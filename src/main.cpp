@@ -1,16 +1,12 @@
 #include <cstdio>
 #include <string>
-#include <scanner.h>
 
+#include "scanner.h"
 #include "tpl.h"
 
-static void RunRepl() {
+static void RunRepl() {}
 
-}
-
-static void RunFile(const std::string &filename) {
-
-}
+static void RunFile(const std::string &filename) {}
 
 int main(int argc, char **argv) {
   printf("Welcome to TPL (ver. %u.%u)\n", TPL_VERSION_MAJOR, TPL_VERSION_MINOR);

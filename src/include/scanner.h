@@ -6,14 +6,14 @@ namespace tpl {
 
 class Scanner {
  public:
-  Scanner(const char *source);
+  explicit Scanner(const char *source);
 
   Token Next();
 
   Token Peek();
 
  private:
-  const char *source;
+  const char *source_;
 };
 
 }  // namespace tpl

@@ -102,7 +102,7 @@ include_directories("${PROJECT_SOURCE_DIR}/src/include/" "${PROJECT_BINARY_DIR}"
 file(GLOB tpl_sources "${PROJECT_SOURCE_DIR}/src/*.cpp")
  
 # Add the executable
-add_executable(tpl ${PROJECT_SOURCE_DIR}/src/main/main.cpp ${tpl_sources})
+add_executable(tpl "${PROJECT_SOURCE_DIR}/src/main.cpp" "${tpl_sources}")
 
 # Print final configuration summary
 print_config_summary()
