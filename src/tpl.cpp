@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 #include <iostream>
 #include <string>
@@ -6,23 +7,22 @@
 #include "tpl.h"
 
 static void RunRepl() {
-  tpl::Scanner scanner;
-
   for (;;) {
     std::string input;
 
-    std::cout << "> ";
+    printf("> ");
     std::getline(std::cin, input);
 
     if (input.empty()) {
       break;
     }
 
-    scanner.Initialize(input.data(), input.length());
+    tpl::Scanner scanner(input.data(), input.length());
 
-    for (auto token = scanner.Next(); token != tpl::Token::Type::EOS;
+    for (auto token = scanner.Next(); token.type != tpl::Token::Type::EOS;
          token = scanner.Next()) {
-      std::cout << tpl::Token::Name(token) << std::endl;
+      printf("[%lu, %lu]: %s %s\n", token.pos.line, token.pos.column,
+             tpl::Token::Name(token.type), token.literal.c_str());
     }
   }
 }

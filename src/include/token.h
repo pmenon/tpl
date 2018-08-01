@@ -13,6 +13,7 @@ namespace tpl {
   T(LEFT_BRACKET, "[")           \
   T(RIGHT_BRACKET, "]")          \
   T(AMPERSAND, "&")              \
+  T(BANG, "!")                   \
   T(COLON, ":")                  \
   T(COMMA, ",")                  \
   T(DOT, ".")                    \

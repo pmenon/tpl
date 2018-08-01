@@ -4,7 +4,7 @@ project(tpl)
 
 # The version number.
 set(TPL_VERSION_MAJOR 0)
-set(TPL_VERSION_MINOR 0)
+set(TPL_VERSION_MINOR 1)
  
 # configure a header file to pass some of the CMake settings to the source code
 configure_file (
@@ -102,7 +102,7 @@ include_directories("${PROJECT_SOURCE_DIR}/src/include/" "${PROJECT_BINARY_DIR}"
 file(GLOB tpl_sources "${PROJECT_SOURCE_DIR}/src/*.cpp")
  
 # Add the executable
-add_executable(tpl "${PROJECT_SOURCE_DIR}/src/main.cpp" "${tpl_sources}")
+add_executable(tpl "${PROJECT_SOURCE_DIR}/src/tpl.cpp" "${tpl_sources}")
 
 # Print final configuration summary
 print_config_summary()

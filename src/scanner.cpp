@@ -6,50 +6,39 @@
 
 namespace tpl {
 
-Scanner::Scanner() : source_(nullptr), len_(0), pos_(0), line_(1) {}
-
-void Scanner::Initialize(const char *source, uint64_t len) {
-  source_ = source;
-  len_ = len;
-  pos_ = 0;
-  line_ = 1;
-
+Scanner::Scanner(const char *source, uint64_t source_len)
+    : source_(source), source_len_(source_len), offset_(0) {
   // Setup current token information
   curr_.type = Token::Type::UNINIITIALIZED;
-  curr_.loc.begin = 0;
-  curr_.loc.end = 0;
-  curr_.loc.line_ = 1;
-
-  // Setup the next token information
-  next_.type = Token::Type::UNINIITIALIZED;
-  next_.loc.begin = 0;
-  next_.loc.end = 0;
-  next_.loc.line_ = 1;
+  curr_.offset = 0;
+  curr_.pos.line = 0;
+  curr_.pos.column = 0;
 
   // Advance character iterator to the first slot
   Advance();
-
-  // Find first token
-  Scan();
+  c0_pos_.line = 1;
+  c0_pos_.column = 1;
 }
 
-Token::Type Scanner::Next() {
-  curr_ = next_;
+const Scanner::TokenDesc &Scanner::Next() {
   Scan();
-  return curr_.type;
+  return curr_;
 }
 
 void Scanner::Scan() {
-  // Track begin position
-  uint64_t begin;
+  // Re-init the next token
+  curr_.literal.clear();
 
   // The token
   Token::Type type;
 
   do {
-    begin = source_position();
+    // Setup current token positions
+    curr_.pos.line = c0_pos_.line;
+    curr_.pos.column = c0_pos_.column;
+    curr_.offset = offset_;
 
-    switch (c_) {
+    switch (c0_) {
       case '{': {
         Advance();
         type = Token::Type::LEFT_BRACE;
@@ -85,6 +74,15 @@ void Scanner::Scan() {
         type = Token::Type::AMPERSAND;
         break;
       }
+      case '!': {
+        Advance();
+        if (Matches('=')) {
+          type = Token::Type::BANG_EQUAL;
+        } else {
+          type = Token::Type::BANG;
+        }
+        break;
+      }
       case ':': {
         Advance();
         type = Token::Type::COLON;
@@ -102,7 +100,31 @@ void Scanner::Scan() {
       }
       case '=': {
         Advance();
-        type = Token::Type::EQUAL;
+        if (Matches('=')) {
+          type = Token::Type::EQUAL_EQUAL;
+        } else {
+          type = Token::Type::EQUAL;
+        }
+        break;
+      }
+      case '>': {
+        Advance();
+        if (Matches('=')) {
+          Advance();
+          type = Token::Type::GREATER_EQUAL;
+        } else {
+          type = Token::Type::GREATER;
+        }
+        break;
+      }
+      case '<': {
+        Advance();
+        if (Matches('=')) {
+          Advance();
+          type = Token::Type::LESS_EQUAL;
+        } else {
+          type = Token::Type::LESS;
+        }
         break;
       }
       case '-': {
@@ -122,8 +144,8 @@ void Scanner::Scan() {
       }
       case '/': {
         Advance();
-        if (c_ == '/') {
-          SkipWhiteSpace();
+        if (Matches('/')) {
+          SkipLineComment();
           type = Token::Type::WHITESPACE;
         } else {
           type = Token::Type::SLASH;
@@ -135,8 +157,20 @@ void Scanner::Scan() {
         type = Token::Type::STAR;
         break;
       }
+      case '"': {
+        Advance();
+        ScanString();
+        type = Token::Type::STRING;
+        break;
+      }
       default: {
-        if (c_ == kEndOfInput) {
+        if (IsDigit(c0_)) {
+          ScanNumber();
+          type = Token::Type::NUMBER;
+        } else if (IsAlpha(c0_)) {
+          ScanIdentifier();
+          type = Token::Type::IDENTIFIER;
+        } else if (c0_ == kEndOfInput) {
           type = Token::Type::EOS;
         } else {
           SkipWhiteSpace();
@@ -146,37 +180,71 @@ void Scanner::Scan() {
     }
   } while (type == Token::Type::WHITESPACE);
 
-  // Track end position
-  uint64_t end = source_position();
-
-  next_.type = type;
-  next_.loc.begin = begin;
-  next_.loc.end = end;
-  next_.loc.line_ = line();
+  curr_.type = type;
 }
 
 void Scanner::SkipWhiteSpace() {
   while (true) {
-    switch (c_) {
+    switch (c0_) {
       case ' ':
       case '\r':
       case '\t': {
         Advance();
         break;
       }
-      case '/': {
-        // Single-line comment
-        while (c_ != '\n' && c_ != kEndOfInput) {
-          Advance();
-        }
-        return;
-      }
       case '\n': {
-        line_++;
+        c0_pos_.line++;
+        c0_pos_.column = 0;
         Advance();
         break;
       }
       default: { return; }
+    }
+  }
+}
+
+void Scanner::SkipLineComment() {
+  while (c0_ != '\n' && c0_ != kEndOfInput) {
+    Advance();
+  }
+}
+
+void Scanner::SkipBlockComment() {
+  // TODO(pmenon): Implement me
+}
+
+void Scanner::ScanIdentifier() {}
+
+void Scanner::ScanNumber() {
+  while (IsDigit(c0_)) {
+    curr_.literal += static_cast<char>(c0_);
+    Advance();
+  }
+
+  if (c0_ == '.') {
+    curr_.literal.append(".");
+
+    Advance();
+
+    while (IsDigit(c0_)) {
+      curr_.literal += static_cast<char>(c0_);
+      Advance();
+    }
+  }
+}
+
+void Scanner::ScanString() {
+  // Single-line string
+  while (c0_ != kEndOfInput) {
+    bool escape = (c0_ == '\\');
+
+    curr_.literal += static_cast<char>(c0_);
+
+    Advance();
+
+    if (c0_ == '"' && !escape) {
+      Advance();
+      break;
     }
   }
 }
