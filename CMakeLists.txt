@@ -5,6 +5,9 @@ project(tpl)
 # The version number.
 set(TPL_VERSION_MAJOR 0)
 set(TPL_VERSION_MINOR 1)
+
+# Enable ExternalProject CMake module
+include(ExternalProject)
  
 # configure a header file to pass some of the CMake settings to the source code
 configure_file (
@@ -103,6 +106,9 @@ file(GLOB tpl_sources "${PROJECT_SOURCE_DIR}/src/*.cpp")
  
 # Add the executable
 add_executable(tpl "${PROJECT_SOURCE_DIR}/src/tpl.cpp" "${tpl_sources}")
+
+# Setup tests
+add_subdirectory(test)
 
 # Print final configuration summary
 print_config_summary()

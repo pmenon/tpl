@@ -1,6 +1,5 @@
 #include "scanner.h"
 
-#include <scanner.h>
 #include <cassert>
 #include <stdexcept>
 
