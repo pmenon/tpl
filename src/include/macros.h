@@ -1,0 +1,12 @@
+#pragma once
+
+#define UNUSED __attribute__((unused))
+
+#define DISALLOW_COPY_AND_MOVE(class)  \
+  class(class &&) = delete;            \
+  class(const class &) = delete;       \
+  class &operator=(class &&) = delete; \
+  class &operator=(const class &) = delete;
+
+#define TPL_LIKELY(x) __builtin_expect(!!(x), 1)
+#define TPL_UNLIKELY(x) __builtin_expect(!!(x), 0)
