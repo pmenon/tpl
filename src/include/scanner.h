@@ -62,7 +62,10 @@ class Scanner {
   void SkipBlockComment();
 
   // Scan an identifier token
-  void ScanIdentifier();
+  Token::Type ScanIdentifierOrKeyword();
+
+  // Check if the given input is a keyword or an identifier
+  Token::Type CheckIdentifierOrKeyword(const char *input, uint32_t input_len);
 
   // Scan a number literal
   void ScanNumber();
@@ -72,12 +75,22 @@ class Scanner {
 
  private:
   // Is the current character a character?
+  static bool IsInRange(int32_t c, int32_t lower, int32_t upper) {
+    return (c >= lower && c <= upper);
+  }
+
+  // Is the provided character an alphabetic character
   static bool IsAlpha(int32_t c) {
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
+    return IsInRange(c, 'a', 'z') || IsInRange(c, 'A', 'Z');
   }
 
   // Is the current character a digit?
-  static bool IsDigit(int32_t c) { return c >= '0' && c <= '9'; }
+  static bool IsDigit(int32_t c) { return IsInRange(c, '0', '9'); }
+
+  // Is this character allowed in an identifier?
+  static bool IsIdentChar(int32_t c) {
+    return IsAlpha(c) || IsDigit(c) || c == '_';
+  }
 
  private:
   // The source input and its length

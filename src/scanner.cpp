@@ -167,9 +167,8 @@ void Scanner::Scan() {
         if (IsDigit(c0_)) {
           ScanNumber();
           type = Token::Type::NUMBER;
-        } else if (IsAlpha(c0_)) {
-          ScanIdentifier();
-          type = Token::Type::IDENTIFIER;
+        } else if (IsIdentChar(c0_)) {
+          type = ScanIdentifierOrKeyword();
         } else if (c0_ == kEndOfInput) {
           type = Token::Type::EOS;
         } else {
@@ -213,7 +212,88 @@ void Scanner::SkipBlockComment() {
   // TODO(pmenon): Implement me
 }
 
-void Scanner::ScanIdentifier() {}
+Token::Type Scanner::ScanIdentifierOrKeyword() {
+  // First collect identifier
+  int32_t identifier_char0 = c0_;
+  while (IsIdentChar(c0_) && c0_ != kEndOfInput) {
+    curr_.literal += static_cast<char>(c0_);
+    Advance();
+  }
+
+  if (identifier_char0 == '_' || IsInRange(identifier_char0, 'A', 'Z')) {
+    // Definitely not keyword
+    return Token::Type::IDENTIFIER;
+  }
+
+  const auto *identifier = curr_.literal.data();
+  auto identifier_len = static_cast<uint32_t>(curr_.literal.length());
+
+  return CheckIdentifierOrKeyword(identifier, identifier_len);
+}
+
+#define KEYWORDS()                          \
+  GROUP_START('a')                          \
+  GROUP_ELEM("and", Token::Type::AND)       \
+  GROUP_START('e')                          \
+  GROUP_ELEM("else", Token::Type::ELSE)     \
+  GROUP_START('f')                          \
+  GROUP_ELEM("false", Token::Type::FALSE)   \
+  GROUP_ELEM("for", Token::Type::FOR)       \
+  GROUP_ELEM("fun", Token::Type::FUN)       \
+  GROUP_START('i')                          \
+  GROUP_ELEM("if", Token::Type::IF)         \
+  GROUP_START('n')                          \
+  GROUP_ELEM("nil", Token::Type::NIL)       \
+  GROUP_START('o')                          \
+  GROUP_ELEM("or", Token::Type::OR)         \
+  GROUP_START('r')                          \
+  GROUP_ELEM("return", Token::Type::RETURN) \
+  GROUP_START('t')                          \
+  GROUP_ELEM("true", Token::Type::TRUE)     \
+  GROUP_START('v')                          \
+  GROUP_ELEM("var", Token::Type::VAR)       \
+  GROUP_START('w')                          \
+  GROUP_ELEM("while", Token::Type::WHILE)
+
+Token::Type Scanner::CheckIdentifierOrKeyword(const char *input,
+                                              uint32_t input_len) {
+  static constexpr uint32_t kMinKeywordLen = 2;
+  static constexpr uint32_t kMaxKeywordLen = 6;
+
+  if (input_len < kMinKeywordLen || input_len > kMaxKeywordLen) {
+    return Token::Type::IDENTIFIER;
+  }
+
+#define GROUP_START(c) \
+  break;               \
+  case c:
+
+#define GROUP_ELEM(str, typ)                              \
+  {                                                       \
+    const uint64_t keyword_len = sizeof(str) - 1;         \
+    if (keyword_len == input_len && str[1] == input[1] && \
+        (keyword_len < 3 || str[2] == input[2]) &&        \
+        (keyword_len < 4 || str[3] == input[3]) &&        \
+        (keyword_len < 5 || str[4] == input[4]) &&        \
+        (keyword_len < 6 || str[5] == input[5])) {        \
+      return typ;                                         \
+    }                                                     \
+  }
+
+  // The main switch statement that outlines all keywords
+  switch (input[0]) {
+    default:
+      KEYWORDS()
+  }
+
+    // hygiene
+#undef GROUP_ELEM
+#undef GROUP_START
+
+  return Token::Type::IDENTIFIER;
+}  // namespace tpl
+
+#undef KEYWORDS
 
 void Scanner::ScanNumber() {
   while (IsDigit(c0_)) {
