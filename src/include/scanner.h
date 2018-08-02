@@ -71,7 +71,7 @@ class Scanner {
   void ScanNumber();
 
   // Scan a string literal
-  void ScanString();
+  Token::Type ScanString();
 
  private:
   // Is the current character a character?

@@ -158,8 +158,7 @@ void Scanner::Scan() {
       }
       case '"': {
         Advance();
-        ScanString();
-        type = Token::Type::STRING;
+        type = ScanString();
         break;
       }
       default: {
@@ -292,7 +291,7 @@ Token::Type Scanner::CheckIdentifierOrKeyword(const char *input,
 #undef GROUP_START
 
   return Token::Type::IDENTIFIER;
-}  // namespace tpl
+}
 
 #undef KEYWORDS
 
@@ -314,18 +313,28 @@ void Scanner::ScanNumber() {
   }
 }
 
-void Scanner::ScanString() {
-  // Single-line string
-  while (c0_ != kEndOfInput) {
+Token::Type Scanner::ScanString() {
+  // Single-line string. The lookahead character points to the start of the
+  // string literal
+  while (true) {
+    if (c0_ == kEndOfInput) {
+      curr_.literal.clear();
+      curr_.literal = "Unterminated string";
+      return Token::Type::ERROR;
+    }
+
+    // Is this character an escape?
     bool escape = (c0_ == '\\');
 
+    // Add the character to the current string literal
     curr_.literal += static_cast<char>(c0_);
 
     Advance();
 
+    // If we see an enclosing quote and it hasn't been escaped, we're done
     if (c0_ == '"' && !escape) {
       Advance();
-      break;
+      return Token::Type::STRING;
     }
   }
 }
