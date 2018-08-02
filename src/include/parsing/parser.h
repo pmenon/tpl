@@ -2,8 +2,8 @@
 
 #include <memory>
 
-#include "ast.h"
-#include "scanner.h"
+#include "ast/ast.h"
+#include "parsing/scanner.h"
 
 namespace tpl {
 

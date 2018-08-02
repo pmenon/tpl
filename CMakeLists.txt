@@ -102,10 +102,10 @@ endif()
 include_directories("${PROJECT_SOURCE_DIR}/src/include/" "${PROJECT_BINARY_DIR}")
 
 # Setup sources
-file(GLOB tpl_sources "${PROJECT_SOURCE_DIR}/src/*.cpp")
+file(GLOB_RECURSE tpl_sources "${PROJECT_SOURCE_DIR}/src/*.cpp")
  
 # Add the executable
-add_executable(tpl "${PROJECT_SOURCE_DIR}/src/tpl.cpp" "${tpl_sources}")
+add_executable(tpl "${tpl_sources}" "${PROJECT_SOURCE_DIR}/src/tpl.cpp" )
 
 # Setup tests
 add_subdirectory(test)

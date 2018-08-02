@@ -1,4 +1,4 @@
-#include "scanner.h"
+#include "parsing/scanner.h"
 
 #include <cassert>
 #include <stdexcept>

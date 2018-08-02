@@ -4,7 +4,7 @@
 #include <string>
 
 #include "macros.h"
-#include "token.h"
+#include "parsing/token.h"
 
 namespace tpl {
 

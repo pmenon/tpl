@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 
-#include "scanner.h"
+#include "parsing/scanner.h"
 #include "tpl.h"
 
 static void RunRepl() {
