@@ -47,6 +47,7 @@ namespace tpl {
   K(NIL, "nil")                  \
   K(OR, "or")                    \
   K(RETURN, "return")            \
+  K(STRUCT, "struct")            \
   K(TRUE, "true")                \
   K(VAR, "var")                  \
   K(WHILE, "while")              \

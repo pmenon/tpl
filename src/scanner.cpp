@@ -247,6 +247,8 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
   GROUP_ELEM("or", Token::Type::OR)         \
   GROUP_START('r')                          \
   GROUP_ELEM("return", Token::Type::RETURN) \
+  GROUP_START('s')                          \
+  GROUP_ELEM("struct", Token::Type::STRUCT) \
   GROUP_START('t')                          \
   GROUP_ELEM("true", Token::Type::TRUE)     \
   GROUP_START('v')                          \
