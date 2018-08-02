@@ -20,11 +20,15 @@ Region::~Region() {
 }
 
 void *Region::Allocate(std::size_t size) {
+  size = SizeWithAlignment(size);
+
   uintptr_t result = position_;
 
   if (size > end_ - position_) {
-    result = Expand();
+    result = Expand(size);
   }
+
+  TPL_ASSERT(position_ < end_);
 
   position_ += size;
 
@@ -33,18 +37,36 @@ void *Region::Allocate(std::size_t size) {
   return reinterpret_cast<void *>(result);
 }
 
-uintptr_t Region::Expand() {
+uintptr_t Region::Expand(std::size_t requested) {
   static constexpr std::size_t kChunkOverhead = sizeof(Chunk);
 
+  /*
+   * Each expansion increases the size of the chunk we allocate by 2. But, we
+   * bound the maximum chunk allocation size.
+   */
+
+  Chunk *head = head_;
+  const std::size_t prev_size = (head == nullptr ? 0 : head->size);
+  const std::size_t new_size_no_overhead = (requested + (prev_size * 2));
+  std::size_t new_size = kChunkOverhead + new_size_no_overhead;
+
+  if (new_size < kMinChunkAllocation) {
+    new_size = kMinChunkAllocation;
+  } else if (new_size > kMaxChunkAllocation) {
+    const std::size_t min_new_size = kChunkOverhead + requested;
+    const std::size_t max_alloc = kMaxChunkAllocation;
+    new_size = std::max(min_new_size, max_alloc);
+  }
+
   // Allocate a new chunk
-  std::size_t size = kChunkOverhead + 1024;
-  auto *new_chunk = static_cast<Chunk *>(malloc(size));
-  new_chunk->Init(head_, size);
+  auto *new_chunk = static_cast<Chunk *>(malloc(new_size));
+  new_chunk->Init(head_, new_size);
 
   // Link it in
   head_ = new_chunk;
   position_ = new_chunk->start();
   end_ = new_chunk->end();
+  chunk_bytes_allocated_ += new_size;
 
   return position_;
 }

@@ -8,6 +8,14 @@
 
 namespace tpl {
 
+/**
+ * A region-based allocator supports fast allocations of small chunks of memory.
+ * Individual deallocations aren't supported, but the entire region can be
+ * deallocated in one fast operation. Regions are used to hold ephemeral objects
+ * that are allocated once and freed all at once. This is the pattern used
+ * during parsing when generating AST nodes which are thrown away after
+ * compilation to bytecode.
+ */
 class Region {
  public:
   explicit Region(std::string name);
@@ -29,13 +37,18 @@ class Region {
   uint64_t allocated_chunk_bytes() const { return chunk_bytes_allocated_; }
 
   std::string get_info() const {
-    return "Region(" + name() + ",allocated=" + std::to_string(allocated()) +
+    return "Region('" + name() + "',allocated=" + std::to_string(allocated()) +
            ",total chunks=" + std::to_string(allocated_chunk_bytes()) + ")";
   }
 
  private:
   // Expand the region
-  uintptr_t Expand();
+  uintptr_t Expand(std::size_t requested);
+
+  // Round up the given requested size to one that retains byte-alignment
+  std::size_t SizeWithAlignment(std::size_t size) const {
+    return ((size + kByteAlignment - 1) & (-kByteAlignment));
+  }
 
  private:
   /*
@@ -62,7 +75,13 @@ class Region {
 
  private:
   // The alignment of all pointers
-  static constexpr uint32_t kAlignment = 8;
+  static const uint32_t kByteAlignment = 8;
+
+  // Min chunk allocation is 8KB
+  static const std::size_t kMinChunkAllocation = 8 * 1024;
+
+  // Max chunk allocation is 1MB
+  static const std::size_t kMaxChunkAllocation = 1 * 1024 * 1024;
 
   // The name of the region
   const std::string name_;
@@ -84,6 +103,9 @@ class Region {
   uintptr_t end_;
 };
 
+/**
+ * Base class for objects allocated from a region
+ */
 class RegionObject {
  public:
   void *operator new(std::size_t size, Region &region) {

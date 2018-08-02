@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cassert>
+#include <cstdint>
+
 #define UNUSED __attribute__((unused))
 
 #define DISALLOW_COPY_AND_MOVE(class)  \
@@ -10,3 +13,9 @@
 
 #define TPL_LIKELY(x) __builtin_expect(!!(x), 1)
 #define TPL_UNLIKELY(x) __builtin_expect(!!(x), 0)
+
+#ifdef NDEBUG
+#define TPL_ASSERT(expr) ((void)0)
+#else
+#define TPL_ASSERT(expr) assert((expr))
+#endif
