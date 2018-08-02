@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "ast/ast.h"
+#include "ast/ast_node_factory.h"
 #include "parsing/scanner.h"
 
 namespace tpl {
@@ -11,7 +12,7 @@ class Parser {
  public:
   Parser(Scanner &scanner, AstNodeFactory &node_factory);
 
-  std::unique_ptr<AstNode> Parse();
+  AstNode *Parse();
 
  private:
   // The main source scanner

@@ -3,27 +3,37 @@
 #include <iostream>
 #include <string>
 
+#include "ast/pretty_print.h"
+#include "parsing/parser.h"
 #include "parsing/scanner.h"
 #include "tpl.h"
 
+static constexpr const char *kExitKeyword = ".exit";
+
 static void RunRepl() {
+  tpl::Region region("repl");
+
   for (;;) {
     std::string input;
 
     printf("> ");
     std::getline(std::cin, input);
 
-    if (input.empty()) {
+    if (input.empty() || input == kExitKeyword) {
       break;
     }
 
+    // Let's parse the source
     tpl::Scanner scanner(input.data(), input.length());
+    tpl::AstNodeFactory node_factory(region);
+    tpl::Parser parser(scanner, node_factory);
 
-    for (auto token = scanner.Next(); token.type != tpl::Token::Type::EOS;
-         token = scanner.Next()) {
-      printf("[%lu, %lu]: %s %s\n", token.pos.line, token.pos.column,
-             tpl::Token::Name(token.type), token.literal.c_str());
-    }
+    // Parse!
+    tpl::AstNode *root = parser.Parse();
+
+    // For now, just pretty print the AST
+    tpl::PrettyPrint pretty_print(root);
+    pretty_print.Print();
   }
 }
 

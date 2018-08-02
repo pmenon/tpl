@@ -43,10 +43,10 @@ endfunction()
 #
 ############################################################
 
-# ---- Force C++17
-set(CMAKE_CXX_STANDARD 17)
+# ---- Force C++14
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "-std=c++14 -Wall")
+set(CMAKE_CXX_FLAGS "-Wall")
 
 if (NOT CMAKE_BUILD_TYPE)
   message(WARNING "No build type selected, default to Release")
@@ -98,16 +98,9 @@ endif()
 #
 ############################################################
 
-# Setup includes 
-include_directories("${PROJECT_SOURCE_DIR}/src/include/" "${PROJECT_BINARY_DIR}")
-
-# Setup sources
-file(GLOB_RECURSE tpl_sources "${PROJECT_SOURCE_DIR}/src/*.cpp")
- 
-# Add the executable
-add_executable(tpl "${tpl_sources}" "${PROJECT_SOURCE_DIR}/src/tpl.cpp" )
-
 # Setup tests
+set(tpl_test_shared tpl_shared)
+add_subdirectory(src)
 add_subdirectory(test)
 
 # Print final configuration summary

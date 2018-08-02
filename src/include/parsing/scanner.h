@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 
-#include "macros.h"
+#include "util/macros.h"
 #include "parsing/token.h"
 
 namespace tpl {
