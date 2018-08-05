@@ -16,3 +16,11 @@ add_library(tpl_shared SHARED ${tpl_sources})
 set(tpl_main "${PROJECT_SOURCE_DIR}/src/tpl.cpp")
 add_executable(tpl ${tpl_main})
 target_link_libraries(tpl tpl_shared)
+
+# Set the output folders for all binaries and libraries
+set_target_properties(tpl tpl_shared
+    PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
