@@ -13,7 +13,7 @@ static constexpr const char *kExitKeyword = ".exit";
 static void RunRepl() {
   tpl::Region region("repl");
 
-  for (;;) {
+  while (true) {
     std::string input;
 
     printf("> ");
@@ -35,6 +35,8 @@ static void RunRepl() {
     tpl::PrettyPrint pretty_print(root);
     pretty_print.Print();
   }
+
+  std::cout << region.get_info() << std::endl;
 }
 
 static void RunFile(const std::string &filename) {}
