@@ -30,6 +30,7 @@ class AstVisitor {
 #define GEN_VISIT_CASE(NodeType)                            \
   case AstNode::Type::NodeType: {                           \
     impl()->Visit##NodeType(static_cast<NodeType *>(node)); \
+    break;                                                  \
   }
 
 #define GEN_VISIT_METHOD                                     \

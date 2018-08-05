@@ -1,7 +1,8 @@
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 
+#include "parsing/token.h"
 #include "util/region.h"
 
 namespace tpl {
@@ -16,6 +17,7 @@ namespace tpl {
  */
 #define EXPRESSION_NODES(T) \
   T(BinaryOperation)        \
+  T(Literal)                \
   T(UnaryOperation)
 
 /*
@@ -51,24 +53,64 @@ class AstNode : public RegionObject {
 };
 
 /**
- *
+ * Base class for all expression nodes
  */
-class BinaryOperation : public AstNode {
+class Expression : public AstNode {
  public:
-  BinaryOperation(AstNode *left, AstNode *right)
-      : AstNode(Type::BinaryOperation) {}
+  Expression(AstNode::Type type) : AstNode(type) {}
+};
 
+/**
+ * A binary expression with non-null left and right children and an operator
+ */
+class BinaryOperation : public Expression {
+ public:
+  BinaryOperation(Token::Type op, AstNode *left, AstNode *right)
+      : Expression(AstNode::Type::BinaryOperation),
+        op_(op),
+        left_(left),
+        right_(right) {}
+
+  Token::Type op() { return op_; }
   AstNode *left() { return left_; }
   AstNode *right() { return right_; }
 
  private:
+  Token::Type op_;
   AstNode *left_;
   AstNode *right_;
 };
 
 /**
- *
+ * A literal in the original source code
  */
-class UnaryOperation : public AstNode {};
+class Literal : public Expression {
+ public:
+  enum class Type : uint8_t { Nil, True, False, Identifier, Number, String };
+
+  Literal(Literal::Type lit_type)
+      : Expression(AstNode::Type::Literal), lit_type_(lit_type) {}
+
+  Literal::Type type() const { return lit_type_; }
+
+ private:
+  Type lit_type_;
+};
+
+/**
+ * A unary expression with a non-null inner expression and an operator
+ */
+class UnaryOperation : public Expression {
+ public:
+  UnaryOperation(Token::Type op, AstNode *expr)
+      : Expression(AstNode::Type::UnaryOperation), op_(op), expr_(expr) {}
+
+  Token::Type op() { return op_; }
+  AstNode *expr() { return expr_; }
+
+ private:
+  Token::Type op_;
+  AstNode *expr_;
+};
 
 }  // namespace tpl

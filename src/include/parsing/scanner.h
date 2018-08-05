@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <string>
 
-#include "util/macros.h"
 #include "parsing/token.h"
+#include "util/macros.h"
 
 namespace tpl {
 
@@ -36,9 +36,10 @@ class Scanner {
   DISALLOW_COPY_AND_MOVE(Scanner);
 
   // Read the next token in the source input stream
-  const TokenDesc &Next();
+  Token::Type Next();
 
-  const TokenDesc &current_token() const { return curr_; }
+  Token::Type current_token() const { return curr_.type; }
+  Token::Type peek() { return next_.type; }
   const SourcePosition &source_position() { return c0_pos_; }
   uint64_t current_offset() const { return offset_; }
 
@@ -88,7 +89,7 @@ class Scanner {
   static bool IsDigit(int32_t c) { return IsInRange(c, '0', '9'); }
 
   // Is this character allowed in an identifier?
-  static bool IsIdentChar(int32_t c) {
+  static bool IsIdentifierChar(int32_t c) {
     return IsAlpha(c) || IsDigit(c) || c == '_';
   }
 
@@ -106,6 +107,7 @@ class Scanner {
 
   // Information about the current token
   TokenDesc curr_;
+  TokenDesc next_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

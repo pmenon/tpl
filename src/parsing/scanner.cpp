@@ -1,5 +1,6 @@
 #include "parsing/scanner.h"
 
+#include <parsing/scanner.h>
 #include <cassert>
 #include <stdexcept>
 
@@ -13,29 +14,38 @@ Scanner::Scanner(const char *source, uint64_t source_len)
   curr_.pos.line = 0;
   curr_.pos.column = 0;
 
+  next_.type = Token::Type::UNINIITIALIZED;
+  next_.offset = 0;
+  next_.pos.line = 0;
+  next_.pos.column = 0;
+
   // Advance character iterator to the first slot
   Advance();
   c0_pos_.line = 1;
   c0_pos_.column = 1;
+
+  // Find the first token
+  Scan();
 }
 
-const Scanner::TokenDesc &Scanner::Next() {
+Token::Type Scanner::Next() {
+  curr_ = next_;
   Scan();
-  return curr_;
+  return curr_.type;
 }
 
 void Scanner::Scan() {
   // Re-init the next token
-  curr_.literal.clear();
+  next_.literal.clear();
 
   // The token
   Token::Type type;
 
   do {
     // Setup current token positions
-    curr_.pos.line = c0_pos_.line;
-    curr_.pos.column = c0_pos_.column;
-    curr_.offset = offset_;
+    next_.pos.line = c0_pos_.line;
+    next_.pos.column = c0_pos_.column;
+    next_.offset = offset_;
 
     switch (c0_) {
       case '{': {
@@ -165,7 +175,7 @@ void Scanner::Scan() {
         if (IsDigit(c0_)) {
           ScanNumber();
           type = Token::Type::NUMBER;
-        } else if (IsIdentChar(c0_)) {
+        } else if (IsIdentifierChar(c0_)) {
           type = ScanIdentifierOrKeyword();
         } else if (c0_ == kEndOfInput) {
           type = Token::Type::EOS;
@@ -177,7 +187,7 @@ void Scanner::Scan() {
     }
   } while (type == Token::Type::WHITESPACE);
 
-  curr_.type = type;
+  next_.type = type;
 }
 
 void Scanner::SkipWhiteSpace() {
@@ -213,8 +223,8 @@ void Scanner::SkipBlockComment() {
 Token::Type Scanner::ScanIdentifierOrKeyword() {
   // First collect identifier
   int32_t identifier_char0 = c0_;
-  while (IsIdentChar(c0_) && c0_ != kEndOfInput) {
-    curr_.literal += static_cast<char>(c0_);
+  while (IsIdentifierChar(c0_) && c0_ != kEndOfInput) {
+    next_.literal += static_cast<char>(c0_);
     Advance();
   }
 
@@ -223,8 +233,8 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
     return Token::Type::IDENTIFIER;
   }
 
-  const auto *identifier = curr_.literal.data();
-  auto identifier_len = static_cast<uint32_t>(curr_.literal.length());
+  const auto *identifier = next_.literal.data();
+  auto identifier_len = static_cast<uint32_t>(next_.literal.length());
 
   return CheckIdentifierOrKeyword(identifier, identifier_len);
 }
@@ -286,28 +296,28 @@ Token::Type Scanner::CheckIdentifierOrKeyword(const char *input,
       KEYWORDS()
   }
 
-    // hygiene
-#undef GROUP_ELEM
-#undef GROUP_START
-
+  // The input isn't a keyword, it must be an identifier
   return Token::Type::IDENTIFIER;
 }
 
+// hygiene
+#undef GROUP_ELEM
+#undef GROUP_START
 #undef KEYWORDS
 
 void Scanner::ScanNumber() {
   while (IsDigit(c0_)) {
-    curr_.literal += static_cast<char>(c0_);
+    next_.literal += static_cast<char>(c0_);
     Advance();
   }
 
   if (c0_ == '.') {
-    curr_.literal.append(".");
+    next_.literal.append(".");
 
     Advance();
 
     while (IsDigit(c0_)) {
-      curr_.literal += static_cast<char>(c0_);
+      next_.literal += static_cast<char>(c0_);
       Advance();
     }
   }
@@ -318,8 +328,8 @@ Token::Type Scanner::ScanString() {
   // string literal
   while (true) {
     if (c0_ == kEndOfInput) {
-      curr_.literal.clear();
-      curr_.literal = "Unterminated string";
+      next_.literal.clear();
+      next_.literal = "Unterminated string";
       return Token::Type::ERROR;
     }
 
@@ -327,7 +337,7 @@ Token::Type Scanner::ScanString() {
     bool escape = (c0_ == '\\');
 
     // Add the character to the current string literal
-    curr_.literal += static_cast<char>(c0_);
+    next_.literal += static_cast<char>(c0_);
 
     Advance();
 
