@@ -1,5 +1,5 @@
-# ---- Force C++14
-set(CMAKE_CXX_STANDARD 14)
+# ---- Force C++17
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ---- Require Clang or GCC
@@ -9,7 +9,64 @@ if(NOT (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR
     message(SEND_ERROR "TPL only supports Clang or GCC")
 endif()
 
-# ---- Use Gold Linker?
+# ---- Setup initial CXX flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -fPIC -mcx16 -march=native")
+
+# ---- Set color diagnostics
+if(("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=auto")
+endif()
+
+################################################################################
+#
+# Configure all CXX flags
+#
+################################################################################
+
+# compiler flags for different build types (run 'cmake -DCMAKE_BUILD_TYPE=<type> .')
+# For all builds:
+# For CMAKE_BUILD_TYPE=Debug
+#   -ggdb: Enable gdb debugging
+# For CMAKE_BUILD_TYPE=FastDebug
+#   Same as DEBUG, except with some optimizations on.
+# For CMAKE_BUILD_TYPE=Release
+#   -O3: Enable all compiler optimizations
+# For CMAKE_BUILD_TYPE=RelWithDebInfo
+#   -O2: Some compiler optimizations
+#   -ggdb: Enable gdb debugging
+set(CXX_FLAGS_DEBUG "-ggdb -O0 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+set(CXX_FLAGS_FASTDEBUG "-ggdb -O1 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+set(CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+set(CXX_FLAGS_RELWITHDEBINFO "-ggdb -O2 -DNDEBUG")
+
+# if no build build type is specified, default to debug builds
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug)
+endif(NOT CMAKE_BUILD_TYPE)
+
+string (TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
+
+# Set compile flags based on the build type.
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "DEBUG")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_FLAGS_DEBUG}")
+elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "FASTDEBUG")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_FLAGS_FASTDEBUG}")
+elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RELEASE")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_FLAGS_RELEASE}")
+elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RELWITHDEBINFO")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_FLAGS_RELWITHDEBINFO}")
+else()
+    message(FATAL_ERROR "Unknown build type: ${CMAKE_BUILD_TYPE}")
+endif ()
+
+################################################################################
+#
+# Gold linker setup
+#
+################################################################################
+
 if(USE_GOLD)
     execute_process(COMMAND ${CMAKE_C_COMPILER} -fuse-ld=gold -Wl,--version ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
     if("${LD_VERSION}" MATCHES "GNU gold")
@@ -21,6 +78,12 @@ if(USE_GOLD)
         set(USE_GOLD OFF)
     endif()
 endif()
+
+################################################################################
+#
+# AddressSanitizer / ThreadSanitizer setup
+#
+################################################################################
 
 # Clang/GCC don't allow both ASan and TSan to be enabled together
 if("${TPL_USE_ASAN}" AND "${TPL_USE_TSAN}")

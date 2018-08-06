@@ -34,7 +34,6 @@ endif()
 
 # Setup the compiler and setup the compiler flags
 include(SetupCompiler)
-include(SetupCxxFlags)
 
 ############################################################
 #
