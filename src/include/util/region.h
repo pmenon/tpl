@@ -32,6 +32,11 @@ class Region {
    */
   void *Allocate(std::size_t size);
 
+  /**
+   * Free all allocated objects in one (quick) fell swoop
+   */
+  void DeleteAll();
+
   const std::string &name() const { return name_; }
   uint64_t allocated() const { return allocated_; }
   uint64_t allocated_chunk_bytes() const { return chunk_bytes_allocated_; }
@@ -112,8 +117,16 @@ class RegionObject {
     return region.Allocate(size);
   }
 
-  void operator delete(UNUSED void *ptr) = delete;
-  void operator delete(UNUSED void *ptr, UNUSED Region &region) = delete;
+  /*
+   * Objects from a Region shouldn't be delete individually. They'll be deleted
+   * when the region is destroyed. You can invoke this behavior manually by
+   * calling Region::DeleteAll().
+   */
+
+  void operator delete(UNUSED void *ptr) { UNREACHABLE(); };
+  void operator delete(UNUSED void *ptr, UNUSED Region &region) {
+    UNREACHABLE();
+  };
 };
 
 }  // namespace tpl

@@ -3,7 +3,9 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ---- Require Clang or GCC
-if(NOT (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")))
+if(NOT (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR
+        ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")   OR
+        ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")))
     message(SEND_ERROR "TPL only supports Clang or GCC")
 endif()
 

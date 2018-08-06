@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <cstdio>
 
 #define UNUSED __attribute__((unused))
 
@@ -18,4 +19,10 @@
 #define TPL_ASSERT(expr) ((void)0)
 #else
 #define TPL_ASSERT(expr) assert((expr))
+#endif
+
+#ifdef NEBUG
+#define UNREACHABLE() __builtin_unreachable();
+#else
+#define UNREACHABLE() fprintf(stderr, "unreachable code!\n");
 #endif

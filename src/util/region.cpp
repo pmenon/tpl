@@ -1,3 +1,6 @@
+
+#include <util/region.h>
+
 #include "util/region.h"
 
 namespace tpl {
@@ -10,14 +13,7 @@ Region::Region(std::string name)
       position_(0),
       end_(0) {}
 
-Region::~Region() {
-  Chunk *head = head_;
-  while (head != nullptr) {
-    Chunk *next = head->next;
-    free(head);
-    head = next;
-  }
-}
+Region::~Region() { DeleteAll(); }
 
 void *Region::Allocate(std::size_t size) {
   size = SizeWithAlignment(size);
@@ -35,6 +31,22 @@ void *Region::Allocate(std::size_t size) {
   allocated_ += size;
 
   return reinterpret_cast<void *>(result);
+}
+
+void Region::DeleteAll() {
+  Chunk *head = head_;
+  while (head != nullptr) {
+    Chunk *next = head->next;
+    free(head);
+    head = next;
+  }
+
+  // Clean up member variables
+  head_ = nullptr;
+  allocated_ = 0;
+  chunk_bytes_allocated_ = 0;
+  position_ = 0;
+  end_ = 0;
 }
 
 uintptr_t Region::Expand(std::size_t requested) {
