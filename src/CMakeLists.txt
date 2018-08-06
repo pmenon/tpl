@@ -1,6 +1,9 @@
 # Setup includes
 include_directories("${PROJECT_SOURCE_DIR}/src/include/" "${PROJECT_BINARY_DIR}")
 
+# Include third party libs
+include_directories("${PROJECT_SOURCE_DIR}/third_party/spdlog/include")
+
 # Setup sources
 file(GLOB_RECURSE tpl_sources "${PROJECT_SOURCE_DIR}/src/*.cpp")
 list(REMOVE_ITEM tpl_sources ${PROJECT_SOURCE_DIR}/src/tpl.cpp)
