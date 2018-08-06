@@ -35,7 +35,10 @@ class Scanner {
 
   DISALLOW_COPY_AND_MOVE(Scanner);
 
-  // Read the next token in the source input stream
+  /**
+   * Read the next token in the source input stream
+   * @return The next token
+   */
   Token::Type Next();
 
   Token::Type current_token() const { return curr_.type; }
@@ -48,10 +51,28 @@ class Scanner {
   void Scan();
 
   // Advance a single character into the source input stream
-  void Advance();
+  void Advance() {
+    bool at_end = (offset_ == source_len_);
+    if (TPL_UNLIKELY(at_end)) {
+      c0_ = kEndOfInput;
+      return;
+    }
+
+    // Not at end, bump
+    c0_ = source_[offset_++];
+    c0_pos_.column++;
+  }
 
   // Does the current character match the expected? If so, advance the scanner
-  bool Matches(int32_t expected);
+  bool Matches(int32_t expected) {
+    if (c0_ != expected) {
+      return false;
+    }
+
+    Advance();
+
+    return true;
+  }
 
   // Skip whitespace from the current token to the next valid token
   void SkipWhiteSpace();
@@ -109,32 +130,5 @@ class Scanner {
   TokenDesc curr_;
   TokenDesc next_;
 };
-
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Implementation below
-///
-////////////////////////////////////////////////////////////////////////////////
-
-inline void Scanner::Advance() {
-  bool at_end = (offset_ == source_len_);
-  if (TPL_UNLIKELY(at_end)) {
-    c0_ = kEndOfInput;
-    return;
-  }
-
-  c0_ = source_[offset_++];
-  c0_pos_.column++;
-}
-
-inline bool Scanner::Matches(int32_t expected) {
-  if (c0_ != expected) {
-    return false;
-  }
-
-  Advance();
-
-  return true;
-}
 
 }  // namespace tpl
