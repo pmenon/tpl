@@ -2,19 +2,50 @@
 
 namespace tpl {
 
-Parser::Parser(Scanner &scanner, AstNodeFactory &node_factory)
-    : scanner_(scanner), node_factory_(node_factory) {}
+Parser::Parser(Scanner &scanner, AstNodeFactory &node_factory,
+               AstStringsContainer &strings_container)
+    : scanner_(scanner),
+      node_factory_(node_factory),
+      strings_container_(strings_container) {}
 
 AstNode *Parser::Parse() { return ParseExpression(); }
 
-AstNode *Parser::ParseExpression() {
+AstNode *Parser::ParseDeclaration() { return ParseFunctionDeclaration(); }
+
+AstNode *Parser::ParseFunctionDeclaration() { return ParseBlock(); }
+
+Statement *Parser::ParseBlock() {
+  // Eat the left brace
+  Expect(Token::Type::LEFT_BRACE);
+
+  // Where we store all the statements in the block
+  RegionVector<Statement *> statements(node_factory().region());
+
+  // Loop while we don't see the right brace
+  while (peek() != Token::Type::RIGHT_BRACE && peek() != Token::Type::EOS) {
+    Statement *stmt = ParseStatement();
+    statements.emplace_back(stmt);
+  }
+
+  // Each the right brace
+  Expect(Token::Type::RIGHT_BRACE);
+
+  return node_factory().NewBlock(std::move(statements));
+}
+
+Statement *Parser::ParseStatement() {
+  auto *expression = ParseExpression();
+  return node_factory().NewExpressionStatement(expression);
+}
+
+Expression *Parser::ParseExpression() {
   return ParseBinaryExpression(Token::LowestPrecedence() + 1);
 }
 
-AstNode *Parser::ParseBinaryExpression(uint32_t min_prec) {
+Expression *Parser::ParseBinaryExpression(uint32_t min_prec) {
   TPL_ASSERT(min_prec > 0);
 
-  AstNode *left = ParseUnaryExpression();
+  Expression *left = ParseUnaryExpression();
 
   for (uint32_t prec = Token::Precedence(peek()); prec > min_prec; prec--) {
     // It's possible that we reach a token that has lower precedence than the
@@ -36,7 +67,7 @@ AstNode *Parser::ParseBinaryExpression(uint32_t min_prec) {
   return left;
 }
 
-AstNode *Parser::ParseUnaryExpression() {
+Expression *Parser::ParseUnaryExpression() {
   // UnaryExpression ::
   //   '!' UnaryExpression
   //   '-' UnaryExpression
@@ -49,8 +80,7 @@ AstNode *Parser::ParseUnaryExpression() {
     case Token::Type::BANG:
     case Token::Type::MINUS:
     case Token::Type::STAR: {
-      Token::Type op = type;
-      Next();
+      Token::Type op = Next();
       AstNode *expr = ParseUnaryExpression();
       return node_factory().NewUnaryOperation(op, expr);
     }
@@ -61,7 +91,7 @@ AstNode *Parser::ParseUnaryExpression() {
   return ParsePrimaryExpression();
 }
 
-AstNode *Parser::ParsePrimaryExpression() {
+Expression *Parser::ParsePrimaryExpression() {
   // PrimaryExpression ::
   //  nil
   //  'true'
@@ -75,31 +105,42 @@ AstNode *Parser::ParsePrimaryExpression() {
   switch (token) {
     case Token::Type::NIL: {
       Consume(Token::Type::NIL);
-      return node_factory().NewLiteral(Literal::Type::Nil);
+      return node_factory().NewNilLiteral();
     }
     case Token::Type::TRUE: {
       Consume(Token::Type::TRUE);
-      return node_factory().NewLiteral(Literal::Type::True);
+      return node_factory().NewBoolLiteral(true);
     }
     case Token::Type::FALSE: {
       Consume(Token::Type::FALSE);
-      return node_factory().NewLiteral(Literal::Type::False);
+      return node_factory().NewBoolLiteral(false);
     }
     case Token::Type::IDENTIFIER: {
-      Consume(Token::Type::IDENTIFIER);
-      return node_factory().NewLiteral(Literal::Type::Identifier);
+      Next();
+      AstString *name = CurrentSymbol();
+      Expression *init = nullptr;
+      if (peek() == Token::Type::COLON) {
+      }
+      if (peek() == Token::Type::EQUAL) {
+        Consume(Token::Type::EQUAL);
+        init = ParseExpression();
+      }
+      return node_factory().NewVariable(name, init);
     }
+#if 0
     case Token::Type::NUMBER: {
       Consume(Token::Type::NUMBER);
       return node_factory().NewLiteral(Literal::Type::Number);
     }
+#endif
     case Token::Type::STRING: {
+      auto *str = node_factory().NewStringLiteral(CurrentSymbol());
       Consume(Token::Type::STRING);
-      return node_factory().NewLiteral(Literal::Type::String);
+      return str;
     }
     case Token::Type::LEFT_PAREN: {
       Consume(Token::Type::LEFT_PAREN);
-      AstNode *expr = ParseExpression();
+      Expression *expr = ParseExpression();
       Consume(Token::Type::RIGHT_PAREN);
       return expr;
     }

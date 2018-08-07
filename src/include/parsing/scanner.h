@@ -21,7 +21,7 @@ class Scanner {
   };
 
   /**
-   * Describes information about a token including it's type, its position in
+   * Describes information about a token including its type, its position in
    * the origin source, and a literal if it has one
    */
   struct TokenDesc {
@@ -41,10 +41,13 @@ class Scanner {
    */
   Token::Type Next();
 
-  Token::Type current_token() const { return curr_.type; }
+  /**
+   * Peek/look at the next token in the stream without consuming it
+   * @return The next token
+   */
   Token::Type peek() { return next_.type; }
-  const SourcePosition &source_position() { return c0_pos_; }
-  uint64_t current_offset() const { return offset_; }
+
+  const std::string &current_literal() const { return curr_.literal; }
 
  private:
   // Scan the next token

@@ -13,7 +13,7 @@ Region::Region(std::string name)
       position_(0),
       end_(0) {}
 
-Region::~Region() { DeleteAll(); }
+Region::~Region() { FreeAll(); }
 
 void *Region::Allocate(std::size_t size) {
   size = SizeWithAlignment(size);
@@ -33,7 +33,7 @@ void *Region::Allocate(std::size_t size) {
   return reinterpret_cast<void *>(result);
 }
 
-void Region::DeleteAll() {
+void Region::FreeAll() {
   Chunk *head = head_;
   while (head != nullptr) {
     Chunk *next = head->next;

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "ast/ast_value.h"
 #include "parsing/token.h"
 #include "util/region.h"
 
@@ -10,7 +11,10 @@ namespace tpl {
 /*
  * Below are all the statement nodes in the AST hierarchy
  */
-#define STATEMENT_NODES(T)
+#define STATEMENT_NODES(T) \
+  T(Block)                 \
+  T(ExpressionStatement)   \
+  T(IfStatement)
 
 /*
  * Below are all the expression nodes in the AST hierarchy
@@ -18,7 +22,8 @@ namespace tpl {
 #define EXPRESSION_NODES(T) \
   T(BinaryOperation)        \
   T(Literal)                \
-  T(UnaryOperation)
+  T(UnaryOperation)         \
+  T(Variable)
 
 /*
  * All possible AST nodes
@@ -38,19 +43,85 @@ class AstNode : public RegionObject {
 
   Type node_type() const { return type_; }
 
-  void *operator new(std::size_t size, Region &region) {
-    return region.Allocate(size);
-  }
-
-  // Use the region-based allocation
-  void *operator new(std::size_t size) = delete;
-
  protected:
   explicit AstNode(Type type) : type_(type) {}
 
  private:
   Type type_;
 };
+
+class Expression;
+class Statement;
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// Statement nodes below
+///
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Base class for all statement nodes
+ */
+class Statement : public AstNode {
+ public:
+  Statement(AstNode::Type type) : AstNode(type) {}
+};
+
+/*
+ * A block of statements
+ */
+class Block : public Statement {
+ public:
+  Block(RegionVector<Statement *> &&statements)
+      : Statement(AstNode::Type::Block), statements_(std::move(statements)) {}
+
+  RegionVector<Statement *> statements() { return statements_; }
+
+ private:
+  RegionVector<Statement *> statements_;
+};
+
+/**
+ * The bridge between statements and expressions
+ */
+class ExpressionStatement : public Statement {
+ public:
+  ExpressionStatement(Expression *expression)
+      : Statement(AstNode::Type::ExpressionStatement),
+        expression_(expression) {}
+
+  Expression *expr() { return expression_; }
+
+ private:
+  Expression *expression_;
+};
+
+/**
+ * An if-then-else statement
+ */
+class IfStatement : public Statement {
+ public:
+  IfStatement(Expression *cond, Statement *then_stmt, Statement *else_stmt)
+      : Statement(AstNode::Type::IfStatement),
+        cond_(cond),
+        then_stmt_(then_stmt),
+        else_stmt_(else_stmt) {}
+
+  Expression *cond() { return cond_; }
+  Statement *then_stmt() { return then_stmt_; }
+  Statement *else_stmt() { return else_stmt_; }
+
+ private:
+  Expression *cond_;
+  Statement *then_stmt_;
+  Statement *else_stmt_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// Expression nodes below
+///
+////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Base class for all expression nodes
@@ -86,15 +157,46 @@ class BinaryOperation : public Expression {
  */
 class Literal : public Expression {
  public:
-  enum class Type : uint8_t { Nil, True, False, Identifier, Number, String };
+  enum class Type : uint8_t { Nil, Boolean, Identifier, Number, String };
 
   Literal(Literal::Type lit_type)
       : Expression(AstNode::Type::Literal), lit_type_(lit_type) {}
 
+  Literal(bool val)
+      : Expression(AstNode::Type::Literal),
+        lit_type_(Literal::Type::Boolean),
+        boolean_(val) {}
+
+  Literal(int64_t val)
+      : Expression(AstNode::Type::Literal),
+        lit_type_(Literal::Type::Number),
+        int_(val) {}
+
+  Literal(double val)
+      : Expression(AstNode::Type::Literal),
+        lit_type_(Literal::Type::Number),
+        double_(val) {}
+  Literal(AstString *str)
+      : Expression(AstNode::Type::Literal),
+        lit_type_(Literal::Type::String),
+        str_(str) {}
+
   Literal::Type type() const { return lit_type_; }
+
+  bool bool_val() const {
+    TPL_ASSERT(type() == Type::Boolean);
+    return boolean_;
+  }
 
  private:
   Type lit_type_;
+
+  union {
+    bool boolean_;
+    int64_t int_;
+    double double_;
+    AstString *str_;
+  };
 };
 
 /**
@@ -111,6 +213,23 @@ class UnaryOperation : public Expression {
  private:
   Token::Type op_;
   AstNode *expr_;
+};
+
+/**
+ *
+ */
+class Variable : public Expression {
+ public:
+  Variable(AstString *name, Expression *init)
+      : Expression(AstNode::Type::Variable), name_(name), init_(init) {}
+
+  AstString *name() { return name_; }
+  bool has_init() { return init_ != nullptr; }
+  Expression *init() { return init_; }
+
+ private:
+  AstString *name_;
+  Expression *init_;
 };
 
 }  // namespace tpl

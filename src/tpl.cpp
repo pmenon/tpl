@@ -26,7 +26,8 @@ static void RunRepl() {
     // Let's parse the source
     tpl::Scanner scanner(input.data(), input.length());
     tpl::AstNodeFactory node_factory(region);
-    tpl::Parser parser(scanner, node_factory);
+    tpl::AstStringsContainer strings_container(region);
+    tpl::Parser parser(scanner, node_factory, strings_container);
 
     // Parse!
     tpl::AstNode *root = parser.Parse();

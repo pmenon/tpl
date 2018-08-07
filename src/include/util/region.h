@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #include "util/macros.h"
 
@@ -33,9 +35,27 @@ class Region {
   void *Allocate(std::size_t size);
 
   /**
+   * Allocate a (contiguous) array of elements of the given type
+   *
+   * @tparam T The type of each element in the array
+   * @param num_elems The number of requested elements in the array
+   * @return
+   */
+  template <typename T>
+  T *AllocateArray(std::size_t num_elems){
+    return static_cast<T *>(Allocate(num_elems * sizeof(T)));
+  }
+
+  /**
    * Free all allocated objects in one (quick) fell swoop
    */
-  void DeleteAll();
+  void FreeAll();
+
+  //////////////////////////////////////////////////////////////////////////////
+  ///
+  /// Simple accessors
+  ///
+  //////////////////////////////////////////////////////////////////////////////
 
   const std::string &name() const { return name_; }
   uint64_t allocated() const { return allocated_; }
@@ -113,6 +133,10 @@ class Region {
  */
 class RegionObject {
  public:
+  // Region objects should always be allocated from and release a region
+  void *operator new(std::size_t size) = delete;
+  void operator delete(void *ptr) = delete;
+
   void *operator new(std::size_t size, Region &region) {
     return region.Allocate(size);
   }
@@ -120,13 +144,36 @@ class RegionObject {
   /*
    * Objects from a Region shouldn't be delete individually. They'll be deleted
    * when the region is destroyed. You can invoke this behavior manually by
-   * calling Region::DeleteAll().
+   * calling Region::FreeAll().
    */
-
-  void operator delete(UNUSED void *ptr) { UNREACHABLE(); };
   void operator delete(UNUSED void *ptr, UNUSED Region &region) {
     UNREACHABLE();
   };
 };
+
+/**
+ *
+ * @tparam T
+ */
+template <typename T>
+class RegionAllocator {
+ public:
+  using value_type = T;
+
+  RegionAllocator(Region &region) : region_(region) {}
+
+  template <typename U>
+  RegionAllocator(RegionAllocator<U> &other) : region_(other.region_) {}
+
+  T *allocate(std::size_t n) { return static_cast<T *>(region_.Allocate(n)); }
+
+  void deallocate(UNUSED T *ptr, UNUSED std::size_t n) {}
+
+ private:
+  Region &region_;
+};
+
+template <typename T>
+using RegionVector = std::vector<T, RegionAllocator<T>>;
 
 }  // namespace tpl
