@@ -47,6 +47,7 @@ void PrettyPrint::VisitLiteral(Literal *node) {
       PrintString(node->bool_val() ? "'true'" : "'false'");
     }
     case Literal::Type::Number: {
+      PrintString(std::to_string(node->double_val()));
       break;
     }
     case Literal::Type::String: {

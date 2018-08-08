@@ -34,9 +34,7 @@ class AstNodeFactory {
 
   Literal *NewBoolLiteral(bool val) { return new (region_) Literal(val); }
 
-#if 0
-  Literal *NewNumLiteral(AstString *str) { return (region_) Literal()}
-#endif
+  Literal *NewNumLiteral(double val) { return new (region_) Literal(val); }
 
   Literal *NewStringLiteral(AstString *str) {
     return new (region_) Literal(str);

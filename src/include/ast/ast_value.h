@@ -41,6 +41,10 @@ class AstString : public RegionObject {
   uint32_t hash_;
 };
 
+class AstNumber : public RegionObject {
+
+};
+
 class AstStringsContainer {
  public:
   AstStringsContainer(Region &region)

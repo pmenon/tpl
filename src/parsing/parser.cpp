@@ -27,7 +27,7 @@ Statement *Parser::ParseBlock() {
     statements.emplace_back(stmt);
   }
 
-  // Each the right brace
+  // Eat the right brace
   Expect(Token::Type::RIGHT_BRACE);
 
   return node_factory().NewBlock(std::move(statements));
@@ -101,8 +101,7 @@ Expression *Parser::ParsePrimaryExpression() {
   //  String
   // '(' Expression ')'
 
-  Token::Type token = peek();
-  switch (token) {
+  switch (peek()) {
     case Token::Type::NIL: {
       Consume(Token::Type::NIL);
       return node_factory().NewNilLiteral();
@@ -120,12 +119,12 @@ Expression *Parser::ParsePrimaryExpression() {
       AstString *name = GetSymbol();
       return node_factory().NewVariable(name, nullptr);
     }
-#if 0
     case Token::Type::NUMBER: {
+      // TODO: Fix me
       Consume(Token::Type::NUMBER);
-      return node_factory().NewLiteral(Literal::Type::Number);
+      double val = std::stod(scanner().current_literal());
+      return node_factory().NewNumLiteral(val);
     }
-#endif
     case Token::Type::STRING: {
       Next();
       auto *str = node_factory().NewStringLiteral(GetSymbol());

@@ -190,7 +190,15 @@ class Literal : public Expression {
     return boolean_;
   }
 
-  const AstString *raw_string() const { return str_; }
+  double double_val() const {
+    TPL_ASSERT(type() == Type::Number);
+    return double_;
+  }
+
+  const AstString *raw_string() const {
+    TPL_ASSERT(type() == Type::String);
+    return str_;
+  }
 
  private:
   Type lit_type_;
