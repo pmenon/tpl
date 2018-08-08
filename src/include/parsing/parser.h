@@ -52,7 +52,7 @@ class Parser {
   }
 
   // Get the current symbol as an AST string
-  AstString *CurrentSymbol() {
+  AstString *GetSymbol() {
     const std::string &literal = scanner().current_literal();
     return strings_container().GetAstString(literal);
   }

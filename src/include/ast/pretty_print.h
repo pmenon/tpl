@@ -26,8 +26,18 @@ class PrettyPrint : public AstVisitor<PrettyPrint> {
 
  private:
   void BeginVisit() { result_.append("("); }
+
   void EndVisit() { result_.append(")"); }
-  void MarkToken(Token::Type type) { result_.append(Token::String(type)); }
+
+  void PrintToken(Token::Type type) { result_.append(Token::String(type)); }
+
+  void PrintString(const std::string &str) {
+    result_.append(str);
+  }
+
+  void PrintString(const AstString *str) {
+    result_.append("'").append(str->bytes(), str->length()).append("'");
+  }
 
  private:
   AstNode *root_;

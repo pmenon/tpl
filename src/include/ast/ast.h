@@ -5,6 +5,7 @@
 #include "ast/ast_value.h"
 #include "parsing/token.h"
 #include "util/region.h"
+#include "util/region_containers.h"
 
 namespace tpl {
 
@@ -72,13 +73,13 @@ class Statement : public AstNode {
  */
 class Block : public Statement {
  public:
-  Block(RegionVector<Statement *> &&statements)
+  Block(util::RegionVector<Statement *> &&statements)
       : Statement(AstNode::Type::Block), statements_(std::move(statements)) {}
 
-  RegionVector<Statement *> statements() { return statements_; }
+  util::RegionVector<Statement *> statements() { return statements_; }
 
  private:
-  RegionVector<Statement *> statements_;
+  util::RegionVector<Statement *> statements_;
 };
 
 /**
@@ -157,7 +158,7 @@ class BinaryOperation : public Expression {
  */
 class Literal : public Expression {
  public:
-  enum class Type : uint8_t { Nil, Boolean, Identifier, Number, String };
+  enum class Type : uint8_t { Nil, Boolean, Number, String };
 
   Literal(Literal::Type lit_type)
       : Expression(AstNode::Type::Literal), lit_type_(lit_type) {}
@@ -176,6 +177,7 @@ class Literal : public Expression {
       : Expression(AstNode::Type::Literal),
         lit_type_(Literal::Type::Number),
         double_(val) {}
+
   Literal(AstString *str)
       : Expression(AstNode::Type::Literal),
         lit_type_(Literal::Type::String),
@@ -187,6 +189,8 @@ class Literal : public Expression {
     TPL_ASSERT(type() == Type::Boolean);
     return boolean_;
   }
+
+  const AstString *raw_string() const { return str_; }
 
  private:
   Type lit_type_;

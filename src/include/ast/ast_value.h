@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstring>
 
+#include "util/hash.h"
 #include "util/hashmap.h"
 #include "util/region.h"
 
@@ -11,7 +12,10 @@ namespace tpl {
 class AstString : public RegionObject {
  public:
   AstString(const char *bytes, uint32_t len, uint32_t hash)
-      : bytes_(bytes), len_(len), hash_(hash) {}
+      : bytes_(bytes), len_(len), hash_(hash) {
+    TPL_ASSERT(bytes != nullptr);
+    TPL_ASSERT(len > 0);
+  }
 
   const char *bytes() const { return bytes_; }
   uint32_t length() const { return len_; }
@@ -43,10 +47,10 @@ class AstStringsContainer {
       : region_(region), string_table_(AstString::Compare) {}
 
   AstString *GetAstString(const char *bytes, uint32_t len) {
-    const uint32_t hash = 1;
+    const uint32_t hash = util::Hasher::Hash(bytes, len);
+    AstString key(bytes, len, hash);
 
-    AstString tmp(bytes, len, hash);
-    auto *entry = string_table_.LookupOrInsert(&tmp, tmp.hash_val());
+    auto *entry = string_table_.LookupOrInsert(&key, key.hash_val());
     if (entry->value == nullptr) {
       // The entry is new, let's copy over the bytes into the region
       auto *copy = region_.AllocateArray<char>(len);

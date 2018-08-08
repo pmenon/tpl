@@ -32,7 +32,7 @@ class Region {
    * @param size The number of bytes to allocate
    * @return A pointer to the start of the allocated space
    */
-  void *Allocate(std::size_t size);
+  void *Allocate(size_t size);
 
   /**
    * Allocate a (contiguous) array of elements of the given type
@@ -42,7 +42,7 @@ class Region {
    * @return
    */
   template <typename T>
-  T *AllocateArray(std::size_t num_elems){
+  T *AllocateArray(size_t num_elems) {
     return static_cast<T *>(Allocate(num_elems * sizeof(T)));
   }
 
@@ -68,10 +68,10 @@ class Region {
 
  private:
   // Expand the region
-  uintptr_t Expand(std::size_t requested);
+  uintptr_t Expand(size_t requested);
 
   // Round up the given requested size to one that retains byte-alignment
-  std::size_t SizeWithAlignment(std::size_t size) const {
+  size_t SizeWithAlignment(size_t size) const {
     return ((size + kByteAlignment - 1) & (-kByteAlignment));
   }
 
@@ -103,20 +103,20 @@ class Region {
   static const uint32_t kByteAlignment = 8;
 
   // Min chunk allocation is 8KB
-  static const std::size_t kMinChunkAllocation = 8 * 1024;
+  static const size_t kMinChunkAllocation = 8 * 1024;
 
   // Max chunk allocation is 1MB
-  static const std::size_t kMaxChunkAllocation = 1 * 1024 * 1024;
+  static const size_t kMaxChunkAllocation = 1 * 1024 * 1024;
 
   // The name of the region
   const std::string name_;
 
   // The number of bytes allocated by this region
-  std::size_t allocated_;
+  size_t allocated_;
 
   // The total number of chunk bytes. This may include bytes not yet given out
   // by the region
-  std::size_t chunk_bytes_allocated_;
+  size_t chunk_bytes_allocated_;
 
   // The head of the chunk list
   Chunk *head_;
@@ -134,15 +134,15 @@ class Region {
 class RegionObject {
  public:
   // Region objects should always be allocated from and release a region
-  void *operator new(std::size_t size) = delete;
+  void *operator new(size_t size) = delete;
   void operator delete(void *ptr) = delete;
 
-  void *operator new(std::size_t size, Region &region) {
+  void *operator new(size_t size, Region &region) {
     return region.Allocate(size);
   }
 
   /*
-   * Objects from a Region shouldn't be delete individually. They'll be deleted
+   * Objects from a Region shouldn't be deleted individually. They'll be deleted
    * when the region is destroyed. You can invoke this behavior manually by
    * calling Region::FreeAll().
    */
@@ -150,30 +150,5 @@ class RegionObject {
     UNREACHABLE();
   };
 };
-
-/**
- *
- * @tparam T
- */
-template <typename T>
-class RegionAllocator {
- public:
-  using value_type = T;
-
-  RegionAllocator(Region &region) : region_(region) {}
-
-  template <typename U>
-  RegionAllocator(RegionAllocator<U> &other) : region_(other.region_) {}
-
-  T *allocate(std::size_t n) { return static_cast<T *>(region_.Allocate(n)); }
-
-  void deallocate(UNUSED T *ptr, UNUSED std::size_t n) {}
-
- private:
-  Region &region_;
-};
-
-template <typename T>
-using RegionVector = std::vector<T, RegionAllocator<T>>;
 
 }  // namespace tpl

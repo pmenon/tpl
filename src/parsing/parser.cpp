@@ -19,7 +19,7 @@ Statement *Parser::ParseBlock() {
   Expect(Token::Type::LEFT_BRACE);
 
   // Where we store all the statements in the block
-  RegionVector<Statement *> statements(node_factory().region());
+  util::RegionVector<Statement *> statements(node_factory().region());
 
   // Loop while we don't see the right brace
   while (peek() != Token::Type::RIGHT_BRACE && peek() != Token::Type::EOS) {
@@ -117,15 +117,8 @@ Expression *Parser::ParsePrimaryExpression() {
     }
     case Token::Type::IDENTIFIER: {
       Next();
-      AstString *name = CurrentSymbol();
-      Expression *init = nullptr;
-      if (peek() == Token::Type::COLON) {
-      }
-      if (peek() == Token::Type::EQUAL) {
-        Consume(Token::Type::EQUAL);
-        init = ParseExpression();
-      }
-      return node_factory().NewVariable(name, init);
+      AstString *name = GetSymbol();
+      return node_factory().NewVariable(name, nullptr);
     }
 #if 0
     case Token::Type::NUMBER: {
@@ -134,8 +127,8 @@ Expression *Parser::ParsePrimaryExpression() {
     }
 #endif
     case Token::Type::STRING: {
-      auto *str = node_factory().NewStringLiteral(CurrentSymbol());
-      Consume(Token::Type::STRING);
+      Next();
+      auto *str = node_factory().NewStringLiteral(GetSymbol());
       return str;
     }
     case Token::Type::LEFT_PAREN: {

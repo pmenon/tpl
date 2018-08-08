@@ -21,7 +21,7 @@ class AstNodeFactory {
     return new (region_) ExpressionStatement(expression);
   }
 
-  Block *NewBlock(RegionVector<Statement *> &&statements) {
+  Block *NewBlock(util::RegionVector<Statement *> &&statements) {
     return new (region_) Block(std::move(statements));
   }
 

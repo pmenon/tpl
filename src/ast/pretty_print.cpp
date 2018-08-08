@@ -13,23 +13,26 @@ void PrettyPrint::VisitExpressionStatement(ExpressionStatement *node) {
 
 void PrettyPrint::VisitIfStatement(IfStatement *node) {
   BeginVisit();
-  result_.append("if ");
+
+  PrintString("if ");
   Visit(node->cond());
-  result_.append(" then ");
+  PrintString(" then ");
   Visit(node->then_stmt());
+
   if (node->else_stmt() != nullptr) {
-    result_.append(" else ");
+    PrintString(" else ");
     Visit(node->else_stmt());
   }
+
   EndVisit();
 }
 
 void PrettyPrint::VisitBinaryOperation(BinaryOperation *node) {
   BeginVisit();
-  MarkToken(node->op());
-  result_.append(" ");
+  PrintToken(node->op());
+  PrintString(" ");
   Visit(node->left());
-  result_.append(" ");
+  PrintString(" ");
   Visit(node->right());
   EndVisit();
 }
@@ -37,18 +40,25 @@ void PrettyPrint::VisitBinaryOperation(BinaryOperation *node) {
 void PrettyPrint::VisitLiteral(Literal *node) {
   switch (node->type()) {
     case Literal::Type::Nil: {
-      result_.append("nil");
+      PrintString("nil");
       break;
     }
     case Literal::Type::Boolean: {
-      result_.append(node->bool_val() ? "'true'" : "'false'");
+      PrintString(node->bool_val() ? "'true'" : "'false'");
+    }
+    case Literal::Type::Number: {
+      break;
+    }
+    case Literal::Type::String: {
+      PrintString(node->raw_string());
+      break;
     }
   }
 }
 
 void PrettyPrint::VisitUnaryOperation(UnaryOperation *node) {
   BeginVisit();
-  MarkToken(node->op());
+  PrintToken(node->op());
   result_.append(" ");
   Visit(node->expr());
   EndVisit();
@@ -56,7 +66,8 @@ void PrettyPrint::VisitUnaryOperation(UnaryOperation *node) {
 
 void PrettyPrint::VisitVariable(Variable *node) {
   BeginVisit();
-  result_.append("var ");
+  PrintString("var ");
+  PrintString(node->name());
   if (node->has_init()) {
     Visit(node->init());
   }
