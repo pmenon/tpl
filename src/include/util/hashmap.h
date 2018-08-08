@@ -64,13 +64,21 @@ class HashMap {
   // associated with the key. If the key doesn't exist, return null.
   Value Remove(const Key &key, uint32_t hash);
 
+  // Iteration
+  using Iterator = Entry *;
+  using ConstIterator = const Entry *;
+  Iterator begin() { return map_; }
+  ConstIterator begin() const { return map_; }
+  Iterator end() { return map_ + capacity_; }
+  ConstIterator end() const { return map_ + capacity_; }
+
   //////////////////////////////////////////////////////////////////////////////
   ///
   /// Accessors
   ///
   //////////////////////////////////////////////////////////////////////////////
 
-  uint64_t occupied() const { return occupied_; }
+  uint64_t occupancy() const { return occupancy_; }
 
   uint64_t occupancy_threshold() const { return occupancy_threshold_; }
 
@@ -92,7 +100,7 @@ class HashMap {
 
  private:
   Entry *map_;
-  uint64_t occupied_;
+  uint64_t occupancy_;
   uint64_t occupancy_threshold_;
   uint64_t capacity_;
 
@@ -107,7 +115,7 @@ class HashMap {
 
 template <typename Key, typename Value, typename MatchFunc>
 HashMap<Key, Value, MatchFunc>::HashMap(uint32_t capacity, MatchFunc match)
-    : map_(nullptr), occupied_(0), match_(match) {
+    : map_(nullptr), occupancy_(0), match_(match) {
   Initialize(capacity);
 }
 
@@ -136,7 +144,7 @@ template <typename Key, typename Value, typename MatchFunc>
 inline typename HashMap<Key, Value, MatchFunc>::Entry *
 HashMap<Key, Value, MatchFunc>::Probe(const Key &key, uint32_t hash) const {
   // This assertion ensures we quit the loop below
-  TPL_ASSERT(occupied_ < capacity_);
+  TPL_ASSERT(occupancy_ < capacity_);
 
   uint64_t idx = (hash & (capacity_ - 1));
 
@@ -155,9 +163,9 @@ HashMap<Key, Value, MatchFunc>::FillEntry(HashMap::Entry *entry, const Key &key,
   TPL_ASSERT(!entry->occupied());
 
   new (entry) Entry(key, val, hash);
-  occupied_++;
+  occupancy_++;
 
-  if (occupied_ > occupancy_threshold_) {
+  if (occupancy_ > occupancy_threshold_) {
     Resize();
 
     // TODO: We can avoid this re-probe if we track position during resizing
@@ -170,7 +178,7 @@ HashMap<Key, Value, MatchFunc>::FillEntry(HashMap::Entry *entry, const Key &key,
 template <typename Key, typename Value, typename MatchFunc>
 void HashMap<Key, Value, MatchFunc>::Resize() {
   Entry *old = map_;
-  uint64_t occ = occupied_;
+  uint64_t occ = occupancy_;
 
   // Initialize new map with double the capacity
   Initialize(capacity_ * 2);
@@ -219,13 +227,37 @@ HashMap<Key, Value, MatchFunc>::Insert(const Key &key, const Value &val,
 template <typename Key, typename Value, typename MatchFunc>
 inline Value HashMap<Key, Value, MatchFunc>::Remove(const Key &key,
                                                     uint32_t hash) {
-  Entry *entry = Probe(key, hash);
-  if (!entry->occupied()) {
+  Entry *a = Probe(key, hash);
+  if (!a->occupied()) {
     return nullptr;
   }
 
-  // TODO
-  TPL_ASSERT(false);
+  Value val = a->value;
+
+  // Deletion logic from: https://en.wikipedia.org/wiki/Open_addressing
+
+  Entry *b = a;
+  while (true) {
+    b = b + 1;
+    if (b == end()) {
+      b = map_;
+    }
+
+    if (!b->occupied()) {
+      break;
+    }
+
+    Entry *c = map_ + (b->hash & (capacity_ - 1));
+
+    if ((a < b && (a <= c || b < c)) || (a > b && (c <= a && c > b))) {
+      *a = *b;
+      a = b;
+    }
+  }
+
+  a->clear();
+  occupancy_--;
+  return val;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
