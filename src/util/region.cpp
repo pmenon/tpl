@@ -15,7 +15,7 @@ Region::Region(std::string name)
 
 Region::~Region() { FreeAll(); }
 
-void *Region::Allocate(std::size_t size) {
+void *Region::Allocate(size_t size) {
   size = SizeWithAlignment(size);
 
   uintptr_t result = position_;
@@ -49,8 +49,8 @@ void Region::FreeAll() {
   end_ = 0;
 }
 
-uintptr_t Region::Expand(std::size_t requested) {
-  static constexpr std::size_t kChunkOverhead = sizeof(Chunk);
+uintptr_t Region::Expand(size_t requested) {
+  static constexpr size_t kChunkOverhead = sizeof(Chunk);
 
   /*
    * Each expansion increases the size of the chunk we allocate by 2. But, we
@@ -58,15 +58,15 @@ uintptr_t Region::Expand(std::size_t requested) {
    */
 
   Chunk *head = head_;
-  const std::size_t prev_size = (head == nullptr ? 0 : head->size);
-  const std::size_t new_size_no_overhead = (requested + (prev_size * 2));
-  std::size_t new_size = kChunkOverhead + new_size_no_overhead;
+  const size_t prev_size = (head == nullptr ? 0 : head->size);
+  const size_t new_size_no_overhead = (requested + (prev_size * 2));
+  size_t new_size = kChunkOverhead + new_size_no_overhead;
 
   if (new_size < kMinChunkAllocation) {
     new_size = kMinChunkAllocation;
   } else if (new_size > kMaxChunkAllocation) {
-    const std::size_t min_new_size = kChunkOverhead + requested;
-    const std::size_t max_alloc = kMaxChunkAllocation;
+    const size_t min_new_size = kChunkOverhead + requested;
+    const size_t max_alloc = kMaxChunkAllocation;
     new_size = std::max(min_new_size, max_alloc);
   }
 
