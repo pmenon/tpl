@@ -22,6 +22,7 @@ namespace tpl {
  */
 #define EXPRESSION_NODES(T) \
   T(BinaryOperation)        \
+  T(Call)                   \
   T(Literal)                \
   T(UnaryOperation)         \
   T(Variable)
@@ -130,6 +131,19 @@ class IfStatement : public Statement {
 class Expression : public AstNode {
  public:
   Expression(AstNode::Type type) : AstNode(type) {}
+};
+
+class Call : public Expression {
+ public:
+  Call(Expression *expr, util::RegionVector<Expression *> &&args)
+      : Expression(AstNode::Type::Call), expr_(expr), args_(std::move(args)) {}
+
+  Expression *expression() { return expr_; }
+  util::RegionVector<Expression *> &arguments() { return args_; }
+
+ private:
+  Expression *expr_;
+  util::RegionVector<Expression *> args_;
 };
 
 /**

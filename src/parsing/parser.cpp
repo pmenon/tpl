@@ -8,11 +8,32 @@ Parser::Parser(Scanner &scanner, AstNodeFactory &node_factory,
       node_factory_(node_factory),
       strings_container_(strings_container) {}
 
-AstNode *Parser::Parse() { return ParseExpression(); }
+AstNode *Parser::Parse() { return ParseStatement(); }
 
 AstNode *Parser::ParseDeclaration() { return ParseFunctionDeclaration(); }
 
-AstNode *Parser::ParseFunctionDeclaration() { return ParseBlock(); }
+AstNode *Parser::ParseFunctionDeclaration() {
+  return ParseBlock();
+}
+
+Statement *Parser::ParseStatement() {
+  switch (peek()) {
+    case Token::Type::LEFT_BRACE: {
+      return ParseBlock();
+    }
+    case Token::Type::IF: {
+      return ParseIfStatement();
+    }
+    default: {
+      return ParseExpressionStatement();
+    }
+  }
+}
+
+Statement *Parser::ParseExpressionStatement() {
+  Expression *expr = ParseExpression();
+  return node_factory().NewExpressionStatement(expr);
+}
 
 Statement *Parser::ParseBlock() {
   // Eat the left brace
@@ -33,9 +54,24 @@ Statement *Parser::ParseBlock() {
   return node_factory().NewBlock(std::move(statements));
 }
 
-Statement *Parser::ParseStatement() {
-  auto *expression = ParseExpression();
-  return node_factory().NewExpressionStatement(expression);
+Statement *Parser::ParseIfStatement() {
+  Expect(Token::Type::IF);
+
+  // Handle condition
+  Expect(Token::Type::LEFT_PAREN);
+  Expression *cond = ParseExpression();
+  Expect(Token::Type::RIGHT_PAREN);
+
+  // Handle 'then' statement
+  Statement *then_stmt = ParseBlock();
+
+  // Handle 'else' statement, if one exists
+  Statement *else_stmt = nullptr;
+  if (Matches(Token::Type::ELSE)) {
+    else_stmt = ParseBlock();
+  }
+
+  return node_factory().NewIfStatement(cond, then_stmt, else_stmt);
 }
 
 Expression *Parser::ParseExpression() {

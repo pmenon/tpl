@@ -25,6 +25,11 @@ class AstNodeFactory {
     return new (region_) Block(std::move(statements));
   }
 
+  IfStatement *NewIfStatement(Expression *cond, Statement *then_stmt,
+                              Statement *else_stmt) {
+    return new (region_) IfStatement(cond, then_stmt, else_stmt);
+  }
+
   BinaryOperation *NewBinaryOperation(Token::Type op, AstNode *left,
                                       AstNode *right) {
     return new (region_) BinaryOperation(op, left, right);

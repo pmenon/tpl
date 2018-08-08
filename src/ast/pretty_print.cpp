@@ -27,6 +27,21 @@ void PrettyPrint::VisitIfStatement(IfStatement *node) {
   EndVisit();
 }
 
+void PrettyPrint::VisitCall(Call *node) {
+  PrintString("call ");
+  Visit(node->expression());
+  PrintString("(");
+
+  bool first = true;
+  for (auto *expr : node->arguments()) {
+    if (!first) PrintString(", ");
+    first = false;
+    Visit(expr);
+  }
+
+  PrintString(")");
+}
+
 void PrettyPrint::VisitBinaryOperation(BinaryOperation *node) {
   BeginVisit();
   PrintToken(node->op());

@@ -12,7 +12,7 @@ class Parser {
   Parser(Scanner &scanner, AstNodeFactory &node_factory,
          AstStringsContainer &strings_container);
 
-  /*
+  /**
    * Parse and generate an abstract syntax tree from the input TPL source code
    */
   AstNode *Parse();
@@ -51,6 +51,16 @@ class Parser {
     }
   }
 
+  bool Matches(Token::Type expected) {
+    if (peek() != expected) {
+      return false;
+    }
+
+    Consume(expected);
+
+    return true;
+  }
+
   // Get the current symbol as an AST string
   AstString *GetSymbol() {
     const std::string &literal = scanner().current_literal();
@@ -67,9 +77,13 @@ class Parser {
 
   AstNode *ParseFunctionDeclaration();
 
+  Statement *ParseStatement();
+
+  Statement *ParseExpressionStatement();
+
   Statement *ParseBlock();
 
-  Statement *ParseStatement();
+  Statement *ParseIfStatement();
 
   Expression *ParseExpression();
 
