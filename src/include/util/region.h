@@ -151,4 +151,58 @@ class RegionObject {
   };
 };
 
+template <typename T>
+class RegionPtr {
+ public:
+  /// Regular constructors
+
+  constexpr RegionPtr() noexcept : ptr_(nullptr) {}
+  explicit RegionPtr(T *ptr) noexcept : ptr_(ptr) {}
+
+  /// Move constructors
+
+  RegionPtr(const RegionPtr &other) = delete;
+  RegionPtr(RegionPtr &&other) noexcept : ptr_(other.release()) {}
+
+  template <typename U,
+            typename = std::enable_if_t<std::is_convertible_v<U, T>>>
+  RegionPtr(RegionPtr<U> &&other) noexcept : ptr_(other.release()) {}
+
+  /// Assignment
+
+  RegionPtr &operator=(const RegionPtr &&other) = delete;
+  RegionPtr &operator=(RegionPtr &&other) noexcept {
+    ptr_ = other.release();
+    return *this;
+  }
+
+  template <typename U,
+            typename = std::enable_if_t<std::is_convertible_v<U, T>>>
+  RegionPtr &operator=(RegionPtr<U> &&other) noexcept {
+    ptr_ = other.release();
+    return *this;
+  }
+
+  /// Public API
+
+  T *get() const noexcept { return ptr_; }
+
+  T *release() {
+    auto *tmp = ptr_;
+    ptr_ = nullptr;
+    return tmp;
+  }
+
+  T *operator->() const noexcept { return get(); }
+
+  T &operator*() const { return *ptr_; }
+
+  explicit operator bool() const noexcept {
+    return get() != nullptr;
+  }
+
+ private:
+  T *ptr_;
+};
+
 }  // namespace tpl
