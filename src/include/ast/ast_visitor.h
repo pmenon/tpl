@@ -27,10 +27,10 @@ class AstVisitor {
   Subclass *impl() { return reinterpret_cast<Subclass *>(this); }
 };
 
-#define GEN_VISIT_CASE(NodeType)                            \
-  case AstNode::Type::NodeType: {                           \
-    impl()->Visit##NodeType(static_cast<NodeType *>(node)); \
-    break;                                                  \
+#define GEN_VISIT_CASE(type)                        \
+  case AstNode::NodeType::type: {                   \
+    impl()->Visit##type(static_cast<type *>(node)); \
+    break;                                          \
   }
 
 #define GEN_VISIT_METHOD                                     \

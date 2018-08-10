@@ -16,7 +16,7 @@ class PrettyPrint : public AstVisitor<PrettyPrint> {
   }
 
   // Declare all node visit methods here
-#define DECLARE_VISIT_METHOD(NodeType) void Visit##NodeType(NodeType *node);
+#define DECLARE_VISIT_METHOD(type) void Visit##type(type *node);
 
   AST_NODES(DECLARE_VISIT_METHOD)
 #undef DECLARE_VISIT_METHOD
@@ -31,9 +31,7 @@ class PrettyPrint : public AstVisitor<PrettyPrint> {
 
   void PrintToken(Token::Type type) { result_.append(Token::String(type)); }
 
-  void PrintString(const std::string &str) {
-    result_.append(str);
-  }
+  void PrintString(const std::string &str) { result_.append(str); }
 
   void PrintString(const AstString *str) {
     result_.append("'").append(str->bytes(), str->length()).append("'");

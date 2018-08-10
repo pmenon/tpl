@@ -2,11 +2,29 @@
 
 namespace tpl {
 
-void PrettyPrint::VisitBlock(Block *node) {
+void PrettyPrint::VisitFunctionDeclaration(FunctionDeclaration *node) {
+  BeginVisit();
+
+  EndVisit();
+}
+
+void PrettyPrint::VisitVariableDeclaration(VariableDeclaration *node) {
+  BeginVisit();
+  EndVisit();
+}
+
+void PrettyPrint::VisitStructDeclaration(StructDeclaration *node) {}
+
+void PrettyPrint::VisitBlockStatement(BlockStatement *node) {
   for (auto *statement : node->statements()) {
     Visit(statement);
   }
 }
+
+void PrettyPrint::VisitDeclarationStatement(DeclarationStatement *node) {
+
+}
+
 void PrettyPrint::VisitExpressionStatement(ExpressionStatement *node) {
   Visit(node->expr());
 }
@@ -27,9 +45,11 @@ void PrettyPrint::VisitIfStatement(IfStatement *node) {
   EndVisit();
 }
 
-void PrettyPrint::VisitCall(Call *node) {
+void PrettyPrint::VisitReturnStatement(ReturnStatement *node) {}
+
+void PrettyPrint::VisitCallExpression(CallExpression *node) {
   PrintString("call ");
-  Visit(node->expression());
+  Visit(node->function());
   PrintString("(");
 
   bool first = true;
@@ -42,7 +62,7 @@ void PrettyPrint::VisitCall(Call *node) {
   PrintString(")");
 }
 
-void PrettyPrint::VisitBinaryOperation(BinaryOperation *node) {
+void PrettyPrint::VisitBinaryExpression(BinaryExpression *node) {
   BeginVisit();
   PrintToken(node->op());
   PrintString(" ");
@@ -52,27 +72,27 @@ void PrettyPrint::VisitBinaryOperation(BinaryOperation *node) {
   EndVisit();
 }
 
-void PrettyPrint::VisitLiteral(Literal *node) {
+void PrettyPrint::VisitFunctionLiteralExpression(
+    FunctionLiteralExpression *node) {}
+
+void PrettyPrint::VisitLiteralExpression(LiteralExpression *node) {
   switch (node->type()) {
-    case Literal::Type::Nil: {
+    case LiteralExpression::Type::Nil: {
       PrintString("nil");
       break;
     }
-    case Literal::Type::Boolean: {
+    case LiteralExpression::Type::Boolean: {
       PrintString(node->bool_val() ? "'true'" : "'false'");
     }
-    case Literal::Type::Number: {
-      PrintString(std::to_string(node->double_val()));
-      break;
-    }
-    case Literal::Type::String: {
+    case LiteralExpression::Type::Number:
+    case LiteralExpression::Type::String: {
       PrintString(node->raw_string());
       break;
     }
   }
 }
 
-void PrettyPrint::VisitUnaryOperation(UnaryOperation *node) {
+void PrettyPrint::VisitUnaryExpression(UnaryExpression *node) {
   BeginVisit();
   PrintToken(node->op());
   result_.append(" ");
@@ -80,13 +100,9 @@ void PrettyPrint::VisitUnaryOperation(UnaryOperation *node) {
   EndVisit();
 }
 
-void PrettyPrint::VisitVariable(Variable *node) {
+void PrettyPrint::VisitVarExpression(VarExpression *node) {
   BeginVisit();
-  PrintString("var ");
   PrintString(node->name());
-  if (node->has_init()) {
-    Visit(node->init());
-  }
   EndVisit();
 }
 

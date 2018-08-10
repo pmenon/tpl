@@ -3,6 +3,7 @@
 #include "ast/ast.h"
 #include "ast/ast_node_factory.h"
 #include "ast/ast_value.h"
+#include "ast/scope.h"
 #include "parsing/scanner.h"
 
 namespace tpl {
@@ -27,7 +28,11 @@ class Parser {
 
   AstNodeFactory &node_factory() { return node_factory_; }
 
+  Region &region() { return node_factory().region(); }
+
   AstStringsContainer &strings_container() { return strings_container_; }
+
+  Scope *scope() { return scope_; }
 
  private:
   //////////////////////////////////////////////////////////////////////////////
@@ -75,7 +80,11 @@ class Parser {
 
   AstNode *ParseDeclaration();
 
-  AstNode *ParseFunctionDeclaration();
+  Declaration *ParseFunctionDeclaration();
+
+  Declaration *ParseStructDeclaration();
+
+  Declaration *ParseVariableDeclaration();
 
   Statement *ParseStatement();
 
@@ -93,6 +102,10 @@ class Parser {
 
   Expression *ParsePrimaryExpression();
 
+  FunctionLiteralExpression *ParseFunctionLiteralExpression();
+
+  Type *ParseType();
+
  private:
   // The source code scanner
   Scanner &scanner_;
@@ -102,6 +115,9 @@ class Parser {
 
   // A factory for strings
   AstStringsContainer &strings_container_;
+
+  // The current scope
+  Scope *scope_;
 };
 
 }  // namespace tpl

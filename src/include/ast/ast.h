@@ -9,30 +9,185 @@
 
 namespace tpl {
 
+#define TYPES(T)    \
+  T(ArrayType)      \
+  T(FunctionType)   \
+  T(IdentifierType) \
+  T(PointerType)    \
+  T(StructType)
+
+#define DECLARATION_NODES(T) \
+  T(FunctionDeclaration)     \
+  T(StructDeclaration)       \
+  T(VariableDeclaration)
+
 /*
  * Below are all the statement nodes in the AST hierarchy
  */
 #define STATEMENT_NODES(T) \
-  T(Block)                 \
+  T(BlockStatement)        \
+  T(DeclarationStatement)  \
   T(ExpressionStatement)   \
-  T(IfStatement)
+  T(IfStatement)           \
+  T(ReturnStatement)
 
 /*
  * Below are all the expression nodes in the AST hierarchy
  */
-#define EXPRESSION_NODES(T) \
-  T(BinaryOperation)        \
-  T(Call)                   \
-  T(Literal)                \
-  T(UnaryOperation)         \
-  T(Variable)
+#define EXPRESSION_NODES(T)    \
+  T(BinaryExpression)          \
+  T(CallExpression)            \
+  T(FunctionLiteralExpression) \
+  T(LiteralExpression)         \
+  T(UnaryExpression)           \
+  T(VarExpression)
 
 /*
  * All possible AST nodes
  */
-#define AST_NODES(T) \
-  STATEMENT_NODES(T) \
-  EXPRESSION_NODES(T)
+#define AST_NODES(T)   \
+  DECLARATION_NODES(T) \
+  EXPRESSION_NODES(T)  \
+  STATEMENT_NODES(T)
+
+class Declaration;
+class Expression;
+class Statement;
+
+// Forward declare all nodes
+#define FORWARD_DECLARE(name) class name;
+AST_NODES(FORWARD_DECLARE)
+#undef FORWARD_DECLARE
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// Types
+///
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Base class for all types
+ */
+class Type : public RegionObject {
+ public:
+#define T(type) type,
+  enum Id : uint8_t { TYPES(T) };
+#undef T
+
+  explicit Type(Id type_id) : type_id_(type_id) {}
+
+  Id type_id() const { return type_id_; }
+
+ private:
+  Id type_id_;
+};
+
+class Field : public RegionObject {
+ public:
+  Field(const AstString *name, Type *type) : name_(name), type_(type) {}
+
+  const AstString *name() const { return name_; }
+  Type *type() const { return type_; }
+
+ private:
+  const AstString *name_;
+  Type *type_;
+};
+
+/**
+ * Array type
+ */
+class ArrayType : public Type {
+ public:
+  ArrayType(Type *elem_type, Expression *len)
+      : Type(Type::Id::ArrayType), elem_type_(elem_type), len_(len) {}
+
+  Type *element_type() const { return elem_type_; }
+  Expression *length() const { return len_; }
+
+ private:
+  Type *elem_type_;
+  Expression *len_;
+};
+
+/**
+ * Function type
+ */
+class FunctionType : public Type {
+ public:
+  FunctionType(util::RegionVector<Field *> &&param_types, Type *ret_type)
+      : Type(Type::Id::FunctionType),
+        param_types_(std::move(param_types)),
+        ret_type_(ret_type) {}
+
+  const util::RegionVector<Field *> parameter_types() const {
+    return param_types_;
+  }
+
+  const Type *return_type() const { return ret_type_; }
+
+ private:
+  util::RegionVector<Field *> param_types_;
+  Type *ret_type_;
+};
+
+/**
+ * An identifier for a type e.g., i32, bool, or custom struct types
+ */
+class IdentifierType : public Type {
+ public:
+  /// Constructor when initializing an unbound identifier type
+  explicit IdentifierType(const AstString *name)
+      : Type(Type::Id::IdentifierType), name_(name), declaration_(nullptr) {}
+
+  IdentifierType(const AstString *name, Declaration *declaration)
+      : Type(Type::Id::IdentifierType),
+        name_(name),
+        declaration_(declaration) {}
+
+  const AstString *name() const { return name_; }
+  Declaration *declaration() const { return declaration_; }
+
+  void BindTo(Declaration *declaration) { declaration_ = declaration; }
+
+ private:
+  const AstString *name_;
+  Declaration *declaration_;
+};
+
+/**
+ * Pointer type
+ */
+class PointerType : public Type {
+ public:
+  explicit PointerType(Type *pointee_type)
+      : Type(Type::Id::PointerType), pointee_type_(pointee_type) {}
+
+  Type *pointee_type() const { return pointee_type_; }
+
+ private:
+  Type *pointee_type_;
+};
+
+/**
+ * Struct type
+ */
+class StructType : public Type {
+ public:
+  StructType(util::RegionVector<Field *> &&fields)
+      : Type(Type::Id::StructType), fields_(std::move(fields)) {}
+
+  const util::RegionVector<Field *> &fields() const { return fields_; }
+
+ private:
+  util::RegionVector<Field *> fields_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// AST Nodes
+///
+////////////////////////////////////////////////////////////////////////////////
 
 /**
  * The base class for all AST nodes
@@ -40,24 +195,85 @@ namespace tpl {
 class AstNode : public RegionObject {
  public:
 #define T(type) type,
-  enum class Type : uint8_t { AST_NODES(T) };
+  enum class NodeType : uint8_t { AST_NODES(T) };
 #undef T
 
-  Type node_type() const { return type_; }
+  NodeType node_type() const { return type_; }
 
  protected:
-  explicit AstNode(Type type) : type_(type) {}
+  explicit AstNode(NodeType type) : type_(type) {}
 
  private:
-  Type type_;
+  NodeType type_;
 };
-
-class Expression;
-class Statement;
 
 ////////////////////////////////////////////////////////////////////////////////
 ///
-/// Statement nodes below
+/// Declaration nodes
+///
+////////////////////////////////////////////////////////////////////////////////
+
+class Declaration : public AstNode {
+ public:
+  Declaration(AstNode::NodeType type, const AstString *name)
+      : AstNode(type), name_(name) {}
+
+  const AstString *name() const { return name_; }
+
+ private:
+  const AstString *name_;
+};
+
+/**
+ * A function declaration
+ */
+class FunctionDeclaration : public Declaration {
+ public:
+  FunctionDeclaration(const AstString *name, FunctionLiteralExpression *fun)
+      : Declaration(AstNode::NodeType::FunctionDeclaration, name), fun_(fun) {}
+
+  FunctionLiteralExpression *function() const { return fun_; }
+  const FunctionType *type() const;
+
+ private:
+  FunctionLiteralExpression *fun_;
+};
+
+/**
+ * A variable declaration
+ */
+class VariableDeclaration : public Declaration {
+ public:
+  VariableDeclaration(const AstString *name, Type *type, Expression *init)
+      : Declaration(AstNode::NodeType::VariableDeclaration, name),
+        type_(type),
+        init_(init) {}
+
+  Type *type() const { return type_; }
+  Expression *initial() const { return init_; }
+
+ private:
+  Type *type_;
+  Expression *init_;
+};
+
+/**
+ *
+ */
+class StructDeclaration : public Declaration {
+ public:
+  StructDeclaration(const AstString *name, StructType *type)
+      : Declaration(AstNode::NodeType::StructDeclaration, name), type_(type) {}
+
+  const StructType *type() const { return type_; }
+
+ private:
+  StructType *type_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// Statement nodes
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -66,16 +282,17 @@ class Statement;
  */
 class Statement : public AstNode {
  public:
-  Statement(AstNode::Type type) : AstNode(type) {}
+  explicit Statement(AstNode::NodeType type) : AstNode(type) {}
 };
 
-/*
+/**
  * A block of statements
  */
-class Block : public Statement {
+class BlockStatement : public Statement {
  public:
-  Block(util::RegionVector<Statement *> &&statements)
-      : Statement(AstNode::Type::Block), statements_(std::move(statements)) {}
+  explicit BlockStatement(util::RegionVector<Statement *> &&statements)
+      : Statement(AstNode::NodeType::BlockStatement),
+        statements_(std::move(statements)) {}
 
   util::RegionVector<Statement *> statements() { return statements_; }
 
@@ -84,12 +301,26 @@ class Block : public Statement {
 };
 
 /**
+ * A declaration
+ */
+class DeclarationStatement : public Statement {
+ public:
+  explicit DeclarationStatement(Declaration *decl)
+      : Statement(AstNode::NodeType::DeclarationStatement), decl_(decl) {}
+
+  const Declaration *declaration() const { return decl_; }
+
+ private:
+  Declaration *decl_;
+};
+
+/**
  * The bridge between statements and expressions
  */
 class ExpressionStatement : public Statement {
  public:
-  ExpressionStatement(Expression *expression)
-      : Statement(AstNode::Type::ExpressionStatement),
+  explicit ExpressionStatement(Expression *expression)
+      : Statement(AstNode::NodeType::ExpressionStatement),
         expression_(expression) {}
 
   Expression *expr() { return expression_; }
@@ -104,7 +335,7 @@ class ExpressionStatement : public Statement {
 class IfStatement : public Statement {
  public:
   IfStatement(Expression *cond, Statement *then_stmt, Statement *else_stmt)
-      : Statement(AstNode::Type::IfStatement),
+      : Statement(AstNode::NodeType::IfStatement),
         cond_(cond),
         then_stmt_(then_stmt),
         else_stmt_(else_stmt) {}
@@ -119,9 +350,23 @@ class IfStatement : public Statement {
   Statement *else_stmt_;
 };
 
+/**
+ * A return statement
+ */
+class ReturnStatement : public Statement {
+ public:
+  explicit ReturnStatement(Expression *ret)
+      : Statement(AstNode::NodeType::ReturnStatement), ret_(ret) {}
+
+  Expression *ret() { return ret_; }
+
+ private:
+  Expression *ret_;
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 ///
-/// Expression nodes below
+/// Expression nodes
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -130,29 +375,34 @@ class IfStatement : public Statement {
  */
 class Expression : public AstNode {
  public:
-  Expression(AstNode::Type type) : AstNode(type) {}
+  explicit Expression(AstNode::NodeType type) : AstNode(type) {}
 };
 
-class Call : public Expression {
+/**
+ * A function call expression
+ */
+class CallExpression : public Expression {
  public:
-  Call(Expression *expr, util::RegionVector<Expression *> &&args)
-      : Expression(AstNode::Type::Call), expr_(expr), args_(std::move(args)) {}
+  CallExpression(Expression *fun, util::RegionVector<Expression *> &&args)
+      : Expression(AstNode::NodeType::CallExpression),
+        fun_(fun),
+        args_(std::move(args)) {}
 
-  Expression *expression() { return expr_; }
+  Expression *function() { return fun_; }
   util::RegionVector<Expression *> &arguments() { return args_; }
 
  private:
-  Expression *expr_;
+  Expression *fun_;
   util::RegionVector<Expression *> args_;
 };
 
 /**
  * A binary expression with non-null left and right children and an operator
  */
-class BinaryOperation : public Expression {
+class BinaryExpression : public Expression {
  public:
-  BinaryOperation(Token::Type op, AstNode *left, AstNode *right)
-      : Expression(AstNode::Type::BinaryOperation),
+  BinaryExpression(Token::Type op, AstNode *left, AstNode *right)
+      : Expression(AstNode::NodeType::BinaryExpression),
         op_(op),
         left_(left),
         right_(right) {}
@@ -167,46 +417,47 @@ class BinaryOperation : public Expression {
   AstNode *right_;
 };
 
+class FunctionLiteralExpression : public Expression {
+ public:
+  FunctionLiteralExpression(const AstString *name, FunctionType *type)
+      : Expression(AstNode::NodeType::FunctionLiteralExpression),
+        name_(name),
+        type_(type) {}
+
+  const AstString *name() const { return name_; }
+  const FunctionType *type() const { return type_; }
+
+ private:
+  const AstString *name_;
+  FunctionType *type_;
+};
+
 /**
  * A literal in the original source code
  */
-class Literal : public Expression {
+class LiteralExpression : public Expression {
  public:
   enum class Type : uint8_t { Nil, Boolean, Number, String };
 
-  Literal(Literal::Type lit_type)
-      : Expression(AstNode::Type::Literal), lit_type_(lit_type) {}
+  explicit LiteralExpression()
+      : Expression(AstNode::NodeType::LiteralExpression),
+        lit_type_(LiteralExpression::Type::Nil) {}
 
-  Literal(bool val)
-      : Expression(AstNode::Type::Literal),
-        lit_type_(Literal::Type::Boolean),
+  explicit LiteralExpression(bool val)
+      : Expression(AstNode::NodeType::LiteralExpression),
+        lit_type_(LiteralExpression::Type::Boolean),
         boolean_(val) {}
 
-  Literal(int64_t val)
-      : Expression(AstNode::Type::Literal),
-        lit_type_(Literal::Type::Number),
-        int_(val) {}
-
-  Literal(double val)
-      : Expression(AstNode::Type::Literal),
-        lit_type_(Literal::Type::Number),
-        double_(val) {}
-
-  Literal(AstString *str)
-      : Expression(AstNode::Type::Literal),
-        lit_type_(Literal::Type::String),
+  explicit LiteralExpression(LiteralExpression::Type lit_type, AstString *str)
+      : Expression(AstNode::NodeType::LiteralExpression),
+        lit_type_(lit_type),
         str_(str) {}
 
-  Literal::Type type() const { return lit_type_; }
+  LiteralExpression::Type type() const { return lit_type_; }
 
   bool bool_val() const {
     TPL_ASSERT(type() == Type::Boolean);
     return boolean_;
-  }
-
-  double double_val() const {
-    TPL_ASSERT(type() == Type::Number);
-    return double_;
   }
 
   const AstString *raw_string() const {
@@ -228,10 +479,10 @@ class Literal : public Expression {
 /**
  * A unary expression with a non-null inner expression and an operator
  */
-class UnaryOperation : public Expression {
+class UnaryExpression : public Expression {
  public:
-  UnaryOperation(Token::Type op, AstNode *expr)
-      : Expression(AstNode::Type::UnaryOperation), op_(op), expr_(expr) {}
+  UnaryExpression(Token::Type op, AstNode *expr)
+      : Expression(AstNode::NodeType::UnaryExpression), op_(op), expr_(expr) {}
 
   Token::Type op() { return op_; }
   AstNode *expr() { return expr_; }
@@ -242,20 +493,17 @@ class UnaryOperation : public Expression {
 };
 
 /**
- *
+ * A reference to a variable
  */
-class Variable : public Expression {
+class VarExpression : public Expression {
  public:
-  Variable(AstString *name, Expression *init)
-      : Expression(AstNode::Type::Variable), name_(name), init_(init) {}
+  explicit VarExpression(const AstString *name)
+      : Expression(AstNode::NodeType::VarExpression), name_(name) {}
 
-  AstString *name() { return name_; }
-  bool has_init() { return init_ != nullptr; }
-  Expression *init() { return init_; }
+  const AstString *name() { return name_; }
 
  private:
-  AstString *name_;
-  Expression *init_;
+  const AstString *name_;
 };
 
 }  // namespace tpl

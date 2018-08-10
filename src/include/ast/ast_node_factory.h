@@ -17,12 +17,32 @@ class AstNodeFactory {
 
   Region &region() { return region_; }
 
-  ExpressionStatement *NewExpressionStatement(Expression *expression) {
-    return new (region_) ExpressionStatement(expression);
+  FunctionDeclaration *NewFunctionDeclaration(const AstString *name,
+                                              FunctionLiteralExpression *fun) {
+    return new (region_) FunctionDeclaration(name, fun);
   }
 
-  Block *NewBlock(util::RegionVector<Statement *> &&statements) {
-    return new (region_) Block(std::move(statements));
+  StructDeclaration *NewStructDeclaration(const AstString *name,
+                                          StructType *type) {
+    return new (region_) StructDeclaration(name, type);
+  }
+
+  VariableDeclaration *NewVariableDeclaration(const AstString *name, Type *type,
+                                              Expression *init) {
+    return new (region_) VariableDeclaration(name, type, init);
+  }
+
+  BlockStatement *NewBlockStatement(
+      util::RegionVector<Statement *> &&statements) {
+    return new (region_) BlockStatement(std::move(statements));
+  }
+
+  DeclarationStatement *NewDeclarationStatement(Declaration *decl) {
+    return new (region_) DeclarationStatement(decl);
+  }
+
+  ExpressionStatement *NewExpressionStatement(Expression *expression) {
+    return new (region_) ExpressionStatement(expression);
   }
 
   IfStatement *NewIfStatement(Expression *cond, Statement *then_stmt,
@@ -30,27 +50,39 @@ class AstNodeFactory {
     return new (region_) IfStatement(cond, then_stmt, else_stmt);
   }
 
-  BinaryOperation *NewBinaryOperation(Token::Type op, AstNode *left,
-                                      AstNode *right) {
-    return new (region_) BinaryOperation(op, left, right);
+  ReturnStatement *NewReturnStatement(Expression *ret) {
+    return new (region_) ReturnStatement(ret);
   }
 
-  Literal *NewNilLiteral() { return new (region_) Literal(Literal::Type::Nil); }
-
-  Literal *NewBoolLiteral(bool val) { return new (region_) Literal(val); }
-
-  Literal *NewNumLiteral(double val) { return new (region_) Literal(val); }
-
-  Literal *NewStringLiteral(AstString *str) {
-    return new (region_) Literal(str);
+  BinaryExpression *NewBinaryExpression(Token::Type op, AstNode *left,
+                                        AstNode *right) {
+    return new (region_) BinaryExpression(op, left, right);
   }
 
-  UnaryOperation *NewUnaryOperation(Token::Type op, AstNode *expr) {
-    return new (region_) UnaryOperation(op, expr);
+  LiteralExpression *NewNilLiteral() {
+    return new (region_) LiteralExpression();
   }
 
-  Variable *NewVariable(AstString *name, Expression *init) {
-    return new (region_) Variable(name, init);
+  LiteralExpression *NewBoolLiteral(bool val) {
+    return new (region_) LiteralExpression(val);
+  }
+
+  LiteralExpression *NewNumLiteral(AstString *num) {
+    return new (region_)
+        LiteralExpression(LiteralExpression::Type::Number, num);
+  }
+
+  LiteralExpression *NewStringLiteral(AstString *str) {
+    return new (region_)
+        LiteralExpression(LiteralExpression::Type::String, str);
+  }
+
+  UnaryExpression *NewUnaryExpression(Token::Type op, AstNode *expr) {
+    return new (region_) UnaryExpression(op, expr);
+  }
+
+  VarExpression *NewVarExpression(AstString *name) {
+    return new (region_) VarExpression(name);
   }
 
  private:

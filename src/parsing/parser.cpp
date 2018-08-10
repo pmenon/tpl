@@ -6,17 +6,93 @@ Parser::Parser(Scanner &scanner, AstNodeFactory &node_factory,
                AstStringsContainer &strings_container)
     : scanner_(scanner),
       node_factory_(node_factory),
-      strings_container_(strings_container) {}
+      strings_container_(strings_container),
+      scope_(nullptr) {}
 
-AstNode *Parser::Parse() { return ParseStatement(); }
+AstNode *Parser::Parse() {
+  util::RegionVector<AstNode *> decls(node_factory().region());
 
-AstNode *Parser::ParseDeclaration() { return ParseFunctionDeclaration(); }
+  while (peek() != Token::Type::EOS) {
+    decls.push_back(ParseDeclaration());
+  }
 
-AstNode *Parser::ParseFunctionDeclaration() {
-  return ParseBlock();
+  return decls[0];
+}
+
+AstNode *Parser::ParseDeclaration() {
+  // At the top-level, we only allow structs and functions
+  switch (peek()) {
+    case Token::Type::STRUCT: {
+      return ParseStructDeclaration();
+    }
+    case Token::Type::FUN: {
+      return ParseFunctionDeclaration();
+    }
+    default: { return nullptr; }
+  }
+}
+
+Declaration *Parser::ParseFunctionDeclaration() {
+  Consume(Token::Type::FUN);
+
+  // The function name
+  Expect(Token::Type::IDENTIFIER);
+  AstString *name = GetSymbol();
+
+  // The function literal
+  FunctionLiteralExpression *fun = ParseFunctionLiteralExpression();
+
+  // Done
+  return node_factory().NewFunctionDeclaration(name, fun);
+}
+
+Declaration *Parser::ParseStructDeclaration() {
+  Consume(Token::Type::STRUCT);
+
+  Expect(Token::Type::IDENTIFIER);
+  AstString *name = GetSymbol();
+
+  Expect(Token::Type::LEFT_BRACE);
+
+  // fields
+  util::RegionVector<Field *> fields(region());
+
+  auto *type = new (region()) StructType(std::move(fields));
+
+  Expect(Token::Type::RIGHT_BRACE);
+
+  return node_factory().NewStructDeclaration(name, type);
+}
+
+Declaration *Parser::ParseVariableDeclaration() {
+  Consume(Token::Type::VAR);
+
+  Expect(Token::Type::IDENTIFIER);
+  AstString *name = GetSymbol();
+
+  Type *type = nullptr;
+
+  if (Matches(Token::Type::COLON)) {
+    type = ParseType();
+  }
+
+  Expression *init = nullptr;
+
+  if (Matches(Token::Type::EQUAL)) {
+    init = ParseExpression();
+  }
+
+  return node_factory().NewVariableDeclaration(name, type, init);
 }
 
 Statement *Parser::ParseStatement() {
+  // Statement ::
+  //   Block
+  //   ExpressionStatement
+  //   ForStatement
+  //   IfStatement
+  //   ReturnStatement
+  //   VariableDeclaration
   switch (peek()) {
     case Token::Type::LEFT_BRACE: {
       return ParseBlock();
@@ -24,9 +100,16 @@ Statement *Parser::ParseStatement() {
     case Token::Type::IF: {
       return ParseIfStatement();
     }
-    default: {
-      return ParseExpressionStatement();
+    case Token::Type::RETURN: {
+      Consume(Token::Type::RETURN);
+      Expression *ret = ParseExpression();
+      return node_factory().NewReturnStatement(ret);
     }
+    case Token::Type::VAR: {
+      Consume(Token::Type::VAR);
+      return node_factory().NewDeclarationStatement(ParseVariableDeclaration());
+    }
+    default: { return ParseExpressionStatement(); }
   }
 }
 
@@ -51,7 +134,7 @@ Statement *Parser::ParseBlock() {
   // Eat the right brace
   Expect(Token::Type::RIGHT_BRACE);
 
-  return node_factory().NewBlock(std::move(statements));
+  return node_factory().NewBlockStatement(std::move(statements));
 }
 
 Statement *Parser::ParseIfStatement() {
@@ -96,7 +179,7 @@ Expression *Parser::ParseBinaryExpression(uint32_t min_prec) {
     while (Token::Precedence(peek()) == prec) {
       Token::Type op = Next();
       AstNode *right = ParseBinaryExpression(prec);
-      left = node_factory().NewBinaryOperation(op, left, right);
+      left = node_factory().NewBinaryExpression(op, left, right);
     }
   }
 
@@ -118,7 +201,7 @@ Expression *Parser::ParseUnaryExpression() {
     case Token::Type::STAR: {
       Token::Type op = Next();
       AstNode *expr = ParseUnaryExpression();
-      return node_factory().NewUnaryOperation(op, expr);
+      return node_factory().NewUnaryExpression(op, expr);
     }
     default:
       break;
@@ -153,27 +236,32 @@ Expression *Parser::ParsePrimaryExpression() {
     case Token::Type::IDENTIFIER: {
       Next();
       AstString *name = GetSymbol();
-      return node_factory().NewVariable(name, nullptr);
+      return node_factory().NewVarExpression(name);
     }
     case Token::Type::NUMBER: {
-      // TODO: Fix me
-      Consume(Token::Type::NUMBER);
-      double val = std::stod(scanner().current_literal());
-      return node_factory().NewNumLiteral(val);
+      Next();
+      return node_factory().NewNumLiteral(GetSymbol());
     }
     case Token::Type::STRING: {
       Next();
-      auto *str = node_factory().NewStringLiteral(GetSymbol());
-      return str;
+      return node_factory().NewStringLiteral(GetSymbol());
     }
     case Token::Type::LEFT_PAREN: {
       Consume(Token::Type::LEFT_PAREN);
       Expression *expr = ParseExpression();
-      Consume(Token::Type::RIGHT_PAREN);
+      Expect(Token::Type::RIGHT_PAREN);
       return expr;
     }
     default: {}
   }
+}
+
+FunctionLiteralExpression *Parser::ParseFunctionLiteralExpression() {
+  return nullptr;
+}
+
+Type *Parser::ParseType() {
+  return nullptr;
 }
 
 }  // namespace tpl
