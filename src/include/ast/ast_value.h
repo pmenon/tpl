@@ -4,32 +4,32 @@
 #include <cstring>
 
 #include "util/hash.h"
-#include "util/hashmap.h"
+#include "util/hash_map.h"
 #include "util/region.h"
 
 namespace tpl {
 
 class AstString : public RegionObject {
  public:
-  AstString(const char *bytes, uint32_t len, uint32_t hash)
-      : bytes_(bytes), len_(len), hash_(hash) {
-    TPL_ASSERT(bytes != nullptr);
-    TPL_ASSERT(len > 0);
-  }
-
   const char *bytes() const { return bytes_; }
   uint32_t length() const { return len_; }
   uint32_t hash_val() const { return hash_; }
 
-  static bool Compare(void *a, void *b) {
-    auto *lhs = static_cast<AstString *>(a);
-    auto *rhs = static_cast<AstString *>(b);
-
+  static bool Compare(const AstString *lhs, const AstString *rhs) {
     if (lhs->length() != rhs->length()) {
       return false;
     }
 
     return (memcmp(lhs->bytes(), rhs->bytes(), lhs->length()) == 0);
+  }
+
+ private:
+  friend class AstStringsContainer;
+
+  AstString(const char *bytes, uint32_t len, uint32_t hash)
+      : bytes_(bytes), len_(len), hash_(hash) {
+    TPL_ASSERT(bytes != nullptr);
+    TPL_ASSERT(len > 0);
   }
 
  private:
@@ -47,8 +47,8 @@ class AstNumber : public RegionObject {
 
 class AstStringsContainer {
  public:
-  AstStringsContainer(Region &region)
-      : region_(region), string_table_(AstString::Compare) {}
+  explicit AstStringsContainer(Region &region)
+      : region_(region), string_table_(CompareString()) {}
 
   AstString *GetAstString(const char *bytes, uint32_t len) {
     const uint32_t hash = util::Hasher::Hash(bytes, len);
@@ -72,7 +72,13 @@ class AstStringsContainer {
  private:
   Region &region_;
 
-  util::SimpleHashMap string_table_;
+  struct CompareString {
+    bool operator()(const AstString *lhs, const AstString *rhs) const noexcept {
+      return AstString::Compare(lhs, rhs);
+    }
+  };
+
+  util::SimpleHashMap<AstString *, void *, CompareString> string_table_;
 };
 
 }  // namespace tpl

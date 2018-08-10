@@ -14,12 +14,17 @@ class RegionAllocator {
  public:
   using value_type = T;
 
-  explicit RegionAllocator(Region &region) : region_(region) {}
-  RegionAllocator(const RegionAllocator &other)
+  explicit RegionAllocator(Region &region) noexcept : region_(region) {}
+
+  RegionAllocator(const RegionAllocator &other) noexcept
       : region_(other.region_) {}
+
   template <typename U>
-  explicit RegionAllocator(const RegionAllocator<U> &other)
+  explicit RegionAllocator(const RegionAllocator<U> &other) noexcept
       : region_(other.region_) {}
+
+  template <typename U>
+  friend class RegionAllocator;
 
   T *allocate(size_t n) { return region_.AllocateArray<T>(n); }
 
