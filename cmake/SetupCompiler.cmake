@@ -12,6 +12,9 @@ endif()
 # ---- Setup initial CXX flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -fPIC -mcx16 -march=native")
 
+# ---- Set no RTTI
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+
 # ---- Set color diagnostics
 if(("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
@@ -40,11 +43,6 @@ set(CXX_FLAGS_DEBUG "-ggdb -O0 -fno-omit-frame-pointer -fno-optimize-sibling-cal
 set(CXX_FLAGS_FASTDEBUG "-ggdb -O1 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 set(CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(CXX_FLAGS_RELWITHDEBINFO "-ggdb -O2 -DNDEBUG")
-
-# if no build build type is specified, default to debug builds
-if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Debug)
-endif(NOT CMAKE_BUILD_TYPE)
 
 string (TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
 
