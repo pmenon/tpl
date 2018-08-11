@@ -2,6 +2,15 @@
 
 namespace tpl {
 
+void PrettyPrint::VisitFile(File *node) {
+  BeginVisit();
+  for (auto *decl : node->declarations()) {
+    Visit(decl);
+    NewLine();
+  }
+  EndVisit();
+}
+
 void PrettyPrint::VisitFunctionDeclaration(FunctionDeclaration *node) {
   BeginVisit();
   PrintString("fun ");

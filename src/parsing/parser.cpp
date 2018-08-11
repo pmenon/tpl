@@ -10,13 +10,13 @@ Parser::Parser(Scanner &scanner, AstNodeFactory &node_factory,
       scope_(nullptr) {}
 
 AstNode *Parser::Parse() {
-  util::RegionVector<AstNode *> decls(region());
+  util::RegionVector<Declaration *> decls(region());
 
   while (peek() != Token::Type::EOS) {
     decls.push_back(ParseDeclaration());
   }
 
-  return decls[0];
+  return node_factory().NewFile(std::move(decls));
 }
 
 Declaration *Parser::ParseDeclaration() {
@@ -199,8 +199,7 @@ Expression *Parser::ParseUnaryExpression() {
   //   '*' UnaryExpression
   //   '&' UnaryExpression
 
-  Token::Type type = peek();
-  switch (type) {
+  switch (peek()) {
     case Token::Type::AMPERSAND:
     case Token::Type::BANG:
     case Token::Type::MINUS:

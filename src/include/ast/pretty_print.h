@@ -37,6 +37,8 @@ class PrettyPrint : public AstVisitor<PrettyPrint> {
     result_.append("'").append(str->bytes(), str->length()).append("'");
   }
 
+  void NewLine() { result_.append("\n"); }
+
  private:
   AstNode *root_;
 

@@ -10,6 +10,11 @@
 namespace tpl {
 
 /*
+ *
+ */
+#define FILE_NODE(T) T(File)
+
+/*
  * All possible declarations
  *
  * If you add a new declaration node to either the beginning or end of the list,
@@ -66,6 +71,7 @@ namespace tpl {
 #define AST_NODES(T)   \
   DECLARATION_NODES(T) \
   EXPRESSION_NODES(T)  \
+  FILE_NODE(T)         \
   STATEMENT_NODES(T)   \
   TYPE_NODES(T)
 
@@ -160,6 +166,24 @@ class AstNode : public RegionObject {
 
  private:
   Kind kind_;
+};
+
+/**
+ *
+ */
+class File : public AstNode {
+ public:
+  explicit File(util::RegionVector<Declaration *> &&decls)
+      : AstNode(Kind::File), decls_(std::move(decls)) {}
+
+  util::RegionVector<Declaration *> &declarations() { return decls_; }
+
+  static bool classof(const AstNode *node) {
+    return node->kind() >= Kind::File;
+  }
+
+ private:
+  util::RegionVector<Declaration *> decls_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
