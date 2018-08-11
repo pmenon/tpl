@@ -59,6 +59,11 @@ class AstNodeFactory {
     return new (region_) BinaryExpression(op, left, right);
   }
 
+  CallExpression *NewCallExpression(Expression *fun,
+                                    util::RegionVector<Expression *> &&args) {
+    return new (region_) CallExpression(fun, std::move(args));
+  }
+
   LiteralExpression *NewNilLiteral() {
     return new (region_) LiteralExpression();
   }

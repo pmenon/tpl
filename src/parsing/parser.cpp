@@ -268,7 +268,7 @@ FunctionLiteralExpression *Parser::ParseFunctionLiteralExpression() {
 
   FunctionType *func_type = ParseFunctionType();
 
-  BlockStatement *body = (BlockStatement *) ParseBlockStatement();
+  BlockStatement *body = ParseBlockStatement()->As<BlockStatement>();
 
   return node_factory().NewFunctionLiteral(func_type, body);
 }

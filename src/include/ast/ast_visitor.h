@@ -15,8 +15,6 @@ namespace tpl {
  * }
  *
  * All AST node visitations will get forwarded to the derived class.
- *
- * @tparam Subclass
  */
 template <typename Subclass>
 class AstVisitor {
@@ -27,15 +25,15 @@ class AstVisitor {
   Subclass &impl() { return *static_cast<Subclass *>(this); }
 };
 
-#define GEN_VISIT_CASE(type)                        \
-  case AstNode::NodeType::type: {                   \
-    impl().Visit##type(static_cast<type *>(node)); \
-    break;                                          \
+#define GEN_VISIT_CASE(kind)                       \
+  case AstNode::Kind::kind: {                      \
+    impl().Visit##kind(static_cast<kind *>(node)); \
+    break;                                         \
   }
 
-#define GEN_VISIT_METHOD                                     \
-  void Visit(AstNode *node) {                                \
-    switch (node->node_type()) { AST_NODES(GEN_VISIT_CASE) } \
+#define GEN_VISIT_METHOD                                \
+  void Visit(AstNode *node) {                           \
+    switch (node->kind()) { AST_NODES(GEN_VISIT_CASE) } \
   }
 
 }  // namespace tpl
