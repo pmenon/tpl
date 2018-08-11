@@ -4,25 +4,39 @@ namespace tpl {
 
 void PrettyPrint::VisitFunctionDeclaration(FunctionDeclaration *node) {
   BeginVisit();
-
+  PrintString("fun ");
+  Visit(node->type());
+  PrintString(node->name());
+  Visit(node->function()->body());
   EndVisit();
 }
 
 void PrettyPrint::VisitVariableDeclaration(VariableDeclaration *node) {
   BeginVisit();
+  PrintString("var ");
+  PrintString(node->name());
+  if (node->initial() != nullptr) {
+    PrintString(" = ");
+    Visit(node->initial());
+  }
   EndVisit();
 }
 
-void PrettyPrint::VisitStructDeclaration(StructDeclaration *node) {}
+void PrettyPrint::VisitStructDeclaration(StructDeclaration *node) {
+
+}
 
 void PrettyPrint::VisitBlockStatement(BlockStatement *node) {
+  BeginVisit();
   for (auto *statement : node->statements()) {
     Visit(statement);
+    PrintString(";");
   }
+  EndVisit();
 }
 
 void PrettyPrint::VisitDeclarationStatement(DeclarationStatement *node) {
-
+  Visit(node->declaration());
 }
 
 void PrettyPrint::VisitExpressionStatement(ExpressionStatement *node) {
@@ -45,7 +59,14 @@ void PrettyPrint::VisitIfStatement(IfStatement *node) {
   EndVisit();
 }
 
-void PrettyPrint::VisitReturnStatement(ReturnStatement *node) {}
+void PrettyPrint::VisitReturnStatement(ReturnStatement *node) {
+  BeginVisit();
+  PrintString("return ");
+  if (node->ret() != nullptr) {
+    Visit(node->ret());
+  }
+  EndVisit();
+}
 
 void PrettyPrint::VisitCallExpression(CallExpression *node) {
   PrintString("call ");
@@ -104,6 +125,48 @@ void PrettyPrint::VisitVarExpression(VarExpression *node) {
   BeginVisit();
   PrintString(node->name());
   EndVisit();
+}
+
+void PrettyPrint::VisitStructType(StructType *node) {
+  PrintString("struct {\n");
+  for (const auto *field : node->fields()) {
+    PrintString(field->name());
+    PrintString(" : ");
+    Visit(field->type());
+  }
+  PrintString("}");
+}
+
+void PrettyPrint::VisitPointerType(PointerType *node) {
+  PrintString("*");
+  Visit(node->pointee_type());
+}
+
+void PrettyPrint::VisitFunctionType(FunctionType *node) {
+  PrintString("(");
+  bool first = true;
+  for (const auto *field : node->parameters()) {
+    if (!first) PrintString(",");
+    first = false;
+    PrintString(field->name());
+    PrintString(" : ");
+    Visit(field->type());
+  }
+  PrintString(") -> ");
+  Visit(node->return_type());
+}
+
+void PrettyPrint::VisitIdentifierType(IdentifierType *node) {
+  PrintString(node->name());
+}
+
+void PrettyPrint::VisitArrayType(ArrayType *node) {
+  PrintString("[");
+  if (node->length() != nullptr) {
+    Visit(node->length());
+  }
+  PrintString("]");
+  Visit(node->element_type());
 }
 
 }  // namespace tpl

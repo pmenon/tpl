@@ -78,7 +78,7 @@ class Parser {
   ///
   //////////////////////////////////////////////////////////////////////////////
 
-  AstNode *ParseDeclaration();
+  Declaration *ParseDeclaration();
 
   Declaration *ParseFunctionDeclaration();
 
@@ -90,7 +90,7 @@ class Parser {
 
   Statement *ParseExpressionStatement();
 
-  Statement *ParseBlock();
+  Statement *ParseBlockStatement();
 
   Statement *ParseIfStatement();
 
@@ -105,6 +105,16 @@ class Parser {
   FunctionLiteralExpression *ParseFunctionLiteralExpression();
 
   Type *ParseType();
+
+  IdentifierType *ParseIdentifierType();
+
+  FunctionType *ParseFunctionType();
+
+  PointerType *ParsePointerType();
+
+  ArrayType *ParseArrayType();
+
+  StructType *ParseStructType();
 
  private:
   // The source code scanner

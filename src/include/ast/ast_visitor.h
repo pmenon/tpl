@@ -21,15 +21,15 @@ namespace tpl {
 template <typename Subclass>
 class AstVisitor {
  public:
-  void Visit(AstNode *node) { impl()->Visit(node); }
+  void Visit(AstNode *node) { impl().Visit(node); }
 
  protected:
-  Subclass *impl() { return reinterpret_cast<Subclass *>(this); }
+  Subclass &impl() { return *static_cast<Subclass *>(this); }
 };
 
 #define GEN_VISIT_CASE(type)                        \
   case AstNode::NodeType::type: {                   \
-    impl()->Visit##type(static_cast<type *>(node)); \
+    impl().Visit##type(static_cast<type *>(node)); \
     break;                                          \
   }
 

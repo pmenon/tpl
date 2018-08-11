@@ -20,6 +20,7 @@ namespace tpl {
   T(COLON, ":", 0)                                 \
                                                    \
   T(DOT, ".", 0)                                   \
+  T(ARROW, "->", 0)                                \
                                                    \
   /* Assignment */                                 \
   T(EQUAL, "=", 2)                                 \

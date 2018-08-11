@@ -10,7 +10,7 @@ Parser::Parser(Scanner &scanner, AstNodeFactory &node_factory,
       scope_(nullptr) {}
 
 AstNode *Parser::Parse() {
-  util::RegionVector<AstNode *> decls(node_factory().region());
+  util::RegionVector<AstNode *> decls(region());
 
   while (peek() != Token::Type::EOS) {
     decls.push_back(ParseDeclaration());
@@ -19,7 +19,7 @@ AstNode *Parser::Parse() {
   return decls[0];
 }
 
-AstNode *Parser::ParseDeclaration() {
+Declaration *Parser::ParseDeclaration() {
   // At the top-level, we only allow structs and functions
   switch (peek()) {
     case Token::Type::STRUCT: {
@@ -52,19 +52,15 @@ Declaration *Parser::ParseStructDeclaration() {
   Expect(Token::Type::IDENTIFIER);
   AstString *name = GetSymbol();
 
-  Expect(Token::Type::LEFT_BRACE);
-
-  // fields
-  util::RegionVector<Field *> fields(region());
-
-  auto *type = new (region()) StructType(std::move(fields));
-
-  Expect(Token::Type::RIGHT_BRACE);
+  StructType *type = ParseStructType();
 
   return node_factory().NewStructDeclaration(name, type);
 }
 
 Declaration *Parser::ParseVariableDeclaration() {
+  // VariableDeclaration ::
+  //   'var' Identifier ':' Type ('=' Expression)?
+
   Consume(Token::Type::VAR);
 
   Expect(Token::Type::IDENTIFIER);
@@ -93,9 +89,10 @@ Statement *Parser::ParseStatement() {
   //   IfStatement
   //   ReturnStatement
   //   VariableDeclaration
+
   switch (peek()) {
     case Token::Type::LEFT_BRACE: {
-      return ParseBlock();
+      return ParseBlockStatement();
     }
     case Token::Type::IF: {
       return ParseIfStatement();
@@ -106,19 +103,25 @@ Statement *Parser::ParseStatement() {
       return node_factory().NewReturnStatement(ret);
     }
     case Token::Type::VAR: {
-      Consume(Token::Type::VAR);
-      return node_factory().NewDeclarationStatement(ParseVariableDeclaration());
+      Declaration *var_decl = ParseVariableDeclaration();
+      return node_factory().NewDeclarationStatement(var_decl);
     }
     default: { return ParseExpressionStatement(); }
   }
 }
 
 Statement *Parser::ParseExpressionStatement() {
+  // ExpressionStatement ::
+  //   Expression
+
   Expression *expr = ParseExpression();
   return node_factory().NewExpressionStatement(expr);
 }
 
-Statement *Parser::ParseBlock() {
+Statement *Parser::ParseBlockStatement() {
+  // BlockStatement ::
+  //   '{' (Statement)+ '}'
+
   // Eat the left brace
   Expect(Token::Type::LEFT_BRACE);
 
@@ -138,6 +141,9 @@ Statement *Parser::ParseBlock() {
 }
 
 Statement *Parser::ParseIfStatement() {
+  // IfStatement ::
+  //   'if' '(' Expression ')' '{' Statement '}' ('else' '{' Statement '}')?
+
   Expect(Token::Type::IF);
 
   // Handle condition
@@ -146,12 +152,12 @@ Statement *Parser::ParseIfStatement() {
   Expect(Token::Type::RIGHT_PAREN);
 
   // Handle 'then' statement
-  Statement *then_stmt = ParseBlock();
+  Statement *then_stmt = ParseBlockStatement();
 
   // Handle 'else' statement, if one exists
   Statement *else_stmt = nullptr;
   if (Matches(Token::Type::ELSE)) {
-    else_stmt = ParseBlock();
+    else_stmt = ParseBlockStatement();
   }
 
   return node_factory().NewIfStatement(cond, then_stmt, else_stmt);
@@ -257,11 +263,145 @@ Expression *Parser::ParsePrimaryExpression() {
 }
 
 FunctionLiteralExpression *Parser::ParseFunctionLiteralExpression() {
-  return nullptr;
+  // FunctionLiteralExpression
+  //   FunctionType BlockStatement
+
+  FunctionType *func_type = ParseFunctionType();
+
+  BlockStatement *body = (BlockStatement *) ParseBlockStatement();
+
+  return node_factory().NewFunctionLiteral(func_type, body);
 }
 
 Type *Parser::ParseType() {
-  return nullptr;
+  switch (peek()) {
+    case Token::Type::IDENTIFIER: {
+      return ParseIdentifierType();
+    }
+    case Token::Type::LEFT_PAREN: {
+      return ParseFunctionType();
+    }
+    case Token::Type::STAR: {
+      return ParsePointerType();
+    }
+    case Token::Type::LEFT_BRACKET: {
+      return ParseArrayType();
+    }
+    case Token::Type::STRUCT: {
+      return ParseStructType();
+    }
+    default: { break; }
+  }
+
+  // Error
+}
+
+IdentifierType *Parser::ParseIdentifierType() {
+  // IdentifierType ::
+  //   Identifier
+
+  // Get the name
+  Consume(Token::Type::IDENTIFIER);
+  AstString *name = GetSymbol();
+
+  // Create the type
+  IdentifierType *type = node_factory().NewIdentifierType(name);
+
+  // Try to resolve
+  Declaration *decl = scope()->Lookup(name);
+  if (decl != nullptr) {
+    type->BindTo(decl);
+  }
+
+  return type;
+}
+
+FunctionType *Parser::ParseFunctionType() {
+  // FuncType ::
+  //   '(' (Identifier ':' Type)? (',' Identifier ':' Type)* ')' '->' Type
+
+  Consume(Token::Type::LEFT_PAREN);
+
+  util::RegionVector<Field *> params(region());
+
+  while (true) {
+    if (!Matches(Token::Type::IDENTIFIER)) {
+      break;
+    }
+
+    // The parameter name
+    AstString *name = GetSymbol();
+
+    // Prepare for parameter type by eating the colon (ew ...)
+    Expect(Token::Type::COLON);
+
+    // Parse the type
+    Type *type = ParseType();
+
+    // That's it
+    params.push_back(node_factory().NewField(name, type));
+
+    if (!Matches(Token::Type::COMMA)) {
+      break;
+    }
+  }
+
+  Expect(Token::Type::RIGHT_PAREN);
+  Expect(Token::Type::ARROW);
+
+  Type *ret = ParseType();
+
+  return node_factory().NewFunctionType(std::move(params), ret);
+}
+
+PointerType *Parser::ParsePointerType() {
+  // PointerType ::
+  //   '*' Type
+
+  Consume(Token::Type::STAR);
+  Type *pointee = ParseType();
+  return node_factory().NewPointerType(pointee);
+}
+
+ArrayType *Parser::ParseArrayType() {
+  // ArrayType ::
+  //   '[' (Expr)? ']' Type
+
+  Consume(Token::Type::LEFT_BRACKET);
+
+  Expression *len = nullptr;
+  if (peek() != Token::Type::RIGHT_BRACKET) {
+    len = ParseExpression();
+  }
+
+  Expect(Token::Type::RIGHT_BRACKET);
+
+  Type *elem_type = ParseType();
+
+  return node_factory().NewArrayType(len, elem_type);
+}
+
+StructType *Parser::ParseStructType() {
+  // StructType ::
+  //   '{' (Identifier ':' Type)* '}'
+
+  Consume(Token::Type::LEFT_BRACE);
+
+  util::RegionVector<Field *> fields(region());
+  while (peek() != Token::Type::RIGHT_BRACE) {
+    Expect(Token::Type::IDENTIFIER);
+    AstString *name = GetSymbol();
+
+    Expect(Token::Type::COLON);
+
+    Type *type = ParseType();
+
+    fields.push_back(node_factory().NewField(name, type));
+  }
+
+  Consume(Token::Type::RIGHT_BRACE);
+
+  return node_factory().NewStructType(std::move(fields));
 }
 
 }  // namespace tpl

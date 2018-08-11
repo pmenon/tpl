@@ -138,7 +138,12 @@ void Scanner::Scan() {
       }
       case '-': {
         Advance();
-        type = Token::Type::MINUS;
+        if (Matches('>')) {
+          Advance();
+          type = Token::Type::ARROW;
+        } else {
+          type = Token::Type::MINUS;
+        }
         break;
       }
       case '%': {

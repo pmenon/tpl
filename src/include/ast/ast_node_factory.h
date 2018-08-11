@@ -77,12 +77,42 @@ class AstNodeFactory {
         LiteralExpression(LiteralExpression::Type::String, str);
   }
 
+  FunctionLiteralExpression *NewFunctionLiteral(FunctionType *type,
+                                                BlockStatement *body) {
+    return new (region_) FunctionLiteralExpression(type, body);
+  }
+
   UnaryExpression *NewUnaryExpression(Token::Type op, AstNode *expr) {
     return new (region_) UnaryExpression(op, expr);
   }
 
   VarExpression *NewVarExpression(AstString *name) {
     return new (region_) VarExpression(name);
+  }
+
+  ArrayType *NewArrayType(Expression *len, Type *elem_type) {
+    return new (region_) ArrayType(len, elem_type);
+  }
+
+  IdentifierType *NewIdentifierType(const AstString *name) {
+    return new (region_) IdentifierType(name);
+  }
+
+  Field *NewField(const AstString *name, Type *type) {
+    return new (region_) Field(name, type);
+  }
+
+  FunctionType *NewFunctionType(util::RegionVector<Field *> &&params,
+                                Type *ret) {
+    return new (region_) FunctionType(std::move(params), ret);
+  }
+
+  PointerType *NewPointerType(Type *pointee_type) {
+    return new (region_) PointerType(pointee_type);
+  }
+
+  StructType *NewStructType(util::RegionVector<Field *> &&fields) {
+    return new (region_) StructType(std::move(fields));
   }
 
  private:

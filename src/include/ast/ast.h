@@ -9,13 +9,19 @@
 
 namespace tpl {
 
-#define TYPES(T)    \
-  T(ArrayType)      \
-  T(FunctionType)   \
-  T(IdentifierType) \
-  T(PointerType)    \
+/*
+ *
+ */
+#define TYPE_NODES(T) \
+  T(ArrayType)        \
+  T(FunctionType)     \
+  T(IdentifierType)   \
+  T(PointerType)      \
   T(StructType)
 
+/*
+ *
+ */
 #define DECLARATION_NODES(T) \
   T(FunctionDeclaration)     \
   T(StructDeclaration)       \
@@ -48,140 +54,18 @@ namespace tpl {
 #define AST_NODES(T)   \
   DECLARATION_NODES(T) \
   EXPRESSION_NODES(T)  \
-  STATEMENT_NODES(T)
+  STATEMENT_NODES(T)   \
+  TYPE_NODES(T)
 
 class Declaration;
 class Expression;
 class Statement;
+class Type;
 
 // Forward declare all nodes
 #define FORWARD_DECLARE(name) class name;
 AST_NODES(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
-
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Types
-///
-////////////////////////////////////////////////////////////////////////////////
-
-/**
- * Base class for all types
- */
-class Type : public RegionObject {
- public:
-#define T(type) type,
-  enum Id : uint8_t { TYPES(T) };
-#undef T
-
-  explicit Type(Id type_id) : type_id_(type_id) {}
-
-  Id type_id() const { return type_id_; }
-
- private:
-  Id type_id_;
-};
-
-class Field : public RegionObject {
- public:
-  Field(const AstString *name, Type *type) : name_(name), type_(type) {}
-
-  const AstString *name() const { return name_; }
-  Type *type() const { return type_; }
-
- private:
-  const AstString *name_;
-  Type *type_;
-};
-
-/**
- * Array type
- */
-class ArrayType : public Type {
- public:
-  ArrayType(Type *elem_type, Expression *len)
-      : Type(Type::Id::ArrayType), elem_type_(elem_type), len_(len) {}
-
-  Type *element_type() const { return elem_type_; }
-  Expression *length() const { return len_; }
-
- private:
-  Type *elem_type_;
-  Expression *len_;
-};
-
-/**
- * Function type
- */
-class FunctionType : public Type {
- public:
-  FunctionType(util::RegionVector<Field *> &&param_types, Type *ret_type)
-      : Type(Type::Id::FunctionType),
-        param_types_(std::move(param_types)),
-        ret_type_(ret_type) {}
-
-  const util::RegionVector<Field *> parameter_types() const {
-    return param_types_;
-  }
-
-  const Type *return_type() const { return ret_type_; }
-
- private:
-  util::RegionVector<Field *> param_types_;
-  Type *ret_type_;
-};
-
-/**
- * An identifier for a type e.g., i32, bool, or custom struct types
- */
-class IdentifierType : public Type {
- public:
-  /// Constructor when initializing an unbound identifier type
-  explicit IdentifierType(const AstString *name)
-      : Type(Type::Id::IdentifierType), name_(name), declaration_(nullptr) {}
-
-  IdentifierType(const AstString *name, Declaration *declaration)
-      : Type(Type::Id::IdentifierType),
-        name_(name),
-        declaration_(declaration) {}
-
-  const AstString *name() const { return name_; }
-  Declaration *declaration() const { return declaration_; }
-
-  void BindTo(Declaration *declaration) { declaration_ = declaration; }
-
- private:
-  const AstString *name_;
-  Declaration *declaration_;
-};
-
-/**
- * Pointer type
- */
-class PointerType : public Type {
- public:
-  explicit PointerType(Type *pointee_type)
-      : Type(Type::Id::PointerType), pointee_type_(pointee_type) {}
-
-  Type *pointee_type() const { return pointee_type_; }
-
- private:
-  Type *pointee_type_;
-};
-
-/**
- * Struct type
- */
-class StructType : public Type {
- public:
-  StructType(util::RegionVector<Field *> &&fields)
-      : Type(Type::Id::StructType), fields_(std::move(fields)) {}
-
-  const util::RegionVector<Field *> &fields() const { return fields_; }
-
- private:
-  util::RegionVector<Field *> fields_;
-};
 
 ////////////////////////////////////////////////////////////////////////////////
 ///
@@ -199,6 +83,15 @@ class AstNode : public RegionObject {
 #undef T
 
   NodeType node_type() const { return type_; }
+
+#define DECLARE_NODE_FUNCTIONS(type) \
+  bool Is##type() const;             \
+  type *As##type();                  \
+  const type *As##type() const;
+  AST_NODES(DECLARE_NODE_FUNCTIONS)
+#undef DECLARE_NODE_FUNCTIONS
+
+  bool IsEmpty() const { return AsBlockStatement() != nullptr; }
 
  protected:
   explicit AstNode(NodeType type) : type_(type) {}
@@ -233,7 +126,7 @@ class FunctionDeclaration : public Declaration {
       : Declaration(AstNode::NodeType::FunctionDeclaration, name), fun_(fun) {}
 
   FunctionLiteralExpression *function() const { return fun_; }
-  const FunctionType *type() const;
+  FunctionType *type();
 
  private:
   FunctionLiteralExpression *fun_;
@@ -308,7 +201,7 @@ class DeclarationStatement : public Statement {
   explicit DeclarationStatement(Declaration *decl)
       : Statement(AstNode::NodeType::DeclarationStatement), decl_(decl) {}
 
-  const Declaration *declaration() const { return decl_; }
+  Declaration *declaration() const { return decl_; }
 
  private:
   Declaration *decl_;
@@ -419,17 +312,17 @@ class BinaryExpression : public Expression {
 
 class FunctionLiteralExpression : public Expression {
  public:
-  FunctionLiteralExpression(const AstString *name, FunctionType *type)
+  FunctionLiteralExpression(FunctionType *type, BlockStatement *body)
       : Expression(AstNode::NodeType::FunctionLiteralExpression),
-        name_(name),
-        type_(type) {}
+        type_(type),
+        body_(body) {}
 
-  const AstString *name() const { return name_; }
-  const FunctionType *type() const { return type_; }
+  FunctionType *type() const { return type_; }
+  BlockStatement *body() const { return body_; }
 
  private:
-  const AstString *name_;
   FunctionType *type_;
+  BlockStatement *body_;
 };
 
 /**
@@ -461,7 +354,8 @@ class LiteralExpression : public Expression {
   }
 
   const AstString *raw_string() const {
-    TPL_ASSERT(type() == Type::String);
+    // TODO(pmenon): Fix me to use actual AstNumbers for numbers?
+    TPL_ASSERT(type() == Type::String || type() == Type::Number);
     return str_;
   }
 
@@ -504,6 +398,123 @@ class VarExpression : public Expression {
 
  private:
   const AstString *name_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// Types
+///
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Base class for all types
+ */
+class Type : public AstNode {
+ public:
+  explicit Type(AstNode::NodeType type) : AstNode(type) {}
+};
+
+class Field : public RegionObject {
+ public:
+  Field(const AstString *name, Type *type) : name_(name), type_(type) {}
+
+  const AstString *name() const { return name_; }
+  Type *type() const { return type_; }
+
+ private:
+  const AstString *name_;
+  Type *type_;
+};
+
+/**
+ * Array type
+ */
+class ArrayType : public Type {
+ public:
+  ArrayType(Expression *len, Type *elem_type)
+      : Type(AstNode::NodeType::ArrayType), len_(len), elem_type_(elem_type) {}
+
+  Expression *length() const { return len_; }
+  Type *element_type() const { return elem_type_; }
+
+ private:
+  Expression *len_;
+  Type *elem_type_;
+};
+
+/**
+ * Function type
+ */
+class FunctionType : public Type {
+ public:
+  FunctionType(util::RegionVector<Field *> &&param_types, Type *ret_type)
+      : Type(AstNode::NodeType::FunctionType),
+        param_types_(std::move(param_types)),
+        ret_type_(ret_type) {}
+
+  const util::RegionVector<Field *> parameters() const {
+    return param_types_;
+  }
+
+  Type *return_type() const { return ret_type_; }
+
+ private:
+  util::RegionVector<Field *> param_types_;
+  Type *ret_type_;
+};
+
+/**
+ * An identifier for a type e.g., i32, bool, or custom struct type
+ */
+class IdentifierType : public Type {
+ public:
+  /// Constructor when initializing an unbound identifier type
+  explicit IdentifierType(const AstString *name)
+      : Type(AstNode::NodeType::IdentifierType),
+        name_(name),
+        declaration_(nullptr) {}
+
+  IdentifierType(const AstString *name, Declaration *declaration)
+      : Type(AstNode::NodeType::IdentifierType),
+        name_(name),
+        declaration_(declaration) {}
+
+  const AstString *name() const { return name_; }
+  Declaration *declaration() const { return declaration_; }
+
+  void BindTo(Declaration *declaration) { declaration_ = declaration; }
+
+ private:
+  const AstString *name_;
+  Declaration *declaration_;
+};
+
+/**
+ * Pointer type
+ */
+class PointerType : public Type {
+ public:
+  explicit PointerType(Type *pointee_type)
+      : Type(AstNode::NodeType::PointerType), pointee_type_(pointee_type) {}
+
+  Type *pointee_type() const { return pointee_type_; }
+
+ private:
+  Type *pointee_type_;
+};
+
+/**
+ * Struct type
+ */
+class StructType : public Type {
+ public:
+  StructType(util::RegionVector<Field *> &&fields)
+      : Type(AstNode::NodeType::StructType), fields_(std::move(fields)) {}
+
+  const util::RegionVector<Field *> &fields() const { return fields_; }
+
+ private:
+  util::RegionVector<Field *> fields_;
 };
 
 }  // namespace tpl

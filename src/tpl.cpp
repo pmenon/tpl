@@ -16,12 +16,18 @@ static void RunRepl() {
   while (true) {
     std::string input;
 
-    printf("> ");
-    std::getline(std::cin, input);
+    std::string line;
+    do {
+      printf("> ");
+      std::getline(std::cin, line);
 
-    if (input.empty() || input == kExitKeyword) {
-      break;
-    }
+      if (line == kExitKeyword) {
+        std::cout << region.get_info() << std::endl;
+        return;
+      }
+
+      input.append(line);
+    } while(!line.empty());
 
     // Let's parse the source
     tpl::Scanner scanner(input.data(), input.length());
@@ -36,8 +42,6 @@ static void RunRepl() {
     tpl::PrettyPrint pretty_print(root);
     pretty_print.Print();
   }
-
-  std::cout << region.get_info() << std::endl;
 }
 
 static void RunFile(const std::string &filename) {}
