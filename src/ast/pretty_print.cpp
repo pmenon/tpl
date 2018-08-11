@@ -23,7 +23,20 @@ void PrettyPrint::VisitVariableDeclaration(VariableDeclaration *node) {
 }
 
 void PrettyPrint::VisitStructDeclaration(StructDeclaration *node) {
-
+  BeginVisit();
+  PrintString("struct ");
+  PrintString(node->name());
+  PrintString("{ ");
+  bool first = true;
+  for (const auto *field : node->type()->fields()) {
+    if (!first) PrintString(",");
+    first = false;
+    PrintString(field->name());
+    PrintString(":");
+    Visit(field->type());
+  }
+  PrintString("}");
+  EndVisit();
 }
 
 void PrettyPrint::VisitBlockStatement(BlockStatement *node) {
