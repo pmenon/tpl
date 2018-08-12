@@ -83,15 +83,15 @@ endif()
 #
 ################################################################################
 
-# Clang/GCC don't allow both ASan and TSan to be enabled together
+# Clang and GCC don't allow both ASan and TSan to be enabled together
 if("${TPL_USE_ASAN}" AND "${TPL_USE_TSAN}")
     message(SEND_ERROR "Can only enable one of ASAN or TSAN at a time")
 endif()
 
 if(${TPL_USE_ASAN})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-    message(STATUS "AddressSanitizer enabled.")
+    message(STATUS "AddressSanitizer enabled")
 elseif(${TPL_USE_TSAN})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
-    message(STATUS "ThreadSanitizer enabled.")
+    message(STATUS "ThreadSanitizer enabled")
 endif()

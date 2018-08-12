@@ -5,10 +5,11 @@
 namespace tpl::ast {
 
 /**
- * Base class for AST node visitors. Implements Curiously Recurring Template
- * Pattern (CRTP) to avoid virtual function call invocation overhead from using
- * regular inheritance. Here, derived classes subclass AstVisitor passing
- * the derived class's name as the template argument, as so:
+ * Base class for AST node visitors. Implemented using the Curiously Recurring
+ * Template Pattern (CRTP) to avoid overhead of virtual function dispatch, and
+ * because we keep a static, macro-based list of all possible AST nodes.
+ *
+ * Derived classes parameterize AstVisitor with itself, e.g.:
  *
  * class Derived : public AstVisitor<Derived> {
  *   ..
@@ -25,15 +26,15 @@ class AstVisitor {
   Subclass &impl() { return *static_cast<Subclass *>(this); }
 };
 
-#define GEN_VISIT_CASE(kind)                       \
-  case AstNode::Kind::kind: {                      \
-    impl().Visit##kind(static_cast<kind *>(node)); \
-    break;                                         \
+#define GEN_VISIT_CASE(kind)                              \
+  case AstNode::Kind::kind: {                             \
+    return impl().Visit##kind(static_cast<kind *>(node)); \
   }
 
-#define GEN_VISIT_METHOD                                \
-  void Visit(AstNode *node) {                           \
-    switch (node->kind()) { AST_NODES(GEN_VISIT_CASE) } \
-  }
+#define GEN_VISITOR_SWITCH() \
+  switch (node->kind()) { AST_NODES(GEN_VISIT_CASE) }
+
+#define DEFINE_AST_VISITOR_METHOD() \
+  void Visit(AstNode *node) { GEN_VISITOR_SWITCH() }
 
 }  // namespace tpl::ast

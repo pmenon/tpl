@@ -114,10 +114,10 @@ class AstNode : public util::RegionObject {
     // Main type switch
     // clang-format off
     switch (kind()) {
-      default: {}
+      default: { UNREACHABLE(); }
       AST_NODES(KIND_CASE)
     }
-      // clang-format on
+    // clang-format on
 #undef KIND_CASE
   }
 

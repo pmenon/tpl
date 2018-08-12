@@ -17,12 +17,11 @@ class PrettyPrint : public AstVisitor<PrettyPrint> {
 
   // Declare all node visit methods here
 #define DECLARE_VISIT_METHOD(type) void Visit##type(type *node);
-
   AST_NODES(DECLARE_VISIT_METHOD)
 #undef DECLARE_VISIT_METHOD
 
   // Generate primary visit method
-  GEN_VISIT_METHOD
+  DEFINE_AST_VISITOR_METHOD()
 
  private:
   void BeginVisit() { result_.append("("); }

@@ -24,5 +24,9 @@
 #ifdef NEBUG
 #define UNREACHABLE() __builtin_unreachable();
 #else
-#define UNREACHABLE() fprintf(stderr, "unreachable code!\n");
+#define UNREACHABLE()                       \
+  do {                                      \
+    fprintf(stderr, "unreachable code!\n"); \
+    __builtin_unreachable();                \
+  } while (false);
 #endif
