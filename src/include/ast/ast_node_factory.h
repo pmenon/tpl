@@ -36,6 +36,10 @@ class AstNodeFactory {
     return new (region_) VariableDeclaration(name, type, init);
   }
 
+  BadStatement *NewBadStatement(uint64_t pos) {
+    return new (region_) BadStatement(pos);
+  }
+
   BlockStatement *NewBlockStatement(
       util::RegionVector<Statement *> &&statements) {
     return new (region_) BlockStatement(std::move(statements));
@@ -56,6 +60,10 @@ class AstNodeFactory {
 
   ReturnStatement *NewReturnStatement(Expression *ret) {
     return new (region_) ReturnStatement(ret);
+  }
+
+  BadExpression *NewBadExpression(uint64_t pos) {
+    return new (region_) BadExpression(pos);
   }
 
   BinaryExpression *NewBinaryExpression(parsing::Token::Type op, AstNode *left,

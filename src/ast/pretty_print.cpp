@@ -195,4 +195,18 @@ void PrettyPrint::VisitArrayType(ArrayType *node) {
   Visit(node->element_type());
 }
 
+void PrettyPrint::VisitBadStatement(BadStatement *node) {
+  BeginVisit();
+  PrintString("BAD STATEMENT @ position:");
+  PrintString(std::to_string(node->position()));
+  EndVisit();
+}
+
+void PrettyPrint::VisitBadExpression(BadExpression *node) {
+  BeginVisit();
+  PrintString("BAD EXPRESSION @ position:");
+  PrintString(std::to_string(node->position()));
+  EndVisit();
+}
+
 }  // namespace tpl::ast

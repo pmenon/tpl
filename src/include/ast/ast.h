@@ -33,6 +33,7 @@ namespace tpl::ast {
  * remember to modify Statement::classof() to update the bounds check.
  */
 #define STATEMENT_NODES(T) \
+  T(BadStatement)          \
   T(BlockStatement)        \
   T(DeclarationStatement)  \
   T(ExpressionStatement)   \
@@ -46,6 +47,7 @@ namespace tpl::ast {
  * remember to modify Expression::classof() to update the bounds check.
  */
 #define EXPRESSION_NODES(T)    \
+  T(BadExpression)             \
   T(BinaryExpression)          \
   T(CallExpression)            \
   T(FunctionLiteralExpression) \
@@ -277,9 +279,27 @@ class Statement : public AstNode {
   explicit Statement(Kind kind) : AstNode(kind) {}
 
   static bool classof(const AstNode *node) {
-    return node->kind() >= Kind::BlockStatement &&
+    return node->kind() >= Kind::BadStatement &&
            node->kind() <= Kind::ReturnStatement;
   }
+};
+
+/**
+ * A bad statement
+ */
+class BadStatement : public Statement {
+ public:
+  explicit BadStatement(uint64_t pos)
+      : Statement(AstNode::Kind::BadStatement), pos_(pos) {}
+
+  uint64_t position() const { return pos_; }
+
+  static bool classof(const AstNode *node) {
+    return node->kind() == Kind::BadStatement;
+  }
+
+ private:
+  uint64_t pos_;
 };
 
 /**
@@ -395,9 +415,27 @@ class Expression : public AstNode {
   explicit Expression(Kind kind) : AstNode(kind) {}
 
   static bool classof(const AstNode *node) {
-    return node->kind() >= Kind::BinaryExpression &&
+    return node->kind() >= Kind::BadExpression &&
            node->kind() <= Kind::VarExpression;
   }
+};
+
+/**
+ * A bad statement
+ */
+class BadExpression : public Expression {
+ public:
+  explicit BadExpression(uint64_t pos)
+      : Expression(AstNode::Kind::BadExpression), pos_(pos) {}
+
+  uint64_t position() const { return pos_; }
+
+  static bool classof(const AstNode *node) {
+    return node->kind() == Kind::BadExpression;
+  }
+
+ private:
+  uint64_t pos_;
 };
 
 /**

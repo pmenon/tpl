@@ -320,10 +320,10 @@ ast::Expression *Parser::ParsePrimaryExpression() {
   }
 
   // Error
-  // TODO(pmenon) Fix me
+  // TODO(pmenon) Also advance to next statement
   ReportError("Unexpected token '%s' when attempting to parse primary",
               Token::String(peek()));
-  return nullptr;
+  return node_factory().NewBadExpression(scanner().current_raw_pos());
 }
 
 ast::Expression *Parser::ParseFunctionLiteralExpression() {
