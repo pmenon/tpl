@@ -91,6 +91,7 @@ void PrettyPrint::VisitReturnStatement(ReturnStatement *node) {
 }
 
 void PrettyPrint::VisitCallExpression(CallExpression *node) {
+  BeginVisit();
   PrintString("call ");
   Visit(node->function());
   PrintString("(");
@@ -103,6 +104,7 @@ void PrettyPrint::VisitCallExpression(CallExpression *node) {
   }
 
   PrintString(")");
+  EndVisit();
 }
 
 void PrettyPrint::VisitBinaryExpression(BinaryExpression *node) {

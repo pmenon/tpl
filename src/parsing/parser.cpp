@@ -212,7 +212,38 @@ ast::Expression *Parser::ParseUnaryExpression() {
       break;
   }
 
-  return ParsePrimaryExpression();
+  return ParseCallExpression();
+}
+
+ast::Expression *Parser::ParseCallExpression() {
+  // CallExpression ::
+  //   PrimaryExpression '(' (Expression
+
+  ast::Expression *result = ParsePrimaryExpression();
+
+  if (Matches(Token::Type::LEFT_PAREN)) {
+    // Parse arguments
+
+    util::RegionVector<ast::Expression *> args(region());
+
+    bool done = (peek() == Token::Type::RIGHT_PAREN);
+    while (!done) {
+      // Parse argument
+      ast::Expression *arg = ParseExpression();
+      args.push_back(arg);
+
+      done = (peek() != Token::Type::COMMA);
+      if (!done) {
+        Next();
+      }
+    }
+
+    Expect(Token::Type::RIGHT_PAREN);
+
+    result = node_factory().NewCallExpression(result, std::move(args));
+  }
+
+  return result;
 }
 
 ast::Expression *Parser::ParsePrimaryExpression() {
@@ -387,6 +418,7 @@ ast::StructType *Parser::ParseStructType() {
   Consume(Token::Type::LEFT_BRACE);
 
   util::RegionVector<ast::Field *> fields(region());
+
   while (peek() != Token::Type::RIGHT_BRACE) {
     Expect(Token::Type::IDENTIFIER);
     ast::AstString *name = GetSymbol();

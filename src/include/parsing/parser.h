@@ -100,6 +100,8 @@ class Parser {
 
   ast::Expression *ParseUnaryExpression();
 
+  ast::Expression *ParseCallExpression();
+
   ast::Expression *ParsePrimaryExpression();
 
   ast::FunctionLiteralExpression *ParseFunctionLiteralExpression();
