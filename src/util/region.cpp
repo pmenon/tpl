@@ -1,9 +1,6 @@
-
-#include <util/region.h>
-
 #include "util/region.h"
 
-namespace tpl {
+namespace tpl::util {
 
 Region::Region(std::string name)
     : name_(std::move(name)),
@@ -83,4 +80,4 @@ uintptr_t Region::Expand(size_t requested) {
   return position_;
 }
 
-}  // namespace tpl
+}  // namespace tpl::util

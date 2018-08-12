@@ -4,30 +4,34 @@
 
 namespace tpl {
 
-class AstString;
+namespace util {
 class Region;
+}  // namespace util
+
+namespace ast {
+
+class AstString;
 class Declaration;
 
 class Scope {
  public:
-  Scope(Region &region, Scope *outer)
+  Scope(util::Region &region, Scope *outer)
       : region_(region), outer_(outer), declarations_(region) {}
-
-  explicit Scope(Region &region) : Scope(region, nullptr) {}
 
   Declaration *Lookup(const AstString *name) const;
   Declaration *LookupLocal(const AstString *name) const;
 
-  Region &region() const { return region_; }
+  util::Region &region() const { return region_; }
 
   Scope *outer() const { return outer_; }
 
  private:
-  Region &region_;
+  util::Region &region_;
 
   Scope *outer_;
 
   util::RegionUnorderedMap<const AstString *, Declaration *> declarations_;
 };
 
+}  // namespace ast
 }  // namespace tpl

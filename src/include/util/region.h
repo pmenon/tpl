@@ -8,7 +8,7 @@
 
 #include "util/macros.h"
 
-namespace tpl {
+namespace tpl::util {
 
 /**
  * A region-based allocator supports fast allocations of small chunks of memory.
@@ -205,4 +205,4 @@ class RegionPtr {
   T *ptr_;
 };
 
-}  // namespace tpl
+}  // namespace tpl::util

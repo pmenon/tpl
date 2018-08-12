@@ -4,16 +4,17 @@
 #include "ast/ast_node_factory.h"
 
 namespace tpl {
+namespace ast {
 namespace test {
 
 class AstTest : public ::testing::Test {
  public:
   AstTest() : region_("ast_test") {}
 
-  Region &region() { return region_; }
+  util::Region &region() { return region_; }
 
  private:
-  Region region_;
+  util::Region region_;
 };
 
 TEST_F(AstTest, HierechyTest) {
@@ -57,12 +58,13 @@ TEST_F(AstTest, HierechyTest) {
   /// Test expressions
   {
     AstNode *all_exprs[] = {
-        factory.NewBinaryExpression(Token::Type::PLUS, nullptr, nullptr),
+        factory.NewBinaryExpression(parsing::Token::Type::PLUS, nullptr,
+                                    nullptr),
         factory.NewCallExpression(nullptr,
                                   util::RegionVector<Expression *>(region())),
         factory.NewFunctionLiteral(nullptr, nullptr),
         factory.NewNilLiteral(),
-        factory.NewUnaryExpression(Token::Type::MINUS, nullptr),
+        factory.NewUnaryExpression(parsing::Token::Type::MINUS, nullptr),
         factory.NewVarExpression(nullptr),
     };
 
@@ -145,4 +147,5 @@ TEST_F(AstTest, HierechyTest) {
 }
 
 }  // namespace test
+}  // namespace ast
 }  // namespace tpl

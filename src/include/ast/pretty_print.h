@@ -4,7 +4,7 @@
 
 #include "ast/ast_visitor.h"
 
-namespace tpl {
+namespace tpl::ast {
 
 class PrettyPrint : public AstVisitor<PrettyPrint> {
  public:
@@ -29,7 +29,9 @@ class PrettyPrint : public AstVisitor<PrettyPrint> {
 
   void EndVisit() { result_.append(")"); }
 
-  void PrintToken(Token::Type type) { result_.append(Token::String(type)); }
+  void PrintToken(parsing::Token::Type type) {
+    result_.append(parsing::Token::String(type));
+  }
 
   void PrintString(const std::string &str) { result_.append(str); }
 
@@ -45,4 +47,4 @@ class PrettyPrint : public AstVisitor<PrettyPrint> {
   std::string result_;
 };
 
-}  // namespace tpl
+}  // namespace tpl::ast

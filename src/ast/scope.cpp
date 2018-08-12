@@ -1,6 +1,6 @@
 #include "ast/scope.h"
 
-namespace tpl {
+namespace tpl::ast {
 
 Declaration *Scope::Lookup(const AstString *name) const {
   for (const Scope *scope = this ; scope != nullptr; scope = scope->outer()) {
@@ -19,4 +19,4 @@ Declaration *Scope::LookupLocal(const AstString *name) const {
   return (iter == declarations_.end() ? nullptr : iter->second);
 }
 
-}  // namespace tpl
+}  // namespace tpl::ast

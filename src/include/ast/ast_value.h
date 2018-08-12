@@ -7,9 +7,9 @@
 #include "util/hash_map.h"
 #include "util/region.h"
 
-namespace tpl {
+namespace tpl::ast {
 
-class AstString : public RegionObject {
+class AstString : public util::RegionObject {
  public:
   const char *bytes() const { return bytes_; }
   uint32_t length() const { return len_; }
@@ -41,13 +41,13 @@ class AstString : public RegionObject {
   uint32_t hash_;
 };
 
-class AstNumber : public RegionObject {
+class AstNumber : public util::RegionObject {
 
 };
 
 class AstStringsContainer {
  public:
-  explicit AstStringsContainer(Region &region)
+  explicit AstStringsContainer(util::Region &region)
       : region_(region), string_table_(CompareString()) {}
 
   AstString *GetAstString(const char *bytes, uint32_t len) {
@@ -70,7 +70,7 @@ class AstStringsContainer {
   }
 
  private:
-  Region &region_;
+  util::Region &region_;
 
   struct CompareString {
     bool operator()(const AstString *lhs, const AstString *rhs) const noexcept {
@@ -81,4 +81,4 @@ class AstStringsContainer {
   util::SimpleHashMap<AstString *, void *, CompareString> string_table_;
 };
 
-}  // namespace tpl
+}  // namespace tpl::ast

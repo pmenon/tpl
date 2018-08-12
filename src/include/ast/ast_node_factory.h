@@ -3,7 +3,7 @@
 #include "ast/ast.h"
 #include "util/region.h"
 
-namespace tpl {
+namespace tpl::ast {
 
 /**
  * A factory for AST nodes. This factory uses a region allocator to quickly
@@ -13,9 +13,9 @@ namespace tpl {
  */
 class AstNodeFactory {
  public:
-  explicit AstNodeFactory(Region &region) : region_(region) {}
+  explicit AstNodeFactory(util::Region &region) : region_(region) {}
 
-  Region &region() { return region_; }
+  util::Region &region() { return region_; }
 
   File *NewFile(util::RegionVector<Declaration *> &&declarations) {
     return new (region_) File(std::move(declarations));
@@ -58,7 +58,7 @@ class AstNodeFactory {
     return new (region_) ReturnStatement(ret);
   }
 
-  BinaryExpression *NewBinaryExpression(Token::Type op, AstNode *left,
+  BinaryExpression *NewBinaryExpression(parsing::Token::Type op, AstNode *left,
                                         AstNode *right) {
     return new (region_) BinaryExpression(op, left, right);
   }
@@ -91,7 +91,7 @@ class AstNodeFactory {
     return new (region_) FunctionLiteralExpression(type, body);
   }
 
-  UnaryExpression *NewUnaryExpression(Token::Type op, AstNode *expr) {
+  UnaryExpression *NewUnaryExpression(parsing::Token::Type op, AstNode *expr) {
     return new (region_) UnaryExpression(op, expr);
   }
 
@@ -125,7 +125,7 @@ class AstNodeFactory {
   }
 
  private:
-  Region &region_;
+  util::Region &region_;
 };
 
-}  // namespace tpl
+}  // namespace tpl::ast

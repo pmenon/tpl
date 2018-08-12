@@ -6,7 +6,7 @@
 #include "parsing/token.h"
 #include "util/macros.h"
 
-namespace tpl {
+namespace tpl::parsing {
 
 class Scanner {
   static constexpr int32_t kEndOfInput = -1;
@@ -134,4 +134,4 @@ class Scanner {
   TokenDesc next_;
 };
 
-}  // namespace tpl
+}  // namespace tpl::parsing

@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace tpl {
+namespace tpl::parsing {
 
 /*
  *
@@ -91,4 +91,4 @@ class Token {
   static const uint32_t precedence_[Type::NUM_TOKENS];
 };
 
-}  // namespace tpl
+}  // namespace tpl::parsing

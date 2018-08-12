@@ -4,7 +4,7 @@
 #include <cassert>
 #include <stdexcept>
 
-namespace tpl {
+namespace tpl::parsing {
 
 Scanner::Scanner(const char *source, uint64_t source_len)
     : source_(source), source_len_(source_len), offset_(0) {
@@ -354,4 +354,4 @@ Token::Type Scanner::ScanString() {
   }
 }
 
-}  // namespace tpl
+}  // namespace tpl::parsing

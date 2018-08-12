@@ -3,7 +3,7 @@
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/spdlog.h"
 
-namespace tpl {
+namespace tpl::util {
 
 class Logger {
  public:
@@ -37,4 +37,5 @@ class Logger {
  private:
   std::shared_ptr<spdlog::logger> logger_;
 };
-}  // namespace tpl
+
+}  // namespace tpl::util

@@ -6,17 +6,17 @@
 #include "ast/scope.h"
 #include "parsing/scanner.h"
 
-namespace tpl {
+namespace tpl::parsing {
 
 class Parser {
  public:
-  Parser(Scanner &scanner, AstNodeFactory &node_factory,
-         AstStringsContainer &strings_container);
+  Parser(Scanner &scanner, ast::AstNodeFactory &node_factory,
+         ast::AstStringsContainer &strings_container);
 
   /**
    * Parse and generate an abstract syntax tree from the input TPL source code
    */
-  AstNode *Parse();
+  ast::AstNode *Parse();
 
   //////////////////////////////////////////////////////////////////////////////
   ///
@@ -26,13 +26,13 @@ class Parser {
 
   Scanner &scanner() { return scanner_; }
 
-  AstNodeFactory &node_factory() { return node_factory_; }
+  ast::AstNodeFactory &node_factory() { return node_factory_; }
 
-  Region &region() { return node_factory().region(); }
+  util::Region &region() { return node_factory().region(); }
 
-  AstStringsContainer &strings_container() { return strings_container_; }
+  ast::AstStringsContainer &strings_container() { return strings_container_; }
 
-  Scope *scope() { return scope_; }
+  ast::Scope *scope() { return scope_; }
 
  private:
   //////////////////////////////////////////////////////////////////////////////
@@ -67,7 +67,7 @@ class Parser {
   }
 
   // Get the current symbol as an AST string
-  AstString *GetSymbol() {
+  ast::AstString *GetSymbol() {
     const std::string &literal = scanner().current_literal();
     return strings_container().GetAstString(literal);
   }
@@ -78,56 +78,56 @@ class Parser {
   ///
   //////////////////////////////////////////////////////////////////////////////
 
-  Declaration *ParseDeclaration();
+  ast::Declaration *ParseDeclaration();
 
-  Declaration *ParseFunctionDeclaration();
+  ast::Declaration *ParseFunctionDeclaration();
 
-  Declaration *ParseStructDeclaration();
+  ast::Declaration *ParseStructDeclaration();
 
-  Declaration *ParseVariableDeclaration();
+  ast::Declaration *ParseVariableDeclaration();
 
-  Statement *ParseStatement();
+  ast::Statement *ParseStatement();
 
-  Statement *ParseExpressionStatement();
+  ast::Statement *ParseExpressionStatement();
 
-  Statement *ParseBlockStatement();
+  ast::Statement *ParseBlockStatement();
 
-  Statement *ParseIfStatement();
+  ast::Statement *ParseIfStatement();
 
-  Expression *ParseExpression();
+  ast::Expression *ParseExpression();
 
-  Expression *ParseBinaryExpression(uint32_t min_prec);
+  ast::Expression *ParseBinaryExpression(uint32_t min_prec);
 
-  Expression *ParseUnaryExpression();
+  ast::Expression *ParseUnaryExpression();
 
-  Expression *ParsePrimaryExpression();
+  ast::Expression *ParsePrimaryExpression();
 
-  FunctionLiteralExpression *ParseFunctionLiteralExpression();
+  ast::FunctionLiteralExpression *ParseFunctionLiteralExpression();
 
-  Type *ParseType();
+  ast::Type *ParseType();
 
-  IdentifierType *ParseIdentifierType();
+  ast::IdentifierType *ParseIdentifierType();
 
-  FunctionType *ParseFunctionType();
+  ast::FunctionType *ParseFunctionType();
 
-  PointerType *ParsePointerType();
+  ast::PointerType *ParsePointerType();
 
-  ArrayType *ParseArrayType();
+  ast::ArrayType *ParseArrayType();
 
-  StructType *ParseStructType();
+  ast::StructType *ParseStructType();
 
  private:
   // The source code scanner
   Scanner &scanner_;
 
   // A factory for all node types
-  AstNodeFactory &node_factory_;
+  ast::AstNodeFactory &node_factory_;
 
   // A factory for strings
-  AstStringsContainer &strings_container_;
+  ast::AstStringsContainer &strings_container_;
 
   // The current scope
-  Scope *scope_;
+  ast::Scope *scope_;
 };
 
-}  // namespace tpl
+}  // namespace tpl::parsing

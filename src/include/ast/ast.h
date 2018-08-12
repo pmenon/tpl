@@ -8,7 +8,7 @@
 #include "util/region.h"
 #include "util/region_containers.h"
 
-namespace tpl {
+namespace tpl::ast {
 
 /*
  *
@@ -95,7 +95,7 @@ AST_NODES(FORWARD_DECLARE)
 /**
  * The base class for all AST nodes
  */
-class AstNode : public RegionObject {
+class AstNode : public util::RegionObject {
  public:
   // The kind enumeration listing all possible node kinds
 #define T(kind) kind,
@@ -405,13 +405,13 @@ class Expression : public AstNode {
  */
 class BinaryExpression : public Expression {
  public:
-  BinaryExpression(Token::Type op, AstNode *left, AstNode *right)
+  BinaryExpression(parsing::Token::Type op, AstNode *left, AstNode *right)
       : Expression(Kind::BinaryExpression),
         op_(op),
         left_(left),
         right_(right) {}
 
-  Token::Type op() { return op_; }
+  parsing::Token::Type op() { return op_; }
 
   AstNode *left() { return left_; }
 
@@ -422,7 +422,7 @@ class BinaryExpression : public Expression {
   }
 
  private:
-  Token::Type op_;
+  parsing::Token::Type op_;
   AstNode *left_;
   AstNode *right_;
 };
@@ -518,10 +518,10 @@ class LiteralExpression : public Expression {
  */
 class UnaryExpression : public Expression {
  public:
-  UnaryExpression(Token::Type op, AstNode *expr)
+  UnaryExpression(parsing::Token::Type op, AstNode *expr)
       : Expression(Kind::UnaryExpression), op_(op), expr_(expr) {}
 
-  Token::Type op() { return op_; }
+  parsing::Token::Type op() { return op_; }
 
   AstNode *expr() { return expr_; }
 
@@ -530,7 +530,7 @@ class UnaryExpression : public Expression {
   }
 
  private:
-  Token::Type op_;
+  parsing::Token::Type op_;
   AstNode *expr_;
 };
 
@@ -570,7 +570,7 @@ class Type : public AstNode {
   }
 };
 
-class Field : public RegionObject {
+class Field : public util::RegionObject {
  public:
   Field(const AstString *name, Type *type) : name_(name), type_(type) {}
 
@@ -692,4 +692,4 @@ class StructType : public Type {
   util::RegionVector<Field *> fields_;
 };
 
-}  // namespace tpl
+}  // namespace tpl::ast

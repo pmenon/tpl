@@ -1,6 +1,6 @@
 #include "ast/pretty_print.h"
 
-namespace tpl {
+namespace tpl::ast {
 
 void PrettyPrint::VisitFile(File *node) {
   BeginVisit();
@@ -191,4 +191,4 @@ void PrettyPrint::VisitArrayType(ArrayType *node) {
   Visit(node->element_type());
 }
 
-}  // namespace tpl
+}  // namespace tpl::ast

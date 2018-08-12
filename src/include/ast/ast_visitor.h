@@ -2,7 +2,7 @@
 
 #include "ast/ast.h"
 
-namespace tpl {
+namespace tpl::ast {
 
 /**
  * Base class for AST node visitors. Implements Curiously Recurring Template
@@ -36,4 +36,4 @@ class AstVisitor {
     switch (node->kind()) { AST_NODES(GEN_VISIT_CASE) } \
   }
 
-}  // namespace tpl
+}  // namespace tpl::ast

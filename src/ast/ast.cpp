@@ -1,7 +1,7 @@
 #include "ast/ast.h"
 
-namespace tpl {
+namespace tpl::ast {
 
 FunctionType *FunctionDeclaration::type() { return fun_->type(); }
 
-}  // namespace tpl
+}  // namespace tpl::ast
