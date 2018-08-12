@@ -48,6 +48,7 @@ class Scanner {
   Token::Type peek() { return next_.type; }
 
   const std::string &current_literal() const { return curr_.literal; }
+  uint64_t current_raw_pos() const { return curr_.offset; }
 
  private:
   // Scan the next token

@@ -47,12 +47,16 @@ class Parser {
 
   void Consume(UNUSED Token::Type expected) {
     UNUSED Token::Type next = Next();
-    TPL_ASSERT(next == expected);
+    TPL_ASSERT(next == expected &&
+               "The next token doesn't match what was expected");
   }
 
   void Expect(Token::Type expected) {
     Token::Type next = Next();
     if (next != expected) {
+      // An error happened, report it but move on ...
+      ReportError("Unexpected token '%s' received when expected '%s'",
+                  Token::String(next), Token::String(expected));
     }
   }
 
@@ -74,7 +78,7 @@ class Parser {
 
   //////////////////////////////////////////////////////////////////////////////
   ///
-  /// Parsing logic
+  /// Parsing productions
   ///
   //////////////////////////////////////////////////////////////////////////////
 
@@ -90,7 +94,7 @@ class Parser {
 
   ast::Statement *ParseExpressionStatement();
 
-  ast::Statement *ParseBlockStatement();
+  ast::Statement *ParseBlockStatement(ast::Scope *scope);
 
   ast::Statement *ParseIfStatement();
 
@@ -104,19 +108,56 @@ class Parser {
 
   ast::Expression *ParsePrimaryExpression();
 
-  ast::FunctionLiteralExpression *ParseFunctionLiteralExpression();
+  ast::Expression *ParseFunctionLiteralExpression();
 
   ast::Type *ParseType();
 
-  ast::IdentifierType *ParseIdentifierType();
+  ast::Type *ParseIdentifierType();
 
-  ast::FunctionType *ParseFunctionType();
+  ast::Type *ParseFunctionType();
 
-  ast::PointerType *ParsePointerType();
+  ast::Type *ParsePointerType();
 
-  ast::ArrayType *ParseArrayType();
+  ast::Type *ParseArrayType();
 
-  ast::StructType *ParseStructType();
+  ast::Type *ParseStructType();
+
+  //////////////////////////////////////////////////////////////////////////////
+  ///
+  /// Scopes
+  ///
+  //////////////////////////////////////////////////////////////////////////////
+
+  class ScopeState {
+   public:
+    ScopeState(ast::Scope **scope_stack, ast::Scope *scope)
+        : scope_stack_(scope_stack), outer_(*scope_stack) {
+      *scope_stack = scope;
+    }
+
+    ~ScopeState() { *scope_stack_ = outer_; }
+
+   private:
+    ast::Scope **scope_stack_;
+    ast::Scope *outer_;
+  };
+
+  ast::Scope *NewScope(ast::Scope::Type scope_type);
+
+  ast::Scope *NewFunctionScope() {
+    return NewScope(ast::Scope::Type::Function);
+  }
+
+  ast::Scope *NewBlockScope() { return NewScope(ast::Scope::Type::Block); }
+
+  //////////////////////////////////////////////////////////////////////////////
+  ///
+  /// Error handling
+  ///
+  //////////////////////////////////////////////////////////////////////////////
+
+  template <typename... Args>
+  void ReportError(const char *fmt, const Args &... args);
 
  private:
   // The source code scanner

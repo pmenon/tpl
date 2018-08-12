@@ -117,7 +117,7 @@ class AstNode : public util::RegionObject {
       default: { UNREACHABLE(); }
       AST_NODES(KIND_CASE)
     }
-    // clang-format on
+      // clang-format on
 #undef KIND_CASE
   }
 
@@ -341,7 +341,7 @@ class ExpressionStatement : public Statement {
  */
 class IfStatement : public Statement {
  public:
-  IfStatement(Expression *cond, Statement *then_stmt, Statement *else_stmt)
+  IfStatement(Expression *cond, BlockStatement *then_stmt, Statement *else_stmt)
       : Statement(Kind::IfStatement),
         cond_(cond),
         then_stmt_(then_stmt),
@@ -349,7 +349,7 @@ class IfStatement : public Statement {
 
   Expression *cond() { return cond_; }
 
-  Statement *then_stmt() { return then_stmt_; }
+  BlockStatement *then_stmt() { return then_stmt_; }
 
   Statement *else_stmt() { return else_stmt_; }
 
@@ -359,7 +359,7 @@ class IfStatement : public Statement {
 
  private:
   Expression *cond_;
-  Statement *then_stmt_;
+  BlockStatement *then_stmt_;
   Statement *else_stmt_;
 };
 
@@ -540,9 +540,13 @@ class UnaryExpression : public Expression {
 class VarExpression : public Expression {
  public:
   explicit VarExpression(const AstString *name)
-      : Expression(Kind::VarExpression), name_(name) {}
+      : Expression(Kind::VarExpression), name_(name), decl_(nullptr) {}
 
   const AstString *name() { return name_; }
+
+  void BindTo(Declaration *decl) { decl_ = decl; }
+
+  bool is_bound() const { return decl_ != nullptr; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::VarExpression;
@@ -550,6 +554,7 @@ class VarExpression : public Expression {
 
  private:
   const AstString *name_;
+  Declaration *decl_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

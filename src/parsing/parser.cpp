@@ -7,7 +7,9 @@ Parser::Parser(Scanner &scanner, ast::AstNodeFactory &node_factory,
     : scanner_(scanner),
       node_factory_(node_factory),
       strings_container_(strings_container),
-      scope_(nullptr) {}
+      scope_(nullptr) {
+  scope_ = NewScope(ast::Scope::Type::File);
+}
 
 ast::AstNode *Parser::Parse() {
   util::RegionVector<ast::Declaration *> decls(region());
@@ -40,7 +42,8 @@ ast::Declaration *Parser::ParseFunctionDeclaration() {
   ast::AstString *name = GetSymbol();
 
   // The function literal
-  ast::FunctionLiteralExpression *fun = ParseFunctionLiteralExpression();
+  auto *fun =
+      ParseFunctionLiteralExpression()->As<ast::FunctionLiteralExpression>();
 
   // Done
   return node_factory().NewFunctionDeclaration(name, fun);
@@ -52,9 +55,9 @@ ast::Declaration *Parser::ParseStructDeclaration() {
   Expect(Token::Type::IDENTIFIER);
   ast::AstString *name = GetSymbol();
 
-  ast::StructType *type = ParseStructType();
+  auto *struct_type = ParseStructType()->As<ast::StructType>();
 
-  return node_factory().NewStructDeclaration(name, type);
+  return node_factory().NewStructDeclaration(name, struct_type);
 }
 
 ast::Declaration *Parser::ParseVariableDeclaration() {
@@ -78,7 +81,12 @@ ast::Declaration *Parser::ParseVariableDeclaration() {
     init = ParseExpression();
   }
 
-  return node_factory().NewVariableDeclaration(name, type, init);
+  ast::VariableDeclaration *decl =
+      node_factory().NewVariableDeclaration(name, type, init);
+
+  scope()->Declare(decl->name(), decl);
+
+  return decl;
 }
 
 ast::Statement *Parser::ParseStatement() {
@@ -92,7 +100,7 @@ ast::Statement *Parser::ParseStatement() {
 
   switch (peek()) {
     case Token::Type::LEFT_BRACE: {
-      return ParseBlockStatement();
+      return ParseBlockStatement(nullptr);
     }
     case Token::Type::IF: {
       return ParseIfStatement();
@@ -118,15 +126,21 @@ ast::Statement *Parser::ParseExpressionStatement() {
   return node_factory().NewExpressionStatement(expr);
 }
 
-ast::Statement *Parser::ParseBlockStatement() {
+ast::Statement *Parser::ParseBlockStatement(ast::Scope *scope) {
   // BlockStatement ::
   //   '{' (Statement)+ '}'
+
+  if (scope == nullptr) {
+    scope = NewBlockScope();
+  }
+
+  ScopeState scope_state(&scope_, scope);
 
   // Eat the left brace
   Expect(Token::Type::LEFT_BRACE);
 
   // Where we store all the statements in the block
-  util::RegionVector<ast::Statement *> statements(node_factory().region());
+  util::RegionVector<ast::Statement *> statements(region());
 
   // Loop while we don't see the right brace
   while (peek() != Token::Type::RIGHT_BRACE && peek() != Token::Type::EOS) {
@@ -152,12 +166,16 @@ ast::Statement *Parser::ParseIfStatement() {
   Expect(Token::Type::RIGHT_PAREN);
 
   // Handle 'then' statement
-  ast::Statement *then_stmt = ParseBlockStatement();
+  auto *then_stmt = ParseBlockStatement(nullptr)->As<ast::BlockStatement>();
 
   // Handle 'else' statement, if one exists
   ast::Statement *else_stmt = nullptr;
   if (Matches(Token::Type::ELSE)) {
-    else_stmt = ParseBlockStatement();
+    if (Matches(Token::Type::IF)) {
+      else_stmt = ParseIfStatement();
+    } else {
+      else_stmt = ParseBlockStatement(nullptr);
+    }
   }
 
   return node_factory().NewIfStatement(cond, then_stmt, else_stmt);
@@ -254,6 +272,7 @@ ast::Expression *Parser::ParsePrimaryExpression() {
   //  Identifier
   //  Number
   //  String
+  //  FunctionLiteral
   // '(' Expression ')'
 
   switch (peek()) {
@@ -271,8 +290,13 @@ ast::Expression *Parser::ParsePrimaryExpression() {
     }
     case Token::Type::IDENTIFIER: {
       Next();
-      ast::AstString *name = GetSymbol();
-      return node_factory().NewVarExpression(name);
+      ast::VarExpression *var = node_factory().NewVarExpression(GetSymbol());
+      ast::Declaration *decl = scope()->Lookup(var->name());
+      if (decl != nullptr) {
+        var->BindTo(decl);
+      }
+      TPL_ASSERT(var->is_bound());
+      return var;
     }
     case Token::Type::NUMBER: {
       Next();
@@ -282,24 +306,47 @@ ast::Expression *Parser::ParsePrimaryExpression() {
       Next();
       return node_factory().NewStringLiteral(GetSymbol());
     }
+    case Token::Type::FUN: {
+      Next();
+      return ParseFunctionLiteralExpression();
+    }
     case Token::Type::LEFT_PAREN: {
       Consume(Token::Type::LEFT_PAREN);
       ast::Expression *expr = ParseExpression();
       Expect(Token::Type::RIGHT_PAREN);
       return expr;
     }
-    default: {}
+    default: { break; }
   }
+
+  // Error
+  // TODO(pmenon) Fix me
+  ReportError("Unexpected token '%s' when attempting to parse primary",
+              Token::String(peek()));
+  return nullptr;
 }
 
-ast::FunctionLiteralExpression *Parser::ParseFunctionLiteralExpression() {
+ast::Expression *Parser::ParseFunctionLiteralExpression() {
   // FunctionLiteralExpression
   //   FunctionType BlockStatement
 
-  ast::FunctionType *func_type = ParseFunctionType();
+  // Create a new scope for this function
+  ast::Scope *func_scope = NewFunctionScope();
 
-  ast::BlockStatement *body = ParseBlockStatement()->As<ast::BlockStatement>();
+  // Parse the type
+  auto *func_type = ParseFunctionType()->As<ast::FunctionType>();
 
+  // Add formal parameters
+  for (const auto *param : func_type->parameters()) {
+    auto *param_decl = node_factory().NewVariableDeclaration(
+        param->name(), param->type(), nullptr);
+    func_scope->Declare(param->name(), param_decl);
+  }
+
+  // Parse the body
+  auto *body = ParseBlockStatement(func_scope)->As<ast::BlockStatement>();
+
+  // Done
   return node_factory().NewFunctionLiteral(func_type, body);
 }
 
@@ -324,9 +371,11 @@ ast::Type *Parser::ParseType() {
   }
 
   // Error
+  ReportError("Un-parsable type beginning with '%s'", Token::String(peek()));
+  return nullptr;
 }
 
-ast::IdentifierType *Parser::ParseIdentifierType() {
+ast::Type *Parser::ParseIdentifierType() {
   // IdentifierType ::
   //   Identifier
 
@@ -346,7 +395,7 @@ ast::IdentifierType *Parser::ParseIdentifierType() {
   return type;
 }
 
-ast::FunctionType *Parser::ParseFunctionType() {
+ast::Type *Parser::ParseFunctionType() {
   // FuncType ::
   //   '(' (Identifier ':' Type)? (',' Identifier ':' Type)* ')' '->' Type
 
@@ -384,7 +433,7 @@ ast::FunctionType *Parser::ParseFunctionType() {
   return node_factory().NewFunctionType(std::move(params), ret);
 }
 
-ast::PointerType *Parser::ParsePointerType() {
+ast::Type *Parser::ParsePointerType() {
   // PointerType ::
   //   '*' Type
 
@@ -393,7 +442,7 @@ ast::PointerType *Parser::ParsePointerType() {
   return node_factory().NewPointerType(pointee);
 }
 
-ast::ArrayType *Parser::ParseArrayType() {
+ast::Type *Parser::ParseArrayType() {
   // ArrayType ::
   //   '[' (Expr)? ']' Type
 
@@ -411,7 +460,7 @@ ast::ArrayType *Parser::ParseArrayType() {
   return node_factory().NewArrayType(len, elem_type);
 }
 
-ast::StructType *Parser::ParseStructType() {
+ast::Type *Parser::ParseStructType() {
   // StructType ::
   //   '{' (Identifier ':' Type)* '}'
 
@@ -434,5 +483,12 @@ ast::StructType *Parser::ParseStructType() {
 
   return node_factory().NewStructType(std::move(fields));
 }
+
+ast::Scope *Parser::NewScope(ast::Scope::Type scope_type) {
+  return new (region()) ast::Scope(region(), scope_, scope_type);
+}
+
+template <typename... Args>
+void Parser::ReportError(UNUSED const char *fmt, UNUSED const Args &... args) {}
 
 }  // namespace tpl::parsing

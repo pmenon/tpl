@@ -49,7 +49,7 @@ class AstNodeFactory {
     return new (region_) ExpressionStatement(expression);
   }
 
-  IfStatement *NewIfStatement(Expression *cond, Statement *then_stmt,
+  IfStatement *NewIfStatement(Expression *cond, BlockStatement *then_stmt,
                               Statement *else_stmt) {
     return new (region_) IfStatement(cond, then_stmt, else_stmt);
   }

@@ -17,7 +17,7 @@ void PrettyPrint::VisitFunctionDeclaration(FunctionDeclaration *node) {
   PrintString(" ");
   Visit(node->type());
   PrintString(" ");
-  Visit(node->function()->body());
+  Visit(node->function());
 }
 
 void PrettyPrint::VisitVariableDeclaration(VariableDeclaration *node) {
@@ -118,7 +118,9 @@ void PrettyPrint::VisitBinaryExpression(BinaryExpression *node) {
 }
 
 void PrettyPrint::VisitFunctionLiteralExpression(
-    FunctionLiteralExpression *node) {}
+    FunctionLiteralExpression *node) {
+  Visit(node->body());
+}
 
 void PrettyPrint::VisitLiteralExpression(LiteralExpression *node) {
   switch (node->type()) {
