@@ -4,6 +4,7 @@
 
 #include "ast/ast_value.h"
 #include "parsing/token.h"
+#include "util/casting.h"
 #include "util/region.h"
 #include "util/region_containers.h"
 
@@ -106,31 +107,25 @@ class AstNode : public RegionObject {
 
   // This is mainly used in tests!
   const char *kind_name() const {
-    switch (kind()) {
-#define S(kind)    \
-  case Kind::kind: \
+#define KIND_CASE(kind) \
+  case Kind::kind:      \
     return #kind;
-      AST_NODES(S)
-#undef S
+
+    // Main type switch
+    // clang-format off
+    switch (kind()) {
+      default: {}
+      AST_NODES(KIND_CASE)
     }
-  }
-
- private:
-  template <typename T>
-  bool IsAImpl(const AstNode *node, std::false_type) const {
-    return false;
-  }
-
-  template <typename T>
-  bool IsAImpl(const AstNode *node, std::true_type) const {
-    return T::classof(node);
+      // clang-format on
+#undef KIND_CASE
   }
 
  public:
   // Checks if this node is an instance of the specified class
   template <typename T>
   bool Is() const {
-    return IsAImpl<T>(this, std::is_base_of<AstNode, T>());
+    return util::Is<T>(this);
   }
 
   // Casts this node to an instance of the specified class, asserting if the
