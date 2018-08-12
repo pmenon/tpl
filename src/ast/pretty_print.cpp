@@ -3,12 +3,10 @@
 namespace tpl::ast {
 
 void PrettyPrint::VisitFile(File *node) {
-  BeginVisit();
   for (auto *decl : node->declarations()) {
     Visit(decl);
     NewLine();
   }
-  EndVisit();
 }
 
 void PrettyPrint::VisitFunctionDeclaration(FunctionDeclaration *node) {

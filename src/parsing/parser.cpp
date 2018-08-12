@@ -45,19 +45,36 @@ ast::Declaration *Parser::ParseFunctionDeclaration() {
   auto *fun =
       ParseFunctionLiteralExpression()->As<ast::FunctionLiteralExpression>();
 
+  // Create declaration
+  ast::FunctionDeclaration *decl =
+      node_factory().NewFunctionDeclaration(name, fun);
+
+  // Declare function in current scope
+  scope()->Declare(name, decl);
+
   // Done
-  return node_factory().NewFunctionDeclaration(name, fun);
+  return decl;
 }
 
 ast::Declaration *Parser::ParseStructDeclaration() {
   Consume(Token::Type::STRUCT);
 
+  // The struct name
   Expect(Token::Type::IDENTIFIER);
   ast::AstString *name = GetSymbol();
 
+  // The type
   auto *struct_type = ParseStructType()->As<ast::StructType>();
 
-  return node_factory().NewStructDeclaration(name, struct_type);
+  // The declaration object
+  ast::StructDeclaration *decl =
+      node_factory().NewStructDeclaration(name, struct_type);
+
+  // Actually declare struct in scope
+  scope()->Declare(name, decl);
+
+  // Done
+  return decl;
 }
 
 ast::Declaration *Parser::ParseVariableDeclaration() {
@@ -66,26 +83,32 @@ ast::Declaration *Parser::ParseVariableDeclaration() {
 
   Consume(Token::Type::VAR);
 
+  // The name
   Expect(Token::Type::IDENTIFIER);
   ast::AstString *name = GetSymbol();
 
+  // The type (if exists)
   ast::Type *type = nullptr;
 
   if (Matches(Token::Type::COLON)) {
     type = ParseType();
   }
 
+  // The initializer (if exists)
   ast::Expression *init = nullptr;
 
   if (Matches(Token::Type::EQUAL)) {
     init = ParseExpression();
   }
 
+  // Create declaration object
   ast::VariableDeclaration *decl =
       node_factory().NewVariableDeclaration(name, type, init);
 
+  // Declare variable in scope
   scope()->Declare(decl->name(), decl);
 
+  // Done
   return decl;
 }
 
