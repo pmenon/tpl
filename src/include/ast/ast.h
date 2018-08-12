@@ -211,6 +211,7 @@ class FunctionDeclaration : public Declaration {
       : Declaration(Kind::FunctionDeclaration, name), fun_(fun) {}
 
   FunctionLiteralExpression *function() const { return fun_; }
+
   FunctionType *type();
 
   static bool classof(const AstNode *node) {
@@ -250,6 +251,7 @@ class VariableDeclaration : public Declaration {
         init_(init) {}
 
   Type *type() const { return type_; }
+
   Expression *initial() const { return init_; }
 
   static bool classof(const AstNode *node) {
@@ -346,7 +348,9 @@ class IfStatement : public Statement {
         else_stmt_(else_stmt) {}
 
   Expression *cond() { return cond_; }
+
   Statement *then_stmt() { return then_stmt_; }
+
   Statement *else_stmt() { return else_stmt_; }
 
   static bool classof(const AstNode *node) {
@@ -408,7 +412,9 @@ class BinaryExpression : public Expression {
         right_(right) {}
 
   Token::Type op() { return op_; }
+
   AstNode *left() { return left_; }
+
   AstNode *right() { return right_; }
 
   static bool classof(const AstNode *node) {
@@ -430,6 +436,7 @@ class CallExpression : public Expression {
       : Expression(Kind::CallExpression), fun_(fun), args_(std::move(args)) {}
 
   Expression *function() { return fun_; }
+
   util::RegionVector<Expression *> &arguments() { return args_; }
 
   static bool classof(const AstNode *node) {
@@ -447,6 +454,7 @@ class FunctionLiteralExpression : public Expression {
       : Expression(Kind::FunctionLiteralExpression), type_(type), body_(body) {}
 
   FunctionType *type() const { return type_; }
+
   BlockStatement *body() const { return body_; }
 
   static bool classof(const AstNode *node) {
@@ -514,6 +522,7 @@ class UnaryExpression : public Expression {
       : Expression(Kind::UnaryExpression), op_(op), expr_(expr) {}
 
   Token::Type op() { return op_; }
+
   AstNode *expr() { return expr_; }
 
   static bool classof(const AstNode *node) {
@@ -566,6 +575,7 @@ class Field : public RegionObject {
   Field(const AstString *name, Type *type) : name_(name), type_(type) {}
 
   const AstString *name() const { return name_; }
+
   Type *type() const { return type_; }
 
  private:
@@ -582,6 +592,7 @@ class ArrayType : public Type {
       : Type(Kind::ArrayType), len_(len), elem_type_(elem_type) {}
 
   Expression *length() const { return len_; }
+
   Type *element_type() const { return elem_type_; }
 
   static bool classof(const AstNode *node) {
@@ -629,7 +640,10 @@ class IdentifierType : public Type {
       : Type(Kind::IdentifierType), name_(name), declaration_(declaration) {}
 
   const AstString *name() const { return name_; }
+
   Declaration *declaration() const { return declaration_; }
+
+  bool is_bound() const { return declaration_ != nullptr; }
 
   void BindTo(Declaration *declaration) { declaration_ = declaration; }
 

@@ -12,12 +12,12 @@ void PrettyPrint::VisitFile(File *node) {
 }
 
 void PrettyPrint::VisitFunctionDeclaration(FunctionDeclaration *node) {
-  BeginVisit();
   PrintString("fun ");
-  Visit(node->type());
   PrintString(node->name());
+  PrintString(" ");
+  Visit(node->type());
+  PrintString(" ");
   Visit(node->function()->body());
-  EndVisit();
 }
 
 void PrettyPrint::VisitVariableDeclaration(VariableDeclaration *node) {
