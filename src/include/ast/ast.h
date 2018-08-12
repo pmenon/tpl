@@ -580,7 +580,7 @@ class VarExpression : public Expression {
   explicit VarExpression(const AstString *name)
       : Expression(Kind::VarExpression), name_(name), decl_(nullptr) {}
 
-  const AstString *name() { return name_; }
+  const AstString *name() const { return name_; }
 
   void BindTo(Declaration *decl) { decl_ = decl; }
 

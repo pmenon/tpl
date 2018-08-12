@@ -5,6 +5,7 @@
 #include "ast/ast_value.h"
 #include "ast/scope.h"
 #include "parsing/scanner.h"
+#include "util/region_containers.h"
 
 namespace tpl::parsing {
 
@@ -33,6 +34,7 @@ class Parser {
   ast::AstStringsContainer &strings_container() { return strings_container_; }
 
   ast::Scope *scope() { return scope_; }
+  const ast::Scope *scope() const { return scope_; }
 
  private:
   //////////////////////////////////////////////////////////////////////////////
@@ -150,6 +152,9 @@ class Parser {
 
   ast::Scope *NewBlockScope() { return NewScope(ast::Scope::Type::Block); }
 
+  template <typename T>
+  bool Resolve(T *node) const;
+
   //////////////////////////////////////////////////////////////////////////////
   ///
   /// Error handling
@@ -171,6 +176,8 @@ class Parser {
 
   // The current scope
   ast::Scope *scope_;
+
+  util::RegionVector<ast::AstNode *> unresolved_;
 };
 
 }  // namespace tpl::parsing

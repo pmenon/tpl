@@ -7,7 +7,8 @@ Parser::Parser(Scanner &scanner, ast::AstNodeFactory &node_factory,
     : scanner_(scanner),
       node_factory_(node_factory),
       strings_container_(strings_container),
-      scope_(nullptr) {
+      scope_(nullptr),
+      unresolved_(region()) {
   scope_ = NewScope(ast::Scope::Type::File);
 }
 
@@ -17,6 +18,22 @@ ast::AstNode *Parser::Parse() {
   while (peek() != Token::Type::EOS) {
     decls.push_back(ParseDeclaration());
   }
+
+  // Try final resolution
+  size_t j = 0;
+  for (size_t i = 0; i < unresolved_.size(); i++) {
+    ast::AstNode *node = unresolved_[i];
+    if (auto *var_expr = node->SafeAs<ast::VarExpression>()) {
+      if (!Resolve(var_expr)) {
+        unresolved_[j++] = unresolved_[i];
+      }
+    } else if (auto *type_ident = node->SafeAs<ast::IdentifierType>()) {
+      if (!Resolve(type_ident)) {
+        unresolved_[j++] = unresolved_[i];
+      }
+    }
+  }
+  unresolved_.erase(unresolved_.begin() + j, unresolved_.end());
 
   return node_factory().NewFile(std::move(decls));
 }
@@ -314,11 +331,9 @@ ast::Expression *Parser::ParsePrimaryExpression() {
     case Token::Type::IDENTIFIER: {
       Next();
       ast::VarExpression *var = node_factory().NewVarExpression(GetSymbol());
-      ast::Declaration *decl = scope()->Lookup(var->name());
-      if (decl != nullptr) {
-        var->BindTo(decl);
+      if (!Resolve(var)) {
+        unresolved_.push_back(var);
       }
-      TPL_ASSERT(var->is_bound());
       return var;
     }
     case Token::Type::NUMBER: {
@@ -509,6 +524,19 @@ ast::Type *Parser::ParseStructType() {
 
 ast::Scope *Parser::NewScope(ast::Scope::Type scope_type) {
   return new (region()) ast::Scope(region(), scope_, scope_type);
+}
+
+template<typename T>
+bool Parser::Resolve(T *node) const {
+  ast::Declaration *decl = scope()->Lookup(node->name());
+  if (decl == nullptr) {
+    return false;
+  }
+
+  // Bind
+  node->BindTo(decl);
+
+  return true;
 }
 
 template <typename... Args>
