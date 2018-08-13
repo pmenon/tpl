@@ -1,3 +1,6 @@
+
+#include <parsing/parser.h>
+
 #include "parsing/parser.h"
 
 namespace tpl::parsing {
@@ -139,6 +142,9 @@ ast::Statement *Parser::ParseStatement() {
     case Token::Type::LEFT_BRACE: {
       return ParseBlockStatement(nullptr);
     }
+    case Token::Type::FOR: {
+      return ParseForStatement();
+    }
     case Token::Type::IF: {
       return ParseIfStatement();
     }
@@ -189,6 +195,70 @@ ast::Statement *Parser::ParseBlockStatement(ast::Scope *scope) {
   Expect(Token::Type::RIGHT_BRACE);
 
   return node_factory().NewBlockStatement(std::move(statements));
+}
+
+Parser::ForHeader Parser::ParseForHeader() {
+  // ForStatement ::
+  //   'for' '(' (Stmt)? ; (Expr)? ; (Stmt)? ')' '{' (StmtList)? '}'
+  //   'for' '(' Expr ')' '{' (StmtList)? '}'
+  //   'for' '(' ')' '{' (StmtList)? '}'
+
+  Expect(Token::Type::LEFT_PAREN);
+
+  if (Matches(Token::Type::RIGHT_PAREN)) {
+    // Infinite loop
+    return ForHeader(nullptr, nullptr, nullptr);
+  }
+
+  ast::Statement *init = nullptr;
+  ast::Expression *cond = nullptr;
+  ast::Statement *next = nullptr;
+
+  init = ParseStatement();
+
+  if (Matches(Token::Type::SEMI)) {
+    // Regular for-loop
+    if (!Matches(Token::Type::SEMI)) {
+      cond = ParseExpression();
+      Expect(Token::Type::SEMI);
+    }
+    if (!Matches(Token::Type::RIGHT_PAREN)) {
+      next = ParseStatement();
+      Expect(Token::Type::RIGHT_PAREN);
+    }
+  } else {
+    // While-loop
+    Expect(Token::Type::RIGHT_PAREN);
+    if (auto *cond_stmt = init->SafeAs<ast::ExpressionStatement>()) {
+      cond = cond_stmt->expr();
+    } else {
+      ReportError("Loop condition is not expression, found '%s'",
+                  init->kind_name());
+    }
+    init = nullptr;
+  }
+
+  return ForHeader(init, cond, next);
+}
+
+ast::Statement *Parser::ParseForStatement() {
+  // ForStatement ::
+  //   'for' '(' (Stmt)? ; (Expr)? ; (Stmt)? ')' '{' (StmtList)? '}'
+  //   'for' '(' Expr ')' '{' (StmtList)? '}'
+  //   'for' '(' ')' '{' (StmtList)? '}'
+
+  Consume(Token::Type::FOR);
+
+  ast::Scope *for_scope = NewBlockScope();
+
+  ScopeState scope_state(&scope_, for_scope);
+
+  ForHeader header = ParseForHeader();
+
+  auto *body = ParseBlockStatement(for_scope)->As<ast::BlockStatement>();
+
+  return node_factory().NewForStatement(header.init, header.cond, header.next,
+                                        body);
 }
 
 ast::Statement *Parser::ParseIfStatement() {

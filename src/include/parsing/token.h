@@ -16,11 +16,11 @@ namespace tpl::parsing {
   T(LEFT_BRACKET, "[", 0)                          \
   T(RIGHT_BRACKET, "]", 0)                         \
   T(AMPERSAND, "&", 0)                             \
+  T(ARROW, "->", 0)                                \
   T(BANG, "!", 0)                                  \
   T(COLON, ":", 0)                                 \
-                                                   \
   T(DOT, ".", 0)                                   \
-  T(ARROW, "->", 0)                                \
+  T(SEMI, ";", 0)                                  \
                                                    \
   /* Assignment */                                 \
   T(EQUAL, "=", 2)                                 \

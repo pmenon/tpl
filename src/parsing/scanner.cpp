@@ -106,6 +106,11 @@ void Scanner::Scan() {
         type = Token::Type::DOT;
         break;
       }
+      case ';': {
+        Advance();
+        type = Token::Type::SEMI;
+        break;
+      }
       case '=': {
         Advance();
         if (Matches('=')) {

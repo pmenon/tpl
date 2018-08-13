@@ -96,6 +96,7 @@ TEST_F(AstTest, HierechyTest) {
         factory.NewBlockStatement(util::RegionVector<Statement *>(region())),
         factory.NewDeclarationStatement(nullptr),
         factory.NewExpressionStatement(nullptr),
+        factory.NewForStatement(nullptr, nullptr, nullptr, nullptr),
         factory.NewIfStatement(nullptr, nullptr, nullptr),
         factory.NewReturnStatement(nullptr),
     };

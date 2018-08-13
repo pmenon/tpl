@@ -98,6 +98,19 @@ class Parser {
 
   ast::Statement *ParseBlockStatement(ast::Scope *scope);
 
+  struct ForHeader {
+    ast::Statement *init;
+    ast::Expression *cond;
+    ast::Statement *next;
+
+    ForHeader(ast::Statement *init, ast::Expression *cond, ast::Statement *next)
+        : init(init), cond(cond), next(next) {}
+  };
+
+  ForHeader ParseForHeader();
+
+  ast::Statement *ParseForStatement();
+
   ast::Statement *ParseIfStatement();
 
   ast::Expression *ParseExpression();

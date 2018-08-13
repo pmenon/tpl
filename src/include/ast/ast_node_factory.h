@@ -55,6 +55,11 @@ class AstNodeFactory {
     return new (region_) ExpressionStatement(expression);
   }
 
+  ForStatement *NewForStatement(Statement *init, Expression *cond,
+                                Statement *next, BlockStatement *body) {
+    return new (region_) ForStatement(init, cond, next, body);
+  }
+
   IfStatement *NewIfStatement(Expression *cond, BlockStatement *then_stmt,
                               Statement *else_stmt) {
     return new (region_) IfStatement(cond, then_stmt, else_stmt);

@@ -37,6 +37,7 @@ namespace tpl::ast {
   T(BlockStatement)        \
   T(DeclarationStatement)  \
   T(ExpressionStatement)   \
+  T(ForStatement)          \
   T(IfStatement)           \
   T(ReturnStatement)
 
@@ -352,6 +353,43 @@ class ExpressionStatement : public Statement {
 
  private:
   Expression *expression_;
+};
+
+/**
+ * A for statement
+ */
+class ForStatement : public Statement {
+ public:
+  ForStatement(Statement *init, Expression *cond, Statement *next,
+               BlockStatement *body)
+      : Statement(AstNode::Kind::ForStatement),
+        init_(init),
+        cond_(cond),
+        next_(next),
+        body_(body) {}
+
+  Statement *init() const { return init_; }
+  Expression *cond() const { return cond_; }
+  Statement *next() const { return next_; }
+  BlockStatement *body() const { return body_; }
+
+  bool is_infinite() const {
+    return init_ == nullptr && cond_ == nullptr && next_ == nullptr;
+  }
+
+  bool is_while_like() const {
+    return init_ == nullptr && cond_ != nullptr && next_ == nullptr;
+  }
+
+  static bool classof(const AstNode *node) {
+    return node->kind() == Kind::ForStatement;
+  }
+
+ private:
+  Statement *init_;
+  Expression *cond_;
+  Statement *next_;
+  BlockStatement *body_;
 };
 
 /**

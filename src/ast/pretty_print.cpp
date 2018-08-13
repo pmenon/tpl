@@ -63,6 +63,27 @@ void PrettyPrint::VisitExpressionStatement(ExpressionStatement *node) {
   Visit(node->expr());
 }
 
+void PrettyPrint::VisitForStatement(ForStatement *node) {
+  BeginVisit();
+  PrintString("for (");
+  if (node->init() != nullptr) {
+    Visit(node->init());
+    PrintString(";");
+  }
+  if (node->cond() != nullptr) {
+    Visit(node->cond());
+    if (!node->is_while_like()) {
+      PrintString(";");
+    }
+  }
+  if (node->next() != nullptr) {
+    Visit(node->next());
+  }
+  PrintString(")");
+  Visit(node->body());
+  EndVisit();
+}
+
 void PrettyPrint::VisitIfStatement(IfStatement *node) {
   BeginVisit();
 
