@@ -23,19 +23,16 @@ ast::AstNode *Parser::Parse() {
   size_t j = 0;
   for (size_t i = 0; i < unresolved_.size(); i++) {
     ast::AstNode *node = unresolved_[i];
-    if (auto *var_expr = node->SafeAs<ast::VarExpression>()) {
-      if (!Resolve(var_expr)) {
-        unresolved_[j++] = unresolved_[i];
-      }
-    } else if (auto *type_ident = node->SafeAs<ast::IdentifierType>()) {
-      if (!Resolve(type_ident)) {
+    if (auto *ident = node->SafeAs<ast::IdentifierExpression>()) {
+      auto *decl = scope()->Lookup(ident->name());
+      if (decl == nullptr) {
         unresolved_[j++] = unresolved_[i];
       }
     }
   }
   unresolved_.erase(unresolved_.begin() + j, unresolved_.end());
 
-  return node_factory().NewFile(std::move(decls));
+  return node_factory().NewFile(std::move(decls), std::move(unresolved_));
 }
 
 ast::Declaration *Parser::ParseDeclaration() {
@@ -105,7 +102,7 @@ ast::Declaration *Parser::ParseVariableDeclaration() {
   ast::AstString *name = GetSymbol();
 
   // The type (if exists)
-  ast::Type *type = nullptr;
+  ast::Expression *type = nullptr;
 
   if (Matches(Token::Type::COLON)) {
     type = ParseType();
@@ -242,7 +239,7 @@ ast::Expression *Parser::ParseBinaryExpression(uint32_t min_prec) {
     // to handle cases like 1+2+3+4.
     while (Token::Precedence(peek()) == prec) {
       Token::Type op = Next();
-      ast::AstNode *right = ParseBinaryExpression(prec);
+      ast::Expression *right = ParseBinaryExpression(prec);
       left = node_factory().NewBinaryExpression(op, left, right);
     }
   }
@@ -263,7 +260,7 @@ ast::Expression *Parser::ParseUnaryExpression() {
     case Token::Type::MINUS:
     case Token::Type::STAR: {
       Token::Type op = Next();
-      ast::AstNode *expr = ParseUnaryExpression();
+      ast::Expression *expr = ParseUnaryExpression();
       return node_factory().NewUnaryExpression(op, expr);
     }
     default:
@@ -330,11 +327,9 @@ ast::Expression *Parser::ParsePrimaryExpression() {
     }
     case Token::Type::IDENTIFIER: {
       Next();
-      ast::VarExpression *var = node_factory().NewVarExpression(GetSymbol());
-      if (!Resolve(var)) {
-        unresolved_.push_back(var);
-      }
-      return var;
+      auto *ident = node_factory().NewIdentifierExpression(GetSymbol());
+      Resolve(ident);
+      return ident;
     }
     case Token::Type::NUMBER: {
       Next();
@@ -388,10 +383,13 @@ ast::Expression *Parser::ParseFunctionLiteralExpression() {
   return node_factory().NewFunctionLiteral(func_type, body);
 }
 
-ast::Type *Parser::ParseType() {
+ast::Expression *Parser::ParseType() {
   switch (peek()) {
     case Token::Type::IDENTIFIER: {
-      return ParseIdentifierType();
+      Next();
+      auto *ident = node_factory().NewIdentifierExpression(GetSymbol());
+      Resolve(ident);
+      return ident;
     }
     case Token::Type::LEFT_PAREN: {
       return ParseFunctionType();
@@ -410,30 +408,11 @@ ast::Type *Parser::ParseType() {
 
   // Error
   ReportError("Un-parsable type beginning with '%s'", Token::String(peek()));
+
   return nullptr;
 }
 
-ast::Type *Parser::ParseIdentifierType() {
-  // IdentifierType ::
-  //   Identifier
-
-  // Get the name
-  Consume(Token::Type::IDENTIFIER);
-  ast::AstString *name = GetSymbol();
-
-  // Create the type
-  ast::IdentifierType *type = node_factory().NewIdentifierType(name);
-
-  // Try to resolve
-  ast::Declaration *decl = scope()->Lookup(name);
-  if (decl != nullptr) {
-    type->BindTo(decl);
-  }
-
-  return type;
-}
-
-ast::Type *Parser::ParseFunctionType() {
+ast::Expression *Parser::ParseFunctionType() {
   // FuncType ::
   //   '(' (Identifier ':' Type)? (',' Identifier ':' Type)* ')' '->' Type
 
@@ -453,7 +432,7 @@ ast::Type *Parser::ParseFunctionType() {
     Expect(Token::Type::COLON);
 
     // Parse the type
-    ast::Type *type = ParseType();
+    ast::Expression *type = ParseType();
 
     // That's it
     params.push_back(node_factory().NewField(name, type));
@@ -466,21 +445,21 @@ ast::Type *Parser::ParseFunctionType() {
   Expect(Token::Type::RIGHT_PAREN);
   Expect(Token::Type::ARROW);
 
-  ast::Type *ret = ParseType();
+  ast::Expression *ret = ParseType();
 
   return node_factory().NewFunctionType(std::move(params), ret);
 }
 
-ast::Type *Parser::ParsePointerType() {
+ast::Expression *Parser::ParsePointerType() {
   // PointerType ::
   //   '*' Type
 
   Consume(Token::Type::STAR);
-  ast::Type *pointee = ParseType();
+  ast::Expression *pointee = ParseType();
   return node_factory().NewPointerType(pointee);
 }
 
-ast::Type *Parser::ParseArrayType() {
+ast::Expression *Parser::ParseArrayType() {
   // ArrayType ::
   //   '[' (Expr)? ']' Type
 
@@ -493,12 +472,12 @@ ast::Type *Parser::ParseArrayType() {
 
   Expect(Token::Type::RIGHT_BRACKET);
 
-  ast::Type *elem_type = ParseType();
+  ast::Expression *elem_type = ParseType();
 
   return node_factory().NewArrayType(len, elem_type);
 }
 
-ast::Type *Parser::ParseStructType() {
+ast::Expression *Parser::ParseStructType() {
   // StructType ::
   //   '{' (Identifier ':' Type)* '}'
 
@@ -512,7 +491,7 @@ ast::Type *Parser::ParseStructType() {
 
     Expect(Token::Type::COLON);
 
-    ast::Type *type = ParseType();
+    ast::Expression *type = ParseType();
 
     fields.push_back(node_factory().NewField(name, type));
   }
@@ -526,17 +505,23 @@ ast::Scope *Parser::NewScope(ast::Scope::Type scope_type) {
   return new (region()) ast::Scope(region(), scope_, scope_type);
 }
 
-template<typename T>
-bool Parser::Resolve(T *node) const {
-  ast::Declaration *decl = scope()->Lookup(node->name());
-  if (decl == nullptr) {
-    return false;
+void Parser::Resolve(ast::Expression *node) {
+  auto *identifier = node->SafeAs<ast::IdentifierExpression>();
+
+  if (identifier == nullptr) {
+    return;
   }
 
-  // Bind
-  node->BindTo(decl);
+  ast::Declaration *decl = scope()->Lookup(identifier->name());
 
-  return true;
+  if (decl == nullptr) {
+    // No declaration found, unresolved
+    unresolved_.push_back(identifier);
+    return;
+  }
+
+  // Success, bind and notify
+  identifier->BindTo(decl);
 }
 
 template <typename... Args>

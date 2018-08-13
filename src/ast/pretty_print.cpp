@@ -120,6 +120,12 @@ void PrettyPrint::VisitFunctionLiteralExpression(
   Visit(node->body());
 }
 
+void PrettyPrint::VisitIdentifierExpression(IdentifierExpression *node) {
+  PrintString("'");
+  PrintString(node->name());
+  PrintString("'");
+}
+
 void PrettyPrint::VisitLiteralExpression(LiteralExpression *node) {
   switch (node->type()) {
     case LiteralExpression::Type::Nil: {
@@ -142,12 +148,6 @@ void PrettyPrint::VisitUnaryExpression(UnaryExpression *node) {
   PrintToken(node->op());
   result_.append(" ");
   Visit(node->expr());
-  EndVisit();
-}
-
-void PrettyPrint::VisitVarExpression(VarExpression *node) {
-  BeginVisit();
-  PrintString(node->name());
   EndVisit();
 }
 
@@ -178,10 +178,6 @@ void PrettyPrint::VisitFunctionType(FunctionType *node) {
   }
   PrintString(") -> ");
   Visit(node->return_type());
-}
-
-void PrettyPrint::VisitIdentifierType(IdentifierType *node) {
-  PrintString(node->name());
 }
 
 void PrettyPrint::VisitArrayType(ArrayType *node) {

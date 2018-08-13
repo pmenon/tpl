@@ -40,7 +40,6 @@ TEST_F(AstTest, HierechyTest) {
       // Ensure declarations aren't expressions, types or statements
       STATEMENT_NODES(CHECK_NODE_IS_NOT_KIND)
       EXPRESSION_NODES(CHECK_NODE_IS_NOT_KIND)
-      TYPE_NODES(CHECK_NODE_IS_NOT_KIND)
 
       // Ensure concrete declarations are also a base declaration type
       EXPECT_TRUE(node->Is<Declaration>())
@@ -65,14 +64,18 @@ TEST_F(AstTest, HierechyTest) {
         factory.NewFunctionLiteral(nullptr, nullptr),
         factory.NewNilLiteral(),
         factory.NewUnaryExpression(parsing::Token::Type::MINUS, nullptr),
-        factory.NewVarExpression(nullptr),
+        factory.NewIdentifierExpression(nullptr),
+        factory.NewArrayType(nullptr, nullptr),
+        factory.NewFunctionType(util::RegionVector<Field *>(region()), nullptr),
+        factory.NewIdentifierExpression(nullptr),
+        factory.NewPointerType(nullptr),
+        factory.NewStructType(util::RegionVector<Field *>(region())),
     };
 
     for (const auto *node : all_exprs) {
       // Ensure expressions aren't declarations, types or statements
       DECLARATION_NODES(CHECK_NODE_IS_NOT_KIND)
       STATEMENT_NODES(CHECK_NODE_IS_NOT_KIND)
-      TYPE_NODES(CHECK_NODE_IS_NOT_KIND)
 
       // Ensure concrete expressions are also a base expression type
       EXPECT_TRUE(node->Is<Expression>())
@@ -101,7 +104,6 @@ TEST_F(AstTest, HierechyTest) {
       // Ensure statements aren't declarations, types or expressions
       DECLARATION_NODES(CHECK_NODE_IS_NOT_KIND)
       EXPRESSION_NODES(CHECK_NODE_IS_NOT_KIND)
-      TYPE_NODES(CHECK_NODE_IS_NOT_KIND)
 
       // Ensure concrete expressions are also a base expression type
       EXPECT_TRUE(node->Is<Statement>())
@@ -113,35 +115,6 @@ TEST_F(AstTest, HierechyTest) {
       EXPECT_EQ(1, COUNT_MATCHES(STATEMENT_NODES))
           << node->kind_name() << " matches more than one of "
           << STATEMENT_NODES(CSL);
-    }
-  }
-
-  /// Test types
-  {
-    AstNode *all_stmts[] = {
-        factory.NewArrayType(nullptr, nullptr),
-        factory.NewFunctionType(util::RegionVector<Field *>(region()), nullptr),
-        factory.NewIdentifierType(nullptr),
-        factory.NewPointerType(nullptr),
-        factory.NewStructType(util::RegionVector<Field *>(region())),
-    };
-
-    for (const auto *node : all_stmts) {
-      // Ensure types aren't declarations, statements or expressions
-      DECLARATION_NODES(CHECK_NODE_IS_NOT_KIND)
-      EXPRESSION_NODES(CHECK_NODE_IS_NOT_KIND)
-      STATEMENT_NODES(CHECK_NODE_IS_NOT_KIND)
-
-      // Ensure concrete types are also a base type
-      EXPECT_TRUE(node->Is<Type>())
-          << "Node " << node->kind_name()
-          << " isn't a Type? Ensure Type::classof() handles all "
-             "cases if you've added a new Type node.";
-
-      // Each expression must match only one other expression type (itself)
-      EXPECT_EQ(1, COUNT_MATCHES(TYPE_NODES))
-          << node->kind_name() << " matches more than one of "
-          << TYPE_NODES(CSL);
     }
   }
 }

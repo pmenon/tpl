@@ -118,7 +118,6 @@ void Scanner::Scan() {
       case '>': {
         Advance();
         if (Matches('=')) {
-          Advance();
           type = Token::Type::GREATER_EQUAL;
         } else {
           type = Token::Type::GREATER;
@@ -128,7 +127,6 @@ void Scanner::Scan() {
       case '<': {
         Advance();
         if (Matches('=')) {
-          Advance();
           type = Token::Type::LESS_EQUAL;
         } else {
           type = Token::Type::LESS;
@@ -138,7 +136,6 @@ void Scanner::Scan() {
       case '-': {
         Advance();
         if (Matches('>')) {
-          Advance();
           type = Token::Type::ARROW;
         } else {
           type = Token::Type::MINUS;

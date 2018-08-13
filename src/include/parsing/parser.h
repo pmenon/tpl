@@ -19,6 +19,7 @@ class Parser {
    */
   ast::AstNode *Parse();
 
+ private:
   //////////////////////////////////////////////////////////////////////////////
   ///
   /// Simple accessors
@@ -36,7 +37,6 @@ class Parser {
   ast::Scope *scope() { return scope_; }
   const ast::Scope *scope() const { return scope_; }
 
- private:
   //////////////////////////////////////////////////////////////////////////////
   ///
   /// Token logic
@@ -112,17 +112,15 @@ class Parser {
 
   ast::Expression *ParseFunctionLiteralExpression();
 
-  ast::Type *ParseType();
+  ast::Expression *ParseType();
 
-  ast::Type *ParseIdentifierType();
+  ast::Expression *ParseFunctionType();
 
-  ast::Type *ParseFunctionType();
+  ast::Expression *ParsePointerType();
 
-  ast::Type *ParsePointerType();
+  ast::Expression *ParseArrayType();
 
-  ast::Type *ParseArrayType();
-
-  ast::Type *ParseStructType();
+  ast::Expression *ParseStructType();
 
   //////////////////////////////////////////////////////////////////////////////
   ///
@@ -152,8 +150,7 @@ class Parser {
 
   ast::Scope *NewBlockScope() { return NewScope(ast::Scope::Type::Block); }
 
-  template <typename T>
-  bool Resolve(T *node) const;
+  void Resolve(ast::Expression *node);
 
   //////////////////////////////////////////////////////////////////////////////
   ///
@@ -177,7 +174,8 @@ class Parser {
   // The current scope
   ast::Scope *scope_;
 
-  util::RegionVector<ast::AstNode *> unresolved_;
+  // Unresolved identifiers
+  util::RegionVector<ast::IdentifierExpression *> unresolved_;
 };
 
 }  // namespace tpl::parsing

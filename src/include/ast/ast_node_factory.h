@@ -17,8 +17,9 @@ class AstNodeFactory {
 
   util::Region &region() { return region_; }
 
-  File *NewFile(util::RegionVector<Declaration *> &&declarations) {
-    return new (region_) File(std::move(declarations));
+  File *NewFile(util::RegionVector<Declaration *> &&declarations,
+                util::RegionVector<IdentifierExpression *> &&unresolved) {
+    return new (region_) File(std::move(declarations), std::move(unresolved));
   }
 
   FunctionDeclaration *NewFunctionDeclaration(const AstString *name,
@@ -31,7 +32,8 @@ class AstNodeFactory {
     return new (region_) StructDeclaration(name, type);
   }
 
-  VariableDeclaration *NewVariableDeclaration(const AstString *name, Type *type,
+  VariableDeclaration *NewVariableDeclaration(const AstString *name,
+                                              Expression *type,
                                               Expression *init) {
     return new (region_) VariableDeclaration(name, type, init);
   }
@@ -66,8 +68,8 @@ class AstNodeFactory {
     return new (region_) BadExpression(pos);
   }
 
-  BinaryExpression *NewBinaryExpression(parsing::Token::Type op, AstNode *left,
-                                        AstNode *right) {
+  BinaryExpression *NewBinaryExpression(parsing::Token::Type op,
+                                        Expression *left, Expression *right) {
     return new (region_) BinaryExpression(op, left, right);
   }
 
@@ -99,32 +101,29 @@ class AstNodeFactory {
     return new (region_) FunctionLiteralExpression(type, body);
   }
 
-  UnaryExpression *NewUnaryExpression(parsing::Token::Type op, AstNode *expr) {
+  UnaryExpression *NewUnaryExpression(parsing::Token::Type op,
+                                      Expression *expr) {
     return new (region_) UnaryExpression(op, expr);
   }
 
-  VarExpression *NewVarExpression(AstString *name) {
-    return new (region_) VarExpression(name);
+  IdentifierExpression *NewIdentifierExpression(AstString *name) {
+    return new (region_) IdentifierExpression(name);
   }
 
-  ArrayType *NewArrayType(Expression *len, Type *elem_type) {
+  ArrayType *NewArrayType(Expression *len, Expression *elem_type) {
     return new (region_) ArrayType(len, elem_type);
   }
 
-  IdentifierType *NewIdentifierType(const AstString *name) {
-    return new (region_) IdentifierType(name);
-  }
-
-  Field *NewField(const AstString *name, Type *type) {
+  Field *NewField(const AstString *name, Expression *type) {
     return new (region_) Field(name, type);
   }
 
   FunctionType *NewFunctionType(util::RegionVector<Field *> &&params,
-                                Type *ret) {
+                                Expression *ret) {
     return new (region_) FunctionType(std::move(params), ret);
   }
 
-  PointerType *NewPointerType(Type *pointee_type) {
+  PointerType *NewPointerType(Expression *pointee_type) {
     return new (region_) PointerType(pointee_type);
   }
 

@@ -35,7 +35,7 @@ class PrettyPrint : public AstVisitor<PrettyPrint> {
   void PrintString(const std::string &str) { result_.append(str); }
 
   void PrintString(const AstString *str) {
-    result_.append("'").append(str->bytes(), str->length()).append("'");
+    result_.append(str->bytes(), str->length());
   }
 
   void NewLine() { result_.append("\n"); }

@@ -51,21 +51,13 @@ namespace tpl::ast {
   T(BinaryExpression)          \
   T(CallExpression)            \
   T(FunctionLiteralExpression) \
+  T(IdentifierExpression)      \
   T(LiteralExpression)         \
   T(UnaryExpression)           \
-  T(VarExpression)
-
-/*
- * All possible types.
- *
- * If you add a new type to either the beginning or end of the list, remember to
- * modify Type::classof() to update the bounds check.
- */
-#define TYPE_NODES(T) \
-  T(ArrayType)        \
-  T(FunctionType)     \
-  T(IdentifierType)   \
-  T(PointerType)      \
+  /* Types */                  \
+  T(ArrayType)                 \
+  T(FunctionType)              \
+  T(PointerType)               \
   T(StructType)
 
 /*
@@ -75,13 +67,11 @@ namespace tpl::ast {
   DECLARATION_NODES(T) \
   EXPRESSION_NODES(T)  \
   FILE_NODE(T)         \
-  STATEMENT_NODES(T)   \
-  TYPE_NODES(T)
+  STATEMENT_NODES(T)
 
 class Declaration;
 class Expression;
 class Statement;
-class Type;
 
 // Forward declare all nodes
 #define FORWARD_DECLARE(name) class name;
@@ -170,10 +160,17 @@ class AstNode : public util::RegionObject {
  */
 class File : public AstNode {
  public:
-  explicit File(util::RegionVector<Declaration *> &&decls)
-      : AstNode(Kind::File), decls_(std::move(decls)) {}
+  File(util::RegionVector<Declaration *> &&decls,
+       util::RegionVector<IdentifierExpression *> &&unresolved)
+      : AstNode(Kind::File),
+        decls_(std::move(decls)),
+        unresolved_(std::move(unresolved)) {}
 
   util::RegionVector<Declaration *> &declarations() { return decls_; }
+
+  util::RegionVector<IdentifierExpression *> &unresolved() {
+    return unresolved_;
+  }
 
   static bool classof(const AstNode *node) {
     return node->kind() >= Kind::File;
@@ -181,6 +178,7 @@ class File : public AstNode {
 
  private:
   util::RegionVector<Declaration *> decls_;
+  util::RegionVector<IdentifierExpression *> unresolved_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -247,12 +245,12 @@ class StructDeclaration : public Declaration {
  */
 class VariableDeclaration : public Declaration {
  public:
-  VariableDeclaration(const AstString *name, Type *type, Expression *init)
+  VariableDeclaration(const AstString *name, Expression *type, Expression *init)
       : Declaration(Kind::VariableDeclaration, name),
         type_(type),
         init_(init) {}
 
-  Type *type() const { return type_; }
+  Expression *type() const { return type_; }
 
   Expression *initial() const { return init_; }
 
@@ -261,7 +259,7 @@ class VariableDeclaration : public Declaration {
   }
 
  private:
-  Type *type_;
+  Expression *type_;
   Expression *init_;
 };
 
@@ -416,7 +414,7 @@ class Expression : public AstNode {
 
   static bool classof(const AstNode *node) {
     return node->kind() >= Kind::BadExpression &&
-           node->kind() <= Kind::VarExpression;
+           node->kind() <= Kind::StructType;
   }
 };
 
@@ -443,7 +441,7 @@ class BadExpression : public Expression {
  */
 class BinaryExpression : public Expression {
  public:
-  BinaryExpression(parsing::Token::Type op, AstNode *left, AstNode *right)
+  BinaryExpression(parsing::Token::Type op, Expression *left, Expression *right)
       : Expression(Kind::BinaryExpression),
         op_(op),
         left_(left),
@@ -451,9 +449,9 @@ class BinaryExpression : public Expression {
 
   parsing::Token::Type op() { return op_; }
 
-  AstNode *left() { return left_; }
+  Expression *left() { return left_; }
 
-  AstNode *right() { return right_; }
+  Expression *right() { return right_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::BinaryExpression;
@@ -461,8 +459,8 @@ class BinaryExpression : public Expression {
 
  private:
   parsing::Token::Type op_;
-  AstNode *left_;
-  AstNode *right_;
+  Expression *left_;
+  Expression *right_;
 };
 
 /**
@@ -502,6 +500,31 @@ class FunctionLiteralExpression : public Expression {
  private:
   FunctionType *type_;
   BlockStatement *body_;
+};
+
+/**
+ * A reference to a variable, function or struct
+ */
+class IdentifierExpression : public Expression {
+ public:
+  explicit IdentifierExpression(const AstString *name)
+      : Expression(Kind::IdentifierExpression), name_(name), decl_(nullptr) {}
+
+  const AstString *name() const { return name_; }
+
+  void BindTo(Declaration *decl) { decl_ = decl; }
+
+  bool is_bound() const { return decl_ != nullptr; }
+
+  static bool classof(const AstNode *node) {
+    return node->kind() == Kind::IdentifierExpression;
+  }
+
+ private:
+  // TODO(pmenon) Should these two be a union since only one should be active?
+  // Pre-binding, 'name_' is used, and post-binding 'decl_' should be used?
+  const AstString *name_;
+  Declaration *decl_;
 };
 
 /**
@@ -556,12 +579,12 @@ class LiteralExpression : public Expression {
  */
 class UnaryExpression : public Expression {
  public:
-  UnaryExpression(parsing::Token::Type op, AstNode *expr)
+  UnaryExpression(parsing::Token::Type op, Expression *expr)
       : Expression(Kind::UnaryExpression), op_(op), expr_(expr) {}
 
   parsing::Token::Type op() { return op_; }
 
-  AstNode *expr() { return expr_; }
+  Expression *expr() { return expr_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::UnaryExpression;
@@ -569,30 +592,7 @@ class UnaryExpression : public Expression {
 
  private:
   parsing::Token::Type op_;
-  AstNode *expr_;
-};
-
-/**
- * A reference to a variable
- */
-class VarExpression : public Expression {
- public:
-  explicit VarExpression(const AstString *name)
-      : Expression(Kind::VarExpression), name_(name), decl_(nullptr) {}
-
-  const AstString *name() const { return name_; }
-
-  void BindTo(Declaration *decl) { decl_ = decl; }
-
-  bool is_bound() const { return decl_ != nullptr; }
-
-  static bool classof(const AstNode *node) {
-    return node->kind() == Kind::VarExpression;
-  }
-
- private:
-  const AstString *name_;
-  Declaration *decl_;
+  Expression *expr_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -601,42 +601,30 @@ class VarExpression : public Expression {
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-/**
- * Base class for all types
- */
-class Type : public AstNode {
- public:
-  explicit Type(Kind kind) : AstNode(kind) {}
-
-  static bool classof(const AstNode *node) {
-    return node->kind() >= Kind::ArrayType && node->kind() <= Kind::StructType;
-  }
-};
-
 class Field : public util::RegionObject {
  public:
-  Field(const AstString *name, Type *type) : name_(name), type_(type) {}
+  Field(const AstString *name, Expression *type) : name_(name), type_(type) {}
 
   const AstString *name() const { return name_; }
 
-  Type *type() const { return type_; }
+  Expression *type() const { return type_; }
 
  private:
   const AstString *name_;
-  Type *type_;
+  Expression *type_;
 };
 
 /**
  * Array type
  */
-class ArrayType : public Type {
+class ArrayType : public Expression {
  public:
-  ArrayType(Expression *len, Type *elem_type)
-      : Type(Kind::ArrayType), len_(len), elem_type_(elem_type) {}
+  ArrayType(Expression *len, Expression *elem_type)
+      : Expression(Kind::ArrayType), len_(len), elem_type_(elem_type) {}
 
   Expression *length() const { return len_; }
 
-  Type *element_type() const { return elem_type_; }
+  Expression *element_type() const { return elem_type_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ArrayType;
@@ -644,22 +632,22 @@ class ArrayType : public Type {
 
  private:
   Expression *len_;
-  Type *elem_type_;
+  Expression *elem_type_;
 };
 
 /**
  * Function type
  */
-class FunctionType : public Type {
+class FunctionType : public Expression {
  public:
-  FunctionType(util::RegionVector<Field *> &&param_types, Type *ret_type)
-      : Type(Kind::FunctionType),
+  FunctionType(util::RegionVector<Field *> &&param_types, Expression *ret_type)
+      : Expression(Kind::FunctionType),
         param_types_(std::move(param_types)),
         ret_type_(ret_type) {}
 
   const util::RegionVector<Field *> parameters() const { return param_types_; }
 
-  Type *return_type() const { return ret_type_; }
+  Expression *return_type() const { return ret_type_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::FunctionType;
@@ -667,63 +655,34 @@ class FunctionType : public Type {
 
  private:
   util::RegionVector<Field *> param_types_;
-  Type *ret_type_;
-};
-
-/**
- * An identifier for a type e.g., i32, bool, or custom struct type
- */
-class IdentifierType : public Type {
- public:
-  /// Constructor when initializing an unbound identifier type
-  explicit IdentifierType(const AstString *name)
-      : Type(Kind::IdentifierType), name_(name), declaration_(nullptr) {}
-
-  IdentifierType(const AstString *name, Declaration *declaration)
-      : Type(Kind::IdentifierType), name_(name), declaration_(declaration) {}
-
-  const AstString *name() const { return name_; }
-
-  Declaration *declaration() const { return declaration_; }
-
-  bool is_bound() const { return declaration_ != nullptr; }
-
-  void BindTo(Declaration *declaration) { declaration_ = declaration; }
-
-  static bool classof(const AstNode *node) {
-    return node->kind() == Kind::IdentifierType;
-  }
-
- private:
-  const AstString *name_;
-  Declaration *declaration_;
+  Expression *ret_type_;
 };
 
 /**
  * Pointer type
  */
-class PointerType : public Type {
+class PointerType : public Expression {
  public:
-  explicit PointerType(Type *pointee_type)
-      : Type(Kind::PointerType), pointee_type_(pointee_type) {}
+  explicit PointerType(Expression *pointee_type)
+      : Expression(Kind::PointerType), pointee_type_(pointee_type) {}
 
-  Type *pointee_type() const { return pointee_type_; }
+  Expression *pointee_type() const { return pointee_type_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::PointerType;
   }
 
  private:
-  Type *pointee_type_;
+  Expression *pointee_type_;
 };
 
 /**
  * Struct type
  */
-class StructType : public Type {
+class StructType : public Expression {
  public:
   explicit StructType(util::RegionVector<Field *> &&fields)
-      : Type(Kind::StructType), fields_(std::move(fields)) {}
+      : Expression(Kind::StructType), fields_(std::move(fields)) {}
 
   const util::RegionVector<Field *> &fields() const { return fields_; }
 
