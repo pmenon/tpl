@@ -17,9 +17,8 @@ class AstNodeFactory {
 
   util::Region &region() { return region_; }
 
-  File *NewFile(util::RegionVector<Declaration *> &&declarations,
-                util::RegionVector<IdentifierExpression *> &&unresolved) {
-    return new (region_) File(std::move(declarations), std::move(unresolved));
+  File *NewFile(util::RegionVector<Declaration *> &&declarations) {
+    return new (region_) File(std::move(declarations));
   }
 
   FunctionDeclaration *NewFunctionDeclaration(const AstString *name,

@@ -1,6 +1,3 @@
-
-#include <parsing/parser.h>
-
 #include "parsing/parser.h"
 
 namespace tpl::parsing {
@@ -9,11 +6,7 @@ Parser::Parser(Scanner &scanner, ast::AstNodeFactory &node_factory,
                ast::AstStringsContainer &strings_container)
     : scanner_(scanner),
       node_factory_(node_factory),
-      strings_container_(strings_container),
-      scope_(nullptr),
-      unresolved_(region()) {
-  scope_ = NewScope(ast::Scope::Type::File);
-}
+      strings_container_(strings_container) {}
 
 ast::AstNode *Parser::Parse() {
   util::RegionVector<ast::Declaration *> decls(region());
@@ -22,20 +15,7 @@ ast::AstNode *Parser::Parse() {
     decls.push_back(ParseDeclaration());
   }
 
-  // Try final resolution
-  size_t j = 0;
-  for (size_t i = 0; i < unresolved_.size(); i++) {
-    ast::AstNode *node = unresolved_[i];
-    if (auto *ident = node->SafeAs<ast::IdentifierExpression>()) {
-      auto *decl = scope()->Lookup(ident->name());
-      if (decl == nullptr) {
-        unresolved_[j++] = unresolved_[i];
-      }
-    }
-  }
-  unresolved_.erase(unresolved_.begin() + j, unresolved_.end());
-
-  return node_factory().NewFile(std::move(decls), std::move(unresolved_));
+  return node_factory().NewFile(std::move(decls));
 }
 
 ast::Declaration *Parser::ParseDeclaration() {
@@ -66,9 +46,6 @@ ast::Declaration *Parser::ParseFunctionDeclaration() {
   ast::FunctionDeclaration *decl =
       node_factory().NewFunctionDeclaration(name, fun);
 
-  // Declare function in current scope
-  scope()->Declare(name, decl);
-
   // Done
   return decl;
 }
@@ -87,16 +64,13 @@ ast::Declaration *Parser::ParseStructDeclaration() {
   ast::StructDeclaration *decl =
       node_factory().NewStructDeclaration(name, struct_type);
 
-  // Actually declare struct in scope
-  scope()->Declare(name, decl);
-
   // Done
   return decl;
 }
 
 ast::Declaration *Parser::ParseVariableDeclaration() {
-  // VariableDeclaration ::
-  //   'var' Identifier ':' Type ('=' Expression)?
+  // VariableDecl ::
+  //   'var' Ident ':' Type ('=' Expr)?
 
   Consume(Token::Type::VAR);
 
@@ -122,9 +96,6 @@ ast::Declaration *Parser::ParseVariableDeclaration() {
   ast::VariableDeclaration *decl =
       node_factory().NewVariableDeclaration(name, type, init);
 
-  // Declare variable in scope
-  scope()->Declare(decl->name(), decl);
-
   // Done
   return decl;
 }
@@ -132,15 +103,15 @@ ast::Declaration *Parser::ParseVariableDeclaration() {
 ast::Statement *Parser::ParseStatement() {
   // Statement ::
   //   Block
-  //   ExpressionStatement
-  //   ForStatement
-  //   IfStatement
-  //   ReturnStatement
-  //   VariableDeclaration
+  //   ExprStmt
+  //   ForStmt
+  //   IfStmt
+  //   ReturnStmt
+  //   VariableDecl
 
   switch (peek()) {
     case Token::Type::LEFT_BRACE: {
-      return ParseBlockStatement(nullptr);
+      return ParseBlockStatement();
     }
     case Token::Type::FOR: {
       return ParseForStatement();
@@ -162,22 +133,16 @@ ast::Statement *Parser::ParseStatement() {
 }
 
 ast::Statement *Parser::ParseExpressionStatement() {
-  // ExpressionStatement ::
-  //   Expression
+  // ExprStmt ::
+  //   Expr
 
   ast::Expression *expr = ParseExpression();
   return node_factory().NewExpressionStatement(expr);
 }
 
-ast::Statement *Parser::ParseBlockStatement(ast::Scope *scope) {
-  // BlockStatement ::
-  //   '{' (Statement)+ '}'
-
-  if (scope == nullptr) {
-    scope = NewBlockScope();
-  }
-
-  ScopeState scope_state(&scope_, scope);
+ast::Statement *Parser::ParseBlockStatement() {
+  // BlockStmt ::
+  //   '{' (Stmt)+ '}'
 
   // Eat the left brace
   Expect(Token::Type::LEFT_BRACE);
@@ -198,7 +163,7 @@ ast::Statement *Parser::ParseBlockStatement(ast::Scope *scope) {
 }
 
 Parser::ForHeader Parser::ParseForHeader() {
-  // ForStatement ::
+  // ForStmt ::
   //   'for' '(' (Stmt)? ; (Expr)? ; (Stmt)? ')' '{' (StmtList)? '}'
   //   'for' '(' Expr ')' '{' (StmtList)? '}'
   //   'for' '(' ')' '{' (StmtList)? '}'
@@ -207,7 +172,7 @@ Parser::ForHeader Parser::ParseForHeader() {
 
   if (Matches(Token::Type::RIGHT_PAREN)) {
     // Infinite loop
-    return ForHeader(nullptr, nullptr, nullptr);
+    return {nullptr, nullptr, nullptr};
   }
 
   ast::Statement *init = nullptr;
@@ -238,32 +203,25 @@ Parser::ForHeader Parser::ParseForHeader() {
     init = nullptr;
   }
 
-  return ForHeader(init, cond, next);
+  return {init, cond, next};
 }
 
 ast::Statement *Parser::ParseForStatement() {
-  // ForStatement ::
-  //   'for' '(' (Stmt)? ; (Expr)? ; (Stmt)? ')' '{' (StmtList)? '}'
-  //   'for' '(' Expr ')' '{' (StmtList)? '}'
-  //   'for' '(' ')' '{' (StmtList)? '}'
-
   Consume(Token::Type::FOR);
 
-  ast::Scope *for_scope = NewBlockScope();
+  // Parse the header to get the initialization statement, loop condition and
+  // next-value statement
+  const auto &[init, cond, next] = ParseForHeader();
 
-  ScopeState scope_state(&scope_, for_scope);
+  // Now the loop body
+  auto *body = ParseBlockStatement()->As<ast::BlockStatement>();
 
-  ForHeader header = ParseForHeader();
-
-  auto *body = ParseBlockStatement(for_scope)->As<ast::BlockStatement>();
-
-  return node_factory().NewForStatement(header.init, header.cond, header.next,
-                                        body);
+  return node_factory().NewForStatement(init, cond, next, body);
 }
 
 ast::Statement *Parser::ParseIfStatement() {
-  // IfStatement ::
-  //   'if' '(' Expression ')' '{' Statement '}' ('else' '{' Statement '}')?
+  // IfStmt ::
+  //   'if' '(' Expr ')' '{' Stmt '}' ('else' '{' Stmt '}')?
 
   Expect(Token::Type::IF);
 
@@ -273,7 +231,7 @@ ast::Statement *Parser::ParseIfStatement() {
   Expect(Token::Type::RIGHT_PAREN);
 
   // Handle 'then' statement
-  auto *then_stmt = ParseBlockStatement(nullptr)->As<ast::BlockStatement>();
+  auto *then_stmt = ParseBlockStatement()->As<ast::BlockStatement>();
 
   // Handle 'else' statement, if one exists
   ast::Statement *else_stmt = nullptr;
@@ -281,7 +239,7 @@ ast::Statement *Parser::ParseIfStatement() {
     if (Matches(Token::Type::IF)) {
       else_stmt = ParseIfStatement();
     } else {
-      else_stmt = ParseBlockStatement(nullptr);
+      else_stmt = ParseBlockStatement();
     }
   }
 
@@ -341,8 +299,8 @@ ast::Expression *Parser::ParseUnaryExpression() {
 }
 
 ast::Expression *Parser::ParseCallExpression() {
-  // CallExpression ::
-  //   PrimaryExpression '(' (Expression
+  // CallExpr ::
+  //   PrimaryExpr '(' (Expr)* ')
 
   ast::Expression *result = ParsePrimaryExpression();
 
@@ -372,15 +330,15 @@ ast::Expression *Parser::ParseCallExpression() {
 }
 
 ast::Expression *Parser::ParsePrimaryExpression() {
-  // PrimaryExpression ::
+  // PrimaryExpr ::
   //  nil
   //  'true'
   //  'false'
-  //  Identifier
+  //  Ident
   //  Number
   //  String
   //  FunctionLiteral
-  // '(' Expression ')'
+  // '(' Expr ')'
 
   switch (peek()) {
     case Token::Type::NIL: {
@@ -397,9 +355,7 @@ ast::Expression *Parser::ParsePrimaryExpression() {
     }
     case Token::Type::IDENTIFIER: {
       Next();
-      auto *ident = node_factory().NewIdentifierExpression(GetSymbol());
-      Resolve(ident);
-      return ident;
+      return node_factory().NewIdentifierExpression(GetSymbol());
     }
     case Token::Type::NUMBER: {
       Next();
@@ -430,24 +386,14 @@ ast::Expression *Parser::ParsePrimaryExpression() {
 }
 
 ast::Expression *Parser::ParseFunctionLiteralExpression() {
-  // FunctionLiteralExpression
-  //   FunctionType BlockStatement
-
-  // Create a new scope for this function
-  ast::Scope *func_scope = NewFunctionScope();
+  // FunctionLiteralExpr
+  //   FunctionType BlockStmt
 
   // Parse the type
   auto *func_type = ParseFunctionType()->As<ast::FunctionType>();
 
-  // Add formal parameters
-  for (const auto *param : func_type->parameters()) {
-    auto *param_decl = node_factory().NewVariableDeclaration(
-        param->name(), param->type(), nullptr);
-    func_scope->Declare(param->name(), param_decl);
-  }
-
   // Parse the body
-  auto *body = ParseBlockStatement(func_scope)->As<ast::BlockStatement>();
+  auto *body = ParseBlockStatement()->As<ast::BlockStatement>();
 
   // Done
   return node_factory().NewFunctionLiteral(func_type, body);
@@ -457,9 +403,7 @@ ast::Expression *Parser::ParseType() {
   switch (peek()) {
     case Token::Type::IDENTIFIER: {
       Next();
-      auto *ident = node_factory().NewIdentifierExpression(GetSymbol());
-      Resolve(ident);
-      return ident;
+      return node_factory().NewIdentifierExpression(GetSymbol());
     }
     case Token::Type::LEFT_PAREN: {
       return ParseFunctionType();
@@ -484,7 +428,7 @@ ast::Expression *Parser::ParseType() {
 
 ast::Expression *Parser::ParseFunctionType() {
   // FuncType ::
-  //   '(' (Identifier ':' Type)? (',' Identifier ':' Type)* ')' '->' Type
+  //   '(' (Ident ':' Type)? (',' Ident ':' Type)* ')' '->' Type
 
   Consume(Token::Type::LEFT_PAREN);
 
@@ -549,7 +493,7 @@ ast::Expression *Parser::ParseArrayType() {
 
 ast::Expression *Parser::ParseStructType() {
   // StructType ::
-  //   '{' (Identifier ':' Type)* '}'
+  //   '{' (Ident ':' Type)* '}'
 
   Consume(Token::Type::LEFT_BRACE);
 
@@ -569,29 +513,6 @@ ast::Expression *Parser::ParseStructType() {
   Consume(Token::Type::RIGHT_BRACE);
 
   return node_factory().NewStructType(std::move(fields));
-}
-
-ast::Scope *Parser::NewScope(ast::Scope::Type scope_type) {
-  return new (region()) ast::Scope(region(), scope_, scope_type);
-}
-
-void Parser::Resolve(ast::Expression *node) {
-  auto *identifier = node->SafeAs<ast::IdentifierExpression>();
-
-  if (identifier == nullptr) {
-    return;
-  }
-
-  ast::Declaration *decl = scope()->Lookup(identifier->name());
-
-  if (decl == nullptr) {
-    // No declaration found, unresolved
-    unresolved_.push_back(identifier);
-    return;
-  }
-
-  // Success, bind and notify
-  identifier->BindTo(decl);
 }
 
 template <typename... Args>

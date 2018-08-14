@@ -157,21 +157,15 @@ class AstNode : public util::RegionObject {
 };
 
 /**
- *
+ * Represents a file
  */
 class File : public AstNode {
  public:
-  File(util::RegionVector<Declaration *> &&decls,
-       util::RegionVector<IdentifierExpression *> &&unresolved)
+  explicit File(util::RegionVector<Declaration *> &&decls)
       : AstNode(Kind::File),
-        decls_(std::move(decls)),
-        unresolved_(std::move(unresolved)) {}
+        decls_(std::move(decls)) {}
 
   util::RegionVector<Declaration *> &declarations() { return decls_; }
-
-  util::RegionVector<IdentifierExpression *> &unresolved() {
-    return unresolved_;
-  }
 
   static bool classof(const AstNode *node) {
     return node->kind() >= Kind::File;
@@ -179,7 +173,6 @@ class File : public AstNode {
 
  private:
   util::RegionVector<Declaration *> decls_;
-  util::RegionVector<IdentifierExpression *> unresolved_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

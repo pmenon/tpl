@@ -34,9 +34,6 @@ class Parser {
 
   ast::AstStringsContainer &strings_container() { return strings_container_; }
 
-  ast::Scope *scope() { return scope_; }
-  const ast::Scope *scope() const { return scope_; }
-
   //////////////////////////////////////////////////////////////////////////////
   ///
   /// Token logic
@@ -96,16 +93,10 @@ class Parser {
 
   ast::Statement *ParseExpressionStatement();
 
-  ast::Statement *ParseBlockStatement(ast::Scope *scope);
+  ast::Statement *ParseBlockStatement();
 
-  struct ForHeader {
-    ast::Statement *init;
-    ast::Expression *cond;
-    ast::Statement *next;
-
-    ForHeader(ast::Statement *init, ast::Expression *cond, ast::Statement *next)
-        : init(init), cond(cond), next(next) {}
-  };
+  using ForHeader =
+      std::tuple<ast::Statement *, ast::Expression *, ast::Statement *>;
 
   ForHeader ParseForHeader();
 
@@ -137,36 +128,6 @@ class Parser {
 
   //////////////////////////////////////////////////////////////////////////////
   ///
-  /// Scopes
-  ///
-  //////////////////////////////////////////////////////////////////////////////
-
-  class ScopeState {
-   public:
-    ScopeState(ast::Scope **scope_stack, ast::Scope *scope)
-        : scope_stack_(scope_stack), outer_(*scope_stack) {
-      *scope_stack = scope;
-    }
-
-    ~ScopeState() { *scope_stack_ = outer_; }
-
-   private:
-    ast::Scope **scope_stack_;
-    ast::Scope *outer_;
-  };
-
-  ast::Scope *NewScope(ast::Scope::Type scope_type);
-
-  ast::Scope *NewFunctionScope() {
-    return NewScope(ast::Scope::Type::Function);
-  }
-
-  ast::Scope *NewBlockScope() { return NewScope(ast::Scope::Type::Block); }
-
-  void Resolve(ast::Expression *node);
-
-  //////////////////////////////////////////////////////////////////////////////
-  ///
   /// Error handling
   ///
   //////////////////////////////////////////////////////////////////////////////
@@ -183,12 +144,6 @@ class Parser {
 
   // A factory for strings
   ast::AstStringsContainer &strings_container_;
-
-  // The current scope
-  ast::Scope *scope_;
-
-  // Unresolved identifiers
-  util::RegionVector<ast::IdentifierExpression *> unresolved_;
 };
 
 }  // namespace tpl::parsing
