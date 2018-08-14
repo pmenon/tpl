@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "common.h"
 #include "ast/ast_value.h"
 #include "parsing/token.h"
 #include "util/casting.h"
@@ -454,17 +455,17 @@ class Expression : public AstNode {
  */
 class BadExpression : public Expression {
  public:
-  explicit BadExpression(uint64_t pos)
+  explicit BadExpression(const SourcePosition &pos)
       : Expression(AstNode::Kind::BadExpression), pos_(pos) {}
 
-  uint64_t position() const { return pos_; }
+  const SourcePosition &position() const { return pos_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::BadExpression;
   }
 
  private:
-  uint64_t pos_;
+  const SourcePosition pos_;
 };
 
 /**

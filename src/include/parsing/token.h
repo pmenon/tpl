@@ -59,7 +59,6 @@ namespace tpl::parsing {
   K(STRUCT, "struct", 0)                           \
   K(TRUE, "true", 0)                               \
   K(VAR, "var", 0)                                 \
-  K(WHILE, "while", 0)                             \
                                                    \
   /* Internal */                                   \
   T(UNINIITIALIZED, nullptr, 0)                    \

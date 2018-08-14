@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 
+#include "common.h"
 #include "parsing/token.h"
 #include "util/macros.h"
 
@@ -12,14 +13,6 @@ class Scanner {
   static constexpr int32_t kEndOfInput = -1;
 
  public:
-  /**
-   * Describes the position in the original source in terms of lines and columns
-   */
-  struct SourcePosition {
-    uint64_t line;
-    uint64_t column;
-  };
-
   /**
    * Describes information about a token including its type, its position in
    * the origin source, and a literal if it has one
@@ -35,20 +28,13 @@ class Scanner {
 
   DISALLOW_COPY_AND_MOVE(Scanner);
 
-  /**
-   * Read the next token in the source input stream
-   * @return The next token
-   */
   Token::Type Next();
 
-  /**
-   * Peek/look at the next token in the stream without consuming it
-   * @return The next token
-   */
   Token::Type peek() { return next_.type; }
 
+  Token::Type current_token() const { return curr_.type; }
   const std::string &current_literal() const { return curr_.literal; }
-  uint64_t current_raw_pos() const { return curr_.offset; }
+  const SourcePosition &current_position() const { return curr_.pos; }
 
  private:
   // Scan the next token
@@ -123,14 +109,14 @@ class Scanner {
   const char *source_;
   uint64_t source_len_;
 
-  // The current position in the source
+  // The offset/position in the source where the next character is read from
   uint64_t offset_;
 
-  // The lookahead character
+  // The lookahead character and its position in the source
   int32_t c0_;
   SourcePosition c0_pos_;
 
-  // Information about the current token
+  // Information about the current and next token in the input stream
   TokenDesc curr_;
   TokenDesc next_;
 };

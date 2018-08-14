@@ -219,8 +219,8 @@ void PrettyPrint::VisitBadStatement(BadStatement *node) {
 
 void PrettyPrint::VisitBadExpression(BadExpression *node) {
   BeginVisit();
-  PrintString("BAD EXPRESSION @ position:");
-  PrintString(std::to_string(node->position()));
+  PrintString("BAD EXPRESSION @ ");
+  PrintPosition(node->position());
   EndVisit();
 }
 

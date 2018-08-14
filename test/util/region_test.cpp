@@ -6,7 +6,7 @@ namespace tpl {
 namespace test {
 
 TEST(RegionTest, Simple) {
-  Region r("test");
+  util::Region r("test");
 }
 
 }  // namespace test

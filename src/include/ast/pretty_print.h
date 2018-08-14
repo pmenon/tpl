@@ -38,6 +38,13 @@ class PrettyPrint : public AstVisitor<PrettyPrint> {
     result_.append(str->bytes(), str->length());
   }
 
+  void PrintPosition(const SourcePosition &pos) {
+    result_.append("line: ")
+        .append(std::to_string(pos.line))
+        .append(", col: ")
+        .append(std::to_string(pos.column));
+  }
+
   void NewLine() { result_.append("\n"); }
 
  private:

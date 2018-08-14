@@ -19,9 +19,9 @@ Scanner::Scanner(const char *source, uint64_t source_len)
   next_.pos.column = 0;
 
   // Advance character iterator to the first slot
-  Advance();
   c0_pos_.line = 1;
-  c0_pos_.column = 1;
+  c0_pos_.column = 0;
+  Advance();
 
   // Find the first token
   Scan();
@@ -42,8 +42,7 @@ void Scanner::Scan() {
 
   do {
     // Setup current token positions
-    next_.pos.line = c0_pos_.line;
-    next_.pos.column = c0_pos_.column;
+    next_.pos = c0_pos_;
     next_.offset = offset_;
 
     switch (c0_) {
@@ -268,8 +267,6 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
   GROUP_ELEM("true", Token::Type::TRUE)     \
   GROUP_START('v')                          \
   GROUP_ELEM("var", Token::Type::VAR)       \
-  GROUP_START('w')                          \
-  GROUP_ELEM("while", Token::Type::WHILE)
 
 Token::Type Scanner::CheckIdentifierOrKeyword(const char *input,
                                               uint32_t input_len) {

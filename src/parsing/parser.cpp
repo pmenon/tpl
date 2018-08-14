@@ -382,7 +382,7 @@ ast::Expression *Parser::ParsePrimaryExpression() {
   // TODO(pmenon) Also advance to next statement
   ReportError("Unexpected token '%s' when attempting to parse primary",
               Token::String(peek()));
-  return node_factory().NewBadExpression(scanner().current_raw_pos());
+  return node_factory().NewBadExpression(scanner().current_position());
 }
 
 ast::Expression *Parser::ParseFunctionLiteralExpression() {

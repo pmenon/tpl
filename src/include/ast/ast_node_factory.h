@@ -68,7 +68,7 @@ class AstNodeFactory {
     return new (region_) ReturnStatement(ret);
   }
 
-  BadExpression *NewBadExpression(uint64_t pos) {
+  BadExpression *NewBadExpression(const SourcePosition &pos) {
     return new (region_) BadExpression(pos);
   }
 
