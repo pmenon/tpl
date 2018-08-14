@@ -3,9 +3,7 @@
 #include "ast/ast.h"
 #include "ast/ast_node_factory.h"
 
-namespace tpl {
-namespace ast {
-namespace test {
+namespace tpl::ast::test {
 
 class AstTest : public ::testing::Test {
  public:
@@ -120,6 +118,4 @@ TEST_F(AstTest, HierechyTest) {
   }
 }
 
-}  // namespace test
-}  // namespace ast
-}  // namespace tpl
+}  // namespace tpl::ast::test

@@ -27,14 +27,14 @@ class AstVisitor {
 };
 
 #define GEN_VISIT_CASE(kind)                              \
-  case AstNode::Kind::kind: {                             \
-    return impl().Visit##kind(static_cast<kind *>(node)); \
+  case ::tpl::ast::AstNode::Kind::kind: {                 \
+    return impl().Visit##kind(static_cast<::tpl::ast::kind *>(node)); \
   }
 
 #define GEN_VISITOR_SWITCH() \
   switch (node->kind()) { AST_NODES(GEN_VISIT_CASE) }
 
 #define DEFINE_AST_VISITOR_METHOD() \
-  void Visit(AstNode *node) { GEN_VISITOR_SWITCH() }
+  void Visit(::tpl::ast::AstNode *node) { GEN_VISITOR_SWITCH() }
 
 }  // namespace tpl::ast
