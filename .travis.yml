@@ -1,0 +1,49 @@
+sudo: required
+language: cpp
+matrix:
+  fast_finish: true
+  include:
+    - os: osx
+      osx_image: xcode9.4
+      compiler: clang
+      env:
+        - NAME="Mac [dbg/clang]" CMAKE_BUILD_TYPE=debug TPL_USE_ASAN=On
+      install:
+        - echo 'y' | ./deps.sh
+        - export PATH=/usr/local/opt/llvm/bin:$PATH
+    - os: linux
+      dist: trusty
+      env:
+        - NAME="Docker[dbg/packages.sh]" CMAKE_BUILD_TYPE=debug TPL_USE_ASAN=On DOCKER=true
+      install:
+        - docker pull ubuntu:18.04
+        - docker run -itd --name build ubuntu:18.04
+        - docker cp . build:/repo
+        - docker exec build /bin/sh -c "echo 'y' | /repo/deps.sh"
+# Release builds. Will be replaced by Jenkins.
+    - os: osx
+      osx_image: xcode9.4
+      compiler: clang
+      env:
+        - NAME="Mac [rel/clang]" CMAKE_BUILD_TYPE=release TPL_USE_ASAN=Off
+      install:
+        - echo 'y' | ./deps.sh
+        - export PATH=/usr/local/opt/llvm/bin:$PATH
+    - os: linux
+      dist: trusty
+      env:
+       - NAME="Docker[rel/packages.sh]" CMAKE_BUILD_TYPE=release TPL_USE_ASAN=Off DOCKER=true
+      install:
+        - docker pull ubuntu:18.04
+        - docker run -itd --name build ubuntu:18.04
+        - docker cp . build:/repo
+        - docker exec build /bin/sh -c "echo 'y' | /repo/deps.sh"
+
+script:
+  - if [[ "$DOCKER" = true ]]; then
+      docker exec build /bin/sh -c "cd /repo/build && make" &&
+      docker exec build /bin/sh -c "cd /repo/build && make check" ;
+    else
+      ASAN_OPTIONS=detect_container_overflow=0 make &&
+      ASAN_OPTIONS=detect_container_overflow=0 make check ;
+    fi
