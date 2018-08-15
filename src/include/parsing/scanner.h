@@ -13,24 +13,13 @@ class Scanner {
   static constexpr int32_t kEndOfInput = -1;
 
  public:
-  /**
-   * Describes information about a token including its type, its position in
-   * the origin source, and a literal if it has one
-   */
-  struct TokenDesc {
-    Token::Type type;
-    SourcePosition pos;
-    uint64_t offset;
-    std::string literal;
-  };
-
   Scanner(const char *source, uint64_t source_len);
 
   DISALLOW_COPY_AND_MOVE(Scanner);
 
   Token::Type Next();
 
-  Token::Type peek() { return next_.type; }
+  Token::Type peek() const { return next_.type; }
 
   Token::Type current_token() const { return curr_.type; }
   const std::string &current_literal() const { return curr_.literal; }
@@ -85,7 +74,24 @@ class Scanner {
   // Scan a string literal
   Token::Type ScanString();
 
- private:
+  /*
+   * This struct describes information about a single token, including its type,
+   * its position in the origin source, and its literal value if it should have
+   * one.
+   */
+  struct TokenDesc {
+    Token::Type type;
+    SourcePosition pos;
+    uint64_t offset;
+    std::string literal;
+  };
+
+  //////////////////////////////////////////////////////////////////////////////
+  ///
+  /// Static utilities
+  ///
+  //////////////////////////////////////////////////////////////////////////////
+
   // Is the current character a character?
   static bool IsInRange(int32_t c, int32_t lower, int32_t upper) {
     return (c >= lower && c <= upper);
