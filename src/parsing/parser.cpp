@@ -75,8 +75,7 @@ ast::Declaration *Parser::ParseStructDeclaration() {
 }
 
 ast::Declaration *Parser::ParseVariableDeclaration() {
-  // VariableDecl ::
-  //   'var' Ident ':' Type ('=' Expr)?
+  // VariableDecl = 'var' Ident ':' Type [ '=' Expr ] ;
 
   Expect(Token::Type::VAR);
 
@@ -109,13 +108,8 @@ ast::Declaration *Parser::ParseVariableDeclaration() {
 }
 
 ast::Statement *Parser::ParseStatement() {
-  // Statement ::
-  //   Block
-  //   ExprStmt
-  //   ForStmt
-  //   IfStmt
-  //   ReturnStmt
-  //   VariableDecl
+  // Statement =
+  //   Block | ExprStmt | ForStmt | IfStmt | ReturnStmt | VariableDecl ;
 
   switch (peek()) {
     case Token::Type::LEFT_BRACE: {
@@ -139,8 +133,7 @@ ast::Statement *Parser::ParseStatement() {
 }
 
 ast::Statement *Parser::ParseExpressionStatement() {
-  // ExprStmt ::
-  //   Expr
+  // ExprStmt = Expr ;
 
   ast::Expression *expr = ParseExpression();
 
@@ -148,8 +141,7 @@ ast::Statement *Parser::ParseExpressionStatement() {
 }
 
 ast::Statement *Parser::ParseBlockStatement() {
-  // BlockStmt ::
-  //   '{' (Stmt)+ '}'
+  // BlockStmt = '{' { Stmt } '}' ;
 
   // Eat the left brace
   Expect(Token::Type::LEFT_BRACE);
@@ -173,10 +165,11 @@ ast::Statement *Parser::ParseBlockStatement() {
 }
 
 Parser::ForHeader Parser::ParseForHeader() {
-  // ForStmt ::
-  //   'for' '(' (Stmt)? ; (Expr)? ; (Stmt)? ')' '{' (StmtList)? '}'
-  //   'for' '(' Expr ')' '{' (StmtList)? '}'
-  //   'for' '(' ')' '{' (StmtList)? '}'
+  // ForStmt = 'for' '(' [ Condition | ForHeader ] ')' Block ;
+  //
+  // Condition = Expression ;
+  //
+  // ForHeader = [ Stmt ] ';' [ Condition ] ';' [ Stmt ]
 
   Expect(Token::Type::LEFT_PAREN);
 
@@ -228,12 +221,12 @@ ast::Statement *Parser::ParseForStatement() {
   // Now the loop body
   auto *body = ParseBlockStatement()->As<ast::BlockStatement>();
 
+  // Done
   return node_factory().NewForStatement(position, init, cond, next, body);
 }
 
 ast::Statement *Parser::ParseIfStatement() {
-  // IfStmt ::
-  //   'if' '(' Expr ')' '{' Stmt '}' ('else' '{' Stmt '}')?
+  // IfStmt = 'if' '(' Expr ')' Block [ 'else' ( IfStmt | Block ) ];
 
   Expect(Token::Type::IF);
 
@@ -356,15 +349,9 @@ ast::Expression *Parser::ParseCallExpression() {
 }
 
 ast::Expression *Parser::ParsePrimaryExpression() {
-  // PrimaryExpr ::
-  //  nil
-  //  'true'
-  //  'false'
-  //  Ident
-  //  Number
-  //  String
-  //  FunctionLiteral
-  // '(' Expr ')'
+  // PrimaryExpr =
+  //   nil | 'true' | 'false' | Ident | Number | String | FunctionLiteral |
+  //   '(' Expr ')'
 
   switch (peek()) {
     case Token::Type::NIL: {
@@ -415,8 +402,9 @@ ast::Expression *Parser::ParsePrimaryExpression() {
 }
 
 ast::Expression *Parser::ParseFunctionLiteralExpression() {
-  // FunctionLiteralExpr
-  //   FunctionType BlockStmt
+  // FunctionLiteralExpr = Signature FunctionBody ;
+  //
+  // FunctionBody = Block ;
 
   // Parse the type
   auto *func_type = ParseFunctionType()->As<ast::FunctionType>();
@@ -457,8 +445,7 @@ ast::Expression *Parser::ParseType() {
 }
 
 ast::Expression *Parser::ParseFunctionType() {
-  // FuncType ::
-  //   '(' (Ident ':' Type)? (',' Ident ':' Type)* ')' '->' Type
+  // FuncType = '(' { Ident ':' Type } ')' '->' Type ;
 
   Consume(Token::Type::LEFT_PAREN);
 
@@ -499,8 +486,7 @@ ast::Expression *Parser::ParseFunctionType() {
 }
 
 ast::Expression *Parser::ParsePointerType() {
-  // PointerType ::
-  //   '*' Type
+  // PointerType = '*' Type ;
 
   Expect(Token::Type::STAR);
 
@@ -512,8 +498,8 @@ ast::Expression *Parser::ParsePointerType() {
 }
 
 ast::Expression *Parser::ParseArrayType() {
-  // ArrayType ::
-  //   '[' (Expr)? ']' Type
+  // ArrayType = '[' [ Length ] ']' Type ;
+  // Length = Expr ;
 
   Consume(Token::Type::LEFT_BRACKET);
 
@@ -534,8 +520,7 @@ ast::Expression *Parser::ParseArrayType() {
 }
 
 ast::Expression *Parser::ParseStructType() {
-  // StructType ::
-  //   '{' (Ident ':' Type)* '}'
+  // StructType = '{' { Ident ':' Type } '}' ;
 
   Consume(Token::Type::LEFT_BRACE);
 

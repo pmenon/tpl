@@ -95,8 +95,11 @@ class Parser {
 
   ast::Statement *ParseBlockStatement();
 
-  using ForHeader =
-      std::tuple<ast::Statement *, ast::Expression *, ast::Statement *>;
+  struct ForHeader {
+    ast::Statement *init;
+    ast::Expression *cond;
+    ast::Statement *next;
+  };
 
   ForHeader ParseForHeader();
 

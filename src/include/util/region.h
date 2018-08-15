@@ -153,6 +153,10 @@ class RegionObject {
 
 template <typename T>
 class RegionPtr {
+  static_assert(
+      std::is_base_of_v<RegionObject, T>,
+      "The template type does not derive from tpl::util::RegionObject");
+
  public:
   /// Regular constructors
 
@@ -166,7 +170,7 @@ class RegionPtr {
 
   template <typename U,
             typename = std::enable_if_t<std::is_convertible_v<U, T>>>
-  RegionPtr(RegionPtr<U> &&other) noexcept : ptr_(other.release()) {}
+  explicit RegionPtr(RegionPtr<U> &&other) noexcept : ptr_(other.release()) {}
 
   /// Assignment
 
@@ -197,9 +201,7 @@ class RegionPtr {
 
   T &operator*() const { return *ptr_; }
 
-  explicit operator bool() const noexcept {
-    return get() != nullptr;
-  }
+  explicit operator bool() const noexcept { return get() != nullptr; }
 
  private:
   T *ptr_;

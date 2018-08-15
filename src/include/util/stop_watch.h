@@ -10,7 +10,7 @@ class StopWatch {
   using TimePoint = std::chrono::time_point<Clock>;
 
  public:
-  StopWatch() noexcept : elapsed_(0) {}
+  StopWatch() noexcept : total_(0), elapsed_(0) { Start(); }
 
   void Start() noexcept { start_ = Clock::now(); }
 
@@ -21,14 +21,19 @@ class StopWatch {
         std::chrono::duration_cast<
             std::chrono::duration<double, ResolutionRatio>>(stop_ - start_)
             .count();
+
+    total_ += elapsed_;
   }
 
   double elapsed() const noexcept { return elapsed_; }
+
+  double total_elapsed() const noexcept { return total_; }
 
  private:
   TimePoint start_;
   TimePoint stop_;
 
+  double total_;
   double elapsed_;
 };
 
