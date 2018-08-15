@@ -316,7 +316,7 @@ class BlockStatement : public Statement {
         rbrace_pos_(rbrace_pos),
         statements_(std::move(statements)) {}
 
-  util::RegionVector<Statement *> statements() { return statements_; }
+  util::RegionVector<Statement *> &statements() { return statements_; }
 
   const SourcePosition &right_brace_position() const { return rbrace_pos_; }
 
@@ -704,7 +704,7 @@ class FunctionType : public Expression {
         param_types_(std::move(param_types)),
         ret_type_(ret_type) {}
 
-  const util::RegionVector<Field *> parameters() const { return param_types_; }
+  const util::RegionVector<Field *> &parameters() const { return param_types_; }
 
   Expression *return_type() const { return ret_type_; }
 
