@@ -104,6 +104,8 @@ class Parser {
 
   ast::Statement *ParseIfStatement();
 
+  ast::Statement *ParseReturnStatement();
+
   ast::Expression *ParseExpression();
 
   ast::Expression *ParseBinaryExpression(uint32_t min_prec);

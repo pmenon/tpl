@@ -184,7 +184,7 @@ void PrettyPrint::VisitStructType(StructType *node) {
 
 void PrettyPrint::VisitPointerType(PointerType *node) {
   PrintString("*");
-  Visit(node->pointee_type());
+  Visit(node->base());
 }
 
 void PrettyPrint::VisitFunctionType(FunctionType *node) {
@@ -212,8 +212,8 @@ void PrettyPrint::VisitArrayType(ArrayType *node) {
 
 void PrettyPrint::VisitBadStatement(BadStatement *node) {
   BeginVisit();
-  PrintString("BAD STATEMENT @ position:");
-  PrintString(std::to_string(node->position()));
+  PrintString("BAD STATEMENT @ ");
+  PrintPosition(node->position());
   EndVisit();
 }
 

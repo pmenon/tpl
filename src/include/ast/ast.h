@@ -2,8 +2,8 @@
 
 #include <cstdint>
 
-#include "common.h"
 #include "ast/ast_value.h"
+#include "common.h"
 #include "parsing/token.h"
 #include "util/casting.h"
 #include "util/region.h"
@@ -99,6 +99,9 @@ class AstNode : public util::RegionObject {
   // The kind of this node
   Kind kind() const { return kind_; }
 
+  // The position in the source where this element was found
+  const SourcePosition &position() const { return pos_; }
+
   // This is mainly used in tests!
   const char *kind_name() const {
 #define KIND_CASE(kind) \
@@ -151,10 +154,16 @@ class AstNode : public util::RegionObject {
   }
 
  protected:
-  explicit AstNode(Kind kind) : kind_(kind) {}
+  explicit AstNode(Kind kind, const SourcePosition &pos)
+      : kind_(kind), pos_(pos) {}
 
  private:
+  // The kind of AST node
   Kind kind_;
+
+  // The position in the original source where this node's underlying
+  // information was found
+  const SourcePosition pos_;
 };
 
 /**
@@ -162,9 +171,9 @@ class AstNode : public util::RegionObject {
  */
 class File : public AstNode {
  public:
-  explicit File(util::RegionVector<Declaration *> &&decls)
-      : AstNode(Kind::File),
-        decls_(std::move(decls)) {}
+  explicit File(const SourcePosition &pos,
+                util::RegionVector<Declaration *> &&decls)
+      : AstNode(Kind::File, pos), decls_(std::move(decls)) {}
 
   util::RegionVector<Declaration *> &declarations() { return decls_; }
 
@@ -184,7 +193,8 @@ class File : public AstNode {
 
 class Declaration : public AstNode {
  public:
-  Declaration(Kind kind, const AstString *name) : AstNode(kind), name_(name) {}
+  Declaration(Kind kind, const SourcePosition &pos, const AstString *name)
+      : AstNode(kind, pos), name_(name) {}
 
   const AstString *name() const { return name_; }
 
@@ -202,8 +212,9 @@ class Declaration : public AstNode {
  */
 class FunctionDeclaration : public Declaration {
  public:
-  FunctionDeclaration(const AstString *name, FunctionLiteralExpression *fun)
-      : Declaration(Kind::FunctionDeclaration, name), fun_(fun) {}
+  FunctionDeclaration(const SourcePosition &pos, const AstString *name,
+                      FunctionLiteralExpression *fun)
+      : Declaration(Kind::FunctionDeclaration, pos, name), fun_(fun) {}
 
   FunctionLiteralExpression *function() const { return fun_; }
 
@@ -222,8 +233,9 @@ class FunctionDeclaration : public Declaration {
  */
 class StructDeclaration : public Declaration {
  public:
-  StructDeclaration(const AstString *name, StructType *type)
-      : Declaration(Kind::StructDeclaration, name), type_(type) {}
+  StructDeclaration(const SourcePosition &pos, const AstString *name,
+                    StructType *type)
+      : Declaration(Kind::StructDeclaration, pos, name), type_(type) {}
 
   const StructType *type() const { return type_; }
 
@@ -240,8 +252,9 @@ class StructDeclaration : public Declaration {
  */
 class VariableDeclaration : public Declaration {
  public:
-  VariableDeclaration(const AstString *name, Expression *type, Expression *init)
-      : Declaration(Kind::VariableDeclaration, name),
+  VariableDeclaration(const SourcePosition &pos, const AstString *name,
+                      Expression *type, Expression *init)
+      : Declaration(Kind::VariableDeclaration, pos, name),
         type_(type),
         init_(init) {}
 
@@ -269,7 +282,8 @@ class VariableDeclaration : public Declaration {
  */
 class Statement : public AstNode {
  public:
-  explicit Statement(Kind kind) : AstNode(kind) {}
+  explicit Statement(Kind kind, const SourcePosition &pos)
+      : AstNode(kind, pos) {}
 
   static bool classof(const AstNode *node) {
     return node->kind() >= Kind::BadStatement &&
@@ -282,17 +296,12 @@ class Statement : public AstNode {
  */
 class BadStatement : public Statement {
  public:
-  explicit BadStatement(uint64_t pos)
-      : Statement(AstNode::Kind::BadStatement), pos_(pos) {}
-
-  uint64_t position() const { return pos_; }
+  explicit BadStatement(const SourcePosition &pos)
+      : Statement(AstNode::Kind::BadStatement, pos) {}
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::BadStatement;
   }
-
- private:
-  uint64_t pos_;
 };
 
 /**
@@ -300,16 +309,24 @@ class BadStatement : public Statement {
  */
 class BlockStatement : public Statement {
  public:
-  explicit BlockStatement(util::RegionVector<Statement *> &&statements)
-      : Statement(Kind::BlockStatement), statements_(std::move(statements)) {}
+  explicit BlockStatement(const SourcePosition &pos,
+                          const SourcePosition &rbrace_pos,
+                          util::RegionVector<Statement *> &&statements)
+      : Statement(Kind::BlockStatement, pos),
+        rbrace_pos_(rbrace_pos),
+        statements_(std::move(statements)) {}
 
   util::RegionVector<Statement *> statements() { return statements_; }
+
+  const SourcePosition &right_brace_position() const { return rbrace_pos_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::BlockStatement;
   }
 
  private:
+  const SourcePosition rbrace_pos_;
+
   util::RegionVector<Statement *> statements_;
 };
 
@@ -319,7 +336,7 @@ class BlockStatement : public Statement {
 class DeclarationStatement : public Statement {
  public:
   explicit DeclarationStatement(Declaration *decl)
-      : Statement(Kind::DeclarationStatement), decl_(decl) {}
+      : Statement(Kind::DeclarationStatement, decl->position()), decl_(decl) {}
 
   Declaration *declaration() const { return decl_; }
 
@@ -336,17 +353,16 @@ class DeclarationStatement : public Statement {
  */
 class ExpressionStatement : public Statement {
  public:
-  explicit ExpressionStatement(Expression *expression)
-      : Statement(Kind::ExpressionStatement), expression_(expression) {}
+  explicit ExpressionStatement(Expression *expr);
 
-  Expression *expr() { return expression_; }
+  Expression *expr() { return expr_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ExpressionStatement;
   }
 
  private:
-  Expression *expression_;
+  Expression *expr_;
 };
 
 /**
@@ -354,9 +370,9 @@ class ExpressionStatement : public Statement {
  */
 class ForStatement : public Statement {
  public:
-  ForStatement(Statement *init, Expression *cond, Statement *next,
-               BlockStatement *body)
-      : Statement(AstNode::Kind::ForStatement),
+  ForStatement(const SourcePosition &pos, Statement *init, Expression *cond,
+               Statement *next, BlockStatement *body)
+      : Statement(AstNode::Kind::ForStatement, pos),
         init_(init),
         cond_(cond),
         next_(next),
@@ -391,8 +407,9 @@ class ForStatement : public Statement {
  */
 class IfStatement : public Statement {
  public:
-  IfStatement(Expression *cond, BlockStatement *then_stmt, Statement *else_stmt)
-      : Statement(Kind::IfStatement),
+  IfStatement(const SourcePosition &pos, Expression *cond,
+              BlockStatement *then_stmt, Statement *else_stmt)
+      : Statement(Kind::IfStatement, pos),
         cond_(cond),
         then_stmt_(then_stmt),
         else_stmt_(else_stmt) {}
@@ -418,8 +435,8 @@ class IfStatement : public Statement {
  */
 class ReturnStatement : public Statement {
  public:
-  explicit ReturnStatement(Expression *ret)
-      : Statement(Kind::ReturnStatement), ret_(ret) {}
+  explicit ReturnStatement(const SourcePosition &pos, Expression *ret)
+      : Statement(Kind::ReturnStatement, pos), ret_(ret) {}
 
   Expression *ret() { return ret_; }
 
@@ -442,7 +459,8 @@ class ReturnStatement : public Statement {
  */
 class Expression : public AstNode {
  public:
-  explicit Expression(Kind kind) : AstNode(kind) {}
+  explicit Expression(Kind kind, const SourcePosition &pos)
+      : AstNode(kind, pos) {}
 
   static bool classof(const AstNode *node) {
     return node->kind() >= Kind::BadExpression &&
@@ -456,16 +474,11 @@ class Expression : public AstNode {
 class BadExpression : public Expression {
  public:
   explicit BadExpression(const SourcePosition &pos)
-      : Expression(AstNode::Kind::BadExpression), pos_(pos) {}
-
-  const SourcePosition &position() const { return pos_; }
+      : Expression(AstNode::Kind::BadExpression, pos) {}
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::BadExpression;
   }
-
- private:
-  const SourcePosition pos_;
 };
 
 /**
@@ -473,8 +486,9 @@ class BadExpression : public Expression {
  */
 class BinaryExpression : public Expression {
  public:
-  BinaryExpression(parsing::Token::Type op, Expression *left, Expression *right)
-      : Expression(Kind::BinaryExpression),
+  BinaryExpression(const SourcePosition &pos, parsing::Token::Type op,
+                   Expression *left, Expression *right)
+      : Expression(Kind::BinaryExpression, pos),
         op_(op),
         left_(left),
         right_(right) {}
@@ -501,7 +515,9 @@ class BinaryExpression : public Expression {
 class CallExpression : public Expression {
  public:
   CallExpression(Expression *fun, util::RegionVector<Expression *> &&args)
-      : Expression(Kind::CallExpression), fun_(fun), args_(std::move(args)) {}
+      : Expression(Kind::CallExpression, fun->position()),
+        fun_(fun),
+        args_(std::move(args)) {}
 
   Expression *function() { return fun_; }
 
@@ -518,8 +534,7 @@ class CallExpression : public Expression {
 
 class FunctionLiteralExpression : public Expression {
  public:
-  FunctionLiteralExpression(FunctionType *type, BlockStatement *body)
-      : Expression(Kind::FunctionLiteralExpression), type_(type), body_(body) {}
+  FunctionLiteralExpression(FunctionType *type, BlockStatement *body);
 
   FunctionType *type() const { return type_; }
 
@@ -539,8 +554,11 @@ class FunctionLiteralExpression : public Expression {
  */
 class IdentifierExpression : public Expression {
  public:
-  explicit IdentifierExpression(const AstString *name)
-      : Expression(Kind::IdentifierExpression), name_(name), decl_(nullptr) {}
+  explicit IdentifierExpression(const SourcePosition &pos,
+                                const AstString *name)
+      : Expression(Kind::IdentifierExpression, pos),
+        name_(name),
+        decl_(nullptr) {}
 
   const AstString *name() const { return name_; }
 
@@ -566,17 +584,20 @@ class LiteralExpression : public Expression {
  public:
   enum class Type : uint8_t { Nil, Boolean, Number, String };
 
-  explicit LiteralExpression()
-      : Expression(Kind::LiteralExpression),
+  explicit LiteralExpression(const SourcePosition &pos)
+      : Expression(Kind::LiteralExpression, pos),
         lit_type_(LiteralExpression::Type::Nil) {}
 
-  explicit LiteralExpression(bool val)
-      : Expression(Kind::LiteralExpression),
+  explicit LiteralExpression(const SourcePosition &pos, bool val)
+      : Expression(Kind::LiteralExpression, pos),
         lit_type_(LiteralExpression::Type::Boolean),
         boolean_(val) {}
 
-  explicit LiteralExpression(LiteralExpression::Type lit_type, AstString *str)
-      : Expression(Kind::LiteralExpression), lit_type_(lit_type), str_(str) {}
+  explicit LiteralExpression(const SourcePosition &pos,
+                             LiteralExpression::Type lit_type, AstString *str)
+      : Expression(Kind::LiteralExpression, pos),
+        lit_type_(lit_type),
+        str_(str) {}
 
   LiteralExpression::Type type() const { return lit_type_; }
 
@@ -611,8 +632,9 @@ class LiteralExpression : public Expression {
  */
 class UnaryExpression : public Expression {
  public:
-  UnaryExpression(parsing::Token::Type op, Expression *expr)
-      : Expression(Kind::UnaryExpression), op_(op), expr_(expr) {}
+  UnaryExpression(const SourcePosition &pos, parsing::Token::Type op,
+                  Expression *expr)
+      : Expression(Kind::UnaryExpression, pos), op_(op), expr_(expr) {}
 
   parsing::Token::Type op() { return op_; }
 
@@ -635,13 +657,17 @@ class UnaryExpression : public Expression {
 
 class Field : public util::RegionObject {
  public:
-  Field(const AstString *name, Expression *type) : name_(name), type_(type) {}
+  Field(const SourcePosition &pos, const AstString *name, Expression *type)
+      : pos_(pos), name_(name), type_(type) {}
+
+  const SourcePosition &position() const { return pos_; }
 
   const AstString *name() const { return name_; }
 
   Expression *type() const { return type_; }
 
  private:
+  const SourcePosition pos_;
   const AstString *name_;
   Expression *type_;
 };
@@ -651,8 +677,8 @@ class Field : public util::RegionObject {
  */
 class ArrayType : public Expression {
  public:
-  ArrayType(Expression *len, Expression *elem_type)
-      : Expression(Kind::ArrayType), len_(len), elem_type_(elem_type) {}
+  ArrayType(const SourcePosition &pos, Expression *len, Expression *elem_type)
+      : Expression(Kind::ArrayType, pos), len_(len), elem_type_(elem_type) {}
 
   Expression *length() const { return len_; }
 
@@ -672,8 +698,9 @@ class ArrayType : public Expression {
  */
 class FunctionType : public Expression {
  public:
-  FunctionType(util::RegionVector<Field *> &&param_types, Expression *ret_type)
-      : Expression(Kind::FunctionType),
+  FunctionType(const SourcePosition &pos,
+               util::RegionVector<Field *> &&param_types, Expression *ret_type)
+      : Expression(Kind::FunctionType, pos),
         param_types_(std::move(param_types)),
         ret_type_(ret_type) {}
 
@@ -695,17 +722,17 @@ class FunctionType : public Expression {
  */
 class PointerType : public Expression {
  public:
-  explicit PointerType(Expression *pointee_type)
-      : Expression(Kind::PointerType), pointee_type_(pointee_type) {}
+  explicit PointerType(const SourcePosition &pos, Expression *base)
+      : Expression(Kind::PointerType, pos), base_(base) {}
 
-  Expression *pointee_type() const { return pointee_type_; }
+  Expression *base() const { return base_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::PointerType;
   }
 
  private:
-  Expression *pointee_type_;
+  Expression *base_;
 };
 
 /**
@@ -713,8 +740,9 @@ class PointerType : public Expression {
  */
 class StructType : public Expression {
  public:
-  explicit StructType(util::RegionVector<Field *> &&fields)
-      : Expression(Kind::StructType), fields_(std::move(fields)) {}
+  explicit StructType(const SourcePosition &pos,
+                      util::RegionVector<Field *> &&fields)
+      : Expression(Kind::StructType, pos), fields_(std::move(fields)) {}
 
   const util::RegionVector<Field *> &fields() const { return fields_; }
 

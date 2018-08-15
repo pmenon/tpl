@@ -17,33 +17,39 @@ class AstNodeFactory {
 
   util::Region &region() { return region_; }
 
-  File *NewFile(util::RegionVector<Declaration *> &&declarations) {
-    return new (region_) File(std::move(declarations));
+  File *NewFile(const SourcePosition &pos,
+                util::RegionVector<Declaration *> &&declarations) {
+    return new (region_) File(pos, std::move(declarations));
   }
 
-  FunctionDeclaration *NewFunctionDeclaration(const AstString *name,
+  FunctionDeclaration *NewFunctionDeclaration(const SourcePosition &pos,
+                                              const AstString *name,
                                               FunctionLiteralExpression *fun) {
-    return new (region_) FunctionDeclaration(name, fun);
+    return new (region_) FunctionDeclaration(pos, name, fun);
   }
 
-  StructDeclaration *NewStructDeclaration(const AstString *name,
+  StructDeclaration *NewStructDeclaration(const SourcePosition &pos,
+                                          const AstString *name,
                                           StructType *type) {
-    return new (region_) StructDeclaration(name, type);
+    return new (region_) StructDeclaration(pos, name, type);
   }
 
-  VariableDeclaration *NewVariableDeclaration(const AstString *name,
+  VariableDeclaration *NewVariableDeclaration(const SourcePosition &pos,
+                                              const AstString *name,
                                               Expression *type,
                                               Expression *init) {
-    return new (region_) VariableDeclaration(name, type, init);
+    return new (region_) VariableDeclaration(pos, name, type, init);
   }
 
-  BadStatement *NewBadStatement(uint64_t pos) {
+  BadStatement *NewBadStatement(const SourcePosition &pos) {
     return new (region_) BadStatement(pos);
   }
 
   BlockStatement *NewBlockStatement(
+      const SourcePosition &start_pos, const SourcePosition &end_pos,
       util::RegionVector<Statement *> &&statements) {
-    return new (region_) BlockStatement(std::move(statements));
+    return new (region_)
+        BlockStatement(start_pos, end_pos, std::move(statements));
   }
 
   DeclarationStatement *NewDeclarationStatement(Declaration *decl) {
@@ -54,27 +60,30 @@ class AstNodeFactory {
     return new (region_) ExpressionStatement(expression);
   }
 
-  ForStatement *NewForStatement(Statement *init, Expression *cond,
-                                Statement *next, BlockStatement *body) {
-    return new (region_) ForStatement(init, cond, next, body);
+  ForStatement *NewForStatement(const SourcePosition &pos, Statement *init,
+                                Expression *cond, Statement *next,
+                                BlockStatement *body) {
+    return new (region_) ForStatement(pos, init, cond, next, body);
   }
 
-  IfStatement *NewIfStatement(Expression *cond, BlockStatement *then_stmt,
-                              Statement *else_stmt) {
-    return new (region_) IfStatement(cond, then_stmt, else_stmt);
+  IfStatement *NewIfStatement(const SourcePosition &pos, Expression *cond,
+                              BlockStatement *then_stmt, Statement *else_stmt) {
+    return new (region_) IfStatement(pos, cond, then_stmt, else_stmt);
   }
 
-  ReturnStatement *NewReturnStatement(Expression *ret) {
-    return new (region_) ReturnStatement(ret);
+  ReturnStatement *NewReturnStatement(const SourcePosition &pos,
+                                      Expression *ret) {
+    return new (region_) ReturnStatement(pos, ret);
   }
 
   BadExpression *NewBadExpression(const SourcePosition &pos) {
     return new (region_) BadExpression(pos);
   }
 
-  BinaryExpression *NewBinaryExpression(parsing::Token::Type op,
+  BinaryExpression *NewBinaryExpression(const SourcePosition &pos,
+                                        parsing::Token::Type op,
                                         Expression *left, Expression *right) {
-    return new (region_) BinaryExpression(op, left, right);
+    return new (region_) BinaryExpression(pos, op, left, right);
   }
 
   CallExpression *NewCallExpression(Expression *fun,
@@ -82,22 +91,23 @@ class AstNodeFactory {
     return new (region_) CallExpression(fun, std::move(args));
   }
 
-  LiteralExpression *NewNilLiteral() {
-    return new (region_) LiteralExpression();
+  LiteralExpression *NewNilLiteral(const SourcePosition &pos) {
+    return new (region_) LiteralExpression(pos);
   }
 
-  LiteralExpression *NewBoolLiteral(bool val) {
-    return new (region_) LiteralExpression(val);
+  LiteralExpression *NewBoolLiteral(const SourcePosition &pos, bool val) {
+    return new (region_) LiteralExpression(pos, val);
   }
 
-  LiteralExpression *NewNumLiteral(AstString *num) {
+  LiteralExpression *NewNumLiteral(const SourcePosition &pos, AstString *num) {
     return new (region_)
-        LiteralExpression(LiteralExpression::Type::Number, num);
+        LiteralExpression(pos, LiteralExpression::Type::Number, num);
   }
 
-  LiteralExpression *NewStringLiteral(AstString *str) {
+  LiteralExpression *NewStringLiteral(const SourcePosition &pos,
+                                      AstString *str) {
     return new (region_)
-        LiteralExpression(LiteralExpression::Type::String, str);
+        LiteralExpression(pos, LiteralExpression::Type::String, str);
   }
 
   FunctionLiteralExpression *NewFunctionLiteral(FunctionType *type,
@@ -105,34 +115,40 @@ class AstNodeFactory {
     return new (region_) FunctionLiteralExpression(type, body);
   }
 
-  UnaryExpression *NewUnaryExpression(parsing::Token::Type op,
+  UnaryExpression *NewUnaryExpression(const SourcePosition &pos,
+                                      parsing::Token::Type op,
                                       Expression *expr) {
-    return new (region_) UnaryExpression(op, expr);
+    return new (region_) UnaryExpression(pos, op, expr);
   }
 
-  IdentifierExpression *NewIdentifierExpression(AstString *name) {
-    return new (region_) IdentifierExpression(name);
+  IdentifierExpression *NewIdentifierExpression(const SourcePosition &pos,
+                                                AstString *name) {
+    return new (region_) IdentifierExpression(pos, name);
   }
 
-  ArrayType *NewArrayType(Expression *len, Expression *elem_type) {
-    return new (region_) ArrayType(len, elem_type);
+  ArrayType *NewArrayType(const SourcePosition &pos, Expression *len,
+                          Expression *elem_type) {
+    return new (region_) ArrayType(pos, len, elem_type);
   }
 
-  Field *NewField(const AstString *name, Expression *type) {
-    return new (region_) Field(name, type);
+  Field *NewField(const SourcePosition &pos, const AstString *name,
+                  Expression *type) {
+    return new (region_) Field(pos, name, type);
   }
 
-  FunctionType *NewFunctionType(util::RegionVector<Field *> &&params,
+  FunctionType *NewFunctionType(const SourcePosition &pos,
+                                util::RegionVector<Field *> &&params,
                                 Expression *ret) {
-    return new (region_) FunctionType(std::move(params), ret);
+    return new (region_) FunctionType(pos, std::move(params), ret);
   }
 
-  PointerType *NewPointerType(Expression *pointee_type) {
-    return new (region_) PointerType(pointee_type);
+  PointerType *NewPointerType(const SourcePosition &pos, Expression *base) {
+    return new (region_) PointerType(pos, base);
   }
 
-  StructType *NewStructType(util::RegionVector<Field *> &&fields) {
-    return new (region_) StructType(std::move(fields));
+  StructType *NewStructType(const SourcePosition &pos,
+                            util::RegionVector<Field *> &&fields) {
+    return new (region_) StructType(pos, std::move(fields));
   }
 
  private:

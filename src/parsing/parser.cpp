@@ -11,11 +11,13 @@ Parser::Parser(Scanner &scanner, ast::AstNodeFactory &node_factory,
 ast::AstNode *Parser::Parse() {
   util::RegionVector<ast::Declaration *> decls(region());
 
+  const SourcePosition &start_pos = scanner().current_position();
+
   while (peek() != Token::Type::EOS) {
     decls.push_back(ParseDeclaration());
   }
 
-  return node_factory().NewFile(std::move(decls));
+  return node_factory().NewFile(start_pos, std::move(decls));
 }
 
 ast::Declaration *Parser::ParseDeclaration() {
@@ -32,7 +34,9 @@ ast::Declaration *Parser::ParseDeclaration() {
 }
 
 ast::Declaration *Parser::ParseFunctionDeclaration() {
-  Consume(Token::Type::FUN);
+  Expect(Token::Type::FUN);
+
+  const SourcePosition &position = scanner().current_position();
 
   // The function name
   Expect(Token::Type::IDENTIFIER);
@@ -44,14 +48,16 @@ ast::Declaration *Parser::ParseFunctionDeclaration() {
 
   // Create declaration
   ast::FunctionDeclaration *decl =
-      node_factory().NewFunctionDeclaration(name, fun);
+      node_factory().NewFunctionDeclaration(position, name, fun);
 
   // Done
   return decl;
 }
 
 ast::Declaration *Parser::ParseStructDeclaration() {
-  Consume(Token::Type::STRUCT);
+  Expect(Token::Type::STRUCT);
+
+  const SourcePosition &position = scanner().current_position();
 
   // The struct name
   Expect(Token::Type::IDENTIFIER);
@@ -62,7 +68,7 @@ ast::Declaration *Parser::ParseStructDeclaration() {
 
   // The declaration object
   ast::StructDeclaration *decl =
-      node_factory().NewStructDeclaration(name, struct_type);
+      node_factory().NewStructDeclaration(position, name, struct_type);
 
   // Done
   return decl;
@@ -72,7 +78,9 @@ ast::Declaration *Parser::ParseVariableDeclaration() {
   // VariableDecl ::
   //   'var' Ident ':' Type ('=' Expr)?
 
-  Consume(Token::Type::VAR);
+  Expect(Token::Type::VAR);
+
+  const SourcePosition &position = scanner().current_position();
 
   // The name
   Expect(Token::Type::IDENTIFIER);
@@ -94,7 +102,7 @@ ast::Declaration *Parser::ParseVariableDeclaration() {
 
   // Create declaration object
   ast::VariableDeclaration *decl =
-      node_factory().NewVariableDeclaration(name, type, init);
+      node_factory().NewVariableDeclaration(position, name, type, init);
 
   // Done
   return decl;
@@ -120,9 +128,7 @@ ast::Statement *Parser::ParseStatement() {
       return ParseIfStatement();
     }
     case Token::Type::RETURN: {
-      Consume(Token::Type::RETURN);
-      ast::Expression *ret = ParseExpression();
-      return node_factory().NewReturnStatement(ret);
+      return ParseReturnStatement();
     }
     case Token::Type::VAR: {
       ast::Declaration *var_decl = ParseVariableDeclaration();
@@ -137,6 +143,7 @@ ast::Statement *Parser::ParseExpressionStatement() {
   //   Expr
 
   ast::Expression *expr = ParseExpression();
+
   return node_factory().NewExpressionStatement(expr);
 }
 
@@ -146,6 +153,7 @@ ast::Statement *Parser::ParseBlockStatement() {
 
   // Eat the left brace
   Expect(Token::Type::LEFT_BRACE);
+  const SourcePosition &start_position = scanner().current_position();
 
   // Where we store all the statements in the block
   util::RegionVector<ast::Statement *> statements(region());
@@ -158,8 +166,10 @@ ast::Statement *Parser::ParseBlockStatement() {
 
   // Eat the right brace
   Expect(Token::Type::RIGHT_BRACE);
+  const SourcePosition &end_position = scanner().current_position();
 
-  return node_factory().NewBlockStatement(std::move(statements));
+  return node_factory().NewBlockStatement(start_position, end_position,
+                                          std::move(statements));
 }
 
 Parser::ForHeader Parser::ParseForHeader() {
@@ -207,7 +217,9 @@ Parser::ForHeader Parser::ParseForHeader() {
 }
 
 ast::Statement *Parser::ParseForStatement() {
-  Consume(Token::Type::FOR);
+  Expect(Token::Type::FOR);
+
+  const SourcePosition &position = scanner().current_position();
 
   // Parse the header to get the initialization statement, loop condition and
   // next-value statement
@@ -216,7 +228,7 @@ ast::Statement *Parser::ParseForStatement() {
   // Now the loop body
   auto *body = ParseBlockStatement()->As<ast::BlockStatement>();
 
-  return node_factory().NewForStatement(init, cond, next, body);
+  return node_factory().NewForStatement(position, init, cond, next, body);
 }
 
 ast::Statement *Parser::ParseIfStatement() {
@@ -224,6 +236,8 @@ ast::Statement *Parser::ParseIfStatement() {
   //   'if' '(' Expr ')' '{' Stmt '}' ('else' '{' Stmt '}')?
 
   Expect(Token::Type::IF);
+
+  const SourcePosition &position = scanner().current_position();
 
   // Handle condition
   Expect(Token::Type::LEFT_PAREN);
@@ -243,7 +257,17 @@ ast::Statement *Parser::ParseIfStatement() {
     }
   }
 
-  return node_factory().NewIfStatement(cond, then_stmt, else_stmt);
+  return node_factory().NewIfStatement(position, cond, then_stmt, else_stmt);
+}
+
+ast::Statement *Parser::ParseReturnStatement() {
+  Expect(Token::Type::RETURN);
+
+  const SourcePosition &position = scanner().current_position();
+
+  ast::Expression *ret = ParseExpression();
+
+  return node_factory().NewReturnStatement(position, ret);
 }
 
 ast::Expression *Parser::ParseExpression() {
@@ -267,8 +291,9 @@ ast::Expression *Parser::ParseBinaryExpression(uint32_t min_prec) {
     // to handle cases like 1+2+3+4.
     while (Token::Precedence(peek()) == prec) {
       Token::Type op = Next();
+      const SourcePosition &position = scanner().current_position();
       ast::Expression *right = ParseBinaryExpression(prec);
-      left = node_factory().NewBinaryExpression(op, left, right);
+      left = node_factory().NewBinaryExpression(position, op, left, right);
     }
   }
 
@@ -288,8 +313,9 @@ ast::Expression *Parser::ParseUnaryExpression() {
     case Token::Type::MINUS:
     case Token::Type::STAR: {
       Token::Type op = Next();
+      const SourcePosition &position = scanner().current_position();
       ast::Expression *expr = ParseUnaryExpression();
-      return node_factory().NewUnaryExpression(op, expr);
+      return node_factory().NewUnaryExpression(position, op, expr);
     }
     default:
       break;
@@ -343,27 +369,30 @@ ast::Expression *Parser::ParsePrimaryExpression() {
   switch (peek()) {
     case Token::Type::NIL: {
       Consume(Token::Type::NIL);
-      return node_factory().NewNilLiteral();
+      return node_factory().NewNilLiteral(scanner().current_position());
     }
     case Token::Type::TRUE: {
       Consume(Token::Type::TRUE);
-      return node_factory().NewBoolLiteral(true);
+      return node_factory().NewBoolLiteral(scanner().current_position(), true);
     }
     case Token::Type::FALSE: {
       Consume(Token::Type::FALSE);
-      return node_factory().NewBoolLiteral(false);
+      return node_factory().NewBoolLiteral(scanner().current_position(), false);
     }
     case Token::Type::IDENTIFIER: {
       Next();
-      return node_factory().NewIdentifierExpression(GetSymbol());
+      const SourcePosition &position = scanner().current_position();
+      return node_factory().NewIdentifierExpression(position, GetSymbol());
     }
     case Token::Type::NUMBER: {
       Next();
-      return node_factory().NewNumLiteral(GetSymbol());
+      const SourcePosition &position = scanner().current_position();
+      return node_factory().NewNumLiteral(position, GetSymbol());
     }
     case Token::Type::STRING: {
       Next();
-      return node_factory().NewStringLiteral(GetSymbol());
+      const SourcePosition &position = scanner().current_position();
+      return node_factory().NewStringLiteral(position, GetSymbol());
     }
     case Token::Type::FUN: {
       Next();
@@ -403,7 +432,8 @@ ast::Expression *Parser::ParseType() {
   switch (peek()) {
     case Token::Type::IDENTIFIER: {
       Next();
-      return node_factory().NewIdentifierExpression(GetSymbol());
+      const SourcePosition &position = scanner().current_position();
+      return node_factory().NewIdentifierExpression(position, GetSymbol());
     }
     case Token::Type::LEFT_PAREN: {
       return ParseFunctionType();
@@ -432,12 +462,16 @@ ast::Expression *Parser::ParseFunctionType() {
 
   Consume(Token::Type::LEFT_PAREN);
 
+  const SourcePosition &position = scanner().current_position();
+
   util::RegionVector<ast::Field *> params(region());
 
   while (true) {
     if (!Matches(Token::Type::IDENTIFIER)) {
       break;
     }
+
+    const SourcePosition &field_position = scanner().current_position();
 
     // The parameter name
     ast::AstString *name = GetSymbol();
@@ -449,7 +483,7 @@ ast::Expression *Parser::ParseFunctionType() {
     ast::Expression *type = ParseType();
 
     // That's it
-    params.push_back(node_factory().NewField(name, type));
+    params.push_back(node_factory().NewField(field_position, name, type));
 
     if (!Matches(Token::Type::COMMA)) {
       break;
@@ -461,16 +495,20 @@ ast::Expression *Parser::ParseFunctionType() {
 
   ast::Expression *ret = ParseType();
 
-  return node_factory().NewFunctionType(std::move(params), ret);
+  return node_factory().NewFunctionType(position, std::move(params), ret);
 }
 
 ast::Expression *Parser::ParsePointerType() {
   // PointerType ::
   //   '*' Type
 
-  Consume(Token::Type::STAR);
-  ast::Expression *pointee = ParseType();
-  return node_factory().NewPointerType(pointee);
+  Expect(Token::Type::STAR);
+
+  const SourcePosition &position = scanner().current_position();
+
+  ast::Expression *base = ParseType();
+
+  return node_factory().NewPointerType(position, base);
 }
 
 ast::Expression *Parser::ParseArrayType() {
@@ -479,16 +517,20 @@ ast::Expression *Parser::ParseArrayType() {
 
   Consume(Token::Type::LEFT_BRACKET);
 
+  const SourcePosition &position = scanner().current_position();
+
+  // If the next token doesn't match a right bracket, it means we have a length
   ast::Expression *len = nullptr;
-  if (peek() != Token::Type::RIGHT_BRACKET) {
+  if (!Matches(Token::Type::RIGHT_BRACKET)) {
     len = ParseExpression();
+    Expect(Token::Type::RIGHT_BRACKET);
   }
 
-  Expect(Token::Type::RIGHT_BRACKET);
-
+  // Now the type
   ast::Expression *elem_type = ParseType();
 
-  return node_factory().NewArrayType(len, elem_type);
+  // Done
+  return node_factory().NewArrayType(position, len, elem_type);
 }
 
 ast::Expression *Parser::ParseStructType() {
@@ -497,22 +539,31 @@ ast::Expression *Parser::ParseStructType() {
 
   Consume(Token::Type::LEFT_BRACE);
 
+  const SourcePosition &position = scanner().current_position();
+
   util::RegionVector<ast::Field *> fields(region());
 
   while (peek() != Token::Type::RIGHT_BRACE) {
     Expect(Token::Type::IDENTIFIER);
+
+    const SourcePosition &field_position = scanner().current_position();
+
+    // The parameter name
     ast::AstString *name = GetSymbol();
 
+    // Prepare for parameter type by eating the colon (ew ...)
     Expect(Token::Type::COLON);
 
+    // Parse the type
     ast::Expression *type = ParseType();
 
-    fields.push_back(node_factory().NewField(name, type));
+    // That's it
+    fields.push_back(node_factory().NewField(field_position, name, type));
   }
 
   Consume(Token::Type::RIGHT_BRACE);
 
-  return node_factory().NewStructType(std::move(fields));
+  return node_factory().NewStructType(position, std::move(fields));
 }
 
 template <typename... Args>

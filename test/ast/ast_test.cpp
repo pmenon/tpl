@@ -7,12 +7,16 @@ namespace tpl::ast::test {
 
 class AstTest : public ::testing::Test {
  public:
-  AstTest() : region_("ast_test") {}
+  AstTest() : region_("ast_test"), pos_() {}
 
   util::Region &region() { return region_; }
 
+  const SourcePosition &empty_pos() const { return pos_; }
+
  private:
   util::Region region_;
+
+  SourcePosition pos_;
 };
 
 TEST_F(AstTest, HierechyTest) {
@@ -29,9 +33,9 @@ TEST_F(AstTest, HierechyTest) {
   /// Test declarations
   {
     AstNode *all_decls[] = {
-        factory.NewFunctionDeclaration(nullptr, nullptr),
-        factory.NewStructDeclaration(nullptr, nullptr),
-        factory.NewVariableDeclaration(nullptr, nullptr, nullptr),
+        factory.NewFunctionDeclaration(empty_pos(), nullptr, nullptr),
+        factory.NewStructDeclaration(empty_pos(), nullptr, nullptr),
+        factory.NewVariableDeclaration(empty_pos(), nullptr, nullptr, nullptr),
     };
 
     for (const auto *node : all_decls) {
@@ -55,19 +59,25 @@ TEST_F(AstTest, HierechyTest) {
   /// Test expressions
   {
     AstNode *all_exprs[] = {
-        factory.NewBinaryExpression(parsing::Token::Type::PLUS, nullptr,
-                                    nullptr),
-        factory.NewCallExpression(nullptr,
+        factory.NewBinaryExpression(empty_pos(), parsing::Token::Type::PLUS,
+                                    nullptr, nullptr),
+        factory.NewCallExpression(factory.NewNilLiteral(empty_pos()),
                                   util::RegionVector<Expression *>(region())),
-        factory.NewFunctionLiteral(nullptr, nullptr),
-        factory.NewNilLiteral(),
-        factory.NewUnaryExpression(parsing::Token::Type::MINUS, nullptr),
-        factory.NewIdentifierExpression(nullptr),
-        factory.NewArrayType(nullptr, nullptr),
-        factory.NewFunctionType(util::RegionVector<Field *>(region()), nullptr),
-        factory.NewIdentifierExpression(nullptr),
-        factory.NewPointerType(nullptr),
-        factory.NewStructType(util::RegionVector<Field *>(region())),
+        factory.NewFunctionLiteral(
+            factory.NewFunctionType(
+                empty_pos(), util::RegionVector<Field *>(region()), nullptr),
+            nullptr),
+        factory.NewNilLiteral(empty_pos()),
+        factory.NewUnaryExpression(empty_pos(), parsing::Token::Type::MINUS,
+                                   nullptr),
+        factory.NewIdentifierExpression(empty_pos(), nullptr),
+        factory.NewArrayType(empty_pos(), nullptr, nullptr),
+        factory.NewFunctionType(empty_pos(),
+                                util::RegionVector<Field *>(region()), nullptr),
+        factory.NewIdentifierExpression(empty_pos(), nullptr),
+        factory.NewPointerType(empty_pos(), nullptr),
+        factory.NewStructType(empty_pos(),
+                              util::RegionVector<Field *>(region())),
     };
 
     for (const auto *node : all_exprs) {
@@ -91,12 +101,15 @@ TEST_F(AstTest, HierechyTest) {
   /// Test statements
   {
     AstNode *all_stmts[] = {
-        factory.NewBlockStatement(util::RegionVector<Statement *>(region())),
-        factory.NewDeclarationStatement(nullptr),
-        factory.NewExpressionStatement(nullptr),
-        factory.NewForStatement(nullptr, nullptr, nullptr, nullptr),
-        factory.NewIfStatement(nullptr, nullptr, nullptr),
-        factory.NewReturnStatement(nullptr),
+        factory.NewBlockStatement(empty_pos(), empty_pos(),
+                                  util::RegionVector<Statement *>(region())),
+        factory.NewDeclarationStatement(factory.NewVariableDeclaration(
+            empty_pos(), nullptr, nullptr, nullptr)),
+        factory.NewExpressionStatement(factory.NewNilLiteral(empty_pos())),
+        factory.NewForStatement(empty_pos(), nullptr, nullptr, nullptr,
+                                nullptr),
+        factory.NewIfStatement(empty_pos(), nullptr, nullptr, nullptr),
+        factory.NewReturnStatement(empty_pos(), nullptr),
     };
 
     for (const auto *node : all_stmts) {
