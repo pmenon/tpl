@@ -15,6 +15,8 @@ class AstNodeFactory {
  public:
   explicit AstNodeFactory(util::Region &region) : region_(region) {}
 
+  DISALLOW_COPY_AND_MOVE(AstNodeFactory);
+
   util::Region &region() { return region_; }
 
   File *NewFile(const SourcePosition &pos,

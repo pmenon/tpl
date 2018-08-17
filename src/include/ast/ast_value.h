@@ -41,14 +41,12 @@ class AstString : public util::RegionObject {
   uint32_t hash_;
 };
 
-class AstNumber : public util::RegionObject {
-
-};
-
 class AstStringsContainer {
  public:
   explicit AstStringsContainer(util::Region &region)
       : region_(region), string_table_(CompareString()) {}
+
+  DISALLOW_COPY_AND_MOVE(AstStringsContainer);
 
   AstString *GetAstString(const char *bytes, uint32_t len) {
     const uint32_t hash = util::Hasher::Hash(bytes, len);

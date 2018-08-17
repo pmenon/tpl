@@ -155,8 +155,7 @@ class AstNode : public util::RegionObject {
   }
 
  protected:
-  explicit AstNode(Kind kind, const SourcePosition &pos)
-      : kind_(kind), pos_(pos) {}
+  AstNode(Kind kind, const SourcePosition &pos) : kind_(kind), pos_(pos) {}
 
  private:
   // The kind of AST node
@@ -172,8 +171,7 @@ class AstNode : public util::RegionObject {
  */
 class File : public AstNode {
  public:
-  explicit File(const SourcePosition &pos,
-                util::RegionVector<Declaration *> &&decls)
+  File(const SourcePosition &pos, util::RegionVector<Declaration *> &&decls)
       : AstNode(Kind::File, pos), decls_(std::move(decls)) {}
 
   util::RegionVector<Declaration *> &declarations() { return decls_; }
@@ -283,8 +281,7 @@ class VariableDeclaration : public Declaration {
  */
 class Statement : public AstNode {
  public:
-  explicit Statement(Kind kind, const SourcePosition &pos)
-      : AstNode(kind, pos) {}
+  Statement(Kind kind, const SourcePosition &pos) : AstNode(kind, pos) {}
 
   static bool classof(const AstNode *node) {
     return node->kind() >= Kind::BadStatement &&
@@ -310,9 +307,8 @@ class BadStatement : public Statement {
  */
 class BlockStatement : public Statement {
  public:
-  explicit BlockStatement(const SourcePosition &pos,
-                          const SourcePosition &rbrace_pos,
-                          util::RegionVector<Statement *> &&statements)
+  BlockStatement(const SourcePosition &pos, const SourcePosition &rbrace_pos,
+                 util::RegionVector<Statement *> &&statements)
       : Statement(Kind::BlockStatement, pos),
         rbrace_pos_(rbrace_pos),
         statements_(std::move(statements)) {}
@@ -436,7 +432,7 @@ class IfStatement : public Statement {
  */
 class ReturnStatement : public Statement {
  public:
-  explicit ReturnStatement(const SourcePosition &pos, Expression *ret)
+  ReturnStatement(const SourcePosition &pos, Expression *ret)
       : Statement(Kind::ReturnStatement, pos), ret_(ret) {}
 
   Expression *ret() { return ret_; }
@@ -460,8 +456,7 @@ class ReturnStatement : public Statement {
  */
 class Expression : public AstNode {
  public:
-  explicit Expression(Kind kind, const SourcePosition &pos,
-                      Type *type = nullptr)
+  Expression(Kind kind, const SourcePosition &pos, Type *type = nullptr)
       : AstNode(kind, pos), type_(type) {}
 
   Type *type() { return type_; }
@@ -564,8 +559,7 @@ class FunctionLiteralExpression : public Expression {
  */
 class IdentifierExpression : public Expression {
  public:
-  explicit IdentifierExpression(const SourcePosition &pos,
-                                const AstString *name)
+  IdentifierExpression(const SourcePosition &pos, const AstString *name)
       : Expression(Kind::IdentifierExpression, pos),
         name_(name),
         decl_(nullptr) {}
@@ -598,13 +592,13 @@ class LiteralExpression : public Expression {
       : Expression(Kind::LiteralExpression, pos),
         lit_type_(LiteralExpression::Type::Nil) {}
 
-  explicit LiteralExpression(const SourcePosition &pos, bool val)
+  LiteralExpression(const SourcePosition &pos, bool val)
       : Expression(Kind::LiteralExpression, pos),
         lit_type_(LiteralExpression::Type::Boolean),
         boolean_(val) {}
 
-  explicit LiteralExpression(const SourcePosition &pos,
-                             LiteralExpression::Type lit_type, AstString *str)
+  LiteralExpression(const SourcePosition &pos, LiteralExpression::Type lit_type,
+                    AstString *str)
       : Expression(Kind::LiteralExpression, pos),
         lit_type_(lit_type),
         str_(str) {}
@@ -630,8 +624,6 @@ class LiteralExpression : public Expression {
 
   union {
     bool boolean_;
-    int64_t int_;
-    double double_;
     AstString *str_;
   };
 };
@@ -735,7 +727,7 @@ class FunctionTypeRepr : public Expression {
  */
 class PointerTypeRepr : public Expression {
  public:
-  explicit PointerTypeRepr(const SourcePosition &pos, Expression *base)
+  PointerTypeRepr(const SourcePosition &pos, Expression *base)
       : Expression(Kind::PointerTypeRepr, pos), base_(base) {}
 
   Expression *base() const { return base_; }
@@ -753,8 +745,8 @@ class PointerTypeRepr : public Expression {
  */
 class StructTypeRepr : public Expression {
  public:
-  explicit StructTypeRepr(const SourcePosition &pos,
-                          util::RegionVector<Field *> &&fields)
+  StructTypeRepr(const SourcePosition &pos,
+                 util::RegionVector<Field *> &&fields)
       : Expression(Kind::StructTypeRepr, pos), fields_(std::move(fields)) {}
 
   const util::RegionVector<Field *> &fields() const { return fields_; }
