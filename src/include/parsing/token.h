@@ -23,7 +23,7 @@ namespace tpl::parsing {
   T(SEMI, ";", 0)                                  \
                                                    \
   /* Assignment */                                 \
-  T(EQUAL, "=", 2)                                 \
+  T(EQUAL, "=", 0)                                 \
                                                    \
   /* Binary operators, sorted by precedence */     \
   T(COMMA, ",", 1)                                 \

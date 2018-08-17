@@ -46,6 +46,15 @@ void PrettyPrint::VisitStructDeclaration(StructDeclaration *node) {
   EndVisit();
 }
 
+void PrettyPrint::VisitAssignmentStatement(AssignmentStatement *node) {
+  BeginVisit();
+  PrintString("assign ");
+  Visit(node->destination());
+  PrintString(" = ");
+  Visit(node->source());
+  EndVisit();
+}
+
 void PrettyPrint::VisitBlockStatement(BlockStatement *node) {
   BeginVisit();
   for (auto *statement : node->statements()) {

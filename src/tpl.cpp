@@ -6,6 +6,7 @@
 #include "ast/pretty_print.h"
 #include "parsing/parser.h"
 #include "parsing/scanner.h"
+#include "sema/error_reporter.h"
 #include "tpl.h"
 
 namespace tpl {
@@ -13,7 +14,7 @@ namespace tpl {
 static constexpr const char *kExitKeyword = ".exit";
 
 static void RunRepl() {
-  util::Region region("repl");
+  util::Region region("repl-ast");
 
   while (true) {
     std::string input;
@@ -35,10 +36,17 @@ static void RunRepl() {
     parsing::Scanner scanner(input.data(), input.length());
     ast::AstNodeFactory node_factory(region);
     ast::AstStringsContainer strings_container(region);
-    parsing::Parser parser(scanner, node_factory, strings_container);
+    sema::ErrorReporter error_reporter;
+    parsing::Parser parser(scanner, node_factory, strings_container,
+                           error_reporter);
 
     // Parse!
     ast::AstNode *root = parser.Parse();
+
+    if (error_reporter.has_errors()) {
+      fprintf(stderr, "Error in parsing!");
+      error_reporter.PrintErrors();
+    }
 
     // For now, just pretty print the AST
     ast::PrettyPrint pretty_print(root);
@@ -48,7 +56,7 @@ static void RunRepl() {
 
 static void RunFile(const std::string &filename) {}
 
-} // namespace tpl
+}  // namespace tpl
 
 int main(int argc, char **argv) {
   printf("Welcome to TPL (ver. %u.%u)\n", TPL_VERSION_MAJOR, TPL_VERSION_MINOR);

@@ -3,16 +3,16 @@
 #include "ast/ast.h"
 #include "ast/ast_node_factory.h"
 #include "ast/ast_value.h"
-#include "ast/scope.h"
 #include "parsing/scanner.h"
-#include "util/region_containers.h"
+#include "sema/error_reporter.h"
 
 namespace tpl::parsing {
 
 class Parser {
  public:
   Parser(Scanner &scanner, ast::AstNodeFactory &node_factory,
-         ast::AstStringsContainer &strings_container);
+         ast::AstStringsContainer &strings_container,
+         sema::ErrorReporter &error_reporter);
 
   /**
    * Parse and generate an abstract syntax tree from the input TPL source code
@@ -34,6 +34,8 @@ class Parser {
 
   ast::AstStringsContainer &strings_container() { return strings_container_; }
 
+  sema::ErrorReporter &error_reporter() { return error_reporter_; }
+
   //////////////////////////////////////////////////////////////////////////////
   ///
   /// Token logic
@@ -46,16 +48,19 @@ class Parser {
 
   void Consume(UNUSED Token::Type expected) {
     UNUSED Token::Type next = Next();
-    TPL_ASSERT(next == expected &&
-               "The next token doesn't match what was expected");
+#ifndef NDEBUG
+    if (next != expected) {
+      error_reporter().Report(sema::ErrorMessages::kUnexpectedToken,
+                              Token::String(next), Token::String(expected));
+    }
+#endif
   }
 
   void Expect(Token::Type expected) {
     Token::Type next = Next();
     if (next != expected) {
-      // An error happened, report it but move on ...
-      ReportError("Unexpected token '%s' received when expected '%s'",
-                  Token::String(next), Token::String(expected));
+      error_reporter().Report(sema::ErrorMessages::kUnexpectedToken,
+                              Token::String(next), Token::String(expected));
     }
   }
 
@@ -91,7 +96,7 @@ class Parser {
 
   ast::Statement *ParseStatement();
 
-  ast::Statement *ParseExpressionStatement();
+  ast::Statement *ParseSimpleStatement();
 
   ast::Statement *ParseBlockStatement();
 
@@ -131,15 +136,6 @@ class Parser {
 
   ast::Expression *ParseStructType();
 
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Error handling
-  ///
-  //////////////////////////////////////////////////////////////////////////////
-
-  template <typename... Args>
-  void ReportError(const char *fmt, const Args &... args);
-
  private:
   // The source code scanner
   Scanner &scanner_;
@@ -149,6 +145,9 @@ class Parser {
 
   // A factory for strings
   ast::AstStringsContainer &strings_container_;
+
+  // The error reporter
+  sema::ErrorReporter &error_reporter_;
 };
 
 }  // namespace tpl::parsing

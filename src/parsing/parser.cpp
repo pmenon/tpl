@@ -1,12 +1,16 @@
 #include "parsing/parser.h"
 
+#include "sema/error_reporter.h"
+
 namespace tpl::parsing {
 
 Parser::Parser(Scanner &scanner, ast::AstNodeFactory &node_factory,
-               ast::AstStringsContainer &strings_container)
+               ast::AstStringsContainer &strings_container,
+               sema::ErrorReporter &error_reporter)
     : scanner_(scanner),
       node_factory_(node_factory),
-      strings_container_(strings_container) {}
+      strings_container_(strings_container),
+      error_reporter_(error_reporter) {}
 
 ast::AstNode *Parser::Parse() {
   util::RegionVector<ast::Declaration *> decls(region());
@@ -108,8 +112,8 @@ ast::Declaration *Parser::ParseVariableDeclaration() {
 }
 
 ast::Statement *Parser::ParseStatement() {
-  // Statement =
-  //   Block | ExprStmt | ForStmt | IfStmt | ReturnStmt | VariableDecl ;
+  // Statement = Block | ExprStmt | ForStmt | IfStmt | ReturnStmt | SimpleStmt |
+  // VariableDecl ;
 
   switch (peek()) {
     case Token::Type::LEFT_BRACE: {
@@ -128,16 +132,21 @@ ast::Statement *Parser::ParseStatement() {
       ast::Declaration *var_decl = ParseVariableDeclaration();
       return node_factory().NewDeclarationStatement(var_decl);
     }
-    default: { return ParseExpressionStatement(); }
+    default: { return ParseSimpleStatement(); }
   }
 }
 
-ast::Statement *Parser::ParseExpressionStatement() {
-  // ExprStmt = Expr ;
+ast::Statement *Parser::ParseSimpleStatement() {
+  // SimpleStmt = Assignment | ExpressionStatement
+  ast::Expression *left = ParseExpression();
 
-  ast::Expression *expr = ParseExpression();
+  if (Matches(Token::Type::EQUAL)) {
+    const SourcePosition &pos = scanner().current_position();
+    ast::Expression *right = ParseExpression();
+    return node_factory().NewAssignmentStatement(pos, left, right);
+  }
 
-  return node_factory().NewExpressionStatement(expr);
+  return node_factory().NewExpressionStatement(left);
 }
 
 ast::Statement *Parser::ParseBlockStatement() {
@@ -199,9 +208,14 @@ Parser::ForHeader Parser::ParseForHeader() {
     Expect(Token::Type::RIGHT_PAREN);
     if (auto *cond_stmt = init->SafeAs<ast::ExpressionStatement>()) {
       cond = cond_stmt->expr();
-    } else {
-      ReportError("Loop condition is not expression, found '%s'",
-                  init->kind_name());
+    } else if (auto *assign = init->SafeAs<ast::AssignmentStatement>()) {
+      // Often, novice users coming from C/C++ may write 'for (x = b) {}'
+      // wrongly assuming that assignments are expressions in TPL. We try to
+      // catch that here.
+      // TODO(pmenon): Fix me to print out expression string
+      (void)assign;
+      error_reporter().Report(sema::ErrorMessages::kAssignmentUsedAsValue, "",
+                              "");
     }
     init = nullptr;
   }
@@ -401,8 +415,7 @@ ast::Expression *Parser::ParsePrimaryExpression() {
 
   // Error
   // TODO(pmenon) Also advance to next statement
-  ReportError("Unexpected token '%s' when attempting to parse primary",
-              Token::String(peek()));
+  error_reporter().Report(sema::ErrorMessages::kExpectingExpression);
   return node_factory().NewBadExpression(scanner().current_position());
 }
 
@@ -444,7 +457,7 @@ ast::Expression *Parser::ParseType() {
   }
 
   // Error
-  ReportError("Un-parsable type beginning with '%s'", Token::String(peek()));
+  error_reporter().Report(sema::ErrorMessages::kExpectingType);
 
   return nullptr;
 }
@@ -555,8 +568,5 @@ ast::Expression *Parser::ParseStructType() {
 
   return node_factory().NewStructType(position, std::move(fields));
 }
-
-template <typename... Args>
-void Parser::ReportError(UNUSED const char *fmt, UNUSED const Args &... args) {}
 
 }  // namespace tpl::parsing

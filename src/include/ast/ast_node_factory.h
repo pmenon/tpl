@@ -58,6 +58,12 @@ class AstNodeFactory {
     return new (region_) DeclarationStatement(decl);
   }
 
+  AssignmentStatement *NewAssignmentStatement(const SourcePosition &pos,
+                                              Expression *dest,
+                                              Expression *src) {
+    return new (region_) AssignmentStatement(pos, dest, src);
+  }
+
   ExpressionStatement *NewExpressionStatement(Expression *expression) {
     return new (region_) ExpressionStatement(expression);
   }

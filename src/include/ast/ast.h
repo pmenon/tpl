@@ -35,6 +35,7 @@ namespace tpl::ast {
  * remember to modify Statement::classof() to update the bounds check.
  */
 #define STATEMENT_NODES(T) \
+  T(AssignmentStatement)   \
   T(BadStatement)          \
   T(BlockStatement)        \
   T(DeclarationStatement)  \
@@ -284,9 +285,29 @@ class Statement : public AstNode {
   Statement(Kind kind, const SourcePosition &pos) : AstNode(kind, pos) {}
 
   static bool classof(const AstNode *node) {
-    return node->kind() >= Kind::BadStatement &&
+    return node->kind() >= Kind::AssignmentStatement &&
            node->kind() <= Kind::ReturnStatement;
   }
+};
+
+/**
+ * An assignment, dest = source
+ */
+class AssignmentStatement : public Statement {
+ public:
+  AssignmentStatement(const SourcePosition &pos, Expression *dest,
+                      Expression *src)
+      : Statement(AstNode::Kind::AssignmentStatement, pos),
+        dest_(dest),
+        src_(src) {}
+
+  Expression *destination() const { return dest_; }
+
+  Expression *source() const { return src_; };
+
+ private:
+  Expression *dest_;
+  Expression *src_;
 };
 
 /**
