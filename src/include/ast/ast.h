@@ -219,7 +219,7 @@ class FunctionDeclaration : public Declaration {
 
   FunctionLiteralExpression *function() const { return fun_; }
 
-  FunctionTypeRepr *type();
+  FunctionTypeRepr *type_repr();
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::FunctionDeclaration;
@@ -238,7 +238,7 @@ class StructDeclaration : public Declaration {
                     StructTypeRepr *type)
       : Declaration(Kind::StructDeclaration, pos, name), type_(type) {}
 
-  const StructTypeRepr *type() const { return type_; }
+  const StructTypeRepr *type_repr() const { return type_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::StructDeclaration;
@@ -259,7 +259,7 @@ class VariableDeclaration : public Declaration {
         type_(type),
         init_(init) {}
 
-  Expression *type() const { return type_; }
+  Expression *type_repr() const { return type_; }
 
   Expression *initial() const { return init_; }
 
@@ -546,7 +546,7 @@ class FunctionLiteralExpression : public Expression {
  public:
   FunctionLiteralExpression(FunctionTypeRepr *type, BlockStatement *body);
 
-  FunctionTypeRepr *type() const { return type_; }
+  FunctionTypeRepr *type_repr() const { return type_; }
 
   BlockStatement *body() const { return body_; }
 
@@ -673,7 +673,7 @@ class Field : public util::RegionObject {
 
   const AstString *name() const { return name_; }
 
-  Expression *type() const { return type_; }
+  Expression *type_repr() const { return type_; }
 
  private:
   const SourcePosition pos_;

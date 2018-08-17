@@ -13,7 +13,7 @@ void PrettyPrint::VisitFunctionDeclaration(FunctionDeclaration *node) {
   PrintString("fun ");
   PrintString(node->name());
   PrintString(" ");
-  Visit(node->type());
+  Visit(node->type_repr());
   PrintString(" ");
   Visit(node->function());
 }
@@ -35,12 +35,12 @@ void PrettyPrint::VisitStructDeclaration(StructDeclaration *node) {
   PrintString(node->name());
   PrintString("{ ");
   bool first = true;
-  for (const auto *field : node->type()->fields()) {
+  for (const auto *field : node->type_repr()->fields()) {
     if (!first) PrintString(",");
     first = false;
     PrintString(field->name());
     PrintString(":");
-    Visit(field->type());
+    Visit(field->type_repr());
   }
   PrintString("}");
   EndVisit();
@@ -178,7 +178,7 @@ void PrettyPrint::VisitStructTypeRepr(StructTypeRepr *node) {
   for (const auto *field : node->fields()) {
     PrintString(field->name());
     PrintString(" : ");
-    Visit(field->type());
+    Visit(field->type_repr());
   }
   PrintString("}");
 }
@@ -196,7 +196,7 @@ void PrettyPrint::VisitFunctionTypeRepr(FunctionTypeRepr *node) {
     first = false;
     PrintString(field->name());
     PrintString(" : ");
-    Visit(field->type());
+    Visit(field->type_repr());
   }
   PrintString(") -> ");
   Visit(node->return_type());
