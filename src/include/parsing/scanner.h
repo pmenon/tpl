@@ -69,7 +69,7 @@ class Scanner {
   Token::Type CheckIdentifierOrKeyword(const char *input, uint32_t input_len);
 
   // Scan a number literal
-  void ScanNumber();
+  Token::Type ScanNumber();
 
   // Scan a string literal
   Token::Type ScanString();

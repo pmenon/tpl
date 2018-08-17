@@ -178,8 +178,7 @@ void Scanner::Scan() {
       }
       default: {
         if (IsDigit(c0_)) {
-          ScanNumber();
-          type = Token::Type::NUMBER;
+          type = ScanNumber();
         } else if (IsIdentifierChar(c0_)) {
           type = ScanIdentifierOrKeyword();
         } else if (c0_ == kEndOfInput) {
@@ -308,13 +307,17 @@ Token::Type Scanner::CheckIdentifierOrKeyword(const char *input,
 #undef GROUP_START
 #undef KEYWORDS
 
-void Scanner::ScanNumber() {
+Token::Type Scanner::ScanNumber() {
+  Token::Type type = Token::Type::INTEGER;
+
   while (IsDigit(c0_)) {
     next_.literal += static_cast<char>(c0_);
     Advance();
   }
 
   if (c0_ == '.') {
+    type = Token::Type::FLOAT;
+
     next_.literal.append(".");
 
     Advance();
@@ -324,6 +327,8 @@ void Scanner::ScanNumber() {
       Advance();
     }
   }
+
+  return type;
 }
 
 Token::Type Scanner::ScanString() {

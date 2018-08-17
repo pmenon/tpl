@@ -148,7 +148,7 @@ void PrettyPrint::VisitIdentifierExpression(IdentifierExpression *node) {
 }
 
 void PrettyPrint::VisitLiteralExpression(LiteralExpression *node) {
-  switch (node->type()) {
+  switch (node->literal_type()) {
     case LiteralExpression::Type::Nil: {
       PrintString("nil");
       break;
@@ -156,7 +156,8 @@ void PrettyPrint::VisitLiteralExpression(LiteralExpression *node) {
     case LiteralExpression::Type::Boolean: {
       PrintString(node->bool_val() ? "'true'" : "'false'");
     }
-    case LiteralExpression::Type::Number:
+    case LiteralExpression::Type::Int:
+    case LiteralExpression::Type::Float:
     case LiteralExpression::Type::String: {
       PrintString(node->raw_string());
       break;

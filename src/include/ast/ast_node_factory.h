@@ -99,9 +99,15 @@ class AstNodeFactory {
     return new (region_) LiteralExpression(pos, val);
   }
 
-  LiteralExpression *NewNumLiteral(const SourcePosition &pos, AstString *num) {
+  LiteralExpression *NewIntLiteral(const SourcePosition &pos, AstString *num) {
     return new (region_)
-        LiteralExpression(pos, LiteralExpression::Type::Number, num);
+        LiteralExpression(pos, LiteralExpression::Type::Int, num);
+  }
+
+  LiteralExpression *NewFloatLiteral(const SourcePosition &pos,
+                                     AstString *num) {
+    return new (region_)
+        LiteralExpression(pos, LiteralExpression::Type::Float, num);
   }
 
   LiteralExpression *NewStringLiteral(const SourcePosition &pos,
@@ -127,7 +133,7 @@ class AstNodeFactory {
   }
 
   ArrayTypeRepr *NewArrayType(const SourcePosition &pos, Expression *len,
-                          Expression *elem_type) {
+                              Expression *elem_type) {
     return new (region_) ArrayTypeRepr(pos, len, elem_type);
   }
 
@@ -137,8 +143,8 @@ class AstNodeFactory {
   }
 
   FunctionTypeRepr *NewFunctionType(const SourcePosition &pos,
-                                util::RegionVector<Field *> &&params,
-                                Expression *ret) {
+                                    util::RegionVector<Field *> &&params,
+                                    Expression *ret) {
     return new (region_) FunctionTypeRepr(pos, std::move(params), ret);
   }
 
@@ -147,7 +153,7 @@ class AstNodeFactory {
   }
 
   StructTypeRepr *NewStructType(const SourcePosition &pos,
-                            util::RegionVector<Field *> &&fields) {
+                                util::RegionVector<Field *> &&fields) {
     return new (region_) StructTypeRepr(pos, std::move(fields));
   }
 

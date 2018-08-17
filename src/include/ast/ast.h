@@ -592,7 +592,7 @@ class IdentifierExpression : public Expression {
  */
 class LiteralExpression : public Expression {
  public:
-  enum class Type : uint8_t { Nil, Boolean, Number, String };
+  enum class Type : uint8_t { Nil, Boolean, Int, Float, String };
 
   explicit LiteralExpression(const SourcePosition &pos)
       : Expression(Kind::LiteralExpression, pos),
@@ -609,16 +609,15 @@ class LiteralExpression : public Expression {
         lit_type_(lit_type),
         str_(str) {}
 
-  LiteralExpression::Type type() const { return lit_type_; }
+  LiteralExpression::Type literal_type() const { return lit_type_; }
 
   bool bool_val() const {
-    TPL_ASSERT(type() == Type::Boolean);
+    TPL_ASSERT(literal_type() == Type::Boolean);
     return boolean_;
   }
 
   const AstString *raw_string() const {
-    // TODO(pmenon): Fix me to use actual AstNumbers for numbers?
-    TPL_ASSERT(type() == Type::String || type() == Type::Number);
+    TPL_ASSERT(literal_type() != Type::Nil && literal_type() != Type::Boolean);
     return str_;
   }
 

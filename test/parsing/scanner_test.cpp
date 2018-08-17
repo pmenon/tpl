@@ -34,8 +34,8 @@ TEST(ScannerTest, SimpleSourceTest) {
   EXPECT_EQ(Token::Type::EQUAL, scanner.Next());
 
   // '10'
-  EXPECT_EQ(Token::Type::NUMBER, scanner.peek());
-  EXPECT_EQ(Token::Type::NUMBER, scanner.Next());
+  EXPECT_EQ(Token::Type::INTEGER, scanner.peek());
+  EXPECT_EQ(Token::Type::INTEGER, scanner.Next());
 
   // Done
   EXPECT_EQ(Token::Type::EOS, scanner.peek());
@@ -88,7 +88,7 @@ TEST(ScannerTest, VariableSyntaxTest) {
       // Variable with no type
       {"var x = 10",
        {Token::Type::VAR, Token::Type::IDENTIFIER, Token::Type::EQUAL,
-        Token::Type::NUMBER},
+        Token::Type::INTEGER},
        [](Scanner &scanner, uint32_t token_idx) {
          if (token_idx == 1) {
            EXPECT_EQ("x", scanner.current_literal());
@@ -100,12 +100,17 @@ TEST(ScannerTest, VariableSyntaxTest) {
       // Variable with type
       {"var x:i32 = 10",
        {Token::Type::VAR, Token::Type::IDENTIFIER, Token::Type::COLON,
-        Token::Type::IDENTIFIER, Token::Type::EQUAL, Token::Type::NUMBER},
+        Token::Type::IDENTIFIER, Token::Type::EQUAL, Token::Type::INTEGER},
        [](Scanner &scanner, uint32_t token_idx) {
          if (token_idx == 3) {
            EXPECT_EQ("i32", scanner.current_literal());
          }
-       }}};
+       }},
+      // Variable with float number
+      {"var x = 10.123",
+       {Token::Type::VAR, Token::Type::IDENTIFIER, Token::Type::EQUAL,
+        Token::Type::FLOAT},
+       nullptr}};
 
   RunTests(tests);
 }
@@ -114,8 +119,9 @@ TEST(ScannerTest, IfSyntaxTest) {
   std::vector<test::Test> tests = {
       {"if (x == 0) { }",
        {Token::Type::IF, Token::Type::LEFT_PAREN, Token::Type::IDENTIFIER,
-        Token::Type::EQUAL_EQUAL, Token::Type::NUMBER, Token::Type::RIGHT_PAREN,
-        Token::Type::LEFT_BRACE, Token::Type::RIGHT_BRACE}},
+        Token::Type::EQUAL_EQUAL, Token::Type::INTEGER,
+        Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE,
+        Token::Type::RIGHT_BRACE}},
   };
 
   RunTests(tests);
@@ -132,12 +138,12 @@ TEST(ScannerTest, ForSyntaxTest) {
       // For as a while loop
       {"for (i < 10) {}",
        {Token::Type::FOR, Token::Type::LEFT_PAREN, Token::Type::IDENTIFIER,
-        Token::Type::LESS, Token::Type::NUMBER, Token::Type::RIGHT_PAREN,
+        Token::Type::LESS, Token::Type::INTEGER, Token::Type::RIGHT_PAREN,
         Token::Type::LEFT_BRACE, Token::Type::RIGHT_BRACE},
        [](Scanner &scanner, uint32_t token_idx) {
          // Check that the fourth token is the number "10"
          if (token_idx == 4) {
-           EXPECT_EQ(Token::Type::NUMBER, scanner.current_token());
+           EXPECT_EQ(Token::Type::INTEGER, scanner.current_token());
            EXPECT_EQ("10", scanner.current_literal());
          }
        }},
@@ -145,7 +151,7 @@ TEST(ScannerTest, ForSyntaxTest) {
       // For as a while loop with simple body
       {"for (i < 10) { println(\"hi\") }",
        {Token::Type::FOR, Token::Type::LEFT_PAREN, Token::Type::IDENTIFIER,
-        Token::Type::LESS, Token::Type::NUMBER, Token::Type::RIGHT_PAREN,
+        Token::Type::LESS, Token::Type::INTEGER, Token::Type::RIGHT_PAREN,
         Token::Type::LEFT_BRACE, Token::Type::IDENTIFIER,
         Token::Type::LEFT_PAREN, Token::Type::STRING, Token::Type::RIGHT_PAREN,
         Token::Type::RIGHT_BRACE},
@@ -160,11 +166,11 @@ TEST(ScannerTest, ForSyntaxTest) {
       // Full blown for loop
       {"for (var x = 0; x < 10; x = x + 1) {}",
        {Token::Type::FOR, Token::Type::LEFT_PAREN, Token::Type::VAR,
-        Token::Type::IDENTIFIER, Token::Type::EQUAL, Token::Type::NUMBER,
+        Token::Type::IDENTIFIER, Token::Type::EQUAL, Token::Type::INTEGER,
         Token::Type::SEMI, Token::Type::IDENTIFIER, Token::Type::LESS,
-        Token::Type::NUMBER, Token::Type::SEMI, Token::Type::IDENTIFIER,
+        Token::Type::INTEGER, Token::Type::SEMI, Token::Type::IDENTIFIER,
         Token::Type::EQUAL, Token::Type::IDENTIFIER, Token::Type::PLUS,
-        Token::Type::NUMBER, Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE,
+        Token::Type::INTEGER, Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE,
         Token::Type::RIGHT_BRACE},
        nullptr},
   };

@@ -45,7 +45,8 @@ namespace tpl::parsing {
                                                    \
   /* Identifiers and literals */                   \
   T(IDENTIFIER, nullptr, 0)                        \
-  T(NUMBER, "num", 0)                              \
+  T(INTEGER, "num", 0)                             \
+  T(FLOAT, "float", 0)                             \
   T(STRING, "str", 0)                              \
                                                    \
   /* Non-binary operator keywords */               \

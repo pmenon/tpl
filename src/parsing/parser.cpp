@@ -371,10 +371,15 @@ ast::Expression *Parser::ParsePrimaryExpression() {
       const SourcePosition &position = scanner().current_position();
       return node_factory().NewIdentifierExpression(position, GetSymbol());
     }
-    case Token::Type::NUMBER: {
+    case Token::Type::INTEGER: {
       Next();
       const SourcePosition &position = scanner().current_position();
-      return node_factory().NewNumLiteral(position, GetSymbol());
+      return node_factory().NewIntLiteral(position, GetSymbol());
+    }
+    case Token::Type::FLOAT: {
+      Next();
+      const SourcePosition &position = scanner().current_position();
+      return node_factory().NewFloatLiteral(position, GetSymbol());
     }
     case Token::Type::STRING: {
       Next();
