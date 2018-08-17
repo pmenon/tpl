@@ -64,7 +64,7 @@ ast::Declaration *Parser::ParseStructDeclaration() {
   ast::AstString *name = GetSymbol();
 
   // The type
-  auto *struct_type = ParseStructType()->As<ast::StructType>();
+  auto *struct_type = ParseStructType()->As<ast::StructTypeRepr>();
 
   // The declaration object
   ast::StructDeclaration *decl =
@@ -407,7 +407,7 @@ ast::Expression *Parser::ParseFunctionLiteralExpression() {
   // FunctionBody = Block ;
 
   // Parse the type
-  auto *func_type = ParseFunctionType()->As<ast::FunctionType>();
+  auto *func_type = ParseFunctionType()->As<ast::FunctionTypeRepr>();
 
   // Parse the body
   auto *body = ParseBlockStatement()->As<ast::BlockStatement>();
@@ -486,7 +486,7 @@ ast::Expression *Parser::ParseFunctionType() {
 }
 
 ast::Expression *Parser::ParsePointerType() {
-  // PointerType = '*' Type ;
+  // PointerTypeRepr = '*' Type ;
 
   Expect(Token::Type::STAR);
 
@@ -498,7 +498,7 @@ ast::Expression *Parser::ParsePointerType() {
 }
 
 ast::Expression *Parser::ParseArrayType() {
-  // ArrayType = '[' [ Length ] ']' Type ;
+  // ArrayTypeRepr = '[' [ Length ] ']' Type ;
   // Length = Expr ;
 
   Consume(Token::Type::LEFT_BRACKET);

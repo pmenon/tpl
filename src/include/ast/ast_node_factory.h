@@ -30,7 +30,7 @@ class AstNodeFactory {
 
   StructDeclaration *NewStructDeclaration(const SourcePosition &pos,
                                           const AstString *name,
-                                          StructType *type) {
+                                          StructTypeRepr *type) {
     return new (region_) StructDeclaration(pos, name, type);
   }
 
@@ -110,7 +110,7 @@ class AstNodeFactory {
         LiteralExpression(pos, LiteralExpression::Type::String, str);
   }
 
-  FunctionLiteralExpression *NewFunctionLiteral(FunctionType *type,
+  FunctionLiteralExpression *NewFunctionLiteral(FunctionTypeRepr *type,
                                                 BlockStatement *body) {
     return new (region_) FunctionLiteralExpression(type, body);
   }
@@ -126,9 +126,9 @@ class AstNodeFactory {
     return new (region_) IdentifierExpression(pos, name);
   }
 
-  ArrayType *NewArrayType(const SourcePosition &pos, Expression *len,
+  ArrayTypeRepr *NewArrayType(const SourcePosition &pos, Expression *len,
                           Expression *elem_type) {
-    return new (region_) ArrayType(pos, len, elem_type);
+    return new (region_) ArrayTypeRepr(pos, len, elem_type);
   }
 
   Field *NewField(const SourcePosition &pos, const AstString *name,
@@ -136,19 +136,19 @@ class AstNodeFactory {
     return new (region_) Field(pos, name, type);
   }
 
-  FunctionType *NewFunctionType(const SourcePosition &pos,
+  FunctionTypeRepr *NewFunctionType(const SourcePosition &pos,
                                 util::RegionVector<Field *> &&params,
                                 Expression *ret) {
-    return new (region_) FunctionType(pos, std::move(params), ret);
+    return new (region_) FunctionTypeRepr(pos, std::move(params), ret);
   }
 
-  PointerType *NewPointerType(const SourcePosition &pos, Expression *base) {
-    return new (region_) PointerType(pos, base);
+  PointerTypeRepr *NewPointerType(const SourcePosition &pos, Expression *base) {
+    return new (region_) PointerTypeRepr(pos, base);
   }
 
-  StructType *NewStructType(const SourcePosition &pos,
+  StructTypeRepr *NewStructType(const SourcePosition &pos,
                             util::RegionVector<Field *> &&fields) {
-    return new (region_) StructType(pos, std::move(fields));
+    return new (region_) StructTypeRepr(pos, std::move(fields));
   }
 
  private:

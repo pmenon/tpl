@@ -2,12 +2,12 @@
 
 namespace tpl::ast {
 
-FunctionType *FunctionDeclaration::type() { return fun_->type(); }
+FunctionTypeRepr *FunctionDeclaration::type() { return fun_->type(); }
 
 ExpressionStatement::ExpressionStatement(Expression *expr)
     : Statement(Kind::ExpressionStatement, expr->position()), expr_(expr) {}
 
-FunctionLiteralExpression::FunctionLiteralExpression(FunctionType *type,
+FunctionLiteralExpression::FunctionLiteralExpression(FunctionTypeRepr *type,
                                                      BlockStatement *body)
     : Expression(Kind::FunctionLiteralExpression, type->position()),
       type_(type),

@@ -172,7 +172,7 @@ void PrettyPrint::VisitUnaryExpression(UnaryExpression *node) {
   EndVisit();
 }
 
-void PrettyPrint::VisitStructType(StructType *node) {
+void PrettyPrint::VisitStructTypeRepr(StructTypeRepr *node) {
   PrintString("struct {\n");
   for (const auto *field : node->fields()) {
     PrintString(field->name());
@@ -182,12 +182,12 @@ void PrettyPrint::VisitStructType(StructType *node) {
   PrintString("}");
 }
 
-void PrettyPrint::VisitPointerType(PointerType *node) {
+void PrettyPrint::VisitPointerTypeRepr(PointerTypeRepr *node) {
   PrintString("*");
   Visit(node->base());
 }
 
-void PrettyPrint::VisitFunctionType(FunctionType *node) {
+void PrettyPrint::VisitFunctionTypeRepr(FunctionTypeRepr *node) {
   PrintString("(");
   bool first = true;
   for (const auto *field : node->parameters()) {
@@ -201,7 +201,7 @@ void PrettyPrint::VisitFunctionType(FunctionType *node) {
   Visit(node->return_type());
 }
 
-void PrettyPrint::VisitArrayType(ArrayType *node) {
+void PrettyPrint::VisitArrayTypeRepr(ArrayTypeRepr *node) {
   PrintString("[");
   if (node->length() != nullptr) {
     Visit(node->length());

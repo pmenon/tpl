@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "ast/ast_value.h"
+#include "ast/type.h"
 #include "common.h"
 #include "parsing/token.h"
 #include "util/casting.h"
@@ -57,10 +58,10 @@ namespace tpl::ast {
   T(LiteralExpression)         \
   T(UnaryExpression)           \
   /* Types */                  \
-  T(ArrayType)                 \
-  T(FunctionType)              \
-  T(PointerType)               \
-  T(StructType)
+  T(ArrayTypeRepr)             \
+  T(FunctionTypeRepr)          \
+  T(PointerTypeRepr)           \
+  T(StructTypeRepr)
 
 /*
  * All possible AST nodes
@@ -218,7 +219,7 @@ class FunctionDeclaration : public Declaration {
 
   FunctionLiteralExpression *function() const { return fun_; }
 
-  FunctionType *type();
+  FunctionTypeRepr *type();
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::FunctionDeclaration;
@@ -234,17 +235,17 @@ class FunctionDeclaration : public Declaration {
 class StructDeclaration : public Declaration {
  public:
   StructDeclaration(const SourcePosition &pos, const AstString *name,
-                    StructType *type)
+                    StructTypeRepr *type)
       : Declaration(Kind::StructDeclaration, pos, name), type_(type) {}
 
-  const StructType *type() const { return type_; }
+  const StructTypeRepr *type() const { return type_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::StructDeclaration;
   }
 
  private:
-  StructType *type_;
+  StructTypeRepr *type_;
 };
 
 /**
@@ -459,13 +460,22 @@ class ReturnStatement : public Statement {
  */
 class Expression : public AstNode {
  public:
-  explicit Expression(Kind kind, const SourcePosition &pos)
-      : AstNode(kind, pos) {}
+  explicit Expression(Kind kind, const SourcePosition &pos,
+                      Type *type = nullptr)
+      : AstNode(kind, pos), type_(type) {}
+
+  Type *type() { return type_; }
+  const Type *type() const { return type_; }
+
+  void set_type(Type *type) { type_ = type; }
 
   static bool classof(const AstNode *node) {
     return node->kind() >= Kind::BadExpression &&
-           node->kind() <= Kind::StructType;
+           node->kind() <= Kind::StructTypeRepr;
   }
+
+ private:
+  Type *type_;
 };
 
 /**
@@ -534,9 +544,9 @@ class CallExpression : public Expression {
 
 class FunctionLiteralExpression : public Expression {
  public:
-  FunctionLiteralExpression(FunctionType *type, BlockStatement *body);
+  FunctionLiteralExpression(FunctionTypeRepr *type, BlockStatement *body);
 
-  FunctionType *type() const { return type_; }
+  FunctionTypeRepr *type() const { return type_; }
 
   BlockStatement *body() const { return body_; }
 
@@ -545,7 +555,7 @@ class FunctionLiteralExpression : public Expression {
   }
 
  private:
-  FunctionType *type_;
+  FunctionTypeRepr *type_;
   BlockStatement *body_;
 };
 
@@ -675,17 +685,20 @@ class Field : public util::RegionObject {
 /**
  * Array type
  */
-class ArrayType : public Expression {
+class ArrayTypeRepr : public Expression {
  public:
-  ArrayType(const SourcePosition &pos, Expression *len, Expression *elem_type)
-      : Expression(Kind::ArrayType, pos), len_(len), elem_type_(elem_type) {}
+  ArrayTypeRepr(const SourcePosition &pos, Expression *len,
+                Expression *elem_type)
+      : Expression(Kind::ArrayTypeRepr, pos),
+        len_(len),
+        elem_type_(elem_type) {}
 
   Expression *length() const { return len_; }
 
   Expression *element_type() const { return elem_type_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::ArrayType;
+    return node->kind() == Kind::ArrayTypeRepr;
   }
 
  private:
@@ -696,11 +709,12 @@ class ArrayType : public Expression {
 /**
  * Function type
  */
-class FunctionType : public Expression {
+class FunctionTypeRepr : public Expression {
  public:
-  FunctionType(const SourcePosition &pos,
-               util::RegionVector<Field *> &&param_types, Expression *ret_type)
-      : Expression(Kind::FunctionType, pos),
+  FunctionTypeRepr(const SourcePosition &pos,
+                   util::RegionVector<Field *> &&param_types,
+                   Expression *ret_type)
+      : Expression(Kind::FunctionTypeRepr, pos),
         param_types_(std::move(param_types)),
         ret_type_(ret_type) {}
 
@@ -709,7 +723,7 @@ class FunctionType : public Expression {
   Expression *return_type() const { return ret_type_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::FunctionType;
+    return node->kind() == Kind::FunctionTypeRepr;
   }
 
  private:
@@ -720,15 +734,15 @@ class FunctionType : public Expression {
 /**
  * Pointer type
  */
-class PointerType : public Expression {
+class PointerTypeRepr : public Expression {
  public:
-  explicit PointerType(const SourcePosition &pos, Expression *base)
-      : Expression(Kind::PointerType, pos), base_(base) {}
+  explicit PointerTypeRepr(const SourcePosition &pos, Expression *base)
+      : Expression(Kind::PointerTypeRepr, pos), base_(base) {}
 
   Expression *base() const { return base_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::PointerType;
+    return node->kind() == Kind::PointerTypeRepr;
   }
 
  private:
@@ -738,16 +752,16 @@ class PointerType : public Expression {
 /**
  * Struct type
  */
-class StructType : public Expression {
+class StructTypeRepr : public Expression {
  public:
-  explicit StructType(const SourcePosition &pos,
-                      util::RegionVector<Field *> &&fields)
-      : Expression(Kind::StructType, pos), fields_(std::move(fields)) {}
+  explicit StructTypeRepr(const SourcePosition &pos,
+                          util::RegionVector<Field *> &&fields)
+      : Expression(Kind::StructTypeRepr, pos), fields_(std::move(fields)) {}
 
   const util::RegionVector<Field *> &fields() const { return fields_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::StructType;
+    return node->kind() == Kind::StructTypeRepr;
   }
 
  private:
