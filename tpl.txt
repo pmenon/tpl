@@ -1,0 +1,86 @@
+Types:
+======
+
+Primitive Types:
+----------------
+nil
+bool
+i8, i16, i32, i64
+u8, u16, u32, u64
+float, double, fp[1,2]
+
+Aggregate types:
+----------------
+- Types read left to right
+
+struct Person {
+  name: string
+  age: i32
+}
+
+var y: [10]i32                  // array of 10 i32's
+var y: (int, float) -> int      // function type
+var y: [](int, float) -> int    // array of functions
+
+Pointers:
+---------
+
+var x = 100
+var p = &x
+var q: *int = &x
+
+
+Control Flow:
+=============
+
+If:
+---
+- Like C, but conditions must be bool type, and body
+must be in braces
+
+if (a and b or c) {
+  // Something
+} else if (d) {
+  // Something else
+} else {
+  // Fallback
+}
+
+Loops:
+------
+- Like C, but loop condition must be bool type, and body
+must be in braces
+
+// Regular loops:
+for (var i = 10; i < 20; i = i + 1) {
+  // Something
+}
+
+// Regular loop with missing loop condition
+for (var i = 10; ; i = i + 1) {
+
+}
+
+// Regular while loop
+for (i < 10) {
+
+}
+
+// Regular loop over a table
+for (row in ``table_name``) {
+
+}
+
+
+Functions:
+==========
+- Explicit input types and output type
+- Explicit parameter names
+
+fun sum(a: int, b: int) -> int {
+  return a + b
+}
+
+var f2 = (a: int, c: float) -> int {
+
+}
