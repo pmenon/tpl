@@ -69,7 +69,7 @@ void PrettyPrint::VisitDeclarationStatement(DeclarationStatement *node) {
 }
 
 void PrettyPrint::VisitExpressionStatement(ExpressionStatement *node) {
-  Visit(node->expr());
+  Visit(node->expression());
 }
 
 void PrettyPrint::VisitForStatement(ForStatement *node) {

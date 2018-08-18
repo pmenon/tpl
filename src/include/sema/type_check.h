@@ -25,8 +25,36 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
   ErrorReporter &error_reporter() { return error_reporter_; }
 
  private:
+  //////////////////////////////////////////////////////////////////////////////
+  ///
+  /// Scoping
+  ///
+  //////////////////////////////////////////////////////////////////////////////
+
   // Return the current scope
   Scope *scope() { return scope_; }
+
+  Scope *OpenScope(Scope::Kind scope_kind) {
+    auto *scope = new (region_) Scope(region_, scope_, scope_kind);
+    scope_ = scope;
+    return scope;
+  }
+
+  void CloseScope(Scope *scope) {
+    TPL_ASSERT(scope == scope_);
+    scope_ = scope->outer();
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+  ///
+  /// Errors
+  ///
+  //////////////////////////////////////////////////////////////////////////////
+
+  template <typename... ArgTypes>
+  void ReportError(const ErrorMessage<ArgTypes...> &msg, ArgTypes &&... args) {
+    error_reporter().Report(msg, std::move(args)...);
+  }
 
  private:
   util::Region &region_;

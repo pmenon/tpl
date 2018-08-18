@@ -6,6 +6,7 @@
 #include "ast/pretty_print.h"
 #include "parsing/parser.h"
 #include "parsing/scanner.h"
+#include "sema/type_check.h"
 #include "sema/error_reporter.h"
 #include "tpl.h"
 
@@ -40,12 +41,17 @@ static void RunRepl() {
     parsing::Parser parser(scanner, node_factory, strings_container,
                            error_reporter);
 
-    // Parse!
+    // Parsing
     ast::AstNode *root = parser.Parse();
 
     if (error_reporter.has_errors()) {
-      fprintf(stderr, "Error in parsing!");
-      error_reporter.PrintErrors();
+      fprintf(stderr, "Parsing error!\n");
+    }
+
+    // Type check
+    sema::TypeChecker type_check(region, error_reporter);
+    if (type_check.Run(root)) {
+      fprintf(stderr, "Type-checking error!\n");
     }
 
     // For now, just pretty print the AST

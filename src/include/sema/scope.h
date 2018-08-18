@@ -32,10 +32,10 @@ class Scope : public util::RegionObject {
 
   Kind scope_kind() const { return scope_kind_; }
 
+  Scope *outer() const { return outer_; }
+
  private:
   util::Region &region() const { return region_; }
-
-  Scope *outer() const { return outer_; }
 
  private:
   util::Region &region_;

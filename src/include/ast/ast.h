@@ -373,7 +373,7 @@ class ExpressionStatement : public Statement {
  public:
   explicit ExpressionStatement(Expression *expr);
 
-  Expression *expr() { return expr_; }
+  Expression *expression() { return expr_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ExpressionStatement;

@@ -207,7 +207,7 @@ Parser::ForHeader Parser::ParseForHeader() {
     // While-loop
     Expect(Token::Type::RIGHT_PAREN);
     if (auto *cond_stmt = init->SafeAs<ast::ExpressionStatement>()) {
-      cond = cond_stmt->expr();
+      cond = cond_stmt->expression();
     } else if (auto *assign = init->SafeAs<ast::AssignmentStatement>()) {
       // Often, novice users coming from C/C++ may write 'for (x = b) {}'
       // wrongly assuming that assignments are expressions in TPL. We try to

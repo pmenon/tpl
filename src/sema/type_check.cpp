@@ -10,24 +10,71 @@ bool TypeChecker::Run(ast::AstNode *root) {
   return error_reporter().has_errors();
 }
 
-void TypeChecker::VisitBadExpression(ast::BadExpression *node) {
-
-}
+void TypeChecker::VisitBadExpression(ast::BadExpression *node) {}
 
 void TypeChecker::VisitUnaryExpression(ast::UnaryExpression *node) {
   Visit(node->expr());
+
+  ast::Type *expr_type = node->expr()->type();
+
+  if (expr_type == nullptr) {
+    return;
+  }
+
+  switch (node->op()) {
+    case parsing::Token::BANG: {
+      if (expr_type->IsBoolType()) {
+        node->set_type(expr_type);
+      } else {
+        ReportError(ErrorMessages::kInvalidOperation, node->op(),
+                    expr_type->name());
+      }
+      break;
+    }
+    case parsing::Token::MINUS: {
+      if (!expr_type->IsNumber()) {
+        ReportError(ErrorMessages::kInvalidOperation, node->op(),
+                    expr_type->name());
+      } else {
+        node->set_type(expr_type);
+      }
+      break;
+    }
+    case parsing::Token::Type::STAR: {
+      if (!expr_type->IsPointerType()) {
+        ReportError(ErrorMessages::kInvalidOperation, node->op(),
+                    expr_type->name());
+      } else {
+//        node->set_type()
+      }
+      break;
+    }
+    default: {}
+  }
 }
 
 void TypeChecker::VisitAssignmentStatement(ast::AssignmentStatement *node) {
-
+  Visit(node->source());
 }
 
-void TypeChecker::VisitBlockStatement(ast::BlockStatement *node) {}
+void TypeChecker::VisitBlockStatement(ast::BlockStatement *node) {
+  Scope *block_scope = OpenScope(Scope::Kind::Block);
+
+  for (auto *stmt : node->statements()) {
+    Visit(stmt);
+  }
+
+  CloseScope(block_scope);
+}
 
 void TypeChecker::VisitFile(ast::File *node) {
+  Scope *file_scope = OpenScope(Scope::Kind::File);
+
   for (auto *decl : node->declarations()) {
     Visit(decl);
   }
+
+  CloseScope(file_scope);
 }
 
 void TypeChecker::VisitVariableDeclaration(ast::VariableDeclaration *node) {
@@ -42,19 +89,31 @@ void TypeChecker::VisitVariableDeclaration(ast::VariableDeclaration *node) {
   scope()->Declare(node->name(), node->type_repr()->type());
 }
 
-void TypeChecker::VisitFunctionDeclaration(ast::FunctionDeclaration *node) {}
+void TypeChecker::VisitFunctionDeclaration(ast::FunctionDeclaration *node) {
+  Visit(node->function());
+}
+
 void TypeChecker::VisitStructDeclaration(ast::StructDeclaration *node) {}
 void TypeChecker::VisitIdentifierExpression(ast::IdentifierExpression *node) {}
 void TypeChecker::VisitCallExpression(ast::CallExpression *node) {}
 void TypeChecker::VisitPointerTypeRepr(ast::PointerTypeRepr *node) {}
 void TypeChecker::VisitLiteralExpression(ast::LiteralExpression *node) {}
 void TypeChecker::VisitForStatement(ast::ForStatement *node) {}
-void TypeChecker::VisitExpressionStatement(ast::ExpressionStatement *node) {}
+
+void TypeChecker::VisitExpressionStatement(ast::ExpressionStatement *node) {
+  Visit(node->expression());
+}
+
 void TypeChecker::VisitBadStatement(ast::BadStatement *node) {}
 void TypeChecker::VisitStructTypeRepr(ast::StructTypeRepr *node) {}
 void TypeChecker::VisitIfStatement(ast::IfStatement *node) {}
-void TypeChecker::VisitDeclarationStatement(ast::DeclarationStatement *node) {}
+
+void TypeChecker::VisitDeclarationStatement(ast::DeclarationStatement *node) {
+  Visit(node->declaration());
+}
+
 void TypeChecker::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {}
+
 void TypeChecker::VisitBinaryExpression(ast::BinaryExpression *node) {}
 void TypeChecker::VisitFunctionLiteralExpression(
     ast::FunctionLiteralExpression *node) {}
