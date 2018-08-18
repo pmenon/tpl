@@ -17,7 +17,8 @@ namespace tpl::sema {
   F(DuplicateStructFieldName, "duplicate field name '$0' in struct '$1'", (const char *, const char *))      \
   F(AssignmentUsedAsValue, "assignment '$0' = '$1' used as value", (const char *, const char *))             \
   F(ExpectingExpression, "expecting expression", ())                                                         \
-  F(ExpectingType, "expecting type", ())
+  F(ExpectingType, "expecting type", ())                                                                     \
+  F(InvalidOperation, "invalid operation: '$0' on type '$1'", (parsing::Token::Type, const ast::AstString *))
 // clang-format on
 
 /**
@@ -41,7 +42,6 @@ struct ErrorMessage {
  * A container for all TPL error messages
  */
 class ErrorMessages {
- public:
   template <typename T>
   struct ReflectErrorMessageWithDetails;
 
@@ -50,6 +50,7 @@ class ErrorMessages {
     using type = ErrorMessage<ArgTypes...>;
   };
 
+ public:
 #define MSG(kind, str, arg_types)                                              \
   static constexpr const ReflectErrorMessageWithDetails<void(arg_types)>::type \
       k##kind = {ErrorMessageId::kind};
