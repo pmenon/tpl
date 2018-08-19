@@ -63,6 +63,8 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
   ErrorReporter &error_reporter_;
 
   Scope *scope_;
+
+  util::RegionUnorderedMap<ast::Type *, ast::PointerType *> pointer_types_;
 };
 
 }  // namespace tpl::sema

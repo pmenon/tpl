@@ -31,11 +31,7 @@ class ErrorReporter {
    */
   class SingleArg {
    public:
-    enum Kind {
-      CString,
-      Int,
-      Token,
-    };
+    enum Kind { CString, Int, Token, Position };
 
     explicit SingleArg(const char *str) : kind_(Kind::CString), raw_str_(str) {}
 
@@ -49,6 +45,9 @@ class ErrorReporter {
       kind_ = Kind::Token;
     }
 
+    explicit SingleArg(const SourcePosition &pos)
+        : kind_(Kind::Position), pos_(pos) {}
+
     Kind kind() const { return kind_; }
 
    private:
@@ -56,6 +55,7 @@ class ErrorReporter {
     union {
       const char *raw_str_;
       int32_t integer_;
+      SourcePosition pos_;
     };
   };
 

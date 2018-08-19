@@ -68,7 +68,6 @@ class Parser {
     }
 
     Consume(expected);
-
     return true;
   }
 

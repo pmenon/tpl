@@ -45,12 +45,22 @@ class Type : public util::RegionObject {
   }
 
   template <typename T>
-  T *As() const {
+  const T *As() const {
+    return reinterpret_cast<const T *>(this);
+  }
+
+  template <typename T>
+  T *As() {
     return reinterpret_cast<T *>(this);
   }
 
   template <typename T>
-  T *SafeAs() const {
+  const T *SafeAs() const {
+    return (Is<T>() ? As<T>() : nullptr);
+  }
+
+  template <typename T>
+  T *SafeAs() {
     return (Is<T>() ? As<T>() : nullptr);
   }
 
@@ -196,7 +206,7 @@ class PointerType : public Type {
   explicit PointerType(Type *base)
       : Type(Type::Kind::PointerType), base_(base) {}
 
-  const Type *base() const { return base_; }
+  Type *base() const { return base_; }
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::PointerType;
@@ -255,7 +265,7 @@ class FunctionType : public Type {
 
   const util::RegionVector<Type *> &params() const { return params_; }
 
-  const Type *return_type() const { return ret_; }
+  Type *return_type() const { return ret_; }
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::FunctionType;

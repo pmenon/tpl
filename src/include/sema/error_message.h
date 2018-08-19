@@ -22,7 +22,15 @@ namespace tpl::sema {
   F(ExpectingExpression, "expecting expression", ())                      \
   F(ExpectingType, "expecting type", ())                                  \
   F(InvalidOperation, "invalid operation: '$0' on type '$1'",             \
-    (parsing::Token::Type, const ast::AstString *))
+    (parsing::Token::Type, const ast::AstString *))                       \
+  F(VariableRedeclared, "'$0' redeclared in this block",                  \
+    (const ast::AstString *))                                             \
+  F(UndefinedVariable, "undefined: '$0'", (const ast::AstString *))       \
+  F(NonFunction, "cannot call non-function '$0'", ())                     \
+  F(NotEnoughCallArgs, "not enough arguments to call to '$0'", ())        \
+  F(TooManyCallArgs, "too many arguments to call to '$0'", ())            \
+  F(IncorrectCallArgType,                                                 \
+    "cannot use a '$0' as type '$1' in argument to '$2'", ())
 
 /**
  * Define the ErrorMessageId enumeration
