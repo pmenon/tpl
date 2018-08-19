@@ -10,16 +10,19 @@ namespace tpl::sema {
  * templated string message that will be displayed, and the types of each
  * template argument.
  */
-// clang-format off
-#define MESSAGE_LIST(F)                                                                                      \
-  F(UnexpectedToken, "unexpected token '$0', expecting '$1'", (const char *, const char *))                  \
-  F(DuplicateArgName, "duplicate named argument '$0' in function '$0'", (const char *))                      \
-  F(DuplicateStructFieldName, "duplicate field name '$0' in struct '$1'", (const char *, const char *))      \
-  F(AssignmentUsedAsValue, "assignment '$0' = '$1' used as value", (const char *, const char *))             \
-  F(ExpectingExpression, "expecting expression", ())                                                         \
-  F(ExpectingType, "expecting type", ())                                                                     \
-  F(InvalidOperation, "invalid operation: '$0' on type '$1'", (parsing::Token::Type, const ast::AstString *))
-// clang-format on
+#define MESSAGE_LIST(F)                                                   \
+  F(UnexpectedToken, "unexpected token '$0', expecting '$1'",             \
+    (parsing::Token::Type, parsing::Token::Type))                         \
+  F(DuplicateArgName, "duplicate named argument '$0' in function '$0'",   \
+    (const char *))                                                       \
+  F(DuplicateStructFieldName, "duplicate field name '$0' in struct '$1'", \
+    (const char *, const char *))                                         \
+  F(AssignmentUsedAsValue, "assignment '$0' = '$1' used as value",        \
+    (const char *, const char *))                                         \
+  F(ExpectingExpression, "expecting expression", ())                      \
+  F(ExpectingType, "expecting type", ())                                  \
+  F(InvalidOperation, "invalid operation: '$0' on type '$1'",             \
+    (parsing::Token::Type, const ast::AstString *))
 
 /**
  * Define the ErrorMessageId enumeration

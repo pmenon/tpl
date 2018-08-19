@@ -26,15 +26,15 @@ void TypeChecker::VisitUnaryExpression(ast::UnaryExpression *node) {
       if (expr_type->IsBoolType()) {
         node->set_type(expr_type);
       } else {
-        ReportError(ErrorMessages::kInvalidOperation, node->op(),
-                    expr_type->name());
+        ReportError(node->position(), ErrorMessages::kInvalidOperation,
+                    node->op(), expr_type->name());
       }
       break;
     }
     case parsing::Token::MINUS: {
       if (!expr_type->IsNumber()) {
-        ReportError(ErrorMessages::kInvalidOperation, node->op(),
-                    expr_type->name());
+        ReportError(node->position(), ErrorMessages::kInvalidOperation,
+                    node->op(), expr_type->name());
       } else {
         node->set_type(expr_type);
       }
@@ -42,10 +42,10 @@ void TypeChecker::VisitUnaryExpression(ast::UnaryExpression *node) {
     }
     case parsing::Token::Type::STAR: {
       if (!expr_type->IsPointerType()) {
-        ReportError(ErrorMessages::kInvalidOperation, node->op(),
-                    expr_type->name());
+        ReportError(node->position(), ErrorMessages::kInvalidOperation,
+                    node->op(), expr_type->name());
       } else {
-//        node->set_type()
+        //        node->set_type()
       }
       break;
     }

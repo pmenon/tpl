@@ -16,9 +16,10 @@ class ErrorReporter {
  public:
   // Record an error
   template <typename... ArgTypes>
-  void Report(ErrorMessage<ArgTypes...> message, ArgTypes... args) {
+  void Report(const SourcePosition &pos,
+              const ErrorMessage<ArgTypes...> &message, ArgTypes... args) {
     std::vector<SingleArg> typed_args = {SingleArg(std::move(args))...};
-    errors_.emplace_back(message.id, std::move(typed_args));
+    errors_.emplace_back(pos, message.id, std::move(typed_args));
   }
 
   // Have any errors been reported?
@@ -64,12 +65,14 @@ class ErrorReporter {
    */
   class MessageWithArgs {
    public:
-    MessageWithArgs(ErrorMessageId id, std::vector<SingleArg> &&args)
-        : id_(id), args_(std::move(args)) {}
+    MessageWithArgs(const SourcePosition &pos, ErrorMessageId id,
+                    std::vector<SingleArg> &&args)
+        : pos_(pos), id_(id), args_(std::move(args)) {}
 
     ErrorMessageId error_message_id() const { return id_; }
 
    private:
+    const SourcePosition pos_;
     ErrorMessageId id_;
     std::vector<SingleArg> args_;
   };

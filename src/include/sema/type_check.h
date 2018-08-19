@@ -52,8 +52,9 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
   //////////////////////////////////////////////////////////////////////////////
 
   template <typename... ArgTypes>
-  void ReportError(const ErrorMessage<ArgTypes...> &msg, ArgTypes &&... args) {
-    error_reporter().Report(msg, std::move(args)...);
+  void ReportError(const SourcePosition &pos,
+                   const ErrorMessage<ArgTypes...> &msg, ArgTypes &&... args) {
+    error_reporter().Report(pos, msg, std::move(args)...);
   }
 
  private:

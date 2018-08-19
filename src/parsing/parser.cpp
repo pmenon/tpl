@@ -1,3 +1,6 @@
+
+#include <parsing/parser.h>
+
 #include "parsing/parser.h"
 
 #include "sema/error_reporter.h"
@@ -214,8 +217,8 @@ Parser::ForHeader Parser::ParseForHeader() {
       // catch that here.
       // TODO(pmenon): Fix me to print out expression string
       (void)assign;
-      error_reporter().Report(sema::ErrorMessages::kAssignmentUsedAsValue, "",
-                              "");
+      ReportError(sema::ErrorMessages::kAssignmentUsedAsValue, (const char *)"",
+                  (const char *)"");
     }
     init = nullptr;
   }
@@ -415,7 +418,7 @@ ast::Expression *Parser::ParsePrimaryExpression() {
 
   // Error
   // TODO(pmenon) Also advance to next statement
-  error_reporter().Report(sema::ErrorMessages::kExpectingExpression);
+  ReportError(sema::ErrorMessages::kExpectingExpression);
   return node_factory().NewBadExpression(scanner().current_position());
 }
 
@@ -457,7 +460,7 @@ ast::Expression *Parser::ParseType() {
   }
 
   // Error
-  error_reporter().Report(sema::ErrorMessages::kExpectingType);
+  ReportError(sema::ErrorMessages::kExpectingType);
 
   return nullptr;
 }
