@@ -32,15 +32,15 @@ class AstNodeFactory {
 
   StructDeclaration *NewStructDeclaration(const SourcePosition &pos,
                                           const AstString *name,
-                                          StructTypeRepr *type) {
-    return new (region_) StructDeclaration(pos, name, type);
+                                          StructTypeRepr *type_repr) {
+    return new (region_) StructDeclaration(pos, name, type_repr);
   }
 
   VariableDeclaration *NewVariableDeclaration(const SourcePosition &pos,
                                               const AstString *name,
-                                              Expression *type,
+                                              Expression *type_repr,
                                               Expression *init) {
-    return new (region_) VariableDeclaration(pos, name, type, init);
+    return new (region_) VariableDeclaration(pos, name, type_repr, init);
   }
 
   BadStatement *NewBadStatement(const SourcePosition &pos) {
@@ -109,24 +109,24 @@ class AstNodeFactory {
 
   LiteralExpression *NewIntLiteral(const SourcePosition &pos, AstString *num) {
     return new (region_)
-        LiteralExpression(pos, LiteralExpression::Type::Int, num);
+        LiteralExpression(pos, LiteralExpression::LitKind::Int, num);
   }
 
   LiteralExpression *NewFloatLiteral(const SourcePosition &pos,
                                      AstString *num) {
     return new (region_)
-        LiteralExpression(pos, LiteralExpression::Type::Float, num);
+        LiteralExpression(pos, LiteralExpression::LitKind::Float, num);
   }
 
   LiteralExpression *NewStringLiteral(const SourcePosition &pos,
                                       AstString *str) {
     return new (region_)
-        LiteralExpression(pos, LiteralExpression::Type::String, str);
+        LiteralExpression(pos, LiteralExpression::LitKind::String, str);
   }
 
-  FunctionLiteralExpression *NewFunctionLiteral(FunctionTypeRepr *type,
+  FunctionLiteralExpression *NewFunctionLiteral(FunctionTypeRepr *type_repr,
                                                 BlockStatement *body) {
-    return new (region_) FunctionLiteralExpression(type, body);
+    return new (region_) FunctionLiteralExpression(type_repr, body);
   }
 
   UnaryExpression *NewUnaryExpression(const SourcePosition &pos,
@@ -146,8 +146,8 @@ class AstNodeFactory {
   }
 
   Field *NewField(const SourcePosition &pos, const AstString *name,
-                  Expression *type) {
-    return new (region_) Field(pos, name, type);
+                  Expression *type_repr) {
+    return new (region_) Field(pos, name, type_repr);
   }
 
   FunctionTypeRepr *NewFunctionType(const SourcePosition &pos,

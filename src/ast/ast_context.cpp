@@ -73,7 +73,9 @@ struct AstContext::Implementation : public util::RegionObject {
         array_types_(ctx.region()) {}
 };
 
-AstContext::AstContext(util::Region &region) : region_(region) {
+AstContext::AstContext(util::Region &region,
+                       sema::ErrorReporter &error_reporter)
+    : region_(region), error_reporter_(error_reporter) {
   impl_ = new (region) Implementation(*this);
 }
 

@@ -2,7 +2,13 @@
 
 #include "util/region.h"
 
-namespace tpl::ast {
+namespace tpl {
+
+namespace sema {
+class ErrorReporter;
+}  // namespace sema
+
+namespace ast {
 
 class Type;
 class IntegerType;
@@ -14,17 +20,23 @@ class FunctionType;
 
 class AstContext {
  public:
-  explicit AstContext(util::Region &region);
+  explicit AstContext(util::Region &region,
+                      sema::ErrorReporter &error_reporter);
 
   struct Implementation;
   Implementation &impl() const { return *impl_; }
+
+  sema::ErrorReporter &error_reporter() const { return error_reporter_; }
 
   util::Region &region() const { return region_; }
 
  private:
   util::Region &region_;
 
+  sema::ErrorReporter &error_reporter_;
+
   Implementation *impl_;
 };
 
-}  // namespace tpl::ast
+}  // namespace ast
+}  // namespace tpl

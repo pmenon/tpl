@@ -243,8 +243,8 @@ class StructType : public Type {
  public:
   const util::RegionVector<Type *> &fields() const { return fields_; }
 
-  StructType *Get(AstContext &ctx, util::RegionVector<Type *> &&fields);
-  StructType *Get(util::RegionVector<Type *> &&fields);
+  static StructType *Get(AstContext &ctx, util::RegionVector<Type *> &&fields);
+  static StructType *Get(util::RegionVector<Type *> &&fields);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::StructType;
@@ -267,7 +267,7 @@ class FunctionType : public Type {
 
   Type *return_type() const { return ret_; }
 
-  FunctionType *Get(util::RegionVector<Type *> &&params, Type *ret);
+  static FunctionType *Get(util::RegionVector<Type *> &&params, Type *ret);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::FunctionType;

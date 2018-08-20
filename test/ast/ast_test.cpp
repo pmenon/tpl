@@ -33,7 +33,7 @@ TEST_F(AstTest, HierechyTest) {
   /// Test declarations
   {
     AstNode *all_decls[] = {
-        factory.NewFunctionDeclaration(empty_pos(), nullptr, nullptr),
+        factory.NewFunctionDeclaration(empty_pos(), nullptr, nullptr, nullptr),
         factory.NewStructDeclaration(empty_pos(), nullptr, nullptr),
         factory.NewVariableDeclaration(empty_pos(), nullptr, nullptr, nullptr),
     };

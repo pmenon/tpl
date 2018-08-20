@@ -2,7 +2,6 @@
 
 #include <cassert>
 #include <cstdint>
-#include <cstdio>
 
 #define UNUSED __attribute__((unused))
 

@@ -18,37 +18,47 @@ class ErrorReporter {
   template <typename... ArgTypes>
   void Report(const SourcePosition &pos,
               const ErrorMessage<ArgTypes...> &message, ArgTypes... args) {
-    std::vector<SingleArg> typed_args = {SingleArg(std::move(args))...};
+    std::vector<MessageArgument> typed_args = {
+        MessageArgument(std::move(args))...};
     errors_.emplace_back(pos, message.id, std::move(typed_args));
   }
 
   // Have any errors been reported?
   bool has_errors() const { return !errors_.empty(); }
 
+  void PrintErrors();
+
  private:
   /*
    * A single argument in the error message
    */
-  class SingleArg {
+  class MessageArgument {
    public:
     enum Kind { CString, Int, Token, Position };
 
-    explicit SingleArg(const char *str) : kind_(Kind::CString), raw_str_(str) {}
+    explicit MessageArgument(const char *str)
+        : kind_(Kind::CString), raw_str_(str) {}
 
-    explicit SingleArg(int32_t integer) : kind_(Kind::Int), integer_(integer) {}
+    explicit MessageArgument(int32_t integer)
+        : kind_(Kind::Int), integer_(integer) {}
 
-    explicit SingleArg(const ast::AstString *str) : SingleArg(str->bytes()) {}
+    explicit MessageArgument(const ast::AstString *str)
+        : MessageArgument(str->bytes()) {}
 
-    explicit SingleArg(parsing::Token::Type type)
-        : SingleArg(
+    explicit MessageArgument(parsing::Token::Type type)
+        : MessageArgument(
               static_cast<std::underlying_type_t<parsing::Token::Type>>(type)) {
       kind_ = Kind::Token;
     }
 
-    explicit SingleArg(const SourcePosition &pos)
+    explicit MessageArgument(const SourcePosition &pos)
         : kind_(Kind::Position), pos_(pos) {}
 
     Kind kind() const { return kind_; }
+
+   private:
+    friend class ErrorReporter;
+    void FormatMessageArgument(std::string &str) const;
 
    private:
     Kind kind_;
@@ -66,15 +76,21 @@ class ErrorReporter {
   class MessageWithArgs {
    public:
     MessageWithArgs(const SourcePosition &pos, ErrorMessageId id,
-                    std::vector<SingleArg> &&args)
+                    std::vector<MessageArgument> &&args)
         : pos_(pos), id_(id), args_(std::move(args)) {}
+
+    const SourcePosition &position() const { return pos_; }
 
     ErrorMessageId error_message_id() const { return id_; }
 
    private:
+    friend class ErrorReporter;
+    std::string FormatMessage() const;
+
+   private:
     const SourcePosition pos_;
     ErrorMessageId id_;
-    std::vector<SingleArg> args_;
+    std::vector<MessageArgument> args_;
   };
 
  private:

@@ -234,17 +234,18 @@ class FunctionDeclaration : public Declaration {
 class StructDeclaration : public Declaration {
  public:
   StructDeclaration(const SourcePosition &pos, const AstString *name,
-                    StructTypeRepr *type)
-      : Declaration(Kind::StructDeclaration, pos, name), type_(type) {}
+                    StructTypeRepr *type_repr)
+      : Declaration(Kind::StructDeclaration, pos, name),
+        type_repr_(type_repr) {}
 
-  const StructTypeRepr *type_repr() const { return type_; }
+  StructTypeRepr *type_repr() const { return type_repr_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::StructDeclaration;
   }
 
  private:
-  StructTypeRepr *type_;
+  StructTypeRepr *type_repr_;
 };
 
 /**
@@ -253,12 +254,12 @@ class StructDeclaration : public Declaration {
 class VariableDeclaration : public Declaration {
  public:
   VariableDeclaration(const SourcePosition &pos, const AstString *name,
-                      Expression *type, Expression *init)
+                      Expression *type_repr, Expression *init)
       : Declaration(Kind::VariableDeclaration, pos, name),
-        type_(type),
+        type_repr_(type_repr),
         init_(init) {}
 
-  Expression *type_repr() const { return type_; }
+  Expression *type_repr() const { return type_repr_; }
 
   Expression *initial() const { return init_; }
 
@@ -267,7 +268,7 @@ class VariableDeclaration : public Declaration {
   }
 
  private:
-  Expression *type_;
+  Expression *type_repr_;
   Expression *init_;
 };
 
@@ -304,6 +305,10 @@ class AssignmentStatement : public Statement {
   Expression *destination() const { return dest_; }
 
   Expression *source() const { return src_; };
+
+  static bool classof(const AstNode *node) {
+    return node->kind() == Kind::AssignmentStatement;
+  }
 
  private:
   Expression *dest_;
@@ -560,9 +565,9 @@ class CallExpression : public Expression {
 
 class FunctionLiteralExpression : public Expression {
  public:
-  FunctionLiteralExpression(FunctionTypeRepr *type, BlockStatement *body);
+  FunctionLiteralExpression(FunctionTypeRepr *type_repr, BlockStatement *body);
 
-  FunctionTypeRepr *type_repr() const { return type_; }
+  FunctionTypeRepr *type_repr() const { return type_repr_; }
 
   BlockStatement *body() const { return body_; }
 
@@ -571,7 +576,7 @@ class FunctionLiteralExpression : public Expression {
   }
 
  private:
-  FunctionTypeRepr *type_;
+  FunctionTypeRepr *type_repr_;
   BlockStatement *body_;
 };
 
@@ -607,33 +612,41 @@ class IdentifierExpression : public Expression {
  */
 class LiteralExpression : public Expression {
  public:
-  enum class Type : uint8_t { Nil, Boolean, Int, Float, String };
+  enum class LitKind : uint8_t { Nil, Boolean, Int, Float, String };
 
   explicit LiteralExpression(const SourcePosition &pos)
       : Expression(Kind::LiteralExpression, pos),
-        lit_type_(LiteralExpression::Type::Nil) {}
+        lit_kind_(LiteralExpression::LitKind::Nil) {}
 
   LiteralExpression(const SourcePosition &pos, bool val)
       : Expression(Kind::LiteralExpression, pos),
-        lit_type_(LiteralExpression::Type::Boolean),
+        lit_kind_(LiteralExpression::LitKind::Boolean),
         boolean_(val) {}
 
-  LiteralExpression(const SourcePosition &pos, LiteralExpression::Type lit_type,
-                    AstString *str)
+  LiteralExpression(const SourcePosition &pos,
+                    LiteralExpression::LitKind lit_kind, AstString *str)
       : Expression(Kind::LiteralExpression, pos),
-        lit_type_(lit_type),
+        lit_kind_(lit_kind),
         str_(str) {}
 
-  LiteralExpression::Type literal_type() const { return lit_type_; }
+  LiteralExpression::LitKind literal_kind() const { return lit_kind_; }
 
   bool bool_val() const {
-    TPL_ASSERT(literal_type() == Type::Boolean);
+    TPL_ASSERT(literal_kind() == LitKind::Boolean);
     return boolean_;
   }
 
   const AstString *raw_string() const {
-    TPL_ASSERT(literal_type() != Type::Nil && literal_type() != Type::Boolean);
+    TPL_ASSERT(literal_kind() != LitKind::Nil &&
+               literal_kind() != LitKind::Boolean);
     return str_;
+  }
+
+  int64_t integer() const {
+    TPL_ASSERT(literal_kind() == LitKind::Int);
+    // TODO(pmenon): Check safe conversion
+    char *end;
+    return std::strtol(str_->bytes(), &end, 10);
   }
 
   static bool classof(const AstNode *node) {
@@ -641,7 +654,7 @@ class LiteralExpression : public Expression {
   }
 
  private:
-  Type lit_type_;
+  LitKind lit_kind_;
 
   union {
     bool boolean_;
@@ -679,19 +692,19 @@ class UnaryExpression : public Expression {
 
 class Field : public util::RegionObject {
  public:
-  Field(const SourcePosition &pos, const AstString *name, Expression *type)
-      : pos_(pos), name_(name), type_(type) {}
+  Field(const SourcePosition &pos, const AstString *name, Expression *type_repr)
+      : pos_(pos), name_(name), type_repr_(type_repr) {}
 
   const SourcePosition &position() const { return pos_; }
 
   const AstString *name() const { return name_; }
 
-  Expression *type_repr() const { return type_; }
+  Expression *type_repr() const { return type_repr_; }
 
  private:
   const SourcePosition pos_;
   const AstString *name_;
-  Expression *type_;
+  Expression *type_repr_;
 };
 
 /**

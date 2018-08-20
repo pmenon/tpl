@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast/ast.h"
+#include "ast/ast_context.h"
 #include "ast/ast_visitor.h"
 #include "sema/error_reporter.h"
 #include "sema/scope.h"
@@ -10,7 +11,7 @@ namespace tpl::sema {
 
 class TypeChecker : public ast::AstVisitor<TypeChecker> {
  public:
-  TypeChecker(util::Region &region, ErrorReporter &error_reporter);
+  TypeChecker(ast::AstContext &ctx);
 
   bool Run(ast::AstNode *root);
 
@@ -22,9 +23,22 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
   // Generate primary visit method
   DEFINE_AST_VISITOR_METHOD()
 
-  ErrorReporter &error_reporter() { return error_reporter_; }
-
  private:
+  ast::Type *Resolve(ast::Expression *expr) {
+    Visit(expr);
+    return expr->type();
+  }
+
+  ast::AstContext &ast_context() const { return ctx_; }
+
+  util::Region &region() const { return region_; }
+
+  ErrorReporter &error_reporter() const { return error_reporter_; }
+
+  ast::FunctionLiteralExpression *current_function() const {
+    return curr_func_;
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   ///
   /// Scoping
@@ -34,16 +48,58 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
   // Return the current scope
   Scope *scope() { return scope_; }
 
-  Scope *OpenScope(Scope::Kind scope_kind) {
-    auto *scope = new (region_) Scope(region_, scope_, scope_kind);
-    scope_ = scope;
-    return scope;
+  Scope *NewScope(Scope::Kind scope_kind) {
+    return new (region_) Scope(region_, scope_, scope_kind);
   }
 
-  void CloseScope(Scope *scope) {
-    TPL_ASSERT(scope == scope_);
-    scope_ = scope->outer();
-  }
+  /*
+   *
+   */
+  class BlockScope {
+   public:
+    BlockScope(Scope **scope_stack, Scope *scope)
+        : scope_stack_(scope_stack), prev_scope_(*scope_stack) {}
+
+    ~BlockScope() { *scope_stack_ = prev_scope_; }
+
+   private:
+    Scope **scope_stack_;
+    Scope *prev_scope_;
+  };
+
+  /*
+   *
+   */
+  class FunctionScope {
+   public:
+    FunctionScope(TypeChecker &check, ast::FunctionLiteralExpression *func,
+                  Scope *scope)
+        : check_(check), prev_func_(nullptr), prev_scope_(nullptr) {
+      prev_func_ = check.curr_func_;
+      check.curr_func_ = func;
+
+      prev_scope_ = check.scope_;
+      check.scope_ = scope;
+    }
+
+    ~FunctionScope() {
+      // Reset the function
+      check_.curr_func_ = prev_func_;
+
+      // Reset the scope
+      check_.scope_ = prev_scope_;
+    }
+
+   private:
+    // The type checking instance
+    TypeChecker &check_;
+
+    // The previous function
+    ast::FunctionLiteralExpression *prev_func_;
+
+    // The previous scope
+    Scope *prev_scope_;
+  };
 
   //////////////////////////////////////////////////////////////////////////////
   ///
@@ -58,13 +114,15 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
   }
 
  private:
+  ast::AstContext &ctx_;
+
   util::Region &region_;
 
   ErrorReporter &error_reporter_;
 
   Scope *scope_;
 
-  util::RegionUnorderedMap<ast::Type *, ast::PointerType *> pointer_types_;
+  ast::FunctionLiteralExpression *curr_func_;
 };
 
 }  // namespace tpl::sema

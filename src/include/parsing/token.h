@@ -44,7 +44,7 @@ namespace tpl::parsing {
   T(LESS_EQUAL, "<=", 6)                           \
                                                    \
   /* Identifiers and literals */                   \
-  T(IDENTIFIER, nullptr, 0)                        \
+  T(IDENTIFIER, "[ident]", 0)                      \
   T(INTEGER, "num", 0)                             \
   T(FLOAT, "float", 0)                             \
   T(STRING, "str", 0)                              \
