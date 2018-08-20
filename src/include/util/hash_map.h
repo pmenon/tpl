@@ -46,7 +46,9 @@ struct HashMapEntry<Key, void> {
 };
 
 /**
- * A generic, non-multithreaded, resizable, open-addressing hash table
+ * A generic, non-multithreaded, resizable, open-addressing hash table with
+ * linear probing. For small key-value pairs, this is much faster (2x) than
+ * std::unordered_map
  */
 template <typename Key, typename Value, typename MatchFunc,
           typename Allocator = std::allocator<char>>
@@ -55,26 +57,6 @@ class HashMap {
                                       const Key &, const Key &>);
 
  public:
-#if 0
-  /**
-   * An entry in the hash map
-   */
-  struct Entry {
-    Key key;
-    Value value;
-    uint32_t hash;
-
-    Entry(Key key, Value value, uint32_t hash)
-        : key(key), value(value), hash(hash), occupied_(true) {}
-
-    bool occupied() const { return occupied_; }
-
-    void clear() { occupied_ = false; }
-
-   private:
-    bool occupied_;
-  };
-#endif
   using Entry = HashMapEntry<Key, Value>;
 
   static constexpr const uint32_t kDefaultInitialCapacity = 8;

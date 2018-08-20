@@ -51,6 +51,10 @@ void TypeChecker::VisitUnaryExpression(ast::UnaryExpression *node) {
       }
       break;
     }
+    case parsing::Token::Type::AMPERSAND: {
+      node->set_type(expr_type->PointerTo());
+      break;
+    }
     default: {}
   }
 }

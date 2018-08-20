@@ -9,6 +9,7 @@
 namespace tpl::ast {
 
 class AstString;
+class AstContext;
 
 #define TYPE_LIST(F) \
   F(IntegerType)     \
@@ -30,6 +31,8 @@ class Type : public util::RegionObject {
 #define F(kind) kind,
   enum class Kind : uint8_t { TYPE_LIST(F) LastType };
 #undef F
+
+  AstContext &context() const { return ctx_; }
 
   uint32_t alignment() const { return align_; }
 
@@ -64,21 +67,25 @@ class Type : public util::RegionObject {
     return (Is<T>() ? As<T>() : nullptr);
   }
 
-#define F(name) \
-  bool Is##name() const { return Is<name>(); }
+#define F(kind) \
+  bool Is##kind() const { return Is<kind>(); }
   TYPE_LIST(F)
 #undef F
 
   bool IsNumber() const { return (IsIntegerType() || IsFloatType()); }
 
+  PointerType *PointerTo();
+
  protected:
-  Type(Kind kind) : kind_(kind) {}
+  Type(AstContext &ctx, Kind kind)
+      : ctx_(ctx), name_(nullptr), align_(0), width_(0), kind_(kind) {}
 
  private:
+  AstContext &ctx_;
+  AstString *name_;
   uint32_t align_;
   uint32_t width_;
   Kind kind_;
-  AstString *name_;
 };
 
 /**
@@ -103,11 +110,7 @@ class IntegerType : public Type {
 
   IntKind int_kind() const { return int_kind_; }
 
-#define F(name)                                 \
-  static IntegerType *name() {                  \
-    static IntegerType instance(IntKind::name); \
-    return &instance;                           \
-  }
+#define F(ikind) static IntegerType *ikind(AstContext &ctx);
   INT_TYPES(F)
 #undef F
 
@@ -116,8 +119,9 @@ class IntegerType : public Type {
   }
 
  private:
-  IntegerType(IntKind int_kind)
-      : Type(Type::Kind::IntegerType), int_kind_(int_kind) {}
+  friend class AstContext;
+  IntegerType(AstContext &ctx, IntKind int_kind)
+      : Type(ctx, Type::Kind::IntegerType), int_kind_(int_kind) {}
 
  private:
   IntKind int_kind_;
@@ -135,23 +139,18 @@ class FloatType : public Type {
 
   FloatKind float_kind() const { return float_kind_; }
 
-  static FloatType *Float32() {
-    static FloatType instance(FloatKind::Float32);
-    return &instance;
-  }
+  static FloatType *Float32(AstContext &ctx);
 
-  static FloatType *Float64() {
-    static FloatType instance(FloatKind::Float64);
-    return &instance;
-  }
+  static FloatType *Float64(AstContext &ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::FloatType;
   }
 
  private:
-  FloatType(FloatKind float_kind)
-      : Type(Type::Kind::FloatType), float_kind_(float_kind) {}
+  friend class AstContext;
+  FloatType(AstContext &ctx, FloatKind float_kind)
+      : Type(ctx, Type::Kind::FloatType), float_kind_(float_kind) {}
 
  private:
   FloatKind float_kind_;
@@ -162,22 +161,15 @@ class FloatType : public Type {
  */
 class BoolType : public Type {
  public:
-  static BoolType *True() {
-    static BoolType instance;
-    return &instance;
-  }
-
-  static BoolType *False() {
-    static BoolType instance;
-    return &instance;
-  }
+  static BoolType *Bool(AstContext &ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::BoolType;
   }
 
  private:
-  BoolType() : Type(Type::Kind::BoolType) {}
+  friend class AstContext;
+  explicit BoolType(AstContext &ctx) : Type(ctx, Type::Kind::BoolType) {}
 };
 
 /**
@@ -185,17 +177,15 @@ class BoolType : public Type {
  */
 class NilType : public Type {
  public:
-  static NilType *Nil() {
-    static NilType instance;
-    return &instance;
-  }
+  static NilType *Nil(AstContext &ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::NilType;
   }
 
  private:
-  NilType() : Type(Type::Kind::NilType) {}
+  friend class AstContext;
+  explicit NilType(AstContext &ctx) : Type(ctx, Type::Kind::NilType) {}
 };
 
 /**
@@ -203,14 +193,17 @@ class NilType : public Type {
  */
 class PointerType : public Type {
  public:
-  explicit PointerType(Type *base)
-      : Type(Type::Kind::PointerType), base_(base) {}
-
   Type *base() const { return base_; }
+
+  static PointerType *Get(Type *base);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::PointerType;
   }
+
+ private:
+  explicit PointerType(Type *base)
+      : Type(base->context(), Type::Kind::PointerType), base_(base) {}
 
  private:
   Type *base_;
@@ -221,16 +214,22 @@ class PointerType : public Type {
  */
 class ArrayType : public Type {
  public:
-  explicit ArrayType(uint64_t length, Type *elem_type)
-      : Type(Type::Kind::ArrayType), length_(length), elem_type_(elem_type) {}
-
   uint64_t length() const { return length_; }
 
   const Type *element_type() const { return elem_type_; }
 
+  static ArrayType *Get(uint64_t length, Type *elem_type);
+
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::ArrayType;
   }
+
+ private:
+  friend class AstContext;
+  explicit ArrayType(uint64_t length, Type *elem_type)
+      : Type(elem_type->context(), Type::Kind::ArrayType),
+        length_(length),
+        elem_type_(elem_type) {}
 
  private:
   uint64_t length_;
@@ -242,14 +241,18 @@ class ArrayType : public Type {
  */
 class StructType : public Type {
  public:
-  explicit StructType(util::RegionVector<Type *> &&fields)
-      : Type(Type::Kind::StructType), fields_(std::move(fields)) {}
-
   const util::RegionVector<Type *> &fields() const { return fields_; }
+
+  StructType *Get(AstContext &ctx, util::RegionVector<Type *> &&fields);
+  StructType *Get(util::RegionVector<Type *> &&fields);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::StructType;
   }
+
+ private:
+  explicit StructType(AstContext &ctx, util::RegionVector<Type *> &&fields)
+      : Type(ctx, Type::Kind::StructType), fields_(std::move(fields)) {}
 
  private:
   util::RegionVector<Type *> fields_;
@@ -260,16 +263,22 @@ class StructType : public Type {
  */
 class FunctionType : public Type {
  public:
-  explicit FunctionType(util::RegionVector<Type *> &&params, Type *ret)
-      : Type(Type::Kind::FunctionType), params_(std::move(params)), ret_(ret) {}
-
   const util::RegionVector<Type *> &params() const { return params_; }
 
   Type *return_type() const { return ret_; }
 
+  FunctionType *Get(util::RegionVector<Type *> &&params, Type *ret);
+
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::FunctionType;
   }
+
+ private:
+  friend class AstContext;
+  explicit FunctionType(util::RegionVector<Type *> &&params, Type *ret)
+      : Type(ret->context(), Type::Kind::FunctionType),
+        params_(std::move(params)),
+        ret_(ret) {}
 
  private:
   util::RegionVector<Type *> params_;
