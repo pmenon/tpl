@@ -4,6 +4,8 @@
 
 namespace tpl {
 
+static constexpr const uint32_t kBitsPerByte = 8;
+
 /**
  * Describes the position in the source as 1-based line and column numbers
  */
