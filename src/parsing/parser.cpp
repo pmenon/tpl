@@ -104,6 +104,12 @@ ast::Declaration *Parser::ParseVariableDeclaration() {
     init = ParseExpression();
   }
 
+  if (type == nullptr && init == nullptr) {
+    error_reporter().Report(scanner().current_position(),
+                            sema::ErrorMessages::kMissingTypeAndInitialValue,
+                            name);
+  }
+
   // Create declaration object
   ast::VariableDeclaration *decl =
       node_factory().NewVariableDeclaration(position, name, type, init);

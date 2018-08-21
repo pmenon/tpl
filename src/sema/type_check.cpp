@@ -97,6 +97,9 @@ void TypeChecker::VisitVariableDeclaration(ast::VariableDeclaration *node) {
     return;
   }
 
+  // At this point, the variable either has a declared type or an initial value
+  TPL_ASSERT(node->type_repr() != nullptr || node->initial() != nullptr);
+
   ast::Type *declared_type = nullptr;
   ast::Type *initializer_type = nullptr;
 
@@ -350,7 +353,10 @@ void TypeChecker::VisitReturnStatement(ast::ReturnStatement *node) {
   ast::Type *ret = Resolve(node->ret());
 
   // Check return type matches function
+  TPL_ASSERT(current_function() != nullptr);
+
   auto *func_type = current_function()->type()->As<ast::FunctionType>();
+
   if (ret != func_type->return_type()) {
     // Error
   }

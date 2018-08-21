@@ -42,7 +42,10 @@ namespace sema {
   F(NonBoolForCondition, "non-bool used as for condition", ())              \
   F(NonIntegerArrayLength, "non-integer literal used as array size", ())    \
   F(NegativeArrayLength, "array bound must be non-negative", ())            \
-  F(ReturnOutsideFunction, "return outside function", ())
+  F(ReturnOutsideFunction, "return outside function", ())                   \
+  F(MissingTypeAndInitialValue,                                             \
+    "variable '%0' must have either a declared type or an initial value",   \
+    (ast::Identifier))
 
 /**
  * Define the ErrorMessageId enumeration
