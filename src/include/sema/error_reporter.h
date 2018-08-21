@@ -6,6 +6,7 @@
 #include "common.h"
 #include "parsing/token.h"
 #include "sema/error_message.h"
+#include "util/region_containers.h"
 
 namespace tpl {
 
@@ -23,17 +24,17 @@ struct PassArgument {
 
 }  // namespace detail
 
-/**
- * TODO(pmenon): These don't use region vectors ...
- */
 class ErrorReporter {
  public:
+  ErrorReporter(util::Region &region) : region_(region), errors_(region) {}
+
   // Record an error
   template <typename... ArgTypes>
   void Report(const SourcePosition &pos,
               const ErrorMessage<ArgTypes...> &message,
               typename detail::PassArgument<ArgTypes>::type... args) {
-    errors_.emplace_back(pos, message, std::forward<ArgTypes>(args)...);
+    errors_.emplace_back(region_, pos, message,
+                         std::forward<ArgTypes>(args)...);
   }
 
   // Have any errors been reported?
@@ -93,13 +94,11 @@ class ErrorReporter {
   class MessageWithArgs {
    public:
     template <typename... ArgTypes>
-    MessageWithArgs(const SourcePosition &pos,
+    MessageWithArgs(util::Region &region, const SourcePosition &pos,
                     const ErrorMessage<ArgTypes...> &message,
                     typename detail::PassArgument<ArgTypes>::type... args)
-        : pos_(pos), id_(message.id) {
-      std::vector<MessageArgument> full_args = {
-          MessageArgument(std::move(args))...};
-      args_ = std::move(full_args);
+        : pos_(pos), id_(message.id), args_(region) {
+      args_.insert(args_.end(), {MessageArgument(std::move(args))...});
     }
 
     const SourcePosition &position() const { return pos_; }
@@ -113,11 +112,12 @@ class ErrorReporter {
    private:
     const SourcePosition pos_;
     ErrorMessageId id_;
-    std::vector<MessageArgument> args_;
+    util::RegionVector<MessageArgument> args_;
   };
 
  private:
-  std::vector<MessageWithArgs> errors_;
+  util::Region &region_;
+  util::RegionVector<MessageWithArgs> errors_;
 };
 
 }  // namespace sema

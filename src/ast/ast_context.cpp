@@ -88,9 +88,11 @@ struct AstContext::Implementation : public util::RegionObject {
         array_types_(ctx.region()) {}
 };
 
-AstContext::AstContext(util::Region &region,
+AstContext::AstContext(util::Region &region, ast::AstNodeFactory &node_factory,
                        sema::ErrorReporter &error_reporter)
-    : region_(region), error_reporter_(error_reporter) {
+    : region_(region),
+      node_factory_(node_factory),
+      error_reporter_(error_reporter) {
   impl_ = new (region) Implementation(*this);
 
   // Initialize builtin types

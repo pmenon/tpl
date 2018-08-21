@@ -11,9 +11,7 @@ namespace tpl::parsing {
 
 class Parser {
  public:
-  Parser(Scanner &scanner, ast::AstContext &ast_context,
-         ast::AstNodeFactory &node_factory,
-         sema::ErrorReporter &error_reporter);
+  Parser(Scanner &scanner, ast::AstContext &ast_context);
 
   /**
    * Parse and generate an abstract syntax tree from the input TPL source code

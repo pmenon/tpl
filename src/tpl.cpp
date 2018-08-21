@@ -16,6 +16,7 @@ static constexpr const char *kExitKeyword = ".exit";
 
 static void RunRepl() {
   util::Region region("repl-ast");
+  util::Region error_region("repl-error");
 
   while (true) {
     std::string input;
@@ -34,13 +35,12 @@ static void RunRepl() {
     } while (!line.empty());
 
     // Let's parse the source
-    sema::ErrorReporter error_reporter;
-    ast::AstContext context(region, error_reporter);
+    ast::AstNodeFactory node_factory(region);
+    sema::ErrorReporter error_reporter(error_region);
+    ast::AstContext context(region, node_factory, error_reporter);
 
     parsing::Scanner scanner(input.data(), input.length());
-    ast::AstNodeFactory node_factory(region);
-
-    parsing::Parser parser(scanner, context, node_factory, error_reporter);
+    parsing::Parser parser(scanner, context);
 
     // Parsing
     ast::AstNode *root = parser.Parse();

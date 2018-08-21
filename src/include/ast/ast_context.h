@@ -12,17 +12,18 @@ class ErrorReporter;
 
 namespace ast {
 
-class Type;
-class IntegerType;
-class FloatType;
-class PointerType;
 class ArrayType;
-class StructType;
+class AstNodeFactory;
+class FloatType;
 class FunctionType;
+class IntegerType;
+class PointerType;
+class StructType;
+class Type;
 
 class AstContext {
  public:
-  explicit AstContext(util::Region &region,
+  explicit AstContext(util::Region &region, ast::AstNodeFactory &node_factory,
                       sema::ErrorReporter &error_reporter);
 
   Identifier GetIdentifier(util::StringRef str);
@@ -32,12 +33,16 @@ class AstContext {
   struct Implementation;
   Implementation &impl() const { return *impl_; }
 
+  ast::AstNodeFactory &node_factory() const { return node_factory_; }
+
   sema::ErrorReporter &error_reporter() const { return error_reporter_; }
 
   util::Region &region() const { return region_; }
 
  private:
   util::Region &region_;
+
+  ast::AstNodeFactory &node_factory_;
 
   sema::ErrorReporter &error_reporter_;
 

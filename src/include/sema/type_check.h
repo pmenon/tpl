@@ -11,8 +11,11 @@ namespace tpl::sema {
 
 class TypeChecker : public ast::AstVisitor<TypeChecker> {
  public:
-  TypeChecker(ast::AstContext &ctx);
+  explicit TypeChecker(ast::AstContext &ctx);
 
+  // Run the type checker on the provided AST. Ensures proper types of all
+  // statements and expressions, and also annotates the AST with type correct
+  // type information.
   bool Run(ast::AstNode *root);
 
   // Declare all node visit methods here

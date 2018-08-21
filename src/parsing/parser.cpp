@@ -7,13 +7,11 @@
 
 namespace tpl::parsing {
 
-Parser::Parser(Scanner &scanner, ast::AstContext &ast_context,
-               ast::AstNodeFactory &node_factory,
-               sema::ErrorReporter &error_reporter)
+Parser::Parser(Scanner &scanner, ast::AstContext &ast_context)
     : scanner_(scanner),
       ast_context_(ast_context),
-      node_factory_(node_factory),
-      error_reporter_(error_reporter) {}
+      node_factory_(ast_context.node_factory()),
+      error_reporter_(ast_context.error_reporter()) {}
 
 ast::AstNode *Parser::Parse() {
   util::RegionVector<ast::Declaration *> decls(region());
