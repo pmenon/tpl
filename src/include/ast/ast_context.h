@@ -27,6 +27,8 @@ class AstContext {
 
   Identifier GetIdentifier(util::StringRef str);
 
+  ast::Type *LookupBuiltin(Identifier identifier);
+
   struct Implementation;
   Implementation &impl() const { return *impl_; }
 

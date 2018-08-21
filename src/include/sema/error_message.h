@@ -2,8 +2,15 @@
 
 #include <cstdint>
 
-namespace tpl::sema {
+#include "ast/identifier.h"
 
+namespace tpl {
+
+namespace ast {
+class Type;
+}  // namespace ast
+
+namespace sema {
 /*
  * The following macro lists out all the semantic and syntactic error messages
  * in TPL. Each macro has three parts: a globally unique textual message ID, the
@@ -14,22 +21,23 @@ namespace tpl::sema {
   F(UnexpectedToken, "unexpected token '%0', expecting '%1'",               \
     (parsing::Token::Type, parsing::Token::Type))                           \
   F(DuplicateArgName, "duplicate named argument '%0' in function '%0'",     \
-    (const char *))                                                         \
+    (ast::Identifier))                                                      \
   F(DuplicateStructFieldName, "duplicate field name '%0' in struct '%1'",   \
-    (const char *, const char *))                                           \
+    (ast::Identifier, ast::Identifier))                                     \
   F(AssignmentUsedAsValue, "assignment '%0' = '%1' used as value",          \
-    (const char *, const char *))                                           \
+    (ast::Identifier, ast::Identifier))                                     \
   F(ExpectingExpression, "expecting expression", ())                        \
   F(ExpectingType, "expecting type", ())                                    \
   F(InvalidOperation, "invalid operation: '%0' on type '%1'",               \
-    (parsing::Token::Type, ast::Identifier))                                \
+    (parsing::Token::Type, ast::Type *))                                    \
   F(VariableRedeclared, "'%0' redeclared in this block", (ast::Identifier)) \
   F(UndefinedVariable, "undefined: '%0'", (ast::Identifier))                \
   F(NonFunction, "cannot call non-function '%0'", ())                       \
   F(NotEnoughCallArgs, "not enough arguments to call to '%0'", ())          \
   F(TooManyCallArgs, "too many arguments to call to '%0'", ())              \
   F(IncorrectCallArgType,                                                   \
-    "cannot use a '%0' as type '%1' in argument to '%2'", ())               \
+    "cannot use a '%0' as type '%1' in argument to '%2'",                   \
+    (ast::Type *, ast::Type *, ast::Identifier))                            \
   F(NonBoolIfCondition, "non-bool used as if condition", ())                \
   F(NonBoolForCondition, "non-bool used as for condition", ())              \
   F(NonIntegerArrayLength, "non-integer literal used as array size", ())    \
@@ -73,4 +81,5 @@ class ErrorMessages {
 #undef MSG
 };
 
-}  // namespace tpl::sema
+}  // namespace sema
+}  // namespace tpl

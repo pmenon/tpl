@@ -51,7 +51,9 @@ class Parser {
     UNUSED Token::Type next = Next();
 #ifndef NDEBUG
     if (next != expected) {
-      ReportError(sema::ErrorMessages::kUnexpectedToken, next, expected);
+      error_reporter().Report(scanner().current_position(),
+                              sema::ErrorMessages::kUnexpectedToken, next,
+                              expected);
     }
 #endif
   }
@@ -59,7 +61,9 @@ class Parser {
   void Expect(Token::Type expected) {
     Token::Type next = Next();
     if (next != expected) {
-      ReportError(sema::ErrorMessages::kUnexpectedToken, next, expected);
+      error_reporter().Report(scanner().current_position(),
+                              sema::ErrorMessages::kUnexpectedToken, next,
+                              expected);
     }
   }
 
@@ -133,19 +137,6 @@ class Parser {
   ast::Expression *ParseArrayType();
 
   ast::Expression *ParseStructType();
-
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Error reporting
-  ///
-  //////////////////////////////////////////////////////////////////////////////
-
-  template <typename... ArgTypes>
-  void ReportError(const sema::ErrorMessage<ArgTypes...> &msg,
-                   const ArgTypes &... args) {
-    error_reporter().Report(scanner().current_position(), msg,
-                            std::move(args)...);
-  }
 
  private:
   // The source code scanner

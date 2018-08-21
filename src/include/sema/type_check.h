@@ -48,46 +48,31 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
   // Return the current scope
   Scope *scope() { return scope_; }
 
-  Scope *NewScope(Scope::Kind scope_kind) {
-    return new (region_) Scope(region_, scope_, scope_kind);
+  Scope *OpenScope(Scope::Kind scope_kind) {
+    auto *scope = new (region_) Scope(region_, scope_, scope_kind);
+    scope_ = scope;
+    return scope;
   }
 
-  /*
-   *
-   */
-  class BlockScope {
-   public:
-    BlockScope(Scope **scope_stack, Scope *scope)
-        : scope_stack_(scope_stack), prev_scope_(*scope_stack) {}
-
-    ~BlockScope() { *scope_stack_ = prev_scope_; }
-
-   private:
-    Scope **scope_stack_;
-    Scope *prev_scope_;
-  };
+  void CloseScope(UNUSED Scope *expected_top) {
+    TPL_ASSERT(scope() == expected_top);
+    scope_ = scope_->outer();
+  }
 
   /*
    *
    */
   class FunctionScope {
    public:
-    FunctionScope(TypeChecker &check, ast::FunctionLiteralExpression *func,
-                  Scope *scope)
-        : check_(check), prev_func_(nullptr), prev_scope_(nullptr) {
+    FunctionScope(TypeChecker &check, ast::FunctionLiteralExpression *func)
+        : check_(check), prev_func_(nullptr) {
       prev_func_ = check.curr_func_;
       check.curr_func_ = func;
-
-      prev_scope_ = check.scope_;
-      check.scope_ = scope;
     }
 
     ~FunctionScope() {
       // Reset the function
       check_.curr_func_ = prev_func_;
-
-      // Reset the scope
-      check_.scope_ = prev_scope_;
     }
 
    private:
@@ -96,22 +81,7 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
 
     // The previous function
     ast::FunctionLiteralExpression *prev_func_;
-
-    // The previous scope
-    Scope *prev_scope_;
   };
-
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Errors
-  ///
-  //////////////////////////////////////////////////////////////////////////////
-
-  template <typename... ArgTypes>
-  void ReportError(const SourcePosition &pos,
-                   const ErrorMessage<ArgTypes...> &msg, ArgTypes &&... args) {
-    error_reporter().Report(pos, msg, std::move(args)...);
-  }
 
  private:
   ast::AstContext &ctx_;

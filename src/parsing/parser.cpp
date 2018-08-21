@@ -217,8 +217,9 @@ Parser::ForHeader Parser::ParseForHeader() {
       // catch that here.
       // TODO(pmenon): Fix me to print out expression string
       (void)assign;
-      ReportError(sema::ErrorMessages::kAssignmentUsedAsValue, (const char *)"",
-                  (const char *)"");
+      error_reporter().Report(scanner().current_position(),
+                              sema::ErrorMessages::kAssignmentUsedAsValue,
+                              ast::Identifier(""), ast::Identifier(""));
     }
     init = nullptr;
   }
@@ -418,7 +419,8 @@ ast::Expression *Parser::ParsePrimaryExpression() {
 
   // Error
   // TODO(pmenon) Also advance to next statement
-  ReportError(sema::ErrorMessages::kExpectingExpression);
+  error_reporter().Report(scanner().current_position(),
+                          sema::ErrorMessages::kExpectingExpression);
   return node_factory().NewBadExpression(scanner().current_position());
 }
 
@@ -460,7 +462,8 @@ ast::Expression *Parser::ParseType() {
   }
 
   // Error
-  ReportError(sema::ErrorMessages::kExpectingType);
+  error_reporter().Report(scanner().current_position(),
+                          sema::ErrorMessages::kExpectingType);
 
   return nullptr;
 }

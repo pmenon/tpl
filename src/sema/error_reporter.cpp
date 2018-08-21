@@ -1,5 +1,9 @@
 #include "sema/error_reporter.h"
 
+#include <cstring>
+
+#include "ast/type.h"
+
 namespace tpl::sema {
 
 namespace {
@@ -8,19 +12,15 @@ constexpr const char *error_strings[] = {MESSAGE_LIST(F)};
 #undef F
 }  // namespace
 
-void ErrorReporter::MessageArgument::FormatMessageArgument(std::string &str) const {
+void ErrorReporter::MessageArgument::FormatMessageArgument(
+    std::string &str) const {
   switch (kind()) {
-    case MessageArgument::Kind::Int: {
-      str.append(std::to_string(integer_));
-      break;
-    }
     case Kind::CString: {
       str.append(raw_str_);
       break;
     }
-    case Kind::Token: {
-      str.append(
-          parsing::Token::String(static_cast<parsing::Token::Type>(integer_)));
+    case MessageArgument::Kind::Int: {
+      str.append(std::to_string(integer_));
       break;
     }
     case Kind::Position: {
@@ -29,6 +29,15 @@ void ErrorReporter::MessageArgument::FormatMessageArgument(std::string &str) con
           .append("/")
           .append(std::to_string(pos_.column))
           .append("]");
+      break;
+    }
+    case Kind::Token: {
+      str.append(
+          parsing::Token::String(static_cast<parsing::Token::Type>(integer_)));
+      break;
+    }
+    case Kind::Type: {
+      str.append("FIXME");
       break;
     }
   }

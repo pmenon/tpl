@@ -7,7 +7,6 @@
 namespace tpl {
 
 namespace ast {
-class AstString;
 class Type;
 }  // namespace ast
 

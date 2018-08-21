@@ -41,6 +41,10 @@ struct AstContext::Implementation : public util::RegionObject {
 
   util::StringMap<char, util::RegionAllocator<char>> string_table_;
 
+  util::RegionUnorderedMap<ast::Identifier, ast::Type *, ast::IdentifierHasher,
+                           ast::IdentifierEquality>
+      builtin_types_;
+
   template <typename T, typename U>
   struct PairHash {
     uint32_t operator()(const std::pair<T, U> &p) const {
@@ -79,6 +83,7 @@ struct AstContext::Implementation : public util::RegionObject {
         nil(ctx),
         string_table_(kDefaultStringTableCapacity,
                       util::RegionAllocator<char>(ctx.region())),
+        builtin_types_(ctx.region()),
         pointer_types_(ctx.region()),
         array_types_(ctx.region()) {}
 };
@@ -87,6 +92,29 @@ AstContext::AstContext(util::Region &region,
                        sema::ErrorReporter &error_reporter)
     : region_(region), error_reporter_(error_reporter) {
   impl_ = new (region) Implementation(*this);
+
+  // Initialize builtin types
+  impl().builtin_types_.insert({
+      // Boolean
+      {GetIdentifier("bool"), &impl().boolean},
+      // Nil
+      {GetIdentifier("nil"), &impl().nil},
+      // Integers
+      {GetIdentifier("int8"), &impl().int8},
+      {GetIdentifier("int16"), &impl().int16},
+      {GetIdentifier("int32"), &impl().int32},
+      {GetIdentifier("int64"), &impl().int64},
+      {GetIdentifier("uint8"), &impl().uint8},
+      {GetIdentifier("uint16"), &impl().uint16},
+      {GetIdentifier("uint32"), &impl().uint32},
+      {GetIdentifier("uint64"), &impl().uint64},
+      {GetIdentifier("float32"), &impl().float32},
+      {GetIdentifier("float64"), &impl().float64},
+      // Typedefs
+      {GetIdentifier("int"), &impl().int32},
+      {GetIdentifier("float"), &impl().float32},
+      {GetIdentifier("void"), &impl().nil},
+  });
 }
 
 Identifier AstContext::GetIdentifier(util::StringRef str) {
@@ -94,6 +122,11 @@ Identifier AstContext::GetIdentifier(util::StringRef str) {
 
   auto iter = impl().string_table_.insert({str, char(0)});
   return Identifier(iter.first->key(), iter.first->key_length());
+}
+
+ast::Type *AstContext::LookupBuiltin(Identifier identifier) {
+  auto iter = impl().builtin_types_.find(identifier);
+  return (iter == impl().builtin_types_.end() ? nullptr : iter->second);
 }
 
 PointerType *Type::PointerTo() { return PointerType::Get(this); }

@@ -7,7 +7,21 @@
 #include "parsing/token.h"
 #include "sema/error_message.h"
 
-namespace tpl::sema {
+namespace tpl {
+
+namespace ast {
+class Type;
+}  // namespace ast
+
+namespace sema {
+
+namespace detail {
+template <typename T>
+struct PassArgument {
+  typedef T type;
+};
+
+}  // namespace detail
 
 /**
  * TODO(pmenon): These don't use region vectors ...
@@ -17,10 +31,9 @@ class ErrorReporter {
   // Record an error
   template <typename... ArgTypes>
   void Report(const SourcePosition &pos,
-              const ErrorMessage<ArgTypes...> &message, ArgTypes... args) {
-    std::vector<MessageArgument> typed_args = {
-        MessageArgument(std::move(args))...};
-    errors_.emplace_back(pos, message.id, std::move(typed_args));
+              const ErrorMessage<ArgTypes...> &message,
+              typename detail::PassArgument<ArgTypes>::type... args) {
+    errors_.emplace_back(pos, message, std::forward<ArgTypes>(args)...);
   }
 
   // Have any errors been reported?
@@ -34,7 +47,7 @@ class ErrorReporter {
    */
   class MessageArgument {
    public:
-    enum Kind { CString, Int, Token, Position };
+    enum Kind { CString, Int, Position, Token, Type };
 
     explicit MessageArgument(const char *str)
         : kind_(Kind::CString), raw_str_(str) {}
@@ -45,7 +58,10 @@ class ErrorReporter {
     explicit MessageArgument(ast::Identifier str)
         : MessageArgument(str.data()) {}
 
-    explicit MessageArgument(parsing::Token::Type type)
+    explicit MessageArgument(ast::Type *type)
+        : kind_(Kind::Type), type_(type) {}
+
+    explicit MessageArgument(const parsing::Token::Type type)
         : MessageArgument(
               static_cast<std::underlying_type_t<parsing::Token::Type>>(type)) {
       kind_ = Kind::Token;
@@ -66,6 +82,7 @@ class ErrorReporter {
       const char *raw_str_;
       int32_t integer_;
       SourcePosition pos_;
+      ast::Type *type_;
     };
   };
 
@@ -75,9 +92,15 @@ class ErrorReporter {
    */
   class MessageWithArgs {
    public:
-    MessageWithArgs(const SourcePosition &pos, ErrorMessageId id,
-                    std::vector<MessageArgument> &&args)
-        : pos_(pos), id_(id), args_(std::move(args)) {}
+    template <typename... ArgTypes>
+    MessageWithArgs(const SourcePosition &pos,
+                    const ErrorMessage<ArgTypes...> &message,
+                    typename detail::PassArgument<ArgTypes>::type... args)
+        : pos_(pos), id_(message.id) {
+      std::vector<MessageArgument> full_args = {
+          MessageArgument(std::move(args))...};
+      args_ = std::move(full_args);
+    }
 
     const SourcePosition &position() const { return pos_; }
 
@@ -97,4 +120,5 @@ class ErrorReporter {
   std::vector<MessageWithArgs> errors_;
 };
 
-}  // namespace tpl::sema
+}  // namespace sema
+}  // namespace tpl

@@ -31,10 +31,9 @@ void TypeChecker::VisitUnaryExpression(ast::UnaryExpression *node) {
       if (expr_type->IsBoolType()) {
         node->set_type(expr_type);
       } else {
-#if 0
-        ReportError(node->position(), ErrorMessages::kInvalidOperation,
-                    node->op(), expr_type->name());
-#endif
+        error_reporter().Report(node->position(),
+                                ErrorMessages::kInvalidOperation, node->op(),
+                                expr_type);
       }
       break;
     }
@@ -42,10 +41,9 @@ void TypeChecker::VisitUnaryExpression(ast::UnaryExpression *node) {
       if (expr_type->IsNumber()) {
         node->set_type(expr_type);
       } else {
-#if 0
-        ReportError(node->position(), ErrorMessages::kInvalidOperation,
-                    node->op(), expr_type->name());
-#endif
+        error_reporter().Report(node->position(),
+                                ErrorMessages::kInvalidOperation, node->op(),
+                                expr_type);
       }
       break;
     }
@@ -53,10 +51,9 @@ void TypeChecker::VisitUnaryExpression(ast::UnaryExpression *node) {
       if (auto *ptr_type = expr_type->SafeAs<ast::PointerType>()) {
         node->set_type(ptr_type->base());
       } else {
-#if 0
-        ReportError(node->position(), ErrorMessages::kInvalidOperation,
-                    node->op(), expr_type->name());
-#endif
+        error_reporter().Report(node->position(),
+                                ErrorMessages::kInvalidOperation, node->op(),
+                                expr_type);
       }
       break;
     }
@@ -74,25 +71,29 @@ void TypeChecker::VisitAssignmentStatement(ast::AssignmentStatement *node) {
 }
 
 void TypeChecker::VisitBlockStatement(ast::BlockStatement *node) {
-  auto *scope = NewScope(Scope::Kind::Block);
-
-  BlockScope block_scope(&scope_, scope);
+  auto *block_scope = OpenScope(Scope::Kind::Block);
 
   for (auto *stmt : node->statements()) {
     Visit(stmt);
   }
+
+  CloseScope(block_scope);
 }
 
 void TypeChecker::VisitFile(ast::File *node) {
+  auto *file_scope = OpenScope(Scope::Kind::File);
+
   for (auto *decl : node->declarations()) {
     Visit(decl);
   }
+
+  CloseScope(file_scope);
 }
 
 void TypeChecker::VisitVariableDeclaration(ast::VariableDeclaration *node) {
   if (scope()->LookupLocal(node->name()) != nullptr) {
-    ReportError(node->position(), ErrorMessages::kVariableRedeclared,
-                node->name());
+    error_reporter().Report(node->position(),
+                            ErrorMessages::kVariableRedeclared, node->name());
     return;
   }
 
@@ -117,7 +118,8 @@ void TypeChecker::VisitVariableDeclaration(ast::VariableDeclaration *node) {
 }
 
 void TypeChecker::VisitFunctionDeclaration(ast::FunctionDeclaration *node) {
-  scope()->Declare(node->name(), Resolve(node->function()));
+  auto *func_type = Resolve(node->function());
+  scope()->Declare(node->name(), func_type);
 }
 
 void TypeChecker::VisitStructDeclaration(ast::StructDeclaration *node) {
@@ -128,9 +130,12 @@ void TypeChecker::VisitIdentifierExpression(ast::IdentifierExpression *node) {
   auto *type = scope()->Lookup(node->name());
 
   if (type == nullptr) {
-    ReportError(node->position(), ErrorMessages::kUndefinedVariable,
-                node->name());
-    return;
+    type = ast_context().LookupBuiltin(node->name());
+    if (type == nullptr) {
+      error_reporter().Report(node->position(),
+                              ErrorMessages::kUndefinedVariable, node->name());
+      return;
+    }
   }
 
   node->set_type(type);
@@ -145,7 +150,7 @@ void TypeChecker::VisitCallExpression(ast::CallExpression *node) {
   }
 
   if (!type->IsFunctionType()) {
-    ReportError(node->position(), ErrorMessages::kNonFunction);
+    error_reporter().Report(node->position(), ErrorMessages::kNonFunction);
     return;
   }
 
@@ -157,16 +162,21 @@ void TypeChecker::VisitCallExpression(ast::CallExpression *node) {
   auto &args = node->arguments();
 
   if (args.size() < param_types.size()) {
-    ReportError(node->position(), ErrorMessages::kNotEnoughCallArgs);
+    error_reporter().Report(node->position(),
+                            ErrorMessages::kNotEnoughCallArgs);
     return;
   } else if (args.size() > param_types.size()) {
-    ReportError(node->position(), ErrorMessages::kTooManyCallArgs);
+    error_reporter().Report(node->position(), ErrorMessages::kTooManyCallArgs);
     return;
   }
 
   for (size_t i = 0; i < args.size(); i++) {
     if (args[i]->type() != param_types[i]) {
-      ReportError(node->position(), ErrorMessages::kIncorrectCallArgType);
+      // TODO(pmenon): Fix this check
+      error_reporter().Report(
+          node->position(), ErrorMessages::kIncorrectCallArgType,
+          args[i]->type(), param_types[i],
+          node->function()->As<ast::IdentifierExpression>()->name());
       return;
     }
   }
@@ -206,8 +216,7 @@ void TypeChecker::VisitLiteralExpression(ast::LiteralExpression *node) {
 
 void TypeChecker::VisitForStatement(ast::ForStatement *node) {
   // Create a new scope for variables introduced in initialization block
-  auto *s = NewScope(Scope::Kind::Block);
-  BlockScope loop_scope(&scope_, s);
+  auto *loop_scope = OpenScope(Scope::Kind::Block);
 
   if (node->init() != nullptr) {
     Visit(node->init());
@@ -216,8 +225,8 @@ void TypeChecker::VisitForStatement(ast::ForStatement *node) {
   if (node->cond() != nullptr) {
     ast::Type *cond_type = Resolve(node->cond());
     if (!cond_type->IsBoolType()) {
-      ReportError(node->cond()->position(),
-                  ErrorMessages::kNonBoolForCondition);
+      error_reporter().Report(node->cond()->position(),
+                              ErrorMessages::kNonBoolForCondition);
     }
   }
 
@@ -227,6 +236,9 @@ void TypeChecker::VisitForStatement(ast::ForStatement *node) {
 
   // The body
   Visit(node->body());
+
+  // Close scope
+  CloseScope(loop_scope);
 }
 
 void TypeChecker::VisitExpressionStatement(ast::ExpressionStatement *node) {
@@ -250,7 +262,8 @@ void TypeChecker::VisitIfStatement(ast::IfStatement *node) {
   ast::Type *cond_type = Resolve(node->cond());
 
   if (cond_type != nullptr && !cond_type->IsBoolType()) {
-    ReportError(node->cond()->position(), ErrorMessages::kNonBoolIfCondition);
+    error_reporter().Report(node->cond()->position(),
+                            ErrorMessages::kNonBoolIfCondition);
   }
 
   Visit(node->then_stmt());
@@ -270,15 +283,15 @@ void TypeChecker::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {
     auto *len_expr = node->length()->SafeAs<ast::LiteralExpression>();
     if (len_expr == nullptr ||
         len_expr->literal_kind() != ast::LiteralExpression::LitKind::Int) {
-      ReportError(node->length()->position(),
-                  ErrorMessages::kNonIntegerArrayLength);
+      error_reporter().Report(node->length()->position(),
+                              ErrorMessages::kNonIntegerArrayLength);
       return;
     }
 
     auto len = len_expr->integer();
     if (len < 0) {
-      ReportError(node->length()->position(),
-                  ErrorMessages::kNegativeArrayLength);
+      error_reporter().Report(node->length()->position(),
+                              ErrorMessages::kNegativeArrayLength);
       return;
     }
 
@@ -309,8 +322,9 @@ void TypeChecker::VisitFunctionLiteralExpression(
   node->set_type(func_type);
 
   // Start a new function scope
-  auto *s = NewScope(Scope::Kind::Function);
-  FunctionScope function_scope(*this, node, s);
+  auto *function_scope = OpenScope(Scope::Kind::Function);
+
+  FunctionScope scoped(*this, node);
 
   // Declare function parameters in scope
   const auto &repr_params = node->type_repr()->parameters();
@@ -321,11 +335,15 @@ void TypeChecker::VisitFunctionLiteralExpression(
 
   // Recurse into the function body
   Visit(node->body());
+
+  //
+  CloseScope(function_scope);
 }
 
 void TypeChecker::VisitReturnStatement(ast::ReturnStatement *node) {
   if (current_function() == nullptr) {
-    ReportError(node->position(), ErrorMessages::kReturnOutsideFunction);
+    error_reporter().Report(node->position(),
+                            ErrorMessages::kReturnOutsideFunction);
     return;
   }
 
