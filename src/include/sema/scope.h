@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ast/identifier.h"
 #include "util/region.h"
 #include "util/region_containers.h"
 
@@ -25,10 +26,10 @@ class Scope : public util::RegionObject {
   // Declare an element with the given name and type in this scope. Return true
   // if successful and false if an element with the given name already exits in
   // the local scope.
-  bool Declare(const ast::AstString *name, ast::Type *type);
+  bool Declare(ast::Identifier name, ast::Type *type);
 
-  ast::Type *Lookup(const ast::AstString *name) const;
-  ast::Type *LookupLocal(const ast::AstString *name) const;
+  ast::Type *Lookup(ast::Identifier name) const;
+  ast::Type *LookupLocal(ast::Identifier name) const;
 
   Kind scope_kind() const { return scope_kind_; }
 
@@ -44,7 +45,9 @@ class Scope : public util::RegionObject {
 
   Kind scope_kind_;
 
-  util::RegionUnorderedMap<const ast::AstString *, ast::Type *> table_;
+  util::RegionUnorderedMap<ast::Identifier, ast::Type *, ast::IdentifierHasher,
+                           ast::IdentifierEquality>
+      table_;
 };
 
 }  // namespace sema

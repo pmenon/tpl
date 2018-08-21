@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "ast/ast_value.h"
+#include "ast/identifier.h"
 #include "ast/type.h"
 #include "common.h"
 #include "parsing/token.h"
@@ -193,10 +193,10 @@ class File : public AstNode {
 
 class Declaration : public AstNode {
  public:
-  Declaration(Kind kind, const SourcePosition &pos, const AstString *name)
+  Declaration(Kind kind, const SourcePosition &pos, Identifier name)
       : AstNode(kind, pos), name_(name) {}
 
-  const AstString *name() const { return name_; }
+  Identifier name() const { return name_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() >= Kind::FunctionDeclaration &&
@@ -204,7 +204,7 @@ class Declaration : public AstNode {
   }
 
  private:
-  const AstString *name_;
+  Identifier name_;
 };
 
 /**
@@ -212,7 +212,7 @@ class Declaration : public AstNode {
  */
 class FunctionDeclaration : public Declaration {
  public:
-  FunctionDeclaration(const SourcePosition &pos, const AstString *name,
+  FunctionDeclaration(const SourcePosition &pos, Identifier name,
                       FunctionLiteralExpression *fun)
       : Declaration(Kind::FunctionDeclaration, pos, name), fun_(fun) {}
 
@@ -233,7 +233,7 @@ class FunctionDeclaration : public Declaration {
  */
 class StructDeclaration : public Declaration {
  public:
-  StructDeclaration(const SourcePosition &pos, const AstString *name,
+  StructDeclaration(const SourcePosition &pos, Identifier name,
                     StructTypeRepr *type_repr)
       : Declaration(Kind::StructDeclaration, pos, name),
         type_repr_(type_repr) {}
@@ -253,7 +253,7 @@ class StructDeclaration : public Declaration {
  */
 class VariableDeclaration : public Declaration {
  public:
-  VariableDeclaration(const SourcePosition &pos, const AstString *name,
+  VariableDeclaration(const SourcePosition &pos, Identifier name,
                       Expression *type_repr, Expression *init)
       : Declaration(Kind::VariableDeclaration, pos, name),
         type_repr_(type_repr),
@@ -585,12 +585,12 @@ class FunctionLiteralExpression : public Expression {
  */
 class IdentifierExpression : public Expression {
  public:
-  IdentifierExpression(const SourcePosition &pos, const AstString *name)
+  IdentifierExpression(const SourcePosition &pos, Identifier name)
       : Expression(Kind::IdentifierExpression, pos),
         name_(name),
         decl_(nullptr) {}
 
-  const AstString *name() const { return name_; }
+  Identifier name() const { return name_; }
 
   void BindTo(Declaration *decl) { decl_ = decl; }
 
@@ -603,7 +603,7 @@ class IdentifierExpression : public Expression {
  private:
   // TODO(pmenon) Should these two be a union since only one should be active?
   // Pre-binding, 'name_' is used, and post-binding 'decl_' should be used?
-  const AstString *name_;
+  Identifier name_;
   Declaration *decl_;
 };
 
@@ -624,7 +624,7 @@ class LiteralExpression : public Expression {
         boolean_(val) {}
 
   LiteralExpression(const SourcePosition &pos,
-                    LiteralExpression::LitKind lit_kind, AstString *str)
+                    LiteralExpression::LitKind lit_kind, Identifier str)
       : Expression(Kind::LiteralExpression, pos),
         lit_kind_(lit_kind),
         str_(str) {}
@@ -636,7 +636,7 @@ class LiteralExpression : public Expression {
     return boolean_;
   }
 
-  const AstString *raw_string() const {
+  Identifier raw_string() const {
     TPL_ASSERT(literal_kind() != LitKind::Nil &&
                literal_kind() != LitKind::Boolean);
     return str_;
@@ -646,7 +646,7 @@ class LiteralExpression : public Expression {
     TPL_ASSERT(literal_kind() == LitKind::Int);
     // TODO(pmenon): Check safe conversion
     char *end;
-    return std::strtol(str_->bytes(), &end, 10);
+    return std::strtol(str_.data(), &end, 10);
   }
 
   static bool classof(const AstNode *node) {
@@ -658,7 +658,7 @@ class LiteralExpression : public Expression {
 
   union {
     bool boolean_;
-    AstString *str_;
+    Identifier str_;
   };
 };
 
@@ -692,18 +692,18 @@ class UnaryExpression : public Expression {
 
 class Field : public util::RegionObject {
  public:
-  Field(const SourcePosition &pos, const AstString *name, Expression *type_repr)
+  Field(const SourcePosition &pos, Identifier name, Expression *type_repr)
       : pos_(pos), name_(name), type_repr_(type_repr) {}
 
   const SourcePosition &position() const { return pos_; }
 
-  const AstString *name() const { return name_; }
+  Identifier name() const { return name_; }
 
   Expression *type_repr() const { return type_repr_; }
 
  private:
   const SourcePosition pos_;
-  const AstString *name_;
+  Identifier name_;
   Expression *type_repr_;
 };
 

@@ -7,12 +7,12 @@
 
 namespace tpl::parsing {
 
-Parser::Parser(Scanner &scanner, ast::AstNodeFactory &node_factory,
-               ast::AstStringsContainer &strings_container,
+Parser::Parser(Scanner &scanner, ast::AstContext &ast_context,
+               ast::AstNodeFactory &node_factory,
                sema::ErrorReporter &error_reporter)
     : scanner_(scanner),
+      ast_context_(ast_context),
       node_factory_(node_factory),
-      strings_container_(strings_container),
       error_reporter_(error_reporter) {}
 
 ast::AstNode *Parser::Parse() {
@@ -47,7 +47,7 @@ ast::Declaration *Parser::ParseFunctionDeclaration() {
 
   // The function name
   Expect(Token::Type::IDENTIFIER);
-  ast::AstString *name = GetSymbol();
+  ast::Identifier name = GetSymbol();
 
   // The function literal
   auto *fun =
@@ -68,7 +68,7 @@ ast::Declaration *Parser::ParseStructDeclaration() {
 
   // The struct name
   Expect(Token::Type::IDENTIFIER);
-  ast::AstString *name = GetSymbol();
+  ast::Identifier name = GetSymbol();
 
   // The type
   auto *struct_type = ParseStructType()->As<ast::StructTypeRepr>();
@@ -90,7 +90,7 @@ ast::Declaration *Parser::ParseVariableDeclaration() {
 
   // The name
   Expect(Token::Type::IDENTIFIER);
-  ast::AstString *name = GetSymbol();
+  ast::Identifier name = GetSymbol();
 
   // The type (if exists)
   ast::Expression *type = nullptr;
@@ -482,7 +482,7 @@ ast::Expression *Parser::ParseFunctionType() {
     const SourcePosition &field_position = scanner().current_position();
 
     // The parameter name
-    ast::AstString *name = GetSymbol();
+    ast::Identifier name = GetSymbol();
 
     // Prepare for parameter type by eating the colon (ew ...)
     Expect(Token::Type::COLON);
@@ -555,7 +555,7 @@ ast::Expression *Parser::ParseStructType() {
     const SourcePosition &field_position = scanner().current_position();
 
     // The parameter name
-    ast::AstString *name = GetSymbol();
+    ast::Identifier name = GetSymbol();
 
     // Prepare for parameter type by eating the colon (ew ...)
     Expect(Token::Type::COLON);

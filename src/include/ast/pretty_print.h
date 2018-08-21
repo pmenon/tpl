@@ -34,8 +34,8 @@ class PrettyPrint : public AstVisitor<PrettyPrint> {
 
   void PrintString(const std::string &str) { result_.append(str); }
 
-  void PrintString(const AstString *str) {
-    result_.append(str->bytes(), str->length());
+  void PrintIdentifier(Identifier str) {
+    result_.append(str.data(), str.length());
   }
 
   void PrintPosition(const SourcePosition &pos) {

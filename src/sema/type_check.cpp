@@ -31,8 +31,10 @@ void TypeChecker::VisitUnaryExpression(ast::UnaryExpression *node) {
       if (expr_type->IsBoolType()) {
         node->set_type(expr_type);
       } else {
+#if 0
         ReportError(node->position(), ErrorMessages::kInvalidOperation,
                     node->op(), expr_type->name());
+#endif
       }
       break;
     }
@@ -40,8 +42,10 @@ void TypeChecker::VisitUnaryExpression(ast::UnaryExpression *node) {
       if (expr_type->IsNumber()) {
         node->set_type(expr_type);
       } else {
+#if 0
         ReportError(node->position(), ErrorMessages::kInvalidOperation,
                     node->op(), expr_type->name());
+#endif
       }
       break;
     }
@@ -49,8 +53,10 @@ void TypeChecker::VisitUnaryExpression(ast::UnaryExpression *node) {
       if (auto *ptr_type = expr_type->SafeAs<ast::PointerType>()) {
         node->set_type(ptr_type->base());
       } else {
+#if 0
         ReportError(node->position(), ErrorMessages::kInvalidOperation,
                     node->op(), expr_type->name());
+#endif
       }
       break;
     }

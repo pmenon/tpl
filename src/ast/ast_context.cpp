@@ -1,10 +1,16 @@
+
+#include <ast/ast_context.h>
+
 #include "ast/ast_context.h"
 
 #include "ast/type.h"
+#include "util/string_map.h"
 
 namespace tpl::ast {
 
 struct AstContext::Implementation : public util::RegionObject {
+  static constexpr const uint32_t kDefaultStringTableCapacity = 32;
+
   //////////////////////////////////////////////////////////
   ///
   /// The basic types
@@ -32,6 +38,8 @@ struct AstContext::Implementation : public util::RegionObject {
   /// Caches
   ///
   //////////////////////////////////////////////////////////
+
+  util::StringMap<char, util::RegionAllocator<char>> string_table_;
 
   template <typename T, typename U>
   struct PairHash {
@@ -69,6 +77,8 @@ struct AstContext::Implementation : public util::RegionObject {
         float64(ctx, FloatType::FloatKind::Float64),
         boolean(ctx),
         nil(ctx),
+        string_table_(kDefaultStringTableCapacity,
+                      util::RegionAllocator<char>(ctx.region())),
         pointer_types_(ctx.region()),
         array_types_(ctx.region()) {}
 };
@@ -77,6 +87,13 @@ AstContext::AstContext(util::Region &region,
                        sema::ErrorReporter &error_reporter)
     : region_(region), error_reporter_(error_reporter) {
   impl_ = new (region) Implementation(*this);
+}
+
+Identifier AstContext::GetIdentifier(util::StringRef str) {
+  if (str.empty()) return Identifier(nullptr);
+
+  auto iter = impl().string_table_.insert({str, char(0)});
+  return Identifier(iter.first->key(), iter.first->key_length());
 }
 
 PointerType *Type::PointerTo() { return PointerType::Get(this); }

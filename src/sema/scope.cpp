@@ -2,7 +2,7 @@
 
 namespace tpl::sema {
 
-bool Scope::Declare(const ast::AstString *name, ast::Type *type) {
+bool Scope::Declare(ast::Identifier name, ast::Type *type) {
   ast::Type *curr_decl = Lookup(name);
   if (curr_decl != nullptr) {
     return false;
@@ -11,7 +11,7 @@ bool Scope::Declare(const ast::AstString *name, ast::Type *type) {
   return true;
 }
 
-ast::Type *Scope::Lookup(const ast::AstString *name) const {
+ast::Type *Scope::Lookup(ast::Identifier name) const {
   for (const Scope *scope = this; scope != nullptr; scope = scope->outer()) {
     ast::Type *decl_type = scope->LookupLocal(name);
     if (decl_type != nullptr) {
@@ -23,7 +23,7 @@ ast::Type *Scope::Lookup(const ast::AstString *name) const {
   return nullptr;
 }
 
-ast::Type *Scope::LookupLocal(const ast::AstString *name) const {
+ast::Type *Scope::LookupLocal(ast::Identifier name) const {
   auto iter = table_.find(name);
   return (iter == table_.end() ? nullptr : iter->second);
 }

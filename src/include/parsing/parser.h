@@ -1,8 +1,9 @@
 #pragma once
 
 #include "ast/ast.h"
+#include "ast/ast_context.h"
 #include "ast/ast_node_factory.h"
-#include "ast/ast_value.h"
+#include "ast/identifier.h"
 #include "parsing/scanner.h"
 #include "sema/error_reporter.h"
 
@@ -10,8 +11,8 @@ namespace tpl::parsing {
 
 class Parser {
  public:
-  Parser(Scanner &scanner, ast::AstNodeFactory &node_factory,
-         ast::AstStringsContainer &strings_container,
+  Parser(Scanner &scanner, ast::AstContext &ast_context,
+         ast::AstNodeFactory &node_factory,
          sema::ErrorReporter &error_reporter);
 
   /**
@@ -28,11 +29,11 @@ class Parser {
 
   Scanner &scanner() { return scanner_; }
 
+  ast::AstContext &ast_context() { return ast_context_; }
+
   ast::AstNodeFactory &node_factory() { return node_factory_; }
 
   util::Region &region() { return node_factory().region(); }
-
-  ast::AstStringsContainer &strings_container() { return strings_container_; }
 
   sema::ErrorReporter &error_reporter() { return error_reporter_; }
 
@@ -72,9 +73,9 @@ class Parser {
   }
 
   // Get the current symbol as an AST string
-  ast::AstString *GetSymbol() {
+  ast::Identifier GetSymbol() {
     const std::string &literal = scanner().current_literal();
-    return strings_container().GetAstString(literal);
+    return ast_context().GetIdentifier(literal);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -150,11 +151,11 @@ class Parser {
   // The source code scanner
   Scanner &scanner_;
 
+  //
+  ast::AstContext &ast_context_;
+
   // A factory for all node types
   ast::AstNodeFactory &node_factory_;
-
-  // A factory for strings
-  ast::AstStringsContainer &strings_container_;
 
   // The error reporter
   sema::ErrorReporter &error_reporter_;

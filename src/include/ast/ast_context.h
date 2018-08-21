@@ -1,6 +1,8 @@
 #pragma once
 
+#include "ast/identifier.h"
 #include "util/region.h"
+#include "util/string_ref.h"
 
 namespace tpl {
 
@@ -22,6 +24,8 @@ class AstContext {
  public:
   explicit AstContext(util::Region &region,
                       sema::ErrorReporter &error_reporter);
+
+  Identifier GetIdentifier(util::StringRef str);
 
   struct Implementation;
   Implementation &impl() const { return *impl_; }

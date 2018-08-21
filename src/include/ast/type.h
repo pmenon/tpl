@@ -40,8 +40,6 @@ class Type : public util::RegionObject {
 
   Kind kind() const { return kind_; }
 
-  const AstString *name() const { return name_; }
-
   template <typename T>
   bool Is() const {
     return util::Is<T>(this);
@@ -78,11 +76,10 @@ class Type : public util::RegionObject {
 
  protected:
   Type(AstContext &ctx, Kind kind)
-      : ctx_(ctx), name_(nullptr), align_(0), width_(0), kind_(kind) {}
+      : ctx_(ctx), align_(0), width_(0), kind_(kind) {}
 
  private:
   AstContext &ctx_;
-  AstString *name_;
   uint32_t align_;
   uint32_t width_;
   Kind kind_;

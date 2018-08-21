@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "ast/ast_value.h"
+#include "ast/identifier.h"
 #include "common.h"
 #include "parsing/token.h"
 #include "sema/error_message.h"
@@ -42,8 +42,8 @@ class ErrorReporter {
     explicit MessageArgument(int32_t integer)
         : kind_(Kind::Int), integer_(integer) {}
 
-    explicit MessageArgument(const ast::AstString *str)
-        : MessageArgument(str->bytes()) {}
+    explicit MessageArgument(ast::Identifier str)
+        : MessageArgument(str.data()) {}
 
     explicit MessageArgument(parsing::Token::Type type)
         : MessageArgument(

@@ -11,7 +11,7 @@ void PrettyPrint::VisitFile(File *node) {
 
 void PrettyPrint::VisitFunctionDeclaration(FunctionDeclaration *node) {
   PrintString("fun ");
-  PrintString(node->name());
+  PrintIdentifier(node->name());
   PrintString(" ");
   Visit(node->type_repr());
   PrintString(" ");
@@ -21,7 +21,7 @@ void PrettyPrint::VisitFunctionDeclaration(FunctionDeclaration *node) {
 void PrettyPrint::VisitVariableDeclaration(VariableDeclaration *node) {
   BeginVisit();
   PrintString("var ");
-  PrintString(node->name());
+  PrintIdentifier(node->name());
   if (node->initial() != nullptr) {
     PrintString(" = ");
     Visit(node->initial());
@@ -32,13 +32,13 @@ void PrettyPrint::VisitVariableDeclaration(VariableDeclaration *node) {
 void PrettyPrint::VisitStructDeclaration(StructDeclaration *node) {
   BeginVisit();
   PrintString("struct ");
-  PrintString(node->name());
+  PrintIdentifier(node->name());
   PrintString("{ ");
   bool first = true;
   for (const auto *field : node->type_repr()->fields()) {
     if (!first) PrintString(",");
     first = false;
-    PrintString(field->name());
+    PrintIdentifier(field->name());
     PrintString(":");
     Visit(field->type_repr());
   }
@@ -152,7 +152,7 @@ void PrettyPrint::VisitFunctionLiteralExpression(
 
 void PrettyPrint::VisitIdentifierExpression(IdentifierExpression *node) {
   PrintString("'");
-  PrintString(node->name());
+  PrintIdentifier(node->name());
   PrintString("'");
 }
 
@@ -168,7 +168,7 @@ void PrettyPrint::VisitLiteralExpression(LiteralExpression *node) {
     case LiteralExpression::LitKind::Int:
     case LiteralExpression::LitKind::Float:
     case LiteralExpression::LitKind::String: {
-      PrintString(node->raw_string());
+      PrintIdentifier(node->raw_string());
       break;
     }
   }
@@ -185,7 +185,7 @@ void PrettyPrint::VisitUnaryExpression(UnaryExpression *node) {
 void PrettyPrint::VisitStructTypeRepr(StructTypeRepr *node) {
   PrintString("struct {\n");
   for (const auto *field : node->fields()) {
-    PrintString(field->name());
+    PrintIdentifier(field->name());
     PrintString(" : ");
     Visit(field->type_repr());
   }
@@ -203,7 +203,7 @@ void PrettyPrint::VisitFunctionTypeRepr(FunctionTypeRepr *node) {
   for (const auto *field : node->parameters()) {
     if (!first) PrintString(",");
     first = false;
-    PrintString(field->name());
+    PrintIdentifier(field->name());
     PrintString(" : ");
     Visit(field->type_repr());
   }

@@ -39,10 +39,8 @@ static void RunRepl() {
 
     parsing::Scanner scanner(input.data(), input.length());
     ast::AstNodeFactory node_factory(region);
-    ast::AstStringsContainer strings_container(region);
 
-    parsing::Parser parser(scanner, node_factory, strings_container,
-                           error_reporter);
+    parsing::Parser parser(scanner, context, node_factory, error_reporter);
 
     // Parsing
     ast::AstNode *root = parser.Parse();

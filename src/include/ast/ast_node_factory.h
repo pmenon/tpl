@@ -25,19 +25,19 @@ class AstNodeFactory {
   }
 
   FunctionDeclaration *NewFunctionDeclaration(const SourcePosition &pos,
-                                              const AstString *name,
+                                              Identifier name,
                                               FunctionLiteralExpression *fun) {
     return new (region_) FunctionDeclaration(pos, name, fun);
   }
 
   StructDeclaration *NewStructDeclaration(const SourcePosition &pos,
-                                          const AstString *name,
+                                          Identifier name,
                                           StructTypeRepr *type_repr) {
     return new (region_) StructDeclaration(pos, name, type_repr);
   }
 
   VariableDeclaration *NewVariableDeclaration(const SourcePosition &pos,
-                                              const AstString *name,
+                                              Identifier name,
                                               Expression *type_repr,
                                               Expression *init) {
     return new (region_) VariableDeclaration(pos, name, type_repr, init);
@@ -107,19 +107,19 @@ class AstNodeFactory {
     return new (region_) LiteralExpression(pos, val);
   }
 
-  LiteralExpression *NewIntLiteral(const SourcePosition &pos, AstString *num) {
+  LiteralExpression *NewIntLiteral(const SourcePosition &pos, Identifier num) {
     return new (region_)
         LiteralExpression(pos, LiteralExpression::LitKind::Int, num);
   }
 
   LiteralExpression *NewFloatLiteral(const SourcePosition &pos,
-                                     AstString *num) {
+                                     Identifier num) {
     return new (region_)
         LiteralExpression(pos, LiteralExpression::LitKind::Float, num);
   }
 
   LiteralExpression *NewStringLiteral(const SourcePosition &pos,
-                                      AstString *str) {
+                                      Identifier str) {
     return new (region_)
         LiteralExpression(pos, LiteralExpression::LitKind::String, str);
   }
@@ -136,7 +136,7 @@ class AstNodeFactory {
   }
 
   IdentifierExpression *NewIdentifierExpression(const SourcePosition &pos,
-                                                AstString *name) {
+                                                Identifier name) {
     return new (region_) IdentifierExpression(pos, name);
   }
 
@@ -145,7 +145,7 @@ class AstNodeFactory {
     return new (region_) ArrayTypeRepr(pos, len, elem_type);
   }
 
-  Field *NewField(const SourcePosition &pos, const AstString *name,
+  Field *NewField(const SourcePosition &pos, Identifier name,
                   Expression *type_repr) {
     return new (region_) Field(pos, name, type_repr);
   }
