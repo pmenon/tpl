@@ -359,8 +359,19 @@ void TypeChecker::VisitBinaryExpression(ast::BinaryExpression *node) {
   ast::Type *left_type = Resolve(node->left());
   ast::Type *right_type = Resolve(node->right());
 
-  // TODO(pmenon): Fix me
-  TPL_ASSERT(left_type == right_type);
+  switch (node->op()) {
+    case parsing::Token::Type::AND:
+    case parsing::Token::Type::OR: {
+      if (!left_type->IsBoolType() || !right_type->IsBoolType()) {
+        error_reporter().Report(node->position(),
+                                ErrorMessages::kMismatchedTypesToBinary,
+                                left_type, right_type, node->op());
+      }
+    }
+    default: {}
+  }
+
+  node->set_type(left_type);
 }
 
 void TypeChecker::VisitFunctionLiteralExpression(

@@ -46,7 +46,10 @@ namespace sema {
   F(ReturnOutsideFunction, "return outside function", ())                     \
   F(MissingTypeAndInitialValue,                                               \
     "variable '%0' must have either a declared type or an initial value",     \
-    (ast::Identifier))
+    (ast::Identifier))                                                        \
+  F(MismatchedTypesToBinary,                                                  \
+    "mismatched types '%0' and '%1' to binary operation '%2'",                \
+    (ast::Type *, ast::Type *, parsing::Token::Type))
 
 /**
  * Define the ErrorMessageId enumeration

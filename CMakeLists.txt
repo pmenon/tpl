@@ -35,6 +35,9 @@ endif()
 # Setup the compiler and setup the compiler flags
 include(SetupCompiler)
 
+# Ensure dependencies
+include(Dependencies)
+
 ############################################################
 #
 # Project Setup

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstdio>
+#include <fstream>
 #include <iostream>
 #include <string>
 
@@ -14,10 +15,41 @@ namespace tpl {
 
 static constexpr const char *kExitKeyword = ".exit";
 
-static void RunRepl() {
+static void Compile(const std::string &source) {
   util::Region region("repl-ast");
   util::Region error_region("repl-error");
 
+  // Let's parse the source
+  ast::AstNodeFactory node_factory(region);
+  sema::ErrorReporter error_reporter(error_region);
+  ast::AstContext context(region, node_factory, error_reporter);
+
+  parsing::Scanner scanner(source.data(), source.length());
+  parsing::Parser parser(scanner, context);
+
+  // Parsing
+  ast::AstNode *root = parser.Parse();
+
+  if (error_reporter.has_errors()) {
+    fprintf(stderr, "Parsing error!\n");
+    error_reporter.PrintErrors();
+    return;
+  }
+
+  // Type check
+  sema::TypeChecker type_check(context);
+  if (type_check.Run(root)) {
+    fprintf(stderr, "Type-checking error!\n");
+    error_reporter.PrintErrors();
+    return;
+  }
+
+  // For now, just pretty print the AST
+  ast::PrettyPrint pretty_print(root);
+  pretty_print.Print();
+}
+
+static void RunRepl() {
   while (true) {
     std::string input;
 
@@ -27,45 +59,30 @@ static void RunRepl() {
       std::getline(std::cin, line);
 
       if (line == kExitKeyword) {
-        std::cout << region.get_info() << std::endl;
         return;
       }
 
       input.append(line);
     } while (!line.empty());
 
-    // Let's parse the source
-    ast::AstNodeFactory node_factory(region);
-    sema::ErrorReporter error_reporter(error_region);
-    ast::AstContext context(region, node_factory, error_reporter);
-
-    parsing::Scanner scanner(input.data(), input.length());
-    parsing::Parser parser(scanner, context);
-
-    // Parsing
-    ast::AstNode *root = parser.Parse();
-
-    if (error_reporter.has_errors()) {
-      fprintf(stderr, "Parsing error!\n");
-      error_reporter.PrintErrors();
-      continue;
-    }
-
-    // Type check
-    sema::TypeChecker type_check(context);
-    if (type_check.Run(root)) {
-      fprintf(stderr, "Type-checking error!\n");
-      error_reporter.PrintErrors();
-      continue;
-    }
-
-    // For now, just pretty print the AST
-    ast::PrettyPrint pretty_print(root);
-    pretty_print.Print();
+    Compile(input);
   }
 }
 
-static void RunFile(const std::string &filename) {}
+static void RunFile(const std::string &filename) {
+  std::string source;
+
+  std::ifstream file(filename);
+  if (file.is_open()) {
+    std::string line;
+    while (std::getline(file, line)) {
+      source.append(line).append("\n");
+    }
+    file.close();
+  }
+
+  Compile(source);
+}
 
 }  // namespace tpl
 
