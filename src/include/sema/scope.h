@@ -14,7 +14,7 @@ namespace sema {
 
 class Scope : public util::RegionObject {
  public:
-  enum class Kind : uint8_t { Block, Function, File };
+  enum class Kind : uint8_t { Block, Function, File, Loop };
 
   Scope(util::Region &region, Scope *outer, Kind scope_kind)
       : region_(region),

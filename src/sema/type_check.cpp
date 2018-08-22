@@ -66,8 +66,16 @@ void TypeChecker::VisitUnaryExpression(ast::UnaryExpression *node) {
 }
 
 void TypeChecker::VisitAssignmentStatement(ast::AssignmentStatement *node) {
-  Visit(node->source());
-  Visit(node->destination());
+  auto *src_type = Resolve(node->source());
+  auto *dest_type = Resolve(node->destination());
+
+  if (src_type == nullptr || dest_type == nullptr) {
+    // Skip
+  }
+
+  if (src_type != dest_type) {
+    // Error
+  }
 }
 
 void TypeChecker::VisitBlockStatement(ast::BlockStatement *node) {
@@ -111,6 +119,11 @@ void TypeChecker::VisitVariableDeclaration(ast::VariableDeclaration *node) {
     initializer_type = Resolve(node->initial());
   }
 
+  if (declared_type == nullptr && initializer_type == nullptr) {
+    // Error
+    return;
+  }
+
   if (declared_type != nullptr && initializer_type != nullptr) {
     // Check compatibility
   }
@@ -122,11 +135,20 @@ void TypeChecker::VisitVariableDeclaration(ast::VariableDeclaration *node) {
 
 void TypeChecker::VisitFunctionDeclaration(ast::FunctionDeclaration *node) {
   auto *func_type = Resolve(node->function());
+  if (func_type == nullptr) {
+    return;
+  }
+
   scope()->Declare(node->name(), func_type);
 }
 
 void TypeChecker::VisitStructDeclaration(ast::StructDeclaration *node) {
-  scope()->Declare(node->name(), Resolve(node->type_repr()));
+  auto *struct_type = Resolve(node->type_repr());
+  if (struct_type == nullptr) {
+    return;
+  }
+
+  scope()->Declare(node->name(), struct_type);
 }
 
 void TypeChecker::VisitIdentifierExpression(ast::IdentifierExpression *node) {
@@ -174,7 +196,10 @@ void TypeChecker::VisitCallExpression(ast::CallExpression *node) {
 
   // Now, let's resolve each function argument's type
   for (auto *arg : node->arguments()) {
-    Resolve(arg);
+    ast::Type *arg_type = Resolve(arg);
+    if (arg_type == nullptr) {
+      return;
+    }
   }
 
   // Now, let's make sure the arguments match up
@@ -196,6 +221,10 @@ void TypeChecker::VisitCallExpression(ast::CallExpression *node) {
 
 void TypeChecker::VisitPointerTypeRepr(ast::PointerTypeRepr *node) {
   ast::Type *base_type = Resolve(node->base());
+  if (base_type == nullptr) {
+    return;
+  }
+
   node->set_type(base_type->PointerTo());
 }
 
@@ -219,13 +248,13 @@ void TypeChecker::VisitLiteralExpression(ast::LiteralExpression *node) {
       node->set_type(ast::IntegerType::Int32(ast_context()));
       break;
     }
-    default: { exit(1); }
+    default: { TPL_ASSERT(false && "String literals not supported yet"); }
   }
 }
 
 void TypeChecker::VisitForStatement(ast::ForStatement *node) {
   // Create a new scope for variables introduced in initialization block
-  auto *loop_scope = OpenScope(Scope::Kind::Block);
+  auto *loop_scope = OpenScope(Scope::Kind::Loop);
 
   if (node->init() != nullptr) {
     Visit(node->init());
@@ -261,7 +290,12 @@ void TypeChecker::VisitBadStatement(ast::BadStatement *node) {
 void TypeChecker::VisitStructTypeRepr(ast::StructTypeRepr *node) {
   util::RegionVector<ast::Type *> elems(region());
   for (auto *elem : node->fields()) {
-    elems.push_back(Resolve(elem->type_repr()));
+    auto *field_type = Resolve(elem->type_repr());
+    if (field_type == nullptr) {
+      // Error
+      return;
+    }
+    elems.push_back(field_type);
   }
 
   node->set_type(ast::StructType::Get(ast_context(), std::move(elems)));
@@ -270,7 +304,12 @@ void TypeChecker::VisitStructTypeRepr(ast::StructTypeRepr *node) {
 void TypeChecker::VisitIfStatement(ast::IfStatement *node) {
   ast::Type *cond_type = Resolve(node->cond());
 
-  if (cond_type != nullptr && !cond_type->IsBoolType()) {
+  if (cond_type == nullptr) {
+    // Error
+    return;
+  }
+
+  if (!cond_type->IsBoolType()) {
     error_reporter().Report(node->cond()->position(),
                             ErrorMessages::kNonBoolIfCondition);
   }
@@ -327,8 +366,14 @@ void TypeChecker::VisitBinaryExpression(ast::BinaryExpression *node) {
 void TypeChecker::VisitFunctionLiteralExpression(
     ast::FunctionLiteralExpression *node) {
   // Resolve the type
-  auto *func_type = Resolve(node->type_repr())->As<ast::FunctionType>();
-  node->set_type(func_type);
+  ast::Type *type = Resolve(node->type_repr());
+  if (type == nullptr) {
+    return;
+  }
+
+  // Good function type, insert into node
+  auto *func_type = type->As<ast::FunctionType>();
+  node->set_type(type->As<ast::FunctionType>());
 
   // Start a new function scope
   auto *function_scope = OpenScope(Scope::Kind::Function);
@@ -345,7 +390,7 @@ void TypeChecker::VisitFunctionLiteralExpression(
   // Recurse into the function body
   Visit(node->body());
 
-  //
+  // Close up the function scope
   CloseScope(function_scope);
 }
 
@@ -357,12 +402,12 @@ void TypeChecker::VisitReturnStatement(ast::ReturnStatement *node) {
   }
 
   ast::Type *ret = Resolve(node->ret());
+  if (ret == nullptr) {
+    return;
+  }
 
   // Check return type matches function
-  TPL_ASSERT(current_function() != nullptr);
-
   auto *func_type = current_function()->type()->As<ast::FunctionType>();
-
   if (ret != func_type->return_type()) {
     // Error
   }
@@ -372,11 +417,18 @@ void TypeChecker::VisitFunctionTypeRepr(ast::FunctionTypeRepr *node) {
   // Handle parameters
   util::RegionVector<ast::Type *> param_types(region());
   for (auto *param : node->parameters()) {
-    param_types.push_back(Resolve(param->type_repr()));
+    auto *param_type = Resolve(param->type_repr());
+    if (param_type == nullptr) {
+      return;
+    }
+    param_types.push_back(param_type);
   }
 
   // Handle return type
   ast::Type *ret = Resolve(node->return_type());
+  if (ret == nullptr) {
+    return;
+  }
 
   // Create type
   ast::FunctionType *func_type =
