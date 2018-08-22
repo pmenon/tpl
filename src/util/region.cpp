@@ -12,22 +12,27 @@ Region::Region(std::string name)
 
 Region::~Region() { FreeAll(); }
 
-void *Region::Allocate(size_t size) {
-  size = SizeWithAlignment(size);
+void *Region::Allocate(size_t size, size_t alignment) {
+  TPL_ASSERT(alignment > 0 && "Alignment must be greater than 0");
 
-  uintptr_t result = position_;
-
-  if (size > end_ - position_) {
-    result = Expand(size);
-  }
-
-  TPL_ASSERT(position_ < end_);
-
-  position_ += size;
+  size_t adjustment = AlignmentAdjustment(position_, alignment);
 
   allocated_ += size;
 
-  return reinterpret_cast<void *>(result);
+  // Do we have enough space in the current chunk?
+  if (size + adjustment <= end_ - position_) {
+    uintptr_t aligned_ptr = position_ + adjustment;
+    position_ = aligned_ptr + size;
+    return reinterpret_cast<void *>(aligned_ptr);
+  }
+
+  Expand(size);
+  TPL_ASSERT(position_ < end_);
+
+
+  uintptr_t aligned_ptr = AlignAddress(position_, alignment);
+  position_ = aligned_ptr + size;
+  return reinterpret_cast<void *>(aligned_ptr);
 }
 
 void Region::FreeAll() {
@@ -73,8 +78,8 @@ uintptr_t Region::Expand(size_t requested) {
 
   // Link it in
   head_ = new_chunk;
-  position_ = new_chunk->start();
-  end_ = new_chunk->end();
+  position_ = new_chunk->Start();
+  end_ = new_chunk->End();
   chunk_bytes_allocated_ += new_size;
 
   return position_;

@@ -4,9 +4,9 @@
 #include <limits>
 #include <string>
 #include <type_traits>
-#include <vector>
 
 #include "util/macros.h"
+#include "util/math_util.h"
 
 namespace tpl::util {
 
@@ -32,7 +32,7 @@ class Region {
    * @param size The number of bytes to allocate
    * @return A pointer to the start of the allocated space
    */
-  void *Allocate(size_t size);
+  void *Allocate(size_t size, size_t alignment = kDefaultByteAlignment);
 
   /**
    * Allocate a (contiguous) array of elements of the given type
@@ -43,11 +43,22 @@ class Region {
    */
   template <typename T>
   T *AllocateArray(size_t num_elems) {
-    return static_cast<T *>(Allocate(num_elems * sizeof(T)));
+    return static_cast<T *>(Allocate(num_elems * sizeof(T), alignof(T)));
   }
 
   /**
-   * Free all allocated objects in one (quick) fell swoop
+   * Invidivual deallocations in a region-allocator are a no-op. All memory is
+   * freed when the region is destroyed, or manually through a call to FreeAll()
+   *
+   * @param ptr The pointer to the memory we're deallocating
+   * @param size The number of bytes the pointer points to
+   */
+  void Deallocate(void *ptr, size_t size) const {
+    // No-op
+  }
+
+  /**
+   * Free all allocated objects in one fell swoop
    */
   void FreeAll();
 
@@ -57,29 +68,34 @@ class Region {
   ///
   //////////////////////////////////////////////////////////////////////////////
 
+  // The name of the region
   const std::string &name() const { return name_; }
-  uint64_t allocated() const { return allocated_; }
-  uint64_t allocated_chunk_bytes() const { return chunk_bytes_allocated_; }
 
-  std::string get_info() const {
-    return "Region('" + name() + "',allocated=" + std::to_string(allocated()) +
-           ",total chunks=" + std::to_string(allocated_chunk_bytes()) + ")";
-  }
+  // The number of bytes this region has given out
+  uint64_t allocated() const { return allocated_; }
+
+  // The total number of bytes acquired from the OS
+  uint64_t total_memory() const { return chunk_bytes_allocated_; }
 
  private:
   // Expand the region
   uintptr_t Expand(size_t requested);
 
-  // Round up the given requested size to one that retains byte-alignment
-  size_t SizeWithAlignment(size_t size) const {
-    return ((size + kByteAlignment - 1) & (-kByteAlignment));
+  uintptr_t AlignAddress(uintptr_t addr, size_t alignment) {
+    TPL_ASSERT(alignment > 0 && MathUtil::IsPowerOf2(alignment) &&
+               "Alignment is not a power of two!");
+    return (addr + alignment - 1) & ~(alignment - 1);
+  }
+
+  uintptr_t AlignmentAdjustment(uintptr_t addr, size_t alignment) {
+    return AlignAddress(addr, alignment) - addr;
   }
 
  private:
   /*
    * A chunk represents a contiguous "chunk" of memory. It is the smallest unit
-   * of allocation a region acquires from the operating system. Each region
-   * allocation is sourced from a chunk.
+   * of allocation a region acquires from the operating system. Each individual
+   * region allocation is sourced from a chunk.
    */
   struct Chunk {
     Chunk *next;
@@ -90,17 +106,15 @@ class Region {
       this->size = size;
     }
 
-    uintptr_t start() { return address(sizeof(Chunk)); }
-    uintptr_t end() const { return address(size); }
-
-    uintptr_t address(uint64_t off) const {
-      return reinterpret_cast<uintptr_t>(this) + off;
+    uintptr_t Start() const {
+      return reinterpret_cast<uintptr_t>(this) + sizeof(Chunk);
     }
+    uintptr_t End() const { return reinterpret_cast<uintptr_t>(this) + size; }
   };
 
  private:
   // The alignment of all pointers
-  static const uint32_t kByteAlignment = 8;
+  static const uint32_t kDefaultByteAlignment = 8;
 
   // Min chunk allocation is 8KB
   static const size_t kMinChunkAllocation = 8 * 1024;
