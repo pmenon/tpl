@@ -1,6 +1,3 @@
-
-#include <parsing/parser.h>
-
 #include "parsing/parser.h"
 
 #include "sema/error_reporter.h"
