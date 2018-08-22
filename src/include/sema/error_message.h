@@ -17,34 +17,35 @@ namespace sema {
  * templated string message that will be displayed, and the types of each
  * template argument.
  */
-#define MESSAGE_LIST(F)                                                     \
-  F(UnexpectedToken, "unexpected token '%0', expecting '%1'",               \
-    (parsing::Token::Type, parsing::Token::Type))                           \
-  F(DuplicateArgName, "duplicate named argument '%0' in function '%0'",     \
-    (ast::Identifier))                                                      \
-  F(DuplicateStructFieldName, "duplicate field name '%0' in struct '%1'",   \
-    (ast::Identifier, ast::Identifier))                                     \
-  F(AssignmentUsedAsValue, "assignment '%0' = '%1' used as value",          \
-    (ast::Identifier, ast::Identifier))                                     \
-  F(ExpectingExpression, "expecting expression", ())                        \
-  F(ExpectingType, "expecting type", ())                                    \
-  F(InvalidOperation, "invalid operation: '%0' on type '%1'",               \
-    (parsing::Token::Type, ast::Type *))                                    \
-  F(VariableRedeclared, "'%0' redeclared in this block", (ast::Identifier)) \
-  F(UndefinedVariable, "undefined: '%0'", (ast::Identifier))                \
-  F(NonFunction, "cannot call non-function '%0'", ())                       \
-  F(NotEnoughCallArgs, "not enough arguments to call to '%0'", ())          \
-  F(TooManyCallArgs, "too many arguments to call to '%0'", ())              \
-  F(IncorrectCallArgType,                                                   \
-    "cannot use a '%0' as type '%1' in argument to '%2'",                   \
-    (ast::Type *, ast::Type *, ast::Identifier))                            \
-  F(NonBoolIfCondition, "non-bool used as if condition", ())                \
-  F(NonBoolForCondition, "non-bool used as for condition", ())              \
-  F(NonIntegerArrayLength, "non-integer literal used as array size", ())    \
-  F(NegativeArrayLength, "array bound must be non-negative", ())            \
-  F(ReturnOutsideFunction, "return outside function", ())                   \
-  F(MissingTypeAndInitialValue,                                             \
-    "variable '%0' must have either a declared type or an initial value",   \
+#define MESSAGE_LIST(F)                                                       \
+  F(UnexpectedToken, "unexpected token '%0', expecting '%1'",                 \
+    (parsing::Token::Type, parsing::Token::Type))                             \
+  F(DuplicateArgName, "duplicate named argument '%0' in function '%0'",       \
+    (ast::Identifier))                                                        \
+  F(DuplicateStructFieldName, "duplicate field name '%0' in struct '%1'",     \
+    (ast::Identifier, ast::Identifier))                                       \
+  F(AssignmentUsedAsValue, "assignment '%0' = '%1' used as value",            \
+    (ast::Identifier, ast::Identifier))                                       \
+  F(ExpectingExpression, "expecting expression", ())                          \
+  F(ExpectingType, "expecting type", ())                                      \
+  F(InvalidOperation, "invalid operation: '%0' on type '%1'",                 \
+    (parsing::Token::Type, ast::Type *))                                      \
+  F(VariableRedeclared, "'%0' redeclared in this block", (ast::Identifier))   \
+  F(UndefinedVariable, "undefined: '%0'", (ast::Identifier))                  \
+  F(NonFunction, "cannot call non-function '%0'", ())                         \
+  F(NotEnoughCallArgs, "not enough arguments in call to '%0'",                \
+    (ast::Identifier))                                                        \
+  F(TooManyCallArgs, "too many arguments in call to '%0'", (ast::Identifier)) \
+  F(IncorrectCallArgType,                                                     \
+    "cannot use a '%0' as type '%1' in argument to '%2'",                     \
+    (ast::Type *, ast::Type *, ast::Identifier))                              \
+  F(NonBoolIfCondition, "non-bool used as if condition", ())                  \
+  F(NonBoolForCondition, "non-bool used as for condition", ())                \
+  F(NonIntegerArrayLength, "non-integer literal used as array size", ())      \
+  F(NegativeArrayLength, "array bound must be non-negative", ())              \
+  F(ReturnOutsideFunction, "return outside function", ())                     \
+  F(MissingTypeAndInitialValue,                                               \
+    "variable '%0' must have either a declared type or an initial value",     \
     (ast::Identifier))
 
 /**

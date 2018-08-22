@@ -157,29 +157,35 @@ void TypeChecker::VisitCallExpression(ast::CallExpression *node) {
     return;
   }
 
-  // Resolve each argument to the function
+  ast::Identifier func_name =
+      node->function()->As<ast::IdentifierExpression>()->name();
+
+  // First, check to make sure we have the right number of function arguments
   auto *func_type = type->As<ast::FunctionType>();
-
-  auto &param_types = func_type->params();
-
-  auto &args = node->arguments();
-
-  if (args.size() < param_types.size()) {
-    error_reporter().Report(node->position(),
-                            ErrorMessages::kNotEnoughCallArgs);
+  if (node->arguments().size() < func_type->params().size()) {
+    error_reporter().Report(node->position(), ErrorMessages::kNotEnoughCallArgs,
+                            func_name);
     return;
-  } else if (args.size() > param_types.size()) {
-    error_reporter().Report(node->position(), ErrorMessages::kTooManyCallArgs);
+  } else if (node->arguments().size() > func_type->params().size()) {
+    error_reporter().Report(node->position(), ErrorMessages::kTooManyCallArgs,
+                            func_name);
     return;
   }
 
-  for (size_t i = 0; i < args.size(); i++) {
-    if (args[i]->type() != param_types[i]) {
+  // Now, let's resolve each function argument's type
+  for (auto *arg : node->arguments()) {
+    Resolve(arg);
+  }
+
+  // Now, let's make sure the arguments match up
+  const auto &arg_types = node->arguments();
+  const auto &func_param_types = func_type->params();
+  for (size_t i = 0; i < arg_types.size(); i++) {
+    if (arg_types[i]->type() != func_param_types[i]) {
       // TODO(pmenon): Fix this check
       error_reporter().Report(
           node->position(), ErrorMessages::kIncorrectCallArgType,
-          args[i]->type(), param_types[i],
-          node->function()->As<ast::IdentifierExpression>()->name());
+          arg_types[i]->type(), func_param_types[i], func_name);
       return;
     }
   }

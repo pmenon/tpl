@@ -8,7 +8,6 @@
 
 namespace tpl::ast {
 
-class AstString;
 class AstContext;
 
 #define TYPE_LIST(F) \
@@ -29,7 +28,7 @@ TYPE_LIST(F)
 class Type : public util::RegionObject {
  public:
 #define F(kind) kind,
-  enum class Kind : uint8_t { TYPE_LIST(F) LastType };
+  enum class Kind : uint8_t { TYPE_LIST(F) };
 #undef F
 
   AstContext &context() const { return ctx_; }
@@ -102,7 +101,7 @@ class Type : public util::RegionObject {
 class IntegerType : public Type {
  public:
 #define F(name) name,
-  enum class IntKind : uint8_t { INT_TYPES(F) LastIntType };
+  enum class IntKind : uint8_t { INT_TYPES(F) };
 #undef F
 
   IntKind int_kind() const { return int_kind_; }
@@ -213,7 +212,7 @@ class ArrayType : public Type {
  public:
   uint64_t length() const { return length_; }
 
-  const Type *element_type() const { return elem_type_; }
+  Type *element_type() const { return elem_type_; }
 
   static ArrayType *Get(uint64_t length, Type *elem_type);
 
