@@ -81,16 +81,6 @@ class Region {
   // Expand the region
   uintptr_t Expand(size_t requested);
 
-  uintptr_t AlignAddress(uintptr_t addr, size_t alignment) {
-    TPL_ASSERT(alignment > 0 && MathUtil::IsPowerOf2(alignment) &&
-               "Alignment is not a power of two!");
-    return (addr + alignment - 1) & ~(alignment - 1);
-  }
-
-  uintptr_t AlignmentAdjustment(uintptr_t addr, size_t alignment) {
-    return AlignAddress(addr, alignment) - addr;
-  }
-
  private:
   /*
    * A chunk represents a contiguous "chunk" of memory. It is the smallest unit

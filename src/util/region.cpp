@@ -15,7 +15,7 @@ Region::~Region() { FreeAll(); }
 void *Region::Allocate(size_t size, size_t alignment) {
   TPL_ASSERT(alignment > 0 && "Alignment must be greater than 0");
 
-  size_t adjustment = AlignmentAdjustment(position_, alignment);
+  size_t adjustment = MathUtil::AlignmentAdjustment(position_, alignment);
 
   allocated_ += size;
 
@@ -30,7 +30,7 @@ void *Region::Allocate(size_t size, size_t alignment) {
   TPL_ASSERT(position_ < end_);
 
 
-  uintptr_t aligned_ptr = AlignAddress(position_, alignment);
+  uintptr_t aligned_ptr = MathUtil::AlignAddress(position_, alignment);
   position_ = aligned_ptr + size;
   return reinterpret_cast<void *>(aligned_ptr);
 }
