@@ -288,7 +288,7 @@ ast::Expression *Parser::ParseExpression() {
 }
 
 ast::Expression *Parser::ParseBinaryExpression(uint32_t min_prec) {
-  TPL_ASSERT(min_prec > 0);
+  TPL_ASSERT(min_prec > 0, "The minimum precedence cannot be 0");
 
   ast::Expression *left = ParseUnaryExpression();
 

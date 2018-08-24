@@ -15,9 +15,9 @@
 #define TPL_UNLIKELY(x) __builtin_expect(!!(x), 0)
 
 #ifdef NDEBUG
-#define TPL_ASSERT(expr) ((void)0)
+#define TPL_ASSERT(expr, msg) ((void)0)
 #else
-#define TPL_ASSERT(expr) assert((expr))
+#define TPL_ASSERT(expr, msg) assert((expr) && (msg))
 #endif
 
 #ifdef NEBUG

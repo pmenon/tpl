@@ -135,13 +135,13 @@ class AstNode : public util::RegionObject {
   // or std::reinterpret_cast<>
   template <typename T>
   T *As() {
-    TPL_ASSERT(Is<T>());
+    TPL_ASSERT(Is<T>(), "Using unsafe cast on mismatched node types");
     return reinterpret_cast<T *>(this);
   }
 
   template <typename T>
   const T *As() const {
-    TPL_ASSERT(Is<T>());
+    TPL_ASSERT(Is<T>(), "Using unsafe cast on mismatched node types");
     return reinterpret_cast<const T *>(this);
   }
 
@@ -445,7 +445,6 @@ class ForStatement : public Statement {
     return node->kind() == Kind::ForStatement;
   }
 
-
  private:
   Statement *init_;
   Expression *cond_;
@@ -474,7 +473,6 @@ class IfStatement : public Statement {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::IfStatement;
   }
-
 
  private:
   Expression *cond_;
@@ -661,18 +659,21 @@ class LiteralExpression : public Expression {
   LiteralExpression::LitKind literal_kind() const { return lit_kind_; }
 
   bool bool_val() const {
-    TPL_ASSERT(literal_kind() == LitKind::Boolean);
+    TPL_ASSERT(literal_kind() == LitKind::Boolean,
+               "Getting boolean value from a non-bool expression!");
     return boolean_;
   }
 
   Identifier raw_string() const {
-    TPL_ASSERT(literal_kind() != LitKind::Nil &&
-               literal_kind() != LitKind::Boolean);
+    TPL_ASSERT(
+        literal_kind() != LitKind::Nil && literal_kind() != LitKind::Boolean,
+        "Getting a raw string value from a non-string or numeric value");
     return str_;
   }
 
   int64_t integer() const {
-    TPL_ASSERT(literal_kind() == LitKind::Int);
+    TPL_ASSERT(literal_kind() == LitKind::Int,
+               "Getting integer value from a non-integer literal expression");
     // TODO(pmenon): Check safe conversion
     char *end;
     return std::strtol(str_.data(), &end, 10);

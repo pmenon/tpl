@@ -173,8 +173,7 @@ StructType *StructType::Get(AstContext &ctx,
 }
 
 StructType *StructType::Get(util::RegionVector<Type *> &&fields) {
-  TPL_ASSERT(!fields.empty() &&
-             "Cannot use this constructor with empty fields");
+  TPL_ASSERT(!fields.empty(), "Cannot use this constructor with empty fields");
   return StructType::Get(fields[0]->context(), std::move(fields));
 }
 

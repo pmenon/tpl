@@ -1,17 +1,23 @@
 #pragma once
 
 #include "ast/ast.h"
-#include "ast/ast_context.h"
 #include "ast/ast_visitor.h"
 #include "sema/error_reporter.h"
 #include "sema/scope.h"
-#include "util/region.h"
 
-namespace tpl::sema {
+namespace tpl {
+
+namespace ast {
+class AstContext;
+}  // namespace ast
+
+namespace sema {
 
 class TypeChecker : public ast::AstVisitor<TypeChecker> {
  public:
   explicit TypeChecker(ast::AstContext &ctx);
+
+  DISALLOW_COPY_AND_MOVE(TypeChecker);
 
   // Run the type checker on the provided AST. Ensures proper types of all
   // statements and expressions, and also annotates the AST with correct
@@ -27,17 +33,12 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
   DEFINE_AST_VISITOR_METHOD()
 
  private:
-  class BlockScopeInfo;
-  class FunctionScopeInfo;
-
   ast::Type *Resolve(ast::Expression *expr) {
     Visit(expr);
     return expr->type();
   }
 
   ast::AstContext &ast_context() const { return ctx_; }
-
-  util::Region &region() const { return region_; }
 
   ErrorReporter &error_reporter() const { return error_reporter_; }
 
@@ -51,55 +52,93 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
   ///
   //////////////////////////////////////////////////////////////////////////////
 
-  // Return the current scope
-  Scope *scope() { return scope_; }
+  Scope *current_scope() { return scope_; }
 
-  Scope *OpenScope(Scope::Kind scope_kind) {
-    Scope *scope = new Scope(scope_, scope_kind);
-    scope_ = scope;
-    return scope;
+  void EnterScope(Scope::Kind scope_kind) {
+    if (num_cached_scopes_ > 0) {
+      Scope *scope = scope_cache_[--num_cached_scopes_].release();
+      TPL_ASSERT(scope != nullptr, "Cached scope was null");
+      scope->Init(current_scope(), scope_kind);
+      scope_ = scope;
+    } else {
+      scope_ = new Scope(current_scope(), scope_kind);
+    }
   }
 
-  void CloseScope(Scope *expected_top) {
-    TPL_ASSERT(scope() == expected_top);
-    scope_ = expected_top->outer();
-    delete expected_top;
+  void ExitScope() {
+    Scope *scope = current_scope();
+    scope_ = scope->outer();
+
+    if (num_cached_scopes_ < kScopeCacheSize) {
+      scope_cache_[num_cached_scopes_++].reset(scope);
+    } else {
+      delete scope;
+    }
   }
+
+  class SemaScope {
+   public:
+    SemaScope(TypeChecker &check, Scope::Kind scope_kind)
+        : check_(check), exited_(false) {
+      check.EnterScope(scope_kind);
+    }
+
+    ~SemaScope() { Exit(); }
+
+    void Exit() {
+      if (!exited_) {
+        check_.ExitScope();
+        exited_ = true;
+      }
+    }
+
+    TypeChecker &check() { return check_; }
+
+   private:
+    TypeChecker &check_;
+    bool exited_;
+  };
 
   /*
    *
    */
-  class FunctionScope {
+  class FunctionSemaScope {
    public:
-    FunctionScope(TypeChecker &check, ast::FunctionLiteralExpression *func)
-        : check_(check), prev_func_(nullptr) {
-      prev_func_ = check.curr_func_;
+    FunctionSemaScope(TypeChecker &check, ast::FunctionLiteralExpression *func)
+        : prev_func_(check.current_function()),
+          block_scope_(check, Scope::Kind::Function) {
       check.curr_func_ = func;
     }
 
-    ~FunctionScope() {
-      // Reset the function
-      check_.curr_func_ = prev_func_;
+    ~FunctionSemaScope() { Exit(); }
+
+    void Exit() {
+      block_scope_.Exit();
+      block_scope_.check().curr_func_ = prev_func_;
     }
 
    private:
-    // The type checking instance
-    TypeChecker &check_;
-
-    // The previous function
     ast::FunctionLiteralExpression *prev_func_;
+    SemaScope block_scope_;
   };
 
  private:
+  // The context
   ast::AstContext &ctx_;
 
-  util::Region &region_;
-
+  // The error reporter
   ErrorReporter &error_reporter_;
 
+  // The current active scope
   Scope *scope_;
+
+  // A cache of scopes to reduce allocations
+  static constexpr const uint32_t kScopeCacheSize = 4;
+  uint64_t num_cached_scopes_;
+  std::unique_ptr<Scope> scope_cache_[kScopeCacheSize] = {nullptr};
 
   ast::FunctionLiteralExpression *curr_func_;
 };
 
-}  // namespace tpl::sema
+}  // namespace sema
+}  // namespace tpl

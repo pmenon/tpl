@@ -2,12 +2,12 @@
 
 #include "llvm/ADT/DenseMap.h"
 
-#include "ast/ast.h"
-#include "util/region_containers.h"
+#include "ast/identifier.h"
 
 namespace tpl {
 
 namespace ast {
+class Declaration;
 class Type;
 }  // namespace ast
 
@@ -17,8 +17,13 @@ class Scope {
  public:
   enum class Kind : uint8_t { Block, Function, File, Loop };
 
-  Scope(Scope *outer, Kind scope_kind)
-      : outer_(outer), scope_kind_(scope_kind) {}
+  Scope(Scope *outer, Kind scope_kind) { Init(outer, scope_kind); }
+
+  void Init(Scope *outer, Kind scope_kind) {
+    outer_ = outer;
+    scope_kind_ = scope_kind;
+    decls_.clear();
+  }
 
   // Declare an element with the given name and type in this scope. Return true
   // if successful and false if an element with the given name already exits in

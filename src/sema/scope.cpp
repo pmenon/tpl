@@ -1,5 +1,7 @@
 #include "sema/scope.h"
 
+#include "ast/ast.h"
+
 namespace tpl::sema {
 
 bool Scope::Declare(ast::Declaration *decl, ast::Type *type) {

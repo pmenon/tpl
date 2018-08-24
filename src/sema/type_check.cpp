@@ -1,14 +1,15 @@
 #include "sema/type_check.h"
 
 #include "ast/type.h"
+#include "ast/ast_context.h"
 
 namespace tpl::sema {
 
 TypeChecker::TypeChecker(ast::AstContext &ctx)
     : ctx_(ctx),
-      region_(ctx.region()),
       error_reporter_(ctx.error_reporter()),
       scope_(nullptr),
+      num_cached_scopes_(0),
       curr_func_(nullptr) {}
 
 bool TypeChecker::Run(ast::AstNode *root) {
@@ -17,7 +18,7 @@ bool TypeChecker::Run(ast::AstNode *root) {
 }
 
 void TypeChecker::VisitBadExpression(ast::BadExpression *node) {
-  TPL_ASSERT(false);
+  TPL_ASSERT(false, "Bad expression in type checker!");
 }
 
 void TypeChecker::VisitUnaryExpression(ast::UnaryExpression *node) {
@@ -81,34 +82,34 @@ void TypeChecker::VisitAssignmentStatement(ast::AssignmentStatement *node) {
 }
 
 void TypeChecker::VisitBlockStatement(ast::BlockStatement *node) {
-  auto *block_scope = OpenScope(Scope::Kind::Block);
+  // Create a block scope
+  SemaScope block_scope(*this, Scope::Kind::Block);
 
   for (auto *stmt : node->statements()) {
     Visit(stmt);
   }
-
-  CloseScope(block_scope);
 }
 
 void TypeChecker::VisitFile(ast::File *node) {
-  auto *file_scope = OpenScope(Scope::Kind::File);
+  // Create RAII file scope
+  SemaScope file_scope(*this, Scope::Kind::File);
 
   for (auto *decl : node->declarations()) {
     Visit(decl);
   }
-
-  CloseScope(file_scope);
 }
 
 void TypeChecker::VisitVariableDeclaration(ast::VariableDeclaration *node) {
-  if (scope()->LookupLocal(node->name()) != nullptr) {
+  if (current_scope()->LookupLocal(node->name()) != nullptr) {
     error_reporter().Report(node->position(),
                             ErrorMessages::kVariableRedeclared, node->name());
     return;
   }
 
   // At this point, the variable either has a declared type or an initial value
-  TPL_ASSERT(node->type_repr() != nullptr || node->initial() != nullptr);
+  TPL_ASSERT(node->type_repr() != nullptr || node->initial() != nullptr,
+             "Variable has neither a type declaration or an initial "
+             "expression. This should have been caught during parsing.");
 
   ast::Type *declared_type = nullptr;
   ast::Type *initializer_type = nullptr;
@@ -131,7 +132,7 @@ void TypeChecker::VisitVariableDeclaration(ast::VariableDeclaration *node) {
   }
 
   // The type should be resolved now
-  scope()->Declare(
+  current_scope()->Declare(
       node, (declared_type != nullptr ? declared_type : initializer_type));
 }
 
@@ -144,7 +145,7 @@ void TypeChecker::VisitFunctionDeclaration(ast::FunctionDeclaration *node) {
     return;
   }
 
-  scope()->Declare(node, func_type);
+  current_scope()->Declare(node, func_type);
 }
 
 void TypeChecker::VisitStructDeclaration(ast::StructDeclaration *node) {
@@ -154,11 +155,11 @@ void TypeChecker::VisitStructDeclaration(ast::StructDeclaration *node) {
     return;
   }
 
-  scope()->Declare(node, struct_type);
+  current_scope()->Declare(node, struct_type);
 }
 
 void TypeChecker::VisitIdentifierExpression(ast::IdentifierExpression *node) {
-  auto *type = scope()->Lookup(node->name());
+  auto *type = current_scope()->Lookup(node->name());
 
   if (type == nullptr) {
     type = ast_context().LookupBuiltin(node->name());
@@ -254,13 +255,13 @@ void TypeChecker::VisitLiteralExpression(ast::LiteralExpression *node) {
       node->set_type(ast::IntegerType::Int32(ast_context()));
       break;
     }
-    default: { TPL_ASSERT(false && "String literals not supported yet"); }
+    default: { TPL_ASSERT(false, "String literals not supported yet"); }
   }
 }
 
 void TypeChecker::VisitForStatement(ast::ForStatement *node) {
   // Create a new scope for variables introduced in initialization block
-  auto *loop_scope = OpenScope(Scope::Kind::Loop);
+  SemaScope for_scope(*this, Scope::Kind::Loop);
 
   if (node->init() != nullptr) {
     Visit(node->init());
@@ -280,9 +281,6 @@ void TypeChecker::VisitForStatement(ast::ForStatement *node) {
 
   // The body
   Visit(node->body());
-
-  // Close scope
-  CloseScope(loop_scope);
 }
 
 void TypeChecker::VisitExpressionStatement(ast::ExpressionStatement *node) {
@@ -290,11 +288,11 @@ void TypeChecker::VisitExpressionStatement(ast::ExpressionStatement *node) {
 }
 
 void TypeChecker::VisitBadStatement(ast::BadStatement *node) {
-  TPL_ASSERT(false);
+  TPL_ASSERT(false, "Bad statement during type checking!");
 }
 
 void TypeChecker::VisitStructTypeRepr(ast::StructTypeRepr *node) {
-  util::RegionVector<ast::Type *> field_types(region());
+  util::RegionVector<ast::Type *> field_types(ast_context().region());
   for (auto *field : node->fields()) {
     Visit(field);
     ast::Type *field_type = field->type_repr()->type();
@@ -391,23 +389,18 @@ void TypeChecker::VisitFunctionLiteralExpression(
   auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
   node->set_type(func_type);
 
-  // Start a new function scope
-  auto *function_scope = OpenScope(Scope::Kind::Function);
-
-  FunctionScope scoped(*this, node);
+  // The function scope
+  FunctionSemaScope function_scope(*this, node);
 
   // Declare function parameters in scope
   const auto &param_decls = node->type_repr()->parameters();
   const auto &param_types = func_type->params();
   for (size_t i = 0; i < func_type->params().size(); i++) {
-    scope()->Declare(param_decls[i], param_types[i]);
+    current_scope()->Declare(param_decls[i], param_types[i]);
   }
 
   // Recurse into the function body
   Visit(node->body());
-
-  // Close up the function scope
-  CloseScope(function_scope);
 }
 
 void TypeChecker::VisitReturnStatement(ast::ReturnStatement *node) {
@@ -431,7 +424,7 @@ void TypeChecker::VisitReturnStatement(ast::ReturnStatement *node) {
 
 void TypeChecker::VisitFunctionTypeRepr(ast::FunctionTypeRepr *node) {
   // Handle parameters
-  util::RegionVector<ast::Type *> param_types(region());
+  util::RegionVector<ast::Type *> param_types(ast_context().region());
   for (auto *param : node->parameters()) {
     Visit(param);
     ast::Type *param_type = param->type_repr()->type();

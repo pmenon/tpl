@@ -14,31 +14,39 @@ Region::Region(std::string name)
 Region::~Region() { FreeAll(); }
 
 void *Region::Allocate(size_t size, size_t alignment) {
-  TPL_ASSERT(alignment > 0 && "Alignment must be greater than 0");
+  TPL_ASSERT(alignment > 0, "Alignment must be greater than 0");
 
   size_t adjustment = MathUtil::AlignmentAdjustment(position_, alignment);
 
   allocated_ += size;
 
-  alignment_waste_ += adjustment;
-
   // Do we have enough space in the current chunk?
   if (size + adjustment <= end_ - position_) {
+    alignment_waste_ += adjustment;
     uintptr_t aligned_ptr = position_ + adjustment;
     position_ = aligned_ptr + size;
     return reinterpret_cast<void *>(aligned_ptr);
   }
 
+  // The current chunk doesn't have enough room, expand the region with at least
+  // 'size' more bytes.
   Expand(size);
-  TPL_ASSERT(position_ < end_);
 
+  TPL_ASSERT(position_ < end_, "Region chunk's start position higher than end");
 
+  // The new chunk position may not have the desired alignment, fix that now
   uintptr_t aligned_ptr = MathUtil::AlignAddress(position_, alignment);
+  alignment_waste_ += (aligned_ptr - position_);
   position_ = aligned_ptr + size;
   return reinterpret_cast<void *>(aligned_ptr);
 }
 
 void Region::FreeAll() {
+  fprintf(
+      stderr,
+      "Region['%s',allocated: %lu,alignment waste: %lu,total chunks: %lu]\n",
+      name().c_str(), allocated(), alignment_waste(), total_memory());
+
   Chunk *head = head_;
   while (head != nullptr) {
     Chunk *next = head->next;
