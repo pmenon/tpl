@@ -230,8 +230,6 @@ class FieldDeclaration : public Declaration {
     return node->kind() == Kind::FieldDeclaration;
   }
 
-  static bool classof(const FieldDeclaration *node) { return true; }
-
  private:
   Expression *type_repr_;
 };
@@ -252,8 +250,6 @@ class FunctionDeclaration : public Declaration {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::FunctionDeclaration;
   }
-
-  static bool classof(const FunctionDeclaration *node) { return true; }
 
  private:
   FunctionLiteralExpression *fun_;
@@ -298,8 +294,6 @@ class VariableDeclaration : public Declaration {
     return node->kind() == Kind::VariableDeclaration;
   }
 
-  static bool classof(const VariableDeclaration *node) { return true; }
-
  private:
   Expression *type_repr_;
   Expression *init_;
@@ -343,8 +337,6 @@ class AssignmentStatement : public Statement {
     return node->kind() == Kind::AssignmentStatement;
   }
 
-  static bool classof(const AssignmentStatement *node) { return true; }
-
  private:
   Expression *dest_;
   Expression *src_;
@@ -361,8 +353,6 @@ class BadStatement : public Statement {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::BadStatement;
   }
-
-  static bool classof(const BadStatement *node) { return true; }
 };
 
 /**
@@ -384,8 +374,6 @@ class BlockStatement : public Statement {
     return node->kind() == Kind::BlockStatement;
   }
 
-  static bool classof(const BlockStatement *node) { return true; }
-
  private:
   const SourcePosition rbrace_pos_;
 
@@ -406,8 +394,6 @@ class DeclarationStatement : public Statement {
     return node->kind() == Kind::DeclarationStatement;
   }
 
-  static bool classof(const DeclarationStatement *node) { return true; }
-
  private:
   Declaration *decl_;
 };
@@ -424,8 +410,6 @@ class ExpressionStatement : public Statement {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ExpressionStatement;
   }
-
-  static bool classof(const ExpressionStatement *node) { return true; }
 
  private:
   Expression *expr_;
@@ -461,8 +445,6 @@ class ForStatement : public Statement {
     return node->kind() == Kind::ForStatement;
   }
 
-  static bool classof(const ForStatement *node) { return true; }
-
 
  private:
   Statement *init_;
@@ -493,8 +475,6 @@ class IfStatement : public Statement {
     return node->kind() == Kind::IfStatement;
   }
 
-  static bool classof(const IfStatement *node) { return true; }
-
 
  private:
   Expression *cond_;
@@ -515,9 +495,6 @@ class ReturnStatement : public Statement {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ReturnStatement;
   }
-
-  static bool classof(const ReturnStatement *node) { return true; }
-
 
  private:
   Expression *ret_;
@@ -562,8 +539,6 @@ class BadExpression : public Expression {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::BadExpression;
   }
-
-  static bool classof(const BadExpression *node) { return true; }
 };
 
 /**
@@ -587,8 +562,6 @@ class BinaryExpression : public Expression {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::BinaryExpression;
   }
-
-  static bool classof(const BinaryExpression *node) { return true; }
 
  private:
   parsing::Token::Type op_;
@@ -614,8 +587,6 @@ class CallExpression : public Expression {
     return node->kind() == Kind::CallExpression;
   }
 
-  static bool classof(const CallExpression *node) { return true; }
-
  private:
   Expression *fun_;
   util::RegionVector<Expression *> args_;
@@ -632,8 +603,6 @@ class FunctionLiteralExpression : public Expression {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::FunctionLiteralExpression;
   }
-
-  static bool classof(const FunctionLiteralExpression *node) { return true; }
 
  private:
   FunctionTypeRepr *type_repr_;
@@ -659,8 +628,6 @@ class IdentifierExpression : public Expression {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::IdentifierExpression;
   }
-
-  static bool classof(const IdentifierExpression *node) { return true; }
 
  private:
   // TODO(pmenon) Should these two be a union since only one should be active?
@@ -715,8 +682,6 @@ class LiteralExpression : public Expression {
     return node->kind() == Kind::LiteralExpression;
   }
 
-  static bool classof(const LiteralExpression *node) { return true; }
-
  private:
   LitKind lit_kind_;
 
@@ -742,8 +707,6 @@ class UnaryExpression : public Expression {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::UnaryExpression;
   }
-
-  static bool classof(const UnaryExpression *node) { return true; }
 
  private:
   parsing::Token::Type op_;
@@ -775,8 +738,6 @@ class ArrayTypeRepr : public Expression {
     return node->kind() == Kind::ArrayTypeRepr;
   }
 
-  static bool classof(const ArrayTypeRepr *node) { return true; }
-
  private:
   Expression *len_;
   Expression *elem_type_;
@@ -804,8 +765,6 @@ class FunctionTypeRepr : public Expression {
     return node->kind() == Kind::FunctionTypeRepr;
   }
 
-  static bool classof(const FunctionTypeRepr *node) { return true; }
-
  private:
   util::RegionVector<FieldDeclaration *> param_types_;
   Expression *ret_type_;
@@ -824,8 +783,6 @@ class PointerTypeRepr : public Expression {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::PointerTypeRepr;
   }
-
-  static bool classof(const PointerTypeRepr *node) { return true; }
 
  private:
   Expression *base_;
@@ -847,8 +804,6 @@ class StructTypeRepr : public Expression {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::StructTypeRepr;
   }
-
-  static bool classof(const StructTypeRepr *node) { return true; }
 
  private:
   util::RegionVector<FieldDeclaration *> fields_;

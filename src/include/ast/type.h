@@ -115,8 +115,6 @@ class IntegerType : public Type {
     return type->kind() == Type::Kind::IntegerType;
   }
 
-  static bool classof(const IntegerType *type) { return true; }
-
  private:
   friend class AstContext;
   IntegerType(AstContext &ctx, IntKind int_kind)
@@ -146,8 +144,6 @@ class FloatType : public Type {
     return type->kind() == Type::Kind::FloatType;
   }
 
-  static bool classof(const FloatType *type) { return true; }
-
  private:
   friend class AstContext;
   FloatType(AstContext &ctx, FloatKind float_kind)
@@ -168,8 +164,6 @@ class BoolType : public Type {
     return type->kind() == Type::Kind::BoolType;
   }
 
-  static bool classof(const BoolType *type) { return true; }
-
  private:
   friend class AstContext;
   explicit BoolType(AstContext &ctx) : Type(ctx, Type::Kind::BoolType) {}
@@ -185,8 +179,6 @@ class NilType : public Type {
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::NilType;
   }
-
-  static bool classof(const NilType *type) { return true; }
 
  private:
   friend class AstContext;
@@ -205,8 +197,6 @@ class PointerType : public Type {
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::PointerType;
   }
-
-  static bool classof(const PointerType *type) { return true; }
 
  private:
   explicit PointerType(Type *base)
@@ -230,8 +220,6 @@ class ArrayType : public Type {
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::ArrayType;
   }
-
-  static bool classof(const ArrayType *type) { return true; }
 
  private:
   friend class AstContext;
@@ -259,8 +247,6 @@ class StructType : public Type {
     return type->kind() == Type::Kind::StructType;
   }
 
-  static bool classof(const StructType *type) { return true; }
-
  private:
   explicit StructType(AstContext &ctx, util::RegionVector<Type *> &&fields)
       : Type(ctx, Type::Kind::StructType), fields_(std::move(fields)) {}
@@ -283,8 +269,6 @@ class FunctionType : public Type {
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::FunctionType;
   }
-
-  static bool classof(const FunctionType *type) { return true; }
 
  private:
   friend class AstContext;
