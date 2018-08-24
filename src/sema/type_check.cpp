@@ -1,6 +1,3 @@
-
-#include <sema/type_check.h>
-
 #include "sema/type_check.h"
 
 #include "ast/type.h"
