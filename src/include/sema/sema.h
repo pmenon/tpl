@@ -13,11 +13,11 @@ class AstContext;
 
 namespace sema {
 
-class TypeChecker : public ast::AstVisitor<TypeChecker> {
+class Sema : public ast::AstVisitor<Sema> {
  public:
-  explicit TypeChecker(ast::AstContext &ctx);
+  explicit Sema(ast::AstContext &ctx);
 
-  DISALLOW_COPY_AND_MOVE(TypeChecker);
+  DISALLOW_COPY_AND_MOVE(Sema);
 
   // Run the type checker on the provided AST. Ensures proper types of all
   // statements and expressions, and also annotates the AST with correct
@@ -78,7 +78,7 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
 
   class SemaScope {
    public:
-    SemaScope(TypeChecker &check, Scope::Kind scope_kind)
+    SemaScope(Sema &check, Scope::Kind scope_kind)
         : check_(check), exited_(false) {
       check.EnterScope(scope_kind);
     }
@@ -92,10 +92,10 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
       }
     }
 
-    TypeChecker &check() { return check_; }
+    Sema &check() { return check_; }
 
    private:
-    TypeChecker &check_;
+    Sema &check_;
     bool exited_;
   };
 
@@ -104,7 +104,7 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
    */
   class FunctionSemaScope {
    public:
-    FunctionSemaScope(TypeChecker &check, ast::FunctionLiteralExpression *func)
+    FunctionSemaScope(Sema &check, ast::FunctionLiteralExpression *func)
         : prev_func_(check.current_function()),
           block_scope_(check, Scope::Kind::Function) {
       check.curr_func_ = func;

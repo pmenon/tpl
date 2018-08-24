@@ -8,7 +8,7 @@
 #include "parsing/parser.h"
 #include "parsing/scanner.h"
 #include "sema/error_reporter.h"
-#include "sema/type_check.h"
+#include "sema/sema.h"
 #include "tpl.h"
 
 namespace tpl {
@@ -36,7 +36,7 @@ static void Compile(const std::string &source) {
   }
 
   // Type check
-  sema::TypeChecker type_check(context);
+  sema::Sema type_check(context);
   if (type_check.Run(root)) {
     fprintf(stderr, "Type-checking error!\n");
     error_reporter.PrintErrors();
