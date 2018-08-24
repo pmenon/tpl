@@ -1,11 +1,14 @@
 #include "ast/ast_context.h"
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
+
+#include "ast/ast_node_factory.h"
 #include "ast/type.h"
-#include "util/string_map.h"
 
 namespace tpl::ast {
 
-struct AstContext::Implementation : public util::RegionObject {
+struct AstContext::Implementation {
   static constexpr const uint32_t kDefaultStringTableCapacity = 32;
 
   //////////////////////////////////////////////////////////
@@ -36,34 +39,10 @@ struct AstContext::Implementation : public util::RegionObject {
   ///
   //////////////////////////////////////////////////////////
 
-  util::StringMap<char, util::RegionAllocator<char>> string_table_;
-
-  util::RegionUnorderedMap<ast::Identifier, ast::Type *, ast::IdentifierHasher,
-                           ast::IdentifierEquality>
-      builtin_types_;
-
-  template <typename T, typename U>
-  struct PairHash {
-    uint32_t operator()(const std::pair<T, U> &p) const {
-      uint64_t key = static_cast<uint64_t>(std::hash<T>()(p.first)) << 32 |
-                     static_cast<uint64_t>(std::hash<U>()(p.second));
-      key += ~(key << 32);
-      key ^= (key >> 22);
-      key += ~(key << 13);
-      key ^= (key >> 8);
-      key += (key << 3);
-      key ^= (key >> 15);
-      key += ~(key << 27);
-      key ^= (key >> 31);
-      return static_cast<uint32_t>(key);
-    }
-  };
-
-  // TODO: Switch to something better for small key/value types?
-  util::RegionUnorderedMap<Type *, PointerType *> pointer_types_;
-  util::RegionUnorderedMap<std::pair<Type *, uint64_t>, ArrayType *,
-                           PairHash<Type *, uint64_t>>
-      array_types_;
+  llvm::StringMap<char, util::LlvmRegionAllocator> string_table_;
+  llvm::DenseMap<ast::Identifier, ast::Type *> builtin_types_;
+  llvm::DenseMap<Type *, PointerType *> pointer_types_;
+  llvm::DenseMap<std::pair<Type *, uint64_t>, ArrayType *> array_types_;
 
   explicit Implementation(AstContext &ctx)
       : int8(ctx, IntegerType::IntKind::Int8),
@@ -79,48 +58,43 @@ struct AstContext::Implementation : public util::RegionObject {
         boolean(ctx),
         nil(ctx),
         string_table_(kDefaultStringTableCapacity,
-                      util::RegionAllocator<char>(ctx.region())),
-        builtin_types_(ctx.region()),
-        pointer_types_(ctx.region()),
-        array_types_(ctx.region()) {}
+                      util::LlvmRegionAllocator(ctx.region())) {}
 };
 
-AstContext::AstContext(util::Region &region, ast::AstNodeFactory &node_factory,
+AstContext::AstContext(util::Region &region,
                        sema::ErrorReporter &error_reporter)
     : region_(region),
-      node_factory_(node_factory),
-      error_reporter_(error_reporter) {
-  impl_ = new (region) Implementation(*this);
-
+      node_factory_(std::make_unique<AstNodeFactory>(region)),
+      error_reporter_(error_reporter),
+      impl_(std::make_unique<Implementation>(*this)) {
   // Initialize builtin types
-  impl().builtin_types_.insert({
-      // Boolean
-      {GetIdentifier("bool"), &impl().boolean},
-      // Nil
-      {GetIdentifier("nil"), &impl().nil},
-      // Integers
-      {GetIdentifier("int8"), &impl().int8},
-      {GetIdentifier("int16"), &impl().int16},
-      {GetIdentifier("int32"), &impl().int32},
-      {GetIdentifier("int64"), &impl().int64},
-      {GetIdentifier("uint8"), &impl().uint8},
-      {GetIdentifier("uint16"), &impl().uint16},
-      {GetIdentifier("uint32"), &impl().uint32},
-      {GetIdentifier("uint64"), &impl().uint64},
-      {GetIdentifier("float32"), &impl().float32},
-      {GetIdentifier("float64"), &impl().float64},
-      // Typedefs
-      {GetIdentifier("int"), &impl().int32},
-      {GetIdentifier("float"), &impl().float32},
-      {GetIdentifier("void"), &impl().nil},
-  });
+  // clang-format off
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("bool"), &impl().boolean));
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("nil"), &impl().nil));
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("int8"), &impl().int8));
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("int16"), &impl().int16));
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("int32"), &impl().int32));
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("int64"), &impl().int64));
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("uint8"), &impl().uint8));
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("uint16"), &impl().uint16));
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("uint32"), &impl().uint32));
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("uint64"), &impl().uint64));
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("float32"), &impl().float32));
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("float64"), &impl().float64));
+  // Typedefs
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("int"), &impl().int32));
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("float"), &impl().float32));
+  impl().builtin_types_.insert(std::make_pair(GetIdentifier("void"), &impl().nil));
+  // clang-format on
 }
 
-Identifier AstContext::GetIdentifier(util::StringRef str) {
+AstContext::~AstContext() = default;
+
+Identifier AstContext::GetIdentifier(llvm::StringRef str) {
   if (str.empty()) return Identifier(nullptr);
 
-  auto iter = impl().string_table_.insert({str, char(0)});
-  return Identifier(iter.first->key(), iter.first->key_length());
+  auto iter = impl().string_table_.insert(std::make_pair(str, char(0))).first;
+  return Identifier(iter->getKeyData());
 }
 
 ast::Type *AstContext::LookupBuiltin(Identifier identifier) {
@@ -170,7 +144,7 @@ PointerType *PointerType::Get(Type *base) {
 
   auto *pointer_type = new (ctx.region()) PointerType(base);
 
-  cached_types.emplace(base, pointer_type);
+  cached_types.try_emplace(base, pointer_type);
 
   return pointer_type;
 }
@@ -187,7 +161,7 @@ ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
 
   auto *array_type = new (ctx.region()) ArrayType(length, elem_type);
 
-  cached_types.emplace(std::make_pair(elem_type, length), array_type);
+  cached_types.try_emplace(std::make_pair(elem_type, length), array_type);
 
   return array_type;
 }

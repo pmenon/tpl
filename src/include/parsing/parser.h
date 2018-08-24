@@ -31,7 +31,7 @@ class Parser {
 
   ast::AstNodeFactory &node_factory() { return node_factory_; }
 
-  util::Region &region() { return node_factory().region(); }
+  util::Region &region() { return ast_context().region(); }
 
   sema::ErrorReporter &error_reporter() { return error_reporter_; }
 

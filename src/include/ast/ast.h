@@ -2,15 +2,17 @@
 
 #include <cstdint>
 
+#include "llvm/Support/Casting.h"
+
 #include "ast/identifier.h"
-#include "ast/type.h"
 #include "common.h"
 #include "parsing/token.h"
-#include "util/casting.h"
 #include "util/region.h"
 #include "util/region_containers.h"
 
 namespace tpl::ast {
+
+class Type;
 
 /*
  *
@@ -24,6 +26,7 @@ namespace tpl::ast {
  * remember to modify Declaration::classof() to update the bounds check.
  */
 #define DECLARATION_NODES(T) \
+  T(FieldDeclaration)        \
   T(FunctionDeclaration)     \
   T(StructDeclaration)       \
   T(VariableDeclaration)
@@ -124,7 +127,7 @@ class AstNode : public util::RegionObject {
   // Checks if this node is an instance of the specified class
   template <typename T>
   bool Is() const {
-    return util::Is<T>(this);
+    return llvm::isa<T>(this);
   }
 
   // Casts this node to an instance of the specified class, asserting if the
@@ -154,6 +157,11 @@ class AstNode : public util::RegionObject {
   const T *SafeAs() const {
     return (Is<T>() ? As<T>() : nullptr);
   }
+
+#define F(kind) \
+  bool Is##kind() const { return Is<kind>(); }
+  AST_NODES(F)
+#undef F
 
  protected:
   AstNode(Kind kind, const SourcePosition &pos) : kind_(kind), pos_(pos) {}
@@ -199,12 +207,33 @@ class Declaration : public AstNode {
   Identifier name() const { return name_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() >= Kind::FunctionDeclaration &&
+    return node->kind() >= Kind::FieldDeclaration &&
            node->kind() <= Kind::VariableDeclaration;
   }
 
  private:
   Identifier name_;
+};
+
+/**
+ * A generic declaration of a function argument or a field in a struct
+ */
+class FieldDeclaration : public Declaration {
+ public:
+  FieldDeclaration(const SourcePosition &pos, Identifier name,
+                   Expression *type_repr)
+      : Declaration(Kind::FieldDeclaration, pos, name), type_repr_(type_repr) {}
+
+  Expression *type_repr() const { return type_repr_; }
+
+  static bool classof(const AstNode *node) {
+    return node->kind() == Kind::FieldDeclaration;
+  }
+
+  static bool classof(const FieldDeclaration *node) { return true; }
+
+ private:
+  Expression *type_repr_;
 };
 
 /**
@@ -223,6 +252,8 @@ class FunctionDeclaration : public Declaration {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::FunctionDeclaration;
   }
+
+  static bool classof(const FunctionDeclaration *node) { return true; }
 
  private:
   FunctionLiteralExpression *fun_;
@@ -267,6 +298,8 @@ class VariableDeclaration : public Declaration {
     return node->kind() == Kind::VariableDeclaration;
   }
 
+  static bool classof(const VariableDeclaration *node) { return true; }
+
  private:
   Expression *type_repr_;
   Expression *init_;
@@ -310,6 +343,8 @@ class AssignmentStatement : public Statement {
     return node->kind() == Kind::AssignmentStatement;
   }
 
+  static bool classof(const AssignmentStatement *node) { return true; }
+
  private:
   Expression *dest_;
   Expression *src_;
@@ -326,6 +361,8 @@ class BadStatement : public Statement {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::BadStatement;
   }
+
+  static bool classof(const BadStatement *node) { return true; }
 };
 
 /**
@@ -347,6 +384,8 @@ class BlockStatement : public Statement {
     return node->kind() == Kind::BlockStatement;
   }
 
+  static bool classof(const BlockStatement *node) { return true; }
+
  private:
   const SourcePosition rbrace_pos_;
 
@@ -367,6 +406,8 @@ class DeclarationStatement : public Statement {
     return node->kind() == Kind::DeclarationStatement;
   }
 
+  static bool classof(const DeclarationStatement *node) { return true; }
+
  private:
   Declaration *decl_;
 };
@@ -383,6 +424,8 @@ class ExpressionStatement : public Statement {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ExpressionStatement;
   }
+
+  static bool classof(const ExpressionStatement *node) { return true; }
 
  private:
   Expression *expr_;
@@ -418,6 +461,9 @@ class ForStatement : public Statement {
     return node->kind() == Kind::ForStatement;
   }
 
+  static bool classof(const ForStatement *node) { return true; }
+
+
  private:
   Statement *init_;
   Expression *cond_;
@@ -447,6 +493,9 @@ class IfStatement : public Statement {
     return node->kind() == Kind::IfStatement;
   }
 
+  static bool classof(const IfStatement *node) { return true; }
+
+
  private:
   Expression *cond_;
   BlockStatement *then_stmt_;
@@ -466,6 +515,9 @@ class ReturnStatement : public Statement {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ReturnStatement;
   }
+
+  static bool classof(const ReturnStatement *node) { return true; }
+
 
  private:
   Expression *ret_;
@@ -510,6 +562,8 @@ class BadExpression : public Expression {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::BadExpression;
   }
+
+  static bool classof(const BadExpression *node) { return true; }
 };
 
 /**
@@ -533,6 +587,8 @@ class BinaryExpression : public Expression {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::BinaryExpression;
   }
+
+  static bool classof(const BinaryExpression *node) { return true; }
 
  private:
   parsing::Token::Type op_;
@@ -558,6 +614,8 @@ class CallExpression : public Expression {
     return node->kind() == Kind::CallExpression;
   }
 
+  static bool classof(const CallExpression *node) { return true; }
+
  private:
   Expression *fun_;
   util::RegionVector<Expression *> args_;
@@ -574,6 +632,8 @@ class FunctionLiteralExpression : public Expression {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::FunctionLiteralExpression;
   }
+
+  static bool classof(const FunctionLiteralExpression *node) { return true; }
 
  private:
   FunctionTypeRepr *type_repr_;
@@ -599,6 +659,8 @@ class IdentifierExpression : public Expression {
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::IdentifierExpression;
   }
+
+  static bool classof(const IdentifierExpression *node) { return true; }
 
  private:
   // TODO(pmenon) Should these two be a union since only one should be active?
@@ -653,6 +715,8 @@ class LiteralExpression : public Expression {
     return node->kind() == Kind::LiteralExpression;
   }
 
+  static bool classof(const LiteralExpression *node) { return true; }
+
  private:
   LitKind lit_kind_;
 
@@ -679,6 +743,8 @@ class UnaryExpression : public Expression {
     return node->kind() == Kind::UnaryExpression;
   }
 
+  static bool classof(const UnaryExpression *node) { return true; }
+
  private:
   parsing::Token::Type op_;
   Expression *expr_;
@@ -689,23 +755,6 @@ class UnaryExpression : public Expression {
 /// Types
 ///
 ////////////////////////////////////////////////////////////////////////////////
-
-class Field : public util::RegionObject {
- public:
-  Field(const SourcePosition &pos, Identifier name, Expression *type_repr)
-      : pos_(pos), name_(name), type_repr_(type_repr) {}
-
-  const SourcePosition &position() const { return pos_; }
-
-  Identifier name() const { return name_; }
-
-  Expression *type_repr() const { return type_repr_; }
-
- private:
-  const SourcePosition pos_;
-  Identifier name_;
-  Expression *type_repr_;
-};
 
 /**
  * Array type
@@ -726,6 +775,8 @@ class ArrayTypeRepr : public Expression {
     return node->kind() == Kind::ArrayTypeRepr;
   }
 
+  static bool classof(const ArrayTypeRepr *node) { return true; }
+
  private:
   Expression *len_;
   Expression *elem_type_;
@@ -737,13 +788,15 @@ class ArrayTypeRepr : public Expression {
 class FunctionTypeRepr : public Expression {
  public:
   FunctionTypeRepr(const SourcePosition &pos,
-                   util::RegionVector<Field *> &&param_types,
+                   util::RegionVector<FieldDeclaration *> &&param_types,
                    Expression *ret_type)
       : Expression(Kind::FunctionTypeRepr, pos),
         param_types_(std::move(param_types)),
         ret_type_(ret_type) {}
 
-  const util::RegionVector<Field *> &parameters() const { return param_types_; }
+  const util::RegionVector<FieldDeclaration *> &parameters() const {
+    return param_types_;
+  }
 
   Expression *return_type() const { return ret_type_; }
 
@@ -751,8 +804,10 @@ class FunctionTypeRepr : public Expression {
     return node->kind() == Kind::FunctionTypeRepr;
   }
 
+  static bool classof(const FunctionTypeRepr *node) { return true; }
+
  private:
-  util::RegionVector<Field *> param_types_;
+  util::RegionVector<FieldDeclaration *> param_types_;
   Expression *ret_type_;
 };
 
@@ -770,6 +825,8 @@ class PointerTypeRepr : public Expression {
     return node->kind() == Kind::PointerTypeRepr;
   }
 
+  static bool classof(const PointerTypeRepr *node) { return true; }
+
  private:
   Expression *base_;
 };
@@ -780,17 +837,21 @@ class PointerTypeRepr : public Expression {
 class StructTypeRepr : public Expression {
  public:
   StructTypeRepr(const SourcePosition &pos,
-                 util::RegionVector<Field *> &&fields)
+                 util::RegionVector<FieldDeclaration *> &&fields)
       : Expression(Kind::StructTypeRepr, pos), fields_(std::move(fields)) {}
 
-  const util::RegionVector<Field *> &fields() const { return fields_; }
+  const util::RegionVector<FieldDeclaration *> &fields() const {
+    return fields_;
+  }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::StructTypeRepr;
   }
 
+  static bool classof(const StructTypeRepr *node) { return true; }
+
  private:
-  util::RegionVector<Field *> fields_;
+  util::RegionVector<FieldDeclaration *> fields_;
 };
 
 }  // namespace tpl::ast

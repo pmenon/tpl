@@ -5,6 +5,7 @@ namespace tpl::util {
 Region::Region(std::string name)
     : name_(std::move(name)),
       allocated_(0),
+      alignment_waste_(0),
       chunk_bytes_allocated_(0),
       head_(nullptr),
       position_(0),
@@ -18,6 +19,8 @@ void *Region::Allocate(size_t size, size_t alignment) {
   size_t adjustment = MathUtil::AlignmentAdjustment(position_, alignment);
 
   allocated_ += size;
+
+  alignment_waste_ += adjustment;
 
   // Do we have enough space in the current chunk?
   if (size + adjustment <= end_ - position_) {

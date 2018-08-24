@@ -20,9 +20,8 @@ static void Compile(const std::string &source) {
   util::Region error_region("repl-error");
 
   // Let's parse the source
-  ast::AstNodeFactory node_factory(region);
   sema::ErrorReporter error_reporter(error_region);
-  ast::AstContext context(region, node_factory, error_reporter);
+  ast::AstContext context(region, error_reporter);
 
   parsing::Scanner scanner(source.data(), source.length());
   parsing::Parser parser(scanner, context);

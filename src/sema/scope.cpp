@@ -2,12 +2,12 @@
 
 namespace tpl::sema {
 
-bool Scope::Declare(ast::Identifier name, ast::Type *type) {
-  ast::Type *curr_decl = Lookup(name);
+bool Scope::Declare(ast::Declaration *decl, ast::Type *type) {
+  ast::Type *curr_decl = Lookup(decl->name());
   if (curr_decl != nullptr) {
     return false;
   }
-  table_.emplace(name, type);
+  decls_.insert(std::make_pair(decl->name(), type));
   return true;
 }
 
@@ -24,8 +24,8 @@ ast::Type *Scope::Lookup(ast::Identifier name) const {
 }
 
 ast::Type *Scope::LookupLocal(ast::Identifier name) const {
-  auto iter = table_.find(name);
-  return (iter == table_.end() ? nullptr : iter->second);
+  auto iter = decls_.find(name);
+  return (iter == decls_.end() ? nullptr : iter->second);
 }
 
 }  // namespace tpl::sema

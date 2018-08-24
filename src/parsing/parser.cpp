@@ -162,6 +162,7 @@ ast::Statement *Parser::ParseBlockStatement() {
 
   // Where we store all the statements in the block
   util::RegionVector<ast::Statement *> statements(region());
+  statements.reserve(16);
 
   // Loop while we don't see the right brace
   while (peek() != Token::Type::RIGHT_BRACE && peek() != Token::Type::EOS) {
@@ -476,7 +477,7 @@ ast::Expression *Parser::ParseFunctionType() {
 
   const SourcePosition &position = scanner().current_position();
 
-  util::RegionVector<ast::Field *> params(region());
+  util::RegionVector<ast::FieldDeclaration *> params(region());
 
   while (true) {
     if (!Matches(Token::Type::IDENTIFIER)) {
@@ -495,7 +496,8 @@ ast::Expression *Parser::ParseFunctionType() {
     ast::Expression *type = ParseType();
 
     // That's it
-    params.push_back(node_factory().NewField(field_position, name, type));
+    params.push_back(
+        node_factory().NewFieldDeclaration(field_position, name, type));
 
     if (!Matches(Token::Type::COMMA)) {
       break;
@@ -551,7 +553,7 @@ ast::Expression *Parser::ParseStructType() {
 
   const SourcePosition &position = scanner().current_position();
 
-  util::RegionVector<ast::Field *> fields(region());
+  util::RegionVector<ast::FieldDeclaration *> fields(region());
 
   while (peek() != Token::Type::RIGHT_BRACE) {
     Expect(Token::Type::IDENTIFIER);
@@ -568,7 +570,8 @@ ast::Expression *Parser::ParseStructType() {
     ast::Expression *type = ParseType();
 
     // That's it
-    fields.push_back(node_factory().NewField(field_position, name, type));
+    fields.push_back(
+        node_factory().NewFieldDeclaration(field_position, name, type));
   }
 
   Consume(Token::Type::RIGHT_BRACE);

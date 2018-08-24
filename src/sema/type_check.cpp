@@ -1,4 +1,9 @@
+
+#include <sema/type_check.h>
+
 #include "sema/type_check.h"
+
+#include "ast/type.h"
 
 namespace tpl::sema {
 
@@ -129,26 +134,30 @@ void TypeChecker::VisitVariableDeclaration(ast::VariableDeclaration *node) {
   }
 
   // The type should be resolved now
-  scope()->Declare(node->name(), (declared_type != nullptr ? declared_type
-                                                           : initializer_type));
+  scope()->Declare(
+      node, (declared_type != nullptr ? declared_type : initializer_type));
 }
+
+void TypeChecker::VisitFieldDeclaration(ast::FieldDeclaration *node) {}
 
 void TypeChecker::VisitFunctionDeclaration(ast::FunctionDeclaration *node) {
   auto *func_type = Resolve(node->function());
+
   if (func_type == nullptr) {
     return;
   }
 
-  scope()->Declare(node->name(), func_type);
+  scope()->Declare(node, func_type);
 }
 
 void TypeChecker::VisitStructDeclaration(ast::StructDeclaration *node) {
   auto *struct_type = Resolve(node->type_repr());
+
   if (struct_type == nullptr) {
     return;
   }
 
-  scope()->Declare(node->name(), struct_type);
+  scope()->Declare(node, struct_type);
 }
 
 void TypeChecker::VisitIdentifierExpression(ast::IdentifierExpression *node) {
@@ -288,17 +297,17 @@ void TypeChecker::VisitBadStatement(ast::BadStatement *node) {
 }
 
 void TypeChecker::VisitStructTypeRepr(ast::StructTypeRepr *node) {
-  util::RegionVector<ast::Type *> elems(region());
-  for (auto *elem : node->fields()) {
-    auto *field_type = Resolve(elem->type_repr());
+  util::RegionVector<ast::Type *> field_types(region());
+  for (auto *field : node->fields()) {
+    Visit(field);
+    ast::Type *field_type = field->type_repr()->type();
     if (field_type == nullptr) {
-      // Error
       return;
     }
-    elems.push_back(field_type);
+    field_types.push_back(field_type);
   }
 
-  node->set_type(ast::StructType::Get(ast_context(), std::move(elems)));
+  node->set_type(ast::StructType::Get(ast_context(), std::move(field_types)));
 }
 
 void TypeChecker::VisitIfStatement(ast::IfStatement *node) {
@@ -377,14 +386,13 @@ void TypeChecker::VisitBinaryExpression(ast::BinaryExpression *node) {
 void TypeChecker::VisitFunctionLiteralExpression(
     ast::FunctionLiteralExpression *node) {
   // Resolve the type
-  ast::Type *type = Resolve(node->type_repr());
-  if (type == nullptr) {
+  if (Resolve(node->type_repr()) == nullptr) {
     return;
   }
 
   // Good function type, insert into node
-  auto *func_type = type->As<ast::FunctionType>();
-  node->set_type(type->As<ast::FunctionType>());
+  auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
+  node->set_type(func_type);
 
   // Start a new function scope
   auto *function_scope = OpenScope(Scope::Kind::Function);
@@ -392,10 +400,10 @@ void TypeChecker::VisitFunctionLiteralExpression(
   FunctionScope scoped(*this, node);
 
   // Declare function parameters in scope
-  const auto &repr_params = node->type_repr()->parameters();
+  const auto &param_decls = node->type_repr()->parameters();
   const auto &param_types = func_type->params();
   for (size_t i = 0; i < func_type->params().size(); i++) {
-    scope()->Declare(repr_params[i]->name(), param_types[i]);
+    scope()->Declare(param_decls[i], param_types[i]);
   }
 
   // Recurse into the function body
@@ -428,7 +436,8 @@ void TypeChecker::VisitFunctionTypeRepr(ast::FunctionTypeRepr *node) {
   // Handle parameters
   util::RegionVector<ast::Type *> param_types(region());
   for (auto *param : node->parameters()) {
-    auto *param_type = Resolve(param->type_repr());
+    Visit(param);
+    ast::Type *param_type = param->type_repr()->type();
     if (param_type == nullptr) {
       return;
     }

@@ -17,8 +17,6 @@ class AstNodeFactory {
 
   DISALLOW_COPY_AND_MOVE(AstNodeFactory);
 
-  util::Region &region() { return region_; }
-
   File *NewFile(const SourcePosition &pos,
                 util::RegionVector<Declaration *> &&declarations) {
     return new (region_) File(pos, std::move(declarations));
@@ -145,14 +143,15 @@ class AstNodeFactory {
     return new (region_) ArrayTypeRepr(pos, len, elem_type);
   }
 
-  Field *NewField(const SourcePosition &pos, Identifier name,
-                  Expression *type_repr) {
-    return new (region_) Field(pos, name, type_repr);
+  FieldDeclaration *NewFieldDeclaration(const SourcePosition &pos,
+                                        Identifier name,
+                                        Expression *type_repr) {
+    return new (region_) FieldDeclaration(pos, name, type_repr);
   }
 
-  FunctionTypeRepr *NewFunctionType(const SourcePosition &pos,
-                                    util::RegionVector<Field *> &&params,
-                                    Expression *ret) {
+  FunctionTypeRepr *NewFunctionType(
+      const SourcePosition &pos,
+      util::RegionVector<FieldDeclaration *> &&params, Expression *ret) {
     return new (region_) FunctionTypeRepr(pos, std::move(params), ret);
   }
 
@@ -160,8 +159,9 @@ class AstNodeFactory {
     return new (region_) PointerTypeRepr(pos, base);
   }
 
-  StructTypeRepr *NewStructType(const SourcePosition &pos,
-                                util::RegionVector<Field *> &&fields) {
+  StructTypeRepr *NewStructType(
+      const SourcePosition &pos,
+      util::RegionVector<FieldDeclaration *> &&fields) {
     return new (region_) StructTypeRepr(pos, std::move(fields));
   }
 

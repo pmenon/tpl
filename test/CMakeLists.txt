@@ -27,7 +27,7 @@ foreach(test_src ${tpl_test_srs})
     # Build a binary for it
     add_executable(${test_name} EXCLUDE_FROM_ALL ${test_src})
     add_dependencies(check ${test_name})
-    target_link_libraries(${test_name} gtest gtest_main ${tpl_test_shared} ${CMAKE_THREAD_LIBS_INIT} -lpthread)
+    target_link_libraries(${test_name} gtest gtest_main ${tpl_test_shared} ${TPL_LINK_LIBS} ${CMAKE_THREAD_LIBS_INIT} -lpthread)
 
     # Register as a test
     add_test(${test_name} ${test_name} --gtest_color=yes)

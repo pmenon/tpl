@@ -53,7 +53,7 @@ class Region {
    * @param ptr The pointer to the memory we're deallocating
    * @param size The number of bytes the pointer points to
    */
-  void Deallocate(void *ptr, size_t size) const {
+  void Deallocate(const void *ptr, size_t size) const {
     // No-op
   }
 
@@ -73,6 +73,9 @@ class Region {
 
   // The number of bytes this region has given out
   uint64_t allocated() const { return allocated_; }
+
+  // The number of bytes wasted due to alignment requirements
+  uint64_t alignment_waste() const { return alignment_waste_; }
 
   // The total number of bytes acquired from the OS
   uint64_t total_memory() const { return chunk_bytes_allocated_; }
@@ -118,6 +121,9 @@ class Region {
   // The number of bytes allocated by this region
   size_t allocated_;
 
+  // Bytes wasted due to alignment
+  size_t alignment_waste_;
+
   // The total number of chunk bytes. This may include bytes not yet given out
   // by the region
   size_t chunk_bytes_allocated_;
@@ -153,62 +159,6 @@ class RegionObject {
   void operator delete(UNUSED void *ptr, UNUSED Region &region) {
     UNREACHABLE();
   };
-};
-
-template <typename T>
-class RegionPtr {
-  static_assert(
-      std::is_base_of_v<RegionObject, T>,
-      "The template type does not derive from tpl::util::RegionObject");
-
- public:
-  /// Regular constructors
-
-  constexpr RegionPtr() noexcept : ptr_(nullptr) {}
-  explicit RegionPtr(T *ptr) noexcept : ptr_(ptr) {}
-
-  /// Move constructors
-
-  RegionPtr(const RegionPtr &other) = delete;
-  RegionPtr(RegionPtr &&other) noexcept : ptr_(other.release()) {}
-
-  template <typename U,
-            typename = std::enable_if_t<std::is_convertible_v<U, T>>>
-  explicit RegionPtr(RegionPtr<U> &&other) noexcept : ptr_(other.release()) {}
-
-  /// Assignment
-
-  RegionPtr &operator=(const RegionPtr &&other) = delete;
-  RegionPtr &operator=(RegionPtr &&other) noexcept {
-    ptr_ = other.release();
-    return *this;
-  }
-
-  template <typename U,
-            typename = std::enable_if_t<std::is_convertible_v<U, T>>>
-  RegionPtr &operator=(RegionPtr<U> &&other) noexcept {
-    ptr_ = other.release();
-    return *this;
-  }
-
-  /// Public API
-
-  T *get() const noexcept { return ptr_; }
-
-  T *release() {
-    auto *tmp = ptr_;
-    ptr_ = nullptr;
-    return tmp;
-  }
-
-  T *operator->() const noexcept { return get(); }
-
-  T &operator*() const { return *ptr_; }
-
-  explicit operator bool() const noexcept { return get() != nullptr; }
-
- private:
-  T *ptr_;
 };
 
 }  // namespace tpl::util

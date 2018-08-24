@@ -14,7 +14,7 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
   explicit TypeChecker(ast::AstContext &ctx);
 
   // Run the type checker on the provided AST. Ensures proper types of all
-  // statements and expressions, and also annotates the AST with type correct
+  // statements and expressions, and also annotates the AST with correct
   // type information.
   bool Run(ast::AstNode *root);
 
@@ -27,6 +27,9 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
   DEFINE_AST_VISITOR_METHOD()
 
  private:
+  class BlockScopeInfo;
+  class FunctionScopeInfo;
+
   ast::Type *Resolve(ast::Expression *expr) {
     Visit(expr);
     return expr->type();
@@ -52,14 +55,15 @@ class TypeChecker : public ast::AstVisitor<TypeChecker> {
   Scope *scope() { return scope_; }
 
   Scope *OpenScope(Scope::Kind scope_kind) {
-    auto *scope = new (region_) Scope(region_, scope_, scope_kind);
+    Scope *scope = new Scope(scope_, scope_kind);
     scope_ = scope;
     return scope;
   }
 
-  void CloseScope(UNUSED Scope *expected_top) {
+  void CloseScope(Scope *expected_top) {
     TPL_ASSERT(scope() == expected_top);
-    scope_ = scope_->outer();
+    scope_ = expected_top->outer();
+    delete expected_top;
   }
 
   /*

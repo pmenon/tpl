@@ -1,7 +1,8 @@
 #pragma once
 
-#include <cstdint>
-#include <functional>
+#include "llvm/ADT/DenseMapInfo.h"
+
+#include "util/macros.h"
 
 namespace tpl::ast {
 
@@ -12,18 +13,16 @@ namespace tpl::ast {
  */
 class Identifier {
  public:
-  // These aren't explicit on purpose
-  Identifier() noexcept : data_(nullptr), len_(0) {}
-  Identifier(nullptr_t) noexcept : Identifier() {}
-  Identifier(const char *str, size_t len) noexcept : data_(str), len_(len) {}
-  Identifier(const std::string &str) noexcept
-      : data_(str.data()), len_(str.length()) {}
+  explicit Identifier(const char *str) noexcept : data_(str) {}
 
   const char *data() const { return data_; }
 
-  size_t length() const { return len_; }
+  size_t length() const {
+    TPL_ASSERT(data_ != nullptr);
+    return std::strlen(data());
+  }
 
-  bool empty() const { return len_ == 0; }
+  bool empty() const { return length() == 0; }
 
   bool operator==(const Identifier &other) const {
     return data() == other.data();
@@ -31,21 +30,44 @@ class Identifier {
 
   bool operator!=(const Identifier &other) const { return !(*this == other); }
 
+  static Identifier GetEmptyKey() {
+    return Identifier(static_cast<const char *>(
+        llvm::DenseMapInfo<const void *>::getEmptyKey()));
+  }
+
+  static Identifier GetTombstoneKey() {
+    return Identifier(static_cast<const char *>(
+        llvm::DenseMapInfo<const void *>::getTombstoneKey()));
+  }
+
  private:
   const char *data_;
-  std::size_t len_;
 };
 
-struct IdentifierHasher {
-  std::size_t operator()(const Identifier &identifier) const {
-    return std::hash<const void *>()(identifier.data());
+}  // namespace tpl::ast
+
+namespace llvm {
+
+// Type trait struct so we can store Identifiers in LLVM's DenseMap hash table
+template <>
+struct DenseMapInfo<tpl::ast::Identifier> {
+  static inline tpl::ast::Identifier getEmptyKey() {
+    return tpl::ast::Identifier::GetEmptyKey();
   }
-};
 
-struct IdentifierEquality {
-  bool operator()(const Identifier &lhs, const Identifier &rhs) const {
+  static inline tpl::ast::Identifier getTombstoneKey() {
+    return tpl::ast::Identifier::GetTombstoneKey();
+  }
+
+  static unsigned getHashValue(const tpl::ast::Identifier identifier) {
+    return DenseMapInfo<const void *>::getHashValue(
+        static_cast<const void *>(identifier.data()));
+  }
+
+  static bool isEqual(const tpl::ast::Identifier lhs,
+                      const tpl::ast::Identifier rhs) {
     return lhs == rhs;
   }
 };
 
-}  // namespace tpl::ast
+}  // namespace llvm
