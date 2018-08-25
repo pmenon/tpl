@@ -22,23 +22,19 @@ class AstNodeFactory {
     return new (region_) File(pos, std::move(declarations));
   }
 
-  FunctionDeclaration *NewFunctionDeclaration(const SourcePosition &pos,
-                                              Identifier name,
-                                              FunctionLiteralExpression *fun) {
-    return new (region_) FunctionDeclaration(pos, name, fun);
+  FunctionDecl *NewFunctionDecl(const SourcePosition &pos, Identifier name,
+                                FunctionLiteralExpression *fun) {
+    return new (region_) FunctionDecl(pos, name, fun);
   }
 
-  StructDeclaration *NewStructDeclaration(const SourcePosition &pos,
-                                          Identifier name,
-                                          StructTypeRepr *type_repr) {
-    return new (region_) StructDeclaration(pos, name, type_repr);
+  StructDecl *NewStructDecl(const SourcePosition &pos, Identifier name,
+                            StructTypeRepr *type_repr) {
+    return new (region_) StructDecl(pos, name, type_repr);
   }
 
-  VariableDeclaration *NewVariableDeclaration(const SourcePosition &pos,
-                                              Identifier name,
-                                              Expression *type_repr,
-                                              Expression *init) {
-    return new (region_) VariableDeclaration(pos, name, type_repr, init);
+  VariableDecl *NewVariableDecl(const SourcePosition &pos, Identifier name,
+                                Expression *type_repr, Expression *init) {
+    return new (region_) VariableDecl(pos, name, type_repr, init);
   }
 
   BadStatement *NewBadStatement(const SourcePosition &pos) {
@@ -143,15 +139,14 @@ class AstNodeFactory {
     return new (region_) ArrayTypeRepr(pos, len, elem_type);
   }
 
-  FieldDeclaration *NewFieldDeclaration(const SourcePosition &pos,
-                                        Identifier name,
-                                        Expression *type_repr) {
-    return new (region_) FieldDeclaration(pos, name, type_repr);
+  FieldDecl *NewFieldDecl(const SourcePosition &pos, Identifier name,
+                          Expression *type_repr) {
+    return new (region_) FieldDecl(pos, name, type_repr);
   }
 
-  FunctionTypeRepr *NewFunctionType(
-      const SourcePosition &pos,
-      util::RegionVector<FieldDeclaration *> &&params, Expression *ret) {
+  FunctionTypeRepr *NewFunctionType(const SourcePosition &pos,
+                                    util::RegionVector<FieldDecl *> &&params,
+                                    Expression *ret) {
     return new (region_) FunctionTypeRepr(pos, std::move(params), ret);
   }
 
@@ -159,9 +154,8 @@ class AstNodeFactory {
     return new (region_) PointerTypeRepr(pos, base);
   }
 
-  StructTypeRepr *NewStructType(
-      const SourcePosition &pos,
-      util::RegionVector<FieldDeclaration *> &&fields) {
+  StructTypeRepr *NewStructType(const SourcePosition &pos,
+                                util::RegionVector<FieldDecl *> &&fields) {
     return new (region_) StructTypeRepr(pos, std::move(fields));
   }
 

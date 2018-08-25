@@ -33,12 +33,11 @@ TEST_F(AstTest, HierechyTest) {
   /// Test declarations
   {
     AstNode *all_decls[] = {
-        factory.NewFieldDeclaration(empty_pos(), Identifier(nullptr), nullptr),
-        factory.NewFunctionDeclaration(empty_pos(), Identifier(nullptr),
-                                       nullptr),
-        factory.NewStructDeclaration(empty_pos(), Identifier(nullptr), nullptr),
-        factory.NewVariableDeclaration(empty_pos(), Identifier(nullptr),
-                                       nullptr, nullptr),
+        factory.NewFieldDecl(empty_pos(), Identifier(nullptr), nullptr),
+        factory.NewFunctionDecl(empty_pos(), Identifier(nullptr), nullptr),
+        factory.NewStructDecl(empty_pos(), Identifier(nullptr), nullptr),
+        factory.NewVariableDecl(empty_pos(), Identifier(nullptr), nullptr,
+                                nullptr),
     };
 
     for (const auto *node : all_decls) {
@@ -67,9 +66,9 @@ TEST_F(AstTest, HierechyTest) {
         factory.NewCallExpression(factory.NewNilLiteral(empty_pos()),
                                   util::RegionVector<Expression *>(region())),
         factory.NewFunctionLiteral(
-            factory.NewFunctionType(
-                empty_pos(), util::RegionVector<FieldDeclaration *>(region()),
-                nullptr),
+            factory.NewFunctionType(empty_pos(),
+                                    util::RegionVector<FieldDecl *>(region()),
+                                    nullptr),
             nullptr),
         factory.NewNilLiteral(empty_pos()),
         factory.NewUnaryExpression(empty_pos(), parsing::Token::Type::MINUS,
@@ -77,11 +76,10 @@ TEST_F(AstTest, HierechyTest) {
         factory.NewIdentifierExpression(empty_pos(), Identifier(nullptr)),
         factory.NewArrayType(empty_pos(), nullptr, nullptr),
         factory.NewFunctionType(
-            empty_pos(), util::RegionVector<FieldDeclaration *>(region()),
-            nullptr),
+            empty_pos(), util::RegionVector<FieldDecl *>(region()), nullptr),
         factory.NewPointerType(empty_pos(), nullptr),
         factory.NewStructType(empty_pos(),
-                              util::RegionVector<FieldDeclaration *>(region())),
+                              util::RegionVector<FieldDecl *>(region())),
     };
 
     for (const auto *node : all_exprs) {
@@ -107,7 +105,7 @@ TEST_F(AstTest, HierechyTest) {
     AstNode *all_stmts[] = {
         factory.NewBlockStatement(empty_pos(), empty_pos(),
                                   util::RegionVector<Statement *>(region())),
-        factory.NewDeclarationStatement(factory.NewVariableDeclaration(
+        factory.NewDeclarationStatement(factory.NewVariableDecl(
             empty_pos(), Identifier(nullptr), nullptr, nullptr)),
         factory.NewExpressionStatement(factory.NewNilLiteral(empty_pos())),
         factory.NewForStatement(empty_pos(), nullptr, nullptr, nullptr,

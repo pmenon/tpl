@@ -49,8 +49,7 @@ ast::Declaration *Parser::ParseFunctionDeclaration() {
       ParseFunctionLiteralExpression()->As<ast::FunctionLiteralExpression>();
 
   // Create declaration
-  ast::FunctionDeclaration *decl =
-      node_factory().NewFunctionDeclaration(position, name, fun);
+  ast::FunctionDecl *decl = node_factory().NewFunctionDecl(position, name, fun);
 
   // Done
   return decl;
@@ -69,8 +68,8 @@ ast::Declaration *Parser::ParseStructDeclaration() {
   auto *struct_type = ParseStructType()->As<ast::StructTypeRepr>();
 
   // The declaration object
-  ast::StructDeclaration *decl =
-      node_factory().NewStructDeclaration(position, name, struct_type);
+  ast::StructDecl *decl =
+      node_factory().NewStructDecl(position, name, struct_type);
 
   // Done
   return decl;
@@ -108,8 +107,8 @@ ast::Declaration *Parser::ParseVariableDeclaration() {
   }
 
   // Create declaration object
-  ast::VariableDeclaration *decl =
-      node_factory().NewVariableDeclaration(position, name, type, init);
+  ast::VariableDecl *decl =
+      node_factory().NewVariableDecl(position, name, type, init);
 
   // Done
   return decl;
@@ -477,7 +476,7 @@ ast::Expression *Parser::ParseFunctionType() {
 
   const SourcePosition &position = scanner().current_position();
 
-  util::RegionVector<ast::FieldDeclaration *> params(region());
+  util::RegionVector<ast::FieldDecl *> params(region());
 
   while (true) {
     if (!Matches(Token::Type::IDENTIFIER)) {
@@ -496,8 +495,7 @@ ast::Expression *Parser::ParseFunctionType() {
     ast::Expression *type = ParseType();
 
     // That's it
-    params.push_back(
-        node_factory().NewFieldDeclaration(field_position, name, type));
+    params.push_back(node_factory().NewFieldDecl(field_position, name, type));
 
     if (!Matches(Token::Type::COMMA)) {
       break;
@@ -553,7 +551,7 @@ ast::Expression *Parser::ParseStructType() {
 
   const SourcePosition &position = scanner().current_position();
 
-  util::RegionVector<ast::FieldDeclaration *> fields(region());
+  util::RegionVector<ast::FieldDecl *> fields(region());
 
   while (peek() != Token::Type::RIGHT_BRACE) {
     Expect(Token::Type::IDENTIFIER);
@@ -570,8 +568,7 @@ ast::Expression *Parser::ParseStructType() {
     ast::Expression *type = ParseType();
 
     // That's it
-    fields.push_back(
-        node_factory().NewFieldDeclaration(field_position, name, type));
+    fields.push_back(node_factory().NewFieldDecl(field_position, name, type));
   }
 
   Consume(Token::Type::RIGHT_BRACE);

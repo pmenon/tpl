@@ -5,7 +5,7 @@
 
 namespace tpl::sema {
 
-void Sema::VisitVariableDeclaration(ast::VariableDeclaration *node) {
+void Sema::VisitVariableDecl(ast::VariableDecl *node) {
   if (current_scope()->LookupLocal(node->name()) != nullptr) {
     error_reporter().Report(node->position(),
                             ErrorMessages::kVariableRedeclared, node->name());
@@ -42,11 +42,9 @@ void Sema::VisitVariableDeclaration(ast::VariableDeclaration *node) {
       node, (declared_type != nullptr ? declared_type : initializer_type));
 }
 
-void Sema::VisitFieldDeclaration(ast::FieldDeclaration *node) {
-  Visit(node->type_repr());
-}
+void Sema::VisitFieldDecl(ast::FieldDecl *node) { Visit(node->type_repr()); }
 
-void Sema::VisitFunctionDeclaration(ast::FunctionDeclaration *node) {
+void Sema::VisitFunctionDecl(ast::FunctionDecl *node) {
   auto *func_type = Resolve(node->function());
 
   if (func_type == nullptr) {
@@ -56,7 +54,7 @@ void Sema::VisitFunctionDeclaration(ast::FunctionDeclaration *node) {
   current_scope()->Declare(node, func_type);
 }
 
-void Sema::VisitStructDeclaration(ast::StructDeclaration *node) {
+void Sema::VisitStructDecl(ast::StructDecl *node) {
   auto *struct_type = Resolve(node->type_repr());
 
   if (struct_type == nullptr) {

@@ -26,10 +26,10 @@ class Type;
  * remember to modify Declaration::classof() to update the bounds check.
  */
 #define DECLARATION_NODES(T) \
-  T(FieldDeclaration)        \
-  T(FunctionDeclaration)     \
-  T(StructDeclaration)       \
-  T(VariableDeclaration)
+  T(FieldDecl)               \
+  T(FunctionDecl)            \
+  T(StructDecl)              \
+  T(VariableDecl)
 
 /*
  * All possible statements
@@ -207,8 +207,8 @@ class Declaration : public AstNode {
   Identifier name() const { return name_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() >= Kind::FieldDeclaration &&
-           node->kind() <= Kind::VariableDeclaration;
+    return node->kind() >= Kind::FieldDecl &&
+           node->kind() <= Kind::VariableDecl;
   }
 
  private:
@@ -218,16 +218,15 @@ class Declaration : public AstNode {
 /**
  * A generic declaration of a function argument or a field in a struct
  */
-class FieldDeclaration : public Declaration {
+class FieldDecl : public Declaration {
  public:
-  FieldDeclaration(const SourcePosition &pos, Identifier name,
-                   Expression *type_repr)
-      : Declaration(Kind::FieldDeclaration, pos, name), type_repr_(type_repr) {}
+  FieldDecl(const SourcePosition &pos, Identifier name, Expression *type_repr)
+      : Declaration(Kind::FieldDecl, pos, name), type_repr_(type_repr) {}
 
   Expression *type_repr() const { return type_repr_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::FieldDeclaration;
+    return node->kind() == Kind::FieldDecl;
   }
 
  private:
@@ -237,18 +236,18 @@ class FieldDeclaration : public Declaration {
 /**
  * A function declaration
  */
-class FunctionDeclaration : public Declaration {
+class FunctionDecl : public Declaration {
  public:
-  FunctionDeclaration(const SourcePosition &pos, Identifier name,
-                      FunctionLiteralExpression *fun)
-      : Declaration(Kind::FunctionDeclaration, pos, name), fun_(fun) {}
+  FunctionDecl(const SourcePosition &pos, Identifier name,
+               FunctionLiteralExpression *fun)
+      : Declaration(Kind::FunctionDecl, pos, name), fun_(fun) {}
 
   FunctionLiteralExpression *function() const { return fun_; }
 
   FunctionTypeRepr *type_repr();
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::FunctionDeclaration;
+    return node->kind() == Kind::FunctionDecl;
   }
 
  private:
@@ -258,17 +257,16 @@ class FunctionDeclaration : public Declaration {
 /**
  *
  */
-class StructDeclaration : public Declaration {
+class StructDecl : public Declaration {
  public:
-  StructDeclaration(const SourcePosition &pos, Identifier name,
-                    StructTypeRepr *type_repr)
-      : Declaration(Kind::StructDeclaration, pos, name),
-        type_repr_(type_repr) {}
+  StructDecl(const SourcePosition &pos, Identifier name,
+             StructTypeRepr *type_repr)
+      : Declaration(Kind::StructDecl, pos, name), type_repr_(type_repr) {}
 
   StructTypeRepr *type_repr() const { return type_repr_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::StructDeclaration;
+    return node->kind() == Kind::StructDecl;
   }
 
  private:
@@ -278,11 +276,11 @@ class StructDeclaration : public Declaration {
 /**
  * A variable declaration
  */
-class VariableDeclaration : public Declaration {
+class VariableDecl : public Declaration {
  public:
-  VariableDeclaration(const SourcePosition &pos, Identifier name,
-                      Expression *type_repr, Expression *init)
-      : Declaration(Kind::VariableDeclaration, pos, name),
+  VariableDecl(const SourcePosition &pos, Identifier name,
+               Expression *type_repr, Expression *init)
+      : Declaration(Kind::VariableDecl, pos, name),
         type_repr_(type_repr),
         init_(init) {}
 
@@ -291,7 +289,7 @@ class VariableDeclaration : public Declaration {
   Expression *initial() const { return init_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::VariableDeclaration;
+    return node->kind() == Kind::VariableDecl;
   }
 
  private:
@@ -750,13 +748,13 @@ class ArrayTypeRepr : public Expression {
 class FunctionTypeRepr : public Expression {
  public:
   FunctionTypeRepr(const SourcePosition &pos,
-                   util::RegionVector<FieldDeclaration *> &&param_types,
+                   util::RegionVector<FieldDecl *> &&param_types,
                    Expression *ret_type)
       : Expression(Kind::FunctionTypeRepr, pos),
         param_types_(std::move(param_types)),
         ret_type_(ret_type) {}
 
-  const util::RegionVector<FieldDeclaration *> &parameters() const {
+  const util::RegionVector<FieldDecl *> &parameters() const {
     return param_types_;
   }
 
@@ -767,7 +765,7 @@ class FunctionTypeRepr : public Expression {
   }
 
  private:
-  util::RegionVector<FieldDeclaration *> param_types_;
+  util::RegionVector<FieldDecl *> param_types_;
   Expression *ret_type_;
 };
 
@@ -795,19 +793,17 @@ class PointerTypeRepr : public Expression {
 class StructTypeRepr : public Expression {
  public:
   StructTypeRepr(const SourcePosition &pos,
-                 util::RegionVector<FieldDeclaration *> &&fields)
+                 util::RegionVector<FieldDecl *> &&fields)
       : Expression(Kind::StructTypeRepr, pos), fields_(std::move(fields)) {}
 
-  const util::RegionVector<FieldDeclaration *> &fields() const {
-    return fields_;
-  }
+  const util::RegionVector<FieldDecl *> &fields() const { return fields_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::StructTypeRepr;
   }
 
  private:
-  util::RegionVector<FieldDeclaration *> fields_;
+  util::RegionVector<FieldDecl *> fields_;
 };
 
 }  // namespace tpl::ast

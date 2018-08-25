@@ -9,13 +9,13 @@ void PrettyPrint::VisitFile(File *node) {
   }
 }
 
-void PrettyPrint::VisitFieldDeclaration(FieldDeclaration *node) {
+void PrettyPrint::VisitFieldDecl(FieldDecl *node) {
   PrintIdentifier(node->name());
   PrintString(":");
   Visit(node->type_repr());
 }
 
-void PrettyPrint::VisitFunctionDeclaration(FunctionDeclaration *node) {
+void PrettyPrint::VisitFunctionDecl(FunctionDecl *node) {
   PrintString("fun ");
   PrintIdentifier(node->name());
   PrintString(" ");
@@ -24,7 +24,7 @@ void PrettyPrint::VisitFunctionDeclaration(FunctionDeclaration *node) {
   Visit(node->function());
 }
 
-void PrettyPrint::VisitVariableDeclaration(VariableDeclaration *node) {
+void PrettyPrint::VisitVariableDecl(VariableDecl *node) {
   BeginVisit();
   PrintString("var ");
   PrintIdentifier(node->name());
@@ -35,7 +35,7 @@ void PrettyPrint::VisitVariableDeclaration(VariableDeclaration *node) {
   EndVisit();
 }
 
-void PrettyPrint::VisitStructDeclaration(StructDeclaration *node) {
+void PrettyPrint::VisitStructDecl(StructDecl *node) {
   BeginVisit();
   PrintString("struct ");
   PrintIdentifier(node->name());
