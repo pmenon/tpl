@@ -24,6 +24,20 @@ class PrettyPrint : public AstVisitor<PrettyPrint> {
   DEFINE_AST_VISITOR_METHOD()
 
  private:
+  void PrintIndent() {
+    for (uint32_t i = 0; i < indent_level_; i++) {
+    }
+  }
+
+  void PrintNodeCommon(ast::AstNode *node) {
+    PrintIndent();
+    result_.append(" ")
+        .append(node->kind_name())
+        .append(" ")
+        .append("(pointer")
+        .append(" ");
+  }
+
   void BeginVisit() { result_.append("("); }
 
   void EndVisit() { result_.append(")"); }
@@ -49,6 +63,8 @@ class PrettyPrint : public AstVisitor<PrettyPrint> {
 
  private:
   AstNode *root_;
+
+  uint32_t indent_level_;
 
   std::string result_;
 };

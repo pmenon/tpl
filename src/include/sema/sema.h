@@ -33,7 +33,7 @@ class Sema : public ast::AstVisitor<Sema> {
   DEFINE_AST_VISITOR_METHOD()
 
  private:
-  ast::Type *Resolve(ast::Expression *expr) {
+  ast::Type *Resolve(ast::Expr *expr) {
     Visit(expr);
     return expr->type();
   }

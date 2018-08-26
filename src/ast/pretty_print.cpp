@@ -85,7 +85,7 @@ void PrettyPrint::VisitForStmt(ForStmt *node) {
   }
   if (node->cond() != nullptr) {
     Visit(node->cond());
-    if (!node->is_while_like()) {
+    if (!node->IsLikeWhile()) {
       PrintString(";");
     }
   }

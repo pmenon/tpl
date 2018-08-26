@@ -102,7 +102,7 @@ class Parser {
 
   struct ForHeader {
     ast::Stmt *init;
-    ast::Expression *cond;
+    ast::Expr *cond;
     ast::Stmt *next;
   };
 
@@ -114,27 +114,27 @@ class Parser {
 
   ast::Stmt *ParseReturnStmt();
 
-  ast::Expression *ParseExpression();
+  ast::Expr *ParseExpr();
 
-  ast::Expression *ParseBinaryOpExpr(uint32_t min_prec);
+  ast::Expr *ParseBinaryOpExpr(uint32_t min_prec);
 
-  ast::Expression *ParseUnaryOpExpr();
+  ast::Expr *ParseUnaryOpExpr();
 
-  ast::Expression *ParseCallExpr();
+  ast::Expr *ParseCallExpr();
 
-  ast::Expression *ParsePrimaryExpr();
+  ast::Expr *ParsePrimaryExpr();
 
-  ast::Expression *ParseFunctionLitExpr();
+  ast::Expr *ParseFunctionLitExpr();
 
-  ast::Expression *ParseType();
+  ast::Expr *ParseType();
 
-  ast::Expression *ParseFunctionType();
+  ast::Expr *ParseFunctionType();
 
-  ast::Expression *ParsePointerType();
+  ast::Expr *ParsePointerType();
 
-  ast::Expression *ParseArrayType();
+  ast::Expr *ParseArrayType();
 
-  ast::Expression *ParseStructType();
+  ast::Expr *ParseStructType();
 
  private:
   // The source code scanner

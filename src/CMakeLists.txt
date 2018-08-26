@@ -11,7 +11,7 @@ list(REMOVE_ITEM tpl_sources ${PROJECT_SOURCE_DIR}/src/tpl.cpp)
 ###############################################
 # TPL library
 ###############################################
-add_library(tpl_shared SHARED ${tpl_sources})
+add_library(tpl_shared STATIC ${tpl_sources})
 
 ###############################################
 # TPL executable

@@ -64,7 +64,7 @@ TEST_F(AstTest, HierechyTest) {
         factory.NewBinaryOpExpr(empty_pos(), parsing::Token::Type::PLUS,
                                 nullptr, nullptr),
         factory.NewCallExpr(factory.NewNilLiteral(empty_pos()),
-                            util::RegionVector<Expression *>(region())),
+                            util::RegionVector<Expr *>(region())),
         factory.NewFunctionLitExpr(
             factory.NewFunctionType(empty_pos(),
                                     util::RegionVector<FieldDecl *>(region()),
@@ -88,10 +88,10 @@ TEST_F(AstTest, HierechyTest) {
       STATEMENT_NODES(CHECK_NODE_IS_NOT_KIND)
 
       // Ensure concrete expressions are also a base expression type
-      EXPECT_TRUE(node->Is<Expression>())
+      EXPECT_TRUE(node->Is<Expr>())
           << "Node " << node->kind_name()
-          << " isn't an Expression? Ensure Expression::classof() handles all "
-             "cases if you've added a new Expression node.";
+          << " isn't an Expr? Ensure Expr::classof() handles all "
+             "cases if you've added a new Expr node.";
 
       // Each expression must match only one other expression type (itself)
       EXPECT_EQ(1, COUNT_MATCHES(EXPRESSION_NODES))

@@ -33,7 +33,7 @@ class AstNodeFactory {
   }
 
   VariableDecl *NewVariableDecl(const SourcePosition &pos, Identifier name,
-                                Expression *type_repr, Expression *init) {
+                                Expr *type_repr, Expr *init) {
     return new (region_) VariableDecl(pos, name, type_repr, init);
   }
 
@@ -49,26 +49,26 @@ class AstNodeFactory {
 
   DeclStmt *NewDeclStmt(Decl *decl) { return new (region_) DeclStmt(decl); }
 
-  AssignmentStmt *NewAssignmentStmt(const SourcePosition &pos, Expression *dest,
-                                    Expression *src) {
+  AssignmentStmt *NewAssignmentStmt(const SourcePosition &pos, Expr *dest,
+                                    Expr *src) {
     return new (region_) AssignmentStmt(pos, dest, src);
   }
 
-  ExpressionStmt *NewExpressionStmt(Expression *expression) {
+  ExpressionStmt *NewExpressionStmt(Expr *expression) {
     return new (region_) ExpressionStmt(expression);
   }
 
-  ForStmt *NewForStmt(const SourcePosition &pos, Stmt *init, Expression *cond,
+  ForStmt *NewForStmt(const SourcePosition &pos, Stmt *init, Expr *cond,
                       Stmt *next, BlockStmt *body) {
     return new (region_) ForStmt(pos, init, cond, next, body);
   }
 
-  IfStmt *NewIfStmt(const SourcePosition &pos, Expression *cond,
-                    BlockStmt *then_stmt, Stmt *else_stmt) {
+  IfStmt *NewIfStmt(const SourcePosition &pos, Expr *cond, BlockStmt *then_stmt,
+                    Stmt *else_stmt) {
     return new (region_) IfStmt(pos, cond, then_stmt, else_stmt);
   }
 
-  ReturnStmt *NewReturnStmt(const SourcePosition &pos, Expression *ret) {
+  ReturnStmt *NewReturnStmt(const SourcePosition &pos, Expr *ret) {
     return new (region_) ReturnStmt(pos, ret);
   }
 
@@ -77,13 +77,12 @@ class AstNodeFactory {
   }
 
   BinaryOpExpr *NewBinaryOpExpr(const SourcePosition &pos,
-                                parsing::Token::Type op, Expression *left,
-                                Expression *right) {
+                                parsing::Token::Type op, Expr *left,
+                                Expr *right) {
     return new (region_) BinaryOpExpr(pos, op, left, right);
   }
 
-  CallExpr *NewCallExpr(Expression *fun,
-                        util::RegionVector<Expression *> &&args) {
+  CallExpr *NewCallExpr(Expr *fun, util::RegionVector<Expr *> &&args) {
     return new (region_) CallExpr(fun, std::move(args));
   }
 
@@ -113,7 +112,7 @@ class AstNodeFactory {
   }
 
   UnaryOpExpr *NewUnaryOpExpr(const SourcePosition &pos,
-                              parsing::Token::Type op, Expression *expr) {
+                              parsing::Token::Type op, Expr *expr) {
     return new (region_) UnaryOpExpr(pos, op, expr);
   }
 
@@ -122,23 +121,23 @@ class AstNodeFactory {
     return new (region_) IdentifierExpr(pos, name);
   }
 
-  ArrayTypeRepr *NewArrayType(const SourcePosition &pos, Expression *len,
-                              Expression *elem_type) {
+  ArrayTypeRepr *NewArrayType(const SourcePosition &pos, Expr *len,
+                              Expr *elem_type) {
     return new (region_) ArrayTypeRepr(pos, len, elem_type);
   }
 
   FieldDecl *NewFieldDecl(const SourcePosition &pos, Identifier name,
-                          Expression *type_repr) {
+                          Expr *type_repr) {
     return new (region_) FieldDecl(pos, name, type_repr);
   }
 
   FunctionTypeRepr *NewFunctionType(const SourcePosition &pos,
                                     util::RegionVector<FieldDecl *> &&params,
-                                    Expression *ret) {
+                                    Expr *ret) {
     return new (region_) FunctionTypeRepr(pos, std::move(params), ret);
   }
 
-  PointerTypeRepr *NewPointerType(const SourcePosition &pos, Expression *base) {
+  PointerTypeRepr *NewPointerType(const SourcePosition &pos, Expr *base) {
     return new (region_) PointerTypeRepr(pos, base);
   }
 
