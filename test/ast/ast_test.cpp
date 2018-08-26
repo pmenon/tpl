@@ -46,10 +46,10 @@ TEST_F(AstTest, HierechyTest) {
       EXPRESSION_NODES(CHECK_NODE_IS_NOT_KIND)
 
       // Ensure concrete declarations are also a base declaration type
-      EXPECT_TRUE(node->Is<Declaration>())
+      EXPECT_TRUE(node->Is<Decl>())
           << "Node " << node->kind_name()
-          << " isn't an Declaration? Ensure Declaration::classof() handles all "
-             "cases if you've added a new Declaration node.";
+          << " isn't an Decl? Ensure Decl::classof() handles all "
+             "cases if you've added a new Decl node.";
 
       // Each declaration must match only one other declaration type (itself)
       EXPECT_EQ(1, COUNT_MATCHES(DECLARATION_NODES))
@@ -61,19 +61,19 @@ TEST_F(AstTest, HierechyTest) {
   /// Test expressions
   {
     AstNode *all_exprs[] = {
-        factory.NewBinaryExpression(empty_pos(), parsing::Token::Type::PLUS,
-                                    nullptr, nullptr),
-        factory.NewCallExpression(factory.NewNilLiteral(empty_pos()),
-                                  util::RegionVector<Expression *>(region())),
-        factory.NewFunctionLiteral(
+        factory.NewBinaryOpExpr(empty_pos(), parsing::Token::Type::PLUS,
+                                nullptr, nullptr),
+        factory.NewCallExpr(factory.NewNilLiteral(empty_pos()),
+                            util::RegionVector<Expression *>(region())),
+        factory.NewFunctionLitExpr(
             factory.NewFunctionType(empty_pos(),
                                     util::RegionVector<FieldDecl *>(region()),
                                     nullptr),
             nullptr),
         factory.NewNilLiteral(empty_pos()),
-        factory.NewUnaryExpression(empty_pos(), parsing::Token::Type::MINUS,
-                                   nullptr),
-        factory.NewIdentifierExpression(empty_pos(), Identifier(nullptr)),
+        factory.NewUnaryOpExpr(empty_pos(), parsing::Token::Type::MINUS,
+                               nullptr),
+        factory.NewIdentifierExpr(empty_pos(), Identifier(nullptr)),
         factory.NewArrayType(empty_pos(), nullptr, nullptr),
         factory.NewFunctionType(
             empty_pos(), util::RegionVector<FieldDecl *>(region()), nullptr),
@@ -103,15 +103,14 @@ TEST_F(AstTest, HierechyTest) {
   /// Test statements
   {
     AstNode *all_stmts[] = {
-        factory.NewBlockStatement(empty_pos(), empty_pos(),
-                                  util::RegionVector<Statement *>(region())),
-        factory.NewDeclarationStatement(factory.NewVariableDecl(
+        factory.NewBlockStmt(empty_pos(), empty_pos(),
+                             util::RegionVector<Stmt *>(region())),
+        factory.NewDeclStmt(factory.NewVariableDecl(
             empty_pos(), Identifier(nullptr), nullptr, nullptr)),
-        factory.NewExpressionStatement(factory.NewNilLiteral(empty_pos())),
-        factory.NewForStatement(empty_pos(), nullptr, nullptr, nullptr,
-                                nullptr),
-        factory.NewIfStatement(empty_pos(), nullptr, nullptr, nullptr),
-        factory.NewReturnStatement(empty_pos(), nullptr),
+        factory.NewExpressionStmt(factory.NewNilLiteral(empty_pos())),
+        factory.NewForStmt(empty_pos(), nullptr, nullptr, nullptr, nullptr),
+        factory.NewIfStmt(empty_pos(), nullptr, nullptr, nullptr),
+        factory.NewReturnStmt(empty_pos(), nullptr),
     };
 
     for (const auto *node : all_stmts) {
@@ -120,7 +119,7 @@ TEST_F(AstTest, HierechyTest) {
       EXPRESSION_NODES(CHECK_NODE_IS_NOT_KIND)
 
       // Ensure concrete expressions are also a base expression type
-      EXPECT_TRUE(node->Is<Statement>())
+      EXPECT_TRUE(node->Is<Stmt>())
           << "Node " << node->kind_name()
           << " isn't an Statement? Ensure Statement::classof() handles all "
              "cases if you've added a new Statement node.";

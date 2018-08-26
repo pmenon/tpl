@@ -8,9 +8,9 @@ namespace tpl::sema {
 void Sema::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {
   uint64_t actual_length = 0;
   if (node->length() != nullptr) {
-    auto *len_expr = node->length()->SafeAs<ast::LiteralExpression>();
+    auto *len_expr = node->length()->SafeAs<ast::LitExpr>();
     if (len_expr == nullptr ||
-        len_expr->literal_kind() != ast::LiteralExpression::LitKind::Int) {
+        len_expr->literal_kind() != ast::LitExpr::LitKind::Int) {
       error_reporter().Report(node->length()->position(),
                               ErrorMessages::kNonIntegerArrayLength);
       return;

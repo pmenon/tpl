@@ -86,45 +86,45 @@ class Parser {
   ///
   //////////////////////////////////////////////////////////////////////////////
 
-  ast::Declaration *ParseDeclaration();
+  ast::Decl *ParseDecl();
 
-  ast::Declaration *ParseFunctionDeclaration();
+  ast::Decl *ParseFunctionDecl();
 
-  ast::Declaration *ParseStructDeclaration();
+  ast::Decl *ParseStructDecl();
 
-  ast::Declaration *ParseVariableDeclaration();
+  ast::Decl *ParseVariableDecl();
 
-  ast::Statement *ParseStatement();
+  ast::Stmt *ParseStmt();
 
-  ast::Statement *ParseSimpleStatement();
+  ast::Stmt *ParseSimpleStmt();
 
-  ast::Statement *ParseBlockStatement();
+  ast::Stmt *ParseBlockStmt();
 
   struct ForHeader {
-    ast::Statement *init;
+    ast::Stmt *init;
     ast::Expression *cond;
-    ast::Statement *next;
+    ast::Stmt *next;
   };
 
   ForHeader ParseForHeader();
 
-  ast::Statement *ParseForStatement();
+  ast::Stmt *ParseForStmt();
 
-  ast::Statement *ParseIfStatement();
+  ast::Stmt *ParseIfStmt();
 
-  ast::Statement *ParseReturnStatement();
+  ast::Stmt *ParseReturnStmt();
 
   ast::Expression *ParseExpression();
 
-  ast::Expression *ParseBinaryExpression(uint32_t min_prec);
+  ast::Expression *ParseBinaryOpExpr(uint32_t min_prec);
 
-  ast::Expression *ParseUnaryExpression();
+  ast::Expression *ParseUnaryOpExpr();
 
-  ast::Expression *ParseCallExpression();
+  ast::Expression *ParseCallExpr();
 
   ast::Expression *ParsePrimaryExpression();
 
-  ast::Expression *ParseFunctionLiteralExpression();
+  ast::Expression *ParseFunctionLitExpr();
 
   ast::Expression *ParseType();
 

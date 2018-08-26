@@ -4,12 +4,11 @@ namespace tpl::ast {
 
 FunctionTypeRepr *FunctionDecl::type_repr() { return fun_->type_repr(); }
 
-ExpressionStatement::ExpressionStatement(Expression *expr)
-    : Statement(Kind::ExpressionStatement, expr->position()), expr_(expr) {}
+ExpressionStmt::ExpressionStmt(Expression *expr)
+    : Stmt(Kind::ExpressionStmt, expr->position()), expr_(expr) {}
 
-FunctionLiteralExpression::FunctionLiteralExpression(
-    FunctionTypeRepr *type_repr, BlockStatement *body)
-    : Expression(Kind::FunctionLiteralExpression, type_repr->position()),
+FunctionLitExpr::FunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body)
+    : Expression(Kind::FunctionLitExpr, type_repr->position()),
       type_repr_(type_repr),
       body_(body) {}
 

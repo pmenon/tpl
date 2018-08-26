@@ -4,7 +4,7 @@
 
 namespace tpl::sema {
 
-bool Scope::Declare(ast::Declaration *decl, ast::Type *type) {
+bool Scope::Declare(ast::Decl *decl, ast::Type *type) {
   ast::Type *curr_decl = Lookup(decl->name());
   if (curr_decl != nullptr) {
     return false;

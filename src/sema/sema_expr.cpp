@@ -5,7 +5,7 @@
 
 namespace tpl::sema {
 
-void Sema::VisitAssignmentStatement(ast::AssignmentStatement *node) {
+void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
   auto *src_type = Resolve(node->source());
   auto *dest_type = Resolve(node->destination());
 
@@ -18,11 +18,11 @@ void Sema::VisitAssignmentStatement(ast::AssignmentStatement *node) {
   }
 }
 
-void Sema::VisitBadExpression(ast::BadExpression *node) {
+void Sema::VisitBadExpr(ast::BadExpr *node) {
   TPL_ASSERT(false, "Bad expression in type checker!");
 }
 
-void Sema::VisitBinaryExpression(ast::BinaryExpression *node) {
+void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
   ast::Type *left_type = Resolve(node->left());
   ast::Type *right_type = Resolve(node->right());
 
@@ -41,7 +41,7 @@ void Sema::VisitBinaryExpression(ast::BinaryExpression *node) {
   node->set_type(left_type);
 }
 
-void Sema::VisitCallExpression(ast::CallExpression *node) {
+void Sema::VisitCallExpr(ast::CallExpr *node) {
   // Resolve the function type
   ast::Type *type = Resolve(node->function());
 
@@ -55,7 +55,7 @@ void Sema::VisitCallExpression(ast::CallExpression *node) {
   }
 
   ast::Identifier func_name =
-      node->function()->As<ast::IdentifierExpression>()->name();
+      node->function()->As<ast::IdentifierExpr>()->name();
 
   // First, check to make sure we have the right number of function arguments
   auto *func_type = type->As<ast::FunctionType>();
@@ -94,8 +94,7 @@ void Sema::VisitCallExpression(ast::CallExpression *node) {
   node->set_type(func_type->return_type());
 }
 
-void Sema::VisitFunctionLiteralExpression(
-    ast::FunctionLiteralExpression *node) {
+void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   // Resolve the type
   if (Resolve(node->type_repr()) == nullptr) {
     return;
@@ -119,7 +118,7 @@ void Sema::VisitFunctionLiteralExpression(
   Visit(node->body());
 }
 
-void Sema::VisitIdentifierExpression(ast::IdentifierExpression *node) {
+void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   auto *type = current_scope()->Lookup(node->name());
 
   if (type == nullptr) {
@@ -134,22 +133,22 @@ void Sema::VisitIdentifierExpression(ast::IdentifierExpression *node) {
   node->set_type(type);
 }
 
-void Sema::VisitLiteralExpression(ast::LiteralExpression *node) {
+void Sema::VisitLitExpr(ast::LitExpr *node) {
   switch (node->literal_kind()) {
-    case ast::LiteralExpression::LitKind::Nil: {
+    case ast::LitExpr::LitKind::Nil: {
       node->set_type(ast::NilType::Nil(ast_context()));
       break;
     }
-    case ast::LiteralExpression::LitKind::Boolean: {
+    case ast::LitExpr::LitKind::Boolean: {
       node->set_type(ast::BoolType::Bool(ast_context()));
       break;
     }
-    case ast::LiteralExpression::LitKind::Float: {
+    case ast::LitExpr::LitKind::Float: {
       // Literal floats default to float32
       node->set_type(ast::FloatType::Float32(ast_context()));
       break;
     }
-    case ast::LiteralExpression::LitKind::Int: {
+    case ast::LitExpr::LitKind::Int: {
       // Literal integers default to int32
       node->set_type(ast::IntegerType::Int32(ast_context()));
       break;
@@ -158,7 +157,7 @@ void Sema::VisitLiteralExpression(ast::LiteralExpression *node) {
   }
 }
 
-void Sema::VisitUnaryExpression(ast::UnaryExpression *node) {
+void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
   // Resolve the type of the sub expression
   ast::Type *expr_type = Resolve(node->expr());
 

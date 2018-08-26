@@ -52,7 +52,7 @@ void PrettyPrint::VisitStructDecl(StructDecl *node) {
   EndVisit();
 }
 
-void PrettyPrint::VisitAssignmentStatement(AssignmentStatement *node) {
+void PrettyPrint::VisitAssignmentStmt(AssignmentStmt *node) {
   BeginVisit();
   PrintString("assign ");
   Visit(node->destination());
@@ -61,7 +61,7 @@ void PrettyPrint::VisitAssignmentStatement(AssignmentStatement *node) {
   EndVisit();
 }
 
-void PrettyPrint::VisitBlockStatement(BlockStatement *node) {
+void PrettyPrint::VisitBlockStmt(BlockStmt *node) {
   BeginVisit();
   for (auto *statement : node->statements()) {
     Visit(statement);
@@ -70,15 +70,13 @@ void PrettyPrint::VisitBlockStatement(BlockStatement *node) {
   EndVisit();
 }
 
-void PrettyPrint::VisitDeclarationStatement(DeclarationStatement *node) {
-  Visit(node->declaration());
-}
+void PrettyPrint::VisitDeclStmt(DeclStmt *node) { Visit(node->declaration()); }
 
-void PrettyPrint::VisitExpressionStatement(ExpressionStatement *node) {
+void PrettyPrint::VisitExpressionStmt(ExpressionStmt *node) {
   Visit(node->expression());
 }
 
-void PrettyPrint::VisitForStatement(ForStatement *node) {
+void PrettyPrint::VisitForStmt(ForStmt *node) {
   BeginVisit();
   PrintString("for (");
   if (node->init() != nullptr) {
@@ -99,7 +97,7 @@ void PrettyPrint::VisitForStatement(ForStatement *node) {
   EndVisit();
 }
 
-void PrettyPrint::VisitIfStatement(IfStatement *node) {
+void PrettyPrint::VisitIfStmt(IfStmt *node) {
   BeginVisit();
 
   PrintString("if ");
@@ -115,7 +113,7 @@ void PrettyPrint::VisitIfStatement(IfStatement *node) {
   EndVisit();
 }
 
-void PrettyPrint::VisitReturnStatement(ReturnStatement *node) {
+void PrettyPrint::VisitReturnStmt(ReturnStmt *node) {
   BeginVisit();
   PrintString("return ");
   if (node->ret() != nullptr) {
@@ -124,7 +122,7 @@ void PrettyPrint::VisitReturnStatement(ReturnStatement *node) {
   EndVisit();
 }
 
-void PrettyPrint::VisitCallExpression(CallExpression *node) {
+void PrettyPrint::VisitCallExpr(CallExpr *node) {
   BeginVisit();
   PrintString("call ");
   Visit(node->function());
@@ -141,7 +139,7 @@ void PrettyPrint::VisitCallExpression(CallExpression *node) {
   EndVisit();
 }
 
-void PrettyPrint::VisitBinaryExpression(BinaryExpression *node) {
+void PrettyPrint::VisitBinaryOpExpr(BinaryOpExpr *node) {
   BeginVisit();
   PrintToken(node->op());
   PrintString(" ");
@@ -151,36 +149,35 @@ void PrettyPrint::VisitBinaryExpression(BinaryExpression *node) {
   EndVisit();
 }
 
-void PrettyPrint::VisitFunctionLiteralExpression(
-    FunctionLiteralExpression *node) {
+void PrettyPrint::VisitFunctionLitExpr(FunctionLitExpr *node) {
   Visit(node->body());
 }
 
-void PrettyPrint::VisitIdentifierExpression(IdentifierExpression *node) {
+void PrettyPrint::VisitIdentifierExpr(IdentifierExpr *node) {
   PrintString("'");
   PrintIdentifier(node->name());
   PrintString("'");
 }
 
-void PrettyPrint::VisitLiteralExpression(LiteralExpression *node) {
+void PrettyPrint::VisitLitExpr(LitExpr *node) {
   switch (node->literal_kind()) {
-    case LiteralExpression::LitKind::Nil: {
+    case LitExpr::LitKind::Nil: {
       PrintString("nil");
       break;
     }
-    case LiteralExpression::LitKind::Boolean: {
+    case LitExpr::LitKind::Boolean: {
       PrintString(node->bool_val() ? "'true'" : "'false'");
     }
-    case LiteralExpression::LitKind::Int:
-    case LiteralExpression::LitKind::Float:
-    case LiteralExpression::LitKind::String: {
+    case LitExpr::LitKind::Int:
+    case LitExpr::LitKind::Float:
+    case LitExpr::LitKind::String: {
       PrintIdentifier(node->raw_string());
       break;
     }
   }
 }
 
-void PrettyPrint::VisitUnaryExpression(UnaryExpression *node) {
+void PrettyPrint::VisitUnaryOpExpr(UnaryOpExpr *node) {
   BeginVisit();
   PrintToken(node->op());
   result_.append(" ");
@@ -222,14 +219,14 @@ void PrettyPrint::VisitArrayTypeRepr(ArrayTypeRepr *node) {
   Visit(node->element_type());
 }
 
-void PrettyPrint::VisitBadStatement(BadStatement *node) {
+void PrettyPrint::VisitBadStmt(BadStmt *node) {
   BeginVisit();
   PrintString("BAD STATEMENT @ ");
   PrintPosition(node->position());
   EndVisit();
 }
 
-void PrettyPrint::VisitBadExpression(BadExpression *node) {
+void PrettyPrint::VisitBadExpr(BadExpr *node) {
   BeginVisit();
   PrintString("BAD EXPRESSION @ ");
   PrintPosition(node->position());

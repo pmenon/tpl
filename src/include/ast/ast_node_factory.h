@@ -18,12 +18,12 @@ class AstNodeFactory {
   DISALLOW_COPY_AND_MOVE(AstNodeFactory);
 
   File *NewFile(const SourcePosition &pos,
-                util::RegionVector<Declaration *> &&declarations) {
+                util::RegionVector<Decl *> &&declarations) {
     return new (region_) File(pos, std::move(declarations));
   }
 
   FunctionDecl *NewFunctionDecl(const SourcePosition &pos, Identifier name,
-                                FunctionLiteralExpression *fun) {
+                                FunctionLitExpr *fun) {
     return new (region_) FunctionDecl(pos, name, fun);
   }
 
@@ -37,101 +37,89 @@ class AstNodeFactory {
     return new (region_) VariableDecl(pos, name, type_repr, init);
   }
 
-  BadStatement *NewBadStatement(const SourcePosition &pos) {
-    return new (region_) BadStatement(pos);
+  BadStmt *NewBadStmt(const SourcePosition &pos) {
+    return new (region_) BadStmt(pos);
   }
 
-  BlockStatement *NewBlockStatement(
-      const SourcePosition &start_pos, const SourcePosition &end_pos,
-      util::RegionVector<Statement *> &&statements) {
-    return new (region_)
-        BlockStatement(start_pos, end_pos, std::move(statements));
+  BlockStmt *NewBlockStmt(const SourcePosition &start_pos,
+                          const SourcePosition &end_pos,
+                          util::RegionVector<Stmt *> &&statements) {
+    return new (region_) BlockStmt(start_pos, end_pos, std::move(statements));
   }
 
-  DeclarationStatement *NewDeclarationStatement(Declaration *decl) {
-    return new (region_) DeclarationStatement(decl);
+  DeclStmt *NewDeclStmt(Decl *decl) { return new (region_) DeclStmt(decl); }
+
+  AssignmentStmt *NewAssignmentStmt(const SourcePosition &pos, Expression *dest,
+                                    Expression *src) {
+    return new (region_) AssignmentStmt(pos, dest, src);
   }
 
-  AssignmentStatement *NewAssignmentStatement(const SourcePosition &pos,
-                                              Expression *dest,
-                                              Expression *src) {
-    return new (region_) AssignmentStatement(pos, dest, src);
+  ExpressionStmt *NewExpressionStmt(Expression *expression) {
+    return new (region_) ExpressionStmt(expression);
   }
 
-  ExpressionStatement *NewExpressionStatement(Expression *expression) {
-    return new (region_) ExpressionStatement(expression);
+  ForStmt *NewForStmt(const SourcePosition &pos, Stmt *init, Expression *cond,
+                      Stmt *next, BlockStmt *body) {
+    return new (region_) ForStmt(pos, init, cond, next, body);
   }
 
-  ForStatement *NewForStatement(const SourcePosition &pos, Statement *init,
-                                Expression *cond, Statement *next,
-                                BlockStatement *body) {
-    return new (region_) ForStatement(pos, init, cond, next, body);
+  IfStmt *NewIfStmt(const SourcePosition &pos, Expression *cond,
+                    BlockStmt *then_stmt, Stmt *else_stmt) {
+    return new (region_) IfStmt(pos, cond, then_stmt, else_stmt);
   }
 
-  IfStatement *NewIfStatement(const SourcePosition &pos, Expression *cond,
-                              BlockStatement *then_stmt, Statement *else_stmt) {
-    return new (region_) IfStatement(pos, cond, then_stmt, else_stmt);
+  ReturnStmt *NewReturnStmt(const SourcePosition &pos, Expression *ret) {
+    return new (region_) ReturnStmt(pos, ret);
   }
 
-  ReturnStatement *NewReturnStatement(const SourcePosition &pos,
-                                      Expression *ret) {
-    return new (region_) ReturnStatement(pos, ret);
+  BadExpr *NewBadExpr(const SourcePosition &pos) {
+    return new (region_) BadExpr(pos);
   }
 
-  BadExpression *NewBadExpression(const SourcePosition &pos) {
-    return new (region_) BadExpression(pos);
+  BinaryOpExpr *NewBinaryOpExpr(const SourcePosition &pos,
+                                parsing::Token::Type op, Expression *left,
+                                Expression *right) {
+    return new (region_) BinaryOpExpr(pos, op, left, right);
   }
 
-  BinaryExpression *NewBinaryExpression(const SourcePosition &pos,
-                                        parsing::Token::Type op,
-                                        Expression *left, Expression *right) {
-    return new (region_) BinaryExpression(pos, op, left, right);
+  CallExpr *NewCallExpr(Expression *fun,
+                        util::RegionVector<Expression *> &&args) {
+    return new (region_) CallExpr(fun, std::move(args));
   }
 
-  CallExpression *NewCallExpression(Expression *fun,
-                                    util::RegionVector<Expression *> &&args) {
-    return new (region_) CallExpression(fun, std::move(args));
+  LitExpr *NewNilLiteral(const SourcePosition &pos) {
+    return new (region_) LitExpr(pos);
   }
 
-  LiteralExpression *NewNilLiteral(const SourcePosition &pos) {
-    return new (region_) LiteralExpression(pos);
+  LitExpr *NewBoolLiteral(const SourcePosition &pos, bool val) {
+    return new (region_) LitExpr(pos, val);
   }
 
-  LiteralExpression *NewBoolLiteral(const SourcePosition &pos, bool val) {
-    return new (region_) LiteralExpression(pos, val);
+  LitExpr *NewIntLiteral(const SourcePosition &pos, Identifier num) {
+    return new (region_) LitExpr(pos, LitExpr::LitKind::Int, num);
   }
 
-  LiteralExpression *NewIntLiteral(const SourcePosition &pos, Identifier num) {
-    return new (region_)
-        LiteralExpression(pos, LiteralExpression::LitKind::Int, num);
+  LitExpr *NewFloatLiteral(const SourcePosition &pos, Identifier num) {
+    return new (region_) LitExpr(pos, LitExpr::LitKind::Float, num);
   }
 
-  LiteralExpression *NewFloatLiteral(const SourcePosition &pos,
-                                     Identifier num) {
-    return new (region_)
-        LiteralExpression(pos, LiteralExpression::LitKind::Float, num);
+  LitExpr *NewStringLiteral(const SourcePosition &pos, Identifier str) {
+    return new (region_) LitExpr(pos, LitExpr::LitKind::String, str);
   }
 
-  LiteralExpression *NewStringLiteral(const SourcePosition &pos,
-                                      Identifier str) {
-    return new (region_)
-        LiteralExpression(pos, LiteralExpression::LitKind::String, str);
+  FunctionLitExpr *NewFunctionLitExpr(FunctionTypeRepr *type_repr,
+                                      BlockStmt *body) {
+    return new (region_) FunctionLitExpr(type_repr, body);
   }
 
-  FunctionLiteralExpression *NewFunctionLiteral(FunctionTypeRepr *type_repr,
-                                                BlockStatement *body) {
-    return new (region_) FunctionLiteralExpression(type_repr, body);
+  UnaryOpExpr *NewUnaryOpExpr(const SourcePosition &pos,
+                              parsing::Token::Type op, Expression *expr) {
+    return new (region_) UnaryOpExpr(pos, op, expr);
   }
 
-  UnaryExpression *NewUnaryExpression(const SourcePosition &pos,
-                                      parsing::Token::Type op,
-                                      Expression *expr) {
-    return new (region_) UnaryExpression(pos, op, expr);
-  }
-
-  IdentifierExpression *NewIdentifierExpression(const SourcePosition &pos,
-                                                Identifier name) {
-    return new (region_) IdentifierExpression(pos, name);
+  IdentifierExpr *NewIdentifierExpr(const SourcePosition &pos,
+                                    Identifier name) {
+    return new (region_) IdentifierExpr(pos, name);
   }
 
   ArrayTypeRepr *NewArrayType(const SourcePosition &pos, Expression *len,

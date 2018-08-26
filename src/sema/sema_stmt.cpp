@@ -1,11 +1,11 @@
 #include "sema/sema.h"
 
-#include "ast/type.h"
 #include "ast/ast_context.h"
+#include "ast/type.h"
 
 namespace tpl::sema {
 
-void Sema::VisitBlockStatement(ast::BlockStatement *node) {
+void Sema::VisitBlockStmt(ast::BlockStmt *node) {
   // Create a block scope
   SemaScope block_scope(*this, Scope::Kind::Block);
 
@@ -23,7 +23,7 @@ void Sema::VisitFile(ast::File *node) {
   }
 }
 
-void Sema::VisitForStatement(ast::ForStatement *node) {
+void Sema::VisitForStmt(ast::ForStmt *node) {
   // Create a new scope for variables introduced in initialization block
   SemaScope for_scope(*this, Scope::Kind::Loop);
 
@@ -47,15 +47,15 @@ void Sema::VisitForStatement(ast::ForStatement *node) {
   Visit(node->body());
 }
 
-void Sema::VisitExpressionStatement(ast::ExpressionStatement *node) {
+void Sema::VisitExpressionStmt(ast::ExpressionStmt *node) {
   Visit(node->expression());
 }
 
-void Sema::VisitBadStatement(ast::BadStatement *node) {
+void Sema::VisitBadStmt(ast::BadStmt *node) {
   TPL_ASSERT(false, "Bad statement during type checking!");
 }
 
-void Sema::VisitIfStatement(ast::IfStatement *node) {
+void Sema::VisitIfStmt(ast::IfStmt *node) {
   ast::Type *cond_type = Resolve(node->cond());
 
   if (cond_type == nullptr) {
@@ -75,11 +75,9 @@ void Sema::VisitIfStatement(ast::IfStatement *node) {
   }
 }
 
-void Sema::VisitDeclarationStatement(ast::DeclarationStatement *node) {
-  Visit(node->declaration());
-}
+void Sema::VisitDeclStmt(ast::DeclStmt *node) { Visit(node->declaration()); }
 
-void Sema::VisitReturnStatement(ast::ReturnStatement *node) {
+void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
   if (current_function() == nullptr) {
     error_reporter().Report(node->position(),
                             ErrorMessages::kReturnOutsideFunction);
@@ -98,4 +96,4 @@ void Sema::VisitReturnStatement(ast::ReturnStatement *node) {
   }
 }
 
-} //
+}  // namespace tpl::sema

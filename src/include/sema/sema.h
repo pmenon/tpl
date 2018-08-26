@@ -42,9 +42,7 @@ class Sema : public ast::AstVisitor<Sema> {
 
   ErrorReporter &error_reporter() const { return error_reporter_; }
 
-  ast::FunctionLiteralExpression *current_function() const {
-    return curr_func_;
-  }
+  ast::FunctionLitExpr *current_function() const { return curr_func_; }
 
   //////////////////////////////////////////////////////////////////////////////
   ///
@@ -104,7 +102,7 @@ class Sema : public ast::AstVisitor<Sema> {
    */
   class FunctionSemaScope {
    public:
-    FunctionSemaScope(Sema &check, ast::FunctionLiteralExpression *func)
+    FunctionSemaScope(Sema &check, ast::FunctionLitExpr *func)
         : prev_func_(check.current_function()),
           block_scope_(check, Scope::Kind::Function) {
       check.curr_func_ = func;
@@ -118,7 +116,7 @@ class Sema : public ast::AstVisitor<Sema> {
     }
 
    private:
-    ast::FunctionLiteralExpression *prev_func_;
+    ast::FunctionLitExpr *prev_func_;
     SemaScope block_scope_;
   };
 
@@ -137,7 +135,7 @@ class Sema : public ast::AstVisitor<Sema> {
   uint64_t num_cached_scopes_;
   std::unique_ptr<Scope> scope_cache_[kScopeCacheSize] = {nullptr};
 
-  ast::FunctionLiteralExpression *curr_func_;
+  ast::FunctionLitExpr *curr_func_;
 };
 
 }  // namespace sema

@@ -23,7 +23,7 @@ class Type;
  * All possible declarations
  *
  * If you add a new declaration node to either the beginning or end of the list,
- * remember to modify Declaration::classof() to update the bounds check.
+ * remember to modify Decl::classof() to update the bounds check.
  */
 #define DECLARATION_NODES(T) \
   T(FieldDecl)               \
@@ -38,14 +38,14 @@ class Type;
  * remember to modify Statement::classof() to update the bounds check.
  */
 #define STATEMENT_NODES(T) \
-  T(AssignmentStatement)   \
-  T(BadStatement)          \
-  T(BlockStatement)        \
-  T(DeclarationStatement)  \
-  T(ExpressionStatement)   \
-  T(ForStatement)          \
-  T(IfStatement)           \
-  T(ReturnStatement)
+  T(AssignmentStmt)        \
+  T(BadStmt)               \
+  T(BlockStmt)             \
+  T(DeclStmt)              \
+  T(ExpressionStmt)        \
+  T(ForStmt)               \
+  T(IfStmt)                \
+  T(ReturnStmt)
 
 /*
  * All possible expressions
@@ -53,18 +53,18 @@ class Type;
  * If you add a new expression node to either the beginning or end of the list,
  * remember to modify Expression::classof() to update the bounds check.
  */
-#define EXPRESSION_NODES(T)    \
-  T(BadExpression)             \
-  T(BinaryExpression)          \
-  T(CallExpression)            \
-  T(FunctionLiteralExpression) \
-  T(IdentifierExpression)      \
-  T(LiteralExpression)         \
-  T(UnaryExpression)           \
-  /* Types */                  \
-  T(ArrayTypeRepr)             \
-  T(FunctionTypeRepr)          \
-  T(PointerTypeRepr)           \
+#define EXPRESSION_NODES(T) \
+  T(BadExpr)                \
+  T(BinaryOpExpr)           \
+  T(CallExpr)               \
+  T(FunctionLitExpr)        \
+  T(IdentifierExpr)         \
+  T(LitExpr)                \
+  T(UnaryOpExpr)            \
+  /* Types */               \
+  T(ArrayTypeRepr)          \
+  T(FunctionTypeRepr)       \
+  T(PointerTypeRepr)        \
   T(StructTypeRepr)
 
 /*
@@ -76,9 +76,9 @@ class Type;
   FILE_NODE(T)         \
   STATEMENT_NODES(T)
 
-class Declaration;
+class Decl;
 class Expression;
-class Statement;
+class Stmt;
 
 // Forward declare all nodes
 #define FORWARD_DECLARE(name) class name;
@@ -180,28 +180,28 @@ class AstNode : public util::RegionObject {
  */
 class File : public AstNode {
  public:
-  File(const SourcePosition &pos, util::RegionVector<Declaration *> &&decls)
+  File(const SourcePosition &pos, util::RegionVector<Decl *> &&decls)
       : AstNode(Kind::File, pos), decls_(std::move(decls)) {}
 
-  util::RegionVector<Declaration *> &declarations() { return decls_; }
+  util::RegionVector<Decl *> &declarations() { return decls_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() >= Kind::File;
   }
 
  private:
-  util::RegionVector<Declaration *> decls_;
+  util::RegionVector<Decl *> decls_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 ///
-/// Declaration nodes
+/// Decl nodes
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-class Declaration : public AstNode {
+class Decl : public AstNode {
  public:
-  Declaration(Kind kind, const SourcePosition &pos, Identifier name)
+  Decl(Kind kind, const SourcePosition &pos, Identifier name)
       : AstNode(kind, pos), name_(name) {}
 
   Identifier name() const { return name_; }
@@ -218,10 +218,10 @@ class Declaration : public AstNode {
 /**
  * A generic declaration of a function argument or a field in a struct
  */
-class FieldDecl : public Declaration {
+class FieldDecl : public Decl {
  public:
   FieldDecl(const SourcePosition &pos, Identifier name, Expression *type_repr)
-      : Declaration(Kind::FieldDecl, pos, name), type_repr_(type_repr) {}
+      : Decl(Kind::FieldDecl, pos, name), type_repr_(type_repr) {}
 
   Expression *type_repr() const { return type_repr_; }
 
@@ -236,13 +236,12 @@ class FieldDecl : public Declaration {
 /**
  * A function declaration
  */
-class FunctionDecl : public Declaration {
+class FunctionDecl : public Decl {
  public:
-  FunctionDecl(const SourcePosition &pos, Identifier name,
-               FunctionLiteralExpression *fun)
-      : Declaration(Kind::FunctionDecl, pos, name), fun_(fun) {}
+  FunctionDecl(const SourcePosition &pos, Identifier name, FunctionLitExpr *fun)
+      : Decl(Kind::FunctionDecl, pos, name), fun_(fun) {}
 
-  FunctionLiteralExpression *function() const { return fun_; }
+  FunctionLitExpr *function() const { return fun_; }
 
   FunctionTypeRepr *type_repr();
 
@@ -251,17 +250,17 @@ class FunctionDecl : public Declaration {
   }
 
  private:
-  FunctionLiteralExpression *fun_;
+  FunctionLitExpr *fun_;
 };
 
 /**
  *
  */
-class StructDecl : public Declaration {
+class StructDecl : public Decl {
  public:
   StructDecl(const SourcePosition &pos, Identifier name,
              StructTypeRepr *type_repr)
-      : Declaration(Kind::StructDecl, pos, name), type_repr_(type_repr) {}
+      : Decl(Kind::StructDecl, pos, name), type_repr_(type_repr) {}
 
   StructTypeRepr *type_repr() const { return type_repr_; }
 
@@ -276,11 +275,11 @@ class StructDecl : public Declaration {
 /**
  * A variable declaration
  */
-class VariableDecl : public Declaration {
+class VariableDecl : public Decl {
  public:
   VariableDecl(const SourcePosition &pos, Identifier name,
                Expression *type_repr, Expression *init)
-      : Declaration(Kind::VariableDecl, pos, name),
+      : Decl(Kind::VariableDecl, pos, name),
         type_repr_(type_repr),
         init_(init) {}
 
@@ -306,33 +305,30 @@ class VariableDecl : public Declaration {
 /**
  * Base class for all statement nodes
  */
-class Statement : public AstNode {
+class Stmt : public AstNode {
  public:
-  Statement(Kind kind, const SourcePosition &pos) : AstNode(kind, pos) {}
+  Stmt(Kind kind, const SourcePosition &pos) : AstNode(kind, pos) {}
 
   static bool classof(const AstNode *node) {
-    return node->kind() >= Kind::AssignmentStatement &&
-           node->kind() <= Kind::ReturnStatement;
+    return node->kind() >= Kind::AssignmentStmt &&
+           node->kind() <= Kind::ReturnStmt;
   }
 };
 
 /**
  * An assignment, dest = source
  */
-class AssignmentStatement : public Statement {
+class AssignmentStmt : public Stmt {
  public:
-  AssignmentStatement(const SourcePosition &pos, Expression *dest,
-                      Expression *src)
-      : Statement(AstNode::Kind::AssignmentStatement, pos),
-        dest_(dest),
-        src_(src) {}
+  AssignmentStmt(const SourcePosition &pos, Expression *dest, Expression *src)
+      : Stmt(AstNode::Kind::AssignmentStmt, pos), dest_(dest), src_(src) {}
 
   Expression *destination() const { return dest_; }
 
   Expression *source() const { return src_; };
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::AssignmentStatement;
+    return node->kind() == Kind::AssignmentStmt;
   }
 
  private:
@@ -343,70 +339,70 @@ class AssignmentStatement : public Statement {
 /**
  * A bad statement
  */
-class BadStatement : public Statement {
+class BadStmt : public Stmt {
  public:
-  explicit BadStatement(const SourcePosition &pos)
-      : Statement(AstNode::Kind::BadStatement, pos) {}
+  explicit BadStmt(const SourcePosition &pos)
+      : Stmt(AstNode::Kind::BadStmt, pos) {}
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::BadStatement;
+    return node->kind() == Kind::BadStmt;
   }
 };
 
 /**
  * A block of statements
  */
-class BlockStatement : public Statement {
+class BlockStmt : public Stmt {
  public:
-  BlockStatement(const SourcePosition &pos, const SourcePosition &rbrace_pos,
-                 util::RegionVector<Statement *> &&statements)
-      : Statement(Kind::BlockStatement, pos),
+  BlockStmt(const SourcePosition &pos, const SourcePosition &rbrace_pos,
+            util::RegionVector<Stmt *> &&statements)
+      : Stmt(Kind::BlockStmt, pos),
         rbrace_pos_(rbrace_pos),
         statements_(std::move(statements)) {}
 
-  util::RegionVector<Statement *> &statements() { return statements_; }
+  util::RegionVector<Stmt *> &statements() { return statements_; }
 
   const SourcePosition &right_brace_position() const { return rbrace_pos_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::BlockStatement;
+    return node->kind() == Kind::BlockStmt;
   }
 
  private:
   const SourcePosition rbrace_pos_;
 
-  util::RegionVector<Statement *> statements_;
+  util::RegionVector<Stmt *> statements_;
 };
 
 /**
- * A declaration
+ * A statement that is just a declaration
  */
-class DeclarationStatement : public Statement {
+class DeclStmt : public Stmt {
  public:
-  explicit DeclarationStatement(Declaration *decl)
-      : Statement(Kind::DeclarationStatement, decl->position()), decl_(decl) {}
+  explicit DeclStmt(Decl *decl)
+      : Stmt(Kind::DeclStmt, decl->position()), decl_(decl) {}
 
-  Declaration *declaration() const { return decl_; }
+  Decl *declaration() const { return decl_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::DeclarationStatement;
+    return node->kind() == Kind::DeclStmt;
   }
 
  private:
-  Declaration *decl_;
+  Decl *decl_;
 };
 
 /**
  * The bridge between statements and expressions
  */
-class ExpressionStatement : public Statement {
+class ExpressionStmt : public Stmt {
  public:
-  explicit ExpressionStatement(Expression *expr);
+  explicit ExpressionStmt(Expression *expr);
 
   Expression *expression() { return expr_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::ExpressionStatement;
+    return node->kind() == Kind::ExpressionStmt;
   }
 
  private:
@@ -416,20 +412,20 @@ class ExpressionStatement : public Statement {
 /**
  * A for statement
  */
-class ForStatement : public Statement {
+class ForStmt : public Stmt {
  public:
-  ForStatement(const SourcePosition &pos, Statement *init, Expression *cond,
-               Statement *next, BlockStatement *body)
-      : Statement(AstNode::Kind::ForStatement, pos),
+  ForStmt(const SourcePosition &pos, Stmt *init, Expression *cond, Stmt *next,
+          BlockStmt *body)
+      : Stmt(AstNode::Kind::ForStmt, pos),
         init_(init),
         cond_(cond),
         next_(next),
         body_(body) {}
 
-  Statement *init() const { return init_; }
+  Stmt *init() const { return init_; }
   Expression *cond() const { return cond_; }
-  Statement *next() const { return next_; }
-  BlockStatement *body() const { return body_; }
+  Stmt *next() const { return next_; }
+  BlockStmt *body() const { return body_; }
 
   bool is_infinite() const {
     return init_ == nullptr && cond_ == nullptr && next_ == nullptr;
@@ -440,56 +436,56 @@ class ForStatement : public Statement {
   }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::ForStatement;
+    return node->kind() == Kind::ForStmt;
   }
 
  private:
-  Statement *init_;
+  Stmt *init_;
   Expression *cond_;
-  Statement *next_;
-  BlockStatement *body_;
+  Stmt *next_;
+  BlockStmt *body_;
 };
 
 /**
  * An if-then-else statement
  */
-class IfStatement : public Statement {
+class IfStmt : public Stmt {
  public:
-  IfStatement(const SourcePosition &pos, Expression *cond,
-              BlockStatement *then_stmt, Statement *else_stmt)
-      : Statement(Kind::IfStatement, pos),
+  IfStmt(const SourcePosition &pos, Expression *cond, BlockStmt *then_stmt,
+         Stmt *else_stmt)
+      : Stmt(Kind::IfStmt, pos),
         cond_(cond),
         then_stmt_(then_stmt),
         else_stmt_(else_stmt) {}
 
   Expression *cond() { return cond_; }
 
-  BlockStatement *then_stmt() { return then_stmt_; }
+  BlockStmt *then_stmt() { return then_stmt_; }
 
-  Statement *else_stmt() { return else_stmt_; }
+  Stmt *else_stmt() { return else_stmt_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::IfStatement;
+    return node->kind() == Kind::IfStmt;
   }
 
  private:
   Expression *cond_;
-  BlockStatement *then_stmt_;
-  Statement *else_stmt_;
+  BlockStmt *then_stmt_;
+  Stmt *else_stmt_;
 };
 
 /**
  * A return statement
  */
-class ReturnStatement : public Statement {
+class ReturnStmt : public Stmt {
  public:
-  ReturnStatement(const SourcePosition &pos, Expression *ret)
-      : Statement(Kind::ReturnStatement, pos), ret_(ret) {}
+  ReturnStmt(const SourcePosition &pos, Expression *ret)
+      : Stmt(Kind::ReturnStmt, pos), ret_(ret) {}
 
   Expression *ret() { return ret_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::ReturnStatement;
+    return node->kind() == Kind::ReturnStmt;
   }
 
  private:
@@ -516,7 +512,7 @@ class Expression : public AstNode {
   void set_type(Type *type) { type_ = type; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() >= Kind::BadExpression &&
+    return node->kind() >= Kind::BadExpr &&
            node->kind() <= Kind::StructTypeRepr;
   }
 
@@ -527,24 +523,24 @@ class Expression : public AstNode {
 /**
  * A bad statement
  */
-class BadExpression : public Expression {
+class BadExpr : public Expression {
  public:
-  explicit BadExpression(const SourcePosition &pos)
-      : Expression(AstNode::Kind::BadExpression, pos) {}
+  explicit BadExpr(const SourcePosition &pos)
+      : Expression(AstNode::Kind::BadExpr, pos) {}
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::BadExpression;
+    return node->kind() == Kind::BadExpr;
   }
 };
 
 /**
  * A binary expression with non-null left and right children and an operator
  */
-class BinaryExpression : public Expression {
+class BinaryOpExpr : public Expression {
  public:
-  BinaryExpression(const SourcePosition &pos, parsing::Token::Type op,
-                   Expression *left, Expression *right)
-      : Expression(Kind::BinaryExpression, pos),
+  BinaryOpExpr(const SourcePosition &pos, parsing::Token::Type op,
+               Expression *left, Expression *right)
+      : Expression(Kind::BinaryOpExpr, pos),
         op_(op),
         left_(left),
         right_(right) {}
@@ -556,7 +552,7 @@ class BinaryExpression : public Expression {
   Expression *right() { return right_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::BinaryExpression;
+    return node->kind() == Kind::BinaryOpExpr;
   }
 
  private:
@@ -568,10 +564,10 @@ class BinaryExpression : public Expression {
 /**
  * A function call expression
  */
-class CallExpression : public Expression {
+class CallExpr : public Expression {
  public:
-  CallExpression(Expression *fun, util::RegionVector<Expression *> &&args)
-      : Expression(Kind::CallExpression, fun->position()),
+  CallExpr(Expression *fun, util::RegionVector<Expression *> &&args)
+      : Expression(Kind::CallExpr, fun->position()),
         fun_(fun),
         args_(std::move(args)) {}
 
@@ -580,7 +576,7 @@ class CallExpression : public Expression {
   util::RegionVector<Expression *> &arguments() { return args_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::CallExpression;
+    return node->kind() == Kind::CallExpr;
   }
 
  private:
@@ -588,73 +584,67 @@ class CallExpression : public Expression {
   util::RegionVector<Expression *> args_;
 };
 
-class FunctionLiteralExpression : public Expression {
+class FunctionLitExpr : public Expression {
  public:
-  FunctionLiteralExpression(FunctionTypeRepr *type_repr, BlockStatement *body);
+  FunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body);
 
   FunctionTypeRepr *type_repr() const { return type_repr_; }
 
-  BlockStatement *body() const { return body_; }
+  BlockStmt *body() const { return body_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::FunctionLiteralExpression;
+    return node->kind() == Kind::FunctionLitExpr;
   }
 
  private:
   FunctionTypeRepr *type_repr_;
-  BlockStatement *body_;
+  BlockStmt *body_;
 };
 
 /**
  * A reference to a variable, function or struct
  */
-class IdentifierExpression : public Expression {
+class IdentifierExpr : public Expression {
  public:
-  IdentifierExpression(const SourcePosition &pos, Identifier name)
-      : Expression(Kind::IdentifierExpression, pos),
-        name_(name),
-        decl_(nullptr) {}
+  IdentifierExpr(const SourcePosition &pos, Identifier name)
+      : Expression(Kind::IdentifierExpr, pos), name_(name), decl_(nullptr) {}
 
   Identifier name() const { return name_; }
 
-  void BindTo(Declaration *decl) { decl_ = decl; }
+  void BindTo(Decl *decl) { decl_ = decl; }
 
   bool is_bound() const { return decl_ != nullptr; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::IdentifierExpression;
+    return node->kind() == Kind::IdentifierExpr;
   }
 
  private:
   // TODO(pmenon) Should these two be a union since only one should be active?
   // Pre-binding, 'name_' is used, and post-binding 'decl_' should be used?
   Identifier name_;
-  Declaration *decl_;
+  Decl *decl_;
 };
 
 /**
  * A literal in the original source code
  */
-class LiteralExpression : public Expression {
+class LitExpr : public Expression {
  public:
   enum class LitKind : uint8_t { Nil, Boolean, Int, Float, String };
 
-  explicit LiteralExpression(const SourcePosition &pos)
-      : Expression(Kind::LiteralExpression, pos),
-        lit_kind_(LiteralExpression::LitKind::Nil) {}
+  explicit LitExpr(const SourcePosition &pos)
+      : Expression(Kind::LitExpr, pos), lit_kind_(LitExpr::LitKind::Nil) {}
 
-  LiteralExpression(const SourcePosition &pos, bool val)
-      : Expression(Kind::LiteralExpression, pos),
-        lit_kind_(LiteralExpression::LitKind::Boolean),
+  LitExpr(const SourcePosition &pos, bool val)
+      : Expression(Kind::LitExpr, pos),
+        lit_kind_(LitExpr::LitKind::Boolean),
         boolean_(val) {}
 
-  LiteralExpression(const SourcePosition &pos,
-                    LiteralExpression::LitKind lit_kind, Identifier str)
-      : Expression(Kind::LiteralExpression, pos),
-        lit_kind_(lit_kind),
-        str_(str) {}
+  LitExpr(const SourcePosition &pos, LitExpr::LitKind lit_kind, Identifier str)
+      : Expression(Kind::LitExpr, pos), lit_kind_(lit_kind), str_(str) {}
 
-  LiteralExpression::LitKind literal_kind() const { return lit_kind_; }
+  LitExpr::LitKind literal_kind() const { return lit_kind_; }
 
   bool bool_val() const {
     TPL_ASSERT(literal_kind() == LitKind::Boolean,
@@ -678,7 +668,7 @@ class LiteralExpression : public Expression {
   }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::LiteralExpression;
+    return node->kind() == Kind::LitExpr;
   }
 
  private:
@@ -693,18 +683,18 @@ class LiteralExpression : public Expression {
 /**
  * A unary expression with a non-null inner expression and an operator
  */
-class UnaryExpression : public Expression {
+class UnaryOpExpr : public Expression {
  public:
-  UnaryExpression(const SourcePosition &pos, parsing::Token::Type op,
-                  Expression *expr)
-      : Expression(Kind::UnaryExpression, pos), op_(op), expr_(expr) {}
+  UnaryOpExpr(const SourcePosition &pos, parsing::Token::Type op,
+              Expression *expr)
+      : Expression(Kind::UnaryOpExpr, pos), op_(op), expr_(expr) {}
 
   parsing::Token::Type op() { return op_; }
 
   Expression *expr() { return expr_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::UnaryExpression;
+    return node->kind() == Kind::UnaryOpExpr;
   }
 
  private:
