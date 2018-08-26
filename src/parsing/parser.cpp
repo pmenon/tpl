@@ -339,7 +339,7 @@ ast::Expression *Parser::ParseCallExpr() {
   // CallExpr ::
   //   PrimaryExpr '(' (Expr)* ')
 
-  ast::Expression *result = ParsePrimaryExpression();
+  ast::Expression *result = ParsePrimaryExpr();
 
   if (Matches(Token::Type::LEFT_PAREN)) {
     // Parse arguments
@@ -366,7 +366,7 @@ ast::Expression *Parser::ParseCallExpr() {
   return result;
 }
 
-ast::Expression *Parser::ParsePrimaryExpression() {
+ast::Expression *Parser::ParsePrimaryExpr() {
   // PrimaryExpr =
   //   nil | 'true' | 'false' | Ident | Number | String | FunctionLiteral |
   //   '(' Expr ')'

@@ -122,7 +122,7 @@ class Parser {
 
   ast::Expression *ParseCallExpr();
 
-  ast::Expression *ParsePrimaryExpression();
+  ast::Expression *ParsePrimaryExpr();
 
   ast::Expression *ParseFunctionLitExpr();
 
