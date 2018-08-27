@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 
-#include "ast/pretty_print.h"
+#include "ast/ast_dump.h"
 #include "parsing/parser.h"
 #include "parsing/scanner.h"
 #include "sema/error_reporter.h"
@@ -44,8 +44,7 @@ static void Compile(const std::string &source) {
   }
 
   // For now, just pretty print the AST
-  ast::PrettyPrint pretty_print(root);
-  pretty_print.Print();
+  ast::AstDump::Dump(root);
 }
 
 static void RunRepl() {
