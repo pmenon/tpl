@@ -261,7 +261,7 @@ ast::Stmt *Parser::ParseIfStmt() {
   // Handle 'else' statement, if one exists
   ast::Stmt *else_stmt = nullptr;
   if (Matches(Token::Type::ELSE)) {
-    if (Matches(Token::Type::IF)) {
+    if (peek() == Token::Type::IF) {
       else_stmt = ParseIfStmt();
     } else {
       else_stmt = ParseBlockStmt();
