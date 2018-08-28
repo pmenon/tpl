@@ -25,12 +25,9 @@ class Sema : public ast::AstVisitor<Sema> {
   bool Run(ast::AstNode *root);
 
   // Declare all node visit methods here
-#define DECLARE_VISIT_METHOD(type) void Visit##type(ast::type *node);
-  AST_NODES(DECLARE_VISIT_METHOD)
-#undef DECLARE_VISIT_METHOD
-
-  // Generate primary visit method
-  DEFINE_AST_VISITOR_METHOD()
+#define DECLARE_AST_VISIT_METHOD(type) void Visit##type(ast::type *node);
+  AST_NODES(DECLARE_AST_VISIT_METHOD)
+#undef DECLARE_AST_VISIT_METHOD
 
  private:
   ast::Type *Resolve(ast::Expr *expr) {

@@ -74,6 +74,8 @@ class Type : public util::RegionObject {
 
   PointerType *PointerTo();
 
+  static std::string GetAsString(Type *type);
+
  protected:
   Type(AstContext &ctx, Kind kind)
       : ctx_(ctx), align_(0), width_(0), kind_(kind) {}

@@ -17,24 +17,44 @@ namespace tpl::ast {
  *
  * All AST node visitations will get forwarded to the derived class.
  */
-template <typename Subclass>
+template <typename Impl, typename RetType = void>
 class AstVisitor {
  public:
-  void Visit(AstNode *node) { impl().Visit(node); }
+#define DISPATCH(Type) \
+  return static_cast<Impl *>(this)->Visit##Type(static_cast<Type *>(node));
 
- protected:
-  Subclass &impl() { return *static_cast<Subclass *>(this); }
-};
-
-#define GEN_VISIT_CASE(kind)                              \
-  case ::tpl::ast::AstNode::Kind::kind: {                 \
-    return impl().Visit##kind(static_cast<::tpl::ast::kind *>(node)); \
+  RetType Visit(AstNode *node) {
+    switch (node->kind()) {
+      default: { llvm_unreachable("Impossible node type"); }
+#define T(kind)               \
+  case AstNode::Kind::kind: { \
+    DISPATCH(kind)            \
+  }
+        AST_NODES(T)
+#undef T
+    }
   }
 
-#define GEN_VISITOR_SWITCH() \
-  switch (node->kind()) { AST_NODES(GEN_VISIT_CASE) }
+  RetType VisitDecl(UNUSED Decl *decl) { return RetType(); }
+  RetType VisitStmt(UNUSED Stmt *stmt) { return RetType(); }
+  RetType VisitExpr(UNUSED Expr *expr) { return RetType(); }
 
-#define DEFINE_AST_VISITOR_METHOD() \
-  void Visit(::tpl::ast::AstNode *node) { GEN_VISITOR_SWITCH() }
+#define T(DeclType) \
+  RetType Visit##DeclType(DeclType *node) { DISPATCH(Decl); }
+  DECLARATION_NODES(T)
+#undef T
+
+#define T(StmtType) \
+  RetType Visit##StmtType(StmtType *node) { DISPATCH(Stmt); }
+  STATEMENT_NODES(T)
+#undef T
+
+#define T(ExprType) \
+  RetType Visit##ExprType(ExprType *node) { DISPATCH(Expr); }
+  EXPRESSION_NODES(T)
+#undef T
+
+#undef DISPATCH
+};
 
 }  // namespace tpl::ast

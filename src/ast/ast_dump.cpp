@@ -16,15 +16,12 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
 
   void Run() { Visit(root_); }
 
- private:
   // Declare all node visit methods here
 #define DECLARE_VISIT_METHOD(type) void Visit##type(type *node);
   AST_NODES(DECLARE_VISIT_METHOD)
 #undef DECLARE_VISIT_METHOD
 
-  // Generate primary visit method
-  DEFINE_AST_VISITOR_METHOD()
-
+ private:
   struct ScopedRecurse {
     AstDumperImpl &impl;
     ScopedRecurse(AstDumperImpl &impl) : impl(impl) {

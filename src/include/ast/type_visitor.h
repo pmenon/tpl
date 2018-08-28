@@ -5,25 +5,33 @@
 namespace tpl::ast {
 
 /**
- * Generic visitor
+ * Generic visitor for type hierarchies
  */
-template <typename Subclass>
+template <typename Impl, typename RetType = void>
 class TypeVisitor {
  public:
-  void Visit(Type *type) { return impl().Visit(type); }
+#define DISPATCH(Type) \
+  return static_cast<Impl *>(this)->Visit##Type(static_cast<Type *>(type));
 
- protected:
-  Subclass &impl() { return *static_cast<Subclass *>(this); }
+  RetType Visit(Type *type) {
+    switch (type->kind()) {
+      default: { llvm_unreachable("Impossible node type"); }
+#define T(kind)          \
+  case Type::Kind::kind: \
+    DISPATCH(kind)
+        TYPE_LIST(T)
+#undef T
+    }
+  }
+
+  RetType VisitType(UNUSED Type *type) { return RetType(); }
+
+#define T(Type) \
+  RetType Visit##Type(Type *type) { DISPATCH(Type); }
+  TYPE_LIST(T)
+#undef T
+
+#undef DISPATCH
 };
-
-#define GEN_VISIT_CASE(kind)                                                \
-  case ::tpl::ast::Type::Kind::kind: {                                      \
-    return this->impl().Visit##kind(static_cast<::tpl::ast::kind *>(type)); \
-  }
-
-#define DEFINE_AST_VISITOR_METHOD()                     \
-  void Visit(::tpl::ast::Type *type) {                  \
-    switch (type->kind()) { TYPE_LIST(GEN_VISIT_CASE) } \
-  }
 
 }  // namespace tpl::ast
