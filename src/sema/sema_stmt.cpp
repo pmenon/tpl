@@ -31,10 +31,10 @@ void Sema::VisitForStmt(ast::ForStmt *node) {
     Visit(node->init());
   }
 
-  if (node->cond() != nullptr) {
-    ast::Type *cond_type = Resolve(node->cond());
+  if (node->condition() != nullptr) {
+    ast::Type *cond_type = Resolve(node->condition());
     if (!cond_type->IsBoolType()) {
-      error_reporter().Report(node->cond()->position(),
+      error_reporter().Report(node->condition()->position(),
                               ErrorMessages::kNonBoolForCondition);
     }
   }
@@ -56,7 +56,7 @@ void Sema::VisitBadStmt(ast::BadStmt *node) {
 }
 
 void Sema::VisitIfStmt(ast::IfStmt *node) {
-  ast::Type *cond_type = Resolve(node->cond());
+  ast::Type *cond_type = Resolve(node->condition());
 
   if (cond_type == nullptr) {
     // Error
@@ -64,7 +64,7 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
   }
 
   if (!cond_type->IsBoolType()) {
-    error_reporter().Report(node->cond()->position(),
+    error_reporter().Report(node->condition()->position(),
                             ErrorMessages::kNonBoolIfCondition);
   }
 

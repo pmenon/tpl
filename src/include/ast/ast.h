@@ -287,6 +287,8 @@ class VariableDecl : public Decl {
 
   Expr *initial() const { return init_; }
 
+  bool HasInitialValue() const { return init_ != nullptr; }
+
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::VariableDecl;
   }
@@ -424,11 +426,17 @@ class ForStmt : public Stmt {
 
   Stmt *init() const { return init_; }
 
-  Expr *cond() const { return cond_; }
+  Expr *condition() const { return cond_; }
 
   Stmt *next() const { return next_; }
 
   BlockStmt *body() const { return body_; }
+
+  bool HasInitializer() const { return init_ != nullptr; }
+
+  bool HasCondition() const { return cond_ != nullptr; }
+
+  bool HasNext() const { return next_ != nullptr; }
 
   bool IsInfinite() const { return cond_ == nullptr; }
 
@@ -459,11 +467,13 @@ class IfStmt : public Stmt {
         then_stmt_(then_stmt),
         else_stmt_(else_stmt) {}
 
-  Expr *cond() { return cond_; }
+  Expr *condition() { return cond_; }
 
   BlockStmt *then_stmt() { return then_stmt_; }
 
   Stmt *else_stmt() { return else_stmt_; }
+
+  bool HasElseStmt() const { return else_stmt_ != nullptr; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::IfStmt;
@@ -484,6 +494,8 @@ class ReturnStmt : public Stmt {
       : Stmt(Kind::ReturnStmt, pos), ret_(ret) {}
 
   Expr *ret() { return ret_; }
+
+  bool HasValue() const { return ret_ != nullptr; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ReturnStmt;

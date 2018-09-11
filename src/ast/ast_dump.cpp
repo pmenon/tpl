@@ -88,10 +88,12 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
     }
 
     auto dump_with_prefix = [this, dump_fn](bool last_child) {
-      // First, the prefix
-      out_ << "\n";
-      out_ << prefix_ << (last_child ? "`" : "|") << "-";
-      prefix_.append(last_child ? " " : "|").append(" ");
+      {
+        WithColor color(*this, llvm::raw_ostream::BLUE);
+        out_ << "\n";
+        out_ << prefix_ << (last_child ? "`" : "|") << "-";
+        prefix_.append(last_child ? " " : "|").append(" ");
+      }
 
       first_child_ = true;
       auto depth = pending_.size();
@@ -163,7 +165,7 @@ void AstDumperImpl::VisitFunctionDecl(FunctionDecl *node) {
 void AstDumperImpl::VisitVariableDecl(VariableDecl *node) {
   DumpNodeCommon(node);
   DumpIdentifier(node->name());
-  if (node->initial() != nullptr) {
+  if (node->HasInitialValue()) {
     DumpExpr(node->initial());
   }
 }
@@ -199,13 +201,13 @@ void AstDumperImpl::VisitExpressionStmt(ExpressionStmt *node) {
 
 void AstDumperImpl::VisitForStmt(ForStmt *node) {
   DumpNodeCommon(node);
-  if (node->init() != nullptr) {
+  if (node->HasInitializer()) {
     DumpStmt(node->init());
   }
-  if (node->cond() != nullptr) {
-    DumpExpr(node->cond());
+  if (node->HasCondition()) {
+    DumpExpr(node->condition());
   }
-  if (node->next() != nullptr) {
+  if (node->HasNext()) {
     DumpStmt(node->next());
   }
   DumpStmt(node->body());
@@ -213,16 +215,16 @@ void AstDumperImpl::VisitForStmt(ForStmt *node) {
 
 void AstDumperImpl::VisitIfStmt(IfStmt *node) {
   DumpNodeCommon(node);
-  DumpExpr(node->cond());
+  DumpExpr(node->condition());
   DumpStmt(node->then_stmt());
-  if (node->else_stmt() != nullptr) {
+  if (node->HasElseStmt()) {
     DumpStmt(node->else_stmt());
   }
 }
 
 void AstDumperImpl::VisitReturnStmt(ReturnStmt *node) {
   DumpNodeCommon(node);
-  if (node->ret() != nullptr) {
+  if (node->HasValue()) {
     DumpExpr(node->ret());
   }
 }
