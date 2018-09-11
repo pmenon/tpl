@@ -6,13 +6,17 @@
 
 #include "ast/ast.h"
 #include "ast/ast_visitor.h"
+#include "ast/type.h"
 
 namespace tpl::ast {
 
 class AstDumperImpl : public AstVisitor<AstDumperImpl> {
  public:
   explicit AstDumperImpl(AstNode *root, int out_fd)
-      : root_(root), indent_level_(0), stream_(out_fd, false) {}
+      : root_(root),
+        top_level_(true),
+        first_child_(true),
+        out_(out_fd, false) {}
 
   void Run() { Visit(root_); }
 
@@ -22,231 +26,220 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
 #undef DECLARE_VISIT_METHOD
 
  private:
-  struct ScopedRecurse {
-    AstDumperImpl &impl;
-    ScopedRecurse(AstDumperImpl &impl) : impl(impl) {
-      impl.IncrIndent();
-      impl.NewLine();
-    }
-    ~ScopedRecurse() { impl.DecrIndent(); }
-  };
-
   struct WithColor {
     AstDumperImpl &impl;
     WithColor(AstDumperImpl &impl, llvm::raw_ostream::Colors color)
         : impl(impl) {
-      impl.stream_.changeColor(color);
+      impl.out_.changeColor(color);
     }
-    ~WithColor() { impl.stream_.resetColor(); }
+    ~WithColor() { impl.out_.resetColor(); }
   };
 
-  void IncrIndent() { indent_level_ += 2; }
-  void DecrIndent() { indent_level_ -= 2; }
-
-  void PrintIndent() { stream_.indent(indent_level_) << "-"; }
-
-  void PrintPosition(const SourcePosition &pos) {
-    stream_.changeColor(llvm::raw_ostream::WHITE) << "<";
-    stream_.changeColor(llvm::raw_ostream::YELLOW)
-        << "line:" << pos.line << ":" << pos.column;
-    stream_.changeColor(llvm::raw_ostream::WHITE) << ">";
+  void DumpKind(ast::AstNode *node) {
+    WithColor color(*this, llvm::raw_ostream::CYAN);
+    out_ << " " << node->kind_name();
   }
 
-  void PrintNodeCommon(ast::AstNode *node) {
-    // Handle indent
-    PrintIndent();
-
-    // Kind
-    stream_.changeColor(llvm::raw_ostream::Colors::CYAN);
-    stream_ << node->kind_name() << " ";
-
-    // Physical address
-    stream_.changeColor(llvm::raw_ostream::Colors::MAGENTA) << "(";
-    stream_ << "0x";
-    stream_.write_hex(reinterpret_cast<uint64_t>(node)) << ")";
-
-    //
-    stream_ << " ";
-
-    // Position
-    PrintPosition(node->position());
-
-    stream_ << " ";
+  void DumpPointer(const void *p) {
+    WithColor color(*this, llvm::raw_ostream::YELLOW);
+    out_ << " (" << p << ")";
   }
 
-  void PrintToken(parsing::Token::Type type) {
-    stream_ << "'" << parsing::Token::String(type) << "'";
+  void DumpType(Type *type) {
+    WithColor color(*this, llvm::raw_ostream::GREEN);
+    out_ << " '" << Type::GetAsString(type) << "'";
   }
 
-  void PrintString(const std::string &str) { stream_ << str; }
-
-  void PrintIdentifier(Identifier str, bool highlight = false) {
-    stream_.write(str.data(), str.length());
+  void DumpPosition(const SourcePosition &pos) {
+    out_ << " <";
+    {
+      WithColor color(*this, llvm::raw_ostream::YELLOW);
+      out_ << "line:" << pos.line << ":" << pos.column;
+    }
+    out_ << ">";
   }
 
-  void NewLine() { stream_ << "\n"; }
+  void DumpNodeCommon(ast::AstNode *node) {
+    DumpKind(node);
+    DumpPointer(node);
+    DumpPosition(node->position());
+    out_ << " ";
+  }
+
+  void DumpToken(parsing::Token::Type type) {
+    out_ << " '" << parsing::Token::String(type) << "'";
+  }
+
+  void DumpString(const std::string &str) { out_ << str; }
+
+  void DumpIdentifier(Identifier str) { out_.write(str.data(), str.length()); }
+
+  template <typename Fn>
+  void DumpChild(Fn dump_fn) {
+    if (top_level_) {
+      top_level_ = false;
+      dump_fn();
+      while (!pending_.empty()) {
+        pending_.pop_back_val()(true);
+      }
+      prefix_.clear();
+      out_ << "\n";
+      top_level_ = true;
+    }
+
+    auto dump_with_prefix = [this, dump_fn](bool last_child) {
+      // First, the prefix
+      out_ << "\n";
+      out_ << prefix_ << (last_child ? "`" : "|") << "-";
+      prefix_.append(last_child ? " " : "|").append(" ");
+
+      first_child_ = true;
+      auto depth = pending_.size();
+
+      dump_fn();
+
+      while (depth < pending_.size()) {
+        pending_.pop_back_val()(true);
+      }
+
+      prefix_.resize(prefix_.size() - 2);
+    };
+
+    if (first_child_) {
+      pending_.emplace_back(dump_with_prefix);
+    } else {
+      pending_.back()(false);
+      pending_.back() = std::move(dump_with_prefix);
+    }
+    first_child_ = false;
+  }
+
+  void DumpDecl(Decl *decl) {
+    DumpChild([=] { AstVisitor<AstDumperImpl>::Visit(decl); });
+  }
+
+  void DumpExpr(Expr *expr) {
+    DumpChild([=] { AstVisitor<AstDumperImpl>::Visit(expr); });
+  }
+
+  void DumpStmt(Stmt *stmt) {
+    DumpChild([=] { AstVisitor<AstDumperImpl>::Visit(stmt); });
+  }
 
  private:
   AstNode *root_;
 
-  uint32_t indent_level_;
+  std::string prefix_;
 
-  llvm::raw_fd_ostream stream_;
+  bool top_level_;
+  bool first_child_;
+
+  llvm::SmallVector<std::function<void(bool)>, 32> pending_;
+
+  llvm::raw_fd_ostream out_;
 };
 
 void AstDumperImpl::VisitFile(File *node) {
-  for (auto *decl : node->declarations()) {
-    Visit(decl);
-    NewLine();
-  }
+  DumpChild([=] {
+    for (auto *decl : node->declarations()) {
+      DumpDecl(decl);
+    }
+  });
 }
 
 void AstDumperImpl::VisitFieldDecl(FieldDecl *node) {
-  PrintIdentifier(node->name());
-  PrintString(":");
+  DumpIdentifier(node->name());
+  DumpString(":");
   Visit(node->type_repr());
 }
 
 void AstDumperImpl::VisitFunctionDecl(FunctionDecl *node) {
-  PrintNodeCommon(node);
-  PrintIdentifier(node->name());
-  PrintString(" '");
-  Visit(node->type_repr());
-  PrintString("' ");
-
-  {
-    ScopedRecurse recurse(*this);
-    Visit(node->function());
-  }
+  DumpNodeCommon(node);
+  DumpIdentifier(node->name());
+  DumpType(node->type_repr()->type());
+  DumpExpr(node->function());
 }
 
 void AstDumperImpl::VisitVariableDecl(VariableDecl *node) {
-  PrintNodeCommon(node);
-  PrintIdentifier(node->name());
-  // Visit(node->type_repr());
+  DumpNodeCommon(node);
+  DumpIdentifier(node->name());
   if (node->initial() != nullptr) {
-    ScopedRecurse recurse(*this);
-    Visit(node->initial());
+    DumpExpr(node->initial());
   }
 }
 
 void AstDumperImpl::VisitStructDecl(StructDecl *node) {
-  PrintNodeCommon(node);
-  PrintString("struct ");
-  PrintIdentifier(node->name());
-  PrintString("{ ");
-  bool first = true;
-  for (const auto *field : node->type_repr()->fields()) {
-    if (!first) PrintString(",");
-    first = false;
-    PrintIdentifier(field->name());
-    PrintString(":");
-    Visit(field->type_repr());
+  DumpNodeCommon(node);
+  DumpIdentifier(node->name());
+  for (auto *field : node->type_repr()->fields()) {
+    DumpDecl(field);
   }
-  PrintString("}");
 }
 
 void AstDumperImpl::VisitAssignmentStmt(AssignmentStmt *node) {
-  PrintNodeCommon(node);
-  PrintString("=");
-
-  ScopedRecurse recurse(*this);
-  Visit(node->destination());
-  NewLine();
-  Visit(node->source());
+  DumpNodeCommon(node);
+  DumpExpr(node->destination());
+  DumpExpr(node->source());
 }
 
 void AstDumperImpl::VisitBlockStmt(BlockStmt *node) {
-  PrintNodeCommon(node);
-
-  ScopedRecurse recurse(*this);
-
-  for (auto *statement : node->statements()) {
-    Visit(statement);
-    NewLine();
+  DumpNodeCommon(node);
+  for (auto *stmt : node->statements()) {
+    DumpStmt(stmt);
   }
 }
 
 void AstDumperImpl::VisitDeclStmt(DeclStmt *node) {
-  Visit(node->declaration());
+  DumpDecl(node->declaration());
 }
 
 void AstDumperImpl::VisitExpressionStmt(ExpressionStmt *node) {
-  Visit(node->expression());
+  DumpExpr(node->expression());
 }
 
 void AstDumperImpl::VisitForStmt(ForStmt *node) {
-  PrintNodeCommon(node);
+  DumpNodeCommon(node);
   if (node->init() != nullptr) {
-    ScopedRecurse recurse(*this);
-    Visit(node->init());
+    DumpStmt(node->init());
   }
   if (node->cond() != nullptr) {
-    ScopedRecurse recurse(*this);
-    Visit(node->cond());
+    DumpExpr(node->cond());
   }
   if (node->next() != nullptr) {
-    ScopedRecurse recurse(*this);
-    Visit(node->next());
+    DumpStmt(node->next());
   }
-  ScopedRecurse recurse(*this);
-  Visit(node->body());
+  DumpStmt(node->body());
 }
 
 void AstDumperImpl::VisitIfStmt(IfStmt *node) {
-  PrintNodeCommon(node);
-
-  {
-    ScopedRecurse recurse(*this);
-    Visit(node->cond());
-    NewLine();
-    Visit(node->then_stmt());
-  }
-
+  DumpNodeCommon(node);
+  DumpExpr(node->cond());
+  DumpStmt(node->then_stmt());
   if (node->else_stmt() != nullptr) {
-    ScopedRecurse recurse(*this);
-    Visit(node->else_stmt());
+    DumpStmt(node->else_stmt());
   }
 }
 
 void AstDumperImpl::VisitReturnStmt(ReturnStmt *node) {
-  PrintNodeCommon(node);
+  DumpNodeCommon(node);
   if (node->ret() != nullptr) {
-    ScopedRecurse recurse(*this);
-    Visit(node->ret());
+    DumpExpr(node->ret());
   }
 }
 
 void AstDumperImpl::VisitCallExpr(CallExpr *node) {
-  PrintNodeCommon(node);
-  {
-    ScopedRecurse recurse(*this);
-    Visit(node->function());
-  }
-
-  ScopedRecurse recurse(*this);
-
+  DumpNodeCommon(node);
+  DumpExpr(node->function());
   for (auto *expr : node->arguments()) {
-    Visit(expr);
-    NewLine();
+    DumpExpr(expr);
   }
 }
 
 void AstDumperImpl::VisitBinaryOpExpr(BinaryOpExpr *node) {
-  PrintNodeCommon(node);
-  PrintToken(node->op());
-
-  // Left expression
-  {
-    ScopedRecurse recurse_left(*this);
-    Visit(node->left());
-  }
-
-  // Right expression
-  {
-    ScopedRecurse recurse_right(*this);
-    Visit(node->right());
-  }
+  DumpNodeCommon(node);
+  DumpToken(node->op());
+  DumpExpr(node->left());
+  DumpExpr(node->right());
 }
 
 void AstDumperImpl::VisitFunctionLitExpr(FunctionLitExpr *node) {
@@ -254,83 +247,62 @@ void AstDumperImpl::VisitFunctionLitExpr(FunctionLitExpr *node) {
 }
 
 void AstDumperImpl::VisitIdentifierExpr(IdentifierExpr *node) {
-  PrintNodeCommon(node);
-  PrintIdentifier(node->name());
+  DumpNodeCommon(node);
+  DumpIdentifier(node->name());
 }
 
 void AstDumperImpl::VisitLitExpr(LitExpr *node) {
-  PrintNodeCommon(node);
+  DumpNodeCommon(node);
   switch (node->literal_kind()) {
     case LitExpr::LitKind::Nil: {
-      PrintString("nil");
+      DumpString("nil");
       break;
     }
     case LitExpr::LitKind::Boolean: {
-      PrintString(node->bool_val() ? "'true'" : "'false'");
+      DumpString(node->bool_val() ? "'true'" : "'false'");
       break;
     }
     case LitExpr::LitKind::Int:
     case LitExpr::LitKind::Float:
     case LitExpr::LitKind::String: {
-      PrintIdentifier(node->raw_string());
+      DumpIdentifier(node->raw_string());
       break;
     }
   }
 }
 
 void AstDumperImpl::VisitUnaryOpExpr(UnaryOpExpr *node) {
-  PrintNodeCommon(node);
-  PrintToken(node->op());
-  {
-    ScopedRecurse recurse(*this);
-    Visit(node->expr());
-  }
-}
-
-void AstDumperImpl::VisitStructTypeRepr(StructTypeRepr *node) {
-  PrintString("struct {\n");
-  for (auto *field : node->fields()) {
-    Visit(field);
-  }
-  PrintString("}");
-}
-
-void AstDumperImpl::VisitPointerTypeRepr(PointerTypeRepr *node) {
-  PrintString("*");
-  Visit(node->base());
-}
-
-void AstDumperImpl::VisitFunctionTypeRepr(FunctionTypeRepr *node) {
-  PrintString("(");
-  bool first = true;
-  for (auto *field : node->parameters()) {
-    if (!first) PrintString(",");
-    first = false;
-    Visit(field);
-  }
-  PrintString(") -> ");
-  Visit(node->return_type());
-}
-
-void AstDumperImpl::VisitArrayTypeRepr(ArrayTypeRepr *node) {
-  PrintString("[");
-  if (node->length() != nullptr) {
-    Visit(node->length());
-  }
-  PrintString("]");
-  Visit(node->element_type());
+  DumpNodeCommon(node);
+  DumpToken(node->op());
+  DumpExpr(node->expr());
 }
 
 void AstDumperImpl::VisitBadStmt(BadStmt *node) {
-  PrintNodeCommon(node);
-  PrintString("BAD STATEMENT @ ");
-  PrintPosition(node->position());
+  DumpNodeCommon(node);
+  DumpString("BAD STATEMENT @ ");
+  DumpPosition(node->position());
 }
 
 void AstDumperImpl::VisitBadExpr(BadExpr *node) {
-  PrintNodeCommon(node);
-  PrintString("BAD EXPRESSION @ ");
-  PrintPosition(node->position());
+  DumpNodeCommon(node);
+  DumpString("BAD EXPRESSION @ ");
+  DumpPosition(node->position());
+}
+
+void AstDumperImpl::VisitStructTypeRepr(StructTypeRepr *node) {
+  DumpType(node->type());
+}
+
+void AstDumperImpl::VisitPointerTypeRepr(PointerTypeRepr *node) {
+  DumpType(node->type());
+}
+
+void AstDumperImpl::VisitFunctionTypeRepr(FunctionTypeRepr *node) {
+  DumpType(node->type());
+}
+
+void AstDumperImpl::VisitArrayTypeRepr(ArrayTypeRepr *node) {
+  DumpType(node->type());
 }
 
 void AstDump::Dump(ast::AstNode *node) {

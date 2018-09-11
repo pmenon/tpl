@@ -186,7 +186,7 @@ class File : public AstNode {
   util::RegionVector<Decl *> &declarations() { return decls_; }
 
   static bool classof(const AstNode *node) {
-    return node->kind() >= Kind::File;
+    return node->kind() == Kind::File;
   }
 
  private:
