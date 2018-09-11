@@ -3,13 +3,7 @@
 ## =================================================================
 ## TPL PACKAGE INSTALLATION
 ##
-## This script will install all the packages that are needed to
-## build and run the DBMS.
-##
-## Note: On newer versions of Ubuntu (17.04), this script
-## will not install the correct version of g++. You will have
-## to use 'update-alternatives' to configure the default of
-## g++ manually.
+## This script will install all packages needed to run TPL.
 ##
 ## Supported environments:
 ##  * Ubuntu 18.04
@@ -19,15 +13,16 @@
 main() {
   set -o errexit
 
-    echo "PACKAGES WILL BE INSTALLED. THIS MAY BREAK YOUR EXISTING TOOLCHAIN."
-    echo "YOU ACCEPT ALL RESPONSIBILITY BY PROCEEDING."
-    read -p "Proceed? [Y/n] : " yn
-    case $yn in
-        Y|y) install;;
-        *) ;;
-    esac
+  echo "PACKAGES WILL BE INSTALLED. THIS MAY BREAK YOUR EXISTING TOOLCHAIN."
+  echo "YOU ACCEPT ALL RESPONSIBILITY BY PROCEEDING."
 
-    echo "Script complete."
+  read -p "Proceed? [Y/n] : " yn
+  case $yn in
+    Y|y) install ;;
+    *) ;;
+  esac
+
+  echo "Script complete."
 }
 
 install() {
@@ -81,14 +76,10 @@ install_linux() {
   # Install packages.
   apt-get -y install \
       build-essential \
-      clang-6.0 \
       clang-format-6.0 \
       cmake \
       git \
       g++-7 \
-      libjemalloc-dev \
-      libjsoncpp-dev \
-      libz-dev \
       llvm-6.0
 }
 
