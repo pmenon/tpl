@@ -15,7 +15,12 @@ namespace tpl::ast {
  *   ..
  * }
  *
- * All AST node visitations will get forwarded to the derived class.
+ * All AST node visitations will get forwarded to the derived class if they
+ * are implemented, and fallback to this base class otherwise. Moreover, the
+ * fallbacks will walk up the hierarchy chain.
+ *
+ * To easily define visitors for all nodes, use the AST_NODES() macro providing
+ * a function generator macro as the argument.
  */
 template <typename Impl, typename RetType = void>
 class AstVisitor {

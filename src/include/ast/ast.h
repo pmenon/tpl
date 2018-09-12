@@ -116,7 +116,7 @@ class AstNode : public util::RegionObject {
     // Main type switch
     // clang-format off
     switch (kind()) {
-      default: { UNREACHABLE(); }
+      default: { UNREACHABLE("Impossible kind name"); }
       AST_NODES(KIND_CASE)
     }
       // clang-format on

@@ -3,6 +3,8 @@
 #include <cassert>
 #include <cstdint>
 
+#include "llvm/Support/ErrorHandling.h"
+
 #define UNUSED __attribute__((unused))
 
 #define DISALLOW_COPY_AND_MOVE(class)  \
@@ -20,12 +22,4 @@
 #define TPL_ASSERT(expr, msg) assert((expr) && (msg))
 #endif
 
-#ifdef NEBUG
-#define UNREACHABLE() __builtin_unreachable();
-#else
-#define UNREACHABLE()                       \
-  do {                                      \
-    fprintf(stderr, "unreachable code!\n"); \
-    __builtin_unreachable();                \
-  } while (false);
-#endif
+#define UNREACHABLE(msg) llvm_unreachable(msg)

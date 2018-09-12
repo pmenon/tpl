@@ -157,7 +157,7 @@ class RegionObject {
    * calling Region::FreeAll().
    */
   void operator delete(UNUSED void *ptr, UNUSED Region &region) {
-    UNREACHABLE();
+    UNREACHABLE("Calling \"delete\" on region object is forbidden!");
   };
 };
 
