@@ -65,7 +65,7 @@ endif ()
 #
 ################################################################################
 
-if(USE_GOLD)
+if(TPL_USE_GOLD)
     execute_process(COMMAND ${CMAKE_C_COMPILER} -fuse-ld=gold -Wl,--version ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
     if("${LD_VERSION}" MATCHES "GNU gold")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -Wl,--disable-new-dtags")
@@ -73,7 +73,7 @@ if(USE_GOLD)
         message(STATUS "GNU gold found")
     else()
         message(STATUS "GNU gold not found")
-        set(USE_GOLD OFF)
+        set(TPL_USE_GOLD OFF)
     endif()
 endif()
 
