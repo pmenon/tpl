@@ -53,7 +53,7 @@ static void RunRepl() {
 
     std::string line;
     do {
-      printf("> ");
+      printf(">>> ");
       std::getline(std::cin, line);
 
       if (line == kExitKeyword) {

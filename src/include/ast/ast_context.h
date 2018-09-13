@@ -41,12 +41,16 @@ class AstContext {
   util::Region &region() const { return region_; }
 
  private:
+  // Region allocator for all Ast objects this context needs
   util::Region &region_;
 
-  std::unique_ptr<ast::AstNodeFactory> node_factory_;
-
+  // Error reporter
   sema::ErrorReporter &error_reporter_;
 
+  // The factory used for Ast nodes
+  std::unique_ptr<ast::AstNodeFactory> node_factory_;
+
+  // Pimpl
   std::unique_ptr<Implementation> impl_;
 };
 

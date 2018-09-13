@@ -64,8 +64,8 @@ struct AstContext::Implementation {
 AstContext::AstContext(util::Region &region,
                        sema::ErrorReporter &error_reporter)
     : region_(region),
-      node_factory_(std::make_unique<AstNodeFactory>(region)),
       error_reporter_(error_reporter),
+      node_factory_(std::make_unique<AstNodeFactory>(region)),
       impl_(std::make_unique<Implementation>(*this)) {
   // Initialize builtin types
   // clang-format off
