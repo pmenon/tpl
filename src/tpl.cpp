@@ -5,6 +5,7 @@
 #include <string>
 
 #include "ast/ast_dump.h"
+#include "logging/logger.h"
 #include "parsing/parser.h"
 #include "parsing/scanner.h"
 #include "sema/error_reporter.h"
@@ -85,7 +86,10 @@ static void RunFile(const std::string &filename) {
 }  // namespace tpl
 
 int main(int argc, char **argv) {
-  printf("Welcome to TPL (ver. %u.%u)\n", TPL_VERSION_MAJOR, TPL_VERSION_MINOR);
+  tpl::logging::init_logger();
+
+  LOG_INFO("Welcome to TPL (ver. {}.{})\n", TPL_VERSION_MAJOR,
+           TPL_VERSION_MINOR);
 
   if (argc == 2) {
     std::string filename(argv[1]);
