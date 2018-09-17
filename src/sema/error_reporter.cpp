@@ -4,6 +4,7 @@
 
 #include "ast/type.h"
 #include "ast/type_visitor.h"
+#include "logging/logger.h"
 
 namespace tpl::sema {
 
@@ -89,7 +90,7 @@ void ErrorReporter::PrintErrors() {
     error_str.append(error.FormatMessage()).append("\n");
   }
 
-  fprintf(stderr, "%s", error_str.c_str());
+  LOG_ERROR("{}", error_str.c_str());
 }
 
 }  // namespace tpl::sema

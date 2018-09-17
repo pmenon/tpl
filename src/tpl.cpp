@@ -31,7 +31,7 @@ static void Compile(const std::string &source) {
   ast::AstNode *root = parser.Parse();
 
   if (error_reporter.has_errors()) {
-    fprintf(stderr, "Parsing error!\n");
+    LOG_ERROR("Parsing error!");
     error_reporter.PrintErrors();
     return;
   }
@@ -39,7 +39,7 @@ static void Compile(const std::string &source) {
   // Type check
   sema::Sema type_check(context);
   if (type_check.Run(root)) {
-    fprintf(stderr, "Type-checking error!\n");
+    LOG_ERROR("Type-checking error!");
     error_reporter.PrintErrors();
     return;
   }

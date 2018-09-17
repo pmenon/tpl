@@ -1,5 +1,7 @@
 #include "util/region.h"
 
+#include "logging/logger.h"
+
 namespace tpl::util {
 
 Region::Region(std::string name)
@@ -42,10 +44,8 @@ void *Region::Allocate(size_t size, size_t alignment) {
 }
 
 void Region::FreeAll() {
-  fprintf(
-      stderr,
-      "Region['%s',allocated: %lu,alignment waste: %lu,total chunks: %lu]\n",
-      name().c_str(), allocated(), alignment_waste(), total_memory());
+  LOG_INFO("Region['{}',allocated: {},alignment waste: {},total chunks: {}]",
+           name().c_str(), allocated(), alignment_waste(), total_memory());
 
   Chunk *head = head_;
   while (head != nullptr) {
