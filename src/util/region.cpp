@@ -44,8 +44,10 @@ void *Region::Allocate(size_t size, size_t alignment) {
 }
 
 void Region::FreeAll() {
-  LOG_INFO("Region['{}',allocated: {},alignment waste: {},total chunks: {}]",
-           name().c_str(), allocated(), alignment_waste(), total_memory());
+  LOG_INFO(
+      "Region['{}', allocated: {} bytes, alignment waste: {} bytes, total "
+      "chunks: {} bytes]",
+      name().c_str(), allocated(), alignment_waste(), total_memory());
 
   Chunk *head = head_;
   while (head != nullptr) {
