@@ -150,9 +150,9 @@ void AstDumperImpl::VisitFile(File *node) {
 }
 
 void AstDumperImpl::VisitFieldDecl(FieldDecl *node) {
+  DumpNodeCommon(node);
   DumpIdentifier(node->name());
-  DumpString(":");
-  Visit(node->type_repr());
+  DumpExpr(node->type_repr());
 }
 
 void AstDumperImpl::VisitFunctionDecl(FunctionDecl *node) {
