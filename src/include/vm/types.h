@@ -12,6 +12,7 @@ using VmFloat = float;
 using VmString = const char *;
 using VmReference = void *;
 
+#if 0
 struct VmValue {
   VmObjType type;
   union {
@@ -21,5 +22,7 @@ struct VmValue {
     VmReference obj_val;
   };
 };
+#endif
+using VmValue = intptr_t;
 
 }  // namespace tpl::vm

@@ -96,15 +96,15 @@ void VM::Run(Frame &frame) {
     OP_INT_MATH(Rem, OpIntRem, true);
 #undef OP_INT_MATH
 
-#define OP_BRANCH(opname, op)                                           \
-  CASE_OP(opname) : {                                                   \
-    auto v2 = stack.PopInt();                                           \
-    auto v1 = stack.PopInt();                                           \
-    if (v1 op v2) {                                                     \
-      auto branch_offset = (static_cast<uint16_t>(ip[0]) << 8) | ip[1]; \
-      ip += branch_offset;                                              \
-    }                                                                   \
-    DISPATCH();                                                         \
+#define OP_BRANCH(opname, op)                                  \
+  CASE_OP(opname) : {                                          \
+    auto v2 = stack.PopInt();                                  \
+    auto v1 = stack.PopInt();                                  \
+    if (v1 op v2) {                                            \
+      auto skip = (static_cast<uint16_t>(ip[0]) << 8) | ip[1]; \
+      ip += skip;                                              \
+    }                                                          \
+    DISPATCH();                                                \
   }
     OP_BRANCH(Beq, ==)
     OP_BRANCH(Bge, >=)
@@ -113,6 +113,13 @@ void VM::Run(Frame &frame) {
     OP_BRANCH(Blt, <)
     OP_BRANCH(Bne, !=)
 #undef OP_BRANCHES
+
+    CASE_OP(Br) : {
+      auto offset = (static_cast<uint16_t>(ip[0]) << 8) | ip[1];
+      ip += offset;
+      DISPATCH();
+    }
+
     /*
      * Integer negation
      */
