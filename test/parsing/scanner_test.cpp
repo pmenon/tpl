@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "tpl_test.h"
 
 #include <functional>
 
@@ -6,14 +6,16 @@
 
 namespace tpl::parsing::test {
 
-TEST(ScannerTest, EmptySourceTest) {
+class ScannerTest : public TplTest {};
+
+TEST_F(ScannerTest, EmptySourceTest) {
   Scanner scanner("", 0);
   for (unsigned i = 0; i < 10; i++) {
     EXPECT_EQ(Token::Type::EOS, scanner.Next());
   }
 }
 
-TEST(ScannerTest, SimpleSourceTest) {
+TEST_F(ScannerTest, SimpleSourceTest) {
   const std::string source = "var x = 10";
   Scanner scanner(source.data(), source.length());
 
@@ -83,7 +85,7 @@ void RunTests(const std::vector<Test> &tests) {
   }
 }
 
-TEST(ScannerTest, VariableSyntaxTest) {
+TEST_F(ScannerTest, VariableSyntaxTest) {
   std::vector<test::Test> tests = {
       // Variable with no type
       {"var x = 10",
@@ -115,7 +117,7 @@ TEST(ScannerTest, VariableSyntaxTest) {
   RunTests(tests);
 }
 
-TEST(ScannerTest, IfSyntaxTest) {
+TEST_F(ScannerTest, IfSyntaxTest) {
   std::vector<test::Test> tests = {
       {"if (x == 0) { }",
        {Token::Type::IF, Token::Type::LEFT_PAREN, Token::Type::IDENTIFIER,
@@ -127,7 +129,7 @@ TEST(ScannerTest, IfSyntaxTest) {
   RunTests(tests);
 }
 
-TEST(ScannerTest, ForSyntaxTest) {
+TEST_F(ScannerTest, ForSyntaxTest) {
   std::vector<test::Test> tests = {
       // Simple for
       {"for () {}",
@@ -178,7 +180,7 @@ TEST(ScannerTest, ForSyntaxTest) {
   RunTests(tests);
 }
 
-TEST(ScannerTest, FunctionSyntaxTest) {
+TEST_F(ScannerTest, FunctionSyntaxTest) {
   std::vector<test::Test> tests = {
       // Empty function test
       {"fun test(){}",

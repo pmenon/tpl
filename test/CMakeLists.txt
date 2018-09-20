@@ -3,7 +3,8 @@ enable_testing()
 ###############################################
 # Setup GoogleTest
 ###############################################
-include_directories(${PROJECT_SOURCE_DIR}/third_party/gtest/include)
+include_directories(${PROJECT_SOURCE_DIR}/third_party/gtest/include
+                    ${PROJECT_SOURCE_DIR}/third_party/spdlog/include)
 link_directories(${PROJECT_SOURCE_DIR}/third_party/gtest/lib)
 
 ###############################################

@@ -1,11 +1,11 @@
-#include "gtest/gtest.h"
+#include "tpl_test.h"
 
 #include "ast/ast.h"
 #include "ast/ast_node_factory.h"
 
 namespace tpl::ast::test {
 
-class AstTest : public ::testing::Test {
+class AstTest : public TplTest {
  public:
   AstTest() : region_("ast_test"), pos_() {}
 

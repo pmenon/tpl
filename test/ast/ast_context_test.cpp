@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "tpl_test.h"
 
 #include <unordered_set>
 
@@ -8,7 +8,9 @@
 
 namespace tpl::ast::test {
 
-TEST(AstStringsContainer, CreateNewStringsTest) {
+class AstStringsContainerTest : public TplTest {};
+
+TEST_F(AstStringsContainerTest, CreateNewStringsTest) {
   util::Region tmp_region("test");
   sema::ErrorReporter error_reporter(tmp_region);
   AstContext ctx(tmp_region, error_reporter);

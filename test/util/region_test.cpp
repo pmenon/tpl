@@ -1,10 +1,12 @@
-#include "gtest/gtest.h"
+#include "tpl_test.h"
 
 #include "util/region.h"
 
 namespace tpl::util::test {
 
-TEST(RegionTest, Simple) {
+class RegionTest : public TplTest {};
+
+TEST_F(RegionTest, Simple) {
   util::Region r("test");
 
   uint32_t alloc_size = 7;
