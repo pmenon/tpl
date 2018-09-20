@@ -15,6 +15,8 @@ class VM {
   static VmValue Invoke(BytecodeFunction &function);
 
  private:
+  VM();
+
   void Run(Frame &frame);
 
  private:

@@ -8,6 +8,8 @@
 
 namespace tpl::vm {
 
+VM::VM() { TPL_MEMSET(bytecode_counts_, 0, sizeof(bytecode_counts_)); }
+
 VmValue VM::Invoke(BytecodeFunction &function) {
   Frame frame(function.max_locals(), function.max_stack());
 
@@ -35,21 +37,23 @@ void VM::Run(Frame &frame) {
   const ConstantsArray &constants = func->constants();
 
 #if TPL_DEBUG_TRACE_INSTRUCTIONS
-#define DEBUG_TRACE_INSTRUCTIONS()                     \
-  do {                                                 \
-    LOG_TRACE("{}: {}", ip, Bytecodes::ToString(*ip)); \
+#define DEBUG_TRACE_INSTRUCTIONS(byte)                                       \
+  do {                                                                       \
+    Bytecode code = Bytecodes::FromByte(byte);                               \
+    bytecode_counts_[static_cast<std::underlying_type_t<Bytecode>>(code)]++; \
+    LOG_INFO("{0:p}: {1:s}", ip, Bytecodes::ToString(code));                 \
   } while (false)
 #else
-#define DEBUG_TRACE_INSTRUCTIONS()
+#define DEBUG_TRACE_INSTRUCTIONS(byte) (void)byte;
 #endif
 
 #define INTERPRETER_LOOP DISPATCH();
 #define CASE_OP(name) op_##name
-#define DISPATCH()              \
-  do {                          \
-    auto byte = (*ip++);        \
-    DEBUG_TRACE_INSTRUCTIONS(); \
-    goto *kDispatchTable[byte]; \
+#define DISPATCH()                  \
+  do {                              \
+    auto byte = (*ip++);            \
+    DEBUG_TRACE_INSTRUCTIONS(byte); \
+    goto *kDispatchTable[byte];     \
   } while (false)
 
   INTERPRETER_LOOP {
