@@ -5,8 +5,8 @@
 #include "llvm/Support/Casting.h"
 
 #include "ast/identifier.h"
-#include "common.h"
 #include "parsing/token.h"
+#include "util/common.h"
 #include "util/region.h"
 #include "util/region_containers.h"
 

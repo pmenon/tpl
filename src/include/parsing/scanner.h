@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <string>
 
-#include "common.h"
 #include "parsing/token.h"
+#include "util/common.h"
 #include "util/macros.h"
 
 namespace tpl::parsing {

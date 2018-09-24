@@ -3,9 +3,9 @@
 #include <vector>
 
 #include "ast/identifier.h"
-#include "common.h"
 #include "parsing/token.h"
 #include "sema/error_message.h"
+#include "util/common.h"
 #include "util/region_containers.h"
 
 namespace tpl {
