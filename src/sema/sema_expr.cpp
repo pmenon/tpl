@@ -34,11 +34,22 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
                                 ErrorMessages::kMismatchedTypesToBinary,
                                 left_type, right_type, node->op());
       }
+      node->set_type(left_type);
+      break;
+    }
+    case parsing::Token::Type::BANG_EQUAL:
+    case parsing::Token::Type::EQUAL_EQUAL:
+    case parsing::Token::Type::GREATER:
+    case parsing::Token::Type::GREATER_EQUAL:
+    case parsing::Token::Type::LESS:
+    case parsing::Token::Type::LESS_EQUAL: {
+      // Boolean comparison ops
+      // TODO(pmenon): Check if compatible types
+      node->set_type(ast::BoolType::Bool(left_type->context()));
+      break;
     }
     default: {}
   }
-
-  node->set_type(left_type);
 }
 
 void Sema::VisitCallExpr(ast::CallExpr *node) {
