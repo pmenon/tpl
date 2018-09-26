@@ -32,12 +32,16 @@ class Type : public util::RegionObject {
   enum class Kind : uint8_t { TYPE_LIST(F) };
 #undef F
 
+  // Context this type was allocated from
   AstContext &context() const { return ctx_; }
 
-  uint32_t alignment() const { return align_; }
+  // Alignment (in bytes) of this type
+  size_t alignment() const { return align_; }
 
-  uint32_t width() const { return width_; }
+  // Size (in bytes) of this type
+  size_t size() const { return size_; }
 
+  // The "kind" of type this is (e.g., Integer, Struct, Array, etc.)
   Kind kind() const { return kind_; }
 
   template <typename T>
@@ -77,13 +81,13 @@ class Type : public util::RegionObject {
   static std::string GetAsString(Type *type);
 
  protected:
-  Type(AstContext &ctx, Kind kind)
-      : ctx_(ctx), align_(0), width_(0), kind_(kind) {}
+  Type(AstContext &ctx, size_t size, size_t alignment, Kind kind)
+      : ctx_(ctx), size_(size), align_(alignment), kind_(kind) {}
 
  private:
   AstContext &ctx_;
-  uint32_t align_;
-  uint32_t width_;
+  size_t size_;
+  size_t align_;
   Kind kind_;
 };
 
@@ -119,8 +123,9 @@ class IntegerType : public Type {
 
  private:
   friend class AstContext;
-  IntegerType(AstContext &ctx, IntKind int_kind)
-      : Type(ctx, Type::Kind::IntegerType), int_kind_(int_kind) {}
+  IntegerType(AstContext &ctx, size_t size, size_t alignment, IntKind int_kind)
+      : Type(ctx, size, alignment, Type::Kind::IntegerType),
+        int_kind_(int_kind) {}
 
  private:
   IntKind int_kind_;
@@ -148,8 +153,10 @@ class FloatType : public Type {
 
  private:
   friend class AstContext;
-  FloatType(AstContext &ctx, FloatKind float_kind)
-      : Type(ctx, Type::Kind::FloatType), float_kind_(float_kind) {}
+  FloatType(AstContext &ctx, size_t size, size_t alignment,
+            FloatKind float_kind)
+      : Type(ctx, size, alignment, Type::Kind::FloatType),
+        float_kind_(float_kind) {}
 
  private:
   FloatKind float_kind_;
@@ -168,7 +175,8 @@ class BoolType : public Type {
 
  private:
   friend class AstContext;
-  explicit BoolType(AstContext &ctx) : Type(ctx, Type::Kind::BoolType) {}
+  explicit BoolType(AstContext &ctx)
+      : Type(ctx, sizeof(i8), alignof(i8), Type::Kind::BoolType) {}
 };
 
 /**
@@ -184,7 +192,7 @@ class NilType : public Type {
 
  private:
   friend class AstContext;
-  explicit NilType(AstContext &ctx) : Type(ctx, Type::Kind::NilType) {}
+  explicit NilType(AstContext &ctx) : Type(ctx, 0, 0, Type::Kind::NilType) {}
 };
 
 /**
@@ -202,7 +210,9 @@ class PointerType : public Type {
 
  private:
   explicit PointerType(Type *base)
-      : Type(base->context(), Type::Kind::PointerType), base_(base) {}
+      : Type(base->context(), sizeof(i8 *), alignof(i8 *),
+             Type::Kind::PointerType),
+        base_(base) {}
 
  private:
   Type *base_;
@@ -226,7 +236,8 @@ class ArrayType : public Type {
  private:
   friend class AstContext;
   explicit ArrayType(uint64_t length, Type *elem_type)
-      : Type(elem_type->context(), Type::Kind::ArrayType),
+      : Type(elem_type->context(), elem_type->size() * length,
+             elem_type->alignment(), Type::Kind::ArrayType),
         length_(length),
         elem_type_(elem_type) {}
 
@@ -250,8 +261,10 @@ class StructType : public Type {
   }
 
  private:
-  explicit StructType(AstContext &ctx, util::RegionVector<Type *> &&fields)
-      : Type(ctx, Type::Kind::StructType), fields_(std::move(fields)) {}
+  explicit StructType(AstContext &ctx, size_t size, size_t alignment,
+                      util::RegionVector<Type *> &&fields)
+      : Type(ctx, size, alignment, Type::Kind::StructType),
+        fields_(std::move(fields)) {}
 
  private:
   util::RegionVector<Type *> fields_;
@@ -275,7 +288,7 @@ class FunctionType : public Type {
  private:
   friend class AstContext;
   explicit FunctionType(util::RegionVector<Type *> &&params, Type *ret)
-      : Type(ret->context(), Type::Kind::FunctionType),
+      : Type(ret->context(), 0, 0, Type::Kind::FunctionType),
         params_(std::move(params)),
         ret_(ret) {}
 

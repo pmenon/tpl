@@ -5,6 +5,8 @@
 
 #include "ast/ast_node_factory.h"
 #include "ast/type.h"
+#include "util/common.h"
+#include "util/math_util.h"
 
 namespace tpl::ast {
 
@@ -18,12 +20,12 @@ struct AstContext::Implementation {
   //////////////////////////////////////////////////////////
 
   IntegerType int8;
-  IntegerType uint8;
   IntegerType int16;
-  IntegerType uint16;
   IntegerType int32;
-  IntegerType uint32;
   IntegerType int64;
+  IntegerType uint8;
+  IntegerType uint16;
+  IntegerType uint32;
   IntegerType uint64;
 
   FloatType float32;
@@ -45,16 +47,16 @@ struct AstContext::Implementation {
   llvm::DenseMap<std::pair<Type *, uint64_t>, ArrayType *> array_types_;
 
   explicit Implementation(AstContext &ctx)
-      : int8(ctx, IntegerType::IntKind::Int8),
-        uint8(ctx, IntegerType::IntKind::UInt8),
-        int16(ctx, IntegerType::IntKind::Int16),
-        uint16(ctx, IntegerType::IntKind::UInt16),
-        int32(ctx, IntegerType::IntKind::Int32),
-        uint32(ctx, IntegerType::IntKind::UInt32),
-        int64(ctx, IntegerType::IntKind::Int64),
-        uint64(ctx, IntegerType::IntKind::UInt64),
-        float32(ctx, FloatType::FloatKind::Float32),
-        float64(ctx, FloatType::FloatKind::Float64),
+      : int8(ctx, sizeof(i8), alignof(i8), IntegerType::IntKind::Int8),
+        int16(ctx, sizeof(i16), alignof(i16), IntegerType::IntKind::Int16),
+        int32(ctx, sizeof(i32), alignof(i32), IntegerType::IntKind::Int32),
+        int64(ctx, sizeof(i64), alignof(i64), IntegerType::IntKind::Int64),
+        uint8(ctx, sizeof(u8), alignof(u8), IntegerType::IntKind::UInt8),
+        uint16(ctx, sizeof(u16), alignof(u16), IntegerType::IntKind::UInt16),
+        uint32(ctx, sizeof(u32), alignof(u32), IntegerType::IntKind::UInt32),
+        uint64(ctx, sizeof(u64), alignof(u64), IntegerType::IntKind::UInt64),
+        float32(ctx, sizeof(f32), alignof(f32), FloatType::FloatKind::Float32),
+        float64(ctx, sizeof(f64), alignof(f64), FloatType::FloatKind::Float64),
         boolean(ctx),
         nil(ctx),
         string_table_(kDefaultStringTableCapacity,
@@ -169,7 +171,24 @@ ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
 StructType *StructType::Get(AstContext &ctx,
                             util::RegionVector<Type *> &&fields) {
   // TODO(pmenon): Use cache?
-  return new (ctx.region()) StructType(ctx, std::move(fields));
+
+  // Compute size and alignment. Alignment of struct is alignment of largest
+  // struct element.
+  size_t size = 0;
+  size_t alignment = 0;
+  for (const auto *type : fields) {
+    // Check if the type needs to be padded
+    if (size & (type->alignment() - 1)) {
+      size = util::MathUtil::AlignTo(size, type->alignment());
+    }
+
+    // Update size and calculate alignment
+    size += type->size();
+    alignment = std::max(alignment, type->alignment());
+  }
+
+  // Done
+  return new (ctx.region()) StructType(ctx, size, alignment, std::move(fields));
 }
 
 StructType *StructType::Get(util::RegionVector<Type *> &&fields) {

@@ -4,6 +4,7 @@
 #include <cstdlib>
 
 #include "util/macros.h"
+#include "util/common.h"
 
 namespace tpl::util {
 
@@ -15,7 +16,7 @@ class MathUtil {
    * @param val The value to check
    * @return True if the value is a power of two > 0
    */
-  static constexpr bool IsPowerOf2(uint64_t val) {
+  static constexpr bool IsPowerOf2(u64 val) {
     return (val > 0) && ((val & (val - 1)) == 0);
   }
 
@@ -25,7 +26,7 @@ class MathUtil {
    * @param val The input
    * @return The next power of two greater than 'val'
    */
-  static constexpr inline uint64_t NextPowerOf2(uint64_t val) {
+  static constexpr inline u64 NextPowerOf2(u64 val) {
     val |= (val >> 1);
     val |= (val >> 2);
     val |= (val >> 4);
@@ -33,6 +34,24 @@ class MathUtil {
     val |= (val >> 16);
     val |= (val >> 32);
     return val + 1;
+  }
+
+  /**
+   * Returns the next integer greater than the provided input value that is a
+   * multiple of the given alignment. Eg:
+   *
+   * AlignTo(5, 8) = 8
+   * AlignTo(8, 8) = 8
+   * AlignTo(9, 8) = 16
+   *
+   * @param value The input value to align
+   * @param align The number to align to
+   * @return The next value greater than the input value that has the desired
+   * alignment.
+   */
+  static u64 AlignTo(u64 value, u64 align) {
+    TPL_ASSERT(align != 0u, "Align can't be 0.");
+    return (value + align - 1) / align;
   }
 
   /**
