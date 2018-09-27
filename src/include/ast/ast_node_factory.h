@@ -37,10 +37,6 @@ class AstNodeFactory {
     return new (region_) VariableDecl(pos, name, type_repr, init);
   }
 
-  BadStmt *NewBadStmt(const SourcePosition &pos) {
-    return new (region_) BadStmt(pos);
-  }
-
   BlockStmt *NewBlockStmt(const SourcePosition &start_pos,
                           const SourcePosition &end_pos,
                           util::RegionVector<Stmt *> &&statements) {

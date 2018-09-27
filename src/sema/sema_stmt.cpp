@@ -51,10 +51,6 @@ void Sema::VisitExpressionStmt(ast::ExpressionStmt *node) {
   Visit(node->expression());
 }
 
-void Sema::VisitBadStmt(ast::BadStmt *node) {
-  TPL_ASSERT(false, "Bad statement during type checking!");
-}
-
 void Sema::VisitIfStmt(ast::IfStmt *node) {
   ast::Type *cond_type = Resolve(node->condition());
 

@@ -39,7 +39,6 @@ class Type;
  */
 #define STATEMENT_NODES(T) \
   T(AssignmentStmt)        \
-  T(BadStmt)               \
   T(BlockStmt)             \
   T(DeclStmt)              \
   T(ExpressionStmt)        \
@@ -336,19 +335,6 @@ class AssignmentStmt : public Stmt {
  private:
   Expr *dest_;
   Expr *src_;
-};
-
-/**
- * A bad statement
- */
-class BadStmt : public Stmt {
- public:
-  explicit BadStmt(const SourcePosition &pos)
-      : Stmt(AstNode::Kind::BadStmt, pos) {}
-
-  static bool classof(const AstNode *node) {
-    return node->kind() == Kind::BadStmt;
-  }
 };
 
 /**

@@ -279,12 +279,6 @@ void AstDumperImpl::VisitUnaryOpExpr(UnaryOpExpr *node) {
   DumpExpr(node->expr());
 }
 
-void AstDumperImpl::VisitBadStmt(BadStmt *node) {
-  DumpNodeCommon(node);
-  DumpString("BAD STATEMENT @ ");
-  DumpPosition(node->position());
-}
-
 void AstDumperImpl::VisitBadExpr(BadExpr *node) {
   DumpNodeCommon(node);
   DumpString("BAD EXPRESSION @ ");
