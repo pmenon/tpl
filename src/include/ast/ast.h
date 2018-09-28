@@ -640,6 +640,9 @@ class LitExpr : public Expr {
   LitExpr(const SourcePosition &pos, LitExpr::LitKind lit_kind, Identifier str)
       : Expr(Kind::LitExpr, pos), lit_kind_(lit_kind), str_(str) {}
 
+  LitExpr(const SourcePosition &pos, i32 num)
+      : Expr(Kind::LitExpr, pos), lit_kind_(LitKind::Int), int32_(num) {}
+
   LitExpr::LitKind literal_kind() const { return lit_kind_; }
 
   bool bool_val() const {
@@ -648,19 +651,17 @@ class LitExpr : public Expr {
     return boolean_;
   }
 
-  Identifier raw_string() const {
+  Identifier raw_string_val() const {
     TPL_ASSERT(
         literal_kind() != LitKind::Nil && literal_kind() != LitKind::Boolean,
         "Getting a raw string value from a non-string or numeric value");
     return str_;
   }
 
-  int64_t integer() const {
+  i32 int32_val() const {
     TPL_ASSERT(literal_kind() == LitKind::Int,
                "Getting integer value from a non-integer literal expression");
-    // TODO(pmenon): Check safe conversion
-    char *end;
-    return std::strtol(str_.data(), &end, 10);
+    return int32_;
   }
 
   static bool classof(const AstNode *node) {
@@ -673,6 +674,10 @@ class LitExpr : public Expr {
   union {
     bool boolean_;
     Identifier str_;
+    i8 int8_;
+    i16 int16_;
+    i32 int32_;
+    i64 int64_;
   };
 };
 

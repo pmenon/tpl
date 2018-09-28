@@ -267,7 +267,7 @@ void AstDumperImpl::VisitLitExpr(LitExpr *node) {
     case LitExpr::LitKind::Int:
     case LitExpr::LitKind::Float:
     case LitExpr::LitKind::String: {
-      DumpIdentifier(node->raw_string());
+      DumpIdentifier(node->raw_string_val());
       break;
     }
   }
