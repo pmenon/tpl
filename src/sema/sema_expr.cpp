@@ -5,19 +5,6 @@
 
 namespace tpl::sema {
 
-void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
-  auto *src_type = Resolve(node->source());
-  auto *dest_type = Resolve(node->destination());
-
-  if (src_type == nullptr || dest_type == nullptr) {
-    // Skip
-  }
-
-  if (src_type != dest_type) {
-    // Error
-  }
-}
-
 void Sema::VisitBadExpr(ast::BadExpr *node) {
   TPL_ASSERT(false, "Bad expression in type checker!");
 }
