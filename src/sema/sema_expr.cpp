@@ -2,6 +2,7 @@
 
 #include "ast/ast_context.h"
 #include "ast/type.h"
+#include "logging/logger.h"
 
 namespace tpl::sema {
 
@@ -24,6 +25,23 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
       node->set_type(left_type);
       break;
     }
+    case parsing::Token::Type::PLUS:
+    case parsing::Token::Type::MINUS:
+    case parsing::Token::Type::STAR:
+    case parsing::Token::Type::SLASH:
+    case parsing::Token::Type::PERCENT: {
+      // Arithmetic ops
+      if (left_type != right_type) {
+        LOG_ERROR("Type mismatch: op={}, left type={}, right type={}",
+                  parsing::Token::String(node->op()),
+                  ast::Type::GetAsString(left_type),
+                  ast::Type::GetAsString(right_type));
+        return;
+      }
+      node->set_type(left_type);
+      break;
+    }
+
     case parsing::Token::Type::BANG_EQUAL:
     case parsing::Token::Type::EQUAL_EQUAL:
     case parsing::Token::Type::GREATER:
@@ -35,7 +53,10 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
       node->set_type(ast::BoolType::Bool(left_type->context()));
       break;
     }
-    default: {}
+    default: {
+      LOG_ERROR("{} is not a binary operation!",
+                parsing::Token::String(node->op()));
+    }
   }
 }
 
