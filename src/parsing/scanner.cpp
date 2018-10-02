@@ -5,6 +5,9 @@
 
 namespace tpl::parsing {
 
+Scanner::Scanner(const std::string &source)
+    : Scanner(source.data(), source.length()) {}
+
 Scanner::Scanner(const char *source, uint64_t source_len)
     : source_(source), source_len_(source_len), offset_(0) {
   // Setup current token information
@@ -265,7 +268,7 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
   GROUP_START('t')                          \
   GROUP_ELEM("true", Token::Type::TRUE)     \
   GROUP_START('v')                          \
-  GROUP_ELEM("var", Token::Type::VAR)       \
+  GROUP_ELEM("var", Token::Type::VAR)
 
 Token::Type Scanner::CheckIdentifierOrKeyword(const char *input,
                                               uint32_t input_len) {

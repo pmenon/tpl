@@ -6,11 +6,11 @@ const char *Bytecodes::ToString(Bytecode bytecode) {
   switch (bytecode) {
     default:
       break;
-#define CASE(name, ...)     \
+#define HANDLE_INST(name, ...)     \
   case Bytecode::name: \
     return #name;
-      BYTECODES_LIST(CASE)
-#undef CASE
+#include "vm/bytecodes.def"
+#undef HANDLE_INST
   }
   UNREACHABLE("Invalid bytecode");
 }

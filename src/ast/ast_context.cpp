@@ -178,7 +178,7 @@ StructType *StructType::Get(AstContext &ctx,
   size_t alignment = 0;
   for (const auto *type : fields) {
     // Check if the type needs to be padded
-    if (size & (type->alignment() - 1)) {
+    if (!util::MathUtil::IsAligned(size, type->alignment())) {
       size = util::MathUtil::AlignTo(size, type->alignment());
     }
 

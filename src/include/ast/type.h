@@ -94,28 +94,29 @@ class Type : public util::RegionObject {
 /**
  * Integral, fixed width integer type
  */
-
-#define INT_TYPES(F) \
-  F(Int8)            \
-  F(UInt8)           \
-  F(Int16)           \
-  F(UInt16)          \
-  F(Int32)           \
-  F(UInt32)          \
-  F(Int64)           \
-  F(UInt64)
-
 class IntegerType : public Type {
  public:
-#define F(name) name,
-  enum class IntKind : uint8_t { INT_TYPES(F) };
-#undef F
+  enum class IntKind : uint8_t {
+    Int8,
+    Int16,
+    Int32,
+    Int64,
+    UInt8,
+    UInt16,
+    UInt32,
+    UInt64
+  };
 
   IntKind int_kind() const { return int_kind_; }
 
-#define F(ikind) static IntegerType *ikind(AstContext &ctx);
-  INT_TYPES(F)
-#undef F
+  static IntegerType *Int8(AstContext &ctx);
+  static IntegerType *Int16(AstContext &ctx);
+  static IntegerType *Int32(AstContext &ctx);
+  static IntegerType *Int64(AstContext &ctx);
+  static IntegerType *UInt8(AstContext &ctx);
+  static IntegerType *UInt16(AstContext &ctx);
+  static IntegerType *UInt32(AstContext &ctx);
+  static IntegerType *UInt64(AstContext &ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::IntegerType;
@@ -130,9 +131,6 @@ class IntegerType : public Type {
  private:
   IntKind int_kind_;
 };
-
-// hygiene
-#undef INT_TYPES
 
 /**
  * Floating point number type

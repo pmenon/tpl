@@ -2,7 +2,7 @@
 
 #include "tpl_test.h"
 
-#include "vm/bytecode_builder.h"
+#include "vm/bytecode_emitter.h"
 #include "vm/bytecode_function.h"
 #include "vm/vm.h"
 
@@ -10,14 +10,12 @@ namespace tpl::vm::test {
 
 class VmTest : public TplTest {
  protected:
-  VmTest()
-      : builder_(std::make_unique<BytecodeBuilder>(
-            std::make_unique<ConstantsArrayBuilder>())) {}
+  VmTest() : builder_(std::make_unique<BytecodeEmitter>()) {}
 
-  BytecodeBuilder &builder() { return *builder_; }
+  BytecodeEmitter &builder() { return *builder_; }
 
  private:
-  std::unique_ptr<BytecodeBuilder> builder_;
+  std::unique_ptr<BytecodeEmitter> builder_;
 };
 
 TEST_F(VmTest, Simple) {

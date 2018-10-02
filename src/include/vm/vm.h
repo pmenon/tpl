@@ -1,26 +1,23 @@
 #pragma once
 
-#include <cstdint>
+#include <memory>
+#include <vector>
 
+#include "util/common.h"
 #include "vm/bytecodes.h"
-#include "vm/types.h"
 
 namespace tpl::vm {
 
-class BytecodeFunction;
-class Frame;
-
 class VM {
  public:
-  static VmValue Invoke(BytecodeFunction &function);
-
  private:
   VM();
 
-  void Run(Frame &frame);
+  class Frame;
+  void Run(Frame *frame);
 
  private:
-  uint64_t bytecode_counts_[Bytecodes::kBytecodeCount];
+  u64 bytecode_counts_[Bytecodes::kBytecodeCount];
 };
 
 }  // namespace tpl::vm

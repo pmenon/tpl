@@ -11,6 +11,9 @@
 #include "sema/error_reporter.h"
 #include "sema/sema.h"
 #include "tpl.h"
+#include "vm/bytecode_generator.h"
+#include "vm/bytecode_unit.h"
+#include "vm/vm.h"
 
 namespace tpl {
 

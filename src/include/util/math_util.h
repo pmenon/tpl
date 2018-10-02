@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <cstdlib>
 
-#include "util/macros.h"
 #include "util/common.h"
+#include "util/macros.h"
 
 namespace tpl::util {
 
@@ -37,12 +37,57 @@ class MathUtil {
   }
 
   /**
+   * Returns whether @param value is aligned to @param alignment. @param
+   * alignment is required to be a power of two.
+   *
+   * Examples:
+   * @code
+   * IsAligned(4, 4) = true
+   * IsAligned(4, 8) = false
+   * IsAligned(16, 8) = true
+   * IsAligned(5, 8) = false
+   * @endcode
+   *
+   * @param value The value whose alignment we'll check
+   * @param alignment The desired alignment
+   * @return Whether the value has the desired alignment
+   */
+  static bool IsAligned(u64 value, u64 alignment) {
+    TPL_ASSERT(alignment != 0u && IsPowerOf2(alignment),
+               "Align must be a non-zero power of two.");
+    return (value & (alignment - 1)) == 0;
+  }
+
+  /**
+   * A generic version of alignment checking where @param alignment can be any
+   * positive integer.
+   *
+   * Examples:
+   * @code
+   * IsAligned(5, 5) = true
+   * IsAligned(21, 7) = true
+   * IsAligned(24, 5) = false;
+   * @endcode
+   *
+   * @param value
+   * @param alignment
+   * @return
+   */
+  static bool IsAlignedGeneric(u64 value, u64 alignment) {
+    TPL_ASSERT(alignment != 0u, "Align must be non-zero.");
+    return (value % alignment) == 0;
+  }
+
+  /**
    * Returns the next integer greater than the provided input value that is a
    * multiple of the given alignment. Eg:
    *
+   * Examples:
+   * @code
    * AlignTo(5, 8) = 8
    * AlignTo(8, 8) = 8
    * AlignTo(9, 8) = 16
+   * @endcode
    *
    * @param value The input value to align
    * @param align The number to align to
@@ -50,19 +95,18 @@ class MathUtil {
    * alignment.
    */
   static u64 AlignTo(u64 value, u64 align) {
-    TPL_ASSERT(align != 0u, "Align can't be 0.");
+    TPL_ASSERT(align != 0u, "Align must be non-zero.");
     return (value + align - 1) / align;
   }
 
   /**
-   * Align the provided input address to the given alignment
+   * Align @param addr to the given alignment @param alignment
    *
    * @param addr
    * @param alignment
    * @return
    */
-  static constexpr uintptr_t AlignAddress(uintptr_t addr,
-                                          std::size_t alignment) {
+  static constexpr uintptr_t AlignAddress(uintptr_t addr, size_t alignment) {
     TPL_ASSERT(alignment > 0 && MathUtil::IsPowerOf2(alignment),
                "Alignment is not a power of two!");
     return (addr + alignment - 1) & ~(alignment - 1);

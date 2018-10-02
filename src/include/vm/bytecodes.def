@@ -1,0 +1,62 @@
+//----------------------------------------------------------------------------//
+//                          Instruction Definitions
+//
+// This file contains the all the bytecode instructions.
+//
+// The definitions can be used by defining one of the HANDLE functions below
+// before including this definition file (see X-Macros). This way the
+// definitions can be used to generate the Opcode enum, the dispatch area, etc.
+//
+// Most instructions are automatically expanded to all their supported types.
+//----------------------------------------------------------------------------//
+
+#ifndef HANDLE_INST
+#define HANDLE_INST(op)
+#endif
+
+#ifndef HANDLE_TYPED_INST
+#define HANDLE_TYPED_INST(op, type) HANDLE_INST(op##_##type)
+#endif
+
+// Creates instances of a given opcode for all integer primitive types
+#define CREATE_FOR_INT_TYPES(func, op)                               \
+  func(op, i8) func(op, i16) func(op, i32) func(op, i64) func(op, u8) \
+      func(op, u16) func(op, u32) func(op, u64)
+
+// Creates instances of a given opcode for all floating-point primitive types
+#define CREATE_FOR_FLOAT_TYPES(func, op) func(op, f32) func(op, f64)
+
+// Creates instances of a given opcode for all primitive types
+#define CREATE_FOR_ALL_TYPES(func, op) \
+  CREATE_FOR_INT_TYPES(func, op)       \
+  CREATE_FOR_FLOAT_TYPES(func, op)
+
+HANDLE_INST(Wide)
+HANDLE_INST(ExtraWide)
+
+HANDLE_INST(LoadConstant1)
+HANDLE_INST(LoadConstant2)
+HANDLE_INST(LoadConstant4)
+HANDLE_INST(LoadConstant8)
+
+HANDLE_INST(Return)
+
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, Add)
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, Sub)
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, Mul)
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, Div)
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, Rem)
+
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, GreaterThan)
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, GreaterThanEqual)
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, Equal)
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, LessThan)
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, LessThanEqual)
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, NotEqual)
+
+// hygiene
+#undef CREATE_FOR_ALL_TYPES
+#undef CREATE_FOR_FLOAT_TYPES
+#undef CREATE_FOR_INT_TYPES
+#undef HANDLE_TYPED_INST
+#undef HANDLE_INST
