@@ -58,7 +58,11 @@ class BytecodeEmitter {
     bytecodes_.push_back(static_cast<u8>(reg_id));
   }
 
-  void EmitRegisters(RegisterId regs...) { EmitRegister(regs); }
+  void EmitRegisters(std::initializer_list<RegisterId> regs) {
+    for (auto reg_id : regs) {
+      EmitRegister(reg_id);
+    }
+  }
 
  private:
   std::vector<u8> bytecodes_;

@@ -44,58 +44,58 @@ void BytecodeEmitter::EmitLiteral8(RegisterId dest, i64 val) {
   void BytecodeEmitter::Emit##Add##_##type(RegisterId dest, RegisterId lhs, \
                                            RegisterId rhs) {                \
     EmitOp(Bytecode::Add##_##type);                                         \
-    EmitRegisters(dest, lhs, rhs);                                          \
+    EmitRegisters({dest, lhs, rhs});                                        \
   }                                                                         \
   void BytecodeEmitter::Emit##Sub##_##type(RegisterId dest, RegisterId lhs, \
                                            RegisterId rhs) {                \
     EmitOp(Bytecode::Sub##_##type);                                         \
-    EmitRegisters(dest, lhs, rhs);                                          \
+    EmitRegisters({dest, lhs, rhs});                                        \
   }                                                                         \
   void BytecodeEmitter::Emit##Mul##_##type(RegisterId dest, RegisterId lhs, \
                                            RegisterId rhs) {                \
     EmitOp(Bytecode::Mul##_##type);                                         \
-    EmitRegisters(dest, lhs, rhs);                                          \
+    EmitRegisters({dest, lhs, rhs});                                        \
   }                                                                         \
   void BytecodeEmitter::Emit##Div##_##type(RegisterId dest, RegisterId lhs, \
                                            RegisterId rhs) {                \
     EmitOp(Bytecode::Div##_##type);                                         \
-    EmitRegisters(dest, lhs, rhs);                                          \
+    EmitRegisters({dest, lhs, rhs});                                        \
   }                                                                         \
   void BytecodeEmitter::Emit##Rem##_##type(RegisterId dest, RegisterId lhs, \
                                            RegisterId rhs) {                \
     EmitOp(Bytecode::Rem##_##type);                                         \
-    EmitRegisters(dest, lhs, rhs);                                          \
+    EmitRegisters({dest, lhs, rhs});                                        \
   }
 #define GEN_COMPARISONS(type)                                                 \
   void BytecodeEmitter::Emit##GreaterThan##_##type(                           \
       RegisterId dest, RegisterId lhs, RegisterId rhs) {                      \
     EmitOp(Bytecode::GreaterThan##_##type);                                   \
-    EmitRegisters(dest, lhs, rhs);                                            \
+    EmitRegisters({dest, lhs, rhs});                                          \
   }                                                                           \
   void BytecodeEmitter::Emit##GreaterThanEqual##_##type(                      \
       RegisterId dest, RegisterId lhs, RegisterId rhs) {                      \
     EmitOp(Bytecode::GreaterThanEqual##_##type);                              \
-    EmitRegisters(dest, lhs, rhs);                                            \
+    EmitRegisters({dest, lhs, rhs});                                          \
   }                                                                           \
   void BytecodeEmitter::Emit##Equal##_##type(RegisterId dest, RegisterId lhs, \
                                              RegisterId rhs) {                \
     EmitOp(Bytecode::Equal##_##type);                                         \
-    EmitRegisters(dest, lhs, rhs);                                            \
+    EmitRegisters({dest, lhs, rhs});                                          \
   }                                                                           \
   void BytecodeEmitter::Emit##LessThan##_##type(                              \
       RegisterId dest, RegisterId lhs, RegisterId rhs) {                      \
     EmitOp(Bytecode::LessThan##_##type);                                      \
-    EmitRegisters(dest, lhs, rhs);                                            \
+    EmitRegisters({dest, lhs, rhs});                                          \
   }                                                                           \
   void BytecodeEmitter::Emit##LessThanEqual##_##type(                         \
       RegisterId dest, RegisterId lhs, RegisterId rhs) {                      \
     EmitOp(Bytecode::LessThanEqual##_##type);                                 \
-    EmitRegisters(dest, lhs, rhs);                                            \
+    EmitRegisters({dest, lhs, rhs});                                          \
   }                                                                           \
   void BytecodeEmitter::Emit##NotEqual##_##type(                              \
       RegisterId dest, RegisterId lhs, RegisterId rhs) {                      \
     EmitOp(Bytecode::NotEqual##_##type);                                      \
-    EmitRegisters(dest, lhs, rhs);                                            \
+    EmitRegisters({dest, lhs, rhs});                                          \
   }
 INT_TYPES(GEN_BIN_OPS)
 INT_TYPES(GEN_COMPARISONS)
