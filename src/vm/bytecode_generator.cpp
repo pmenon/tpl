@@ -43,6 +43,21 @@ class BytecodeGenerator::ExpressionResultScope {
   ExpressionResultScope *outer_scope_;
 };
 
+class BytecodeGenerator::BytecodePositionTracker {
+ public:
+  BytecodePositionTracker(BytecodeGenerator *generator)
+      : generator_(generator),
+        start_offset_(generator->emitter()->position()) {}
+
+  std::pair<std::size_t, std::size_t> BytecodeRange() const {
+    return {start_offset_, generator_->emitter()->position()};
+  }
+
+ private:
+  BytecodeGenerator *generator_;
+  std::size_t start_offset_;
+};
+
 BytecodeGenerator::BytecodeGenerator()
     : execution_result_(nullptr), func_id_counter_(0) {}
 
@@ -70,8 +85,15 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
     func_info->NewLocal(param_types[i], params[i]->name().data());
   }
 
+  // Remember current position
+  BytecodePositionTracker position_tracker(this);
+
   // Generate body
   Visit(node->function());
+
+  // Mark bytecode position boundaries in function
+  const auto [start_offset, end_offset] = position_tracker.BytecodeRange();
+  func_info->MarkBytecodeRange(start_offset, end_offset);
 }
 
 void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
@@ -278,7 +300,7 @@ void BytecodeGenerator::VisitStructTypeRepr(ast::StructTypeRepr *node) {
 }
 
 FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &name) {
-  functions_.emplace_back(++func_id_counter_, name, emitter()->position());
+  functions_.emplace_back(++func_id_counter_, name);
   return &functions_.back();
 }
 

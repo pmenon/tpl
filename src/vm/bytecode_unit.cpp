@@ -30,7 +30,7 @@ void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
 }
 
 void PrettyPrintFuncCode(std::ostream &os, const FunctionInfo &func,
-                         const u8 *code) {}
+                         const BytecodeIterator &bytecode_iter) {}
 
 void PrettyPrintFunc(std::ostream &os, const BytecodeUnit &unit,
                      FunctionId func_id) {
@@ -42,7 +42,7 @@ void PrettyPrintFunc(std::ostream &os, const BytecodeUnit &unit,
 }  // namespace
 
 void BytecodeUnit::PrettyPrint(std::ostream &os) {
-  for (FunctionId id = 0; id < NumFunctions(); id++) {
+  for (FunctionId id = 0; id < num_functions(); id++) {
     PrettyPrintFunc(os, *this, id);
   }
 }

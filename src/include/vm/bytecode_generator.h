@@ -27,6 +27,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
  private:
   class ExpressionResultScope;
+  class BytecodePositionTracker;
 
   // Allocate a new function ID
   FunctionInfo *AllocateFunc(const std::string &name);
