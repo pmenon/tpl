@@ -43,7 +43,8 @@ class BytecodeGenerator::ExpressionResultScope {
   ExpressionResultScope *outer_scope_;
 };
 
-BytecodeGenerator::BytecodeGenerator() : execution_result_(nullptr) {}
+BytecodeGenerator::BytecodeGenerator()
+    : execution_result_(nullptr), func_id_counter_(0) {}
 
 void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
   AstVisitor::VisitForStmt(node);
@@ -55,23 +56,19 @@ void BytecodeGenerator::VisitFieldDecl(ast::FieldDecl *node) {
 
 void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
   // Create function info object
-  auto func_id = static_cast<u32>(functions().size());
-  FunctionInfo func(func_id);
+  FunctionInfo *func_info = AllocateFunc(node->name().data());
 
   auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
 
   // Register return type
-  func.NewLocal(func_type->return_type(), "ret");
+  func_info->NewLocal(func_type->return_type(), "ret");
 
   // Register parameters
   const auto &params = node->type_repr()->parameters();
   const auto &param_types = func_type->params();
   for (u32 i = 0; i < param_types.size(); i++) {
-    func.NewLocal(param_types[i], params[i]->name().data());
+    func_info->NewLocal(param_types[i], params[i]->name().data());
   }
-
-  // Add new function
-  functions_.emplace_back(std::move(func));
 
   // Generate body
   Visit(node->function());
@@ -278,6 +275,11 @@ void BytecodeGenerator::VisitPointerTypeRepr(ast::PointerTypeRepr *node) {
 
 void BytecodeGenerator::VisitStructTypeRepr(ast::StructTypeRepr *node) {
   TPL_ASSERT(false, "Should not visit type-representation nodes!");
+}
+
+FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &name) {
+  functions_.emplace_back(++func_id_counter_, name, emitter()->position());
+  return &functions_.back();
 }
 
 RegisterId BytecodeGenerator::VisitExpressionForValue(ast::Expr *expr) {

@@ -17,6 +17,8 @@ class BytecodeEmitter {
 
   DISALLOW_COPY_AND_MOVE(BytecodeEmitter);
 
+  size_t position() const { return bytecodes_.size(); }
+
   void EmitLiteral1(RegisterId reg_id, i8 val);
   void EmitLiteral2(RegisterId reg_id, i16 val);
   void EmitLiteral4(RegisterId reg_id, i32 val);
@@ -30,6 +32,7 @@ class BytecodeEmitter {
   const std::vector<u8> &Finish();
 
  private:
+
   void EmitOp(Bytecode bytecode) {
     bytecodes_.push_back(Bytecodes::ToByte(bytecode));
   }

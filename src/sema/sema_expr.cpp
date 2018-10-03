@@ -34,8 +34,8 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
       if (left_type != right_type) {
         LOG_ERROR("Type mismatch: op={}, left type={}, right type={}",
                   parsing::Token::String(node->op()),
-                  ast::Type::GetAsString(left_type),
-                  ast::Type::GetAsString(right_type));
+                  ast::Type::ToString(left_type),
+                  ast::Type::ToString(right_type));
         return;
       }
       node->set_type(left_type);

@@ -28,7 +28,14 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
  private:
   class ExpressionResultScope;
 
+  // Allocate a new function ID
+  FunctionInfo *AllocateFunc(const std::string &name);
+
+  // Visit an expression and return the register that holds its result
   RegisterId VisitExpressionForValue(ast::Expr *expr);
+
+  // Visit an expression providing a target register where its results should be
+  // stored into
   void VisitExpressionWithTarget(ast::Expr *expr, RegisterId reg_id);
 
  private:
@@ -54,6 +61,8 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
  private:
   BytecodeEmitter emitter_;
   ExpressionResultScope *execution_result_;
+
+  FunctionId func_id_counter_;
   std::vector<FunctionInfo> functions_;
 };
 

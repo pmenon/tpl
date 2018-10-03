@@ -78,7 +78,9 @@ class Type : public util::RegionObject {
 
   PointerType *PointerTo();
 
-  static std::string GetAsString(Type *type);
+  std::string ToString() const { return ToString(this); }
+
+  static std::string ToString(const Type *type);
 
  protected:
   Type(AstContext &ctx, size_t size, size_t alignment, Kind kind)

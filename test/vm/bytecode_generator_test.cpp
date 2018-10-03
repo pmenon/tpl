@@ -50,6 +50,8 @@ TEST_F(BytecodeGeneratorTest, LoadConstantTest) {
 
   // Try generating bytecode for this declaration
   auto unit = BytecodeGenerator::Compile(ast);
+
+  unit->PrettyPrint(std::cout);
 }
 
 }  // namespace tpl::vm::test

@@ -47,7 +47,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
 
   void DumpType(Type *type) {
     WithColor color(*this, llvm::raw_ostream::GREEN);
-    out_ << " '" << Type::GetAsString(type) << "'";
+    out_ << " '" << Type::ToString(type) << "'";
   }
 
   void DumpPosition(const SourcePosition &pos) {

@@ -1,5 +1,7 @@
 #include "vm/bytecodes.h"
 
+#include <algorithm>
+
 namespace tpl::vm {
 
 const char *Bytecodes::ToString(Bytecode bytecode) {
@@ -13,6 +15,14 @@ const char *Bytecodes::ToString(Bytecode bytecode) {
 #undef HANDLE_INST
   }
   UNREACHABLE("Invalid bytecode");
+}
+
+constexpr u32 Bytecodes::MaxBytecodeNameLength() {
+  return std::max({
+#define HANDLE_INST(name, ...) sizeof(#name),
+#include "vm/bytecodes.def"
+#undef HANDLE_INST
+  });
 }
 
 }  // namespace tpl::vm

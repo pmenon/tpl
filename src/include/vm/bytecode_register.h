@@ -15,14 +15,16 @@ class Type;
 namespace vm {
 
 using RegisterId = u16;
+using FunctionId = u16;
 
 class Register {
  public:
   static constexpr const RegisterId kInvalidIndex =
       std::numeric_limits<RegisterId>::max();
 
-  Register(std::string name, ast::Type *type, RegisterId index, size_t offset)
-      : name_(std::move(name)), type_(type), id_(index), offset_(offset) {
+  Register(RegisterId index, std::string name, ast::Type *type,
+           std::size_t offset)
+      : name_(std::move(name)), type_(type), offset_(offset), id_(index) {
     TPL_ASSERT(index >= 0, "Index must be positive!");
   }
 
@@ -34,31 +36,53 @@ class Register {
 
   RegisterId id() const { return id_; }
 
+  std::size_t offset() const { return offset_; }
+
  private:
   std::string name_;
   ast::Type *type_;
+  std::size_t offset_;
   RegisterId id_;
-  size_t offset_;
 };
 
 class FunctionInfo {
+  static constexpr const RegisterId kRVRegisterId = 0;
+
  public:
-  explicit FunctionInfo(u32 id) : id_(id), total_size_(0) {}
+  FunctionInfo(FunctionId id, std::string name, std::size_t bytecode_offset)
+      : id_(id),
+        name_(std::move(name)),
+        bytecode_offset_(bytecode_offset),
+        frame_size_(0) {}
 
   RegisterId NewLocal(ast::Type *type, std::string name = "");
 
   RegisterId LookupLocal(const std::string &name);
 
-  RegisterId GetRVRegister() const { return 0; }
+  RegisterId GetRVRegister() const { return kRVRegisterId; }
 
-  u32 id() const { return id_; }
+  //////////////////////////////////////////////////////////////////////////////
+  ///
+  /// Accessors
+  ///
+  //////////////////////////////////////////////////////////////////////////////
+
+  FunctionId id() const { return id_; }
+
+  const std::string &name() const { return name_; }
+
+  std::size_t bytecode_offset() const { return bytecode_offset_; }
 
   const std::vector<Register> &locals() const { return locals_; }
 
+  std::size_t frame_size() const { return frame_size_; }
+
  private:
-  u32 id_;
+  FunctionId id_;
+  std::string name_;
+  std::size_t bytecode_offset_;
   std::vector<Register> locals_;
-  size_t total_size_;
+  std::size_t frame_size_;
 };
 
 }  // namespace vm

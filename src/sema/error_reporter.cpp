@@ -40,7 +40,7 @@ void ErrorReporter::MessageArgument::FormatMessageArgument(
       break;
     }
     case Kind::Type: {
-      str.append(ast::Type::GetAsString(type_));
+      str.append(ast::Type::ToString(type_));
       break;
     }
   }

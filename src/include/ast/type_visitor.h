@@ -10,10 +10,11 @@ namespace tpl::ast {
 template <typename Impl, typename RetType = void>
 class TypeVisitor {
  public:
-#define DISPATCH(Type) \
-  return static_cast<Impl *>(this)->Visit##Type(static_cast<Type *>(type));
+#define DISPATCH(Type)                           \
+  return static_cast<Impl *>(this)->Visit##Type( \
+      static_cast<const Type *>(type));
 
-  RetType Visit(Type *type) {
+  RetType Visit(const Type *type) {
     switch (type->kind()) {
       default: { llvm_unreachable("Impossible node type"); }
 #define T(kind)          \
@@ -24,10 +25,10 @@ class TypeVisitor {
     }
   }
 
-  RetType VisitType(UNUSED Type *type) { return RetType(); }
+  RetType VisitType(UNUSED const Type *type) { return RetType(); }
 
 #define T(Type) \
-  RetType Visit##Type(Type *type) { DISPATCH(Type); }
+  RetType Visit##Type(const Type *type) { DISPATCH(Type); }
   TYPE_LIST(T)
 #undef T
 

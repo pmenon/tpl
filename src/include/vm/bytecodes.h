@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 
 #include "util/common.h"
@@ -27,6 +28,12 @@ class Bytecodes {
  public:
   // The total number of bytecode instructions
   static const u32 kBytecodeCount = static_cast<u32>(Bytecode::Last) + 1;
+
+  // Return the total number of bytecodes
+  static constexpr u32 NumBytecodes() { return kBytecodeCount; }
+
+  // Return the maximum length of any bytecode instruction in bytes
+  static constexpr u32 MaxBytecodeNameLength();
 
   // Returns the string representation of the given bytecode
   static const char *ToString(Bytecode bytecode);
