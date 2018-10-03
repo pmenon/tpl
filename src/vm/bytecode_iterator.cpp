@@ -10,14 +10,14 @@ BytecodeIterator::BytecodeIterator(const std::vector<u8> &bytecode,
     : bytecodes_(bytecode),
       start_offset_(start),
       end_offset_(end),
-      bytecode_offset_(start) {}
+      curr_offset_(start) {}
 
 Bytecode BytecodeIterator::current_bytecode() const {
   return Bytecodes::FromByte(bytecodes_[current_offset()]);
 }
 
-void BytecodeIterator::Advance() {}
+void BytecodeIterator::Advance() { curr_offset_ += 2; }
 
-bool BytecodeIterator::Done() const { return false; }
+bool BytecodeIterator::Done() const { return current_offset() > end_offset(); }
 
 }  // namespace tpl::vm

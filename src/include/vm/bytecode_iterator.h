@@ -14,7 +14,9 @@ class BytecodeIterator {
                    std::size_t end);
 
   Bytecode current_bytecode() const;
-  std::size_t current_offset() const { return bytecode_offset_; }
+  std::size_t start_offset() const { return start_offset_; }
+  std::size_t current_offset() const { return curr_offset_; }
+  std::size_t end_offset() const { return end_offset_; }
   const std::vector<u8> &bytecodes() const { return bytecodes_; }
 
   void Advance();
@@ -24,7 +26,7 @@ class BytecodeIterator {
   const std::vector<u8> &bytecodes_;
   std::size_t start_offset_;
   std::size_t end_offset_;
-  std::size_t bytecode_offset_;
+  std::size_t curr_offset_;
 };
 
 }  // namespace tpl::vm

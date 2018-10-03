@@ -33,7 +33,7 @@ class Bytecodes {
   static constexpr u32 NumBytecodes() { return kBytecodeCount; }
 
   // Return the maximum length of any bytecode instruction in bytes
-  static constexpr u32 MaxBytecodeNameLength();
+  static u32 MaxBytecodeNameLength();
 
   // Returns the string representation of the given bytecode
   static const char *ToString(Bytecode bytecode);

@@ -4,6 +4,7 @@
 
 namespace tpl::vm {
 
+// static
 const char *Bytecodes::ToString(Bytecode bytecode) {
   switch (bytecode) {
     default:
@@ -17,7 +18,8 @@ const char *Bytecodes::ToString(Bytecode bytecode) {
   UNREACHABLE("Invalid bytecode");
 }
 
-constexpr u32 Bytecodes::MaxBytecodeNameLength() {
+// static
+u32 Bytecodes::MaxBytecodeNameLength() {
   return std::max({
 #define HANDLE_INST(name, ...) sizeof(#name),
 #include "vm/bytecodes.def"
