@@ -104,7 +104,29 @@ void BytecodeGenerator::VisitVariableDecl(ast::VariableDecl *node) {
 }
 
 void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
-  AstVisitor::VisitUnaryOpExpr(node);
+  RegisterId dest = execution_result()->GetOrCreateDestination(node->type());
+  RegisterId input = VisitExpressionForValue(node->expr());
+
+  Bytecode bytecode;
+  switch (node->op()) {
+    case parsing::Token::Type::MINUS: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Neg),
+                                     node->type());
+      break;
+    }
+    case parsing::Token::Type::BIT_NOT: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitNeg),
+                                     node->type());
+      break;
+    }
+    default: { UNREACHABLE("Impossible unary operation"); }
+  }
+
+  // Emit
+  emitter()->Emit(bytecode, dest, input);
+
+  // Mark where the result is
+  execution_result()->set_destination(dest);
 }
 
 void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {

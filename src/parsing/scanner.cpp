@@ -103,6 +103,11 @@ void Scanner::Scan() {
         }
         break;
       }
+      case '~': {
+        Advance();
+        type = Token::Type::BIT_NOT;
+        break;
+      }
       case ':': {
         Advance();
         type = Token::Type::COLON;

@@ -29,6 +29,12 @@ void BytecodeEmitter::EmitLiteral8(RegisterId dest, i64 val) {
   EmitImmediateValue(val);
 }
 
+void BytecodeEmitter::Emit(Bytecode bytecode, RegisterId dest,
+                           RegisterId input) {
+  EmitOp(bytecode);
+  EmitRegisters(dest, input);
+}
+
 void BytecodeEmitter::Emit(Bytecode bytecode, RegisterId dest, RegisterId lhs,
                            RegisterId rhs) {
   EmitOp(bytecode);

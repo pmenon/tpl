@@ -24,6 +24,7 @@ class BytecodeEmitter {
 
   void EmitReturn();
 
+  void Emit(Bytecode bytecode, RegisterId dest, RegisterId input);
   void Emit(Bytecode bytecode, RegisterId dest, RegisterId lhs, RegisterId rhs);
 
   const std::vector<u8> &Finish();
