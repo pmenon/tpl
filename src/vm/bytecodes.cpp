@@ -6,8 +6,8 @@ const char *Bytecodes::ToString(Bytecode bytecode) {
   switch (bytecode) {
     default:
       break;
-#define HANDLE_INST(name, ...)     \
-  case Bytecode::name: \
+#define HANDLE_INST(name, ...) \
+  case Bytecode::name:         \
     return #name;
 #include "vm/bytecodes.def"
 #undef HANDLE_INST

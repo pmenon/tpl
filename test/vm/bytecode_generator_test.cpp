@@ -40,7 +40,11 @@ class BytecodeExpectations {
 };
 
 TEST_F(BytecodeGeneratorTest, LoadConstantTest) {
-  auto src = "fun test(x: int32) -> int32 { return x * 2 }";
+  auto src = R"(
+    fun test(x: int32) -> int32 {
+      var y = 20
+      return x * y
+    })";
   BytecodeExpectations expectations;
   auto *ast = expectations.Compile(src);
 

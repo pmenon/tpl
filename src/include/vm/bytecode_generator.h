@@ -31,6 +31,15 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   RegisterId VisitExpressionForValue(ast::Expr *expr);
   void VisitExpressionWithTarget(ast::Expr *expr, RegisterId reg_id);
 
+ private:
+  Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type);
+
+  //////////////////////////////////////////////////////////////////////////////
+  ///
+  /// Accessors
+  ///
+  //////////////////////////////////////////////////////////////////////////////
+
   BytecodeEmitter *emitter() { return &emitter_; }
 
   ExpressionResultScope *execution_result() { return execution_result_; }

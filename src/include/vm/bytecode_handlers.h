@@ -27,16 +27,26 @@ extern "C" {
   void OpSub##_##type(type *result, type lhs, type rhs); \
   void OpMul##_##type(type *result, type lhs, type rhs); \
   void OpDiv##_##type(type *result, type lhs, type rhs); \
-  void OpRem##_##type(type *result, type lhs, type rhs);
+  void OpRem##_##type(type *result, type lhs, type rhs); \
+  void OpNeg##_##type(type *result, type input);
+
+/// Bitwise operations
+#define BITS(type)                                          \
+  void OpBitAnd##_##type(type *result, type lhs, type rhs); \
+  void OpBitOr##_##type(type *result, type lhs, type rhs);  \
+  void OpBitXor##_##type(type *result, type lhs, type rhs); \
+  void OpBitNeg##_##type(type *result, type input);
 
 #define LOAD_CONSTANT(type) void OpLoadConstant##_##type(type *result, type c);
 
 INT_TYPES(COMPARISONS)
 INT_TYPES(ARITHMETIC)
+INT_TYPES(BITS)
 INT_TYPES(LOAD_CONSTANT)
 
 #undef COMPARISONS
 #undef ARITHMETIC
+#undef BITS
 #undef LOAD_CONSTANT
 
 }  // extern "C"

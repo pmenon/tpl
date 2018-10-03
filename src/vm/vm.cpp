@@ -98,7 +98,7 @@ void VM::Run(Frame *frame) {
   /*
    * Binary operations
    */
-#define DO_GEN_BIN_OP(op, test, type)                  \
+#define DO_GEN_ARITHMETIC_OP(op, test, type)           \
   CASE_OP(op##_##type) : {                             \
     auto *dest = frame->LocalAt<type>(READ_OPERAND()); \
     auto *lhs = frame->LocalAt<type>(READ_OPERAND());  \
@@ -110,16 +110,39 @@ void VM::Run(Frame *frame) {
     Op##op##_##type(dest, *lhs, *rhs);                 \
     DISPATCH_NEXT();                                   \
   }
-#define GEN_BIN_OP(type)          \
-  DO_GEN_BIN_OP(Add, false, type) \
-  DO_GEN_BIN_OP(Sub, false, type) \
-  DO_GEN_BIN_OP(Mul, false, type) \
-  DO_GEN_BIN_OP(Div, true, type)  \
-  DO_GEN_BIN_OP(Rem, true, type)
+#define GEN_ARITHMETIC_OP(type)             \
+  DO_GEN_ARITHMETIC_OP(Add, false, type)    \
+  DO_GEN_ARITHMETIC_OP(Sub, false, type)    \
+  DO_GEN_ARITHMETIC_OP(Mul, false, type)    \
+  DO_GEN_ARITHMETIC_OP(Div, true, type)     \
+  DO_GEN_ARITHMETIC_OP(Rem, true, type)     \
+  DO_GEN_ARITHMETIC_OP(BitAnd, false, type) \
+  DO_GEN_ARITHMETIC_OP(BitOr, false, type)  \
+  DO_GEN_ARITHMETIC_OP(BitXor, false, type)
 
-  INT_TYPES(GEN_BIN_OP)
-#undef GEN_BIN_OP
-#undef DO_GEN_BIN_OP
+  INT_TYPES(GEN_ARITHMETIC_OP)
+#undef GEN_ARITHMETIC_OP
+#undef DO_GEN_ARITHMETIC_OP
+
+  /*
+   * Bitwise negation and regular integer negation
+   */
+#define GEN_NEG_OP(type)                                \
+  CASE_OP(Neg##_##type) : {                             \
+    auto *dest = frame->LocalAt<type>(READ_OPERAND());  \
+    auto *input = frame->LocalAt<type>(READ_OPERAND()); \
+    OpNeg##_##type(dest, *input);                       \
+    DISPATCH_NEXT();                                    \
+  }                                                     \
+  CASE_OP(BitNeg##_##type) : {                          \
+    auto *dest = frame->LocalAt<type>(READ_OPERAND());  \
+    auto *input = frame->LocalAt<type>(READ_OPERAND()); \
+    OpBitNeg##_##type(dest, *input);                    \
+    DISPATCH_NEXT();                                    \
+  }
+
+  INT_TYPES(GEN_NEG_OP)
+#undef GEN_NEG_OP
 
   CASE_OP(LoadConstant1) : {
     i8 *dest = frame->LocalAt<i8>(READ_OPERAND());
@@ -153,6 +176,10 @@ void VM::Run(Frame *frame) {
     // Just return for now. We need to handle return values though ...
     return;
   }
+
+  CASE_OP(ScanOpen) : { DISPATCH_NEXT(); }
+  CASE_OP(ScanNext) : { DISPATCH_NEXT(); }
+  CASE_OP(ScanClose) : { DISPATCH_NEXT(); }
 
   // Impossible
   UNREACHABLE("Impossible to reach end of interpreter loop. Bad code!");

@@ -31,6 +31,7 @@ class Bytecodes {
   // Returns the string representation of the given bytecode
   static const char *ToString(Bytecode bytecode);
 
+  // Returns if the provided bytecode is a prefix-scaling bytecode
   static bool IsPrefixScalingCode(Bytecode bytecode) {
     return bytecode == Bytecode::Wide || bytecode == Bytecode::ExtraWide;
   }

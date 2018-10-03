@@ -24,27 +24,7 @@ class BytecodeEmitter {
 
   void EmitReturn();
 
-#define GEN_BIN_OPS(type)                                                   \
-  void Emit##Add##_##type(RegisterId dest, RegisterId lhs, RegisterId rhs); \
-  void Emit##Sub##_##type(RegisterId dest, RegisterId lhs, RegisterId rhs); \
-  void Emit##Mul##_##type(RegisterId dest, RegisterId lhs, RegisterId rhs); \
-  void Emit##Div##_##type(RegisterId dest, RegisterId lhs, RegisterId rhs); \
-  void Emit##Rem##_##type(RegisterId dest, RegisterId lhs, RegisterId rhs);
-#define GEN_COMPARISONS(type)                                                 \
-  void Emit##GreaterThan##_##type(RegisterId dest, RegisterId lhs,            \
-                                  RegisterId rhs);                            \
-  void Emit##GreaterThanEqual##_##type(RegisterId dest, RegisterId lhs,       \
-                                       RegisterId rhs);                       \
-  void Emit##Equal##_##type(RegisterId dest, RegisterId lhs, RegisterId rhs); \
-  void Emit##LessThan##_##type(RegisterId dest, RegisterId lhs,               \
-                               RegisterId rhs);                               \
-  void Emit##LessThanEqual##_##type(RegisterId dest, RegisterId lhs,          \
-                                    RegisterId rhs);                          \
-  void Emit##NotEqual##_##type(RegisterId dest, RegisterId lhs, RegisterId rhs);
-  INT_TYPES(GEN_BIN_OPS)
-  INT_TYPES(GEN_COMPARISONS)
-#undef GEN_COMPARISONS
-#undef GEN_BIN_OPS
+  void Emit(Bytecode bytecode, RegisterId dest, RegisterId lhs, RegisterId rhs);
 
   const std::vector<u8> &Finish();
 
@@ -53,15 +33,20 @@ class BytecodeEmitter {
     bytecodes_.push_back(Bytecodes::ToByte(bytecode));
   }
 
-  void EmitRegister(RegisterId reg_id) {
-    bytecodes_.push_back(static_cast<u8>(reg_id >> 8));
-    bytecodes_.push_back(static_cast<u8>(reg_id));
+  template <typename T,
+            typename std::enable_if_t<std::is_integral_v<T>, int> = 0>
+  void EmitImmediateValue(T val) {
+    bytecodes_.insert(bytecodes_.end(), sizeof(T), 0);
+    *reinterpret_cast<T *>(&*(bytecodes_.end() - sizeof(T))) = val;
   }
 
-  void EmitRegisters(std::initializer_list<RegisterId> regs) {
-    for (auto reg_id : regs) {
-      EmitRegister(reg_id);
-    }
+  void EmitRegister(RegisterId reg_id) { EmitImmediateValue(reg_id); }
+
+  template <typename... Regs,
+            typename std::enable_if_t<
+                std::conjunction_v<std::is_same<Regs, RegisterId>...>, int> = 0>
+  void EmitRegisters(Regs... regs) {
+    (EmitRegister(regs), ...);
   }
 
  private:

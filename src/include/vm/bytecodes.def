@@ -26,27 +26,36 @@
 // Creates instances of a given opcode for all floating-point primitive types
 #define CREATE_FOR_FLOAT_TYPES(func, op) func(op, f32) func(op, f64)
 
-// Creates instances of a given opcode for all primitive types
+// Creates instances of a given opcode for *ALL* primitive types
 #define CREATE_FOR_ALL_TYPES(func, op) \
   CREATE_FOR_INT_TYPES(func, op)       \
   CREATE_FOR_FLOAT_TYPES(func, op)
 
+#define GET_BASE_FOR_INT_TYPES(op) (op##_i8)
+#define GET_BASE_FOR_FLOAT_TYPES(op) (op##_f32)
+
 HANDLE_INST(Wide)
 HANDLE_INST(ExtraWide)
-
 HANDLE_INST(LoadConstant1)
 HANDLE_INST(LoadConstant2)
 HANDLE_INST(LoadConstant4)
 HANDLE_INST(LoadConstant8)
-
+HANDLE_INST(ScanOpen)
+HANDLE_INST(ScanNext)
+HANDLE_INST(ScanClose)
 HANDLE_INST(Return)
 
+// Primitive operations
 CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, Add)
 CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, Sub)
 CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, Mul)
 CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, Div)
 CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, Rem)
-
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, BitAnd)
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, BitOr)
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, BitXor)
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, Neg)
+CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, BitNeg)
 CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, GreaterThan)
 CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, GreaterThanEqual)
 CREATE_FOR_INT_TYPES(HANDLE_TYPED_INST, Equal)

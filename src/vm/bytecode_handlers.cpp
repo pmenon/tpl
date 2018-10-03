@@ -61,11 +61,35 @@
   void OpRem##_##type(type *result, type lhs, type rhs) { \
     TPL_ASSERT(rhs != 0, "Division-by-zero error!");      \
     *result = (lhs % rhs);                                \
-  }
+  }                                                       \
+                                                          \
+  /* Primitive negation */                                \
+  void OpNeg##_##type(type *result, type input) { *result = -input; }
+
+/// Bitwise operations
+#define BITS(type)                                           \
+  /* Primitive bitwise AND */                                \
+  void OpBitAnd##_##type(type *result, type lhs, type rhs) { \
+    *result = (lhs & rhs);                                   \
+  }                                                          \
+                                                             \
+  /* Primitive bitwise OR */                                 \
+  void OpBitOr##_##type(type *result, type lhs, type rhs) {  \
+    *result = (lhs | rhs);                                   \
+  }                                                          \
+                                                             \
+  /* Primitive bitwise XOR */                                \
+  void OpBitXor##_##type(type *result, type lhs, type rhs) { \
+    *result = (lhs ^ rhs);                                   \
+  }                                                          \
+                                                             \
+  /* Primitive bitwise COMPLEMENT */                         \
+  void OpBitNeg##_##type(type *result, type input) { *result = ~input; }
 
 #define LOAD_CONSTANT(type) \
   void OpLoadConstant##_##type(type *result, type c) { *result = c; }
 
 INT_TYPES(COMPARISONS);
 INT_TYPES(ARITHMETIC);
+INT_TYPES(BITS);
 INT_TYPES(LOAD_CONSTANT)

@@ -1,6 +1,10 @@
+
+#include <vm/bytecode_generator.h>
+
 #include "vm/bytecode_generator.h"
 
 #include "ast/type.h"
+#include "logging/logger.h"
 #include "util/macros.h"
 #include "vm/bytecode_unit.h"
 
@@ -88,8 +92,12 @@ void BytecodeGenerator::VisitBlockStmt(ast::BlockStmt *node) {
 }
 
 void BytecodeGenerator::VisitVariableDecl(ast::VariableDecl *node) {
-  RegisterId reg =
-      curr_func()->NewLocal(node->type_repr()->type(), node->name().data());
+  // Register a new local variale in the function
+  auto *type = node->initial() != nullptr ? node->initial()->type()
+                                          : node->type_repr()->type();
+  RegisterId reg = curr_func()->NewLocal(type, node->name().data());
+
+  // If there's an initializer, handle it now
   if (node->initial() != nullptr) {
     VisitExpressionWithTarget(node->initial(), reg);
   }
@@ -135,17 +143,71 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
   RegisterId left = VisitExpressionForValue(node->left());
   RegisterId right = VisitExpressionForValue(node->right());
 
+  Bytecode bytecode;
   switch (node->op()) {
     case parsing::Token::Type::PLUS: {
-      emitter()->EmitAdd_i32(dest, left, right);
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Add),
+                                     node->type());
+      break;
+    }
+    case parsing::Token::Type::MINUS: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Sub),
+                                     node->type());
       break;
     }
     case parsing::Token::Type::STAR: {
-      emitter()->EmitMul_i32(dest, left, right);
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Mul),
+                                     node->type());
       break;
     }
-    default: { break; }
+    case parsing::Token::Type::SLASH: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Div),
+                                     node->type());
+      break;
+    }
+    case parsing::Token::Type::PERCENT: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Rem),
+                                     node->type());
+      break;
+    }
+    case parsing::Token::Type::GREATER: {
+      bytecode = GetIntTypedBytecode(
+          GET_BASE_FOR_INT_TYPES(Bytecode::GreaterThan), node->type());
+      break;
+    }
+    case parsing::Token::Type::GREATER_EQUAL: {
+      bytecode = GetIntTypedBytecode(
+          GET_BASE_FOR_INT_TYPES(Bytecode::GreaterThanEqual), node->type());
+      break;
+    }
+    case parsing::Token::Type::EQUAL_EQUAL: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Equal),
+                                     node->type());
+      break;
+    }
+    case parsing::Token::Type::LESS: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::LessThan),
+                                     node->type());
+      break;
+    }
+    case parsing::Token::Type::LESS_EQUAL: {
+      bytecode = GetIntTypedBytecode(
+          GET_BASE_FOR_INT_TYPES(Bytecode::LessThanEqual), node->type());
+      break;
+    }
+    case parsing::Token::Type::BANG_EQUAL: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::NotEqual),
+                                     node->type());
+      break;
+    }
+    default: { UNREACHABLE("Impossible binary operation"); }
   }
+
+  // Emit
+  emitter()->Emit(bytecode, dest, left, right);
+
+  // Mark where the result is
+  execution_result()->set_destination(dest);
 }
 
 void BytecodeGenerator::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
@@ -194,6 +256,14 @@ void BytecodeGenerator::VisitExpressionWithTarget(ast::Expr *expr,
                                                   RegisterId reg_id) {
   ExpressionResultScope scope(this, reg_id);
   Visit(expr);
+}
+
+Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode,
+                                                ast::Type *type) {
+  TPL_ASSERT(type->IsIntegerType(), "Type must be integer type");
+  auto *int_type = type->SafeAs<ast::IntegerType>();
+  auto int_kind = static_cast<u8>(int_type->int_kind());
+  return Bytecodes::FromByte(Bytecodes::ToByte(bytecode) + int_kind);
 }
 
 std::unique_ptr<BytecodeUnit> BytecodeGenerator::Compile(ast::AstNode *root) {

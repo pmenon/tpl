@@ -118,6 +118,41 @@ class IntegerType : public Type {
   static IntegerType *UInt32(AstContext &ctx);
   static IntegerType *UInt64(AstContext &ctx);
 
+  u32 BitWidth() const {
+    switch (int_kind()) {
+      case IntKind::Int8:
+      case IntKind::UInt8: {
+        return 8;
+      }
+      case IntKind::Int16:
+      case IntKind::UInt16: {
+        return 16;
+      }
+      case IntKind::Int32:
+      case IntKind::UInt32: {
+        return 32;
+      }
+      case IntKind::Int64:
+      case IntKind::UInt64: {
+        return 64;
+      }
+    }
+  }
+
+  bool IsSigned() const {
+    switch (int_kind()) {
+      case IntKind::Int8:
+      case IntKind::Int16:
+      case IntKind::Int32:
+      case IntKind::Int64: {
+        return true;
+      }
+      default: {
+        return false;
+      }
+    }
+  }
+
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::IntegerType;
   }
