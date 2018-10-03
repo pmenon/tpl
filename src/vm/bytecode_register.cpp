@@ -13,9 +13,14 @@ RegisterId FunctionInfo::NewLocal(ast::Type *type, std::string name) {
     frame_size_ = util::MathUtil::AlignTo(frame_size_, type->alignment());
   }
 
+  std::string reg_name = name;
+  if (name.empty()) {
+    reg_name = "tmp" + std::to_string(NextTempRegId());
+  }
+
   auto arg_id = static_cast<RegisterId>(locals_.size());
   auto offset = frame_size_;
-  locals_.emplace_back(arg_id, name, type, offset);
+  locals_.emplace_back(arg_id, reg_name , type, offset);
 
   frame_size_ += type->size();
 

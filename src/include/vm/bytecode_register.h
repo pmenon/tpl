@@ -65,7 +65,8 @@ class FunctionInfo {
         name_(std::move(name)),
         bytecode_start_offset_(0),
         bytecode_end_offset_(0),
-        frame_size_(0) {}
+        frame_size_(0),
+        reg_id_counter_(0) {}
 
   RegisterId NewLocal(ast::Type *type, std::string name = "");
 
@@ -99,12 +100,17 @@ class FunctionInfo {
   std::size_t frame_size() const { return frame_size_; }
 
  private:
+  u32 NextTempRegId() { return reg_id_counter_++; }
+
+ private:
   FunctionId id_;
   std::string name_;
   std::size_t bytecode_start_offset_;
   std::size_t bytecode_end_offset_;
   std::vector<Register> locals_;
   std::size_t frame_size_;
+
+  u32 reg_id_counter_;
 };
 
 }  // namespace vm
