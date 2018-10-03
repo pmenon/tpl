@@ -17,7 +17,7 @@ class Identifier {
 
   const char *data() const { return data_; }
 
-  size_t length() const {
+  std::size_t length() const {
     TPL_ASSERT(data_ != nullptr,
                "Trying to get the length of an invalid identifier");
     return std::strlen(data());

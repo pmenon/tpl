@@ -28,9 +28,9 @@ class StlRegionAllocator {
   template <typename U>
   friend class StlRegionAllocator;
 
-  T *allocate(size_t n) { return region_.AllocateArray<T>(n); }
+  T *allocate(std::size_t n) { return region_.AllocateArray<T>(n); }
 
-  void deallocate(T *ptr, size_t n) {
+  void deallocate(T *ptr, std::size_t n) {
     region_.Deallocate(reinterpret_cast<const void *>(ptr), n);
   }
 
@@ -56,14 +56,14 @@ class LlvmRegionAllocator : public llvm::AllocatorBase<LlvmRegionAllocator> {
  public:
   explicit LlvmRegionAllocator(Region &region) noexcept : region_(region) {}
 
-  void *Allocate(size_t size, size_t alignment) {
+  void *Allocate(std::size_t size, std::size_t alignment) {
     return region_.Allocate(size, alignment);
   }
 
   // Pull in base class overloads.
   using AllocatorBase<LlvmRegionAllocator>::Allocate;
 
-  void Deallocate(const void *ptr, size_t size) {
+  void Deallocate(const void *ptr, std::size_t size) {
     region_.Deallocate(ptr, size);
   }
 

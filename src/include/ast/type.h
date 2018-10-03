@@ -36,10 +36,10 @@ class Type : public util::RegionObject {
   AstContext &context() const { return ctx_; }
 
   // Alignment (in bytes) of this type
-  size_t alignment() const { return align_; }
+  std::size_t alignment() const { return align_; }
 
   // Size (in bytes) of this type
-  size_t size() const { return size_; }
+  std::size_t size() const { return size_; }
 
   // The "kind" of type this is (e.g., Integer, Struct, Array, etc.)
   Kind kind() const { return kind_; }
@@ -83,13 +83,13 @@ class Type : public util::RegionObject {
   static std::string ToString(const Type *type);
 
  protected:
-  Type(AstContext &ctx, size_t size, size_t alignment, Kind kind)
+  Type(AstContext &ctx, std::size_t size, std::size_t alignment, Kind kind)
       : ctx_(ctx), size_(size), align_(alignment), kind_(kind) {}
 
  private:
   AstContext &ctx_;
-  size_t size_;
-  size_t align_;
+  std::size_t size_;
+  std::size_t align_;
   Kind kind_;
 };
 
@@ -149,9 +149,7 @@ class IntegerType : public Type {
       case IntKind::Int64: {
         return true;
       }
-      default: {
-        return false;
-      }
+      default: { return false; }
     }
   }
 
@@ -161,7 +159,8 @@ class IntegerType : public Type {
 
  private:
   friend class AstContext;
-  IntegerType(AstContext &ctx, size_t size, size_t alignment, IntKind int_kind)
+  IntegerType(AstContext &ctx, std::size_t size, std::size_t alignment,
+              IntKind int_kind)
       : Type(ctx, size, alignment, Type::Kind::IntegerType),
         int_kind_(int_kind) {}
 
@@ -188,7 +187,7 @@ class FloatType : public Type {
 
  private:
   friend class AstContext;
-  FloatType(AstContext &ctx, size_t size, size_t alignment,
+  FloatType(AstContext &ctx, std::size_t size, std::size_t alignment,
             FloatKind float_kind)
       : Type(ctx, size, alignment, Type::Kind::FloatType),
         float_kind_(float_kind) {}
@@ -296,7 +295,7 @@ class StructType : public Type {
   }
 
  private:
-  explicit StructType(AstContext &ctx, size_t size, size_t alignment,
+  explicit StructType(AstContext &ctx, std::size_t size, std::size_t alignment,
                       util::RegionVector<Type *> &&fields)
       : Type(ctx, size, alignment, Type::Kind::StructType),
         fields_(std::move(fields)) {}

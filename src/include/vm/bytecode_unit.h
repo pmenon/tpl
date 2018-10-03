@@ -16,7 +16,9 @@ class BytecodeUnit {
     return std::unique_ptr<BytecodeUnit>(new BytecodeUnit(code, functions));
   }
 
-  size_t NumFunctions() const { return functions_.size(); }
+  std::size_t InstructionCount() const { return code_.size(); }
+
+  std::size_t NumFunctions() const { return functions_.size(); }
 
   const FunctionInfo &GetFunction(FunctionId func_id) const {
     TPL_ASSERT(func_id < NumFunctions(), "Invalid function ID");

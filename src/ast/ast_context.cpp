@@ -174,8 +174,8 @@ StructType *StructType::Get(AstContext &ctx,
 
   // Compute size and alignment. Alignment of struct is alignment of largest
   // struct element.
-  size_t size = 0;
-  size_t alignment = 0;
+  std::size_t size = 0;
+  std::size_t alignment = 0;
   for (const auto *type : fields) {
     // Check if the type needs to be padded
     if (!util::MathUtil::IsAligned(size, type->alignment())) {

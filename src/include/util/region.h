@@ -32,7 +32,8 @@ class Region {
    * @param size The number of bytes to allocate
    * @return A pointer to the start of the allocated space
    */
-  void *Allocate(size_t size, size_t alignment = kDefaultByteAlignment);
+  void *Allocate(std::size_t size,
+                 std::size_t alignment = kDefaultByteAlignment);
 
   /**
    * Allocate a (contiguous) array of elements of the given type
@@ -42,7 +43,7 @@ class Region {
    * @return
    */
   template <typename T>
-  T *AllocateArray(size_t num_elems) {
+  T *AllocateArray(std::size_t num_elems) {
     return static_cast<T *>(Allocate(num_elems * sizeof(T), alignof(T)));
   }
 
@@ -53,7 +54,7 @@ class Region {
    * @param ptr The pointer to the memory we're deallocating
    * @param size The number of bytes the pointer points to
    */
-  void Deallocate(const void *ptr, size_t size) const {
+  void Deallocate(const void *ptr, std::size_t size) const {
     // No-op
   }
 
@@ -82,7 +83,7 @@ class Region {
 
  private:
   // Expand the region
-  uintptr_t Expand(size_t requested);
+  uintptr_t Expand(std::size_t requested);
 
  private:
   /*
@@ -110,23 +111,23 @@ class Region {
   static const uint32_t kDefaultByteAlignment = 8;
 
   // Min chunk allocation is 8KB
-  static const size_t kMinChunkAllocation = 8 * 1024;
+  static const std::size_t kMinChunkAllocation = 8 * 1024;
 
   // Max chunk allocation is 1MB
-  static const size_t kMaxChunkAllocation = 1 * 1024 * 1024;
+  static const std::size_t kMaxChunkAllocation = 1 * 1024 * 1024;
 
   // The name of the region
   const std::string name_;
 
   // The number of bytes allocated by this region
-  size_t allocated_;
+  std::size_t allocated_;
 
   // Bytes wasted due to alignment
-  size_t alignment_waste_;
+  std::size_t alignment_waste_;
 
   // The total number of chunk bytes. This may include bytes not yet given out
   // by the region
-  size_t chunk_bytes_allocated_;
+  std::size_t chunk_bytes_allocated_;
 
   // The head of the chunk list
   Chunk *head_;
@@ -144,10 +145,10 @@ class Region {
 class RegionObject {
  public:
   // Region objects should always be allocated from and release a region
-  void *operator new(size_t size) = delete;
+  void *operator new(std::size_t size) = delete;
   void operator delete(void *ptr) = delete;
 
-  void *operator new(size_t size, Region &region) {
+  void *operator new(std::size_t size, Region &region) {
     return region.Allocate(size);
   }
 
