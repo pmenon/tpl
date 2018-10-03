@@ -1,6 +1,3 @@
-
-#include <vm/bytecode_generator.h>
-
 #include "vm/bytecode_generator.h"
 
 #include "ast/type.h"
@@ -303,6 +300,7 @@ Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode,
   return Bytecodes::FromByte(Bytecodes::ToByte(bytecode) + int_kind);
 }
 
+// static
 std::unique_ptr<BytecodeUnit> BytecodeGenerator::Compile(ast::AstNode *root) {
   BytecodeGenerator generator;
   generator.Visit(root);
