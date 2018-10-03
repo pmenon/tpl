@@ -15,7 +15,6 @@ namespace tpl::parsing {
   T(RIGHT_BRACE, "}", 0)                           \
   T(LEFT_BRACKET, "[", 0)                          \
   T(RIGHT_BRACKET, "]", 0)                         \
-  T(AMPERSAND, "&", 0)                             \
   T(ARROW, "->", 0)                                \
   T(BANG, "!", 0)                                  \
   T(COLON, ":", 0)                                 \
@@ -29,11 +28,14 @@ namespace tpl::parsing {
   T(COMMA, ",", 1)                                 \
   K(OR, "or", 3)                                   \
   K(AND, "and", 4)                                 \
-  T(PLUS, "+", 7)                                  \
-  T(MINUS, "-", 7)                                 \
-  T(STAR, "*", 8)                                  \
-  T(SLASH, "/", 8)                                 \
-  T(PERCENT, "%", 8)                               \
+  T(BIT_OR, "|", 6)                                \
+  T(BIT_XOR, "^", 7)                               \
+  T(AMPERSAND, "&", 8)                             \
+  T(PLUS, "+", 9)                                  \
+  T(MINUS, "-", 9)                                 \
+  T(STAR, "*", 10)                                 \
+  T(SLASH, "/", 10)                                \
+  T(PERCENT, "%", 10)                              \
                                                    \
   /* Comparison operators, sorted by precedence */ \
   T(BANG_EQUAL, "!=", 5)                           \

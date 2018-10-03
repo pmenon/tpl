@@ -84,6 +84,16 @@ void Scanner::Scan() {
         type = Token::Type::AMPERSAND;
         break;
       }
+      case '|': {
+        Advance();
+        type = Token::Type::BIT_OR;
+        break;
+      }
+      case '^': {
+        Advance();
+        type = Token::Type::BIT_XOR;
+        break;
+      }
       case '!': {
         Advance();
         if (Matches('=')) {

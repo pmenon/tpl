@@ -200,6 +200,21 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
                                      node->type());
       break;
     }
+    case parsing::Token::Type::AMPERSAND: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitAnd),
+                                     node->type());
+      break;
+    }
+    case parsing::Token::Type::BIT_OR: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitOr),
+                                     node->type());
+      break;
+    }
+    case parsing::Token::Type::BIT_XOR: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitXor),
+                                     node->type());
+      break;
+    }
     default: { UNREACHABLE("Impossible binary operation"); }
   }
 

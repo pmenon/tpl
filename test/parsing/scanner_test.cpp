@@ -208,4 +208,27 @@ TEST_F(ScannerTest, FunctionSyntaxTest) {
   RunTests(tests);
 }
 
+TEST_F(ScannerTest, BinOpSyntaxTest) {
+  std::vector<test::Test> tests = {
+      // Empty function test
+      {"fun test(){ return 1 & 2 }",
+       {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN,
+        Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE, Token::Type::RETURN,
+        Token::Type::INTEGER, Token::Type::AMPERSAND, Token::Type::INTEGER,
+        Token::Type::RIGHT_BRACE}},
+      {"fun test(){ return 1 ^ 2 }",
+       {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN,
+        Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE, Token::Type::RETURN,
+        Token::Type::INTEGER, Token::Type::BIT_XOR, Token::Type::INTEGER,
+        Token::Type::RIGHT_BRACE}},
+      {"fun test(){ return 1 | 2 }",
+       {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN,
+        Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE, Token::Type::RETURN,
+        Token::Type::INTEGER, Token::Type::BIT_OR, Token::Type::INTEGER,
+        Token::Type::RIGHT_BRACE}},
+  };
+
+  RunTests(tests);
+}
+
 }  // namespace tpl::parsing::test
