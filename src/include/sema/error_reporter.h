@@ -53,7 +53,7 @@ class ErrorReporter {
     explicit MessageArgument(const char *str)
         : kind_(Kind::CString), raw_str_(str) {}
 
-    explicit MessageArgument(int32_t integer)
+    explicit MessageArgument(i32 integer)
         : kind_(Kind::Int), integer_(integer) {}
 
     explicit MessageArgument(ast::Identifier str)
@@ -81,7 +81,7 @@ class ErrorReporter {
     Kind kind_;
     union {
       const char *raw_str_;
-      int32_t integer_;
+      i32 integer_;
       SourcePosition pos_;
       ast::Type *type_;
     };

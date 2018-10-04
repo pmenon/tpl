@@ -97,7 +97,7 @@ class AstNode : public util::RegionObject {
  public:
   // The kind enumeration listing all possible node kinds
 #define T(kind) kind,
-  enum class Kind : uint8_t { AST_NODES(T) };
+  enum class Kind : u8 { AST_NODES(T) };
 #undef T
 
   // The kind of this node
@@ -627,7 +627,7 @@ class IdentifierExpr : public Expr {
  */
 class LitExpr : public Expr {
  public:
-  enum class LitKind : uint8_t { Nil, Boolean, Int, Float, String };
+  enum class LitKind : u8 { Nil, Boolean, Int, Float, String };
 
   explicit LitExpr(const SourcePosition &pos)
       : Expr(Kind::LitExpr, pos), lit_kind_(LitExpr::LitKind::Nil) {}

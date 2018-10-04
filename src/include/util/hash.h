@@ -2,21 +2,26 @@
 
 #include <cstdint>
 
+#include "util/common.h"
+
 namespace tpl::util {
 
+/**
+ * Utility class for hashing
+ */
 class Hasher {
  public:
   enum class HashMethod { Fnv1, Murmur3, Crc };
 
-  static uint32_t Hash(const char *buf, uint64_t len,
+  static u32 Hash(const char *buf, u64 len,
                        HashMethod method = HashMethod::Crc);
 
  private:
-  static uint32_t HashFnv1(const char *buf, uint64_t len);
+  static u32 HashFnv1(const char *buf, u64 len);
 
-  static uint32_t HashMurmur(const char *buf, uint64_t len);
+  static u32 HashMurmur(const char *buf, u64 len);
 
-  static uint32_t HashCrc(const char *buf, uint64_t len);
+  static u32 HashCrc(const char *buf, u64 len);
 };
 
 }  // namespace tpl::util

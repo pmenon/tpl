@@ -29,7 +29,7 @@ TYPE_LIST(F)
 class Type : public util::RegionObject {
  public:
 #define F(kind) kind,
-  enum class Kind : uint8_t { TYPE_LIST(F) };
+  enum class Kind : u8 { TYPE_LIST(F) };
 #undef F
 
   // Context this type was allocated from
@@ -98,7 +98,7 @@ class Type : public util::RegionObject {
  */
 class IntegerType : public Type {
  public:
-  enum class IntKind : uint8_t {
+  enum class IntKind : u8 {
     Int8,
     Int16,
     Int32,
@@ -173,7 +173,7 @@ class IntegerType : public Type {
  */
 class FloatType : public Type {
  public:
-  enum class FloatKind : uint8_t { Float32, Float64 };
+  enum class FloatKind : u8 { Float32, Float64 };
 
   FloatKind float_kind() const { return float_kind_; }
 
@@ -257,11 +257,11 @@ class PointerType : public Type {
  */
 class ArrayType : public Type {
  public:
-  uint64_t length() const { return length_; }
+  u64 length() const { return length_; }
 
   Type *element_type() const { return elem_type_; }
 
-  static ArrayType *Get(uint64_t length, Type *elem_type);
+  static ArrayType *Get(u64 length, Type *elem_type);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::ArrayType;
@@ -269,14 +269,14 @@ class ArrayType : public Type {
 
  private:
   friend class AstContext;
-  explicit ArrayType(uint64_t length, Type *elem_type)
+  explicit ArrayType(u64 length, Type *elem_type)
       : Type(elem_type->context(), elem_type->size() * length,
              elem_type->alignment(), Type::Kind::ArrayType),
         length_(length),
         elem_type_(elem_type) {}
 
  private:
-  uint64_t length_;
+  u64 length_;
   Type *elem_type_;
 };
 

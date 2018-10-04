@@ -3,6 +3,7 @@
 #include "llvm/ADT/DenseMap.h"
 
 #include "ast/identifier.h"
+#include "util/common.h"
 
 namespace tpl {
 
@@ -15,7 +16,7 @@ namespace sema {
 
 class Scope {
  public:
-  enum class Kind : uint8_t { Block, Function, File, Loop };
+  enum class Kind : u8 { Block, Function, File, Loop };
 
   Scope(Scope *outer, Kind scope_kind) { Init(outer, scope_kind); }
 

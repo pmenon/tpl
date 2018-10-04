@@ -128,8 +128,8 @@ class Sema : public ast::AstVisitor<Sema> {
   Scope *scope_;
 
   // A cache of scopes to reduce allocations
-  static constexpr const uint32_t kScopeCacheSize = 4;
-  uint64_t num_cached_scopes_;
+  static constexpr const u32 kScopeCacheSize = 4;
+  u64 num_cached_scopes_;
   std::unique_ptr<Scope> scope_cache_[kScopeCacheSize] = {nullptr};
 
   ast::FunctionLitExpr *curr_func_;

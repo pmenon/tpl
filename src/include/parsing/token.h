@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "util/common.h"
+
 namespace tpl::parsing {
 
 /*
@@ -82,16 +84,16 @@ class Token {
 
   static const char *String(Type type) { return string_[type]; }
 
-  static constexpr const uint32_t LowestPrecedence() { return 0; }
+  static constexpr const u32 LowestPrecedence() { return 0; }
 
-  static const uint32_t Precedence(Type type) { return precedence_[type]; }
+  static const u32 Precedence(Type type) { return precedence_[type]; }
 
-  static constexpr uint32_t NumTokens() { return Type::NUM_TOKENS; }
+  static constexpr u32 NumTokens() { return Type::NUM_TOKENS; }
 
  private:
   static const char *name_[Type::NUM_TOKENS];
   static const char *string_[Type::NUM_TOKENS];
-  static const uint32_t precedence_[Type::NUM_TOKENS];
+  static const u32 precedence_[Type::NUM_TOKENS];
 };
 
 }  // namespace tpl::parsing

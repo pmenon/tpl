@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "ast/identifier.h"
+#include "util/common.h"
 
 namespace tpl {
 
@@ -55,7 +56,7 @@ namespace sema {
  * Define the ErrorMessageId enumeration
  */
 #define F(id, str, arg_types) id,
-enum class ErrorMessageId : uint16_t { MESSAGE_LIST(F) };
+enum class ErrorMessageId : u16 { MESSAGE_LIST(F) };
 #undef F
 
 /**

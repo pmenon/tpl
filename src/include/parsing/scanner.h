@@ -10,10 +10,10 @@
 namespace tpl::parsing {
 
 class Scanner {
-  static constexpr int32_t kEndOfInput = -1;
+  static constexpr i32 kEndOfInput = -1;
 
  public:
-  Scanner(const char *source, uint64_t source_len);
+  Scanner(const char *source, u64 source_len);
   Scanner(const std::string &source);
 
   DISALLOW_COPY_AND_MOVE(Scanner);
@@ -44,7 +44,7 @@ class Scanner {
   }
 
   // Does the current character match the expected? If so, advance the scanner
-  bool Matches(int32_t expected) {
+  bool Matches(i32 expected) {
     if (c0_ != expected) {
       return false;
     }
@@ -67,7 +67,7 @@ class Scanner {
   Token::Type ScanIdentifierOrKeyword();
 
   // Check if the given input is a keyword or an identifier
-  Token::Type CheckIdentifierOrKeyword(const char *input, uint32_t input_len);
+  Token::Type CheckIdentifierOrKeyword(const char *input, u32 input_len);
 
   // Scan a number literal
   Token::Type ScanNumber();
@@ -83,7 +83,7 @@ class Scanner {
   struct TokenDesc {
     Token::Type type;
     SourcePosition pos;
-    uint64_t offset;
+    u64 offset;
     std::string literal;
   };
 
@@ -94,33 +94,33 @@ class Scanner {
   //////////////////////////////////////////////////////////////////////////////
 
   // Is the current character a character?
-  static bool IsInRange(int32_t c, int32_t lower, int32_t upper) {
+  static bool IsInRange(i32 c, i32 lower, i32 upper) {
     return (c >= lower && c <= upper);
   }
 
   // Is the provided character an alphabetic character
-  static bool IsAlpha(int32_t c) {
+  static bool IsAlpha(i32 c) {
     return IsInRange(c, 'a', 'z') || IsInRange(c, 'A', 'Z');
   }
 
   // Is the current character a digit?
-  static bool IsDigit(int32_t c) { return IsInRange(c, '0', '9'); }
+  static bool IsDigit(i32 c) { return IsInRange(c, '0', '9'); }
 
   // Is this character allowed in an identifier?
-  static bool IsIdentifierChar(int32_t c) {
+  static bool IsIdentifierChar(i32 c) {
     return IsAlpha(c) || IsDigit(c) || c == '_';
   }
 
  private:
   // The source input and its length
   const char *source_;
-  uint64_t source_len_;
+  u64 source_len_;
 
   // The offset/position in the source where the next character is read from
-  uint64_t offset_;
+  u64 offset_;
 
   // The lookahead character and its position in the source
-  int32_t c0_;
+  i32 c0_;
   SourcePosition c0_pos_;
 
   // Information about the current and next token in the input stream
