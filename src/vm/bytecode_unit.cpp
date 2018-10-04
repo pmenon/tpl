@@ -19,7 +19,11 @@ void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
     max_local_len = std::max(max_local_len, reg.name().length());
   }
   for (const auto &reg : func.locals()) {
-    os << "    local  ";
+    if (reg.is_parameter()) {
+      os << "    param  ";
+    } else {
+      os << "    local  ";
+    }
     os << std::setw(max_local_len) << std::right << reg.name()
        << ":  offset=" << std::setw(7) << std::left << reg.offset()
        << " size=" << std::setw(7) << std::left << reg.Size()

@@ -31,8 +31,12 @@ class Register {
       std::numeric_limits<RegisterId>::max();
 
   Register(RegisterId index, std::string name, ast::Type *type,
-           std::size_t offset)
-      : name_(std::move(name)), type_(type), offset_(offset), id_(index) {
+           std::size_t offset, bool is_param)
+      : name_(std::move(name)),
+        type_(type),
+        offset_(offset),
+        id_(index),
+        is_param_(is_param) {
     TPL_ASSERT(index >= 0, "Index must be positive!");
   }
 
@@ -46,11 +50,14 @@ class Register {
 
   std::size_t offset() const { return offset_; }
 
+  bool is_parameter() const { return is_param_; }
+
  private:
   std::string name_;
   ast::Type *type_;
   std::size_t offset_;
   RegisterId id_;
+  bool is_param_;
 };
 
 /**
@@ -68,7 +75,8 @@ class FunctionInfo {
         frame_size_(0),
         reg_id_counter_(0) {}
 
-  RegisterId NewLocal(ast::Type *type, std::string name = "");
+  RegisterId NewLocal(ast::Type *type, const std::string &name, bool is_param);
+  RegisterId NewLocal(ast::Type *type);
 
   RegisterId LookupLocal(const std::string &name);
 

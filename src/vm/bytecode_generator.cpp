@@ -76,13 +76,13 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
   auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
 
   // Register return type
-  func_info->NewLocal(func_type->return_type(), "ret");
+  func_info->NewLocal(func_type->return_type(), "ret", false);
 
   // Register parameters
   const auto &params = node->type_repr()->parameters();
   const auto &param_types = func_type->params();
   for (u32 i = 0; i < param_types.size(); i++) {
-    func_info->NewLocal(param_types[i], params[i]->name().data());
+    func_info->NewLocal(param_types[i], params[i]->name().data(), true);
   }
 
   // Remember current position
@@ -111,7 +111,7 @@ void BytecodeGenerator::VisitVariableDecl(ast::VariableDecl *node) {
   // Register a new local variale in the function
   auto *type = node->initial() != nullptr ? node->initial()->type()
                                           : node->type_repr()->type();
-  RegisterId reg = curr_func()->NewLocal(type, node->name().data());
+  RegisterId reg = curr_func()->NewLocal(type, node->name().data(), false);
 
   // If there's an initializer, handle it now
   if (node->initial() != nullptr) {
@@ -173,7 +173,7 @@ void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
 }
 
 void BytecodeGenerator::VisitStructDecl(ast::StructDecl *node) {
-  curr_func()->NewLocal(node->type_repr()->type(), node->name().data());
+  curr_func()->NewLocal(node->type_repr()->type(), node->name().data(), false);
 }
 
 void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
