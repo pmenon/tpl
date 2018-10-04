@@ -21,18 +21,40 @@ class BytecodeUnit {
 
   std::size_t num_functions() const { return functions_.size(); }
 
-  const FunctionInfo &GetFunction(FunctionId func_id) const {
-    TPL_ASSERT(func_id < num_functions(), "Invalid function ID");
-    return functions_[func_id];
+  const std::vector<FunctionInfo> &functions() const { return functions_; }
+
+  const FunctionInfo *GetFunction(FunctionId func_id) const {
+    for (const auto &func : functions_) {
+      if (func.id() == func_id) return &func;
+    }
+    return nullptr;
   }
 
-  BytecodeIterator BytecodeForFunction(FunctionId func_id) const {
-    const auto &func = GetFunction(func_id);
+  const FunctionInfo *GetFunctionByName(const std::string &name) const {
+    for (const auto &func : functions_) {
+      if (func.name() == name) return &func;
+    }
+    return nullptr;
+  }
+
+  BytecodeIterator BytecodeForFunction(const FunctionInfo &func) const {
+    TPL_ASSERT(IsFunctionDefinedInUnit(func), "Function not defined in unit!");
     return BytecodeIterator(code_, func.bytecode_start_offset(),
                             func.bytecode_end_offset());
   }
 
   void PrettyPrint(std::ostream &os);
+
+ private:
+  friend class VM;
+  const u8 *GetBytecodeForFunction(const FunctionInfo &func) const {
+    TPL_ASSERT(IsFunctionDefinedInUnit(func), "Function not defined in unit!");
+    return &code_[func.bytecode_start_offset()];
+  }
+
+  bool IsFunctionDefinedInUnit(const FunctionInfo &func) const {
+    return GetFunction(func.id()) != nullptr;
+  }
 
  private:
   BytecodeUnit(std::vector<u8> code, std::vector<FunctionInfo> functions)

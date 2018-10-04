@@ -41,21 +41,20 @@ void PrettyPrintFuncCode(std::ostream &os, const FunctionInfo &func,
 }
 
 void PrettyPrintFunc(std::ostream &os, const BytecodeUnit &unit,
-                     FunctionId func_id) {
-  const auto &func = unit.GetFunction(func_id);
+                     const FunctionInfo &func) {
   PrettyPrintFuncInfo(os, func);
 
   os << std::endl;
 
-  auto iter = unit.BytecodeForFunction(func_id);
+  auto iter = unit.BytecodeForFunction(func);
   PrettyPrintFuncCode(os, func, iter);
 }
 
 }  // namespace
 
 void BytecodeUnit::PrettyPrint(std::ostream &os) {
-  for (FunctionId id = 0; id < num_functions(); id++) {
-    PrettyPrintFunc(os, *this, id);
+  for (const auto &func : functions()) {
+    PrettyPrintFunc(os, *this, func);
   }
 }
 
