@@ -144,6 +144,32 @@ void VM::Run(Frame *frame) {
   INT_TYPES(GEN_NEG_OP)
 #undef GEN_NEG_OP
 
+  CASE_OP(Jump) : {
+    auto *skip = frame->LocalAt<u16>(READ_2());
+    if (OpJump()) {
+      ip += *skip;
+    }
+    DISPATCH_NEXT();
+  }
+
+  CASE_OP(JumpIfTrue) : {
+    auto *cond = frame->LocalAt<bool>(READ_OPERAND());
+    auto skip = *frame->LocalAt<u16>(READ_2());
+    if (OpJumpIfTrue(*cond)) {
+      ip += skip;
+    }
+    DISPATCH_NEXT();
+  }
+
+  CASE_OP(JumpIfFalse) : {
+    auto *cond = frame->LocalAt<bool>(READ_OPERAND());
+    auto skip = *frame->LocalAt<u16>(READ_2());
+    if (OpJumpIfFalse(*cond)) {
+      ip += skip;
+    }
+    DISPATCH_NEXT();
+  }
+
   CASE_OP(LoadConstant1) : {
     i8 *dest = frame->LocalAt<i8>(READ_OPERAND());
     i8 val = READ_1();

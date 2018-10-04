@@ -49,6 +49,11 @@ static void Compile(const std::string &source) {
 
   // For now, just pretty print the AST
   ast::AstDump::Dump(root);
+
+  // Try generating bytecode for this declaration
+  auto unit = vm::BytecodeGenerator::Compile(root);
+
+  unit->PrettyPrint(std::cout);
 }
 
 static void RunRepl() {

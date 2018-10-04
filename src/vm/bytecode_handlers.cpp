@@ -1,3 +1,6 @@
+
+#include <vm/bytecode_handlers.h>
+
 #include "vm/bytecode_handlers.h"
 
 #include "util/macros.h"
@@ -93,3 +96,20 @@ INT_TYPES(COMPARISONS);
 INT_TYPES(ARITHMETIC);
 INT_TYPES(BITS);
 INT_TYPES(LOAD_CONSTANT)
+
+#undef COMPARISONS
+#undef ARITHMETIC
+#undef BITS
+#undef LOAD_CONSTANT
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// Branching operations
+///
+////////////////////////////////////////////////////////////////////////////////
+
+bool OpJump() { return true; }
+
+bool OpJumpIfTrue(bool cond) { return cond; }
+
+bool OpJumpIfFalse(bool cond) { return !cond; }

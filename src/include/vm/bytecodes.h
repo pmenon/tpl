@@ -9,13 +9,23 @@
 namespace tpl::vm {
 
 /**
+ * All possible operands to a bytecode
+ */
+enum class OperandType : u8 { Imm1, Imm2, Imm4, Imm8, Reg };
+
+/**
+ * Scale factors for operands to a bytecode
+ */
+enum class OperandScale : u8 { Single, Double, Quadruple };
+
+/**
  * The enumeration of all possible bytecode instructions.
  */
 enum class Bytecode : u8 {
-#define HANDLE_INST(inst) inst,
+#define HANDLE_INST(inst,...) inst,
 #include "vm/bytecodes.def"
 #undef HANDLE_INST
-#define HANDLE_INST(inst) +1
+#define HANDLE_INST(inst,...) +1
   Last = -1
 #include "vm/bytecodes.def"
 #undef HANDLE_INST
@@ -37,6 +47,9 @@ class Bytecodes {
 
   // Returns the string representation of the given bytecode
   static const char *ToString(Bytecode bytecode);
+
+  // Return the number of operands a bytecode accepts
+  static u8 NumOperands(Bytecode bytecode);
 
   // Returns if the provided bytecode is a prefix-scaling bytecode
   static bool IsPrefixScalingCode(Bytecode bytecode) {
