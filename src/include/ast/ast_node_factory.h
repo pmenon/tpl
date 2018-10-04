@@ -90,12 +90,12 @@ class AstNodeFactory {
     return new (region_) LitExpr(pos, val);
   }
 
-  LitExpr *NewIntLiteral(const SourcePosition &pos, Identifier num) {
-    return new (region_) LitExpr(pos, LitExpr::LitKind::Int, num);
+  LitExpr *NewIntLiteral(const SourcePosition &pos, i32 num) {
+    return new (region_) LitExpr(pos, num);
   }
 
-  LitExpr *NewFloatLiteral(const SourcePosition &pos, Identifier num) {
-    return new (region_) LitExpr(pos, LitExpr::LitKind::Float, num);
+  LitExpr *NewFloatLiteral(const SourcePosition &pos, f32 num) {
+    return new (region_) LitExpr(pos, num);
   }
 
   LitExpr *NewStringLiteral(const SourcePosition &pos, Identifier str) {

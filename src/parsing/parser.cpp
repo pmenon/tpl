@@ -393,13 +393,23 @@ ast::Expr *Parser::ParsePrimaryExpr() {
     }
     case Token::Type::INTEGER: {
       Next();
+
+      // Convert the number
+      char *end = nullptr;
+      i32 num = std::strtol(GetSymbol().data(), &end, 10);
+
       const SourcePosition &position = scanner().current_position();
-      return node_factory().NewIntLiteral(position, GetSymbol());
+      return node_factory().NewIntLiteral(position, num);
     }
     case Token::Type::FLOAT: {
       Next();
+
+      // Convert the number
+      char *end = nullptr;
+      f32 num = std::strtof(GetSymbol().data(), &end);
+
       const SourcePosition &position = scanner().current_position();
-      return node_factory().NewFloatLiteral(position, GetSymbol());
+      return node_factory().NewFloatLiteral(position, num);
     }
     case Token::Type::STRING: {
       Next();

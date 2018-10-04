@@ -643,6 +643,9 @@ class LitExpr : public Expr {
   LitExpr(const SourcePosition &pos, i32 num)
       : Expr(Kind::LitExpr, pos), lit_kind_(LitKind::Int), int32_(num) {}
 
+  LitExpr(const SourcePosition &pos, f32 num)
+      : Expr(Kind::LitExpr, pos), lit_kind_(LitKind::Float), float32_(num) {}
+
   LitExpr::LitKind literal_kind() const { return lit_kind_; }
 
   bool bool_val() const {
@@ -664,6 +667,12 @@ class LitExpr : public Expr {
     return int32_;
   }
 
+  f32 float32_val() const {
+    TPL_ASSERT(literal_kind() == LitKind::Float,
+               "Getting float value from a non-float literal expression");
+    return float32_;
+  }
+
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::LitExpr;
   }
@@ -678,6 +687,7 @@ class LitExpr : public Expr {
     i16 int16_;
     i32 int32_;
     i64 int64_;
+    f32 float32_;
   };
 };
 
