@@ -22,10 +22,10 @@ enum class OperandScale : u8 { Single, Double, Quadruple };
  * The enumeration of all possible bytecode instructions.
  */
 enum class Bytecode : u8 {
-#define HANDLE_INST(inst,...) inst,
+#define HANDLE_INST(inst, ...) inst,
 #include "vm/bytecodes.def"
 #undef HANDLE_INST
-#define HANDLE_INST(inst,...) +1
+#define HANDLE_INST(inst, ...) +1
   Last = -1
 #include "vm/bytecodes.def"
 #undef HANDLE_INST
@@ -50,6 +50,16 @@ class Bytecodes {
 
   // Return the number of operands a bytecode accepts
   static u8 NumOperands(Bytecode bytecode);
+
+  // Return an array of the operand types for the given bytecode
+  static const OperandType *GetOperandTypes(Bytecode bytecode);
+
+  // Return the type of the Nth operand to the given bytecode
+  static OperandType GetNthOperandType(Bytecode bytecode, u8 idx) {
+    TPL_ASSERT(idx < NumOperands(bytecode),
+               "Accessing out-of-bounds operand number for bytecode");
+    return GetOperandTypes(bytecode)[idx];
+  }
 
   // Returns if the provided bytecode is a prefix-scaling bytecode
   static bool IsPrefixScalingCode(Bytecode bytecode) {

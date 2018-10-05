@@ -3,6 +3,7 @@
 #include "ast/type.h"
 #include "logging/logger.h"
 #include "util/macros.h"
+#include "vm/bytecode_label.h"
 #include "vm/bytecode_unit.h"
 
 namespace tpl::vm {
@@ -45,16 +46,18 @@ class BytecodeGenerator::ExpressionResultScope {
 
 class BytecodeGenerator::BytecodePositionTracker {
  public:
-  BytecodePositionTracker(BytecodeGenerator *generator)
+  BytecodePositionTracker(BytecodeGenerator *generator, FunctionInfo *func)
       : generator_(generator),
+        func_(func),
         start_offset_(generator->emitter()->position()) {}
 
-  std::pair<std::size_t, std::size_t> BytecodeRange() const {
-    return {start_offset_, generator_->emitter()->position()};
+  ~BytecodePositionTracker() {
+    func_->MarkBytecodeRange(start_offset_, generator_->emitter()->position());
   }
 
  private:
   BytecodeGenerator *generator_;
+  FunctionInfo *func_;
   std::size_t start_offset_;
 };
 
@@ -85,15 +88,11 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
     func_info->NewLocal(param_types[i], params[i]->name().data(), true);
   }
 
-  // Remember current position
-  BytecodePositionTracker position_tracker(this);
-
-  // Generate body
-  Visit(node->function());
-
-  // Mark bytecode position boundaries in function
-  const auto [start_offset, end_offset] = position_tracker.BytecodeRange();
-  func_info->MarkBytecodeRange(start_offset, end_offset);
+  {
+    // Visit the body of the function
+    BytecodePositionTracker position_tracker(this, func_info);
+    Visit(node->function());
+  }
 }
 
 void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
