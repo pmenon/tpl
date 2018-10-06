@@ -70,7 +70,8 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
     out_ << " '" << parsing::Token::String(type) << "'";
   }
 
-  void DumpString(const std::string &str) { out_ << str; }
+  template <typename T>
+  void DumpPrimitive(const T &val) { out_ << val; }
 
   void DumpIdentifier(Identifier str) { out_.write(str.data(), str.length()); }
 
@@ -257,15 +258,21 @@ void AstDumperImpl::VisitLitExpr(LitExpr *node) {
   DumpNodeCommon(node);
   switch (node->literal_kind()) {
     case LitExpr::LitKind::Nil: {
-      DumpString("nil");
+      DumpPrimitive("nil");
       break;
     }
     case LitExpr::LitKind::Boolean: {
-      DumpString(node->bool_val() ? "'true'" : "'false'");
+      DumpPrimitive(node->bool_val() ? "'true'" : "'false'");
       break;
     }
-    case LitExpr::LitKind::Int:
-    case LitExpr::LitKind::Float:
+    case LitExpr::LitKind::Int: {
+      DumpPrimitive(node->int32_val());
+      break;
+    }
+    case LitExpr::LitKind::Float: {
+      DumpPrimitive(node->float32_val());
+      break;
+    }
     case LitExpr::LitKind::String: {
       DumpIdentifier(node->raw_string_val());
       break;
@@ -281,7 +288,7 @@ void AstDumperImpl::VisitUnaryOpExpr(UnaryOpExpr *node) {
 
 void AstDumperImpl::VisitBadExpr(BadExpr *node) {
   DumpNodeCommon(node);
-  DumpString("BAD EXPRESSION @ ");
+  DumpPrimitive("BAD EXPRESSION @ ");
   DumpPosition(node->position());
 }
 
