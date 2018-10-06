@@ -34,14 +34,4 @@ struct BytecodeTraits {
       sizeof(std::underlying_type_t<Bytecode>) + kOperandsSize;
 };
 
-// No-arg bytecodes
-template <>
-struct BytecodeTraits<> {
-  static constexpr const u32 kOperandCount = 0;
-  static constexpr const u32 kOperandsSize = 0;
-  static constexpr const OperandType kOperandTypes[] = {OperandType::None};
-  static constexpr const OperandSize kOperandSizes[] = {OperandSize::None};
-  static constexpr const u32 kSize = sizeof(std::underlying_type_t<Bytecode>);
-};
-
 }  // namespace tpl::vm
