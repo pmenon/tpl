@@ -292,7 +292,21 @@ void BytecodeGenerator::VisitDeclStmt(ast::DeclStmt *node) {
 }
 
 void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
-  AstVisitor::VisitIfStmt(node);
+  BytecodeLabel else_label, end_label;
+
+  RegisterId cond = VisitExpressionForValue(node->condition());
+  emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond, &else_label);
+
+  Visit(node->then_stmt());
+
+  if (node->else_stmt() != nullptr) {
+    emitter()->EmitJump(Bytecode::Jump, &end_label);
+    emitter()->Bind(&else_label);
+    Visit(node->else_stmt());
+  } else {
+    emitter()->Bind(&else_label);
+  }
+  emitter()->Bind(&end_label);
 }
 
 void BytecodeGenerator::VisitExpressionStmt(ast::ExpressionStmt *node) {

@@ -167,16 +167,16 @@ void VM::Run(Frame *frame) {
 #undef GEN_NEG_OP
 
   CASE_OP(Jump) : {
-    auto *skip = frame->LocalAt<u16>(READ_2());
+    u16 skip = READ_2();
     if (OpJump()) {
-      ip += *skip;
+      ip += skip;
     }
     DISPATCH_NEXT();
   }
 
   CASE_OP(JumpIfTrue) : {
     auto *cond = frame->LocalAt<bool>(READ_OPERAND());
-    auto skip = *frame->LocalAt<u16>(READ_2());
+    u16 skip = READ_2();
     if (OpJumpIfTrue(*cond)) {
       ip += skip;
     }
@@ -185,7 +185,7 @@ void VM::Run(Frame *frame) {
 
   CASE_OP(JumpIfFalse) : {
     auto *cond = frame->LocalAt<bool>(READ_OPERAND());
-    auto skip = *frame->LocalAt<u16>(READ_2());
+    u16 skip = READ_2();
     if (OpJumpIfFalse(*cond)) {
       ip += skip;
     }

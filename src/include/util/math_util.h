@@ -96,7 +96,7 @@ class MathUtil {
    */
   static u64 AlignTo(u64 value, u64 align) {
     TPL_ASSERT(align != 0u, "Align must be non-zero.");
-    return (value + align - 1) / align;
+    return (value + align - 1) / align * align;
   }
 
   /**

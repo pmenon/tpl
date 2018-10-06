@@ -10,8 +10,10 @@
 namespace tpl::vm {
 
 class BytecodeUnit;
+class BytecodeLabel;
 
 class BytecodeEmitter {
+  static const u16 kJumpPlaceholder = std::numeric_limits<u16>::max() - 1u;
  public:
   BytecodeEmitter() = default;
 
@@ -24,10 +26,15 @@ class BytecodeEmitter {
   void EmitLoadImm4(RegisterId reg_id, i32 val);
   void EmitLoadImm8(RegisterId reg_id, i64 val);
 
+  void EmitJump(Bytecode bytecode, BytecodeLabel *label);
+  void EmitConditionalJump(Bytecode bytecode, RegisterId cond, BytecodeLabel *label);
+
   void EmitReturn();
 
   void Emit(Bytecode bytecode, RegisterId dest, RegisterId input);
   void Emit(Bytecode bytecode, RegisterId dest, RegisterId lhs, RegisterId rhs);
+
+  void Bind(BytecodeLabel *label);
 
   const std::vector<u8> &Finish();
 
@@ -54,6 +61,8 @@ class BytecodeEmitter {
   void EmitRegisters(Regs... regs) {
     (EmitRegister(regs), ...);
   }
+
+  void EmitJump(BytecodeLabel *label);
 
  private:
   std::vector<u8> bytecodes_;

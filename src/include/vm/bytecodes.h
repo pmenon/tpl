@@ -167,6 +167,11 @@ class Bytecodes {
     return bytecode;
   }
 
+  static bool IsJump(Bytecode bytecode) {
+    return (bytecode == Bytecode::Jump || bytecode == Bytecode::JumpIfFalse ||
+            bytecode == Bytecode::JumpIfTrue);
+  }
+
  private:
   static const char *kBytecodeNames[];
   static u32 kBytecodeOperandCounts[];
