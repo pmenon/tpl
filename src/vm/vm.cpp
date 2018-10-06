@@ -75,17 +75,18 @@ void VM::Run(Frame *frame) {
 #define DEBUG_TRACE_INSTRUCTIONS()
 #endif
 
-#define CASE_OP(name) op_##name
-#define DISPATCH_NEXT()                          \
-  do {                                           \
-    op = Bytecodes::FromByte(*ip++);             \
-    DEBUG_TRACE_INSTRUCTIONS();                  \
-    goto *kDispatchTable[Bytecodes::ToByte(op)]; \
-  } while (false)
 #define READ_1() (*ip++)
 #define READ_2() (ip += 2, (*reinterpret_cast<const u16 *>(&ip[-2])))
 #define READ_4() (ip += 4, (*reinterpret_cast<const i32 *>(&ip[-4])))
 #define READ_8() (ip += 8, (*reinterpret_cast<const u64 *>(&ip[-8])))
+
+#define CASE_OP(name) op_##name
+#define DISPATCH_NEXT()                          \
+  do {                                           \
+    op = Bytecodes::FromByte(READ_2());          \
+    DEBUG_TRACE_INSTRUCTIONS();                  \
+    goto *kDispatchTable[Bytecodes::ToByte(op)]; \
+  } while (false)
 #define READ_OPERAND() READ_2()
 
   DISPATCH_NEXT();
@@ -237,7 +238,7 @@ void VM::Run(Frame *frame) {
 }
 
 void VM::Invoke(FunctionId func_id) {
-  const auto *func = unit().GetFunction(func_id);
+  const auto *func = unit().GetFunctionById(func_id);
 
   if (func == nullptr) return;
 

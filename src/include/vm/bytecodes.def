@@ -46,15 +46,15 @@ HANDLE_INST(Wide)
 HANDLE_INST(ExtraWide)
 
 // Constants
-HANDLE_INST(LoadConstant1, OperandType::Imm1)
-HANDLE_INST(LoadConstant2, OperandType::Imm2)
-HANDLE_INST(LoadConstant4, OperandType::Imm4)
-HANDLE_INST(LoadConstant8, OperandType::Imm8)
+HANDLE_INST(LoadConstant1, OperandType::Reg, OperandType::Imm1)
+HANDLE_INST(LoadConstant2, OperandType::Reg, OperandType::Imm2)
+HANDLE_INST(LoadConstant4, OperandType::Reg, OperandType::Imm4)
+HANDLE_INST(LoadConstant8, OperandType::Reg, OperandType::Imm8)
 
 // Branching
-HANDLE_INST(Jump)
-HANDLE_INST(JumpIfTrue, OperandType::Reg)
-HANDLE_INST(JumpIfFalse, OperandType::Reg)
+HANDLE_INST(Jump, OperandType::UImm2)
+HANDLE_INST(JumpIfTrue, OperandType::Reg, OperandType::UImm2)
+HANDLE_INST(JumpIfFalse, OperandType::Reg, OperandType::UImm2)
 
 // Tables
 HANDLE_INST(ScanOpen)

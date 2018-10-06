@@ -17,13 +17,7 @@ class BytecodeUnit {
     return std::unique_ptr<BytecodeUnit>(new BytecodeUnit(code, functions));
   }
 
-  std::size_t instruction_size() const { return code_.size(); }
-
-  std::size_t num_functions() const { return functions_.size(); }
-
-  const std::vector<FunctionInfo> &functions() const { return functions_; }
-
-  const FunctionInfo *GetFunction(FunctionId func_id) const {
+  const FunctionInfo *GetFunctionById(FunctionId func_id) const {
     for (const auto &func : functions_) {
       if (func.id() == func_id) return &func;
     }
@@ -45,6 +39,19 @@ class BytecodeUnit {
 
   void PrettyPrint(std::ostream &os);
 
+ public:
+  //////////////////////////////////////////////////////////////////////////////
+  ///
+  /// Accessors
+  ///
+  //////////////////////////////////////////////////////////////////////////////
+
+  std::size_t instruction_count() const { return code_.size(); }
+
+  std::size_t num_functions() const { return functions_.size(); }
+
+  const std::vector<FunctionInfo> &functions() const { return functions_; }
+
  private:
   friend class VM;
   const u8 *GetBytecodeForFunction(const FunctionInfo &func) const {
@@ -53,7 +60,7 @@ class BytecodeUnit {
   }
 
   bool IsFunctionDefinedInUnit(const FunctionInfo &func) const {
-    return GetFunction(func.id()) != nullptr;
+    return GetFunctionById(func.id()) != nullptr;
   }
 
  private:

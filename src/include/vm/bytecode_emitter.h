@@ -33,7 +33,10 @@ class BytecodeEmitter {
 
  private:
   void EmitOp(Bytecode bytecode) {
-    bytecodes_.push_back(Bytecodes::ToByte(bytecode));
+    auto code = Bytecodes::ToByte(bytecode);
+    auto *raw_code = reinterpret_cast<const u8 *>(&code);
+    bytecodes_.push_back(raw_code[0]);
+    bytecodes_.push_back(raw_code[1]);
   }
 
   template <typename T,

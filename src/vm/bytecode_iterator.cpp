@@ -13,11 +13,16 @@ BytecodeIterator::BytecodeIterator(const std::vector<u8> &bytecode,
       curr_offset_(start) {}
 
 Bytecode BytecodeIterator::current_bytecode() const {
-  return Bytecodes::FromByte(bytecodes_[current_offset()]);
+  auto raw_code = *reinterpret_cast<const u16 *>(&bytecodes_[current_offset()]);
+  return Bytecodes::FromByte(raw_code);
 }
 
-void BytecodeIterator::Advance() { curr_offset_ += 2; }
+void BytecodeIterator::Advance() {
+  if (!Done()) {
+    curr_offset_ += Bytecodes::Size(current_bytecode());
+  }
+}
 
-bool BytecodeIterator::Done() const { return current_offset() > end_offset(); }
+bool BytecodeIterator::Done() const { return current_offset() >= end_offset(); }
 
 }  // namespace tpl::vm
