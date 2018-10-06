@@ -24,35 +24,35 @@ class TypePrinter : public TypeVisitor<TypePrinter> {
 void TypePrinter::VisitIntegerType(const IntegerType *type) {
   switch (type->int_kind()) {
     case IntegerType::IntKind::Int8: {
-      out_ << "i8";
+      out_ << "int8";
       break;
     }
     case IntegerType::IntKind::Int16: {
-      out_ << "i16";
+      out_ << "int16";
       break;
     }
     case IntegerType::IntKind::Int32: {
-      out_ << "i32";
+      out_ << "int32";
       break;
     }
     case IntegerType::IntKind::Int64: {
-      out_ << "i64";
+      out_ << "int64";
       break;
     }
     case IntegerType::IntKind::UInt8: {
-      out_ << "u8";
+      out_ << "uint8";
       break;
     }
     case IntegerType::IntKind::UInt16: {
-      out_ << "u16";
+      out_ << "uint16";
       break;
     }
     case IntegerType::IntKind::UInt32: {
-      out_ << "u32";
+      out_ << "uint32";
       break;
     }
     case IntegerType::IntKind::UInt64: {
-      out_ << "u64";
+      out_ << "uint64";
       break;
     }
   }
