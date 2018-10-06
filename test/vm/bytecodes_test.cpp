@@ -11,11 +11,11 @@ class BytecodesTest : public TplTest {};
 TEST_F(BytecodesTest, OperandCountTest) {
   // Non-exhaustive test of operand counts for various op codes
 
-  // Constant loads
-  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::LoadConstant1));
-  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::LoadConstant2));
-  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::LoadConstant4));
-  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::LoadConstant8));
+  // Imm loads
+  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::LoadImm1));
+  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::LoadImm2));
+  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::LoadImm4));
+  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::LoadImm8));
 
   // Jumps
   EXPECT_EQ(1u, Bytecodes::NumOperands(Bytecode::Jump));
@@ -36,11 +36,11 @@ TEST_F(BytecodesTest, OperandCountTest) {
 TEST_F(BytecodesTest, OperandSizeTest) {
   // Non-exhaustive test of operand sizes for various op codes
 
-  // Constant loads
+  // Imm loads
   EXPECT_EQ(OperandSize::Short,
-            Bytecodes::GetNthOperandSize(Bytecode::LoadConstant1, 0));
+            Bytecodes::GetNthOperandSize(Bytecode::LoadImm1, 0));
   EXPECT_EQ(OperandSize::Byte,
-            Bytecodes::GetNthOperandSize(Bytecode::LoadConstant1, 1));
+            Bytecodes::GetNthOperandSize(Bytecode::LoadImm1, 1));
 
   // Jumps
   EXPECT_EQ(OperandSize::Short, Bytecodes::GetOperandSizes(Bytecode::Jump)[0]);
@@ -64,11 +64,11 @@ TEST_F(BytecodesTest, OperandSizeTest) {
 TEST_F(BytecodesTest, OperandTypesTest) {
   // Non-exhaustive test of operand types for various op codes
 
-  // Constant loads
+  // Imm loads
   EXPECT_EQ(OperandType::Reg,
-            Bytecodes::GetNthOperandType(Bytecode::LoadConstant1, 0));
+            Bytecodes::GetNthOperandType(Bytecode::LoadImm1, 0));
   EXPECT_EQ(OperandType::Imm1,
-            Bytecodes::GetNthOperandType(Bytecode::LoadConstant1, 1));
+            Bytecodes::GetNthOperandType(Bytecode::LoadImm1, 1));
 
   // Jumps
   EXPECT_EQ(OperandType::UImm2,
@@ -93,11 +93,11 @@ TEST_F(BytecodesTest, OperandTypesTest) {
 TEST_F(BytecodesTest, BytecodeSizeTest) {
   // Non-exhaustive test of operand types for various op codes
 
-  // Constant loads
-  EXPECT_EQ(5u, Bytecodes::Size(Bytecode::LoadConstant1));
-  EXPECT_EQ(6u, Bytecodes::Size(Bytecode::LoadConstant2));
-  EXPECT_EQ(8u, Bytecodes::Size(Bytecode::LoadConstant4));
-  EXPECT_EQ(12u, Bytecodes::Size(Bytecode::LoadConstant8));
+  // Imm loads
+  EXPECT_EQ(5u, Bytecodes::Size(Bytecode::LoadImm1));
+  EXPECT_EQ(6u, Bytecodes::Size(Bytecode::LoadImm2));
+  EXPECT_EQ(8u, Bytecodes::Size(Bytecode::LoadImm4));
+  EXPECT_EQ(12u, Bytecodes::Size(Bytecode::LoadImm8));
 
   // Jumps
   EXPECT_EQ(4u, Bytecodes::Size(Bytecode::Jump));

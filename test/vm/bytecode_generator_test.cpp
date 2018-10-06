@@ -12,6 +12,7 @@
 #include "util/region.h"
 #include "vm/bytecode_generator.h"
 #include "vm/bytecode_unit.h"
+#include "vm/vm.h"
 
 namespace tpl::vm::test {
 
@@ -41,8 +42,8 @@ class BytecodeExpectations {
 
 TEST_F(BytecodeGeneratorTest, LoadConstantTest) {
   auto src = R"(
-    fun test(x: int32) -> int32 {
-      var y = 20
+    fun test(x: uint32) -> uint32 {
+      var y : uint32 = 20
       return x * y
     })";
   BytecodeExpectations expectations;
@@ -52,6 +53,8 @@ TEST_F(BytecodeGeneratorTest, LoadConstantTest) {
   auto unit = BytecodeGenerator::Compile(ast);
 
   unit->PrettyPrint(std::cout);
+
+  VM::Execute(*unit, "test");
 }
 
 }  // namespace tpl::vm::test
