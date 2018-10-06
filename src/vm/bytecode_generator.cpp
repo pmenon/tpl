@@ -196,6 +196,9 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
   RegisterId left = VisitExpressionForValue(node->left());
   RegisterId right = VisitExpressionForValue(node->right());
 
+  TPL_ASSERT(node->left()->type()->kind() == node->right()->type()->kind(),
+             "Binary operation has mismatched left and right types");
+
   Bytecode bytecode;
   switch (node->op()) {
     case parsing::Token::Type::PLUS: {
@@ -225,32 +228,34 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
     }
     case parsing::Token::Type::GREATER: {
       bytecode = GetIntTypedBytecode(
-          GET_BASE_FOR_INT_TYPES(Bytecode::GreaterThan), node->type());
+          GET_BASE_FOR_INT_TYPES(Bytecode::GreaterThan), node->left()->type());
       break;
     }
     case parsing::Token::Type::GREATER_EQUAL: {
       bytecode = GetIntTypedBytecode(
-          GET_BASE_FOR_INT_TYPES(Bytecode::GreaterThanEqual), node->type());
+          GET_BASE_FOR_INT_TYPES(Bytecode::GreaterThanEqual),
+          node->left()->type());
       break;
     }
     case parsing::Token::Type::EQUAL_EQUAL: {
       bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Equal),
-                                     node->type());
+                                     node->left()->type());
       break;
     }
     case parsing::Token::Type::LESS: {
       bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::LessThan),
-                                     node->type());
+                                     node->left()->type());
       break;
     }
     case parsing::Token::Type::LESS_EQUAL: {
-      bytecode = GetIntTypedBytecode(
-          GET_BASE_FOR_INT_TYPES(Bytecode::LessThanEqual), node->type());
+      bytecode =
+          GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::LessThanEqual),
+                              node->left()->type());
       break;
     }
     case parsing::Token::Type::BANG_EQUAL: {
       bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::NotEqual),
-                                     node->type());
+                                     node->left()->type());
       break;
     }
     case parsing::Token::Type::AMPERSAND: {
