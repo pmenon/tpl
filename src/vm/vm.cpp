@@ -58,7 +58,7 @@ VM::VM(const BytecodeUnit &unit) : unit_(unit) {
 void VM::Run(Frame *frame) {
   static void *kDispatchTable[] = {
 #define HANDLE_INST(name, ...) &&op_##name,
-#include "vm/bytecodes.def"
+      BYTECODE_LIST(HANDLE_INST)
 #undef HANDLE_INST
   };
 
