@@ -91,10 +91,6 @@ void VM::Run(Frame *frame) {
 
   DISPATCH_NEXT();
 
-  // Wide and ExtraWide opcodes not used at the moment
-  CASE_OP(Wide) : { DISPATCH_NEXT(); }
-  CASE_OP(ExtraWide) : { DISPATCH_NEXT(); }
-
   /*
    * All primitive comparisons are generated here. Primitive comparisons all
    * have the same bytecode format. The target of the comparison is a primitive
@@ -196,31 +192,31 @@ void VM::Run(Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  CASE_OP(LoadConstant1) : {
+  CASE_OP(LoadImm1) : {
     i8 *dest = frame->LocalAt<i8>(READ_OPERAND());
     i8 val = READ_1();
-    OpLoadConstant_i8(dest, val);
+    OpLoadImm_i8(dest, val);
     DISPATCH_NEXT();
   }
 
-  CASE_OP(LoadConstant2) : {
+  CASE_OP(LoadImm2) : {
     i16 *dest = frame->LocalAt<i16>(READ_OPERAND());
     i16 val = READ_2();
-    OpLoadConstant_i16(dest, val);
+    OpLoadImm_i16(dest, val);
     DISPATCH_NEXT();
   }
 
-  CASE_OP(LoadConstant4) : {
+  CASE_OP(LoadImm4) : {
     i32 *dest = frame->LocalAt<i32>(READ_OPERAND());
     i32 val = READ_4();
-    OpLoadConstant_i32(dest, val);
+    OpLoadImm_i32(dest, val);
     DISPATCH_NEXT();
   }
 
-  CASE_OP(LoadConstant8) : {
+  CASE_OP(LoadImm8) : {
     i64 *dest = frame->LocalAt<i64>(READ_OPERAND());
     i64 val = READ_8();
-    OpLoadConstant_i64(dest, val);
+    OpLoadImm_i64(dest, val);
     DISPATCH_NEXT();
   }
 

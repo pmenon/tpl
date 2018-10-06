@@ -37,7 +37,7 @@ extern "C" {
   void OpBitXor##_##type(type *result, type lhs, type rhs); \
   void OpBitNeg##_##type(type *result, type input);
 
-#define LOAD_CONSTANT(type) void OpLoadConstant##_##type(type *result, type c);
+#define LOAD_CONSTANT(type) void OpLoadImm##_##type(type *result, type c);
 
 INT_TYPES(COMPARISONS)
 INT_TYPES(ARITHMETIC)

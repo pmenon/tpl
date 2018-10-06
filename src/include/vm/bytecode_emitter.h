@@ -19,10 +19,10 @@ class BytecodeEmitter {
 
   std::size_t position() const { return bytecodes_.size(); }
 
-  void EmitLiteral1(RegisterId reg_id, i8 val);
-  void EmitLiteral2(RegisterId reg_id, i16 val);
-  void EmitLiteral4(RegisterId reg_id, i32 val);
-  void EmitLiteral8(RegisterId reg_id, i64 val);
+  void EmitLoadImm1(RegisterId reg_id, i8 val);
+  void EmitLoadImm2(RegisterId reg_id, i16 val);
+  void EmitLoadImm4(RegisterId reg_id, i32 val);
+  void EmitLoadImm8(RegisterId reg_id, i64 val);
 
   void EmitReturn();
 

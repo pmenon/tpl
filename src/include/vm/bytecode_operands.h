@@ -9,10 +9,10 @@ namespace tpl::vm {
  */
 enum class OperandSize : u8 {
   None = 0,
-  Byte = sizeof(u8),
-  Short = sizeof(u16),
-  Int = sizeof(u32),
-  Long = sizeof(u64)
+  Byte = 1,
+  Short = 2,
+  Int = 4,
+  Long = 8
 };
 
 /**

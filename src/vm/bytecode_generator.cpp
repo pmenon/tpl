@@ -107,12 +107,28 @@ void BytecodeGenerator::VisitBlockStmt(ast::BlockStmt *node) {
 }
 
 void BytecodeGenerator::VisitVariableDecl(ast::VariableDecl *node) {
-  // Register a new local variale in the function
-  auto *type = node->initial() != nullptr ? node->initial()->type()
-                                          : node->type_repr()->type();
+  // Register a new local variable in the function. If the variable has an
+  // explicit type specifier, prefer using that. Otherwise, use the type of the
+  // initial value resolved after semantic analysis.
+  ast::Type *type = nullptr;
+  if (node->type_repr() != nullptr) {
+    TPL_ASSERT(node->type_repr()->type() != nullptr,
+               "Variable with explicit type declaration is missing resolved "
+               "type at runtime!");
+    type = node->type_repr()->type();
+  } else {
+    TPL_ASSERT(node->initial() != nullptr,
+               "Variable without explicit type declaration is missing an "
+               "initialization expression!");
+    TPL_ASSERT(node->initial()->type() != nullptr,
+               "Variable with initial value is missing resolved type");
+    type = node->initial()->type();
+  }
+
+  // Register this variable in the function as a local
   RegisterId reg = curr_func()->NewLocal(type, node->name().data(), false);
 
-  // If there's an initializer, handle it now
+  // If there's an initializer, generate code for it now
   if (node->initial() != nullptr) {
     VisitExpressionWithTarget(node->initial(), reg);
   }
@@ -168,7 +184,7 @@ void BytecodeGenerator::VisitFile(ast::File *node) {
 
 void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
   RegisterId target = execution_result()->GetOrCreateDestination(node->type());
-  emitter()->EmitLiteral4(target, node->int32_val());
+  emitter()->EmitLoadImm4(target, node->int32_val());
 }
 
 void BytecodeGenerator::VisitStructDecl(ast::StructDecl *node) {

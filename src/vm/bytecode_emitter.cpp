@@ -5,26 +5,26 @@
 
 namespace tpl::vm {
 
-void BytecodeEmitter::EmitLiteral1(RegisterId dest, i8 val) {
-  EmitOp(Bytecode::LoadConstant1);
+void BytecodeEmitter::EmitLoadImm1(RegisterId dest, i8 val) {
+  EmitOp(Bytecode::LoadImm1);
   EmitRegister(dest);
   EmitImmediateValue(val);
 }
 
-void BytecodeEmitter::EmitLiteral2(RegisterId dest, i16 val) {
-  EmitOp(Bytecode::LoadConstant2);
+void BytecodeEmitter::EmitLoadImm2(RegisterId dest, i16 val) {
+  EmitOp(Bytecode::LoadImm2);
   EmitRegister(dest);
   EmitImmediateValue(val);
 }
 
-void BytecodeEmitter::EmitLiteral4(RegisterId dest, i32 val) {
-  EmitOp(Bytecode::LoadConstant4);
+void BytecodeEmitter::EmitLoadImm4(RegisterId dest, i32 val) {
+  EmitOp(Bytecode::LoadImm4);
   EmitRegister(dest);
   EmitImmediateValue(val);
 }
 
-void BytecodeEmitter::EmitLiteral8(RegisterId dest, i64 val) {
-  EmitOp(Bytecode::LoadConstant8);
+void BytecodeEmitter::EmitLoadImm8(RegisterId dest, i64 val) {
+  EmitOp(Bytecode::LoadImm8);
   EmitRegister(dest);
   EmitImmediateValue(val);
 }

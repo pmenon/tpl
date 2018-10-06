@@ -87,7 +87,7 @@
   void OpBitNeg##_##type(type *result, type input) { *result = ~input; }
 
 #define LOAD_CONSTANT(type) \
-  void OpLoadConstant##_##type(type *result, type c) { *result = c; }
+  void OpLoadImm##_##type(type *result, type c) { *result = c; }
 
 INT_TYPES(COMPARISONS);
 INT_TYPES(ARITHMETIC);
