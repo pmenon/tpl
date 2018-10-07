@@ -205,7 +205,7 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
   }
 
   switch (node->op()) {
-    case parsing::Token::BANG: {
+    case parsing::Token::Type::BANG: {
       if (expr_type->IsBoolType()) {
         node->set_type(expr_type);
       } else {
@@ -215,7 +215,7 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
       }
       break;
     }
-    case parsing::Token::MINUS: {
+    case parsing::Token::Type::MINUS: {
       if (expr_type->IsNumber()) {
         node->set_type(expr_type);
       } else {

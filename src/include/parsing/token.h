@@ -77,28 +77,42 @@ namespace tpl::parsing {
 class Token {
  public:
 #define T(name, str, precedence) name,
-  enum Type : u8 { TOKENS(T, T) NUM_TOKENS };
+  enum class Type : u8 {
+    TOKENS(T, T)
 #undef T
+#define T(name, str, precedence) +1
+        Last = -1 TOKENS(T, T)
+#undef T
+  };
 
-  static const char *Name(Type type) { return name_[type]; }
+  static const u32 kTokenCount = static_cast<u32>(Type::Last) + 1;
 
-  static const char *String(Type type) { return string_[type]; }
+  // Get the name of a given token type
+  static const char *Name(Type type) { return name_[static_cast<u32>(type)]; }
 
+  // Get the stringified version of a given token type
+  static const char *String(Type type) {
+    return string_[static_cast<u32>(type)];
+  }
+
+  // Get the precedence of a given token
+  static const u32 Precedence(Type type) {
+    return precedence_[static_cast<u32>(type)];
+  }
+
+  // Get the lowest operator precedence we support
   static constexpr const u32 LowestPrecedence() { return 0; }
 
-  static const u32 Precedence(Type type) { return precedence_[type]; }
-
-  static constexpr u32 NumTokens() { return Type::NUM_TOKENS; }
-
+  // Is the given token a comparison operator?
   static bool IsCompareOp(Type op) {
     return (static_cast<u8>(Type::BANG_EQUAL) <= static_cast<u8>(op) &&
             static_cast<u8>(op) <= static_cast<u8>(Type::LESS_EQUAL));
   }
 
  private:
-  static const char *name_[Type::NUM_TOKENS];
-  static const char *string_[Type::NUM_TOKENS];
-  static const u32 precedence_[Type::NUM_TOKENS];
+  static const char *name_[];
+  static const char *string_[];
+  static const u32 precedence_[];
 };
 
 }  // namespace tpl::parsing
