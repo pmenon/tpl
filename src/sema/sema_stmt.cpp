@@ -93,15 +93,18 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
     return;
   }
 
-  ast::Type *ret = Resolve(node->ret());
-  if (ret == nullptr) {
+  ast::Type *return_type = Resolve(node->ret());
+  if (return_type == nullptr) {
     return;
   }
 
-  // Check return type matches function
+  // Check return type matches function's return type
   auto *func_type = current_function()->type()->As<ast::FunctionType>();
-  if (ret != func_type->return_type()) {
-    // Error
+  if (return_type != func_type->return_type()) {
+    error_reporter().Report(node->position(),
+                            ErrorMessages::kMismatchedReturnType, return_type,
+                            func_type->return_type());
+    return;
   }
 }
 

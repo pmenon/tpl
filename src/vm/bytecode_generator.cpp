@@ -65,7 +65,9 @@ BytecodeGenerator::BytecodeGenerator()
     : execution_result_(nullptr), func_id_counter_(0) {}
 
 void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
-  AstVisitor::VisitForStmt(node);
+  if (node->init() != nullptr) {
+    Visit(node->init());
+  }
 }
 
 void BytecodeGenerator::VisitFieldDecl(ast::FieldDecl *node) {
@@ -184,7 +186,24 @@ void BytecodeGenerator::VisitFile(ast::File *node) {
 
 void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
   RegisterId target = execution_result()->GetOrCreateDestination(node->type());
-  emitter()->EmitLoadImm4(target, node->int32_val());
+  switch (node->literal_kind()) {
+    case ast::LitExpr::LitKind::Nil: {
+      // Do nothing
+      break;
+    }
+    case ast::LitExpr::LitKind::Boolean: {
+      emitter()->EmitLoadImm1(target, node->bool_val());
+      break;
+    }
+    case ast::LitExpr::LitKind::Int: {
+      emitter()->EmitLoadImm4(target, node->int32_val());
+      break;
+    }
+    default: {
+      LOG_ERROR("Non-bool or non-integer literals not supported in bytecode");
+      break;
+    }
+  }
 }
 
 void BytecodeGenerator::VisitStructDecl(ast::StructDecl *node) {

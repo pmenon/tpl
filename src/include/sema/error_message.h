@@ -50,7 +50,11 @@ namespace sema {
     (ast::Identifier))                                                        \
   F(MismatchedTypesToBinary,                                                  \
     "mismatched types '%0' and '%1' to binary operation '%2'",                \
-    (ast::Type *, ast::Type *, parsing::Token::Type))
+    (ast::Type *, ast::Type *, parsing::Token::Type))                         \
+  F(MismatchedReturnType,                                                     \
+    "type of 'return' expression '%0' incomptible with function's declared "  \
+    "return type '%1'",                                                       \
+    (ast::Type *, ast::Type *))
 
 /**
  * Define the ErrorMessageId enumeration
