@@ -56,6 +56,7 @@ class Type;
   T(BadExpr)                \
   T(BinaryOpExpr)           \
   T(CallExpr)               \
+  T(ComparisonOpExpr)       \
   T(FunctionLitExpr)        \
   T(IdentifierExpr)         \
   T(LitExpr)                \
@@ -578,6 +579,34 @@ class CallExpr : public Expr {
  private:
   Expr *fun_;
   util::RegionVector<Expr *> args_;
+};
+
+/**
+ * A binary comparison operator
+ */
+class ComparisonOpExpr : public Expr {
+ public:
+  ComparisonOpExpr(const SourcePosition &pos, parsing::Token::Type op,
+                   Expr *left, Expr *right)
+      : Expr(Kind::ComparisonOpExpr, pos),
+        op_(op),
+        left_(left),
+        right_(right) {}
+
+  parsing::Token::Type op() { return op_; }
+
+  Expr *left() { return left_; }
+
+  Expr *right() { return right_; }
+
+  static bool classof(const AstNode *node) {
+    return node->kind() == Kind::ComparisonOpExpr;
+  }
+
+ private:
+  parsing::Token::Type op_;
+  Expr *left_;
+  Expr *right_;
 };
 
 class FunctionLitExpr : public Expr {

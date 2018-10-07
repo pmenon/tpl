@@ -78,6 +78,12 @@ class AstNodeFactory {
     return new (region_) BinaryOpExpr(pos, op, left, right);
   }
 
+  ComparisonOpExpr *NewComparisonOpExpr(const SourcePosition &pos,
+                                        parsing::Token::Type op, Expr *left,
+                                        Expr *right) {
+    return new (region_) ComparisonOpExpr(pos, op, left, right);
+  }
+
   CallExpr *NewCallExpr(Expr *fun, util::RegionVector<Expr *> &&args) {
     return new (region_) CallExpr(fun, std::move(args));
   }

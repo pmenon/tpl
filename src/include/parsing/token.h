@@ -77,7 +77,7 @@ namespace tpl::parsing {
 class Token {
  public:
 #define T(name, str, precedence) name,
-  enum Type { TOKENS(T, T) NUM_TOKENS };
+  enum Type : u8 { TOKENS(T, T) NUM_TOKENS };
 #undef T
 
   static const char *Name(Type type) { return name_[type]; }
@@ -89,6 +89,11 @@ class Token {
   static const u32 Precedence(Type type) { return precedence_[type]; }
 
   static constexpr u32 NumTokens() { return Type::NUM_TOKENS; }
+
+  static bool IsCompareOp(Type op) {
+    return (static_cast<u8>(Type::BANG_EQUAL) <= static_cast<u8>(op) &&
+            static_cast<u8>(op) <= static_cast<u8>(Type::LESS_EQUAL));
+  }
 
  private:
   static const char *name_[Type::NUM_TOKENS];

@@ -304,7 +304,12 @@ ast::Expr *Parser::ParseBinaryOpExpr(uint32_t min_prec) {
       Token::Type op = Next();
       const SourcePosition &position = scanner().current_position();
       ast::Expr *right = ParseBinaryOpExpr(prec);
-      left = node_factory().NewBinaryOpExpr(position, op, left, right);
+
+      if (Token::IsCompareOp(op)) {
+        left = node_factory().NewComparisonOpExpr(position, op, left, right);
+      } else {
+        left = node_factory().NewBinaryOpExpr(position, op, left, right);
+      }
     }
   }
 

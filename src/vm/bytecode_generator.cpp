@@ -288,6 +288,41 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
                                      node->type());
       break;
     }
+    case parsing::Token::Type::AMPERSAND: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitAnd),
+                                     node->type());
+      break;
+    }
+    case parsing::Token::Type::BIT_OR: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitOr),
+                                     node->type());
+      break;
+    }
+    case parsing::Token::Type::BIT_XOR: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitXor),
+                                     node->type());
+      break;
+    }
+    default: { UNREACHABLE("Impossible binary operation"); }
+  }
+
+  // Emit
+  emitter()->Emit(bytecode, dest, left, right);
+
+  // Mark where the result is
+  execution_result()->set_destination(dest);
+}
+
+void BytecodeGenerator::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
+  RegisterId dest = execution_result()->GetOrCreateDestination(node->type());
+  RegisterId left = VisitExpressionForValue(node->left());
+  RegisterId right = VisitExpressionForValue(node->right());
+
+  TPL_ASSERT(node->type()->IsBoolType(),
+             "Comparison op is expected to be boolean");
+
+  Bytecode bytecode;
+  switch (node->op()) {
     case parsing::Token::Type::GREATER: {
       bytecode = GetIntTypedBytecode(
           GET_BASE_FOR_INT_TYPES(Bytecode::GreaterThan), node->left()->type());
@@ -318,21 +353,6 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
     case parsing::Token::Type::BANG_EQUAL: {
       bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::NotEqual),
                                      node->left()->type());
-      break;
-    }
-    case parsing::Token::Type::AMPERSAND: {
-      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitAnd),
-                                     node->type());
-      break;
-    }
-    case parsing::Token::Type::BIT_OR: {
-      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitOr),
-                                     node->type());
-      break;
-    }
-    case parsing::Token::Type::BIT_XOR: {
-      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitXor),
-                                     node->type());
       break;
     }
     default: { UNREACHABLE("Impossible binary operation"); }

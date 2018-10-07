@@ -44,20 +44,37 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
       node->set_type(left_type);
       break;
     }
+    default: {
+      LOG_ERROR("{} is not a binary operation!",
+                parsing::Token::String(node->op()));
+    }
+  }
+}
 
+void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
+  ast::Type *left_type = Resolve(node->left());
+  ast::Type *right_type = Resolve(node->right());
+
+  // TODO(pmenon): Fix this check
+  if (left_type != right_type) {
+    LOG_ERROR("Type mismatch: op={}, left type={}, right type={}",
+              parsing::Token::String(node->op()),
+              ast::Type::ToString(left_type), ast::Type::ToString(right_type));
+    return;
+  }
+
+  switch (node->op()) {
     case parsing::Token::Type::BANG_EQUAL:
     case parsing::Token::Type::EQUAL_EQUAL:
     case parsing::Token::Type::GREATER:
     case parsing::Token::Type::GREATER_EQUAL:
     case parsing::Token::Type::LESS:
     case parsing::Token::Type::LESS_EQUAL: {
-      // Boolean comparison ops
-      // TODO(pmenon): Check if compatible types
       node->set_type(ast::BoolType::Bool(left_type->context()));
       break;
     }
     default: {
-      LOG_ERROR("{} is not a binary operation!",
+      LOG_ERROR("{} is not a comparison operation",
                 parsing::Token::String(node->op()));
     }
   }
