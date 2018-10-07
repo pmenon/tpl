@@ -11,11 +11,11 @@ class BytecodeLabel {
       std::numeric_limits<std::size_t>::max();
 
  public:
-  BytecodeLabel() : bytecode_offset_(kInvalidOffset), bound_(false) {}
+  BytecodeLabel() : offset_(kInvalidOffset), bound_(false) {}
 
   bool is_bound() const { return bound_; }
 
-  std::size_t offset() const { return bytecode_offset_; }
+  std::size_t offset() const { return offset_; }
 
   bool is_forward_target() const {
     return !is_bound() && offset() != kInvalidOffset;
@@ -25,20 +25,20 @@ class BytecodeLabel {
   friend class BytecodeEmitter;
 
   void set_reference(std::size_t offset) {
-    TPL_ASSERT(!is_bound() && bytecode_offset_ == kInvalidOffset,
+    TPL_ASSERT(!is_bound() && offset_ == kInvalidOffset,
                "Cannot set offset reference for already bound label");
-    bytecode_offset_ = offset;
+    offset_ = offset;
   }
 
-  void BindTo(std::size_t pos) {
-    TPL_ASSERT(!is_bound() && offset() != kInvalidOffset,
+  void BindTo(std::size_t offset) {
+    TPL_ASSERT(!is_bound() && offset != kInvalidOffset,
                "Cannot rebind an already bound label!");
     bound_ = true;
-    bytecode_offset_ = pos;
+    offset_ = offset;
   }
 
  private:
-  std::size_t bytecode_offset_;
+  std::size_t offset_;
   bool bound_;
 };
 

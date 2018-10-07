@@ -5,6 +5,7 @@
 #include "util/macros.h"
 #include "vm/bytecode_label.h"
 #include "vm/bytecode_unit.h"
+#include "vm/control_flow_builders.h"
 
 namespace tpl::vm {
 
@@ -64,10 +65,52 @@ class BytecodeGenerator::BytecodePositionTracker {
 BytecodeGenerator::BytecodeGenerator()
     : execution_result_(nullptr), func_id_counter_(0) {}
 
+void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
+  IfThenElseBuilder if_builder(this);
+
+  // Generate condition check code
+  VisitExpressionForTest(node->condition(), if_builder.then_label(),
+                         if_builder.else_label(), TestFallthrough::Then);
+
+  // Generate code in "then" block
+  if_builder.Then();
+  Visit(node->then_stmt());
+
+  // If there's an "else" block, handle it now
+  if (node->else_stmt() != nullptr) {
+    if_builder.JumpToEnd();
+    if_builder.Else();
+    Visit(node->else_stmt());
+  }
+}
+
 void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
+  LoopBuilder loop_builder(this);
+
+  // If there's an initialization block, handle it now
   if (node->init() != nullptr) {
     Visit(node->init());
   }
+
+  // That's it, we're in the loop header now
+  loop_builder.LoopHeader();
+
+  // If there's a loop condition, handle it now
+  if (node->condition() != nullptr) {
+    BytecodeLabel loop_body_label;
+    VisitExpressionForTest(node->condition(), &loop_body_label,
+                           loop_builder.break_label(), TestFallthrough::Then);
+  }
+
+  // "continues" should hit here
+  loop_builder.BindContinueTarget();
+
+  if (node->next() != nullptr) {
+    Visit(node->next());
+  }
+
+  // Jump back to header to check loop condition
+  loop_builder.JumpToHeader();
 }
 
 void BytecodeGenerator::VisitFieldDecl(ast::FieldDecl *node) {
@@ -310,24 +353,6 @@ void BytecodeGenerator::VisitDeclStmt(ast::DeclStmt *node) {
   Visit(node->declaration());
 }
 
-void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
-  BytecodeLabel else_label, end_label;
-
-  RegisterId cond = VisitExpressionForValue(node->condition());
-  emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond, &else_label);
-
-  Visit(node->then_stmt());
-
-  if (node->else_stmt() != nullptr) {
-    emitter()->EmitJump(Bytecode::Jump, &end_label);
-    emitter()->Bind(&else_label);
-    Visit(node->else_stmt());
-  } else {
-    emitter()->Bind(&else_label);
-  }
-  emitter()->Bind(&end_label);
-}
-
 void BytecodeGenerator::VisitExpressionStmt(ast::ExpressionStmt *node) {
   Visit(node->expression());
 }
@@ -367,6 +392,30 @@ void BytecodeGenerator::VisitExpressionWithTarget(ast::Expr *expr,
                                                   RegisterId reg_id) {
   ExpressionResultScope scope(this, reg_id);
   Visit(expr);
+}
+
+void BytecodeGenerator::VisitExpressionForTest(ast::Expr *expr,
+                                               BytecodeLabel *then_label,
+                                               BytecodeLabel *else_label,
+                                               TestFallthrough fallthrough) {
+  // Evaluate the expression
+  RegisterId cond = VisitExpressionForValue(expr);
+
+  switch (fallthrough) {
+    case TestFallthrough::Then: {
+      emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond, else_label);
+      break;
+    }
+    case TestFallthrough::Else: {
+      emitter()->EmitConditionalJump(Bytecode::JumpIfTrue, cond, then_label);
+      break;
+    }
+    case TestFallthrough::None: {
+      emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond, else_label);
+      emitter()->EmitJump(Bytecode::Jump, then_label);
+      break;
+    }
+  }
 }
 
 Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode,

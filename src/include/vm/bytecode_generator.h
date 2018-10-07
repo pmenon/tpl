@@ -39,6 +39,12 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   // stored into
   void VisitExpressionWithTarget(ast::Expr *expr, RegisterId reg_id);
 
+  enum class TestFallthrough : u8 { None, Then, Else };
+
+  void VisitExpressionForTest(ast::Expr *expr, BytecodeLabel *then_label,
+                              BytecodeLabel *else_label,
+                              TestFallthrough fallthrough);
+
  private:
   Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type);
 
@@ -47,9 +53,10 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   /// Accessors
   ///
   //////////////////////////////////////////////////////////////////////////////
-
+ public:
   BytecodeEmitter *emitter() { return &emitter_; }
 
+ private:
   ExpressionResultScope *execution_result() { return execution_result_; }
   void set_execution_result(ExpressionResultScope *execution_result) {
     execution_result_ = execution_result;
