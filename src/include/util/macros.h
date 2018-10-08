@@ -6,7 +6,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #define UNUSED __attribute__((unused))
-#define ALWAYS_INLINE __attribute__((noinline))
+#define ALWAYS_INLINE __attribute__((always_inline))
 
 #define DISALLOW_COPY_AND_MOVE(class)  \
   class(class &&) = delete;            \
