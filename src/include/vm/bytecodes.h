@@ -45,6 +45,7 @@ namespace tpl::vm {
                                                                              \
   /* Branching */                                                            \
   V(Jump, OperandType::UImm2)                                                \
+  V(JumpLoop, OperandType::UImm2)                                            \
   V(JumpIfTrue, OperandType::Reg, OperandType::UImm2)                        \
   V(JumpIfFalse, OperandType::Reg, OperandType::UImm2)                       \
                                                                              \
@@ -168,7 +169,8 @@ class Bytecodes {
   }
 
   static bool IsJump(Bytecode bytecode) {
-    return (bytecode == Bytecode::Jump || bytecode == Bytecode::JumpIfFalse ||
+    return (bytecode == Bytecode::Jump || bytecode == Bytecode::JumpLoop ||
+            bytecode == Bytecode::JumpIfFalse ||
             bytecode == Bytecode::JumpIfTrue);
   }
 

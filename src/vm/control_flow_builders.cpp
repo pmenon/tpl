@@ -34,7 +34,9 @@ void LoopBuilder::LoopHeader() {
   generator()->emitter()->Bind(header_label());
 }
 
-void LoopBuilder::JumpToHeader() { EmitJump(header_label()); }
+void LoopBuilder::JumpToHeader() {
+  generator()->emitter()->EmitJump(Bytecode::JumpLoop, header_label());
+}
 
 void LoopBuilder::Continue() { EmitJump(continue_label()); }
 

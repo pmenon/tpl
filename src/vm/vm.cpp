@@ -55,6 +55,28 @@ VM::VM(const BytecodeUnit &unit) : unit_(unit) {
   TPL_MEMSET(bytecode_counts_, 0, sizeof(bytecode_counts_));
 }
 
+namespace {
+
+template <typename T>
+inline ALWAYS_INLINE T Read(const u8 **ip) {
+  static_assert(std::is_integral_v<T>,
+                "Read() should only be used to read primitive integer types "
+                "directly from the bytecode instruction stream");
+  auto ret = *reinterpret_cast<const T *>(*ip);
+  (*ip) += sizeof(T);
+  return ret;
+}
+
+template <typename T>
+inline ALWAYS_INLINE T Peek(const u8 **ip) {
+  static_assert(std::is_integral_v<T>,
+                "Peek() should only be used to read primitive integer types "
+                "directly from the bytecode instruction stream");
+  return *reinterpret_cast<const T *>(*ip);
+}
+
+}  // namespace
+
 void VM::Run(Frame *frame) {
   static void *kDispatchTable[] = {
 #define HANDLE_INST(name, ...) &&op_##name,
@@ -65,7 +87,7 @@ void VM::Run(Frame *frame) {
   Bytecode op;
   const u8 *ip = frame->pc();
 
-#ifndef TPL_DEBUG_TRACE_INSTRUCTIONS
+#ifdef TPL_DEBUG_TRACE_INSTRUCTIONS
 #define DEBUG_TRACE_INSTRUCTIONS()                                         \
   do {                                                                     \
     bytecode_counts_[static_cast<std::underlying_type_t<Bytecode>>(op)]++; \
@@ -75,19 +97,26 @@ void VM::Run(Frame *frame) {
 #define DEBUG_TRACE_INSTRUCTIONS()
 #endif
 
-#define READ_1() (*ip++)
-#define READ_2() (ip += 2, (*reinterpret_cast<const u16 *>(&ip[-2])))
-#define READ_4() (ip += 4, (*reinterpret_cast<const i32 *>(&ip[-4])))
-#define READ_8() (ip += 8, (*reinterpret_cast<const u64 *>(&ip[-8])))
+    // TODO(pmenon): Should these READ/PEEK macros take in a vm::OperantType so
+    // that we can infer primitive types using traits? This minimizes number of
+    // changes if the underlying offset/bytecode/register sizes changes?
+#define PEEK_JMP_OFFSET() Peek<u16>(&ip)
+#define READ_IMM1() Read<i8>(&ip)
+#define READ_IMM2() Read<i16>(&ip)
+#define READ_IMM4() Read<i32>(&ip)
+#define READ_IMM8() Read<i64>(&ip)
+#define READ_JMP_OFFSET() Read<u16>(&ip)
+#define READ_REG_ID() Read<u16>(&ip)
+#define READ_REG_COUNT() Read<u16>(&ip)
+#define READ_OP() Read<std::underlying_type_t<Bytecode>>(&ip)
 
 #define CASE_OP(name) op_##name
 #define DISPATCH_NEXT()                          \
   do {                                           \
-    op = Bytecodes::FromByte(READ_2());          \
+    op = Bytecodes::FromByte(READ_OP());         \
     DEBUG_TRACE_INSTRUCTIONS();                  \
     goto *kDispatchTable[Bytecodes::ToByte(op)]; \
   } while (false)
-#define READ_OPERAND() READ_2()
 
   DISPATCH_NEXT();
 
@@ -97,13 +126,13 @@ void VM::Run(Frame *frame) {
    * single-byte boolean value, and the two operands are the primitive input
    * arguments.
    */
-#define DO_GEN_COMPARISON(op, type)                    \
-  CASE_OP(op##_##type) : {                             \
-    auto *dest = frame->LocalAt<bool>(READ_OPERAND()); \
-    auto *lhs = frame->LocalAt<type>(READ_OPERAND());  \
-    auto *rhs = frame->LocalAt<type>(READ_OPERAND());  \
-    Op##op##_##type(dest, *lhs, *rhs);                 \
-    DISPATCH_NEXT();                                   \
+#define DO_GEN_COMPARISON(op, type)                   \
+  CASE_OP(op##_##type) : {                            \
+    auto *dest = frame->LocalAt<bool>(READ_REG_ID()); \
+    auto *lhs = frame->LocalAt<type>(READ_REG_ID());  \
+    auto *rhs = frame->LocalAt<type>(READ_REG_ID());  \
+    Op##op##_##type(dest, *lhs, *rhs);                \
+    DISPATCH_NEXT();                                  \
   }
 #define GEN_COMPARISON_TYPES(type)          \
   DO_GEN_COMPARISON(GreaterThan, type)      \
@@ -120,17 +149,17 @@ void VM::Run(Frame *frame) {
   /*
    * Binary operations
    */
-#define DO_GEN_ARITHMETIC_OP(op, test, type)           \
-  CASE_OP(op##_##type) : {                             \
-    auto *dest = frame->LocalAt<type>(READ_OPERAND()); \
-    auto *lhs = frame->LocalAt<type>(READ_OPERAND());  \
-    auto *rhs = frame->LocalAt<type>(READ_OPERAND());  \
-    if (test && *rhs == 0u) {                          \
-      /* TODO(pmenon): Proper error */                 \
-      LOG_ERROR("Division by zero error!");            \
-    }                                                  \
-    Op##op##_##type(dest, *lhs, *rhs);                 \
-    DISPATCH_NEXT();                                   \
+#define DO_GEN_ARITHMETIC_OP(op, test, type)          \
+  CASE_OP(op##_##type) : {                            \
+    auto *dest = frame->LocalAt<type>(READ_REG_ID()); \
+    auto *lhs = frame->LocalAt<type>(READ_REG_ID());  \
+    auto *rhs = frame->LocalAt<type>(READ_REG_ID());  \
+    if (test && *rhs == 0u) {                         \
+      /* TODO(pmenon): Proper error */                \
+      LOG_ERROR("Division by zero error!");           \
+    }                                                 \
+    Op##op##_##type(dest, *lhs, *rhs);                \
+    DISPATCH_NEXT();                                  \
   }
 #define GEN_ARITHMETIC_OP(type)             \
   DO_GEN_ARITHMETIC_OP(Add, false, type)    \
@@ -149,73 +178,94 @@ void VM::Run(Frame *frame) {
   /*
    * Bitwise negation and regular integer negation
    */
-#define GEN_NEG_OP(type)                                \
-  CASE_OP(Neg##_##type) : {                             \
-    auto *dest = frame->LocalAt<type>(READ_OPERAND());  \
-    auto *input = frame->LocalAt<type>(READ_OPERAND()); \
-    OpNeg##_##type(dest, *input);                       \
-    DISPATCH_NEXT();                                    \
-  }                                                     \
-  CASE_OP(BitNeg##_##type) : {                          \
-    auto *dest = frame->LocalAt<type>(READ_OPERAND());  \
-    auto *input = frame->LocalAt<type>(READ_OPERAND()); \
-    OpBitNeg##_##type(dest, *input);                    \
-    DISPATCH_NEXT();                                    \
+#define GEN_NEG_OP(type)                               \
+  CASE_OP(Neg##_##type) : {                            \
+    auto *dest = frame->LocalAt<type>(READ_REG_ID());  \
+    auto *input = frame->LocalAt<type>(READ_REG_ID()); \
+    OpNeg##_##type(dest, *input);                      \
+    DISPATCH_NEXT();                                   \
+  }                                                    \
+  CASE_OP(BitNeg##_##type) : {                         \
+    auto *dest = frame->LocalAt<type>(READ_REG_ID());  \
+    auto *input = frame->LocalAt<type>(READ_REG_ID()); \
+    OpBitNeg##_##type(dest, *input);                   \
+    DISPATCH_NEXT();                                   \
   }
 
   INT_TYPES(GEN_NEG_OP)
 #undef GEN_NEG_OP
 
+  /*
+   * Jumps are unconditional forward-only jumps
+   */
   CASE_OP(Jump) : {
-    u16 skip = READ_2();
+    u16 skip = PEEK_JMP_OFFSET();
     if (OpJump()) {
       ip += skip;
     }
     DISPATCH_NEXT();
   }
 
+  /*
+   * JumpLoops are unconditional back-only jumps mostly used for loops
+   */
+  CASE_OP(JumpLoop) : {
+    i16 skip = -static_cast<i16>(PEEK_JMP_OFFSET());
+    if (OpJump()) {
+      ip += skip;
+    }
+    DISPATCH_NEXT();
+  }
+
+  /*
+   * JumpIfTrue is a conditional branch instruction.
+   */
   CASE_OP(JumpIfTrue) : {
-    auto *cond = frame->LocalAt<bool>(READ_OPERAND());
-    u16 skip = READ_2();
+    auto *cond = frame->LocalAt<bool>(READ_REG_ID());
+    u16 skip = PEEK_JMP_OFFSET();
     if (OpJumpIfTrue(*cond)) {
       ip += skip;
+    } else {
+      READ_JMP_OFFSET();
     }
     DISPATCH_NEXT();
   }
 
   CASE_OP(JumpIfFalse) : {
-    auto *cond = frame->LocalAt<bool>(READ_OPERAND());
-    u16 skip = READ_2();
+    auto *cond = frame->LocalAt<bool>(READ_REG_ID());
+    u16 skip = PEEK_JMP_OFFSET();
     if (OpJumpIfFalse(*cond)) {
       ip += skip;
+    } else {
+      READ_JMP_OFFSET();
     }
     DISPATCH_NEXT();
   }
 
   CASE_OP(LoadImm1) : {
-    i8 *dest = frame->LocalAt<i8>(READ_OPERAND());
-    i8 val = READ_1();
+    i8 *dest = frame->LocalAt<i8>(READ_REG_ID());
+    i8 val = READ_IMM1();
     OpLoadImm_i8(dest, val);
     DISPATCH_NEXT();
   }
 
   CASE_OP(LoadImm2) : {
-    i16 *dest = frame->LocalAt<i16>(READ_OPERAND());
-    i16 val = READ_2();
+    i16 *dest = frame->LocalAt<i16>(READ_REG_ID());
+    i16 val = READ_IMM2();
     OpLoadImm_i16(dest, val);
     DISPATCH_NEXT();
   }
 
   CASE_OP(LoadImm4) : {
-    i32 *dest = frame->LocalAt<i32>(READ_OPERAND());
-    i32 val = READ_4();
+    i32 *dest = frame->LocalAt<i32>(READ_REG_ID());
+    i32 val = READ_IMM4();
     OpLoadImm_i32(dest, val);
     DISPATCH_NEXT();
   }
 
   CASE_OP(LoadImm8) : {
-    i64 *dest = frame->LocalAt<i64>(READ_OPERAND());
-    i64 val = READ_8();
+    i64 *dest = frame->LocalAt<i64>(READ_REG_ID());
+    i64 val = READ_IMM8();
     OpLoadImm_i64(dest, val);
     DISPATCH_NEXT();
   }
