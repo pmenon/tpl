@@ -13,6 +13,8 @@ class ControlFlowBuilder {
   explicit ControlFlowBuilder(BytecodeGenerator *generator)
       : generator_(generator) {}
 
+  virtual ~ControlFlowBuilder() = default;
+
  protected:
   BytecodeGenerator *generator() { return generator_; }
 
@@ -25,7 +27,7 @@ class BreakableBlockBuilder : public ControlFlowBuilder {
   explicit BreakableBlockBuilder(BytecodeGenerator *generator)
       : ControlFlowBuilder(generator) {}
 
-  ~BreakableBlockBuilder();
+  ~BreakableBlockBuilder() override;
 
   void Break();
 
@@ -43,7 +45,7 @@ class LoopBuilder : public BreakableBlockBuilder {
   explicit LoopBuilder(BytecodeGenerator *generator)
       : BreakableBlockBuilder(generator) {}
 
-  ~LoopBuilder();
+  ~LoopBuilder() override;
 
   void LoopHeader();
   void JumpToHeader();
@@ -69,7 +71,7 @@ class IfThenElseBuilder : public ControlFlowBuilder {
   explicit IfThenElseBuilder(BytecodeGenerator *generator)
       : ControlFlowBuilder(generator) {}
 
-  ~IfThenElseBuilder();
+  ~IfThenElseBuilder() override;
 
   void Then();
   void Else();

@@ -10,7 +10,10 @@ namespace tpl::vm {
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-BreakableBlockBuilder::~BreakableBlockBuilder() = default;
+BreakableBlockBuilder::~BreakableBlockBuilder() {
+  TPL_ASSERT(!break_label()->is_bound(), "Break label cannot be bound!");
+  generator()->emitter()->Bind(break_label());
+}
 
 void BreakableBlockBuilder::Break() { EmitJump(break_label()); }
 
