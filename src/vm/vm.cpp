@@ -207,7 +207,7 @@ void VM::Run(Frame *frame) {
   }
 
   /*
-   * JumpLoops are unconditional back-only jumps mostly used for loops
+   * JumpLoops are unconditional backwards-only jumps, mostly used for loops
    */
   CASE_OP(JumpLoop) : {
     i16 skip = -static_cast<i16>(PEEK_JMP_OFFSET());
@@ -217,9 +217,6 @@ void VM::Run(Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  /*
-   * JumpIfTrue is a conditional branch instruction.
-   */
   CASE_OP(JumpIfTrue) : {
     auto *cond = frame->LocalAt<bool>(READ_REG_ID());
     u16 skip = PEEK_JMP_OFFSET();
