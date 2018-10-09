@@ -102,6 +102,8 @@ void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
                            loop_builder.break_label(), TestFallthrough::Then);
   }
 
+  Visit(node->body());
+
   // "continues" should hit here
   loop_builder.BindContinueTarget();
 
