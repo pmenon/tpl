@@ -94,12 +94,12 @@ namespace tpl::vm {
  * more than enough.
  */
 enum class Bytecode : u16 {
-#define HANDLE_INST(inst, ...) inst,
-  BYTECODE_LIST(HANDLE_INST)
-#undef HANDLE_INST
-#define HANDLE_INST(inst, ...) +1
-      Last = -1 BYTECODE_LIST(HANDLE_INST)
-#undef HANDLE_INST
+#define DECLARE_OP(inst, ...) inst,
+  BYTECODE_LIST(DECLARE_OP)
+#undef DECLARE_OP
+#define COUNT_OP(inst, ...) +1
+      Last = -1 BYTECODE_LIST(COUNT_OP)
+#undef COUNT_OP
 };
 
 /**

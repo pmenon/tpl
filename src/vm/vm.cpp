@@ -79,9 +79,9 @@ inline ALWAYS_INLINE T Peek(const u8 **ip) {
 
 void VM::Run(Frame *frame) {
   static void *kDispatchTable[] = {
-#define HANDLE_INST(name, ...) &&op_##name,
-      BYTECODE_LIST(HANDLE_INST)
-#undef HANDLE_INST
+#define ENTRY(name, ...) &&op_##name,
+      BYTECODE_LIST(ENTRY)
+#undef ENTRY
   };
 
   Bytecode op;

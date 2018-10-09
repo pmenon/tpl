@@ -8,45 +8,45 @@ namespace tpl::vm {
 
 // static
 const char *Bytecodes::kBytecodeNames[] = {
-#define HANDLE_INST(name, ...) #name,
-    BYTECODE_LIST(HANDLE_INST)
-#undef HANDLE_INST
+#define ENTRY(name, ...) #name,
+    BYTECODE_LIST(ENTRY)
+#undef ENTRY
 };
 
 // static
 u32 Bytecodes::kBytecodeOperandCounts[] = {
-#define HANDLE_INST(name, ...) BytecodeTraits<__VA_ARGS__>::kOperandCount,
-    BYTECODE_LIST(HANDLE_INST)
-#undef HANDLE_INST
+#define ENTRY(name, ...) BytecodeTraits<__VA_ARGS__>::kOperandCount,
+    BYTECODE_LIST(ENTRY)
+#undef ENTRY
 };
 
 // static
 const OperandType *Bytecodes::kBytecodeOperandTypes[] = {
-#define HANDLE_INST(name, ...) BytecodeTraits<__VA_ARGS__>::kOperandTypes,
-    BYTECODE_LIST(HANDLE_INST)
-#undef HANDLE_INST
+#define ENTRY(name, ...) BytecodeTraits<__VA_ARGS__>::kOperandTypes,
+    BYTECODE_LIST(ENTRY)
+#undef ENTRY
 };
 
 // static
 const OperandSize *Bytecodes::kBytecodeOperandSizes[] = {
-#define HANDLE_INST(name, ...) BytecodeTraits<__VA_ARGS__>::kOperandSizes,
-    BYTECODE_LIST(HANDLE_INST)
-#undef HANDLE_INST
+#define ENTRY(name, ...) BytecodeTraits<__VA_ARGS__>::kOperandSizes,
+    BYTECODE_LIST(ENTRY)
+#undef ENTRY
 };
 
 // static
 u32 Bytecodes::kBytecodeSizes[] = {
-#define HANDLE_INST(name, ...) BytecodeTraits<__VA_ARGS__>::kSize,
-    BYTECODE_LIST(HANDLE_INST)
-#undef HANDLE_INST
+#define ENTRY(name, ...) BytecodeTraits<__VA_ARGS__>::kSize,
+    BYTECODE_LIST(ENTRY)
+#undef ENTRY
 };
 
 // static
 u32 Bytecodes::MaxBytecodeNameLength() {
   static constexpr const u32 kMaxInstNameLength = std::max({
-#define HANDLE_INST(name, ...) sizeof(#name),
-      BYTECODE_LIST(HANDLE_INST)
-#undef HANDLE_INST
+#define ENTRY(name, ...) sizeof(#name),
+      BYTECODE_LIST(ENTRY)
+#undef ENTRY
   });
   return kMaxInstNameLength;
 }
