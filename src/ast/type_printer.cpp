@@ -7,6 +7,12 @@
 
 namespace tpl::ast {
 
+namespace {
+
+/**
+ * Visitor class that walks a type hierarchy tree with the purpose of
+ * pretty-printing to an injected output stream.
+ */
 class TypePrinter : public TypeVisitor<TypePrinter> {
  public:
   explicit TypePrinter(llvm::raw_ostream &out) : out_(out) {}
@@ -112,6 +118,13 @@ void TypePrinter::VisitArrayType(const ArrayType *type) {
   Visit(type->element_type());
 }
 
+void TypePrinter::VisitInternalType(const InternalType *type) {
+  out_ << llvm::StringRef(type->name().data());
+}
+
+}  // namespace
+
+// static
 std::string Type::ToString(const Type *type) {
   llvm::SmallString<256> buffer;
   llvm::raw_svector_ostream stream(buffer);

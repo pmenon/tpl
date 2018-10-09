@@ -4,6 +4,7 @@
 
 #include "llvm/Support/Casting.h"
 
+#include "ast/identifier.h"
 #include "util/region.h"
 #include "util/region_containers.h"
 
@@ -19,7 +20,8 @@ class AstContext;
   F(PointerType)     \
   F(ArrayType)       \
   F(StructType)      \
-  F(FunctionType)
+  F(FunctionType)    \
+  F(InternalType)
 
 // Forward declare everything first
 #define F(name) class name;
@@ -329,6 +331,57 @@ class FunctionType : public Type {
  private:
   util::RegionVector<Type *> params_;
   Type *ret_;
+};
+
+#define INTERNAL_TYPE_LIST(V) \
+  V(Scanner, "runtime::Scanner", ::tpl::runtime::Scanner)
+
+/**
+ * Internal types are dedicated to pre-compiled C++ types that we don't want to
+ * lift into TPL's type system. While they are usable as regular TPL types, they
+ * are not exposed to users (i.e., a user cannot construct one of these types).
+ *
+ * TODO(pmenon): Is InternalType really a good name for these?
+ */
+class InternalType : public Type {
+ public:
+  enum class InternalKind : u8 {
+#define DECLARE_TYPE(kind, ...) kind,
+    INTERNAL_TYPE_LIST(DECLARE_TYPE)
+#undef DECLARE_TYPE
+#define COUNT(...) +1
+        Last = -1 INTERNAL_TYPE_LIST(COUNT)
+#undef COUNT
+  };
+
+  const Identifier &name() const { return name_; }
+
+  InternalKind internal_kind() const { return internal_kind_; }
+
+  // Return the number of internal types
+  static constexpr u32 NumInternalTypes() {
+    return static_cast<u32>(InternalKind::Last);
+  }
+
+  // Static factory
+  static InternalType *Get(AstContext &ctx, InternalKind kind);
+
+  // Type check
+  static bool classof(const Type *type) {
+    return type->kind() == Type::Kind::InternalType;
+  }
+
+ private:
+  friend class AstContext;
+  explicit InternalType(AstContext &ctx, Identifier name, std::size_t size,
+                        std::size_t alignment, InternalKind internal_kind)
+      : Type(ctx, size, alignment, Type::Kind::InternalType),
+        name_(name),
+        internal_kind_(internal_kind) {}
+
+ private:
+  ast::Identifier name_;
+  InternalKind internal_kind_;
 };
 
 }  // namespace tpl::ast

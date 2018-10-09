@@ -84,9 +84,6 @@ void VM::Run(Frame *frame) {
 #undef ENTRY
   };
 
-  Bytecode op;
-  const u8 *ip = frame->pc();
-
 #ifdef TPL_DEBUG_TRACE_INSTRUCTIONS
 #define DEBUG_TRACE_INSTRUCTIONS()                                         \
   do {                                                                     \
@@ -97,9 +94,9 @@ void VM::Run(Frame *frame) {
 #define DEBUG_TRACE_INSTRUCTIONS()
 #endif
 
-    // TODO(pmenon): Should these READ/PEEK macros take in a vm::OperantType so
-    // that we can infer primitive types using traits? This minimizes number of
-    // changes if the underlying offset/bytecode/register sizes changes?
+  // TODO(pmenon): Should these READ/PEEK macros take in a vm::OperantType so
+  // that we can infer primitive types using traits? This minimizes number of
+  // changes if the underlying offset/bytecode/register sizes changes?
 #define PEEK_JMP_OFFSET() Peek<u16>(&ip)
 #define READ_IMM1() Read<i8>(&ip)
 #define READ_IMM2() Read<i16>(&ip)
@@ -117,6 +114,36 @@ void VM::Run(Frame *frame) {
     DEBUG_TRACE_INSTRUCTIONS();                  \
     goto *kDispatchTable[Bytecodes::ToByte(op)]; \
   } while (false)
+
+  /*****************************************************************************
+   *
+   * Below this comment begins the primary section of TPL's register-based
+   * virtual machine (VM) dispatch area. The VM uses indirect threaded
+   * interpretation; each bytecode handler's label is statically generated and
+   * stored in @ref kDispatchTable at server compile time. Bytecode handler
+   * logic is written as a case using the CASE_OP macro. Handlers can read from
+   * and write to registers using the local execution frame's register file
+   * (i.e., through @ref Frame::LocalAt()).
+   *
+   * Upon entry, the instruction pointer (IP) points to the first bytecode of
+   * function that is running. The READ_* macros can be used to directly read
+   * values from the bytecode stream. The READ_* macros read values from the
+   * bytecode stream and advance the IP whereas the PEEK_* macros do only the
+   * former, leaving the IP unmodified.
+   *
+   * IMPORTANT:
+   * ----------
+   * Bytecode handler code here should only be simple register/IP manipulation
+   * (i.e., reading from and writing to registers). Actual full-blown bytecode
+   * logic must be implemented externally and invoked from stubs here. This is a
+   * strict requirement necessary because it makes code generation to LLVM much
+   * simpler.
+   *
+   ****************************************************************************/
+
+  // The currently executing bytecode and the instruction pointer
+  Bytecode op;
+  const u8 *ip = frame->pc();
 
   DISPATCH_NEXT();
 
@@ -210,9 +237,9 @@ void VM::Run(Frame *frame) {
    * JumpLoops are unconditional backwards-only jumps, mostly used for loops
    */
   CASE_OP(JumpLoop) : {
-    i16 skip = -static_cast<i16>(PEEK_JMP_OFFSET());
+    u16 skip = PEEK_JMP_OFFSET();
     if (OpJump()) {
-      ip += skip;
+      ip -= skip;
     }
     DISPATCH_NEXT();
   }

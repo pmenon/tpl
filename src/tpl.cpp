@@ -54,6 +54,7 @@ static void Compile(const std::string &source) {
   auto unit = vm::BytecodeGenerator::Compile(root);
 
   unit->PrettyPrint(std::cout);
+  vm::VM::Execute(*unit, "f");
 }
 
 static void RunRepl() {
