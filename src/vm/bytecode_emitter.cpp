@@ -45,6 +45,10 @@ void BytecodeEmitter::Emit(Bytecode bytecode, RegisterId dest, RegisterId lhs,
 
 void BytecodeEmitter::EmitJump(Bytecode bytecode, BytecodeLabel *label) {
   TPL_ASSERT(Bytecodes::IsJump(bytecode), "Provided bytecode is not a jump");
+  TPL_ASSERT((!label->is_bound() && bytecode == Bytecode::Jump) ||
+                 (label->is_bound() && bytecode == Bytecode::JumpLoop),
+             "Jump should only be used for forward jumps and JumpLoop for "
+             "backwards jumps");
 
   // Emit the jump opcode and condition
   EmitOp(bytecode);
@@ -64,16 +68,17 @@ void BytecodeEmitter::EmitConditionalJump(Bytecode bytecode, RegisterId cond,
 void BytecodeEmitter::EmitReturn() { EmitOp(Bytecode::Return); }
 
 void BytecodeEmitter::EmitJump(BytecodeLabel *label) {
-  std::size_t current_position = position();
+  std::size_t curr_offset = position();
 
   if (label->is_bound()) {
-    // The label is already bound so this must be a backwards jump
+    // The label is already bound so this must be a backwards jump. We just need
+    // to emit the delta offset directly into the bytestream.
     TPL_ASSERT(
-        label->offset() <= current_position,
+        label->offset() <= curr_offset,
         "Label for backwards jump cannot be beyond current bytecode position");
-    u32 delta = static_cast<u32>(current_position - label->offset());
-//    TPL_ASSERT(delta < (1u << OperandTypeTraits<OperandType::UImm2>::kSize),
-//               "Jump delta exceeds 16-bit value for jump offsets!");
+    std::size_t delta = curr_offset - label->offset();
+    TPL_ASSERT(delta < std::numeric_limits<u16>::max(),
+               "Jump delta exceeds 16-bit value for jump offsets!");
 
     // Immediately emit the delta
     EmitImmediateValue(static_cast<u16>(delta));
@@ -81,7 +86,7 @@ void BytecodeEmitter::EmitJump(BytecodeLabel *label) {
     // The label is not bound yet so this must be a forward jump. We set the
     // reference position in the label and use a placeholder offset in the
     // byte stream for now. We'll update the placeholder when the label is bound
-    label->set_reference(current_position);
+    label->set_referrer(curr_offset);
     EmitImmediateValue(kJumpPlaceholder);
   }
 }
@@ -92,11 +97,13 @@ void BytecodeEmitter::Bind(BytecodeLabel *label) {
   std::size_t curr_offset = position();
 
   if (label->is_forward_target()) {
-    // We need to path this forward jump
+    // We need to patch this forward jump
     std::size_t jump_location = label->offset();
-    u32 delta = static_cast<u32>(curr_offset - jump_location);
-//    TPL_ASSERT(delta < (1u << OperandTypeTraits<OperandType::UImm2>::kSize),
-//               "Jump delta exceeds 16-bit value for jump offsets!");
+
+    TPL_ASSERT((curr_offset - jump_location) < std::numeric_limits<u16>::max(),
+               "Jump delta exceeds 16-bit value for jump offsets!");
+
+    u16 delta = static_cast<u16>(curr_offset - jump_location);
     u8 *raw_delta = reinterpret_cast<u8 *>(&delta);
     bytecodes_[jump_location] = raw_delta[0];
     bytecodes_[jump_location + 1] = raw_delta[1];
