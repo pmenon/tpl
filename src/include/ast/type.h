@@ -37,11 +37,11 @@ class Type : public util::RegionObject {
   // Context this type was allocated from
   AstContext &context() const { return ctx_; }
 
-  // Alignment (in bytes) of this type
-  std::size_t alignment() const { return align_; }
-
   // Size (in bytes) of this type
-  std::size_t size() const { return size_; }
+  u32 size() const { return size_; }
+
+  // Alignment (in bytes) of this type
+  u32 alignment() const { return align_; }
 
   // The "kind" of type this is (e.g., Integer, Struct, Array, etc.)
   Kind kind() const { return kind_; }
@@ -85,13 +85,13 @@ class Type : public util::RegionObject {
   static std::string ToString(const Type *type);
 
  protected:
-  Type(AstContext &ctx, std::size_t size, std::size_t alignment, Kind kind)
+  Type(AstContext &ctx, u32 size, u32 alignment, Kind kind)
       : ctx_(ctx), size_(size), align_(alignment), kind_(kind) {}
 
  private:
   AstContext &ctx_;
-  std::size_t size_;
-  std::size_t align_;
+  u32 size_;
+  u32 align_;
   Kind kind_;
 };
 
@@ -161,8 +161,7 @@ class IntegerType : public Type {
 
  private:
   friend class AstContext;
-  IntegerType(AstContext &ctx, std::size_t size, std::size_t alignment,
-              IntKind int_kind)
+  IntegerType(AstContext &ctx, u32 size, u32 alignment, IntKind int_kind)
       : Type(ctx, size, alignment, Type::Kind::IntegerType),
         int_kind_(int_kind) {}
 
@@ -189,8 +188,7 @@ class FloatType : public Type {
 
  private:
   friend class AstContext;
-  FloatType(AstContext &ctx, std::size_t size, std::size_t alignment,
-            FloatKind float_kind)
+  FloatType(AstContext &ctx, u32 size, u32 alignment, FloatKind float_kind)
       : Type(ctx, size, alignment, Type::Kind::FloatType),
         float_kind_(float_kind) {}
 
@@ -282,28 +280,44 @@ class ArrayType : public Type {
   Type *elem_type_;
 };
 
+struct Field {
+  Identifier name;
+  Type *type;
+
+  Field(const Identifier &name, Type *type) : name(name), type(type) {}
+};
+
 /**
  * A struct type
  */
 class StructType : public Type {
  public:
-  const util::RegionVector<Type *> &fields() const { return fields_; }
+  Type *LookupFieldByName(Identifier name) const {
+    for (const auto &field : fields()) {
+      if (field.name == name) {
+        return field.type;
+      }
+    }
+    return nullptr;
+  }
 
-  static StructType *Get(AstContext &ctx, util::RegionVector<Type *> &&fields);
-  static StructType *Get(util::RegionVector<Type *> &&fields);
+  const util::RegionVector<Field> &fields() const { return fields_; }
+
+  static StructType *Get(AstContext &ctx, util::RegionVector<Field> &&fields);
+  static StructType *Get(util::RegionVector<Field> &&fields);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::StructType;
   }
 
  private:
-  explicit StructType(AstContext &ctx, std::size_t size, std::size_t alignment,
-                      util::RegionVector<Type *> &&fields)
+  explicit StructType(AstContext &ctx, u32 size, u32 alignment,
+                      util::RegionVector<Field> &&fields)
       : Type(ctx, size, alignment, Type::Kind::StructType),
         fields_(std::move(fields)) {}
 
  private:
-  util::RegionVector<Type *> fields_;
+  util::RegionVector<Field> fields_;
 };
 
 /**
@@ -311,11 +325,11 @@ class StructType : public Type {
  */
 class FunctionType : public Type {
  public:
-  const util::RegionVector<Type *> &params() const { return params_; }
+  const util::RegionVector<Field> &params() const { return params_; }
 
   Type *return_type() const { return ret_; }
 
-  static FunctionType *Get(util::RegionVector<Type *> &&params, Type *ret);
+  static FunctionType *Get(util::RegionVector<Field> &&params, Type *ret);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::FunctionType;
@@ -323,13 +337,13 @@ class FunctionType : public Type {
 
  private:
   friend class AstContext;
-  explicit FunctionType(util::RegionVector<Type *> &&params, Type *ret)
+  explicit FunctionType(util::RegionVector<Field> &&params, Type *ret)
       : Type(ret->context(), 0, 0, Type::Kind::FunctionType),
         params_(std::move(params)),
         ret_(ret) {}
 
  private:
-  util::RegionVector<Type *> params_;
+  util::RegionVector<Field> params_;
   Type *ret_;
 };
 
@@ -373,14 +387,14 @@ class InternalType : public Type {
 
  private:
   friend class AstContext;
-  explicit InternalType(AstContext &ctx, Identifier name, std::size_t size,
-                        std::size_t alignment, InternalKind internal_kind)
+  explicit InternalType(AstContext &ctx, Identifier name, u32 size,
+                        u32 alignment, InternalKind internal_kind)
       : Type(ctx, size, alignment, Type::Kind::InternalType),
         name_(name),
         internal_kind_(internal_kind) {}
 
  private:
-  ast::Identifier name_;
+  Identifier name_;
   InternalKind internal_kind_;
 };
 

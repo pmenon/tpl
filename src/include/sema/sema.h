@@ -11,6 +11,10 @@ namespace ast {
 class AstContext;
 }  // namespace ast
 
+namespace runtime {
+class Schema;
+}  // namespace runtime
+
 namespace sema {
 
 class Sema : public ast::AstVisitor<Sema> {
@@ -34,6 +38,14 @@ class Sema : public ast::AstVisitor<Sema> {
     Visit(expr);
     return expr->type();
   }
+
+  ast::Type *ConvertToType(const runtime::Schema &schema);
+
+  //////////////////////////////////////////////////////////////////////////////
+  ///
+  /// Accessors
+  ///
+  //////////////////////////////////////////////////////////////////////////////
 
   ast::AstContext &ast_context() const { return ctx_; }
 
@@ -71,6 +83,9 @@ class Sema : public ast::AstVisitor<Sema> {
     }
   }
 
+  /**
+   * RAII class to capture the current scope
+   */
   class SemaScope {
    public:
     SemaScope(Sema &check, Scope::Kind scope_kind)
@@ -94,8 +109,8 @@ class Sema : public ast::AstVisitor<Sema> {
     bool exited_;
   };
 
-  /*
-   *
+  /**
+   * RAII class to capture both the current scope and the current function
    */
   class FunctionSemaScope {
    public:

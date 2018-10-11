@@ -118,13 +118,12 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
 
   // Now, let's make sure the arguments match up
   const auto &arg_types = node->arguments();
-  const auto &func_param_types = func_type->params();
+  const auto &func_params = func_type->params();
   for (size_t i = 0; i < arg_types.size(); i++) {
-    if (arg_types[i]->type() != func_param_types[i]) {
-      // TODO(pmenon): Fix this check
+    if (arg_types[i]->type() != func_params[i].type) {
       error_reporter().Report(
           node->position(), ErrorMessages::kIncorrectCallArgType,
-          arg_types[i]->type(), func_param_types[i], func_name);
+          arg_types[i]->type(), func_params[i].type, func_name);
       return;
     }
   }
@@ -147,10 +146,8 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   FunctionSemaScope function_scope(*this, node);
 
   // Declare function parameters in scope
-  const auto &param_decls = node->type_repr()->parameters();
-  const auto &param_types = func_type->params();
-  for (size_t i = 0; i < func_type->params().size(); i++) {
-    current_scope()->Declare(param_decls[i], param_types[i]);
+  for (const auto &param : func_type->params()) {
+    current_scope()->Declare(param.name, param.type);
   }
 
   // Recurse into the function body
@@ -158,18 +155,21 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
 }
 
 void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
-  auto *type = current_scope()->Lookup(node->name());
-
-  if (type == nullptr) {
-    type = ast_context().LookupBuiltin(node->name());
-    if (type == nullptr) {
-      error_reporter().Report(node->position(),
-                              ErrorMessages::kUndefinedVariable, node->name());
-      return;
-    }
+  // Check the current context
+  if (auto *type = current_scope()->Lookup(node->name())) {
+    node->set_type(type);
+    return;
   }
 
-  node->set_type(type);
+  // Check the builtins
+  if (auto *type = ast_context().LookupBuiltin(node->name())) {
+    node->set_type(type);
+    return;
+  }
+
+  // Error
+  error_reporter().Report(node->position(), ErrorMessages::kUndefinedVariable,
+                          node->name());
 }
 
 void Sema::VisitLitExpr(ast::LitExpr *node) {
@@ -241,6 +241,35 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
     }
     default: {}
   }
+}
+
+void Sema::VisitSelectorExpr(ast::SelectorExpr *node) {
+  // Resolve to make sure object refers to valid
+  ast::Type *obj_type = Resolve(node->object());
+
+  if (!obj_type->IsStructType()) {
+    error_reporter().Report(node->position(),
+                            ErrorMessages::kSelObjectNotComposite, obj_type);
+    return;
+  }
+
+  if (!node->selector()->IsIdentifierExpr()) {
+    error_reporter().Report(node->selector()->position(),
+                            ErrorMessages::kExpectedIdentifierForSelector);
+    return;
+  }
+
+  ast::Identifier sel_name =
+      node->selector()->As<ast::IdentifierExpr>()->name();
+
+  ast::Type *field_type =
+      obj_type->As<ast::StructType>()->LookupFieldByName(sel_name);
+
+  if (field_type == nullptr) {
+    // Error
+  }
+
+  node->set_type(field_type);
 }
 
 }  // namespace tpl::sema

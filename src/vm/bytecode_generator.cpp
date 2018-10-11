@@ -84,35 +84,38 @@ void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
   }
 }
 
+void BytecodeGenerator::VisitIterationStatement(ast::IterationStmt *iteration,
+                                                LoopBuilder *loop_builder) {
+  Visit(iteration->body());
+  loop_builder->BindContinueTarget();
+}
+
 void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
   LoopBuilder loop_builder(this);
 
-  // If there's an initialization block, handle it now
   if (node->init() != nullptr) {
     Visit(node->init());
   }
 
-  // That's it, we're in the loop header now
   loop_builder.LoopHeader();
 
-  // If there's a loop condition, handle it now
   if (node->condition() != nullptr) {
     BytecodeLabel loop_body_label;
     VisitExpressionForTest(node->condition(), &loop_body_label,
                            loop_builder.break_label(), TestFallthrough::Then);
   }
 
-  Visit(node->body());
-
-  // "continues" should hit here
-  loop_builder.BindContinueTarget();
+  VisitIterationStatement(node, &loop_builder);
 
   if (node->next() != nullptr) {
     Visit(node->next());
   }
 
-  // Jump back to header to check loop condition
   loop_builder.JumpToHeader();
+}
+
+void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
+  AstVisitor::VisitForInStmt(node);
 }
 
 void BytecodeGenerator::VisitFieldDecl(ast::FieldDecl *node) {
@@ -129,10 +132,8 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
   func_info->NewLocal(func_type->return_type(), "ret", false);
 
   // Register parameters
-  const auto &params = node->type_repr()->parameters();
-  const auto &param_types = func_type->params();
-  for (u32 i = 0; i < param_types.size(); i++) {
-    func_info->NewLocal(param_types[i], params[i]->name().data(), true);
+  for (const auto &func_param : func_type->params()) {
+    func_info->NewLocal(func_param.type, func_param.name.data(), true);
   }
 
   {
@@ -252,7 +253,8 @@ void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
 }
 
 void BytecodeGenerator::VisitStructDecl(ast::StructDecl *node) {
-  curr_func()->NewLocal(node->type_repr()->type(), node->name().data(), false);
+  // TODO
+  //curr_func()->NewLocal(node->type_repr()->type(), node->name().data(), false);
 }
 
 void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
@@ -369,6 +371,11 @@ void BytecodeGenerator::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
 
 void BytecodeGenerator::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   Visit(node->body());
+}
+
+void BytecodeGenerator::VisitSelectorExpr(ast::SelectorExpr *node) {
+  // TODO
+  AstVisitor::VisitSelectorExpr(node);
 }
 
 void BytecodeGenerator::VisitDeclStmt(ast::DeclStmt *node) {

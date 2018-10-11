@@ -43,6 +43,7 @@ class Type;
   T(DeclStmt)              \
   T(ExpressionStmt)        \
   T(ForStmt)               \
+  T(ForInStmt)             \
   T(IfStmt)                \
   T(ReturnStmt)
 
@@ -60,6 +61,7 @@ class Type;
   T(FunctionLitExpr)        \
   T(IdentifierExpr)         \
   T(LitExpr)                \
+  T(SelectorExpr)           \
   T(UnaryOpExpr)            \
   /* Types */               \
   T(ArrayTypeRepr)          \
@@ -201,10 +203,12 @@ class File : public AstNode {
 
 class Decl : public AstNode {
  public:
-  Decl(Kind kind, const SourcePosition &pos, Identifier name)
-      : AstNode(kind, pos), name_(name) {}
+  Decl(Kind kind, const SourcePosition &pos, Identifier name, Expr *type_repr)
+      : AstNode(kind, pos), name_(name), type_repr_(type_repr) {}
 
   Identifier name() const { return name_; }
+
+  Expr *type_repr() const { return type_repr_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() >= Kind::FieldDecl &&
@@ -213,6 +217,7 @@ class Decl : public AstNode {
 
  private:
   Identifier name_;
+  Expr *type_repr_;
 };
 
 /**
@@ -221,16 +226,11 @@ class Decl : public AstNode {
 class FieldDecl : public Decl {
  public:
   FieldDecl(const SourcePosition &pos, Identifier name, Expr *type_repr)
-      : Decl(Kind::FieldDecl, pos, name), type_repr_(type_repr) {}
-
-  Expr *type_repr() const { return type_repr_; }
+      : Decl(Kind::FieldDecl, pos, name, type_repr) {}
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::FieldDecl;
   }
-
- private:
-  Expr *type_repr_;
 };
 
 /**
@@ -238,12 +238,10 @@ class FieldDecl : public Decl {
  */
 class FunctionDecl : public Decl {
  public:
-  FunctionDecl(const SourcePosition &pos, Identifier name, FunctionLitExpr *fun)
-      : Decl(Kind::FunctionDecl, pos, name), fun_(fun) {}
+  FunctionDecl(const SourcePosition &pos, Identifier name,
+               FunctionLitExpr *fun);
 
   FunctionLitExpr *function() const { return fun_; }
-
-  FunctionTypeRepr *type_repr();
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::FunctionDecl;
@@ -254,22 +252,16 @@ class FunctionDecl : public Decl {
 };
 
 /**
- *
+ * A structure declaration
  */
 class StructDecl : public Decl {
  public:
   StructDecl(const SourcePosition &pos, Identifier name,
-             StructTypeRepr *type_repr)
-      : Decl(Kind::StructDecl, pos, name), type_repr_(type_repr) {}
-
-  StructTypeRepr *type_repr() const { return type_repr_; }
+             StructTypeRepr *type_repr);
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::StructDecl;
   }
-
- private:
-  StructTypeRepr *type_repr_;
 };
 
 /**
@@ -279,11 +271,7 @@ class VariableDecl : public Decl {
  public:
   VariableDecl(const SourcePosition &pos, Identifier name, Expr *type_repr,
                Expr *init)
-      : Decl(Kind::VariableDecl, pos, name),
-        type_repr_(type_repr),
-        init_(init) {}
-
-  Expr *type_repr() const { return type_repr_; }
+      : Decl(Kind::VariableDecl, pos, name, type_repr), init_(init) {}
 
   Expr *initial() const { return init_; }
 
@@ -294,7 +282,6 @@ class VariableDecl : public Decl {
   }
 
  private:
-  Expr *type_repr_;
   Expr *init_;
 };
 
@@ -399,25 +386,40 @@ class ExpressionStmt : public Stmt {
 };
 
 /**
+ * Base class for all iteration-based statements
+ */
+class IterationStmt : public Stmt {
+ public:
+  IterationStmt(const SourcePosition &pos, AstNode::Kind kind, BlockStmt *body)
+      : Stmt(kind, pos), body_(body) {}
+
+  BlockStmt *body() const { return body_; }
+
+  static bool classof(const AstNode *node) {
+    return node->kind() >= Kind::ForStmt && node->kind() <= Kind::ForInStmt;
+  }
+
+ private:
+  BlockStmt *body_;
+};
+
+/**
  * A for statement
  */
-class ForStmt : public Stmt {
+class ForStmt : public IterationStmt {
  public:
   ForStmt(const SourcePosition &pos, Stmt *init, Expr *cond, Stmt *next,
           BlockStmt *body)
-      : Stmt(AstNode::Kind::ForStmt, pos),
+      : IterationStmt(pos, AstNode::Kind::ForStmt, body),
         init_(init),
         cond_(cond),
-        next_(next),
-        body_(body) {}
+        next_(next) {}
 
   Stmt *init() const { return init_; }
 
   Expr *condition() const { return cond_; }
 
   Stmt *next() const { return next_; }
-
-  BlockStmt *body() const { return body_; }
 
   bool HasInitializer() const { return init_ != nullptr; }
 
@@ -439,7 +441,30 @@ class ForStmt : public Stmt {
   Stmt *init_;
   Expr *cond_;
   Stmt *next_;
-  BlockStmt *body_;
+};
+
+/**
+ * A range for statement
+ */
+class ForInStmt : public IterationStmt {
+ public:
+  ForInStmt(const SourcePosition &pos, Expr *target, Expr *iter,
+            BlockStmt *body)
+      : IterationStmt(pos, AstNode::Kind::ForInStmt, body),
+        target_(target),
+        iter_(iter) {}
+
+  Expr *target() const { return target_; }
+
+  Expr *iter() const { return iter_; }
+
+  static bool classof(const AstNode *node) {
+    return node->kind() == Kind::ForInStmt;
+  }
+
+ private:
+  Expr *target_;
+  Expr *iter_;
 };
 
 /**
@@ -721,6 +746,26 @@ class LitExpr : public Expr {
 };
 
 /**
+ * A selector expression for struct field access
+ */
+class SelectorExpr : public Expr {
+ public:
+  SelectorExpr(const SourcePosition &pos, Expr *obj, Expr *sel)
+      : Expr(Kind::SelectorExpr, pos), object_(obj), selector_(sel) {}
+
+  Expr *object() { return object_; }
+  Expr *selector() { return selector_; }
+
+  static bool classof(const AstNode *node) {
+    return node->kind() == Kind::SelectorExpr;
+  }
+
+ private:
+  Expr *object_;
+  Expr *selector_;
+};
+
+/**
  * A unary expression with a non-null inner expression and an operator
  */
 class UnaryOpExpr : public Expr {
@@ -743,7 +788,10 @@ class UnaryOpExpr : public Expr {
 
 ////////////////////////////////////////////////////////////////////////////////
 ///
-/// Types
+/// Type representation nodes. A type representation is a thin representation of
+/// how the type appears in code. They are structurally the same as their full
+/// blown Type counterparts, but we use the expressions to defer their type
+/// resolution.
 ///
 ////////////////////////////////////////////////////////////////////////////////
 

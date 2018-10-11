@@ -71,7 +71,9 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
   }
 
   template <typename T>
-  void DumpPrimitive(const T &val) { out_ << val; }
+  void DumpPrimitive(const T &val) {
+    out_ << val;
+  }
 
   void DumpIdentifier(Identifier str) { out_.write(str.data(), str.length()); }
 
@@ -159,7 +161,7 @@ void AstDumperImpl::VisitFieldDecl(FieldDecl *node) {
 void AstDumperImpl::VisitFunctionDecl(FunctionDecl *node) {
   DumpNodeCommon(node);
   DumpIdentifier(node->name());
-  DumpType(node->type_repr()->type());
+  DumpType(node->type_repr()->As<FunctionTypeRepr>()->type());
   DumpExpr(node->function());
 }
 
@@ -174,7 +176,7 @@ void AstDumperImpl::VisitVariableDecl(VariableDecl *node) {
 void AstDumperImpl::VisitStructDecl(StructDecl *node) {
   DumpNodeCommon(node);
   DumpIdentifier(node->name());
-  for (auto *field : node->type_repr()->fields()) {
+  for (auto *field : node->type_repr()->As<StructTypeRepr>()->fields()) {
     DumpDecl(field);
   }
 }
@@ -211,6 +213,13 @@ void AstDumperImpl::VisitForStmt(ForStmt *node) {
   if (node->HasNext()) {
     DumpStmt(node->next());
   }
+  DumpStmt(node->body());
+}
+
+void AstDumperImpl::VisitForInStmt(ForInStmt *node) {
+  DumpNodeCommon(node);
+  DumpExpr(node->iter());
+  DumpExpr(node->target());
   DumpStmt(node->body());
 }
 
@@ -285,6 +294,12 @@ void AstDumperImpl::VisitLitExpr(LitExpr *node) {
       break;
     }
   }
+}
+
+void AstDumperImpl::VisitSelectorExpr(SelectorExpr *node) {
+  DumpNodeCommon(node);
+  DumpExpr(node->object());
+  DumpExpr(node->selector());
 }
 
 void AstDumperImpl::VisitUnaryOpExpr(UnaryOpExpr *node) {

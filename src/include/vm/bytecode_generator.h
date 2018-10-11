@@ -7,6 +7,7 @@
 namespace tpl::vm {
 
 class BytecodeUnit;
+class LoopBuilder;
 
 /**
  * This class takes a TPL program in the form of an AST and compiles it into a
@@ -45,7 +46,9 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
                               BytecodeLabel *else_label,
                               TestFallthrough fallthrough);
 
- private:
+  void VisitIterationStatement(ast::IterationStmt *iteration,
+                               LoopBuilder *loop_builder);
+
   Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type);
 
   //////////////////////////////////////////////////////////////////////////////

@@ -34,7 +34,13 @@ TEST_F(AstTest, HierechyTest) {
   {
     AstNode *all_decls[] = {
         factory.NewFieldDecl(empty_pos(), Identifier(nullptr), nullptr),
-        factory.NewFunctionDecl(empty_pos(), Identifier(nullptr), nullptr),
+        factory.NewFunctionDecl(
+            empty_pos(), Identifier(nullptr),
+            factory.NewFunctionLitExpr(
+                factory.NewFunctionType(
+                    empty_pos(), util::RegionVector<FieldDecl *>(region()),
+                    nullptr),
+                nullptr)),
         factory.NewStructDecl(empty_pos(), Identifier(nullptr), nullptr),
         factory.NewVariableDecl(empty_pos(), Identifier(nullptr), nullptr,
                                 nullptr),

@@ -37,14 +37,14 @@ void Sema::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {
 
 void Sema::VisitFunctionTypeRepr(ast::FunctionTypeRepr *node) {
   // Handle parameters
-  util::RegionVector<ast::Type *> param_types(ast_context().region());
+  util::RegionVector<ast::Field> param_types(ast_context().region());
   for (auto *param : node->parameters()) {
     Visit(param);
     ast::Type *param_type = param->type_repr()->type();
     if (param_type == nullptr) {
       return;
     }
-    param_types.push_back(param_type);
+    param_types.emplace_back(param->name(), param_type);
   }
 
   // Handle return type
@@ -69,14 +69,14 @@ void Sema::VisitPointerTypeRepr(ast::PointerTypeRepr *node) {
 }
 
 void Sema::VisitStructTypeRepr(ast::StructTypeRepr *node) {
-  util::RegionVector<ast::Type *> field_types(ast_context().region());
+  util::RegionVector<ast::Field> field_types(ast_context().region());
   for (auto *field : node->fields()) {
     Visit(field);
     ast::Type *field_type = field->type_repr()->type();
     if (field_type == nullptr) {
       return;
     }
-    field_types.push_back(field_type);
+    field_types.emplace_back(field->name(), field_type);
   }
 
   node->set_type(ast::StructType::Get(ast_context(), std::move(field_types)));

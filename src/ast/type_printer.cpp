@@ -67,10 +67,10 @@ void TypePrinter::VisitIntegerType(const IntegerType *type) {
 void TypePrinter::VisitFunctionType(const FunctionType *type) {
   out_ << "(";
   bool first = true;
-  for (auto *param : type->params()) {
+  for (const auto &param : type->params()) {
     if (!first) out_ << ",";
     first = false;
-    Visit(param);
+    Visit(param.type);
   }
   out_ << ")->";
   Visit(type->return_type());
@@ -99,10 +99,10 @@ void TypePrinter::VisitFloatType(const FloatType *type) {
 void TypePrinter::VisitStructType(const StructType *type) {
   out_ << "struct{";
   bool first = true;
-  for (auto *field : type->fields()) {
+  for (const auto &field : type->fields()) {
     if (!first) out_ << ",";
     first = false;
-    Visit(field);
+    Visit(field.type);
   }
   out_ << "}";
 }

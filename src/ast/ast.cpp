@@ -2,7 +2,13 @@
 
 namespace tpl::ast {
 
-FunctionTypeRepr *FunctionDecl::type_repr() { return fun_->type_repr(); }
+FunctionDecl::FunctionDecl(const SourcePosition &pos, Identifier name,
+                           FunctionLitExpr *fun)
+    : Decl(Kind::FunctionDecl, pos, name, fun->type_repr()), fun_(fun) {}
+
+StructDecl::StructDecl(const SourcePosition &pos, Identifier name,
+                       StructTypeRepr *type_repr)
+    : Decl(Kind::StructDecl, pos, name, type_repr) {}
 
 ExpressionStmt::ExpressionStmt(Expr *expr)
     : Stmt(Kind::ExpressionStmt, expr->position()), expr_(expr) {}

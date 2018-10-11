@@ -2,6 +2,7 @@
 
 #include "ast/ast_context.h"
 #include "ast/type.h"
+#include "runtime/sql_table.h"
 
 namespace tpl::sema {
 
@@ -19,7 +20,6 @@ void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
 }
 
 void Sema::VisitBlockStmt(ast::BlockStmt *node) {
-  // Create a block scope
   SemaScope block_scope(*this, Scope::Kind::Block);
 
   for (auto *stmt : node->statements()) {
@@ -28,7 +28,6 @@ void Sema::VisitBlockStmt(ast::BlockStmt *node) {
 }
 
 void Sema::VisitFile(ast::File *node) {
-  // Create RAII file scope
   SemaScope file_scope(*this, Scope::Kind::File);
 
   for (auto *decl : node->declarations()) {
@@ -57,6 +56,39 @@ void Sema::VisitForStmt(ast::ForStmt *node) {
   }
 
   // The body
+  Visit(node->body());
+}
+
+void Sema::VisitForInStmt(ast::ForInStmt *node) {
+  SemaScope for_scope(*this, Scope::Kind::Loop);
+
+  if (!node->target()->IsIdentifierExpr()) {
+    error_reporter().Report(node->target()->position(),
+                            ErrorMessages::kNonIdentifierTargetInForInLoop);
+    return;
+  }
+
+  if (!node->iter()->IsIdentifierExpr()) {
+    error_reporter().Report(node->iter()->position(),
+                            ErrorMessages::kNonIdentifierIterator);
+    return;
+  }
+
+  auto *target = node->target()->As<ast::IdentifierExpr>();
+  auto *iter = node->iter()->As<ast::IdentifierExpr>();
+
+  auto *table = runtime::LookupTable(target->name().data());
+
+  if (table == nullptr) {
+    error_reporter().Report(target->position(),
+                            ErrorMessages::kNonExistingTable, target->name());
+    return;
+  }
+
+  // Declare iteration variable
+  current_scope()->Declare(iter->name(), ConvertToType(table->schema()));
+
+  // Process body
   Visit(node->body());
 }
 

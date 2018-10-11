@@ -39,7 +39,8 @@ void Sema::VisitVariableDecl(ast::VariableDecl *node) {
 
   // The type should be resolved now
   current_scope()->Declare(
-      node, (declared_type != nullptr ? declared_type : initializer_type));
+      node->name(),
+      (declared_type != nullptr ? declared_type : initializer_type));
 }
 
 void Sema::VisitFieldDecl(ast::FieldDecl *node) { Visit(node->type_repr()); }
@@ -51,7 +52,7 @@ void Sema::VisitFunctionDecl(ast::FunctionDecl *node) {
     return;
   }
 
-  current_scope()->Declare(node, func_type);
+  current_scope()->Declare(node->name(), func_type);
 }
 
 void Sema::VisitStructDecl(ast::StructDecl *node) {
@@ -61,7 +62,7 @@ void Sema::VisitStructDecl(ast::StructDecl *node) {
     return;
   }
 
-  current_scope()->Declare(node, struct_type);
+  current_scope()->Declare(node->name(), struct_type);
 }
 
 }  // namespace tpl::sema

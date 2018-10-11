@@ -123,6 +123,11 @@ class AstNodeFactory {
     return new (region_) IdentifierExpr(pos, name);
   }
 
+  SelectorExpr *NewSelectorExpr(const SourcePosition &pos, Expr *obj,
+                                Expr *sel) {
+    return new (region_) SelectorExpr(pos, obj, sel);
+  }
+
   ArrayTypeRepr *NewArrayType(const SourcePosition &pos, Expr *len,
                               Expr *elem_type) {
     return new (region_) ArrayTypeRepr(pos, len, elem_type);

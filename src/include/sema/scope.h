@@ -29,7 +29,7 @@ class Scope {
   // Declare an element with the given name and type in this scope. Return true
   // if successful and false if an element with the given name already exits in
   // the local scope.
-  bool Declare(ast::Decl *decl, ast::Type *type);
+  bool Declare(ast::Identifier decl_name, ast::Type *type);
 
   ast::Type *Lookup(ast::Identifier name) const;
   ast::Type *LookupLocal(ast::Identifier name) const;

@@ -339,38 +339,48 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
       break;
   }
 
-  return ParseCallExpr();
+  return ParseLeftHandSideExpression();
 }
 
-ast::Expr *Parser::ParseCallExpr() {
-  // CallExpr ::
-  //   PrimaryExpr '(' (Expr)* ')
+ast::Expr *Parser::ParseLeftHandSideExpression() {
+  // LeftHandSideExpression = [ CallExpr | SelectorExpr ] ;
+  //
+  // CallExpr = PrimaryExpr '(' (Expr)* ') ;
+  // SelectorExpr = PrimaryExpr '.' Expr
 
   ast::Expr *result = ParsePrimaryExpr();
 
-  if (Matches(Token::Type::LEFT_PAREN)) {
-    // Parse arguments
+  switch (peek()) {
+    case Token::Type::LEFT_PAREN: {
+      // Call expression
+      Consume(Token::Type::LEFT_PAREN);
 
-    util::RegionVector<ast::Expr *> args(region());
+      util::RegionVector<ast::Expr *> args(region());
 
-    bool done = (peek() == Token::Type::RIGHT_PAREN);
-    while (!done) {
-      // Parse argument
-      ast::Expr *arg = ParseExpr();
-      args.push_back(arg);
+      bool done = (peek() == Token::Type::RIGHT_PAREN);
+      while (!done) {
+        // Parse argument
+        ast::Expr *arg = ParseExpr();
+        args.push_back(arg);
 
-      done = (peek() != Token::Type::COMMA);
-      if (!done) {
-        Next();
+        done = (peek() != Token::Type::COMMA);
+        if (!done) {
+          Next();
+        }
       }
+
+      Expect(Token::Type::RIGHT_PAREN);
+
+      return node_factory().NewCallExpr(result, std::move(args));
     }
-
-    Expect(Token::Type::RIGHT_PAREN);
-
-    result = node_factory().NewCallExpr(result, std::move(args));
+    case Token::Type::DOT: {
+      // Selector expression
+      Consume(Token::Type::DOT);
+      ast::Expr *sel = ParseExpr();
+      return node_factory().NewSelectorExpr(result->position(), result, sel);
+    }
+    default: { return result; }
   }
-
-  return result;
 }
 
 ast::Expr *Parser::ParsePrimaryExpr() {

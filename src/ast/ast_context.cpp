@@ -196,22 +196,23 @@ ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
 
 // static
 StructType *StructType::Get(AstContext &ctx,
-                            util::RegionVector<Type *> &&fields) {
+                            util::RegionVector<Field> &&fields) {
   // TODO(pmenon): Use cache?
 
   // Compute size and alignment. Alignment of struct is alignment of largest
   // struct element.
-  std::size_t size = 0;
-  std::size_t alignment = 0;
-  for (const auto *type : fields) {
+  u32 size = 0;
+  u32 alignment = 0;
+  for (const auto &field : fields) {
     // Check if the type needs to be padded
-    if (!util::MathUtil::IsAligned(size, type->alignment())) {
-      size = util::MathUtil::AlignTo(size, type->alignment());
+    if (!util::MathUtil::IsAligned(size, field.type->alignment())) {
+      size = static_cast<u32>(
+          util::MathUtil::AlignTo(size, field.type->alignment()));
     }
 
     // Update size and calculate alignment
-    size += type->size();
-    alignment = std::max(alignment, type->alignment());
+    size += field.type->size();
+    alignment = std::max(alignment, field.type->alignment());
   }
 
   // Done
@@ -219,15 +220,14 @@ StructType *StructType::Get(AstContext &ctx,
 }
 
 // static
-StructType *StructType::Get(util::RegionVector<Type *> &&fields) {
+StructType *StructType::Get(util::RegionVector<Field> &&fields) {
   TPL_ASSERT(!fields.empty(),
              "Cannot use StructType::Get(fields) with an empty list of fields");
-  return StructType::Get(fields[0]->context(), std::move(fields));
+  return StructType::Get(fields[0].type->context(), std::move(fields));
 }
 
 // static
-FunctionType *FunctionType::Get(util::RegionVector<Type *> &&params,
-                                Type *ret) {
+FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
   // TODO(pmenon): Use cache
   return new (ret->context().region()) FunctionType(std::move(params), ret);
 }

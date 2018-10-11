@@ -8,6 +8,7 @@
 #include "logging/logger.h"
 #include "parsing/parser.h"
 #include "parsing/scanner.h"
+#include "runtime/sql_table.h"
 #include "sema/error_reporter.h"
 #include "sema/sema.h"
 #include "tpl.h"
@@ -99,6 +100,9 @@ int main(int argc, char **argv) {
 
   LOG_INFO("Welcome to TPL (ver. {}.{})\n", TPL_VERSION_MAJOR,
            TPL_VERSION_MINOR);
+
+  // Initialize tables
+  tpl::runtime::InitTables();
 
   if (argc == 2) {
     std::string filename(argv[1]);
