@@ -115,7 +115,7 @@ ast::Decl *Parser::ParseVariableDecl() {
 
 ast::Stmt *Parser::ParseStmt() {
   // Statement = Block | ExpressionStmt | ForStmt | IfStmt | ReturnStmt |
-  // SimpleStmt | VariableDecl ;
+  //             SimpleStmt | VariableDecl ;
 
   switch (peek()) {
     case Token::Type::LEFT_BRACE: {
@@ -139,7 +139,7 @@ ast::Stmt *Parser::ParseStmt() {
 }
 
 ast::Stmt *Parser::ParseSimpleStmt() {
-  // SimpleStmt = AssignmentStmt | ExpressionStmt
+  // SimpleStmt = AssignmentStmt | ExpressionStmt ;
   ast::Expr *left = ParseExpr();
 
   if (Matches(Token::Type::EQUAL)) {
@@ -177,17 +177,19 @@ ast::Stmt *Parser::ParseBlockStmt() {
 }
 
 Parser::ForHeader Parser::ParseForHeader() {
-  // ForStmt = 'for' '(' [ Condition | ForHeader ] ')' Block ;
+  // ForStmt = 'for' '(' [ Condition | ForHeader | ForInHeader] ')' Block ;
   //
   // Condition = Expr ;
   //
-  // ForHeader = [ Stmt ] ';' [ Condition ] ';' [ Stmt ]
+  // ForHeader = [ Stmt ] ';' [ Condition ] ';' [ Stmt ] ;
+  //
+  // ForInHeader = [ Expr ] 'in' [ Expr ] ;
 
   Expect(Token::Type::LEFT_PAREN);
 
+  // Infinite loop ?
   if (Matches(Token::Type::RIGHT_PAREN)) {
-    // Infinite loop
-    return {nullptr, nullptr, nullptr};
+    return ForHeader::Infinite();
   }
 
   ast::Stmt *init = nullptr;
@@ -196,8 +198,16 @@ Parser::ForHeader Parser::ParseForHeader() {
 
   init = ParseStmt();
 
+  // For-in loop?
+  if (Matches(Token::Type::IN)) {
+    ast::Expr *target = init->SafeAs<ast::ExpressionStmt>()->expression();
+    ast::Expr *iter = ParseStmt()->SafeAs<ast::ExpressionStmt>()->expression();
+    Expect(Token::Type::RIGHT_PAREN);
+    return ForHeader::ForIn(target, iter);
+  }
+
+  // Regular for-loop ?
   if (Matches(Token::Type::SEMI)) {
-    // Regular for-loop
     if (!Matches(Token::Type::SEMI)) {
       cond = ParseExpr();
       Expect(Token::Type::SEMI);
@@ -206,25 +216,14 @@ Parser::ForHeader Parser::ParseForHeader() {
       next = ParseStmt();
       Expect(Token::Type::RIGHT_PAREN);
     }
-  } else {
-    // While-loop
-    Expect(Token::Type::RIGHT_PAREN);
-    if (auto *cond_stmt = init->SafeAs<ast::ExpressionStmt>()) {
-      cond = cond_stmt->expression();
-    } else if (auto *assign = init->SafeAs<ast::AssignmentStmt>()) {
-      // Often, novice users coming from C/C++ may write 'for (x = b) {}'
-      // wrongly assuming that assignments are expressions in TPL. We try to
-      // catch that here.
-      // TODO(pmenon): Fix me to print out expression string
-      (void)assign;
-      error_reporter().Report(scanner().current_position(),
-                              sema::ErrorMessages::kAssignmentUsedAsValue,
-                              ast::Identifier(""), ast::Identifier(""));
-    }
-    init = nullptr;
+    return ForHeader::Standard(init, cond, next);
   }
 
-  return {init, cond, next};
+  // While-loop ...
+  Expect(Token::Type::RIGHT_PAREN);
+  cond = init->SafeAs<ast::ExpressionStmt>()->expression();
+  init = next = nullptr;
+  return ForHeader::Standard(init, cond, next);
 }
 
 ast::Stmt *Parser::ParseForStmt() {
@@ -234,17 +233,22 @@ ast::Stmt *Parser::ParseForStmt() {
 
   // Parse the header to get the initialization statement, loop condition and
   // next-value statement
-  const auto &[init, cond, next] = ParseForHeader();
+  const ForHeader &header = ParseForHeader();
 
   // Now the loop body
   auto *body = ParseBlockStmt()->As<ast::BlockStmt>();
 
-  // Done
-  return node_factory().NewForStmt(position, init, cond, next, body);
+  if (header.IsStandard()) {
+    const auto &[init, cond, next] = header.GetForElements();
+    return node_factory().NewForStmt(position, init, cond, next, body);
+  } else {
+    const auto &[target, iter] = header.GetForInElements();
+    return node_factory().NewForInStmt(position, target, iter, body);
+  }
 }
 
 ast::Stmt *Parser::ParseIfStmt() {
-  // IfStmt = 'if' '(' Expr ')' Block [ 'else' ( IfStmt | Block ) ];
+  // IfStmt = 'if' '(' Expr ')' Block [ 'else' ( IfStmt | Block ) ] ;
 
   Expect(Token::Type::IF);
 
@@ -317,12 +321,7 @@ ast::Expr *Parser::ParseBinaryOpExpr(uint32_t min_prec) {
 }
 
 ast::Expr *Parser::ParseUnaryOpExpr() {
-  // UnaryOpExpr ::
-  //   '!' UnaryOpExpr
-  //   '-' UnaryOpExpr
-  //   '*' UnaryOpExpr
-  //   '&' UnaryOpExpr
-  //   '~' UnaryOpExpr
+  // UnaryOpExpr = [ '&' | '!' | '~' | '-' | '*' ] UnaryOpExpr ;
 
   switch (peek()) {
     case Token::Type::AMPERSAND:
@@ -376,7 +375,7 @@ ast::Expr *Parser::ParseLeftHandSideExpression() {
     case Token::Type::DOT: {
       // Selector expression
       Consume(Token::Type::DOT);
-      ast::Expr *sel = ParseExpr();
+      ast::Expr *sel = ParsePrimaryExpr();
       return node_factory().NewSelectorExpr(result->position(), result, sel);
     }
     default: { return result; }

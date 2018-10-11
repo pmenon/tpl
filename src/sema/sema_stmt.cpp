@@ -77,16 +77,16 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
   auto *target = node->target()->As<ast::IdentifierExpr>();
   auto *iter = node->iter()->As<ast::IdentifierExpr>();
 
-  auto *table = runtime::LookupTable(target->name().data());
+  auto *table = runtime::LookupTable(iter->name().data());
 
   if (table == nullptr) {
-    error_reporter().Report(target->position(),
-                            ErrorMessages::kNonExistingTable, target->name());
+    error_reporter().Report(iter->position(),
+                            ErrorMessages::kNonExistingTable, iter->name());
     return;
   }
 
   // Declare iteration variable
-  current_scope()->Declare(iter->name(), ConvertToType(table->schema()));
+  current_scope()->Declare(target->name(), ConvertToType(table->schema()));
 
   // Process body
   Visit(node->body());

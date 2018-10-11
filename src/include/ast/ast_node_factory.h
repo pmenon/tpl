@@ -59,6 +59,11 @@ class AstNodeFactory {
     return new (region_) ForStmt(pos, init, cond, next, body);
   }
 
+  ForInStmt *NewForInStmt(const SourcePosition &pos, Expr *target, Expr *iter,
+                          BlockStmt *body) {
+    return new (region_) ForInStmt(pos, target, iter, body);
+  }
+
   IfStmt *NewIfStmt(const SourcePosition &pos, Expr *cond, BlockStmt *then_stmt,
                     Stmt *else_stmt) {
     return new (region_) IfStmt(pos, cond, then_stmt, else_stmt);

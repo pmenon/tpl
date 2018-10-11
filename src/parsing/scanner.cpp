@@ -272,6 +272,7 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
   GROUP_ELEM("fun", Token::Type::FUN)       \
   GROUP_START('i')                          \
   GROUP_ELEM("if", Token::Type::IF)         \
+  GROUP_ELEM("in", Token::Type::IN)         \
   GROUP_START('n')                          \
   GROUP_ELEM("nil", Token::Type::NIL)       \
   GROUP_START('o')                          \

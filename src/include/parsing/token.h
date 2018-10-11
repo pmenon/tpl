@@ -60,6 +60,7 @@ namespace tpl::parsing {
   K(FOR, "for", 0)                                 \
   K(FUN, "fun", 0)                                 \
   K(IF, "if", 0)                                   \
+  K(IN, "in", 0)                                   \
   K(NIL, "nil", 0)                                 \
   K(RETURN, "return", 0)                           \
   K(STRUCT, "struct", 0)                           \
