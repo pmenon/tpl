@@ -100,51 +100,7 @@ class Parser {
 
   ast::Stmt *ParseBlockStmt();
 
-  class ForHeader {
-   public:
-    // Header for infinite loops
-    static ForHeader Infinite() { return ForHeader(); }
-
-    // Header for standard for-loops
-    static ForHeader Standard(ast::Stmt *init, ast::Expr *cond,
-                              ast::Stmt *next) {
-      return ForHeader(init, cond, next, nullptr, nullptr);
-    }
-
-    // Header for for-in loops
-    static ForHeader ForIn(ast::Expr *target, ast::Expr *iter) {
-      return ForHeader(nullptr, nullptr, nullptr, target, iter);
-    }
-
-    bool IsForIn() const { return target != nullptr && iter != nullptr; }
-
-    bool IsStandard() const { return !IsForIn(); }
-
-    std::tuple<ast::Stmt *, ast::Expr *, ast::Stmt *> GetForElements() const {
-      TPL_ASSERT(IsStandard(), "Loop isn't a standard for-loop");
-      return {init, cond, next};
-    }
-
-    std::tuple<ast::Expr *, ast::Expr *> GetForInElements() const {
-      TPL_ASSERT(IsForIn(), "Loop isn't a for-in");
-      return {target, iter};
-    }
-
-   private:
-    ForHeader(ast::Stmt *init, ast::Expr *cond, ast::Stmt *next,
-              ast::Expr *target, ast::Expr *iter)
-        : init(init), cond(cond), next(next), target(target), iter(iter) {}
-
-    ForHeader() : ForHeader(nullptr, nullptr, nullptr, nullptr, nullptr) {}
-
-   private:
-    ast::Stmt *init;
-    ast::Expr *cond;
-    ast::Stmt *next;
-
-    ast::Expr *target;
-    ast::Expr *iter;
-  };
+  class ForHeader;
 
   ForHeader ParseForHeader();
 
