@@ -203,6 +203,7 @@ StructType *StructType::Get(AstContext &ctx,
   // struct element.
   u32 size = 0;
   u32 alignment = 0;
+  util::RegionVector<u32> field_offsets(ctx.region());
   for (const auto &field : fields) {
     // Check if the type needs to be padded
     if (!util::MathUtil::IsAligned(size, field.type->alignment())) {
@@ -211,12 +212,14 @@ StructType *StructType::Get(AstContext &ctx,
     }
 
     // Update size and calculate alignment
+    field_offsets.push_back(size);
     size += field.type->size();
     alignment = std::max(alignment, field.type->alignment());
   }
 
   // Done
-  return new (ctx.region()) StructType(ctx, size, alignment, std::move(fields));
+  return new (ctx.region()) StructType(ctx, size, alignment, std::move(fields),
+                                       std::move(field_offsets));
 }
 
 // static

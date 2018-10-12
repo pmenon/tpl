@@ -301,6 +301,15 @@ class StructType : public Type {
     return nullptr;
   }
 
+  u32 GetOffsetOfFieldByName(Identifier name) const {
+    for (u32 i = 0; i < fields_.size(); i++) {
+      if (fields_[i].name == name) {
+        return field_offsets_[i];
+      }
+    }
+    return 0;
+  }
+
   const util::RegionVector<Field> &fields() const { return fields_; }
 
   static StructType *Get(AstContext &ctx, util::RegionVector<Field> &&fields);
@@ -312,12 +321,15 @@ class StructType : public Type {
 
  private:
   explicit StructType(AstContext &ctx, u32 size, u32 alignment,
-                      util::RegionVector<Field> &&fields)
+                      util::RegionVector<Field> &&fields,
+                      util::RegionVector<u32> &&field_offsets)
       : Type(ctx, size, alignment, Type::Kind::StructType),
-        fields_(std::move(fields)) {}
+        fields_(std::move(fields)),
+        field_offsets_(std::move(field_offsets)) {}
 
  private:
   util::RegionVector<Field> fields_;
+  util::RegionVector<u32> field_offsets_;
 };
 
 /**

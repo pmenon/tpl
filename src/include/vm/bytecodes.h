@@ -54,6 +54,8 @@ namespace tpl::vm {
   V(ScanNext)                                                                \
   V(ScanClose)                                                               \
                                                                              \
+  V(LoadEffectiveAddress, OperandType::Reg, OperandType::Reg,                \
+    OperandType::Imm4)                                                       \
   V(Return)                                                                  \
                                                                              \
   /* Primitive operations */                                                 \

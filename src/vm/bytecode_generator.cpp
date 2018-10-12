@@ -254,7 +254,8 @@ void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
 
 void BytecodeGenerator::VisitStructDecl(ast::StructDecl *node) {
   // TODO
-  //curr_func()->NewLocal(node->type_repr()->type(), node->name().data(), false);
+  // curr_func()->NewLocal(node->type_repr()->type(), node->name().data(),
+  // false);
 }
 
 void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
@@ -374,8 +375,14 @@ void BytecodeGenerator::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
 }
 
 void BytecodeGenerator::VisitSelectorExpr(ast::SelectorExpr *node) {
-  // TODO
-  AstVisitor::VisitSelectorExpr(node);
+  ast::StructType *type = node->object()->type()->As<ast::StructType>();
+  ast::IdentifierExpr *field_name = node->selector()->As<ast::IdentifierExpr>();
+
+  u32 offset = type->GetOffsetOfFieldByName(field_name->name());
+
+  RegisterId dest = execution_result()->GetOrCreateDestination(node->type());
+  RegisterId src = VisitExpressionForValue(node->object());
+  emitter()->EmitLea(dest, src, offset);
 }
 
 void BytecodeGenerator::VisitDeclStmt(ast::DeclStmt *node) {

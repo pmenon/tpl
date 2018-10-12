@@ -14,6 +14,7 @@ class BytecodeLabel;
 
 class BytecodeEmitter {
   static const u16 kJumpPlaceholder = std::numeric_limits<u16>::max() - 1u;
+
  public:
   BytecodeEmitter() = default;
 
@@ -27,8 +28,10 @@ class BytecodeEmitter {
   void EmitLoadImm8(RegisterId reg_id, i64 val);
 
   void EmitJump(Bytecode bytecode, BytecodeLabel *label);
-  void EmitConditionalJump(Bytecode bytecode, RegisterId cond, BytecodeLabel *label);
+  void EmitConditionalJump(Bytecode bytecode, RegisterId cond,
+                           BytecodeLabel *label);
 
+  void EmitLea(RegisterId dest, RegisterId src, u32 offset);
   void EmitReturn();
 
   void Emit(Bytecode bytecode, RegisterId dest, RegisterId input);

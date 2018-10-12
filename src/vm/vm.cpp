@@ -102,6 +102,7 @@ void VM::Run(Frame *frame) {
 #define READ_IMM2() Read<i16>(&ip)
 #define READ_IMM4() Read<i32>(&ip)
 #define READ_IMM8() Read<i64>(&ip)
+#define READ_UIMM4() Read<u32>(&ip);
 #define READ_JMP_OFFSET() Read<u16>(&ip)
 #define READ_REG_ID() Read<u16>(&ip)
 #define READ_REG_COUNT() Read<u16>(&ip)
@@ -291,6 +292,14 @@ void VM::Run(Frame *frame) {
     i64 *dest = frame->LocalAt<i64>(READ_REG_ID());
     i64 val = READ_IMM8();
     OpLoadImm_i64(dest, val);
+    DISPATCH_NEXT();
+  }
+
+  CASE_OP(LoadEffectiveAddress) : {
+    byte **dest = frame->LocalAt<byte*>(READ_REG_ID());
+    byte *src = frame->LocalAt<byte>(READ_REG_ID());
+    u32 offset = READ_UIMM4();
+    OpLoadEffectiveAddress(dest, src, offset);
     DISPATCH_NEXT();
   }
 
