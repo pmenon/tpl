@@ -80,8 +80,8 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
   auto *table = runtime::LookupTable(iter->name().data());
 
   if (table == nullptr) {
-    error_reporter().Report(iter->position(),
-                            ErrorMessages::kNonExistingTable, iter->name());
+    error_reporter().Report(iter->position(), ErrorMessages::kNonExistingTable,
+                            iter->name());
     return;
   }
 

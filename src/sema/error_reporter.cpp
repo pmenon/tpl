@@ -35,8 +35,8 @@ void ErrorReporter::MessageArgument::FormatMessageArgument(
       break;
     }
     case Kind::Token: {
-      str.append(
-          parsing::Token::String(static_cast<parsing::Token::Type>(integer_)));
+      str.append(parsing::Token::GetString(
+          static_cast<parsing::Token::Type>(integer_)));
       break;
     }
     case Kind::Type: {

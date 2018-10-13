@@ -14,7 +14,7 @@ class Hasher {
   enum class HashMethod { Fnv1, Murmur3, Crc };
 
   static u32 Hash(const char *buf, u64 len,
-                       HashMethod method = HashMethod::Crc);
+                  HashMethod method = HashMethod::Crc);
 
  private:
   static u32 HashFnv1(const char *buf, u64 len);

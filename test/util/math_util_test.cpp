@@ -13,5 +13,4 @@ TEST(MathUtilTest, AlignToTest) {
   EXPECT_EQ(16u, MathUtil::AlignTo(9, 8));
 }
 
-
 }  // namespace tpl::util::test

@@ -67,7 +67,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
   }
 
   void DumpToken(parsing::Token::Type type) {
-    out_ << " '" << parsing::Token::String(type) << "'";
+    out_ << " '" << parsing::Token::GetString(type) << "'";
   }
 
   template <typename T>

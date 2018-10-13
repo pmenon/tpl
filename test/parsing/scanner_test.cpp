@@ -57,8 +57,8 @@ void CheckEquality(uint32_t test_idx, const std::vector<Token::Type> &expected,
     if (expected[i] != actual[i]) {
       EXPECT_EQ(expected[i], actual[i])
           << "Test " << test_idx << ": expected token type '"
-          << Token::String(expected[i]) << "' at pos " << i << " but got '"
-          << Token::String(actual[i]) << "'";
+          << Token::GetString(expected[i]) << "' at pos " << i << " but got '"
+          << Token::GetString(actual[i]) << "'";
     }
   }
 }

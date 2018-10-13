@@ -339,17 +339,17 @@ ast::Expr *Parser::ParseBinaryOpExpr(uint32_t min_prec) {
 
   ast::Expr *left = ParseUnaryOpExpr();
 
-  for (uint32_t prec = Token::Precedence(peek()); prec > min_prec; prec--) {
+  for (uint32_t prec = Token::GetPrecedence(peek()); prec > min_prec; prec--) {
     // It's possible that we reach a token that has lower precedence than the
     // minimum (e.g., EOS) so we check and early exit
-    if (Token::Precedence(peek()) < min_prec) {
+    if (Token::GetPrecedence(peek()) < min_prec) {
       break;
     }
 
     // Make sure to consume **all** tokens with the same precedence as the
     // current value before moving on to a lower precedence expression. This is
     // to handle cases like 1+2+3+4.
-    while (Token::Precedence(peek()) == prec) {
+    while (Token::GetPrecedence(peek()) == prec) {
       Token::Type op = Next();
       const SourcePosition &position = scanner().current_position();
       ast::Expr *right = ParseBinaryOpExpr(prec);

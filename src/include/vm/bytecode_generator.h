@@ -65,7 +65,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
     execution_result_ = execution_result;
   }
 
-  FunctionInfo *curr_func() { return &functions_.back(); }
+  FunctionInfo *current_function() { return &functions_.back(); }
 
   const std::vector<FunctionInfo> &functions() const { return functions_; }
 

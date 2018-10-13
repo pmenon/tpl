@@ -11,9 +11,6 @@
 #include "util/region_containers.h"
 
 namespace tpl::ast {
-
-class Type;
-
 /*
  *
  */
@@ -78,9 +75,11 @@ class Type;
   FILE_NODE(T)         \
   STATEMENT_NODES(T)
 
+// Forward declare some base classes
 class Decl;
 class Expr;
 class Stmt;
+class Type;
 
 // Forward declare all nodes
 #define FORWARD_DECLARE(name) class name;

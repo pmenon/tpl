@@ -30,7 +30,7 @@ class BytecodeGenerator::ExpressionResultScope {
 
   RegisterId GetOrCreateDestination(ast::Type *type) {
     if (destination_ == Register::kInvalidIndex) {
-      destination_ = generator_->curr_func()->NewLocal(type);
+      destination_ = generator_->current_function()->NewLocal(type);
     }
 
     return destination_;
@@ -144,7 +144,7 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
 }
 
 void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
-  auto reg_id = curr_func()->LookupLocal(node->name().data());
+  auto reg_id = current_function()->LookupLocal(node->name().data());
   execution_result()->set_destination(reg_id);
 }
 
@@ -174,7 +174,8 @@ void BytecodeGenerator::VisitVariableDecl(ast::VariableDecl *node) {
   }
 
   // Register this variable in the function as a local
-  RegisterId reg = curr_func()->NewLocal(type, node->name().data(), false);
+  RegisterId reg =
+      current_function()->NewLocal(type, node->name().data(), false);
 
   // If there's an initializer, generate code for it now
   if (node->initial() != nullptr) {
@@ -210,7 +211,7 @@ void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
 
 void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
   if (node->ret() != nullptr) {
-    VisitExpressionWithTarget(node->ret(), curr_func()->GetRVRegister());
+    VisitExpressionWithTarget(node->ret(), current_function()->GetRVRegister());
   }
   emitter()->EmitReturn();
 }

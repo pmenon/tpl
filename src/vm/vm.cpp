@@ -296,7 +296,7 @@ void VM::Run(Frame *frame) {
   }
 
   CASE_OP(LoadEffectiveAddress) : {
-    byte **dest = frame->LocalAt<byte*>(READ_REG_ID());
+    byte **dest = frame->LocalAt<byte *>(READ_REG_ID());
     byte *src = frame->LocalAt<byte>(READ_REG_ID());
     u32 offset = READ_UIMM4();
     OpLoadEffectiveAddress(dest, src, offset);

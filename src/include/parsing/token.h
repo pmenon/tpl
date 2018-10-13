@@ -77,8 +77,8 @@ namespace tpl::parsing {
 
 class Token {
  public:
-#define T(name, str, precedence) name,
   enum class Type : u8 {
+#define T(name, str, precedence) name,
     TOKENS(T, T)
 #undef T
 #define T(name, str, precedence) +1
@@ -89,20 +89,22 @@ class Token {
   static const u32 kTokenCount = static_cast<u32>(Type::Last) + 1;
 
   // Get the name of a given token type
-  static const char *Name(Type type) { return name_[static_cast<u32>(type)]; }
+  static const char *GetName(Type type) {
+    return kTokenNames[static_cast<u32>(type)];
+  }
 
   // Get the stringified version of a given token type
-  static const char *String(Type type) {
-    return string_[static_cast<u32>(type)];
+  static const char *GetString(Type type) {
+    return kTokenStrings[static_cast<u32>(type)];
   }
 
   // Get the precedence of a given token
-  static const u32 Precedence(Type type) {
-    return precedence_[static_cast<u32>(type)];
+  static const u32 GetPrecedence(Type type) {
+    return kTokenPrecedence[static_cast<u32>(type)];
   }
 
   // Get the lowest operator precedence we support
-  static constexpr const u32 LowestPrecedence() { return 0; }
+  static const u32 LowestPrecedence() { return 0; }
 
   // Is the given token a comparison operator?
   static bool IsCompareOp(Type op) {
@@ -111,9 +113,9 @@ class Token {
   }
 
  private:
-  static const char *name_[];
-  static const char *string_[];
-  static const u32 precedence_[];
+  static const char *kTokenNames[];
+  static const char *kTokenStrings[];
+  static const u32 kTokenPrecedence[];
 };
 
 }  // namespace tpl::parsing

@@ -24,5 +24,4 @@ TEST_F(TokenTest, ComparisonOpTest) {
   EXPECT_TRUE(Token::IsCompareOp(Token::Type::LESS_EQUAL));
 }
 
-
 }  // namespace tpl::parsing::test

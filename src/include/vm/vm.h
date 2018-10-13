@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "util/common.h"
-#include "vm/bytecodes.h"
 #include "vm/bytecode_unit.h"
+#include "vm/bytecodes.h"
 
 namespace tpl::vm {
 
@@ -14,6 +14,7 @@ class VM {
   static void Execute(const BytecodeUnit &unit, const std::string &name);
 
   class Frame;
+
  private:
   VM(const BytecodeUnit &unit);
 

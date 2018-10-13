@@ -5,12 +5,12 @@
 namespace tpl::util {
 
 template <typename ResolutionRatio = std::ratio<1>>
-class StopWatch {
+class Timer {
   using Clock = std::chrono::high_resolution_clock;
   using TimePoint = std::chrono::time_point<Clock>;
 
  public:
-  StopWatch() noexcept : total_(0), elapsed_(0) { Start(); }
+  Timer() noexcept : total_(0), elapsed_(0) { Start(); }
 
   void Start() noexcept { start_ = Clock::now(); }
 
