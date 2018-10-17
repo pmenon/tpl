@@ -9,7 +9,7 @@ namespace tpl::util {
 // Bitfield for encoding/decoding values of type T into a storage space of type
 // S. The values are located at the bit 'position' and have a size of 'size'
 template <typename S, typename T, unsigned position, unsigned size>
-class BitField {
+class BitFieldBase {
  public:
   // Some checks
   static_assert((sizeof(S) * kBitsPerByte) >= (position + size),
@@ -20,11 +20,11 @@ class BitField {
                 "The provided size of the bitfield is smaller than the type "
                 "you want to encode");
 
-  static constexpr const uintptr_t kUWord = 1U;
+  static constexpr const S kOne = static_cast<S>(1U);
 
-  static constexpr const uintptr_t kNextBit = position + size;
+  static constexpr const S kNextBit = position + size;
 
-  static constexpr const S kMask = (kUWord << size) - 1;
+  static constexpr const S kMask = (kOne << size) - 1;
 
   static constexpr const S kMaskInPosition = kMask << position;
 
@@ -42,5 +42,17 @@ class BitField {
     return (curr_storage & ~mask_in_position()) | Encode(update);
   }
 };
+
+template <typename T, unsigned position, unsigned size>
+class BitField8 : public BitFieldBase<u8, T, position, size> {};
+
+template <typename T, unsigned position, unsigned size>
+class BitField16 : public BitFieldBase<u16, T, position, size> {};
+
+template <typename T, unsigned position, unsigned size>
+class BitField32 : public BitFieldBase<u32, T, position, size> {};
+
+template <typename T, unsigned position, unsigned size>
+class BitField64 : public BitFieldBase<u64, T, position, size> {};
 
 }  // namespace tpl::util
