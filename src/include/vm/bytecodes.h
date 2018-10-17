@@ -36,59 +36,46 @@ namespace tpl::vm {
 /**
  * The master list of all bytecodes and its operands.
  */
-#define BYTECODE_LIST(V)                                                     \
-  /* Constants */                                                            \
-  V(LoadImm1, OperandType::Reg, OperandType::Imm1)                           \
-  V(LoadImm2, OperandType::Reg, OperandType::Imm2)                           \
-  V(LoadImm4, OperandType::Reg, OperandType::Imm4)                           \
-  V(LoadImm8, OperandType::Reg, OperandType::Imm8)                           \
-                                                                             \
-  /* Branching */                                                            \
-  V(Jump, OperandType::UImm2)                                                \
-  V(JumpLoop, OperandType::UImm2)                                            \
-  V(JumpIfTrue, OperandType::Reg, OperandType::UImm2)                        \
-  V(JumpIfFalse, OperandType::Reg, OperandType::UImm2)                       \
-                                                                             \
-  /* Table scanning */                                                       \
-  V(ScanOpen)                                                                \
-  V(ScanNext)                                                                \
-  V(ScanClose)                                                               \
-                                                                             \
-  V(LoadEffectiveAddress, OperandType::Reg, OperandType::Reg,                \
-    OperandType::Imm4)                                                       \
-  V(Return)                                                                  \
-                                                                             \
-  /* Primitive operations */                                                 \
-  CREATE_FOR_INT_TYPES(V, Add, OperandType::Reg, OperandType::Reg,           \
-                       OperandType::Reg)                                     \
-  CREATE_FOR_INT_TYPES(V, Sub, OperandType::Reg, OperandType::Reg,           \
-                       OperandType::Reg)                                     \
-  CREATE_FOR_INT_TYPES(V, Mul, OperandType::Reg, OperandType::Reg,           \
-                       OperandType::Reg)                                     \
-  CREATE_FOR_INT_TYPES(V, Div, OperandType::Reg, OperandType::Reg,           \
-                       OperandType::Reg)                                     \
-  CREATE_FOR_INT_TYPES(V, Rem, OperandType::Reg, OperandType::Reg,           \
-                       OperandType::Reg)                                     \
-  CREATE_FOR_INT_TYPES(V, BitAnd, OperandType::Reg, OperandType::Reg,        \
-                       OperandType::Reg)                                     \
-  CREATE_FOR_INT_TYPES(V, BitOr, OperandType::Reg, OperandType::Reg,         \
-                       OperandType::Reg)                                     \
-  CREATE_FOR_INT_TYPES(V, BitXor, OperandType::Reg, OperandType::Reg,        \
-                       OperandType::Reg)                                     \
-  CREATE_FOR_INT_TYPES(V, Neg, OperandType::Reg, OperandType::Reg)           \
-  CREATE_FOR_INT_TYPES(V, BitNeg, OperandType::Reg, OperandType::Reg)        \
-  CREATE_FOR_INT_TYPES(V, GreaterThan, OperandType::Reg, OperandType::Reg,   \
-                       OperandType::Reg)                                     \
-  CREATE_FOR_INT_TYPES(V, GreaterThanEqual, OperandType::Reg,                \
-                       OperandType::Reg, OperandType::Reg)                   \
-  CREATE_FOR_INT_TYPES(V, Equal, OperandType::Reg, OperandType::Reg,         \
-                       OperandType::Reg)                                     \
-  CREATE_FOR_INT_TYPES(V, LessThan, OperandType::Reg, OperandType::Reg,      \
-                       OperandType::Reg)                                     \
-  CREATE_FOR_INT_TYPES(V, LessThanEqual, OperandType::Reg, OperandType::Reg, \
-                       OperandType::Reg)                                     \
-  CREATE_FOR_INT_TYPES(V, NotEqual, OperandType::Reg, OperandType::Reg,      \
-                       OperandType::Reg)
+// clang-format off
+#define BYTECODE_LIST(V)                                                                                               \
+  /* Constants */                                                                                                      \
+  V(LoadImm1, OperandType::Reg, OperandType::Imm1)                                                                     \
+  V(LoadImm2, OperandType::Reg, OperandType::Imm2)                                                                     \
+  V(LoadImm4, OperandType::Reg, OperandType::Imm4)                                                                     \
+  V(LoadImm8, OperandType::Reg, OperandType::Imm8)                                                                     \
+                                                                                                                       \
+  /* Primitive operations */                                                                                           \
+  CREATE_FOR_INT_TYPES(V, Add, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                   \
+  CREATE_FOR_INT_TYPES(V, Sub, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                   \
+  CREATE_FOR_INT_TYPES(V, Mul, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                   \
+  CREATE_FOR_INT_TYPES(V, Div, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                   \
+  CREATE_FOR_INT_TYPES(V, Rem, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                   \
+  CREATE_FOR_INT_TYPES(V, BitAnd, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                \
+  CREATE_FOR_INT_TYPES(V, BitOr, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                 \
+  CREATE_FOR_INT_TYPES(V, BitXor, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                \
+  CREATE_FOR_INT_TYPES(V, Neg, OperandType::Reg, OperandType::Reg)                                                     \
+  CREATE_FOR_INT_TYPES(V, BitNeg, OperandType::Reg, OperandType::Reg)                                                  \
+  CREATE_FOR_INT_TYPES(V, GreaterThan, OperandType::Reg, OperandType::Reg, OperandType::Reg)                           \
+  CREATE_FOR_INT_TYPES(V, GreaterThanEqual, OperandType::Reg, OperandType::Reg, OperandType::Reg)                      \
+  CREATE_FOR_INT_TYPES(V, Equal, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                 \
+  CREATE_FOR_INT_TYPES(V, LessThan, OperandType::Reg, OperandType::Reg, OperandType::Reg)                              \
+  CREATE_FOR_INT_TYPES(V, LessThanEqual, OperandType::Reg, OperandType::Reg, OperandType::Reg)                         \
+  CREATE_FOR_INT_TYPES(V, NotEqual, OperandType::Reg, OperandType::Reg, OperandType::Reg)                              \
+                                                                                                                       \
+  /* Branching */                                                                                                      \
+  V(Jump, OperandType::UImm2)                                                                                          \
+  V(JumpLoop, OperandType::UImm2)                                                                                      \
+  V(JumpIfTrue, OperandType::Reg, OperandType::UImm2)                                                                  \
+  V(JumpIfFalse, OperandType::Reg, OperandType::UImm2)                                                                 \
+                                                                                                                       \
+  /* Table scanning */                                                                                                 \
+  V(ScanOpen)                                                                                                          \
+  V(ScanNext)                                                                                                          \
+  V(ScanClose)                                                                                                         \
+                                                                                                                       \
+  V(Lea, OperandType::Reg, OperandType::Reg, OperandType::Imm4)                                                        \
+  V(Return)
+// clang-format on
 
 /**
  * The enumeration of all possible bytecode instructions. A bytecode takes up

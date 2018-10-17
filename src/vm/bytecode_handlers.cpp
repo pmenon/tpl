@@ -99,7 +99,7 @@ INT_TYPES(LOAD_CONSTANT)
 #undef BITS
 #undef LOAD_CONSTANT
 
-void OpLoadEffectiveAddress(byte **dest, byte *src, u32 offset) {
+void OpLea(byte **dest, byte *src, u32 offset) {
   *dest = src + offset;
 }
 

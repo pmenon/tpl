@@ -66,7 +66,7 @@ void BytecodeEmitter::EmitConditionalJump(Bytecode bytecode, RegisterId cond,
 }
 
 void BytecodeEmitter::EmitLea(RegisterId dest, RegisterId src, u32 offset) {
-  EmitOp(Bytecode::LoadEffectiveAddress);
+  EmitOp(Bytecode::Lea);
   EmitRegisters(dest, src);
   EmitImmediateValue(offset);
 }

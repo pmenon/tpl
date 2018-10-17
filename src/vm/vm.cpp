@@ -295,11 +295,11 @@ void VM::Run(Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  CASE_OP(LoadEffectiveAddress) : {
+  CASE_OP(Lea) : {
     byte **dest = frame->LocalAt<byte *>(READ_REG_ID());
     byte *src = frame->LocalAt<byte>(READ_REG_ID());
     u32 offset = READ_UIMM4();
-    OpLoadEffectiveAddress(dest, src, offset);
+    OpLea(dest, src, offset);
     DISPATCH_NEXT();
   }
 
