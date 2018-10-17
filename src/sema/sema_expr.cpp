@@ -244,8 +244,13 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
 }
 
 void Sema::VisitSelectorExpr(ast::SelectorExpr *node) {
-  // Resolve to make sure object refers to valid
   ast::Type *obj_type = Resolve(node->object());
+
+  if (auto *pointer_type = obj_type->SafeAs<ast::PointerType>()) {
+    // Unlike C/C++, TPL allows selectors on both struct types and pointers to
+    // structs using the same '.' syntax.
+    obj_type = pointer_type->base();
+  }
 
   if (!obj_type->IsStructType()) {
     error_reporter().Report(node->position(),

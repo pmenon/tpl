@@ -66,8 +66,16 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
     out_ << " ";
   }
 
+  void DumpExpressionCommon(ast::Expr *expr) {
+    DumpNodeCommon(expr);
+    if (expr->type() != nullptr) {
+      DumpType(expr->type());
+      out_ << " ";
+    }
+  }
+
   void DumpToken(parsing::Token::Type type) {
-    out_ << " '" << parsing::Token::GetString(type) << "'";
+    out_ << "'" << parsing::Token::GetString(type) << "'";
   }
 
   template <typename T>
@@ -240,7 +248,7 @@ void AstDumperImpl::VisitReturnStmt(ReturnStmt *node) {
 }
 
 void AstDumperImpl::VisitCallExpr(CallExpr *node) {
-  DumpNodeCommon(node);
+  DumpExpressionCommon(node);
   DumpExpr(node->function());
   for (auto *expr : node->arguments()) {
     DumpExpr(expr);
@@ -248,14 +256,14 @@ void AstDumperImpl::VisitCallExpr(CallExpr *node) {
 }
 
 void AstDumperImpl::VisitBinaryOpExpr(BinaryOpExpr *node) {
-  DumpNodeCommon(node);
+  DumpExpressionCommon(node);
   DumpToken(node->op());
   DumpExpr(node->left());
   DumpExpr(node->right());
 }
 
 void AstDumperImpl::VisitComparisonOpExpr(ComparisonOpExpr *node) {
-  DumpNodeCommon(node);
+  DumpExpressionCommon(node);
   DumpToken(node->op());
   DumpExpr(node->left());
   DumpExpr(node->right());
@@ -266,12 +274,12 @@ void AstDumperImpl::VisitFunctionLitExpr(FunctionLitExpr *node) {
 }
 
 void AstDumperImpl::VisitIdentifierExpr(IdentifierExpr *node) {
-  DumpNodeCommon(node);
+  DumpExpressionCommon(node);
   DumpIdentifier(node->name());
 }
 
 void AstDumperImpl::VisitLitExpr(LitExpr *node) {
-  DumpNodeCommon(node);
+  DumpExpressionCommon(node);
   switch (node->literal_kind()) {
     case LitExpr::LitKind::Nil: {
       DumpPrimitive("nil");
@@ -297,13 +305,13 @@ void AstDumperImpl::VisitLitExpr(LitExpr *node) {
 }
 
 void AstDumperImpl::VisitSelectorExpr(SelectorExpr *node) {
-  DumpNodeCommon(node);
+  DumpExpressionCommon(node);
   DumpExpr(node->object());
   DumpExpr(node->selector());
 }
 
 void AstDumperImpl::VisitUnaryOpExpr(UnaryOpExpr *node) {
-  DumpNodeCommon(node);
+  DumpExpressionCommon(node);
   DumpToken(node->op());
   DumpExpr(node->expr());
 }
