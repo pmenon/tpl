@@ -2,57 +2,76 @@
 
 #include <cstdint>
 
-#include "common.h"
+#include "util/common.h"
 
 namespace tpl::util {
 
-// Bitfield for encoding/decoding values of type T into a storage space of type
-// S. The values are located at the bit 'position' and have a size of 'size'
-template <typename S, typename T, unsigned position, unsigned size>
+namespace internal {
+
+/**
+ * Bitfield class for encoding/decoding values of type T into/from a storage
+ * space of type S. The encoded version of type T occupies positions
+ * [shift, shift + size] in the underlying storage value.
+ *
+ * Multiple bitfields can be applied onto the same underlying storage so long as
+ * they occupy disjoint sets of bits. To determine the next available bit
+ * position in a bitfield, use the BitFieldBase::kNextBit value.
+ *
+ * To use, create a subclass of the desired bitfield size (i.e., BitField32, not
+ * the base class!), and specify the encoding type and bit-range where you want
+ * to encode the values. Then, use the Encode/Decode/Update values to modify the
+ * underlying storage.
+ *
+ * For example, assume we want to encode two u16 types into a single u32 raw
+ * bitfield. We would do:
+ *
+ * class FieldOne : public BitField32<Type1, 0, 16> {};
+ * class FieldTwo : public BitField32<Type2, FieldOne::kNextBit, 16> {};
+ *
+ * Given a raw u32 bitfield, reading type one and type two:
+ *
+ * Type1 t1 = FieldOne::Decode(u32_storage);
+ * Type2 t2 = FieldTwo::Decode(u32_storage);
+ *
+ * @tparam S The type of the primitive storage type where the bitfield is stored
+ * @tparam T The type we encode into the bitfield
+ * @tparam shift The number of bits to shift
+ * @tparam size The size of the bitfield
+ */
+template <typename S, typename T, unsigned shift, unsigned size>
 class BitFieldBase {
  public:
-  // Some checks
-  static_assert((sizeof(S) * kBitsPerByte) >= (position + size),
-                "The size of the provided storage type is not large enough to "
-                "encode the value");
-
-  static_assert((sizeof(T) * kBitsPerByte) <= size,
-                "The provided size of the bitfield is smaller than the type "
-                "you want to encode");
-
   static constexpr const S kOne = static_cast<S>(1U);
 
-  static constexpr const S kNextBit = position + size;
+  static constexpr const S kNextBit = shift + size;
 
-  static constexpr const S kMask = (kOne << size) - 1;
+  static constexpr const S kMask = ((kOne << size) - 1) << shift;
 
-  static constexpr const S kMaskInPosition = kMask << position;
-
-  static constexpr S mask() { return kMask; }
-
-  static constexpr S mask_in_position() { return kMaskInPosition; }
-
-  static S Encode(T val) { return static_cast<S>(val) << position; }
+  static S Encode(T val) { return static_cast<S>(val) << shift; }
 
   static T Decode(S storage) {
-    return (static_cast<T>(storage >> position) & mask());
+    return static_cast<T>((storage & kMask) >> shift);
   }
 
   static S Update(S curr_storage, T update) {
-    return (curr_storage & ~mask_in_position()) | Encode(update);
+    return (curr_storage & ~kMask) | Encode(update);
   }
+
+  static_assert((kNextBit - 1) / 8 < sizeof(S));
 };
 
-template <typename T, unsigned position, unsigned size>
-class BitField8 : public BitFieldBase<u8, T, position, size> {};
+}  // namespace internal
 
 template <typename T, unsigned position, unsigned size>
-class BitField16 : public BitFieldBase<u16, T, position, size> {};
+class BitField8 : public internal::BitFieldBase<u8, T, position, size> {};
 
 template <typename T, unsigned position, unsigned size>
-class BitField32 : public BitFieldBase<u32, T, position, size> {};
+class BitField16 : public internal::BitFieldBase<u16, T, position, size> {};
 
 template <typename T, unsigned position, unsigned size>
-class BitField64 : public BitFieldBase<u64, T, position, size> {};
+class BitField32 : public internal::BitFieldBase<u32, T, position, size> {};
+
+template <typename T, unsigned position, unsigned size>
+class BitField64 : public internal::BitFieldBase<u64, T, position, size> {};
 
 }  // namespace tpl::util
