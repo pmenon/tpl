@@ -527,6 +527,13 @@ class ReturnStmt : public Stmt {
  */
 class Expr : public AstNode {
  public:
+  enum class Context : u8 {
+    LValue,
+    RValue,
+    Test,
+    Effect,
+  };
+
   Expr(Kind kind, const SourcePosition &pos, Type *type = nullptr)
       : AstNode(kind, pos), type_(type) {}
 
