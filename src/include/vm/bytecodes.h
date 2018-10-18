@@ -73,6 +73,7 @@ namespace tpl::vm {
   V(ScanNext)                                                                                                          \
   V(ScanClose)                                                                                                         \
                                                                                                                        \
+  V(Deref4, OperandType::Reg, OperandType::Reg)                                                                        \
   V(Lea, OperandType::Reg, OperandType::Reg, OperandType::Imm4)                                                        \
   V(Return)
 // clang-format on

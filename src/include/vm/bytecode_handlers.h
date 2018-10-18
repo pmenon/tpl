@@ -49,6 +49,10 @@ INT_TYPES(LOAD_CONSTANT)
 #undef BITS
 #undef LOAD_CONSTANT
 
+void OpDeref1(u8 *dest, u8 *src);
+void OpDeref2(u16 *dest, u16 *src);
+void OpDeref4(u32 *dest, u32 *src);
+void OpDeref8(u64 *dest, u64 *src);
 void OpLea(byte **dest, byte *src, u32 offset);
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -73,9 +73,9 @@ class LocalVar {
 
   LocalVar() : LocalVar(LocalInfo::kInvalidLocalId, AddressMode::Address) {}
 
-  LocalVar(LocalId offset, AddressMode address_mode)
+  LocalVar(u32 offset, AddressMode address_mode)
       : bitfield_(AddressModeField::Encode(address_mode) |
-                  LocalIdField::Encode(offset)) {}
+                  LocalOffsetField::Encode(offset)) {}
 
   AddressMode GetAddressMode() const {
     return AddressModeField::Decode(bitfield_);
@@ -85,7 +85,7 @@ class LocalVar {
     return GetAddressMode() == AddressMode::Address;
   }
 
-  LocalId GetLocalId() const { return LocalIdField::Decode(bitfield_); }
+  u32 GetLocalOffset() const { return LocalOffsetField::Decode(bitfield_); }
 
   u32 Encode() const { return bitfield_; }
 
@@ -96,7 +96,7 @@ class LocalVar {
       return *this;
     }
 
-    return LocalVar(GetLocalId(), AddressMode::Address);
+    return LocalVar(GetLocalOffset(), AddressMode::Address);
   }
 
   LocalVar ValueOf() const {
@@ -104,21 +104,23 @@ class LocalVar {
       return *this;
     }
 
-    return LocalVar(GetLocalId(), AddressMode::Value);
+    return LocalVar(GetLocalOffset(), AddressMode::Value);
   }
 
-  bool IsInvalid() const { return GetLocalId() == LocalInfo::kInvalidLocalId; }
+  bool IsInvalid() const {
+    return GetLocalOffset() == LocalInfo::kInvalidLocalId;
+  }
 
  private:
   // Single bit indicating the addressing mode of the local
   class AddressModeField : public util::BitField32<AddressMode, 0, 1> {};
 
-  // The
-  class LocalIdField
-      : public util::BitField32<LocalId, AddressModeField::kNextBit, 16> {};
+  // The offset of the local variable in the function's execution frame
+  class LocalOffsetField
+      : public util::BitField32<u32, AddressModeField::kNextBit, 31> {};
 
  private:
-  LocalVar(u32 bitfield) : bitfield_(bitfield) {}
+  explicit LocalVar(u32 bitfield) : bitfield_(bitfield) {}
 
  private:
   u32 bitfield_;

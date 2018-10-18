@@ -22,7 +22,7 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
 
   frame_size_ += type->size();
 
-  return LocalVar(local_id, LocalVar::AddressMode::Address);
+  return LocalVar(offset, LocalVar::AddressMode::Address);
 }
 
 LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name) {

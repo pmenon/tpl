@@ -12,12 +12,10 @@ class VM::Frame {
   Frame(VM *vm, const BytecodeUnit &unit, const FunctionInfo &func)
       : vm_(vm),
         caller_(vm->current_frame()),
-        data_(std::make_unique<u8[]>(func.frame_size())),
+        data_(static_cast<u8 *>(std::aligned_alloc(64, func.frame_size())),
+              &std::free),
         pc_(unit.GetBytecodeForFunction(func)) {
-    // Prepare this frame's data
-    Prepare(unit, func);
-
-    // Mark as active in the VM
+    TPL_MEMSET(data_.get(), 0, func.frame_size());
     vm->set_current_frame(this);
   }
 
@@ -29,46 +27,23 @@ class VM::Frame {
 
   const u8 *pc() const { return pc_; }
 
-  template <typename T,
-            typename std::enable_if_t<std::is_pointer_v<T>, u32> = 0>
+  template <typename T>
   T LocalAt(u32 index) const {
-    LocalVar local = LocalVar::Decode(index);
-    auto *local_ptr = locals_[local.GetLocalId()];
-    if (local.GetAddressMode() == LocalVar::AddressMode::Value) {
-      local_ptr = *reinterpret_cast<u8 **>(local_ptr);
+    LocalVar local_var = LocalVar::Decode(index);
+
+    auto local = reinterpret_cast<uintptr_t>(&data_[local_var.GetLocalOffset()]);
+
+    if (local_var.GetAddressMode() == LocalVar::AddressMode::Value) {
+      return *reinterpret_cast<T *>(local);
     }
-    return reinterpret_cast<T>(local_ptr);
+
+    return (T)local;
   }
 
-  template <typename T,
-            typename std::enable_if_t<std::is_integral_v<T>, u32> = 0>
-  T LocalAt(u32 index) const {
-    LocalVar local = LocalVar::Decode(index);
-    auto *local_ptr = reinterpret_cast<T *>(locals_[local.GetLocalId()]);
-    if (local.GetAddressMode() == LocalVar::AddressMode::Value) {
-      return *local_ptr;
-    }
-    return reinterpret_cast<uintptr_t>(local_ptr);
-  }
-
- private:
-  void Prepare(const BytecodeUnit &unit, const FunctionInfo &func) {
-    // Clear data segment
-    TPL_MEMSET(data_.get(), 0, func.frame_size());
-
-    // Copy pointers
-    const auto &locals = func.locals();
-    locals_.resize(locals.size());
-    for (u32 i = 0; i < locals.size(); i++) {
-      locals_[i] = &data_[locals[i].offset()];
-    }
-  }
-
- private:
+ public:
   VM *vm_;
   Frame *caller_;
-  std::unique_ptr<u8[]> data_;
-  std::vector<u8 *> locals_;
+  std::unique_ptr<u8[], decltype(&std::free)> data_;
   const u8 *pc_;
 };
 
@@ -129,7 +104,7 @@ void VM::Run(Frame *frame) {
 #define READ_REG_COUNT() Read<u16>(&ip)
 #define READ_OP() Read<std::underlying_type_t<Bytecode>>(&ip)
 
-#define CASE_OP(name) op_##name
+#define OP(name) op_##name
 #define DISPATCH_NEXT()                          \
   do {                                           \
     op = Bytecodes::FromByte(READ_OP());         \
@@ -176,7 +151,7 @@ void VM::Run(Frame *frame) {
    * arguments.
    */
 #define DO_GEN_COMPARISON(op, type)                     \
-  CASE_OP(op##_##type) : {                              \
+  OP(op##_##type) : {                                   \
     bool *dest = frame->LocalAt<bool *>(READ_REG_ID()); \
     type lhs = frame->LocalAt<type>(READ_REG_ID());     \
     type rhs = frame->LocalAt<type>(READ_REG_ID());     \
@@ -199,7 +174,7 @@ void VM::Run(Frame *frame) {
    * Binary operations
    */
 #define DO_GEN_ARITHMETIC_OP(op, test, type)            \
-  CASE_OP(op##_##type) : {                              \
+  OP(op##_##type) : {                                   \
     type *dest = frame->LocalAt<type *>(READ_REG_ID()); \
     type lhs = frame->LocalAt<type>(READ_REG_ID());     \
     type rhs = frame->LocalAt<type>(READ_REG_ID());     \
@@ -228,13 +203,13 @@ void VM::Run(Frame *frame) {
    * Bitwise negation and regular integer negation
    */
 #define GEN_NEG_OP(type)                                \
-  CASE_OP(Neg##_##type) : {                             \
+  OP(Neg##_##type) : {                                  \
     auto *dest = frame->LocalAt<type *>(READ_REG_ID()); \
     auto input = frame->LocalAt<type>(READ_REG_ID());   \
     OpNeg##_##type(dest, input);                        \
     DISPATCH_NEXT();                                    \
   }                                                     \
-  CASE_OP(BitNeg##_##type) : {                          \
+  OP(BitNeg##_##type) : {                               \
     auto *dest = frame->LocalAt<type *>(READ_REG_ID()); \
     auto input = frame->LocalAt<type>(READ_REG_ID());   \
     OpBitNeg##_##type(dest, input);                     \
@@ -247,7 +222,7 @@ void VM::Run(Frame *frame) {
   /*
    * Jumps are unconditional forward-only jumps
    */
-  CASE_OP(Jump) : {
+  OP(Jump) : {
     u16 skip = PEEK_JMP_OFFSET();
     if (OpJump()) {
       ip += skip;
@@ -258,7 +233,7 @@ void VM::Run(Frame *frame) {
   /*
    * JumpLoops are unconditional backwards-only jumps, mostly used for loops
    */
-  CASE_OP(JumpLoop) : {
+  OP(JumpLoop) : {
     u16 skip = PEEK_JMP_OFFSET();
     if (OpJump()) {
       ip -= skip;
@@ -266,7 +241,7 @@ void VM::Run(Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  CASE_OP(JumpIfTrue) : {
+  OP(JumpIfTrue) : {
     auto cond = frame->LocalAt<bool>(READ_REG_ID());
     u16 skip = PEEK_JMP_OFFSET();
     if (OpJumpIfTrue(cond)) {
@@ -277,7 +252,7 @@ void VM::Run(Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  CASE_OP(JumpIfFalse) : {
+  OP(JumpIfFalse) : {
     auto cond = frame->LocalAt<bool>(READ_REG_ID());
     u16 skip = PEEK_JMP_OFFSET();
     if (OpJumpIfFalse(cond)) {
@@ -288,35 +263,42 @@ void VM::Run(Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  CASE_OP(LoadImm1) : {
+  OP(LoadImm1) : {
     i8 *dest = frame->LocalAt<i8 *>(READ_REG_ID());
     i8 val = READ_IMM1();
     OpLoadImm_i8(dest, val);
     DISPATCH_NEXT();
   }
 
-  CASE_OP(LoadImm2) : {
+  OP(LoadImm2) : {
     i16 *dest = frame->LocalAt<i16 *>(READ_REG_ID());
     i16 val = READ_IMM2();
     OpLoadImm_i16(dest, val);
     DISPATCH_NEXT();
   }
 
-  CASE_OP(LoadImm4) : {
+  OP(LoadImm4) : {
     i32 *dest = frame->LocalAt<i32 *>(READ_REG_ID());
     i32 val = READ_IMM4();
     OpLoadImm_i32(dest, val);
     DISPATCH_NEXT();
   }
 
-  CASE_OP(LoadImm8) : {
+  OP(LoadImm8) : {
     i64 *dest = frame->LocalAt<i64 *>(READ_REG_ID());
     i64 val = READ_IMM8();
     OpLoadImm_i64(dest, val);
     DISPATCH_NEXT();
   }
 
-  CASE_OP(Lea) : {
+  OP(Deref4) : {
+    u32 *dest = frame->LocalAt<u32 *>(READ_REG_ID());
+    u32 *src = frame->LocalAt<u32 *>(READ_REG_ID());
+    OpDeref4(dest, src);
+    DISPATCH_NEXT();
+  }
+
+  OP(Lea) : {
     byte **dest = frame->LocalAt<byte **>(READ_REG_ID());
     byte *src = frame->LocalAt<byte *>(READ_REG_ID());
     u32 offset = READ_UIMM4();
@@ -324,14 +306,14 @@ void VM::Run(Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  CASE_OP(Return) : {
+  OP(Return) : {
     // Just return for now. We need to handle return values though ...
     return;
   }
 
-  CASE_OP(ScanOpen) : { DISPATCH_NEXT(); }
-  CASE_OP(ScanNext) : { DISPATCH_NEXT(); }
-  CASE_OP(ScanClose) : { DISPATCH_NEXT(); }
+  OP(ScanOpen) : { DISPATCH_NEXT(); }
+  OP(ScanNext) : { DISPATCH_NEXT(); }
+  OP(ScanClose) : { DISPATCH_NEXT(); }
 
   // Impossible
   UNREACHABLE("Impossible to reach end of interpreter loop. Bad code!");

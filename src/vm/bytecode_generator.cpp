@@ -28,8 +28,10 @@ class BytecodeGenerator::ExpressionResultScope {
   bool IsRValue() const { return kind_ == ast::Expr::Context::RValue; }
   bool IsEffect() const { return kind_ == ast::Expr::Context::Effect; }
 
+  bool HasDestination() const { return !destination().IsInvalid(); }
+
   LocalVar GetOrCreateDestination(ast::Type *type) {
-    if (destination().IsInvalid()) {
+    if (!HasDestination()) {
       destination_ = generator_->current_function()->NewTempLocal(type);
     }
 
@@ -263,6 +265,9 @@ void BytecodeGenerator::VisitFile(ast::File *node) {
 }
 
 void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
+  TPL_ASSERT(execution_result()->IsRValue(),
+             "Literal expressions cannot be R-Values!");
+
   LocalVar target = execution_result()->GetOrCreateDestination(node->type());
 
   switch (node->literal_kind()) {
@@ -431,15 +436,45 @@ void BytecodeGenerator::VisitSelectorExpr(ast::SelectorExpr *node) {
   u32 offset = obj_type->GetOffsetOfFieldByName(field_name->name());
 
   if (execution_result()->IsLValue()) {
+    TPL_ASSERT(!execution_result()->HasDestination(),
+               "L-Values produce their destination");
+    if (offset == 0) {
+      // No LEA needed
+      if (node->object()->type()->IsPointerType()) {
+        execution_result()->set_destination(obj.ValueOf());
+      } else {
+        execution_result()->set_destination(obj);
+      }
+      return;
+    }
+
+    // Need to LEA
     LocalVar dest =
         execution_result()->GetOrCreateDestination(node->type()->PointerTo());
     emitter()->EmitLea(dest, obj, offset);
-  } else {
-    LocalVar elem_ptr =
-        current_function()->NewTempLocal(node->type()->PointerTo());
-    emitter()->EmitLea(elem_ptr, obj, offset);
-    // TODO: Handle storing/dereferencing
+    execution_result()->set_destination(dest.ValueOf());
+    return;
   }
+
+  // Need to load address and deref
+
+  LocalVar elem_ptr;
+  if (offset == 0) {
+    if (node->object()->type()->IsPointerType()) {
+      elem_ptr = obj.ValueOf();
+    } else {
+      elem_ptr = obj;
+    }
+  } else {
+    elem_ptr = current_function()->NewTempLocal(node->type()->PointerTo());
+    emitter()->EmitLea(elem_ptr, obj, offset);
+    elem_ptr = elem_ptr.ValueOf();
+  }
+
+  // TODO: This Deref size should depend on type!
+  LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
+  emitter()->EmitUnaryOp(Bytecode::Deref4, dest, elem_ptr);
+  execution_result()->set_destination(dest.ValueOf());
 }
 
 void BytecodeGenerator::VisitDeclStmt(ast::DeclStmt *node) {
@@ -489,7 +524,6 @@ LocalVar BytecodeGenerator::VisitExpressionForRValue(ast::Expr *expr) {
 
 void BytecodeGenerator::VisitExpressionForRValue(ast::Expr *expr,
                                                  LocalVar dest) {
-  TPL_ASSERT(dest.IsAddressOfLocal(), "Cannot store into non-address local");
   RValueResultScope scope(this, dest);
   Visit(expr);
 }

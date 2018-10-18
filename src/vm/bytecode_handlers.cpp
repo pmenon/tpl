@@ -99,9 +99,15 @@ INT_TYPES(LOAD_CONSTANT)
 #undef BITS
 #undef LOAD_CONSTANT
 
-void OpLea(byte **dest, byte *src, u32 offset) {
-  *dest = src + offset;
-}
+void OpDeref1(u8 *dest, u8 *src) { *dest = *src; }
+
+void OpDeref2(u16 *dest, u16 *src) { *dest = *src; }
+
+void OpDeref4(u32 *dest, u32 *src) { *dest = *src; }
+
+void OpDeref8(u64 *dest, u64 *src) { *dest = *src; }
+
+void OpLea(byte **dest, byte *src, u32 offset) { *dest = src + offset; }
 
 bool OpJump() { return true; }
 
