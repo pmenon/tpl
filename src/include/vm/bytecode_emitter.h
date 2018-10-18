@@ -22,47 +22,45 @@ class BytecodeEmitter {
 
   std::size_t position() const { return bytecodes_.size(); }
 
-  void EmitLoadImm1(RegisterId reg_id, i8 val);
-  void EmitLoadImm2(RegisterId reg_id, i16 val);
-  void EmitLoadImm4(RegisterId reg_id, i32 val);
-  void EmitLoadImm8(RegisterId reg_id, i64 val);
+  void EmitLoadImm1(LocalVar dest, i8 val);
+  void EmitLoadImm2(LocalVar dest, i16 val);
+  void EmitLoadImm4(LocalVar dest, i32 val);
+  void EmitLoadImm8(LocalVar dest, i64 val);
 
   void EmitJump(Bytecode bytecode, BytecodeLabel *label);
-  void EmitConditionalJump(Bytecode bytecode, RegisterId cond,
+  void EmitConditionalJump(Bytecode bytecode, LocalVar cond,
                            BytecodeLabel *label);
 
-  void EmitLea(RegisterId dest, RegisterId src, u32 offset);
+  void EmitLea(LocalVar dest, LocalVar src, u32 offset);
   void EmitReturn();
 
-  void Emit(Bytecode bytecode, RegisterId dest, RegisterId input);
-  void Emit(Bytecode bytecode, RegisterId dest, RegisterId lhs, RegisterId rhs);
+  void EmitUnaryOp(Bytecode bytecode, LocalVar dest, LocalVar input);
+  void EmitBinaryOp(Bytecode bytecode, LocalVar dest, LocalVar lhs,
+                    LocalVar rhs);
 
   void Bind(BytecodeLabel *label);
 
   const std::vector<u8> &Finish();
 
  private:
-  void EmitOp(Bytecode bytecode) {
-    auto code = Bytecodes::ToByte(bytecode);
-    auto *raw_code = reinterpret_cast<const u8 *>(&code);
-    bytecodes_.push_back(raw_code[0]);
-    bytecodes_.push_back(raw_code[1]);
-  }
-
   template <typename T,
-            typename std::enable_if_t<std::is_integral_v<T>, int> = 0>
+            typename std::enable_if_t<std::is_integral_v<T>, u32> = 0>
   void EmitImmediateValue(T val) {
     bytecodes_.insert(bytecodes_.end(), sizeof(T), 0);
     *reinterpret_cast<T *>(&*(bytecodes_.end() - sizeof(T))) = val;
   }
 
-  void EmitRegister(RegisterId reg_id) { EmitImmediateValue(reg_id); }
+  void EmitOp(Bytecode bytecode) {
+    EmitImmediateValue(Bytecodes::ToByte(bytecode));
+  }
 
-  template <typename... Regs,
+  void EmitLocalVar(LocalVar local) { EmitImmediateValue(local.Encode()); }
+
+  template <typename... Locals,
             typename std::enable_if_t<
-                std::conjunction_v<std::is_same<Regs, RegisterId>...>, int> = 0>
-  void EmitRegisters(Regs... regs) {
-    (EmitRegister(regs), ...);
+                std::conjunction_v<std::is_same<Locals, LocalVar>...>, u32> = 0>
+  void EmitLocalVars(Locals... locals) {
+    (EmitLocalVar(locals), ...);
   }
 
   void EmitJump(BytecodeLabel *label);

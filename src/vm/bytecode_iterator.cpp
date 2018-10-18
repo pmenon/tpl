@@ -13,7 +13,8 @@ BytecodeIterator::BytecodeIterator(const std::vector<u8> &bytecode,
       curr_offset_(start) {}
 
 Bytecode BytecodeIterator::current_bytecode() const {
-  auto raw_code = *reinterpret_cast<const u16 *>(&bytecodes_[current_offset()]);
+  auto raw_code = *reinterpret_cast<const std::underlying_type_t<Bytecode> *>(
+      &bytecodes_[current_offset()]);
   return Bytecodes::FromByte(raw_code);
 }
 

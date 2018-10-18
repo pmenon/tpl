@@ -28,17 +28,24 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
  private:
   class ExpressionResultScope;
+  class LValueResultScope;
+  class RValueResultScope;
+  class TestResultScope;
   class BytecodePositionTracker;
 
   // Allocate a new function ID
   FunctionInfo *AllocateFunc(const std::string &name);
 
-  // Visit an expression and return the register that holds its result
-  RegisterId VisitExpressionForValue(ast::Expr *expr);
+  // Visit an expression for its L-Value
+  LocalVar VisitExpressionForLValue(ast::Expr *expr);
 
-  // Visit an expression providing a target register where its results should be
-  // stored into
-  void VisitExpressionWithTarget(ast::Expr *expr, RegisterId reg_id);
+  // Visit an expression for its R-Value and return the local variable holding
+  // its result
+  LocalVar VisitExpressionForRValue(ast::Expr *expr);
+
+  // Visit an expression for its R-Value providing a destination variable where
+  // the result should be stored
+  void VisitExpressionForRValue(ast::Expr *expr, LocalVar dest);
 
   enum class TestFallthrough : u8 { None, Then, Else };
 
@@ -46,6 +53,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
                               BytecodeLabel *else_label,
                               TestFallthrough fallthrough);
 
+  // Visit the body of an iteration statement
   void VisitIterationStatement(ast::IterationStmt *iteration,
                                LoopBuilder *loop_builder);
 

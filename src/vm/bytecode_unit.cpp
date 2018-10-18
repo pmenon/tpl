@@ -15,21 +15,21 @@ void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
      << func.locals().size() << " locals)" << std::endl;
 
   u64 max_local_len = 0;
-  for (const auto &reg : func.locals()) {
-    max_local_len = std::max(max_local_len, reg.name().length());
+  for (const auto &local : func.locals()) {
+    max_local_len = std::max(max_local_len, local.name().length());
   }
-  for (const auto &reg : func.locals()) {
-    if (reg.is_parameter()) {
+  for (const auto &local : func.locals()) {
+    if (local.is_parameter()) {
       os << "    param  ";
     } else {
       os << "    local  ";
     }
-    os << std::setw(max_local_len) << std::right << reg.name()
-       << ":  offset=" << std::setw(7) << std::left << reg.offset()
-       << " size=" << std::setw(7) << std::left << reg.Size()
-       << " align=" << std::setw(7) << std::left << reg.type()->alignment()
+    os << std::setw(max_local_len) << std::right << local.name()
+       << ":  offset=" << std::setw(7) << std::left << local.offset()
+       << " size=" << std::setw(7) << std::left << local.Size()
+       << " align=" << std::setw(7) << std::left << local.type()->alignment()
        << " type=" << std::setw(7) << std::left
-       << ast::Type::ToString(reg.type()) << std::endl;
+       << ast::Type::ToString(local.type()) << std::endl;
   }
 }
 

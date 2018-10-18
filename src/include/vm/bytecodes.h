@@ -78,11 +78,9 @@ namespace tpl::vm {
 // clang-format on
 
 /**
- * The enumeration of all possible bytecode instructions. A bytecode takes up
- * two unsigned bytes, meaning we can support upto 2^16 = 65,536 bytecode ops,
- * more than enough.
+ * The enumeration of all possible bytecode instructions.
  */
-enum class Bytecode : u16 {
+enum class Bytecode : u32 {
 #define DECLARE_OP(inst, ...) inst,
   BYTECODE_LIST(DECLARE_OP)
 #undef DECLARE_OP

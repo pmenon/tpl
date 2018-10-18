@@ -11,40 +11,67 @@ namespace tpl::vm {
 
 class BytecodeGenerator::ExpressionResultScope {
  public:
-  explicit ExpressionResultScope(BytecodeGenerator *generator)
+  ExpressionResultScope(BytecodeGenerator *generator, ast::Expr::Context kind,
+                        LocalVar destination = LocalVar())
       : generator_(generator),
-        destination_(Register::kInvalidIndex),
-        outer_scope_(generator->execution_result()) {
-    generator_->set_execution_result(this);
-  }
-
-  explicit ExpressionResultScope(BytecodeGenerator *generator,
-                                 RegisterId destination)
-      : generator_(generator),
+        outer_scope_(generator->execution_result()),
         destination_(destination),
-        outer_scope_(generator->execution_result()) {
+        kind_(kind) {
     generator_->set_execution_result(this);
   }
 
-  ~ExpressionResultScope() { generator_->set_execution_result(outer_scope_); }
+  virtual ~ExpressionResultScope() {
+    generator_->set_execution_result(outer_scope_);
+  }
 
-  RegisterId GetOrCreateDestination(ast::Type *type) {
-    if (destination_ == Register::kInvalidIndex) {
-      destination_ = generator_->current_function()->NewLocal(type);
+  bool IsLValue() const { return kind_ == ast::Expr::Context::LValue; }
+  bool IsRValue() const { return kind_ == ast::Expr::Context::RValue; }
+  bool IsEffect() const { return kind_ == ast::Expr::Context::Effect; }
+
+  LocalVar GetOrCreateDestination(ast::Type *type) {
+    if (destination().IsInvalid()) {
+      destination_ = generator_->current_function()->NewTempLocal(type);
     }
 
     return destination_;
   }
 
-  RegisterId destination() const { return destination_; }
-  void set_destination(RegisterId destination) { destination_ = destination; }
+  LocalVar destination() const { return destination_; }
+  void set_destination(LocalVar destination) { destination_ = destination; }
 
  private:
   BytecodeGenerator *generator_;
-  RegisterId destination_;
   ExpressionResultScope *outer_scope_;
+  LocalVar destination_;
+  ast::Expr::Context kind_;
 };
 
+class BytecodeGenerator::LValueResultScope
+    : public BytecodeGenerator::ExpressionResultScope {
+ public:
+  LValueResultScope(BytecodeGenerator *generator, LocalVar dest = LocalVar())
+      : ExpressionResultScope(generator, ast::Expr::Context::LValue, dest) {}
+};
+
+class BytecodeGenerator::RValueResultScope
+    : public BytecodeGenerator::ExpressionResultScope {
+ public:
+  RValueResultScope(BytecodeGenerator *generator, LocalVar dest = LocalVar())
+      : ExpressionResultScope(generator, ast::Expr::Context::RValue, dest) {}
+};
+
+class BytecodeGenerator::TestResultScope
+    : public BytecodeGenerator::ExpressionResultScope {
+ public:
+  TestResultScope(BytecodeGenerator *generator, LocalVar dest = LocalVar())
+      : ExpressionResultScope(generator, ast::Expr::Context::Test, dest) {}
+};
+
+/**
+ * A handy scoped class that tracks the start and end positions in the bytecode
+ * for a given function, automatically setting the range in the function upon
+ * going out of scope.
+ */
 class BytecodeGenerator::BytecodePositionTracker {
  public:
   BytecodePositionTracker(BytecodeGenerator *generator, FunctionInfo *func)
@@ -129,11 +156,11 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
   auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
 
   // Register return type
-  func_info->NewLocal(func_type->return_type(), "ret", false);
+  func_info->NewLocal(func_type->return_type(), "ret");
 
   // Register parameters
   for (const auto &func_param : func_type->params()) {
-    func_info->NewLocal(func_param.type, func_param.name.data(), true);
+    func_info->NewParameterLocal(func_param.type, func_param.name.data());
   }
 
   {
@@ -144,8 +171,13 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
 }
 
 void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
-  auto reg_id = current_function()->LookupLocal(node->name().data());
-  execution_result()->set_destination(reg_id);
+  LocalVar local = current_function()->LookupLocal(node->name().data());
+
+  if (execution_result()->IsRValue()) {
+    local = local.ValueOf();
+  }
+
+  execution_result()->set_destination(local);
 }
 
 void BytecodeGenerator::VisitBlockStmt(ast::BlockStmt *node) {
@@ -174,18 +206,17 @@ void BytecodeGenerator::VisitVariableDecl(ast::VariableDecl *node) {
   }
 
   // Register this variable in the function as a local
-  RegisterId reg =
-      current_function()->NewLocal(type, node->name().data(), false);
+  LocalVar local = current_function()->NewLocal(type, node->name().data());
 
   // If there's an initializer, generate code for it now
   if (node->initial() != nullptr) {
-    VisitExpressionWithTarget(node->initial(), reg);
+    VisitExpressionForRValue(node->initial(), local);
   }
 }
 
 void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
-  RegisterId dest = execution_result()->GetOrCreateDestination(node->type());
-  RegisterId input = VisitExpressionForValue(node->expr());
+  LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
+  LocalVar input = VisitExpressionForRValue(node->expr());
 
   Bytecode bytecode;
   switch (node->op()) {
@@ -203,7 +234,7 @@ void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
   }
 
   // Emit
-  emitter()->Emit(bytecode, dest, input);
+  emitter()->EmitUnaryOp(bytecode, dest, input);
 
   // Mark where the result is
   execution_result()->set_destination(dest);
@@ -211,7 +242,7 @@ void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
 
 void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
   if (node->ret() != nullptr) {
-    VisitExpressionWithTarget(node->ret(), current_function()->GetRVRegister());
+    VisitExpressionForRValue(node->ret(), current_function()->GetRVLocal());
   }
   emitter()->EmitReturn();
 }
@@ -221,8 +252,8 @@ void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
 }
 
 void BytecodeGenerator::VisitAssignmentStmt(ast::AssignmentStmt *node) {
-  RegisterId dest = VisitExpressionForValue(node->destination());
-  VisitExpressionWithTarget(node->source(), dest);
+  LocalVar dest = VisitExpressionForLValue(node->destination());
+  VisitExpressionForRValue(node->source(), dest);
 }
 
 void BytecodeGenerator::VisitFile(ast::File *node) {
@@ -232,7 +263,8 @@ void BytecodeGenerator::VisitFile(ast::File *node) {
 }
 
 void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
-  RegisterId target = execution_result()->GetOrCreateDestination(node->type());
+  LocalVar target = execution_result()->GetOrCreateDestination(node->type());
+
   switch (node->literal_kind()) {
     case ast::LitExpr::LitKind::Nil: {
       // Do nothing
@@ -251,6 +283,10 @@ void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
       break;
     }
   }
+
+  if (execution_result()->IsRValue()) {
+    execution_result()->set_destination(target.ValueOf());
+  }
 }
 
 void BytecodeGenerator::VisitStructDecl(ast::StructDecl *node) {
@@ -260,12 +296,14 @@ void BytecodeGenerator::VisitStructDecl(ast::StructDecl *node) {
 }
 
 void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
-  RegisterId dest = execution_result()->GetOrCreateDestination(node->type());
-  RegisterId left = VisitExpressionForValue(node->left());
-  RegisterId right = VisitExpressionForValue(node->right());
-
+  TPL_ASSERT(execution_result()->IsRValue(),
+             "Binary expressions must be R-Values!");
   TPL_ASSERT(node->left()->type()->kind() == node->right()->type()->kind(),
              "Binary operation has mismatched left and right types");
+
+  LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
+  LocalVar left = VisitExpressionForRValue(node->left());
+  LocalVar right = VisitExpressionForRValue(node->right());
 
   Bytecode bytecode;
   switch (node->op()) {
@@ -313,19 +351,21 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
   }
 
   // Emit
-  emitter()->Emit(bytecode, dest, left, right);
+  emitter()->EmitBinaryOp(bytecode, dest, left, right);
 
   // Mark where the result is
-  execution_result()->set_destination(dest);
+  execution_result()->set_destination(dest.ValueOf());
 }
 
 void BytecodeGenerator::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
-  RegisterId dest = execution_result()->GetOrCreateDestination(node->type());
-  RegisterId left = VisitExpressionForValue(node->left());
-  RegisterId right = VisitExpressionForValue(node->right());
-
+  TPL_ASSERT(execution_result()->IsRValue(),
+             "Comparison expressions must be R-Values!");
   TPL_ASSERT(node->type()->IsBoolType(),
              "Comparison op is expected to be boolean");
+
+  LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
+  LocalVar left = VisitExpressionForRValue(node->left());
+  LocalVar right = VisitExpressionForRValue(node->right());
 
   Bytecode bytecode;
   switch (node->op()) {
@@ -365,10 +405,10 @@ void BytecodeGenerator::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
   }
 
   // Emit
-  emitter()->Emit(bytecode, dest, left, right);
+  emitter()->EmitBinaryOp(bytecode, dest, left, right);
 
   // Mark where the result is
-  execution_result()->set_destination(dest);
+  execution_result()->set_destination(dest.ValueOf());
 }
 
 void BytecodeGenerator::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
@@ -376,14 +416,30 @@ void BytecodeGenerator::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
 }
 
 void BytecodeGenerator::VisitSelectorExpr(ast::SelectorExpr *node) {
-  ast::StructType *type = node->object()->type()->As<ast::StructType>();
-  ast::IdentifierExpr *field_name = node->selector()->As<ast::IdentifierExpr>();
+  LocalVar obj = VisitExpressionForLValue(node->object());
 
-  u32 offset = type->GetOffsetOfFieldByName(field_name->name());
+  ast::StructType *obj_type = nullptr;
+  if (auto *ptr_type = node->object()->type()->SafeAs<ast::PointerType>()) {
+    obj = obj.ValueOf();
+    obj_type = ptr_type->base()->As<ast::StructType>();
+  } else {
+    obj_type = node->object()->type()->As<ast::StructType>();
+  }
 
-  RegisterId dest = execution_result()->GetOrCreateDestination(node->type());
-  RegisterId src = VisitExpressionForValue(node->object());
-  emitter()->EmitLea(dest, src, offset);
+  auto *field_name = node->selector()->As<ast::IdentifierExpr>();
+
+  u32 offset = obj_type->GetOffsetOfFieldByName(field_name->name());
+
+  if (execution_result()->IsLValue()) {
+    LocalVar dest =
+        execution_result()->GetOrCreateDestination(node->type()->PointerTo());
+    emitter()->EmitLea(dest, obj, offset);
+  } else {
+    LocalVar elem_ptr =
+        current_function()->NewTempLocal(node->type()->PointerTo());
+    emitter()->EmitLea(elem_ptr, obj, offset);
+    // TODO: Handle storing/dereferencing
+  }
 }
 
 void BytecodeGenerator::VisitDeclStmt(ast::DeclStmt *node) {
@@ -419,15 +475,22 @@ FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &name) {
   return &functions_.back();
 }
 
-RegisterId BytecodeGenerator::VisitExpressionForValue(ast::Expr *expr) {
-  ExpressionResultScope scope(this);
+LocalVar BytecodeGenerator::VisitExpressionForLValue(ast::Expr *expr) {
+  LValueResultScope scope(this);
   Visit(expr);
   return scope.destination();
 }
 
-void BytecodeGenerator::VisitExpressionWithTarget(ast::Expr *expr,
-                                                  RegisterId reg_id) {
-  ExpressionResultScope scope(this, reg_id);
+LocalVar BytecodeGenerator::VisitExpressionForRValue(ast::Expr *expr) {
+  RValueResultScope scope(this);
+  Visit(expr);
+  return scope.destination();
+}
+
+void BytecodeGenerator::VisitExpressionForRValue(ast::Expr *expr,
+                                                 LocalVar dest) {
+  TPL_ASSERT(dest.IsAddressOfLocal(), "Cannot store into non-address local");
+  RValueResultScope scope(this, dest);
   Visit(expr);
 }
 
@@ -436,7 +499,7 @@ void BytecodeGenerator::VisitExpressionForTest(ast::Expr *expr,
                                                BytecodeLabel *else_label,
                                                TestFallthrough fallthrough) {
   // Evaluate the expression
-  RegisterId cond = VisitExpressionForValue(expr);
+  LocalVar cond = VisitExpressionForRValue(expr);
 
   switch (fallthrough) {
     case TestFallthrough::Then: {

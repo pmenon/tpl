@@ -7,40 +7,40 @@
 
 namespace tpl::vm {
 
-void BytecodeEmitter::EmitLoadImm1(RegisterId dest, i8 val) {
+void BytecodeEmitter::EmitLoadImm1(LocalVar dest, i8 val) {
   EmitOp(Bytecode::LoadImm1);
-  EmitRegister(dest);
+  EmitLocalVar(dest);
   EmitImmediateValue(val);
 }
 
-void BytecodeEmitter::EmitLoadImm2(RegisterId dest, i16 val) {
+void BytecodeEmitter::EmitLoadImm2(LocalVar dest, i16 val) {
   EmitOp(Bytecode::LoadImm2);
-  EmitRegister(dest);
+  EmitLocalVar(dest);
   EmitImmediateValue(val);
 }
 
-void BytecodeEmitter::EmitLoadImm4(RegisterId dest, i32 val) {
+void BytecodeEmitter::EmitLoadImm4(LocalVar dest, i32 val) {
   EmitOp(Bytecode::LoadImm4);
-  EmitRegister(dest);
+  EmitLocalVar(dest);
   EmitImmediateValue(val);
 }
 
-void BytecodeEmitter::EmitLoadImm8(RegisterId dest, i64 val) {
+void BytecodeEmitter::EmitLoadImm8(LocalVar dest, i64 val) {
   EmitOp(Bytecode::LoadImm8);
-  EmitRegister(dest);
+  EmitLocalVar(dest);
   EmitImmediateValue(val);
 }
 
-void BytecodeEmitter::Emit(Bytecode bytecode, RegisterId dest,
-                           RegisterId input) {
+void BytecodeEmitter::EmitUnaryOp(Bytecode bytecode, LocalVar dest,
+                                  LocalVar input) {
   EmitOp(bytecode);
-  EmitRegisters(dest, input);
+  EmitLocalVars(dest, input);
 }
 
-void BytecodeEmitter::Emit(Bytecode bytecode, RegisterId dest, RegisterId lhs,
-                           RegisterId rhs) {
+void BytecodeEmitter::EmitBinaryOp(Bytecode bytecode, LocalVar dest,
+                                   LocalVar lhs, LocalVar rhs) {
   EmitOp(bytecode);
-  EmitRegisters(dest, lhs, rhs);
+  EmitLocalVars(dest, lhs, rhs);
 }
 
 void BytecodeEmitter::EmitJump(Bytecode bytecode, BytecodeLabel *label) {
@@ -55,19 +55,19 @@ void BytecodeEmitter::EmitJump(Bytecode bytecode, BytecodeLabel *label) {
   EmitJump(label);
 }
 
-void BytecodeEmitter::EmitConditionalJump(Bytecode bytecode, RegisterId cond,
+void BytecodeEmitter::EmitConditionalJump(Bytecode bytecode, LocalVar cond,
                                           BytecodeLabel *label) {
   TPL_ASSERT(Bytecodes::IsJump(bytecode), "Provided bytecode is not a jump");
 
   // Emit the jump opcode and condition
   EmitOp(bytecode);
-  EmitRegister(cond);
+  EmitLocalVar(cond);
   EmitJump(label);
 }
 
-void BytecodeEmitter::EmitLea(RegisterId dest, RegisterId src, u32 offset) {
+void BytecodeEmitter::EmitLea(LocalVar dest, LocalVar src, u32 offset) {
   EmitOp(Bytecode::Lea);
-  EmitRegisters(dest, src);
+  EmitLocalVars(dest, src);
   EmitImmediateValue(offset);
 }
 

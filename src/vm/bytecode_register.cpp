@@ -5,10 +5,10 @@
 
 namespace tpl::vm {
 
-std::size_t Register::Size() const { return type()->size(); }
+std::size_t LocalInfo::Size() const { return type()->size(); }
 
-RegisterId FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
-                                  bool is_param) {
+LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
+                                LocalInfo::Kind kind) {
   TPL_ASSERT(!name.empty(), "Local name cannot be empty");
 
   // Bump size to account for the alignment of the new local
@@ -16,27 +16,38 @@ RegisterId FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
     frame_size_ = util::MathUtil::AlignTo(frame_size_, type->alignment());
   }
 
-  auto register_id = static_cast<RegisterId>(locals_.size());
+  auto local_id = static_cast<LocalId>(locals_.size());
   auto offset = frame_size();
-  locals_.emplace_back(register_id, name, type, offset, is_param);
+  locals_.emplace_back(local_id, name, type, offset, kind);
 
   frame_size_ += type->size();
 
-  return register_id;
+  return LocalVar(local_id, LocalVar::AddressMode::Address);
 }
 
-RegisterId FunctionInfo::NewLocal(ast::Type *type) {
-  return NewLocal(type, "tmp" + std::to_string(NextTempRegId()), false);
+LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name) {
+  return NewLocal(type, name, LocalInfo::Kind::Var);
 }
 
-RegisterId FunctionInfo::LookupLocal(const std::string &name) {
-  // TODO(pmenon): More efficient lookup?
-  for (const auto &reg : locals()) {
-    if (reg.name() == name) {
-      return reg.id();
+LocalVar FunctionInfo::NewParameterLocal(ast::Type *type,
+                                         const std::string &name) {
+  return NewLocal(type, name, LocalInfo::Kind::Parameter);
+}
+
+LocalVar FunctionInfo::NewTempLocal(ast::Type *type) {
+  std::string tmp_name = "tmp" + std::to_string(NextTempId());
+  return NewLocal(type, tmp_name, LocalInfo::Kind::Temporary);
+}
+
+LocalVar FunctionInfo::LookupLocal(const std::string &name) {
+  for (const auto &local_info : locals()) {
+    if (local_info.name() == name) {
+      return LocalVar(local_info.id(), LocalVar::AddressMode::Address);
     }
   }
-  return Register::kInvalidIndex;
+
+  // Invalid local
+  return LocalVar();
 }
 
 }  // namespace tpl::vm

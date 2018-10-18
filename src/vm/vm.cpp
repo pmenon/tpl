@@ -2,6 +2,7 @@
 
 #include "logging/logger.h"
 #include "util/common.h"
+#include "util/timer.h"
 #include "vm/bytecode_handlers.h"
 
 namespace tpl::vm {
@@ -28,18 +29,38 @@ class VM::Frame {
 
   const u8 *pc() const { return pc_; }
 
-  template <typename T>
-  T *LocalAt(u32 index) const {
-    return reinterpret_cast<T *>(locals_[index]);
+  template <typename T,
+            typename std::enable_if_t<std::is_pointer_v<T>, u32> = 0>
+  T LocalAt(u32 index) const {
+    LocalVar local = LocalVar::Decode(index);
+    auto *local_ptr = locals_[local.GetLocalId()];
+    if (local.GetAddressMode() == LocalVar::AddressMode::Value) {
+      local_ptr = *reinterpret_cast<u8 **>(local_ptr);
+    }
+    return reinterpret_cast<T>(local_ptr);
+  }
+
+  template <typename T,
+            typename std::enable_if_t<std::is_integral_v<T>, u32> = 0>
+  T LocalAt(u32 index) const {
+    LocalVar local = LocalVar::Decode(index);
+    auto *local_ptr = reinterpret_cast<T *>(locals_[local.GetLocalId()]);
+    if (local.GetAddressMode() == LocalVar::AddressMode::Value) {
+      return *local_ptr;
+    }
+    return reinterpret_cast<uintptr_t>(local_ptr);
   }
 
  private:
   void Prepare(const BytecodeUnit &unit, const FunctionInfo &func) {
-    const auto &regs = func.locals();
+    // Clear data segment
+    TPL_MEMSET(data_.get(), 0, func.frame_size());
 
-    locals_.resize(regs.size());
-    for (u32 i = 0; i < regs.size(); i++) {
-      locals_[i] = &data_[regs[i].offset()];
+    // Copy pointers
+    const auto &locals = func.locals();
+    locals_.resize(locals.size());
+    for (u32 i = 0; i < locals.size(); i++) {
+      locals_[i] = &data_[locals[i].offset()];
     }
   }
 
@@ -104,7 +125,7 @@ void VM::Run(Frame *frame) {
 #define READ_IMM8() Read<i64>(&ip)
 #define READ_UIMM4() Read<u32>(&ip);
 #define READ_JMP_OFFSET() Read<u16>(&ip)
-#define READ_REG_ID() Read<u16>(&ip)
+#define READ_REG_ID() Read<u32>(&ip)
 #define READ_REG_COUNT() Read<u16>(&ip)
 #define READ_OP() Read<std::underlying_type_t<Bytecode>>(&ip)
 
@@ -154,13 +175,13 @@ void VM::Run(Frame *frame) {
    * single-byte boolean value, and the two operands are the primitive input
    * arguments.
    */
-#define DO_GEN_COMPARISON(op, type)                   \
-  CASE_OP(op##_##type) : {                            \
-    auto *dest = frame->LocalAt<bool>(READ_REG_ID()); \
-    auto *lhs = frame->LocalAt<type>(READ_REG_ID());  \
-    auto *rhs = frame->LocalAt<type>(READ_REG_ID());  \
-    Op##op##_##type(dest, *lhs, *rhs);                \
-    DISPATCH_NEXT();                                  \
+#define DO_GEN_COMPARISON(op, type)                     \
+  CASE_OP(op##_##type) : {                              \
+    bool *dest = frame->LocalAt<bool *>(READ_REG_ID()); \
+    type lhs = frame->LocalAt<type>(READ_REG_ID());     \
+    type rhs = frame->LocalAt<type>(READ_REG_ID());     \
+    Op##op##_##type(dest, lhs, rhs);                    \
+    DISPATCH_NEXT();                                    \
   }
 #define GEN_COMPARISON_TYPES(type)          \
   DO_GEN_COMPARISON(GreaterThan, type)      \
@@ -177,17 +198,17 @@ void VM::Run(Frame *frame) {
   /*
    * Binary operations
    */
-#define DO_GEN_ARITHMETIC_OP(op, test, type)          \
-  CASE_OP(op##_##type) : {                            \
-    auto *dest = frame->LocalAt<type>(READ_REG_ID()); \
-    auto *lhs = frame->LocalAt<type>(READ_REG_ID());  \
-    auto *rhs = frame->LocalAt<type>(READ_REG_ID());  \
-    if (test && *rhs == 0u) {                         \
-      /* TODO(pmenon): Proper error */                \
-      LOG_ERROR("Division by zero error!");           \
-    }                                                 \
-    Op##op##_##type(dest, *lhs, *rhs);                \
-    DISPATCH_NEXT();                                  \
+#define DO_GEN_ARITHMETIC_OP(op, test, type)            \
+  CASE_OP(op##_##type) : {                              \
+    type *dest = frame->LocalAt<type *>(READ_REG_ID()); \
+    type lhs = frame->LocalAt<type>(READ_REG_ID());     \
+    type rhs = frame->LocalAt<type>(READ_REG_ID());     \
+    if (test && rhs == 0u) {                            \
+      /* TODO(pmenon): Proper error */                  \
+      LOG_ERROR("Division by zero error!");             \
+    }                                                   \
+    Op##op##_##type(dest, lhs, rhs);                    \
+    DISPATCH_NEXT();                                    \
   }
 #define GEN_ARITHMETIC_OP(type)             \
   DO_GEN_ARITHMETIC_OP(Add, false, type)    \
@@ -206,18 +227,18 @@ void VM::Run(Frame *frame) {
   /*
    * Bitwise negation and regular integer negation
    */
-#define GEN_NEG_OP(type)                               \
-  CASE_OP(Neg##_##type) : {                            \
-    auto *dest = frame->LocalAt<type>(READ_REG_ID());  \
-    auto *input = frame->LocalAt<type>(READ_REG_ID()); \
-    OpNeg##_##type(dest, *input);                      \
-    DISPATCH_NEXT();                                   \
-  }                                                    \
-  CASE_OP(BitNeg##_##type) : {                         \
-    auto *dest = frame->LocalAt<type>(READ_REG_ID());  \
-    auto *input = frame->LocalAt<type>(READ_REG_ID()); \
-    OpBitNeg##_##type(dest, *input);                   \
-    DISPATCH_NEXT();                                   \
+#define GEN_NEG_OP(type)                                \
+  CASE_OP(Neg##_##type) : {                             \
+    auto *dest = frame->LocalAt<type *>(READ_REG_ID()); \
+    auto input = frame->LocalAt<type>(READ_REG_ID());   \
+    OpNeg##_##type(dest, input);                        \
+    DISPATCH_NEXT();                                    \
+  }                                                     \
+  CASE_OP(BitNeg##_##type) : {                          \
+    auto *dest = frame->LocalAt<type *>(READ_REG_ID()); \
+    auto input = frame->LocalAt<type>(READ_REG_ID());   \
+    OpBitNeg##_##type(dest, input);                     \
+    DISPATCH_NEXT();                                    \
   }
 
   INT_TYPES(GEN_NEG_OP)
@@ -246,9 +267,9 @@ void VM::Run(Frame *frame) {
   }
 
   CASE_OP(JumpIfTrue) : {
-    auto *cond = frame->LocalAt<bool>(READ_REG_ID());
+    auto cond = frame->LocalAt<bool>(READ_REG_ID());
     u16 skip = PEEK_JMP_OFFSET();
-    if (OpJumpIfTrue(*cond)) {
+    if (OpJumpIfTrue(cond)) {
       ip += skip;
     } else {
       READ_JMP_OFFSET();
@@ -257,9 +278,9 @@ void VM::Run(Frame *frame) {
   }
 
   CASE_OP(JumpIfFalse) : {
-    auto *cond = frame->LocalAt<bool>(READ_REG_ID());
+    auto cond = frame->LocalAt<bool>(READ_REG_ID());
     u16 skip = PEEK_JMP_OFFSET();
-    if (OpJumpIfFalse(*cond)) {
+    if (OpJumpIfFalse(cond)) {
       ip += skip;
     } else {
       READ_JMP_OFFSET();
@@ -268,36 +289,36 @@ void VM::Run(Frame *frame) {
   }
 
   CASE_OP(LoadImm1) : {
-    i8 *dest = frame->LocalAt<i8>(READ_REG_ID());
+    i8 *dest = frame->LocalAt<i8 *>(READ_REG_ID());
     i8 val = READ_IMM1();
     OpLoadImm_i8(dest, val);
     DISPATCH_NEXT();
   }
 
   CASE_OP(LoadImm2) : {
-    i16 *dest = frame->LocalAt<i16>(READ_REG_ID());
+    i16 *dest = frame->LocalAt<i16 *>(READ_REG_ID());
     i16 val = READ_IMM2();
     OpLoadImm_i16(dest, val);
     DISPATCH_NEXT();
   }
 
   CASE_OP(LoadImm4) : {
-    i32 *dest = frame->LocalAt<i32>(READ_REG_ID());
+    i32 *dest = frame->LocalAt<i32 *>(READ_REG_ID());
     i32 val = READ_IMM4();
     OpLoadImm_i32(dest, val);
     DISPATCH_NEXT();
   }
 
   CASE_OP(LoadImm8) : {
-    i64 *dest = frame->LocalAt<i64>(READ_REG_ID());
+    i64 *dest = frame->LocalAt<i64 *>(READ_REG_ID());
     i64 val = READ_IMM8();
     OpLoadImm_i64(dest, val);
     DISPATCH_NEXT();
   }
 
   CASE_OP(Lea) : {
-    byte **dest = frame->LocalAt<byte *>(READ_REG_ID());
-    byte *src = frame->LocalAt<byte>(READ_REG_ID());
+    byte **dest = frame->LocalAt<byte **>(READ_REG_ID());
+    byte *src = frame->LocalAt<byte *>(READ_REG_ID());
     u32 offset = READ_UIMM4();
     OpLea(dest, src, offset);
     DISPATCH_NEXT();
