@@ -69,9 +69,9 @@ namespace tpl::vm {
   V(JumpIfFalse, OperandType::Reg, OperandType::UImm2)                                                                 \
                                                                                                                        \
   /* Table scanning */                                                                                                 \
-  V(ScanOpen)                                                                                                          \
-  V(ScanNext)                                                                                                          \
-  V(ScanClose)                                                                                                         \
+  V(SqlTableIteratorInit)                                                                                              \
+  V(SqlTableIteratorNext)                                                                                              \
+  V(SqlTableIteratorClose)                                                                                             \
                                                                                                                        \
   V(Deref4, OperandType::Reg, OperandType::Reg)                                                                        \
   V(Lea, OperandType::Reg, OperandType::Reg, OperandType::Imm4)                                                        \

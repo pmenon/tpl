@@ -226,8 +226,8 @@ void AstDumperImpl::VisitForStmt(ForStmt *node) {
 
 void AstDumperImpl::VisitForInStmt(ForInStmt *node) {
   DumpNodeCommon(node);
-  DumpExpr(node->iter());
   DumpExpr(node->target());
+  DumpExpr(node->iter());
   DumpStmt(node->body());
 }
 

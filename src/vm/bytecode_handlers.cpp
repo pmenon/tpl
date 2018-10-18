@@ -1,5 +1,6 @@
 #include "vm/bytecode_handlers.h"
 
+#include "runtime/sql_table.h"
 #include "util/macros.h"
 
 /// Comparisons
@@ -114,3 +115,18 @@ bool OpJump() { return true; }
 bool OpJumpIfTrue(bool cond) { return cond; }
 
 bool OpJumpIfFalse(bool cond) { return !cond; }
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// Table
+///
+////////////////////////////////////////////////////////////////////////////////
+
+void OpSqlTableIteratorInit(tpl::runtime::SqlTableIterator *iter) {}
+
+void OpSqlTableIteratorNext(bool *has_more,
+                            tpl::runtime::SqlTableIterator *iter) {
+  *has_more = iter->Next();
+}
+
+void OpSqlTableIteratorClose(tpl::runtime::SqlTableIterator *iter) {}

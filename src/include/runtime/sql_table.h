@@ -11,13 +11,20 @@ namespace tpl::runtime {
 enum class SqlTypeId : u8 { SmallInt, Integer, BigInt, Decimal };
 
 // A physical schema for a table
-struct Schema {
+class Schema {
+ public:
   struct ColInfo {
     std::string name;
     SqlTypeId type_id;
   };
 
-  std::vector<ColInfo> cols;
+  Schema(std::vector<ColInfo> cols) : cols_(std::move(cols)) {}
+  Schema(std::initializer_list<ColInfo> cols) : cols_(cols) {}
+
+  const std::vector<ColInfo> columns() const { return cols_; }
+
+ private:
+  std::vector<ColInfo> cols_;
 };
 
 // A SQL table
@@ -38,18 +45,31 @@ class SqlTable {
 };
 
 // A SQL table iterator
-struct SqlTableIterator {
+class SqlTableIterator {
+ public:
+  explicit SqlTableIterator(SqlTable *table) : block(0), pos(0) {}
+
+  bool Next();
+
+ private:
   u32 block;
   u32 pos;
   std::vector<const byte *> cols;
-
-  explicit SqlTableIterator(SqlTable *table) : block(0), pos(0) {}
 };
 
 // Static catalog functions
 
+#define TEST_TABLES(V) V(Test1, "test_1")
+
+enum class TestTableId : u8 {
+#define DECLARE(Name, ...) Name
+  TEST_TABLES(DECLARE)
+#undef DECLARE
+};
+
 void InitTables();
 
-SqlTable *LookupTable(const std::string &name);
+SqlTable *LookupTableById(TestTableId table_id);
+SqlTable *LookupTableByName(const std::string &name);
 
 }  // namespace tpl::runtime

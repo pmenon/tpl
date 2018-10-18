@@ -43,7 +43,7 @@ ast::Type *SqlTypeToTplType(ast::AstContext &ctx, runtime::SqlTypeId type) {
 
 ast::Type *Sema::ConvertToType(const runtime::Schema &schema) {
   util::RegionVector<ast::Field> cols(ast_context().region());
-  for (const auto &col : schema.cols) {
+  for (const auto &col : schema.columns()) {
     auto col_name = ast_context().GetIdentifier(col.name);
     auto col_type = SqlTypeToTplType(ast_context(), col.type_id);
     cols.emplace_back(col_name, col_type);

@@ -4,6 +4,10 @@
 
 #include "util/common.h"
 
+namespace tpl::runtime {
+class SqlTableIterator;
+}  // namespace tpl::runtime
+
 extern "C" {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -64,5 +68,16 @@ void OpLea(byte **dest, byte *src, u32 offset);
 bool OpJump();
 bool OpJumpIfTrue(bool cond);
 bool OpJumpIfFalse(bool cond);
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// Table
+///
+////////////////////////////////////////////////////////////////////////////////
+
+void OpSqlTableIteratorInit(tpl::runtime::SqlTableIterator *iter);
+void OpSqlTableIteratorNext(bool *has_more,
+                            tpl::runtime::SqlTableIterator *iter);
+void OpSqlTableIteratorClose(tpl::runtime::SqlTableIterator *iter);
 
 }  // extern "C"

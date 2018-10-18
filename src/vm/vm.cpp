@@ -1,11 +1,18 @@
 #include "vm/vm.h"
 
 #include "logging/logger.h"
+#include "runtime/sql_table.h"
 #include "util/common.h"
 #include "util/timer.h"
 #include "vm/bytecode_handlers.h"
 
-namespace tpl::vm {
+namespace tpl {
+
+namespace runtime {
+class SqlTableIterator;
+}  // namespace runtime
+
+namespace vm {
 
 class VM::Frame {
  public:
@@ -311,9 +318,24 @@ void VM::Run(Frame *frame) {
     return;
   }
 
-  OP(ScanOpen) : { DISPATCH_NEXT(); }
-  OP(ScanNext) : { DISPATCH_NEXT(); }
-  OP(ScanClose) : { DISPATCH_NEXT(); }
+  OP(SqlTableIteratorInit) : {
+    auto *iter = frame->LocalAt<runtime::SqlTableIterator *>(READ_REG_ID());
+    OpSqlTableIteratorInit(iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(SqlTableIteratorNext) : {
+    auto *has_more = frame->LocalAt<bool *>(READ_REG_ID());
+    auto *iter = frame->LocalAt<runtime::SqlTableIterator *>(READ_REG_ID());
+    OpSqlTableIteratorNext(has_more, iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(SqlTableIteratorClose) : {
+    auto *iter = frame->LocalAt<runtime::SqlTableIterator *>(READ_REG_ID());
+    OpSqlTableIteratorClose(iter);
+    DISPATCH_NEXT();
+  }
 
   // Impossible
   UNREACHABLE("Impossible to reach end of interpreter loop. Bad code!");
@@ -337,4 +359,5 @@ void VM::Execute(const BytecodeUnit &unit, const std::string &name) {
   vm.Invoke(func->id());
 }
 
-}  // namespace tpl::vm
+}  // namespace vm
+}  // namespace tpl

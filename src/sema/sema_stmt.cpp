@@ -77,16 +77,24 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
   auto *target = node->target()->As<ast::IdentifierExpr>();
   auto *iter = node->iter()->As<ast::IdentifierExpr>();
 
-  auto *table = runtime::LookupTable(iter->name().data());
-
+  // Lookup the table in the catalog
+  // TODO(pmenon): This will change after we integrate with bigger system
+  auto *table = runtime::LookupTableByName(iter->name().data());
   if (table == nullptr) {
     error_reporter().Report(iter->position(), ErrorMessages::kNonExistingTable,
                             iter->name());
     return;
   }
 
+  // Convert the table schema into a TPL struct type
+  auto *row_type = ConvertToType(table->schema());
+  TPL_ASSERT(row_type->IsStructType(), "Rows must be structs");
+
+  // Set the target's type
+  target->set_type(row_type);
+
   // Declare iteration variable
-  current_scope()->Declare(target->name(), ConvertToType(table->schema()));
+  current_scope()->Declare(target->name(), row_type);
 
   // Process body
   Visit(node->body());
