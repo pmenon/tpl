@@ -359,8 +359,10 @@ class FunctionType : public Type {
   Type *ret_;
 };
 
+// clang-format off
 #define INTERNAL_TYPE_LIST(V) \
-  V(Scanner, "runtime::Scanner", ::tpl::runtime::Scanner)
+  V(SqlTableIterator, "runtime::SqlTableIterator", ::tpl::runtime::SqlTableIterator)
+// clang-format on
 
 /**
  * Internal types are dedicated to pre-compiled C++ types that we don't want to
@@ -379,6 +381,8 @@ class InternalType : public Type {
         Last = -1 INTERNAL_TYPE_LIST(COUNT)
 #undef COUNT
   };
+
+  static const u32 kNumInternalKinds = static_cast<u32>(InternalKind::Last) + 1;
 
   const Identifier &name() const { return name_; }
 

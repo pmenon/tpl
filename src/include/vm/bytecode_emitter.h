@@ -38,6 +38,9 @@ class BytecodeEmitter {
   void EmitBinaryOp(Bytecode bytecode, LocalVar dest, LocalVar lhs,
                     LocalVar rhs);
 
+  void Emit(Bytecode bytecode, LocalVar operand_1);
+  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2);
+
   void Bind(BytecodeLabel *label);
 
   const std::vector<u8> &Finish();

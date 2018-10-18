@@ -5,7 +5,7 @@
 
 #include "ast/ast_node_factory.h"
 #include "ast/type.h"
-#include "runtime/scanner.h"
+#include "runtime/sql_table.h"
 #include "util/common.h"
 #include "util/math_util.h"
 
@@ -237,7 +237,8 @@ FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
 
 // static
 InternalType *InternalType::Get(AstContext &ctx, InternalKind kind) {
-  TPL_ASSERT(kind < InternalType::InternalKind::Last, "Invalid internal kind");
+  TPL_ASSERT(static_cast<u8>(kind) < kNumInternalKinds,
+             "Invalid internal kind");
   return ctx.impl().internal_types[static_cast<u32>(kind)];
 }
 

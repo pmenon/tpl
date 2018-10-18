@@ -97,6 +97,17 @@ void BytecodeEmitter::EmitJump(BytecodeLabel *label) {
   }
 }
 
+void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1) {
+  EmitOp(bytecode);
+  EmitLocalVar(operand_1);
+}
+
+void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1,
+                           LocalVar operand_2) {
+  EmitOp(bytecode);
+  EmitLocalVars(operand_1, operand_2);
+}
+
 void BytecodeEmitter::Bind(BytecodeLabel *label) {
   TPL_ASSERT(!label->is_bound(), "Cannot rebind labels");
 

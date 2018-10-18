@@ -144,7 +144,30 @@ void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
 }
 
 void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
-  AstVisitor::VisitForInStmt(node);
+  auto &ctx = node->target()->type()->context();
+
+  LocalVar iter = current_function()->NewLocal(
+      ast::InternalType::Get(ctx,
+                             ast::InternalType::InternalKind::SqlTableIterator),
+      "iter");
+
+  LoopBuilder loop_builder(this);
+
+  emitter()->Emit(Bytecode::SqlTableIteratorInit, iter);
+
+  loop_builder.LoopHeader();
+
+  LocalVar cond = current_function()->NewLocal(ast::BoolType::Bool(ctx), "c");
+  emitter()->Emit(Bytecode::SqlTableIteratorNext, cond, iter);
+  emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
+                                 loop_builder.break_label());
+
+  VisitIterationStatement(node, &loop_builder);
+
+  loop_builder.JumpToHeader();
+
+  // Cleanup
+  emitter()->Emit(Bytecode::SqlTableIteratorClose, iter);
 }
 
 void BytecodeGenerator::VisitFieldDecl(ast::FieldDecl *node) {
