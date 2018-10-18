@@ -31,7 +31,7 @@ class VM::Frame {
   T LocalAt(u32 index) const {
     LocalVar local_var = LocalVar::Decode(index);
 
-    auto local = reinterpret_cast<uintptr_t>(&data_[local_var.GetLocalOffset()]);
+    auto local = reinterpret_cast<uintptr_t>(&data_[local_var.GetOffset()]);
 
     if (local_var.GetAddressMode() == LocalVar::AddressMode::Value) {
       return *reinterpret_cast<T *>(local);
