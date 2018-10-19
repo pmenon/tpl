@@ -42,7 +42,7 @@ LocalVar FunctionInfo::NewTempLocal(ast::Type *type) {
 LocalVar FunctionInfo::LookupLocal(const std::string &name) {
   for (const auto &local_info : locals()) {
     if (local_info.name() == name) {
-      return LocalVar(local_info.id(), LocalVar::AddressMode::Address);
+      return LocalVar(local_info.offset(), LocalVar::AddressMode::Address);
     }
   }
 
