@@ -345,11 +345,56 @@ void BytecodeGenerator::VisitStructDecl(ast::StructDecl *node) {
   // false);
 }
 
+void BytecodeGenerator::VisitBooleanBinaryOpExpr(ast::BinaryOpExpr *node) {
+  TPL_ASSERT(execution_result()->IsRValue(),
+             "Binary expressions must be R-Values!");
+  TPL_ASSERT(node->left()->type()->kind() == node->right()->type()->kind(),
+             "Binary operation has mismatched left and right types");
+  TPL_ASSERT(node->type()->IsBoolType(),
+             "Boolean binary operation must be of type bool");
+
+  LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
+
+  // Execute left child
+  VisitExpressionForRValue(node->left(), dest);
+
+  Bytecode conditional_jump;
+  BytecodeLabel fallthrough;
+
+  switch(node->op()) {
+    case parsing::Token::Type::OR: {
+      conditional_jump = Bytecode::JumpIfTrue;
+      break;
+    }
+    case parsing::Token::Type::AND: {
+      conditional_jump = Bytecode::JumpIfFalse;
+      break;
+    }
+    default: { UNREACHABLE("Impossible binary operation of bool type"); }
+  }
+
+  // Do a conditional jump
+  emitter()->EmitConditionalJump(Bytecode::JumpIfTrue, dest, &fallthrough);
+
+  // Execute the right child
+  VisitExpressionForRValue(node->right(), dest);
+
+  // Bind the label for fallthrough
+  emitter()->Bind(&fallthrough);
+
+  // Mark where the result is
+  execution_result()->set_destination(dest.ValueOf());
+}
+
 void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
   TPL_ASSERT(execution_result()->IsRValue(),
              "Binary expressions must be R-Values!");
   TPL_ASSERT(node->left()->type()->kind() == node->right()->type()->kind(),
              "Binary operation has mismatched left and right types");
+
+  if (node->type()->IsBoolType()) {
+    return VisitBooleanBinaryOpExpr(node);
+  }
 
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
   LocalVar left = VisitExpressionForRValue(node->left());

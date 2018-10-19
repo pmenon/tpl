@@ -57,4 +57,22 @@ TEST_F(BytecodeGeneratorTest, LoadConstantTest) {
   VM::Execute(*unit, "test");
 }
 
+TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
+  auto src = R"(
+    fun test(x: bool) -> bool {
+      var t : bool = true
+      var f : bool = false
+      return (f and x) or (t or x)
+    })";
+  BytecodeExpectations expectations;
+  auto *ast = expectations.Compile(src);
+
+  // Try generating bytecode for this declaration
+  auto unit = BytecodeGenerator::Compile(ast);
+
+  unit->PrettyPrint(std::cout);
+
+  VM::Execute(*unit, "test");
+}
+
 }  // namespace tpl::vm::test
