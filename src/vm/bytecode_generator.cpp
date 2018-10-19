@@ -359,7 +359,7 @@ void BytecodeGenerator::VisitBooleanBinaryOpExpr(ast::BinaryOpExpr *node) {
   VisitExpressionForRValue(node->left(), dest);
 
   Bytecode conditional_jump;
-  BytecodeLabel fallthrough;
+  BytecodeLabel end_label;
 
   switch(node->op()) {
     case parsing::Token::Type::OR: {
@@ -374,13 +374,13 @@ void BytecodeGenerator::VisitBooleanBinaryOpExpr(ast::BinaryOpExpr *node) {
   }
 
   // Do a conditional jump
-  emitter()->EmitConditionalJump(Bytecode::JumpIfTrue, dest, &fallthrough);
+  emitter()->EmitConditionalJump(Bytecode::JumpIfTrue, dest, &end_label);
 
   // Execute the right child
   VisitExpressionForRValue(node->right(), dest);
 
   // Bind the label for fallthrough
-  emitter()->Bind(&fallthrough);
+  emitter()->Bind(&end_label);
 
   // Mark where the result is
   execution_result()->set_destination(dest.ValueOf());
