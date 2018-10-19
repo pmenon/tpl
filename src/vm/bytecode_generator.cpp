@@ -345,7 +345,7 @@ void BytecodeGenerator::VisitStructDecl(ast::StructDecl *node) {
   // false);
 }
 
-void BytecodeGenerator::VisitBooleanBinaryOpExpr(ast::BinaryOpExpr *node) {
+void BytecodeGenerator::VisitAndOrExpr(ast::BinaryOpExpr *node) {
   TPL_ASSERT(execution_result()->IsRValue(),
              "Binary expressions must be R-Values!");
   TPL_ASSERT(node->left()->type()->kind() == node->right()->type()->kind(),
@@ -374,12 +374,12 @@ void BytecodeGenerator::VisitBooleanBinaryOpExpr(ast::BinaryOpExpr *node) {
   }
 
   // Do a conditional jump
-  emitter()->EmitConditionalJump(Bytecode::JumpIfTrue, dest, &end_label);
+  emitter()->EmitConditionalJump(conditional_jump, dest, &end_label);
 
   // Execute the right child
   VisitExpressionForRValue(node->right(), dest);
 
-  // Bind the label for fallthrough
+  // Bind the end label
   emitter()->Bind(&end_label);
 
   // Mark where the result is
@@ -392,8 +392,9 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
   TPL_ASSERT(node->left()->type()->kind() == node->right()->type()->kind(),
              "Binary operation has mismatched left and right types");
 
-  if (node->type()->IsBoolType()) {
-    return VisitBooleanBinaryOpExpr(node);
+  if (node->op() == parsing::Token::Type::AND
+          || node->op() == parsing::Token::Type::OR) {
+    return VisitAndOrExpr(node);
   }
 
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());

@@ -36,9 +36,8 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   // Allocate a new function ID
   FunctionInfo *AllocateFunc(const std::string &name);
 
-  // Visit a binary expression of boolean type and execute it in a short
-  // circuited manner
-  void VisitBooleanBinaryOpExpr(ast::BinaryOpExpr *node);
+  // Visit 'and' or 'or' expression of boolean type for short circuit execution
+  void VisitAndOrExpr(ast::BinaryOpExpr *node);
 
   // Visit an expression for its L-Value
   LocalVar VisitExpressionForLValue(ast::Expr *expr);
