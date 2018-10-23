@@ -222,6 +222,15 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
 
   if (execution_result()->IsRValue()) {
     local = local.ValueOf();
+
+    if (execution_result()->HasDestination()) {
+      LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
+      emitter()->Emit(GetIntTypedBytecode(
+                          GET_BASE_FOR_INT_TYPES(Bytecode::Move), node->type()),
+                    dest, local);
+      execution_result()->set_destination(dest);
+      return;
+    }
   }
 
   execution_result()->set_destination(local);
@@ -346,6 +355,8 @@ void BytecodeGenerator::VisitStructDecl(ast::StructDecl *node) {
 }
 
 void BytecodeGenerator::VisitAndOrExpr(ast::BinaryOpExpr *node) {
+  // TODO(siva): Once we support move for all types (bool), fix this to support
+  // destination of the assignment in the lhs expression.
   TPL_ASSERT(execution_result()->IsRValue(),
              "Binary expressions must be R-Values!");
   TPL_ASSERT(node->left()->type()->kind() == node->right()->type()->kind(),
@@ -374,7 +385,7 @@ void BytecodeGenerator::VisitAndOrExpr(ast::BinaryOpExpr *node) {
   }
 
   // Do a conditional jump
-  emitter()->EmitConditionalJump(conditional_jump, dest, &end_label);
+  emitter()->EmitConditionalJump(conditional_jump, dest.ValueOf(), &end_label);
 
   // Execute the right child
   VisitExpressionForRValue(node->right(), dest);

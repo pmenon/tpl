@@ -60,6 +60,7 @@ namespace tpl::vm {
   CREATE_FOR_INT_TYPES(V, Equal, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                 \
   CREATE_FOR_INT_TYPES(V, LessThan, OperandType::Reg, OperandType::Reg, OperandType::Reg)                              \
   CREATE_FOR_INT_TYPES(V, LessThanEqual, OperandType::Reg, OperandType::Reg, OperandType::Reg)                         \
+  CREATE_FOR_INT_TYPES(V, Move, OperandType::Reg, OperandType::Reg)                                                    \
   CREATE_FOR_INT_TYPES(V, NotEqual, OperandType::Reg, OperandType::Reg, OperandType::Reg)                              \
                                                                                                                        \
   /* Branching */                                                                                                      \
