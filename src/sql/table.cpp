@@ -12,20 +12,21 @@ bool Table::Scan(TableIterator *iter) const {
   }
 
   // The columns in the new block
-  const auto &block = blocks_[iter->block_++];
+  const auto &block = blocks_[iter->block_];
   const auto &cols = block.columns;
 
   iter->cols_.resize(cols.size());
   for (u32 i = 0; i < cols.size(); i++) {
     iter->cols_[i] = &cols[i];
   }
+  iter->block_ += 1;
   iter->pos_ = 0;
   iter->bound_ = block.num_rows;
   return true;
 }
 
 bool TableIterator::Next() {
-  if (pos_ == bound_) {
+  if (pos_ + 1 == bound_) {
     return table_->Scan(this);
   }
   pos_++;

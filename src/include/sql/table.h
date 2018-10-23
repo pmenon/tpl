@@ -63,9 +63,7 @@ class Table {
 class TableIterator {
  public:
   explicit TableIterator(Table *table)
-      : table_(table), block_(0), pos_(0), bound_(0) {
-    table->Scan(this);
-  }
+      : table_(table), block_(0), pos_(0), bound_(1) {}
 
   bool Next();
 
