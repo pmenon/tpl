@@ -14,6 +14,11 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
   ast::Type *left_type = Resolve(node->left());
   ast::Type *right_type = Resolve(node->right());
 
+  if (left_type == nullptr || right_type == nullptr) {
+    // Some error occurred
+    return;
+  }
+
   switch (node->op()) {
     case parsing::Token::Type::AND:
     case parsing::Token::Type::OR: {
@@ -54,6 +59,11 @@ void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
   ast::Type *left_type = Resolve(node->left());
   ast::Type *right_type = Resolve(node->right());
 
+  if (left_type == nullptr || right_type == nullptr) {
+    // Some error occurred
+    return;
+  }
+
   // TODO(pmenon): Fix this check
   if (left_type != right_type) {
     error_reporter().Report(node->position(),
@@ -84,6 +94,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   ast::Type *type = Resolve(node->function());
 
   if (type == nullptr) {
+    // Some error occurred
     return;
   }
 
@@ -134,6 +145,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
 void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   // Resolve the type
   if (Resolve(node->type_repr()) == nullptr) {
+    // Some error occurred
     return;
   }
 
@@ -200,6 +212,7 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
   ast::Type *expr_type = Resolve(node->expr());
 
   if (expr_type == nullptr) {
+    // Some error occurred
     return;
   }
 

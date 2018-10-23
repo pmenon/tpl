@@ -39,7 +39,7 @@ class Sema : public ast::AstVisitor<Sema> {
     return expr->type();
   }
 
-  ast::Type *ConvertToType(const sql::Schema &schema);
+  ast::Type *ConvertSchemaToType(const sql::Schema &schema);
 
   //////////////////////////////////////////////////////////////////////////////
   ///

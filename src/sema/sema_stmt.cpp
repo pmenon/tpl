@@ -88,7 +88,7 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
   }
 
   // Convert the table schema into a TPL struct type
-  auto *row_type = ConvertToType(table->schema());
+  auto *row_type = ConvertSchemaToType(table->schema());
   TPL_ASSERT(row_type->IsStructType(), "Rows must be structs");
 
   // Set the target's type
