@@ -242,11 +242,14 @@ void Scanner::SkipLineComment() {
 }
 
 void Scanner::SkipBlockComment() {
-  i32 c = c0_;
-  while (c != '*' && c0_ != '/') {
+  i32 c;
+  do {
     c = c0_;
     Advance();
-  }
+  } while (c != '*' && c0_ != '/' && c0_ != kEndOfInput);
+
+  // Skip the '/' if we found. If we're are the end, Advance() will be a no-op
+  // anyways, so we're safe.
   Advance();
 }
 

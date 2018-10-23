@@ -52,8 +52,8 @@ struct Test {
 
 void CheckEquality(uint32_t test_idx, const std::vector<Token::Type> &expected,
                    const std::vector<Token::Type> &actual) {
-  ASSERT_EQ(expected.size(), actual.size());
-  for (unsigned i = 0; i < actual.size(); i++) {
+  EXPECT_EQ(expected.size(), actual.size());
+  for (unsigned i = 0; i < std::min(actual.size(), expected.size()); i++) {
     if (expected[i] != actual[i]) {
       EXPECT_EQ(expected[i], actual[i])
           << "Test " << test_idx << ": expected token type '"
