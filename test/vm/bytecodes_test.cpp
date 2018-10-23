@@ -37,7 +37,7 @@ TEST_F(BytecodesTest, OperandSizeTest) {
   // Non-exhaustive test of operand sizes for various op codes
 
   // Imm loads
-  EXPECT_EQ(OperandSize::Short,
+  EXPECT_EQ(OperandSize::Int,
             Bytecodes::GetNthOperandSize(Bytecode::LoadImm1, 0));
   EXPECT_EQ(OperandSize::Byte,
             Bytecodes::GetNthOperandSize(Bytecode::LoadImm1, 1));
@@ -45,19 +45,19 @@ TEST_F(BytecodesTest, OperandSizeTest) {
   // Jumps
   EXPECT_EQ(OperandSize::Short, Bytecodes::GetOperandSizes(Bytecode::Jump)[0]);
 
-  // Conditional jumps have 2 2-byte operands: one for the register ID holding
-  // the condition, and the other 2-byte jump offset
-  EXPECT_EQ(OperandSize::Short,
+  // Conditional jumps have two operands: one four-byte operand for the register
+  // holding value of the boolean condition, and one two-byte jump offset
+  EXPECT_EQ(OperandSize::Int,
             Bytecodes::GetNthOperandSize(Bytecode::JumpIfTrue, 0));
   EXPECT_EQ(OperandSize::Short,
             Bytecodes::GetNthOperandSize(Bytecode::JumpIfTrue, 1));
 
-  // Binary ops usually have three operands, all 2-byte register IDs
-  EXPECT_EQ(OperandSize::Short,
+  // Binary ops usually have three operands, all 4-byte register IDs
+  EXPECT_EQ(OperandSize::Int,
             Bytecodes::GetNthOperandSize(Bytecode::Add_i32, 0));
-  EXPECT_EQ(OperandSize::Short,
+  EXPECT_EQ(OperandSize::Int,
             Bytecodes::GetNthOperandSize(Bytecode::Add_i32, 1));
-  EXPECT_EQ(OperandSize::Short,
+  EXPECT_EQ(OperandSize::Int,
             Bytecodes::GetNthOperandSize(Bytecode::Add_i32, 2));
 }
 
@@ -94,25 +94,25 @@ TEST_F(BytecodesTest, BytecodeSizeTest) {
   // Non-exhaustive test of operand types for various op codes
 
   // Imm loads
-  EXPECT_EQ(5u, Bytecodes::Size(Bytecode::LoadImm1));
-  EXPECT_EQ(6u, Bytecodes::Size(Bytecode::LoadImm2));
-  EXPECT_EQ(8u, Bytecodes::Size(Bytecode::LoadImm4));
-  EXPECT_EQ(12u, Bytecodes::Size(Bytecode::LoadImm8));
+  EXPECT_EQ(9u, Bytecodes::Size(Bytecode::LoadImm1));
+  EXPECT_EQ(10u, Bytecodes::Size(Bytecode::LoadImm2));
+  EXPECT_EQ(12u, Bytecodes::Size(Bytecode::LoadImm4));
+  EXPECT_EQ(16u, Bytecodes::Size(Bytecode::LoadImm8));
 
   // Jumps
-  EXPECT_EQ(4u, Bytecodes::Size(Bytecode::Jump));
+  EXPECT_EQ(6u, Bytecodes::Size(Bytecode::Jump));
 
   // Conditional jumps have a 2-byte register ID and a 2-byte unsigned jump
   // offset
-  EXPECT_EQ(6u, Bytecodes::Size(Bytecode::JumpIfTrue));
-  EXPECT_EQ(6u, Bytecodes::Size(Bytecode::JumpIfFalse));
+  EXPECT_EQ(10u, Bytecodes::Size(Bytecode::JumpIfTrue));
+  EXPECT_EQ(10u, Bytecodes::Size(Bytecode::JumpIfFalse));
 
-  // Binary ops usually have three operands, all 2-byte register IDs
-  EXPECT_EQ(8u, Bytecodes::Size(Bytecode::Add_i32));
-  EXPECT_EQ(8u, Bytecodes::Size(Bytecode::Sub_i8));
-  EXPECT_EQ(8u, Bytecodes::Size(Bytecode::Mul_i8));
-  EXPECT_EQ(8u, Bytecodes::Size(Bytecode::Div_i16));
-  EXPECT_EQ(8u, Bytecodes::Size(Bytecode::Rem_i64));
+  // Binary ops usually have three operands, all 4-byte register IDs
+  EXPECT_EQ(16u, Bytecodes::Size(Bytecode::Add_i32));
+  EXPECT_EQ(16u, Bytecodes::Size(Bytecode::Sub_i8));
+  EXPECT_EQ(16u, Bytecodes::Size(Bytecode::Mul_i8));
+  EXPECT_EQ(16u, Bytecodes::Size(Bytecode::Div_i16));
+  EXPECT_EQ(16u, Bytecodes::Size(Bytecode::Rem_i64));
 }
 
 }  // namespace tpl::vm::test
