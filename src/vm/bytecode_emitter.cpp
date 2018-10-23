@@ -114,16 +114,19 @@ void BytecodeEmitter::Bind(BytecodeLabel *label) {
   std::size_t curr_offset = position();
 
   if (label->is_forward_target()) {
-    // We need to patch this forward jump
-    std::size_t jump_location = label->offset();
+    // We need to patch all the forward jumps
+    auto &jump_locations = label->referrer_offsets();
 
-    TPL_ASSERT((curr_offset - jump_location) < std::numeric_limits<u16>::max(),
-               "Jump delta exceeds 16-bit value for jump offsets!");
+    for (const auto &jump_location : jump_locations) {
+      TPL_ASSERT(
+          (curr_offset - jump_location) < std::numeric_limits<u16>::max(),
+          "Jump delta exceeds 16-bit value for jump offsets!");
 
-    u16 delta = static_cast<u16>(curr_offset - jump_location);
-    u8 *raw_delta = reinterpret_cast<u8 *>(&delta);
-    bytecodes_[jump_location] = raw_delta[0];
-    bytecodes_[jump_location + 1] = raw_delta[1];
+      u16 delta = static_cast<u16>(curr_offset - jump_location);
+      u8 *raw_delta = reinterpret_cast<u8 *>(&delta);
+      bytecodes_[jump_location] = raw_delta[0];
+      bytecodes_[jump_location + 1] = raw_delta[1];
+    }
   }
 
   label->BindTo(curr_offset);

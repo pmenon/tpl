@@ -24,17 +24,21 @@ class BytecodeLabel {
 
   std::size_t offset() const { return offset_; }
 
+  const std::vector<size_t> &referrer_offsets() const {
+    return referrer_offsets_;
+  }
+
   bool is_forward_target() const {
-    return !is_bound() && offset() != kInvalidOffset;
+    return !is_bound() && referrer_offsets().size() != 0;
   }
 
  private:
   friend class BytecodeEmitter;
 
   void set_referrer(std::size_t offset) {
-    TPL_ASSERT(!is_bound() && offset_ == kInvalidOffset,
+    TPL_ASSERT(!is_bound(),
                "Cannot set offset reference for already bound label");
-    offset_ = offset;
+    referrer_offsets_.push_back(offset);
   }
 
   void BindTo(std::size_t offset) {
@@ -46,6 +50,7 @@ class BytecodeLabel {
 
  private:
   std::size_t offset_;
+  std::vector<size_t> referrer_offsets_;
   bool bound_;
 };
 

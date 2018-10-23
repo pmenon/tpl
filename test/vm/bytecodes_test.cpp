@@ -102,7 +102,7 @@ TEST_F(BytecodesTest, BytecodeSizeTest) {
   // Jumps
   EXPECT_EQ(6u, Bytecodes::Size(Bytecode::Jump));
 
-  // Conditional jumps have a 2-byte register ID and a 2-byte unsigned jump
+  // Conditional jumps have a 4-byte register ID and a 2-byte unsigned jump
   // offset
   EXPECT_EQ(10u, Bytecodes::Size(Bytecode::JumpIfTrue));
   EXPECT_EQ(10u, Bytecodes::Size(Bytecode::JumpIfFalse));
