@@ -69,9 +69,13 @@ namespace tpl::vm {
   V(JumpIfFalse, OperandType::Reg, OperandType::UImm2)                                                                 \
                                                                                                                        \
   /* Table scanning */                                                                                                 \
-  V(SqlTableIteratorInit, OperandType::Reg)                                                                            \
+  V(SqlTableIteratorInit, OperandType::Reg, OperandType::UImm2)                                                        \
   V(SqlTableIteratorNext, OperandType::Reg, OperandType::Reg)                                                          \
   V(SqlTableIteratorClose, OperandType::Reg)                                                                           \
+  V(ReadSmallInt, OperandType::Reg, OperandType::UImm4, OperandType::Reg)                                              \
+  V(ReadInteger, OperandType::Reg, OperandType::UImm4, OperandType::Reg)                                               \
+  V(ReadBigInt, OperandType::Reg, OperandType::UImm4, OperandType::Reg)                                                \
+  V(ReadDecimal, OperandType::Reg, OperandType::UImm4, OperandType::Reg)                                               \
                                                                                                                        \
   V(Deref4, OperandType::Reg, OperandType::Reg)                                                                        \
   V(Lea, OperandType::Reg, OperandType::Reg, OperandType::Imm4)                                                        \

@@ -8,9 +8,9 @@
 #include "logging/logger.h"
 #include "parsing/parser.h"
 #include "parsing/scanner.h"
-#include "runtime/sql_table.h"
 #include "sema/error_reporter.h"
 #include "sema/sema.h"
+#include "sql/catalog.h"
 #include "tpl.h"
 #include "vm/bytecode_generator.h"
 #include "vm/bytecode_unit.h"
@@ -96,13 +96,14 @@ static void RunFile(const std::string &filename) {
 }  // namespace tpl
 
 int main(int argc, char **argv) {
+  // Init logging
   tpl::logging::init_logger();
+
+  // Init catalog
+  tpl::sql::Catalog::instance();
 
   LOG_INFO("Welcome to TPL (ver. {}.{})\n", TPL_VERSION_MAJOR,
            TPL_VERSION_MINOR);
-
-  // Initialize tables
-  tpl::runtime::InitTables();
 
   if (argc == 2) {
     std::string filename(argv[1]);

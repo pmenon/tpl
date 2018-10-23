@@ -5,7 +5,8 @@
 
 #include "ast/ast_node_factory.h"
 #include "ast/type.h"
-#include "runtime/sql_table.h"
+#include "sql/table.h"
+#include "sql/value.h"
 #include "util/common.h"
 #include "util/math_util.h"
 

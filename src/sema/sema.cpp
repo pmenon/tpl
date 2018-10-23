@@ -2,7 +2,9 @@
 
 #include "ast/ast_context.h"
 #include "ast/type.h"
-#include "runtime/sql_table.h"
+#include "sql/table.h"
+#include "sql/schema.h"
+#include "sql/type.h"
 
 namespace tpl::sema {
 
@@ -21,31 +23,25 @@ bool Sema::Run(ast::AstNode *root) {
 
 namespace {
 
-ast::Type *SqlTypeToTplType(ast::AstContext &ctx, runtime::SqlTypeId type) {
-  switch (type) {
-    case runtime::SqlTypeId::SmallInt: {
-      return ast::IntegerType::Int16(ctx);
-    }
-    case runtime::SqlTypeId::Integer: {
-      return ast::IntegerType::Int32(ctx);
-    }
-    case runtime::SqlTypeId::BigInt: {
-      return ast::IntegerType::Int32(ctx);
-    }
-    case runtime::SqlTypeId::Decimal: {
-      return ast::FloatType::Float64(ctx);
-    }
+ast::Type *SqlTypeToTplType(ast::AstContext &ctx, const sql::Type &type) {
+  ast::InternalType::InternalKind tpl_type;
+  if (type.IsIntegral()) {
+    tpl_type = ast::InternalType::InternalKind::SqlInteger;
+  } else if (type.IsDecimal()) {
+    tpl_type = ast::InternalType::InternalKind::SqlDecimal;
+  } else {
+    UNREACHABLE("Impossible type");
   }
-  UNREACHABLE("Impossible SQL type");
+  return ast::InternalType::Get(ctx, tpl_type);
 }
 
 }  // namespace
 
-ast::Type *Sema::ConvertToType(const runtime::Schema &schema) {
+ast::Type *Sema::ConvertToType(const sql::Schema &schema) {
   util::RegionVector<ast::Field> cols(ast_context().region());
   for (const auto &col : schema.columns()) {
     auto col_name = ast_context().GetIdentifier(col.name);
-    auto col_type = SqlTypeToTplType(ast_context(), col.type_id);
+    auto col_type = SqlTypeToTplType(ast_context(), col.type);
     cols.emplace_back(col_name, col_type);
   }
   return ast::StructType::Get(ast_context(), std::move(cols));

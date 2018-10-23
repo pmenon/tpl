@@ -4,9 +4,11 @@
 
 #include "util/common.h"
 
-namespace tpl::runtime {
-class SqlTableIterator;
-}  // namespace tpl::runtime
+namespace tpl::sql {
+class Decimal;
+class Integer;
+class TableIterator;
+}  // namespace tpl::sql
 
 extern "C" {
 
@@ -75,9 +77,16 @@ bool OpJumpIfFalse(bool cond);
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-void OpSqlTableIteratorInit(tpl::runtime::SqlTableIterator *iter);
-void OpSqlTableIteratorNext(bool *has_more,
-                            tpl::runtime::SqlTableIterator *iter);
-void OpSqlTableIteratorClose(tpl::runtime::SqlTableIterator *iter);
+void OpSqlTableIteratorInit(tpl::sql::TableIterator *iter, u16 table_id);
+void OpSqlTableIteratorNext(bool *has_more, tpl::sql::TableIterator *iter);
+void OpSqlTableIteratorClose(tpl::sql::TableIterator *iter);
+void OpReadSmallInt(tpl::sql::TableIterator *iter, u32 col_idx,
+                    tpl::sql::Integer *val);
+void OpReadInt(tpl::sql::TableIterator *iter, u32 col_idx,
+               tpl::sql::Integer *val);
+void OpReadBigInt(tpl::sql::TableIterator *iter, u32 col_idx,
+                  tpl::sql::Integer *val);
+void OpReadDecimal(tpl::sql::TableIterator *iter, u32 col_idx,
+                   tpl::sql::Decimal *val);
 
 }  // extern "C"

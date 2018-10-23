@@ -361,7 +361,9 @@ class FunctionType : public Type {
 
 // clang-format off
 #define INTERNAL_TYPE_LIST(V) \
-  V(SqlTableIterator, "runtime::SqlTableIterator", ::tpl::runtime::SqlTableIterator)
+  V(SqlTableIterator, "sql::TableIterator", ::tpl::sql::TableIterator) \
+  V(SqlInteger, "sql::Integer", ::tpl::sql::Integer)                   \
+  V(SqlDecimal, "sql::Decimal", ::tpl::sql::Decimal)
 // clang-format on
 
 /**

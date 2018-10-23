@@ -2,6 +2,8 @@
 
 #include "ast/type.h"
 #include "logging/logger.h"
+#include "sql/catalog.h"
+#include "sql/table.h"
 #include "util/macros.h"
 #include "vm/bytecode_label.h"
 #include "vm/bytecode_unit.h"
@@ -144,27 +146,47 @@ void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
 }
 
 void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
-  auto &ctx = node->target()->type()->context();
+  TPL_ASSERT(node->iter()->IsIdentifierExpr(),
+             "Iterable of for-in must be an identifier to a table, collection "
+             "or array/list literal");
+  // Create the iterator variable
+  ast::AstContext &ctx = node->target()->type()->context();
+  ast::InternalType *iter_type = ast::InternalType::Get(
+      ctx, ast::InternalType::InternalKind::SqlTableIterator);
+  LocalVar iter = current_function()->NewLocal(iter_type, "iter");
 
-  LocalVar iter = current_function()->NewLocal(
-      ast::InternalType::Get(ctx,
-                             ast::InternalType::InternalKind::SqlTableIterator),
-      "iter");
+  // Initialize the iterator
+  sql::Table *table = sql::Catalog::instance()->LookupTableByName(
+      node->iter()->As<ast::IdentifierExpr>()->name().data());
+  TPL_ASSERT(table != nullptr, "Table does not exist!");
+  emitter()->Emit(Bytecode::SqlTableIteratorInit, iter, table->id());
 
-  LoopBuilder loop_builder(this);
+  // Create the row type and pull pointers to the columns
+  auto *row_type = node->target()->type()->As<ast::StructType>();
+  LocalVar row = current_function()->NewLocal(row_type, "row");
 
-  emitter()->Emit(Bytecode::SqlTableIteratorInit, iter);
+  const auto &fields = row_type->fields();
+  for (u32 idx = 0, offset = 0; idx < fields.size(); idx++) {
+    LocalVar col_ptr = current_function()->NewLocal(
+        fields[idx].type->PointerTo(), fields[idx].name.data());
+    emitter()->EmitLea(col_ptr, row, offset);
+    offset += fields[idx].type->size();
+  }
 
-  loop_builder.LoopHeader();
+  {
+    // Loop body
+    LoopBuilder loop_builder(this);
+    loop_builder.LoopHeader();
 
-  LocalVar cond = current_function()->NewLocal(ast::BoolType::Bool(ctx), "c");
-  emitter()->Emit(Bytecode::SqlTableIteratorNext, cond, iter);
-  emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
-                                 loop_builder.break_label());
+    LocalVar cond = current_function()->NewTempLocal(ast::BoolType::Bool(ctx));
+    emitter()->Emit(Bytecode::SqlTableIteratorNext, cond, iter);
+    emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
+                                   loop_builder.break_label());
 
-  VisitIterationStatement(node, &loop_builder);
+    VisitIterationStatement(node, &loop_builder);
 
-  loop_builder.JumpToHeader();
+    loop_builder.JumpToHeader();
+  }
 
   // Cleanup
   emitter()->Emit(Bytecode::SqlTableIteratorClose, iter);

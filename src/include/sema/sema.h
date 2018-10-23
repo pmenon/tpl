@@ -11,9 +11,9 @@ namespace ast {
 class AstContext;
 }  // namespace ast
 
-namespace runtime {
+namespace sql {
 class Schema;
-}  // namespace runtime
+}  // namespace sql
 
 namespace sema {
 
@@ -39,7 +39,7 @@ class Sema : public ast::AstVisitor<Sema> {
     return expr->type();
   }
 
-  ast::Type *ConvertToType(const runtime::Schema &schema);
+  ast::Type *ConvertToType(const sql::Schema &schema);
 
   //////////////////////////////////////////////////////////////////////////////
   ///

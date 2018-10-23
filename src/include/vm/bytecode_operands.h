@@ -26,6 +26,7 @@ enum class OperandSize : u8 {
   V(Imm4, true, OperandSize::Int)     \
   V(Imm8, true, OperandSize::Long)    \
   V(UImm2, false, OperandSize::Short) \
+  V(UImm4, false, OperandSize::Int)   \
   V(Reg, false, OperandSize::Int)     \
   V(RegCount, false, OperandSize::Short)
 

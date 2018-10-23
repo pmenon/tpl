@@ -1,6 +1,8 @@
 #include "vm/bytecode_handlers.h"
 
-#include "runtime/sql_table.h"
+#include "logging/logger.h"
+#include "sql/catalog.h"
+#include "sql/table.h"
 #include "util/macros.h"
 
 /// Comparisons
@@ -122,11 +124,44 @@ bool OpJumpIfFalse(bool cond) { return !cond; }
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-void OpSqlTableIteratorInit(tpl::runtime::SqlTableIterator *iter) {}
+void OpSqlTableIteratorInit(tpl::sql::TableIterator *iter, u16 table_id) {
+  TPL_ASSERT(iter != nullptr, "Null iterator!");
 
-void OpSqlTableIteratorNext(bool *has_more,
-                            tpl::runtime::SqlTableIterator *iter) {
+  auto *table = tpl::sql::Catalog::instance()->LookupTableById(
+      static_cast<tpl::sql::TableId>(table_id));
+
+  if (table == nullptr) {
+    LOG_ERROR("Table with ID {} does not exist!", table_id);
+    throw std::runtime_error("Table does not exist");
+  }
+
+  new (iter) tpl::sql::TableIterator(table);
+}
+
+void OpSqlTableIteratorNext(bool *has_more, tpl::sql::TableIterator *iter) {
   *has_more = iter->Next();
 }
 
-void OpSqlTableIteratorClose(tpl::runtime::SqlTableIterator *iter) {}
+void OpSqlTableIteratorClose(tpl::sql::TableIterator *iter) {
+  iter->~TableIterator();
+}
+
+void OpReadSmallInt(tpl::sql::TableIterator *iter, u32 col_idx,
+                    tpl::sql::Integer *val) {
+  iter->GetIntegerColumn<tpl::sql::TypeId::SmallInt, false>(col_idx, val);
+}
+
+void OpReadInt(tpl::sql::TableIterator *iter, u32 col_idx,
+               tpl::sql::Integer *val) {
+  iter->GetIntegerColumn<tpl::sql::TypeId::Integer, false>(col_idx, val);
+}
+
+void OpReadBigInt(tpl::sql::TableIterator *iter, u32 col_idx,
+                  tpl::sql::Integer *val) {
+  iter->GetIntegerColumn<tpl::sql::TypeId::BigInt, false>(col_idx, val);
+}
+
+void OpReadDecimal(tpl::sql::TableIterator *iter, u32 col_idx,
+                   tpl::sql::Decimal *val) {
+  iter->GetDecimalColumn<false>(col_idx, val);
+}

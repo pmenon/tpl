@@ -2,7 +2,8 @@
 
 #include "ast/ast_context.h"
 #include "ast/type.h"
-#include "runtime/sql_table.h"
+#include "sql/catalog.h"
+#include "sql/table.h"
 
 namespace tpl::sema {
 
@@ -79,7 +80,7 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
 
   // Lookup the table in the catalog
   // TODO(pmenon): This will change after we integrate with bigger system
-  auto *table = runtime::LookupTableByName(iter->name().data());
+  auto *table = sql::Catalog::instance()->LookupTableByName(iter->name());
   if (table == nullptr) {
     error_reporter().Report(iter->position(), ErrorMessages::kNonExistingTable,
                             iter->name());

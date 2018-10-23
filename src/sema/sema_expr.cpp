@@ -35,10 +35,9 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
     case parsing::Token::Type::PERCENT: {
       // Arithmetic ops
       if (left_type != right_type) {
-        LOG_ERROR("Type mismatch: op={}, left type={}, right type={}",
-                  parsing::Token::GetString(node->op()),
-                  ast::Type::ToString(left_type),
-                  ast::Type::ToString(right_type));
+        error_reporter().Report(node->position(),
+                                ErrorMessages::kMismatchedTypesToBinary,
+                                left_type, right_type, node->op());
         return;
       }
       node->set_type(left_type);
@@ -57,9 +56,9 @@ void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
 
   // TODO(pmenon): Fix this check
   if (left_type != right_type) {
-    LOG_ERROR("Type mismatch: op={}, left type={}, right type={}",
-              parsing::Token::GetString(node->op()),
-              ast::Type::ToString(left_type), ast::Type::ToString(right_type));
+    error_reporter().Report(node->position(),
+                            ErrorMessages::kMismatchedTypesToBinary, left_type,
+                            right_type, node->op());
     return;
   }
 
@@ -271,7 +270,10 @@ void Sema::VisitSelectorExpr(ast::SelectorExpr *node) {
       obj_type->As<ast::StructType>()->LookupFieldByName(sel_name);
 
   if (field_type == nullptr) {
-    // Error
+    error_reporter().Report(node->selector()->position(),
+                            ErrorMessages::kFieldObjectDoesNotExist, sel_name,
+                            obj_type);
+    return;
   }
 
   node->set_type(field_type);

@@ -1,26 +1,20 @@
 #include "vm/vm.h"
 
 #include "logging/logger.h"
-#include "runtime/sql_table.h"
+#include "sql/table.h"
+#include "sql/value.h"
 #include "util/common.h"
 #include "util/timer.h"
 #include "vm/bytecode_handlers.h"
 
-namespace tpl {
-
-namespace runtime {
-class SqlTableIterator;
-}  // namespace runtime
-
-namespace vm {
+namespace tpl::vm {
 
 class VM::Frame {
  public:
   Frame(VM *vm, const BytecodeUnit &unit, const FunctionInfo &func)
       : vm_(vm),
         caller_(vm->current_frame()),
-        data_(static_cast<u8 *>(std::aligned_alloc(64, func.frame_size())),
-              &std::free),
+        data_(std::make_unique<u8[]>(func.frame_size())),
         pc_(unit.GetBytecodeForFunction(func)) {
     TPL_MEMSET(data_.get(), 0, func.frame_size());
     vm->set_current_frame(this);
@@ -50,7 +44,7 @@ class VM::Frame {
  public:
   VM *vm_;
   Frame *caller_;
-  std::unique_ptr<u8[], decltype(&std::free)> data_;
+  std::unique_ptr<u8[]> data_;
   const u8 *pc_;
 };
 
@@ -88,13 +82,15 @@ void VM::Run(Frame *frame) {
   };
 
 #ifdef TPL_DEBUG_TRACE_INSTRUCTIONS
-#define DEBUG_TRACE_INSTRUCTIONS()                                         \
-  do {                                                                     \
-    bytecode_counts_[static_cast<std::underlying_type_t<Bytecode>>(op)]++; \
-    LOG_INFO("{0:p}: {1:s}", ip - 1, Bytecodes::ToString(op));             \
+#define DEBUG_TRACE_INSTRUCTIONS(op)                                        \
+  do {                                                                      \
+    auto bytecode = Bytecodes::FromByte(op);                                \
+    bytecode_counts_[op]++;                                                 \
+    LOG_INFO("{0:p}: {1:s}", ip - sizeof(std::underlying_type_t<Bytecode>), \
+             Bytecodes::ToString(bytecode));                                \
   } while (false)
 #else
-#define DEBUG_TRACE_INSTRUCTIONS()
+#define DEBUG_TRACE_INSTRUCTIONS(op) (void)op
 #endif
 
   // TODO(pmenon): Should these READ/PEEK macros take in a vm::OperantType so
@@ -105,18 +101,19 @@ void VM::Run(Frame *frame) {
 #define READ_IMM2() Read<i16>(&ip)
 #define READ_IMM4() Read<i32>(&ip)
 #define READ_IMM8() Read<i64>(&ip)
-#define READ_UIMM4() Read<u32>(&ip);
-#define READ_JMP_OFFSET() Read<u16>(&ip)
+#define READ_UIMM2() Read<u16>(&ip)
+#define READ_UIMM4() Read<u32>(&ip)
+#define READ_JMP_OFFSET() READ_UIMM2()
 #define READ_REG_ID() Read<u32>(&ip)
 #define READ_REG_COUNT() Read<u16>(&ip)
 #define READ_OP() Read<std::underlying_type_t<Bytecode>>(&ip)
 
 #define OP(name) op_##name
-#define DISPATCH_NEXT()                          \
-  do {                                           \
-    op = Bytecodes::FromByte(READ_OP());         \
-    DEBUG_TRACE_INSTRUCTIONS();                  \
-    goto *kDispatchTable[Bytecodes::ToByte(op)]; \
+#define DISPATCH_NEXT()           \
+  do {                            \
+    auto op = READ_OP();          \
+    DEBUG_TRACE_INSTRUCTIONS(op); \
+    goto *kDispatchTable[op];     \
   } while (false)
 
   /*****************************************************************************
@@ -145,8 +142,7 @@ void VM::Run(Frame *frame) {
    *
    ****************************************************************************/
 
-  // The currently executing bytecode and the instruction pointer
-  Bytecode op;
+  // The instruction pointer
   const u8 *ip = frame->pc();
 
   DISPATCH_NEXT();
@@ -319,21 +315,54 @@ void VM::Run(Frame *frame) {
   }
 
   OP(SqlTableIteratorInit) : {
-    auto *iter = frame->LocalAt<runtime::SqlTableIterator *>(READ_REG_ID());
-    OpSqlTableIteratorInit(iter);
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_REG_ID());
+    auto table_id = READ_UIMM2();
+    OpSqlTableIteratorInit(iter, table_id);
     DISPATCH_NEXT();
   }
 
   OP(SqlTableIteratorNext) : {
     auto *has_more = frame->LocalAt<bool *>(READ_REG_ID());
-    auto *iter = frame->LocalAt<runtime::SqlTableIterator *>(READ_REG_ID());
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_REG_ID());
     OpSqlTableIteratorNext(has_more, iter);
     DISPATCH_NEXT();
   }
 
   OP(SqlTableIteratorClose) : {
-    auto *iter = frame->LocalAt<runtime::SqlTableIterator *>(READ_REG_ID());
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_REG_ID());
     OpSqlTableIteratorClose(iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(ReadSmallInt) : {
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_REG_ID());
+    auto col_idx = READ_UIMM4();
+    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_REG_ID());
+    OpReadSmallInt(iter, col_idx, sql_int);
+    DISPATCH_NEXT();
+  }
+
+  OP(ReadInteger) : {
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_REG_ID());
+    auto col_idx = READ_UIMM4();
+    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_REG_ID());
+    OpReadInt(iter, col_idx, sql_int);
+    DISPATCH_NEXT();
+  }
+
+  OP(ReadBigInt) : {
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_REG_ID());
+    auto col_idx = READ_UIMM4();
+    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_REG_ID());
+    OpReadBigInt(iter, col_idx, sql_int);
+    DISPATCH_NEXT();
+  }
+
+  OP(ReadDecimal) : {
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_REG_ID());
+    auto col_idx = READ_UIMM4();
+    auto *sql_int = frame->LocalAt<sql::Decimal *>(READ_REG_ID());
+    OpReadDecimal(iter, col_idx, sql_int);
     DISPATCH_NEXT();
   }
 
@@ -359,5 +388,4 @@ void VM::Execute(const BytecodeUnit &unit, const std::string &name) {
   vm.Invoke(func->id());
 }
 
-}  // namespace vm
-}  // namespace tpl
+}  // namespace tpl::vm

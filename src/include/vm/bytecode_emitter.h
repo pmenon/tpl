@@ -41,6 +41,14 @@ class BytecodeEmitter {
   void Emit(Bytecode bytecode, LocalVar operand_1);
   void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2);
 
+  template <typename T,
+            typename std::enable_if_t<std::is_integral_v<T>, u32> = 0>
+  void Emit(Bytecode bytecode, LocalVar operand_1, T imm) {
+    EmitOp(bytecode);
+    EmitLocalVar(operand_1);
+    EmitImmediateValue(imm);
+  }
+
   void Bind(BytecodeLabel *label);
 
   const std::vector<u8> &Finish();
