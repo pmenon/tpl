@@ -26,10 +26,9 @@ bool Table::Scan(TableIterator *iter) const {
 }
 
 bool TableIterator::Next() {
-  if (pos_ + 1 == bound_) {
+  if (++pos_ >= bound_) {
     return table_->Scan(this);
   }
-  pos_++;
   return true;
 }
 
