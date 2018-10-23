@@ -179,6 +179,9 @@ void Scanner::Scan() {
         if (Matches('/')) {
           SkipLineComment();
           type = Token::Type::WHITESPACE;
+        } else if (Matches('*')) {
+          SkipBlockComment();
+          type = Token::Type::WHITESPACE;
         } else {
           type = Token::Type::SLASH;
         }
@@ -239,7 +242,12 @@ void Scanner::SkipLineComment() {
 }
 
 void Scanner::SkipBlockComment() {
-  // TODO(pmenon): Implement me
+  i32 c = c0_;
+  while (c != '*' && c0_ != '/') {
+    c = c0_;
+    Advance();
+  }
+  Advance();
 }
 
 Token::Type Scanner::ScanIdentifierOrKeyword() {
