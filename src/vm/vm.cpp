@@ -226,7 +226,7 @@ void VM::Run(Frame *frame) {
    * Move operations
    */
 #define GEN_MOVE_OP(type)                               \
-    OP(Move##_##type) : {                               \
+  OP(Move##_##type) : {                                 \
     auto *dest = frame->LocalAt<type *>(READ_REG_ID()); \
     auto input = frame->LocalAt<type>(READ_REG_ID());   \
     OpMove##_##type(dest, input);                       \
@@ -234,6 +234,7 @@ void VM::Run(Frame *frame) {
   }
 
   INT_TYPES(GEN_MOVE_OP)
+  GEN_MOVE_OP(bool)
 #undef GEN_MOVE_OP
   /*
    * Jumps are unconditional forward-only jumps
@@ -324,6 +325,8 @@ void VM::Run(Frame *frame) {
 
   OP(Return) : {
     // Just return for now. We need to handle return values though ...
+    bool *result = frame->LocalAt<bool *>(0);
+    LOG_INFO("Return value {}", *result);
     return;
   }
 

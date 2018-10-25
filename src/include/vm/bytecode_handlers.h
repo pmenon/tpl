@@ -61,6 +61,7 @@ INT_TYPES(LOAD_CONSTANT)
 #undef MOVE
 #undef LOAD_CONSTANT
 
+void OpMove_bool(bool *result, bool input);
 void OpDeref1(u8 *dest, u8 *src);
 void OpDeref2(u16 *dest, u16 *src);
 void OpDeref4(u32 *dest, u32 *src);

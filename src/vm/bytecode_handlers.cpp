@@ -109,6 +109,9 @@ INT_TYPES(LOAD_CONSTANT)
 #undef MOVE
 #undef LOAD_CONSTANT
 
+// TODO(siva); Remove this later
+void OpMove_bool(bool *result, bool input) { *result = input; }
+
 void OpDeref1(u8 *dest, u8 *src) { *dest = *src; }
 
 void OpDeref2(u16 *dest, u16 *src) { *dest = *src; }

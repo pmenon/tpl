@@ -63,6 +63,9 @@ namespace tpl::vm {
   CREATE_FOR_INT_TYPES(V, Move, OperandType::Reg, OperandType::Reg)                                                    \
   CREATE_FOR_INT_TYPES(V, NotEqual, OperandType::Reg, OperandType::Reg, OperandType::Reg)                              \
                                                                                                                        \
+  /* TODO(siva): Remove this when bool operations are cleanly done */                                                  \
+  V(Move_bool, OperandType::Reg, OperandType::Reg)                                                                     \
+                                                                                                                       \
   /* Branching */                                                                                                      \
   V(Jump, OperandType::UImm2)                                                                                          \
   V(JumpLoop, OperandType::UImm2)                                                                                      \

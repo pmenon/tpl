@@ -57,8 +57,6 @@ TEST_F(BytecodeGeneratorTest, LoadConstantTest) {
   VM::Execute(*unit, "test");
 }
 
-// return (f < 1 and x > 2) or (t > 5 or x < 3)
-
 TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
   auto src = R"(
     fun test() -> bool {

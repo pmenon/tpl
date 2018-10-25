@@ -309,7 +309,12 @@ void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
 
 void BytecodeGenerator::VisitAssignmentStmt(ast::AssignmentStmt *node) {
   LocalVar dest = VisitExpressionForLValue(node->destination());
-  VisitExpressionForRValue(node->source(), dest);
+  if (node->destination()->type()->IsBoolType()) {
+    LocalVar src = VisitExpressionForRValue(node->source());
+    emitter()->Emit(Bytecode::Move_bool, dest, src);
+  } else {
+    VisitExpressionForRValue(node->source(), dest);
+  }
 }
 
 void BytecodeGenerator::VisitFile(ast::File *node) {
