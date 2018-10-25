@@ -5,8 +5,8 @@
 #include "util/common.h"
 
 namespace tpl::sql {
-class Decimal;
-class Integer;
+struct Decimal;
+struct Integer;
 class TableIterator;
 }  // namespace tpl::sql
 
