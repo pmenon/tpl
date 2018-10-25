@@ -12,6 +12,7 @@
 #include "sema/sema.h"
 #include "sql/catalog.h"
 #include "tpl.h"
+#include "util/timer.h"
 #include "vm/bytecode_generator.h"
 #include "vm/bytecode_unit.h"
 #include "vm/vm.h"
@@ -20,7 +21,7 @@ namespace tpl {
 
 static constexpr const char *kExitKeyword = ".exit";
 
-static void Compile(const std::string &source) {
+static void CompileAndRun(const std::string &source) {
   util::Region region("repl-ast");
   util::Region error_region("repl-error");
 
@@ -31,8 +32,14 @@ static void Compile(const std::string &source) {
   parsing::Scanner scanner(source.data(), source.length());
   parsing::Parser parser(scanner, context);
 
-  // Parsing
-  ast::AstNode *root = parser.Parse();
+  double parse_ms = 0, typecheck_ms = 0, codegen_ms = 0, exec_ms = 0;
+
+  // Parse
+  ast::AstNode *root;
+  {
+    util::ScopedTimer<std::milli> timer(&parse_ms);
+    root = parser.Parse();
+  }
 
   if (error_reporter.has_errors()) {
     LOG_ERROR("Parsing error!");
@@ -41,21 +48,40 @@ static void Compile(const std::string &source) {
   }
 
   // Type check
-  sema::Sema type_check(context);
-  if (type_check.Run(root)) {
+  {
+    util::ScopedTimer<std::milli> timer(&typecheck_ms);
+    sema::Sema type_check(context);
+    type_check.Run(root);
+  }
+
+  if (error_reporter.has_errors()) {
     LOG_ERROR("Type-checking error!");
     error_reporter.PrintErrors();
     return;
   }
 
-  // For now, just pretty print the AST
+  // Dump AST
   ast::AstDump::Dump(root);
 
-  // Try generating bytecode for this declaration
-  auto unit = vm::BytecodeGenerator::Compile(root);
+  // Codegen
+  std::unique_ptr<vm::BytecodeUnit> unit;
+  {
+    util::ScopedTimer<std::milli> timer(&codegen_ms);
+    unit = vm::BytecodeGenerator::Compile(root);
+  }
 
+  // Dump VM
   unit->PrettyPrint(std::cout);
-  vm::VM::Execute(*unit, "f");
+
+  // Execute
+  {
+    util::ScopedTimer<std::milli> timer(&exec_ms);
+    vm::VM::Execute(*unit, "f");
+  }
+
+  // Dump stats
+  LOG_INFO("Parse: {} ms, Typecheck: {} ms, Codegen: {} ms, Exec.: {} ms",
+           parse_ms, typecheck_ms, codegen_ms, exec_ms);
 }
 
 static void RunRepl() {
@@ -74,7 +100,7 @@ static void RunRepl() {
       input.append(line);
     } while (!line.empty());
 
-    Compile(input);
+    CompileAndRun(input);
   }
 }
 
@@ -90,7 +116,7 @@ static void RunFile(const std::string &filename) {
     file.close();
   }
 
-  Compile(source);
+  CompileAndRun(source);
 }
 
 }  // namespace tpl

@@ -37,4 +37,22 @@ class Timer {
   double elapsed_;
 };
 
+template <typename ResolutionRatio = std::ratio<1>>
+class ScopedTimer {
+ public:
+  explicit ScopedTimer(double *elapsed) : elapsed_(elapsed) {
+    *elapsed_ = 0;
+    timer_.Start();
+  }
+
+  ~ScopedTimer() {
+    timer_.Stop();
+    *elapsed_ = timer_.elapsed();
+  }
+
+ private:
+  Timer<ResolutionRatio> timer_;
+  double *elapsed_;
+};
+
 }  // namespace tpl::util
