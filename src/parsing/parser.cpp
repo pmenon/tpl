@@ -489,9 +489,9 @@ ast::Expr *Parser::ParsePrimaryExpr() {
   }
 
   // Error
-  // TODO(pmenon) Also advance to next statement
   error_reporter().Report(scanner().current_position(),
                           sema::ErrorMessages::kExpectingExpression);
+  Next();
   return node_factory().NewBadExpr(scanner().current_position());
 }
 
