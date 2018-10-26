@@ -227,7 +227,7 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
       LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
       emitter()->Emit(GetIntTypedBytecode(
                           GET_BASE_FOR_INT_TYPES(Bytecode::Move), node->type()),
-                    dest, local);
+                      dest, local);
       execution_result()->set_destination(dest);
       return;
     }
@@ -359,7 +359,7 @@ void BytecodeGenerator::VisitStructDecl(ast::StructDecl *node) {
   // false);
 }
 
-void BytecodeGenerator::VisitAndOrExpr(ast::BinaryOpExpr *node) {
+void BytecodeGenerator::VisitLogicalAndOrExpr(ast::BinaryOpExpr *node) {
   // TODO(siva): Once we support move for all types (bool), fix this to support
   // destination of the assignment in the lhs expression.
   TPL_ASSERT(execution_result()->IsRValue(),
@@ -377,7 +377,7 @@ void BytecodeGenerator::VisitAndOrExpr(ast::BinaryOpExpr *node) {
   Bytecode conditional_jump;
   BytecodeLabel end_label;
 
-  switch(node->op()) {
+  switch (node->op()) {
     case parsing::Token::Type::OR: {
       conditional_jump = Bytecode::JumpIfTrue;
       break;
@@ -386,7 +386,7 @@ void BytecodeGenerator::VisitAndOrExpr(ast::BinaryOpExpr *node) {
       conditional_jump = Bytecode::JumpIfFalse;
       break;
     }
-    default: { UNREACHABLE("Impossible binary operation of bool type"); }
+    default: { UNREACHABLE("Impossible logical operation type"); }
   }
 
   // Do a conditional jump
@@ -402,16 +402,11 @@ void BytecodeGenerator::VisitAndOrExpr(ast::BinaryOpExpr *node) {
   execution_result()->set_destination(dest.ValueOf());
 }
 
-void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
+void BytecodeGenerator::VisitArithmeticExpr(ast::BinaryOpExpr *node) {
   TPL_ASSERT(execution_result()->IsRValue(),
-             "Binary expressions must be R-Values!");
+             "Arithmetic expressions must be R-Values!");
   TPL_ASSERT(node->left()->type()->kind() == node->right()->type()->kind(),
-             "Binary operation has mismatched left and right types");
-
-  if (node->op() == parsing::Token::Type::AND
-          || node->op() == parsing::Token::Type::OR) {
-    return VisitAndOrExpr(node);
-  }
+             "Arithmetic operation has mismatched left and right types");
 
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
   LocalVar left = VisitExpressionForRValue(node->left());
@@ -467,6 +462,20 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
 
   // Mark where the result is
   execution_result()->set_destination(dest.ValueOf());
+}
+
+void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
+  switch (node->op()) {
+    case parsing::Token::Type::AND:
+    case parsing::Token::Type::OR: {
+      VisitLogicalAndOrExpr(node);
+      break;
+    }
+    default: {
+      VisitArithmeticExpr(node);
+      break;
+    }
+  }
 }
 
 void BytecodeGenerator::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
