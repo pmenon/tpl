@@ -22,16 +22,22 @@ namespace tpl::vm {
   func(op##_##u64, __VA_ARGS__)
 // clang-format on
 
+// Creates instances of a given opcode for all bool primitive types
+#define CREATE_FOR_BOOL_TYPES(func, op, ...)      \
+  func(op##_##bool, __VA_ARGS__)
+
 // Creates instances of a given opcode for all floating-point primitive types
 #define CREATE_FOR_FLOAT_TYPES(func, op) func(op, f32) func(op, f64)
 
 // Creates instances of a given opcode for *ALL* primitive types
-#define CREATE_FOR_ALL_TYPES(func, op, ...)   \
-  CREATE_FOR_INT_TYPES(func, op, __VA_ARGS__) \
+#define CREATE_FOR_ALL_TYPES(func, op, ...)     \
+  CREATE_FOR_INT_TYPES(func, op, __VA_ARGS__)   \
   CREATE_FOR_FLOAT_TYPES(func, op, __VA_ARGS__)
+
 
 #define GET_BASE_FOR_INT_TYPES(op) (op##_i8)
 #define GET_BASE_FOR_FLOAT_TYPES(op) (op##_f32)
+#define GET_BASE_FOR_BOOL_TYPES(op) (op##_bool)
 
 /**
  * The master list of all bytecodes and its operands.
@@ -63,8 +69,8 @@ namespace tpl::vm {
   CREATE_FOR_INT_TYPES(V, Move, OperandType::Reg, OperandType::Reg)                                                    \
   CREATE_FOR_INT_TYPES(V, NotEqual, OperandType::Reg, OperandType::Reg, OperandType::Reg)                              \
                                                                                                                        \
-  /* TODO(siva): Remove this when bool operations are cleanly done */                                                  \
-  V(Move_bool, OperandType::Reg, OperandType::Reg)                                                                     \
+  /* Bool operations */                                                                                                \
+  CREATE_FOR_BOOL_TYPES(V, Move, OperandType::Reg, OperandType::Reg)                                                   \
                                                                                                                        \
   /* Branching */                                                                                                      \
   V(Jump, OperandType::UImm2)                                                                                          \

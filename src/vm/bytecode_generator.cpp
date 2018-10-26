@@ -311,7 +311,7 @@ void BytecodeGenerator::VisitAssignmentStmt(ast::AssignmentStmt *node) {
   LocalVar dest = VisitExpressionForLValue(node->destination());
   if (node->destination()->type()->IsBoolType()) {
     LocalVar src = VisitExpressionForRValue(node->source());
-    emitter()->Emit(Bytecode::Move_bool, dest, src);
+    emitter()->Emit(GET_BASE_FOR_BOOL_TYPES(Bytecode::Move), dest, src);
   } else {
     VisitExpressionForRValue(node->source(), dest);
   }
