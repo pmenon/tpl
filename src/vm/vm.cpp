@@ -366,6 +366,36 @@ void VM::Run(Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(ForceBoolTruth) : {
+    auto *result = frame->LocalAt<bool *>(READ_REG_ID());
+    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_REG_ID());
+    OpForceBoolTruth(result, sql_int);
+    DISPATCH_NEXT();
+  }
+
+  OP(InitInteger) : {
+    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_REG_ID());
+    i32 val = frame->LocalAt<i32>(READ_REG_ID());
+    OpInitInteger(sql_int, val);
+    DISPATCH_NEXT();
+  }
+
+#define GEN_CMP(op)                                               \
+  OP(op##Integer) : {                                             \
+    auto *result = frame->LocalAt<sql::Integer *>(READ_REG_ID()); \
+    auto *left = frame->LocalAt<sql::Integer *>(READ_REG_ID());   \
+    auto *right = frame->LocalAt<sql::Integer *>(READ_REG_ID());  \
+    Op##op##Integer(result, left, right);                         \
+    DISPATCH_NEXT();                                              \
+  }
+  GEN_CMP(GreaterThan);
+  GEN_CMP(GreaterThanEqual);
+  GEN_CMP(Equal);
+  GEN_CMP(LessThan);
+  GEN_CMP(LessThanEqual);
+  GEN_CMP(NotEqual);
+#undef GEN_CMP
+
   // Impossible
   UNREACHABLE("Impossible to reach end of interpreter loop. Bad code!");
 }

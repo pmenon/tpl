@@ -73,13 +73,16 @@ bool OpJumpIfFalse(bool cond);
 
 ////////////////////////////////////////////////////////////////////////////////
 ///
-/// Table
+/// SQL
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
+// Iteration
 void OpSqlTableIteratorInit(tpl::sql::TableIterator *iter, u16 table_id);
 void OpSqlTableIteratorNext(bool *has_more, tpl::sql::TableIterator *iter);
 void OpSqlTableIteratorClose(tpl::sql::TableIterator *iter);
+
+// Reading
 void OpReadSmallInt(tpl::sql::TableIterator *iter, u32 col_idx,
                     tpl::sql::Integer *val);
 void OpReadInt(tpl::sql::TableIterator *iter, u32 col_idx,
@@ -88,5 +91,25 @@ void OpReadBigInt(tpl::sql::TableIterator *iter, u32 col_idx,
                   tpl::sql::Integer *val);
 void OpReadDecimal(tpl::sql::TableIterator *iter, u32 col_idx,
                    tpl::sql::Decimal *val);
+
+// SQL Boolean to boolean
+void OpForceBoolTruth(bool *result, tpl::sql::Integer *input);
+
+// Native integer to SQL
+void OpInitInteger(tpl::sql::Integer *result, i32 input);
+
+void OpGreaterThanInteger(tpl::sql::Integer *result, tpl::sql::Integer *left,
+                          tpl::sql::Integer *right);
+void OpGreaterThanEqualInteger(tpl::sql::Integer *result,
+                               tpl::sql::Integer *left,
+                               tpl::sql::Integer *right);
+void OpEqualInteger(tpl::sql::Integer *result, tpl::sql::Integer *left,
+                    tpl::sql::Integer *right);
+void OpLessThanInteger(tpl::sql::Integer *result, tpl::sql::Integer *left,
+                       tpl::sql::Integer *right);
+void OpLessThanEqualInteger(tpl::sql::Integer *result, tpl::sql::Integer *left,
+                            tpl::sql::Integer *right);
+void OpNotEqualInteger(tpl::sql::Integer *result, tpl::sql::Integer *left,
+                       tpl::sql::Integer *right);
 
 }  // extern "C"

@@ -165,3 +165,49 @@ void OpReadDecimal(tpl::sql::TableIterator *iter, u32 col_idx,
                    tpl::sql::Decimal *val) {
   iter->GetDecimalColumn<false>(col_idx, val);
 }
+
+void OpForceBoolTruth(bool *result, tpl::sql::Integer *input) {
+  *result = input->val.boolean;
+}
+
+void OpInitInteger(tpl::sql::Integer *result, i32 input) {
+  result->val.integer = input;
+  result->null = false;
+}
+
+void OpGreaterThanInteger(tpl::sql::Integer *result, tpl::sql::Integer *left,
+                          tpl::sql::Integer *right) {
+  result->val.boolean = left->val.integer > right->val.integer;
+  result->null = left->null || right->null;
+}
+
+void OpGreaterThanEqualInteger(tpl::sql::Integer *result,
+                               tpl::sql::Integer *left,
+                               tpl::sql::Integer *right) {
+  result->val.boolean = left->val.integer >= right->val.integer;
+  result->null = left->null || right->null;
+}
+
+void OpEqualInteger(tpl::sql::Integer *result, tpl::sql::Integer *left,
+                    tpl::sql::Integer *right) {
+  result->val.boolean = left->val.integer == right->val.integer;
+  result->null = left->null || right->null;
+}
+
+void OpLessThanInteger(tpl::sql::Integer *result, tpl::sql::Integer *left,
+                       tpl::sql::Integer *right) {
+  result->val.boolean = left->val.integer < right->val.integer;
+  result->null = left->null || right->null;
+}
+
+void OpLessThanEqualInteger(tpl::sql::Integer *result, tpl::sql::Integer *left,
+                            tpl::sql::Integer *right) {
+  result->val.boolean = left->val.integer <= right->val.integer;
+  result->null = left->null || right->null;
+}
+
+void OpNotEqualInteger(tpl::sql::Integer *result, tpl::sql::Integer *left,
+                       tpl::sql::Integer *right) {
+  result->val.boolean = left->val.integer != right->val.integer;
+  result->null = left->null || right->null;
+}

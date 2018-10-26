@@ -10,7 +10,14 @@
 #include "util/region.h"
 #include "util/region_containers.h"
 
-namespace tpl::ast {
+namespace tpl {
+
+namespace sema {
+class Sema;
+}  // namespace sema
+
+namespace ast {
+
 /*
  *
  */
@@ -57,6 +64,7 @@ namespace tpl::ast {
   T(ComparisonOpExpr)       \
   T(FunctionLitExpr)        \
   T(IdentifierExpr)         \
+  T(ImplicitCastExpr)       \
   T(LitExpr)                \
   T(SelectorExpr)           \
   T(UnaryOpExpr)            \
@@ -491,6 +499,13 @@ class IfStmt : public Stmt {
   }
 
  private:
+  friend class sema::Sema;
+  void set_condition(Expr *cond) {
+    TPL_ASSERT(cond != nullptr, "Cannot set null condition");
+    cond_ = cond;
+  }
+
+ private:
   Expr *cond_;
   BlockStmt *then_stmt_;
   Stmt *else_stmt_;
@@ -584,6 +599,19 @@ class BinaryOpExpr : public Expr {
   }
 
  private:
+  friend class sema::Sema;
+
+  void set_left(Expr *left) {
+    TPL_ASSERT(left != nullptr, "Left cannot be null!");
+    left_ = left;
+  }
+
+  void set_right(Expr *right) {
+    TPL_ASSERT(right != nullptr, "Right cannot be null!");
+    right_ = right;
+  }
+
+ private:
   parsing::Token::Type op_;
   Expr *left_;
   Expr *right_;
@@ -635,6 +663,19 @@ class ComparisonOpExpr : public Expr {
   }
 
  private:
+  friend class sema::Sema;
+
+  void set_left(Expr *left) {
+    TPL_ASSERT(left != nullptr, "Left cannot be null!");
+    left_ = left;
+  }
+
+  void set_right(Expr *right) {
+    TPL_ASSERT(right != nullptr, "Right cannot be null!");
+    right_ = right;
+  }
+
+ private:
   parsing::Token::Type op_;
   Expr *left_;
   Expr *right_;
@@ -680,6 +721,38 @@ class IdentifierExpr : public Expr {
   // Pre-binding, 'name_' is used, and post-binding 'decl_' should be used?
   Identifier name_;
   Decl *decl_;
+};
+
+/**
+ *
+ */
+class ImplicitCastExpr : public Expr {
+ public:
+  enum class CastKind {
+    IntToSqlInt,
+    IntToSqlDecimal,
+    SqlBoolToBool,
+  };
+
+  CastKind cast_kind() const { return cast_kind_; }
+
+  Expr *input() { return input_; }
+
+  static bool classof(const AstNode *node) {
+    return node->kind() == Kind::ImplicitCastExpr;
+  }
+
+ private:
+  friend class AstNodeFactory;
+
+  ImplicitCastExpr(const SourcePosition &pos, CastKind cast_kind, Expr *input)
+      : Expr(Kind::ImplicitCastExpr, pos),
+        cast_kind_(cast_kind),
+        input_(input) {}
+
+ private:
+  CastKind cast_kind_;
+  Expr *input_;
 };
 
 /**
@@ -886,4 +959,5 @@ class StructTypeRepr : public Expr {
   util::RegionVector<FieldDecl *> fields_;
 };
 
-}  // namespace tpl::ast
+}  // namespace ast
+}  // namespace tpl

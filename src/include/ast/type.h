@@ -5,6 +5,7 @@
 #include "llvm/Support/Casting.h"
 
 #include "ast/identifier.h"
+#include "sql/type.h"
 #include "util/region.h"
 #include "util/region_containers.h"
 
@@ -21,7 +22,8 @@ class AstContext;
   F(ArrayType)       \
   F(StructType)      \
   F(FunctionType)    \
-  F(InternalType)
+  F(InternalType)    \
+  F(SqlType)
 
 // Forward declare everything first
 #define F(name) class name;
@@ -76,7 +78,7 @@ class Type : public util::RegionObject {
   TYPE_LIST(F)
 #undef F
 
-  bool IsNumber() const { return (IsIntegerType() || IsFloatType()); }
+  bool IsArithmetic() const;
 
   PointerType *PointerTo();
 
@@ -113,14 +115,7 @@ class IntegerType : public Type {
 
   IntKind int_kind() const { return int_kind_; }
 
-  static IntegerType *Int8(AstContext &ctx);
-  static IntegerType *Int16(AstContext &ctx);
-  static IntegerType *Int32(AstContext &ctx);
-  static IntegerType *Int64(AstContext &ctx);
-  static IntegerType *UInt8(AstContext &ctx);
-  static IntegerType *UInt16(AstContext &ctx);
-  static IntegerType *UInt32(AstContext &ctx);
-  static IntegerType *UInt64(AstContext &ctx);
+  static IntegerType *Get(AstContext &ctx, IntKind kind);
 
   u32 BitWidth() const {
     switch (int_kind()) {
@@ -178,9 +173,7 @@ class FloatType : public Type {
 
   FloatKind float_kind() const { return float_kind_; }
 
-  static FloatType *Float32(AstContext &ctx);
-
-  static FloatType *Float64(AstContext &ctx);
+  static FloatType *Get(AstContext &ctx, FloatKind kind);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::FloatType;
@@ -201,7 +194,7 @@ class FloatType : public Type {
  */
 class BoolType : public Type {
  public:
-  static BoolType *Bool(AstContext &ctx);
+  static BoolType *Get(AstContext &ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::BoolType;
@@ -218,7 +211,7 @@ class BoolType : public Type {
  */
 class NilType : public Type {
  public:
-  static NilType *Nil(AstContext &ctx);
+  static NilType *Get(AstContext &ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::NilType;
@@ -414,6 +407,30 @@ class InternalType : public Type {
  private:
   Identifier name_;
   InternalKind internal_kind_;
+};
+
+/**
+ * A SQL type masquerading as a TPL type
+ */
+class SqlType : public Type {
+ public:
+  static SqlType *Get(AstContext &ctx, const sql::Type &sql_type);
+
+  sql::Type *sql_type() { return &sql_type_; }
+  const sql::Type &sql_type() const { return sql_type_; }
+
+  // Type check
+  static bool classof(const Type *type) {
+    return type->kind() == Type::Kind::SqlType;
+  }
+
+ private:
+  friend class AstContext;
+  SqlType(AstContext &ctx, u32 size, u32 alignment, const sql::Type &sql_type)
+      : Type(ctx, size, alignment, Kind::SqlType), sql_type_(sql_type) {}
+
+ private:
+  sql::Type sql_type_;
 };
 
 }  // namespace tpl::ast

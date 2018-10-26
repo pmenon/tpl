@@ -48,11 +48,14 @@ namespace sema {
   F(MissingTypeAndInitialValue,                                                \
     "variable '%0' must have either a declared type or an initial value",      \
     (ast::Identifier))                                                         \
+  F(IllegalTypesForBinary,                                                     \
+    "binary operation '%0' does not support types '%1' and '%2'",              \
+    (parsing::Token::Type, ast::Type *, ast::Type *))                          \
   F(MismatchedTypesToBinary,                                                   \
     "mismatched types '%0' and '%1' to binary operation '%2'",                 \
     (ast::Type *, ast::Type *, parsing::Token::Type))                          \
   F(MismatchedReturnType,                                                      \
-    "type of 'return' expression '%0' incomptible with function's declared "   \
+    "type of 'return' expression '%0' incompatible with function's declared "  \
     "return type '%1'",                                                        \
     (ast::Type *, ast::Type *))                                                \
   F(NonIdentifierIterator, "expected identifier for table iteration variable", \

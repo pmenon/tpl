@@ -161,30 +161,35 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   TPL_ASSERT(table != nullptr, "Table does not exist!");
   emitter()->Emit(Bytecode::SqlTableIteratorInit, iter, table->id());
 
-  // Create the row type and pull pointers to the columns
+  // Create the row type
   auto *row_type = node->target()->type()->As<ast::StructType>();
   LocalVar row = current_function()->NewLocal(row_type, "row");
-
-  const auto &fields = row_type->fields();
-  for (u32 idx = 0, offset = 0; idx < fields.size(); idx++) {
-    LocalVar col_ptr = current_function()->NewLocal(
-        fields[idx].type->PointerTo(), fields[idx].name.data());
-    emitter()->EmitLea(col_ptr, row, offset);
-    offset += fields[idx].type->size();
-  }
 
   {
     // Loop body
     LoopBuilder loop_builder(this);
     loop_builder.LoopHeader();
 
-    LocalVar cond = current_function()->NewTempLocal(ast::BoolType::Bool(ctx));
+    LocalVar cond = current_function()->NewTempLocal(ast::BoolType::Get(ctx));
     emitter()->Emit(Bytecode::SqlTableIteratorNext, cond, iter);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    loop_builder.break_label());
 
+    // Load fields
+    const auto &fields = row_type->fields();
+    for (u32 col_idx = 0, offset = 0; col_idx < fields.size(); col_idx++) {
+      LocalVar col_ptr =
+          current_function()->NewTempLocal(fields[col_idx].type->PointerTo());
+      emitter()->EmitLea(col_ptr, row, offset);
+      emitter()->EmitRead(Bytecode::ReadInteger, iter, col_idx,
+                          col_ptr.ValueOf());
+      offset += fields[col_idx].type->size();
+    }
+
+    // Generate body
     VisitIterationStatement(node, &loop_builder);
 
+    // Finish, loop back around
     loop_builder.JumpToHeader();
   }
 
@@ -225,6 +230,28 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   }
 
   execution_result()->set_destination(local);
+}
+
+void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
+  LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
+  LocalVar input = VisitExpressionForRValue(node->input());
+
+  switch (node->cast_kind()) {
+    case ast::ImplicitCastExpr::CastKind::SqlBoolToBool: {
+      emitter()->Emit(Bytecode::ForceBoolTruth, dest, input);
+      execution_result()->set_destination(dest.ValueOf());
+      break;
+    }
+    case ast::ImplicitCastExpr::CastKind::IntToSqlInt: {
+      emitter()->Emit(Bytecode::InitInteger, dest, input);
+      execution_result()->set_destination(dest);
+      break;
+    }
+    default: {
+      // Implement me
+      throw std::runtime_error("Implement me");
+    }
+  }
 }
 
 void BytecodeGenerator::VisitBlockStmt(ast::BlockStmt *node) {
@@ -407,48 +434,92 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
   execution_result()->set_destination(dest.ValueOf());
 }
 
-void BytecodeGenerator::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
+void BytecodeGenerator::VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare) {
+  TPL_ASSERT(execution_result()->IsRValue(),
+             "SQL comparison expressions must be R-Values!");
+
+  LocalVar dest = execution_result()->GetOrCreateDestination(compare->type());
+  LocalVar left = VisitExpressionForLValue(compare->left());
+  LocalVar right = VisitExpressionForLValue(compare->right());
+
+  Bytecode code;
+  switch (compare->op()) {
+    case parsing::Token::Type::GREATER: {
+      code = Bytecode::GreaterThanInteger;
+      break;
+    }
+    case parsing::Token::Type::GREATER_EQUAL: {
+      code = Bytecode::GreaterThanEqualInteger;
+      break;
+    }
+    case parsing::Token::Type::EQUAL_EQUAL: {
+      code = Bytecode::EqualInteger;
+      break;
+    }
+    case parsing::Token::Type::LESS: {
+      code = Bytecode::LessThanInteger;
+      break;
+    }
+    case parsing::Token::Type::LESS_EQUAL: {
+      code = Bytecode::LessThanEqualInteger;
+      break;
+    }
+    case parsing::Token::Type::BANG_EQUAL: {
+      code = Bytecode::NotEqualInteger;
+      break;
+    }
+    default: { UNREACHABLE("Impossible binary operation"); }
+  }
+
+  // Emit
+  emitter()->EmitBinaryOp(code, dest, left, right);
+
+  // Mark where the result is
+  execution_result()->set_destination(dest);
+}
+
+void BytecodeGenerator::VisitPrimitiveCompareOpExpr(
+    ast::ComparisonOpExpr *compare) {
   TPL_ASSERT(execution_result()->IsRValue(),
              "Comparison expressions must be R-Values!");
-  TPL_ASSERT(node->type()->IsBoolType(),
-             "Comparison op is expected to be boolean");
 
-  LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
-  LocalVar left = VisitExpressionForRValue(node->left());
-  LocalVar right = VisitExpressionForRValue(node->right());
+  LocalVar dest = execution_result()->GetOrCreateDestination(compare->type());
+  LocalVar left = VisitExpressionForRValue(compare->left());
+  LocalVar right = VisitExpressionForRValue(compare->right());
 
   Bytecode bytecode;
-  switch (node->op()) {
+  switch (compare->op()) {
     case parsing::Token::Type::GREATER: {
-      bytecode = GetIntTypedBytecode(
-          GET_BASE_FOR_INT_TYPES(Bytecode::GreaterThan), node->left()->type());
+      bytecode =
+          GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::GreaterThan),
+                              compare->left()->type());
       break;
     }
     case parsing::Token::Type::GREATER_EQUAL: {
       bytecode = GetIntTypedBytecode(
           GET_BASE_FOR_INT_TYPES(Bytecode::GreaterThanEqual),
-          node->left()->type());
+          compare->left()->type());
       break;
     }
     case parsing::Token::Type::EQUAL_EQUAL: {
       bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Equal),
-                                     node->left()->type());
+                                     compare->left()->type());
       break;
     }
     case parsing::Token::Type::LESS: {
       bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::LessThan),
-                                     node->left()->type());
+                                     compare->left()->type());
       break;
     }
     case parsing::Token::Type::LESS_EQUAL: {
       bytecode =
           GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::LessThanEqual),
-                              node->left()->type());
+                              compare->left()->type());
       break;
     }
     case parsing::Token::Type::BANG_EQUAL: {
       bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::NotEqual),
-                                     node->left()->type());
+                                     compare->left()->type());
       break;
     }
     default: { UNREACHABLE("Impossible binary operation"); }
@@ -459,6 +530,16 @@ void BytecodeGenerator::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
 
   // Mark where the result is
   execution_result()->set_destination(dest.ValueOf());
+}
+
+void BytecodeGenerator::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
+  TPL_ASSERT(execution_result()->IsRValue(),
+             "Comparison expressions must be R-Values!");
+  if (node->type()->IsSqlType()) {
+    VisitSqlCompareOpExpr(node);
+  } else {
+    VisitPrimitiveCompareOpExpr(node);
+  }
 }
 
 void BytecodeGenerator::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
@@ -516,10 +597,13 @@ void BytecodeGenerator::VisitSelectorExpr(ast::SelectorExpr *node) {
     elem_ptr = elem_ptr.ValueOf();
   }
 
+#if 0
   // TODO: This Deref size should depend on type!
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
   emitter()->EmitUnaryOp(Bytecode::Deref4, dest, elem_ptr);
   execution_result()->set_destination(dest.ValueOf());
+#endif
+  execution_result()->set_destination(elem_ptr);
 }
 
 void BytecodeGenerator::VisitDeclStmt(ast::DeclStmt *node) {

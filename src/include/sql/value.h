@@ -9,6 +9,7 @@ namespace tpl::sql {
  */
 struct Integer {
   union {
+    bool boolean;
     i16 smallint;
     i32 integer;
     i64 bigint;

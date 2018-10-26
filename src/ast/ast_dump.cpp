@@ -26,34 +26,37 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
 #undef DECLARE_VISIT_METHOD
 
  private:
-  struct WithColor {
-    AstDumperImpl &impl;
-    WithColor(AstDumperImpl &impl, llvm::raw_ostream::Colors color)
+  class WithColor {
+   public:
+    WithColor(AstDumperImpl *impl, llvm::raw_ostream::Colors color)
         : impl(impl) {
-      impl.out_.changeColor(color);
+      impl->out_.changeColor(color);
     }
-    ~WithColor() { impl.out_.resetColor(); }
+    ~WithColor() { impl->out_.resetColor(); }
+
+   private:
+    AstDumperImpl *impl;
   };
 
   void DumpKind(ast::AstNode *node) {
-    WithColor color(*this, llvm::raw_ostream::CYAN);
+    WithColor color(this, llvm::raw_ostream::CYAN);
     out_ << " " << node->kind_name();
   }
 
   void DumpPointer(const void *p) {
-    WithColor color(*this, llvm::raw_ostream::YELLOW);
+    WithColor color(this, llvm::raw_ostream::YELLOW);
     out_ << " (" << p << ")";
   }
 
   void DumpType(Type *type) {
-    WithColor color(*this, llvm::raw_ostream::GREEN);
+    WithColor color(this, llvm::raw_ostream::GREEN);
     out_ << " '" << Type::ToString(type) << "'";
   }
 
   void DumpPosition(const SourcePosition &pos) {
     out_ << " <";
     {
-      WithColor color(*this, llvm::raw_ostream::YELLOW);
+      WithColor color(this, llvm::raw_ostream::YELLOW);
       out_ << "line:" << pos.line << ":" << pos.column;
     }
     out_ << ">";
@@ -100,7 +103,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
 
     auto dump_with_prefix = [this, dump_fn](bool last_child) {
       {
-        WithColor color(*this, llvm::raw_ostream::BLUE);
+        WithColor color(this, llvm::raw_ostream::BLUE);
         out_ << "\n";
         out_ << prefix_ << (last_child ? "`" : "|") << "-";
         prefix_.append(last_child ? " " : "|").append(" ");
@@ -276,6 +279,30 @@ void AstDumperImpl::VisitFunctionLitExpr(FunctionLitExpr *node) {
 void AstDumperImpl::VisitIdentifierExpr(IdentifierExpr *node) {
   DumpExpressionCommon(node);
   DumpIdentifier(node->name());
+}
+
+void AstDumperImpl::VisitImplicitCastExpr(ImplicitCastExpr *node) {
+  DumpExpressionCommon(node);
+  DumpPrimitive("<");
+  {
+    WithColor color(this, llvm::raw_ostream::Colors::RED);
+    switch (node->cast_kind()) {
+      case ImplicitCastExpr::CastKind::IntToSqlInt: {
+        DumpPrimitive("IntegerToSqlInteger");
+        break;
+      }
+      case ImplicitCastExpr::CastKind::IntToSqlDecimal: {
+        DumpPrimitive("IntegerToSqlDecimal");
+        break;
+      }
+      case ImplicitCastExpr::CastKind::SqlBoolToBool: {
+        DumpPrimitive("SqlBooleanToBoolean");
+        break;
+      }
+    }
+  }
+  DumpPrimitive(">");
+  DumpExpr(node->input());
 }
 
 void AstDumperImpl::VisitLitExpr(LitExpr *node) {

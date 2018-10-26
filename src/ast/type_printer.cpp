@@ -122,6 +122,27 @@ void TypePrinter::VisitInternalType(const InternalType *type) {
   out_ << llvm::StringRef(type->name().data());
 }
 
+void tpl::ast::TypePrinter::VisitSqlType(const SqlType *type) {
+  switch (type->sql_type().type_id()) {
+    case sql::TypeId::Boolean:
+    case sql::TypeId::SmallInt:
+    case sql::TypeId::Integer:
+    case sql::TypeId::BigInt: {
+      out_ << "sql::Integer";
+      break;
+    }
+    case sql::TypeId::Decimal: {
+      out_ << "sql::Decimal";
+      break;
+    }
+    case sql::TypeId::Varchar: {
+      out_ << "sql::String";
+      break;
+    }
+    default: { UNREACHABLE("Impossible SQL type"); }
+  }
+}
+
 }  // namespace
 
 // static

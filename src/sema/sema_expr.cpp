@@ -1,6 +1,7 @@
 #include "sema/sema.h"
 
 #include "ast/ast_context.h"
+#include "ast/ast_node_factory.h"
 #include "ast/type.h"
 #include "logging/logger.h"
 
@@ -8,6 +9,125 @@ namespace tpl::sema {
 
 void Sema::VisitBadExpr(ast::BadExpr *node) {
   TPL_ASSERT(false, "Bad expression in type checker!");
+}
+
+Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
+                                             const SourcePosition &pos,
+                                             ast::Expr *left,
+                                             ast::Expr *right) {
+  // Are left and right types boolean values?
+  if (left->type()->IsBoolType() && right->type()->IsBoolType()) {
+    return {left->type(), left, right};
+  }
+
+  // Are left and right types SQL boolean values?
+  if (left->type()->IsSqlType() && right->type()->IsSqlType()) {
+    auto *left_type = left->type()->As<ast::SqlType>()->sql_type();
+    auto *right_type = right->type()->As<ast::SqlType>()->sql_type();
+
+    if (left_type->IsBoolean() && right_type->IsBoolean()) {
+      sql::Type ret = *left_type;
+      if (left_type->nullable() || right_type->nullable()) {
+        ret = ret.AsNullable();
+      }
+      return {ast::SqlType::Get(ast_context(), ret), left, right};
+    }
+  }
+
+  // We don't do any implicit casting for logical operators ...
+
+  // Error
+  error_reporter().Report(pos, ErrorMessages::kMismatchedTypesToBinary,
+                          left->type(), right->type(), op);
+  return {nullptr, left, right};
+}
+
+Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
+                                                const SourcePosition &pos,
+                                                ast::Expr *left,
+                                                ast::Expr *right) {
+  ast::Type *left_type = left->type();
+  ast::Type *right_type = right->type();
+
+  // Are left and right types arithmetic? If not, we early exit.
+  if (!left_type->IsArithmetic() || !right_type->IsArithmetic()) {
+    error_reporter().Report(pos, ErrorMessages::kIllegalTypesForBinary, op,
+                            left_type, right_type);
+    return {nullptr, left, right};
+  }
+
+  if (left_type == right_type) {
+    return {left->type(), left, right};
+  }
+
+  if (!right_type->IsSqlType()) {
+    // Implicitly cast the right to a SQL Integer
+    right = ast_context().node_factory().NewImplicitCastExpr(
+        right->position(), ast::ImplicitCastExpr::CastKind::IntToSqlInt, right);
+
+    sql::Type sql_type(sql::TypeId::Integer, false);
+    right->set_type(ast::SqlType::Get(ast_context(), sql_type));
+  }
+
+  if (!left_type->IsSqlType()) {
+    // Implicitly cast the left to a SQL Integer
+    left = ast_context().node_factory().NewImplicitCastExpr(
+        left->position(), ast::ImplicitCastExpr::CastKind::IntToSqlInt, left);
+
+    sql::Type sql_type(sql::TypeId::Integer, false);
+    left->set_type(ast::SqlType::Get(ast_context(), sql_type));
+  }
+
+  sql::Type ret = *left_type->As<ast::SqlType>()->sql_type();
+  if (left_type->As<ast::SqlType>()->sql_type()->nullable() ||
+      right_type->As<ast::SqlType>()->sql_type()) {
+    ret = ret.AsNullable();
+  }
+  return {ast::SqlType::Get(ast_context(), ret), left, right};
+}
+
+Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
+                                                const SourcePosition &pos,
+                                                ast::Expr *left,
+                                                ast::Expr *right) {
+  ast::Type *left_type = left->type();
+  ast::Type *right_type = right->type();
+
+  // Are left and right types arithmetic? If not, we early exit.
+  if (!left_type->IsArithmetic() || !right_type->IsArithmetic()) {
+    error_reporter().Report(pos, ErrorMessages::kIllegalTypesForBinary, op,
+                            left_type, right_type);
+    return {nullptr, left, right};
+  }
+
+  if (left_type == right_type) {
+    return {ast::BoolType::Get(ast_context()), left, right};
+  }
+
+  if (!right_type->IsSqlType()) {
+    // Implicitly cast the right to a SQL Integer
+    right = ast_context().node_factory().NewImplicitCastExpr(
+        right->position(), ast::ImplicitCastExpr::CastKind::IntToSqlInt, right);
+
+    sql::Type sql_type(sql::TypeId::Integer, false);
+    right->set_type(ast::SqlType::Get(ast_context(), sql_type));
+  }
+
+  if (!left_type->IsSqlType()) {
+    // Implicitly cast the left to a SQL Integer
+    left = ast_context().node_factory().NewImplicitCastExpr(
+        left->position(), ast::ImplicitCastExpr::CastKind::IntToSqlInt, left);
+
+    sql::Type sql_type(sql::TypeId::Integer, false);
+    left->set_type(ast::SqlType::Get(ast_context(), sql_type));
+  }
+
+  bool res_nullable = left_type->As<ast::SqlType>()->sql_type()->nullable() ||
+                      right_type->As<ast::SqlType>()->sql_type();
+  ast::SqlType *return_type = ast::SqlType::Get(
+      ast_context(), sql::Type(sql::TypeId::Boolean, res_nullable));
+
+  return {return_type, left, right};
 }
 
 void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
@@ -22,12 +142,11 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
   switch (node->op()) {
     case parsing::Token::Type::AND:
     case parsing::Token::Type::OR: {
-      if (!left_type->IsBoolType() || !right_type->IsBoolType()) {
-        error_reporter().Report(node->position(),
-                                ErrorMessages::kMismatchedTypesToBinary,
-                                left_type, right_type, node->op());
-      }
-      node->set_type(left_type);
+      auto [result_type, left, right] = CheckLogicalOperands(
+          node->op(), node->position(), node->left(), node->right());
+      node->set_type(result_type);
+      if (node->left() != left) node->set_left(left);
+      if (node->right() != right) node->set_right(right);
       break;
     }
     case parsing::Token::Type::AMPERSAND:
@@ -38,14 +157,11 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
     case parsing::Token::Type::STAR:
     case parsing::Token::Type::SLASH:
     case parsing::Token::Type::PERCENT: {
-      // Arithmetic ops
-      if (left_type != right_type) {
-        error_reporter().Report(node->position(),
-                                ErrorMessages::kMismatchedTypesToBinary,
-                                left_type, right_type, node->op());
-        return;
-      }
-      node->set_type(left_type);
+      auto [result_type, left, right] = CheckArithmeticOperands(
+          node->op(), node->position(), node->left(), node->right());
+      node->set_type(result_type);
+      if (node->left() != left) node->set_left(left);
+      if (node->right() != right) node->set_right(right);
       break;
     }
     default: {
@@ -64,14 +180,6 @@ void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
     return;
   }
 
-  // TODO(pmenon): Fix this check
-  if (left_type != right_type) {
-    error_reporter().Report(node->position(),
-                            ErrorMessages::kMismatchedTypesToBinary, left_type,
-                            right_type, node->op());
-    return;
-  }
-
   switch (node->op()) {
     case parsing::Token::Type::BANG_EQUAL:
     case parsing::Token::Type::EQUAL_EQUAL:
@@ -79,7 +187,11 @@ void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
     case parsing::Token::Type::GREATER_EQUAL:
     case parsing::Token::Type::LESS:
     case parsing::Token::Type::LESS_EQUAL: {
-      node->set_type(ast::BoolType::Bool(left_type->context()));
+      auto [result_type, left, right] = CheckComparisonOperands(
+          node->op(), node->position(), node->left(), node->right());
+      node->set_type(result_type);
+      if (node->left() != left) node->set_left(left);
+      if (node->right() != right) node->set_right(right);
       break;
     }
     default: {
@@ -144,7 +256,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
 
 void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   // Resolve the type
-  if (Resolve(node->type_repr()) == nullptr) {
+  if (auto *func_type = Resolve(node->type_repr()); func_type == nullptr) {
     // Some error occurred
     return;
   }
@@ -183,27 +295,38 @@ void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
                           node->name());
 }
 
+void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
+  auto *expr_type = Resolve(node->input());
+  (void)expr_type;
+  // TODO: Check if the resolved input type can be casted to the target type
+}
+
 void Sema::VisitLitExpr(ast::LitExpr *node) {
   switch (node->literal_kind()) {
     case ast::LitExpr::LitKind::Nil: {
-      node->set_type(ast::NilType::Nil(ast_context()));
+      node->set_type(ast::NilType::Get(ast_context()));
       break;
     }
     case ast::LitExpr::LitKind::Boolean: {
-      node->set_type(ast::BoolType::Bool(ast_context()));
+      node->set_type(ast::BoolType::Get(ast_context()));
       break;
     }
     case ast::LitExpr::LitKind::Float: {
       // Literal floats default to float32
-      node->set_type(ast::FloatType::Float32(ast_context()));
+      node->set_type(ast::FloatType::Get(ast_context(),
+                                         ast::FloatType::FloatKind::Float32));
       break;
     }
     case ast::LitExpr::LitKind::Int: {
       // Literal integers default to int32
-      node->set_type(ast::IntegerType::Int32(ast_context()));
+      node->set_type(ast::IntegerType::Get(ast_context(),
+                                           ast::IntegerType::IntKind::Int32));
       break;
     }
-    default: { TPL_ASSERT(false, "String literals not supported yet"); }
+    case ast::LitExpr::LitKind::String: {
+      TPL_ASSERT(false, "String literals not supported yet");
+      break;
+    }
   }
 }
 
@@ -218,40 +341,43 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
 
   switch (node->op()) {
     case parsing::Token::Type::BANG: {
-      if (expr_type->IsBoolType()) {
-        node->set_type(expr_type);
-      } else {
+      if (!expr_type->IsBoolType()) {
         error_reporter().Report(node->position(),
                                 ErrorMessages::kInvalidOperation, node->op(),
                                 expr_type);
+        return;
       }
+
+      node->set_type(expr_type);
       break;
     }
     case parsing::Token::Type::MINUS: {
-      if (expr_type->IsNumber()) {
-        node->set_type(expr_type);
-      } else {
+      if (!expr_type->IsArithmetic()) {
         error_reporter().Report(node->position(),
                                 ErrorMessages::kInvalidOperation, node->op(),
                                 expr_type);
+        return;
       }
+
+      node->set_type(expr_type);
       break;
     }
     case parsing::Token::Type::STAR: {
-      if (auto *ptr_type = expr_type->SafeAs<ast::PointerType>()) {
-        node->set_type(ptr_type->base());
-      } else {
+      if (!expr_type->IsPointerType()) {
         error_reporter().Report(node->position(),
                                 ErrorMessages::kInvalidOperation, node->op(),
                                 expr_type);
+        return;
       }
+
+      node->set_type(expr_type->As<ast::PointerType>()->base());
       break;
     }
     case parsing::Token::Type::AMPERSAND: {
       node->set_type(expr_type->PointerTo());
       break;
     }
-    default: {}
+    default: { UNREACHABLE("Impossible unary operation!"); }
   }
 }
 

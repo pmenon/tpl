@@ -40,10 +40,10 @@ struct TableInsertMeta {
 // clang-format off
 std::vector<TableInsertMeta> insert_meta = {
     {TableId::Test1, "test_1", 1000000, {
-      {"colA", Type{.type_id = TypeId::Integer, .nullable = false}, Dist::Uniform, 0, std::numeric_limits<i32>::max()},
-      {"colB", Type{.type_id = TypeId::Integer, .nullable = false}, Dist::Uniform, 0, std::numeric_limits<i32>::max()},
-      {"colC", Type{.type_id = TypeId::Integer, .nullable = false}, Dist::Uniform, 0, std::numeric_limits<i32>::max()},
-      {"colD", Type{.type_id = TypeId::Integer, .nullable = false}, Dist::Uniform, 0, std::numeric_limits<i32>::max()}}
+      {"colA", Type(TypeId::Integer, false), Dist::Uniform, 0, 99},
+      {"colB", Type(TypeId::Integer, false), Dist::Uniform, 0, std::numeric_limits<i32>::max()},
+      {"colC", Type(TypeId::Integer, false), Dist::Uniform, 0, std::numeric_limits<i32>::max()},
+      {"colD", Type(TypeId::Integer, false), Dist::Uniform, 0, std::numeric_limits<i32>::max()}}
     },
 };
 // clang-format on
@@ -52,7 +52,7 @@ template <typename T>
 T *CreateNumberColumnData(u32 num_vals, u64 min, u64 max) {
   T *val = static_cast<T *>(malloc(sizeof(T) * num_vals));
 
-  std::default_random_engine generator;
+  std::mt19937 generator;
   std::uniform_int_distribution<T> distribution(min, max);
 
   for (u32 i = 0; i < num_vals; i++) {
@@ -66,7 +66,10 @@ std::pair<const byte *, const bool *> GenerateColumnData(
     const ColumnInsertMeta &col_meta, u32 num_vals) {
   // Create data
   byte *col_data = nullptr;
-  switch (col_meta.type.type_id) {
+  switch (col_meta.type.type_id()) {
+    case TypeId::Boolean: {
+      throw std::runtime_error("Implement me!");
+    }
     case TypeId::SmallInt: {
       col_data = reinterpret_cast<byte *>(
           CreateNumberColumnData<i16>(num_vals, col_meta.min, col_meta.max));
@@ -90,7 +93,7 @@ std::pair<const byte *, const bool *> GenerateColumnData(
 
   // Create bitmap
   bool *null_bitmap = nullptr;
-  if (col_meta.type.nullable) {
+  if (col_meta.type.nullable()) {
     null_bitmap = static_cast<bool *>(malloc(sizeof(bool)));
   }
 

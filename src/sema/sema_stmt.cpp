@@ -1,6 +1,7 @@
 #include "sema/sema.h"
 
 #include "ast/ast_context.h"
+#include "ast/ast_node_factory.h"
 #include "ast/type.h"
 #include "sql/catalog.h"
 #include "sql/table.h"
@@ -106,14 +107,23 @@ void Sema::VisitExpressionStmt(ast::ExpressionStmt *node) {
 }
 
 void Sema::VisitIfStmt(ast::IfStmt *node) {
-  ast::Type *cond_type = Resolve(node->condition());
-
-  if (cond_type == nullptr) {
+  if (ast::Type *cond_type = Resolve(node->condition()); cond_type == nullptr) {
     // Error
     return;
   }
 
-  if (!cond_type->IsBoolType()) {
+  // If the result type is a SQL bool, we need to implicitly cast it to a native
+  // boolean value
+  if (auto *type = node->condition()->type()->SafeAs<ast::SqlType>();
+      type != nullptr && type->sql_type()->IsBoolean()) {
+    ast::Expr *cond = node->condition();
+    cond = ast_context().node_factory().NewImplicitCastExpr(
+        cond->position(), ast::ImplicitCastExpr::CastKind::SqlBoolToBool, cond);
+    cond->set_type(ast::BoolType::Get(ast_context()));
+    node->set_condition(cond);
+  }
+
+  if (!node->condition()->type()->IsBoolType()) {
     error_reporter().Report(node->condition()->position(),
                             ErrorMessages::kNonBoolIfCondition);
   }

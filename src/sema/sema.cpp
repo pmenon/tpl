@@ -21,27 +21,11 @@ bool Sema::Run(ast::AstNode *root) {
   return error_reporter().has_errors();
 }
 
-namespace {
-
-ast::Type *SqlTypeToTplType(ast::AstContext &ctx, const sql::Type &type) {
-  ast::InternalType::InternalKind tpl_type;
-  if (type.IsIntegral()) {
-    tpl_type = ast::InternalType::InternalKind::SqlInteger;
-  } else if (type.IsDecimal()) {
-    tpl_type = ast::InternalType::InternalKind::SqlDecimal;
-  } else {
-    UNREACHABLE("Impossible type");
-  }
-  return ast::InternalType::Get(ctx, tpl_type);
-}
-
-}  // namespace
-
 ast::Type *Sema::ConvertSchemaToType(const sql::Schema &schema) {
   util::RegionVector<ast::Field> cols(ast_context().region());
   for (const auto &col : schema.columns()) {
     auto col_name = ast_context().GetIdentifier(col.name);
-    auto col_type = SqlTypeToTplType(ast_context(), col.type);
+    auto col_type = ast::SqlType::Get(ast_context(), col.type);
     cols.emplace_back(col_name, col_type);
   }
   return ast::StructType::Get(ast_context(), std::move(cols));

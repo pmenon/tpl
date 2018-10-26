@@ -128,6 +128,12 @@ class AstNodeFactory {
     return new (region_) IdentifierExpr(pos, name);
   }
 
+  ImplicitCastExpr *NewImplicitCastExpr(const SourcePosition &pos,
+                                        ImplicitCastExpr::CastKind cast_kind,
+                                        Expr *input) {
+    return new (region_) ImplicitCastExpr(pos, cast_kind, input);
+  }
+
   SelectorExpr *NewSelectorExpr(const SourcePosition &pos, Expr *obj,
                                 Expr *sel) {
     return new (region_) SelectorExpr(pos, obj, sel);

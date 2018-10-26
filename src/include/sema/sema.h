@@ -41,6 +41,24 @@ class Sema : public ast::AstVisitor<Sema> {
 
   ast::Type *ConvertSchemaToType(const sql::Schema &schema);
 
+  struct CheckResult {
+    ast::Type *result_type;
+    ast::Expr *left;
+    ast::Expr *right;
+  };
+
+  CheckResult CheckLogicalOperands(parsing::Token::Type op,
+                                   const SourcePosition &pos, ast::Expr *left,
+                                   ast::Expr *right);
+
+  CheckResult CheckArithmeticOperands(parsing::Token::Type op,
+                                      const SourcePosition &pos,
+                                      ast::Expr *left, ast::Expr *right);
+
+  CheckResult CheckComparisonOperands(parsing::Token::Type op,
+                                      const SourcePosition &pos,
+                                      ast::Expr *left, ast::Expr *right);
+
   //////////////////////////////////////////////////////////////////////////////
   ///
   /// Accessors

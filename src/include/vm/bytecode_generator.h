@@ -57,6 +57,10 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   void VisitIterationStatement(ast::IterationStmt *iteration,
                                LoopBuilder *loop_builder);
 
+  // Dispatched from VisitCompareOp for SQL vs. primitive comparisons
+  void VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare);
+  void VisitPrimitiveCompareOpExpr(ast::ComparisonOpExpr *compare);
+
   Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type);
 
   //////////////////////////////////////////////////////////////////////////////

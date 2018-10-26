@@ -76,6 +76,14 @@ namespace tpl::vm {
   V(ReadInteger, OperandType::Reg, OperandType::UImm4, OperandType::Reg)                                               \
   V(ReadBigInt, OperandType::Reg, OperandType::UImm4, OperandType::Reg)                                                \
   V(ReadDecimal, OperandType::Reg, OperandType::UImm4, OperandType::Reg)                                               \
+  V(ForceBoolTruth, OperandType::Reg, OperandType::Reg)                                                                \
+  V(InitInteger, OperandType::Reg, OperandType::Reg)                                                                   \
+  V(LessThanInteger, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                             \
+  V(LessThanEqualInteger, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                        \
+  V(GreaterThanInteger, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                          \
+  V(GreaterThanEqualInteger, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                     \
+  V(EqualInteger, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                                \
+  V(NotEqualInteger, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                             \
                                                                                                                        \
   V(Deref4, OperandType::Reg, OperandType::Reg)                                                                        \
   V(Lea, OperandType::Reg, OperandType::Reg, OperandType::Imm4)                                                        \

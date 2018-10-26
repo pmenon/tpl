@@ -41,6 +41,13 @@ class BytecodeEmitter {
   void Emit(Bytecode bytecode, LocalVar operand_1);
   void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2);
 
+  void EmitRead(Bytecode bytecode, LocalVar o1, u32 id, LocalVar o2) {
+    EmitOp(bytecode);
+    EmitLocalVar(o1);
+    EmitImmediateValue(id);
+    EmitLocalVar(o2);
+  }
+
   template <typename T,
             typename std::enable_if_t<std::is_integral_v<T>, u32> = 0>
   void Emit(Bytecode bytecode, LocalVar operand_1, T imm) {

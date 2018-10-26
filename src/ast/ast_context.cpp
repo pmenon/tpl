@@ -120,44 +120,58 @@ ast::Type *AstContext::LookupBuiltin(Identifier identifier) {
 PointerType *Type::PointerTo() { return PointerType::Get(this); }
 
 // static
-IntegerType *IntegerType::Int8(AstContext &ctx) { return &ctx.impl().int8; }
-
-// static
-IntegerType *IntegerType::UInt8(AstContext &ctx) { return &ctx.impl().uint8; }
-
-// static
-IntegerType *IntegerType::Int16(AstContext &ctx) { return &ctx.impl().int16; }
-
-// static
-IntegerType *IntegerType::UInt16(AstContext &ctx) { return &ctx.impl().uint16; }
-
-// static
-IntegerType *IntegerType::Int32(AstContext &ctx) { return &ctx.impl().int32; }
-
-// static
-IntegerType *IntegerType::UInt32(AstContext &ctx) { return &ctx.impl().uint32; }
-
-// static
-IntegerType *IntegerType::Int64(AstContext &ctx) { return &ctx.impl().int64; }
-
-// static
-IntegerType *IntegerType::UInt64(AstContext &ctx) { return &ctx.impl().uint64; }
-
-// static
-FloatType *FloatType::Float32(tpl::ast::AstContext &ctx) {
-  return &ctx.impl().float32;
+IntegerType *IntegerType::Get(AstContext &ctx, IntegerType::IntKind int_kind) {
+  switch (int_kind) {
+    case IntegerType::IntKind::Int8: {
+      return &ctx.impl().int8;
+    }
+    case IntegerType::IntKind::Int16: {
+      return &ctx.impl().int16;
+    }
+    case IntegerType::IntKind::Int32: {
+      return &ctx.impl().int32;
+    }
+    case IntegerType::IntKind::Int64: {
+      return &ctx.impl().int64;
+    }
+    case IntegerType::IntKind::UInt8: {
+      return &ctx.impl().uint8;
+    }
+    case IntegerType::IntKind::UInt16: {
+      return &ctx.impl().uint16;
+    }
+    case IntegerType::IntKind::UInt32: {
+      return &ctx.impl().uint32;
+    }
+    case IntegerType::IntKind::UInt64: {
+      return &ctx.impl().uint64;
+    }
+    default: {
+      UNREACHABLE("Impossible integer kind");
+    }
+  }
 }
 
 // static
-FloatType *FloatType::Float64(tpl::ast::AstContext &ctx) {
-  return &ctx.impl().float64;
+FloatType *FloatType::Get(tpl::ast::AstContext &ctx, FloatKind float_kind) {
+  switch (float_kind) {
+    case FloatType::FloatKind::Float32: {
+      return &ctx.impl().float32;
+    }
+    case FloatType::FloatKind::Float64: {
+      return &ctx.impl().float64;
+    }
+    default: {
+      UNREACHABLE("Impossible floating point kind");
+    }
+  }
 }
 
 // static
-BoolType *BoolType::Bool(AstContext &ctx) { return &ctx.impl().boolean; }
+BoolType *BoolType::Get(AstContext &ctx) { return &ctx.impl().boolean; }
 
 // static
-NilType *NilType::Nil(AstContext &ctx) { return &ctx.impl().nil; }
+NilType *NilType::Get(AstContext &ctx) { return &ctx.impl().nil; }
 
 // static
 PointerType *PointerType::Get(Type *base) {
@@ -241,6 +255,23 @@ InternalType *InternalType::Get(AstContext &ctx, InternalKind kind) {
   TPL_ASSERT(static_cast<u8>(kind) < kNumInternalKinds,
              "Invalid internal kind");
   return ctx.impl().internal_types[static_cast<u32>(kind)];
+}
+
+SqlType *SqlType::Get(AstContext &ctx, const sql::Type &sql_type) {
+  // TODO: cache
+  u32 size, alignment;
+  if (sql_type.IsBoolean() || sql_type.IsIntegral()) {
+    size = sizeof(sql::Integer);
+    alignment = alignof(sql::Integer);
+  } else if (sql_type.IsDecimal()) {
+    size = sizeof(sql::Decimal);
+    alignment = alignof(sql::Decimal);
+  } else {
+    size = sizeof(sql::String);
+    alignment = sizeof(sql::String);
+  }
+
+  return new (ctx.region()) SqlType(ctx, size, alignment, sql_type);
 }
 
 }  // namespace tpl::ast
