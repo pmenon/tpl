@@ -325,8 +325,6 @@ void VM::Run(Frame *frame) {
 
   OP(Return) : {
     // Just return for now. We need to handle return values though ...
-    bool *result = frame->LocalAt<bool *>(0);
-    LOG_INFO("Return value {}", *result);
     return;
   }
 
