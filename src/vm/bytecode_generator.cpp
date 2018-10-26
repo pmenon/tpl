@@ -597,13 +597,10 @@ void BytecodeGenerator::VisitSelectorExpr(ast::SelectorExpr *node) {
     elem_ptr = elem_ptr.ValueOf();
   }
 
-#if 0
   // TODO: This Deref size should depend on type!
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
   emitter()->EmitUnaryOp(Bytecode::Deref4, dest, elem_ptr);
   execution_result()->set_destination(dest.ValueOf());
-#endif
-  execution_result()->set_destination(elem_ptr);
 }
 
 void BytecodeGenerator::VisitDeclStmt(ast::DeclStmt *node) {
