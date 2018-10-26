@@ -36,6 +36,11 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   // Allocate a new function ID
   FunctionInfo *AllocateFunc(const std::string &name);
 
+  // These are dispatched from VisitBinaryOpExpr() for handling logical boolean
+  // expressions and arithmetic expressions
+  void VisitLogicalAndOrExpr(ast::BinaryOpExpr *node);
+  void VisitArithmeticExpr(ast::BinaryOpExpr *node);
+
   // Visit an expression for its L-Value
   LocalVar VisitExpressionForLValue(ast::Expr *expr);
 
@@ -63,11 +68,6 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
   Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type);
 
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Accessors
-  ///
-  //////////////////////////////////////////////////////////////////////////////
  public:
   BytecodeEmitter *emitter() { return &emitter_; }
 

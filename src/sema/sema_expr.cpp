@@ -15,26 +15,34 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
                                              const SourcePosition &pos,
                                              ast::Expr *left,
                                              ast::Expr *right) {
+  ast::Type *left_type = left->type();
+  ast::Type *right_type = right->type();
+
+  if (left->type()->IsSqlType()) {
+    TPL_ASSERT(left_type->As<ast::SqlType>()->sql_type()->IsBoolean(),
+               "Expected boolean!");
+    left = ast_context().node_factory().NewImplicitCastExpr(
+        left->position(), ast::ImplicitCastExpr::CastKind::SqlBoolToBool, left);
+
+    left_type = ast::BoolType::Get(ast_context());
+    left->set_type(left_type);
+  }
+
+  if (right_type->IsSqlType()) {
+    TPL_ASSERT(right_type->As<ast::SqlType>()->sql_type()->IsBoolean(),
+               "Expected boolean!");
+    right = ast_context().node_factory().NewImplicitCastExpr(
+        right->position(), ast::ImplicitCastExpr::CastKind::SqlBoolToBool,
+        right);
+
+    right_type = ast::BoolType::Get(ast_context());
+    right->set_type(right_type);
+  }
+
   // Are left and right types boolean values?
-  if (left->type()->IsBoolType() && right->type()->IsBoolType()) {
-    return {left->type(), left, right};
+  if (left_type->IsBoolType() && right_type->IsBoolType()) {
+    return {left_type, left, right};
   }
-
-  // Are left and right types SQL boolean values?
-  if (left->type()->IsSqlType() && right->type()->IsSqlType()) {
-    auto *left_type = left->type()->As<ast::SqlType>()->sql_type();
-    auto *right_type = right->type()->As<ast::SqlType>()->sql_type();
-
-    if (left_type->IsBoolean() && right_type->IsBoolean()) {
-      sql::Type ret = *left_type;
-      if (left_type->nullable() || right_type->nullable()) {
-        ret = ret.AsNullable();
-      }
-      return {ast::SqlType::Get(ast_context(), ret), left, right};
-    }
-  }
-
-  // We don't do any implicit casting for logical operators ...
 
   // Error
   error_reporter().Report(pos, ErrorMessages::kMismatchedTypesToBinary,
