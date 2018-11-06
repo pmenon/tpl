@@ -36,6 +36,8 @@ class Scope {
 
   Scope *outer() const { return outer_; }
 
+  Kind kind() const { return scope_kind_; }
+
  private:
   Scope *outer_;
 

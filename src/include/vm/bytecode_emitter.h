@@ -43,7 +43,8 @@ class BytecodeEmitter {
     EmitImmediateValue(len);
   }
 
-  void EmitJump(Bytecode bytecode, BytecodeLabel *label);
+  void EmitJump(BytecodeLabel *label);
+
   void EmitConditionalJump(Bytecode bytecode, LocalVar cond,
                            BytecodeLabel *label);
 
@@ -97,7 +98,7 @@ class BytecodeEmitter {
     (EmitLocalVar(locals), ...);
   }
 
-  void EmitJump(BytecodeLabel *label);
+  void EmitJumpOffset(BytecodeLabel *label);
 
  private:
   std::vector<u8> bytecodes_;

@@ -15,6 +15,8 @@ class ControlFlowBuilder {
 
   virtual ~ControlFlowBuilder() = default;
 
+  void EmitJump(BytecodeLabel *label);
+
  protected:
   BytecodeGenerator *generator() { return generator_; }
 
@@ -22,44 +24,30 @@ class ControlFlowBuilder {
   BytecodeGenerator *generator_;
 };
 
-class BreakableBlockBuilder : public ControlFlowBuilder {
- public:
-  explicit BreakableBlockBuilder(BytecodeGenerator *generator)
-      : ControlFlowBuilder(generator) {}
-
-  ~BreakableBlockBuilder() override;
-
-  void Break();
-
-  BytecodeLabel *break_label() { return &break_label_; }
-
- protected:
-  void EmitJump(BytecodeLabel *label);
-
- private:
-  BytecodeLabel break_label_;
-};
-
-class LoopBuilder : public BreakableBlockBuilder {
+class LoopBuilder : public ControlFlowBuilder {
  public:
   explicit LoopBuilder(BytecodeGenerator *generator)
-      : BreakableBlockBuilder(generator) {}
+      : ControlFlowBuilder(generator) {}
 
   ~LoopBuilder() override;
 
   void LoopHeader();
+
   void JumpToHeader();
+
+  void LoopBody();
 
   void Continue();
 
   void BindContinueTarget();
 
- private:
   BytecodeLabel *header_label() { return &header_label_; }
+  BytecodeLabel *body_label() { return &body_label_; }
   BytecodeLabel *continue_label() { return &continue_label_; }
 
  private:
   BytecodeLabel header_label_;
+  BytecodeLabel body_label_;
   BytecodeLabel continue_label_;
 };
 
@@ -75,18 +63,15 @@ class IfThenElseBuilder : public ControlFlowBuilder {
 
   void Then();
   void Else();
-  void JumpToEnd();
+
+  void JumpToEnd(BytecodeLabel *end_label);
 
   BytecodeLabel *then_label() { return &then_label_; }
   BytecodeLabel *else_label() { return &else_label_; }
 
  private:
-  BytecodeLabel *end_label() { return &end_label_; }
-
- private:
   BytecodeLabel then_label_;
   BytecodeLabel else_label_;
-  BytecodeLabel end_label_;
 };
 
 }  // namespace tpl::vm

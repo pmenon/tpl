@@ -72,9 +72,11 @@ namespace tpl::vm {
                                                                                                                        \
   /* Branching */                                                                                                      \
   V(Jump, OperandType::UImm2)                                                                                          \
-  V(JumpLoop, OperandType::UImm2)                                                                                      \
+  V(JumpBack, OperandType::UImm2)                                                                                      \
   V(JumpIfTrue, OperandType::Reg, OperandType::UImm2)                                                                  \
+  V(JumpBackIfTrue, OperandType::Reg, OperandType::UImm2)                                                              \
   V(JumpIfFalse, OperandType::Reg, OperandType::UImm2)                                                                 \
+  V(JumpBackIfFalse, OperandType::Reg, OperandType::UImm2)                                                             \
                                                                                                                        \
   /* SQL codes */                                                                                                      \
   V(SqlTableIteratorInit, OperandType::Reg, OperandType::UImm2)                                                        \
@@ -162,6 +164,16 @@ class Bytecodes {
     return GetOperandSizes(bytecode)[idx];
   }
 
+  // Return the offset of the Nth operand to the given bytecode
+  static u32 GetNthOperandOffset(Bytecode bytecode, u8 idx) {
+    TPL_ASSERT(idx < NumOperands(bytecode),
+               "Accessing out-of-bounds operand number for bytecode");
+    u32 offset = sizeof(std::underlying_type_t<Bytecode>);
+    for (int i = 0; i < idx; ++i)
+      offset += static_cast<u32>(GetNthOperandSize(bytecode, i));
+    return offset;
+  }
+
   // Return the total size (in bytes) of the bytecode including it's operands
   static u32 Size(Bytecode bytecode) {
     return kBytecodeSizes[static_cast<u32>(bytecode)];
@@ -181,9 +193,24 @@ class Bytecodes {
   }
 
   static bool IsJump(Bytecode bytecode) {
-    return (bytecode == Bytecode::Jump || bytecode == Bytecode::JumpLoop ||
+    return (bytecode == Bytecode::Jump || bytecode == Bytecode::JumpBack ||
             bytecode == Bytecode::JumpIfFalse ||
-            bytecode == Bytecode::JumpIfTrue);
+            bytecode == Bytecode::JumpBackIfFalse ||
+            bytecode == Bytecode::JumpIfTrue || 
+            bytecode == Bytecode::JumpBackIfTrue);
+  }
+
+  static bool IsBackwardJump(Bytecode bytecode) {
+    return (bytecode == Bytecode::JumpBack ||
+            bytecode == Bytecode::JumpBackIfFalse ||
+            bytecode == Bytecode::JumpBackIfTrue);
+  }
+
+  static bool IsConditionalJump(Bytecode bytecode) {
+    return (bytecode == Bytecode::JumpIfFalse ||
+            bytecode == Bytecode::JumpBackIfFalse ||
+            bytecode == Bytecode::JumpIfTrue || 
+            bytecode == Bytecode::JumpBackIfTrue);
   }
 
  private:

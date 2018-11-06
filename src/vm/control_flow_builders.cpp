@@ -6,19 +6,12 @@ namespace tpl::vm {
 
 ////////////////////////////////////////////////////////////////////////////////
 ///
-/// Breakable blocks
+/// Control flow builder
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-BreakableBlockBuilder::~BreakableBlockBuilder() {
-  TPL_ASSERT(!break_label()->is_bound(), "Break label cannot be bound!");
-  generator()->emitter()->Bind(break_label());
-}
-
-void BreakableBlockBuilder::Break() { EmitJump(break_label()); }
-
-void BreakableBlockBuilder::EmitJump(BytecodeLabel *label) {
-  generator()->emitter()->EmitJump(Bytecode::Jump, label);
+void ControlFlowBuilder::EmitJump(BytecodeLabel *label) {
+  generator()->emitter()->EmitJump(label);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -35,7 +28,12 @@ void LoopBuilder::LoopHeader() {
 }
 
 void LoopBuilder::JumpToHeader() {
-  generator()->emitter()->EmitJump(Bytecode::JumpLoop, header_label());
+  generator()->emitter()->EmitJump(header_label());
+}
+
+void LoopBuilder::LoopBody() {
+  TPL_ASSERT(!body_label()->is_bound(), "Body cannot be rebound");
+  generator()->emitter()->Bind(body_label());
 }
 
 void LoopBuilder::Continue() { EmitJump(continue_label()); }
@@ -56,17 +54,14 @@ IfThenElseBuilder::~IfThenElseBuilder() {
   if (!else_label()->is_bound()) {
     generator()->emitter()->Bind(else_label());
   }
-
-  TPL_ASSERT(!end_label()->is_bound(), "End label should not be bound yet");
-  generator()->emitter()->Bind(end_label());
 }
 
 void IfThenElseBuilder::Then() { generator()->emitter()->Bind(then_label()); }
 
 void IfThenElseBuilder::Else() { generator()->emitter()->Bind(else_label()); }
 
-void IfThenElseBuilder::JumpToEnd() {
-  generator()->emitter()->EmitJump(Bytecode::Jump, end_label());
+void IfThenElseBuilder::JumpToEnd(BytecodeLabel *end_label) {
+  EmitJump(end_label);
 }
 
 }  // namespace tpl::vm

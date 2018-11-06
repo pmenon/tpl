@@ -43,26 +43,28 @@ void BytecodeEmitter::EmitBinaryOp(Bytecode bytecode, LocalVar dest,
   EmitLocalVars(dest, lhs, rhs);
 }
 
-void BytecodeEmitter::EmitJump(Bytecode bytecode, BytecodeLabel *label) {
-  TPL_ASSERT(Bytecodes::IsJump(bytecode), "Provided bytecode is not a jump");
-  TPL_ASSERT((!label->is_bound() && bytecode == Bytecode::Jump) ||
-                 (label->is_bound() && bytecode == Bytecode::JumpLoop),
-             "Jump should only be used for forward jumps and JumpLoop for "
-             "backwards jumps");
+void BytecodeEmitter::EmitJump(BytecodeLabel *label) {
+  Bytecode bytecode = (label->is_bound())
+      ? Bytecode::JumpBack : Bytecode::Jump;
 
   // Emit the jump opcode and condition
   EmitOp(bytecode);
-  EmitJump(label);
+  EmitJumpOffset(label);
 }
 
 void BytecodeEmitter::EmitConditionalJump(Bytecode bytecode, LocalVar cond,
                                           BytecodeLabel *label) {
   TPL_ASSERT(Bytecodes::IsJump(bytecode), "Provided bytecode is not a jump");
 
+  if (label->is_bound()) {
+    bytecode = (bytecode == Bytecode::JumpIfTrue)
+        ? Bytecode::JumpBackIfTrue : Bytecode::JumpBackIfFalse;
+  }
+
   // Emit the jump opcode and condition
   EmitOp(bytecode);
   EmitLocalVar(cond);
-  EmitJump(label);
+  EmitJumpOffset(label);
 }
 
 void BytecodeEmitter::EmitLea(LocalVar dest, LocalVar src, u32 offset) {
@@ -73,7 +75,7 @@ void BytecodeEmitter::EmitLea(LocalVar dest, LocalVar src, u32 offset) {
 
 void BytecodeEmitter::EmitReturn() { EmitOp(Bytecode::Return); }
 
-void BytecodeEmitter::EmitJump(BytecodeLabel *label) {
+void BytecodeEmitter::EmitJumpOffset(BytecodeLabel *label) {
   std::size_t curr_offset = position();
 
   if (label->is_bound()) {

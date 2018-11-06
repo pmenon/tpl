@@ -272,37 +272,41 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
   return CheckIdentifierOrKeyword(identifier, identifier_len);
 }
 
-#define KEYWORDS()                          \
-  GROUP_START('a')                          \
-  GROUP_ELEM("and", Token::Type::AND)       \
-  GROUP_START('e')                          \
-  GROUP_ELEM("else", Token::Type::ELSE)     \
-  GROUP_START('f')                          \
-  GROUP_ELEM("false", Token::Type::FALSE)   \
-  GROUP_ELEM("for", Token::Type::FOR)       \
-  GROUP_ELEM("fun", Token::Type::FUN)       \
-  GROUP_START('i')                          \
-  GROUP_ELEM("if", Token::Type::IF)         \
-  GROUP_ELEM("in", Token::Type::IN)         \
-  GROUP_START('m')                          \
-  GROUP_ELEM("map", Token::Type::MAP)       \
-  GROUP_START('n')                          \
-  GROUP_ELEM("nil", Token::Type::NIL)       \
-  GROUP_START('o')                          \
-  GROUP_ELEM("or", Token::Type::OR)         \
-  GROUP_START('r')                          \
-  GROUP_ELEM("return", Token::Type::RETURN) \
-  GROUP_START('s')                          \
-  GROUP_ELEM("struct", Token::Type::STRUCT) \
-  GROUP_START('t')                          \
-  GROUP_ELEM("true", Token::Type::TRUE)     \
-  GROUP_START('v')                          \
+#define KEYWORDS()                                  \
+  GROUP_START('a')                                  \
+  GROUP_ELEM("and", Token::Type::AND)               \
+  GROUP_START('b')                                  \
+  GROUP_ELEM("break", Token::Type::BREAK)           \
+  GROUP_START('c')                                  \
+  GROUP_ELEM("continue", Token::Type::CONTINUE)     \
+  GROUP_START('e')                                  \
+  GROUP_ELEM("else", Token::Type::ELSE)             \
+  GROUP_START('f')                                  \
+  GROUP_ELEM("false", Token::Type::FALSE)           \
+  GROUP_ELEM("for", Token::Type::FOR)               \
+  GROUP_ELEM("fun", Token::Type::FUN)               \
+  GROUP_START('i')                                  \
+  GROUP_ELEM("if", Token::Type::IF)                 \
+  GROUP_ELEM("in", Token::Type::IN)                 \
+  GROUP_START('m')                                  \
+  GROUP_ELEM("map", Token::Type::MAP)               \
+  GROUP_START('n')                                  \
+  GROUP_ELEM("nil", Token::Type::NIL)               \
+  GROUP_START('o')                                  \
+  GROUP_ELEM("or", Token::Type::OR)                 \
+  GROUP_START('r')                                  \
+  GROUP_ELEM("return", Token::Type::RETURN)         \
+  GROUP_START('s')                                  \
+  GROUP_ELEM("struct", Token::Type::STRUCT)         \
+  GROUP_START('t')                                  \
+  GROUP_ELEM("true", Token::Type::TRUE)             \
+  GROUP_START('v')                                  \
   GROUP_ELEM("var", Token::Type::VAR)
 
 Token::Type Scanner::CheckIdentifierOrKeyword(const char *input,
                                               uint32_t input_len) {
   static constexpr uint32_t kMinKeywordLen = 2;
-  static constexpr uint32_t kMaxKeywordLen = 6;
+  static constexpr uint32_t kMaxKeywordLen = 8;
 
   if (input_len < kMinKeywordLen || input_len > kMaxKeywordLen) {
     return Token::Type::IDENTIFIER;
@@ -319,7 +323,9 @@ Token::Type Scanner::CheckIdentifierOrKeyword(const char *input,
         (keyword_len < 3 || str[2] == input[2]) &&        \
         (keyword_len < 4 || str[3] == input[3]) &&        \
         (keyword_len < 5 || str[4] == input[4]) &&        \
-        (keyword_len < 6 || str[5] == input[5])) {        \
+        (keyword_len < 6 || str[5] == input[5]) &&        \
+        (keyword_len < 7 || str[6] == input[6]) &&        \
+        (keyword_len < 8 || str[7] == input[7])) {        \
       return typ;                                         \
     }                                                     \
   }

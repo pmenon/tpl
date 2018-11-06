@@ -44,6 +44,8 @@ namespace ast {
 #define STATEMENT_NODES(T) \
   T(AssignmentStmt)        \
   T(BlockStmt)             \
+  T(BreakStmt)             \
+  T(ContinueStmt)          \
   T(DeclStmt)              \
   T(ExpressionStmt)        \
   T(ForStmt)               \
@@ -358,6 +360,32 @@ class BlockStmt : public Stmt {
   const SourcePosition rbrace_pos_;
 
   util::RegionVector<Stmt *> statements_;
+};
+
+/**
+ * A break statement
+ */
+class BreakStmt : public Stmt {
+ public:
+  BreakStmt(const SourcePosition &pos)
+      : Stmt(Kind::BreakStmt, pos) {}
+
+  static bool classof(const AstNode *node) {
+    return node->kind() == Kind::BreakStmt;
+  }
+};
+
+/**
+ * A continue statement
+ */
+class ContinueStmt : public Stmt {
+ public:
+  ContinueStmt(const SourcePosition &pos)
+      : Stmt(Kind::ContinueStmt, pos) {}
+
+  static bool classof(const AstNode *node) {
+    return node->kind() == Kind::ContinueStmt;
+  }
 };
 
 /**

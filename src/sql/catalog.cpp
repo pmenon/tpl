@@ -1,6 +1,5 @@
 #include "sql/catalog.h"
 
-#include <iostream>
 #include <random>
 #include <utility>
 

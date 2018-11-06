@@ -43,6 +43,14 @@ class AstNodeFactory {
     return new (region_) BlockStmt(start_pos, end_pos, std::move(statements));
   }
 
+  BreakStmt *NewBreakStmt(const SourcePosition &start_pos) {
+    return new (region_) BreakStmt(start_pos);
+  }
+
+  ContinueStmt *NewContinueStmt(const SourcePosition &start_pos) {
+    return new (region_) ContinueStmt(start_pos);
+  }
+
   DeclStmt *NewDeclStmt(Decl *decl) { return new (region_) DeclStmt(decl); }
 
   AssignmentStmt *NewAssignmentStmt(const SourcePosition &pos, Expr *dest,

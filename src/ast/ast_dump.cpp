@@ -205,6 +205,16 @@ void AstDumperImpl::VisitBlockStmt(BlockStmt *node) {
   }
 }
 
+void AstDumperImpl::VisitBreakStmt(BreakStmt *node) {
+  DumpNodeCommon(node);
+  DumpPrimitive("break");
+}
+
+void AstDumperImpl::VisitContinueStmt(ContinueStmt *node) {
+  DumpNodeCommon(node);
+  DumpPrimitive("continue");
+}
+
 void AstDumperImpl::VisitDeclStmt(DeclStmt *node) {
   DumpDecl(node->declaration());
 }

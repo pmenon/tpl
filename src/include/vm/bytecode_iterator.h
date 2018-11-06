@@ -19,6 +19,12 @@ class BytecodeIterator {
   std::size_t end_offset() const { return end_offset_; }
   const std::vector<u8> &bytecodes() const { return bytecodes_; }
 
+  template <typename T>
+  T GetNthOperand(u32 idx) {
+    auto offset = Bytecodes::GetNthOperandOffset(current_bytecode(), idx);
+    return *reinterpret_cast<const T *>(&bytecodes_[current_offset() + offset]);
+  }
+
   void Advance();
   bool Done() const;
 

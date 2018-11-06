@@ -248,9 +248,9 @@ void VM::Run(Frame *frame) {
   }
 
   /*
-   * JumpLoops are unconditional backwards-only jumps, mostly used for loops
+   * JumpBacks are unconditional backwards-only jumps
    */
-  OP(JumpLoop) : {
+  OP(JumpBack) : {
     u16 skip = PEEK_JMP_OFFSET();
     if (OpJump()) {
       ip -= skip;
@@ -269,11 +269,39 @@ void VM::Run(Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  /*
+   * JumpBackIfTrues are conditional backwards-only jumps
+   */
+  OP(JumpBackIfTrue) : {
+    auto cond = frame->LocalAt<bool>(READ_REG_ID());
+    u16 skip = PEEK_JMP_OFFSET();
+    if (OpJumpIfTrue(cond)) {
+      ip -= skip;
+    } else {
+      READ_JMP_OFFSET();
+    }
+    DISPATCH_NEXT();
+  }
+
   OP(JumpIfFalse) : {
     auto cond = frame->LocalAt<bool>(READ_REG_ID());
     u16 skip = PEEK_JMP_OFFSET();
     if (OpJumpIfFalse(cond)) {
       ip += skip;
+    } else {
+      READ_JMP_OFFSET();
+    }
+    DISPATCH_NEXT();
+  }
+
+  /*
+   * JumpBackIfFalses are conditional backwards-only jumps
+   */
+  OP(JumpBackIfFalse) : {
+    auto cond = frame->LocalAt<bool>(READ_REG_ID());
+    u16 skip = PEEK_JMP_OFFSET();
+    if (OpJumpIfFalse(cond)) {
+      ip -= skip;
     } else {
       READ_JMP_OFFSET();
     }
@@ -287,7 +315,6 @@ void VM::Run(Frame *frame) {
     OpLoadImm_##type(dest, val);                        \
     DISPATCH_NEXT();                                    \
   }
-
   GEN_LOAD_IMM(i8, 1);
   GEN_LOAD_IMM(i16, 2);
   GEN_LOAD_IMM(i32, 4);

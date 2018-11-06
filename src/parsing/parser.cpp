@@ -115,7 +115,7 @@ ast::Decl *Parser::ParseVariableDecl() {
 
 ast::Stmt *Parser::ParseStmt() {
   // Statement = Block | ExpressionStmt | ForStmt | IfStmt | ReturnStmt |
-  //             SimpleStmt | VariableDecl ;
+  //             SimpleStmt | VariableDecl | BreakStmt | ContinueStmt;
 
   switch (peek()) {
     case Token::Type::LEFT_BRACE: {
@@ -133,6 +133,14 @@ ast::Stmt *Parser::ParseStmt() {
     case Token::Type::VAR: {
       ast::Decl *var_decl = ParseVariableDecl();
       return node_factory().NewDeclStmt(var_decl);
+    }
+    case Token::Type::BREAK: {
+      Consume(Token::Type::BREAK);
+      return node_factory().NewBreakStmt(scanner().current_position());
+    }
+    case Token::Type::CONTINUE: {
+      Consume(Token::Type::CONTINUE);
+      return node_factory().NewContinueStmt(scanner().current_position());
     }
     default: { return ParseSimpleStmt(); }
   }

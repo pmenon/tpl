@@ -14,9 +14,12 @@ namespace tpl::vm {
 class BytecodeGenerator::ExpressionResultScope {
  public:
   ExpressionResultScope(BytecodeGenerator *generator, ast::Expr::Context kind,
+                        BytecodeLabel *then_label, BytecodeLabel *else_label,
                         LocalVar destination = LocalVar())
       : generator_(generator),
         outer_scope_(generator->execution_result()),
+        then_label_(then_label),
+        else_label_(else_label),
         destination_(destination),
         kind_(kind) {
     generator_->set_execution_result(this);
@@ -32,6 +35,17 @@ class BytecodeGenerator::ExpressionResultScope {
 
   bool HasDestination() const { return !destination().IsInvalid(); }
 
+  BytecodeLabel *then_label() { return then_label_; }
+  BytecodeLabel *else_label() { return else_label_; }
+
+  void set_then_label(BytecodeLabel *then_label) {
+    then_label_ = then_label;
+  }
+
+  void set_else_label(BytecodeLabel *else_label) {
+    else_label_ = else_label;
+  }
+
   LocalVar GetOrCreateDestination(ast::Type *type) {
     if (!HasDestination()) {
       destination_ = generator_->current_function()->NewTempLocal(type);
@@ -46,6 +60,8 @@ class BytecodeGenerator::ExpressionResultScope {
  private:
   BytecodeGenerator *generator_;
   ExpressionResultScope *outer_scope_;
+  BytecodeLabel *then_label_;
+  BytecodeLabel *else_label_;
   LocalVar destination_;
   ast::Expr::Context kind_;
 };
@@ -53,22 +69,58 @@ class BytecodeGenerator::ExpressionResultScope {
 class BytecodeGenerator::LValueResultScope
     : public BytecodeGenerator::ExpressionResultScope {
  public:
-  LValueResultScope(BytecodeGenerator *generator, LocalVar dest = LocalVar())
-      : ExpressionResultScope(generator, ast::Expr::Context::LValue, dest) {}
+  LValueResultScope(BytecodeGenerator *generator, BytecodeLabel *then_label,
+                    BytecodeLabel *else_label, LocalVar dest = LocalVar())
+      : ExpressionResultScope(generator, ast::Expr::Context::LValue, then_label,
+                              else_label, dest) {}
 };
 
 class BytecodeGenerator::RValueResultScope
     : public BytecodeGenerator::ExpressionResultScope {
  public:
-  RValueResultScope(BytecodeGenerator *generator, LocalVar dest = LocalVar())
-      : ExpressionResultScope(generator, ast::Expr::Context::RValue, dest) {}
+  RValueResultScope(BytecodeGenerator *generator, BytecodeLabel *then_label,
+                    BytecodeLabel *else_label, LocalVar dest = LocalVar())
+      : ExpressionResultScope(generator, ast::Expr::Context::RValue, then_label,
+                              else_label, dest) {}
 };
 
 class BytecodeGenerator::TestResultScope
     : public BytecodeGenerator::ExpressionResultScope {
  public:
-  TestResultScope(BytecodeGenerator *generator, LocalVar dest = LocalVar())
-      : ExpressionResultScope(generator, ast::Expr::Context::Test, dest) {}
+  TestResultScope(BytecodeGenerator *generator, BytecodeLabel *then_label,
+                  BytecodeLabel *else_label, LocalVar dest = LocalVar())
+      : ExpressionResultScope(generator, ast::Expr::Context::Test, then_label,
+                              else_label, dest) {}
+};
+
+class BytecodeGenerator::StatementContext {
+ public:
+  StatementContext(BytecodeGenerator *generator,
+                   BytecodeLabel *next_label = nullptr,
+                   BytecodeLabel *break_label = nullptr,
+                   BytecodeLabel *continue_label = nullptr)
+      : generator_(generator),
+        old_context_(generator->statement_context()),
+        next_label_(next_label),
+        break_label_(break_label),
+        continue_label_(continue_label) {
+    generator_->set_statement_context(this);
+  }
+
+  ~StatementContext() {
+    generator_->set_statement_context(old_context_);
+  }
+
+  BytecodeLabel *next_label() { return next_label_; }
+  BytecodeLabel *break_label() { return break_label_; }
+  BytecodeLabel *continue_label() { return continue_label_; }
+
+ private:
+  BytecodeGenerator *generator_;
+  StatementContext *old_context_;
+  BytecodeLabel *next_label_;
+  BytecodeLabel *break_label_;
+  BytecodeLabel *continue_label_;
 };
 
 /**
@@ -99,9 +151,13 @@ BytecodeGenerator::BytecodeGenerator()
 void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
   IfThenElseBuilder if_builder(this);
 
+  BytecodeLabel *then_label = if_builder.then_label();
+  BytecodeLabel *else_label = (node->else_stmt())
+      ? if_builder.else_label() : statement_context()->next_label();
+
   // Generate condition check code
-  VisitExpressionForTest(node->condition(), if_builder.then_label(),
-                         if_builder.else_label(), TestFallthrough::Then);
+  VisitExpressionForTest(node->condition(), then_label,
+                         else_label, TestFallthrough::Then);
 
   // Generate code in "then" block
   if_builder.Then();
@@ -109,7 +165,7 @@ void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
 
   // If there's an "else" block, handle it now
   if (node->else_stmt() != nullptr) {
-    if_builder.JumpToEnd();
+    if_builder.JumpToEnd(/*end_label=*/statement_context()->next_label());
     if_builder.Else();
     Visit(node->else_stmt());
   }
@@ -124,6 +180,8 @@ void BytecodeGenerator::VisitIterationStatement(ast::IterationStmt *iteration,
 void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
   LoopBuilder loop_builder(this);
 
+  auto *old_context = statement_context();
+
   if (node->init() != nullptr) {
     Visit(node->init());
   }
@@ -131,14 +189,31 @@ void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
   loop_builder.LoopHeader();
 
   if (node->condition() != nullptr) {
-    BytecodeLabel loop_body_label;
-    VisitExpressionForTest(node->condition(), &loop_body_label,
-                           loop_builder.break_label(), TestFallthrough::Then);
+    VisitExpressionForTest(node->condition(), loop_builder.body_label(),
+                           old_context->next_label(), TestFallthrough::Then);
+    loop_builder.LoopBody();
   }
 
-  VisitIterationStatement(node, &loop_builder);
+  {
+    BytecodeLabel *label = (node->next())
+        ? loop_builder.continue_label() : loop_builder.header_label();
+    StatementContext new_context(
+        this,
+        /*next_label=*/label,
+        /*break_label=*/old_context->next_label(),
+        /*continue_label=*/label);
+
+    VisitIterationStatement(node, &loop_builder);
+  }
 
   if (node->next() != nullptr) {
+    // TODO(Siva): next statement cannot be complicated. So maybe, break label
+    // and continue label is not needed.
+    StatementContext new_context(
+        this,
+        /*next_label=*/loop_builder.header_label(),
+        /*break_label=*/old_context->next_label(),
+        /*continue_label=*/loop_builder.header_label());
     Visit(node->next());
   }
 
@@ -166,6 +241,8 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   LocalVar row = current_function()->NewLocal(row_type, "row");
 
   {
+    auto *old_context = statement_context();
+
     // Loop body
     LoopBuilder loop_builder(this);
     loop_builder.LoopHeader();
@@ -173,7 +250,15 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
     LocalVar cond = current_function()->NewTempLocal(ast::BoolType::Get(ctx));
     emitter()->Emit(Bytecode::SqlTableIteratorNext, cond, iter);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
-                                   loop_builder.break_label());
+                                   old_context->next_label());
+
+    loop_builder.LoopBody();
+
+    StatementContext new_context(
+        this,
+        /*next_label=*/loop_builder.header_label(),
+        /*break_label=*/old_context->next_label(),
+        /*continue_label=*/loop_builder.header_label());
 
     // Load fields
     const auto &fields = row_type->fields();
@@ -217,8 +302,11 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
 
   {
     // Visit the body of the function
+    BytecodeLabel end_label;
+    StatementContext new_context(this, &end_label, &end_label, &end_label);
     BytecodePositionTracker position_tracker(this, func_info);
     Visit(node->function());
+    emitter()->Bind(&end_label);
   }
 }
 
@@ -295,9 +383,36 @@ void BytecodeGenerator::VisitIndexExpr(ast::IndexExpr *node) {
 }
 
 void BytecodeGenerator::VisitBlockStmt(ast::BlockStmt *node) {
-  for (auto *stmt : node->statements()) {
+  auto *old_context = statement_context();
+  const auto &statements = node->statements();
+  for (auto i = 0; i < (statements.size() - 1); i++) {
+    auto *stmt = statements[i];
+    BytecodeLabel next_label;
+    StatementContext new_context(
+        this,
+        /*next_label=*/&next_label,
+        /*break_label=*/old_context->break_label(),
+        /*continue_label=*/old_context->continue_label());
     Visit(stmt);
+    emitter()->Bind(&next_label);
   }
+
+  // Visit the last statement
+  auto *stmt = statements[statements.size() - 1];
+  StatementContext new_context(
+      this,
+      /*next_label=*/old_context->next_label(),
+      /*break_label=*/old_context->break_label(),
+      /*continue_label=*/old_context->continue_label());
+  Visit(stmt);
+}
+
+void BytecodeGenerator::VisitBreakStmt(ast::BreakStmt *node) {
+  emitter()->EmitJump(statement_context()->break_label());
+}
+
+void BytecodeGenerator::VisitContinueStmt(ast::ContinueStmt *node) {
+  emitter()->EmitJump(statement_context()->continue_label());
 }
 
 void BytecodeGenerator::VisitVariableDecl(ast::VariableDecl *node) {
@@ -418,8 +533,6 @@ void BytecodeGenerator::VisitStructDecl(ast::StructDecl *node) {
 }
 
 void BytecodeGenerator::VisitLogicalAndOrExpr(ast::BinaryOpExpr *node) {
-  // TODO(siva): Once we support move for all types (bool), fix this to support
-  // destination of the assignment in the lhs expression.
   TPL_ASSERT(execution_result()->IsRValue(),
              "Binary expressions must be R-Values!");
   TPL_ASSERT(node->left()->type()->kind() == node->right()->type()->kind(),
@@ -429,32 +542,45 @@ void BytecodeGenerator::VisitLogicalAndOrExpr(ast::BinaryOpExpr *node) {
 
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
 
-  // Execute left child
-  VisitExpressionForRValue(node->left(), dest);
+  BytecodeLabel then_label, else_label;
+  if (!execution_result()->then_label()) {
+    execution_result()->set_then_label(&then_label);
+  }
+  if (!execution_result()->else_label()) {
+    execution_result()->set_else_label(&else_label);
+  }
 
-  Bytecode conditional_jump;
-  BytecodeLabel end_label;
+  BytecodeLabel next_label;
 
   switch (node->op()) {
     case parsing::Token::Type::OR: {
-      conditional_jump = Bytecode::JumpIfTrue;
+      VisitExpressionForTest(node->left(),
+                         /*then_label=*/execution_result()->then_label(),
+                         /*else_label=*/&next_label,
+                         TestFallthrough::Else,
+                         dest);
       break;
     }
     case parsing::Token::Type::AND: {
-      conditional_jump = Bytecode::JumpIfFalse;
+      VisitExpressionForTest(node->left(),
+                         /*then_label=*/&next_label,
+                         /*else_label=*/execution_result()->else_label(),
+                         TestFallthrough::Then,
+                         dest);
       break;
     }
     default: { UNREACHABLE("Impossible logical operation type"); }
   }
 
-  // Do a conditional jump
-  emitter()->EmitConditionalJump(conditional_jump, dest.ValueOf(), &end_label);
+  emitter()->Bind(&next_label);
 
   // Execute the right child
-  VisitExpressionForRValue(node->right(), dest);
+  VisitExpressionForRValue(node->right(), dest,
+                           /*then_label=*/execution_result()->then_label(),
+                           /*else_label=*/execution_result()->else_label());
 
-  // Bind the end label
-  emitter()->Bind(&end_label);
+  emitter()->Bind(&then_label);
+  emitter()->Bind(&else_label);
 
   // Mark where the result is
   execution_result()->set_destination(dest.ValueOf());
@@ -784,29 +910,35 @@ FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &name) {
 }
 
 LocalVar BytecodeGenerator::VisitExpressionForLValue(ast::Expr *expr) {
-  LValueResultScope scope(this);
+  LValueResultScope scope(this, nullptr, nullptr);
   Visit(expr);
   return scope.destination();
 }
 
-LocalVar BytecodeGenerator::VisitExpressionForRValue(ast::Expr *expr) {
-  RValueResultScope scope(this);
+LocalVar BytecodeGenerator::VisitExpressionForRValue(
+    ast::Expr *expr, BytecodeLabel *then_label, BytecodeLabel *else_label) {
+  RValueResultScope scope(this, then_label, else_label);
   Visit(expr);
   return scope.destination();
 }
 
-void BytecodeGenerator::VisitExpressionForRValue(ast::Expr *expr,
-                                                 LocalVar dest) {
-  RValueResultScope scope(this, dest);
+void BytecodeGenerator::VisitExpressionForRValue(
+    ast::Expr *expr, LocalVar dest, BytecodeLabel *then_label,
+    BytecodeLabel *else_label) {
+  RValueResultScope scope(this, then_label, else_label, dest);
   Visit(expr);
 }
 
-void BytecodeGenerator::VisitExpressionForTest(ast::Expr *expr,
-                                               BytecodeLabel *then_label,
-                                               BytecodeLabel *else_label,
-                                               TestFallthrough fallthrough) {
+void BytecodeGenerator::VisitExpressionForTest(
+    ast::Expr *expr, BytecodeLabel *then_label, BytecodeLabel *else_label,
+    TestFallthrough fallthrough, LocalVar cond) {
   // Evaluate the expression
-  LocalVar cond = VisitExpressionForRValue(expr);
+  if (cond.IsInvalid()) {
+    cond = VisitExpressionForRValue(expr, then_label, else_label);
+  } else {
+    VisitExpressionForRValue(expr, cond, then_label, else_label);
+    cond = cond.ValueOf();
+  }
 
   switch (fallthrough) {
     case TestFallthrough::Then: {
@@ -819,7 +951,7 @@ void BytecodeGenerator::VisitExpressionForTest(ast::Expr *expr,
     }
     case TestFallthrough::None: {
       emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond, else_label);
-      emitter()->EmitJump(Bytecode::Jump, then_label);
+      emitter()->EmitJump(then_label);
       break;
     }
   }

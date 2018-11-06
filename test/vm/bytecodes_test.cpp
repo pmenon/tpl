@@ -22,6 +22,10 @@ TEST_F(BytecodesTest, OperandCountTest) {
   EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::JumpIfTrue));
   EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::JumpIfFalse));
 
+  EXPECT_EQ(1u, Bytecodes::NumOperands(Bytecode::JumpBack));
+  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::JumpBackIfTrue));
+  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::JumpBackIfFalse));
+
   // Binary ops
   EXPECT_EQ(3u, Bytecodes::NumOperands(Bytecode::Add_i32));
   EXPECT_EQ(3u, Bytecodes::NumOperands(Bytecode::Mul_i32));
@@ -101,11 +105,14 @@ TEST_F(BytecodesTest, BytecodeSizeTest) {
 
   // Jumps
   EXPECT_EQ(6u, Bytecodes::Size(Bytecode::Jump));
+  EXPECT_EQ(6u, Bytecodes::Size(Bytecode::JumpBack));
 
   // Conditional jumps have a 4-byte register ID and a 2-byte unsigned jump
   // offset
   EXPECT_EQ(10u, Bytecodes::Size(Bytecode::JumpIfTrue));
   EXPECT_EQ(10u, Bytecodes::Size(Bytecode::JumpIfFalse));
+  EXPECT_EQ(10u, Bytecodes::Size(Bytecode::JumpBackIfTrue));
+  EXPECT_EQ(10u, Bytecodes::Size(Bytecode::JumpBackIfFalse));
 
   // Binary ops usually have three operands, all 4-byte register IDs
   EXPECT_EQ(16u, Bytecodes::Size(Bytecode::Add_i32));

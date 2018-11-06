@@ -56,6 +56,8 @@ namespace tpl::parsing {
   T(STRING, "str", 0)                              \
                                                    \
   /* Non-binary operator keywords */               \
+  K(BREAK, "break", 0)                             \
+  K(CONTINUE, "continue", 0)                       \
   K(ELSE, "else", 0)                               \
   K(FALSE, "false", 0)                             \
   K(FOR, "for", 0)                                 \

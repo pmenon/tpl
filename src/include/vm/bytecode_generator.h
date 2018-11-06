@@ -32,6 +32,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   class RValueResultScope;
   class TestResultScope;
   class BytecodePositionTracker;
+  class StatementContext;
 
   // Allocate a new function ID
   FunctionInfo *AllocateFunc(const std::string &name);
@@ -46,17 +47,23 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
   // Visit an expression for its R-Value and return the local variable holding
   // its result
-  LocalVar VisitExpressionForRValue(ast::Expr *expr);
+  LocalVar VisitExpressionForRValue(ast::Expr *expr,
+                                    BytecodeLabel *then_label = nullptr,
+                                    BytecodeLabel *else_label = nullptr);
 
   // Visit an expression for its R-Value providing a destination variable where
   // the result should be stored
-  void VisitExpressionForRValue(ast::Expr *expr, LocalVar dest);
+  void VisitExpressionForRValue(ast::Expr *expr,
+                                LocalVar dest,
+                                BytecodeLabel *then_label = nullptr,
+                                BytecodeLabel *else_label = nullptr);
 
   enum class TestFallthrough : u8 { None, Then, Else };
 
   void VisitExpressionForTest(ast::Expr *expr, BytecodeLabel *then_label,
                               BytecodeLabel *else_label,
-                              TestFallthrough fallthrough);
+                              TestFallthrough fallthrough,
+                              LocalVar cond = LocalVar());
 
   // Visit the body of an iteration statement
   void VisitIterationStatement(ast::IterationStmt *iteration,
@@ -75,8 +82,15 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
  private:
   ExpressionResultScope *execution_result() { return execution_result_; }
+
   void set_execution_result(ExpressionResultScope *execution_result) {
     execution_result_ = execution_result;
+  }
+
+  StatementContext *statement_context() { return statement_context_; }
+
+  void set_statement_context(StatementContext *statement_context) {
+    statement_context_ = statement_context;
   }
 
   FunctionInfo *current_function() { return &functions_.back(); }
@@ -86,6 +100,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
  private:
   BytecodeEmitter emitter_;
   ExpressionResultScope *execution_result_;
+  StatementContext *statement_context_;
 
   FunctionId func_id_counter_;
   std::vector<FunctionInfo> functions_;

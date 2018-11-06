@@ -29,6 +29,22 @@ void Sema::VisitBlockStmt(ast::BlockStmt *node) {
   }
 }
 
+void Sema::VisitBreakStmt(ast::BreakStmt *node) {
+  // Check that break is in a loop
+  if (current_scope()->kind() != Scope::Kind::Loop) {
+    error_reporter().Report(node->position(),
+                            ErrorMessages::kBreakOrContinueOutsideLoop);
+  }
+}
+
+void Sema::VisitContinueStmt(ast::ContinueStmt *node) {
+  // Check that continue is in a loop
+  if (current_scope()->kind() != Scope::Kind::Loop) {
+    error_reporter().Report(node->position(),
+                            ErrorMessages::kBreakOrContinueOutsideLoop);
+  }
+}
+
 void Sema::VisitFile(ast::File *node) {
   SemaScope file_scope(*this, Scope::Kind::File);
 
