@@ -25,13 +25,34 @@ enum class TableId : u16 {
  */
 class Catalog {
  public:
+  /**
+   * Access singleton Catalog object. Singletons are bad blah blah blah ...
+   * @return The singleton Catalog object
+   */
   static Catalog *instance() {
     static Catalog kInstance;
     return &kInstance;
   }
 
+  /**
+   * Lookup a table in this catalog by name
+   * @param name The name of the target table
+   * @return A pointer to the table, or NULL if the table doesn't exist.
+   */
   Table *LookupTableByName(const std::string &name);
+
+  /**
+   * Lookup a table in this catalog by name, using an identifier
+   * @param name The name of the target table
+   * @return A pointer to the table, or NULL if the table doesn't exist.
+   */
   Table *LookupTableByName(ast::Identifier name);
+
+  /**
+   * Lookup a table in this catalog by ID
+   * @param table_id The ID of the target table
+   * @return A pointer to the table, or NULL if the table doesn't exist.
+   */
   Table *LookupTableById(TableId table_id);
 
  private:

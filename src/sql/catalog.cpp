@@ -1,5 +1,6 @@
 #include "sql/catalog.h"
 
+#include <iostream>
 #include <random>
 #include <utility>
 
@@ -12,8 +13,15 @@ namespace tpl::sql {
 
 namespace {
 
+/**
+ * Enumeration to characterize the distribution of values in a given column
+ */
 enum class Dist : u8 { Uniform, Zipf_50, Zipf_75, Zipf_95, Zipf_99 };
 
+/**
+ * Metadata about the data for a given column. Specifically, the type of the
+ * column, the distribution of values, a min and max if appropriate.
+ */
 struct ColumnInsertMeta {
   const char *name;
   Type type;
@@ -26,6 +34,10 @@ struct ColumnInsertMeta {
       : name(name), type(type), dist(dist), min(min), max(max) {}
 };
 
+/**
+ * Metadata about data within a table. Specifically, the schema and number of
+ * rows in the table.
+ */
 struct TableInsertMeta {
   TableId id;
   const char *name;
@@ -37,14 +49,20 @@ struct TableInsertMeta {
       : id(id), name(name), num_rows(num_rows), col_meta(std::move(col_meta)) {}
 };
 
+/**
+ * This array configures each of the test tables. When the catalog is created,
+ * it bootstraps itself with the tables in this array. Each able is configured
+ * with a name, size, and schema. We also configure the columns of the table. If
+ * you add a new table, set it up here.
+ */
 // clang-format off
-std::vector<TableInsertMeta> insert_meta = {
-    {TableId::Test1, "test_1", 1000000, {
-      {"colA", Type(TypeId::Integer, false), Dist::Uniform, 0, 99},
-      {"colB", Type(TypeId::Integer, false), Dist::Uniform, 0, std::numeric_limits<i32>::max()},
-      {"colC", Type(TypeId::Integer, false), Dist::Uniform, 0, std::numeric_limits<i32>::max()},
-      {"colD", Type(TypeId::Integer, false), Dist::Uniform, 0, std::numeric_limits<i32>::max()}}
-    },
+TableInsertMeta insert_meta[] = {
+    // Table 1
+    {TableId::Test1, "test_1", 2000000,
+     {{"colA", Type(TypeId::Integer, false), Dist::Uniform, 0, 99},
+      {"colB", Type(TypeId::Integer, false), Dist::Uniform, 0, 999},
+      {"colC", Type(TypeId::Integer, false), Dist::Uniform, 0, 9999},
+      {"colD", Type(TypeId::Integer, false), Dist::Uniform, 0, 99999}}},
 };
 // clang-format on
 
@@ -129,6 +147,9 @@ void InitTable(const TableInsertMeta &meta, Table *table) {
 
 }  // namespace
 
+/*
+ * Create a catalog, setting up all tables.
+ */
 Catalog::Catalog() {
   LOG_INFO("Initializing catalog");
 
