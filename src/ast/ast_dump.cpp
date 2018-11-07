@@ -350,19 +350,24 @@ void AstDumperImpl::VisitBadExpr(BadExpr *node) {
 }
 
 void AstDumperImpl::VisitStructTypeRepr(StructTypeRepr *node) {
+  DumpNodeCommon(node);
   DumpType(node->type());
 }
 
 void AstDumperImpl::VisitPointerTypeRepr(PointerTypeRepr *node) {
-  DumpType(node->type());
+  DumpNodeCommon(node);
+  DumpExpr(node->base());
 }
 
 void AstDumperImpl::VisitFunctionTypeRepr(FunctionTypeRepr *node) {
+  DumpNodeCommon(node);
   DumpType(node->type());
 }
 
 void AstDumperImpl::VisitArrayTypeRepr(ArrayTypeRepr *node) {
-  DumpType(node->type());
+  DumpNodeCommon(node);
+  DumpExpr(node->length());
+  DumpExpr(node->element_type());
 }
 
 void AstDump::Dump(ast::AstNode *node) {
