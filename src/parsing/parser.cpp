@@ -420,8 +420,16 @@ ast::Expr *Parser::ParseLeftHandSideExpression() {
     case Token::Type::DOT: {
       // Selector expression
       Consume(Token::Type::DOT);
-      ast::Expr *sel = ParsePrimaryExpr();
-      return node_factory().NewSelectorExpr(result->position(), result, sel);
+
+      // Eagerly consume the full selector chain
+      ast::Expr *expr = result;
+      do {
+        ast::Expr *sel = ParsePrimaryExpr();
+        expr = node_factory().NewSelectorExpr(result->position(), expr, sel);
+      } while (Matches(Token::Type::DOT));
+
+      // Done
+      return expr;
     }
     default: { return result; }
   }
