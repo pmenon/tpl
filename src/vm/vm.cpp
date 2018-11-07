@@ -283,7 +283,7 @@ void VM::Run(Frame *frame) {
 #define GEN_LOAD_IMM(type, size)                        \
   OP(LoadImm##size) : {                                 \
     type *dest = frame->LocalAt<type *>(READ_REG_ID()); \
-    type val = READ_IMM1();                             \
+    type val = READ_IMM##size();                        \
     OpLoadImm_##type(dest, val);                        \
     DISPATCH_NEXT();                                    \
   }
