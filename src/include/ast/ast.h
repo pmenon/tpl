@@ -832,8 +832,10 @@ class SelectorExpr : public Expr {
   SelectorExpr(const SourcePosition &pos, Expr *obj, Expr *sel)
       : Expr(Kind::SelectorExpr, pos), object_(obj), selector_(sel) {}
 
-  Expr *object() { return object_; }
-  Expr *selector() { return selector_; }
+  Expr *object() const { return object_; }
+  Expr *selector() const { return selector_; }
+
+  bool IsSugaredArrow() const;
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::SelectorExpr;

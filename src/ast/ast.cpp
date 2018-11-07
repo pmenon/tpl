@@ -1,5 +1,7 @@
 #include "ast/ast.h"
 
+#include "ast/type.h"
+
 namespace tpl::ast {
 
 FunctionDecl::FunctionDecl(const SourcePosition &pos, Identifier name,
@@ -17,5 +19,11 @@ FunctionLitExpr::FunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body)
     : Expr(Kind::FunctionLitExpr, type_repr->position()),
       type_repr_(type_repr),
       body_(body) {}
+
+bool SelectorExpr::IsSugaredArrow() const {
+  TPL_ASSERT(object()->type() != nullptr,
+             "Cannot determine sugared-arrow before type checking!");
+  return object()->type()->IsPointerType();
+}
 
 }  // namespace tpl::ast
