@@ -223,22 +223,39 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
 }
 
 void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
+  /*
+   * Lookup the local in the current function. It must be there through a
+   * previous variable declaration (or parameter declaration). What is returned
+   * is a pointer to the variable.
+   */
+
   LocalVar local = current_function()->LookupLocal(node->name().data());
 
-  if (execution_result()->IsRValue()) {
-    local = local.ValueOf();
-
-    if (execution_result()->HasDestination()) {
-      LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
-      emitter()->Emit(GetIntTypedBytecode(
-                          GET_BASE_FOR_INT_TYPES(Bytecode::Move), node->type()),
-                      dest, local);
-      execution_result()->set_destination(dest);
-      return;
-    }
+  if (execution_result()->IsLValue()) {
+    execution_result()->set_destination(local);
+    return;
   }
 
-  execution_result()->set_destination(local);
+  /*
+   * The caller wants the R-Value of the identifier. So, we need to load it. If
+   * the caller did not provide a destination register, we're done. If the
+   * caller provided a destination, we need to move the value of the identifier
+   * into the provided destination.
+   */
+
+  local = local.ValueOf();
+
+  if (!execution_result()->HasDestination()) {
+    execution_result()->set_destination(local);
+    return;
+  }
+
+  // We need to move the value of the variable into the provided destination
+  LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
+  emitter()->Emit(
+      GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Move), node->type()),
+      dest, local);
+  execution_result()->set_destination(dest);
 }
 
 void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
@@ -606,6 +623,11 @@ void BytecodeGenerator::VisitPrimitiveCompareOpExpr(
 void BytecodeGenerator::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
   TPL_ASSERT(execution_result()->IsRValue(),
              "Comparison expressions must be R-Values!");
+
+  /*
+   * We treat SQL comparisons slightly differently that primitive comparisons.
+   */
+
   if (node->type()->IsSqlType()) {
     VisitSqlCompareOpExpr(node);
   } else {
@@ -617,61 +639,95 @@ void BytecodeGenerator::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   Visit(node->body());
 }
 
-void BytecodeGenerator::VisitSelectorExpr(ast::SelectorExpr *node) {
-  LocalVar obj = VisitExpressionForLValue(node->object());
-
-  ast::StructType *obj_type = nullptr;
-  if (auto *ptr_type = node->object()->type()->SafeAs<ast::PointerType>()) {
-    obj = obj.ValueOf();
-    obj_type = ptr_type->base()->As<ast::StructType>();
-  } else {
-    obj_type = node->object()->type()->As<ast::StructType>();
+LocalVar BytecodeGenerator::BuildLoadPointer(LocalVar double_ptr,
+                                             ast::Type *type) {
+  if (double_ptr.GetAddressMode() == LocalVar::AddressMode::Address) {
+    return double_ptr.ValueOf();
   }
 
-  auto *field_name = node->selector()->As<ast::IdentifierExpr>();
+  // Need to Deref
+  LocalVar ptr = current_function()->NewTempLocal(type);
+  emitter()->EmitDeref<Bytecode::Deref8>(ptr, double_ptr);
+  return ptr.ValueOf();
+}
 
-  u32 offset = obj_type->GetOffsetOfFieldByName(field_name->name());
+void BytecodeGenerator::VisitSelectorExpr(ast::SelectorExpr *node) {
+  /*
+   * We first need to compute the address of the object we're selecting into.
+   * Thus, we get the L-Value of the object below.
+   */
+
+  LocalVar obj_ptr = VisitExpressionForLValue(node->object());
+
+  /*
+   * We now need to compute the offset of the field in the composite type. TPL
+   * unifies C's arrow and dot syntax for field/member access. Thus, the type
+   * of the object may be either a pointer to a struct or the actual struct. If
+   * the type is a pointer, then the L-Value of the object is actually a double
+   * pointer. Thus, we need to dereference it.
+   */
+
+  ast::StructType *obj_type = nullptr;
+  if (auto *type = node->object()->type(); node->IsSugaredArrow()) {
+    // Double pointer, need to dereference
+    obj_ptr = BuildLoadPointer(obj_ptr, type);
+    obj_type = type->As<ast::PointerType>()->base()->As<ast::StructType>();
+  } else {
+    obj_type = type->As<ast::StructType>();
+  }
+
+  /*
+   * We're now ready to compute offset. Let's lookup the field's offset in the
+   * struct type.
+   */
+
+  auto *field_name = node->selector()->As<ast::IdentifierExpr>();
+  auto offset = obj_type->GetOffsetOfFieldByName(field_name->name());
+
+  /*
+   * Now that we have a pointer to the composite object, we need to compute a
+   * pointer to the field within the object. If the offset of the field in the
+   * object is zero, we needn't do anything - we can just reinterpret the object
+   * pointer. If the field offset is greater than zero, we generate a LEA.
+   */
+
+  LocalVar field_ptr;
+  if (offset == 0) {
+    field_ptr = obj_ptr;
+  } else {
+    field_ptr = current_function()->NewTempLocal(node->type()->PointerTo());
+    emitter()->EmitLea(field_ptr, obj_ptr, offset);
+    field_ptr = field_ptr.ValueOf();
+  }
 
   if (execution_result()->IsLValue()) {
     TPL_ASSERT(!execution_result()->HasDestination(),
                "L-Values produce their destination");
-    if (offset == 0) {
-      // No LEA needed
-      if (node->object()->type()->IsPointerType()) {
-        execution_result()->set_destination(obj.ValueOf());
-      } else {
-        execution_result()->set_destination(obj);
-      }
-      return;
-    }
-
-    // Need to LEA
-    LocalVar dest =
-        execution_result()->GetOrCreateDestination(node->type()->PointerTo());
-    emitter()->EmitLea(dest, obj, offset);
-    execution_result()->set_destination(dest.ValueOf());
+    execution_result()->set_destination(field_ptr);
     return;
   }
 
-  // Need to load address and deref
+  /*
+   * The caller wants the actual value of the field. We just computed a pointer
+   * to the field in the object, so we need to load/dereference it. If the
+   * caller provided a destination variable, use that; otherwise, create a new
+   * temporary variable to store the value.
+   */
 
-  LocalVar elem_ptr;
-  if (offset == 0) {
-    if (node->object()->type()->IsPointerType()) {
-      elem_ptr = obj.ValueOf();
-    } else {
-      elem_ptr = obj;
-    }
-  } else {
-    elem_ptr = current_function()->NewTempLocal(node->type()->PointerTo());
-    emitter()->EmitLea(elem_ptr, obj, offset);
-    elem_ptr = elem_ptr.ValueOf();
-  }
-
-  // TODO: This Deref size should depend on type!
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
-  emitter()->EmitUnaryOp(Bytecode::Deref4, dest, elem_ptr);
-  execution_result()->set_destination(dest.ValueOf());
+
+  // Emit the appropriate deref
+  if (auto size = node->type()->size(); size == 1) {
+    emitter()->EmitDeref<Bytecode::Deref1>(dest, field_ptr);
+  } else if (size == 2) {
+    emitter()->EmitDeref<Bytecode::Deref2>(dest, field_ptr);
+  } else if (size == 4) {
+    emitter()->EmitDeref<Bytecode::Deref4>(dest, field_ptr);
+  } else if (size == 8) {
+    emitter()->EmitDeref<Bytecode::Deref8>(dest, field_ptr);
+  } else {
+    emitter()->EmitDerefN(dest, field_ptr, size);
+  }
 }
 
 void BytecodeGenerator::VisitDeclStmt(ast::DeclStmt *node) {

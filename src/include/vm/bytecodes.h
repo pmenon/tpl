@@ -23,17 +23,15 @@ namespace tpl::vm {
 // clang-format on
 
 // Creates instances of a given opcode for all bool primitive types
-#define CREATE_FOR_BOOL_TYPES(func, op, ...)      \
-  func(op##_##bool, __VA_ARGS__)
+#define CREATE_FOR_BOOL_TYPES(func, op, ...) func(op##_##bool, __VA_ARGS__)
 
 // Creates instances of a given opcode for all floating-point primitive types
 #define CREATE_FOR_FLOAT_TYPES(func, op) func(op, f32) func(op, f64)
 
 // Creates instances of a given opcode for *ALL* primitive types
-#define CREATE_FOR_ALL_TYPES(func, op, ...)     \
-  CREATE_FOR_INT_TYPES(func, op, __VA_ARGS__)   \
+#define CREATE_FOR_ALL_TYPES(func, op, ...)   \
+  CREATE_FOR_INT_TYPES(func, op, __VA_ARGS__) \
   CREATE_FOR_FLOAT_TYPES(func, op, __VA_ARGS__)
-
 
 #define GET_BASE_FOR_INT_TYPES(op) (op##_i8)
 #define GET_BASE_FOR_FLOAT_TYPES(op) (op##_f32)
@@ -78,7 +76,7 @@ namespace tpl::vm {
   V(JumpIfTrue, OperandType::Reg, OperandType::UImm2)                                                                  \
   V(JumpIfFalse, OperandType::Reg, OperandType::UImm2)                                                                 \
                                                                                                                        \
-  /* Table scanning */                                                                                                 \
+  /* SQL codes */                                                                                                      \
   V(SqlTableIteratorInit, OperandType::Reg, OperandType::UImm2)                                                        \
   V(SqlTableIteratorNext, OperandType::Reg, OperandType::Reg)                                                          \
   V(SqlTableIteratorClose, OperandType::Reg)                                                                           \
@@ -95,7 +93,11 @@ namespace tpl::vm {
   V(EqualInteger, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                                \
   V(NotEqualInteger, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                             \
                                                                                                                        \
+  V(Deref1, OperandType::Reg, OperandType::Reg)                                                                        \
+  V(Deref2, OperandType::Reg, OperandType::Reg)                                                                        \
   V(Deref4, OperandType::Reg, OperandType::Reg)                                                                        \
+  V(Deref8, OperandType::Reg, OperandType::Reg)                                                                        \
+  V(DerefN, OperandType::Reg, OperandType::Reg, OperandType::UImm4)                                                    \
   V(Lea, OperandType::Reg, OperandType::Reg, OperandType::Imm4)                                                        \
   V(Return)
 // clang-format on

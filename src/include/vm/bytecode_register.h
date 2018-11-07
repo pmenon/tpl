@@ -79,10 +79,6 @@ class LocalVar {
     return AddressModeField::Decode(bitfield_);
   }
 
-  bool IsAddressOfLocal() const {
-    return GetAddressMode() == AddressMode::Address;
-  }
-
   u32 GetOffset() const { return LocalOffsetField::Decode(bitfield_); }
 
   u32 Encode() const { return bitfield_; }
@@ -90,10 +86,8 @@ class LocalVar {
   static LocalVar Decode(u32 bitfield) { return LocalVar(bitfield); }
 
   LocalVar ValueOf() const {
-    if (!IsAddressOfLocal()) {
-      return *this;
-    }
-
+    TPL_ASSERT(GetAddressMode() == AddressMode::Address,
+               "LocalVar is already a value");
     return LocalVar(GetOffset(), AddressMode::Value);
   }
 
@@ -131,12 +125,32 @@ class FunctionInfo {
         frame_size_(0),
         temp_id_counter_(0) {}
 
+  /**
+   * Allocate a new local variable of the given type and name. This returns a
+   * LocalVar object with the Address addressing mode (i.e., a pointer to the
+   * variable).
+   *
+   * @param type The TPL type of the variable
+   * @param name The name of the variable
+   * @return The local variable ID
+   */
   LocalVar NewLocal(ast::Type *type, const std::string &name);
   LocalVar NewParameterLocal(ast::Type *type, const std::string &name);
   LocalVar NewTempLocal(ast::Type *type);
 
+  /**
+   * Lookup a local variable by name
+   *
+   * @param name The name of the local variable
+   * @return
+   */
   LocalVar LookupLocal(const std::string &name);
 
+  /**
+   * Return the ID of the return value for the function
+   *
+   * @return
+   */
   LocalVar GetRVLocal() const {
     return LocalVar(kRetVarOffset, LocalVar::AddressMode::Address);
   }

@@ -66,6 +66,8 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   void VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare);
   void VisitPrimitiveCompareOpExpr(ast::ComparisonOpExpr *compare);
 
+  LocalVar BuildLoadPointer(LocalVar double_ptr, ast::Type *type);
+
   Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type);
 
  public:

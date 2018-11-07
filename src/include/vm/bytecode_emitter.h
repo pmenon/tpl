@@ -27,6 +27,22 @@ class BytecodeEmitter {
   void EmitLoadImm4(LocalVar dest, i32 val);
   void EmitLoadImm8(LocalVar dest, i64 val);
 
+  template <Bytecode DerefCode>
+  void EmitDeref(LocalVar dest, LocalVar src) {
+    static_assert(
+        DerefCode == Bytecode::Deref1 || DerefCode == Bytecode::Deref2 ||
+            DerefCode == Bytecode::Deref4 || DerefCode == Bytecode::Deref8,
+        "Must only call EmitDeref with scalar Deref[1|2|4|8] code");
+    EmitOp(DerefCode);
+    EmitLocalVars(dest, src);
+  }
+
+  void EmitDerefN(LocalVar dest, LocalVar src, u32 len) {
+    EmitOp(Bytecode::DerefN);
+    EmitLocalVars(dest, src);
+    EmitImmediateValue(len);
+  }
+
   void EmitJump(Bytecode bytecode, BytecodeLabel *label);
   void EmitConditionalJump(Bytecode bytecode, LocalVar cond,
                            BytecodeLabel *label);

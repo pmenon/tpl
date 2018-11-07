@@ -63,10 +63,11 @@ MOVE(bool)
 #undef MOVE
 #undef LOAD_CONSTANT
 
-void OpDeref1(u8 *dest, u8 *src);
-void OpDeref2(u16 *dest, u16 *src);
-void OpDeref4(u32 *dest, u32 *src);
-void OpDeref8(u64 *dest, u64 *src);
+void OpDeref1(i8 *dest, i8 *src);
+void OpDeref2(i16 *dest, i16 *src);
+void OpDeref4(i32 *dest, i32 *src);
+void OpDeref8(i64 *dest, i64 *src);
+void OpDerefN(byte *dest, byte *src, u32 len);
 void OpLea(byte **dest, byte *src, u32 offset);
 
 ////////////////////////////////////////////////////////////////////////////////

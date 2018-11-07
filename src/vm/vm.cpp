@@ -280,38 +280,38 @@ void VM::Run(Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(LoadImm1) : {
-    i8 *dest = frame->LocalAt<i8 *>(READ_REG_ID());
-    i8 val = READ_IMM1();
-    OpLoadImm_i8(dest, val);
-    DISPATCH_NEXT();
+#define GEN_LOAD_IMM(type, size)                        \
+  OP(LoadImm##size) : {                                 \
+    type *dest = frame->LocalAt<type *>(READ_REG_ID()); \
+    type val = READ_IMM1();                             \
+    OpLoadImm_##type(dest, val);                        \
+    DISPATCH_NEXT();                                    \
   }
 
-  OP(LoadImm2) : {
-    i16 *dest = frame->LocalAt<i16 *>(READ_REG_ID());
-    i16 val = READ_IMM2();
-    OpLoadImm_i16(dest, val);
-    DISPATCH_NEXT();
-  }
+  GEN_LOAD_IMM(i8, 1);
+  GEN_LOAD_IMM(i16, 2);
+  GEN_LOAD_IMM(i32, 4);
+  GEN_LOAD_IMM(i64, 8);
+#undef GEN_LOAD_IMM
 
-  OP(LoadImm4) : {
-    i32 *dest = frame->LocalAt<i32 *>(READ_REG_ID());
-    i32 val = READ_IMM4();
-    OpLoadImm_i32(dest, val);
-    DISPATCH_NEXT();
+#define GEN_DEREF(type, size)                           \
+  OP(Deref##size) : {                                   \
+    type *dest = frame->LocalAt<type *>(READ_REG_ID()); \
+    type *src = frame->LocalAt<type *>(READ_REG_ID());  \
+    OpDeref##size(dest, src);                           \
+    DISPATCH_NEXT();                                    \
   }
+  GEN_DEREF(i8, 1);
+  GEN_DEREF(i16, 2);
+  GEN_DEREF(i32, 4);
+  GEN_DEREF(i64, 8);
+#undef GEN_DEREF
 
-  OP(LoadImm8) : {
-    i64 *dest = frame->LocalAt<i64 *>(READ_REG_ID());
-    i64 val = READ_IMM8();
-    OpLoadImm_i64(dest, val);
-    DISPATCH_NEXT();
-  }
-
-  OP(Deref4) : {
-    u32 *dest = frame->LocalAt<u32 *>(READ_REG_ID());
-    u32 *src = frame->LocalAt<u32 *>(READ_REG_ID());
-    OpDeref4(dest, src);
+  OP(DerefN) : {
+    byte *dest = frame->LocalAt<byte *>(READ_REG_ID());
+    byte *src = frame->LocalAt<byte *>(READ_REG_ID());
+    u32 len = READ_UIMM4();
+    OpDerefN(dest, src, len);
     DISPATCH_NEXT();
   }
 
