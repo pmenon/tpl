@@ -82,4 +82,16 @@ void Sema::VisitStructTypeRepr(ast::StructTypeRepr *node) {
   node->set_type(ast::StructType::Get(ast_context(), std::move(field_types)));
 }
 
+void Sema::VisitMapTypeRepr(ast::MapTypeRepr *node) {
+  ast::Type *key_type = Resolve(node->key());
+  ast::Type *value_type  = Resolve(node->val());
+
+  if (key_type == nullptr || value_type == nullptr) {
+    // Error
+    return;
+  }
+
+  node->set_type(ast::MapType::Get(key_type, value_type));
+}
+
 }  // namespace tpl::sema

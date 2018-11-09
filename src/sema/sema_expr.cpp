@@ -304,9 +304,63 @@ void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
 }
 
 void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
-  auto *expr_type = Resolve(node->input());
-  (void)expr_type;
-  // TODO: Check if the resolved input type can be casted to the target type
+  ast::Type *expr_type = Resolve(node->input());
+
+  if (expr_type == nullptr) {
+    // Error
+    return;
+  }
+
+  switch (node->cast_kind()) {
+    case ast::ImplicitCastExpr::CastKind::IntToSqlInt: {
+      if (!expr_type->IsIntegerType()) {
+        error_reporter().Report(node->position(),
+                                ErrorMessages::kInvalidCastToSqlInt, expr_type);
+        return;
+      }
+
+      // The type is a non-null SQL integer
+      sql::Type non_null_int(sql::TypeId::Integer, false);
+      node->set_type(ast::SqlType::Get(expr_type->context(), non_null_int));
+
+      break;
+    }
+    case ast::ImplicitCastExpr::CastKind::IntToSqlDecimal: {
+      if (!expr_type->IsIntegerType()) {
+        error_reporter().Report(node->position(),
+                                ErrorMessages::kInvalidCastToSqlDecimal,
+                                expr_type);
+        return;
+      }
+
+      // The type is a non-null SQL decimal
+      sql::Type non_null_int(sql::TypeId::Decimal, false);
+      node->set_type(ast::SqlType::Get(expr_type->context(), non_null_int));
+
+      break;
+    }
+    case ast::ImplicitCastExpr::CastKind::SqlBoolToBool: {
+      if (!expr_type->IsSqlType()) {
+        // Error
+        error_reporter().Report(
+            node->position(), ErrorMessages::kInvalidSqlCastToBool, expr_type);
+        return;
+      }
+
+      const sql::Type *sql_type = expr_type->As<ast::SqlType>()->sql_type();
+      if (sql_type->type_id() != sql::TypeId::Boolean) {
+        // Error
+        error_reporter().Report(
+            node->position(), ErrorMessages::kInvalidSqlCastToBool, expr_type);
+        return;
+      }
+
+      // Type is native boolean
+      node->set_type(ast::BoolType::Get(expr_type->context()));
+
+      break;
+    }
+  }
 }
 
 void Sema::VisitIndexExpr(ast::IndexExpr *node) {
@@ -318,7 +372,7 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
     return;
   }
 
-  if (!obj_type->IsArrayType()) {
+  if (!obj_type->IsArrayType() && !obj_type->IsMapType()) {
     error_reporter().Report(node->position(),
                             ErrorMessages::kInvalidIndexOperation, obj_type);
     return;
@@ -422,8 +476,6 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
   }
 
   if (auto *pointer_type = obj_type->SafeAs<ast::PointerType>()) {
-    // Unlike C/C++, TPL allows selectors on both struct types and pointers to
-    // structs using the same '.' syntax.
     obj_type = pointer_type->base();
   }
 
@@ -439,20 +491,19 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
     return;
   }
 
-  ast::Identifier sel_name =
-      node->member()->As<ast::IdentifierExpr>()->name();
+  ast::Identifier member = node->member()->As<ast::IdentifierExpr>()->name();
 
-  ast::Type *field_type =
-      obj_type->As<ast::StructType>()->LookupFieldByName(sel_name);
+  ast::Type *member_type =
+      obj_type->As<ast::StructType>()->LookupFieldByName(member);
 
-  if (field_type == nullptr) {
+  if (member_type == nullptr) {
     error_reporter().Report(node->member()->position(),
-                            ErrorMessages::kFieldObjectDoesNotExist, sel_name,
+                            ErrorMessages::kFieldObjectDoesNotExist, member,
                             obj_type);
     return;
   }
 
-  node->set_type(field_type);
+  node->set_type(member_type);
 }
 
 }  // namespace tpl::sema

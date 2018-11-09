@@ -169,6 +169,11 @@ class AstNodeFactory {
     return new (region_) StructTypeRepr(pos, std::move(fields));
   }
 
+  MapTypeRepr *NewMapType(const SourcePosition &pos, Expr *key_type,
+                          Expr *val_type) {
+    return new (region_) MapTypeRepr(pos, key_type, val_type);
+  }
+
  private:
   util::Region &region_;
 };

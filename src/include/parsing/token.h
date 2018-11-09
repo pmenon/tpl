@@ -7,7 +7,8 @@
 namespace tpl::parsing {
 
 /*
- *
+ * List of all tokens + keywords that accepts two callback functions. T() is
+ * invoked for all symbol tokens, and K() is invoked for all keyword tokens.
  */
 #define TOKENS(T, K)                               \
   /* Punctuations */                               \
@@ -61,6 +62,7 @@ namespace tpl::parsing {
   K(FUN, "fun", 0)                                 \
   K(IF, "if", 0)                                   \
   K(IN, "in", 0)                                   \
+  K(MAP, "map", 0)                                 \
   K(NIL, "nil", 0)                                 \
   K(RETURN, "return", 0)                           \
   K(STRUCT, "struct", 0)                           \

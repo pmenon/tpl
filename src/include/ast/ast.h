@@ -57,22 +57,24 @@ namespace ast {
  * If you add a new expression node to either the beginning or end of the list,
  * remember to modify Expr::classof() to update the bounds check.
  */
-#define EXPRESSION_NODES(T) \
-  T(BadExpr)                \
-  T(BinaryOpExpr)           \
-  T(CallExpr)               \
-  T(ComparisonOpExpr)       \
-  T(FunctionLitExpr)        \
-  T(IdentifierExpr)         \
-  T(ImplicitCastExpr)       \
-  T(IndexExpr)              \
-  T(LitExpr)                \
-  T(MemberExpr)             \
-  T(UnaryOpExpr)            \
-  /* Types */               \
-  T(ArrayTypeRepr)          \
-  T(FunctionTypeRepr)       \
-  T(PointerTypeRepr)        \
+#define EXPRESSION_NODES(T)             \
+  T(BadExpr)                            \
+  T(BinaryOpExpr)                       \
+  T(CallExpr)                           \
+  T(ComparisonOpExpr)                   \
+  T(FunctionLitExpr)                    \
+  T(IdentifierExpr)                     \
+  T(ImplicitCastExpr)                   \
+  T(IndexExpr)                          \
+  T(LitExpr)                            \
+  T(MemberExpr)                         \
+  T(UnaryOpExpr)                        \
+                                        \
+  /* Type Representation Expressions */ \
+  T(ArrayTypeRepr)                      \
+  T(FunctionTypeRepr)                   \
+  T(MapTypeRepr)                        \
+  T(PointerTypeRepr)                    \
   T(StructTypeRepr)
 
 /*
@@ -978,6 +980,27 @@ class FunctionTypeRepr : public Expr {
  private:
   util::RegionVector<FieldDecl *> param_types_;
   Expr *ret_type_;
+};
+
+/**
+ * Map types
+ */
+class MapTypeRepr : public Expr {
+ public:
+  MapTypeRepr(const SourcePosition &pos, Expr *key, Expr *val)
+      : Expr(Kind::MapTypeRepr, pos), key_(key), val_(val) {}
+
+  Expr *key() const { return key_; }
+
+  Expr *val() const { return val_; }
+
+  static bool classof(const AstNode *node) {
+    return node->kind() == Kind::MapTypeRepr;
+  }
+
+ private:
+  Expr *key_;
+  Expr *val_;
 };
 
 /**

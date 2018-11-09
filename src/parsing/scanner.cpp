@@ -284,6 +284,8 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
   GROUP_START('i')                          \
   GROUP_ELEM("if", Token::Type::IF)         \
   GROUP_ELEM("in", Token::Type::IN)         \
+  GROUP_START('m')                          \
+  GROUP_ELEM("map", Token::Type::MAP)       \
   GROUP_START('n')                          \
   GROUP_ELEM("nil", Token::Type::NIL)       \
   GROUP_START('o')                          \

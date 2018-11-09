@@ -376,6 +376,12 @@ void AstDumperImpl::VisitArrayTypeRepr(ArrayTypeRepr *node) {
   DumpExpr(node->element_type());
 }
 
+void AstDumperImpl::VisitMapTypeRepr(MapTypeRepr *node) {
+  DumpNodeCommon(node);
+  DumpExpr(node->key());
+  DumpExpr(node->val());
+}
+
 void AstDump::Dump(ast::AstNode *node) {
   AstDumperImpl print(node, fileno(stderr));
   print.Run();

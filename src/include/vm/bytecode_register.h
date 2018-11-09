@@ -86,8 +86,8 @@ class LocalVar {
   static LocalVar Decode(u32 bitfield) { return LocalVar(bitfield); }
 
   LocalVar ValueOf() const {
-    TPL_ASSERT(GetAddressMode() == AddressMode::Address,
-               "LocalVar is already a value");
+//    TPL_ASSERT(GetAddressMode() == AddressMode::Address,
+//               "LocalVar is already a value");
     return LocalVar(GetOffset(), AddressMode::Value);
   }
 

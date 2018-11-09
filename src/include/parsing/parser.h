@@ -132,6 +132,8 @@ class Parser {
 
   ast::Expr *ParseStructType();
 
+  ast::Expr *ParseMapType();
+
  private:
   // The source code scanner
   Scanner &scanner_;

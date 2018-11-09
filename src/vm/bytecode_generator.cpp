@@ -742,6 +742,8 @@ void BytecodeGenerator::VisitMemberExpr(ast::MemberExpr *node) {
   } else {
     emitter()->EmitDerefN(dest, field_ptr, size);
   }
+
+  execution_result()->set_destination(dest.ValueOf());
 }
 
 void BytecodeGenerator::VisitDeclStmt(ast::DeclStmt *node) {
@@ -769,6 +771,10 @@ void BytecodeGenerator::VisitPointerTypeRepr(ast::PointerTypeRepr *node) {
 }
 
 void BytecodeGenerator::VisitStructTypeRepr(ast::StructTypeRepr *node) {
+  TPL_ASSERT(false, "Should not visit type-representation nodes!");
+}
+
+void BytecodeGenerator::VisitMapTypeRepr(ast::MapTypeRepr *node) {
   TPL_ASSERT(false, "Should not visit type-representation nodes!");
 }
 

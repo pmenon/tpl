@@ -543,6 +543,9 @@ ast::Expr *Parser::ParseType() {
       const SourcePosition &position = scanner().current_position();
       return node_factory().NewIdentifierExpr(position, GetSymbol());
     }
+    case Token::Type::MAP: {
+      return ParseMapType();
+    }
     case Token::Type::LEFT_PAREN: {
       return ParseFunctionType();
     }
@@ -643,9 +646,9 @@ ast::Expr *Parser::ParseArrayType() {
 ast::Expr *Parser::ParseStructType() {
   // StructType = '{' { Ident ':' Type } '}' ;
 
-  Consume(Token::Type::LEFT_BRACE);
-
   const SourcePosition &position = scanner().current_position();
+
+  Consume(Token::Type::LEFT_BRACE);
 
   util::RegionVector<ast::FieldDecl *> fields(region());
 
@@ -670,6 +673,24 @@ ast::Expr *Parser::ParseStructType() {
   Consume(Token::Type::RIGHT_BRACE);
 
   return node_factory().NewStructType(position, std::move(fields));
+}
+
+ast::Expr *Parser::ParseMapType() {
+  // MapType = 'map' '[' Expr ']' Expr ;
+
+  const SourcePosition &position = scanner().current_position();
+
+  Consume(Token::Type::MAP);
+
+  Expect(Token::Type::LEFT_BRACKET);
+
+  ast::Expr *key_type = ParseType();
+
+  Expect(Token::Type::RIGHT_BRACKET);
+
+  ast::Expr *value_type = ParseType();
+
+  return node_factory().NewMapType(position, key_type, value_type);
 }
 
 }  // namespace tpl::parsing

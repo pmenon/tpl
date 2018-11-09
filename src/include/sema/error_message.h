@@ -73,7 +73,13 @@ namespace sema {
     (ast::Identifier, ast::Type *))                                            \
   F(InvalidIndexOperation,                                                     \
     "Invalid operation: type '%0' does not support indexing", (ast::Type *))   \
-  F(InvalidArrayIndexValue, "Non-integer array index", ())
+  F(InvalidArrayIndexValue, "Non-integer array index", ())                     \
+  F(InvalidCastToSqlInt, "Invalid cast of %0 to SQL integer", (ast::Type *))   \
+  F(InvalidCastToSqlDecimal, "Invalid cast of %0 to SQL decimal",              \
+    (ast::Type *))                                                             \
+  F(InvalidSqlCastToBool,                                                      \
+    "Invalid input to cast to native boolean: expected SQL boolean, got %0",   \
+    (ast::Type *))
 
 /**
  * Define the ErrorMessageId enumeration
