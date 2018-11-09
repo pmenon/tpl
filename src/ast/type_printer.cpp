@@ -24,102 +24,105 @@ class TypePrinter : public TypeVisitor<TypePrinter> {
   void Print(const Type *type) { Visit(type); }
 
  private:
+  llvm::raw_ostream &os() { return out_; }
+
+ private:
   llvm::raw_ostream &out_;
 };
 
 void TypePrinter::VisitIntegerType(const IntegerType *type) {
   switch (type->int_kind()) {
     case IntegerType::IntKind::Int8: {
-      out_ << "int8";
+      os() << "int8";
       break;
     }
     case IntegerType::IntKind::Int16: {
-      out_ << "int16";
+      os() << "int16";
       break;
     }
     case IntegerType::IntKind::Int32: {
-      out_ << "int32";
+      os() << "int32";
       break;
     }
     case IntegerType::IntKind::Int64: {
-      out_ << "int64";
+      os() << "int64";
       break;
     }
     case IntegerType::IntKind::UInt8: {
-      out_ << "uint8";
+      os() << "uint8";
       break;
     }
     case IntegerType::IntKind::UInt16: {
-      out_ << "uint16";
+      os() << "uint16";
       break;
     }
     case IntegerType::IntKind::UInt32: {
-      out_ << "uint32";
+      os() << "uint32";
       break;
     }
     case IntegerType::IntKind::UInt64: {
-      out_ << "uint64";
+      os() << "uint64";
       break;
     }
   }
 }
 
 void TypePrinter::VisitFunctionType(const FunctionType *type) {
-  out_ << "(";
+  os() << "(";
   bool first = true;
   for (const auto &param : type->params()) {
-    if (!first) out_ << ",";
+    if (!first) os() << ",";
     first = false;
     Visit(param.type);
   }
-  out_ << ")->";
+  os() << ")->";
   Visit(type->return_type());
 }
 
-void TypePrinter::VisitBoolType(const BoolType *type) { out_ << "bool"; }
+void TypePrinter::VisitBoolType(const BoolType *type) { os() << "bool"; }
 
 void TypePrinter::VisitPointerType(const PointerType *type) {
-  out_ << "*";
+  os() << "*";
   Visit(type->base());
 }
 
 void TypePrinter::VisitFloatType(const FloatType *type) {
   switch (type->float_kind()) {
     case FloatType::FloatKind::Float32: {
-      out_ << "f32";
+      os() << "f32";
       break;
     }
     case FloatType::FloatKind::Float64: {
-      out_ << "f64";
+      os() << "f64";
       break;
     }
   }
 }
 
 void TypePrinter::VisitStructType(const StructType *type) {
-  out_ << "struct{";
+  os() << "struct{";
   bool first = true;
   for (const auto &field : type->fields()) {
-    if (!first) out_ << ",";
+    if (!first) os() << ",";
     first = false;
     Visit(field.type);
   }
-  out_ << "}";
+  os() << "}";
 }
 
-void TypePrinter::VisitNilType(const NilType *type) { out_ << "nil"; }
+void TypePrinter::VisitNilType(const NilType *type) { os() << "nil"; }
 
 void TypePrinter::VisitArrayType(const ArrayType *type) {
-  out_ << "[";
+  os() << "[";
   if (type->length() != 0) {
-    out_ << type->length();
+    os() << type->length();
   }
-  out_ << "]";
+  os() << "]";
   Visit(type->element_type());
 }
 
 void TypePrinter::VisitInternalType(const InternalType *type) {
-  out_ << llvm::StringRef(type->name().data());
+  os() << llvm::StringRef(type->name().data());
 }
 
 void tpl::ast::TypePrinter::VisitSqlType(const SqlType *type) {
@@ -128,19 +131,26 @@ void tpl::ast::TypePrinter::VisitSqlType(const SqlType *type) {
     case sql::TypeId::SmallInt:
     case sql::TypeId::Integer:
     case sql::TypeId::BigInt: {
-      out_ << "sql::Integer";
+      os() << "sql::Integer";
       break;
     }
     case sql::TypeId::Decimal: {
-      out_ << "sql::Decimal";
+      os() << "sql::Decimal";
       break;
     }
     case sql::TypeId::Varchar: {
-      out_ << "sql::String";
+      os() << "sql::String";
       break;
     }
     default: { UNREACHABLE("Impossible SQL type"); }
   }
+}
+
+void tpl::ast::TypePrinter::VisitMapType(const MapType *type) {
+  os() << "map[";
+  Visit(type->key_type());
+  os() << "]";
+  Visit(type->value_type());
 }
 
 }  // namespace

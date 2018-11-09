@@ -20,6 +20,20 @@ FunctionLitExpr::FunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body)
       type_repr_(type_repr),
       body_(body) {}
 
+bool IndexExpr::IsArrayAccess() const {
+  TPL_ASSERT(object() != nullptr, "Object cannot be NULL");
+  TPL_ASSERT(object() != nullptr,
+             "Cannot determine object type before type checking!");
+  return object()->type()->IsArrayType();
+}
+
+bool IndexExpr::IsMapAccess() const {
+  TPL_ASSERT(object() != nullptr, "Object cannot be NULL");
+  TPL_ASSERT(object() != nullptr,
+             "Cannot determine object type before type checking!");
+  return object()->type()->IsMapType();
+}
+
 bool MemberExpr::IsSugaredArrow() const {
   TPL_ASSERT(object()->type() != nullptr,
              "Cannot determine sugared-arrow before type checking!");

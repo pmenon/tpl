@@ -757,13 +757,25 @@ class ImplicitCastExpr : public Expr {
 };
 
 /**
- *
+ * Expressions for array or map accesses
  */
 class IndexExpr : public Expr {
  public:
   Expr *object() const { return obj_; }
 
   Expr *index() const { return index_; }
+
+  /**
+   * Is this expression for an array access?
+   * @return True if for array; false otherwise
+   */
+  bool IsArrayAccess() const;
+
+  /**
+   * Is this expression for a map access?
+   * @return True if for a map; false otherwise
+   */
+  bool IsMapAccess() const;
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::IndexExpr;

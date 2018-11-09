@@ -20,6 +20,7 @@ class AstContext;
   F(NilType)         \
   F(PointerType)     \
   F(ArrayType)       \
+  F(MapType)         \
   F(StructType)      \
   F(FunctionType)    \
   F(InternalType)    \
@@ -261,7 +262,6 @@ class ArrayType : public Type {
   }
 
  private:
-  friend class AstContext;
   explicit ArrayType(u64 length, Type *elem_type)
       : Type(elem_type->context(), elem_type->size() * length,
              elem_type->alignment(), Type::Kind::ArrayType),
@@ -278,6 +278,32 @@ struct Field {
   Type *type;
 
   Field(const Identifier &name, Type *type) : name(name), type(type) {}
+};
+
+/**
+ * An unordered map (i.e., hashtable)
+ */
+class MapType : public Type {
+ public:
+  Type *key_type() const { return key_type_; }
+
+  Type *value_type() const { return val_type_; }
+
+  static MapType *Get(Type *key_type, Type *val_type);
+
+  static bool classof(const Type *type) {
+    return type->kind() == Type::Kind::MapType;
+  }
+
+ private:
+  MapType(Type *key_type, Type *val_type)
+      : Type(key_type->context(), 0, 0, Kind::MapType),
+        key_type_(key_type),
+        val_type_(val_type) {}
+
+ private:
+  Type *key_type_;
+  Type *val_type_;
 };
 
 /**
@@ -341,7 +367,6 @@ class FunctionType : public Type {
   }
 
  private:
-  friend class AstContext;
   explicit FunctionType(util::RegionVector<Field> &&params, Type *ret)
       : Type(ret->context(), 0, 0, Type::Kind::FunctionType),
         params_(std::move(params)),
@@ -425,7 +450,6 @@ class SqlType : public Type {
   }
 
  private:
-  friend class AstContext;
   SqlType(AstContext &ctx, u32 size, u32 alignment, const sql::Type &sql_type)
       : Type(ctx, size, alignment, Kind::SqlType), sql_type_(sql_type) {}
 

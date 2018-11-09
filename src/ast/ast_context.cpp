@@ -49,6 +49,7 @@ struct AstContext::Implementation {
   llvm::DenseMap<ast::Identifier, ast::Type *> builtin_types;
   llvm::DenseMap<Type *, PointerType *> pointer_types;
   llvm::DenseMap<std::pair<Type *, uint64_t>, ArrayType *> array_types;
+  llvm::DenseMap<std::pair<Type *, Type *>, MapType *> map_types;
 
   explicit Implementation(AstContext &ctx)
       : int8(ctx, sizeof(i8), alignof(i8), IntegerType::IntKind::Int8),
@@ -207,6 +208,24 @@ ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
   cached_types.try_emplace(std::make_pair(elem_type, length), array_type);
 
   return array_type;
+}
+
+// static
+MapType *MapType::Get(Type *key_type, Type *value_type) {
+  AstContext &ctx = key_type->context();
+
+  auto &cached_types = ctx.impl().map_types;
+
+  auto iter = cached_types.find({key_type, value_type});
+  if (iter != cached_types.end()) {
+    return iter->second;
+  }
+
+  auto *map_type = new (ctx.region()) MapType(key_type, value_type);
+
+  cached_types.try_emplace({key_type, value_type}, map_type);
+
+  return map_type;
 }
 
 // static
