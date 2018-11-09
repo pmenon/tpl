@@ -53,6 +53,8 @@ void PrettyPrintFunc(std::ostream &os, const BytecodeUnit &unit,
 
   auto iter = unit.BytecodeForFunction(func);
   PrettyPrintFuncCode(os, func, iter);
+
+  os << std::endl;
 }
 
 }  // namespace

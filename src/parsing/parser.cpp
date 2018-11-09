@@ -366,12 +366,13 @@ ast::Expr *Parser::ParseBinaryOpExpr(uint32_t min_prec) {
 }
 
 ast::Expr *Parser::ParseUnaryOpExpr() {
-  // UnaryOpExpr = [ '&' | '!' | '~' | '-' | '*' ] UnaryOpExpr ;
+  // UnaryOpExpr = [ '&' | '!' | '~' | '^' | '-' | '*' ] UnaryOpExpr ;
 
   switch (peek()) {
     case Token::Type::AMPERSAND:
     case Token::Type::BANG:
     case Token::Type::BIT_NOT:
+    case Token::Type::BIT_XOR:
     case Token::Type::MINUS:
     case Token::Type::STAR: {
       Token::Type op = Next();

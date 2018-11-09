@@ -583,7 +583,7 @@ class TplLang(Lang):
     ext = 'tpl'
 
     type_names = {
-        'int': 'i32',
+        'int': 'int32',
     }
 
     def write_program(self, f, program):
@@ -594,7 +594,7 @@ class TplLang(Lang):
 
     def write_fun_decl(self, f, fun_decl, main=False):
         if fun_decl.return_type is None:
-            optional_result = ''
+            optional_result = ' -> int'
         else:
             type_name = self.type_names[fun_decl.return_type]
             optional_result = ' -> %s' % type_name
@@ -610,7 +610,7 @@ class TplLang(Lang):
         self.write_indent(f)
         f.write('var ')
         self.write_lval(f, var_decl.name)
-        f.write(': i32')
+        f.write(': int32')
         f.write(' = ')
         self.write_expr(f, var_decl.expr)
         f.write('\n')
@@ -620,7 +620,7 @@ class TplLang(Lang):
         self.write_lval(f, assignment.lval)
         f.write(' = ')
         self.write_expr(f, assignment.expr)
-        f.write(';\n')
+        f.write('\n')
 
     def write_return(self, f, statement):
         self.write_indent(f)
