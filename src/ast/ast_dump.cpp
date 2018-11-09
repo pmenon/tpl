@@ -305,6 +305,12 @@ void AstDumperImpl::VisitImplicitCastExpr(ImplicitCastExpr *node) {
   DumpExpr(node->input());
 }
 
+void AstDumperImpl::VisitIndexExpr(IndexExpr *node) {
+  DumpExpressionCommon(node);
+  DumpExpr(node->object());
+  DumpExpr(node->index());
+}
+
 void AstDumperImpl::VisitLitExpr(LitExpr *node) {
   DumpExpressionCommon(node);
   switch (node->literal_kind()) {
@@ -331,10 +337,10 @@ void AstDumperImpl::VisitLitExpr(LitExpr *node) {
   }
 }
 
-void AstDumperImpl::VisitSelectorExpr(SelectorExpr *node) {
+void AstDumperImpl::VisitMemberExpr(MemberExpr *node) {
   DumpExpressionCommon(node);
   DumpExpr(node->object());
-  DumpExpr(node->selector());
+  DumpExpr(node->member());
 }
 
 void AstDumperImpl::VisitUnaryOpExpr(UnaryOpExpr *node) {

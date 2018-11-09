@@ -65,8 +65,9 @@ namespace ast {
   T(FunctionLitExpr)        \
   T(IdentifierExpr)         \
   T(ImplicitCastExpr)       \
+  T(IndexExpr)              \
   T(LitExpr)                \
-  T(SelectorExpr)           \
+  T(MemberExpr)             \
   T(UnaryOpExpr)            \
   /* Types */               \
   T(ArrayTypeRepr)          \
@@ -756,6 +757,30 @@ class ImplicitCastExpr : public Expr {
 };
 
 /**
+ *
+ */
+class IndexExpr : public Expr {
+ public:
+  Expr *object() const { return obj_; }
+
+  Expr *index() const { return index_; }
+
+  static bool classof(const AstNode *node) {
+    return node->kind() == Kind::IndexExpr;
+  }
+
+ private:
+  friend class AstNodeFactory;
+
+  IndexExpr(const SourcePosition &pos, Expr *obj, Expr *index)
+      : Expr(Kind::IndexExpr, pos), obj_(obj), index_(index) {}
+
+ private:
+  Expr *obj_;
+  Expr *index_;
+};
+
+/**
  * A literal in the original source code
  */
 class LitExpr : public Expr {
@@ -825,25 +850,44 @@ class LitExpr : public Expr {
 };
 
 /**
- * A selector expression for struct field access
+ * Expressions accessing structure members, e.g., X.F
+ *
+ * TPL uses the same member access syntax for regular struct member access and
+ * access through a struct pointer. Thus, the language allows the following:
+ *
+ * @code
+ * struct X {
+ *   a: int
+ * }
+ *
+ * var x: X
+ * var px: *X
+ *
+ * x.a = 10
+ * px.a = 20
+ * @endcode
  */
-class SelectorExpr : public Expr {
+class MemberExpr : public Expr {
  public:
-  SelectorExpr(const SourcePosition &pos, Expr *obj, Expr *sel)
-      : Expr(Kind::SelectorExpr, pos), object_(obj), selector_(sel) {}
-
   Expr *object() const { return object_; }
-  Expr *selector() const { return selector_; }
+
+  Expr *member() const { return member_; }
 
   bool IsSugaredArrow() const;
 
   static bool classof(const AstNode *node) {
-    return node->kind() == Kind::SelectorExpr;
+    return node->kind() == Kind::MemberExpr;
   }
 
  private:
+  friend class AstNodeFactory;
+
+  MemberExpr(const SourcePosition &pos, Expr *obj, Expr *member)
+      : Expr(Kind::MemberExpr, pos), object_(obj), member_(member) {}
+
+ private:
   Expr *object_;
-  Expr *selector_;
+  Expr *member_;
 };
 
 /**

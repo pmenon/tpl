@@ -387,16 +387,19 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
 }
 
 ast::Expr *Parser::ParseLeftHandSideExpression() {
-  // LeftHandSideExpression = [ CallExpr | SelectorExpr ] ;
+  // LeftHandSideExpression = [ CallExpr | MemberExpr | IndexExpr ] ;
   //
   // CallExpr = PrimaryExpr '(' (Expr)* ') ;
-  // SelectorExpr = PrimaryExpr '.' Expr
+  // MemberExpr = PrimaryExpr '.' Expr
+  // IndexExpr = PrimaryExpr '[' Expr ']'
 
   ast::Expr *result = ParsePrimaryExpr();
 
   switch (peek()) {
     case Token::Type::LEFT_PAREN: {
-      // Call expression
+      /*
+       * Call expression
+       */
       Consume(Token::Type::LEFT_PAREN);
 
       util::RegionVector<ast::Expr *> args(region());
@@ -415,24 +418,39 @@ ast::Expr *Parser::ParseLeftHandSideExpression() {
 
       Expect(Token::Type::RIGHT_PAREN);
 
-      return node_factory().NewCallExpr(result, std::move(args));
+      result = node_factory().NewCallExpr(result, std::move(args));
+      break;
     }
     case Token::Type::DOT: {
-      // Selector expression
+      /*
+       * Member expression
+       */
       Consume(Token::Type::DOT);
 
       // Eagerly consume the full selector chain
       ast::Expr *expr = result;
       do {
-        ast::Expr *sel = ParsePrimaryExpr();
-        expr = node_factory().NewSelectorExpr(result->position(), expr, sel);
+        ast::Expr *member = ParsePrimaryExpr();
+        expr = node_factory().NewMemberExpr(result->position(), expr, member);
       } while (Matches(Token::Type::DOT));
 
-      // Done
-      return expr;
+      result = expr;
+      break;
     }
-    default: { return result; }
+    case Token::Type::LEFT_BRACKET: {
+      /*
+       * Index expression (i.e., array or map access)
+       */
+      Consume(Token::Type::LEFT_BRACKET);
+      ast::Expr *index = ParseExpr();
+      Expect(Token::Type::RIGHT_BRACKET);
+      result = node_factory().NewIndexExpr(result->position(), result, index);
+      break;
+    }
+    default: { break; }
   }
+
+  return result;
 }
 
 ast::Expr *Parser::ParsePrimaryExpr() {

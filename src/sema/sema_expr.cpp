@@ -309,6 +309,30 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
   // TODO: Check if the resolved input type can be casted to the target type
 }
 
+void Sema::VisitIndexExpr(ast::IndexExpr *node) {
+  ast::Type *obj_type = Resolve(node->object());
+  ast::Type *index_type = Resolve(node->index());
+
+  if (obj_type == nullptr || index_type == nullptr) {
+    // Error
+    return;
+  }
+
+  if (!obj_type->IsArrayType()) {
+    error_reporter().Report(node->position(),
+                            ErrorMessages::kInvalidIndexOperation, obj_type);
+    return;
+  }
+
+  if (!index_type->IsIntegerType()) {
+    error_reporter().Report(node->position(),
+                            ErrorMessages::kInvalidArrayIndexValue);
+    return;
+  }
+
+  node->set_type(obj_type->As<ast::ArrayType>()->element_type());
+}
+
 void Sema::VisitLitExpr(ast::LitExpr *node) {
   switch (node->literal_kind()) {
     case ast::LitExpr::LitKind::Nil: {
@@ -389,7 +413,7 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
   }
 }
 
-void Sema::VisitSelectorExpr(ast::SelectorExpr *node) {
+void Sema::VisitMemberExpr(ast::MemberExpr *node) {
   ast::Type *obj_type = Resolve(node->object());
 
   if (obj_type == nullptr) {
@@ -409,20 +433,20 @@ void Sema::VisitSelectorExpr(ast::SelectorExpr *node) {
     return;
   }
 
-  if (!node->selector()->IsIdentifierExpr()) {
-    error_reporter().Report(node->selector()->position(),
+  if (!node->member()->IsIdentifierExpr()) {
+    error_reporter().Report(node->member()->position(),
                             ErrorMessages::kExpectedIdentifierForSelector);
     return;
   }
 
   ast::Identifier sel_name =
-      node->selector()->As<ast::IdentifierExpr>()->name();
+      node->member()->As<ast::IdentifierExpr>()->name();
 
   ast::Type *field_type =
       obj_type->As<ast::StructType>()->LookupFieldByName(sel_name);
 
   if (field_type == nullptr) {
-    error_reporter().Report(node->selector()->position(),
+    error_reporter().Report(node->member()->position(),
                             ErrorMessages::kFieldObjectDoesNotExist, sel_name,
                             obj_type);
     return;

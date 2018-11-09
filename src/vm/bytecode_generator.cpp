@@ -280,6 +280,20 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
   }
 }
 
+void BytecodeGenerator::VisitIndexExpr(ast::IndexExpr *node) {
+#if 0
+  LocalVar arr = VisitExpressionForLValue(node->object());
+
+  ast::ArrayType *type = node->object()->type()->As<ast::ArrayType>();
+  u32 elem_size = type->element_type()->size();
+
+  LocalVar idx = VisitExpressionForRValue(node->index());
+
+  LocalVar elem_ptr =
+      current_function()->NewTempLocal(node->type()->PointerTo());
+#endif
+}
+
 void BytecodeGenerator::VisitBlockStmt(ast::BlockStmt *node) {
   for (auto *stmt : node->statements()) {
     Visit(stmt);
@@ -651,7 +665,7 @@ LocalVar BytecodeGenerator::BuildLoadPointer(LocalVar double_ptr,
   return ptr.ValueOf();
 }
 
-void BytecodeGenerator::VisitSelectorExpr(ast::SelectorExpr *node) {
+void BytecodeGenerator::VisitMemberExpr(ast::MemberExpr *node) {
   /*
    * We first need to compute the address of the object we're selecting into.
    * Thus, we get the L-Value of the object below.
@@ -681,7 +695,7 @@ void BytecodeGenerator::VisitSelectorExpr(ast::SelectorExpr *node) {
    * struct type.
    */
 
-  auto *field_name = node->selector()->As<ast::IdentifierExpr>();
+  auto *field_name = node->member()->As<ast::IdentifierExpr>();
   auto offset = obj_type->GetOffsetOfFieldByName(field_name->name());
 
   /*

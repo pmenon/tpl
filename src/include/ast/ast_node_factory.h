@@ -134,9 +134,14 @@ class AstNodeFactory {
     return new (region_) ImplicitCastExpr(pos, cast_kind, input);
   }
 
-  SelectorExpr *NewSelectorExpr(const SourcePosition &pos, Expr *obj,
-                                Expr *sel) {
-    return new (region_) SelectorExpr(pos, obj, sel);
+  IndexExpr *NewIndexExpr(const SourcePosition &pos, Expr *object,
+                          Expr *index) {
+    return new (region_) IndexExpr(pos, object, index);
+  }
+
+  MemberExpr *NewMemberExpr(const SourcePosition &pos, Expr *object,
+                            Expr *member) {
+    return new (region_) MemberExpr(pos, object, member);
   }
 
   ArrayTypeRepr *NewArrayType(const SourcePosition &pos, Expr *len,

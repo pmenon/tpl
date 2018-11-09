@@ -70,7 +70,10 @@ namespace sema {
     (ast::Type *))                                                             \
   F(FieldObjectDoesNotExist,                                                   \
     "No field with name '%0' exists in composite type '%1'",                   \
-    (ast::Identifier, ast::Type *))
+    (ast::Identifier, ast::Type *))                                            \
+  F(InvalidIndexOperation,                                                     \
+    "Invalid operation: type '%0' does not support indexing", (ast::Type *))   \
+  F(InvalidArrayIndexValue, "Non-integer array index", ())
 
 /**
  * Define the ErrorMessageId enumeration
