@@ -384,7 +384,11 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
     return;
   }
 
-  node->set_type(obj_type->As<ast::ArrayType>()->element_type());
+  if (auto *arr_type = obj_type->SafeAs<ast::ArrayType>()) {
+    node->set_type(arr_type->element_type());
+  } else {
+    node->set_type(obj_type->As<ast::MapType>()->value_type());
+  }
 }
 
 void Sema::VisitLitExpr(ast::LitExpr *node) {
