@@ -114,6 +114,11 @@ class Token {
             static_cast<u8>(op) <= static_cast<u8>(Type::LESS_EQUAL));
   }
 
+  static bool IsCallOrMemberOrIndex(Type op) {
+    return (op == Type::LEFT_PAREN || op == Type::DOT ||
+            op == Type::LEFT_BRACKET);
+  }
+
  private:
   static const char *kTokenNames[];
   static const char *kTokenStrings[];

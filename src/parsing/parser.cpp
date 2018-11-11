@@ -396,60 +396,53 @@ ast::Expr *Parser::ParseLeftHandSideExpression() {
 
   ast::Expr *result = ParsePrimaryExpr();
 
-  switch (peek()) {
-    case Token::Type::LEFT_PAREN: {
-      /*
-       * Call expression
-       */
-      Consume(Token::Type::LEFT_PAREN);
-
-      util::RegionVector<ast::Expr *> args(region());
-
-      bool done = (peek() == Token::Type::RIGHT_PAREN);
-      while (!done) {
-        // Parse argument
-        ast::Expr *arg = ParseExpr();
-        args.push_back(arg);
-
-        done = (peek() != Token::Type::COMMA);
-        if (!done) {
-          Next();
+  do {
+    switch (peek()) {
+      case Token::Type::LEFT_PAREN: {
+        /*
+         * Call expression
+         */
+        Consume(Token::Type::LEFT_PAREN);
+        util::RegionVector<ast::Expr *> args(region());
+        while (peek() != Token::Type::RIGHT_PAREN) {
+          ast::Expr *arg = ParseExpr();
+          args.push_back(arg);
+          if (peek() == Token::Type::COMMA) {
+            Next();
+          }
         }
+        Expect(Token::Type::RIGHT_PAREN);
+        result = node_factory().NewCallExpr(result, std::move(args));
+        break;
       }
-
-      Expect(Token::Type::RIGHT_PAREN);
-
-      result = node_factory().NewCallExpr(result, std::move(args));
-      break;
-    }
-    case Token::Type::DOT: {
-      /*
-       * Member expression
-       */
-      Consume(Token::Type::DOT);
-
-      // Eagerly consume the full selector chain
-      ast::Expr *expr = result;
-      do {
+      case Token::Type::DOT: {
+        /*
+         * Member expression
+         */
+        Consume(Token::Type::DOT);
         ast::Expr *member = ParsePrimaryExpr();
-        expr = node_factory().NewMemberExpr(result->position(), expr, member);
-      } while (Matches(Token::Type::DOT));
-
-      result = expr;
-      break;
+        result =
+            node_factory().NewMemberExpr(result->position(), result, member);
+        break;
+      }
+      case Token::Type::LEFT_BRACKET: {
+        /*
+         * Index expression (i.e., array or map access)
+         */
+        Consume(Token::Type::LEFT_BRACKET);
+        ast::Expr *index = ParseExpr();
+        Expect(Token::Type::RIGHT_BRACKET);
+        result = node_factory().NewIndexExpr(result->position(), result, index);
+        break;
+      }
+      default: {
+        /*
+         * Not a call, member of index expression. Finish.
+         */
+        break;
+      }
     }
-    case Token::Type::LEFT_BRACKET: {
-      /*
-       * Index expression (i.e., array or map access)
-       */
-      Consume(Token::Type::LEFT_BRACKET);
-      ast::Expr *index = ParseExpr();
-      Expect(Token::Type::RIGHT_BRACKET);
-      result = node_factory().NewIndexExpr(result->position(), result, index);
-      break;
-    }
-    default: { break; }
-  }
+  } while (Token::IsCallOrMemberOrIndex(peek()));
 
   return result;
 }
