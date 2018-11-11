@@ -76,14 +76,14 @@ class BytecodeGenerator::TestResultScope
  * for a given function, automatically setting the range in the function upon
  * going out of scope.
  */
-class BytecodeGenerator::BytecodePositionTracker {
+class BytecodeGenerator::BytecodePositionScope {
  public:
-  BytecodePositionTracker(BytecodeGenerator *generator, FunctionInfo *func)
+  BytecodePositionScope(BytecodeGenerator *generator, FunctionInfo *func)
       : generator_(generator),
         func_(func),
         start_offset_(generator->emitter()->position()) {}
 
-  ~BytecodePositionTracker() {
+  ~BytecodePositionScope() {
     func_->MarkBytecodeRange(start_offset_, generator_->emitter()->position());
   }
 
@@ -217,7 +217,7 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
 
   {
     // Visit the body of the function
-    BytecodePositionTracker position_tracker(this, func_info);
+    BytecodePositionScope position_scope(this, func_info);
     Visit(node->function());
   }
 }
