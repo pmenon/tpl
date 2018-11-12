@@ -243,18 +243,13 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
    * into the provided destination.
    */
 
-  local = local.ValueOf();
-
   if (!execution_result()->HasDestination()) {
-    execution_result()->set_destination(local);
+    execution_result()->set_destination(local.ValueOf());
     return;
   }
 
-  // We need to move the value of the variable into the provided destination
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
-  emitter()->Emit(
-      GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Move), node->type()),
-      dest, local);
+  BuildDeref(dest, local, node->type());
   execution_result()->set_destination(dest);
 }
 
@@ -417,12 +412,7 @@ void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
 
 void BytecodeGenerator::VisitAssignmentStmt(ast::AssignmentStmt *node) {
   LocalVar dest = VisitExpressionForLValue(node->destination());
-  if (node->destination()->type()->IsBoolType()) {
-    LocalVar src = VisitExpressionForRValue(node->source());
-    emitter()->Emit(GET_BASE_FOR_BOOL_TYPES(Bytecode::Move), dest, src);
-  } else {
-    VisitExpressionForRValue(node->source(), dest);
-  }
+  VisitExpressionForRValue(node->source(), dest);
 }
 
 void BytecodeGenerator::VisitFile(ast::File *node) {

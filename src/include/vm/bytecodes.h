@@ -22,9 +22,6 @@ namespace tpl::vm {
   func(op##_##u64, __VA_ARGS__)
 // clang-format on
 
-// Creates instances of a given opcode for all bool primitive types
-#define CREATE_FOR_BOOL_TYPES(func, op, ...) func(op##_##bool, __VA_ARGS__)
-
 // Creates instances of a given opcode for all floating-point primitive types
 #define CREATE_FOR_FLOAT_TYPES(func, op) func(op, f32) func(op, f64)
 
@@ -64,11 +61,7 @@ namespace tpl::vm {
   CREATE_FOR_INT_TYPES(V, Equal, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                 \
   CREATE_FOR_INT_TYPES(V, LessThan, OperandType::Reg, OperandType::Reg, OperandType::Reg)                              \
   CREATE_FOR_INT_TYPES(V, LessThanEqual, OperandType::Reg, OperandType::Reg, OperandType::Reg)                         \
-  CREATE_FOR_INT_TYPES(V, Move, OperandType::Reg, OperandType::Reg)                                                    \
   CREATE_FOR_INT_TYPES(V, NotEqual, OperandType::Reg, OperandType::Reg, OperandType::Reg)                              \
-                                                                                                                       \
-  /* Bool operations */                                                                                                \
-  CREATE_FOR_BOOL_TYPES(V, Move, OperandType::Reg, OperandType::Reg)                                                   \
                                                                                                                        \
   /* Branching */                                                                                                      \
   V(Jump, OperandType::UImm2)                                                                                          \

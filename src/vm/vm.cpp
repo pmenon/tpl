@@ -223,20 +223,6 @@ void VM::Run(Frame *frame) {
 #undef GEN_NEG_OP
 
   /*
-   * Move operations
-   */
-#define GEN_MOVE_OP(type)                               \
-  OP(Move##_##type) : {                                 \
-    auto *dest = frame->LocalAt<type *>(READ_REG_ID()); \
-    auto input = frame->LocalAt<type>(READ_REG_ID());   \
-    OpMove##_##type(dest, input);                       \
-    DISPATCH_NEXT();                                    \
-  }
-
-  INT_TYPES(GEN_MOVE_OP)
-  GEN_MOVE_OP(bool)
-#undef GEN_MOVE_OP
-  /*
    * Jumps are unconditional forward-only jumps
    */
   OP(Jump) : {
