@@ -323,6 +323,16 @@ void VM::Run(Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(LeaScaled) : {
+    byte **dest = frame->LocalAt<byte **>(READ_REG_ID());
+    byte *src = frame->LocalAt<byte *>(READ_REG_ID());
+    u32 index = frame->LocalAt<u32>(READ_REG_ID());
+    u32 scale = READ_UIMM4();
+    u32 offset = READ_UIMM4();
+    OpLeaScaled(dest, src, index, scale, offset);
+    DISPATCH_NEXT();
+  }
+
   OP(Return) : {
     // Just return for now. We need to handle return values though ...
     return;

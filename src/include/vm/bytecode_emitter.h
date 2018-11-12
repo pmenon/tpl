@@ -48,6 +48,8 @@ class BytecodeEmitter {
                            BytecodeLabel *label);
 
   void EmitLea(LocalVar dest, LocalVar src, u32 offset);
+  void EmitLeaScaled(LocalVar dest, LocalVar src, LocalVar index, u32 scale,
+                     u32 offset);
   void EmitReturn();
 
   void EmitUnaryOp(Bytecode bytecode, LocalVar dest, LocalVar input);

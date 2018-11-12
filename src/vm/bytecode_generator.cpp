@@ -280,18 +280,68 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
   }
 }
 
-void BytecodeGenerator::VisitIndexExpr(ast::IndexExpr *node) {
-#if 0
+void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
+  /*
+   * First, we need to get the base address of the array
+   */
+
   LocalVar arr = VisitExpressionForLValue(node->object());
 
-  ast::ArrayType *type = node->object()->type()->As<ast::ArrayType>();
-  u32 elem_size = type->element_type()->size();
+  /*
+   * Now, we need to compute the address of the element at the desired index.
+   * There are two cases we handle here:
+   *   1. The index is a constant literal
+   *   2. The index is variable
+   *
+   * If the index is a constant literal (e.g., x[4]), then we can directly
+   * compute the byte-offset of the element, and issue a Lea.
+   *
+   * If the index is not a constant, we need to evaluate the expression to
+   * produce the index, then issue a LeaScaled instruction to compute the
+   * address.
+   */
 
-  LocalVar idx = VisitExpressionForRValue(node->index());
+  auto *type = node->object()->type()->As<ast::ArrayType>();
+  auto elem_size = type->element_type()->size();
 
-  LocalVar elem_ptr =
+  LocalVar element_ptr =
       current_function()->NewTempLocal(node->type()->PointerTo());
-#endif
+
+  if (auto *literal_index = node->index()->SafeAs<ast::LitExpr>()) {
+    i32 index = literal_index->int32_val();
+    TPL_ASSERT(index > 0, "Array indexes must be positive");
+    emitter()->EmitLea(element_ptr, arr, elem_size * index);
+  } else {
+    LocalVar index = VisitExpressionForRValue(node->index());
+    emitter()->EmitLeaScaled(element_ptr, arr, index, elem_size, 0);
+  }
+
+  element_ptr = element_ptr.ValueOf();
+
+  if (execution_result()->IsLValue()) {
+    execution_result()->set_destination(element_ptr);
+    return;
+  }
+
+  /*
+   * The caller wants the value of the array element. We just computed the
+   * element's pointer (in element_ptr). Just dereference it into the desired
+   * location and be done with it.
+   */
+
+  LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
+  BuildDeref(dest, element_ptr, node->type());
+  execution_result()->set_destination(dest.ValueOf());
+}
+
+void BytecodeGenerator::VisitMapIndexExpr(ast::IndexExpr *node) {}
+
+void BytecodeGenerator::VisitIndexExpr(ast::IndexExpr *node) {
+  if (node->object()->type()->IsArrayType()) {
+    VisitArrayIndexExpr(node);
+  } else {
+    VisitMapIndexExpr(node);
+  }
 }
 
 void BytecodeGenerator::VisitBlockStmt(ast::BlockStmt *node) {
@@ -406,9 +456,7 @@ void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
     }
   }
 
-  if (execution_result()->IsRValue()) {
-    execution_result()->set_destination(target.ValueOf());
-  }
+  execution_result()->set_destination(target.ValueOf());
 }
 
 void BytecodeGenerator::VisitStructDecl(ast::StructDecl *node) {
@@ -653,6 +701,22 @@ void BytecodeGenerator::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   Visit(node->body());
 }
 
+void BytecodeGenerator::BuildDeref(LocalVar dest, LocalVar ptr,
+                                   ast::Type *dest_type) {
+  // Emit the appropriate deref
+  if (auto size = dest_type->size(); size == 1) {
+    emitter()->EmitDeref<Bytecode::Deref1>(dest, ptr);
+  } else if (size == 2) {
+    emitter()->EmitDeref<Bytecode::Deref2>(dest, ptr);
+  } else if (size == 4) {
+    emitter()->EmitDeref<Bytecode::Deref4>(dest, ptr);
+  } else if (size == 8) {
+    emitter()->EmitDeref<Bytecode::Deref8>(dest, ptr);
+  } else {
+    emitter()->EmitDerefN(dest, ptr, size);
+  }
+}
+
 LocalVar BytecodeGenerator::BuildLoadPointer(LocalVar double_ptr,
                                              ast::Type *type) {
   if (double_ptr.GetAddressMode() == LocalVar::AddressMode::Address) {
@@ -729,20 +793,7 @@ void BytecodeGenerator::VisitMemberExpr(ast::MemberExpr *node) {
    */
 
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
-
-  // Emit the appropriate deref
-  if (auto size = node->type()->size(); size == 1) {
-    emitter()->EmitDeref<Bytecode::Deref1>(dest, field_ptr);
-  } else if (size == 2) {
-    emitter()->EmitDeref<Bytecode::Deref2>(dest, field_ptr);
-  } else if (size == 4) {
-    emitter()->EmitDeref<Bytecode::Deref4>(dest, field_ptr);
-  } else if (size == 8) {
-    emitter()->EmitDeref<Bytecode::Deref8>(dest, field_ptr);
-  } else {
-    emitter()->EmitDerefN(dest, field_ptr, size);
-  }
-
+  BuildDeref(dest, field_ptr, node->type());
   execution_result()->set_destination(dest.ValueOf());
 }
 

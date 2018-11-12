@@ -41,6 +41,11 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   void VisitLogicalAndOrExpr(ast::BinaryOpExpr *node);
   void VisitArithmeticExpr(ast::BinaryOpExpr *node);
 
+  // Dispatched from VisitIndexExpr() to distinguish between array and map
+  // access.
+  void VisitArrayIndexExpr(ast::IndexExpr *node);
+  void VisitMapIndexExpr(ast::IndexExpr *node);
+
   // Visit an expression for its L-Value
   LocalVar VisitExpressionForLValue(ast::Expr *expr);
 
@@ -66,6 +71,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   void VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare);
   void VisitPrimitiveCompareOpExpr(ast::ComparisonOpExpr *compare);
 
+  void BuildDeref(LocalVar dest, LocalVar ptr, ast::Type *dest_type);
   LocalVar BuildLoadPointer(LocalVar double_ptr, ast::Type *type);
 
   Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type);

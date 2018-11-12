@@ -68,7 +68,8 @@ void OpDeref2(i16 *dest, i16 *src);
 void OpDeref4(i32 *dest, i32 *src);
 void OpDeref8(i64 *dest, i64 *src);
 void OpDerefN(byte *dest, byte *src, u32 len);
-void OpLea(byte **dest, byte *src, u32 offset);
+void OpLea(byte **dest, byte *base, u32 offset);
+void OpLeaScaled(byte **dest, byte *base, u32 index, u32 scale, u32 offset);
 
 ////////////////////////////////////////////////////////////////////////////////
 ///

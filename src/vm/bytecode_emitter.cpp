@@ -71,6 +71,14 @@ void BytecodeEmitter::EmitLea(LocalVar dest, LocalVar src, u32 offset) {
   EmitImmediateValue(offset);
 }
 
+void BytecodeEmitter::EmitLeaScaled(LocalVar dest, LocalVar src, LocalVar index,
+                                    u32 scale, u32 offset) {
+  EmitOp(Bytecode::LeaScaled);
+  EmitLocalVars(dest, src, index);
+  EmitImmediateValue(scale);
+  EmitImmediateValue(offset);
+}
+
 void BytecodeEmitter::EmitReturn() { EmitOp(Bytecode::Return); }
 
 void BytecodeEmitter::EmitJump(BytecodeLabel *label) {

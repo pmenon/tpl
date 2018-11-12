@@ -99,6 +99,7 @@ namespace tpl::vm {
   V(Deref8, OperandType::Reg, OperandType::Reg)                                                                        \
   V(DerefN, OperandType::Reg, OperandType::Reg, OperandType::UImm4)                                                    \
   V(Lea, OperandType::Reg, OperandType::Reg, OperandType::Imm4)                                                        \
+  V(LeaScaled, OperandType::Reg, OperandType::Reg, OperandType::Reg, OperandType::Imm4, OperandType::Imm4)             \
   V(Return)
 // clang-format on
 

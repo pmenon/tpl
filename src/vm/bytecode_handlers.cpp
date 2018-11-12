@@ -120,7 +120,11 @@ void OpDeref8(i64 *dest, i64 *src) { *dest = *src; }
 
 void OpDerefN(byte *dest, byte *src, u32 len) { std::memcpy(dest, src, len); }
 
-void OpLea(byte **dest, byte *src, u32 offset) { *dest = src + offset; }
+void OpLea(byte **dest, byte *base, u32 offset) { *dest = base + offset; }
+
+void OpLeaScaled(byte **dest, byte *base, u32 index, u32 scale, u32 offset) {
+  *dest = base + (scale * index) + offset;
+}
 
 bool OpJump() { return true; }
 
