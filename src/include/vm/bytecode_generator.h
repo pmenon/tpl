@@ -31,7 +31,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   class LValueResultScope;
   class RValueResultScope;
   class TestResultScope;
-  class BytecodePositionTracker;
+  class BytecodePositionScope;
 
   // Allocate a new function ID
   FunctionInfo *AllocateFunc(const std::string &name);
