@@ -76,7 +76,7 @@ static void CompileAndRun(const std::string &source) {
   // Execute
   {
     util::ScopedTimer<std::milli> timer(&exec_ms);
-    vm::VM::Execute(*unit, "f");
+    vm::VM::Execute(*unit, "main");
   }
 
   // Dump stats
