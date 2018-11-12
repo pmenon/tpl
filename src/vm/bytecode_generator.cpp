@@ -299,22 +299,22 @@ void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
   auto *type = node->object()->type()->As<ast::ArrayType>();
   auto elem_size = type->element_type()->size();
 
-  LocalVar element_ptr =
+  LocalVar elem_ptr =
       current_function()->NewTempLocal(node->type()->PointerTo());
 
   if (auto *literal_index = node->index()->SafeAs<ast::LitExpr>()) {
     i32 index = literal_index->int32_val();
     TPL_ASSERT(index > 0, "Array indexes must be positive");
-    emitter()->EmitLea(element_ptr, arr, elem_size * index);
+    emitter()->EmitLea(elem_ptr, arr, (elem_size * index));
   } else {
     LocalVar index = VisitExpressionForRValue(node->index());
-    emitter()->EmitLeaScaled(element_ptr, arr, index, elem_size, 0);
+    emitter()->EmitLeaScaled(elem_ptr, arr, index, elem_size, 0);
   }
 
-  element_ptr = element_ptr.ValueOf();
+  elem_ptr = elem_ptr.ValueOf();
 
   if (execution_result()->IsLValue()) {
-    execution_result()->set_destination(element_ptr);
+    execution_result()->set_destination(elem_ptr);
     return;
   }
 
@@ -325,7 +325,7 @@ void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
    */
 
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
-  BuildDeref(dest, element_ptr, node->type());
+  BuildDeref(dest, elem_ptr, node->type());
   execution_result()->set_destination(dest.ValueOf());
 }
 
