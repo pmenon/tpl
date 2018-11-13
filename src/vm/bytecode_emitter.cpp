@@ -121,7 +121,7 @@ void BytecodeEmitter::Bind(BytecodeLabel *label) {
 
   std::size_t curr_offset = position();
 
-  if (label->is_forward_target()) {
+  if (label->IsForwardTarget()) {
     // We need to patch all the forward jumps
     auto &jump_locations = label->referrer_offsets();
 

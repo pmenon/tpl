@@ -1,17 +1,18 @@
 #pragma once
 
 #include <limits>
+#include <vector>
 
 #include "util/macros.h"
 
 namespace tpl::vm {
 
 /**
- * A bytecode label represents a textual location in the bytecode and is often
- * used as the target of a jump instruction. When the label is bound, it becomes
- * an immutable reference to a location in the bytecode (accessible through @ref
- * offset()). If the label is a forward reference, @ref offset() will return
- * the bytecode location of the referring jump instruction.
+ * A label represents a location in the bytecode and is used as the target of a
+ * jump instruction. When the label is bound, it becomes an immutable reference
+ * to a location in the bytecode (accessible through @ref offset()). If the
+ * label is a forward target, @ref offset() will return the bytecode location
+ * of the referring jump instruction.
  */
 class BytecodeLabel {
   static constexpr const std::size_t kInvalidOffset =
@@ -28,8 +29,8 @@ class BytecodeLabel {
     return referrer_offsets_;
   }
 
-  bool is_forward_target() const {
-    return !is_bound() && referrer_offsets().size() != 0;
+  bool IsForwardTarget() const {
+    return !is_bound() && !referrer_offsets().empty();
   }
 
  private:
