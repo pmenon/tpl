@@ -262,9 +262,36 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   node->set_type(func_type->return_type());
 }
 
+namespace {
+
+/**
+ * Determines if @ref stmt, the last in a statement list, is terminating.
+ *
+ * @param stmt
+ * @return
+ */
+bool IsTerminating(ast::Stmt *stmt) {
+  switch (stmt->kind()) {
+    case ast::AstNode::Kind::BlockStmt: {
+      return IsTerminating(stmt->As<ast::BlockStmt>()->statements().back());
+    }
+    case ast::AstNode::Kind::IfStmt: {
+      auto *if_stmt = stmt->As<ast::IfStmt>();
+      return (if_stmt->HasElseStmt() && (IsTerminating(if_stmt->then_stmt()) &&
+                                         IsTerminating(if_stmt->else_stmt())));
+    }
+    case ast::AstNode::Kind::ReturnStmt: {
+      return true;
+    }
+    default: { return false; }
+  }
+}
+
+}  // namespace
+
 void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   // Resolve the type
-  if (auto *func_type = Resolve(node->type_repr()); func_type == nullptr) {
+  if (auto *type = Resolve(node->type_repr()); type == nullptr) {
     // Some error occurred
     return;
   }
@@ -283,6 +310,22 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
 
   // Recurse into the function body
   Visit(node->body());
+
+  // Check return
+  if (!func_type->return_type()->IsNilType()) {
+    if (node->IsEmpty() || !IsTerminating(node->body())) {
+      error_reporter().Report(node->body()->right_brace_position(),
+                              ErrorMessages::kMissingReturn);
+      return;
+    }
+  }
+
+  // If an empty and nil-return function, synthesize return
+  if (node->IsEmpty() && func_type->return_type()->IsNilType()) {
+    ast::ReturnStmt *empty_ret =
+        ast_context().node_factory().NewReturnStmt(node->position(), nullptr);
+    node->body()->statements().push_back(empty_ret);
+  }
 }
 
 void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_set>
+
 #include "ast/ast.h"
 #include "ast/ast_context.h"
 #include "ast/ast_node_factory.h"
@@ -79,6 +81,9 @@ class Parser {
     const std::string &literal = scanner().current_literal();
     return ast_context().GetIdentifier(literal);
   }
+
+  // In case of errors, sync up to any token in the list
+  void Sync(std::unordered_set<Token::Type> &s);
 
   //////////////////////////////////////////////////////////////////////////////
   ///

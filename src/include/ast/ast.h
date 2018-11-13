@@ -692,6 +692,12 @@ class FunctionLitExpr : public Expr {
 
   BlockStmt *body() const { return body_; }
 
+  bool IsEmpty() const { return body()->statements().empty(); }
+
+  ast::Stmt *LastStmt() const {
+    return (IsEmpty() ? nullptr : body()->statements().back());
+  }
+
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::FunctionLitExpr;
   }

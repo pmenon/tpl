@@ -4,6 +4,9 @@
 
 namespace tpl::parsing {
 
+static std::unordered_set<Token::Type> kTopLevelDecls = {Token::Type::STRUCT,
+                                                         Token::Type::FUN};
+
 Parser::Parser(Scanner &scanner, ast::AstContext &ast_context)
     : scanner_(scanner),
       ast_context_(ast_context),
@@ -16,10 +19,22 @@ ast::AstNode *Parser::Parse() {
   const SourcePosition &start_pos = scanner().current_position();
 
   while (peek() != Token::Type::EOS) {
-    decls.push_back(ParseDecl());
+    if (ast::Decl *decl = ParseDecl()) {
+      decls.push_back(decl);
+    }
   }
 
   return node_factory().NewFile(start_pos, std::move(decls));
+}
+
+void Parser::Sync(std::unordered_set<Token::Type> &s) {
+  Next();
+  while (peek() != Token::Type::EOS) {
+    if (s.count(peek()) > 0) {
+      return;
+    }
+    Next();
+  }
 }
 
 ast::Decl *Parser::ParseDecl() {
@@ -31,8 +46,14 @@ ast::Decl *Parser::ParseDecl() {
     case Token::Type::FUN: {
       return ParseFunctionDecl();
     }
-    default: { return nullptr; }
+    default: { break; }
   }
+
+  // Report error, sync up and try again
+  error_reporter().Report(scanner().current_position(),
+                          sema::ErrorMessages::kInvalidDeclaration);
+  Sync(kTopLevelDecls);
+  return nullptr;
 }
 
 ast::Decl *Parser::ParseFunctionDecl() {
@@ -532,6 +553,7 @@ ast::Expr *Parser::ParseFunctionLitExpr() {
 
 ast::Expr *Parser::ParseType() {
   switch (peek()) {
+    case Token::Type::NIL:
     case Token::Type::IDENTIFIER: {
       Next();
       const SourcePosition &position = scanner().current_position();

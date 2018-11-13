@@ -79,7 +79,9 @@ namespace sema {
     (ast::Type *))                                                             \
   F(InvalidSqlCastToBool,                                                      \
     "Invalid input to cast to native boolean: expected SQL boolean, got %0",   \
-    (ast::Type *))
+    (ast::Type *))                                                             \
+  F(MissingReturn, "Missing return at end of function", ())                    \
+  F(InvalidDeclaration, "Non-declaration outside function", ())
 
 /**
  * Define the ErrorMessageId enumeration
