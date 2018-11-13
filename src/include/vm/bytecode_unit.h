@@ -32,14 +32,14 @@ class BytecodeUnit {
   }
 
   BytecodeIterator BytecodeForFunction(const FunctionInfo &func) const {
-    TPL_ASSERT(IsFunctionDefinedInUnit(func), "Function not defined in unit!");
+    TPL_ASSERT(GetFunctionById(func.id()) != nullptr,
+               "Function not defined in unit!");
     return BytecodeIterator(code_, func.bytecode_start_offset(),
                             func.bytecode_end_offset());
   }
 
   void PrettyPrint(std::ostream &os);
 
- public:
   //////////////////////////////////////////////////////////////////////////////
   ///
   /// Accessors
@@ -55,12 +55,9 @@ class BytecodeUnit {
  private:
   friend class VM;
   const u8 *GetBytecodeForFunction(const FunctionInfo &func) const {
-    TPL_ASSERT(IsFunctionDefinedInUnit(func), "Function not defined in unit!");
+    TPL_ASSERT(GetFunctionById(func.id()) != nullptr,
+               "Function not defined in unit!");
     return &code_[func.bytecode_start_offset()];
-  }
-
-  bool IsFunctionDefinedInUnit(const FunctionInfo &func) const {
-    return GetFunctionById(func.id()) != nullptr;
   }
 
  private:

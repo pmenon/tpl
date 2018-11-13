@@ -89,25 +89,17 @@
   /* Primitive bitwise COMPLEMENT */                         \
   void OpBitNeg##_##type(type *result, type input) { *result = ~input; }
 
-/// Move operations
-#define MOVE(type) \
-  void OpMove##_##type(type *result, type input) { *result = input; }
-
 #define LOAD_CONSTANT(type) \
   void OpLoadImm##_##type(type *result, type c) { *result = c; }
 
 INT_TYPES(COMPARISONS);
 INT_TYPES(ARITHMETIC);
 INT_TYPES(BITS);
-INT_TYPES(MOVE);
 INT_TYPES(LOAD_CONSTANT)
-
-MOVE(bool)
 
 #undef COMPARISONS
 #undef ARITHMETIC
 #undef BITS
-#undef MOVE
 #undef LOAD_CONSTANT
 
 void OpDeref1(i8 *dest, i8 *src) { *dest = *src; }
