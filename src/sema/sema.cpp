@@ -2,8 +2,8 @@
 
 #include "ast/ast_context.h"
 #include "ast/type.h"
-#include "sql/table.h"
 #include "sql/schema.h"
+#include "sql/table.h"
 #include "sql/type.h"
 
 namespace tpl::sema {
@@ -18,7 +18,7 @@ Sema::Sema(ast::AstContext &ctx)
 // Main entry point to semantic analysis and type checking an AST
 bool Sema::Run(ast::AstNode *root) {
   Visit(root);
-  return error_reporter().has_errors();
+  return error_reporter().HasErrors();
 }
 
 ast::Type *Sema::ConvertSchemaToType(const sql::Schema &schema) {

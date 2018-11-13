@@ -15,36 +15,41 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
                                              const SourcePosition &pos,
                                              ast::Expr *left,
                                              ast::Expr *right) {
-  ast::Type *left_type = left->type();
-  ast::Type *right_type = right->type();
+  /*
+   * If the left expression is a SQL boolean value, cast it to a native boolean.
+   * Do the same for the right expression.
+   */
 
-  if (left->type()->IsSqlType()) {
-    TPL_ASSERT(left_type->As<ast::SqlType>()->sql_type()->IsBoolean(),
-               "Expected boolean!");
+  if (auto *left_type = left->type()->SafeAs<ast::SqlType>();
+      left_type != nullptr && left_type->sql_type()->IsBoolean()) {
+    // Implicit cast
     left = ast_context().node_factory().NewImplicitCastExpr(
         left->position(), ast::ImplicitCastExpr::CastKind::SqlBoolToBool, left);
 
-    left_type = ast::BoolType::Get(ast_context());
-    left->set_type(left_type);
+    // Resolve
+    left->set_type(ast::BoolType::Get(ast_context()));
   }
 
-  if (right_type->IsSqlType()) {
-    TPL_ASSERT(right_type->As<ast::SqlType>()->sql_type()->IsBoolean(),
-               "Expected boolean!");
+  if (auto *right_type = right->type()->SafeAs<ast::SqlType>();
+      right_type != nullptr && right_type->sql_type()->IsBoolean()) {
+    // Implicit cast
     right = ast_context().node_factory().NewImplicitCastExpr(
         right->position(), ast::ImplicitCastExpr::CastKind::SqlBoolToBool,
         right);
 
-    right_type = ast::BoolType::Get(ast_context());
-    right->set_type(right_type);
+    // Resolve
+    right->set_type(ast::BoolType::Get(ast_context()));
   }
 
-  // Are left and right types boolean values?
-  if (left_type->IsBoolType() && right_type->IsBoolType()) {
-    return {left_type, left, right};
+  /*
+   * At this point, either left and right expressions are booleans, or there is
+   * a semantic error.
+   */
+
+  if (left->type()->IsBoolType() && right->type()->IsBoolType()) {
+    return {ast::BoolType::Get(ast_context()), left, right};
   }
 
-  // Error
   error_reporter().Report(pos, ErrorMessages::kMismatchedTypesToBinary,
                           left->type(), right->type(), op);
   return {nullptr, left, right};
@@ -54,21 +59,27 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
                                                 const SourcePosition &pos,
                                                 ast::Expr *left,
                                                 ast::Expr *right) {
-  ast::Type *left_type = left->type();
-  ast::Type *right_type = right->type();
+  /*
+   * If neither the left expression or the right expression are arithmetic,
+   * including arithmetic SQL types, there's a semantic error. Early exit.
+   */
 
-  // Are left and right types arithmetic? If not, we early exit.
-  if (!left_type->IsArithmetic() || !right_type->IsArithmetic()) {
+  if (!left->type()->IsArithmetic() || !right->type()->IsArithmetic()) {
     error_reporter().Report(pos, ErrorMessages::kIllegalTypesForBinary, op,
-                            left_type, right_type);
+                            left->type(), right->type());
     return {nullptr, left, right};
   }
 
-  if (left_type == right_type) {
+  /*
+   * Both types are arithmetic. If they're the exact same type, we don't need to
+   * do any additional work. Return.
+   */
+
+  if (left->type() == right->type()) {
     return {left->type(), left, right};
   }
 
-  if (!right_type->IsSqlType()) {
+  if (!right->type()->IsSqlType()) {
     // Implicitly cast the right to a SQL Integer
     right = ast_context().node_factory().NewImplicitCastExpr(
         right->position(), ast::ImplicitCastExpr::CastKind::IntToSqlInt, right);
@@ -77,7 +88,7 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
     right->set_type(ast::SqlType::Get(ast_context(), sql_type));
   }
 
-  if (!left_type->IsSqlType()) {
+  if (!left->type()->IsSqlType()) {
     // Implicitly cast the left to a SQL Integer
     left = ast_context().node_factory().NewImplicitCastExpr(
         left->position(), ast::ImplicitCastExpr::CastKind::IntToSqlInt, left);
@@ -86,9 +97,9 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
     left->set_type(ast::SqlType::Get(ast_context(), sql_type));
   }
 
-  sql::Type ret = *left_type->As<ast::SqlType>()->sql_type();
-  if (left_type->As<ast::SqlType>()->sql_type()->nullable() ||
-      right_type->As<ast::SqlType>()->sql_type()) {
+  sql::Type ret = *left->type()->As<ast::SqlType>()->sql_type();
+  if (left->type()->As<ast::SqlType>()->sql_type()->nullable() ||
+      right->type()->As<ast::SqlType>()->sql_type()) {
     ret = ret.AsNullable();
   }
   return {ast::SqlType::Get(ast_context(), ret), left, right};

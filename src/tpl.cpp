@@ -41,7 +41,7 @@ static void CompileAndRun(const std::string &source) {
     root = parser.Parse();
   }
 
-  if (error_reporter.has_errors()) {
+  if (error_reporter.HasErrors()) {
     LOG_ERROR("Parsing error!");
     error_reporter.PrintErrors();
     return;
@@ -54,7 +54,7 @@ static void CompileAndRun(const std::string &source) {
     type_check.Run(root);
   }
 
-  if (error_reporter.has_errors()) {
+  if (error_reporter.HasErrors()) {
     LOG_ERROR("Type-checking error!");
     error_reporter.PrintErrors();
     return;

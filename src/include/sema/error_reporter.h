@@ -38,7 +38,9 @@ class ErrorReporter {
   }
 
   // Have any errors been reported?
-  bool has_errors() const { return !errors_.empty(); }
+  bool HasErrors() const { return !errors_.empty(); }
+
+  void Reset() { errors_.clear(); }
 
   void PrintErrors();
 
