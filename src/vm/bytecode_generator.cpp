@@ -208,7 +208,9 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
   auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
 
   // Register return type
-  func_info->NewLocal(func_type->return_type(), "ret");
+  if (!func_type->return_type()->IsNilType()) {
+    func_info->NewLocal(func_type->return_type(), "ret");
+  }
 
   // Register parameters
   for (const auto &func_param : func_type->params()) {
