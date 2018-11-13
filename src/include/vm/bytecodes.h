@@ -40,59 +40,59 @@ namespace tpl::vm {
 // clang-format off
 #define BYTECODE_LIST(V)                                                                                               \
   /* Constants */                                                                                                      \
-  V(LoadImm1, OperandType::Reg, OperandType::Imm1)                                                                     \
-  V(LoadImm2, OperandType::Reg, OperandType::Imm2)                                                                     \
-  V(LoadImm4, OperandType::Reg, OperandType::Imm4)                                                                     \
-  V(LoadImm8, OperandType::Reg, OperandType::Imm8)                                                                     \
+  V(LoadImm1, OperandType::Local, OperandType::Imm1)                                                                   \
+  V(LoadImm2, OperandType::Local, OperandType::Imm2)                                                                   \
+  V(LoadImm4, OperandType::Local, OperandType::Imm4)                                                                   \
+  V(LoadImm8, OperandType::Local, OperandType::Imm8)                                                                   \
                                                                                                                        \
   /* Primitive operations */                                                                                           \
-  CREATE_FOR_INT_TYPES(V, Add, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                   \
-  CREATE_FOR_INT_TYPES(V, Sub, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                   \
-  CREATE_FOR_INT_TYPES(V, Mul, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                   \
-  CREATE_FOR_INT_TYPES(V, Div, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                   \
-  CREATE_FOR_INT_TYPES(V, Rem, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                   \
-  CREATE_FOR_INT_TYPES(V, BitAnd, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                \
-  CREATE_FOR_INT_TYPES(V, BitOr, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                 \
-  CREATE_FOR_INT_TYPES(V, BitXor, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                \
-  CREATE_FOR_INT_TYPES(V, Neg, OperandType::Reg, OperandType::Reg)                                                     \
-  CREATE_FOR_INT_TYPES(V, BitNeg, OperandType::Reg, OperandType::Reg)                                                  \
-  CREATE_FOR_INT_TYPES(V, GreaterThan, OperandType::Reg, OperandType::Reg, OperandType::Reg)                           \
-  CREATE_FOR_INT_TYPES(V, GreaterThanEqual, OperandType::Reg, OperandType::Reg, OperandType::Reg)                      \
-  CREATE_FOR_INT_TYPES(V, Equal, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                 \
-  CREATE_FOR_INT_TYPES(V, LessThan, OperandType::Reg, OperandType::Reg, OperandType::Reg)                              \
-  CREATE_FOR_INT_TYPES(V, LessThanEqual, OperandType::Reg, OperandType::Reg, OperandType::Reg)                         \
-  CREATE_FOR_INT_TYPES(V, NotEqual, OperandType::Reg, OperandType::Reg, OperandType::Reg)                              \
+  CREATE_FOR_INT_TYPES(V, Add, OperandType::Local, OperandType::Local, OperandType::Local)                             \
+  CREATE_FOR_INT_TYPES(V, Sub, OperandType::Local, OperandType::Local, OperandType::Local)                             \
+  CREATE_FOR_INT_TYPES(V, Mul, OperandType::Local, OperandType::Local, OperandType::Local)                             \
+  CREATE_FOR_INT_TYPES(V, Div, OperandType::Local, OperandType::Local, OperandType::Local)                             \
+  CREATE_FOR_INT_TYPES(V, Rem, OperandType::Local, OperandType::Local, OperandType::Local)                             \
+  CREATE_FOR_INT_TYPES(V, BitAnd, OperandType::Local, OperandType::Local, OperandType::Local)                          \
+  CREATE_FOR_INT_TYPES(V, BitOr, OperandType::Local, OperandType::Local, OperandType::Local)                           \
+  CREATE_FOR_INT_TYPES(V, BitXor, OperandType::Local, OperandType::Local, OperandType::Local)                          \
+  CREATE_FOR_INT_TYPES(V, Neg, OperandType::Local, OperandType::Local)                                                 \
+  CREATE_FOR_INT_TYPES(V, BitNeg, OperandType::Local, OperandType::Local)                                              \
+  CREATE_FOR_INT_TYPES(V, GreaterThan, OperandType::Local, OperandType::Local, OperandType::Local)                     \
+  CREATE_FOR_INT_TYPES(V, GreaterThanEqual, OperandType::Local, OperandType::Local, OperandType::Local)                \
+  CREATE_FOR_INT_TYPES(V, Equal, OperandType::Local, OperandType::Local, OperandType::Local)                           \
+  CREATE_FOR_INT_TYPES(V, LessThan, OperandType::Local, OperandType::Local, OperandType::Local)                        \
+  CREATE_FOR_INT_TYPES(V, LessThanEqual, OperandType::Local, OperandType::Local, OperandType::Local)                   \
+  CREATE_FOR_INT_TYPES(V, NotEqual, OperandType::Local, OperandType::Local, OperandType::Local)                        \
                                                                                                                        \
   /* Branching */                                                                                                      \
   V(Jump, OperandType::UImm2)                                                                                          \
   V(JumpLoop, OperandType::UImm2)                                                                                      \
-  V(JumpIfTrue, OperandType::Reg, OperandType::UImm2)                                                                  \
-  V(JumpIfFalse, OperandType::Reg, OperandType::UImm2)                                                                 \
+  V(JumpIfTrue, OperandType::Local, OperandType::UImm2)                                                                \
+  V(JumpIfFalse, OperandType::Local, OperandType::UImm2)                                                               \
                                                                                                                        \
   /* SQL codes */                                                                                                      \
-  V(SqlTableIteratorInit, OperandType::Reg, OperandType::UImm2)                                                        \
-  V(SqlTableIteratorNext, OperandType::Reg, OperandType::Reg)                                                          \
-  V(SqlTableIteratorClose, OperandType::Reg)                                                                           \
-  V(ReadSmallInt, OperandType::Reg, OperandType::UImm4, OperandType::Reg)                                              \
-  V(ReadInteger, OperandType::Reg, OperandType::UImm4, OperandType::Reg)                                               \
-  V(ReadBigInt, OperandType::Reg, OperandType::UImm4, OperandType::Reg)                                                \
-  V(ReadDecimal, OperandType::Reg, OperandType::UImm4, OperandType::Reg)                                               \
-  V(ForceBoolTruth, OperandType::Reg, OperandType::Reg)                                                                \
-  V(InitInteger, OperandType::Reg, OperandType::Reg)                                                                   \
-  V(LessThanInteger, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                             \
-  V(LessThanEqualInteger, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                        \
-  V(GreaterThanInteger, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                          \
-  V(GreaterThanEqualInteger, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                     \
-  V(EqualInteger, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                                \
-  V(NotEqualInteger, OperandType::Reg, OperandType::Reg, OperandType::Reg)                                             \
+  V(SqlTableIteratorInit, OperandType::Local, OperandType::UImm2)                                                      \
+  V(SqlTableIteratorNext, OperandType::Local, OperandType::Local)                                                      \
+  V(SqlTableIteratorClose, OperandType::Local)                                                                         \
+  V(ReadSmallInt, OperandType::Local, OperandType::UImm4, OperandType::Local)                                          \
+  V(ReadInteger, OperandType::Local, OperandType::UImm4, OperandType::Local)                                           \
+  V(ReadBigInt, OperandType::Local, OperandType::UImm4, OperandType::Local)                                            \
+  V(ReadDecimal, OperandType::Local, OperandType::UImm4, OperandType::Local)                                           \
+  V(ForceBoolTruth, OperandType::Local, OperandType::Local)                                                            \
+  V(InitInteger, OperandType::Local, OperandType::Local)                                                               \
+  V(LessThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
+  V(LessThanEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                  \
+  V(GreaterThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                    \
+  V(GreaterThanEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                               \
+  V(EqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
+  V(NotEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
                                                                                                                        \
-  V(Deref1, OperandType::Reg, OperandType::Reg)                                                                        \
-  V(Deref2, OperandType::Reg, OperandType::Reg)                                                                        \
-  V(Deref4, OperandType::Reg, OperandType::Reg)                                                                        \
-  V(Deref8, OperandType::Reg, OperandType::Reg)                                                                        \
-  V(DerefN, OperandType::Reg, OperandType::Reg, OperandType::UImm4)                                                    \
-  V(Lea, OperandType::Reg, OperandType::Reg, OperandType::Imm4)                                                        \
-  V(LeaScaled, OperandType::Reg, OperandType::Reg, OperandType::Reg, OperandType::Imm4, OperandType::Imm4)             \
+  V(Deref1, OperandType::Local, OperandType::Local)                                                                    \
+  V(Deref2, OperandType::Local, OperandType::Local)                                                                    \
+  V(Deref4, OperandType::Local, OperandType::Local)                                                                    \
+  V(Deref8, OperandType::Local, OperandType::Local)                                                                    \
+  V(DerefN, OperandType::Local, OperandType::Local, OperandType::UImm4)                                                \
+  V(Lea, OperandType::Local, OperandType::Local, OperandType::Imm4)                                                    \
+  V(LeaScaled, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Imm4, OperandType::Imm4)       \
   V(Return)
 // clang-format on
 

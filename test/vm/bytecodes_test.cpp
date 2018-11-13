@@ -65,7 +65,7 @@ TEST_F(BytecodesTest, OperandTypesTest) {
   // Non-exhaustive test of operand types for various op codes
 
   // Imm loads
-  EXPECT_EQ(OperandType::Reg,
+  EXPECT_EQ(OperandType::Local,
             Bytecodes::GetNthOperandType(Bytecode::LoadImm1, 0));
   EXPECT_EQ(OperandType::Imm1,
             Bytecodes::GetNthOperandType(Bytecode::LoadImm1, 1));
@@ -76,17 +76,17 @@ TEST_F(BytecodesTest, OperandTypesTest) {
 
   // Conditional jumps have a 2-byte register ID and a 2-byte unsigned jump
   // offset
-  EXPECT_EQ(OperandType::Reg,
+  EXPECT_EQ(OperandType::Local,
             Bytecodes::GetNthOperandType(Bytecode::JumpIfTrue, 0));
   EXPECT_EQ(OperandType::UImm2,
             Bytecodes::GetNthOperandType(Bytecode::JumpIfTrue, 1));
 
   // Binary ops usually have three operands, all 2-byte register IDs
-  EXPECT_EQ(OperandType::Reg,
+  EXPECT_EQ(OperandType::Local,
             Bytecodes::GetNthOperandType(Bytecode::Add_i32, 0));
-  EXPECT_EQ(OperandType::Reg,
+  EXPECT_EQ(OperandType::Local,
             Bytecodes::GetNthOperandType(Bytecode::Add_i32, 1));
-  EXPECT_EQ(OperandType::Reg,
+  EXPECT_EQ(OperandType::Local,
             Bytecodes::GetNthOperandType(Bytecode::Add_i32, 2));
 }
 

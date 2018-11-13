@@ -105,7 +105,6 @@ void VM::Run(Frame *frame) {
 #define READ_UIMM4() Read<u32>(&ip)
 #define READ_JMP_OFFSET() READ_UIMM2()
 #define READ_LOCAL_ID() Read<u32>(&ip)
-#define READ_REG_COUNT() Read<u16>(&ip)
 #define READ_OP() Read<std::underlying_type_t<Bytecode>>(&ip)
 
 #define OP(name) op_##name

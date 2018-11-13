@@ -27,8 +27,8 @@ enum class OperandSize : u8 {
   V(Imm8, true, OperandSize::Long)    \
   V(UImm2, false, OperandSize::Short) \
   V(UImm4, false, OperandSize::Int)   \
-  V(Reg, false, OperandSize::Int)     \
-  V(RegCount, false, OperandSize::Short)
+  V(Local, false, OperandSize::Int)   \
+  V(LocalCount, false, OperandSize::Short)
 
 /**
  * This enumeration lists all possible types of operands to any bytecode
