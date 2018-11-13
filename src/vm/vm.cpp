@@ -104,7 +104,7 @@ void VM::Run(Frame *frame) {
 #define READ_UIMM2() Read<u16>(&ip)
 #define READ_UIMM4() Read<u32>(&ip)
 #define READ_JMP_OFFSET() READ_UIMM2()
-#define READ_REG_ID() Read<u32>(&ip)
+#define READ_LOCAL_ID() Read<u32>(&ip)
 #define READ_REG_COUNT() Read<u16>(&ip)
 #define READ_OP() Read<std::underlying_type_t<Bytecode>>(&ip)
 
@@ -153,13 +153,13 @@ void VM::Run(Frame *frame) {
    * single-byte boolean value, and the two operands are the primitive input
    * arguments.
    */
-#define DO_GEN_COMPARISON(op, type)                     \
-  OP(op##_##type) : {                                   \
-    bool *dest = frame->LocalAt<bool *>(READ_REG_ID()); \
-    type lhs = frame->LocalAt<type>(READ_REG_ID());     \
-    type rhs = frame->LocalAt<type>(READ_REG_ID());     \
-    Op##op##_##type(dest, lhs, rhs);                    \
-    DISPATCH_NEXT();                                    \
+#define DO_GEN_COMPARISON(op, type)                       \
+  OP(op##_##type) : {                                     \
+    bool *dest = frame->LocalAt<bool *>(READ_LOCAL_ID()); \
+    type lhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
+    type rhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
+    Op##op##_##type(dest, lhs, rhs);                      \
+    DISPATCH_NEXT();                                      \
   }
 #define GEN_COMPARISON_TYPES(type)          \
   DO_GEN_COMPARISON(GreaterThan, type)      \
@@ -176,17 +176,17 @@ void VM::Run(Frame *frame) {
   /*
    * Binary operations
    */
-#define DO_GEN_ARITHMETIC_OP(op, test, type)            \
-  OP(op##_##type) : {                                   \
-    type *dest = frame->LocalAt<type *>(READ_REG_ID()); \
-    type lhs = frame->LocalAt<type>(READ_REG_ID());     \
-    type rhs = frame->LocalAt<type>(READ_REG_ID());     \
-    if (test && rhs == 0u) {                            \
-      /* TODO(pmenon): Proper error */                  \
-      LOG_ERROR("Division by zero error!");             \
-    }                                                   \
-    Op##op##_##type(dest, lhs, rhs);                    \
-    DISPATCH_NEXT();                                    \
+#define DO_GEN_ARITHMETIC_OP(op, test, type)              \
+  OP(op##_##type) : {                                     \
+    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
+    type lhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
+    type rhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
+    if (test && rhs == 0u) {                              \
+      /* TODO(pmenon): Proper error */                    \
+      LOG_ERROR("Division by zero error!");               \
+    }                                                     \
+    Op##op##_##type(dest, lhs, rhs);                      \
+    DISPATCH_NEXT();                                      \
   }
 #define GEN_ARITHMETIC_OP(type)             \
   DO_GEN_ARITHMETIC_OP(Add, false, type)    \
@@ -205,18 +205,18 @@ void VM::Run(Frame *frame) {
   /*
    * Bitwise negation and regular integer negation
    */
-#define GEN_NEG_OP(type)                                \
-  OP(Neg##_##type) : {                                  \
-    auto *dest = frame->LocalAt<type *>(READ_REG_ID()); \
-    auto input = frame->LocalAt<type>(READ_REG_ID());   \
-    OpNeg##_##type(dest, input);                        \
-    DISPATCH_NEXT();                                    \
-  }                                                     \
-  OP(BitNeg##_##type) : {                               \
-    auto *dest = frame->LocalAt<type *>(READ_REG_ID()); \
-    auto input = frame->LocalAt<type>(READ_REG_ID());   \
-    OpBitNeg##_##type(dest, input);                     \
-    DISPATCH_NEXT();                                    \
+#define GEN_NEG_OP(type)                                  \
+  OP(Neg##_##type) : {                                    \
+    auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
+    auto input = frame->LocalAt<type>(READ_LOCAL_ID());   \
+    OpNeg##_##type(dest, input);                          \
+    DISPATCH_NEXT();                                      \
+  }                                                       \
+  OP(BitNeg##_##type) : {                                 \
+    auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
+    auto input = frame->LocalAt<type>(READ_LOCAL_ID());   \
+    OpBitNeg##_##type(dest, input);                       \
+    DISPATCH_NEXT();                                      \
   }
 
   INT_TYPES(GEN_NEG_OP)
@@ -245,7 +245,7 @@ void VM::Run(Frame *frame) {
   }
 
   OP(JumpIfTrue) : {
-    auto cond = frame->LocalAt<bool>(READ_REG_ID());
+    auto cond = frame->LocalAt<bool>(READ_LOCAL_ID());
     u16 skip = PEEK_JMP_OFFSET();
     if (OpJumpIfTrue(cond)) {
       ip += skip;
@@ -256,7 +256,7 @@ void VM::Run(Frame *frame) {
   }
 
   OP(JumpIfFalse) : {
-    auto cond = frame->LocalAt<bool>(READ_REG_ID());
+    auto cond = frame->LocalAt<bool>(READ_LOCAL_ID());
     u16 skip = PEEK_JMP_OFFSET();
     if (OpJumpIfFalse(cond)) {
       ip += skip;
@@ -266,12 +266,12 @@ void VM::Run(Frame *frame) {
     DISPATCH_NEXT();
   }
 
-#define GEN_LOAD_IMM(type, size)                        \
-  OP(LoadImm##size) : {                                 \
-    type *dest = frame->LocalAt<type *>(READ_REG_ID()); \
-    type val = READ_IMM##size();                        \
-    OpLoadImm_##type(dest, val);                        \
-    DISPATCH_NEXT();                                    \
+#define GEN_LOAD_IMM(type, size)                          \
+  OP(LoadImm##size) : {                                   \
+    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
+    type val = READ_IMM##size();                          \
+    OpLoadImm_##type(dest, val);                          \
+    DISPATCH_NEXT();                                      \
   }
 
   GEN_LOAD_IMM(i8, 1);
@@ -280,12 +280,12 @@ void VM::Run(Frame *frame) {
   GEN_LOAD_IMM(i64, 8);
 #undef GEN_LOAD_IMM
 
-#define GEN_DEREF(type, size)                           \
-  OP(Deref##size) : {                                   \
-    type *dest = frame->LocalAt<type *>(READ_REG_ID()); \
-    type *src = frame->LocalAt<type *>(READ_REG_ID());  \
-    OpDeref##size(dest, src);                           \
-    DISPATCH_NEXT();                                    \
+#define GEN_DEREF(type, size)                             \
+  OP(Deref##size) : {                                     \
+    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
+    type *src = frame->LocalAt<type *>(READ_LOCAL_ID());  \
+    OpDeref##size(dest, src);                             \
+    DISPATCH_NEXT();                                      \
   }
   GEN_DEREF(i8, 1);
   GEN_DEREF(i16, 2);
@@ -294,25 +294,25 @@ void VM::Run(Frame *frame) {
 #undef GEN_DEREF
 
   OP(DerefN) : {
-    byte *dest = frame->LocalAt<byte *>(READ_REG_ID());
-    byte *src = frame->LocalAt<byte *>(READ_REG_ID());
+    byte *dest = frame->LocalAt<byte *>(READ_LOCAL_ID());
+    byte *src = frame->LocalAt<byte *>(READ_LOCAL_ID());
     u32 len = READ_UIMM4();
     OpDerefN(dest, src, len);
     DISPATCH_NEXT();
   }
 
   OP(Lea) : {
-    byte **dest = frame->LocalAt<byte **>(READ_REG_ID());
-    byte *src = frame->LocalAt<byte *>(READ_REG_ID());
+    byte **dest = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    byte *src = frame->LocalAt<byte *>(READ_LOCAL_ID());
     u32 offset = READ_UIMM4();
     OpLea(dest, src, offset);
     DISPATCH_NEXT();
   }
 
   OP(LeaScaled) : {
-    byte **dest = frame->LocalAt<byte **>(READ_REG_ID());
-    byte *src = frame->LocalAt<byte *>(READ_REG_ID());
-    u32 index = frame->LocalAt<u32>(READ_REG_ID());
+    byte **dest = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    byte *src = frame->LocalAt<byte *>(READ_LOCAL_ID());
+    u32 index = frame->LocalAt<u32>(READ_LOCAL_ID());
     u32 scale = READ_UIMM4();
     u32 offset = READ_UIMM4();
     OpLeaScaled(dest, src, index, scale, offset);
@@ -325,78 +325,78 @@ void VM::Run(Frame *frame) {
   }
 
   OP(SqlTableIteratorInit) : {
-    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_REG_ID());
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
     auto table_id = READ_UIMM2();
     OpSqlTableIteratorInit(iter, table_id);
     DISPATCH_NEXT();
   }
 
   OP(SqlTableIteratorNext) : {
-    auto *has_more = frame->LocalAt<bool *>(READ_REG_ID());
-    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_REG_ID());
+    auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
     OpSqlTableIteratorNext(has_more, iter);
     DISPATCH_NEXT();
   }
 
   OP(SqlTableIteratorClose) : {
-    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_REG_ID());
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
     OpSqlTableIteratorClose(iter);
     DISPATCH_NEXT();
   }
 
   OP(ReadSmallInt) : {
-    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_REG_ID());
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
     auto col_idx = READ_UIMM4();
-    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_REG_ID());
+    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
     OpReadSmallInt(iter, col_idx, sql_int);
     DISPATCH_NEXT();
   }
 
   OP(ReadInteger) : {
-    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_REG_ID());
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
     auto col_idx = READ_UIMM4();
-    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_REG_ID());
+    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
     OpReadInt(iter, col_idx, sql_int);
     DISPATCH_NEXT();
   }
 
   OP(ReadBigInt) : {
-    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_REG_ID());
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
     auto col_idx = READ_UIMM4();
-    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_REG_ID());
+    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
     OpReadBigInt(iter, col_idx, sql_int);
     DISPATCH_NEXT();
   }
 
   OP(ReadDecimal) : {
-    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_REG_ID());
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
     auto col_idx = READ_UIMM4();
-    auto *sql_int = frame->LocalAt<sql::Decimal *>(READ_REG_ID());
+    auto *sql_int = frame->LocalAt<sql::Decimal *>(READ_LOCAL_ID());
     OpReadDecimal(iter, col_idx, sql_int);
     DISPATCH_NEXT();
   }
 
   OP(ForceBoolTruth) : {
-    auto *result = frame->LocalAt<bool *>(READ_REG_ID());
-    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_REG_ID());
+    auto *result = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
     OpForceBoolTruth(result, sql_int);
     DISPATCH_NEXT();
   }
 
   OP(InitInteger) : {
-    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_REG_ID());
-    i32 val = frame->LocalAt<i32>(READ_REG_ID());
+    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    i32 val = frame->LocalAt<i32>(READ_LOCAL_ID());
     OpInitInteger(sql_int, val);
     DISPATCH_NEXT();
   }
 
-#define GEN_CMP(op)                                               \
-  OP(op##Integer) : {                                             \
-    auto *result = frame->LocalAt<sql::Integer *>(READ_REG_ID()); \
-    auto *left = frame->LocalAt<sql::Integer *>(READ_REG_ID());   \
-    auto *right = frame->LocalAt<sql::Integer *>(READ_REG_ID());  \
-    Op##op##Integer(result, left, right);                         \
-    DISPATCH_NEXT();                                              \
+#define GEN_CMP(op)                                                 \
+  OP(op##Integer) : {                                               \
+    auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID()); \
+    auto *left = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());   \
+    auto *right = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());  \
+    Op##op##Integer(result, left, right);                           \
+    DISPATCH_NEXT();                                                \
   }
   GEN_CMP(GreaterThan);
   GEN_CMP(GreaterThanEqual);
