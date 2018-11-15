@@ -5,8 +5,8 @@
 namespace tpl::ast {
 
 FunctionDecl::FunctionDecl(const SourcePosition &pos, Identifier name,
-                           FunctionLitExpr *fun)
-    : Decl(Kind::FunctionDecl, pos, name, fun->type_repr()), fun_(fun) {}
+                           FunctionLitExpr *func)
+    : Decl(Kind::FunctionDecl, pos, name, func->type_repr()), func_(func) {}
 
 StructDecl::StructDecl(const SourcePosition &pos, Identifier name,
                        StructTypeRepr *type_repr)

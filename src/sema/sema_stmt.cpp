@@ -80,7 +80,6 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
   auto *iter = node->iter()->As<ast::IdentifierExpr>();
 
   // Lookup the table in the catalog
-  // TODO(pmenon): This will change after we integrate with bigger system
   auto *table = sql::Catalog::instance()->LookupTableByName(iter->name());
   if (table == nullptr) {
     error_reporter().Report(iter->position(), ErrorMessages::kNonExistingTable,

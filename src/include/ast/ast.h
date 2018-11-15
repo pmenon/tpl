@@ -249,16 +249,16 @@ class FieldDecl : public Decl {
 class FunctionDecl : public Decl {
  public:
   FunctionDecl(const SourcePosition &pos, Identifier name,
-               FunctionLitExpr *fun);
+               FunctionLitExpr *func);
 
-  FunctionLitExpr *function() const { return fun_; }
+  FunctionLitExpr *function() const { return func_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::FunctionDecl;
   }
 
  private:
-  FunctionLitExpr *fun_;
+  FunctionLitExpr *func_;
 };
 
 /**
@@ -628,12 +628,12 @@ class BinaryOpExpr : public Expr {
  */
 class CallExpr : public Expr {
  public:
-  CallExpr(Expr *fun, util::RegionVector<Expr *> &&args)
-      : Expr(Kind::CallExpr, fun->position()),
-        fun_(fun),
+  CallExpr(Expr *func, util::RegionVector<Expr *> &&args)
+      : Expr(Kind::CallExpr, func->position()),
+        func_(func),
         args_(std::move(args)) {}
 
-  Expr *function() { return fun_; }
+  Expr *function() { return func_; }
 
   util::RegionVector<Expr *> &arguments() { return args_; }
 
@@ -642,7 +642,7 @@ class CallExpr : public Expr {
   }
 
  private:
-  Expr *fun_;
+  Expr *func_;
   util::RegionVector<Expr *> args_;
 };
 
