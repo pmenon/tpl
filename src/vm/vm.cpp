@@ -6,49 +6,63 @@
 #include "util/common.h"
 #include "util/timer.h"
 #include "vm/bytecode_handlers.h"
+#include "vm/function_info.h"
+#include "vm/module.h"
 
 namespace tpl::vm {
 
+/**
+ * An execution frame where all function's local variables and parameters live
+ * for the duration of the function's lifetime.
+ */
 class VM::Frame {
  public:
-  Frame(VM *vm, const BytecodeUnit &unit, const FunctionInfo &func)
-      : vm_(vm),
-        caller_(vm->current_frame()),
-        data_(std::make_unique<u8[]>(func.frame_size())),
-        pc_(unit.GetBytecodeForFunction(func)) {
-    TPL_MEMSET(data_.get(), 0, func.frame_size());
-    vm->set_current_frame(this);
+  Frame(VM *vm, u8 *frame_data, std::size_t frame_size)
+      : vm_(vm), frame_data_(frame_data), frame_size_(frame_size) {
+    TPL_ASSERT(frame_data != nullptr, "Frame data cannot be null");
+    TPL_ASSERT(frame_size >= 0, "Frame size must be >= 0");
   }
 
-  ~Frame() { vm()->set_current_frame(caller()); }
-
-  VM *vm() { return vm_; }
-
-  Frame *caller() const { return caller_; }
-
-  const u8 *pc() const { return pc_; }
+  ~Frame() { vm()->ReleaseFrame(frame_size()); }
 
   template <typename T>
   T LocalAt(u32 index) const {
     LocalVar local_var = LocalVar::Decode(index);
 
-    auto local = reinterpret_cast<uintptr_t>(&data_[local_var.GetOffset()]);
+    u32 offset = local_var.GetOffset();
+
+#ifndef NDEBUG
+    if (offset >= frame_size()) {
+      LOG_ERROR("Accessing local at offset {}, beyond frame of size {}", offset,
+                frame_size());
+      throw std::runtime_error("Local access outside frame");
+    }
+#endif
+
+    auto local = reinterpret_cast<uintptr_t>(&frame_data_[offset]);
 
     if (local_var.GetAddressMode() == LocalVar::AddressMode::Value) {
-      return *reinterpret_cast<T *>(local);
+      return *(T *)(local);
     }
 
     return (T)local;
   }
 
+ private:
+  VM *vm() const { return vm_; }
+
+  const u8 *raw_frame() const { return frame_data_; }
+
+  std::size_t frame_size() const { return frame_size_; }
+
  public:
   VM *vm_;
-  Frame *caller_;
-  std::unique_ptr<u8[]> data_;
-  const u8 *pc_;
+  u8 *frame_data_;
+  std::size_t frame_size_;
 };
 
-VM::VM(const BytecodeUnit &unit) : unit_(unit) {
+VM::VM(util::Region *region, const Module &module)
+    : stack_(kDefaultInitialStackSize, 0, region), sp_(0), module_(module) {
   TPL_MEMSET(bytecode_counts_, 0, sizeof(bytecode_counts_));
 }
 
@@ -74,7 +88,7 @@ inline ALWAYS_INLINE T Peek(const u8 **ip) {
 
 }  // namespace
 
-void VM::Run(Frame *frame) {
+void VM::Interpret(const u8 *ip, Frame *frame) {
   static void *kDispatchTable[] = {
 #define ENTRY(name, ...) &&op_##name,
       BYTECODE_LIST(ENTRY)
@@ -140,9 +154,6 @@ void VM::Run(Frame *frame) {
    * simpler.
    *
    ****************************************************************************/
-
-  // The instruction pointer
-  const u8 *ip = frame->pc();
 
   DISPATCH_NEXT();
 
@@ -409,21 +420,44 @@ void VM::Run(Frame *frame) {
   UNREACHABLE("Impossible to reach end of interpreter loop. Bad code!");
 }
 
-void VM::Invoke(FunctionId func_id) {
-  const auto *func = unit().GetFunctionById(func_id);
+void VM::Invoke(u32 func_id) {
+  const FunctionInfo *func = module().GetFuncInfoById(func_id);
 
-  if (func == nullptr) return;
+  if (func == nullptr) {
+    LOG_ERROR("Function '{}' with ID {} does not exist in module", func->name(),
+              func_id);
+    throw std::runtime_error("Missing function");
+  }
 
-  VM::Frame frame(this, unit(), *func);
-  Run(&frame);
+  /*
+   * We need to set up the frame. First, we allocate enough space for all local
+   * variables. Then we setup call arguments.
+   */
+
+  std::size_t frame_size = func->frame_size();
+  u8 *frame_data = AllocateFrame(frame_size);
+  VM::Frame frame(this, frame_data, frame_size);
+
+  /*
+   * The frame has been set up. We are now ready to interpret the function.
+   */
+
+  const u8 *bytecode = module().GetBytecodeForFunction(*func);
+  TPL_ASSERT(bytecode != nullptr, "Bytecode cannot be null");
+  Interpret(bytecode, &frame);
+
+  /*
+   * Function has completed. Setup return vals.
+   */
 }
 
 // static
-void VM::Execute(const BytecodeUnit &unit, const std::string &name) {
-  auto *func = unit.GetFunctionByName(name);
+void VM::Execute(util::Region *region, const Module &module,
+                 const std::string &name) {
+  auto *func = module.GetFuncInfoByName(name);
   if (func == nullptr) return;
 
-  VM vm(unit);
+  VM vm(region, module);
   vm.Invoke(func->id());
 }
 

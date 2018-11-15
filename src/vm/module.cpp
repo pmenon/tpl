@@ -1,4 +1,4 @@
-#include "vm/bytecode_unit.h"
+#include "vm/module.h"
 
 #include <iomanip>
 #include <iostream>
@@ -45,7 +45,7 @@ void PrettyPrintFuncCode(std::ostream &os, const FunctionInfo &func,
   }
 }
 
-void PrettyPrintFunc(std::ostream &os, const BytecodeUnit &unit,
+void PrettyPrintFunc(std::ostream &os, const Module &unit,
                      const FunctionInfo &func) {
   PrettyPrintFuncInfo(os, func);
 
@@ -59,7 +59,7 @@ void PrettyPrintFunc(std::ostream &os, const BytecodeUnit &unit,
 
 }  // namespace
 
-void BytecodeUnit::PrettyPrint(std::ostream &os) {
+void Module::PrettyPrint(std::ostream &os) {
   for (const auto &func : functions()) {
     PrettyPrintFunc(os, *this, func);
   }

@@ -2,11 +2,11 @@
 
 #include "ast/ast.h"
 #include "ast/ast_visitor.h"
-#include "vm/bytecode_emitter.h"
+#include "vm/emitter.h"
 
 namespace tpl::vm {
 
-class BytecodeUnit;
+class Module;
 class LoopBuilder;
 
 /**
@@ -15,8 +15,6 @@ class LoopBuilder;
  */
 class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
  public:
-  BytecodeGenerator();
-
   DISALLOW_COPY_AND_MOVE(BytecodeGenerator);
 
   // Declare all node visit methods here
@@ -24,9 +22,13 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   AST_NODES(DECLARE_VISIT_METHOD)
 #undef DECLARE_VISIT_METHOD
 
-  static std::unique_ptr<BytecodeUnit> Compile(ast::AstNode *root);
+  static std::unique_ptr<Module> Compile(util::Region *region,
+                                         ast::AstNode *root);
 
  private:
+  // Private constructor to force users to call Compile()
+  BytecodeGenerator(util::Region *region);
+
   class ExpressionResultScope;
   class LValueResultScope;
   class RValueResultScope;
@@ -59,9 +61,8 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
   enum class TestFallthrough : u8 { None, Then, Else };
 
-  void VisitExpressionForTest(ast::Expr *expr, BytecodeLabel *then_label,
-                              BytecodeLabel *else_label,
-                              TestFallthrough fallthrough);
+  void VisitExpressionForTest(ast::Expr *expr, Label *then_label,
+                              Label *else_label, TestFallthrough fallthrough);
 
   // Visit the body of an iteration statement
   void VisitIterationStatement(ast::IterationStmt *iteration,
@@ -77,7 +78,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type);
 
  public:
-  BytecodeEmitter *emitter() { return &emitter_; }
+  Emitter *emitter() { return &emitter_; }
 
  private:
   ExpressionResultScope *execution_result() { return execution_result_; }
@@ -87,14 +88,27 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
   FunctionInfo *current_function() { return &functions_.back(); }
 
-  const std::vector<FunctionInfo> &functions() const { return functions_; }
+  util::RegionVector<u8> &bytecode() { return bytecode_; }
+
+  const util::RegionVector<FunctionInfo> &functions() const {
+    return functions_;
+  }
 
  private:
-  BytecodeEmitter emitter_;
-  ExpressionResultScope *execution_result_;
+  // Region
+  util::Region *region_;
 
-  FunctionId func_id_counter_;
-  std::vector<FunctionInfo> functions_;
+  // The bytecode generated during compilation
+  util::RegionVector<u8> bytecode_;
+
+  // Information about all generated functions
+  util::RegionVector<FunctionInfo> functions_;
+
+  // Emitter to write bytecode ops
+  Emitter emitter_;
+
+  // RAII struct to capture semantics of expression evaluation
+  ExpressionResultScope *execution_result_;
 };
 
 }  // namespace tpl::vm

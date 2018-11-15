@@ -9,7 +9,7 @@ class AstTest : public TplTest {
  public:
   AstTest() : region_("ast_test"), pos_() {}
 
-  util::Region &region() { return region_; }
+  util::Region *region() { return &region_; }
 
   const SourcePosition &empty_pos() const { return pos_; }
 

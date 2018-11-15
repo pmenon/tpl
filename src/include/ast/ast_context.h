@@ -20,7 +20,7 @@ class Type;
 
 class AstContext {
  public:
-  explicit AstContext(util::Region &region,
+  explicit AstContext(util::Region *region,
                       sema::ErrorReporter &error_reporter);
 
   DISALLOW_COPY_AND_MOVE(AstContext);
@@ -38,11 +38,11 @@ class AstContext {
 
   sema::ErrorReporter &error_reporter() const { return error_reporter_; }
 
-  util::Region &region() const { return region_; }
+  util::Region *region() const { return region_; }
 
  private:
   // Region allocator for all Ast objects this context needs
-  util::Region &region_;
+  util::Region *region_;
 
   // Error reporter
   sema::ErrorReporter &error_reporter_;

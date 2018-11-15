@@ -13,23 +13,23 @@ namespace tpl::util {
 template <typename T>
 class RegionVector : public std::vector<T, StlRegionAllocator<T>> {
  public:
-  explicit RegionVector(Region &region)
+  explicit RegionVector(Region *region)
       : std::vector<T, StlRegionAllocator<T>>(StlRegionAllocator<T>(region)) {}
 
-  RegionVector(size_t n, Region &region)
+  RegionVector(size_t n, Region *region)
       : std::vector<T, StlRegionAllocator<T>>(n,
                                               StlRegionAllocator<T>(region)) {}
 
-  RegionVector(size_t n, const T &elem, Region &region)
+  RegionVector(size_t n, const T &elem, Region *region)
       : std::vector<T, StlRegionAllocator<T>>(n, elem,
                                               StlRegionAllocator<T>(region)) {}
 
-  RegionVector(std::initializer_list<T> list, Region &region)
+  RegionVector(std::initializer_list<T> list, Region *region)
       : std::vector<T, StlRegionAllocator<T>>(list,
                                               StlRegionAllocator<T>(region)) {}
 
   template <typename InputIter>
-  RegionVector(InputIter first, InputIter last, Region &region)
+  RegionVector(InputIter first, InputIter last, Region *region)
       : std::vector<T, StlRegionAllocator<T>>(first, last,
                                               StlRegionAllocator<T>(region)) {}
 };
@@ -44,7 +44,7 @@ class RegionUnorderedMap
           Key, Value, Hash, KeyEqual,
           StlRegionAllocator<std::pair<const Key, Value>>> {
  public:
-  explicit RegionUnorderedMap(Region &region)
+  explicit RegionUnorderedMap(Region *region)
       : std::unordered_map<Key, Value, Hash, KeyEqual,
                            StlRegionAllocator<std::pair<const Key, Value>>>(
             StlRegionAllocator<std::pair<const Key, Value>>(region)) {}

@@ -11,9 +11,9 @@ namespace tpl::ast::test {
 class AstStringsContainerTest : public TplTest {};
 
 TEST_F(AstStringsContainerTest, CreateNewStringsTest) {
-  util::Region tmp_region("test");
-  sema::ErrorReporter error_reporter(tmp_region);
-  AstContext ctx(tmp_region, error_reporter);
+  util::Region region("test");
+  sema::ErrorReporter error_reporter(&region);
+  AstContext ctx(&region, error_reporter);
 
   // We request the strings "string-0", "string-1", ..., "string-99" from the
   // context. We expect duplicate input strings to return the same Identifier!

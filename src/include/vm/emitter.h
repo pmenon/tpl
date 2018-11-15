@@ -1,26 +1,25 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
 
 #include "util/common.h"
-#include "vm/bytecode_register.h"
+#include "util/region_containers.h"
 #include "vm/bytecodes.h"
+#include "vm/function_info.h"
 
 namespace tpl::vm {
 
-class BytecodeUnit;
-class BytecodeLabel;
+class Label;
 
-class BytecodeEmitter {
+class Emitter {
   static const u16 kJumpPlaceholder = std::numeric_limits<u16>::max() - 1u;
 
  public:
-  BytecodeEmitter() = default;
+  explicit Emitter(util::RegionVector<u8> &bytecode) : bytecode_(bytecode) {}
 
-  DISALLOW_COPY_AND_MOVE(BytecodeEmitter);
+  DISALLOW_COPY_AND_MOVE(Emitter);
 
-  std::size_t position() const { return bytecodes_.size(); }
+  std::size_t position() const { return bytecode_.size(); }
 
   void EmitLoadImm1(LocalVar dest, i8 val);
   void EmitLoadImm2(LocalVar dest, i16 val);
@@ -43,9 +42,8 @@ class BytecodeEmitter {
     EmitImmediateValue(len);
   }
 
-  void EmitJump(Bytecode bytecode, BytecodeLabel *label);
-  void EmitConditionalJump(Bytecode bytecode, LocalVar cond,
-                           BytecodeLabel *label);
+  void EmitJump(Bytecode bytecode, Label *label);
+  void EmitConditionalJump(Bytecode bytecode, LocalVar cond, Label *label);
 
   void EmitLea(LocalVar dest, LocalVar src, u32 offset);
   void EmitLeaScaled(LocalVar dest, LocalVar src, LocalVar index, u32 scale,
@@ -74,16 +72,14 @@ class BytecodeEmitter {
     EmitImmediateValue(imm);
   }
 
-  void Bind(BytecodeLabel *label);
-
-  const std::vector<u8> &Finish();
+  void Bind(Label *label);
 
  private:
   template <typename T,
             typename std::enable_if_t<std::is_integral_v<T>, u32> = 0>
   void EmitImmediateValue(T val) {
-    bytecodes_.insert(bytecodes_.end(), sizeof(T), 0);
-    *reinterpret_cast<T *>(&*(bytecodes_.end() - sizeof(T))) = val;
+    bytecode_.insert(bytecode_.end(), sizeof(T), 0);
+    *reinterpret_cast<T *>(&*(bytecode_.end() - sizeof(T))) = val;
   }
 
   void EmitOp(Bytecode bytecode) {
@@ -99,10 +95,10 @@ class BytecodeEmitter {
     (EmitLocalVar(locals), ...);
   }
 
-  void EmitJump(BytecodeLabel *label);
+  void EmitJump(Label *label);
 
  private:
-  std::vector<u8> bytecodes_;
+  util::RegionVector<u8> &bytecode_;
 };
 
 }  // namespace tpl::vm

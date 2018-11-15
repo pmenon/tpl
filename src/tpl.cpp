@@ -14,7 +14,7 @@
 #include "tpl.h"
 #include "util/timer.h"
 #include "vm/bytecode_generator.h"
-#include "vm/bytecode_unit.h"
+#include "vm/module.h"
 #include "vm/vm.h"
 
 namespace tpl {
@@ -26,8 +26,8 @@ static void CompileAndRun(const std::string &source) {
   util::Region error_region("repl-error");
 
   // Let's parse the source
-  sema::ErrorReporter error_reporter(error_region);
-  ast::AstContext context(region, error_reporter);
+  sema::ErrorReporter error_reporter(&error_region);
+  ast::AstContext context(&region, error_reporter);
 
   parsing::Scanner scanner(source.data(), source.length());
   parsing::Parser parser(scanner, context);
@@ -64,19 +64,19 @@ static void CompileAndRun(const std::string &source) {
   ast::AstDump::Dump(root);
 
   // Codegen
-  std::unique_ptr<vm::BytecodeUnit> unit;
+  std::unique_ptr<vm::Module> module;
   {
     util::ScopedTimer<std::milli> timer(&codegen_ms);
-    unit = vm::BytecodeGenerator::Compile(root);
+    module = vm::BytecodeGenerator::Compile(&region, root);
   }
 
   // Dump VM
-  unit->PrettyPrint(std::cout);
+  module->PrettyPrint(std::cout);
 
   // Execute
   {
     util::ScopedTimer<std::milli> timer(&exec_ms);
-    vm::VM::Execute(*unit, "main");
+    vm::VM::Execute(&region, *module, "main");
   }
 
   // Dump stats
@@ -97,7 +97,7 @@ static void RunRepl() {
         return;
       }
 
-      input.append(line);
+      input.append(line).append("\n");
     } while (!line.empty());
 
     CompileAndRun(input);

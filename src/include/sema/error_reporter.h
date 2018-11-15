@@ -26,7 +26,7 @@ struct PassArgument {
 
 class ErrorReporter {
  public:
-  ErrorReporter(util::Region &region) : region_(region), errors_(region) {}
+  ErrorReporter(util::Region *region) : region_(region), errors_(region) {}
 
   // Record an error
   template <typename... ArgTypes>
@@ -96,7 +96,7 @@ class ErrorReporter {
   class MessageWithArgs {
    public:
     template <typename... ArgTypes>
-    MessageWithArgs(util::Region &region, const SourcePosition &pos,
+    MessageWithArgs(util::Region *region, const SourcePosition &pos,
                     const ErrorMessage<ArgTypes...> &message,
                     typename detail::PassArgument<ArgTypes>::type... args)
         : pos_(pos), id_(message.id), args_(region) {
@@ -118,7 +118,7 @@ class ErrorReporter {
   };
 
  private:
-  util::Region &region_;
+  util::Region *region_;
   util::RegionVector<MessageWithArgs> errors_;
 };
 

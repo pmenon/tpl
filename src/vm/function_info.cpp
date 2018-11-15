@@ -1,4 +1,4 @@
-#include "vm/bytecode_register.h"
+#include "vm/function_info.h"
 
 #include "ast/type.h"
 #include "util/math_util.h"
@@ -31,6 +31,7 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name) {
 
 LocalVar FunctionInfo::NewParameterLocal(ast::Type *type,
                                          const std::string &name) {
+  num_params_++;
   return NewLocal(type, name, LocalInfo::Kind::Parameter);
 }
 

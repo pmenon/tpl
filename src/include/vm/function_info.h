@@ -123,7 +123,9 @@ class FunctionInfo {
         bytecode_start_offset_(0),
         bytecode_end_offset_(0),
         frame_size_(0),
-        temp_id_counter_(0) {}
+        has_return_(false),
+        num_params_(0),
+        num_temps_(0) {}
 
   /**
    * Allocate a new local variable of the given type and name. This returns a
@@ -135,7 +137,22 @@ class FunctionInfo {
    * @return The local variable ID
    */
   LocalVar NewLocal(ast::Type *type, const std::string &name);
+
+  /**
+   * Allocate a new function parameter.
+   *
+   * @param type The TPL type of the parameter
+   * @param name The name of the parameter
+   * @return
+   */
   LocalVar NewParameterLocal(ast::Type *type, const std::string &name);
+
+  /**
+   * Allocate a temporary function variable
+   *
+   * @param type The TPL type of the variable
+   * @return
+   */
   LocalVar NewTempLocal(ast::Type *type);
 
   /**
@@ -180,13 +197,15 @@ class FunctionInfo {
 
   std::size_t frame_size() const { return frame_size_; }
 
+  u32 num_params() const { return num_params_; }
+
  private:
   // Allocate a new local variable in the function
   LocalVar NewLocal(ast::Type *type, const std::string &name,
                     LocalInfo::Kind kind);
 
   // Return the next available ID for a temporary variable
-  u32 NextTempId() { return ++temp_id_counter_; }
+  u32 NextTempId() { return ++num_temps_; }
 
  private:
   FunctionId id_;
@@ -196,7 +215,9 @@ class FunctionInfo {
   std::vector<LocalInfo> locals_;
   std::size_t frame_size_;
 
-  u32 temp_id_counter_;
+  bool has_return_;
+  u32 num_params_;
+  u32 num_temps_;
 };
 
 }  // namespace vm

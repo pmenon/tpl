@@ -14,8 +14,8 @@ class SemaExprTest : public TplTest {
  public:
   SemaExprTest()
       : region_("test"),
-        error_reporter_(region_),
-        ctx_(region_, error_reporter_) {}
+        error_reporter_(region()),
+        ctx_(region(), error_reporter_) {}
 
   util::Region *region() { return &region_; }
   ErrorReporter *error_reporter() { return &error_reporter_; }
@@ -57,7 +57,7 @@ class SemaExprTest : public TplTest {
       const std::string &table_name,
       const std::function<void(const std::string &,
                                util::RegionVector<ast::Stmt *> &)> &body) {
-    util::RegionVector<ast::Stmt *> stmts(*region());
+    util::RegionVector<ast::Stmt *> stmts(region());
     body("row", stmts);
 
     return node_factory()->NewForInStmt(

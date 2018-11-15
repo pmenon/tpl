@@ -33,7 +33,7 @@ class Parser {
 
   ast::AstNodeFactory &node_factory() { return node_factory_; }
 
-  util::Region &region() { return ast_context().region(); }
+  util::Region *region() { return ast_context().region(); }
 
   sema::ErrorReporter &error_reporter() { return error_reporter_; }
 
@@ -143,7 +143,7 @@ class Parser {
   // The source code scanner
   Scanner &scanner_;
 
-  //
+  // The context
   ast::AstContext &ast_context_;
 
   // A factory for all node types

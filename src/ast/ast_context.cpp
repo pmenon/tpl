@@ -69,7 +69,7 @@ struct AstContext::Implementation {
                      util::LlvmRegionAllocator(ctx.region())) {}
 };
 
-AstContext::AstContext(util::Region &region,
+AstContext::AstContext(util::Region *region,
                        sema::ErrorReporter &error_reporter)
     : region_(region),
       error_reporter_(error_reporter),

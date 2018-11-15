@@ -5,9 +5,9 @@
 #include "sql/catalog.h"
 #include "sql/table.h"
 #include "util/macros.h"
-#include "vm/bytecode_label.h"
-#include "vm/bytecode_unit.h"
 #include "vm/control_flow_builders.h"
+#include "vm/label.h"
+#include "vm/module.h"
 
 namespace tpl::vm {
 
@@ -93,8 +93,11 @@ class BytecodeGenerator::BytecodePositionScope {
   std::size_t start_offset_;
 };
 
-BytecodeGenerator::BytecodeGenerator()
-    : execution_result_(nullptr), func_id_counter_(0) {}
+BytecodeGenerator::BytecodeGenerator(util::Region *region)
+    : bytecode_(region),
+      functions_(region),
+      emitter_(bytecode()),
+      execution_result_(nullptr) {}
 
 void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
   IfThenElseBuilder if_builder(this);
@@ -131,7 +134,7 @@ void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
   loop_builder.LoopHeader();
 
   if (node->condition() != nullptr) {
-    BytecodeLabel loop_body_label;
+    Label loop_body_label;
     VisitExpressionForTest(node->condition(), &loop_body_label,
                            loop_builder.break_label(), TestFallthrough::Then);
   }
@@ -473,7 +476,7 @@ void BytecodeGenerator::VisitLogicalAndOrExpr(ast::BinaryOpExpr *node) {
   VisitExpressionForRValue(node->left(), dest);
 
   Bytecode conditional_jump;
-  BytecodeLabel end_label;
+  Label end_label;
 
   switch (node->op()) {
     case parsing::Token::Type::OR: {
@@ -822,7 +825,8 @@ void BytecodeGenerator::VisitMapTypeRepr(ast::MapTypeRepr *node) {
 }
 
 FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &name) {
-  functions_.emplace_back(++func_id_counter_, name);
+  auto func_id = static_cast<FunctionId>(functions().size() + 1);
+  functions_.emplace_back(func_id, name);
   return &functions_.back();
 }
 
@@ -845,8 +849,8 @@ void BytecodeGenerator::VisitExpressionForRValue(ast::Expr *expr,
 }
 
 void BytecodeGenerator::VisitExpressionForTest(ast::Expr *expr,
-                                               BytecodeLabel *then_label,
-                                               BytecodeLabel *else_label,
+                                               Label *then_label,
+                                               Label *else_label,
                                                TestFallthrough fallthrough) {
   // Evaluate the expression
   LocalVar cond = VisitExpressionForRValue(expr);
@@ -877,13 +881,12 @@ Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode,
 }
 
 // static
-std::unique_ptr<BytecodeUnit> BytecodeGenerator::Compile(ast::AstNode *root) {
-  BytecodeGenerator generator;
+std::unique_ptr<Module> BytecodeGenerator::Compile(util::Region *region,
+                                                   ast::AstNode *root) {
+  BytecodeGenerator generator(region);
   generator.Visit(root);
 
-  const auto &code = generator.emitter()->Finish();
-  const auto &functions = generator.functions();
-  return BytecodeUnit::Create(code, functions);
+  return std::make_unique<Module>(generator.bytecode(), generator.functions());
 }
 
 }  // namespace tpl::vm

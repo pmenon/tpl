@@ -13,7 +13,7 @@ namespace tpl::ast {
  */
 class AstNodeFactory {
  public:
-  explicit AstNodeFactory(util::Region &region) : region_(region) {}
+  explicit AstNodeFactory(util::Region *region) : region_(region) {}
 
   DISALLOW_COPY_AND_MOVE(AstNodeFactory);
 
@@ -175,7 +175,7 @@ class AstNodeFactory {
   }
 
  private:
-  util::Region &region_;
+  util::Region *region_;
 };
 
 }  // namespace tpl::ast

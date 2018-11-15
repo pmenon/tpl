@@ -148,8 +148,8 @@ class RegionObject {
   void *operator new(std::size_t size) = delete;
   void operator delete(void *ptr) = delete;
 
-  void *operator new(std::size_t size, Region &region) {
-    return region.Allocate(size);
+  void *operator new(std::size_t size, Region *region) {
+    return region->Allocate(size);
   }
 
   /*
@@ -157,7 +157,7 @@ class RegionObject {
    * when the region is destroyed. You can invoke this behavior manually by
    * calling Region::FreeAll().
    */
-  void operator delete(UNUSED void *ptr, UNUSED Region &region) {
+  void operator delete(UNUSED void *ptr, UNUSED Region *region) {
     UNREACHABLE("Calling \"delete\" on region object is forbidden!");
   };
 };
