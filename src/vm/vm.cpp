@@ -17,10 +17,10 @@ namespace tpl::vm {
  */
 class VM::Frame {
  public:
-  Frame(VM *vm, u8 *frame_data, std::size_t frame_size)
-      : vm_(vm), frame_data_(frame_data), frame_size_(frame_size) {
-    TPL_ASSERT(frame_data != nullptr, "Frame data cannot be null");
-    TPL_ASSERT(frame_size >= 0, "Frame size must be >= 0");
+  Frame(VM *vm, std::size_t frame_size) : vm_(vm), frame_size_(frame_size) {
+    frame_data_ = vm->AllocateFrame(frame_size);
+    TPL_ASSERT(frame_data_ != nullptr, "Frame data cannot be null");
+    TPL_ASSERT(frame_size_ >= 0, "Frame size must be >= 0");
   }
 
   ~Frame() { vm()->ReleaseFrame(frame_size()); }
@@ -29,17 +29,10 @@ class VM::Frame {
   T LocalAt(u32 index) const {
     LocalVar local_var = LocalVar::Decode(index);
 
-    u32 offset = local_var.GetOffset();
+    EnsureInFrame(local_var);
 
-#ifndef NDEBUG
-    if (offset >= frame_size()) {
-      LOG_ERROR("Accessing local at offset {}, beyond frame of size {}", offset,
-                frame_size());
-      throw std::runtime_error("Local access outside frame");
-    }
-#endif
-
-    auto local = reinterpret_cast<uintptr_t>(&frame_data_[offset]);
+    auto local =
+        reinterpret_cast<uintptr_t>(&frame_data_[local_var.GetOffset()]);
 
     if (local_var.GetAddressMode() == LocalVar::AddressMode::Value) {
       return *(T *)(local);
@@ -49,6 +42,20 @@ class VM::Frame {
   }
 
  private:
+#ifndef NDEBUG
+  void EnsureInFrame(LocalVar var) const {
+    if (var.GetOffset() >= frame_size()) {
+      std::string error_msg =
+          fmt::format("Accessing local at offset {}, beyond frame of size {}",
+                      var.GetOffset(), frame_size());
+      LOG_ERROR("{}", error_msg);
+      throw std::runtime_error(error_msg);
+    }
+  }
+#else
+  void EnsureInFrame(UNUSED LocalVar var) const {}
+#endif
+
   VM *vm() const { return vm_; }
 
   const u8 *raw_frame() const { return frame_data_; }
@@ -154,6 +161,8 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
    * simpler.
    *
    ****************************************************************************/
+
+  std::vector<void *> params;
 
   DISPATCH_NEXT();
 
@@ -329,10 +338,18 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(Return) : {
-    // Just return for now. We need to handle return values though ...
-    return;
+  OP(Call) : {
+    u16 func_id = READ_UIMM2();
+    u16 num_params = READ_UIMM2();
+    params.reserve(num_params);
+    for (u32 i = 0; i < num_params; i++) {
+      params[i] = frame->LocalAt<void *>(READ_LOCAL_ID());
+    }
+    Invoke(func_id);
+    DISPATCH_NEXT();
   }
+
+  OP(Return) : { return; }
 
   OP(SqlTableIteratorInit) : {
     auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
@@ -423,10 +440,11 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 void VM::Invoke(u32 func_id) {
   const FunctionInfo *func = module().GetFuncInfoById(func_id);
 
-  if (func == nullptr) {
-    LOG_ERROR("Function '{}' with ID {} does not exist in module", func->name(),
-              func_id);
-    throw std::runtime_error("Missing function");
+  if (TPL_UNLIKELY(func == nullptr)) {
+    std::string error_msg =
+        fmt::format("Function with ID {} does not exist in module", func_id);
+    LOG_ERROR("{}", error_msg);
+    throw std::runtime_error(error_msg);
   }
 
   /*
@@ -435,8 +453,7 @@ void VM::Invoke(u32 func_id) {
    */
 
   std::size_t frame_size = func->frame_size();
-  u8 *frame_data = AllocateFrame(frame_size);
-  VM::Frame frame(this, frame_data, frame_size);
+  VM::Frame frame(this, frame_size);
 
   /*
    * The frame has been set up. We are now ready to interpret the function.

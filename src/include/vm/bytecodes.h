@@ -93,6 +93,9 @@ namespace tpl::vm {
   V(DerefN, OperandType::Local, OperandType::Local, OperandType::UImm4)                                                \
   V(Lea, OperandType::Local, OperandType::Local, OperandType::Imm4)                                                    \
   V(LeaScaled, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Imm4, OperandType::Imm4)       \
+                                                                                                                       \
+  /* Function calls */                                                                                                 \
+  V(Call, OperandType::UImm2, OperandType::LocalCount)                                                                 \
   V(Return)
 // clang-format on
 
@@ -156,7 +159,7 @@ class Bytecodes {
     return GetOperandSizes(bytecode)[idx];
   }
 
-  // Return the total size (in bytes) of the bytecode including it's operands
+  // Return the total size (in bytes) of the bytecode including its operands
   static u32 Size(Bytecode bytecode) {
     return kBytecodeSizes[static_cast<u32>(bytecode)];
   }

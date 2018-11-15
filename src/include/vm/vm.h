@@ -28,6 +28,8 @@ class VM {
 
   void Invoke(u32 func_id);
 
+  void XCall(const u8 *ip, Frame *caller);
+
   void Interpret(const u8 *ip, Frame *frame);
 
   //////////////////////////////////////////////////////////////////////////////

@@ -350,13 +350,16 @@ class BlockStmt : public Stmt {
 
   const SourcePosition &right_brace_position() const { return rbrace_pos_; }
 
+  bool IsEmpty() const { return statements_.empty(); }
+
+  ast::Stmt *LastStmt() { return (IsEmpty() ? nullptr : statements_.back()); }
+
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::BlockStmt;
   }
 
  private:
   const SourcePosition rbrace_pos_;
-
   util::RegionVector<Stmt *> statements_;
 };
 
@@ -692,11 +695,7 @@ class FunctionLitExpr : public Expr {
 
   BlockStmt *body() const { return body_; }
 
-  bool IsEmpty() const { return body()->statements().empty(); }
-
-  ast::Stmt *LastStmt() const {
-    return (IsEmpty() ? nullptr : body()->statements().back());
-  }
+  bool IsEmpty() const { return body()->IsEmpty(); }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::FunctionLitExpr;

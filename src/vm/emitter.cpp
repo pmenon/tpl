@@ -78,6 +78,22 @@ void Emitter::EmitLeaScaled(LocalVar dest, LocalVar src, LocalVar index,
   EmitImmediateValue(offset);
 }
 
+void Emitter::EmitCall(FunctionId func_id,
+                       const std::vector<LocalVar> &params) {
+  TPL_ASSERT(
+      Bytecodes::GetNthOperandSize(Bytecode::Call, 1) == OperandSize::Short,
+      "Expected argument count to be 2-byte short");
+  TPL_ASSERT(params.size() < std::numeric_limits<u16>::max(),
+             "Too many parameters!");
+
+  EmitOp(Bytecode::Call);
+  EmitImmediateValue(func_id);
+  EmitImmediateValue(static_cast<u16>(params.size()));
+  for (LocalVar local : params) {
+    EmitLocalVar(local);
+  }
+}
+
 void Emitter::EmitReturn() { EmitOp(Bytecode::Return); }
 
 void Emitter::EmitJump(Label *label) {

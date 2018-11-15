@@ -27,7 +27,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
  private:
   // Private constructor to force users to call Compile()
-  BytecodeGenerator(util::Region *region);
+  explicit BytecodeGenerator(util::Region *region);
 
   class ExpressionResultScope;
   class LValueResultScope;

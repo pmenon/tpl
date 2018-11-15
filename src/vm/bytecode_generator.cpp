@@ -412,7 +412,30 @@ void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
 }
 
 void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
-  AstVisitor::VisitCallExpr(node);
+  // Lookup function
+  std::string func_name =
+      node->function()->As<ast::IdentifierExpr>()->name().data();
+
+  const FunctionInfo *func_info = nullptr;
+  for (const auto &func : functions()) {
+    if (func.name() == func_name) {
+      func_info = &func;
+      break;
+    }
+  }
+
+  TPL_ASSERT(func_info != nullptr, "Function not found!");
+  TPL_ASSERT(func_info->num_params() == node->arguments().size(),
+             "Argument mismatch between AST and bytecode");
+
+  // Collect parameters
+  std::vector<LocalVar> params(func_info->num_params());
+  for (u32 i = 0; i < node->arguments().size(); i++) {
+    params[i] = VisitExpressionForRValue(node->arguments()[i]);
+  }
+
+  // Done
+  emitter()->EmitCall(func_info->id(), params);
 }
 
 void BytecodeGenerator::VisitAssignmentStmt(ast::AssignmentStmt *node) {
