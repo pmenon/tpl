@@ -1,48 +1,46 @@
-#include "vm/emitter.h"
+#include "vm/bytecode_emitter.h"
 
-#include "logging/logger.h"
-#include "vm/bytecode_traits.h"
-#include "vm/label.h"
-#include "vm/module.h"
+#include "vm/bytecode_label.h"
 
 namespace tpl::vm {
 
-void Emitter::EmitLoadImm1(LocalVar dest, i8 val) {
-  EmitOp(Bytecode::LoadImm1);
+void BytecodeEmitter::EmitAssignImm1(LocalVar dest, i8 val) {
+  EmitOp(Bytecode::AssignImm1);
   EmitLocalVar(dest);
   EmitImmediateValue(val);
 }
 
-void Emitter::EmitLoadImm2(LocalVar dest, i16 val) {
-  EmitOp(Bytecode::LoadImm2);
+void BytecodeEmitter::EmitAssignImm2(LocalVar dest, i16 val) {
+  EmitOp(Bytecode::AssignImm2);
   EmitLocalVar(dest);
   EmitImmediateValue(val);
 }
 
-void Emitter::EmitLoadImm4(LocalVar dest, i32 val) {
-  EmitOp(Bytecode::LoadImm4);
+void BytecodeEmitter::EmitAssignImm4(LocalVar dest, i32 val) {
+  EmitOp(Bytecode::AssignImm4);
   EmitLocalVar(dest);
   EmitImmediateValue(val);
 }
 
-void Emitter::EmitLoadImm8(LocalVar dest, i64 val) {
-  EmitOp(Bytecode::LoadImm8);
+void BytecodeEmitter::EmitAssignImm8(LocalVar dest, i64 val) {
+  EmitOp(Bytecode::AssignImm8);
   EmitLocalVar(dest);
   EmitImmediateValue(val);
 }
 
-void Emitter::EmitUnaryOp(Bytecode bytecode, LocalVar dest, LocalVar input) {
+void BytecodeEmitter::EmitUnaryOp(Bytecode bytecode, LocalVar dest,
+                                  LocalVar input) {
   EmitOp(bytecode);
   EmitLocalVars(dest, input);
 }
 
-void Emitter::EmitBinaryOp(Bytecode bytecode, LocalVar dest, LocalVar lhs,
-                           LocalVar rhs) {
+void BytecodeEmitter::EmitBinaryOp(Bytecode bytecode, LocalVar dest,
+                                   LocalVar lhs, LocalVar rhs) {
   EmitOp(bytecode);
   EmitLocalVars(dest, lhs, rhs);
 }
 
-void Emitter::EmitJump(Bytecode bytecode, Label *label) {
+void BytecodeEmitter::EmitJump(Bytecode bytecode, BytecodeLabel *label) {
   TPL_ASSERT(Bytecodes::IsJump(bytecode), "Provided bytecode is not a jump");
   TPL_ASSERT((!label->is_bound() && bytecode == Bytecode::Jump) ||
                  (label->is_bound() && bytecode == Bytecode::JumpLoop),
@@ -54,8 +52,8 @@ void Emitter::EmitJump(Bytecode bytecode, Label *label) {
   EmitJump(label);
 }
 
-void Emitter::EmitConditionalJump(Bytecode bytecode, LocalVar cond,
-                                  Label *label) {
+void BytecodeEmitter::EmitConditionalJump(Bytecode bytecode, LocalVar cond,
+                                          BytecodeLabel *label) {
   TPL_ASSERT(Bytecodes::IsJump(bytecode), "Provided bytecode is not a jump");
 
   // Emit the jump opcode and condition
@@ -64,22 +62,22 @@ void Emitter::EmitConditionalJump(Bytecode bytecode, LocalVar cond,
   EmitJump(label);
 }
 
-void Emitter::EmitLea(LocalVar dest, LocalVar src, u32 offset) {
+void BytecodeEmitter::EmitLea(LocalVar dest, LocalVar src, u32 offset) {
   EmitOp(Bytecode::Lea);
   EmitLocalVars(dest, src);
   EmitImmediateValue(offset);
 }
 
-void Emitter::EmitLeaScaled(LocalVar dest, LocalVar src, LocalVar index,
-                            u32 scale, u32 offset) {
+void BytecodeEmitter::EmitLeaScaled(LocalVar dest, LocalVar src, LocalVar index,
+                                    u32 scale, u32 offset) {
   EmitOp(Bytecode::LeaScaled);
   EmitLocalVars(dest, src, index);
   EmitImmediateValue(scale);
   EmitImmediateValue(offset);
 }
 
-void Emitter::EmitCall(FunctionId func_id,
-                       const std::vector<LocalVar> &params) {
+void BytecodeEmitter::EmitCall(FunctionId func_id,
+                               const std::vector<LocalVar> &params) {
   TPL_ASSERT(
       Bytecodes::GetNthOperandSize(Bytecode::Call, 1) == OperandSize::Short,
       "Expected argument count to be 2-byte short");
@@ -94,9 +92,9 @@ void Emitter::EmitCall(FunctionId func_id,
   }
 }
 
-void Emitter::EmitReturn() { EmitOp(Bytecode::Return); }
+void BytecodeEmitter::EmitReturn() { EmitOp(Bytecode::Return); }
 
-void Emitter::EmitJump(Label *label) {
+void BytecodeEmitter::EmitJump(BytecodeLabel *label) {
   std::size_t curr_offset = position();
 
   if (label->is_bound()) {
@@ -120,17 +118,18 @@ void Emitter::EmitJump(Label *label) {
   }
 }
 
-void Emitter::Emit(Bytecode bytecode, LocalVar operand_1) {
+void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1) {
   EmitOp(bytecode);
   EmitLocalVar(operand_1);
 }
 
-void Emitter::Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2) {
+void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1,
+                           LocalVar operand_2) {
   EmitOp(bytecode);
   EmitLocalVars(operand_1, operand_2);
 }
 
-void Emitter::Bind(Label *label) {
+void BytecodeEmitter::Bind(BytecodeLabel *label) {
   TPL_ASSERT(!label->is_bound(), "Cannot rebind labels");
 
   std::size_t curr_offset = position();

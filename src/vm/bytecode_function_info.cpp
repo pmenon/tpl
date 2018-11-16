@@ -1,11 +1,11 @@
-#include "vm/function_info.h"
+#include "vm/bytecode_function_info.h"
 
 #include "ast/type.h"
 #include "util/math_util.h"
 
 namespace tpl::vm {
 
-std::size_t LocalInfo::Size() const { return type()->size(); }
+u32 LocalInfo::Size() const { return type()->size(); }
 
 LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
                                 LocalInfo::Kind kind) {
@@ -40,7 +40,7 @@ LocalVar FunctionInfo::NewTempLocal(ast::Type *type) {
   return NewLocal(type, tmp_name, LocalInfo::Kind::Temporary);
 }
 
-LocalVar FunctionInfo::LookupLocal(const std::string &name) {
+LocalVar FunctionInfo::LookupLocal(const std::string &name) const {
   for (const auto &local_info : locals()) {
     if (local_info.name() == name) {
       return LocalVar(local_info.offset(), LocalVar::AddressMode::Address);

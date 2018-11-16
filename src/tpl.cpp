@@ -14,7 +14,7 @@
 #include "tpl.h"
 #include "util/timer.h"
 #include "vm/bytecode_generator.h"
-#include "vm/module.h"
+#include "vm/bytecode_module.h"
 #include "vm/vm.h"
 
 namespace tpl {
@@ -64,7 +64,7 @@ static void CompileAndRun(const std::string &source) {
   ast::AstDump::Dump(root);
 
   // Codegen
-  std::unique_ptr<vm::Module> module;
+  std::unique_ptr<vm::BytecodeModule> module;
   {
     util::ScopedTimer<std::milli> timer(&codegen_ms);
     module = vm::BytecodeGenerator::Compile(&region, root);
@@ -76,7 +76,15 @@ static void CompileAndRun(const std::string &source) {
   // Execute
   {
     util::ScopedTimer<std::milli> timer(&exec_ms);
-    vm::VM::Execute(&region, *module, "main");
+
+    std::function<u32()> main_func;
+
+    if (!module->GetFunction("main", vm::ExecutionMode::Interpret, main_func)) {
+      LOG_ERROR("No main() entry function found with signature ()->int32");
+      return;
+    }
+
+    LOG_INFO("main() returned: {}", main_func());
   }
 
   // Dump stats

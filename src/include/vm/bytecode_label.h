@@ -14,12 +14,12 @@ namespace tpl::vm {
  * label is a forward target, @ref offset() will return the bytecode location
  * of the referring jump instruction.
  */
-class Label {
+class BytecodeLabel {
   static constexpr const std::size_t kInvalidOffset =
       std::numeric_limits<std::size_t>::max();
 
  public:
-  Label() : offset_(kInvalidOffset), bound_(false) {}
+  BytecodeLabel() : offset_(kInvalidOffset), bound_(false) {}
 
   bool is_bound() const { return bound_; }
 
@@ -34,7 +34,7 @@ class Label {
   }
 
  private:
-  friend class Emitter;
+  friend class BytecodeEmitter;
 
   void set_referrer(std::size_t offset) {
     TPL_ASSERT(!is_bound(),

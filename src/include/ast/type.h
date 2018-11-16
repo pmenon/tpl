@@ -358,6 +358,8 @@ class FunctionType : public Type {
  public:
   const util::RegionVector<Field> &params() const { return params_; }
 
+  u32 num_params() const { return static_cast<u32>(params().size()); }
+
   Type *return_type() const { return ret_; }
 
   static FunctionType *Get(util::RegionVector<Field> &&params, Type *ret);

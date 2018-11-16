@@ -5,9 +5,9 @@
 #include "sql/catalog.h"
 #include "sql/table.h"
 #include "util/macros.h"
+#include "vm/bytecode_label.h"
+#include "vm/bytecode_module.h"
 #include "vm/control_flow_builders.h"
-#include "vm/label.h"
-#include "vm/module.h"
 
 namespace tpl::vm {
 
@@ -28,7 +28,6 @@ class BytecodeGenerator::ExpressionResultScope {
 
   bool IsLValue() const { return kind_ == ast::Expr::Context::LValue; }
   bool IsRValue() const { return kind_ == ast::Expr::Context::RValue; }
-  bool IsEffect() const { return kind_ == ast::Expr::Context::Effect; }
 
   bool HasDestination() const { return !destination().IsInvalid(); }
 
@@ -53,22 +52,17 @@ class BytecodeGenerator::ExpressionResultScope {
 class BytecodeGenerator::LValueResultScope
     : public BytecodeGenerator::ExpressionResultScope {
  public:
-  LValueResultScope(BytecodeGenerator *generator, LocalVar dest = LocalVar())
+  explicit LValueResultScope(BytecodeGenerator *generator,
+                             LocalVar dest = LocalVar())
       : ExpressionResultScope(generator, ast::Expr::Context::LValue, dest) {}
 };
 
 class BytecodeGenerator::RValueResultScope
     : public BytecodeGenerator::ExpressionResultScope {
  public:
-  RValueResultScope(BytecodeGenerator *generator, LocalVar dest = LocalVar())
+  explicit RValueResultScope(BytecodeGenerator *generator,
+                             LocalVar dest = LocalVar())
       : ExpressionResultScope(generator, ast::Expr::Context::RValue, dest) {}
-};
-
-class BytecodeGenerator::TestResultScope
-    : public BytecodeGenerator::ExpressionResultScope {
- public:
-  TestResultScope(BytecodeGenerator *generator, LocalVar dest = LocalVar())
-      : ExpressionResultScope(generator, ast::Expr::Context::Test, dest) {}
 };
 
 /**
@@ -134,7 +128,7 @@ void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
   loop_builder.LoopHeader();
 
   if (node->condition() != nullptr) {
-    Label loop_body_label;
+    BytecodeLabel loop_body_label;
     VisitExpressionForTest(node->condition(), &loop_body_label,
                            loop_builder.break_label(), TestFallthrough::Then);
   }
@@ -212,7 +206,8 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
 
   // Register return type
   if (!func_type->return_type()->IsNilType()) {
-    func_info->NewLocal(func_type->return_type(), "ret");
+    auto *ret_type = func_type->return_type()->PointerTo();
+    func_info->NewParameterLocal(ret_type, "hiddenRv");
   }
 
   // Register parameters
@@ -406,35 +401,31 @@ void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
 
 void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
   if (node->ret() != nullptr) {
-    VisitExpressionForRValue(node->ret(), current_function()->GetRVLocal());
+    LocalVar rv = current_function()->GetRVLocal();
+    LocalVar result = VisitExpressionForRValue(node->ret());
+    BuildAssign(rv.ValueOf(), result, node->ret()->type());
   }
   emitter()->EmitReturn();
 }
 
 void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
-  // Lookup function
-  std::string func_name =
-      node->function()->As<ast::IdentifierExpr>()->name().data();
+  std::vector<LocalVar> params;
 
-  const FunctionInfo *func_info = nullptr;
-  for (const auto &func : functions()) {
-    if (func.name() == func_name) {
-      func_info = &func;
-      break;
-    }
+  auto *func_type = node->function()->type()->As<ast::FunctionType>();
+
+  if (!func_type->return_type()->IsNilType()) {
+    LocalVar ret_val = execution_result()->GetOrCreateDestination(
+        func_type->return_type()->PointerTo());
+    params.push_back(ret_val);
   }
 
+  for (u32 i = 0; i < func_type->num_params(); i++) {
+    params.push_back(VisitExpressionForRValue(node->arguments()[i]));
+  }
+
+  const FunctionInfo *func_info = LookupFuncInfoByName(
+      node->function()->As<ast::IdentifierExpr>()->name().data());
   TPL_ASSERT(func_info != nullptr, "Function not found!");
-  TPL_ASSERT(func_info->num_params() == node->arguments().size(),
-             "Argument mismatch between AST and bytecode");
-
-  // Collect parameters
-  std::vector<LocalVar> params(func_info->num_params());
-  for (u32 i = 0; i < node->arguments().size(); i++) {
-    params[i] = VisitExpressionForRValue(node->arguments()[i]);
-  }
-
-  // Done
   emitter()->EmitCall(func_info->id(), params);
 }
 
@@ -461,11 +452,11 @@ void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
       break;
     }
     case ast::LitExpr::LitKind::Boolean: {
-      emitter()->EmitLoadImm1(target, node->bool_val());
+      emitter()->EmitAssignImm1(target, node->bool_val());
       break;
     }
     case ast::LitExpr::LitKind::Int: {
-      emitter()->EmitLoadImm4(target, node->int32_val());
+      emitter()->EmitAssignImm4(target, node->int32_val());
       break;
     }
     default: {
@@ -477,19 +468,13 @@ void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
   execution_result()->set_destination(target.ValueOf());
 }
 
-void BytecodeGenerator::VisitStructDecl(ast::StructDecl *node) {
-  // TODO
-  // curr_func()->NewLocal(node->type_repr()->type(), node->name().data(),
-  // false);
+void BytecodeGenerator::VisitStructDecl(UNUSED ast::StructDecl *node) {
+  // Nothing to do
 }
 
 void BytecodeGenerator::VisitLogicalAndOrExpr(ast::BinaryOpExpr *node) {
-  // TODO(siva): Once we support move for all types (bool), fix this to support
-  // destination of the assignment in the lhs expression.
   TPL_ASSERT(execution_result()->IsRValue(),
              "Binary expressions must be R-Values!");
-  TPL_ASSERT(node->left()->type()->kind() == node->right()->type()->kind(),
-             "Binary operation has mismatched left and right types");
   TPL_ASSERT(node->type()->IsBoolType(),
              "Boolean binary operation must be of type bool");
 
@@ -499,7 +484,7 @@ void BytecodeGenerator::VisitLogicalAndOrExpr(ast::BinaryOpExpr *node) {
   VisitExpressionForRValue(node->left(), dest);
 
   Bytecode conditional_jump;
-  Label end_label;
+  BytecodeLabel end_label;
 
   switch (node->op()) {
     case parsing::Token::Type::OR: {
@@ -529,8 +514,6 @@ void BytecodeGenerator::VisitLogicalAndOrExpr(ast::BinaryOpExpr *node) {
 void BytecodeGenerator::VisitArithmeticExpr(ast::BinaryOpExpr *node) {
   TPL_ASSERT(execution_result()->IsRValue(),
              "Arithmetic expressions must be R-Values!");
-  TPL_ASSERT(node->left()->type()->kind() == node->right()->type()->kind(),
-             "Arithmetic operation has mismatched left and right types");
 
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
   LocalVar left = VisitExpressionForRValue(node->left());
@@ -719,6 +702,20 @@ void BytecodeGenerator::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   Visit(node->body());
 }
 
+void BytecodeGenerator::BuildAssign(LocalVar dest, LocalVar ptr,
+                                    ast::Type *dest_type) {
+  // Emit the appropriate deref
+  if (auto size = dest_type->size(); size == 1) {
+    emitter()->EmitAssign<Bytecode::Assign1>(dest, ptr);
+  } else if (size == 2) {
+    emitter()->EmitAssign<Bytecode::Assign2>(dest, ptr);
+  } else if (size == 4) {
+    emitter()->EmitAssign<Bytecode::Assign4>(dest, ptr);
+  } else {
+    emitter()->EmitAssign<Bytecode::Assign8>(dest, ptr);
+  }
+}
+
 void BytecodeGenerator::BuildDeref(LocalVar dest, LocalVar ptr,
                                    ast::Type *dest_type) {
   // Emit the appropriate deref
@@ -848,7 +845,7 @@ void BytecodeGenerator::VisitMapTypeRepr(ast::MapTypeRepr *node) {
 }
 
 FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &name) {
-  auto func_id = static_cast<FunctionId>(functions().size() + 1);
+  auto func_id = static_cast<FunctionId>(functions().size());
   functions_.emplace_back(func_id, name);
   return &functions_.back();
 }
@@ -872,8 +869,8 @@ void BytecodeGenerator::VisitExpressionForRValue(ast::Expr *expr,
 }
 
 void BytecodeGenerator::VisitExpressionForTest(ast::Expr *expr,
-                                               Label *then_label,
-                                               Label *else_label,
+                                               BytecodeLabel *then_label,
+                                               BytecodeLabel *else_label,
                                                TestFallthrough fallthrough) {
   // Evaluate the expression
   LocalVar cond = VisitExpressionForRValue(expr);
@@ -904,12 +901,13 @@ Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode,
 }
 
 // static
-std::unique_ptr<Module> BytecodeGenerator::Compile(util::Region *region,
-                                                   ast::AstNode *root) {
+std::unique_ptr<BytecodeModule> BytecodeGenerator::Compile(util::Region *region,
+                                                           ast::AstNode *root) {
   BytecodeGenerator generator(region);
   generator.Visit(root);
 
-  return std::make_unique<Module>(generator.bytecode(), generator.functions());
+  return std::make_unique<BytecodeModule>(generator.bytecode(),
+                                          generator.functions());
 }
 
 }  // namespace tpl::vm

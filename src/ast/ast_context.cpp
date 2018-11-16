@@ -147,9 +147,7 @@ IntegerType *IntegerType::Get(AstContext &ctx, IntegerType::IntKind int_kind) {
     case IntegerType::IntKind::UInt64: {
       return &ctx.impl().uint64;
     }
-    default: {
-      UNREACHABLE("Impossible integer kind");
-    }
+    default: { UNREACHABLE("Impossible integer kind"); }
   }
 }
 
@@ -162,9 +160,7 @@ FloatType *FloatType::Get(tpl::ast::AstContext &ctx, FloatKind float_kind) {
     case FloatType::FloatKind::Float64: {
       return &ctx.impl().float64;
     }
-    default: {
-      UNREACHABLE("Impossible floating point kind");
-    }
+    default: { UNREACHABLE("Impossible floating point kind"); }
   }
 }
 

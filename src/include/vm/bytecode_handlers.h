@@ -43,23 +43,25 @@ extern "C" {
   void OpBitXor##_##type(type *result, type lhs, type rhs); \
   void OpBitNeg##_##type(type *result, type input);
 
-#define LOAD_CONSTANT(type) void OpLoadImm##_##type(type *result, type c);
-
 INT_TYPES(COMPARISONS)
 INT_TYPES(ARITHMETIC)
 INT_TYPES(BITS)
-INT_TYPES(LOAD_CONSTANT)
 
 #undef COMPARISONS
 #undef ARITHMETIC
 #undef BITS
-#undef LOAD_CONSTANT
 
 void OpDeref1(i8 *dest, i8 *src);
 void OpDeref2(i16 *dest, i16 *src);
 void OpDeref4(i32 *dest, i32 *src);
 void OpDeref8(i64 *dest, i64 *src);
 void OpDerefN(byte *dest, byte *src, u32 len);
+
+void OpAssign1(i8 *dest, i8 src);
+void OpAssign2(i16 *dest, i16 src);
+void OpAssign4(i32 *dest, i32 src);
+void OpAssign8(i64 *dest, i64 src);
+
 void OpLea(byte **dest, byte *base, u32 offset);
 void OpLeaScaled(byte **dest, byte *base, u32 index, u32 scale, u32 offset);
 

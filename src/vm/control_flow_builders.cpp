@@ -1,6 +1,6 @@
 #include "vm/control_flow_builders.h"
 
-#include "vm/emitter.h"
+#include "vm/bytecode_emitter.h"
 
 namespace tpl::vm {
 
@@ -17,7 +17,7 @@ BreakableBlockBuilder::~BreakableBlockBuilder() {
 
 void BreakableBlockBuilder::Break() { EmitJump(break_label()); }
 
-void BreakableBlockBuilder::EmitJump(Label *label) {
+void BreakableBlockBuilder::EmitJump(BytecodeLabel *label) {
   generator()->emitter()->EmitJump(Bytecode::Jump, label);
 }
 

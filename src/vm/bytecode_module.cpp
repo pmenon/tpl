@@ -1,4 +1,4 @@
-#include "vm/module.h"
+#include "vm/bytecode_module.h"
 
 #include <iomanip>
 #include <iostream>
@@ -45,13 +45,13 @@ void PrettyPrintFuncCode(std::ostream &os, const FunctionInfo &func,
   }
 }
 
-void PrettyPrintFunc(std::ostream &os, const Module &unit,
+void PrettyPrintFunc(std::ostream &os, const BytecodeModule &module,
                      const FunctionInfo &func) {
   PrettyPrintFuncInfo(os, func);
 
   os << std::endl;
 
-  auto iter = unit.BytecodeForFunction(func);
+  auto iter = module.BytecodeForFunction(func);
   PrettyPrintFuncCode(os, func, iter);
 
   os << std::endl;
@@ -59,7 +59,7 @@ void PrettyPrintFunc(std::ostream &os, const Module &unit,
 
 }  // namespace
 
-void Module::PrettyPrint(std::ostream &os) {
+void BytecodeModule::PrettyPrint(std::ostream &os) {
   for (const auto &func : functions()) {
     PrettyPrintFunc(os, *this, func);
   }

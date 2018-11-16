@@ -84,7 +84,7 @@ void Sema::VisitStructTypeRepr(ast::StructTypeRepr *node) {
 
 void Sema::VisitMapTypeRepr(ast::MapTypeRepr *node) {
   ast::Type *key_type = Resolve(node->key());
-  ast::Type *value_type  = Resolve(node->val());
+  ast::Type *value_type = Resolve(node->val());
 
   if (key_type == nullptr || value_type == nullptr) {
     // Error

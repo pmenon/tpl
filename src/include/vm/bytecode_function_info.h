@@ -40,7 +40,7 @@ class LocalInfo {
         index_(index),
         kind_(kind) {}
 
-  std::size_t Size() const;
+  u32 Size() const;
 
   const std::string &name() const { return name_; }
 
@@ -66,31 +66,59 @@ class LocalInfo {
  */
 class LocalVar {
  public:
-  // The different local addressing modes
+  /**
+   * The different local addressing modes
+   */
   enum class AddressMode : u8 { Address = 0, Value = 1 };
 
+  /**
+   * An invalid local variable
+   */
   LocalVar() : LocalVar(kInvalidOffset, AddressMode::Address) {}
 
+  /**
+   * A local variable with a given addressing mode
+   *
+   * @param offset
+   * @param address_mode
+   */
   LocalVar(u32 offset, AddressMode address_mode)
       : bitfield_(AddressModeField::Encode(address_mode) |
                   LocalOffsetField::Encode(offset)) {}
 
+  /**
+   * Return the addressing mode of for this local variable
+   * @return
+   */
   AddressMode GetAddressMode() const {
     return AddressModeField::Decode(bitfield_);
   }
 
+  /**
+   * Return the offset of this local variable in the frame
+   * @return
+   */
   u32 GetOffset() const { return LocalOffsetField::Decode(bitfield_); }
 
+  /**
+   * Encode this local variable into an instruction stream
+   * @return
+   */
   u32 Encode() const { return bitfield_; }
 
+  /**
+   * Decode
+   * @param bitfield
+   * @return
+   */
   static LocalVar Decode(u32 bitfield) { return LocalVar(bitfield); }
 
-  LocalVar ValueOf() const {
-//    TPL_ASSERT(GetAddressMode() == AddressMode::Address,
-//               "LocalVar is already a value");
-    return LocalVar(GetOffset(), AddressMode::Value);
-  }
+  LocalVar ValueOf() const { return LocalVar(GetOffset(), AddressMode::Value); }
 
+  /**
+   * Is this a valid local variable?
+   * @return
+   */
   bool IsInvalid() const { return GetOffset() == kInvalidOffset; }
 
  private:
@@ -120,10 +148,8 @@ class FunctionInfo {
   FunctionInfo(FunctionId id, std::string name)
       : id_(id),
         name_(std::move(name)),
-        bytecode_start_offset_(0),
-        bytecode_end_offset_(0),
+        bytecode_range_(std::make_pair(0, 0)),
         frame_size_(0),
-        has_return_(false),
         num_params_(0),
         num_temps_(0) {}
 
@@ -161,7 +187,7 @@ class FunctionInfo {
    * @param name The name of the local variable
    * @return
    */
-  LocalVar LookupLocal(const std::string &name);
+  LocalVar LookupLocal(const std::string &name) const;
 
   /**
    * Return the ID of the return value for the function
@@ -175,8 +201,7 @@ class FunctionInfo {
   void MarkBytecodeRange(std::size_t start_offset, std::size_t end_offset) {
     TPL_ASSERT(start_offset < end_offset,
                "Starting offset must be smaller than ending offset");
-    bytecode_start_offset_ = start_offset;
-    bytecode_end_offset_ = end_offset;
+    bytecode_range_ = std::make_pair(start_offset, end_offset);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -189,9 +214,9 @@ class FunctionInfo {
 
   const std::string &name() const { return name_; }
 
-  std::size_t bytecode_start_offset() const { return bytecode_start_offset_; }
-
-  std::size_t bytecode_end_offset() const { return bytecode_end_offset_; }
+  std::pair<std::size_t, std::size_t> bytecode_range() const {
+    return bytecode_range_;
+  }
 
   const std::vector<LocalInfo> &locals() const { return locals_; }
 
@@ -210,12 +235,10 @@ class FunctionInfo {
  private:
   FunctionId id_;
   std::string name_;
-  std::size_t bytecode_start_offset_;
-  std::size_t bytecode_end_offset_;
+  std::pair<std::size_t, std::size_t> bytecode_range_;
   std::vector<LocalInfo> locals_;
   std::size_t frame_size_;
 
-  bool has_return_;
   u32 num_params_;
   u32 num_temps_;
 };

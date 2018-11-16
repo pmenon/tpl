@@ -11,7 +11,7 @@
 #include "sema/sema.h"
 #include "util/region.h"
 #include "vm/bytecode_generator.h"
-#include "vm/module.h"
+#include "vm/bytecode_module.h"
 #include "vm/vm.h"
 
 namespace tpl::vm::test {
@@ -62,7 +62,13 @@ TEST_F(BytecodeGeneratorTest, LoadConstantTest) {
 
   module->PrettyPrint(std::cout);
 
-  VM::Execute(region(), *module, "test");
+  std::function<u32(u32)> f;
+  EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
+      << "Function 'test' not found in module";
+
+  EXPECT_EQ(20u, f(1));
+  EXPECT_EQ(40u, f(2));
+  EXPECT_EQ(60u, f(3));
 }
 
 TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
@@ -81,7 +87,10 @@ TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
 
   module->PrettyPrint(std::cout);
 
-  VM::Execute(region(), *module, "test");
+  std::function<bool()> f;
+  EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
+            << "Function 'test' not found in module";
+  EXPECT_FALSE(f());
 }
 
 }  // namespace tpl::vm::test

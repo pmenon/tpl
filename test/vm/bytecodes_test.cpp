@@ -12,10 +12,10 @@ TEST_F(BytecodesTest, OperandCountTest) {
   // Non-exhaustive test of operand counts for various op codes
 
   // Imm loads
-  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::LoadImm1));
-  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::LoadImm2));
-  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::LoadImm4));
-  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::LoadImm8));
+  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::AssignImm1));
+  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::AssignImm2));
+  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::AssignImm4));
+  EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::AssignImm8));
 
   // Jumps
   EXPECT_EQ(1u, Bytecodes::NumOperands(Bytecode::Jump));
@@ -38,9 +38,9 @@ TEST_F(BytecodesTest, OperandSizeTest) {
 
   // Imm loads
   EXPECT_EQ(OperandSize::Int,
-            Bytecodes::GetNthOperandSize(Bytecode::LoadImm1, 0));
+            Bytecodes::GetNthOperandSize(Bytecode::AssignImm1, 0));
   EXPECT_EQ(OperandSize::Byte,
-            Bytecodes::GetNthOperandSize(Bytecode::LoadImm1, 1));
+            Bytecodes::GetNthOperandSize(Bytecode::AssignImm1, 1));
 
   // Jumps
   EXPECT_EQ(OperandSize::Short, Bytecodes::GetOperandSizes(Bytecode::Jump)[0]);
@@ -66,9 +66,9 @@ TEST_F(BytecodesTest, OperandTypesTest) {
 
   // Imm loads
   EXPECT_EQ(OperandType::Local,
-            Bytecodes::GetNthOperandType(Bytecode::LoadImm1, 0));
+            Bytecodes::GetNthOperandType(Bytecode::AssignImm1, 0));
   EXPECT_EQ(OperandType::Imm1,
-            Bytecodes::GetNthOperandType(Bytecode::LoadImm1, 1));
+            Bytecodes::GetNthOperandType(Bytecode::AssignImm1, 1));
 
   // Jumps
   EXPECT_EQ(OperandType::UImm2,
@@ -94,10 +94,10 @@ TEST_F(BytecodesTest, BytecodeSizeTest) {
   // Non-exhaustive test of operand types for various op codes
 
   // Imm loads
-  EXPECT_EQ(9u, Bytecodes::Size(Bytecode::LoadImm1));
-  EXPECT_EQ(10u, Bytecodes::Size(Bytecode::LoadImm2));
-  EXPECT_EQ(12u, Bytecodes::Size(Bytecode::LoadImm4));
-  EXPECT_EQ(16u, Bytecodes::Size(Bytecode::LoadImm8));
+  EXPECT_EQ(9u, Bytecodes::Size(Bytecode::AssignImm1));
+  EXPECT_EQ(10u, Bytecodes::Size(Bytecode::AssignImm2));
+  EXPECT_EQ(12u, Bytecodes::Size(Bytecode::AssignImm4));
+  EXPECT_EQ(16u, Bytecodes::Size(Bytecode::AssignImm8));
 
   // Jumps
   EXPECT_EQ(6u, Bytecodes::Size(Bytecode::Jump));

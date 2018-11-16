@@ -1,34 +1,34 @@
 #pragma once
 
-#include <memory>
-#include <vector>
-
+#ifndef NDEBUG
+#include "logging/logger.h"
+#endif
 #include "util/common.h"
 #include "util/region_containers.h"
+#include "vm/bytecode_function_info.h"
 #include "vm/bytecodes.h"
 
 namespace tpl::vm {
 
-class Module;
+class BytecodeModule;
 
 class VM {
   // Use a 1K stack initially
   static constexpr u32 kDefaultInitialStackSize = 1024;
 
  public:
+  VM(util::Region *region, const BytecodeModule &module);
+
   DISALLOW_COPY_AND_MOVE(VM);
 
-  static void Execute(util::Region *region, const Module &module,
-                      const std::string &name);
+  template <typename... ArgTypes>
+  void Execute(const FunctionInfo &func, const u8 *ip, ArgTypes... args);
 
  private:
   class Frame;
+  class FrameBuilder;
 
-  VM(util::Region *region, const Module &module);
-
-  void Invoke(u32 func_id);
-
-  void XCall(const u8 *ip, Frame *caller);
+  const u8 *ExecuteCall(const u8 *ip, Frame *caller);
 
   void Interpret(const u8 *ip, Frame *frame);
 
@@ -43,8 +43,8 @@ class VM {
   void GrowStackIfNeeded(std::size_t size) {
     TPL_ASSERT(sp() < stack_capacity(), "Stack overflow!");
 
-    std::size_t room_left = stack_capacity() - sp();
-    if (size < room_left) {
+    std::size_t available = stack_capacity() - sp();
+    if (size < available) {
       return;
     }
 
@@ -76,15 +76,106 @@ class VM {
 
   std::size_t sp() const { return sp_; }
 
-  const Module &module() const { return module_; }
+  const BytecodeModule &module() const { return module_; }
 
  private:
   util::RegionVector<u8> stack_;
   std::size_t sp_;
 
-  const Module &module_;
+  const BytecodeModule &module_;
 
   u64 bytecode_counts_[Bytecodes::kBytecodeCount];
 };
+
+/**
+ * An execution frame where all function's local variables and parameters live
+ * for the duration of the function's lifetime.
+ */
+class VM::Frame {
+  friend class VM;
+
+ public:
+  Frame(VM *vm, std::size_t frame_size) : vm_(vm), frame_size_(frame_size) {
+    frame_data_ = vm->AllocateFrame(frame_size);
+    TPL_ASSERT(frame_data_ != nullptr, "Frame data cannot be null");
+    TPL_ASSERT(frame_size_ >= 0, "Frame size must be >= 0");
+  }
+
+  ~Frame() { vm()->ReleaseFrame(frame_size()); }
+
+  template <typename T>
+  T LocalAt(u32 index) const {
+    LocalVar local = LocalVar::Decode(index);
+
+    EnsureInFrame(local);
+
+    auto val = reinterpret_cast<uintptr_t>(&frame_data_[local.GetOffset()]);
+
+    if (local.GetAddressMode() == LocalVar::AddressMode::Value) {
+      return *(T *)(val);
+    }
+
+    return (T)val;
+  }
+
+ private:
+#ifndef NDEBUG
+  void EnsureInFrame(LocalVar var) const {
+    if (var.GetOffset() >= frame_size()) {
+      std::string error_msg =
+          fmt::format("Accessing local at offset {}, beyond frame of size {}",
+                      var.GetOffset(), frame_size());
+      LOG_ERROR("{}", error_msg);
+      throw std::runtime_error(error_msg);
+    }
+  }
+#else
+  void EnsureInFrame(UNUSED LocalVar var) const {}
+#endif
+
+  VM *vm() const { return vm_; }
+
+  u8 *raw_frame() const { return frame_data_; }
+
+  std::size_t frame_size() const { return frame_size_; }
+
+ private:
+  VM *vm_;
+  u8 *frame_data_;
+  std::size_t frame_size_;
+};
+
+/**
+ * Helper class to construct a frame from a set of user-provided C/C++ function
+ * arguments. Note that TPL has call-by-value semantics, hence all arguments
+ * are copied.
+ */
+class VM::FrameBuilder {
+ public:
+  template <typename... ArgTypes>
+  static void Prepare(Frame *frame, ArgTypes... args) {
+    FrameBuilder builder;
+    builder.WriteArgs(frame->raw_frame(), args...);
+  }
+
+ private:
+  inline void WriteArgs(UNUSED u8 *buffer) {}
+
+  template <typename HeadT, typename... RestT>
+  inline void WriteArgs(u8 *buffer, const HeadT &head, const RestT &... rest) {
+    TPL_MEMCPY(buffer, reinterpret_cast<const u8 *>(&head), sizeof(head));
+    WriteArgs(buffer + sizeof(head), rest...);
+  }
+};
+
+template <typename... ArgTypes>
+void VM::Execute(const FunctionInfo &func, const u8 *ip, ArgTypes... args) {
+  // Create and prepare frame for interpretation
+  VM::Frame frame(this, func.frame_size());
+  VM::FrameBuilder::Prepare(&frame, args...);
+
+  // All good, let's go
+  Interpret(ip, &frame);
+}
 
 }  // namespace tpl::vm

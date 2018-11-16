@@ -1,7 +1,7 @@
 #pragma once
 
 #include "vm/bytecode_generator.h"
-#include "vm/label.h"
+#include "vm/bytecode_label.h"
 
 namespace tpl::vm {
 
@@ -31,13 +31,13 @@ class BreakableBlockBuilder : public ControlFlowBuilder {
 
   void Break();
 
-  Label *break_label() { return &break_label_; }
+  BytecodeLabel *break_label() { return &break_label_; }
 
  protected:
-  void EmitJump(Label *label);
+  void EmitJump(BytecodeLabel *label);
 
  private:
-  Label break_label_;
+  BytecodeLabel break_label_;
 };
 
 class LoopBuilder : public BreakableBlockBuilder {
@@ -55,12 +55,12 @@ class LoopBuilder : public BreakableBlockBuilder {
   void BindContinueTarget();
 
  private:
-  Label *header_label() { return &header_label_; }
-  Label *continue_label() { return &continue_label_; }
+  BytecodeLabel *header_label() { return &header_label_; }
+  BytecodeLabel *continue_label() { return &continue_label_; }
 
  private:
-  Label header_label_;
-  Label continue_label_;
+  BytecodeLabel header_label_;
+  BytecodeLabel continue_label_;
 };
 
 /**
@@ -77,16 +77,16 @@ class IfThenElseBuilder : public ControlFlowBuilder {
   void Else();
   void JumpToEnd();
 
-  Label *then_label() { return &then_label_; }
-  Label *else_label() { return &else_label_; }
+  BytecodeLabel *then_label() { return &then_label_; }
+  BytecodeLabel *else_label() { return &else_label_; }
 
  private:
-  Label *end_label() { return &end_label_; }
+  BytecodeLabel *end_label() { return &end_label_; }
 
  private:
-  Label then_label_;
-  Label else_label_;
-  Label end_label_;
+  BytecodeLabel then_label_;
+  BytecodeLabel else_label_;
+  BytecodeLabel end_label_;
 };
 
 }  // namespace tpl::vm

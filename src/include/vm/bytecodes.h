@@ -39,12 +39,6 @@ namespace tpl::vm {
  */
 // clang-format off
 #define BYTECODE_LIST(V)                                                                                               \
-  /* Constants */                                                                                                      \
-  V(LoadImm1, OperandType::Local, OperandType::Imm1)                                                                   \
-  V(LoadImm2, OperandType::Local, OperandType::Imm2)                                                                   \
-  V(LoadImm4, OperandType::Local, OperandType::Imm4)                                                                   \
-  V(LoadImm8, OperandType::Local, OperandType::Imm8)                                                                   \
-                                                                                                                       \
   /* Primitive operations */                                                                                           \
   CREATE_FOR_INT_TYPES(V, Add, OperandType::Local, OperandType::Local, OperandType::Local)                             \
   CREATE_FOR_INT_TYPES(V, Sub, OperandType::Local, OperandType::Local, OperandType::Local)                             \
@@ -69,7 +63,7 @@ namespace tpl::vm {
   V(JumpIfTrue, OperandType::Local, OperandType::UImm2)                                                                \
   V(JumpIfFalse, OperandType::Local, OperandType::UImm2)                                                               \
                                                                                                                        \
-  /* SQL codes */                                                                                                      \
+  /* SQL operations */                                                                                                 \
   V(SqlTableIteratorInit, OperandType::Local, OperandType::UImm2)                                                      \
   V(SqlTableIteratorNext, OperandType::Local, OperandType::Local)                                                      \
   V(SqlTableIteratorClose, OperandType::Local)                                                                         \
@@ -86,11 +80,20 @@ namespace tpl::vm {
   V(EqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
   V(NotEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
                                                                                                                        \
+  /* Memory/pointer operations */                                                                                      \
   V(Deref1, OperandType::Local, OperandType::Local)                                                                    \
   V(Deref2, OperandType::Local, OperandType::Local)                                                                    \
   V(Deref4, OperandType::Local, OperandType::Local)                                                                    \
   V(Deref8, OperandType::Local, OperandType::Local)                                                                    \
   V(DerefN, OperandType::Local, OperandType::Local, OperandType::UImm4)                                                \
+  V(Assign1, OperandType::Local, OperandType::Local)                                                                   \
+  V(Assign2, OperandType::Local, OperandType::Local)                                                                   \
+  V(Assign4, OperandType::Local, OperandType::Local)                                                                   \
+  V(Assign8, OperandType::Local, OperandType::Local)                                                                   \
+  V(AssignImm1, OperandType::Local, OperandType::Imm1)                                                                 \
+  V(AssignImm2, OperandType::Local, OperandType::Imm2)                                                                 \
+  V(AssignImm4, OperandType::Local, OperandType::Imm4)                                                                 \
+  V(AssignImm8, OperandType::Local, OperandType::Imm8)                                                                 \
   V(Lea, OperandType::Local, OperandType::Local, OperandType::Imm4)                                                    \
   V(LeaScaled, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Imm4, OperandType::Imm4)       \
                                                                                                                        \

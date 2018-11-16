@@ -2,11 +2,11 @@
 
 #include "ast/ast.h"
 #include "ast/ast_visitor.h"
-#include "vm/emitter.h"
+#include "vm/bytecode_emitter.h"
 
 namespace tpl::vm {
 
-class Module;
+class BytecodeModule;
 class LoopBuilder;
 
 /**
@@ -22,8 +22,8 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   AST_NODES(DECLARE_VISIT_METHOD)
 #undef DECLARE_VISIT_METHOD
 
-  static std::unique_ptr<Module> Compile(util::Region *region,
-                                         ast::AstNode *root);
+  static std::unique_ptr<BytecodeModule> Compile(util::Region *region,
+                                                 ast::AstNode *root);
 
  private:
   // Private constructor to force users to call Compile()
@@ -32,7 +32,6 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   class ExpressionResultScope;
   class LValueResultScope;
   class RValueResultScope;
-  class TestResultScope;
   class BytecodePositionScope;
 
   // Allocate a new function ID
@@ -61,8 +60,9 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
   enum class TestFallthrough : u8 { None, Then, Else };
 
-  void VisitExpressionForTest(ast::Expr *expr, Label *then_label,
-                              Label *else_label, TestFallthrough fallthrough);
+  void VisitExpressionForTest(ast::Expr *expr, BytecodeLabel *then_label,
+                              BytecodeLabel *else_label,
+                              TestFallthrough fallthrough);
 
   // Visit the body of an iteration statement
   void VisitIterationStatement(ast::IterationStmt *iteration,
@@ -73,14 +73,24 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   void VisitPrimitiveCompareOpExpr(ast::ComparisonOpExpr *compare);
 
   void BuildDeref(LocalVar dest, LocalVar ptr, ast::Type *dest_type);
+  void BuildAssign(LocalVar dest, LocalVar ptr, ast::Type *dest_type);
   LocalVar BuildLoadPointer(LocalVar double_ptr, ast::Type *type);
 
   Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type);
 
  public:
-  Emitter *emitter() { return &emitter_; }
+  BytecodeEmitter *emitter() { return &emitter_; }
 
  private:
+  const FunctionInfo *LookupFuncInfoByName(const std::string &name) const {
+    for (const auto &func : functions()) {
+      if (func.name() == name) {
+        return &func;
+      }
+    }
+    return nullptr;
+  }
+
   ExpressionResultScope *execution_result() { return execution_result_; }
   void set_execution_result(ExpressionResultScope *execution_result) {
     execution_result_ = execution_result;
@@ -95,9 +105,6 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   }
 
  private:
-  // Region
-  util::Region *region_;
-
   // The bytecode generated during compilation
   util::RegionVector<u8> bytecode_;
 
@@ -105,7 +112,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   util::RegionVector<FunctionInfo> functions_;
 
   // Emitter to write bytecode ops
-  Emitter emitter_;
+  BytecodeEmitter emitter_;
 
   // RAII struct to capture semantics of expression evaluation
   ExpressionResultScope *execution_result_;

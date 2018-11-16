@@ -4,27 +4,23 @@
 
 #include "util/common.h"
 #include "util/region_containers.h"
+#include "vm/bytecode_function_info.h"
 #include "vm/bytecodes.h"
-#include "vm/function_info.h"
 
 namespace tpl::vm {
 
-class Label;
+class BytecodeLabel;
 
-class Emitter {
+class BytecodeEmitter {
   static const u16 kJumpPlaceholder = std::numeric_limits<u16>::max() - 1u;
 
  public:
-  explicit Emitter(util::RegionVector<u8> &bytecode) : bytecode_(bytecode) {}
+  explicit BytecodeEmitter(util::RegionVector<u8> &bytecode)
+      : bytecode_(bytecode) {}
 
-  DISALLOW_COPY_AND_MOVE(Emitter);
+  DISALLOW_COPY_AND_MOVE(BytecodeEmitter);
 
   std::size_t position() const { return bytecode_.size(); }
-
-  void EmitLoadImm1(LocalVar dest, i8 val);
-  void EmitLoadImm2(LocalVar dest, i16 val);
-  void EmitLoadImm4(LocalVar dest, i32 val);
-  void EmitLoadImm8(LocalVar dest, i64 val);
 
   template <Bytecode DerefCode>
   void EmitDeref(LocalVar dest, LocalVar src) {
@@ -42,8 +38,24 @@ class Emitter {
     EmitImmediateValue(len);
   }
 
-  void EmitJump(Bytecode bytecode, Label *label);
-  void EmitConditionalJump(Bytecode bytecode, LocalVar cond, Label *label);
+  template <Bytecode AssignCode>
+  void EmitAssign(LocalVar dest, LocalVar src) {
+    static_assert(
+        AssignCode == Bytecode::Assign1 || AssignCode == Bytecode::Assign2 ||
+            AssignCode == Bytecode::Assign4 || AssignCode == Bytecode::Assign8,
+        "Must only call EmitDeref with scalar Deref[1|2|4|8] code");
+    EmitOp(AssignCode);
+    EmitLocalVars(dest, src);
+  }
+
+  void EmitAssignImm1(LocalVar dest, i8 val);
+  void EmitAssignImm2(LocalVar dest, i16 val);
+  void EmitAssignImm4(LocalVar dest, i32 val);
+  void EmitAssignImm8(LocalVar dest, i64 val);
+
+  void EmitJump(Bytecode bytecode, BytecodeLabel *label);
+  void EmitConditionalJump(Bytecode bytecode, LocalVar cond,
+                           BytecodeLabel *label);
 
   void EmitLea(LocalVar dest, LocalVar src, u32 offset);
   void EmitLeaScaled(LocalVar dest, LocalVar src, LocalVar index, u32 scale,
@@ -74,7 +86,7 @@ class Emitter {
     EmitImmediateValue(imm);
   }
 
-  void Bind(Label *label);
+  void Bind(BytecodeLabel *label);
 
  private:
   template <typename T,
@@ -97,7 +109,7 @@ class Emitter {
     (EmitLocalVar(locals), ...);
   }
 
-  void EmitJump(Label *label);
+  void EmitJump(BytecodeLabel *label);
 
  private:
   util::RegionVector<u8> &bytecode_;

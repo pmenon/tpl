@@ -89,18 +89,13 @@
   /* Primitive bitwise COMPLEMENT */                         \
   void OpBitNeg##_##type(type *result, type input) { *result = ~input; }
 
-#define LOAD_CONSTANT(type) \
-  void OpLoadImm##_##type(type *result, type c) { *result = c; }
-
 INT_TYPES(COMPARISONS);
 INT_TYPES(ARITHMETIC);
 INT_TYPES(BITS);
-INT_TYPES(LOAD_CONSTANT)
 
 #undef COMPARISONS
 #undef ARITHMETIC
 #undef BITS
-#undef LOAD_CONSTANT
 
 void OpDeref1(i8 *dest, i8 *src) { *dest = *src; }
 
@@ -111,6 +106,14 @@ void OpDeref4(i32 *dest, i32 *src) { *dest = *src; }
 void OpDeref8(i64 *dest, i64 *src) { *dest = *src; }
 
 void OpDerefN(byte *dest, byte *src, u32 len) { std::memcpy(dest, src, len); }
+
+void OpAssign1(i8 *dest, i8 src) { *dest = src; }
+
+void OpAssign2(i16 *dest, i16 src) { *dest = src; }
+
+void OpAssign4(i32 *dest, i32 src) { *dest = src; }
+
+void OpAssign8(i64 *dest, i64 src) { *dest = src; }
 
 void OpLea(byte **dest, byte *base, u32 offset) { *dest = base + offset; }
 
