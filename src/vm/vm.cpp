@@ -225,22 +225,6 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-#if 0
-#define GEN_LOAD_IMM(type, size)                          \
-  OP(LoadImm##size) : {                                   \
-    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
-    type val = READ_IMM##size();                          \
-    OpLoadImm_##type(dest, val);                          \
-    DISPATCH_NEXT();                                      \
-  }
-
-  GEN_LOAD_IMM(i8, 1);
-  GEN_LOAD_IMM(i16, 2);
-  GEN_LOAD_IMM(i32, 4);
-  GEN_LOAD_IMM(i64, 8);
-#undef GEN_LOAD_IMM
-#endif
-
 #define GEN_DEREF(type, size)                             \
   OP(Deref##size) : {                                     \
     type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \

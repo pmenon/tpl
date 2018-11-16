@@ -24,7 +24,7 @@
 *.swp
 *~
 
-# IntelliJ
+# Any IDEA IDE project files
 .idea
 *.iml
 
@@ -42,9 +42,6 @@
 
 # QtCreator files
 *.user
-
-# PyCharm files
-.idea
 
 # OSX dir files
 .DS_Store
