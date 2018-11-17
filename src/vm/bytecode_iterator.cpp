@@ -1,5 +1,7 @@
 #include "vm/bytecode_iterator.h"
 
+#include "vm/bytecode_traits.h"
+
 namespace tpl::vm {
 
 BytecodeIterator::BytecodeIterator(const util::RegionVector<u8> &bytecode)
@@ -19,9 +21,22 @@ Bytecode BytecodeIterator::current_bytecode() const {
 }
 
 void BytecodeIterator::Advance() {
-  if (!Done()) {
-    curr_offset_ += Bytecodes::Size(current_bytecode());
+  if (Done()) {
+    return;
   }
+
+  auto bytecode = current_bytecode();
+
+  u32 offset = 0;
+  if (Bytecodes::IsCall(bytecode)) {
+    // The parameter count is the second argument to the call instruction
+    auto num_param_offset = Bytecodes::GetNthOperandOffset(bytecode, 1);
+    auto num_params = *reinterpret_cast<const u16 *>(
+        &bytecodes_[current_offset() + num_param_offset]);
+    offset = (num_params * OperandTypeTraits<OperandType::Local>::kSize);
+  }
+
+  curr_offset_ += Bytecodes::Size(bytecode) + offset;
 }
 
 bool BytecodeIterator::Done() const { return current_offset() >= end_offset(); }

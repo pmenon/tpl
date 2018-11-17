@@ -162,6 +162,9 @@ class Bytecodes {
     return GetOperandSizes(bytecode)[idx];
   }
 
+  // Return the offset of the Nth operand of the given bytecode
+  static u32 GetNthOperandOffset(Bytecode bytecode, u8 idx);
+
   // Return the total size (in bytes) of the bytecode including its operands
   static u32 Size(Bytecode bytecode) {
     return kBytecodeSizes[static_cast<u32>(bytecode)];
@@ -184,6 +187,10 @@ class Bytecodes {
     return (bytecode == Bytecode::Jump || bytecode == Bytecode::JumpLoop ||
             bytecode == Bytecode::JumpIfFalse ||
             bytecode == Bytecode::JumpIfTrue);
+  }
+
+  static bool IsCall(Bytecode bytecode) {
+    return (bytecode == Bytecode::Call);
   }
 
  private:

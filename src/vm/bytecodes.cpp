@@ -1,6 +1,7 @@
 #include "vm/bytecodes.h"
 
 #include <algorithm>
+#include <vm/bytecodes.h>
 
 #include "vm/bytecode_traits.h"
 
@@ -49,6 +50,16 @@ u32 Bytecodes::MaxBytecodeNameLength() {
 #undef ENTRY
   });
   return kMaxInstNameLength;
+}
+
+u32 Bytecodes::GetNthOperandOffset(Bytecode bytecode, u8 idx) {
+  TPL_ASSERT(idx < NumOperands(bytecode), "Invalid operand index");
+  u32 offset = sizeof(std::underlying_type_t<Bytecode>);
+  for (u32 i = 0; i < idx; i++) {
+    OperandSize operand_size = GetNthOperandSize(bytecode, i);
+    offset += static_cast<u32>(operand_size);
+  }
+  return offset;
 }
 
 }  // namespace tpl::vm
