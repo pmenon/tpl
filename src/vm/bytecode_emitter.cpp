@@ -85,7 +85,7 @@ void BytecodeEmitter::EmitCall(FunctionId func_id,
              "Too many parameters!");
 
   EmitOp(Bytecode::Call);
-  EmitImmediateValue(func_id);
+  EmitImmediateValue(static_cast<u16>(func_id));
   EmitImmediateValue(static_cast<u16>(params.size()));
   for (LocalVar local : params) {
     EmitLocalVar(local);

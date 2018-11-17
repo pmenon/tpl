@@ -409,20 +409,29 @@ void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
 }
 
 void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
+  TPL_ASSERT(execution_result()->IsRValue(), "Calls can only be R-Values!");
+
   std::vector<LocalVar> params;
 
   auto *func_type = node->function()->type()->As<ast::FunctionType>();
 
   if (!func_type->return_type()->IsNilType()) {
     LocalVar ret_val = execution_result()->GetOrCreateDestination(
-        func_type->return_type()->PointerTo());
+        func_type->return_type());
+
+    // Push return value address into parameter list
     params.push_back(ret_val);
+
+    // Let the caller know where the result value is
+    execution_result()->set_destination(ret_val.ValueOf());
   }
 
+  // Collect non-return-value parameters as usual
   for (u32 i = 0; i < func_type->num_params(); i++) {
     params.push_back(VisitExpressionForRValue(node->arguments()[i]));
   }
 
+  // Emit call
   const FunctionInfo *func_info = LookupFuncInfoByName(
       node->function()->As<ast::IdentifierExpr>()->name().data());
   TPL_ASSERT(func_info != nullptr, "Function not found!");
