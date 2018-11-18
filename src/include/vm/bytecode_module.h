@@ -56,9 +56,6 @@ class BytecodeModule {
     return BytecodeIterator(code_, start, end);
   }
 
-  template <typename... ArgTypes>
-  struct FunctionHelper;
-
   /**
    * Retrieve and wrap a TPL function inside a C++ function object, thus making
    * the TPL function callable as a C++ function. Callers can request different
@@ -125,47 +122,9 @@ class BytecodeModule {
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename RetT, typename... ArgTypes>
-struct BytecodeModule::FunctionHelper<RetT, ArgTypes...> {
-  static void Wrap(const BytecodeModule &module, const FunctionInfo &func_info,
-                   std::function<RetT(ArgTypes...)> &func) {
-    func = [&module, &func_info](ArgTypes... args) -> RetT {
-      // Create allocator for execution
-      util::Region region(func_info.name() + "-exec-region");
-
-      // The virtual machine
-      VM vm(&region, module);
-
-      // Let's go
-      RetT rv{};
-      const u8 *ip = module.GetBytecodeForFunction(func_info);
-      vm.Execute(func_info, ip, &rv, args...);
-      return rv;
-    };
-  }
-};
-
-template <typename... ArgTypes>
-struct BytecodeModule::FunctionHelper<void, ArgTypes...> {
-  static void Wrap(const BytecodeModule &module, const FunctionInfo &func_info,
-                   std::function<void(ArgTypes...)> &func) {
-    func = [&module, &func_info](ArgTypes... args) {
-      // Create allocator for execution
-      util::Region region(func_info.name() + "-exec-region");
-
-      // The virtual machine
-      VM vm(&region, module);
-
-      // Let's go
-      const u8 *ip = module.GetBytecodeForFunction(func_info);
-      vm.Execute(func_info, ip, args...);
-    };
-  }
-};
-
-template <typename RetT, typename... ArgTs>
 bool BytecodeModule::GetFunction(const std::string &name,
                                  ExecutionMode exec_mode,
-                                 std::function<RetT(ArgTs...)> &func) const {
+                                 std::function<RetT(ArgTypes...)> &func) const {
   const FunctionInfo *func_info = GetFuncInfoByName(name);
 
   // Check valid function
@@ -174,15 +133,30 @@ bool BytecodeModule::GetFunction(const std::string &name,
   }
 
   // Verify argument counts
-  constexpr u32 num_params = sizeof...(ArgTs) + !std::is_void_v<RetT>;
+  constexpr u32 num_params = sizeof...(ArgTypes) + !std::is_void_v<RetT>;
   if (num_params != func_info->num_params()) {
     return false;
   }
 
   switch (exec_mode) {
     case ExecutionMode::Interpret: {
-      BytecodeModule::FunctionHelper<RetT, ArgTs...>::Wrap(*this, *func_info,
-                                                           func);
+      if constexpr (std::is_void_v<RetT>) {
+        func = [this, func_info](ArgTypes... args) {
+          util::Region region(func_info->name() + "-exec-region");
+          VM vm(&region, *this);
+          vm.Execute(*func_info, GetBytecodeForFunction(*func_info),
+                     std::forward(args)...);
+        };
+      } else {
+        func = [this, func_info](ArgTypes... args) -> RetT {
+          RetT rv{};
+          util::Region region(func_info->name() + "-exec-region");
+          VM vm(&region, *this);
+          vm.Execute(*func_info, GetBytecodeForFunction(*func_info), &rv,
+                     std::forward(args)...);
+          return rv;
+        };
+      }
       return true;
     }
     default: {

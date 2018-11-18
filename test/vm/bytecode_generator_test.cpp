@@ -48,7 +48,7 @@ class BytecodeExpectations {
   ast::AstContext ctx_;
 };
 
-TEST_F(BytecodeGeneratorTest, LoadConstantTest) {
+TEST_F(BytecodeGeneratorTest, SimpleTest) {
   auto src = R"(
     fun test(x: uint32) -> uint32 {
       var y : uint32 = 20
@@ -91,6 +91,78 @@ TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
   EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
             << "Function 'test' not found in module";
   EXPECT_FALSE(f());
+}
+
+TEST_F(BytecodeGeneratorTest, ParameterPassingTest) {
+  auto src = R"(
+    struct S {
+      a: int
+      b: int
+    }
+    fun test(s: *S) -> bool {
+      s.a = 10
+      s.b = s.a * 2
+      return true
+    })";
+  BytecodeExpectations expectations(region());
+  auto *ast = expectations.Compile(src);
+
+  // Try generating bytecode for this declaration
+  auto module = BytecodeGenerator::Compile(region(), ast);
+
+  module->PrettyPrint(std::cout);
+
+  struct S {
+    int a;
+    int b;
+  };
+
+  std::function<bool(S *s)> f;
+  EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
+            << "Function 'test' not found in module";
+
+  S s{.a = 0, .b = 0};
+  EXPECT_TRUE(f(&s));
+  EXPECT_EQ(10, s.a);
+  EXPECT_EQ(20, s.b);
+}
+
+TEST_F(BytecodeGeneratorTest, FunctionTest) {
+  auto src = R"(
+    struct S {
+      a: int
+      b: int
+    }
+    fun f(s: *S) -> bool {
+      s.b = s.a * 2
+      return true
+    }
+    fun test(s: *S) -> bool {
+      s.a = 10
+      f(s)
+      return true
+    })";
+  BytecodeExpectations expectations(region());
+  auto *ast = expectations.Compile(src);
+
+  // Try generating bytecode for this declaration
+  auto module = BytecodeGenerator::Compile(region(), ast);
+
+  module->PrettyPrint(std::cout);
+
+  struct S {
+    int a;
+    int b;
+  };
+
+  std::function<bool(S *s)> f;
+  EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
+            << "Function 'test' not found in module";
+
+  S s{.a = 0, .b = 0};
+  EXPECT_TRUE(f(&s));
+  EXPECT_EQ(10, s.a);
+  EXPECT_EQ(20, s.b);
 }
 
 }  // namespace tpl::vm::test

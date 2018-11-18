@@ -373,20 +373,43 @@ void BytecodeGenerator::VisitVariableDecl(ast::VariableDecl *node) {
   }
 }
 
-void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
-  LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
-  LocalVar input = VisitExpressionForRValue(node->expr());
+void BytecodeGenerator::VisitAddressOfExpr(ast::UnaryOpExpr *op) {
+  TPL_ASSERT(execution_result()->IsRValue(),
+             "Address-of expressions must be R-values!");
+  /*
+   * TODO(pmenon): Remove extra assignment
+   *
+   * L-values can't take a target local to store into address values into. Thus,
+   * we evaluate as an R-value into a temporary and copy into the real
+   * destination. Optimize later ...
+   */
+  LocalVar dest = execution_result()->GetOrCreateDestination(op->type());
+  LocalVar addr = VisitExpressionForLValue(op->expr());
+  BuildAssign(dest, addr, op->type());
+  execution_result()->set_destination(dest.ValueOf());
+}
+
+void BytecodeGenerator::VisitDerefExpr(ast::UnaryOpExpr *op) {
+  LocalVar dest = execution_result()->GetOrCreateDestination(op->type());
+  LocalVar addr = VisitExpressionForRValue(op->expr());
+  BuildDeref(dest, addr, op->type());
+  execution_result()->set_destination(dest.ValueOf());
+}
+
+void BytecodeGenerator::VisitArithmeticUnaryExpr(ast::UnaryOpExpr *op) {
+  LocalVar dest = execution_result()->GetOrCreateDestination(op->type());
+  LocalVar input = VisitExpressionForRValue(op->expr());
 
   Bytecode bytecode;
-  switch (node->op()) {
+  switch (op->op()) {
     case parsing::Token::Type::MINUS: {
       bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Neg),
-                                     node->type());
+                                     op->type());
       break;
     }
     case parsing::Token::Type::BIT_NOT: {
       bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitNeg),
-                                     node->type());
+                                     op->type());
       break;
     }
     default: { UNREACHABLE("Impossible unary operation"); }
@@ -399,6 +422,25 @@ void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
   execution_result()->set_destination(dest);
 }
 
+void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
+  switch (node->op()) {
+    case parsing::Token::Type::AMPERSAND: {
+      VisitAddressOfExpr(node);
+      break;
+    }
+    case parsing::Token::Type::STAR: {
+      VisitDerefExpr(node);
+      break;
+    }
+    case parsing::Token::Type::MINUS:
+    case parsing::Token::Type::BIT_NOT: {
+      VisitArithmeticUnaryExpr(node);
+      break;
+    }
+    default: { UNREACHABLE("Impossible unary operation"); }
+  }
+}
+
 void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
   if (node->ret() != nullptr) {
     LocalVar rv = current_function()->GetRVLocal();
@@ -409,21 +451,28 @@ void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
 }
 
 void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
-  TPL_ASSERT(execution_result()->IsRValue(), "Calls can only be R-Values!");
+  bool caller_wants_result = execution_result() != nullptr;
+  TPL_ASSERT(!caller_wants_result || execution_result()->IsRValue(),
+             "Calls can only be R-Values!");
 
   std::vector<LocalVar> params;
 
   auto *func_type = node->function()->type()->As<ast::FunctionType>();
 
   if (!func_type->return_type()->IsNilType()) {
-    LocalVar ret_val = execution_result()->GetOrCreateDestination(
-        func_type->return_type());
+    LocalVar ret_val;
+    if (caller_wants_result) {
+      ret_val =
+          execution_result()->GetOrCreateDestination(func_type->return_type());
+
+      // Let the caller know where the result value is
+      execution_result()->set_destination(ret_val.ValueOf());
+    } else {
+      ret_val = current_function()->NewTempLocal(func_type->return_type());
+    }
 
     // Push return value address into parameter list
     params.push_back(ret_val);
-
-    // Let the caller know where the result value is
-    execution_result()->set_destination(ret_val.ValueOf());
   }
 
   // Collect non-return-value parameters as usual

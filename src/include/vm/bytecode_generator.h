@@ -37,10 +37,15 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   // Allocate a new function ID
   FunctionInfo *AllocateFunc(const std::string &name);
 
-  // These are dispatched from VisitBinaryOpExpr() for handling logical boolean
+  // Dispatched from VisitBinaryOpExpr() for handling logical boolean
   // expressions and arithmetic expressions
   void VisitLogicalAndOrExpr(ast::BinaryOpExpr *node);
   void VisitArithmeticExpr(ast::BinaryOpExpr *node);
+
+  // Dispatched from VisitUnaryOp()
+  void VisitAddressOfExpr(ast::UnaryOpExpr *op);
+  void VisitDerefExpr(ast::UnaryOpExpr *op);
+  void VisitArithmeticUnaryExpr(ast::UnaryOpExpr *op);
 
   // Dispatched from VisitIndexExpr() to distinguish between array and map
   // access.
