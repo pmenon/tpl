@@ -140,20 +140,19 @@ bool BytecodeModule::GetFunction(const std::string &name,
 
   switch (exec_mode) {
     case ExecutionMode::Interpret: {
+      const u8 *ip = GetBytecodeForFunction(*func_info);
       if constexpr (std::is_void_v<RetT>) {
-        func = [this, func_info](ArgTypes... args) {
+        func = [this, func_info, ip](ArgTypes... args) {
           util::Region region(func_info->name() + "-exec-region");
           VM vm(&region, *this);
-          vm.Execute(*func_info, GetBytecodeForFunction(*func_info),
-                     std::forward(args)...);
+          vm.Execute(*func_info, ip, args...);
         };
       } else {
-        func = [this, func_info](ArgTypes... args) -> RetT {
+        func = [this, func_info, ip](ArgTypes... args) -> RetT {
           RetT rv{};
           util::Region region(func_info->name() + "-exec-region");
           VM vm(&region, *this);
-          vm.Execute(*func_info, GetBytecodeForFunction(*func_info), &rv,
-                     std::forward(args)...);
+          vm.Execute(*func_info, ip, &rv, args...);
           return rv;
         };
       }
