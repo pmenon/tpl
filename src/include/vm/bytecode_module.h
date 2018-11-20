@@ -92,6 +92,9 @@ class BytecodeModule {
  private:
   friend class VM;
 
+  template <typename... ArgTypes>
+  struct FunctionHelper;
+
   const FunctionInfo *GetFuncInfoByName(const std::string &name) const {
     for (const auto &func : functions_) {
       if (func.name() == name) return &func;
@@ -122,6 +125,44 @@ class BytecodeModule {
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename RetT, typename... ArgTypes>
+struct BytecodeModule::FunctionHelper<RetT, ArgTypes...> {
+  static void Wrap(const BytecodeModule &module, const FunctionInfo &func_info,
+                   std::function<RetT(ArgTypes...)> &func) {
+    func = [&module, &func_info](ArgTypes... args) -> RetT {
+      // Create allocator for execution
+      util::Region region(func_info.name() + "-exec-region");
+
+      // The virtual machine
+      VM vm(&region, module);
+
+      // Let's go
+      RetT rv{};
+      const u8 *ip = module.GetBytecodeForFunction(func_info);
+      vm.Execute(func_info, ip, &rv, args...);
+      return rv;
+    };
+  }
+};
+
+template <typename... ArgTypes>
+struct BytecodeModule::FunctionHelper<void, ArgTypes...> {
+  static void Wrap(const BytecodeModule &module, const FunctionInfo &func_info,
+                   std::function<void(ArgTypes...)> &func) {
+    func = [&module, &func_info](ArgTypes... args) {
+      // Create allocator for execution
+      util::Region region(func_info.name() + "-exec-region");
+
+      // The virtual machine
+      VM vm(&region, module);
+
+      // Let's go
+      const u8 *ip = module.GetBytecodeForFunction(func_info);
+      vm.Execute(func_info, ip, args...);
+    };
+  }
+};
+
+template <typename RetT, typename... ArgTypes>
 bool BytecodeModule::GetFunction(const std::string &name,
                                  ExecutionMode exec_mode,
                                  std::function<RetT(ArgTypes...)> &func) const {
@@ -140,22 +181,7 @@ bool BytecodeModule::GetFunction(const std::string &name,
 
   switch (exec_mode) {
     case ExecutionMode::Interpret: {
-      const u8 *ip = GetBytecodeForFunction(*func_info);
-      if constexpr (std::is_void_v<RetT>) {
-        func = [this, func_info, ip](ArgTypes... args) {
-          util::Region region(func_info->name() + "-exec-region");
-          VM vm(&region, *this);
-          vm.Execute(*func_info, ip, args...);
-        };
-      } else {
-        func = [this, func_info, ip](ArgTypes... args) -> RetT {
-          RetT rv{};
-          util::Region region(func_info->name() + "-exec-region");
-          VM vm(&region, *this);
-          vm.Execute(*func_info, ip, &rv, args...);
-          return rv;
-        };
-      }
+      FunctionHelper<RetT, ArgTypes...>::Wrap(*this, *func_info, func);
       return true;
     }
     default: {
