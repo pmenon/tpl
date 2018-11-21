@@ -2,6 +2,9 @@
 
 #include <iostream>
 
+// TODO(siva): Hack! Fix me!
+u32 current_partition = -1;
+
 namespace tpl::sql {
 
 void Table::BulkInsert(std::vector<Table::ColumnVector> &&data, u32 num_rows) {
@@ -9,7 +12,8 @@ void Table::BulkInsert(std::vector<Table::ColumnVector> &&data, u32 num_rows) {
 }
 
 bool Table::Scan(TableIterator *iter) const {
-  if (iter->block_ == blocks_.size()) {
+  if ((current_partition == -1 && iter->block_ == blocks_.size())
+      || (iter->block_ != current_partition)) {
     return false;
   }
 
