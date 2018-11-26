@@ -5,6 +5,7 @@
 
 #include "llvm/Support/ErrorHandling.h"
 
+#define RESTRICT __restrict__
 #define UNUSED __attribute__((unused))
 #define ALWAYS_INLINE __attribute__((always_inline))
 #define NEVER_INLINE __attribute__((noinline))
