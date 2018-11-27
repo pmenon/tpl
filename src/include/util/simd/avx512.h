@@ -4,8 +4,11 @@
 
 #include "util/common.h"
 #include "util/macros.h"
+#include "util/simd/types.h"
 
 namespace tpl::util::simd {
+
+#define USE_GATHER 1
 
 /**
  * A 512-bit SIMD register vector. This is a purely internal class that holds
@@ -37,21 +40,21 @@ class Vec8 : public Vec512b {
   }
 
   template <typename T>
-  void Load(const T *ptr) {
-    reg_ = _mm512_loadu_si512(reinterpret_cast<const __m512i *>(ptr));
-  }
+  void Load(const T *ptr);
 
   template <typename T>
   void Gather(const T *ptr, const Vec8 &pos) {
+#if USE_GATHER
+    reg_ = _mm512_i64gather_epi64(pos, ptr, 8);
+#else
     alignas(64) i64 x[Size()];
     pos.Store(x);
     reg_ = _mm512_setr_epi64(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
                              ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
+#endif
   }
 
-  ALWAYS_INLINE void Store(i64 *ptr) const {
-    _mm512_store_si512(reinterpret_cast<__m512i *>(ptr), reg());
-  }
+  ALWAYS_INLINE void Store(i64 *ptr) const { _mm512_storeu_si512(ptr, reg()); }
 
   ALWAYS_INLINE i64 Extract(u32 index) const {
     TPL_ASSERT(index < 8, "Out-of-bounds mask element access");
@@ -105,14 +108,28 @@ class Vec8Mask {
   Vec8Mask(const __mmask8 &mask) : mask_(mask) {}
 
   ALWAYS_INLINE u32 ToPositions(u32 *positions, u32 offset) const {
-    __m512i sequence = _mm512_setr_epi64(0, 1, 2, 3, 4, 5, 6, 7);
-    __m512i pos_vec = _mm512_add_epi64(sequence, _mm512_set1_epi64(offset));
-    _mm512_mask_cvtepi64_storeu_epi16(positions, mask_, pos_vec);
+    // TODO(pmenon): This uses AVX2, can we use AVX512?
+    const __m128i match_pos_scaled = _mm_loadl_epi64(
+        reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask_]));
+    const __m256i match_pos = _mm256_cvtepi8_epi32(match_pos_scaled);
+    const __m256i pos_vec =
+        _mm256_add_epi32(_mm256_set1_epi32(offset), match_pos);
+    _mm256_storeu_si256(reinterpret_cast<__m256i *>(positions), pos_vec);
     return __builtin_popcountll(mask_);
   }
 
   ALWAYS_INLINE u32 ToPositions(u32 *positions, const Vec8 &pos) const {
-    _mm512_mask_cvtepi64_storeu_epi16(positions, mask_, pos);
+    // TODO(pmenon): This uses AVX2, can we use AVX512?
+    const __m128i perm_comp = _mm_loadl_epi64(
+        reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask_]));
+    const __m256i perm = _mm256_cvtepi8_epi32(perm_comp);
+    const __m256i mask =
+        _mm256_maskz_broadcastd_epi32(mask_, _mm_set1_epi32(-1));
+    const __m256i pos_scaled = _mm512_cvtepi64_epi32(pos);
+    const __m256i perm_pos = _mm256_permutevar8x32_epi32(pos_scaled, perm);
+    const __m256i perm_mask = _mm256_permutevar8x32_epi32(mask, perm);
+    _mm256_maskstore_epi32(reinterpret_cast<i32 *>(positions), perm_mask,
+                           perm_pos);
     return __builtin_popcountll(mask_);
   }
 
@@ -120,11 +137,11 @@ class Vec8Mask {
     return (static_cast<u32>(mask_) >> index) & 1;
   }
 
-  ALWAYS_INLINE bool operator[](uint32_t index) const { return Extract(index); }
+  ALWAYS_INLINE bool operator[](u32 index) const { return Extract(index); }
 
   ALWAYS_INLINE operator __mmask8() const { return mask_; }
 
-  static constexpr int Size() { return 8; }
+  ALWAYS_INLINE static constexpr int Size() { return 8; }
 
  private:
   __mmask8 mask_;
@@ -152,15 +169,38 @@ class Vec16Mask {
     return (static_cast<u32>(mask_) >> index) & 1;
   }
 
-  ALWAYS_INLINE bool operator[](uint32_t index) const { return Extract(index); }
+  ALWAYS_INLINE bool operator[](u32 index) const { return Extract(index); }
 
   ALWAYS_INLINE operator __mmask16() const { return mask_; }
 
-  static constexpr int Size() { return 16; }
+  ALWAYS_INLINE static constexpr int Size() { return 16; }
 
  private:
   __mmask16 mask_;
 };
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// Vec8
+///
+////////////////////////////////////////////////////////////////////////////////
+
+template <typename T>
+ALWAYS_INLINE inline void Vec8::Load(const T *ptr) {
+  using signed_t = std::make_signed_t<T>;
+  Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
+}
+
+template <>
+ALWAYS_INLINE inline void Vec8::Load<i32>(const i32 *ptr) {
+  auto tmp = _mm256_load_si256(reinterpret_cast<const __m256i *>(ptr));
+  reg_ = _mm512_cvtepi32_epi64(tmp);
+}
+
+template <>
+ALWAYS_INLINE inline void Vec8::Load<i64>(const i64 *ptr) {
+  reg_ = _mm512_loadu_si512((const __m512i *)ptr);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 ///
@@ -176,19 +216,19 @@ ALWAYS_INLINE inline void Vec16::Load(const T *ptr) {
 
 template <>
 ALWAYS_INLINE inline void Vec16::Load<i8>(const i8 *ptr) {
-  auto tmp = _mm_loadu_si128((const __m128i *)ptr);
+  auto tmp = _mm_loadu_si128(reinterpret_cast<const __m128i *>(ptr));
   reg_ = _mm512_cvtepi8_epi32(tmp);
 }
 
 template <>
 ALWAYS_INLINE inline void Vec16::Load<i16>(const i16 *ptr) {
-  auto tmp = _mm256_loadu_si256((const __m256i *)ptr);
+  auto tmp = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(ptr));
   reg_ = _mm512_cvtepi16_epi32(tmp);
 }
 
 template <>
 ALWAYS_INLINE inline void Vec16::Load<i32>(const i32 *ptr) {
-  reg_ = _mm512_loadu_si512((const __m512i *)ptr);
+  reg_ = _mm512_loadu_si512(ptr);
 }
 
 template <typename T>
@@ -378,15 +418,13 @@ static inline u32 Filter(const T *RESTRICT in, u32 in_count, T val,
   using Vec = typename FilterVecSizer<T>::Vec;
   using VecMask = typename FilterVecSizer<T>::VecMask;
 
-  const Vec xval(val);
-
   const Compare cmp;
+  const Vec xval(val);
 
   u32 out_pos = 0;
 
   if (sel == nullptr) {
     Vec in_vec;
-
     for (in_pos = 0; in_pos + Vec::Size() < in_count; in_pos += Vec::Size()) {
       in_vec.Load(in + in_pos);
       VecMask mask = cmp(in_vec, xval);
@@ -394,7 +432,6 @@ static inline u32 Filter(const T *RESTRICT in, u32 in_count, T val,
     }
   } else {
     Vec in_vec, sel_vec;
-
     for (in_pos = 0; in_pos + Vec::Size() < in_count; in_pos += Vec::Size()) {
       sel_vec.Load(sel + in_pos);
       in_vec.Gather(in, sel_vec);
