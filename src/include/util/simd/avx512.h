@@ -107,14 +107,12 @@ class Vec8Mask {
   ALWAYS_INLINE u32 ToPositions(u32 *positions, u32 offset) const {
     __m512i sequence = _mm512_setr_epi64(0, 1, 2, 3, 4, 5, 6, 7);
     __m512i pos_vec = _mm512_add_epi64(sequence, _mm512_set1_epi64(offset));
-    _mm512_mask_compressstoreu_epi64(reinterpret_cast<__m512i *>(positions),
-                                     mask_, pos_vec);
+    _mm512_mask_cvtepi64_storeu_epi16(positions, mask_, pos_vec);
     return __builtin_popcountll(mask_);
   }
 
   ALWAYS_INLINE u32 ToPositions(u32 *positions, const Vec8 &pos) const {
-    _mm512_mask_compressstoreu_epi64(reinterpret_cast<__m512i *>(positions),
-                                     mask_, pos);
+    _mm512_mask_cvtepi64_storeu_epi16(positions, mask_, pos);
     return __builtin_popcountll(mask_);
   }
 
@@ -141,14 +139,12 @@ class Vec16Mask {
     __m512i sequence =
         _mm512_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
     __m512i pos_vec = _mm512_add_epi32(sequence, _mm512_set1_epi32(offset));
-    _mm512_mask_compressstoreu_epi32(reinterpret_cast<__m512i *>(positions),
-                                     mask_, pos_vec);
+    _mm512_mask_compressstoreu_epi32(positions, mask_, pos_vec);
     return __builtin_popcountll(mask_);
   }
 
   ALWAYS_INLINE u32 ToPositions(u32 *positions, const Vec16 &pos) const {
-    _mm512_mask_compressstoreu_epi32(reinterpret_cast<__m512i *>(positions),
-                                     mask_, pos);
+    _mm512_mask_compressstoreu_epi32(positions, mask_, pos);
     return __builtin_popcountll(mask_);
   }
 
