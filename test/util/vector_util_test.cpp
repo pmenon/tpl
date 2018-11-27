@@ -163,7 +163,7 @@ TEST_F(VectorUtilTest, MaskToPositionTest) {
 
   simd::Vec8Mask mask = vec > val;
 
-  u32 positions[8] = {0};
+  alignas(64) u32 positions[8] = {0};
 
   u32 count = mask.ToPositions(positions, 0);
   EXPECT_EQ(4u, count);
@@ -295,7 +295,7 @@ TEST_F(VectorUtilTest, MultiFilterTest) {
 
 TEST_F(VectorUtilTest, DISABLED_PerfSelectTest) {
   constexpr u32 num_elems = 128 * 1024u * 1024u;
-  constexpr const u32 chunk_size = 1024;
+  constexpr const u32 chunk_size = 4096;
 
   i32 *arr = AllocArray<i32>(num_elems);
 
