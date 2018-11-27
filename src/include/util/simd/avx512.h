@@ -41,6 +41,14 @@ class Vec8 : public Vec512b {
     reg_ = _mm512_loadu_si512(reinterpret_cast<const __m512i *>(ptr));
   }
 
+  template <typename T>
+  void Gather(const T *ptr, const Vec8 &pos) {
+    alignas(64) i64 x[Size()];
+    pos.Store(x);
+    reg_ = _mm512_setr_epi64(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
+                             ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
+  }
+
   ALWAYS_INLINE void Store(i64 *ptr) const {
     _mm512_store_si512(reinterpret_cast<__m512i *>(ptr), reg());
   }
@@ -73,6 +81,9 @@ class Vec16 : public Vec512b {
   template <typename T>
   void Load(const T *ptr);
 
+  template <typename T>
+  void Gather(const T *ptr, const Vec16 &pos);
+
   ALWAYS_INLINE void Store(i32 *ptr) const {
     _mm512_store_si512(reinterpret_cast<__m512i *>(ptr), reg_);
   }
@@ -98,6 +109,12 @@ class Vec8Mask {
     __m512i pos_vec = _mm512_add_epi64(sequence, _mm512_set1_epi64(offset));
     _mm512_mask_compressstoreu_epi64(reinterpret_cast<__m512i *>(positions),
                                      mask_, pos_vec);
+    return __builtin_popcountll(mask_);
+  }
+
+  ALWAYS_INLINE u32 ToPositions(u32 *positions, const Vec8 &pos) const {
+    _mm512_mask_compressstoreu_epi64(reinterpret_cast<__m512i *>(positions),
+                                     mask_, pos);
     return __builtin_popcountll(mask_);
   }
 
@@ -129,6 +146,12 @@ class Vec16Mask {
     return __builtin_popcountll(mask_);
   }
 
+  ALWAYS_INLINE u32 ToPositions(u32 *positions, const Vec16 &pos) const {
+    _mm512_mask_compressstoreu_epi32(reinterpret_cast<__m512i *>(positions),
+                                     mask_, pos);
+    return __builtin_popcountll(mask_);
+  }
+
   ALWAYS_INLINE bool Extract(u32 index) const {
     return (static_cast<u32>(mask_) >> index) & 1;
   }
@@ -149,15 +172,16 @@ class Vec16Mask {
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
+template <typename T>
+ALWAYS_INLINE inline void Vec16::Load(const T *ptr) {
+  using signed_t = std::make_signed_t<T>;
+  Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
+}
+
 template <>
 ALWAYS_INLINE inline void Vec16::Load<i8>(const i8 *ptr) {
   auto tmp = _mm_loadu_si128((const __m128i *)ptr);
   reg_ = _mm512_cvtepi8_epi32(tmp);
-}
-
-template <>
-ALWAYS_INLINE inline void Vec16::Load<u8>(const u8 *ptr) {
-  return Load<i8>(reinterpret_cast<const i8 *>(ptr));
 }
 
 template <>
@@ -167,18 +191,94 @@ ALWAYS_INLINE inline void Vec16::Load<i16>(const i16 *ptr) {
 }
 
 template <>
-ALWAYS_INLINE inline void Vec16::Load<u16>(const u16 *ptr) {
-  return Load<i16>(reinterpret_cast<const i16 *>(ptr));
-}
-
-template <>
 ALWAYS_INLINE inline void Vec16::Load<i32>(const i32 *ptr) {
   reg_ = _mm512_loadu_si512((const __m512i *)ptr);
 }
 
+template <typename T>
+ALWAYS_INLINE inline void Vec16::Gather(const T *ptr, const Vec16 &pos) {
+  using signed_t = std::make_signed_t<T>;
+  Gather<signed_t>(reinterpret_cast<const signed_t *>(ptr), pos);
+}
+
 template <>
-ALWAYS_INLINE inline void Vec16::Load<u32>(const u32 *ptr) {
-  return Load<i32>(reinterpret_cast<const i32 *>(ptr));
+ALWAYS_INLINE inline void Vec16::Gather<i8>(const i8 *ptr, const Vec16 &pos) {
+  alignas(64) i32 x[Size()];
+  pos.Store(x);
+  reg_ = _mm512_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
+                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]],
+                           ptr[x[8]], ptr[x[9]], ptr[x[10]], ptr[x[11]],
+                           ptr[x[12]], ptr[x[13]], ptr[x[14]], ptr[x[15]]);
+}
+
+template <>
+ALWAYS_INLINE inline void Vec16::Gather<i16>(const i16 *ptr, const Vec16 &pos) {
+  alignas(64) i32 x[Size()];
+  pos.Store(x);
+  reg_ = _mm512_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
+                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]],
+                           ptr[x[8]], ptr[x[9]], ptr[x[10]], ptr[x[11]],
+                           ptr[x[12]], ptr[x[13]], ptr[x[14]], ptr[x[15]]);
+}
+
+template <>
+ALWAYS_INLINE inline void Vec16::Gather<i32>(const i32 *ptr, const Vec16 &pos) {
+  reg_ = _mm512_i32gather_epi32(pos, ptr, 4);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// Vec8 - Comparison Operations
+///
+////////////////////////////////////////////////////////////////////////////////
+
+static ALWAYS_INLINE inline Vec8Mask operator>(const Vec8 &lhs,
+                                               const Vec8 &rhs) noexcept {
+  return _mm512_cmpgt_epi64_mask(lhs, rhs);
+}
+
+static ALWAYS_INLINE inline Vec8Mask operator==(const Vec8 &lhs,
+                                                const Vec8 &rhs) noexcept {
+  return _mm512_cmpeq_epi64_mask(lhs, rhs);
+}
+
+static ALWAYS_INLINE inline Vec8Mask operator<(const Vec8 &lhs,
+                                               const Vec8 &rhs) noexcept {
+  return _mm512_cmplt_epi64_mask(lhs, rhs);
+}
+
+static ALWAYS_INLINE inline Vec8Mask operator<=(const Vec8 &lhs,
+                                                const Vec8 &rhs) noexcept {
+  return _mm512_cmple_epi64_mask(lhs, rhs);
+}
+
+static ALWAYS_INLINE inline Vec8Mask operator>=(const Vec8 &lhs,
+                                                const Vec8 &rhs) noexcept {
+  return _mm512_cmpge_epi64_mask(lhs, rhs);
+}
+
+static ALWAYS_INLINE inline Vec8Mask operator!=(const Vec8 &lhs,
+                                                const Vec8 &rhs) noexcept {
+  return _mm512_cmpneq_epi64_mask(lhs, rhs);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// Vec8 - Arithmetic Operations
+///
+////////////////////////////////////////////////////////////////////////////////
+
+static ALWAYS_INLINE inline Vec8 operator+(const Vec8 &lhs, const Vec8 &rhs) {
+  return _mm512_add_epi64(lhs, rhs);
+}
+
+static ALWAYS_INLINE inline Vec8 operator-(const Vec8 &lhs, const Vec8 &rhs) {
+  return _mm512_sub_epi64(lhs, rhs);
+}
+
+static ALWAYS_INLINE inline Vec8 &operator+=(Vec8 &lhs, const Vec8 &rhs) {
+  lhs = lhs + rhs;
+  return lhs;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -277,22 +377,36 @@ struct FilterVecSizer<T, std::enable_if_t<std::is_unsigned_v<T>>>
 
 template <typename T, typename Compare>
 static inline u32 Filter(const T *RESTRICT in, u32 in_count, T val,
-                         u32 *RESTRICT out, u32 &in_pos) noexcept {
+                         u32 *RESTRICT out, u32 *RESTRICT sel,
+                         u32 &in_pos) noexcept {
   using Vec = typename FilterVecSizer<T>::Vec;
   using VecMask = typename FilterVecSizer<T>::VecMask;
 
-  Compare op{};
+  const Vec xval(val);
+
+  const Compare cmp;
 
   u32 out_pos = 0;
 
-  Vec xval(val);
-  Vec in_vec;
+  if (sel == nullptr) {
+    Vec in_vec;
 
-  for (in_pos = 0; in_pos + Vec::Size() < in_count; in_pos += Vec::Size()) {
-    in_vec.Load(in + in_pos);
-    VecMask mask = op(in_vec, xval);
-    out_pos += mask.ToPositions(out + out_pos, in_pos);
+    for (in_pos = 0; in_pos + Vec::Size() < in_count; in_pos += Vec::Size()) {
+      in_vec.Load(in + in_pos);
+      VecMask mask = cmp(in_vec, xval);
+      out_pos += mask.ToPositions(out + out_pos, in_pos);
+    }
+  } else {
+    Vec in_vec, sel_vec;
+
+    for (in_pos = 0; in_pos + Vec::Size() < in_count; in_pos += Vec::Size()) {
+      sel_vec.Load(sel + in_pos);
+      in_vec.Gather(in, sel_vec);
+      VecMask mask = cmp(in_vec, xval);
+      out_pos += mask.ToPositions(out + out_pos, sel_vec);
+    }
   }
+
   return out_pos;
 }
 
