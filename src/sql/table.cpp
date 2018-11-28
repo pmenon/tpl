@@ -7,8 +7,8 @@ i32 current_partition = -1;
 
 namespace tpl::sql {
 
-void Table::BulkInsert(std::vector<ColumnVector> &&data, u32 num_rows) {
-  blocks_.emplace_back(std::move(data), num_rows);
+void Table::BulkInsert(Block &&block) {
+  blocks_.emplace_back(std::move(block));
 }
 
 bool Table::Scan(TableIterator *iter) const {
@@ -20,15 +20,15 @@ bool Table::Scan(TableIterator *iter) const {
 
   // The columns in the new block
   const auto &block = blocks_[iter->block_];
-  const auto &cols = block.columns;
+  //  const auto &cols = block.columns;
 
-  iter->cols_.resize(cols.size());
-  for (u32 i = 0; i < cols.size(); i++) {
-    iter->cols_[i] = &cols[i];
+  iter->cols_.resize(block.num_cols());
+  for (u32 i = 0; i < block.num_cols(); i++) {
+    iter->cols_[i] = &block.ColumnData(i);
   }
   iter->block_ += 1;
   iter->pos_ = 0;
-  iter->bound_ = block.num_rows;
+  iter->bound_ = block.num_rows();
   return true;
 }
 
@@ -74,10 +74,10 @@ void DumpColValue(std::ostream &os, Type type, const ColumnVector &col,
 void Table::Dump(std::ostream &os) const {
   const auto &cols_meta = schema().columns();
   for (const auto &block : blocks_) {
-    for (u32 row_idx = 0; row_idx < block.num_rows; row_idx++) {
+    for (u32 row_idx = 0; row_idx < block.num_rows(); row_idx++) {
       for (u32 col_idx = 0; col_idx < cols_meta.size(); col_idx++) {
         if (col_idx != 0) os << ", ";
-        const auto &col_vector = block.columns[col_idx];
+        const auto &col_vector = block.ColumnData(col_idx);
         DumpColValue(os, cols_meta[col_idx].type, col_vector, row_idx);
       }
       os << "\n";

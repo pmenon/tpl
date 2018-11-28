@@ -145,14 +145,14 @@ void InitTable(const TableInsertMeta &table_meta, Table *table) {
     std::vector<ColumnVector> columns;
 
     // Generate column data for all columns
-    u32 size = std::min(batch_size, table_meta.num_rows - (i * batch_size));
+    u32 num_vals = std::min(batch_size, table_meta.num_rows - (i * batch_size));
     for (const auto &col_meta : table_meta.col_meta) {
-      const auto &[data, null_bitmap] = GenerateColumnData(col_meta, size);
-      columns.emplace_back(data, null_bitmap);
+      const auto &[data, null_bitmap] = GenerateColumnData(col_meta, num_vals);
+      columns.emplace_back(data, null_bitmap, num_vals);
     }
 
     // Insert into table
-    table->BulkInsert(std::move(columns), size);
+    table->BulkInsert(Block(std::move(columns), num_vals));
   }
 }
 

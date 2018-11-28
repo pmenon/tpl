@@ -12,12 +12,13 @@ namespace tpl::sql {
  */
 class ColumnVector {
  public:
-  ColumnVector() noexcept : data_(nullptr), null_bitmap_(nullptr) {}
-  ColumnVector(const byte *data, const bool *null_bitmap) noexcept
-      : data_(data), null_bitmap_(null_bitmap) {}
+  ColumnVector(const byte *data, const bool *null_bitmap, u32 num_rows) noexcept
+      : data_(data), null_bitmap_(null_bitmap), num_rows_(num_rows) {}
 
   ColumnVector(ColumnVector &&other) noexcept
-      : data_(other.data_), null_bitmap_(other.null_bitmap_) {
+      : data_(other.data_),
+        null_bitmap_(other.null_bitmap_),
+        num_rows_(other.num_rows_) {
     other.data_ = nullptr;
     other.null_bitmap_ = nullptr;
   }
@@ -33,14 +34,30 @@ class ColumnVector {
 
   template <typename T>
   const T &GetAt(u32 index) const {
-    return reinterpret_cast<const T *>(data_)[index];
+    TPL_ASSERT(index < num_rows(), "Invalid row index!");
+    return Raw<T>()[index];
   }
 
   bool IsNullAt(u32 index) const { return null_bitmap_[index]; }
 
+  //////////////////////////////////////////////////////////////////////////////
+  ///
+  /// Accessors
+  ///
+  //////////////////////////////////////////////////////////////////////////////
+
+  u32 num_rows() const { return num_rows_; }
+
+ private:
+  template <typename T>
+  const T *Raw() const {
+    return reinterpret_cast<const T *>(data_);
+  }
+
  private:
   const byte *data_;
   const bool *null_bitmap_;
+  u32 num_rows_;
 };
 
 }  // namespace tpl::sql

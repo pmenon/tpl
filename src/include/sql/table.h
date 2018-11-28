@@ -4,6 +4,7 @@
 #include <iosfwd>
 #include <vector>
 
+#include "sql/block.h"
 #include "sql/column.h"
 #include "sql/schema.h"
 #include "sql/value.h"
@@ -33,7 +34,7 @@ class Table {
    * @param data
    * @param num_rows
    */
-  void BulkInsert(std::vector<ColumnVector> &&data, u32 num_rows);
+  void BulkInsert(Block &&block);
 
   /**
    * Continue the scan of this table from the given iterators position. If the
@@ -60,15 +61,6 @@ class Table {
   u16 id() const { return id_; }
 
   const Schema &schema() const { return schema_; }
-
- private:
-  struct Block {
-    std::vector<ColumnVector> columns;
-    u32 num_rows;
-
-    Block(std::vector<ColumnVector> &&columns, u32 num_rows)
-        : columns(std::move(columns)), num_rows(num_rows) {}
-  };
 
  private:
   u16 id_;
