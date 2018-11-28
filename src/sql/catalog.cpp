@@ -118,26 +118,22 @@ std::pair<const byte *, const bool *> GenerateColumnData(
   return {col_data, null_bitmap};
 }
 
-void InitTable(const TableInsertMeta &meta, Table *table) {
-  LOG_INFO("Populating table instance '{}' with {} rows", meta.name,
-           meta.num_rows);
+void InitTable(const TableInsertMeta &table_meta, Table *table) {
+  LOG_INFO("Populating table instance '{}' with {} rows", table_meta.name,
+           table_meta.num_rows);
 
   u32 batch_size = 1000;
-  u32 num_batches =
-      meta.num_rows / batch_size + (meta.num_rows % batch_size != 0);
+  u32 num_batches = table_meta.num_rows / batch_size +
+                    (table_meta.num_rows % batch_size != 0);
 
   for (u32 i = 0; i < num_batches; i++) {
-    // The column data we'll insert
     std::vector<Table::ColumnVector> columns;
-    columns.resize(meta.col_meta.size());
 
     // Generate column data for all columns
-    u32 size = std::min(batch_size, meta.num_rows - (i * batch_size));
-    for (u32 col_idx = 0; col_idx < meta.col_meta.size(); col_idx++) {
-      const auto &[data, null_bitmap] =
-          GenerateColumnData(meta.col_meta[col_idx], size);
-      columns[col_idx].data = data;
-      columns[col_idx].null_bitmap = null_bitmap;
+    u32 size = std::min(batch_size, table_meta.num_rows - (i * batch_size));
+    for (const auto &col_meta : table_meta.col_meta) {
+      const auto &[data, null_bitmap] = GenerateColumnData(col_meta, size);
+      columns.emplace_back(data, null_bitmap);
     }
 
     // Insert into table

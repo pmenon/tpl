@@ -10,11 +10,17 @@
 #define ALWAYS_INLINE __attribute__((always_inline))
 #define NEVER_INLINE __attribute__((noinline))
 
-#define DISALLOW_COPY_AND_MOVE(class)  \
-  class(class &&) = delete;            \
-  class(const class &) = delete;       \
-  class &operator=(class &&) = delete; \
-  class &operator=(const class &) = delete;
+#define DISALLOW_COPY(klazz)     \
+  klazz(const klazz &) = delete; \
+  klazz &operator=(const klazz &) = delete;
+
+#define DISALLOW_MOVE(klazz) \
+  klazz(klazz &&) = delete;  \
+  klazz &operator=(klazz &&) = delete;
+
+#define DISALLOW_COPY_AND_MOVE(klazz) \
+  DISALLOW_COPY(klazz)                \
+  DISALLOW_MOVE(klazz)
 
 #define TPL_LIKELY(x) LLVM_LIKELY(x)
 #define TPL_UNLIKELY(x) LLVM_UNLIKELY(x)

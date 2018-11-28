@@ -22,20 +22,37 @@ class Table {
    * compact, positionally aligned bitmap indicating whether a column value is
    * NULL.
    */
-  struct ColumnVector {
-    const byte *data;
-    const bool *null_bitmap;
+  class ColumnVector {
+   public:
+    ColumnVector() noexcept : data_(nullptr), null_bitmap_(nullptr) {}
+    ColumnVector(const byte *data, const bool *null_bitmap) noexcept
+        : data_(data), null_bitmap_(null_bitmap) {}
 
-    ColumnVector() : data(nullptr), null_bitmap(nullptr) {}
-    ColumnVector(const byte *data, const bool *null_bitmap)
-        : data(data), null_bitmap(null_bitmap) {}
+    ColumnVector(ColumnVector &&other) noexcept
+        : data_(other.data_), null_bitmap_(other.null_bitmap_) {
+      other.data_ = nullptr;
+      other.null_bitmap_ = nullptr;
+    }
+
+    DISALLOW_COPY(ColumnVector);
 
     ~ColumnVector() {
-      if (data != nullptr) {
-        std::free((void *)data);
-        std::free((void *)null_bitmap);
+      if (data_ != nullptr) {
+        std::free((void *)data_);
+        std::free((void *)null_bitmap_);
       }
     }
+
+    template <typename T>
+    const T &GetAt(u32 index) const {
+      return reinterpret_cast<const T *>(data_)[index];
+    }
+
+    bool GetNullAt(u32 index) const { return null_bitmap_[index]; }
+
+   private:
+    const byte *data_;
+    const bool *null_bitmap_;
   };
 
   /**
@@ -122,16 +139,16 @@ class TableIterator {
 
     // Set null (if column is nullable)
     if constexpr (nullable) {
-      out->null = col->null_bitmap[pos()];
+      out->null = col->GetNullAt(pos());
     }
 
     // Set appropriate value
     if constexpr (type_id == TypeId::SmallInt) {
-      out->val.smallint = reinterpret_cast<const i16 *>(col->data)[pos()];
+      out->val.smallint = col->GetAt<i16>(pos());
     } else if constexpr (type_id == TypeId::Integer) {
-      out->val.integer = reinterpret_cast<const i32 *>(col->data)[pos()];
+      out->val.integer = col->GetAt<i32>(pos());
     } else if constexpr (type_id == TypeId::BigInt) {
-      out->val.bigint = reinterpret_cast<const i64 *>(col->data)[pos()];
+      out->val.bigint = col->GetAt<i64>(pos());
     }
   }
 

@@ -34,26 +34,26 @@ void DumpColValue(std::ostream &os, Type type, const Table::ColumnVector &col,
       break;
     }
     case TypeId::SmallInt: {
-      if (type.nullable() && col.null_bitmap[row_idx]) {
+      if (type.nullable() && col.GetNullAt(row_idx)) {
         os << "NULL";
       } else {
-        os << reinterpret_cast<const i16 *>(col.data)[row_idx];
+        os << col.GetAt<i16>(row_idx);
       }
       break;
     }
     case TypeId::Integer: {
-      if (type.nullable() && col.null_bitmap[row_idx]) {
+      if (type.nullable() && col.GetNullAt(row_idx)) {
         os << "NULL";
       } else {
-        os << reinterpret_cast<const i32 *>(col.data)[row_idx];
+        os << col.GetAt<i32>(row_idx);
       }
       break;
     }
     case TypeId::BigInt: {
-      if (type.nullable() && col.null_bitmap[row_idx]) {
+      if (type.nullable() && col.GetNullAt(row_idx)) {
         os << "NULL";
       } else {
-        os << reinterpret_cast<const i64 *>(col.data)[row_idx];
+        os << col.GetAt<i64>(row_idx);
       }
       break;
     }
