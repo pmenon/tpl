@@ -157,22 +157,22 @@ void OpSqlTableIteratorClose(tpl::sql::TableIterator *iter) {
 
 void OpReadSmallInt(tpl::sql::TableIterator *iter, u32 col_idx,
                     tpl::sql::Integer *val) {
-  iter->GetIntegerColumn<tpl::sql::TypeId::SmallInt, false>(col_idx, val);
+  iter->ReadIntegerColumn<tpl::sql::TypeId::SmallInt, false>(col_idx, val);
 }
 
 void OpReadInt(tpl::sql::TableIterator *iter, u32 col_idx,
                tpl::sql::Integer *val) {
-  iter->GetIntegerColumn<tpl::sql::TypeId::Integer, false>(col_idx, val);
+  iter->ReadIntegerColumn<tpl::sql::TypeId::Integer, false>(col_idx, val);
 }
 
 void OpReadBigInt(tpl::sql::TableIterator *iter, u32 col_idx,
                   tpl::sql::Integer *val) {
-  iter->GetIntegerColumn<tpl::sql::TypeId::BigInt, false>(col_idx, val);
+  iter->ReadIntegerColumn<tpl::sql::TypeId::BigInt, false>(col_idx, val);
 }
 
 void OpReadDecimal(tpl::sql::TableIterator *iter, u32 col_idx,
                    tpl::sql::Decimal *val) {
-  iter->GetDecimalColumn<false>(col_idx, val);
+  iter->ReadDecimalColumn<false>(col_idx, val);
 }
 
 void OpForceBoolTruth(bool *result, tpl::sql::Integer *input) {

@@ -37,7 +37,7 @@ void DumpColValue(std::ostream &os, Type type, const Table::ColumnVector &col,
       break;
     }
     case TypeId::SmallInt: {
-      if (type.nullable() && col.GetNullAt(row_idx)) {
+      if (type.nullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
         os << col.GetAt<i16>(row_idx);
@@ -45,7 +45,7 @@ void DumpColValue(std::ostream &os, Type type, const Table::ColumnVector &col,
       break;
     }
     case TypeId::Integer: {
-      if (type.nullable() && col.GetNullAt(row_idx)) {
+      if (type.nullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
         os << col.GetAt<i32>(row_idx);
@@ -53,7 +53,7 @@ void DumpColValue(std::ostream &os, Type type, const Table::ColumnVector &col,
       break;
     }
     case TypeId::BigInt: {
-      if (type.nullable() && col.GetNullAt(row_idx)) {
+      if (type.nullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
         os << col.GetAt<i64>(row_idx);

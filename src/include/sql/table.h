@@ -51,7 +51,7 @@ class Table {
       return reinterpret_cast<const T *>(data_)[index];
     }
 
-    bool GetNullAt(u32 index) const { return null_bitmap_[index]; }
+    bool IsNullAt(u32 index) const { return null_bitmap_[index]; }
 
    private:
     const byte *data_;
@@ -137,12 +137,12 @@ class TableIterator {
    * @param out The output value to populate
    */
   template <TypeId type_id, bool nullable>
-  void GetIntegerColumn(u32 col_idx, Integer *out) const {
+  void ReadIntegerColumn(u32 col_idx, Integer *out) const {
     const Table::ColumnVector *col = cols_[col_idx];
 
     // Set null (if column is nullable)
     if constexpr (nullable) {
-      out->null = col->GetNullAt(pos());
+      out->null = col->IsNullAt(pos());
     }
 
     // Set appropriate value
@@ -156,7 +156,7 @@ class TableIterator {
   }
 
   template <bool nullable>
-  void GetDecimalColumn(u32 col_idx, Decimal *out) const {}
+  void ReadDecimalColumn(u32 col_idx, Decimal *out) const {}
 
   u32 pos() const { return pos_; }
 
