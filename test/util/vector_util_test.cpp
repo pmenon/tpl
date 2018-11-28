@@ -34,11 +34,13 @@ class VectorUtilTest : public TplTest {
 
  private:
   void *MallocHuge(std::size_t size) {
-    void *p = mmap(nullptr, size, PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    madvise(p, size, MADV_HUGEPAGE);
-    memset(p, 0, size);
-    return p;
+    void *ptr = mmap(nullptr, size, PROT_READ | PROT_WRITE,
+                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+#if !defined(__APPLE__)
+    madvise(ptr, size, MADV_HUGEPAGE);
+#endif
+    memset(ptr, 0, size);
+    return ptr;
   }
 
   void FreeHuge(void *ptr, std::size_t size) { munmap(ptr, size); }
