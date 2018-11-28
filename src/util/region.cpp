@@ -44,7 +44,7 @@ void *Region::Allocate(std::size_t size, std::size_t alignment) {
 }
 
 void Region::FreeAll() {
-  LOG_INFO(
+  LOG_DEBUG(
       "Region['{}', allocated: {} bytes, alignment waste: {} bytes, total "
       "chunks: {} bytes]",
       name().c_str(), allocated(), alignment_waste(), total_memory());

@@ -2,6 +2,9 @@
 
 #include <iostream>
 
+// TODO(siva): Hack! Fix me!
+i32 current_partition = -1;
+
 namespace tpl::sql {
 
 void Table::BulkInsert(std::vector<Table::ColumnVector> &&data, u32 num_rows) {

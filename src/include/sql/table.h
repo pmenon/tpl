@@ -1,11 +1,14 @@
 #pragma once
 
+#include <algorithm>
 #include <iosfwd>
 #include <vector>
 
 #include "sql/schema.h"
 #include "sql/value.h"
 #include "util/common.h"
+
+extern i32 current_partition;
 
 namespace tpl::sql {
 
