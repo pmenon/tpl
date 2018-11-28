@@ -1,11 +1,14 @@
 #pragma once
 
+#include <algorithm>
 #include <iosfwd>
 #include <vector>
 
 #include "sql/schema.h"
 #include "sql/value.h"
 #include "util/common.h"
+
+extern u32 current_partition;
 
 namespace tpl::sql {
 
@@ -99,7 +102,8 @@ class Table {
 class TableIterator {
  public:
   explicit TableIterator(Table *table)
-      : table_(table), block_(0), pos_(0), bound_(0) {}
+      : table_(table), block_(std::max(current_partition, 0u)), pos_(0),
+        bound_(0) {}
 
   /**
    * Move to the next row in the table.

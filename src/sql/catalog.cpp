@@ -16,7 +16,7 @@ namespace {
 /**
  * Enumeration to characterize the distribution of values in a given column
  */
-enum class Dist : u8 { Uniform, Zipf_50, Zipf_75, Zipf_95, Zipf_99 };
+enum class Dist : u8 { Uniform, Zipf_50, Zipf_75, Zipf_95, Zipf_99, Serial };
 
 /**
  * Metadata about the data for a given column. Specifically, the type of the
@@ -58,23 +58,38 @@ struct TableInsertMeta {
 // clang-format off
 TableInsertMeta insert_meta[] = {
     // Table 1
-    {TableId::Test1, "test_1", 2000000,
-     {{"colA", Type(TypeId::Integer, false), Dist::Uniform, 0, 99},
-      {"colB", Type(TypeId::Integer, false), Dist::Uniform, 0, 999},
+    {TableId::Test1, "test_1", 20000000,
+     {{"colA", Type(TypeId::Integer, false), Dist::Serial, 0, 0},
+      {"colB", Type(TypeId::Integer, false), Dist::Uniform, 0, 9},
       {"colC", Type(TypeId::Integer, false), Dist::Uniform, 0, 9999},
       {"colD", Type(TypeId::Integer, false), Dist::Uniform, 0, 99999}}},
 };
 // clang-format on
 
 template <typename T>
-T *CreateNumberColumnData(u32 num_vals, u64 min, u64 max) {
+T *CreateNumberColumnData(Dist dist, u32 num_vals, u64 min, u64 max) {
+  static u64 serial_counter = 0;
   T *val = static_cast<T *>(malloc(sizeof(T) * num_vals));
 
-  std::mt19937 generator;
-  std::uniform_int_distribution<T> distribution(min, max);
+  switch (dist) {
+    case Dist::Uniform: {
+      std::mt19937 generator;
+      std::uniform_int_distribution<T> distribution(min, max);
 
-  for (u32 i = 0; i < num_vals; i++) {
-    val[i] = distribution(generator);
+      for (u32 i = 0; i < num_vals; i++) {
+        val[i] = distribution(generator);
+      }
+
+      break; 
+    }
+    case Dist::Serial: {
+      for (u32 i = 0; i < num_vals; i++) {
+        val[i] = serial_counter++;
+      }
+      break;
+    }
+    default:
+      throw std::runtime_error("Implement me!");
   }
 
   return val;
@@ -90,18 +105,21 @@ std::pair<const byte *, const bool *> GenerateColumnData(
     }
     case TypeId::SmallInt: {
       col_data = reinterpret_cast<byte *>(
-          CreateNumberColumnData<i16>(num_vals, col_meta.min, col_meta.max));
+          CreateNumberColumnData<i16>(col_meta.dist, num_vals, col_meta.min,
+              col_meta.max));
       break;
     }
     case TypeId::Integer: {
       col_data = reinterpret_cast<byte *>(
-          CreateNumberColumnData<i32>(num_vals, col_meta.min, col_meta.max));
+          CreateNumberColumnData<i32>(col_meta.dist, num_vals, col_meta.min,
+              col_meta.max));
       break;
     }
     case TypeId::BigInt:
     case TypeId::Decimal: {
       col_data = reinterpret_cast<byte *>(
-          CreateNumberColumnData<i64>(num_vals, col_meta.min, col_meta.max));
+          CreateNumberColumnData<i64>(col_meta.dist, num_vals, col_meta.min,
+              col_meta.max));
       break;
     }
     case TypeId::Varchar: {
@@ -122,7 +140,7 @@ void InitTable(const TableInsertMeta &meta, Table *table) {
   LOG_INFO("Populating table instance '{}' with {} rows", meta.name,
            meta.num_rows);
 
-  u32 batch_size = 1000;
+  u32 batch_size = 100000;
   u32 num_batches =
       meta.num_rows / batch_size + (meta.num_rows % batch_size != 0);
 
