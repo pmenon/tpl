@@ -80,7 +80,7 @@ T *CreateNumberColumnData(Dist dist, u32 num_vals, u64 min, u64 max) {
         val[i] = distribution(generator);
       }
 
-      break; 
+      break;
     }
     case Dist::Serial: {
       for (u32 i = 0; i < num_vals; i++) {
@@ -104,22 +104,19 @@ std::pair<const byte *, const bool *> GenerateColumnData(
       throw std::runtime_error("Implement me!");
     }
     case TypeId::SmallInt: {
-      col_data = reinterpret_cast<byte *>(
-          CreateNumberColumnData<i16>(col_meta.dist, num_vals, col_meta.min,
-              col_meta.max));
+      col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i16>(
+          col_meta.dist, num_vals, col_meta.min, col_meta.max));
       break;
     }
     case TypeId::Integer: {
-      col_data = reinterpret_cast<byte *>(
-          CreateNumberColumnData<i32>(col_meta.dist, num_vals, col_meta.min,
-              col_meta.max));
+      col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i32>(
+          col_meta.dist, num_vals, col_meta.min, col_meta.max));
       break;
     }
     case TypeId::BigInt:
     case TypeId::Decimal: {
-      col_data = reinterpret_cast<byte *>(
-          CreateNumberColumnData<i64>(col_meta.dist, num_vals, col_meta.min,
-              col_meta.max));
+      col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i64>(
+          col_meta.dist, num_vals, col_meta.min, col_meta.max));
       break;
     }
     case TypeId::Varchar: {
@@ -145,7 +142,7 @@ void InitTable(const TableInsertMeta &table_meta, Table *table) {
                     (table_meta.num_rows % batch_size != 0);
 
   for (u32 i = 0; i < num_batches; i++) {
-    std::vector<Table::ColumnVector> columns;
+    std::vector<ColumnVector> columns;
 
     // Generate column data for all columns
     u32 size = std::min(batch_size, table_meta.num_rows - (i * batch_size));

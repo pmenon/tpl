@@ -4,6 +4,7 @@
 #include <iosfwd>
 #include <vector>
 
+#include "sql/column.h"
 #include "sql/schema.h"
 #include "sql/value.h"
 #include "util/common.h"
@@ -20,44 +21,6 @@ class TableIterator;
  */
 class Table {
  public:
-  /**
-   * A column vector represents a compact array of column values along with a
-   * compact, positionally aligned bitmap indicating whether a column value is
-   * NULL.
-   */
-  class ColumnVector {
-   public:
-    ColumnVector() noexcept : data_(nullptr), null_bitmap_(nullptr) {}
-    ColumnVector(const byte *data, const bool *null_bitmap) noexcept
-        : data_(data), null_bitmap_(null_bitmap) {}
-
-    ColumnVector(ColumnVector &&other) noexcept
-        : data_(other.data_), null_bitmap_(other.null_bitmap_) {
-      other.data_ = nullptr;
-      other.null_bitmap_ = nullptr;
-    }
-
-    DISALLOW_COPY(ColumnVector);
-
-    ~ColumnVector() {
-      if (data_ != nullptr) {
-        std::free((void *)data_);
-        std::free((void *)null_bitmap_);
-      }
-    }
-
-    template <typename T>
-    const T &GetAt(u32 index) const {
-      return reinterpret_cast<const T *>(data_)[index];
-    }
-
-    bool IsNullAt(u32 index) const { return null_bitmap_[index]; }
-
-   private:
-    const byte *data_;
-    const bool *null_bitmap_;
-  };
-
   /**
    * Create a new table with ID @ref id and physical layout @ref schema
    * @param id The desired ID of the table
@@ -119,7 +82,10 @@ class Table {
 class TableIterator {
  public:
   explicit TableIterator(Table *table)
-      : table_(table), block_(0), pos_(0), bound_(0) {}
+      : table_(table),
+        block_(static_cast<u32>(std::max(current_partition, 0))),
+        pos_(0),
+        bound_(0) {}
 
   /**
    * Move to the next row in the table.
@@ -138,7 +104,7 @@ class TableIterator {
    */
   template <TypeId type_id, bool nullable>
   void ReadIntegerColumn(u32 col_idx, Integer *out) const {
-    const Table::ColumnVector *col = cols_[col_idx];
+    const ColumnVector *col = cols_[col_idx];
 
     // Set null (if column is nullable)
     if constexpr (nullable) {
@@ -167,7 +133,7 @@ class TableIterator {
   u32 block_;
   u32 pos_;
   u32 bound_;
-  std::vector<const Table::ColumnVector *> cols_;
+  std::vector<const ColumnVector *> cols_;
 };
 
 }  // namespace tpl::sql

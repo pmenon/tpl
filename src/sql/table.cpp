@@ -7,12 +7,14 @@ i32 current_partition = -1;
 
 namespace tpl::sql {
 
-void Table::BulkInsert(std::vector<Table::ColumnVector> &&data, u32 num_rows) {
+void Table::BulkInsert(std::vector<ColumnVector> &&data, u32 num_rows) {
   blocks_.emplace_back(std::move(data), num_rows);
 }
 
 bool Table::Scan(TableIterator *iter) const {
-  if (iter->block_ == blocks_.size()) {
+  if ((current_partition == -1 && iter->block_ == blocks_.size()) ||
+      (current_partition != -1 &&
+       iter->block_ != static_cast<u32>(current_partition))) {
     return false;
   }
 
@@ -30,7 +32,7 @@ bool Table::Scan(TableIterator *iter) const {
   return true;
 }
 
-void DumpColValue(std::ostream &os, Type type, const Table::ColumnVector &col,
+void DumpColValue(std::ostream &os, Type type, const ColumnVector &col,
                   u32 row_idx) {
   switch (type.type_id()) {
     case TypeId::Boolean: {
