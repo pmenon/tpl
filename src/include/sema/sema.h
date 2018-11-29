@@ -59,6 +59,10 @@ class Sema : public ast::AstVisitor<Sema> {
                                       const SourcePosition &pos,
                                       ast::Expr *left, ast::Expr *right);
 
+  void CheckBuiltinCall(ast::CallExpr *call);
+  void CheckBuiltinMapCall(ast::CallExpr *call);
+  void CheckBuiltinFilterCall(ast::CallExpr *call);
+
   //////////////////////////////////////////////////////////////////////////////
   ///
   /// Accessors

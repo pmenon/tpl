@@ -34,9 +34,9 @@ namespace sema {
   F(VariableRedeclared, "'%0' redeclared in this block", (ast::Identifier))    \
   F(UndefinedVariable, "undefined: '%0'", (ast::Identifier))                   \
   F(NonFunction, "cannot call non-function '%0'", ())                          \
-  F(NotEnoughCallArgs, "not enough arguments in call to '%0'",                 \
-    (ast::Identifier))                                                         \
-  F(TooManyCallArgs, "too many arguments in call to '%0'", (ast::Identifier))  \
+  F(MismatchedCallArgs,                                                        \
+    "Wrong number of arguments in call to '%0'. Expected %1, received %2.",    \
+    (ast::Identifier, u32, u32))                                               \
   F(IncorrectCallArgType,                                                      \
     "cannot use a '%0' as type '%1' in argument to '%2'",                      \
     (ast::Type *, ast::Type *, ast::Identifier))                               \
@@ -81,7 +81,13 @@ namespace sema {
     "Invalid input to cast to native boolean: expected SQL boolean, got %0",   \
     (ast::Type *))                                                             \
   F(MissingReturn, "Missing return at end of function", ())                    \
-  F(InvalidDeclaration, "Non-declaration outside function", ())
+  F(InvalidDeclaration, "Non-declaration outside function", ())                \
+  F(BadArgToFilter, "tpl_filter requires array argument, received '%0'",       \
+    (ast::Type *))                                                             \
+  F(BadFuncToFilter,                                                           \
+    "Filter function to tpl_filter expects input type '%0' and must return a " \
+    "bool. Found input type '%1' and output type '%2'",                        \
+    (ast::Type *, ast::Type *, ast::Type *))
 
 /**
  * Define the ErrorMessageId enumeration

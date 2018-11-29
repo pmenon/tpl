@@ -1,6 +1,7 @@
 #include "ast/ast_context.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 
 #include "ast/ast_node_factory.h"
@@ -47,6 +48,7 @@ struct AstContext::Implementation {
 
   llvm::StringMap<char, util::LlvmRegionAllocator> string_table;
   llvm::DenseMap<ast::Identifier, ast::Type *> builtin_types;
+  llvm::DenseSet<ast::Identifier> builtin_funcs;
   llvm::DenseMap<Type *, PointerType *> pointer_types;
   llvm::DenseMap<std::pair<Type *, uint64_t>, ArrayType *> array_types;
   llvm::DenseMap<std::pair<Type *, Type *>, MapType *> map_types;
@@ -101,6 +103,14 @@ AstContext::AstContext(util::Region *region,
       InternalType::InternalKind::Kind));
   INTERNAL_TYPE_LIST(INIT_TYPE)
 #undef INIT_TYPE
+
+  // Initialize builtin functions
+  impl().builtin_funcs.insert(GetIdentifier("tpl_map"));
+  impl().builtin_funcs.insert(GetIdentifier("tpl_filter"));
+  impl().builtin_funcs.insert(GetIdentifier("tpl_fold"));
+  impl().builtin_funcs.insert(GetIdentifier("tpl_gather"));
+  impl().builtin_funcs.insert(GetIdentifier("tpl_scatter"));
+  impl().builtin_funcs.insert(GetIdentifier("tpl_compress"));
 }
 
 AstContext::~AstContext() = default;
@@ -112,9 +122,14 @@ Identifier AstContext::GetIdentifier(llvm::StringRef str) {
   return Identifier(iter->getKeyData());
 }
 
-ast::Type *AstContext::LookupBuiltin(Identifier identifier) {
+ast::Type *AstContext::LookupBuiltinType(Identifier identifier) const {
   auto iter = impl().builtin_types.find(identifier);
   return (iter == impl().builtin_types.end() ? nullptr : iter->second);
+}
+
+bool AstContext::IsBuiltinFunction(Identifier identifier) const {
+  const auto iter = impl().builtin_funcs.find(identifier);
+  return (iter != impl().builtin_funcs.end());
 }
 
 // static

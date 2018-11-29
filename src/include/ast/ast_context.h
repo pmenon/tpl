@@ -29,7 +29,9 @@ class AstContext {
 
   Identifier GetIdentifier(llvm::StringRef str);
 
-  ast::Type *LookupBuiltin(Identifier identifier);
+  ast::Type *LookupBuiltinType(Identifier identifier) const;
+
+  bool IsBuiltinFunction(Identifier identifier) const;
 
   struct Implementation;
   Implementation &impl() const { return *impl_; }

@@ -628,22 +628,35 @@ class BinaryOpExpr : public Expr {
  */
 class CallExpr : public Expr {
  public:
+  enum class CallKind : u8 { Regular, Builtin };
+
   CallExpr(Expr *func, util::RegionVector<Expr *> &&args)
       : Expr(Kind::CallExpr, func->position()),
         func_(func),
-        args_(std::move(args)) {}
+        args_(std::move(args)),
+        call_kind_(CallKind::Regular) {}
 
   Expr *function() { return func_; }
 
   util::RegionVector<Expr *> &arguments() { return args_; }
+
+  CallKind call_kind() const { return call_kind_; }
+
+  u32 num_args() const { return static_cast<u32>(args_.size()); }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::CallExpr;
   }
 
  private:
+  friend class sema::Sema;
+
+  void set_call_kind(CallKind call_kind) { call_kind_ = call_kind; }
+
+ private:
   Expr *func_;
   util::RegionVector<Expr *> args_;
+  CallKind call_kind_;
 };
 
 /**

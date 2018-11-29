@@ -1,3 +1,6 @@
+
+#include <sema/sema.h>
+
 #include "sema/sema.h"
 
 #include "ast/ast_context.h"
@@ -220,7 +223,88 @@ void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
   }
 }
 
+void Sema::CheckBuiltinMapCall(ast::CallExpr *call) {}
+
+void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
+  if (call->num_args() != 2) {
+    auto func_name = call->function()->As<ast::IdentifierExpr>()->name();
+    error_reporter().Report(call->position(),
+                            ErrorMessages::kMismatchedCallArgs, func_name, 2,
+                            call->num_args());
+    return;
+  }
+
+  // Type-check arguments to filter
+  ast::Type *first_arg_type = Resolve(call->arguments()[0]);
+  ast::Type *second_arg_type = Resolve(call->arguments()[1]);
+
+  if (first_arg_type == nullptr || second_arg_type == nullptr) {
+    return;
+  }
+
+  // Check first is an array
+  if (!first_arg_type->IsArrayType()) {
+    error_reporter().Report(call->position(), ErrorMessages::kBadArgToFilter,
+                            first_arg_type);
+    return;
+  }
+
+  // Check second is a function
+  if (!second_arg_type->IsFunctionType()) {
+    error_reporter().Report(call->position(), ErrorMessages::kBadArgToFilter,
+                            second_arg_type);
+    return;
+  }
+
+  // Check input to function is the same as nested array element type
+  auto arr_type = first_arg_type->As<ast::ArrayType>();
+  auto func_type = second_arg_type->As<ast::FunctionType>();
+
+  bool non_bool_return = !func_type->return_type()->IsBoolType();
+  bool mismatched_input =
+      func_type->num_params() != 1 ||
+      func_type->params()[0].type != arr_type->element_type();
+
+  if (non_bool_return || mismatched_input) {
+    error_reporter().Report(call->position(), ErrorMessages::kBadFuncToFilter,
+                            func_type->params()[0].type,
+                            func_type->return_type(), arr_type->element_type());
+    return;
+  }
+
+  // All good ...
+  util::RegionVector<ast::Field> params(ast_context().region());
+  params.emplace_back(ast_context().GetIdentifier("input"), arr_type);
+  params.emplace_back(ast_context().GetIdentifier("lambda"), func_type);
+  auto *filter_type = ast::FunctionType::Get(std::move(params), arr_type);
+
+  call->function()->set_type(filter_type);
+  call->set_type(filter_type->return_type());
+}
+
+void Sema::CheckBuiltinCall(ast::CallExpr *call) {
+  std::string func_name =
+      call->function()->As<ast::IdentifierExpr>()->name().data();
+
+  call->set_call_kind(ast::CallExpr::CallKind::Builtin);
+
+  // TODO: Fix me
+  if (func_name == "tpl_map") {
+    CheckBuiltinMapCall(call);
+  } else if (func_name == "tpl_filter") {
+    CheckBuiltinFilterCall(call);
+  }
+}
+
 void Sema::VisitCallExpr(ast::CallExpr *node) {
+  auto func_name = node->function()->As<ast::IdentifierExpr>()->name();
+
+  // Is this a built in?
+  if (ast_context().IsBuiltinFunction(func_name)) {
+    CheckBuiltinCall(node);
+    return;
+  }
+
   // Resolve the function type
   ast::Type *type = Resolve(node->function());
 
@@ -234,18 +318,12 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
     return;
   }
 
-  ast::Identifier func_name =
-      node->function()->As<ast::IdentifierExpr>()->name();
-
   // First, check to make sure we have the right number of function arguments
   auto *func_type = type->As<ast::FunctionType>();
-  if (node->arguments().size() < func_type->params().size()) {
-    error_reporter().Report(node->position(), ErrorMessages::kNotEnoughCallArgs,
-                            func_name);
-    return;
-  } else if (node->arguments().size() > func_type->params().size()) {
-    error_reporter().Report(node->position(), ErrorMessages::kTooManyCallArgs,
-                            func_name);
+  if (func_type->num_params() != node->num_args()) {
+    error_reporter().Report(node->position(),
+                            ErrorMessages::kMismatchedCallArgs, func_name,
+                            func_type->num_params(), node->num_args());
     return;
   }
 
@@ -270,6 +348,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   }
 
   // All looks good ...
+  node->set_call_kind(ast::CallExpr::CallKind::Regular);
   node->set_type(func_type->return_type());
 }
 
@@ -346,8 +425,8 @@ void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
     return;
   }
 
-  // Check the builtins
-  if (auto *type = ast_context().LookupBuiltin(node->name())) {
+  // Check the builtin types
+  if (auto *type = ast_context().LookupBuiltinType(node->name())) {
     node->set_type(type);
     return;
   }

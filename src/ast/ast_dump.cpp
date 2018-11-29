@@ -172,7 +172,6 @@ void AstDumperImpl::VisitFieldDecl(FieldDecl *node) {
 void AstDumperImpl::VisitFunctionDecl(FunctionDecl *node) {
   DumpNodeCommon(node);
   DumpIdentifier(node->name());
-  DumpType(node->type_repr()->As<FunctionTypeRepr>()->type());
   DumpExpr(node->function());
 }
 
@@ -252,6 +251,22 @@ void AstDumperImpl::VisitReturnStmt(ReturnStmt *node) {
 
 void AstDumperImpl::VisitCallExpr(CallExpr *node) {
   DumpExpressionCommon(node);
+
+  DumpPrimitive("<");
+  {
+    WithColor color(this, llvm::raw_ostream::Colors::RED);
+    switch (node->call_kind()) {
+      case CallExpr::CallKind::Builtin: {
+        out_ << "Builtin";
+        break;
+      }
+      case CallExpr::CallKind::Regular: {
+        out_ << "Regular";
+      }
+    }
+  }
+  DumpPrimitive("> ");
+
   DumpExpr(node->function());
   for (auto *expr : node->arguments()) {
     DumpExpr(expr);
@@ -273,7 +288,8 @@ void AstDumperImpl::VisitComparisonOpExpr(ComparisonOpExpr *node) {
 }
 
 void AstDumperImpl::VisitFunctionLitExpr(FunctionLitExpr *node) {
-  Visit(node->body());
+  DumpExpressionCommon(node);
+  DumpStmt(node->body());
 }
 
 void AstDumperImpl::VisitIdentifierExpr(IdentifierExpr *node) {
