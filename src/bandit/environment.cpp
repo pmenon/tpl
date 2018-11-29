@@ -30,7 +30,7 @@ void Environment::Run(u32 num_trials, std::vector<double> *rewards,
     std::shuffle(partitions.begin(), partitions.end(), g);
   }
 
-  for (int i = 0; i < num_trials; ++i) {
+  for (u32 i = 0; i < num_trials; ++i) {
     // TODO(siva): Hack! Fix me!
     current_partition = partitions[i];
     auto action = agent_->NextAction();
