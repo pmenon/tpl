@@ -13,18 +13,18 @@ void Sema::VisitVariableDecl(ast::VariableDecl *node) {
   }
 
   // At this point, the variable either has a declared type or an initial value
-  TPL_ASSERT(node->type_repr() != nullptr || node->initial() != nullptr,
+  TPL_ASSERT(node->HasTypeDecl() || node->HasInitialValue(),
              "Variable has neither a type declaration or an initial "
              "expression. This should have been caught during parsing.");
 
   ast::Type *declared_type = nullptr;
   ast::Type *initializer_type = nullptr;
 
-  if (node->type_repr() != nullptr) {
+  if (node->HasTypeDecl()) {
     declared_type = Resolve(node->type_repr());
   }
 
-  if (node->initial() != nullptr) {
+  if (node->HasInitialValue()) {
     initializer_type = Resolve(node->initial());
   }
 

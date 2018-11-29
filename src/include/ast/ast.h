@@ -285,6 +285,9 @@ class VariableDecl : public Decl {
 
   Expr *initial() const { return init_; }
 
+  // Did the variable declaration come with an explicit type i.e., var x:int = 0
+  bool HasTypeDecl() const { return type_repr() != nullptr; }
+
   bool HasInitialValue() const { return init_ != nullptr; }
 
   static bool classof(const AstNode *node) {
@@ -963,6 +966,8 @@ class ArrayTypeRepr : public Expr {
   Expr *length() const { return len_; }
 
   Expr *element_type() const { return elem_type_; }
+
+  bool HasLength() const { return len_ != nullptr; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ArrayTypeRepr;

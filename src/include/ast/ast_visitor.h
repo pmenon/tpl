@@ -22,11 +22,11 @@ namespace tpl::ast {
  * To easily define visitors for all nodes, use the AST_NODES() macro providing
  * a function generator macro as the argument.
  */
-template <typename Impl, typename RetType = void>
+template <typename Subclass, typename RetType = void>
 class AstVisitor {
  public:
 #define DISPATCH(Type) \
-  return static_cast<Impl *>(this)->Visit##Type(static_cast<Type *>(node));
+  return this->impl()->Visit##Type(static_cast<Type *>(node));
 
   RetType Visit(AstNode *node) {
     switch (node->kind()) {
@@ -60,6 +60,9 @@ class AstVisitor {
 #undef T
 
 #undef DISPATCH
+
+ protected:
+  Subclass *impl() { return static_cast<Subclass *>(this); }
 };
 
 }  // namespace tpl::ast
