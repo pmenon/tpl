@@ -98,7 +98,7 @@ class BanditTest : public TplTest,
     std::string tpl_code = "";
     std::vector<std::string> function_names;
 
-    for(int i = 0; i < permuataions.size(); ++i) {
+    for(u32 i = 0; i < permuataions.size(); ++i) {
       auto [src, function_name] = CreateSampleTPLFunction(i, permuataions[i]);
       tpl_code += src;
       function_names.push_back(function_name);
@@ -254,7 +254,7 @@ TEST_P(BanditTest, SimpleTest) {
   out_file << "EpsGreedy: exec_time, EpsGreedy: optimal, " << std::endl;
 
   // print execution time on each timestep.
-  for (int i = 0; i < num_trials; ++i) {
+  for (u32 i = 0; i < num_trials; ++i) {
     out_file << i << ", ";
 
     for (u32 action = 0; action < num_actions; action++) {
