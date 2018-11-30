@@ -243,7 +243,7 @@ class Parser::ForHeader {
 };
 
 Parser::ForHeader Parser::ParseForHeader() {
-  // ForStmt = 'for' '(' [ Condition | ForHeader | ForInHeader] ')' Block ;
+  // ForStmt = 'for' [ '(' Condition ')' | '(' ForHeader ')' | '(' ForInHeader ')' ] Block ;
   //
   // Condition = Expr ;
   //
@@ -251,12 +251,12 @@ Parser::ForHeader Parser::ParseForHeader() {
   //
   // ForInHeader = [ Expr ] 'in' [ Expr ] ;
 
-  Expect(Token::Type::LEFT_PAREN);
-
-  // Infinite loop ?
-  if (Matches(Token::Type::RIGHT_PAREN)) {
+  // Infinite loop?
+  if (peek() == Token::Type::LEFT_BRACE) {
     return ForHeader::Infinite();
   }
+
+  Expect(Token::Type::LEFT_PAREN);
 
   ast::Stmt *init = nullptr;
   ast::Expr *cond = nullptr;

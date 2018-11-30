@@ -47,14 +47,21 @@ class AstTraversalVisitorTest : public TplTest {
 namespace {
 
 // Visit to find FOR loops only
-class ForFinder : public AstTraversalVisitor<ForFinder> {
+template <bool FindInfinite = false>
+class ForFinder : public AstTraversalVisitor<ForFinder<FindInfinite>> {
+  using SelfT = ForFinder<FindInfinite>;
+
  public:
   explicit ForFinder(ast::AstNode *root)
-      : AstTraversalVisitor(root), num_fors_(0) {}
+      : AstTraversalVisitor<SelfT>(root), num_fors_(0) {}
 
   void VisitForStmt(ast::ForStmt *stmt) {
-    num_fors_++;
-    AstTraversalVisitor<ForFinder>::VisitForStmt(stmt);
+    if constexpr (FindInfinite) {
+      num_fors_ += stmt->IsInfinite();
+    } else {
+      num_fors_++;
+    }
+    AstTraversalVisitor<SelfT>::VisitForStmt(stmt);
   }
 
   u32 num_fors() const { return num_fors_; }
@@ -103,9 +110,9 @@ TEST_F(AstTraversalVisitorTest, CountForLoopsTest) {
     const auto src = R"(
     fun test(x: int) -> int {
       for (x < 10) {
-        for () {
-          for () {
-            for () { }
+        for {
+          for {
+            for { }
           }
         }
       }
@@ -114,20 +121,24 @@ TEST_F(AstTraversalVisitorTest, CountForLoopsTest) {
 
     auto *root = GenerateAst(src);
 
-    ForFinder finder(root);
+    ForFinder<false> finder(root);
+    ForFinder<true> inf_finder(root);
+
     finder.Run();
+    inf_finder.Run();
 
     EXPECT_EQ(4u, finder.num_fors());
+    EXPECT_EQ(3u, inf_finder.num_fors());
   }
 
   // 4 sequential for-loops
   {
     const auto src = R"(
     fun test(x: int) -> int {
-      for () {}
-      for () {}
-      for () {}
-      for () {}
+      for {}
+      for {}
+      for {}
+      for {}
       return 0
     })";
 
