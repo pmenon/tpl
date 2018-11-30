@@ -108,28 +108,16 @@ class Vec8Mask {
   Vec8Mask(const __mmask8 &mask) : mask_(mask) {}
 
   ALWAYS_INLINE u32 ToPositions(u32 *positions, u32 offset) const {
-    // TODO(pmenon): This uses AVX2, can we use AVX512?
-    const __m128i match_pos_scaled = _mm_loadl_epi64(
-        reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask_]));
-    const __m256i match_pos = _mm256_cvtepi8_epi32(match_pos_scaled);
-    const __m256i pos_vec =
-        _mm256_add_epi32(_mm256_set1_epi32(offset), match_pos);
-    _mm256_storeu_si256(reinterpret_cast<__m256i *>(positions), pos_vec);
+    __m512i sequence = _mm512_setr_epi64(0, 1, 2, 3, 4, 5, 6, 7);
+    __m512i pos_vec = _mm512_add_epi64(sequence, _mm512_set1_epi64(offset));
+    __m256i pos_vec_comp = _mm512_cvtepi64_epi32(pos_vec);
+    _mm256_mask_compressstoreu_epi32(positions, mask_, pos_vec_comp);
     return __builtin_popcountll(mask_);
   }
 
   ALWAYS_INLINE u32 ToPositions(u32 *positions, const Vec8 &pos) const {
-    // TODO(pmenon): This uses AVX2, can we use AVX512?
-    const __m128i perm_comp = _mm_loadl_epi64(
-        reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask_]));
-    const __m256i perm = _mm256_cvtepi8_epi32(perm_comp);
-    const __m256i mask =
-        _mm256_maskz_broadcastd_epi32(mask_, _mm_set1_epi32(-1));
-    const __m256i pos_scaled = _mm512_cvtepi64_epi32(pos);
-    const __m256i perm_pos = _mm256_permutevar8x32_epi32(pos_scaled, perm);
-    const __m256i perm_mask = _mm256_permutevar8x32_epi32(mask, perm);
-    _mm256_maskstore_epi32(reinterpret_cast<i32 *>(positions), perm_mask,
-                           perm_pos);
+    __m256i pos_comp = _mm512_cvtepi64_epi32(pos);
+    _mm256_mask_compressstoreu_epi32(positions, mask_, pos_comp);
     return __builtin_popcountll(mask_);
   }
 
