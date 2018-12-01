@@ -16,6 +16,8 @@ using f32 = float;
 using f64 = double;
 using byte = std::byte;
 
+using hash_t = u64;
+
 #define INT_TYPES(_) \
   _(i8)              \
   _(i16)             \
