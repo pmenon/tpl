@@ -155,7 +155,7 @@ void RunExperiment(bandit::MultiArmedBandit *bandit, bandit::Agent *agent,
 }
 
 
-TEST_P(BanditTest, SimpleTest) {
+TEST_P(BanditTest, DISABLED_SimpleTest) {
   auto conf = GetParam();
 
   LOG_INFO("Configuration {}", conf.out_file);

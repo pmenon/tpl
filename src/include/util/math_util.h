@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <cstdlib>
 
+#include "llvm/Support/MathExtras.h"
+
 #include "util/common.h"
 #include "util/macros.h"
 
@@ -16,9 +18,7 @@ class MathUtil {
    * @param val The value to check
    * @return True if the value is a power of two > 0
    */
-  static constexpr bool IsPowerOf2(u64 val) {
-    return (val > 0) && ((val & (val - 1)) == 0);
-  }
+  static constexpr bool IsPowerOf2(u64 val) { return llvm::isPowerOf2_64(val); }
 
   /**
    * Compute the next power of two greater than the input
@@ -26,14 +26,17 @@ class MathUtil {
    * @param val The input
    * @return The next power of two greater than 'val'
    */
-  static constexpr inline u64 NextPowerOf2(u64 val) {
-    val |= (val >> 1);
-    val |= (val >> 2);
-    val |= (val >> 4);
-    val |= (val >> 8);
-    val |= (val >> 16);
-    val |= (val >> 32);
-    return val + 1;
+  static inline u64 NextPowerOf2(u64 val) { return llvm::NextPowerOf2(val); }
+
+  /**
+   * Count the number of zeroes from the most significant bit to the first 1 in
+   * the input number @ref val
+   * @param val The input number
+   * @return The number of leading zeros
+   */
+  template <typename T>
+  static inline u64 CountLeadingZeros(T val) {
+    return llvm::countLeadingZeros(val);
   }
 
   /**
@@ -95,8 +98,7 @@ class MathUtil {
    * alignment.
    */
   static u64 AlignTo(u64 value, u64 align) {
-    TPL_ASSERT(align != 0u, "Align must be non-zero.");
-    return (value + align - 1) / align * align;
+    return llvm::alignTo(value, align);
   }
 
   /**

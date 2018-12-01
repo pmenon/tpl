@@ -242,8 +242,6 @@ MapType *MapType::Get(Type *key_type, Type *value_type) {
 // static
 StructType *StructType::Get(AstContext &ctx,
                             util::RegionVector<Field> &&fields) {
-  // TODO(pmenon): Use cache?
-
   // Compute size and alignment. Alignment of struct is alignment of largest
   // struct element.
   u32 size = 0;
@@ -251,9 +249,9 @@ StructType *StructType::Get(AstContext &ctx,
   util::RegionVector<u32> field_offsets(ctx.region());
   for (const auto &field : fields) {
     // Check if the type needs to be padded
-    if (!util::MathUtil::IsAligned(size, field.type->alignment())) {
-      size = static_cast<u32>(
-          util::MathUtil::AlignTo(size, field.type->alignment()));
+    u32 field_align = field.type->alignment();
+    if (!util::MathUtil::IsAligned(size, field_align)) {
+      size = static_cast<u32>(util::MathUtil::AlignTo(size, field_align));
     }
 
     // Update size and calculate alignment
@@ -262,7 +260,6 @@ StructType *StructType::Get(AstContext &ctx,
     alignment = std::max(alignment, field.type->alignment());
   }
 
-  // Done
   return new (ctx.region()) StructType(ctx, size, alignment, std::move(fields),
                                        std::move(field_offsets));
 }

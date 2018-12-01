@@ -95,7 +95,7 @@ class HashMap {
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-HashMap::HashMap(float load_factor)
+inline HashMap::HashMap(float load_factor)
     : entries_(nullptr),
       mask_(0),
       capacity_(0),
@@ -121,7 +121,7 @@ inline HashMap::EntryHeader *HashMap::FindChainHeadWithTag(hash_t hash) const {
 }
 
 template <bool Concurrent>
-void HashMap::Insert(HashMap::EntryHeader *entry, hash_t hash) {
+inline void HashMap::Insert(HashMap::EntryHeader *entry, hash_t hash) {
   const auto pos = hash & mask_;
 
   TPL_ASSERT(pos < capacity_, "Computed table position exceeds capacity!");
@@ -144,7 +144,7 @@ void HashMap::Insert(HashMap::EntryHeader *entry, hash_t hash) {
 }
 
 template <bool Concurrent>
-void HashMap::InsertTagged(HashMap::EntryHeader *entry, hash_t hash) {
+inline void HashMap::InsertTagged(HashMap::EntryHeader *entry, hash_t hash) {
   const auto pos = hash & mask_;
 
   TPL_ASSERT(pos < capacity_, "Computed table position exceeds capacity!");
@@ -169,7 +169,7 @@ void HashMap::InsertTagged(HashMap::EntryHeader *entry, hash_t hash) {
   num_elems_++;
 }
 
-void HashMap::SetSize(u64 new_size) {
+inline void HashMap::SetSize(u64 new_size) {
   TPL_ASSERT(new_size > 0, "New size cannot be zero!");
   if (entries_ != nullptr) {
     util::mem::FreeHuge(entries_,
@@ -193,7 +193,7 @@ inline HashMap::EntryHeader *HashMap::UntagPointer(
   return reinterpret_cast<EntryHeader *>(ptr & kMaskPointer);
 }
 
-HashMap::EntryHeader *HashMap::UpdateTag(
+inline HashMap::EntryHeader *HashMap::UpdateTag(
     HashMap::EntryHeader *old_entry, HashMap::EntryHeader *new_entry) const {
   auto old_ptr = reinterpret_cast<intptr_t>(old_entry);
   auto ptr = reinterpret_cast<intptr_t>(new_entry);

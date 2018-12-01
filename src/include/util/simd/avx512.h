@@ -173,6 +173,24 @@ class Vec16Mask {
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
+ALWAYS_INLINE inline Vec512b operator&(const Vec512b &a, const Vec512b &b) {
+  return _mm512_and_epi64(a, b);
+}
+
+ALWAYS_INLINE inline Vec512b operator|(const Vec512b &a, const Vec512b &b) {
+  return _mm512_or_si512(a, b);
+}
+
+ALWAYS_INLINE inline Vec512b operator^(const Vec512b &a, const Vec512b &b) {
+  return _mm512_xor_si512(a, b);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// Vec8
+///
+////////////////////////////////////////////////////////////////////////////////
+
 template <typename T>
 ALWAYS_INLINE inline void Vec8::Load(const T *ptr) {
   using signed_t = std::make_signed_t<T>;
@@ -256,34 +274,32 @@ ALWAYS_INLINE inline void Vec16::Gather<i32>(const i32 *ptr, const Vec16 &pos) {
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-static ALWAYS_INLINE inline Vec8Mask operator>(const Vec8 &lhs,
-                                               const Vec8 &rhs) noexcept {
-  return _mm512_cmpgt_epi64_mask(lhs, rhs);
+ALWAYS_INLINE inline Vec8Mask operator>(const Vec8 &a, const Vec8 &b) noexcept {
+  return _mm512_cmpgt_epi64_mask(a, b);
 }
 
-static ALWAYS_INLINE inline Vec8Mask operator==(const Vec8 &lhs,
-                                                const Vec8 &rhs) noexcept {
-  return _mm512_cmpeq_epi64_mask(lhs, rhs);
+ALWAYS_INLINE inline Vec8Mask operator==(const Vec8 &a,
+                                         const Vec8 &b) noexcept {
+  return _mm512_cmpeq_epi64_mask(a, b);
 }
 
-static ALWAYS_INLINE inline Vec8Mask operator<(const Vec8 &lhs,
-                                               const Vec8 &rhs) noexcept {
-  return _mm512_cmplt_epi64_mask(lhs, rhs);
+ALWAYS_INLINE inline Vec8Mask operator<(const Vec8 &a, const Vec8 &b) noexcept {
+  return _mm512_cmplt_epi64_mask(a, b);
 }
 
-static ALWAYS_INLINE inline Vec8Mask operator<=(const Vec8 &lhs,
-                                                const Vec8 &rhs) noexcept {
-  return _mm512_cmple_epi64_mask(lhs, rhs);
+ALWAYS_INLINE inline Vec8Mask operator<=(const Vec8 &a,
+                                         const Vec8 &b) noexcept {
+  return _mm512_cmple_epi64_mask(a, b);
 }
 
-static ALWAYS_INLINE inline Vec8Mask operator>=(const Vec8 &lhs,
-                                                const Vec8 &rhs) noexcept {
-  return _mm512_cmpge_epi64_mask(lhs, rhs);
+ALWAYS_INLINE inline Vec8Mask operator>=(const Vec8 &a,
+                                         const Vec8 &b) noexcept {
+  return _mm512_cmpge_epi64_mask(a, b);
 }
 
-static ALWAYS_INLINE inline Vec8Mask operator!=(const Vec8 &lhs,
-                                                const Vec8 &rhs) noexcept {
-  return _mm512_cmpneq_epi64_mask(lhs, rhs);
+ALWAYS_INLINE inline Vec8Mask operator!=(const Vec8 &a,
+                                         const Vec8 &b) noexcept {
+  return _mm512_cmpneq_epi64_mask(a, b);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -292,17 +308,45 @@ static ALWAYS_INLINE inline Vec8Mask operator!=(const Vec8 &lhs,
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-static ALWAYS_INLINE inline Vec8 operator+(const Vec8 &lhs, const Vec8 &rhs) {
-  return _mm512_add_epi64(lhs, rhs);
+ALWAYS_INLINE inline Vec8 operator+(const Vec8 &a, const Vec8 &b) {
+  return _mm512_add_epi64(a, b);
 }
 
-static ALWAYS_INLINE inline Vec8 operator-(const Vec8 &lhs, const Vec8 &rhs) {
-  return _mm512_sub_epi64(lhs, rhs);
+ALWAYS_INLINE inline Vec8 operator-(const Vec8 &a, const Vec8 &b) {
+  return _mm512_sub_epi64(a, b);
 }
 
-static ALWAYS_INLINE inline Vec8 &operator+=(Vec8 &lhs, const Vec8 &rhs) {
-  lhs = lhs + rhs;
-  return lhs;
+ALWAYS_INLINE inline Vec8 &operator+=(Vec8 &a, const Vec8 &b) {
+  a = a + b;
+  return a;
+}
+
+ALWAYS_INLINE inline Vec8 operator&(const Vec8 &a, const Vec8 &b) {
+  return _mm512_and_epi64(a, b);
+}
+
+ALWAYS_INLINE inline Vec8 operator|(const Vec8 &a, const Vec8 &b) {
+  return _mm512_or_epi64(a, b);
+}
+
+ALWAYS_INLINE inline Vec8 operator^(const Vec8 &a, const Vec8 &b) {
+  return _mm512_xor_epi64(a, b);
+}
+
+ALWAYS_INLINE inline Vec8 operator>>(const Vec8 &a, const u32 shift) {
+  return _mm512_srli_epi64(a, shift);
+}
+
+ALWAYS_INLINE inline Vec8 operator<<(const Vec8 &a, const u32 shift) {
+  return _mm512_slli_epi64(a, shift);
+}
+
+ALWAYS_INLINE inline Vec8 operator>>(const Vec8 &a, const Vec8 &b) {
+  return _mm512_srlv_epi64(a, b);
+}
+
+ALWAYS_INLINE inline Vec8 operator<<(const Vec8 &a, const Vec8 &b) {
+  return _mm512_sllv_epi64(a, b);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -311,34 +355,34 @@ static ALWAYS_INLINE inline Vec8 &operator+=(Vec8 &lhs, const Vec8 &rhs) {
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-static ALWAYS_INLINE inline Vec16Mask operator>(const Vec16 &lhs,
-                                                const Vec16 &rhs) noexcept {
-  return _mm512_cmpgt_epi32_mask(lhs, rhs);
+ALWAYS_INLINE inline Vec16Mask operator>(const Vec16 &a,
+                                         const Vec16 &b) noexcept {
+  return _mm512_cmpgt_epi32_mask(a, b);
 }
 
-static ALWAYS_INLINE inline Vec16Mask operator==(const Vec16 &lhs,
-                                                 const Vec16 &rhs) noexcept {
-  return _mm512_cmpeq_epi32_mask(lhs, rhs);
+ALWAYS_INLINE inline Vec16Mask operator==(const Vec16 &a,
+                                          const Vec16 &b) noexcept {
+  return _mm512_cmpeq_epi32_mask(a, b);
 }
 
-static ALWAYS_INLINE inline Vec16Mask operator<(const Vec16 &lhs,
-                                                const Vec16 &rhs) noexcept {
-  return _mm512_cmplt_epi32_mask(lhs, rhs);
+ALWAYS_INLINE inline Vec16Mask operator<(const Vec16 &a,
+                                         const Vec16 &b) noexcept {
+  return _mm512_cmplt_epi32_mask(a, b);
 }
 
-static ALWAYS_INLINE inline Vec16Mask operator<=(const Vec16 &lhs,
-                                                 const Vec16 &rhs) noexcept {
-  return _mm512_cmple_epi32_mask(lhs, rhs);
+ALWAYS_INLINE inline Vec16Mask operator<=(const Vec16 &a,
+                                          const Vec16 &b) noexcept {
+  return _mm512_cmple_epi32_mask(a, b);
 }
 
-static ALWAYS_INLINE inline Vec16Mask operator>=(const Vec16 &lhs,
-                                                 const Vec16 &rhs) noexcept {
-  return _mm512_cmpge_epi32_mask(lhs, rhs);
+ALWAYS_INLINE inline Vec16Mask operator>=(const Vec16 &a,
+                                          const Vec16 &b) noexcept {
+  return _mm512_cmpge_epi32_mask(a, b);
 }
 
-static ALWAYS_INLINE inline Vec16Mask operator!=(const Vec16 &lhs,
-                                                 const Vec16 &rhs) noexcept {
-  return _mm512_cmpneq_epi32_mask(lhs, rhs);
+ALWAYS_INLINE inline Vec16Mask operator!=(const Vec16 &a,
+                                          const Vec16 &b) noexcept {
+  return _mm512_cmpneq_epi32_mask(a, b);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -347,19 +391,45 @@ static ALWAYS_INLINE inline Vec16Mask operator!=(const Vec16 &lhs,
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-static ALWAYS_INLINE inline Vec16 operator+(const Vec16 &lhs,
-                                            const Vec16 &rhs) {
-  return _mm512_add_epi32(lhs, rhs);
+ALWAYS_INLINE inline Vec16 operator+(const Vec16 &a, const Vec16 &b) {
+  return _mm512_add_epi32(a, b);
 }
 
-static ALWAYS_INLINE inline Vec16 operator-(const Vec16 &lhs,
-                                            const Vec16 &rhs) {
-  return _mm512_sub_epi32(lhs, rhs);
+ALWAYS_INLINE inline Vec16 operator-(const Vec16 &a, const Vec16 &b) {
+  return _mm512_sub_epi32(a, b);
 }
 
-static ALWAYS_INLINE inline Vec16 &operator+=(Vec16 &lhs, const Vec16 &rhs) {
-  lhs = lhs + rhs;
-  return lhs;
+ALWAYS_INLINE inline Vec16 &operator+=(Vec16 &a, const Vec16 &b) {
+  a = a + b;
+  return a;
+}
+
+ALWAYS_INLINE inline Vec16 operator&(const Vec16 &a, const Vec16 &b) {
+  return _mm512_and_epi32(a, b);
+}
+
+ALWAYS_INLINE inline Vec16 operator|(const Vec16 &a, const Vec16 &b) {
+  return _mm512_or_epi32(a, b);
+}
+
+ALWAYS_INLINE inline Vec16 operator^(const Vec16 &a, const Vec16 &b) {
+  return _mm512_xor_epi32(a, b);
+}
+
+ALWAYS_INLINE inline Vec16 operator>>(const Vec16 &a, const u32 shift) {
+  return _mm512_srli_epi32(a, shift);
+}
+
+ALWAYS_INLINE inline Vec16 operator<<(const Vec16 &a, const u32 shift) {
+  return _mm512_slli_epi32(a, shift);
+}
+
+ALWAYS_INLINE inline Vec16 operator>>(const Vec16 &a, const Vec16 &b) {
+  return _mm512_srlv_epi32(a, b);
+}
+
+ALWAYS_INLINE inline Vec16 operator<<(const Vec16 &a, const Vec16 &b) {
+  return _mm512_sllv_epi32(a, b);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

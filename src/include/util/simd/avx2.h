@@ -200,14 +200,23 @@ class Vec4Mask : public Vec4 {
 ////////////////////////////////////////////////////////////////////////////////
 
 // Bit-wise NOT
-static ALWAYS_INLINE inline Vec256b operator~(const Vec256b &v) noexcept {
+ALWAYS_INLINE inline Vec256b operator~(const Vec256b &v) noexcept {
   return _mm256_xor_si256(v, _mm256_set1_epi32(-1));
 }
 
-// Bit-wise AND
-static ALWAYS_INLINE inline Vec256b operator&(const Vec256b &lhs,
-                                              const Vec256b &rhs) noexcept {
-  return _mm256_and_si256(lhs, rhs);
+ALWAYS_INLINE inline Vec256b operator&(const Vec256b &a,
+                                       const Vec256b &b) noexcept {
+  return _mm256_and_si256(a, b);
+}
+
+ALWAYS_INLINE inline Vec256b operator|(const Vec256b &a,
+                                       const Vec256b &b) noexcept {
+  return _mm256_or_si256(a, b);
+}
+
+ALWAYS_INLINE inline Vec256b operator^(const Vec256b &a,
+                                       const Vec256b &b) noexcept {
+  return _mm256_xor_si256(a, b);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -216,9 +225,9 @@ static ALWAYS_INLINE inline Vec256b operator&(const Vec256b &lhs,
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-static ALWAYS_INLINE inline Vec8Mask operator&(const Vec8Mask &lhs,
-                                               const Vec8Mask &rhs) noexcept {
-  return Vec8Mask(Vec256b(lhs) & Vec256b(rhs));
+ALWAYS_INLINE inline Vec8Mask operator&(const Vec8Mask &a,
+                                        const Vec8Mask &b) noexcept {
+  return Vec8Mask(Vec256b(a) & Vec256b(b));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -227,9 +236,9 @@ static ALWAYS_INLINE inline Vec8Mask operator&(const Vec8Mask &lhs,
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-static ALWAYS_INLINE inline Vec4Mask operator&(const Vec4Mask &lhs,
-                                               const Vec4Mask &rhs) noexcept {
-  return Vec4Mask(Vec256b(lhs) & Vec256b(rhs));
+ALWAYS_INLINE inline Vec4Mask operator&(const Vec4Mask &a,
+                                        const Vec4Mask &b) noexcept {
+  return Vec4Mask(Vec256b(a) & Vec256b(b));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -253,6 +262,88 @@ ALWAYS_INLINE inline void Vec4::Load<i32>(const i32 *ptr) {
 template <>
 ALWAYS_INLINE inline void Vec4::Load<i64>(const i64 *ptr) {
   reg_ = _mm256_loadu_si256((const __m256i *)ptr);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// Vec4 - Comparison Operations
+///
+////////////////////////////////////////////////////////////////////////////////
+
+ALWAYS_INLINE inline Vec4Mask operator>(const Vec4 &a, const Vec4 &b) noexcept {
+  return _mm256_cmpgt_epi64(a, b);
+}
+
+ALWAYS_INLINE inline Vec4Mask operator==(const Vec4 &a,
+                                         const Vec4 &b) noexcept {
+  return _mm256_cmpeq_epi64(a, b);
+}
+
+ALWAYS_INLINE inline Vec4Mask operator>=(const Vec4 &a,
+                                         const Vec4 &b) noexcept {
+  __m256i max_a_b = _mm256_max_epu64(a, b);
+  return _mm256_cmpeq_epi64(a, max_a_b);
+}
+
+ALWAYS_INLINE inline Vec4Mask operator<(const Vec4 &a, const Vec4 &b) noexcept {
+  return b > a;
+}
+
+ALWAYS_INLINE inline Vec4Mask operator<=(const Vec4 &a,
+                                         const Vec4 &b) noexcept {
+  return b >= a;
+}
+
+ALWAYS_INLINE inline Vec4Mask operator!=(const Vec4 &a,
+                                         const Vec4 &b) noexcept {
+  return Vec4Mask(~Vec256b(a == b));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///
+/// Vec4 - Arithmetic Operations
+///
+////////////////////////////////////////////////////////////////////////////////
+
+ALWAYS_INLINE inline Vec4 operator+(const Vec4 &a, const Vec4 &b) {
+  return _mm256_add_epi64(a, b);
+}
+
+ALWAYS_INLINE inline Vec4 operator-(const Vec4 &a, const Vec4 &b) {
+  return _mm256_sub_epi64(a, b);
+}
+
+ALWAYS_INLINE inline Vec4 &operator+=(Vec4 &a, const Vec4 &b) {
+  a = a + b;
+  return a;
+}
+
+ALWAYS_INLINE inline Vec4 operator&(const Vec4 &a, const Vec4 &b) {
+  return Vec4(Vec256b(a) & Vec256b(b));
+}
+
+ALWAYS_INLINE inline Vec4 operator|(const Vec4 &a, const Vec4 &b) {
+  return Vec4(Vec256b(a) | Vec256b(b));
+}
+
+ALWAYS_INLINE inline Vec4 operator^(const Vec4 &a, const Vec4 &b) {
+  return Vec4(Vec256b(a) ^ Vec256b(b));
+}
+
+ALWAYS_INLINE inline Vec4 operator>>(const Vec4 &a, const u32 shift) {
+  return _mm256_srli_epi64(a, shift);
+}
+
+ALWAYS_INLINE inline Vec4 operator<<(const Vec4 &a, const u32 shift) {
+  return _mm256_slli_epi64(a, shift);
+}
+
+ALWAYS_INLINE inline Vec4 operator>>(const Vec4 &a, const Vec4 &b) {
+  return _mm256_srlv_epi64(a, b);
+}
+
+ALWAYS_INLINE inline Vec4 operator<<(const Vec4 &a, const Vec4 &b) {
+  return _mm256_sllv_epi64(a, b);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -334,35 +425,33 @@ ALWAYS_INLINE inline void Vec8::Gather<i32>(const i32 *ptr, const Vec8 &pos) {
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-static ALWAYS_INLINE inline Vec8Mask operator>(const Vec8 &lhs,
-                                               const Vec8 &rhs) noexcept {
-  return _mm256_cmpgt_epi32(lhs, rhs);
+ALWAYS_INLINE inline Vec8Mask operator>(const Vec8 &a, const Vec8 &b) noexcept {
+  return _mm256_cmpgt_epi32(a, b);
 }
 
-static ALWAYS_INLINE inline Vec8Mask operator==(const Vec8 &lhs,
-                                                const Vec8 &rhs) noexcept {
-  return _mm256_cmpeq_epi32(lhs, rhs);
+ALWAYS_INLINE inline Vec8Mask operator==(const Vec8 &a,
+                                         const Vec8 &b) noexcept {
+  return _mm256_cmpeq_epi32(a, b);
 }
 
-static ALWAYS_INLINE inline Vec8Mask operator>=(const Vec8 &lhs,
-                                                const Vec8 &rhs) noexcept {
-  __m256i max_lhs_rhs = _mm256_max_epu32(lhs, rhs);
-  return _mm256_cmpeq_epi32(lhs, max_lhs_rhs);
+ALWAYS_INLINE inline Vec8Mask operator>=(const Vec8 &a,
+                                         const Vec8 &b) noexcept {
+  __m256i max_a_b = _mm256_max_epu32(a, b);
+  return _mm256_cmpeq_epi32(a, max_a_b);
 }
 
-static ALWAYS_INLINE inline Vec8Mask operator<(const Vec8 &lhs,
-                                               const Vec8 &rhs) noexcept {
-  return rhs > lhs;
+ALWAYS_INLINE inline Vec8Mask operator<(const Vec8 &a, const Vec8 &b) noexcept {
+  return b > a;
 }
 
-static ALWAYS_INLINE inline Vec8Mask operator<=(const Vec8 &lhs,
-                                                const Vec8 &rhs) noexcept {
-  return rhs >= lhs;
+ALWAYS_INLINE inline Vec8Mask operator<=(const Vec8 &a,
+                                         const Vec8 &b) noexcept {
+  return b >= a;
 }
 
-static ALWAYS_INLINE inline Vec8Mask operator!=(const Vec8 &lhs,
-                                                const Vec8 &rhs) noexcept {
-  return Vec8Mask(~Vec256b(lhs == rhs));
+ALWAYS_INLINE inline Vec8Mask operator!=(const Vec8 &a,
+                                         const Vec8 &b) noexcept {
+  return Vec8Mask(~Vec256b(a == b));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -371,73 +460,45 @@ static ALWAYS_INLINE inline Vec8Mask operator!=(const Vec8 &lhs,
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-static ALWAYS_INLINE inline Vec8 operator+(const Vec8 &lhs, const Vec8 &rhs) {
-  return _mm256_add_epi32(lhs, rhs);
+ALWAYS_INLINE inline Vec8 operator+(const Vec8 &a, const Vec8 &b) {
+  return _mm256_add_epi32(a, b);
 }
 
-static ALWAYS_INLINE inline Vec8 operator-(const Vec8 &lhs, const Vec8 &rhs) {
-  return _mm256_sub_epi32(lhs, rhs);
+ALWAYS_INLINE inline Vec8 operator-(const Vec8 &a, const Vec8 &b) {
+  return _mm256_sub_epi32(a, b);
 }
 
-static ALWAYS_INLINE inline Vec8 &operator+=(Vec8 &lhs, const Vec8 &rhs) {
-  lhs = lhs + rhs;
-  return lhs;
+ALWAYS_INLINE inline Vec8 &operator+=(Vec8 &a, const Vec8 &b) {
+  a = a + b;
+  return a;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Vec4 - Comparison Operations
-///
-////////////////////////////////////////////////////////////////////////////////
-
-static ALWAYS_INLINE inline Vec4Mask operator>(const Vec4 &lhs,
-                                               const Vec4 &rhs) noexcept {
-  return _mm256_cmpgt_epi64(lhs, rhs);
+ALWAYS_INLINE inline Vec8 operator&(const Vec8 &a, const Vec8 &b) {
+  return Vec8(Vec256b(a) & Vec256b(b));
 }
 
-static ALWAYS_INLINE inline Vec4Mask operator==(const Vec4 &lhs,
-                                                const Vec4 &rhs) noexcept {
-  return _mm256_cmpeq_epi64(lhs, rhs);
+ALWAYS_INLINE inline Vec8 operator|(const Vec8 &a, const Vec8 &b) {
+  return Vec8(Vec256b(a) | Vec256b(b));
 }
 
-static ALWAYS_INLINE inline Vec4Mask operator>=(const Vec4 &lhs,
-                                                const Vec4 &rhs) noexcept {
-  __m256i max_lhs_rhs = _mm256_max_epu64(lhs, rhs);
-  return _mm256_cmpeq_epi64(lhs, max_lhs_rhs);
+ALWAYS_INLINE inline Vec8 operator^(const Vec8 &a, const Vec8 &b) {
+  return Vec8(Vec256b(a) ^ Vec256b(b));
 }
 
-static ALWAYS_INLINE inline Vec4Mask operator<(const Vec4 &lhs,
-                                               const Vec4 &rhs) noexcept {
-  return rhs > lhs;
+ALWAYS_INLINE inline Vec8 operator>>(const Vec8 &a, const u32 shift) {
+  return _mm256_srli_epi32(a, shift);
 }
 
-static ALWAYS_INLINE inline Vec4Mask operator<=(const Vec4 &lhs,
-                                                const Vec4 &rhs) noexcept {
-  return rhs >= lhs;
+ALWAYS_INLINE inline Vec8 operator<<(const Vec8 &a, const u32 shift) {
+  return _mm256_slli_epi32(a, shift);
 }
 
-static ALWAYS_INLINE inline Vec4Mask operator!=(const Vec4 &lhs,
-                                                const Vec4 &rhs) noexcept {
-  return Vec4Mask(~Vec256b(lhs == rhs));
+ALWAYS_INLINE inline Vec8 operator>>(const Vec8 &a, const Vec8 &b) {
+  return _mm256_srlv_epi32(a, b);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Vec4 - Arithmetic Operations
-///
-////////////////////////////////////////////////////////////////////////////////
-
-static ALWAYS_INLINE inline Vec4 operator+(const Vec4 &lhs, const Vec4 &rhs) {
-  return _mm256_add_epi64(lhs, rhs);
-}
-
-static ALWAYS_INLINE inline Vec4 operator-(const Vec4 &lhs, const Vec4 &rhs) {
-  return _mm256_sub_epi64(lhs, rhs);
-}
-
-static ALWAYS_INLINE inline Vec4 &operator+=(Vec4 &lhs, const Vec4 &rhs) {
-  lhs = lhs + rhs;
-  return lhs;
+ALWAYS_INLINE inline Vec8 operator<<(const Vec8 &a, const Vec8 &b) {
+  return _mm256_sllv_epi32(a, b);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
