@@ -281,6 +281,31 @@ struct Field {
 };
 
 /**
+ * A function type
+ */
+class FunctionType : public Type {
+ public:
+  const util::RegionVector<Field> &params() const { return params_; }
+
+  u32 num_params() const { return static_cast<u32>(params().size()); }
+
+  Type *return_type() const { return ret_; }
+
+  static FunctionType *Get(util::RegionVector<Field> &&params, Type *ret);
+
+  static bool classof(const Type *type) {
+    return type->kind() == Type::Kind::FunctionType;
+  }
+
+ private:
+  explicit FunctionType(util::RegionVector<Field> &&params, Type *ret);
+
+ private:
+  util::RegionVector<Field> params_;
+  Type *ret_;
+};
+
+/**
  * An unordered map (i.e., hashtable)
  */
 class MapType : public Type {
@@ -296,10 +321,7 @@ class MapType : public Type {
   }
 
  private:
-  MapType(Type *key_type, Type *val_type)
-      : Type(key_type->context(), 0, 0, Kind::MapType),
-        key_type_(key_type),
-        val_type_(val_type) {}
+  MapType(Type *key_type, Type *val_type);
 
  private:
   Type *key_type_;
@@ -341,42 +363,11 @@ class StructType : public Type {
  private:
   explicit StructType(AstContext &ctx, u32 size, u32 alignment,
                       util::RegionVector<Field> &&fields,
-                      util::RegionVector<u32> &&field_offsets)
-      : Type(ctx, size, alignment, Type::Kind::StructType),
-        fields_(std::move(fields)),
-        field_offsets_(std::move(field_offsets)) {}
+                      util::RegionVector<u32> &&field_offsets);
 
  private:
   util::RegionVector<Field> fields_;
   util::RegionVector<u32> field_offsets_;
-};
-
-/**
- * A function type
- */
-class FunctionType : public Type {
- public:
-  const util::RegionVector<Field> &params() const { return params_; }
-
-  u32 num_params() const { return static_cast<u32>(params().size()); }
-
-  Type *return_type() const { return ret_; }
-
-  static FunctionType *Get(util::RegionVector<Field> &&params, Type *ret);
-
-  static bool classof(const Type *type) {
-    return type->kind() == Type::Kind::FunctionType;
-  }
-
- private:
-  explicit FunctionType(util::RegionVector<Field> &&params, Type *ret)
-      : Type(ret->context(), 0, 0, Type::Kind::FunctionType),
-        params_(std::move(params)),
-        ret_(ret) {}
-
- private:
-  util::RegionVector<Field> params_;
-  Type *ret_;
 };
 
 // clang-format off
