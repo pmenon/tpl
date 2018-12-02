@@ -48,8 +48,8 @@ struct AstContext::Implementation {
   //////////////////////////////////////////////////////////
 
   llvm::StringMap<char, util::LlvmRegionAllocator> string_table;
-  llvm::DenseMap<ast::Identifier, ast::Type *> builtin_types;
-  llvm::DenseSet<ast::Identifier> builtin_funcs;
+  llvm::DenseMap<Identifier, Type *> builtin_types;
+  llvm::DenseMap<Identifier, Builtin> builtin_funcs;
   llvm::DenseMap<Type *, PointerType *> pointer_types;
   llvm::DenseMap<std::pair<Type *, uint64_t>, ArrayType *> array_types;
   llvm::DenseMap<std::pair<Type *, Type *>, MapType *> map_types;
@@ -106,9 +106,9 @@ AstContext::AstContext(util::Region *region,
 #undef INIT_TYPE
 
   // Initialize builtin functions
-#define BUILTIN_FUNC(Name, ...) \
-  impl().builtin_funcs.insert(  \
-      GetIdentifier(Builtins::GetFunctionName(Builtin::Name)));
+#define BUILTIN_FUNC(Name, ...)       \
+  impl().builtin_funcs[GetIdentifier( \
+      Builtins::GetFunctionName(Builtin::Name))] = Builtin::Name;
   BUILTINS_LIST(BUILTIN_FUNC)
 #undef BUILTIN_FUNC
 }
@@ -122,14 +122,23 @@ Identifier AstContext::GetIdentifier(llvm::StringRef str) {
   return Identifier(iter->getKeyData());
 }
 
-ast::Type *AstContext::LookupBuiltinType(Identifier identifier) const {
+Type *AstContext::LookupBuiltinType(Identifier identifier) const {
   auto iter = impl().builtin_types.find(identifier);
   return (iter == impl().builtin_types.end() ? nullptr : iter->second);
 }
 
-bool AstContext::IsBuiltinFunction(Identifier identifier) const {
+bool AstContext::IsBuiltinFunction(Identifier identifier,
+                                   Builtin *builtin) const {
   const auto iter = impl().builtin_funcs.find(identifier);
-  return (iter != impl().builtin_funcs.end());
+
+  if (iter != impl().builtin_funcs.end()) {
+    if (builtin != nullptr) {
+      *builtin = iter->second;
+    }
+    return true;
+  }
+
+  return false;
 }
 
 // static
@@ -167,7 +176,7 @@ IntegerType *IntegerType::Get(AstContext &ctx, IntegerType::IntKind int_kind) {
 }
 
 // static
-FloatType *FloatType::Get(tpl::ast::AstContext &ctx, FloatKind float_kind) {
+FloatType *FloatType::Get(AstContext &ctx, FloatKind float_kind) {
   switch (float_kind) {
     case FloatType::FloatKind::Float32: {
       return &ctx.impl().float32;

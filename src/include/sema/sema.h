@@ -2,6 +2,7 @@
 
 #include "ast/ast.h"
 #include "ast/ast_visitor.h"
+#include "ast/builtins.h"
 #include "sema/error_reporter.h"
 #include "sema/scope.h"
 
@@ -59,7 +60,8 @@ class Sema : public ast::AstVisitor<Sema> {
                                       const SourcePosition &pos,
                                       ast::Expr *left, ast::Expr *right);
 
-  void CheckBuiltinCall(ast::CallExpr *call);
+  // Dispatched from VisitCall() to handle builtin functions
+  void CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinMapCall(ast::CallExpr *call);
   void CheckBuiltinFilterCall(ast::CallExpr *call);
 

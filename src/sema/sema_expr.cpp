@@ -282,17 +282,21 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
   call->set_type(filter_type->return_type());
 }
 
-void Sema::CheckBuiltinCall(ast::CallExpr *call) {
-  std::string func_name =
-      call->function()->As<ast::IdentifierExpr>()->name().data();
-
+void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
   call->set_call_kind(ast::CallExpr::CallKind::Builtin);
-
-  // TODO: Fix me
-  if (func_name == "tpl_map") {
-    CheckBuiltinMapCall(call);
-  } else if (func_name == "tpl_filter") {
-    CheckBuiltinFilterCall(call);
+  switch (builtin) {
+    case ast::Builtin::Filter: {
+      CheckBuiltinFilterCall(call);
+      break;
+    }
+    case ast::Builtin::Map: {
+      CheckBuiltinMapCall(call);
+      break;
+    }
+    default: {
+      // No-op
+      break;
+    }
   }
 }
 
@@ -300,8 +304,9 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   auto func_name = node->function()->As<ast::IdentifierExpr>()->name();
 
   // Is this a built in?
-  if (ast_context().IsBuiltinFunction(func_name)) {
-    CheckBuiltinCall(node);
+  if (ast::Builtin builtin;
+      ast_context().IsBuiltinFunction(func_name, &builtin)) {
+    CheckBuiltinCall(node, builtin);
     return;
   }
 
