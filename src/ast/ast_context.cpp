@@ -5,6 +5,7 @@
 #include "llvm/ADT/StringMap.h"
 
 #include "ast/ast_node_factory.h"
+#include "ast/builtins.h"
 #include "ast/type.h"
 #include "sql/table.h"
 #include "sql/value.h"
@@ -105,12 +106,11 @@ AstContext::AstContext(util::Region *region,
 #undef INIT_TYPE
 
   // Initialize builtin functions
-  impl().builtin_funcs.insert(GetIdentifier("tpl_map"));
-  impl().builtin_funcs.insert(GetIdentifier("tpl_filter"));
-  impl().builtin_funcs.insert(GetIdentifier("tpl_fold"));
-  impl().builtin_funcs.insert(GetIdentifier("tpl_gather"));
-  impl().builtin_funcs.insert(GetIdentifier("tpl_scatter"));
-  impl().builtin_funcs.insert(GetIdentifier("tpl_compress"));
+#define BUILTIN_FUNC(Name, ...) \
+  impl().builtin_funcs.insert(  \
+      GetIdentifier(Builtins::GetFunctionName(Builtin::Name)));
+  BUILTINS_LIST(BUILTIN_FUNC)
+#undef BUILTIN_FUNC
 }
 
 AstContext::~AstContext() = default;
