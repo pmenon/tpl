@@ -49,6 +49,11 @@ void Scanner::Scan() {
     next_.offset = offset_;
 
     switch (c0_) {
+      case '@': {
+        Advance();
+        type = Token::Type::AT;
+        break;
+      }
       case '{': {
         Advance();
         type = Token::Type::LEFT_BRACE;

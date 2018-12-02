@@ -24,6 +24,7 @@ namespace tpl::parsing {
   T(COLON, ":", 0)                                 \
   T(DOT, ".", 0)                                   \
   T(SEMI, ";", 0)                                  \
+  T(AT, "@", 0)                                    \
                                                    \
   /* Assignment */                                 \
   T(EQUAL, "=", 0)                                 \

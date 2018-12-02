@@ -278,6 +278,10 @@ struct Field {
   Type *type;
 
   Field(const Identifier &name, Type *type) : name(name), type(type) {}
+
+  bool operator==(const Field &other) const noexcept {
+    return name == other.name && type == other.type;
+  }
 };
 
 /**
@@ -333,6 +337,8 @@ class MapType : public Type {
  */
 class StructType : public Type {
  public:
+  const util::RegionVector<Field> &fields() const { return fields_; }
+
   Type *LookupFieldByName(Identifier name) const {
     for (const auto &field : fields()) {
       if (field.name == name) {
@@ -351,7 +357,9 @@ class StructType : public Type {
     return 0;
   }
 
-  const util::RegionVector<Field> &fields() const { return fields_; }
+  bool IsLayoutIdentical(const StructType &other) const {
+    return (this == &other || fields() == other.fields());
+  }
 
   static StructType *Get(AstContext &ctx, util::RegionVector<Field> &&fields);
   static StructType *Get(util::RegionVector<Field> &&fields);

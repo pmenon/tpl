@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "llvm/ADT/DenseMapInfo.h"
 
 #include "util/macros.h"
@@ -49,7 +51,9 @@ class Identifier {
 
 namespace llvm {
 
-// Type trait struct so we can store Identifiers in LLVM's DenseMap hash table
+/**
+ * Make Identifiers usable from LLVM DenseMaps
+ */
 template <>
 struct DenseMapInfo<tpl::ast::Identifier> {
   static inline tpl::ast::Identifier getEmptyKey() {
@@ -72,3 +76,18 @@ struct DenseMapInfo<tpl::ast::Identifier> {
 };
 
 }  // namespace llvm
+
+namespace std {
+
+/**
+ * Make Identifiers usable as keys in STL/TPL maps
+ */
+template <>
+struct hash<tpl::ast::Identifier> {
+  std::size_t operator()(const tpl::ast::Identifier &ident) const noexcept {
+    std::string_view s(ident.data(), ident.length());
+    return std::hash<decltype(s)>()(s);
+  }
+};
+
+}  // namespace std

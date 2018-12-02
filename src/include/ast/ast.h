@@ -459,20 +459,41 @@ class ForStmt : public IterationStmt {
   Stmt *next_;
 };
 
+class Attributes : public util::RegionObject {
+ public:
+  explicit Attributes(
+      util::RegionUnorderedMap<ast::Identifier, ast::Expr *> &&map)
+      : map_(std::move(map)) {}
+
+  bool Contains(ast::Identifier ident) const {
+    return map_.find(ident) != map_.end();
+  }
+
+  ast::Expr *Find(ast::Identifier identifier) {
+    return map_.find(identifier)->second;
+  }
+
+ private:
+  util::RegionUnorderedMap<ast::Identifier, ast::Expr *> map_;
+};
+
 /**
  * A range for statement
  */
 class ForInStmt : public IterationStmt {
  public:
   ForInStmt(const SourcePosition &pos, Expr *target, Expr *iter,
-            BlockStmt *body)
+            Attributes *attributes, BlockStmt *body)
       : IterationStmt(pos, AstNode::Kind::ForInStmt, body),
         target_(target),
-        iter_(iter) {}
+        iter_(iter),
+        attributes_(attributes) {}
 
   Expr *target() const { return target_; }
 
   Expr *iter() const { return iter_; }
+
+  Attributes *attributes() const { return attributes_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ForInStmt;
@@ -481,6 +502,7 @@ class ForInStmt : public IterationStmt {
  private:
   Expr *target_;
   Expr *iter_;
+  Attributes *attributes_;
 };
 
 /**
