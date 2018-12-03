@@ -1,7 +1,6 @@
 #include "vm/bytecodes.h"
 
 #include <algorithm>
-#include <vm/bytecodes.h>
 
 #include "vm/bytecode_traits.h"
 

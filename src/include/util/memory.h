@@ -30,4 +30,9 @@ T *MallocHugeArray(std::size_t num_elems) {
 
 void FreeHuge(void *ptr, std::size_t size) { munmap(ptr, size); }
 
+template <typename T>
+void FreeHugeArray(T *ptr, std::size_t num_elems) {
+  FreeHuge(static_cast<void *>(ptr), sizeof(T) * num_elems);
+}
+
 }  // namespace tpl::util::mem

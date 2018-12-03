@@ -104,8 +104,7 @@ inline HashMap::HashMap(float load_factor)
 
 inline HashMap::~HashMap() {
   if (entries_ != nullptr) {
-    std::size_t size = capacity_ * sizeof(std::atomic<EntryHeader *>);
-    util::mem::FreeHuge(entries_, size);
+    util::mem::FreeHugeArray(entries_, capacity_);
   }
 }
 
@@ -183,8 +182,7 @@ inline void HashMap::SetSize(u64 new_size) {
 
   capacity_ = next_size;
   mask_ = capacity_ - 1;
-  entries_ = static_cast<std::atomic<EntryHeader *> *>(
-      util::mem::MallocHuge(capacity_ * sizeof(std::atomic<EntryHeader *>)));
+  entries_ = util::mem::MallocHugeArray<std::atomic<EntryHeader *>>(capacity_);
 }
 
 inline HashMap::EntryHeader *HashMap::UntagPointer(
