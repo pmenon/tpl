@@ -175,8 +175,9 @@ Catalog::Catalog() {
     }
 
     // Insert into catalog
-    table_catalog_[TableId::Test1] = std::make_unique<Table>(
-        static_cast<u16>(TableId::Test1), Schema(std::move(cols)));
+    table_catalog_[TableId::Test1] =
+        std::make_unique<Table>(static_cast<u16>(TableId::Test1),
+                                std::make_unique<Schema>(std::move(cols)));
   }
 
   // Populate all tables

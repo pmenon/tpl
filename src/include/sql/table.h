@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iosfwd>
+#include <memory>
 #include <vector>
 
 #include "sql/block.h"
@@ -27,7 +28,8 @@ class Table {
    * @param id The desired ID of the table
    * @param schema The physical schema of the table
    */
-  Table(u16 id, Schema &&schema) : id_(id), schema_(std::move(schema)) {}
+  Table(u16 id, std::unique_ptr<Schema> &&schema)
+      : id_(id), schema_(std::move(schema)) {}
 
   /**
    * Insert column data from @data into the table.
@@ -60,11 +62,11 @@ class Table {
 
   u16 id() const { return id_; }
 
-  const Schema &schema() const { return schema_; }
+  const Schema &schema() const { return *schema_; }
 
  private:
   u16 id_;
-  Schema schema_;
+  std::unique_ptr<Schema> schema_;
   std::vector<Block> blocks_;
 };
 

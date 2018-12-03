@@ -61,7 +61,7 @@ class SemaExprTest : public TplTest {
     body("row", stmts);
 
     return node_factory()->NewForInStmt(
-        empty_, IdentExpr("row"), IdentExpr(table_name),
+        empty_, IdentExpr("row"), IdentExpr(table_name), nullptr,
         node_factory()->NewBlockStmt(empty_, empty_, std::move(stmts)));
   }
 
