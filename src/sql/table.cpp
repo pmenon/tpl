@@ -7,7 +7,7 @@ i32 current_partition = -1;
 
 namespace tpl::sql {
 
-void Table::BulkInsert(Block &&block) {
+void Table::Insert(Block &&block) {
   blocks_.emplace_back(std::move(block));
 }
 
@@ -24,7 +24,7 @@ bool Table::Scan(TableIterator *iter) const {
 
   iter->cols_.resize(block.num_cols());
   for (u32 i = 0; i < block.num_cols(); i++) {
-    iter->cols_[i] = &block.ColumnData(i);
+    iter->cols_[i] = &block.GetColumnData(i);
   }
   iter->block_ += 1;
   iter->pos_ = 0;
@@ -77,7 +77,7 @@ void Table::Dump(std::ostream &os) const {
     for (u32 row_idx = 0; row_idx < block.num_rows(); row_idx++) {
       for (u32 col_idx = 0; col_idx < cols_meta.size(); col_idx++) {
         if (col_idx != 0) os << ", ";
-        const auto &col_vector = block.ColumnData(col_idx);
+        const auto &col_vector = block.GetColumnData(col_idx);
         DumpColValue(os, cols_meta[col_idx].type, col_vector, row_idx);
       }
       os << "\n";

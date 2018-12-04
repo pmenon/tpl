@@ -150,11 +150,11 @@ void InitTable(const TableInsertMeta &table_meta, Table *table) {
     u32 num_vals = std::min(batch_size, table_meta.num_rows - (i * batch_size));
     for (const auto &col_meta : table_meta.col_meta) {
       const auto &[data, null_bitmap] = GenerateColumnData(col_meta, num_vals);
-      columns.emplace_back(data, null_bitmap, num_vals);
+      columns.emplace_back(col_meta.type, data, null_bitmap, num_vals);
     }
 
     // Insert into table
-    table->BulkInsert(Block(std::move(columns), num_vals));
+    table->Insert(Table::Block(std::move(columns), num_vals));
   }
 }
 

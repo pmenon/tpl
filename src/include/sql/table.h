@@ -5,7 +5,6 @@
 #include <memory>
 #include <vector>
 
-#include "sql/block.h"
 #include "sql/column.h"
 #include "sql/schema.h"
 #include "sql/value.h"
@@ -24,6 +23,59 @@ class TableIterator;
 class Table {
  public:
   /**
+   * A collection of column values forming a block of rows in the table
+   */
+  class Block {
+   public:
+    Block(std::vector<ColumnVector> &&data, u32 num_rows)
+        : data_(std::move(data)), num_rows_(num_rows) {}
+
+    u32 num_cols() const { return static_cast<u32>(data_.size()); }
+    u32 num_rows() const { return num_rows_; }
+
+    const ColumnVector &GetColumnData(u32 col_idx) const {
+      TPL_ASSERT(col_idx < num_cols(), "Invalid column index!");
+      return data_[col_idx];
+    }
+
+   private:
+    std::vector<ColumnVector> data_;
+    u32 num_rows_;
+  };
+
+  using BlockList = std::vector<Block>;
+
+  /**
+   * An iterator over the blocks in a table
+   */
+  class BlockIterator {
+    BlockIterator &operator++() noexcept {
+      ++pos_;
+      return *this;
+    }
+
+    bool operator==(const BlockIterator &other) const noexcept {
+      return pos_ == other.pos_;
+    }
+
+    bool operator!=(const BlockIterator &other) const noexcept {
+      return !(*this == other);
+    }
+
+    const Block *operator*() const { return (pos_ != end_ ? &*pos_ : nullptr); }
+
+   private:
+    friend class Table;
+    BlockIterator(BlockList::const_iterator begin,
+                  BlockList::const_iterator end)
+        : pos_(begin), end_(end) {}
+
+   private:
+    BlockList::const_iterator pos_;
+    BlockList::const_iterator end_;
+  };
+
+  /**
    * Create a new table with ID @ref id and physical layout @ref schema
    * @param id The desired ID of the table
    * @param schema The physical schema of the table
@@ -36,7 +88,7 @@ class Table {
    * @param data
    * @param num_rows
    */
-  void BulkInsert(Block &&block);
+  void Insert(Block &&block);
 
   /**
    * Continue the scan of this table from the given iterators position. If the
@@ -47,6 +99,22 @@ class Table {
    * @return True if there is more data.
    */
   bool Scan(TableIterator *iter) const;
+
+  /**
+   * Return an iterator over all blocks of the table
+   * @return
+   */
+  BlockIterator begin() const {
+    return BlockIterator(blocks().cbegin(), blocks().cend());
+  }
+
+  /**
+   * Return an iterator pointing to the end of the table
+   * @return
+   */
+  BlockIterator end() const {
+    return BlockIterator(blocks().cend(), blocks().cend());
+  }
 
   /**
    * Dump the contents of the table to the output stream in CSV format
@@ -64,10 +132,12 @@ class Table {
 
   const Schema &schema() const { return *schema_; }
 
+  const BlockList &blocks() const { return blocks_; }
+
  private:
   u16 id_;
   std::unique_ptr<Schema> schema_;
-  std::vector<Block> blocks_;
+  BlockList blocks_;
 };
 
 /**
