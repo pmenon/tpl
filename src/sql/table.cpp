@@ -32,7 +32,7 @@ bool Table::Scan(TableIterator *iter) const {
   return true;
 }
 
-void DumpColValue(std::ostream &os, Type type, const ColumnVector &col,
+void DumpColValue(std::ostream &os, const Type &type, const ColumnVector &col,
                   u32 row_idx) {
   switch (type.type_id()) {
     case TypeId::Boolean: {
@@ -62,9 +62,9 @@ void DumpColValue(std::ostream &os, Type type, const ColumnVector &col,
       }
       break;
     }
-    case TypeId::Decimal: {
-      break;
-    }
+    case TypeId::Decimal:
+    case TypeId::Date:
+    case TypeId::Char:
     case TypeId::Varchar: {
       break;
     }

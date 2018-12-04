@@ -296,15 +296,27 @@ InternalType *InternalType::Get(AstContext &ctx, InternalKind kind) {
 SqlType *SqlType::Get(AstContext &ctx, const sql::Type &sql_type) {
   // TODO: cache
   u32 size, alignment;
-  if (sql_type.IsBoolean() || sql_type.IsIntegral()) {
-    size = sizeof(sql::Integer);
-    alignment = alignof(sql::Integer);
-  } else if (sql_type.IsDecimal()) {
-    size = sizeof(sql::Decimal);
-    alignment = alignof(sql::Decimal);
-  } else {
-    size = sizeof(sql::String);
-    alignment = sizeof(sql::String);
+  switch (sql_type.type_id()) {
+    case sql::TypeId::Boolean:
+    case sql::TypeId::SmallInt:
+    case sql::TypeId::Integer:
+    case sql::TypeId::Date:
+    case sql::TypeId::BigInt: {
+      size = sizeof(sql::Integer);
+      alignment = alignof(sql::Integer);
+      break;
+    }
+    case sql::TypeId::Decimal: {
+      size = sizeof(sql::Decimal);
+      alignment = alignof(sql::Decimal);
+      break;
+    }
+    case sql::TypeId::Char:
+    case sql::TypeId::Varchar: {
+      size = sizeof(sql::String);
+      alignment = sizeof(sql::String);
+      break;
+    }
   }
 
   return new (ctx.region()) SqlType(ctx, size, alignment, sql_type);

@@ -28,7 +28,7 @@ class Table {
    * @param id The desired ID of the table
    * @param schema The physical schema of the table
    */
-  Table(u16 id, std::unique_ptr<Schema> &&schema)
+  Table(u16 id, std::unique_ptr<Schema> schema)
       : id_(id), schema_(std::move(schema)) {}
 
   /**
