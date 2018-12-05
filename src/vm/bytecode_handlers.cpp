@@ -3,6 +3,7 @@
 #include "logging/logger.h"
 #include "sql/catalog.h"
 #include "sql/table.h"
+#include "sql/table_iterator.h"
 #include "util/macros.h"
 
 /// Comparisons
@@ -144,12 +145,14 @@ void OpSqlTableIteratorInit(tpl::sql::TableIterator *iter, u16 table_id) {
     throw std::runtime_error("Table does not exist");
   }
 
-  new (iter) tpl::sql::TableIterator(table);
+  new (iter) tpl::sql::TableIterator(*table);
 }
 
-void OpSqlTableIteratorNext(bool *has_more, tpl::sql::TableIterator *iter) {
-  *has_more = iter->Next();
+void OpSqlTableIteratorHasNext(bool *has_more, tpl::sql::TableIterator *iter) {
+  *has_more = iter->HasNext();
 }
+
+void OpSqlTableIteratorNext(tpl::sql::TableIterator *iter) { iter->Next(); }
 
 void OpSqlTableIteratorClose(tpl::sql::TableIterator *iter) {
   iter->~TableIterator();

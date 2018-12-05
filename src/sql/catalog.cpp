@@ -5,9 +5,9 @@
 #include <utility>
 
 #include "logging/logger.h"
+#include "sql/data_types.h"
 #include "sql/schema.h"
 #include "sql/table.h"
-#include "sql/type.h"
 
 namespace tpl::sql {
 
@@ -24,7 +24,7 @@ enum class Dist : u8 { Uniform, Zipf_50, Zipf_75, Zipf_95, Zipf_99, Serial };
  */
 struct ColumnInsertMeta {
   const char *name;
-  Type type;
+  const Type &type;
   Dist dist;
   u64 min;
   u64 max;
@@ -59,10 +59,10 @@ struct TableInsertMeta {
 TableInsertMeta insert_meta[] = {
     // Table 1
     {TableId::Test1, "test_1", 2000000,
-     {{"colA", Type(TypeId::Integer, false), Dist::Serial, 0, 0},
-      {"colB", Type(TypeId::Integer, false), Dist::Uniform, 0, 9},
-      {"colC", Type(TypeId::Integer, false), Dist::Uniform, 0, 9999},
-      {"colD", Type(TypeId::Integer, false), Dist::Uniform, 0, 99999}}},
+     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0, 0},
+      {"colB", sql::IntegerType::Instance(false), Dist::Uniform, 0, 9},
+      {"colC", sql::IntegerType::Instance(false), Dist::Uniform, 0, 9999},
+      {"colD", sql::IntegerType::Instance(false), Dist::Uniform, 0, 99999}}},
 };
 // clang-format on
 
@@ -119,6 +119,8 @@ std::pair<const byte *, const bool *> GenerateColumnData(
           col_meta.dist, num_vals, col_meta.min, col_meta.max));
       break;
     }
+    case TypeId::Date:
+    case TypeId::Char:
     case TypeId::Varchar: {
       throw std::runtime_error("Implement me!");
     }
@@ -148,11 +150,11 @@ void InitTable(const TableInsertMeta &table_meta, Table *table) {
     u32 num_vals = std::min(batch_size, table_meta.num_rows - (i * batch_size));
     for (const auto &col_meta : table_meta.col_meta) {
       const auto &[data, null_bitmap] = GenerateColumnData(col_meta, num_vals);
-      columns.emplace_back(data, null_bitmap, num_vals);
+      columns.emplace_back(col_meta.type, data, null_bitmap, num_vals);
     }
 
     // Insert into table
-    table->BulkInsert(Block(std::move(columns), num_vals));
+    table->Insert(Table::Block(std::move(columns), num_vals));
   }
 }
 

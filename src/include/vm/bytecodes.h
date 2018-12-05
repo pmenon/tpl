@@ -65,7 +65,8 @@ namespace tpl::vm {
                                                                                                                        \
   /* SQL operations */                                                                                                 \
   V(SqlTableIteratorInit, OperandType::Local, OperandType::UImm2)                                                      \
-  V(SqlTableIteratorNext, OperandType::Local, OperandType::Local)                                                      \
+  V(SqlTableIteratorHasNext, OperandType::Local, OperandType::Local)                                                   \
+  V(SqlTableIteratorNext, OperandType::Local)                                                                          \
   V(SqlTableIteratorClose, OperandType::Local)                                                                         \
   V(ReadSmallInt, OperandType::Local, OperandType::UImm4, OperandType::Local)                                          \
   V(ReadInteger, OperandType::Local, OperandType::UImm4, OperandType::Local)                                           \
@@ -189,9 +190,7 @@ class Bytecodes {
             bytecode == Bytecode::JumpIfTrue);
   }
 
-  static bool IsCall(Bytecode bytecode) {
-    return (bytecode == Bytecode::Call);
-  }
+  static bool IsCall(Bytecode bytecode) { return (bytecode == Bytecode::Call); }
 
  private:
   static const char *kBytecodeNames[];

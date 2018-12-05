@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "sql/type.h"
+#include "sql/data_types.h"
 
 namespace tpl::sql {
 
@@ -14,7 +14,7 @@ class Schema {
  public:
   struct ColInfo {
     std::string name;
-    Type type;
+    const Type &type;
   };
 
   explicit Schema(std::vector<ColInfo> cols) : cols_(std::move(cols)) {}

@@ -126,24 +126,7 @@ void TypePrinter::VisitInternalType(const InternalType *type) {
 }
 
 void tpl::ast::TypePrinter::VisitSqlType(const SqlType *type) {
-  switch (type->sql_type().type_id()) {
-    case sql::TypeId::Boolean:
-    case sql::TypeId::SmallInt:
-    case sql::TypeId::Integer:
-    case sql::TypeId::BigInt: {
-      os() << "sql::Integer";
-      break;
-    }
-    case sql::TypeId::Decimal: {
-      os() << "sql::Decimal";
-      break;
-    }
-    case sql::TypeId::Varchar: {
-      os() << "sql::String";
-      break;
-    }
-    default: { UNREACHABLE("Impossible SQL type"); }
-  }
+  os() << type->sql_type().GetName();
 }
 
 void tpl::ast::TypePrinter::VisitMapType(const MapType *type) {

@@ -5,7 +5,7 @@
 #include "llvm/Support/Casting.h"
 
 #include "ast/identifier.h"
-#include "sql/type.h"
+#include "sql/data_types.h"
 #include "util/region.h"
 #include "util/region_containers.h"
 
@@ -442,7 +442,6 @@ class SqlType : public Type {
  public:
   static SqlType *Get(AstContext &ctx, const sql::Type &sql_type);
 
-  sql::Type *sql_type() { return &sql_type_; }
   const sql::Type &sql_type() const { return sql_type_; }
 
   // Type check
@@ -455,7 +454,7 @@ class SqlType : public Type {
       : Type(ctx, size, alignment, Kind::SqlType), sql_type_(sql_type) {}
 
  private:
-  sql::Type sql_type_;
+  const sql::Type &sql_type_;
 };
 
 }  // namespace tpl::ast

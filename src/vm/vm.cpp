@@ -297,10 +297,16 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(SqlTableIteratorNext) : {
+  OP(SqlTableIteratorHasNext) : {
     auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
     auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
-    OpSqlTableIteratorNext(has_more, iter);
+    OpSqlTableIteratorHasNext(has_more, iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(SqlTableIteratorNext) : {
+    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
+    OpSqlTableIteratorNext(iter);
     DISPATCH_NEXT();
   }
 

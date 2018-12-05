@@ -114,7 +114,7 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
   // If the result type is a SQL bool, we need to implicitly cast it to a native
   // boolean value
   if (auto *type = node->condition()->type()->SafeAs<ast::SqlType>();
-      type != nullptr && type->sql_type()->IsBoolean()) {
+      type != nullptr && type->sql_type().type_id() == sql::TypeId::Boolean) {
     ast::Expr *cond = node->condition();
     cond = ast_context().node_factory().NewImplicitCastExpr(
         cond->position(), ast::ImplicitCastExpr::CastKind::SqlBoolToBool, cond);
