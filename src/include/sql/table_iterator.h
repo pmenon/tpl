@@ -12,31 +12,19 @@ namespace tpl::sql {
 class TableIterator {
  public:
   explicit TableIterator(const Table &table)
-      : iterator_(table), pos_(0), limit_(0) {
-    Setup();
-  }
+      : iterator_(table), pos_(-1), limit_(0) {}
 
-  /**
-   * Does the iterator have any more tuples
-   * @return True if there's more tuples; false otherwise
-   */
-  bool HasNext() { return pos() != limit() || iterator()->HasNext(); }
-
-  /**
-   * Move to the next row in the table
-   */
-  void Next() {
-    // Are there any more tuples in the **current** vector?
+  bool Next() noexcept {
     if (++pos_ < limit()) {
-      return;
+      return true;
     }
 
-    // We've exhausted the current vector, move to the next and set it up
-    TPL_ASSERT(iterator()->HasNext(),
-               "Nested iterator is exhausted during call to Next()");
+    if (!iterator()->Next()) {
+      return false;
+    }
 
-    iterator()->Next();
     Setup();
+    return true;
   }
 
   /**
@@ -88,14 +76,14 @@ class TableIterator {
     return iterator()->row_batch();
   }
 
-  u32 pos() const { return pos_; }
+  i32 pos() const { return pos_; }
 
-  u32 limit() const { return limit_; }
+  i32 limit() const { return limit_; }
 
  private:
   VectorizedIterator iterator_;
-  u32 pos_;
-  u32 limit_;
+  i32 pos_;
+  i32 limit_;
 };
 
 }  // namespace tpl::sql

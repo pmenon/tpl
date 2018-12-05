@@ -50,11 +50,14 @@ class Table {
    */
   class BlockIterator {
    public:
-    bool HasNext() const noexcept { return pos_ != end_; }
+    bool Next() noexcept {
+      if (pos_ == end_) {
+        return false;
+      }
 
-    void Next() noexcept {
-      ++pos_;
       curr_block_ = &*pos_;
+      ++pos_;
+      return true;
     }
 
     const Block *current_block() const { return curr_block_; }
@@ -63,11 +66,7 @@ class Table {
     friend class Table;
     BlockIterator(BlockList::const_iterator begin,
                   BlockList::const_iterator end)
-        : curr_block_(nullptr), pos_(begin), end_(end) {
-      if (HasNext()) {
-        curr_block_ = &*pos_;
-      }
-    }
+        : curr_block_(nullptr), pos_(begin), end_(end) {}
 
    private:
     const Block *curr_block_;

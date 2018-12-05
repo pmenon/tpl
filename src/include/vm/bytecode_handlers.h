@@ -83,8 +83,7 @@ bool OpJumpIfFalse(bool cond);
 
 // Iteration
 void OpSqlTableIteratorInit(tpl::sql::TableIterator *iter, u16 table_id);
-void OpSqlTableIteratorHasNext(bool *has_more, tpl::sql::TableIterator *iter);
-void OpSqlTableIteratorNext(tpl::sql::TableIterator *iter);
+void OpSqlTableIteratorNext(bool *has_more, tpl::sql::TableIterator *iter);
 void OpSqlTableIteratorClose(tpl::sql::TableIterator *iter);
 
 // Reading

@@ -52,22 +52,15 @@ class VectorizedIterator {
    * @param table
    */
   explicit VectorizedIterator(const Table &table) noexcept
-      : block_iterator_(table.Iterate()), row_batch_(2048) {
-    SetupRowBatch(block_iterator()->current_block());
-  }
+      : block_iterator_(table.Iterate()), row_batch_(2048) {}
 
-  /**
-   * Does the iterator have any more data?
-   * @return True if there is more data; false otherwise
-   */
-  bool HasNext() const noexcept { return block_iterator()->HasNext(); }
+  bool Next() noexcept {
+    if (!block_iterator()->Next()) {
+      return false;
+    }
 
-  /**
-   * Move the iterator to the next vector of input
-   */
-  void Next() {
-    block_iterator()->Next();
     SetupRowBatch(block_iterator()->current_block());
+    return true;
   }
 
   //////////////////////////////////////////////////////////////////////////////

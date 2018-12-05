@@ -148,11 +148,9 @@ void OpSqlTableIteratorInit(tpl::sql::TableIterator *iter, u16 table_id) {
   new (iter) tpl::sql::TableIterator(*table);
 }
 
-void OpSqlTableIteratorHasNext(bool *has_more, tpl::sql::TableIterator *iter) {
-  *has_more = iter->HasNext();
+void OpSqlTableIteratorNext(bool *has_more, tpl::sql::TableIterator *iter) {
+  *has_more = iter->Next();
 }
-
-void OpSqlTableIteratorNext(tpl::sql::TableIterator *iter) { iter->Next(); }
 
 void OpSqlTableIteratorClose(tpl::sql::TableIterator *iter) {
   iter->~TableIterator();

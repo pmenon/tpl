@@ -65,8 +65,7 @@ namespace tpl::vm {
                                                                                                                        \
   /* SQL operations */                                                                                                 \
   V(SqlTableIteratorInit, OperandType::Local, OperandType::UImm2)                                                      \
-  V(SqlTableIteratorHasNext, OperandType::Local, OperandType::Local)                                                   \
-  V(SqlTableIteratorNext, OperandType::Local)                                                                          \
+  V(SqlTableIteratorNext, OperandType::Local, OperandType::Local)                                                      \
   V(SqlTableIteratorClose, OperandType::Local)                                                                         \
   V(ReadSmallInt, OperandType::Local, OperandType::UImm4, OperandType::Local)                                          \
   V(ReadInteger, OperandType::Local, OperandType::UImm4, OperandType::Local)                                           \

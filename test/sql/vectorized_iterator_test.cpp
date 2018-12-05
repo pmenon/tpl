@@ -14,14 +14,14 @@ TEST_F(VectorizedIteratorTest, SimpleScanTest) {
   auto table = sql::Catalog::instance()->LookupTableById(sql::TableId::Test1);
 
   u32 num_blocks = 0;
-  for (sql::VectorizedIterator iter(*table); iter.HasNext(); iter.Next()) {
+  for (sql::VectorizedIterator iter(*table); iter.Next();) {
     num_blocks++;
   }
 
   EXPECT_EQ(table->blocks().size(), num_blocks);
 
   u32 num_rows = 0;
-  for (sql::TableIterator iter(*table); iter.HasNext(); iter.Next()) {
+  for (sql::TableIterator iter(*table); iter.Next();) {
     num_rows++;
   }
 
@@ -33,7 +33,7 @@ TEST_F(VectorizedIteratorTest, DISABLED_PerfTest) {
 
   double t1 = Bench(4, [&table]() {
     u32 num_rows = 0;
-    for (sql::TableIterator iter(*table); iter.HasNext(); iter.Next()) {
+    for (sql::TableIterator iter(*table); iter.Next();) {
       num_rows++;
     }
     std::cout << num_rows << std::endl;

@@ -168,7 +168,7 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
     loop_builder.LoopHeader();
 
     LocalVar cond = current_function()->NewTempLocal(ast::BoolType::Get(ctx));
-    emitter()->Emit(Bytecode::SqlTableIteratorHasNext, cond, iter);
+    emitter()->Emit(Bytecode::SqlTableIteratorNext, cond, iter);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    loop_builder.break_label());
 
@@ -185,8 +185,6 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
 
     // Generate body
     VisitIterationStatement(node, &loop_builder);
-
-    emitter()->Emit(Bytecode::SqlTableIteratorNext, iter);
 
     // Finish, loop back around
     loop_builder.JumpToHeader();
