@@ -8,6 +8,7 @@ i32 current_partition = -1;
 namespace tpl::sql {
 
 void Table::Insert(Block &&block) {
+  num_rows_ += block.num_rows();
   blocks_.emplace_back(std::move(block));
 }
 

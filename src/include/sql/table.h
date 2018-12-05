@@ -81,7 +81,7 @@ class Table {
    * @param schema The physical schema of the table
    */
   Table(u16 id, std::unique_ptr<Schema> schema)
-      : id_(id), schema_(std::move(schema)) {}
+      : schema_(std::move(schema)), id_(id), num_rows_(0) {}
 
   /**
    * Insert column data from @data into the table.
@@ -112,14 +112,17 @@ class Table {
 
   u16 id() const { return id_; }
 
+  u32 num_rows() const { return num_rows_; }
+
   const Schema &schema() const { return *schema_; }
 
   const BlockList &blocks() const { return blocks_; }
 
  private:
-  u16 id_;
   std::unique_ptr<Schema> schema_;
   BlockList blocks_;
+  u16 id_;
+  u32 num_rows_;
 };
 
 }  // namespace tpl::sql
