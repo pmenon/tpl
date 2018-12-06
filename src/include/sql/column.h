@@ -39,7 +39,7 @@ class ColumnVector {
   }
 
   template <typename T>
-  const T &GetAt(u32 index) const {
+  const T &TypedAccessAt(u32 index) const {
     TPL_ASSERT(index < num_rows(), "Invalid row index!");
     return Raw<T>()[index];
   }

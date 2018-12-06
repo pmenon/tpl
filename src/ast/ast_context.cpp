@@ -8,6 +8,7 @@
 #include "ast/builtins.h"
 #include "ast/type.h"
 #include "sql/table.h"
+#include "sql/table_iterator.h"
 #include "sql/value.h"
 #include "util/common.h"
 #include "util/math_util.h"
@@ -295,7 +296,7 @@ InternalType *InternalType::Get(AstContext &ctx, InternalKind kind) {
 
 SqlType *SqlType::Get(AstContext &ctx, const sql::Type &sql_type) {
   // TODO: cache
-  u32 size, alignment;
+  u32 size = 0, alignment = 0;
   switch (sql_type.type_id()) {
     case sql::TypeId::Boolean:
     case sql::TypeId::SmallInt:

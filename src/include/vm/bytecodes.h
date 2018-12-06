@@ -189,9 +189,7 @@ class Bytecodes {
             bytecode == Bytecode::JumpIfTrue);
   }
 
-  static bool IsCall(Bytecode bytecode) {
-    return (bytecode == Bytecode::Call);
-  }
+  static bool IsCall(Bytecode bytecode) { return (bytecode == Bytecode::Call); }
 
  private:
   static const char *kBytecodeNames[];
