@@ -12,6 +12,13 @@ list(APPEND TPL_LINK_LIBS ${LLVM_LIBRARIES})
 
 # Check Clang++ is available. Ideally, you should have Clang 7 or Clang 6 ...
 set(SUPPORTED_CLANGS "clang++-7" "clang++-6.0" "clang++-5.0")
+if (${MACOSX})
+    # Because MacOS does some weird Clang versioning, and it isn't available
+    # through Homebrew, we add in vanilla "clang++". You won't be running TPL
+    # in production on a Mac system anyways ...
+    list(APPEND SUPPORTED_CLANGS "clang++")
+endif ()
+
 find_program(CLANG NAMES ${SUPPORTED_CLANGS})
 if (NOT EXISTS ${CLANG})
     message(FATAL_ERROR "Unable to locate clang++.")

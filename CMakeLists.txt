@@ -20,6 +20,11 @@ option(TPL_USE_ASAN "Build TPL with AddressSanitizer enabled" OFF)
 option(TPL_USE_TSAN "Build TPL with ThreadSanitizer enabled" OFF)
 option(TPL_USE_GOLD "Use the GNU Gold linker if available" ON)
 
+# Is this MacOS ?
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  set(MACOSX TRUE)
+endif()
+
 ############################################################
 #
 # Compiler Options
