@@ -1,6 +1,5 @@
 #include "vm/bytecode_handlers.h"
 
-#include "logging/logger.h"
 #include "sql/catalog.h"
 #include "sql/table.h"
 #include "sql/table_iterator.h"
@@ -140,10 +139,8 @@ void OpSqlTableIteratorInit(tpl::sql::TableIterator *iter, u16 table_id) {
   auto *table = tpl::sql::Catalog::instance()->LookupTableById(
       static_cast<tpl::sql::TableId>(table_id));
 
-  if (table == nullptr) {
-    LOG_ERROR("Table with ID {} does not exist!", table_id);
-    throw std::runtime_error("Table does not exist");
-  }
+  // At this point, the table better exist ...
+  TPL_ASSERT(table != nullptr, "Table can't be null!");
 
   new (iter) tpl::sql::TableIterator(*table);
 }

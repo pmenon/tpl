@@ -11,9 +11,7 @@
 
 namespace tpl::vm {
 
-/**
- * An enumeration capturing different execution methods and optimization levels
- */
+/// An enumeration capturing different execution methods and optimization levels
 enum class ExecutionMode : u8 {
   Interpret = 0,
   InterpretOpt = 1,
@@ -21,9 +19,7 @@ enum class ExecutionMode : u8 {
   JitOpt = 3
 };
 
-/**
- * A module represents all code in a single TPL source file
- */
+/// A module represents all code in a single TPL source file
 class BytecodeModule {
  public:
   BytecodeModule(util::RegionVector<u8> code,
@@ -32,23 +28,17 @@ class BytecodeModule {
 
   DISALLOW_COPY_AND_MOVE(BytecodeModule);
 
-  /**
-   * Retrieve a function's information struct by the ID of the function
-   *
-   * @param func_id The ID of the function
-   * @return The FunctionInfo struct, or NULL if the function does not exist
-   */
+  /// Retrieve a function's information struct by the ID of the function
+  /// \param func_id The ID of the function
+  /// \return The FunctionInfo struct, or NULL if the function does not exist
   const FunctionInfo *GetFuncInfoById(FunctionId func_id) const {
     TPL_ASSERT(func_id < NumFunctions(), "Invalid function");
     return &functions_[func_id];
   }
 
-  /**
-   * Retrieve an iterator over the bytecode for a given function
-   *
-   * @param func The function whose bytecode to retrieve
-   * @return An iterator over the bytecode
-   */
+  /// Retrieve an iterator over the bytecode for a given function
+  /// \param func The function whose bytecode to retrieve
+  /// \return An iterator over the bytecode
   BytecodeIterator BytecodeForFunction(const FunctionInfo &func) const {
     TPL_ASSERT(GetFuncInfoById(func.id()) != nullptr,
                "Function not defined in unit!");
@@ -56,41 +46,35 @@ class BytecodeModule {
     return BytecodeIterator(code_, start, end);
   }
 
-  /**
-   * Retrieve and wrap a TPL function inside a C++ function object, thus making
-   * the TPL function callable as a C++ function. Callers can request different
-   * versions of the TPL code including an interpreted version and a compiled
-   * version.
-   *
-   * @tparam Ret The C/C++ return type of the function
-   * @tparam ArgTypes The C/C++ argument types to the function
-   * @param name The name of the function the caller wants
-   * @param exec_mode The interpretation mode the caller desires
-   * @param func[output] The function wrapper we use to wrap the TPL function
-   */
+  /// Retrieve and wrap a TPL function inside a C++ function object, thus making
+  /// the TPL function callable as a C++ function. Callers can request different
+  /// versions of the TPL code including an interpreted version and a compiled
+  /// version.
+  /// \tparam Ret Ret The C/C++ return type of the function
+  /// \tparam ArgTypes ArgTypes The C/C++ argument types to the function
+  /// \param name The name of the function the caller wants
+  /// \param exec_mode The interpretation mode the caller desires
+  /// \param func[output] The function wrapper we use to wrap the TPL function
+  /// \return True if the function was found and the output parameter was set
   template <typename Ret, typename... ArgTypes>
   bool GetFunction(const std::string &name, ExecutionMode exec_mode,
                    std::function<Ret(ArgTypes...)> &func) const;
 
-  /**
-   * Pretty print all the module's contents into the provided output stream
-   *
-   * @param os The stream where the module's contents are printed to
-   */
+  /// Pretty print all the module's contents into the provided output stream
+  /// \param os The stream into which we dump the module's contents
   void PrettyPrint(std::ostream &os);
 
-  /**
-   * How many instructions are in this module?
-   */
+  /// How many instructions are in this module?
+  /// \return The total number of bytecode instructions in the module
   std::size_t InstructionCount() const { return code_.size(); }
 
-  /**
-   * How many functions are in this module?
-   */
+  /// How many functions are defined in this module?
+  /// \return The number of functions in the module
   std::size_t NumFunctions() const { return functions_.size(); }
 
  private:
   friend class VM;
+  friend class LLVMEngine;
 
   template <typename... ArgTypes>
   struct FunctionHelper;
@@ -107,6 +91,10 @@ class BytecodeModule {
     return &code_[start];
   }
 
+  // -------------------------------------------------------
+  // Accessors
+  // -------------------------------------------------------
+
   const util::RegionVector<u8> code() const { return code_; }
 
   const util::RegionVector<FunctionInfo> &functions() const {
@@ -118,11 +106,9 @@ class BytecodeModule {
   util::RegionVector<FunctionInfo> functions_;
 };
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Implementation below
-///
-////////////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------
+// Implementation below
+//----------------------------------------------------------
 
 template <typename RetT, typename... ArgTypes>
 struct BytecodeModule::FunctionHelper<RetT, ArgTypes...> {
