@@ -35,6 +35,7 @@ install() {
     LINUX)
       version=$(cat /etc/os-release | grep VERSION_ID | cut -d '"' -f 2)
       case $version in
+        18.10) ;&
         18.04) install_linux ;;
         *) give_up ;;
       esac
@@ -76,11 +77,12 @@ install_linux() {
   # Install packages.
   apt-get -y install \
       build-essential \
-      clang-format-6.0 \
+      clang-format-7 \
       cmake \
       git \
       g++-7 \
-      llvm-6.0
+      clang-7 \
+      llvm-7
 }
 
 main "$@"
