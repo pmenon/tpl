@@ -42,6 +42,13 @@ u32 Bytecodes::kBytecodeSizes[] = {
 };
 
 // static
+const char *Bytecodes::kBytecodeHandlerName[] = {
+#define ENTRY(name, ...) "Op" #name,
+    BYTECODE_LIST(ENTRY)
+#undef ENTRY
+};
+
+// static
 u32 Bytecodes::MaxBytecodeNameLength() {
   static constexpr const u32 kMaxInstNameLength = std::max({
 #define ENTRY(name, ...) sizeof(#name),

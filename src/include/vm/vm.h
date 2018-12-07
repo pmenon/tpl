@@ -12,6 +12,7 @@ namespace tpl::vm {
 
 class BytecodeModule;
 
+/// Our virtual machine
 class VM {
   // Use a 1K stack initially
   static constexpr u32 kDefaultInitialStackSize = 1024;
@@ -21,6 +22,14 @@ class VM {
 
   DISALLOW_COPY_AND_MOVE(VM);
 
+  /// Execute a function in this virtual machine
+  /// \tparam ArgTypes Template arguments specifying the arguments to the
+  /// function. At this point, we don't do any type-checking!
+  /// \param func The function to run
+  /// \param ip The instruction pointer pointing to the first instruction in the
+  /// function's bytecode
+  /// \param args The arguments to pass to the function. These are copied into
+  /// the function's execution frame, so beware!
   template <typename... ArgTypes>
   void Execute(const FunctionInfo &func, const u8 *ip, ArgTypes... args);
 
@@ -32,11 +41,9 @@ class VM {
 
   void Interpret(const u8 *ip, Frame *frame);
 
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Stack/Frame operations
-  ///
-  //////////////////////////////////////////////////////////////////////////////
+  // -------------------------------------------------------
+  // Stack/Frame operations
+  // -------------------------------------------------------
 
   std::size_t stack_capacity() const { return stack().size(); }
 
@@ -65,11 +72,9 @@ class VM {
     sp_ -= frame_size;
   }
 
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Accessors
-  ///
-  //////////////////////////////////////////////////////////////////////////////
+  // -------------------------------------------------------
+  // Accessors
+  // -------------------------------------------------------
 
   util::RegionVector<u8> &stack() { return stack_; }
   const util::RegionVector<u8> &stack() const { return stack_; }
@@ -87,10 +92,8 @@ class VM {
   u64 bytecode_counts_[Bytecodes::kBytecodeCount];
 };
 
-/**
- * An execution frame where all function's local variables and parameters live
- * for the duration of the function's lifetime.
- */
+/// An execution frame where all function's local variables and parameters live
+/// for the duration of the function's lifetime.
 class VM::Frame {
   friend class VM;
 
@@ -103,6 +106,13 @@ class VM::Frame {
 
   ~Frame() { vm()->ReleaseFrame(frame_size()); }
 
+  /// Access the local variable at the given index in the fame. The \ref 'index'
+  /// attribute is encoded and indicates whether the local variable is accessed
+  /// through an indirection (i.e., if the variable has to be dereferenced or
+  /// loaded)
+  /// \tparam T The type of the variable the user expects
+  /// \param index The encoded index into the frame where the variable is
+  /// \return The value of the variable. Note that this is copied!
   template <typename T>
   T LocalAt(u32 index) const {
     LocalVar local = LocalVar::Decode(index);
@@ -120,6 +130,8 @@ class VM::Frame {
 
  private:
 #ifndef NDEBUG
+  /// Ensure the local variable is valid
+  /// \param var The variable to access in the frame
   void EnsureInFrame(LocalVar var) const {
     if (var.GetOffset() >= frame_size()) {
       std::string error_msg =
@@ -145,11 +157,9 @@ class VM::Frame {
   std::size_t frame_size_;
 };
 
-/**
- * Helper class to construct a frame from a set of user-provided C/C++ function
- * arguments. Note that TPL has call-by-value semantics, hence all arguments
- * are copied.
- */
+/// Helper class to construct a frame from a set of user-provided C/C++ function
+/// arguments. Note that TPL has call-by-value semantics, hence all arguments
+/// are copied.
 class VM::FrameBuilder {
  public:
   template <typename... ArgTypes>

@@ -170,6 +170,11 @@ class Bytecodes {
     return kBytecodeSizes[static_cast<u32>(bytecode)];
   }
 
+  // Return the name of the bytecode handler function for this bytecode
+  static const char *GetBytecodeHandlerName(Bytecode bytecode) {
+    return kBytecodeHandlerName[ToByte(bytecode)];
+  }
+
   // Converts the given bytecode to a single-byte representation
   static std::underlying_type_t<Bytecode> ToByte(Bytecode bytecode) {
     TPL_ASSERT(bytecode <= Bytecode::Last, "Invalid bytecode");
@@ -197,6 +202,7 @@ class Bytecodes {
   static const OperandType *kBytecodeOperandTypes[];
   static const OperandSize *kBytecodeOperandSizes[];
   static u32 kBytecodeSizes[];
+  static const char *kBytecodeHandlerName[];
 };
 
 }  // namespace tpl::vm

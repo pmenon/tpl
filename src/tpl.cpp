@@ -88,6 +88,12 @@ static void CompileAndRun(const std::string &source) {
     LOG_INFO("main() returned: {}", main_func());
   }
 
+  // JIT
+  {
+    vm::LLVMEngine engine;
+    engine.Compile(module.get());
+  }
+
   // Dump stats
   LOG_INFO("Parse: {} ms, Typecheck: {} ms, Codegen: {} ms, Exec.: {} ms",
            parse_ms, typecheck_ms, codegen_ms, exec_ms);

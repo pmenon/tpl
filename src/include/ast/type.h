@@ -136,6 +136,7 @@ class IntegerType : public Type {
       case IntKind::UInt64: {
         return 64;
       }
+      default: { UNREACHABLE("Impossible integer kind"); }
     }
   }
 
