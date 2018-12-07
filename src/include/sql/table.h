@@ -17,20 +17,18 @@ namespace tpl::sql {
 class Table;
 class TableIterator;
 
-/**
- * A SQL table
- */
+/// A SQL table. It's stupid and only for testing the system out. It'll be
+/// ripped out when we pull it into the full DBMS
 class Table {
  public:
-  /**
-   * A collection of column values forming a block of rows in the table
-   */
+  /// A collection of column values forming a block of rows in the table
   class Block {
    public:
     Block(std::vector<ColumnVector> &&data, u32 num_rows)
         : data_(std::move(data)), num_rows_(num_rows) {}
 
     u32 num_cols() const { return static_cast<u32>(data_.size()); }
+
     u32 num_rows() const { return num_rows_; }
 
     const ColumnVector *GetColumnData(u32 col_idx) const {
@@ -45,9 +43,7 @@ class Table {
 
   using BlockList = std::vector<Block>;
 
-  /**
-   * An iterator over the blocks in a table
-   */
+  /// An iterator over the blocks in a table
   class BlockIterator {
    public:
     bool Next() noexcept {
@@ -74,56 +70,30 @@ class Table {
     BlockList::const_iterator end_;
   };
 
-  /**
-   * Create a new table with ID @ref id and physical layout @ref schema
-   * @param id The desired ID of the table
-   * @param schema The physical schema of the table
-   */
+  /// Create a new table with ID \ref id and physical layout \ref schema
+  /// \param id The desired ID of the table
+  /// \param schema The physical schema of the table
   Table(u16 id, std::unique_ptr<Schema> schema)
       : schema_(std::move(schema)), id_(id), num_rows_(0) {}
 
-  /**
-   * Insert column data from @data into the table.
-   * @param data
-   * @param num_rows
-   */
+  /// Insert column data from \ref data into the table
+  /// \param data
+  /// \param num_rows
   void Insert(Block &&block);
 
-  /**
-   * Return an iterator over all blocks of the table
-   * @return
-   */
+  /// Return an iterator over all blocks of the table
+  /// \return
   BlockIterator Iterate() const {
     return BlockIterator(blocks().cbegin(), blocks().cend());
   }
 
-  /**
-   * Return an iterator over all blocks of the table
-   * @return
-   */
-  BlockIterator begin() const {
-    return BlockIterator(blocks().cbegin(), blocks().cend());
-  }
-
-  /**
-   * Return an iterator pointing to the end of the table
-   * @return
-   */
-  BlockIterator end() const {
-    return BlockIterator(blocks().cend(), blocks().cend());
-  }
-
-  /**
-   * Dump the contents of the table to the output stream in CSV format
-   * @param os The output stream to write contents into
-   */
+  /// Dump the contents of the table to the output stream in CSV format
+  /// \param os The output stream to write contents into
   void Dump(std::ostream &os) const;
 
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Accessors
-  ///
-  //////////////////////////////////////////////////////////////////////////////
+  // -------------------------------------------------------
+  // Accessors
+  // -------------------------------------------------------
 
   u16 id() const { return id_; }
 

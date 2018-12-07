@@ -4,11 +4,9 @@
 
 namespace tpl::sql {
 
-/**
- * A row-at-a-time iterator over SQL tables. This iterator is only used during
- * JIT when generating row-at-a-time iterations in tight loops. Or, it's used
- * for debugging purposes.
- */
+/// A row-at-a-time iterator over SQL tables. This iterator is only used during
+/// JIT when generating row-at-a-time iterations in tight loops. Or, it's used
+/// for debugging purposes.
 class TableIterator {
  public:
   explicit TableIterator(const Table &table)
@@ -27,14 +25,12 @@ class TableIterator {
     return true;
   }
 
-  /**
-   * Read an integer column value from the current iterator position
-   *
-   * @tparam type_id The SQL type of the column
-   * @tparam nullable Whether the column is NULLable
-   * @param col_idx The ID (offset) of the column to read from
-   * @param out The output value to populate
-   */
+  /// Read an integer column value from the current iterator position
+  ///
+  /// \tparam type_id The SQL type of the column
+  /// \tparam nullable Whether the column is NULLable
+  /// \param col_idx The ID (offset) of the column to read from
+  /// \param out The output value to populate
   template <TypeId type_id, bool nullable>
   void ReadIntegerColumn(u32 col_idx, Integer *out) const {
     const auto *col = row_batch()->GetColumn(col_idx);
@@ -63,11 +59,9 @@ class TableIterator {
     limit_ = row_batch()->num_rows();
   }
 
-  //////////////////////////////////////////////////////////
-  ///
-  /// Accessors
-  ///
-  //////////////////////////////////////////////////////////
+  // -------------------------------------------------------
+  // Accessors
+  // -------------------------------------------------------
 
   VectorizedIterator *iterator() { return &iterator_; }
   const VectorizedIterator *iterator() const { return &iterator_; }

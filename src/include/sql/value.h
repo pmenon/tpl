@@ -4,9 +4,7 @@
 
 namespace tpl::sql {
 
-/**
- * An integral SQL value
- */
+/// An integral SQL value
 struct Integer {
   union {
     bool boolean;
@@ -17,18 +15,14 @@ struct Integer {
   bool null;
 };
 
-/**
- * A decimal SQL value
- */
+/// A decimal SQL value
 struct Decimal {
   u64 val;
   u32 scale_factor;
   bool null;
 };
 
-/**
- * A SQL string
- */
+/// A SQL string
 struct String {
   u8 *str;
   u32 len;

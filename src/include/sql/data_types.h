@@ -23,9 +23,7 @@ enum class TypeId : u8 {
   Varchar
 };
 
-/**
- * Base algebraic SQL type
- */
+/// Base algebraic SQL type
 class Type {
  public:
   virtual ~Type() = default;
@@ -44,11 +42,9 @@ class Type {
 
   virtual bool Equals(const Type &other) const = 0;
 
-  ///-------------------------------------------------------
-  ///
-  /// Type-checking
-  ///
-  ///-------------------------------------------------------
+  // -------------------------------------------------------
+  // Type-checking
+  // -------------------------------------------------------
 
   template <typename T>
   bool Is() const {
@@ -120,13 +116,11 @@ class BooleanType : public Type {
   explicit BooleanType(bool nullable);
 };
 
-/**
- * Base for all types that are stored as primitive C/C++ numbers. This includes
- * the regular SQL numbers (smallint, int, decimal), but also dates and
- * timestamps
- *
- * @tparam CppType The primitive type
- */
+/// Base for all types that are stored as primitive C/C++ numbers. This includes
+/// the regular SQL numbers (smallint, int, decimal), but also dates and
+/// timestamps.
+///
+/// \tparam CppType The primitive type
 template <typename CppType>
 class NumberBaseType : public Type {
  public:

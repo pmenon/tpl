@@ -6,11 +6,9 @@
 
 namespace tpl::sql {
 
-/**
- * A column vector represents a compact array of column values along with a
- * compact, positionally aligned bitmap indicating whether a column value is
- * NULL.
- */
+/// A column vector represents a compact array of column values along with a
+/// compact, positionally aligned bitmap indicating whether a column value is
+/// NULL.
 class ColumnVector {
  public:
   ColumnVector(const Type &type, const byte *data, const bool *null_bitmap,
@@ -38,19 +36,24 @@ class ColumnVector {
     }
   }
 
+  /// Read the value of type \ref T at the given index within the column's data
+  /// \tparam T The type of the value to read. We make no assumptions on copy
+  /// \param index
+  /// \return
   template <typename T>
   const T &TypedAccessAt(u32 index) const {
     TPL_ASSERT(index < num_rows(), "Invalid row index!");
     return Raw<T>()[index];
   }
 
+  /// Is the value at the given index NULL
+  /// \param index The index to check
+  /// \return True if the value is null; false otherwise
   bool IsNullAt(u32 index) const { return null_bitmap_[index]; }
 
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Accessors
-  ///
-  //////////////////////////////////////////////////////////////////////////////
+  // -------------------------------------------------------
+  // Accessors
+  // -------------------------------------------------------
 
   const Type &type() const { return type_; }
 
