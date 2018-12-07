@@ -10,7 +10,7 @@ namespace tpl {
 
 class TplTest : public ::testing::Test {
  protected:
-  void SetUp() override { logging::init_logger(); }
+  void SetUp() override { logging::InitLogger(); }
 
   void TearDown() override {
     // shutdown loggers

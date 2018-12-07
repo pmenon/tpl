@@ -5,7 +5,7 @@ namespace tpl::logging {
 std::shared_ptr<spdlog::sinks::stdout_sink_mt> default_sink;
 std::shared_ptr<spdlog::logger> logger;
 
-void init_logger() {
+void InitLogger() {
   // create the default, shared sink
   default_sink = std::make_shared<spdlog::sinks::stdout_sink_mt>();
 

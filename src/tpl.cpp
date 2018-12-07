@@ -15,6 +15,7 @@
 #include "util/timer.h"
 #include "vm/bytecode_generator.h"
 #include "vm/bytecode_module.h"
+#include "vm/llvm_engine.h"
 #include "vm/vm.h"
 
 namespace tpl {
@@ -127,17 +128,30 @@ static void RunFile(const std::string &filename) {
   CompileAndRun(source);
 }
 
-}  // namespace tpl
-
-int main(int argc, char **argv) {
+void InitTPL() {
   // Init logging
-  tpl::logging::init_logger();
-
-  // Welcome
-  LOG_INFO("Welcome to TPL (ver. {}.{})", TPL_VERSION_MAJOR, TPL_VERSION_MINOR);
+  tpl::logging::InitLogger();
 
   // Init catalog
   tpl::sql::Catalog::instance();
+
+  // Init LLVM engine
+  tpl::vm::LLVMEngine::Initialize();
+}
+
+void ShutdownTPL() {
+  // Cleanup
+  tpl::vm::LLVMEngine::Shutdown();
+}
+
+}  // namespace tpl
+
+int main(int argc, char **argv) {
+  // Init
+  tpl::InitTPL();
+
+  // Welcome
+  LOG_INFO("Welcome to TPL (ver. {}.{})", TPL_VERSION_MAJOR, TPL_VERSION_MINOR);
 
   // Either execute a TPL program from a source file, or run REPL
   if (argc == 2) {
@@ -146,6 +160,9 @@ int main(int argc, char **argv) {
   } else if (argc == 1) {
     tpl::RunRepl();
   }
+
+  // Shutdown
+  tpl::ShutdownTPL();
 
   return 0;
 }
