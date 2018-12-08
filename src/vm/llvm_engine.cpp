@@ -47,10 +47,6 @@ std::unique_ptr<LLVMEngine::CompilationUnit> LLVMEngine::Compile(
 
   builder.Optimize();
 
-    auto ret = builder.PrettyPrintLLVMModule();
-
-    LOG_ERROR("{}", ret);
-
   return builder.Finalize();
 }
 
@@ -130,16 +126,38 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunctions() {
       ir_builder.CreateAlloca(GetLLVMType(tpl_type));
     }
 
-    //auto *instructions = tpl_module()->GetBytecodeForFunction(func_info);
+    // Build function
+    auto [start, end] = tpl_module()->GetBytecodeRangeForFunction(func_info);
+    while (start < end) {
+      Bytecode bytecode = Bytecodes::FromByte(*start);
 
-    func->print(llvm::outs(), nullptr);
+      LOG_DEBUG("Handling {}", Bytecodes::ToString(bytecode));
+
+      // Lookup the bytecode handler name
+      const char *handler_name = Bytecodes::GetBytecodeHandlerName(bytecode);
+      llvm::Function *handler = module()->getFunction(handler_name);
+      TPL_ASSERT(handler != nullptr, "Handler for code");
+
+      // Collect arguments
+      llvm::SmallVector<llvm::Value *, 8> args;
+
+      // Call
+      ir_builder.CreateCall(handler, args);
+
+      start += Bytecodes::Size(bytecode);
+    }
+
+    // Done
+    ir_builder.CreateRetVoid();
+
+    func->print(llvm::errs(), nullptr);
   }
 }
 
 void LLVMEngine::CompilationUnitBuilder::Verify() {
   std::string result;
   llvm::raw_string_ostream ostream(result);
-  if (bool valid = llvm::verifyModule(*module(), &ostream); !valid) {
+  if (bool has_error = llvm::verifyModule(*module(), &ostream); has_error) {
     // TODO(pmenon): Do something more here ...
     LOG_ERROR("ERROR IN MODULE: {}", result);
   }

@@ -91,6 +91,12 @@ class BytecodeModule {
     return &code_[start];
   }
 
+  std::pair<const u8 *, const u8 *> GetBytecodeRangeForFunction(
+      const FunctionInfo &func) const {
+    auto [start, end] = func.bytecode_range();
+    return {&code_[start], &code_[end]};
+  }
+
   // -------------------------------------------------------
   // Accessors
   // -------------------------------------------------------

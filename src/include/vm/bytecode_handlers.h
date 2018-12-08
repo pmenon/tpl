@@ -12,13 +12,10 @@ class TableIterator;
 
 extern "C" {
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Primitive operations
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Primitive comparisons
+// ---------------------------------------------------------
 
-/// Comparisons
 #define COMPARISONS(type)                                             \
   void OpGreaterThanEqual##_##type(bool *result, type lhs, type rhs); \
   void OpGreaterThan##_##type(bool *result, type lhs, type rhs);      \
@@ -27,7 +24,14 @@ extern "C" {
   void OpLessThan##_##type(bool *result, type lhs, type rhs);         \
   void OpNotEqual##_##type(bool *result, type lhs, type rhs);
 
-/// Arithmetic
+INT_TYPES(COMPARISONS)
+
+#undef COMPARISONS
+
+// ---------------------------------------------------------
+// Primitive arithmetic
+// ---------------------------------------------------------
+
 #define ARITHMETIC(type)                                 \
   void OpAdd##_##type(type *result, type lhs, type rhs); \
   void OpSub##_##type(type *result, type lhs, type rhs); \
@@ -36,20 +40,27 @@ extern "C" {
   void OpRem##_##type(type *result, type lhs, type rhs); \
   void OpNeg##_##type(type *result, type input);
 
-/// Bitwise operations
+INT_TYPES(ARITHMETIC)
+
+#undef ARITHMETIC
+
+// ---------------------------------------------------------
+// Bitwise operations
+// ---------------------------------------------------------
+
 #define BITS(type)                                          \
   void OpBitAnd##_##type(type *result, type lhs, type rhs); \
   void OpBitOr##_##type(type *result, type lhs, type rhs);  \
   void OpBitXor##_##type(type *result, type lhs, type rhs); \
   void OpBitNeg##_##type(type *result, type input);
 
-INT_TYPES(COMPARISONS)
-INT_TYPES(ARITHMETIC)
 INT_TYPES(BITS)
 
-#undef COMPARISONS
-#undef ARITHMETIC
 #undef BITS
+
+// ---------------------------------------------------------
+// Memory operations
+// ---------------------------------------------------------
 
 void OpDeref1(i8 *dest, i8 *src);
 void OpDeref2(i16 *dest, i16 *src);
@@ -61,25 +72,28 @@ void OpAssign1(i8 *dest, i8 src);
 void OpAssign2(i16 *dest, i16 src);
 void OpAssign4(i32 *dest, i32 src);
 void OpAssign8(i64 *dest, i64 src);
+void OpAssignImm1(i8 *dest, i8 val);
+void OpAssignImm2(i16 *dest, i16 val);
+void OpAssignImm4(i32 *dest, i32 val);
+void OpAssignImm8(i64 *dest, i64 val);
 
 void OpLea(byte **dest, byte *base, u32 offset);
 void OpLeaScaled(byte **dest, byte *base, u32 index, u32 scale, u32 offset);
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Branching operations
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Branching operations
+// ---------------------------------------------------------
 
+// TODO(pmenon): Consolidate Jump/JumpLoop to one Jump with signed offset
 bool OpJump();
+bool OpJumpLoop();
 bool OpJumpIfTrue(bool cond);
 bool OpJumpIfFalse(bool cond);
+void OpReturn();
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// SQL
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// SQL
+// ---------------------------------------------------------
 
 // Iteration
 void OpSqlTableIteratorInit(tpl::sql::TableIterator *iter, u16 table_id);
@@ -89,8 +103,8 @@ void OpSqlTableIteratorClose(tpl::sql::TableIterator *iter);
 // Reading
 void OpReadSmallInt(tpl::sql::TableIterator *iter, u32 col_idx,
                     tpl::sql::Integer *val);
-void OpReadInt(tpl::sql::TableIterator *iter, u32 col_idx,
-               tpl::sql::Integer *val);
+void OpReadInteger(tpl::sql::TableIterator *iter, u32 col_idx,
+                   tpl::sql::Integer *val);
 void OpReadBigInt(tpl::sql::TableIterator *iter, u32 col_idx,
                   tpl::sql::Integer *val);
 void OpReadDecimal(tpl::sql::TableIterator *iter, u32 col_idx,

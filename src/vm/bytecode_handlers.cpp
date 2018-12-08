@@ -5,7 +5,10 @@
 #include "sql/table_iterator.h"
 #include "util/macros.h"
 
-/// Comparisons
+// ---------------------------------------------------------
+// Primitive comparisons
+// ---------------------------------------------------------
+
 #define COMPARISONS(type)                                              \
   /* Primitive greater-than-equal implementation */                    \
   void OpGreaterThanEqual##_##type(bool *result, type lhs, type rhs) { \
@@ -37,7 +40,14 @@
     *result = (lhs != rhs);                                            \
   }
 
-/// Arithmetic
+INT_TYPES(COMPARISONS);
+
+#undef COMPARISONS
+
+// ---------------------------------------------------------
+// Primitive arithmetic
+// ---------------------------------------------------------
+
 #define ARITHMETIC(type)                                  \
   /* Primitive addition */                                \
   void OpAdd##_##type(type *result, type lhs, type rhs) { \
@@ -69,7 +79,14 @@
   /* Primitive negation */                                \
   void OpNeg##_##type(type *result, type input) { *result = -input; }
 
-/// Bitwise operations
+INT_TYPES(ARITHMETIC);
+
+#undef ARITHMETIC
+
+// ---------------------------------------------------------
+// Bitwise operations
+// ---------------------------------------------------------
+
 #define BITS(type)                                           \
   /* Primitive bitwise AND */                                \
   void OpBitAnd##_##type(type *result, type lhs, type rhs) { \
@@ -89,13 +106,13 @@
   /* Primitive bitwise COMPLEMENT */                         \
   void OpBitNeg##_##type(type *result, type input) { *result = ~input; }
 
-INT_TYPES(COMPARISONS);
-INT_TYPES(ARITHMETIC);
 INT_TYPES(BITS);
 
-#undef COMPARISONS
-#undef ARITHMETIC
 #undef BITS
+
+// ---------------------------------------------------------
+// Memory operations
+// ---------------------------------------------------------
 
 void OpDeref1(i8 *dest, i8 *src) { *dest = *src; }
 
@@ -115,6 +132,14 @@ void OpAssign4(i32 *dest, i32 src) { *dest = src; }
 
 void OpAssign8(i64 *dest, i64 src) { *dest = src; }
 
+void OpAssignImm1(i8 *dest, i8 src) { *dest = src; }
+
+void OpAssignImm2(i16 *dest, i16 src) { *dest = src; }
+
+void OpAssignImm4(i32 *dest, i32 src) { *dest = src; }
+
+void OpAssignImm8(i64 *dest, i64 src) { *dest = src; }
+
 void OpLea(byte **dest, byte *base, u32 offset) { *dest = base + offset; }
 
 void OpLeaScaled(byte **dest, byte *base, u32 index, u32 scale, u32 offset) {
@@ -123,15 +148,17 @@ void OpLeaScaled(byte **dest, byte *base, u32 index, u32 scale, u32 offset) {
 
 bool OpJump() { return true; }
 
+bool OpJumpLoop() { return true; }
+
 bool OpJumpIfTrue(bool cond) { return cond; }
 
 bool OpJumpIfFalse(bool cond) { return !cond; }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Table
-///
-////////////////////////////////////////////////////////////////////////////////
+void OpReturn() {}
+
+// ---------------------------------------------------------
+// Table
+// ---------------------------------------------------------
 
 void OpSqlTableIteratorInit(tpl::sql::TableIterator *iter, u16 table_id) {
   TPL_ASSERT(iter != nullptr, "Null iterator!");
@@ -158,8 +185,8 @@ void OpReadSmallInt(tpl::sql::TableIterator *iter, u32 col_idx,
   iter->ReadIntegerColumn<tpl::sql::TypeId::SmallInt, false>(col_idx, val);
 }
 
-void OpReadInt(tpl::sql::TableIterator *iter, u32 col_idx,
-               tpl::sql::Integer *val) {
+void OpReadInteger(tpl::sql::TableIterator *iter, u32 col_idx,
+                   tpl::sql::Integer *val) {
   iter->ReadIntegerColumn<tpl::sql::TypeId::Integer, false>(col_idx, val);
 }
 

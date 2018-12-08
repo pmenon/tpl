@@ -43,6 +43,7 @@ class VM {
 
   // -------------------------------------------------------
   // Stack/Frame operations
+  // TODO(pmenon): Move these stack operations into a separate Stack class
   // -------------------------------------------------------
 
   std::size_t stack_capacity() const { return stack().size(); }
@@ -77,13 +78,16 @@ class VM {
   // -------------------------------------------------------
 
   util::RegionVector<u8> &stack() { return stack_; }
+
   const util::RegionVector<u8> &stack() const { return stack_; }
 
-  std::size_t sp() const { return sp_; }
+  const std::size_t sp() const { return sp_; }
 
   const BytecodeModule &module() const { return module_; }
 
  private:
+  // The stack and the current stack pointer. We use a vanilla byte-vector with
+  // a stack position for our stack implementation
   util::RegionVector<u8> stack_;
   std::size_t sp_;
 

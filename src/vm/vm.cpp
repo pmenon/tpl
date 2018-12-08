@@ -186,7 +186,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
    */
   OP(Jump) : {
     u16 skip = PEEK_JMP_OFFSET();
-    if (OpJump()) {
+    if (TPL_LIKELY(OpJump())) {
       ip += skip;
     }
     DISPATCH_NEXT();
@@ -197,7 +197,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
    */
   OP(JumpLoop) : {
     u16 skip = PEEK_JMP_OFFSET();
-    if (OpJump()) {
+    if (TPL_LIKELY(OpJumpLoop())) {
       ip -= skip;
     }
     DISPATCH_NEXT();
@@ -255,8 +255,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   }                                                       \
   OP(AssignImm##size) : {                                 \
     type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
-    type src = READ_IMM##size();                          \
-    OpAssign##size(dest, src);                            \
+    OpAssignImm##size(dest, READ_IMM##size());            \
     DISPATCH_NEXT();                                      \
   }
   GEN_ASSIGN(i8, 1);
@@ -288,7 +287,10 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(Return) : { return; }
+  OP(Return) : {
+    OpReturn();
+    return;
+  }
 
   OP(SqlTableIteratorInit) : {
     auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
@@ -322,7 +324,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
     auto col_idx = READ_UIMM4();
     auto *sql_int = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
-    OpReadInt(iter, col_idx, sql_int);
+    OpReadInteger(iter, col_idx, sql_int);
     DISPATCH_NEXT();
   }
 
