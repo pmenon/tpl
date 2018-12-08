@@ -381,9 +381,9 @@ class StructType : public Type {
 
 // clang-format off
 #define INTERNAL_TYPE_LIST(V) \
-  V(SqlTableIterator, "sql::TableIterator", ::tpl::sql::TableIterator) \
-  V(SqlInteger, "sql::Integer", ::tpl::sql::Integer)                   \
-  V(SqlDecimal, "sql::Decimal", ::tpl::sql::Decimal)
+  V(SqlTableIterator, "tpl::sql::TableIterator", ::tpl::sql::TableIterator) \
+  V(SqlInteger, "tpl::sql::Integer", ::tpl::sql::Integer)                   \
+  V(SqlDecimal, "tpl::sql::Decimal", ::tpl::sql::Decimal)
 // clang-format on
 
 /**

@@ -47,9 +47,9 @@ std::unique_ptr<LLVMEngine::CompilationUnit> LLVMEngine::Compile(
 
   builder.Optimize();
 
-  //  auto ret = builder.PrettyPrintLLVMModule();
+    auto ret = builder.PrettyPrintLLVMModule();
 
-  //  LOG_ERROR("{}", ret);
+    LOG_ERROR("{}", ret);
 
   return builder.Finalize();
 }
@@ -120,7 +120,19 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunctions() {
     TPL_ASSERT(func != nullptr,
                "All functions have to be declared before we define them");
 
+    // Define locals
+    auto *entry = llvm::BasicBlock::Create(context(), "EntryBB", func);
+    ir_builder.SetInsertPoint(entry);
+
+    u32 num_params = func_info.num_params();
+    for (u32 i = num_params; i < func_info.locals().size(); i++) {
+      const auto *tpl_type = func_info.locals()[i].type();
+      ir_builder.CreateAlloca(GetLLVMType(tpl_type));
+    }
+
     //auto *instructions = tpl_module()->GetBytecodeForFunction(func_info);
+
+    func->print(llvm::outs(), nullptr);
   }
 }
 
@@ -227,7 +239,14 @@ llvm::Type *LLVMEngine::CompilationUnitBuilder::GetLLVMType(
       break;
     }
     case ast::Type::Kind::StructType: {
-      // TODO: me
+      auto *struct_type = type->As<ast::StructType>();
+
+      llvm::SmallVector<llvm::Type *, 8> fields;
+      for (const auto &field : struct_type->fields()) {
+        fields.emplace_back(GetLLVMType(field.type));
+      }
+      llvm_type = llvm::StructType::create(fields);
+
       break;
     }
     case ast::Type::Kind::FunctionType: {
@@ -247,7 +266,17 @@ llvm::Type *LLVMEngine::CompilationUnitBuilder::GetLLVMType(
       break;
     }
     case ast::Type::Kind::SqlType: {
-      // TODO: me
+      auto *sql_type = type->As<ast::SqlType>();
+      switch (sql_type->sql_type().type_id()) {
+        case sql::TypeId::Boolean:
+        case sql::TypeId::SmallInt:
+        case sql::TypeId::Integer:
+        case sql::TypeId::BigInt: {
+          llvm_type = module()->getTypeByName("struct.tpl::sql::Integer");
+          break;
+        }
+        default : { break; }
+      }
       break;
     }
   }
