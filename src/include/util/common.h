@@ -18,15 +18,21 @@ using byte = std::byte;
 
 using hash_t = u64;
 
-#define INT_TYPES(_) \
-  _(i8)              \
-  _(i16)             \
-  _(i32)             \
-  _(i64)             \
-  _(u8)              \
-  _(u16)             \
-  _(u32)             \
-  _(u64)
+#define FOR_EACH_SIGNED_INT_TYPE(F) \
+  F(i8)                             \
+  F(i16)                            \
+  F(i32)                            \
+  F(i64)
+
+#define FOR_EACH_UNSIGNED_INT_TYPE(F) \
+  F(u8)                               \
+  F(u16)                              \
+  F(u32)                              \
+  F(u64)
+
+#define INT_TYPES(F)          \
+  FOR_EACH_SIGNED_INT_TYPE(F) \
+  FOR_EACH_UNSIGNED_INT_TYPE(F)
 
 namespace tpl {
 

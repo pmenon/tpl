@@ -41,13 +41,20 @@ function(COMPILE_TO_IR SRC_FILE)
 endfunction(COMPILE_TO_IR)
 
 ##################################################
-# TPL library
+# The TPL shared library
 ##################################################
+
+# We compile a static library containing all the TPL logic that we use as a
+# library. We have a library so that we can shared it with the tests as well.
 add_library(tpl_shared STATIC ${tpl_sources})
 
 ##################################################
 # TPL executable
 ##################################################
+
+# The TPL executable relies tpl.cpp which contains "main()" and links in the
+# TPL shared static library along with any runtime library dependencies like
+# LLVM
 set(tpl_main "${PROJECT_SOURCE_DIR}/src/tpl.cpp")
 add_executable(tpl ${tpl_main})
 target_link_libraries(tpl tpl_shared ${TPL_LINK_LIBS})

@@ -1,4 +1,6 @@
+#include <unistd.h>
 #include <algorithm>
+#include <csignal>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
@@ -152,11 +154,28 @@ void ShutdownTPL() {
 
 }  // namespace tpl
 
+void SignalHandler(i32 sig_num) {
+  if (sig_num == SIGINT) {
+    tpl::ShutdownTPL();
+    exit(0);
+  }
+}
+
 int main(int argc, char **argv) {
-  // Init
+  // Initialize a signal handler
+  struct sigaction sa;
+  sa.sa_handler = &SignalHandler;
+  sa.sa_flags = SA_RESTART;
+  // Block every signal during the handler
+  sigfillset(&sa.sa_mask);
+
+  if (sigaction(SIGINT, &sa, nullptr) == -1) {
+    perror("Error: cannot handle SIGINT");
+  }
+
+  // Init TPL
   tpl::InitTPL();
 
-  // Welcome
   LOG_INFO("Welcome to TPL (ver. {}.{})", TPL_VERSION_MAJOR, TPL_VERSION_MINOR);
 
   // Either execute a TPL program from a source file, or run REPL
@@ -167,7 +186,7 @@ int main(int argc, char **argv) {
     tpl::RunRepl();
   }
 
-  // Shutdown
+  // Cleanup
   tpl::ShutdownTPL();
 
   return 0;
