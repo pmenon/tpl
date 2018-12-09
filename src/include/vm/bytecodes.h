@@ -196,6 +196,10 @@ class Bytecodes {
 
   static bool IsCall(Bytecode bytecode) { return (bytecode == Bytecode::Call); }
 
+  static bool IsTerminator(Bytecode bytecode) {
+    return IsJump(bytecode) || bytecode == Bytecode::Return;
+  }
+
  private:
   static const char *kBytecodeNames[];
   static u32 kBytecodeOperandCounts[];
