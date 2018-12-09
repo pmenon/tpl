@@ -11,7 +11,8 @@ namespace {
 
 void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
   os << "Function " << func.id() << " <" << func.name() << ">:" << std::endl;
-  os << "  Frame size " << func.frame_size() << " bytes ("
+  os << "  Frame size " << func.frame_size() << " bytes (" << func.num_params()
+     << " parameter" << (func.num_params() > 1 ? "s, " : ", ")
      << func.locals().size() << " locals)" << std::endl;
 
   u64 max_local_len = 0;

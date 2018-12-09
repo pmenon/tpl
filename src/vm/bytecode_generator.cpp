@@ -443,7 +443,7 @@ void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
 
 void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
   if (node->ret() != nullptr) {
-    LocalVar rv = current_function()->GetRVLocal();
+    LocalVar rv = current_function()->GetReturnValueLocal();
     LocalVar result = VisitExpressionForRValue(node->ret());
     BuildAssign(rv.ValueOf(), result, node->ret()->type());
   }
@@ -964,8 +964,8 @@ std::unique_ptr<BytecodeModule> BytecodeGenerator::Compile(util::Region *region,
   BytecodeGenerator generator(region);
   generator.Visit(root);
 
-  return std::make_unique<BytecodeModule>(generator.bytecode(),
-                                          generator.functions());
+  return std::make_unique<BytecodeModule>(std::move(generator.bytecode()),
+                                          std::move(generator.functions()));
 }
 
 }  // namespace tpl::vm

@@ -22,8 +22,8 @@ enum class ExecutionMode : u8 {
 /// A module represents all code in a single TPL source file
 class BytecodeModule {
  public:
-  BytecodeModule(util::RegionVector<u8> code,
-                 util::RegionVector<FunctionInfo> functions)
+  BytecodeModule(util::RegionVector<u8> &&code,
+                 util::RegionVector<FunctionInfo> &&functions)
       : code_(std::move(code)), functions_(std::move(functions)) {}
 
   DISALLOW_COPY_AND_MOVE(BytecodeModule);

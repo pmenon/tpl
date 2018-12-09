@@ -30,8 +30,7 @@ class LocalInfo {
  public:
   enum class Kind : u8 { Var, Parameter, Temporary };
 
-  LocalInfo(u32 index, std::string name, ast::Type *type, std::size_t offset,
-            Kind kind)
+  LocalInfo(u32 index, std::string name, ast::Type *type, u32 offset, Kind kind)
       : name_(std::move(name)),
         type_(type),
         offset_(offset),
@@ -52,14 +51,14 @@ class LocalInfo {
 
   u32 id() const { return index_; }
 
-  std::size_t offset() const { return offset_; }
+  u32 offset() const { return offset_; }
 
   bool is_parameter() const { return kind_ == Kind::Parameter; }
 
  private:
   std::string name_;
   ast::Type *type_;
-  std::size_t offset_;
+  u32 offset_;
   u32 index_;
   Kind kind_;
 };
@@ -83,13 +82,13 @@ class LocalVar {
                   LocalOffsetField::Encode(offset)) {}
 
   /// Return the addressing mode of for this local variable
-  /// \return 
+  /// \return The addressing mode (direct or indirect) of this local
   AddressMode GetAddressMode() const {
     return AddressModeField::Decode(bitfield_);
   }
 
   /// Return the offset of this local variable in the function's execution frame
-  /// \return 
+  /// \return The offset (in bytes) of this local in the function's frame
   u32 GetOffset() const { return LocalOffsetField::Decode(bitfield_); }
 
   /// Encode this local variable into an instruction stream
@@ -166,7 +165,7 @@ class FunctionInfo {
 
   /// Return the ID of the return value for the function
   /// @return
-  LocalVar GetRVLocal() const {
+  LocalVar GetReturnValueLocal() const {
     return LocalVar(kRetVarOffset, LocalVar::AddressMode::Address);
   }
 

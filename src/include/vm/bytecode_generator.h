@@ -96,7 +96,12 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
     return nullptr;
   }
 
+  // -------------------------------------------------------
+  // Accessors
+  // -------------------------------------------------------
+
   ExpressionResultScope *execution_result() { return execution_result_; }
+
   void set_execution_result(ExpressionResultScope *execution_result) {
     execution_result_ = execution_result;
   }
@@ -104,6 +109,8 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   FunctionInfo *current_function() { return &functions_.back(); }
 
   util::RegionVector<u8> &bytecode() { return bytecode_; }
+
+  util::RegionVector<FunctionInfo> &functions() { return functions_; }
 
   const util::RegionVector<FunctionInfo> &functions() const {
     return functions_;
