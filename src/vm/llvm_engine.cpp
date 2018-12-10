@@ -9,6 +9,8 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -91,66 +93,129 @@ LLVMEngine::CompilationUnitBuilder::CompilationUnitBuilder(
   }
 
   llvm_module_ = std::move(module.get());
+  type_map_ = std::make_unique<TPLTypeToLLVMTypeMap>(llvm_module_.get());
 }
 
 void LLVMEngine::CompilationUnitBuilder::DeclareFunctions() {
-  // Create function prototypes for all functions defined in the bytecode module
-  llvm::Type *void_type = llvm::Type::getVoidTy(module()->getContext());
-
+  // Create a LLVM function declaration for each TPL function
   for (const auto &func_info : tpl_module()->functions()) {
     llvm::SmallVector<llvm::Type *, 8> param_types;
+
     for (u32 i = 0; i < func_info.num_params(); i++) {
       const auto *tpl_type = func_info.locals()[i].type();
-      param_types.emplace_back(GetLLVMType(tpl_type));
+      param_types.push_back(type_map()->GetLLVMType(tpl_type));
     }
-    auto func_type = llvm::FunctionType::get(void_type, param_types, false);
+
+    auto *func_type =
+        llvm::FunctionType::get(type_map()->VoidType(), param_types, false);
     module()->getOrInsertFunction(func_info.name(), func_type);
   }
 }
 
+llvm::Function *LLVMEngine::CompilationUnitBuilder::LookupBytecodeHandler(
+    Bytecode bytecode) const {
+  const char *handler_name = Bytecodes::GetBytecodeHandlerName(bytecode);
+  llvm::Function *func = module()->getFunction(handler_name);
+#ifndef NDEBUG
+  if (func == nullptr) {
+    auto error =
+        fmt::format("No bytecode handler function '{}' for bytecode {}",
+                    handler_name, Bytecodes::ToString(bytecode));
+    LOG_ERROR("{}", error);
+    throw std::runtime_error(error);
+  }
+#endif
+  return func;
+}
+
+void LLVMEngine::CompilationUnitBuilder::DefineFunction(
+    const FunctionInfo &func_info,
+    llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>
+        &ir_builder) {
+  llvm::Function *func = module()->getFunction(func_info.name());
+
+  LLVMFunctionHelper function_helper(func_info, func, type_map(), ir_builder);
+
+  // Build function
+  for (auto iter = tpl_module()->BytecodeForFunction(func_info); !iter.Done();
+       iter.Advance()) {
+    Bytecode bytecode = iter.current_bytecode();
+
+    // Get handler function
+    llvm::Function *handler = LookupBytecodeHandler(bytecode);
+
+    const u8 *pos = iter.current_position();
+
+    // Collect arguments
+    llvm::SmallVector<llvm::Value *, 8> args;
+    for (u32 i = 0; i < Bytecodes::NumOperands(bytecode); i++) {
+      auto *arg_pos = pos + Bytecodes::GetNthOperandOffset(bytecode, i);
+
+      switch (Bytecodes::GetNthOperandType(bytecode, i)) {
+        case OperandType::None: {
+          break;
+        }
+        case OperandType::Imm1: {
+          auto val = *reinterpret_cast<const i8 *>(arg_pos);
+          args.push_back(
+              llvm::ConstantInt::get(type_map()->Int8Type(), val, true));
+          break;
+        }
+        case OperandType::Imm2: {
+          auto val = *reinterpret_cast<const i16 *>(arg_pos);
+          args.push_back(llvm::ConstantInt::get(
+              llvm::Type::getInt16Ty(context()), val, true));
+          break;
+        }
+        case OperandType::Imm4: {
+          auto val = *reinterpret_cast<const i32 *>(arg_pos);
+          args.push_back(llvm::ConstantInt::get(
+              llvm::Type::getInt32Ty(context()), val, true));
+          break;
+        }
+        case OperandType::Imm8: {
+          auto val = *reinterpret_cast<const i64 *>(arg_pos);
+          args.push_back(llvm::ConstantInt::get(
+              llvm::Type::getInt64Ty(context()), val, true));
+          break;
+        }
+        case OperandType::UImm2: {
+          auto val = *reinterpret_cast<const u16 *>(arg_pos);
+          args.push_back(llvm::ConstantInt::get(
+              llvm::Type::getInt16Ty(context()), val, false));
+          break;
+        }
+        case OperandType::UImm4: {
+          auto val = *reinterpret_cast<const u32 *>(arg_pos);
+          args.push_back(llvm::ConstantInt::get(
+              llvm::Type::getInt32Ty(context()), val, false));
+          break;
+        }
+        case OperandType::Local: {
+          auto encoded_index = *reinterpret_cast<const u32 *>(arg_pos);
+          args.push_back(function_helper.GetArgumentById(encoded_index));
+          break;
+        }
+        case OperandType::LocalCount: {
+          break;
+        }
+      }
+    }
+
+    // Call
+    ir_builder.CreateCall(handler, args);
+  }
+
+  // Done
+  ir_builder.CreateRetVoid();
+
+  func->print(llvm::errs(), nullptr);
+}
+
 void LLVMEngine::CompilationUnitBuilder::DefineFunctions() {
   llvm::IRBuilder<> ir_builder(context());
-
   for (const auto &func_info : tpl_module()->functions()) {
-    llvm::Function *func = module()->getFunction(func_info.name());
-    TPL_ASSERT(func != nullptr,
-               "All functions have to be declared before we define them");
-
-    // Define locals
-    auto *entry = llvm::BasicBlock::Create(context(), "EntryBB", func);
-    ir_builder.SetInsertPoint(entry);
-
-    u32 num_params = func_info.num_params();
-    for (u32 i = num_params; i < func_info.locals().size(); i++) {
-      const auto *tpl_type = func_info.locals()[i].type();
-      ir_builder.CreateAlloca(GetLLVMType(tpl_type));
-    }
-
-    // Build function
-    auto [start, end] = tpl_module()->GetBytecodeRangeForFunction(func_info);
-    while (start < end) {
-      Bytecode bytecode = Bytecodes::FromByte(*start);
-
-      LOG_DEBUG("Handling {}", Bytecodes::ToString(bytecode));
-
-      // Lookup the bytecode handler name
-      const char *handler_name = Bytecodes::GetBytecodeHandlerName(bytecode);
-      llvm::Function *handler = module()->getFunction(handler_name);
-      TPL_ASSERT(handler != nullptr, "Handler for code");
-
-      // Collect arguments
-      llvm::SmallVector<llvm::Value *, 8> args;
-
-      // Call
-      ir_builder.CreateCall(handler, args);
-
-      start += Bytecodes::Size(bytecode);
-    }
-
-    // Done
-    ir_builder.CreateRetVoid();
-
-    func->print(llvm::errs(), nullptr);
+    DefineFunction(func_info, ir_builder);
   }
 }
 
@@ -163,22 +228,22 @@ void LLVMEngine::CompilationUnitBuilder::Verify() {
   }
 }
 
-void LLVMEngine::CompilationUnitBuilder::Clean() {}
+void LLVMEngine::CompilationUnitBuilder::Clean() {
+  llvm::legacy::PassManager pass_manager;
+  pass_manager.add(llvm::createGlobalDCEPass());
+  pass_manager.add(llvm::createAlwaysInlinerLegacyPass());
+  pass_manager.run(*module());
+}
 
 void LLVMEngine::CompilationUnitBuilder::Optimize() {
-  llvm::legacy::FunctionPassManager pass_manager(module());
+  llvm::legacy::PassManager pass_manager;
   pass_manager.add(llvm::createInstructionCombiningPass());
   pass_manager.add(llvm::createReassociatePass());
   pass_manager.add(llvm::createGVNPass());
   pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createAggressiveDCEPass());
   pass_manager.add(llvm::createCFGSimplificationPass());
-
-  pass_manager.doInitialization();
-  for (auto &func : *module()) {
-    pass_manager.run(func);
-  }
-  pass_manager.doFinalization();
+  pass_manager.run(*module());
 }
 
 std::unique_ptr<LLVMEngine::CompilationUnit>
@@ -208,37 +273,86 @@ std::string LLVMEngine::CompilationUnitBuilder::PrettyPrintLLVMModule() const {
   return result;
 }
 
-llvm::Type *LLVMEngine::CompilationUnitBuilder::GetLLVMType(
-    const ast::Type *type) {
-  // Check cache
-  if (auto iter = type_map_.find(type); iter != type_map_.end()) {
+// ---------------------------------------------------------
+// LLVM Function Helper
+// ---------------------------------------------------------
+
+LLVMEngine::LLVMFunctionHelper::LLVMFunctionHelper(
+    const FunctionInfo &func_info, llvm::Function *func,
+    TPLTypeToLLVMTypeMap *type_map, llvm::IRBuilder<> &ir_builder)
+    : ir_builder_(ir_builder) {
+  // Start construction of this function
+  auto *entry =
+      llvm::BasicBlock::Create(ir_builder_.getContext(), "EntryBB", func);
+  ir_builder.SetInsertPoint(entry);
+
+  // Setup locals
+  u32 local_idx = 0;
+  auto arg_iter = func->arg_begin();
+  for (local_idx = 0; local_idx < func_info.num_params(); local_idx++) {
+    const auto &param = func_info.locals()[local_idx];
+    params_[param.offset()] = &*arg_iter;
+  }
+
+  for (; local_idx < func_info.locals().size(); local_idx++) {
+    const auto &local = func_info.locals()[local_idx];
+    auto *val = ir_builder.CreateAlloca(type_map->GetLLVMType(local.type()));
+    locals_[local.offset()] = val;
+  }
+}
+
+llvm::Value *LLVMEngine::LLVMFunctionHelper::GetArgumentById(
+    u32 encoded_index) {
+  LocalVar var = LocalVar::Decode(encoded_index);
+
+  if (auto iter = params_.find(var.GetOffset()); iter != params_.end()) {
     return iter->second;
   }
 
-  llvm::LLVMContext &ctx = module()->getContext();
-  llvm::Type *llvm_type = nullptr;
+  if (auto iter = locals_.find(var.GetOffset()); iter != locals_.end()) {
+    llvm::Value *val = iter->second;
 
+    if (var.GetAddressMode() == LocalVar::AddressMode::Value) {
+      val = ir_builder_.CreateLoad(val);
+    }
+
+    return val;
+  }
+
+  LOG_ERROR("No variable found at offset {}", encoded_index);
+  return nullptr;
+}
+
+// ---------------------------------------------------------
+// TPL To LLVM Type Map
+// ---------------------------------------------------------
+
+LLVMEngine::TPLTypeToLLVMTypeMap::TPLTypeToLLVMTypeMap(llvm::Module *module)
+    : module_(module) {
+  llvm::LLVMContext &ctx = module->getContext();
+  type_map_["nil"] = llvm::Type::getVoidTy(ctx);
+  type_map_["bool"] = llvm::Type::getInt8Ty(ctx);
+  type_map_["int8"] = llvm::Type::getInt8Ty(ctx);
+  type_map_["int16"] = llvm::Type::getInt16Ty(ctx);
+  type_map_["int32"] = llvm::Type::getInt32Ty(ctx);
+  type_map_["int64"] = llvm::Type::getInt64Ty(ctx);
+  type_map_["uint8"] = llvm::Type::getInt8Ty(ctx);
+  type_map_["uint16"] = llvm::Type::getInt16Ty(ctx);
+  type_map_["uint32"] = llvm::Type::getInt32Ty(ctx);
+  type_map_["uint64"] = llvm::Type::getInt64Ty(ctx);
+  type_map_["float32"] = llvm::Type::getFloatTy(ctx);
+  type_map_["float64"] = llvm::Type::getDoubleTy(ctx);
+}
+
+llvm::Type *LLVMEngine::TPLTypeToLLVMTypeMap::GetLLVMType(
+    const ast::Type *type) {
+  llvm::Type *llvm_type = nullptr;
   switch (type->kind()) {
-    case ast::Type::Kind::BoolType: {
-      llvm_type = llvm::Type::getInt1Ty(ctx);
-      break;
-    }
-    case ast::Type::Kind::IntegerType: {
-      auto *int_type = type->As<ast::IntegerType>();
-      llvm_type = llvm::Type::getIntNTy(ctx, int_type->BitWidth());
-      break;
-    }
-    case ast::Type::Kind::FloatType: {
-      auto *float_type = type->As<ast::FloatType>();
-      if (float_type->float_kind() == ast::FloatType::FloatKind::Float32) {
-        llvm_type = llvm::Type::getFloatTy(ctx);
-      } else {
-        llvm_type = llvm::Type::getDoubleTy(ctx);
-      }
-      break;
-    }
+    case ast::Type::Kind::BoolType:
+    case ast::Type::Kind::IntegerType:
+    case ast::Type::Kind::FloatType:
     case ast::Type::Kind::NilType: {
-      llvm_type = llvm::Type::getVoidTy(ctx);
+      llvm_type = type_map_[type->ToString()];
       break;
     }
     case ast::Type::Kind::PointerType: {
@@ -257,11 +371,9 @@ llvm::Type *LLVMEngine::CompilationUnitBuilder::GetLLVMType(
       break;
     }
     case ast::Type::Kind::StructType: {
-      auto *struct_type = type->As<ast::StructType>();
-
       llvm::SmallVector<llvm::Type *, 8> fields;
-      for (const auto &field : struct_type->fields()) {
-        fields.emplace_back(GetLLVMType(field.type));
+      for (const auto &field : type->As<ast::StructType>()->fields()) {
+        fields.push_back(GetLLVMType(field.type));
       }
       llvm_type = llvm::StructType::create(fields);
 
@@ -293,16 +405,13 @@ llvm::Type *LLVMEngine::CompilationUnitBuilder::GetLLVMType(
           llvm_type = module()->getTypeByName("struct.tpl::sql::Integer");
           break;
         }
-        default : { break; }
+        default: { break; }
       }
       break;
     }
   }
 
   TPL_ASSERT(llvm_type != nullptr, "No LLVM type found!");
-
-  // Cache
-  type_map_.insert(std::make_pair(type, llvm_type));
 
   return llvm_type;
 }

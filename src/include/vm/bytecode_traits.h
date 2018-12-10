@@ -7,17 +7,17 @@ namespace tpl::vm {
 
 template <OperandType>
 struct OperandTypeTraits {
-  static const bool kIsSigned = false;
-  static const OperandSize kOperandSize = OperandSize::None;
-  static const u32 kSize = static_cast<u32>(kOperandSize);
+  static constexpr bool kIsSigned = false;
+  static constexpr OperandSize kOperandSize = OperandSize::None;
+  static constexpr u32 kSize = static_cast<u32>(kOperandSize);
 };
 
 #define DECLARE_OPERAND_TYPE(Name, IsSigned, BaseSize)       \
   template <>                                                \
   struct OperandTypeTraits<OperandType::Name> {              \
-    static const bool kIsSigned = IsSigned;                  \
-    static const OperandSize kOperandSize = BaseSize;        \
-    static const u32 kSize = static_cast<u32>(kOperandSize); \
+    static constexpr bool kIsSigned = IsSigned;                  \
+    static constexpr OperandSize kOperandSize = BaseSize;        \
+    static constexpr u32 kSize = static_cast<u32>(kOperandSize); \
   };
 OPERAND_TYPE_LIST(DECLARE_OPERAND_TYPE)
 #undef DECLARE_OPERAND_TYPE
