@@ -11,6 +11,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
+#include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -208,8 +209,6 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunction(
 
   // Done
   ir_builder.CreateRetVoid();
-
-  func->print(llvm::errs(), nullptr);
 }
 
 void LLVMEngine::CompilationUnitBuilder::DefineFunctions() {
