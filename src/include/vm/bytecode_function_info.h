@@ -109,6 +109,14 @@ class LocalVar {
   /// \return True if valid; false otherwise
   bool IsInvalid() const { return GetOffset() == kInvalidOffset; }
 
+  /// Is this local variable equal to \a other
+  /// \param other The variable to check against
+  /// \return True if equal; false otherwise
+  bool operator==(const LocalVar &other) const noexcept {
+    return GetOffset() == other.GetOffset() &&
+           GetAddressMode() == other.GetAddressMode();
+  }
+
  private:
   // Single bit indicating the addressing mode of the local
   class AddressModeField : public util::BitField32<AddressMode, 0, 1> {};

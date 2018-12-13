@@ -30,6 +30,7 @@ namespace tpl::vm {
 
 class BytecodeModule;
 class FunctionInfo;
+class LocalVar;
 
 /// The interface to LLVM to JIT compile TPL bytecode
 class LLVMEngine {
@@ -39,6 +40,17 @@ class LLVMEngine {
 
   /// Shutdown the whole LLVM subsystem
   static void Shutdown();
+
+  class CompilationUnit;
+
+  /// Compile a TPL bytecode module into an LLVM compilation unit
+  /// \param module The module to compile
+  /// \return The JIT compiled module
+  std::unique_ptr<CompilationUnit> Compile(vm::BytecodeModule *module);
+
+  // -------------------------------------------------------
+  // Helper classes below
+  // -------------------------------------------------------
 
   /// A class tracking options used to control compilation
   class CompileOptions {
@@ -73,7 +85,10 @@ class LLVMEngine {
   /// A handy class that maps TPL types to LLVM types
   class TPLTypeToLLVMTypeMap {
    public:
-    TPLTypeToLLVMTypeMap(llvm::Module *module);
+    explicit TPLTypeToLLVMTypeMap(llvm::Module *module);
+
+    /// No copying or moving this class
+    DISALLOW_COPY_AND_MOVE(TPLTypeToLLVMTypeMap);
 
     llvm::Type *VoidType() { return type_map_["nil"]; }
     llvm::Type *BoolType() { return type_map_["bool"]; }
@@ -100,8 +115,8 @@ class LLVMEngine {
   /// unit is immutable after creation.
   class CompilationUnitBuilder {
    public:
-    explicit CompilationUnitBuilder(const CompileOptions &options,
-                                    vm::BytecodeModule *tpl_module);
+    CompilationUnitBuilder(const CompileOptions &options,
+                           vm::BytecodeModule *tpl_module);
 
     /// No copying or moving this class
     DISALLOW_COPY_AND_MOVE(CompilationUnitBuilder);
@@ -177,20 +192,14 @@ class LLVMEngine {
         llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>
             &ir_builder);
 
-    llvm::Value *GetArgumentById(u32 encoded_index);
+    llvm::Value *GetArgumentById(LocalVar var);
 
    private:
     llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>
         &ir_builder_;
     llvm::DenseMap<u32, llvm::Value *> params_;
     llvm::DenseMap<u32, llvm::Value *> locals_;
-    llvm::DenseMap<std::size_t, llvm::BasicBlock *> function_blocks_;
   };
-
-  /// Compile a TPL bytecode module into an LLVM compilation unit
-  /// \param module The module to compile
-  /// \return The JIT compiled module
-  std::unique_ptr<CompilationUnit> Compile(vm::BytecodeModule *module);
 };
 
 }  // namespace tpl::vm

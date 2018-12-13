@@ -19,6 +19,7 @@
 #include "ast/type.h"
 #include "logging/logger.h"
 #include "vm/bytecode_module.h"
+#include "vm/bytecode_traits.h"
 
 namespace tpl::vm {
 
@@ -89,8 +90,11 @@ LLVMEngine::CompilationUnitBuilder::CompilationUnitBuilder(
 
   auto module = llvm::parseBitcodeFile(*(memory_buffer.get()), context());
   if (!module) {
-    auto error = module.takeError();
-    LOG_ERROR("There was an error parsing the bitcode file!");
+    llvm::SmallString<256> error;
+    llvm::raw_svector_ostream os(error);
+    os << module.takeError();
+    LOG_ERROR("{}", error.c_str());
+    throw std::runtime_error(error.str());
   }
 
   llvm_module_ = std::move(module.get());
@@ -133,68 +137,145 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunction(
     const FunctionInfo &func_info,
     llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>
         &ir_builder) {
+  llvm::LLVMContext &ctx = ir_builder.getContext();
   llvm::Function *func = module()->getFunction(func_info.name());
+  llvm::BasicBlock *entry = llvm::BasicBlock::Create(ctx, "EntryBB", func);
+
+  ir_builder.SetInsertPoint(entry);
+
+  /*
+   * We first need to pre-process the function's body to discover all the basic
+   * blocks. We store what we find in the blocks map below, sorted by the
+   * bytecode positions.
+   */
+
+  std::vector<std::size_t> bb_begin_positions = {0};
+  std::map<std::size_t, llvm::BasicBlock *> blocks = {{0, entry}};
+
+  for (auto iter = tpl_module()->BytecodeForFunction(func_info);
+       !bb_begin_positions.empty();) {
+    std::size_t begin_pos = bb_begin_positions.back();
+    bb_begin_positions.pop_back();
+
+    for (iter.SetOffset(begin_pos); !iter.Done(); iter.Advance()) {
+      Bytecode bytecode = iter.CurrentBytecode();
+
+      bool is_terminal = Bytecodes::IsTerminal(bytecode);
+      bool is_jump = Bytecodes::IsJump(bytecode);
+
+      if (is_terminal && !is_jump) {
+        break;
+      }
+
+      if (is_terminal) {
+        std::size_t target_bb_pos =
+            iter.current_offset() + iter.GetJumpOffsetOperand(0);
+        blocks[target_bb_pos] = nullptr;
+        break;
+      }
+
+      if (Bytecodes::IsJump(bytecode)) {
+        std::size_t fallthrough_bb_pos =
+            iter.current_offset() + iter.CurrentBytecodeSize();
+        std::size_t branch_target_bb_pos =
+            iter.current_offset() +
+            Bytecodes::GetNthOperandOffset(bytecode, 1) +
+            iter.GetJumpOffsetOperand(1);
+
+        bb_begin_positions.push_back(branch_target_bb_pos);
+
+        blocks[fallthrough_bb_pos] = nullptr;
+        blocks[branch_target_bb_pos] = nullptr;
+      }
+    }
+  }
+
+  // Set block names
+  {
+    u32 i = 1;
+    for (auto &[_, block] : blocks) {
+      if (block == nullptr) {
+        block = llvm::BasicBlock::Create(ctx, "BB" + std::to_string(i++), func);
+      }
+    }
+  }
+
+#ifndef NDEBUG
+  LOG_INFO("Found blocks:");
+  for (auto &[pos, block] : blocks) {
+    LOG_INFO("  Block {} @ {:x}", block->getName().str(), pos);
+  }
+#endif
+
+  /*
+   * Now, we can define the function
+   */
+
+  auto block_iter = blocks.cbegin();
 
   LLVMFunctionHelper function_helper(func_info, func, type_map(), ir_builder);
 
-  // Build function
+  // Start construction of this function
   for (auto iter = tpl_module()->BytecodeForFunction(func_info); !iter.Done();
        iter.Advance()) {
-    Bytecode bytecode = iter.current_bytecode();
+    Bytecode bytecode = iter.CurrentBytecode();
+
+    if (iter.current_offset() == block_iter->first) {
+      ir_builder.SetInsertPoint(block_iter->second);
+      ++block_iter;
+    }
 
     // Get handler function
     llvm::Function *handler = LookupBytecodeHandler(bytecode);
 
-    const u8 *pos = iter.current_position();
-
     // Collect arguments
     llvm::SmallVector<llvm::Value *, 8> args;
     for (u32 i = 0; i < Bytecodes::NumOperands(bytecode); i++) {
-      auto *arg_pos = pos + Bytecodes::GetNthOperandOffset(bytecode, i);
-
       switch (Bytecodes::GetNthOperandType(bytecode, i)) {
         case OperandType::None: {
           break;
         }
         case OperandType::Imm1: {
-          auto val = *reinterpret_cast<const i8 *>(arg_pos);
-          args.push_back(
-              llvm::ConstantInt::get(type_map()->Int8Type(), val, true));
+          args.push_back(llvm::ConstantInt::get(
+              type_map()->Int8Type(), iter.GetImmediateOperand(i), true));
           break;
         }
         case OperandType::Imm2: {
-          auto val = *reinterpret_cast<const i16 *>(arg_pos);
-          args.push_back(llvm::ConstantInt::get(
-              llvm::Type::getInt16Ty(context()), val, true));
+          args.push_back(
+              llvm::ConstantInt::get(llvm::Type::getInt16Ty(context()),
+                                     iter.GetImmediateOperand(i), true));
           break;
         }
         case OperandType::Imm4: {
-          auto val = *reinterpret_cast<const i32 *>(arg_pos);
-          args.push_back(llvm::ConstantInt::get(
-              llvm::Type::getInt32Ty(context()), val, true));
+          args.push_back(
+              llvm::ConstantInt::get(llvm::Type::getInt32Ty(context()),
+                                     iter.GetImmediateOperand(i), true));
           break;
         }
         case OperandType::Imm8: {
-          auto val = *reinterpret_cast<const i64 *>(arg_pos);
-          args.push_back(llvm::ConstantInt::get(
-              llvm::Type::getInt64Ty(context()), val, true));
+          args.push_back(
+              llvm::ConstantInt::get(llvm::Type::getInt64Ty(context()),
+                                     iter.GetImmediateOperand(i), true));
           break;
         }
         case OperandType::UImm2: {
-          auto val = *reinterpret_cast<const u16 *>(arg_pos);
           args.push_back(llvm::ConstantInt::get(
-              llvm::Type::getInt16Ty(context()), val, false));
+              llvm::Type::getInt16Ty(context()),
+              iter.GetUnsignedImmediateOperand(i), false));
+          break;
+        }
+        case OperandType::JumpOffset: {
           break;
         }
         case OperandType::UImm4: {
-          auto val = *reinterpret_cast<const u32 *>(arg_pos);
           args.push_back(llvm::ConstantInt::get(
-              llvm::Type::getInt32Ty(context()), val, false));
+              llvm::Type::getInt32Ty(context()),
+              iter.GetUnsignedImmediateOperand(i), false));
           break;
         }
         case OperandType::Local: {
-          auto encoded_index = *reinterpret_cast<const u32 *>(arg_pos);
-          args.push_back(function_helper.GetArgumentById(encoded_index));
+          LocalVar local = iter.GetLocalOperand(i);
+          args.push_back(function_helper.GetArgumentById(local));
           break;
         }
         case OperandType::LocalCount: {
@@ -209,6 +290,8 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunction(
 
   // Done
   ir_builder.CreateRetVoid();
+
+  func->print(llvm::errs(), nullptr);
 }
 
 void LLVMEngine::CompilationUnitBuilder::DefineFunctions() {
@@ -280,11 +363,6 @@ LLVMEngine::LLVMFunctionHelper::LLVMFunctionHelper(
     const FunctionInfo &func_info, llvm::Function *func,
     TPLTypeToLLVMTypeMap *type_map, llvm::IRBuilder<> &ir_builder)
     : ir_builder_(ir_builder) {
-  // Start construction of this function
-  auto *entry =
-      llvm::BasicBlock::Create(ir_builder_.getContext(), "EntryBB", func);
-  ir_builder.SetInsertPoint(entry);
-
   // Setup locals
   u32 local_idx = 0;
   auto arg_iter = func->arg_begin();
@@ -300,10 +378,7 @@ LLVMEngine::LLVMFunctionHelper::LLVMFunctionHelper(
   }
 }
 
-llvm::Value *LLVMEngine::LLVMFunctionHelper::GetArgumentById(
-    u32 encoded_index) {
-  LocalVar var = LocalVar::Decode(encoded_index);
-
+llvm::Value *LLVMEngine::LLVMFunctionHelper::GetArgumentById(LocalVar var) {
   if (auto iter = params_.find(var.GetOffset()); iter != params_.end()) {
     return iter->second;
   }
@@ -318,7 +393,8 @@ llvm::Value *LLVMEngine::LLVMFunctionHelper::GetArgumentById(
     return val;
   }
 
-  LOG_ERROR("No variable found at offset {}", encoded_index);
+  LOG_ERROR("No variable found at offset {}", var.GetOffset());
+
   return nullptr;
 }
 

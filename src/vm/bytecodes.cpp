@@ -35,13 +35,6 @@ const OperandSize *Bytecodes::kBytecodeOperandSizes[] = {
 };
 
 // static
-u32 Bytecodes::kBytecodeSizes[] = {
-#define ENTRY(name, ...) BytecodeTraits<__VA_ARGS__>::kSize,
-    BYTECODE_LIST(ENTRY)
-#undef ENTRY
-};
-
-// static
 const char *Bytecodes::kBytecodeHandlerName[] = {
 #define ENTRY(name, ...) "Op" #name,
     BYTECODE_LIST(ENTRY)
@@ -58,10 +51,10 @@ u32 Bytecodes::MaxBytecodeNameLength() {
   return kMaxInstNameLength;
 }
 
-u32 Bytecodes::GetNthOperandOffset(Bytecode bytecode, u8 idx) {
-  TPL_ASSERT(idx < NumOperands(bytecode), "Invalid operand index");
+u32 Bytecodes::GetNthOperandOffset(Bytecode bytecode, u32 operand_index) {
+  TPL_ASSERT(operand_index < NumOperands(bytecode), "Invalid operand index");
   u32 offset = sizeof(std::underlying_type_t<Bytecode>);
-  for (u32 i = 0; i < idx; i++) {
+  for (u32 i = 0; i < operand_index; i++) {
     OperandSize operand_size = GetNthOperandSize(bytecode, i);
     offset += static_cast<u32>(operand_size);
   }

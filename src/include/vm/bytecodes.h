@@ -34,9 +34,10 @@ namespace tpl::vm {
 #define GET_BASE_FOR_FLOAT_TYPES(op) (op##_f32)
 #define GET_BASE_FOR_BOOL_TYPES(op) (op##_bool)
 
-/**
- * The master list of all bytecodes and its operands.
- */
+///
+/// The master list of all bytecodes, flags and operands
+///
+
 // clang-format off
 #define BYTECODE_LIST(V)                                                                                               \
   /* Primitive operations */                                                                                           \
@@ -58,10 +59,10 @@ namespace tpl::vm {
   CREATE_FOR_INT_TYPES(V, NotEqual, OperandType::Local, OperandType::Local, OperandType::Local)                        \
                                                                                                                        \
   /* Branching */                                                                                                      \
-  V(Jump, OperandType::UImm2)                                                                                          \
-  V(JumpLoop, OperandType::UImm2)                                                                                      \
-  V(JumpIfTrue, OperandType::Local, OperandType::UImm2)                                                                \
-  V(JumpIfFalse, OperandType::Local, OperandType::UImm2)                                                               \
+  V(Jump, OperandType::JumpOffset)                                                                                     \
+  V(JumpLoop, OperandType::JumpOffset)                                                                                 \
+  V(JumpIfTrue, OperandType::Local, OperandType::JumpOffset)                                                           \
+  V(JumpIfFalse, OperandType::Local, OperandType::JumpOffset)                                                          \
                                                                                                                        \
   /* SQL operations */                                                                                                 \
   V(SqlTableIteratorInit, OperandType::Local, OperandType::UImm2)                                                      \
@@ -149,26 +150,21 @@ class Bytecodes {
   }
 
   // Return the type of the Nth operand to the given bytecode
-  static OperandType GetNthOperandType(Bytecode bytecode, u8 idx) {
-    TPL_ASSERT(idx < NumOperands(bytecode),
+  static OperandType GetNthOperandType(Bytecode bytecode, u32 operand_index) {
+    TPL_ASSERT(operand_index < NumOperands(bytecode),
                "Accessing out-of-bounds operand number for bytecode");
-    return GetOperandTypes(bytecode)[idx];
+    return GetOperandTypes(bytecode)[operand_index];
   }
 
   // Return the type of the Nth operand to the given bytecode
-  static OperandSize GetNthOperandSize(Bytecode bytecode, u8 idx) {
-    TPL_ASSERT(idx < NumOperands(bytecode),
+  static OperandSize GetNthOperandSize(Bytecode bytecode, u32 operand_index) {
+    TPL_ASSERT(operand_index < NumOperands(bytecode),
                "Accessing out-of-bounds operand number for bytecode");
-    return GetOperandSizes(bytecode)[idx];
+    return GetOperandSizes(bytecode)[operand_index];
   }
 
   // Return the offset of the Nth operand of the given bytecode
-  static u32 GetNthOperandOffset(Bytecode bytecode, u8 idx);
-
-  // Return the total size (in bytes) of the bytecode including its operands
-  static u32 Size(Bytecode bytecode) {
-    return kBytecodeSizes[static_cast<u32>(bytecode)];
-  }
+  static u32 GetNthOperandOffset(Bytecode bytecode, u32 operand_index);
 
   // Return the name of the bytecode handler function for this bytecode
   static const char *GetBytecodeHandlerName(Bytecode bytecode) {
@@ -194,10 +190,9 @@ class Bytecodes {
             bytecode == Bytecode::JumpIfTrue);
   }
 
-  static bool IsCall(Bytecode bytecode) { return (bytecode == Bytecode::Call); }
-
-  static bool IsTerminator(Bytecode bytecode) {
-    return IsJump(bytecode) || bytecode == Bytecode::Return;
+  static bool IsTerminal(Bytecode bytecode) {
+    return bytecode == Bytecode::Jump || bytecode == Bytecode::JumpLoop ||
+           bytecode == Bytecode::Return;
   }
 
  private:
@@ -205,7 +200,6 @@ class Bytecodes {
   static u32 kBytecodeOperandCounts[];
   static const OperandType *kBytecodeOperandTypes[];
   static const OperandSize *kBytecodeOperandSizes[];
-  static u32 kBytecodeSizes[];
   static const char *kBytecodeHandlerName[];
 };
 

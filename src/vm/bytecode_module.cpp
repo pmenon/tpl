@@ -39,9 +39,9 @@ void PrettyPrintFuncCode(std::ostream &os, const FunctionInfo &func,
   const u32 max_inst_len = Bytecodes::MaxBytecodeNameLength();
   for (; !bytecode_iter.Done(); bytecode_iter.Advance()) {
     os << "  0x" << std::right << std::setfill('0') << std::setw(8) << std::hex
-       << (bytecode_iter.current_offset() - bytecode_iter.start_offset());
+       << bytecode_iter.current_offset();
     os << std::setfill(' ') << "    " << std::dec << std::setw(max_inst_len)
-       << std::left << Bytecodes::ToString(bytecode_iter.current_bytecode())
+       << std::left << Bytecodes::ToString(bytecode_iter.CurrentBytecode())
        << std::endl;
   }
 }
