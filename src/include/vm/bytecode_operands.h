@@ -19,16 +19,16 @@ enum class OperandSize : u8 {
  * This macro list provides information about all possible operand types to a
  * bytecode operation. The format is: Name, IsSigned, BaseSize
  */
-#define OPERAND_TYPE_LIST(V)               \
-  V(None, false, OperandSize::None)        \
-  V(Imm1, true, OperandSize::Byte)         \
-  V(Imm2, true, OperandSize::Short)        \
-  V(Imm4, true, OperandSize::Int)          \
-  V(Imm8, true, OperandSize::Long)         \
-  V(UImm2, false, OperandSize::Short)      \
-  V(UImm4, false, OperandSize::Int)        \
-  V(JumpOffset, true, OperandSize::Short) \
-  V(Local, false, OperandSize::Int)        \
+#define OPERAND_TYPE_LIST(V)            \
+  V(None, false, OperandSize::None)     \
+  V(Imm1, true, OperandSize::Byte)      \
+  V(Imm2, true, OperandSize::Short)     \
+  V(Imm4, true, OperandSize::Int)       \
+  V(Imm8, true, OperandSize::Long)      \
+  V(UImm2, false, OperandSize::Short)   \
+  V(UImm4, false, OperandSize::Int)     \
+  V(JumpOffset, true, OperandSize::Int) \
+  V(Local, false, OperandSize::Int)     \
   V(LocalCount, false, OperandSize::Short)
 
 /**
@@ -61,6 +61,8 @@ class OperandTypes {
   static bool IsLocalCount(OperandType operand_type) {
     return operand_type == OperandType::LocalCount;
   }
+
+  static i32 MaxJumpOffset();
 };
 
 }  // namespace tpl::vm

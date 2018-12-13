@@ -42,12 +42,6 @@ void BytecodeEmitter::EmitBinaryOp(Bytecode bytecode, LocalVar dest,
 
 void BytecodeEmitter::EmitJump(Bytecode bytecode, BytecodeLabel *label) {
   TPL_ASSERT(Bytecodes::IsJump(bytecode), "Provided bytecode is not a jump");
-  TPL_ASSERT((!label->is_bound() && bytecode == Bytecode::Jump) ||
-                 (label->is_bound() && bytecode == Bytecode::JumpLoop),
-             "Jump should only be used for forward jumps and JumpLoop for "
-             "backwards jumps");
-
-  // Emit the jump opcode and condition
   EmitOp(bytecode);
   EmitJump(label);
 }
@@ -95,6 +89,8 @@ void BytecodeEmitter::EmitCall(FunctionId func_id,
 void BytecodeEmitter::EmitReturn() { EmitOp(Bytecode::Return); }
 
 void BytecodeEmitter::EmitJump(BytecodeLabel *label) {
+  static const i32 kJumpPlaceholder = std::numeric_limits<i32>::max() - 1;
+
   std::size_t curr_offset = position();
 
   if (label->is_bound()) {
@@ -104,11 +100,11 @@ void BytecodeEmitter::EmitJump(BytecodeLabel *label) {
         label->offset() <= curr_offset,
         "Label for backwards jump cannot be beyond current bytecode position");
     std::size_t delta = curr_offset - label->offset();
-    TPL_ASSERT(delta < std::numeric_limits<u16>::max(),
-               "Jump delta exceeds 16-bit value for jump offsets!");
+    TPL_ASSERT(delta < std::numeric_limits<i32>::max(),
+               "Jump delta exceeds 32-bit value for jump offsets!");
 
     // Immediately emit the delta
-    EmitImmediateValue(static_cast<u16>(delta));
+    EmitImmediateValue(-static_cast<i32>(delta));
   } else {
     // The label is not bound yet so this must be a forward jump. We set the
     // reference position in the label and use a placeholder offset in the
@@ -135,18 +131,21 @@ void BytecodeEmitter::Bind(BytecodeLabel *label) {
   std::size_t curr_offset = position();
 
   if (label->IsForwardTarget()) {
-    // We need to patch all the forward jumps
+    // We need to patch all locations in the bytecode that forward jump to the
+    // given bytecode label. Each referrer is stored in the bytecode label ...
     auto &jump_locations = label->referrer_offsets();
 
     for (const auto &jump_location : jump_locations) {
       TPL_ASSERT(
-          (curr_offset - jump_location) < std::numeric_limits<u16>::max(),
-          "Jump delta exceeds 16-bit value for jump offsets!");
+          (curr_offset - jump_location) < std::numeric_limits<i32>::max(),
+          "Jump delta exceeds 32-bit value for jump offsets!");
 
-      u16 delta = static_cast<u16>(curr_offset - jump_location);
+      i32 delta = static_cast<i32>(curr_offset - jump_location);
       u8 *raw_delta = reinterpret_cast<u8 *>(&delta);
       bytecode_[jump_location] = raw_delta[0];
       bytecode_[jump_location + 1] = raw_delta[1];
+      bytecode_[jump_location + 2] = raw_delta[2];
+      bytecode_[jump_location + 3] = raw_delta[3];
     }
   }
 

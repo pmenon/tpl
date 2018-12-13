@@ -43,14 +43,19 @@ TEST_F(BytecodesTest, OperandSizeTest) {
             Bytecodes::GetNthOperandSize(Bytecode::AssignImm1, 1));
 
   // Jumps
-  EXPECT_EQ(OperandSize::Short, Bytecodes::GetOperandSizes(Bytecode::Jump)[0]);
+  EXPECT_EQ(OperandSize::Int, Bytecodes::GetOperandSizes(Bytecode::Jump)[0]);
 
-  // Conditional jumps have two operands: one four-byte operand for the register
-  // holding value of the boolean condition, and one two-byte jump offset
+  // Conditional jumps have two operands: one four-byte operand for the local
+  // holding value of the boolean condition, and one four-byte jump offset
   EXPECT_EQ(OperandSize::Int,
             Bytecodes::GetNthOperandSize(Bytecode::JumpIfTrue, 0));
-  EXPECT_EQ(OperandSize::Short,
+  EXPECT_EQ(OperandSize::Int,
             Bytecodes::GetNthOperandSize(Bytecode::JumpIfTrue, 1));
+
+  EXPECT_EQ(OperandSize::Int,
+            Bytecodes::GetNthOperandSize(Bytecode::JumpIfFalse, 0));
+  EXPECT_EQ(OperandSize::Int,
+            Bytecodes::GetNthOperandSize(Bytecode::JumpIfFalse, 1));
 
   // Binary ops usually have three operands, all 4-byte register IDs
   EXPECT_EQ(OperandSize::Int,
@@ -59,6 +64,28 @@ TEST_F(BytecodesTest, OperandSizeTest) {
             Bytecodes::GetNthOperandSize(Bytecode::Add_i32, 1));
   EXPECT_EQ(OperandSize::Int,
             Bytecodes::GetNthOperandSize(Bytecode::Add_i32, 2));
+}
+
+TEST_F(BytecodesTest, OperandOffsetTest) {
+  // Non-exhaustive test of operand sizes for various op codes
+
+  // Imm loads
+  EXPECT_EQ(4u,Bytecodes::GetNthOperandOffset(Bytecode::AssignImm1, 0));
+
+  // Jumps
+  EXPECT_EQ(4u, Bytecodes::GetNthOperandOffset(Bytecode::Jump, 0));
+
+  // Conditional jumps have always have a 4-byte condition and 4-byte offset
+  EXPECT_EQ(4u, Bytecodes::GetNthOperandOffset(Bytecode::JumpIfTrue, 0));
+  EXPECT_EQ(8u, Bytecodes::GetNthOperandOffset(Bytecode::JumpIfTrue, 1));
+
+  EXPECT_EQ(4u, Bytecodes::GetNthOperandOffset(Bytecode::JumpIfFalse, 0));
+  EXPECT_EQ(8u, Bytecodes::GetNthOperandOffset(Bytecode::JumpIfFalse, 1));
+
+  // Binary ops usually have three operands, all 4-byte register IDs
+  EXPECT_EQ(4u, Bytecodes::GetNthOperandOffset(Bytecode::Add_i32, 0));
+  EXPECT_EQ(8u, Bytecodes::GetNthOperandOffset(Bytecode::Add_i32, 1));
+  EXPECT_EQ(12u, Bytecodes::GetNthOperandOffset(Bytecode::Add_i32, 2));
 }
 
 TEST_F(BytecodesTest, OperandTypesTest) {

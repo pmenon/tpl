@@ -145,8 +145,8 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunction(
 
   /*
    * We first need to pre-process the function's body to discover all the basic
-   * blocks. We store what we find in the blocks map below, sorted by the
-   * bytecode positions.
+   * blocks. This is pretty much a regular DFS traversal. We store what we find
+   * in the blocks map below, sorted by the bytecode positions.
    */
 
   std::vector<std::size_t> bb_begin_positions = {0};
@@ -169,7 +169,9 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunction(
 
       if (is_terminal) {
         std::size_t target_bb_pos =
-            iter.current_offset() + iter.GetJumpOffsetOperand(0);
+            iter.current_offset() +
+            Bytecodes::GetNthOperandOffset(bytecode, 0) +
+            iter.GetJumpOffsetOperand(0);
         blocks[target_bb_pos] = nullptr;
         break;
       }

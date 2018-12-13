@@ -54,7 +54,7 @@ i64 BytecodeIterator::GetImmediateOperand(u32 operand_index) const {
 u64 BytecodeIterator::GetUnsignedImmediateOperand(u32 operand_index) const {
   OperandType operand_type =
       Bytecodes::GetNthOperandType(CurrentBytecode(), operand_index);
-  TPL_ASSERT(OperandTypes::IsSignedImmediate(operand_type),
+  TPL_ASSERT(OperandTypes::IsUnsignedImmediate(operand_type),
              "Operand type is not a signed immediate");
 
   const u8 *operand_address =
@@ -74,14 +74,14 @@ u64 BytecodeIterator::GetUnsignedImmediateOperand(u32 operand_index) const {
   UNREACHABLE("Impossible!");
 }
 
-i16 BytecodeIterator::GetJumpOffsetOperand(u32 operand_index) const {
+i32 BytecodeIterator::GetJumpOffsetOperand(u32 operand_index) const {
   TPL_ASSERT(Bytecodes::GetNthOperandType(CurrentBytecode(), operand_index) ==
                  OperandType::JumpOffset,
              "Operand isn't a jump offset");
   const u8 *operand_address =
       GetFirstBytecodeAddress() + current_offset() +
       Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
-  return *reinterpret_cast<const i16 *>(operand_address);
+  return *reinterpret_cast<const i32 *>(operand_address);
 }
 
 LocalVar BytecodeIterator::GetLocalOperand(u32 operand_index) const {

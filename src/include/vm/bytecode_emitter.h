@@ -12,8 +12,6 @@ namespace tpl::vm {
 class BytecodeLabel;
 
 class BytecodeEmitter {
-  static const u16 kJumpPlaceholder = std::numeric_limits<u16>::max() - 1u;
-
  public:
   explicit BytecodeEmitter(util::RegionVector<u8> &bytecode)
       : bytecode_(bytecode) {}

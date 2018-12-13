@@ -67,10 +67,25 @@ TEST_F(BytecodeIteratorTest, JumpTest) {
   LocalVar v2(8, LocalVar::AddressMode::Address);
   LocalVar v3(16, LocalVar::AddressMode::Address);
 
+  // We have a label that we bind to the start of the instruction stream. Thus,
+  // a jump to the start would be a jump of -4 (to skip over the JUMP bytecode
+  // instruction itself).
   vm::BytecodeLabel label;
+  emitter.Bind(&label);
   emitter.EmitJump(Bytecode::Jump, &label);
   emitter.EmitBinaryOp(Bytecode::Add_i16, v3, v2, v1);
-  emitter.Emit(Bytecode::BitAnd_i8, v2, v3);
+
+  vm::BytecodeIterator iter(code(), 0, code().size());
+  EXPECT_FALSE(iter.Done());
+  EXPECT_EQ(Bytecode::Jump, iter.CurrentBytecode());
+  EXPECT_EQ(-4, iter.GetJumpOffsetOperand(0));
+
+  iter.Advance();
+  EXPECT_FALSE(iter.Done());
+  EXPECT_EQ(Bytecode::Add_i16, iter.CurrentBytecode());
+  EXPECT_EQ(v3, iter.GetLocalOperand(0));
+  EXPECT_EQ(v2, iter.GetLocalOperand(1));
+  EXPECT_EQ(v1, iter.GetLocalOperand(2));
 }
 
 }  // namespace tpl::vm::test

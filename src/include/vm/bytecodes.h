@@ -60,7 +60,6 @@ namespace tpl::vm {
                                                                                                                        \
   /* Branching */                                                                                                      \
   V(Jump, OperandType::JumpOffset)                                                                                     \
-  V(JumpLoop, OperandType::JumpOffset)                                                                                 \
   V(JumpIfTrue, OperandType::Local, OperandType::JumpOffset)                                                           \
   V(JumpIfFalse, OperandType::Local, OperandType::JumpOffset)                                                          \
                                                                                                                        \
@@ -185,14 +184,12 @@ class Bytecodes {
   }
 
   static bool IsJump(Bytecode bytecode) {
-    return (bytecode == Bytecode::Jump || bytecode == Bytecode::JumpLoop ||
-            bytecode == Bytecode::JumpIfFalse ||
+    return (bytecode == Bytecode::Jump || bytecode == Bytecode::JumpIfFalse ||
             bytecode == Bytecode::JumpIfTrue);
   }
 
   static bool IsTerminal(Bytecode bytecode) {
-    return bytecode == Bytecode::Jump || bytecode == Bytecode::JumpLoop ||
-           bytecode == Bytecode::Return;
+    return bytecode == Bytecode::Jump || bytecode == Bytecode::Return;
   }
 
  private:

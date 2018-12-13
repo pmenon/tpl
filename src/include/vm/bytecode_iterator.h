@@ -42,7 +42,7 @@ class BytecodeIterator {
   /// jump offset as part of either a conditional or unconditional jump
   /// \param operand_index The index of the operand to retrieve
   /// \return The jump offset at the given index
-  i16 GetJumpOffsetOperand(u32 operand_index) const;
+  i32 GetJumpOffsetOperand(u32 operand_index) const;
 
   /// Get the operand at index \a operand_index for the current bytecode
   /// \param operand_index The index of the operand to retrieve

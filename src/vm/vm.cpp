@@ -59,14 +59,14 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // TODO(pmenon): Should these READ/PEEK macros take in a vm::OperandType so
   // that we can infer primitive types using traits? This minimizes number of
   // changes if the underlying offset/bytecode/register sizes changes?
-#define PEEK_JMP_OFFSET() Peek<u16>(&ip)
+#define PEEK_JMP_OFFSET() Peek<i32>(&ip)
 #define READ_IMM1() Read<i8>(&ip)
 #define READ_IMM2() Read<i16>(&ip)
 #define READ_IMM4() Read<i32>(&ip)
 #define READ_IMM8() Read<i64>(&ip)
 #define READ_UIMM2() Read<u16>(&ip)
 #define READ_UIMM4() Read<u32>(&ip)
-#define READ_JMP_OFFSET() READ_UIMM2()
+#define READ_JMP_OFFSET() READ_IMM4()
 #define READ_LOCAL_ID() Read<u32>(&ip)
 #define READ_OP() Read<std::underlying_type_t<Bytecode>>(&ip)
 
@@ -181,24 +181,10 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   INT_TYPES(GEN_NEG_OP)
 #undef GEN_NEG_OP
 
-  /*
-   * Jumps are unconditional forward-only jumps
-   */
   OP(Jump) : {
-    u16 skip = PEEK_JMP_OFFSET();
+    i32 skip = PEEK_JMP_OFFSET();
     if (TPL_LIKELY(OpJump())) {
       ip += skip;
-    }
-    DISPATCH_NEXT();
-  }
-
-  /*
-   * JumpLoops are unconditional backwards-only jumps, mostly used for loops
-   */
-  OP(JumpLoop) : {
-    u16 skip = PEEK_JMP_OFFSET();
-    if (TPL_LIKELY(OpJumpLoop())) {
-      ip -= skip;
     }
     DISPATCH_NEXT();
   }
