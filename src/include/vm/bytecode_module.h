@@ -7,6 +7,7 @@
 #include "util/region_containers.h"
 #include "vm/bytecode_function_info.h"
 #include "vm/bytecode_iterator.h"
+#include "vm/llvm_engine.h"
 #include "vm/vm.h"
 
 namespace tpl::vm {
@@ -86,9 +87,6 @@ class BytecodeModule {
   friend class VM;
   friend class LLVMEngine;
 
-  template <typename... ArgTypes>
-  struct FunctionHelper;
-
   const u8 *GetBytecodeForFunction(const FunctionInfo &func) const {
     auto [start, _] = func.bytecode_range();
     return &code_[start];
@@ -114,44 +112,6 @@ class BytecodeModule {
 //----------------------------------------------------------
 
 template <typename RetT, typename... ArgTypes>
-struct BytecodeModule::FunctionHelper<RetT, ArgTypes...> {
-  static void Wrap(const BytecodeModule &module, const FunctionInfo &func_info,
-                   std::function<RetT(ArgTypes...)> &func) {
-    func = [&module, &func_info](ArgTypes... args) -> RetT {
-      // Create allocator for execution
-      util::Region region(func_info.name() + "-exec-region");
-
-      // The virtual machine
-      VM vm(&region, module);
-
-      // Let's go
-      RetT rv{};
-      const u8 *ip = module.GetBytecodeForFunction(func_info);
-      vm.Execute(func_info, ip, &rv, args...);
-      return rv;
-    };
-  }
-};
-
-template <typename... ArgTypes>
-struct BytecodeModule::FunctionHelper<void, ArgTypes...> {
-  static void Wrap(const BytecodeModule &module, const FunctionInfo &func_info,
-                   std::function<void(ArgTypes...)> &func) {
-    func = [&module, &func_info](ArgTypes... args) {
-      // Create allocator for execution
-      util::Region region(func_info.name() + "-exec-region");
-
-      // The virtual machine
-      VM vm(&region, module);
-
-      // Let's go
-      const u8 *ip = module.GetBytecodeForFunction(func_info);
-      vm.Execute(func_info, ip, args...);
-    };
-  }
-};
-
-template <typename RetT, typename... ArgTypes>
 bool BytecodeModule::GetFunction(const std::string &name,
                                  ExecutionMode exec_mode,
                                  std::function<RetT(ArgTypes...)> &func) const {
@@ -170,8 +130,43 @@ bool BytecodeModule::GetFunction(const std::string &name,
 
   switch (exec_mode) {
     case ExecutionMode::Interpret: {
-      FunctionHelper<RetT, ArgTypes...>::Wrap(*this, *func_info, func);
+      func = [this, func_info](ArgTypes... args) {
+        // Create allocator for execution
+        util::Region region(func_info->name() + "-exec-region");
+
+        // The virtual machine
+        VM vm(&region, *this);
+
+        // Let's go!
+        const u8 *ip = GetBytecodeForFunction(*func_info);
+        if constexpr (std::is_void_v<RetT>) {
+          vm.Execute(*func_info, ip, args...);
+          return;
+        } else {
+          RetT rv{};
+          vm.Execute(*func_info, ip, &rv, args...);
+          return rv;
+        }
+      };
       return true;
+    }
+    case ExecutionMode::Jit: {
+      func = [this, &name](ArgTypes... args) {
+        // JIT the module
+        LLVMEngine engine;
+        auto cu = engine.Compile(const_cast<BytecodeModule *>(this));
+
+        using FuncType = RetT (*)(ArgTypes...);
+        auto *jit_fn = reinterpret_cast<FuncType>(cu->GetFunctionPointer(name));
+
+        // Let's go!
+        if constexpr (std::is_void_v<RetT>) {
+          jit_fn(args...);
+          return;
+        } else {
+          return jit_fn(args...);
+        }
+      };
     }
     default: {
       LOG_ERROR("Non-basic-interpreter-mode not supported yet");

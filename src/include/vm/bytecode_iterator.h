@@ -8,6 +8,16 @@ namespace tpl::vm {
 
 class LocalVar;
 
+/// An iterator over a section of bytecode. Unlike STL iterators, callers must
+/// explicitly call \a Advance() and \a Done() and progress the iterator and
+/// check if the iterator has been exhausted, respectively. At any point, the
+/// iterator points to the start of a bytecode instruction. Callers can query
+/// the current bytecode through \a CurrentBytecode(), and can read individual
+/// operands to the bytecode through the various types of operand getter
+/// functions. BytecodeIterators support random access of the bytecode through
+/// explicit calls to \a SetPosition() to move the iterator to a specific
+/// positions. It is the callers responsibility to ensure these points mark the
+/// beginning of a bytecode instruction.
 class BytecodeIterator {
  public:
   BytecodeIterator(const util::RegionVector<u8> &bytecode, std::size_t start,
@@ -60,13 +70,18 @@ class BytecodeIterator {
   /// \return
   u32 CurrentBytecodeSize() const;
 
-  ///
-  /// \param offset
-  void SetOffset(std::size_t offset) {
-    //TPL_ASSERT(offset < (end_offset() - start_offset()), "Invalid offset");
-    curr_offset_ = offset;
+  /// Get the current position of the iterator
+  /// \return The position of the iterator from the start
+  std::size_t GetPosition() const { return current_offset() - start_offset(); }
+
+  /// Set the position of the iterator
+  /// \param pos
+  void SetPosition(std::size_t pos) {
+    // TPL_ASSERT(offset < (end_offset() - start_offset()), "Invalid offset");
+    curr_offset_ = start_offset() + pos;
   }
 
+ private:
   // -------------------------------------------------------
   // Accessors
   // -------------------------------------------------------
@@ -75,15 +90,9 @@ class BytecodeIterator {
 
   std::size_t end_offset() const { return end_offset_; }
 
-  std::size_t current_offset() const { return curr_offset_ - start_offset_; }
+  std::size_t current_offset() const { return curr_offset_; }
 
   const util::RegionVector<u8> &bytecodes() const { return bytecodes_; }
-
- private:
-  // Return the address of the first bytecode we're allowed to see
-  const u8 *GetFirstBytecodeAddress() const {
-    return bytecodes().data() + start_offset();
-  }
 
  private:
   // ALL the bytecode instructions for a TPL compilation unit

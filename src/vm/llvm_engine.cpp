@@ -145,8 +145,15 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunction(
 
   /*
    * We first need to pre-process the function's body to discover all the basic
-   * blocks. This is pretty much a regular DFS traversal. We store what we find
-   * in the blocks map below, sorted by the bytecode positions.
+   * blocks. To do this, we construct a control-flow graph from the TPL bytecode
+   * through a vanilla DFS. Edges are added to the CFG at branching/jump
+   * instructions. TPL bytecode isn't as structured as LLVM IR, so we need to
+   * massage the structure slightly. An example of this is at the end of TPL
+   * loops that jump back to the loop pre-header to re-evaluate the loop
+   * condition; in this scenario, LLVM requires an unconditional branch from
+   * instructions before the pre-header into the pre-header block. In general,
+   * we collect enough information in this pre-processing phase to ensure we
+   * generate well-formed LLVM basic blocks that end in terminal instructions.
    */
 
   std::vector<std::size_t> bb_begin_positions = {0};
@@ -157,37 +164,45 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunction(
     std::size_t begin_pos = bb_begin_positions.back();
     bb_begin_positions.pop_back();
 
-    for (iter.SetOffset(begin_pos); !iter.Done(); iter.Advance()) {
+    for (iter.SetPosition(begin_pos); !iter.Done(); iter.Advance()) {
       Bytecode bytecode = iter.CurrentBytecode();
 
-      bool is_terminal = Bytecodes::IsTerminal(bytecode);
-      bool is_jump = Bytecodes::IsJump(bytecode);
+      if (Bytecodes::IsTerminal(bytecode)) {
+        if (Bytecodes::IsJump(bytecode)) {
+          // Unconditional Jump
+          std::size_t branch_target_pos =
+              iter.GetPosition() + Bytecodes::GetNthOperandOffset(bytecode, 0) +
+              iter.GetJumpOffsetOperand(0);
 
-      if (is_terminal && !is_jump) {
-        break;
-      }
+          if (blocks.find(branch_target_pos) == blocks.end()) {
+            blocks[branch_target_pos] = nullptr;
+            bb_begin_positions.push_back(branch_target_pos);
+          }
+        }
 
-      if (is_terminal) {
-        std::size_t target_bb_pos =
-            iter.current_offset() +
-            Bytecodes::GetNthOperandOffset(bytecode, 0) +
-            iter.GetJumpOffsetOperand(0);
-        blocks[target_bb_pos] = nullptr;
         break;
       }
 
       if (Bytecodes::IsJump(bytecode)) {
-        std::size_t fallthrough_bb_pos =
-            iter.current_offset() + iter.CurrentBytecodeSize();
-        std::size_t branch_target_bb_pos =
-            iter.current_offset() +
-            Bytecodes::GetNthOperandOffset(bytecode, 1) +
+        // Conditional Jump
+        std::size_t fallthrough_pos =
+            iter.GetPosition() + iter.CurrentBytecodeSize();
+
+        if (blocks.find(fallthrough_pos) == blocks.end()) {
+          bb_begin_positions.push_back(fallthrough_pos);
+          blocks[fallthrough_pos] = nullptr;
+        }
+
+        std::size_t branch_target_pos =
+            iter.GetPosition() + Bytecodes::GetNthOperandOffset(bytecode, 1) +
             iter.GetJumpOffsetOperand(1);
 
-        bb_begin_positions.push_back(branch_target_bb_pos);
+        if (blocks.find(branch_target_pos) == blocks.end()) {
+          bb_begin_positions.push_back(branch_target_pos);
+          blocks[branch_target_pos] = nullptr;
+        }
 
-        blocks[fallthrough_bb_pos] = nullptr;
-        blocks[branch_target_bb_pos] = nullptr;
+        break;
       }
     }
   }
@@ -213,22 +228,22 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunction(
    * Now, we can define the function
    */
 
-  auto block_iter = blocks.cbegin();
+  auto block_iter = ++blocks.cbegin();
 
   LLVMFunctionHelper function_helper(func_info, func, type_map(), ir_builder);
 
-  // Start construction of this function
+  bool last_was_jump = false;
   for (auto iter = tpl_module()->BytecodeForFunction(func_info); !iter.Done();
        iter.Advance()) {
     Bytecode bytecode = iter.CurrentBytecode();
 
-    if (iter.current_offset() == block_iter->first) {
+    if (iter.GetPosition() == block_iter->first) {
+      if (!last_was_jump) {
+        ir_builder.CreateBr(block_iter->second);
+      }
       ir_builder.SetInsertPoint(block_iter->second);
       ++block_iter;
     }
-
-    // Get handler function
-    llvm::Function *handler = LookupBytecodeHandler(bytecode);
 
     // Collect arguments
     llvm::SmallVector<llvm::Value *, 8> args;
@@ -243,27 +258,24 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunction(
           break;
         }
         case OperandType::Imm2: {
-          args.push_back(
-              llvm::ConstantInt::get(llvm::Type::getInt16Ty(context()),
-                                     iter.GetImmediateOperand(i), true));
+          args.push_back(llvm::ConstantInt::get(
+              type_map()->Int16Type(), iter.GetImmediateOperand(i), true));
           break;
         }
         case OperandType::Imm4: {
-          args.push_back(
-              llvm::ConstantInt::get(llvm::Type::getInt32Ty(context()),
-                                     iter.GetImmediateOperand(i), true));
+          args.push_back(llvm::ConstantInt::get(
+              type_map()->Int32Type(), iter.GetImmediateOperand(i), true));
           break;
         }
         case OperandType::Imm8: {
-          args.push_back(
-              llvm::ConstantInt::get(llvm::Type::getInt64Ty(context()),
-                                     iter.GetImmediateOperand(i), true));
+          args.push_back(llvm::ConstantInt::get(
+              type_map()->Int64Type(), iter.GetImmediateOperand(i), true));
           break;
         }
         case OperandType::UImm2: {
           args.push_back(llvm::ConstantInt::get(
-              llvm::Type::getInt16Ty(context()),
-              iter.GetUnsignedImmediateOperand(i), false));
+              type_map()->UInt16Type(), iter.GetUnsignedImmediateOperand(i),
+              false));
           break;
         }
         case OperandType::JumpOffset: {
@@ -271,8 +283,8 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunction(
         }
         case OperandType::UImm4: {
           args.push_back(llvm::ConstantInt::get(
-              llvm::Type::getInt32Ty(context()),
-              iter.GetUnsignedImmediateOperand(i), false));
+              type_map()->UInt32Type(), iter.GetUnsignedImmediateOperand(i),
+              false));
           break;
         }
         case OperandType::Local: {
@@ -286,8 +298,49 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunction(
       }
     }
 
-    // Call
-    ir_builder.CreateCall(handler, args);
+    // Find function to call
+    llvm::Function *callee = nullptr;
+    if (Bytecodes::IsCall(bytecode)) {
+    } else {
+      callee = LookupBytecodeHandler(bytecode);
+    }
+
+    // Clean up call arguments
+    TPL_ASSERT(callee != nullptr, "Couldn't find function!");
+    TPL_ASSERT(args.size() == callee->arg_size(), "Argument mismatch!");
+    for (u32 i = 0; i < args.size(); i++) {
+      auto *arg = callee->arg_begin() + i;
+      if (args[i]->getType() != arg->getType()) {
+        if (args[i]->getType()->isIntegerTy()) {
+          args[i] = ir_builder.CreateIntCast(args[i], arg->getType(), true);
+        } else if (args[i]->getType()->isPointerTy()) {
+          args[i] = ir_builder.CreatePointerCast(args[i], arg->getType());
+        }
+      }
+    }
+
+    // Issue call
+    llvm::Value *ret = ir_builder.CreateCall(callee, args);
+
+    last_was_jump = false;
+    if (Bytecodes::IsJump(bytecode)) {
+      last_was_jump = true;
+      if (!Bytecodes::IsTerminal(bytecode)) {
+        std::size_t fallthrough_bb_pos =
+            iter.GetPosition() + iter.CurrentBytecodeSize();
+        std::size_t branch_target_bb_pos =
+            iter.GetPosition() + Bytecodes::GetNthOperandOffset(bytecode, 1) +
+            iter.GetJumpOffsetOperand(1);
+        ret = ir_builder.CreateTrunc(ret, llvm::Type::getInt1Ty(ctx));
+        ir_builder.CreateCondBr(ret, blocks[fallthrough_bb_pos],
+                                blocks[branch_target_bb_pos]);
+      } else {
+        std::size_t branch_target_bb_pos =
+            iter.GetPosition() + Bytecodes::GetNthOperandOffset(bytecode, 0) +
+            iter.GetJumpOffsetOperand(0);
+        ir_builder.CreateBr(blocks[branch_target_bb_pos]);
+      }
+    }
   }
 
   // Done
@@ -408,7 +461,7 @@ LLVMEngine::TPLTypeToLLVMTypeMap::TPLTypeToLLVMTypeMap(llvm::Module *module)
     : module_(module) {
   llvm::LLVMContext &ctx = module->getContext();
   type_map_["nil"] = llvm::Type::getVoidTy(ctx);
-  type_map_["bool"] = llvm::Type::getInt8Ty(ctx);
+  type_map_["bool"] = llvm::Type::getInt1Ty(ctx);
   type_map_["int8"] = llvm::Type::getInt8Ty(ctx);
   type_map_["int16"] = llvm::Type::getInt16Ty(ctx);
   type_map_["int32"] = llvm::Type::getInt32Ty(ctx);

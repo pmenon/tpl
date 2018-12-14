@@ -35,14 +35,16 @@ void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
 }
 
 void PrettyPrintFuncCode(std::ostream &os, const FunctionInfo &func,
-                         BytecodeIterator &bytecode_iter) {
+                         BytecodeIterator &iter) {
   const u32 max_inst_len = Bytecodes::MaxBytecodeNameLength();
-  for (; !bytecode_iter.Done(); bytecode_iter.Advance()) {
+  for (; !iter.Done(); iter.Advance()) {
+    Bytecode bytecode = iter.CurrentBytecode();
+
+    // Print common bytecode info
     os << "  0x" << std::right << std::setfill('0') << std::setw(8) << std::hex
-       << bytecode_iter.current_offset();
+       << iter.GetPosition();
     os << std::setfill(' ') << "    " << std::dec << std::setw(max_inst_len)
-       << std::left << Bytecodes::ToString(bytecode_iter.CurrentBytecode())
-       << std::endl;
+       << std::left << Bytecodes::ToString(bytecode) << std::endl;
   }
 }
 

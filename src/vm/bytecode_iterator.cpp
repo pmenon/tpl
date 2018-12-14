@@ -18,9 +18,7 @@ Bytecode BytecodeIterator::CurrentBytecode() const {
   return Bytecodes::FromByte(raw_code);
 }
 
-void BytecodeIterator::Advance() {
-  SetOffset(current_offset() + CurrentBytecodeSize());
-}
+void BytecodeIterator::Advance() { curr_offset_ += CurrentBytecodeSize(); }
 
 bool BytecodeIterator::Done() const { return current_offset() >= end_offset(); }
 
@@ -31,7 +29,7 @@ i64 BytecodeIterator::GetImmediateOperand(u32 operand_index) const {
              "Operand type is not a signed immediate");
 
   const u8 *operand_address =
-      GetFirstBytecodeAddress() + current_offset() +
+      bytecodes().data() + current_offset() +
       Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
 
   switch (operand_type) {
@@ -58,7 +56,7 @@ u64 BytecodeIterator::GetUnsignedImmediateOperand(u32 operand_index) const {
              "Operand type is not a signed immediate");
 
   const u8 *operand_address =
-      GetFirstBytecodeAddress() + current_offset() +
+      bytecodes().data() + current_offset() +
       Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
 
   switch (operand_type) {
@@ -79,8 +77,9 @@ i32 BytecodeIterator::GetJumpOffsetOperand(u32 operand_index) const {
                  OperandType::JumpOffset,
              "Operand isn't a jump offset");
   const u8 *operand_address =
-      GetFirstBytecodeAddress() + current_offset() +
+      bytecodes().data() + current_offset() +
       Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
+
   return *reinterpret_cast<const i32 *>(operand_address);
 }
 
@@ -89,8 +88,9 @@ LocalVar BytecodeIterator::GetLocalOperand(u32 operand_index) const {
                  CurrentBytecode(), operand_index)),
              "Operand type is not a local variable reference");
   const u8 *operand_address =
-      GetFirstBytecodeAddress() + current_offset() +
+      bytecodes().data() + current_offset() +
       Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
+
   auto encoded_val = *reinterpret_cast<const u32 *>(operand_address);
   return LocalVar::Decode(encoded_val);
 }
@@ -101,7 +101,7 @@ u16 BytecodeIterator::GetLocalCountOperand(u32 operand_index) const {
              "Operand type is not a local variable count");
 
   const u8 *operand_address =
-      GetFirstBytecodeAddress() + current_offset() +
+      bytecodes().data() + current_offset() +
       Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
 
   return *reinterpret_cast<const u16 *>(operand_address);
@@ -114,7 +114,7 @@ u32 BytecodeIterator::CurrentBytecodeSize() const {
     size += static_cast<u32>(Bytecodes::GetNthOperandSize(bytecode, i));
     if (Bytecodes::GetNthOperandType(bytecode, i) == OperandType::LocalCount) {
       auto num_locals = GetLocalCountOperand(i);
-      size += (num_locals + OperandTypeTraits<OperandType::Local>::kSize);
+      size += (num_locals * OperandTypeTraits<OperandType::Local>::kSize);
     }
   }
   return size;

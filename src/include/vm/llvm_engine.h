@@ -92,14 +92,14 @@ class LLVMEngine {
 
     llvm::Type *VoidType() { return type_map_["nil"]; }
     llvm::Type *BoolType() { return type_map_["bool"]; }
-    llvm::Type *Int8Type() { return type_map_["i8"]; };
-    llvm::Type *Int16Type() { return type_map_["i16"]; };
-    llvm::Type *Int32Type() { return type_map_["i32"]; };
-    llvm::Type *Int64Type() { return type_map_["i64"]; };
-    llvm::Type *UInt8Type() { return type_map_["u8"]; };
-    llvm::Type *UInt16Type() { return type_map_["u16"]; };
-    llvm::Type *UInt32Type() { return type_map_["u32"]; };
-    llvm::Type *UInt64Type() { return type_map_["u64"]; };
+    llvm::Type *Int8Type() { return type_map_["int8"]; };
+    llvm::Type *Int16Type() { return type_map_["int16"]; };
+    llvm::Type *Int32Type() { return type_map_["int32"]; };
+    llvm::Type *Int64Type() { return type_map_["int64"]; };
+    llvm::Type *UInt8Type() { return type_map_["uint8"]; };
+    llvm::Type *UInt16Type() { return type_map_["uint16"]; };
+    llvm::Type *UInt32Type() { return type_map_["uint32"]; };
+    llvm::Type *UInt64Type() { return type_map_["uint64"]; };
 
     llvm::Type *GetLLVMType(const ast::Type *type);
 
