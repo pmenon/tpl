@@ -171,6 +171,11 @@ class FunctionInfo {
   /// @return A pointer to the local variable encoded as a LocalVar
   LocalVar LookupLocal(const std::string &name) const;
 
+  /// Lookup a local's information by its offset in the function's exec. frame
+  /// \param local The offset in bytes of the local
+  /// \return A possible nullptr to the local's information
+  const LocalInfo *LookupLocalInfo(u32 offset) const;
+
   /// Return the ID of the return value for the function
   /// @return
   LocalVar GetReturnValueLocal() const {

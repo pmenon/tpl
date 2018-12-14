@@ -17,7 +17,7 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
   }
 
   auto local_id = static_cast<LocalId>(locals_.size());
-  auto offset = frame_size();
+  auto offset = static_cast<u32>(frame_size());
   locals_.emplace_back(local_id, name, type, offset, kind);
 
   frame_size_ += type->size();
@@ -49,6 +49,17 @@ LocalVar FunctionInfo::LookupLocal(const std::string &name) const {
 
   // Invalid local
   return LocalVar();
+}
+
+const LocalInfo *FunctionInfo::LookupLocalInfo(u32 offset) const {
+  for (const auto &local_info : locals()) {
+    if (local_info.offset() == offset) {
+      return &local_info;
+    }
+  }
+
+  // Invalid local
+  return nullptr;
 }
 
 }  // namespace tpl::vm

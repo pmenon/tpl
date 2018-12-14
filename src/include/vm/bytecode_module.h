@@ -28,12 +28,22 @@ class BytecodeModule {
 
   DISALLOW_COPY_AND_MOVE(BytecodeModule);
 
-  /// Retrieve a function's information struct by the ID of the function
+  /// Look up a TPL function in this module by its ID
   /// \param func_id The ID of the function
-  /// \return The FunctionInfo struct, or NULL if the function does not exist
+  /// \return The TPL function if one exists with the ID; otherwise return null
   const FunctionInfo *GetFuncInfoById(FunctionId func_id) const {
     TPL_ASSERT(func_id < NumFunctions(), "Invalid function");
     return &functions_[func_id];
+  }
+
+  /// Look up a TPL function in this module by its name
+  /// \param name The name of the function
+  /// \return The TPL function if it exists; otherwise return null
+  const FunctionInfo *GetFuncInfoByName(const std::string &name) const {
+    for (const auto &func : functions_) {
+      if (func.name() == name) return &func;
+    }
+    return nullptr;
   }
 
   /// Retrieve an iterator over the bytecode for a given function
@@ -79,22 +89,9 @@ class BytecodeModule {
   template <typename... ArgTypes>
   struct FunctionHelper;
 
-  const FunctionInfo *GetFuncInfoByName(const std::string &name) const {
-    for (const auto &func : functions_) {
-      if (func.name() == name) return &func;
-    }
-    return nullptr;
-  }
-
   const u8 *GetBytecodeForFunction(const FunctionInfo &func) const {
     auto [start, _] = func.bytecode_range();
     return &code_[start];
-  }
-
-  std::pair<const u8 *, const u8 *> GetBytecodeRangeForFunction(
-      const FunctionInfo &func) const {
-    auto [start, end] = func.bytecode_range();
-    return {&code_[start], &code_[end]};
   }
 
   // -------------------------------------------------------
