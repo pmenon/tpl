@@ -57,7 +57,7 @@ class VM {
     }
 
     // Need to grow
-    stack().reserve(stack_capacity() + size);
+    stack().resize(stack_capacity() + size);
   }
 
   u8 *AllocateFrame(std::size_t frame_size) {
