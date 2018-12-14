@@ -122,9 +122,6 @@ class Bytecodes {
   // The total number of bytecode instructions
   static const u32 kBytecodeCount = static_cast<u32>(Bytecode::Last) + 1;
 
-  // Return the total number of bytecodes
-  static constexpr u32 NumBytecodes() { return kBytecodeCount; }
-
   // Return the maximum length of any bytecode instruction in bytes
   static u32 MaxBytecodeNameLength();
 
@@ -187,6 +184,8 @@ class Bytecodes {
     return (bytecode == Bytecode::Jump || bytecode == Bytecode::JumpIfFalse ||
             bytecode == Bytecode::JumpIfTrue);
   }
+
+  static bool IsCall(Bytecode bytecode) { return bytecode == Bytecode::Call; }
 
   static bool IsTerminal(Bytecode bytecode) {
     return bytecode == Bytecode::Jump || bytecode == Bytecode::Return;
