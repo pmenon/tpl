@@ -167,6 +167,7 @@ bool BytecodeModule::GetFunction(const std::string &name,
           return jit_fn(args...);
         }
       };
+      return true;
     }
     default: {
       LOG_ERROR("Non-basic-interpreter-mode not supported yet");
