@@ -192,6 +192,11 @@ Catalog::Catalog() {
 
 Catalog::~Catalog() = default;
 
+Catalog *Catalog::instance() {
+  static Catalog kInstance;
+  return &kInstance;
+}
+
 Table *Catalog::LookupTableByName(const std::string &name) {
   static std::unordered_map<std::string, TableId> kTableNameMap = {
 #define ENTRY(Name, Str, ...) {Str, TableId::Name},
