@@ -66,12 +66,21 @@ std::string LLVMEngine::CompileOptions::GetBytecodeHandlersBcPath() const {
 // Compilation Unit
 // ---------------------------------------------------------
 
-LLVMEngine::CompilationUnit::CompilationUnit(llvm::Module *module)
-    : module_(module) {}
+LLVMEngine::CompilationUnit::CompilationUnit(
+    llvm::Module *module, std::unique_ptr<llvm::ExecutionEngine> engine)
+    : module_(module), engine_(std::move(engine)) {}
+
+LLVMEngine::CompilationUnit::~CompilationUnit() = default;
 
 void *LLVMEngine::CompilationUnit::GetFunctionPointer(
     const std::string &name) const {
-  return nullptr;
+  auto func_addr = engine()->getFunctionAddress(name);
+
+  if (func_addr == 0) {
+    return nullptr;
+  }
+
+  return reinterpret_cast<void *>(func_addr);
 }
 
 // ---------------------------------------------------------
@@ -400,7 +409,7 @@ LLVMEngine::CompilationUnitBuilder::Finalize() {
   engine->finalizeObject();
 
   // Done
-  return std::make_unique<CompilationUnit>(module_handle);
+  return std::make_unique<CompilationUnit>(module_handle, std::move(engine));
 }
 
 std::string LLVMEngine::CompilationUnitBuilder::PrettyPrintLLVMModule() const {

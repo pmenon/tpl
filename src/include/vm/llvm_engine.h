@@ -12,6 +12,7 @@
 namespace llvm {
 class BasicBlock;
 class ConstantFolder;
+class ExecutionEngine;
 class Function;
 template <typename, typename>
 class IRBuilder;
@@ -41,9 +42,32 @@ class LLVMEngine {
   /// Shutdown the whole LLVM subsystem
   static void Shutdown();
 
-  class CompilationUnit;
+  /// A compilation unit is another word for a translation unit in C/C++
+  /// parlance. It represents all the code in a single source file. Compilation
+  /// units
+  class CompilationUnit {
+   public:
+    explicit CompilationUnit(llvm::Module *module,
+                             std::unique_ptr<llvm::ExecutionEngine> engine);
 
-  /// Compile a TPL bytecode module into an LLVM compilation unit
+    /// No copying or moving this class
+    DISALLOW_COPY_AND_MOVE(CompilationUnit);
+
+    ~CompilationUnit();
+
+    void *GetFunctionPointer(const std::string &name) const;
+
+   private:
+    llvm::Module *module() { return module_; }
+
+    llvm::ExecutionEngine *engine() const { return engine_.get(); }
+
+   private:
+    llvm::Module *module_;
+    std::unique_ptr<llvm::ExecutionEngine> engine_;
+  };
+
+  /// JIT compile a TPL bytecode module
   /// \param module The module to compile
   /// \return The JIT compiled module
   static std::unique_ptr<CompilationUnit> Compile(
@@ -62,25 +86,6 @@ class LLVMEngine {
     DISALLOW_COPY_AND_MOVE(CompileOptions);
 
     std::string GetBytecodeHandlersBcPath() const;
-  };
-
-  /// A compilation unit is another word for a translation unit in C/C++
-  /// parlance. It represents all the code in a single source file. Compilation
-  /// units
-  class CompilationUnit {
-   public:
-    explicit CompilationUnit(llvm::Module *module);
-
-    /// No copying or moving this class
-    DISALLOW_COPY_AND_MOVE(CompilationUnit);
-
-    void *GetFunctionPointer(const std::string &name) const;
-
-   private:
-    llvm::Module *module() { return module_; }
-
-   private:
-    llvm::Module *module_;
   };
 
   /// A handy class that maps TPL types to LLVM types

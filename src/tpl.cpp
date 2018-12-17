@@ -92,7 +92,11 @@ static void CompileAndRun(const std::string &source) {
 
   // JIT
   {
-    vm::LLVMEngine::Compile(*module);
+#if 0
+    std::function<u32()> main_func;
+    module->GetFunction("main", vm::ExecutionMode::Jit, main_func);
+    main_func();
+#endif
   }
 
   // Dump stats
