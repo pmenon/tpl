@@ -4,13 +4,14 @@
 
 namespace tpl::util {
 
-template <typename ResolutionRatio = std::ratio<1>>
+/// A simple restartable timer
+template <typename ResolutionRatio = std::milli>
 class Timer {
   using Clock = std::chrono::high_resolution_clock;
   using TimePoint = std::chrono::time_point<Clock>;
 
  public:
-  Timer() noexcept : total_(0), elapsed_(0) { Start(); }
+  Timer() noexcept : elapsed_(0) { Start(); }
 
   void Start() noexcept { start_ = Clock::now(); }
 
@@ -21,26 +22,24 @@ class Timer {
         std::chrono::duration_cast<
             std::chrono::duration<double, ResolutionRatio>>(stop_ - start_)
             .count();
-
-    total_ += elapsed_;
   }
 
   double elapsed() const noexcept { return elapsed_; }
-
-  double total_elapsed() const noexcept { return total_; }
 
  private:
   TimePoint start_;
   TimePoint stop_;
 
-  double total_;
   double elapsed_;
 };
 
-template <typename ResolutionRatio = std::ratio<1>>
+/// An RAII timer that begins timing upon construction and stops timing when the
+/// object goes out of scope. The total elapsed time is written to the output
+/// \a elapsed argument.
+template <typename ResolutionRatio = std::milli>
 class ScopedTimer {
  public:
-  explicit ScopedTimer(double *elapsed) : elapsed_(elapsed) {
+  explicit ScopedTimer(double *elapsed) noexcept : elapsed_(elapsed) {
     *elapsed_ = 0;
     timer_.Start();
   }
