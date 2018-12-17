@@ -92,8 +92,7 @@ static void CompileAndRun(const std::string &source) {
 
   // JIT
   {
-    vm::LLVMEngine engine;
-    engine.Compile(module.get());
+    vm::LLVMEngine::Compile(*module);
   }
 
   // Dump stats

@@ -36,7 +36,7 @@ void LLVMEngine::Initialize() {
 void LLVMEngine::Shutdown() { llvm::llvm_shutdown(); }
 
 std::unique_ptr<LLVMEngine::CompilationUnit> LLVMEngine::Compile(
-    vm::BytecodeModule *module) {
+    const vm::BytecodeModule &module) {
   CompileOptions options;
 
   CompilationUnitBuilder builder(options, module);
@@ -79,7 +79,7 @@ void *LLVMEngine::CompilationUnit::GetFunctionPointer(
 // ---------------------------------------------------------
 
 LLVMEngine::CompilationUnitBuilder::CompilationUnitBuilder(
-    const CompileOptions &options, vm::BytecodeModule *tpl_module)
+    const CompileOptions &options, const vm::BytecodeModule &tpl_module)
     : tpl_module_(tpl_module), context_(std::make_unique<llvm::LLVMContext>()) {
   auto memory_buffer =
       llvm::MemoryBuffer::getFile(options.GetBytecodeHandlersBcPath());
@@ -103,7 +103,7 @@ LLVMEngine::CompilationUnitBuilder::CompilationUnitBuilder(
 
 void LLVMEngine::CompilationUnitBuilder::DeclareFunctions() {
   // Create a LLVM function declaration for each TPL function
-  for (const auto &func_info : tpl_module()->functions()) {
+  for (const auto &func_info : tpl_module().functions()) {
     llvm::SmallVector<llvm::Type *, 8> param_types;
 
     for (u32 i = 0; i < func_info.num_params(); i++) {
@@ -159,7 +159,7 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunction(
   std::vector<std::size_t> bb_begin_positions = {0};
   std::map<std::size_t, llvm::BasicBlock *> blocks = {{0, entry}};
 
-  for (auto iter = tpl_module()->BytecodeForFunction(func_info);
+  for (auto iter = tpl_module().BytecodeForFunction(func_info);
        !bb_begin_positions.empty();) {
     std::size_t begin_pos = bb_begin_positions.back();
     bb_begin_positions.pop_back();
@@ -233,7 +233,7 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunction(
   LLVMFunctionHelper function_helper(func_info, func, type_map(), ir_builder);
 
   bool last_was_jump = false;
-  for (auto iter = tpl_module()->BytecodeForFunction(func_info); !iter.Done();
+  for (auto iter = tpl_module().BytecodeForFunction(func_info); !iter.Done();
        iter.Advance()) {
     Bytecode bytecode = iter.CurrentBytecode();
 
@@ -351,7 +351,7 @@ void LLVMEngine::CompilationUnitBuilder::DefineFunction(
 
 void LLVMEngine::CompilationUnitBuilder::DefineFunctions() {
   llvm::IRBuilder<> ir_builder(context());
-  for (const auto &func_info : tpl_module()->functions()) {
+  for (const auto &func_info : tpl_module().functions()) {
     DefineFunction(func_info, ir_builder);
   }
 }

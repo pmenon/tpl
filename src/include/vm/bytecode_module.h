@@ -153,8 +153,8 @@ bool BytecodeModule::GetFunction(const std::string &name,
     case ExecutionMode::Jit: {
       func = [this, &name](ArgTypes... args) {
         // JIT the module
-        LLVMEngine engine;
-        auto cu = engine.Compile(const_cast<BytecodeModule *>(this));
+        std::unique_ptr<LLVMEngine::CompilationUnit> cu =
+            LLVMEngine::Compile(*this);
 
         using FuncType = RetT (*)(ArgTypes...);
         auto *jit_fn = reinterpret_cast<FuncType>(cu->GetFunctionPointer(name));

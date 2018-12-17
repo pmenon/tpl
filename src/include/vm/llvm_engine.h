@@ -46,7 +46,8 @@ class LLVMEngine {
   /// Compile a TPL bytecode module into an LLVM compilation unit
   /// \param module The module to compile
   /// \return The JIT compiled module
-  std::unique_ptr<CompilationUnit> Compile(vm::BytecodeModule *module);
+  static std::unique_ptr<CompilationUnit> Compile(
+      const vm::BytecodeModule &module);
 
   // -------------------------------------------------------
   // Helper classes below
@@ -116,7 +117,7 @@ class LLVMEngine {
   class CompilationUnitBuilder {
    public:
     CompilationUnitBuilder(const CompileOptions &options,
-                           vm::BytecodeModule *tpl_module);
+                           const vm::BytecodeModule &tpl_module);
 
     /// No copying or moving this class
     DISALLOW_COPY_AND_MOVE(CompilationUnitBuilder);
@@ -166,7 +167,7 @@ class LLVMEngine {
     // Accessors
     // -----------------------------------------------------
 
-    vm::BytecodeModule *tpl_module() { return tpl_module_; }
+    const vm::BytecodeModule &tpl_module() const { return tpl_module_; }
 
     llvm::LLVMContext &context() { return *context_; }
 
@@ -177,7 +178,7 @@ class LLVMEngine {
     TPLTypeToLLVMTypeMap *type_map() { return type_map_.get(); }
 
    private:
-    vm::BytecodeModule *tpl_module_;
+    const vm::BytecodeModule &tpl_module_;
     std::unique_ptr<llvm::LLVMContext> context_;
     std::unique_ptr<llvm::Module> llvm_module_;
     std::unique_ptr<TPLTypeToLLVMTypeMap> type_map_;
