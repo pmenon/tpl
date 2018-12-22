@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <cstring>
 
 #include "llvm/Support/ErrorHandling.h"
 
