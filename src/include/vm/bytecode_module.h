@@ -156,15 +156,19 @@ bool BytecodeModule::GetFunction(const std::string &name,
         std::unique_ptr<LLVMEngine::CompilationUnit> cu =
             LLVMEngine::Compile(*this);
 
-        using FuncType = RetT (*)(ArgTypes...);
-        auto *jit_fn = reinterpret_cast<FuncType>(cu->GetFunctionPointer(name));
+        void *raw_f = cu->GetFunctionPointer(name);
+        TPL_ASSERT(raw_f != nullptr, "No function");
 
         // Let's go!
         if constexpr (std::is_void_v<RetT>) {
-          jit_fn(args...);
+          auto *jit_f = reinterpret_cast<void (*)(ArgTypes...)>(raw_f);
+          jit_f(args...);
           return;
         } else {
-          return jit_fn(args...);
+          auto *jit_f = reinterpret_cast<void (*)(RetT *, ArgTypes...)>(raw_f);
+          RetT rv{};
+          jit_f(&rv, args...);
+          return rv;
         }
       };
       return true;
