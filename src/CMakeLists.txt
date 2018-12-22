@@ -37,16 +37,16 @@ function(COMPILE_TO_IR SRC_FILE)
         COMMAND ${CLANG} ${CLANG_IR_CXX_FLAGS} ${CLANG_IR_CXX_INCLUDES} ${FULL_NAME} -o ${OUTPUT_FILE}
         DEPENDS ${SRC_FILE})
     add_custom_target(${BASE_NAME}_bc ALL DEPENDS ${OUTPUT_FILE})
-    add_dependencies(tpl bytecode_handlers_bc)
+    add_dependencies(tpl ${BASE_NAME}_bc)
 endfunction(COMPILE_TO_IR)
 
 ##################################################
 # The TPL shared library
 ##################################################
 
-# We compile a static library containing all the TPL logic that we use as a
-# library. We have a library so that we can shared it with the tests as well.
-add_library(tpl_shared STATIC ${tpl_sources})
+# We compile a shared library containing all the TPL logic so that we can share
+# it with the tests as well.
+add_library(tpl_shared SHARED ${tpl_sources})
 
 ##################################################
 # TPL executable
@@ -68,4 +68,4 @@ set_target_properties(tpl tpl_shared
 )
 
 # Cross-compile the bytecode handlers
-COMPILE_TO_IR(vm/bytecode_handlers.cpp)
+COMPILE_TO_IR(vm/bytecode_handlers_ir.cpp)
