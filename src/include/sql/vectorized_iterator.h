@@ -44,33 +44,22 @@ class VectorizedIterator {
 
   /// Constructor for a vectorized iterator
   /// \param table
-  explicit VectorizedIterator(const Table &table) noexcept
-      : block_iterator_(table.Iterate()), row_batch_(2048) {}
+  explicit VectorizedIterator(const Table &table) noexcept;
 
-  bool Next() noexcept {
-    if (!block_iterator()->Next()) {
-      return false;
-    }
-
-    SetupRowBatch(block_iterator()->current_block());
-    return true;
-  }
+  /// Move to the next batch of tuples in this iterator
+  /// \return True if there is another batch; false otherwise
+  bool Next() noexcept;
 
   // -------------------------------------------------------
   // Accessors
   // -------------------------------------------------------
 
   const RowBatch *row_batch() const { return &row_batch_; }
+
   RowBatch *row_batch() { return &row_batch_; }
 
  private:
-  void SetupRowBatch(const Table::Block *block) {
-    row_batch()->Reset(block->num_rows());
-
-    for (u32 i = 0; i < block->num_cols(); i++) {
-      row_batch()->AddColumn(block->GetColumnData(i));
-    }
-  }
+  void SetupRowBatch(const Table::Block *block);
 
   Table::BlockIterator *block_iterator() { return &block_iterator_; }
 
