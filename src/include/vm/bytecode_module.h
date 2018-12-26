@@ -157,11 +157,11 @@ inline bool BytecodeModule::GetFunction(
       return true;
     }
     case ExecutionMode::Jit: {
-      func = [this, &name](ArgTypes... args) {
+      func = [this, func_info](ArgTypes... args) {
         // JIT the module
         auto compiled = LLVMEngine::Compile(*this);
 
-        void *raw_f = compiled->GetFunctionPointer("main");
+        void *raw_f = compiled->GetFunctionPointer(func_info->name());
         TPL_ASSERT(raw_f != nullptr, "No function");
 
         // Let's go!
