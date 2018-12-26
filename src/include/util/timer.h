@@ -13,8 +13,10 @@ class Timer {
  public:
   Timer() noexcept : elapsed_(0) { Start(); }
 
+  /// Start the timer
   void Start() noexcept { start_ = Clock::now(); }
 
+  /// Stop the timer
   void Stop() noexcept {
     stop_ = Clock::now();
 
@@ -24,6 +26,7 @@ class Timer {
             .count();
   }
 
+  /// Return the total number of elapsed time units
   double elapsed() const noexcept { return elapsed_; }
 
  private:
