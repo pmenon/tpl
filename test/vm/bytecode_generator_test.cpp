@@ -58,7 +58,7 @@ TEST_F(BytecodeGeneratorTest, SimpleTest) {
   auto *ast = expectations.Compile(src);
 
   // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(region(), ast);
+  auto module = BytecodeGenerator::Compile(region(), ast, "test");
 
   module->PrettyPrint(std::cout);
 
@@ -83,7 +83,7 @@ TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
   auto *ast = expectations.Compile(src);
 
   // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(region(), ast);
+  auto module = BytecodeGenerator::Compile(region(), ast, "test");
 
   module->PrettyPrint(std::cout);
 
@@ -108,7 +108,7 @@ TEST_F(BytecodeGeneratorTest, ParameterPassingTest) {
   auto *ast = expectations.Compile(src);
 
   // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(region(), ast);
+  auto module = BytecodeGenerator::Compile(region(), ast, "test");
 
   module->PrettyPrint(std::cout);
 
@@ -146,7 +146,7 @@ TEST_F(BytecodeGeneratorTest, FunctionTest) {
   auto *ast = expectations.Compile(src);
 
   // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(region(), ast);
+  auto module = BytecodeGenerator::Compile(region(), ast, "test");
 
   module->PrettyPrint(std::cout);
 

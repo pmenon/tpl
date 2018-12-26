@@ -959,12 +959,12 @@ Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode,
 }
 
 // static
-std::unique_ptr<BytecodeModule> BytecodeGenerator::Compile(util::Region *region,
-                                                           ast::AstNode *root) {
+std::unique_ptr<BytecodeModule> BytecodeGenerator::Compile(
+    util::Region *region, ast::AstNode *root, const std::string &name) {
   BytecodeGenerator generator(region);
   generator.Visit(root);
 
-  return std::make_unique<BytecodeModule>(std::move(generator.bytecode()),
+  return std::make_unique<BytecodeModule>(name, std::move(generator.bytecode()),
                                           std::move(generator.functions()));
 }
 

@@ -3,14 +3,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ---- Require Clang or GCC
-if(NOT (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR
-        ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")   OR
-        ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")))
+if (NOT (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR
+         ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")   OR
+         ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")))
     message(SEND_ERROR "TPL only supports Clang or GCC")
-endif()
+endif ()
 
 # ---- Setup initial CXX flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Werror -fPIC -mcx16 -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Werror -mcx16 -march=native")
 
 # ---- Set no RTTI
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
@@ -22,11 +22,11 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=auto")
 endif()
 
-################################################################################
+############################################################
 #
 # Configure all CXX flags
 #
-################################################################################
+############################################################
 
 # compiler flags for different build types (run 'cmake -DCMAKE_BUILD_TYPE=<type> .')
 # For all builds:
@@ -55,43 +55,43 @@ elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RELEASE")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_FLAGS_RELEASE}")
 elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RELWITHDEBINFO")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_FLAGS_RELWITHDEBINFO}")
-else()
+else ()
     message(FATAL_ERROR "Unknown build type: ${CMAKE_BUILD_TYPE}")
 endif ()
 
-################################################################################
+############################################################
 #
 # Gold linker setup
 #
-################################################################################
+############################################################
 
-if(TPL_USE_GOLD)
+if (TPL_USE_GOLD)
     execute_process(COMMAND ${CMAKE_C_COMPILER} -fuse-ld=gold -Wl,--version ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
-    if("${LD_VERSION}" MATCHES "GNU gold")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -Wl,--disable-new-dtags")
-        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -Wl,--disable-new-dtags")
+    if ("${LD_VERSION}" MATCHES "GNU gold")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -Wl,--disable-new-dtags -rdynamic")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -Wl,--disable-new-dtags -rdynamic")
         message(STATUS "GNU gold enabled")
-    else()
+    else ()
         message(STATUS "GNU gold not found - disabled")
         set(TPL_USE_GOLD OFF)
-    endif()
-endif()
+    endif ()
+endif ()
 
-################################################################################
+############################################################
 #
 # AddressSanitizer / ThreadSanitizer setup
 #
-################################################################################
+############################################################
 
 # Clang and GCC don't allow both ASan and TSan to be enabled together
-if("${TPL_USE_ASAN}" AND "${TPL_USE_TSAN}")
+if ("${TPL_USE_ASAN}" AND "${TPL_USE_TSAN}")
     message(SEND_ERROR "Can only enable one of ASAN or TSAN at a time")
-endif()
+endif ()
 
-if(${TPL_USE_ASAN})
+if (${TPL_USE_ASAN})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
     message(STATUS "AddressSanitizer (ASAN) enabled")
-elseif(${TPL_USE_TSAN})
+elseif (${TPL_USE_TSAN})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
     message(STATUS "ThreadSanitizer (TSAN) enabled")
-endif()
+endif ()

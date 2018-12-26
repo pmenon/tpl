@@ -23,7 +23,8 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 #undef DECLARE_VISIT_METHOD
 
   static std::unique_ptr<BytecodeModule> Compile(util::Region *region,
-                                                 ast::AstNode *root);
+                                                 ast::AstNode *root,
+                                                 const std::string &name);
 
  private:
   // Private constructor to force users to call Compile()

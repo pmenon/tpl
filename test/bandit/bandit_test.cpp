@@ -169,7 +169,7 @@ TEST_P(BanditTest, DISABLED_SimpleTest) {
   auto *ast = expectations.Compile(src);
 
   // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(region(), ast);
+  auto module = BytecodeGenerator::Compile(region(), ast, "bandit");
 
   auto bandit = bandit::MultiArmedBandit(module.get(), action_names);
 

@@ -44,17 +44,16 @@ endfunction(COMPILE_TO_IR)
 # The TPL shared library
 ##################################################
 
-# We compile a shared library containing all the TPL logic so that we can share
-# it with the tests as well.
+# We build a shared library containing all the TPL logic so it can be shared
+# between the main TPL binary and the unit tests.
 add_library(tpl_shared SHARED ${tpl_sources})
 
 ##################################################
 # TPL executable
 ##################################################
 
-# The TPL executable relies tpl.cpp which contains "main()" and links in the
-# TPL shared static library along with any runtime library dependencies like
-# LLVM
+# The TPL executable relies on tpl.cpp (which contains main()) and the shared
+# library containing all TPL logic.
 set(tpl_main "${PROJECT_SOURCE_DIR}/src/tpl.cpp")
 add_executable(tpl ${tpl_main})
 target_link_libraries(tpl tpl_shared ${TPL_LINK_LIBS})

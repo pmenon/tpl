@@ -24,7 +24,8 @@ namespace tpl {
 
 static constexpr const char *kExitKeyword = ".exit";
 
-static void CompileAndRun(const std::string &source) {
+static void CompileAndRun(const std::string &source,
+                          const std::string &name = "tmp-tpl") {
   util::Region region("repl-ast");
   util::Region error_region("repl-error");
 
@@ -35,7 +36,8 @@ static void CompileAndRun(const std::string &source) {
   parsing::Scanner scanner(source.data(), source.length());
   parsing::Parser parser(scanner, context);
 
-  double parse_ms = 0, typecheck_ms = 0, codegen_ms = 0, exec_ms = 0;
+  double parse_ms = 0, typecheck_ms = 0, codegen_ms = 0, exec_ms = 0,
+         jit_ms = 0;
 
   // Parse
   ast::AstNode *root;
@@ -70,7 +72,7 @@ static void CompileAndRun(const std::string &source) {
   std::unique_ptr<vm::BytecodeModule> module;
   {
     util::ScopedTimer<std::milli> timer(&codegen_ms);
-    module = vm::BytecodeGenerator::Compile(&region, root);
+    module = vm::BytecodeGenerator::Compile(&region, root, name);
   }
 
   // Dump VM
@@ -93,15 +95,18 @@ static void CompileAndRun(const std::string &source) {
   // JIT
   {
 #if 0
+    util::ScopedTimer<std::milli> timer(&jit_ms);
     std::function<u32()> main_func;
     module->GetFunction("main", vm::ExecutionMode::Jit, main_func);
-    main_func();
+    LOG_INFO("JIT main() returned: {}", main_func());
 #endif
   }
 
   // Dump stats
-  LOG_INFO("Parse: {} ms, Typecheck: {} ms, Codegen: {} ms, Exec.: {} ms",
-           parse_ms, typecheck_ms, codegen_ms, exec_ms);
+  LOG_INFO(
+      "Parse: {} ms, Typecheck: {} ms, Codegen: {} ms, Exec.: {} ms, Jit: {} "
+      "ms",
+      parse_ms, typecheck_ms, codegen_ms, exec_ms, jit_ms);
 }
 
 static void RunRepl() {

@@ -23,10 +23,13 @@ enum class ExecutionMode : u8 {
 /// A module represents all code in a single TPL source file
 class BytecodeModule {
  public:
-  BytecodeModule(util::RegionVector<u8> &&code,
+  BytecodeModule(std::string name, util::RegionVector<u8> &&code,
                  util::RegionVector<FunctionInfo> &&functions)
-      : code_(std::move(code)), functions_(std::move(functions)) {}
+      : name_(std::move(name)),
+        code_(std::move(code)),
+        functions_(std::move(functions)) {}
 
+  /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(BytecodeModule);
 
   /// Look up a TPL function in this module by its ID
@@ -96,6 +99,8 @@ class BytecodeModule {
   // Accessors
   // -------------------------------------------------------
 
+  const std::string &name() const { return name_; }
+
   const util::RegionVector<u8> code() const { return code_; }
 
   const util::RegionVector<FunctionInfo> &functions() const {
@@ -103,6 +108,7 @@ class BytecodeModule {
   }
 
  private:
+  const std::string name_;
   util::RegionVector<u8> code_;
   util::RegionVector<FunctionInfo> functions_;
 };
@@ -112,9 +118,9 @@ class BytecodeModule {
 //----------------------------------------------------------
 
 template <typename RetT, typename... ArgTypes>
-bool BytecodeModule::GetFunction(const std::string &name,
-                                 ExecutionMode exec_mode,
-                                 std::function<RetT(ArgTypes...)> &func) const {
+inline bool BytecodeModule::GetFunction(
+    const std::string &name, ExecutionMode exec_mode,
+    std::function<RetT(ArgTypes...)> &func) const {
   const FunctionInfo *func_info = GetFuncInfoByName(name);
 
   // Check valid function
@@ -153,10 +159,9 @@ bool BytecodeModule::GetFunction(const std::string &name,
     case ExecutionMode::Jit: {
       func = [this, &name](ArgTypes... args) {
         // JIT the module
-        std::unique_ptr<LLVMEngine::CompilationUnit> cu =
-            LLVMEngine::Compile(*this);
+        auto compiled = LLVMEngine::Compile(*this);
 
-        void *raw_f = cu->GetFunctionPointer(name);
+        void *raw_f = compiled->GetFunctionPointer("main");
         TPL_ASSERT(raw_f != nullptr, "No function");
 
         // Let's go!
