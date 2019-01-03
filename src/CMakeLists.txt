@@ -4,9 +4,12 @@ include_directories("${PROJECT_SOURCE_DIR}/src/include/" "${PROJECT_BINARY_DIR}"
 # Include third party libs
 include_directories("${PROJECT_SOURCE_DIR}/third_party/spdlog/include")
 
-# Setup sources
+# Setup sources: add all CPP files in 'src', but remove tpl.cpp (since it
+# contains main(), and all cross-compiled code.
 file(GLOB_RECURSE tpl_sources "${PROJECT_SOURCE_DIR}/src/*.cpp")
-list(REMOVE_ITEM tpl_sources ${PROJECT_SOURCE_DIR}/src/tpl.cpp)
+list(REMOVE_ITEM tpl_sources
+     "${PROJECT_SOURCE_DIR}/src/tpl.cpp"
+     "${PROJECT_SOURCE_DIR}/src/vm/bytecode_handlers_ir.cpp")
 
 ##################################################
 # Bytecode Handlers
