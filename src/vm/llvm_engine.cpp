@@ -65,7 +65,7 @@ class LLVMEngine::TypeMap {
   explicit TypeMap(llvm::Module *module) : module_(module) {
     llvm::LLVMContext &ctx = module->getContext();
     type_map_["nil"] = llvm::Type::getVoidTy(ctx);
-    type_map_["bool"] = llvm::Type::getInt1Ty(ctx);
+    type_map_["bool"] = llvm::Type::getInt8Ty(ctx);
     type_map_["int8"] = llvm::Type::getInt8Ty(ctx);
     type_map_["int16"] = llvm::Type::getInt16Ty(ctx);
     type_map_["int32"] = llvm::Type::getInt32Ty(ctx);
@@ -183,14 +183,10 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
 class LLVMEngine::FunctionHelper {
  public:
   FunctionHelper(const FunctionInfo &func_info, llvm::Function *func,
-                 TypeMap *type_map,
-                 llvm::IRBuilder<llvm::ConstantFolder,
-                                 llvm::IRBuilderDefaultInserter> &ir_builder);
+                 TypeMap *type_map, llvm::IRBuilder<> &ir_builder);
 
-  /// Given a reference to a local variable in a function, return the LLVM
-  /// equivalent.
-  /// \param var
-  /// \return
+  // Given a reference to a local variable in a function's local variable list,
+  // return the corresponding LLVM value.
   llvm::Value *GetArgumentById(LocalVar var);
 
  private:
@@ -205,12 +201,12 @@ LLVMEngine::FunctionHelper::FunctionHelper(const FunctionInfo &func_info,
                                            TypeMap *type_map,
                                            llvm::IRBuilder<> &ir_builder)
     : ir_builder_(ir_builder) {
-  // Setup locals
   u32 local_idx = 0;
   auto arg_iter = func->arg_begin();
   for (local_idx = 0; local_idx < func_info.num_params(); local_idx++) {
     const auto &param = func_info.locals()[local_idx];
     params_[param.offset()] = &*arg_iter;
+    ++arg_iter;
   }
 
   for (; local_idx < func_info.locals().size(); local_idx++) {
@@ -251,55 +247,51 @@ class LLVMEngine::CompiledModuleBuilder {
   CompiledModuleBuilder(const CompilerOptions &options,
                         const vm::BytecodeModule &tpl_module);
 
-  /// No copying or moving this class
+  // No copying or moving this class
   DISALLOW_COPY_AND_MOVE(CompiledModuleBuilder);
 
-  /// Create function declarations for all functions declared in the TPL
-  /// bytecode module
-  /// \param bytecode_module The bytecode module
+  // Generate function declarations for each function in the TPL bytecode module
   void DeclareFunctions();
 
-  /// Generate LLVM function implementations for all functions defined in the
-  /// TPL bytecode module
-  /// \param bytecode_module The bytecode module
+  // Generate an LLVM function implementation for each function defined in the
+  // TPL bytecode module. DeclareFunctions() must be called to generate function
+  // declarations before they can be defined.
   void DefineFunctions();
 
-  /// Verify that all generated code is good
+  // Verify that all generated code is good
   void Verify();
 
-  /// Clean up the code
-  void RunSimpleOptimizations();
+  // Remove unused code to make optimizations quicker
+  void Simplify();
 
-  /// Optimize the generate code
-  void RunAggressiveOptimizations();
+  // Optimize the generate code
+  void Optimize();
 
-  /// Perform finalization logic create a compilation unit
-  /// \return A compilation unit housing all LLVM bitcode for the module
+  // Perform finalization logic and create a compiled module
   std::unique_ptr<CompiledModule> Finalize();
 
-  /// Print the contents of the module to a string and return it
-  /// \return Stringified module contents
+  // Print the contents of the module to a string and return it
   std::string DumpModule() const;
 
  private:
-  /// Define the body of the function \ref func_info
-  /// \param func_info The function to define
-  /// \param ir_builder LLVM's IR builder
+  // Given a TPL function, build a simple CFG using 'blocks' as an output param
+  void BuildSimpleCFG(const FunctionInfo &func_info,
+                      std::map<std::size_t, llvm::BasicBlock *> &blocks);
+
+  // Convert one TPL function into an LLVM implementation
   void DefineFunction(
       const FunctionInfo &func_info,
       llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>
           &ir_builder);
 
-  /// Lookup the handler function for the given bytecode
-  /// \param bytecode The bytecode whose handler to lookup
-  /// \return
+  // Given a bytecode, lookup it's LLVM function handler in the module
   llvm::Function *LookupBytecodeHandler(Bytecode bytecode) const;
 
-  /// Generate a raw object file in memory
-  /// \return A buffer containing the object code for the compilation unit
+  // Generate an in-memory shared object from this LLVM module. It iss assumed
+  // that all functions have been generated and verified.
   std::unique_ptr<llvm::MemoryBuffer> EmitObject();
 
-  /// Write the object out
+  // Write the given object to the file system
   void PersistObjectToFile(const llvm::MemoryBuffer &obj_buffer);
 
   // -----------------------------------------------------
@@ -404,7 +396,7 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
 
     llvm_module_ = std::move(module.get());
     llvm_module_->setModuleIdentifier(tpl_module.name());
-    llvm_module_->setSourceFileName(tpl_module.name());
+    llvm_module_->setSourceFileName(tpl_module.name() + ".tpl");
   }
 
   type_map_ = std::make_unique<TypeMap>(llvm_module_.get());
@@ -446,16 +438,9 @@ llvm::Function *LLVMEngine::CompiledModuleBuilder::LookupBytecodeHandler(
   return func;
 }
 
-void LLVMEngine::CompiledModuleBuilder::DefineFunction(
+void LLVMEngine::CompiledModuleBuilder::BuildSimpleCFG(
     const FunctionInfo &func_info,
-    llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>
-        &ir_builder) {
-  llvm::LLVMContext &ctx = ir_builder.getContext();
-  llvm::Function *func = module()->getFunction(func_info.name());
-  llvm::BasicBlock *entry = llvm::BasicBlock::Create(ctx, "EntryBB", func);
-
-  ir_builder.SetInsertPoint(entry);
-
+    std::map<std::size_t, llvm::BasicBlock *> &blocks) {
   /*
    * Before we can generate LLVM IR, we need to build a control-flow graph (CFG)
    * for the function. We do this construction directly from the TPL bytecode
@@ -464,8 +449,8 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
    * of a basic block.
    */
 
+  // We use this vector as a stack for DFS traversal
   llvm::SmallVector<std::size_t, 16> bb_begin_positions = {0};
-  std::map<std::size_t, llvm::BasicBlock *> blocks = {{0, entry}};
 
   for (auto iter = tpl_module().BytecodeForFunction(func_info);
        !bb_begin_positions.empty();) {
@@ -514,8 +499,20 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
       }
     }
   }
+}
 
-  // Set block names
+void LLVMEngine::CompiledModuleBuilder::DefineFunction(
+    const FunctionInfo &func_info,
+    llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>
+        &ir_builder) {
+  llvm::LLVMContext &ctx = ir_builder.getContext();
+  llvm::Function *func = module()->getFunction(func_info.name());
+  llvm::BasicBlock *entry = llvm::BasicBlock::Create(ctx, "EntryBB", func);
+
+  std::map<std::size_t, llvm::BasicBlock *> blocks = {{0, entry}};
+
+  BuildSimpleCFG(func_info, blocks);
+
   {
     u32 i = 1;
     for (auto &[_, block] : blocks) {
@@ -543,6 +540,8 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
    * on context) into the new block, and the IR builder position shifts to the
    * new block.
    */
+
+  ir_builder.SetInsertPoint(entry);
 
   auto block_iter = ++blocks.cbegin();
 
@@ -594,13 +593,18 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
               false));
           break;
         }
-        case OperandType::JumpOffset: {
-          break;
-        }
         case OperandType::UImm4: {
           args.push_back(llvm::ConstantInt::get(
               type_map()->UInt32Type(), iter.GetUnsignedImmediateOperand(i),
               false));
+          break;
+        }
+        case OperandType::FunctionId: {
+          args.push_back(llvm::ConstantInt::get(
+              type_map()->UInt16Type(), iter.GetFunctionIdOperand(i), false));
+          break;
+        }
+        case OperandType::JumpOffset: {
           break;
         }
         case OperandType::Local: {
@@ -609,52 +613,74 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
           break;
         }
         case OperandType::LocalCount: {
+          std::vector<LocalVar> locals;
+          iter.GetLocalCountOperand(i, locals);
+          for (const auto local : locals) {
+            args.push_back(function_helper.GetArgumentById(local));
+          }
           break;
         }
       }
     }
 
-    // Find function to call
-    llvm::Function *callee = nullptr;
-    if (Bytecodes::IsCall(bytecode)) {
-    } else {
-      callee = LookupBytecodeHandler(bytecode);
-    }
-
-    // Clean up call arguments
-    TPL_ASSERT(callee != nullptr, "Couldn't find function!");
-    TPL_ASSERT(args.size() == callee->arg_size(), "Argument mismatch!");
-    for (u32 i = 0; i < args.size(); i++) {
-      auto *arg = callee->arg_begin() + i;
-      if (args[i]->getType() != arg->getType()) {
-        if (args[i]->getType()->isIntegerTy()) {
-          args[i] = ir_builder.CreateIntCast(args[i], arg->getType(), true);
-        } else if (args[i]->getType()->isPointerTy()) {
-          args[i] = ir_builder.CreatePointerCast(args[i], arg->getType());
-        }
-      }
-    }
-
-    // Issue call
-    llvm::Value *ret = ir_builder.CreateCall(callee, args);
-
+    // Handle opcode
     last_was_jump = false;
-    if (Bytecodes::IsJump(bytecode)) {
-      last_was_jump = true;
-      if (!Bytecodes::IsTerminal(bytecode)) {
+    switch (bytecode) {
+      case Bytecode::Call: {
+        const u16 callee_func_id = iter.GetFunctionIdOperand(0);
+        const auto &callee_info = tpl_module().GetFuncInfoById(callee_func_id);
+        llvm::Function *callee = module()->getFunction(callee_info->name());
+        llvm::ArrayRef<llvm::Value *> args_ref(args);
+        ir_builder.CreateCall(callee, args_ref.slice(1));
+        break;
+      }
+      case Bytecode::Jump: {
+        last_was_jump = true;
+        std::size_t branch_target_bb_pos =
+            iter.GetPosition() + Bytecodes::GetNthOperandOffset(bytecode, 0) +
+            iter.GetJumpOffsetOperand(0);
+        ir_builder.CreateBr(blocks[branch_target_bb_pos]);
+        break;
+      }
+      case Bytecode::JumpIfFalse:
+      case Bytecode::JumpIfTrue: {
+        last_was_jump = true;
         std::size_t fallthrough_bb_pos =
             iter.GetPosition() + iter.CurrentBytecodeSize();
         std::size_t branch_target_bb_pos =
             iter.GetPosition() + Bytecodes::GetNthOperandOffset(bytecode, 1) +
             iter.GetJumpOffsetOperand(1);
-        ret = ir_builder.CreateTrunc(ret, llvm::Type::getInt1Ty(ctx));
-        ir_builder.CreateCondBr(ret, blocks[fallthrough_bb_pos],
-                                blocks[branch_target_bb_pos]);
-      } else {
-        std::size_t branch_target_bb_pos =
-            iter.GetPosition() + Bytecodes::GetNthOperandOffset(bytecode, 0) +
-            iter.GetJumpOffsetOperand(0);
-        ir_builder.CreateBr(blocks[branch_target_bb_pos]);
+        auto *check = llvm::ConstantInt::get(type_map()->Int8Type(), 1, false);
+        auto *cond = ir_builder.CreateICmpEQ(args[0], check);
+        if (bytecode == Bytecode::JumpIfTrue) {
+          ir_builder.CreateCondBr(cond, blocks[branch_target_bb_pos],
+                                  blocks[fallthrough_bb_pos]);
+        } else {
+          ir_builder.CreateCondBr(cond, blocks[fallthrough_bb_pos],
+                                  blocks[branch_target_bb_pos]);
+        }
+        break;
+      }
+      default: {
+        llvm::Function *callee = LookupBytecodeHandler(bytecode);
+#if 0
+        // Clean up call arguments
+        TPL_ASSERT(callee != nullptr, "Couldn't find function!");
+        TPL_ASSERT(args.size() == callee->arg_size(), "Argument mismatch!");
+        for (u32 i = 0; i < args.size(); i++) {
+          auto *arg = callee->arg_begin() + i;
+          if (args[i]->getType() != arg->getType()) {
+            if (args[i]->getType()->isIntegerTy()) {
+              args[i] = ir_builder.CreateIntCast(args[i], arg->getType(), true);
+            } else if (args[i]->getType()->isPointerTy()) {
+              args[i] = ir_builder.CreatePointerCast(args[i], arg->getType());
+            }
+          }
+        }
+#endif
+
+        ir_builder.CreateCall(callee, args);
+        break;
       }
     }
   }
@@ -684,7 +710,7 @@ void LLVMEngine::CompiledModuleBuilder::Verify() {
   }
 }
 
-void LLVMEngine::CompiledModuleBuilder::RunSimpleOptimizations() {
+void LLVMEngine::CompiledModuleBuilder::Simplify() {
   /*
    * This function ensures all bytecode handlers marked 'always_inline' are
    * inlined into the main TPL program. After this inlining, we clean up any
@@ -697,7 +723,7 @@ void LLVMEngine::CompiledModuleBuilder::RunSimpleOptimizations() {
   pass_manager.run(*module());
 }
 
-void LLVMEngine::CompiledModuleBuilder::RunAggressiveOptimizations() {
+void LLVMEngine::CompiledModuleBuilder::Optimize() {
   /*
    * The optimization passes we use are somewhat ad-hoc, but were found to
    * provide a nice balance of performance and compilation times. We use an
@@ -930,11 +956,11 @@ std::unique_ptr<LLVMEngine::CompiledModule> LLVMEngine::Compile(
 
   builder.DefineFunctions();
 
-  builder.RunSimpleOptimizations();
+  builder.Simplify();
 
   builder.Verify();
 
-  builder.RunAggressiveOptimizations();
+  builder.Optimize();
 
   auto compiled_module = builder.Finalize();
 

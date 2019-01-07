@@ -174,7 +174,7 @@ VM_OP_HOT bool OpJumpIfTrue(bool cond) { return cond; }
 
 VM_OP_HOT bool OpJumpIfFalse(bool cond) { return !cond; }
 
-VM_OP_HOT void OpCall(u16 func_id, u16 num_args) {}
+VM_OP_HOT void OpCall(UNUSED u16 func_id, UNUSED u16 num_args) {}
 
 VM_OP_HOT void OpReturn() {}
 

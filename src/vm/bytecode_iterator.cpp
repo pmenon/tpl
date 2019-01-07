@@ -95,10 +95,35 @@ LocalVar BytecodeIterator::GetLocalOperand(u32 operand_index) const {
   return LocalVar::Decode(encoded_val);
 }
 
-u16 BytecodeIterator::GetLocalCountOperand(u32 operand_index) const {
+u16 BytecodeIterator::GetLocalCountOperand(
+    u32 operand_index, std::vector<LocalVar> &locals) const {
   TPL_ASSERT(OperandTypes::IsLocalCount(Bytecodes::GetNthOperandType(
                  CurrentBytecode(), operand_index)),
              "Operand type is not a local variable count");
+
+  const u8 *operand_address =
+      bytecodes().data() + current_offset() +
+      Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
+
+  u16 num_locals = *reinterpret_cast<const u16 *>(operand_address);
+
+  const u8 *locals_address =
+      operand_address + OperandTypeTraits<OperandType::LocalCount>::kSize;
+
+  for (u32 i = 0; i < num_locals; i++) {
+    auto encoded_val = *reinterpret_cast<const u32 *>(locals_address);
+    locals.push_back(LocalVar::Decode(encoded_val));
+
+    locals_address += OperandTypeTraits<OperandType::Local>::kSize;
+  }
+
+  return num_locals;
+}
+
+u16 BytecodeIterator::GetFunctionIdOperand(u32 operand_index) const {
+  TPL_ASSERT(Bytecodes::GetNthOperandType(CurrentBytecode(), operand_index) ==
+                 OperandType::FunctionId,
+             "Operand type is not a function");
 
   const u8 *operand_address =
       bytecodes().data() + current_offset() +

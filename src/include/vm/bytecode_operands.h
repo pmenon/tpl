@@ -19,17 +19,18 @@ enum class OperandSize : u8 {
  * This macro list provides information about all possible operand types to a
  * bytecode operation. The format is: Name, IsSigned, BaseSize
  */
-#define OPERAND_TYPE_LIST(V)            \
-  V(None, false, OperandSize::None)     \
-  V(Imm1, true, OperandSize::Byte)      \
-  V(Imm2, true, OperandSize::Short)     \
-  V(Imm4, true, OperandSize::Int)       \
-  V(Imm8, true, OperandSize::Long)      \
-  V(UImm2, false, OperandSize::Short)   \
-  V(UImm4, false, OperandSize::Int)     \
-  V(JumpOffset, true, OperandSize::Int) \
-  V(Local, false, OperandSize::Int)     \
-  V(LocalCount, false, OperandSize::Short)
+#define OPERAND_TYPE_LIST(V)               \
+  V(None, false, OperandSize::None)        \
+  V(Imm1, true, OperandSize::Byte)         \
+  V(Imm2, true, OperandSize::Short)        \
+  V(Imm4, true, OperandSize::Int)          \
+  V(Imm8, true, OperandSize::Long)         \
+  V(UImm2, false, OperandSize::Short)      \
+  V(UImm4, false, OperandSize::Int)        \
+  V(JumpOffset, true, OperandSize::Int)    \
+  V(Local, false, OperandSize::Int)        \
+  V(LocalCount, false, OperandSize::Short) \
+  V(FunctionId, false, OperandSize::Short)
 
 /**
  * This enumeration lists all possible types of operands to any bytecode

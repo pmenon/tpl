@@ -63,7 +63,22 @@ class BytecodeIterator {
   /// local variables appearing after this operand
   /// \param operand_index The index of the operand to retrieve
   /// \return The number of operands
-  u16 GetLocalCountOperand(u32 operand_index) const;
+  u16 GetLocalCountOperand(u32 operand_index,
+                           std::vector<LocalVar> &locals) const;
+
+  ///
+  /// \param operand_index
+  /// \return
+  u16 GetLocalCountOperand(u32 operand_index) const {
+    std::vector<LocalVar> locals;
+    return GetLocalCountOperand(operand_index, locals);
+  }
+
+  /// Get the operand at \a operand_index for the current bytecode as the ID of
+  /// a function defined in the module
+  /// \param operand_index The index of the operand to read
+  /// \return The encoded function ID
+  u16 GetFunctionIdOperand(u32 operand_index) const;
 
   /// Return the total size in bytes of the bytecode instruction the iterator is
   /// currently pointing to. This size includes variable length arguments.

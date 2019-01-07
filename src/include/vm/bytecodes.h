@@ -98,7 +98,7 @@ namespace tpl::vm {
   F(LeaScaled, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Imm4, OperandType::Imm4)       \
                                                                                                                        \
   /* Function calls */                                                                                                 \
-  F(Call, OperandType::UImm2, OperandType::LocalCount)                                                                 \
+  F(Call, OperandType::FunctionId, OperandType::LocalCount)                                                            \
   F(Return)
 // clang-format on
 
