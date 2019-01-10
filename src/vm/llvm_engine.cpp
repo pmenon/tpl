@@ -105,14 +105,20 @@ class LLVMEngine::TypeMap {
 };
 
 llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
+  const std::string type_name = type->ToString();
+
+  if (auto iter = type_map_.find(type_name); iter != type_map_.end()) {
+    return iter->second;
+  }
+
   llvm::Type *llvm_type = nullptr;
   switch (type->kind()) {
     case ast::Type::Kind::BoolType:
     case ast::Type::Kind::IntegerType:
     case ast::Type::Kind::FloatType:
     case ast::Type::Kind::NilType: {
-      llvm_type = type_map_[type->ToString()];
-      break;
+      // These should be pre-filled in type cache!
+      UNREACHABLE("Missing default type not found in cache");
     }
     case ast::Type::Kind::PointerType: {
       auto *ptr_type = type->As<ast::PointerType>();
@@ -172,18 +178,20 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
 
   TPL_ASSERT(llvm_type != nullptr, "No LLVM type found!");
 
+  type_map_[type_name] = llvm_type;
+
   return llvm_type;
 }
 
 // ---------------------------------------------------------
-// Function Helper
+// Function Locals Map
 // ---------------------------------------------------------
 
-/// This class helps construction of an LLVM function from a TPL function
-class LLVMEngine::FunctionHelper {
+/// This class provides access to a function's local variables
+class LLVMEngine::FunctionLocalsMap {
  public:
-  FunctionHelper(const FunctionInfo &func_info, llvm::Function *func,
-                 TypeMap *type_map, llvm::IRBuilder<> &ir_builder);
+  FunctionLocalsMap(const FunctionInfo &func_info, llvm::Function *func,
+                    TypeMap *type_map, llvm::IRBuilder<> &ir_builder);
 
   // Given a reference to a local variable in a function's local variable list,
   // return the corresponding LLVM value.
@@ -196,10 +204,10 @@ class LLVMEngine::FunctionHelper {
   std::unordered_map<u32, llvm::Value *> locals_;
 };
 
-LLVMEngine::FunctionHelper::FunctionHelper(const FunctionInfo &func_info,
-                                           llvm::Function *func,
-                                           TypeMap *type_map,
-                                           llvm::IRBuilder<> &ir_builder)
+LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
+                                                 llvm::Function *func,
+                                                 TypeMap *type_map,
+                                                 llvm::IRBuilder<> &ir_builder)
     : ir_builder_(ir_builder) {
   u32 local_idx = 0;
   auto arg_iter = func->arg_begin();
@@ -216,7 +224,7 @@ LLVMEngine::FunctionHelper::FunctionHelper(const FunctionInfo &func_info,
   }
 }
 
-llvm::Value *LLVMEngine::FunctionHelper::GetArgumentById(LocalVar var) {
+llvm::Value *LLVMEngine::FunctionLocalsMap::GetArgumentById(LocalVar var) {
   if (auto iter = params_.find(var.GetOffset()); iter != params_.end()) {
     return iter->second;
   }
@@ -545,7 +553,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
 
   auto block_iter = ++blocks.cbegin();
 
-  FunctionHelper function_helper(func_info, func, type_map(), ir_builder);
+  FunctionLocalsMap locals_map(func_info, func, type_map(), ir_builder);
 
   bool last_was_jump = false;
   for (auto iter = tpl_module().BytecodeForFunction(func_info); !iter.Done();
@@ -609,14 +617,14 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
         }
         case OperandType::Local: {
           LocalVar local = iter.GetLocalOperand(i);
-          args.push_back(function_helper.GetArgumentById(local));
+          args.push_back(locals_map.GetArgumentById(local));
           break;
         }
         case OperandType::LocalCount: {
           std::vector<LocalVar> locals;
           iter.GetLocalCountOperand(i, locals);
           for (const auto local : locals) {
-            args.push_back(function_helper.GetArgumentById(local));
+            args.push_back(locals_map.GetArgumentById(local));
           }
           break;
         }
@@ -627,6 +635,13 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
     last_was_jump = false;
     switch (bytecode) {
       case Bytecode::Call: {
+        /*
+         * For internal calls, we read the callee function's ID, lookup the
+         * LLVM declaration and generate the call. The arguments collected
+         * earlier include the function ID, so we slice off the first element
+         * before passing along the function arguments.
+         */
+
         const u16 callee_func_id = iter.GetFunctionIdOperand(0);
         const auto &callee_info = tpl_module().GetFuncInfoById(callee_func_id);
         llvm::Function *callee = module()->getFunction(callee_info->name());
@@ -634,24 +649,47 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
         ir_builder.CreateCall(callee, args_ref.slice(1));
         break;
       }
+
       case Bytecode::Jump: {
+        /*
+         * Unconditional jumps work as follows: we read the relative target
+         * bytecode position from the iterator, calculate the absolute bytecode
+         * position, and create an unconditional branch to the basic block that
+         * starts at the given bytecode position, using the information in the
+         * CFG.
+         */
+
         last_was_jump = true;
         std::size_t branch_target_bb_pos =
             iter.GetPosition() + Bytecodes::GetNthOperandOffset(bytecode, 0) +
             iter.GetJumpOffsetOperand(0);
+        TPL_ASSERT(blocks[branch_target_bb_pos] != nullptr,
+                   "Branch target does not point to valid basic block");
         ir_builder.CreateBr(blocks[branch_target_bb_pos]);
         break;
       }
+
       case Bytecode::JumpIfFalse:
       case Bytecode::JumpIfTrue: {
+        /*
+         * Conditional jumps work almost exactly as unconditional jump except
+         * a second fallthrough position is calculated.
+         */
+
         last_was_jump = true;
         std::size_t fallthrough_bb_pos =
             iter.GetPosition() + iter.CurrentBytecodeSize();
         std::size_t branch_target_bb_pos =
             iter.GetPosition() + Bytecodes::GetNthOperandOffset(bytecode, 1) +
             iter.GetJumpOffsetOperand(1);
+        TPL_ASSERT(blocks[fallthrough_bb_pos] != nullptr,
+                   "Branch fallthrough does not point to valid basic block");
+        TPL_ASSERT(blocks[branch_target_bb_pos] != nullptr,
+                   "Branch target does not point to valid basic block");
+
         auto *check = llvm::ConstantInt::get(type_map()->Int8Type(), 1, false);
-        auto *cond = ir_builder.CreateICmpEQ(args[0], check);
+        llvm::Value *cond = ir_builder.CreateICmpEQ(args[0], check);
+
         if (bytecode == Bytecode::JumpIfTrue) {
           ir_builder.CreateCondBr(cond, blocks[branch_target_bb_pos],
                                   blocks[fallthrough_bb_pos]);
@@ -661,31 +699,37 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
         }
         break;
       }
+
       default: {
-        llvm::Function *callee = LookupBytecodeHandler(bytecode);
-#if 0
-        // Clean up call arguments
-        TPL_ASSERT(callee != nullptr, "Couldn't find function!");
-        TPL_ASSERT(args.size() == callee->arg_size(), "Argument mismatch!");
-        for (u32 i = 0; i < args.size(); i++) {
-          auto *arg = callee->arg_begin() + i;
-          if (args[i]->getType() != arg->getType()) {
-            if (args[i]->getType()->isIntegerTy()) {
-              args[i] = ir_builder.CreateIntCast(args[i], arg->getType(), true);
-            } else if (args[i]->getType()->isPointerTy()) {
-              args[i] = ir_builder.CreatePointerCast(args[i], arg->getType());
+        /*
+         * In the default case, each bytecode makes a function call into it's
+         * bytecode handler function. We also need to ensure correct types by
+         * inserting casting operations where appropriate.
+         */
+
+        llvm::Function *handler = LookupBytecodeHandler(bytecode);
+
+        {
+          auto arg_iter = handler->arg_begin();
+          for (u32 i = 0; i < args.size(); ++i, ++arg_iter) {
+            llvm::Argument *arg = &*arg_iter;
+            if (args[i]->getType() != arg->getType()) {
+              if (args[i]->getType()->isIntegerTy()) {
+                args[i] =
+                    ir_builder.CreateIntCast(args[i], arg->getType(), true);
+              } else if (args[i]->getType()->isPointerTy()) {
+                args[i] = ir_builder.CreatePointerCast(args[i], arg->getType());
+              }
             }
           }
         }
-#endif
 
-        ir_builder.CreateCall(callee, args);
+        ir_builder.CreateCall(handler, args);
         break;
       }
     }
   }
 
-  // Done
   ir_builder.CreateRetVoid();
 }
 
@@ -706,7 +750,7 @@ void LLVMEngine::CompiledModuleBuilder::Verify() {
   llvm::raw_string_ostream ostream(result);
   if (bool has_error = llvm::verifyModule(*module(), &ostream); has_error) {
     // TODO(pmenon): Do something more here ...
-    LOG_ERROR("ERROR IN MODULE: {}", result);
+    LOG_ERROR("ERROR IN MODULE:\n{}", result);
   }
 }
 
@@ -907,7 +951,6 @@ void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
   loader.loadObject(*object.get());
 
   if (loader.hasError()) {
-    // Error
     LOG_ERROR("LLVMEngine: Error loading object file {}",
               loader.getErrorString().str());
     return;

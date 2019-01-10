@@ -162,7 +162,7 @@ u32 DecimalType::precision() const { return precision_; }
 
 u32 DecimalType::scale() const { return scale_; }
 
-template <bool nullable>
+template <bool Nullable>
 const DecimalType &DecimalType::InstanceInternal(u32 precision, u32 scale) {
   thread_local llvm::DenseMap<std::pair<u32, u32>, std::unique_ptr<DecimalType>>
       kDecimalTypeMap;
@@ -173,7 +173,7 @@ const DecimalType &DecimalType::InstanceInternal(u32 precision, u32 scale) {
   }
 
   auto iter = kDecimalTypeMap.try_emplace(
-      key, new DecimalType(nullable, precision, scale));
+      key, new DecimalType(Nullable, precision, scale));
   return *iter.first->second;
 }
 
@@ -221,7 +221,7 @@ DateType::DateType(bool nullable) : Type(TypeId::Date, nullable) {}
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-template <bool nullable>
+template <bool Nullable>
 const CharType &CharType::InstanceInternal(u32 length) {
   thread_local llvm::DenseMap<u32, std::unique_ptr<CharType>> kCharTypeMap;
 
@@ -229,7 +229,7 @@ const CharType &CharType::InstanceInternal(u32 length) {
     return *iter->second;
   }
 
-  auto iter = kCharTypeMap.try_emplace(length, new CharType(nullable, length));
+  auto iter = kCharTypeMap.try_emplace(length, new CharType(Nullable, length));
   return *iter.first->second;
 }
 
@@ -268,7 +268,7 @@ u32 CharType::length() const { return length_; }
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-template <bool nullable>
+template <bool Nullable>
 const VarcharType &VarcharType::InstanceInternal(u32 length) {
   thread_local llvm::DenseMap<u32, std::unique_ptr<VarcharType>>
       kVarcharTypeMap;
@@ -278,7 +278,7 @@ const VarcharType &VarcharType::InstanceInternal(u32 length) {
   }
 
   auto iter =
-      kVarcharTypeMap.try_emplace(length, new VarcharType(nullable, length));
+      kVarcharTypeMap.try_emplace(length, new VarcharType(Nullable, length));
   return *iter.first->second;
 }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -27,7 +28,7 @@ class LLVMEngine {
 
   class TPLMemoryManager;
   class TypeMap;
-  class FunctionHelper;
+  class FunctionLocalsMap;
   class CompilerOptions;
   class CompiledModule;
   class CompiledModuleBuilder;
