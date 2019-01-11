@@ -40,4 +40,21 @@ bool MemberExpr::IsSugaredArrow() const {
   return object()->type()->IsPointerType();
 }
 
+bool Stmt::IsTerminating(Stmt *stmt) {
+  switch (stmt->kind()) {
+    case AstNode::Kind::BlockStmt: {
+      return IsTerminating(stmt->As<BlockStmt>()->statements().back());
+    }
+    case AstNode::Kind::IfStmt: {
+      auto *if_stmt = stmt->As<IfStmt>();
+      return (if_stmt->HasElseStmt() && (IsTerminating(if_stmt->then_stmt()) &&
+                                         IsTerminating(if_stmt->else_stmt())));
+    }
+    case AstNode::Kind::ReturnStmt: {
+      return true;
+    }
+    default: { return false; }
+  }
+}
+
 }  // namespace tpl::ast

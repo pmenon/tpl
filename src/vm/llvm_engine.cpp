@@ -248,8 +248,8 @@ llvm::Value *LLVMEngine::FunctionLocalsMap::GetArgumentById(LocalVar var) {
 // Compiled Module Builder
 // ---------------------------------------------------------
 
-/// A builder to create a compilation unit. We need this because a compilation
-/// unit is immutable after creation.
+/// A builder for compiled modules. We need this because compiled modules are
+/// immutable after creation.
 class LLVMEngine::CompiledModuleBuilder {
  public:
   CompiledModuleBuilder(const CompilerOptions &options,
@@ -280,13 +280,6 @@ class LLVMEngine::CompiledModuleBuilder {
 
   // Print the contents of the module to a string and return it
   std::string DumpModule() const;
-
-  void PrintModuleFunctions() {
-    for (const auto &func_info : tpl_module().functions()) {
-      auto *func = module()->getFunction(func_info.name());
-      func->print(llvm::errs(), nullptr);
-    }
-  }
 
  private:
   // Given a TPL function, build a simple CFG using 'blocks' as an output param
@@ -337,7 +330,7 @@ class LLVMEngine::CompiledModuleBuilder {
 };
 
 // ---------------------------------------------------------
-// Compilation Unit Builder
+// Compiled Module Builder
 // ---------------------------------------------------------
 
 LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
@@ -884,7 +877,7 @@ std::string LLVMEngine::CompiledModuleBuilder::DumpModule() const {
 }
 
 // ---------------------------------------------------------
-// Compilation Unit
+// Compiled Module
 // ---------------------------------------------------------
 
 LLVMEngine::CompiledModule::CompiledModule(

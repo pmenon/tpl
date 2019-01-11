@@ -357,33 +357,6 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   node->set_type(func_type->return_type());
 }
 
-namespace {
-
-/**
- * Determines if @ref stmt, the last in a statement list, is terminating.
- *
- * @param stmt
- * @return
- */
-bool IsTerminating(ast::Stmt *stmt) {
-  switch (stmt->kind()) {
-    case ast::AstNode::Kind::BlockStmt: {
-      return IsTerminating(stmt->As<ast::BlockStmt>()->statements().back());
-    }
-    case ast::AstNode::Kind::IfStmt: {
-      auto *if_stmt = stmt->As<ast::IfStmt>();
-      return (if_stmt->HasElseStmt() && (IsTerminating(if_stmt->then_stmt()) &&
-                                         IsTerminating(if_stmt->else_stmt())));
-    }
-    case ast::AstNode::Kind::ReturnStmt: {
-      return true;
-    }
-    default: { return false; }
-  }
-}
-
-}  // namespace
-
 void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   // Resolve the type
   if (auto *type = Resolve(node->type_repr()); type == nullptr) {
@@ -408,7 +381,7 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
 
   // Check return
   if (!func_type->return_type()->IsNilType()) {
-    if (node->IsEmpty() || !IsTerminating(node->body())) {
+    if (node->IsEmpty() || !ast::Stmt::IsTerminating(node->body())) {
       error_reporter().Report(node->body()->right_brace_position(),
                               ErrorMessages::kMissingReturn);
       return;

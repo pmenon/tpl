@@ -311,6 +311,14 @@ class Stmt : public AstNode {
  public:
   Stmt(Kind kind, const SourcePosition &pos) : AstNode(kind, pos) {}
 
+  /**
+   * Determines if @ref stmt, the last in a statement list, is terminating.
+   *
+   * @param stmt
+   * @return
+   */
+  static bool IsTerminating(Stmt *stmt);
+
   static bool classof(const AstNode *node) {
     return node->kind() >= Kind::AssignmentStmt &&
            node->kind() <= Kind::ReturnStmt;

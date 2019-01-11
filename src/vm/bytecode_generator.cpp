@@ -106,7 +106,9 @@ void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
 
   // If there's an "else" block, handle it now
   if (node->else_stmt() != nullptr) {
-    if_builder.JumpToEnd();
+    if (!ast::Stmt::IsTerminating(node->then_stmt())) {
+      if_builder.JumpToEnd();
+    }
     if_builder.Else();
     Visit(node->else_stmt());
   }
