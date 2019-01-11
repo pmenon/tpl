@@ -281,6 +281,13 @@ class LLVMEngine::CompiledModuleBuilder {
   // Print the contents of the module to a string and return it
   std::string DumpModule() const;
 
+  void PrintModuleFunctions() {
+    for (const auto &func_info : tpl_module().functions()) {
+      auto *func = module()->getFunction(func_info.name());
+      func->print(llvm::errs(), nullptr);
+    }
+  }
+
  private:
   // Given a TPL function, build a simple CFG using 'blocks' as an output param
   void BuildSimpleCFG(const FunctionInfo &func_info,
@@ -551,22 +558,11 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
 
   ir_builder.SetInsertPoint(entry);
 
-  auto block_iter = ++blocks.cbegin();
-
   FunctionLocalsMap locals_map(func_info, func, type_map(), ir_builder);
 
-  bool last_was_jump = false;
   for (auto iter = tpl_module().BytecodeForFunction(func_info); !iter.Done();
        iter.Advance()) {
     Bytecode bytecode = iter.CurrentBytecode();
-
-    if (iter.GetPosition() == block_iter->first) {
-      if (!last_was_jump) {
-        ir_builder.CreateBr(block_iter->second);
-      }
-      ir_builder.SetInsertPoint(block_iter->second);
-      ++block_iter;
-    }
 
     // Collect arguments
     llvm::SmallVector<llvm::Value *, 8> args;
@@ -607,12 +603,9 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
               false));
           break;
         }
-        case OperandType::FunctionId: {
-          args.push_back(llvm::ConstantInt::get(
-              type_map()->UInt16Type(), iter.GetFunctionIdOperand(i), false));
-          break;
-        }
+        case OperandType::FunctionId:
         case OperandType::JumpOffset: {
+          // These are handled specially below
           break;
         }
         case OperandType::Local: {
@@ -631,22 +624,18 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
       }
     }
 
-    // Handle opcode
-    last_was_jump = false;
+    // Handle bytecode
     switch (bytecode) {
       case Bytecode::Call: {
         /*
          * For internal calls, we read the callee function's ID, lookup the
-         * LLVM declaration and generate the call. The arguments collected
-         * earlier include the function ID, so we slice off the first element
-         * before passing along the function arguments.
+         * LLVM declaration and generate the call.
          */
 
         const u16 callee_func_id = iter.GetFunctionIdOperand(0);
         const auto &callee_info = tpl_module().GetFuncInfoById(callee_func_id);
         llvm::Function *callee = module()->getFunction(callee_info->name());
-        llvm::ArrayRef<llvm::Value *> args_ref(args);
-        ir_builder.CreateCall(callee, args_ref.slice(1));
+        ir_builder.CreateCall(callee, args);
         break;
       }
 
@@ -659,7 +648,6 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
          * CFG.
          */
 
-        last_was_jump = true;
         std::size_t branch_target_bb_pos =
             iter.GetPosition() + Bytecodes::GetNthOperandOffset(bytecode, 0) +
             iter.GetJumpOffsetOperand(0);
@@ -676,7 +664,6 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
          * a second fallthrough position is calculated.
          */
 
-        last_was_jump = true;
         std::size_t fallthrough_bb_pos =
             iter.GetPosition() + iter.CurrentBytecodeSize();
         std::size_t branch_target_bb_pos =
@@ -697,6 +684,11 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
           ir_builder.CreateCondBr(cond, blocks[fallthrough_bb_pos],
                                   blocks[branch_target_bb_pos]);
         }
+        break;
+      }
+
+      case Bytecode::Return: {
+        ir_builder.CreateRetVoid();
         break;
       }
 
@@ -728,9 +720,22 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
         break;
       }
     }
-  }
 
-  ir_builder.CreateRetVoid();
+    /*
+     * If the next bytecode marks the start of a new basic block, we need to
+     * switch insertion points to it before continuing IR generation.
+     */
+
+    auto next_bytecode_pos = iter.GetPosition() + iter.CurrentBytecodeSize();
+
+    if (auto blocks_iter = blocks.find(next_bytecode_pos);
+        blocks_iter != blocks.end()) {
+      if (!Bytecodes::IsJump(bytecode) && !Bytecodes::IsTerminal(bytecode)) {
+        ir_builder.CreateBr(blocks_iter->second);
+      }
+      ir_builder.SetInsertPoint(blocks_iter->second);
+    }
+  }
 }
 
 void LLVMEngine::CompiledModuleBuilder::DefineFunctions() {

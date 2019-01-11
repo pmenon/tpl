@@ -1,8 +1,6 @@
 #pragma once
 
-#ifndef NDEBUG
 #include "logging/logger.h"
-#endif
 #include "util/common.h"
 #include "util/region_containers.h"
 #include "vm/bytecode_function_info.h"
@@ -20,9 +18,11 @@ class VM {
  public:
   VM(util::Region *region, const BytecodeModule &module);
 
+  // This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(VM);
 
-  /// Execute a function in this virtual machine
+  /// Execute the given function in this virtual machine
+  ///
   /// \tparam ArgTypes Template arguments specifying the arguments to the
   /// function. At this point, we don't do any type-checking!
   /// \param func The function to run
@@ -96,6 +96,10 @@ class VM {
   u64 bytecode_counts_[Bytecodes::kBytecodeCount];
 };
 
+// ---------------------------------------------------------
+// VM Frame
+// ---------------------------------------------------------
+
 /// An execution frame where all function's local variables and parameters live
 /// for the duration of the function's lifetime.
 class VM::Frame {
@@ -134,8 +138,7 @@ class VM::Frame {
 
  private:
 #ifndef NDEBUG
-  /// Ensure the local variable is valid
-  /// \param var The variable to access in the frame
+  // Ensure the local variable is valid
   void EnsureInFrame(LocalVar var) const {
     if (var.GetOffset() >= frame_size()) {
       std::string error_msg =
@@ -160,6 +163,10 @@ class VM::Frame {
   u8 *frame_data_;
   std::size_t frame_size_;
 };
+
+// ---------------------------------------------------------
+// VM Frame Builder
+// ---------------------------------------------------------
 
 /// Helper class to construct a frame from a set of user-provided C/C++ function
 /// arguments. Note that TPL has call-by-value semantics, hence all arguments
