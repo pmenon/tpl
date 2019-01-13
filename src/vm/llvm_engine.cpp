@@ -287,10 +287,8 @@ class LLVMEngine::CompiledModuleBuilder {
                       std::map<std::size_t, llvm::BasicBlock *> &blocks);
 
   // Convert one TPL function into an LLVM implementation
-  void DefineFunction(
-      const FunctionInfo &func_info,
-      llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>
-          &ir_builder);
+  void DefineFunction(const FunctionInfo &func_info,
+                      llvm::IRBuilder<> &ir_builder);
 
   // Given a bytecode, lookup it's LLVM function handler in the module
   llvm::Function *LookupBytecodeHandler(Bytecode bytecode) const;
@@ -510,9 +508,7 @@ void LLVMEngine::CompiledModuleBuilder::BuildSimpleCFG(
 }
 
 void LLVMEngine::CompiledModuleBuilder::DefineFunction(
-    const FunctionInfo &func_info,
-    llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>
-        &ir_builder) {
+    const FunctionInfo &func_info, llvm::IRBuilder<> &ir_builder) {
   llvm::LLVMContext &ctx = ir_builder.getContext();
   llvm::Function *func = module()->getFunction(func_info.name());
   llvm::BasicBlock *entry = llvm::BasicBlock::Create(ctx, "EntryBB", func);
