@@ -316,7 +316,7 @@ class LLVMEngine::CompiledModuleBuilder {
 
   llvm::Module *module() { return llvm_module_.get(); }
 
-  const llvm::Module *module() const { return llvm_module_.get(); }
+  const llvm::Module &module() const { return *llvm_module_; }
 
   TypeMap *type_map() { return type_map_.get(); }
 
@@ -433,7 +433,7 @@ void LLVMEngine::CompiledModuleBuilder::DeclareFunctions() {
 llvm::Function *LLVMEngine::CompiledModuleBuilder::LookupBytecodeHandler(
     Bytecode bytecode) const {
   const char *handler_name = Bytecodes::GetBytecodeHandlerName(bytecode);
-  llvm::Function *func = module()->getFunction(handler_name);
+  llvm::Function *func = module().getFunction(handler_name);
 #ifndef NDEBUG
   if (func == nullptr) {
     auto error =
@@ -872,7 +872,7 @@ void LLVMEngine::CompiledModuleBuilder::PersistObjectToFile(
 std::string LLVMEngine::CompiledModuleBuilder::DumpModule() const {
   std::string result;
   llvm::raw_string_ostream ostream(result);
-  module()->print(ostream, nullptr);
+  module().print(ostream, nullptr);
   return result;
 }
 
