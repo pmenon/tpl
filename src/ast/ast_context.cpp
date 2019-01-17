@@ -130,9 +130,8 @@ Type *AstContext::LookupBuiltinType(Identifier identifier) const {
 
 bool AstContext::IsBuiltinFunction(Identifier identifier,
                                    Builtin *builtin) const {
-  const auto iter = impl().builtin_funcs.find(identifier);
-
-  if (iter != impl().builtin_funcs.end()) {
+  if (auto iter = impl().builtin_funcs.find(identifier);
+      iter != impl().builtin_funcs.end()) {
     if (builtin != nullptr) {
       *builtin = iter->second;
     }

@@ -281,8 +281,7 @@ ALWAYS_INLINE inline Vec4Mask operator==(const Vec4 &a,
 
 ALWAYS_INLINE inline Vec4Mask operator>=(const Vec4 &a,
                                          const Vec4 &b) noexcept {
-  __m256i max_a_b = _mm256_max_epu64(a, b);
-  return _mm256_cmpeq_epi64(a, max_a_b);
+  return Vec4Mask(~(b > a));
 }
 
 ALWAYS_INLINE inline Vec4Mask operator<(const Vec4 &a, const Vec4 &b) noexcept {

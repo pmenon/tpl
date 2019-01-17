@@ -473,12 +473,16 @@ class Attributes : public util::RegionObject {
       util::RegionUnorderedMap<ast::Identifier, ast::Expr *> &&map)
       : map_(std::move(map)) {}
 
-  bool Contains(ast::Identifier ident) const {
-    return map_.find(ident) != map_.end();
+  ast::Expr *Find(ast::Identifier identifier) {
+    if (auto iter = map_.find(identifier); iter != map_.end()) {
+      return iter->second;
+    }
+
+    return nullptr;
   }
 
-  ast::Expr *Find(ast::Identifier identifier) {
-    return map_.find(identifier)->second;
+  bool Contains(ast::Identifier identifier) {
+    return Find(identifier) != nullptr;
   }
 
  private:

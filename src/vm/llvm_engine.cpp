@@ -335,7 +335,10 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
     const CompilerOptions &options, const vm::BytecodeModule &tpl_module)
     : options_(options),
       tpl_module_(tpl_module),
-      context_(std::make_unique<llvm::LLVMContext>()) {
+      target_machine_(nullptr),
+      context_(std::make_unique<llvm::LLVMContext>()),
+      llvm_module_(nullptr),
+      type_map_(nullptr) {
   /*
    * First, we create a suitable target machine for LLVM to use when we JIT
    * TPL programs. At the moment, we rely on LLVM to discover all CPU features
@@ -371,9 +374,8 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
     std::string cpu = llvm::sys::getHostCPUName();
     llvm::TargetOptions target_options;
     llvm::Optional<llvm::Reloc::Model> reloc;
-    target_machine_ =
-        std::unique_ptr<llvm::TargetMachine>(target->createTargetMachine(
-            triple, cpu, target_features.getString(), target_options, reloc));
+    target_machine_.reset(target->createTargetMachine(
+        triple, cpu, target_features.getString(), target_options, reloc));
     TPL_ASSERT(target_machine_ != nullptr,
                "LLVM: Unable to find a suitable target machine!");
   }
