@@ -4,12 +4,17 @@
 
 namespace tpl::ast {
 
-#define BUILTINS_LIST(V)  \
-  V(Filter, tpl_filter)   \
-  V(Map, tpl_map)         \
-  V(Fold, tpl_fold)       \
-  V(Gather, tpl_gather)   \
-  V(Scatter, tpl_scatter) \
+#define BUILTINS_LIST(V)     \
+  V(FilterEq, tpl_filter_eq) \
+  V(FilterGe, tpl_filter_ge) \
+  V(FilterGt, tpl_filter_gt) \
+  V(FilterLe, tpl_filter_le) \
+  V(FilterLt, tpl_filter_lt) \
+  V(FilterNe, tpl_filter_ne) \
+  V(Map, tpl_map)            \
+  V(Fold, tpl_fold)          \
+  V(Gather, tpl_gather)      \
+  V(Scatter, tpl_scatter)    \
   V(Compress, tpl_compress)
 
 enum class Builtin : u8 {

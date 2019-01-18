@@ -249,43 +249,25 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
     return;
   }
 
-  // Check second is a function
-  if (!second_arg_type->IsFunctionType()) {
+  // Check second is a value
+  if (!second_arg_type->IsArithmetic()) {
     error_reporter().Report(call->position(), ErrorMessages::kBadArgToFilter,
                             second_arg_type);
     return;
   }
 
-  // Check input to function is the same as nested array element type
-  auto arr_type = first_arg_type->As<ast::ArrayType>();
-  auto func_type = second_arg_type->As<ast::FunctionType>();
-
-  bool non_bool_return = !func_type->return_type()->IsBoolType();
-  bool mismatched_input =
-      func_type->num_params() != 1 ||
-      func_type->params()[0].type != arr_type->element_type();
-
-  if (non_bool_return || mismatched_input) {
-    error_reporter().Report(call->position(), ErrorMessages::kBadFuncToFilter,
-                            func_type->params()[0].type,
-                            func_type->return_type(), arr_type->element_type());
-    return;
-  }
-
-  // All good ...
-  util::RegionVector<ast::Field> params(ast_context().region());
-  params.emplace_back(ast_context().GetIdentifier("input"), arr_type);
-  params.emplace_back(ast_context().GetIdentifier("lambda"), func_type);
-  auto *filter_type = ast::FunctionType::Get(std::move(params), arr_type);
-
-  call->function()->set_type(filter_type);
-  call->set_type(filter_type->return_type());
+  call->set_type(
+      ast::IntegerType::Get(ast_context(), ast::IntegerType::IntKind::Int32));
 }
 
 void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
   call->set_call_kind(ast::CallExpr::CallKind::Builtin);
   switch (builtin) {
-    case ast::Builtin::Filter: {
+    case ast::Builtin::FilterEq:
+    case ast::Builtin::FilterGe:
+    case ast::Builtin::FilterGt:
+    case ast::Builtin::FilterLt:
+    case ast::Builtin::FilterLe: {
       CheckBuiltinFilterCall(call);
       break;
     }
@@ -358,10 +340,12 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
 }
 
 void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
-  // Resolve the type
-  if (auto *type = Resolve(node->type_repr()); type == nullptr) {
-    // Some error occurred
-    return;
+  // Resolve the type, if not resolved already
+  if (auto *type = node->type_repr()->type(); type == nullptr) {
+    type = Resolve(node->type_repr());
+    if (type == nullptr) {
+      return;
+    }
   }
 
   // Good function type, insert into node

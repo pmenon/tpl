@@ -46,13 +46,18 @@ void Sema::VisitVariableDecl(ast::VariableDecl *node) {
 void Sema::VisitFieldDecl(ast::FieldDecl *node) { Visit(node->type_repr()); }
 
 void Sema::VisitFunctionDecl(ast::FunctionDecl *node) {
-  auto *func_type = Resolve(node->function());
+  // Resolve just the function type (not the body of the function)
+  auto *func_type = Resolve(node->type_repr());
 
   if (func_type == nullptr) {
     return;
   }
 
+  // Make declaration available
   current_scope()->Declare(node->name(), func_type);
+
+  // Now resolve the whole function
+  Resolve(node->function());
 }
 
 void Sema::VisitStructDecl(ast::StructDecl *node) {
