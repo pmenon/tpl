@@ -83,29 +83,31 @@ static void CompileAndRun(const std::string &source,
     util::ScopedTimer<std::milli> timer(&exec_ms);
 
     std::function<u32()> main_func;
-
     if (!module->GetFunction("main", vm::ExecutionMode::Interpret, main_func)) {
       LOG_ERROR("No main() entry function found with signature ()->int32");
       return;
     }
 
-    LOG_INFO("main() returned: {}", main_func());
+    LOG_INFO("VM main() returned: {}", main_func());
   }
 
   // JIT
   {
-#if 0
     util::ScopedTimer<std::milli> timer(&jit_ms);
+
     std::function<u32()> main_func;
-    module->GetFunction("main", vm::ExecutionMode::Jit, main_func);
+    if (!module->GetFunction("main", vm::ExecutionMode::Jit, main_func)) {
+      LOG_ERROR("No main() entry function found with signature ()->int32");
+      return;
+    }
+
     LOG_INFO("JIT main() returned: {}", main_func());
-#endif
   }
 
   // Dump stats
   LOG_INFO(
-      "Parse: {} ms, Typecheck: {} ms, Codegen: {} ms, Exec.: {} ms, Jit: {} "
-      "ms",
+      "Parse: {} ms, Type-check: {} ms, Code-gen: {} ms, Exec.: {} ms, "
+      "Jit+Exec.: {} ms",
       parse_ms, typecheck_ms, codegen_ms, exec_ms, jit_ms);
 }
 
