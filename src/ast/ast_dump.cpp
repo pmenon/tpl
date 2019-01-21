@@ -156,6 +156,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
 };
 
 void AstDumperImpl::VisitFile(File *node) {
+  DumpNodeCommon(node);
   DumpChild([=] {
     for (auto *decl : node->declarations()) {
       DumpDecl(decl);
@@ -178,6 +179,9 @@ void AstDumperImpl::VisitFunctionDecl(FunctionDecl *node) {
 void AstDumperImpl::VisitVariableDecl(VariableDecl *node) {
   DumpNodeCommon(node);
   DumpIdentifier(node->name());
+  if (node->HasTypeDecl()) {
+    DumpType(node->type_repr()->type());
+  }
   if (node->HasInitialValue()) {
     DumpExpr(node->initial());
   }
@@ -205,11 +209,11 @@ void AstDumperImpl::VisitBlockStmt(BlockStmt *node) {
 }
 
 void AstDumperImpl::VisitDeclStmt(DeclStmt *node) {
-  DumpDecl(node->declaration());
+  AstVisitor<AstDumperImpl>::Visit(node->declaration());
 }
 
 void AstDumperImpl::VisitExpressionStmt(ExpressionStmt *node) {
-  DumpExpr(node->expression());
+  AstVisitor<AstDumperImpl>::Visit(node->expression());
 }
 
 void AstDumperImpl::VisitForStmt(ForStmt *node) {
