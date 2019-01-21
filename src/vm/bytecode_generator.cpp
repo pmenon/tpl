@@ -155,7 +155,7 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   LocalVar iter = current_function()->NewLocal(iter_type, "iter");
 
   // Initialize the iterator
-  sql::Table *table = sql::Catalog::instance()->LookupTableByName(
+  sql::Table *table = sql::Catalog::Instance()->LookupTableByName(
       node->iter()->As<ast::IdentifierExpr>()->name().data());
   TPL_ASSERT(table != nullptr, "Table does not exist!");
   emitter()->Emit(Bytecode::SqlTableIteratorInit, iter, table->id());

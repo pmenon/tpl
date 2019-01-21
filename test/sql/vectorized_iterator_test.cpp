@@ -11,7 +11,7 @@ namespace tpl::sema::test {
 class VectorizedIteratorTest : public TplTest {};
 
 TEST_F(VectorizedIteratorTest, SimpleScanTest) {
-  auto table = sql::Catalog::instance()->LookupTableById(sql::TableId::Test1);
+  auto table = sql::Catalog::Instance()->LookupTableById(sql::TableId::Test1);
 
   u32 num_blocks = 0;
   for (sql::VectorizedIterator iter(*table); iter.Next();) {
@@ -29,7 +29,7 @@ TEST_F(VectorizedIteratorTest, SimpleScanTest) {
 }
 
 TEST_F(VectorizedIteratorTest, DISABLED_PerfTest) {
-  auto table = sql::Catalog::instance()->LookupTableById(sql::TableId::Test1);
+  auto table = sql::Catalog::Instance()->LookupTableById(sql::TableId::Test1);
 
   double t1 = Bench(4, [&table]() {
     u32 num_rows = 0;

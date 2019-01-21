@@ -151,7 +151,7 @@ void InitTPL() {
   tpl::logging::InitLogger();
 
   // Init catalog
-  tpl::sql::Catalog::instance();
+  tpl::sql::Catalog::Instance();
 
   // Init LLVM engine
   tpl::vm::LLVMEngine::Initialize();

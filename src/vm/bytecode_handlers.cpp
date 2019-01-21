@@ -7,7 +7,7 @@ extern "C" {
 void OpSqlTableIteratorInit(tpl::sql::TableIterator *iter, u16 table_id) {
   TPL_ASSERT(iter != nullptr, "Null iterator!");
 
-  auto *table = tpl::sql::Catalog::instance()->LookupTableById(
+  auto *table = tpl::sql::Catalog::Instance()->LookupTableById(
       static_cast<tpl::sql::TableId>(table_id));
 
   // At this point, the table better exist ...

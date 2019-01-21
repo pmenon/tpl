@@ -192,7 +192,7 @@ Catalog::Catalog() {
 
 Catalog::~Catalog() = default;
 
-Catalog *Catalog::instance() {
+Catalog *Catalog::Instance() {
   static Catalog kInstance;
   return &kInstance;
 }

@@ -31,7 +31,7 @@ class Catalog {
 
   /// Access singleton Catalog object. Singletons are bad blah blah blah ...
   /// \return The singleton Catalog object
-  static Catalog *instance();
+  static Catalog *Instance();
 
   /// Lookup a table in this catalog by name
   /// \param name The name of the target table
