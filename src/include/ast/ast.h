@@ -342,6 +342,12 @@ class AssignmentStmt : public Stmt {
   }
 
  private:
+  friend class sema::Sema;
+
+  // Used for implicit casts
+  void set_source(ast::Expr *source) { src_ = source; }
+
+ private:
   Expr *dest_;
   Expr *src_;
 };
@@ -564,7 +570,7 @@ class ReturnStmt : public Stmt {
 
   Expr *ret() { return ret_; }
 
-  bool HasValue() const { return ret_ != nullptr; }
+  bool HasExpressionValue() const { return ret_ != nullptr; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ReturnStmt;
@@ -787,9 +793,20 @@ class IdentifierExpr : public Expr {
 class ImplicitCastExpr : public Expr {
  public:
   enum class CastKind {
+    // Conversion of a 32-bit integer into a non-nullable SQL Integer value
     IntToSqlInt,
+
+    // Conversino of a 32-bit integer into a non-nullable SQL Decimal value
     IntToSqlDecimal,
+
+    // Conversion of a SQL boolean value (potentially nullable) into a primitive
+    // boolean value
     SqlBoolToBool,
+
+    // A cast between integral types (i.e., 8-bit, 16-bit, 32-bit, or 64-bit
+    // numbers), excluding to boolean! Boils down to a bitcast, a truncation,
+    // a sign-extension, or a zero-extension. The same as in C/C++.
+    IntegralCast,
   };
 
   CastKind cast_kind() const { return cast_kind_; }
@@ -803,8 +820,9 @@ class ImplicitCastExpr : public Expr {
  private:
   friend class AstNodeFactory;
 
-  ImplicitCastExpr(const SourcePosition &pos, CastKind cast_kind, Expr *input)
-      : Expr(Kind::ImplicitCastExpr, pos),
+  ImplicitCastExpr(const SourcePosition &pos, CastKind cast_kind,
+                   ast::Type *target_type, Expr *input)
+      : Expr(Kind::ImplicitCastExpr, pos, target_type),
         cast_kind_(cast_kind),
         input_(input) {}
 

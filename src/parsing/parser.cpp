@@ -365,7 +365,10 @@ ast::Stmt *Parser::ParseReturnStmt() {
 
   const SourcePosition &position = scanner().current_position();
 
-  ast::Expr *ret = ParseExpr();
+  ast::Expr *ret = nullptr;
+  if (peek() != Token::Type::RIGHT_BRACE) {
+    ret = ParseExpr();
+  }
 
   return node_factory().NewReturnStmt(position, ret);
 }

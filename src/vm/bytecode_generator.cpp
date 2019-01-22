@@ -270,6 +270,10 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
       execution_result()->set_destination(dest);
       break;
     }
+    case ast::ImplicitCastExpr::CastKind::IntegralCast: {
+      BuildAssign(dest, input, node->type());
+      break;
+    }
     default: {
       // Implement me
       throw std::runtime_error("Implement me");
@@ -392,10 +396,14 @@ void BytecodeGenerator::VisitAddressOfExpr(ast::UnaryOpExpr *op) {
 }
 
 void BytecodeGenerator::VisitDerefExpr(ast::UnaryOpExpr *op) {
-  LocalVar dest = execution_result()->GetOrCreateDestination(op->type());
   LocalVar addr = VisitExpressionForRValue(op->expr());
-  BuildDeref(dest, addr, op->type());
-  execution_result()->set_destination(dest.ValueOf());
+  if (execution_result()->IsLValue()) {
+    execution_result()->set_destination(addr);
+  } else {
+    LocalVar dest = execution_result()->GetOrCreateDestination(op->type());
+    BuildDeref(dest, addr, op->type());
+    execution_result()->set_destination(dest.ValueOf());
+  }
 }
 
 void BytecodeGenerator::VisitArithmeticUnaryExpr(ast::UnaryOpExpr *op) {

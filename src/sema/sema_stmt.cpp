@@ -9,15 +9,30 @@
 namespace tpl::sema {
 
 void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
-  auto *src_type = Resolve(node->source());
-  auto *dest_type = Resolve(node->destination());
+  ast::Type *src_type = Resolve(node->source());
+  ast::Type *dest_type = Resolve(node->destination());
 
   if (src_type == nullptr || dest_type == nullptr) {
-    // Skip
+    return;
   }
 
-  if (src_type != dest_type) {
-    // Error
+  // Fast-path
+  if (src_type == dest_type) {
+    return;
+  }
+
+  /*
+   * The left and right types are no the same. If both types are integral, see
+   * if we can issue an integral cast.
+   */
+
+  if (src_type->IsIntegerType() || dest_type->IsIntegerType()) {
+    auto *cast_expr = ast_context().node_factory().NewImplicitCastExpr(
+        node->source()->position(),
+        ast::ImplicitCastExpr::CastKind::IntegralCast, dest_type,
+        node->source());
+    node->set_source(cast_expr);
+    return;
   }
 }
 
@@ -111,13 +126,18 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
     return;
   }
 
-  // If the result type is a SQL bool, we need to implicitly cast it to a native
-  // boolean value
+  /*
+   * If the result type of the evaluated condition is a SQL boolean value, we
+   * implicitly cast it to a native boolean value before we feed it into the
+   * if-condition.
+   */
+
   if (auto *type = node->condition()->type()->SafeAs<ast::SqlType>();
       type != nullptr && type->sql_type().type_id() == sql::TypeId::Boolean) {
     ast::Expr *cond = node->condition();
     cond = ast_context().node_factory().NewImplicitCastExpr(
-        cond->position(), ast::ImplicitCastExpr::CastKind::SqlBoolToBool, cond);
+        cond->position(), ast::ImplicitCastExpr::CastKind::SqlBoolToBool,
+        ast::BoolType::Get(ast_context()), cond);
     cond->set_type(ast::BoolType::Get(ast_context()));
     node->set_condition(cond);
   }
@@ -143,14 +163,45 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
     return;
   }
 
-  ast::Type *return_type = Resolve(node->ret());
-  if (return_type == nullptr) {
+  /*
+   * If there's an expression with the return clause, resolve it now. We'll
+   * check later if we need it.
+   */
+
+  ast::Type *return_type = nullptr;
+  if (node->HasExpressionValue()) {
+    return_type = Resolve(node->ret());
+  }
+
+  /*
+   * If the function has a nil-type, we just need to make sure this return
+   * statement doesn't have an attached expression. If it does, that's an error
+   */
+
+  auto *func_type = current_function()->type()->As<ast::FunctionType>();
+
+  if (func_type->return_type()->IsNilType()) {
+    if (return_type != nullptr) {
+      error_reporter().Report(node->position(),
+                              ErrorMessages::kMismatchedReturnType, return_type,
+                              func_type->return_type());
+    }
     return;
   }
 
-  // Check return type matches function's return type
-  auto *func_type = current_function()->type()->As<ast::FunctionType>();
+  /*
+   * The function has a non-nil return type. So, we need to make sure the
+   * resolved type of the expression in this return is compatible with the
+   * return type of the function.
+   */
+
   if (return_type != func_type->return_type()) {
+    // It's possible the return type is null (either because there was an error
+    // or there wasn't an expression)
+    if (return_type == nullptr) {
+      return_type = ast::NilType::Get(ast_context());
+    }
+
     error_reporter().Report(node->position(),
                             ErrorMessages::kMismatchedReturnType, return_type,
                             func_type->return_type());

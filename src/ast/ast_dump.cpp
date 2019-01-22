@@ -248,7 +248,7 @@ void AstDumperImpl::VisitIfStmt(IfStmt *node) {
 
 void AstDumperImpl::VisitReturnStmt(ReturnStmt *node) {
   DumpNodeCommon(node);
-  if (node->HasValue()) {
+  if (node->HasExpressionValue()) {
     DumpExpr(node->ret());
   }
 }
@@ -317,6 +317,10 @@ void AstDumperImpl::VisitImplicitCastExpr(ImplicitCastExpr *node) {
       }
       case ImplicitCastExpr::CastKind::SqlBoolToBool: {
         DumpPrimitive("SqlBooleanToBoolean");
+        break;
+      }
+      case ImplicitCastExpr::CastKind::IntegralCast: {
+        DumpPrimitive("IntegralCast");
         break;
       }
     }

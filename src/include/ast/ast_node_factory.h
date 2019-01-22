@@ -130,8 +130,9 @@ class AstNodeFactory {
 
   ImplicitCastExpr *NewImplicitCastExpr(const SourcePosition &pos,
                                         ImplicitCastExpr::CastKind cast_kind,
+                                        ast::Type *target_type,
                                         Expr *input) {
-    return new (region_) ImplicitCastExpr(pos, cast_kind, input);
+    return new (region_) ImplicitCastExpr(pos, cast_kind, target_type, input);
   }
 
   IndexExpr *NewIndexExpr(const SourcePosition &pos, Expr *object,

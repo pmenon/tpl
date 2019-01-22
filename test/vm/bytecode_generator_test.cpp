@@ -43,6 +43,8 @@ class BytecodeExpectations {
     return ast;
   }
 
+  bool HasTypeCheckErrors() const { return errors_.HasErrors(); }
+
  private:
   sema::ErrorReporter errors_;
   ast::AstContext ctx_;
@@ -125,6 +127,85 @@ TEST_F(BytecodeGeneratorTest, ParameterPassingTest) {
   EXPECT_TRUE(f(&s));
   EXPECT_EQ(10, s.a);
   EXPECT_EQ(20, s.b);
+}
+
+TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
+  /*
+   * Function with nil return type cannot return expression
+   */
+
+  {
+    auto src = R"(
+    fun test() -> nil {
+      var a = 10
+      return a
+    })";
+
+    BytecodeExpectations expectations(region());
+    expectations.Compile(src);
+    EXPECT_TRUE(expectations.HasTypeCheckErrors());
+  }
+
+  /*
+   * Function with non-nil return type must have expression
+   */
+
+  {
+    auto src = R"(
+    fun test() -> int32 {
+      return
+    })";
+
+    BytecodeExpectations expectations(region());
+    expectations.Compile(src);
+    EXPECT_TRUE(expectations.HasTypeCheckErrors());
+  }
+
+  {
+    auto src = R"(
+    fun test() -> int32 {
+      return 10
+    })";
+
+    BytecodeExpectations expectations(region());
+    auto *ast = expectations.Compile(src);
+    EXPECT_FALSE(expectations.HasTypeCheckErrors());
+
+    // Try generating bytecode for this declaration
+    auto module = BytecodeGenerator::Compile(region(), ast, "test");
+
+    module->PrettyPrint(std::cout);
+
+    std::function<i32()> f;
+    EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
+              << "Function 'test' not found in module";
+
+    EXPECT_EQ(10, f());
+  }
+
+  {
+    auto src = R"(
+    fun test() -> int16 {
+      var a: int16 = 20
+      var b: int16 = 40
+      return a * b
+    })";
+
+    BytecodeExpectations expectations(region());
+    auto *ast = expectations.Compile(src);
+    EXPECT_FALSE(expectations.HasTypeCheckErrors());
+
+    // Try generating bytecode for this declaration
+    auto module = BytecodeGenerator::Compile(region(), ast, "test");
+
+    module->PrettyPrint(std::cout);
+
+    std::function<i32()> f;
+    EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
+              << "Function 'test' not found in module";
+
+    EXPECT_EQ(800, f());
+  }
 }
 
 TEST_F(BytecodeGeneratorTest, FunctionTest) {
