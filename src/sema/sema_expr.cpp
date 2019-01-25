@@ -237,34 +237,34 @@ void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
 void Sema::CheckBuiltinMapCall(ast::CallExpr *call) {}
 
 void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
-  if (call->num_args() != 2) {
-    auto func_name = call->function()->As<ast::IdentifierExpr>()->name();
+  if (call->NumCallArgs() != 3) {
     error_reporter().Report(call->position(),
-                            ErrorMessages::kMismatchedCallArgs, func_name, 2,
-                            call->num_args());
+                            ErrorMessages::kMismatchedCallArgs,
+                            call->FuncName(), 3, call->NumCallArgs());
     return;
   }
 
   // Type-check arguments to filter
-  ast::Type *first_arg_type = Resolve(call->arguments()[0]);
-  ast::Type *second_arg_type = Resolve(call->arguments()[1]);
-
-  if (first_arg_type == nullptr || second_arg_type == nullptr) {
-    return;
+  const auto &arguments = call->arguments();
+  for (auto *arg : arguments) {
+    if (auto *resolved_type = Resolve(arg); resolved_type == nullptr) {
+      return;
+    }
   }
 
-  // Check first is an array
-  if (!first_arg_type->IsArrayType()) {
-    error_reporter().Report(call->position(), ErrorMessages::kBadArgToFilter,
-                            first_arg_type);
-    return;
-  }
+  //
+  // Filters have three arguments: the first is a VectorProjectionIterator; the
+  // second is a string representing the name of the column to filter; the third
+  // is either a constant integer value or a string representing another column.
+  //
 
-  // Check second is a value
-  if (!second_arg_type->IsArithmetic()) {
-    error_reporter().Report(call->position(), ErrorMessages::kBadArgToFilter,
-                            second_arg_type);
-    return;
+  if (auto *type = arguments[0]->type()->SafeAs<ast::InternalType>()) {
+    if (type->internal_kind() !=
+        ast::InternalType::InternalKind::VectorProjectionIterator) {
+      error_reporter().Report(call->position(), ErrorMessages::kBadArgToFilter,
+                              type);
+      return;
+    }
   }
 
   call->set_type(
@@ -294,11 +294,9 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
 }
 
 void Sema::VisitCallExpr(ast::CallExpr *node) {
-  auto func_name = node->function()->As<ast::IdentifierExpr>()->name();
-
   // Is this a built in?
   if (ast::Builtin builtin;
-      ast_context().IsBuiltinFunction(func_name, &builtin)) {
+      ast_context().IsBuiltinFunction(node->FuncName(), &builtin)) {
     CheckBuiltinCall(node, builtin);
     return;
   }
@@ -318,10 +316,10 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
 
   // First, check to make sure we have the right number of function arguments
   auto *func_type = type->As<ast::FunctionType>();
-  if (func_type->num_params() != node->num_args()) {
-    error_reporter().Report(node->position(),
-                            ErrorMessages::kMismatchedCallArgs, func_name,
-                            func_type->num_params(), node->num_args());
+  if (func_type->num_params() != node->NumCallArgs()) {
+    error_reporter().Report(
+        node->position(), ErrorMessages::kMismatchedCallArgs, node->FuncName(),
+        func_type->num_params(), node->NumCallArgs());
     return;
   }
 
@@ -340,7 +338,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
     if (arg_types[i]->type() != func_params[i].type) {
       error_reporter().Report(
           node->position(), ErrorMessages::kIncorrectCallArgType,
-          arg_types[i]->type(), func_params[i].type, func_name);
+          arg_types[i]->type(), func_params[i].type, node->FuncName());
       return;
     }
   }
@@ -524,7 +522,7 @@ void Sema::VisitLitExpr(ast::LitExpr *node) {
       break;
     }
     case ast::LitExpr::LitKind::String: {
-      TPL_ASSERT(false, "String literals not supported yet");
+      node->set_type(ast::StringType::Get(ast_context()));
       break;
     }
   }

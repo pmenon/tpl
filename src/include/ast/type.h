@@ -17,6 +17,7 @@ class AstContext;
   F(IntegerType)     \
   F(FloatType)       \
   F(BoolType)        \
+  F(StringType)      \
   F(NilType)         \
   F(PointerType)     \
   F(ArrayType)       \
@@ -206,6 +207,20 @@ class BoolType : public Type {
   friend class AstContext;
   explicit BoolType(AstContext &ctx)
       : Type(ctx, sizeof(i8), alignof(i8), Type::Kind::BoolType) {}
+};
+
+class StringType : public Type {
+ public:
+  static StringType *Get(AstContext &ctx);
+
+  static bool classof(const Type *type) {
+    return type->kind() == Type::Kind::StringType;
+  }
+
+ private:
+  friend class AstContext;
+  explicit StringType(AstContext &ctx)
+      : Type(ctx, sizeof(i8 *), alignof(i8 *), Type::Kind::StringType) {}
 };
 
 /**

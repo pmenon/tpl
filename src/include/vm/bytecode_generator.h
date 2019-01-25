@@ -2,6 +2,7 @@
 
 #include "ast/ast.h"
 #include "ast/ast_visitor.h"
+#include "ast/builtins.h"
 #include "vm/bytecode_emitter.h"
 
 namespace tpl::vm {
@@ -44,6 +45,9 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
                              LoopBuilder *table_loop);
   void VisitVectorWiseIteration(ast::ForInStmt *node, LocalVar vpi,
                                 LoopBuilder *table_loop);
+
+  // Dispatched from VisitBuiltinCallExpr() to handle filter operations
+  void VisitBuiltinFilterCallExpr(ast::CallExpr *call, ast::Builtin builtin);
 
   // Dispatched from VisitCallExpr() for handling builtins
   void VisitBuiltinCallExpr(ast::CallExpr *call);

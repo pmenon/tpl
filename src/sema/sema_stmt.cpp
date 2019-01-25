@@ -102,21 +102,23 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
     return;
   }
 
-  // Convert the table schema into a TPL struct type
-  auto *iter_type = ConvertSchemaToType(table->schema());
-  TPL_ASSERT(iter_type->IsStructType(), "Rows must be structs");
+  //
+  // Now we resolve the type of the iterable. If the user wanted a row-at-a-time
+  // iteration, the type becomes a struct-equivalent representation of the row
+  // as stored in the table. If the user wanted a vector-at-a-time iteration,
+  // the iterable type becomes a VectorProjectionIterator.
+  //
 
-  // Unless the user wanted batches ...
+  ast::Type *iter_type = nullptr;
   if (auto *attributes = node->attributes();
       attributes != nullptr &&
       attributes->Contains(ast_context().GetIdentifier("batch"))) {
-    // Make each element an array
-    util::RegionVector<ast::Field> fields(ast_context().region());
-    for (const auto &field : iter_type->As<ast::StructType>()->fields()) {
-      fields.emplace_back(field.name, ast::ArrayType::Get(0, field.type));
-    }
-
-    iter_type = ast::StructType::Get(std::move(fields));
+    iter_type = ast::InternalType::Get(
+        ast_context(),
+        ast::InternalType::InternalKind::VectorProjectionIterator);
+  } else {
+    iter_type = ConvertSchemaToType(table->schema());
+    TPL_ASSERT(iter_type->IsStructType(), "Rows must be structs");
   }
 
   // Set the target iterators type

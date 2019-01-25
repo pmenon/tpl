@@ -76,6 +76,7 @@ class LLVMEngine::TypeMap {
     type_map_["uint64"] = llvm::Type::getInt64Ty(ctx);
     type_map_["float32"] = llvm::Type::getFloatTy(ctx);
     type_map_["float64"] = llvm::Type::getDoubleTy(ctx);
+    type_map_["string"] = llvm::Type::getInt8PtrTy(ctx);
   }
 
   /// No copying or moving this class
@@ -116,7 +117,8 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
     case ast::Type::Kind::BoolType:
     case ast::Type::Kind::IntegerType:
     case ast::Type::Kind::FloatType:
-    case ast::Type::Kind::NilType: {
+    case ast::Type::Kind::NilType:
+    case ast::Type::Kind::StringType: {
       // These should be pre-filled in type cache!
       UNREACHABLE("Missing default type not found in cache");
     }

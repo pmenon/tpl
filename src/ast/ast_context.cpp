@@ -37,6 +37,8 @@ struct AstContext::Implementation {
 
   BoolType boolean;
 
+  StringType string;
+
   NilType nil;
 
   util::RegionVector<InternalType *> internal_types;
@@ -66,6 +68,7 @@ struct AstContext::Implementation {
         float32(ctx, sizeof(f32), alignof(f32), FloatType::FloatKind::Float32),
         float64(ctx, sizeof(f64), alignof(f64), FloatType::FloatKind::Float64),
         boolean(ctx),
+        string(ctx),
         nil(ctx),
         internal_types(ctx.region()),
         string_table(kDefaultStringTableCapacity,
@@ -189,6 +192,9 @@ FloatType *FloatType::Get(AstContext &ctx, FloatKind float_kind) {
 
 // static
 BoolType *BoolType::Get(AstContext &ctx) { return &ctx.impl().boolean; }
+
+// static
+StringType *StringType::Get(AstContext &ctx) { return &ctx.impl().string; }
 
 // static
 NilType *NilType::Get(AstContext &ctx) { return &ctx.impl().nil; }

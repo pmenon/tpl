@@ -81,6 +81,8 @@ void TypePrinter::VisitFunctionType(const FunctionType *type) {
 
 void TypePrinter::VisitBoolType(const BoolType *type) { os() << "bool"; }
 
+void TypePrinter::VisitStringType(const StringType *type) { os() << "string"; }
+
 void TypePrinter::VisitPointerType(const PointerType *type) {
   os() << "*";
   Visit(type->base());

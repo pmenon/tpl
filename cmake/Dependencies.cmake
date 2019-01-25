@@ -1,6 +1,9 @@
 set(TPL_LINK_LIBS "")
 
+############################################################
 # LLVM 7.0+
+############################################################
+
 find_package(LLVM 7 REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 if (${LLVM_PACKAGE_VERSION} VERSION_LESS "7")
@@ -10,8 +13,13 @@ llvm_map_components_to_libnames(LLVM_LIBRARIES core mcjit nativecodegen native i
 include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
 list(APPEND TPL_LINK_LIBS ${LLVM_LIBRARIES})
 
-# Check Clang++ is available. Ideally, you should have Clang 7 or Clang 6 ...
-set(SUPPORTED_CLANGS "clang++-7" "clang++-6.0" "clang++-5.0")
+############################################################
+# Check Clang++ is available. Ideally, you should have
+# either Clang 7 or 6, otherwise your compiler is too
+# old to use with TPL.
+############################################################
+
+set(SUPPORTED_CLANGS "clang++-7" "clang++-6.0")
 if (${MACOSX})
     # Because MacOS does some weird Clang versioning, and it isn't available
     # through Homebrew, we add in vanilla "clang++". You won't be running TPL

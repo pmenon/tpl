@@ -107,7 +107,7 @@ class BytecodeEmitter {
   void EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar vpi, u32 col_idx);
 
   // Filter a column in the iterator by a constant value
-  void EmitVPIVectorFilter(Bytecode bytecode, LocalVar selected, LocalVar iter,
+  void EmitVPIVectorFilter(Bytecode bytecode, LocalVar selected, LocalVar vpi,
                            u32 col_idx, i64 val);
 
  private:

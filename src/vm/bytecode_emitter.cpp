@@ -204,8 +204,8 @@ void BytecodeEmitter::EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar vpi,
 }
 
 void BytecodeEmitter::EmitVPIVectorFilter(Bytecode bytecode, LocalVar selected,
-                                          LocalVar iter, u32 col_idx, i64 val) {
-  EmitAll(bytecode, selected, iter, col_idx, val);
+                                          LocalVar vpi, u32 col_idx, i64 val) {
+  EmitAll(bytecode, selected, vpi, col_idx, val);
 }
 
 }  // namespace tpl::vm

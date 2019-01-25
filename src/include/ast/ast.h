@@ -679,13 +679,21 @@ class CallExpr : public Expr {
         args_(std::move(args)),
         call_kind_(CallKind::Regular) {}
 
+  /// Return the name of the function this node is calling
+  ast::Identifier FuncName() const;
+
+  /// Return the number of arguments to the function this node is calling
+  u32 NumCallArgs() const { return static_cast<u32>(args_.size()); }
+
+  // -------------------------------------------------------
+  // Accessors
+  // -------------------------------------------------------
+
   Expr *function() { return func_; }
 
   util::RegionVector<Expr *> &arguments() { return args_; }
 
   CallKind call_kind() const { return call_kind_; }
-
-  u32 num_args() const { return static_cast<u32>(args_.size()); }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::CallExpr;

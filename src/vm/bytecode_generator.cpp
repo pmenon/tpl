@@ -149,19 +149,24 @@ void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
 void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
                                               LocalVar vpi,
                                               LoopBuilder *table_loop) {
-  // Create the row type
-  ast::AstContext &ctx = node->target()->type()->context();
+  // Allocate the row iteration variable
   auto *row_type = node->target()->type()->As<ast::StructType>();
   LocalVar row = current_function()->NewLocal(row_type, "row");
 
+  //
+  // Now, we generate a loop over every element in the VPI. In the beginning of
+  // each iteration, we pull out the column members into the allocated row
+  // structure in preparation for the body of the loop that expects rows.
+  //
+
   {
-    // Loop body
     LoopBuilder vpi_loop(this);
     vpi_loop.LoopHeader();
 
-    LocalVar cond_2 = current_function()->NewTempLocal(ast::BoolType::Get(ctx));
-    emitter()->Emit(Bytecode::VPIHasNext, cond_2, vpi);
-    emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond_2.ValueOf(),
+    ast::AstContext &ctx = row_type->context();
+    LocalVar cond = current_function()->NewTempLocal(ast::BoolType::Get(ctx));
+    emitter()->Emit(Bytecode::VPIHasNext, cond, vpi);
+    emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    vpi_loop.break_label());
 
     // Load fields
@@ -199,20 +204,26 @@ void BytecodeGenerator::VisitVectorWiseIteration(ast::ForInStmt *node,
 void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   //
   // For both tuple-at-a-time iteration and vector-at-a-time iteration, we need
-  // a TableVectorIterator. Thus, we allocate one in the function. We also need
-  // a VectorProjectionIterator (VPI) pointer to read individual rows, but also
-  // for vectorized processing. Thus, we allocate a VPI* in the function, too.
+  // a TableVectorIterator which we allocate in the function first. We also need
+  // a VectorProjectionIterator (VPI) pointer to read individual rows; VPIs are
+  // also needed for vectorized processing because they allow consecutive
+  // iterations and track filtered tuples. Thus, we allocate a VPI* in the
+  // function, too, that we populate with the instance inside the TVI.
   //
 
   ast::AstContext &ctx = node->target()->type()->context();
+
+  bool vectorized = false;
+  if (auto *attributes = node->attributes(); attributes != nullptr) {
+    if (attributes->Contains(ctx.GetIdentifier("batch"))) {
+      vectorized = true;
+    }
+  }
+
   ast::InternalType *table_iter_type = ast::InternalType::Get(
       ctx, ast::InternalType::InternalKind::TableVectorIterator);
   LocalVar table_iter =
       current_function()->NewLocal(table_iter_type, "table_iter");
-
-  ast::InternalType *vpi_type = ast::InternalType::Get(
-      ctx, ast::InternalType::InternalKind::VectorProjectionIterator);
-  LocalVar vpi = current_function()->NewLocal(vpi_type->PointerTo(), "vpi");
 
   //
   // We first initialize the TableVectorIterator and then pull out the VPI*
@@ -224,6 +235,14 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   TPL_ASSERT(table != nullptr, "Table does not exist!");
   emitter()->EmitTableIteratorInit(Bytecode::TableVectorIteratorInit,
                                    table_iter, table->id());
+
+  std::string vpi_name = "vpi";
+  if (vectorized) {
+    vpi_name = node->target()->As<ast::IdentifierExpr>()->name().data();
+  }
+  ast::InternalType *vpi_type = ast::InternalType::Get(
+      ctx, ast::InternalType::InternalKind::VectorProjectionIterator);
+  LocalVar vpi = current_function()->NewLocal(vpi_type->PointerTo(), vpi_name);
 
   emitter()->Emit(Bytecode::TableVectorIteratorGetVPI, vpi, table_iter);
 
@@ -243,7 +262,7 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond_1.ValueOf(),
                                    table_loop.break_label());
 
-    if (auto *attributes = node->attributes(); attributes != nullptr) {
+    if (vectorized) {
       VisitVectorWiseIteration(node, vpi.ValueOf(), &table_loop);
     } else {
       VisitRowWiseIteration(node, vpi.ValueOf(), &table_loop);
@@ -521,15 +540,11 @@ void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
   emitter()->EmitReturn();
 }
 
-void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
+void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
+                                                   ast::Builtin builtin) {
   ast::AstContext &ctx = call->type()->context();
-
-  auto func_name = call->function()->As<ast::IdentifierExpr>();
-
-  ast::Builtin builtin;
-  ctx.IsBuiltinFunction(func_name->name(), &builtin);
-
-  auto ret_type = ast::IntegerType::Get(ctx, ast::IntegerType::IntKind::Int32);
+  ast::Type *ret_type =
+      ast::IntegerType::Get(ctx, ast::IntegerType::IntKind::Int32);
 
   LocalVar ret_val;
   if (execution_result() != nullptr) {
@@ -539,8 +554,11 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     ret_val = current_function()->NewTempLocal(ret_type);
   }
 
-  LocalVar iter = current_function()->LookupLocal("iter");
-  i32 val = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
+  // Collect the three call arguments
+  LocalVar vpi = VisitExpressionForRValue(call->arguments()[0]).ValueOf();
+  UNUSED ast::Identifier col_name =
+      call->arguments()[1]->As<ast::LitExpr>()->raw_string_val();
+  i64 val = call->arguments()[2]->As<ast::LitExpr>()->int32_val();
 
   Bytecode bytecode = Bytecode::VPIFilterEqual;
   switch (builtin) {
@@ -571,7 +589,27 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     default: { UNREACHABLE("Impossible bytecode"); }
   }
 
-  emitter()->EmitVPIVectorFilter(bytecode, ret_val, iter, 0, val);
+  emitter()->EmitVPIVectorFilter(bytecode, ret_val, vpi, 0, val);
+}
+
+void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
+  ast::Builtin builtin;
+
+  ast::AstContext &ctx = call->type()->context();
+  ctx.IsBuiltinFunction(call->FuncName(), &builtin);
+
+  switch (builtin) {
+    case ast::Builtin::FilterEq:
+    case ast::Builtin::FilterGt:
+    case ast::Builtin::FilterGe:
+    case ast::Builtin::FilterLt:
+    case ast::Builtin::FilterLe:
+    case ast::Builtin::FilterNe: {
+      VisitBuiltinFilterCallExpr(call, builtin);
+      break;
+    }
+    default: { UNREACHABLE("Builtin not supported!"); }
+  }
 }
 
 void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
@@ -605,8 +643,7 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   }
 
   // Emit call
-  const FunctionInfo *func_info = LookupFuncInfoByName(
-      call->function()->As<ast::IdentifierExpr>()->name().data());
+  const FunctionInfo *func_info = LookupFuncInfoByName(call->FuncName().data());
   TPL_ASSERT(func_info != nullptr, "Function not found!");
   emitter()->EmitCall(func_info->id(), params);
 }

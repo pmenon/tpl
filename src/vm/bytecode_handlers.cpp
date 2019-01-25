@@ -21,24 +21,40 @@ void OpTableVectorIteratorClose(tpl::sql::TableVectorIterator *iter) {
   TPL_ASSERT(iter != nullptr, "NULL iterator given to close");
   iter->~TableVectorIterator();
 }
-void OpVPIFilterEqual(u32 *size, tpl::sql::VectorProjectionIterator *iter,
-                      u16 col_id, i64 val) {}
+void OpVPIFilterEqual(u32 *size,
+                      UNUSED tpl::sql::VectorProjectionIterator *iter,
+                      UNUSED u16 col_id, UNUSED i64 val) {
+  *size = 0;
+}
 
-void OpVPIFilterGreaterThan(u32 *size, tpl::sql::VectorProjectionIterator *iter,
-                            u16 col_id, i64 val) {}
+void OpVPIFilterGreaterThan(u32 *size,
+                            UNUSED tpl::sql::VectorProjectionIterator *iter,
+                            UNUSED u16 col_id, UNUSED i64 val) {
+  *size = 0;
+}
 
-void OpVPIFilterGreaterThanEqual(u32 *size,
-                                 tpl::sql::VectorProjectionIterator *iter,
-                                 u16 col_id, i64 val) {}
+void OpVPIFilterGreaterThanEqual(
+    u32 *size, UNUSED tpl::sql::VectorProjectionIterator *iter,
+    UNUSED u16 col_id, UNUSED i64 val) {
+  *size = 0;
+}
 
-void OpVPIFilterLessThan(u32 *size, tpl::sql::VectorProjectionIterator *iter,
-                         u16 col_id, i64 val) {}
+void OpVPIFilterLessThan(u32 *size,
+                         UNUSED tpl::sql::VectorProjectionIterator *iter,
+                         UNUSED u16 col_id, UNUSED i64 val) {
+  *size = 0;
+}
 
 void OpVPIFilterLessThanEqual(u32 *size,
-                              tpl::sql::VectorProjectionIterator *iter,
-                              u16 col_id, i64 val) {}
+                              UNUSED tpl::sql::VectorProjectionIterator *iter,
+                              UNUSED u16 col_id, UNUSED i64 val) {
+  *size = 0;
+}
 
-void OpVPIFilterNotEqual(u32 *size, tpl::sql::VectorProjectionIterator *iter,
-                         u16 col_id, i64 val) {}
+void OpVPIFilterNotEqual(u32 *size,
+                         UNUSED tpl::sql::VectorProjectionIterator *iter,
+                         UNUSED u16 col_id, UNUSED i64 val) {
+  *size = 0;
+}
 
 }  //

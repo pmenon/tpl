@@ -57,4 +57,8 @@ bool Stmt::IsTerminating(Stmt *stmt) {
   }
 }
 
+ast::Identifier CallExpr::FuncName() const {
+  return func_->As<ast::IdentifierExpr>()->name();
+}
+
 }  // namespace tpl::ast
