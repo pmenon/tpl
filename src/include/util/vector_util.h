@@ -5,27 +5,36 @@
 
 namespace tpl::util {
 
+/// Catch-all utility class for vectorized operations
 class VectorUtil {
  public:
-  template <typename T, typename Compare>
-  static u32 Filter(const T *RESTRICT in, u32 in_count, T val,
-                    u32 *RESTRICT out, u32 *RESTRICT sel) {
-    const Compare op;
+  /// Filter an input vector by a constant value and store the indexes of valid
+  /// elements in the output vector. If a selection vector is provided, only
+  /// vector elements from the selection vector will be read.
+  /// \tparam T The data type of the elements stored in the input vector
+  /// \tparam Op The filter comparison operation
+  /// \param in The input vector
+  /// \param in_count The number of elements in the input (or selection) vector
+  /// \param val The constant value to compare with
+  /// \param[out] out The vector storing indexes of valid input elements
+  /// \param sel The
+  /// \return The number of elements that pass the filter
+  template <typename T, typename Op>
+  static u32 FilterVectorByVal(const T *RESTRICT in, u32 in_count, T val,
+                               u32 *RESTRICT out, const u32 *RESTRICT sel) {
+    const Op op;
 
     u32 in_pos = 0;
-    u32 out_pos = 0;
+    u32 out_pos =
+        simd::FilterVectorByVal<T, Op>(in, in_count, val, out, sel, in_pos);
 
     if (sel == nullptr) {
-      out_pos = simd::Filter<T, Compare>(in, in_count, val, out, sel, in_pos);
-
       for (; in_pos < in_count; in_pos++) {
         bool cmp = op(in[in_pos], val);
         out[out_pos] = in_pos;
         out_pos += static_cast<u32>(cmp);
       }
     } else {
-      out_pos = simd::Filter<T, Compare>(in, in_count, val, out, sel, in_pos);
-
       for (; in_pos < in_count; in_pos++) {
         bool cmp = op(in[sel[in_pos]], val);
         out[out_pos] = sel[in_pos];
@@ -36,41 +45,23 @@ class VectorUtil {
     return out_pos;
   }
 
-  template <typename T>
-  static u32 FilterGe(const T *RESTRICT in, u32 in_count, T val,
-                      u32 *RESTRICT out, u32 *RESTRICT sel) {
-    return Filter<T, std::greater_equal<void>>(in, in_count, val, out, sel);
-  }
+  // -------------------------------------------------------
+  // Generate specialized vectorized filters
+  // -------------------------------------------------------
 
-  template <typename T>
-  static u32 FilterGt(const T *RESTRICT in, u32 in_count, T val,
-                      u32 *RESTRICT out, u32 *RESTRICT sel) {
-    return Filter<T, std::greater<void>>(in, in_count, val, out, sel);
+#define GEN_FILTER(Op, Comparison)                                        \
+  template <typename T>                                                   \
+  static u32 Filter##Op(const T *RESTRICT in, u32 in_count, T val,        \
+                        u32 *RESTRICT out, u32 *RESTRICT sel) {           \
+    return FilterVectorByVal<T, Comparison>(in, in_count, val, out, sel); \
   }
-
-  template <typename T>
-  static u32 FilterEq(const T *RESTRICT in, u32 in_count, T val,
-                      u32 *RESTRICT out, u32 *RESTRICT sel) {
-    return Filter<T, std::equal_to<void>>(in, in_count, val, out, sel);
-  }
-
-  template <typename T>
-  static u32 FilterLe(const T *RESTRICT in, u32 in_count, T val,
-                      u32 *RESTRICT out, u32 *RESTRICT sel) {
-    return Filter<T, std::less_equal<void>>(in, in_count, val, out, sel);
-  }
-
-  template <typename T>
-  static u32 FilterLt(const T *RESTRICT in, u32 in_count, T val,
-                      u32 *RESTRICT out, u32 *RESTRICT sel) {
-    return Filter<T, std::less<void>>(in, in_count, val, out, sel);
-  }
-
-  template <typename T>
-  static u32 FilterNe(const T *RESTRICT in, u32 in_count, T val,
-                      u32 *RESTRICT out, u32 *RESTRICT sel) {
-    return Filter<T, std::not_equal_to<void>>(in, in_count, val, out, sel);
-  }
+  GEN_FILTER(Eq, std::equal_to<void>)
+  GEN_FILTER(Gt, std::greater<void>)
+  GEN_FILTER(Ge, std::greater_equal<void>)
+  GEN_FILTER(Lt, std::less<void>)
+  GEN_FILTER(Le, std::less_equal<void>)
+  GEN_FILTER(Ne, std::not_equal_to<void>)
+#undef GEN_FILTER
 };
 
 }  // namespace tpl::util

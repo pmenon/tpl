@@ -470,13 +470,14 @@ struct FilterVecSizer<T, std::enable_if_t<std::is_unsigned_v<T>>>
     : public FilterVecSizer<std::make_signed_t<T>> {};
 
 template <typename T, typename Compare>
-static inline u32 Filter(const T *RESTRICT in, u32 in_count, T val,
-                         u32 *RESTRICT out, u32 *RESTRICT sel,
-                         u32 &RESTRICT in_pos) noexcept {
+static inline u32 FilterVectorByVal(const T *RESTRICT in, u32 in_count, T val,
+                                    u32 *RESTRICT out, const u32 *RESTRICT sel,
+                                    u32 &RESTRICT in_pos) {
   using Vec = typename FilterVecSizer<T>::Vec;
   using VecMask = typename FilterVecSizer<T>::VecMask;
 
   const Compare cmp;
+
   const Vec xval(val);
 
   u32 out_pos = 0;
