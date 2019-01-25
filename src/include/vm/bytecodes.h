@@ -63,14 +63,30 @@ namespace tpl::vm {
   F(JumpIfTrue, OperandType::Local, OperandType::JumpOffset)                                                           \
   F(JumpIfFalse, OperandType::Local, OperandType::JumpOffset)                                                          \
                                                                                                                        \
-  /* SQL operations */                                                                                                 \
-  F(SqlTableIteratorInit, OperandType::Local, OperandType::UImm2)                                                      \
-  F(SqlTableIteratorNext, OperandType::Local, OperandType::Local)                                                      \
-  F(SqlTableIteratorClose, OperandType::Local)                                                                         \
-  F(ReadSmallInt, OperandType::Local, OperandType::UImm4, OperandType::Local)                                          \
-  F(ReadInteger, OperandType::Local, OperandType::UImm4, OperandType::Local)                                           \
-  F(ReadBigInt, OperandType::Local, OperandType::UImm4, OperandType::Local)                                            \
-  F(ReadDecimal, OperandType::Local, OperandType::UImm4, OperandType::Local)                                           \
+  /* Table Vector Iterator */                                                                                          \
+  F(TableVectorIteratorInit, OperandType::Local, OperandType::UImm2)                                                   \
+  F(TableVectorIteratorNext, OperandType::Local, OperandType::Local)                                                   \
+  F(TableVectorIteratorClose, OperandType::Local)                                                                      \
+  F(TableVectorIteratorGetVPI, OperandType::Local, OperandType::Local)                                                 \
+  F(VPIHasNext, OperandType::Local, OperandType::Local)                                                                \
+  F(VPIAdvance, OperandType::Local)                                                                                    \
+  F(VPIReset, OperandType::Local)                                                                                      \
+  F(VPIGetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
+  F(VPIGetInteger, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
+  F(VPIGetBigInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
+  F(VPIGetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
+  F(VPIGetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
+  F(VPIGetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
+  F(VPIGetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
+  F(VPIGetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
+  F(VPIFilterEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                     \
+  F(VPIFilterGreaterThan, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)               \
+  F(VPIFilterGreaterThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)          \
+  F(VPIFilterLessThan, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                  \
+  F(VPIFilterLessThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)             \
+  F(VPIFilterNotEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                  \
+                                                                                                                       \
+  /* */                                                                                                                \
   F(ForceBoolTruth, OperandType::Local, OperandType::Local)                                                            \
   F(InitInteger, OperandType::Local, OperandType::Local)                                                               \
   F(LessThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
@@ -102,9 +118,7 @@ namespace tpl::vm {
   F(Return)
 // clang-format on
 
-/**
- * The enumeration of all possible bytecode instructions.
- */
+/// The single enumeration of all possible bytecode instructions
 enum class Bytecode : u32 {
 #define DECLARE_OP(inst, ...) inst,
   BYTECODE_LIST(DECLARE_OP)
@@ -114,9 +128,7 @@ enum class Bytecode : u32 {
 #undef COUNT_OP
 };
 
-/**
- * Handy class for interacting with bytecode instructions.
- */
+/// Helper class for querying/interacting with bytecode instructions
 class Bytecodes {
  public:
   // The total number of bytecode instructions

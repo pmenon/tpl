@@ -1,3 +1,5 @@
+#include <utility>
+
 #pragma once
 
 #include <string>
@@ -10,17 +12,67 @@ namespace tpl::sql {
 /// A class to capture the physical schema layout
 class Schema {
  public:
-  struct ColInfo {
-    std::string name;
-    const Type &type;
+  enum class ColumnEncoding : u8 {
+    None,
+    Rle,
+    Delta,
+    IntegerDict,
+    StringDict,
   };
 
-  explicit Schema(std::vector<ColInfo> cols) : cols_(std::move(cols)) {}
+  struct ColumnInfo {
+    std::string name;
+    const Type &type;
+    ColumnEncoding encoding;
 
-  const std::vector<ColInfo> columns() const { return cols_; }
+    ColumnInfo(std::string name, const Type &type,
+               ColumnEncoding encoding = ColumnEncoding::None)
+        : name(std::move(name)), type(type), encoding(encoding) {}
+
+    // TODO: Fix me to change based on encoding
+    u32 StorageSize() const {
+      switch (type.type_id()) {
+        case TypeId::Boolean: {
+          return sizeof(i8);
+        }
+        case TypeId::SmallInt: {
+          return sizeof(i16);
+        }
+        case TypeId::Date:
+        case TypeId::Integer: {
+          return sizeof(i32);
+        }
+        case TypeId::BigInt: {
+          return sizeof(i64);
+        }
+        case TypeId::Decimal: {
+          return sizeof(i128);
+        }
+        case TypeId::Char: {
+          auto *char_type = type.As<CharType>();
+          return char_type->length() * sizeof(i8);
+        }
+        case TypeId::Varchar: {
+          return 16;
+        }
+        default: {
+          TPL_UNLIKELY("Impossible type");
+          return 0;
+        }
+      }
+    }
+  };
+
+  explicit Schema(std::vector<ColumnInfo> &&cols) : cols_(std::move(cols)) {}
+
+  const ColumnInfo &GetColumnInfo(u32 col_idx) const { return cols_[col_idx]; }
+
+  u32 NumColumns() const { return static_cast<u32>(columns().size()); }
+
+  const std::vector<ColumnInfo> &columns() const { return cols_; }
 
  private:
-  std::vector<ColInfo> cols_;
+  std::vector<ColumnInfo> cols_;
 };
 
 }  // namespace tpl::sql

@@ -4,9 +4,7 @@
 
 namespace tpl::vm {
 
-/**
- * This enumeration lists all possible sizes of operands to any bytecode
- */
+/// This enumeration lists all possible sizes of operands to any bytecode
 enum class OperandSize : u8 {
   None = 0,
   Byte = 1,
@@ -15,10 +13,8 @@ enum class OperandSize : u8 {
   Long = 8
 };
 
-/**
- * This macro list provides information about all possible operand types to a
- * bytecode operation. The format is: Name, IsSigned, BaseSize
- */
+/// This macro list provides information about all possible operand types to a
+/// bytecode operation. The format is: Name, IsSigned, BaseSize
 #define OPERAND_TYPE_LIST(V)               \
   V(None, false, OperandSize::None)        \
   V(Imm1, true, OperandSize::Byte)         \
@@ -32,15 +28,14 @@ enum class OperandSize : u8 {
   V(LocalCount, false, OperandSize::Short) \
   V(FunctionId, false, OperandSize::Short)
 
-/**
- * This enumeration lists all possible types of operands to any bytecode
- */
+/// This enumeration lists all possible types of operands to any bytecode
 enum class OperandType : u8 {
 #define OP_TYPE(Name, ...) Name,
   OPERAND_TYPE_LIST(OP_TYPE)
 #undef OP_TYPE
 };
 
+/// Helper class to query operand types
 class OperandTypes {
  public:
   static bool IsSignedImmediate(OperandType operand_type) {

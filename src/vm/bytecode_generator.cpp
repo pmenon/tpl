@@ -1,5 +1,7 @@
 #include "vm/bytecode_generator.h"
 
+#include "ast/ast_context.h"
+#include "ast/builtins.h"
 #include "ast/type.h"
 #include "logging/logger.h"
 #include "sql/catalog.h"
@@ -144,35 +146,23 @@ void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
   loop_builder.JumpToHeader();
 }
 
-void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
-  TPL_ASSERT(node->iter()->IsIdentifierExpr(),
-             "Iterable of for-in must be an identifier to a table, collection "
-             "or array/list literal");
-  // Create the iterator variable
-  ast::AstContext &ctx = node->target()->type()->context();
-  ast::InternalType *iter_type = ast::InternalType::Get(
-      ctx, ast::InternalType::InternalKind::SqlTableIterator);
-  LocalVar iter = current_function()->NewLocal(iter_type, "iter");
-
-  // Initialize the iterator
-  sql::Table *table = sql::Catalog::Instance()->LookupTableByName(
-      node->iter()->As<ast::IdentifierExpr>()->name().data());
-  TPL_ASSERT(table != nullptr, "Table does not exist!");
-  emitter()->Emit(Bytecode::SqlTableIteratorInit, iter, table->id());
-
+void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
+                                              LocalVar vpi,
+                                              LoopBuilder *table_loop) {
   // Create the row type
+  ast::AstContext &ctx = node->target()->type()->context();
   auto *row_type = node->target()->type()->As<ast::StructType>();
   LocalVar row = current_function()->NewLocal(row_type, "row");
 
   {
     // Loop body
-    LoopBuilder loop_builder(this);
-    loop_builder.LoopHeader();
+    LoopBuilder vpi_loop(this);
+    vpi_loop.LoopHeader();
 
-    LocalVar cond = current_function()->NewTempLocal(ast::BoolType::Get(ctx));
-    emitter()->Emit(Bytecode::SqlTableIteratorNext, cond, iter);
-    emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
-                                   loop_builder.break_label());
+    LocalVar cond_2 = current_function()->NewTempLocal(ast::BoolType::Get(ctx));
+    emitter()->Emit(Bytecode::VPIHasNext, cond_2, vpi);
+    emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond_2.ValueOf(),
+                                   vpi_loop.break_label());
 
     // Load fields
     const auto &fields = row_type->fields();
@@ -180,20 +170,91 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
       LocalVar col_ptr =
           current_function()->NewTempLocal(fields[col_idx].type->PointerTo());
       emitter()->EmitLea(col_ptr, row, offset);
-      emitter()->EmitRead(Bytecode::ReadInteger, iter, col_idx,
-                          col_ptr.ValueOf());
+      emitter()->EmitVPIGet(Bytecode::VPIGetInteger, col_ptr.ValueOf(), vpi,
+                            col_idx);
       offset += fields[col_idx].type->size();
     }
 
     // Generate body
-    VisitIterationStatement(node, &loop_builder);
+    VisitIterationStatement(node, table_loop);
+
+    // Advance the VPI one row
+    emitter()->Emit(Bytecode::VPIAdvance, vpi);
 
     // Finish, loop back around
-    loop_builder.JumpToHeader();
+    vpi_loop.JumpToHeader();
+  }
+
+  // When we're done with one iteration of the loop, we reset the vector
+  // projection iterator
+  emitter()->Emit(Bytecode::VPIReset, vpi);
+}
+
+void BytecodeGenerator::VisitVectorWiseIteration(ast::ForInStmt *node,
+                                                 UNUSED LocalVar vpi,
+                                                 LoopBuilder *table_loop) {
+  VisitIterationStatement(node, table_loop);
+}
+
+void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
+  //
+  // For both tuple-at-a-time iteration and vector-at-a-time iteration, we need
+  // a TableVectorIterator. Thus, we allocate one in the function. We also need
+  // a VectorProjectionIterator (VPI) pointer to read individual rows, but also
+  // for vectorized processing. Thus, we allocate a VPI* in the function, too.
+  //
+
+  ast::AstContext &ctx = node->target()->type()->context();
+  ast::InternalType *table_iter_type = ast::InternalType::Get(
+      ctx, ast::InternalType::InternalKind::TableVectorIterator);
+  LocalVar table_iter =
+      current_function()->NewLocal(table_iter_type, "table_iter");
+
+  ast::InternalType *vpi_type = ast::InternalType::Get(
+      ctx, ast::InternalType::InternalKind::VectorProjectionIterator);
+  LocalVar vpi = current_function()->NewLocal(vpi_type->PointerTo(), "vpi");
+
+  //
+  // We first initialize the TableVectorIterator and then pull out the VPI*
+  // from the iterator for use in the body of the loop.
+  //
+
+  sql::Table *table = sql::Catalog::Instance()->LookupTableByName(
+      node->iter()->As<ast::IdentifierExpr>()->name().data());
+  TPL_ASSERT(table != nullptr, "Table does not exist!");
+  emitter()->EmitTableIteratorInit(Bytecode::TableVectorIteratorInit,
+                                   table_iter, table->id());
+
+  emitter()->Emit(Bytecode::TableVectorIteratorGetVPI, vpi, table_iter);
+
+  //
+  // Now, we generate a loop while TableVectorIterator::Advance() returns true,
+  // indicating that there is more input data. If the loop is non-vectorized,
+  // then we call into VisitRowWiseIteration() to handle iteration over the
+  // VPI, setting up the row pointer, resetting the VPI etc.
+  //
+
+  {
+    LoopBuilder table_loop(this);
+    table_loop.LoopHeader();
+
+    LocalVar cond_1 = current_function()->NewTempLocal(ast::BoolType::Get(ctx));
+    emitter()->Emit(Bytecode::TableVectorIteratorNext, cond_1, table_iter);
+    emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond_1.ValueOf(),
+                                   table_loop.break_label());
+
+    if (auto *attributes = node->attributes(); attributes != nullptr) {
+      VisitVectorWiseIteration(node, vpi.ValueOf(), &table_loop);
+    } else {
+      VisitRowWiseIteration(node, vpi.ValueOf(), &table_loop);
+    }
+
+    // Finish, loop back around
+    table_loop.JumpToHeader();
   }
 
   // Cleanup
-  emitter()->Emit(Bytecode::SqlTableIteratorClose, iter);
+  emitter()->Emit(Bytecode::TableVectorIteratorClose, table_iter);
 }
 
 void BytecodeGenerator::VisitFieldDecl(ast::FieldDecl *node) {
@@ -460,14 +521,67 @@ void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
   emitter()->EmitReturn();
 }
 
-void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
+void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
+  ast::AstContext &ctx = call->type()->context();
+
+  auto func_name = call->function()->As<ast::IdentifierExpr>();
+
+  ast::Builtin builtin;
+  ctx.IsBuiltinFunction(func_name->name(), &builtin);
+
+  auto ret_type = ast::IntegerType::Get(ctx, ast::IntegerType::IntKind::Int32);
+
+  LocalVar ret_val;
+  if (execution_result() != nullptr) {
+    ret_val = execution_result()->GetOrCreateDestination(ret_type);
+    execution_result()->set_destination(ret_val.ValueOf());
+  } else {
+    ret_val = current_function()->NewTempLocal(ret_type);
+  }
+
+  LocalVar iter = current_function()->LookupLocal("iter");
+  i32 val = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
+
+  Bytecode bytecode = Bytecode::VPIFilterEqual;
+  switch (builtin) {
+    case ast::Builtin::FilterEq: {
+      bytecode = Bytecode::VPIFilterEqual;
+      break;
+    }
+    case ast::Builtin::FilterGt: {
+      bytecode = Bytecode::VPIFilterGreaterThan;
+      break;
+    }
+    case ast::Builtin::FilterGe: {
+      bytecode = Bytecode::VPIFilterGreaterThanEqual;
+      break;
+    }
+    case ast::Builtin::FilterLt: {
+      bytecode = Bytecode::VPIFilterLessThan;
+      break;
+    }
+    case ast::Builtin::FilterLe: {
+      bytecode = Bytecode::VPIFilterLessThanEqual;
+      break;
+    }
+    case ast::Builtin::FilterNe: {
+      bytecode = Bytecode::VPIFilterNotEqual;
+      break;
+    }
+    default: { UNREACHABLE("Impossible bytecode"); }
+  }
+
+  emitter()->EmitVPIVectorFilter(bytecode, ret_val, iter, 0, val);
+}
+
+void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   bool caller_wants_result = execution_result() != nullptr;
   TPL_ASSERT(!caller_wants_result || execution_result()->IsRValue(),
              "Calls can only be R-Values!");
 
   std::vector<LocalVar> params;
 
-  auto *func_type = node->function()->type()->As<ast::FunctionType>();
+  auto *func_type = call->function()->type()->As<ast::FunctionType>();
 
   if (!func_type->return_type()->IsNilType()) {
     LocalVar ret_val;
@@ -487,14 +601,22 @@ void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
 
   // Collect non-return-value parameters as usual
   for (u32 i = 0; i < func_type->num_params(); i++) {
-    params.push_back(VisitExpressionForRValue(node->arguments()[i]));
+    params.push_back(VisitExpressionForRValue(call->arguments()[i]));
   }
 
   // Emit call
   const FunctionInfo *func_info = LookupFuncInfoByName(
-      node->function()->As<ast::IdentifierExpr>()->name().data());
+      call->function()->As<ast::IdentifierExpr>()->name().data());
   TPL_ASSERT(func_info != nullptr, "Function not found!");
   emitter()->EmitCall(func_info->id(), params);
+}
+
+void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
+  if (node->call_kind() == ast::CallExpr::CallKind::Builtin) {
+    VisitBuiltinCallExpr(node);
+  } else {
+    VisitRegularCallExpr(node);
+  }
 }
 
 void BytecodeGenerator::VisitAssignmentStmt(ast::AssignmentStmt *node) {
@@ -772,29 +894,31 @@ void BytecodeGenerator::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
 
 void BytecodeGenerator::BuildAssign(LocalVar dest, LocalVar ptr,
                                     ast::Type *dest_type) {
-  // Emit the appropriate deref
-  if (auto size = dest_type->size(); size == 1) {
-    emitter()->EmitAssign<Bytecode::Assign1>(dest, ptr);
+  // Emit the appropriate assignment
+  const u32 size = dest_type->size();
+  if (size == 1) {
+    emitter()->EmitAssign(Bytecode::Assign1, dest, ptr);
   } else if (size == 2) {
-    emitter()->EmitAssign<Bytecode::Assign2>(dest, ptr);
+    emitter()->EmitAssign(Bytecode::Assign2, dest, ptr);
   } else if (size == 4) {
-    emitter()->EmitAssign<Bytecode::Assign4>(dest, ptr);
+    emitter()->EmitAssign(Bytecode::Assign4, dest, ptr);
   } else {
-    emitter()->EmitAssign<Bytecode::Assign8>(dest, ptr);
+    emitter()->EmitAssign(Bytecode::Assign8, dest, ptr);
   }
 }
 
 void BytecodeGenerator::BuildDeref(LocalVar dest, LocalVar ptr,
                                    ast::Type *dest_type) {
   // Emit the appropriate deref
-  if (auto size = dest_type->size(); size == 1) {
-    emitter()->EmitDeref<Bytecode::Deref1>(dest, ptr);
+  const u32 size = dest_type->size();
+  if (size == 1) {
+    emitter()->EmitDeref(Bytecode::Deref1, dest, ptr);
   } else if (size == 2) {
-    emitter()->EmitDeref<Bytecode::Deref2>(dest, ptr);
+    emitter()->EmitDeref(Bytecode::Deref2, dest, ptr);
   } else if (size == 4) {
-    emitter()->EmitDeref<Bytecode::Deref4>(dest, ptr);
+    emitter()->EmitDeref(Bytecode::Deref4, dest, ptr);
   } else if (size == 8) {
-    emitter()->EmitDeref<Bytecode::Deref8>(dest, ptr);
+    emitter()->EmitDeref(Bytecode::Deref8, dest, ptr);
   } else {
     emitter()->EmitDerefN(dest, ptr, size);
   }
@@ -808,7 +932,7 @@ LocalVar BytecodeGenerator::BuildLoadPointer(LocalVar double_ptr,
 
   // Need to Deref
   LocalVar ptr = current_function()->NewTempLocal(type);
-  emitter()->EmitDeref<Bytecode::Deref8>(ptr, double_ptr);
+  emitter()->EmitDeref(Bytecode::Deref8, ptr, double_ptr);
   return ptr.ValueOf();
 }
 

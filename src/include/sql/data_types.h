@@ -91,16 +91,11 @@ class BooleanType : public Type {
     return (nullable ? InstanceNullable() : InstanceNonNullable());
   }
 
-  template <bool nullable>
-  static const BooleanType &Instance() {
-    return (nullable ? InstanceNullable() : InstanceNonNullable());
-  }
-
   const Type &GetNonNullableVersion() const override {
-    return Instance<false>();
+    return InstanceNonNullable();
   }
 
-  const Type &GetNullableVersion() const override { return Instance<true>(); }
+  const Type &GetNullableVersion() const override { return InstanceNullable(); }
 
   std::string GetName() const override;
 
@@ -142,16 +137,11 @@ class SmallIntType : public NumberBaseType<i16> {
     return (nullable ? InstanceNullable() : InstanceNonNullable());
   }
 
-  template <bool nullable>
-  static const SmallIntType &Instance() {
-    return (nullable ? InstanceNullable() : InstanceNonNullable());
-  }
-
   const Type &GetNonNullableVersion() const override {
-    return Instance<false>();
+    return InstanceNonNullable();
   }
 
-  const Type &GetNullableVersion() const override { return Instance<true>(); }
+  const Type &GetNullableVersion() const override { return InstanceNullable(); }
 
   std::string GetName() const override;
 
@@ -175,16 +165,11 @@ class IntegerType : public NumberBaseType<i32> {
     return (nullable ? InstanceNullable() : InstanceNonNullable());
   }
 
-  template <bool nullable>
-  static const IntegerType &Instance() {
-    return (nullable ? InstanceNullable() : InstanceNonNullable());
-  }
-
   const Type &GetNonNullableVersion() const override {
-    return Instance<false>();
+    return InstanceNonNullable();
   }
 
-  const Type &GetNullableVersion() const override { return Instance<true>(); }
+  const Type &GetNullableVersion() const override { return InstanceNullable(); }
 
   std::string GetName() const override;
 
@@ -208,16 +193,11 @@ class BigIntType : public NumberBaseType<i64> {
     return (nullable ? InstanceNullable() : InstanceNonNullable());
   }
 
-  template <bool nullable>
-  static const BigIntType &Instance() {
-    return (nullable ? InstanceNullable() : InstanceNonNullable());
-  }
-
   const Type &GetNonNullableVersion() const override {
-    return Instance<false>();
+    return InstanceNonNullable();
   }
 
-  const Type &GetNullableVersion() const override { return Instance<true>(); }
+  const Type &GetNullableVersion() const override { return InstanceNullable(); }
 
   std::string GetName() const override;
 
@@ -242,18 +222,12 @@ class DecimalType : public Type {
                      : InstanceNonNullable(precision, scale));
   }
 
-  template <bool nullable>
-  static const DecimalType &Instance(u32 precision, u32 scale) {
-    return (nullable ? InstanceNullable(precision, scale)
-                     : InstanceNonNullable(precision, scale));
-  }
-
   const Type &GetNonNullableVersion() const override {
-    return Instance<false>(precision(), scale());
+    return InstanceNonNullable(precision(), scale());
   }
 
   const Type &GetNullableVersion() const override {
-    return Instance<true>(precision(), scale());
+    return InstanceNullable(precision(), scale());
   }
 
   std::string GetName() const override;
@@ -291,16 +265,11 @@ class DateType : public Type {
     return (nullable ? InstanceNullable() : InstanceNonNullable());
   }
 
-  template <bool nullable>
-  static const DateType &Instance() {
-    return (nullable ? InstanceNullable() : InstanceNonNullable());
-  }
-
   const Type &GetNonNullableVersion() const override {
-    return Instance<false>();
+    return InstanceNonNullable();
   }
 
-  const Type &GetNullableVersion() const override { return Instance<true>(); }
+  const Type &GetNullableVersion() const override { return InstanceNullable(); }
 
   std::string GetName() const override;
 
@@ -326,17 +295,12 @@ class CharType : public Type {
     return (nullable ? InstanceNullable(len) : InstanceNonNullable(len));
   }
 
-  template <bool nullable>
-  static const CharType &Instance(u32 len) {
-    return (nullable ? InstanceNullable(len) : InstanceNonNullable(len));
-  }
-
   const Type &GetNonNullableVersion() const override {
-    return Instance<false>(length());
+    return InstanceNonNullable(length());
   }
 
   const Type &GetNullableVersion() const override {
-    return Instance<true>(length());
+    return InstanceNullable(length());
   }
 
   std::string GetName() const override;
@@ -372,18 +336,12 @@ class VarcharType : public Type {
                      : InstanceNonNullable(max_len));
   }
 
-  template <bool nullable>
-  static const VarcharType &Instance(u32 max_len) {
-    return (nullable ? InstanceNullable(max_len)
-                     : InstanceNonNullable(max_len));
-  }
-
   const Type &GetNonNullableVersion() const override {
-    return Instance<false>(max_length());
+    return InstanceNonNullable(max_length());
   }
 
   const Type &GetNullableVersion() const override {
-    return Instance<true>(max_length());
+    return InstanceNullable(max_length());
   }
 
   std::string GetName() const override;

@@ -12,10 +12,12 @@ namespace tpl::sql {
 
 class Table;
 
-#define TABLES(V) V(Test1, "test_1")
+#define TABLES(V)              \
+  V(EmptyTable, "empty_table") \
+  V(Test1, "test_1")
 
 enum class TableId : u16 {
-#define ENTRY(Id, ...) Id
+#define ENTRY(Id, ...) Id,
   TABLES(ENTRY)
 #undef ENTRY
 };
@@ -28,7 +30,6 @@ enum class TableId : u16 {
 /// initialization function.
 class Catalog {
  public:
-
   /// Access singleton Catalog object. Singletons are bad blah blah blah ...
   /// \return The singleton Catalog object
   static Catalog *Instance();
@@ -50,6 +51,7 @@ class Catalog {
 
  private:
   Catalog();
+
   ~Catalog();
 
  private:

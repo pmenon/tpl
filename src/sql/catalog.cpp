@@ -57,6 +57,10 @@ struct TableInsertMeta {
  */
 // clang-format off
 TableInsertMeta insert_meta[] = {
+    // The empty table
+    {TableId::EmptyTable, "empty_table", 0,
+     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0, 0}}},
+
     // Table 1
     {TableId::Test1, "test_1", 2000000,
      {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0, 0},
@@ -95,8 +99,8 @@ T *CreateNumberColumnData(Dist dist, u32 num_vals, u64 min, u64 max) {
   return val;
 }
 
-std::pair<const byte *, const bool *> GenerateColumnData(
-    const ColumnInsertMeta &col_meta, u32 num_vals) {
+std::pair<byte *, u32 *> GenerateColumnData(const ColumnInsertMeta &col_meta,
+                                            u32 num_rows) {
   // Create data
   byte *col_data = nullptr;
   switch (col_meta.type.type_id()) {
@@ -105,18 +109,18 @@ std::pair<const byte *, const bool *> GenerateColumnData(
     }
     case TypeId::SmallInt: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i16>(
-          col_meta.dist, num_vals, col_meta.min, col_meta.max));
+          col_meta.dist, num_rows, col_meta.min, col_meta.max));
       break;
     }
     case TypeId::Integer: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i32>(
-          col_meta.dist, num_vals, col_meta.min, col_meta.max));
+          col_meta.dist, num_rows, col_meta.min, col_meta.max));
       break;
     }
     case TypeId::BigInt:
     case TypeId::Decimal: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i64>(
-          col_meta.dist, num_vals, col_meta.min, col_meta.max));
+          col_meta.dist, num_rows, col_meta.min, col_meta.max));
       break;
     }
     case TypeId::Date:
@@ -127,9 +131,10 @@ std::pair<const byte *, const bool *> GenerateColumnData(
   }
 
   // Create bitmap
-  bool *null_bitmap = nullptr;
+  u32 *null_bitmap = nullptr;
   if (col_meta.type.nullable()) {
-    null_bitmap = static_cast<bool *>(malloc(sizeof(bool)));
+    u32 num_words = util::BitUtil::NumWordsFor(num_rows);
+    null_bitmap = static_cast<u32 *>(malloc(num_words * sizeof(u32)));
   }
 
   return {col_data, null_bitmap};
@@ -149,7 +154,7 @@ void InitTable(const TableInsertMeta &table_meta, Table *table) {
     // Generate column data for all columns
     u32 num_vals = std::min(batch_size, table_meta.num_rows - (i * batch_size));
     for (const auto &col_meta : table_meta.col_meta) {
-      const auto &[data, null_bitmap] = GenerateColumnData(col_meta, num_vals);
+      auto [data, null_bitmap] = GenerateColumnData(col_meta, num_vals);
       columns.emplace_back(col_meta.type, data, null_bitmap, num_vals);
     }
 
@@ -170,16 +175,14 @@ Catalog::Catalog() {
   for (const auto &meta : insert_meta) {
     LOG_INFO("Creating table instance '{}' in catalog", meta.name);
 
-    std::vector<Schema::ColInfo> cols;
+    std::vector<Schema::ColumnInfo> cols;
     for (const auto &col_meta : meta.col_meta) {
-      cols.emplace_back(
-          Schema::ColInfo{.name = col_meta.name, .type = col_meta.type});
+      cols.emplace_back(col_meta.name, col_meta.type);
     }
 
     // Insert into catalog
-    table_catalog_[TableId::Test1] =
-        std::make_unique<Table>(static_cast<u16>(TableId::Test1),
-                                std::make_unique<Schema>(std::move(cols)));
+    table_catalog_[meta.id] = std::make_unique<Table>(
+        static_cast<u16>(meta.id), std::make_unique<Schema>(std::move(cols)));
   }
 
   // Populate all tables
@@ -190,6 +193,9 @@ Catalog::Catalog() {
   LOG_INFO("Catalog initialization complete");
 }
 
+// We need this here because a catalog has a map that stores unique pointers to
+// SQL Table objects. SQL Table is forward-declared in the header file, so the
+// destructor cannot be inlined in the header.
 Catalog::~Catalog() = default;
 
 Catalog *Catalog::Instance() {

@@ -4,7 +4,7 @@
 
 #include "util/common.h"
 
-#include "sql/table_iterator.h"
+#include "sql/table_vector_iterator.h"
 #include "util/macros.h"
 
 // All VM bytecode op handlers must use this macro
@@ -21,7 +21,7 @@ extern "C" {
 // Primitive comparisons
 // ---------------------------------------------------------
 
-#define COMPARISONS(type)                                                     \
+#define COMPARISONS(type, ...)                                                \
   /* Primitive greater-than-equal implementation */                           \
   VM_OP_HOT void OpGreaterThanEqual##_##type(bool *result, type lhs,          \
                                              type rhs) {                      \
@@ -61,7 +61,7 @@ INT_TYPES(COMPARISONS);
 // Primitive arithmetic
 // ---------------------------------------------------------
 
-#define ARITHMETIC(type)                                            \
+#define ARITHMETIC(type, ...)                                       \
   /* Primitive addition */                                          \
   VM_OP_HOT void OpAdd##_##type(type *result, type lhs, type rhs) { \
     *result = (lhs + rhs);                                          \
@@ -100,7 +100,7 @@ INT_TYPES(ARITHMETIC);
 // Bitwise operations
 // ---------------------------------------------------------
 
-#define BITS(type)                                                     \
+#define BITS(type, ...)                                                \
   /* Primitive bitwise AND */                                          \
   VM_OP_HOT void OpBitAnd##_##type(type *result, type lhs, type rhs) { \
     *result = (lhs & rhs);                                             \
@@ -179,38 +179,140 @@ VM_OP_HOT void OpCall(UNUSED u16 func_id, UNUSED u16 num_args) {}
 VM_OP_HOT void OpReturn() {}
 
 // ---------------------------------------------------------
-// Table
+// Table Vector Iterator
 // ---------------------------------------------------------
 
-VM_OP_COLD void OpSqlTableIteratorInit(tpl::sql::TableIterator *iter,
-                                       u16 table_id);
+VM_OP_COLD void OpTableVectorIteratorInit(tpl::sql::TableVectorIterator *iter,
+                                          u16 table_id);
 
-VM_OP_HOT void OpSqlTableIteratorNext(bool *has_more,
-                                      tpl::sql::TableIterator *iter) {
-  *has_more = iter->Next();
+VM_OP_HOT void OpTableVectorIteratorNext(bool *has_more,
+                                         tpl::sql::TableVectorIterator *iter) {
+  *has_more = iter->Advance();
 }
 
-VM_OP_COLD void OpSqlTableIteratorClose(tpl::sql::TableIterator *iter);
+VM_OP_COLD void OpTableVectorIteratorClose(tpl::sql::TableVectorIterator *iter);
 
-VM_OP_HOT void OpReadSmallInt(tpl::sql::TableIterator *iter, u32 col_idx,
-                              tpl::sql::Integer *val) {
-  iter->ReadIntegerColumn<tpl::sql::TypeId::SmallInt, false>(col_idx, val);
+VM_OP_HOT void OpTableVectorIteratorGetVPI(
+    tpl::sql::VectorProjectionIterator **vpi,
+    tpl::sql::TableVectorIterator *iter) {
+  *vpi = iter->vector_projection_iterator();
 }
 
-VM_OP_HOT void OpReadInteger(tpl::sql::TableIterator *iter, u32 col_idx,
-                             tpl::sql::Integer *val) {
-  iter->ReadIntegerColumn<tpl::sql::TypeId::Integer, false>(col_idx, val);
+VM_OP_HOT void OpVPIHasNext(bool *has_more,
+                            tpl::sql::VectorProjectionIterator *vpi) {
+  *has_more = vpi->HasNext();
 }
 
-VM_OP_HOT void OpReadBigInt(tpl::sql::TableIterator *iter, u32 col_idx,
-                            tpl::sql::Integer *val) {
-  iter->ReadIntegerColumn<tpl::sql::TypeId::BigInt, false>(col_idx, val);
+VM_OP_HOT void OpVPIAdvance(tpl::sql::VectorProjectionIterator *vpi) {
+  vpi->Advance();
 }
 
-VM_OP_HOT void OpReadDecimal(tpl::sql::TableIterator *iter, u32 col_idx,
-                             tpl::sql::Decimal *val) {
-  iter->ReadDecimalColumn<false>(col_idx, val);
+VM_OP_HOT void OpVPIReset(tpl::sql::VectorProjectionIterator *vpi) {
+  vpi->Reset();
 }
+
+VM_OP_HOT void OpVPIGetSmallInt(tpl::sql::Integer *out,
+                                tpl::sql::VectorProjectionIterator *iter,
+                                u32 col_idx) {
+  auto *ptr = iter->Get<i16, false>(col_idx, nullptr);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
+  out->val.smallint = *ptr;
+}
+
+VM_OP_HOT void OpVPIGetInteger(tpl::sql::Integer *out,
+                               tpl::sql::VectorProjectionIterator *iter,
+                               u32 col_idx) {
+  auto *ptr = iter->Get<i32, false>(col_idx, nullptr);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
+  out->val.integer = *ptr;
+}
+
+VM_OP_HOT void OpVPIGetBigInt(tpl::sql::Integer *out,
+                              tpl::sql::VectorProjectionIterator *iter,
+                              u32 col_idx) {
+  auto *ptr = iter->Get<i64, false>(col_idx, nullptr);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
+  out->val.bigint = *ptr;
+}
+
+VM_OP_HOT void OpVPIGetDecimal(tpl::sql::Decimal *out,
+                               tpl::sql::VectorProjectionIterator *iter,
+                               u32 col_idx) {
+  out->val = 0;
+  out->null = false;
+}
+
+VM_OP_HOT void OpVPIGetSmallIntNull(tpl::sql::Integer *out,
+                                    tpl::sql::VectorProjectionIterator *iter,
+                                    u32 col_idx) {
+  // Read
+  bool null = false;
+  auto *ptr = iter->Get<i16, true>(col_idx, &null);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
+
+  // Set
+  out->null = null;
+  out->val.smallint = *ptr;
+}
+
+VM_OP_HOT void OpVPIGetIntegerNull(tpl::sql::Integer *out,
+                                   tpl::sql::VectorProjectionIterator *iter,
+                                   u32 col_idx) {
+  // Read
+  bool null = false;
+  auto *ptr = iter->Get<i32, true>(col_idx, &null);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
+
+  // Set
+  out->null = null;
+  out->val.integer = *ptr;
+}
+
+VM_OP_HOT void OpVPIGetBigIntNull(tpl::sql::Integer *out,
+                                  tpl::sql::VectorProjectionIterator *iter,
+                                  u32 col_idx) {
+  // Read
+  bool null = false;
+  auto *ptr = iter->Get<i64, true>(col_idx, &null);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
+
+  // Set
+  out->null = null;
+  out->val.bigint = *ptr;
+}
+
+VM_OP_HOT void OpVPIGetDecimalNull(tpl::sql::Decimal *out,
+                                   tpl::sql::VectorProjectionIterator *iter,
+                                   u32 col_idx) {
+  out->val = 0;
+  out->null = false;
+}
+
+VM_OP_COLD void OpVPIFilterEqual(u32 *size,
+                                 tpl::sql::VectorProjectionIterator *iter,
+                                 u16 col_id, i64 val);
+
+VM_OP_COLD void OpVPIFilterGreaterThan(u32 *size,
+                                       tpl::sql::VectorProjectionIterator *iter,
+                                       u16 col_id, i64 val);
+
+VM_OP_COLD void OpVPIFilterGreaterThanEqual(
+    u32 *size, tpl::sql::VectorProjectionIterator *iter, u16 col_id, i64 val);
+
+VM_OP_COLD void OpVPIFilterLessThan(u32 *size,
+                                    tpl::sql::VectorProjectionIterator *iter,
+                                    u16 col_id, i64 val);
+
+VM_OP_COLD void OpVPIFilterLessThanEqual(
+    u32 *size, tpl::sql::VectorProjectionIterator *iter, u16 col_id, i64 val);
+
+VM_OP_COLD void OpVPIFilterNotEqual(u32 *size,
+                                    tpl::sql::VectorProjectionIterator *iter,
+                                    u16 col_id, i64 val);
+
+// ---------------------------------------------------------
+// Scalar SQL comparisons
+// ---------------------------------------------------------
 
 VM_OP_HOT void OpForceBoolTruth(bool *result, tpl::sql::Integer *input) {
   *result = input->val.boolean;

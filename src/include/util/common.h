@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
+/// Common integral type shorthands
 using i8 = int8_t;
 using i16 = int16_t;
 using i32 = int32_t;
@@ -18,32 +19,35 @@ using byte = std::byte;
 
 using hash_t = u64;
 
-#define FOR_EACH_SIGNED_INT_TYPE(F) \
-  F(i8)                             \
-  F(i16)                            \
-  F(i32)                            \
-  F(i64)
+#define FOR_EACH_SIGNED_INT_TYPE(F, ...) \
+  F(i8, __VA_ARGS__)                     \
+  F(i16, __VA_ARGS__)                    \
+  F(i32, __VA_ARGS__)                    \
+  F(i64, __VA_ARGS__)
 
-#define FOR_EACH_UNSIGNED_INT_TYPE(F) \
-  F(u8)                               \
-  F(u16)                              \
-  F(u32)                              \
-  F(u64)
+#define FOR_EACH_UNSIGNED_INT_TYPE(F, ...) \
+  F(u8, __VA_ARGS__)                       \
+  F(u16, __VA_ARGS__)                      \
+  F(u32, __VA_ARGS__)                      \
+  F(u64, __VA_ARGS__)
 
-#define INT_TYPES(F)          \
-  FOR_EACH_SIGNED_INT_TYPE(F) \
-  FOR_EACH_UNSIGNED_INT_TYPE(F)
+#define INT_TYPES(F, ...)                  \
+  FOR_EACH_SIGNED_INT_TYPE(F, __VA_ARGS__) \
+  FOR_EACH_UNSIGNED_INT_TYPE(F, __VA_ARGS__)
 
 namespace tpl {
 
-static constexpr const u32 kBitsPerByte = 8;
-
-/**
- * Describes the position in the source as 1-based line and column numbers
- */
+/// A compact structure used during parsing to capture and describe the position
+/// in the source as 1-based line and column number
 struct SourcePosition {
   u64 line;
   u64 column;
 };
+
+/// The number of bits per byte
+static constexpr const u32 kBitsPerByte = 8;
+
+/// The default vector size to use when performing vectorized iteration
+static constexpr const u32 kDefaultVectorSize = 2048;
 
 }  // namespace tpl

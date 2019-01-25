@@ -2,7 +2,10 @@
 
 #include "tpl_test.h"
 
+#include "llvm/Support/FormatVariadic.h"
+
 #include "ast/ast_context.h"
+#include "ast/ast_dump.h"
 #include "ast/ast_node_factory.h"
 #include "ast/type.h"
 #include "parsing/parser.h"
@@ -39,6 +42,11 @@ class BytecodeExpectations {
 
     sema::Sema type_check(ctx_);
     type_check.Run(ast);
+
+    if (errors_.HasErrors()) {
+      LOG_ERROR("Type-checking error!");
+      errors_.PrintErrors();
+    }
 
     return ast;
   }
@@ -91,8 +99,46 @@ TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
 
   std::function<bool()> f;
   EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
-            << "Function 'test' not found in module";
+      << "Function 'test' not found in module";
   EXPECT_FALSE(f());
+}
+
+TEST_F(BytecodeGeneratorTest, SimpleTypesTest) {
+  auto fn = [this](auto type, auto arg) {
+    using ArgType = decltype(arg);
+
+    auto src = llvm::formatv(R"(
+      fun test(a: *{0}) -> void {{
+        *a = 10
+        return
+      })", type);
+
+    BytecodeExpectations expectations(region());
+    auto *ast = expectations.Compile(src);
+    ASSERT_FALSE(expectations.HasTypeCheckErrors());
+
+    auto module = BytecodeGenerator::Compile(region(), ast, "test");
+
+    module->PrettyPrint(std::cout);
+
+    std::function<void(ArgType *)> f;
+    ASSERT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
+        << "Function 'test' not found in module";
+
+    ArgType a = 0;
+
+    f(&a);
+    EXPECT_EQ((ArgType)10, a);
+  };
+
+  fn("int8", (i8)0);
+  fn("int16", (i16)0);
+  fn("int32", (i32)0);
+  fn("int64", (i64)0);
+  fn("uint8", (u8)0);
+  fn("uint16", (u16)0);
+  fn("uint32", (u32)0);
+  fn("uint64", (u64)0);
 }
 
 TEST_F(BytecodeGeneratorTest, ParameterPassingTest) {
@@ -119,9 +165,9 @@ TEST_F(BytecodeGeneratorTest, ParameterPassingTest) {
     int b;
   };
 
-  std::function<bool(S *s)> f;
+  std::function<bool(S * s)> f;
   EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
-            << "Function 'test' not found in module";
+      << "Function 'test' not found in module";
 
   S s{.a = 0, .b = 0};
   EXPECT_TRUE(f(&s));
@@ -178,7 +224,7 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
 
     std::function<i32()> f;
     EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
-              << "Function 'test' not found in module";
+        << "Function 'test' not found in module";
 
     EXPECT_EQ(10, f());
   }
@@ -202,7 +248,7 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
 
     std::function<i32()> f;
     EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
-              << "Function 'test' not found in module";
+        << "Function 'test' not found in module";
 
     EXPECT_EQ(800, f());
   }
@@ -236,9 +282,9 @@ TEST_F(BytecodeGeneratorTest, FunctionTest) {
     int b;
   };
 
-  std::function<bool(S *s)> f;
+  std::function<bool(S * s)> f;
   EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
-            << "Function 'test' not found in module";
+      << "Function 'test' not found in module";
 
   S s{.a = 0, .b = 0};
   EXPECT_TRUE(f(&s));

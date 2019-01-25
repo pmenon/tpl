@@ -479,15 +479,15 @@ class Attributes : public util::RegionObject {
       util::RegionUnorderedMap<ast::Identifier, ast::Expr *> &&map)
       : map_(std::move(map)) {}
 
-  ast::Expr *Find(ast::Identifier identifier) {
-    if (auto iter = map_.find(identifier); iter != map_.end()) {
+  ast::Expr *Find(ast::Identifier identifier) const {
+    if (const auto iter = map_.find(identifier); iter != map_.end()) {
       return iter->second;
     }
 
     return nullptr;
   }
 
-  bool Contains(ast::Identifier identifier) {
+  bool Contains(ast::Identifier identifier) const {
     return Find(identifier) != nullptr;
   }
 

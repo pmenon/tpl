@@ -103,14 +103,27 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
   }
 
   // Convert the table schema into a TPL struct type
-  auto *row_type = ConvertSchemaToType(table->schema());
-  TPL_ASSERT(row_type->IsStructType(), "Rows must be structs");
+  auto *iter_type = ConvertSchemaToType(table->schema());
+  TPL_ASSERT(iter_type->IsStructType(), "Rows must be structs");
 
-  // Set the target's type
-  target->set_type(row_type);
+  // Unless the user wanted batches ...
+  if (auto *attributes = node->attributes();
+      attributes != nullptr &&
+      attributes->Contains(ast_context().GetIdentifier("batch"))) {
+    // Make each element an array
+    util::RegionVector<ast::Field> fields(ast_context().region());
+    for (const auto &field : iter_type->As<ast::StructType>()->fields()) {
+      fields.emplace_back(field.name, ast::ArrayType::Get(0, field.type));
+    }
+
+    iter_type = ast::StructType::Get(std::move(fields));
+  }
+
+  // Set the target iterators type
+  target->set_type(iter_type);
 
   // Declare iteration variable
-  current_scope()->Declare(target->name(), row_type);
+  current_scope()->Declare(target->name(), iter_type);
 
   // Process body
   Visit(node->body());

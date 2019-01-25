@@ -381,8 +381,9 @@ class StructType : public Type {
 
 // clang-format off
 #define INTERNAL_TYPE_LIST(V) \
-  V(SqlTableIterator, "tpl::sql::TableIterator", ::tpl::sql::TableIterator) \
-  V(SqlInteger, "tpl::sql::Integer", ::tpl::sql::Integer)                   \
+  V(TableVectorIterator, "tpl::sql::TableVectorIterator", ::tpl::sql::TableVectorIterator)                                  \
+  V(VectorProjectionIterator, "tpl::sql::VectorProjectionIterator", ::tpl::sql::VectorProjectionIterator)                   \
+  V(SqlInteger, "tpl::sql::Integer", ::tpl::sql::Integer)                                                                   \
   V(SqlDecimal, "tpl::sql::Decimal", ::tpl::sql::Decimal)
 // clang-format on
 
@@ -411,9 +412,7 @@ class InternalType : public Type {
   InternalKind internal_kind() const { return internal_kind_; }
 
   // Return the number of internal types
-  static constexpr u32 NumInternalTypes() {
-    return static_cast<u32>(InternalKind::Last);
-  }
+  static constexpr u32 NumInternalTypes() { return kNumInternalKinds; }
 
   // Static factory
   static InternalType *Get(AstContext &ctx, InternalKind kind);

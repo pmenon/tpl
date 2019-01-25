@@ -4,11 +4,9 @@
 
 namespace tpl::sql {
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Boolean
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Boolean
+// ---------------------------------------------------------
 
 BooleanType::BooleanType(bool nullable) : Type(TypeId::Boolean, nullable) {}
 
@@ -36,11 +34,9 @@ const BooleanType &BooleanType::InstanceNullable() {
   return kNullableBoolean;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// SmallInt
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Small Integer
+// ---------------------------------------------------------
 
 SmallIntType::SmallIntType(bool nullable)
     : NumberBaseType(TypeId::SmallInt, nullable) {}
@@ -67,11 +63,9 @@ const SmallIntType &SmallIntType::InstanceNullable() {
   return kNullableSmallInt;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Integer
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Integer
+// ---------------------------------------------------------
 
 IntegerType::IntegerType(bool nullable)
     : NumberBaseType(TypeId::Integer, nullable) {}
@@ -98,11 +92,9 @@ const IntegerType &IntegerType::InstanceNullable() {
   return kNullableInt;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// BigInt
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Big Integer
+// ---------------------------------------------------------
 
 BigIntType::BigIntType(bool nullable)
     : NumberBaseType(TypeId::BigInt, nullable) {}
@@ -129,11 +121,9 @@ const BigIntType &BigIntType::InstanceNullable() {
   return kNullableBigInt;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Decimal
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Decimal
+// ---------------------------------------------------------
 
 DecimalType::DecimalType(bool nullable, u32 precision, u32 scale)
     : Type(TypeId::Decimal, nullable), precision_(precision), scale_(scale) {}
@@ -185,11 +175,9 @@ const DecimalType &DecimalType::InstanceNullable(u32 precision, u32 scale) {
   return InstanceInternal<true>(precision, scale);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Date
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Date
+// ---------------------------------------------------------
 
 const DateType &DateType::InstanceNonNullable() {
   thread_local DateType kNonNullableDate(false);
@@ -215,11 +203,9 @@ bool DateType::Equals(const Type &other) const {
 
 DateType::DateType(bool nullable) : Type(TypeId::Date, nullable) {}
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Char
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Fixed-length strings
+// ---------------------------------------------------------
 
 template <bool Nullable>
 const CharType &CharType::InstanceInternal(u32 length) {
@@ -262,11 +248,9 @@ bool CharType::Equals(const Type &other) const {
 
 u32 CharType::length() const { return length_; }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Varchar
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Variable-length strings
+// ---------------------------------------------------------
 
 template <bool Nullable>
 const VarcharType &VarcharType::InstanceInternal(u32 length) {

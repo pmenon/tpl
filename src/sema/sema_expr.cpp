@@ -89,8 +89,8 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
         right->position(), ast::ImplicitCastExpr::CastKind::IntToSqlInt,
         sql_int_type, right);
 
-    right->set_type(
-        ast::SqlType::Get(ast_context(), sql::IntegerType::Instance<false>()));
+    right->set_type(ast::SqlType::Get(ast_context(),
+                                      sql::IntegerType::InstanceNonNullable()));
   }
 
   if (!left->type()->IsSqlType()) {
@@ -99,8 +99,8 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
         left->position(), ast::ImplicitCastExpr::CastKind::IntToSqlInt,
         sql_int_type, left);
 
-    left->set_type(
-        ast::SqlType::Get(ast_context(), sql::IntegerType::Instance<false>()));
+    left->set_type(ast::SqlType::Get(ast_context(),
+                                     sql::IntegerType::InstanceNonNullable()));
   }
 
   const sql::Type &ret = left->type()->As<ast::SqlType>()->sql_type();
@@ -426,8 +426,8 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
       }
 
       // The type is a non-null SQL integer
-      node->set_type(ast::SqlType::Get(expr_type->context(),
-                                       sql::IntegerType::Instance<false>()));
+      node->set_type(ast::SqlType::Get(
+          expr_type->context(), sql::IntegerType::InstanceNonNullable()));
 
       break;
     }
@@ -442,7 +442,7 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
 
       // The type is a non-null SQL decimal
       node->set_type(ast::SqlType::Get(
-          expr_type->context(), sql::DecimalType::Instance<false>(1, 2)));
+          expr_type->context(), sql::DecimalType::InstanceNonNullable(1, 2)));
 
       break;
     }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sql/data_types.h"
+#include "util/bit_util.h"
 #include "util/common.h"
 #include "util/macros.h"
 
@@ -11,18 +12,18 @@ namespace tpl::sql {
 /// NULL.
 class ColumnVector {
  public:
-  ColumnVector(const Type &type, const byte *data, const bool *null_bitmap,
-               u32 num_rows) noexcept
+  ColumnVector(const Type &type, byte *data, u32 *null_bitmap,
+               u32 num_tuples) noexcept
       : type_(type),
         data_(data),
         null_bitmap_(null_bitmap),
-        num_rows_(num_rows) {}
+        num_tuples_(num_tuples) {}
 
   ColumnVector(ColumnVector &&other) noexcept
       : type_(other.type_),
         data_(other.data_),
         null_bitmap_(other.null_bitmap_),
-        num_rows_(other.num_rows_) {
+        num_tuples_(other.num_tuples_) {
     other.data_ = nullptr;
     other.null_bitmap_ = nullptr;
   }
@@ -31,25 +32,28 @@ class ColumnVector {
 
   ~ColumnVector() {
     if (data_ != nullptr) {
-      std::free((void *)data_);
-      std::free((void *)null_bitmap_);
+      std::free(data_);
+      std::free(null_bitmap_);
     }
   }
 
   /// Read the value of type \ref T at the given index within the column's data
   /// \tparam T The type of the value to read. We make no assumptions on copy
-  /// \param index
+  /// \param idx
   /// \return
   template <typename T>
-  const T &TypedAccessAt(u32 index) const {
-    TPL_ASSERT(index < num_rows(), "Invalid row index!");
-    return Raw<T>()[index];
+  const T &TypedAccessAt(u32 idx) const {
+    TPL_ASSERT(idx < num_tuples(), "Invalid row index!");
+    const T *typed_data = reinterpret_cast<const T *>(data_);
+    return typed_data[idx];
   }
 
   /// Is the value at the given index NULL
-  /// \param index The index to check
+  /// \param idx The index to check
   /// \return True if the value is null; false otherwise
-  bool IsNullAt(u32 index) const { return null_bitmap_[index]; }
+  bool IsNullAt(u32 idx) const {
+    return util::BitUtil::Test(null_bitmap_, idx);
+  }
 
   // -------------------------------------------------------
   // Accessors
@@ -57,19 +61,25 @@ class ColumnVector {
 
   const Type &type() const { return type_; }
 
-  u32 num_rows() const { return num_rows_; }
+  u32 num_tuples() const { return num_tuples_; }
 
  private:
-  template <typename T>
-  const T *Raw() const {
-    return reinterpret_cast<const T *>(data_);
-  }
+  friend class ColumnVectorIterator;
+
+  auto *AccessRaw(u32 idx) const { return &data_[idx]; }
+
+  auto *AccessRawNullBitmap(u32 idx) const { return &null_bitmap_[idx]; }
+
+ private:
+  // TODO: Remove me
+  friend class VectorizedIterator;
+  const byte* raw_data() const { return data_; }
 
  private:
   const Type &type_;
-  const byte *data_;
-  const bool *null_bitmap_;
-  u32 num_rows_;
+  byte *data_;
+  u32 *null_bitmap_;
+  u32 num_tuples_;
 };
 
 }  // namespace tpl::sql

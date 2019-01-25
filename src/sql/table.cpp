@@ -8,7 +8,15 @@ i32 current_partition = -1;
 namespace tpl::sql {
 
 void Table::Insert(Block &&block) {
-  num_rows_ += block.num_rows();
+  // Sanity check
+  TPL_ASSERT(block.num_cols() == num_columns(), "Column count mismatch");
+  for (u32 i = 0; i < num_columns(); i++) {
+    TPL_ASSERT(
+        schema().GetColumnInfo(i).type.Equals(block.GetColumnData(i)->type()),
+        "Column type mismatch");
+  }
+
+  num_tuples_ += block.num_tuples();
   blocks_.emplace_back(std::move(block));
 }
 
@@ -54,7 +62,7 @@ void DumpColValue(std::ostream &os, const Type &type, const ColumnVector &col,
 void Table::Dump(std::ostream &os) const {
   const auto &cols_meta = schema().columns();
   for (const auto &block : blocks_) {
-    for (u32 row_idx = 0; row_idx < block.num_rows(); row_idx++) {
+    for (u32 row_idx = 0; row_idx < block.num_tuples(); row_idx++) {
       for (u32 col_idx = 0; col_idx < cols_meta.size(); col_idx++) {
         if (col_idx != 0) os << ", ";
         const auto *col_vector = block.GetColumnData(col_idx);

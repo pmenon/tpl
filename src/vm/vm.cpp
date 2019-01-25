@@ -120,7 +120,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     Op##op##_##type(dest, lhs, rhs);                      \
     DISPATCH_NEXT();                                      \
   }
-#define GEN_COMPARISON_TYPES(type)          \
+#define GEN_COMPARISON_TYPES(type, ...)     \
   DO_GEN_COMPARISON(GreaterThan, type)      \
   DO_GEN_COMPARISON(GreaterThanEqual, type) \
   DO_GEN_COMPARISON(Equal, type)            \
@@ -147,7 +147,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     Op##op##_##type(dest, lhs, rhs);                      \
     DISPATCH_NEXT();                                      \
   }
-#define GEN_ARITHMETIC_OP(type)             \
+#define GEN_ARITHMETIC_OP(type, ...)        \
   DO_GEN_ARITHMETIC_OP(Add, false, type)    \
   DO_GEN_ARITHMETIC_OP(Sub, false, type)    \
   DO_GEN_ARITHMETIC_OP(Mul, false, type)    \
@@ -164,7 +164,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   /*
    * Bitwise negation and regular integer negation
    */
-#define GEN_NEG_OP(type)                                  \
+#define GEN_NEG_OP(type, ...)                             \
   OP(Neg##_##type) : {                                    \
     auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
     auto input = frame->LocalAt<type>(READ_LOCAL_ID());   \
@@ -278,57 +278,104 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     return;
   }
 
-  OP(SqlTableIteratorInit) : {
-    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
+  // -------------------------------------------------------
+  // Table Vector Iterator and Vector Projection Iterator ops
+  // -------------------------------------------------------
+
+  OP(TableVectorIteratorInit) : {
+    auto *iter = frame->LocalAt<sql::TableVectorIterator *>(READ_LOCAL_ID());
     auto table_id = READ_UIMM2();
-    OpSqlTableIteratorInit(iter, table_id);
+    OpTableVectorIteratorInit(iter, table_id);
     DISPATCH_NEXT();
   }
 
-  OP(SqlTableIteratorNext) : {
+  OP(TableVectorIteratorNext) : {
     auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
-    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
-    OpSqlTableIteratorNext(has_more, iter);
+    auto *iter = frame->LocalAt<sql::TableVectorIterator *>(READ_LOCAL_ID());
+    OpTableVectorIteratorNext(has_more, iter);
     DISPATCH_NEXT();
   }
 
-  OP(SqlTableIteratorClose) : {
-    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
-    OpSqlTableIteratorClose(iter);
+  OP(TableVectorIteratorClose) : {
+    auto *iter = frame->LocalAt<sql::TableVectorIterator *>(READ_LOCAL_ID());
+    OpTableVectorIteratorClose(iter);
     DISPATCH_NEXT();
   }
 
-  OP(ReadSmallInt) : {
-    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
-    auto col_idx = READ_UIMM4();
-    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
-    OpReadSmallInt(iter, col_idx, sql_int);
+  OP(TableVectorIteratorGetVPI) : {
+    auto *vpi =
+        frame->LocalAt<sql::VectorProjectionIterator **>(READ_LOCAL_ID());
+    auto *iter = frame->LocalAt<sql::TableVectorIterator *>(READ_LOCAL_ID());
+    OpTableVectorIteratorGetVPI(vpi, iter);
     DISPATCH_NEXT();
   }
 
-  OP(ReadInteger) : {
-    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
-    auto col_idx = READ_UIMM4();
-    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
-    OpReadInteger(iter, col_idx, sql_int);
+  OP(VPIHasNext) : {
+    auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto *iter =
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    OpVPIHasNext(has_more, iter);
     DISPATCH_NEXT();
   }
 
-  OP(ReadBigInt) : {
-    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
-    auto col_idx = READ_UIMM4();
-    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
-    OpReadBigInt(iter, col_idx, sql_int);
+  OP(VPIAdvance) : {
+    auto *iter =
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    OpVPIAdvance(iter);
     DISPATCH_NEXT();
   }
 
-  OP(ReadDecimal) : {
-    auto *iter = frame->LocalAt<sql::TableIterator *>(READ_LOCAL_ID());
-    auto col_idx = READ_UIMM4();
-    auto *sql_int = frame->LocalAt<sql::Decimal *>(READ_LOCAL_ID());
-    OpReadDecimal(iter, col_idx, sql_int);
+  OP(VPIReset) : {
+    auto *iter =
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    OpVPIReset(iter);
     DISPATCH_NEXT();
   }
+
+#define GEN_VPI_ACCESS(type_str, type)                                    \
+  OP(VPIGet##type_str) : {                                                \
+    auto *result = frame->LocalAt<type *>(READ_LOCAL_ID());               \
+    auto *vpi =                                                           \
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
+    auto col_idx = READ_UIMM4();                                          \
+    OpVPIGet##type_str(result, vpi, col_idx);                             \
+    DISPATCH_NEXT();                                                      \
+  }                                                                       \
+  OP(VPIGet##type_str##Null) : {                                          \
+    auto *result = frame->LocalAt<type *>(READ_LOCAL_ID());               \
+    auto *vpi =                                                           \
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
+    auto col_idx = READ_UIMM4();                                          \
+    OpVPIGet##type_str##Null(result, vpi, col_idx);                       \
+    DISPATCH_NEXT();                                                      \
+  }
+  GEN_VPI_ACCESS(SmallInt, sql::Integer)
+  GEN_VPI_ACCESS(Integer, sql::Integer)
+  GEN_VPI_ACCESS(BigInt, sql::Integer)
+  GEN_VPI_ACCESS(Decimal, sql::Decimal)
+#undef GEN_VPI_ACCESS
+
+#define GEN_VPI_FILTER(Op)                                                \
+  OP(VPIFilter##Op) : {                                                   \
+    auto *size = frame->LocalAt<u32 *>(READ_LOCAL_ID());                  \
+    auto *iter =                                                          \
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
+    auto col_idx = READ_UIMM4();                                          \
+    auto val = READ_IMM8();                                               \
+    OpVPIFilter##Op(size, iter, col_idx, val);                            \
+    DISPATCH_NEXT();                                                      \
+  }
+  GEN_VPI_FILTER(Equal)
+  GEN_VPI_FILTER(GreaterThan)
+  GEN_VPI_FILTER(GreaterThanEqual)
+  GEN_VPI_FILTER(LessThan)
+  GEN_VPI_FILTER(LessThanEqual)
+  GEN_VPI_FILTER(NotEqual)
+#undef GEN_VPI_FILTER
+
+  // -------------------------------------------------------
+  // SQL Integer Comparison Operations
+  // -------------------------------------------------------
 
   OP(ForceBoolTruth) : {
     auto *result = frame->LocalAt<bool *>(READ_LOCAL_ID());

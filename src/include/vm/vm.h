@@ -18,7 +18,7 @@ class VM {
  public:
   VM(util::Region *region, const BytecodeModule &module);
 
-  // This class cannot be copied or moved
+  /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(VM);
 
   /// Execute the given function in this virtual machine
@@ -36,10 +36,18 @@ class VM {
  private:
   class Frame;
   class FrameBuilder;
+  class InstructionStream;
 
-  const u8 *ExecuteCall(const u8 *ip, Frame *caller);
+#define DECLARE_HANDLER(Name, ...) \
+  void XOp##Name(InstructionStream *is, Frame *frame);
+  BYTECODE_LIST(DECLARE_HANDLER)
+#undef DECLARE_HANDLER
 
+  // Interpret the given instruction stream using the given execution frame
   void Interpret(const u8 *ip, Frame *frame);
+
+  // Execute a call instruction
+  const u8 *ExecuteCall(const u8 *ip, Frame *caller);
 
   // -------------------------------------------------------
   // Stack/Frame operations

@@ -9,10 +9,10 @@ namespace tpl::vm {
 class BytecodeModule;
 class LoopBuilder;
 
-/**
- * This class takes a TPL program in the form of an AST and compiles it into a
- * TBC bytecode compilation unit.
- */
+/// This class takes a correctly parsed and semantically type-checked TPL
+/// program as an AST and compiles it into TBC bytecode. The entry point into
+/// this class is the static \refitem Compile() function which performs the
+/// heavy lifting
 class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
  public:
   DISALLOW_COPY_AND_MOVE(BytecodeGenerator);
@@ -37,6 +37,17 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
   // Allocate a new function ID
   FunctionInfo *AllocateFunc(const std::string &name);
+
+  // Dispatched from VisitForInStatement() when using tuple-at-time loops to
+  // set up the row structure used in the body of the loop
+  void VisitRowWiseIteration(ast::ForInStmt *node, LocalVar vpi,
+                             LoopBuilder *table_loop);
+  void VisitVectorWiseIteration(ast::ForInStmt *node, LocalVar vpi,
+                                LoopBuilder *table_loop);
+
+  // Dispatched from VisitCallExpr() for handling builtins
+  void VisitBuiltinCallExpr(ast::CallExpr *call);
+  void VisitRegularCallExpr(ast::CallExpr *call);
 
   // Dispatched from VisitBinaryOpExpr() for handling logical boolean
   // expressions and arithmetic expressions
