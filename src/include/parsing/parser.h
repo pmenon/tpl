@@ -13,19 +13,22 @@ namespace tpl::parsing {
 
 class Parser {
  public:
+  /// Build a parser instance using the given scanner and AST context
+  /// \param scanner The scanner used to read input tokens
+  /// \param ast_context The AST context
   Parser(Scanner &scanner, ast::AstContext &ast_context);
 
-  /**
-   * Parse and generate an abstract syntax tree from the input TPL source code
-   */
+  /// This class cannot be copied or moved
+  DISALLOW_COPY_AND_MOVE(Parser);
+
+  /// Parse and generate an abstract syntax tree from the input TPL source code
+  /// \return The generated AST
   ast::AstNode *Parse();
 
  private:
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Simple accessors
-  ///
-  //////////////////////////////////////////////////////////////////////////////
+  // -------------------------------------------------------
+  // Accessors
+  // -------------------------------------------------------
 
   Scanner &scanner() { return scanner_; }
 
@@ -37,14 +40,14 @@ class Parser {
 
   sema::ErrorReporter &error_reporter() { return error_reporter_; }
 
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Token logic
-  ///
-  //////////////////////////////////////////////////////////////////////////////
+  // -------------------------------------------------------
+  // Token logic
+  // -------------------------------------------------------
 
+  // Move to the next token in the stream
   Token::Type Next() { return scanner().Next(); }
 
+  // Peek at the next token in the stream
   Token::Type peek() { return scanner().peek(); }
 
   void Consume(UNUSED Token::Type expected) {
@@ -58,6 +61,7 @@ class Parser {
 #endif
   }
 
+  // If the next token doesn't matched the given expected token, throw an error
   void Expect(Token::Type expected) {
     Token::Type next = Next();
     if (next != expected) {
@@ -67,6 +71,8 @@ class Parser {
     }
   }
 
+  // If the next token matches the given expected token, consume it and return
+  // true; otherwise, return false
   bool Matches(Token::Type expected) {
     if (peek() != expected) {
       return false;
@@ -85,11 +91,9 @@ class Parser {
   // In case of errors, sync up to any token in the list
   void Sync(std::unordered_set<Token::Type> &s);
 
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Parsing productions
-  ///
-  //////////////////////////////////////////////////////////////////////////////
+  // -------------------------------------------------------
+  // Parsing productions
+  // -------------------------------------------------------
 
   ast::Decl *ParseDecl();
 

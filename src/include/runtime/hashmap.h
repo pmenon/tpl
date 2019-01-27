@@ -9,9 +9,11 @@
 
 namespace tpl::runtime {
 
-/**
- * Bytes-to-bytes hash map used for SQL processing! This isn't general-purpose.
- */
+/// HashMap is a generic bytes-to-bytes hash table used for SQL processing. It
+/// is implemented using a closed-addressing bucket-chained hash table with
+/// pointer tagging.
+///
+/// This isn't general-purpose.
 class HashMap {
  private:
   static const u32 kNumTagBits = 16;
@@ -20,53 +22,53 @@ class HashMap {
   static const i64 kMaskTag = (~static_cast<u64>(0)) << kNumPointerBits;
 
  protected:
+  // Generic struct representing an entry in the hash map
   struct EntryHeader {
     EntryHeader *next;
     hash_t hash;
   };
 
+  // Given a hash value, return the head of the bucket chain ignoring any tag
   EntryHeader *FindChainHead(hash_t hash) const;
 
+  // Given a hash value, return the head of the bucket chain removing the tag
   EntryHeader *FindChainHeadWithTag(hash_t hash) const;
 
  public:
-  // Constructor does not allocate memory. Callers must first call SetSize()
-  // before using this hash map.
+  /// Constructor does not allocate memory. Callers must first call SetSize()
+  /// before using this hash map.
+  /// \param load_factor The desired load-factor for the table
   explicit HashMap(float load_factor = 0.7);
 
+  /// Cleanup
   ~HashMap();
 
+  /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(HashMap);
 
-  /**
-   * Insert an entry ignoring the tag
-   * @tparam Concurrent Is the insert occurring concurrently with other inserts
-   * @param entry The entry to insert
-   * @param hash The hash value of the entry
-   */
+  /// Insert an entry into the hash table, ignoring tagging the pointer into the
+  /// bucket head
+  /// \tparam Concurrent Is the insert occurring concurrently with other inserts
+  /// \param entry The entry to insert
+  /// \param hash The hash value of the entry
   template <bool Concurrent = true>
   void Insert(EntryHeader *entry, hash_t hash);
 
-  /**
-   * Insert an entry into the hash table, modifying the tag
-   * @tparam Concurrent
-   * @param entry
-   * @param hash
-   */
+  /// Insert an entry into the hash table, updating the tag in the bucket head
+  /// \tparam Concurrent Is the insert occurring concurrently with other inserts
+  /// \param entry The entry to insert
+  /// \param hash The hash value of the entry
   template <bool Concurrent = true>
   void InsertTagged(EntryHeader *entry, hash_t hash);
 
-  /**
-   * Set the size of the hashmap
-   * @param new_size
-   */
+  /// Explicitly set the size of the hash map
+  /// \param new_size The new size represented as the number of elements to
+  /// store in the map
   void SetSize(u64 new_size);
 
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Accessors
-  ///
-  //////////////////////////////////////////////////////////////////////////////
+  // -------------------------------------------------------
+  // Accessors
+  // -------------------------------------------------------
 
   u64 num_elements() const { return num_elems_; }
 
@@ -82,18 +84,25 @@ class HashMap {
   u64 TagHash(hash_t hash) const;
 
  private:
+  // Main bucket table
   std::atomic<EntryHeader *> *entries_;
+
+  // The mask to use to determine the bucket position of an entry given its hash
   u64 mask_;
+
+  // The capacity of the table
   u64 capacity_;
+
+  // The current number of elements stored in the table
   u64 num_elems_;
+
+  // The current load-factory
   float load_factor_;
 };
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Implementation below
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Implementation below
+// ---------------------------------------------------------
 
 inline HashMap::HashMap(float load_factor)
     : entries_(nullptr),

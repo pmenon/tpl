@@ -607,32 +607,36 @@ ast::Expr *Parser::ParseType() {
 }
 
 ast::Expr *Parser::ParseFunctionType() {
-  // FuncType = '(' { Ident ':' Type } ')' '->' Type ;
+  // FuncType = '(' { ParameterList } ')' '->' Type ;
+  // ParameterList = { Ident ':' } Type ;
 
   Consume(Token::Type::LEFT_PAREN);
 
   const SourcePosition &position = scanner().current_position();
 
   util::RegionVector<ast::FieldDecl *> params(region());
+  params.reserve(4);
 
-  while (true) {
-    if (!Matches(Token::Type::IDENTIFIER)) {
-      break;
-    }
-
+  while (peek() != Token::Type::RIGHT_PAREN) {
     const SourcePosition &field_position = scanner().current_position();
 
-    // The parameter name
-    ast::Identifier name = GetSymbol();
+    ast::Identifier ident(nullptr);
 
-    // Prepare for parameter type by eating the colon (ew ...)
-    Expect(Token::Type::COLON);
+    ast::Expr *type = nullptr;
 
-    // Parse the type
-    ast::Expr *type = ParseType();
+    if (Matches(Token::Type::IDENTIFIER)) {
+      ident = GetSymbol();
+    }
+
+    if (Matches(Token::Type::COLON) || ident.data() == nullptr) {
+      type = ParseType();
+    } else {
+      type = node_factory().NewIdentifierExpr(field_position, ident);
+      ident = ast::Identifier(nullptr);
+    }
 
     // That's it
-    params.push_back(node_factory().NewFieldDecl(field_position, name, type));
+    params.push_back(node_factory().NewFieldDecl(field_position, ident, type));
 
     if (!Matches(Token::Type::COMMA)) {
       break;

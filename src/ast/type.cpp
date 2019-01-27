@@ -15,7 +15,8 @@ bool Type::IsArithmetic() const {
 }
 
 FunctionType::FunctionType(util::RegionVector<Field> &&params, Type *ret)
-    : Type(ret->context(), 0, 0, Type::Kind::FunctionType),
+    : Type(ret->context(), sizeof(void *), alignof(void *),
+           Type::Kind::FunctionType),
       params_(std::move(params)),
       ret_(ret) {}
 
