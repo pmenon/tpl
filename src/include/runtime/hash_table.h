@@ -14,7 +14,7 @@ namespace tpl::runtime {
 /// pointer tagging.
 ///
 /// This isn't general-purpose.
-class HashMap {
+class HashTable {
  private:
   static const u32 kNumTagBits = 16;
   static const u32 kNumPointerBits = sizeof(u64) * 8 - kNumTagBits;
@@ -38,13 +38,13 @@ class HashMap {
   /// Constructor does not allocate memory. Callers must first call SetSize()
   /// before using this hash map.
   /// \param load_factor The desired load-factor for the table
-  explicit HashMap(float load_factor = 0.7);
+  explicit HashTable(float load_factor = 0.7);
 
   /// Cleanup
-  ~HashMap();
+  ~HashTable();
 
   /// This class cannot be copied or moved
-  DISALLOW_COPY_AND_MOVE(HashMap);
+  DISALLOW_COPY_AND_MOVE(HashTable);
 
   /// Insert an entry into the hash table, ignoring tagging the pointer into the
   /// bucket head
@@ -104,32 +104,33 @@ class HashMap {
 // Implementation below
 // ---------------------------------------------------------
 
-inline HashMap::HashMap(float load_factor)
+inline HashTable::HashTable(float load_factor)
     : entries_(nullptr),
       mask_(0),
       capacity_(0),
       num_elems_(0),
       load_factor_(load_factor) {}
 
-inline HashMap::~HashMap() {
+inline HashTable::~HashTable() {
   if (entries_ != nullptr) {
     util::mem::FreeHugeArray(entries_, capacity_);
   }
 }
 
-inline HashMap::EntryHeader *HashMap::FindChainHead(hash_t hash) const {
+inline HashTable::EntryHeader *HashTable::FindChainHead(hash_t hash) const {
   u64 pos = hash & mask_;
   return entries_[pos].load(std::memory_order_relaxed);
 }
 
-inline HashMap::EntryHeader *HashMap::FindChainHeadWithTag(hash_t hash) const {
+inline HashTable::EntryHeader *HashTable::FindChainHeadWithTag(
+    hash_t hash) const {
   auto candidate = FindChainHead(hash);
   auto exists_in_chain = reinterpret_cast<intptr_t>(candidate) & TagHash(hash);
   return (exists_in_chain ? UntagPointer(candidate) : nullptr);
 }
 
 template <bool Concurrent>
-inline void HashMap::Insert(HashMap::EntryHeader *entry, hash_t hash) {
+inline void HashTable::Insert(HashTable::EntryHeader *entry, hash_t hash) {
   const auto pos = hash & mask_;
 
   TPL_ASSERT(pos < capacity_, "Computed table position exceeds capacity!");
@@ -152,7 +153,8 @@ inline void HashMap::Insert(HashMap::EntryHeader *entry, hash_t hash) {
 }
 
 template <bool Concurrent>
-inline void HashMap::InsertTagged(HashMap::EntryHeader *entry, hash_t hash) {
+inline void HashTable::InsertTagged(HashTable::EntryHeader *entry,
+                                    hash_t hash) {
   const auto pos = hash & mask_;
 
   TPL_ASSERT(pos < capacity_, "Computed table position exceeds capacity!");
@@ -177,7 +179,7 @@ inline void HashMap::InsertTagged(HashMap::EntryHeader *entry, hash_t hash) {
   num_elems_++;
 }
 
-inline void HashMap::SetSize(u64 new_size) {
+inline void HashTable::SetSize(u64 new_size) {
   TPL_ASSERT(new_size > 0, "New size cannot be zero!");
   if (entries_ != nullptr) {
     util::mem::FreeHuge(entries_,
@@ -194,21 +196,22 @@ inline void HashMap::SetSize(u64 new_size) {
   entries_ = util::mem::MallocHugeArray<std::atomic<EntryHeader *>>(capacity_);
 }
 
-inline HashMap::EntryHeader *HashMap::UntagPointer(
-    HashMap::EntryHeader *entry) const {
+inline HashTable::EntryHeader *HashTable::UntagPointer(
+    HashTable::EntryHeader *entry) const {
   auto ptr = reinterpret_cast<intptr_t>(entry);
   return reinterpret_cast<EntryHeader *>(ptr & kMaskPointer);
 }
 
-inline HashMap::EntryHeader *HashMap::UpdateTag(
-    HashMap::EntryHeader *old_entry, HashMap::EntryHeader *new_entry) const {
+inline HashTable::EntryHeader *HashTable::UpdateTag(
+    HashTable::EntryHeader *old_entry,
+    HashTable::EntryHeader *new_entry) const {
   auto old_ptr = reinterpret_cast<intptr_t>(old_entry);
   auto ptr = reinterpret_cast<intptr_t>(new_entry);
   return reinterpret_cast<EntryHeader *>(ptr | old_ptr |
                                          TagHash(new_entry->hash));
 }
 
-inline u64 HashMap::TagHash(hash_t hash) const {
+inline u64 HashTable::TagHash(hash_t hash) const {
   auto tag_bit_pos = hash >> (sizeof(u64) * 8 - 4);
   TPL_ASSERT(tag_bit_pos < kNumTagBits, "Invalid tag!");
   return static_cast<u64>(1) << (tag_bit_pos + kNumPointerBits);

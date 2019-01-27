@@ -1,6 +1,6 @@
 #include "ast/type.h"
 
-#include "runtime/hashmap.h"
+#include "runtime/hash_table.h"
 
 namespace tpl::ast {
 
@@ -21,8 +21,8 @@ FunctionType::FunctionType(util::RegionVector<Field> &&params, Type *ret)
       ret_(ret) {}
 
 MapType::MapType(Type *key_type, Type *val_type)
-    : Type(key_type->context(), sizeof(runtime::HashMap),
-           alignof(runtime::HashMap), Kind::MapType),
+    : Type(key_type->context(), sizeof(runtime::HashTable),
+           alignof(runtime::HashTable), Kind::MapType),
       key_type_(key_type),
       val_type_(val_type) {}
 

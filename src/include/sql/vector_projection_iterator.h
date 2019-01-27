@@ -74,10 +74,15 @@ class VectorProjectionIterator {
   /// Reset iteration to the beginning of the filtered vector projection
   void ResetFiltered();
 
-  /// Run a generic filter over all active tuples in this vector projection
-  /// \param filter function to filter tuples
-  void RunFilter(
-      const std::function<bool(const VectorProjectionIterator &iter)> &filter);
+  /// Run a generic tuple-at-a-time filter over all active tuples in the
+  /// vector projection
+  /// \tparam F The generic type of the filter function. This can be any
+  /// functor-like type including raw function pointer, functor or std::function
+  /// \param filter A function that accepts a const version of this VPI and
+  /// returns true if the tuple pointed to by the VPI is valid (i.e., passes the
+  /// filter) or false otherwise
+  template <typename F>
+  void RunFilter(const F &filter);
 
   // -------------------------------------------------------
   // Vectorized API
@@ -188,19 +193,24 @@ inline void VectorProjectionIterator::ResetFiltered() {
   selection_vector_write_pos_ = 0;
 }
 
-inline void VectorProjectionIterator::RunFilter(
-    const std::function<bool(const VectorProjectionIterator &iter)> &filter) {
+template <typename F>
+inline void VectorProjectionIterator::RunFilter(const F &filter) {
   if (IsFiltered()) {
     for (; HasNextFiltered(); AdvanceFiltered()) {
-      bool valid = filter(*this);
+      bool valid = filter(std::as_const(*this));
       Match(valid);
     }
   } else {
     for (; HasNext(); Advance()) {
-      bool valid = filter(*this);
+      bool valid = filter(std::as_const(*this));
       Match(valid);
     }
   }
+
+  // After the filter has been run on the either vector projection, we need to
+  // ensure that we reset it so that clients can query the updated state of the
+  // VPI, and subsequent filters operate only on valid tuples potentially
+  // filtered out in this filter.
   ResetFiltered();
 }
 
@@ -218,8 +228,14 @@ inline u32 VectorProjectionIterator::FilterColByVal(u32 col_idx, T val) {
         input, num_tuples, val, selection_vector(), nullptr);
   }
 
+  // After the filter has been run on the either vector projection, we need to
+  // ensure that we reset it so that clients can query the updated state of the
+  // VPI, and subsequent filters operate only on valid tuples potentially
+  // filtered out in this filter.
   ResetFiltered();
 
+  // After the call to ResetFiltered(), num_selected_ should indicate the number
+  // of valid tuples in the filter.
   return num_selected();
 }
 
