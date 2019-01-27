@@ -83,7 +83,7 @@ class LLVMEngine {
     }
 
     std::string GetBytecodeHandlersBcPath() const {
-      return "./lib/bytecode_handlers_ir.bc";
+      return "./bytecode_handlers_ir.bc";
     }
 
    private:

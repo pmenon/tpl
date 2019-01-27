@@ -34,7 +34,7 @@ set(CLANG_IR_CXX_INCLUDES
 function(COMPILE_TO_IR SRC_FILE)
     set(FULL_NAME "${PROJECT_SOURCE_DIR}/src/${SRC_FILE}")
     get_filename_component(BASE_NAME ${FULL_NAME} NAME_WE)
-    set(OUTPUT_FILE "${CMAKE_BINARY_DIR}/lib/${BASE_NAME}.bc")
+    set(OUTPUT_FILE "${CMAKE_BINARY_DIR}/${BASE_NAME}.bc")
     add_custom_command(
         OUTPUT ${OUTPUT_FILE}
         COMMAND ${CLANG} ${CLANG_IR_CXX_FLAGS} ${CLANG_IR_CXX_INCLUDES} ${FULL_NAME} -o ${OUTPUT_FILE}
@@ -49,7 +49,7 @@ endfunction(COMPILE_TO_IR)
 
 # We build a shared library containing all the TPL logic so it can be shared
 # between the main TPL binary and the unit tests.
-add_library(tpl_shared SHARED ${tpl_sources})
+add_library(tpl_shared OBJECT ${tpl_sources})
 
 ##################################################
 # TPL executable

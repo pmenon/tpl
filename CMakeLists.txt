@@ -50,7 +50,6 @@ include(Dependencies)
 ############################################################
 
 # Let the sources and tests directory set themselves up
-set(tpl_test_shared tpl_shared)
 add_subdirectory(src)
 add_subdirectory(test)
 

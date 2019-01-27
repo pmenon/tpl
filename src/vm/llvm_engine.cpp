@@ -45,10 +45,10 @@ class LLVMEngine::TPLMemoryManager : public llvm::SectionMemoryManager {
 
     LOG_DEBUG("Symbol '{}' not found in cache, checking process ...", name);
 
-    auto sym = llvm::SectionMemoryManager::findSymbol(name);
-    TPL_ASSERT(sym.getAddress(), "Resolved symbol has no address!");
-    symbols_[name] = {sym.getAddress().get(), sym.getFlags()};
-    return sym;
+    llvm::JITSymbol symbol = llvm::SectionMemoryManager::findSymbol(name);
+    TPL_ASSERT(symbol.getAddress(), "Resolved symbol has no address!");
+    symbols_[name] = {symbol.getAddress().get(), symbol.getFlags()};
+    return symbol;
   }
 
  private:

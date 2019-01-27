@@ -226,6 +226,7 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
     const auto &col_data = column_data(ColId::col_b);
     u32 actual_non_null = col_data.num_tuples - col_data.num_nulls;
     EXPECT_EQ(actual_non_null, num_non_null);
+    EXPECT_EQ(actual_non_null, iter.num_selected());
   }
 
   //
