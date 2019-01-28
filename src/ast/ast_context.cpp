@@ -18,23 +18,19 @@ namespace tpl::ast {
 // Key type used in the cache for struct types in the context
 // ---------------------------------------------------------
 
+/// Compute a hash_code for a field
+llvm::hash_code hash_value(const Field &field) {
+  return llvm::hash_combine(field.name.data(), field.type);
+}
+
 struct StructTypeKeyInfo {
   struct KeyTy {
-    llvm::SmallVector<Type *, 8> elements;
+    const util::RegionVector<Field> &elements;
 
-    explicit KeyTy(const util::RegionVector<Field> &elems) noexcept {
-      elements.resize(elems.size());
-      for (u32 i = 0; i < elems.size(); i++) {
-        elements[i] = elems[i].type;
-      }
-    }
+    explicit KeyTy(const util::RegionVector<Field> &es) : elements(es) {}
 
-    explicit KeyTy(const StructType *struct_type) {
-      elements.resize(struct_type->fields().size());
-      for (u32 i = 0; i < struct_type->fields().size(); i++) {
-        elements[i] = struct_type->fields()[i].type;
-      }
-    }
+    explicit KeyTy(const StructType *struct_type)
+        : elements(struct_type->fields()) {}
 
     bool operator==(const KeyTy &that) const {
       return elements == that.elements;
@@ -76,23 +72,13 @@ struct StructTypeKeyInfo {
 struct FunctionTypeKeyInfo {
   struct KeyTy {
     Type *ret_type;
-    llvm::SmallVector<Type *, 8> params;
+    const util::RegionVector<Field> &params;
 
     explicit KeyTy(Type *ret_type, const util::RegionVector<Field> &ps)
-        : ret_type(ret_type) {
-      params.resize(ps.size());
-      for (u32 i = 0; i < ps.size(); i++) {
-        params[i] = ps[i].type;
-      }
-    }
+        : ret_type(ret_type), params(ps) {}
 
-    explicit KeyTy(const FunctionType *func_type) {
-      ret_type = func_type->return_type();
-      params.resize(func_type->params().size());
-      for (u32 i = 0; i < func_type->params().size(); i++) {
-        params[i] = func_type->params()[i].type;
-      }
-    }
+    explicit KeyTy(const FunctionType *func_type)
+        : ret_type(func_type->return_type()), params(func_type->params()) {}
 
     bool operator==(const KeyTy &that) const { return params == that.params; }
 
