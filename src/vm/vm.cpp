@@ -191,7 +191,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
   OP(JumpIfTrue) : {
     auto cond = frame->LocalAt<bool>(READ_LOCAL_ID());
-    u16 skip = PEEK_JMP_OFFSET();
+    i32 skip = PEEK_JMP_OFFSET();
     if (OpJumpIfTrue(cond)) {
       ip += skip;
     } else {
@@ -202,7 +202,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
   OP(JumpIfFalse) : {
     auto cond = frame->LocalAt<bool>(READ_LOCAL_ID());
-    u16 skip = PEEK_JMP_OFFSET();
+    i32 skip = PEEK_JMP_OFFSET();
     if (OpJumpIfFalse(cond)) {
       ip += skip;
     } else {
