@@ -14,14 +14,125 @@
 
 namespace tpl::ast {
 
+// ---------------------------------------------------------
+// Key type used in the cache for struct types in the context
+// ---------------------------------------------------------
+
+struct StructTypeKeyInfo {
+  struct KeyTy {
+    llvm::SmallVector<Type *, 8> elements;
+
+    explicit KeyTy(const util::RegionVector<Field> &elems) noexcept {
+      elements.resize(elems.size());
+      for (u32 i = 0; i < elems.size(); i++) {
+        elements[i] = elems[i].type;
+      }
+    }
+
+    explicit KeyTy(const StructType *struct_type) {
+      elements.resize(struct_type->fields().size());
+      for (u32 i = 0; i < struct_type->fields().size(); i++) {
+        elements[i] = struct_type->fields()[i].type;
+      }
+    }
+
+    bool operator==(const KeyTy &that) const {
+      return elements == that.elements;
+    }
+
+    bool operator!=(const KeyTy &that) const { return !this->operator==(that); }
+  };
+
+  static inline StructType *getEmptyKey() {
+    return llvm::DenseMapInfo<StructType *>::getEmptyKey();
+  }
+
+  static inline StructType *getTombstoneKey() {
+    return llvm::DenseMapInfo<StructType *>::getTombstoneKey();
+  }
+
+  static std::size_t getHashValue(const KeyTy &key) {
+    return llvm::hash_combine_range(key.elements.begin(), key.elements.end());
+  }
+
+  static std::size_t getHashValue(const StructType *struct_type) {
+    return getHashValue(KeyTy(struct_type));
+  }
+
+  static bool isEqual(const KeyTy &lhs, const StructType *rhs) {
+    if (rhs == getEmptyKey() || rhs == getTombstoneKey()) return false;
+    return lhs == KeyTy(rhs);
+  }
+
+  static bool isEqual(const StructType *lhs, const StructType *rhs) {
+    return lhs == rhs;
+  }
+};
+
+// ---------------------------------------------------------
+// Key type used in the cache for function types in the context
+// ---------------------------------------------------------
+
+struct FunctionTypeKeyInfo {
+  struct KeyTy {
+    Type *ret_type;
+    llvm::SmallVector<Type *, 8> params;
+
+    explicit KeyTy(Type *ret_type, const util::RegionVector<Field> &ps)
+        : ret_type(ret_type) {
+      params.resize(ps.size());
+      for (u32 i = 0; i < ps.size(); i++) {
+        params[i] = ps[i].type;
+      }
+    }
+
+    explicit KeyTy(const FunctionType *func_type) {
+      ret_type = func_type->return_type();
+      params.resize(func_type->params().size());
+      for (u32 i = 0; i < func_type->params().size(); i++) {
+        params[i] = func_type->params()[i].type;
+      }
+    }
+
+    bool operator==(const KeyTy &that) const { return params == that.params; }
+
+    bool operator!=(const KeyTy &that) const { return !this->operator==(that); }
+  };
+
+  static inline FunctionType *getEmptyKey() {
+    return llvm::DenseMapInfo<FunctionType *>::getEmptyKey();
+  }
+
+  static inline FunctionType *getTombstoneKey() {
+    return llvm::DenseMapInfo<FunctionType *>::getTombstoneKey();
+  }
+
+  static std::size_t getHashValue(const KeyTy &key) {
+    return llvm::hash_combine(
+        key.ret_type,
+        llvm::hash_combine_range(key.params.begin(), key.params.end()));
+  }
+
+  static std::size_t getHashValue(const FunctionType *func_type) {
+    return getHashValue(KeyTy(func_type));
+  }
+
+  static bool isEqual(const KeyTy &lhs, const FunctionType *rhs) {
+    if (rhs == getEmptyKey() || rhs == getTombstoneKey()) return false;
+    return lhs == KeyTy(rhs);
+  }
+
+  static bool isEqual(const FunctionType *lhs, const FunctionType *rhs) {
+    return lhs == rhs;
+  }
+};
+
 struct AstContext::Implementation {
   static constexpr const uint32_t kDefaultStringTableCapacity = 32;
 
-  //////////////////////////////////////////////////////////
-  ///
-  /// The basic types
-  ///
-  //////////////////////////////////////////////////////////
+  // -------------------------------------------------------
+  // Basic primitive types
+  // -------------------------------------------------------
 
   IntegerType int8;
   IntegerType int16;
@@ -43,11 +154,9 @@ struct AstContext::Implementation {
 
   util::RegionVector<InternalType *> internal_types;
 
-  //////////////////////////////////////////////////////////
-  ///
-  /// Caches
-  ///
-  //////////////////////////////////////////////////////////
+  // -------------------------------------------------------
+  // Complex type caches
+  // -------------------------------------------------------
 
   llvm::StringMap<char, util::LlvmRegionAllocator> string_table;
   llvm::DenseMap<Identifier, Type *> builtin_types;
@@ -55,6 +164,8 @@ struct AstContext::Implementation {
   llvm::DenseMap<Type *, PointerType *> pointer_types;
   llvm::DenseMap<std::pair<Type *, uint64_t>, ArrayType *> array_types;
   llvm::DenseMap<std::pair<Type *, Type *>, MapType *> map_types;
+  llvm::DenseSet<StructType *, StructTypeKeyInfo> struct_types;
+  llvm::DenseSet<FunctionType *, FunctionTypeKeyInfo> func_types;
 
   explicit Implementation(AstContext &ctx)
       : int8(ctx, sizeof(i8), alignof(i8), IntegerType::IntKind::Int8),
@@ -203,16 +314,11 @@ NilType *NilType::Get(AstContext &ctx) { return &ctx.impl().nil; }
 PointerType *PointerType::Get(Type *base) {
   AstContext &ctx = base->context();
 
-  auto &cached_types = ctx.impl().pointer_types;
+  PointerType *&pointer_type = ctx.impl().pointer_types[base];
 
-  auto iter = cached_types.find(base);
-  if (iter != cached_types.end()) {
-    return iter->second;
+  if (pointer_type == nullptr) {
+    pointer_type = new (ctx.region()) PointerType(base);
   }
-
-  auto *pointer_type = new (ctx.region()) PointerType(base);
-
-  cached_types.try_emplace(base, pointer_type);
 
   return pointer_type;
 }
@@ -221,16 +327,11 @@ PointerType *PointerType::Get(Type *base) {
 ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
   AstContext &ctx = elem_type->context();
 
-  auto &cached_types = ctx.impl().array_types;
+  ArrayType *&array_type = ctx.impl().array_types[{elem_type, length}];
 
-  auto iter = cached_types.find(std::make_pair(elem_type, length));
-  if (iter != cached_types.end()) {
-    return iter->second;
+  if (array_type == nullptr) {
+    array_type = new (ctx.region()) ArrayType(length, elem_type);
   }
-
-  auto *array_type = new (ctx.region()) ArrayType(length, elem_type);
-
-  cached_types.try_emplace(std::make_pair(elem_type, length), array_type);
 
   return array_type;
 }
@@ -239,16 +340,11 @@ ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
 MapType *MapType::Get(Type *key_type, Type *value_type) {
   AstContext &ctx = key_type->context();
 
-  auto &cached_types = ctx.impl().map_types;
+  MapType *&map_type = ctx.impl().map_types[{key_type, value_type}];
 
-  auto iter = cached_types.find({key_type, value_type});
-  if (iter != cached_types.end()) {
-    return iter->second;
+  if (map_type == nullptr) {
+    map_type = new (ctx.region()) MapType(key_type, value_type);
   }
-
-  auto *map_type = new (ctx.region()) MapType(key_type, value_type);
-
-  cached_types.try_emplace({key_type, value_type}, map_type);
 
   return map_type;
 }
@@ -256,26 +352,39 @@ MapType *MapType::Get(Type *key_type, Type *value_type) {
 // static
 StructType *StructType::Get(AstContext &ctx,
                             util::RegionVector<Field> &&fields) {
-  // Compute size and alignment. Alignment of struct is alignment of largest
-  // struct element.
-  u32 size = 0;
-  u32 alignment = 0;
-  util::RegionVector<u32> field_offsets(ctx.region());
-  for (const auto &field : fields) {
-    // Check if the type needs to be padded
-    u32 field_align = field.type->alignment();
-    if (!util::MathUtil::IsAligned(size, field_align)) {
-      size = static_cast<u32>(util::MathUtil::AlignTo(size, field_align));
+  const StructTypeKeyInfo::KeyTy key(fields);
+
+  auto [iter, inserted] = ctx.impl().struct_types.insert_as(nullptr, key);
+
+  StructType *struct_type = nullptr;
+
+  if (inserted) {
+    // Compute size and alignment. Alignment of struct is alignment of largest
+    // struct element.
+    u32 size = 0;
+    u32 alignment = 0;
+    util::RegionVector<u32> field_offsets(ctx.region());
+    for (const auto &field : fields) {
+      // Check if the type needs to be padded
+      u32 field_align = field.type->alignment();
+      if (!util::MathUtil::IsAligned(size, field_align)) {
+        size = static_cast<u32>(util::MathUtil::AlignTo(size, field_align));
+      }
+
+      // Update size and calculate alignment
+      field_offsets.push_back(size);
+      size += field.type->size();
+      alignment = std::max(alignment, field.type->alignment());
     }
 
-    // Update size and calculate alignment
-    field_offsets.push_back(size);
-    size += field.type->size();
-    alignment = std::max(alignment, field.type->alignment());
+    struct_type = new (ctx.region()) StructType(
+        ctx, size, alignment, std::move(fields), std::move(field_offsets));
+    *iter = struct_type;
+  } else {
+    struct_type = *iter;
   }
 
-  return new (ctx.region()) StructType(ctx, size, alignment, std::move(fields),
-                                       std::move(field_offsets));
+  return struct_type;
 }
 
 // static
@@ -287,8 +396,24 @@ StructType *StructType::Get(util::RegionVector<Field> &&fields) {
 
 // static
 FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
-  // TODO(pmenon): Use cache
-  return new (ret->context().region()) FunctionType(std::move(params), ret);
+  AstContext &ctx = ret->context();
+
+  const FunctionTypeKeyInfo::KeyTy key(ret, params);
+
+  auto [iter, inserted] = ctx.impl().func_types.insert_as(nullptr, key);
+
+  FunctionType *func_type = nullptr;
+
+  if (inserted) {
+    // The function type was not in the cache, create the type now and insert it
+    // into the cache
+    func_type = new (ctx.region()) FunctionType(std::move(params), ret);
+    *iter = func_type;
+  } else {
+    func_type = *iter;
+  }
+
+  return func_type;
 }
 
 // static
