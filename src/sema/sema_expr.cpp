@@ -268,13 +268,23 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
   // All call argument types have been resolved. Ensure they match the API now
   //
 
-  if (auto *type = arguments[0]->type();
-      !type->IsInternalType() ||
-      type->As<ast::InternalType>()->internal_kind() !=
+  if (!arguments[0]->type()->IsInternalType() ||
+      arguments[0]->type()->As<ast::InternalType>()->internal_kind() !=
           ast::InternalType::InternalKind::VectorProjectionIterator) {
-    error_reporter().Report(call->position(), ErrorMessages::kBadArgToFilter,
-                            type);
+    auto *vpi_type = ast::InternalType::Get(
+        ast_context(),
+        ast::InternalType::InternalKind::VectorProjectionIterator);
+    error_reporter().Report(call->position(),
+                            ErrorMessages::kIncorrectCallArgType,
+                            arguments[0]->type(), vpi_type, call->FuncName());
     return;
+  }
+
+  if (!arguments[1]->type()->IsStringType()) {
+    error_reporter().Report(
+        call->position(), ErrorMessages::kIncorrectCallArgType,
+        arguments[1]->type(), ast::StringType::Get(ast_context()),
+        call->FuncName());
   }
 
   call->set_type(

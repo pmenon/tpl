@@ -2,9 +2,10 @@
 #include <algorithm>
 #include <csignal>
 #include <cstdio>
-#include <fstream>
 #include <iostream>
 #include <string>
+
+#include "llvm/Support/MemoryBuffer.h"
 
 #include "ast/ast_dump.h"
 #include "logging/logger.h"
@@ -24,6 +25,10 @@ namespace tpl {
 
 static constexpr const char *kExitKeyword = ".exit";
 
+/// Compile the TPL source in \p source and run it in both interpreted and JIT
+/// compiled mode
+/// \param source The TPL source
+/// \param name The name of the module/program
 static void CompileAndRun(const std::string &source,
                           const std::string &name = "tmp-tpl") {
   util::Region region("repl-ast");
@@ -111,6 +116,7 @@ static void CompileAndRun(const std::string &source,
       parse_ms, typecheck_ms, codegen_ms, exec_ms, jit_ms);
 }
 
+/// Run the TPL REPL
 static void RunRepl() {
   while (true) {
     std::string input;
@@ -131,21 +137,24 @@ static void RunRepl() {
   }
 }
 
+/// Compile and run the TPL program in the given filename
+/// \param filename The name of the file on disk to compile
 static void RunFile(const std::string &filename) {
-  std::string source;
-
-  std::ifstream file(filename);
-  if (file.is_open()) {
-    std::string line;
-    while (std::getline(file, line)) {
-      source.append(line).append("\n");
-    }
-    file.close();
+  auto file = llvm::MemoryBuffer::getFile(filename);
+  if (std::error_code error = file.getError()) {
+    LOG_ERROR("There was an error reading file '{}': {}", filename,
+              error.message());
+    return;
   }
 
+  // Make a copy of the source ... crappy, yes, but okay in this use case
+  const std::string source((*file)->getBufferStart(), (*file)->getBufferEnd());
+
+  // Compile and run
   CompileAndRun(source);
 }
 
+/// Initialize all TPL subsystems
 void InitTPL() {
   // Init logging
   tpl::logging::InitLogger();
@@ -157,8 +166,9 @@ void InitTPL() {
   tpl::vm::LLVMEngine::Initialize();
 }
 
+/// Shutdown all TPL subsystems
 void ShutdownTPL() {
-  // Cleanup
+  // Shutdown LLVM
   tpl::vm::LLVMEngine::Shutdown();
 }
 
