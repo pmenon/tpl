@@ -104,14 +104,13 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
    *
    ****************************************************************************/
 
+  // Jump to the first instruction
   DISPATCH_NEXT();
 
-  /*
-   * All primitive comparisons are generated here. Primitive comparisons all
-   * have the same bytecode format. The target of the comparison is a primitive
-   * single-byte boolean value, and the two operands are the primitive input
-   * arguments.
-   */
+  // -------------------------------------------------------
+  // Primitive comparison operations
+  // -------------------------------------------------------
+
 #define DO_GEN_COMPARISON(op, type)                       \
   OP(op##_##type) : {                                     \
     bool *dest = frame->LocalAt<bool *>(READ_LOCAL_ID()); \
@@ -132,9 +131,10 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 #undef GEN_COMPARISON_TYPES
 #undef DO_GEN_COMPARISON
 
-  /*
-   * Binary operations
-   */
+  // -------------------------------------------------------
+  // Primitive arithmetic and binary operations
+  // -------------------------------------------------------
+
 #define DO_GEN_ARITHMETIC_OP(op, test, type)              \
   OP(op##_##type) : {                                     \
     type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
@@ -161,9 +161,10 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 #undef GEN_ARITHMETIC_OP
 #undef DO_GEN_ARITHMETIC_OP
 
-  /*
-   * Bitwise negation and regular integer negation
-   */
+  // -------------------------------------------------------
+  // Bitwise and integer negation
+  // -------------------------------------------------------
+
 #define GEN_NEG_OP(type, ...)                             \
   OP(Neg##_##type) : {                                    \
     auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
@@ -180,6 +181,10 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
   INT_TYPES(GEN_NEG_OP)
 #undef GEN_NEG_OP
+
+  // -------------------------------------------------------
+  // Jumps
+  // -------------------------------------------------------
 
   OP(Jump) : {
     i32 skip = PEEK_JMP_OFFSET();
@@ -210,6 +215,10 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     }
     DISPATCH_NEXT();
   }
+
+  // -------------------------------------------------------
+  // Low-level memory operations
+  // -------------------------------------------------------
 
 #define GEN_DEREF(type, size)                             \
   OP(Deref##size) : {                                     \
@@ -279,7 +288,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   }
 
   // -------------------------------------------------------
-  // Table Vector Iterator and Vector Projection Iterator ops
+  // Table Vector and Vector Projection Iterator (VPI) ops
   // -------------------------------------------------------
 
   OP(TableVectorIteratorInit) : {
@@ -310,6 +319,10 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  // -------------------------------------------------------
+  // VPI iteration operations
+  // -------------------------------------------------------
+
   OP(VPIHasNext) : {
     auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
     auto *iter =
@@ -331,6 +344,10 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     OpVPIReset(iter);
     DISPATCH_NEXT();
   }
+
+  // -------------------------------------------------------
+  // VPI element access
+  // -------------------------------------------------------
 
 #define GEN_VPI_ACCESS(type_str, type)                                    \
   OP(VPIGet##type_str) : {                                                \
