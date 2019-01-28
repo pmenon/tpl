@@ -27,7 +27,7 @@ class Policy {
   virtual u32 NextAction(Agent *agent) = 0;
 
   auto kind() { return kind_; }
- 
+
  protected:
   Kind kind_;
   std::mt19937 generator_;
@@ -41,8 +41,9 @@ class Policy {
  */
 class EpsilonGreedyPolicy : public Policy {
  public:
-  EpsilonGreedyPolicy(double epsilon, Kind kind=Kind::EpsilonGreedy)
-      : Policy(kind), epsilon_(epsilon),
+  EpsilonGreedyPolicy(double epsilon, Kind kind = Kind::EpsilonGreedy)
+      : Policy(kind),
+        epsilon_(epsilon),
         real_(std::uniform_real_distribution<double>(0, 1)) {}
 
   virtual u32 NextAction(Agent *agent);
@@ -76,7 +77,7 @@ class RandomPolicy : public EpsilonGreedyPolicy {
  * The Upper Confidence Bound algorithm (UCB). It applies an exploration
  * factor to the expected value of each arm which can influence a greedy
  * selection strategy to more intelligently explore less confident options.
-*/
+ */
 class UCBPolicy : public Policy {
  public:
   UCBPolicy(double c) : Policy(Kind::UCB), c_(c) {}
@@ -85,7 +86,7 @@ class UCBPolicy : public Policy {
 
  private:
   // Hyperparameter that decides the weight of the penalty term.
-  double c_;  
+  double c_;
 };
 
 /**
@@ -99,7 +100,7 @@ class FixedActionPolicy : public Policy {
   u32 NextAction(Agent *agent) { return action_; }
 
  private:
-  u32 action_;  
+  u32 action_;
 };
 
 }  // namespace tpl::bandit

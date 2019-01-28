@@ -70,7 +70,7 @@ TEST_F(BytecodesTest, OperandOffsetTest) {
   // Non-exhaustive test of operand sizes for various op codes
 
   // Imm loads
-  EXPECT_EQ(4u,Bytecodes::GetNthOperandOffset(Bytecode::AssignImm1, 0));
+  EXPECT_EQ(4u, Bytecodes::GetNthOperandOffset(Bytecode::AssignImm1, 0));
 
   // Jumps
   EXPECT_EQ(4u, Bytecodes::GetNthOperandOffset(Bytecode::Jump, 0));

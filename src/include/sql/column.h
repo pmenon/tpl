@@ -73,7 +73,7 @@ class ColumnVector {
  private:
   // TODO: Remove me
   friend class VectorizedIterator;
-  const byte* raw_data() const { return data_; }
+  const byte *raw_data() const { return data_; }
 
  private:
   const Type &type_;

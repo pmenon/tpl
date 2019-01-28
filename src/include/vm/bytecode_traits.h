@@ -12,9 +12,9 @@ struct OperandTypeTraits {
   static constexpr u32 kSize = static_cast<u32>(kOperandSize);
 };
 
-#define DECLARE_OPERAND_TYPE(Name, IsSigned, BaseSize)       \
-  template <>                                                \
-  struct OperandTypeTraits<OperandType::Name> {              \
+#define DECLARE_OPERAND_TYPE(Name, IsSigned, BaseSize)           \
+  template <>                                                    \
+  struct OperandTypeTraits<OperandType::Name> {                  \
     static constexpr bool kIsSigned = IsSigned;                  \
     static constexpr OperandSize kOperandSize = BaseSize;        \
     static constexpr u32 kSize = static_cast<u32>(kOperandSize); \

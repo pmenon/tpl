@@ -19,7 +19,7 @@ class VectorProjection {
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(VectorProjection);
 
-  /// Get the current vector input for the column at index \refitem col_idx
+  /// Get the current vector input for the column at index \p col_idx
   /// \tparam T The data type to interpret the column's data as
   /// \param col_idx The index of the column
   /// \return The typed vector of column data in this vector projection
@@ -28,7 +28,7 @@ class VectorProjection {
     return reinterpret_cast<T *>(column_data_[col_idx]);
   }
 
-  /// Return the NULL bit vector for the column at index \refitem col_idx
+  /// Return the NULL bit vector for the column at index \p col_idx
   /// \param col_idx The index of the column
   /// \return The NULL bit vector for the desired column
   const u32 *GetNullBitmap(u32 col_idx) const {
@@ -37,17 +37,17 @@ class VectorProjection {
 
   /// Reset/reload the data for the column at the given index from the given
   /// column iterator instance
-  /// \param column_iters A vector of all column iterators
+  /// \param col_iters A vector of all column iterators
   /// \param col_idx The index of the column in this projection to reset
-  void ResetColumn(std::vector<ColumnVectorIterator> &column_iters, u32 col_idx);
+  void ResetColumn(std::vector<ColumnVectorIterator> &col_iters, u32 col_idx);
 
-  ///
-  /// \param column_data
-  /// \param column_null_bitmap
-  /// \param column_idx
-  /// \param num_tuples
-  void ResetFromRaw(byte *column_data, u32 *column_null_bitmap,
-                    u32 column_idx, u32 num_tuples);
+  /// Reset the column data at index \p col_idx with \p col_data and the
+  /// \param col_data The raw (potentially compressed) data for the column
+  /// \param col_null_bitmap The null bitmap for the column
+  /// \param col_idx The index of the column to reset
+  /// \param num_tuples The number of tuples stored in the input
+  void ResetFromRaw(byte *col_data, u32 *col_null_bitmap, u32 col_idx,
+                    u32 num_tuples);
 
   /// Return the number of active tuples in this projection
   /// \return The number of active tuples

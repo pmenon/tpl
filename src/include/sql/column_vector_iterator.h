@@ -16,11 +16,11 @@ class ColumnVectorIterator {
   bool Advance();
 
   /// The number of tuples in the input. Or, in other words, the number of
-  /// elements in the array returned by \refitem col_data() or
-  /// \refitem col_null_bitmap()
+  /// elements in the array returned by \p col_data() or \p col_null_bitmap()
+  /// \return The number of tuples in the currently active vector
   u32 NumTuples() const { return next_block_pos() - current_block_pos(); }
 
-  /// Reset the iterator to begin iteration at the start \refitem column
+  /// Reset the iterator to begin iteration at the start \p column
   /// \param column The column to begin iteration over
   void Reset(const ColumnVector *column);
 

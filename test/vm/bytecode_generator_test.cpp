@@ -111,7 +111,8 @@ TEST_F(BytecodeGeneratorTest, SimpleTypesTest) {
       fun test(a: *{0}) -> void {{
         *a = 10
         return
-      })", type);
+      })",
+                             type);
 
     BytecodeExpectations expectations(region());
     auto *ast = expectations.Compile(src);

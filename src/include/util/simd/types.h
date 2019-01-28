@@ -100,6 +100,4 @@ alignas(64) static constexpr const u64 k4BitMatchLUT[16] = {
     0x0000000100030002ull, 0x0001000300020000ull, 0x0000000300020001ull,
     0x0003000200010000ull};
 
-
-
-} //
+}  // namespace tpl::util::simd

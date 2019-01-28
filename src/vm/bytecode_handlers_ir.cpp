@@ -9,5 +9,4 @@ void *kAllFuncs[] = {
     BYTECODE_LIST(ENTRY)
 #undef ENTRY
 };
-
 }

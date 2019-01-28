@@ -21,7 +21,7 @@ class BitUtil {
     return MathUtil::DivRoundUp(num_bits, kBitWordSize);
   }
 
-  /// Test if the bit at index \refitem idx is set in the bit vector
+  /// Test if the bit at index \p idx is set in the bit vector
   /// \param bits The bit vector
   /// \param idx The index of the bit to check
   /// \return True if set; false otherwise
@@ -30,14 +30,14 @@ class BitUtil {
     return (bits[idx / kBitWordSize] & mask) != 0;
   }
 
-  /// Set the bit at index \refitem idx to 1 in the bit vector \refitem bits
+  /// Set the bit at index \p idx to 1 in the bit vector \p bits
   /// \param bits The bit vector
   /// \param idx The index of the bit to set to 1
   static void Set(u32 *const bits, const u32 idx) {
     bits[idx / kBitWordSize] |= 1u << (idx % kBitWordSize);
   }
 
-  /// Flip the value of the bit at index \refitem idx in the bit vector
+  /// Flip the value of the bit at index \p idx in the bit vector
   /// \param bits The bit vector
   /// \param idx The index of the bit to flip
   static void Flip(u32 *const bits, const u32 idx) {

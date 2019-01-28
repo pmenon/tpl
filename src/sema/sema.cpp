@@ -2,9 +2,9 @@
 
 #include "ast/ast_context.h"
 #include "ast/type.h"
+#include "sql/data_types.h"
 #include "sql/schema.h"
 #include "sql/table.h"
-#include "sql/data_types.h"
 
 namespace tpl::sema {
 
