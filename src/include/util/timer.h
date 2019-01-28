@@ -29,6 +29,19 @@ class Timer {
   /// Return the total number of elapsed time units
   double elapsed() const noexcept { return elapsed_; }
 
+  /// Time a function \p fn
+  /// \tparam F The functor-type of the parameter function
+  /// \param fn The function (or functor-like object) to time
+  /// \return The elapsed time in whatever resolution ratio the caller wants
+  template <typename F>
+  static inline double TimeFunction(const F &fn) {
+    Timer<ResolutionRatio> timer;
+    timer.Start();
+    fn();
+    timer.Stop();
+    return timer.elapsed();
+  }
+
  private:
   TimePoint start_;
   TimePoint stop_;
