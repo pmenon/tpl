@@ -130,7 +130,7 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
     case ast::Type::Kind::ArrayType: {
       auto *arr_type = type->As<ast::ArrayType>();
       llvm::Type *elem_type = GetLLVMType(arr_type->element_type());
-      llvm_type = llvm::PointerType::get(elem_type, 0);
+      llvm_type = llvm::ArrayType::get(elem_type, arr_type->length());
       break;
     }
     case ast::Type::Kind::MapType: {
