@@ -237,6 +237,15 @@ void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
 void Sema::CheckBuiltinMapCall(ast::CallExpr *call) {}
 
 void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
+  //
+  // Filters have three arguments:
+  // 1. A VectorProjectionIterator;
+  // 2. A string representing the name of the column to filter;
+  // 3. Either a constant integer value or a string representing another column
+  //
+  // The return type of the filter is an int32
+  //
+
   if (call->NumCallArgs() != 3) {
     error_reporter().Report(call->position(),
                             ErrorMessages::kMismatchedCallArgs,
@@ -244,7 +253,10 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
     return;
   }
 
-  // Type-check arguments to filter
+  //
+  // We have three arguments, resolve each now
+  //
+
   const auto &arguments = call->arguments();
   for (auto *arg : arguments) {
     if (auto *resolved_type = Resolve(arg); resolved_type == nullptr) {
@@ -253,18 +265,26 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
   }
 
   //
-  // Filters have three arguments: the first is a VectorProjectionIterator; the
-  // second is a string representing the name of the column to filter; the third
-  // is either a constant integer value or a string representing another column.
+  // All call argument types have been resolved. Ensure they match the API now
   //
 
-  if (auto *type = arguments[0]->type()->SafeAs<ast::InternalType>()) {
-    if (type->internal_kind() !=
-        ast::InternalType::InternalKind::VectorProjectionIterator) {
-      error_reporter().Report(call->position(), ErrorMessages::kBadArgToFilter,
-                              type);
-      return;
-    }
+  if (!arguments[0]->type()->IsInternalType() ||
+      arguments[0]->type()->As<ast::InternalType>()->internal_kind() !=
+          ast::InternalType::InternalKind::VectorProjectionIterator) {
+    auto *vpi_type = ast::InternalType::Get(
+        ast_context(),
+        ast::InternalType::InternalKind::VectorProjectionIterator);
+    error_reporter().Report(call->position(),
+                            ErrorMessages::kIncorrectCallArgType,
+                            arguments[0]->type(), vpi_type, call->FuncName());
+    return;
+  }
+
+  if (!arguments[1]->type()->IsStringType()) {
+    error_reporter().Report(
+        call->position(), ErrorMessages::kIncorrectCallArgType,
+        arguments[1]->type(), ast::StringType::Get(ast_context()),
+        call->FuncName());
   }
 
   call->set_type(
@@ -332,13 +352,14 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   }
 
   // Now, let's make sure the arguments match up
-  const auto &arg_types = node->arguments();
-  const auto &func_params = func_type->params();
-  for (size_t i = 0; i < arg_types.size(); i++) {
-    if (arg_types[i]->type() != func_params[i].type) {
-      error_reporter().Report(
-          node->position(), ErrorMessages::kIncorrectCallArgType,
-          arg_types[i]->type(), func_params[i].type, node->FuncName());
+  const auto &actual_call_arg_types = node->arguments();
+  const auto &expected_arg_params = func_type->params();
+  for (size_t i = 0; i < actual_call_arg_types.size(); i++) {
+    if (actual_call_arg_types[i]->type() != expected_arg_params[i].type) {
+      error_reporter().Report(node->position(),
+                              ErrorMessages::kIncorrectCallArgType,
+                              actual_call_arg_types[i]->type(),
+                              expected_arg_params[i].type, node->FuncName());
       return;
     }
   }
