@@ -138,16 +138,34 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
       break;
     }
     case ast::Type::Kind::StructType: {
+      auto *struct_type = type->As<ast::StructType>();
+
+      // Collect all struct field types
       llvm::SmallVector<llvm::Type *, 8> fields;
-      for (const auto &field : type->As<ast::StructType>()->fields()) {
+      for (const auto &field : struct_type->fields()) {
         fields.push_back(GetLLVMType(field.type));
       }
+
+      // Done
       llvm_type = llvm::StructType::create(fields);
 
       break;
     }
     case ast::Type::Kind::FunctionType: {
-      // TODO: me
+      auto *func_type = type->As<ast::FunctionType>();
+
+      // The return type
+      llvm::Type *ret_type = GetLLVMType(func_type->return_type());
+
+      // Collect the parameter types
+      llvm::SmallVector<llvm::Type *, 8> param_types;
+      param_types.resize(func_type->params().size());
+      for (auto &param : func_type->params()) {
+        param_types.push_back(GetLLVMType(param.type));
+      }
+
+      // Done
+      llvm_type = llvm::FunctionType::get(ret_type, param_types, false);
       break;
     }
     case ast::Type::Kind::InternalType: {
