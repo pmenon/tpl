@@ -13,6 +13,18 @@
 
 namespace tpl::vm {
 
+// ---------------------------------------------------------
+// Expression Result Scope
+// ---------------------------------------------------------
+
+/// ExpressionResultScope is an RAII class that provides metadata about the
+/// usage of an expression and its result. Callers construct one of its
+/// subclasses to let children nodes know the context in which the expression's
+/// result is needed (i.e., whether the expression is an L-Value or R-Value).
+/// It also tracks **where** the result of an expression is, somewhat emulating
+/// destination-driven code generation.
+///
+/// This is a base class for both LValue and RValue result scope objects
 class BytecodeGenerator::ExpressionResultScope {
  public:
   ExpressionResultScope(BytecodeGenerator *generator, ast::Expr::Context kind,
@@ -51,6 +63,11 @@ class BytecodeGenerator::ExpressionResultScope {
   ast::Expr::Context kind_;
 };
 
+// ---------------------------------------------------------
+// LValue Result Scope
+// ---------------------------------------------------------
+
+/// An expression result scope that indicates the result is used as an L-Value
 class BytecodeGenerator::LValueResultScope
     : public BytecodeGenerator::ExpressionResultScope {
  public:
@@ -59,6 +76,11 @@ class BytecodeGenerator::LValueResultScope
       : ExpressionResultScope(generator, ast::Expr::Context::LValue, dest) {}
 };
 
+// ---------------------------------------------------------
+// RValue Result Scope
+// ---------------------------------------------------------
+
+/// An expression result scope that indicates the result is used as an R-Value
 class BytecodeGenerator::RValueResultScope
     : public BytecodeGenerator::ExpressionResultScope {
  public:
@@ -67,11 +89,13 @@ class BytecodeGenerator::RValueResultScope
       : ExpressionResultScope(generator, ast::Expr::Context::RValue, dest) {}
 };
 
-/**
- * A handy scoped class that tracks the start and end positions in the bytecode
- * for a given function, automatically setting the range in the function upon
- * going out of scope.
- */
+// ---------------------------------------------------------
+// Bytecode Position Scope
+// ---------------------------------------------------------
+
+/// A handy scoped class that tracks the start and end positions in the bytecode
+/// for a given function, automatically setting the range in the function upon
+/// going out of scope.
 class BytecodeGenerator::BytecodePositionScope {
  public:
   BytecodePositionScope(BytecodeGenerator *generator, FunctionInfo *func)
@@ -88,6 +112,10 @@ class BytecodeGenerator::BytecodePositionScope {
   FunctionInfo *func_;
   std::size_t start_offset_;
 };
+
+// ---------------------------------------------------------
+// Bytecode Generator begins
+// ---------------------------------------------------------
 
 BytecodeGenerator::BytecodeGenerator(util::Region *region)
     : bytecode_(region),
@@ -305,11 +333,11 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
 }
 
 void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
-  /*
-   * Lookup the local in the current function. It must be there through a
-   * previous variable declaration (or parameter declaration). What is returned
-   * is a pointer to the variable.
-   */
+  //
+  // Lookup the local in the current function. It must be there through a
+  // previous variable declaration (or parameter declaration). What is returned
+  // is a pointer to the variable.
+  //
 
   LocalVar local = current_function()->LookupLocal(node->name().data());
 
@@ -318,12 +346,12 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
     return;
   }
 
-  /*
-   * The caller wants the R-Value of the identifier. So, we need to load it. If
-   * the caller did not provide a destination register, we're done. If the
-   * caller provided a destination, we need to move the value of the identifier
-   * into the provided destination.
-   */
+  //
+  // The caller wants the R-Value of the identifier. So, we need to load it. If
+  // the caller did not provide a destination register, we're done. If the
+  // caller provided a destination, we need to move the value of the identifier
+  // into the provided destination.
+  //
 
   if (!execution_result()->HasDestination()) {
     execution_result()->set_destination(local.ValueOf());
@@ -362,25 +390,26 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
 }
 
 void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
-  /*
-   * First, we need to get the base address of the array
-   */
+  //
+  // First, we need to get the base address of the array
+  //
 
   LocalVar arr = VisitExpressionForLValue(node->object());
 
-  /*
-   * Now, we need to compute the address of the element at the desired index.
-   * There are two cases we handle here:
-   *   1. The index is a constant literal
-   *   2. The index is variable
-   *
-   * If the index is a constant literal (e.g., x[4]), then we can directly
-   * compute the byte-offset of the element, and issue a Lea.
-   *
-   * If the index is not a constant, we need to evaluate the expression to
-   * produce the index, then issue a LeaScaled instruction to compute the
-   * address.
-   */
+  //
+  // The next step is to compute the address of the element at the desired index
+  // stored in the IndexExpr node. There are two cases we handle:
+  //
+  // 1. The index is a constant literal
+  // 2. The index is variable
+  //
+  // If the index is a constant literal (e.g., x[4]), then we can immediately
+  // compute the offset of the element, and issue a vanilla Lea instruction.
+  //
+  // If the index is not a constant, we need to evaluate the expression to
+  // produce the index, then issue a LeaScaled instruction to compute the
+  // address.
+  //
 
   auto *type = node->object()->type()->As<ast::ArrayType>();
   auto elem_size = type->element_type()->size();
@@ -404,11 +433,11 @@ void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
     return;
   }
 
-  /*
-   * The caller wants the value of the array element. We just computed the
-   * element's pointer (in element_ptr). Just dereference it into the desired
-   * location and be done with it.
-   */
+  //
+  // The caller wants the value of the array element. We just computed the
+  // element's pointer (in element_ptr). Just dereference it into the desired
+  // location and be done with it.
+  //
 
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
   BuildDeref(dest, elem_ptr, node->type());
@@ -462,13 +491,14 @@ void BytecodeGenerator::VisitVariableDecl(ast::VariableDecl *node) {
 void BytecodeGenerator::VisitAddressOfExpr(ast::UnaryOpExpr *op) {
   TPL_ASSERT(execution_result()->IsRValue(),
              "Address-of expressions must be R-values!");
-  /*
-   * TODO(pmenon): Remove extra assignment
-   *
-   * L-values can't take a target local to store into address values into. Thus,
-   * we evaluate as an R-value into a temporary and copy into the real
-   * destination. Optimize later ...
-   */
+  //
+  // TODO(pmenon): Remove extra assignment
+  //
+  // L-values can't take a target local to store into address values into. Thus,
+  // we evaluate as an R-value into a temporary and copy into the real
+  // destination. Optimize later ...
+  //
+
   LocalVar dest = execution_result()->GetOrCreateDestination(op->type());
   LocalVar addr = VisitExpressionForLValue(op->expr());
   BuildAssign(dest, addr, op->type());
@@ -913,11 +943,6 @@ void BytecodeGenerator::VisitPrimitiveCompareOpExpr(
 void BytecodeGenerator::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
   TPL_ASSERT(execution_result()->IsRValue(),
              "Comparison expressions must be R-Values!");
-
-  /*
-   * We treat SQL comparisons slightly differently that primitive comparisons.
-   */
-
   if (node->type()->IsSqlType()) {
     VisitSqlCompareOpExpr(node);
   } else {
@@ -974,20 +999,21 @@ LocalVar BytecodeGenerator::BuildLoadPointer(LocalVar double_ptr,
 }
 
 void BytecodeGenerator::VisitMemberExpr(ast::MemberExpr *node) {
-  /*
-   * We first need to compute the address of the object we're selecting into.
-   * Thus, we get the L-Value of the object below.
-   */
+  //
+  // We first need to compute the address of the object we're selecting into.
+  // Thus, we get the L-Value of the object below.
+  //
 
   LocalVar obj_ptr = VisitExpressionForLValue(node->object());
 
-  /*
-   * We now need to compute the offset of the field in the composite type. TPL
-   * unifies C's arrow and dot syntax for field/member access. Thus, the type
-   * of the object may be either a pointer to a struct or the actual struct. If
-   * the type is a pointer, then the L-Value of the object is actually a double
-   * pointer. Thus, we need to dereference it.
-   */
+  //
+  // We now need to compute the offset of the field in the composite type. TPL
+  // unifies C's arrow and dot syntax for field/member access. Thus, the type
+  // of the object may be either a pointer to a struct or the actual struct. If
+  // the type is a pointer, then the L-Value of the object is actually a double
+  // pointer and we need to dereference it; otherwise, we can use the address
+  // as is.
+  //
 
   ast::StructType *obj_type = nullptr;
   if (auto *type = node->object()->type(); node->IsSugaredArrow()) {
@@ -998,20 +1024,20 @@ void BytecodeGenerator::VisitMemberExpr(ast::MemberExpr *node) {
     obj_type = type->As<ast::StructType>();
   }
 
-  /*
-   * We're now ready to compute offset. Let's lookup the field's offset in the
-   * struct type.
-   */
+  //
+  // We're now ready to compute offset. Let's lookup the field's offset in the
+  // struct type.
+  //
 
   auto *field_name = node->member()->As<ast::IdentifierExpr>();
   auto offset = obj_type->GetOffsetOfFieldByName(field_name->name());
 
-  /*
-   * Now that we have a pointer to the composite object, we need to compute a
-   * pointer to the field within the object. If the offset of the field in the
-   * object is zero, we needn't do anything - we can just reinterpret the object
-   * pointer. If the field offset is greater than zero, we generate a LEA.
-   */
+  //
+  // Now that we have a pointer to the composite object, we need to compute a
+  // pointer to the field within the object. If the offset of the field in the
+  // object is zero, we needn't do anything - we can just reinterpret the object
+  // pointer. If the field offset is greater than zero, we generate a LEA.
+  //
 
   LocalVar field_ptr;
   if (offset == 0) {
@@ -1029,12 +1055,12 @@ void BytecodeGenerator::VisitMemberExpr(ast::MemberExpr *node) {
     return;
   }
 
-  /*
-   * The caller wants the actual value of the field. We just computed a pointer
-   * to the field in the object, so we need to load/dereference it. If the
-   * caller provided a destination variable, use that; otherwise, create a new
-   * temporary variable to store the value.
-   */
+  //
+  // The caller wants the actual value of the field. We just computed a pointer
+  // to the field in the object, so we need to load/dereference it. If the
+  // caller provided a destination variable, use that; otherwise, create a new
+  // temporary variable to store the value.
+  //
 
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
   BuildDeref(dest, field_ptr, node->type());

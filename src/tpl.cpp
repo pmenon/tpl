@@ -147,6 +147,8 @@ static void RunFile(const std::string &filename) {
     return;
   }
 
+  LOG_INFO("Compiling and running file: {}", filename);
+
   // Make a copy of the source ... crappy, yes, but okay in this use case
   const std::string source((*file)->getBufferStart(), (*file)->getBufferEnd());
 
