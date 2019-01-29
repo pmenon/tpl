@@ -63,6 +63,27 @@ namespace tpl::vm {
   F(JumpIfTrue, OperandType::Local, OperandType::JumpOffset)                                                           \
   F(JumpIfFalse, OperandType::Local, OperandType::JumpOffset)                                                          \
                                                                                                                        \
+  /* Memory/pointer operations */                                                                                      \
+  F(Deref1, OperandType::Local, OperandType::Local)                                                                    \
+  F(Deref2, OperandType::Local, OperandType::Local)                                                                    \
+  F(Deref4, OperandType::Local, OperandType::Local)                                                                    \
+  F(Deref8, OperandType::Local, OperandType::Local)                                                                    \
+  F(DerefN, OperandType::Local, OperandType::Local, OperandType::UImm4)                                                \
+  F(Assign1, OperandType::Local, OperandType::Local)                                                                   \
+  F(Assign2, OperandType::Local, OperandType::Local)                                                                   \
+  F(Assign4, OperandType::Local, OperandType::Local)                                                                   \
+  F(Assign8, OperandType::Local, OperandType::Local)                                                                   \
+  F(AssignImm1, OperandType::Local, OperandType::Imm1)                                                                 \
+  F(AssignImm2, OperandType::Local, OperandType::Imm2)                                                                 \
+  F(AssignImm4, OperandType::Local, OperandType::Imm4)                                                                 \
+  F(AssignImm8, OperandType::Local, OperandType::Imm8)                                                                 \
+  F(Lea, OperandType::Local, OperandType::Local, OperandType::Imm4)                                                    \
+  F(LeaScaled, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Imm4, OperandType::Imm4)       \
+                                                                                                                       \
+  /* Function calls */                                                                                                 \
+  F(Call, OperandType::FunctionId, OperandType::LocalCount)                                                            \
+  F(Return)                                                                                                            \
+                                                                                                                       \
   /* Table Vector Iterator */                                                                                          \
   F(TableVectorIteratorInit, OperandType::Local, OperandType::UImm2)                                                   \
   F(TableVectorIteratorNext, OperandType::Local, OperandType::Local)                                                   \
@@ -88,7 +109,7 @@ namespace tpl::vm {
   F(VPIFilterLessThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)             \
   F(VPIFilterNotEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                  \
                                                                                                                        \
-  /* */                                                                                                                \
+  /* SQL type comparisons */                                                                                           \
   F(ForceBoolTruth, OperandType::Local, OperandType::Local)                                                            \
   F(InitInteger, OperandType::Local, OperandType::Local)                                                               \
   F(LessThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
@@ -96,28 +117,7 @@ namespace tpl::vm {
   F(GreaterThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                    \
   F(GreaterThanEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                               \
   F(EqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
-  F(NotEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
-                                                                                                                       \
-  /* Memory/pointer operations */                                                                                      \
-  F(Deref1, OperandType::Local, OperandType::Local)                                                                    \
-  F(Deref2, OperandType::Local, OperandType::Local)                                                                    \
-  F(Deref4, OperandType::Local, OperandType::Local)                                                                    \
-  F(Deref8, OperandType::Local, OperandType::Local)                                                                    \
-  F(DerefN, OperandType::Local, OperandType::Local, OperandType::UImm4)                                                \
-  F(Assign1, OperandType::Local, OperandType::Local)                                                                   \
-  F(Assign2, OperandType::Local, OperandType::Local)                                                                   \
-  F(Assign4, OperandType::Local, OperandType::Local)                                                                   \
-  F(Assign8, OperandType::Local, OperandType::Local)                                                                   \
-  F(AssignImm1, OperandType::Local, OperandType::Imm1)                                                                 \
-  F(AssignImm2, OperandType::Local, OperandType::Imm2)                                                                 \
-  F(AssignImm4, OperandType::Local, OperandType::Imm4)                                                                 \
-  F(AssignImm8, OperandType::Local, OperandType::Imm8)                                                                 \
-  F(Lea, OperandType::Local, OperandType::Local, OperandType::Imm4)                                                    \
-  F(LeaScaled, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Imm4, OperandType::Imm4)       \
-                                                                                                                       \
-  /* Function calls */                                                                                                 \
-  F(Call, OperandType::FunctionId, OperandType::LocalCount)                                                            \
-  F(Return)
+  F(NotEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)
 // clang-format on
 
 /// The single enumeration of all possible bytecode instructions
