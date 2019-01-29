@@ -393,17 +393,21 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   // Recurse into the function body
   Visit(node->body());
 
-  // Check return
-  if (!func_type->return_type()->IsNilType()) {
-    if (node->IsEmpty() || !ast::Stmt::IsTerminating(node->body())) {
+  //
+  // If the function is empty or doesn't end in a terminator, we need to check
+  // if the function is **supposed** to return something. If the function has a
+  // non-nil return type and doesn't return anything, it's an error. If the
+  // function has a nil return type, but doesn't return, we synthesize a return
+  // statement here.
+  //
+
+  if (node->IsEmpty() || !ast::Stmt::IsTerminating(node->body())) {
+    if (!func_type->return_type()->IsNilType()) {
       error_reporter().Report(node->body()->right_brace_position(),
                               ErrorMessages::kMissingReturn);
       return;
     }
-  }
 
-  // If an empty and nil-return function, synthesize return
-  if (node->IsEmpty() && func_type->return_type()->IsNilType()) {
     ast::ReturnStmt *empty_ret =
         ast_context().node_factory().NewReturnStmt(node->position(), nullptr);
     node->body()->statements().push_back(empty_ret);
