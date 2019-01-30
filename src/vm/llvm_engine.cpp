@@ -106,11 +106,22 @@ class LLVMEngine::TypeMap {
 };
 
 llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
-  const std::string type_name = type->ToString();
+  //
+  // First, lookup the type in the cache. We do the lookup by performing a
+  // try_emplace() in order to save a second lookup in the case when the type
+  // does not exist in the cache. If the type is uncached, we can directly
+  // update the returned iterator rather than performing another lookup.
+  //
 
-  if (auto iter = type_map_.find(type_name); iter != type_map_.end()) {
+  auto [iter, inserted] = type_map_.try_emplace(type->ToString(), nullptr);
+
+  if (!inserted) {
     return iter->second;
   }
+
+  //
+  // The type isn't cached, construct it now
+  //
 
   llvm::Type *llvm_type = nullptr;
   switch (type->kind()) {
@@ -196,9 +207,13 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
     }
   }
 
+  //
+  // Update the cache with the constructed type
+  //
+
   TPL_ASSERT(llvm_type != nullptr, "No LLVM type found!");
 
-  type_map_[type_name] = llvm_type;
+  iter->second = llvm_type;
 
   return llvm_type;
 }
