@@ -1,9 +1,6 @@
 #pragma once
 
-#include <functional>
 #include <limits>
-#include <memory>
-#include <vector>
 
 #include "sql/vector_projection.h"
 #include "util/bit_util.h"
