@@ -47,7 +47,7 @@ class LocalInfo {
 
   const std::string &name() const { return name_; }
 
-  const ast::Type *type() const { return type_; }
+  ast::Type *type() const { return type_; }
 
   u32 id() const { return index_; }
 
