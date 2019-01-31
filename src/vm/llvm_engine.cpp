@@ -374,14 +374,14 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
       context_(std::make_unique<llvm::LLVMContext>()),
       llvm_module_(nullptr),
       type_map_(nullptr) {
-  /*
-   * First, we create a suitable target machine for LLVM to use when we JIT
-   * TPL programs. At the moment, we rely on LLVM to discover all CPU features
-   * e.g., AVX2 or AVX512, and we make no assumptions about symbol relocations.
-   * All this is to say that we leave much of these configurables as defaults
-   * for the purposes of getting the basics working. We can revisit at a later
-   * timer.
-   */
+  //
+  // We need to create a suitable TargetMachine for LLVM to before we can JIT
+  // TPL programs. At the moment, we rely on LLVM to discover all CPU features
+  // e.g., AVX2 or AVX512, and we make no assumptions about symbol relocations.
+  //
+  // TODO: This may change with LLVM8 that comes with TargetMachineBuilders
+  // TODO: Alter the flags as need be
+  //
 
   {
     std::string triple = llvm::sys::getProcessTriple();
@@ -415,12 +415,12 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
                "LLVM: Unable to find a suitable target machine!");
   }
 
-  /*
-   * We've built the target machine we use to generate machine code. Now, we
-   * load the pre-compiled bytecode module containing all the TPL bytecode
-   * logic. We add the functions we're about to compile into this module. This
-   * module forms the unit of JIT.
-   */
+  //
+  // We've built a TargetMachine we use to generate machine code. Now, we
+  // load the pre-compiled bytecode module containing all the TPL bytecode
+  // logic. We add the functions we're about to compile into this module. This
+  // module forms the unit of JIT.
+  //
 
   {
     auto memory_buffer =
@@ -446,10 +446,11 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
 }
 
 void LLVMEngine::CompiledModuleBuilder::DeclareFunctions() {
-  /*
-   * For each TPL function in the bytecode module we build an equivalent LLVM
-   * function declaration.
-   */
+  //
+  // For each TPL function in the bytecode module we build an equivalent LLVM
+  // function declaration.
+  //
+
   for (const auto &func_info : tpl_module().functions()) {
     llvm::SmallVector<llvm::Type *, 8> param_types;
 
@@ -484,13 +485,13 @@ llvm::Function *LLVMEngine::CompiledModuleBuilder::LookupBytecodeHandler(
 void LLVMEngine::CompiledModuleBuilder::BuildSimpleCFG(
     const FunctionInfo &func_info,
     std::map<std::size_t, llvm::BasicBlock *> &blocks) {
-  /*
-   * Before we can generate LLVM IR, we need to build a control-flow graph (CFG)
-   * for the function. We do this construction directly from the TPL bytecode
-   * using a vanilla DFS and produce an ordered map ('blocks') from bytecode
-   * position to an LLVM basic block. Each entry in the map indicates the start
-   * of a basic block.
-   */
+  //
+  // Before we can generate LLVM IR, we need to build a control-flow graph (CFG)
+  // for the function. We do this construction directly from the TPL bytecode
+  // using a vanilla DFS and produce an ordered map ('blocks') from bytecode
+  // position to an LLVM basic block. Each entry in the map indicates the start
+  // of a basic block.
+  //
 
   // We use this vector as a stack for DFS traversal
   llvm::SmallVector<std::size_t, 16> bb_begin_positions = {0};
@@ -570,17 +571,17 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
   }
 #endif
 
-  /*
-   * We can define the function now. LLVM IR generation happens by iterating
-   * over the function's bytecode simultaneously with the ordered list of basic
-   * block start positions ('blocks'). Each TPL bytecode is converted to a
-   * function call into a pre-compiled TPL bytecode handler. However, many of
-   * these calls will get inlined away during optimization. If the current
-   * bytecode position matches the position of a new basic block, a branch
-   * instruction is generated automatically (either conditional or not depending
-   * on context) into the new block, and the IR builder position shifts to the
-   * new block.
-   */
+  //
+  // We can define the function now. LLVM IR generation happens by iterating
+  // over the function's bytecode simultaneously with the ordered list of basic
+  // block start positions ('blocks'). Each TPL bytecode is converted to a
+  // function call into a pre-compiled TPL bytecode handler. However, many of
+  // these calls will get inlined away during optimization. If the current
+  // bytecode position matches the position of a new basic block, a branch
+  // instruction is generated automatically (either conditional or not depending
+  // on context) into the new block, and the IR builder position shifts to the
+  // new block.
+  //
 
   ir_builder.SetInsertPoint(entry);
 
@@ -653,10 +654,10 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
     // Handle bytecode
     switch (bytecode) {
       case Bytecode::Call: {
-        /*
-         * For internal calls, we read the callee function's ID, lookup the
-         * LLVM declaration and generate the call.
-         */
+        //
+        // For internal calls, we read the callee function's ID, lookup the
+        // LLVM declaration and generate the call.
+        //
 
         const u16 callee_func_id = iter.GetFunctionIdOperand(0);
         const auto &callee_info = tpl_module().GetFuncInfoById(callee_func_id);
@@ -666,13 +667,13 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
       }
 
       case Bytecode::Jump: {
-        /*
-         * Unconditional jumps work as follows: we read the relative target
-         * bytecode position from the iterator, calculate the absolute bytecode
-         * position, and create an unconditional branch to the basic block that
-         * starts at the given bytecode position, using the information in the
-         * CFG.
-         */
+        //
+        // Unconditional jumps work as follows: we read the relative target
+        // bytecode position from the iterator, calculate the absolute bytecode
+        // position, and create an unconditional branch to the basic block that
+        // starts at the given bytecode position, using the information in the
+        // CFG.
+        //
 
         std::size_t branch_target_bb_pos =
             iter.GetPosition() + Bytecodes::GetNthOperandOffset(bytecode, 0) +
@@ -685,10 +686,10 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
 
       case Bytecode::JumpIfFalse:
       case Bytecode::JumpIfTrue: {
-        /*
-         * Conditional jumps work almost exactly as unconditional jump except
-         * a second fallthrough position is calculated.
-         */
+        //
+        // Conditional jumps work almost exactly as unconditional jump except
+        // a second fallthrough position is calculated.
+        //
 
         std::size_t fallthrough_bb_pos =
             iter.GetPosition() + iter.CurrentBytecodeSize();
@@ -719,11 +720,11 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
       }
 
       default: {
-        /*
-         * In the default case, each bytecode makes a function call into it's
-         * bytecode handler function. We also need to ensure correct types by
-         * inserting casting operations where appropriate.
-         */
+        //
+        // In the default case, each bytecode makes a function call into it's
+        // bytecode handler function. We also need to ensure correct types by
+        // inserting casting operations where appropriate.
+        //
 
         llvm::Function *handler = LookupBytecodeHandler(bytecode);
 
@@ -747,10 +748,10 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
       }
     }
 
-    /*
-     * If the next bytecode marks the start of a new basic block, we need to
-     * switch insertion points to it before continuing IR generation.
-     */
+    //
+    // If the next bytecode marks the start of a new basic block, we need to
+    // switch insertion points to it before continuing IR generation.
+    //
 
     auto next_bytecode_pos = iter.GetPosition() + iter.CurrentBytecodeSize();
 
@@ -765,10 +766,10 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
 }
 
 void LLVMEngine::CompiledModuleBuilder::DefineFunctions() {
-  /*
-   * We iterate over all the TPL functions defined in the module and generate
-   * their LLVM equivalents into the current module.
-   */
+  //
+  // We iterate over all the TPL functions defined in the module and generate
+  // their LLVM equivalents into the current module.
+  //
 
   llvm::IRBuilder<> ir_builder(context());
   for (const auto &func_info : tpl_module().functions()) {
@@ -786,11 +787,11 @@ void LLVMEngine::CompiledModuleBuilder::Verify() {
 }
 
 void LLVMEngine::CompiledModuleBuilder::Simplify() {
-  /*
-   * This function ensures all bytecode handlers marked 'always_inline' are
-   * inlined into the main TPL program. After this inlining, we clean up any
-   * unused functions.
-   */
+  //
+  // This function ensures all bytecode handlers marked 'always_inline' are
+  // inlined into the main TPL program. After this inlining, we clean up any
+  // unused functions.
+  //
 
   llvm::legacy::PassManager pass_manager;
   pass_manager.add(llvm::createAlwaysInlinerLegacyPass());
@@ -799,28 +800,28 @@ void LLVMEngine::CompiledModuleBuilder::Simplify() {
 }
 
 void LLVMEngine::CompiledModuleBuilder::Optimize() {
-  /*
-   * The optimization passes we use are somewhat ad-hoc, but were found to
-   * provide a nice balance of performance and compilation times. We use an
-   * aggressive function inlining pass followed by a CFG simplification pass
-   * that should clean up work done during earlier inlining and DCE work.
-   */
+  //
+  // The optimization passes we use are somewhat ad-hoc, but were found to
+  // provide a nice balance of performance and compilation times. We use an
+  // aggressive function inlining pass followed by a CFG simplification pass
+  // that should clean up work done during earlier inlining and DCE work.
+  //
 
   llvm::PassManagerBuilder pm_builder;
   pm_builder.Inliner = llvm::createFunctionInliningPass(3, 0, false);
 
-  /*
-   * The function optimization passes ...
-   */
+  //
+  // The function optimization passes ...
+  //
 
   llvm::legacy::FunctionPassManager function_pm(module());
   function_pm.add(llvm::createTargetTransformInfoWrapperPass(
       target_machine()->getTargetIRAnalysis()));
   function_pm.add(llvm::createCFGSimplificationPass());
 
-  /*
-   * The module-level optimization passes ...
-   */
+  //
+  // The module-level optimization passes ...
+  //
 
   llvm::legacy::PassManager module_pm;
   module_pm.add(llvm::createTargetTransformInfoWrapperPass(
@@ -829,7 +830,10 @@ void LLVMEngine::CompiledModuleBuilder::Optimize() {
   pm_builder.populateFunctionPassManager(function_pm);
   pm_builder.populateModulePassManager(module_pm);
 
+  //
   // First, run the function-level optimizations
+  //
+
   function_pm.doInitialization();
   for (const auto &func_info : tpl_module().functions()) {
     auto *func = module()->getFunction(func_info.name());
@@ -837,7 +841,10 @@ void LLVMEngine::CompiledModuleBuilder::Optimize() {
   }
   function_pm.doFinalization();
 
-  // Now run the module-level optimizations
+  //
+  // Now, run the module-level optimizations
+  //
+
   module_pm.run(*module());
 }
 
@@ -854,11 +861,11 @@ LLVMEngine::CompiledModuleBuilder::Finalize() {
 
 std::unique_ptr<llvm::MemoryBuffer>
 LLVMEngine::CompiledModuleBuilder::EmitObject() {
-  /*
-   * Generating a raw object file involves running a specialized pass that emits
-   * machine code. Thus, all we need to do is create an in-memory buffer to hold
-   * the machine code, and use that as the output buffer for the pass.
-   */
+  //
+  // Generating a raw object file involves running a specialized pass that emits
+  // machine code. Thus, all we need to do is create an in-memory buffer to hold
+  // the machine code, and use that as the output buffer for the pass.
+  //
 
   llvm::SmallVector<char, 0> obj_buffer;
 
@@ -935,13 +942,13 @@ void *LLVMEngine::CompiledModule::GetFunctionPointer(
 }
 
 void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
-  /*
-   * A compiled module can be initialized with or without an in-memory object.
-   * If the module does not have an existing in-memory version, one will be
-   * loaded from the file system using the module's name and storage directory.
-   * If the module has already been read into a memory buffer, it must be
-   * loaded and linked into the environment.
-   */
+  //
+  // A compiled module can be initialized with or without an in-memory object.
+  // If the module does not have an existing in-memory version, one will be
+  // loaded from the file system using the module's name and storage directory.
+  // If the module has already been read into a memory buffer, it must be
+  // loaded and linked into the environment.
+  //
 
   if (loaded()) {
     return;
@@ -962,12 +969,12 @@ void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
     object_code_ = std::move(file_buffer.get());
   }
 
-  /*
-   * At this point, we have a valid object code buffer containing the contents
-   * of the module. We now need to load it into the environment. This involves
-   * several linker-level steps like allocating executable memory, resolving
-   * symbols and re-locations, and registering EH frames for exception handling.
-   */
+  //
+  // At this point, we have a valid object code buffer containing the contents
+  // of the module. We now need to load it into the environment. This involves
+  // several linker-level steps like allocating executable memory, resolving
+  // symbols and re-locations, and registering EH frames for exception handling.
+  //
 
   auto object = llvm::object::ObjectFile::createObjectFile(
       object_code()->getMemBufferRef());
@@ -993,10 +1000,10 @@ void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
 
   memory_manager()->finalizeMemory();
 
-  /*
-   * Now, the object has successfully been loaded and is executable. We pull out
-   * all module functions into a handy cache.
-   */
+  //
+  // Now, the object has successfully been loaded and is executable. We pull out
+  // all module functions into a handy cache.
+  //
 
   for (const auto &func : module.functions()) {
     auto symbol = loader.getSymbol(func.name());

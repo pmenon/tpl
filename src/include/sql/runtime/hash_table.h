@@ -7,7 +7,7 @@
 #include "util/math_util.h"
 #include "util/memory.h"
 
-namespace tpl::runtime {
+namespace tpl::sql::runtime {
 
 /// HashMap is a generic bytes-to-bytes hash table used for SQL processing. It
 /// is implemented using a closed-addressing bucket-chained hash table with
@@ -217,4 +217,4 @@ inline u64 HashTable::TagHash(hash_t hash) const {
   return static_cast<u64>(1) << (tag_bit_pos + kNumPointerBits);
 }
 
-}  // namespace tpl::runtime
+}  // namespace tpl::sql::runtime
