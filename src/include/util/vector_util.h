@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "util/common.h"
 #include "util/simd.h"
 
