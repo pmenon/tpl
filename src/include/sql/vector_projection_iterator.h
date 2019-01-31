@@ -93,7 +93,7 @@ class VectorProjectionIterator {
   /// \param col_idx The index of the column in the vector projection to filter
   /// \param val The value to filter on
   /// \return The number of selected elements
-  template <typename T, typename Op, bool nullable>
+  template <typename T, template <typename> typename Op, bool nullable>
   u32 FilterColByVal(u32 col_idx, T val);
 
   /// Return the number of selected tuples after any filters have been applied
@@ -215,7 +215,7 @@ inline void VectorProjectionIterator::RunFilter(const F &filter) {
 }
 
 // Filter an entire column's data by the provided constant value
-template <typename T, typename Op, bool nullable>
+template <typename T, template <typename> typename Op, bool nullable>
 inline u32 VectorProjectionIterator::FilterColByVal(u32 col_idx, T val) {
   const T *input = vector_projection()->GetVectorAs<T>(col_idx);
 

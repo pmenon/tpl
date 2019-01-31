@@ -469,7 +469,7 @@ template <typename T>
 struct FilterVecSizer<T, std::enable_if_t<std::is_unsigned_v<T>>>
     : public FilterVecSizer<std::make_signed_t<T>> {};
 
-template <typename T, typename Compare>
+template <typename T, template <typename> typename Compare>
 static inline u32 FilterVectorByVal(const T *RESTRICT in, u32 in_count, T val,
                                     u32 *RESTRICT out, const u32 *RESTRICT sel,
                                     u32 &RESTRICT in_pos) {

@@ -15,10 +15,8 @@ namespace tpl::util::simd {
 
 #define USE_GATHER 0
 
-/**
- * A 256-bit SIMD register vector. This is a purely internal class that holds
- * common functions for other user-visible vector classes
- */
+/// A 256-bit SIMD register vector. This is a purely internal class that holds
+/// common functions for other user-visible vector classes
 class Vec256b {
  public:
   Vec256b() = default;
@@ -34,6 +32,7 @@ class Vec256b {
   __m256i reg_;
 };
 
+/// A 256-bit SIMD register interpreted as 4 64-bit integer values
 class Vec4 : public Vec256b {
   friend class Vec4Mask;
 
@@ -45,9 +44,20 @@ class Vec4 : public Vec256b {
     reg_ = _mm256_setr_epi64x(val1, val2, val3, val4);
   }
 
+  /// Load 4 64-bit values stored contiguously from the input pointer \p ptr.
+  /// The underlying data type of the array \p ptr can be either 32-bit integers
+  /// in which case the 4 values will be loaded and upcasted, or 64-bit integers
+  /// which is the trivial case 
+  /// \tparam T The underlying data type of the pointer
+  /// \param ptr The input pointer to read from
   template <typename T>
   void Load(const T *ptr);
 
+  /// Gather non-contiguous elements from the input array \p ptr stored at
+  /// index positions from \t pos
+  /// \tparam T The data type of the underlying array
+  /// \param ptr The input array
+  /// \param pos The list of positions in the input array to gather
   template <typename T>
   ALWAYS_INLINE inline void Gather(const T *ptr, const Vec4 &pos) {
 #if USE_GATHER == 1
@@ -59,23 +69,29 @@ class Vec4 : public Vec256b {
 #endif
   }
 
+  /// Store the contents of this vector contiguously into the input array \p ptr
+  /// \param ptr The array to write into
   ALWAYS_INLINE inline void Store(i64 *ptr) const {
     _mm256_store_si256(reinterpret_cast<__m256i *>(ptr), reg());
   }
 
+  /// Return the number of elements that can be stored in this vector
+  static constexpr u32 Size() { return 4; }
+
+  // Extract the integer at the given index from this vector
   ALWAYS_INLINE inline i64 Extract(u32 index) const {
     alignas(32) i64 x[Size()];
     Store(x);
     return x[index & 3];
   }
 
+  // Extract the integer at the given index from this vector
   ALWAYS_INLINE inline i64 operator[](u32 index) const {
     return Extract(index);
   }
-
-  static constexpr u32 Size() { return 4; }
 };
 
+/// A 256-bit SIMD register interpreted as 8 32-bit integer values
 class Vec8 : public Vec256b {
  public:
   Vec8() = default;
@@ -86,16 +102,31 @@ class Vec8 : public Vec256b {
     reg_ = _mm256_setr_epi32(val1, val2, val3, val4, val5, val6, val7, val8);
   }
 
+  /// Load 8 32-bit values stored contiguously from the input pointer \p ptr.
+  /// The underlying data type of the array \p ptr can be either 8-bit, 16-bit,
+  /// or 32-bit integers. Up-casting is performed when appropriate.
+  /// \tparam T The underlying data type of the pointer
+  /// \param ptr The input pointer to read from
   template <typename T>
   void Load(const T *ptr);
 
+  /// Gather non-contiguous elements from the input array \p ptr stored at
+  /// index positions from \t pos
+  /// \tparam T The data type of the underlying array
+  /// \param ptr The input array
+  /// \param pos The list of positions in the input array to gather
   template <typename T>
   void Gather(const T *ptr, const Vec8 &pos);
 
+  /// Store the contents of this vector contiguously into the input array \p ptr
+  /// \param ptr The array to write into
   ALWAYS_INLINE inline void Store(i32 *ptr) const {
     _mm256_store_si256(reinterpret_cast<__m256i *>(ptr), reg());
   }
 
+  /// Return the number of elements that can be stored in this vector
+  static constexpr u32 Size() { return 8; }
+  
   ALWAYS_INLINE inline i32 Extract(u32 index) const {
     TPL_ASSERT(index < 8, "Out-of-bounds mask element access");
     alignas(32) i32 x[Size()];
@@ -106,8 +137,6 @@ class Vec8 : public Vec256b {
   ALWAYS_INLINE inline i32 operator[](u32 index) const {
     return Extract(index);
   }
-
-  static constexpr u32 Size() { return 8; }
 };
 
 class Vec8Mask : public Vec8 {
@@ -193,11 +222,9 @@ class Vec4Mask : public Vec4 {
   }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Vec256b - Generic Bitwise Operations
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Vec256b - Generic Bitwise Operations
+// ---------------------------------------------------------
 
 // Bit-wise NOT
 ALWAYS_INLINE inline Vec256b operator~(const Vec256b &v) noexcept {
@@ -219,33 +246,27 @@ ALWAYS_INLINE inline Vec256b operator^(const Vec256b &a,
   return _mm256_xor_si256(a, b);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Vec8Mask
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Vec8Mask
+// ---------------------------------------------------------
 
 ALWAYS_INLINE inline Vec8Mask operator&(const Vec8Mask &a,
                                         const Vec8Mask &b) noexcept {
   return Vec8Mask(Vec256b(a) & Vec256b(b));
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Vec4Mask
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Vec4Mask
+// ---------------------------------------------------------
 
 ALWAYS_INLINE inline Vec4Mask operator&(const Vec4Mask &a,
                                         const Vec4Mask &b) noexcept {
   return Vec4Mask(Vec256b(a) & Vec256b(b));
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Vec4
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Vec4
+// ---------------------------------------------------------
 
 template <typename T>
 ALWAYS_INLINE inline void Vec4::Load(const T *ptr) {
@@ -264,11 +285,9 @@ ALWAYS_INLINE inline void Vec4::Load<i64>(const i64 *ptr) {
   reg_ = _mm256_loadu_si256((const __m256i *)ptr);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Vec4 - Comparison Operations
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Vec4 - Comparison Operations
+// ---------------------------------------------------------
 
 ALWAYS_INLINE inline Vec4Mask operator>(const Vec4 &a, const Vec4 &b) noexcept {
   return _mm256_cmpgt_epi64(a, b);
@@ -298,11 +317,9 @@ ALWAYS_INLINE inline Vec4Mask operator!=(const Vec4 &a,
   return Vec4Mask(~Vec256b(a == b));
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Vec4 - Arithmetic Operations
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Vec4 - Arithmetic Operations
+// ---------------------------------------------------------
 
 ALWAYS_INLINE inline Vec4 operator+(const Vec4 &a, const Vec4 &b) {
   return _mm256_add_epi64(a, b);
@@ -345,11 +362,9 @@ ALWAYS_INLINE inline Vec4 operator<<(const Vec4 &a, const Vec4 &b) {
   return _mm256_sllv_epi64(a, b);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Vec8
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Vec8
+// ---------------------------------------------------------
 
 template <typename T>
 ALWAYS_INLINE inline void Vec8::Load(const T *ptr) {
@@ -418,11 +433,9 @@ ALWAYS_INLINE inline void Vec8::Gather<i32>(const i32 *ptr, const Vec8 &pos) {
 #endif
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Vec8 - Comparison Operations
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Vec8 - Comparison Operations
+// ---------------------------------------------------------
 
 ALWAYS_INLINE inline Vec8Mask operator>(const Vec8 &a, const Vec8 &b) noexcept {
   return _mm256_cmpgt_epi32(a, b);
@@ -453,11 +466,9 @@ ALWAYS_INLINE inline Vec8Mask operator!=(const Vec8 &a,
   return Vec8Mask(~Vec256b(a == b));
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Vec8 - Arithmetic Operations
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Vec8 - Arithmetic Operations
+// ---------------------------------------------------------
 
 ALWAYS_INLINE inline Vec8 operator+(const Vec8 &a, const Vec8 &b) {
   return _mm256_add_epi32(a, b);
@@ -500,11 +511,9 @@ ALWAYS_INLINE inline Vec8 operator<<(const Vec8 &a, const Vec8 &b) {
   return _mm256_sllv_epi32(a, b);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Filter
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Filter
+// ---------------------------------------------------------
 
 template <typename T, typename Enable = void>
 struct FilterVecSizer;
@@ -537,7 +546,7 @@ template <typename T>
 struct FilterVecSizer<T, std::enable_if_t<std::is_unsigned_v<T>>>
     : public FilterVecSizer<std::make_signed_t<T>> {};
 
-template <typename T, typename Compare>
+template <typename T, template <typename> typename Compare>
 static inline u32 FilterVectorByVal(const T *RESTRICT in, u32 in_count, T val,
                                     u32 *RESTRICT out, const u32 *RESTRICT sel,
                                     u32 &RESTRICT in_pos) {

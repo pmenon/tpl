@@ -317,7 +317,7 @@ TEST_F(VectorProjectionIteratorTest, SimpleVectorizedFilterTest) {
   }
 
   // Filter
-  iter.FilterColByVal<i32, std::less<void>, false>(ColId::col_c, 100);
+  iter.FilterColByVal<i32, std::less, false>(ColId::col_c, 100);
 
   // Check
   u32 count = 0;
@@ -344,8 +344,8 @@ TEST_F(VectorProjectionIteratorTest, MultipleVectorizedFilterTest) {
   VectorProjectionIterator iter;
   iter.SetVectorProjection(vp());
 
-  iter.FilterColByVal<i32, std::less<void>, false>(ColId::col_c, 750);
-  iter.FilterColByVal<i16, std::less<void>, false>(ColId::col_a, 10);
+  iter.FilterColByVal<i32, std::less, false>(ColId::col_c, 750);
+  iter.FilterColByVal<i16, std::less, false>(ColId::col_a, 10);
 
   // Check
   u32 count = 0;
