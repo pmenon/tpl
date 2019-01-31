@@ -226,6 +226,21 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
 void BytecodeGenerator::VisitVectorWiseIteration(ast::ForInStmt *node,
                                                  UNUSED LocalVar vpi,
                                                  LoopBuilder *table_loop) {
+  //
+  // When iterating vector-wise, we need to allocate a VPI* with the same name
+  // as the target variable for the loop. We copy the given VPI instance for
+  // each iteration
+  //
+
+  // Get the name and type of the target VPI iteration variable
+  auto type = current_function()->LookupLocalInfo(vpi.GetOffset())->type();
+  auto iter_name = node->target()->As<ast::IdentifierExpr>()->name().data();
+
+  // Create the variable and assign it the value of the given VPI
+  LocalVar iter = current_function()->NewLocal(type, iter_name);
+  BuildAssign(iter, vpi, type);
+
+  // Generate body
   VisitIterationStatement(node, table_loop);
 }
 
@@ -264,13 +279,13 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   emitter()->EmitTableIteratorInit(Bytecode::TableVectorIteratorInit,
                                    table_iter, table->id());
 
-  std::string vpi_name = "vpi";
-  if (vectorized) {
-    vpi_name = node->target()->As<ast::IdentifierExpr>()->name().data();
-  }
+  //
+  // Pull out the VPI from the TableVectorIterator we just initialized
+  //
+
   ast::InternalType *vpi_type = ast::InternalType::Get(
       ctx, ast::InternalType::InternalKind::VectorProjectionIterator);
-  LocalVar vpi = current_function()->NewLocal(vpi_type->PointerTo(), vpi_name);
+  LocalVar vpi = current_function()->NewLocal(vpi_type->PointerTo(), "vpi");
 
   emitter()->Emit(Bytecode::TableVectorIteratorGetVPI, vpi, table_iter);
 
@@ -679,7 +694,9 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
 }
 
 void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
-  if (node->call_kind() == ast::CallExpr::CallKind::Builtin) {
+  ast::CallExpr::CallKind call_kind = node->call_kind();
+
+  if (call_kind == ast::CallExpr::CallKind::Builtin) {
     VisitBuiltinCallExpr(node);
   } else {
     VisitRegularCallExpr(node);
@@ -1100,9 +1117,30 @@ void BytecodeGenerator::VisitMapTypeRepr(ast::MapTypeRepr *node) {
 }
 
 FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &name) {
+  // Clear variable name cache
+  name_cache_.clear();
+
+  // Allocate a new function
   auto func_id = static_cast<FunctionId>(functions().size());
   functions_.emplace_back(func_id, name);
   return &functions_.back();
+}
+
+LocalVar BytecodeGenerator::NewHiddenLocal(const std::string &name,
+                                           ast::Type *type) {
+  //
+  // We check if the name exists in the cache. If so, we bump the version number
+  // and construct a new local with the new name.
+  //
+
+  auto [iter, inserted] = name_cache_.try_emplace(name, 0);
+
+  if (inserted) {
+    return current_function()->NewLocal(type, name);
+  } else {
+    std::string unique_name = name + std::to_string(++iter->second);
+    return current_function()->NewLocal(type, unique_name);
+  }
 }
 
 LocalVar BytecodeGenerator::VisitExpressionForLValue(ast::Expr *expr) {

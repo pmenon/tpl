@@ -39,6 +39,9 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   // Allocate a new function ID
   FunctionInfo *AllocateFunc(const std::string &name);
 
+  // Allocate a hidden local variable in the current function
+  LocalVar NewHiddenLocal(const std::string &name, ast::Type *type);
+
   // Dispatched from VisitForInStatement() when using tuple-at-time loops to
   // set up the row structure used in the body of the loop
   void VisitRowWiseIteration(ast::ForInStmt *node, LocalVar vpi,
@@ -144,6 +147,9 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
   // RAII struct to capture semantics of expression evaluation
   ExpressionResultScope *execution_result_;
+
+  // A cache of names of per-function hidden variables used to ensure uniqueness
+  std::unordered_map<std::string, u32> name_cache_;
 };
 
 }  // namespace tpl::vm
