@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "util/bit_util.h"
 #include "util/common.h"
 #include "util/macros.h"
 
@@ -61,7 +62,7 @@ class VectorProjection {
   // Accessors
   // -------------------------------------------------------
 
-  u32 *deletions() { return deletions_.get(); }
+  util::BitVector *deletions() { return &deletions_; }
 
   u32 vector_size() const { return vector_size_; }
 
@@ -74,7 +75,7 @@ class VectorProjection {
   std::unique_ptr<u32 *[]> column_null_bitmaps_;
 
   // A bitmap tracking which tuples have been marked for deletion
-  std::unique_ptr<u32[]> deletions_;
+  util::BitVector deletions_;
 
   // The number of active tuples
   u32 tuple_count_;

@@ -46,7 +46,7 @@ std::unique_ptr<byte[]> CreateRandom(u32 num_elems, T min = 0,
 }
 
 std::pair<std::unique_ptr<u32[]>, u32> CreateRandomNullBitmap(u32 num_elems) {
-  auto input = std::make_unique<u32[]>(util::BitUtil::NumWordsFor(num_elems));
+  auto input = std::make_unique<u32[]>(util::BitUtil::Num32BitWordsFor(num_elems));
   auto num_nulls = 0;
 
   std::mt19937 generator;

@@ -8,7 +8,7 @@ namespace tpl::sql {
 VectorProjection::VectorProjection(u32 num_cols, u32 size)
     : column_data_(std::make_unique<byte *[]>(num_cols)),
       column_null_bitmaps_(std::make_unique<u32 *[]>(num_cols)),
-      deletions_(std::make_unique<u32[]>(util::BitUtil::NumWordsFor(size))),
+      deletions_(size),
       tuple_count_(0),
       vector_size_(size) {}
 
@@ -38,12 +38,10 @@ void VectorProjection::ResetFromRaw(byte *col_data, u32 *col_null_bitmap,
   TPL_ASSERT(num_tuples <= vector_size(),
              "Provided column iterator has too many tuples for this vector "
              "projection");
+
   ClearDeletions();
 }
 
-void VectorProjection::ClearDeletions() {
-  u32 num_deletion_bits = util::BitUtil::NumWordsFor(vector_size());
-  util::BitUtil::Clear(deletions(), num_deletion_bits);
-}
+void VectorProjection::ClearDeletions() { deletions()->ClearAll(); }
 
 }  // namespace tpl::sql

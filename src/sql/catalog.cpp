@@ -133,7 +133,7 @@ std::pair<byte *, u32 *> GenerateColumnData(const ColumnInsertMeta &col_meta,
   // Create bitmap
   u32 *null_bitmap = nullptr;
   if (col_meta.type.nullable()) {
-    u32 num_words = util::BitUtil::NumWordsFor(num_rows);
+    u64 num_words = util::BitUtil::Num32BitWordsFor(num_rows);
     null_bitmap = static_cast<u32 *>(malloc(num_words * sizeof(u32)));
   }
 

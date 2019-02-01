@@ -38,7 +38,7 @@ namespace internal {
  * @tparam shift The number of bits to shift
  * @tparam size The size of the bitfield
  */
-template <typename S, typename T, unsigned shift, unsigned size>
+template <typename S, typename T, u64 shift, u64 size>
 class BitFieldBase {
  public:
   static constexpr const S kOne = static_cast<S>(1U);
