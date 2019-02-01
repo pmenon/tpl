@@ -20,7 +20,7 @@ void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
     max_local_len = std::max(max_local_len, (u64)local.name().length());
   }
   for (const auto &local : func.locals()) {
-    if (local.is_parameter()) {
+    if (local.IsParameter()) {
       os << "    param  ";
     } else {
       os << "    local  ";

@@ -16,9 +16,8 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
     frame_size_ = util::MathUtil::AlignTo(frame_size_, type->alignment());
   }
 
-  auto local_id = static_cast<LocalId>(locals_.size());
   auto offset = static_cast<u32>(frame_size());
-  locals_.emplace_back(local_id, name, type, offset, kind);
+  locals_.emplace_back(name, type, offset, kind);
 
   frame_size_ += type->size();
 

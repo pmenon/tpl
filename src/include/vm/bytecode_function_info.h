@@ -18,48 +18,48 @@ namespace vm {
 using LocalId = u16;
 using FunctionId = u16;
 
-/// LocalInfo represents any local variable allocated in a function including
-/// genuine local variable explicitly stated in the source, function parameters,
-/// and temporary variables required for expression evaluation.
+/// LocalInfo captures information about any local variable allocated in a
+/// function, including genuine local variables in the source, function
+/// parameters, and temporary variables required for expression evaluation.
 ///
 /// Locals have a fixed size, a static position (offset) in a function's
-/// execution frame, and a static type. The virtual machine ensures that a
-/// local variable's memory always has the correct alignment deemed by its type
-/// and the machine architecture.
+/// execution frame, and a fixed TPL type. A local variable's type also defines
+/// its alignment in a function's execution frame. The TPL virtual machine
+/// ensures that a local variable's memory has the correct alignment deemed by
+/// its type and the machine architecture.
 class LocalInfo {
  public:
   enum class Kind : u8 { Var, Parameter, Temporary };
 
-  LocalInfo(u32 index, std::string name, ast::Type *type, u32 offset, Kind kind)
+  LocalInfo(std::string name, ast::Type *type, u32 offset, Kind kind)
       : name_(std::move(name)),
         type_(type),
         offset_(offset),
-        index_(index),
         kind_(kind) {}
 
   /// Return the size (in bytes) of this local variable
-  /// \return The size in bytes
   u32 Size() const;
+
+  /// Return true if this local variable a parameter to a function
+  bool IsParameter() const { return kind_ == Kind::Parameter; }
 
   // -------------------------------------------------------
   // Accessors Only
   // -------------------------------------------------------
 
+  /// Return the name of this local variable
   const std::string &name() const { return name_; }
 
+  /// Return the TPL type of this local variable
   ast::Type *type() const { return type_; }
 
-  u32 id() const { return index_; }
-
+  /// Return the offset (in bytes) of this local in the function's stack frame
   u32 offset() const { return offset_; }
-
-  bool is_parameter() const { return kind_ == Kind::Parameter; }
 
  private:
   std::string name_;
   ast::Type *type_;
   u32 offset_;
-  u32 index_;
   Kind kind_;
 };
 
@@ -150,25 +150,25 @@ class FunctionInfo {
   /// Allocate a new local variable of the given type and name. This returns a
   /// LocalVar object with the Address addressing mode (i.e., a pointer to the
   /// variable).
-  /// @param type The TPL type of the variable
-  /// @param name The name of the variable
-  /// @return A pointer to the local variable encoded as a LocalVar
+  /// \param type The TPL type of the variable
+  /// \param name The name of the variable
+  /// \return A pointer to the local variable encoded as a LocalVar
   LocalVar NewLocal(ast::Type *type, const std::string &name);
 
   /// Allocate a new function parameter.
-  /// @param type The TPL type of the parameter
-  /// @param name The name of the parameter
-  /// @return A pointer to the local variable encoded as a LocalVar
+  /// \param type The TPL type of the parameter
+  /// \param name The name of the parameter
+  /// \return A pointer to the local variable encoded as a LocalVar
   LocalVar NewParameterLocal(ast::Type *type, const std::string &name);
 
   /// Allocate a temporary function variable
-  /// @param type The TPL type of the variable
-  /// @return A pointer to the local variable encoded as a LocalVar
+  /// \param type The TPL type of the variable
+  /// \return A pointer to the local variable encoded as a LocalVar
   LocalVar NewTempLocal(ast::Type *type);
 
   /// Lookup a local variable by name
-  /// @param name The name of the local variable
-  /// @return A pointer to the local variable encoded as a LocalVar
+  /// \param name The name of the local variable
+  /// \return A pointer to the local variable encoded as a LocalVar
   LocalVar LookupLocal(const std::string &name) const;
 
   /// Lookup a local's information by its offset in the function's exec. frame
@@ -177,7 +177,6 @@ class FunctionInfo {
   const LocalInfo *LookupLocalInfo(u32 offset) const;
 
   /// Return the ID of the return value for the function
-  /// @return
   LocalVar GetReturnValueLocal() const {
     return LocalVar(kRetVarOffset, LocalVar::AddressMode::Address);
   }
@@ -192,18 +191,24 @@ class FunctionInfo {
   // Accessors
   // -------------------------------------------------------
 
+  /// Return the unique ID of this function
   FunctionId id() const { return id_; }
 
+  /// Return the name of this function
   const std::string &name() const { return name_; }
 
+  /// Return the range of bytecode for this function in the bytecode module
   std::pair<std::size_t, std::size_t> bytecode_range() const {
     return bytecode_range_;
   }
 
+  /// Return a constant view of all the local variables in this function
   const std::vector<LocalInfo> &locals() const { return locals_; }
 
+  /// Return the size of the stack frame this function requires
   std::size_t frame_size() const { return frame_size_; }
 
+  /// Return the number of parameters to this function
   u32 num_params() const { return num_params_; }
 
  private:
