@@ -29,7 +29,7 @@ class MathUtil {
   /// Compute the next power of two greater than the input
   /// \param val The input
   /// \return The next power of two greater than \p val
-  static inline u64 NextPowerOf2(u64 val) { return llvm::NextPowerOf2(val); }
+  static u64 NextPowerOf2(u64 val) { return llvm::NextPowerOf2(val); }
 
   /// Count the number of zeroes from the most significant bit to the first 1 in
   /// the input number @ref val
@@ -37,7 +37,7 @@ class MathUtil {
   /// \param val The input number
   /// \return The number of leading zeros
   template <typename T>
-  static inline u64 CountLeadingZeros(T val) {
+  static u64 CountLeadingZeros(T val) {
     return llvm::countLeadingZeros(val);
   }
 

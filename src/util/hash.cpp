@@ -2,21 +2,23 @@
 
 #include <x86intrin.h>
 
+#include "util/macros.h"
+
 namespace tpl::util {
 
-uint32_t Hasher::Hash(const char *buf, uint64_t len, HashMethod method) {
+hash_t Hasher::Hash(const u8 *buf, uint64_t len, HashMethod method) {
   switch (method) {
     case HashMethod::Fnv1:
       return HashFnv1(buf, len);
     case HashMethod::Murmur3:
-      return HashMurmur(buf, len);
+      return HashMurmur3(buf, len);
     default:
-      return HashCrc(buf, len);
+      return HashCrc32(buf, len);
   }
 }
 
-uint32_t Hasher::HashFnv1(const char *buf, uint64_t len) {
-  uint32_t hash = 2166136261u;
+hash_t Hasher::HashFnv1(const u8 *buf, uint64_t len) {
+  hash_t hash = 2166136261u;
 
   for (uint64_t i = 0; i < len; i++) {
     hash ^= buf[i];
@@ -26,40 +28,46 @@ uint32_t Hasher::HashFnv1(const char *buf, uint64_t len) {
   return hash;
 }
 
-uint32_t Hasher::HashMurmur(const char *buf, uint64_t len) { return 0; }
+hash_t Hasher::HashMurmur3(const u8 *buf, uint64_t len) { return 0; }
 
-#define CRC32(op, crc, type, buf, len)                   \
-  do {                                                   \
-    for (; (len) >= sizeof(type);                        \
-         (len) -= sizeof(type), (buf) += sizeof(type)) { \
-      (crc) = op((crc), *(type *)buf);                   \
-    }                                                    \
-  } while (0)
+hash_t Hasher::HashCrc32(const u8 *buf, uint64_t len) {
+  // Thanks HyPer
+  auto hash_int = [](auto input, auto seed) {
+    u64 result1 = _mm_crc32_u64(seed, input);
+    u64 result2 = _mm_crc32_u64(0x04C11DB7, input);
+    return ((result2 << 32) | result1) * 0x2545F4914F6CDD1Dull;
+  };
 
-uint32_t Hasher::HashCrc(const char *buf, uint64_t len) {
-  static constexpr const auto kAlignSize = 0x08ul;
-  static constexpr const auto kAlignMask = (kAlignSize - 1);
-  static constexpr const uint32_t kSeed = 0x741b8cd7;
+  u64 hash = 0;
 
-  uint32_t crc = kSeed;
-
-  // Align the input to the word boundary
-  for (; (len > 0) && ((size_t)buf & kAlignMask); len--, buf++) {
-    crc = _mm_crc32_u8(crc, *(uint8_t *)buf);
+  // Process as many 8-byte chunks as possible
+  for (; len >= 8; buf += 8, len -= 8) {
+    hash = hash_int(*reinterpret_cast<const u64 *>(buf), hash);
   }
 
-  // Now greedily process 8-byte, 4-byte, and 2-byte chunks of the input,
-  // exhausting the tail byte-at-a-time
-#if defined(__x86_64__) || defined(_M_X64)
-  CRC32(_mm_crc32_u64, crc, uint64_t, buf, len);
-#endif
-  CRC32(_mm_crc32_u32, crc, uint32_t, buf, len);
-  CRC32(_mm_crc32_u16, crc, uint16_t, buf, len);
-  CRC32(_mm_crc32_u8, crc, uint8_t, buf, len);
+  // If there's at least a 4-byte chunk, process that
+  if (len >= 4) {
+    hash = hash_int(*reinterpret_cast<const u32 *>(buf), hash);
+    buf += 4;
+    len -= 4;
+  }
 
-  return crc;
+  // Process the tail
+  switch (len) {
+    case 3:
+      hash ^= (static_cast<u64>(buf[2])) << 16;
+      FALLTHROUGH;
+    case 2:
+      hash ^= (static_cast<u64>(buf[1])) << 8;
+      FALLTHROUGH;
+    case 1:
+      hash ^= buf[0];
+      FALLTHROUGH;
+    default:
+      break;
+  }
+
+  return hash;
 }
-
-#undef CRC32
 
 }  // namespace tpl::util

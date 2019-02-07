@@ -13,15 +13,15 @@ class Hasher {
  public:
   enum class HashMethod { Fnv1, Murmur3, Crc };
 
-  static u32 Hash(const char *buf, u64 len,
-                  HashMethod method = HashMethod::Crc);
+  static hash_t Hash(const u8 *buf, u64 len,
+                     HashMethod method = HashMethod::Crc);
 
  private:
-  static u32 HashFnv1(const char *buf, u64 len);
+  static hash_t HashFnv1(const u8 *buf, u64 len);
 
-  static u32 HashMurmur(const char *buf, u64 len);
+  static hash_t HashMurmur3(const u8 *buf, u64 len);
 
-  static u32 HashCrc(const char *buf, u64 len);
+  static hash_t HashCrc32(const u8 *buf, u64 len);
 };
 
 }  // namespace tpl::util

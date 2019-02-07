@@ -6,10 +6,13 @@
 
 #include "llvm/Support/ErrorHandling.h"
 
+#define CACHELINE_SIZE 64
+
 #define RESTRICT __restrict__
 #define UNUSED __attribute__((unused))
 #define ALWAYS_INLINE __attribute__((always_inline))
 #define NEVER_INLINE __attribute__((noinline))
+#define FALLTHROUGH LLVM_FALLTHROUGH
 
 #define DISALLOW_COPY(klazz)     \
   klazz(const klazz &) = delete; \
