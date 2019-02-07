@@ -312,12 +312,17 @@ ALWAYS_INLINE inline Vec8 operator+(const Vec8 &a, const Vec8 &b) {
   return _mm512_add_epi64(a, b);
 }
 
+ALWAYS_INLINE inline Vec8 &operator+=(Vec8 &a, const Vec8 &b) {
+  a = a + b;
+  return a;
+}
+
 ALWAYS_INLINE inline Vec8 operator-(const Vec8 &a, const Vec8 &b) {
   return _mm512_sub_epi64(a, b);
 }
 
-ALWAYS_INLINE inline Vec8 &operator+=(Vec8 &a, const Vec8 &b) {
-  a = a + b;
+ALWAYS_INLINE inline Vec8 &operator-=(Vec8 &a, const Vec8 &b) {
+  a = a - b;
   return a;
 }
 
@@ -325,28 +330,63 @@ ALWAYS_INLINE inline Vec8 operator&(const Vec8 &a, const Vec8 &b) {
   return _mm512_and_epi64(a, b);
 }
 
+ALWAYS_INLINE inline Vec8 &operator&=(Vec8 &a, const Vec8 &b) {
+  a = a & b;
+  return a;
+}
+
 ALWAYS_INLINE inline Vec8 operator|(const Vec8 &a, const Vec8 &b) {
   return _mm512_or_epi64(a, b);
+}
+
+ALWAYS_INLINE inline Vec8 &operator|=(Vec8 &a, const Vec8 &b) {
+  a = a | b;
+  return a;
 }
 
 ALWAYS_INLINE inline Vec8 operator^(const Vec8 &a, const Vec8 &b) {
   return _mm512_xor_epi64(a, b);
 }
 
+ALWAYS_INLINE inline Vec8 &operator^=(Vec8 &a, const Vec8 &b) {
+  a = a ^ b;
+  return a;
+}
+
 ALWAYS_INLINE inline Vec8 operator>>(const Vec8 &a, const u32 shift) {
   return _mm512_srli_epi64(a, shift);
+}
+
+ALWAYS_INLINE inline Vec8 &operator>>=(Vec8 &a, const u32 shift) {
+  a = a >> shift;
+  return a;
 }
 
 ALWAYS_INLINE inline Vec8 operator<<(const Vec8 &a, const u32 shift) {
   return _mm512_slli_epi64(a, shift);
 }
 
+ALWAYS_INLINE inline Vec8 &operator<<=(Vec8 &a, const u32 shift) {
+  a = a << shift;
+  return a;
+}
+
 ALWAYS_INLINE inline Vec8 operator>>(const Vec8 &a, const Vec8 &b) {
   return _mm512_srlv_epi64(a, b);
 }
 
+ALWAYS_INLINE inline Vec8 &operator>>=(Vec8 &a, const Vec8 &b) {
+  a = a >> b;
+  return a;
+}
+
 ALWAYS_INLINE inline Vec8 operator<<(const Vec8 &a, const Vec8 &b) {
   return _mm512_sllv_epi64(a, b);
+}
+
+ALWAYS_INLINE inline Vec8 &operator<<=(Vec8 &a, const Vec8 &b) {
+  a = a << b;
+  return a;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -395,12 +435,17 @@ ALWAYS_INLINE inline Vec16 operator+(const Vec16 &a, const Vec16 &b) {
   return _mm512_add_epi32(a, b);
 }
 
+ALWAYS_INLINE inline Vec16 &operator+=(Vec16 &a, const Vec16 &b) {
+  a = a + b;
+  return a;
+}
+
 ALWAYS_INLINE inline Vec16 operator-(const Vec16 &a, const Vec16 &b) {
   return _mm512_sub_epi32(a, b);
 }
 
-ALWAYS_INLINE inline Vec16 &operator+=(Vec16 &a, const Vec16 &b) {
-  a = a + b;
+ALWAYS_INLINE inline Vec16 &operator-=(Vec16 &a, const Vec16 &b) {
+  a = a - b;
   return a;
 }
 
@@ -408,28 +453,63 @@ ALWAYS_INLINE inline Vec16 operator&(const Vec16 &a, const Vec16 &b) {
   return _mm512_and_epi32(a, b);
 }
 
+ALWAYS_INLINE inline Vec16 &operator&=(Vec16 &a, const Vec16 &b) {
+  a = a & b;
+  return a;
+}
+
 ALWAYS_INLINE inline Vec16 operator|(const Vec16 &a, const Vec16 &b) {
   return _mm512_or_epi32(a, b);
+}
+
+ALWAYS_INLINE inline Vec16 &operator|=(Vec16 &a, const Vec16 &b) {
+  a = a | b;
+  return a;
 }
 
 ALWAYS_INLINE inline Vec16 operator^(const Vec16 &a, const Vec16 &b) {
   return _mm512_xor_epi32(a, b);
 }
 
+ALWAYS_INLINE inline Vec16 &operator^=(Vec16 &a, const Vec16 &b) {
+  a = a ^ b;
+  return a;
+}
+
 ALWAYS_INLINE inline Vec16 operator>>(const Vec16 &a, const u32 shift) {
   return _mm512_srli_epi32(a, shift);
+}
+
+ALWAYS_INLINE inline Vec16 &operator>>=(Vec16 &a, const u32 shift) {
+  a = a >> shift;
+  return a;
 }
 
 ALWAYS_INLINE inline Vec16 operator<<(const Vec16 &a, const u32 shift) {
   return _mm512_slli_epi32(a, shift);
 }
 
+ALWAYS_INLINE inline Vec16 &operator<<=(Vec16 &a, const u32 shift) {
+  a = a << shift;
+  return a;
+}
+
 ALWAYS_INLINE inline Vec16 operator>>(const Vec16 &a, const Vec16 &b) {
   return _mm512_srlv_epi32(a, b);
 }
 
+ALWAYS_INLINE inline Vec16 &operator>>=(Vec16 &a, const Vec16 &b) {
+  a = a >> b;
+  return a;
+}
+
 ALWAYS_INLINE inline Vec16 operator<<(const Vec16 &a, const Vec16 &b) {
   return _mm512_sllv_epi32(a, b);
+}
+
+ALWAYS_INLINE inline Vec16 &operator<<=(Vec16 &a, const Vec16 &b) {
+  a = a << b;
+  return a;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -67,6 +67,85 @@ TEST_F(VectorUtilTest, AccessTest) {
   }
 }
 
+TEST_F(VectorUtilTest, ArithmeticTest) {
+  // Addition
+  {
+    simd::Vec8 v(1, 2, 3, 4, 5, 6, 7, 8);
+    simd::Vec8 add = v + simd::Vec8(10);
+    for (i32 i = 0; i < 8; i++) {
+      EXPECT_EQ(10 + (i + 1), add[i]);
+    }
+
+    // Update the original vector
+    v += simd::Vec8(10);
+    for (i32 i = 0; i < 8; i++) {
+      EXPECT_EQ(10 + (i + 1), v[i]);
+    }
+  }
+
+  // Subtraction
+  {
+    simd::Vec8 v(11, 12, 13, 14, 15, 16, 17, 18);
+    simd::Vec8 sub = v - simd::Vec8(10);
+    for (i32 i = 0; i < 8; i++) {
+      EXPECT_EQ(i + 1, sub[i]);
+    }
+
+    // Update the original vector
+    v -= simd::Vec8(10);
+    for (i32 i = 0; i < 8; i++) {
+      EXPECT_EQ(i + 1, v[i]);
+    }
+  }
+
+  // Multiplication
+  {
+    simd::Vec8 v(1, 2, 3, 4, 5, 6, 7, 8);
+    simd::Vec8 add = v * simd::Vec8(10);
+    for (i32 i = 0; i < 8; i++) {
+      EXPECT_EQ(10 * (i + 1), add[i]);
+    }
+
+    // Update the original vector
+    v *= simd::Vec8(10);
+    for (i32 i = 0; i < 8; i++) {
+      EXPECT_EQ(10 * (i + 1), v[i]);
+    }
+  }
+}
+
+TEST_F(VectorUtilTest, BitwiseOperationsTest) {
+  // Left shift
+  {
+    simd::Vec8 v(1, 2, 3, 4, 5, 6, 7, 8);
+    simd::Vec8 left_shift = v << 2;
+    for (i32 i = 0; i < 8; i++) {
+      EXPECT_EQ(v[i] * 4, left_shift[i]);
+    }
+
+    // Update the original vector
+    v <<= 2;
+    for (i32 i = 0; i < 8; i++) {
+      EXPECT_EQ(left_shift[i], v[i]);
+    }
+  }
+
+  // Right shift
+  {
+    simd::Vec8 v(4, 8, 16, 32, 64, 128, 256, 512);
+    simd::Vec8 right_shift = v >> 1;
+    for (i32 i = 0; i < 8; i++) {
+      EXPECT_EQ(v[i] / 2, right_shift[i]);
+    }
+
+    // Update the original vector
+    v >>= 1;
+    for (i32 i = 0; i < 8; i++) {
+      EXPECT_EQ(right_shift[i], v[i]);
+    }
+  }
+}
+
 TEST_F(VectorUtilTest, ComparisonsTest) {
   // Equality
   {
