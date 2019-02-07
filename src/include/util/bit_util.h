@@ -60,10 +60,18 @@ class BitUtil {
     auto num_bytes = sizeof(u32) * Num32BitWordsFor(size);
     TPL_MEMSET(bits, 0, num_bytes);
   }
+
+  /// Count the number of set bits in the given value
+  template <typename T>
+  static u64 CountBits(T val) { return llvm::countPopulation(val); }
 };
 
 class BitVector {
  public:
+  // Create an uninitialized bit vector. Callers **must** use Init() before
+  // interacting with the BitVector
+  BitVector() : owned_bits_(nullptr), bits_(nullptr), num_bits_(0) {}
+
   // Create a new BitVector with the specified number of bits
   explicit BitVector(u32 num_bits)
       : owned_bits_(
@@ -82,6 +90,12 @@ class BitVector {
   // Provide bit vector access to the given bits, not taking ownership of them
   BitVector(u32 unowned_bits[], u32 num_bits)
       : owned_bits_(nullptr), bits_(unowned_bits), num_bits_(num_bits) {}
+
+  void Init(u32 num_bits) {
+    owned_bits_ = std::make_unique<u32[]>(BitUtil::Num32BitWordsFor(num_bits));
+    bits_ = owned_bits_.get();
+    num_bits_ = num_bits;
+  }
 
   bool Test(u32 idx) const {
     TPL_ASSERT(idx < num_bits(), "Index out of range");
