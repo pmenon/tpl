@@ -56,7 +56,8 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
   // The validation set. We use this to check false negatives.
   std::unordered_set<u32> check(insertions.begin(), insertions.end());
 
-  runtime::BloomFilter filter(num_filter_elems);
+  util::Region tmp("filter");
+  runtime::BloomFilter filter(&tmp, num_filter_elems);
   for (const auto elem : insertions) {
     filter.Add(
         util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
@@ -68,11 +69,11 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
         util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
   }
 
-  double bits_per_elem = (double)filter.GetNumBits() / num_filter_elems;
-  double bit_set_prob = (double)filter.GetTotalBitsSet() / filter.GetNumBits();
+  double bits_per_elem = (double) filter.GetSizeInBits() / num_filter_elems;
+  double bit_set_prob = (double)filter.GetTotalBitsSet() / filter.GetSizeInBits();
   LOG_INFO(
       "Filter: {} elements, {} bits, {} bits/element, {} bits set (p={:.2f})",
-      num_filter_elems, filter.GetNumBits(), bits_per_elem,
+      num_filter_elems, filter.GetSizeInBits(), bits_per_elem,
       filter.GetTotalBitsSet(), bit_set_prob);
 
   for (auto prob_success :

@@ -16,6 +16,10 @@ class TplTest : public ::testing::Test {
     // shutdown loggers
     spdlog::shutdown();
   }
+
+  const char *GetTestName() const {
+    return ::testing::UnitTest::GetInstance()->current_test_info()->name();
+  }
 };
 
 template <typename F>

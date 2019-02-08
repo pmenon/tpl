@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "util/common.h"
 #include "util/macros.h"
 #include "util/math_util.h"

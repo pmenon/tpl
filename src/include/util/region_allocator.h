@@ -12,37 +12,34 @@ namespace tpl::util {
  * @tparam T The types of elements this allocator handles
  */
 template <typename T>
-class StlRegionAllocator {
+class RegionAllocator {
  public:
   using value_type = T;
 
-  explicit StlRegionAllocator(Region *region) noexcept : region_(region) {}
+  explicit RegionAllocator(Region *region) noexcept : region_(region) {}
 
-  StlRegionAllocator(const StlRegionAllocator &other) noexcept
+  RegionAllocator(const RegionAllocator &other) noexcept
       : region_(other.region_) {}
 
   template <typename U>
-  explicit StlRegionAllocator(const StlRegionAllocator<U> &other) noexcept
+  explicit RegionAllocator(const RegionAllocator<U> &other) noexcept
       : region_(other.region_) {}
 
   template <typename U>
-  friend class StlRegionAllocator;
+  friend class RegionAllocator;
 
   T *allocate(std::size_t n) { return region_->AllocateArray<T>(n); }
 
-  void deallocate(T *ptr, std::size_t n) {
-    region_->Deallocate(reinterpret_cast<const void *>(ptr), n);
+  // No-op
+  void deallocate(T *ptr, std::size_t n) {}
+
+  bool operator==(const RegionAllocator &other) const {
+    return region_ == other.region_;
   }
 
-  bool operator==(const StlRegionAllocator &other) const {
-    return region() == other.region();
-  }
-
-  bool operator!=(const StlRegionAllocator &other) const {
+  bool operator!=(const RegionAllocator &other) const {
     return !(this == other);
   }
-
-  Region *region() { return region_; }
 
  private:
   Region *region_;

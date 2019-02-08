@@ -32,7 +32,7 @@ void *Region::Allocate(std::size_t size, std::size_t alignment) {
 
   // The current chunk doesn't have enough room, expand the region with at least
   // 'size' more bytes.
-  Expand(size);
+  Expand(size + alignment);
 
   TPL_ASSERT(position_ < end_, "Region chunk's start position higher than end");
 
