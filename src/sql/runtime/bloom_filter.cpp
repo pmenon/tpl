@@ -1,5 +1,7 @@
 #include "sql/runtime/bloom_filter.h"
 
+#include "util/simd.h"
+
 namespace tpl::sql::runtime {
 
 BloomFilter::BloomFilter()
@@ -34,6 +36,38 @@ void BloomFilter::Init(util::Region *region, u32 num_elems) {
   TPL_MEMSET(blocks_, 0, num_bytes);
 
   block_mask_ = static_cast<u32>(num_blocks - 1);
+}
+
+void BloomFilter::Add(hash_t hash) {
+  u32 block_idx = static_cast<u32>(hash & block_mask());
+
+  auto block = util::simd::Vec8().Load(blocks_[block_idx]);
+  auto alt_hash = util::simd::Vec8(hash >> 32);
+  auto salts = util::simd::Vec8().Load(kSalts);
+
+  alt_hash *= salts;
+  alt_hash >>= 27;
+
+  auto masks = util::simd::Vec8(1) << alt_hash;
+
+  block |= masks;
+
+  block.StoreAligned(blocks_[block_idx]);
+}
+
+bool BloomFilter::Contains(hash_t hash) const {
+  u32 block_idx = static_cast<u32>(hash & block_mask());
+
+  auto block = util::simd::Vec8().Load(blocks_[block_idx]);
+  auto alt_hash = util::simd::Vec8(hash >> 32);
+  auto salts = util::simd::Vec8().Load(kSalts);
+
+  alt_hash *= salts;
+  alt_hash >>= 27;
+
+  auto masks = util::simd::Vec8(1) << alt_hash;
+
+  return block.AllBitsAtPositionsSet(masks);
 }
 
 u64 BloomFilter::GetTotalBitsSet() const {

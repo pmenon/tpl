@@ -10,9 +10,9 @@ namespace tpl::sql::runtime {
 
 class BloomFilter {
   // The set of salt values we use to produce alternative hash values
-  static constexpr const u32 kSalts[8] = {0x47b6137bU, 0x44974d91U, 0x8824ad5bU,
-                                          0xa2b7289dU, 0x705495c7U, 0x2df1424bU,
-                                          0x9efc4947U, 0x5c6bfb31U};
+  alignas(CACHELINE_SIZE) static constexpr const u32 kSalts[8] = {
+      0x47b6137bU, 0x44974d91U, 0x8824ad5bU, 0xa2b7289dU,
+      0x705495c7U, 0x2df1424bU, 0x9efc4947U, 0x5c6bfb31U};
 
   static constexpr const u32 kBitsPerElement = 8;
 
@@ -37,32 +37,11 @@ class BloomFilter {
   void Init(util::Region *region, u32 num_elems);
 
   /// Add an element to the bloom filter
-  void Add(hash_t hash) {
-    u32 block_idx = static_cast<u32>(hash & block_mask());
-    Block &block = blocks_[block_idx];
-    u32 alt_hash = static_cast<u32>(hash >> 32);
-    for (u32 i = 0; i < 8; i++) {
-      u32 bit_idx = (alt_hash * kSalts[i]) >> 27;
-      util::BitUtil::Set(&block[i], bit_idx);
-    }
-  }
+  void Add(hash_t);
 
   /// Check if the given element is contained in the filter
   /// \return True if the hash may be in the filter; false if definitely not
-  bool Contains(hash_t hash) const {
-    u32 alt_hash = static_cast<u32>(hash >> 32);
-    u32 block_idx = static_cast<u32>(hash & block_mask());
-
-    Block &block = blocks_[block_idx];
-    for (u32 i = 0; i < 8; i++) {
-      u32 bit_idx = (alt_hash * kSalts[i]) >> 27;
-      if (!util::BitUtil::Test(&block[i], bit_idx)) {
-        return false;
-      }
-    }
-
-    return true;
-  }
+  bool Contains(hash_t hash) const;
 
   /// Return the size of this Bloom Filter in bytes
   u64 GetSizeInBytes() const { return sizeof(Block) * num_blocks(); }
@@ -98,5 +77,36 @@ class BloomFilter {
 
   util::RegionVector<hash_t> lazily_added_hashes_;
 };
+
+#if 0
+// ---------------------------------------------------------
+// Implementation below
+// ---------------------------------------------------------
+
+inline void BloomFilter::Add_Slow(hash_t hash) {
+  u32 block_idx = static_cast<u32>(hash & block_mask());
+  Block &block = blocks_[block_idx];
+  u32 alt_hash = static_cast<u32>(hash >> 32);
+  for (u32 i = 0; i < 8; i++) {
+    u32 bit_idx = (alt_hash * kSalts[i]) >> 27;
+    util::BitUtil::Set(&block[i], bit_idx);
+  }
+}
+
+inline bool BloomFilter::Contains_Slow(hash_t hash) const {
+  u32 alt_hash = static_cast<u32>(hash >> 32);
+  u32 block_idx = static_cast<u32>(hash & block_mask());
+
+  Block &block = blocks_[block_idx];
+  for (u32 i = 0; i < 8; i++) {
+    u32 bit_idx = (alt_hash * kSalts[i]) >> 27;
+    if (!util::BitUtil::Test(&block[i], bit_idx)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+#endif
 
 }  // namespace tpl::sql::runtime

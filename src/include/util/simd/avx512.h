@@ -51,6 +51,10 @@ class Vec8 : public Vec512b {
   template <typename T>
   Vec8 &Gather(const T *ptr, const Vec8 &pos);
 
+  /// Given a vector of 8 64-bit masks, return true if all corresponding bits in
+  /// this vector are set
+  bool AllBitsAtPositionsSet(const Vec8 &mask) const;
+
   ALWAYS_INLINE void Store(i64 *ptr) const {
     Vec512b::Store(reinterpret_cast<void *>(ptr));
   }
@@ -85,6 +89,10 @@ class Vec16 : public Vec512b {
 
   template <typename T>
   Vec16 &Gather(const T *ptr, const Vec16 &pos);
+
+  /// Given a vector of 16 32-bit masks, return true if all corresponding bits
+  /// in this vector are set
+  bool AllBitsAtPositionsSet(const Vec16 &mask) const;
 
   ALWAYS_INLINE void Store(i32 *ptr) const {
     Vec512b::Store(reinterpret_cast<void *>(ptr));
@@ -168,7 +176,7 @@ class Vec16Mask {
 
 ////////////////////////////////////////////////////////////////////////////////
 ///
-/// Vec8
+/// Vec512
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -220,6 +228,11 @@ ALWAYS_INLINE inline Vec8 &Vec8::Gather(const T *ptr, const Vec8 &pos) {
                            ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
 #endif
   return *this;
+}
+
+ALWAYS_INLINE inline bool Vec8::AllBitsAtPositionsSet(
+    const Vec8 &mask) const {
+  return _mm512_test_epi64_mask(reg(), mask) == 1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -288,6 +301,11 @@ ALWAYS_INLINE inline Vec16 &Vec16::Gather<i32>(const i32 *ptr,
                                                const Vec16 &pos) {
   reg_ = _mm512_i32gather_epi32(pos, ptr, 4);
   return *this;
+}
+
+ALWAYS_INLINE inline bool Vec16::AllBitsAtPositionsSet(
+    const Vec16 &mask) const {
+  return _mm512_test_epi32_mask(reg(), mask) == 1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

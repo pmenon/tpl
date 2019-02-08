@@ -35,6 +35,12 @@ class Vec256b {
     _mm256_store_si256(reinterpret_cast<__m256i *>(ptr), reg());
   }
 
+  /// Given a 256b mask, return true if all corresponding bits in this vector
+  /// are set.
+  bool AllBitsAtPositionsSet(const Vec256b &mask) const {
+    return _mm256_testc_si256(reg(), mask) == 1;
+  }
+
  protected:
   const __m256i &reg() const { return reg_; }
 
