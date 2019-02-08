@@ -348,6 +348,15 @@ ALWAYS_INLINE inline Vec8 &operator-=(Vec8 &a, const Vec8 &b) {
   return a;
 }
 
+ALWAYS_INLINE inline Vec8 operator*(const Vec8 &a, const Vec8 &b) {
+  return _mm512_mullo_epi64(a, b);
+}
+
+ALWAYS_INLINE inline Vec8 &operator*=(Vec8 &a, const Vec8 &b) {
+  a = a * b;
+  return a;
+}
+
 ALWAYS_INLINE inline Vec8 operator&(const Vec8 &a, const Vec8 &b) {
   return _mm512_and_epi64(a, b);
 }
