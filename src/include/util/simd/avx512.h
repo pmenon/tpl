@@ -53,6 +53,8 @@ class Vec8 : public Vec512b {
     reg_ = _mm512_setr_epi64(val1, val2, val3, val4, val5, val6, val7, val8);
   }
 
+  static constexpr u32 Size() { return 8; }
+
   template <typename T>
   Vec8 &Load(const T *ptr);
 
@@ -67,16 +69,14 @@ class Vec8 : public Vec512b {
     Vec512b::StoreUnaligned(reinterpret_cast<void *>(ptr));
   }
 
-  ALWAYS_INLINE i64 Extract(u32 index) const {
+  i64 Extract(u32 index) const {
     TPL_ASSERT(index < 8, "Out-of-bounds mask element access");
     alignas(64) i64 x[Size()];
     Store(x);
     return x[index & 7];
   }
 
-  ALWAYS_INLINE i64 operator[](u32 index) const { return Extract(index); }
-
-  ALWAYS_INLINE static constexpr u32 Size() { return 8; }
+  i64 operator[](u32 index) const { return Extract(index); }
 };
 
 // ---------------------------------------------------------
@@ -96,6 +96,8 @@ class Vec16 : public Vec512b {
                           val10, val11, val12, val13, val14, val15, val16);
   }
 
+  ALWAYS_INLINE static constexpr int Size() { return 16; }
+
   template <typename T>
   Vec16 &Load(const T *ptr);
 
@@ -110,15 +112,13 @@ class Vec16 : public Vec512b {
     Vec512b::StoreUnaligned(reinterpret_cast<void *>(ptr));
   }
 
-  ALWAYS_INLINE i32 Extract(u32 index) const {
+  i32 Extract(u32 index) const {
     alignas(64) i32 x[Size()];
     Store(x);
     return x[index & 15];
   }
 
-  ALWAYS_INLINE i32 operator[](u32 index) const { return Extract(index); }
-
-  ALWAYS_INLINE static constexpr int Size() { return 16; }
+  i32 operator[](u32 index) const { return Extract(index); }
 };
 
 // ---------------------------------------------------------
@@ -209,6 +209,8 @@ class Vec8Mask {
     return __builtin_popcountll(mask_);
   }
 
+  static constexpr int Size() { return 8; }
+
   ALWAYS_INLINE u32 ToPositions(u32 *positions, const Vec8 &pos) const {
     __m256i pos_comp = _mm512_cvtepi64_epi32(pos);
     _mm256_mask_compressstoreu_epi32(positions, mask_, pos_comp);
@@ -222,8 +224,6 @@ class Vec8Mask {
   ALWAYS_INLINE bool operator[](u32 index) const { return Extract(index); }
 
   ALWAYS_INLINE operator __mmask8() const { return mask_; }
-
-  ALWAYS_INLINE static constexpr int Size() { return 8; }
 
  private:
   __mmask8 mask_;
@@ -278,6 +278,8 @@ class Vec16Mask {
   Vec16Mask() = default;
   Vec16Mask(const __mmask16 &mask) : mask_(mask) {}
 
+  static constexpr int Size() { return 16; }
+
   ALWAYS_INLINE u32 ToPositions(u32 *positions, u32 offset) const {
     __m512i sequence =
         _mm512_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
@@ -291,15 +293,13 @@ class Vec16Mask {
     return __builtin_popcountll(mask_);
   }
 
-  ALWAYS_INLINE bool Extract(u32 index) const {
+  bool Extract(u32 index) const {
     return (static_cast<u32>(mask_) >> index) & 1;
   }
 
-  ALWAYS_INLINE bool operator[](u32 index) const { return Extract(index); }
+  bool operator[](u32 index) const { return Extract(index); }
 
-  ALWAYS_INLINE operator __mmask16() const { return mask_; }
-
-  ALWAYS_INLINE static constexpr int Size() { return 16; }
+  operator __mmask16() const { return mask_; }
 
  private:
   __mmask16 mask_;

@@ -64,6 +64,9 @@ class Vec4 : public Vec256b {
     reg_ = _mm256_setr_epi64x(val1, val2, val3, val4);
   }
 
+  /// Return the number of elements that can be stored in this vector
+  static constexpr u32 Size() { return 4; }
+
   /// Load four 64-bit values stored contiguously from the unaligned input
   /// pointer. The underlying data type of the array \p ptr can be either 32-bit
   /// or 64-bit integers. Up-casting is performed when appropriate.
@@ -80,18 +83,15 @@ class Vec4 : public Vec256b {
     Vec256b::Store(reinterpret_cast<void *>(ptr));
   }
 
-  /// Return the number of elements that can be stored in this vector
-  static constexpr u32 Size() { return 4; }
-
   /// Extract the integer at the given index from this vector
-  ALWAYS_INLINE i64 Extract(u32 index) const {
+  i64 Extract(u32 index) const {
     alignas(32) i64 x[Size()];
     Store(x);
     return x[index & 3];
   }
 
   /// Extract the integer at the given index from this vector
-  ALWAYS_INLINE i64 operator[](u32 index) const { return Extract(index); }
+  i64 operator[](u32 index) const { return Extract(index); }
 };
 
 // ---------------------------------------------------------
@@ -177,16 +177,14 @@ class Vec8 : public Vec256b {
   /// Return the number of elements that can be stored in this vector
   static constexpr u32 Size() { return 8; }
 
-  ALWAYS_INLINE inline i32 Extract(u32 index) const {
+  ALWAYS_INLINE i32 Extract(u32 index) const {
     TPL_ASSERT(index < 8, "Out-of-bounds mask element access");
     alignas(32) i32 x[Size()];
     Store(x);
     return x[index & 7];
   }
 
-  ALWAYS_INLINE inline i32 operator[](u32 index) const {
-    return Extract(index);
-  }
+  ALWAYS_INLINE i32 operator[](u32 index) const { return Extract(index); }
 };
 
 // ---------------------------------------------------------
@@ -287,10 +285,10 @@ class Vec8Mask : public Vec8 {
   Vec8Mask(const __m256i &reg) : Vec8(reg) {}
 
   /// Extract the value of the bit at index \p index in this mask
-  ALWAYS_INLINE bool Extract(u32 idx) const { return Vec8::Extract(idx) != 0; }
+  bool Extract(u32 idx) const { return Vec8::Extract(idx) != 0; }
 
   /// Extract the value of the bit at index \p index in this mask
-  ALWAYS_INLINE bool operator[](u32 idx) const { return Extract(idx); }
+  bool operator[](u32 idx) const { return Extract(idx); }
 
   u32 ToPositions(u32 *positions, u32 offset) const;
 
@@ -336,15 +334,9 @@ class Vec4Mask : public Vec4 {
   Vec4Mask() = default;
   Vec4Mask(const __m256i &reg) : Vec4(reg) {}
 
-  ALWAYS_INLINE inline i32 Extract(u32 index) const {
-    TPL_ASSERT(index < 4, "Out-of-bounds mask element access");
-    return Vec4::Extract(index) != 0;
-  }
+  i32 Extract(u32 index) const { return Vec4::Extract(index) != 0; }
 
-  ALWAYS_INLINE inline i32 operator[](u32 index) const {
-    TPL_ASSERT(index < 4, "Out-of-bounds mask element access");
-    return Extract(index);
-  }
+  i32 operator[](u32 index) const { return Extract(index); }
 
   ALWAYS_INLINE inline u32 ToPositions(u32 *positions, u32 offset) const {
     i32 mask = _mm256_movemask_pd(_mm256_castsi256_pd(reg()));
