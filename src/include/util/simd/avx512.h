@@ -43,6 +43,7 @@ class Vec512b {
 // Vec8 Definition
 // ---------------------------------------------------------
 
+/// A vector of eight 64-bit values
 class Vec8 : public Vec512b {
  public:
   Vec8() = default;
@@ -61,13 +62,20 @@ class Vec8 : public Vec512b {
   template <typename T>
   Vec8 &Gather(const T *ptr, const Vec8 &pos);
 
-  /// Given a vector of 8 64-bit masks, return true if all corresponding bits in
-  /// this vector are set
-  bool AllBitsAtPositionsSet(const Vec8 &mask) const;
+  void Store(i8 *arr) const;
+  void Store(i16 *arr) const;
+  void Store(i32 *arr) const;
+  void Store(i64 *arr) const;
 
-  ALWAYS_INLINE void Store(i64 *ptr) const {
-    Vec512b::StoreUnaligned(reinterpret_cast<void *>(ptr));
+  template <typename T>
+  typename std::enable_if_t<
+      std::conjunction_v<std::is_integral<T>, std::is_unsigned<T>>>
+  Store(T *arr) const {
+    using SignedType = std::make_signed_t<T>;
+    Store(reinterpret_cast<SignedType *>(arr));
   }
+
+  bool AllBitsAtPositionsSet(const Vec8 &mask) const;
 
   i64 Extract(u32 index) const {
     TPL_ASSERT(index < 8, "Out-of-bounds mask element access");
@@ -78,6 +86,65 @@ class Vec8 : public Vec512b {
 
   i64 operator[](u32 index) const { return Extract(index); }
 };
+
+// ---------------------------------------------------------
+// Vec8 Implementation
+// ---------------------------------------------------------
+
+template <typename T>
+ALWAYS_INLINE inline Vec8 &Vec8::Load(const T *ptr) {
+  using signed_t = std::make_signed_t<T>;
+  return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
+}
+
+template <>
+ALWAYS_INLINE inline Vec8 &Vec8::Load<i32>(const i32 *ptr) {
+  auto tmp = _mm256_load_si256(reinterpret_cast<const __m256i *>(ptr));
+  reg_ = _mm512_cvtepi32_epi64(tmp);
+  return *this;
+}
+
+template <>
+ALWAYS_INLINE inline Vec8 &Vec8::Load<i64>(const i64 *ptr) {
+  reg_ = _mm512_loadu_si512((const __m512i *)ptr);
+  return *this;
+}
+
+template <typename T>
+ALWAYS_INLINE inline Vec8 &Vec8::Gather(const T *ptr, const Vec8 &pos) {
+#if USE_GATHER
+  reg_ = _mm512_i64gather_epi64(pos, ptr, 8);
+#else
+  alignas(64) i64 x[Size()];
+  pos.Store(x);
+  reg_ = _mm512_setr_epi64(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
+                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
+#endif
+  return *this;
+}
+
+ALWAYS_INLINE inline void Vec8::Store(i8 *arr) const {
+  const __mmask8 all(~(u8)0);
+  _mm512_mask_cvtepi64_storeu_epi8(reinterpret_cast<void *>(arr), all, reg());
+}
+
+ALWAYS_INLINE inline void Vec8::Store(i16 *arr) const {
+  const __mmask8 all(~(u8)0);
+  _mm512_mask_cvtepi64_storeu_epi16(reinterpret_cast<void *>(arr), all, reg());
+}
+
+ALWAYS_INLINE inline void Vec8::Store(i32 *arr) const {
+  const __mmask8 all(~(u8)0);
+  _mm512_mask_cvtepi64_storeu_epi32(reinterpret_cast<void *>(arr), all, reg());
+}
+
+ALWAYS_INLINE inline void Vec8::Store(i64 *arr) const {
+  Vec512b::StoreUnaligned(reinterpret_cast<void *>(arr));
+}
+
+ALWAYS_INLINE inline bool Vec8::AllBitsAtPositionsSet(const Vec8 &mask) const {
+  return _mm512_test_epi64_mask(reg(), mask) == 1;
+}
 
 // ---------------------------------------------------------
 // Vec16 Definition
@@ -104,13 +171,21 @@ class Vec16 : public Vec512b {
   template <typename T>
   Vec16 &Gather(const T *ptr, const Vec16 &pos);
 
+  void Store(i8 *arr) const;
+  void Store(i16 *arr) const;
+  void Store(i32 *arr) const;
+
+  template <typename T>
+  typename std::enable_if_t<
+      std::conjunction_v<std::is_integral<T>, std::is_unsigned<T>>>
+  Store(T *arr) const {
+    using SignedType = std::make_signed_t<T>;
+    Store(reinterpret_cast<SignedType *>(arr));
+  }
+
   /// Given a vector of 16 32-bit masks, return true if all corresponding bits
   /// in this vector are set
   bool AllBitsAtPositionsSet(const Vec16 &mask) const;
-
-  ALWAYS_INLINE void Store(i32 *ptr) const {
-    Vec512b::StoreUnaligned(reinterpret_cast<void *>(ptr));
-  }
 
   i32 Extract(u32 index) const {
     alignas(64) i32 x[Size()];
@@ -187,6 +262,20 @@ ALWAYS_INLINE inline Vec16 &Vec16::Gather<i32>(const i32 *ptr,
   return *this;
 }
 
+ALWAYS_INLINE inline void Vec16::Store(i8 *arr) const {
+  const __mmask16 all(~(u16)0);
+  _mm512_mask_cvtepi32_storeu_epi8(reinterpret_cast<void *>(arr), all, reg());
+}
+
+ALWAYS_INLINE inline void Vec16::Store(i16 *arr) const {
+  const __mmask16 all(~(u16)0);
+  _mm512_mask_cvtepi32_storeu_epi16(reinterpret_cast<void *>(arr), all, reg());
+}
+
+ALWAYS_INLINE inline void Vec16::Store(i32 *arr) const {
+  Vec512b::StoreUnaligned(reinterpret_cast<void *>(arr));
+}
+
 ALWAYS_INLINE inline bool Vec16::AllBitsAtPositionsSet(
     const Vec16 &mask) const {
   return _mm512_test_epi32_mask(reg(), mask) == 1;
@@ -228,46 +317,6 @@ class Vec8Mask {
  private:
   __mmask8 mask_;
 };
-
-// ---------------------------------------------------------
-// Vec8 Implementation
-// ---------------------------------------------------------
-
-template <typename T>
-ALWAYS_INLINE inline Vec8 &Vec8::Load(const T *ptr) {
-  using signed_t = std::make_signed_t<T>;
-  return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
-}
-
-template <>
-ALWAYS_INLINE inline Vec8 &Vec8::Load<i32>(const i32 *ptr) {
-  auto tmp = _mm256_load_si256(reinterpret_cast<const __m256i *>(ptr));
-  reg_ = _mm512_cvtepi32_epi64(tmp);
-  return *this;
-}
-
-template <>
-ALWAYS_INLINE inline Vec8 &Vec8::Load<i64>(const i64 *ptr) {
-  reg_ = _mm512_loadu_si512((const __m512i *)ptr);
-  return *this;
-}
-
-template <typename T>
-ALWAYS_INLINE inline Vec8 &Vec8::Gather(const T *ptr, const Vec8 &pos) {
-#if USE_GATHER
-  reg_ = _mm512_i64gather_epi64(pos, ptr, 8);
-#else
-  alignas(64) i64 x[Size()];
-  pos.Store(x);
-  reg_ = _mm512_setr_epi64(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
-                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
-#endif
-  return *this;
-}
-
-ALWAYS_INLINE inline bool Vec8::AllBitsAtPositionsSet(const Vec8 &mask) const {
-  return _mm512_test_epi64_mask(reg(), mask) == 1;
-}
 
 // ---------------------------------------------------------
 // Vec16Mask Definition

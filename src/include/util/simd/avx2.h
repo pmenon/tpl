@@ -78,9 +78,16 @@ class Vec4 : public Vec256b {
   template <typename T>
   Vec4 &Gather(const T *ptr, const Vec4 &pos);
 
+  void Store(i32 *arr) const;
+  void Store(i64 *arr) const;
+
   /// Store the contents of this vector contiguously into the input array \p ptr
-  ALWAYS_INLINE void Store(i64 *ptr) const {
-    Vec256b::Store(reinterpret_cast<void *>(ptr));
+  template <typename T>
+  typename std::enable_if_t<
+      std::conjunction_v<std::is_integral<T>, std::is_unsigned<T>>>
+  Store(T *arr) const {
+    using SignedType = std::make_signed_t<T>;
+    Store(reinterpret_cast<SignedType *>(arr));
   }
 
   /// Extract the integer at the given index from this vector
@@ -138,6 +145,17 @@ ALWAYS_INLINE inline Vec4 &Vec4::Gather<i64>(const i64 *ptr, const Vec4 &pos) {
   return *this;
 }
 
+// Truncate the four 64-bit values in this vector and store them into the first
+// four elements of the provided array
+ALWAYS_INLINE inline void Vec4::Store(i32 *arr) const {
+  auto truncated = _mm256_cvtepi64_epi32(reg());
+  _mm_store_si128(reinterpret_cast<__m128i *>(arr), truncated);
+}
+
+ALWAYS_INLINE inline void Vec4::Store(i64 *arr) const {
+  Vec256b::Store(reinterpret_cast<void *>(arr));
+}
+
 // ---------------------------------------------------------
 // Vec8 Definition
 // ---------------------------------------------------------
@@ -168,10 +186,15 @@ class Vec8 : public Vec256b {
   template <typename T>
   Vec8 &Gather(const T *ptr, const Vec8 &pos);
 
+  void Store(i32 *arr) const;
+
   /// Store the contents of this vector contiguously into the input array \p ptr
-  /// \param ptr The array to write into
-  ALWAYS_INLINE void Store(i32 *ptr) const {
-    Vec256b::Store(reinterpret_cast<void *>(ptr));
+  template <typename T>
+  typename std::enable_if_t<
+      std::conjunction_v<std::is_integral<T>, std::is_unsigned<T>>>
+  Store(T *arr) const {
+    using SignedType = std::make_signed_t<T>;
+    Store(reinterpret_cast<SignedType *>(arr));
   }
 
   /// Return the number of elements that can be stored in this vector
@@ -271,6 +294,10 @@ ALWAYS_INLINE inline Vec8 &Vec8::Gather<i32>(const i32 *ptr, const Vec8 &pos) {
                            ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
 #endif
   return *this;
+}
+
+ALWAYS_INLINE inline void Vec8::Store(i32 *arr) const {
+  Vec256b::Store(reinterpret_cast<void *>(arr));
 }
 
 // --------------------------------------------------------
