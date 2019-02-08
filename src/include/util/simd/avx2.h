@@ -48,15 +48,19 @@ class Vec256b {
   __m256i reg_;
 };
 
+// ---------------------------------------------------------
+// Vec4 Definition
+// ---------------------------------------------------------
+
 /// A 256-bit SIMD register interpreted as 4 64-bit integer values
 class Vec4 : public Vec256b {
   friend class Vec4Mask;
 
  public:
   Vec4() = default;
-  Vec4(i64 val) noexcept { reg_ = _mm256_set1_epi64x(val); }
-  Vec4(const __m256i &reg) noexcept : Vec256b(reg) {}
-  Vec4(i64 val1, i64 val2, i64 val3, i64 val4) noexcept {
+  Vec4(i64 val) { reg_ = _mm256_set1_epi64x(val); }
+  Vec4(const __m256i &reg) : Vec256b(reg) {}
+  Vec4(i64 val1, i64 val2, i64 val3, i64 val4) {
     reg_ = _mm256_setr_epi64x(val1, val2, val3, val4);
   }
 
@@ -90,15 +94,63 @@ class Vec4 : public Vec256b {
   ALWAYS_INLINE i64 operator[](u32 index) const { return Extract(index); }
 };
 
+// ---------------------------------------------------------
+// Vec4 Implementation
+// ---------------------------------------------------------
+
+template <typename T>
+ALWAYS_INLINE inline Vec4 &Vec4::Load(const T *ptr) {
+  using signed_t = std::make_signed_t<T>;
+  return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
+}
+
+template <>
+ALWAYS_INLINE inline Vec4 &Vec4::Load<i32>(const i32 *ptr) {
+  auto tmp = _mm_loadu_si128((const __m128i *)ptr);
+  reg_ = _mm256_cvtepi32_epi64(tmp);
+  return *this;
+}
+
+template <>
+ALWAYS_INLINE inline Vec4 &Vec4::Load<i64>(const i64 *ptr) {
+  // Load aligned and unaligned have almost no performance different on AVX2
+  // machines. To alleviate some pain from clients having to know this info
+  // we always use an unaligned load.
+  reg_ = _mm256_loadu_si256((const __m256i *)ptr);
+  return *this;
+}
+
+template <typename T>
+ALWAYS_INLINE inline Vec4 &Vec4::Gather(const T *ptr, const Vec4 &pos) {
+  using signed_t = std::make_signed_t<T>;
+  return Gather<signed_t>(reinterpret_cast<const signed_t *>(ptr), pos);
+}
+
+template <>
+ALWAYS_INLINE inline Vec4 &Vec4::Gather<i64>(const i64 *ptr, const Vec4 &pos) {
+#if USE_GATHER == 1
+  reg_ = _mm256_i64gather_epi64(ptr, pos, 8);
+#else
+  alignas(32) i64 x[Size()];
+  pos.Store(x);
+  reg_ = _mm256_setr_epi64x(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]]);
+#endif
+  return *this;
+}
+
+// ---------------------------------------------------------
+// Vec8 Definition
+// ---------------------------------------------------------
+
 /// A 256-bit SIMD register interpreted as 8 32-bit integer values
 class Vec8 : public Vec256b {
  public:
   // The below constructors are not explicit on purpose
   Vec8() = default;
-  Vec8(i32 val) noexcept { reg_ = _mm256_set1_epi32(val); }
-  Vec8(const __m256i &reg) noexcept : Vec256b(reg) {}
+  Vec8(i32 val) { reg_ = _mm256_set1_epi32(val); }
+  Vec8(const __m256i &reg) : Vec256b(reg) {}
   Vec8(i32 val1, i32 val2, i32 val3, i32 val4, i32 val5, i32 val6, i32 val7,
-       i32 val8) noexcept {
+       i32 val8) {
     reg_ = _mm256_setr_epi32(val1, val2, val3, val4, val5, val6, val7, val8);
   }
 
@@ -137,43 +189,147 @@ class Vec8 : public Vec256b {
   }
 };
 
+// ---------------------------------------------------------
+// Vec8 Implementation
+// ---------------------------------------------------------
+
+// Vec8's can be loaded from any array whose element types are smaller than or
+// equal to 32-bits. Eight elements are always read from the input array, but
+// are up-casted to 32-bits when appropriate.
+
+template <typename T>
+ALWAYS_INLINE inline Vec8 &Vec8::Load(const T *ptr) {
+  using signed_t = std::make_signed_t<T>;
+  return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
+};
+
+template <>
+ALWAYS_INLINE inline Vec8 &Vec8::Load<i8>(const i8 *ptr) {
+  auto tmp = _mm_loadu_si128((const __m128i *)ptr);
+  reg_ = _mm256_cvtepi8_epi32(tmp);
+  return *this;
+}
+
+template <>
+ALWAYS_INLINE inline Vec8 &Vec8::Load<i16>(const i16 *ptr) {
+  auto tmp = _mm_loadu_si128((const __m128i *)ptr);
+  reg_ = _mm256_cvtepi16_epi32(tmp);
+  return *this;
+}
+
+template <>
+ALWAYS_INLINE inline Vec8 &Vec8::Load<i32>(const i32 *ptr) {
+  reg_ = _mm256_loadu_si256((const __m256i *)ptr);
+  return *this;
+}
+
+// Like loads, Vec8's can be gathered from any array whose element types are
+// smaller than or equal to 32-bits. The input position vector must have eight
+// indexes from the input array; eight array elements are always loaded and the
+// elements are up-casted when appropriate.
+
+template <typename T>
+ALWAYS_INLINE inline Vec8 &Vec8::Gather(const T *ptr, const Vec8 &pos) {
+  using signed_t = std::make_signed_t<T>;
+  return Gather<signed_t>(reinterpret_cast<const signed_t *>(ptr), pos);
+}
+
+template <>
+NEVER_INLINE inline Vec8 &Vec8::Gather<i8>(const i8 *ptr, const Vec8 &pos) {
+#if USE_GATHER == 1
+  reg_ = _mm256_i32gather_epi32(ptr, pos, 1);
+  reg_ = _mm256_srai_epi32(reg_, 24);
+#else
+  alignas(32) i32 x[Size()];
+  pos.Store(x);
+  reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
+                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
+#endif
+  return *this;
+}
+
+template <>
+ALWAYS_INLINE inline Vec8 &Vec8::Gather<i16>(const i16 *ptr, const Vec8 &pos) {
+#if USE_GATHER == 1
+  reg_ = _mm256_i32gather_epi32(ptr, pos, 2);
+  reg_ = _mm256_srai_epi32(reg_, 16);
+#else
+  alignas(32) i32 x[Size()];
+  pos.Store(x);
+  reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
+                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
+#endif
+  return *this;
+}
+
+template <>
+ALWAYS_INLINE inline Vec8 &Vec8::Gather<i32>(const i32 *ptr, const Vec8 &pos) {
+#if USE_GATHER == 1
+  reg_ = _mm256_i32gather_epi32(ptr, pos, 4);
+#else
+  alignas(32) i32 x[Size()];
+  pos.Store(x);
+  reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
+                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
+#endif
+  return *this;
+}
+
+// --------------------------------------------------------
+// Vec8Mask Definition
+// --------------------------------------------------------
+
+/// An 8-bit mask stored logically as 1-bit in each of the eight 32-bit lanes in
+/// a 256-bit register
 class Vec8Mask : public Vec8 {
  public:
   Vec8Mask() = default;
   Vec8Mask(const __m256i &reg) : Vec8(reg) {}
 
-  ALWAYS_INLINE inline i32 Extract(u32 index) const {
-    return Vec8::Extract(index) != 0;
-  }
+  /// Extract the value of the bit at index \p index in this mask
+  ALWAYS_INLINE bool Extract(u32 idx) const { return Vec8::Extract(idx) != 0; }
 
-  ALWAYS_INLINE inline i32 operator[](u32 index) const {
-    return Extract(index);
-  }
+  /// Extract the value of the bit at index \p index in this mask
+  ALWAYS_INLINE bool operator[](u32 idx) const { return Extract(idx); }
 
-  ALWAYS_INLINE inline u32 ToPositions(u32 *positions, u32 offset) const {
-    i32 mask = _mm256_movemask_ps(_mm256_castsi256_ps(reg()));
-    TPL_ASSERT(mask < 256, "8-bit mask must be less than 256");
-    __m128i match_pos_scaled = _mm_loadl_epi64(
-        reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask]));
-    __m256i match_pos = _mm256_cvtepi8_epi32(match_pos_scaled);
-    __m256i pos_vec = _mm256_add_epi32(_mm256_set1_epi32(offset), match_pos);
-    _mm256_storeu_si256(reinterpret_cast<__m256i *>(positions), pos_vec);
-    return __builtin_popcount(mask);
-  }
+  u32 ToPositions(u32 *positions, u32 offset) const;
 
-  ALWAYS_INLINE inline u32 ToPositions(u32 *positions, const Vec8 &pos) const {
-    i32 mask = _mm256_movemask_ps(_mm256_castsi256_ps(reg()));
-    TPL_ASSERT(mask < 256, "8-bit mask must be less than 256");
-    __m128i perm_comp = _mm_loadl_epi64(
-        reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask]));
-    __m256i perm = _mm256_cvtepi8_epi32(perm_comp);
-    __m256i perm_pos = _mm256_permutevar8x32_epi32(pos, perm);
-    __m256i perm_mask = _mm256_permutevar8x32_epi32(reg(), perm);
-    _mm256_maskstore_epi32(reinterpret_cast<i32 *>(positions), perm_mask,
-                           perm_pos);
-    return __builtin_popcount(mask);
-  }
+  u32 ToPositions(u32 *positions, const Vec8 &pos) const;
 };
+
+// ---------------------------------------------------------
+// Vec8Mask Implementation
+// ---------------------------------------------------------
+
+ALWAYS_INLINE inline u32 Vec8Mask::ToPositions(u32 *positions,
+                                               u32 offset) const {
+  i32 mask = _mm256_movemask_ps(_mm256_castsi256_ps(reg()));
+  TPL_ASSERT(mask < 256, "8-bit mask must be less than 256");
+  __m128i match_pos_scaled =
+      _mm_loadl_epi64(reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask]));
+  __m256i match_pos = _mm256_cvtepi8_epi32(match_pos_scaled);
+  __m256i pos_vec = _mm256_add_epi32(_mm256_set1_epi32(offset), match_pos);
+  _mm256_storeu_si256(reinterpret_cast<__m256i *>(positions), pos_vec);
+  return __builtin_popcount(mask);
+}
+
+ALWAYS_INLINE inline u32 Vec8Mask::ToPositions(
+    u32 *positions, const tpl::util::simd::Vec8 &pos) const {
+  i32 mask = _mm256_movemask_ps(_mm256_castsi256_ps(reg()));
+  TPL_ASSERT(mask < 256, "8-bit mask must be less than 256");
+  __m128i perm_comp =
+      _mm_loadl_epi64(reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask]));
+  __m256i perm = _mm256_cvtepi8_epi32(perm_comp);
+  __m256i perm_pos = _mm256_permutevar8x32_epi32(pos, perm);
+  __m256i perm_mask = _mm256_permutevar8x32_epi32(reg(), perm);
+  _mm256_maskstore_epi32(reinterpret_cast<i32 *>(positions), perm_mask,
+                         perm_pos);
+  return __builtin_popcount(mask);
+}
+
+// ---------------------------------------------------------
+// Vec4Mask Definition
+// ---------------------------------------------------------
 
 class Vec4Mask : public Vec4 {
  public:
@@ -225,22 +381,19 @@ class Vec4Mask : public Vec4 {
 // ---------------------------------------------------------
 
 // Bit-wise NOT
-ALWAYS_INLINE inline Vec256b operator~(const Vec256b &v) noexcept {
+ALWAYS_INLINE inline Vec256b operator~(const Vec256b &v) {
   return _mm256_xor_si256(v, _mm256_set1_epi32(-1));
 }
 
-ALWAYS_INLINE inline Vec256b operator&(const Vec256b &a,
-                                       const Vec256b &b) noexcept {
+ALWAYS_INLINE inline Vec256b operator&(const Vec256b &a, const Vec256b &b) {
   return _mm256_and_si256(a, b);
 }
 
-ALWAYS_INLINE inline Vec256b operator|(const Vec256b &a,
-                                       const Vec256b &b) noexcept {
+ALWAYS_INLINE inline Vec256b operator|(const Vec256b &a, const Vec256b &b) {
   return _mm256_or_si256(a, b);
 }
 
-ALWAYS_INLINE inline Vec256b operator^(const Vec256b &a,
-                                       const Vec256b &b) noexcept {
+ALWAYS_INLINE inline Vec256b operator^(const Vec256b &a, const Vec256b &b) {
   return _mm256_xor_si256(a, b);
 }
 
@@ -248,8 +401,7 @@ ALWAYS_INLINE inline Vec256b operator^(const Vec256b &a,
 // Vec8Mask
 // ---------------------------------------------------------
 
-ALWAYS_INLINE inline Vec8Mask operator&(const Vec8Mask &a,
-                                        const Vec8Mask &b) noexcept {
+ALWAYS_INLINE inline Vec8Mask operator&(const Vec8Mask &a, const Vec8Mask &b) {
   return Vec8Mask(Vec256b(a) & Vec256b(b));
 }
 
@@ -257,84 +409,35 @@ ALWAYS_INLINE inline Vec8Mask operator&(const Vec8Mask &a,
 // Vec4Mask
 // ---------------------------------------------------------
 
-ALWAYS_INLINE inline Vec4Mask operator&(const Vec4Mask &a,
-                                        const Vec4Mask &b) noexcept {
+ALWAYS_INLINE inline Vec4Mask operator&(const Vec4Mask &a, const Vec4Mask &b) {
   return Vec4Mask(Vec256b(a) & Vec256b(b));
-}
-
-// ---------------------------------------------------------
-// Vec4
-// ---------------------------------------------------------
-
-template <typename T>
-ALWAYS_INLINE inline Vec4 &Vec4::Load(const T *ptr) {
-  using signed_t = std::make_signed_t<T>;
-  return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
-}
-
-template <>
-ALWAYS_INLINE inline Vec4 &Vec4::Load<i32>(const i32 *ptr) {
-  auto tmp = _mm_loadu_si128((const __m128i *)ptr);
-  reg_ = _mm256_cvtepi32_epi64(tmp);
-  return *this;
-}
-
-template <>
-ALWAYS_INLINE inline Vec4 &Vec4::Load<i64>(const i64 *ptr) {
-  // Load aligned and unaligned have almost no performance different on AVX2
-  // machines. To alleviate some pain from clients having to know this info
-  // we always use an unaligned load.
-  reg_ = _mm256_loadu_si256((const __m256i *)ptr);
-  return *this;
-}
-
-template <typename T>
-ALWAYS_INLINE inline Vec4 &Vec4::Gather(const T *ptr, const Vec4 &pos) {
-  using signed_t = std::make_signed_t<T>;
-  return Gather<signed_t>(reinterpret_cast<const signed_t *>(ptr), pos);
-}
-
-template <>
-ALWAYS_INLINE inline Vec4 &Vec4::Gather<i64>(const i64 *ptr, const Vec4 &pos) {
-#if USE_GATHER == 1
-  reg_ = _mm256_i64gather_epi64(ptr, pos, 8);
-#else
-  alignas(32) i64 x[Size()];
-  pos.Store(x);
-  reg_ = _mm256_setr_epi64x(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]]);
-#endif
-  return *this;
 }
 
 // ---------------------------------------------------------
 // Vec4 - Comparison Operations
 // ---------------------------------------------------------
 
-ALWAYS_INLINE inline Vec4Mask operator>(const Vec4 &a, const Vec4 &b) noexcept {
+ALWAYS_INLINE inline Vec4Mask operator>(const Vec4 &a, const Vec4 &b) {
   return _mm256_cmpgt_epi64(a, b);
 }
 
-ALWAYS_INLINE inline Vec4Mask operator==(const Vec4 &a,
-                                         const Vec4 &b) noexcept {
+ALWAYS_INLINE inline Vec4Mask operator==(const Vec4 &a, const Vec4 &b) {
   return _mm256_cmpeq_epi64(a, b);
 }
 
-ALWAYS_INLINE inline Vec4Mask operator>=(const Vec4 &a,
-                                         const Vec4 &b) noexcept {
+ALWAYS_INLINE inline Vec4Mask operator>=(const Vec4 &a, const Vec4 &b) {
   return Vec4Mask(~(b > a));
 }
 
-ALWAYS_INLINE inline Vec4Mask operator<(const Vec4 &a, const Vec4 &b) noexcept {
+ALWAYS_INLINE inline Vec4Mask operator<(const Vec4 &a, const Vec4 &b) {
   return b > a;
 }
 
-ALWAYS_INLINE inline Vec4Mask operator<=(const Vec4 &a,
-                                         const Vec4 &b) noexcept {
+ALWAYS_INLINE inline Vec4Mask operator<=(const Vec4 &a, const Vec4 &b) {
   return b >= a;
 }
 
-ALWAYS_INLINE inline Vec4Mask operator!=(const Vec4 &a,
-                                         const Vec4 &b) noexcept {
+ALWAYS_INLINE inline Vec4Mask operator!=(const Vec4 &a, const Vec4 &b) {
   return Vec4Mask(~Vec256b(a == b));
 }
 
@@ -424,121 +527,31 @@ ALWAYS_INLINE inline Vec4 &operator<<=(Vec4 &a, const Vec4 &b) {
 }
 
 // ---------------------------------------------------------
-// Vec8
-// ---------------------------------------------------------
-
-// Vec8's can be loaded from any array whose element types are smaller than or
-// equal to 32-bits. Eight elements are always read from the input array, but
-// are up-casted to 32-bits when appropriate.
-
-template <typename T>
-ALWAYS_INLINE inline Vec8 &Vec8::Load(const T *ptr) {
-  using signed_t = std::make_signed_t<T>;
-  return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
-};
-
-template <>
-ALWAYS_INLINE inline Vec8 &Vec8::Load<i8>(const i8 *ptr) {
-  auto tmp = _mm_loadu_si128((const __m128i *)ptr);
-  reg_ = _mm256_cvtepi8_epi32(tmp);
-  return *this;
-}
-
-template <>
-ALWAYS_INLINE inline Vec8 &Vec8::Load<i16>(const i16 *ptr) {
-  auto tmp = _mm_loadu_si128((const __m128i *)ptr);
-  reg_ = _mm256_cvtepi16_epi32(tmp);
-  return *this;
-}
-
-template <>
-ALWAYS_INLINE inline Vec8 &Vec8::Load<i32>(const i32 *ptr) {
-  reg_ = _mm256_loadu_si256((const __m256i *)ptr);
-  return *this;
-}
-
-// Like loads, Vec8's can be gathered from any array whose element types are
-// smaller than or equal to 32-bits. The input position vector must have eight
-// indexes from the input array; eight array elements are always loaded and the
-// elements are up-casted when appropriate.
-
-template <typename T>
-ALWAYS_INLINE inline Vec8 &Vec8::Gather(const T *ptr, const Vec8 &pos) {
-  using signed_t = std::make_signed_t<T>;
-  return Gather<signed_t>(reinterpret_cast<const signed_t *>(ptr), pos);
-}
-
-template <>
-NEVER_INLINE inline Vec8 &Vec8::Gather<i8>(const i8 *ptr, const Vec8 &pos) {
-#if USE_GATHER == 1
-  reg_ = _mm256_i32gather_epi32(ptr, pos, 1);
-  reg_ = _mm256_srai_epi32(reg_, 24);
-#else
-  alignas(32) i32 x[Size()];
-  pos.Store(x);
-  reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
-                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
-#endif
-  return *this;
-}
-
-template <>
-ALWAYS_INLINE inline Vec8 &Vec8::Gather<i16>(const i16 *ptr, const Vec8 &pos) {
-#if USE_GATHER == 1
-  reg_ = _mm256_i32gather_epi32(ptr, pos, 2);
-  reg_ = _mm256_srai_epi32(reg_, 16);
-#else
-  alignas(32) i32 x[Size()];
-  pos.Store(x);
-  reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
-                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
-#endif
-  return *this;
-}
-
-template <>
-ALWAYS_INLINE inline Vec8 &Vec8::Gather<i32>(const i32 *ptr, const Vec8 &pos) {
-#if USE_GATHER == 1
-  reg_ = _mm256_i32gather_epi32(ptr, pos, 4);
-#else
-  alignas(32) i32 x[Size()];
-  pos.Store(x);
-  reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
-                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
-#endif
-  return *this;
-}
-
-// ---------------------------------------------------------
 // Vec8 - Comparison Operations
 // ---------------------------------------------------------
 
-ALWAYS_INLINE inline Vec8Mask operator>(const Vec8 &a, const Vec8 &b) noexcept {
+ALWAYS_INLINE inline Vec8Mask operator>(const Vec8 &a, const Vec8 &b) {
   return _mm256_cmpgt_epi32(a, b);
 }
 
-ALWAYS_INLINE inline Vec8Mask operator==(const Vec8 &a,
-                                         const Vec8 &b) noexcept {
+ALWAYS_INLINE inline Vec8Mask operator==(const Vec8 &a, const Vec8 &b) {
   return _mm256_cmpeq_epi32(a, b);
 }
 
-ALWAYS_INLINE inline Vec8Mask operator>=(const Vec8 &a,
-                                         const Vec8 &b) noexcept {
+ALWAYS_INLINE inline Vec8Mask operator>=(const Vec8 &a, const Vec8 &b) {
   __m256i max_a_b = _mm256_max_epu32(a, b);
   return _mm256_cmpeq_epi32(a, max_a_b);
 }
 
-ALWAYS_INLINE inline Vec8Mask operator<(const Vec8 &a, const Vec8 &b) noexcept {
+ALWAYS_INLINE inline Vec8Mask operator<(const Vec8 &a, const Vec8 &b) {
   return b > a;
 }
 
-ALWAYS_INLINE inline Vec8Mask operator<=(const Vec8 &a,
-                                         const Vec8 &b) noexcept {
+ALWAYS_INLINE inline Vec8Mask operator<=(const Vec8 &a, const Vec8 &b) {
   return b >= a;
 }
 
-ALWAYS_INLINE inline Vec8Mask operator!=(const Vec8 &a,
-                                         const Vec8 &b) noexcept {
+ALWAYS_INLINE inline Vec8Mask operator!=(const Vec8 &a, const Vec8 &b) {
   return Vec8Mask(~Vec256b(a == b));
 }
 
