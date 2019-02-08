@@ -25,6 +25,16 @@ class Vec256b {
   // Type-cast operator so that Vec*'s can be used directly with intrinsics
   ALWAYS_INLINE operator __m256i() const { return reg_; }
 
+  /// Store the contents of this vector into the provided unaligned pointer
+  void Store(void *ptr) const {
+    _mm256_storeu_si256(reinterpret_cast<__m256i *>(ptr), reg());
+  }
+
+  /// Store the contents of this vector into the provided aligned pointer
+  void StoreAligned(void *ptr) const {
+    _mm256_store_si256(reinterpret_cast<__m256i *>(ptr), reg());
+  }
+
  protected:
   const __m256i &reg() const { return reg_; }
 
@@ -44,56 +54,40 @@ class Vec4 : public Vec256b {
     reg_ = _mm256_setr_epi64x(val1, val2, val3, val4);
   }
 
-  /// Load 4 64-bit values stored contiguously from the input pointer \p ptr.
-  /// The underlying data type of the array \p ptr can be either 32-bit integers
-  /// in which case the 4 values will be loaded and upcasted, or 64-bit integers
-  /// which is the trivial case
-  /// \tparam T The underlying data type of the pointer
-  /// \param ptr The input pointer to read from
+  /// Load four 64-bit values stored contiguously from the unaligned input
+  /// pointer. The underlying data type of the array \p ptr can be either 32-bit
+  /// or 64-bit integers. Up-casting is performed when appropriate.
   template <typename T>
-  void Load(const T *ptr);
+  Vec4 &Load(const T *ptr);
 
   /// Gather non-contiguous elements from the input array \p ptr stored at
   /// index positions from \t pos
-  /// \tparam T The data type of the underlying array
-  /// \param ptr The input array
-  /// \param pos The list of positions in the input array to gather
   template <typename T>
-  ALWAYS_INLINE inline void Gather(const T *ptr, const Vec4 &pos) {
-#if USE_GATHER == 1
-    reg_ = _mm256_i64gather_epi64(ptr, pos, 8);
-#else
-    alignas(32) i64 x[Size()];
-    pos.Store(x);
-    reg_ = _mm256_setr_epi64x(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]]);
-#endif
-  }
+  Vec4 &Gather(const T *ptr, const Vec4 &pos);
 
   /// Store the contents of this vector contiguously into the input array \p ptr
-  /// \param ptr The array to write into
-  ALWAYS_INLINE inline void Store(i64 *ptr) const {
-    _mm256_store_si256(reinterpret_cast<__m256i *>(ptr), reg());
+  ALWAYS_INLINE void Store(i64 *ptr) const {
+    Vec256b::Store(reinterpret_cast<void *>(ptr));
   }
 
   /// Return the number of elements that can be stored in this vector
   static constexpr u32 Size() { return 4; }
 
-  // Extract the integer at the given index from this vector
-  ALWAYS_INLINE inline i64 Extract(u32 index) const {
+  /// Extract the integer at the given index from this vector
+  ALWAYS_INLINE i64 Extract(u32 index) const {
     alignas(32) i64 x[Size()];
     Store(x);
     return x[index & 3];
   }
 
-  // Extract the integer at the given index from this vector
-  ALWAYS_INLINE inline i64 operator[](u32 index) const {
-    return Extract(index);
-  }
+  /// Extract the integer at the given index from this vector
+  ALWAYS_INLINE i64 operator[](u32 index) const { return Extract(index); }
 };
 
 /// A 256-bit SIMD register interpreted as 8 32-bit integer values
 class Vec8 : public Vec256b {
  public:
+  // The below constructors are not explicit on purpose
   Vec8() = default;
   Vec8(i32 val) noexcept { reg_ = _mm256_set1_epi32(val); }
   Vec8(const __m256i &reg) noexcept : Vec256b(reg) {}
@@ -105,10 +99,8 @@ class Vec8 : public Vec256b {
   /// Load 8 32-bit values stored contiguously from the input pointer \p ptr.
   /// The underlying data type of the array \p ptr can be either 8-bit, 16-bit,
   /// or 32-bit integers. Up-casting is performed when appropriate.
-  /// \tparam T The underlying data type of the pointer
-  /// \param ptr The input pointer to read from
   template <typename T>
-  void Load(const T *ptr);
+  Vec8 &Load(const T *ptr);
 
   /// Gather non-contiguous elements from the input array \p ptr stored at
   /// index positions from \t pos
@@ -116,12 +108,12 @@ class Vec8 : public Vec256b {
   /// \param ptr The input array
   /// \param pos The list of positions in the input array to gather
   template <typename T>
-  void Gather(const T *ptr, const Vec8 &pos);
+  Vec8 &Gather(const T *ptr, const Vec8 &pos);
 
   /// Store the contents of this vector contiguously into the input array \p ptr
   /// \param ptr The array to write into
-  ALWAYS_INLINE inline void Store(i32 *ptr) const {
-    _mm256_store_si256(reinterpret_cast<__m256i *>(ptr), reg());
+  ALWAYS_INLINE void Store(i32 *ptr) const {
+    Vec256b::Store(reinterpret_cast<void *>(ptr));
   }
 
   /// Return the number of elements that can be stored in this vector
@@ -269,20 +261,43 @@ ALWAYS_INLINE inline Vec4Mask operator&(const Vec4Mask &a,
 // ---------------------------------------------------------
 
 template <typename T>
-ALWAYS_INLINE inline void Vec4::Load(const T *ptr) {
+ALWAYS_INLINE inline Vec4 &Vec4::Load(const T *ptr) {
   using signed_t = std::make_signed_t<T>;
-  Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
+  return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
 }
 
 template <>
-ALWAYS_INLINE inline void Vec4::Load<i32>(const i32 *ptr) {
+ALWAYS_INLINE inline Vec4 &Vec4::Load<i32>(const i32 *ptr) {
   auto tmp = _mm_loadu_si128((const __m128i *)ptr);
   reg_ = _mm256_cvtepi32_epi64(tmp);
+  return *this;
 }
 
 template <>
-ALWAYS_INLINE inline void Vec4::Load<i64>(const i64 *ptr) {
+ALWAYS_INLINE inline Vec4 &Vec4::Load<i64>(const i64 *ptr) {
+  // Load aligned and unaligned have almost no performance different on AVX2
+  // machines. To alleviate some pain from clients having to know this info
+  // we always use an unaligned load.
   reg_ = _mm256_loadu_si256((const __m256i *)ptr);
+  return *this;
+}
+
+template <typename T>
+ALWAYS_INLINE inline Vec4 &Vec4::Gather(const T *ptr, const Vec4 &pos) {
+  using signed_t = std::make_signed_t<T>;
+  return Gather<signed_t>(reinterpret_cast<const signed_t *>(ptr), pos);
+}
+
+template <>
+ALWAYS_INLINE inline Vec4 &Vec4::Gather<i64>(const i64 *ptr, const Vec4 &pos) {
+#if USE_GATHER == 1
+  reg_ = _mm256_i64gather_epi64(ptr, pos, 8);
+#else
+  alignas(32) i64 x[Size()];
+  pos.Store(x);
+  reg_ = _mm256_setr_epi64x(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]]);
+#endif
+  return *this;
 }
 
 // ---------------------------------------------------------
@@ -406,37 +421,49 @@ ALWAYS_INLINE inline Vec4 &operator<<=(Vec4 &a, const Vec4 &b) {
 // Vec8
 // ---------------------------------------------------------
 
+// Vec8's can be loaded from any array whose element types are smaller than or
+// equal to 32-bits. Eight elements are always read from the input array, but
+// are up-casted to 32-bits when appropriate.
+
 template <typename T>
-ALWAYS_INLINE inline void Vec8::Load(const T *ptr) {
+ALWAYS_INLINE inline Vec8 &Vec8::Load(const T *ptr) {
   using signed_t = std::make_signed_t<T>;
-  Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
+  return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
 };
 
 template <>
-ALWAYS_INLINE inline void Vec8::Load<i8>(const i8 *ptr) {
+ALWAYS_INLINE inline Vec8 &Vec8::Load<i8>(const i8 *ptr) {
   auto tmp = _mm_loadu_si128((const __m128i *)ptr);
   reg_ = _mm256_cvtepi8_epi32(tmp);
+  return *this;
 }
 
 template <>
-ALWAYS_INLINE inline void Vec8::Load<i16>(const i16 *ptr) {
+ALWAYS_INLINE inline Vec8 &Vec8::Load<i16>(const i16 *ptr) {
   auto tmp = _mm_loadu_si128((const __m128i *)ptr);
   reg_ = _mm256_cvtepi16_epi32(tmp);
+  return *this;
 }
 
 template <>
-ALWAYS_INLINE inline void Vec8::Load<i32>(const i32 *ptr) {
+ALWAYS_INLINE inline Vec8 &Vec8::Load<i32>(const i32 *ptr) {
   reg_ = _mm256_loadu_si256((const __m256i *)ptr);
+  return *this;
 }
+
+// Like loads, Vec8's can be gathered from any array whose element types are
+// smaller than or equal to 32-bits. The input position vector must have eight
+// indexes from the input array; eight array elements are always loaded and the
+// elements are up-casted when appropriate.
 
 template <typename T>
-ALWAYS_INLINE inline void Vec8::Gather(const T *ptr, const Vec8 &pos) {
+ALWAYS_INLINE inline Vec8 &Vec8::Gather(const T *ptr, const Vec8 &pos) {
   using signed_t = std::make_signed_t<T>;
-  Gather<signed_t>(reinterpret_cast<const signed_t *>(ptr), pos);
+  return Gather<signed_t>(reinterpret_cast<const signed_t *>(ptr), pos);
 }
 
 template <>
-NEVER_INLINE inline void Vec8::Gather<i8>(const i8 *ptr, const Vec8 &pos) {
+NEVER_INLINE inline Vec8 &Vec8::Gather<i8>(const i8 *ptr, const Vec8 &pos) {
 #if USE_GATHER == 1
   reg_ = _mm256_i32gather_epi32(ptr, pos, 1);
   reg_ = _mm256_srai_epi32(reg_, 24);
@@ -446,10 +473,11 @@ NEVER_INLINE inline void Vec8::Gather<i8>(const i8 *ptr, const Vec8 &pos) {
   reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
                            ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
 #endif
+  return *this;
 }
 
 template <>
-ALWAYS_INLINE inline void Vec8::Gather<i16>(const i16 *ptr, const Vec8 &pos) {
+ALWAYS_INLINE inline Vec8 &Vec8::Gather<i16>(const i16 *ptr, const Vec8 &pos) {
 #if USE_GATHER == 1
   reg_ = _mm256_i32gather_epi32(ptr, pos, 2);
   reg_ = _mm256_srai_epi32(reg_, 16);
@@ -459,10 +487,11 @@ ALWAYS_INLINE inline void Vec8::Gather<i16>(const i16 *ptr, const Vec8 &pos) {
   reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
                            ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
 #endif
+  return *this;
 }
 
 template <>
-ALWAYS_INLINE inline void Vec8::Gather<i32>(const i32 *ptr, const Vec8 &pos) {
+ALWAYS_INLINE inline Vec8 &Vec8::Gather<i32>(const i32 *ptr, const Vec8 &pos) {
 #if USE_GATHER == 1
   reg_ = _mm256_i32gather_epi32(ptr, pos, 4);
 #else
@@ -471,6 +500,7 @@ ALWAYS_INLINE inline void Vec8::Gather<i32>(const i32 *ptr, const Vec8 &pos) {
   reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
                            ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
 #endif
+  return *this;
 }
 
 // ---------------------------------------------------------

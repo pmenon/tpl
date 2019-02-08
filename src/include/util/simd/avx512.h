@@ -22,6 +22,12 @@ class Vec512b {
   // Type-cast operator so that Vec*'s can be used directly with intrinsics
   ALWAYS_INLINE operator __m512i() const { return reg_; }
 
+  ALWAYS_INLINE void Store(void *ptr) const { _mm512_storeu_si512(ptr, reg()); }
+
+  ALWAYS_INLINE void StoreAligned(void *ptr) const {
+    _mm512_store_si512(ptr, reg());
+  }
+
  protected:
   const __m512i &reg() const { return reg_; }
 
@@ -40,21 +46,14 @@ class Vec8 : public Vec512b {
   }
 
   template <typename T>
-  void Load(const T *ptr);
+  Vec8 &Load(const T *ptr);
 
   template <typename T>
-  void Gather(const T *ptr, const Vec8 &pos) {
-#if USE_GATHER
-    reg_ = _mm512_i64gather_epi64(pos, ptr, 8);
-#else
-    alignas(64) i64 x[Size()];
-    pos.Store(x);
-    reg_ = _mm512_setr_epi64(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
-                             ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
-#endif
-  }
+  Vec8 &Gather(const T *ptr, const Vec8 &pos);
 
-  ALWAYS_INLINE void Store(i64 *ptr) const { _mm512_storeu_si512(ptr, reg()); }
+  ALWAYS_INLINE void Store(i64 *ptr) const {
+    Vec512b::Store(reinterpret_cast<void *>(ptr));
+  }
 
   ALWAYS_INLINE i64 Extract(u32 index) const {
     TPL_ASSERT(index < 8, "Out-of-bounds mask element access");
@@ -82,13 +81,13 @@ class Vec16 : public Vec512b {
   }
 
   template <typename T>
-  void Load(const T *ptr);
+  Vec16 &Load(const T *ptr);
 
   template <typename T>
-  void Gather(const T *ptr, const Vec16 &pos);
+  Vec16 &Gather(const T *ptr, const Vec16 &pos);
 
   ALWAYS_INLINE void Store(i32 *ptr) const {
-    _mm512_store_si512(reinterpret_cast<__m512i *>(ptr), reg_);
+    Vec512b::Store(reinterpret_cast<void *>(ptr));
   }
 
   ALWAYS_INLINE i32 Extract(u32 index) const {
@@ -192,20 +191,35 @@ ALWAYS_INLINE inline Vec512b operator^(const Vec512b &a, const Vec512b &b) {
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-ALWAYS_INLINE inline void Vec8::Load(const T *ptr) {
+ALWAYS_INLINE inline Vec8 &Vec8::Load(const T *ptr) {
   using signed_t = std::make_signed_t<T>;
-  Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
+  return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
 }
 
 template <>
-ALWAYS_INLINE inline void Vec8::Load<i32>(const i32 *ptr) {
+ALWAYS_INLINE inline Vec8 &Vec8::Load<i32>(const i32 *ptr) {
   auto tmp = _mm256_load_si256(reinterpret_cast<const __m256i *>(ptr));
   reg_ = _mm512_cvtepi32_epi64(tmp);
+  return *this;
 }
 
 template <>
-ALWAYS_INLINE inline void Vec8::Load<i64>(const i64 *ptr) {
+ALWAYS_INLINE inline Vec8 &Vec8::Load<i64>(const i64 *ptr) {
   reg_ = _mm512_loadu_si512((const __m512i *)ptr);
+  return *this;
+}
+
+template <typename T>
+ALWAYS_INLINE inline Vec8 &Vec8::Gather(const T *ptr, const Vec8 &pos) {
+#if USE_GATHER
+  reg_ = _mm512_i64gather_epi64(pos, ptr, 8);
+#else
+  alignas(64) i64 x[Size()];
+  pos.Store(x);
+  reg_ = _mm512_setr_epi64(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
+                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
+#endif
+  return *this;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -215,57 +229,65 @@ ALWAYS_INLINE inline void Vec8::Load<i64>(const i64 *ptr) {
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-ALWAYS_INLINE inline void Vec16::Load(const T *ptr) {
+ALWAYS_INLINE inline Vec16 &Vec16::Load(const T *ptr) {
   using signed_t = std::make_signed_t<T>;
-  Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
+  return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
 }
 
 template <>
-ALWAYS_INLINE inline void Vec16::Load<i8>(const i8 *ptr) {
+ALWAYS_INLINE inline Vec16 &Vec16::Load<i8>(const i8 *ptr) {
   auto tmp = _mm_loadu_si128(reinterpret_cast<const __m128i *>(ptr));
   reg_ = _mm512_cvtepi8_epi32(tmp);
+  return *this;
 }
 
 template <>
-ALWAYS_INLINE inline void Vec16::Load<i16>(const i16 *ptr) {
+ALWAYS_INLINE inline Vec16 &Vec16::Load<i16>(const i16 *ptr) {
   auto tmp = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(ptr));
   reg_ = _mm512_cvtepi16_epi32(tmp);
+  return *this;
 }
 
 template <>
-ALWAYS_INLINE inline void Vec16::Load<i32>(const i32 *ptr) {
+ALWAYS_INLINE inline Vec16 &Vec16::Load<i32>(const i32 *ptr) {
   reg_ = _mm512_loadu_si512(ptr);
+  return *this;
 }
 
 template <typename T>
-ALWAYS_INLINE inline void Vec16::Gather(const T *ptr, const Vec16 &pos) {
+ALWAYS_INLINE inline Vec16 &Vec16::Gather(const T *ptr, const Vec16 &pos) {
   using signed_t = std::make_signed_t<T>;
-  Gather<signed_t>(reinterpret_cast<const signed_t *>(ptr), pos);
+  return Gather<signed_t>(reinterpret_cast<const signed_t *>(ptr), pos);
 }
 
 template <>
-ALWAYS_INLINE inline void Vec16::Gather<i8>(const i8 *ptr, const Vec16 &pos) {
+ALWAYS_INLINE inline Vec16 &Vec16::Gather<i8>(const i8 *ptr, const Vec16 &pos) {
   alignas(64) i32 x[Size()];
   pos.Store(x);
   reg_ = _mm512_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
                            ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]],
                            ptr[x[8]], ptr[x[9]], ptr[x[10]], ptr[x[11]],
                            ptr[x[12]], ptr[x[13]], ptr[x[14]], ptr[x[15]]);
+  return *this;
 }
 
 template <>
-ALWAYS_INLINE inline void Vec16::Gather<i16>(const i16 *ptr, const Vec16 &pos) {
+ALWAYS_INLINE inline Vec16 &Vec16::Gather<i16>(const i16 *ptr,
+                                               const Vec16 &pos) {
   alignas(64) i32 x[Size()];
   pos.Store(x);
   reg_ = _mm512_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
                            ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]],
                            ptr[x[8]], ptr[x[9]], ptr[x[10]], ptr[x[11]],
                            ptr[x[12]], ptr[x[13]], ptr[x[14]], ptr[x[15]]);
+  return *this;
 }
 
 template <>
-ALWAYS_INLINE inline void Vec16::Gather<i32>(const i32 *ptr, const Vec16 &pos) {
+ALWAYS_INLINE inline Vec16 &Vec16::Gather<i32>(const i32 *ptr,
+                                               const Vec16 &pos) {
   reg_ = _mm512_i32gather_epi32(pos, ptr, 4);
+  return *this;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
