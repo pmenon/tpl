@@ -32,7 +32,7 @@ hash_t Hasher::HashMurmur3(const u8 *buf, uint64_t len) { return 0; }
 
 hash_t Hasher::HashCrc32(const u8 *buf, uint64_t len) {
   // Thanks HyPer
-  auto hash_int = [](auto input, auto seed) {
+  auto gen_hash_64 = [](u64 input, u64 seed) {
     u64 result1 = _mm_crc32_u64(seed, input);
     u64 result2 = _mm_crc32_u64(0x04C11DB7, input);
     return ((result2 << 32) | result1) * 0x2545F4914F6CDD1Dull;
@@ -42,12 +42,12 @@ hash_t Hasher::HashCrc32(const u8 *buf, uint64_t len) {
 
   // Process as many 8-byte chunks as possible
   for (; len >= 8; buf += 8, len -= 8) {
-    hash = hash_int(*reinterpret_cast<const u64 *>(buf), hash);
+    hash = gen_hash_64(*reinterpret_cast<const u64 *>(buf), hash);
   }
 
   // If there's at least a 4-byte chunk, process that
   if (len >= 4) {
-    hash = hash_int(*reinterpret_cast<const u32 *>(buf), hash);
+    hash = gen_hash_64(*reinterpret_cast<const u32 *>(buf), hash);
     buf += 4;
     len -= 4;
   }
