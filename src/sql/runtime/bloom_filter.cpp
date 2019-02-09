@@ -57,7 +57,7 @@ void BloomFilter::Add(hash_t hash) {
 
   block |= masks;
 
-  block.StoreAligned(blocks_[block_idx]);
+  block.Store(blocks_[block_idx]);
 }
 
 bool BloomFilter::Contains(hash_t hash) const {
