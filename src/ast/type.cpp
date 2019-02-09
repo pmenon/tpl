@@ -1,6 +1,6 @@
 #include "ast/type.h"
 
-#include "sql/runtime/hash_table.h"
+#include <unordered_map>
 
 namespace tpl::ast {
 
@@ -21,8 +21,8 @@ FunctionType::FunctionType(util::RegionVector<Field> &&params, Type *ret)
       ret_(ret) {}
 
 MapType::MapType(Type *key_type, Type *val_type)
-    : Type(key_type->context(), sizeof(sql::runtime::HashTable),
-           alignof(sql::runtime::HashTable), Kind::MapType),
+    : Type(key_type->context(), sizeof(std::unordered_map<i32, i32>),
+           alignof(std::unordered_map<i32, i32>), Kind::MapType),
       key_type_(key_type),
       val_type_(val_type) {}
 
