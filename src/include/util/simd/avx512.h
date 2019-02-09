@@ -143,7 +143,7 @@ ALWAYS_INLINE inline void Vec8::Store(i64 *arr) const {
 }
 
 ALWAYS_INLINE inline bool Vec8::AllBitsAtPositionsSet(const Vec8 &mask) const {
-  return _mm512_test_epi64_mask(reg(), mask) == 1;
+  return _mm512_testn_epi64_mask(reg(), mask) == 0;
 }
 
 // ---------------------------------------------------------
@@ -278,7 +278,7 @@ ALWAYS_INLINE inline void Vec16::Store(i32 *arr) const {
 
 ALWAYS_INLINE inline bool Vec16::AllBitsAtPositionsSet(
     const Vec16 &mask) const {
-  return _mm512_test_epi32_mask(reg(), mask) == 1;
+  return _mm512_testn_epi32_mask(reg(), mask) == 0;
 }
 
 // ---------------------------------------------------------

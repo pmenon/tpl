@@ -1,5 +1,7 @@
 #include "sql/runtime/bloom_filter.h"
 
+#include <limits>
+
 #include "util/simd.h"
 
 namespace tpl::sql::runtime {
@@ -42,10 +44,13 @@ void BloomFilter::Add(hash_t hash) {
   u32 block_idx = static_cast<u32>(hash & block_mask());
 
   auto block = util::simd::Vec8().Load(blocks_[block_idx]);
-  auto alt_hash = util::simd::Vec8(hash >> 32);
+  auto alt_hash = util::simd::Vec8(static_cast<u32>(hash >> 32));
   auto salts = util::simd::Vec8().Load(kSalts);
 
   alt_hash *= salts;
+  if constexpr (util::simd::Bitwidth::value == 512) {
+    alt_hash &= util::simd::Vec8(std::numeric_limits<u32>::max() - 1);
+  }
   alt_hash >>= 27;
 
   auto masks = util::simd::Vec8(1) << alt_hash;
@@ -59,10 +64,13 @@ bool BloomFilter::Contains(hash_t hash) const {
   u32 block_idx = static_cast<u32>(hash & block_mask());
 
   auto block = util::simd::Vec8().Load(blocks_[block_idx]);
-  auto alt_hash = util::simd::Vec8(hash >> 32);
+  auto alt_hash = util::simd::Vec8(static_cast<u32>(hash >> 32));
   auto salts = util::simd::Vec8().Load(kSalts);
 
   alt_hash *= salts;
+  if constexpr (util::simd::Bitwidth::value == 512) {
+    alt_hash &= util::simd::Vec8(std::numeric_limits<u32>::max() - 1);
+  }
   alt_hash >>= 27;
 
   auto masks = util::simd::Vec8(1) << alt_hash;
