@@ -69,15 +69,15 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
         util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
   }
 
-  double bits_per_elem = (double) filter.GetSizeInBits() / num_filter_elems;
-  double bit_set_prob = (double)filter.GetTotalBitsSet() / filter.GetSizeInBits();
+  double bits_per_elem = (double)filter.GetSizeInBits() / num_filter_elems;
+  double bit_set_prob =
+      (double)filter.GetTotalBitsSet() / filter.GetSizeInBits();
   LOG_INFO(
       "Filter: {} elements, {} bits, {} bits/element, {} bits set (p={:.2f})",
       num_filter_elems, filter.GetSizeInBits(), bits_per_elem,
       filter.GetTotalBitsSet(), bit_set_prob);
 
-  for (auto prob_success :
-       {0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.00}) {
+  for (auto prob_success : {0.00, 0.25, 0.50, 0.75, 1.00}) {
     std::vector<u32> lookups;
     GenerateRandom32(lookups, num_filter_elems * lookup_scale_factor);
     Mix(lookups, insertions, prob_success);

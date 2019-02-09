@@ -17,8 +17,8 @@ class JoinHashTableTest : public TplTest {
 
   runtime::JoinHashTable *join_hash_table() { return &join_hash_table_; }
 
-  runtime::GenericHashTable *inner_hash_table() {
-    return join_hash_table()->hash_table();
+  runtime::GenericHashTable *inner_generic_hash_table() {
+    return join_hash_table()->generic_hash_table();
   }
 
  private:
@@ -59,14 +59,14 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
   }
 
   EXPECT_EQ(num_tuples, join_hash_table()->num_elems());
-  EXPECT_EQ(0u, inner_hash_table()->num_elements());
+  EXPECT_EQ(0u, inner_generic_hash_table()->num_elements());
 
   // Try to build
 
   join_hash_table()->Build();
 
   EXPECT_EQ(num_tuples, join_hash_table()->num_elems());
-  EXPECT_EQ(num_tuples, inner_hash_table()->num_elements());
+  EXPECT_EQ(num_tuples, inner_generic_hash_table()->num_elements());
 }
 
 }  // namespace tpl::sql::test

@@ -12,6 +12,17 @@ namespace tpl::sql::runtime {
 
 class JoinHashTable {
  public:
+  // An entry in the join hash table. An Entry is a variably-sized chunk of
+  // memory where the join keys and join attributes are stored. One of these
+  // is allocated for every tuple from the build side of a join, through each
+  // call to AllocInputTuple(). The first two fields of all entries are the
+  // links to the next entry in the chain and the hash value of the entry. These
+  // values are populated by this class. The payload (i.e., the keys and values)
+  // are populated by the client and are opaque to this class.
+  struct Entry : public GenericHashTable::EntryHeader {
+    byte payload[0];
+  };
+
   /// Construct a hash-table used for join processing using \p region as the
   /// main memory allocator
   explicit JoinHashTable(util::Region *region);
@@ -37,24 +48,13 @@ class JoinHashTable {
  private:
   friend class tpl::sql::test::JoinHashTableTest;
 
-  // An entry in the join hash table. An Entry is a variably-sized chunk of
-  // memory where the join keys and join attributes are stored. One of these
-  // is allocated for every tuple from the build side of a join, through each
-  // call to AllocInputTuple(). The first two fields of all entries are the
-  // links to the next entry in the chain and the hash value of the entry. These
-  // values are populated by this class. The payload (i.e., the keys and values)
-  // are populated by the client and are opaque to this class.
-  struct Entry : public GenericHashTable::EntryHeader {
-    byte payload[0];
-  };
-
   // -------------------------------------------------------
   // Accessors
   // -------------------------------------------------------
 
   util::Region *region() const { return region_; }
 
-  GenericHashTable *hash_table() { return &table_; }
+  GenericHashTable *generic_hash_table() { return &generic_table_; }
 
   BloomFilter *bloom_filter() { return &filter_; }
 
@@ -64,8 +64,8 @@ class JoinHashTable {
   // The memory allocator we use for all entries stored in the hash table
   util::Region *region_;
 
-  // The hash table
-  GenericHashTable table_;
+  // The generic hash table
+  GenericHashTable generic_table_;
 
   // The bloom filter
   BloomFilter filter_;

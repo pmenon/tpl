@@ -12,11 +12,11 @@ void JoinHashTable::Build() {
 
   // TODO(pmenon): Use HLL++ sketches to better estimate size
 
-  hash_table()->SetSize(num_elems());
+  generic_hash_table()->SetSize(num_elems());
 
   for (auto *entry_header = head()->next; entry_header != nullptr;) {
     auto *const RESTRICT next = entry_header->next;
-    hash_table()->Insert<false>(entry_header, entry_header->hash);
+    generic_hash_table()->Insert<false>(entry_header, entry_header->hash);
     entry_header = next;
   }
 
