@@ -31,8 +31,8 @@ struct Tuple {
   u64 a, b, c, d;
 };
 
-static inline bool TupleKeyEq(UNUSED const u8 *_, const u8 *probe_tuple,
-                              const u8 *table_tuple) {
+static inline bool TupleKeyEq(UNUSED void *_, void *probe_tuple,
+                              void *table_tuple) {
   auto *lhs = reinterpret_cast<const Tuple *>(probe_tuple);
   auto *rhs = reinterpret_cast<const Tuple *>(table_tuple);
   return lhs->a == rhs->a;
@@ -104,11 +104,11 @@ TEST_F(JoinHashTableTest, UniqueKeyLookupTest) {
 
   for (u32 i = 0; i < num_tuples; i++) {
     auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
-    Tuple t = {i, 0, 0, 0};
+    Tuple probe_tuple = {i, 0, 0, 0};
     u32 count = 0;
     runtime::JoinHashTable::Entry *entry = nullptr;
     for (auto iter = join_hash_table()->Lookup(hash_val);
-         (entry = iter.NextMatch(TupleKeyEq, nullptr, (const u8 *)&t));) {
+         (entry = iter.NextMatch(TupleKeyEq, nullptr, (void *)&probe_tuple));) {
       // Check contents
       auto *matched = reinterpret_cast<Tuple *>(entry->payload);
       EXPECT_EQ(i + 0, matched->a);
@@ -130,7 +130,7 @@ TEST_F(JoinHashTableTest, UniqueKeyLookupTest) {
     auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
     Tuple probe_tuple = {i, 0, 0, 0};
     for (auto iter = join_hash_table()->Lookup(hash_val);
-         iter.NextMatch(TupleKeyEq, nullptr, (const u8 *)&probe_tuple);) {
+         iter.NextMatch(TupleKeyEq, nullptr, (void *)&probe_tuple);) {
       FAIL() << "Should not find any matches for key [" << i
              << "] that was not inserted into the join hash table";
     }
@@ -167,7 +167,7 @@ TEST_F(JoinHashTableTest, DuplicateKeyLookupTest) {
     Tuple probe_tuple = {i, 0, 0, 0};
     u32 count = 0;
     for (auto iter = join_hash_table()->Lookup(hash_val);
-         iter.NextMatch(TupleKeyEq, nullptr, (const u8 *)&probe_tuple);) {
+         iter.NextMatch(TupleKeyEq, nullptr, (void *)&probe_tuple);) {
       count++;
     }
     EXPECT_EQ(num_dups, count) << "Find " << count << " matches for key [" << i

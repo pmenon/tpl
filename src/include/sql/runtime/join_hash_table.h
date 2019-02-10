@@ -45,8 +45,8 @@ class JoinHashTable {
    public:
     Iterator(const JoinHashTable &table, hash_t hash);
 
-    using KeyEq = bool(const u8 *, const u8 *, const u8 *);
-    Entry *NextMatch(KeyEq key_eq, u8 *ctx, const u8 *probe_tuple);
+    using KeyEq = bool(void *opaque_ctx, void *probe_tuple, void *table_tuple);
+    Entry *NextMatch(KeyEq key_eq, void *opaque_ctx, void *probe_tuple);
 
    private:
     Entry *next() const { return next_; }
@@ -141,12 +141,14 @@ inline JoinHashTable::Iterator::Iterator(const JoinHashTable &table,
 }
 
 inline JoinHashTable::Entry *JoinHashTable::Iterator::NextMatch(
-    JoinHashTable::Iterator::KeyEq key_eq, u8 *ctx, const u8 *probe_tuple) {
+    JoinHashTable::Iterator::KeyEq key_eq, void *opaque_ctx,
+    void *probe_tuple) {
   Entry *result = next();
   while (result != nullptr) {
     next_ = reinterpret_cast<Entry *>(next()->next);
     if (result->hash == hash() &&
-        key_eq(ctx, probe_tuple, reinterpret_cast<u8 *>(result->payload))) {
+        key_eq(opaque_ctx, probe_tuple,
+               reinterpret_cast<void *>(result->payload))) {
       break;
     }
     result = next_;
