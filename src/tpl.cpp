@@ -25,7 +25,7 @@ namespace tpl {
 
 static constexpr const char *kExitKeyword = ".exit";
 
-/// Compile the TPL source in \p source and run it in both interpreted and JIT
+/// Compile the TPL source in \a source and run it in both interpreted and JIT
 /// compiled mode
 /// \param source The TPL source
 /// \param name The name of the module/program

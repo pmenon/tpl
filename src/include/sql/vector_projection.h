@@ -20,7 +20,7 @@ class VectorProjection {
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(VectorProjection);
 
-  /// Get the current vector input for the column at index \p col_idx
+  /// Get the current vector input for the column at index \a col_idx
   /// \tparam T The data type to interpret the column's data as
   /// \param col_idx The index of the column
   /// \return The typed vector of column data in this vector projection
@@ -29,7 +29,7 @@ class VectorProjection {
     return reinterpret_cast<T *>(column_data_[col_idx]);
   }
 
-  /// Return the NULL bit vector for the column at index \p col_idx
+  /// Return the NULL bit vector for the column at index \a col_idx
   /// \param col_idx The index of the column
   /// \return The NULL bit vector for the desired column
   const u32 *GetNullBitmap(u32 col_idx) const {
@@ -42,7 +42,7 @@ class VectorProjection {
   /// \param col_idx The index of the column in this projection to reset
   void ResetColumn(std::vector<ColumnVectorIterator> &col_iters, u32 col_idx);
 
-  /// Reset the column data at index \p col_idx with \p col_data and the
+  /// Reset the column data at index \a col_idx with \a col_data and the
   /// \param col_data The raw (potentially compressed) data for the column
   /// \param col_null_bitmap The null bitmap for the column
   /// \param col_idx The index of the column to reset

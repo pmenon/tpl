@@ -14,7 +14,7 @@ class VectorProjectionIterator;
 
 class JoinHashTable {
  public:
-  /// Construct a hash-table used for join processing using \p region as the
+  /// Construct a hash-table used for join processing using \a region as the
   /// main memory allocator
   explicit JoinHashTable(util::Region *region, u32 tuple_size);
 
@@ -22,7 +22,7 @@ class JoinHashTable {
   DISALLOW_COPY_AND_MOVE(JoinHashTable);
 
   /// Allocate storage in the hash table for an input tuple whose hash value is
-  /// \p hash and whose size (in bytes) is \p tuple_size. Remember that this
+  /// \a hash and whose size (in bytes) is \a tuple_size. Remember that this
   /// only performs an allocation from the table's memory pool. No insertion
   /// into the table is performed.
   byte *AllocInputTuple(hash_t hash);

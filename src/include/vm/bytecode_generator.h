@@ -12,7 +12,7 @@ class LoopBuilder;
 
 /// This class takes a correctly parsed and semantically type-checked TPL
 /// program as an AST and compiles it into TBC bytecode. The entry point into
-/// this class is the static \p Compile() function which performs the
+/// this class is the static \a Compile() function which performs the
 /// heavy lifting
 class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
  public:

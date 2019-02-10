@@ -34,7 +34,7 @@ class CHTSlot {
 
 /// A generic structure used to represent an entry in either a generic hash
 /// table or a concise hash table. An entry is a variably-sized chunk of
-/// memory where the keys, attributes, aggregates are stored in the \p payload
+/// memory where the keys, attributes, aggregates are stored in the \a payload
 /// field. This structure is used for both joins and aggregations.
 struct HashTableEntry {
   static_assert(sizeof(CHTSlot) == sizeof(u32), "CHT slots should be 4-bytes");

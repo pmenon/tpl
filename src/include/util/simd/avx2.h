@@ -68,20 +68,20 @@ class Vec4 : public Vec256b {
   static constexpr u32 Size() { return 4; }
 
   /// Load four 64-bit values stored contiguously from the unaligned input
-  /// pointer. The underlying data type of the array \p ptr can be either 32-bit
+  /// pointer. The underlying data type of the array \a ptr can be either 32-bit
   /// or 64-bit integers. Up-casting is performed when appropriate.
   template <typename T>
   Vec4 &Load(const T *ptr);
 
-  /// Gather non-contiguous elements from the input array \p ptr stored at
-  /// index positions from \t pos
+  /// Gather non-contiguous elements from the input array \a ptr stored at
+  /// index positions from \a pos
   template <typename T>
   Vec4 &Gather(const T *ptr, const Vec4 &pos);
 
   void Store(i32 *arr) const;
   void Store(i64 *arr) const;
 
-  /// Store the contents of this vector contiguously into the input array \p ptr
+  /// Store the contents of this vector contiguously into the input array \a ptr
   template <typename T>
   typename std::enable_if_t<
       std::conjunction_v<std::is_integral<T>, std::is_unsigned<T>>>
@@ -172,14 +172,14 @@ class Vec8 : public Vec256b {
     reg_ = _mm256_setr_epi32(val1, val2, val3, val4, val5, val6, val7, val8);
   }
 
-  /// Load 8 32-bit values stored contiguously from the input pointer \p ptr.
-  /// The underlying data type of the array \p ptr can be either 8-bit, 16-bit,
+  /// Load 8 32-bit values stored contiguously from the input pointer \a ptr.
+  /// The underlying data type of the array \a ptr can be either 8-bit, 16-bit,
   /// or 32-bit integers. Up-casting is performed when appropriate.
   template <typename T>
   Vec8 &Load(const T *ptr);
 
-  /// Gather non-contiguous elements from the input array \p ptr stored at
-  /// index positions from \t pos
+  /// Gather non-contiguous elements from the input array \a ptr stored at
+  /// index positions from \a pos
   /// \tparam T The data type of the underlying array
   /// \param ptr The input array
   /// \param pos The list of positions in the input array to gather
@@ -188,7 +188,7 @@ class Vec8 : public Vec256b {
 
   void Store(i32 *arr) const;
 
-  /// Store the contents of this vector contiguously into the input array \p ptr
+  /// Store the contents of this vector contiguously into the input array \a ptr
   template <typename T>
   typename std::enable_if_t<
       std::conjunction_v<std::is_integral<T>, std::is_unsigned<T>>>
@@ -311,10 +311,10 @@ class Vec8Mask : public Vec8 {
   Vec8Mask() = default;
   Vec8Mask(const __m256i &reg) : Vec8(reg) {}
 
-  /// Extract the value of the bit at index \p index in this mask
+  /// Extract the value of the bit at index \a index in this mask
   bool Extract(u32 idx) const { return Vec8::Extract(idx) != 0; }
 
-  /// Extract the value of the bit at index \p index in this mask
+  /// Extract the value of the bit at index \a index in this mask
   bool operator[](u32 idx) const { return Extract(idx); }
 
   u32 ToPositions(u32 *positions, u32 offset) const;
