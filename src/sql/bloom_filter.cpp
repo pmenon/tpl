@@ -1,11 +1,11 @@
-#include "sql/runtime/bloom_filter.h"
+#include "sql/bloom_filter.h"
 
 #include <limits>
 
 #include "util/bit_util.h"
 #include "util/simd.h"
 
-namespace tpl::sql::runtime {
+namespace tpl::sql {
 
 BloomFilter::BloomFilter()
     : region_(nullptr),
@@ -95,4 +95,4 @@ u64 BloomFilter::GetTotalBitsSet() const {
   return count;
 }
 
-}  // namespace tpl::sql::runtime
+}  // namespace tpl::sql

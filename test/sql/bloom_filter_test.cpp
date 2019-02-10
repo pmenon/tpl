@@ -5,7 +5,7 @@
 
 #include "tpl_test.h"
 
-#include "sql/runtime/bloom_filter.h"
+#include "sql/bloom_filter.h"
 #include "util/hash.h"
 
 namespace tpl::sql::test {
@@ -57,16 +57,14 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
   std::unordered_set<u32> check(insertions.begin(), insertions.end());
 
   util::Region tmp("filter");
-  runtime::BloomFilter filter(&tmp, num_filter_elems);
+  BloomFilter filter(&tmp, num_filter_elems);
   for (const auto elem : insertions) {
-    filter.Add(
-        util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
+    filter.Add(util::Hasher::Hash((const u8 *)&elem, sizeof(elem)));
   }
 
   // All inserted elements **must** be present in filter
   for (const auto elem : insertions) {
-    filter.Add(
-        util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
+    filter.Add(util::Hasher::Hash((const u8 *)&elem, sizeof(elem)));
   }
 
   double bits_per_elem = (double)filter.GetSizeInBits() / num_filter_elems;

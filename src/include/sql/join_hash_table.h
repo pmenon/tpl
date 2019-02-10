@@ -1,7 +1,7 @@
 #pragma once
 
-#include "sql/runtime/bloom_filter.h"
-#include "sql/runtime/generic_hash_table.h"
+#include "bloom_filter.h"
+#include "generic_hash_table.h"
 #include "util/region.h"
 
 namespace tpl::sql::test {
@@ -9,10 +9,8 @@ class JoinHashTableTest;
 }  // namespace tpl::sql::test
 
 namespace tpl::sql {
-class VectorProjectionIterator;
-}  // namespace tpl::sql
 
-namespace tpl::sql::runtime {
+class VectorProjectionIterator;
 
 class JoinHashTable {
  public:
@@ -186,4 +184,4 @@ inline HashTableEntry *JoinHashTable::Iterator::NextMatch(
   return result;
 }
 
-}  // namespace tpl::sql::runtime
+}  // namespace tpl::sql

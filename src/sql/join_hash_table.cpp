@@ -1,8 +1,8 @@
-#include "sql/runtime/join_hash_table.h"
+#include "sql/join_hash_table.h"
 
 #include "sql/vector_projection_iterator.h"
 
-namespace tpl::sql::runtime {
+namespace tpl::sql {
 
 JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size)
     : region_(region), tuple_size_(tuple_size), num_elems_(0), built_(false) {
@@ -51,4 +51,4 @@ JoinHashTable::VectorLookup::VectorLookup(const JoinHashTable &table,
 
 u32 JoinHashTable::VectorLookup::NumTuples() { return vpi()->num_selected(); }
 
-}  // namespace tpl::sql::runtime
+}  // namespace tpl::sql

@@ -3,7 +3,7 @@
 #include "util/bitfield.h"
 #include "util/common.h"
 
-namespace tpl::sql::runtime {
+namespace tpl::sql {
 
 /// Compact structure representing a position in the concise hash table.
 class CHTSlot {
@@ -49,4 +49,4 @@ struct HashTableEntry {
   HashTableEntry() = default;
 };
 
-}  // namespace tpl::sql::runtime
+}  // namespace tpl::sql

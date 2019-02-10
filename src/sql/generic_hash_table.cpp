@@ -1,9 +1,9 @@
-#include "sql/runtime/generic_hash_table.h"
+#include "sql/generic_hash_table.h"
 
 #include "util/math_util.h"
 #include "util/memory.h"
 
-namespace tpl::sql::runtime {
+namespace tpl::sql {
 
 GenericHashTable::GenericHashTable(float load_factor)
     : entries_(nullptr),
@@ -35,4 +35,4 @@ void GenericHashTable::SetSize(u64 new_size) {
       util::mem::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_);
 }
 
-}  // namespace tpl::sql::runtime
+}  // namespace tpl::sql

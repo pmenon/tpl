@@ -5,7 +5,7 @@
 #include "util/region.h"
 #include "util/region_containers.h"
 
-namespace tpl::sql::runtime {
+namespace tpl::sql {
 
 class BloomFilter {
   // The set of salt values we use to produce alternative hash values
@@ -108,4 +108,4 @@ inline bool BloomFilter::Contains_Slow(hash_t hash) const {
 }
 #endif
 
-}  // namespace tpl::sql::runtime
+}  // namespace tpl::sql

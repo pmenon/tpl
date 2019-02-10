@@ -2,11 +2,11 @@
 
 #include <atomic>
 
-#include "sql/runtime/hash_table_entry.h"
+#include "hash_table_entry.h"
 #include "util/common.h"
 #include "util/macros.h"
 
-namespace tpl::sql::runtime {
+namespace tpl::sql {
 
 /// GenericHashTable serves as a dead-simple hash table for joins and
 /// aggregations in TPL. It is a generic bytes-to-bytes hash table implemented
@@ -200,4 +200,4 @@ inline void GenericHashTable::InsertTagged(HashTableEntry *new_entry,
   num_elems_++;
 }
 
-}  // namespace tpl::sql::runtime
+}  // namespace tpl::sql

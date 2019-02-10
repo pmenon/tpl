@@ -4,7 +4,7 @@
 
 #include "tpl_test.h"
 
-#include "sql/runtime/join_hash_table.h"
+#include "sql/join_hash_table.h"
 #include "util/hash.h"
 
 namespace tpl::sql::test {
@@ -29,16 +29,16 @@ class JoinHashTableTest : public TplTest {
 
   util::Region *region() { return &region_; }
 
-  runtime::JoinHashTable *join_hash_table() { return &join_hash_table_; }
+  JoinHashTable *join_hash_table() { return &join_hash_table_; }
 
-  runtime::GenericHashTable *inner_generic_hash_table() {
+  GenericHashTable *inner_generic_hash_table() {
     return join_hash_table()->generic_hash_table();
   }
 
  private:
   util::Region region_;
 
-  runtime::JoinHashTable join_hash_table_;
+  JoinHashTable join_hash_table_;
 };
 
 TEST_F(JoinHashTableTest, LazyInsertionTest) {
@@ -107,7 +107,7 @@ TEST_F(JoinHashTableTest, UniqueKeyLookupTest) {
     auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
     Tuple probe_tuple = {i, 0, 0, 0};
     u32 count = 0;
-    runtime::HashTableEntry *entry = nullptr;
+    HashTableEntry *entry = nullptr;
     for (auto iter = join_hash_table()->Lookup(hash_val);
          (entry = iter.NextMatch(TupleKeyEq, nullptr, (void *)&probe_tuple));) {
       // Check contents
