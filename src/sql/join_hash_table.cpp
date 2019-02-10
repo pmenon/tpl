@@ -36,8 +36,19 @@ void JoinHashTable::LookupBatch(JoinHashTable::VectorLookup *lookup) const {
 
   auto *hashes = lookup->hashes();
   auto *entries = lookup->entries();
+
+  // Initial lookup
   for (u32 i = 0; i < lookup->NumTuples(); i++) {
     entries[i] = generic_hash_table()->FindChainHead(hashes[i]);
+  }
+
+  // Ensure find match on hash
+  for (u32 i = 0; i < lookup->NumTuples(); i++) {
+    auto *entry = entries[i];
+    while (entry != nullptr && entry->hash != hashes[i]) {
+      entry = entry->next;
+    }
+    entries[i] = entry;
   }
 }
 
