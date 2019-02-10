@@ -1,8 +1,7 @@
-#include <utility>
-
 #pragma once
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "sql/data_types.h"

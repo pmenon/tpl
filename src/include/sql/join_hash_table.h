@@ -1,7 +1,7 @@
 #pragma once
 
-#include "bloom_filter.h"
-#include "generic_hash_table.h"
+#include "sql/bloom_filter.h"
+#include "sql/generic_hash_table.h"
 #include "util/region.h"
 
 namespace tpl::sql::test {

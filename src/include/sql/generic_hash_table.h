@@ -2,7 +2,7 @@
 
 #include <atomic>
 
-#include "hash_table_entry.h"
+#include "sql/hash_table_entry.h"
 #include "util/common.h"
 #include "util/macros.h"
 
