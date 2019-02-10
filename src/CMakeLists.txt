@@ -1,9 +1,6 @@
 # Setup includes
 include_directories("${PROJECT_SOURCE_DIR}/src/include/" "${PROJECT_BINARY_DIR}")
 
-# Include third party libs
-include_directories("${PROJECT_SOURCE_DIR}/third_party/spdlog/include")
-
 # Setup sources: add all CPP files in 'src', but remove tpl.cpp (since it
 # contains main(), and all cross-compiled code.
 file(GLOB_RECURSE tpl_sources "${PROJECT_SOURCE_DIR}/src/*.cpp")
@@ -23,7 +20,6 @@ set(CLANG_IR_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-emit-llvm" "-c")
 separate_arguments(CLANG_IR_CXX_FLAGS)
 set(CLANG_IR_CXX_INCLUDES
     "-I${PROJECT_SOURCE_DIR}/src/include"
-    "-I${PROJECT_SOURCE_DIR}/third_party/spdlog/include"
     "-isystem${LLVM_INCLUDE_DIRS}")
 
 # Function to generate rule to cross compile a source file to an IR module.

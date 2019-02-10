@@ -38,7 +38,6 @@ class GenericHashTable {
 
   /// Constructor does not allocate memory. Callers must first call SetSize()
   /// before using this hash map.
-  ///
   /// \param load_factor The desired load-factor for the table
   explicit GenericHashTable(float load_factor = 0.7);
 
@@ -50,7 +49,6 @@ class GenericHashTable {
 
   /// Insert an entry into the hash table, ignoring tagging the pointer into the
   /// bucket head
-  ///
   /// \tparam Concurrent Is the insert occurring concurrently with other inserts
   /// \param[in] new_entry The entry to insert
   /// \param[in] hash The hash value of the entry
@@ -58,7 +56,6 @@ class GenericHashTable {
   void Insert(EntryHeader *new_entry, hash_t hash);
 
   /// Insert an entry into the hash table, updating the tag in the bucket head
-  ///
   /// \tparam Concurrent Is the insert occurring concurrently with other inserts
   /// \param[in] new_entry The entry to insert
   /// \param[in] hash The hash value of the entry
@@ -66,20 +63,17 @@ class GenericHashTable {
   void InsertTagged(EntryHeader *new_entry, hash_t hash);
 
   /// Explicitly set the size of the hash map
-  /// \param[in] new_size The new size represented as the number of elements to
-  /// store in the map
+  /// \param[in] new_size The expected number of elements to size the table for
   void SetSize(u64 new_size);
 
   /// Given a hash value, return the head of the bucket chain ignoring any tag.
   /// This probe is performed assuming no concurrent access into the table.
-  ///
   /// \param[in] hash The hash value of the element to find
   /// \return The (potentially null) head of the bucket chain for the given hash
   EntryHeader *FindChainHead(hash_t hash) const;
 
   /// Given a hash value, return the head of the bucket chain removing the tag.
   /// This probe is performed assuming no concurrent access into the table.
-  ///
   /// \param[in] hash The hash value of the element to find
   /// \return The (potentially null) head of the bucket chain for the given hash
   EntryHeader *FindChainHeadWithTag(hash_t hash) const;
@@ -140,7 +134,7 @@ class GenericHashTable {
   // The mask to use to determine the bucket position of an entry given its hash
   u64 mask_;
 
-  // The capacity of the table
+  // The capacity of the directory
   u64 capacity_;
 
   // The current number of elements stored in the table

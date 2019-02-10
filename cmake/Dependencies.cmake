@@ -33,3 +33,16 @@ if (NOT EXISTS ${CLANG})
 else()
     message(STATUS "Found Clang ${CLANG}")
 endif ()
+
+
+############################################################
+# IPS4O - The sorting library
+############################################################
+
+include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/ips4o")
+
+############################################################
+# SPD Log - The logging library
+############################################################
+
+include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/spdlog/include")
