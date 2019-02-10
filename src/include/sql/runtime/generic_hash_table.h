@@ -2,23 +2,22 @@
 
 #include <atomic>
 
+#include "sql/runtime/hash_table_entry.h"
 #include "util/common.h"
 #include "util/macros.h"
-#include "util/math_util.h"
-#include "util/memory.h"
 
 namespace tpl::sql::runtime {
 
-/// GenericHashTable serves as a base class for all hash tables in the TPL
-/// runtime. It is a generic bytes-to-bytes hash table implemented using a
-/// closed-addressing bucket-chained hash table with pointer tagging. It
-/// optionally supports concurrent inserts (and trivially concurrent probes).
-/// This class only stores pointers into externally managed storage, it does not
-/// store any hash table data internally at all.
+/// GenericHashTable serves as a dead-simple hash table for joins and
+/// aggregations in TPL. It is a generic bytes-to-bytes hash table implemented
+/// as a bucket-chained table with pointer tagging. Pointer tagging uses the
+/// first \a kNumTagBits bits of the entry pointers in the main bucket directory
+/// as a bloom filter. It optionally supports concurrent inserts (and trivially
+/// concurrent probes). This class only stores pointers into externally managed
+/// storage, it does not store any hash table data internally at all.
 ///
-/// GenericHashTable can only be instantiated through one of its subclasses.
-///
-/// This isn't general-purpose.
+/// Note that this class makes use of the \a HashTableEntry::next pointer to
+/// implement the linked list bucket chain.
 class GenericHashTable {
  private:
   static constexpr const u32 kNumTagBits = 16;
@@ -27,15 +26,6 @@ class GenericHashTable {
   static constexpr const u64 kMaskTag = (~0ull) << kNumPointerBits;
 
  public:
-  // Generic struct representing an entry in the hash map. All subclasses must
-  // subclass this to store entries in the table.
-  struct EntryHeader {
-    EntryHeader *next;
-    hash_t hash;
-
-    EntryHeader() : next(nullptr), hash(0) {}
-  };
-
   /// Constructor does not allocate memory. Callers must first call SetSize()
   /// before using this hash map.
   /// \param load_factor The desired load-factor for the table
@@ -53,14 +43,14 @@ class GenericHashTable {
   /// \param[in] new_entry The entry to insert
   /// \param[in] hash The hash value of the entry
   template <bool Concurrent>
-  void Insert(EntryHeader *new_entry, hash_t hash);
+  void Insert(HashTableEntry *new_entry, hash_t hash);
 
   /// Insert an entry into the hash table, updating the tag in the bucket head
   /// \tparam Concurrent Is the insert occurring concurrently with other inserts
   /// \param[in] new_entry The entry to insert
   /// \param[in] hash The hash value of the entry
   template <bool Concurrent>
-  void InsertTagged(EntryHeader *new_entry, hash_t hash);
+  void InsertTagged(HashTableEntry *new_entry, hash_t hash);
 
   /// Explicitly set the size of the hash map
   /// \param[in] new_size The expected number of elements to size the table for
@@ -70,13 +60,13 @@ class GenericHashTable {
   /// This probe is performed assuming no concurrent access into the table.
   /// \param[in] hash The hash value of the element to find
   /// \return The (potentially null) head of the bucket chain for the given hash
-  EntryHeader *FindChainHead(hash_t hash) const;
+  HashTableEntry *FindChainHead(hash_t hash) const;
 
   /// Given a hash value, return the head of the bucket chain removing the tag.
   /// This probe is performed assuming no concurrent access into the table.
   /// \param[in] hash The hash value of the element to find
   /// \return The (potentially null) head of the bucket chain for the given hash
-  EntryHeader *FindChainHeadWithTag(hash_t hash) const;
+  HashTableEntry *FindChainHeadWithTag(hash_t hash) const;
 
   /// Return the number of elements stored in this hash table
   u64 num_elements() const { return num_elems_; }
@@ -89,21 +79,22 @@ class GenericHashTable {
   // Tag-related operations
   // -------------------------------------------------------
 
-  // Given a tagged EntryHeader pointer, strip out the tag bits and return an
-  // untagged EntryHeader pointer
-  static EntryHeader *UntagPointer(const EntryHeader *const entry) {
+  // Given a tagged HashTableEntry pointer, strip out the tag bits and return an
+  // untagged HashTableEntry pointer
+  static HashTableEntry *UntagPointer(const HashTableEntry *const entry) {
     auto ptr = reinterpret_cast<intptr_t>(entry);
-    return reinterpret_cast<EntryHeader *>(ptr & kMaskPointer);
+    return reinterpret_cast<HashTableEntry *>(ptr & kMaskPointer);
   }
 
-  static EntryHeader *UpdateTag(const EntryHeader *const tagged_old_entry,
-                                const EntryHeader *const untagged_new_entry) {
+  static HashTableEntry *UpdateTag(
+      const HashTableEntry *const tagged_old_entry,
+      const HashTableEntry *const untagged_new_entry) {
     auto old_tagged_ptr = reinterpret_cast<intptr_t>(tagged_old_entry);
     auto new_untagged_ptr = reinterpret_cast<intptr_t>(untagged_new_entry);
     auto new_tagged_ptr = (new_untagged_ptr & kMaskPointer) |
                           (old_tagged_ptr & kMaskTag) |
                           TagHash(untagged_new_entry->hash);
-    return reinterpret_cast<EntryHeader *>(new_tagged_ptr);
+    return reinterpret_cast<HashTableEntry *>(new_tagged_ptr);
   }
 
   static u64 TagHash(const hash_t hash) {
@@ -120,7 +111,7 @@ class GenericHashTable {
   // Accessors
   // -------------------------------------------------------
 
-  std::atomic<EntryHeader *> *entries() { return entries_; }
+  std::atomic<HashTableEntry *> *entries() { return entries_; }
 
   u64 mask() const { return mask_; }
 
@@ -129,7 +120,7 @@ class GenericHashTable {
 
  private:
   // Main bucket table
-  std::atomic<EntryHeader *> *entries_;
+  std::atomic<HashTableEntry *> *entries_;
 
   // The mask to use to determine the bucket position of an entry given its hash
   u64 mask_;
@@ -148,26 +139,12 @@ class GenericHashTable {
 // Implementation below
 // ---------------------------------------------------------
 
-inline GenericHashTable::GenericHashTable(float load_factor)
-    : entries_(nullptr),
-      mask_(0),
-      capacity_(0),
-      num_elems_(0),
-      load_factor_(load_factor) {}
-
-inline GenericHashTable::~GenericHashTable() {
-  if (entries() != nullptr) {
-    util::mem::FreeHugeArray(entries(), capacity());
-  }
-}
-
-inline GenericHashTable::EntryHeader *GenericHashTable::FindChainHead(
-    hash_t hash) const {
+inline HashTableEntry *GenericHashTable::FindChainHead(hash_t hash) const {
   u64 pos = hash & mask_;
   return entries_[pos].load(std::memory_order_relaxed);
 }
 
-inline GenericHashTable::EntryHeader *GenericHashTable::FindChainHeadWithTag(
+inline HashTableEntry *GenericHashTable::FindChainHeadWithTag(
     hash_t hash) const {
   auto candidate = FindChainHead(hash);
   auto exists_in_chain = reinterpret_cast<intptr_t>(candidate) & TagHash(hash);
@@ -175,22 +152,21 @@ inline GenericHashTable::EntryHeader *GenericHashTable::FindChainHeadWithTag(
 }
 
 template <bool Concurrent>
-inline void GenericHashTable::Insert(GenericHashTable::EntryHeader *new_entry,
-                                     hash_t hash) {
+inline void GenericHashTable::Insert(HashTableEntry *new_entry, hash_t hash) {
   const auto pos = hash & mask();
 
   TPL_ASSERT(pos < capacity(), "Computed table position exceeds capacity!");
   TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
-    std::atomic<EntryHeader *> &loc = entries_[pos];
-    EntryHeader *old_entry = loc.load();
+    std::atomic<HashTableEntry *> &loc = entries_[pos];
+    HashTableEntry *old_entry = loc.load();
     do {
       new_entry->next = old_entry;
     } while (!loc.compare_exchange_weak(old_entry, new_entry));
   } else {
-    std::atomic<EntryHeader *> &loc = entries_[pos];
-    EntryHeader *old_entry = loc.load(std::memory_order_relaxed);
+    std::atomic<HashTableEntry *> &loc = entries_[pos];
+    HashTableEntry *old_entry = loc.load(std::memory_order_relaxed);
     new_entry->next = old_entry;
     loc.store(new_entry, std::memory_order_relaxed);
   }
@@ -199,46 +175,29 @@ inline void GenericHashTable::Insert(GenericHashTable::EntryHeader *new_entry,
 }
 
 template <bool Concurrent>
-inline void GenericHashTable::InsertTagged(
-    GenericHashTable::EntryHeader *new_entry, hash_t hash) {
+inline void GenericHashTable::InsertTagged(HashTableEntry *new_entry,
+                                           hash_t hash) {
   const auto pos = hash & mask();
 
   TPL_ASSERT(pos < capacity(), "Computed table position exceeds capacity!");
   TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
-    std::atomic<EntryHeader *> &loc = entries_[pos];
-    EntryHeader *old_entry = loc.load();
-    EntryHeader *new_entry;
+    std::atomic<HashTableEntry *> &loc = entries_[pos];
+    HashTableEntry *old_entry = loc.load();
     do {
       new_entry->next = UntagPointer(old_entry);
       new_entry = UpdateTag(old_entry, new_entry);
     } while (!loc.compare_exchange_weak(old_entry, new_entry));
 
   } else {
-    std::atomic<EntryHeader *> &loc = entries_[pos];
-    EntryHeader *old_entry = loc.load(std::memory_order_relaxed);
+    std::atomic<HashTableEntry *> &loc = entries_[pos];
+    HashTableEntry *old_entry = loc.load(std::memory_order_relaxed);
     new_entry->next = UntagPointer(old_entry);
     loc.store(UpdateTag(old_entry, new_entry), std::memory_order_relaxed);
   }
 
   num_elems_++;
-}
-
-inline void GenericHashTable::SetSize(u64 new_size) {
-  TPL_ASSERT(new_size > 0, "New size cannot be zero!");
-  if (entries() != nullptr) {
-    util::mem::FreeHugeArray(entries(), capacity());
-  }
-
-  u64 next_size = util::MathUtil::NextPowerOf2(new_size);
-  if (next_size < new_size / load_factor()) {
-    next_size *= 2;
-  }
-
-  capacity_ = next_size;
-  mask_ = capacity_ - 1;
-  entries_ = util::mem::MallocHugeArray<std::atomic<EntryHeader *>>(capacity_);
 }
 
 }  // namespace tpl::sql::runtime

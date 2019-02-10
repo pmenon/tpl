@@ -9,9 +9,23 @@
 
 namespace tpl::sql::test {
 
+/// This is the tuple we insert into the hash table
+struct Tuple {
+  u64 a, b, c, d;
+};
+
+/// The function to determine whether two tuples have equivalent keys
+static inline bool TupleKeyEq(UNUSED void *_, void *probe_tuple,
+                              void *table_tuple) {
+  auto *lhs = reinterpret_cast<const Tuple *>(probe_tuple);
+  auto *rhs = reinterpret_cast<const Tuple *>(table_tuple);
+  return lhs->a == rhs->a;
+}
+
 class JoinHashTableTest : public TplTest {
  public:
-  JoinHashTableTest() : region_(GetTestName()), join_hash_table_(region()) {}
+  JoinHashTableTest()
+      : region_(GetTestName()), join_hash_table_(region(), sizeof(Tuple)) {}
 
   util::Region *region() { return &region_; }
 
@@ -26,17 +40,6 @@ class JoinHashTableTest : public TplTest {
 
   runtime::JoinHashTable join_hash_table_;
 };
-
-struct Tuple {
-  u64 a, b, c, d;
-};
-
-static inline bool TupleKeyEq(UNUSED void *_, void *probe_tuple,
-                              void *table_tuple) {
-  auto *lhs = reinterpret_cast<const Tuple *>(probe_tuple);
-  auto *rhs = reinterpret_cast<const Tuple *>(table_tuple);
-  return lhs->a == rhs->a;
-}
 
 TEST_F(JoinHashTableTest, LazyInsertionTest) {
   // Test data
@@ -58,11 +61,9 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
 
   // The table
   for (const auto &tuple : tuples) {
-    auto hash_val = util::Hasher::Hash(reinterpret_cast<const u8 *>(&tuple.a),
-                                       sizeof(tuple.a));
-    auto *e = reinterpret_cast<Tuple *>(
-        join_hash_table()->AllocInputTuple(hash_val, sizeof(Tuple)));
-    *e = tuple;
+    auto hash_val = util::Hasher::Hash((const u8 *)&tuple.a, sizeof(tuple.a));
+    auto *space = join_hash_table()->AllocInputTuple(hash_val);
+    *reinterpret_cast<Tuple *>(space) = tuple;
   }
 
   EXPECT_EQ(num_tuples, join_hash_table()->num_elems());
@@ -83,7 +84,7 @@ TEST_F(JoinHashTableTest, UniqueKeyLookupTest) {
   // Some inserts
   for (u32 i = 0; i < num_tuples; i++) {
     auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
-    auto *space = join_hash_table()->AllocInputTuple(hash_val, sizeof(Tuple));
+    auto *space = join_hash_table()->AllocInputTuple(hash_val);
     auto *tuple = reinterpret_cast<Tuple *>(space);
 
     tuple->a = i + 0;
@@ -106,7 +107,7 @@ TEST_F(JoinHashTableTest, UniqueKeyLookupTest) {
     auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
     Tuple probe_tuple = {i, 0, 0, 0};
     u32 count = 0;
-    runtime::JoinHashTable::Entry *entry = nullptr;
+    runtime::HashTableEntry *entry = nullptr;
     for (auto iter = join_hash_table()->Lookup(hash_val);
          (entry = iter.NextMatch(TupleKeyEq, nullptr, (void *)&probe_tuple));) {
       // Check contents
@@ -146,7 +147,7 @@ TEST_F(JoinHashTableTest, DuplicateKeyLookupTest) {
   for (u32 rep = 0; rep < num_dups; rep++) {
     for (u32 i = 0; i < num_tuples; i++) {
       auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
-      auto *space = join_hash_table()->AllocInputTuple(hash_val, sizeof(Tuple));
+      auto *space = join_hash_table()->AllocInputTuple(hash_val);
       auto *tuple = reinterpret_cast<Tuple *>(space);
 
       tuple->a = i + 0;

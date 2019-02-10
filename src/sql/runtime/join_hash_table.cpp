@@ -2,8 +2,8 @@
 
 namespace tpl::sql::runtime {
 
-JoinHashTable::JoinHashTable(util::Region *region)
-    : region_(region), num_elems_(0), built_(false) {
+JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size)
+    : region_(region), tuple_size_(tuple_size), num_elems_(0), built_(false) {
   head()->next = nullptr;
 }
 
