@@ -8,6 +8,10 @@ namespace tpl::sql::test {
 class JoinHashTableTest;
 }  // namespace tpl::sql::test
 
+namespace tpl::sql {
+class VectorProjectionIterator;
+}  // namespace tpl::sql
+
 namespace tpl::sql::runtime {
 
 class JoinHashTable {
@@ -33,6 +37,9 @@ class JoinHashTable {
   /// an iterator.
   class Iterator;
   Iterator Lookup(hash_t hash) const;
+
+  class VectorLookup;
+  void LookupBatch(VectorLookup *lookup) const;
 
   /// Return the total number of inserted elements, including duplicates
   u32 num_elems() const { return num_elems_; }
@@ -60,6 +67,31 @@ class JoinHashTable {
     HashTableEntry *next_;
     // The hash value we're looking up
     hash_t hash_;
+  };
+
+  /// Helper class to perform vectorized lookups
+  class VectorLookup {
+   public:
+    VectorLookup(const JoinHashTable &table, VectorProjectionIterator *vpi);
+
+    u32 NumTuples();
+
+   private:
+    friend class JoinHashTable;
+
+    const JoinHashTable &table() const { return table_; }
+
+    VectorProjectionIterator *vpi() const { return vpi_; }
+
+    hash_t *hashes() { return hashes_; }
+
+    HashTableEntry **entries() { return entries_; }
+
+   private:
+    const JoinHashTable &table_;
+    VectorProjectionIterator *vpi_;
+    hash_t hashes_[kDefaultVectorSize];
+    HashTableEntry *entries_[kDefaultVectorSize];
   };
 
  private:

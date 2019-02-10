@@ -1,5 +1,7 @@
 #include "sql/runtime/join_hash_table.h"
 
+#include "sql/vector_projection_iterator.h"
+
 namespace tpl::sql::runtime {
 
 JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size)
@@ -27,5 +29,26 @@ void JoinHashTable::Build() {
   // The table has been built. Set the flag now so we don't redo it
   built_ = true;
 }
+
+void JoinHashTable::LookupBatch(JoinHashTable::VectorLookup *lookup) const {
+  // TODO(pmenon): Select between generic tables and concise tables
+  // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
+
+  auto *hashes = lookup->hashes();
+  auto *entries = lookup->entries();
+  for (u32 i = 0; i < lookup->NumTuples(); i++) {
+    entries[i] = generic_hash_table()->FindChainHead(hashes[i]);
+  }
+}
+
+// ---------------------------------------------------------
+// JoinHashTable's VectorLookup
+// ---------------------------------------------------------
+
+JoinHashTable::VectorLookup::VectorLookup(const JoinHashTable &table,
+                                          VectorProjectionIterator *vpi)
+    : table_(table), vpi_(vpi) {}
+
+u32 JoinHashTable::VectorLookup::NumTuples() { return vpi()->num_selected(); }
 
 }  // namespace tpl::sql::runtime
