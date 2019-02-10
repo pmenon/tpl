@@ -36,10 +36,35 @@ class JoinHashTable {
   /// into the table is performed.
   byte *AllocInputTuple(hash_t hash, u32 tuple_size);
 
-  /// Fully construct the join hash table
+  /// Fully construct the join hash table. If the join hash table has already
+  /// been built, do nothing.
   void Build();
 
-  /// Return the number of inserted elements, including duplicates
+  /// The iterator used for lookups
+  class Iterator {
+   public:
+    Iterator(const JoinHashTable &table, hash_t hash);
+
+    using KeyEq = bool(const u8 *, const u8 *, const u8 *);
+    Entry *NextMatch(KeyEq key_eq, u8 *ctx, const u8 *probe_tuple);
+
+   private:
+    Entry *next() const { return next_; }
+
+    hash_t hash() const { return hash_; }
+
+   private:
+    // The next element the iterator produces
+    Entry *next_;
+    // The hash value we're looking up
+    hash_t hash_;
+  };
+
+  /// Lookup all entries in this hash table with the given hash value, returning
+  /// an iterator.
+  Iterator Lookup(hash_t hash) const;
+
+  /// Return the total number of inserted elements, including duplicates
   u32 num_elems() const { return num_elems_; }
 
   /// Has the join hash table been built?
@@ -55,6 +80,7 @@ class JoinHashTable {
   util::Region *region() const { return region_; }
 
   GenericHashTable *generic_hash_table() { return &generic_table_; }
+  const GenericHashTable *generic_hash_table() const { return &generic_table_; }
 
   BloomFilter *bloom_filter() { return &filter_; }
 
@@ -81,7 +107,7 @@ class JoinHashTable {
 };
 
 // ---------------------------------------------------------
-// Implementation below
+// JoinHashTable implementation
 // ---------------------------------------------------------
 
 inline byte *JoinHashTable::AllocInputTuple(hash_t hash, u32 tuple_size) {
@@ -93,6 +119,39 @@ inline byte *JoinHashTable::AllocInputTuple(hash_t hash, u32 tuple_size) {
   num_elems_++;
 
   return entry->payload;
+}
+
+inline JoinHashTable::Iterator JoinHashTable::Lookup(hash_t hash) const {
+  return JoinHashTable::Iterator(*this, hash);
+}
+
+// ---------------------------------------------------------
+// JoinHashTable's Iterator implementation
+// ---------------------------------------------------------
+
+inline JoinHashTable::Iterator::Iterator(const JoinHashTable &table,
+                                         hash_t hash)
+    : next_(nullptr), hash_(hash) {
+  const auto *generic_table = table.generic_hash_table();
+  auto *entry = generic_table->FindChainHead(hash);
+  while (entry != nullptr && entry->hash != hash) {
+    entry = entry->next;
+  }
+  next_ = reinterpret_cast<Entry *>(entry);
+}
+
+inline JoinHashTable::Entry *JoinHashTable::Iterator::NextMatch(
+    JoinHashTable::Iterator::KeyEq key_eq, u8 *ctx, const u8 *probe_tuple) {
+  Entry *result = next();
+  while (result != nullptr) {
+    next_ = reinterpret_cast<Entry *>(next()->next);
+    if (result->hash == hash() &&
+        key_eq(ctx, probe_tuple, reinterpret_cast<u8 *>(result->payload))) {
+      break;
+    }
+    result = next_;
+  }
+  return result;
 }
 
 }  // namespace tpl::sql::runtime

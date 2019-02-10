@@ -29,7 +29,7 @@ void VectorProjection::ResetColumn(std::vector<ColumnVectorIterator> &col_iters,
   ClearDeletions();
 }
 
-void VectorProjection::ResetFromRaw(byte *col_data, u32 *col_null_bitmap,
+void VectorProjection::ResetFromRaw(byte col_data[], u32 col_null_bitmap[],
                                     u32 col_idx, u32 num_tuples) {
   column_data_[col_idx] = col_data;
   column_null_bitmaps_[col_idx] = col_null_bitmap;

@@ -8,16 +8,20 @@ JoinHashTable::JoinHashTable(util::Region *region)
 }
 
 void JoinHashTable::Build() {
-  TPL_ASSERT(!is_table_built(), "Calling Build() on an already built table");
+  if (is_table_built()) {
+    return;
+  }
 
   // TODO(pmenon): Use HLL++ sketches to better estimate size
+  // TODO(pmenon): Select between generic tables and concise tables
+  // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
 
   generic_hash_table()->SetSize(num_elems());
 
-  for (auto *entry_header = head()->next; entry_header != nullptr;) {
-    auto *const RESTRICT next = entry_header->next;
-    generic_hash_table()->Insert<false>(entry_header, entry_header->hash);
-    entry_header = next;
+  for (auto *entry = head()->next; entry != nullptr;) {
+    auto *const next = entry->next;
+    generic_hash_table()->Insert<false>(entry, entry->hash);
+    entry = next;
   }
 
   // The table has been built. Set the flag now so we don't redo it

@@ -47,7 +47,7 @@ class VectorProjection {
   /// \param col_null_bitmap The null bitmap for the column
   /// \param col_idx The index of the column to reset
   /// \param num_tuples The number of tuples stored in the input
-  void ResetFromRaw(byte *col_data, u32 *col_null_bitmap, u32 col_idx,
+  void ResetFromRaw(byte col_data[], u32 col_null_bitmap[], u32 col_idx,
                     u32 num_tuples);
 
   /// Return the number of active tuples in this projection
