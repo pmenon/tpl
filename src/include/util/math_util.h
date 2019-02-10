@@ -31,16 +31,6 @@ class MathUtil {
   /// \return The next power of two greater than \a val
   static u64 NextPowerOf2(u64 val) { return llvm::NextPowerOf2(val); }
 
-  /// Count the number of zeroes from the most significant bit to the first 1 in
-  /// the input number @ref val
-  /// \tparam T The data type of the input value
-  /// \param val The input number
-  /// \return The number of leading zeros
-  template <typename T>
-  static u64 CountLeadingZeros(T val) {
-    return llvm::countLeadingZeros(val);
-  }
-
   /// Returns whether \param value is aligned to \param alignment. The desired
   /// alignment is required to be a power of two.
   ///

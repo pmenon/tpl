@@ -17,6 +17,16 @@ class BitUtil {
   // bit operations cheap
   static_assert(util::MathUtil::IsPowerOf2(kBitWordSize));
 
+  /// Count the number of zeroes from the most significant bit to the first 1 in
+  /// the input number @ref val
+  /// \tparam T The data type of the input value
+  /// \param val The input number
+  /// \return The number of leading zeros
+  template <typename T>
+  static u64 CountLeadingZeros(T val) {
+    return llvm::countLeadingZeros(val);
+  }
+
   /// Calculate the number of 32-bit words are needed to store a bit vector of
   /// the given size
   /// \param num_bits The size of the bit vector, in bits
