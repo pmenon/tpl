@@ -72,4 +72,40 @@ TEST(BitUtilTest, TestAndSetTest) {
   }
 }
 
+TEST(BitUtilTest, InlinedBitVectorTest) {
+  InlinedBitVector<64> bits;
+
+  EXPECT_EQ(64u, bits.num_bits());
+
+  // Initially all false
+  for (u32 i = 0; i < bits.num_bits(); i++) {
+    EXPECT_FALSE(bits.Test(i));
+  }
+
+  // Set even bits
+  for (u32 i = 0; i < bits.num_bits(); i++) {
+    if (i % 2 == 0) {
+      bits.Set(i);
+    }
+  }
+
+  // Check
+  for (u32 i = 0; i < bits.num_bits(); i++) {
+    auto set = bits.Test(i);
+    if (i % 2 == 0) {
+      EXPECT_TRUE(set);
+    } else {
+      EXPECT_FALSE(set);
+    }
+  }
+
+  // Clear
+  bits.ClearAll();
+
+  // Final check all 0
+  for (u32 i = 0; i < bits.num_bits(); i++) {
+    EXPECT_FALSE(bits.Test(i));
+  }
+}
+
 }  // namespace tpl::util::test

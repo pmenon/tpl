@@ -9,6 +9,7 @@
 namespace tpl::util {
 
 class BitUtil {
+ public:
   // The number of bits in one word
   static constexpr const u32 kBitWordSize = sizeof(u32) * kBitsPerByte;
 
@@ -16,7 +17,6 @@ class BitUtil {
   // bit operations cheap
   static_assert(util::MathUtil::IsPowerOf2(kBitWordSize));
 
- public:
   /// Calculate the number of 32-bit words are needed to store a bit vector of
   /// the given size
   /// \param num_bits The size of the bit vector, in bits
@@ -25,7 +25,7 @@ class BitUtil {
     return MathUtil::DivRoundUp(num_bits, kBitWordSize);
   }
 
-  /// Test if the bit at index \p idx is set in the bit vector
+  /// Test if the bit at index \a idx is set in the bit vector
   /// \param bits The bit vector
   /// \param idx The index of the bit to check
   /// \return True if set; false otherwise
@@ -34,21 +34,21 @@ class BitUtil {
     return (bits[idx / kBitWordSize] & mask) != 0;
   }
 
-  /// Set the bit at index \p idx to 1 in the bit vector \p bits
+  /// Set the bit at index \a idx to 1 in the bit vector \a bits
   /// \param bits The bit vector
   /// \param idx The index of the bit to set to 1
   static void Set(u32 bits[], const u32 idx) {
     bits[idx / kBitWordSize] |= 1u << (idx % kBitWordSize);
   }
 
-  /// Set the bit at index \p idx to 0 in the bit vector \p bits
+  /// Set the bit at index \a idx to 0 in the bit vector \a bits
   /// \param bits The bit vector
   /// \param idx The index of the bit to unset
   static void Unset(u32 bits[], const u32 idx) {
     bits[idx / kBitWordSize] &= ~(1u << (idx % kBitWordSize));
   }
 
-  /// Flip the value of the bit at index \p idx in the bit vector
+  /// Flip the value of the bit at index \a idx in the bit vector
   /// \param bits The bit vector
   /// \param idx The index of the bit to flip
   static void Flip(u32 bits[], const u32 idx) {
@@ -59,16 +59,57 @@ class BitUtil {
   /// \param bits The bit vector
   /// \param size The number of elements in the bit vector
   static void Clear(u32 bits[], const u64 size) {
-    auto num_bytes = sizeof(u32) * Num32BitWordsFor(size);
-    TPL_MEMSET(bits, 0, num_bytes);
+    auto num_words = size / kBitWordSize;
+    TPL_MEMSET(bits, 0, num_words * sizeof(u32));
   }
 
   /// Count the number of set bits in the given value
   template <typename T>
-  static u64 CountBits(T val) { return llvm::countPopulation(val); }
+  static u64 CountBits(T val) {
+    return llvm::countPopulation(val);
+  }
 };
 
-class BitVector {
+/// Common class to bit vectors that are inlined or stored externally to the
+/// class. Uses CRTP to properly access bits and bit-vector size. Subclasses
+/// must implement bits() and num_bits() and provide raw access to the bit
+/// vector data and the number of bits in the bit vector, respectively.
+template <typename Subclass>
+class BitVectorBase {
+ public:
+  /// Test the value of the bit at index \a idx in the bit-vector
+  bool Test(u32 idx) const {
+    TPL_ASSERT(idx < impl()->num_bits(), "Index out of range");
+    return BitUtil::Test(impl()->bits(), idx);
+  }
+
+  void Set(u32 idx) {
+    TPL_ASSERT(idx < impl()->num_bits(), "Index out of range");
+    return BitUtil::Set(impl()->bits(), idx);
+  }
+
+  void Unset(u32 idx) {
+    TPL_ASSERT(idx < impl()->num_bits(), "Index out of range");
+    return BitUtil::Unset(impl()->bits(), idx);
+  }
+
+  void Flip(u32 idx) {
+    TPL_ASSERT(idx < impl()->num_bits(), "Index out of range");
+    return BitUtil::Flip(impl()->bits(), idx);
+  }
+
+  void ClearAll() { return BitUtil::Clear(impl()->bits(), impl()->num_bits()); }
+
+  bool operator[](u32 idx) const { return Test(idx); }
+
+ private:
+  Subclass *impl() { return static_cast<Subclass *>(this); }
+  const Subclass *impl() const { return static_cast<const Subclass *>(this); }
+};
+
+/// A bit vector that either owns the bit set, or can interpret an externally
+/// allocate bit vector
+class BitVector : public BitVectorBase<BitVector> {
  public:
   // Create an uninitialized bit vector. Callers **must** use Init() before
   // interacting with the BitVector
@@ -99,40 +140,9 @@ class BitVector {
     num_bits_ = num_bits;
   }
 
-  bool Test(u32 idx) const {
-    TPL_ASSERT(idx < num_bits(), "Index out of range");
-    return BitUtil::Test(bits(), idx);
-  }
-
-  void Set(u32 idx) {
-    TPL_ASSERT(idx < num_bits(), "Index out of range");
-    return BitUtil::Set(bits(), idx);
-  }
-
-  void Unset(u32 idx) {
-    TPL_ASSERT(idx < num_bits(), "Index out of range");
-    return BitUtil::Unset(bits(), idx);
-  }
-
-  void Flip(u32 idx) {
-    TPL_ASSERT(idx < num_bits(), "Index out of range");
-    return BitUtil::Flip(bits(), idx);
-  }
-
-  void ClearAll() { return BitUtil::Clear(bits(), num_bits()); }
-
-  bool operator[](u32 idx) const { return Test(idx); }
-
   u32 num_bits() const { return num_bits_; }
 
- private:
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
-
-  u32 *bits() { return bits_; }
-
-  const u32 *bits() const { return bits_; }
+  u32 *bits() const { return bits_; }
 
  private:
   std::unique_ptr<u32[]> owned_bits_;
@@ -140,6 +150,26 @@ class BitVector {
   u32 *bits_;
 
   u32 num_bits_;
+};
+
+/// A bit vector that stores the bit set data inline in the class
+template <u32 NumBits>
+class InlinedBitVector : public BitVectorBase<InlinedBitVector<NumBits>> {
+  static_assert(NumBits % BitUtil::kBitWordSize == 0,
+                "Inlined bit vectors only support vectors that are a multiple "
+                "of the word size (i.e., 32 bits, 64 bits, 128 bits, etc.");
+
+ public:
+  InlinedBitVector() : bits_{0} {}
+
+  u32 num_bits() const { return NumBits; }
+
+  u32 *bits() { return bits_; }
+
+  const u32 *bits() const { return bits_; }
+
+ private:
+  u32 bits_[NumBits / BitUtil::kBitWordSize];
 };
 
 }  // namespace tpl::util
