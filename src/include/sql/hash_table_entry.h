@@ -14,13 +14,19 @@ class CHTSlot {
 
   static CHTSlot MakeOverflow() { return CHTSlot(true, 0); }
 
-  bool IsOverflow() const { return Overflow::Decode(bitfield()); }
+  bool IsOverflow() const { return Overflow::Decode(bitfield_); }
 
-  u32 GetIndex() const { return Index::Decode(bitfield()); }
+  u32 GetIndex() const { return Index::Decode(bitfield_); }
+
+  bool Equal(const CHTSlot &that) const {
+    return IsOverflow() == that.IsOverflow() && GetIndex() == that.GetIndex();
+  }
+
+  bool operator==(const CHTSlot &that) const { return Equal(that); }
+
+  bool operator!=(const CHTSlot &that) const { return !(*this == that); }
 
  private:
-  u32 bitfield() const { return bitfield_; }
-
   class Overflow : public util::BitField32<bool, 0, 1> {};
   class Index : public util::BitField32<u32, Overflow::kNextBit, 31> {};
 
