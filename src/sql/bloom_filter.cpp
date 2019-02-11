@@ -27,10 +27,7 @@ void BloomFilter::Init(util::Region *region, u32 num_elems) {
   region_ = region;
   lazily_added_hashes_ = util::RegionVector<hash_t>(region);
 
-  u64 num_bits = kBitsPerElement * num_elems;
-  if (!util::MathUtil::IsPowerOf2(num_bits)) {
-    num_bits = util::MathUtil::NextPowerOf2(num_bits);
-  }
+  u64 num_bits = util::MathUtil::PowerOf2Ceil(kBitsPerElement * num_elems);
   u64 num_blocks =
       util::MathUtil::DivRoundUp(num_bits, sizeof(Block) * kBitsPerByte);
   u64 num_bytes = num_blocks * sizeof(Block);

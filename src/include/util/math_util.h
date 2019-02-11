@@ -26,10 +26,11 @@ class MathUtil {
   /// \return True if the value is a power of two > 0
   static constexpr bool IsPowerOf2(u64 val) { return llvm::isPowerOf2_64(val); }
 
-  /// Compute the next power of two greater than the input
-  /// \param val The input
-  /// \return The next power of two greater than \a val
+  /// Compute the next power of two strictly greater than the input \a val
   static u64 NextPowerOf2(u64 val) { return llvm::NextPowerOf2(val); }
+
+  /// Return the next power of two greater than or equal to the input \a val
+  static u64 PowerOf2Ceil(u64 val) { return llvm::PowerOf2Ceil(val); }
 
   /// Returns whether \param value is aligned to \param alignment. The desired
   /// alignment is required to be a power of two.

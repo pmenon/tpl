@@ -46,7 +46,12 @@ class JoinHashTable {
   bool is_table_built() const { return built_; }
 
  public:
-  /// The iterator used for lookups
+  // -------------------------------------------------------
+  // Tuple-at-a-time Iterator
+  // -------------------------------------------------------
+
+  /// The iterator used for generic lookups. This class is used mostly for
+  /// tuple-at-a-time lookups from the hash table.
   class Iterator {
    public:
     Iterator(const JoinHashTable &table, hash_t hash);
@@ -66,6 +71,10 @@ class JoinHashTable {
     // The hash value we're looking up
     hash_t hash_;
   };
+
+  // -------------------------------------------------------
+  // VectorLookup
+  // -------------------------------------------------------
 
   /// Helper class to perform vectorized lookups
   class VectorLookup {

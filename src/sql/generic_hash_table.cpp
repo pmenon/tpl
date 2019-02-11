@@ -24,7 +24,7 @@ void GenericHashTable::SetSize(u64 new_size) {
     util::mem::FreeHugeArray(entries(), capacity());
   }
 
-  u64 next_size = util::MathUtil::NextPowerOf2(new_size);
+  u64 next_size = util::MathUtil::PowerOf2Ceil(new_size);
   if (next_size < new_size / load_factor()) {
     next_size *= 2;
   }
