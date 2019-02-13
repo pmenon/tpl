@@ -92,6 +92,7 @@ class BytecodeModule {
 
   const u8 *GetBytecodeForFunction(const FunctionInfo &func) const {
     auto [start, _] = func.bytecode_range();
+    (void)_;
     return &code_[start];
   }
 

@@ -558,6 +558,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
   {
     u32 i = 1;
     for (auto &[_, block] : blocks) {
+      (void)_;
       if (block == nullptr) {
         block = llvm::BasicBlock::Create(ctx, "BB" + std::to_string(i++), func);
       }

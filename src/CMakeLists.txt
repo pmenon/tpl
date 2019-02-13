@@ -45,7 +45,7 @@ endfunction(COMPILE_TO_IR)
 
 # We build a shared library containing all the TPL logic so it can be shared
 # between the main TPL binary and the unit tests.
-add_library(tpl_shared OBJECT ${tpl_sources})
+add_library(tpl_shared STATIC ${tpl_sources})
 
 ##################################################
 # TPL executable

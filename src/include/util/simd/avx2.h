@@ -256,7 +256,7 @@ ALWAYS_INLINE inline Vec8 &Vec8::Gather(const T *ptr, const Vec8 &pos) {
 }
 
 template <>
-NEVER_INLINE inline Vec8 &Vec8::Gather<i8>(const i8 *ptr, const Vec8 &pos) {
+ALWAYS_INLINE inline Vec8 &Vec8::Gather<i8>(const i8 *ptr, const Vec8 &pos) {
 #if USE_GATHER == 1
   reg_ = _mm256_i32gather_epi32(ptr, pos, 1);
   reg_ = _mm256_srai_epi32(reg_, 24);
