@@ -1,41 +1,78 @@
 #pragma once
 
+#include <limits>
+
 #include "util/bitfield.h"
 #include "util/common.h"
 
 namespace tpl::sql {
 
-/// Compact structure representing a position in the concise hash table.
-class CHTSlot {
+/// Compact structure representing a position in the concise hash table. CHT
+/// slots are 32-bit values with the following encoding:
+///
+/// +-----------------+------------------+
+/// | Index (31 bits) | Overflow (1 bit) |
+/// +-----------------+------------------+
+///
+/// We use the most significant 31-bits to encode that index of the entry in the
+/// concise hash array; the least-significant bit is used to indicate whether
+/// the slot points to the overflow table.
+class ConciseHashTableSlot {
+ private:
+  ConciseHashTableSlot(bool overflow, u32 index)
+      : bitfield_(OverflowField::Encode(overflow) | IndexField::Encode(index)) {
+  }
+
  public:
-  CHTSlot() = default;
+  ConciseHashTableSlot() : bitfield_(std::numeric_limits<u32>::max()) {}
 
-  static CHTSlot Make(u32 index) { return CHTSlot(false, index); }
+  // -------------------------------------------------------
+  // Static factories
+  // -------------------------------------------------------
 
-  static CHTSlot MakeOverflow() { return CHTSlot(true, 0); }
+  static ConciseHashTableSlot Make(u32 index) {
+    return ConciseHashTableSlot(false, index);
+  }
 
-  bool IsOverflow() const { return Overflow::Decode(bitfield_); }
+  static ConciseHashTableSlot MakeOverflow() {
+    return ConciseHashTableSlot(true, 0);
+  }
 
-  u32 GetIndex() const { return Index::Decode(bitfield_); }
+  // -------------------------------------------------------
+  // Query
+  // -------------------------------------------------------
 
-  bool Equal(const CHTSlot &that) const {
+  /// Does this slow point to the overflow table?
+  bool IsOverflow() const { return OverflowField::Decode(bitfield_); }
+
+  /// Assuming this slot isn't an overflow slot, return the index this slot
+  /// represents in the concise hash table
+  u32 GetIndex() const { return IndexField::Decode(bitfield_); }
+
+  // -------------------------------------------------------
+  // Equality operations
+  // -------------------------------------------------------
+
+  bool Equal(const ConciseHashTableSlot &that) const {
     return IsOverflow() == that.IsOverflow() && GetIndex() == that.GetIndex();
   }
 
-  bool operator==(const CHTSlot &that) const { return Equal(that); }
+  bool operator==(const ConciseHashTableSlot &that) const {
+    return Equal(that);
+  }
 
-  bool operator!=(const CHTSlot &that) const { return !(*this == that); }
-
- private:
-  class Overflow : public util::BitField32<bool, 0, 1> {};
-  class Index : public util::BitField32<u32, Overflow::kNextBit, 31> {};
-
- //private:
- public:
-  CHTSlot(bool overflow, u32 index)
-      : bitfield_(Overflow::Encode(overflow) | Index::Encode(index)) {}
+  bool operator!=(const ConciseHashTableSlot &that) const {
+    return !(*this == that);
+  }
 
  private:
+  class OverflowField : public util::BitField32<bool, 0, 1> {};
+
+  class IndexField : public util::BitField32<u32, OverflowField::kNextBit, 31> {
+  };
+
+ private:
+  // The bitfield we use to encode the overflow and index bits
   u32 bitfield_;
 };
 
@@ -44,16 +81,18 @@ class CHTSlot {
 /// memory where the keys, attributes, aggregates are stored in the \a payload
 /// field. This structure is used for both joins and aggregations.
 struct HashTableEntry {
-  static_assert(sizeof(CHTSlot) == sizeof(u32), "CHT slots should be 4-bytes");
+  static_assert(sizeof(ConciseHashTableSlot) == sizeof(u32),
+                "CHT slots should be 4-bytes");
 
   union {
     HashTableEntry *next;
-    CHTSlot cht_slot;
+    ConciseHashTableSlot cht_slot;
   };
+
   hash_t hash;
   byte payload[0];
 
-  HashTableEntry() = default;
+  HashTableEntry() : cht_slot() {}
 };
 
 }  // namespace tpl::sql
