@@ -30,7 +30,8 @@ class CHTSlot {
   class Overflow : public util::BitField32<bool, 0, 1> {};
   class Index : public util::BitField32<u32, Overflow::kNextBit, 31> {};
 
- private:
+ //private:
+ public:
   CHTSlot(bool overflow, u32 index)
       : bitfield_(Overflow::Encode(overflow) | Index::Encode(index)) {}
 

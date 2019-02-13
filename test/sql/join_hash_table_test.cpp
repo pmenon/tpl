@@ -176,4 +176,56 @@ TEST_F(JoinHashTableTest, DuplicateKeyLookupTest) {
   }
 }
 
+TEST_F(JoinHashTableTest, SimpleTest) {
+  const u32 num_tuples = 10000000;
+
+  //
+  // Build random input
+  //
+
+  JoinHashTable table(region(), sizeof(Tuple));
+
+  std::vector<Tuple *> tuples(num_tuples);
+  std::vector<CHTSlot> slots;
+
+  {
+    std::random_device random;
+    auto genrand = [&random, &table]() {
+      auto hash = random();
+      auto *space = table.AllocInputTuple(hash);
+      auto *tuple = reinterpret_cast<Tuple*>(space);
+      tuple->a = hash;
+      return tuple;
+    };
+    std::generate(tuples.begin(), tuples.end(), genrand);
+  }
+
+  //
+  // Build
+  //
+
+  util::Timer<std::milli> timer;
+  timer.Start();
+
+
+  table.Build();
+
+  timer.Stop();
+  auto tps = (tuples.size() / timer.elapsed()) * 1000.0;
+  std::cout << "Insert+Build: " << std::fixed << std::setprecision(2) << tps << " tps" << std::endl;
+
+#if 0
+  std::cout << table.PrettyPrint() << std::endl;
+
+  //
+  // Probe
+  //
+  for (u32 i = 0; i < tuples.size(); i++) {
+    auto hash = util::Hasher::Hash((const u8 *)&tuples[i].a, sizeof(Tuple::a));
+    auto slot = table.FindFirst(hash);
+    EXPECT_EQ(slots[i], slot);
+  }
+#endif
+}
+
 }  // namespace tpl::sql::test
