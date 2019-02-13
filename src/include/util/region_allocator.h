@@ -38,7 +38,7 @@ class RegionAllocator {
   }
 
   bool operator!=(const RegionAllocator &other) const {
-    return !(this == other);
+    return !(*this == other);
   }
 
  private:
