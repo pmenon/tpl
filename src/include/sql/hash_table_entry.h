@@ -18,6 +18,7 @@ namespace tpl::sql {
 /// concise hash array; the least-significant bit is used to indicate whether
 /// the slot points to the overflow table.
 class ConciseHashTableSlot {
+  friend class ConciseHashTable;
  private:
   ConciseHashTableSlot(bool overflow, u32 index)
       : bitfield_(OverflowField::Encode(overflow) | IndexField::Encode(index)) {
@@ -86,13 +87,10 @@ struct HashTableEntry {
 
   union {
     HashTableEntry *next;
-    ConciseHashTableSlot cht_slot;
+    ConciseHashTableSlot cht_slot{};
   };
-
   hash_t hash;
   byte payload[0];
-
-  HashTableEntry() : cht_slot() {}
 };
 
 }  // namespace tpl::sql

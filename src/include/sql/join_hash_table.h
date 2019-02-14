@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sql/bloom_filter.h"
+#include "sql/concise_hash_table.h"
 #include "sql/generic_hash_table.h"
 #include "util/region.h"
 
@@ -16,7 +17,8 @@ class JoinHashTable {
  public:
   /// Construct a hash-table used for join processing using \a region as the
   /// main memory allocator
-  explicit JoinHashTable(util::Region *region, u32 tuple_size);
+  JoinHashTable(util::Region *region, u32 tuple_size,
+                bool use_concise_ht = false);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(JoinHashTable);
@@ -44,6 +46,9 @@ class JoinHashTable {
 
   /// Has the join hash table been built?
   bool is_table_built() const { return built_; }
+
+  /// Is this join using a concise hash table?
+  bool use_concise_hash_table() const { return use_concise_ht_; }
 
  public:
   // -------------------------------------------------------
@@ -104,16 +109,26 @@ class JoinHashTable {
  private:
   friend class tpl::sql::test::JoinHashTableTest;
 
+  // Dispatched from Build() to build either a generic or concise hash table
+  void BuildGenericHashTable();
+  void BuildConciseHashTable();
+
+  // Dispatched from BuildConciseHashTable() to reorder elements based on
+  // ordering from the concise hash table
+  void ReorderEntries();
+
   // -------------------------------------------------------
   // Accessors
   // -------------------------------------------------------
 
   util::Region *region() const { return region_; }
 
-  u32 build_tuple_size() const { return tuple_size_; }
+  u32 tuple_size() const { return tuple_size_; }
 
   GenericHashTable *generic_hash_table() { return &generic_table_; }
   const GenericHashTable *generic_hash_table() const { return &generic_table_; }
+
+  ConciseHashTable *concise_hash_table() { return &concise_table_; }
 
   BloomFilter *bloom_filter() { return &filter_; }
 
@@ -129,6 +144,9 @@ class JoinHashTable {
   // The generic hash table
   GenericHashTable generic_table_;
 
+  // The concise hash table
+  ConciseHashTable concise_table_;
+
   // The bloom filter
   BloomFilter filter_;
 
@@ -140,6 +158,9 @@ class JoinHashTable {
 
   // Has the hash table been built?
   bool built_;
+
+  // Should we use a concise hash table?
+  bool use_concise_ht_;
 };
 
 // ---------------------------------------------------------
@@ -148,7 +169,7 @@ class JoinHashTable {
 
 inline byte *JoinHashTable::AllocInputTuple(hash_t hash) {
   auto *entry = static_cast<HashTableEntry *>(
-      region()->Allocate(sizeof(HashTableEntry) + build_tuple_size()));
+      region()->Allocate(sizeof(HashTableEntry) + tuple_size()));
   entry->hash = hash;
   entry->next = head()->next;
   head()->next = entry;
