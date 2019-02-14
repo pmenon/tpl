@@ -46,7 +46,8 @@ std::unique_ptr<byte[]> CreateRandom(u32 num_elems, T min = 0,
 }
 
 std::pair<std::unique_ptr<u32[]>, u32> CreateRandomNullBitmap(u32 num_elems) {
-  auto input = std::make_unique<u32[]>(util::BitUtil::Num32BitWordsFor(num_elems));
+  auto input =
+      std::make_unique<u32[]>(util::BitUtil::Num32BitWordsFor(num_elems));
   auto num_nulls = 0;
 
   std::mt19937 generator;
@@ -290,15 +291,31 @@ TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
   VectorProjectionIterator iter;
   iter.SetVectorProjection(vp());
 
-  iter.RunFilter([](const VectorProjectionIterator &vpi) {
+  iter.RunFilter([&iter]() {
     bool null = false;
-    vpi.Get<i32, true>(ColId::col_b, &null);
+    iter.Get<i32, true>(ColId::col_b, &null);
     return !null;
   });
 
   const auto &col_data = column_data(ColId::col_b);
   u32 actual_non_null = col_data.num_tuples - col_data.num_nulls;
   EXPECT_EQ(actual_non_null, iter.num_selected());
+
+  //
+  // Ensure subsequent iterations only work on selected items
+  //
+  {
+    u32 c = 0;
+    iter.ForEach([&iter, &c]() {
+      c++;
+      bool null = false;
+      iter.Get<i32, true>(ColId::col_b, &null);
+      EXPECT_FALSE(null);
+    });
+
+    EXPECT_EQ(actual_non_null, iter.num_selected());
+    EXPECT_EQ(iter.num_selected(), c);
+  }
 }
 
 TEST_F(VectorProjectionIteratorTest, SimpleVectorizedFilterTest) {

@@ -38,8 +38,9 @@ class JoinHashTable {
   class Iterator;
   Iterator Lookup(hash_t hash) const;
 
-  class VectorLookup;
-  void LookupBatch(VectorLookup *lookup) const;
+  /// Perform a vectorized lookup
+  void LookupBatch(u32 num_tuples, hash_t hashes[],
+                   HashTableEntry *results[]) const;
 
   /// Return the total number of inserted elements, including duplicates
   u32 num_elems() const { return num_elems_; }
@@ -59,7 +60,7 @@ class JoinHashTable {
   /// tuple-at-a-time lookups from the hash table.
   class Iterator {
    public:
-    Iterator(const JoinHashTable &table, hash_t hash);
+    Iterator(HashTableEntry *initial, hash_t hash);
 
     using KeyEq = bool(void *opaque_ctx, void *probe_tuple, void *table_tuple);
     HashTableEntry *NextMatch(KeyEq key_eq, void *opaque_ctx,
@@ -77,35 +78,6 @@ class JoinHashTable {
     hash_t hash_;
   };
 
-  // -------------------------------------------------------
-  // VectorLookup
-  // -------------------------------------------------------
-
-  /// Helper class to perform vectorized lookups
-  class VectorLookup {
-   public:
-    VectorLookup(const JoinHashTable &table, VectorProjectionIterator *vpi);
-
-    u32 NumTuples();
-
-   private:
-    friend class JoinHashTable;
-
-    const JoinHashTable &table() const { return table_; }
-
-    VectorProjectionIterator *vpi() const { return vpi_; }
-
-    hash_t *hashes() { return hashes_; }
-
-    HashTableEntry **entries() { return entries_; }
-
-   private:
-    const JoinHashTable &table_;
-    VectorProjectionIterator *vpi_;
-    hash_t hashes_[kDefaultVectorSize];
-    HashTableEntry *entries_[kDefaultVectorSize];
-  };
-
  private:
   friend class tpl::sql::test::JoinHashTableTest;
 
@@ -116,6 +88,13 @@ class JoinHashTable {
   // Dispatched from BuildConciseHashTable() to reorder elements based on
   // ordering from the concise hash table
   void ReorderEntries();
+
+  // Dispatched from LookupBatch() to lookup from either a generic or concise
+  // hash table in batched manner
+  void LookupBatchInGenericHashTable(u32 num_tuples, hash_t hashes[],
+                                     HashTableEntry *results[]) const;
+  void LookupBatchInConciseHashTable(u32 num_tuples, hash_t hashes[],
+                                     HashTableEntry *results[]) const;
 
   // -------------------------------------------------------
   // Accessors
@@ -180,23 +159,19 @@ inline byte *JoinHashTable::AllocInputTuple(hash_t hash) {
 }
 
 inline JoinHashTable::Iterator JoinHashTable::Lookup(hash_t hash) const {
-  return JoinHashTable::Iterator(*this, hash);
+  auto *entry = generic_hash_table()->FindChainHead(hash);
+  while (entry != nullptr && entry->hash != hash) {
+    entry = entry->next;
+  }
+  return JoinHashTable::Iterator(entry, hash);
 }
 
 // ---------------------------------------------------------
 // JoinHashTable's Iterator implementation
 // ---------------------------------------------------------
 
-inline JoinHashTable::Iterator::Iterator(const JoinHashTable &table,
-                                         hash_t hash)
-    : next_(nullptr), hash_(hash) {
-  const auto *generic_table = table.generic_hash_table();
-  auto *entry = generic_table->FindChainHead(hash);
-  while (entry != nullptr && entry->hash != hash) {
-    entry = entry->next;
-  }
-  next_ = entry;
-}
+inline JoinHashTable::Iterator::Iterator(HashTableEntry *initial, hash_t hash)
+    : next_(initial), hash_(hash) {}
 
 inline HashTableEntry *JoinHashTable::Iterator::NextMatch(
     JoinHashTable::Iterator::KeyEq key_eq, void *opaque_ctx,

@@ -15,6 +15,8 @@ JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size,
 }
 
 void JoinHashTable::BuildGenericHashTable() {
+  // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
+
   generic_hash_table()->SetSize(num_elems());
 
   for (HashTableEntry *entry = head()->next; entry != nullptr;) {
@@ -57,7 +59,6 @@ void JoinHashTable::Build() {
   }
 
   // TODO(pmenon): Use HLL++ sketches to better estimate size
-  // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
 
   if (use_concise_hash_table()) {
     BuildConciseHashTable();
@@ -69,36 +70,36 @@ void JoinHashTable::Build() {
   built_ = true;
 }
 
-void JoinHashTable::LookupBatch(JoinHashTable::VectorLookup *lookup) const {
-  // TODO(pmenon): Select between generic tables and concise tables
+void JoinHashTable::LookupBatchInGenericHashTable(
+    u32 num_tuples, hash_t hashes[], HashTableEntry *results[]) const {
   // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
 
-  auto *hashes = lookup->hashes();
-  auto *entries = lookup->entries();
-
   // Initial lookup
-  for (u32 i = 0; i < lookup->NumTuples(); i++) {
-    entries[i] = generic_hash_table()->FindChainHead(hashes[i]);
+  for (u32 i = 0; i < num_tuples; i++) {
+    results[i] = generic_hash_table()->FindChainHead(hashes[i]);
   }
 
   // Ensure find match on hash
-  for (u32 i = 0; i < lookup->NumTuples(); i++) {
-    auto *entry = entries[i];
+  for (u32 i = 0; i < num_tuples; i++) {
+    auto *entry = results[i];
     while (entry != nullptr && entry->hash != hashes[i]) {
       entry = entry->next;
     }
-    entries[i] = entry;
+    results[i] = entry;
   }
 }
 
-// ---------------------------------------------------------
-// JoinHashTable's VectorLookup
-// ---------------------------------------------------------
+void JoinHashTable::LookupBatchInConciseHashTable(
+    u32 num_tuples, hash_t hashes[], HashTableEntry *results[]) const {}
 
-JoinHashTable::VectorLookup::VectorLookup(const JoinHashTable &table,
-                                          VectorProjectionIterator *vpi)
-    : table_(table), vpi_(vpi) {}
-
-u32 JoinHashTable::VectorLookup::NumTuples() { return vpi()->num_selected(); }
+void JoinHashTable::LookupBatch(u32 num_tuples, hash_t hashes[],
+                                HashTableEntry *results[]) const {
+  TPL_ASSERT(is_table_built(), "Cannot perform lookup before table is built!");
+  if (use_concise_hash_table()) {
+    LookupBatchInConciseHashTable(num_tuples, hashes, results);
+  } else {
+    LookupBatchInGenericHashTable(num_tuples, hashes, results);
+  }
+}
 
 }  // namespace tpl::sql

@@ -20,7 +20,9 @@ class VectorProjectionIterator {
   static constexpr const u32 kInvalidPos = std::numeric_limits<u32>::max();
 
  public:
-  explicit VectorProjectionIterator();
+  VectorProjectionIterator();
+
+  explicit VectorProjectionIterator(VectorProjection *vp);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(VectorProjectionIterator);
@@ -31,7 +33,10 @@ class VectorProjectionIterator {
 
   /// Set the vector projection to iterate over
   /// \param vp The vector projection
-  void SetVectorProjection(VectorProjection *vp) { vp_ = vp; }
+  void SetVectorProjection(VectorProjection *vp) {
+    vp_ = vp;
+    num_selected_ = vp->TotalTupleCount();
+  }
 
   // -------------------------------------------------------
   // Tuple-at-a-time API
@@ -70,6 +75,14 @@ class VectorProjectionIterator {
 
   /// Reset iteration to the beginning of the filtered vector projection
   void ResetFiltered();
+
+  /// Fun a function over each active tuple in the vector projection. This is a
+  /// read-only function (despite it being non-const), meaning the callback must
+  /// not modify the state of the iterator, but should only query it using const
+  /// functions!
+  /// \param fn A callback function
+  template <typename F>
+  void ForEach(const F &fn);
 
   /// Run a generic tuple-at-a-time filter over all active tuples in the
   /// vector projection
@@ -137,16 +150,6 @@ class VectorProjectionIterator {
 // Implementation below
 // ---------------------------------------------------------
 
-inline VectorProjectionIterator::VectorProjectionIterator()
-    : vp_(nullptr),
-      curr_pos_(0),
-      num_selected_(0),
-      selection_vector_{0},
-      selection_vector_read_pos_(0),
-      selection_vector_write_pos_(0) {
-  selection_vector()[0] = VectorProjectionIterator::kInvalidPos;
-}
-
 // Retrieve a single column value (and potentially its NULL indicator) from the
 // desired column's input data
 template <typename T, bool nullable>
@@ -191,20 +194,36 @@ inline void VectorProjectionIterator::ResetFiltered() {
 }
 
 template <typename F>
+inline void VectorProjectionIterator::ForEach(const F &fn) {
+  if (IsFiltered()) {
+    for (; HasNextFiltered(); AdvanceFiltered()) {
+      fn();
+    }
+    selection_vector_write_pos_ = num_selected();
+    ResetFiltered();
+  } else {
+    for (; HasNext(); Advance()) {
+      fn();
+    }
+    Reset();
+  }
+}
+
+template <typename F>
 inline void VectorProjectionIterator::RunFilter(const F &filter) {
   if (IsFiltered()) {
     for (; HasNextFiltered(); AdvanceFiltered()) {
-      bool valid = filter(std::as_const(*this));
+      bool valid = filter();
       Match(valid);
     }
   } else {
     for (; HasNext(); Advance()) {
-      bool valid = filter(std::as_const(*this));
+      bool valid = filter();
       Match(valid);
     }
   }
 
-  // After the filter has been run on the either vector projection, we need to
+  // After the filter has been run on the entire vector projection, we need to
   // ensure that we reset it so that clients can query the updated state of the
   // VPI, and subsequent filters operate only on valid tuples potentially
   // filtered out in this filter.
@@ -225,7 +244,7 @@ inline u32 VectorProjectionIterator::FilterColByVal(u32 col_idx, T val) {
         input, num_tuples, val, selection_vector(), nullptr);
   }
 
-  // After the filter has been run on the either vector projection, we need to
+  // After the filter has been run on the entire vector projection, we need to
   // ensure that we reset it so that clients can query the updated state of the
   // VPI, and subsequent filters operate only on valid tuples potentially
   // filtered out in this filter.

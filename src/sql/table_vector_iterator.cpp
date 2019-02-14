@@ -9,9 +9,6 @@ TableVectorIterator::TableVectorIterator(const Table &table)
       vp_(table.num_columns(), kDefaultVectorSize) {
   TPL_ASSERT(table.num_columns() > 0, "Cannot scan table with no columns");
 
-  // Insert our vector projection instance into the vector projection iterator
-  vector_projection_iterator()->SetVectorProjection(vector_projection());
-
   // Reserve space for the column iterators
   column_iterators().reserve(table.num_columns());
 
@@ -31,6 +28,9 @@ void TableVectorIterator::RefreshVectorProjection() {
   for (u32 col_idx = 0; col_idx < column_iterators().size(); col_idx++) {
     vector_projection()->ResetColumn(column_iterators(), col_idx);
   }
+
+  // Insert our vector projection instance into the vector projection iterator
+  vector_projection_iterator()->SetVectorProjection(vector_projection());
 }
 
 bool TableVectorIterator::Advance() {
