@@ -68,6 +68,11 @@ class GenericHashTable {
   /// \return The (potentially null) head of the bucket chain for the given hash
   HashTableEntry *FindChainHeadWithTag(hash_t hash) const;
 
+  /// Return the number of bytes this hash table has allocated
+  u64 GetTotalMemoryUsage() const {
+    return sizeof(HashTableEntry *) * capacity();
+  }
+
   /// Return the number of elements stored in this hash table
   u64 num_elements() const { return num_elems_; }
 

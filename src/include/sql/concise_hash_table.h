@@ -3,20 +3,30 @@
 #include <memory>
 
 #include "sql/hash_table_entry.h"
-#include "util/common.h"
 #include "util/bit_util.h"
+#include "util/common.h"
 
 namespace tpl::sql {
 
 class ConciseHashTable {
  public:
+  // The maximum probe length before falling back into the overflow table
   static constexpr const u32 kProbeThreshold = 2;
 
+  // The number of CHT slots that belong to one group. This value should either
+  // be 32 or 64 for (1) making computation simpler by bit-shifting and (2) to
+  // ensure at most one cache-line read/write per insert/lookup.
+  static constexpr const u32 kSlotsPerGroup = 64;
+
   /// Create a new uninitialized concise hash table. Callers **must** call
-  /// Init() before interacting with the table
+  /// SetSize() before interacting with the table
   explicit ConciseHashTable(u32 probe_threshold = kProbeThreshold);
 
+  /// Destroy
   ~ConciseHashTable();
+
+  /// This class cannot be copied or moved
+  DISALLOW_COPY_AND_MOVE(ConciseHashTable)
 
   /// Set the size of the hash table to support at least \a num_elems elements
   void SetSize(u32 num_elems);
@@ -46,12 +56,16 @@ class ConciseHashTable {
 
  private:
   // The concise hash table is composed of multiple groups of slots. This struct
-  // captures this concept.
+  // captures this concept
   struct SlotGroup {
     // The bitmap indicating whether the slots are occupied or free
     u64 bits;
     // The prefix population count
     u32 count;
+
+    static_assert(
+        sizeof(bits) * kBitsPerByte == kSlotsPerGroup,
+        "Number of slots in group and configured constant are out of sync");
   };
 
   // -------------------------------------------------------
@@ -83,5 +97,49 @@ class ConciseHashTable {
   // Flag indicating if the hash table has been built and is frozen (read-only)
   bool built_;
 };
+
+// ---------------------------------------------------------
+// Implementation below
+// ---------------------------------------------------------
+
+inline ConciseHashTableSlot ConciseHashTable::Insert(const hash_t hash) {
+  // kSlotsPerGroup is either 32 or 64, so all divide and modulus operations
+  // will optimize into simple bit shifts
+
+  u32 slot_idx = static_cast<u32>(hash & slot_mask());
+  u32 group_idx = slot_idx / kSlotsPerGroup;
+  u32 *group_bits = reinterpret_cast<u32 *>(&slot_groups_[group_idx].bits);
+
+  for (u32 bit_pos = slot_idx % kSlotsPerGroup,
+           max_bit_pos = std::min(63u, bit_pos + probe_threshold());
+       bit_pos < max_bit_pos; bit_pos++) {
+    if (!util::BitUtil::Test(group_bits, bit_pos)) {
+      util::BitUtil::Set(group_bits, bit_pos);
+      return ConciseHashTableSlot::Make(group_idx * kSlotsPerGroup + bit_pos);
+    }
+  }
+
+  return ConciseHashTableSlot::MakeOverflow();
+}
+
+inline ConciseHashTableSlot ConciseHashTable::FindFirst(
+    const hash_t hash) const {
+  // kSlotsPerGroup is either 32 or 64, so all divide and modulus operations
+  // will optimize into simple bit shifts
+
+  u32 slot_idx = static_cast<u32>(hash & slot_mask());
+  u32 group_idx = slot_idx / kSlotsPerGroup;
+  u32 *group_bits = reinterpret_cast<u32 *>(&slot_groups_[group_idx].bits);
+
+  for (u32 bit_pos = slot_idx % kSlotsPerGroup,
+           max_bit_pos = std::max(63u, bit_pos + probe_threshold());
+       bit_pos < max_bit_pos; bit_pos++) {
+    if (util::BitUtil::Test(group_bits, bit_pos)) {
+      return ConciseHashTableSlot::Make(group_idx * kSlotsPerGroup + bit_pos);
+    }
+  }
+
+  return ConciseHashTableSlot::MakeOverflow();
+}
 
 }  // namespace tpl::sql

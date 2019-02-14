@@ -176,4 +176,37 @@ TEST_F(JoinHashTableTest, DuplicateKeyLookupTest) {
   }
 }
 
+TEST_F(JoinHashTableTest, DISABLED_PerfTest) {
+  const u32 num_tuples = 10000000;
+
+  //
+  // Build random input
+  //
+
+  std::random_device random;
+  for (u32 i = 0; i < num_tuples; i++) {
+    auto hash_val = random();
+    auto *space = join_hash_table()->AllocInputTuple(hash_val);
+    auto *tuple = reinterpret_cast<Tuple *>(space);
+
+    tuple->a = hash_val;
+    tuple->b = i + 1;
+    tuple->c = i + 2;
+    tuple->d = i + 3;
+  }
+
+  util::Timer<std::milli> timer;
+  timer.Start();
+
+  join_hash_table()->Build();
+
+  timer.Stop();
+
+  auto mtps = (num_tuples / timer.elapsed()) / 1000.0;
+  LOG_INFO("# Tuples    : {}", num_tuples)
+  LOG_INFO("Table size  : {} KB",
+           inner_generic_hash_table()->GetTotalMemoryUsage() / 1024.0);
+  LOG_INFO("Insert+Build: {} ms ({:.2f} Mtps)", timer.elapsed(), mtps);
+}
+
 }  // namespace tpl::sql::test

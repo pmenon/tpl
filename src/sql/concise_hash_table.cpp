@@ -43,39 +43,6 @@ void ConciseHashTable::Build() {
   set_is_built();
 }
 
-ConciseHashTableSlot ConciseHashTable::Insert(const hash_t hash) {
-  u32 slot_pos = static_cast<u32>(hash & slot_mask());
-  SlotGroup *slot_group = slot_groups_ + (slot_pos / 64);
-  auto *group_bits = reinterpret_cast<u32 *>(&slot_group->bits);
-
-  for (u32 bit_pos = slot_pos % 64,
-           max_bit_pos = std::min(63u, bit_pos + probe_threshold());
-       bit_pos < max_bit_pos; bit_pos++) {
-    if (!util::BitUtil::Test(group_bits, bit_pos)) {
-      util::BitUtil::Set(group_bits, bit_pos);
-      return ConciseHashTableSlot::Make(slot_pos);
-    }
-  }
-
-  return ConciseHashTableSlot::MakeOverflow();
-}
-
-ConciseHashTableSlot ConciseHashTable::FindFirst(const hash_t hash) const {
-  u32 slot_pos = static_cast<u32>(hash & slot_mask());
-  SlotGroup *slot_group = slot_groups_ + (slot_pos / 64);
-  auto *group_bits = reinterpret_cast<u32 *>(&slot_group->bits);
-
-  for (u32 bit_pos = slot_pos % 64,
-           max_bit_pos = std::max(63u, bit_pos + probe_threshold());
-       bit_pos < max_bit_pos; bit_pos++) {
-    if (util::BitUtil::Test(group_bits, bit_pos)) {
-      return ConciseHashTableSlot::Make(slot_pos);
-    }
-  }
-
-  return ConciseHashTableSlot::MakeOverflow();
-}
-
 std::string ConciseHashTable::PrettyPrint() const {
   std::string result;
 
