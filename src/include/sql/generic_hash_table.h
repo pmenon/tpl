@@ -29,7 +29,7 @@ class GenericHashTable {
   /// Constructor does not allocate memory. Callers must first call SetSize()
   /// before using this hash map.
   /// \param load_factor The desired load-factor for the table
-  explicit GenericHashTable(float load_factor = 0.7);
+  explicit GenericHashTable(float load_factor = 0.7) noexcept;
 
   /// Cleanup
   ~GenericHashTable();

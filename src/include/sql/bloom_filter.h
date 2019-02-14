@@ -21,7 +21,7 @@ class BloomFilter {
 
  public:
   /// Create an uninitialized bloom filter
-  BloomFilter();
+  BloomFilter() noexcept;
 
   /// Create an uninitialized bloom filter with the given region allocator
   explicit BloomFilter(util::Region *region);

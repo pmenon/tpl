@@ -7,7 +7,7 @@
 
 namespace tpl::sql {
 
-BloomFilter::BloomFilter()
+BloomFilter::BloomFilter() noexcept
     : region_(nullptr),
       blocks_(nullptr),
       block_mask_(0),

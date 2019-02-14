@@ -20,7 +20,7 @@ class ConciseHashTable {
 
   /// Create a new uninitialized concise hash table. Callers **must** call
   /// SetSize() before interacting with the table
-  explicit ConciseHashTable(u32 probe_threshold = kProbeThreshold);
+  explicit ConciseHashTable(u32 probe_threshold = kProbeThreshold) noexcept;
 
   /// Destroy
   ~ConciseHashTable();

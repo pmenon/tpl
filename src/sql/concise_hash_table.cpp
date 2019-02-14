@@ -5,7 +5,7 @@
 
 namespace tpl::sql {
 
-ConciseHashTable::ConciseHashTable(u32 probe_threshold)
+ConciseHashTable::ConciseHashTable(u32 probe_threshold) noexcept
     : slot_groups_(nullptr),
       num_groups_(0),
       probe_threshold_(probe_threshold),

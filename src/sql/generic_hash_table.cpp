@@ -5,7 +5,7 @@
 
 namespace tpl::sql {
 
-GenericHashTable::GenericHashTable(float load_factor)
+GenericHashTable::GenericHashTable(float load_factor) noexcept
     : entries_(nullptr),
       mask_(0),
       capacity_(0),
