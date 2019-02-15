@@ -4,7 +4,7 @@
 
 namespace tpl::util {
 
-Region::Region(std::string name)
+Region::Region(std::string name) noexcept
     : name_(std::move(name)),
       allocated_(0),
       alignment_waste_(0),
