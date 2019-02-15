@@ -38,6 +38,9 @@ class ConciseHashTable {
   /// Finalize and build this concise hash table
   void Build();
 
+  ///
+  u64 NumOccupiedSlotsBefore(ConciseHashTableSlot slot) const;
+
   /// Find the first match for the given hash value
   ConciseHashTableSlot FindFirst(hash_t hash) const;
 
@@ -106,16 +109,17 @@ inline ConciseHashTableSlot ConciseHashTable::Insert(const hash_t hash) {
   // kSlotsPerGroup is either 32 or 64, so all divide and modulus operations
   // will optimize into simple bit shifts
 
-  u32 slot_idx = static_cast<u32>(hash & slot_mask());
-  u32 group_idx = slot_idx / kSlotsPerGroup;
-  u32 *group_bits = reinterpret_cast<u32 *>(&slot_groups_[group_idx].bits);
+  const u32 slot_idx = static_cast<u32>(hash & slot_mask());
+  const u32 group_idx = slot_idx / kSlotsPerGroup;
+  SlotGroup *slot_group = slot_groups_ + group_idx;
+  u32 *group_bits = reinterpret_cast<u32 *>(&slot_group->bits);
 
-  for (u32 bit_pos = slot_idx % kSlotsPerGroup,
-           max_bit_pos = std::min(63u, bit_pos + probe_threshold());
-       bit_pos < max_bit_pos; bit_pos++) {
-    if (!util::BitUtil::Test(group_bits, bit_pos)) {
-      util::BitUtil::Set(group_bits, bit_pos);
-      return ConciseHashTableSlot::Make(group_idx * kSlotsPerGroup + bit_pos);
+  for (u32 bit_idx = slot_idx % kSlotsPerGroup,
+           max_bit_idx = std::min(kSlotsPerGroup, bit_idx + probe_threshold());
+       bit_idx < max_bit_idx; bit_idx++) {
+    if (TPL_LIKELY(!util::BitUtil::Test(group_bits, bit_idx))) {
+      util::BitUtil::Set(group_bits, bit_idx);
+      return ConciseHashTableSlot::Make(group_idx * kSlotsPerGroup + bit_idx);
     }
   }
 
@@ -127,19 +131,39 @@ inline ConciseHashTableSlot ConciseHashTable::FindFirst(
   // kSlotsPerGroup is either 32 or 64, so all divide and modulus operations
   // will optimize into simple bit shifts
 
-  u32 slot_idx = static_cast<u32>(hash & slot_mask());
-  u32 group_idx = slot_idx / kSlotsPerGroup;
-  u32 *group_bits = reinterpret_cast<u32 *>(&slot_groups_[group_idx].bits);
+  const u32 slot_idx = static_cast<u32>(hash & slot_mask());
+  const u32 group_idx = slot_idx / kSlotsPerGroup;
+  const SlotGroup *slot_group = slot_groups_ + group_idx;
+  const u32 *group_bits = reinterpret_cast<const u32 *>(&slot_group->bits);
 
-  for (u32 bit_pos = slot_idx % kSlotsPerGroup,
-           max_bit_pos = std::max(63u, bit_pos + probe_threshold());
-       bit_pos < max_bit_pos; bit_pos++) {
-    if (util::BitUtil::Test(group_bits, bit_pos)) {
-      return ConciseHashTableSlot::Make(group_idx * kSlotsPerGroup + bit_pos);
+  for (u32 bit_idx = slot_idx % kSlotsPerGroup,
+           max_bit_idx = std::max(kSlotsPerGroup, bit_idx + probe_threshold());
+       bit_idx < max_bit_idx; bit_idx++) {
+    if (util::BitUtil::Test(group_bits, bit_idx)) {
+      return ConciseHashTableSlot::Make(group_idx * kSlotsPerGroup + bit_idx);
     }
   }
 
   return ConciseHashTableSlot::MakeOverflow();
+}
+
+inline u64 ConciseHashTable::NumOccupiedSlotsBefore(
+    ConciseHashTableSlot slot) const {
+  // kSlotsPerGroup is either 32 or 64, so all divide and modulus operations
+  // will optimize into simple bit shifts
+
+  TPL_ASSERT(is_built(), "Table must be built");
+
+  if (slot.IsOverflow()) {
+    return std::numeric_limits<u64>::max();
+  }
+
+  const u32 slot_idx = slot.GetIndex();
+  const u32 group_idx = slot_idx / kSlotsPerGroup;
+  const SlotGroup *slot_group = slot_groups_ + group_idx;
+  const u32 bit_idx = slot_idx % kSlotsPerGroup;
+  const u64 bits_after_slot = slot_group->bits & (u64(-1) << bit_idx);
+  return slot_group->count - util::BitUtil::CountBits(bits_after_slot);
 }
 
 }  // namespace tpl::sql

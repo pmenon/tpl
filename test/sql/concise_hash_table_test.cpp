@@ -133,7 +133,59 @@ TEST_F(ConciseHashTableTest, MultiGroupInsertTest) {
   EXPECT_EQ(34u, _289_slot.GetIndex());
 }
 
-TEST_F(ConciseHashTableTest, DISABLED_PerfTest) {
+TEST_F(ConciseHashTableTest, BuildTest) {
+  const u32 num_tuples = 20;
+  const u32 probe_length = 2;
+
+  //
+  // Table composed of single bucket with 64 bits
+  //
+
+  ConciseHashTable table(probe_length);
+  table.SetSize(num_tuples);
+
+  EXPECT_EQ(64u, table.Capacity());
+
+  std::vector<ConciseHashTableSlot> inserted;
+
+  for (u32 i = 1; i < 64; i += 2) {
+    inserted.push_back(table.Insert(i));
+  }
+
+  table.Build();
+
+  for (u32 i = 0; i < inserted.size(); i++) {
+    EXPECT_EQ(i, table.NumOccupiedSlotsBefore(inserted[i]));
+  }
+}
+
+TEST_F(ConciseHashTableTest, MultiGroupBuildTest) {
+  const u32 num_tuples = 40;
+  const u32 probe_length = 2;
+
+  //
+  // Table composed of single bucket with 128 bits
+  //
+
+  ConciseHashTable table(probe_length);
+  table.SetSize(num_tuples);
+
+  EXPECT_EQ(128u, table.Capacity());
+
+  std::vector<ConciseHashTableSlot> inserted;
+
+  for (u32 i = 1; i < 128; i += 2) {
+    inserted.push_back(table.Insert(i));
+  }
+
+  table.Build();
+
+  for (u32 i = 0; i < inserted.size(); i++) {
+    EXPECT_EQ(i, table.NumOccupiedSlotsBefore(inserted[i]));
+  }
+}
+
+TEST_F(ConciseHashTableTest, PerfTest) {
   const u32 num_tuples = 10000000;
 
   //
