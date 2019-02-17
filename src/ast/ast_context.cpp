@@ -144,7 +144,7 @@ struct AstContext::Implementation {
   // Complex type caches
   // -------------------------------------------------------
 
-  llvm::StringMap<char, util::LlvmRegionAllocator> string_table;
+  llvm::StringMap<char, util::LLVMRegionAllocator> string_table;
   llvm::DenseMap<Identifier, Type *> builtin_types;
   llvm::DenseMap<Identifier, Builtin> builtin_funcs;
   llvm::DenseMap<Type *, PointerType *> pointer_types;
@@ -169,7 +169,7 @@ struct AstContext::Implementation {
         nil(ctx),
         internal_types(ctx.region()),
         string_table(kDefaultStringTableCapacity,
-                     util::LlvmRegionAllocator(ctx.region())) {}
+                     util::LLVMRegionAllocator(ctx.region())) {}
 };
 
 AstContext::AstContext(util::Region *region,

@@ -6,38 +6,35 @@
 
 namespace tpl::util {
 
-/**
- * An STL-compliant allocator that uses a region-based strategy
- *
- * @tparam T The types of elements this allocator handles
- */
+/// An STL-compliant allocator that uses a region-based strategy
+/// \tparam T The types of elements this allocator handles
 template <typename T>
-class RegionAllocator {
+class StlRegionAllocator {
  public:
   using value_type = T;
 
-  explicit RegionAllocator(Region *region) noexcept : region_(region) {}
+  explicit StlRegionAllocator(Region *region) noexcept : region_(region) {}
 
-  RegionAllocator(const RegionAllocator &other) noexcept
+  StlRegionAllocator(const StlRegionAllocator &other) noexcept
       : region_(other.region_) {}
 
   template <typename U>
-  explicit RegionAllocator(const RegionAllocator<U> &other) noexcept
+  explicit StlRegionAllocator(const StlRegionAllocator<U> &other) noexcept
       : region_(other.region_) {}
 
   template <typename U>
-  friend class RegionAllocator;
+  friend class StlRegionAllocator;
 
   T *allocate(std::size_t n) { return region_->AllocateArray<T>(n); }
 
   // No-op
   void deallocate(T *ptr, std::size_t n) {}
 
-  bool operator==(const RegionAllocator &other) const {
+  bool operator==(const StlRegionAllocator &other) const {
     return region_ == other.region_;
   }
 
-  bool operator!=(const RegionAllocator &other) const {
+  bool operator!=(const StlRegionAllocator &other) const {
     return !(*this == other);
   }
 
@@ -45,27 +42,25 @@ class RegionAllocator {
   Region *region_;
 };
 
-/**
- * An allocator that complies with LLVM's allocator concept and uses a region-
- * based allocation strategy.
- */
-class LlvmRegionAllocator : public llvm::AllocatorBase<LlvmRegionAllocator> {
+/// An allocator that complies with LLVM's allocator concept and uses a region-
+/// based allocation strategy.
+class LLVMRegionAllocator : public llvm::AllocatorBase<LLVMRegionAllocator> {
  public:
-  explicit LlvmRegionAllocator(Region *region) noexcept : region_(region) {}
+  explicit LLVMRegionAllocator(Region *region) noexcept : region_(region) {}
 
   void *Allocate(std::size_t size, std::size_t alignment) {
     return region_->Allocate(size, alignment);
   }
 
   // Pull in base class overloads.
-  using AllocatorBase<LlvmRegionAllocator>::Allocate;
+  using AllocatorBase<LLVMRegionAllocator>::Allocate;
 
   void Deallocate(const void *ptr, std::size_t size) {
     region_->Deallocate(ptr, size);
   }
 
   // Pull in base class overloads.
-  using AllocatorBase<LlvmRegionAllocator>::Deallocate;
+  using AllocatorBase<LLVMRegionAllocator>::Deallocate;
 
  private:
   Region *region_;
