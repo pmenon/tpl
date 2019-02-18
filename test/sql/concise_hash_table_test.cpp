@@ -183,7 +183,7 @@ TEST_F(ConciseHashTableTest, MultiGroupBuildTest) {
   }
 }
 
-TEST_F(ConciseHashTableTest, PerfTest) {
+TEST_F(ConciseHashTableTest, DISABLED_PerfTest) {
   const u32 num_tuples = 10000000;
 
   //
