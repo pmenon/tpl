@@ -6,8 +6,7 @@ namespace tpl::sql {
 
 JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size,
                              bool use_concise_ht) noexcept
-    : region_(region),
-      tuple_size_(tuple_size),
+    : entries_(region, sizeof(HashTableEntry) + tuple_size),
       num_elems_(0),
       built_(false),
       use_concise_ht_(use_concise_ht) {
@@ -81,7 +80,7 @@ void JoinHashTable::LookupBatchInGenericHashTable(
 
   // Ensure find match on hash
   for (u32 i = 0; i < num_tuples; i++) {
-    auto *entry = results[i];
+    HashTableEntry *entry = results[i];
     while (entry != nullptr && entry->hash != hashes[i]) {
       entry = entry->next;
     }

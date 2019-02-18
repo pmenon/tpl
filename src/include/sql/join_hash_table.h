@@ -3,6 +3,7 @@
 #include "sql/bloom_filter.h"
 #include "sql/concise_hash_table.h"
 #include "sql/generic_hash_table.h"
+#include "util/chunked_vector.h"
 #include "util/region.h"
 
 namespace tpl::sql::test {
@@ -100,9 +101,7 @@ class JoinHashTable {
   // Accessors
   // -------------------------------------------------------
 
-  util::Region *region() const { return region_; }
-
-  u32 tuple_size() const { return tuple_size_; }
+  util::ChunkedVector *entries() { return &entries_; }
 
   GenericHashTable *generic_hash_table() { return &generic_table_; }
   const GenericHashTable *generic_hash_table() const { return &generic_table_; }
@@ -114,11 +113,8 @@ class JoinHashTable {
   HashTableEntry *head() { return &head_; }
 
  private:
-  // The memory allocator we use for all entries stored in the hash table
-  util::Region *region_;
-
-  // The size of the build-side tuples that are inserted into the table
-  u32 tuple_size_;
+  // The vector where we store the build-side input
+  util::ChunkedVector entries_;
 
   // The generic hash table
   GenericHashTable generic_table_;
@@ -147,8 +143,7 @@ class JoinHashTable {
 // ---------------------------------------------------------
 
 inline byte *JoinHashTable::AllocInputTuple(hash_t hash) {
-  auto *entry = static_cast<HashTableEntry *>(
-      region()->Allocate(sizeof(HashTableEntry) + tuple_size()));
+  auto *entry = reinterpret_cast<HashTableEntry *>(entries()->Append());
   entry->hash = hash;
   entry->next = head()->next;
   head()->next = entry;
@@ -159,7 +154,7 @@ inline byte *JoinHashTable::AllocInputTuple(hash_t hash) {
 }
 
 inline JoinHashTable::Iterator JoinHashTable::Lookup(hash_t hash) const {
-  auto *entry = generic_hash_table()->FindChainHead(hash);
+  HashTableEntry *entry = generic_hash_table()->FindChainHead(hash);
   while (entry != nullptr && entry->hash != hash) {
     entry = entry->next;
   }
