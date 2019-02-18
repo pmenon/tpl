@@ -38,8 +38,8 @@ class ChunkedVectorT : public ChunkedVector {
     ChunkedVectorIterator iter_;
   };
 
-  Iterator begin() { return Iterator(ChunkedVector::Begin()); }
-  Iterator end() { return Iterator(ChunkedVector::End()); }
+  Iterator begin() { return Iterator(ChunkedVector::begin()); }
+  Iterator end() { return Iterator(ChunkedVector::end()); }
 
   // -------------------------------------------------------
   // Element access

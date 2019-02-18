@@ -9,15 +9,19 @@ namespace tpl::util {
 
 class ChunkedVectorIterator;
 
-/// A ChunkedVector is similar to a std::vector, but it is untyped, it does not
-/// guarantee physical contiguity of all elements in the vector, and it ensures
+/// A ChunkedVector is similar to STL's std::vector, but with three important
+/// distinctions: ChunkedVectors are untyped and are not templated;
+/// ChunkedVectors do not guarantee physical contiguity of all elements, though
+/// the majority of elements are stored contiguously; ChunkedVectors ensures
 /// that pointers into the container are not invalidated through insertions.
 ///
-/// Internally, it maintains an array of fixed-sized memory chunks. Elements
-/// inside a chunk are stored contiguously. Appending (i.e., push_back()) is an
-/// O(1) constant-time operation and iteration performance is comparable to
-/// std::vector. As memory is used, fixed-sized memory allocations are made
-/// against the injected memory allocator to store additional elements.
+/// ChunkedVectors are composed of a list of fixed-sized memory chunks and one
+/// active chunk. Elements \a within a chunk are stored contiguously, and new
+/// elements are inserted into the active chunk (i.e., the most recently
+/// allocated chunk and the last chunk in the list of chunks). Appending new
+/// elements is an amortized constant O(1) time operation; random access lookups
+/// are also constant O(1) time operations. Iteration performance is comparable
+/// to std::vector since the majority of elements are contiguous.
 ///
 /// This class is useful (and usually faster) when you don't need to rely on
 /// contiguity of elements, or when you do not know the number of insertions
@@ -31,15 +35,15 @@ class ChunkedVector {
       (1u << kLogNumElementsPerChunk);
   static constexpr const u32 kChunkPositionMask = kNumElementsPerChunk - 1;
 
-  /// Constructor
   ChunkedVector(util::Region *region, std::size_t element_size) noexcept;
+  ~ChunkedVector() noexcept;
 
   // -------------------------------------------------------
   // Iterators
   // -------------------------------------------------------
 
-  ChunkedVectorIterator Begin();
-  ChunkedVectorIterator End();
+  ChunkedVectorIterator begin() noexcept;
+  ChunkedVectorIterator end() noexcept;
 
   // -------------------------------------------------------
   // Element access
@@ -47,13 +51,15 @@ class ChunkedVector {
 
   /// Return a pointer to the entry at the given index
   /// NOTE: This is an unchecked index lookup
-  byte *EntryAt(std::size_t idx);
-  const byte *EntryAt(std::size_t idx) const;
+  byte *EntryAt(std::size_t idx) noexcept;
+  const byte *EntryAt(std::size_t idx) const noexcept;
 
   /// Operator overloaded vector access
   /// NOTE: This is an unchecked index lookup
-  byte *operator[](std::size_t idx) { return EntryAt(idx); }
-  const byte *operator[](std::size_t idx) const { return EntryAt(idx); }
+  byte *operator[](std::size_t idx) noexcept { return EntryAt(idx); }
+  const byte *operator[](std::size_t idx) const noexcept {
+    return EntryAt(idx);
+  }
 
   // -------------------------------------------------------
   // Modification
@@ -75,7 +81,7 @@ class ChunkedVector {
 
   /// Given the size (in bytes) of an individual element, compute the size of
   /// each chunk in the chunked vector
-  static std::size_t ChunkAllocSize(std::size_t element_size) {
+  static constexpr std::size_t ChunkAllocSize(std::size_t element_size) {
     return kNumElementsPerChunk * element_size;
   }
 
@@ -83,7 +89,7 @@ class ChunkedVector {
   // Accessors
   // -------------------------------------------------------
 
-  util::Region *region() { return region_; }
+  util::Region *region() noexcept { return region_; }
 
   std::size_t element_size() const noexcept { return element_size_; }
 
@@ -162,7 +168,14 @@ inline ChunkedVector::ChunkedVector(util::Region *region,
       end_(nullptr),
       element_size_(element_size) {}
 
-inline ChunkedVectorIterator ChunkedVector::Begin() {
+inline ChunkedVector::~ChunkedVector() noexcept {
+  const std::size_t chunk_size = ChunkAllocSize(element_size());
+  for (auto *chunk : chunks_) {
+    region_->Deallocate(chunk, chunk_size);
+  }
+}
+
+inline ChunkedVectorIterator ChunkedVector::begin() noexcept {
   if (Empty()) {
     return ChunkedVectorIterator();
   }
@@ -171,7 +184,7 @@ inline ChunkedVectorIterator ChunkedVector::Begin() {
                                element_size());
 }
 
-inline ChunkedVectorIterator ChunkedVector::End() {
+inline ChunkedVectorIterator ChunkedVector::end() noexcept {
   if (Empty()) {
     return ChunkedVectorIterator();
   }
@@ -179,13 +192,14 @@ inline ChunkedVectorIterator ChunkedVector::End() {
   return ChunkedVectorIterator(chunks_.end() - 1, position_, element_size());
 }
 
-inline byte *ChunkedVector::EntryAt(const std::size_t idx) {
+inline byte *ChunkedVector::EntryAt(const std::size_t idx) noexcept {
   std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
   std::size_t chunk_pos = idx & kChunkPositionMask;
   return chunks_[chunk_idx] + (element_size() * chunk_pos);
 }
 
-inline const byte *ChunkedVector::EntryAt(const std::size_t idx) const {
+inline const byte *ChunkedVector::EntryAt(const std::size_t idx) const
+    noexcept {
   std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
   std::size_t chunk_pos = idx & kChunkPositionMask;
   return chunks_[chunk_idx] + (element_size() * chunk_pos);
