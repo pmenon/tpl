@@ -1,5 +1,3 @@
-#include "gtest/gtest.h"
-
 #include "sql_test.h"
 
 #include "sql/catalog.h"

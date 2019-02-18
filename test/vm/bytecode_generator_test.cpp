@@ -1,5 +1,3 @@
-#include "gtest/gtest.h"
-
 #include "tpl_test.h"
 
 #include "llvm/Support/FormatVariadic.h"

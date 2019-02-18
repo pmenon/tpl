@@ -1,5 +1,3 @@
-#include "gtest/gtest.h"
-
 #include "tpl_test.h"
 
 #include "vm/bytecodes.h"

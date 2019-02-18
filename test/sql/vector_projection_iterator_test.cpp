@@ -1,9 +1,7 @@
-#include "gtest/gtest.h"
+#include "tpl_test.h"
 
 #include <numeric>
 #include <random>
-
-#include "tpl_test.h"
 
 #include "sql/catalog.h"
 #include "sql/vector_projection_iterator.h"

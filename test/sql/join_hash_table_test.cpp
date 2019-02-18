@@ -1,8 +1,6 @@
-#include "gtest/gtest.h"
+#include "tpl_test.h"
 
 #include <random>
-
-#include "tpl_test.h"
 
 #include "sql/join_hash_table.h"
 #include "util/hash.h"

@@ -1,9 +1,7 @@
-#include "gtest/gtest.h"
+#include "tpl_test.h"
 
 #include <random>
 #include <unordered_set>
-
-#include "tpl_test.h"
 
 #include "sql/bloom_filter.h"
 #include "util/hash.h"
