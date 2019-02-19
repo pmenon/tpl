@@ -107,6 +107,7 @@ class JoinHashTable {
   const GenericHashTable *generic_hash_table() const { return &generic_table_; }
 
   ConciseHashTable *concise_hash_table() { return &concise_table_; }
+  const ConciseHashTable *concise_hash_table() const { return &concise_table_; }
 
   BloomFilter *bloom_filter() { return &filter_; }
 

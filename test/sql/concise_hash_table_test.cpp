@@ -183,39 +183,4 @@ TEST_F(ConciseHashTableTest, MultiGroupBuildTest) {
   }
 }
 
-TEST_F(ConciseHashTableTest, DISABLED_PerfTest) {
-  const u32 num_tuples = 10000000;
-
-  //
-  // Build random input
-  //
-
-  std::vector<Tuple> tuples(num_tuples);
-
-  {
-    std::random_device random;
-    auto genrand = [&random]() { return Tuple{random(), 0, 0, 0}; };
-    std::generate(tuples.begin(), tuples.end(), genrand);
-  }
-
-  util::Timer<std::milli> timer;
-  timer.Start();
-
-  ConciseHashTable table;
-  table.SetSize(num_tuples);
-
-  for (const auto &tuple : tuples) {
-    table.Insert(tuple.a);
-  }
-
-  table.Build();
-
-  timer.Stop();
-
-  auto mtps = (num_tuples / timer.elapsed()) / 1000.0;
-  LOG_INFO("# Tuples    : {}", num_tuples)
-  LOG_INFO("Table size  : {} KB", table.GetTotalMemoryUsage() / 1024.0);
-  LOG_INFO("Insert+Build: {} ms ({:.2f} Mtps)", timer.elapsed(), mtps);
-}
-
 }  // namespace tpl::sql::test
