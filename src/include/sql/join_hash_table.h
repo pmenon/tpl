@@ -46,9 +46,6 @@ class JoinHashTable {
   /// Return the total number of inserted elements, including duplicates
   u32 num_elems() const { return num_elems_; }
 
-  /// Has the join hash table been built?
-  bool is_table_built() const { return built_; }
-
   /// Is this join using a concise hash table?
   bool use_concise_hash_table() const { return use_concise_ht_; }
 
@@ -112,6 +109,9 @@ class JoinHashTable {
   BloomFilter *bloom_filter() { return &filter_; }
 
   HashTableEntry *head() { return &head_; }
+
+  bool is_built() const { return built_; }
+  void set_is_built(bool built) { built_ = built; }
 
  private:
   // The vector where we store the build-side input

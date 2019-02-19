@@ -30,7 +30,7 @@ TEST_F(ConciseHashTableTest, InsertTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(32u, table.Capacity());
+  EXPECT_EQ(32u, table.capacity());
 
   // 0 should go into the zero-th slot
   auto _0_slot = table.Insert(0);
@@ -65,7 +65,7 @@ TEST_F(ConciseHashTableTest, InsertOverflowTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(64u, table.Capacity());
+  EXPECT_EQ(64u, table.capacity());
 
   // 33 should go into the 33rd slot
   auto _33_slot = table.Insert(33);
@@ -98,7 +98,7 @@ TEST_F(ConciseHashTableTest, MultiGroupInsertTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(256u, table.Capacity());
+  EXPECT_EQ(256u, table.capacity());
 
   // 33 goes in the first group, in the 33rd slot
   auto _33_slot = table.Insert(33);
@@ -142,7 +142,7 @@ TEST_F(ConciseHashTableTest, BuildTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(64u, table.Capacity());
+  EXPECT_EQ(64u, table.capacity());
 
   std::vector<ConciseHashTableSlot> inserted;
 
@@ -168,7 +168,7 @@ TEST_F(ConciseHashTableTest, MultiGroupBuildTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(128u, table.Capacity());
+  EXPECT_EQ(128u, table.capacity());
 
   std::vector<ConciseHashTableSlot> inserted;
 

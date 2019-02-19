@@ -200,7 +200,9 @@ TEST_F(JoinHashTableTest, DISABLED_PerfTest) {
 
     std::random_device random;
     for (u32 i = 0; i < num_tuples; i++) {
-      auto hash_val = random();
+      auto key = random();
+      auto hash_val = util::Hasher::Hash((const u8 *)&key, sizeof(key),
+                                         util::HashMethod::Crc);
       auto *space = join_hash_table.AllocInputTuple(hash_val);
       auto *tuple = reinterpret_cast<Tuple *>(space);
 

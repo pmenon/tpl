@@ -18,9 +18,9 @@ hash_t Hasher::Hash(const u8 *buf, uint64_t len, HashMethod method) {
 }
 
 hash_t Hasher::HashFnv1(const u8 *buf, uint64_t len) {
-  hash_t hash = 2166136261u;
+  hash_t hash = hash_t(2166136261ull);
 
-  for (uint64_t i = 0; i < len; i++) {
+  for (u64 i = 0; i < len; i++) {
     hash ^= buf[i];
     hash *= 16777619;
   }

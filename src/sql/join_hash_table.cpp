@@ -1,7 +1,5 @@
 #include "sql/join_hash_table.h"
 
-#include "sql/vector_projection_iterator.h"
-
 namespace tpl::sql {
 
 JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size,
@@ -14,6 +12,7 @@ JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size,
 }
 
 void JoinHashTable::BuildGenericHashTable() {
+  // TODO(pmenon): Use HLL++ sketches to better estimate size
   // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
 
   generic_hash_table()->SetSize(num_elems());
@@ -37,6 +36,8 @@ void JoinHashTable::ReorderEntries() {
 }
 
 void JoinHashTable::BuildConciseHashTable() {
+  // TODO(pmenon): Use HLL++ sketches to better estimate size
+
   concise_hash_table()->SetSize(num_elems());
 
   for (HashTableEntry *entry = head()->next; entry != nullptr;) {
@@ -53,11 +54,9 @@ void JoinHashTable::BuildConciseHashTable() {
 }
 
 void JoinHashTable::Build() {
-  if (is_table_built()) {
+  if (is_built()) {
     return;
   }
-
-  // TODO(pmenon): Use HLL++ sketches to better estimate size
 
   if (use_concise_hash_table()) {
     BuildConciseHashTable();
@@ -65,8 +64,7 @@ void JoinHashTable::Build() {
     BuildGenericHashTable();
   }
 
-  // The table has been built. Set the flag now so we don't redo it
-  built_ = true;
+  set_is_built(true);
 }
 
 void JoinHashTable::LookupBatchInGenericHashTable(
@@ -93,7 +91,7 @@ void JoinHashTable::LookupBatchInConciseHashTable(
 
 void JoinHashTable::LookupBatch(u32 num_tuples, hash_t hashes[],
                                 HashTableEntry *results[]) const {
-  TPL_ASSERT(is_table_built(), "Cannot perform lookup before table is built!");
+  TPL_ASSERT(is_built(), "Cannot perform lookup before table is built!");
   if (use_concise_hash_table()) {
     LookupBatchInConciseHashTable(num_tuples, hashes, results);
   } else {

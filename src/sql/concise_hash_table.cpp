@@ -9,6 +9,7 @@ ConciseHashTable::ConciseHashTable(u32 probe_threshold) noexcept
     : slot_groups_(nullptr),
       num_groups_(0),
       probe_threshold_(probe_threshold),
+      num_overflow_(0),
       built_(false) {}
 
 void ConciseHashTable::SetSize(const u32 num_elems) {
@@ -40,7 +41,7 @@ void ConciseHashTable::Build() {
         static_cast<u32>(util::BitUtil::CountBits(slot_groups_[i].bits));
   }
 
-  set_is_built();
+  set_is_built(true);
 }
 
 std::string ConciseHashTable::PrettyPrint() const {

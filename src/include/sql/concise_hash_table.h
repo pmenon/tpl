@@ -45,7 +45,10 @@ class ConciseHashTable {
   ConciseHashTableSlot FindFirst(hash_t hash) const;
 
   /// Return the capacity (the maximum number of elements) this table supports
-  u64 Capacity() const { return slot_mask() + 1; }
+  u64 capacity() const { return slot_mask() + 1; }
+
+  /// Return the number of overflows entries in this table
+  u64 num_overflow() const { return num_overflow_;}
 
   // -------------------------------------------------------
   // Utility Operations
@@ -82,7 +85,7 @@ class ConciseHashTable {
   u32 probe_threshold() const { return probe_threshold_; }
 
   bool is_built() const { return built_; }
-  void set_is_built() { built_ = true; }
+  void set_is_built(bool built) { built_ = built; }
 
  private:
   // The array of groups. This array is managed by this class.
@@ -96,6 +99,9 @@ class ConciseHashTable {
 
   // The maximum number of slots to probe
   u32 probe_threshold_;
+
+  // The number of entries in the overflow table
+  u32 num_overflow_;
 
   // Flag indicating if the hash table has been built and is frozen (read-only)
   bool built_;
@@ -122,6 +128,8 @@ inline ConciseHashTableSlot ConciseHashTable::Insert(const hash_t hash) {
       return ConciseHashTableSlot::Make(group_idx * kSlotsPerGroup + bit_idx);
     }
   }
+
+  num_overflow_++;
 
   return ConciseHashTableSlot::MakeOverflow();
 }
