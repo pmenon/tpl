@@ -74,4 +74,21 @@ TEST(BitfieldTest, NegativeIntegerTest) {
   EXPECT_EQ(-16, U16_BF::Decode(s));
 }
 
+TEST(BitfieldTest, BooleanElementTest) {
+  // Encode a boolean flag at the 32nd bit in a 64-bit bitfield
+  using BF = BitField64<bool, 32, 1>;
+
+  // Initial should be set to 0
+  u64 bitfield = 0;
+  EXPECT_FALSE(BF::Decode(bitfield));
+
+  // Now, set the bit
+  u64 bitfield_2 = BF::Update(bitfield, true);
+  EXPECT_TRUE(BF::Decode(bitfield_2));
+
+  // Now reset the bit
+  u64 bitfield_3 = BF::Update(bitfield_2, false);
+  EXPECT_FALSE(BF::Decode(bitfield_3));
+}
+
 }  // namespace tpl::util::test

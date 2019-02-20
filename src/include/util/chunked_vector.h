@@ -29,11 +29,12 @@ class ChunkedVectorIterator;
 /// a chunked vector will be roughly 2x faster than a std::vector.
 class ChunkedVector {
  public:
+  // clang-format off
   // We store 256 elements in each chunk of the vector
   static constexpr const u32 kLogNumElementsPerChunk = 8;
-  static constexpr const u32 kNumElementsPerChunk =
-      (1u << kLogNumElementsPerChunk);
+  static constexpr const u32 kNumElementsPerChunk = (1u << kLogNumElementsPerChunk);
   static constexpr const u32 kChunkPositionMask = kNumElementsPerChunk - 1;
+  // clang-format on
 
   ChunkedVector(util::Region *region, std::size_t element_size) noexcept;
   ~ChunkedVector() noexcept;
@@ -49,17 +50,13 @@ class ChunkedVector {
   // Element access
   // -------------------------------------------------------
 
-  /// Return a pointer to the entry at the given index
-  /// NOTE: This is an unchecked index lookup
-  byte *EntryAt(std::size_t idx) noexcept;
-  const byte *EntryAt(std::size_t idx) const noexcept;
+  /// Checked indexed lookup
+  byte *at(std::size_t idx);
+  const byte *at(std::size_t idx) const;
 
-  /// Operator overloaded vector access
-  /// NOTE: This is an unchecked index lookup
-  byte *operator[](std::size_t idx) noexcept { return EntryAt(idx); }
-  const byte *operator[](std::size_t idx) const noexcept {
-    return EntryAt(idx);
-  }
+  /// Unchecked indexed lookup
+  byte *operator[](std::size_t idx) noexcept;
+  const byte *operator[](std::size_t idx) const noexcept;
 
   // -------------------------------------------------------
   // Modification
@@ -67,7 +64,7 @@ class ChunkedVector {
 
   /// Append a new entry at the end of the vector, returning a contiguous memory
   /// space where the element can be written to by the caller
-  byte *Append();
+  byte *append() noexcept;
 
   // -------------------------------------------------------
   // Size/Capacity
@@ -179,41 +176,40 @@ inline ChunkedVectorIterator ChunkedVector::begin() noexcept {
   if (empty()) {
     return ChunkedVectorIterator();
   }
-
-  return ChunkedVectorIterator(chunks_.begin(), chunks_.front(),
-                               element_size());
+  return ChunkedVectorIterator(chunks_.begin(), chunks_[0], element_size());
 }
 
 inline ChunkedVectorIterator ChunkedVector::end() noexcept {
   if (empty()) {
     return ChunkedVectorIterator();
   }
-
   return ChunkedVectorIterator(chunks_.end() - 1, position_, element_size());
 }
 
-inline byte *ChunkedVector::EntryAt(const std::size_t idx) noexcept {
-  std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
-  std::size_t chunk_pos = idx & kChunkPositionMask;
-  return chunks_[chunk_idx] + (element_size() * chunk_pos);
-}
-
-inline const byte *ChunkedVector::EntryAt(const std::size_t idx) const
-    noexcept {
-  std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
-  std::size_t chunk_pos = idx & kChunkPositionMask;
-  return chunks_[chunk_idx] + (element_size() * chunk_pos);
-}
-
-inline byte *ChunkedVector::Append() {
-  if (position_ == end_) {
-    AllocateChunk();
+inline byte *ChunkedVector::at(size_t idx) {
+  if (idx > size()) {
+    throw std::out_of_range("Out-of-range access");
   }
+  return (*this)[idx];
+}
 
-  byte *const result = position_;
-  position_ += element_size_;
-  num_elements_++;
-  return result;
+inline const byte *ChunkedVector::at(size_t idx) const {
+  if (idx > size()) {
+    throw std::out_of_range("Out-of-range access");
+  }
+  return (*this)[idx];
+}
+
+inline byte *ChunkedVector::operator[](std::size_t idx) noexcept {
+  std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
+  std::size_t chunk_pos = idx & kChunkPositionMask;
+  return chunks_[chunk_idx] + (element_size() * chunk_pos);
+}
+
+inline const byte *ChunkedVector::operator[](std::size_t idx) const noexcept {
+  std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
+  std::size_t chunk_pos = idx & kChunkPositionMask;
+  return chunks_[chunk_idx] + (element_size() * chunk_pos);
 }
 
 inline void ChunkedVector::AllocateChunk() {
@@ -222,6 +218,17 @@ inline void ChunkedVector::AllocateChunk() {
   chunks_.push_back(new_chunk);
   position_ = new_chunk;
   end_ = new_chunk + alloc_size;
+}
+
+inline byte *ChunkedVector::append() noexcept {
+  if (position_ == end_) {
+    AllocateChunk();
+  }
+
+  byte *const result = position_;
+  position_ += element_size_;
+  num_elements_++;
+  return result;
 }
 
 }  // namespace tpl::util

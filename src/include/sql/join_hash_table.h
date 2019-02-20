@@ -144,7 +144,7 @@ class JoinHashTable {
 // ---------------------------------------------------------
 
 inline byte *JoinHashTable::AllocInputTuple(hash_t hash) {
-  auto *entry = reinterpret_cast<HashTableEntry *>(entries()->Append());
+  auto *entry = reinterpret_cast<HashTableEntry *>(entries()->append());
   entry->hash = hash;
   entry->next = head()->next;
   head()->next = entry;

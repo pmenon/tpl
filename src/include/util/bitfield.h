@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <type_traits>
 
 #include "util/common.h"
 
@@ -47,13 +48,16 @@ class BitFieldBase {
 
   static constexpr const S kMask = ((kOne << size) - 1) << shift;
 
-  static S Encode(T val) { return static_cast<S>(val) << shift; }
+  static constexpr S Encode(T val) { return static_cast<S>(val) << shift; }
 
-  static T Decode(S storage) {
+  static constexpr T Decode(S storage) {
+    if constexpr (std::is_same_v<T, bool>) {
+      return static_cast<T>(storage & kMask);
+    }
     return static_cast<T>((storage & kMask) >> shift);
   }
 
-  static S Update(S curr_storage, T update) {
+  static constexpr S Update(S curr_storage, T update) {
     return (curr_storage & ~kMask) | Encode(update);
   }
 

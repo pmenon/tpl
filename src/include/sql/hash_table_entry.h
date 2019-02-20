@@ -10,15 +10,16 @@ namespace tpl::sql {
 /// Compact structure representing a position in the concise hash table. CHT
 /// slots are 32-bit values with the following encoding:
 ///
-/// +-----------------+------------------+
-/// | Index (31 bits) | Overflow (1 bit) |
-/// +-----------------+------------------+
+/// +------------------+-----------------+
+/// | Overflow (1 bit) | Index (31 bits) |
+/// +------------------+-----------------+
 ///
-/// We use the most significant 31-bits to encode that index of the entry in the
-/// concise hash array; the least-significant bit is used to indicate whether
-/// the slot points to the overflow table.
+/// We use the least-significant 31-bits to store the index of the entry in the
+/// concise hash array; the most-significant bit is used to indicate whether the
+/// slot points to the overflow table.
 class ConciseHashTableSlot {
   friend class ConciseHashTable;
+
  private:
   ConciseHashTableSlot(bool overflow, u32 index)
       : bitfield_(OverflowField::Encode(overflow) | IndexField::Encode(index)) {
@@ -67,10 +68,10 @@ class ConciseHashTableSlot {
   }
 
  private:
-  class OverflowField : public util::BitField32<bool, 0, 1> {};
-
-  class IndexField : public util::BitField32<u32, OverflowField::kNextBit, 31> {
-  };
+  // clang-format off
+  class IndexField : public util::BitField32<u32, 0, 31> {};
+  class OverflowField : public util::BitField32<bool, IndexField::kNextBit, 1> {};
+  // clang-format on
 
  private:
   // The bitfield we use to encode the overflow and index bits
@@ -82,8 +83,8 @@ class ConciseHashTableSlot {
 /// memory where the keys, attributes, aggregates are stored in the \a payload
 /// field. This structure is used for both joins and aggregations.
 struct HashTableEntry {
-  static_assert(sizeof(ConciseHashTableSlot) == sizeof(u32),
-                "CHT slots should be 4-bytes");
+  static_assert(sizeof(ConciseHashTableSlot) <= sizeof(HashTableEntry *),
+                "CHT slots should be smaller than 64-bits");
 
   union {
     HashTableEntry *next;

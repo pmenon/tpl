@@ -61,18 +61,18 @@ class ChunkedVectorT : public ChunkedVector {
 
   template <class... Args>
   void emplace_back(Args &&... args) {
-    auto *new_elem = Append();
+    auto *new_elem = append();
     *reinterpret_cast<T *>(new_elem) =
         std::move(T(std::forward<Args>(args)...));
   }
 
   void push_back(const T &elem) {
-    auto *new_elem = Append();
+    auto *new_elem = append();
     *reinterpret_cast<T *>(new_elem) = elem;
   }
 
   void push_back(T &&elem) {
-    auto *new_elem = Append();
+    auto *new_elem = append();
     *reinterpret_cast<T *>(new_elem) = std::move(elem);
   }
 };
