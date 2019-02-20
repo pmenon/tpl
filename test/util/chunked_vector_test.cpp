@@ -1,6 +1,7 @@
 #include "tpl_test.h"
 
 #include <deque>
+#include <random>
 
 #include "util/chunked_vector.h"
 
@@ -82,17 +83,33 @@ TEST_F(GenericChunkedVectorTest, InsertAndIndexTest) {
   util::Region tmp("tmp");
   ChunkedVectorT<u32> vec(&tmp);
 
-  EXPECT_TRUE(vec.Empty());
+  EXPECT_TRUE(vec.empty());
 
   for (u32 i = 0; i < num_elems; i++) {
     vec.push_back(i);
   }
 
-  EXPECT_FALSE(vec.Empty());
-  EXPECT_EQ(num_elems, vec.Size());
+  EXPECT_FALSE(vec.empty());
+  EXPECT_EQ(num_elems, vec.size());
+}
+
+TEST_F(GenericChunkedVectorTest, RandomLookupTest) {
+  const u32 num_elems = 1000;
+
+  util::Region tmp("tmp");
+  ChunkedVectorT<u32> vec(&tmp);
+
+  EXPECT_TRUE(vec.empty());
 
   for (u32 i = 0; i < num_elems; i++) {
-    EXPECT_EQ(i, vec[i]);
+    vec.push_back(i);
+  }
+
+  // Do a bunch of random lookup
+  std::random_device random;
+  for (u32 i = 0; i < 1000; i++) {
+    auto idx = random() % num_elems;
+    EXPECT_EQ(idx, vec[idx]);
   }
 }
 

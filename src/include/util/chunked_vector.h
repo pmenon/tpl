@@ -74,10 +74,10 @@ class ChunkedVector {
   // -------------------------------------------------------
 
   /// Is this vector empty?
-  bool Empty() const noexcept { return chunks_.empty(); }
+  bool empty() const noexcept { return size() == 0; }
 
-  /// Return the number of elements currently stored in the vector
-  std::size_t Size() const noexcept;
+  /// Return the number of elements in the chunked vector
+  std::size_t size() const noexcept { return num_elements_; }
 
   /// Given the size (in bytes) of an individual element, compute the size of
   /// each chunk in the chunked vector
@@ -88,8 +88,6 @@ class ChunkedVector {
   // -------------------------------------------------------
   // Accessors
   // -------------------------------------------------------
-
-  util::Region *region() noexcept { return region_; }
 
   std::size_t element_size() const noexcept { return element_size_; }
 
@@ -110,6 +108,7 @@ class ChunkedVector {
 
   // The size of the elements this vector stores
   std::size_t element_size_;
+  std::size_t num_elements_;
 };
 
 // ---------------------------------------------------------
@@ -166,7 +165,8 @@ inline ChunkedVector::ChunkedVector(util::Region *region,
     : region_(region),
       position_(nullptr),
       end_(nullptr),
-      element_size_(element_size) {}
+      element_size_(element_size),
+      num_elements_(0) {}
 
 inline ChunkedVector::~ChunkedVector() noexcept {
   const std::size_t chunk_size = ChunkAllocSize(element_size());
@@ -176,7 +176,7 @@ inline ChunkedVector::~ChunkedVector() noexcept {
 }
 
 inline ChunkedVectorIterator ChunkedVector::begin() noexcept {
-  if (Empty()) {
+  if (empty()) {
     return ChunkedVectorIterator();
   }
 
@@ -185,7 +185,7 @@ inline ChunkedVectorIterator ChunkedVector::begin() noexcept {
 }
 
 inline ChunkedVectorIterator ChunkedVector::end() noexcept {
-  if (Empty()) {
+  if (empty()) {
     return ChunkedVectorIterator();
   }
 
@@ -212,27 +212,16 @@ inline byte *ChunkedVector::Append() {
 
   byte *const result = position_;
   position_ += element_size_;
+  num_elements_++;
   return result;
 }
 
 inline void ChunkedVector::AllocateChunk() {
   std::size_t alloc_size = ChunkAllocSize(element_size());
-  byte *new_chunk = static_cast<byte *>(region()->Allocate(alloc_size));
+  byte *new_chunk = static_cast<byte *>(region_->Allocate(alloc_size));
   chunks_.push_back(new_chunk);
   position_ = new_chunk;
   end_ = new_chunk + alloc_size;
-}
-
-inline std::size_t ChunkedVector::Size() const noexcept {
-  if (Empty()) {
-    return 0;
-  }
-
-  std::size_t full_chunk_elems = kNumElementsPerChunk * (chunks_.size() - 1);
-  std::size_t partial_chunk_elems =
-      (position_ - chunks_.back()) / element_size();
-
-  return full_chunk_elems + partial_chunk_elems;
 }
 
 }  // namespace tpl::util

@@ -80,10 +80,10 @@ static void CompileAndRun(const std::string &source,
     module = vm::BytecodeGenerator::Compile(&region, root, name);
   }
 
-  // Dump VM
+  // Dump Bytecode
   module->PrettyPrint(std::cout);
 
-  // Execute
+  // Interpret
   {
     util::ScopedTimer<std::milli> timer(&exec_ms);
 
@@ -149,29 +149,26 @@ static void RunFile(const std::string &filename) {
 
   LOG_INFO("Compiling and running file: {}", filename);
 
-  // Make a copy of the source ... crappy, yes, but okay in this use case
-  const std::string source((*file)->getBufferStart(), (*file)->getBufferEnd());
-
-  // Compile and run
-  CompileAndRun(source);
+  // Copy the source into a temporary, compile, and run
+  CompileAndRun((*file)->getBuffer().str());
 }
 
 /// Initialize all TPL subsystems
 void InitTPL() {
-  // Init logging
   tpl::logging::InitLogger();
 
-  // Init catalog
   tpl::sql::Catalog::Instance();
 
-  // Init LLVM engine
   tpl::vm::LLVMEngine::Initialize();
+
+  LOG_INFO("TPL initialized ...");
 }
 
 /// Shutdown all TPL subsystems
 void ShutdownTPL() {
-  // Shutdown LLVM
   tpl::vm::LLVMEngine::Shutdown();
+  LOG_INFO("TPL cleanly shutdown ...");
+
 }
 
 }  // namespace tpl
@@ -184,15 +181,16 @@ void SignalHandler(i32 sig_num) {
 }
 
 int main(int argc, char **argv) {
-  // Initialize a signal handler
+  // Initialize a signal handler to call SignalHandler()
   struct sigaction sa;
   sa.sa_handler = &SignalHandler;
   sa.sa_flags = SA_RESTART;
-  // Block every signal during the handler
+
   sigfillset(&sa.sa_mask);
 
   if (sigaction(SIGINT, &sa, nullptr) == -1) {
-    perror("Error: cannot handle SIGINT");
+    LOG_ERROR("Cannot handle SIGNIT: {}", strerror(errno));
+    return errno;
   }
 
   // Init TPL
