@@ -6,16 +6,16 @@ namespace tpl::sql {
 
 TableVectorIterator::TableVectorIterator(const Table &table)
     : block_iterator_(table.Iterate()),
-      vp_(table.num_columns(), kDefaultVectorSize) {
+      vector_projection_(table.num_columns(), kDefaultVectorSize) {
   TPL_ASSERT(table.num_columns() > 0, "Cannot scan table with no columns");
 
   // Reserve space for the column iterators
-  column_iterators().reserve(table.num_columns());
+  column_iterators_.reserve(table.num_columns());
 
   // Set up each column iterator for the columns we'll iterate over
   for (u32 col_idx = 0; col_idx < table.num_columns(); col_idx++) {
     const Schema::ColumnInfo &col_info = table.schema().GetColumnInfo(col_idx);
-    column_iterators().emplace_back(col_info);
+    column_iterators_.emplace_back(col_info);
   }
 }
 
@@ -25,12 +25,12 @@ void TableVectorIterator::RefreshVectorProjection() {
   // column iterators
   //
 
-  for (u32 col_idx = 0; col_idx < column_iterators().size(); col_idx++) {
-    vector_projection()->ResetColumn(column_iterators(), col_idx);
+  for (u32 col_idx = 0; col_idx < column_iterators_.size(); col_idx++) {
+    vector_projection_.ResetColumn(column_iterators_, col_idx);
   }
 
   // Insert our vector projection instance into the vector projection iterator
-  vector_projection_iterator()->SetVectorProjection(vector_projection());
+  vector_projection_iterator()->SetVectorProjection(&vector_projection_);
 }
 
 bool TableVectorIterator::Advance() {
@@ -52,7 +52,7 @@ bool TableVectorIterator::Advance() {
   //
 
   bool advanced = true;
-  for (auto &col_iter : column_iterators()) {
+  for (auto &col_iter : column_iterators_) {
     advanced &= col_iter.Advance();
   }
 
@@ -62,11 +62,11 @@ bool TableVectorIterator::Advance() {
   }
 
   // Check block iterator
-  if (block_iterator()->Advance()) {
-    const Table::Block *block = block_iterator()->current_block();
-    for (u32 i = 0; i < column_iterators().size(); i++) {
+  if (block_iterator_.Advance()) {
+    const Table::Block *block = block_iterator_.current_block();
+    for (u32 i = 0; i < column_iterators_.size(); i++) {
       const ColumnVector *col = block->GetColumnData(i);
-      col_iters_[i].Reset(col);
+      column_iterators_[i].Reset(col);
     }
     RefreshVectorProjection();
     return true;

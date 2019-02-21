@@ -24,13 +24,9 @@ class TableVectorIterator {
   // Accessors
   // -------------------------------------------------------
 
-  Table::BlockIterator *block_iterator() { return &block_iterator_; }
-
-  std::vector<ColumnVectorIterator> &column_iterators() { return col_iters_; }
-
-  VectorProjection *vector_projection() { return &vp_; }
-
-  VectorProjectionIterator *vector_projection_iterator() { return &vp_iter_; }
+  VectorProjectionIterator *vector_projection_iterator() {
+    return &vector_projection_iterator_;
+  }
 
  private:
   // When the column iterators receive new vectors of input, we need to
@@ -42,13 +38,13 @@ class TableVectorIterator {
   Table::BlockIterator block_iterator_;
 
   // The vector-wise iterators over each column in the table
-  std::vector<ColumnVectorIterator> col_iters_;
+  std::vector<ColumnVectorIterator> column_iterators_;
 
   // The active vector projection
-  VectorProjection vp_;
+  VectorProjection vector_projection_;
 
   // An iterator over the currently active projection
-  VectorProjectionIterator vp_iter_;
+  VectorProjectionIterator vector_projection_iterator_;
 };
 
 }  // namespace tpl::sql
