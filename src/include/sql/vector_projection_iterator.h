@@ -1,6 +1,7 @@
 #pragma once
 
 #include <limits>
+#include <type_traits>
 
 #include "sql/vector_projection.h"
 #include "util/bit_util.h"
@@ -195,6 +196,10 @@ inline void VectorProjectionIterator::ResetFiltered() {
 
 template <typename F>
 inline void VectorProjectionIterator::ForEach(const F &fn) {
+  // Ensure function conforms to expected form
+  static_assert(std::is_invocable_r_v<void, F>,
+                "Iteration function must be a no-arg void-return function");
+
   if (IsFiltered()) {
     for (; HasNextFiltered(); AdvanceFiltered()) {
       fn();
@@ -211,6 +216,10 @@ inline void VectorProjectionIterator::ForEach(const F &fn) {
 
 template <typename F>
 inline void VectorProjectionIterator::RunFilter(const F &filter) {
+  // Ensure filter function conforms to expected form
+  static_assert(std::is_invocable_r_v<bool, F>,
+                "Filter function must be a no-arg function returning a bool");
+
   if (IsFiltered()) {
     for (; HasNextFiltered(); AdvanceFiltered()) {
       bool valid = filter();
