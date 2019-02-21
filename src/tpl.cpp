@@ -167,8 +167,10 @@ void InitTPL() {
 /// Shutdown all TPL subsystems
 void ShutdownTPL() {
   tpl::vm::LLVMEngine::Shutdown();
-  LOG_INFO("TPL cleanly shutdown ...");
 
+  tpl::logging::ShutdownLogger();
+
+  LOG_INFO("TPL cleanly shutdown ...");
 }
 
 }  // namespace tpl

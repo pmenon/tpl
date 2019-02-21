@@ -9,13 +9,10 @@
 namespace tpl {
 
 class TplTest : public ::testing::Test {
- protected:
-  void SetUp() override { logging::InitLogger(); }
+ public:
+  TplTest() { logging::InitLogger(); }
 
-  void TearDown() override {
-    // shutdown loggers
-    spdlog::shutdown();
-  }
+  virtual ~TplTest() { logging::ShutdownLogger(); }
 
   const char *GetTestName() const {
     return ::testing::UnitTest::GetInstance()->current_test_info()->name();

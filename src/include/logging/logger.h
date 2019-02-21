@@ -10,8 +10,9 @@ namespace tpl::logging {
 extern std::shared_ptr<spdlog::sinks::stdout_sink_mt> default_sink;
 extern std::shared_ptr<spdlog::logger> logger;
 
-/// Initialize the loggers
+/// Initialize/shutdown all loggers
 void InitLogger();
+void ShutdownLogger();
 
 // ---------------------------------------------------------
 // Define logging level

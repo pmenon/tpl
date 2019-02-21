@@ -16,4 +16,6 @@ void InitLogger() {
   spdlog::register_logger(logger);
 }
 
+void ShutdownLogger() { spdlog::shutdown(); }
+
 }  // namespace tpl::logging
