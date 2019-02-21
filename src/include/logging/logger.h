@@ -7,14 +7,40 @@
 
 namespace tpl::logging {
 
-// flush the debug logs, every <n> seconds
-#define DEBUG_LOG_FLUSH_INTERVAL 3
-
-extern const char *kLoggerName;
 extern std::shared_ptr<spdlog::sinks::stdout_sink_mt> default_sink;
 extern std::shared_ptr<spdlog::logger> logger;
 
+/// Initialize the loggers
 void InitLogger();
+
+// ---------------------------------------------------------
+// Define logging level
+// ---------------------------------------------------------
+
+#if defined(LOG_LEVEL_TRACE)
+#define SPD_LOG_LEVEL spdlog::level::level_enum::trace
+#elif defined(LOG_LEVEL_DEBUG)
+#define SPD_LOG_LEVEL spdlog::level::level_enum::debug
+#elif defined(LOG_LEVEL_INFO)
+#define SPD_LOG_LEVEL spdlog::level::level_enum::info
+#elif defined(LOG_LEVEL_WARN)
+#define SPD_LOG_LEVEL spdlog::level::level_enum::warn
+#elif defined(LOG_LEVEL_OFF)
+#define SPD_LOG_LEVEL spdlog::level::level_enum::off
+#else
+
+// LOG_LEVEL_* not explicitly defined, use debug if in DEBUG mode, otherwise ERR
+#ifndef NDEBUG
+#define SPD_LOG_LEVEL spdlog::level::level_enum::debug
+#else
+#define SPD_LOG_LEVEL spdlog::level::level_enum::err
+#endif
+
+#endif
+
+// ---------------------------------------------------------
+// Logging macros
+// ---------------------------------------------------------
 
 #define LOG_TRACE(...) ::tpl::logging::logger->trace(__VA_ARGS__);
 

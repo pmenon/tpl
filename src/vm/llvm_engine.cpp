@@ -36,14 +36,14 @@ namespace tpl::vm {
 class LLVMEngine::TPLMemoryManager : public llvm::SectionMemoryManager {
  public:
   llvm::JITSymbol findSymbol(const std::string &name) override {
-    LOG_DEBUG("Resolving symbol '{}' ...", name);
+    LOG_TRACE("Resolving symbol '{}' ...", name);
 
     if (const auto iter = symbols_.find(name); iter != symbols_.end()) {
-      LOG_DEBUG("Symbol '{}' found in cache ...", name);
+      LOG_TRACE("Symbol '{}' found in cache ...", name);
       return llvm::JITSymbol(iter->second);
     }
 
-    LOG_DEBUG("Symbol '{}' not found in cache, checking process ...", name);
+    LOG_TRACE("Symbol '{}' not found in cache, checking process ...", name);
 
     llvm::JITSymbol symbol = llvm::SectionMemoryManager::findSymbol(name);
     TPL_ASSERT(symbol.getAddress(), "Resolved symbol has no address!");
@@ -404,7 +404,7 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
       target_features.AddFeature(entry.getKey(), entry.getValue());
     }
 
-    LOG_DEBUG("LLVM: Discovered CPU features: {}", target_features.getString());
+    LOG_TRACE("LLVM: Discovered CPU features: {}", target_features.getString());
 
     std::string cpu = llvm::sys::getHostCPUName();
     llvm::TargetOptions target_options;
@@ -566,9 +566,9 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
   }
 
 #ifndef NDEBUG
-  LOG_DEBUG("Found blocks:");
+  LOG_TRACE("Found blocks:");
   for (auto &[pos, block] : blocks) {
-    LOG_DEBUG("  Block {} @ {:x}", block->getName().str(), pos);
+    LOG_TRACE("  Block {} @ {:x}", block->getName().str(), pos);
   }
 #endif
 
