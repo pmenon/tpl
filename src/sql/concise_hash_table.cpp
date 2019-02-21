@@ -8,7 +8,7 @@ namespace tpl::sql {
 ConciseHashTable::ConciseHashTable(u32 probe_threshold) noexcept
     : slot_groups_(nullptr),
       num_groups_(0),
-      probe_threshold_(probe_threshold),
+      probe_limit_(probe_threshold),
       num_overflow_(0),
       built_(false) {}
 
@@ -21,7 +21,7 @@ void ConciseHashTable::SetSize(const u32 num_elems) {
 
 ConciseHashTable::~ConciseHashTable() {
   if (slot_groups_ != nullptr) {
-    util::mem::FreeHugeArray(slot_groups_, num_groups());
+    util::mem::FreeHugeArray(slot_groups_, num_groups_);
   }
 }
 
@@ -35,19 +35,19 @@ void ConciseHashTable::Build() {
   slot_groups_[0].count =
       static_cast<u32>(util::BitUtil::CountBits(slot_groups_[0].bits));
 
-  for (u32 i = 1; i < num_groups(); i++) {
+  for (u32 i = 1; i < num_groups_; i++) {
     slot_groups_[i].count =
         slot_groups_[i - 1].count +
         static_cast<u32>(util::BitUtil::CountBits(slot_groups_[i].bits));
   }
 
-  set_is_built(true);
+  built_ = true;
 }
 
 std::string ConciseHashTable::PrettyPrint() const {
   std::string result;
 
-  for (u32 idx = 0; idx < num_groups(); idx++) {
+  for (u32 idx = 0; idx < num_groups_; idx++) {
     SlotGroup *slot_group = slot_groups_ + idx;
     auto *group_bits = reinterpret_cast<u32 *>(&slot_group->bits);
     for (u32 j = 0; j < 64; j++) {

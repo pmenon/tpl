@@ -58,14 +58,6 @@ class VectorProjection {
   // Set the deletions bitmap
   void ClearDeletions();
 
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
-
-  util::BitVector *deletions() { return &deletions_; }
-
-  u32 vector_size() const { return vector_size_; }
-
  private:
   // The array of pointers to column data for all columns in this projection
   std::unique_ptr<byte *[]> column_data_;

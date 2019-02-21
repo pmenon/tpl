@@ -43,7 +43,7 @@ class BloomFilter {
   bool Contains(hash_t hash) const;
 
   /// Return the size of this Bloom Filter in bytes
-  u64 GetSizeInBytes() const { return sizeof(Block) * num_blocks(); }
+  u64 GetSizeInBytes() const { return sizeof(Block) * GetNumBlocks(); }
 
   /// Get the number of bits this Bloom Filter has
   u64 GetSizeInBits() const { return GetSizeInBytes() * kBitsPerByte; }
@@ -52,15 +52,7 @@ class BloomFilter {
   u64 GetTotalBitsSet() const;
 
  private:
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
-
-  util::Region *region() const { return region_; }
-
-  u32 num_blocks() const { return block_mask() + 1; }
-
-  u32 block_mask() const { return block_mask_; }
+  u32 GetNumBlocks() const { return block_mask_ + 1; }
 
  private:
   // The region allocator we use for all allocations

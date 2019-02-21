@@ -13,19 +13,19 @@ GenericHashTable::GenericHashTable(float load_factor) noexcept
       load_factor_(load_factor) {}
 
 GenericHashTable::~GenericHashTable() {
-  if (entries() != nullptr) {
-    util::mem::FreeHugeArray(entries(), capacity());
+  if (entries_ != nullptr) {
+    util::mem::FreeHugeArray(entries_, capacity());
   }
 }
 
 void GenericHashTable::SetSize(u64 new_size) {
   TPL_ASSERT(new_size > 0, "New size cannot be zero!");
-  if (entries() != nullptr) {
-    util::mem::FreeHugeArray(entries(), capacity());
+  if (entries_ != nullptr) {
+    util::mem::FreeHugeArray(entries_, capacity());
   }
 
   u64 next_size = util::MathUtil::PowerOf2Ceil(new_size);
-  if (next_size < new_size / load_factor()) {
+  if (next_size < new_size / load_factor_) {
     next_size *= 2;
   }
 

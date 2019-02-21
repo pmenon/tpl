@@ -8,18 +8,18 @@ JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size,
       num_elems_(0),
       built_(false),
       use_concise_ht_(use_concise_ht) {
-  head()->next = nullptr;
+  head_.next = nullptr;
 }
 
 void JoinHashTable::BuildGenericHashTable() {
   // TODO(pmenon): Use HLL++ sketches to better estimate size
   // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
 
-  generic_hash_table()->SetSize(num_elems());
+  generic_hash_table_.SetSize(num_elems());
 
-  for (HashTableEntry *entry = head()->next; entry != nullptr;) {
+  for (HashTableEntry *entry = head_.next; entry != nullptr;) {
     HashTableEntry *next = entry->next;
-    generic_hash_table()->Insert<false>(entry, entry->hash);
+    generic_hash_table_.Insert<false>(entry, entry->hash);
     entry = next;
   }
 }
@@ -38,16 +38,16 @@ void JoinHashTable::ReorderEntries() {
 void JoinHashTable::BuildConciseHashTable() {
   // TODO(pmenon): Use HLL++ sketches to better estimate size
 
-  concise_hash_table()->SetSize(num_elems());
+  concise_hash_table_.SetSize(num_elems());
 
-  for (HashTableEntry *entry = head()->next; entry != nullptr;) {
+  for (HashTableEntry *entry = head_.next; entry != nullptr;) {
     HashTableEntry *next = entry->next;
-    entry->cht_slot = concise_hash_table()->Insert(entry->hash);
+    entry->cht_slot = concise_hash_table_.Insert(entry->hash);
     entry = next;
   }
 
   // Insertions complete, build it
-  concise_hash_table()->Build();
+  concise_hash_table_.Build();
 
   // Re-order
   ReorderEntries();
@@ -64,7 +64,7 @@ void JoinHashTable::Build() {
     BuildGenericHashTable();
   }
 
-  set_is_built(true);
+  built_ = true;
 }
 
 void JoinHashTable::LookupBatchInGenericHashTable(
@@ -73,7 +73,7 @@ void JoinHashTable::LookupBatchInGenericHashTable(
 
   // Initial lookup
   for (u32 i = 0; i < num_tuples; i++) {
-    results[i] = generic_hash_table()->FindChainHead(hashes[i]);
+    results[i] = generic_hash_table_.FindChainHead(hashes[i]);
   }
 
   // Ensure find match on hash

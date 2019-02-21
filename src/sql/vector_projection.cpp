@@ -23,7 +23,7 @@ void VectorProjection::ResetColumn(std::vector<ColumnVectorIterator> &col_iters,
   tuple_count_ = col_iter.NumTuples();
 
   // Clear the column deletions
-  TPL_ASSERT(col_iter.NumTuples() <= vector_size(),
+  TPL_ASSERT(col_iter.NumTuples() <= vector_size_,
              "Provided column iterator has too many tuples for this vector "
              "projection");
   ClearDeletions();
@@ -35,13 +35,13 @@ void VectorProjection::ResetFromRaw(byte col_data[], u32 col_null_bitmap[],
   column_null_bitmaps_[col_idx] = col_null_bitmap;
   tuple_count_ = num_tuples;
 
-  TPL_ASSERT(num_tuples <= vector_size(),
+  TPL_ASSERT(num_tuples <= vector_size_,
              "Provided column iterator has too many tuples for this vector "
              "projection");
 
   ClearDeletions();
 }
 
-void VectorProjection::ClearDeletions() { deletions()->ClearAll(); }
+void VectorProjection::ClearDeletions() { deletions_.ClearAll(); }
 
 }  // namespace tpl::sql

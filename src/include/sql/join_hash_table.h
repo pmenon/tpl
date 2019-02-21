@@ -46,6 +46,9 @@ class JoinHashTable {
   /// Return the total number of inserted elements, including duplicates
   u32 num_elems() const { return num_elems_; }
 
+  /// Has the hash table been built?
+  bool is_built() const { return built_; }
+
   /// Is this join using a concise hash table?
   bool use_concise_hash_table() const { return use_concise_ht_; }
 
@@ -94,37 +97,18 @@ class JoinHashTable {
   void LookupBatchInConciseHashTable(u32 num_tuples, hash_t hashes[],
                                      HashTableEntry *results[]) const;
 
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
-
-  util::ChunkedVector *entries() { return &entries_; }
-
-  GenericHashTable *generic_hash_table() { return &generic_table_; }
-  const GenericHashTable *generic_hash_table() const { return &generic_table_; }
-
-  ConciseHashTable *concise_hash_table() { return &concise_table_; }
-  const ConciseHashTable *concise_hash_table() const { return &concise_table_; }
-
-  BloomFilter *bloom_filter() { return &filter_; }
-
-  HashTableEntry *head() { return &head_; }
-
-  bool is_built() const { return built_; }
-  void set_is_built(bool built) { built_ = built; }
-
  private:
   // The vector where we store the build-side input
   util::ChunkedVector entries_;
 
   // The generic hash table
-  GenericHashTable generic_table_;
+  GenericHashTable generic_hash_table_;
 
   // The concise hash table
-  ConciseHashTable concise_table_;
+  ConciseHashTable concise_hash_table_;
 
   // The bloom filter
-  BloomFilter filter_;
+  BloomFilter bloom_filter_;
 
   // The head of the lazy insertion list
   HashTableEntry head_;
@@ -144,10 +128,10 @@ class JoinHashTable {
 // ---------------------------------------------------------
 
 inline byte *JoinHashTable::AllocInputTuple(hash_t hash) {
-  auto *entry = reinterpret_cast<HashTableEntry *>(entries()->append());
+  auto *entry = reinterpret_cast<HashTableEntry *>(entries_.append());
   entry->hash = hash;
-  entry->next = head()->next;
-  head()->next = entry;
+  entry->next = head_.next;
+  head_.next = entry;
 
   num_elems_++;
 
@@ -155,7 +139,7 @@ inline byte *JoinHashTable::AllocInputTuple(hash_t hash) {
 }
 
 inline JoinHashTable::Iterator JoinHashTable::Lookup(hash_t hash) const {
-  HashTableEntry *entry = generic_hash_table()->FindChainHead(hash);
+  HashTableEntry *entry = generic_hash_table_.FindChainHead(hash);
   while (entry != nullptr && entry->hash != hash) {
     entry = entry->next;
   }

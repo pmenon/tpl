@@ -27,15 +27,15 @@ class JoinHashTableTest : public TplTest {
   util::Region *region() { return &region_; }
 
   GenericHashTable *GenericTableFor(JoinHashTable *join_hash_table) {
-    return join_hash_table->generic_hash_table();
+    return &join_hash_table->generic_hash_table_;
   }
 
   ConciseHashTable *ConciseTableFor(JoinHashTable *join_hash_table) {
-    return join_hash_table->concise_hash_table();
+    return &join_hash_table->concise_hash_table_;
   }
 
   BloomFilter *BloomFilterFor(JoinHashTable *join_hash_table) {
-    return join_hash_table->bloom_filter();
+    return &join_hash_table->bloom_filter_;
   }
 
  private:

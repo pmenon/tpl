@@ -112,17 +112,6 @@ class GenericHashTable {
     return 1ull << (tag_bit_pos + kNumPointerBits);
   }
 
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
-
-  std::atomic<HashTableEntry *> *entries() { return entries_; }
-
-  u64 mask() const { return mask_; }
-
-  /// Return the current load factory of this hash table
-  float load_factor() const { return load_factor_; }
-
  private:
   // Main bucket table
   std::atomic<HashTableEntry *> *entries_;
@@ -158,7 +147,7 @@ inline HashTableEntry *GenericHashTable::FindChainHeadWithTag(
 
 template <bool Concurrent>
 inline void GenericHashTable::Insert(HashTableEntry *new_entry, hash_t hash) {
-  const auto pos = hash & mask();
+  const auto pos = hash & mask_;
 
   TPL_ASSERT(pos < capacity(), "Computed table position exceeds capacity!");
   TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");
@@ -182,7 +171,7 @@ inline void GenericHashTable::Insert(HashTableEntry *new_entry, hash_t hash) {
 template <bool Concurrent>
 inline void GenericHashTable::InsertTagged(HashTableEntry *new_entry,
                                            hash_t hash) {
-  const auto pos = hash & mask();
+  const auto pos = hash & mask_;
 
   TPL_ASSERT(pos < capacity(), "Computed table position exceeds capacity!");
   TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");

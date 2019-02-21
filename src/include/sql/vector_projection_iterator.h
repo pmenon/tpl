@@ -35,7 +35,7 @@ class VectorProjectionIterator {
   /// Set the vector projection to iterate over
   /// \param vp The vector projection
   void SetVectorProjection(VectorProjection *vp) {
-    vp_ = vp;
+    vector_projection_ = vp;
     num_selected_ = vp->TotalTupleCount();
   }
 
@@ -112,24 +112,8 @@ class VectorProjectionIterator {
   u32 num_selected() const { return num_selected_; }
 
  private:
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
-
-  VectorProjection *vector_projection() { return vp_; }
-  const VectorProjection *vector_projection() const { return vp_; }
-
-  u32 current_position() const { return curr_pos_; }
-
-  u32 *selection_vector() { return selection_vector_; }
-
-  u32 selection_vector_read_pos() const { return selection_vector_read_pos_; }
-
-  u32 selection_vector_write_pos() const { return selection_vector_write_pos_; }
-
- private:
   // The vector projection we're iterating over
-  VectorProjection *vp_;
+  VectorProjection *vector_projection_;
 
   // The current raw position in the vector projection we're pointing to
   u32 curr_pos_;
@@ -157,39 +141,39 @@ template <typename T, bool nullable>
 inline const T *VectorProjectionIterator::Get(u32 col_idx, bool *null) const {
   if constexpr (nullable) {
     TPL_ASSERT(null != nullptr, "Missing output variable for NULL indicator");
-    const u32 *col_null_bitmap = vector_projection()->GetNullBitmap(col_idx);
-    *null = util::BitUtil::Test(col_null_bitmap, current_position());
+    const u32 *col_null_bitmap = vector_projection_->GetNullBitmap(col_idx);
+    *null = util::BitUtil::Test(col_null_bitmap, curr_pos_);
   }
 
-  const T *col_data = vector_projection()->GetVectorAs<T>(col_idx);
-  return &col_data[current_position()];
+  const T *col_data = vector_projection_->GetVectorAs<T>(col_idx);
+  return &col_data[curr_pos_];
 }
 
 inline void VectorProjectionIterator::Advance() { curr_pos_++; }
 
 inline void VectorProjectionIterator::AdvanceFiltered() {
-  curr_pos_ = selection_vector()[selection_vector_read_pos()];
+  curr_pos_ = selection_vector_[selection_vector_read_pos_];
   selection_vector_read_pos_++;
 }
 
 inline void VectorProjectionIterator::Match(bool matched) {
-  selection_vector_[selection_vector_write_pos()] = current_position();
+  selection_vector_[selection_vector_write_pos_] = curr_pos_;
   selection_vector_write_pos_ += matched;
 }
 
 inline bool VectorProjectionIterator::HasNext() const {
-  return current_position() < vector_projection()->TotalTupleCount();
+  return curr_pos_ < vector_projection_->TotalTupleCount();
 }
 
 inline bool VectorProjectionIterator::HasNextFiltered() const {
-  return selection_vector_read_pos() < num_selected();
+  return selection_vector_read_pos_ < num_selected();
 }
 
 inline void VectorProjectionIterator::Reset() { curr_pos_ = 0; }
 
 inline void VectorProjectionIterator::ResetFiltered() {
-  curr_pos_ = selection_vector()[0];
-  num_selected_ = selection_vector_write_pos();
+  curr_pos_ = selection_vector_[0];
+  num_selected_ = selection_vector_write_pos_;
   selection_vector_read_pos_ = 0;
   selection_vector_write_pos_ = 0;
 }
@@ -242,15 +226,16 @@ inline void VectorProjectionIterator::RunFilter(const F &filter) {
 // Filter an entire column's data by the provided constant value
 template <typename T, template <typename> typename Op, bool nullable>
 inline u32 VectorProjectionIterator::FilterColByVal(u32 col_idx, T val) {
-  const T *input = vector_projection()->GetVectorAs<T>(col_idx);
+  const T *input = vector_projection_->GetVectorAs<T>(col_idx);
 
   if (IsFiltered()) {
+    const u32 *sel_vec = selection_vector_;
     selection_vector_write_pos_ = util::VectorUtil::FilterVectorByVal<T, Op>(
-        input, num_selected(), val, selection_vector(), selection_vector());
+        input, num_selected(), val, selection_vector_, sel_vec);
   } else {
-    u32 num_tuples = vector_projection()->TotalTupleCount();
+    u32 num_tuples = vector_projection_->TotalTupleCount();
     selection_vector_write_pos_ = util::VectorUtil::FilterVectorByVal<T, Op>(
-        input, num_tuples, val, selection_vector(), nullptr);
+        input, num_tuples, val, selection_vector_, nullptr);
   }
 
   // After the filter has been run on the entire vector projection, we need to
