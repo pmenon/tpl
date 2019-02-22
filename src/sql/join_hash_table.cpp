@@ -165,23 +165,23 @@ void JoinHashTable::ReorderMainEntries() noexcept {
       // already been processed, then it's either in the reorder buffer or in
       // its final slot. In either case, we can perform a direct write.
       if (target->cht_slot.IsProcessed()) {
-        target->cht_slot.SetProcessed(true);
         std::memcpy(target, buf_pos, elem_size);
+        target->cht_slot.SetProcessed(true);
         continue;
       }
 
       if (write_pos == buf_pos) {
-        target->cht_slot.SetProcessed(true);
         std::memcpy(reorder_buf.temp_buffer(), target, elem_size);
         std::memcpy(target, buf_pos, elem_size);
         std::memcpy(buf_pos, reorder_buf.temp_buffer(), elem_size);
+        target->cht_slot.SetProcessed(true);
         write_pos += elem_size;
         continue;
       }
 
-      target->cht_slot.SetProcessed(true);
       std::memcpy(write_pos, target, elem_size);
       std::memcpy(target, buf_pos, elem_size);
+      target->cht_slot.SetProcessed(true);
     }
 
     // Reset and try again
@@ -206,13 +206,11 @@ void JoinHashTable::BuildConciseHashTable() {
   // Insertions complete, build it
   concise_hash_table_.Build();
 
-#if 0
   // Re-order main entries according to CHT order
   ReorderMainEntries();
 
   // Process overflow entries
   ProcessOverflowEntries();
-#endif
 }
 
 void JoinHashTable::Build() {
