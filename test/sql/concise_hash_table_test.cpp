@@ -25,7 +25,7 @@ class ConciseHashTableTest : public TplTest {};
 
 TEST_F(ConciseHashTableTest, InsertTest) {
   const u32 num_tuples = 10;
-  const u32 probe_length = 2;
+  const u32 probe_length = 1;
 
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
@@ -56,7 +56,7 @@ TEST_F(ConciseHashTableTest, InsertTest) {
 
 TEST_F(ConciseHashTableTest, InsertOverflowTest) {
   const u32 num_tuples = 20;
-  const u32 probe_length = 2;
+  const u32 probe_length = 1;
 
   //
   // Create a CHT with one bucket with 64 slots
@@ -153,7 +153,7 @@ TEST_F(ConciseHashTableTest, BuildTest) {
   table.Build();
 
   for (u32 i = 0; i < inserted.size(); i++) {
-    EXPECT_EQ(i, table.NumOccupiedSlotsBefore(inserted[i]));
+    EXPECT_EQ(i, table.NumFilledSlotsBefore(inserted[i]));
   }
 }
 
@@ -179,7 +179,7 @@ TEST_F(ConciseHashTableTest, MultiGroupBuildTest) {
   table.Build();
 
   for (u32 i = 0; i < inserted.size(); i++) {
-    EXPECT_EQ(i, table.NumOccupiedSlotsBefore(inserted[i]));
+    EXPECT_EQ(i, table.NumFilledSlotsBefore(inserted[i]));
   }
 }
 

@@ -68,11 +68,6 @@ class JoinHashTable {
                               void *probe_tuple);
 
    private:
-    HashTableEntry *next() const { return next_; }
-
-    hash_t hash() const { return hash_; }
-
-   private:
     // The next element the iterator produces
     HashTableEntry *next_;
     // The hash value we're looking up
@@ -157,10 +152,10 @@ inline JoinHashTable::Iterator::Iterator(HashTableEntry *initial, hash_t hash)
 inline HashTableEntry *JoinHashTable::Iterator::NextMatch(
     JoinHashTable::Iterator::KeyEq key_eq, void *opaque_ctx,
     void *probe_tuple) {
-  HashTableEntry *result = next();
+  HashTableEntry *result = next_;
   while (result != nullptr) {
-    next_ = next()->next;
-    if (result->hash == hash() &&
+    next_ = next_->next;
+    if (result->hash == hash_ &&
         key_eq(opaque_ctx, probe_tuple,
                reinterpret_cast<void *>(result->payload))) {
       break;

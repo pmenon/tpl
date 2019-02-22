@@ -22,7 +22,7 @@ class ConciseHashTable {
 
   /// Create a new uninitialized concise hash table. Callers **must** call
   /// SetSize() before interacting with the table
-  explicit ConciseHashTable(u32 probe_threshold = kProbeThreshold) noexcept;
+  explicit ConciseHashTable(u32 probe_threshold = kProbeThreshold);
 
   /// Destroy
   ~ConciseHashTable();
@@ -40,11 +40,8 @@ class ConciseHashTable {
   /// Finalize and build this concise hash table
   void Build();
 
-  ///
-  u64 NumOccupiedSlotsBefore(ConciseHashTableSlot slot) const;
-
-  /// Find the first match for the given hash value
-  ConciseHashTableSlot FindFirst(hash_t hash) const;
+  /// Return the number of occupied slots in the table **before** the given slot
+  u64 NumFilledSlotsBefore(ConciseHashTableSlot slot) const;
 
   // -------------------------------------------------------
   // Utility Operations
@@ -52,9 +49,6 @@ class ConciseHashTable {
 
   /// Return the number of bytes this hash table has allocated
   u64 GetTotalMemoryUsage() const { return sizeof(SlotGroup) * num_groups_; }
-
-  /// Pretty print the contents of the table
-  std::string PrettyPrint() const;
 
   // -------------------------------------------------------
   // Accessors
@@ -110,70 +104,25 @@ class ConciseHashTable {
 inline ConciseHashTableSlot ConciseHashTable::Insert(const hash_t hash) {
   const u64 slot_idx = hash & slot_mask_;
   const u64 group_idx = slot_idx >> kLogSlotsPerGroup;
-  SlotGroup *slot_group = slot_groups_ + group_idx;
-  u32 *group_bits = reinterpret_cast<u32 *>(&slot_group->bits);
-
-  for (u32 bit_idx = static_cast<u32>(slot_idx & kGroupBitMask),
-           max_bit_idx = std::min(kSlotsPerGroup, bit_idx + probe_limit_);
-       bit_idx < max_bit_idx; bit_idx++) {
-    if (TPL_LIKELY(!util::BitUtil::Test(group_bits, bit_idx))) {
-      util::BitUtil::Set(group_bits, bit_idx);
-      return ConciseHashTableSlot::Make(group_idx * kSlotsPerGroup + bit_idx);
-    }
-  }
-
-  num_overflow_++;
-
-  return ConciseHashTableSlot::MakeOverflow();
-}
-
-#if 0
-template <u8 ProbeLimit>
-inline ConciseHashTableSlot ConciseHashTable::Insert(const hash_t hash) {
-  static_assert(ProbeLimit < 3, "ProbeLimit must be less than 2");
-
-  const u32 slot_idx = static_cast<u32>(hash & slot_mask_);
-  const u32 group_idx = slot_idx >> kLogSlotsPerGroup;
+  const u64 num_bits_to_group = group_idx * kSlotsPerGroup;
   u32 *group_bits = reinterpret_cast<u32 *>(&slot_groups_[group_idx].bits);
 
-  u32 bit_idx = slot_idx & kGroupBitMask;
-  u32 max_bit_idx = (bit_idx + ProbeLimit) & kGroupBitMask;
-
-  bool overflow = true;
+  u32 bit_idx = static_cast<u32>(slot_idx & kGroupBitMask);
+  u32 max_bit_idx = (bit_idx + probe_limit_) & kGroupBitMask;
   do {
     if (!util::BitUtil::Test(group_bits, bit_idx)) {
       util::BitUtil::Set(group_bits, bit_idx);
-      overflow = false;
-      break;
+      return ConciseHashTableSlot(false, num_bits_to_group + bit_idx);
     }
-  } while (++bit_idx < max_bit_idx);
+  } while (bit_idx++ < max_bit_idx);
 
-  num_overflow_ += overflow;
+  num_overflow_++;
 
-  return ConciseHashTableSlot(overflow, group_idx * kSlotsPerGroup + bit_idx);
-}
-#endif
-
-inline ConciseHashTableSlot ConciseHashTable::FindFirst(
-    const hash_t hash) const {
-  const u64 slot_idx = static_cast<u32>(hash & slot_mask_);
-  const u64 group_idx = slot_idx >> kLogSlotsPerGroup;
-  const SlotGroup *slot_group = slot_groups_ + group_idx;
-  const u32 *group_bits = reinterpret_cast<const u32 *>(&slot_group->bits);
-
-  for (u32 bit_idx = static_cast<u32>(slot_idx & kGroupBitMask),
-           max_bit_idx = std::max(kSlotsPerGroup, bit_idx + probe_limit_);
-       bit_idx < max_bit_idx; bit_idx++) {
-    if (util::BitUtil::Test(group_bits, bit_idx)) {
-      return ConciseHashTableSlot::Make(group_idx * kSlotsPerGroup + bit_idx);
-    }
-  }
-
-  return ConciseHashTableSlot::MakeOverflow();
+  return ConciseHashTableSlot(true, num_bits_to_group + bit_idx - 1);
 }
 
-inline u64 ConciseHashTable::NumOccupiedSlotsBefore(
-    ConciseHashTableSlot slot) const {
+inline u64 ConciseHashTable::NumFilledSlotsBefore(
+    const ConciseHashTableSlot slot) const {
   TPL_ASSERT(is_built(), "Table must be built");
 
   const u64 slot_idx = slot.GetSlotIndex();

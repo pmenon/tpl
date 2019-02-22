@@ -5,7 +5,7 @@
 
 namespace tpl::sql {
 
-ConciseHashTable::ConciseHashTable(u32 probe_threshold) noexcept
+ConciseHashTable::ConciseHashTable(u32 probe_threshold)
     : slot_groups_(nullptr),
       num_groups_(0),
       probe_limit_(probe_threshold),
@@ -42,23 +42,6 @@ void ConciseHashTable::Build() {
   }
 
   built_ = true;
-}
-
-std::string ConciseHashTable::PrettyPrint() const {
-  std::string result;
-
-  for (u32 idx = 0; idx < num_groups_; idx++) {
-    SlotGroup *slot_group = slot_groups_ + idx;
-    auto *group_bits = reinterpret_cast<u32 *>(&slot_group->bits);
-    for (u32 j = 0; j < 64; j++) {
-      result += (util::BitUtil::Test(group_bits, j) ? "1" : "0");
-    }
-    result += ",";
-    result += std::to_string(slot_group->count);
-    result += "\n";
-  }
-
-  return result;
 }
 
 }  // namespace tpl::sql
