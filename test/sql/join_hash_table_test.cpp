@@ -188,6 +188,35 @@ TEST_F(JoinHashTableTest, DuplicateKeyLookupTest) {
   }
 }
 
+TEST_F(JoinHashTableTest, UniqueKeyConciseTableTest) {
+  // Test data
+  const u32 num_tuples = 10;
+
+  // The join table
+  JoinHashTable join_hash_table(region(), sizeof(Tuple), true);
+
+  //
+  // Some inserts
+  //
+
+  for (u32 i = 0; i < num_tuples; i++) {
+    auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
+    auto *space = join_hash_table.AllocInputTuple(hash_val);
+    auto *tuple = reinterpret_cast<Tuple *>(space);
+
+    tuple->a = i + 0;
+    tuple->b = i + 1;
+    tuple->c = i + 2;
+    tuple->d = i + 3;
+  }
+
+  //
+  // Build
+  //
+
+  join_hash_table.Build();
+}
+
 TEST_F(JoinHashTableTest, DISABLED_PerfTest) {
   const u32 num_tuples = 10000000;
 

@@ -8,31 +8,33 @@
 namespace tpl::sql {
 
 /// Compact structure representing a position in the concise hash table. CHT
-/// slots are 32-bit values with the following encoding:
+/// slots are 64-bit values with the following encoding:
 ///
-/// +------------------+-----------------+
-/// | Overflow (1 bit) | Index (31 bits) |
-/// +------------------+-----------------+
+/// 63         62         61         60           0
+/// +-----------+----------+----------+-----------+
+/// | Processed | Buffered | Overflow |   Index   |
+/// |  (1-bit)  |  (1-bit) | (1-bit)  | (61-bits) |
+/// +-----------+----------+----------+-----------+
 ///
-/// We use the least-significant 31-bits to store the index of the entry in the
-/// concise hash array; the most-significant bit is used to indicate whether the
-/// slot points to the overflow table.
+/// These flags are modified during the construction of the concise hash table
 class ConciseHashTableSlot {
   friend class ConciseHashTable;
 
  private:
-  ConciseHashTableSlot(bool overflow, u32 index)
-      : bitfield_(OverflowField::Encode(overflow) | IndexField::Encode(index)) {
+  ConciseHashTableSlot(bool overflow, u64 index) noexcept
+      : bitfield_(ProcessedField::Encode(false) | BufferedField::Encode(false) |
+                  OverflowField::Encode(overflow) | IndexField::Encode(index)) {
   }
 
  public:
-  ConciseHashTableSlot() : bitfield_(std::numeric_limits<u32>::max()) {}
+  ConciseHashTableSlot() noexcept
+      : bitfield_(std::numeric_limits<u64>::max()) {}
 
   // -------------------------------------------------------
   // Static factories
   // -------------------------------------------------------
 
-  static ConciseHashTableSlot Make(u32 index) {
+  static ConciseHashTableSlot Make(u64 index) {
     return ConciseHashTableSlot(false, index);
   }
 
@@ -41,41 +43,55 @@ class ConciseHashTableSlot {
   }
 
   // -------------------------------------------------------
-  // Query
+  // Query/Update
   // -------------------------------------------------------
 
-  /// Does this slow point to the overflow table?
-  bool IsOverflow() const { return OverflowField::Decode(bitfield_); }
+  bool IsBuffered() const noexcept { return BufferedField::Decode(bitfield_); }
 
-  /// Assuming this slot isn't an overflow slot, return the index this slot
-  /// represents in the concise hash table
-  u32 GetIndex() const { return IndexField::Decode(bitfield_); }
+  void SetBuffered(bool buffered) noexcept {
+    bitfield_ = BufferedField::Update(bitfield_, buffered);
+  }
+
+  bool IsProcessed() const noexcept {
+    return ProcessedField::Decode(bitfield_);
+  }
+
+  void SetProcessed(bool processed) noexcept {
+    bitfield_ = ProcessedField::Update(bitfield_, processed);
+  }
+
+  bool IsOverflow() const noexcept { return OverflowField::Decode(bitfield_); }
+
+  u64 GetSlotIndex() const noexcept { return IndexField::Decode(bitfield_); }
 
   // -------------------------------------------------------
   // Equality operations
   // -------------------------------------------------------
 
-  bool Equal(const ConciseHashTableSlot &that) const {
-    return IsOverflow() == that.IsOverflow() && GetIndex() == that.GetIndex();
+  bool Equal(const ConciseHashTableSlot &that) const noexcept {
+    return IsOverflow() == that.IsOverflow() &&
+           GetSlotIndex() == that.GetSlotIndex();
   }
 
-  bool operator==(const ConciseHashTableSlot &that) const {
+  bool operator==(const ConciseHashTableSlot &that) const noexcept {
     return Equal(that);
   }
 
-  bool operator!=(const ConciseHashTableSlot &that) const {
+  bool operator!=(const ConciseHashTableSlot &that) const noexcept {
     return !(*this == that);
   }
 
  private:
   // clang-format off
-  class IndexField : public util::BitField32<u32, 0, 31> {};
-  class OverflowField : public util::BitField32<bool, IndexField::kNextBit, 1> {};
+  class IndexField : public util::BitField64<u64, 0, 61> {};
+  class OverflowField : public util::BitField64<bool, IndexField::kNextBit, 1> {};
+  class BufferedField : public util::BitField64<bool, OverflowField::kNextBit, 1> {};
+  class ProcessedField : public util::BitField64<bool, BufferedField::kNextBit, 1> {};
   // clang-format on
 
  private:
   // The bitfield we use to encode the overflow and index bits
-  u32 bitfield_;
+  u64 bitfield_;
 };
 
 /// A generic structure used to represent an entry in either a generic hash

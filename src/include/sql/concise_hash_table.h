@@ -16,7 +16,9 @@ class ConciseHashTable {
   // The number of CHT slots that belong to one group. This value should either
   // be 32 or 64 for (1) making computation simpler by bit-shifting and (2) to
   // ensure at most one cache-line read/write per insert/lookup.
-  static constexpr const u32 kSlotsPerGroup = 64;
+  static constexpr const u32 kLogSlotsPerGroup = 6;
+  static constexpr const u32 kSlotsPerGroup = 1u << kLogSlotsPerGroup;
+  static constexpr const u32 kGroupBitMask = kSlotsPerGroup - 1;
 
   /// Create a new uninitialized concise hash table. Callers **must** call
   /// SetSize() before interacting with the table
@@ -44,12 +46,6 @@ class ConciseHashTable {
   /// Find the first match for the given hash value
   ConciseHashTableSlot FindFirst(hash_t hash) const;
 
-  /// Return the capacity (the maximum number of elements) this table supports
-  u64 capacity() const { return slot_mask_ + 1; }
-
-  /// Return the number of overflows entries in this table
-  u64 num_overflow() const { return num_overflow_; }
-
   // -------------------------------------------------------
   // Utility Operations
   // -------------------------------------------------------
@@ -57,11 +53,21 @@ class ConciseHashTable {
   /// Return the number of bytes this hash table has allocated
   u64 GetTotalMemoryUsage() const { return sizeof(SlotGroup) * num_groups_; }
 
-  /// Has the table been built?
-  bool is_built() const { return built_; }
-
   /// Pretty print the contents of the table
   std::string PrettyPrint() const;
+
+  // -------------------------------------------------------
+  // Accessors
+  // -------------------------------------------------------
+
+  /// Return the capacity (the maximum number of elements) this table supports
+  u64 capacity() const { return slot_mask_ + 1; }
+
+  /// Return the number of overflows entries in this table
+  u64 num_overflow() const { return num_overflow_; }
+
+  /// Has the table been built?
+  bool is_built() const { return built_; }
 
  private:
   // The concise hash table is composed of multiple groups of slots. This struct
@@ -102,15 +108,12 @@ class ConciseHashTable {
 // ---------------------------------------------------------
 
 inline ConciseHashTableSlot ConciseHashTable::Insert(const hash_t hash) {
-  // kSlotsPerGroup is either 32 or 64, so all divide and modulus operations
-  // will optimize into simple bit shifts
-
-  const u32 slot_idx = static_cast<u32>(hash & slot_mask_);
-  const u32 group_idx = slot_idx / kSlotsPerGroup;
+  const u64 slot_idx = hash & slot_mask_;
+  const u64 group_idx = slot_idx >> kLogSlotsPerGroup;
   SlotGroup *slot_group = slot_groups_ + group_idx;
   u32 *group_bits = reinterpret_cast<u32 *>(&slot_group->bits);
 
-  for (u32 bit_idx = slot_idx % kSlotsPerGroup,
+  for (u32 bit_idx = static_cast<u32>(slot_idx & kGroupBitMask),
            max_bit_idx = std::min(kSlotsPerGroup, bit_idx + probe_limit_);
        bit_idx < max_bit_idx; bit_idx++) {
     if (TPL_LIKELY(!util::BitUtil::Test(group_bits, bit_idx))) {
@@ -124,17 +127,41 @@ inline ConciseHashTableSlot ConciseHashTable::Insert(const hash_t hash) {
   return ConciseHashTableSlot::MakeOverflow();
 }
 
-inline ConciseHashTableSlot ConciseHashTable::FindFirst(
-    const hash_t hash) const {
-  // kSlotsPerGroup is either 32 or 64, so all divide and modulus operations
-  // will optimize into simple bit shifts
+#if 0
+template <u8 ProbeLimit>
+inline ConciseHashTableSlot ConciseHashTable::Insert(const hash_t hash) {
+  static_assert(ProbeLimit < 3, "ProbeLimit must be less than 2");
 
   const u32 slot_idx = static_cast<u32>(hash & slot_mask_);
-  const u32 group_idx = slot_idx / kSlotsPerGroup;
+  const u32 group_idx = slot_idx >> kLogSlotsPerGroup;
+  u32 *group_bits = reinterpret_cast<u32 *>(&slot_groups_[group_idx].bits);
+
+  u32 bit_idx = slot_idx & kGroupBitMask;
+  u32 max_bit_idx = (bit_idx + ProbeLimit) & kGroupBitMask;
+
+  bool overflow = true;
+  do {
+    if (!util::BitUtil::Test(group_bits, bit_idx)) {
+      util::BitUtil::Set(group_bits, bit_idx);
+      overflow = false;
+      break;
+    }
+  } while (++bit_idx < max_bit_idx);
+
+  num_overflow_ += overflow;
+
+  return ConciseHashTableSlot(overflow, group_idx * kSlotsPerGroup + bit_idx);
+}
+#endif
+
+inline ConciseHashTableSlot ConciseHashTable::FindFirst(
+    const hash_t hash) const {
+  const u64 slot_idx = static_cast<u32>(hash & slot_mask_);
+  const u64 group_idx = slot_idx >> kLogSlotsPerGroup;
   const SlotGroup *slot_group = slot_groups_ + group_idx;
   const u32 *group_bits = reinterpret_cast<const u32 *>(&slot_group->bits);
 
-  for (u32 bit_idx = slot_idx % kSlotsPerGroup,
+  for (u32 bit_idx = static_cast<u32>(slot_idx & kGroupBitMask),
            max_bit_idx = std::max(kSlotsPerGroup, bit_idx + probe_limit_);
        bit_idx < max_bit_idx; bit_idx++) {
     if (util::BitUtil::Test(group_bits, bit_idx)) {
@@ -147,19 +174,13 @@ inline ConciseHashTableSlot ConciseHashTable::FindFirst(
 
 inline u64 ConciseHashTable::NumOccupiedSlotsBefore(
     ConciseHashTableSlot slot) const {
-  // kSlotsPerGroup is either 32 or 64, so all divide and modulus operations
-  // will optimize into simple bit shifts
-
   TPL_ASSERT(is_built(), "Table must be built");
 
-  if (slot.IsOverflow()) {
-    return std::numeric_limits<u64>::max();
-  }
+  const u64 slot_idx = slot.GetSlotIndex();
+  const u64 group_idx = slot_idx >> kLogSlotsPerGroup;
+  const u64 bit_idx = slot_idx & kGroupBitMask;
 
-  const u32 slot_idx = slot.GetIndex();
-  const u32 group_idx = slot_idx / kSlotsPerGroup;
   const SlotGroup *slot_group = slot_groups_ + group_idx;
-  const u32 bit_idx = slot_idx % kSlotsPerGroup;
   const u64 bits_after_slot = slot_group->bits & (u64(-1) << bit_idx);
   return slot_group->count - util::BitUtil::CountBits(bits_after_slot);
 }
