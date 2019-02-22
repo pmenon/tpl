@@ -112,13 +112,13 @@ inline ConciseHashTableSlot ConciseHashTable::Insert(const hash_t hash) {
   do {
     if (!util::BitUtil::Test(group_bits, bit_idx)) {
       util::BitUtil::Set(group_bits, bit_idx);
-      return ConciseHashTableSlot(false, num_bits_to_group + bit_idx);
+      return ConciseHashTableSlot(num_bits_to_group + bit_idx);
     }
   } while (bit_idx++ < max_bit_idx);
 
   num_overflow_++;
 
-  return ConciseHashTableSlot(true, num_bits_to_group + bit_idx - 1);
+  return ConciseHashTableSlot(num_bits_to_group + bit_idx - 1);
 }
 
 inline u64 ConciseHashTable::NumFilledSlotsBefore(
