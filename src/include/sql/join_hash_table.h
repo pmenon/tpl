@@ -34,14 +34,14 @@ class JoinHashTable {
   /// been built, do nothing.
   void Build();
 
-  /// Lookup all entries in this hash table with the given hash value, returning
-  /// an iterator.
   class Iterator;
+
+  /// Lookup a single entry with hash value \a hash returning an iterator
   Iterator Lookup(hash_t hash) const;
 
   /// Perform a vectorized lookup
-  void LookupBatch(u32 num_tuples, hash_t hashes[],
-                   HashTableEntry *results[]) const;
+  void LookupBatch(u32 num_tuples, const hash_t hashes[],
+                   const HashTableEntry *results[]) const;
 
   /// Return the total number of inserted elements, including duplicates
   u32 num_elems() const { return num_elems_; }
@@ -89,10 +89,10 @@ class JoinHashTable {
 
   // Dispatched from LookupBatch() to lookup from either a generic or concise
   // hash table in batched manner
-  void LookupBatchInGenericHashTable(u32 num_tuples, hash_t hashes[],
-                                     HashTableEntry *results[]) const;
-  void LookupBatchInConciseHashTable(u32 num_tuples, hash_t hashes[],
-                                     HashTableEntry *results[]) const;
+  void LookupBatchInGenericHashTable(u32 num_tuples, const hash_t hashes[],
+                                     const HashTableEntry *results[]) const;
+  void LookupBatchInConciseHashTable(u32 num_tuples, const hash_t hashes[],
+                                     const HashTableEntry *results[]) const;
 
  private:
   // The vector where we store the build-side input
@@ -135,7 +135,7 @@ inline byte *JoinHashTable::AllocInputTuple(hash_t hash) {
   return entry->payload;
 }
 
-inline JoinHashTable::Iterator JoinHashTable::Lookup(hash_t hash) const {
+inline JoinHashTable::Iterator JoinHashTable::Lookup(const hash_t hash) const {
   HashTableEntry *entry = generic_hash_table_.FindChainHead(hash);
   while (entry != nullptr && entry->hash != hash) {
     entry = entry->next;

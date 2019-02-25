@@ -108,10 +108,7 @@ void JoinHashTable::ReorderMainEntries() noexcept {
   HashTableEntry *RESTRICT targets[kNumBufferElems];
 
   while (reorder_buf.Fill()) {
-    //
-    // Iterate through buffered entries and lookup their destination location
-    //
-
+    // First, find matches for buffered entries
     for (auto [idx, buf_pos, buf_end] = std::tuple(
              0u, reorder_buf.buffer_begin(), reorder_buf.buffer_end());
          buf_pos != buf_end; buf_pos += elem_size, idx++) {
@@ -120,10 +117,7 @@ void JoinHashTable::ReorderMainEntries() noexcept {
       targets[idx] = reinterpret_cast<HashTableEntry *>(entries_[dest_idx]);
     }
 
-    //
-    // Iterate through buffered entries and store them in their final slots
-    //
-
+    // Next, write buffered entries into their destinations
     byte *buf_write_pos = reorder_buf.buffer_begin();
     for (auto [idx, buf_read_pos, buf_end] = std::tuple(
              0u, reorder_buf.buffer_begin(), reorder_buf.buffer_end());
@@ -145,18 +139,14 @@ void JoinHashTable::ReorderMainEntries() noexcept {
 
       // The destination element has not been buffered; we need to bring it into
       // the reorder buffer before we can write the current entry into its
-      // destination.
+      // destination. If there is room in the buffer, copy it in and write the
+      // current entry. Otherwise, perform a costly three-step swap using a
+      // temporary buffer from the ROB.
 
       if (buf_write_pos < buf_read_pos) {
-        // There is room in the buffer to accomodate the destination entry. Copy
-        // it in, then write the current entry into the destination.
-
         std::memcpy(buf_write_pos, reinterpret_cast<byte *>(dest), elem_size);
         std::memcpy(reinterpret_cast<byte *>(dest), buf_read_pos, elem_size);
       } else {
-        // There isn't enough room in the buffer. We need a three-step swap
-        // using a temporary entry buffer in the ROB.
-
         byte *const RESTRICT tmp = reorder_buf.temp_buffer();
         std::memcpy(tmp, reinterpret_cast<byte *>(dest), elem_size);
         std::memcpy(reinterpret_cast<byte *>(dest), buf_read_pos, elem_size);
@@ -229,7 +219,8 @@ void JoinHashTable::Build() {
 }
 
 void JoinHashTable::LookupBatchInGenericHashTable(
-    u32 num_tuples, hash_t hashes[], HashTableEntry *results[]) const {
+    u32 num_tuples, const hash_t hashes[],
+    const HashTableEntry *results[]) const {
   // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
 
   // Initial lookup
@@ -239,7 +230,7 @@ void JoinHashTable::LookupBatchInGenericHashTable(
 
   // Ensure find match on hash
   for (u32 i = 0; i < num_tuples; i++) {
-    HashTableEntry *entry = results[i];
+    const HashTableEntry *entry = results[i];
     while (entry != nullptr && entry->hash != hashes[i]) {
       entry = entry->next;
     }
@@ -248,10 +239,11 @@ void JoinHashTable::LookupBatchInGenericHashTable(
 }
 
 void JoinHashTable::LookupBatchInConciseHashTable(
-    u32 num_tuples, hash_t hashes[], HashTableEntry *results[]) const {}
+    UNUSED u32 num_tuples, UNUSED const hash_t hashes[],
+    UNUSED const HashTableEntry *results[]) const {}
 
-void JoinHashTable::LookupBatch(u32 num_tuples, hash_t hashes[],
-                                HashTableEntry *results[]) const {
+void JoinHashTable::LookupBatch(u32 num_tuples, const hash_t hashes[],
+                                const HashTableEntry *results[]) const {
   TPL_ASSERT(is_built(), "Cannot perform lookup before table is built!");
   if (use_concise_hash_table()) {
     LookupBatchInConciseHashTable(num_tuples, hashes, results);
