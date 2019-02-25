@@ -1,5 +1,7 @@
 #include "sql/join_hash_table.h"
 
+#include "logging/logger.h"
+
 namespace tpl::sql {
 
 JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size,
@@ -40,46 +42,39 @@ class ReorderBuffer {
                 u64 overflow_read_pos) noexcept
       : entry_size_(entries.element_size()),
         max_elems_(std::min(max_elems, kBufferSizeInBytes / entry_size_) - 1),
-        end_read_idx_(overflow_read_pos),
-        buffer_read_idx_(0),
-        buffer_write_idx_(0),
+        buffer_pos_(buffer_),
         temp_buf_(buffer_ + (max_elems_ * entry_size_)),
         read_idx_(0),
-        entries_(entries) {
-    TPL_ASSERT(max_elems > 0, "Maximum element count needs to be non-zero");
-  }
+        end_read_idx_(overflow_read_pos),
+        entries_(entries) {}
 
   DISALLOW_COPY_AND_MOVE(ReorderBuffer);
 
-  void Fill() noexcept {
-    byte *buffer_pos = buffer_;
-    while (read_idx_ < end_read_idx_ && buffer_write_idx_ < max_elems_) {
+  bool Fill() noexcept {
+    while (read_idx_ < end_read_idx_ && buffer_pos_ < temp_buf_) {
       auto *entry = reinterpret_cast<HashTableEntry *>(entries_[read_idx_++]);
 
+      // Skip buffering processed entries
       if (entry->cht_slot.IsProcessed()) {
         continue;
       }
 
-      std::memcpy(buffer_pos, entry, entry_size_);
+      // Copy and mark original entry as buffered
+      std::memcpy(buffer_pos_, entry, entry_size_);
       entry->cht_slot.SetBuffered(true);
 
-      buffer_pos += entry_size_;
-      buffer_write_idx_++;
+      // Bump pointer
+      buffer_pos_ += entry_size_;
     }
+
+    return buffer_pos_ > buffer_;
   }
 
-  void Reset() noexcept {
-    buffer_read_idx_ = 0;
-    buffer_write_idx_ = 0;
-  }
+  void Reset(byte *write_pos) noexcept { buffer_pos_ = write_pos; }
 
-  bool AtEnd() const noexcept { return read_idx_ == end_read_idx_; }
+  byte *buffer_begin() noexcept { return buffer_; }
 
-  byte *BufferBegin() noexcept { return buffer_; }
-
-  byte *BufferEnd() noexcept {
-    return buffer_ + (entry_size_ * buffer_write_idx_);
-  }
+  byte *buffer_end() noexcept { return buffer_pos_; }
 
   byte *temp_buffer() const noexcept { return temp_buf_; }
 
@@ -88,20 +83,17 @@ class ReorderBuffer {
   const u64 entry_size_;
   // The maximum number of elements to buffer
   const u64 max_elems_;
-  // The end index to stop reading from
-  const u64 end_read_idx_;
 
-  // The primary buffer space and the range of valid entries contained within
+  // Buffer space for entries and a pointer into the space for the next entry
   byte buffer_[kBufferSizeInBytes];
-  u64 buffer_read_idx_;
-  u64 buffer_write_idx_;
+  byte *buffer_pos_;
 
-  // A pointer to a temporary entry within the buffer space for worst-case
-  // three-move swaps
-  byte *const temp_buf_;
+  // A pointer to the last entry slot in the buffer space; used for costly swaps
+  byte *const RESTRICT temp_buf_;
 
-  // Indexes into the entries buffer
+  // The current and maximum index to read from in the entries list
   u64 read_idx_;
+  const u64 end_read_idx_;
   util::ChunkedVector &entries_;
 };
 
@@ -115,19 +107,13 @@ void JoinHashTable::ReorderMainEntries() noexcept {
   ReorderBuffer reorder_buf(entries_, kNumBufferElems, overflow_idx);
   HashTableEntry *RESTRICT targets[kNumBufferElems];
 
-  while (!reorder_buf.AtEnd()) {
-    //
-    // Fill the buffer
-    //
-
-    reorder_buf.Fill();
-
+  while (reorder_buf.Fill()) {
     //
     // Iterate through buffered entries and lookup their destination location
     //
 
-    for (auto [idx, buf_pos, buf_end] =
-             std::tuple(0u, reorder_buf.BufferBegin(), reorder_buf.BufferEnd());
+    for (auto [idx, buf_pos, buf_end] = std::tuple(
+             0u, reorder_buf.buffer_begin(), reorder_buf.buffer_end());
          buf_pos != buf_end; buf_pos += elem_size, idx++) {
       auto *entry = reinterpret_cast<HashTableEntry *>(buf_pos);
       u64 dest_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot);
@@ -138,9 +124,9 @@ void JoinHashTable::ReorderMainEntries() noexcept {
     // Iterate through buffered entries and store them in their final slots
     //
 
-    for (auto [idx, buf_write_pos, buf_read_pos, buf_end] =
-             std::tuple(0u, reorder_buf.BufferBegin(),
-                        reorder_buf.BufferBegin(), reorder_buf.BufferEnd());
+    byte *buf_write_pos = reorder_buf.buffer_begin();
+    for (auto [idx, buf_read_pos, buf_end] = std::tuple(
+             0u, reorder_buf.buffer_begin(), reorder_buf.buffer_end());
          buf_read_pos != buf_end; buf_read_pos += elem_size, idx++) {
       HashTableEntry *dest = targets[idx];
 
@@ -152,34 +138,53 @@ void JoinHashTable::ReorderMainEntries() noexcept {
       // If the destination is 'BUFFERED', a copy exists somewhere safe in the
       // reorder buffer. We can directly overwrite the destination's contents.
       if (dest->cht_slot.IsBuffered()) {
-        std::memcpy(dest, buf_read_pos, elem_size);
+        std::memcpy(reinterpret_cast<byte *>(dest), buf_read_pos, elem_size);
         dest->cht_slot.SetProcessed(true);
         continue;
       }
 
-      // If there is buffer space available, directly write the contents of the
-      // destination into the buffer for processing, and write the current
-      // buffer item into the destination.
+      // The destination element has not been buffered; we need to bring it into
+      // the reorder buffer before we can write the current entry into its
+      // destination.
+
       if (buf_write_pos < buf_read_pos) {
-        std::memcpy(buf_write_pos, dest, elem_size);
-        std::memcpy(dest, buf_read_pos, elem_size);
-        dest->cht_slot.SetProcessed(true);
-        continue;
+        // There is room in the buffer to accomodate the destination entry. Copy
+        // it in, then write the current entry into the destination.
+
+        std::memcpy(buf_write_pos, reinterpret_cast<byte *>(dest), elem_size);
+        std::memcpy(reinterpret_cast<byte *>(dest), buf_read_pos, elem_size);
+      } else {
+        // There isn't enough room in the buffer. We need a three-step swap
+        // using a temporary entry buffer in the ROB.
+
+        byte *const RESTRICT tmp = reorder_buf.temp_buffer();
+        std::memcpy(tmp, reinterpret_cast<byte *>(dest), elem_size);
+        std::memcpy(reinterpret_cast<byte *>(dest), buf_read_pos, elem_size);
+        std::memcpy(buf_read_pos, tmp, elem_size);
       }
 
-      // This is the worst case scenario, hopefully one that occurs infrequently
-      // enough to not be an issue. We write swap the contents of the
-      // destination and buffer using a temporary buffer space.
-      std::memcpy(reorder_buf.temp_buffer(), dest, elem_size);
-      std::memcpy(dest, buf_read_pos, elem_size);
-      std::memcpy(buf_read_pos, reorder_buf.temp_buffer(), elem_size);
       dest->cht_slot.SetProcessed(true);
       buf_write_pos += elem_size;
     }
 
     // Reset and try again
-    reorder_buf.Reset();
+    reorder_buf.Reset(buf_write_pos);
   }
+}
+
+void JoinHashTable::VerifyMainEntryOrder() noexcept {
+#ifndef NDEBUG
+  const u64 overflow_idx = entries_.size() - concise_hash_table_.num_overflow();
+  for (u32 idx = 0; idx < overflow_idx; idx++) {
+    auto *entry = reinterpret_cast<HashTableEntry *>(entries_[idx]);
+    auto dest_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot);
+    if (idx != dest_idx) {
+      LOG_ERROR("Entry {} has CHT slot {}. Found @ {}, but should be @ {}",
+                static_cast<void *>(entry), entry->cht_slot.GetSlotIndex(), idx,
+                dest_idx);
+    }
+  }
+#endif
 }
 
 void JoinHashTable::ProcessOverflowEntries() noexcept {}
@@ -189,20 +194,23 @@ void JoinHashTable::BuildConciseHashTable() {
 
   concise_hash_table_.SetSize(num_elems());
 
-  // Insert all entries into CHT
   for (HashTableEntry *entry = head_.next; entry != nullptr;) {
     HashTableEntry *next = entry->next;
     entry->cht_slot = concise_hash_table_.Insert(entry->hash);
     entry = next;
   }
 
-  // Insertions complete, build it
   concise_hash_table_.Build();
 
-  // Re-order main entries according to CHT order
+  LOG_DEBUG(
+      "{} entries, {} overflow ({} % overflow)", entries_.size(),
+      concise_hash_table_.num_overflow(),
+      100.0 * (concise_hash_table_.num_overflow() * 1.0 / entries_.size()));
+
   ReorderMainEntries();
 
-  // Process overflow entries
+  VerifyMainEntryOrder();
+
   ProcessOverflowEntries();
 }
 

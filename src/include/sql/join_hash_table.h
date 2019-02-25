@@ -84,6 +84,7 @@ class JoinHashTable {
   // Dispatched from BuildConciseHashTable() to reorder elements based on
   // ordering from the concise hash table
   void ReorderMainEntries() noexcept;
+  void VerifyMainEntryOrder() noexcept;
   void ProcessOverflowEntries() noexcept;
 
   // Dispatched from LookupBatch() to lookup from either a generic or concise

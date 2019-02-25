@@ -190,7 +190,7 @@ TEST_F(JoinHashTableTest, DuplicateKeyLookupTest) {
 
 TEST_F(JoinHashTableTest, UniqueKeyConciseTableTest) {
   // Test data
-  const u32 num_tuples = 10;
+  const u32 num_tuples = 400;
 
   // The join table
   JoinHashTable join_hash_table(region(), sizeof(Tuple), true);

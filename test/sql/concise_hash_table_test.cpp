@@ -34,23 +34,20 @@ TEST_F(ConciseHashTableTest, InsertTest) {
 
   // 0 should go into the zero-th slot
   auto _0_slot = table.Insert(0);
-  EXPECT_FALSE(_0_slot.IsOverflow());
   EXPECT_EQ(0u, _0_slot.GetSlotIndex());
 
   // 1 should go into the second slot
   auto _1_slot = table.Insert(1);
-  EXPECT_FALSE(_1_slot.IsOverflow());
   EXPECT_EQ(1u, _1_slot.GetSlotIndex());
 
-  // 32 should go into the zero-th slot because the capacity of the table is 32
+  // 32 **SHOULD** go into the 0th slot because the capacity of the table is 32
   // But, the first two slots are occupied (by 0 and 1). Since the probe length
-  // is 2, 32 should fall to the overflow
+  // is 1, the key 32 should fall to the overflow
   auto _32_slot = table.Insert(32);
-  EXPECT_TRUE(_32_slot.IsOverflow());
+  EXPECT_EQ(1u, _32_slot.GetSlotIndex());
 
   // 2 should into the third slot
   auto _2_slot = table.Insert(2);
-  EXPECT_FALSE(_2_slot.IsOverflow());
   EXPECT_EQ(2u, _2_slot.GetSlotIndex());
 }
 
@@ -59,7 +56,7 @@ TEST_F(ConciseHashTableTest, InsertOverflowTest) {
   const u32 probe_length = 1;
 
   //
-  // Create a CHT with one bucket with 64 slots
+  // Create a CHT with one slot group, 64 slots total
   //
 
   ConciseHashTable table(probe_length);
@@ -69,66 +66,64 @@ TEST_F(ConciseHashTableTest, InsertOverflowTest) {
 
   // 33 should go into the 33rd slot
   auto _33_slot = table.Insert(33);
-  EXPECT_FALSE(_33_slot.IsOverflow());
   EXPECT_EQ(33u, _33_slot.GetSlotIndex());
 
   // A second 33 should go into the 34th slot
   auto _33_v2_slot = table.Insert(33);
-  EXPECT_FALSE(_33_v2_slot.IsOverflow());
   EXPECT_EQ(34u, _33_v2_slot.GetSlotIndex());
 
   // A fourth 33 should overflow since probe length is 2
   auto _33_v3_slot = table.Insert(33);
-  EXPECT_TRUE(_33_v3_slot.IsOverflow());
+  EXPECT_EQ(34u, _33_v3_slot.GetSlotIndex());
 
-  // 34 should go into the 35th bucket (since the 34th is occupied by 33 v2)
+  // 34 should go into the 35th slot (since the 34th is occupied by 33 v2)
   auto _34_slot = table.Insert(34);
-  EXPECT_FALSE(_34_slot.IsOverflow());
   EXPECT_EQ(35u, _34_slot.GetSlotIndex());
 }
 
 TEST_F(ConciseHashTableTest, MultiGroupInsertTest) {
   const u32 num_tuples = 100;
-  const u32 probe_length = 2;
+  const u32 probe_length = 1;
 
   //
-  // Create a CHT with four buckets (each with 64 slots)
+  // Create a CHT with four slot-groups, each having 64 slots
   //
 
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
+  // 4 groups * 64 slots-per-group = 256 slots
   EXPECT_EQ(256u, table.capacity());
 
   // 33 goes in the first group, in the 33rd slot
   auto _33_slot = table.Insert(33);
-  EXPECT_FALSE(_33_slot.IsOverflow());
   EXPECT_EQ(33u, _33_slot.GetSlotIndex());
 
   // 97 (64+33) goes in the second group in the 33rd group bit, but the 97th
   // overall slot
   auto _97_slot = table.Insert(97);
-  EXPECT_FALSE(_97_slot.IsOverflow());
   EXPECT_EQ(97u, _97_slot.GetSlotIndex());
 
   // 161 (64+64+33) goes in the third group in the 33rd group bit, but the 130th
   // overall slot
   auto _161_slot = table.Insert(161);
-  EXPECT_FALSE(_161_slot.IsOverflow());
   EXPECT_EQ(161u, _161_slot.GetSlotIndex());
 
   // 225 (64+64+64+33) goes in the fourth (and last) group, in the 33rd group
-  // bit, but the 194th overall slot
+  // bit, but the 225th overall slot
   auto _225_slot = table.Insert(225);
-  EXPECT_FALSE(_225_slot.IsOverflow());
   EXPECT_EQ(225u, _225_slot.GetSlotIndex());
 
-  // 289 (64+64+64+33) cycles back into the **first** group, in the 34th group
-  // bit (the 33rd is occupied by the first insert), hence takes the 34th
-  // overall slot
+  // 289 (64+64+64+64+33) cycles back into the **FIRST** group, in the 34th
+  // group bit since the 33rd is occupied by the first insert
   auto _289_slot = table.Insert(289);
-  EXPECT_FALSE(_289_slot.IsOverflow());
   EXPECT_EQ(34u, _289_slot.GetSlotIndex());
+
+  // Inserting 289 again should overflow: 33rd slot is occupied by '33', 34th
+  // slot is occupied by the first '289'. With probe length of 1, the second
+  // '289' will overflow.
+  auto _289_v2_slot = table.Insert(289);
+  EXPECT_EQ(34u, _289_v2_slot.GetSlotIndex());
 }
 
 TEST_F(ConciseHashTableTest, BuildTest) {
@@ -136,7 +131,7 @@ TEST_F(ConciseHashTableTest, BuildTest) {
   const u32 probe_length = 2;
 
   //
-  // Table composed of single bucket with 64 bits
+  // Table composed of single slot with 64 bits
   //
 
   ConciseHashTable table(probe_length);
@@ -162,7 +157,7 @@ TEST_F(ConciseHashTableTest, MultiGroupBuildTest) {
   const u32 probe_length = 2;
 
   //
-  // Table composed of single bucket with 128 bits
+  // Table composed of single slot with 128 bits
   //
 
   ConciseHashTable table(probe_length);
