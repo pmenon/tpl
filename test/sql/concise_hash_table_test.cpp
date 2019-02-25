@@ -30,7 +30,8 @@ TEST_F(ConciseHashTableTest, InsertTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(32u, table.capacity());
+  // Check minimum capacity is enforced
+  EXPECT_EQ(64u, table.capacity());
 
   // 0 should go into the zero-th slot
   auto _0_slot = table.Insert(0);
@@ -39,12 +40,6 @@ TEST_F(ConciseHashTableTest, InsertTest) {
   // 1 should go into the second slot
   auto _1_slot = table.Insert(1);
   EXPECT_EQ(1u, _1_slot.GetSlotIndex());
-
-  // 32 **SHOULD** go into the 0th slot because the capacity of the table is 32
-  // But, the first two slots are occupied (by 0 and 1). Since the probe length
-  // is 1, the key 32 should fall to the overflow
-  auto _32_slot = table.Insert(32);
-  EXPECT_EQ(1u, _32_slot.GetSlotIndex());
 
   // 2 should into the third slot
   auto _2_slot = table.Insert(2);
@@ -126,12 +121,40 @@ TEST_F(ConciseHashTableTest, MultiGroupInsertTest) {
   EXPECT_EQ(34u, _289_v2_slot.GetSlotIndex());
 }
 
+TEST_F(ConciseHashTableTest, CornerCaseTest) {
+  const u32 num_tuples = 20;
+  const u32 probe_length = 4;
+
+  ConciseHashTable table(probe_length);
+  table.SetSize(num_tuples);
+
+  EXPECT_EQ(64u, table.capacity());
+
+  // 63 should go into the 63rd slot
+  auto _63_slot = table.Insert(63);
+  EXPECT_EQ(63u, _63_slot.GetSlotIndex());
+
+  // A second 63 should overflow even though the probe length is 4. Probing
+  // doesn't cross slot group boundaries.
+  auto _63_v2_slot = table.Insert(63);
+  EXPECT_EQ(63u, _63_v2_slot.GetSlotIndex());
+
+  // 62 should go into the 62nd slot
+  auto _62_slot = table.Insert(62);
+  EXPECT_EQ(62u, _62_slot.GetSlotIndex());
+
+  // A second 62 should overflow onto the 63rd slot since probing doesn't cross
+  // slot group boundaries
+  auto _62_v2_slot = table.Insert(62);
+  EXPECT_EQ(63u, _62_v2_slot.GetSlotIndex());
+}
+
 TEST_F(ConciseHashTableTest, BuildTest) {
   const u32 num_tuples = 20;
   const u32 probe_length = 2;
 
   //
-  // Table composed of single slot with 64 bits
+  // Table composed of single group with 64 bits
   //
 
   ConciseHashTable table(probe_length);
@@ -157,7 +180,7 @@ TEST_F(ConciseHashTableTest, MultiGroupBuildTest) {
   const u32 probe_length = 2;
 
   //
-  // Table composed of single slot with 128 bits
+  // Table composed of two groups totaling 128 bits
   //
 
   ConciseHashTable table(probe_length);

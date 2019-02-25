@@ -104,17 +104,17 @@ class ConciseHashTable {
 inline ConciseHashTableSlot ConciseHashTable::Insert(const hash_t hash) {
   const u64 slot_idx = hash & slot_mask_;
   const u64 group_idx = slot_idx >> kLogSlotsPerGroup;
-  const u64 num_bits_to_group = group_idx * kSlotsPerGroup;
+  const u64 num_bits_to_group = group_idx << kLogSlotsPerGroup;
   u32 *group_bits = reinterpret_cast<u32 *>(&slot_groups_[group_idx].bits);
 
   u32 bit_idx = static_cast<u32>(slot_idx & kGroupBitMask);
-  u32 max_bit_idx = (bit_idx + probe_limit_) & kGroupBitMask;
+  u32 max_bit_idx = std::min(63u, bit_idx + probe_limit_);
   do {
     if (!util::BitUtil::Test(group_bits, bit_idx)) {
       util::BitUtil::Set(group_bits, bit_idx);
       return ConciseHashTableSlot(num_bits_to_group + bit_idx);
     }
-  } while (bit_idx++ < max_bit_idx);
+  } while (++bit_idx <= max_bit_idx);
 
   num_overflow_++;
 
