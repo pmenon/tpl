@@ -89,7 +89,7 @@ class ReorderBuffer {
   byte *buffer_pos_;
 
   // A pointer to the last entry slot in the buffer space; used for costly swaps
-  byte *const RESTRICT temp_buf_;
+  byte *const temp_buf_;
 
   // The current and maximum index to read from in the entries list
   u64 read_idx_;
@@ -105,7 +105,7 @@ void JoinHashTable::ReorderMainEntries() noexcept {
   u64 overflow_idx = entries_.size() - concise_hash_table_.num_overflow();
 
   ReorderBuffer reorder_buf(entries_, kNumBufferElems, overflow_idx);
-  HashTableEntry *RESTRICT targets[kNumBufferElems];
+  HashTableEntry *targets[kNumBufferElems];
 
   while (reorder_buf.Fill()) {
     // First, find matches for buffered entries
@@ -147,7 +147,7 @@ void JoinHashTable::ReorderMainEntries() noexcept {
         std::memcpy(buf_write_pos, reinterpret_cast<byte *>(dest), elem_size);
         std::memcpy(reinterpret_cast<byte *>(dest), buf_read_pos, elem_size);
       } else {
-        byte *const RESTRICT tmp = reorder_buf.temp_buffer();
+        byte *const tmp = reorder_buf.temp_buffer();
         std::memcpy(tmp, reinterpret_cast<byte *>(dest), elem_size);
         std::memcpy(reinterpret_cast<byte *>(dest), buf_read_pos, elem_size);
         std::memcpy(buf_read_pos, tmp, elem_size);

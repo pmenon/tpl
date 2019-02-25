@@ -58,7 +58,7 @@ class ConciseHashTableSlot {
 
  private:
   // clang-format off
-  class IndexField : public util::BitField64<u64, 0, 61> {};
+  class IndexField : public util::BitField64<u64, 0, 62> {};
   class BufferedField : public util::BitField64<bool, IndexField::kNextBit, 1> {};
   class ProcessedField : public util::BitField64<bool, BufferedField::kNextBit, 1> {};
   // clang-format on
