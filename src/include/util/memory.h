@@ -4,7 +4,13 @@
 #include <cstddef>
 #include <cstring>
 
-namespace tpl::util::mem {
+#include "util/common.h"
+
+namespace tpl::util {
+
+// ---------------------------------------------------------
+// Allocations
+// ---------------------------------------------------------
 
 inline void *MallocHuge(std::size_t size) {
   void *ptr = mmap(nullptr, size, PROT_READ | PROT_WRITE,
@@ -35,4 +41,18 @@ inline void FreeHugeArray(T *ptr, std::size_t num_elems) {
   FreeHuge(static_cast<void *>(ptr), sizeof(T) * num_elems);
 }
 
-}  // namespace tpl::util::mem
+// ---------------------------------------------------------
+// Prefetch
+// ---------------------------------------------------------
+
+template <bool READ, Locality LOCALITY>
+inline void Prefetch(const void *const addr) noexcept {
+  // The builtin prefetch intrinsic takes three arguments:
+  // 'addr': the address we want to prefetch
+  // 'rw': indicates read-write intention; 0 is for a read, 1 is for a write
+  // 'locality': indicates the degree of temporal locality represented in the
+  // range {0-3}. 0 means no locality; 3 is high temporal locality.
+  __builtin_prefetch(addr, READ ? 0 : 1, static_cast<u8>(LOCALITY));
+}
+
+}  // namespace tpl::util

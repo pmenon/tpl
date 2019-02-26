@@ -77,6 +77,11 @@ class JoinHashTable {
  private:
   friend class tpl::sql::test::JoinHashTableTest;
 
+  // Access a stored entry by index
+  HashTableEntry *EntryAt(const u64 idx) noexcept {
+    return reinterpret_cast<HashTableEntry *>(entries_[idx]);
+  }
+
   // Dispatched from Build() to build either a generic or concise hash table
   void BuildGenericHashTable();
   void BuildConciseHashTable();
@@ -84,8 +89,9 @@ class JoinHashTable {
   // Dispatched from BuildConciseHashTable() to reorder elements based on
   // ordering from the concise hash table
   void ReorderMainEntries() noexcept;
+  void ReorderOverflowEntries() noexcept;
   void VerifyMainEntryOrder() noexcept;
-  void ProcessOverflowEntries() noexcept;
+  void VerifyOverflowEntryOrder() noexcept;
 
   // Dispatched from LookupBatch() to lookup from either a generic or concise
   // hash table in batched manner

@@ -1,6 +1,7 @@
 #include "sql/join_hash_table.h"
 
 #include "logging/logger.h"
+#include "util/memory.h"
 
 namespace tpl::sql {
 
@@ -28,24 +29,20 @@ void JoinHashTable::BuildGenericHashTable() {
 
 namespace {
 
-// When using concise hash tables, we need to reorder the build-side tuples
-// after they've been materialized. The amount of size of the reorder buffer we
-// use (both the maximum size and the maximum number of elements, whichever
-// comes first) is fixed in the constants below.
-
-constexpr const u32 kBufferSizeInBytes = 16 * 1024;
-constexpr const u32 kNumBufferElems = 4096;
-
 class ReorderBuffer {
  public:
-  ReorderBuffer(util::ChunkedVector &entries, u64 max_elems,
-                u64 overflow_read_pos) noexcept
+  // Use a 16 KB internal buffer for temporary copies
+  static constexpr const u32 kBufferSizeInBytes = 16 * 1024;
+
+  ReorderBuffer(util::ChunkedVector &entries, u64 max_elems, u64 begin_read_idx,
+                u64 end_read_idx) noexcept
       : entry_size_(entries.element_size()),
         max_elems_(std::min(max_elems, kBufferSizeInBytes / entry_size_) - 1),
+        buffer_{},
         buffer_pos_(buffer_),
         temp_buf_(buffer_ + (max_elems_ * entry_size_)),
-        read_idx_(0),
-        end_read_idx_(overflow_read_pos),
+        read_idx_(begin_read_idx),
+        end_read_idx_(end_read_idx),
         entries_(entries) {}
 
   DISALLOW_COPY_AND_MOVE(ReorderBuffer);
@@ -101,11 +98,12 @@ class ReorderBuffer {
 
 void JoinHashTable::ReorderMainEntries() noexcept {
   const u64 elem_size = entries_.element_size();
+  const u64 num_overflow_entries = concise_hash_table_.num_overflow();
+  const u64 num_main_entries = entries_.size() - num_overflow_entries;
+  u64 overflow_idx = num_main_entries;
 
-  u64 overflow_idx = entries_.size() - concise_hash_table_.num_overflow();
-
-  ReorderBuffer reorder_buf(entries_, kNumBufferElems, overflow_idx);
-  HashTableEntry *targets[kNumBufferElems];
+  HashTableEntry *targets[kDefaultVectorSize];
+  ReorderBuffer reorder_buf(entries_, kDefaultVectorSize, 0, overflow_idx);
 
   while (reorder_buf.Fill()) {
     // First, find matches for buffered entries
@@ -114,7 +112,8 @@ void JoinHashTable::ReorderMainEntries() noexcept {
          buf_pos != buf_end; buf_pos += elem_size, idx++) {
       auto *entry = reinterpret_cast<HashTableEntry *>(buf_pos);
       u64 dest_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot);
-      targets[idx] = reinterpret_cast<HashTableEntry *>(entries_[dest_idx]);
+      targets[idx] = EntryAt(dest_idx);
+      util::Prefetch<false, Locality::Low>(targets[idx]);
     }
 
     // Next, write buffered entries into their destinations
@@ -123,41 +122,133 @@ void JoinHashTable::ReorderMainEntries() noexcept {
              0u, reorder_buf.buffer_begin(), reorder_buf.buffer_end());
          buf_read_pos != buf_end; buf_read_pos += elem_size, idx++) {
       HashTableEntry *dest = targets[idx];
+      bool result = true;
 
       // If the destination is 'PROCESSED', then the buffer entry is an overflow
       if (dest->cht_slot.IsProcessed()) {
-        dest = reinterpret_cast<HashTableEntry *>(entries_[overflow_idx++]);
+        dest = EntryAt(overflow_idx++);
+        result = false;
       }
 
-      // If the destination is 'BUFFERED', a copy exists somewhere safe in the
-      // reorder buffer. We can directly overwrite the destination's contents.
       if (dest->cht_slot.IsBuffered()) {
-        std::memcpy(reinterpret_cast<byte *>(dest), buf_read_pos, elem_size);
-        dest->cht_slot.SetProcessed(true);
-        continue;
-      }
-
-      // The destination element has not been buffered; we need to bring it into
-      // the reorder buffer before we can write the current entry into its
-      // destination. If there is room in the buffer, copy it in and write the
-      // current entry. Otherwise, perform a costly three-step swap using a
-      // temporary buffer from the ROB.
-
-      if (buf_write_pos < buf_read_pos) {
-        std::memcpy(buf_write_pos, reinterpret_cast<byte *>(dest), elem_size);
-        std::memcpy(reinterpret_cast<byte *>(dest), buf_read_pos, elem_size);
+        std::memcpy(static_cast<void *>(dest), buf_read_pos, elem_size);
+      } else if (buf_write_pos < buf_read_pos) {
+        std::memcpy(buf_write_pos, static_cast<void *>(dest), elem_size);
+        std::memcpy(static_cast<void *>(dest), buf_read_pos, elem_size);
+        buf_write_pos += elem_size;
       } else {
         byte *const tmp = reorder_buf.temp_buffer();
-        std::memcpy(tmp, reinterpret_cast<byte *>(dest), elem_size);
-        std::memcpy(reinterpret_cast<byte *>(dest), buf_read_pos, elem_size);
+        std::memcpy(tmp, static_cast<void *>(dest), elem_size);
+        std::memcpy(static_cast<void *>(dest), buf_read_pos, elem_size);
         std::memcpy(buf_read_pos, tmp, elem_size);
+        buf_write_pos += elem_size;
       }
 
-      dest->cht_slot.SetProcessed(true);
-      buf_write_pos += elem_size;
+      dest->cht_slot.SetProcessed(result);
     }
 
-    // Reset and try again
+    reorder_buf.Reset(buf_write_pos);
+  }
+}
+
+void JoinHashTable::ReorderOverflowEntries() noexcept {
+  const u64 elem_size = entries_.element_size();
+  const u64 num_overflow_entries = concise_hash_table_.num_overflow();
+  const u64 num_main_entries = entries_.size() - num_overflow_entries;
+  const u64 overflow_start_idx = num_main_entries;
+
+  if (num_overflow_entries == 0) {
+    return;
+  }
+
+  HashTableEntry *parents[kDefaultVectorSize];
+
+  //
+  // Step 1, clear the count for all main entries
+  //
+
+  for (u64 idx = 0; idx < num_main_entries; idx++) {
+    EntryAt(idx)->overflow_count = 0;
+  }
+
+  //
+  // Step 2, iterate over all overflow entries in vector chunks, incrementing
+  // the chain count in their main-entry parents
+  //
+
+  for (u64 start = overflow_start_idx; start < entries_.size();
+       start += kDefaultVectorSize) {
+    u64 vec_size = std::min(u64{kDefaultVectorSize}, entries_.size() - start);
+    u64 end = start + vec_size;
+
+    for (u64 idx = start, write_idx = 0; idx < end; idx++, write_idx++) {
+      HashTableEntry *entry = EntryAt(idx);
+      u64 chain_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot);
+      parents[write_idx] = EntryAt(chain_idx);
+      util::Prefetch<false, Locality::Low>(parents[write_idx]);
+    }
+
+    for (u64 idx = 0; idx < vec_size; idx++) {
+      parents[idx]->overflow_count++;
+    }
+  }
+
+  //
+  // Step 3, calculate global prefix count on main entries
+  //
+
+  for (u64 idx = 0, count = 0; idx < num_main_entries; idx++) {
+    HashTableEntry *entry = EntryAt(idx);
+    count += entry->overflow_count;
+    entry->overflow_count =
+        (entry->overflow_count == 0 ? std::numeric_limits<u64>::max()
+                                    : num_main_entries + count);
+  }
+
+  //
+  // Step 4, start reordering
+  //
+
+  ReorderBuffer reorder_buf(entries_, kDefaultVectorSize, overflow_start_idx,
+                            entries_.size());
+  while (reorder_buf.Fill()) {
+    // First, find parents for buffered overflow entries
+    for (auto [idx, buf_pos, buf_end] = std::tuple(
+             0u, reorder_buf.buffer_begin(), reorder_buf.buffer_end());
+         buf_pos != buf_end; buf_pos += elem_size, idx++) {
+      auto *entry = reinterpret_cast<HashTableEntry *>(buf_pos);
+      u64 dest_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot);
+      parents[idx] = EntryAt(dest_idx);
+      util::Prefetch<false, Locality::Low>(parents[idx]);
+    }
+
+    // First, find parents for buffered overflow entries
+    byte *buf_write_pos = reorder_buf.buffer_begin();
+    for (auto [idx, buf_pos, buf_end] = std::tuple(
+             0u, reorder_buf.buffer_begin(), reorder_buf.buffer_end());
+         buf_pos != buf_end; buf_pos += elem_size, idx++) {
+      TPL_ASSERT(
+          parents[idx]->overflow_count != std::numeric_limits<u64>::max(),
+          "Invalid");
+      HashTableEntry *target = EntryAt(--parents[idx]->overflow_count);
+
+      if (target->cht_slot.IsBuffered()) {
+        std::memcpy(static_cast<void *>(target), buf_pos, elem_size);
+      } else if (buf_write_pos < buf_pos) {
+        std::memcpy(buf_write_pos, static_cast<void *>(target), elem_size);
+        std::memcpy(static_cast<void *>(target), buf_pos, elem_size);
+        buf_write_pos += elem_size;
+      } else {
+        byte *const tmp = reorder_buf.temp_buffer();
+        std::memcpy(tmp, static_cast<void *>(target), elem_size);
+        std::memcpy(static_cast<void *>(target), buf_pos, elem_size);
+        std::memcpy(buf_write_pos, tmp, elem_size);
+        buf_write_pos += elem_size;
+      }
+
+      target->cht_slot.SetProcessed(true);
+    }
+
     reorder_buf.Reset(buf_write_pos);
   }
 }
@@ -177,7 +268,10 @@ void JoinHashTable::VerifyMainEntryOrder() noexcept {
 #endif
 }
 
-void JoinHashTable::ProcessOverflowEntries() noexcept {}
+void JoinHashTable::VerifyOverflowEntryOrder() noexcept {
+#ifndef NDEBUG
+#endif
+}
 
 void JoinHashTable::BuildConciseHashTable() {
   // TODO(pmenon): Use HLL++ sketches to better estimate size
@@ -193,15 +287,17 @@ void JoinHashTable::BuildConciseHashTable() {
   concise_hash_table_.Build();
 
   LOG_DEBUG(
-      "{} entries, {} overflow ({} % overflow)", entries_.size(),
-      concise_hash_table_.num_overflow(),
+      "Concise Table Stats: {} entries, {} overflow ({} % overflow)",
+      entries_.size(), concise_hash_table_.num_overflow(),
       100.0 * (concise_hash_table_.num_overflow() * 1.0 / entries_.size()));
 
   ReorderMainEntries();
 
   VerifyMainEntryOrder();
 
-  ProcessOverflowEntries();
+  ReorderOverflowEntries();
+
+  VerifyOverflowEntryOrder();
 }
 
 void JoinHashTable::Build() {
@@ -245,6 +341,7 @@ void JoinHashTable::LookupBatchInConciseHashTable(
 void JoinHashTable::LookupBatch(u32 num_tuples, const hash_t hashes[],
                                 const HashTableEntry *results[]) const {
   TPL_ASSERT(is_built(), "Cannot perform lookup before table is built!");
+
   if (use_concise_hash_table()) {
     LookupBatchInConciseHashTable(num_tuples, hashes, results);
   } else {

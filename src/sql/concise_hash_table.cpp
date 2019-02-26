@@ -12,18 +12,22 @@ ConciseHashTable::ConciseHashTable(u32 probe_threshold)
       num_overflow_(0),
       built_(false) {}
 
+ConciseHashTable::~ConciseHashTable() {
+  if (slot_groups_ != nullptr) {
+    util::FreeHugeArray(slot_groups_, num_groups_);
+  }
+}
+
 void ConciseHashTable::SetSize(const u32 num_elems) {
+  if (slot_groups_ != nullptr) {
+    util::FreeHugeArray(slot_groups_, num_groups_);
+  }
+
   // Ensure we have at least one slot group, meaning the minimum capacity is 64
   u64 capacity = std::max(64ul, util::MathUtil::PowerOf2Ceil(num_elems * 2));
   slot_mask_ = capacity - 1;
   num_groups_ = util::MathUtil::DivRoundUp(capacity, 64);
-  slot_groups_ = util::mem::MallocHugeArray<SlotGroup>(num_groups_);
-}
-
-ConciseHashTable::~ConciseHashTable() {
-  if (slot_groups_ != nullptr) {
-    util::mem::FreeHugeArray(slot_groups_, num_groups_);
-  }
+  slot_groups_ = util::MallocHugeArray<SlotGroup>(num_groups_);
 }
 
 void ConciseHashTable::Build() {

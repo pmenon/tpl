@@ -23,9 +23,8 @@ class ConciseHashTableSlot {
       : ConciseHashTableSlot(std::numeric_limits<u64>::max()) {}
 
   explicit ConciseHashTableSlot(u64 index) noexcept
-      : bitfield_(ProcessedField::Encode(false) |
-      BufferedField::Encode(false) | IndexField::Encode(index)) {
-  }
+      : bitfield_(ProcessedField::Encode(false) | BufferedField::Encode(false) |
+                  IndexField::Encode(index)) {}
 
   bool IsProcessed() const noexcept {
     return ProcessedField::Decode(bitfield_);
@@ -79,7 +78,9 @@ struct HashTableEntry {
   union {
     HashTableEntry *next;
     ConciseHashTableSlot cht_slot{};
+    u64 overflow_count;
   };
+
   hash_t hash;
   byte payload[0];
 };

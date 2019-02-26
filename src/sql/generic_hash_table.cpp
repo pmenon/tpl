@@ -14,14 +14,14 @@ GenericHashTable::GenericHashTable(float load_factor) noexcept
 
 GenericHashTable::~GenericHashTable() {
   if (entries_ != nullptr) {
-    util::mem::FreeHugeArray(entries_, capacity());
+    util::FreeHugeArray(entries_, capacity());
   }
 }
 
 void GenericHashTable::SetSize(u64 new_size) {
   TPL_ASSERT(new_size > 0, "New size cannot be zero!");
   if (entries_ != nullptr) {
-    util::mem::FreeHugeArray(entries_, capacity());
+    util::FreeHugeArray(entries_, capacity());
   }
 
   u64 next_size = util::MathUtil::PowerOf2Ceil(new_size);
@@ -31,8 +31,7 @@ void GenericHashTable::SetSize(u64 new_size) {
 
   capacity_ = next_size;
   mask_ = capacity_ - 1;
-  entries_ =
-      util::mem::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_);
+  entries_ = util::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_);
 }
 
 }  // namespace tpl::sql
