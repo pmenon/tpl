@@ -102,52 +102,80 @@ void JoinHashTable::ReorderMainEntries() noexcept {
   const u64 num_main_entries = entries_.size() - num_overflow_entries;
   u64 overflow_idx = num_main_entries;
 
+  if (num_main_entries == 0) {
+    return;
+  }
+
+  //
+  // This function reorders the main entries in-place using an ephemeral reorder
+  // buffer space. The general process is:
+  // 1. Buffer N tuples. These can be either main or overflow entries.
+  // 2. Find and store their destination addresses in the 'targets' buffer
+  // 3. Try and store the buffered entry into the found (i.e., target)
+  //    destination space. There are a few cases we handle:
+  //    3a. If the target entry is 'PROCESSED', then the buffered entry is an
+  //        overflow entry. We acquire an overflow slot and store the buffered
+  //        entry there.
+  //    3b. If the target entry is 'BUFFERED', it is either stored somewhere
+  //        in the reorder buffer, or has been stored into its own target space.
+  //        Either way, we can directly overwrite the target with the buffered
+  //        entry and be done with it.
+  //    3c. We need to swap the target and buffer entry. If the reorder buffer
+  //        has room, copy the target into the buffer and write the buffered
+  //        entry out.
+  //    3d. If the reorder buffer has no room for this target entry, we use a
+  //        temporary space to perform a (costly) three-way swap to buffer the
+  //        target entry into the reorder buffer and write the buffered entry
+  //        out. This should happen infrequently.
+  // 4. Reset the reorder buffer and repeat.
+  //
+
   HashTableEntry *targets[kDefaultVectorSize];
   ReorderBuffer reorder_buf(entries_, kDefaultVectorSize, 0, overflow_idx);
 
   while (reorder_buf.Fill()) {
-    // First, find matches for buffered entries
-    for (auto [idx, buf_pos, buf_end] = std::tuple(
-             0u, reorder_buf.buffer_begin(), reorder_buf.buffer_end());
-         buf_pos != buf_end; buf_pos += elem_size, idx++) {
-      auto *entry = reinterpret_cast<HashTableEntry *>(buf_pos);
+    u64 idx = 0;
+    for (auto iter = reorder_buf.buffer_begin(), end = reorder_buf.buffer_end();
+         iter != end; iter += elem_size, idx++) {
+      HashTableEntry *entry = reinterpret_cast<HashTableEntry *>(iter);
       u64 dest_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot);
       targets[idx] = EntryAt(dest_idx);
+
+      // Prefetch the entry now since we'll need it below
       util::Prefetch<false, Locality::Low>(targets[idx]);
     }
 
-    // Next, write buffered entries into their destinations
-    byte *buf_write_pos = reorder_buf.buffer_begin();
-    for (auto [idx, buf_read_pos, buf_end] = std::tuple(
-             0u, reorder_buf.buffer_begin(), reorder_buf.buffer_end());
-         buf_read_pos != buf_end; buf_read_pos += elem_size, idx++) {
+    idx = 0;
+
+    byte *write_iter = reorder_buf.buffer_begin();
+    for (auto iter = reorder_buf.buffer_begin(), end = reorder_buf.buffer_end();
+         iter != end; iter += elem_size, idx++) {
       HashTableEntry *dest = targets[idx];
       bool result = true;
 
-      // If the destination is 'PROCESSED', then the buffer entry is an overflow
       if (dest->cht_slot.IsProcessed()) {
         dest = EntryAt(overflow_idx++);
         result = false;
       }
 
       if (dest->cht_slot.IsBuffered()) {
-        std::memcpy(static_cast<void *>(dest), buf_read_pos, elem_size);
-      } else if (buf_write_pos < buf_read_pos) {
-        std::memcpy(buf_write_pos, static_cast<void *>(dest), elem_size);
-        std::memcpy(static_cast<void *>(dest), buf_read_pos, elem_size);
-        buf_write_pos += elem_size;
+        std::memcpy(static_cast<void *>(dest), iter, elem_size);
+      } else if (write_iter < iter) {
+        std::memcpy(write_iter, static_cast<void *>(dest), elem_size);
+        std::memcpy(static_cast<void *>(dest), iter, elem_size);
+        write_iter += elem_size;
       } else {
         byte *const tmp = reorder_buf.temp_buffer();
         std::memcpy(tmp, static_cast<void *>(dest), elem_size);
-        std::memcpy(static_cast<void *>(dest), buf_read_pos, elem_size);
-        std::memcpy(buf_read_pos, tmp, elem_size);
-        buf_write_pos += elem_size;
+        std::memcpy(static_cast<void *>(dest), iter, elem_size);
+        std::memcpy(iter, tmp, elem_size);
+        write_iter += elem_size;
       }
 
       dest->cht_slot.SetProcessed(result);
     }
 
-    reorder_buf.Reset(buf_write_pos);
+    reorder_buf.Reset(write_iter);
   }
 }
 
@@ -161,20 +189,17 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
     return;
   }
 
-  HashTableEntry *parents[kDefaultVectorSize];
+  //
+  // This function reorders the overflow entries in-place. The high-level idea
+  // is to reorder the entries stored in the overflow area so that probe chains
+  // are stored contiguously.
+  //
 
-  //
-  // Step 1, clear the count for all main entries
-  //
+  HashTableEntry *parents[kDefaultVectorSize];
 
   for (u64 idx = 0; idx < num_main_entries; idx++) {
     EntryAt(idx)->overflow_count = 0;
   }
-
-  //
-  // Step 2, iterate over all overflow entries in vector chunks, incrementing
-  // the chain count in their main-entry parents
-  //
 
   for (u64 start = overflow_start_idx; start < entries_.size();
        start += kDefaultVectorSize) {
@@ -193,10 +218,6 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
     }
   }
 
-  //
-  // Step 3, calculate global prefix count on main entries
-  //
-
   for (u64 idx = 0, count = 0; idx < num_main_entries; idx++) {
     HashTableEntry *entry = EntryAt(idx);
     count += entry->overflow_count;
@@ -205,43 +226,37 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
                                     : num_main_entries + count);
   }
 
-  //
-  // Step 4, start reordering
-  //
-
   ReorderBuffer reorder_buf(entries_, kDefaultVectorSize, overflow_start_idx,
                             entries_.size());
   while (reorder_buf.Fill()) {
-    // First, find parents for buffered overflow entries
-    for (auto [idx, buf_pos, buf_end] = std::tuple(
-             0u, reorder_buf.buffer_begin(), reorder_buf.buffer_end());
-         buf_pos != buf_end; buf_pos += elem_size, idx++) {
-      auto *entry = reinterpret_cast<HashTableEntry *>(buf_pos);
+    u64 idx = 0;
+    for (auto iter = reorder_buf.buffer_begin(), end = reorder_buf.buffer_end();
+         iter != end; iter += elem_size, idx++) {
+      HashTableEntry *entry = reinterpret_cast<HashTableEntry *>(iter);
       u64 dest_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot);
       parents[idx] = EntryAt(dest_idx);
+
+      // Prefetch the entry since we'll need it below
       util::Prefetch<false, Locality::Low>(parents[idx]);
     }
 
-    // First, find parents for buffered overflow entries
+    idx = 0;
+
     byte *buf_write_pos = reorder_buf.buffer_begin();
-    for (auto [idx, buf_pos, buf_end] = std::tuple(
-             0u, reorder_buf.buffer_begin(), reorder_buf.buffer_end());
-         buf_pos != buf_end; buf_pos += elem_size, idx++) {
-      TPL_ASSERT(
-          parents[idx]->overflow_count != std::numeric_limits<u64>::max(),
-          "Invalid");
+    for (auto iter = reorder_buf.buffer_begin(), end = reorder_buf.buffer_end();
+         iter != end; iter += elem_size, idx++) {
       HashTableEntry *target = EntryAt(--parents[idx]->overflow_count);
 
       if (target->cht_slot.IsBuffered()) {
-        std::memcpy(static_cast<void *>(target), buf_pos, elem_size);
-      } else if (buf_write_pos < buf_pos) {
+        std::memcpy(static_cast<void *>(target), iter, elem_size);
+      } else if (buf_write_pos < iter) {
         std::memcpy(buf_write_pos, static_cast<void *>(target), elem_size);
-        std::memcpy(static_cast<void *>(target), buf_pos, elem_size);
+        std::memcpy(static_cast<void *>(target), iter, elem_size);
         buf_write_pos += elem_size;
       } else {
         byte *const tmp = reorder_buf.temp_buffer();
         std::memcpy(tmp, static_cast<void *>(target), elem_size);
-        std::memcpy(static_cast<void *>(target), buf_pos, elem_size);
+        std::memcpy(static_cast<void *>(target), iter, elem_size);
         std::memcpy(buf_write_pos, tmp, elem_size);
         buf_write_pos += elem_size;
       }
