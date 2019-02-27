@@ -64,8 +64,11 @@ class ConciseHashTable {
   bool is_built() const { return built_; }
 
  private:
-  // The concise hash table is composed of multiple groups of slots. This struct
-  // captures this concept
+  /// A slot group represents a group of 64 slots. Each slot is represented as a
+  /// single bit from the \a bits field. \a count is a count of the number of
+  /// set bits in all slot groups in the group array up to and including this
+  /// group. In other worse, \a count is a prefix count of the number of filled
+  /// slots up to this group.
   struct SlotGroup {
     // The bitmap indicating whether the slots are occupied or free
     u64 bits;
@@ -75,7 +78,7 @@ class ConciseHashTable {
     static_assert(
         sizeof(bits) * kBitsPerByte == kSlotsPerGroup,
         "Number of slots in group and configured constant are out of sync");
-  };
+  } PACKED;
 
  private:
   // The array of groups. This array is managed by this class.
