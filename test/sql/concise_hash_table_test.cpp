@@ -31,7 +31,7 @@ TEST_F(ConciseHashTableTest, InsertTest) {
   table.SetSize(num_tuples);
 
   // Check minimum capacity is enforced
-  EXPECT_EQ(64u, table.capacity());
+  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.capacity());
 
   // 0 should go into the zero-th slot
   auto _0_slot = table.Insert(0);
@@ -57,7 +57,7 @@ TEST_F(ConciseHashTableTest, InsertOverflowTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(64u, table.capacity());
+  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.capacity());
 
   // 33 should go into the 33rd slot
   auto _33_slot = table.Insert(33);
@@ -87,8 +87,7 @@ TEST_F(ConciseHashTableTest, MultiGroupInsertTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  // 4 groups * 64 slots-per-group = 256 slots
-  EXPECT_EQ(256u, table.capacity());
+  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.capacity());
 
   // 33 goes in the first group, in the 33rd slot
   auto _33_slot = table.Insert(33);
@@ -109,16 +108,16 @@ TEST_F(ConciseHashTableTest, MultiGroupInsertTest) {
   auto _225_slot = table.Insert(225);
   EXPECT_EQ(225u, _225_slot.GetSlotIndex());
 
-  // 289 (64+64+64+64+33) cycles back into the **FIRST** group, in the 34th
-  // group bit since the 33rd is occupied by the first insert
-  auto _289_slot = table.Insert(289);
-  EXPECT_EQ(34u, _289_slot.GetSlotIndex());
+  // Try inserting something into the 33rd slot but with a wrap around. This
+  // should overflow onto the 34th slot since the 33rd is occupied by the first
+  // '33' insertion.
+  auto _33_v2_slot = table.Insert(ConciseHashTable::kMinNumSlots + 33);
+  EXPECT_EQ(34u, _33_v2_slot.GetSlotIndex());
 
-  // Inserting 289 again should overflow: 33rd slot is occupied by '33', 34th
-  // slot is occupied by the first '289'. With probe length of 1, the second
-  // '289' will overflow.
-  auto _289_v2_slot = table.Insert(289);
-  EXPECT_EQ(34u, _289_v2_slot.GetSlotIndex());
+  // Inserting the previous hash again should overflow. The first '33' went into
+  // the 33rd slot; the second went into the 34th slot (since probe limit is 1)
+  auto _33_v3_slot = table.Insert(ConciseHashTable::kMinNumSlots + 33);
+  EXPECT_EQ(34u, _33_v3_slot.GetSlotIndex());
 }
 
 TEST_F(ConciseHashTableTest, CornerCaseTest) {
@@ -128,7 +127,7 @@ TEST_F(ConciseHashTableTest, CornerCaseTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(64u, table.capacity());
+  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.capacity());
 
   // 63 should go into the 63rd slot
   auto _63_slot = table.Insert(63);
@@ -160,7 +159,7 @@ TEST_F(ConciseHashTableTest, BuildTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(64u, table.capacity());
+  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.capacity());
 
   std::vector<ConciseHashTableSlot> inserted;
 
@@ -186,7 +185,7 @@ TEST_F(ConciseHashTableTest, MultiGroupBuildTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(128u, table.capacity());
+  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.capacity());
 
   std::vector<ConciseHashTableSlot> inserted;
 

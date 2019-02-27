@@ -8,6 +8,7 @@ namespace tpl::sql {
 JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size,
                              bool use_concise_ht) noexcept
     : entries_(region, sizeof(HashTableEntry) + tuple_size),
+      concise_hash_table_(0),
       num_elems_(0),
       built_(false),
       use_concise_ht_(use_concise_ht) {
