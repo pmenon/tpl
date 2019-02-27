@@ -54,4 +54,7 @@ static constexpr const u32 kBitsPerByte = 8;
 /// The default vector size to use when performing vectorized iteration
 static constexpr const u32 kDefaultVectorSize = 4096;
 
+/// The default prefetch distance to use
+static constexpr const u32 kPrefetchDistance = 10;
+
 }  // namespace tpl

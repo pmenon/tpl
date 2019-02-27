@@ -135,23 +135,28 @@ void JoinHashTable::ReorderMainEntries() noexcept {
 
   while (reorder_buf.Fill()) {
     u64 idx = 0;
-    for (auto iter = reorder_buf.buffer_begin(), end = reorder_buf.buffer_end();
-         iter != end; iter += elem_size, idx++) {
-      HashTableEntry *entry = reinterpret_cast<HashTableEntry *>(iter);
+    for (auto buf_pos = reorder_buf.buffer_begin(),
+              buf_end = reorder_buf.buffer_end();
+         buf_pos != buf_end; buf_pos += elem_size, idx++) {
+      HashTableEntry *entry = reinterpret_cast<HashTableEntry *>(buf_pos);
       u64 dest_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot);
       targets[idx] = EntryAt(dest_idx);
-
-      // Prefetch the entry now since we'll need it below
-      util::Prefetch<false, Locality::Low>(targets[idx]);
     }
 
+    const u64 found = idx;
+    u32 prefetch_idx = kPrefetchDistance;
     idx = 0;
 
-    byte *write_iter = reorder_buf.buffer_begin();
-    for (auto iter = reorder_buf.buffer_begin(), end = reorder_buf.buffer_end();
-         iter != end; iter += elem_size, idx++) {
+    byte *buf_write_pos = reorder_buf.buffer_begin();
+    for (auto buf_pos = reorder_buf.buffer_begin(),
+              buf_end = reorder_buf.buffer_end();
+         buf_pos != buf_end; buf_pos += elem_size, idx++) {
       HashTableEntry *dest = targets[idx];
       bool result = true;
+
+      if (TPL_LIKELY(prefetch_idx < found)) {
+        util::Prefetch<false, Locality::Medium>(targets[prefetch_idx++]);
+      }
 
       if (dest->cht_slot.IsProcessed()) {
         dest = EntryAt(overflow_idx++);
@@ -159,23 +164,23 @@ void JoinHashTable::ReorderMainEntries() noexcept {
       }
 
       if (dest->cht_slot.IsBuffered()) {
-        std::memcpy(static_cast<void *>(dest), iter, elem_size);
-      } else if (write_iter < iter) {
-        std::memcpy(write_iter, static_cast<void *>(dest), elem_size);
-        std::memcpy(static_cast<void *>(dest), iter, elem_size);
-        write_iter += elem_size;
+        std::memcpy(static_cast<void *>(dest), buf_pos, elem_size);
+      } else if (buf_write_pos < buf_pos) {
+        std::memcpy(buf_write_pos, static_cast<void *>(dest), elem_size);
+        std::memcpy(static_cast<void *>(dest), buf_pos, elem_size);
+        buf_write_pos += elem_size;
       } else {
         byte *const tmp = reorder_buf.temp_buffer();
         std::memcpy(tmp, static_cast<void *>(dest), elem_size);
-        std::memcpy(static_cast<void *>(dest), iter, elem_size);
-        std::memcpy(iter, tmp, elem_size);
-        write_iter += elem_size;
+        std::memcpy(static_cast<void *>(dest), buf_pos, elem_size);
+        std::memcpy(buf_pos, tmp, elem_size);
+        buf_write_pos += elem_size;
       }
 
       dest->cht_slot.SetProcessed(result);
     }
 
-    reorder_buf.Reset(write_iter);
+    reorder_buf.Reset(buf_write_pos);
   }
 }
 
@@ -243,20 +248,21 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
     idx = 0;
 
     byte *buf_write_pos = reorder_buf.buffer_begin();
-    for (auto iter = reorder_buf.buffer_begin(), end = reorder_buf.buffer_end();
-         iter != end; iter += elem_size, idx++) {
+    for (auto buf_pos = reorder_buf.buffer_begin(),
+              buf_end = reorder_buf.buffer_end();
+         buf_pos != buf_end; buf_pos += elem_size, idx++) {
       HashTableEntry *target = EntryAt(--parents[idx]->overflow_count);
 
       if (target->cht_slot.IsBuffered()) {
-        std::memcpy(static_cast<void *>(target), iter, elem_size);
-      } else if (buf_write_pos < iter) {
+        std::memcpy(static_cast<void *>(target), buf_pos, elem_size);
+      } else if (buf_write_pos < buf_pos) {
         std::memcpy(buf_write_pos, static_cast<void *>(target), elem_size);
-        std::memcpy(static_cast<void *>(target), iter, elem_size);
+        std::memcpy(static_cast<void *>(target), buf_pos, elem_size);
         buf_write_pos += elem_size;
       } else {
         byte *const tmp = reorder_buf.temp_buffer();
         std::memcpy(tmp, static_cast<void *>(target), elem_size);
-        std::memcpy(static_cast<void *>(target), iter, elem_size);
+        std::memcpy(static_cast<void *>(target), buf_pos, elem_size);
         std::memcpy(buf_write_pos, tmp, elem_size);
         buf_write_pos += elem_size;
       }
