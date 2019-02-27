@@ -189,6 +189,7 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
   const u64 num_overflow_entries = concise_hash_table_.num_overflow();
   const u64 num_main_entries = entries_.size() - num_overflow_entries;
   const u64 overflow_start_idx = num_main_entries;
+  const u64 no_overflow = std::numeric_limits<u64>::max();
 
   if (num_overflow_entries == 0) {
     return;
@@ -215,7 +216,6 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
       HashTableEntry *entry = EntryAt(idx);
       u64 chain_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot);
       parents[write_idx] = EntryAt(chain_idx);
-      util::Prefetch<false, Locality::Low>(parents[write_idx]);
     }
 
     for (u64 idx = 0; idx < vec_size; idx++) {
@@ -227,8 +227,7 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
     HashTableEntry *entry = EntryAt(idx);
     count += entry->overflow_count;
     entry->overflow_count =
-        (entry->overflow_count == 0 ? std::numeric_limits<u64>::max()
-                                    : num_main_entries + count);
+        (entry->overflow_count == 0 ? no_overflow : num_main_entries + count);
   }
 
   ReorderBuffer reorder_buf(entries_, kDefaultVectorSize, overflow_start_idx,
@@ -240,9 +239,6 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
       HashTableEntry *entry = reinterpret_cast<HashTableEntry *>(iter);
       u64 dest_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot);
       parents[idx] = EntryAt(dest_idx);
-
-      // Prefetch the entry since we'll need it below
-      util::Prefetch<false, Locality::Low>(parents[idx]);
     }
 
     idx = 0;
@@ -271,6 +267,13 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
     }
 
     reorder_buf.Reset(buf_write_pos);
+  }
+
+  for (u64 idx = 0; idx < num_main_entries; idx++) {
+    HashTableEntry *entry = EntryAt(idx);
+    entry->next =
+        (entry->overflow_count == no_overflow ? nullptr
+                                              : EntryAt(entry->overflow_count));
   }
 }
 

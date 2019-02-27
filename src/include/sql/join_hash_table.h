@@ -43,6 +43,10 @@ class JoinHashTable {
   void LookupBatch(u32 num_tuples, const hash_t hashes[],
                    const HashTableEntry *results[]) const;
 
+  // -------------------------------------------------------
+  // Simple Accessors
+  // -------------------------------------------------------
+
   /// Return the total number of inserted elements, including duplicates
   u32 num_elems() const { return num_elems_; }
 
