@@ -5,6 +5,7 @@
 #include "sql/hash_table_entry.h"
 #include "util/common.h"
 #include "util/macros.h"
+#include "util/memory.h"
 
 namespace tpl::sql {
 
@@ -55,6 +56,10 @@ class GenericHashTable {
   /// Explicitly set the size of the hash map
   /// \param[in] new_size The expected number of elements to size the table for
   void SetSize(u64 new_size);
+
+  /// Prefetch the head of the bucket chain for the hash \a hash
+  template <bool READ>
+  void PrefetchChainHead(hash_t hash) const;
 
   /// Given a hash value, return the head of the bucket chain ignoring any tag.
   /// This probe is performed assuming no concurrent access into the table.
@@ -133,14 +138,20 @@ class GenericHashTable {
 // Implementation below
 // ---------------------------------------------------------
 
+template <bool READ>
+void GenericHashTable::PrefetchChainHead(hash_t hash) const {
+  const u64 pos = hash & mask_;
+  util::Prefetch<READ, Locality::Low>(entries_ + pos);
+}
+
 inline HashTableEntry *GenericHashTable::FindChainHead(hash_t hash) const {
-  u64 pos = hash & mask_;
+  const u64 pos = hash & mask_;
   return entries_[pos].load(std::memory_order_relaxed);
 }
 
 inline HashTableEntry *GenericHashTable::FindChainHeadWithTag(
     hash_t hash) const {
-  auto candidate = FindChainHead(hash);
+  const HashTableEntry *const candidate = FindChainHead(hash);
   auto exists_in_chain = reinterpret_cast<intptr_t>(candidate) & TagHash(hash);
   return (exists_in_chain ? UntagPointer(candidate) : nullptr);
 }

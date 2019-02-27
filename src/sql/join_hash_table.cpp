@@ -21,10 +21,14 @@ void JoinHashTable::BuildGenericHashTable() {
 
   generic_hash_table_.SetSize(num_elems());
 
-  for (HashTableEntry *entry = head_.next; entry != nullptr;) {
-    HashTableEntry *next = entry->next;
+  for (u64 idx = 0, prefetch_idx = 16; idx < entries_.size();
+       idx++, prefetch_idx++) {
+    if (TPL_LIKELY(prefetch_idx < entries_.size())) {
+      generic_hash_table_.PrefetchChainHead<true>(EntryAt(prefetch_idx)->hash);
+    }
+
+    HashTableEntry *entry = EntryAt(idx);
     generic_hash_table_.Insert<false>(entry, entry->hash);
-    entry = next;
   }
 }
 
@@ -303,10 +307,14 @@ void JoinHashTable::BuildConciseHashTable() {
 
   concise_hash_table_.SetSize(num_elems());
 
-  for (HashTableEntry *entry = head_.next; entry != nullptr;) {
-    HashTableEntry *next = entry->next;
-    entry->cht_slot = concise_hash_table_.Insert(entry->hash);
-    entry = next;
+  for (u64 idx = 0, prefetch_idx = 16; idx < entries_.size();
+       idx++, prefetch_idx++) {
+    if (TPL_LIKELY(prefetch_idx < entries_.size())) {
+      concise_hash_table_.PrefetchSlotGroup<true>(EntryAt(prefetch_idx)->hash);
+    }
+
+    HashTableEntry *entry = EntryAt(idx);
+    concise_hash_table_.Insert(entry, entry->hash);
   }
 
   concise_hash_table_.Build();

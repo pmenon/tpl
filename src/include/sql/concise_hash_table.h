@@ -5,6 +5,7 @@
 #include "sql/hash_table_entry.h"
 #include "util/bit_util.h"
 #include "util/common.h"
+#include "util/memory.h"
 
 namespace tpl::sql {
 
@@ -41,10 +42,14 @@ class ConciseHashTable {
 
   /// Insert an element with the given hash into the table and return an encoded
   /// slot position
-  ConciseHashTableSlot Insert(hash_t hash);
+  void Insert(HashTableEntry *entry, hash_t hash);
 
   /// Finalize and build this concise hash table
   void Build();
+
+  /// Prefetch the slot group for the given slot \a slot
+  template <bool READ>
+  void PrefetchSlotGroup(hash_t hash) const;
 
   /// Return the number of occupied slots in the table **before** the given slot
   u64 NumFilledSlotsBefore(ConciseHashTableSlot slot) const;
@@ -110,7 +115,7 @@ class ConciseHashTable {
 // Implementation below
 // ---------------------------------------------------------
 
-inline ConciseHashTableSlot ConciseHashTable::Insert(const hash_t hash) {
+inline void ConciseHashTable::Insert(HashTableEntry *entry, const hash_t hash) {
   const u64 slot_idx = hash & slot_mask_;
   const u64 group_idx = slot_idx >> kLogSlotsPerGroup;
   const u64 num_bits_to_group = group_idx << kLogSlotsPerGroup;
@@ -121,13 +126,21 @@ inline ConciseHashTableSlot ConciseHashTable::Insert(const hash_t hash) {
   do {
     if (!util::BitUtil::Test(group_bits, bit_idx)) {
       util::BitUtil::Set(group_bits, bit_idx);
-      return ConciseHashTableSlot(num_bits_to_group + bit_idx);
+      entry->cht_slot = ConciseHashTableSlot(num_bits_to_group + bit_idx);
+      return;
     }
   } while (++bit_idx <= max_bit_idx);
 
   num_overflow_++;
 
-  return ConciseHashTableSlot(num_bits_to_group + bit_idx - 1);
+  entry->cht_slot = ConciseHashTableSlot(num_bits_to_group + bit_idx - 1);
+}
+
+template <bool READ>
+inline void ConciseHashTable::PrefetchSlotGroup(hash_t hash) const {
+  const u64 slot_idx = hash & slot_mask_;
+  const u64 group_idx = slot_idx >> kLogSlotsPerGroup;
+  util::Prefetch<READ, Locality::Low>(slot_groups_ + group_idx);
 }
 
 inline u64 ConciseHashTable::NumFilledSlotsBefore(

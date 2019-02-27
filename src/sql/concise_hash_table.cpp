@@ -1,7 +1,6 @@
 #include "sql/concise_hash_table.h"
 
 #include "util/bit_util.h"
-#include "util/memory.h"
 
 namespace tpl::sql {
 
