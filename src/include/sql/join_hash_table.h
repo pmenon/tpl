@@ -92,6 +92,9 @@ class JoinHashTable {
 
   // Dispatched from BuildConciseHashTable() to reorder elements based on
   // ordering from the concise hash table
+  void InsertIntoConciseHashTable() noexcept;
+  template <bool PREFETCH>
+  void InsertIntoConciseHashTableInternal() noexcept;
   void ReorderMainEntries() noexcept;
   void ReorderOverflowEntries() noexcept;
   void VerifyMainEntryOrder() noexcept;

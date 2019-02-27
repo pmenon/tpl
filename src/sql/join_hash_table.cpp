@@ -24,11 +24,43 @@ void JoinHashTable::BuildGenericHashTable() {
   for (u64 idx = 0, prefetch_idx = 16; idx < entries_.size();
        idx++, prefetch_idx++) {
     if (TPL_LIKELY(prefetch_idx < entries_.size())) {
-      generic_hash_table_.PrefetchChainHead<true>(EntryAt(prefetch_idx)->hash);
+      generic_hash_table_.PrefetchChainHead<false>(EntryAt(prefetch_idx)->hash);
     }
 
     HashTableEntry *entry = EntryAt(idx);
     generic_hash_table_.Insert<false>(entry, entry->hash);
+  }
+}
+
+template <>
+void JoinHashTable::InsertIntoConciseHashTableInternal<false>() noexcept {
+  for (u64 idx = 0; idx < entries_.size(); idx++) {
+    HashTableEntry *entry = EntryAt(idx);
+    concise_hash_table_.Insert(entry, entry->hash);
+  }
+}
+
+template <>
+void JoinHashTable::InsertIntoConciseHashTableInternal<true>() noexcept {
+  for (u64 idx = 0, prefetch_idx = 16; idx < entries_.size();
+       idx++, prefetch_idx++) {
+    if (TPL_LIKELY(prefetch_idx < entries_.size())) {
+      concise_hash_table_.PrefetchSlotGroup<false>(EntryAt(prefetch_idx)->hash);
+    }
+
+    HashTableEntry *entry = EntryAt(idx);
+    concise_hash_table_.Insert(entry, entry->hash);
+  }
+}
+
+void JoinHashTable::InsertIntoConciseHashTable() noexcept {
+  // Assume 8MB cache
+  static constexpr const u32 kCacheSize = 1u << 23;
+
+  if (concise_hash_table_.GetTotalMemoryUsage() > kCacheSize) {
+    InsertIntoConciseHashTableInternal<true>();
+  } else {
+    InsertIntoConciseHashTableInternal<false>();
   }
 }
 
@@ -307,15 +339,7 @@ void JoinHashTable::BuildConciseHashTable() {
 
   concise_hash_table_.SetSize(num_elems());
 
-  for (u64 idx = 0, prefetch_idx = 16; idx < entries_.size();
-       idx++, prefetch_idx++) {
-    if (TPL_LIKELY(prefetch_idx < entries_.size())) {
-      concise_hash_table_.PrefetchSlotGroup<true>(EntryAt(prefetch_idx)->hash);
-    }
-
-    HashTableEntry *entry = EntryAt(idx);
-    concise_hash_table_.Insert(entry, entry->hash);
-  }
+  InsertIntoConciseHashTable();
 
   concise_hash_table_.Build();
 
