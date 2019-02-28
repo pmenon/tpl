@@ -23,7 +23,7 @@ void ConciseHashTable::SetSize(const u32 num_elems) {
   }
 
   u64 capacity = std::max(
-      kMinNumSlots, util::MathUtil::PowerOf2Ceil(num_elems * kLoadFactor));
+      kMinNumSlots, util::MathUtil::PowerOf2Floor(num_elems * kLoadFactor));
   slot_mask_ = capacity - 1;
   num_groups_ = capacity >> kLogSlotsPerGroup;
   slot_groups_ = util::MallocHugeArray<SlotGroup>(num_groups_);

@@ -55,6 +55,9 @@ static constexpr const u32 kBitsPerByte = 8;
 static constexpr const u32 kDefaultVectorSize = 4096;
 
 /// The default prefetch distance to use
-static constexpr const u32 kPrefetchDistance = 10;
+static constexpr const u32 kPrefetchDistance = 16;
+
+/// Default assume 8MB cache size
+static constexpr const u32 kL3CacheSize = 1u << 23;
 
 }  // namespace tpl

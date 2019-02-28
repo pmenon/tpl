@@ -3,6 +3,9 @@
 #include "logging/logger.h"
 #include "util/memory.h"
 
+// TODO(pmenon): Use HLL++ to better estimate size of CHT and GHT
+// TODO(pmenon): Use tagged insertions/probes if no bloom filter exists in GHT
+
 namespace tpl::sql {
 
 JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size,
@@ -11,20 +14,17 @@ JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size,
       concise_hash_table_(0),
       num_elems_(0),
       built_(false),
-      use_concise_ht_(use_concise_ht) {
-  head_.next = nullptr;
-}
+      use_concise_ht_(use_concise_ht) {}
 
-void JoinHashTable::BuildGenericHashTable() {
-  // TODO(pmenon): Use HLL++ sketches to better estimate size
-  // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
-
-  generic_hash_table_.SetSize(num_elems());
-
-  for (u64 idx = 0, prefetch_idx = 16; idx < entries_.size();
+template <bool Prefetch>
+void JoinHashTable::BuildGenericHashTableInternal() noexcept {
+  for (u64 idx = 0, prefetch_idx = kPrefetchDistance; idx < entries_.size();
        idx++, prefetch_idx++) {
-    if (TPL_LIKELY(prefetch_idx < entries_.size())) {
-      generic_hash_table_.PrefetchChainHead<false>(EntryAt(prefetch_idx)->hash);
+    if constexpr (Prefetch) {
+      if (TPL_LIKELY(prefetch_idx < entries_.size())) {
+        auto *prefetch_entry = EntryAt(prefetch_idx);
+        generic_hash_table_.PrefetchChainHead<false>(prefetch_entry->hash);
+      }
     }
 
     HashTableEntry *entry = EntryAt(idx);
@@ -32,20 +32,27 @@ void JoinHashTable::BuildGenericHashTable() {
   }
 }
 
-template <>
-void JoinHashTable::InsertIntoConciseHashTableInternal<false>() noexcept {
-  for (u64 idx = 0; idx < entries_.size(); idx++) {
-    HashTableEntry *entry = EntryAt(idx);
-    concise_hash_table_.Insert(entry, entry->hash);
+void JoinHashTable::BuildGenericHashTable() noexcept {
+  // Setup based on number of buffered build-size tuples
+  generic_hash_table_.SetSize(num_elems());
+
+  // Dispatch to appropriate build code based on GHT size
+  if (generic_hash_table_.GetTotalMemoryUsage() > kL3CacheSize) {
+    BuildGenericHashTableInternal<true>();
+  } else {
+    BuildGenericHashTableInternal<false>();
   }
 }
 
-template <>
-void JoinHashTable::InsertIntoConciseHashTableInternal<true>() noexcept {
-  for (u64 idx = 0, prefetch_idx = 16; idx < entries_.size();
+template <bool Prefetch>
+void JoinHashTable::InsertIntoConciseHashTable() noexcept {
+  for (u64 idx = 0, prefetch_idx = kPrefetchDistance; idx < entries_.size();
        idx++, prefetch_idx++) {
-    if (TPL_LIKELY(prefetch_idx < entries_.size())) {
-      concise_hash_table_.PrefetchSlotGroup<false>(EntryAt(prefetch_idx)->hash);
+    if constexpr (Prefetch) {
+      if (TPL_LIKELY(prefetch_idx < entries_.size())) {
+        auto *prefetch_entry = EntryAt(prefetch_idx);
+        concise_hash_table_.PrefetchSlotGroup<false>(prefetch_entry->hash);
+      }
     }
 
     HashTableEntry *entry = EntryAt(idx);
@@ -53,19 +60,10 @@ void JoinHashTable::InsertIntoConciseHashTableInternal<true>() noexcept {
   }
 }
 
-void JoinHashTable::InsertIntoConciseHashTable() noexcept {
-  // Assume 8MB cache
-  static constexpr const u32 kCacheSize = 1u << 23;
-
-  if (concise_hash_table_.GetTotalMemoryUsage() > kCacheSize) {
-    InsertIntoConciseHashTableInternal<true>();
-  } else {
-    InsertIntoConciseHashTableInternal<false>();
-  }
-}
-
 namespace {
 
+/// A reorder is a small piece of buffer space into which we temporarily buffer
+/// hash table entries for the purposes of reordering them.
 class ReorderBuffer {
  public:
   // Use a 16 KB internal buffer for temporary copies
@@ -74,65 +72,75 @@ class ReorderBuffer {
   ReorderBuffer(util::ChunkedVector &entries, u64 max_elems, u64 begin_read_idx,
                 u64 end_read_idx) noexcept
       : entry_size_(entries.element_size()),
+        buf_idx_(0),
         max_elems_(std::min(max_elems, kBufferSizeInBytes / entry_size_) - 1),
-        buffer_{},
-        buffer_pos_(buffer_),
         temp_buf_(buffer_ + (max_elems_ * entry_size_)),
         read_idx_(begin_read_idx),
         end_read_idx_(end_read_idx),
         entries_(entries) {}
 
+  /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(ReorderBuffer);
 
-  bool Fill() noexcept {
-    while (read_idx_ < end_read_idx_ && buffer_pos_ < temp_buf_) {
-      auto *entry = reinterpret_cast<HashTableEntry *>(entries_[read_idx_++]);
-
-      // Skip buffering processed entries
-      if (entry->cht_slot.IsProcessed()) {
-        continue;
-      }
-
-      // Copy and mark original entry as buffered
-      std::memcpy(buffer_pos_, entry, entry_size_);
-      entry->cht_slot.SetBuffered(true);
-
-      // Bump pointer
-      buffer_pos_ += entry_size_;
-    }
-
-    return buffer_pos_ > buffer_;
+  /// Retrieve an entry by index
+  template <typename T = byte>
+  T *BufEntryAt(u64 idx) {
+    return reinterpret_cast<T *>(buffer_ + (idx * entry_size_));
   }
 
-  void Reset(byte *write_pos) noexcept { buffer_pos_ = write_pos; }
+  /// Fill the buffer with unprocessed entries
+  bool Fill() {
+    while (buf_idx_ < max_elems_ && read_idx_ < end_read_idx_) {
+      auto *entry = reinterpret_cast<HashTableEntry *>(entries_[read_idx_++]);
+      if (!entry->cht_slot.IsProcessed()) {
+        byte *const buf_space = BufEntryAt(buf_idx_++);
+        std::memcpy(buf_space, static_cast<void *>(entry), entry_size_);
+        entry->cht_slot.SetBuffered(true);
+      }
+    }
 
-  byte *buffer_begin() noexcept { return buffer_; }
+    return buf_idx_ > 0;
+  }
 
-  byte *buffer_end() noexcept { return buffer_pos_; }
+  /// Reset the index where the next buffered item goes
+  void Reset(const u64 new_buf_idx) noexcept { buf_idx_ = new_buf_idx; }
 
-  byte *temp_buffer() const noexcept { return temp_buf_; }
+  // -------------------------------------------------------
+  // Accessors
+  // -------------------------------------------------------
+
+  u64 num_entries() const { return buf_idx_; }
+
+  byte *temp_buffer() const { return temp_buf_; }
 
  private:
   // Size of entries
   const u64 entry_size_;
+
+  // Buffer space for entries
+  byte buffer_[kBufferSizeInBytes];
+
+  // The index into the buffer where the next element is written
+  u64 buf_idx_;
+
   // The maximum number of elements to buffer
   const u64 max_elems_;
-
-  // Buffer space for entries and a pointer into the space for the next entry
-  byte buffer_[kBufferSizeInBytes];
-  byte *buffer_pos_;
 
   // A pointer to the last entry slot in the buffer space; used for costly swaps
   byte *const temp_buf_;
 
-  // The current and maximum index to read from in the entries list
+  // The index of the next element to read from the entries list
   u64 read_idx_;
+
+  // The exclusive upper bound index to read from the entries list
   const u64 end_read_idx_;
+
   util::ChunkedVector &entries_;
 };
 
 }  // namespace
 
+template <bool PrefetchCHT, bool PrefetchEntries>
 void JoinHashTable::ReorderMainEntries() noexcept {
   const u64 elem_size = entries_.element_size();
   const u64 num_overflow_entries = concise_hash_table_.num_overflow();
@@ -171,29 +179,36 @@ void JoinHashTable::ReorderMainEntries() noexcept {
   ReorderBuffer reorder_buf(entries_, kDefaultVectorSize, 0, overflow_idx);
 
   while (reorder_buf.Fill()) {
-    u64 idx = 0;
-    for (auto buf_pos = reorder_buf.buffer_begin(),
-              buf_end = reorder_buf.buffer_end();
-         buf_pos != buf_end; buf_pos += elem_size, idx++) {
-      HashTableEntry *entry = reinterpret_cast<HashTableEntry *>(buf_pos);
+    const u64 num_buf_entries = reorder_buf.num_entries();
+
+    for (u64 idx = 0, prefetch_idx = idx + kPrefetchDistance;
+         idx < num_buf_entries; idx++, prefetch_idx++) {
+      if constexpr (PrefetchCHT) {
+        // Prefetch the CHT slot
+        if (TPL_LIKELY(prefetch_idx < num_buf_entries)) {
+          auto *pf_entry = reorder_buf.BufEntryAt<HashTableEntry>(prefetch_idx);
+          concise_hash_table_.PrefetchSlotGroup<true>(pf_entry->hash);
+        }
+      }
+
+      const auto *const entry = reorder_buf.BufEntryAt<HashTableEntry>(idx);
       u64 dest_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot);
       targets[idx] = EntryAt(dest_idx);
     }
 
-    const u64 found = idx;
-    u32 prefetch_idx = kPrefetchDistance;
-    idx = 0;
+    u64 buf_write_idx = 0;
+    for (u64 idx = 0, prefetch_idx = idx + kPrefetchDistance;
+         idx < num_buf_entries; idx++, prefetch_idx++) {
+      if constexpr (PrefetchEntries) {
+        // Prefetch the destination entries
+        if (TPL_LIKELY(prefetch_idx < num_buf_entries)) {
+          util::Prefetch<false, Locality::Low>(targets[prefetch_idx]);
+        }
+      }
 
-    byte *buf_write_pos = reorder_buf.buffer_begin();
-    for (auto buf_pos = reorder_buf.buffer_begin(),
-              buf_end = reorder_buf.buffer_end();
-         buf_pos != buf_end; buf_pos += elem_size, idx++) {
+      const byte *const buf_entry = reorder_buf.BufEntryAt(idx);
       HashTableEntry *dest = targets[idx];
       bool result = true;
-
-      if (TPL_LIKELY(prefetch_idx < found)) {
-        util::Prefetch<false, Locality::Medium>(targets[prefetch_idx++]);
-      }
 
       if (dest->cht_slot.IsProcessed()) {
         dest = EntryAt(overflow_idx++);
@@ -201,26 +216,26 @@ void JoinHashTable::ReorderMainEntries() noexcept {
       }
 
       if (dest->cht_slot.IsBuffered()) {
-        std::memcpy(static_cast<void *>(dest), buf_pos, elem_size);
-      } else if (buf_write_pos < buf_pos) {
-        std::memcpy(buf_write_pos, static_cast<void *>(dest), elem_size);
-        std::memcpy(static_cast<void *>(dest), buf_pos, elem_size);
-        buf_write_pos += elem_size;
+        std::memcpy(static_cast<void *>(dest), buf_entry, elem_size);
+      } else if (buf_write_idx < idx) {
+        std::memcpy(reorder_buf.BufEntryAt(buf_write_idx++),
+                    static_cast<void *>(dest), elem_size);
+        std::memcpy(static_cast<void *>(dest), buf_entry, elem_size);
       } else {
         byte *const tmp = reorder_buf.temp_buffer();
         std::memcpy(tmp, static_cast<void *>(dest), elem_size);
-        std::memcpy(static_cast<void *>(dest), buf_pos, elem_size);
-        std::memcpy(buf_pos, tmp, elem_size);
-        buf_write_pos += elem_size;
+        std::memcpy(static_cast<void *>(dest), buf_entry, elem_size);
+        std::memcpy(reorder_buf.BufEntryAt(buf_write_idx++), tmp, elem_size);
       }
 
       dest->cht_slot.SetProcessed(result);
     }
 
-    reorder_buf.Reset(buf_write_pos);
+    reorder_buf.Reset(buf_write_idx);
   }
 }
 
+template <bool PrefetchCHT, bool PrefetchEntries>
 void JoinHashTable::ReorderOverflowEntries() noexcept {
   const u64 elem_size = entries_.element_size();
   const u64 num_overflow_entries = concise_hash_table_.num_overflow();
@@ -233,23 +248,53 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
   }
 
   //
+  // General idea:
+  // -------------
   // This function reorders the overflow entries in-place. The high-level idea
   // is to reorder the entries stored in the overflow area so that probe chains
-  // are stored contiguously.
+  // are stored contiguously. We also need to hook up the 'next' entries from
+  // the main arena to the overflow arena
   //
 
   HashTableEntry *parents[kDefaultVectorSize];
+
+  //
+  // Step 1:
+  // -------
+  // For each main entry, we maintain an "overflow count" which also acts as an
+  // index in the entries array where overflow elements for the entry belongs.
+  // We begin by clearing these counts (which were modified earlier when
+  // rearranging the main entries).
+  //
 
   for (u64 idx = 0; idx < num_main_entries; idx++) {
     EntryAt(idx)->overflow_count = 0;
   }
 
+  //
+  // Step 2:
+  // -------
+  // Now we iterate over the overflow entries (in vectors) and update the
+  // the overflow count for their main entry parents. At the end of this process
+  // if a main entry has an overflow chain the "overflow count" will count the
+  // length of the chain.
+  //
+
   for (u64 start = overflow_start_idx; start < entries_.size();
        start += kDefaultVectorSize) {
-    u64 vec_size = std::min(u64{kDefaultVectorSize}, entries_.size() - start);
-    u64 end = start + vec_size;
+    const u64 vec_size =
+        std::min(u64{kDefaultVectorSize}, entries_.size() - start);
+    const u64 end = start + vec_size;
 
-    for (u64 idx = start, write_idx = 0; idx < end; idx++, write_idx++) {
+    for (u64 idx = start, write_idx = 0, prefetch_idx = idx + kPrefetchDistance;
+         idx < end; idx++, write_idx++, prefetch_idx++) {
+      if constexpr (PrefetchCHT) {
+        if (TPL_LIKELY(prefetch_idx < end)) {
+          HashTableEntry *prefetch_entry = EntryAt(prefetch_idx);
+          concise_hash_table_.NumFilledSlotsBefore(prefetch_entry->cht_slot);
+        }
+      }
+
       HashTableEntry *entry = EntryAt(idx);
       u64 chain_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot);
       parents[write_idx] = EntryAt(chain_idx);
@@ -260,6 +305,16 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
     }
   }
 
+  //
+  // Step 3:
+  // -------
+  // Now we iterate over all the main entries and compute a prefix sum of the
+  // overflow counts. At the end of this process, if a main entry has an
+  // overflow, the "overflow count" will be one greater than the index of the
+  // last overflow entry in the overflow chain. We use these indexes in the last
+  // step when assigning overflow entries to their final locations.
+  //
+
   for (u64 idx = 0, count = 0; idx < num_main_entries; idx++) {
     HashTableEntry *entry = EntryAt(idx);
     count += entry->overflow_count;
@@ -267,44 +322,71 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
         (entry->overflow_count == 0 ? no_overflow : num_main_entries + count);
   }
 
+  //
+  // Step 4:
+  // ------
+  //
+
   ReorderBuffer reorder_buf(entries_, kDefaultVectorSize, overflow_start_idx,
                             entries_.size());
   while (reorder_buf.Fill()) {
-    u64 idx = 0;
-    for (auto iter = reorder_buf.buffer_begin(), end = reorder_buf.buffer_end();
-         iter != end; iter += elem_size, idx++) {
-      HashTableEntry *entry = reinterpret_cast<HashTableEntry *>(iter);
+    const u64 num_buf_entries = reorder_buf.num_entries();
+
+    // For each overflow entry, find its main entry parent in the overflow chain
+    for (u64 idx = 0, prefetch_idx = idx + kPrefetchDistance;
+         idx < num_buf_entries; idx++, prefetch_idx++) {
+      if constexpr (PrefetchCHT) {
+        // Prefetch the CHT slot
+        if (TPL_LIKELY(prefetch_idx < num_buf_entries)) {
+          auto *pf_entry = reorder_buf.BufEntryAt<HashTableEntry>(prefetch_idx);
+          concise_hash_table_.PrefetchSlotGroup<true>(pf_entry->hash);
+        }
+      }
+
+      auto *entry = reorder_buf.BufEntryAt<HashTableEntry>(idx);
       u64 dest_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot);
       parents[idx] = EntryAt(dest_idx);
     }
 
-    idx = 0;
+    // For each overflow entry, look at the overflow count in its main parent
+    // to acquire a slot in the overflow arena.
+    u64 buf_write_idx = 0;
+    for (u64 idx = 0, prefetch_idx = idx + kPrefetchDistance;
+         idx < num_buf_entries; idx++, prefetch_idx++) {
+      if constexpr (PrefetchEntries) {
+        // Prefetch the destination entries
+        if (TPL_LIKELY(prefetch_idx < num_buf_entries)) {
+          util::Prefetch<false, Locality::Low>(parents[prefetch_idx]);
+        }
+      }
 
-    byte *buf_write_pos = reorder_buf.buffer_begin();
-    for (auto buf_pos = reorder_buf.buffer_begin(),
-              buf_end = reorder_buf.buffer_end();
-         buf_pos != buf_end; buf_pos += elem_size, idx++) {
+      const byte *const buf_entry = reorder_buf.BufEntryAt(idx);
       HashTableEntry *target = EntryAt(--parents[idx]->overflow_count);
 
       if (target->cht_slot.IsBuffered()) {
-        std::memcpy(static_cast<void *>(target), buf_pos, elem_size);
-      } else if (buf_write_pos < buf_pos) {
-        std::memcpy(buf_write_pos, static_cast<void *>(target), elem_size);
-        std::memcpy(static_cast<void *>(target), buf_pos, elem_size);
-        buf_write_pos += elem_size;
+        std::memcpy(static_cast<void *>(target), buf_entry, elem_size);
+      } else if (buf_write_idx < idx) {
+        std::memcpy(reorder_buf.BufEntryAt(buf_write_idx++),
+                    static_cast<void *>(target), elem_size);
+        std::memcpy(static_cast<void *>(target), buf_entry, elem_size);
       } else {
         byte *const tmp = reorder_buf.temp_buffer();
         std::memcpy(tmp, static_cast<void *>(target), elem_size);
-        std::memcpy(static_cast<void *>(target), buf_pos, elem_size);
-        std::memcpy(buf_write_pos, tmp, elem_size);
-        buf_write_pos += elem_size;
+        std::memcpy(static_cast<void *>(target), buf_entry, elem_size);
+        std::memcpy(reorder_buf.BufEntryAt(buf_write_idx++), tmp, elem_size);
       }
 
       target->cht_slot.SetProcessed(true);
     }
 
-    reorder_buf.Reset(buf_write_pos);
+    reorder_buf.Reset(buf_write_idx);
   }
+
+  //
+  // Final chain hookup. At this point, if an entry in the main arena has an
+  // overflow chain, the "overflow count" field will contain the index of the
+  // first entry in the overflow chain in the overflow arena.
+  //
 
   for (u64 idx = 0; idx < num_main_entries; idx++) {
     HashTableEntry *entry = EntryAt(idx);
@@ -334,27 +416,48 @@ void JoinHashTable::VerifyOverflowEntryOrder() noexcept {
 #endif
 }
 
-void JoinHashTable::BuildConciseHashTable() {
-  // TODO(pmenon): Use HLL++ sketches to better estimate size
+template <bool PrefetchCHT, bool PrefetchEntries>
+void JoinHashTable::BuildConciseHashTableInternal() noexcept {
+  // Insert all elements
+  InsertIntoConciseHashTable<PrefetchCHT>();
 
-  concise_hash_table_.SetSize(num_elems());
-
-  InsertIntoConciseHashTable();
-
+  // Build
   concise_hash_table_.Build();
 
-  LOG_DEBUG(
+  LOG_INFO(
       "Concise Table Stats: {} entries, {} overflow ({} % overflow)",
       entries_.size(), concise_hash_table_.num_overflow(),
       100.0 * (concise_hash_table_.num_overflow() * 1.0 / entries_.size()));
 
-  ReorderMainEntries();
+  // Reorder all the main entries in place according to CHT order
+  ReorderMainEntries<PrefetchCHT, PrefetchEntries>();
 
+  // Verify (no-op in debug)
   VerifyMainEntryOrder();
 
-  ReorderOverflowEntries();
+  // Reorder all the overflow entries in place according to CHT order
+  ReorderOverflowEntries<PrefetchCHT, PrefetchEntries>();
 
+  // Verify (no-op in debug)
   VerifyOverflowEntryOrder();
+}
+
+void JoinHashTable::BuildConciseHashTable() noexcept {
+  // Setup based on number of buffered build-size tuples
+  concise_hash_table_.SetSize(num_elems());
+
+  // Dispatch to internal function based on prefetching requirements. If the CHT
+  // is larger than L3 then the total size of all buffered build-side tuples is
+  // also larger than L3; in this case prefetch from both when building the CHT.
+  // If the CHT fits in cache, it's still possible that build tuples do not.
+
+  if (concise_hash_table_.GetTotalMemoryUsage() > kL3CacheSize) {
+    BuildConciseHashTableInternal<true, true>();
+  } else if (GetTotalBufferedTupleMemoryUsage() > kL3CacheSize) {
+    BuildConciseHashTableInternal<false, true>();
+  } else {
+    BuildConciseHashTableInternal<false, false>();
+  }
 }
 
 void JoinHashTable::Build() {

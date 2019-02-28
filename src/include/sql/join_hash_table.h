@@ -43,18 +43,31 @@ class JoinHashTable {
   void LookupBatch(u32 num_tuples, const hash_t hashes[],
                    const HashTableEntry *results[]) const;
 
+  /// Return the amount of memory the buffered tuples occupy
+  u64 GetTotalBufferedTupleMemoryUsage() const noexcept {
+    return entries_.size() * entries_.element_size();
+  }
+
+  /// Return the total size of the join hash table in bytes
+  u64 GetTotalMemoryUsage() const noexcept {
+    const u64 tuples_mem_usage = GetTotalBufferedTupleMemoryUsage();
+    return tuples_mem_usage + (use_concise_hash_table()
+                                   ? concise_hash_table_.GetTotalMemoryUsage()
+                                   : generic_hash_table_.GetTotalMemoryUsage());
+  }
+
   // -------------------------------------------------------
   // Simple Accessors
   // -------------------------------------------------------
 
   /// Return the total number of inserted elements, including duplicates
-  u32 num_elems() const { return num_elems_; }
+  u32 num_elems() const noexcept { return num_elems_; }
 
   /// Has the hash table been built?
-  bool is_built() const { return built_; }
+  bool is_built() const noexcept { return built_; }
 
   /// Is this join using a concise hash table?
-  bool use_concise_hash_table() const { return use_concise_ht_; }
+  bool use_concise_hash_table() const noexcept { return use_concise_ht_; }
 
  public:
   // -------------------------------------------------------
@@ -87,15 +100,22 @@ class JoinHashTable {
   }
 
   // Dispatched from Build() to build either a generic or concise hash table
-  void BuildGenericHashTable();
-  void BuildConciseHashTable();
+  void BuildGenericHashTable() noexcept;
+  void BuildConciseHashTable() noexcept;
 
-  // Dispatched from BuildConciseHashTable() to reorder elements based on
-  // ordering from the concise hash table
+  // Dispatched from BuildGenericHashTable()
+  template <bool Prefetch>
+  void BuildGenericHashTableInternal() noexcept;
+
+  // Dispatched from BuildConciseHashTable() to construct the concise hash table
+  // and to reorder buffered build tuples in place according to the CHT
+  template <bool PrefetchCHT, bool PrefetchEntries>
+  void BuildConciseHashTableInternal() noexcept;
+  template <bool Prefetch>
   void InsertIntoConciseHashTable() noexcept;
-  template <bool PREFETCH>
-  void InsertIntoConciseHashTableInternal() noexcept;
+  template <bool PrefetchCHT, bool PrefetchEntries>
   void ReorderMainEntries() noexcept;
+  template <bool Prefetch, bool PrefetchEntries>
   void ReorderOverflowEntries() noexcept;
   void VerifyMainEntryOrder() noexcept;
   void VerifyOverflowEntryOrder() noexcept;
@@ -120,9 +140,6 @@ class JoinHashTable {
   // The bloom filter
   BloomFilter bloom_filter_;
 
-  // The head of the lazy insertion list
-  HashTableEntry head_;
-
   // The number of elements inserted
   u32 num_elems_;
 
@@ -137,11 +154,10 @@ class JoinHashTable {
 // JoinHashTable implementation
 // ---------------------------------------------------------
 
-inline byte *JoinHashTable::AllocInputTuple(hash_t hash) {
+inline byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
   auto *entry = reinterpret_cast<HashTableEntry *>(entries_.append());
   entry->hash = hash;
-  entry->next = head_.next;
-  head_.next = entry;
+  entry->next = nullptr;
 
   num_elems_++;
 
