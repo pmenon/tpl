@@ -15,6 +15,7 @@
 #include "sema/sema.h"
 #include "sql/catalog.h"
 #include "tpl.h"
+#include "util/cpu_info.h"
 #include "util/timer.h"
 #include "vm/bytecode_generator.h"
 #include "vm/bytecode_module.h"
@@ -155,6 +156,8 @@ static void RunFile(const std::string &filename) {
 
 /// Initialize all TPL subsystems
 void InitTPL() {
+  tpl::util::CpuInfo::Init();
+
   tpl::logging::InitLogger();
 
   tpl::sql::Catalog::Instance();

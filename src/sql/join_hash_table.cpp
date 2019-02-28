@@ -1,6 +1,7 @@
 #include "sql/join_hash_table.h"
 
 #include "logging/logger.h"
+#include "util/cpu_info.h"
 #include "util/memory.h"
 
 // TODO(pmenon): Use HLL++ to better estimate size of CHT and GHT
@@ -37,7 +38,8 @@ void JoinHashTable::BuildGenericHashTable() noexcept {
   generic_hash_table_.SetSize(num_elems());
 
   // Dispatch to appropriate build code based on GHT size
-  if (generic_hash_table_.GetTotalMemoryUsage() > kL3CacheSize) {
+  u64 l3_cache_size = util::CpuInfo::GetCacheSize(util::CpuInfo::L3_CACHE);
+  if (generic_hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
     BuildGenericHashTableInternal<true>();
   } else {
     BuildGenericHashTableInternal<false>();
@@ -451,9 +453,10 @@ void JoinHashTable::BuildConciseHashTable() noexcept {
   // also larger than L3; in this case prefetch from both when building the CHT.
   // If the CHT fits in cache, it's still possible that build tuples do not.
 
-  if (concise_hash_table_.GetTotalMemoryUsage() > kL3CacheSize) {
+  u64 l3_cache_size = util::CpuInfo::GetCacheSize(util::CpuInfo::L3_CACHE);
+  if (concise_hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
     BuildConciseHashTableInternal<true, true>();
-  } else if (GetTotalBufferedTupleMemoryUsage() > kL3CacheSize) {
+  } else if (GetTotalBufferedTupleMemoryUsage() > l3_cache_size) {
     BuildConciseHashTableInternal<false, true>();
   } else {
     BuildConciseHashTableInternal<false, false>();
