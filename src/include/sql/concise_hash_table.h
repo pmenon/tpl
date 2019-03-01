@@ -54,6 +54,9 @@ class ConciseHashTable {
   /// Return the number of occupied slots in the table **before** the given slot
   u64 NumFilledSlotsBefore(ConciseHashTableSlot slot) const;
 
+  /// Lookup the slot for the given hash
+  std::pair<bool, u64> Lookup(hash_t hash) const;
+
   // -------------------------------------------------------
   // Utility Operations
   // -------------------------------------------------------
@@ -147,13 +150,26 @@ inline u64 ConciseHashTable::NumFilledSlotsBefore(
     const ConciseHashTableSlot slot) const {
   TPL_ASSERT(is_built(), "Table must be built");
 
-  const u64 slot_idx = slot.GetSlotIndex();
+  const u64 group_idx = slot >> kLogSlotsPerGroup;
+  const u64 bit_idx = slot & kGroupBitMask;
+
+  const SlotGroup *slot_group = slot_groups_ + group_idx;
+  const u64 bits_after_slot = slot_group->bits & (u64(-1) << bit_idx);
+  return slot_group->count - util::BitUtil::CountBits(bits_after_slot);
+}
+
+inline std::pair<bool, u64> ConciseHashTable::Lookup(const hash_t hash) const {
+  const u64 slot_idx = hash & slot_mask_;
   const u64 group_idx = slot_idx >> kLogSlotsPerGroup;
   const u64 bit_idx = slot_idx & kGroupBitMask;
 
   const SlotGroup *slot_group = slot_groups_ + group_idx;
   const u64 bits_after_slot = slot_group->bits & (u64(-1) << bit_idx);
-  return slot_group->count - util::BitUtil::CountBits(bits_after_slot);
+
+  const bool exists = slot_group->bits & (1ull << bit_idx);
+  const u64 pos = slot_group->count - util::BitUtil::CountBits(bits_after_slot);
+
+  return std::pair(exists, pos);
 }
 
 }  // namespace tpl::sql

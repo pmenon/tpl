@@ -83,23 +83,26 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
   EXPECT_EQ(num_tuples, GenericTableFor(&join_hash_table)->num_elements());
 }
 
-TEST_F(JoinHashTableTest, UniqueKeyLookupTest) {
-  // Test data
-  const u32 num_tuples = 10;
-
+template <bool UseConciseHashTable>
+void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
+  //
   // The join table
-  JoinHashTable join_hash_table(region(), sizeof(Tuple));
+  //
 
-  // Some inserts of unique keys
-  for (u32 i = 0; i < num_tuples; i++) {
-    auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
-    auto *space = join_hash_table.AllocInputTuple(hash_val);
-    auto *tuple = reinterpret_cast<Tuple *>(space);
+  util::Region region("temp");
+  JoinHashTable join_hash_table(&region, sizeof(Tuple), UseConciseHashTable);
 
-    tuple->a = i + 0;
-    tuple->b = i + 1;
-    tuple->c = i + 2;
-    tuple->d = i + 3;
+  //
+  // Some inserts
+  //
+
+  for (u32 rep = 0; rep < dup_scale_factor; rep++) {
+    for (u32 i = 0; i < num_tuples; i++) {
+      auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
+      auto *space = join_hash_table.AllocInputTuple(hash_val);
+      auto *tuple = reinterpret_cast<Tuple *>(space);
+      tuple->a = i;
+    }
   }
 
   //
@@ -117,19 +120,15 @@ TEST_F(JoinHashTableTest, UniqueKeyLookupTest) {
     Tuple probe_tuple = {i, 0, 0, 0};
     u32 count = 0;
     HashTableEntry *entry = nullptr;
-    for (auto iter = join_hash_table.Lookup(hash_val);
+    for (auto iter = join_hash_table.Lookup<UseConciseHashTable>(hash_val);
          (entry = iter.NextMatch(TupleKeyEq, nullptr, (void *)&probe_tuple));) {
-      // Check contents
       auto *matched = reinterpret_cast<Tuple *>(entry->payload);
-      EXPECT_EQ(i + 0, matched->a);
-      EXPECT_EQ(i + 1, matched->b);
-      EXPECT_EQ(i + 2, matched->c);
-      EXPECT_EQ(i + 3, matched->d);
+      EXPECT_EQ(i, matched->a);
       count++;
     }
-    EXPECT_EQ(1u, count)
-        << "Expected to find only a single match for unique keys, but key ["
-        << i << "] found " << count << " matches";
+    EXPECT_EQ(dup_scale_factor, count)
+        << "Expected to find " << dup_scale_factor << " matches, but key [" << i
+        << "] found " << count << " matches";
   }
 
   //
@@ -139,7 +138,7 @@ TEST_F(JoinHashTableTest, UniqueKeyLookupTest) {
   for (u32 i = num_tuples; i < num_tuples + 1000; i++) {
     auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
     Tuple probe_tuple = {i, 0, 0, 0};
-    for (auto iter = join_hash_table.Lookup(hash_val);
+    for (auto iter = join_hash_table.Lookup<UseConciseHashTable>(hash_val);
          iter.NextMatch(TupleKeyEq, nullptr, (void *)&probe_tuple);) {
       FAIL() << "Should not find any matches for key [" << i
              << "] that was not inserted into the join hash table";
@@ -147,74 +146,20 @@ TEST_F(JoinHashTableTest, UniqueKeyLookupTest) {
   }
 }
 
+TEST_F(JoinHashTableTest, UniqueKeyLookupTest) {
+  BuildAndProbeTest<false>(400, 1);
+}
+
 TEST_F(JoinHashTableTest, DuplicateKeyLookupTest) {
-  // Test data
-  const u32 num_tuples = 10;
-  const u32 num_dups = 5;
-
-  // The join table
-  JoinHashTable join_hash_table(region(), sizeof(Tuple));
-
-  // Some inserts with repetitions
-  for (u32 rep = 0; rep < num_dups; rep++) {
-    for (u32 i = 0; i < num_tuples; i++) {
-      auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
-      auto *space = join_hash_table.AllocInputTuple(hash_val);
-      auto *tuple = reinterpret_cast<Tuple *>(space);
-
-      tuple->a = i + 0;
-      tuple->b = i + 1;
-      tuple->c = i + 2;
-      tuple->d = i + 3;
-    }
-  }
-
-  join_hash_table.Build();
-
-  //
-  // Do some successful lookups
-  //
-
-  for (u32 i = 0; i < num_tuples; i++) {
-    auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
-    Tuple probe_tuple = {i, 0, 0, 0};
-    u32 count = 0;
-    for (auto iter = join_hash_table.Lookup(hash_val);
-         iter.NextMatch(TupleKeyEq, nullptr, (void *)&probe_tuple);) {
-      count++;
-    }
-    EXPECT_EQ(num_dups, count) << "Find " << count << " matches for key [" << i
-                               << "], expected " << num_dups;
-  }
+  BuildAndProbeTest<false>(400, 5);
 }
 
 TEST_F(JoinHashTableTest, UniqueKeyConciseTableTest) {
-  // Test data
-  const u32 num_tuples = 400;
+  BuildAndProbeTest<true>(400, 1);
+}
 
-  // The join table
-  JoinHashTable join_hash_table(region(), sizeof(Tuple), true);
-
-  //
-  // Some inserts
-  //
-
-  for (u32 i = 0; i < num_tuples; i++) {
-    auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
-    auto *space = join_hash_table.AllocInputTuple(hash_val);
-    auto *tuple = reinterpret_cast<Tuple *>(space);
-
-    tuple->a = i + 0;
-    tuple->b = i + 1;
-    tuple->c = i + 2;
-    tuple->d = i + 3;
-  }
-
-  //
-  // Build
-  //
-
-  join_hash_table.Build();
+TEST_F(JoinHashTableTest, DuplicateKeyLookupConciseTableTest) {
+  BuildAndProbeTest<true>(400, 5);
 }
 
 TEST_F(JoinHashTableTest, DISABLED_PerfTest) {
@@ -259,7 +204,7 @@ TEST_F(JoinHashTableTest, DISABLED_PerfTest) {
     LOG_INFO("Insert+Build: {} ms ({:.2f} Mtps)", timer.elapsed(), mtps);
   };
 
-  bench(false, num_tuples);
+  // bench(false, num_tuples);
   bench(true, num_tuples);
 }
 

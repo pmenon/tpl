@@ -32,9 +32,11 @@ class JoinHashTable {
   /// been built, do nothing.
   void Build();
 
+  /// The tuple-at-a-time iterator
   class Iterator;
 
   /// Lookup a single entry with hash value \a hash returning an iterator
+  template <bool UseCHT>
   Iterator Lookup(hash_t hash) const;
 
   /// Perform a vectorized lookup
@@ -162,11 +164,21 @@ inline byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
   return entry->payload;
 }
 
-inline JoinHashTable::Iterator JoinHashTable::Lookup(const hash_t hash) const {
+template <>
+inline JoinHashTable::Iterator JoinHashTable::Lookup<false>(
+    const hash_t hash) const {
   HashTableEntry *entry = generic_hash_table_.FindChainHead(hash);
   while (entry != nullptr && entry->hash != hash) {
     entry = entry->next;
   }
+  return JoinHashTable::Iterator(entry, hash);
+}
+
+template <>
+inline JoinHashTable::Iterator JoinHashTable::Lookup<true>(
+    const hash_t hash) const {
+  const auto [found, idx] = concise_hash_table_.Lookup(hash);
+  auto *entry = (found ? (HashTableEntry *)entries_[idx] : nullptr);
   return JoinHashTable::Iterator(entry, hash);
 }
 
