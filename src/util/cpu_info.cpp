@@ -7,32 +7,48 @@
 #include <fstream>
 #include <sstream>
 
-namespace tpl::util {
-
-bool CpuInfo::kInitialized_ = false;
-u32 CpuInfo::kNumCores_ = 0;
-std::string CpuInfo::kModelName_;
-double CpuInfo::kCpuMhz_ = 0;
-u32 CpuInfo::kCacheSizes_[CpuInfo::kNumCacheLevels];
-u32 CpuInfo::kCacheLineSizes_[CpuInfo::kNumCacheLevels];
-InlinedBitVector<64> CpuInfo::kHardwareFlags_;
+namespace tpl {
 
 struct {
   CpuInfo::Feature feature;
   llvm::SmallVector<const char *, 4> names;
-} interested_flags[] = {
+} features[] = {
     {CpuInfo::SSE_4_2, {"sse4_2"}},
     {CpuInfo::AVX, {"avx"}},
     {CpuInfo::AVX2, {"avx2"}},
     {CpuInfo::AVX512, {"avx512f", "avx512cd"}},
 };
 
-void ParseCpuFlags(UNUSED llvm::StringRef flags) {}
+void CpuInfo::ParseCpuFlags(llvm::StringRef flags) {
+  for (const auto &[feature, names] : features) {
+    bool has_feature = true;
+
+    // Check if all feature flag names exist in the flags string. Only if all
+    // exist do we claim the whole feature exists.
+    for (const auto &name : names) {
+      if (!flags.contains(name)) {
+        has_feature = false;
+        break;
+      }
+    }
+
+    // Set or don't
+    if (has_feature) {
+      hardware_flags_.Set(feature);
+    } else {
+      hardware_flags_.Unset(feature);
+    }
+
+  }
+}
+
+CpuInfo::CpuInfo() {
+  InitCpuInfo();
+  InitCacheInfo();
+}
 
 void CpuInfo::InitCpuInfo() {
-  TPL_ASSERT(!kInitialized_, "Should not call post-initialization");
-
-#ifdef __APPLE__f
+#ifdef __APPLE__
 #error "Fix me"
 #else
   // On linux, just read /proc/cpuinfo
@@ -45,13 +61,13 @@ void CpuInfo::InitCpuInfo() {
     value = value.trim(" ");
 
     if (name.startswith("processor")) {
-      kNumCores_++;
+      num_cores_++;
     } else if (name.startswith("model")) {
-      kModelName_ = value.str();
+      model_name_ = value.str();
     } else if (name.startswith("cpu MHz")) {
       double cpu_mhz;
       value.getAsDouble(cpu_mhz);
-      kCpuMhz_ = std::max(kCpuMhz_, cpu_mhz);
+      cpu_mhz_ = std::max(cpu_mhz_, cpu_mhz);
     } else if (name.startswith("flags")) {
       ParseCpuFlags(value);
     }
@@ -60,49 +76,44 @@ void CpuInfo::InitCpuInfo() {
 }
 
 void CpuInfo::InitCacheInfo() {
-  TPL_ASSERT(!kInitialized_, "Should not call post-initialization");
-
   // Use sysconf to determine cache sizes
-  kCacheSizes_[L1_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL1_DCACHE_SIZE));
-  kCacheSizes_[L2_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL2_CACHE_SIZE));
-  kCacheSizes_[L3_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL3_CACHE_SIZE));
+  cache_sizes_[L1_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL1_DCACHE_SIZE));
+  cache_sizes_[L2_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL2_CACHE_SIZE));
+  cache_sizes_[L3_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL3_CACHE_SIZE));
 
-  kCacheLineSizes_[L1_CACHE] =
+  cache_line_sizes_[L1_CACHE] =
       static_cast<u32>(sysconf(_SC_LEVEL1_DCACHE_LINESIZE));
-  kCacheLineSizes_[L2_CACHE] =
+  cache_line_sizes_[L2_CACHE] =
       static_cast<u32>(sysconf(_SC_LEVEL2_CACHE_LINESIZE));
-  kCacheLineSizes_[L3_CACHE] =
+  cache_line_sizes_[L3_CACHE] =
       static_cast<u32>(sysconf(_SC_LEVEL3_CACHE_LINESIZE));
 }
 
-void CpuInfo::Init() {
-  if (kInitialized_) {
-    return;
-  }
-
-  // Initialize each component sequentially
-  InitCpuInfo();
-  InitCacheInfo();
-
-  // Mark done
-  kInitialized_ = true;
-}
-
-std::string CpuInfo::PrettyPrintInfo() {
+std::string CpuInfo::PrettyPrintInfo() const {
   std::stringstream ss;
 
   // clang-format off
-  ss << "CPU Info:" << std::endl;
-  ss << "  Model: " << kModelName_ << std::endl;
-  ss << "  Cores: " << kNumCores_ << std::endl;
-  ss << "  Mhz:   " << kCpuMhz_ << std::endl;
-  ss << "  Caches: " << kNumCacheLevels << std::endl;
-  ss << "    L1: " << (kCacheSizes_[L1_CACHE] / 1024.0) << " KB (" << kCacheLineSizes_[L1_CACHE] << " byte line)" << std::endl;
-  ss << "    L2: " << (kCacheSizes_[L2_CACHE] / 1024.0) << " KB (" << kCacheLineSizes_[L2_CACHE] << " byte line)" << std::endl;
-  ss << "    L3: " << (kCacheSizes_[L3_CACHE] / 1024.0) << " KB (" << kCacheLineSizes_[L3_CACHE] << " byte line)" << std::endl;
+  ss << "CPU Info: " << std::endl;
+  ss << "  Model:  " << model_name_ << std::endl;
+  ss << "  Cores:  " << num_cores_ << std::endl;
+  ss << "  Mhz:    " << cpu_mhz_ << std::endl;
+  ss << "  Caches: " << std::endl;
+  ss << "    L1: " << (cache_sizes_[L1_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L1_CACHE] << " byte line)" << std::endl;
+  ss << "    L2: " << (cache_sizes_[L2_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L2_CACHE] << " byte line)" << std::endl;
+  ss << "    L3: " << (cache_sizes_[L3_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L3_CACHE] << " byte line)" << std::endl;
   // clang-format on
+
+  ss << "Features: ";
+  for (const auto &[feature, names] : features) {
+    if (HasFeature(feature)) {
+      for (const auto &name : names) {
+        ss << name << " ";
+      }
+    }
+  }
+  ss << std::endl;
 
   return ss.str();
 }
 
-}  // namespace tpl::util
+}  // namespace tpl

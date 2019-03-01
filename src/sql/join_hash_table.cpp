@@ -38,7 +38,7 @@ void JoinHashTable::BuildGenericHashTable() noexcept {
   generic_hash_table_.SetSize(num_elems());
 
   // Dispatch to appropriate build code based on GHT size
-  u64 l3_cache_size = util::CpuInfo::GetCacheSize(util::CpuInfo::L3_CACHE);
+  u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
   if (generic_hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
     BuildGenericHashTableInternal<true>();
   } else {
@@ -453,7 +453,7 @@ void JoinHashTable::BuildConciseHashTable() noexcept {
   // also larger than L3; in this case prefetch from both when building the CHT.
   // If the CHT fits in cache, it's still possible that build tuples do not.
 
-  u64 l3_cache_size = util::CpuInfo::GetCacheSize(util::CpuInfo::L3_CACHE);
+  u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
   if (concise_hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
     BuildConciseHashTableInternal<true, true>();
   } else if (GetTotalBufferedTupleMemoryUsage() > l3_cache_size) {

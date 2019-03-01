@@ -12,7 +12,7 @@ namespace tpl {
 class TplTest : public ::testing::Test {
  public:
   TplTest() {
-    util::CpuInfo::Init();
+    CpuInfo::Instance();
     logging::InitLogger();
   }
 

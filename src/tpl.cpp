@@ -156,7 +156,7 @@ static void RunFile(const std::string &filename) {
 
 /// Initialize all TPL subsystems
 void InitTPL() {
-  tpl::util::CpuInfo::Init();
+  tpl::CpuInfo::Instance();
 
   tpl::logging::InitLogger();
 
@@ -200,6 +200,8 @@ int main(int argc, char **argv) {
 
   // Init TPL
   tpl::InitTPL();
+
+  LOG_INFO("\n{}", tpl::CpuInfo::Instance()->PrettyPrintInfo());
 
   LOG_INFO("Welcome to TPL (ver. {}.{})", TPL_VERSION_MAJOR, TPL_VERSION_MINOR);
 
