@@ -4,13 +4,17 @@
 
 #include "logging/logger.h"
 #include "util/common.h"
+#include "util/cpu_info.h"
 #include "util/timer.h"
 
 namespace tpl {
 
 class TplTest : public ::testing::Test {
  public:
-  TplTest() { logging::InitLogger(); }
+  TplTest() {
+    util::CpuInfo::Init();
+    logging::InitLogger();
+  }
 
   virtual ~TplTest() { logging::ShutdownLogger(); }
 

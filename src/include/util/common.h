@@ -45,10 +45,16 @@ struct SourcePosition {
   u64 column;
 };
 
+/// Use to classify locality of reference for memory accesses
+enum class Locality : u8 { None = 0, Low = 1, Medium = 2, High = 3 };
+
 /// The number of bits per byte
 static constexpr const u32 kBitsPerByte = 8;
 
 /// The default vector size to use when performing vectorized iteration
-static constexpr const u32 kDefaultVectorSize = 2048;
+static constexpr const u32 kDefaultVectorSize = 4096;
+
+/// The default prefetch distance to use
+static constexpr const u32 kPrefetchDistance = 16;
 
 }  // namespace tpl

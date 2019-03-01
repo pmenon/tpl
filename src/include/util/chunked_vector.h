@@ -201,14 +201,14 @@ inline const byte *ChunkedVector::at(size_t idx) const {
 }
 
 inline byte *ChunkedVector::operator[](std::size_t idx) noexcept {
-  std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
-  std::size_t chunk_pos = idx & kChunkPositionMask;
+  const std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
+  const std::size_t chunk_pos = idx & kChunkPositionMask;
   return chunks_[chunk_idx] + (element_size() * chunk_pos);
 }
 
 inline const byte *ChunkedVector::operator[](std::size_t idx) const noexcept {
-  std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
-  std::size_t chunk_pos = idx & kChunkPositionMask;
+  const std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
+  const std::size_t chunk_pos = idx & kChunkPositionMask;
   return chunks_[chunk_idx] + (element_size() * chunk_pos);
 }
 

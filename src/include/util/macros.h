@@ -13,6 +13,7 @@
 #define ALWAYS_INLINE __attribute__((always_inline))
 #define NEVER_INLINE __attribute__((noinline))
 #define FALLTHROUGH LLVM_FALLTHROUGH
+#define PACKED __attribute__((packed))
 
 #define DISALLOW_COPY(klazz)     \
   klazz(const klazz &) = delete; \

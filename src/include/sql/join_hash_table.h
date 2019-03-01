@@ -12,8 +12,6 @@ class JoinHashTableTest;
 
 namespace tpl::sql {
 
-class VectorProjectionIterator;
-
 class JoinHashTable {
  public:
   /// Construct a hash-table used for join processing using \a region as the
@@ -34,23 +32,40 @@ class JoinHashTable {
   /// been built, do nothing.
   void Build();
 
-  /// Lookup all entries in this hash table with the given hash value, returning
-  /// an iterator.
   class Iterator;
+
+  /// Lookup a single entry with hash value \a hash returning an iterator
   Iterator Lookup(hash_t hash) const;
 
   /// Perform a vectorized lookup
-  void LookupBatch(u32 num_tuples, hash_t hashes[],
-                   HashTableEntry *results[]) const;
+  void LookupBatch(u32 num_tuples, const hash_t hashes[],
+                   const HashTableEntry *results[]) const;
+
+  /// Return the amount of memory the buffered tuples occupy
+  u64 GetTotalBufferedTupleMemoryUsage() const noexcept {
+    return entries_.size() * entries_.element_size();
+  }
+
+  /// Return the total size of the join hash table in bytes
+  u64 GetTotalMemoryUsage() const noexcept {
+    const u64 tuples_mem_usage = GetTotalBufferedTupleMemoryUsage();
+    return tuples_mem_usage + (use_concise_hash_table()
+                                   ? concise_hash_table_.GetTotalMemoryUsage()
+                                   : generic_hash_table_.GetTotalMemoryUsage());
+  }
+
+  // -------------------------------------------------------
+  // Simple Accessors
+  // -------------------------------------------------------
 
   /// Return the total number of inserted elements, including duplicates
-  u32 num_elems() const { return num_elems_; }
+  u32 num_elems() const noexcept { return num_elems_; }
 
   /// Has the hash table been built?
-  bool is_built() const { return built_; }
+  bool is_built() const noexcept { return built_; }
 
   /// Is this join using a concise hash table?
-  bool use_concise_hash_table() const { return use_concise_ht_; }
+  bool use_concise_hash_table() const noexcept { return use_concise_ht_; }
 
  public:
   // -------------------------------------------------------
@@ -77,21 +92,38 @@ class JoinHashTable {
  private:
   friend class tpl::sql::test::JoinHashTableTest;
 
-  // Dispatched from Build() to build either a generic or concise hash table
-  void BuildGenericHashTable();
-  void BuildConciseHashTable();
+  // Access a stored entry by index
+  HashTableEntry *EntryAt(const u64 idx) noexcept {
+    return reinterpret_cast<HashTableEntry *>(entries_[idx]);
+  }
 
-  // Dispatched from BuildConciseHashTable() to reorder elements based on
-  // ordering from the concise hash table
+  // Dispatched from Build() to build either a generic or concise hash table
+  void BuildGenericHashTable() noexcept;
+  void BuildConciseHashTable() noexcept;
+
+  // Dispatched from BuildGenericHashTable()
+  template <bool Prefetch>
+  void BuildGenericHashTableInternal() noexcept;
+
+  // Dispatched from BuildConciseHashTable() to construct the concise hash table
+  // and to reorder buffered build tuples in place according to the CHT
+  template <bool PrefetchCHT, bool PrefetchEntries>
+  void BuildConciseHashTableInternal() noexcept;
+  template <bool Prefetch>
+  void InsertIntoConciseHashTable() noexcept;
+  template <bool PrefetchCHT, bool PrefetchEntries>
   void ReorderMainEntries() noexcept;
-  void ProcessOverflowEntries() noexcept;
+  template <bool Prefetch, bool PrefetchEntries>
+  void ReorderOverflowEntries() noexcept;
+  void VerifyMainEntryOrder() noexcept;
+  void VerifyOverflowEntryOrder() noexcept;
 
   // Dispatched from LookupBatch() to lookup from either a generic or concise
   // hash table in batched manner
-  void LookupBatchInGenericHashTable(u32 num_tuples, hash_t hashes[],
-                                     HashTableEntry *results[]) const;
-  void LookupBatchInConciseHashTable(u32 num_tuples, hash_t hashes[],
-                                     HashTableEntry *results[]) const;
+  void LookupBatchInGenericHashTable(u32 num_tuples, const hash_t hashes[],
+                                     const HashTableEntry *results[]) const;
+  void LookupBatchInConciseHashTable(u32 num_tuples, const hash_t hashes[],
+                                     const HashTableEntry *results[]) const;
 
  private:
   // The vector where we store the build-side input
@@ -105,9 +137,6 @@ class JoinHashTable {
 
   // The bloom filter
   BloomFilter bloom_filter_;
-
-  // The head of the lazy insertion list
-  HashTableEntry head_;
 
   // The number of elements inserted
   u32 num_elems_;
@@ -123,18 +152,17 @@ class JoinHashTable {
 // JoinHashTable implementation
 // ---------------------------------------------------------
 
-inline byte *JoinHashTable::AllocInputTuple(hash_t hash) {
+inline byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
   auto *entry = reinterpret_cast<HashTableEntry *>(entries_.append());
   entry->hash = hash;
-  entry->next = head_.next;
-  head_.next = entry;
+  entry->next = nullptr;
 
   num_elems_++;
 
   return entry->payload;
 }
 
-inline JoinHashTable::Iterator JoinHashTable::Lookup(hash_t hash) const {
+inline JoinHashTable::Iterator JoinHashTable::Lookup(const hash_t hash) const {
   HashTableEntry *entry = generic_hash_table_.FindChainHead(hash);
   while (entry != nullptr && entry->hash != hash) {
     entry = entry->next;

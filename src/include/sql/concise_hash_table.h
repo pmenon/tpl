@@ -5,13 +5,20 @@
 #include "sql/hash_table_entry.h"
 #include "util/bit_util.h"
 #include "util/common.h"
+#include "util/memory.h"
 
 namespace tpl::sql {
 
 class ConciseHashTable {
  public:
   // The maximum probe length before falling back into the overflow table
-  static constexpr const u32 kProbeThreshold = 2;
+  static constexpr const u32 kProbeThreshold = 1;
+
+  // The default load factor
+  static constexpr const u32 kLoadFactor = 8;
+
+  // A minimum of 4K slots
+  static constexpr const u64 kMinNumSlots = 1u << 12;
 
   // The number of CHT slots that belong to one group. This value should either
   // be 32 or 64 for (1) making computation simpler by bit-shifting and (2) to
@@ -35,10 +42,14 @@ class ConciseHashTable {
 
   /// Insert an element with the given hash into the table and return an encoded
   /// slot position
-  ConciseHashTableSlot Insert(hash_t hash);
+  void Insert(HashTableEntry *entry, hash_t hash);
 
   /// Finalize and build this concise hash table
   void Build();
+
+  /// Prefetch the slot group for the given slot \a slot
+  template <bool READ>
+  void PrefetchSlotGroup(hash_t hash) const;
 
   /// Return the number of occupied slots in the table **before** the given slot
   u64 NumFilledSlotsBefore(ConciseHashTableSlot slot) const;
@@ -64,8 +75,11 @@ class ConciseHashTable {
   bool is_built() const { return built_; }
 
  private:
-  // The concise hash table is composed of multiple groups of slots. This struct
-  // captures this concept
+  /// A slot group represents a group of 64 slots. Each slot is represented as a
+  /// single bit from the \a bits field. \a count is a count of the number of
+  /// set bits in all slot groups in the group array up to and including this
+  /// group. In other worse, \a count is a prefix count of the number of filled
+  /// slots up to this group.
   struct SlotGroup {
     // The bitmap indicating whether the slots are occupied or free
     u64 bits;
@@ -75,7 +89,7 @@ class ConciseHashTable {
     static_assert(
         sizeof(bits) * kBitsPerByte == kSlotsPerGroup,
         "Number of slots in group and configured constant are out of sync");
-  };
+  } PACKED;
 
  private:
   // The array of groups. This array is managed by this class.
@@ -101,24 +115,32 @@ class ConciseHashTable {
 // Implementation below
 // ---------------------------------------------------------
 
-inline ConciseHashTableSlot ConciseHashTable::Insert(const hash_t hash) {
+inline void ConciseHashTable::Insert(HashTableEntry *entry, const hash_t hash) {
   const u64 slot_idx = hash & slot_mask_;
   const u64 group_idx = slot_idx >> kLogSlotsPerGroup;
-  const u64 num_bits_to_group = group_idx * kSlotsPerGroup;
+  const u64 num_bits_to_group = group_idx << kLogSlotsPerGroup;
   u32 *group_bits = reinterpret_cast<u32 *>(&slot_groups_[group_idx].bits);
 
   u32 bit_idx = static_cast<u32>(slot_idx & kGroupBitMask);
-  u32 max_bit_idx = (bit_idx + probe_limit_) & kGroupBitMask;
+  u32 max_bit_idx = std::min(63u, bit_idx + probe_limit_);
   do {
     if (!util::BitUtil::Test(group_bits, bit_idx)) {
       util::BitUtil::Set(group_bits, bit_idx);
-      return ConciseHashTableSlot(false, num_bits_to_group + bit_idx);
+      entry->cht_slot = ConciseHashTableSlot(num_bits_to_group + bit_idx);
+      return;
     }
-  } while (bit_idx++ < max_bit_idx);
+  } while (++bit_idx <= max_bit_idx);
 
   num_overflow_++;
 
-  return ConciseHashTableSlot(true, num_bits_to_group + bit_idx - 1);
+  entry->cht_slot = ConciseHashTableSlot(num_bits_to_group + bit_idx - 1);
+}
+
+template <bool READ>
+inline void ConciseHashTable::PrefetchSlotGroup(hash_t hash) const {
+  const u64 slot_idx = hash & slot_mask_;
+  const u64 group_idx = slot_idx >> kLogSlotsPerGroup;
+  util::Prefetch<READ, Locality::Low>(slot_groups_ + group_idx);
 }
 
 inline u64 ConciseHashTable::NumFilledSlotsBefore(

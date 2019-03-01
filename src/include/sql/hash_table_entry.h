@@ -12,38 +12,38 @@ namespace tpl::sql {
 ///
 /// 63         62         61           0
 /// +-----------+----------+-----------+
-/// | Processed | Overflow |   Index   |
+/// | Processed | Buffered |   Index   |
 /// |  (1-bit)  |  (1-bit) | (62-bits) |
 /// +-----------+----------+-----------+
 ///
 /// These flags are modified during the construction of the concise hash table
 class ConciseHashTableSlot {
-  friend class ConciseHashTable;
-
- private:
-  ConciseHashTableSlot(bool overflow, u64 index) noexcept
-      : bitfield_(ProcessedField::Encode(false) |
-                  OverflowField::Encode(overflow) | IndexField::Encode(index)) {
-  }
-
  public:
   ConciseHashTableSlot() noexcept
-      : bitfield_(std::numeric_limits<u64>::max()) {}
+      : ConciseHashTableSlot(std::numeric_limits<u64>::max()) {}
+
+  explicit ConciseHashTableSlot(u64 index) noexcept
+      : bitfield_(ProcessedField::Encode(false) | BufferedField::Encode(false) |
+                  IndexField::Encode(index)) {}
 
   bool IsProcessed() const noexcept {
     return ProcessedField::Decode(bitfield_);
   }
-
   void SetProcessed(bool processed) noexcept {
     bitfield_ = ProcessedField::Update(bitfield_, processed);
   }
 
-  bool IsOverflow() const noexcept { return OverflowField::Decode(bitfield_); }
+  bool IsBuffered() const noexcept { return BufferedField::Decode(bitfield_); }
+
+  void SetBuffered(bool buffered) noexcept {
+    bitfield_ = BufferedField::Update(bitfield_, buffered);
+  }
 
   u64 GetSlotIndex() const noexcept { return IndexField::Decode(bitfield_); }
 
   bool Equal(const ConciseHashTableSlot &that) const noexcept {
-    return IsOverflow() == that.IsOverflow() &&
+    return IsProcessed() == that.IsProcessed() &&
+           IsBuffered() == that.IsBuffered() &&
            GetSlotIndex() == that.GetSlotIndex();
   }
 
@@ -57,9 +57,9 @@ class ConciseHashTableSlot {
 
  private:
   // clang-format off
-  class IndexField : public util::BitField64<u64, 0, 61> {};
-  class OverflowField : public util::BitField64<bool, IndexField::kNextBit, 1> {};
-  class ProcessedField : public util::BitField64<bool, OverflowField::kNextBit, 1> {};
+  class IndexField : public util::BitField64<u64, 0, 62> {};
+  class BufferedField : public util::BitField64<bool, IndexField::kNextBit, 1> {};
+  class ProcessedField : public util::BitField64<bool, BufferedField::kNextBit, 1> {};
   // clang-format on
 
  private:
@@ -78,7 +78,9 @@ struct HashTableEntry {
   union {
     HashTableEntry *next;
     ConciseHashTableSlot cht_slot{};
+    u64 overflow_count;
   };
+
   hash_t hash;
   byte payload[0];
 };
