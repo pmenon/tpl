@@ -301,6 +301,15 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
   }
 
   //
+  // If there arne't any overflow entries, we can early exit. We just NULLed
+  // overflow pointers in all main arena entries in the loop above.
+  //
+
+  if (num_overflow_entries == 0) {
+    return;
+  }
+
+  //
   // Step 2:
   // -------
   // Now iterate over the overflow entries (in vectors) and update the overflow
