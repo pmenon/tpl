@@ -12,8 +12,6 @@ class JoinHashTableTest;
 
 namespace tpl::sql {
 
-class VectorProjectionIterator;
-
 class JoinHashTable {
  public:
   /// Construct a hash-table used for join processing using \a region as the
