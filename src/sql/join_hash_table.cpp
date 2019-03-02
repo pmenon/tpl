@@ -129,11 +129,14 @@ class ReorderBuffer {
   bool Fill() {
     while (buf_idx_ < max_elems_ && read_idx_ < end_read_idx_) {
       auto *entry = reinterpret_cast<HashTableEntry *>(entries_[read_idx_++]);
-      if (!IsProcessed(entry)) {
-        byte *const buf_space = BufEntryAt(buf_idx_++);
-        std::memcpy(buf_space, static_cast<void *>(entry), entry_size_);
-        SetBuffered(entry);
+
+      if (IsProcessed(entry)) {
+        continue;
       }
+
+      byte *const buf_space = BufEntryAt(buf_idx_++);
+      std::memcpy(buf_space, static_cast<void *>(entry), entry_size_);
+      SetBuffered(entry);
     }
 
     return buf_idx_ > 0;
