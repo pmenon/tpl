@@ -40,7 +40,8 @@ class VectorProjection {
   /// column iterator instance
   /// \param col_iters A vector of all column iterators
   /// \param col_idx The index of the column in this projection to reset
-  void ResetColumn(std::vector<ColumnVectorIterator> &col_iters, u32 col_idx);
+  void ResetColumn(const std::vector<ColumnVectorIterator> &col_iters,
+                   u32 col_idx);
 
   /// Reset the column data at index \a col_idx with \a col_data and the
   /// \param col_data The raw (potentially compressed) data for the column
