@@ -78,15 +78,15 @@ class JoinHashTable {
   /// tuple-at-a-time lookups from the hash table.
   class Iterator {
    public:
-    Iterator(HashTableEntry *initial, hash_t hash);
+    Iterator(const HashTableEntry *initial, hash_t hash);
 
     using KeyEq = bool(void *opaque_ctx, void *probe_tuple, void *table_tuple);
-    HashTableEntry *NextMatch(KeyEq key_eq, void *opaque_ctx,
-                              void *probe_tuple);
+    const HashTableEntry *NextMatch(KeyEq key_eq, void *opaque_ctx,
+                                    void *probe_tuple);
 
    private:
     // The next element the iterator produces
-    HashTableEntry *next_;
+    const HashTableEntry *next_;
     // The hash value we're looking up
     hash_t hash_;
   };
@@ -194,7 +194,7 @@ template <>
 inline JoinHashTable::Iterator JoinHashTable::Lookup<true>(
     const hash_t hash) const {
   const auto [found, idx] = concise_hash_table_.Lookup(hash);
-  auto *entry = (found ? (HashTableEntry *)entries_[idx] : nullptr);
+  auto *entry = (found ? EntryAt(idx) : nullptr);
   return JoinHashTable::Iterator(entry, hash);
 }
 
@@ -202,18 +202,18 @@ inline JoinHashTable::Iterator JoinHashTable::Lookup<true>(
 // JoinHashTable's Iterator implementation
 // ---------------------------------------------------------
 
-inline JoinHashTable::Iterator::Iterator(HashTableEntry *initial, hash_t hash)
+inline JoinHashTable::Iterator::Iterator(const HashTableEntry *initial,
+                                         hash_t hash)
     : next_(initial), hash_(hash) {}
 
-inline HashTableEntry *JoinHashTable::Iterator::NextMatch(
+inline const HashTableEntry *JoinHashTable::Iterator::NextMatch(
     JoinHashTable::Iterator::KeyEq key_eq, void *opaque_ctx,
     void *probe_tuple) {
-  HashTableEntry *result = next_;
+  const HashTableEntry *result = next_;
   while (result != nullptr) {
     next_ = next_->next;
     if (result->hash == hash_ &&
-        key_eq(opaque_ctx, probe_tuple,
-               reinterpret_cast<void *>(result->payload))) {
+        key_eq(opaque_ctx, probe_tuple, (void *)result->payload)) {
       break;
     }
     result = next_;

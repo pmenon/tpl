@@ -119,10 +119,10 @@ void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
     auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
     Tuple probe_tuple = {i, 0, 0, 0};
     u32 count = 0;
-    HashTableEntry *entry = nullptr;
+    const HashTableEntry *entry = nullptr;
     for (auto iter = join_hash_table.Lookup<UseConciseHashTable>(hash_val);
          (entry = iter.NextMatch(TupleKeyEq, nullptr, (void *)&probe_tuple));) {
-      auto *matched = reinterpret_cast<Tuple *>(entry->payload);
+      auto *matched = reinterpret_cast<const Tuple *>(entry->payload);
       EXPECT_EQ(i, matched->a);
       count++;
     }
