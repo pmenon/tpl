@@ -48,7 +48,7 @@ class ConciseHashTable {
   void Build();
 
   /// Prefetch the slot group for the given slot \a slot
-  template <bool READ>
+  template <bool ForRead>
   void PrefetchSlotGroup(hash_t hash) const;
 
   /// Return the number of occupied slots in the table **before** the given slot
@@ -139,11 +139,11 @@ inline void ConciseHashTable::Insert(HashTableEntry *entry, const hash_t hash) {
   entry->cht_slot = ConciseHashTableSlot(num_bits_to_group + bit_idx - 1);
 }
 
-template <bool READ>
+template <bool ForRead>
 inline void ConciseHashTable::PrefetchSlotGroup(hash_t hash) const {
   const u64 slot_idx = hash & slot_mask_;
   const u64 group_idx = slot_idx >> kLogSlotsPerGroup;
-  util::Prefetch<READ, Locality::Low>(slot_groups_ + group_idx);
+  util::Prefetch<ForRead, Locality::Low>(slot_groups_ + group_idx);
 }
 
 inline u64 ConciseHashTable::NumFilledSlotsBefore(

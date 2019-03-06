@@ -99,6 +99,10 @@ class JoinHashTable {
     return reinterpret_cast<HashTableEntry *>(entries_[idx]);
   }
 
+  const HashTableEntry *EntryAt(const u64 idx) const noexcept {
+    return reinterpret_cast<const HashTableEntry *>(entries_[idx]);
+  }
+
   // Dispatched from Build() to build either a generic or concise hash table
   void BuildGenericHashTable() noexcept;
   void BuildConciseHashTable() noexcept;
@@ -126,6 +130,18 @@ class JoinHashTable {
                                      const HashTableEntry *results[]) const;
   void LookupBatchInConciseHashTable(u32 num_tuples, const hash_t hashes[],
                                      const HashTableEntry *results[]) const;
+
+  // Dispatched from LookupBatchInGenericHashTable()
+  template <bool Prefetch>
+  void LookupBatchInGenericHashTableInternal(
+      u32 num_tuples, const hash_t hashes[],
+      const HashTableEntry *results[]) const;
+
+  // Dispatched from LookupBatchInConciseHashTable()
+  template <bool Prefetch>
+  void LookupBatchInConciseHashTableInternal(
+      u32 num_tuples, const hash_t hashes[],
+      const HashTableEntry *results[]) const;
 
  private:
   // The vector where we store the build-side input

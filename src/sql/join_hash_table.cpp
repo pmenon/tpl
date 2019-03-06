@@ -537,29 +537,59 @@ void JoinHashTable::Build() {
   built_ = true;
 }
 
-void JoinHashTable::LookupBatchInGenericHashTable(
-    u32 num_tuples, const hash_t hashes[],
+template <bool Prefetch>
+void JoinHashTable::LookupBatchInGenericHashTableInternal(
+    u32 num_tuples, const hash_t *hashes,
     const HashTableEntry *results[]) const {
   // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
 
   // Initial lookup
-  for (u32 i = 0; i < num_tuples; i++) {
-    results[i] = generic_hash_table_.FindChainHead(hashes[i]);
-  }
-
-  // Ensure find match on hash
-  for (u32 i = 0; i < num_tuples; i++) {
-    const HashTableEntry *entry = results[i];
-    while (entry != nullptr && entry->hash != hashes[i]) {
-      entry = entry->next;
+  for (u32 idx = 0, prefetch_idx = kPrefetchDistance; idx < num_tuples;
+       idx++, prefetch_idx++) {
+    if constexpr (Prefetch) {
+      generic_hash_table_.PrefetchChainHead<true>(hashes[prefetch_idx]);
     }
-    results[i] = entry;
+
+    results[idx] = generic_hash_table_.FindChainHead(hashes[idx]);
+  }
+}
+
+void JoinHashTable::LookupBatchInGenericHashTable(
+    u32 num_tuples, const hash_t hashes[],
+    const HashTableEntry *results[]) const {
+  u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
+  if (generic_hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
+    LookupBatchInGenericHashTableInternal<true>(num_tuples, hashes, results);
+  } else {
+    LookupBatchInGenericHashTableInternal<false>(num_tuples, hashes, results);
+  }
+}
+
+template <bool Prefetch>
+void JoinHashTable::LookupBatchInConciseHashTableInternal(
+    u32 num_tuples, const hash_t *hashes,
+    const HashTableEntry *results[]) const {
+  for (u32 idx = 0, prefetch_idx = kPrefetchDistance; idx < num_tuples;
+       idx++, prefetch_idx++) {
+    if constexpr (Prefetch) {
+      concise_hash_table_.PrefetchSlotGroup<true>(hashes[prefetch_idx]);
+    }
+
+    const auto [found, entry_idx] = concise_hash_table_.Lookup(hashes[idx]);
+    results[idx] = (found ? EntryAt(entry_idx) : nullptr);
   }
 }
 
 void JoinHashTable::LookupBatchInConciseHashTable(
-    UNUSED u32 num_tuples, UNUSED const hash_t hashes[],
-    UNUSED const HashTableEntry *results[]) const {}
+    u32 num_tuples, const hash_t hashes[],
+    const HashTableEntry *results[]) const {
+  u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
+  if (concise_hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
+    LookupBatchInConciseHashTableInternal<true>(num_tuples, hashes, results);
+  } else {
+    LookupBatchInConciseHashTableInternal<false>(num_tuples, hashes, results);
+  }
+}
 
 void JoinHashTable::LookupBatch(u32 num_tuples, const hash_t hashes[],
                                 const HashTableEntry *results[]) const {
