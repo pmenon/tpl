@@ -12,10 +12,10 @@ VectorProjection::VectorProjection(u32 num_cols, u32 size)
       tuple_count_(0),
       vector_size_(size) {}
 
-void VectorProjection::ResetColumn(std::vector<ColumnVectorIterator> &col_iters,
-                                   u32 col_idx) {
+void VectorProjection::ResetColumn(
+    const std::vector<ColumnVectorIterator> &col_iters, const u32 col_idx) {
   // Read the column's data and NULL bitmap from the iterator
-  ColumnVectorIterator &col_iter = col_iters[col_idx];
+  const ColumnVectorIterator &col_iter = col_iters[col_idx];
   column_data_[col_idx] = col_iter.col_data();
   column_null_bitmaps_[col_idx] = col_iter.col_null_bitmap();
 
@@ -30,7 +30,7 @@ void VectorProjection::ResetColumn(std::vector<ColumnVectorIterator> &col_iters,
 }
 
 void VectorProjection::ResetFromRaw(byte col_data[], u32 col_null_bitmap[],
-                                    u32 col_idx, u32 num_tuples) {
+                                    const u32 col_idx, const u32 num_tuples) {
   column_data_[col_idx] = col_data;
   column_null_bitmaps_[col_idx] = col_null_bitmap;
   tuple_count_ = num_tuples;

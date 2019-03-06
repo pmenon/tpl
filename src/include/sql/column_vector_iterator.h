@@ -35,9 +35,11 @@ class ColumnVectorIterator {
 
   /// Access the current vector of raw untyped column data
   byte *col_data() { return col_data_; }
+  byte *col_data() const { return col_data_; }
 
   /// Access the current raw NULL bitmap
   u32 *col_null_bitmap() { return col_null_bitmap_; }
+  u32 *col_null_bitmap() const { return col_null_bitmap_; }
 
  private:
   // The schema information for the column this iterator operates on
