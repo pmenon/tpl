@@ -12,8 +12,8 @@ namespace tpl {
 class TplTest : public ::testing::Test {
  public:
   TplTest() {
-    CpuInfo::Instance();
     logging::InitLogger();
+    CpuInfo::Instance();
   }
 
   virtual ~TplTest() { logging::ShutdownLogger(); }
