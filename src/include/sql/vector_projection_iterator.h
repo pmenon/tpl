@@ -155,8 +155,7 @@ inline const T *VectorProjectionIterator::Get(u32 col_idx, bool *null) const {
 inline void VectorProjectionIterator::Advance() { curr_idx_++; }
 
 inline void VectorProjectionIterator::AdvanceFiltered() {
-  curr_idx_ = selection_vector_[selection_vector_read_idx_];
-  selection_vector_read_idx_++;
+  curr_idx_ = selection_vector_[++selection_vector_read_idx_];
 }
 
 inline void VectorProjectionIterator::Match(bool matched) {
