@@ -370,7 +370,6 @@ inline void ChunkedVectorT<T>::push_back(T &&elem) {
 template <typename T>
 inline void ChunkedVectorT<T>::pop_back() {
   ChunkedVector::pop_back();
-
 }
 
 }  // namespace tpl::util
