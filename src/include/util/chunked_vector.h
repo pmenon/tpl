@@ -57,6 +57,10 @@ class ChunkedVector {
   /// Unchecked indexed lookup
   byte *operator[](std::size_t idx) noexcept;
   const byte *operator[](std::size_t idx) const noexcept;
+  byte *front() noexcept;
+  const byte *front() const noexcept;
+  byte *back() noexcept;
+  const byte *back() const noexcept;
 
   // -------------------------------------------------------
   // Modification
@@ -65,6 +69,8 @@ class ChunkedVector {
   /// Append a new entry at the end of the vector, returning a contiguous memory
   /// space where the element can be written to by the caller
   byte *append() noexcept;
+  void push_back(const byte *elem);
+  void pop_back();
 
   // -------------------------------------------------------
   // Size/Capacity
@@ -212,6 +218,18 @@ inline const byte *ChunkedVector::operator[](std::size_t idx) const noexcept {
   return chunks_[chunk_idx] + (element_size() * chunk_pos);
 }
 
+inline byte *ChunkedVector::front() noexcept { return chunks_[0]; }
+
+inline const byte *ChunkedVector::front() const noexcept { return chunks_[0]; }
+
+inline byte *ChunkedVector::back() noexcept {
+  return this->operator[](size() - 1);
+}
+
+inline const byte *ChunkedVector::back() const noexcept {
+  return this->operator[](size() - 1);
+}
+
 inline void ChunkedVector::AllocateChunk() {
   std::size_t alloc_size = ChunkAllocSize(element_size());
   byte *new_chunk = static_cast<byte *>(region_->Allocate(alloc_size));
@@ -230,6 +248,13 @@ inline byte *ChunkedVector::append() noexcept {
   num_elements_++;
   return result;
 }
+
+void ChunkedVector::push_back(const byte *const elem) {
+  byte *dest = append();
+  std::memcpy(dest, elem, element_size());
+}
+
+void ChunkedVector::pop_back() { position_ -= element_size(); }
 
 // ---------------------------------------------------------
 // Templated ChunkedVector
@@ -272,35 +297,80 @@ class ChunkedVectorT : public ChunkedVector {
   // Element access
   // -------------------------------------------------------
 
-  T &operator[](std::size_t idx) noexcept {
-    auto *ptr = ChunkedVector::operator[](idx);
-    return *reinterpret_cast<T *>(ptr);
-  }
-  const T &operator[](std::size_t idx) const noexcept {
-    auto *ptr = ChunkedVector::operator[](idx);
-    return *reinterpret_cast<T *>(ptr);
-  }
+  T &operator[](std::size_t idx) noexcept;
+  const T &operator[](std::size_t idx) const noexcept;
+  T &front() noexcept;
+  const T &front() const noexcept;
+  T &back() noexcept;
+  const T &back() const noexcept;
 
   // -------------------------------------------------------
   // Modifiers
   // -------------------------------------------------------
 
   template <class... Args>
-  void emplace_back(Args &&... args) {
-    auto *new_elem = append();
-    *reinterpret_cast<T *>(new_elem) =
-        std::move(T(std::forward<Args>(args)...));
-  }
-
-  void push_back(const T &elem) {
-    auto *new_elem = append();
-    *reinterpret_cast<T *>(new_elem) = elem;
-  }
-
-  void push_back(T &&elem) {
-    auto *new_elem = append();
-    *reinterpret_cast<T *>(new_elem) = std::move(elem);
-  }
+  void emplace_back(Args &&... args);
+  void push_back(const T &elem);
+  void push_back(T &&elem);
+  void pop_back();
 };
+
+// ---------------------------------------------------------
+// ChunkedVectorT Implementation
+// ---------------------------------------------------------
+
+template <typename T>
+T &ChunkedVectorT<T>::operator[](std::size_t idx) noexcept {
+  auto *ptr = ChunkedVector::operator[](idx);
+  return *reinterpret_cast<T *>(ptr);
+}
+template <typename T>
+const T &ChunkedVectorT<T>::operator[](std::size_t idx) const noexcept {
+  auto *ptr = ChunkedVector::operator[](idx);
+  return *reinterpret_cast<T *>(ptr);
+}
+
+template <typename T>
+T &ChunkedVectorT<T>::front() noexcept {
+  return *reinterpret_cast<T *>(ChunkedVector::front());
+}
+
+template <typename T>
+const T &ChunkedVectorT<T>::front() const noexcept {
+  return *reinterpret_cast<const T *>(ChunkedVector::front());
+}
+template <typename T>
+T &ChunkedVectorT<T>::back() noexcept {
+  return *reinterpret_cast<T *>(ChunkedVector::back());
+}
+template <typename T>
+const T &ChunkedVectorT<T>::back() const noexcept {
+  return *reinterpret_cast<const T *>(ChunkedVector::back());
+}
+
+template <typename T>
+template <class... Args>
+inline void ChunkedVectorT<T>::emplace_back(Args &&... args) {
+  auto *new_elem = append();
+  *reinterpret_cast<T *>(new_elem) = std::move(T(std::forward<Args>(args)...));
+}
+
+template <typename T>
+inline void ChunkedVectorT<T>::push_back(const T &elem) {
+  auto *new_elem = append();
+  *reinterpret_cast<T *>(new_elem) = elem;
+}
+
+template <typename T>
+inline void ChunkedVectorT<T>::push_back(T &&elem) {
+  auto *new_elem = append();
+  *reinterpret_cast<T *>(new_elem) = std::move(elem);
+}
+
+template <typename T>
+inline void ChunkedVectorT<T>::pop_back() {
+  ChunkedVector::pop_back();
+
+}
 
 }  // namespace tpl::util
