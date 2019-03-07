@@ -65,7 +65,7 @@ class JoinHashTable {
   // -------------------------------------------------------
 
   /// Return the total number of inserted elements, including duplicates
-  u32 num_elems() const noexcept { return num_elems_; }
+  u64 num_elements() const noexcept { return entries_.size(); }
 
   /// Has the hash table been built?
   bool is_built() const noexcept { return built_; }
@@ -160,9 +160,6 @@ class JoinHashTable {
   // The bloom filter
   BloomFilter bloom_filter_;
 
-  // The number of elements inserted
-  u32 num_elems_;
-
   // Has the hash table been built?
   bool built_;
 
@@ -178,9 +175,6 @@ inline byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
   auto *entry = reinterpret_cast<HashTableEntry *>(entries_.append());
   entry->hash = hash;
   entry->next = nullptr;
-
-  num_elems_++;
-
   return entry->payload;
 }
 

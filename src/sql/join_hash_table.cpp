@@ -13,7 +13,6 @@ JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size,
                              bool use_concise_ht) noexcept
     : entries_(region, sizeof(HashTableEntry) + tuple_size),
       concise_hash_table_(0),
-      num_elems_(0),
       built_(false),
       use_concise_ht_(use_concise_ht) {}
 
@@ -39,7 +38,7 @@ void JoinHashTable::BuildGenericHashTableInternal() noexcept {
 
 void JoinHashTable::BuildGenericHashTable() noexcept {
   // Setup based on number of buffered build-size tuples
-  generic_hash_table_.SetSize(num_elems());
+  generic_hash_table_.SetSize(num_elements());
 
   // Dispatch to appropriate build code based on GHT size
   u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
@@ -506,7 +505,7 @@ void JoinHashTable::BuildConciseHashTableInternal() noexcept {
 
 void JoinHashTable::BuildConciseHashTable() noexcept {
   // Setup based on number of buffered build-size tuples
-  concise_hash_table_.SetSize(num_elems());
+  concise_hash_table_.SetSize(num_elements());
 
   // Dispatch to internal function based on prefetching requirements. If the CHT
   // is larger than L3 then the total size of all buffered build-side tuples is

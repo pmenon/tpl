@@ -71,7 +71,7 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
 
   // Before build, the generic hash table shouldn't be populated, but the join
   // table's storage should have buffered all input tuples
-  EXPECT_EQ(num_tuples, join_hash_table.num_elems());
+  EXPECT_EQ(num_tuples, join_hash_table.num_elements());
   EXPECT_EQ(0u, GenericTableFor(&join_hash_table)->num_elements());
 
   // Try to build
@@ -79,7 +79,7 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
 
   // Post-build, the sizes should be synced up since all tuples were inserted
   // into the GHT
-  EXPECT_EQ(num_tuples, join_hash_table.num_elems());
+  EXPECT_EQ(num_tuples, join_hash_table.num_elements());
   EXPECT_EQ(num_tuples, GenericTableFor(&join_hash_table)->num_elements());
 }
 
