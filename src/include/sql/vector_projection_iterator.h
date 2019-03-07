@@ -34,10 +34,7 @@ class VectorProjectionIterator {
 
   /// Set the vector projection to iterate over
   /// \param vp The vector projection
-  void SetVectorProjection(VectorProjection *vp) {
-    vector_projection_ = vp;
-    num_selected_ = vp->TotalTupleCount();
-  }
+  void SetVectorProjection(VectorProjection *vp) noexcept;
 
   // -------------------------------------------------------
   // Tuple-at-a-time API
@@ -111,9 +108,6 @@ class VectorProjectionIterator {
   /// \return The number of selected tuples
   u32 num_selected() const { return num_selected_; }
 
-  /// Return the current index the iterator is positioned at in the VP
-  u32 current_index() const { return curr_idx_; }
-
  private:
   // The vector projection we're iterating over
   VectorProjection *vector_projection_;
@@ -138,11 +132,21 @@ class VectorProjectionIterator {
 // Implementation below
 // ---------------------------------------------------------
 
+inline void VectorProjectionIterator::SetVectorProjection(
+    VectorProjection *vp) noexcept {
+  vector_projection_ = vp;
+  num_selected_ = vp->TotalTupleCount();
+  curr_idx_ = 0;
+  selection_vector_[0] = kInvalidPos;
+  selection_vector_read_idx_ = 0;
+  selection_vector_write_idx_ = 0;
+}
+
 // Retrieve a single column value (and potentially its NULL indicator) from the
 // desired column's input data
-template <typename T, bool nullable>
+template <typename T, bool Nullable>
 inline const T *VectorProjectionIterator::Get(u32 col_idx, bool *null) const {
-  if constexpr (nullable) {
+  if constexpr (Nullable) {
     TPL_ASSERT(null != nullptr, "Missing output variable for NULL indicator");
     const u32 *col_null_bitmap = vector_projection_->GetNullBitmap(col_idx);
     *null = util::BitUtil::Test(col_null_bitmap, curr_idx_);
@@ -171,7 +175,12 @@ inline bool VectorProjectionIterator::HasNextFiltered() const {
   return selection_vector_read_idx_ < num_selected();
 }
 
-inline void VectorProjectionIterator::Reset() { curr_idx_ = 0; }
+inline void VectorProjectionIterator::Reset() {
+  const auto next_idx = selection_vector_[0];
+  curr_idx_ = (next_idx == kInvalidPos ? 0 : next_idx);
+  selection_vector_read_idx_ = 0;
+  selection_vector_write_idx_ = 0;
+}
 
 inline void VectorProjectionIterator::ResetFiltered() {
   curr_idx_ = selection_vector_[0];
@@ -189,15 +198,14 @@ inline void VectorProjectionIterator::ForEach(const F &fn) {
   if (IsFiltered()) {
     for (; HasNextFiltered(); AdvanceFiltered()) {
       fn();
-      Match(true);
     }
-    ResetFiltered();
   } else {
     for (; HasNext(); Advance()) {
       fn();
     }
-    Reset();
   }
+
+  Reset();
 }
 
 template <typename F>
