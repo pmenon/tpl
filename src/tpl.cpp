@@ -156,9 +156,9 @@ static void RunFile(const std::string &filename) {
 
 /// Initialize all TPL subsystems
 void InitTPL() {
-  tpl::CpuInfo::Instance();
-
   tpl::logging::InitLogger();
+
+  tpl::CpuInfo::Instance();
 
   tpl::sql::Catalog::Instance();
 

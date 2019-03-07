@@ -34,10 +34,7 @@ class VectorProjectionIterator {
 
   /// Set the vector projection to iterate over
   /// \param vp The vector projection
-  void SetVectorProjection(VectorProjection *vp) {
-    vector_projection_ = vp;
-    num_selected_ = vp->TotalTupleCount();
-  }
+  void SetVectorProjection(VectorProjection *vp) noexcept;
 
   // -------------------------------------------------------
   // Tuple-at-a-time API
@@ -116,7 +113,7 @@ class VectorProjectionIterator {
   VectorProjection *vector_projection_;
 
   // The current raw position in the vector projection we're pointing to
-  u32 curr_pos_;
+  u32 curr_idx_;
 
   // The number of tuples from the projection that have been selected (filtered)
   u32 num_selected_;
@@ -125,57 +122,71 @@ class VectorProjectionIterator {
   u32 selection_vector_[kDefaultVectorSize];
 
   // The next slot in the selection vector to read from
-  u32 selection_vector_read_pos_;
+  u32 selection_vector_read_idx_;
 
   // The next slot in the selection vector to write into
-  u32 selection_vector_write_pos_;
+  u32 selection_vector_write_idx_;
 };
 
 // ---------------------------------------------------------
 // Implementation below
 // ---------------------------------------------------------
 
+inline void VectorProjectionIterator::SetVectorProjection(
+    VectorProjection *vp) noexcept {
+  vector_projection_ = vp;
+  num_selected_ = vp->TotalTupleCount();
+  curr_idx_ = 0;
+  selection_vector_[0] = kInvalidPos;
+  selection_vector_read_idx_ = 0;
+  selection_vector_write_idx_ = 0;
+}
+
 // Retrieve a single column value (and potentially its NULL indicator) from the
 // desired column's input data
-template <typename T, bool nullable>
+template <typename T, bool Nullable>
 inline const T *VectorProjectionIterator::Get(u32 col_idx, bool *null) const {
-  if constexpr (nullable) {
+  if constexpr (Nullable) {
     TPL_ASSERT(null != nullptr, "Missing output variable for NULL indicator");
     const u32 *col_null_bitmap = vector_projection_->GetNullBitmap(col_idx);
-    *null = util::BitUtil::Test(col_null_bitmap, curr_pos_);
+    *null = util::BitUtil::Test(col_null_bitmap, curr_idx_);
   }
 
   const T *col_data = vector_projection_->GetVectorAs<T>(col_idx);
-  return &col_data[curr_pos_];
+  return &col_data[curr_idx_];
 }
 
-inline void VectorProjectionIterator::Advance() { curr_pos_++; }
+inline void VectorProjectionIterator::Advance() { curr_idx_++; }
 
 inline void VectorProjectionIterator::AdvanceFiltered() {
-  curr_pos_ = selection_vector_[selection_vector_read_pos_];
-  selection_vector_read_pos_++;
+  curr_idx_ = selection_vector_[++selection_vector_read_idx_];
 }
 
 inline void VectorProjectionIterator::Match(bool matched) {
-  selection_vector_[selection_vector_write_pos_] = curr_pos_;
-  selection_vector_write_pos_ += matched;
+  selection_vector_[selection_vector_write_idx_] = curr_idx_;
+  selection_vector_write_idx_ += matched;
 }
 
 inline bool VectorProjectionIterator::HasNext() const {
-  return curr_pos_ < vector_projection_->TotalTupleCount();
+  return curr_idx_ < vector_projection_->TotalTupleCount();
 }
 
 inline bool VectorProjectionIterator::HasNextFiltered() const {
-  return selection_vector_read_pos_ < num_selected();
+  return selection_vector_read_idx_ < num_selected();
 }
 
-inline void VectorProjectionIterator::Reset() { curr_pos_ = 0; }
+inline void VectorProjectionIterator::Reset() {
+  const auto next_idx = selection_vector_[0];
+  curr_idx_ = (next_idx == kInvalidPos ? 0 : next_idx);
+  selection_vector_read_idx_ = 0;
+  selection_vector_write_idx_ = 0;
+}
 
 inline void VectorProjectionIterator::ResetFiltered() {
-  curr_pos_ = selection_vector_[0];
-  num_selected_ = selection_vector_write_pos_;
-  selection_vector_read_pos_ = 0;
-  selection_vector_write_pos_ = 0;
+  curr_idx_ = selection_vector_[0];
+  num_selected_ = selection_vector_write_idx_;
+  selection_vector_read_idx_ = 0;
+  selection_vector_write_idx_ = 0;
 }
 
 template <typename F>
@@ -188,14 +199,13 @@ inline void VectorProjectionIterator::ForEach(const F &fn) {
     for (; HasNextFiltered(); AdvanceFiltered()) {
       fn();
     }
-    selection_vector_write_pos_ = num_selected();
-    ResetFiltered();
   } else {
     for (; HasNext(); Advance()) {
       fn();
     }
-    Reset();
   }
+
+  Reset();
 }
 
 template <typename F>
@@ -230,11 +240,11 @@ inline u32 VectorProjectionIterator::FilterColByVal(u32 col_idx, T val) {
 
   if (IsFiltered()) {
     const u32 *sel_vec = selection_vector_;
-    selection_vector_write_pos_ = util::VectorUtil::FilterVectorByVal<T, Op>(
+    selection_vector_write_idx_ = util::VectorUtil::FilterVectorByVal<T, Op>(
         input, num_selected(), val, selection_vector_, sel_vec);
   } else {
     u32 num_tuples = vector_projection_->TotalTupleCount();
-    selection_vector_write_pos_ = util::VectorUtil::FilterVectorByVal<T, Op>(
+    selection_vector_write_idx_ = util::VectorUtil::FilterVectorByVal<T, Op>(
         input, num_tuples, val, selection_vector_, nullptr);
   }
 

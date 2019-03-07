@@ -3,9 +3,17 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
+#if __APPLE__
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#endif
+
 #include <unistd.h>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
+
+#include "logging/logger.h"
 
 namespace tpl {
 
@@ -49,7 +57,22 @@ CpuInfo::CpuInfo() {
 
 void CpuInfo::InitCpuInfo() {
 #ifdef __APPLE__
-#error "Fix me"
+  // On MacOS, use sysctl
+  {
+    size_t size = sizeof(num_cores_);
+    if (sysctlbyname("hw.ncpu", &num_cores_, &size, NULL, 0) < 0) {
+      LOG_ERROR("Cannot read # CPUs: {}", strerror(errno));
+    }
+  }
+
+  {
+    u64 freq = 0;
+    size_t size = sizeof(freq);
+    if (sysctlbyname("hw.cpufrequency", &freq, &size, NULL, 0) < 0) {
+      LOG_ERROR("Cannot read CPU Mhz: {}", strerror(errno));
+    }
+    cpu_mhz_ = double(freq) / 1000000.0;
+  }
 #else
   // On linux, just read /proc/cpuinfo
   std::string line;
@@ -76,6 +99,27 @@ void CpuInfo::InitCpuInfo() {
 }
 
 void CpuInfo::InitCacheInfo() {
+#ifdef __APPLE__
+  // Lookup cache sizes
+  std::size_t len = 0;
+  sysctlbyname("hw.cachesize", NULL, &len, NULL, 0);
+  auto data = std::make_unique<u64[]>(len);
+  sysctlbyname("hw.cachesize", data.get(), &len, NULL, 0);
+  TPL_ASSERT(len / sizeof(uint64_t) >= 3, "Expected three levels of cache!");
+
+  // Copy data
+  for (u32 idx = 0; idx < kNumCacheLevels; idx++) {
+    cache_sizes_[idx] = data[idx];
+  }
+
+  // Lookup cache line sizes
+  std::size_t linesize;
+  std::size_t sizeof_linesize = sizeof(linesize);
+  sysctlbyname("hw.cachelinesize", &linesize, &sizeof_linesize, NULL, 0);
+  for (u32 idx = 0; idx < kNumCacheLevels; idx++) {
+    cache_line_sizes_[idx] = linesize;
+  }
+#else
   // Use sysconf to determine cache sizes
   cache_sizes_[L1_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL1_DCACHE_SIZE));
   cache_sizes_[L2_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL2_CACHE_SIZE));
@@ -87,6 +131,7 @@ void CpuInfo::InitCacheInfo() {
       static_cast<u32>(sysconf(_SC_LEVEL2_CACHE_LINESIZE));
   cache_line_sizes_[L3_CACHE] =
       static_cast<u32>(sysconf(_SC_LEVEL3_CACHE_LINESIZE));
+#endif
 }
 
 std::string CpuInfo::PrettyPrintInfo() const {
@@ -96,7 +141,7 @@ std::string CpuInfo::PrettyPrintInfo() const {
   ss << "CPU Info: " << std::endl;
   ss << "  Model:  " << model_name_ << std::endl;
   ss << "  Cores:  " << num_cores_ << std::endl;
-  ss << "  Mhz:    " << cpu_mhz_ << std::endl;
+  ss << "  Mhz:    " << std::fixed << std::setprecision(2) << cpu_mhz_ << std::endl;
   ss << "  Caches: " << std::endl;
   ss << "    L1: " << (cache_sizes_[L1_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L1_CACHE] << " byte line)" << std::endl;
   ss << "    L2: " << (cache_sizes_[L2_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L2_CACHE] << " byte line)" << std::endl;

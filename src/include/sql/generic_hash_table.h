@@ -58,7 +58,7 @@ class GenericHashTable {
   void SetSize(u64 new_size);
 
   /// Prefetch the head of the bucket chain for the hash \a hash
-  template <bool READ>
+  template <bool ForRead>
   void PrefetchChainHead(hash_t hash) const;
 
   /// Given a hash value, return the head of the bucket chain ignoring any tag.
@@ -138,10 +138,10 @@ class GenericHashTable {
 // Implementation below
 // ---------------------------------------------------------
 
-template <bool READ>
+template <bool ForRead>
 void GenericHashTable::PrefetchChainHead(hash_t hash) const {
   const u64 pos = hash & mask_;
-  util::Prefetch<READ, Locality::Low>(entries_ + pos);
+  util::Prefetch<ForRead, Locality::Low>(entries_ + pos);
 }
 
 inline HashTableEntry *GenericHashTable::FindChainHead(hash_t hash) const {

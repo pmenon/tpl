@@ -71,11 +71,6 @@ class ColumnVector {
   auto *AccessRawNullBitmap(u32 idx) const { return &null_bitmap_[idx]; }
 
  private:
-  // TODO: Remove me
-  friend class VectorizedIterator;
-  const byte *raw_data() const { return data_; }
-
- private:
   const Type &type_;
   byte *data_;
   u32 *null_bitmap_;

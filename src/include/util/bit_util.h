@@ -23,7 +23,7 @@ class BitUtil {
   /// \param val The input number
   /// \return The number of leading zeros
   template <typename T>
-  static u64 CountLeadingZeros(T val) {
+  ALWAYS_INLINE static u64 CountLeadingZeros(T val) {
     return llvm::countLeadingZeros(val);
   }
 
@@ -31,7 +31,7 @@ class BitUtil {
   /// the given size
   /// \param num_bits The size of the bit vector, in bits
   /// \return The number of words needed to store a bit vector of the given size
-  static u64 Num32BitWordsFor(u64 num_bits) {
+  ALWAYS_INLINE static u64 Num32BitWordsFor(u64 num_bits) {
     return MathUtil::DivRoundUp(num_bits, kBitWordSize);
   }
 
@@ -39,36 +39,36 @@ class BitUtil {
   /// \param bits The bit vector
   /// \param idx The index of the bit to check
   /// \return True if set; false otherwise
-  static bool Test(const u32 bits[], const u32 idx) {
-    u32 mask = 1u << (idx % kBitWordSize);
-    return (bits[idx / kBitWordSize] & mask) != 0;
+  ALWAYS_INLINE static bool Test(const u32 bits[], const u32 idx) {
+    const u32 mask = 1u << (idx % kBitWordSize);
+    return bits[idx / kBitWordSize] & mask;
   }
 
   /// Set the bit at index \a idx to 1 in the bit vector \a bits
   /// \param bits The bit vector
   /// \param idx The index of the bit to set to 1
-  static void Set(u32 bits[], const u32 idx) {
+  ALWAYS_INLINE static void Set(u32 bits[], const u32 idx) {
     bits[idx / kBitWordSize] |= 1u << (idx % kBitWordSize);
   }
 
   /// Set the bit at index \a idx to 0 in the bit vector \a bits
   /// \param bits The bit vector
   /// \param idx The index of the bit to unset
-  static void Unset(u32 bits[], const u32 idx) {
+  ALWAYS_INLINE static void Unset(u32 bits[], const u32 idx) {
     bits[idx / kBitWordSize] &= ~(1u << (idx % kBitWordSize));
   }
 
   /// Flip the value of the bit at index \a idx in the bit vector
   /// \param bits The bit vector
   /// \param idx The index of the bit to flip
-  static void Flip(u32 bits[], const u32 idx) {
+  ALWAYS_INLINE static void Flip(u32 bits[], const u32 idx) {
     bits[idx / kBitWordSize] ^= 1u << (idx % kBitWordSize);
   }
 
   /// Clear all bits in the bit vector
   /// \param bits The bit vector
   /// \param size The number of elements in the bit vector
-  static void Clear(u32 bits[], const u64 size) {
+  ALWAYS_INLINE static void Clear(u32 bits[], const u64 size) {
     auto num_words = size / kBitWordSize;
     TPL_MEMSET(bits, 0, num_words * sizeof(u32));
   }

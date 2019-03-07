@@ -5,20 +5,13 @@
 #include <vector>
 
 #include "sql/data_types.h"
+#include "sql/sql.h"
 
 namespace tpl::sql {
 
 /// A class to capture the physical schema layout
 class Schema {
  public:
-  enum class ColumnEncoding : u8 {
-    None,
-    Rle,
-    Delta,
-    IntegerDict,
-    StringDict,
-  };
-
   struct ColumnInfo {
     std::string name;
     const Type &type;

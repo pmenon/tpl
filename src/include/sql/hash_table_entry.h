@@ -24,6 +24,12 @@ struct HashTableEntry {
 
   hash_t hash;
   byte payload[0];
+
+  /// For testing!
+  template <typename T>
+  const T *PayloadAs() const noexcept {
+    return reinterpret_cast<const T *>(payload);
+  }
 };
 
 }  // namespace tpl::sql

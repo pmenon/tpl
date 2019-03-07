@@ -78,15 +78,15 @@ class JoinHashTable {
   /// tuple-at-a-time lookups from the hash table.
   class Iterator {
    public:
-    Iterator(HashTableEntry *initial, hash_t hash);
+    Iterator(const HashTableEntry *initial, hash_t hash);
 
     using KeyEq = bool(void *opaque_ctx, void *probe_tuple, void *table_tuple);
-    HashTableEntry *NextMatch(KeyEq key_eq, void *opaque_ctx,
-                              void *probe_tuple);
+    const HashTableEntry *NextMatch(KeyEq key_eq, void *opaque_ctx,
+                                    void *probe_tuple);
 
    private:
     // The next element the iterator produces
-    HashTableEntry *next_;
+    const HashTableEntry *next_;
     // The hash value we're looking up
     hash_t hash_;
   };
@@ -97,6 +97,10 @@ class JoinHashTable {
   // Access a stored entry by index
   HashTableEntry *EntryAt(const u64 idx) noexcept {
     return reinterpret_cast<HashTableEntry *>(entries_[idx]);
+  }
+
+  const HashTableEntry *EntryAt(const u64 idx) const noexcept {
+    return reinterpret_cast<const HashTableEntry *>(entries_[idx]);
   }
 
   // Dispatched from Build() to build either a generic or concise hash table
@@ -126,6 +130,18 @@ class JoinHashTable {
                                      const HashTableEntry *results[]) const;
   void LookupBatchInConciseHashTable(u32 num_tuples, const hash_t hashes[],
                                      const HashTableEntry *results[]) const;
+
+  // Dispatched from LookupBatchInGenericHashTable()
+  template <bool Prefetch>
+  void LookupBatchInGenericHashTableInternal(
+      u32 num_tuples, const hash_t hashes[],
+      const HashTableEntry *results[]) const;
+
+  // Dispatched from LookupBatchInConciseHashTable()
+  template <bool Prefetch>
+  void LookupBatchInConciseHashTableInternal(
+      u32 num_tuples, const hash_t hashes[],
+      const HashTableEntry *results[]) const;
 
  private:
   // The vector where we store the build-side input
@@ -178,7 +194,7 @@ template <>
 inline JoinHashTable::Iterator JoinHashTable::Lookup<true>(
     const hash_t hash) const {
   const auto [found, idx] = concise_hash_table_.Lookup(hash);
-  auto *entry = (found ? (HashTableEntry *)entries_[idx] : nullptr);
+  auto *entry = (found ? EntryAt(idx) : nullptr);
   return JoinHashTable::Iterator(entry, hash);
 }
 
@@ -186,18 +202,18 @@ inline JoinHashTable::Iterator JoinHashTable::Lookup<true>(
 // JoinHashTable's Iterator implementation
 // ---------------------------------------------------------
 
-inline JoinHashTable::Iterator::Iterator(HashTableEntry *initial, hash_t hash)
+inline JoinHashTable::Iterator::Iterator(const HashTableEntry *initial,
+                                         hash_t hash)
     : next_(initial), hash_(hash) {}
 
-inline HashTableEntry *JoinHashTable::Iterator::NextMatch(
+inline const HashTableEntry *JoinHashTable::Iterator::NextMatch(
     JoinHashTable::Iterator::KeyEq key_eq, void *opaque_ctx,
     void *probe_tuple) {
-  HashTableEntry *result = next_;
+  const HashTableEntry *result = next_;
   while (result != nullptr) {
     next_ = next_->next;
     if (result->hash == hash_ &&
-        key_eq(opaque_ctx, probe_tuple,
-               reinterpret_cast<void *>(result->payload))) {
+        key_eq(opaque_ctx, probe_tuple, (void *)result->payload)) {
       break;
     }
     result = next_;
