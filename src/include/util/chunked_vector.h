@@ -231,4 +231,76 @@ inline byte *ChunkedVector::append() noexcept {
   return result;
 }
 
+// ---------------------------------------------------------
+// Templated ChunkedVector
+// ---------------------------------------------------------
+
+// A typed chunked vector. We use this to make the tests easier to understand.
+template <typename T>
+class ChunkedVectorT : public ChunkedVector {
+ public:
+  explicit ChunkedVectorT(util::Region *region) noexcept
+      : ChunkedVector(region, sizeof(T)) {}
+
+  // -------------------------------------------------------
+  // Iterators
+  // -------------------------------------------------------
+
+  class Iterator {
+   public:
+    explicit Iterator(ChunkedVectorIterator iter) : iter_(iter) {}
+
+    T &operator*() const noexcept { return *reinterpret_cast<T *>(*iter_); }
+
+    Iterator &operator++() noexcept {
+      ++iter_;
+      return *this;
+    }
+
+    bool operator==(const Iterator &that) const { return iter_ == that.iter_; }
+
+    bool operator!=(const Iterator &that) const { return !(*this == that); }
+
+   private:
+    ChunkedVectorIterator iter_;
+  };
+
+  Iterator begin() { return Iterator(ChunkedVector::begin()); }
+  Iterator end() { return Iterator(ChunkedVector::end()); }
+
+  // -------------------------------------------------------
+  // Element access
+  // -------------------------------------------------------
+
+  T &operator[](std::size_t idx) noexcept {
+    auto *ptr = ChunkedVector::operator[](idx);
+    return *reinterpret_cast<T *>(ptr);
+  }
+  const T &operator[](std::size_t idx) const noexcept {
+    auto *ptr = ChunkedVector::operator[](idx);
+    return *reinterpret_cast<T *>(ptr);
+  }
+
+  // -------------------------------------------------------
+  // Modifiers
+  // -------------------------------------------------------
+
+  template <class... Args>
+  void emplace_back(Args &&... args) {
+    auto *new_elem = append();
+    *reinterpret_cast<T *>(new_elem) =
+        std::move(T(std::forward<Args>(args)...));
+  }
+
+  void push_back(const T &elem) {
+    auto *new_elem = append();
+    *reinterpret_cast<T *>(new_elem) = elem;
+  }
+
+  void push_back(T &&elem) {
+    auto *new_elem = append();
+    *reinterpret_cast<T *>(new_elem) = std::move(elem);
+  }
+};
+
 }  // namespace tpl::util
