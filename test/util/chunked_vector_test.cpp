@@ -84,6 +84,7 @@ TEST_F(GenericChunkedVectorTest, DISABLED_PerfInsertTest) {
     }
   });
 
+  std::cout << std::fixed << std::setprecision(4);
   std::cout << "std::vector  : " << stdvec_ms << " ms" << std::endl;
   std::cout << "std::deque   : " << stddeque_ms << " ms" << std::endl;
   std::cout << "ChunkedVector: " << chunked_ms << " ms" << std::endl;
@@ -107,7 +108,7 @@ TEST_F(GenericChunkedVectorTest, DISABLED_PerfScanTest) {
     for (auto x : stdvec) {
       c += x;
     }
-    return c;
+    stdvec[0] = c;
   });
 
   auto stddeque_ms = Bench(10, [&stddeque]() {
@@ -115,7 +116,7 @@ TEST_F(GenericChunkedVectorTest, DISABLED_PerfScanTest) {
     for (auto x : stddeque) {
       c += x;
     }
-    return c;
+    stddeque[0] = c;
   });
 
   auto chunked_ms = Bench(10, [&chunkedvec]() {
@@ -123,9 +124,58 @@ TEST_F(GenericChunkedVectorTest, DISABLED_PerfScanTest) {
     for (auto x : chunkedvec) {
       c += x;
     }
-    return c;
+    chunkedvec[0] = c;
   });
 
+  std::cout << std::fixed << std::setprecision(4);
+  std::cout << "std::vector  : " << stdvec_ms << " ms" << std::endl;
+  std::cout << "std::deque   : " << stddeque_ms << " ms" << std::endl;
+  std::cout << "ChunkedVector: " << chunked_ms << " ms" << std::endl;
+}
+
+TEST_F(GenericChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
+  static const u32 num_elems = 10000000;
+
+  std::vector<u32> stdvec;
+  std::deque<u32> stddeque;
+  util::Region tmp("tmp");
+  ChunkedVectorT<u32> chunkedvec(&tmp);
+  for (u32 i = 0; i < num_elems; i++) {
+    stdvec.push_back(i % 4);
+    stddeque.push_back(i % 4);
+    chunkedvec.push_back(i % 4);
+  }
+
+  std::vector<u32> random_indexes(num_elems);
+  for (u32 i = 0; i < num_elems; i++) {
+    random_indexes[i] = (rand() % num_elems);
+  }
+
+  auto stdvec_ms = Bench(10, [&stdvec, &random_indexes]() {
+    auto c = 0;
+    for (auto idx : random_indexes) {
+      c += stdvec[idx];
+    }
+    stdvec[0] = c;
+  });
+
+  auto stddeque_ms = Bench(10, [&stddeque, &random_indexes]() {
+    auto c = 0;
+    for (auto idx : random_indexes) {
+      c += stddeque[idx];
+    }
+    stddeque[0] = c;
+  });
+
+  auto chunked_ms = Bench(10, [&chunkedvec, &random_indexes]() {
+    u32 c = 0;
+    for (auto idx : random_indexes) {
+      c += chunkedvec[idx];
+    }
+    chunkedvec[0] = c;
+  });
+
+  std::cout << std::fixed << std::setprecision(4);
   std::cout << "std::vector  : " << stdvec_ms << " ms" << std::endl;
   std::cout << "std::deque   : " << stddeque_ms << " ms" << std::endl;
   std::cout << "ChunkedVector: " << chunked_ms << " ms" << std::endl;
