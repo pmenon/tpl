@@ -97,8 +97,10 @@ void Sorter::Sort() noexcept {
 
   // Sort the sucker
 #if 0
-  ips4o::sort(entry_ptrs_.begin(), entry_ptrs_.end(),
-              [](const byte *left, const byte *right) {});
+  const auto compare = [this](const byte *left, const byte *right) {
+    return cmp_fn_(left, right);
+  };
+  ips4o::sort(tuples_.begin(), tuples_.end(), compare);
 #endif
 
   timer.Stop();
