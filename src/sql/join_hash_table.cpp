@@ -516,7 +516,7 @@ void JoinHashTable::BuildConciseHashTable() noexcept {
   u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
   if (concise_hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
     BuildConciseHashTableInternal<true, true>();
-  } else if (GetTotalBufferedTupleMemoryUsage() > l3_cache_size) {
+  } else if (GetBufferedTupleMemoryUsage() > l3_cache_size) {
     BuildConciseHashTableInternal<false, true>();
   } else {
     BuildConciseHashTableInternal<false, false>();

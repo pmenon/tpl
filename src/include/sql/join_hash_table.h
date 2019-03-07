@@ -44,16 +44,20 @@ class JoinHashTable {
                    const HashTableEntry *results[]) const;
 
   /// Return the amount of memory the buffered tuples occupy
-  u64 GetTotalBufferedTupleMemoryUsage() const noexcept {
+  u64 GetBufferedTupleMemoryUsage() const noexcept {
     return entries_.size() * entries_.element_size();
+  }
+
+  /// Get the amount of memory used by the join index only (i.e., excluding
+  /// space used to store materialized build-side tuples)
+  u64 GetJoinIndexMemoryUsage() const noexcept {
+    return use_concise_hash_table() ? concise_hash_table_.GetTotalMemoryUsage()
+                                    : generic_hash_table_.GetTotalMemoryUsage();
   }
 
   /// Return the total size of the join hash table in bytes
   u64 GetTotalMemoryUsage() const noexcept {
-    const u64 tuples_mem_usage = GetTotalBufferedTupleMemoryUsage();
-    return tuples_mem_usage + (use_concise_hash_table()
-                                   ? concise_hash_table_.GetTotalMemoryUsage()
-                                   : generic_hash_table_.GetTotalMemoryUsage());
+    return GetBufferedTupleMemoryUsage() + GetJoinIndexMemoryUsage();
   }
 
   // -------------------------------------------------------
