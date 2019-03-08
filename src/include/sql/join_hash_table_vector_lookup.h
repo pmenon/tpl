@@ -1,7 +1,6 @@
 #pragma once
 
 #include "sql/hash_table_entry.h"
-#include "sql/join_hash_table.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/common.h"
 
@@ -36,32 +35,10 @@ class JoinHashTableVectorLookup {
 // Implementation below
 // ---------------------------------------------------------
 
-inline JoinHashTableVectorLookup::JoinHashTableVectorLookup(
-    const JoinHashTable &table) noexcept
-    : table_(table), match_idx_(0), hashes_{0}, entries_{nullptr} {}
-
-inline void JoinHashTableVectorLookup::Prepare(
-    VectorProjectionIterator *vpi,
-    const JoinHashTableVectorLookup::HashFn hash_fn) noexcept {
-  TPL_ASSERT(vpi->num_selected() <= kDefaultVectorSize,
-             "VectorProjection size must be less than kDefaultVectorSize");
-  // Set up
-  match_idx_ = 0;
-
-  // Compute the hashes
-  {
-    u32 idx = 0;
-    vpi->ForEach(
-        [this, vpi, hash_fn, &idx]() { hashes_[idx++] = hash_fn(vpi); });
-  }
-
-  // Perform the initial lookup
-  table_.LookupBatch(vpi->num_selected(), hashes_, entries_);
-}
-
+// Because this function is a tuple-at-a-time, it's placed in the header to
+// reduce function call overhead.
 inline const HashTableEntry *JoinHashTableVectorLookup::GetNextOutput(
-    VectorProjectionIterator *vpi,
-    const JoinHashTableVectorLookup::KeyEqFn key_eq_fn) noexcept {
+    VectorProjectionIterator *vpi, const KeyEqFn key_eq_fn) noexcept {
   TPL_ASSERT(vpi != nullptr, "No input VPI!");
   TPL_ASSERT(match_idx_ < vpi->num_selected(), "Continuing past iteration!");
 

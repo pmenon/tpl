@@ -12,7 +12,6 @@ class Sorter {
   friend class SorterIterator;
 
   using ComparisonFunction = int (*)(const byte *lhs, const byte *rhs);
-  using SortEntryIter = util::ChunkedVectorT<const byte *>::Iterator;
 
   /// Construct a sorter using the given allocator, configured to store input
   /// tuples of size \a tuple_size bytes
@@ -69,7 +68,7 @@ class SorterIterator {
   }
 
  private:
-  Sorter::SortEntryIter iter_;
+  util::ChunkedVectorT<const byte *>::Iterator iter_;
 };
 
 // ---------------------------------------------------------

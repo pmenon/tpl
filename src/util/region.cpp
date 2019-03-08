@@ -1,6 +1,7 @@
 #include "util/region.h"
 
 #include "logging/logger.h"
+#include "util/memory.h"
 
 namespace tpl::util {
 
@@ -52,7 +53,7 @@ void Region::FreeAll() {
   Chunk *head = head_;
   while (head != nullptr) {
     Chunk *next = head->next;
-    free(head);
+    util::FreeHuge(head, head->size);
     head = next;
   }
 
@@ -67,10 +68,10 @@ void Region::FreeAll() {
 uintptr_t Region::Expand(std::size_t requested) {
   static constexpr std::size_t kChunkOverhead = sizeof(Chunk);
 
-  /*
-   * Each expansion increases the size of the chunk we allocate by 2. But, we
-   * bound the maximum chunk allocation size.
-   */
+  //
+  // Each expansion increases the size of the chunk we allocate by 2. But, we
+  // bound the maximum chunk allocation size.
+  //
 
   Chunk *head = head_;
   const std::size_t prev_size = (head == nullptr ? 0 : head->size);
@@ -87,7 +88,7 @@ uintptr_t Region::Expand(std::size_t requested) {
 
   // Allocate a new chunk
   LOG_TRACE("Allocating chunk of size {} KB", new_size / 1024.0);
-  auto *new_chunk = static_cast<Chunk *>(malloc(new_size));
+  auto *new_chunk = static_cast<Chunk *>(util::MallocHuge(new_size));
   new_chunk->Init(head_, new_size);
 
   // Link it in
