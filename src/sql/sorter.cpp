@@ -87,7 +87,7 @@ void Sorter::HeapSiftDown() {
 }
 
 void Sorter::Sort() noexcept {
-  if (tuple_storage_.empty()) {
+  if (tuples_.empty()) {
     return;
   }
 
@@ -105,7 +105,7 @@ void Sorter::Sort() noexcept {
 
   timer.Stop();
 
-  auto rate = tuple_storage_.size() / timer.elapsed();
+  auto rate = (tuples_.size() / timer.elapsed()) / 1000.0;
   LOG_DEBUG("Sorted %zu tuples in %.2f ms (%.2lf TPS)", tuple_storage_.size(),
             timer.elapsed(), rate);
 }
