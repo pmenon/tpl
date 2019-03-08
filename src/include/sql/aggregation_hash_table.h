@@ -19,7 +19,8 @@ class AggregationHashTable {
   byte *Insert(hash_t hash) noexcept;
 
   /// Lookup the first element in the chain of entries with the hash value
-  byte *LookupHead(hash_t hash) noexcept;
+  using KeyEqFn = bool(const void *, const void *);
+  byte *Lookup(hash_t hash, KeyEqFn keq_eq_fn, const void *arg) noexcept;
 
  private:
   // Does the hash table need to grow?
@@ -43,9 +44,19 @@ class AggregationHashTable {
 // Implementation
 // ---------------------------------------------------------
 
-inline byte *AggregationHashTable::LookupHead(const hash_t hash) noexcept {
+inline byte *AggregationHashTable::Lookup(
+    const hash_t hash, AggregationHashTable::KeyEqFn keq_eq_fn,
+    const void *arg) noexcept {
   auto *entry = hash_table_.FindChainHead(hash);
-  return (entry == nullptr ? nullptr : entry->payload);
+
+  while (entry != nullptr) {
+    if (entry->hash == hash && keq_eq_fn(arg, entry->payload)) {
+      return entry->payload;
+    }
+    entry = entry->next;
+  }
+
+  return nullptr;
 }
 
 }  // namespace tpl::sql
