@@ -26,7 +26,12 @@ struct Integer : public Val {
     i64 bigint;
   } val;
 
+  explicit Integer(i64 v) noexcept : Val(false) { val.bigint = v; }
   Integer(bool null, i64 v) noexcept : Val(null) { val.bigint = v; }
+
+  i16 smallint_val() const { return val.smallint; }
+  i32 int_val() const { return val.smallint; }
+  i64 bigint_val() const { return val.bigint; }
 };
 
 /// A decimal SQL value
