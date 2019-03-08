@@ -398,8 +398,9 @@ class StructType : public Type {
 #define INTERNAL_TYPE_LIST(V) \
   V(TableVectorIterator, "tpl::sql::TableVectorIterator", ::tpl::sql::TableVectorIterator)                                  \
   V(VectorProjectionIterator, "tpl::sql::VectorProjectionIterator", ::tpl::sql::VectorProjectionIterator)                   \
-  V(SqlInteger, "tpl::sql::Integer", ::tpl::sql::Integer)                                                                   \
-  V(SqlDecimal, "tpl::sql::Decimal", ::tpl::sql::Decimal)
+  V(SqlBool, "sql::Bool", ::tpl::sql::BoolVal)                                                                              \
+  V(SqlInteger, "sql::Integer", ::tpl::sql::Integer)                                                                        \
+  V(SqlDecimal, "sql::Decimal", ::tpl::sql::Decimal)
 // clang-format on
 
 /**

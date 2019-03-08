@@ -4,22 +4,35 @@
 
 namespace tpl::sql {
 
+struct Val {
+  bool null;
+
+  explicit Val(bool _null) noexcept : null(_null) {}
+};
+
+struct BoolVal : public Val {
+  bool val;
+
+  explicit BoolVal(bool null, bool v) noexcept : Val(null), val(v) {}
+
+  bool ForceTruth() const noexcept { return !null && val; }
+};
+
 /// An integral SQL value
-struct Integer {
+struct Integer : public Val {
   union {
-    bool boolean;
     i16 smallint;
     i32 integer;
     i64 bigint;
   } val;
-  bool null;
+
+  Integer(bool null, i64 v) noexcept : Val(null) { val.bigint = v; }
 };
 
 /// A decimal SQL value
-struct Decimal {
+struct Decimal : public Val {
   u64 val;
   u32 scale_factor;
-  bool null;
 };
 
 /// A SQL string

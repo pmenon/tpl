@@ -413,7 +413,11 @@ SqlType *SqlType::Get(AstContext &ctx, const sql::Type &sql_type) {
   // TODO: cache
   u32 size = 0, alignment = 0;
   switch (sql_type.type_id()) {
-    case sql::TypeId::Boolean:
+    case sql::TypeId::Boolean: {
+      size = sizeof(sql::BoolVal);
+      alignment = alignof(sql::BoolVal);
+      break;
+    }
     case sql::TypeId::SmallInt:
     case sql::TypeId::Integer:
     case sql::TypeId::Date:

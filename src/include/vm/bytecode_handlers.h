@@ -314,8 +314,8 @@ VM_OP_COLD void OpVPIFilterNotEqual(u32 *size,
 // Scalar SQL comparisons
 // ---------------------------------------------------------
 
-VM_OP_HOT void OpForceBoolTruth(bool *result, tpl::sql::Integer *input) {
-  *result = input->val.boolean;
+VM_OP_HOT void OpForceBoolTruth(bool *result, tpl::sql::BoolVal *input) {
+  *result = input->ForceTruth();
 }
 
 VM_OP_HOT void OpInitInteger(tpl::sql::Integer *result, i32 input) {
@@ -323,45 +323,45 @@ VM_OP_HOT void OpInitInteger(tpl::sql::Integer *result, i32 input) {
   result->null = false;
 }
 
-VM_OP_HOT void OpGreaterThanInteger(tpl::sql::Integer *result,
+VM_OP_HOT void OpGreaterThanInteger(tpl::sql::BoolVal *result,
                                     tpl::sql::Integer *left,
                                     tpl::sql::Integer *right) {
-  result->val.boolean = (left->val.integer > right->val.integer);
+  result->val = (left->val.integer > right->val.integer);
   result->null = (left->null || right->null);
 }
 
-VM_OP_HOT void OpGreaterThanEqualInteger(tpl::sql::Integer *result,
+VM_OP_HOT void OpGreaterThanEqualInteger(tpl::sql::BoolVal *result,
                                          tpl::sql::Integer *left,
                                          tpl::sql::Integer *right) {
-  result->val.boolean = (left->val.integer >= right->val.integer);
+  result->val = (left->val.integer >= right->val.integer);
   result->null = (left->null || right->null);
 }
 
-VM_OP_HOT void OpEqualInteger(tpl::sql::Integer *result,
+VM_OP_HOT void OpEqualInteger(tpl::sql::BoolVal *result,
                               tpl::sql::Integer *left,
                               tpl::sql::Integer *right) {
-  result->val.boolean = (left->val.integer == right->val.integer);
+  result->val = (left->val.integer == right->val.integer);
   result->null = (left->null || right->null);
 }
 
-VM_OP_HOT void OpLessThanInteger(tpl::sql::Integer *result,
+VM_OP_HOT void OpLessThanInteger(tpl::sql::BoolVal *result,
                                  tpl::sql::Integer *left,
                                  tpl::sql::Integer *right) {
-  result->val.boolean = (left->val.integer < right->val.integer);
+  result->val = (left->val.integer < right->val.integer);
   result->null = (left->null || right->null);
 }
 
-VM_OP_HOT void OpLessThanEqualInteger(tpl::sql::Integer *result,
+VM_OP_HOT void OpLessThanEqualInteger(tpl::sql::BoolVal *result,
                                       tpl::sql::Integer *left,
                                       tpl::sql::Integer *right) {
-  result->val.boolean = (left->val.integer <= right->val.integer);
+  result->val = (left->val.integer <= right->val.integer);
   result->null = (left->null || right->null);
 }
 
-VM_OP_HOT void OpNotEqualInteger(tpl::sql::Integer *result,
+VM_OP_HOT void OpNotEqualInteger(tpl::sql::BoolVal *result,
                                  tpl::sql::Integer *left,
                                  tpl::sql::Integer *right) {
-  result->val.boolean = (left->val.integer != right->val.integer);
+  result->val = (left->val.integer != right->val.integer);
   result->null = (left->null || right->null);
 }
 

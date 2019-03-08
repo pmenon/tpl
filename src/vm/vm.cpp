@@ -396,7 +396,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
   OP(ForceBoolTruth) : {
     auto *result = frame->LocalAt<bool *>(READ_LOCAL_ID());
-    auto *sql_int = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    auto *sql_int = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
     OpForceBoolTruth(result, sql_int);
     DISPATCH_NEXT();
   }
@@ -410,7 +410,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
 #define GEN_CMP(op)                                                 \
   OP(op##Integer) : {                                               \
-    auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID()); \
+    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID()); \
     auto *left = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());   \
     auto *right = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());  \
     Op##op##Integer(result, left, right);                           \
