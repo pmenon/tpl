@@ -20,7 +20,7 @@ class AggregationHashTable {
 
   /// Lookup the first element in the chain of entries with the hash value
   using KeyEqFn = bool(const void *, const void *);
-  byte *Lookup(hash_t hash, KeyEqFn keq_eq_fn, const void *arg) noexcept;
+  byte *Lookup(hash_t hash, KeyEqFn key_eq_fn, const void *arg) noexcept;
 
  private:
   // Does the hash table need to grow?
@@ -45,12 +45,12 @@ class AggregationHashTable {
 // ---------------------------------------------------------
 
 inline byte *AggregationHashTable::Lookup(
-    const hash_t hash, AggregationHashTable::KeyEqFn keq_eq_fn,
+    const hash_t hash, AggregationHashTable::KeyEqFn key_eq_fn,
     const void *arg) noexcept {
   auto *entry = hash_table_.FindChainHead(hash);
 
   while (entry != nullptr) {
-    if (entry->hash == hash && keq_eq_fn(arg, entry->payload)) {
+    if (entry->hash == hash && key_eq_fn(arg, entry->payload)) {
       return entry->payload;
     }
     entry = entry->next;
