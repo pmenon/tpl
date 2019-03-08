@@ -334,6 +334,7 @@ template <typename T>
 T &ChunkedVectorT<T>::operator[](std::size_t idx) noexcept {
   return *reinterpret_cast<T *>(vec_[idx]);
 }
+
 template <typename T>
 const T &ChunkedVectorT<T>::operator[](std::size_t idx) const noexcept {
   return *reinterpret_cast<T *>(vec_[idx]);
@@ -348,10 +349,12 @@ template <typename T>
 const T &ChunkedVectorT<T>::front() const noexcept {
   return *reinterpret_cast<const T *>(vec_.front());
 }
+
 template <typename T>
 T &ChunkedVectorT<T>::back() noexcept {
   return *reinterpret_cast<T *>(vec_.back());
 }
+
 template <typename T>
 const T &ChunkedVectorT<T>::back() const noexcept {
   return *reinterpret_cast<const T *>(vec_.back());
