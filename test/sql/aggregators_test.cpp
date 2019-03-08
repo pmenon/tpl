@@ -42,7 +42,7 @@ TEST_F(AggregatorsTest, CountMergeTest) {
     count_1.Advance(&val);
   }
   for (u32 i = 0; i < 100; i++) {
-    Integer val = i;
+    Integer val(i);
     count_2.Advance(&val);
   }
 
