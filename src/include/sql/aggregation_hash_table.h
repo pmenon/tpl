@@ -18,6 +18,9 @@ class AggregationHashTable {
   /// Insert a new element into the table
   byte *Insert(hash_t hash) noexcept;
 
+  /// Lookup the first element in the chain of entries with the hash value
+  byte *LookupHead(hash_t hash) noexcept;
+
  private:
   // Does the hash table need to grow?
   bool NeedsToGrow() const { return hash_table_.num_elements() == max_fill_; }
@@ -35,5 +38,14 @@ class AggregationHashTable {
   // The maximum number of elements in the table before a resize
   u64 max_fill_;
 };
+
+// ---------------------------------------------------------
+// Implementation
+// ---------------------------------------------------------
+
+inline byte *AggregationHashTable::LookupHead(const hash_t hash) noexcept {
+  auto *entry = hash_table_.FindChainHead(hash);
+  return (entry == nullptr ? nullptr : entry->payload);
+}
 
 }  // namespace tpl::sql
