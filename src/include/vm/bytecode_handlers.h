@@ -379,6 +379,10 @@ VM_OP_HOT void OpNotEqualInteger(tpl::sql::BoolVal *result,
   result->null = (left->null || right->null);
 }
 
+// ---------------------------------------------------------
+// SQL Joins
+// ---------------------------------------------------------
+
 VM_OP_HOT void OpJoinHashTableAllocTuple(
     byte **result, tpl::sql::JoinHashTable *join_hash_table, hash_t hash) {
   *result = join_hash_table->AllocInputTuple(hash);
