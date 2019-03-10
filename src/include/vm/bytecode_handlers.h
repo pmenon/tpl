@@ -214,32 +214,45 @@ VM_OP_HOT void OpVPIReset(tpl::sql::VectorProjectionIterator *vpi) {
 VM_OP_HOT void OpVPIGetSmallInt(tpl::sql::Integer *out,
                                 tpl::sql::VectorProjectionIterator *iter,
                                 u32 col_idx) {
+  // Read
   auto *ptr = iter->Get<i16, false>(col_idx, nullptr);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
+
+  // Set
+  out->null = false;
   out->val.smallint = *ptr;
 }
 
 VM_OP_HOT void OpVPIGetInteger(tpl::sql::Integer *out,
                                tpl::sql::VectorProjectionIterator *iter,
                                u32 col_idx) {
+  // Read
   auto *ptr = iter->Get<i32, false>(col_idx, nullptr);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
+
+  // Set
+  out->null = false;
   out->val.integer = *ptr;
 }
 
 VM_OP_HOT void OpVPIGetBigInt(tpl::sql::Integer *out,
                               tpl::sql::VectorProjectionIterator *iter,
                               u32 col_idx) {
+  // Read
   auto *ptr = iter->Get<i64, false>(col_idx, nullptr);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
+
+  // Set
+  out->null = false;
   out->val.bigint = *ptr;
 }
 
 VM_OP_HOT void OpVPIGetDecimal(tpl::sql::Decimal *out,
-                               tpl::sql::VectorProjectionIterator *iter,
-                               u32 col_idx) {
-  out->val = 0;
+                               UNUSED tpl::sql::VectorProjectionIterator *iter,
+                               UNUSED u32 col_idx) {
+  // Set
   out->null = false;
+  out->val = 0;
 }
 
 VM_OP_HOT void OpVPIGetSmallIntNull(tpl::sql::Integer *out,
