@@ -424,6 +424,22 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   GEN_CMP(NotEqual);
 #undef GEN_CMP
 
+  OP(JoinHashTableAllocTuple) : {
+    auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    auto *join_hash_table =
+        frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
+    auto hash = frame->LocalAt<hash_t>(READ_LOCAL_ID());
+    OpJoinHashTableAllocTuple(result, join_hash_table, hash);
+    DISPATCH_NEXT();
+  }
+
+  OP(JoinHashTableBuild) : {
+    auto *join_hash_table =
+        frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
+    OpJoinHashTableBuild(join_hash_table);
+    DISPATCH_NEXT();
+  }
+
   // Impossible
   UNREACHABLE("Impossible to reach end of interpreter loop. Bad code!");
 }

@@ -117,7 +117,12 @@ namespace tpl::vm {
   F(GreaterThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                    \
   F(GreaterThanEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                               \
   F(EqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
-  F(NotEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)
+  F(NotEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
+                                                                                                                       \
+  /* Joins */                                                                                                          \
+  F(JoinHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                               \
+  F(JoinHashTableBuild, OperandType::Local)
+
 // clang-format on
 
 /// The single enumeration of all possible bytecode instructions

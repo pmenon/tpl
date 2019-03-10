@@ -4,6 +4,7 @@
 
 #include "util/common.h"
 
+#include "sql/join_hash_table.h"
 #include "sql/table_vector_iterator.h"
 #include "util/macros.h"
 
@@ -376,6 +377,15 @@ VM_OP_HOT void OpNotEqualInteger(tpl::sql::BoolVal *result,
                                  tpl::sql::Integer *right) {
   result->val = (left->val.integer != right->val.integer);
   result->null = (left->null || right->null);
+}
+
+VM_OP_HOT void OpJoinHashTableAllocTuple(
+    byte **result, tpl::sql::JoinHashTable *join_hash_table, hash_t hash) {
+  *result = join_hash_table->AllocInputTuple(hash);
+}
+
+VM_OP_HOT void OpJoinHashTableBuild(tpl::sql::JoinHashTable *join_hash_table) {
+  join_hash_table->Build();
 }
 
 }  // extern "C"
