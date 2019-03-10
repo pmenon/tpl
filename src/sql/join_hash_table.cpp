@@ -16,6 +16,13 @@ JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size,
       built_(false),
       use_concise_ht_(use_concise_ht) {}
 
+byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
+  auto *entry = reinterpret_cast<HashTableEntry *>(entries_.append());
+  entry->hash = hash;
+  entry->next = nullptr;
+  return entry->payload;
+}
+
 // ---------------------------------------------------------
 // Generic hash tables
 // ---------------------------------------------------------

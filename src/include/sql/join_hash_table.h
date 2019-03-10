@@ -171,13 +171,6 @@ class JoinHashTable {
 // JoinHashTable implementation
 // ---------------------------------------------------------
 
-inline byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
-  auto *entry = reinterpret_cast<HashTableEntry *>(entries_.append());
-  entry->hash = hash;
-  entry->next = nullptr;
-  return entry->payload;
-}
-
 template <>
 inline JoinHashTable::Iterator JoinHashTable::Lookup<false>(
     const hash_t hash) const {
