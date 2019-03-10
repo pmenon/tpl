@@ -194,7 +194,10 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
     case ast::Type::Kind::SqlType: {
       auto *sql_type = type->As<ast::SqlType>();
       switch (sql_type->sql_type().type_id()) {
-        case sql::TypeId::Boolean:
+        case sql::TypeId::Boolean: {
+          llvm_type = module()->getTypeByName("struct.tpl::sql::BoolVal");
+          break;
+        }
         case sql::TypeId::SmallInt:
         case sql::TypeId::Integer:
         case sql::TypeId::BigInt: {

@@ -394,14 +394,21 @@ class StructType : public Type {
   util::RegionVector<u32> field_offsets_;
 };
 
+// This macro lists all internal types. The columns are:
+// internal kind name, fully qualified name of class in string, fully qualified
+// The LLVM engine uses the names below verbatim to look into the runtime
+// for loaded classes. Thus, these names need to be consistent with the FQN
+// names of the corresponding classes (i.e., the string form and FQN reference
+// should most likely be the same)
+// class reference
 // clang-format off
 #define INTERNAL_TYPE_LIST(V) \
-  V(TableVectorIterator, "TableVectorIterator", ::tpl::sql::TableVectorIterator)                                  \
-  V(VectorProjectionIterator, "VectorProjectionIterator", ::tpl::sql::VectorProjectionIterator)                   \
-  V(JoinHashTable, "JoinHashTable", ::tpl::sql::JoinHashTable)                                                    \
-  V(SqlBool, "Bool", ::tpl::sql::BoolVal)                                                                         \
-  V(SqlInteger, "Integer", ::tpl::sql::Integer)                                                                   \
-  V(SqlDecimal, "Decimal", ::tpl::sql::Decimal)
+  V(TableVectorIterator, "tpl::sql::TableVectorIterator", ::tpl::sql::TableVectorIterator)                                  \
+  V(VectorProjectionIterator, "tpl::sql::VectorProjectionIterator", ::tpl::sql::VectorProjectionIterator)                   \
+  V(JoinHashTable, "tpl::sql::JoinHashTable", ::tpl::sql::JoinHashTable)                                                    \
+  V(SqlBool, "tpl::sql::Bool", ::tpl::sql::BoolVal)                                                                         \
+  V(SqlInteger, "tpl::sql::Integer", ::tpl::sql::Integer)                                                                   \
+  V(SqlDecimal, "tpl::sql::Decimal", ::tpl::sql::Decimal)
 // clang-format on
 
 /**
