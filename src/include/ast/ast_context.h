@@ -28,34 +28,27 @@ class AstContext {
 
   ~AstContext();
 
-  /**
-   * Return the provided string as a unique'd identifier in this context
-   * @param str The input string
-   * @return The equivalent unique'd string
-   */
+  /// Return \a str as a unique string in this context
   Identifier GetIdentifier(llvm::StringRef str);
 
-  /**
-   * Is the type with name @ref identifier a builtin type?
-   * @param identifier The name of the type to lookup
-   * @return True if the provided name names a builtin; false otherwise
-   */
+  /// Is the type with name \a identifier a builtin type?
+  /// \return A non-null pointer to the Type if a valid builtin; null otherwise
   ast::Type *LookupBuiltinType(Identifier identifier) const;
 
-  /**
-   * Is the function with name @ref identifier a builtin function?
-   * @param[in] identifier The name of the function to check
-   * @param[out] builtin If non-null, set to the appropriate builtin enumeration
-   * @return True if the function name is that of a builtin; false otherwise
-   */
+  /// Is the type with name \a identifier an internal type?
+  /// \return A non-null pointer to the Type if an internal type; null otherwise
+  ast::Type *LookupInternalType(Identifier identifier) const;
+
+  /// Is the function with name \a identifier a builtin function?
+  /// \param[in] identifier The name of the function to check
+  /// \param[out] builtin If non-null, set to the appropriate builtin enumeration
+  /// \return True if the function name is that of a builtin; false otherwise
   bool IsBuiltinFunction(Identifier identifier,
                          Builtin *builtin = nullptr) const;
 
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Accessors
-  ///
-  //////////////////////////////////////////////////////////////////////////////
+  // -------------------------------------------------------
+  // Simple accessors
+  // -------------------------------------------------------
 
   struct Implementation;
   Implementation &impl() const { return *impl_; }

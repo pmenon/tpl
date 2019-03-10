@@ -291,6 +291,77 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
       ast::IntegerType::Get(ast_context(), ast::IntegerType::IntKind::Int32));
 }
 
+void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
+  if (call->NumCallArgs() != 3) {
+    error_reporter().Report(call->position(),
+                            ErrorMessages::kMismatchedCallArgs,
+                            call->FuncName(), 3, call->NumCallArgs());
+    return;
+  }
+
+  // Resolve function call arguments
+  const auto &arguments = call->arguments();
+  for (auto *arg : arguments) {
+    if (auto *resolved_type = Resolve(arg); resolved_type == nullptr) {
+      return;
+    }
+  }
+
+  // Check first argument is a pointer to a JoinHashTable
+  {
+    auto *ptr_type = arguments[0]->type()->SafeAs<ast::PointerType>();
+    if (ptr_type == nullptr) {
+      error_reporter().Report(call->position(),
+                              ErrorMessages::kBadArgToHashTableInsert,
+                              arguments[0]->type(), 0);
+      return;
+    }
+
+    auto *base_type = ptr_type->base()->SafeAs<ast::InternalType>();
+    if (base_type == nullptr ||
+        base_type->internal_kind() !=
+            ast::InternalType::InternalKind::JoinHashTable) {
+      error_reporter().Report(call->position(),
+                              ErrorMessages::kBadArgToHashTableInsert,
+                              arguments[0]->type(), 0);
+      return;
+    }
+  }
+}
+
+void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
+  if (call->NumCallArgs() != 1) {
+    error_reporter().Report(call->position(),
+                            ErrorMessages::kMismatchedCallArgs,
+                            call->FuncName(), 1, call->NumCallArgs());
+    return;
+  }
+
+  // Resolve single argument
+  auto *type = Resolve(call->arguments()[0]);
+
+  // If not a pointer type, fail
+  if (type == nullptr || !type->IsPointerType()) {
+    error_reporter().Report(call->position(),
+                            ErrorMessages::kBadArgToHashTableBuild, type);
+    return;
+  }
+
+  // If not a pointer to a join hash table, fail
+  auto *base_type =
+      type->As<ast::PointerType>()->base()->SafeAs<ast::InternalType>();
+  if (base_type == nullptr ||
+      base_type->internal_kind() !=
+          ast::InternalType::InternalKind::JoinHashTable) {
+    error_reporter().Report(call->position(),
+                            ErrorMessages::kBadArgToHashTableBuild, type);
+    return;
+  }
+
+  // This call returns nothing
+  call->set_type(ast::NilType::Get(ast_context()));
+}
+
 void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
   call->set_call_kind(ast::CallExpr::CallKind::Builtin);
   switch (builtin) {
@@ -300,6 +371,14 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
     case ast::Builtin::FilterLt:
     case ast::Builtin::FilterLe: {
       CheckBuiltinFilterCall(call);
+      break;
+    }
+    case ast::Builtin::HashTableInsert: {
+      CheckBuiltinJoinHashTableInsert(call);
+      break;
+    }
+    case ast::Builtin::HashTableBuild: {
+      CheckBuiltinJoinHashTableBuild(call);
       break;
     }
     case ast::Builtin::Map: {
@@ -423,6 +502,12 @@ void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
 
   // Check the builtin types
   if (auto *type = ast_context().LookupBuiltinType(node->name())) {
+    node->set_type(type);
+    return;
+  }
+
+  // Check the internal types
+  if (auto *type = ast_context().LookupInternalType(node->name())) {
     node->set_type(type);
     return;
   }

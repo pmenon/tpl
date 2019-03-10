@@ -396,11 +396,12 @@ class StructType : public Type {
 
 // clang-format off
 #define INTERNAL_TYPE_LIST(V) \
-  V(TableVectorIterator, "tpl::sql::TableVectorIterator", ::tpl::sql::TableVectorIterator)                                  \
-  V(VectorProjectionIterator, "tpl::sql::VectorProjectionIterator", ::tpl::sql::VectorProjectionIterator)                   \
-  V(SqlBool, "sql::Bool", ::tpl::sql::BoolVal)                                                                              \
-  V(SqlInteger, "sql::Integer", ::tpl::sql::Integer)                                                                        \
-  V(SqlDecimal, "sql::Decimal", ::tpl::sql::Decimal)
+  V(TableVectorIterator, "TableVectorIterator", ::tpl::sql::TableVectorIterator)                                  \
+  V(VectorProjectionIterator, "VectorProjectionIterator", ::tpl::sql::VectorProjectionIterator)                   \
+  V(JoinHashTable, "JoinHashTable", ::tpl::sql::JoinHashTable)                                                    \
+  V(SqlBool, "Bool", ::tpl::sql::BoolVal)                                                                         \
+  V(SqlInteger, "Integer", ::tpl::sql::Integer)                                                                   \
+  V(SqlDecimal, "Decimal", ::tpl::sql::Decimal)
 // clang-format on
 
 /**

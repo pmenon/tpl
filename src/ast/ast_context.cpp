@@ -7,6 +7,7 @@
 #include "ast/ast_node_factory.h"
 #include "ast/builtins.h"
 #include "ast/type.h"
+#include "sql/join_hash_table.h"
 #include "sql/table_vector_iterator.h"
 #include "sql/value.h"
 #include "util/common.h"
@@ -147,6 +148,7 @@ struct AstContext::Implementation {
   llvm::StringMap<char, util::LLVMRegionAllocator> string_table;
   llvm::DenseMap<Identifier, Type *> builtin_types;
   llvm::DenseMap<Identifier, Builtin> builtin_funcs;
+  llvm::DenseMap<Identifier, InternalType::InternalKind> internal_type_names;
   llvm::DenseMap<Type *, PointerType *> pointer_types;
   llvm::DenseMap<std::pair<Type *, uint64_t>, ArrayType *> array_types;
   llvm::DenseMap<std::pair<Type *, Type *>, MapType *> map_types;
@@ -201,7 +203,9 @@ AstContext::AstContext(util::Region *region,
 #define INIT_TYPE(Kind, NameStr, Type)                            \
   impl().internal_types.push_back(new (region) InternalType(      \
       *this, GetIdentifier(NameStr), sizeof(Type), alignof(Type), \
-      InternalType::InternalKind::Kind));
+      InternalType::InternalKind::Kind));                         \
+  impl().internal_type_names[GetIdentifier(NameStr)] =            \
+      InternalType::InternalKind::Kind;
   INTERNAL_TYPE_LIST(INIT_TYPE)
 #undef INIT_TYPE
 
@@ -225,6 +229,14 @@ Identifier AstContext::GetIdentifier(llvm::StringRef str) {
 Type *AstContext::LookupBuiltinType(Identifier identifier) const {
   auto iter = impl().builtin_types.find(identifier);
   return (iter == impl().builtin_types.end() ? nullptr : iter->second);
+}
+
+ast::Type *AstContext::LookupInternalType(Identifier identifier) const {
+  if (auto iter = impl().internal_type_names.find(identifier);
+      iter != impl().internal_type_names.end()) {
+    return impl().internal_types[static_cast<u32>(iter->second)];
+  }
+  return nullptr;
 }
 
 bool AstContext::IsBuiltinFunction(Identifier identifier,
