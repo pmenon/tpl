@@ -6,7 +6,7 @@ include_directories("${PROJECT_SOURCE_DIR}/src/include/" "${PROJECT_BINARY_DIR}"
 file(GLOB_RECURSE tpl_sources "${PROJECT_SOURCE_DIR}/src/*.cpp")
 list(REMOVE_ITEM tpl_sources
      "${PROJECT_SOURCE_DIR}/src/tpl.cpp"
-     "${PROJECT_SOURCE_DIR}/src/vm/gen_bc.cpp"
+     "${PROJECT_SOURCE_DIR}/src/vm/gen_opt_bc.cpp"
      "${PROJECT_SOURCE_DIR}/src/vm/bytecode_handlers_ir.cpp")
 
 ##################################################
@@ -41,13 +41,13 @@ function(tpl_compile_to_ir SRC_FILE)
         COMMAND ${CLANG} ${CLANG_IR_CXX_FLAGS} ${CLANG_IR_CXX_INCLUDES} ${FULL_NAME} -o ${OUTPUT_FILE}
         DEPENDS ${SRC_FILE})
     add_custom_target(${BASE_NAME}_bc ALL DEPENDS ${OUTPUT_FILE})
-    add_dependencies(gen_bc ${BASE_NAME}_bc)
+    add_dependencies(gen_opt_bc ${BASE_NAME}_bc)
 endfunction(tpl_compile_to_ir)
 
-# Build the "gen_bc" executable. This is dependent on all cross-compiled bitcode
+# Build the "gen_opt_bc" executable. This is dependent on all cross-compiled bitcode
 # set up through tpl_compile_to_ir()
-add_executable(gen_bc "${PROJECT_SOURCE_DIR}/src/vm/gen_bc.cpp")
-target_link_libraries(gen_bc ${TPL_LINK_LIBS})
+add_executable(gen_opt_bc "${PROJECT_SOURCE_DIR}/src/vm/gen_opt_bc.cpp")
+target_link_libraries(gen_opt_bc ${TPL_LINK_LIBS})
 
 # Cross-compile the bytecode handlers
 tpl_compile_to_ir(vm/bytecode_handlers_ir.cpp)
@@ -71,7 +71,7 @@ add_library(tpl_shared STATIC ${tpl_sources})
 
 set(tpl_main "${PROJECT_SOURCE_DIR}/src/tpl.cpp")
 add_executable(tpl ${tpl_main})
-add_dependencies(tpl gen_bc)
+add_dependencies(tpl gen_opt_bc)
 target_link_libraries(tpl tpl_shared ${TPL_LINK_LIBS})
 
 ##################################################
@@ -81,11 +81,13 @@ target_link_libraries(tpl tpl_shared ${TPL_LINK_LIBS})
 #
 ##################################################
 
-add_custom_command(TARGET tpl
+add_custom_command(
+        TARGET tpl
         POST_BUILD
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        COMMENT "Cleaning Bytecode Handler Module ..."
-        COMMAND gen_bc bytecode_handlers_ir.bc)
+        COMMENT "Generating Optimized Bitcode ..."
+        COMMAND gen_opt_bc bytecode_handlers_ir.bc bytecode_handlers_opt.bc
+        COMMAND mv bytecode_handlers_opt.bc bytecode_handlers_ir.bc)
 
 ##################################################
 #
@@ -93,7 +95,7 @@ add_custom_command(TARGET tpl
 #
 ##################################################
 
-set_target_properties(tpl gen_bc tpl_shared
+set_target_properties(tpl gen_opt_bc tpl_shared
     PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
