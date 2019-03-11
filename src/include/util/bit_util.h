@@ -75,7 +75,7 @@ class BitUtil {
 
   /// Count the number of set bits in the given value
   template <typename T>
-  static u64 CountBits(T val) {
+  static u32 CountBits(T val) {
     return llvm::countPopulation(val);
   }
 };
