@@ -224,7 +224,7 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
 }
 
 void BytecodeGenerator::VisitVectorWiseIteration(ast::ForInStmt *node,
-                                                 UNUSED LocalVar vpi,
+                                                 LocalVar vpi,
                                                  LoopBuilder *table_loop) {
   //
   // When iterating vector-wise, we need to allocate a VPI* with the same name
