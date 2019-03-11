@@ -10,19 +10,19 @@ namespace tpl::sql {
 // Count
 // ---------------------------------------------------------
 
-class CountAggregator {
+class CountAggregate {
  public:
   /// Construct
-  CountAggregator() : count_(0) {}
+  CountAggregate() : count_(0) {}
 
   /// This class cannot be copied or moved
-  DISALLOW_COPY_AND_MOVE(CountAggregator);
+  DISALLOW_COPY_AND_MOVE(CountAggregate);
 
   /// Advance the count based on the NULLness of the input value
   void Advance(const Val *val) { count_ += !val->null; }
 
   /// Merge this count with the \a that count
-  void Merge(const CountAggregator &that) { count_ += that.count_; }
+  void Merge(const CountAggregate &that) { count_ += that.count_; }
 
   /// Reset the aggregate
   void Reset() noexcept { count_ = 0; }
@@ -121,7 +121,7 @@ class IntegerSumAggregate : public SumAggregate {
 };
 
 template <>
-void IntegerSumAggregate::Advance<true>(const Integer *val) {
+inline void IntegerSumAggregate::Advance<true>(const Integer *val) {
   if (!val->null) {
     IncrementUpdateCount();
     sum_ += val->val.integer;
@@ -129,7 +129,7 @@ void IntegerSumAggregate::Advance<true>(const Integer *val) {
 }
 
 template <>
-void IntegerSumAggregate::Advance<false>(const Integer *val) {
+inline void IntegerSumAggregate::Advance<false>(const Integer *val) {
   TPL_ASSERT(val->null, "Received NULL input in non-NULLable aggregator!");
   IncrementUpdateCount();
   sum_ += val->val.integer;

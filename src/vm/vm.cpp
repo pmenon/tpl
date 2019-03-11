@@ -424,6 +424,92 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   GEN_CMP(NotEqual);
 #undef GEN_CMP
 
+  // -------------------------------------------------------
+  // Aggregations
+  // -------------------------------------------------------
+
+  OP(CountAggregateInit) : {
+    auto *agg = frame->LocalAt<sql::CountAggregate *>(READ_LOCAL_ID());
+    OpCountAggregateInit(agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(CountAggregateAdvance) : {
+    auto *agg = frame->LocalAt<sql::CountAggregate *>(READ_LOCAL_ID());
+    auto *val = frame->LocalAt<sql::Val *>(READ_LOCAL_ID());
+    OpCountAggregateAdvance(agg, val);
+    DISPATCH_NEXT();
+  }
+
+  OP(CountAggregateMerge) : {
+    auto *agg_1 = frame->LocalAt<sql::CountAggregate *>(READ_LOCAL_ID());
+    auto *agg_2 = frame->LocalAt<sql::CountAggregate *>(READ_LOCAL_ID());
+    OpCountAggregateMerge(agg_1, agg_2);
+    DISPATCH_NEXT();
+  }
+
+  OP(CountAggregateReset) : {
+    auto *agg = frame->LocalAt<sql::CountAggregate *>(READ_LOCAL_ID());
+    OpCountAggregateReset(agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(CountAggregateGetResult) : {
+    auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    auto *agg = frame->LocalAt<sql::CountAggregate *>(READ_LOCAL_ID());
+    OpCountAggregateGetResult(result, agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(CountAggregateFree) : {
+    auto *agg = frame->LocalAt<sql::CountAggregate *>(READ_LOCAL_ID());
+    OpCountAggregateFree(agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(CountStarAggregateInit) : {
+    auto *agg = frame->LocalAt<sql::CountStarAggregate *>(READ_LOCAL_ID());
+    OpCountStarAggregateInit(agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(CountStarAggregateAdvance) : {
+    auto *agg = frame->LocalAt<sql::CountStarAggregate *>(READ_LOCAL_ID());
+    auto *val = frame->LocalAt<sql::Val *>(READ_LOCAL_ID());
+    OpCountStarAggregateAdvance(agg, val);
+    DISPATCH_NEXT();
+  }
+
+  OP(CountStarAggregateMerge) : {
+    auto *agg_1 = frame->LocalAt<sql::CountStarAggregate *>(READ_LOCAL_ID());
+    auto *agg_2 = frame->LocalAt<sql::CountStarAggregate *>(READ_LOCAL_ID());
+    OpCountStarAggregateMerge(agg_1, agg_2);
+    DISPATCH_NEXT();
+  }
+
+  OP(CountStarAggregateReset) : {
+    auto *agg = frame->LocalAt<sql::CountStarAggregate *>(READ_LOCAL_ID());
+    OpCountStarAggregateReset(agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(CountStarAggregateGetResult) : {
+    auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    auto *agg = frame->LocalAt<sql::CountStarAggregate *>(READ_LOCAL_ID());
+    OpCountStarAggregateGetResult(result, agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(CountStarAggregateFree) : {
+    auto *agg = frame->LocalAt<sql::CountStarAggregate *>(READ_LOCAL_ID());
+    OpCountStarAggregateFree(agg);
+    DISPATCH_NEXT();
+  }
+
+  // -------------------------------------------------------
+  // Joins
+  // -------------------------------------------------------
+
   OP(JoinHashTableAllocTuple) : {
     auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
     auto *join_hash_table =

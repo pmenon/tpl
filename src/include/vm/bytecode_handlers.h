@@ -4,6 +4,7 @@
 
 #include "util/common.h"
 
+#include "sql/aggregators.h"
 #include "sql/join_hash_table.h"
 #include "sql/table_vector_iterator.h"
 #include "util/macros.h"
@@ -377,6 +378,66 @@ VM_OP_HOT void OpNotEqualInteger(tpl::sql::BoolVal *result,
                                  tpl::sql::Integer *right) {
   result->val = (left->val.integer != right->val.integer);
   result->null = (left->null || right->null);
+}
+
+// ---------------------------------------------------------
+// SQL Aggregations
+// ---------------------------------------------------------
+
+VM_OP_HOT void OpCountAggregateInit(tpl::sql::CountAggregate *agg) {
+  new (agg) tpl::sql::CountAggregate();
+}
+
+VM_OP_HOT void OpCountAggregateAdvance(tpl::sql::CountAggregate *agg,
+                                       tpl::sql::Val *val) {
+  agg->Advance(val);
+}
+
+VM_OP_HOT void OpCountAggregateMerge(tpl::sql::CountAggregate *agg_1,
+                                     tpl::sql::CountAggregate *agg_2) {
+  TPL_ASSERT(agg_2 != nullptr, "Null aggregate!");
+  agg_1->Merge(*agg_2);
+}
+
+VM_OP_HOT void OpCountAggregateReset(tpl::sql::CountAggregate *agg) {
+  agg->Reset();
+}
+
+VM_OP_HOT void OpCountAggregateGetResult(tpl::sql::Integer *result,
+                                         tpl::sql::CountAggregate *agg) {
+  *result = agg->GetCountResult();
+}
+
+VM_OP_HOT void OpCountAggregateFree(tpl::sql::CountAggregate *agg) {
+  agg->~CountAggregate();
+}
+
+VM_OP_HOT void OpCountStarAggregateInit(tpl::sql::CountStarAggregate *agg) {
+  new (agg) tpl::sql::CountStarAggregate();
+}
+
+VM_OP_HOT void OpCountStarAggregateAdvance(tpl::sql::CountStarAggregate *agg,
+                                           tpl::sql::Val *val) {
+  agg->Advance(val);
+}
+
+VM_OP_HOT void OpCountStarAggregateMerge(tpl::sql::CountStarAggregate *agg_1,
+                                         tpl::sql::CountStarAggregate *agg_2) {
+  TPL_ASSERT(agg_2 != nullptr, "Null aggregate!");
+  agg_1->Merge(*agg_2);
+}
+
+VM_OP_HOT void OpCountStarAggregateReset(tpl::sql::CountStarAggregate *agg) {
+  agg->Reset();
+}
+
+VM_OP_HOT void OpCountStarAggregateGetResult(
+    tpl::sql::Integer *result, tpl::sql::CountStarAggregate *agg) {
+  *result = agg->GetCountResult();
+}
+
+VM_OP_HOT void OpCountStarAggregateFree(tpl::sql::CountStarAggregate *agg) {
+  agg->~CountStarAggregate();
 }
 
 // ---------------------------------------------------------

@@ -119,9 +119,23 @@ namespace tpl::vm {
   F(EqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
   F(NotEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
                                                                                                                        \
+  /* Aggregations */                                                                                                   \
+  F(CountAggregateInit, OperandType::Local)                                                                            \
+  F(CountAggregateAdvance, OperandType::Local, OperandType::Local)                                                     \
+  F(CountAggregateMerge, OperandType::Local, OperandType::Local)                                                       \
+  F(CountAggregateReset, OperandType::Local)                                                                           \
+  F(CountAggregateGetResult, OperandType::Local, OperandType::Local)                                                   \
+  F(CountAggregateFree, OperandType::Local)                                                                            \
+  F(CountStarAggregateInit, OperandType::Local)                                                                        \
+  F(CountStarAggregateAdvance, OperandType::Local, OperandType::Local)                                                 \
+  F(CountStarAggregateMerge, OperandType::Local, OperandType::Local)                                                   \
+  F(CountStarAggregateReset, OperandType::Local)                                                                       \
+  F(CountStarAggregateGetResult, OperandType::Local, OperandType::Local)                                               \
+  F(CountStarAggregateFree, OperandType::Local)                                                                        \
+                                                                                                                       \
   /* Joins */                                                                                                          \
   F(JoinHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                               \
-  F(JoinHashTableBuild, OperandType::Local)
+  F(JoinHashTableBuild, OperandType::Local)                                                                            \
 
 // clang-format on
 
