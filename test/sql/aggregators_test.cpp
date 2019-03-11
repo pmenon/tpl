@@ -13,7 +13,7 @@ TEST_F(AggregatorsTest, CountTest) {
   //
 
   {
-    CountAggregator count;
+    CountAggregate count;
     EXPECT_EQ(0, count.GetCountResult().val.bigint);
   }
 
@@ -23,7 +23,7 @@ TEST_F(AggregatorsTest, CountTest) {
 
   {
     // Even inputs are NULL
-    CountAggregator count;
+    CountAggregate count;
     for (u32 i = 0; i < 10; i++) {
       Integer val(i % 2 == 0, i);
       count.Advance(&val);
@@ -34,7 +34,7 @@ TEST_F(AggregatorsTest, CountTest) {
 
 TEST_F(AggregatorsTest, CountMergeTest) {
   // Even inputs are NULL
-  CountAggregator count_1, count_2;
+  CountAggregate count_1, count_2;
 
   // Insert into count_1
   for (u32 i = 0; i < 100; i++) {
@@ -73,11 +73,27 @@ TEST_F(AggregatorsTest, SumIntegerTest) {
     IntegerSumAggregate sum;
     for (u32 i = 0; i < 10; i++) {
       Integer val(i % 2 == 0, i);
-      sum.Advance<true>(&val);
+      sum.AdvanceNullable(&val);
     }
 
     EXPECT_FALSE(sum.GetResultSum().null);
     EXPECT_EQ(25, sum.GetResultSum().val.integer);
+  }
+
+  //
+  // Sum on non-NULL input
+  //
+
+  {
+    // [0..9]
+    IntegerSumAggregate sum;
+    for (u32 i = 0; i < 10; i++) {
+      Integer val(false, i);
+      sum.Advance(&val);
+    }
+
+    EXPECT_FALSE(sum.GetResultSum().null);
+    EXPECT_EQ(45, sum.GetResultSum().val.integer);
   }
 }
 

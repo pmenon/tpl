@@ -440,6 +440,40 @@ VM_OP_HOT void OpCountStarAggregateFree(tpl::sql::CountStarAggregate *agg) {
   agg->~CountStarAggregate();
 }
 
+VM_OP_HOT void OpIntegerSumAggregateInit(tpl::sql::IntegerSumAggregate *agg) {
+  new (agg) tpl::sql::IntegerSumAggregate();
+}
+
+VM_OP_HOT void OpIntegerSumAggregateAdvance(tpl::sql::IntegerSumAggregate *agg,
+                                            tpl::sql::Integer *val) {
+  agg->Advance(val);
+}
+
+VM_OP_HOT void OpIntegerSumAggregateAdvanceNullable(
+    tpl::sql::IntegerSumAggregate *agg, tpl::sql::Integer *val) {
+  agg->AdvanceNullable(val);
+}
+
+VM_OP_HOT void OpIntegerSumAggregateMerge(
+    tpl::sql::IntegerSumAggregate *agg_1,
+    tpl::sql::IntegerSumAggregate *agg_2) {
+  TPL_ASSERT(agg_2 != nullptr, "Null aggregate!");
+  agg_1->Merge(*agg_2);
+}
+
+VM_OP_HOT void OpIntegerSumAggregateReset(tpl::sql::IntegerSumAggregate *agg) {
+  agg->Reset();
+}
+
+VM_OP_HOT void OpIntegerSumAggregateGetResult(
+    tpl::sql::Integer *result, tpl::sql::IntegerSumAggregate *agg) {
+  *result = agg->GetResultSum();
+}
+
+VM_OP_HOT void OpIntegerSumAggregateFree(tpl::sql::IntegerSumAggregate *agg) {
+  agg->~IntegerSumAggregate();
+}
+
 // ---------------------------------------------------------
 // SQL Joins
 // ---------------------------------------------------------

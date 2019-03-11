@@ -132,6 +132,13 @@ namespace tpl::vm {
   F(CountStarAggregateReset, OperandType::Local)                                                                       \
   F(CountStarAggregateGetResult, OperandType::Local, OperandType::Local)                                               \
   F(CountStarAggregateFree, OperandType::Local)                                                                        \
+  F(IntegerSumAggregateInit, OperandType::Local)                                                                       \
+  F(IntegerSumAggregateAdvance, OperandType::Local, OperandType::Local)                                                \
+  F(IntegerSumAggregateAdvanceNullable, OperandType::Local, OperandType::Local)                                        \
+  F(IntegerSumAggregateMerge, OperandType::Local, OperandType::Local)                                                  \
+  F(IntegerSumAggregateReset, OperandType::Local)                                                                      \
+  F(IntegerSumAggregateGetResult, OperandType::Local, OperandType::Local)                                              \
+  F(IntegerSumAggregateFree, OperandType::Local)                                                                       \
                                                                                                                        \
   /* Joins */                                                                                                          \
   F(JoinHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                               \

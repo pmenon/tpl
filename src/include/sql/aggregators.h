@@ -104,8 +104,8 @@ class IntegerSumAggregate : public SumAggregate {
   DISALLOW_COPY_AND_MOVE(IntegerSumAggregate);
 
   /// Advance the aggregate by the input value \a val
-  template <bool Nullable>
   void Advance(const Integer *val);
+  void AdvanceNullable(const Integer *val);
 
   /// Reset the aggregate
   void Reset() noexcept {
@@ -120,17 +120,14 @@ class IntegerSumAggregate : public SumAggregate {
   i64 sum_;
 };
 
-template <>
-inline void IntegerSumAggregate::Advance<true>(const Integer *val) {
+inline void IntegerSumAggregate::AdvanceNullable(const Integer *val) {
   if (!val->null) {
-    IncrementUpdateCount();
-    sum_ += val->val.integer;
+    Advance(val);
   }
 }
 
-template <>
-inline void IntegerSumAggregate::Advance<false>(const Integer *val) {
-  TPL_ASSERT(val->null, "Received NULL input in non-NULLable aggregator!");
+inline void IntegerSumAggregate::Advance(const Integer *val) {
+  TPL_ASSERT(!val->null, "Received NULL input in non-NULLable aggregator!");
   IncrementUpdateCount();
   sum_ += val->val.integer;
 }
