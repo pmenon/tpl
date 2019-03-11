@@ -149,7 +149,7 @@ namespace tpl::vm {
   F(SorterAllocInputTupleTopK, OperandType::Local)                                                                     \
   F(SorterAllocInputTupleTopKFinish, OperandType::Local)                                                               \
   F(SorterSort, OperandType::Local)                                                                                    \
-  F(SorterFree, OperandType::Local)                                                                                    \
+  F(SorterFree, OperandType::Local)
 
 // clang-format on
 
@@ -167,7 +167,10 @@ enum class Bytecode : u32 {
 class Bytecodes {
  public:
   // The total number of bytecode instructions
-  static const u32 kBytecodeCount = static_cast<u32>(Bytecode::Last) + 1;
+  static constexpr const u32 kBytecodeCount =
+      static_cast<u32>(Bytecode::Last) + 1;
+
+  static constexpr u32 NumBytecodes() { return kBytecodeCount; }
 
   // Return the maximum length of any bytecode instruction in bytes
   static u32 MaxBytecodeNameLength();

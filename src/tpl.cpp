@@ -164,6 +164,8 @@ void InitTPL() {
 
   tpl::vm::LLVMEngine::Initialize();
 
+  LOG_INFO("TPL Bytecode Count: {}", tpl::vm::Bytecodes::NumBytecodes());
+
   LOG_INFO("TPL initialized ...");
 }
 
