@@ -143,6 +143,13 @@ namespace tpl::vm {
   /* Hash Joins */                                                                                                     \
   F(JoinHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                               \
   F(JoinHashTableBuild, OperandType::Local)                                                                            \
+                                                                                                                       \
+  /* Sorting */                                                                                                        \
+  F(SorterAllocInputTuple, OperandType::Local)                                                                         \
+  F(SorterAllocInputTupleTopK, OperandType::Local)                                                                     \
+  F(SorterAllocInputTupleTopKFinish, OperandType::Local)                                                               \
+  F(SorterSort, OperandType::Local)                                                                                    \
+  F(SorterFree, OperandType::Local)                                                                                    \
 
 // clang-format on
 

@@ -572,6 +572,44 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  // -------------------------------------------------------
+  // Sorting
+  // -------------------------------------------------------
+
+  OP(SorterAllocInputTuple) : {
+    auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
+    OpSorterAllocInputTuple(result, sorter);
+    DISPATCH_NEXT();
+  }
+
+  OP(SorterAllocInputTupleTopK) : {
+    auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
+    auto top_k = READ_IMM8();
+    OpSorterAllocInputTupleTopK(result, sorter, top_k);
+    DISPATCH_NEXT();
+  }
+
+  OP(SorterAllocInputTupleTopKFinish) : {
+    auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
+    auto top_k = READ_IMM8();
+    OpSorterAllocInputTupleTopKFinish(sorter, top_k);
+    DISPATCH_NEXT();
+  }
+
+  OP(SorterSort) : {
+    auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
+    OpSorterSort(sorter);
+    DISPATCH_NEXT();
+  }
+
+  OP(SorterFree) : {
+    auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
+    OpSorterFree(sorter);
+    DISPATCH_NEXT();
+  }
+
   // Impossible
   UNREACHABLE("Impossible to reach end of interpreter loop. Bad code!");
 }

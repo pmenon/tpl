@@ -13,6 +13,16 @@ Sorter::Sorter(util::Region *region, ComparisonFunction cmp_fn,
 
 Sorter::~Sorter() = default;
 
+byte *Sorter::AllocInputTuple() noexcept {
+  byte *ret = tuple_storage_.append();
+  tuples_.push_back(ret);
+  return ret;
+}
+
+byte *Sorter::AllocInputTupleTopK(UNUSED u64 top_k) noexcept {
+  return AllocInputTuple();
+}
+
 void Sorter::AllocInputTupleTopKFinish(u64 top_k) noexcept {
   // If the number of buffered tuples is less than the bound, we're done
   if (tuples_.size() < top_k) {

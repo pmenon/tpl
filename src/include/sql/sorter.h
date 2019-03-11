@@ -71,18 +71,4 @@ class SorterIterator {
   util::ChunkedVectorT<const byte *>::Iterator iter_;
 };
 
-// ---------------------------------------------------------
-// Implementation below
-// ---------------------------------------------------------
-
-inline byte *Sorter::AllocInputTuple() noexcept {
-  byte *ret = tuple_storage_.append();
-  tuples_.push_back(ret);
-  return ret;
-}
-
-inline byte *Sorter::AllocInputTupleTopK(UNUSED u64 top_k) noexcept {
-  return AllocInputTuple();
-}
-
 }  // namespace tpl::sql

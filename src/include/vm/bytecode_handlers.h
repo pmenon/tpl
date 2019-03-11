@@ -4,8 +4,10 @@
 
 #include "util/common.h"
 
+#include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
 #include "sql/join_hash_table.h"
+#include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
 #include "util/macros.h"
 
@@ -486,5 +488,35 @@ VM_OP_HOT void OpJoinHashTableAllocTuple(
 VM_OP_HOT void OpJoinHashTableBuild(tpl::sql::JoinHashTable *join_hash_table) {
   join_hash_table->Build();
 }
+
+// ---------------------------------------------------------
+// Sorting
+// ---------------------------------------------------------
+
+VM_OP_HOT void OpSorterInit(tpl::sql::Sorter *sorter, tpl::util::Region *region,
+                            tpl::sql::Sorter::ComparisonFunction cmp_fn,
+                            u32 tuple_size) {
+  new (sorter) tpl::sql::Sorter(region, cmp_fn, tuple_size);
+}
+
+VM_OP_HOT void OpSorterAllocInputTuple(byte **result,
+                                       tpl::sql::Sorter *sorter) {
+  *result = sorter->AllocInputTuple();
+}
+
+VM_OP_HOT void OpSorterAllocInputTupleTopK(byte **result,
+                                           tpl::sql::Sorter *sorter,
+                                           u64 top_k) {
+  *result = sorter->AllocInputTupleTopK(top_k);
+}
+
+VM_OP_HOT void OpSorterAllocInputTupleTopKFinish(tpl::sql::Sorter *sorter,
+                                                 u64 top_k) {
+  sorter->AllocInputTupleTopKFinish(top_k);
+}
+
+VM_OP_HOT void OpSorterSort(tpl::sql::Sorter *sorter) { sorter->Sort(); }
+
+VM_OP_HOT void OpSorterFree(tpl::sql::Sorter *sorter) { sorter->~Sorter(); }
 
 }  // extern "C"
