@@ -475,7 +475,7 @@ VM_OP_HOT void OpIntegerSumAggregateFree(tpl::sql::IntegerSumAggregate *agg) {
 }
 
 // ---------------------------------------------------------
-// SQL Joins
+// SQL Hash Joins
 // ---------------------------------------------------------
 
 VM_OP_HOT void OpJoinHashTableAllocTuple(

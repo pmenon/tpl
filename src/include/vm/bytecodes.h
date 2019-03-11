@@ -140,7 +140,7 @@ namespace tpl::vm {
   F(IntegerSumAggregateGetResult, OperandType::Local, OperandType::Local)                                              \
   F(IntegerSumAggregateFree, OperandType::Local)                                                                       \
                                                                                                                        \
-  /* Joins */                                                                                                          \
+  /* Hash Joins */                                                                                                     \
   F(JoinHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                               \
   F(JoinHashTableBuild, OperandType::Local)                                                                            \
 

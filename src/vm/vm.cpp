@@ -553,7 +553,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   }
 
   // -------------------------------------------------------
-  // Joins
+  // Hash Joins
   // -------------------------------------------------------
 
   OP(JoinHashTableAllocTuple) : {
