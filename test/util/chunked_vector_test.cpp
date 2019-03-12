@@ -7,9 +7,9 @@
 
 namespace tpl::util::test {
 
-class GenericChunkedVectorTest : public TplTest {};
+class ChunkedVectorTest : public TplTest {};
 
-TEST_F(GenericChunkedVectorTest, InsertAndIndexTest) {
+TEST_F(ChunkedVectorTest, InsertAndIndexTest) {
   const u32 num_elems = 10;
 
   util::Region tmp("tmp");
@@ -25,7 +25,7 @@ TEST_F(GenericChunkedVectorTest, InsertAndIndexTest) {
   EXPECT_EQ(num_elems, vec.size());
 }
 
-TEST_F(GenericChunkedVectorTest, RandomLookupTest) {
+TEST_F(ChunkedVectorTest, RandomLookupTest) {
   const u32 num_elems = 1000;
 
   util::Region tmp("tmp");
@@ -45,7 +45,7 @@ TEST_F(GenericChunkedVectorTest, RandomLookupTest) {
   }
 }
 
-TEST_F(GenericChunkedVectorTest, IterationTest) {
+TEST_F(ChunkedVectorTest, IterationTest) {
   util::Region tmp("tmp");
   ChunkedVectorT<u32> vec(&tmp);
 
@@ -61,7 +61,7 @@ TEST_F(GenericChunkedVectorTest, IterationTest) {
   }
 }
 
-TEST_F(GenericChunkedVectorTest, PopBackTest) {
+TEST_F(ChunkedVectorTest, PopBackTest) {
   util::Region tmp("tmp");
   ChunkedVectorT<u32> vec(&tmp);
 
@@ -80,7 +80,7 @@ TEST_F(GenericChunkedVectorTest, PopBackTest) {
   }
 }
 
-TEST_F(GenericChunkedVectorTest, FrontBackTest) {
+TEST_F(ChunkedVectorTest, FrontBackTest) {
   util::Region tmp("tmp");
   ChunkedVectorT<u32> vec(&tmp);
 
@@ -101,16 +101,76 @@ TEST_F(GenericChunkedVectorTest, FrontBackTest) {
   EXPECT_EQ(8u, vec.back());
 }
 
-TEST_F(GenericChunkedVectorTest, DISABLED_PerfInsertTest) {
+TEST_F(ChunkedVectorTest, ChunkReuseTest) {
+  util::Region tmp("tmp");
+  ChunkedVectorT<u32> vec(&tmp);
+
+  for (u32 i = 0; i < 1000; i++) {
+    vec.push_back(i);
+  }
+
+  EXPECT_EQ(1000u, vec.size());
+  EXPECT_EQ(999u, vec.back());
+
+  // Track memory allocation after all data inserted
+  auto allocated_1 = tmp.allocated();
+
+  for (u32 i = 0; i < 1000; i++) {
+    vec.pop_back();
+  }
+
+  // Pops shouldn't allocated memory
+  auto allocated_2 = tmp.allocated();
+  EXPECT_EQ(0u, allocated_2 - allocated_1);
+
+  for (u32 i = 0; i < 1000; i++) {
+    vec.push_back(i);
+  }
+
+  // The above pushes should reuse chunks, i.e., no allocations
+  auto allocated_3 = tmp.allocated();
+  EXPECT_EQ(0u, allocated_3 - allocated_2);
+}
+
+struct Simple {
+  // Not thread-safe!
+  static u32 count;
+  Simple() { count++; }
+  ~Simple() { count--; }
+};
+
+u32 Simple::count = 0;
+
+TEST_F(ChunkedVectorTest, ElementConstructDestructTest) {
+  util::Region tmp("tmp");
+  ChunkedVectorT<Simple> vec(&tmp);
+
+  for (u32 i = 0; i < 1000; i++) {
+    vec.emplace_back();
+  }
+  EXPECT_EQ(1000u, Simple::count);
+
+  vec.pop_back();
+  EXPECT_EQ(999u, Simple::count);
+
+  for (u32 i = 0; i < 999; i++) {
+    vec.pop_back();
+  }
+  EXPECT_EQ(0u, Simple::count);
+}
+
+TEST_F(ChunkedVectorTest, DISABLED_PerfInsertTest) {
   auto stdvec_ms = Bench(3, []() {
-    std::vector<u32> v;
+    util::Region tmp("tmp");
+    std::vector<u32, StlRegionAllocator<u32>> v{StlRegionAllocator<u32>(&tmp)};
     for (u32 i = 0; i < 10000000; i++) {
       v.push_back(i);
     }
   });
 
   auto stddeque_ms = Bench(3, []() {
-    std::deque<u32> v;
+    util::Region tmp("tmp");
+    std::deque<u32, StlRegionAllocator<u32>> v{StlRegionAllocator<u32>(&tmp)};
     for (u32 i = 0; i < 10000000; i++) {
       v.push_back(i);
     }
@@ -130,13 +190,15 @@ TEST_F(GenericChunkedVectorTest, DISABLED_PerfInsertTest) {
   std::cout << "ChunkedVector: " << chunked_ms << " ms" << std::endl;
 }
 
-TEST_F(GenericChunkedVectorTest, DISABLED_PerfScanTest) {
+TEST_F(ChunkedVectorTest, DISABLED_PerfScanTest) {
   static const u32 num_elems = 10000000;
 
-  std::vector<u32> stdvec;
-  std::deque<u32> stddeque;
-  util::Region tmp("tmp");
-  ChunkedVectorT<u32> chunkedvec(&tmp);
+  util::Region tmp("vec"), tmp2("deque"), tmp3("chunk");
+  std::vector<u32, StlRegionAllocator<u32>> stdvec{
+      StlRegionAllocator<u32>(&tmp)};
+  std::deque<u32, StlRegionAllocator<u32>> stddeque{
+      StlRegionAllocator<u32>(&tmp2)};
+  ChunkedVectorT<u32> chunkedvec(&tmp3);
   for (u32 i = 0; i < num_elems; i++) {
     stdvec.push_back(i);
     stddeque.push_back(i);
@@ -144,7 +206,7 @@ TEST_F(GenericChunkedVectorTest, DISABLED_PerfScanTest) {
   }
 
   auto stdvec_ms = Bench(10, [&stdvec]() {
-    auto c = 0;
+    u32 c = 0;
     for (auto x : stdvec) {
       c += x;
     }
@@ -152,7 +214,7 @@ TEST_F(GenericChunkedVectorTest, DISABLED_PerfScanTest) {
   });
 
   auto stddeque_ms = Bench(10, [&stddeque]() {
-    auto c = 0;
+    u32 c = 0;
     for (auto x : stddeque) {
       c += x;
     }
@@ -173,13 +235,15 @@ TEST_F(GenericChunkedVectorTest, DISABLED_PerfScanTest) {
   std::cout << "ChunkedVector: " << chunked_ms << " ms" << std::endl;
 }
 
-TEST_F(GenericChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
+TEST_F(ChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
   static const u32 num_elems = 10000000;
 
-  std::vector<u32> stdvec;
-  std::deque<u32> stddeque;
-  util::Region tmp("tmp");
-  ChunkedVectorT<u32> chunkedvec(&tmp);
+  util::Region tmp("vec"), tmp2("deque"), tmp3("chunk");
+  std::vector<u32, StlRegionAllocator<u32>> stdvec{
+      StlRegionAllocator<u32>(&tmp)};
+  std::deque<u32, StlRegionAllocator<u32>> stddeque{
+      StlRegionAllocator<u32>(&tmp2)};
+  ChunkedVectorT<u32> chunkedvec(&tmp3);
   for (u32 i = 0; i < num_elems; i++) {
     stdvec.push_back(i % 4);
     stddeque.push_back(i % 4);
@@ -192,7 +256,7 @@ TEST_F(GenericChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
   }
 
   auto stdvec_ms = Bench(10, [&stdvec, &random_indexes]() {
-    auto c = 0;
+    u32 c = 0;
     for (auto idx : random_indexes) {
       c += stdvec[idx];
     }
@@ -200,7 +264,7 @@ TEST_F(GenericChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
   });
 
   auto stddeque_ms = Bench(10, [&stddeque, &random_indexes]() {
-    auto c = 0;
+    u32 c = 0;
     for (auto idx : random_indexes) {
       c += stddeque[idx];
     }

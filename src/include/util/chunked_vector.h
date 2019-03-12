@@ -1,9 +1,8 @@
 #pragma once
 
-#include "llvm/ADT/SmallVector.h"
-
 #include "util/common.h"
 #include "util/region.h"
+#include "util/region_containers.h"
 
 namespace tpl::util {
 
@@ -103,9 +102,10 @@ class ChunkedVector {
   util::Region *region_;
 
   // The list of pointers to all chunks
-  llvm::SmallVector<byte *, 4> chunks_;
+  util::RegionVector<byte *> chunks_;
 
   // The current position in the last chunk and the position of the end
+  std::size_t active_chunk_idx_;
   byte *position_;
   byte *end_;
 
@@ -124,7 +124,7 @@ class ChunkedVectorIterator {
   ChunkedVectorIterator() noexcept
       : chunks_iter_(), element_size_(0), curr_(nullptr), end_(nullptr) {}
 
-  ChunkedVectorIterator(llvm::SmallVectorImpl<byte *>::iterator chunks_iter,
+  ChunkedVectorIterator(util::RegionVector<byte *>::iterator chunks_iter,
                         byte *position, std::size_t element_size) noexcept
       : chunks_iter_(chunks_iter),
         element_size_(element_size),
@@ -153,7 +153,7 @@ class ChunkedVectorIterator {
   }
 
  private:
-  llvm::SmallVectorImpl<byte *>::iterator chunks_iter_;
+  util::RegionVector<byte *>::iterator chunks_iter_;
   std::size_t element_size_;
   byte *curr_;
   byte *end_;
@@ -166,10 +166,14 @@ class ChunkedVectorIterator {
 inline ChunkedVector::ChunkedVector(util::Region *region,
                                     std::size_t element_size) noexcept
     : region_(region),
+      chunks_(region),
+      active_chunk_idx_(0),
       position_(nullptr),
       end_(nullptr),
       element_size_(element_size),
-      num_elements_(0) {}
+      num_elements_(0) {
+  chunks_.reserve(4);
+}
 
 inline ChunkedVector::~ChunkedVector() noexcept {
   const std::size_t chunk_size = ChunkAllocSize(element_size());
@@ -234,13 +238,19 @@ inline void ChunkedVector::AllocateChunk() {
   std::size_t alloc_size = ChunkAllocSize(element_size());
   byte *new_chunk = static_cast<byte *>(region_->Allocate(alloc_size));
   chunks_.push_back(new_chunk);
+  active_chunk_idx_ = chunks_.size() - 1;
   position_ = new_chunk;
   end_ = new_chunk + alloc_size;
 }
 
 inline byte *ChunkedVector::append() noexcept {
   if (position_ == end_) {
-    AllocateChunk();
+    if (chunks_.empty() || active_chunk_idx_ == chunks_.size() - 1) {
+      AllocateChunk();
+    } else {
+      position_ = chunks_[++active_chunk_idx_];
+      end_ = position_ + ChunkAllocSize(element_size());
+    }
   }
 
   byte *const result = position_;
@@ -255,8 +265,14 @@ inline void ChunkedVector::push_back(const byte *const elem) {
 }
 
 inline void ChunkedVector::pop_back() {
-  num_elements_--;
+  TPL_ASSERT(!empty(), "Popping empty vector");
+  if (position_ == chunks_[active_chunk_idx_]) {
+    end_ = chunks_[--active_chunk_idx_] + ChunkAllocSize(element_size());
+    position_ = end_;
+  }
+
   position_ -= element_size();
+  num_elements_--;
 }
 
 // ---------------------------------------------------------
@@ -366,20 +382,20 @@ const T &ChunkedVectorT<T>::back() const noexcept {
 template <typename T>
 template <class... Args>
 inline void ChunkedVectorT<T>::emplace_back(Args &&... args) {
-  auto *new_elem = vec_.append();
-  *reinterpret_cast<T *>(new_elem) = std::move(T(std::forward<Args>(args)...));
+  T *space = reinterpret_cast<T *>(vec_.append());
+  new (space) T(std::forward<Args>(args)...);
 }
 
 template <typename T>
 inline void ChunkedVectorT<T>::push_back(const T &elem) {
-  auto *new_elem = vec_.append();
-  *reinterpret_cast<T *>(new_elem) = elem;
+  T *space = reinterpret_cast<T *>(vec_.append());
+  new (space) T(elem);
 }
 
 template <typename T>
 inline void ChunkedVectorT<T>::push_back(T &&elem) {
-  auto *new_elem = vec_.append();
-  *reinterpret_cast<T *>(new_elem) = std::move(elem);
+  T *space = reinterpret_cast<T *>(vec_.append());
+  new (space) T(std::move(elem));
 }
 
 template <typename T>
