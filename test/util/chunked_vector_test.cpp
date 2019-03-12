@@ -61,6 +61,46 @@ TEST_F(GenericChunkedVectorTest, IterationTest) {
   }
 }
 
+TEST_F(GenericChunkedVectorTest, PopBackTest) {
+  util::Region tmp("tmp");
+  ChunkedVectorT<u32> vec(&tmp);
+
+  for (u32 i = 0; i < 10; i++) {
+    vec.push_back(i);
+  }
+
+  vec.pop_back();
+  EXPECT_EQ(9u, vec.size());
+
+  vec.pop_back();
+  EXPECT_EQ(8u, vec.size());
+
+  for (u32 i = 0; i < vec.size(); i++) {
+    EXPECT_EQ(i, vec[i]);
+  }
+}
+
+TEST_F(GenericChunkedVectorTest, FrontBackTest) {
+  util::Region tmp("tmp");
+  ChunkedVectorT<u32> vec(&tmp);
+
+  for (u32 i = 0; i < 10; i++) {
+    vec.push_back(i);
+  }
+
+  EXPECT_EQ(0u, vec.front());
+  EXPECT_EQ(9u, vec.back());
+
+  vec.front() = 44;
+  vec.back() = 100;
+
+  EXPECT_EQ(44u, vec[0]);
+  EXPECT_EQ(100u, vec[9]);
+
+  vec.pop_back();
+  EXPECT_EQ(8u, vec.back());
+}
+
 TEST_F(GenericChunkedVectorTest, DISABLED_PerfInsertTest) {
   auto stdvec_ms = Bench(3, []() {
     std::vector<u32> v;

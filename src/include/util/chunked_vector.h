@@ -254,7 +254,10 @@ inline void ChunkedVector::push_back(const byte *const elem) {
   std::memcpy(dest, elem, element_size());
 }
 
-inline void ChunkedVector::pop_back() { position_ -= element_size(); }
+inline void ChunkedVector::pop_back() {
+  num_elements_--;
+  position_ -= element_size();
+}
 
 // ---------------------------------------------------------
 // Templated ChunkedVector
