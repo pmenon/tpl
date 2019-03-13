@@ -19,7 +19,7 @@ class CountAggregate {
   DISALLOW_COPY_AND_MOVE(CountAggregate);
 
   /// Advance the count based on the NULLness of the input value
-  void Advance(const Val *val) { count_ += !val->null; }
+  void Advance(const Val *val) { count_ += !val->is_null; }
 
   /// Merge this count with the \a that count
   void Merge(const CountAggregate &that) { count_ += that.count_; }
@@ -28,9 +28,7 @@ class CountAggregate {
   void Reset() noexcept { count_ = 0; }
 
   /// Return the current value of the count
-  Integer GetCountResult() const {
-    return Integer(false, static_cast<i64>(count_));
-  }
+  Integer GetCountResult() const { return Integer(count_); }
 
  private:
   u64 count_;
@@ -58,9 +56,7 @@ class CountStarAggregate {
   void Reset() noexcept { count_ = 0; }
 
   /// Return the current value of the count
-  Integer GetCountResult() const {
-    return Integer(false, static_cast<i64>(count_));
-  }
+  Integer GetCountResult() const { return Integer(count_); }
 
  private:
   u64 count_;
@@ -114,22 +110,26 @@ class IntegerSumAggregate : public SumAggregate {
   }
 
   /// Return the result of the summation
-  Integer GetResultSum() const { return Integer(GetNumUpdates() == 0, sum_); }
+  Integer GetResultSum() const {
+    Integer sum(sum_);
+    sum.is_null = (GetNumUpdates() == 0);
+    return sum;
+  }
 
  private:
   i64 sum_;
 };
 
 inline void IntegerSumAggregate::AdvanceNullable(const Integer *val) {
-  if (!val->null) {
+  if (!val->is_null) {
     Advance(val);
   }
 }
 
 inline void IntegerSumAggregate::Advance(const Integer *val) {
-  TPL_ASSERT(!val->null, "Received NULL input in non-NULLable aggregator!");
+  TPL_ASSERT(!val->is_null, "Received NULL input in non-NULLable aggregator!");
   IncrementUpdateCount();
-  sum_ += val->val.integer;
+  sum_ += val->val;
 }
 
 }  // namespace tpl::sql

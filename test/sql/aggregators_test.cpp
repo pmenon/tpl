@@ -14,7 +14,7 @@ TEST_F(AggregatorsTest, CountTest) {
 
   {
     CountAggregate count;
-    EXPECT_EQ(0, count.GetCountResult().val.bigint);
+    EXPECT_EQ(0, count.GetCountResult().val);
   }
 
   //
@@ -25,10 +25,10 @@ TEST_F(AggregatorsTest, CountTest) {
     // Even inputs are NULL
     CountAggregate count;
     for (u32 i = 0; i < 10; i++) {
-      Integer val(i % 2 == 0, i);
+      Integer val = (i % 2 == 0 ? Integer::Null() : Integer(i));
       count.Advance(&val);
     }
-    EXPECT_EQ(5, count.GetCountResult().val.bigint);
+    EXPECT_EQ(5, count.GetCountResult().val);
   }
 }
 
@@ -38,7 +38,7 @@ TEST_F(AggregatorsTest, CountMergeTest) {
 
   // Insert into count_1
   for (u32 i = 0; i < 100; i++) {
-    Integer val(rand() % 2 == 0, i);
+    Integer val = (i % 2 == 0 ? Integer::Null() : Integer(i));
     count_1.Advance(&val);
   }
   for (u32 i = 0; i < 100; i++) {
@@ -46,12 +46,11 @@ TEST_F(AggregatorsTest, CountMergeTest) {
     count_2.Advance(&val);
   }
 
-  auto merged = count_1.GetCountResult().bigint_val() +
-                count_2.GetCountResult().bigint_val();
+  auto merged = count_1.GetCountResult().val + count_2.GetCountResult().val;
 
   count_1.Merge(count_2);
 
-  EXPECT_EQ(merged, count_1.GetCountResult().bigint_val());
+  EXPECT_EQ(merged, count_1.GetCountResult().val);
 }
 
 TEST_F(AggregatorsTest, SumIntegerTest) {
@@ -61,7 +60,7 @@ TEST_F(AggregatorsTest, SumIntegerTest) {
 
   {
     IntegerSumAggregate sum;
-    EXPECT_TRUE(sum.GetResultSum().null);
+    EXPECT_TRUE(sum.GetResultSum().is_null);
   }
 
   //
@@ -72,12 +71,12 @@ TEST_F(AggregatorsTest, SumIntegerTest) {
     // [1, 3, 5, 7, 9]
     IntegerSumAggregate sum;
     for (u32 i = 0; i < 10; i++) {
-      Integer val(i % 2 == 0, i);
+      Integer val = (i % 2 == 0 ? Integer::Null() : Integer(i));
       sum.AdvanceNullable(&val);
     }
 
-    EXPECT_FALSE(sum.GetResultSum().null);
-    EXPECT_EQ(25, sum.GetResultSum().val.integer);
+    EXPECT_FALSE(sum.GetResultSum().is_null);
+    EXPECT_EQ(25, sum.GetResultSum().val);
   }
 
   //
@@ -88,12 +87,12 @@ TEST_F(AggregatorsTest, SumIntegerTest) {
     // [0..9]
     IntegerSumAggregate sum;
     for (u32 i = 0; i < 10; i++) {
-      Integer val(false, i);
+      Integer val(i);
       sum.Advance(&val);
     }
 
-    EXPECT_FALSE(sum.GetResultSum().null);
-    EXPECT_EQ(45, sum.GetResultSum().val.integer);
+    EXPECT_FALSE(sum.GetResultSum().is_null);
+    EXPECT_EQ(45, sum.GetResultSum().val);
   }
 }
 

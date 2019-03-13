@@ -223,8 +223,8 @@ VM_OP_HOT void OpVPIGetSmallInt(tpl::sql::Integer *out,
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
 
   // Set
-  out->null = false;
-  out->val.smallint = *ptr;
+  out->is_null = false;
+  out->val = *ptr;
 }
 
 VM_OP_HOT void OpVPIGetInteger(tpl::sql::Integer *out,
@@ -235,8 +235,8 @@ VM_OP_HOT void OpVPIGetInteger(tpl::sql::Integer *out,
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
 
   // Set
-  out->null = false;
-  out->val.integer = *ptr;
+  out->is_null = false;
+  out->val = *ptr;
 }
 
 VM_OP_HOT void OpVPIGetBigInt(tpl::sql::Integer *out,
@@ -247,15 +247,15 @@ VM_OP_HOT void OpVPIGetBigInt(tpl::sql::Integer *out,
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
 
   // Set
-  out->null = false;
-  out->val.bigint = *ptr;
+  out->is_null = false;
+  out->val = *ptr;
 }
 
 VM_OP_HOT void OpVPIGetDecimal(tpl::sql::Decimal *out,
                                UNUSED tpl::sql::VectorProjectionIterator *iter,
                                UNUSED u32 col_idx) {
   // Set
-  out->null = false;
+  out->is_null = false;
   out->val = 0;
 }
 
@@ -268,8 +268,8 @@ VM_OP_HOT void OpVPIGetSmallIntNull(tpl::sql::Integer *out,
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
 
   // Set
-  out->null = null;
-  out->val.smallint = *ptr;
+  out->is_null = null;
+  out->val = *ptr;
 }
 
 VM_OP_HOT void OpVPIGetIntegerNull(tpl::sql::Integer *out,
@@ -281,8 +281,8 @@ VM_OP_HOT void OpVPIGetIntegerNull(tpl::sql::Integer *out,
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
 
   // Set
-  out->null = null;
-  out->val.integer = *ptr;
+  out->is_null = null;
+  out->val = *ptr;
 }
 
 VM_OP_HOT void OpVPIGetBigIntNull(tpl::sql::Integer *out,
@@ -294,15 +294,15 @@ VM_OP_HOT void OpVPIGetBigIntNull(tpl::sql::Integer *out,
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
 
   // Set
-  out->null = null;
-  out->val.bigint = *ptr;
+  out->is_null = null;
+  out->val = *ptr;
 }
 
 VM_OP_HOT void OpVPIGetDecimalNull(tpl::sql::Decimal *out,
                                    tpl::sql::VectorProjectionIterator *iter,
                                    u32 col_idx) {
   out->val = 0;
-  out->null = false;
+  out->is_null = false;
 }
 
 VM_OP_COLD void OpVPIFilterEqual(u32 *size,
@@ -336,50 +336,49 @@ VM_OP_HOT void OpForceBoolTruth(bool *result, tpl::sql::BoolVal *input) {
 }
 
 VM_OP_HOT void OpInitInteger(tpl::sql::Integer *result, i32 input) {
-  result->val.integer = input;
-  result->null = false;
+  *result = tpl::sql::Integer(input);
 }
 
 VM_OP_HOT void OpGreaterThanInteger(tpl::sql::BoolVal *result,
                                     tpl::sql::Integer *left,
                                     tpl::sql::Integer *right) {
-  result->val = (left->val.integer > right->val.integer);
-  result->null = (left->null || right->null);
+  result->val = (left->val > right->val);
+  result->is_null = (left->is_null || right->is_null);
 }
 
 VM_OP_HOT void OpGreaterThanEqualInteger(tpl::sql::BoolVal *result,
                                          tpl::sql::Integer *left,
                                          tpl::sql::Integer *right) {
-  result->val = (left->val.integer >= right->val.integer);
-  result->null = (left->null || right->null);
+  result->val = (left->val >= right->val);
+  result->is_null = (left->is_null || right->is_null);
 }
 
 VM_OP_HOT void OpEqualInteger(tpl::sql::BoolVal *result,
                               tpl::sql::Integer *left,
                               tpl::sql::Integer *right) {
-  result->val = (left->val.integer == right->val.integer);
-  result->null = (left->null || right->null);
+  result->val = (left->val == right->val);
+  result->is_null = (left->is_null || right->is_null);
 }
 
 VM_OP_HOT void OpLessThanInteger(tpl::sql::BoolVal *result,
                                  tpl::sql::Integer *left,
                                  tpl::sql::Integer *right) {
-  result->val = (left->val.integer < right->val.integer);
-  result->null = (left->null || right->null);
+  result->val = (left->val < right->val);
+  result->is_null = (left->is_null || right->is_null);
 }
 
 VM_OP_HOT void OpLessThanEqualInteger(tpl::sql::BoolVal *result,
                                       tpl::sql::Integer *left,
                                       tpl::sql::Integer *right) {
-  result->val = (left->val.integer <= right->val.integer);
-  result->null = (left->null || right->null);
+  result->val = (left->val <= right->val);
+  result->is_null = (left->is_null || right->is_null);
 }
 
 VM_OP_HOT void OpNotEqualInteger(tpl::sql::BoolVal *result,
                                  tpl::sql::Integer *left,
                                  tpl::sql::Integer *right) {
-  result->val = (left->val.integer != right->val.integer);
-  result->null = (left->null || right->null);
+  result->val = (left->val != right->val);
+  result->is_null = (left->is_null || right->is_null);
 }
 
 // ---------------------------------------------------------
