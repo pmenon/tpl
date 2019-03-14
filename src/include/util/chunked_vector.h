@@ -6,7 +6,7 @@
 
 namespace tpl::util {
 
-class ChunkedVectorIterator;
+class ChunkedVectorRandomIterator;
 
 /// A ChunkedVector is similar to STL's std::vector, but with three important
 /// distinctions: ChunkedVectors are untyped and are not templated;
@@ -42,8 +42,8 @@ class ChunkedVector {
   // Iterators
   // -------------------------------------------------------
 
-  ChunkedVectorIterator begin() noexcept;
-  ChunkedVectorIterator end() noexcept;
+  ChunkedVectorRandomIterator begin() noexcept;
+  ChunkedVectorRandomIterator end() noexcept;
 
   // -------------------------------------------------------
   // Element access
@@ -119,44 +119,143 @@ class ChunkedVector {
 // ---------------------------------------------------------
 
 /// An iterator over the elements in a generic chunked-vector
-class ChunkedVectorIterator {
+class ChunkedVectorRandomIterator {
  public:
-  ChunkedVectorIterator() noexcept
-      : chunks_iter_(), element_size_(0), curr_(nullptr), end_(nullptr) {}
+  ChunkedVectorRandomIterator() noexcept
+      : chunks_iter_(), element_size_(0), curr_(nullptr) {}
 
-  ChunkedVectorIterator(util::RegionVector<byte *>::iterator chunks_iter,
-                        byte *position, std::size_t element_size) noexcept
-      : chunks_iter_(chunks_iter),
-        element_size_(element_size),
-        curr_(position),
-        end_(*chunks_iter + ChunkedVector::ChunkAllocSize(element_size)) {}
+  ChunkedVectorRandomIterator(util::RegionVector<byte *>::iterator chunks_iter,
+  byte *position, std::size_t element_size) noexcept
+  : chunks_iter_(chunks_iter)
+  , element_size_(element_size)
+  , curr_(position) {}
 
+  // Random Iterator typedefs.
+  using difference_type = i64;
+  using value_type = byte*;
+  using iterator_category = std::random_access_iterator_tag;
+  using pointer = byte**;
+  using reference = byte*&;
+
+  // Dereference
   byte *operator*() const noexcept { return curr_; }
 
-  // Pre-increment
-  ChunkedVectorIterator &operator++() noexcept {
-    curr_ += element_size_;
-    if (curr_ == end_) {
-      byte *start = *++chunks_iter_;
-      curr_ = start;
-      end_ = start + ChunkedVector::ChunkAllocSize(element_size_);
+
+  // In place addition
+  ChunkedVectorRandomIterator& operator+=(const i64 &offset) {
+    const i64 chunk_size = ChunkedVector::ChunkAllocSize(element_size_);
+    const i64 elem_size = static_cast<i64>(element_size_);
+    i64 used = curr_ - *chunks_iter_; // Number of bytes used in the current chunk.
+    i64 chunk_offset; // Offset of the new chunk relative to the current one.
+    i64 curr_offset; // Offset of the curr_ pointer relative to the beginning of the new chunk.
+    if (offset > 0) {
+      chunk_offset = (offset * elem_size + used) / chunk_size;
+      curr_offset = ((offset * elem_size + used) % chunk_size);
+    } else {
+      // Force rounding towards negative infinity
+      chunk_offset = (offset * elem_size + used - (chunk_size - 1)) / chunk_size;
+      curr_offset = (std::abs(chunk_offset) * chunk_size + (offset * elem_size + used));
     }
+    chunks_iter_ += chunk_offset; // Update the current chunk.
+    curr_ = *chunks_iter_ + curr_offset; // Update the curr_ pointer.
     return *this;
   }
 
-  bool operator==(const ChunkedVectorIterator &that) const noexcept {
+  // In place subtraction
+  ChunkedVectorRandomIterator& operator-=(const i64 &offset) {
+    *this += (-offset);
+    return *this;
+  }
+
+  // Addition
+  const ChunkedVectorRandomIterator operator+(const i64 &offset) const {
+    ChunkedVectorRandomIterator copy(*this);
+    copy += offset;
+    return copy;
+  }
+
+  // Subtraction
+  const ChunkedVectorRandomIterator operator-(const i64 &offset) const {
+    ChunkedVectorRandomIterator copy(*this);
+    copy -= offset;
+    return copy;
+  }
+
+  // Pre-increment
+  ChunkedVectorRandomIterator &operator++() noexcept {
+    *this += 1;
+    return *this;
+  }
+
+  // Post-increment
+  const ChunkedVectorRandomIterator operator++(int) noexcept {
+    ChunkedVectorRandomIterator copy(*this);
+    *this += 1;
+    return copy;
+  }
+
+  // Pre-decrement
+  ChunkedVectorRandomIterator &operator--() noexcept {
+    *this -= 1;
+    return *this;
+  }
+
+  // Post-decrement
+  const ChunkedVectorRandomIterator operator--(int) noexcept {
+    ChunkedVectorRandomIterator copy(*this);
+    *this -= 1;
+    return copy;
+  }
+
+  // Indexing
+  byte *operator[](const i64 &idx) const noexcept {
+    return *(*this + idx);
+  }
+
+  // Equality
+  bool operator==(const ChunkedVectorRandomIterator &that) const noexcept {
     return curr_ == that.curr_;
   }
 
-  bool operator!=(const ChunkedVectorIterator &that) const noexcept {
+  // Difference
+  bool operator!=(const ChunkedVectorRandomIterator &that) const noexcept {
     return !(this->operator==(that));
+  }
+
+  // Less than
+  bool operator<(const ChunkedVectorRandomIterator &that) const noexcept {
+    if (chunks_iter_ != that.chunks_iter_) return chunks_iter_ < that.chunks_iter_;
+    return curr_ < that.curr_;
+  }
+
+  // Greater than
+  bool operator>(const ChunkedVectorRandomIterator &that) const noexcept {
+    return this->operator!=(that) && !(this->operator<(that));
+  }
+
+  // Less than or equal to
+  bool operator<=(const ChunkedVectorRandomIterator &that) const noexcept {
+    return !(this->operator>(that));
+  }
+
+  // Greater than or equal to
+  bool operator>=(const ChunkedVectorRandomIterator &that) const noexcept {
+    return !(this->operator<(that));
+  }
+
+  difference_type operator-(const ChunkedVectorRandomIterator& that) const noexcept {
+    const i64 chunk_size = ChunkedVector::ChunkAllocSize(element_size_);
+    const i64 elem_size = static_cast<i64>(element_size_);
+
+    return ((chunks_iter_ - that.chunks_iter_) * chunk_size
+             + ((curr_ - *chunks_iter_) - (that.curr_ - *that.chunks_iter_)))
+           / elem_size;
   }
 
  private:
   util::RegionVector<byte *>::iterator chunks_iter_;
   std::size_t element_size_;
   byte *curr_;
-  byte *end_;
 };
 
 // ---------------------------------------------------------
@@ -182,18 +281,18 @@ inline ChunkedVector::~ChunkedVector() noexcept {
   }
 }
 
-inline ChunkedVectorIterator ChunkedVector::begin() noexcept {
+inline ChunkedVectorRandomIterator ChunkedVector::begin() noexcept {
   if (empty()) {
-    return ChunkedVectorIterator();
+    return ChunkedVectorRandomIterator();
   }
-  return ChunkedVectorIterator(chunks_.begin(), chunks_[0], element_size());
+  return ChunkedVectorRandomIterator(chunks_.begin(), chunks_[0], element_size());
 }
 
-inline ChunkedVectorIterator ChunkedVector::end() noexcept {
+inline ChunkedVectorRandomIterator ChunkedVector::end() noexcept {
   if (empty()) {
-    return ChunkedVectorIterator();
+    return ChunkedVectorRandomIterator();
   }
-  return ChunkedVectorIterator(chunks_.end() - 1, position_, element_size());
+  return ChunkedVectorRandomIterator(chunks_.end() - 1, position_, element_size());
 }
 
 inline byte *ChunkedVector::at(size_t idx) {
@@ -292,21 +391,74 @@ class ChunkedVectorT {
 
   class Iterator {
    public:
-    explicit Iterator(ChunkedVectorIterator iter) : iter_(iter) {}
+    explicit Iterator(ChunkedVectorRandomIterator iter) : iter_(iter) {}
+
+    Iterator() : iter_() {}
+
+    using difference_type = ChunkedVectorRandomIterator::difference_type;
+    using value_type = T;
+    using iterator_category = std::random_access_iterator_tag;
+    using pointer = T*;
+    using reference = T&;
 
     T &operator*() const noexcept { return *reinterpret_cast<T *>(*iter_); }
+
+    Iterator &operator+=(const i64 &offset) noexcept {
+      iter_ += offset;
+      return *this;
+    }
+
+    Iterator &operator-=(const i64 &offset) noexcept {
+      iter_ -= offset;
+      return *this;
+    }
+
+    const Iterator operator+(const i64 &offset) const noexcept {
+      return Iterator(iter_ + offset);
+    }
+
+    const Iterator operator-(const i64 &offset) const noexcept {
+      return Iterator(iter_ - offset);
+    }
 
     Iterator &operator++() noexcept {
       ++iter_;
       return *this;
     }
 
+    const Iterator operator++(int) noexcept {
+      return Iterator(iter_++);
+    }
+
+    Iterator &operator--() noexcept {
+      --iter_;
+      return *this;
+    }
+
+    const Iterator operator--(int) noexcept {
+      return Iterator(iter_--);
+    }
+
+    T &operator[](const i64 &idx) const noexcept {
+      return *reinterpret_cast<T*>(iter_[idx]);
+    }
+
     bool operator==(const Iterator &that) const { return iter_ == that.iter_; }
 
-    bool operator!=(const Iterator &that) const { return !(*this == that); }
+    bool operator!=(const Iterator &that) const { return iter_ != that.iter_; }
+
+    bool operator<(const Iterator &that) const { return iter_ < that.iter_; }
+
+    bool operator<=(const Iterator &that) const { return iter_ <= that.iter_; }
+
+    bool operator>(const Iterator &that) const { return iter_ > that.iter_; }
+
+    bool operator>=(const Iterator &that) const { return iter_ >= that.iter_; }
+
+    difference_type  operator-(const Iterator &that) const { return iter_ - that.iter_; }
 
    private:
-    ChunkedVectorIterator iter_;
+    ChunkedVectorRandomIterator iter_;
   };
 
   Iterator begin() { return Iterator(vec_.begin()); }
