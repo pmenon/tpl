@@ -582,7 +582,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto tuple_size = READ_UIMM4();
 
     auto cmp_fn = reinterpret_cast<sql::Sorter::ComparisonFunction>(
-        module().GetTrampolineFor(cmp_func_id));
+        module().GetFuncTrampoline(cmp_func_id));
     OpSorterInit(sorter, nullptr, cmp_fn, tuple_size);
     DISPATCH_NEXT();
   }

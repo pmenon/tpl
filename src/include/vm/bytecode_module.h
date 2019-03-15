@@ -34,16 +34,12 @@ class BytecodeModule {
   DISALLOW_COPY_AND_MOVE(BytecodeModule);
 
   /// Look up a TPL function in this module by its ID
-  /// \param func_id The ID of the function
-  /// \return The TPL function if one exists with the ID; otherwise return null
-  const FunctionInfo *GetFuncInfoById(FunctionId func_id) const {
+  const FunctionInfo *GetFuncInfoById(const FunctionId func_id) const {
     TPL_ASSERT(func_id < num_functions(), "Invalid function");
     return &functions_[func_id];
   }
 
   /// Look up a TPL function in this module by its name
-  /// \param name The name of the function
-  /// \return The TPL function if it exists; otherwise return null
   const FunctionInfo *GetFuncInfoByName(const std::string &name) const {
     for (const auto &func : functions_) {
       if (func.name() == name) {
@@ -54,8 +50,6 @@ class BytecodeModule {
   }
 
   /// Retrieve an iterator over the bytecode for a given function
-  /// \param func The function whose bytecode to retrieve
-  /// \return An iterator over the bytecode
   BytecodeIterator BytecodeForFunction(const FunctionInfo &func) const {
     TPL_ASSERT(GetFuncInfoById(func.id()) != nullptr,
                "Function not defined in unit!");
@@ -64,7 +58,7 @@ class BytecodeModule {
   }
 
   /// Get the trampoline function for the bytecode function with id \a func_id
-  void *GetTrampolineFor(FunctionId func_id) const noexcept {
+  void *GetFuncTrampoline(const FunctionId func_id) const noexcept {
     return trampolines_[func_id].GetTrampolineCode();
   }
 
