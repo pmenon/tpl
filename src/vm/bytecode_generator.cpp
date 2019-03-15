@@ -120,6 +120,7 @@ class BytecodeGenerator::BytecodePositionScope {
 BytecodeGenerator::BytecodeGenerator(util::Region *region)
     : bytecode_(region),
       functions_(region),
+      exported_functions_(region),
       emitter_(bytecode()),
       execution_result_(nullptr) {}
 

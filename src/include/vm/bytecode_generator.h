@@ -142,6 +142,9 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   // Information about all generated functions
   util::RegionVector<FunctionInfo> functions_;
 
+  // Exported functions
+  util::RegionVector<FunctionId> exported_functions_;
+
   // Emitter to write bytecode ops
   BytecodeEmitter emitter_;
 

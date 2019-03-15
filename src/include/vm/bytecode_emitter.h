@@ -113,7 +113,7 @@ class BytecodeEmitter {
  private:
   // Copy a scalar immediate value into the bytecode stream
   template <typename T>
-  typename std::enable_if_t<std::is_integral_v<T>> EmitScalarValue(T val) {
+  auto EmitScalarValue(T val) -> std::enable_if_t<std::is_integral_v<T>> {
     bytecode_.insert(bytecode_.end(), sizeof(T), 0);
     *reinterpret_cast<T *>(&*(bytecode_.end() - sizeof(T))) = val;
   }
@@ -128,7 +128,7 @@ class BytecodeEmitter {
 
   // Emit an integer immediate value
   template <typename T>
-  typename std::enable_if_t<std::is_integral_v<T>> EmitImpl(T val) {
+  auto EmitImpl(T val) -> std::enable_if_t<std::is_integral_v<T>> {
     EmitScalarValue(val);
   }
 
