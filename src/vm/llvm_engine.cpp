@@ -554,8 +554,14 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
   llvm::Function *func = module()->getFunction(func_info.name());
   llvm::BasicBlock *entry = llvm::BasicBlock::Create(ctx, "EntryBB", func);
 
-  std::map<std::size_t, llvm::BasicBlock *> blocks = {{0, entry}};
+  //
+  // First, construct a simple CFG for the function. The CFG contains entries
+  // for the start of every basic block in the function, and the bytecode
+  // position of the first instruction in the block. The CFG is ordered by
+  // bytecode position in ascending order.
+  //
 
+  std::map<std::size_t, llvm::BasicBlock *> blocks = {{0, entry}};
   BuildSimpleCFG(func_info, blocks);
 
   {
@@ -650,6 +656,12 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
           for (const auto local : locals) {
             args.push_back(locals_map.GetArgumentById(local));
           }
+          break;
+        }
+        case OperandType::FunctionPtr: {
+          const u16 func_id = iter.GetFunctionIdOperand(i);
+          const auto &callee_info = tpl_module().GetFuncInfoById(func_id);
+          args.push_back(module()->getFunction(callee_info->name()));
           break;
         }
       }

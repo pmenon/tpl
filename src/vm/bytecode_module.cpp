@@ -3,9 +3,66 @@
 #include <iomanip>
 #include <iostream>
 
+#include "llvm/ADT/SmallVector.h"
+
 #include "ast/type.h"
 
 namespace tpl::vm {
+
+BytecodeModule::BytecodeModule(std::string name, util::RegionVector<u8> &&code,
+                               util::RegionVector<FunctionInfo> &&functions)
+    : name_(std::move(name)),
+      code_(std::move(code)),
+      functions_(std::move(functions)),
+      trampolines_(functions_.size()) {
+  for (const auto &func : functions_) {
+    CreateFunctionTrampoline(func.id());
+  }
+}
+
+void BytecodeModule::CreateFunctionTrampoline(const FunctionInfo &func,
+                                              Trampoline &trampoline) {
+  llvm::SmallVector<u8, 256> code;
+  code.push_back(0xf4);
+
+  // Create the memory
+  std::error_code error;
+  u32 flags = llvm::sys::Memory::ProtectionFlags::MF_READ |
+              llvm::sys::Memory::ProtectionFlags::MF_WRITE |
+              llvm::sys::Memory::ProtectionFlags::MF_EXEC;
+  llvm::sys::MemoryBlock mem = llvm::sys::Memory::allocateMappedMemory(
+      code.size(), nullptr, flags, error);
+  if (error) {
+    LOG_ERROR("There was an error allocating executable memory {}",
+              error.message());
+    return;
+  }
+
+  // Copy code into allocated memory
+  std::memcpy(mem.base(), code.data(), code.size());
+
+  // Done
+  trampoline = Trampoline(mem);
+}
+
+void BytecodeModule::CreateFunctionTrampoline(FunctionId func_id) {
+  // If a trampoline has already been setup, don't bother
+  if (trampolines_[func_id].GetTrampolineCode() != nullptr) {
+    LOG_DEBUG("Function {} has a trampoline; will not recreate", func_id);
+    return;
+  }
+
+  // Lookup the function
+  const auto *func_info = GetFuncInfoById(func_id);
+  TPL_ASSERT(func_info != nullptr, "Function doesn't exist");
+
+  // Create the trampoline for the function
+  Trampoline trampoline;
+  CreateFunctionTrampoline(*func_info, trampoline);
+
+  // Mark available
+  trampolines_[func_id] = trampoline;
+}
 
 namespace {
 
@@ -63,7 +120,7 @@ void PrettyPrintFunc(std::ostream &os, const BytecodeModule &module,
 }  // namespace
 
 void BytecodeModule::PrettyPrint(std::ostream &os) {
-  for (const auto &func : functions()) {
+  for (const auto &func : functions_) {
     PrettyPrintFunc(os, *this, func);
   }
 }

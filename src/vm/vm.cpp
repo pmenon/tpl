@@ -576,6 +576,17 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // Sorting
   // -------------------------------------------------------
 
+  OP(SorterInit) : {
+    auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
+    auto cmp_func_id = frame->LocalAt<FunctionId>(READ_UIMM2());
+    auto tuple_size = READ_UIMM4();
+
+    auto cmp_fn = reinterpret_cast<sql::Sorter::ComparisonFunction>(
+        module().GetTrampolineFor(cmp_func_id));
+    OpSorterInit(sorter, nullptr, cmp_fn, tuple_size);
+    DISPATCH_NEXT();
+  }
+
   OP(SorterAllocInputTuple) : {
     auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
@@ -615,24 +626,24 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 }
 
 const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
-  /*
-   * Read the function ID and the argument count to the function first
-   */
+  //
+  // Read the function ID and the argument count to the function first
+  //
 
   u16 func_id = READ_UIMM2();
   u16 num_params = READ_UIMM2();
 
-  /*
-   * Lookup the function
-   */
+  //
+  // Lookup the function
+  //
 
   const FunctionInfo *func = module().GetFuncInfoById(func_id);
   TPL_ASSERT(func != nullptr, "Function doesn't exist in module!");
 
-  /*
-   * Create the function's execution frame, and initialize it with the call
-   * arguments encoded in the instruction stream
-   */
+  //
+  // Create the function's execution frame, and initialize it with the call
+  // arguments encoded in the instruction stream
+  //
 
   VM::Frame callee(this, func->frame_size());
 
@@ -644,9 +655,9 @@ const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
     raw_frame += param_size;
   }
 
-  /*
-   * Frame preparation is complete. Let's bounce ...
-   */
+  //
+  // Frame preparation is complete. Let's bounce ...
+  //
 
   const u8 *bytecode = module().GetBytecodeForFunction(*func);
   TPL_ASSERT(bytecode != nullptr, "Bytecode cannot be null");

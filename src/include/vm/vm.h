@@ -36,12 +36,6 @@ class VM {
  private:
   class Frame;
   class FrameBuilder;
-  class InstructionStream;
-
-#define DECLARE_HANDLER(Name, ...) \
-  void XOp##Name(InstructionStream *is, Frame *frame);
-  BYTECODE_LIST(DECLARE_HANDLER)
-#undef DECLARE_HANDLER
 
   // Interpret the given instruction stream using the given execution frame
   void Interpret(const u8 *ip, Frame *frame);
@@ -114,13 +108,15 @@ class VM::Frame {
   friend class VM;
 
  public:
+  /// Constructor
   Frame(VM *vm, std::size_t frame_size) : vm_(vm), frame_size_(frame_size) {
     frame_data_ = vm->AllocateFrame(frame_size);
     TPL_ASSERT(frame_data_ != nullptr, "Frame data cannot be null");
     TPL_ASSERT(frame_size_ >= 0, "Frame size must be >= 0");
   }
 
-  ~Frame() { vm()->ReleaseFrame(frame_size()); }
+  /// Destructor
+  ~Frame() { vm_->ReleaseFrame(frame_size_); }
 
   /// Access the local variable at the given index in the fame. The \ref 'index'
   /// attribute is encoded and indicates whether the local variable is accessed
@@ -148,10 +144,10 @@ class VM::Frame {
 #ifndef NDEBUG
   // Ensure the local variable is valid
   void EnsureInFrame(LocalVar var) const {
-    if (var.GetOffset() >= frame_size()) {
+    if (var.GetOffset() >= frame_size_) {
       std::string error_msg =
           fmt::format("Accessing local at offset {}, beyond frame of size {}",
-                      var.GetOffset(), frame_size());
+                      var.GetOffset(), frame_size_);
       LOG_ERROR("{}", error_msg);
       throw std::runtime_error(error_msg);
     }
@@ -160,11 +156,7 @@ class VM::Frame {
   void EnsureInFrame(UNUSED LocalVar var) const {}
 #endif
 
-  VM *vm() const { return vm_; }
-
   u8 *raw_frame() const { return frame_data_; }
-
-  std::size_t frame_size() const { return frame_size_; }
 
  private:
   VM *vm_;

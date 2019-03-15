@@ -145,6 +145,7 @@ namespace tpl::vm {
   F(JoinHashTableBuild, OperandType::Local)                                                                            \
                                                                                                                        \
   /* Sorting */                                                                                                        \
+  F(SorterInit, OperandType::Local, OperandType::FunctionPtr, OperandType::UImm4)                                      \
   F(SorterAllocInputTuple, OperandType::Local)                                                                         \
   F(SorterAllocInputTupleTopK, OperandType::Local)                                                                     \
   F(SorterAllocInputTupleTopKFinish, OperandType::Local)                                                               \

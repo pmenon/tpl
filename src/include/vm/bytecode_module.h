@@ -2,6 +2,9 @@
 
 #include <functional>
 #include <iosfwd>
+#include <vector>
+
+#include "llvm/Support/Memory.h"
 
 #include "logging/logger.h"
 #include "util/region_containers.h"
@@ -23,11 +26,9 @@ enum class ExecutionMode : u8 {
 /// A module represents all code in a single TPL source file
 class BytecodeModule {
  public:
+  /// Construct
   BytecodeModule(std::string name, util::RegionVector<u8> &&code,
-                 util::RegionVector<FunctionInfo> &&functions)
-      : name_(std::move(name)),
-        code_(std::move(code)),
-        functions_(std::move(functions)) {}
+                 util::RegionVector<FunctionInfo> &&functions);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(BytecodeModule);
@@ -36,7 +37,7 @@ class BytecodeModule {
   /// \param func_id The ID of the function
   /// \return The TPL function if one exists with the ID; otherwise return null
   const FunctionInfo *GetFuncInfoById(FunctionId func_id) const {
-    TPL_ASSERT(func_id < NumFunctions(), "Invalid function");
+    TPL_ASSERT(func_id < num_functions(), "Invalid function");
     return &functions_[func_id];
   }
 
@@ -45,7 +46,9 @@ class BytecodeModule {
   /// \return The TPL function if it exists; otherwise return null
   const FunctionInfo *GetFuncInfoByName(const std::string &name) const {
     for (const auto &func : functions_) {
-      if (func.name() == name) return &func;
+      if (func.name() == name) {
+        return &func;
+      }
     }
     return nullptr;
   }
@@ -60,6 +63,11 @@ class BytecodeModule {
     return BytecodeIterator(code_, start, end);
   }
 
+  /// Get the trampoline function for the bytecode function with id \a func_id
+  void *GetTrampolineFor(FunctionId func_id) const noexcept {
+    return trampolines_[func_id].GetTrampolineCode();
+  }
+
   /// Retrieve and wrap a TPL function inside a C++ function object, thus making
   /// the TPL function callable as a C++ function. Callers can request different
   /// versions of the TPL code including an interpreted version and a compiled
@@ -68,7 +76,7 @@ class BytecodeModule {
   /// \tparam ArgTypes ArgTypes The C/C++ argument types to the function
   /// \param name The name of the function the caller wants
   /// \param exec_mode The interpretation mode the caller desires
-  /// \param func[output] The function wrapper we use to wrap the TPL function
+  /// \param[out] func The function wrapper we use to wrap the TPL function
   /// \return True if the function was found and the output parameter was set
   template <typename Ret, typename... ArgTypes>
   bool GetFunction(const std::string &name, ExecutionMode exec_mode,
@@ -78,13 +86,23 @@ class BytecodeModule {
   /// \param os The stream into which we dump the module's contents
   void PrettyPrint(std::ostream &os);
 
-  /// How many instructions are in this module?
-  /// \return The total number of bytecode instructions in the module
-  std::size_t InstructionCount() const { return code_.size(); }
+  // -------------------------------------------------------
+  // Accessors
+  // -------------------------------------------------------
 
-  /// How many functions are defined in this module?
-  /// \return The number of functions in the module
-  std::size_t NumFunctions() const { return functions_.size(); }
+  /// Return the name of the module
+  const std::string &name() const noexcept { return name_; }
+
+  /// Return a constant view of all functions
+  const util::RegionVector<FunctionInfo> &functions() const {
+    return functions_;
+  }
+
+  /// Return the number of bytecode instructions in this module
+  std::size_t instruction_count() const { return code_.size(); }
+
+  /// Return the number of functions defined in this module
+  std::size_t num_functions() const { return functions_.size(); }
 
  private:
   friend class VM;
@@ -96,22 +114,39 @@ class BytecodeModule {
     return &code_[start];
   }
 
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
+  /// Create a trampoline function for the function with id \a func_id
+  class Trampoline;
+  void CreateFunctionTrampoline(FunctionId func_id);
+  void CreateFunctionTrampoline(const FunctionInfo &func,
+                                Trampoline &trampoline);
 
-  const std::string &name() const { return name_; }
+ private:
+  /// A trampoline is a stub function that all calls into TPL code go through
+  /// to set up call arguments.
+  class Trampoline {
+   public:
+    /// Create an empty/uninitialized trampoline
+    Trampoline() : mem_() {}
 
-  const util::RegionVector<u8> code() const { return code_; }
+    /// Create a trampoline over the given memory block
+    explicit Trampoline(llvm::sys::MemoryBlock mem) : mem_(mem) {}
 
-  const util::RegionVector<FunctionInfo> &functions() const {
-    return functions_;
-  }
+    /// Cleanup the trampoline's memory
+    ~Trampoline() { llvm::sys::Memory::releaseMappedMemory(mem_); }
+
+    /// Access the trampoline code
+    void *GetTrampolineCode() const { return mem_.base(); }
+
+   private:
+    // Memory region where the trampoline's code is
+    llvm::sys::MemoryBlock mem_;
+  };
 
  private:
   const std::string name_;
-  util::RegionVector<u8> code_;
-  util::RegionVector<FunctionInfo> functions_;
+  const util::RegionVector<u8> code_;
+  const util::RegionVector<FunctionInfo> functions_;
+  std::vector<Trampoline> trampolines_;
 };
 
 //----------------------------------------------------------
