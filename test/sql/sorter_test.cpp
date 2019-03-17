@@ -37,15 +37,9 @@ void TestSortRandomTupleSize(const u32 num_iters, const u32 max_elems, Random *g
   // passing in something that we can sizeof(). Limiting ourselves to IntType should be fine.
   const auto tuple_size = sizeof(IntType);
   auto cmp_fn = [](const byte *a, const byte *b) -> int {
-    // Explicit comparison to avoid overflows
-    IntType a_val = *reinterpret_cast<const IntType *>(a);
-    IntType b_val = *reinterpret_cast<const IntType *>(b);
-    if (a_val < b_val) {
-      return -1;
-    } else if (a_val > b_val) {
-      return 1;
-    }
-    return 0;
+    const auto val_a = *reinterpret_cast<const IntType *>(a);
+    const auto val_b = *reinterpret_cast<const IntType *>(b);
+    return val_a < val_b ? -1 : (val_a == val_b ? 0 : 1);
   };
 
   for (u32 curr_iter = 0; curr_iter < num_iters; curr_iter++) {
@@ -80,16 +74,12 @@ void TestSortRandomTupleSize(const u32 num_iters, const u32 max_elems, Random *g
   }
 }
 
-// NOLINTNEXTLINE
 TEST_F(SorterTest, SortTest) {
-  const uint32_t num_iters = 20;
+  const uint32_t num_iters = 200;
   const uint32_t max_elems = 10000;
   TestSortRandomTupleSize<i32>(num_iters, max_elems, &generator_);
-//  TestAllSigned(TestSortRandomTupleSize, num_iters, max_elems, &generator_);
-//  TestAllUnsigned(TestSortRandomTupleSize, num_iters, max_elems, &generator_);
 }
 
-// NOLINTNEXTLINE
 TEST_F(SorterTest, TopKTest) {
   // Generate random vector and keep track of the top k elements
   const i32 num_elems = 10000;
