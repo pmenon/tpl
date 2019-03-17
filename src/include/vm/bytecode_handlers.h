@@ -336,7 +336,8 @@ VM_OP_HOT void OpForceBoolTruth(bool *result, tpl::sql::BoolVal *input) {
 }
 
 VM_OP_HOT void OpInitInteger(tpl::sql::Integer *result, i32 input) {
-  *result = tpl::sql::Integer(input);
+  result->val = input;
+  result->is_null = false;
 }
 
 VM_OP_HOT void OpGreaterThanInteger(tpl::sql::BoolVal *result,
