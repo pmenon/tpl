@@ -128,7 +128,13 @@ class ChunkedVectorRandomIterator {
   byte *position, std::size_t element_size) noexcept
   : chunks_iter_(chunks_iter)
   , element_size_(element_size)
-  , curr_(position) {}
+  , curr_(position)
+  {
+    if (*chunks_iter + ChunkedVector::ChunkAllocSize(element_size) == position) {
+      ++chunks_iter_;
+      curr_ = *chunks_iter_;
+    }
+  }
 
   // Random Iterator typedefs.
   using difference_type = i64;
