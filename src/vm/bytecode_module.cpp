@@ -77,14 +77,14 @@ void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
     max_local_len = std::max(max_local_len, (u64)local.name().length());
   }
   for (const auto &local : func.locals()) {
-    if (local.IsParameter()) {
+    if (local.is_parameter()) {
       os << "    param  ";
     } else {
       os << "    local  ";
     }
     os << std::setw(max_local_len) << std::right << local.name()
        << ":  offset=" << std::setw(7) << std::left << local.offset()
-       << " size=" << std::setw(7) << std::left << local.Size()
+       << " size=" << std::setw(7) << std::left << local.size()
        << " align=" << std::setw(7) << std::left << local.type()->alignment()
        << " type=" << std::setw(7) << std::left
        << ast::Type::ToString(local.type()) << std::endl;

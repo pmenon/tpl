@@ -649,7 +649,7 @@ const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
 
   u8 *raw_frame = callee.raw_frame();
   for (u32 i = 0; i < num_params; i++) {
-    u32 param_size = func->locals()[i].Size();
+    u32 param_size = func->locals()[i].size();
     auto *param = caller->LocalAt<void *>(READ_LOCAL_ID());
     TPL_MEMCPY(raw_frame, &param, param_size);
     raw_frame += param_size;

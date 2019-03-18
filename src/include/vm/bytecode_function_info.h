@@ -38,14 +38,10 @@ class LocalInfo {
         kind_(kind) {}
 
   /// Return the size (in bytes) of this local variable
-  u32 Size() const;
+  u32 size() const;
 
   /// Return true if this local variable a parameter to a function
-  bool IsParameter() const { return kind_ == Kind::Parameter; }
-
-  // -------------------------------------------------------
-  // Accessors Only
-  // -------------------------------------------------------
+  bool is_parameter() const { return kind_ == Kind::Parameter; }
 
   /// Return the name of this local variable
   const std::string &name() const { return name_; }

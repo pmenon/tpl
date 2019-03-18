@@ -5,7 +5,7 @@
 
 namespace tpl::vm {
 
-u32 LocalInfo::Size() const { return type()->size(); }
+u32 LocalInfo::size() const { return type()->size(); }
 
 LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
                                 LocalInfo::Kind kind) {
