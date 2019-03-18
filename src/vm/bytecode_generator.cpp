@@ -117,12 +117,8 @@ class BytecodeGenerator::BytecodePositionScope {
 // Bytecode Generator begins
 // ---------------------------------------------------------
 
-BytecodeGenerator::BytecodeGenerator(util::Region *region)
-    : bytecode_(region),
-      functions_(region),
-      exported_functions_(region),
-      emitter_(bytecode()),
-      execution_result_(nullptr) {}
+BytecodeGenerator::BytecodeGenerator(UNUSED util::Region *region)
+    : emitter_(bytecode_), execution_result_(nullptr) {}
 
 void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
   IfThenElseBuilder if_builder(this);
@@ -1122,7 +1118,7 @@ FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &name) {
   name_cache_.clear();
 
   // Allocate a new function
-  auto func_id = static_cast<FunctionId>(functions().size());
+  auto func_id = static_cast<FunctionId>(functions_.size());
   functions_.emplace_back(func_id, name);
   return &functions_.back();
 }
@@ -1200,8 +1196,8 @@ std::unique_ptr<BytecodeModule> BytecodeGenerator::Compile(
   BytecodeGenerator generator(region);
   generator.Visit(root);
 
-  return std::make_unique<BytecodeModule>(name, std::move(generator.bytecode()),
-                                          std::move(generator.functions()));
+  return std::make_unique<BytecodeModule>(name, std::move(generator.bytecode_),
+                                          std::move(generator.functions_));
 }
 
 }  // namespace tpl::vm

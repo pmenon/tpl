@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "ast/ast.h"
 #include "ast/ast_visitor.h"
 #include "ast/builtins.h"
@@ -107,7 +109,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
  private:
   const FunctionInfo *LookupFuncInfoByName(const std::string &name) const {
-    for (const auto &func : functions()) {
+    for (const auto &func : functions_) {
       if (func.name() == name) {
         return &func;
       }
@@ -127,23 +129,15 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
   FunctionInfo *current_function() { return &functions_.back(); }
 
-  util::RegionVector<u8> &bytecode() { return bytecode_; }
-
-  util::RegionVector<FunctionInfo> &functions() { return functions_; }
-
-  const util::RegionVector<FunctionInfo> &functions() const {
-    return functions_;
-  }
-
  private:
   // The bytecode generated during compilation
-  util::RegionVector<u8> bytecode_;
+  std::vector<u8> bytecode_;
 
   // Information about all generated functions
-  util::RegionVector<FunctionInfo> functions_;
+  std::vector<FunctionInfo> functions_;
 
   // Exported functions
-  util::RegionVector<FunctionId> exported_functions_;
+  std::vector<FunctionId> exported_functions_;
 
   // Emitter to write bytecode ops
   BytecodeEmitter emitter_;

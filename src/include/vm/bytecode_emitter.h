@@ -1,9 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include "util/common.h"
-#include "util/region_containers.h"
 #include "vm/bytecode_function_info.h"
 #include "vm/bytecodes.h"
 
@@ -15,7 +15,7 @@ class BytecodeEmitter {
  public:
   /// Construct a bytecode emitter instance that emits bytecode operations into
   /// the provided bytecode vector
-  explicit BytecodeEmitter(util::RegionVector<u8> &bytecode) noexcept
+  explicit BytecodeEmitter(std::vector<u8> &bytecode) noexcept
       : bytecode_(bytecode) {}
 
   /// Cannot copy or move this class
@@ -142,7 +142,7 @@ class BytecodeEmitter {
   void EmitJump(BytecodeLabel *label);
 
  private:
-  util::RegionVector<u8> &bytecode_;
+  std::vector<u8> &bytecode_;
 };
 
 }  // namespace tpl::vm
