@@ -1,6 +1,3 @@
-
-#include <vm/bytecode_function_info.h>
-
 #include "vm/bytecode_function_info.h"
 
 #include "ast/type.h"
