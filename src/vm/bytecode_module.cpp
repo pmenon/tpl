@@ -9,8 +9,8 @@
 
 namespace tpl::vm {
 
-BytecodeModule::BytecodeModule(std::string name, util::RegionVector<u8> &&code,
-                               util::RegionVector<FunctionInfo> &&functions)
+BytecodeModule::BytecodeModule(std::string name, std::vector<u8> &&code,
+                               std::vector<FunctionInfo> &&functions)
     : name_(std::move(name)),
       code_(std::move(code)),
       functions_(std::move(functions)),
