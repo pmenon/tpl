@@ -32,10 +32,7 @@ class LocalInfo {
   enum class Kind : u8 { Var, Parameter, Temporary };
 
   LocalInfo(std::string name, ast::Type *type, u32 offset, Kind kind)
-      : name_(std::move(name)),
-        type_(type),
-        offset_(offset),
-        kind_(kind) {}
+      : name_(std::move(name)), type_(type), offset_(offset), kind_(kind) {}
 
   /// Return the size (in bytes) of this local variable
   u32 size() const;
@@ -176,6 +173,11 @@ class FunctionInfo {
   LocalVar GetReturnValueLocal() const {
     return LocalVar(kRetVarOffset, LocalVar::AddressMode::Address);
   }
+
+  /// Lookup all parameters to this function, storing pointers to them in the
+  /// output vector \a \p params. The order they appear in the vector is the
+  /// order they appear in the function's signature.
+  void GetParameters(std::vector<const LocalInfo *> &params) const;
 
   void MarkBytecodeRange(std::size_t start_offset, std::size_t end_offset) {
     TPL_ASSERT(start_offset < end_offset,

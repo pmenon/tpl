@@ -1,3 +1,6 @@
+
+#include <vm/bytecode_function_info.h>
+
 #include "vm/bytecode_function_info.h"
 
 #include "ast/type.h"
@@ -59,6 +62,15 @@ const LocalInfo *FunctionInfo::LookupLocalInfo(u32 offset) const {
 
   // Invalid local
   return nullptr;
+}
+
+void FunctionInfo::GetParameters(std::vector<const LocalInfo *> &params) const {
+  params.clear();
+  for (const auto &local_info : locals()) {
+    if (local_info.is_parameter()) {
+      params.push_back(&local_info);
+    }
+  }
 }
 
 }  // namespace tpl::vm
