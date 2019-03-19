@@ -101,6 +101,7 @@ class LLVMEngine {
   class CompiledModule {
    public:
     /// Constructor
+    CompiledModule() : CompiledModule(nullptr) {}
     explicit CompiledModule(std::unique_ptr<llvm::MemoryBuffer> object_code);
 
     /// No copying or moving this class
@@ -109,18 +110,16 @@ class LLVMEngine {
     /// Destroy
     ~CompiledModule();
 
-    /// Obtain a raw function pointer to a JITted function in this module
-    /// \param name The name of the function
-    /// \return A raw function pointer if a function with the name exists. If no
-    /// function with the provided name exists, this will return null
+    /// Get a pointer to the jitted function in this module with name \a name
+    /// \return A function pointer if a function exists with name \a name. If no
+    ///         function exists, returns null.
     void *GetFunctionPointer(const std::string &name) const;
 
-    /// Load this module into memory
-    /// \param module
+    /// Load the given module \a module into memory
     void Load(const BytecodeModule &module);
 
     /// Has this module been loaded into memory and linked?
-    bool loaded() const { return loaded_; }
+    bool is_loaded() const { return loaded_; }
 
    private:
     bool loaded_;

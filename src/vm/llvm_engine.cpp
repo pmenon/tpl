@@ -948,7 +948,7 @@ LLVMEngine::CompiledModule::~CompiledModule() = default;
 
 void *LLVMEngine::CompiledModule::GetFunctionPointer(
     const std::string &name) const {
-  TPL_ASSERT(loaded(), "Compiled module isn't loaded!");
+  TPL_ASSERT(is_loaded(), "Compiled module isn't loaded!");
 
   if (auto iter = functions_.find(name); iter != functions_.end()) {
     return iter->second;
@@ -959,7 +959,7 @@ void *LLVMEngine::CompiledModule::GetFunctionPointer(
 
 void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
   // If already loaded, do nothing
-  if (loaded()) {
+  if (is_loaded()) {
     return;
   }
 
