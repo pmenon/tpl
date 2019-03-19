@@ -39,7 +39,7 @@ class BytecodeModule {
   /// \return A pointer to the function's info if it exists; null otherwise
   BytecodeIterator BytecodeForFunction(const FunctionInfo &func) const;
 
-  /// Get the trampoline function for the bytecode function with id \a func_id
+  /// Get the trampoline for the bytecode function with id \a func_id
   /// \return An opaque function pointer to the bytecode function
   void *GetFuncTrampoline(FunctionId func_id) const;
 
@@ -99,20 +99,24 @@ class BytecodeModule {
   class Trampoline {
    public:
     /// Create an empty/uninitialized trampoline
-    Trampoline() : mem_() {}
+    Trampoline() noexcept : mem_() {}
 
     /// Create a trampoline over the given memory block
-    explicit Trampoline(llvm::sys::MemoryBlock mem) : mem_(mem) {}
+    explicit Trampoline(llvm::sys::OwningMemoryBlock &&mem) noexcept
+        : mem_(std::move(mem)) {}
 
-    /// Cleanup the trampoline's memory
-    ~Trampoline() { llvm::sys::Memory::releaseMappedMemory(mem_); }
+    /// Move assignment
+    Trampoline &operator=(Trampoline &&other) noexcept {
+      mem_ = std::move(other.mem_);
+      return *this;
+    }
 
     /// Access the trampoline code
-    void *GetTrampolineCode() const { return mem_.base(); }
+    void *GetCode() const { return mem_.base(); }
 
    private:
     // Memory region where the trampoline's code is
-    llvm::sys::MemoryBlock mem_;
+    llvm::sys::OwningMemoryBlock mem_;
   };
 
  private:
@@ -151,7 +155,7 @@ inline BytecodeIterator BytecodeModule::BytecodeForFunction(
 }
 
 inline void *BytecodeModule::GetFuncTrampoline(const FunctionId func_id) const {
-  return trampolines_[func_id].GetTrampolineCode();
+  return trampolines_[func_id].GetCode();
 }
 
 template <typename RetT, typename... ArgTypes>

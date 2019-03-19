@@ -42,26 +42,25 @@ void BytecodeModule::CreateFunctionTrampoline(const FunctionInfo &func,
   std::memcpy(mem.base(), code.data(), code.size());
 
   // Done
-  trampoline = Trampoline(mem);
+  trampoline = Trampoline(llvm::sys::OwningMemoryBlock(mem));
 }
 
 void BytecodeModule::CreateFunctionTrampoline(FunctionId func_id) {
   // If a trampoline has already been setup, don't bother
-  if (trampolines_[func_id].GetTrampolineCode() != nullptr) {
+  if (trampolines_[func_id].GetCode() != nullptr) {
     LOG_DEBUG("Function {} has a trampoline; will not recreate", func_id);
     return;
   }
 
   // Lookup the function
   const auto *func_info = GetFuncInfoById(func_id);
-  TPL_ASSERT(func_info != nullptr, "Function doesn't exist");
 
   // Create the trampoline for the function
   Trampoline trampoline;
   CreateFunctionTrampoline(*func_info, trampoline);
 
   // Mark available
-  trampolines_[func_id] = trampoline;
+  trampolines_[func_id] = std::move(trampoline);
 }
 
 namespace {
