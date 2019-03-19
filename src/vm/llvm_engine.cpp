@@ -958,19 +958,19 @@ void *LLVMEngine::CompiledModule::GetFunctionPointer(
 }
 
 void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
-  //
-  // A compiled module can be initialized with or without an in-memory object.
-  // If the module does not have an existing in-memory version, one will be
-  // loaded from the file system using the module's name and storage directory.
-  // If the module has already been read into a memory buffer, it must be
-  // loaded and linked into the environment.
-  //
-
+  // If already loaded, do nothing
   if (loaded()) {
     return;
   }
 
-  if (object_code() == nullptr) {
+  //
+  // CompiledModules can be created with or without an in-memory object file. If
+  // this one was created without an in-memory object file, we need to load it
+  // from the file system. We use the module's name to find it in the current
+  // directory.
+  //
+
+  if (object_code_ == nullptr) {
     llvm::SmallString<128> path;
     if (std::error_code error = llvm::sys::fs::current_path(path)) {
       LOG_ERROR("LLVMEngine: Error reading current path '{}'", error.message());
@@ -986,35 +986,27 @@ void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
   }
 
   //
-  // At this point, we have a valid object code buffer containing the contents
-  // of the module. We now need to load it into the environment. This involves
-  // several linker-level steps like allocating executable memory, resolving
-  // symbols and re-locations, and registering EH frames for exception handling.
+  // We've loaded the object file into an in-memory buffer. We need to convert
+  // it into an object file, load it, and link it into our address space to make
+  // its functions available for execution.
   //
 
   auto object = llvm::object::ObjectFile::createObjectFile(
-      object_code()->getMemBufferRef());
+      object_code_->getMemBufferRef());
   if (auto error = object.takeError()) {
     LOG_ERROR("LLVMEngine: Error constructing object file '{}'",
               llvm::toString(std::move(error)));
     return;
   }
 
-  llvm::RuntimeDyld loader(*memory_manager(), *memory_manager());
-
+  llvm::RuntimeDyld loader(*memory_manager_, *memory_manager_);
   loader.loadObject(*object.get());
-
   if (loader.hasError()) {
     LOG_ERROR("LLVMEngine: Error loading object file {}",
               loader.getErrorString().str());
     return;
   }
-
-  loader.resolveRelocations();
-
-  loader.registerEHFrames();
-
-  memory_manager()->finalizeMemory();
+  loader.finalizeWithMemoryManagerLocking();
 
   //
   // Now, the object has successfully been loaded and is executable. We pull out
@@ -1026,7 +1018,8 @@ void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
     functions_[func.name()] = reinterpret_cast<void *>(symbol.getAddress());
   }
 
-  set_loaded(true);
+  // Done
+  loaded_ = true;
 }
 
 // ---------------------------------------------------------

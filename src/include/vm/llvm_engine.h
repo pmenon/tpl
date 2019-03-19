@@ -100,11 +100,13 @@ class LLVMEngine {
   /// been JIT compiled into native code.
   class CompiledModule {
    public:
+    /// Constructor
     explicit CompiledModule(std::unique_ptr<llvm::MemoryBuffer> object_code);
 
     /// No copying or moving this class
     DISALLOW_COPY_AND_MOVE(CompiledModule);
 
+    /// Destroy
     ~CompiledModule();
 
     /// Obtain a raw function pointer to a JITted function in this module
@@ -117,13 +119,8 @@ class LLVMEngine {
     /// \param module
     void Load(const BytecodeModule &module);
 
-   private:
+    /// Has this module been loaded into memory and linked?
     bool loaded() const { return loaded_; }
-    void set_loaded(bool loaded) { loaded_ = loaded; }
-
-    llvm::MemoryBuffer *object_code() { return object_code_.get(); }
-
-    TPLMemoryManager *memory_manager() { return memory_manager_.get(); }
 
    private:
     bool loaded_;
