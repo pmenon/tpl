@@ -180,10 +180,10 @@ class VM::FrameBuilder {
   }
 
  private:
-  inline void WriteArgs(UNUSED u8 *buffer) {}
+  void WriteArgs(UNUSED u8 *buffer) {}
 
   template <typename HeadT, typename... RestT>
-  inline void WriteArgs(u8 *buffer, const HeadT &head, const RestT &... rest) {
+  void WriteArgs(u8 *buffer, const HeadT &head, const RestT &... rest) {
     TPL_MEMCPY(buffer, reinterpret_cast<const u8 *>(&head), sizeof(head));
     WriteArgs(buffer + sizeof(head), rest...);
   }
