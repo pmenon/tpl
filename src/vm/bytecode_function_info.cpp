@@ -5,7 +5,15 @@
 
 namespace tpl::vm {
 
+// ---------------------------------------------------------
+// Local Information
+// ---------------------------------------------------------
+
 u32 LocalInfo::size() const { return type()->size(); }
+
+// ---------------------------------------------------------
+// Function Information
+// ---------------------------------------------------------
 
 LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
                                 LocalInfo::Kind kind) {
@@ -61,7 +69,8 @@ const LocalInfo *FunctionInfo::LookupLocalInfo(u32 offset) const {
   return nullptr;
 }
 
-void FunctionInfo::GetParameters(std::vector<const LocalInfo *> &params) const {
+void FunctionInfo::GetParameterInfos(
+    std::vector<const LocalInfo *> &params) const {
   params.clear();
   for (const auto &local_info : locals()) {
     if (local_info.is_parameter()) {

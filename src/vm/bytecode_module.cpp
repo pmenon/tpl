@@ -36,7 +36,7 @@ struct TrampolineGenerator : public Xbyak::CodeGenerator {
 
     // Push the arguments onto the stack
     std::vector<const LocalInfo *> params;
-    func.GetParameters(params);
+    func.GetParameterInfos(params);
     for (u32 idx = 0; idx < params.size(); idx++) {
       u32 disp = sizeof(void *) * idx;
       mov(ptr[rsp + disp], abi_regs[idx]);

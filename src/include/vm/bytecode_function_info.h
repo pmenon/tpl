@@ -177,7 +177,7 @@ class FunctionInfo {
   /// Lookup all parameters to this function, storing pointers to them in the
   /// output vector \a \p params. The order they appear in the vector is the
   /// order they appear in the function's signature.
-  void GetParameters(std::vector<const LocalInfo *> &params) const;
+  void GetParameterInfos(std::vector<const LocalInfo *> &params) const;
 
   void MarkBytecodeRange(std::size_t start_offset, std::size_t end_offset) {
     TPL_ASSERT(start_offset < end_offset,

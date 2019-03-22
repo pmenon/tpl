@@ -83,7 +83,7 @@ VM::VM(const BytecodeModule &module, util::Region *region)
   TPL_MEMSET(bytecode_counts_, 0, sizeof(bytecode_counts_));
 }
 
-void VM::InvokeFunction(FunctionId func, const u8 *args) {
+void VM::InvokeFunction(const FunctionId func, const u8 *const args) {
   const FunctionInfo *const func_info = module_.GetFuncInfoById(func);
   const u8 *ip = module_.GetBytecodeForFunction(*func_info);
 
@@ -93,7 +93,7 @@ void VM::InvokeFunction(FunctionId func, const u8 *args) {
   // Copy args into frame
   {
     std::vector<const LocalInfo *> arg_infos;
-    func_info->GetParameters(arg_infos);
+    func_info->GetParameterInfos(arg_infos);
     const u32 size = std::accumulate(
         arg_infos.begin(), arg_infos.end(), u32(0),
         [](auto size, const auto *local) { return size + local->size(); });
@@ -117,7 +117,7 @@ void VM::InvokeFunctionWrapper(const BytecodeModule *module, FunctionId func,
   // Copy args
   {
     std::vector<const LocalInfo *> arg_infos;
-    func_info->GetParameters(arg_infos);
+    func_info->GetParameterInfos(arg_infos);
 
     u8 *frame_bytes = frame.raw_frame();
     for (u32 idx = 0; idx < arg_infos.size(); idx++) {
