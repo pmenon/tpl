@@ -185,7 +185,7 @@ inline bool BytecodeModule::GetFunction(
         if constexpr (std::is_void_v<RetT>) {
           // The buffer we copy the arguments into
           u8 arg_buffer[(0ul + ... + sizeof(args))];
-          util::CopyAll(arg_buffer, std::forward(args)...);
+          util::CopyAll(arg_buffer, args...);
           // Invoke the function
           vm.InvokeFunction(func_info->id(), arg_buffer);
           // Finish
@@ -196,7 +196,7 @@ inline bool BytecodeModule::GetFunction(
           // The return value
           RetT rv{};
           // Copy the function arguments
-          util::CopyAll(arg_buffer, &rv, std::forward(args)...);
+          util::CopyAll(arg_buffer, &rv, args...);
           // Invoke the function
           vm.InvokeFunction(func_info->id(), arg_buffer);
           // Finish

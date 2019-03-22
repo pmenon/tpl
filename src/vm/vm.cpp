@@ -103,6 +103,33 @@ void VM::InvokeFunction(FunctionId func, const u8 *args) {
   Interpret(ip, &frame);
 }
 
+void VM::InvokeFunctionWrapper(const BytecodeModule *module, FunctionId func,
+                               const u8 **args) {
+  // The function we'll invoke
+  const FunctionInfo *const func_info = module->GetFuncInfoById(func);
+
+  // The virtual machine
+  VM vm(*module);
+
+  // Setup the locals frame
+  Frame frame(&vm, func_info->frame_size());
+
+  // Copy args
+  {
+    std::vector<const LocalInfo *> arg_infos;
+    func_info->GetParameters(arg_infos);
+
+    u8 *frame_bytes = frame.raw_frame();
+    for (u32 idx = 0; idx < arg_infos.size(); idx++) {
+      const LocalInfo *arg = arg_infos[idx];
+      std::memcpy(frame_bytes + arg->offset(), args[idx], arg->size());
+      frame_bytes += arg->size();
+    }
+  }
+
+  vm.Interpret(module->GetBytecodeForFunction(*func_info), &frame);
+}
+
 namespace {
 
 template <typename T>

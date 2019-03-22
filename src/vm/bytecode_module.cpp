@@ -2,8 +2,10 @@
 
 #include <iomanip>
 #include <iostream>
+#include <numeric>
 
-#include "llvm/ADT/SmallVector.h"
+#define XBYAK_NO_OP_NAMES
+#include "xbyak/xbyak.h"
 
 #include "ast/type.h"
 
@@ -20,26 +22,67 @@ BytecodeModule::BytecodeModule(std::string name, std::vector<u8> &&code,
   }
 }
 
+namespace {
+
+struct TrampolineGenerator : public Xbyak::CodeGenerator {
+  /// Generate trampoline code for the given function in the given module
+  TrampolineGenerator(const BytecodeModule &module, const FunctionInfo &func,
+                      void *mem)
+      : Xbyak::CodeGenerator(Xbyak::DEFAULT_MAX_CODE_SIZE, mem) {
+    const Xbyak::Reg64 abi_regs[] = {rdi, rsi, rdx, rcx, r8, r9};
+
+    auto num_args = func.num_params();
+    sub(rsp, num_args * sizeof(void *));
+
+    // Push the arguments onto the stack
+    std::vector<const LocalInfo *> params;
+    func.GetParameters(params);
+    for (u32 idx = 0; idx < params.size(); idx++) {
+      u32 disp = sizeof(void *) * idx;
+      mov(ptr[rsp + disp], abi_regs[idx]);
+    }
+
+    // We're going to call InvokeFunctionWrapper(module, func, args). Thus, we
+    // need to ensure: RDI=module*, RSI=func*, RDX=args*
+    mov(rdi, reinterpret_cast<std::size_t>(&module));
+    mov(rsi, func.id());
+    mov(rdx, rsp);
+
+    // Make the call. Move the address of InvokeFunctionWrapper() into RAX and
+    // emit a call instruction
+    mov(rax, reinterpret_cast<std::size_t>(&VM::InvokeFunctionWrapper));
+    call(rax);
+
+    // Restore stack and return
+    add(rsp, num_args * sizeof(void *));
+    ret();
+  }
+};
+
+}  // namespace
+
 void BytecodeModule::CreateFunctionTrampoline(const FunctionInfo &func,
                                               Trampoline &trampoline) {
-  llvm::SmallVector<u8, 256> code;
-  code.push_back(0xf4);
-
-  // Create the memory
+  // Allocate memory
   std::error_code error;
   u32 flags = llvm::sys::Memory::ProtectionFlags::MF_READ |
-              llvm::sys::Memory::ProtectionFlags::MF_WRITE |
-              llvm::sys::Memory::ProtectionFlags::MF_EXEC;
-  llvm::sys::MemoryBlock mem = llvm::sys::Memory::allocateMappedMemory(
-      code.size(), nullptr, flags, error);
+              llvm::sys::Memory::ProtectionFlags::MF_WRITE;
+  llvm::sys::MemoryBlock mem =
+      llvm::sys::Memory::allocateMappedMemory(1 << 12, nullptr, flags, error);
   if (error) {
     LOG_ERROR("There was an error allocating executable memory {}",
               error.message());
     return;
   }
 
-  // Copy code into allocated memory
-  std::memcpy(mem.base(), code.data(), code.size());
+  // Generate code
+  TrampolineGenerator generator(*this, func, mem.base());
+
+  // Now that the code's been generated and finalized, let's remove write
+  // protections and just make is read+exec.
+  llvm::sys::Memory::protectMappedMemory(
+      mem, llvm::sys::Memory::ProtectionFlags::MF_READ |
+               llvm::sys::Memory::ProtectionFlags::MF_EXEC);
 
   // Done
   trampoline = Trampoline(llvm::sys::OwningMemoryBlock(mem));

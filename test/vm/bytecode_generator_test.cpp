@@ -164,7 +164,7 @@ TEST_F(BytecodeGeneratorTest, ParameterPassingTest) {
     int b;
   };
 
-  std::function<bool(S * s)> f;
+  std::function<bool(S *)> f;
   EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
       << "Function 'test' not found in module";
 
@@ -281,7 +281,7 @@ TEST_F(BytecodeGeneratorTest, FunctionTest) {
     int b;
   };
 
-  std::function<bool(S * s)> f;
+  std::function<bool(S *)> f;
   EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
       << "Function 'test' not found in module";
 

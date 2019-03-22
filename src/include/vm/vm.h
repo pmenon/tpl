@@ -16,6 +16,7 @@ class VM {
   static constexpr u32 kDefaultInitialStackSize = 1024;
 
  public:
+  /// Constructor
   explicit VM(const BytecodeModule &module, util::Region *region = nullptr);
 
   /// This class cannot be copied or moved
@@ -24,9 +25,13 @@ class VM {
   /// Invoke the function with id \a \p func using the arguments \a \p args
   void InvokeFunction(FunctionId func, const u8 *args);
 
-  ///
-  static void Invoke(const BytecodeModule *module, FunctionId func,
-                     const u8 **args);
+  /// A static wrapper function that creates a virtual machine and runs the
+  /// function with ID \a func in the module \a module using the given
+  /// arguments stored in \a args. This is the function invoked from the
+  /// trampoline when calling into interpreted code from pre-compiled C/C++.
+  /// Regular users should use \a VM::InvokeFunction().
+  static void InvokeFunctionWrapper(const BytecodeModule *module,
+                                    FunctionId func, const u8 **args);
 
  private:
   class Frame;

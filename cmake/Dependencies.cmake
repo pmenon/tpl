@@ -46,3 +46,9 @@ include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/ips4o")
 ############################################################
 
 include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/spdlog/include")
+
+############################################################
+# XByak
+############################################################
+
+include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/xbyak")
