@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "util/common.h"
+#include "util/macros.h"
 
 namespace tpl::util {
 
@@ -39,6 +40,17 @@ inline void FreeHuge(void *ptr, std::size_t size) { munmap(ptr, size); }
 template <typename T>
 inline void FreeHugeArray(T *ptr, std::size_t num_elems) {
   FreeHuge(static_cast<void *>(ptr), sizeof(T) * num_elems);
+}
+
+// These functions value-copy a variable number of pass-by-value arguments into
+// a given buffer. It's assumed the buffer is large enough to hold all arguments
+
+inline void CopyAll(UNUSED u8 *buffer) {}
+
+template <typename HeadT, typename... RestT>
+inline void CopyAll(u8 *buffer, const HeadT &head, const RestT &... rest) {
+  std::memcpy(buffer, reinterpret_cast<const u8 *>(&head), sizeof(head));
+  CopyAll(buffer + sizeof(head), rest...);
 }
 
 // ---------------------------------------------------------

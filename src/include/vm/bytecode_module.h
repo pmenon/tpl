@@ -7,6 +7,7 @@
 #include "llvm/Support/Memory.h"
 
 #include "logging/logger.h"
+#include "util/memory.h"
 #include "vm/bytecode_function_info.h"
 #include "vm/bytecode_iterator.h"
 #include "vm/llvm_engine.h"
@@ -177,41 +178,47 @@ inline bool BytecodeModule::GetFunction(
 
   switch (exec_mode) {
     case ExecutionMode::Interpret: {
-      func = [this, func_info](ArgTypes... args) {
-        // Create allocator for execution
-        util::Region region(func_info->name() + "-exec-region");
-
+      func = [this, func_info](ArgTypes... args) -> RetT {
         // The virtual machine
-        VM vm(&region, *this);
-
-        // Let's go!
-        const u8 *ip = GetBytecodeForFunction(*func_info);
+        VM vm(*this);
+        // Let's go
         if constexpr (std::is_void_v<RetT>) {
-          vm.Execute(*func_info, ip, args...);
+          // The buffer we copy the arguments into
+          u8 arg_buffer[(0ul + ... + sizeof(args))];
+          util::CopyAll(arg_buffer, std::forward(args)...);
+          // Invoke the function
+          vm.InvokeFunction(func_info->id(), arg_buffer);
+          // Finish
           return;
         } else {
+          // The buffer we copy the arguments into, including the return value
+          u8 arg_buffer[sizeof(RetT *) + (0ul + ... + sizeof(args))];
+          // The return value
           RetT rv{};
-          vm.Execute(*func_info, ip, &rv, args...);
+          // Copy the function arguments
+          util::CopyAll(arg_buffer, &rv, std::forward(args)...);
+          // Invoke the function
+          vm.InvokeFunction(func_info->id(), arg_buffer);
+          // Finish
           return rv;
         }
       };
       return true;
     }
     case ExecutionMode::Jit: {
-      func = [this, func_info](ArgTypes... args) {
+      func = [this, func_info](ArgTypes... args) -> RetT {
         // JIT the module
         auto compiled = LLVMEngine::Compile(*this);
-
-        void *raw_f = compiled->GetFunctionPointer(func_info->name());
-        TPL_ASSERT(raw_f != nullptr, "No function");
-
+        // Pull out the function
+        void *raw_fn = compiled->GetFunctionPointer(func_info->name());
+        TPL_ASSERT(raw_fn != nullptr, "No function");
         // Let's go!
         if constexpr (std::is_void_v<RetT>) {
-          auto *jit_f = reinterpret_cast<void (*)(ArgTypes...)>(raw_f);
+          auto *jit_f = reinterpret_cast<void (*)(ArgTypes...)>(raw_fn);
           jit_f(args...);
           return;
         } else {
-          auto *jit_f = reinterpret_cast<void (*)(RetT *, ArgTypes...)>(raw_f);
+          auto *jit_f = reinterpret_cast<void (*)(RetT *, ArgTypes...)>(raw_fn);
           RetT rv{};
           jit_f(&rv, args...);
           return rv;
@@ -219,11 +226,10 @@ inline bool BytecodeModule::GetFunction(
       };
       return true;
     }
-    default: {
-      LOG_ERROR("Non-basic-interpreter-mode not supported yet");
-      return false;
-    }
   }
+
+  UNREACHABLE("Impossible");
+  return false;
 }
 
 }  // namespace tpl::vm

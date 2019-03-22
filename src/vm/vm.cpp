@@ -1,5 +1,7 @@
 #include "vm/vm.h"
 
+#include <numeric>
+
 #include "sql/table.h"
 #include "sql/value.h"
 #include "util/common.h"
@@ -10,9 +12,95 @@
 
 namespace tpl::vm {
 
-VM::VM(util::Region *region, const BytecodeModule &module)
-    : stack_(kDefaultInitialStackSize, 0, region), sp_(0), module_(module) {
+/// An execution frame where all function's local variables and parameters live
+/// for the duration of the function's lifetime.
+class VM::Frame {
+  friend class VM;
+
+ public:
+  /// Constructor
+  Frame(VM *vm, std::size_t frame_size) : vm_(vm), frame_size_(frame_size) {
+    frame_data_ = vm->AllocateFrame(frame_size);
+    TPL_ASSERT(frame_data_ != nullptr, "Frame data cannot be null");
+    TPL_ASSERT(frame_size_ >= 0, "Frame size must be >= 0");
+  }
+
+  /// Destructor
+  ~Frame() { vm_->ReleaseFrame(frame_size_); }
+
+  /// Access the local variable at the given index in the fame. The \ref 'index'
+  /// attribute is encoded and indicates whether the local variable is accessed
+  /// through an indirection (i.e., if the variable has to be dereferenced or
+  /// loaded)
+  /// \tparam T The type of the variable the user expects
+  /// \param index The encoded index into the frame where the variable is
+  /// \return The value of the variable. Note that this is copied!
+  template <typename T>
+  T LocalAt(u32 index) const {
+    LocalVar local = LocalVar::Decode(index);
+
+    EnsureInFrame(local);
+
+    auto val = reinterpret_cast<uintptr_t>(&frame_data_[local.GetOffset()]);
+
+    if (local.GetAddressMode() == LocalVar::AddressMode::Value) {
+      return *(T *)(val);
+    }
+
+    return (T)val;
+  }
+
+ private:
+#ifndef NDEBUG
+  // Ensure the local variable is valid
+  void EnsureInFrame(LocalVar var) const {
+    if (var.GetOffset() >= frame_size_) {
+      std::string error_msg =
+          fmt::format("Accessing local at offset {}, beyond frame of size {}",
+                      var.GetOffset(), frame_size_);
+      LOG_ERROR("{}", error_msg);
+      throw std::runtime_error(error_msg);
+    }
+  }
+#else
+  void EnsureInFrame(UNUSED LocalVar var) const {}
+#endif
+
+  u8 *raw_frame() const { return frame_data_; }
+
+ private:
+  VM *vm_;
+  u8 *frame_data_;
+  std::size_t frame_size_;
+};
+
+VM::VM(const BytecodeModule &module, util::Region *region)
+    : our_region_(module.name()),
+      region_(region != nullptr ? region : &our_region_),
+      stack_(kDefaultInitialStackSize, 0, region_),
+      sp_(0),
+      module_(module) {
   TPL_MEMSET(bytecode_counts_, 0, sizeof(bytecode_counts_));
+}
+
+void VM::InvokeFunction(FunctionId func, const u8 *args) {
+  const FunctionInfo *const func_info = module_.GetFuncInfoById(func);
+  const u8 *ip = module_.GetBytecodeForFunction(*func_info);
+
+  // Locals frame
+  Frame frame(this, func_info->frame_size());
+
+  // Copy args into frame
+  {
+    std::vector<const LocalInfo *> arg_infos;
+    func_info->GetParameters(arg_infos);
+    const u32 size = std::accumulate(
+        arg_infos.begin(), arg_infos.end(), u32(0),
+        [](auto size, const auto *local) { return size + local->size(); });
+    std::memcpy(frame.raw_frame(), args, size);
+  }
+
+  Interpret(ip, &frame);
 }
 
 namespace {
