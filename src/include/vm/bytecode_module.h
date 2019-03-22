@@ -159,6 +159,21 @@ inline void *BytecodeModule::GetFuncTrampoline(const FunctionId func_id) const {
   return trampolines_[func_id].GetCode();
 }
 
+namespace detail {
+
+// These functions value-copy a variable number of pass-by-value arguments into
+// a given buffer. It's assumed the buffer is large enough to hold all arguments
+
+inline void CopyAll(UNUSED u8 *buffer) {}
+
+template <typename HeadT, typename... RestT>
+inline void CopyAll(u8 *buffer, const HeadT &head, const RestT &... rest) {
+  std::memcpy(buffer, reinterpret_cast<const u8 *>(&head), sizeof(head));
+  CopyAll(buffer + sizeof(head), rest...);
+}
+
+}  // namespace detail
+
 template <typename RetT, typename... ArgTypes>
 inline bool BytecodeModule::GetFunction(
     const std::string &name, ExecutionMode exec_mode,
@@ -185,7 +200,7 @@ inline bool BytecodeModule::GetFunction(
         if constexpr (std::is_void_v<RetT>) {
           // The buffer we copy the arguments into
           u8 arg_buffer[(0ul + ... + sizeof(args))];
-          util::CopyAll(arg_buffer, args...);
+          detail::CopyAll(arg_buffer, args...);
           // Invoke the function
           vm.InvokeFunction(func_info->id(), arg_buffer);
           // Finish
@@ -196,7 +211,7 @@ inline bool BytecodeModule::GetFunction(
           // The return value
           RetT rv{};
           // Copy the function arguments
-          util::CopyAll(arg_buffer, &rv, args...);
+          detail::CopyAll(arg_buffer, &rv, args...);
           // Invoke the function
           vm.InvokeFunction(func_info->id(), arg_buffer);
           // Finish
