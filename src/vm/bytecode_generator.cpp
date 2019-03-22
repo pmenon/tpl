@@ -431,7 +431,7 @@ void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
 
   if (auto *literal_index = node->index()->SafeAs<ast::LitExpr>()) {
     i32 index = literal_index->int32_val();
-    TPL_ASSERT(index > 0, "Array indexes must be positive");
+    TPL_ASSERT(index >= 0, "Array indexes must be non-negative");
     emitter()->EmitLea(elem_ptr, arr, (elem_size * index));
   } else {
     LocalVar index = VisitExpressionForRValue(node->index());
