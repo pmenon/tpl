@@ -162,7 +162,7 @@ class IntegerMaxAggregate : public SumAggregate {
   /// Reset the aggregate
   void Reset() noexcept {
     ResetUpdateCount();
-    max_ = INT64_MAX;
+    max_ = INT64_MIN;
   }
 
   /// Return the result of the summation
