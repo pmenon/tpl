@@ -67,13 +67,13 @@ class CountStarAggregate {
 // ---------------------------------------------------------
 
 /// Base class for Sums
-class SumAggregate {
+class NullableAggregate {
  public:
   /// Construct
-  SumAggregate() : num_updates_(0) {}
+  NullableAggregate() : num_updates_(0) {}
 
   /// This class cannot be copied or moved
-  DISALLOW_COPY_AND_MOVE(SumAggregate);
+  DISALLOW_COPY_AND_MOVE(NullableAggregate);
 
   /// Increment the number of tuples this aggregate has seen
   void IncrementUpdateCount() { num_updates_++; }
@@ -82,7 +82,7 @@ class SumAggregate {
   void ResetUpdateCount() { num_updates_ = 0; }
 
   /// Merge this sum with the one provided
-  void Merge(const SumAggregate &that) { num_updates_ += that.num_updates_; }
+  void Merge(const NullableAggregate &that) { num_updates_ += that.num_updates_; }
 
   u64 GetNumUpdates() const { return num_updates_; }
 
@@ -91,10 +91,10 @@ class SumAggregate {
 };
 
 /// Integer Sums
-class IntegerSumAggregate : public SumAggregate {
+class IntegerSumAggregate : public NullableAggregate {
  public:
   /// Constructor
-  IntegerSumAggregate() : SumAggregate(), sum_(0) {}
+  IntegerSumAggregate() : NullableAggregate(), sum_(0) {}
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(IntegerSumAggregate);
@@ -136,7 +136,7 @@ inline void IntegerSumAggregate::Advance(const Integer *val) {
 }
 
 inline void IntegerSumAggregate::Merge(const IntegerSumAggregate &that) {
-  SumAggregate::Merge(that);
+  NullableAggregate::Merge(that);
   Integer i = that.GetResultSum();
   if(!i.is_null) {
     sum_ += i.val;
@@ -144,10 +144,10 @@ inline void IntegerSumAggregate::Merge(const IntegerSumAggregate &that) {
 }
 
 /// Integer Max
-class IntegerMaxAggregate : public SumAggregate {
+class IntegerMaxAggregate : public NullableAggregate {
  public:
   /// Constructor
-  IntegerMaxAggregate() : SumAggregate(), max_(INT64_MIN) {}
+  IntegerMaxAggregate() : NullableAggregate(), max_(INT64_MIN) {}
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(IntegerMaxAggregate);
@@ -165,7 +165,7 @@ class IntegerMaxAggregate : public SumAggregate {
     max_ = INT64_MIN;
   }
 
-  /// Return the result of the summation
+  /// Return the result of the max
   Integer GetResultMax() const {
     Integer max(max_);
     max.is_null = (GetNumUpdates() == 0);
@@ -189,7 +189,7 @@ inline void IntegerMaxAggregate::Advance(const Integer *val) {
 }
 
 inline void IntegerMaxAggregate::Merge(const IntegerMaxAggregate &that) {
-  SumAggregate::Merge(that);
+  NullableAggregate::Merge(that);
   Integer i = that.GetResultMax();
   if(!i.is_null) {
     max_ = std::max(i.val, max_);
@@ -197,10 +197,10 @@ inline void IntegerMaxAggregate::Merge(const IntegerMaxAggregate &that) {
 }
 
 /// Integer Min
-class IntegerMinAggregate : public SumAggregate {
+class IntegerMinAggregate : public NullableAggregate {
  public:
   /// Constructor
-  IntegerMinAggregate() : SumAggregate(), min_(INT64_MAX) {}
+  IntegerMinAggregate() : NullableAggregate(), min_(INT64_MAX) {}
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(IntegerMinAggregate);
@@ -218,7 +218,7 @@ class IntegerMinAggregate : public SumAggregate {
     min_ = INT64_MAX;
   }
 
-  /// Return the result of the summation
+  /// Return the result of the minimum
   Integer GetResultMin() const {
     Integer min(min_);
     min.is_null = (GetNumUpdates() == 0);
@@ -242,7 +242,7 @@ inline void IntegerMinAggregate::Advance(const Integer *val) {
 }
 
 inline void IntegerMinAggregate::Merge(const IntegerMinAggregate &that) {
-  SumAggregate::Merge(that);
+  NullableAggregate::Merge(that);
   Integer i = that.GetResultMin();
   if(!i.is_null) {
     min_ = std::min(i.val, min_);
