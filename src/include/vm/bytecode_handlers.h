@@ -475,6 +475,40 @@ VM_OP_HOT void OpIntegerSumAggregateFree(tpl::sql::IntegerSumAggregate *agg) {
   agg->~IntegerSumAggregate();
 }
 
+VM_OP_HOT void OpIntegerMaxAggregateInit(tpl::sql::IntegerMaxAggregate *agg) {
+  new (agg) tpl::sql::IntegerMaxAggregate();
+}
+
+VM_OP_HOT void OpIntegerMaxAggregateAdvance(tpl::sql::IntegerMaxAggregate *agg,
+                                            tpl::sql::Integer *val) {
+  agg->Advance(val);
+}
+
+VM_OP_HOT void OpIntegerMaxAggregateAdvanceNullable(
+    tpl::sql::IntegerMaxAggregate *agg, tpl::sql::Integer *val) {
+  agg->AdvanceNullable(val);
+}
+
+VM_OP_HOT void OpIntegerMaxAggregateMerge(
+    tpl::sql::IntegerMaxAggregate *agg_1,
+    tpl::sql::IntegerMaxAggregate *agg_2) {
+  TPL_ASSERT(agg_2 != nullptr, "Null aggregate!");
+  agg_1->Merge(*agg_2);
+}
+
+VM_OP_HOT void OpIntegerMaxAggregateReset(tpl::sql::IntegerMaxAggregate *agg) {
+  agg->Reset();
+}
+
+VM_OP_HOT void OpIntegerMaxAggregateGetResult(
+    tpl::sql::Integer *result, tpl::sql::IntegerMaxAggregate *agg) {
+  *result = agg->GetResultMax();
+}
+
+VM_OP_HOT void OpIntegerMaxAggregateFree(tpl::sql::IntegerMaxAggregate *agg) {
+  agg->~IntegerMaxAggregate();
+}
+
 // ---------------------------------------------------------
 // SQL Hash Joins
 // ---------------------------------------------------------

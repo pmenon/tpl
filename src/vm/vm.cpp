@@ -552,6 +552,53 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+ OP(IntegerMaxAggregateInit) : {
+    auto *agg = frame->LocalAt<sql::IntegerMaxAggregate *>(READ_LOCAL_ID());
+    OpIntegerMaxAggregateInit(agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerMaxAggregateAdvance) : {
+    auto *agg = frame->LocalAt<sql::IntegerMaxAggregate *>(READ_LOCAL_ID());
+    auto *val = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    OpIntegerMaxAggregateAdvance(agg, val);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerMaxAggregateAdvanceNullable) : {
+    auto *agg = frame->LocalAt<sql::IntegerMaxAggregate *>(READ_LOCAL_ID());
+    auto *val = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    OpIntegerMaxAggregateAdvanceNullable(agg, val);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerMaxAggregateMerge) : {
+    auto *agg_1 = frame->LocalAt<sql::IntegerMaxAggregate *>(READ_LOCAL_ID());
+    auto *agg_2 = frame->LocalAt<sql::IntegerMaxAggregate *>(READ_LOCAL_ID());
+    OpIntegerMaxAggregateMerge(agg_1, agg_2);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerMaxAggregateReset) : {
+    auto *agg = frame->LocalAt<sql::IntegerSumAggregate *>(READ_LOCAL_ID());
+    OpIntegerSumAggregateReset(agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerMaxAggregateGetResult) : {
+    auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    auto *agg = frame->LocalAt<sql::IntegerSumAggregate *>(READ_LOCAL_ID());
+    OpIntegerSumAggregateGetResult(result, agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerMaxAggregateFree) : {
+    auto *agg = frame->LocalAt<sql::IntegerSumAggregate *>(READ_LOCAL_ID());
+    OpIntegerSumAggregateFree(agg);
+    DISPATCH_NEXT();
+  }
+
+
   // -------------------------------------------------------
   // Hash Joins
   // -------------------------------------------------------

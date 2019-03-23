@@ -103,6 +103,9 @@ class IntegerSumAggregate : public SumAggregate {
   void Advance(const Integer *val);
   void AdvanceNullable(const Integer *val);
 
+  /// Merge another aggregate in
+  void Merge(const IntegerSumAggregate &that);
+
   /// Reset the aggregate
   void Reset() noexcept {
     ResetUpdateCount();
@@ -130,6 +133,67 @@ inline void IntegerSumAggregate::Advance(const Integer *val) {
   TPL_ASSERT(!val->is_null, "Received NULL input in non-NULLable aggregator!");
   IncrementUpdateCount();
   sum_ += val->val;
+}
+
+inline void IntegerSumAggregate::Merge(const IntegerSumAggregate &that) {
+  SumAggregate::Merge(that);
+  Integer i = that.GetResultSum();
+  if(!i.is_null) {
+    sum_ += i.val;
+  }
+}
+
+/// Integer Max
+class IntegerMaxAggregate : public SumAggregate {
+ public:
+  /// Constructor
+  IntegerMaxAggregate() : SumAggregate(), max_(INT64_MIN) {}
+
+  /// This class cannot be copied or moved
+  DISALLOW_COPY_AND_MOVE(IntegerMaxAggregate);
+
+  /// Advance the aggregate by the input value \a val
+  void Advance(const Integer *val);
+  void AdvanceNullable(const Integer *val);
+
+  /// Merge another aggregate in
+  void Merge(const IntegerMaxAggregate &that);
+
+  /// Reset the aggregate
+  void Reset() noexcept {
+    ResetUpdateCount();
+    max_ = INT64_MAX;
+  }
+
+  /// Return the result of the summation
+  Integer GetResultMax() const {
+    Integer max(max_);
+    max.is_null = (GetNumUpdates() == 0);
+    return max;
+  }
+
+ private:
+  i64 max_;
+};
+
+inline void IntegerMaxAggregate::AdvanceNullable(const Integer *val) {
+  if (!val->is_null) {
+    Advance(val);
+  }
+}
+
+inline void IntegerMaxAggregate::Advance(const Integer *val) {
+  TPL_ASSERT(!val->is_null, "Received NULL input in non-NULLable aggregator!");
+  IncrementUpdateCount();
+  max_ = std::max(val->val, max_);
+}
+
+inline void IntegerMaxAggregate::Merge(const IntegerMaxAggregate &that) {
+  SumAggregate::Merge(that);
+  Integer i = that.GetResultMax();
+  if(!i.is_null) {
+    max_ = std::max(i.val, max_);
+  }
 }
 
 }  // namespace tpl::sql
