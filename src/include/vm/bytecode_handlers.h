@@ -509,6 +509,40 @@ VM_OP_HOT void OpIntegerMaxAggregateFree(tpl::sql::IntegerMaxAggregate *agg) {
   agg->~IntegerMaxAggregate();
 }
 
+VM_OP_HOT void OpIntegerMinAggregateInit(tpl::sql::IntegerMinAggregate *agg) {
+  new (agg) tpl::sql::IntegerMinAggregate();
+}
+
+VM_OP_HOT void OpIntegerMinAggregateAdvance(tpl::sql::IntegerMinAggregate *agg,
+                                            tpl::sql::Integer *val) {
+  agg->Advance(val);
+}
+
+VM_OP_HOT void OpIntegerMinAggregateAdvanceNullable(
+    tpl::sql::IntegerMinAggregate *agg, tpl::sql::Integer *val) {
+  agg->AdvanceNullable(val);
+}
+
+VM_OP_HOT void OpIntegerMinAggregateMerge(
+    tpl::sql::IntegerMinAggregate *agg_1,
+    tpl::sql::IntegerMinAggregate *agg_2) {
+  TPL_ASSERT(agg_2 != nullptr, "Null aggregate!");
+  agg_1->Merge(*agg_2);
+}
+
+VM_OP_HOT void OpIntegerMinAggregateReset(tpl::sql::IntegerMinAggregate *agg) {
+  agg->Reset();
+}
+
+VM_OP_HOT void OpIntegerMinAggregateGetResult(
+    tpl::sql::Integer *result, tpl::sql::IntegerMinAggregate *agg) {
+  *result = agg->GetResultMin();
+}
+
+VM_OP_HOT void OpIntegerMinAggregateFree(tpl::sql::IntegerMinAggregate *agg) {
+  agg->~IntegerMinAggregate();
+}
+
 // ---------------------------------------------------------
 // SQL Hash Joins
 // ---------------------------------------------------------

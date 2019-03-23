@@ -598,6 +598,52 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(IntegerMinAggregateInit) : {
+    auto *agg = frame->LocalAt<sql::IntegerMinAggregate *>(READ_LOCAL_ID());
+    OpIntegerMinAggregateInit(agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerMinAggregateAdvance) : {
+  auto *agg = frame->LocalAt<sql::IntegerMinAggregate *>(READ_LOCAL_ID());
+  auto *val = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+  OpIntegerMinAggregateAdvance(agg, val);
+  DISPATCH_NEXT();
+}
+
+  OP(IntegerMinAggregateAdvanceNullable) : {
+    auto *agg = frame->LocalAt<sql::IntegerMinAggregate *>(READ_LOCAL_ID());
+    auto *val = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    OpIntegerMinAggregateAdvanceNullable(agg, val);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerMinAggregateMerge) : {
+    auto *agg_1 = frame->LocalAt<sql::IntegerMinAggregate *>(READ_LOCAL_ID());
+    auto *agg_2 = frame->LocalAt<sql::IntegerMinAggregate *>(READ_LOCAL_ID());
+    OpIntegerMinAggregateMerge(agg_1, agg_2);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerMinAggregateReset) : {
+    auto *agg = frame->LocalAt<sql::IntegerMinAggregate *>(READ_LOCAL_ID());
+    OpIntegerMinAggregateReset(agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerMinAggregateGetResult) : {
+    auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    auto *agg = frame->LocalAt<sql::IntegerMinAggregate *>(READ_LOCAL_ID());
+    OpIntegerMinAggregateGetResult(result, agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerMinAggregateFree) : {
+    auto *agg = frame->LocalAt<sql::IntegerMinAggregate *>(READ_LOCAL_ID());
+    OpIntegerMinAggregateFree(agg);
+    DISPATCH_NEXT();
+  }
+
 
   // -------------------------------------------------------
   // Hash Joins

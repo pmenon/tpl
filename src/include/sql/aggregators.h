@@ -196,4 +196,57 @@ inline void IntegerMaxAggregate::Merge(const IntegerMaxAggregate &that) {
   }
 }
 
+/// Integer Min
+class IntegerMinAggregate : public SumAggregate {
+ public:
+  /// Constructor
+  IntegerMinAggregate() : SumAggregate(), min_(INT64_MAX) {}
+
+  /// This class cannot be copied or moved
+  DISALLOW_COPY_AND_MOVE(IntegerMinAggregate);
+
+  /// Advance the aggregate by the input value \a val
+  void Advance(const Integer *val);
+  void AdvanceNullable(const Integer *val);
+
+  /// Merge another aggregate in
+  void Merge(const IntegerMinAggregate &that);
+
+  /// Reset the aggregate
+  void Reset() noexcept {
+    ResetUpdateCount();
+    min_ = INT64_MAX;
+  }
+
+  /// Return the result of the summation
+  Integer GetResultMin() const {
+    Integer min(min_);
+    min.is_null = (GetNumUpdates() == 0);
+    return min;
+  }
+
+ private:
+  i64 min_;
+};
+
+inline void IntegerMinAggregate::AdvanceNullable(const Integer *val) {
+  if (!val->is_null) {
+    Advance(val);
+  }
+}
+
+inline void IntegerMinAggregate::Advance(const Integer *val) {
+  TPL_ASSERT(!val->is_null, "Received NULL input in non-NULLable aggregator!");
+  IncrementUpdateCount();
+  min_ = std::min(val->val, min_);
+}
+
+inline void IntegerMinAggregate::Merge(const IntegerMinAggregate &that) {
+  SumAggregate::Merge(that);
+  Integer i = that.GetResultMin();
+  if(!i.is_null) {
+    min_ = std::min(i.val, min_);
+  }
+}
+
 }  // namespace tpl::sql

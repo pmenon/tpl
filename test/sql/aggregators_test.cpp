@@ -179,4 +179,55 @@ TEST_F(AggregatorsTest, MaxIntegerTest) {
   EXPECT_EQ(43, max.GetResultMax().val);
 }
 
+TEST_F(AggregatorsTest, MinIntegerTest) {
+  IntegerMinAggregate min;
+  EXPECT_TRUE(min.GetResultMin().is_null);
+
+
+  IntegerMinAggregate nullMin;
+  EXPECT_TRUE(nullMin.GetResultMin().is_null);
+
+  min.Merge(nullMin);
+  EXPECT_TRUE(min.GetResultMin().is_null);
+
+
+  for(i64 i = 0; i < 25; i++) {
+    i64 j = i;
+
+    //mix in some low numbers
+    if(i % 2 == 0){
+      j = -i;
+    }
+    Integer val = Integer(j);
+    min.Advance(&val);
+  }
+
+  EXPECT_FALSE(min.GetResultMin().is_null);
+  EXPECT_EQ(-24, min.GetResultMin().val);
+
+  IntegerMinAggregate min2;
+  EXPECT_TRUE(min2.GetResultMin().is_null);
+  for(i64 i = 23; i < 45; i++) {
+    i64 j = i;
+
+    //mix in some low numbers
+    if(i % 2 == 0){
+      j = -i;
+    }
+    Integer val = Integer(j);
+    min2.Advance(&val);
+  }
+
+  EXPECT_FALSE(min2.GetResultMin().is_null);
+  EXPECT_EQ(-44, min2.GetResultMin().val);
+
+  min.Merge(min2);
+  EXPECT_FALSE(min.GetResultMin().is_null);
+  EXPECT_EQ(-44, min.GetResultMin().val);
+
+  min.Merge(nullMin);
+  EXPECT_FALSE(min.GetResultMin().is_null);
+  EXPECT_EQ(-44, min.GetResultMin().val);
+}
+
 }  // namespace tpl::sql::test

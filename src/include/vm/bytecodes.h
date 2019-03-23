@@ -146,6 +146,13 @@ namespace tpl::vm {
   F(IntegerMaxAggregateReset, OperandType::Local)                                                                      \
   F(IntegerMaxAggregateGetResult, OperandType::Local, OperandType::Local)                                              \
   F(IntegerMaxAggregateFree, OperandType::Local)                                                                       \
+  F(IntegerMinAggregateInit, OperandType::Local)                                                                       \
+  F(IntegerMinAggregateAdvance, OperandType::Local, OperandType::Local)                                                \
+  F(IntegerMinAggregateAdvanceNullable, OperandType::Local, OperandType::Local)                                        \
+  F(IntegerMinAggregateMerge, OperandType::Local, OperandType::Local)                                                  \
+  F(IntegerMinAggregateReset, OperandType::Local)                                                                      \
+  F(IntegerMinAggregateGetResult, OperandType::Local, OperandType::Local)                                              \
+  F(IntegerMinAggregateFree, OperandType::Local)                                                                       \
                                                                                                                        \
 /* Hash Joins */                                                                                                       \
   F(JoinHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                               \
