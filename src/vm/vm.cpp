@@ -580,21 +580,21 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   }
 
   OP(IntegerMaxAggregateReset) : {
-    auto *agg = frame->LocalAt<sql::IntegerSumAggregate *>(READ_LOCAL_ID());
-    OpIntegerSumAggregateReset(agg);
+    auto *agg = frame->LocalAt<sql::IntegerMaxAggregate *>(READ_LOCAL_ID());
+    OpIntegerMaxAggregateReset(agg);
     DISPATCH_NEXT();
   }
 
   OP(IntegerMaxAggregateGetResult) : {
     auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
-    auto *agg = frame->LocalAt<sql::IntegerSumAggregate *>(READ_LOCAL_ID());
-    OpIntegerSumAggregateGetResult(result, agg);
+    auto *agg = frame->LocalAt<sql::IntegerMaxAggregate *>(READ_LOCAL_ID());
+    OpIntegerMaxAggregateGetResult(result, agg);
     DISPATCH_NEXT();
   }
 
   OP(IntegerMaxAggregateFree) : {
-    auto *agg = frame->LocalAt<sql::IntegerSumAggregate *>(READ_LOCAL_ID());
-    OpIntegerSumAggregateFree(agg);
+    auto *agg = frame->LocalAt<sql::IntegerMaxAggregate *>(READ_LOCAL_ID());
+    OpIntegerMaxAggregateFree(agg);
     DISPATCH_NEXT();
   }
 
