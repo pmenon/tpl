@@ -85,10 +85,11 @@ void Sorter::HeapSiftDown() {
     if (cmp_fn_(top, tuples_[child]) >= 0) {
       break;
     }
-    // TODO(Amadou): Could save space by memcpying instead of just swapping pointers (Too slow for large tuples?)
-    // i.e we can call tuple_storage_.pop_back() only if we memcpy.
-    // Otherwise, the same memory location is reused by subsequent calls AllocateInputTuple(), which will overwrite
-    // existing values.
+    // TODO(Amadou): Could save space by memcpying instead of just swapping
+    // pointers (Too slow for large tuples?) i.e we can call
+    // tuple_storage_.pop_back() only if we memcpy. Otherwise, the same memory
+    // location is reused by subsequent calls AllocateInputTuple(), which will
+    // overwrite existing values.
     std::swap(tuples_[idx], tuples_[child]);
     idx = child;
   }

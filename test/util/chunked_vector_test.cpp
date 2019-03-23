@@ -1,11 +1,11 @@
 #include "tpl_test.h"
 
+#include <algorithm>
 #include <deque>
 #include <random>
-#include <algorithm>
 
-#include "util/chunked_vector.h"
 #include "ips4o/ips4o.hpp"
+#include "util/chunked_vector.h"
 
 namespace tpl::util::test {
 
@@ -161,11 +161,10 @@ TEST_F(ChunkedVectorTest, ElementConstructDestructTest) {
   EXPECT_EQ(0u, Simple::count);
 }
 
-
 // Check that adding random integers to the iterator works.
 TEST_F(ChunkedVectorTest, RandomIteratorAdditionTest) {
   const u32 num_elems = 1000;
-  const u32 num_rolls = 1000000; // Number of additions to make
+  const u32 num_rolls = 1000000;  // Number of additions to make
   // Create vector
   util::Region tmp("tmp");
   ChunkedVectorT<u32> vec(&tmp);
@@ -173,7 +172,7 @@ TEST_F(ChunkedVectorTest, RandomIteratorAdditionTest) {
 
   // Jump at random offsets within the vector.
   std::default_random_engine generator;
-  std::uniform_int_distribution<int> distribution(0, num_elems-1);
+  std::uniform_int_distribution<int> distribution(0, num_elems - 1);
   auto iter = vec.begin();
   i32 prev_idx = 0;
   for (u32 i = 0; i < num_rolls; i++) {
@@ -187,7 +186,7 @@ TEST_F(ChunkedVectorTest, RandomIteratorAdditionTest) {
 // Check that subtracting random integers from the iterator works.
 TEST_F(ChunkedVectorTest, RandomIteratorSubtractionTest) {
   const u32 num_elems = 1000;
-  const u32 num_rolls = 1000000; // number of subtractions to make
+  const u32 num_rolls = 1000000;  // number of subtractions to make
   // Create vector
   util::Region tmp("tmp");
   ChunkedVectorT<u32> vec(&tmp);
@@ -195,7 +194,7 @@ TEST_F(ChunkedVectorTest, RandomIteratorSubtractionTest) {
 
   // Jump at random offsets within the vector
   std::default_random_engine generator;
-  std::uniform_int_distribution<i32> distribution(0, num_elems-1);
+  std::uniform_int_distribution<i32> distribution(0, num_elems - 1);
   auto iter = vec.begin();
   i32 prev_idx = 0;
   for (u32 i = 0; i < num_rolls; i++) {
@@ -210,7 +209,7 @@ TEST_F(ChunkedVectorTest, RandomIteratorSubtractionTest) {
 // <, <=, >, >=, ==, !=, -.
 TEST_F(ChunkedVectorTest, RandomIteratorBinaryOpsTest) {
   const u32 num_elems = 1000;
-  const u32 num_rolls = 1000000; // Number of checks to make
+  const u32 num_rolls = 1000000;  // Number of checks to make
   // Create vector
   util::Region tmp("tmp");
   ChunkedVectorT<u32> vec(&tmp);
@@ -218,7 +217,7 @@ TEST_F(ChunkedVectorTest, RandomIteratorBinaryOpsTest) {
 
   // Perform binary operations on random indices.
   std::default_random_engine generator;
-  std::uniform_int_distribution<int> distribution(0, num_elems-1);
+  std::uniform_int_distribution<int> distribution(0, num_elems - 1);
   for (u32 i = 0; i < num_rolls; i++) {
     i32 idx1 = distribution(generator);
     i32 idx2 = distribution(generator);
@@ -262,8 +261,6 @@ TEST_F(ChunkedVectorTest, RandomIteratorIps4oSortTest) {
     ASSERT_EQ(vec[i], i);
   }
 }
-
-
 
 TEST_F(ChunkedVectorTest, DISABLED_PerfInsertTest) {
   auto stdvec_ms = Bench(3, []() {
