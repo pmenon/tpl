@@ -1,7 +1,9 @@
-#include "tpl_test.h"
-
 #include <sys/mman.h>
+#include <algorithm>
 #include <random>
+#include <vector>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "util/timer.h"
 #include "util/vector_util.h"
@@ -295,7 +297,7 @@ void SmallScale_NeedleTest(VectorUtilTest *test) {
 
   // Ensure total found through vector util matches what we generated
   EXPECT_EQ(actual_count, count);
-};
+}
 
 template <typename T>
 void SmallScale_MultiFilterTest(VectorUtilTest *test) {
@@ -350,7 +352,7 @@ void SmallScale_MultiFilterTest(VectorUtilTest *test) {
 
   // Ensure total found through vector util matches what we generated
   EXPECT_EQ(actual_count, count);
-};
+}
 
 TEST_F(VectorUtilTest, SimpleFilterTest) {
   SmallScale_NeedleTest<i8>(this);
@@ -409,8 +411,9 @@ TEST_F(VectorUtilTest, DISABLED_PerfSelectTest) {
       }
     }
 
-    std::cout << "Sel: " << ((double)sel / 100) << ", count: " << count
-              << ", time: " << time << " ms" << std::endl;
+    std::cout << "Sel: " << (static_cast<double>(sel) / 100)
+              << ", count: " << count << ", time: " << time << " ms"
+              << std::endl;
   }
 }
 

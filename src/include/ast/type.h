@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 #include "llvm/Support/Casting.h"
 
@@ -403,11 +404,11 @@ class StructType : public Type {
 // class reference
 // clang-format off
 #define INTERNAL_TYPE_LIST(V) \
-  V(TableVectorIterator, "tpl::sql::TableVectorIterator", ::tpl::sql::TableVectorIterator)                                  \
-  V(VectorProjectionIterator, "tpl::sql::VectorProjectionIterator", ::tpl::sql::VectorProjectionIterator)                   \
-  V(JoinHashTable, "tpl::sql::JoinHashTable", ::tpl::sql::JoinHashTable)                                                    \
-  V(SqlBool, "tpl::sql::Bool", ::tpl::sql::BoolVal)                                                                         \
-  V(SqlInteger, "tpl::sql::Integer", ::tpl::sql::Integer)                                                                   \
+  V(TableVectorIterator, "tpl::sql::TableVectorIterator", ::tpl::sql::TableVectorIterator)                   /* NOLINT */   \
+  V(VectorProjectionIterator, "tpl::sql::VectorProjectionIterator", ::tpl::sql::VectorProjectionIterator)    /* NOLINT */   \
+  V(JoinHashTable, "tpl::sql::JoinHashTable", ::tpl::sql::JoinHashTable)                                     /* NOLINT */   \
+  V(SqlBool, "tpl::sql::Bool", ::tpl::sql::BoolVal)                                                          /* NOLINT */   \
+  V(SqlInteger, "tpl::sql::Integer", ::tpl::sql::Integer)                                                    /* NOLINT */   \
   V(SqlDecimal, "tpl::sql::Decimal", ::tpl::sql::Decimal)
 // clang-format on
 

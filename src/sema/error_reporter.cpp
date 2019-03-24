@@ -1,6 +1,7 @@
 #include "sema/error_reporter.h"
 
 #include <cstring>
+#include <string>
 
 #include "ast/type.h"
 #include "ast/type_visitor.h"

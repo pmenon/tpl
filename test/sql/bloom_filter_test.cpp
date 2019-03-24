@@ -1,7 +1,8 @@
-#include "tpl_test.h"
-
 #include <random>
 #include <unordered_set>
+#include <vector>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "sql/bloom_filter.h"
 #include "util/hash.h"
@@ -65,9 +66,10 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
     filter.Add(util::Hasher::Hash((const u8 *)&elem, sizeof(elem)));
   }
 
-  double bits_per_elem = (double)filter.GetSizeInBits() / num_filter_elems;
-  double bit_set_prob =
-      (double)filter.GetTotalBitsSet() / filter.GetSizeInBits();
+  auto bits_per_elem =
+      static_cast<double>(filter.GetSizeInBits() / num_filter_elems);
+  auto bit_set_prob =
+      static_cast<double>(filter.GetTotalBitsSet() / filter.GetSizeInBits());
   LOG_INFO(
       "Filter: {} elements, {} bits, {} bits/element, {} bits set (p={:.2f})",
       num_filter_elems, filter.GetSizeInBits(), bits_per_elem,
@@ -97,9 +99,10 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
 
     timer.Stop();
 
-    double fpr = (actual_found - expected_found) / (double)lookups.size();
-    double probes_per_sec =
-        (double)lookups.size() / timer.elapsed() * 1000.0 / 1000000.0;
+    double fpr =
+        (actual_found - expected_found) / static_cast<double>(lookups.size());
+    double probes_per_sec = static_cast<double>(lookups.size()) /
+                            timer.elapsed() * 1000.0 / 1000000.0;
     LOG_INFO(
         "p: {:.2f}, {} M probes/sec, FPR: {:2.4f}, (expected: {}, actual: {})",
         prob_success, probes_per_sec, fpr, expected_found, actual_found);

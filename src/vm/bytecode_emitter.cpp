@@ -1,5 +1,8 @@
 #include "vm/bytecode_emitter.h"
 
+#include <limits>
+#include <vector>
+
 #include "vm/bytecode_label.h"
 
 namespace tpl::vm {

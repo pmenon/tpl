@@ -204,7 +204,8 @@ inline const HashTableEntry *JoinHashTable::Iterator::NextMatch(
   while (result != nullptr) {
     next_ = next_->next;
     if (result->hash == hash_ &&
-        key_eq(opaque_ctx, probe_tuple, (void *)result->payload)) {
+        key_eq(opaque_ctx, probe_tuple,
+               reinterpret_cast<void *>(const_cast<byte *>(result->payload)))) {
       break;
     }
     result = next_;

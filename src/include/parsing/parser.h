@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <unordered_set>
 
 #include "ast/ast.h"
@@ -89,7 +90,7 @@ class Parser {
   }
 
   // In case of errors, sync up to any token in the list
-  void Sync(std::unordered_set<Token::Type> &s);
+  void Sync(const std::unordered_set<Token::Type> &s);
 
   // -------------------------------------------------------
   // Parsing productions

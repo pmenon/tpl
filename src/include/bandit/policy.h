@@ -19,7 +19,7 @@ enum class Kind : u8 { EpsilonGreedy, Greedy, Random, UCB, FixedAction };
  */
 class Policy {
  public:
-  Policy(Kind kind) : kind_(kind), generator_(time(0)) {}
+  explicit Policy(Kind kind) : kind_(kind), generator_(time(0)) {}
 
   /**
    * Returns the next action according to the policy
@@ -41,7 +41,7 @@ class Policy {
  */
 class EpsilonGreedyPolicy : public Policy {
  public:
-  EpsilonGreedyPolicy(double epsilon, Kind kind = Kind::EpsilonGreedy)
+  explicit EpsilonGreedyPolicy(double epsilon, Kind kind = Kind::EpsilonGreedy)
       : Policy(kind),
         epsilon_(epsilon),
         real_(std::uniform_real_distribution<double>(0, 1)) {}
@@ -80,7 +80,7 @@ class RandomPolicy : public EpsilonGreedyPolicy {
  */
 class UCBPolicy : public Policy {
  public:
-  UCBPolicy(double c) : Policy(Kind::UCB), c_(c) {}
+  explicit UCBPolicy(double c) : Policy(Kind::UCB), c_(c) {}
 
   u32 NextAction(Agent *agent);
 
@@ -95,7 +95,8 @@ class UCBPolicy : public Policy {
  */
 class FixedActionPolicy : public Policy {
  public:
-  FixedActionPolicy(u32 action) : Policy(Kind::FixedAction), action_(action) {}
+  explicit FixedActionPolicy(u32 action)
+      : Policy(Kind::FixedAction), action_(action) {}
 
   u32 NextAction(Agent *agent) { return action_; }
 

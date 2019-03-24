@@ -11,8 +11,10 @@ class JoinHashTable;
 /// Helper class to perform vectorized lookups into a JoinHashTable
 class JoinHashTableVectorLookup {
  public:
-  using HashFn = hash_t (*)(VectorProjectionIterator *) noexcept;
+  // clang-format off
+  using HashFn = hash_t (*)(VectorProjectionIterator *) noexcept;  // NOLINT it appears to parse the function as a cast
   using KeyEqFn = bool (*)(const byte *, VectorProjectionIterator *) noexcept;
+  // clang-format on
 
   /// Constructor given a hashing function and a key equality function
   explicit JoinHashTableVectorLookup(const JoinHashTable &table) noexcept;

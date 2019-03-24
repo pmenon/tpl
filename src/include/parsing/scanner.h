@@ -14,7 +14,7 @@ class Scanner {
 
  public:
   Scanner(const char *source, u64 source_len);
-  Scanner(const std::string &source);
+  explicit Scanner(const std::string &source);
 
   DISALLOW_COPY_AND_MOVE(Scanner);
 

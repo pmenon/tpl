@@ -1,5 +1,7 @@
 #include "sema/sema.h"
 
+#include <utility>
+
 #include "ast/ast_context.h"
 #include "ast/type.h"
 #include "sql/data_types.h"

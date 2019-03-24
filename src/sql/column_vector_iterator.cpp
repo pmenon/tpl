@@ -1,5 +1,7 @@
 #include "sql/column_vector_iterator.h"
 
+#include <algorithm>
+
 #include "sql/column.h"
 
 namespace tpl::sql {
@@ -42,7 +44,6 @@ void ColumnVectorIterator::Reset(const ColumnVector *column) noexcept {
   // length of the column or one vector's length of data)
   current_block_pos_ = 0;
   next_block_pos_ = std::min(column->num_tuples(), vector_size());
-  ;
 }
 
 }  // namespace tpl::sql

@@ -1,7 +1,8 @@
-#include "tpl_test.h"
-
 #include <deque>
 #include <random>
+#include <vector>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "util/chunked_vector.h"
 
@@ -252,7 +253,7 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
 
   std::vector<u32> random_indexes(num_elems);
   for (u32 i = 0; i < num_elems; i++) {
-    random_indexes[i] = (rand() % num_elems);
+    random_indexes[i] = (rand() % num_elems);  // NOLINT
   }
 
   auto stdvec_ms = Bench(10, [&stdvec, &random_indexes]() {

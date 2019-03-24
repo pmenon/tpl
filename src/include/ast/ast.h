@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <utility>
 
 #include "llvm/Support/Casting.h"
 
@@ -335,7 +336,7 @@ class AssignmentStmt : public Stmt {
 
   Expr *destination() const { return dest_; }
 
-  Expr *source() const { return src_; };
+  Expr *source() const { return src_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::AssignmentStmt;

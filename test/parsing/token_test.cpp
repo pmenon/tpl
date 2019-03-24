@@ -1,6 +1,6 @@
-#include "tpl_test.h"
-
 #include <functional>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "parsing/scanner.h"
 

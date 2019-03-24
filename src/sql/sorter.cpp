@@ -1,5 +1,8 @@
 #include "sql/sorter.h"
 
+#include <algorithm>
+#include <utility>
+
 #include "ips4o/ips4o.hpp"
 
 #include "logging/logger.h"

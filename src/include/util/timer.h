@@ -1,6 +1,6 @@
 #pragma once
 
-#include <chrono>
+#include <chrono>  // NOLINT
 
 namespace tpl::util {
 

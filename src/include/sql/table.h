@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iosfwd>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "sql/column.h"

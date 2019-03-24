@@ -574,7 +574,7 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
     }
 
     case ast::ImplicitCastExpr::CastKind::IntegralCast: {
-      // TODO: Fix me
+      // TODO(pmenon): Fix me
       if (!expr_type->IsIntegerType()) {
         error_reporter().Report(node->position(),
                                 ErrorMessages::kInvalidCastToSqlDecimal,

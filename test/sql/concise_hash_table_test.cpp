@@ -1,6 +1,7 @@
-#include "tpl_test.h"
-
 #include <random>
+#include <vector>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "sql/concise_hash_table.h"
 #include "util/hash.h"

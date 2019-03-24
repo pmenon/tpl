@@ -1,5 +1,10 @@
 #include "ast/ast_context.h"
 
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <utility>
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
@@ -158,11 +163,15 @@ struct AstContext::Implementation {
   explicit Implementation(AstContext &ctx)
       : int8(ctx, sizeof(i8), alignof(i8), IntegerType::IntKind::Int8),
         int16(ctx, sizeof(i16), alignof(i16), IntegerType::IntKind::Int16),
+        // NOLINTNEXTLINE
         int32(ctx, sizeof(i32), alignof(i32), IntegerType::IntKind::Int32),
+        // NOLINTNEXTLINE
         int64(ctx, sizeof(i64), alignof(i64), IntegerType::IntKind::Int64),
         uint8(ctx, sizeof(u8), alignof(u8), IntegerType::IntKind::UInt8),
         uint16(ctx, sizeof(u16), alignof(u16), IntegerType::IntKind::UInt16),
+        // NOLINTNEXTLINE
         uint32(ctx, sizeof(u32), alignof(u32), IntegerType::IntKind::UInt32),
+        // NOLINTNEXTLINE
         uint64(ctx, sizeof(u64), alignof(u64), IntegerType::IntKind::UInt64),
         float32(ctx, sizeof(f32), alignof(f32), FloatType::FloatKind::Float32),
         float64(ctx, sizeof(f64), alignof(f64), FloatType::FloatKind::Float64),
@@ -222,7 +231,10 @@ AstContext::~AstContext() = default;
 Identifier AstContext::GetIdentifier(llvm::StringRef str) {
   if (str.empty()) return Identifier(nullptr);
 
-  auto iter = impl().string_table.insert(std::make_pair(str, char(0))).first;
+  auto iter =
+      impl()
+          .string_table.insert(std::make_pair(str, static_cast<char>(0)))
+          .first;
   return Identifier(iter->getKeyData());
 }
 
@@ -422,7 +434,7 @@ InternalType *InternalType::Get(AstContext &ctx, InternalKind kind) {
 }
 
 SqlType *SqlType::Get(AstContext &ctx, const sql::Type &sql_type) {
-  // TODO: cache
+  // TODO(pmenon): cache
   u32 size = 0, alignment = 0;
   switch (sql_type.type_id()) {
     case sql::TypeId::Boolean: {

@@ -1,8 +1,12 @@
 #include "vm/bytecode_module.h"
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <numeric>
+#include <string>
+#include <utility>
+#include <vector>
 
 #define XBYAK_NO_OP_NAMES
 #include "xbyak/xbyak.h"

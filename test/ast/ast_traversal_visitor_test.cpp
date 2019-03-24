@@ -1,4 +1,6 @@
-#include "tpl_test.h"
+#include <string>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "ast/ast.h"
 #include "ast/ast_node_factory.h"

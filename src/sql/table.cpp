@@ -1,6 +1,7 @@
 #include "sql/table.h"
 
 #include <iostream>
+#include <utility>
 
 // TODO(siva): Hack! Fix me!
 i32 current_partition = -1;

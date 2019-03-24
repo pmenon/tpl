@@ -1,5 +1,8 @@
 #include "sql/join_hash_table.h"
 
+#include <algorithm>
+#include <limits>
+
 #include "logging/logger.h"
 #include "util/cpu_info.h"
 #include "util/memory.h"

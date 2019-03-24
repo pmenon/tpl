@@ -1,6 +1,8 @@
 #include "ast/ast_dump.h"
 
 #include <iostream>
+#include <string>
+#include <utility>
 
 #include "llvm/Support/raw_os_ostream.h"
 

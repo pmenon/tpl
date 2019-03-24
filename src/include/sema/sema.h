@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "ast/ast.h"
 #include "ast/ast_visitor.h"
 #include "ast/builtins.h"

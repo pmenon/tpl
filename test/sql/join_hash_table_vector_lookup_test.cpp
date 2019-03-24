@@ -1,6 +1,9 @@
-#include "tpl_test.h"
-
+#include <algorithm>
+#include <memory>
 #include <random>
+#include <vector>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "sql/join_hash_table.h"
 #include "sql/join_hash_table_vector_lookup.h"
@@ -109,7 +112,7 @@ TEST_F(JoinHashTableVectorLookupTest, SimpleGenericLookupTest) {
     u32 size = std::min(kDefaultVectorSize, num_probe - i);
 
     // Setup VP
-    vp.ResetFromRaw((byte *)&probe_keys[i], nullptr, 0, size);
+    vp.ResetFromRaw(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0, size);
     vpi.SetVectorProjection(&vp);
 
     // Lookup
@@ -156,7 +159,8 @@ TEST_F(JoinHashTableVectorLookupTest, DISABLED_PerfLookupTest) {
       u32 size = std::min(kDefaultVectorSize, num_probe - i);
 
       // Setup VP
-      vp.ResetFromRaw((byte *)&probe_keys[i], nullptr, 0, size);
+      vp.ResetFromRaw(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0,
+                      size);
       vpi.SetVectorProjection(&vp);
 
       // Lookup

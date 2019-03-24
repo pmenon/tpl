@@ -1,5 +1,6 @@
 #include <sql/value.h>
-#include "tpl_test.h"
+
+#include "tpl_test.h"  // NOLINT
 
 #include "sql/aggregators.h"
 

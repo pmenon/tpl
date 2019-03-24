@@ -1,6 +1,8 @@
 #include "vm/vm.h"
 
 #include <numeric>
+#include <string>
+#include <vector>
 
 #include "sql/table.h"
 #include "sql/value.h"
@@ -44,7 +46,7 @@ class VM::Frame {
     auto val = reinterpret_cast<uintptr_t>(&frame_data_[local.GetOffset()]);
 
     if (local.GetAddressMode() == LocalVar::AddressMode::Value) {
-      return *(T *)(val);
+      return *reinterpret_cast<T *>(val);
     }
 
     return (T)val;

@@ -1,5 +1,9 @@
 #include "util/cpu_info.h"
 
+#include <algorithm>
+#include <memory>
+#include <string>
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -70,7 +74,7 @@ void CpuInfo::InitCpuInfo() {
     if (sysctlbyname("hw.cpufrequency", &freq, &size, NULL, 0) < 0) {
       LOG_ERROR("Cannot read CPU Mhz: {}", strerror(errno));
     }
-    cpu_mhz_ = double(freq) / 1000000.0;
+    cpu_mhz_ = static_cast<double>(freq) / 1000000.0;
   }
 #else
   // On linux, just read /proc/cpuinfo
@@ -142,9 +146,9 @@ std::string CpuInfo::PrettyPrintInfo() const {
   ss << "  Cores:  " << num_cores_ << std::endl;
   ss << "  Mhz:    " << std::fixed << std::setprecision(2) << cpu_mhz_ << std::endl;
   ss << "  Caches: " << std::endl;
-  ss << "    L1: " << (cache_sizes_[L1_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L1_CACHE] << " byte line)" << std::endl;
-  ss << "    L2: " << (cache_sizes_[L2_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L2_CACHE] << " byte line)" << std::endl;
-  ss << "    L3: " << (cache_sizes_[L3_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L3_CACHE] << " byte line)" << std::endl;
+  ss << "    L1: " << (cache_sizes_[L1_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L1_CACHE] << " byte line)" << std::endl;  // NOLINT
+  ss << "    L2: " << (cache_sizes_[L2_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L2_CACHE] << " byte line)" << std::endl;  // NOLINT
+  ss << "    L3: " << (cache_sizes_[L3_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L3_CACHE] << " byte line)" << std::endl;  // NOLINT
   // clang-format on
 
   ss << "Features: ";

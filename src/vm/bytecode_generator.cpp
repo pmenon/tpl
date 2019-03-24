@@ -1,5 +1,10 @@
 #include "vm/bytecode_generator.h"
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "ast/ast_context.h"
 #include "ast/builtins.h"
 #include "ast/type.h"

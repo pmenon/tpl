@@ -1,5 +1,9 @@
 #include "sql/data_types.h"
 
+#include <memory>
+#include <string>
+#include <utility>
+
 #include "llvm/ADT/DenseMap.h"
 
 namespace tpl::sql {

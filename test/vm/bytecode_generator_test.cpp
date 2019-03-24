@@ -1,4 +1,6 @@
-#include "tpl_test.h"
+#include <string>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "llvm/Support/FormatVariadic.h"
 

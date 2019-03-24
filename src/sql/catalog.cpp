@@ -1,8 +1,13 @@
 #include "sql/catalog.h"
 
+#include <algorithm>
 #include <iostream>
+#include <memory>
 #include <random>
+#include <string>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "logging/logger.h"
 #include "sql/data_types.h"

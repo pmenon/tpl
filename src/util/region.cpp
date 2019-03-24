@@ -1,5 +1,9 @@
 #include "util/region.h"
 
+#include <algorithm>
+#include <string>
+#include <utility>
+
 #include "logging/logger.h"
 #include "util/memory.h"
 

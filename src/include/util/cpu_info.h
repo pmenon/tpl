@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "util/bit_util.h"
 #include "util/common.h"
 #include "util/macros.h"
@@ -72,7 +74,7 @@ class CpuInfo {
   void ParseCpuFlags(llvm::StringRef flags);
 
  private:
-  explicit CpuInfo();
+  CpuInfo();
 
  private:
   u32 num_cores_;

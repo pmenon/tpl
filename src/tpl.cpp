@@ -3,6 +3,7 @@
 #include <csignal>
 #include <cstdio>
 #include <iostream>
+#include <memory>
 #include <string>
 
 #include "llvm/Support/MemoryBuffer.h"
@@ -14,7 +15,7 @@
 #include "sema/error_reporter.h"
 #include "sema/sema.h"
 #include "sql/catalog.h"
-#include "tpl.h"
+#include "tpl.h"  // NOLINT
 #include "util/cpu_info.h"
 #include "util/timer.h"
 #include "vm/bytecode_generator.h"
