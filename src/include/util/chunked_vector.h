@@ -149,24 +149,24 @@ class ChunkedVectorRandomIterator {
   // In place addition
   ChunkedVectorRandomIterator &operator+=(const i64 &offset) {
     const i64 chunk_size = ChunkedVector::ChunkAllocSize(element_size_);
-    const i64 elem_size = static_cast<i64>(element_size_);
-    i64 used =
-        curr_ - *chunks_iter_;  // Number of bytes used in the current chunk.
+    // byte_offset is the total number of bytes between the new position and the current chunks_iter.
+    const i64 byte_offset = offset * static_cast<i64>(element_size_) + (curr_ - *chunks_iter_);
     i64 chunk_offset;  // Offset of the new chunk relative to the current one.
-    i64 curr_offset;   // Offset of the curr_ pointer relative to the beginning
-                       // of the new chunk.
-    if (offset > 0) {
-      chunk_offset = (offset * elem_size + used) / chunk_size;
-      curr_offset = ((offset * elem_size + used) % chunk_size);
-    } else {
-      // Force rounding towards negative infinity
-      chunk_offset =
-          (offset * elem_size + used - (chunk_size - 1)) / chunk_size;
-      curr_offset =
-          (std::abs(chunk_offset) * chunk_size + (offset * elem_size + used));
+
+    // Optimize for the common case where offset is relatively small.
+    // This reduces the number of integer divisions.
+    if (byte_offset < chunk_size && byte_offset >= 0) {
+      chunk_offset = 0;
+    } else if (byte_offset >= chunk_size && byte_offset < 2 * chunk_size) {
+      chunk_offset = 1;
+    } else if (byte_offset < 0 && byte_offset > (-chunk_size)) {
+      chunk_offset = -1;
+    } else { // When offset is large, division can't be avoided.
+      // Force rounding towards negative infinity when the offset is negative
+      chunk_offset = (byte_offset - (offset < 0) * (chunk_size - 1)) / chunk_size;
     }
-    chunks_iter_ += chunk_offset;         // Update the current chunk.
-    curr_ = *chunks_iter_ + curr_offset;  // Update the curr_ pointer.
+    chunks_iter_ += chunk_offset;  // Update the current chunk.
+    curr_ = *chunks_iter_ + byte_offset - chunk_offset * chunk_size;  // Update the curr_ pointer.
     return *this;
   }
 
@@ -191,28 +191,46 @@ class ChunkedVectorRandomIterator {
   }
 
   // Pre-increment
+  // NOTE: This is not implemented in terms of += to optimize for the cases when the offset is known.
   ChunkedVectorRandomIterator &operator++() noexcept {
-    *this += 1;
+    const i64 chunk_size = ChunkedVector::ChunkAllocSize(element_size_);
+    const i64 byte_offset = static_cast<i64>(element_size_) + (curr_ - *chunks_iter_);
+    // NOTE: an explicit if statement is a bit faster despite the possibility of branch misprediction.
+    if (byte_offset >= chunk_size) {
+      ++chunks_iter_;
+      curr_ = *chunks_iter_ + (byte_offset - chunk_size);
+    } else {
+      curr_ += element_size_;
+    }
     return *this;
   }
 
   // Post-increment
   const ChunkedVectorRandomIterator operator++(int) noexcept {
     ChunkedVectorRandomIterator copy(*this);
-    *this += 1;
+    ++(*this);
     return copy;
   }
 
   // Pre-decrement
+  // NOTE: This is not implemented in terms of += to optimize for the cases when the offset is known.
   ChunkedVectorRandomIterator &operator--() noexcept {
-    *this -= 1;
+    const i64 chunk_size = ChunkedVector::ChunkAllocSize(element_size_);
+    const i64 byte_offset = -static_cast<i64>(element_size_) + (curr_ - *chunks_iter_);
+    // NOTE: an explicit if statement is a bit faster despite the possibility of branch misprediction.
+    if (byte_offset < 0) {
+      --chunks_iter_;
+      curr_ = *chunks_iter_ + byte_offset + chunk_size;
+    } else {
+      curr_ -= element_size_;
+    }
     return *this;
   }
 
   // Post-decrement
   const ChunkedVectorRandomIterator operator--(int) noexcept {
     ChunkedVectorRandomIterator copy(*this);
-    *this -= 1;
+    ++(*this);
     return copy;
   }
 

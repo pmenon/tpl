@@ -5,6 +5,8 @@
 #include <vector>
 #include "tpl_test.h"
 #include "util/region.h"
+#include "ips4o/ips4o.hpp"
+
 
 #define TestAllSigned(FuncName, Args...) \
   FuncName<i8>(Args);                    \
@@ -152,4 +154,74 @@ TEST_F(SorterTest, TopKTest) {
   TestAllIntegral(TestTopKRandomTupleSize, num_iters, max_elems, &generator_);
 }
 
+TEST_F(SorterTest, DISABLED_PerfSortTest) {
+  using int_type = uint64_t;
+  auto cmp_fn = [](const byte *a, const byte *b) -> int {
+    const auto val_a = *reinterpret_cast<const int_type *>(a);
+    const auto val_b = *reinterpret_cast<const int_type *>(b);
+    return val_a < val_b ? -1 : (val_a == val_b ? 0 : 1);
+  };
+
+  const uint32_t num_elems = 10000000;
+  // Create a vector and a sorter.
+  util::Region vec_tmp("vec_tmp");
+  util::Region vec_isp4o_tmp("vec_isp4o_tmp");
+  util::Region sorter_tmp("sorter_tmp");
+  util::Region chunk_tmp("chunk_tmp");
+  util::Region chunk_ips4o_tmp("chunk_ips4o_tmp");
+  std::vector<int_type, util::StlRegionAllocator<int_type>> vec{util::StlRegionAllocator<int_type>(&vec_tmp)};
+  std::vector<int_type, util::StlRegionAllocator<int_type>> vec_ips4o{util::StlRegionAllocator<int_type>(&vec_isp4o_tmp)};
+  util::ChunkedVectorT<int_type > chunk_vec(&chunk_tmp);
+  util::ChunkedVectorT<int_type > chunk_vec_ips4o(&chunk_ips4o_tmp);
+
+  sql::Sorter sorter(&sorter_tmp, cmp_fn, sizeof(int_type));
+
+
+  // Fill up the regular vector
+  for (int_type i = 0; i < num_elems; i++) vec.push_back(i);
+  std::shuffle(vec.begin(), vec.end(), generator_);
+
+  // Copy the vector for ips4o
+  for (int_type i = 0; i < num_elems; i++) vec_ips4o.push_back(vec[i]);
+
+  // Fill the chunked vectors
+  for (int_type i = 0; i < num_elems; i++) chunk_vec.push_back(vec[i]);
+  for (int_type i = 0; i < num_elems; i++) chunk_vec_ips4o.push_back(vec[i]);
+
+
+  // Fill up the sorter
+  for (int_type i = 0; i < num_elems; i++) {
+    auto *elem = reinterpret_cast<int_type *>(sorter.AllocInputTuple());
+    *elem = vec[i];
+  }
+
+  // Run benchmarks
+  auto stdvec_ms = Bench(5, [&vec]() {
+    std::sort(vec.begin(), vec.end());
+  });
+
+  auto ips4o_ms = Bench(5, [&vec_ips4o]() {
+    ips4o::sort(vec_ips4o.begin(), vec_ips4o.end());
+  });
+
+  auto chunk_ms = Bench(5, [&chunk_vec]() {
+    std::sort(chunk_vec.begin(), chunk_vec.end());
+  });
+
+  auto chunk_ips4o_ms = Bench(5, [&chunk_vec_ips4o]() {
+    std::sort(chunk_vec_ips4o.begin(), chunk_vec_ips4o.end());
+  });
+
+  auto sorter_ms = Bench(5, [&sorter]() {
+    sorter.Sort();
+  });
+
+
+  std::cout << std::fixed << std::setprecision(4);
+  std::cout << "std::sort(std::vector): " << stdvec_ms << " ms" << std::endl;
+  std::cout << "ips4o::sort(std::vector): " << ips4o_ms << " ms" << std::endl;
+  std::cout << "std::sort(ChunkedVector): " << chunk_ms << " ms" << std::endl;
+  std::cout << "ips4o::sort(ChunkedVector): " << chunk_ips4o_ms << " ms" << std::endl;
+  std::cout << "Sorter.Sort(): " << sorter_ms << " ms" << std::endl;
+}
 }  // namespace tpl::sql::test
