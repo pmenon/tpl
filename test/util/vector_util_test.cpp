@@ -152,7 +152,7 @@ TEST_F(VectorUtilTest, ComparisonsTest) {
   // Equality
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
-    simd::Vec8 check = 40;
+    simd::Vec8 check = simd::Vec8(40);
     simd::Vec8Mask mask = in == check;
     EXPECT_FALSE(mask[0]);
     EXPECT_FALSE(mask[1]);
@@ -167,7 +167,7 @@ TEST_F(VectorUtilTest, ComparisonsTest) {
   // Greater Than
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
-    simd::Vec8 check = 40;
+    simd::Vec8 check = simd::Vec8(40);
     simd::Vec8Mask mask = in > check;
     EXPECT_FALSE(mask[0]);
     EXPECT_FALSE(mask[1]);
@@ -182,7 +182,7 @@ TEST_F(VectorUtilTest, ComparisonsTest) {
   // Greater Than Equal
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
-    simd::Vec8 check = 40;
+    simd::Vec8 check = simd::Vec8(40);
     simd::Vec8Mask mask = in >= check;
     EXPECT_FALSE(mask[0]);
     EXPECT_FALSE(mask[1]);
@@ -197,7 +197,7 @@ TEST_F(VectorUtilTest, ComparisonsTest) {
   // Less Than
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
-    simd::Vec8 check = 40;
+    simd::Vec8 check = simd::Vec8(40);
     simd::Vec8Mask mask = in < check;
     EXPECT_TRUE(mask[0]);
     EXPECT_TRUE(mask[1]);
@@ -212,7 +212,7 @@ TEST_F(VectorUtilTest, ComparisonsTest) {
   // Less Than Equal
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
-    simd::Vec8 check = 40;
+    simd::Vec8 check = simd::Vec8(40);
     simd::Vec8Mask mask = (in <= check);
     EXPECT_TRUE(mask[0]);
     EXPECT_TRUE(mask[1]);
@@ -227,7 +227,7 @@ TEST_F(VectorUtilTest, ComparisonsTest) {
   // Not Equal
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
-    simd::Vec8 check = 40;
+    simd::Vec8 check = simd::Vec8(40);
     simd::Vec8Mask mask = (in == check);
     EXPECT_FALSE(mask[0]);
     EXPECT_FALSE(mask[1]);
