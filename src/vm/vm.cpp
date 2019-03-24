@@ -80,7 +80,7 @@ VM::VM(const BytecodeModule &module, util::Region *region)
       stack_(kDefaultInitialStackSize, 0, region_),
       sp_(0),
       module_(module) {
-  TPL_MEMSET(bytecode_counts_, 0, sizeof(bytecode_counts_));
+  std::memset(bytecode_counts_, 0, sizeof(bytecode_counts_));
 }
 
 void VM::InvokeFunction(const FunctionId func, const u8 *const args) {
@@ -766,7 +766,7 @@ const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
   for (u32 i = 0; i < num_params; i++) {
     u32 param_size = func->locals()[i].size();
     auto *param = caller->LocalAt<void *>(READ_LOCAL_ID());
-    TPL_MEMCPY(raw_frame, &param, param_size);
+    std::memcpy(raw_frame, &param, param_size);
     raw_frame += param_size;
   }
 

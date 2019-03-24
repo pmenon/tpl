@@ -13,7 +13,7 @@ void BytecodeEmitter::EmitDeref(Bytecode bytecode, LocalVar dest,
 }
 
 void BytecodeEmitter::EmitDerefN(LocalVar dest, LocalVar src, u32 len) {
-  EmitAll(Bytecode::DerefN, dest, src);
+  EmitAll(Bytecode::DerefN, dest, src, len);
 }
 
 void BytecodeEmitter::EmitAssign(Bytecode bytecode, LocalVar dest,
