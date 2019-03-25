@@ -9,7 +9,13 @@ namespace tpl::vm {
 // Local Information
 // ---------------------------------------------------------
 
-u32 LocalInfo::size() const { return type()->size(); }
+LocalInfo::LocalInfo(std::string name, ast::Type *type, u32 offset,
+                     LocalInfo::Kind kind) noexcept
+    : name_(std::move(name)),
+      type_(type),
+      offset_(offset),
+      size_(type->size()),
+      kind_(kind) {}
 
 // ---------------------------------------------------------
 // Function Information

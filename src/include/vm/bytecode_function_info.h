@@ -31,11 +31,8 @@ class LocalInfo {
  public:
   enum class Kind : u8 { Var, Parameter, Temporary };
 
-  LocalInfo(std::string name, ast::Type *type, u32 offset, Kind kind)
-      : name_(std::move(name)), type_(type), offset_(offset), kind_(kind) {}
-
-  /// Return the size (in bytes) of this local variable
-  u32 size() const;
+  /// Construct a local with the given, name, type, offset and kind
+  LocalInfo(std::string name, ast::Type *type, u32 offset, Kind kind) noexcept;
 
   /// Return true if this local variable a parameter to a function
   bool is_parameter() const { return kind_ == Kind::Parameter; }
@@ -49,10 +46,14 @@ class LocalInfo {
   /// Return the offset (in bytes) of this local in the function's stack frame
   u32 offset() const { return offset_; }
 
+  /// Return the size (in bytes) of this local variable
+  u32 size() const { return size_; }
+
  private:
   std::string name_;
   ast::Type *type_;
   u32 offset_;
+  u32 size_;
   Kind kind_;
 };
 
