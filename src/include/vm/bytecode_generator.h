@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_map>
 #include <vector>
 
 #include "ast/ast.h"
@@ -39,10 +40,9 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   class BytecodePositionScope;
 
   // Allocate a new function ID
-  FunctionInfo *AllocateFunc(const std::string &name);
-
-  // Allocate a hidden local variable in the current function
-  LocalVar NewHiddenLocal(const std::string &name, ast::Type *type);
+  FunctionInfo *AllocateFunc(
+      const std::string &func_name, ast::Type *return_type,
+      const std::vector<std::pair<ast::Type *, std::string>> &params);
 
   // Dispatched from VisitForInStatement() when using tuple-at-time loops to
   // set up the row structure used in the body of the loop
@@ -136,17 +136,11 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   // Information about all generated functions
   std::vector<FunctionInfo> functions_;
 
-  // Exported functions
-  std::vector<FunctionId> exported_functions_;
-
   // Emitter to write bytecode ops
   BytecodeEmitter emitter_;
 
   // RAII struct to capture semantics of expression evaluation
   ExpressionResultScope *execution_result_;
-
-  // A cache of names of per-function hidden variables used to ensure uniqueness
-  std::unordered_map<std::string, u32> name_cache_;
 };
 
 }  // namespace tpl::vm

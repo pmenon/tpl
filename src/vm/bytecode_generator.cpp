@@ -321,24 +321,22 @@ void BytecodeGenerator::VisitFieldDecl(ast::FieldDecl *node) {
 }
 
 void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
-  // Create function info object
-  FunctionInfo *func_info = AllocateFunc(node->name().data());
+  // The function's TPL type
+  const auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
 
-  auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
-
-  // Register return type
-  if (!func_type->return_type()->IsNilType()) {
-    auto *ret_type = func_type->return_type()->PointerTo();
-    func_info->NewParameterLocal(ret_type, "hiddenRv");
+  // Collect parameters
+  std::vector<std::pair<ast::Type *, std::string>> params;
+  for (const auto &param : func_type->params()) {
+    params.emplace_back(param.type, param.name.data());
   }
 
-  // Register parameters
-  for (const auto &func_param : func_type->params()) {
-    func_info->NewParameterLocal(func_param.type, func_param.name.data());
-  }
+  // Allocate the function
+  FunctionInfo *func_info =
+      AllocateFunc(node->name().data(), func_type->return_type(), params);
 
   {
-    // Visit the body of the function
+    // Visit the body of the function. We use this handy scope object to track
+    // the start and end position of this function's bytecode in the module.
     BytecodePositionScope position_scope(this, func_info);
     Visit(node->function());
   }
@@ -1112,31 +1110,25 @@ void BytecodeGenerator::VisitMapTypeRepr(ast::MapTypeRepr *node) {
   TPL_ASSERT(false, "Should not visit type-representation nodes!");
 }
 
-FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &name) {
-  // Clear variable name cache
-  name_cache_.clear();
+FunctionInfo *BytecodeGenerator::AllocateFunc(
+    const std::string &func_name, ast::Type *return_type,
+    const std::vector<std::pair<ast::Type *, std::string>> &params) {
+  // Allocate function
+  const auto func_id = static_cast<FunctionId>(functions_.size());
+  functions_.emplace_back(func_id, func_name);
+  FunctionInfo *func = &functions_.back();
 
-  // Allocate a new function
-  auto func_id = static_cast<FunctionId>(functions_.size());
-  functions_.emplace_back(func_id, name);
-  return &functions_.back();
-}
-
-LocalVar BytecodeGenerator::NewHiddenLocal(const std::string &name,
-                                           ast::Type *type) {
-  //
-  // We check if the name exists in the cache. If so, we bump the version number
-  // and construct a new local with the new name.
-  //
-
-  auto [iter, inserted] = name_cache_.try_emplace(name, 0);
-
-  if (inserted) {
-    return current_function()->NewLocal(type, name);
-  } else {
-    std::string unique_name = name + std::to_string(++iter->second);
-    return current_function()->NewLocal(type, unique_name);
+  // Register return type
+  if (!return_type->IsNilType()) {
+    func->NewParameterLocal(return_type->PointerTo(), "hiddenRv");
   }
+
+  // Register parameters
+  for (const auto &[type, name] : params) {
+    func->NewParameterLocal(type, name);
+  }
+
+  return func;
 }
 
 LocalVar BytecodeGenerator::VisitExpressionForLValue(ast::Expr *expr) {
