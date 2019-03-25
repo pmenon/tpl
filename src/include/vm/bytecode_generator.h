@@ -13,10 +13,12 @@ namespace tpl::vm {
 class BytecodeModule;
 class LoopBuilder;
 
-/// This class takes a correctly parsed and semantically type-checked TPL
-/// program as an AST and compiles it into TBC bytecode. The entry point into
-/// this class is the static \a Compile() function which performs the
-/// heavy lifting
+/// This class is responsible for generating and compiling a parsed and
+/// type-checked TPL program (as an AST) into TPL bytecode (TBC) as a
+/// BytecodeModule. Once compiled, all functions defined in the module are
+/// fully executable. BytecodeGenerator exposes a single public static function
+/// \a Compile() that performs the heavy lifting and orchestration involved in
+/// the compilation process.
 class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
  public:
   DISALLOW_COPY_AND_MOVE(BytecodeGenerator);
@@ -26,13 +28,12 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   AST_NODES(DECLARE_VISIT_METHOD)
 #undef DECLARE_VISIT_METHOD
 
-  static std::unique_ptr<BytecodeModule> Compile(util::Region *region,
-                                                 ast::AstNode *root,
+  static std::unique_ptr<BytecodeModule> Compile(ast::AstNode *root,
                                                  const std::string &name);
 
  private:
   // Private constructor to force users to call Compile()
-  explicit BytecodeGenerator(util::Region *region);
+  BytecodeGenerator() noexcept;
 
   class ExpressionResultScope;
   class LValueResultScope;

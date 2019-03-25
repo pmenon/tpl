@@ -117,7 +117,7 @@ class BytecodeGenerator::BytecodePositionScope {
 // Bytecode Generator begins
 // ---------------------------------------------------------
 
-BytecodeGenerator::BytecodeGenerator(UNUSED util::Region *region)
+BytecodeGenerator::BytecodeGenerator() noexcept
     : emitter_(bytecode_), execution_result_(nullptr) {}
 
 void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
@@ -1183,8 +1183,8 @@ Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode,
 
 // static
 std::unique_ptr<BytecodeModule> BytecodeGenerator::Compile(
-    util::Region *region, ast::AstNode *root, const std::string &name) {
-  BytecodeGenerator generator(region);
+    ast::AstNode *root, const std::string &name) {
+  BytecodeGenerator generator;
   generator.Visit(root);
 
   return std::make_unique<BytecodeModule>(name, std::move(generator.bytecode_),

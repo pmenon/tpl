@@ -78,7 +78,7 @@ static void CompileAndRun(const std::string &source,
   std::unique_ptr<vm::BytecodeModule> module;
   {
     util::ScopedTimer<std::milli> timer(&codegen_ms);
-    module = vm::BytecodeGenerator::Compile(&region, root, name);
+    module = vm::BytecodeGenerator::Compile(root, name);
   }
 
   // Dump Bytecode
