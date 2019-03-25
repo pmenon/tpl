@@ -179,12 +179,6 @@ class FunctionInfo {
   /// order they appear in the function's signature.
   void GetParameterInfos(std::vector<const LocalInfo *> &params) const;
 
-  void MarkBytecodeRange(std::size_t start_offset, std::size_t end_offset) {
-    TPL_ASSERT(start_offset < end_offset,
-               "Starting offset must be smaller than ending offset");
-    bytecode_range_ = std::make_pair(start_offset, end_offset);
-  }
-
   // -------------------------------------------------------
   // Accessors
   // -------------------------------------------------------
@@ -210,6 +204,18 @@ class FunctionInfo {
   u32 num_params() const { return num_params_; }
 
  private:
+  friend class BytecodeGenerator;
+
+  // Mark the range of bytecodes for this function in its module. This is set
+  // by the BytecodeGenerator during code generation after this function's
+  // bytecode range has been discovered.
+  void MarkBytecodeRange(std::size_t start_offset, std::size_t end_offset) {
+    // Functions must have **at least** one bytecode instruction (i.e., RETURN)
+    TPL_ASSERT(start_offset < end_offset,
+               "Starting offset must be smaller than ending offset");
+    bytecode_range_ = std::make_pair(start_offset, end_offset);
+  }
+
   // Allocate a new local variable in the function
   LocalVar NewLocal(ast::Type *type, const std::string &name,
                     LocalInfo::Kind kind);
