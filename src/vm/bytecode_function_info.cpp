@@ -39,6 +39,11 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
 }
 
 LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name) {
+  if (name.empty()) {
+    const auto tmp_name = "tmp" + std::to_string(NextTempId());
+    return NewLocal(type, tmp_name, LocalInfo::Kind::Var);
+  }
+
   return NewLocal(type, name, LocalInfo::Kind::Var);
 }
 
@@ -46,11 +51,6 @@ LocalVar FunctionInfo::NewParameterLocal(ast::Type *type,
                                          const std::string &name) {
   num_params_++;
   return NewLocal(type, name, LocalInfo::Kind::Parameter);
-}
-
-LocalVar FunctionInfo::NewTempLocal(ast::Type *type) {
-  std::string tmp_name = "tmp" + std::to_string(NextTempId());
-  return NewLocal(type, tmp_name, LocalInfo::Kind::Temporary);
 }
 
 LocalVar FunctionInfo::LookupLocal(const std::string &name) const {

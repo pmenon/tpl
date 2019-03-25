@@ -47,7 +47,7 @@ class BytecodeGenerator::ExpressionResultScope {
 
   LocalVar GetOrCreateDestination(ast::Type *type) {
     if (!HasDestination()) {
-      destination_ = generator_->current_function()->NewTempLocal(type);
+      destination_ = generator_->current_function()->NewLocal(type);
     }
 
     return destination_;
@@ -189,7 +189,7 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
     vpi_loop.LoopHeader();
 
     ast::AstContext &ctx = row_type->context();
-    LocalVar cond = current_function()->NewTempLocal(ast::BoolType::Get(ctx));
+    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(ctx));
     emitter()->Emit(Bytecode::VPIHasNext, cond, vpi);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    vpi_loop.break_label());
@@ -198,7 +198,7 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
     const auto &fields = row_type->fields();
     for (u32 col_idx = 0, offset = 0; col_idx < fields.size(); col_idx++) {
       LocalVar col_ptr =
-          current_function()->NewTempLocal(fields[col_idx].type->PointerTo());
+          current_function()->NewLocal(fields[col_idx].type->PointerTo());
       emitter()->EmitLea(col_ptr, row, offset);
       emitter()->EmitVPIGet(Bytecode::VPIGetInteger, col_ptr.ValueOf(), vpi,
                             col_idx);
@@ -297,9 +297,9 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
     LoopBuilder table_loop(this);
     table_loop.LoopHeader();
 
-    LocalVar cond_1 = current_function()->NewTempLocal(ast::BoolType::Get(ctx));
-    emitter()->Emit(Bytecode::TableVectorIteratorNext, cond_1, table_iter);
-    emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond_1.ValueOf(),
+    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(ctx));
+    emitter()->Emit(Bytecode::TableVectorIteratorNext, cond, table_iter);
+    emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    table_loop.break_label());
 
     if (vectorized) {
@@ -426,8 +426,7 @@ void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
   auto *type = node->object()->type()->As<ast::ArrayType>();
   auto elem_size = type->element_type()->size();
 
-  LocalVar elem_ptr =
-      current_function()->NewTempLocal(node->type()->PointerTo());
+  LocalVar elem_ptr = current_function()->NewLocal(node->type()->PointerTo());
 
   if (auto *literal_index = node->index()->SafeAs<ast::LitExpr>()) {
     i32 index = literal_index->int32_val();
@@ -593,7 +592,7 @@ void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
     ret_val = execution_result()->GetOrCreateDestination(ret_type);
     execution_result()->set_destination(ret_val.ValueOf());
   } else {
-    ret_val = current_function()->NewTempLocal(ret_type);
+    ret_val = current_function()->NewLocal(ret_type);
   }
 
   // Collect the three call arguments
@@ -672,7 +671,7 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
       // Let the caller know where the result value is
       execution_result()->set_destination(ret_val.ValueOf());
     } else {
-      ret_val = current_function()->NewTempLocal(func_type->return_type());
+      ret_val = current_function()->NewLocal(func_type->return_type());
     }
 
     // Push return value address into parameter list
@@ -1007,7 +1006,7 @@ LocalVar BytecodeGenerator::BuildLoadPointer(LocalVar double_ptr,
   }
 
   // Need to Deref
-  LocalVar ptr = current_function()->NewTempLocal(type);
+  LocalVar ptr = current_function()->NewLocal(type);
   emitter()->EmitDeref(Bytecode::Deref8, ptr, double_ptr);
   return ptr.ValueOf();
 }
@@ -1057,7 +1056,7 @@ void BytecodeGenerator::VisitMemberExpr(ast::MemberExpr *node) {
   if (offset == 0) {
     field_ptr = obj_ptr;
   } else {
-    field_ptr = current_function()->NewTempLocal(node->type()->PointerTo());
+    field_ptr = current_function()->NewLocal(node->type()->PointerTo());
     emitter()->EmitLea(field_ptr, obj_ptr, offset);
     field_ptr = field_ptr.ValueOf();
   }

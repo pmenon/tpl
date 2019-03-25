@@ -29,7 +29,7 @@ using FunctionId = u16;
 /// its type and the machine architecture.
 class LocalInfo {
  public:
-  enum class Kind : u8 { Var, Parameter, Temporary };
+  enum class Kind : u8 { Var, Parameter };
 
   /// Construct a local with the given, name, type, offset and kind
   LocalInfo(std::string name, ast::Type *type, u32 offset, Kind kind) noexcept;
@@ -141,24 +141,20 @@ class FunctionInfo {
         num_params_(0),
         num_temps_(0) {}
 
-  /// Allocate a new local variable of the given type and name. This returns a
-  /// LocalVar object with the Address addressing mode (i.e., a pointer to the
-  /// variable).
+  /// Allocate a new local variable with type \a type and name \a name. This
+  /// returns a LocalVar object with the Address addressing mode (i.e., a
+  /// pointer to the variable).
   /// \param type The TPL type of the variable
-  /// \param name The name of the variable
+  /// \param name The name of the variable. If no name is given, the variable
+  ///             is assigned a synthesized one.
   /// \return A pointer to the local variable encoded as a LocalVar
-  LocalVar NewLocal(ast::Type *type, const std::string &name);
+  LocalVar NewLocal(ast::Type *type, const std::string &name = "");
 
   /// Allocate a new function parameter.
   /// \param type The TPL type of the parameter
   /// \param name The name of the parameter
   /// \return A pointer to the local variable encoded as a LocalVar
   LocalVar NewParameterLocal(ast::Type *type, const std::string &name);
-
-  /// Allocate a temporary function variable
-  /// \param type The TPL type of the variable
-  /// \return A pointer to the local variable encoded as a LocalVar
-  LocalVar NewTempLocal(ast::Type *type);
 
   /// Lookup a local variable by name
   /// \param name The name of the local variable
