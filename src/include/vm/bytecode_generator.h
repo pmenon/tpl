@@ -109,14 +109,11 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   BytecodeEmitter *emitter() { return &emitter_; }
 
  private:
-  const FunctionInfo *LookupFuncInfoByName(const std::string &name) const {
-    for (const auto &func : functions_) {
-      if (func.name() == name) {
-        return &func;
-      }
-    }
-    return nullptr;
-  }
+  // Lookup a function's ID by its name
+  FunctionId LookupFuncIdByName(const std::string &name) const;
+
+  // Lookup a function by its name
+  const FunctionInfo *LookupFuncInfoByName(const std::string &name) const;
 
   // -------------------------------------------------------
   // Accessors
@@ -136,6 +133,9 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
   // Information about all generated functions
   std::vector<FunctionInfo> functions_;
+
+  // Cache of function names to IDs for faster lookup
+  std::unordered_map<std::string, FunctionId> func_map_;
 
   // Emitter to write bytecode ops
   BytecodeEmitter emitter_;

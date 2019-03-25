@@ -682,9 +682,9 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   }
 
   // Emit call
-  const FunctionInfo *func_info = LookupFuncInfoByName(call->FuncName().data());
-  TPL_ASSERT(func_info != nullptr, "Function not found!");
-  emitter()->EmitCall(func_info->id(), params);
+  const auto func_id = LookupFuncIdByName(call->FuncName().data());
+  TPL_ASSERT(func_id != FunctionInfo::kInvalidFuncId, "Function not found!");
+  emitter()->EmitCall(func_id, params);
 }
 
 void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
@@ -1128,7 +1128,28 @@ FunctionInfo *BytecodeGenerator::AllocateFunc(
     func->NewParameterLocal(type, name);
   }
 
+  // Cache
+  func_map_[func->name()] = func->id();
+
   return func;
+}
+
+FunctionId BytecodeGenerator::LookupFuncIdByName(
+    const std::string &name) const {
+  auto iter = func_map_.find(name);
+  if (iter == func_map_.end()) {
+    return FunctionInfo::kInvalidFuncId;
+  }
+  return iter->second;
+}
+
+const FunctionInfo *BytecodeGenerator::LookupFuncInfoByName(
+    const std::string &name) const {
+  const auto iter = func_map_.find(name);
+  if (iter == func_map_.end()) {
+    return nullptr;
+  }
+  return &functions_[iter->second];
 }
 
 LocalVar BytecodeGenerator::VisitExpressionForLValue(ast::Expr *expr) {

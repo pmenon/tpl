@@ -133,6 +133,10 @@ class FunctionInfo {
   static const LocalId kRetVarOffset = 0;
 
  public:
+  /// An invalid function ID
+  static constexpr FunctionId kInvalidFuncId = std::numeric_limits<u16>::max();
+
+  /// Construct a function with the given ID and name \a name
   FunctionInfo(FunctionId id, std::string name)
       : id_(id),
         name_(std::move(name)),
