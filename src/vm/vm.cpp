@@ -605,11 +605,11 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   }
 
   OP(IntegerMinAggregateAdvance) : {
-  auto *agg = frame->LocalAt<sql::IntegerMinAggregate *>(READ_LOCAL_ID());
-  auto *val = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
-  OpIntegerMinAggregateAdvance(agg, val);
-  DISPATCH_NEXT();
-}
+    auto *agg = frame->LocalAt<sql::IntegerMinAggregate *>(READ_LOCAL_ID());
+    auto *val = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    OpIntegerMinAggregateAdvance(agg, val);
+    DISPATCH_NEXT();
+  }
 
   OP(IntegerMinAggregateAdvanceNullable) : {
     auto *agg = frame->LocalAt<sql::IntegerMinAggregate *>(READ_LOCAL_ID());
@@ -641,6 +641,52 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(IntegerMinAggregateFree) : {
     auto *agg = frame->LocalAt<sql::IntegerMinAggregate *>(READ_LOCAL_ID());
     OpIntegerMinAggregateFree(agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerAvgAggregateInit) : {
+    auto *agg = frame->LocalAt<sql::IntegerAvgAggregate *>(READ_LOCAL_ID());
+    OpIntegerAvgAggregateInit(agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerAvgAggregateAdvance) : {
+    auto *agg = frame->LocalAt<sql::IntegerAvgAggregate *>(READ_LOCAL_ID());
+    auto *val = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    OpIntegerAvgAggregateAdvance(agg, val);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerAvgAggregateAdvanceNullable) : {
+    auto *agg = frame->LocalAt<sql::IntegerAvgAggregate *>(READ_LOCAL_ID());
+    auto *val = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    OpIntegerAvgAggregateAdvanceNullable(agg, val);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerAvgAggregateMerge) : {
+    auto *agg_1 = frame->LocalAt<sql::IntegerAvgAggregate *>(READ_LOCAL_ID());
+    auto *agg_2 = frame->LocalAt<sql::IntegerAvgAggregate *>(READ_LOCAL_ID());
+    OpIntegerAvgAggregateMerge(agg_1, agg_2);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerAvgAggregateReset) : {
+    auto *agg = frame->LocalAt<sql::IntegerAvgAggregate *>(READ_LOCAL_ID());
+    OpIntegerAvgAggregateReset(agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerAvgAggregateGetResult) : {
+    auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    auto *agg = frame->LocalAt<sql::IntegerAvgAggregate *>(READ_LOCAL_ID());
+    OpIntegerAvgAggregateGetResult(result, agg);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerAvgAggregateFree) : {
+    auto *agg = frame->LocalAt<sql::IntegerAvgAggregate *>(READ_LOCAL_ID());
+    OpIntegerAvgAggregateFree(agg);
     DISPATCH_NEXT();
   }
 

@@ -249,4 +249,25 @@ inline void IntegerMinAggregate::Merge(const IntegerMinAggregate &that) {
   }
 }
 
+/// Integer Avg
+class IntegerAvgAggregate : public IntegerSumAggregate {
+ public:
+  /// Constructor
+  IntegerAvgAggregate() : IntegerSumAggregate() {}
+
+  /// This class cannot be copied or moved
+  DISALLOW_COPY_AND_MOVE(IntegerAvgAggregate);
+
+  /// Return the result of the minimum
+  Integer GetResultAvg() const {
+    u64 numUpdates = GetNumUpdates();
+    if(numUpdates == 0) {
+      return Integer::Null();
+    }
+
+    Integer avgInt = GetResultSum().Divide(Integer(GetNumUpdates()));
+    return avgInt;
+  }
+};
+
 }  // namespace tpl::sql

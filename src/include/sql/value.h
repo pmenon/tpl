@@ -1,8 +1,12 @@
 #pragma once
 
+#include <util/macros.h>
 #include "util/common.h"
 
 namespace tpl::sql {
+
+#define AVG_PRECISION 3
+#define AVG_SCALE 6
 
 /// A generic base catch-all SQL value
 struct Val {
@@ -38,19 +42,6 @@ struct BoolVal : public Val {
   }
 };
 
-/// An integral SQL value
-struct Integer : public Val {
-  i64 val;
-
-  explicit Integer(i64 val) noexcept : Val(false), val(val) {}
-
-  /// Return a NULL integer value
-  static Integer Null() {
-    Integer val(0);
-    val.is_null = true;
-    return val;
-  }
-};
 
 /// A decimal SQL value
 struct Decimal : public Val {
@@ -66,6 +57,25 @@ struct Decimal : public Val {
     Decimal val(0, 0, 0);
     val.is_null = true;
     return val;
+  }
+};
+
+/// An integral SQL value
+struct Integer : public Val {
+  i64 val;
+
+  explicit Integer(i64 val) noexcept : Val(false), val(val) {}
+
+  /// Return a NULL integer value
+  static Integer Null() {
+    Integer val(0);
+    val.is_null = true;
+    return val;
+  }
+
+  /// dumb division for now
+  Integer Divide(const Integer &denom) {
+    return Integer(this->val/denom.val);
   }
 };
 

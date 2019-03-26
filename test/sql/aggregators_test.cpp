@@ -96,6 +96,7 @@ TEST_F(AggregatorsTest, SumIntegerTest) {
   }
 }
 
+
 TEST_F(AggregatorsTest, MergeSumIntegersTest) {
 
   IntegerSumAggregate sum1;
@@ -228,6 +229,47 @@ TEST_F(AggregatorsTest, MinIntegerTest) {
   min.Merge(nullMin);
   EXPECT_FALSE(min.GetResultMin().is_null);
   EXPECT_EQ(-44, min.GetResultMin().val);
+}
+
+TEST_F(AggregatorsTest, AvgIntegerTest) {
+  IntegerAvgAggregate avg;
+  EXPECT_TRUE(avg.GetResultAvg().is_null);
+
+
+  IntegerAvgAggregate nullAvg;
+  EXPECT_TRUE(nullAvg.GetResultAvg().is_null);
+
+  avg.Merge(nullAvg);
+  EXPECT_TRUE(avg.GetResultAvg().is_null);
+
+
+  for(i64 i = 0; i < 25; i++) {
+    i64 j = i;
+
+    Integer val = Integer(j);
+    avg.Advance(&val);
+  }
+
+  EXPECT_FALSE(avg.GetResultAvg().is_null);
+  EXPECT_EQ(12, avg.GetResultAvg().val);
+
+  IntegerAvgAggregate avg2;
+  EXPECT_TRUE(avg2.GetResultAvg().is_null);
+  for(i64 i = 0; i > -25; i--) {
+    Integer val = Integer(i);
+    avg2.Advance(&val);
+  }
+
+  EXPECT_FALSE(avg2.GetResultAvg().is_null);
+  EXPECT_EQ(-12, avg2.GetResultAvg().val);
+
+  avg.Merge(avg2);
+  EXPECT_FALSE(avg.GetResultAvg().is_null);
+  EXPECT_EQ(0, avg.GetResultAvg().val);
+
+  avg.Merge(nullAvg);
+  EXPECT_FALSE(avg.GetResultAvg().is_null);
+  EXPECT_EQ(0, avg.GetResultAvg().val);
 }
 
 }  // namespace tpl::sql::test
