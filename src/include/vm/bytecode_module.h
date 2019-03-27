@@ -30,19 +30,35 @@ class BytecodeModule {
 
   /// Look up a TPL function in this module by its ID
   /// \return A pointer to the function's info if it exists; null otherwise
-  const FunctionInfo *GetFuncInfoById(FunctionId func_id) const;
+  const FunctionInfo *GetFuncInfoById(const FunctionId func_id) const {
+    TPL_ASSERT(func_id < num_functions(), "Invalid function");
+    return &functions_[func_id];
+  }
 
   /// Look up a TPL function in this module by its name
   /// \return A pointer to the function's info if it exists; null otherwise
-  const FunctionInfo *GetFuncInfoByName(const std::string &name) const;
+  const FunctionInfo *GetFuncInfoByName(const std::string &name) const {
+    for (const auto &func : functions_) {
+      if (func.name() == name) {
+        return &func;
+      }
+    }
+    return nullptr;
+  }
 
   /// Retrieve an iterator over the bytecode for the given function \a func
   /// \return A pointer to the function's info if it exists; null otherwise
-  BytecodeIterator BytecodeForFunction(const FunctionInfo &func) const;
+  BytecodeIterator BytecodeForFunction(const FunctionInfo &func) const {
+    auto [start, end] = func.bytecode_range();
+    return BytecodeIterator(code_, start, end);
+  }
 
   /// Get the trampoline for the bytecode function with id \a func_id
   /// \return An opaque function pointer to the bytecode function
-  void *GetFuncTrampoline(FunctionId func_id) const;
+  void *GetFuncTrampoline(const FunctionId func_id) const {
+    TPL_ASSERT(func_id < num_functions(), "Invalid function");
+    return trampolines_[func_id].GetCode();
+  }
 
   /// Retrieve and wrap a TPL function inside a C++ function object, thus making
   /// the TPL function callable as a C++ function. Callers can request different
@@ -130,34 +146,6 @@ class BytecodeModule {
 //----------------------------------------------------------
 // Implementation below
 //----------------------------------------------------------
-
-inline const FunctionInfo *BytecodeModule::GetFuncInfoById(
-    const FunctionId func_id) const {
-  TPL_ASSERT(func_id < num_functions(), "Invalid function");
-  return &functions_[func_id];
-}
-
-inline const FunctionInfo *BytecodeModule::GetFuncInfoByName(
-    const std::string &name) const {
-  for (const auto &func : functions_) {
-    if (func.name() == name) {
-      return &func;
-    }
-  }
-  return nullptr;
-}
-
-inline BytecodeIterator BytecodeModule::BytecodeForFunction(
-    const FunctionInfo &func) const {
-  TPL_ASSERT(GetFuncInfoById(func.id()) != nullptr,
-             "Function not defined in unit!");
-  auto [start, end] = func.bytecode_range();
-  return BytecodeIterator(code_, start, end);
-}
-
-inline void *BytecodeModule::GetFuncTrampoline(const FunctionId func_id) const {
-  return trampolines_[func_id].GetCode();
-}
 
 namespace detail {
 
