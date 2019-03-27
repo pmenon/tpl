@@ -119,11 +119,10 @@ void VM::InvokeFunctionWrapper(const BytecodeModule *module, FunctionId func,
     std::vector<const LocalInfo *> arg_infos;
     func_info->GetParameterInfos(arg_infos);
 
-    u8 *frame_bytes = frame.raw_frame();
+    u8 *const frame_bytes = frame.raw_frame();
     for (u32 idx = 0; idx < arg_infos.size(); idx++) {
       const LocalInfo *arg = arg_infos[idx];
       std::memcpy(frame_bytes + arg->offset(), args[idx], arg->size());
-      frame_bytes += arg->size();
     }
   }
 
@@ -762,12 +761,11 @@ const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
 
   VM::Frame callee(this, func->frame_size());
 
-  u8 *raw_frame = callee.raw_frame();
+  u8 *const raw_frame = callee.raw_frame();
   for (u32 i = 0; i < num_params; i++) {
-    u32 param_size = func->locals()[i].size();
-    auto *param = caller->LocalAt<void *>(READ_LOCAL_ID());
-    std::memcpy(raw_frame, &param, param_size);
-    raw_frame += param_size;
+    const LocalInfo &param_info = func->locals()[i];
+    const void *const param = caller->LocalAt<void *>(READ_LOCAL_ID());
+    std::memcpy(raw_frame + param_info.offset(), &param, param_info.size());
   }
 
   //
