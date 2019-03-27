@@ -104,7 +104,8 @@ class BytecodeGenerator::BytecodePositionScope {
         start_offset_(generator->emitter()->position()) {}
 
   ~BytecodePositionScope() {
-    func_->MarkBytecodeRange(start_offset_, generator_->emitter()->position());
+    const std::size_t end_offset = generator_->emitter()->position();
+    func_->set_bytecode_range(start_offset_, end_offset);
   }
 
  private:

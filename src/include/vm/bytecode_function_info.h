@@ -210,7 +210,7 @@ class FunctionInfo {
   // Mark the range of bytecodes for this function in its module. This is set
   // by the BytecodeGenerator during code generation after this function's
   // bytecode range has been discovered.
-  void MarkBytecodeRange(std::size_t start_offset, std::size_t end_offset) {
+  void set_bytecode_range(std::size_t start_offset, std::size_t end_offset) {
     // Functions must have **at least** one bytecode instruction (i.e., RETURN)
     TPL_ASSERT(start_offset < end_offset,
                "Starting offset must be smaller than ending offset");
@@ -221,16 +221,12 @@ class FunctionInfo {
   LocalVar NewLocal(ast::Type *type, const std::string &name,
                     LocalInfo::Kind kind);
 
-  // Return the next available ID for a temporary variable
-  u32 NextTempId() { return ++num_temps_; }
-
  private:
   FunctionId id_;
   std::string name_;
   std::pair<std::size_t, std::size_t> bytecode_range_;
   std::vector<LocalInfo> locals_;
   std::size_t frame_size_;
-
   u32 num_params_;
   u32 num_temps_;
 };

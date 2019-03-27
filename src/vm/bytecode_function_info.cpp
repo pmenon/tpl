@@ -40,7 +40,7 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
 
 LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name) {
   if (name.empty()) {
-    const auto tmp_name = "tmp" + std::to_string(NextTempId());
+    const auto tmp_name = "tmp" + std::to_string(++num_temps_);
     return NewLocal(type, tmp_name, LocalInfo::Kind::Var);
   }
 
