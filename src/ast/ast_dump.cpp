@@ -218,13 +218,13 @@ void AstDumperImpl::VisitExpressionStmt(ExpressionStmt *node) {
 
 void AstDumperImpl::VisitForStmt(ForStmt *node) {
   DumpNodeCommon(node);
-  if (node->HasInitializer()) {
+  if (node->init() != nullptr) {
     DumpStmt(node->init());
   }
-  if (node->HasCondition()) {
+  if (node->condition() != nullptr) {
     DumpExpr(node->condition());
   }
-  if (node->HasNext()) {
+  if (node->next() != nullptr) {
     DumpStmt(node->next());
   }
   DumpStmt(node->body());

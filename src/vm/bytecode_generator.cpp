@@ -336,7 +336,9 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
 
   {
     // Visit the body of the function. We use this handy scope object to track
-    // the start and end position of this function's bytecode in the module.
+    // the start and end position of this function's bytecode in the module's
+    // bytecode array. Upon destruction, the scoped class will set the bytecode
+    // range in the function.
     BytecodePositionScope position_scope(this, func_info);
     Visit(node->function());
   }

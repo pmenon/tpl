@@ -451,18 +451,6 @@ class ForStmt : public IterationStmt {
 
   Stmt *next() const { return next_; }
 
-  bool HasInitializer() const { return init_ != nullptr; }
-
-  bool HasCondition() const { return cond_ != nullptr; }
-
-  bool HasNext() const { return next_ != nullptr; }
-
-  bool IsInfinite() const { return cond_ == nullptr; }
-
-  bool IsLikeWhile() const {
-    return init_ == nullptr && cond_ != nullptr && next_ == nullptr;
-  }
-
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ForStmt;
   }
