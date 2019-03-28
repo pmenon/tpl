@@ -268,7 +268,7 @@ bool AstContext::IsBuiltinFunction(Identifier identifier,
 PointerType *Type::PointerTo() { return PointerType::Get(this); }
 
 // static
-IntegerType *IntegerType::Get(AstContext &ctx, IntegerType::IntKind int_kind) {
+IntegerType *IntegerType::Get(const AstContext &ctx, IntegerType::IntKind int_kind) {
   switch (int_kind) {
     case IntegerType::IntKind::Int8: {
       return &ctx.impl().int8;
@@ -299,7 +299,7 @@ IntegerType *IntegerType::Get(AstContext &ctx, IntegerType::IntKind int_kind) {
 }
 
 // static
-FloatType *FloatType::Get(AstContext &ctx, FloatKind float_kind) {
+FloatType *FloatType::Get(const AstContext &ctx, FloatKind float_kind) {
   switch (float_kind) {
     case FloatType::FloatKind::Float32: {
       return &ctx.impl().float32;
@@ -312,13 +312,13 @@ FloatType *FloatType::Get(AstContext &ctx, FloatKind float_kind) {
 }
 
 // static
-BoolType *BoolType::Get(AstContext &ctx) { return &ctx.impl().boolean; }
+BoolType *BoolType::Get(const AstContext &ctx) { return &ctx.impl().boolean; }
 
 // static
-StringType *StringType::Get(AstContext &ctx) { return &ctx.impl().string; }
+StringType *StringType::Get(const AstContext &ctx) { return &ctx.impl().string; }
 
 // static
-NilType *NilType::Get(AstContext &ctx) { return &ctx.impl().nil; }
+NilType *NilType::Get(const AstContext &ctx) { return &ctx.impl().nil; }
 
 // static
 PointerType *PointerType::Get(Type *base) {
@@ -427,7 +427,7 @@ FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
 }
 
 // static
-InternalType *InternalType::Get(AstContext &ctx, InternalKind kind) {
+InternalType *InternalType::Get(const AstContext &ctx, InternalKind kind) {
   TPL_ASSERT(static_cast<u8>(kind) < kNumInternalKinds,
              "Invalid internal kind");
   return ctx.impl().internal_types[static_cast<u32>(kind)];
