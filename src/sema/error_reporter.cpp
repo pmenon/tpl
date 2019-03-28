@@ -11,7 +11,7 @@ namespace tpl::sema {
 
 namespace {
 #define F(id, str, arg_types) str,
-constexpr const char *error_strings[] = {MESSAGE_LIST(F)};
+constexpr const char *error_strings[] = {MESSAGE_LIST(F)};  // NOLINT(bugprone-suspicious-missing-comma)
 #undef F
 
 }  // namespace
@@ -76,7 +76,7 @@ std::string ErrorReporter::MessageWithArgs::FormatMessage() const {
     args_[arg_idx++].FormatMessageArgument(msg);
 
     fmt = pos + 1;
-    while (std::isalnum(*fmt)) {
+    while (std::isalnum(*fmt) != 0) {
       fmt++;
     }
   }

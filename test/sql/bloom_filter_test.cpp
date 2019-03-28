@@ -58,18 +58,18 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
   util::Region tmp("filter");
   BloomFilter filter(&tmp, num_filter_elems);
   for (const auto elem : insertions) {
-    filter.Add(util::Hasher::Hash((const u8 *)&elem, sizeof(elem)));
+    filter.Add(util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
   }
 
   // All inserted elements **must** be present in filter
   for (const auto elem : insertions) {
-    filter.Add(util::Hasher::Hash((const u8 *)&elem, sizeof(elem)));
+    filter.Add(util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
   }
 
   auto bits_per_elem =
-      static_cast<double>(filter.GetSizeInBits() / num_filter_elems);
+      static_cast<double>(filter.GetSizeInBits()) / num_filter_elems;
   auto bit_set_prob =
-      static_cast<double>(filter.GetTotalBitsSet() / filter.GetSizeInBits());
+      static_cast<double>(filter.GetTotalBitsSet()) / filter.GetSizeInBits();
   LOG_INFO(
       "Filter: {} elements, {} bits, {} bits/element, {} bits set (p={:.2f})",
       num_filter_elems, filter.GetSizeInBits(), bits_per_elem,

@@ -151,7 +151,7 @@ void InitTable(const TableInsertMeta &table_meta, Table *table) {
 
   u32 batch_size = 10000;
   u32 num_batches = table_meta.num_rows / batch_size +
-                    (table_meta.num_rows % batch_size != 0);
+                    static_cast<u32>(table_meta.num_rows % batch_size != 0);
 
   for (u32 i = 0; i < num_batches; i++) {
     std::vector<ColumnVector> columns;

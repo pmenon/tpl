@@ -329,11 +329,10 @@ ast::Stmt *Parser::ParseForStmt() {
   if (header.IsStandard()) {
     const auto &[init, cond, next] = header.GetForElements();
     return node_factory().NewForStmt(position, init, cond, next, body);
-  } else {
-    const auto &[target, iter, attributes] = header.GetForInElements();
-    return node_factory().NewForInStmt(position, target, iter, attributes,
-                                       body);
   }
+  const auto &[target, iter, attributes] = header.GetForInElements();
+  return node_factory().NewForInStmt(position, target, iter, attributes,
+                                     body);
 }
 
 ast::Stmt *Parser::ParseIfStmt() {

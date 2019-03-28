@@ -49,7 +49,7 @@ class VM::Frame {
       return *reinterpret_cast<T *>(val);
     }
 
-    return (T)val;
+    return (T)(val);  // NOLINT (requires both static_cast and reinterpret_cast semantics)
   }
 
  private:
@@ -154,6 +154,7 @@ inline ALWAYS_INLINE T Peek(const u8 **ip) {
 
 }  // namespace
 
+// NOLINTNEXTLINE(google-readability-function-size,readability-function-size)
 void VM::Interpret(const u8 *ip, Frame *frame) {
   static void *kDispatchTable[] = {
 #define ENTRY(name, ...) &&op_##name,
@@ -252,17 +253,17 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // Primitive arithmetic and binary operations
   // -------------------------------------------------------
 
-#define DO_GEN_ARITHMETIC_OP(op, test, type)              \
-  OP(op##_##type) : {                                     \
-    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
-    type lhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
-    type rhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
-    if (test && rhs == 0u) {                              \
-      /* TODO(pmenon): Proper error */                    \
-      LOG_ERROR("Division by zero error!");               \
-    }                                                     \
-    Op##op##_##type(dest, lhs, rhs);                      \
-    DISPATCH_NEXT();                                      \
+#define DO_GEN_ARITHMETIC_OP(op, test, type)                                                        \
+  OP(op##_##type) : {                                                                               \
+    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID());  /* NOLINT(bugprone-macro-parentheses) */ \
+    type lhs = frame->LocalAt<type>(READ_LOCAL_ID());      /* NOLINT(bugprone-macro-parentheses) */ \
+    type rhs = frame->LocalAt<type>(READ_LOCAL_ID());      /* NOLINT(bugprone-macro-parentheses) */ \
+    if ((test) && rhs == 0u) {                                                                      \
+      /* TODO(pmenon): Proper error */                                                              \
+      LOG_ERROR("Division by zero error!");                                                         \
+    }                                                                                               \
+    Op##op##_##type(dest, lhs, rhs);                                                                \
+    DISPATCH_NEXT();                                                                                \
   }
 #define GEN_ARITHMETIC_OP(type, ...)        \
   DO_GEN_ARITHMETIC_OP(Add, false, type)    \
@@ -337,12 +338,12 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // Low-level memory operations
   // -------------------------------------------------------
 
-#define GEN_DEREF(type, size)                             \
-  OP(Deref##size) : {                                     \
-    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
-    type *src = frame->LocalAt<type *>(READ_LOCAL_ID());  \
-    OpDeref##size(dest, src);                             \
-    DISPATCH_NEXT();                                      \
+#define GEN_DEREF(type, size)                                                                       \
+  OP(Deref##size) : {                                                                               \
+    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID());  /* NOLINT(bugprone-macro-parentheses) */ \
+    type *src = frame->LocalAt<type *>(READ_LOCAL_ID());   /* NOLINT(bugprone-macro-parentheses) */ \
+    OpDeref##size(dest, src);                                                                       \
+    DISPATCH_NEXT();                                                                                \
   }
   GEN_DEREF(i8, 1);
   GEN_DEREF(i16, 2);
@@ -358,17 +359,17 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-#define GEN_ASSIGN(type, size)                            \
-  OP(Assign##size) : {                                    \
-    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
-    type src = frame->LocalAt<type>(READ_LOCAL_ID());     \
-    OpAssign##size(dest, src);                            \
-    DISPATCH_NEXT();                                      \
-  }                                                       \
-  OP(AssignImm##size) : {                                 \
-    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
-    OpAssignImm##size(dest, READ_IMM##size());            \
-    DISPATCH_NEXT();                                      \
+#define GEN_ASSIGN(type, size)                                                                      \
+  OP(Assign##size) : {                                                                              \
+    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID());  /* NOLINT(bugprone-macro-parentheses) */ \
+    type src = frame->LocalAt<type>(READ_LOCAL_ID());      /* NOLINT(bugprone-macro-parentheses) */ \
+    OpAssign##size(dest, src);                                                                      \
+    DISPATCH_NEXT();                                                                                \
+  }                                                                                                 \
+  OP(AssignImm##size) : {                                                                           \
+    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID());  /* NOLINT(bugprone-macro-parentheses) */ \
+    OpAssignImm##size(dest, READ_IMM##size());                                                      \
+    DISPATCH_NEXT();                                                                                \
   }
   GEN_ASSIGN(i8, 1);
   GEN_ASSIGN(i16, 2);
@@ -466,22 +467,22 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // VPI element access
   // -------------------------------------------------------
 
-#define GEN_VPI_ACCESS(type_str, type)                                    \
-  OP(VPIGet##type_str) : {                                                \
-    auto *result = frame->LocalAt<type *>(READ_LOCAL_ID());               \
-    auto *vpi =                                                           \
-        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
-    auto col_idx = READ_UIMM4();                                          \
-    OpVPIGet##type_str(result, vpi, col_idx);                             \
-    DISPATCH_NEXT();                                                      \
-  }                                                                       \
-  OP(VPIGet##type_str##Null) : {                                          \
-    auto *result = frame->LocalAt<type *>(READ_LOCAL_ID());               \
-    auto *vpi =                                                           \
-        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
-    auto col_idx = READ_UIMM4();                                          \
-    OpVPIGet##type_str##Null(result, vpi, col_idx);                       \
-    DISPATCH_NEXT();                                                      \
+#define GEN_VPI_ACCESS(type_str, type)                                                                             \
+  OP(VPIGet##type_str) : {                                                                                         \
+    auto *result = frame->LocalAt<type *>(READ_LOCAL_ID());               /* NOLINT(bugprone-macro-parentheses) */ \
+    auto *vpi =                                                                                                    \
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());                                          \
+    auto col_idx = READ_UIMM4();                                                                                   \
+    OpVPIGet##type_str(result, vpi, col_idx);                                                                      \
+    DISPATCH_NEXT();                                                                                               \
+  }                                                                                                                \
+  OP(VPIGet##type_str##Null) : {                                                                                   \
+    auto *result = frame->LocalAt<type *>(READ_LOCAL_ID());               /* NOLINT(bugprone-macro-parentheses) */ \
+    auto *vpi =                                                                                                    \
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());                                          \
+    auto col_idx = READ_UIMM4();                                                                                   \
+    OpVPIGet##type_str##Null(result, vpi, col_idx);                                                                \
+    DISPATCH_NEXT();                                                                                               \
   }
   GEN_VPI_ACCESS(SmallInt, sql::Integer)
   GEN_VPI_ACCESS(Integer, sql::Integer)

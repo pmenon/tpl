@@ -69,10 +69,6 @@ void Sorter::BuildHeap() {
 }
 
 void Sorter::HeapSiftDown() {
-  const auto compare = [this](const byte *left, const byte *right) {
-    return cmp_fn_(left, right) < 0;
-  };
-
   uint64_t size = tuples_.size();
   uint32_t idx = 0;
 
@@ -85,11 +81,11 @@ void Sorter::HeapSiftDown() {
       break;
     }
 
-    if (child + 1 < size && compare(tuples_[child], tuples_[child + 1]) > 0) {
+    if (child + 1 < size && cmp_fn_(tuples_[child], tuples_[child + 1]) < 0) {
       child++;
     }
 
-    if (compare(top, tuples_[child]) <= 0) {
+    if (cmp_fn_(top, tuples_[child]) >= 0) {
       break;
     }
 

@@ -1,6 +1,6 @@
 #include "bandit/policy.h"
 
-#include <float.h>
+#include <cfloat>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -30,7 +30,7 @@ u32 ChooseBestIndex(const std::vector<double> &values,
     }
   }
 
-  if (best_indices.size() == 1) return best_indices[0];
+  if (best_indices.size() == 1) { return best_indices[0]; }
   return best_indices[(*generator)() % best_indices.size()];
 }
 
@@ -40,12 +40,10 @@ u32 ChooseBestIndex(const std::vector<double> &values,
 // Otherwise choose a random action.
 u32 EpsilonGreedyPolicy::NextAction(Agent *agent) {
   const auto &value_estimates = agent->value_estimates();
-
   if (real_(generator_) < epsilon_) {
     return generator_() % value_estimates.size();
-  } else {
-    return ChooseBestIndex(value_estimates, &generator_);
   }
+  return ChooseBestIndex(value_estimates, &generator_);
 }
 
 // Choose the policy that maximises

@@ -728,7 +728,7 @@ void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
       break;
     }
     case ast::LitExpr::LitKind::Boolean: {
-      emitter()->EmitAssignImm1(target, node->bool_val());
+      emitter()->EmitAssignImm1(target, static_cast<i8>(node->bool_val()));
       break;
     }
     case ast::LitExpr::LitKind::Int: {
@@ -1139,10 +1139,9 @@ LocalVar BytecodeGenerator::NewHiddenLocal(const std::string &name,
 
   if (inserted) {
     return current_function()->NewLocal(type, name);
-  } else {
-    std::string unique_name = name + std::to_string(++iter->second);
-    return current_function()->NewLocal(type, unique_name);
   }
+  std::string unique_name = name + std::to_string(++iter->second);
+  return current_function()->NewLocal(type, unique_name);
 }
 
 LocalVar BytecodeGenerator::VisitExpressionForLValue(ast::Expr *expr) {

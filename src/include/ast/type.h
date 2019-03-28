@@ -335,7 +335,7 @@ class MapType : public Type {
 
   Type *value_type() const { return val_type_; }
 
-  static MapType *Get(Type *key_type, Type *val_type);
+  static MapType *Get(Type *key_type, Type *value_type);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::MapType;

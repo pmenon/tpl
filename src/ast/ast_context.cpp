@@ -62,7 +62,7 @@ struct StructTypeKeyInfo {
   }
 
   static bool isEqual(const KeyTy &lhs, const StructType *rhs) {
-    if (rhs == getEmptyKey() || rhs == getTombstoneKey()) return false;
+    if (rhs == getEmptyKey() || rhs == getTombstoneKey()) { return false; }
     return lhs == KeyTy(rhs);
   }
 
@@ -110,7 +110,7 @@ struct FunctionTypeKeyInfo {
   }
 
   static bool isEqual(const KeyTy &lhs, const FunctionType *rhs) {
-    if (rhs == getEmptyKey() || rhs == getTombstoneKey()) return false;
+    if (rhs == getEmptyKey() || rhs == getTombstoneKey()) { return false; }
     return lhs == KeyTy(rhs);
   }
 
@@ -229,7 +229,7 @@ AstContext::AstContext(util::Region *region,
 AstContext::~AstContext() = default;
 
 Identifier AstContext::GetIdentifier(llvm::StringRef str) {
-  if (str.empty()) return Identifier(nullptr);
+  if (str.empty()) { return Identifier(nullptr); }
 
   auto iter =
       impl()

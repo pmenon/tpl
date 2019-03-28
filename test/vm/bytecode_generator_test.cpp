@@ -132,14 +132,14 @@ TEST_F(BytecodeGeneratorTest, SimpleTypesTest) {
     EXPECT_EQ((ArgType)10, a);
   };
 
-  fn("int8", (i8)0);
-  fn("int16", (i16)0);
-  fn("int32", (i32)0);
-  fn("int64", (i64)0);
-  fn("uint8", (u8)0);
-  fn("uint16", (u16)0);
-  fn("uint32", (u32)0);
-  fn("uint64", (u64)0);
+  fn("int8", static_cast<i8>(0));
+  fn("int16", static_cast<i16>(0));
+  fn("int32", static_cast<i32>(0));
+  fn("int64", static_cast<i64>(0));
+  fn("uint8", static_cast<u8>(0));
+  fn("uint16", static_cast<u16>(0));
+  fn("uint32", static_cast<u32>(0));
+  fn("uint64", static_cast<u64>(0));
 }
 
 TEST_F(BytecodeGeneratorTest, ParameterPassingTest) {
