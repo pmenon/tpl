@@ -52,7 +52,7 @@ class BytecodeGenerator::ExpressionResultScope {
 
   LocalVar GetOrCreateDestination(ast::Type *type) {
     if (!HasDestination()) {
-      destination_ = generator_->current_function()->NewTempLocal(type);
+      destination_ = generator_->current_function()->NewLocal(type);
     }
 
     return destination_;
@@ -109,7 +109,8 @@ class BytecodeGenerator::BytecodePositionScope {
         start_offset_(generator->emitter()->position()) {}
 
   ~BytecodePositionScope() {
-    func_->MarkBytecodeRange(start_offset_, generator_->emitter()->position());
+    const std::size_t end_offset = generator_->emitter()->position();
+    func_->set_bytecode_range(start_offset_, end_offset);
   }
 
  private:
@@ -122,7 +123,7 @@ class BytecodeGenerator::BytecodePositionScope {
 // Bytecode Generator begins
 // ---------------------------------------------------------
 
-BytecodeGenerator::BytecodeGenerator(UNUSED util::Region *region)
+BytecodeGenerator::BytecodeGenerator() noexcept
     : emitter_(bytecode_), execution_result_(nullptr) {}
 
 void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
@@ -194,7 +195,7 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
     vpi_loop.LoopHeader();
 
     ast::AstContext &ctx = row_type->context();
-    LocalVar cond = current_function()->NewTempLocal(ast::BoolType::Get(ctx));
+    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(ctx));
     emitter()->Emit(Bytecode::VPIHasNext, cond, vpi);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    vpi_loop.break_label());
@@ -203,7 +204,7 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
     const auto &fields = row_type->fields();
     for (u32 col_idx = 0, offset = 0; col_idx < fields.size(); col_idx++) {
       LocalVar col_ptr =
-          current_function()->NewTempLocal(fields[col_idx].type->PointerTo());
+          current_function()->NewLocal(fields[col_idx].type->PointerTo());
       emitter()->EmitLea(col_ptr, row, offset);
       emitter()->EmitVPIGet(Bytecode::VPIGetInteger, col_ptr.ValueOf(), vpi,
                             col_idx);
@@ -302,9 +303,9 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
     LoopBuilder table_loop(this);
     table_loop.LoopHeader();
 
-    LocalVar cond_1 = current_function()->NewTempLocal(ast::BoolType::Get(ctx));
-    emitter()->Emit(Bytecode::TableVectorIteratorNext, cond_1, table_iter);
-    emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond_1.ValueOf(),
+    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(ctx));
+    emitter()->Emit(Bytecode::TableVectorIteratorNext, cond, table_iter);
+    emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    table_loop.break_label());
 
     if (vectorized) {
@@ -326,24 +327,24 @@ void BytecodeGenerator::VisitFieldDecl(ast::FieldDecl *node) {
 }
 
 void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
-  // Create function info object
-  FunctionInfo *func_info = AllocateFunc(node->name().data());
+  // The function's TPL type
+  const auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
 
-  auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
-
-  // Register return type
-  if (!func_type->return_type()->IsNilType()) {
-    auto *ret_type = func_type->return_type()->PointerTo();
-    func_info->NewParameterLocal(ret_type, "hiddenRv");
+  // Collect parameters
+  std::vector<std::pair<ast::Type *, std::string>> params;
+  for (const auto &param : func_type->params()) {
+    params.emplace_back(param.type, param.name.data());
   }
 
-  // Register parameters
-  for (const auto &func_param : func_type->params()) {
-    func_info->NewParameterLocal(func_param.type, func_param.name.data());
-  }
+  // Allocate the function
+  FunctionInfo *func_info =
+      AllocateFunc(node->name().data(), func_type->return_type(), params);
 
   {
-    // Visit the body of the function
+    // Visit the body of the function. We use this handy scope object to track
+    // the start and end position of this function's bytecode in the module's
+    // bytecode array. Upon destruction, the scoped class will set the bytecode
+    // range in the function.
     BytecodePositionScope position_scope(this, func_info);
     Visit(node->function());
   }
@@ -431,12 +432,11 @@ void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
   auto *type = node->object()->type()->As<ast::ArrayType>();
   auto elem_size = type->element_type()->size();
 
-  LocalVar elem_ptr =
-      current_function()->NewTempLocal(node->type()->PointerTo());
+  LocalVar elem_ptr = current_function()->NewLocal(node->type()->PointerTo());
 
   if (auto *literal_index = node->index()->SafeAs<ast::LitExpr>()) {
     i32 index = literal_index->int32_val();
-    TPL_ASSERT(index > 0, "Array indexes must be positive");
+    TPL_ASSERT(index >= 0, "Array indexes must be non-negative");
     emitter()->EmitLea(elem_ptr, arr, (elem_size * index));
   } else {
     LocalVar index = VisitExpressionForRValue(node->index());
@@ -598,7 +598,7 @@ void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
     ret_val = execution_result()->GetOrCreateDestination(ret_type);
     execution_result()->set_destination(ret_val.ValueOf());
   } else {
-    ret_val = current_function()->NewTempLocal(ret_type);
+    ret_val = current_function()->NewLocal(ret_type);
   }
 
   // Collect the three call arguments
@@ -677,7 +677,7 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
       // Let the caller know where the result value is
       execution_result()->set_destination(ret_val.ValueOf());
     } else {
-      ret_val = current_function()->NewTempLocal(func_type->return_type());
+      ret_val = current_function()->NewLocal(func_type->return_type());
     }
 
     // Push return value address into parameter list
@@ -690,9 +690,9 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   }
 
   // Emit call
-  const FunctionInfo *func_info = LookupFuncInfoByName(call->FuncName().data());
-  TPL_ASSERT(func_info != nullptr, "Function not found!");
-  emitter()->EmitCall(func_info->id(), params);
+  const auto func_id = LookupFuncIdByName(call->FuncName().data());
+  TPL_ASSERT(func_id != FunctionInfo::kInvalidFuncId, "Function not found!");
+  emitter()->EmitCall(func_id, params);
 }
 
 void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
@@ -1012,7 +1012,7 @@ LocalVar BytecodeGenerator::BuildLoadPointer(LocalVar double_ptr,
   }
 
   // Need to Deref
-  LocalVar ptr = current_function()->NewTempLocal(type);
+  LocalVar ptr = current_function()->NewLocal(type);
   emitter()->EmitDeref(Bytecode::Deref8, ptr, double_ptr);
   return ptr.ValueOf();
 }
@@ -1062,7 +1062,7 @@ void BytecodeGenerator::VisitMemberExpr(ast::MemberExpr *node) {
   if (offset == 0) {
     field_ptr = obj_ptr;
   } else {
-    field_ptr = current_function()->NewTempLocal(node->type()->PointerTo());
+    field_ptr = current_function()->NewLocal(node->type()->PointerTo());
     emitter()->EmitLea(field_ptr, obj_ptr, offset);
     field_ptr = field_ptr.ValueOf();
   }
@@ -1118,30 +1118,46 @@ void BytecodeGenerator::VisitMapTypeRepr(ast::MapTypeRepr *node) {
   TPL_ASSERT(false, "Should not visit type-representation nodes!");
 }
 
-FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &name) {
-  // Clear variable name cache
-  name_cache_.clear();
+FunctionInfo *BytecodeGenerator::AllocateFunc(
+    const std::string &func_name, ast::Type *return_type,
+    const std::vector<std::pair<ast::Type *, std::string>> &params) {
+  // Allocate function
+  const auto func_id = static_cast<FunctionId>(functions_.size());
+  functions_.emplace_back(func_id, func_name);
+  FunctionInfo *func = &functions_.back();
 
-  // Allocate a new function
-  auto func_id = static_cast<FunctionId>(functions_.size());
-  functions_.emplace_back(func_id, name);
-  return &functions_.back();
+  // Register return type
+  if (!return_type->IsNilType()) {
+    func->NewParameterLocal(return_type->PointerTo(), "hiddenRv");
+  }
+
+  // Register parameters
+  for (const auto &[type, name] : params) {
+    func->NewParameterLocal(type, name);
+  }
+
+  // Cache
+  func_map_[func->name()] = func->id();
+
+  return func;
 }
 
-LocalVar BytecodeGenerator::NewHiddenLocal(const std::string &name,
-                                           ast::Type *type) {
-  //
-  // We check if the name exists in the cache. If so, we bump the version number
-  // and construct a new local with the new name.
-  //
-
-  auto [iter, inserted] = name_cache_.try_emplace(name, 0);
-
-  if (inserted) {
-    return current_function()->NewLocal(type, name);
+FunctionId BytecodeGenerator::LookupFuncIdByName(
+    const std::string &name) const {
+  auto iter = func_map_.find(name);
+  if (iter == func_map_.end()) {
+    return FunctionInfo::kInvalidFuncId;
   }
-  std::string unique_name = name + std::to_string(++iter->second);
-  return current_function()->NewLocal(type, unique_name);
+  return iter->second;
+}
+
+const FunctionInfo *BytecodeGenerator::LookupFuncInfoByName(
+    const std::string &name) const {
+  const auto iter = func_map_.find(name);
+  if (iter == func_map_.end()) {
+    return nullptr;
+  }
+  return &functions_[iter->second];
 }
 
 LocalVar BytecodeGenerator::VisitExpressionForLValue(ast::Expr *expr) {
@@ -1196,8 +1212,8 @@ Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode,
 
 // static
 std::unique_ptr<BytecodeModule> BytecodeGenerator::Compile(
-    util::Region *region, ast::AstNode *root, const std::string &name) {
-  BytecodeGenerator generator(region);
+    ast::AstNode *root, const std::string &name) {
+  BytecodeGenerator generator;
   generator.Visit(root);
 
   return std::make_unique<BytecodeModule>(name, std::move(generator.bytecode_),

@@ -71,7 +71,7 @@ class BitUtil {
   /// \param size The number of elements in the bit vector
   ALWAYS_INLINE static void Clear(u32 bits[], const u64 size) {
     auto num_words = size / kBitWordSize;
-    TPL_MEMSET(bits, 0, num_words * sizeof(u32));
+    std::memset(bits, 0, num_words * sizeof(u32));
   }
 
   /// Count the number of set bits in the given value

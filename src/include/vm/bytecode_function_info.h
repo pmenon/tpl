@@ -32,13 +32,10 @@ using FunctionId = u16;
 /// its type and the machine architecture.
 class LocalInfo {
  public:
-  enum class Kind : u8 { Var, Parameter, Temporary };
+  enum class Kind : u8 { Var, Parameter };
 
-  LocalInfo(std::string name, ast::Type *type, u32 offset, Kind kind)
-      : name_(std::move(name)), type_(type), offset_(offset), kind_(kind) {}
-
-  /// Return the size (in bytes) of this local variable
-  u32 size() const;
+  /// Construct a local with the given, name, type, offset and kind
+  LocalInfo(std::string name, ast::Type *type, u32 offset, Kind kind) noexcept;
 
   /// Return true if this local variable a parameter to a function
   bool is_parameter() const { return kind_ == Kind::Parameter; }
@@ -52,10 +49,14 @@ class LocalInfo {
   /// Return the offset (in bytes) of this local in the function's stack frame
   u32 offset() const { return offset_; }
 
+  /// Return the size (in bytes) of this local variable
+  u32 size() const { return size_; }
+
  private:
   std::string name_;
   ast::Type *type_;
   u32 offset_;
+  u32 size_;
   Kind kind_;
 };
 
@@ -135,6 +136,10 @@ class FunctionInfo {
   static const LocalId kRetVarOffset = 0;
 
  public:
+  /// An invalid function ID
+  static constexpr FunctionId kInvalidFuncId = std::numeric_limits<u16>::max();
+
+  /// Construct a function with the given ID and name \a name
   FunctionInfo(FunctionId id, std::string name)
       : id_(id),
         name_(std::move(name)),
@@ -143,24 +148,20 @@ class FunctionInfo {
         num_params_(0),
         num_temps_(0) {}
 
-  /// Allocate a new local variable of the given type and name. This returns a
-  /// LocalVar object with the Address addressing mode (i.e., a pointer to the
-  /// variable).
+  /// Allocate a new local variable with type \a type and name \a name. This
+  /// returns a LocalVar object with the Address addressing mode (i.e., a
+  /// pointer to the variable).
   /// \param type The TPL type of the variable
-  /// \param name The name of the variable
+  /// \param name The name of the variable. If no name is given, the variable
+  ///             is assigned a synthesized one.
   /// \return A pointer to the local variable encoded as a LocalVar
-  LocalVar NewLocal(ast::Type *type, const std::string &name);
+  LocalVar NewLocal(ast::Type *type, const std::string &name = "");
 
   /// Allocate a new function parameter.
   /// \param type The TPL type of the parameter
   /// \param name The name of the parameter
   /// \return A pointer to the local variable encoded as a LocalVar
   LocalVar NewParameterLocal(ast::Type *type, const std::string &name);
-
-  /// Allocate a temporary function variable
-  /// \param type The TPL type of the variable
-  /// \return A pointer to the local variable encoded as a LocalVar
-  LocalVar NewTempLocal(ast::Type *type);
 
   /// Lookup a local variable by name
   /// \param name The name of the local variable
@@ -182,12 +183,6 @@ class FunctionInfo {
   /// order they appear in the function's signature.
   void GetParameterInfos(
       std::vector<const LocalInfo *> &params) const;  // NOLINT
-
-  void MarkBytecodeRange(std::size_t start_offset, std::size_t end_offset) {
-    TPL_ASSERT(start_offset < end_offset,
-               "Starting offset must be smaller than ending offset");
-    bytecode_range_ = std::make_pair(start_offset, end_offset);
-  }
 
   // -------------------------------------------------------
   // Accessors
@@ -214,12 +209,21 @@ class FunctionInfo {
   u32 num_params() const { return num_params_; }
 
  private:
+  friend class BytecodeGenerator;
+
+  // Mark the range of bytecodes for this function in its module. This is set
+  // by the BytecodeGenerator during code generation after this function's
+  // bytecode range has been discovered.
+  void set_bytecode_range(std::size_t start_offset, std::size_t end_offset) {
+    // Functions must have **at least** one bytecode instruction (i.e., RETURN)
+    TPL_ASSERT(start_offset < end_offset,
+               "Starting offset must be smaller than ending offset");
+    bytecode_range_ = std::make_pair(start_offset, end_offset);
+  }
+
   // Allocate a new local variable in the function
   LocalVar NewLocal(ast::Type *type, const std::string &name,
                     LocalInfo::Kind kind);
-
-  // Return the next available ID for a temporary variable
-  u32 NextTempId() { return ++num_temps_; }
 
  private:
   FunctionId id_;
@@ -227,7 +231,6 @@ class FunctionInfo {
   std::pair<std::size_t, std::size_t> bytecode_range_;
   std::vector<LocalInfo> locals_;
   std::size_t frame_size_;
-
   u32 num_params_;
   u32 num_temps_;
 };

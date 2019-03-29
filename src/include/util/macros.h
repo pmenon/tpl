@@ -37,6 +37,3 @@
 #endif
 
 #define UNREACHABLE(msg) llvm_unreachable(msg)
-
-#define TPL_MEMCPY(dest, src, nbytes) std::memcpy(dest, src, nbytes)
-#define TPL_MEMSET(dest, c, nbytes) std::memset(dest, c, nbytes)
