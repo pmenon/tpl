@@ -24,83 +24,116 @@ BytecodeModule::BytecodeModule(std::string name, std::vector<u8> &&code,
 
 namespace {
 
-struct TrampolineGenerator : public Xbyak::CodeGenerator {
-  /// Generate trampoline code for the given function in the given module
+// TODO(pmenon): Implement generator for non x86_64 machines
+// TODO(pmenon): Implement generator for Windows
+// TODO(pmenon): Implement non-integer input and output arguments
+// TODO(pmenon): Handle more than 6 input arguments
+class TrampolineGenerator : public Xbyak::CodeGenerator {
+ public:
   TrampolineGenerator(const BytecodeModule &module,
                       const FunctionInfo &func_info, void *mem)
       : Xbyak::CodeGenerator(Xbyak::DEFAULT_MAX_CODE_SIZE, mem),
         module_(module),
-        func_(func_info) {
+        func_(func_info) {}
+
+  /// Generate trampoline code for the given function in the given module
+  void Generate() {
+    // Compute the stack space needed for all arguments
+    const u32 required_stack_space = ComputeRequiredStackSpace();
+
+    // Allocate space for arguments
+    AllocStack(required_stack_space);
+
     // Push call args onto stack
-    AdjustStackAndPushCallerArgs();
-    //
+    PushCallerArgsOntoStack();
+
+    // Invoke the VM entry function
     InvokeVMFunction();
-    //
-    RestoreStackAndReturn();
+
+    // Restore stack
+    FreeStack(required_stack_space);
+
+    // Return from the trampoline, placing return values where appropriate
+    Return();
   }
 
+ private:
   u32 ComputeRequiredStackSpace() const {
-    // TODO(pmenon): Fix for non-integer args and args larger than 8-bytes
-    const ast::FunctionType *func_type = func_.func_type();
-
-    // First, we need to at least store all legitimate call arguments onto the
-    // stack
-    u32 required_stack_space = func_type->num_params() * sizeof(intptr_t);
+    // FunctionInfo tells us the amount of space we need for all input and
+    // output arguments, so use that.
+    u32 required_stack_space = func_.params_size();
 
     // If the function has a return type, we need to allocate a temporary
-    // return value and a pointer to the return value on the stack as well
-    if (const ast::Type *ret_type = func_type->return_type();
-        !ret_type->IsNilType()) {
-      // Space for the temporary return value
-      required_stack_space += ret_type->size();
-      // Space for the pointer to the return value
-      required_stack_space += sizeof(intptr_t);
+    // return value on the stack for that as well. However, if the return type
+    // is larger than 8 bytes (i.e., larger than a general-purpose register),
+    // a pointer to the return value is provided to the trampoline as the first
+    // argument
+    const ast::Type *return_type = func_.func_type()->return_type();
+    if (!return_type->IsNilType()) {
+      required_stack_space += return_type->size();
     }
 
     return required_stack_space;
   }
 
-  // This function pushes all caller arguments onto the stack. After this call
-  // we want the stack to look as follows:
+  void AllocStack(u32 size) { sub(rsp, size); }
+
+  void FreeStack(u32 size) { add(rsp, size); }
+
+  // This function pushes all caller arguments onto the stack. We assume that
+  // there is enough stack through a previous call to AdjustStack(). There are
+  // a few different cases to handle:
+  //
+  // If the function returns a value whose size is less than 8-bytes, we want
+  // the stack to look as follows:
   //
   //            |                   |
-  //  Old SP -> +-------------------+ (Higher address)
-  //            |       arg N       |
+  //  Old SP ━> +-------------------+ (Higher address)
+  //            |       Arg N       |
   //            +-------------------+
   //            |        ...        |
   //            +-------------------+
-  //            |       arg 1       |
+  //            |       Arg 1       |
   //            +-------------------+
-  //        +-- |  Pointer to 'rv'  |
-  //        |   +-------------------+
-  //        +-->| Return Value 'rv' |
-  //      SP -> +-------------------+ (Lower address)
+  //        ┏━━ |  Pointer to 'rv'  |
+  //        ┃   +-------------------+
+  //        ┗━> | Return Value 'rv' |
+  //  New SP ━> +-------------------+ (Lower address)
   //            |                   |
   //
-  // If the function doesn't return anything, then no return value is allocated
-  // on the stack, only the formal function arguments are pushed.
+  // If the function is a void function neither a return value or a pointer to
+  // it are allocated on the stack. Only legitimate function arguments will be
+  // placed on the stack.
   //
-  void AdjustStackAndPushCallerArgs() {
+  void PushCallerArgsOntoStack() {
     const Xbyak::Reg64 arg_regs[] = {rdi, rsi, rdx, rcx, r8, r9};
 
-    // Bump stack
-    sub(rsp, ComputeRequiredStackSpace());
-
-    // Stack displacement used to store things on the stack
-    u32 displacement = 0;
-
     const ast::FunctionType *func_type = func_.func_type();
+    TPL_ASSERT(func_type->num_params() < sizeof(arg_regs),
+               "Too many function arguments");
+
+    u32 displacement = 0;
+    u32 local_idx = 0;
+
+    //
+    // The first argument to the TBC function is a pointer to the return value.
+    // If the function returns a non-void value, insert the pointer now.
+    //
+
     if (const ast::Type *ret_type = func_type->return_type();
         !ret_type->IsNilType()) {
-      displacement += ret_type->size();
+      displacement = ret_type->size();
       mov(ptr[rsp + displacement], rsp);
-      displacement += sizeof(intptr_t);
+      local_idx++;
     }
 
-    // Push the arguments onto the stack
-    for (u32 idx = 0; idx < func_type->num_params();
-         idx++, displacement += sizeof(intptr_t)) {
-      mov(ptr[rsp + displacement], arg_regs[idx]);
+    //
+    // Now comes all the input arguments
+    //
+
+    for (u32 idx = 0; idx < func_type->num_params(); idx++, local_idx++) {
+      const auto &local_info = func_.locals()[local_idx];
+      mov(ptr[rsp + displacement + local_info.offset()], arg_regs[idx]);
     }
   }
 
@@ -108,22 +141,17 @@ struct TrampolineGenerator : public Xbyak::CodeGenerator {
     const ast::FunctionType *func_type = func_.func_type();
     const u32 ret_type_size = func_type->return_type()->size();
 
-    // We're going to call InvokeFunctionWrapper(module, func, args). Thus, we
-    // need to ensure: RDI=module*, RSI=func*, RDX=args*
+    // Set up the arguments to VM::InvokeFunction(module, function ID, args)
     mov(rdi, reinterpret_cast<std::size_t>(&module_));
     mov(rsi, func_.id());
     lea(rdx, ptr[rsp + ret_type_size]);
 
-    // Make the call. Move the address of InvokeFunctionWrapper() into RAX and
-    // emit a call instruction
+    // Call VM::InvokeFunction()
     mov(rax, reinterpret_cast<std::size_t>(&VM::InvokeFunction));
     call(rax);
   }
 
-  void RestoreStackAndReturn() {
-    add(rsp, ComputeRequiredStackSpace());
-    ret();
-  }
+  void Return() { ret(); }
 
  private:
   const BytecodeModule &module_;
@@ -148,6 +176,7 @@ void BytecodeModule::CreateFunctionTrampoline(const FunctionInfo &func,
 
   // Generate code
   TrampolineGenerator generator(*this, func, mem.base());
+  generator.Generate();
 
   // Now that the code's been generated and finalized, let's remove write
   // protections and just make is read+exec.
