@@ -183,31 +183,28 @@ inline bool BytecodeModule::GetFunction(
   switch (exec_mode) {
     case ExecutionMode::Interpret: {
       func = [this, func_info](ArgTypes... args) -> RetT {
-        // The virtual machine
-        VM vm(*this);
-        // Let's go
         if constexpr (std::is_void_v<RetT>) {
-          // The buffer we copy the arguments into
+          // Create a temporary on-stack buffer and copy all arguments
           u8 arg_buffer[(0ul + ... + sizeof(args))];
           detail::CopyAll(arg_buffer, args...);
-          // Invoke the function
-          vm.InvokeFunction(func_info->id(), arg_buffer);
-          // Finish
+
+          // Invoke and finish
+          VM::InvokeFunction(*this, func_info->id(), arg_buffer);
           return;
         } else {
-          // The buffer we copy the arguments into, including the return value
-          u8 arg_buffer[sizeof(RetT *) + (0ul + ... + sizeof(args))];
           // The return value
           RetT rv{};
-          // Copy the function arguments
+
+          // Create a temporary on-stack buffer and copy all arguments
+          u8 arg_buffer[sizeof(RetT *) + (0ul + ... + sizeof(args))];
           detail::CopyAll(arg_buffer, &rv, args...);
-          // Invoke the function
-          vm.InvokeFunction(func_info->id(), arg_buffer);
-          // Finish
+
+          // Invoke and finish
+          VM::InvokeFunction(*this, func_info->id(), arg_buffer);
           return rv;
         }
       };
-      return true;
+      break;
     }
     case ExecutionMode::Jit: {
       func = [this, func_info](ArgTypes... args) -> RetT {
@@ -232,12 +229,12 @@ inline bool BytecodeModule::GetFunction(
           return rv;
         }
       };
-      return true;
+      break;
     }
   }
 
-  UNREACHABLE("Impossible");
-  return false;
+  // Function is setup, return success
+  return true;
 }
 
 }  // namespace tpl::vm

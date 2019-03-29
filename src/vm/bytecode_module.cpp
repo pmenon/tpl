@@ -26,37 +26,108 @@ namespace {
 
 struct TrampolineGenerator : public Xbyak::CodeGenerator {
   /// Generate trampoline code for the given function in the given module
-  TrampolineGenerator(const BytecodeModule &module, const FunctionInfo &func,
-                      void *mem)
-      : Xbyak::CodeGenerator(Xbyak::DEFAULT_MAX_CODE_SIZE, mem) {
-    const Xbyak::Reg64 abi_regs[] = {rdi, rsi, rdx, rcx, r8, r9};
+  TrampolineGenerator(const BytecodeModule &module,
+                      const FunctionInfo &func_info, void *mem)
+      : Xbyak::CodeGenerator(Xbyak::DEFAULT_MAX_CODE_SIZE, mem),
+        module_(module),
+        func_(func_info) {
+    // Push call args onto stack
+    AdjustStackAndPushCallerArgs();
+    //
+    InvokeVMFunction();
+    //
+    RestoreStackAndReturn();
+  }
 
-    auto num_args = func.num_params();
-    sub(rsp, num_args * sizeof(void *));
+  u32 ComputeRequiredStackSpace() const {
+    // TODO(pmenon): Fix for non-integer args and args larger than 8-bytes
+    const ast::FunctionType *func_type = func_.func_type();
+
+    // First, we need to at least store all legitimate call arguments onto the
+    // stack
+    u32 required_stack_space = func_type->num_params() * sizeof(intptr_t);
+
+    // If the function has a return type, we need to allocate a temporary
+    // return value and a pointer to the return value on the stack as well
+    if (const ast::Type *ret_type = func_type->return_type();
+        !ret_type->IsNilType()) {
+      // Space for the temporary return value
+      required_stack_space += ret_type->size();
+      // Space for the pointer to the return value
+      required_stack_space += sizeof(intptr_t);
+    }
+
+    return required_stack_space;
+  }
+
+  // This function pushes all caller arguments onto the stack. After this call
+  // we want the stack to look as follows:
+  //
+  //            |                   |
+  //  Old SP -> +-------------------+ (Higher address)
+  //            |       arg N       |
+  //            +-------------------+
+  //            |        ...        |
+  //            +-------------------+
+  //            |       arg 1       |
+  //            +-------------------+
+  //        +-- |  Pointer to 'rv'  |
+  //        |   +-------------------+
+  //        +-->| Return Value 'rv' |
+  //      SP -> +-------------------+ (Lower address)
+  //            |                   |
+  //
+  // If the function doesn't return anything, then no return value is allocated
+  // on the stack, only the formal function arguments are pushed.
+  //
+  void AdjustStackAndPushCallerArgs() {
+    const Xbyak::Reg64 arg_regs[] = {rdi, rsi, rdx, rcx, r8, r9};
+
+    // Bump stack
+    sub(rsp, ComputeRequiredStackSpace());
+
+    // Stack displacement used to store things on the stack
+    u32 displacement = 0;
+
+    const ast::FunctionType *func_type = func_.func_type();
+    if (const ast::Type *ret_type = func_type->return_type();
+        !ret_type->IsNilType()) {
+      displacement += ret_type->size();
+      mov(ptr[rsp + displacement], rsp);
+      displacement += sizeof(intptr_t);
+    }
 
     // Push the arguments onto the stack
-    std::vector<const LocalInfo *> params;
-    func.GetParameterInfos(params);
-    for (u32 idx = 0; idx < params.size(); idx++) {
-      u32 disp = sizeof(void *) * idx;
-      mov(ptr[rsp + disp], abi_regs[idx]);
+    for (u32 idx = 0; idx < func_type->num_params();
+         idx++, displacement += sizeof(intptr_t)) {
+      mov(ptr[rsp + displacement], arg_regs[idx]);
     }
+  }
+
+  void InvokeVMFunction() {
+    const ast::FunctionType *func_type = func_.func_type();
+    const u32 ret_type_size = func_type->return_type()->size();
 
     // We're going to call InvokeFunctionWrapper(module, func, args). Thus, we
     // need to ensure: RDI=module*, RSI=func*, RDX=args*
-    mov(rdi, reinterpret_cast<std::size_t>(&module));
-    mov(rsi, func.id());
-    mov(rdx, rsp);
+    mov(rdi, reinterpret_cast<std::size_t>(&module_));
+    mov(rsi, func_.id());
+    lea(rdx, ptr[rsp + ret_type_size]);
 
     // Make the call. Move the address of InvokeFunctionWrapper() into RAX and
     // emit a call instruction
-    mov(rax, reinterpret_cast<std::size_t>(&VM::InvokeFunctionWrapper));
+    mov(rax, reinterpret_cast<std::size_t>(&VM::InvokeFunction));
     call(rax);
+  }
 
-    // Restore stack and return
-    add(rsp, num_args * sizeof(void *));
+  void RestoreStackAndReturn() {
+    add(rsp, ComputeRequiredStackSpace());
     ret();
   }
+
+ private:
+  const BytecodeModule &module_;
+  const FunctionInfo &func_;
 };
 
 }  // namespace

@@ -41,9 +41,8 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   class BytecodePositionScope;
 
   // Allocate a new function ID
-  FunctionInfo *AllocateFunc(
-      const std::string &func_name, ast::Type *return_type,
-      const std::vector<std::pair<ast::Type *, std::string>> &params);
+  FunctionInfo *AllocateFunc(const std::string &func_name,
+                             ast::FunctionType *func_type);
 
   // Dispatched from VisitForInStatement() when using tuple-at-time loops to
   // set up the row structure used in the body of the loop

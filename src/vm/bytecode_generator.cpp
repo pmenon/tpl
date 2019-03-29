@@ -323,17 +323,10 @@ void BytecodeGenerator::VisitFieldDecl(ast::FieldDecl *node) {
 
 void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
   // The function's TPL type
-  const auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
-
-  // Collect parameters
-  std::vector<std::pair<ast::Type *, std::string>> params;
-  for (const auto &param : func_type->params()) {
-    params.emplace_back(param.type, param.name.data());
-  }
+  auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
 
   // Allocate the function
-  FunctionInfo *func_info =
-      AllocateFunc(node->name().data(), func_type->return_type(), params);
+  FunctionInfo *func_info = AllocateFunc(node->name().data(), func_type);
 
   {
     // Visit the body of the function. We use this handy scope object to track
@@ -1114,21 +1107,20 @@ void BytecodeGenerator::VisitMapTypeRepr(ast::MapTypeRepr *node) {
 }
 
 FunctionInfo *BytecodeGenerator::AllocateFunc(
-    const std::string &func_name, ast::Type *return_type,
-    const std::vector<std::pair<ast::Type *, std::string>> &params) {
+    const std::string &func_name, ast::FunctionType *const func_type) {
   // Allocate function
   const auto func_id = static_cast<FunctionId>(functions_.size());
-  functions_.emplace_back(func_id, func_name);
+  functions_.emplace_back(func_id, func_name, func_type);
   FunctionInfo *func = &functions_.back();
 
   // Register return type
-  if (!return_type->IsNilType()) {
+  if (auto *return_type = func_type->return_type(); !return_type->IsNilType()) {
     func->NewParameterLocal(return_type->PointerTo(), "hiddenRv");
   }
 
   // Register parameters
-  for (const auto &[type, name] : params) {
-    func->NewParameterLocal(type, name);
+  for (const auto &param : func_type->params()) {
+    func->NewParameterLocal(param.type, param.name.data());
   }
 
   // Cache
