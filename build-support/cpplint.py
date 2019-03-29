@@ -268,6 +268,15 @@ _ERROR_CATEGORIES = [
     'whitespace/semicolon',
     'whitespace/tab',
     'whitespace/todo',
+    # new additions
+    'bugprone-exception-escape',
+    'bugprone-narrowing-conversions',
+    'bugprone-macro-parentheses',
+    'bugprone-suspicious-missing-comma',
+    'clang-analyzer-unix.Malloc',
+    'google-readability-function-size',
+    'google-runtime-references',
+    'readability-function-size',
 ]
 
 # These error categories are no longer enforced by cpplint, but for backwards-
@@ -604,12 +613,12 @@ def ParseNolintSuppressions(filename, raw_line, linenum, error):
             _error_suppressions.setdefault(None, set()).add(suppressed_line)
         else:
             if category.startswith('(') and category.endswith(')'):
-                category = category[1:-1]
-                if category in _ERROR_CATEGORIES:
-                    _error_suppressions.setdefault(category, set()).add(suppressed_line)
-                elif category not in _LEGACY_ERROR_CATEGORIES:
-                    error(filename, linenum, 'readability/nolint', 5,
-                          'Unknown NOLINT error category: %s' % category)
+                for cat in category[1:-1].split(','):
+                    if cat in _ERROR_CATEGORIES:
+                        _error_suppressions.setdefault(cat, set()).add(suppressed_line)
+                    elif cat not in _LEGACY_ERROR_CATEGORIES:
+                        error(filename, linenum, 'readability/nolint', 5,
+                              'Unknown NOLINT error category: %s' % cat)
 
 
 def ProcessGlobalSuppresions(lines):
@@ -3284,7 +3293,7 @@ def CheckSpacing(filename, clean_lines, linenum, nesting_state, error):
 
     # You shouldn't have spaces before your brackets, except maybe after
     # 'delete []' or 'return []() {};'
-    if Search(r'\w\s+\[', line) and not Search(r'(?:delete|return)\s+\[', line):
+    if Search(r'\w\s+\[', line) and not Search(r'(?:delete|return|auto)\s+\[', line):
         error(filename, linenum, 'whitespace/braces', 5,
               'Extra space before [')
 
