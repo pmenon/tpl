@@ -73,7 +73,9 @@ void TypePrinter::VisitFunctionType(const FunctionType *type) {
   os() << "(";
   bool first = true;
   for (const auto &param : type->params()) {
-    if (!first) { os() << ","; }
+    if (!first) {
+      os() << ",";
+    }
     first = false;
     Visit(param.type);
   }
@@ -107,7 +109,9 @@ void TypePrinter::VisitStructType(const StructType *type) {
   os() << "struct{";
   bool first = true;
   for (const auto &field : type->fields()) {
-    if (!first) { os() << ","; }
+    if (!first) {
+      os() << ",";
+    }
     first = false;
     Visit(field.type);
   }

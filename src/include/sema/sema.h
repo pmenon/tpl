@@ -22,7 +22,7 @@ namespace sema {
 
 class Sema : public ast::AstVisitor<Sema> {
  public:
-  explicit Sema(ast::AstContext &ctx);
+  explicit Sema(ast::AstContext &ctx);  // NOLINT
 
   DISALLOW_COPY_AND_MOVE(Sema);
 
@@ -116,7 +116,7 @@ class Sema : public ast::AstVisitor<Sema> {
    */
   class SemaScope {
    public:
-    SemaScope(Sema &check, Scope::Kind scope_kind)
+    SemaScope(Sema &check, Scope::Kind scope_kind)  // NOLINT
         : check_(check), exited_(false) {
       check.EnterScope(scope_kind);
     }
@@ -142,7 +142,7 @@ class Sema : public ast::AstVisitor<Sema> {
    */
   class FunctionSemaScope {
    public:
-    FunctionSemaScope(Sema &check, ast::FunctionLitExpr *func)
+    FunctionSemaScope(Sema &check, ast::FunctionLitExpr *func)  // NOLINT
         : prev_func_(check.current_function()),
           block_scope_(check, Scope::Kind::Function) {
       check.curr_func_ = func;

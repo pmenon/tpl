@@ -4,7 +4,7 @@ namespace tpl::sql {
 
 AggregationHashTable::AggregationHashTable(util::Region *region,
                                            u32 tuple_size) noexcept
-// NOLINTNEXTLINE(bugprone-narrowing-conversions)
+    // NOLINTNEXTLINE(bugprone-narrowing-conversions)
     : entries_(region, tuple_size), max_fill_(kDefaultInitialTableSize * 0.7) {
   hash_table_.SetSize(kDefaultInitialTableSize);
 }

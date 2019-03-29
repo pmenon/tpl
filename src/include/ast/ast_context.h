@@ -22,7 +22,7 @@ class Type;
 class AstContext {
  public:
   explicit AstContext(util::Region *region,
-                      sema::ErrorReporter &error_reporter);
+                      sema::ErrorReporter &error_reporter);  // NOLINT
 
   DISALLOW_COPY_AND_MOVE(AstContext);
 

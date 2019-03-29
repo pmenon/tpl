@@ -62,7 +62,9 @@ struct StructTypeKeyInfo {
   }
 
   static bool isEqual(const KeyTy &lhs, const StructType *rhs) {
-    if (rhs == getEmptyKey() || rhs == getTombstoneKey()) { return false; }
+    if (rhs == getEmptyKey() || rhs == getTombstoneKey()) {
+      return false;
+    }
     return lhs == KeyTy(rhs);
   }
 
@@ -110,7 +112,9 @@ struct FunctionTypeKeyInfo {
   }
 
   static bool isEqual(const KeyTy &lhs, const FunctionType *rhs) {
-    if (rhs == getEmptyKey() || rhs == getTombstoneKey()) { return false; }
+    if (rhs == getEmptyKey() || rhs == getTombstoneKey()) {
+      return false;
+    }
     return lhs == KeyTy(rhs);
   }
 
@@ -160,7 +164,7 @@ struct AstContext::Implementation {
   llvm::DenseSet<StructType *, StructTypeKeyInfo> struct_types;
   llvm::DenseSet<FunctionType *, FunctionTypeKeyInfo> func_types;
 
-  explicit Implementation(AstContext &ctx)
+  explicit Implementation(AstContext &ctx)  // NOLINT
       : int8(ctx, sizeof(i8), alignof(i8), IntegerType::IntKind::Int8),
         int16(ctx, sizeof(i16), alignof(i16), IntegerType::IntKind::Int16),
         // NOLINTNEXTLINE
@@ -229,7 +233,9 @@ AstContext::AstContext(util::Region *region,
 AstContext::~AstContext() = default;
 
 Identifier AstContext::GetIdentifier(llvm::StringRef str) {
-  if (str.empty()) { return Identifier(nullptr); }
+  if (str.empty()) {
+    return Identifier(nullptr);
+  }
 
   auto iter =
       impl()
@@ -268,7 +274,8 @@ bool AstContext::IsBuiltinFunction(Identifier identifier,
 PointerType *Type::PointerTo() { return PointerType::Get(this); }
 
 // static
-IntegerType *IntegerType::Get(const AstContext &ctx, IntegerType::IntKind int_kind) {
+IntegerType *IntegerType::Get(const AstContext &ctx,
+                              IntegerType::IntKind int_kind) {
   switch (int_kind) {
     case IntegerType::IntKind::Int8: {
       return &ctx.impl().int8;
@@ -315,7 +322,9 @@ FloatType *FloatType::Get(const AstContext &ctx, FloatKind float_kind) {
 BoolType *BoolType::Get(const AstContext &ctx) { return &ctx.impl().boolean; }
 
 // static
-StringType *StringType::Get(const AstContext &ctx) { return &ctx.impl().string; }
+StringType *StringType::Get(const AstContext &ctx) {
+  return &ctx.impl().string;
+}
 
 // static
 NilType *NilType::Get(const AstContext &ctx) { return &ctx.impl().nil; }

@@ -469,16 +469,16 @@ ALWAYS_INLINE inline Vec4 operator+(const Vec4 &a, const Vec4 &b) {
   return Vec4(_mm256_add_epi64(a, b));
 }
 
-ALWAYS_INLINE inline Vec4 &operator+=(Vec4 &a, const Vec4 &b) {
+ALWAYS_INLINE inline Vec4 &operator+=(Vec4 &a, const Vec4 &b) {  // NOLINT
   a = a + b;
   return a;
 }
 
-ALWAYS_INLINE inline Vec4 operator-(const Vec4 &a, const Vec4 &b) {
+ALWAYS_INLINE inline Vec4 operator-(const Vec4 &a, const Vec4 &b) {  // NOLINT
   return Vec4(_mm256_sub_epi64(a, b));
 }
 
-ALWAYS_INLINE inline Vec4 &operator-=(Vec4 &a, const Vec4 &b) {
+ALWAYS_INLINE inline Vec4 &operator-=(Vec4 &a, const Vec4 &b) {  // NOLINT
   a = a - b;
   return a;
 }
@@ -487,7 +487,7 @@ ALWAYS_INLINE inline Vec4 operator&(const Vec4 &a, const Vec4 &b) {
   return Vec4(Vec256b(a) & Vec256b(b));
 }
 
-ALWAYS_INLINE inline Vec4 &operator&=(Vec4 &a, const Vec4 &b) {
+ALWAYS_INLINE inline Vec4 &operator&=(Vec4 &a, const Vec4 &b) {  // NOLINT
   a = a & b;
   return a;
 }
@@ -496,7 +496,7 @@ ALWAYS_INLINE inline Vec4 operator|(const Vec4 &a, const Vec4 &b) {
   return Vec4(Vec256b(a) | Vec256b(b));
 }
 
-ALWAYS_INLINE inline Vec4 &operator|=(Vec4 &a, const Vec4 &b) {
+ALWAYS_INLINE inline Vec4 &operator|=(Vec4 &a, const Vec4 &b) {  // NOLINT
   a = a | b;
   return a;
 }
@@ -505,7 +505,7 @@ ALWAYS_INLINE inline Vec4 operator^(const Vec4 &a, const Vec4 &b) {
   return Vec4(Vec256b(a) ^ Vec256b(b));
 }
 
-ALWAYS_INLINE inline Vec4 &operator^=(Vec4 &a, const Vec4 &b) {
+ALWAYS_INLINE inline Vec4 &operator^=(Vec4 &a, const Vec4 &b) {  // NOLINT
   a = a ^ b;
   return a;
 }
@@ -514,7 +514,7 @@ ALWAYS_INLINE inline Vec4 operator>>(const Vec4 &a, const u32 shift) {
   return Vec4(_mm256_srli_epi64(a, shift));
 }
 
-ALWAYS_INLINE inline Vec4 &operator>>=(Vec4 &a, const u32 shift) {
+ALWAYS_INLINE inline Vec4 &operator>>=(Vec4 &a, const u32 shift) {  // NOLINT
   a = a >> shift;
   return a;
 }
@@ -523,7 +523,7 @@ ALWAYS_INLINE inline Vec4 operator<<(const Vec4 &a, const u32 shift) {
   return Vec4(_mm256_slli_epi64(a, shift));
 }
 
-ALWAYS_INLINE inline Vec4 &operator<<=(Vec4 &a, const u32 shift) {
+ALWAYS_INLINE inline Vec4 &operator<<=(Vec4 &a, const u32 shift) {  // NOLINT
   a = a << shift;
   return a;
 }
@@ -532,7 +532,7 @@ ALWAYS_INLINE inline Vec4 operator>>(const Vec4 &a, const Vec4 &b) {
   return Vec4(_mm256_srlv_epi64(a, b));
 }
 
-ALWAYS_INLINE inline Vec4 &operator>>=(Vec4 &a, const Vec4 &b) {
+ALWAYS_INLINE inline Vec4 &operator>>=(Vec4 &a, const Vec4 &b) {  // NOLINT
   a = a >> b;
   return a;
 }
@@ -541,7 +541,7 @@ ALWAYS_INLINE inline Vec4 operator<<(const Vec4 &a, const Vec4 &b) {
   return Vec4(_mm256_sllv_epi64(a, b));
 }
 
-ALWAYS_INLINE inline Vec4 &operator<<=(Vec4 &a, const Vec4 &b) {
+ALWAYS_INLINE inline Vec4 &operator<<=(Vec4 &a, const Vec4 &b) {  // NOLINT
   a = a << b;
   return a;
 }
@@ -583,7 +583,7 @@ ALWAYS_INLINE inline Vec8 operator+(const Vec8 &a, const Vec8 &b) {
   return Vec8(_mm256_add_epi32(a, b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator+=(Vec8 &a, const Vec8 &b) {
+ALWAYS_INLINE inline Vec8 &operator+=(Vec8 &a, const Vec8 &b) {  // NOLINT
   a = a + b;
   return a;
 }
@@ -592,7 +592,7 @@ ALWAYS_INLINE inline Vec8 operator-(const Vec8 &a, const Vec8 &b) {
   return Vec8(_mm256_sub_epi32(a, b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator-=(Vec8 &a, const Vec8 &b) {
+ALWAYS_INLINE inline Vec8 &operator-=(Vec8 &a, const Vec8 &b) {  // NOLINT
   a = a - b;
   return a;
 }
@@ -601,7 +601,7 @@ ALWAYS_INLINE inline Vec8 operator*(const Vec8 &a, const Vec8 &b) {
   return Vec8(_mm256_mullo_epi32(a, b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator*=(Vec8 &a, const Vec8 &b) {
+ALWAYS_INLINE inline Vec8 &operator*=(Vec8 &a, const Vec8 &b) {  // NOLINT
   a = a * b;
   return a;
 }
@@ -610,7 +610,7 @@ ALWAYS_INLINE inline Vec8 operator&(const Vec8 &a, const Vec8 &b) {
   return Vec8(Vec256b(a) & Vec256b(b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator&=(Vec8 &a, const Vec8 &b) {
+ALWAYS_INLINE inline Vec8 &operator&=(Vec8 &a, const Vec8 &b) {  // NOLINT
   a = a & b;
   return a;
 }
@@ -619,7 +619,7 @@ ALWAYS_INLINE inline Vec8 operator|(const Vec8 &a, const Vec8 &b) {
   return Vec8(Vec256b(a) | Vec256b(b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator|=(Vec8 &a, const Vec8 &b) {
+ALWAYS_INLINE inline Vec8 &operator|=(Vec8 &a, const Vec8 &b) {  // NOLINT
   a = a | b;
   return a;
 }
@@ -628,7 +628,7 @@ ALWAYS_INLINE inline Vec8 operator^(const Vec8 &a, const Vec8 &b) {
   return Vec8(Vec256b(a) ^ Vec256b(b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator^=(Vec8 &a, const Vec8 &b) {
+ALWAYS_INLINE inline Vec8 &operator^=(Vec8 &a, const Vec8 &b) {  // NOLINT
   a = a ^ b;
   return a;
 }
@@ -637,7 +637,7 @@ ALWAYS_INLINE inline Vec8 operator>>(const Vec8 &a, const u32 shift) {
   return Vec8(_mm256_srli_epi32(a, shift));
 }
 
-ALWAYS_INLINE inline Vec8 &operator>>=(Vec8 &a, const u32 shift) {
+ALWAYS_INLINE inline Vec8 &operator>>=(Vec8 &a, const u32 shift) {  // NOLINT
   a = a >> shift;
   return a;
 }
@@ -646,7 +646,7 @@ ALWAYS_INLINE inline Vec8 operator<<(const Vec8 &a, const u32 shift) {
   return Vec8(_mm256_slli_epi32(a, shift));
 }
 
-ALWAYS_INLINE inline Vec8 &operator<<=(Vec8 &a, const u32 shift) {
+ALWAYS_INLINE inline Vec8 &operator<<=(Vec8 &a, const u32 shift) {  // NOLINT
   a = a << shift;
   return a;
 }
@@ -655,7 +655,7 @@ ALWAYS_INLINE inline Vec8 operator>>(const Vec8 &a, const Vec8 &b) {
   return Vec8(_mm256_srlv_epi32(a, b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator>>=(Vec8 &a, const Vec8 &b) {
+ALWAYS_INLINE inline Vec8 &operator>>=(Vec8 &a, const Vec8 &b) {  // NOLINT
   a = a >> b;
   return a;
 }
@@ -664,7 +664,7 @@ ALWAYS_INLINE inline Vec8 operator<<(const Vec8 &a, const Vec8 &b) {
   return Vec8(_mm256_sllv_epi32(a, b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator<<=(Vec8 &a, const Vec8 &b) {
+ALWAYS_INLINE inline Vec8 &operator<<=(Vec8 &a, const Vec8 &b) {  // NOLINT
   a = a << b;
   return a;
 }

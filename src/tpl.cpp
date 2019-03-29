@@ -188,7 +188,7 @@ void SignalHandler(i32 sig_num) {
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv) {  // NOLINT(bugprone-exception-escape)
   // Initialize a signal handler to call SignalHandler()
   struct sigaction sa;
   sa.sa_handler = &SignalHandler;

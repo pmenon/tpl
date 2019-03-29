@@ -11,7 +11,8 @@ namespace tpl::sema {
 
 namespace {
 #define F(id, str, arg_types) str,
-constexpr const char *error_strings[] = {MESSAGE_LIST(F)};  // NOLINT(bugprone-suspicious-missing-comma)
+// NOLINTNEXTLINE(bugprone-suspicious-missing-comma)
+constexpr const char *error_strings[] = {MESSAGE_LIST(F)};
 #undef F
 
 }  // namespace

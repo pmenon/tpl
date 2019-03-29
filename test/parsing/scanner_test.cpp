@@ -50,7 +50,7 @@ TEST_F(ScannerTest, SimpleSourceTest) {
 struct Test {
   const std::string source;
   std::vector<Token::Type> expected_tokens;
-  std::function<void(Scanner &scanner, uint32_t token_idx)> check;
+  std::function<void(Scanner &scanner, uint32_t token_idx)> check;  // NOLINT
 };
 
 void CheckEquality(uint32_t test_idx, const std::vector<Token::Type> &expected,

@@ -97,6 +97,7 @@ class ReorderBuffer {
   // Use a 16 KB internal buffer for temporary copies
   static constexpr const u32 kBufferSizeInBytes = 16 * 1024;
 
+  // NOLINTNEXTLINE
   ReorderBuffer(util::ChunkedVector &entries, u64 max_elems, u64 begin_read_idx,
                 u64 end_read_idx) noexcept
       : entry_size_(entries.element_size()),
@@ -343,6 +344,7 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
 
     for (u64 idx = start, write_idx = 0, prefetch_idx = idx + kPrefetchDistance;
          idx < end; idx++, write_idx++, prefetch_idx++) {
+      // NOLINTNEXTLINE
       if constexpr (PrefetchCHT) {
         if (TPL_LIKELY(prefetch_idx < end)) {
           HashTableEntry *prefetch_entry = EntryAt(prefetch_idx);
@@ -473,7 +475,8 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
   EntryAt(num_entries - 1)->next = nullptr;
 }
 
-void JoinHashTable::VerifyMainEntryOrder() noexcept {
+void JoinHashTable::
+    VerifyMainEntryOrder() noexcept {  // NOLINT(bugprone-exception-escape)
 #ifndef NDEBUG
   const u64 overflow_idx = entries_.size() - concise_hash_table_.num_overflow();
   for (u32 idx = 0; idx < overflow_idx; idx++) {
@@ -494,7 +497,8 @@ void JoinHashTable::VerifyOverflowEntryOrder() noexcept {
 }
 
 template <bool PrefetchCHT, bool PrefetchEntries>
-void JoinHashTable::BuildConciseHashTableInternal() noexcept {
+void JoinHashTable::
+    BuildConciseHashTableInternal() noexcept {  // NOLINT(bugprone-exception-escape)
   // Insert all elements
   InsertIntoConciseHashTable<PrefetchCHT>();
 
@@ -519,7 +523,8 @@ void JoinHashTable::BuildConciseHashTableInternal() noexcept {
   VerifyOverflowEntryOrder();
 }
 
-void JoinHashTable::BuildConciseHashTable() noexcept {
+void JoinHashTable::
+    BuildConciseHashTable() noexcept {  // NOLINT(bugprone-exception-escape)
   // Setup based on number of buffered build-size tuples
   concise_hash_table_.SetSize(num_elements());
 

@@ -65,7 +65,9 @@ void Table::Dump(std::ostream &os) const {
   for (const auto &block : blocks_) {
     for (u32 row_idx = 0; row_idx < block.num_tuples(); row_idx++) {
       for (u32 col_idx = 0; col_idx < cols_meta.size(); col_idx++) {
-        if (col_idx != 0) { os << ", "; }
+        if (col_idx != 0) {
+          os << ", ";
+        }
         const auto *col_vector = block.GetColumnData(col_idx);
         DumpColValue(os, cols_meta[col_idx].type, *col_vector, row_idx);
       }

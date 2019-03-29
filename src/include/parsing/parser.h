@@ -17,7 +17,7 @@ class Parser {
   /// Build a parser instance using the given scanner and AST context
   /// \param scanner The scanner used to read input tokens
   /// \param ast_context The AST context
-  Parser(Scanner &scanner, ast::AstContext &ast_context);
+  Parser(Scanner &scanner, ast::AstContext &ast_context);  // NOLINT
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(Parser);

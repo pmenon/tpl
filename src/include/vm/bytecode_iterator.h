@@ -65,7 +65,7 @@ class BytecodeIterator {
   /// \param operand_index The index of the operand to retrieve
   /// \return The number of operands
   u16 GetLocalCountOperand(u32 operand_index,
-                           std::vector<LocalVar> &locals) const;
+                           std::vector<LocalVar> &locals) const;  // NOLINT
 
   ///
   /// \param operand_index

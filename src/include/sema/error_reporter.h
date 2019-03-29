@@ -80,7 +80,7 @@ class ErrorReporter {
 
    private:
     friend class ErrorReporter;
-    void FormatMessageArgument(std::string &str) const;
+    void FormatMessageArgument(std::string &str) const;  // NOLINT
 
    private:
     Kind kind_;

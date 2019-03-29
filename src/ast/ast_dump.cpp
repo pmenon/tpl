@@ -23,7 +23,8 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
   void Run() { Visit(root_); }
 
   // Declare all node visit methods here
-#define DECLARE_VISIT_METHOD(type) void Visit##type(type *node);  // NOLINT(bugprone-macro-parentheses)
+#define DECLARE_VISIT_METHOD(type) \
+  void Visit##type(type *node);  // NOLINT(bugprone-macro-parentheses)
   AST_NODES(DECLARE_VISIT_METHOD)
 #undef DECLARE_VISIT_METHOD
 

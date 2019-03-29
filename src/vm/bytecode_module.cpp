@@ -120,7 +120,8 @@ void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
 
   u64 max_local_len = 0;
   for (const auto &local : func.locals()) {
-    max_local_len = std::max(max_local_len, static_cast<u64>(local.name().length()));
+    max_local_len =
+        std::max(max_local_len, static_cast<u64>(local.name().length()));
   }
   for (const auto &local : func.locals()) {
     if (local.is_parameter()) {
@@ -138,7 +139,7 @@ void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
 }
 
 void PrettyPrintFuncCode(std::ostream &os, const FunctionInfo &func,
-                         BytecodeIterator &iter) {
+                         BytecodeIterator &iter) {  // NOLINT
   const u32 max_inst_len = Bytecodes::MaxBytecodeNameLength();
   for (; !iter.Done(); iter.Advance()) {
     Bytecode bytecode = iter.CurrentBytecode();

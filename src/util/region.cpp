@@ -18,7 +18,7 @@ Region::Region(std::string name) noexcept
       position_(0),
       end_(0) {}
 
-Region::~Region() { FreeAll(); }
+Region::~Region() { FreeAll(); }  // NOLINT(bugprone-exception-escape)
 
 void *Region::Allocate(std::size_t size, std::size_t alignment) {
   TPL_ASSERT(alignment > 0, "Alignment must be greater than 0");
@@ -48,7 +48,7 @@ void *Region::Allocate(std::size_t size, std::size_t alignment) {
   return reinterpret_cast<void *>(aligned_ptr);
 }
 
-void Region::FreeAll() {
+void Region::FreeAll() {  // NOLINT(bugprone-exception-escape)
   LOG_TRACE(
       "Region['{}', allocated: {} bytes, alignment waste: {} bytes, total "
       "chunks: {} bytes]",

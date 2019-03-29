@@ -138,6 +138,7 @@ std::pair<byte *, u32 *> GenerateColumnData(const ColumnInsertMeta &col_meta,
   // Create bitmap
   u32 *null_bitmap = nullptr;
   if (col_meta.type.nullable()) {
+    TPL_ASSERT(num_rows != 0, "Cannot have 0 rows.");
     u64 num_words = util::BitUtil::Num32BitWordsFor(num_rows);
     null_bitmap = static_cast<u32 *>(malloc(num_words * sizeof(u32)));
   }
@@ -158,8 +159,10 @@ void InitTable(const TableInsertMeta &table_meta, Table *table) {
 
     // Generate column data for all columns
     u32 num_vals = std::min(batch_size, table_meta.num_rows - (i * batch_size));
+    TPL_ASSERT(num_vals != 0, "Can't have empty columns.");
     for (const auto &col_meta : table_meta.col_meta) {
       auto [data, null_bitmap] = GenerateColumnData(col_meta, num_vals);
+      // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
       columns.emplace_back(col_meta.type, data, null_bitmap, num_vals);
     }
 

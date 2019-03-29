@@ -15,7 +15,7 @@ class BytecodeEmitter {
  public:
   /// Construct a bytecode emitter instance that emits bytecode operations into
   /// the provided bytecode vector
-  explicit BytecodeEmitter(std::vector<u8> &bytecode) noexcept
+  explicit BytecodeEmitter(std::vector<u8> &bytecode) noexcept  // NOLINT
       : bytecode_(bytecode) {}
 
   /// Cannot copy or move this class

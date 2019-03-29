@@ -90,7 +90,7 @@ class Type : public util::RegionObject {
   static std::string ToString(const Type *type);
 
  protected:
-  Type(AstContext &ctx, u32 size, u32 alignment, Kind kind)
+  Type(AstContext &ctx, u32 size, u32 alignment, Kind kind)  // NOLINT
       : ctx_(ctx), size_(size), align_(alignment), kind_(kind) {}
 
  private:
@@ -160,6 +160,7 @@ class IntegerType : public Type {
 
  private:
   friend class AstContext;
+  // NOLINTNEXTLINE
   IntegerType(AstContext &ctx, u32 size, u32 alignment, IntKind int_kind)
       : Type(ctx, size, alignment, Type::Kind::IntegerType),
         int_kind_(int_kind) {}
@@ -185,6 +186,7 @@ class FloatType : public Type {
 
  private:
   friend class AstContext;
+  // NOLINTNEXTLINE
   FloatType(AstContext &ctx, u32 size, u32 alignment, FloatKind float_kind)
       : Type(ctx, size, alignment, Type::Kind::FloatType),
         float_kind_(float_kind) {}
@@ -206,6 +208,7 @@ class BoolType : public Type {
 
  private:
   friend class AstContext;
+  // NOLINTNEXTLINE
   explicit BoolType(AstContext &ctx)
       : Type(ctx, sizeof(i8), alignof(i8), Type::Kind::BoolType) {}
 };
@@ -220,6 +223,7 @@ class StringType : public Type {
 
  private:
   friend class AstContext;
+  // NOLINTNEXTLINE
   explicit StringType(AstContext &ctx)
       : Type(ctx, sizeof(i8 *), alignof(i8 *), Type::Kind::StringType) {}
 };
@@ -378,6 +382,7 @@ class StructType : public Type {
     return (this == &other || fields() == other.fields());
   }
 
+  // NOLINTNEXTLINE
   static StructType *Get(AstContext &ctx, util::RegionVector<Field> &&fields);
   static StructType *Get(util::RegionVector<Field> &&fields);
 
@@ -386,7 +391,7 @@ class StructType : public Type {
   }
 
  private:
-  explicit StructType(AstContext &ctx, u32 size, u32 alignment,
+  explicit StructType(AstContext &ctx, u32 size, u32 alignment,  // NOLINT
                       util::RegionVector<Field> &&fields,
                       util::RegionVector<u32> &&field_offsets);
 
@@ -449,7 +454,7 @@ class InternalType : public Type {
 
  private:
   friend class AstContext;
-  explicit InternalType(AstContext &ctx, Identifier name, u32 size,
+  explicit InternalType(AstContext &ctx, Identifier name, u32 size,  // NOLINT
                         u32 alignment, InternalKind internal_kind)
       : Type(ctx, size, alignment, Type::Kind::InternalType),
         name_(name),
@@ -465,6 +470,7 @@ class InternalType : public Type {
  */
 class SqlType : public Type {
  public:
+  // NOLINTNEXTLINE
   static SqlType *Get(AstContext &ctx, const sql::Type &sql_type);
 
   const sql::Type &sql_type() const { return sql_type_; }
@@ -475,6 +481,7 @@ class SqlType : public Type {
   }
 
  private:
+  // NOLINTNEXTLINE
   SqlType(AstContext &ctx, u32 size, u32 alignment, const sql::Type &sql_type)
       : Type(ctx, size, alignment, Kind::SqlType), sql_type_(sql_type) {}
 

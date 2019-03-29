@@ -3,11 +3,12 @@
 #include <string>
 #include <vector>
 
+#include "tpl_test.h"  // NOLINT
+
 #include "bandit/agent.h"
 #include "bandit/environment.h"
 #include "bandit/multi_armed_bandit.h"
 #include "bandit/policy.h"
-#include "include/tpl_test.h"
 #include "logging/logger.h"
 #include "parsing/parser.h"
 #include "parsing/scanner.h"
@@ -93,7 +94,7 @@ class BanditTest : public TplTest,
         {3, 4, 0, 1, 2}, {4, 0, 1, 3, 2}, {4, 1, 0, 3, 2}, {4, 3, 1, 2, 0},
         {4, 3, 2, 0, 1}, {4, 3, 2, 1, 0}};
 
-    std::string tpl_code = "";
+    std::string tpl_code;
     std::vector<std::string> function_names;
 
     for (u32 i = 0; i < permuataions.size(); ++i) {
@@ -105,8 +106,8 @@ class BanditTest : public TplTest,
     return std::tuple(tpl_code, function_names);
   }
 
-  void SetPred1(std::string pred) { pred1_ = pred; }
-  void SetPred2(std::string pred) { pred2_ = pred; }
+  void SetPred1(std::string pred) { pred1_ = std::move(pred); }
+  void SetPred2(std::string pred) { pred2_ = std::move(pred); }
 
  private:
   std::string pred1_;

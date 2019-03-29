@@ -95,7 +95,7 @@ void Sorter::HeapSiftDown() {
   tuples_[idx] = top;
 }
 
-void Sorter::Sort() noexcept {
+void Sorter::Sort() noexcept {  // NOLINT(bugprone-exception-escape)
   if (tuples_.empty()) {
     return;
   }

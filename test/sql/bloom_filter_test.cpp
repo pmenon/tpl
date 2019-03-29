@@ -12,7 +12,7 @@ namespace tpl::sql::test {
 class BloomFilterTest : public TplTest {};
 
 template <typename F>
-void GenerateRandom32(std::vector<u32> &vals, u32 n, const F &f) {
+void GenerateRandom32(std::vector<u32> &vals, u32 n, const F &f) {  // NOLINT
   vals.resize(n);
   std::random_device random;
   auto genrand = [&random, &f]() {
@@ -26,12 +26,12 @@ void GenerateRandom32(std::vector<u32> &vals, u32 n, const F &f) {
   std::generate(vals.begin(), vals.end(), genrand);
 }
 
-void GenerateRandom32(std::vector<u32> &vals, u32 n) {
+void GenerateRandom32(std::vector<u32> &vals, u32 n) {  // NOLINT
   GenerateRandom32(vals, n, [](auto r) { return true; });
 }
 
 // Mix in elements from source into the target vector with probability p
-template <typename T>
+template <typename T>  // NOLINTNEXTLINE
 void Mix(std::vector<T> &target, const std::vector<T> &source, double p) {
   TPL_ASSERT(target.size() > source.size(), "Bad sizes!");
   std::random_device random;
@@ -58,12 +58,14 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
   util::Region tmp("filter");
   BloomFilter filter(&tmp, num_filter_elems);
   for (const auto elem : insertions) {
-    filter.Add(util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
+    filter.Add(
+        util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
   }
 
   // All inserted elements **must** be present in filter
   for (const auto elem : insertions) {
-    filter.Add(util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
+    filter.Add(
+        util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
   }
 
   auto bits_per_elem =

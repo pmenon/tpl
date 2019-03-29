@@ -1,7 +1,7 @@
 #include "bandit/policy.h"
 
-#include <cfloat>
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <limits>
 #include <vector>
@@ -30,7 +30,9 @@ u32 ChooseBestIndex(const std::vector<double> &values,
     }
   }
 
-  if (best_indices.size() == 1) { return best_indices[0]; }
+  if (best_indices.size() == 1) {
+    return best_indices[0];
+  }
   return best_indices[(*generator)() % best_indices.size()];
 }
 
