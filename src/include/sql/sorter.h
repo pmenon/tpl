@@ -58,7 +58,6 @@ class Sorter {
 class SorterIterator {
  public:
   explicit SorterIterator(Sorter *sorter) noexcept {
-    sorter->Sort();
     iter_ = sorter->tuples_.begin();
   }
 

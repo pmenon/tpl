@@ -121,6 +121,14 @@ class ChunkedVector {
 /// An iterator over the elements in a generic chunked-vector
 class ChunkedVectorRandomIterator {
  public:
+  // Random Iterator typedefs.
+  using difference_type = i64;
+  using value_type = byte *;
+  using iterator_category = std::random_access_iterator_tag;
+  using pointer = byte **;
+  using reference = byte *&;
+
+
   ChunkedVectorRandomIterator() noexcept
       : chunks_iter_(), element_size_(0), curr_(nullptr) {}
 
@@ -135,13 +143,6 @@ class ChunkedVectorRandomIterator {
       curr_ = *chunks_iter_;
     }
   }
-
-  // Random Iterator typedefs.
-  using difference_type = i64;
-  using value_type = byte *;
-  using iterator_category = std::random_access_iterator_tag;
-  using pointer = byte **;
-  using reference = byte *&;
 
   // Dereference
   byte *operator*() const noexcept { return curr_; }
@@ -420,15 +421,16 @@ class ChunkedVectorT {
 
   class Iterator {
    public:
-    explicit Iterator(ChunkedVectorRandomIterator iter) : iter_(iter) {}
-
-    Iterator() : iter_() {}
-
     using difference_type = ChunkedVectorRandomIterator::difference_type;
     using value_type = T;
     using iterator_category = std::random_access_iterator_tag;
     using pointer = T *;
     using reference = T &;
+
+    explicit Iterator(ChunkedVectorRandomIterator iter) : iter_(iter) {}
+
+    Iterator() : iter_() {}
+
 
     T &operator*() const noexcept { return *reinterpret_cast<T *>(*iter_); }
 
