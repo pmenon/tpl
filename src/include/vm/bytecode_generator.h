@@ -1,5 +1,8 @@
 #pragma once
 
+#include <unordered_map>
+#include <vector>
+
 #include "ast/ast.h"
 #include "ast/ast_visitor.h"
 #include "ast/builtins.h"
@@ -10,10 +13,12 @@ namespace tpl::vm {
 class BytecodeModule;
 class LoopBuilder;
 
-/// This class takes a correctly parsed and semantically type-checked TPL
-/// program as an AST and compiles it into TBC bytecode. The entry point into
-/// this class is the static \a Compile() function which performs the
-/// heavy lifting
+/// This class is responsible for generating and compiling a parsed and
+/// type-checked TPL program (as an AST) into TPL bytecode (TBC) as a
+/// BytecodeModule. Once compiled, all functions defined in the module are
+/// fully executable. BytecodeGenerator exposes a single public static function
+/// \a Compile() that performs the heavy lifting and orchestration involved in
+/// the compilation process.
 class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
  public:
   DISALLOW_COPY_AND_MOVE(BytecodeGenerator);
@@ -23,13 +28,12 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   AST_NODES(DECLARE_VISIT_METHOD)
 #undef DECLARE_VISIT_METHOD
 
-  static std::unique_ptr<BytecodeModule> Compile(util::Region *region,
-                                                 ast::AstNode *root,
+  static std::unique_ptr<BytecodeModule> Compile(ast::AstNode *root,
                                                  const std::string &name);
 
  private:
   // Private constructor to force users to call Compile()
-  explicit BytecodeGenerator(util::Region *region);
+  BytecodeGenerator() noexcept;
 
   class ExpressionResultScope;
   class LValueResultScope;
@@ -37,10 +41,8 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   class BytecodePositionScope;
 
   // Allocate a new function ID
-  FunctionInfo *AllocateFunc(const std::string &name);
-
-  // Allocate a hidden local variable in the current function
-  LocalVar NewHiddenLocal(const std::string &name, ast::Type *type);
+  FunctionInfo *AllocateFunc(const std::string &func_name,
+                             ast::FunctionType *func_type);
 
   // Dispatched from VisitForInStatement() when using tuple-at-time loops to
   // set up the row structure used in the body of the loop
@@ -106,14 +108,11 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   BytecodeEmitter *emitter() { return &emitter_; }
 
  private:
-  const FunctionInfo *LookupFuncInfoByName(const std::string &name) const {
-    for (const auto &func : functions()) {
-      if (func.name() == name) {
-        return &func;
-      }
-    }
-    return nullptr;
-  }
+  // Lookup a function's ID by its name
+  FunctionId LookupFuncIdByName(const std::string &name) const;
+
+  // Lookup a function by its name
+  const FunctionInfo *LookupFuncInfoByName(const std::string &name) const;
 
   // -------------------------------------------------------
   // Accessors
@@ -127,29 +126,21 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
   FunctionInfo *current_function() { return &functions_.back(); }
 
-  util::RegionVector<u8> &bytecode() { return bytecode_; }
-
-  util::RegionVector<FunctionInfo> &functions() { return functions_; }
-
-  const util::RegionVector<FunctionInfo> &functions() const {
-    return functions_;
-  }
-
  private:
   // The bytecode generated during compilation
-  util::RegionVector<u8> bytecode_;
+  std::vector<u8> bytecode_;
 
   // Information about all generated functions
-  util::RegionVector<FunctionInfo> functions_;
+  std::vector<FunctionInfo> functions_;
+
+  // Cache of function names to IDs for faster lookup
+  std::unordered_map<std::string, FunctionId> func_map_;
 
   // Emitter to write bytecode ops
   BytecodeEmitter emitter_;
 
   // RAII struct to capture semantics of expression evaluation
   ExpressionResultScope *execution_result_;
-
-  // A cache of names of per-function hidden variables used to ensure uniqueness
-  std::unordered_map<std::string, u32> name_cache_;
 };
 
 }  // namespace tpl::vm

@@ -1,9 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include "util/common.h"
-#include "util/region_containers.h"
 #include "vm/bytecode_function_info.h"
 #include "vm/bytecodes.h"
 
@@ -15,7 +15,7 @@ class BytecodeEmitter {
  public:
   /// Construct a bytecode emitter instance that emits bytecode operations into
   /// the provided bytecode vector
-  explicit BytecodeEmitter(util::RegionVector<u8> &bytecode) noexcept
+  explicit BytecodeEmitter(std::vector<u8> &bytecode) noexcept
       : bytecode_(bytecode) {}
 
   /// Cannot copy or move this class
@@ -113,7 +113,7 @@ class BytecodeEmitter {
  private:
   // Copy a scalar immediate value into the bytecode stream
   template <typename T>
-  typename std::enable_if_t<std::is_integral_v<T>> EmitScalarValue(T val) {
+  auto EmitScalarValue(T val) -> std::enable_if_t<std::is_integral_v<T>> {
     bytecode_.insert(bytecode_.end(), sizeof(T), 0);
     *reinterpret_cast<T *>(&*(bytecode_.end() - sizeof(T))) = val;
   }
@@ -128,7 +128,7 @@ class BytecodeEmitter {
 
   // Emit an integer immediate value
   template <typename T>
-  typename std::enable_if_t<std::is_integral_v<T>> EmitImpl(T val) {
+  auto EmitImpl(T val) -> std::enable_if_t<std::is_integral_v<T>> {
     EmitScalarValue(val);
   }
 
@@ -142,7 +142,7 @@ class BytecodeEmitter {
   void EmitJump(BytecodeLabel *label);
 
  private:
-  util::RegionVector<u8> &bytecode_;
+  std::vector<u8> &bytecode_;
 };
 
 }  // namespace tpl::vm

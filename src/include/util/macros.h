@@ -1,8 +1,6 @@
 #pragma once
 
 #include <cassert>
-#include <cstdint>
-#include <cstring>
 
 #include "llvm/Support/ErrorHandling.h"
 
@@ -37,6 +35,3 @@
 #endif
 
 #define UNREACHABLE(msg) llvm_unreachable(msg)
-
-#define TPL_MEMCPY(dest, src, nbytes) std::memcpy(dest, src, nbytes)
-#define TPL_MEMSET(dest, c, nbytes) std::memset(dest, c, nbytes)

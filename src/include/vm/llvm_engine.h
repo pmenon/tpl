@@ -100,30 +100,26 @@ class LLVMEngine {
   /// been JIT compiled into native code.
   class CompiledModule {
    public:
+    /// Constructor
+    CompiledModule() : CompiledModule(nullptr) {}
     explicit CompiledModule(std::unique_ptr<llvm::MemoryBuffer> object_code);
 
     /// No copying or moving this class
     DISALLOW_COPY_AND_MOVE(CompiledModule);
 
+    /// Destroy
     ~CompiledModule();
 
-    /// Obtain a raw function pointer to a JITted function in this module
-    /// \param name The name of the function
-    /// \return A raw function pointer if a function with the name exists. If no
-    /// function with the provided name exists, this will return null
+    /// Get a pointer to the jitted function in this module with name \a name
+    /// \return A function pointer if a function exists with name \a name. If no
+    ///         function exists, returns null.
     void *GetFunctionPointer(const std::string &name) const;
 
-    /// Load this module into memory
-    /// \param module
+    /// Load the given module \a module into memory
     void Load(const BytecodeModule &module);
 
-   private:
-    bool loaded() const { return loaded_; }
-    void set_loaded(bool loaded) { loaded_ = loaded; }
-
-    llvm::MemoryBuffer *object_code() { return object_code_.get(); }
-
-    TPLMemoryManager *memory_manager() { return memory_manager_.get(); }
+    /// Has this module been loaded into memory and linked?
+    bool is_loaded() const { return loaded_; }
 
    private:
     bool loaded_;

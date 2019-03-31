@@ -28,12 +28,12 @@ struct TestConf {
   std::string out_file;
 };
 
-class BytecodeExpectations {
+class BytecodeCompiler {
  public:
-  explicit BytecodeExpectations(util::Region *region)
+  explicit BytecodeCompiler(util::Region *region)
       : errors_(region), ctx_(region, errors_) {}
 
-  ast::AstNode *Compile(const std::string &source) {
+  ast::AstNode *CompileToAst(const std::string &source) {
     parsing::Scanner scanner(source);
     parsing::Parser parser(scanner, ctx_);
 
@@ -161,11 +161,11 @@ TEST_P(BanditTest, DISABLED_SimpleTest) {
 
   auto [src, action_names] = CreateSampleTPLCode();
 
-  BytecodeExpectations expectations(region());
-  auto *ast = expectations.Compile(src);
+  BytecodeCompiler expectations(region());
+  auto *ast = expectations.CompileToAst(src);
 
   // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(region(), ast, "bandit");
+  auto module = BytecodeGenerator::Compile(ast, "bandit");
 
   auto bandit = bandit::MultiArmedBandit(module.get(), action_names);
 

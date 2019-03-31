@@ -340,8 +340,12 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
   // Resolve single argument
   auto *type = Resolve(call->arguments()[0]);
 
+  if (type == nullptr) {
+    return;
+  }
+
   // If not a pointer type, fail
-  if (type == nullptr || !type->IsPointerType()) {
+  if (!type->IsPointerType()) {
     error_reporter().Report(call->position(),
                             ErrorMessages::kBadArgToHashTableBuild, type);
     return;

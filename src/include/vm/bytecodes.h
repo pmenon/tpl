@@ -145,6 +145,7 @@ namespace tpl::vm {
   F(JoinHashTableBuild, OperandType::Local)                                                                            \
                                                                                                                        \
   /* Sorting */                                                                                                        \
+  F(SorterInit, OperandType::Local, OperandType::FunctionPtr, OperandType::UImm4)                                      \
   F(SorterAllocInputTuple, OperandType::Local)                                                                         \
   F(SorterAllocInputTupleTopK, OperandType::Local)                                                                     \
   F(SorterAllocInputTupleTopKFinish, OperandType::Local)                                                               \
@@ -218,26 +219,28 @@ class Bytecodes {
   }
 
   // Converts the given bytecode to a single-byte representation
-  static std::underlying_type_t<Bytecode> ToByte(Bytecode bytecode) {
+  static constexpr std::underlying_type_t<Bytecode> ToByte(Bytecode bytecode) {
     TPL_ASSERT(bytecode <= Bytecode::Last, "Invalid bytecode");
     return static_cast<std::underlying_type_t<Bytecode>>(bytecode);
   }
 
   // Converts the given unsigned byte into the associated bytecode
-  static Bytecode FromByte(std::underlying_type_t<Bytecode> val) {
+  static constexpr Bytecode FromByte(std::underlying_type_t<Bytecode> val) {
     auto bytecode = static_cast<Bytecode>(val);
     TPL_ASSERT(bytecode <= Bytecode::Last, "Invalid bytecode");
     return bytecode;
   }
 
-  static bool IsJump(Bytecode bytecode) {
+  static constexpr bool IsJump(Bytecode bytecode) {
     return (bytecode == Bytecode::Jump || bytecode == Bytecode::JumpIfFalse ||
             bytecode == Bytecode::JumpIfTrue);
   }
 
-  static bool IsCall(Bytecode bytecode) { return bytecode == Bytecode::Call; }
+  static constexpr bool IsCall(Bytecode bytecode) {
+    return bytecode == Bytecode::Call;
+  }
 
-  static bool IsTerminal(Bytecode bytecode) {
+  static constexpr bool IsTerminal(Bytecode bytecode) {
     return bytecode == Bytecode::Jump || bytecode == Bytecode::Return;
   }
 

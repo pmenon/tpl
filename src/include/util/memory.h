@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "util/common.h"
+#include "util/macros.h"
 
 namespace tpl::util {
 

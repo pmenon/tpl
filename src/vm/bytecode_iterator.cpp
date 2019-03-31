@@ -5,7 +5,7 @@
 
 namespace tpl::vm {
 
-BytecodeIterator::BytecodeIterator(const util::RegionVector<u8> &bytecode,
+BytecodeIterator::BytecodeIterator(const std::vector<u8> &bytecode,
                                    std::size_t start, std::size_t end)
     : bytecodes_(bytecode),
       start_offset_(start),

@@ -1,5 +1,7 @@
 #include "vm/vm.h"
 
+#include <numeric>
+
 #include "sql/table.h"
 #include "sql/value.h"
 #include "util/common.h"
@@ -10,9 +12,102 @@
 
 namespace tpl::vm {
 
-VM::VM(util::Region *region, const BytecodeModule &module)
-    : stack_(kDefaultInitialStackSize, 0, region), sp_(0), module_(module) {
-  TPL_MEMSET(bytecode_counts_, 0, sizeof(bytecode_counts_));
+// ---------------------------------------------------------
+// Virtual Machine Frame
+// ---------------------------------------------------------
+
+/// An execution frame where all function's local variables and parameters live
+/// for the duration of the function's lifetime.
+class VM::Frame {
+  friend class VM;
+
+ public:
+  /// Constructor
+  Frame(VM *vm, std::size_t frame_size) : vm_(vm), frame_size_(frame_size) {
+    frame_data_ = vm->AllocateFrame(frame_size);
+    TPL_ASSERT(frame_data_ != nullptr, "Frame data cannot be null");
+    TPL_ASSERT(frame_size_ >= 0, "Frame size must be >= 0");
+  }
+
+  /// Destructor
+  ~Frame() { vm_->ReleaseFrame(frame_size_); }
+
+  /// Access the local variable at the given index in the fame. The \ref 'index'
+  /// attribute is encoded and indicates whether the local variable is accessed
+  /// through an indirection (i.e., if the variable has to be dereferenced or
+  /// loaded)
+  /// \tparam T The type of the variable the user expects
+  /// \param index The encoded index into the frame where the variable is
+  /// \return The value of the variable. Note that this is copied!
+  template <typename T>
+  T LocalAt(u32 index) const {
+    LocalVar local = LocalVar::Decode(index);
+
+    EnsureInFrame(local);
+
+    auto val = reinterpret_cast<uintptr_t>(&frame_data_[local.GetOffset()]);
+
+    if (local.GetAddressMode() == LocalVar::AddressMode::Value) {
+      return *(T *)(val);
+    }
+
+    return (T)val;
+  }
+
+ private:
+#ifndef NDEBUG
+  // Ensure the local variable is valid
+  void EnsureInFrame(LocalVar var) const {
+    if (var.GetOffset() >= frame_size_) {
+      std::string error_msg =
+          fmt::format("Accessing local at offset {}, beyond frame of size {}",
+                      var.GetOffset(), frame_size_);
+      LOG_ERROR("{}", error_msg);
+      throw std::runtime_error(error_msg);
+    }
+  }
+#else
+  void EnsureInFrame(UNUSED LocalVar var) const {}
+#endif
+
+  u8 *raw_frame() const { return frame_data_; }
+
+ private:
+  VM *vm_;
+  u8 *frame_data_;
+  std::size_t frame_size_;
+};
+
+// ---------------------------------------------------------
+// Virtual Machine
+// ---------------------------------------------------------
+
+VM::VM(const BytecodeModule &module, util::Region *region)
+    : our_region_(module.name()),
+      region_(region != nullptr ? region : &our_region_),
+      stack_(kDefaultInitialStackSize, 0, region_),
+      sp_(0),
+      module_(module),
+      bytecode_counts_{0ull} {}
+
+// static
+void VM::InvokeFunction(const BytecodeModule &module, const FunctionId func,
+                        const u8 args[]) {
+  const FunctionInfo *const func_info = module.GetFuncInfoById(func);
+  const u8 *ip = module.GetBytecodeForFunction(*func_info);
+
+  // The virtual machine
+  VM vm(module);
+
+  // Locals frame
+  Frame frame(&vm, func_info->frame_size());
+
+  // Copy args into frame
+  std::memcpy(frame.raw_frame() + func_info->params_start_pos(), args,
+              func_info->params_size());
+
+  // Let's go
+  vm.Interpret(ip, &frame);
 }
 
 namespace {
@@ -576,6 +671,17 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // Sorting
   // -------------------------------------------------------
 
+  OP(SorterInit) : {
+    auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
+    auto cmp_func_id = frame->LocalAt<FunctionId>(READ_UIMM2());
+    auto tuple_size = READ_UIMM4();
+
+    auto cmp_fn = reinterpret_cast<sql::Sorter::ComparisonFunction>(
+        module().GetFuncTrampoline(cmp_func_id));
+    OpSorterInit(sorter, nullptr, cmp_fn, tuple_size);
+    DISPATCH_NEXT();
+  }
+
   OP(SorterAllocInputTuple) : {
     auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
@@ -615,38 +721,37 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 }
 
 const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
-  /*
-   * Read the function ID and the argument count to the function first
-   */
+  //
+  // Read the function ID and the argument count to the function first
+  //
 
   u16 func_id = READ_UIMM2();
   u16 num_params = READ_UIMM2();
 
-  /*
-   * Lookup the function
-   */
+  //
+  // Lookup the function
+  //
 
   const FunctionInfo *func = module().GetFuncInfoById(func_id);
   TPL_ASSERT(func != nullptr, "Function doesn't exist in module!");
 
-  /*
-   * Create the function's execution frame, and initialize it with the call
-   * arguments encoded in the instruction stream
-   */
+  //
+  // Create the function's execution frame, and initialize it with the call
+  // arguments encoded in the instruction stream
+  //
 
   VM::Frame callee(this, func->frame_size());
 
-  u8 *raw_frame = callee.raw_frame();
+  u8 *const raw_frame = callee.raw_frame();
   for (u32 i = 0; i < num_params; i++) {
-    u32 param_size = func->locals()[i].Size();
-    auto *param = caller->LocalAt<void *>(READ_LOCAL_ID());
-    TPL_MEMCPY(raw_frame, &param, param_size);
-    raw_frame += param_size;
+    const LocalInfo &param_info = func->locals()[i];
+    const void *const param = caller->LocalAt<void *>(READ_LOCAL_ID());
+    std::memcpy(raw_frame + param_info.offset(), &param, param_info.size());
   }
 
-  /*
-   * Frame preparation is complete. Let's bounce ...
-   */
+  //
+  // Frame preparation is complete. Let's bounce ...
+  //
 
   const u8 *bytecode = module().GetBytecodeForFunction(*func);
   TPL_ASSERT(bytecode != nullptr, "Bytecode cannot be null");

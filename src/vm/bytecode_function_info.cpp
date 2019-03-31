@@ -5,7 +5,21 @@
 
 namespace tpl::vm {
 
-u32 LocalInfo::Size() const { return type()->size(); }
+// ---------------------------------------------------------
+// Local Information
+// ---------------------------------------------------------
+
+LocalInfo::LocalInfo(std::string name, ast::Type *type, u32 offset,
+                     LocalInfo::Kind kind) noexcept
+    : name_(std::move(name)),
+      type_(type),
+      offset_(offset),
+      size_(type->size()),
+      kind_(kind) {}
+
+// ---------------------------------------------------------
+// Function Information
+// ---------------------------------------------------------
 
 LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
                                 LocalInfo::Kind kind) {
@@ -16,7 +30,7 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
     frame_size_ = util::MathUtil::AlignTo(frame_size_, type->alignment());
   }
 
-  auto offset = static_cast<u32>(frame_size());
+  const auto offset = static_cast<u32>(frame_size_);
   locals_.emplace_back(name, type, offset, kind);
 
   frame_size_ += type->size();
@@ -24,19 +38,21 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
   return LocalVar(offset, LocalVar::AddressMode::Address);
 }
 
-LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name) {
-  return NewLocal(type, name, LocalInfo::Kind::Var);
-}
-
 LocalVar FunctionInfo::NewParameterLocal(ast::Type *type,
                                          const std::string &name) {
+  const LocalVar local = NewLocal(type, name, LocalInfo::Kind::Parameter);
   num_params_++;
-  return NewLocal(type, name, LocalInfo::Kind::Parameter);
+  params_size_ = frame_size();
+  return local;
 }
 
-LocalVar FunctionInfo::NewTempLocal(ast::Type *type) {
-  std::string tmp_name = "tmp" + std::to_string(NextTempId());
-  return NewLocal(type, tmp_name, LocalInfo::Kind::Temporary);
+LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name) {
+  if (name.empty()) {
+    const auto tmp_name = "tmp" + std::to_string(++num_temps_);
+    return NewLocal(type, tmp_name, LocalInfo::Kind::Var);
+  }
+
+  return NewLocal(type, name, LocalInfo::Kind::Var);
 }
 
 LocalVar FunctionInfo::LookupLocal(const std::string &name) const {

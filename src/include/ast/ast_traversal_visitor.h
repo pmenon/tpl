@@ -166,13 +166,13 @@ inline void AstTraversalVisitor<Subclass>::VisitFunctionLitExpr(
 template <typename Subclass>
 inline void AstTraversalVisitor<Subclass>::VisitForStmt(ForStmt *node) {
   PROCESS_NODE(node);
-  if (node->HasInitializer()) {
+  if (node->init() != nullptr) {
     RECURSE(Visit(node->init()));
   }
-  if (node->HasCondition()) {
+  if (node->condition() != nullptr) {
     RECURSE(Visit(node->condition()));
   }
-  if (node->HasNext()) {
+  if (node->next() != nullptr) {
     RECURSE(Visit(node->next()));
   }
   RECURSE(Visit(node->body()));
