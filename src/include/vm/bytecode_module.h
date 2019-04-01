@@ -6,6 +6,7 @@
 
 #include "llvm/Support/Memory.h"
 
+#include "ast/type.h"
 #include "logging/logger.h"
 #include "util/memory.h"
 #include "vm/bytecode_function_info.h"
@@ -83,7 +84,7 @@ class BytecodeModule {
   // -------------------------------------------------------
 
   /// Return the name of the module
-  const std::string &name() const noexcept { return name_; }
+  const std::string &name() const { return name_; }
 
   /// Return a constant view of all functions
   const std::vector<FunctionInfo> &functions() const { return functions_; }
@@ -174,9 +175,8 @@ inline bool BytecodeModule::GetFunction(
   }
 
   // Verify argument counts
-  constexpr const u32 num_params =
-      sizeof...(ArgTypes) + (std::is_void_v<RetT> ? 0 : 1);
-  if (num_params != func_info->num_params()) {
+  constexpr const u32 num_params = sizeof...(ArgTypes);
+  if (num_params != func_info->func_type()->num_params()) {
     return false;
   }
 
@@ -208,24 +208,22 @@ inline bool BytecodeModule::GetFunction(
     }
     case ExecutionMode::Jit: {
       func = [this, func_info](ArgTypes... args) -> RetT {
+        // TODO(pmenon): Check if already compiled
+
         // JIT the module
         auto compiled = LLVMEngine::Compile(*this);
-        // Pull out the function
+
         void *raw_fn = compiled->GetFunctionPointer(func_info->name());
         TPL_ASSERT(raw_fn != nullptr, "No function");
-        // Let's go!
+
         if constexpr (std::is_void_v<RetT>) {
-          // Invoke the function
           auto *jit_f = reinterpret_cast<void (*)(ArgTypes...)>(raw_fn);
           jit_f(args...);
-          // Finish
           return;
         } else {
-          // Invoke the function
           auto *jit_f = reinterpret_cast<void (*)(RetT *, ArgTypes...)>(raw_fn);
           RetT rv{};
           jit_f(&rv, args...);
-          // Finish
           return rv;
         }
       };
