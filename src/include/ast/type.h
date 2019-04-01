@@ -118,7 +118,7 @@ class IntegerType : public Type {
 
   IntKind int_kind() const { return int_kind_; }
 
-  static IntegerType *Get(const AstContext &ctx, IntKind kind);
+  static IntegerType *Get(AstContext *ctx, IntKind kind);
 
   u32 BitWidth() const {
     switch (int_kind()) {
@@ -178,7 +178,7 @@ class FloatType : public Type {
 
   FloatKind float_kind() const { return float_kind_; }
 
-  static FloatType *Get(const AstContext &ctx, FloatKind kind);
+  static FloatType *Get(AstContext *ctx, FloatKind kind);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::FloatType;
@@ -200,7 +200,7 @@ class FloatType : public Type {
  */
 class BoolType : public Type {
  public:
-  static BoolType *Get(const AstContext &ctx);
+  static BoolType *Get(AstContext *ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::BoolType;
@@ -215,7 +215,7 @@ class BoolType : public Type {
 
 class StringType : public Type {
  public:
-  static StringType *Get(const AstContext &ctx);
+  static StringType *Get(AstContext *ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::StringType;
@@ -233,7 +233,7 @@ class StringType : public Type {
  */
 class NilType : public Type {
  public:
-  static NilType *Get(const AstContext &ctx);
+  static NilType *Get(AstContext *ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::NilType;
@@ -445,7 +445,7 @@ class InternalType : public Type {
   static constexpr u32 NumInternalTypes() { return kNumInternalKinds; }
 
   // Static factory
-  static InternalType *Get(const AstContext &ctx, InternalKind kind);
+  static InternalType *Get(AstContext *ctx, InternalKind kind);
 
   // Type check
   static bool classof(const Type *type) {

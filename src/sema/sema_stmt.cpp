@@ -114,7 +114,7 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
       attributes != nullptr &&
       attributes->Contains(ast_context().GetIdentifier("batch"))) {
     iter_type = ast::InternalType::Get(
-        ast_context(),
+        &ast_context(),
         ast::InternalType::InternalKind::VectorProjectionIterator);
   } else {
     iter_type = ConvertSchemaToType(table->schema());
@@ -152,8 +152,8 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
     ast::Expr *cond = node->condition();
     cond = ast_context().node_factory().NewImplicitCastExpr(
         cond->position(), ast::ImplicitCastExpr::CastKind::SqlBoolToBool,
-        ast::BoolType::Get(ast_context()), cond);
-    cond->set_type(ast::BoolType::Get(ast_context()));
+        ast::BoolType::Get(&ast_context()), cond);
+    cond->set_type(ast::BoolType::Get(&ast_context()));
     node->set_condition(cond);
   }
 
@@ -214,7 +214,7 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
     // It's possible the return type is null (either because there was an error
     // or there wasn't an expression)
     if (return_type == nullptr) {
-      return_type = ast::NilType::Get(ast_context());
+      return_type = ast::NilType::Get(&ast_context());
     }
 
     error_reporter().Report(node->position(),

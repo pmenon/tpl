@@ -25,10 +25,10 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
     // Implicit cast
     left = ast_context().node_factory().NewImplicitCastExpr(
         left->position(), ast::ImplicitCastExpr::CastKind::SqlBoolToBool,
-        ast::BoolType::Get(ast_context()), left);
+        ast::BoolType::Get(&ast_context()), left);
 
     // Resolve
-    left->set_type(ast::BoolType::Get(ast_context()));
+    left->set_type(ast::BoolType::Get(&ast_context()));
   }
 
   if (auto *right_type = right->type()->SafeAs<ast::SqlType>();
@@ -36,10 +36,10 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
     // Implicit cast
     right = ast_context().node_factory().NewImplicitCastExpr(
         right->position(), ast::ImplicitCastExpr::CastKind::SqlBoolToBool,
-        ast::BoolType::Get(ast_context()), right);
+        ast::BoolType::Get(&ast_context()), right);
 
     // Resolve
-    right->set_type(ast::BoolType::Get(ast_context()));
+    right->set_type(ast::BoolType::Get(&ast_context()));
   }
 
   /*
@@ -48,7 +48,7 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
    */
 
   if (left->type()->IsBoolType() && right->type()->IsBoolType()) {
-    return {ast::BoolType::Get(ast_context()), left, right};
+    return {ast::BoolType::Get(&ast_context()), left, right};
   }
 
   error_reporter().Report(pos, ErrorMessages::kMismatchedTypesToBinary,
@@ -127,7 +127,7 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
   }
 
   if (left_type == right_type) {
-    return {ast::BoolType::Get(ast_context()), left, right};
+    return {ast::BoolType::Get(&ast_context()), left, right};
   }
 
   ast::Type *sql_int_type =
@@ -284,7 +284,7 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
       arguments[0]->type()->As<ast::InternalType>()->internal_kind() !=
           ast::InternalType::InternalKind::VectorProjectionIterator) {
     auto *vpi_type = ast::InternalType::Get(
-        ast_context(),
+        &ast_context(),
         ast::InternalType::InternalKind::VectorProjectionIterator);
     error_reporter().Report(call->position(),
                             ErrorMessages::kIncorrectCallArgType,
@@ -295,12 +295,12 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
   if (!arguments[1]->type()->IsStringType()) {
     error_reporter().Report(
         call->position(), ErrorMessages::kIncorrectCallArgType,
-        arguments[1]->type(), ast::StringType::Get(ast_context()),
+        arguments[1]->type(), ast::StringType::Get(&ast_context()),
         call->FuncName());
   }
 
   call->set_type(
-      ast::IntegerType::Get(ast_context(), ast::IntegerType::IntKind::Int32));
+      ast::IntegerType::Get(&ast_context(), ast::IntegerType::IntKind::Int32));
 }
 
 void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
@@ -375,7 +375,7 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
   }
 
   // This call returns nothing
-  call->set_type(ast::NilType::Get(ast_context()));
+  call->set_type(ast::NilType::Get(&ast_context()));
 }
 
 void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
@@ -580,7 +580,7 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
       }
 
       // Type is native boolean
-      node->set_type(ast::BoolType::Get(expr_type->context()));
+      node->set_type(ast::BoolType::Get(&expr_type->context()));
 
       break;
     }
@@ -628,27 +628,27 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
 void Sema::VisitLitExpr(ast::LitExpr *node) {
   switch (node->literal_kind()) {
     case ast::LitExpr::LitKind::Nil: {
-      node->set_type(ast::NilType::Get(ast_context()));
+      node->set_type(ast::NilType::Get(&ast_context()));
       break;
     }
     case ast::LitExpr::LitKind::Boolean: {
-      node->set_type(ast::BoolType::Get(ast_context()));
+      node->set_type(ast::BoolType::Get(&ast_context()));
       break;
     }
     case ast::LitExpr::LitKind::Float: {
       // Literal floats default to float32
-      node->set_type(ast::FloatType::Get(ast_context(),
+      node->set_type(ast::FloatType::Get(&ast_context(),
                                          ast::FloatType::FloatKind::Float32));
       break;
     }
     case ast::LitExpr::LitKind::Int: {
       // Literal integers default to int32
-      node->set_type(ast::IntegerType::Get(ast_context(),
+      node->set_type(ast::IntegerType::Get(&ast_context(),
                                            ast::IntegerType::IntKind::Int32));
       break;
     }
     case ast::LitExpr::LitKind::String: {
-      node->set_type(ast::StringType::Get(ast_context()));
+      node->set_type(ast::StringType::Get(&ast_context()));
       break;
     }
   }

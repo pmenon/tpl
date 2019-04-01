@@ -195,7 +195,7 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
     vpi_loop.LoopHeader();
 
     ast::AstContext &ctx = row_type->context();
-    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(ctx));
+    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(&ctx));
     emitter()->Emit(Bytecode::VPIHasNext, cond, vpi);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    vpi_loop.break_label());
@@ -267,7 +267,7 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   }
 
   ast::InternalType *table_iter_type = ast::InternalType::Get(
-      ctx, ast::InternalType::InternalKind::TableVectorIterator);
+      &ctx, ast::InternalType::InternalKind::TableVectorIterator);
   LocalVar table_iter =
       current_function()->NewLocal(table_iter_type, "table_iter");
 
@@ -287,7 +287,7 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   //
 
   ast::InternalType *vpi_type = ast::InternalType::Get(
-      ctx, ast::InternalType::InternalKind::VectorProjectionIterator);
+      &ctx, ast::InternalType::InternalKind::VectorProjectionIterator);
   LocalVar vpi = current_function()->NewLocal(vpi_type->PointerTo(), "vpi");
 
   emitter()->Emit(Bytecode::TableVectorIteratorGetVPI, vpi, table_iter);
@@ -303,7 +303,7 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
     LoopBuilder table_loop(this);
     table_loop.LoopHeader();
 
-    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(ctx));
+    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(&ctx));
     emitter()->Emit(Bytecode::TableVectorIteratorNext, cond, table_iter);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    table_loop.break_label());
@@ -591,7 +591,7 @@ void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
                                                    ast::Builtin builtin) {
   ast::AstContext &ctx = call->type()->context();
   ast::Type *ret_type =
-      ast::IntegerType::Get(ctx, ast::IntegerType::IntKind::Int32);
+      ast::IntegerType::Get(&ctx, ast::IntegerType::IntKind::Int32);
 
   LocalVar ret_val;
   if (execution_result() != nullptr) {
