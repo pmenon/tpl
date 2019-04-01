@@ -96,9 +96,7 @@ TEST_F(AggregatorsTest, SumIntegerTest) {
   }
 }
 
-
 TEST_F(AggregatorsTest, MergeSumIntegersTest) {
-
   IntegerSumAggregate sum1;
   EXPECT_TRUE(sum1.GetResultSum().is_null);
   for (u64 i = 0; i < 10; i++) {
@@ -133,19 +131,17 @@ TEST_F(AggregatorsTest, MaxIntegerTest) {
   IntegerMaxAggregate max;
   EXPECT_TRUE(max.GetResultMax().is_null);
 
-
   IntegerMaxAggregate nullMax;
   EXPECT_TRUE(nullMax.GetResultMax().is_null);
 
   max.Merge(nullMax);
   EXPECT_TRUE(max.GetResultMax().is_null);
 
-
-  for(i64 i = 0; i < 25; i++) {
+  for (i64 i = 0; i < 25; i++) {
     i64 j = i;
 
-    //mix in some low numbers
-    if(i % 2 == 0){
+    // mix in some low numbers
+    if (i % 2 == 0) {
       j = -i;
     }
     Integer val = Integer(j);
@@ -157,11 +153,11 @@ TEST_F(AggregatorsTest, MaxIntegerTest) {
 
   IntegerMaxAggregate max2;
   EXPECT_TRUE(max2.GetResultMax().is_null);
-  for(i64 i = 23; i < 45; i++) {
+  for (i64 i = 23; i < 45; i++) {
     i64 j = i;
 
-    //mix in some low numbers
-    if(i % 2 == 0){
+    // mix in some low numbers
+    if (i % 2 == 0) {
       j = -i;
     }
     Integer val = Integer(j);
@@ -184,19 +180,17 @@ TEST_F(AggregatorsTest, MinIntegerTest) {
   IntegerMinAggregate min;
   EXPECT_TRUE(min.GetResultMin().is_null);
 
-
   IntegerMinAggregate nullMin;
   EXPECT_TRUE(nullMin.GetResultMin().is_null);
 
   min.Merge(nullMin);
   EXPECT_TRUE(min.GetResultMin().is_null);
 
-
-  for(i64 i = 0; i < 25; i++) {
+  for (i64 i = 0; i < 25; i++) {
     i64 j = i;
 
-    //mix in some low numbers
-    if(i % 2 == 0){
+    // mix in some low numbers
+    if (i % 2 == 0) {
       j = -i;
     }
     Integer val = Integer(j);
@@ -208,11 +202,11 @@ TEST_F(AggregatorsTest, MinIntegerTest) {
 
   IntegerMinAggregate min2;
   EXPECT_TRUE(min2.GetResultMin().is_null);
-  for(i64 i = 23; i < 45; i++) {
+  for (i64 i = 23; i < 45; i++) {
     i64 j = i;
 
-    //mix in some low numbers
-    if(i % 2 == 0){
+    // mix in some low numbers
+    if (i % 2 == 0) {
       j = -i;
     }
     Integer val = Integer(j);
@@ -235,15 +229,13 @@ TEST_F(AggregatorsTest, AvgIntegerTest) {
   IntegerAvgAggregate avg;
   EXPECT_TRUE(avg.GetResultAvg().is_null);
 
-
   IntegerAvgAggregate nullAvg;
   EXPECT_TRUE(nullAvg.GetResultAvg().is_null);
 
   avg.Merge(nullAvg);
   EXPECT_TRUE(avg.GetResultAvg().is_null);
 
-
-  for(i64 i = 0; i < 25; i++) {
+  for (i64 i = 0; i < 25; i++) {
     i64 j = i;
 
     Integer val = Integer(j);
@@ -255,7 +247,7 @@ TEST_F(AggregatorsTest, AvgIntegerTest) {
 
   IntegerAvgAggregate avg2;
   EXPECT_TRUE(avg2.GetResultAvg().is_null);
-  for(i64 i = 0; i > -25; i--) {
+  for (i64 i = 0; i > -25; i--) {
     Integer val = Integer(i);
     avg2.Advance(&val);
   }

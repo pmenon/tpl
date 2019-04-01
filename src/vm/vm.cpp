@@ -552,7 +552,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
- OP(IntegerMaxAggregateInit) : {
+  OP(IntegerMaxAggregateInit) : {
     auto *agg = frame->LocalAt<sql::IntegerMaxAggregate *>(READ_LOCAL_ID());
     OpIntegerMaxAggregateInit(agg);
     DISPATCH_NEXT();
@@ -689,7 +689,6 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     OpIntegerAvgAggregateFree(agg);
     DISPATCH_NEXT();
   }
-
 
   // -------------------------------------------------------
   // Hash Joins

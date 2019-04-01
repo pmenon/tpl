@@ -42,7 +42,6 @@ struct BoolVal : public Val {
   }
 };
 
-
 /// A decimal SQL value
 struct Decimal : public Val {
   u64 val;
@@ -75,7 +74,7 @@ struct Integer : public Val {
 
   /// dumb division for now
   Integer Divide(const Integer &denom) {
-    return Integer(this->val/denom.val);
+    return Integer(this->val / denom.val);
   }
 };
 

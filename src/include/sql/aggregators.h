@@ -82,7 +82,9 @@ class NullableAggregate {
   void ResetUpdateCount() { num_updates_ = 0; }
 
   /// Merge this sum with the one provided
-  void Merge(const NullableAggregate &that) { num_updates_ += that.num_updates_; }
+  void Merge(const NullableAggregate &that) {
+    num_updates_ += that.num_updates_;
+  }
 
   u64 GetNumUpdates() const { return num_updates_; }
 
@@ -138,7 +140,7 @@ inline void IntegerSumAggregate::Advance(const Integer *val) {
 inline void IntegerSumAggregate::Merge(const IntegerSumAggregate &that) {
   NullableAggregate::Merge(that);
   Integer i = that.GetResultSum();
-  if(!i.is_null) {
+  if (!i.is_null) {
     sum_ += i.val;
   }
 }
@@ -191,7 +193,7 @@ inline void IntegerMaxAggregate::Advance(const Integer *val) {
 inline void IntegerMaxAggregate::Merge(const IntegerMaxAggregate &that) {
   NullableAggregate::Merge(that);
   Integer i = that.GetResultMax();
-  if(!i.is_null) {
+  if (!i.is_null) {
     max_ = std::max(i.val, max_);
   }
 }
@@ -244,7 +246,7 @@ inline void IntegerMinAggregate::Advance(const Integer *val) {
 inline void IntegerMinAggregate::Merge(const IntegerMinAggregate &that) {
   NullableAggregate::Merge(that);
   Integer i = that.GetResultMin();
-  if(!i.is_null) {
+  if (!i.is_null) {
     min_ = std::min(i.val, min_);
   }
 }
@@ -261,7 +263,7 @@ class IntegerAvgAggregate : public IntegerSumAggregate {
   /// Return the result of the minimum
   Integer GetResultAvg() const {
     u64 numUpdates = GetNumUpdates();
-    if(numUpdates == 0) {
+    if (numUpdates == 0) {
       return Integer::Null();
     }
 
