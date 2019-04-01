@@ -149,7 +149,8 @@ inline void IntegerSumAggregate::Merge(const IntegerSumAggregate &that) {
 class IntegerMaxAggregate : public NullableAggregate {
  public:
   /// Constructor
-  IntegerMaxAggregate() : NullableAggregate(), max_(std::numeric_limits<i64>::min()) {}
+  IntegerMaxAggregate()
+      : NullableAggregate(), max_(std::numeric_limits<i64>::min()) {}
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(IntegerMaxAggregate);
@@ -202,7 +203,8 @@ inline void IntegerMaxAggregate::Merge(const IntegerMaxAggregate &that) {
 class IntegerMinAggregate : public NullableAggregate {
  public:
   /// Constructor
-  IntegerMinAggregate() : NullableAggregate(), min_(std::numeric_limits<i64>::max()) {}
+  IntegerMinAggregate()
+      : NullableAggregate(), min_(std::numeric_limits<i64>::max()) {}
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(IntegerMinAggregate);
