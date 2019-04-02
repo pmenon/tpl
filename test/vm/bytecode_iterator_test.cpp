@@ -10,15 +10,10 @@ namespace tpl::vm::test {
 
 class BytecodeIteratorTest : public TplTest {
  public:
-  BytecodeIteratorTest() : region_("test"), code_(&region_) {}
-
-  util::Region *region() { return &region_; }
-
-  util::RegionVector<u8> &code() { return code_; }
+  std::vector<u8> &code() { return code_; }
 
  private:
-  util::Region region_;
-  util::RegionVector<u8> code_;
+  std::vector<u8> code_;
 };
 
 TEST_F(BytecodeIteratorTest, SimpleIteratorTest) {

@@ -12,30 +12,24 @@ class BytecodeModule;
 
 /// Our virtual machine
 class VM {
+ public:
+  /// Invoke the function with ID \a func_id in the module \a module. \a args
+  /// contains the output and input parameters stored contiguously.
+  static void InvokeFunction(const BytecodeModule &module, FunctionId func_id,
+                             const u8 args[]);
+
+ private:
   // Use a 1K stack initially
   static constexpr u32 kDefaultInitialStackSize = 1024;
 
- public:
-  VM(util::Region *region, const BytecodeModule &module);
+  // Private constructor to force users to use InvokeFunction
+  explicit VM(const BytecodeModule &module, util::Region *region = nullptr);
 
-  /// This class cannot be copied or moved
+  // This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(VM);
 
-  /// Execute the given function in this virtual machine
-  ///
-  /// \tparam ArgTypes Template arguments specifying the arguments to the
-  /// function. At this point, we don't do any type-checking!
-  /// \param func The function to run
-  /// \param ip The instruction pointer pointing to the first instruction in the
-  /// function's bytecode
-  /// \param args The arguments to pass to the function. These are copied into
-  /// the function's execution frame, so beware!
-  template <typename... ArgTypes>
-  void Execute(const FunctionInfo &func, const u8 *ip, ArgTypes... args);
-
- private:
+  // Forward declare the frame
   class Frame;
-  class FrameBuilder;
 
   // Interpret the given instruction stream using the given execution frame
   void Interpret(const u8 *ip, Frame *frame);
@@ -88,6 +82,13 @@ class VM {
   const BytecodeModule &module() const { return module_; }
 
  private:
+  // A region managed by this virtual machine
+  util::Region our_region_;
+
+  // A pointer to either the internally managed region, or an injected one.
+  // Regardless, this is the one we use for any and all allocations.
+  util::Region *region_;
+
   // The stack and the current stack pointer. We use a vanilla byte-vector with
   // a stack position for our stack implementation
   util::RegionVector<u8> stack_;
@@ -97,106 +98,5 @@ class VM {
 
   u64 bytecode_counts_[Bytecodes::kBytecodeCount];
 };
-
-// ---------------------------------------------------------
-// VM Frame
-// ---------------------------------------------------------
-
-/// An execution frame where all function's local variables and parameters live
-/// for the duration of the function's lifetime.
-class VM::Frame {
-  friend class VM;
-
- public:
-  /// Constructor
-  Frame(VM *vm, std::size_t frame_size) : vm_(vm), frame_size_(frame_size) {
-    frame_data_ = vm->AllocateFrame(frame_size);
-    TPL_ASSERT(frame_data_ != nullptr, "Frame data cannot be null");
-    TPL_ASSERT(frame_size_ >= 0, "Frame size must be >= 0");
-  }
-
-  /// Destructor
-  ~Frame() { vm_->ReleaseFrame(frame_size_); }
-
-  /// Access the local variable at the given index in the fame. The \ref 'index'
-  /// attribute is encoded and indicates whether the local variable is accessed
-  /// through an indirection (i.e., if the variable has to be dereferenced or
-  /// loaded)
-  /// \tparam T The type of the variable the user expects
-  /// \param index The encoded index into the frame where the variable is
-  /// \return The value of the variable. Note that this is copied!
-  template <typename T>
-  T LocalAt(u32 index) const {
-    LocalVar local = LocalVar::Decode(index);
-
-    EnsureInFrame(local);
-
-    auto val = reinterpret_cast<uintptr_t>(&frame_data_[local.GetOffset()]);
-
-    if (local.GetAddressMode() == LocalVar::AddressMode::Value) {
-      return *(T *)(val);
-    }
-
-    return (T)val;
-  }
-
- private:
-#ifndef NDEBUG
-  // Ensure the local variable is valid
-  void EnsureInFrame(LocalVar var) const {
-    if (var.GetOffset() >= frame_size_) {
-      std::string error_msg =
-          fmt::format("Accessing local at offset {}, beyond frame of size {}",
-                      var.GetOffset(), frame_size_);
-      LOG_ERROR("{}", error_msg);
-      throw std::runtime_error(error_msg);
-    }
-  }
-#else
-  void EnsureInFrame(UNUSED LocalVar var) const {}
-#endif
-
-  u8 *raw_frame() const { return frame_data_; }
-
- private:
-  VM *vm_;
-  u8 *frame_data_;
-  std::size_t frame_size_;
-};
-
-// ---------------------------------------------------------
-// VM Frame Builder
-// ---------------------------------------------------------
-
-/// Helper class to construct a frame from a set of user-provided C/C++ function
-/// arguments. Note that TPL has call-by-value semantics, hence all arguments
-/// are copied.
-class VM::FrameBuilder {
- public:
-  template <typename... ArgTypes>
-  static void Prepare(Frame *frame, ArgTypes... args) {
-    FrameBuilder builder;
-    builder.WriteArgs(frame->raw_frame(), args...);
-  }
-
- private:
-  inline void WriteArgs(UNUSED u8 *buffer) {}
-
-  template <typename HeadT, typename... RestT>
-  inline void WriteArgs(u8 *buffer, const HeadT &head, const RestT &... rest) {
-    TPL_MEMCPY(buffer, reinterpret_cast<const u8 *>(&head), sizeof(head));
-    WriteArgs(buffer + sizeof(head), rest...);
-  }
-};
-
-template <typename... ArgTypes>
-void VM::Execute(const FunctionInfo &func, const u8 *ip, ArgTypes... args) {
-  // Create and prepare frame for interpretation
-  VM::Frame frame(this, func.frame_size());
-  VM::FrameBuilder::Prepare(&frame, args...);
-
-  // All good, let's go
-  Interpret(ip, &frame);
-}
 
 }  // namespace tpl::vm

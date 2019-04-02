@@ -2,18 +2,8 @@
 
 #include "llvm/Support/FormatVariadic.h"
 
-#include "ast/ast_context.h"
-#include "ast/ast_dump.h"
-#include "ast/ast_node_factory.h"
-#include "ast/type.h"
-#include "parsing/parser.h"
-#include "parsing/scanner.h"
-#include "sema/error_reporter.h"
-#include "sema/sema.h"
-#include "util/region.h"
-#include "vm/bytecode_generator.h"
-#include "vm/bytecode_module.h"
-#include "vm/vm.h"
+// From test
+#include "vm/bytecode_compiler.h"
 
 namespace tpl::vm::test {
 
@@ -27,46 +17,17 @@ class BytecodeGeneratorTest : public TplTest {
   util::Region region_;
 };
 
-class BytecodeExpectations {
- public:
-  explicit BytecodeExpectations(util::Region *region)
-      : errors_(region), ctx_(region, errors_) {}
-
-  ast::AstNode *Compile(const std::string &source) {
-    parsing::Scanner scanner(source);
-    parsing::Parser parser(scanner, ctx_);
-
-    auto *ast = parser.Parse();
-
-    sema::Sema type_check(ctx_);
-    type_check.Run(ast);
-
-    if (errors_.HasErrors()) {
-      LOG_ERROR("Type-checking error!");
-      errors_.PrintErrors();
-    }
-
-    return ast;
-  }
-
-  bool HasTypeCheckErrors() const { return errors_.HasErrors(); }
-
- private:
-  sema::ErrorReporter errors_;
-  ast::AstContext ctx_;
-};
-
 TEST_F(BytecodeGeneratorTest, SimpleTest) {
   auto src = R"(
     fun test(x: uint32) -> uint32 {
       var y : uint32 = 20
       return x * y
     })";
-  BytecodeExpectations expectations(region());
-  auto *ast = expectations.Compile(src);
+  BytecodeCompiler compiler;
+  auto *ast = compiler.CompileToAst(src);
 
   // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(region(), ast, "test");
+  auto module = BytecodeGenerator::Compile(ast, "test");
 
   module->PrettyPrint(std::cout);
 
@@ -87,11 +48,11 @@ TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
       var f : int32 = 10
       return (f > 1 and x < 2) and (t < 100 or x < 3)
     })";
-  BytecodeExpectations expectations(region());
-  auto *ast = expectations.Compile(src);
+  BytecodeCompiler compiler;
+  auto *ast = compiler.CompileToAst(src);
 
   // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(region(), ast, "test");
+  auto module = BytecodeGenerator::Compile(ast, "test");
 
   module->PrettyPrint(std::cout);
 
@@ -102,7 +63,7 @@ TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
 }
 
 TEST_F(BytecodeGeneratorTest, SimpleTypesTest) {
-  auto fn = [this](auto type, auto arg) {
+  auto fn = [](auto type, auto arg) {
     using ArgType = decltype(arg);
 
     auto src = llvm::formatv(R"(
@@ -112,11 +73,11 @@ TEST_F(BytecodeGeneratorTest, SimpleTypesTest) {
       })",
                              type);
 
-    BytecodeExpectations expectations(region());
-    auto *ast = expectations.Compile(src);
-    ASSERT_FALSE(expectations.HasTypeCheckErrors());
+    BytecodeCompiler compiler;
+    auto *ast = compiler.CompileToAst(src);
+    ASSERT_FALSE(compiler.HasErrors());
 
-    auto module = BytecodeGenerator::Compile(region(), ast, "test");
+    auto module = BytecodeGenerator::Compile(ast, "test");
 
     module->PrettyPrint(std::cout);
 
@@ -151,11 +112,11 @@ TEST_F(BytecodeGeneratorTest, ParameterPassingTest) {
       s.b = s.a * 2
       return true
     })";
-  BytecodeExpectations expectations(region());
-  auto *ast = expectations.Compile(src);
+  BytecodeCompiler compiler;
+  auto *ast = compiler.CompileToAst(src);
 
   // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(region(), ast, "test");
+  auto module = BytecodeGenerator::Compile(ast, "test");
 
   module->PrettyPrint(std::cout);
 
@@ -164,7 +125,7 @@ TEST_F(BytecodeGeneratorTest, ParameterPassingTest) {
     int b;
   };
 
-  std::function<bool(S * s)> f;
+  std::function<bool(S *)> f;
   EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
       << "Function 'test' not found in module";
 
@@ -186,9 +147,9 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
       return a
     })";
 
-    BytecodeExpectations expectations(region());
-    expectations.Compile(src);
-    EXPECT_TRUE(expectations.HasTypeCheckErrors());
+    BytecodeCompiler compiler;
+    compiler.CompileToAst(src);
+    EXPECT_TRUE(compiler.HasErrors());
   }
 
   /*
@@ -201,9 +162,9 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
       return
     })";
 
-    BytecodeExpectations expectations(region());
-    expectations.Compile(src);
-    EXPECT_TRUE(expectations.HasTypeCheckErrors());
+    BytecodeCompiler compiler;
+    compiler.CompileToAst(src);
+    EXPECT_TRUE(compiler.HasErrors());
   }
 
   {
@@ -212,12 +173,12 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
       return 10
     })";
 
-    BytecodeExpectations expectations(region());
-    auto *ast = expectations.Compile(src);
-    EXPECT_FALSE(expectations.HasTypeCheckErrors());
+    BytecodeCompiler compiler;
+    auto *ast = compiler.CompileToAst(src);
+    EXPECT_FALSE(compiler.HasErrors());
 
     // Try generating bytecode for this declaration
-    auto module = BytecodeGenerator::Compile(region(), ast, "test");
+    auto module = BytecodeGenerator::Compile(ast, "test");
 
     module->PrettyPrint(std::cout);
 
@@ -236,12 +197,12 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
       return a * b
     })";
 
-    BytecodeExpectations expectations(region());
-    auto *ast = expectations.Compile(src);
-    EXPECT_FALSE(expectations.HasTypeCheckErrors());
+    BytecodeCompiler compiler;
+    auto *ast = compiler.CompileToAst(src);
+    EXPECT_FALSE(compiler.HasErrors());
 
     // Try generating bytecode for this declaration
-    auto module = BytecodeGenerator::Compile(region(), ast, "test");
+    auto module = BytecodeGenerator::Compile(ast, "test");
 
     module->PrettyPrint(std::cout);
 
@@ -268,11 +229,11 @@ TEST_F(BytecodeGeneratorTest, FunctionTest) {
       f(s)
       return true
     })";
-  BytecodeExpectations expectations(region());
-  auto *ast = expectations.Compile(src);
+  BytecodeCompiler compiler;
+  auto *ast = compiler.CompileToAst(src);
 
   // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(region(), ast, "test");
+  auto module = BytecodeGenerator::Compile(ast, "test");
 
   module->PrettyPrint(std::cout);
 
@@ -281,7 +242,7 @@ TEST_F(BytecodeGeneratorTest, FunctionTest) {
     int b;
   };
 
-  std::function<bool(S * s)> f;
+  std::function<bool(S *)> f;
   EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
       << "Function 'test' not found in module";
 

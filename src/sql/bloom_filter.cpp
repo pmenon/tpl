@@ -33,7 +33,7 @@ void BloomFilter::Init(util::Region *region, u32 num_elems) {
   u64 num_bytes = num_blocks * sizeof(Block);
   blocks_ =
       reinterpret_cast<Block *>(region->Allocate(num_bytes, CACHELINE_SIZE));
-  TPL_MEMSET(blocks_, 0, num_bytes);
+  std::memset(blocks_, 0, num_bytes);
 
   block_mask_ = static_cast<u32>(num_blocks - 1);
 }

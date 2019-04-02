@@ -142,7 +142,7 @@ VM_OP_HOT void OpDeref4(i32 *dest, i32 *src) { *dest = *src; }
 VM_OP_HOT void OpDeref8(i64 *dest, i64 *src) { *dest = *src; }
 
 VM_OP_HOT void OpDerefN(byte *dest, byte *src, u32 len) {
-  TPL_MEMCPY(dest, src, len);
+  std::memcpy(dest, src, len);
 }
 
 VM_OP_HOT void OpAssign1(i8 *dest, i8 src) { *dest = src; }
@@ -336,7 +336,8 @@ VM_OP_HOT void OpForceBoolTruth(bool *result, tpl::sql::BoolVal *input) {
 }
 
 VM_OP_HOT void OpInitInteger(tpl::sql::Integer *result, i32 input) {
-  *result = tpl::sql::Integer(input);
+  result->val = input;
+  result->is_null = false;
 }
 
 VM_OP_HOT void OpGreaterThanInteger(tpl::sql::BoolVal *result,

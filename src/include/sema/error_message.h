@@ -64,9 +64,10 @@ namespace sema {
     "target of for-in loop must be an identifier", ())                         \
   F(NonExistingTable, "table with name '%0' does not exist",                   \
     (ast::Identifier))                                                         \
-  F(ExpectedIdentifierForSelector, "expected identifier for selector", ())     \
-  F(SelObjectNotComposite,                                                     \
-    "object of selector has type ('%0') which is not a composite",             \
+  F(ExpectedIdentifierForMember, "expected identifier for member expression",  \
+    ())                                                                        \
+  F(MemberObjectNotComposite,                                                  \
+    "object of member expression has type ('%0') which is not a composite",    \
     (ast::Type *))                                                             \
   F(FieldObjectDoesNotExist,                                                   \
     "No field with name '%0' exists in composite type '%1'",                   \

@@ -3,20 +3,13 @@
 #include <fstream>
 #include <iostream>
 
+// From test
+#include "vm/bytecode_compiler.h"
+
 #include "bandit/agent.h"
 #include "bandit/environment.h"
 #include "bandit/multi_armed_bandit.h"
 #include "bandit/policy.h"
-#include "logging/logger.h"
-#include "parsing/parser.h"
-#include "parsing/scanner.h"
-#include "sema/sema.h"
-#include "sql/catalog.h"
-#include "util/region.h"
-#include "util/timer.h"
-#include "vm/bytecode_generator.h"
-#include "vm/bytecode_module.h"
-#include "vm/vm.h"
 
 #define NUM_EXPERIMENTS 10
 
@@ -26,28 +19,6 @@ struct TestConf {
   std::string pred1;
   std::string pred2;
   std::string out_file;
-};
-
-class BytecodeExpectations {
- public:
-  explicit BytecodeExpectations(util::Region *region)
-      : errors_(region), ctx_(region, errors_) {}
-
-  ast::AstNode *Compile(const std::string &source) {
-    parsing::Scanner scanner(source);
-    parsing::Parser parser(scanner, ctx_);
-
-    auto *ast = parser.Parse();
-
-    sema::Sema type_check(ctx_);
-    type_check.Run(ast);
-
-    return ast;
-  }
-
- private:
-  sema::ErrorReporter errors_;
-  ast::AstContext ctx_;
 };
 
 class BanditTest : public TplTest,
@@ -161,11 +132,11 @@ TEST_P(BanditTest, DISABLED_SimpleTest) {
 
   auto [src, action_names] = CreateSampleTPLCode();
 
-  BytecodeExpectations expectations(region());
-  auto *ast = expectations.Compile(src);
+  BytecodeCompiler compiler;
+  auto *ast = compiler.CompileToAst(src);
 
   // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(region(), ast, "bandit");
+  auto module = BytecodeGenerator::Compile(ast, "bandit");
 
   auto bandit = bandit::MultiArmedBandit(module.get(), action_names);
 

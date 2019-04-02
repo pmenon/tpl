@@ -6,8 +6,9 @@
 
 #include "llvm/Support/Memory.h"
 
+#include "ast/type.h"
 #include "logging/logger.h"
-#include "util/region_containers.h"
+#include "util/memory.h"
 #include "vm/bytecode_function_info.h"
 #include "vm/bytecode_iterator.h"
 #include "vm/llvm_engine.h"
@@ -16,30 +17,27 @@
 namespace tpl::vm {
 
 /// An enumeration capturing different execution methods and optimization levels
-enum class ExecutionMode : u8 {
-  Interpret = 0,
-  InterpretOpt = 1,
-  Jit = 2,
-  JitOpt = 3
-};
+enum class ExecutionMode : u8 { Interpret, Jit };
 
 /// A module represents all code in a single TPL source file
 class BytecodeModule {
  public:
   /// Construct
-  BytecodeModule(std::string name, util::RegionVector<u8> &&code,
-                 util::RegionVector<FunctionInfo> &&functions);
+  BytecodeModule(std::string name, std::vector<u8> &&code,
+                 std::vector<FunctionInfo> &&functions);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(BytecodeModule);
 
   /// Look up a TPL function in this module by its ID
+  /// \return A pointer to the function's info if it exists; null otherwise
   const FunctionInfo *GetFuncInfoById(const FunctionId func_id) const {
     TPL_ASSERT(func_id < num_functions(), "Invalid function");
     return &functions_[func_id];
   }
 
   /// Look up a TPL function in this module by its name
+  /// \return A pointer to the function's info if it exists; null otherwise
   const FunctionInfo *GetFuncInfoByName(const std::string &name) const {
     for (const auto &func : functions_) {
       if (func.name() == name) {
@@ -49,17 +47,18 @@ class BytecodeModule {
     return nullptr;
   }
 
-  /// Retrieve an iterator over the bytecode for a given function
+  /// Retrieve an iterator over the bytecode for the given function \a func
+  /// \return A pointer to the function's info if it exists; null otherwise
   BytecodeIterator BytecodeForFunction(const FunctionInfo &func) const {
-    TPL_ASSERT(GetFuncInfoById(func.id()) != nullptr,
-               "Function not defined in unit!");
     auto [start, end] = func.bytecode_range();
     return BytecodeIterator(code_, start, end);
   }
 
-  /// Get the trampoline function for the bytecode function with id \a func_id
-  void *GetFuncTrampoline(const FunctionId func_id) const noexcept {
-    return trampolines_[func_id].GetTrampolineCode();
+  /// Get the trampoline for the bytecode function with id \a func_id
+  /// \return An opaque function pointer to the bytecode function
+  void *GetFuncTrampoline(const FunctionId func_id) const {
+    TPL_ASSERT(func_id < num_functions(), "Invalid function");
+    return trampolines_[func_id].GetCode();
   }
 
   /// Retrieve and wrap a TPL function inside a C++ function object, thus making
@@ -85,12 +84,10 @@ class BytecodeModule {
   // -------------------------------------------------------
 
   /// Return the name of the module
-  const std::string &name() const noexcept { return name_; }
+  const std::string &name() const { return name_; }
 
   /// Return a constant view of all functions
-  const util::RegionVector<FunctionInfo> &functions() const {
-    return functions_;
-  }
+  const std::vector<FunctionInfo> &functions() const { return functions_; }
 
   /// Return the number of bytecode instructions in this module
   std::size_t instruction_count() const { return code_.size(); }
@@ -120,32 +117,51 @@ class BytecodeModule {
   class Trampoline {
    public:
     /// Create an empty/uninitialized trampoline
-    Trampoline() : mem_() {}
+    Trampoline() noexcept : mem_() {}
 
     /// Create a trampoline over the given memory block
-    explicit Trampoline(llvm::sys::MemoryBlock mem) : mem_(mem) {}
+    explicit Trampoline(llvm::sys::OwningMemoryBlock &&mem) noexcept
+        : mem_(std::move(mem)) {}
 
-    /// Cleanup the trampoline's memory
-    ~Trampoline() { llvm::sys::Memory::releaseMappedMemory(mem_); }
+    /// Move assignment
+    Trampoline &operator=(Trampoline &&other) noexcept {
+      mem_ = std::move(other.mem_);
+      return *this;
+    }
 
     /// Access the trampoline code
-    void *GetTrampolineCode() const { return mem_.base(); }
+    void *GetCode() const { return mem_.base(); }
 
    private:
     // Memory region where the trampoline's code is
-    llvm::sys::MemoryBlock mem_;
+    llvm::sys::OwningMemoryBlock mem_;
   };
 
  private:
   const std::string name_;
-  const util::RegionVector<u8> code_;
-  const util::RegionVector<FunctionInfo> functions_;
+  const std::vector<u8> code_;
+  const std::vector<FunctionInfo> functions_;
   std::vector<Trampoline> trampolines_;
 };
 
 //----------------------------------------------------------
 // Implementation below
 //----------------------------------------------------------
+
+namespace detail {
+
+// These functions value-copy a variable number of pass-by-value arguments into
+// a given buffer. It's assumed the buffer is large enough to hold all arguments
+
+inline void CopyAll(UNUSED u8 *buffer) {}
+
+template <typename HeadT, typename... RestT>
+inline void CopyAll(u8 *buffer, const HeadT &head, const RestT &... rest) {
+  std::memcpy(buffer, reinterpret_cast<const u8 *>(&head), sizeof(head));
+  CopyAll(buffer + sizeof(head), rest...);
+}
+
+}  // namespace detail
 
 template <typename RetT, typename... ArgTypes>
 inline bool BytecodeModule::GetFunction(
@@ -159,60 +175,64 @@ inline bool BytecodeModule::GetFunction(
   }
 
   // Verify argument counts
-  constexpr u32 num_params = sizeof...(ArgTypes) + !std::is_void_v<RetT>;
-  if (num_params != func_info->num_params()) {
+  constexpr const u32 num_params = sizeof...(ArgTypes);
+  if (num_params != func_info->func_type()->num_params()) {
     return false;
   }
 
   switch (exec_mode) {
     case ExecutionMode::Interpret: {
-      func = [this, func_info](ArgTypes... args) {
-        // Create allocator for execution
-        util::Region region(func_info->name() + "-exec-region");
-
-        // The virtual machine
-        VM vm(&region, *this);
-
-        // Let's go!
-        const u8 *ip = GetBytecodeForFunction(*func_info);
+      func = [this, func_info](ArgTypes... args) -> RetT {
         if constexpr (std::is_void_v<RetT>) {
-          vm.Execute(*func_info, ip, args...);
+          // Create a temporary on-stack buffer and copy all arguments
+          u8 arg_buffer[(0ul + ... + sizeof(args))];
+          detail::CopyAll(arg_buffer, args...);
+
+          // Invoke and finish
+          VM::InvokeFunction(*this, func_info->id(), arg_buffer);
           return;
         } else {
+          // The return value
           RetT rv{};
-          vm.Execute(*func_info, ip, &rv, args...);
+
+          // Create a temporary on-stack buffer and copy all arguments
+          u8 arg_buffer[sizeof(RetT *) + (0ul + ... + sizeof(args))];
+          detail::CopyAll(arg_buffer, &rv, args...);
+
+          // Invoke and finish
+          VM::InvokeFunction(*this, func_info->id(), arg_buffer);
           return rv;
         }
       };
-      return true;
+      break;
     }
     case ExecutionMode::Jit: {
-      func = [this, func_info](ArgTypes... args) {
+      func = [this, func_info](ArgTypes... args) -> RetT {
+        // TODO(pmenon): Check if already compiled
+
         // JIT the module
         auto compiled = LLVMEngine::Compile(*this);
 
-        void *raw_f = compiled->GetFunctionPointer(func_info->name());
-        TPL_ASSERT(raw_f != nullptr, "No function");
+        void *raw_fn = compiled->GetFunctionPointer(func_info->name());
+        TPL_ASSERT(raw_fn != nullptr, "No function");
 
-        // Let's go!
         if constexpr (std::is_void_v<RetT>) {
-          auto *jit_f = reinterpret_cast<void (*)(ArgTypes...)>(raw_f);
+          auto *jit_f = reinterpret_cast<void (*)(ArgTypes...)>(raw_fn);
           jit_f(args...);
           return;
         } else {
-          auto *jit_f = reinterpret_cast<void (*)(RetT *, ArgTypes...)>(raw_f);
+          auto *jit_f = reinterpret_cast<void (*)(RetT *, ArgTypes...)>(raw_fn);
           RetT rv{};
           jit_f(&rv, args...);
           return rv;
         }
       };
-      return true;
-    }
-    default: {
-      LOG_ERROR("Non-basic-interpreter-mode not supported yet");
-      return false;
+      break;
     }
   }
+
+  // Function is setup, return success
+  return true;
 }
 
 }  // namespace tpl::vm

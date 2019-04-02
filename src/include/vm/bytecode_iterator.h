@@ -1,7 +1,8 @@
 #pragma once
 
+#include <vector>
+
 #include "util/common.h"
-#include "util/region_containers.h"
 #include "vm/bytecodes.h"
 
 namespace tpl::vm {
@@ -20,7 +21,7 @@ class LocalVar;
 /// beginning of a bytecode instruction.
 class BytecodeIterator {
  public:
-  BytecodeIterator(const util::RegionVector<u8> &bytecode, std::size_t start,
+  BytecodeIterator(const std::vector<u8> &bytecode, std::size_t start,
                    std::size_t end);
 
   /// Get the bytecode instruction the iterator is currently pointing to
@@ -107,11 +108,11 @@ class BytecodeIterator {
 
   std::size_t current_offset() const { return curr_offset_; }
 
-  const util::RegionVector<u8> &bytecodes() const { return bytecodes_; }
+  const std::vector<u8> &bytecodes() const { return bytecodes_; }
 
  private:
   // ALL the bytecode instructions for a TPL compilation unit
-  const util::RegionVector<u8> &bytecodes_;
+  const std::vector<u8> &bytecodes_;
   std::size_t start_offset_;
   std::size_t end_offset_;
   std::size_t curr_offset_;
