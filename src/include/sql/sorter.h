@@ -52,6 +52,9 @@ class Sorter {
 
   // Vector of pointers to each entry. This is the vector that's sorted.
   util::ChunkedVectorT<const byte *> tuples_;
+
+  // Flag indicating if the contents of the sorter have been sorted
+  bool sorted_;
 };
 
 /// An iterator over the elements in a sorter instance
