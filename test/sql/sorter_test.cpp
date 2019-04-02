@@ -131,6 +131,7 @@ void TestTopKRandomTupleSize(const u32 num_iters, const u32 max_elems,
     }
 
     // Check that only the top k elements are left.
+    sorter.Sort(); // Sort because the reference is sorted.
     sql::SorterIterator iter(&sorter);
     for (u32 i = 0; i < top_k; i++) {
       const auto ref_elem = reference.top();
