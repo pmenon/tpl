@@ -60,9 +60,8 @@ class Sorter {
 /// An iterator over the elements in a sorter instance
 class SorterIterator {
  public:
-  explicit SorterIterator(Sorter *sorter) noexcept {
-    iter_ = sorter->tuples_.begin();
-  }
+  explicit SorterIterator(Sorter *sorter) noexcept
+      : iter_(sorter->tuples_.begin()) {}
 
   const byte *operator*() noexcept { return *iter_; }
 
