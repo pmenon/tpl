@@ -161,8 +161,6 @@ TEST_F(ChunkedVectorTest, ElementConstructDestructTest) {
   EXPECT_EQ(0u, Simple::count);
 }
 
-
-
 // Check that adding random integers to the iterator works.
 TEST_F(ChunkedVectorTest, RandomIteratorAdditionTest) {
   const u32 num_elems = 1000;
@@ -236,29 +234,78 @@ TEST_F(ChunkedVectorTest, RandomIteratorBinaryOpsTest) {
   }
 }
 
-// Check that std sort is working with the iterator
-TEST_F(ChunkedVectorTest, RandomIteratorStdSortTest) {
-  const u32 num_elems = 1000;
+// Check that pre-incrementing works.
+TEST_F(ChunkedVectorTest, RandomIteratorPreIncrementTest) {
+  const u32 num_elems = 512;
+
+  // Generate random elements
+  std::vector<u32> std_vec;
+  for (u32 i = 0; i < num_elems; i++) {
+    std_vec.push_back(i);
+  }
+
+  std::default_random_engine generator;
+  std::shuffle(std_vec.begin(), std_vec.end(), generator);
+
+  // Create chunked vector
   util::Region tmp("tmp");
   ChunkedVectorT<u32> vec(&tmp);
-  for (u32 i = 0; i < num_elems; i++) vec.push_back(i);
-  std::default_random_engine generator;
-  std::shuffle(vec.begin(), vec.end(), generator);
-  std::sort(vec.begin(), vec.end());
   for (u32 i = 0; i < num_elems; i++) {
-    ASSERT_EQ(vec[i], i);
+    vec.push_back(std_vec[i]);
+  }
+
+  auto iter = vec.begin();
+  for (u32 i = 0; i < num_elems; i++) {
+    ASSERT_EQ(*iter, std_vec[i]);
+    ++iter;
   }
 }
 
-// Check that ips4o sort is working with the iterator
-TEST_F(ChunkedVectorTest, RandomIteratorIps4oSortTest) {
+// Check that pre-decrementing works.
+TEST_F(ChunkedVectorTest, RandomIteratorPreDecrementTest) {
+  const u32 num_elems = 512;
+
+  // Generate random elements
+  std::vector<u32> std_vec;
+  for (u32 i = 0; i < num_elems; i++) {
+    std_vec.push_back(i);
+  }
+
+  std::default_random_engine generator;
+  std::shuffle(std_vec.begin(), std_vec.end(), generator);
+
+  // Create chunked vector
+  util::Region tmp("tmp");
+  ChunkedVectorT<u32> vec(&tmp);
+  for (u32 i = 0; i < num_elems; i++) {
+    vec.push_back(std_vec[i]);
+  }
+
+  auto iter = vec.end();
+  for (u32 i = 0; i < num_elems; i++) {
+    --iter;
+    ASSERT_EQ(*iter, std_vec[num_elems - i - 1]);
+  }
+}
+
+TEST_F(ChunkedVectorTest, SortTest) {
   const u32 num_elems = 1000;
   util::Region tmp("tmp");
   ChunkedVectorT<u32> vec(&tmp);
-  for (u32 i = 0; i < num_elems; i++) vec.push_back(i);
+
+  // Insert elements
+  for (u32 i = 0; i < num_elems; i++) {
+    vec.push_back(i);
+  }
+
+  // Shuffle
   std::default_random_engine generator;
   std::shuffle(vec.begin(), vec.end(), generator);
+
+  // Sort
   ips4o::sort(vec.begin(), vec.end());
+
+  // Verify
   for (u32 i = 0; i < num_elems; i++) {
     ASSERT_EQ(vec[i], i);
   }
@@ -388,49 +435,6 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
   std::cout << "std::vector  : " << stdvec_ms << " ms" << std::endl;
   std::cout << "std::deque   : " << stddeque_ms << " ms" << std::endl;
   std::cout << "ChunkedVector: " << chunked_ms << " ms" << std::endl;
-}
-
-// Check that pre-incrementing works.
-TEST_F(ChunkedVectorTest, RandomIteratorPreIncrementTest) {
-  std::default_random_engine generator_;
-  const u32 num_elems = 512;
-  // Generate random elements
-  std::vector<u32> std_vec;
-  for (u32 i = 0; i < num_elems; i++) std_vec.push_back(i);
-  std::shuffle(std_vec.begin(), std_vec.end(), generator_);
-
-  // Create chunked vector
-  util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec(&tmp);
-  for (u32 i = 0; i < num_elems; i++) vec.push_back(std_vec[i]);
-
-  auto iter = vec.begin();
-  for (u32 i = 0; i < num_elems; i++) {
-    ASSERT_EQ(*iter, std_vec[i]);
-    ++iter;
-  }
-}
-
-
-// Check that pre-decrementing works.
-TEST_F(ChunkedVectorTest, RandomIteratorPreDecrementTest) {
-  std::default_random_engine generator_;
-  const u32 num_elems = (1 << 15);
-  // Generate random elements
-  std::vector<u32> std_vec;
-  for (u32 i = 0; i < num_elems; i++) std_vec.push_back(i);
-  std::shuffle(std_vec.begin(), std_vec.end(), generator_);
-
-  // Create chunked vector
-  util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec(&tmp);
-  for (u32 i = 0; i < num_elems; i++) vec.push_back(std_vec[i]);
-
-  auto iter = vec.end();
-  for (u32 i = 0; i < num_elems; i++) {
-    --iter;
-    ASSERT_EQ(*iter, std_vec[num_elems - i - 1]);
-  }
 }
 
 }  // namespace tpl::util::test

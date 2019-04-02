@@ -1,11 +1,14 @@
-#include "sql/sorter.h"
+#include "tpl_test.h"
+
 #include <algorithm>
 #include <queue>
 #include <random>
 #include <vector>
-#include "tpl_test.h"
-#include "util/region.h"
+
 #include "ips4o/ips4o.hpp"
+
+#include "sql/sorter.h"
+#include "util/region.h"
 
 #define TestAllSigned(FuncName, Args...) \
   FuncName<i8>(Args);                    \
@@ -42,8 +45,8 @@ void TestSortRandomTupleSize(const u32 num_iters, const u32 max_elems,
   // tuple_size, so this is not possible without heavy macro abuse or passing in
   // something that we can sizeof(). Limiting ourselves to IntType should be
   // fine.
-  const auto tuple_size = sizeof(IntType);
-  auto cmp_fn = [](const byte *a, const byte *b) -> int {
+  constexpr const auto tuple_size = sizeof(IntType);
+  const auto cmp_fn = [](const byte *a, const byte *b) -> i32 {
     const auto val_a = *reinterpret_cast<const IntType *>(a);
     const auto val_b = *reinterpret_cast<const IntType *>(b);
     return val_a < val_b ? -1 : (val_a == val_b ? 0 : 1);
@@ -131,7 +134,7 @@ void TestTopKRandomTupleSize(const u32 num_iters, const u32 max_elems,
     }
 
     // Check that only the top k elements are left.
-    sorter.Sort(); // Sort because the reference is sorted.
+    sorter.Sort();  // Sort because the reference is sorted.
     sql::SorterIterator iter(&sorter);
     for (u32 i = 0; i < top_k; i++) {
       const auto ref_elem = reference.top();
@@ -142,26 +145,29 @@ void TestTopKRandomTupleSize(const u32 num_iters, const u32 max_elems,
   }
 }
 
-
 TEST_F(SorterTest, SortTest) {
-  const uint32_t num_iters = 200;
+  const uint32_t num_iters = 5;
   const uint32_t max_elems = 10000;
   TestAllIntegral(TestSortRandomTupleSize, num_iters, max_elems, &generator_);
 }
 
 TEST_F(SorterTest, TopKTest) {
-  const uint32_t num_iters = 200;
+  const uint32_t num_iters = 5;
   const uint32_t max_elems = 10000;
   TestAllIntegral(TestTopKRandomTupleSize, num_iters, max_elems, &generator_);
 }
 
-
 TEST_F(SorterTest, DISABLED_PerfSortTest) {
-  // TODO(Amadou): Figure out a way to avoid manually changing this. Maybe metaprogramming?
-  using data = std::array<char, 250>;  // Change this to benchmark different tuple sizes
+  // TODO(Amadou): Figure out a way to avoid manually changing this. Maybe
+  // metaprogramming?
+  using data = std::array<byte, 128>;
   using int_type = uint32_t;
-  const uint32_t num_elems = 1000000;
-  auto sorter_cmp_fn = [](const byte *a, const byte *b) -> int {
+
+  // 10 million elements
+  const uint32_t num_elems = 10000000;
+
+  // The sort comparison function
+  auto sorter_cmp_fn = [](const byte *a, const byte *b) -> i32 {
     // Just compare the first few bytes
     const auto val_a = *reinterpret_cast<const int_type *>(a);
     const auto val_b = *reinterpret_cast<const int_type *>(b);
@@ -173,74 +179,60 @@ TEST_F(SorterTest, DISABLED_PerfSortTest) {
     const auto val_b = *reinterpret_cast<const int_type *>(b.data());
     return val_a < val_b;
   };
+
   // Create the different kinds of vectors.
   // Some of these are commented out to reduce the memory usage of this test.
   util::Region vec_tmp("vec_tmp");
-  //util::Region vec_isp4o_tmp("vec_isp4o_tmp");
-  //util::Region chunk_tmp("chunk_tmp");
-  //util::Region chunk_ips4o_tmp("chunk_ips4o_tmp");
+  util::Region chunk_tmp("chunk_tmp");
   util::Region sorter_tmp("sorter_tmp");
-  std::vector<data, util::StlRegionAllocator<data>> vec{util::StlRegionAllocator<data>(&vec_tmp)};
-  //std::vector<data, util::StlRegionAllocator<data>> vec_ips4o{util::StlRegionAllocator<data>(&vec_isp4o_tmp)};
-  //util::ChunkedVectorT<data> chunk_vec(&chunk_tmp);
-  //util::ChunkedVectorT<data> chunk_vec_ips4o(&chunk_ips4o_tmp);
+  std::vector<data, util::StlRegionAllocator<data>> vec{
+      util::StlRegionAllocator<data>(&vec_tmp)};
+  util::ChunkedVectorT<data> chunk_vec(&chunk_tmp);
   sql::Sorter sorter(&sorter_tmp, sorter_cmp_fn, sizeof(data));
   std::cout << "Sizeof(data) is " << (sizeof(data)) << std::endl;
 
-  // Fill up the regular vector
+  // Fill up the regular vector. This is our reference.
   for (int_type i = 0; i < num_elems; i++) {
     data val;
-    std::memcpy(val.data(), &i, sizeof(int_type)); // Only the first few bytes are useful for comparison
+    // Only the first few bytes are useful for comparison
+    std::memcpy(val.data(), &i, sizeof(int_type));
     vec.push_back(val);
   }
+
+  // Shuffle vector to get a random ordering
   std::shuffle(vec.begin(), vec.end(), generator_);
 
-  // Copy the vector for ips4o
-  //for (int_type i = 0; i < num_elems; i++) vec_ips4o.push_back(vec[i]);
-
-  // Fill the chunked vectors
-  //for (int_type i = 0; i < num_elems; i++) chunk_vec.push_back(vec[i]);
-  //for (int_type i = 0; i < num_elems; i++) chunk_vec_ips4o.push_back(vec[i]);
-
-  // Fill up the sorter
+  // Fill the ChunkedVectorT<data> and the Sorter instance with the same data
+  for (int_type i = 0; i < num_elems; i++) {
+    chunk_vec.push_back(vec[i]);
+  }
   for (int_type i = 0; i < num_elems; i++) {
     auto *elem = sorter.AllocInputTuple();
     std::memcpy(elem, vec[i].data(), sizeof(int_type));
   }
 
-
   // Run benchmarks
   // NOTE: keep the number of runs to 1.
-  // Otherwise the vector will be presorted in subsequent runs, which avoids copies and speeds up the function.
-  auto stdvec_ms = Bench(1, [&vec, &cmp_fn]() {
-    std::sort(vec.begin(), vec.end(), cmp_fn);
+  // Otherwise the vector will be presorted in subsequent runs, which avoids
+  // copies and speeds up the function.
+  auto stdvec_ms = Bench(
+      1, [&vec, &cmp_fn]() { ips4o::sort(vec.begin(), vec.end(), cmp_fn); });
+
+  auto chunk_ms = Bench(1, [&chunk_vec, &cmp_fn]() {
+    ips4o::sort(chunk_vec.begin(), chunk_vec.end(), cmp_fn);
   });
 
-  /*
-  auto ips4o_ms = Bench(10, [&vec_ips4o, &cmp_fn]() {
-    ips4o::sort(vec_ips4o.begin(), vec_ips4o.end(), cmp_fn);
-  });
+  auto sorter_ms = Bench(1, [&sorter]() { sorter.Sort(); });
 
-  auto chunk_ms = Bench(10, [&chunk_vec, &cmp_fn]() {
-    std::sort(chunk_vec.begin(), chunk_vec.end(), cmp_fn);
-  });
-
-  auto chunk_ips4o_ms = Bench(10, [&chunk_vec_ips4o, &cmp_fn]() {
-    std::sort(chunk_vec_ips4o.begin(), chunk_vec_ips4o.end(), cmp_fn);
-  });
-  */
-
-  auto sorter_ms = Bench(1, [&sorter]() {
-    sorter.Sort();
-  });
-
-
+  for (u32 i = 0; i < num_elems; i++) {
+    const auto std_a = *reinterpret_cast<const int_type *>(vec[i].data());
+    const auto chunk_a = *reinterpret_cast<const int_type *>(chunk_vec[i].data());
+    EXPECT_EQ(std_a, chunk_a);
+  }
 
   std::cout << std::fixed << std::setprecision(4);
   std::cout << "std::sort(std::vector): " << stdvec_ms << " ms" << std::endl;
-  //std::cout << "ips4o::sort(std::vector): " << ips4o_ms << " ms" << std::endl;
-  //std::cout << "std::sort(ChunkedVector): " << chunk_ms << " ms" << std::endl;
-  //std::cout << "ips4o::sort(ChunkedVector): " << chunk_ips4o_ms << " ms" << std::endl;
+  std::cout << "ips4o::sort(ChunkedVector): " << chunk_ms << " ms" << std::endl;
   std::cout << "Sorter.Sort(): " << sorter_ms << " ms" << std::endl;
 }
 }  // namespace tpl::sql::test
