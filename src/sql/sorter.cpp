@@ -46,7 +46,6 @@ void Sorter::AllocInputTupleTopKFinish(u64 top_k) noexcept {
 
   // The most recent insert
   const byte *last_insert = tuples_.back();
-  tuple_storage_.pop_back();
 
   // The current top
   const byte *heap_top = tuples_.front();
@@ -55,24 +54,21 @@ void Sorter::AllocInputTupleTopKFinish(u64 top_k) noexcept {
     // The last inserted tuples belongs in the top-k. Swap it with the current
     // maximum and sift it down.
     tuples_.front() = last_insert;
+    tuples_.pop_back();
     HeapSiftDown();
+  } else {
+    tuples_.pop_back();
   }
 }
 
 void Sorter::BuildHeap() {
-#if 0
   const auto compare = [this](const byte *left, const byte *right) {
     return cmp_fn_(left, right) < 0;
   };
   std::make_heap(tuples_.begin(), tuples_.end(), compare);
-#endif
 }
 
 void Sorter::HeapSiftDown() {
-  const auto compare = [this](const byte *left, const byte *right) {
-    return cmp_fn_(left, right) < 0;
-  };
-
   uint64_t size = tuples_.size();
   uint32_t idx = 0;
 
@@ -85,18 +81,21 @@ void Sorter::HeapSiftDown() {
       break;
     }
 
-    if (child + 1 < size && compare(tuples_[child], tuples_[child + 1]) > 0) {
+    if (child + 1 < size && cmp_fn_(tuples_[child], tuples_[child + 1]) < 0) {
       child++;
     }
 
-    if (compare(top, tuples_[child]) <= 0) {
+    if (cmp_fn_(top, tuples_[child]) >= 0) {
       break;
     }
-
+    // TODO(Amadou): Could save space by memcpying instead of just swapping
+    // pointers (Too slow for large tuples?) i.e we can call
+    // tuple_storage_.pop_back() only if we memcpy. Otherwise, the same memory
+    // location is reused by subsequent calls AllocateInputTuple(), which will
+    // overwrite existing values.
     std::swap(tuples_[idx], tuples_[child]);
     idx = child;
   }
-  tuples_[idx] = top;
 }
 
 void Sorter::Sort() noexcept {
@@ -115,12 +114,10 @@ void Sorter::Sort() noexcept {
   timer.Start();
 
   // Sort the sucker
-#if 0
   const auto compare = [this](const byte *left, const byte *right) {
-    return cmp_fn_(left, right);
+    return cmp_fn_(left, right) < 0;
   };
   ips4o::sort(tuples_.begin(), tuples_.end(), compare);
-#endif
 
   timer.Stop();
 
