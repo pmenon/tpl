@@ -9,7 +9,10 @@ namespace tpl::sql {
 
 Sorter::Sorter(util::Region *region, ComparisonFunction cmp_fn,
                u32 tuple_size) noexcept
-    : tuple_storage_(region, tuple_size), cmp_fn_(cmp_fn), tuples_(region) {}
+    : tuple_storage_(region, tuple_size),
+      cmp_fn_(cmp_fn),
+      tuples_(region),
+      sorted_(false) {}
 
 Sorter::~Sorter() = default;
 
@@ -96,6 +99,12 @@ void Sorter::HeapSiftDown() {
 }
 
 void Sorter::Sort() noexcept {
+  // Exit if the input tuples have already been sorted
+  if (sorted_) {
+    return;
+  }
+
+  // Exit if there are no input tuples
   if (tuples_.empty()) {
     return;
   }
@@ -112,9 +121,14 @@ void Sorter::Sort() noexcept {
 
   timer.Stop();
 
+#ifndef NDEBUG
   auto rate = (tuples_.size() / timer.elapsed()) / 1000.0;
   LOG_DEBUG("Sorted %zu tuples in %.2f ms (%.2lf TPS)", tuples_.size(),
             timer.elapsed(), rate);
+#endif
+
+  // Mark complete
+  sorted_ = true;
 }
 
 }  // namespace tpl::sql

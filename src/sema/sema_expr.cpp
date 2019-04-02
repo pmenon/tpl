@@ -707,13 +707,13 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
 
   if (!obj_type->IsStructType()) {
     error_reporter().Report(node->position(),
-                            ErrorMessages::kSelObjectNotComposite, obj_type);
+                            ErrorMessages::kMemberObjectNotComposite, obj_type);
     return;
   }
 
   if (!node->member()->IsIdentifierExpr()) {
     error_reporter().Report(node->member()->position(),
-                            ErrorMessages::kExpectedIdentifierForSelector);
+                            ErrorMessages::kExpectedIdentifierForMember);
     return;
   }
 

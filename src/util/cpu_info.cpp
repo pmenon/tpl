@@ -46,7 +46,6 @@ void CpuInfo::ParseCpuFlags(llvm::StringRef flags) {
     } else {
       hardware_flags_.Unset(feature);
     }
-
   }
 }
 
