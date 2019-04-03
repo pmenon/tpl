@@ -37,7 +37,7 @@ void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
 }
 
 void Sema::VisitBlockStmt(ast::BlockStmt *node) {
-  SemaScope block_scope(*this, Scope::Kind::Block);
+  SemaScope block_scope(this, Scope::Kind::Block);
 
   for (auto *stmt : node->statements()) {
     Visit(stmt);
@@ -45,7 +45,7 @@ void Sema::VisitBlockStmt(ast::BlockStmt *node) {
 }
 
 void Sema::VisitFile(ast::File *node) {
-  SemaScope file_scope(*this, Scope::Kind::File);
+  SemaScope file_scope(this, Scope::Kind::File);
 
   for (auto *decl : node->declarations()) {
     Visit(decl);
@@ -54,7 +54,7 @@ void Sema::VisitFile(ast::File *node) {
 
 void Sema::VisitForStmt(ast::ForStmt *node) {
   // Create a new scope for variables introduced in initialization block
-  SemaScope for_scope(*this, Scope::Kind::Loop);
+  SemaScope for_scope(this, Scope::Kind::Loop);
 
   if (node->init() != nullptr) {
     Visit(node->init());
@@ -77,7 +77,7 @@ void Sema::VisitForStmt(ast::ForStmt *node) {
 }
 
 void Sema::VisitForInStmt(ast::ForInStmt *node) {
-  SemaScope for_scope(*this, Scope::Kind::Loop);
+  SemaScope for_scope(this, Scope::Kind::Loop);
 
   if (!node->target()->IsIdentifierExpr()) {
     error_reporter().Report(node->target()->position(),

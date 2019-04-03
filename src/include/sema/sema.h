@@ -114,24 +114,24 @@ class Sema : public ast::AstVisitor<Sema> {
    */
   class SemaScope {
    public:
-    SemaScope(Sema &check, Scope::Kind scope_kind)
+    SemaScope(Sema *check, Scope::Kind scope_kind)
         : check_(check), exited_(false) {
-      check.EnterScope(scope_kind);
+      check->EnterScope(scope_kind);
     }
 
     ~SemaScope() { Exit(); }
 
     void Exit() {
       if (!exited_) {
-        check_.ExitScope();
+        check_->ExitScope();
         exited_ = true;
       }
     }
 
-    Sema &check() { return check_; }
+    Sema *check() { return check_; }
 
    private:
-    Sema &check_;
+    Sema *check_;
     bool exited_;
   };
 
@@ -140,17 +140,17 @@ class Sema : public ast::AstVisitor<Sema> {
    */
   class FunctionSemaScope {
    public:
-    FunctionSemaScope(Sema &check, ast::FunctionLitExpr *func)
-        : prev_func_(check.current_function()),
+    FunctionSemaScope(Sema *check, ast::FunctionLitExpr *func)
+        : prev_func_(check->current_function()),
           block_scope_(check, Scope::Kind::Function) {
-      check.curr_func_ = func;
+      check->curr_func_ = func;
     }
 
     ~FunctionSemaScope() { Exit(); }
 
     void Exit() {
       block_scope_.Exit();
-      block_scope_.check().curr_func_ = prev_func_;
+      block_scope_.check()->curr_func_ = prev_func_;
     }
 
    private:

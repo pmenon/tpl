@@ -466,7 +466,7 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   node->set_type(func_type);
 
   // The function scope
-  FunctionSemaScope function_scope(*this, node);
+  FunctionSemaScope function_scope(this, node);
 
   // Declare function parameters in scope
   for (const auto &param : func_type->params()) {
