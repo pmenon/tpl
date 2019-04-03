@@ -24,7 +24,7 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
       left_type != nullptr && left_type->sql_type().Is<sql::BooleanType>()) {
     // Implicit cast
     left = ast_context().node_factory().NewImplicitCastExpr(
-        left->position(), ast::ImplicitCastExpr::CastKind::SqlBoolToBool,
+        left->position(), ast::CastKind::SqlBoolToBool,
         ast::BoolType::Get(ast_context()), left);
 
     // Resolve
@@ -35,7 +35,7 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
       right_type != nullptr && right_type->sql_type().Is<sql::BooleanType>()) {
     // Implicit cast
     right = ast_context().node_factory().NewImplicitCastExpr(
-        right->position(), ast::ImplicitCastExpr::CastKind::SqlBoolToBool,
+        right->position(), ast::CastKind::SqlBoolToBool,
         ast::BoolType::Get(ast_context()), right);
 
     // Resolve
@@ -86,8 +86,7 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
   if (!right->type()->IsSqlType()) {
     // Implicitly cast the right to a SQL Integer
     right = ast_context().node_factory().NewImplicitCastExpr(
-        right->position(), ast::ImplicitCastExpr::CastKind::IntToSqlInt,
-        sql_int_type, right);
+        right->position(), ast::CastKind::IntToSqlInt, sql_int_type, right);
 
     right->set_type(ast::SqlType::Get(ast_context(),
                                       sql::IntegerType::InstanceNonNullable()));
@@ -96,8 +95,7 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
   if (!left->type()->IsSqlType()) {
     // Implicitly cast the left to a SQL Integer
     left = ast_context().node_factory().NewImplicitCastExpr(
-        left->position(), ast::ImplicitCastExpr::CastKind::IntToSqlInt,
-        sql_int_type, left);
+        left->position(), ast::CastKind::IntToSqlInt, sql_int_type, left);
 
     left->set_type(ast::SqlType::Get(ast_context(),
                                      sql::IntegerType::InstanceNonNullable()));
@@ -136,8 +134,7 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
   if (!right_type->IsSqlType()) {
     // Implicitly cast the right to a SQL Integer
     right = ast_context().node_factory().NewImplicitCastExpr(
-        right->position(), ast::ImplicitCastExpr::CastKind::IntToSqlInt,
-        sql_int_type, right);
+        right->position(), ast::CastKind::IntToSqlInt, sql_int_type, right);
 
     right_type =
         ast::SqlType::Get(ast_context(), sql::IntegerType::Instance(false));
@@ -147,8 +144,7 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
   if (!left_type->IsSqlType()) {
     // Implicitly cast the left to a SQL Integer
     left = ast_context().node_factory().NewImplicitCastExpr(
-        left->position(), ast::ImplicitCastExpr::CastKind::IntToSqlInt,
-        sql_int_type, left);
+        left->position(), ast::CastKind::IntToSqlInt, sql_int_type, left);
 
     left_type =
         ast::SqlType::Get(ast_context(), sql::IntegerType::Instance(false));
@@ -530,7 +526,7 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
   }
 
   switch (node->cast_kind()) {
-    case ast::ImplicitCastExpr::CastKind::IntToSqlInt: {
+    case ast::CastKind::IntToSqlInt: {
       if (!expr_type->IsIntegerType()) {
         error_reporter().Report(node->position(),
                                 ErrorMessages::kInvalidCastToSqlInt, expr_type);
@@ -544,7 +540,7 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
       break;
     }
 
-    case ast::ImplicitCastExpr::CastKind::IntToSqlDecimal: {
+    case ast::CastKind::IntToSqlDecimal: {
       if (!expr_type->IsIntegerType()) {
         error_reporter().Report(node->position(),
                                 ErrorMessages::kInvalidCastToSqlDecimal,
@@ -559,7 +555,7 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
       break;
     }
 
-    case ast::ImplicitCastExpr::CastKind::SqlBoolToBool: {
+    case ast::CastKind::SqlBoolToBool: {
       if (auto *type = expr_type->SafeAs<ast::SqlType>();
           type == nullptr || !type->sql_type().Is<sql::BooleanType>()) {
         error_reporter().Report(
@@ -573,7 +569,7 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
       break;
     }
 
-    case ast::ImplicitCastExpr::CastKind::IntegralCast: {
+    case ast::CastKind::IntegralCast: {
       // TODO: Fix me
       if (!expr_type->IsIntegerType()) {
         error_reporter().Report(node->position(),

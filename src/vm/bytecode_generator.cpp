@@ -374,17 +374,17 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
   LocalVar input = VisitExpressionForRValue(node->input());
 
   switch (node->cast_kind()) {
-    case ast::ImplicitCastExpr::CastKind::SqlBoolToBool: {
+    case ast::CastKind::SqlBoolToBool: {
       emitter()->Emit(Bytecode::ForceBoolTruth, dest, input);
       execution_result()->set_destination(dest.ValueOf());
       break;
     }
-    case ast::ImplicitCastExpr::CastKind::IntToSqlInt: {
+    case ast::CastKind::IntToSqlInt: {
       emitter()->Emit(Bytecode::InitInteger, dest, input);
       execution_result()->set_destination(dest);
       break;
     }
-    case ast::ImplicitCastExpr::CastKind::IntegralCast: {
+    case ast::CastKind::IntegralCast: {
       BuildAssign(dest, input, node->type());
       break;
     }
