@@ -26,7 +26,7 @@ MapType::MapType(Type *key_type, Type *val_type)
       key_type_(key_type),
       val_type_(val_type) {}
 
-StructType::StructType(AstContext &ctx, u32 size, u32 alignment,
+StructType::StructType(Context &ctx, u32 size, u32 alignment,
                        util::RegionVector<Field> &&fields,
                        util::RegionVector<u32> &&field_offsets)
     : Type(ctx, size, alignment, Type::Kind::StructType),

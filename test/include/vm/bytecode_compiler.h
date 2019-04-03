@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ast/ast.h"
-#include "ast/ast_context.h"
+#include "ast/context.h"
 #include "parsing/parser.h"
 #include "parsing/scanner.h"
 #include "sema/sema.h"
@@ -46,7 +46,7 @@ class BytecodeCompiler {
  private:
   util::Region region_;
   sema::ErrorReporter errors_;
-  ast::AstContext ctx_;
+  ast::Context ctx_;
 };
 
 }  // namespace tpl::vm::test

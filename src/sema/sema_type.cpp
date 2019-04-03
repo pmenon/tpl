@@ -1,6 +1,6 @@
 #include "sema/sema.h"
 
-#include "ast/ast_context.h"
+#include "ast/context.h"
 #include "ast/type.h"
 
 namespace tpl::sema {

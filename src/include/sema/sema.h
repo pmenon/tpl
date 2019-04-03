@@ -9,7 +9,7 @@
 namespace tpl {
 
 namespace ast {
-class AstContext;
+class Context;
 }  // namespace ast
 
 namespace sql {
@@ -20,7 +20,7 @@ namespace sema {
 
 class Sema : public ast::AstVisitor<Sema> {
  public:
-  explicit Sema(ast::AstContext &ctx);
+  explicit Sema(ast::Context &ctx);
 
   DISALLOW_COPY_AND_MOVE(Sema);
 
@@ -73,7 +73,7 @@ class Sema : public ast::AstVisitor<Sema> {
   ///
   //////////////////////////////////////////////////////////////////////////////
 
-  ast::AstContext &ast_context() const { return ctx_; }
+  ast::Context &ast_context() const { return ctx_; }
 
   ErrorReporter &error_reporter() const { return error_reporter_; }
 
@@ -160,7 +160,7 @@ class Sema : public ast::AstVisitor<Sema> {
 
  private:
   // The context
-  ast::AstContext &ctx_;
+  ast::Context &ctx_;
 
   // The error reporter
   ErrorReporter &error_reporter_;

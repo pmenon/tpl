@@ -1,6 +1,6 @@
 #include "tpl_test.h"
 
-#include "ast/ast_context.h"
+#include "ast/context.h"
 #include "ast/ast_node_factory.h"
 #include "ast/type.h"
 #include "sema/sema.h"
@@ -17,7 +17,7 @@ class SemaExprTest : public TplTest {
 
   util::Region *region() { return &region_; }
   ErrorReporter *error_reporter() { return &error_reporter_; }
-  ast::AstContext *ctx() { return &ctx_; }
+  ast::Context *ctx() { return &ctx_; }
   ast::AstNodeFactory *node_factory() { return &ctx_.node_factory(); }
 
   ast::Identifier Ident(const std::string &s) {
@@ -66,7 +66,7 @@ class SemaExprTest : public TplTest {
  private:
   util::Region region_;
   ErrorReporter error_reporter_;
-  ast::AstContext ctx_;
+  ast::Context ctx_;
 
   SourcePosition empty_{0, 0};
 };

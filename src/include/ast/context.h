@@ -19,14 +19,16 @@ namespace ast {
 class AstNodeFactory;
 class Type;
 
-class AstContext {
+class Context {
  public:
-  explicit AstContext(util::Region *region,
-                      sema::ErrorReporter &error_reporter);
+  /// Constructor
+  explicit Context(util::Region *region, sema::ErrorReporter &error_reporter);
 
-  DISALLOW_COPY_AND_MOVE(AstContext);
+  /// This class cannot be copied or moved
+  DISALLOW_COPY_AND_MOVE(Context);
 
-  ~AstContext();
+  /// Destructor
+  ~Context();
 
   /// Return \a str as a unique string in this context
   Identifier GetIdentifier(llvm::StringRef str);

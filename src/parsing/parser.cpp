@@ -7,7 +7,7 @@ namespace tpl::parsing {
 static std::unordered_set<Token::Type> kTopLevelDecls = {Token::Type::STRUCT,
                                                          Token::Type::FUN};
 
-Parser::Parser(Scanner &scanner, ast::AstContext &ast_context)
+Parser::Parser(Scanner &scanner, ast::Context &ast_context)
     : scanner_(scanner),
       ast_context_(ast_context),
       node_factory_(ast_context.node_factory()),

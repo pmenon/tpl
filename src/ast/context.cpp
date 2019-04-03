@@ -1,4 +1,4 @@
-#include "ast/ast_context.h"
+#include "ast/context.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -114,7 +114,7 @@ struct FunctionTypeKeyInfo {
   }
 };
 
-struct AstContext::Implementation {
+struct Context::Implementation {
   static constexpr const uint32_t kDefaultStringTableCapacity = 32;
 
   // -------------------------------------------------------
@@ -155,7 +155,7 @@ struct AstContext::Implementation {
   llvm::DenseSet<StructType *, StructTypeKeyInfo> struct_types;
   llvm::DenseSet<FunctionType *, FunctionTypeKeyInfo> func_types;
 
-  explicit Implementation(AstContext &ctx)
+  explicit Implementation(Context &ctx)
       : int8(ctx, sizeof(i8), alignof(i8), IntegerType::IntKind::Int8),
         int16(ctx, sizeof(i16), alignof(i16), IntegerType::IntKind::Int16),
         int32(ctx, sizeof(i32), alignof(i32), IntegerType::IntKind::Int32),
@@ -174,8 +174,7 @@ struct AstContext::Implementation {
                      util::LLVMRegionAllocator(ctx.region())) {}
 };
 
-AstContext::AstContext(util::Region *region,
-                       sema::ErrorReporter &error_reporter)
+Context::Context(util::Region *region, sema::ErrorReporter &error_reporter)
     : region_(region),
       error_reporter_(error_reporter),
       node_factory_(std::make_unique<AstNodeFactory>(region)),
@@ -217,21 +216,21 @@ AstContext::AstContext(util::Region *region,
 #undef BUILTIN_FUNC
 }
 
-AstContext::~AstContext() = default;
+Context::~Context() = default;
 
-Identifier AstContext::GetIdentifier(llvm::StringRef str) {
+Identifier Context::GetIdentifier(llvm::StringRef str) {
   if (str.empty()) return Identifier(nullptr);
 
   auto iter = impl().string_table.insert(std::make_pair(str, char(0))).first;
   return Identifier(iter->getKeyData());
 }
 
-Type *AstContext::LookupBuiltinType(Identifier identifier) const {
+Type *Context::LookupBuiltinType(Identifier identifier) const {
   auto iter = impl().builtin_types.find(identifier);
   return (iter == impl().builtin_types.end() ? nullptr : iter->second);
 }
 
-ast::Type *AstContext::LookupInternalType(Identifier identifier) const {
+ast::Type *Context::LookupInternalType(Identifier identifier) const {
   if (auto iter = impl().internal_type_names.find(identifier);
       iter != impl().internal_type_names.end()) {
     return impl().internal_types[static_cast<u32>(iter->second)];
@@ -239,8 +238,7 @@ ast::Type *AstContext::LookupInternalType(Identifier identifier) const {
   return nullptr;
 }
 
-bool AstContext::IsBuiltinFunction(Identifier identifier,
-                                   Builtin *builtin) const {
+bool Context::IsBuiltinFunction(Identifier identifier, Builtin *builtin) const {
   if (auto iter = impl().builtin_funcs.find(identifier);
       iter != impl().builtin_funcs.end()) {
     if (builtin != nullptr) {
@@ -256,7 +254,7 @@ bool AstContext::IsBuiltinFunction(Identifier identifier,
 PointerType *Type::PointerTo() { return PointerType::Get(this); }
 
 // static
-IntegerType *IntegerType::Get(AstContext &ctx, IntegerType::IntKind int_kind) {
+IntegerType *IntegerType::Get(Context &ctx, IntegerType::IntKind int_kind) {
   switch (int_kind) {
     case IntegerType::IntKind::Int8: {
       return &ctx.impl().int8;
@@ -287,7 +285,7 @@ IntegerType *IntegerType::Get(AstContext &ctx, IntegerType::IntKind int_kind) {
 }
 
 // static
-FloatType *FloatType::Get(AstContext &ctx, FloatKind float_kind) {
+FloatType *FloatType::Get(Context &ctx, FloatKind float_kind) {
   switch (float_kind) {
     case FloatType::FloatKind::Float32: {
       return &ctx.impl().float32;
@@ -300,17 +298,17 @@ FloatType *FloatType::Get(AstContext &ctx, FloatKind float_kind) {
 }
 
 // static
-BoolType *BoolType::Get(AstContext &ctx) { return &ctx.impl().boolean; }
+BoolType *BoolType::Get(Context &ctx) { return &ctx.impl().boolean; }
 
 // static
-StringType *StringType::Get(AstContext &ctx) { return &ctx.impl().string; }
+StringType *StringType::Get(Context &ctx) { return &ctx.impl().string; }
 
 // static
-NilType *NilType::Get(AstContext &ctx) { return &ctx.impl().nil; }
+NilType *NilType::Get(Context &ctx) { return &ctx.impl().nil; }
 
 // static
 PointerType *PointerType::Get(Type *base) {
-  AstContext &ctx = base->context();
+  Context &ctx = base->context();
 
   PointerType *&pointer_type = ctx.impl().pointer_types[base];
 
@@ -323,7 +321,7 @@ PointerType *PointerType::Get(Type *base) {
 
 // static
 ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
-  AstContext &ctx = elem_type->context();
+  Context &ctx = elem_type->context();
 
   ArrayType *&array_type = ctx.impl().array_types[{elem_type, length}];
 
@@ -336,7 +334,7 @@ ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
 
 // static
 MapType *MapType::Get(Type *key_type, Type *value_type) {
-  AstContext &ctx = key_type->context();
+  Context &ctx = key_type->context();
 
   MapType *&map_type = ctx.impl().map_types[{key_type, value_type}];
 
@@ -348,8 +346,7 @@ MapType *MapType::Get(Type *key_type, Type *value_type) {
 }
 
 // static
-StructType *StructType::Get(AstContext &ctx,
-                            util::RegionVector<Field> &&fields) {
+StructType *StructType::Get(Context &ctx, util::RegionVector<Field> &&fields) {
   const StructTypeKeyInfo::KeyTy key(fields);
 
   auto [iter, inserted] = ctx.impl().struct_types.insert_as(nullptr, key);
@@ -394,7 +391,7 @@ StructType *StructType::Get(util::RegionVector<Field> &&fields) {
 
 // static
 FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
-  AstContext &ctx = ret->context();
+  Context &ctx = ret->context();
 
   const FunctionTypeKeyInfo::KeyTy key(ret, params);
 
@@ -415,13 +412,13 @@ FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
 }
 
 // static
-InternalType *InternalType::Get(AstContext &ctx, InternalKind kind) {
+InternalType *InternalType::Get(Context &ctx, InternalKind kind) {
   TPL_ASSERT(static_cast<u8>(kind) < kNumInternalKinds,
              "Invalid internal kind");
   return ctx.impl().internal_types[static_cast<u32>(kind)];
 }
 
-SqlType *SqlType::Get(AstContext &ctx, const sql::Type &sql_type) {
+SqlType *SqlType::Get(Context &ctx, const sql::Type &sql_type) {
   // TODO: cache
   u32 size = 0, alignment = 0;
   switch (sql_type.type_id()) {

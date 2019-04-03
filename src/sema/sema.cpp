@@ -1,6 +1,6 @@
 #include "sema/sema.h"
 
-#include "ast/ast_context.h"
+#include "ast/context.h"
 #include "ast/type.h"
 #include "sql/data_types.h"
 #include "sql/schema.h"
@@ -8,7 +8,7 @@
 
 namespace tpl::sema {
 
-Sema::Sema(ast::AstContext &ctx)
+Sema::Sema(ast::Context &ctx)
     : ctx_(ctx),
       error_reporter_(ctx.error_reporter()),
       scope_(nullptr),

@@ -1,7 +1,7 @@
 #include "sema/sema.h"
 
-#include "ast/ast_context.h"
 #include "ast/ast_node_factory.h"
+#include "ast/context.h"
 #include "ast/type.h"
 #include "logging/logger.h"
 

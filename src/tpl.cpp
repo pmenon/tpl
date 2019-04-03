@@ -49,7 +49,7 @@ static void CompileAndRun(const std::string &source,
 
   // Let's parse the source
   sema::ErrorReporter error_reporter(&error_region);
-  ast::AstContext context(&region, error_reporter);
+  ast::Context context(&region, error_reporter);
 
   parsing::Scanner scanner(source.data(), source.length());
   parsing::Parser parser(scanner, context);

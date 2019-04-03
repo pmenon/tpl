@@ -3,8 +3,8 @@
 #include <unordered_set>
 
 #include "ast/ast.h"
-#include "ast/ast_context.h"
 #include "ast/ast_node_factory.h"
+#include "ast/context.h"
 #include "ast/identifier.h"
 #include "parsing/scanner.h"
 #include "sema/error_reporter.h"
@@ -16,7 +16,7 @@ class Parser {
   /// Build a parser instance using the given scanner and AST context
   /// \param scanner The scanner used to read input tokens
   /// \param ast_context The AST context
-  Parser(Scanner &scanner, ast::AstContext &ast_context);
+  Parser(Scanner &scanner, ast::Context &ast_context);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(Parser);
@@ -32,7 +32,7 @@ class Parser {
 
   Scanner &scanner() { return scanner_; }
 
-  ast::AstContext &ast_context() { return ast_context_; }
+  ast::Context &ast_context() { return ast_context_; }
 
   ast::AstNodeFactory &node_factory() { return node_factory_; }
 
@@ -150,7 +150,7 @@ class Parser {
   Scanner &scanner_;
 
   // The context
-  ast::AstContext &ast_context_;
+  ast::Context &ast_context_;
 
   // A factory for all node types
   ast::AstNodeFactory &node_factory_;
