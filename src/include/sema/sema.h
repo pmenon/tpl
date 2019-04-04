@@ -18,15 +18,31 @@ class Schema;
 
 namespace sema {
 
+/// This is the main class that performs semantic analysis of TPL programs. It
+/// traverses an untyped TPL abstract syntax tree (AST), fills in types based on
+/// declarations, derives types of expressions and ensures correctness of all
+/// operations in the TPL program.
+///
+/// Usage:
+/// \code
+/// sema::Sema check(context);
+/// bool has_errors = check.Run(ast);
+/// if (has_errors) {
+///   // handle errors
+/// }
+/// \endcode
 class Sema : public ast::AstVisitor<Sema> {
  public:
+  /// Constructor
   explicit Sema(ast::Context *ctx);
 
+  /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(Sema);
 
-  // Run the type checker on the provided AST. Ensures proper types of all
-  // statements and expressions, and also annotates the AST with correct
-  // type information.
+  /// Run the type checker on the provided AST rooted at \a root. Ensures proper
+  /// types of all statements and expressions, and also annotates the AST with
+  /// correct type information.
+  /// \return true if type-checking found errors; false otherwise
   bool Run(ast::AstNode *root);
 
   // Declare all node visit methods here
@@ -35,11 +51,13 @@ class Sema : public ast::AstVisitor<Sema> {
 #undef DECLARE_AST_VISIT_METHOD
 
  private:
+  // Resolve the type of the input expression
   ast::Type *Resolve(ast::Expr *expr) {
     Visit(expr);
     return expr->type();
   }
 
+  // Convert the given schema into a row type
   ast::Type *ConvertSchemaToType(const sql::Schema &schema);
 
   struct CheckResult {
@@ -67,26 +85,13 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinJoinHashTableInsert(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableBuild(ast::CallExpr *call);
 
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Accessors
-  ///
-  //////////////////////////////////////////////////////////////////////////////
-
-  ast::Context *context() const { return ctx_; }
-
-  ErrorReporter *error_reporter() const { return error_reporter_; }
-
-  ast::FunctionLitExpr *current_function() const { return curr_func_; }
-
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Scoping
-  ///
-  //////////////////////////////////////////////////////////////////////////////
+  // -------------------------------------------------------
+  // Scoping
+  // -------------------------------------------------------
 
   Scope *current_scope() { return scope_; }
 
+  // Enter a new scope
   void EnterScope(Scope::Kind scope_kind) {
     if (num_cached_scopes_ > 0) {
       Scope *scope = scope_cache_[--num_cached_scopes_].release();
@@ -98,7 +103,10 @@ class Sema : public ast::AstVisitor<Sema> {
     }
   }
 
+  // Exit the current scope
   void ExitScope() {
+    TPL_ASSERT(current_scope() != nullptr, "Mismatched scope exit");
+
     Scope *scope = current_scope();
     scope_ = scope->outer();
 
@@ -109,9 +117,7 @@ class Sema : public ast::AstVisitor<Sema> {
     }
   }
 
-  /**
-   * RAII class to capture the current scope
-   */
+  /// RAII scope class to track the current scope
   class SemaScope {
    public:
     SemaScope(Sema *check, Scope::Kind scope_kind)
@@ -135,9 +141,7 @@ class Sema : public ast::AstVisitor<Sema> {
     bool exited_;
   };
 
-  /**
-   * RAII class to capture both the current scope and the current function
-   */
+  /// RAII scope class to capture both the current function and its scope
   class FunctionSemaScope {
    public:
     FunctionSemaScope(Sema *check, ast::FunctionLitExpr *func)
@@ -157,6 +161,16 @@ class Sema : public ast::AstVisitor<Sema> {
     ast::FunctionLitExpr *prev_func_;
     SemaScope block_scope_;
   };
+
+  // -------------------------------------------------------
+  // Accessors
+  // -------------------------------------------------------
+
+  ast::Context *context() const { return ctx_; }
+
+  ErrorReporter *error_reporter() const { return error_reporter_; }
+
+  ast::FunctionLitExpr *current_function() const { return curr_func_; }
 
  private:
   // The context
