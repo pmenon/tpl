@@ -73,7 +73,7 @@ class Sema : public ast::AstVisitor<Sema> {
   ///
   //////////////////////////////////////////////////////////////////////////////
 
-  ast::Context &ast_context() const { return ctx_; }
+  ast::Context &context() const { return ctx_; }
 
   ErrorReporter &error_reporter() const { return error_reporter_; }
 

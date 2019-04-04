@@ -15,8 +15,8 @@ class Parser {
  public:
   /// Build a parser instance using the given scanner and AST context
   /// \param scanner The scanner used to read input tokens
-  /// \param ast_context The AST context
-  Parser(Scanner &scanner, ast::Context &ast_context);
+  /// \param context The context
+  Parser(Scanner &scanner, ast::Context &context);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(Parser);
@@ -32,11 +32,11 @@ class Parser {
 
   Scanner &scanner() { return scanner_; }
 
-  ast::Context &ast_context() { return ast_context_; }
+  ast::Context &context() { return context_; }
 
   ast::AstNodeFactory &node_factory() { return node_factory_; }
 
-  util::Region *region() { return ast_context().region(); }
+  util::Region *region() { return context().region(); }
 
   sema::ErrorReporter &error_reporter() { return error_reporter_; }
 
@@ -85,7 +85,7 @@ class Parser {
   // Get the current symbol as an AST string
   ast::Identifier GetSymbol() {
     const std::string &literal = scanner().current_literal();
-    return ast_context().GetIdentifier(literal);
+    return context().GetIdentifier(literal);
   }
 
   // In case of errors, sync up to any token in the list
@@ -150,7 +150,7 @@ class Parser {
   Scanner &scanner_;
 
   // The context
-  ast::Context &ast_context_;
+  ast::Context &context_;
 
   // A factory for all node types
   ast::AstNodeFactory &node_factory_;

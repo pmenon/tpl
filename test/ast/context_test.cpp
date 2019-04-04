@@ -8,9 +8,9 @@
 
 namespace tpl::ast::test {
 
-class AstContextTest : public TplTest {};
+class ContextTest : public TplTest {};
 
-TEST_F(AstContextTest, CreateNewStringsTest) {
+TEST_F(ContextTest, CreateNewStringsTest) {
   util::Region region("test");
   sema::ErrorReporter error_reporter(&region);
   Context ctx(&region, error_reporter);

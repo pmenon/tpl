@@ -23,23 +23,23 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
   if (auto *left_type = left->type()->SafeAs<ast::SqlType>();
       left_type != nullptr && left_type->sql_type().Is<sql::BooleanType>()) {
     // Implicit cast
-    left = ast_context().node_factory().NewImplicitCastExpr(
+    left = context().node_factory().NewImplicitCastExpr(
         left->position(), ast::CastKind::SqlBoolToBool,
-        ast::BoolType::Get(ast_context()), left);
+        ast::BoolType::Get(context()), left);
 
     // Resolve
-    left->set_type(ast::BoolType::Get(ast_context()));
+    left->set_type(ast::BoolType::Get(context()));
   }
 
   if (auto *right_type = right->type()->SafeAs<ast::SqlType>();
       right_type != nullptr && right_type->sql_type().Is<sql::BooleanType>()) {
     // Implicit cast
-    right = ast_context().node_factory().NewImplicitCastExpr(
+    right = context().node_factory().NewImplicitCastExpr(
         right->position(), ast::CastKind::SqlBoolToBool,
-        ast::BoolType::Get(ast_context()), right);
+        ast::BoolType::Get(context()), right);
 
     // Resolve
-    right->set_type(ast::BoolType::Get(ast_context()));
+    right->set_type(ast::BoolType::Get(context()));
   }
 
   /*
@@ -48,7 +48,7 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
    */
 
   if (left->type()->IsBoolType() && right->type()->IsBoolType()) {
-    return {ast::BoolType::Get(ast_context()), left, right};
+    return {ast::BoolType::Get(context()), left, right};
   }
 
   error_reporter().Report(pos, ErrorMessages::kMismatchedTypesToBinary,
@@ -81,33 +81,33 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
   }
 
   ast::Type *sql_int_type =
-      ast::SqlType::Get(ast_context(), sql::IntegerType::InstanceNonNullable());
+      ast::SqlType::Get(context(), sql::IntegerType::InstanceNonNullable());
 
   if (!right->type()->IsSqlType()) {
     // Implicitly cast the right to a SQL Integer
-    right = ast_context().node_factory().NewImplicitCastExpr(
+    right = context().node_factory().NewImplicitCastExpr(
         right->position(), ast::CastKind::IntToSqlInt, sql_int_type, right);
 
-    right->set_type(ast::SqlType::Get(ast_context(),
-                                      sql::IntegerType::InstanceNonNullable()));
+    right->set_type(
+        ast::SqlType::Get(context(), sql::IntegerType::InstanceNonNullable()));
   }
 
   if (!left->type()->IsSqlType()) {
     // Implicitly cast the left to a SQL Integer
-    left = ast_context().node_factory().NewImplicitCastExpr(
+    left = context().node_factory().NewImplicitCastExpr(
         left->position(), ast::CastKind::IntToSqlInt, sql_int_type, left);
 
-    left->set_type(ast::SqlType::Get(ast_context(),
-                                     sql::IntegerType::InstanceNonNullable()));
+    left->set_type(
+        ast::SqlType::Get(context(), sql::IntegerType::InstanceNonNullable()));
   }
 
   const sql::Type &ret = left->type()->As<ast::SqlType>()->sql_type();
   if (left->type()->As<ast::SqlType>()->sql_type().nullable() ||
       right->type()->As<ast::SqlType>()->sql_type().nullable()) {
-    return {ast::SqlType::Get(ast_context(), ret.GetNullableVersion()), left,
+    return {ast::SqlType::Get(context(), ret.GetNullableVersion()), left,
             right};
   }
-  return {ast::SqlType::Get(ast_context(), ret), left, right};
+  return {ast::SqlType::Get(context(), ret), left, right};
 }
 
 Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
@@ -125,36 +125,35 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
   }
 
   if (left_type == right_type) {
-    return {ast::BoolType::Get(ast_context()), left, right};
+    return {ast::BoolType::Get(context()), left, right};
   }
 
   ast::Type *sql_int_type =
-      ast::SqlType::Get(ast_context(), sql::IntegerType::InstanceNonNullable());
+      ast::SqlType::Get(context(), sql::IntegerType::InstanceNonNullable());
 
   if (!right_type->IsSqlType()) {
     // Implicitly cast the right to a SQL Integer
-    right = ast_context().node_factory().NewImplicitCastExpr(
+    right = context().node_factory().NewImplicitCastExpr(
         right->position(), ast::CastKind::IntToSqlInt, sql_int_type, right);
 
     right_type =
-        ast::SqlType::Get(ast_context(), sql::IntegerType::Instance(false));
+        ast::SqlType::Get(context(), sql::IntegerType::Instance(false));
     right->set_type(right_type);
   }
 
   if (!left_type->IsSqlType()) {
     // Implicitly cast the left to a SQL Integer
-    left = ast_context().node_factory().NewImplicitCastExpr(
+    left = context().node_factory().NewImplicitCastExpr(
         left->position(), ast::CastKind::IntToSqlInt, sql_int_type, left);
 
-    left_type =
-        ast::SqlType::Get(ast_context(), sql::IntegerType::Instance(false));
+    left_type = ast::SqlType::Get(context(), sql::IntegerType::Instance(false));
     left->set_type(left_type);
   }
 
   bool res_nullable = left_type->As<ast::SqlType>()->sql_type().nullable() ||
                       right_type->As<ast::SqlType>()->sql_type().nullable();
-  ast::SqlType *return_type = ast::SqlType::Get(
-      ast_context(), sql::BooleanType::Instance(res_nullable));
+  ast::SqlType *return_type =
+      ast::SqlType::Get(context(), sql::BooleanType::Instance(res_nullable));
 
   return {return_type, left, right};
 }
@@ -268,8 +267,7 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
       arguments[0]->type()->As<ast::InternalType>()->internal_kind() !=
           ast::InternalType::InternalKind::VectorProjectionIterator) {
     auto *vpi_type = ast::InternalType::Get(
-        ast_context(),
-        ast::InternalType::InternalKind::VectorProjectionIterator);
+        context(), ast::InternalType::InternalKind::VectorProjectionIterator);
     error_reporter().Report(call->position(),
                             ErrorMessages::kIncorrectCallArgType,
                             arguments[0]->type(), vpi_type, call->FuncName());
@@ -277,14 +275,14 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
   }
 
   if (!arguments[1]->type()->IsStringType()) {
-    error_reporter().Report(
-        call->position(), ErrorMessages::kIncorrectCallArgType,
-        arguments[1]->type(), ast::StringType::Get(ast_context()),
-        call->FuncName());
+    error_reporter().Report(call->position(),
+                            ErrorMessages::kIncorrectCallArgType,
+                            arguments[1]->type(),
+                            ast::StringType::Get(context()), call->FuncName());
   }
 
   call->set_type(
-      ast::IntegerType::Get(ast_context(), ast::IntegerType::IntKind::Int32));
+      ast::IntegerType::Get(context(), ast::IntegerType::IntKind::Int32));
 }
 
 void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
@@ -359,7 +357,7 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
   }
 
   // This call returns nothing
-  call->set_type(ast::NilType::Get(ast_context()));
+  call->set_type(ast::NilType::Get(context()));
 }
 
 void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
@@ -395,7 +393,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
 void Sema::VisitCallExpr(ast::CallExpr *node) {
   // Is this a built in?
   if (ast::Builtin builtin;
-      ast_context().IsBuiltinFunction(node->FuncName(), &builtin)) {
+      context().IsBuiltinFunction(node->FuncName(), &builtin)) {
     CheckBuiltinCall(node, builtin);
     return;
   }
@@ -488,7 +486,7 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
     }
 
     ast::ReturnStmt *empty_ret =
-        ast_context().node_factory().NewReturnStmt(node->position(), nullptr);
+        context().node_factory().NewReturnStmt(node->position(), nullptr);
     node->body()->statements().push_back(empty_ret);
   }
 }
@@ -501,13 +499,13 @@ void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   }
 
   // Check the builtin types
-  if (auto *type = ast_context().LookupBuiltinType(node->name())) {
+  if (auto *type = context().LookupBuiltinType(node->name())) {
     node->set_type(type);
     return;
   }
 
   // Check the internal types
-  if (auto *type = ast_context().LookupInternalType(node->name())) {
+  if (auto *type = context().LookupInternalType(node->name())) {
     node->set_type(type);
     return;
   }
@@ -612,27 +610,27 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
 void Sema::VisitLitExpr(ast::LitExpr *node) {
   switch (node->literal_kind()) {
     case ast::LitExpr::LitKind::Nil: {
-      node->set_type(ast::NilType::Get(ast_context()));
+      node->set_type(ast::NilType::Get(context()));
       break;
     }
     case ast::LitExpr::LitKind::Boolean: {
-      node->set_type(ast::BoolType::Get(ast_context()));
+      node->set_type(ast::BoolType::Get(context()));
       break;
     }
     case ast::LitExpr::LitKind::Float: {
       // Literal floats default to float32
-      node->set_type(ast::FloatType::Get(ast_context(),
-                                         ast::FloatType::FloatKind::Float32));
+      node->set_type(
+          ast::FloatType::Get(context(), ast::FloatType::FloatKind::Float32));
       break;
     }
     case ast::LitExpr::LitKind::Int: {
       // Literal integers default to int32
-      node->set_type(ast::IntegerType::Get(ast_context(),
-                                           ast::IntegerType::IntKind::Int32));
+      node->set_type(
+          ast::IntegerType::Get(context(), ast::IntegerType::IntKind::Int32));
       break;
     }
     case ast::LitExpr::LitKind::String: {
-      node->set_type(ast::StringType::Get(ast_context()));
+      node->set_type(ast::StringType::Get(context()));
       break;
     }
   }
