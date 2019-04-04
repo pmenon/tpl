@@ -23,7 +23,7 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
   if (auto *left_type = left->type()->SafeAs<ast::SqlType>();
       left_type != nullptr && left_type->sql_type().Is<sql::BooleanType>()) {
     // Implicit cast
-    left = context().node_factory().NewImplicitCastExpr(
+    left = context()->node_factory().NewImplicitCastExpr(
         left->position(), ast::CastKind::SqlBoolToBool,
         ast::BoolType::Get(context()), left);
 
@@ -34,7 +34,7 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
   if (auto *right_type = right->type()->SafeAs<ast::SqlType>();
       right_type != nullptr && right_type->sql_type().Is<sql::BooleanType>()) {
     // Implicit cast
-    right = context().node_factory().NewImplicitCastExpr(
+    right = context()->node_factory().NewImplicitCastExpr(
         right->position(), ast::CastKind::SqlBoolToBool,
         ast::BoolType::Get(context()), right);
 
@@ -85,7 +85,7 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
 
   if (!right->type()->IsSqlType()) {
     // Implicitly cast the right to a SQL Integer
-    right = context().node_factory().NewImplicitCastExpr(
+    right = context()->node_factory().NewImplicitCastExpr(
         right->position(), ast::CastKind::IntToSqlInt, sql_int_type, right);
 
     right->set_type(
@@ -94,7 +94,7 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
 
   if (!left->type()->IsSqlType()) {
     // Implicitly cast the left to a SQL Integer
-    left = context().node_factory().NewImplicitCastExpr(
+    left = context()->node_factory().NewImplicitCastExpr(
         left->position(), ast::CastKind::IntToSqlInt, sql_int_type, left);
 
     left->set_type(
@@ -133,7 +133,7 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
 
   if (!right_type->IsSqlType()) {
     // Implicitly cast the right to a SQL Integer
-    right = context().node_factory().NewImplicitCastExpr(
+    right = context()->node_factory().NewImplicitCastExpr(
         right->position(), ast::CastKind::IntToSqlInt, sql_int_type, right);
 
     right_type =
@@ -143,7 +143,7 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
 
   if (!left_type->IsSqlType()) {
     // Implicitly cast the left to a SQL Integer
-    left = context().node_factory().NewImplicitCastExpr(
+    left = context()->node_factory().NewImplicitCastExpr(
         left->position(), ast::CastKind::IntToSqlInt, sql_int_type, left);
 
     left_type = ast::SqlType::Get(context(), sql::IntegerType::Instance(false));
@@ -393,7 +393,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
 void Sema::VisitCallExpr(ast::CallExpr *node) {
   // Is this a built in?
   if (ast::Builtin builtin;
-      context().IsBuiltinFunction(node->FuncName(), &builtin)) {
+      context()->IsBuiltinFunction(node->FuncName(), &builtin)) {
     CheckBuiltinCall(node, builtin);
     return;
   }
@@ -486,7 +486,7 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
     }
 
     ast::ReturnStmt *empty_ret =
-        context().node_factory().NewReturnStmt(node->position(), nullptr);
+        context()->node_factory().NewReturnStmt(node->position(), nullptr);
     node->body()->statements().push_back(empty_ret);
   }
 }
@@ -499,13 +499,13 @@ void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   }
 
   // Check the builtin types
-  if (auto *type = context().LookupBuiltinType(node->name())) {
+  if (auto *type = context()->LookupBuiltinType(node->name())) {
     node->set_type(type);
     return;
   }
 
   // Check the internal types
-  if (auto *type = context().LookupInternalType(node->name())) {
+  if (auto *type = context()->LookupInternalType(node->name())) {
     node->set_type(type);
     return;
   }

@@ -8,9 +8,9 @@
 
 namespace tpl::sema {
 
-Sema::Sema(ast::Context &ctx)
+Sema::Sema(ast::Context *ctx)
     : ctx_(ctx),
-      error_reporter_(ctx.error_reporter()),
+      error_reporter_(ctx->error_reporter()),
       scope_(nullptr),
       num_cached_scopes_(0),
       curr_func_(nullptr) {}
@@ -22,9 +22,9 @@ bool Sema::Run(ast::AstNode *root) {
 }
 
 ast::Type *Sema::ConvertSchemaToType(const sql::Schema &schema) {
-  util::RegionVector<ast::Field> cols(context().region());
+  util::RegionVector<ast::Field> cols(context()->region());
   for (const auto &col : schema.columns()) {
-    auto col_name = context().GetIdentifier(col.name);
+    auto col_name = context()->GetIdentifier(col.name);
     auto col_type = ast::SqlType::Get(context(), col.type);
     cols.emplace_back(col_name, col_type);
   }

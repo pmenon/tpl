@@ -122,7 +122,7 @@ TEST_F(SemaExprTest, LogicalOperationTest) {
   };
 
   for (const auto &test : tests) {
-    Sema sema(*ctx());
+    Sema sema(ctx());
     bool errors = sema.Run(test.tree);
 
     if (test.has_errors) {
@@ -175,7 +175,7 @@ TEST_F(SemaExprTest, ComparisonOperationWithImplicitCastTest) {
   }
 
   for (const auto &test : tests) {
-    Sema sema(*ctx());
+    Sema sema(ctx());
     bool errors = sema.Run(test.tree);
 
     if (test.has_errors) {

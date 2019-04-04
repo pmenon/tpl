@@ -37,7 +37,7 @@ void Sema::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {
 
 void Sema::VisitFunctionTypeRepr(ast::FunctionTypeRepr *node) {
   // Handle parameters
-  util::RegionVector<ast::Field> param_types(context().region());
+  util::RegionVector<ast::Field> param_types(context()->region());
   for (auto *param : node->parameters()) {
     Visit(param);
     ast::Type *param_type = param->type_repr()->type();
@@ -69,7 +69,7 @@ void Sema::VisitPointerTypeRepr(ast::PointerTypeRepr *node) {
 }
 
 void Sema::VisitStructTypeRepr(ast::StructTypeRepr *node) {
-  util::RegionVector<ast::Field> field_types(context().region());
+  util::RegionVector<ast::Field> field_types(context()->region());
   for (auto *field : node->fields()) {
     Visit(field);
     ast::Type *field_type = field->type_repr()->type();

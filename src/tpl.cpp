@@ -52,7 +52,7 @@ static void CompileAndRun(const std::string &source,
   ast::Context context(&region, error_reporter);
 
   parsing::Scanner scanner(source.data(), source.length());
-  parsing::Parser parser(scanner, context);
+  parsing::Parser parser(&scanner, &context);
 
   double parse_ms = 0, typecheck_ms = 0, codegen_ms = 0, exec_ms = 0,
          jit_ms = 0;
@@ -73,7 +73,7 @@ static void CompileAndRun(const std::string &source,
   // Type check
   {
     util::ScopedTimer<std::milli> timer(&typecheck_ms);
-    sema::Sema type_check(context);
+    sema::Sema type_check(&context);
     type_check.Run(root);
   }
 

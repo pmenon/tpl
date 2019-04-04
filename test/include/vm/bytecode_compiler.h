@@ -17,11 +17,11 @@ class BytecodeCompiler {
 
   ast::AstNode *CompileToAst(const std::string &source) {
     parsing::Scanner scanner(source);
-    parsing::Parser parser(scanner, ctx_);
+    parsing::Parser parser(&scanner, &ctx_);
 
     auto *ast = parser.Parse();
 
-    sema::Sema type_check(ctx_);
+    sema::Sema type_check(&ctx_);
     type_check.Run(ast);
 
     if (errors_.HasErrors()) {

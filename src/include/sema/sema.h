@@ -20,7 +20,7 @@ namespace sema {
 
 class Sema : public ast::AstVisitor<Sema> {
  public:
-  explicit Sema(ast::Context &ctx);
+  explicit Sema(ast::Context *ctx);
 
   DISALLOW_COPY_AND_MOVE(Sema);
 
@@ -73,7 +73,7 @@ class Sema : public ast::AstVisitor<Sema> {
   ///
   //////////////////////////////////////////////////////////////////////////////
 
-  ast::Context &context() const { return ctx_; }
+  ast::Context *context() const { return ctx_; }
 
   ErrorReporter &error_reporter() const { return error_reporter_; }
 
@@ -160,7 +160,7 @@ class Sema : public ast::AstVisitor<Sema> {
 
  private:
   // The context
-  ast::Context &ctx_;
+  ast::Context *ctx_;
 
   // The error reporter
   ErrorReporter &error_reporter_;

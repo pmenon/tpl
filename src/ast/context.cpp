@@ -155,7 +155,7 @@ struct Context::Implementation {
   llvm::DenseSet<StructType *, StructTypeKeyInfo> struct_types;
   llvm::DenseSet<FunctionType *, FunctionTypeKeyInfo> func_types;
 
-  explicit Implementation(Context &ctx)
+  explicit Implementation(Context *ctx)
       : int8(ctx, sizeof(i8), alignof(i8), IntegerType::IntKind::Int8),
         int16(ctx, sizeof(i16), alignof(i16), IntegerType::IntKind::Int16),
         int32(ctx, sizeof(i32), alignof(i32), IntegerType::IntKind::Int32),
@@ -169,16 +169,16 @@ struct Context::Implementation {
         boolean(ctx),
         string(ctx),
         nil(ctx),
-        internal_types(ctx.region()),
+        internal_types(ctx->region()),
         string_table(kDefaultStringTableCapacity,
-                     util::LLVMRegionAllocator(ctx.region())) {}
+                     util::LLVMRegionAllocator(ctx->region())) {}
 };
 
 Context::Context(util::Region *region, sema::ErrorReporter &error_reporter)
     : region_(region),
       error_reporter_(error_reporter),
       node_factory_(std::make_unique<AstNodeFactory>(region)),
-      impl_(std::make_unique<Implementation>(*this)) {
+      impl_(std::make_unique<Implementation>(this)) {
   // Initialize basic types
   impl().builtin_types[GetIdentifier("bool")] = &impl().boolean;
   impl().builtin_types[GetIdentifier("nil")] = &impl().nil;
@@ -199,11 +199,11 @@ Context::Context(util::Region *region, sema::ErrorReporter &error_reporter)
 
   // Populate all the internal/hidden/opaque types
   impl().internal_types.reserve(InternalType::NumInternalTypes());
-#define INIT_TYPE(Kind, NameStr, Type)                            \
-  impl().internal_types.push_back(new (region) InternalType(      \
-      *this, GetIdentifier(NameStr), sizeof(Type), alignof(Type), \
-      InternalType::InternalKind::Kind));                         \
-  impl().internal_type_names[GetIdentifier(NameStr)] =            \
+#define INIT_TYPE(Kind, NameStr, Type)                           \
+  impl().internal_types.push_back(new (region) InternalType(     \
+      this, GetIdentifier(NameStr), sizeof(Type), alignof(Type), \
+      InternalType::InternalKind::Kind));                        \
+  impl().internal_type_names[GetIdentifier(NameStr)] =           \
       InternalType::InternalKind::Kind;
   INTERNAL_TYPE_LIST(INIT_TYPE)
 #undef INIT_TYPE
@@ -254,66 +254,66 @@ bool Context::IsBuiltinFunction(Identifier identifier, Builtin *builtin) const {
 PointerType *Type::PointerTo() { return PointerType::Get(this); }
 
 // static
-IntegerType *IntegerType::Get(Context &ctx, IntegerType::IntKind int_kind) {
+IntegerType *IntegerType::Get(Context *ctx, IntegerType::IntKind int_kind) {
   switch (int_kind) {
     case IntegerType::IntKind::Int8: {
-      return &ctx.impl().int8;
+      return &ctx->impl().int8;
     }
     case IntegerType::IntKind::Int16: {
-      return &ctx.impl().int16;
+      return &ctx->impl().int16;
     }
     case IntegerType::IntKind::Int32: {
-      return &ctx.impl().int32;
+      return &ctx->impl().int32;
     }
     case IntegerType::IntKind::Int64: {
-      return &ctx.impl().int64;
+      return &ctx->impl().int64;
     }
     case IntegerType::IntKind::UInt8: {
-      return &ctx.impl().uint8;
+      return &ctx->impl().uint8;
     }
     case IntegerType::IntKind::UInt16: {
-      return &ctx.impl().uint16;
+      return &ctx->impl().uint16;
     }
     case IntegerType::IntKind::UInt32: {
-      return &ctx.impl().uint32;
+      return &ctx->impl().uint32;
     }
     case IntegerType::IntKind::UInt64: {
-      return &ctx.impl().uint64;
+      return &ctx->impl().uint64;
     }
     default: { UNREACHABLE("Impossible integer kind"); }
   }
 }
 
 // static
-FloatType *FloatType::Get(Context &ctx, FloatKind float_kind) {
+FloatType *FloatType::Get(Context *ctx, FloatKind float_kind) {
   switch (float_kind) {
     case FloatType::FloatKind::Float32: {
-      return &ctx.impl().float32;
+      return &ctx->impl().float32;
     }
     case FloatType::FloatKind::Float64: {
-      return &ctx.impl().float64;
+      return &ctx->impl().float64;
     }
     default: { UNREACHABLE("Impossible floating point kind"); }
   }
 }
 
 // static
-BoolType *BoolType::Get(Context &ctx) { return &ctx.impl().boolean; }
+BoolType *BoolType::Get(Context *ctx) { return &ctx->impl().boolean; }
 
 // static
-StringType *StringType::Get(Context &ctx) { return &ctx.impl().string; }
+StringType *StringType::Get(Context *ctx) { return &ctx->impl().string; }
 
 // static
-NilType *NilType::Get(Context &ctx) { return &ctx.impl().nil; }
+NilType *NilType::Get(Context *ctx) { return &ctx->impl().nil; }
 
 // static
 PointerType *PointerType::Get(Type *base) {
-  Context &ctx = base->context();
+  Context *ctx = base->context();
 
-  PointerType *&pointer_type = ctx.impl().pointer_types[base];
+  PointerType *&pointer_type = ctx->impl().pointer_types[base];
 
   if (pointer_type == nullptr) {
-    pointer_type = new (ctx.region()) PointerType(base);
+    pointer_type = new (ctx->region()) PointerType(base);
   }
 
   return pointer_type;
@@ -321,12 +321,12 @@ PointerType *PointerType::Get(Type *base) {
 
 // static
 ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
-  Context &ctx = elem_type->context();
+  Context *ctx = elem_type->context();
 
-  ArrayType *&array_type = ctx.impl().array_types[{elem_type, length}];
+  ArrayType *&array_type = ctx->impl().array_types[{elem_type, length}];
 
   if (array_type == nullptr) {
-    array_type = new (ctx.region()) ArrayType(length, elem_type);
+    array_type = new (ctx->region()) ArrayType(length, elem_type);
   }
 
   return array_type;
@@ -334,22 +334,22 @@ ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
 
 // static
 MapType *MapType::Get(Type *key_type, Type *value_type) {
-  Context &ctx = key_type->context();
+  Context *ctx = key_type->context();
 
-  MapType *&map_type = ctx.impl().map_types[{key_type, value_type}];
+  MapType *&map_type = ctx->impl().map_types[{key_type, value_type}];
 
   if (map_type == nullptr) {
-    map_type = new (ctx.region()) MapType(key_type, value_type);
+    map_type = new (ctx->region()) MapType(key_type, value_type);
   }
 
   return map_type;
 }
 
 // static
-StructType *StructType::Get(Context &ctx, util::RegionVector<Field> &&fields) {
+StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
   const StructTypeKeyInfo::KeyTy key(fields);
 
-  auto [iter, inserted] = ctx.impl().struct_types.insert_as(nullptr, key);
+  auto [iter, inserted] = ctx->impl().struct_types.insert_as(nullptr, key);
 
   StructType *struct_type = nullptr;
 
@@ -358,7 +358,7 @@ StructType *StructType::Get(Context &ctx, util::RegionVector<Field> &&fields) {
     // struct element.
     u32 size = 0;
     u32 alignment = 0;
-    util::RegionVector<u32> field_offsets(ctx.region());
+    util::RegionVector<u32> field_offsets(ctx->region());
     for (const auto &field : fields) {
       // Check if the type needs to be padded
       u32 field_align = field.type->alignment();
@@ -372,7 +372,7 @@ StructType *StructType::Get(Context &ctx, util::RegionVector<Field> &&fields) {
       alignment = std::max(alignment, field.type->alignment());
     }
 
-    struct_type = new (ctx.region()) StructType(
+    struct_type = new (ctx->region()) StructType(
         ctx, size, alignment, std::move(fields), std::move(field_offsets));
     *iter = struct_type;
   } else {
@@ -391,18 +391,18 @@ StructType *StructType::Get(util::RegionVector<Field> &&fields) {
 
 // static
 FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
-  Context &ctx = ret->context();
+  Context *ctx = ret->context();
 
   const FunctionTypeKeyInfo::KeyTy key(ret, params);
 
-  auto [iter, inserted] = ctx.impl().func_types.insert_as(nullptr, key);
+  auto [iter, inserted] = ctx->impl().func_types.insert_as(nullptr, key);
 
   FunctionType *func_type = nullptr;
 
   if (inserted) {
     // The function type was not in the cache, create the type now and insert it
     // into the cache
-    func_type = new (ctx.region()) FunctionType(std::move(params), ret);
+    func_type = new (ctx->region()) FunctionType(std::move(params), ret);
     *iter = func_type;
   } else {
     func_type = *iter;
@@ -412,13 +412,13 @@ FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
 }
 
 // static
-InternalType *InternalType::Get(Context &ctx, InternalKind kind) {
+InternalType *InternalType::Get(Context *ctx, InternalKind kind) {
   TPL_ASSERT(static_cast<u8>(kind) < kNumInternalKinds,
              "Invalid internal kind");
-  return ctx.impl().internal_types[static_cast<u32>(kind)];
+  return ctx->impl().internal_types[static_cast<u32>(kind)];
 }
 
-SqlType *SqlType::Get(Context &ctx, const sql::Type &sql_type) {
+SqlType *SqlType::Get(Context *ctx, const sql::Type &sql_type) {
   // TODO: cache
   u32 size = 0, alignment = 0;
   switch (sql_type.type_id()) {
@@ -448,7 +448,7 @@ SqlType *SqlType::Get(Context &ctx, const sql::Type &sql_type) {
     }
   }
 
-  return new (ctx.region()) SqlType(ctx, size, alignment, sql_type);
+  return new (ctx->region()) SqlType(ctx, size, alignment, sql_type);
 }
 
 }  // namespace tpl::ast

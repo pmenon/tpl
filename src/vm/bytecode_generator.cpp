@@ -189,7 +189,7 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
     LoopBuilder vpi_loop(this);
     vpi_loop.LoopHeader();
 
-    ast::Context &ctx = row_type->context();
+    ast::Context *ctx = row_type->context();
     LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(ctx));
     emitter()->Emit(Bytecode::VPIHasNext, cond, vpi);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
@@ -252,11 +252,11 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   // function, too, that we populate with the instance inside the TVI.
   //
 
-  ast::Context &ctx = node->target()->type()->context();
+  ast::Context *ctx = node->target()->type()->context();
 
   bool vectorized = false;
   if (auto *attributes = node->attributes(); attributes != nullptr) {
-    if (attributes->Contains(ctx.GetIdentifier("batch"))) {
+    if (attributes->Contains(ctx->GetIdentifier("batch"))) {
       vectorized = true;
     }
   }
@@ -577,7 +577,7 @@ void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
 
 void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
                                                    ast::Builtin builtin) {
-  ast::Context &ctx = call->type()->context();
+  ast::Context *ctx = call->type()->context();
   ast::Type *ret_type =
       ast::IntegerType::Get(ctx, ast::IntegerType::IntKind::Int32);
 
@@ -630,8 +630,8 @@ void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
 void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
   ast::Builtin builtin;
 
-  ast::Context &ctx = call->type()->context();
-  ctx.IsBuiltinFunction(call->FuncName(), &builtin);
+  ast::Context *ctx = call->type()->context();
+  ctx->IsBuiltinFunction(call->FuncName(), &builtin);
 
   switch (builtin) {
     case ast::Builtin::FilterEq:
