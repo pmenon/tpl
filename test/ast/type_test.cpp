@@ -10,7 +10,7 @@ namespace tpl::ast::test {
 class TypeTest : public TplTest {
  public:
   TypeTest()
-      : region_("ast_test"), errors_(&region_), ctx_(&region_, errors_) {}
+      : region_("ast_test"), errors_(&region_), ctx_(&region_, &errors_) {}
 
   util::Region *region() { return &region_; }
 

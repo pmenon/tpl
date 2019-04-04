@@ -13,7 +13,7 @@ namespace tpl::vm::test {
 class BytecodeCompiler {
  public:
   BytecodeCompiler()
-      : region_("temp"), errors_(&region_), ctx_(&region_, errors_) {}
+      : region_("temp"), errors_(&region_), ctx_(&region_, &errors_) {}
 
   ast::AstNode *CompileToAst(const std::string &source) {
     parsing::Scanner scanner(source);

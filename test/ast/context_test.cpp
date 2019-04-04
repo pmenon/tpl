@@ -13,7 +13,7 @@ class ContextTest : public TplTest {};
 TEST_F(ContextTest, CreateNewStringsTest) {
   util::Region region("test");
   sema::ErrorReporter error_reporter(&region);
-  Context ctx(&region, error_reporter);
+  Context ctx(&region, &error_reporter);
 
   // We request the strings "string-0", "string-1", ..., "string-99" from the
   // context. We expect duplicate input strings to return the same Identifier!

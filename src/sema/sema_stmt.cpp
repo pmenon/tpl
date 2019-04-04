@@ -62,8 +62,8 @@ void Sema::VisitForStmt(ast::ForStmt *node) {
   if (node->condition() != nullptr) {
     ast::Type *cond_type = Resolve(node->condition());
     if (!cond_type->IsBoolType()) {
-      error_reporter().Report(node->condition()->position(),
-                              ErrorMessages::kNonBoolForCondition);
+      error_reporter()->Report(node->condition()->position(),
+                               ErrorMessages::kNonBoolForCondition);
     }
   }
 
@@ -79,14 +79,14 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
   SemaScope for_scope(this, Scope::Kind::Loop);
 
   if (!node->target()->IsIdentifierExpr()) {
-    error_reporter().Report(node->target()->position(),
-                            ErrorMessages::kNonIdentifierTargetInForInLoop);
+    error_reporter()->Report(node->target()->position(),
+                             ErrorMessages::kNonIdentifierTargetInForInLoop);
     return;
   }
 
   if (!node->iter()->IsIdentifierExpr()) {
-    error_reporter().Report(node->iter()->position(),
-                            ErrorMessages::kNonIdentifierIterator);
+    error_reporter()->Report(node->iter()->position(),
+                             ErrorMessages::kNonIdentifierIterator);
     return;
   }
 
@@ -96,8 +96,8 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
   // Lookup the table in the catalog
   auto *table = sql::Catalog::Instance()->LookupTableByName(iter->name());
   if (table == nullptr) {
-    error_reporter().Report(iter->position(), ErrorMessages::kNonExistingTable,
-                            iter->name());
+    error_reporter()->Report(iter->position(), ErrorMessages::kNonExistingTable,
+                             iter->name());
     return;
   }
 
@@ -156,8 +156,8 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
   }
 
   if (!node->condition()->type()->IsBoolType()) {
-    error_reporter().Report(node->condition()->position(),
-                            ErrorMessages::kNonBoolIfCondition);
+    error_reporter()->Report(node->condition()->position(),
+                             ErrorMessages::kNonBoolIfCondition);
   }
 
   Visit(node->then_stmt());
@@ -171,8 +171,8 @@ void Sema::VisitDeclStmt(ast::DeclStmt *node) { Visit(node->declaration()); }
 
 void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
   if (current_function() == nullptr) {
-    error_reporter().Report(node->position(),
-                            ErrorMessages::kReturnOutsideFunction);
+    error_reporter()->Report(node->position(),
+                             ErrorMessages::kReturnOutsideFunction);
     return;
   }
 
@@ -195,9 +195,9 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
 
   if (func_type->return_type()->IsNilType()) {
     if (return_type != nullptr) {
-      error_reporter().Report(node->position(),
-                              ErrorMessages::kMismatchedReturnType, return_type,
-                              func_type->return_type());
+      error_reporter()->Report(node->position(),
+                               ErrorMessages::kMismatchedReturnType,
+                               return_type, func_type->return_type());
     }
     return;
   }
@@ -215,9 +215,9 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
       return_type = ast::NilType::Get(context());
     }
 
-    error_reporter().Report(node->position(),
-                            ErrorMessages::kMismatchedReturnType, return_type,
-                            func_type->return_type());
+    error_reporter()->Report(node->position(),
+                             ErrorMessages::kMismatchedReturnType, return_type,
+                             func_type->return_type());
     return;
   }
 }

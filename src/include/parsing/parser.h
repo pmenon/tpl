@@ -38,7 +38,7 @@ class Parser {
 
   util::Region *region() { return context()->region(); }
 
-  sema::ErrorReporter &error_reporter() { return error_reporter_; }
+  sema::ErrorReporter *error_reporter() { return error_reporter_; }
 
   // -------------------------------------------------------
   // Token logic
@@ -54,9 +54,9 @@ class Parser {
     UNUSED Token::Type next = Next();
 #ifndef NDEBUG
     if (next != expected) {
-      error_reporter().Report(scanner()->current_position(),
-                              sema::ErrorMessages::kUnexpectedToken, next,
-                              expected);
+      error_reporter()->Report(scanner()->current_position(),
+                               sema::ErrorMessages::kUnexpectedToken, next,
+                               expected);
     }
 #endif
   }
@@ -65,9 +65,9 @@ class Parser {
   void Expect(Token::Type expected) {
     Token::Type next = Next();
     if (next != expected) {
-      error_reporter().Report(scanner()->current_position(),
-                              sema::ErrorMessages::kUnexpectedToken, next,
-                              expected);
+      error_reporter()->Report(scanner()->current_position(),
+                               sema::ErrorMessages::kUnexpectedToken, next,
+                               expected);
     }
   }
 
@@ -156,7 +156,7 @@ class Parser {
   ast::AstNodeFactory &node_factory_;
 
   // The error reporter
-  sema::ErrorReporter &error_reporter_;
+  sema::ErrorReporter *error_reporter_;
 };
 
 }  // namespace tpl::parsing

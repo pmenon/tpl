@@ -50,8 +50,8 @@ ast::Decl *Parser::ParseDecl() {
   }
 
   // Report error, sync up and try again
-  error_reporter().Report(scanner()->current_position(),
-                          sema::ErrorMessages::kInvalidDeclaration);
+  error_reporter()->Report(scanner()->current_position(),
+                           sema::ErrorMessages::kInvalidDeclaration);
   Sync(kTopLevelDecls);
   return nullptr;
 }
@@ -121,9 +121,9 @@ ast::Decl *Parser::ParseVariableDecl() {
   }
 
   if (type == nullptr && init == nullptr) {
-    error_reporter().Report(scanner()->current_position(),
-                            sema::ErrorMessages::kMissingTypeAndInitialValue,
-                            name);
+    error_reporter()->Report(scanner()->current_position(),
+                             sema::ErrorMessages::kMissingTypeAndInitialValue,
+                             name);
   }
 
   // Create declaration object
@@ -506,7 +506,8 @@ ast::Expr *Parser::ParsePrimaryExpr() {
     }
     case Token::Type::FALSE: {
       Consume(Token::Type::FALSE);
-      return node_factory().NewBoolLiteral(scanner()->current_position(), false);
+      return node_factory().NewBoolLiteral(scanner()->current_position(),
+                                           false);
     }
     case Token::Type::IDENTIFIER: {
       Next();
@@ -552,8 +553,8 @@ ast::Expr *Parser::ParsePrimaryExpr() {
   }
 
   // Error
-  error_reporter().Report(scanner()->current_position(),
-                          sema::ErrorMessages::kExpectingExpression);
+  error_reporter()->Report(scanner()->current_position(),
+                           sema::ErrorMessages::kExpectingExpression);
   Next();
   return node_factory().NewBadExpr(scanner()->current_position());
 }
@@ -600,8 +601,8 @@ ast::Expr *Parser::ParseType() {
   }
 
   // Error
-  error_reporter().Report(scanner()->current_position(),
-                          sema::ErrorMessages::kExpectingType);
+  error_reporter()->Report(scanner()->current_position(),
+                           sema::ErrorMessages::kExpectingType);
 
   return nullptr;
 }

@@ -174,7 +174,7 @@ struct Context::Implementation {
                      util::LLVMRegionAllocator(ctx->region())) {}
 };
 
-Context::Context(util::Region *region, sema::ErrorReporter &error_reporter)
+Context::Context(util::Region *region, sema::ErrorReporter *error_reporter)
     : region_(region),
       error_reporter_(error_reporter),
       node_factory_(std::make_unique<AstNodeFactory>(region)),

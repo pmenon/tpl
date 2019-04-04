@@ -11,15 +11,15 @@ void Sema::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {
     auto *len_expr = node->length()->SafeAs<ast::LitExpr>();
     if (len_expr == nullptr ||
         len_expr->literal_kind() != ast::LitExpr::LitKind::Int) {
-      error_reporter().Report(node->length()->position(),
-                              ErrorMessages::kNonIntegerArrayLength);
+      error_reporter()->Report(node->length()->position(),
+                               ErrorMessages::kNonIntegerArrayLength);
       return;
     }
 
     auto len = len_expr->int32_val();
     if (len < 0) {
-      error_reporter().Report(node->length()->position(),
-                              ErrorMessages::kNegativeArrayLength);
+      error_reporter()->Report(node->length()->position(),
+                               ErrorMessages::kNegativeArrayLength);
       return;
     }
 

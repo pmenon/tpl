@@ -7,8 +7,8 @@ namespace tpl::sema {
 
 void Sema::VisitVariableDecl(ast::VariableDecl *node) {
   if (current_scope()->LookupLocal(node->name()) != nullptr) {
-    error_reporter().Report(node->position(),
-                            ErrorMessages::kVariableRedeclared, node->name());
+    error_reporter()->Report(node->position(),
+                             ErrorMessages::kVariableRedeclared, node->name());
     return;
   }
 

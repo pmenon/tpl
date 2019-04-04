@@ -75,7 +75,7 @@ class Sema : public ast::AstVisitor<Sema> {
 
   ast::Context *context() const { return ctx_; }
 
-  ErrorReporter &error_reporter() const { return error_reporter_; }
+  ErrorReporter *error_reporter() const { return error_reporter_; }
 
   ast::FunctionLitExpr *current_function() const { return curr_func_; }
 
@@ -163,7 +163,7 @@ class Sema : public ast::AstVisitor<Sema> {
   ast::Context *ctx_;
 
   // The error reporter
-  ErrorReporter &error_reporter_;
+  ErrorReporter *error_reporter_;
 
   // The current active scope
   Scope *scope_;

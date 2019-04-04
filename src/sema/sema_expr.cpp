@@ -51,8 +51,8 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
     return {ast::BoolType::Get(context()), left, right};
   }
 
-  error_reporter().Report(pos, ErrorMessages::kMismatchedTypesToBinary,
-                          left->type(), right->type(), op);
+  error_reporter()->Report(pos, ErrorMessages::kMismatchedTypesToBinary,
+                           left->type(), right->type(), op);
   return {nullptr, left, right};
 }
 
@@ -66,8 +66,8 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
    */
 
   if (!left->type()->IsArithmetic() || !right->type()->IsArithmetic()) {
-    error_reporter().Report(pos, ErrorMessages::kIllegalTypesForBinary, op,
-                            left->type(), right->type());
+    error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op,
+                             left->type(), right->type());
     return {nullptr, left, right};
   }
 
@@ -119,8 +119,8 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
 
   // Are left and right types arithmetic? If not, we early exit.
   if (!left_type->IsArithmetic() || !right_type->IsArithmetic()) {
-    error_reporter().Report(pos, ErrorMessages::kIllegalTypesForBinary, op,
-                            left_type, right_type);
+    error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op,
+                             left_type, right_type);
     return {nullptr, left, right};
   }
 
@@ -242,9 +242,9 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
   //
 
   if (call->NumCallArgs() != 3) {
-    error_reporter().Report(call->position(),
-                            ErrorMessages::kMismatchedCallArgs,
-                            call->FuncName(), 3, call->NumCallArgs());
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kMismatchedCallArgs,
+                             call->FuncName(), 3, call->NumCallArgs());
     return;
   }
 
@@ -268,17 +268,17 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
           ast::InternalType::InternalKind::VectorProjectionIterator) {
     auto *vpi_type = ast::InternalType::Get(
         context(), ast::InternalType::InternalKind::VectorProjectionIterator);
-    error_reporter().Report(call->position(),
-                            ErrorMessages::kIncorrectCallArgType,
-                            arguments[0]->type(), vpi_type, call->FuncName());
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kIncorrectCallArgType,
+                             arguments[0]->type(), vpi_type, call->FuncName());
     return;
   }
 
   if (!arguments[1]->type()->IsStringType()) {
-    error_reporter().Report(call->position(),
-                            ErrorMessages::kIncorrectCallArgType,
-                            arguments[1]->type(),
-                            ast::StringType::Get(context()), call->FuncName());
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kIncorrectCallArgType,
+                             arguments[1]->type(),
+                             ast::StringType::Get(context()), call->FuncName());
   }
 
   call->set_type(
@@ -287,9 +287,9 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
 
 void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
   if (call->NumCallArgs() != 3) {
-    error_reporter().Report(call->position(),
-                            ErrorMessages::kMismatchedCallArgs,
-                            call->FuncName(), 3, call->NumCallArgs());
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kMismatchedCallArgs,
+                             call->FuncName(), 3, call->NumCallArgs());
     return;
   }
 
@@ -305,9 +305,9 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
   {
     auto *ptr_type = arguments[0]->type()->SafeAs<ast::PointerType>();
     if (ptr_type == nullptr) {
-      error_reporter().Report(call->position(),
-                              ErrorMessages::kBadArgToHashTableInsert,
-                              arguments[0]->type(), 0);
+      error_reporter()->Report(call->position(),
+                               ErrorMessages::kBadArgToHashTableInsert,
+                               arguments[0]->type(), 0);
       return;
     }
 
@@ -315,9 +315,9 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
     if (base_type == nullptr ||
         base_type->internal_kind() !=
             ast::InternalType::InternalKind::JoinHashTable) {
-      error_reporter().Report(call->position(),
-                              ErrorMessages::kBadArgToHashTableInsert,
-                              arguments[0]->type(), 0);
+      error_reporter()->Report(call->position(),
+                               ErrorMessages::kBadArgToHashTableInsert,
+                               arguments[0]->type(), 0);
       return;
     }
   }
@@ -325,9 +325,9 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
 
 void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
   if (call->NumCallArgs() != 1) {
-    error_reporter().Report(call->position(),
-                            ErrorMessages::kMismatchedCallArgs,
-                            call->FuncName(), 1, call->NumCallArgs());
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kMismatchedCallArgs,
+                             call->FuncName(), 1, call->NumCallArgs());
     return;
   }
 
@@ -340,8 +340,8 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
 
   // If not a pointer type, fail
   if (!type->IsPointerType()) {
-    error_reporter().Report(call->position(),
-                            ErrorMessages::kBadArgToHashTableBuild, type);
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kBadArgToHashTableBuild, type);
     return;
   }
 
@@ -351,8 +351,8 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
   if (base_type == nullptr ||
       base_type->internal_kind() !=
           ast::InternalType::InternalKind::JoinHashTable) {
-    error_reporter().Report(call->position(),
-                            ErrorMessages::kBadArgToHashTableBuild, type);
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kBadArgToHashTableBuild, type);
     return;
   }
 
@@ -407,14 +407,14 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   }
 
   if (!type->IsFunctionType()) {
-    error_reporter().Report(node->position(), ErrorMessages::kNonFunction);
+    error_reporter()->Report(node->position(), ErrorMessages::kNonFunction);
     return;
   }
 
   // First, check to make sure we have the right number of function arguments
   auto *func_type = type->As<ast::FunctionType>();
   if (func_type->num_params() != node->NumCallArgs()) {
-    error_reporter().Report(
+    error_reporter()->Report(
         node->position(), ErrorMessages::kMismatchedCallArgs, node->FuncName(),
         func_type->num_params(), node->NumCallArgs());
     return;
@@ -433,10 +433,10 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   const auto &expected_arg_params = func_type->params();
   for (size_t i = 0; i < actual_call_arg_types.size(); i++) {
     if (actual_call_arg_types[i]->type() != expected_arg_params[i].type) {
-      error_reporter().Report(node->position(),
-                              ErrorMessages::kIncorrectCallArgType,
-                              actual_call_arg_types[i]->type(),
-                              expected_arg_params[i].type, node->FuncName());
+      error_reporter()->Report(node->position(),
+                               ErrorMessages::kIncorrectCallArgType,
+                               actual_call_arg_types[i]->type(),
+                               expected_arg_params[i].type, node->FuncName());
       return;
     }
   }
@@ -480,8 +480,8 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
 
   if (node->IsEmpty() || !ast::Stmt::IsTerminating(node->body())) {
     if (!func_type->return_type()->IsNilType()) {
-      error_reporter().Report(node->body()->right_brace_position(),
-                              ErrorMessages::kMissingReturn);
+      error_reporter()->Report(node->body()->right_brace_position(),
+                               ErrorMessages::kMissingReturn);
       return;
     }
 
@@ -511,8 +511,8 @@ void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   }
 
   // Error
-  error_reporter().Report(node->position(), ErrorMessages::kUndefinedVariable,
-                          node->name());
+  error_reporter()->Report(node->position(), ErrorMessages::kUndefinedVariable,
+                           node->name());
 }
 
 void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
@@ -526,8 +526,8 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
   switch (node->cast_kind()) {
     case ast::CastKind::IntToSqlInt: {
       if (!expr_type->IsIntegerType()) {
-        error_reporter().Report(node->position(),
-                                ErrorMessages::kInvalidCastToSqlInt, expr_type);
+        error_reporter()->Report(
+            node->position(), ErrorMessages::kInvalidCastToSqlInt, expr_type);
         return;
       }
 
@@ -540,9 +540,9 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
 
     case ast::CastKind::IntToSqlDecimal: {
       if (!expr_type->IsIntegerType()) {
-        error_reporter().Report(node->position(),
-                                ErrorMessages::kInvalidCastToSqlDecimal,
-                                expr_type);
+        error_reporter()->Report(node->position(),
+                                 ErrorMessages::kInvalidCastToSqlDecimal,
+                                 expr_type);
         return;
       }
 
@@ -556,7 +556,7 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
     case ast::CastKind::SqlBoolToBool: {
       if (auto *type = expr_type->SafeAs<ast::SqlType>();
           type == nullptr || !type->sql_type().Is<sql::BooleanType>()) {
-        error_reporter().Report(
+        error_reporter()->Report(
             node->position(), ErrorMessages::kInvalidSqlCastToBool, expr_type);
         return;
       }
@@ -570,9 +570,9 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
     case ast::CastKind::IntegralCast: {
       // TODO: Fix me
       if (!expr_type->IsIntegerType()) {
-        error_reporter().Report(node->position(),
-                                ErrorMessages::kInvalidCastToSqlDecimal,
-                                expr_type);
+        error_reporter()->Report(node->position(),
+                                 ErrorMessages::kInvalidCastToSqlDecimal,
+                                 expr_type);
       }
       break;
     }
@@ -589,14 +589,14 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
   }
 
   if (!obj_type->IsArrayType() && !obj_type->IsMapType()) {
-    error_reporter().Report(node->position(),
-                            ErrorMessages::kInvalidIndexOperation, obj_type);
+    error_reporter()->Report(node->position(),
+                             ErrorMessages::kInvalidIndexOperation, obj_type);
     return;
   }
 
   if (!index_type->IsIntegerType()) {
-    error_reporter().Report(node->position(),
-                            ErrorMessages::kInvalidArrayIndexValue);
+    error_reporter()->Report(node->position(),
+                             ErrorMessages::kInvalidArrayIndexValue);
     return;
   }
 
@@ -648,9 +648,9 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
   switch (node->op()) {
     case parsing::Token::Type::BANG: {
       if (!expr_type->IsBoolType()) {
-        error_reporter().Report(node->position(),
-                                ErrorMessages::kInvalidOperation, node->op(),
-                                expr_type);
+        error_reporter()->Report(node->position(),
+                                 ErrorMessages::kInvalidOperation, node->op(),
+                                 expr_type);
         return;
       }
 
@@ -659,9 +659,9 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
     }
     case parsing::Token::Type::MINUS: {
       if (!expr_type->IsArithmetic()) {
-        error_reporter().Report(node->position(),
-                                ErrorMessages::kInvalidOperation, node->op(),
-                                expr_type);
+        error_reporter()->Report(node->position(),
+                                 ErrorMessages::kInvalidOperation, node->op(),
+                                 expr_type);
         return;
       }
 
@@ -670,9 +670,9 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
     }
     case parsing::Token::Type::STAR: {
       if (!expr_type->IsPointerType()) {
-        error_reporter().Report(node->position(),
-                                ErrorMessages::kInvalidOperation, node->op(),
-                                expr_type);
+        error_reporter()->Report(node->position(),
+                                 ErrorMessages::kInvalidOperation, node->op(),
+                                 expr_type);
         return;
       }
 
@@ -700,14 +700,14 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
   }
 
   if (!obj_type->IsStructType()) {
-    error_reporter().Report(node->position(),
-                            ErrorMessages::kMemberObjectNotComposite, obj_type);
+    error_reporter()->Report(
+        node->position(), ErrorMessages::kMemberObjectNotComposite, obj_type);
     return;
   }
 
   if (!node->member()->IsIdentifierExpr()) {
-    error_reporter().Report(node->member()->position(),
-                            ErrorMessages::kExpectedIdentifierForMember);
+    error_reporter()->Report(node->member()->position(),
+                             ErrorMessages::kExpectedIdentifierForMember);
     return;
   }
 
@@ -717,9 +717,9 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
       obj_type->As<ast::StructType>()->LookupFieldByName(member);
 
   if (member_type == nullptr) {
-    error_reporter().Report(node->member()->position(),
-                            ErrorMessages::kFieldObjectDoesNotExist, member,
-                            obj_type);
+    error_reporter()->Report(node->member()->position(),
+                             ErrorMessages::kFieldObjectDoesNotExist, member,
+                             obj_type);
     return;
   }
 

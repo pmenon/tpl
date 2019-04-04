@@ -18,7 +18,7 @@ Sema::Sema(ast::Context *ctx)
 // Main entry point to semantic analysis and type checking an AST
 bool Sema::Run(ast::AstNode *root) {
   Visit(root);
-  return error_reporter().HasErrors();
+  return error_reporter()->HasErrors();
 }
 
 ast::Type *Sema::ConvertSchemaToType(const sql::Schema &schema) {

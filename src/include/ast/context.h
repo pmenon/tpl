@@ -22,7 +22,7 @@ class Type;
 class Context {
  public:
   /// Constructor
-  explicit Context(util::Region *region, sema::ErrorReporter &error_reporter);
+  explicit Context(util::Region *region, sema::ErrorReporter *error_reporter);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(Context);
@@ -58,7 +58,7 @@ class Context {
 
   ast::AstNodeFactory &node_factory() const { return *node_factory_; }
 
-  sema::ErrorReporter &error_reporter() const { return error_reporter_; }
+  sema::ErrorReporter *error_reporter() const { return error_reporter_; }
 
   util::Region *region() const { return region_; }
 
@@ -67,7 +67,7 @@ class Context {
   util::Region *region_;
 
   // Error reporter
-  sema::ErrorReporter &error_reporter_;
+  sema::ErrorReporter *error_reporter_;
 
   // The factory used for Ast nodes
   std::unique_ptr<ast::AstNodeFactory> node_factory_;
