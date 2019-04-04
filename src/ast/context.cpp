@@ -180,37 +180,37 @@ Context::Context(util::Region *region, sema::ErrorReporter *error_reporter)
       node_factory_(std::make_unique<AstNodeFactory>(region)),
       impl_(std::make_unique<Implementation>(this)) {
   // Initialize basic types
-  impl().builtin_types[GetIdentifier("bool")] = &impl().boolean;
-  impl().builtin_types[GetIdentifier("nil")] = &impl().nil;
-  impl().builtin_types[GetIdentifier("int8")] = &impl().int8;
-  impl().builtin_types[GetIdentifier("int16")] = &impl().int16;
-  impl().builtin_types[GetIdentifier("int32")] = &impl().int32;
-  impl().builtin_types[GetIdentifier("int64")] = &impl().int64;
-  impl().builtin_types[GetIdentifier("uint8")] = &impl().uint8;
-  impl().builtin_types[GetIdentifier("uint16")] = &impl().uint16;
-  impl().builtin_types[GetIdentifier("uint32")] = &impl().uint32;
-  impl().builtin_types[GetIdentifier("uint64")] = &impl().uint64;
-  impl().builtin_types[GetIdentifier("float32")] = &impl().float32;
-  impl().builtin_types[GetIdentifier("float64")] = &impl().float64;
+  impl()->builtin_types[GetIdentifier("bool")] = &impl()->boolean;
+  impl()->builtin_types[GetIdentifier("nil")] = &impl()->nil;
+  impl()->builtin_types[GetIdentifier("int8")] = &impl()->int8;
+  impl()->builtin_types[GetIdentifier("int16")] = &impl()->int16;
+  impl()->builtin_types[GetIdentifier("int32")] = &impl()->int32;
+  impl()->builtin_types[GetIdentifier("int64")] = &impl()->int64;
+  impl()->builtin_types[GetIdentifier("uint8")] = &impl()->uint8;
+  impl()->builtin_types[GetIdentifier("uint16")] = &impl()->uint16;
+  impl()->builtin_types[GetIdentifier("uint32")] = &impl()->uint32;
+  impl()->builtin_types[GetIdentifier("uint64")] = &impl()->uint64;
+  impl()->builtin_types[GetIdentifier("float32")] = &impl()->float32;
+  impl()->builtin_types[GetIdentifier("float64")] = &impl()->float64;
   // Aliases
-  impl().builtin_types[GetIdentifier("int")] = &impl().int32;
-  impl().builtin_types[GetIdentifier("float")] = &impl().float32;
-  impl().builtin_types[GetIdentifier("void")] = &impl().nil;
+  impl()->builtin_types[GetIdentifier("int")] = &impl()->int32;
+  impl()->builtin_types[GetIdentifier("float")] = &impl()->float32;
+  impl()->builtin_types[GetIdentifier("void")] = &impl()->nil;
 
   // Populate all the internal/hidden/opaque types
-  impl().internal_types.reserve(InternalType::NumInternalTypes());
+  impl()->internal_types.reserve(InternalType::NumInternalTypes());
 #define INIT_TYPE(Kind, NameStr, Type)                           \
-  impl().internal_types.push_back(new (region) InternalType(     \
+  impl()->internal_types.push_back(new (region) InternalType(    \
       this, GetIdentifier(NameStr), sizeof(Type), alignof(Type), \
       InternalType::InternalKind::Kind));                        \
-  impl().internal_type_names[GetIdentifier(NameStr)] =           \
+  impl()->internal_type_names[GetIdentifier(NameStr)] =          \
       InternalType::InternalKind::Kind;
   INTERNAL_TYPE_LIST(INIT_TYPE)
 #undef INIT_TYPE
 
   // Initialize builtin functions
-#define BUILTIN_FUNC(Name, ...)       \
-  impl().builtin_funcs[GetIdentifier( \
+#define BUILTIN_FUNC(Name, ...)        \
+  impl()->builtin_funcs[GetIdentifier( \
       Builtins::GetFunctionName(Builtin::Name))] = Builtin::Name;
   BUILTINS_LIST(BUILTIN_FUNC)
 #undef BUILTIN_FUNC
@@ -221,26 +221,26 @@ Context::~Context() = default;
 Identifier Context::GetIdentifier(llvm::StringRef str) {
   if (str.empty()) return Identifier(nullptr);
 
-  auto iter = impl().string_table.insert(std::make_pair(str, char(0))).first;
+  auto iter = impl()->string_table.insert(std::make_pair(str, char(0))).first;
   return Identifier(iter->getKeyData());
 }
 
 Type *Context::LookupBuiltinType(Identifier identifier) const {
-  auto iter = impl().builtin_types.find(identifier);
-  return (iter == impl().builtin_types.end() ? nullptr : iter->second);
+  auto iter = impl()->builtin_types.find(identifier);
+  return (iter == impl()->builtin_types.end() ? nullptr : iter->second);
 }
 
 ast::Type *Context::LookupInternalType(Identifier identifier) const {
-  if (auto iter = impl().internal_type_names.find(identifier);
-      iter != impl().internal_type_names.end()) {
-    return impl().internal_types[static_cast<u32>(iter->second)];
+  if (auto iter = impl()->internal_type_names.find(identifier);
+      iter != impl()->internal_type_names.end()) {
+    return impl()->internal_types[static_cast<u32>(iter->second)];
   }
   return nullptr;
 }
 
 bool Context::IsBuiltinFunction(Identifier identifier, Builtin *builtin) const {
-  if (auto iter = impl().builtin_funcs.find(identifier);
-      iter != impl().builtin_funcs.end()) {
+  if (auto iter = impl()->builtin_funcs.find(identifier);
+      iter != impl()->builtin_funcs.end()) {
     if (builtin != nullptr) {
       *builtin = iter->second;
     }
@@ -257,28 +257,28 @@ PointerType *Type::PointerTo() { return PointerType::Get(this); }
 IntegerType *IntegerType::Get(Context *ctx, IntegerType::IntKind int_kind) {
   switch (int_kind) {
     case IntegerType::IntKind::Int8: {
-      return &ctx->impl().int8;
+      return &ctx->impl()->int8;
     }
     case IntegerType::IntKind::Int16: {
-      return &ctx->impl().int16;
+      return &ctx->impl()->int16;
     }
     case IntegerType::IntKind::Int32: {
-      return &ctx->impl().int32;
+      return &ctx->impl()->int32;
     }
     case IntegerType::IntKind::Int64: {
-      return &ctx->impl().int64;
+      return &ctx->impl()->int64;
     }
     case IntegerType::IntKind::UInt8: {
-      return &ctx->impl().uint8;
+      return &ctx->impl()->uint8;
     }
     case IntegerType::IntKind::UInt16: {
-      return &ctx->impl().uint16;
+      return &ctx->impl()->uint16;
     }
     case IntegerType::IntKind::UInt32: {
-      return &ctx->impl().uint32;
+      return &ctx->impl()->uint32;
     }
     case IntegerType::IntKind::UInt64: {
-      return &ctx->impl().uint64;
+      return &ctx->impl()->uint64;
     }
     default: { UNREACHABLE("Impossible integer kind"); }
   }
@@ -288,29 +288,29 @@ IntegerType *IntegerType::Get(Context *ctx, IntegerType::IntKind int_kind) {
 FloatType *FloatType::Get(Context *ctx, FloatKind float_kind) {
   switch (float_kind) {
     case FloatType::FloatKind::Float32: {
-      return &ctx->impl().float32;
+      return &ctx->impl()->float32;
     }
     case FloatType::FloatKind::Float64: {
-      return &ctx->impl().float64;
+      return &ctx->impl()->float64;
     }
     default: { UNREACHABLE("Impossible floating point kind"); }
   }
 }
 
 // static
-BoolType *BoolType::Get(Context *ctx) { return &ctx->impl().boolean; }
+BoolType *BoolType::Get(Context *ctx) { return &ctx->impl()->boolean; }
 
 // static
-StringType *StringType::Get(Context *ctx) { return &ctx->impl().string; }
+StringType *StringType::Get(Context *ctx) { return &ctx->impl()->string; }
 
 // static
-NilType *NilType::Get(Context *ctx) { return &ctx->impl().nil; }
+NilType *NilType::Get(Context *ctx) { return &ctx->impl()->nil; }
 
 // static
 PointerType *PointerType::Get(Type *base) {
   Context *ctx = base->context();
 
-  PointerType *&pointer_type = ctx->impl().pointer_types[base];
+  PointerType *&pointer_type = ctx->impl()->pointer_types[base];
 
   if (pointer_type == nullptr) {
     pointer_type = new (ctx->region()) PointerType(base);
@@ -323,7 +323,7 @@ PointerType *PointerType::Get(Type *base) {
 ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
   Context *ctx = elem_type->context();
 
-  ArrayType *&array_type = ctx->impl().array_types[{elem_type, length}];
+  ArrayType *&array_type = ctx->impl()->array_types[{elem_type, length}];
 
   if (array_type == nullptr) {
     array_type = new (ctx->region()) ArrayType(length, elem_type);
@@ -336,7 +336,7 @@ ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
 MapType *MapType::Get(Type *key_type, Type *value_type) {
   Context *ctx = key_type->context();
 
-  MapType *&map_type = ctx->impl().map_types[{key_type, value_type}];
+  MapType *&map_type = ctx->impl()->map_types[{key_type, value_type}];
 
   if (map_type == nullptr) {
     map_type = new (ctx->region()) MapType(key_type, value_type);
@@ -349,7 +349,7 @@ MapType *MapType::Get(Type *key_type, Type *value_type) {
 StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
   const StructTypeKeyInfo::KeyTy key(fields);
 
-  auto [iter, inserted] = ctx->impl().struct_types.insert_as(nullptr, key);
+  auto [iter, inserted] = ctx->impl()->struct_types.insert_as(nullptr, key);
 
   StructType *struct_type = nullptr;
 
@@ -395,7 +395,7 @@ FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
 
   const FunctionTypeKeyInfo::KeyTy key(ret, params);
 
-  auto [iter, inserted] = ctx->impl().func_types.insert_as(nullptr, key);
+  auto [iter, inserted] = ctx->impl()->func_types.insert_as(nullptr, key);
 
   FunctionType *func_type = nullptr;
 
@@ -415,7 +415,7 @@ FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
 InternalType *InternalType::Get(Context *ctx, InternalKind kind) {
   TPL_ASSERT(static_cast<u8>(kind) < kNumInternalKinds,
              "Invalid internal kind");
-  return ctx->impl().internal_types[static_cast<u32>(kind)];
+  return ctx->impl()->internal_types[static_cast<u32>(kind)];
 }
 
 SqlType *SqlType::Get(Context *ctx, const sql::Type &sql_type) {

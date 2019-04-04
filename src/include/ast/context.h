@@ -54,7 +54,7 @@ class Context {
   // -------------------------------------------------------
 
   struct Implementation;
-  Implementation &impl() const { return *impl_; }
+  Implementation *impl() const { return impl_.get(); }
 
   ast::AstNodeFactory *node_factory() const { return node_factory_.get(); }
 
