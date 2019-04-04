@@ -34,7 +34,7 @@ class Parser {
 
   ast::Context *context() { return context_; }
 
-  ast::AstNodeFactory &node_factory() { return node_factory_; }
+  ast::AstNodeFactory *node_factory() { return node_factory_; }
 
   util::Region *region() { return context()->region(); }
 
@@ -153,7 +153,7 @@ class Parser {
   ast::Context *context_;
 
   // A factory for all node types
-  ast::AstNodeFactory &node_factory_;
+  ast::AstNodeFactory *node_factory_;
 
   // The error reporter
   sema::ErrorReporter *error_reporter_;

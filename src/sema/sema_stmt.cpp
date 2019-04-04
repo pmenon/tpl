@@ -27,7 +27,7 @@ void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
    */
 
   if (src_type->IsIntegerType() || dest_type->IsIntegerType()) {
-    auto *cast_expr = context()->node_factory().NewImplicitCastExpr(
+    auto *cast_expr = context()->node_factory()->NewImplicitCastExpr(
         node->source()->position(), ast::CastKind::IntegralCast, dest_type,
         node->source());
     node->set_source(cast_expr);
@@ -148,7 +148,7 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
   if (auto *type = node->condition()->type()->SafeAs<ast::SqlType>();
       type != nullptr && type->sql_type().type_id() == sql::TypeId::Boolean) {
     ast::Expr *cond = node->condition();
-    cond = context()->node_factory().NewImplicitCastExpr(
+    cond = context()->node_factory()->NewImplicitCastExpr(
         cond->position(), ast::CastKind::SqlBoolToBool,
         ast::BoolType::Get(context()), cond);
     cond->set_type(ast::BoolType::Get(context()));

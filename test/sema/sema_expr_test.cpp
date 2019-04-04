@@ -18,7 +18,7 @@ class SemaExprTest : public TplTest {
   util::Region *region() { return &region_; }
   ErrorReporter *error_reporter() { return &error_reporter_; }
   ast::Context *ctx() { return &ctx_; }
-  ast::AstNodeFactory *node_factory() { return &ctx_.node_factory(); }
+  ast::AstNodeFactory *node_factory() { return ctx_.node_factory(); }
 
   ast::Identifier Ident(const std::string &s) {
     return ctx()->GetIdentifier(s);

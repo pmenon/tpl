@@ -24,7 +24,7 @@ ast::AstNode *Parser::Parse() {
     }
   }
 
-  return node_factory().NewFile(start_pos, std::move(decls));
+  return node_factory()->NewFile(start_pos, std::move(decls));
 }
 
 void Parser::Sync(std::unordered_set<Token::Type> &s) {
@@ -69,7 +69,8 @@ ast::Decl *Parser::ParseFunctionDecl() {
   auto *fun = ParseFunctionLitExpr()->As<ast::FunctionLitExpr>();
 
   // Create declaration
-  ast::FunctionDecl *decl = node_factory().NewFunctionDecl(position, name, fun);
+  ast::FunctionDecl *decl =
+      node_factory()->NewFunctionDecl(position, name, fun);
 
   // Done
   return decl;
@@ -89,7 +90,7 @@ ast::Decl *Parser::ParseStructDecl() {
 
   // The declaration object
   ast::StructDecl *decl =
-      node_factory().NewStructDecl(position, name, struct_type);
+      node_factory()->NewStructDecl(position, name, struct_type);
 
   // Done
   return decl;
@@ -128,7 +129,7 @@ ast::Decl *Parser::ParseVariableDecl() {
 
   // Create declaration object
   ast::VariableDecl *decl =
-      node_factory().NewVariableDecl(position, name, type, init);
+      node_factory()->NewVariableDecl(position, name, type, init);
 
   // Done
   return decl;
@@ -153,7 +154,7 @@ ast::Stmt *Parser::ParseStmt() {
     }
     case Token::Type::VAR: {
       ast::Decl *var_decl = ParseVariableDecl();
-      return node_factory().NewDeclStmt(var_decl);
+      return node_factory()->NewDeclStmt(var_decl);
     }
     default: { return ParseSimpleStmt(); }
   }
@@ -166,10 +167,10 @@ ast::Stmt *Parser::ParseSimpleStmt() {
   if (Matches(Token::Type::EQUAL)) {
     const SourcePosition &pos = scanner()->current_position();
     ast::Expr *right = ParseExpr();
-    return node_factory().NewAssignmentStmt(pos, left, right);
+    return node_factory()->NewAssignmentStmt(pos, left, right);
   }
 
-  return node_factory().NewExpressionStmt(left);
+  return node_factory()->NewExpressionStmt(left);
 }
 
 ast::Stmt *Parser::ParseBlockStmt() {
@@ -193,8 +194,8 @@ ast::Stmt *Parser::ParseBlockStmt() {
   Expect(Token::Type::RIGHT_BRACE);
   const SourcePosition &end_position = scanner()->current_position();
 
-  return node_factory().NewBlockStmt(start_position, end_position,
-                                     std::move(statements));
+  return node_factory()->NewBlockStmt(start_position, end_position,
+                                      std::move(statements));
 }
 
 class Parser::ForHeader {
@@ -324,11 +325,11 @@ ast::Stmt *Parser::ParseForStmt() {
 
   if (header.IsStandard()) {
     const auto &[init, cond, next] = header.GetForElements();
-    return node_factory().NewForStmt(position, init, cond, next, body);
+    return node_factory()->NewForStmt(position, init, cond, next, body);
   } else {
     const auto &[target, iter, attributes] = header.GetForInElements();
-    return node_factory().NewForInStmt(position, target, iter, attributes,
-                                       body);
+    return node_factory()->NewForInStmt(position, target, iter, attributes,
+                                        body);
   }
 }
 
@@ -357,7 +358,7 @@ ast::Stmt *Parser::ParseIfStmt() {
     }
   }
 
-  return node_factory().NewIfStmt(position, cond, then_stmt, else_stmt);
+  return node_factory()->NewIfStmt(position, cond, then_stmt, else_stmt);
 }
 
 ast::Stmt *Parser::ParseReturnStmt() {
@@ -370,7 +371,7 @@ ast::Stmt *Parser::ParseReturnStmt() {
     ret = ParseExpr();
   }
 
-  return node_factory().NewReturnStmt(position, ret);
+  return node_factory()->NewReturnStmt(position, ret);
 }
 
 ast::Expr *Parser::ParseExpr() {
@@ -398,9 +399,9 @@ ast::Expr *Parser::ParseBinaryOpExpr(uint32_t min_prec) {
       ast::Expr *right = ParseBinaryOpExpr(prec);
 
       if (Token::IsCompareOp(op)) {
-        left = node_factory().NewComparisonOpExpr(position, op, left, right);
+        left = node_factory()->NewComparisonOpExpr(position, op, left, right);
       } else {
-        left = node_factory().NewBinaryOpExpr(position, op, left, right);
+        left = node_factory()->NewBinaryOpExpr(position, op, left, right);
       }
     }
   }
@@ -421,7 +422,7 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
       Token::Type op = Next();
       const SourcePosition &position = scanner()->current_position();
       ast::Expr *expr = ParseUnaryOpExpr();
-      return node_factory().NewUnaryOpExpr(position, op, expr);
+      return node_factory()->NewUnaryOpExpr(position, op, expr);
     }
     default:
       break;
@@ -455,7 +456,7 @@ ast::Expr *Parser::ParseLeftHandSideExpression() {
           }
         }
         Expect(Token::Type::RIGHT_PAREN);
-        result = node_factory().NewCallExpr(result, std::move(args));
+        result = node_factory()->NewCallExpr(result, std::move(args));
         break;
       }
       case Token::Type::DOT: {
@@ -465,7 +466,7 @@ ast::Expr *Parser::ParseLeftHandSideExpression() {
         Consume(Token::Type::DOT);
         ast::Expr *member = ParsePrimaryExpr();
         result =
-            node_factory().NewMemberExpr(result->position(), result, member);
+            node_factory()->NewMemberExpr(result->position(), result, member);
         break;
       }
       case Token::Type::LEFT_BRACKET: {
@@ -475,7 +476,8 @@ ast::Expr *Parser::ParseLeftHandSideExpression() {
         Consume(Token::Type::LEFT_BRACKET);
         ast::Expr *index = ParseExpr();
         Expect(Token::Type::RIGHT_BRACKET);
-        result = node_factory().NewIndexExpr(result->position(), result, index);
+        result =
+            node_factory()->NewIndexExpr(result->position(), result, index);
         break;
       }
       default: {
@@ -498,21 +500,22 @@ ast::Expr *Parser::ParsePrimaryExpr() {
   switch (peek()) {
     case Token::Type::NIL: {
       Consume(Token::Type::NIL);
-      return node_factory().NewNilLiteral(scanner()->current_position());
+      return node_factory()->NewNilLiteral(scanner()->current_position());
     }
     case Token::Type::TRUE: {
       Consume(Token::Type::TRUE);
-      return node_factory().NewBoolLiteral(scanner()->current_position(), true);
+      return node_factory()->NewBoolLiteral(scanner()->current_position(),
+                                            true);
     }
     case Token::Type::FALSE: {
       Consume(Token::Type::FALSE);
-      return node_factory().NewBoolLiteral(scanner()->current_position(),
-                                           false);
+      return node_factory()->NewBoolLiteral(scanner()->current_position(),
+                                            false);
     }
     case Token::Type::IDENTIFIER: {
       Next();
       const SourcePosition &position = scanner()->current_position();
-      return node_factory().NewIdentifierExpr(position, GetSymbol());
+      return node_factory()->NewIdentifierExpr(position, GetSymbol());
     }
     case Token::Type::INTEGER: {
       Next();
@@ -522,7 +525,7 @@ ast::Expr *Parser::ParsePrimaryExpr() {
       i32 num = std::strtol(GetSymbol().data(), &end, 10);
 
       const SourcePosition &position = scanner()->current_position();
-      return node_factory().NewIntLiteral(position, num);
+      return node_factory()->NewIntLiteral(position, num);
     }
     case Token::Type::FLOAT: {
       Next();
@@ -532,12 +535,12 @@ ast::Expr *Parser::ParsePrimaryExpr() {
       f32 num = std::strtof(GetSymbol().data(), &end);
 
       const SourcePosition &position = scanner()->current_position();
-      return node_factory().NewFloatLiteral(position, num);
+      return node_factory()->NewFloatLiteral(position, num);
     }
     case Token::Type::STRING: {
       Next();
       const SourcePosition &position = scanner()->current_position();
-      return node_factory().NewStringLiteral(position, GetSymbol());
+      return node_factory()->NewStringLiteral(position, GetSymbol());
     }
     case Token::Type::FUN: {
       Next();
@@ -556,7 +559,7 @@ ast::Expr *Parser::ParsePrimaryExpr() {
   error_reporter()->Report(scanner()->current_position(),
                            sema::ErrorMessages::kExpectingExpression);
   Next();
-  return node_factory().NewBadExpr(scanner()->current_position());
+  return node_factory()->NewBadExpr(scanner()->current_position());
 }
 
 ast::Expr *Parser::ParseFunctionLitExpr() {
@@ -571,7 +574,7 @@ ast::Expr *Parser::ParseFunctionLitExpr() {
   auto *body = ParseBlockStmt()->As<ast::BlockStmt>();
 
   // Done
-  return node_factory().NewFunctionLitExpr(func_type, body);
+  return node_factory()->NewFunctionLitExpr(func_type, body);
 }
 
 ast::Expr *Parser::ParseType() {
@@ -580,7 +583,7 @@ ast::Expr *Parser::ParseType() {
     case Token::Type::IDENTIFIER: {
       Next();
       const SourcePosition &position = scanner()->current_position();
-      return node_factory().NewIdentifierExpr(position, GetSymbol());
+      return node_factory()->NewIdentifierExpr(position, GetSymbol());
     }
     case Token::Type::MAP: {
       return ParseMapType();
@@ -632,12 +635,12 @@ ast::Expr *Parser::ParseFunctionType() {
     if (Matches(Token::Type::COLON) || ident.data() == nullptr) {
       type = ParseType();
     } else {
-      type = node_factory().NewIdentifierExpr(field_position, ident);
+      type = node_factory()->NewIdentifierExpr(field_position, ident);
       ident = ast::Identifier(nullptr);
     }
 
     // That's it
-    params.push_back(node_factory().NewFieldDecl(field_position, ident, type));
+    params.push_back(node_factory()->NewFieldDecl(field_position, ident, type));
 
     if (!Matches(Token::Type::COMMA)) {
       break;
@@ -649,7 +652,7 @@ ast::Expr *Parser::ParseFunctionType() {
 
   ast::Expr *ret = ParseType();
 
-  return node_factory().NewFunctionType(position, std::move(params), ret);
+  return node_factory()->NewFunctionType(position, std::move(params), ret);
 }
 
 ast::Expr *Parser::ParsePointerType() {
@@ -661,7 +664,7 @@ ast::Expr *Parser::ParsePointerType() {
 
   ast::Expr *base = ParseType();
 
-  return node_factory().NewPointerType(position, base);
+  return node_factory()->NewPointerType(position, base);
 }
 
 ast::Expr *Parser::ParseArrayType() {
@@ -683,7 +686,7 @@ ast::Expr *Parser::ParseArrayType() {
   ast::Expr *elem_type = ParseType();
 
   // Done
-  return node_factory().NewArrayType(position, len, elem_type);
+  return node_factory()->NewArrayType(position, len, elem_type);
 }
 
 ast::Expr *Parser::ParseStructType() {
@@ -710,12 +713,12 @@ ast::Expr *Parser::ParseStructType() {
     ast::Expr *type = ParseType();
 
     // That's it
-    fields.push_back(node_factory().NewFieldDecl(field_position, name, type));
+    fields.push_back(node_factory()->NewFieldDecl(field_position, name, type));
   }
 
   Consume(Token::Type::RIGHT_BRACE);
 
-  return node_factory().NewStructType(position, std::move(fields));
+  return node_factory()->NewStructType(position, std::move(fields));
 }
 
 ast::Expr *Parser::ParseMapType() {
@@ -733,7 +736,7 @@ ast::Expr *Parser::ParseMapType() {
 
   ast::Expr *value_type = ParseType();
 
-  return node_factory().NewMapType(position, key_type, value_type);
+  return node_factory()->NewMapType(position, key_type, value_type);
 }
 
 ast::Attributes *Parser::ParseAttributes() {

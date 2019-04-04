@@ -56,7 +56,7 @@ class Context {
   struct Implementation;
   Implementation &impl() const { return *impl_; }
 
-  ast::AstNodeFactory &node_factory() const { return *node_factory_; }
+  ast::AstNodeFactory *node_factory() const { return node_factory_.get(); }
 
   sema::ErrorReporter *error_reporter() const { return error_reporter_; }
 
