@@ -226,7 +226,8 @@ TEST_F(SorterTest, DISABLED_PerfSortTest) {
 
   for (u32 i = 0; i < num_elems; i++) {
     const auto std_a = *reinterpret_cast<const int_type *>(vec[i].data());
-    const auto chunk_a = *reinterpret_cast<const int_type *>(chunk_vec[i].data());
+    const auto chunk_a =
+        *reinterpret_cast<const int_type *>(chunk_vec[i].data());
     EXPECT_EQ(std_a, chunk_a);
   }
 
