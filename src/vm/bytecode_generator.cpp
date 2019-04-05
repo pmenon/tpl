@@ -627,6 +627,15 @@ void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
   emitter()->EmitVPIVectorFilter(bytecode, ret_val, vpi, 0, val);
 }
 
+void BytecodeGenerator::VisitJoinHashTableInsertCallExpr(ast::CallExpr *call) {}
+
+void BytecodeGenerator::VisitJoinHashTableBuildCallExpr(ast::CallExpr *call) {
+  // The first and only argument is a pointer to the hash table. Evaluate it to
+  // get the address now
+  LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
+  emitter()->Emit(Bytecode::JoinHashTableBuild, join_hash_table);
+}
+
 void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
   ast::Builtin builtin;
 
@@ -641,6 +650,14 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::FilterLe:
     case ast::Builtin::FilterNe: {
       VisitBuiltinFilterCallExpr(call, builtin);
+      break;
+    }
+    case ast::Builtin::HashTableInsert: {
+      VisitJoinHashTableInsertCallExpr(call);
+      break;
+    }
+    case ast::Builtin::HashTableBuild: {
+      VisitJoinHashTableBuildCallExpr(call);
       break;
     }
     default: { UNREACHABLE("Builtin not supported!"); }

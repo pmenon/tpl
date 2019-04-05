@@ -13,6 +13,7 @@ namespace tpl::ast {
 
 class Context;
 
+/// List of all concrete types
 #define TYPE_LIST(F) \
   F(IntegerType)     \
   F(FloatType)       \
@@ -75,15 +76,23 @@ class Type : public util::RegionObject {
     return (Is<T>() ? As<T>() : nullptr);
   }
 
+  /// Type checks
 #define F(kind) \
   bool Is##kind() const { return Is<kind>(); }
   TYPE_LIST(F)
 #undef F
 
+  /// Is this an arithmetic type (including SQL arithmetic)
   bool IsArithmetic() const;
 
+  /// Return a new type that is a pointer to the current type
   PointerType *PointerTo();
 
+  /// If this is a pointer type, return the type it points to, returning null
+  /// otherwise.
+  Type *GetPointeeType() const;
+
+  /// Get a string representation of this type
   std::string ToString() const { return ToString(this); }
 
   static std::string ToString(const Type *type);
@@ -401,15 +410,26 @@ class StructType : public Type {
 // names of the corresponding classes (i.e., the string form and FQN reference
 // should most likely be the same)
 // class reference
-// clang-format off
-#define INTERNAL_TYPE_LIST(V) \
-  V(TableVectorIterator, "tpl::sql::TableVectorIterator", ::tpl::sql::TableVectorIterator)                                  \
-  V(VectorProjectionIterator, "tpl::sql::VectorProjectionIterator", ::tpl::sql::VectorProjectionIterator)                   \
-  V(JoinHashTable, "tpl::sql::JoinHashTable", ::tpl::sql::JoinHashTable)                                                    \
-  V(SqlBool, "tpl::sql::Bool", ::tpl::sql::BoolVal)                                                                         \
-  V(SqlInteger, "tpl::sql::Integer", ::tpl::sql::Integer)                                                                   \
-  V(SqlDecimal, "tpl::sql::Decimal", ::tpl::sql::Decimal)
-// clang-format on
+#define INTERNAL_TYPE_LIST(V)                             \
+  /* Misc.*/                                              \
+  V(RegionAlloc, tpl::util::Region)                       \
+  /* Runtime Values*/                                     \
+  V(Boolean, tpl::sql::BoolVal)                           \
+  V(Integer, tpl::sql::Integer)                           \
+  V(Decimal, tpl::sql::Decimal)                           \
+  /* Aggregations */                                      \
+  V(CountAggregate, tpl::sql::CountAggregate)             \
+  V(CountStarAggregate, tpl::sql::CountStarAggregate)     \
+  V(IntegerSumAggregate, tpl::sql::IntegerSumAggregate)   \
+  V(AggregationHashTable, tpl::sql::AggregationHashTable) \
+  /* Sorting */                                           \
+  V(Sorter, tpl::sql::Sorter)                             \
+  V(SorterIterator, tpl::sql::SorterIterator)             \
+  /* Hash Joins*/                                         \
+  V(JoinHashTable, tpl::sql::JoinHashTable)               \
+  /* Scans */                                             \
+  V(TableVectorIterator, tpl::sql::TableVectorIterator)   \
+  V(VectorProjectionIterator, tpl::sql::VectorProjectionIterator)
 
 /**
  * Internal types are dedicated to pre-compiled C++ types that we don't want to
@@ -420,7 +440,7 @@ class StructType : public Type {
  */
 class InternalType : public Type {
  public:
-  enum class InternalKind : u8 {
+  enum class InternalKind : u16 {
 #define DECLARE_TYPE(kind, ...) kind,
     INTERNAL_TYPE_LIST(DECLARE_TYPE)
 #undef DECLARE_TYPE
@@ -480,5 +500,16 @@ class SqlType : public Type {
  private:
   const sql::Type &sql_type_;
 };
+
+// ---------------------------------------------------------
+// Type implementation below
+// ---------------------------------------------------------
+
+inline Type *Type::GetPointeeType() const {
+  if (auto *ptr_type = SafeAs<PointerType>()) {
+    return ptr_type->base();
+  }
+  return nullptr;
+}
 
 }  // namespace tpl::ast

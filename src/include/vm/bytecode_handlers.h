@@ -480,14 +480,17 @@ VM_OP_HOT void OpIntegerSumAggregateFree(tpl::sql::IntegerSumAggregate *agg) {
 // SQL Hash Joins
 // ---------------------------------------------------------
 
+void OpJoinHashTableInit(tpl::sql::JoinHashTable *join_hash_table,
+                         tpl::util::Region *region, u32 tuple_size);
+
 VM_OP_HOT void OpJoinHashTableAllocTuple(
     byte **result, tpl::sql::JoinHashTable *join_hash_table, hash_t hash) {
   *result = join_hash_table->AllocInputTuple(hash);
 }
 
-VM_OP_HOT void OpJoinHashTableBuild(tpl::sql::JoinHashTable *join_hash_table) {
-  join_hash_table->Build();
-}
+void OpJoinHashTableBuild(tpl::sql::JoinHashTable *join_hash_table);
+
+void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table);
 
 // ---------------------------------------------------------
 // Sorting

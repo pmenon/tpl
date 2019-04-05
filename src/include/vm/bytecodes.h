@@ -141,8 +141,10 @@ namespace tpl::vm {
   F(IntegerSumAggregateFree, OperandType::Local)                                                                       \
                                                                                                                        \
   /* Hash Joins */                                                                                                     \
+  F(JoinHashTableInit, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(JoinHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                               \
   F(JoinHashTableBuild, OperandType::Local)                                                                            \
+  F(JoinHashTableFree, OperandType::Local)                                                                             \
                                                                                                                        \
   /* Sorting */                                                                                                        \
   F(SorterInit, OperandType::Local, OperandType::FunctionPtr, OperandType::UImm4)                                      \

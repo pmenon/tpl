@@ -7,7 +7,10 @@
 #include "ast/ast_node_factory.h"
 #include "ast/builtins.h"
 #include "ast/type.h"
+#include "sql/aggregation_hash_table.h"
+#include "sql/aggregators.h"
 #include "sql/join_hash_table.h"
+#include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
 #include "sql/value.h"
 #include "util/common.h"
@@ -199,11 +202,11 @@ Context::Context(util::Region *region, sema::ErrorReporter *error_reporter)
 
   // Populate all the internal/hidden/opaque types
   impl()->internal_types.reserve(InternalType::NumInternalTypes());
-#define INIT_TYPE(Kind, NameStr, Type)                           \
-  impl()->internal_types.push_back(new (region) InternalType(    \
-      this, GetIdentifier(NameStr), sizeof(Type), alignof(Type), \
-      InternalType::InternalKind::Kind));                        \
-  impl()->internal_type_names[GetIdentifier(NameStr)] =          \
+#define INIT_TYPE(Kind, CppType)                                        \
+  impl()->internal_types.push_back(new (region) InternalType(           \
+      this, GetIdentifier(#CppType), sizeof(CppType), alignof(CppType), \
+      InternalType::InternalKind::Kind));                               \
+  impl()->internal_type_names[GetIdentifier(#Kind)] =                   \
       InternalType::InternalKind::Kind;
   INTERNAL_TYPE_LIST(INIT_TYPE)
 #undef INIT_TYPE
