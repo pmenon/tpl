@@ -4,6 +4,10 @@
 
 extern "C" {
 
+// ---------------------------------------------------------
+// Table Vector Iterator
+// ---------------------------------------------------------
+
 void OpTableVectorIteratorInit(tpl::sql::TableVectorIterator *iter,
                                u16 table_id) {
   TPL_ASSERT(iter != nullptr, "Null iterator to initialize");
@@ -21,6 +25,11 @@ void OpTableVectorIteratorClose(tpl::sql::TableVectorIterator *iter) {
   TPL_ASSERT(iter != nullptr, "NULL iterator given to close");
   iter->~TableVectorIterator();
 }
+
+// ---------------------------------------------------------
+// VPI Vectorized Filters
+// ---------------------------------------------------------
+
 void OpVPIFilterEqual(u32 *size,
                       UNUSED tpl::sql::VectorProjectionIterator *iter,
                       UNUSED u16 col_id, UNUSED i64 val) {
@@ -55,6 +64,23 @@ void OpVPIFilterNotEqual(u32 *size,
                          UNUSED tpl::sql::VectorProjectionIterator *iter,
                          UNUSED u16 col_id, UNUSED i64 val) {
   *size = 0;
+}
+
+// ---------------------------------------------------------
+// Join Hash Table
+// ---------------------------------------------------------
+
+void OpJoinHashTableInit(tpl::sql::JoinHashTable *join_hash_table,
+                         tpl::util::Region *region, u32 tuple_size) {
+  new (join_hash_table) tpl::sql::JoinHashTable(region, tuple_size);
+}
+
+void OpJoinHashTableBuild(tpl::sql::JoinHashTable *join_hash_table) {
+  join_hash_table->Build();
+}
+
+void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table) {
+  join_hash_table->~JoinHashTable();
 }
 
 }  //

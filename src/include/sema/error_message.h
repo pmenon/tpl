@@ -89,6 +89,11 @@ namespace sema {
     "Filter function to tpl_filter expects input type '%0' and must return a " \
     "bool. Found input type '%1' and output type '%2'",                        \
     (ast::Type *, ast::Type *, ast::Type *))                                   \
+  F(BadArgToHashTableInit,                                                     \
+    "Hash table initialization function expects three arguments: a pointer "   \
+    "to hash table, a pointer to a region, and an int32 for the entry size. "  \
+    "Received type '%0' in position %1",                                       \
+    (ast::Type *, u32))                                                        \
   F(BadArgToHashTableInsert,                                                   \
     "Hash table insert function expects three arguments: a pointer to hash "   \
     "table, literal of all key columns, and literal array of all attributes. " \

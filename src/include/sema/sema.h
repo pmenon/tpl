@@ -84,8 +84,10 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinMapCall(ast::CallExpr *call);
   void CheckBuiltinFilterCall(ast::CallExpr *call);
+  void CheckBuiltinJoinHashTableInit(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableInsert(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableBuild(ast::CallExpr *call);
+  void CheckBuiltinJoinHashTableFree(ast::CallExpr *call);
 
   // -------------------------------------------------------
   // Scoping

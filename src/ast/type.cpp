@@ -5,6 +5,10 @@
 
 namespace tpl::ast {
 
+// ---------------------------------------------------------
+// Type
+// ---------------------------------------------------------
+
 bool Type::IsArithmetic() const {
   if (IsIntegerType() || IsFloatType()) {
     return true;
@@ -15,17 +19,29 @@ bool Type::IsArithmetic() const {
   return false;
 }
 
+// ---------------------------------------------------------
+// Function Type
+// ---------------------------------------------------------
+
 FunctionType::FunctionType(util::RegionVector<Field> &&params, Type *ret)
     : Type(ret->context(), sizeof(void *), alignof(void *),
            Type::Kind::FunctionType),
       params_(std::move(params)),
       ret_(ret) {}
 
+// ---------------------------------------------------------
+// Map Type
+// ---------------------------------------------------------
+
 MapType::MapType(Type *key_type, Type *val_type)
     : Type(key_type->context(), sizeof(std::unordered_map<i32, i32>),
            alignof(std::unordered_map<i32, i32>), Kind::MapType),
       key_type_(key_type),
       val_type_(val_type) {}
+
+// ---------------------------------------------------------
+// Struct Type
+// ---------------------------------------------------------
 
 StructType::StructType(Context *ctx, u32 size, u32 alignment,
                        util::RegionVector<Field> &&fields,

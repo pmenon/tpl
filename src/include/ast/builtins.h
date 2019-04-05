@@ -14,8 +14,10 @@ namespace tpl::ast {
   V(FilterNe, tpl_filter_ne)        \
                                     \
   /* Joins */                       \
+  V(HashTableInit, tpl_ht_init)     \
   V(HashTableInsert, tpl_ht_insert) \
   V(HashTableBuild, tpl_ht_build)   \
+  V(HashTableFree, tpl_ht_free)     \
                                     \
   /* Generic */                     \
   V(Map, tpl_map)                   \

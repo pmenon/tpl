@@ -54,8 +54,11 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   void VisitVectorWiseIteration(ast::ForInStmt *node, LocalVar vpi,
                                 LoopBuilder *table_loop);
 
-  // Dispatched from VisitBuiltinCallExpr() to handle filter operations
+  // Dispatched from VisitBuiltinCallExpr() to handle the various builtin
+  // functions, including filtering, hash table interaction, sorting etc.
   void VisitBuiltinFilterCallExpr(ast::CallExpr *call, ast::Builtin builtin);
+  void VisitJoinHashTableInsertCallExpr(ast::CallExpr *call);
+  void VisitJoinHashTableBuildCallExpr(ast::CallExpr *call);
 
   // Dispatched from VisitCallExpr() for handling builtins
   void VisitBuiltinCallExpr(ast::CallExpr *call);
