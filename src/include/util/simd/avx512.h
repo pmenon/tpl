@@ -647,7 +647,7 @@ static inline u32 FilterVectorByVal(const T *RESTRICT in, u32 in_count, T val,
   using Vec = typename FilterVecSizer<T>::Vec;
   using VecMask = typename FilterVecSizer<T>::VecMask;
 
-  const Compare cmp;  // NOLINT
+  const Compare cmp{};
 
   const Vec xval(val);
 
