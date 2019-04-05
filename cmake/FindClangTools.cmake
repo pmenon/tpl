@@ -80,6 +80,7 @@ if (CLANG_TOOLS_VERSION)
 else()
   find_program(CLANG_TIDY_BIN
       NAMES
+      clang-tidy-7
       clang-tidy-6.0
       clang-tidy
       PATHS ${ClangTools_PATH} $ENV{CLANG_TOOLS_PATH} /usr/local/bin /usr/bin "${HOMEBREW_PREFIX}/bin" /usr/local/opt/llvm/bin
