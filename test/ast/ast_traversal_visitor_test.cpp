@@ -61,7 +61,7 @@ class ForFinder : public AstTraversalVisitor<ForFinder<FindInfinite>> {
     if constexpr (FindInfinite) {
       bool is_finite_for = (stmt->condition() == nullptr);
       num_fors_ += static_cast<u32>(is_finite_for);
-    } else {
+    } else {  // NOLINT
       num_fors_++;
     }
     AstTraversalVisitor<SelfT>::VisitForStmt(stmt);

@@ -468,8 +468,7 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
   EntryAt(num_entries - 1)->next = nullptr;
 }
 
-void JoinHashTable::
-    VerifyMainEntryOrder() {
+void JoinHashTable::VerifyMainEntryOrder() {
 #ifndef NDEBUG
   const u64 overflow_idx = entries_.size() - concise_hash_table_.num_overflow();
   for (u32 idx = 0; idx < overflow_idx; idx++) {
@@ -490,8 +489,7 @@ void JoinHashTable::VerifyOverflowEntryOrder() noexcept {
 }
 
 template <bool PrefetchCHT, bool PrefetchEntries>
-void JoinHashTable::
-    BuildConciseHashTableInternal() {
+void JoinHashTable::BuildConciseHashTableInternal() {
   // Insert all elements
   InsertIntoConciseHashTable<PrefetchCHT>();
 
@@ -516,8 +514,7 @@ void JoinHashTable::
   VerifyOverflowEntryOrder();
 }
 
-void JoinHashTable::
-    BuildConciseHashTable() {
+void JoinHashTable::BuildConciseHashTable() {
   // Setup based on number of buffered build-size tuples
   concise_hash_table_.SetSize(num_elements());
 
