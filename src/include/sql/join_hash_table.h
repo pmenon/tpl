@@ -17,7 +17,7 @@ class JoinHashTable {
   /// Construct a hash-table used for join processing using \a region as the
   /// main memory allocator
   JoinHashTable(util::Region *region, u32 tuple_size,
-                bool use_concise_ht = false) noexcept;
+                bool use_concise_ht = false);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(JoinHashTable);
@@ -109,7 +109,7 @@ class JoinHashTable {
 
   // Dispatched from Build() to build either a generic or concise hash table
   void BuildGenericHashTable() noexcept;
-  void BuildConciseHashTable() noexcept;
+  void BuildConciseHashTable();
 
   // Dispatched from BuildGenericHashTable()
   template <bool Prefetch>
@@ -118,7 +118,7 @@ class JoinHashTable {
   // Dispatched from BuildConciseHashTable() to construct the concise hash table
   // and to reorder buffered build tuples in place according to the CHT
   template <bool PrefetchCHT, bool PrefetchEntries>
-  void BuildConciseHashTableInternal() noexcept;
+  void BuildConciseHashTableInternal();
   template <bool Prefetch>
   void InsertIntoConciseHashTable() noexcept;
   template <bool PrefetchCHT, bool PrefetchEntries>
