@@ -721,7 +721,7 @@ void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
       break;
     }
     case ast::LitExpr::LitKind::Boolean: {
-      emitter()->EmitAssignImm1(target, node->bool_val());
+      emitter()->EmitAssignImm1(target, static_cast<i8>(node->bool_val()));
       break;
     }
     case ast::LitExpr::LitKind::Int: {

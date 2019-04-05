@@ -80,14 +80,14 @@ TEST_F(TypeTest, PrimitiveTypeCacheTest) {
   // integer types
   //
 
-#define GEN_INT_TEST(Kind)                                              \
-  {                                                                     \
-    auto *type1 =                                                       \
-        ast::IntegerType::Get(&ctx(), ast::IntegerType::IntKind::Kind); \
-    auto *type2 =                                                       \
-        ast::IntegerType::Get(&ctx(), ast::IntegerType::IntKind::Kind); \
-    EXPECT_EQ(type1, type2)                                             \
-        << "Received two different " #Kind " types from context";       \
+#define GEN_INT_TEST(Kind)                                             \
+  {                                                                    \
+    auto *type1 =                                                      \
+        ast::IntegerType::Get(ctx(), ast::IntegerType::IntKind::Kind); \
+    auto *type2 =                                                      \
+        ast::IntegerType::Get(ctx(), ast::IntegerType::IntKind::Kind); \
+    EXPECT_EQ(type1, type2)                                            \
+        << "Received two different " #Kind " types from context";      \
   }
   GEN_INT_TEST(Int8);
   GEN_INT_TEST(Int16);

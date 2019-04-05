@@ -170,6 +170,7 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
   switch (node->op()) {
     case parsing::Token::Type::AND:
     case parsing::Token::Type::OR: {
+      // NOLINTNEXTLINE
       auto [result_type, left, right] = CheckLogicalOperands(
           node->op(), node->position(), node->left(), node->right());
       node->set_type(result_type);

@@ -265,7 +265,7 @@ void SmallScale_NeedleTest(VectorUtilTest *test) {
   constexpr const u32 chunk_size = 1024;
   constexpr const T needle = 16;
 
-  T *arr = test->AllocArray<T>(num_elems);
+  auto *arr = test->AllocArray<T>(num_elems);
 
   u32 actual_count = 0;
 
@@ -308,8 +308,8 @@ void SmallScale_MultiFilterTest(VectorUtilTest *test) {
   constexpr const T needle_1 = 16;
   constexpr const T needle_2 = 10;
 
-  T *arr_1 = test->AllocArray<T>(num_elems);
-  T *arr_2 = test->AllocArray<T>(num_elems);
+  auto *arr_1 = test->AllocArray<T>(num_elems);
+  auto *arr_2 = test->AllocArray<T>(num_elems);
 
   u32 actual_count = 0;
 
@@ -380,7 +380,7 @@ TEST_F(VectorUtilTest, DISABLED_PerfSelectTest) {
   constexpr u32 num_elems = 128 * 1024u * 1024u;
   constexpr const u32 chunk_size = 4096;
 
-  i32 *arr = AllocArray<i32>(num_elems);
+  auto *arr = AllocArray<i32>(num_elems);
 
   double load_time = 0.0;
   {

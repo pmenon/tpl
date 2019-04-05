@@ -82,7 +82,7 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
     GenerateRandom32(lookups, num_filter_elems * lookup_scale_factor);
     Mix(lookups, insertions, prob_success);
 
-    u32 expected_found = static_cast<u32>(prob_success * lookups.size());
+    auto expected_found = static_cast<u32>(prob_success * lookups.size());
 
     util::Timer<std::milli> timer;
     timer.Start();
