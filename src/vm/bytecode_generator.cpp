@@ -1225,6 +1225,7 @@ std::unique_ptr<BytecodeModule> BytecodeGenerator::Compile(
   BytecodeGenerator generator;
   generator.Visit(root);
 
+  // NOLINTNEXTLINE
   return std::make_unique<BytecodeModule>(name, std::move(generator.bytecode_),
                                           std::move(generator.functions_));
 }
