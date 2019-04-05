@@ -26,6 +26,7 @@ Checks:     '
             performance-*,
             portability-*,
             readability-*,
+            -clang-analyzer-deadcode.DeadStores,
             -google-readability-braces-around-statements,
             -google-readability-namespace-comments,
             -readability-braces-around-statements,

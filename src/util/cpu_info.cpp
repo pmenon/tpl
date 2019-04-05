@@ -83,7 +83,7 @@ void CpuInfo::InitCpuInfo() {
   while (std::getline(infile, line)) {
     llvm::StringRef str(line);
 
-    auto [name, value] = str.split(":");  // NOLINT
+    auto [name, value] = str.split(":");
     value = value.trim(" ");
 
     if (name.startswith("processor")) {

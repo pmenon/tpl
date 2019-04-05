@@ -161,7 +161,6 @@ void InitTable(const TableInsertMeta &table_meta, Table *table) {
     u32 num_vals = std::min(batch_size, table_meta.num_rows - (i * batch_size));
     TPL_ASSERT(num_vals != 0, "Can't have empty columns.");
     for (const auto &col_meta : table_meta.col_meta) {
-      // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
       auto [data, null_bitmap] = GenerateColumnData(col_meta, num_vals);
       // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
       columns.emplace_back(col_meta.type, data, null_bitmap, num_vals);
