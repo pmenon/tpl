@@ -388,7 +388,7 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfScanTest) {
   std::cout << "ChunkedVector: " << chunked_ms << " ms" << std::endl;
 }
 
-TEST_F(ChunkedVectorTest, PerfRandomAccessTest) {
+TEST_F(ChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
   static const u32 num_elems = 10000000;
   std::default_random_engine generator;
   std::uniform_int_distribution<u32> rng(0, num_elems);
