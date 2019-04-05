@@ -17,7 +17,7 @@ class JoinHashTable {
   /// Construct a hash-table used for join processing using \a region as the
   /// main memory allocator
   JoinHashTable(util::Region *region, u32 tuple_size,
-                bool use_concise_ht = false);
+                bool use_concise_ht = false) noexcept;
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(JoinHashTable);
@@ -125,7 +125,7 @@ class JoinHashTable {
   void ReorderMainEntries() noexcept;
   template <bool Prefetch, bool PrefetchEntries>
   void ReorderOverflowEntries() noexcept;
-  void VerifyMainEntryOrder() noexcept;
+  void VerifyMainEntryOrder();
   void VerifyOverflowEntryOrder() noexcept;
 
   // Dispatched from LookupBatch() to lookup from either a generic or concise
