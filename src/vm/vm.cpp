@@ -90,7 +90,9 @@ VM::VM(const BytecodeModule &module, util::Region *region)
       stack_(kDefaultInitialStackSize, 0, region_),
       sp_(0),
       module_(module),
-      bytecode_counts_{0ull} { (void) bytecode_counts_; }  // unused variable
+      bytecode_counts_{0ull} {
+  (void)bytecode_counts_;
+}  // unused variable
 
 // static
 void VM::InvokeFunction(const BytecodeModule &module, const FunctionId func,
