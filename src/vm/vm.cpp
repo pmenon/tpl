@@ -288,7 +288,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // -------------------------------------------------------
 
   OP(Jump) : {
-    i32 skip = PEEK_JMP_OFFSET();
+    auto skip = PEEK_JMP_OFFSET();
     if (TPL_LIKELY(OpJump())) {
       ip += skip;
     }
@@ -297,7 +297,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
   OP(JumpIfTrue) : {
     auto cond = frame->LocalAt<bool>(READ_LOCAL_ID());
-    i32 skip = PEEK_JMP_OFFSET();
+    auto skip = PEEK_JMP_OFFSET();
     if (OpJumpIfTrue(cond)) {
       ip += skip;
     } else {
@@ -308,7 +308,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
   OP(JumpIfFalse) : {
     auto cond = frame->LocalAt<bool>(READ_LOCAL_ID());
-    i32 skip = PEEK_JMP_OFFSET();
+    auto skip = PEEK_JMP_OFFSET();
     if (OpJumpIfFalse(cond)) {
       ip += skip;
     } else {
@@ -324,9 +324,9 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 #define GEN_DEREF(type, size)                             \
   OP(Deref##size) : {                                     \
     /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
-    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
+    auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
     /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
-    type *src = frame->LocalAt<type *>(READ_LOCAL_ID());  \
+    auto *src = frame->LocalAt<type *>(READ_LOCAL_ID());  \
     OpDeref##size(dest, src);                             \
     DISPATCH_NEXT();                                      \
   }
@@ -337,9 +337,9 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 #undef GEN_DEREF
 
   OP(DerefN) : {
-    byte *dest = frame->LocalAt<byte *>(READ_LOCAL_ID());
-    byte *src = frame->LocalAt<byte *>(READ_LOCAL_ID());
-    u32 len = READ_UIMM4();
+    auto *dest = frame->LocalAt<byte *>(READ_LOCAL_ID());
+    auto *src = frame->LocalAt<byte *>(READ_LOCAL_ID());
+    auto len = READ_UIMM4();
     OpDerefN(dest, src, len);
     DISPATCH_NEXT();
   }
@@ -347,15 +347,15 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 #define GEN_ASSIGN(type, size)                            \
   OP(Assign##size) : {                                    \
     /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
-    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
+    auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
     /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
-    type src = frame->LocalAt<type>(READ_LOCAL_ID());     \
+    auto src = frame->LocalAt<type>(READ_LOCAL_ID());     \
     OpAssign##size(dest, src);                            \
     DISPATCH_NEXT();                                      \
   }                                                       \
   OP(AssignImm##size) : {                                 \
     /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
-    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
+    auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
     OpAssignImm##size(dest, READ_IMM##size());            \
     DISPATCH_NEXT();                                      \
   }
@@ -366,19 +366,19 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 #undef GEN_ASSIGN
 
   OP(Lea) : {
-    byte **dest = frame->LocalAt<byte **>(READ_LOCAL_ID());
-    byte *src = frame->LocalAt<byte *>(READ_LOCAL_ID());
-    u32 offset = READ_UIMM4();
+    auto **dest = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    auto *src = frame->LocalAt<byte *>(READ_LOCAL_ID());
+    auto offset = READ_UIMM4();
     OpLea(dest, src, offset);
     DISPATCH_NEXT();
   }
 
   OP(LeaScaled) : {
-    byte **dest = frame->LocalAt<byte **>(READ_LOCAL_ID());
-    byte *src = frame->LocalAt<byte *>(READ_LOCAL_ID());
-    u32 index = frame->LocalAt<u32>(READ_LOCAL_ID());
-    u32 scale = READ_UIMM4();
-    u32 offset = READ_UIMM4();
+    auto **dest = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    auto *src = frame->LocalAt<byte *>(READ_LOCAL_ID());
+    auto index = frame->LocalAt<u32>(READ_LOCAL_ID());
+    auto scale = READ_UIMM4();
+    auto offset = READ_UIMM4();
     OpLeaScaled(dest, src, index, scale, offset);
     DISPATCH_NEXT();
   }
@@ -511,7 +511,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
   OP(InitInteger) : {
     auto *sql_int = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
-    i32 val = frame->LocalAt<i32>(READ_LOCAL_ID());
+    auto val = frame->LocalAt<i32>(READ_LOCAL_ID());
     OpInitInteger(sql_int, val);
     DISPATCH_NEXT();
   }
