@@ -4,15 +4,14 @@ namespace tpl::sql {
 
 AggregationHashTable::AggregationHashTable(util::Region *region,
                                            u32 tuple_size) noexcept
-    // NOLINTNEXTLINE(bugprone-narrowing-conversions)
-    : entries_(region, tuple_size), max_fill_(kDefaultInitialTableSize * 0.7) {
+    : entries_(region, tuple_size), max_fill_(static_cast<u64>(kDefaultInitialTableSize * 0.7)) {
   hash_table_.SetSize(kDefaultInitialTableSize);
 }
 
 void AggregationHashTable::Grow() {
   // Resize table
   auto new_size = hash_table_.capacity() * 2;
-  max_fill_ = new_size * 0.7;  // NOLINT(bugprone-narrowing-conversions)
+  max_fill_ = static_cast<u64>(new_size * 0.7);
   hash_table_.SetSize(new_size);
 
   // Insert elements again

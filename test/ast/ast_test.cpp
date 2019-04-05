@@ -26,7 +26,7 @@ TEST_F(AstTest, HierechyTest) {
   EXPECT_FALSE(node->Is<n>())     \
       << "Node " << node->kind_name() << " is not " << #n;
 
-#define IS_MATCH(n) node->Is<n>() + /* NOLINT(bugprone-macro-parentheses) */
+#define IS_MATCH(n) node->Is<n>() +
 #define COUNT_MATCHES(NODE_LIST) NODE_LIST(IS_MATCH) 0
 #define CSL(n) #n << ", "
 

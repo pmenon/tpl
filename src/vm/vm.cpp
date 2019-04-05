@@ -237,11 +237,8 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
 #define DO_GEN_ARITHMETIC_OP(op, test, type)              \
   OP(op##_##type) : {                                     \
-    /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
     auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
-    /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
     auto lhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
-    /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
     auto rhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
     if ((test) && rhs == 0u) {                            \
       /* TODO(pmenon): Proper error */                    \
@@ -325,9 +322,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
 #define GEN_DEREF(type, size)                             \
   OP(Deref##size) : {                                     \
-    /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
     auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
-    /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
     auto *src = frame->LocalAt<type *>(READ_LOCAL_ID());  \
     OpDeref##size(dest, src);                             \
     DISPATCH_NEXT();                                      \
@@ -348,15 +343,12 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
 #define GEN_ASSIGN(type, size)                            \
   OP(Assign##size) : {                                    \
-    /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
     auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
-    /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
     auto src = frame->LocalAt<type>(READ_LOCAL_ID());     \
     OpAssign##size(dest, src);                            \
     DISPATCH_NEXT();                                      \
   }                                                       \
   OP(AssignImm##size) : {                                 \
-    /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
     auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
     OpAssignImm##size(dest, READ_IMM##size());            \
     DISPATCH_NEXT();                                      \
@@ -459,7 +451,6 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
 #define GEN_VPI_ACCESS(type_str, type)                                    \
   OP(VPIGet##type_str) : {                                                \
-    /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                      \
     auto *result = frame->LocalAt<type *>(READ_LOCAL_ID());               \
     auto *vpi =                                                           \
         frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
@@ -468,7 +459,6 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();                                                      \
   }                                                                       \
   OP(VPIGet##type_str##Null) : {                                          \
-    /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                      \
     auto *result = frame->LocalAt<type *>(READ_LOCAL_ID());               \
     auto *vpi =                                                           \
         frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
