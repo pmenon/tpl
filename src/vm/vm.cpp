@@ -238,11 +238,11 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 #define DO_GEN_ARITHMETIC_OP(op, test, type)              \
   OP(op##_##type) : {                                     \
     /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
-    type *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
+    auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
     /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
-    type lhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
+    auto lhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
     /* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
-    type rhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
+    auto rhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
     if ((test) && rhs == 0u) {                            \
       /* TODO(pmenon): Proper error */                    \
       LOG_ERROR("Division by zero error!");               \
