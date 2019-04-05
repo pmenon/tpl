@@ -101,7 +101,7 @@ void Sorter::HeapSiftDown() {
   }
 }
 
-void Sorter::Sort() noexcept {
+void Sorter::Sort() {
   // Exit if the input tuples have already been sorted
   if (sorted_) {
     return;
