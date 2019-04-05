@@ -22,7 +22,7 @@ struct Tuple {
 
 template <u8 N>
 static inline hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
-  const u32 *key_ptr = vpi->Get<u32, false>(0, nullptr);
+  const auto *key_ptr = vpi->Get<u32, false>(0, nullptr);
   return util::Hasher::Hash(reinterpret_cast<const u8 *>(key_ptr),
                             sizeof(Tuple<N>::build_key));
 }

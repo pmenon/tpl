@@ -143,7 +143,7 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
 
     for (u32 idx = 0; idx < func_type->num_params(); idx++, local_idx++) {
       const auto &local_info = func_.locals()[local_idx];
-      u32 use_64bit_reg = static_cast<u32>(local_info.size() > sizeof(u32));
+      auto use_64bit_reg = static_cast<u32>(local_info.size() > sizeof(u32));
       mov(ptr[rsp + displacement + local_info.offset()],
           arg_regs[use_64bit_reg][idx]);
     }

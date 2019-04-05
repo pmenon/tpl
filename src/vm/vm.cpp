@@ -213,9 +213,9 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
 #define DO_GEN_COMPARISON(op, type)                       \
   OP(op##_##type) : {                                     \
-    bool *dest = frame->LocalAt<bool *>(READ_LOCAL_ID()); \
-    type lhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
-    type rhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
+    auto *dest = frame->LocalAt<bool *>(READ_LOCAL_ID()); \
+    auto lhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
+    auto rhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
     Op##op##_##type(dest, lhs, rhs);                      \
     DISPATCH_NEXT();                                      \
   }
@@ -740,8 +740,8 @@ const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
   // Read the function ID and the argument count to the function first
   //
 
-  u16 func_id = READ_UIMM2();
-  u16 num_params = READ_UIMM2();
+  auto func_id = READ_UIMM2();
+  auto num_params = READ_UIMM2();
 
   //
   // Lookup the function

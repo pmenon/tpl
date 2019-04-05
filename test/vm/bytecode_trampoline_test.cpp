@@ -171,6 +171,7 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
     // Try to sort using the generated comparison function
     std::sort(
         numbers.begin(), numbers.end(),
+        // NOLINTNEXTLINE
         [compare](const auto &a, const auto &b) { return compare(&a, &b); });
 
     // Verify

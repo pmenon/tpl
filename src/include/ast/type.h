@@ -118,7 +118,7 @@ class IntegerType : public Type {
 
   IntKind int_kind() const { return int_kind_; }
 
-  static IntegerType *Get(Context *ctx, IntKind kind);
+  static IntegerType *Get(Context *ctx, IntKind int_kind);
 
   u32 BitWidth() const {
     switch (int_kind()) {
@@ -177,7 +177,7 @@ class FloatType : public Type {
 
   FloatKind float_kind() const { return float_kind_; }
 
-  static FloatType *Get(Context *ctx, FloatKind kind);
+  static FloatType *Get(Context *ctx, FloatKind float_kind);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::FloatType;
@@ -335,7 +335,7 @@ class MapType : public Type {
 
   Type *value_type() const { return val_type_; }
 
-  static MapType *Get(Type *key_type, Type *val_type);
+  static MapType *Get(Type *key_type, Type *value_type);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::MapType;

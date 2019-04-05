@@ -13,9 +13,9 @@ class BytecodeModule;
 /// Our virtual machine
 class VM {
  public:
-  /// Invoke the function with ID \a func_id in the module \a module. \a args
+  /// Invoke the function with ID \a func in the module \a module. \a args
   /// contains the output and input parameters stored contiguously.
-  static void InvokeFunction(const BytecodeModule &module, FunctionId func_id,
+  static void InvokeFunction(const BytecodeModule &module, FunctionId func,
                              const u8 args[]);
 
  private:
