@@ -395,7 +395,7 @@ void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
 void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
   // First, resolve all call arguments. If any fail, exit immediately.
   for (auto *arg : call->arguments()) {
-    if (!Resolve(arg)) {
+    if (Resolve(arg) == nullptr) {
       return;
     }
   }
