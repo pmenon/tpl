@@ -58,11 +58,10 @@ class ForFinder : public AstTraversalVisitor<ForFinder<FindInfinite>> {
       : AstTraversalVisitor<SelfT>(root), num_fors_(0) {}
 
   void VisitForStmt(ast::ForStmt *stmt) {
-    // NOLINTNEXTLINE
     if constexpr (FindInfinite) {
       bool is_finite_for = (stmt->condition() == nullptr);
       num_fors_ += static_cast<u32>(is_finite_for);
-    } else {  // NOLINT
+    } else {
       num_fors_++;
     }
     AstTraversalVisitor<SelfT>::VisitForStmt(stmt);
@@ -169,7 +168,6 @@ class FunctionFinder
       : AstTraversalVisitor<SelfT>(root), num_funcs_(0) {}
 
   void VisitFunctionDecl(ast::FunctionDecl *decl) {
-    // NOLINTNEXTLINE
     if constexpr (!CountLiterals) {
       num_funcs_++;
     }
@@ -177,7 +175,6 @@ class FunctionFinder
   }
 
   void VisitFunctionLitExpr(ast::FunctionLitExpr *expr) {
-    // NOLINTNEXTLINE
     if constexpr (CountLiterals) {
       num_funcs_++;
     }
