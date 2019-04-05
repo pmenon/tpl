@@ -388,8 +388,10 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfScanTest) {
   std::cout << "ChunkedVector: " << chunked_ms << " ms" << std::endl;
 }
 
-TEST_F(ChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
+TEST_F(ChunkedVectorTest, PerfRandomAccessTest) {
   static const u32 num_elems = 10000000;
+  std::default_random_engine generator;
+  std::uniform_int_distribution<u32> rng(0, num_elems);
 
   util::Region tmp("vec"), tmp2("deque"), tmp3("chunk");
   std::vector<u32, StlRegionAllocator<u32>> stdvec{
@@ -405,7 +407,7 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
 
   std::vector<u32> random_indexes(num_elems);
   for (u32 i = 0; i < num_elems; i++) {
-    random_indexes[i] = (rand() % num_elems);  // NOLINT
+    random_indexes[i] = rng(generator);
   }
 
   auto stdvec_ms = Bench(10, [&stdvec, &random_indexes]() {
