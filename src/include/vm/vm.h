@@ -96,7 +96,7 @@ class VM {
 
   const BytecodeModule &module_;
 
-  UNUSED u64 bytecode_counts_[Bytecodes::kBytecodeCount];  // NOLINT
+  UNUSED u64 bytecode_counts_[Bytecodes::kBytecodeCount];
 };
 
 }  // namespace tpl::vm
