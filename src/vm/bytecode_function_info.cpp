@@ -34,12 +34,20 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name,
     frame_size_ = util::MathUtil::AlignTo(frame_size_, type->alignment());
   }
 
-  auto offset = static_cast<u32>(frame_size());
+  const auto offset = static_cast<u32>(frame_size_);
   locals_.emplace_back(name, type, offset, kind);
 
   frame_size_ += type->size();
 
   return LocalVar(offset, LocalVar::AddressMode::Address);
+}
+
+LocalVar FunctionInfo::NewParameterLocal(ast::Type *type,
+                                         const std::string &name) {
+  const LocalVar local = NewLocal(type, name, LocalInfo::Kind::Parameter);
+  num_params_++;
+  params_size_ = frame_size();
+  return local;
 }
 
 LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name) {
@@ -49,12 +57,6 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name) {
   }
 
   return NewLocal(type, name, LocalInfo::Kind::Var);
-}
-
-LocalVar FunctionInfo::NewParameterLocal(ast::Type *type,
-                                         const std::string &name) {
-  num_params_++;
-  return NewLocal(type, name, LocalInfo::Kind::Parameter);
 }
 
 LocalVar FunctionInfo::LookupLocal(const std::string &name) const {
@@ -77,16 +79,6 @@ const LocalInfo *FunctionInfo::LookupLocalInfo(u32 offset) const {
 
   // Invalid local
   return nullptr;
-}
-
-void FunctionInfo::GetParameterInfos(
-    std::vector<const LocalInfo *> &params) const {
-  params.clear();
-  for (const auto &local_info : locals()) {
-    if (local_info.is_parameter()) {
-      params.push_back(&local_info);
-    }
-  }
 }
 
 }  // namespace tpl::vm

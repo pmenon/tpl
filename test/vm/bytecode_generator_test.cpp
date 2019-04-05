@@ -4,18 +4,8 @@
 
 #include "llvm/Support/FormatVariadic.h"
 
-#include "ast/ast_context.h"
-#include "ast/ast_dump.h"
-#include "ast/ast_node_factory.h"
-#include "ast/type.h"
-#include "parsing/parser.h"
-#include "parsing/scanner.h"
-#include "sema/error_reporter.h"
-#include "sema/sema.h"
-#include "util/region.h"
-#include "vm/bytecode_generator.h"
-#include "vm/bytecode_module.h"
-#include "vm/vm.h"
+// From test
+#include "vm/bytecode_compiler.h"
 
 namespace tpl::vm::test {
 
@@ -29,42 +19,13 @@ class BytecodeGeneratorTest : public TplTest {
   util::Region region_;
 };
 
-class BytecodeCompiler {
- public:
-  explicit BytecodeCompiler(util::Region *region)
-      : errors_(region), ctx_(region, errors_) {}
-
-  ast::AstNode *CompileToAst(const std::string &source) {
-    parsing::Scanner scanner(source);
-    parsing::Parser parser(scanner, ctx_);
-
-    auto *ast = parser.Parse();
-
-    sema::Sema type_check(ctx_);
-    type_check.Run(ast);
-
-    if (errors_.HasErrors()) {
-      LOG_ERROR("Type-checking error!");
-      errors_.PrintErrors();
-    }
-
-    return ast;
-  }
-
-  bool HasTypeCheckErrors() const { return errors_.HasErrors(); }
-
- private:
-  sema::ErrorReporter errors_;
-  ast::AstContext ctx_;
-};
-
 TEST_F(BytecodeGeneratorTest, SimpleTest) {
   auto src = R"(
     fun test(x: uint32) -> uint32 {
       var y : uint32 = 20
       return x * y
     })";
-  BytecodeCompiler compiler(region());
+  BytecodeCompiler compiler;
   auto *ast = compiler.CompileToAst(src);
 
   // Try generating bytecode for this declaration
@@ -89,7 +50,7 @@ TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
       var f : int32 = 10
       return (f > 1 and x < 2) and (t < 100 or x < 3)
     })";
-  BytecodeCompiler compiler(region());
+  BytecodeCompiler compiler;
   auto *ast = compiler.CompileToAst(src);
 
   // Try generating bytecode for this declaration
@@ -104,7 +65,7 @@ TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
 }
 
 TEST_F(BytecodeGeneratorTest, SimpleTypesTest) {
-  auto fn = [this](auto type, auto arg) {
+  auto fn = [](auto type, auto arg) {
     using ArgType = decltype(arg);
 
     auto src = llvm::formatv(R"(
@@ -114,9 +75,9 @@ TEST_F(BytecodeGeneratorTest, SimpleTypesTest) {
       })",
                              type);
 
-    BytecodeCompiler compiler(region());
+    BytecodeCompiler compiler;
     auto *ast = compiler.CompileToAst(src);
-    ASSERT_FALSE(compiler.HasTypeCheckErrors());
+    ASSERT_FALSE(compiler.HasErrors());
 
     auto module = BytecodeGenerator::Compile(ast, "test");
 
@@ -153,7 +114,7 @@ TEST_F(BytecodeGeneratorTest, ParameterPassingTest) {
       s.b = s.a * 2
       return true
     })";
-  BytecodeCompiler compiler(region());
+  BytecodeCompiler compiler;
   auto *ast = compiler.CompileToAst(src);
 
   // Try generating bytecode for this declaration
@@ -188,9 +149,9 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
       return a
     })";
 
-    BytecodeCompiler compiler(region());
+    BytecodeCompiler compiler;
     compiler.CompileToAst(src);
-    EXPECT_TRUE(compiler.HasTypeCheckErrors());
+    EXPECT_TRUE(compiler.HasErrors());
   }
 
   /*
@@ -203,9 +164,9 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
       return
     })";
 
-    BytecodeCompiler compiler(region());
+    BytecodeCompiler compiler;
     compiler.CompileToAst(src);
-    EXPECT_TRUE(compiler.HasTypeCheckErrors());
+    EXPECT_TRUE(compiler.HasErrors());
   }
 
   {
@@ -214,9 +175,9 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
       return 10
     })";
 
-    BytecodeCompiler compiler(region());
+    BytecodeCompiler compiler;
     auto *ast = compiler.CompileToAst(src);
-    EXPECT_FALSE(compiler.HasTypeCheckErrors());
+    EXPECT_FALSE(compiler.HasErrors());
 
     // Try generating bytecode for this declaration
     auto module = BytecodeGenerator::Compile(ast, "test");
@@ -238,9 +199,9 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
       return a * b
     })";
 
-    BytecodeCompiler compiler(region());
+    BytecodeCompiler compiler;
     auto *ast = compiler.CompileToAst(src);
-    EXPECT_FALSE(compiler.HasTypeCheckErrors());
+    EXPECT_FALSE(compiler.HasErrors());
 
     // Try generating bytecode for this declaration
     auto module = BytecodeGenerator::Compile(ast, "test");
@@ -270,7 +231,7 @@ TEST_F(BytecodeGeneratorTest, FunctionTest) {
       f(s)
       return true
     })";
-  BytecodeCompiler compiler(region());
+  BytecodeCompiler compiler;
   auto *ast = compiler.CompileToAst(src);
 
   // Try generating bytecode for this declaration

@@ -11,16 +11,16 @@ namespace tpl::parsing {
 static std::unordered_set<Token::Type> kTopLevelDecls = {Token::Type::STRUCT,
                                                          Token::Type::FUN};
 
-Parser::Parser(Scanner &scanner, ast::AstContext &ast_context)
+Parser::Parser(Scanner *scanner, ast::Context *context)
     : scanner_(scanner),
-      ast_context_(ast_context),
-      node_factory_(ast_context.node_factory()),
-      error_reporter_(ast_context.error_reporter()) {}
+      context_(context),
+      node_factory_(context->node_factory()),
+      error_reporter_(context->error_reporter()) {}
 
 ast::AstNode *Parser::Parse() {
   util::RegionVector<ast::Decl *> decls(region());
 
-  const SourcePosition &start_pos = scanner().current_position();
+  const SourcePosition &start_pos = scanner()->current_position();
 
   while (peek() != Token::Type::EOS) {
     if (ast::Decl *decl = ParseDecl()) {
@@ -28,7 +28,7 @@ ast::AstNode *Parser::Parse() {
     }
   }
 
-  return node_factory().NewFile(start_pos, std::move(decls));
+  return node_factory()->NewFile(start_pos, std::move(decls));
 }
 
 void Parser::Sync(const std::unordered_set<Token::Type> &s) {
@@ -54,8 +54,8 @@ ast::Decl *Parser::ParseDecl() {
   }
 
   // Report error, sync up and try again
-  error_reporter().Report(scanner().current_position(),
-                          sema::ErrorMessages::kInvalidDeclaration);
+  error_reporter()->Report(scanner()->current_position(),
+                           sema::ErrorMessages::kInvalidDeclaration);
   Sync(kTopLevelDecls);
   return nullptr;
 }
@@ -63,7 +63,7 @@ ast::Decl *Parser::ParseDecl() {
 ast::Decl *Parser::ParseFunctionDecl() {
   Expect(Token::Type::FUN);
 
-  const SourcePosition &position = scanner().current_position();
+  const SourcePosition &position = scanner()->current_position();
 
   // The function name
   Expect(Token::Type::IDENTIFIER);
@@ -73,7 +73,8 @@ ast::Decl *Parser::ParseFunctionDecl() {
   auto *fun = ParseFunctionLitExpr()->As<ast::FunctionLitExpr>();
 
   // Create declaration
-  ast::FunctionDecl *decl = node_factory().NewFunctionDecl(position, name, fun);
+  ast::FunctionDecl *decl =
+      node_factory()->NewFunctionDecl(position, name, fun);
 
   // Done
   return decl;
@@ -82,7 +83,7 @@ ast::Decl *Parser::ParseFunctionDecl() {
 ast::Decl *Parser::ParseStructDecl() {
   Expect(Token::Type::STRUCT);
 
-  const SourcePosition &position = scanner().current_position();
+  const SourcePosition &position = scanner()->current_position();
 
   // The struct name
   Expect(Token::Type::IDENTIFIER);
@@ -93,7 +94,7 @@ ast::Decl *Parser::ParseStructDecl() {
 
   // The declaration object
   ast::StructDecl *decl =
-      node_factory().NewStructDecl(position, name, struct_type);
+      node_factory()->NewStructDecl(position, name, struct_type);
 
   // Done
   return decl;
@@ -104,7 +105,7 @@ ast::Decl *Parser::ParseVariableDecl() {
 
   Expect(Token::Type::VAR);
 
-  const SourcePosition &position = scanner().current_position();
+  const SourcePosition &position = scanner()->current_position();
 
   // The name
   Expect(Token::Type::IDENTIFIER);
@@ -125,14 +126,14 @@ ast::Decl *Parser::ParseVariableDecl() {
   }
 
   if (type == nullptr && init == nullptr) {
-    error_reporter().Report(scanner().current_position(),
-                            sema::ErrorMessages::kMissingTypeAndInitialValue,
-                            name);
+    error_reporter()->Report(scanner()->current_position(),
+                             sema::ErrorMessages::kMissingTypeAndInitialValue,
+                             name);
   }
 
   // Create declaration object
   ast::VariableDecl *decl =
-      node_factory().NewVariableDecl(position, name, type, init);
+      node_factory()->NewVariableDecl(position, name, type, init);
 
   // Done
   return decl;
@@ -157,7 +158,7 @@ ast::Stmt *Parser::ParseStmt() {
     }
     case Token::Type::VAR: {
       ast::Decl *var_decl = ParseVariableDecl();
-      return node_factory().NewDeclStmt(var_decl);
+      return node_factory()->NewDeclStmt(var_decl);
     }
     default: { return ParseSimpleStmt(); }
   }
@@ -168,12 +169,12 @@ ast::Stmt *Parser::ParseSimpleStmt() {
   ast::Expr *left = ParseExpr();
 
   if (Matches(Token::Type::EQUAL)) {
-    const SourcePosition &pos = scanner().current_position();
+    const SourcePosition &pos = scanner()->current_position();
     ast::Expr *right = ParseExpr();
-    return node_factory().NewAssignmentStmt(pos, left, right);
+    return node_factory()->NewAssignmentStmt(pos, left, right);
   }
 
-  return node_factory().NewExpressionStmt(left);
+  return node_factory()->NewExpressionStmt(left);
 }
 
 ast::Stmt *Parser::ParseBlockStmt() {
@@ -181,7 +182,7 @@ ast::Stmt *Parser::ParseBlockStmt() {
 
   // Eat the left brace
   Expect(Token::Type::LEFT_BRACE);
-  const SourcePosition &start_position = scanner().current_position();
+  const SourcePosition &start_position = scanner()->current_position();
 
   // Where we store all the statements in the block
   util::RegionVector<ast::Stmt *> statements(region());
@@ -195,10 +196,10 @@ ast::Stmt *Parser::ParseBlockStmt() {
 
   // Eat the right brace
   Expect(Token::Type::RIGHT_BRACE);
-  const SourcePosition &end_position = scanner().current_position();
+  const SourcePosition &end_position = scanner()->current_position();
 
-  return node_factory().NewBlockStmt(start_position, end_position,
-                                     std::move(statements));
+  return node_factory()->NewBlockStmt(start_position, end_position,
+                                      std::move(statements));
 }
 
 class Parser::ForHeader {
@@ -317,7 +318,7 @@ ast::Stmt *Parser::ParseForStmt() {
   // ForStmt = 'for' ForHeader Block ;
   Expect(Token::Type::FOR);
 
-  const SourcePosition &position = scanner().current_position();
+  const SourcePosition &position = scanner()->current_position();
 
   // Parse the header to get the initialization statement, loop condition and
   // next-value statement
@@ -328,10 +329,12 @@ ast::Stmt *Parser::ParseForStmt() {
 
   if (header.IsStandard()) {
     const auto &[init, cond, next] = header.GetForElements();
-    return node_factory().NewForStmt(position, init, cond, next, body);
+    return node_factory()->NewForStmt(position, init, cond, next, body);
+  } else {
+    const auto &[target, iter, attributes] = header.GetForInElements();
+    return node_factory()->NewForInStmt(position, target, iter, attributes,
+                                        body);
   }
-  const auto &[target, iter, attributes] = header.GetForInElements();
-  return node_factory().NewForInStmt(position, target, iter, attributes, body);
 }
 
 ast::Stmt *Parser::ParseIfStmt() {
@@ -339,7 +342,7 @@ ast::Stmt *Parser::ParseIfStmt() {
 
   Expect(Token::Type::IF);
 
-  const SourcePosition &position = scanner().current_position();
+  const SourcePosition &position = scanner()->current_position();
 
   // Handle condition
   Expect(Token::Type::LEFT_PAREN);
@@ -359,20 +362,20 @@ ast::Stmt *Parser::ParseIfStmt() {
     }
   }
 
-  return node_factory().NewIfStmt(position, cond, then_stmt, else_stmt);
+  return node_factory()->NewIfStmt(position, cond, then_stmt, else_stmt);
 }
 
 ast::Stmt *Parser::ParseReturnStmt() {
   Expect(Token::Type::RETURN);
 
-  const SourcePosition &position = scanner().current_position();
+  const SourcePosition &position = scanner()->current_position();
 
   ast::Expr *ret = nullptr;
   if (peek() != Token::Type::RIGHT_BRACE) {
     ret = ParseExpr();
   }
 
-  return node_factory().NewReturnStmt(position, ret);
+  return node_factory()->NewReturnStmt(position, ret);
 }
 
 ast::Expr *Parser::ParseExpr() {
@@ -396,13 +399,13 @@ ast::Expr *Parser::ParseBinaryOpExpr(uint32_t min_prec) {
     // to handle cases like 1+2+3+4.
     while (Token::GetPrecedence(peek()) == prec) {
       Token::Type op = Next();
-      const SourcePosition &position = scanner().current_position();
+      const SourcePosition &position = scanner()->current_position();
       ast::Expr *right = ParseBinaryOpExpr(prec);
 
       if (Token::IsCompareOp(op)) {
-        left = node_factory().NewComparisonOpExpr(position, op, left, right);
+        left = node_factory()->NewComparisonOpExpr(position, op, left, right);
       } else {
-        left = node_factory().NewBinaryOpExpr(position, op, left, right);
+        left = node_factory()->NewBinaryOpExpr(position, op, left, right);
       }
     }
   }
@@ -421,9 +424,9 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
     case Token::Type::MINUS:
     case Token::Type::STAR: {
       Token::Type op = Next();
-      const SourcePosition &position = scanner().current_position();
+      const SourcePosition &position = scanner()->current_position();
       ast::Expr *expr = ParseUnaryOpExpr();
-      return node_factory().NewUnaryOpExpr(position, op, expr);
+      return node_factory()->NewUnaryOpExpr(position, op, expr);
     }
     default:
       break;
@@ -457,7 +460,7 @@ ast::Expr *Parser::ParseLeftHandSideExpression() {
           }
         }
         Expect(Token::Type::RIGHT_PAREN);
-        result = node_factory().NewCallExpr(result, std::move(args));
+        result = node_factory()->NewCallExpr(result, std::move(args));
         break;
       }
       case Token::Type::DOT: {
@@ -467,7 +470,7 @@ ast::Expr *Parser::ParseLeftHandSideExpression() {
         Consume(Token::Type::DOT);
         ast::Expr *member = ParsePrimaryExpr();
         result =
-            node_factory().NewMemberExpr(result->position(), result, member);
+            node_factory()->NewMemberExpr(result->position(), result, member);
         break;
       }
       case Token::Type::LEFT_BRACKET: {
@@ -477,7 +480,8 @@ ast::Expr *Parser::ParseLeftHandSideExpression() {
         Consume(Token::Type::LEFT_BRACKET);
         ast::Expr *index = ParseExpr();
         Expect(Token::Type::RIGHT_BRACKET);
-        result = node_factory().NewIndexExpr(result->position(), result, index);
+        result =
+            node_factory()->NewIndexExpr(result->position(), result, index);
         break;
       }
       default: {
@@ -500,20 +504,22 @@ ast::Expr *Parser::ParsePrimaryExpr() {
   switch (peek()) {
     case Token::Type::NIL: {
       Consume(Token::Type::NIL);
-      return node_factory().NewNilLiteral(scanner().current_position());
+      return node_factory()->NewNilLiteral(scanner()->current_position());
     }
     case Token::Type::TRUE: {
       Consume(Token::Type::TRUE);
-      return node_factory().NewBoolLiteral(scanner().current_position(), true);
+      return node_factory()->NewBoolLiteral(scanner()->current_position(),
+                                            true);
     }
     case Token::Type::FALSE: {
       Consume(Token::Type::FALSE);
-      return node_factory().NewBoolLiteral(scanner().current_position(), false);
+      return node_factory()->NewBoolLiteral(scanner()->current_position(),
+                                            false);
     }
     case Token::Type::IDENTIFIER: {
       Next();
-      const SourcePosition &position = scanner().current_position();
-      return node_factory().NewIdentifierExpr(position, GetSymbol());
+      const SourcePosition &position = scanner()->current_position();
+      return node_factory()->NewIdentifierExpr(position, GetSymbol());
     }
     case Token::Type::INTEGER: {
       Next();
@@ -522,8 +528,8 @@ ast::Expr *Parser::ParsePrimaryExpr() {
       char *end = nullptr;
       i32 num = std::strtol(GetSymbol().data(), &end, 10);
 
-      const SourcePosition &position = scanner().current_position();
-      return node_factory().NewIntLiteral(position, num);
+      const SourcePosition &position = scanner()->current_position();
+      return node_factory()->NewIntLiteral(position, num);
     }
     case Token::Type::FLOAT: {
       Next();
@@ -532,13 +538,13 @@ ast::Expr *Parser::ParsePrimaryExpr() {
       char *end = nullptr;
       f32 num = std::strtof(GetSymbol().data(), &end);
 
-      const SourcePosition &position = scanner().current_position();
-      return node_factory().NewFloatLiteral(position, num);
+      const SourcePosition &position = scanner()->current_position();
+      return node_factory()->NewFloatLiteral(position, num);
     }
     case Token::Type::STRING: {
       Next();
-      const SourcePosition &position = scanner().current_position();
-      return node_factory().NewStringLiteral(position, GetSymbol());
+      const SourcePosition &position = scanner()->current_position();
+      return node_factory()->NewStringLiteral(position, GetSymbol());
     }
     case Token::Type::FUN: {
       Next();
@@ -554,10 +560,10 @@ ast::Expr *Parser::ParsePrimaryExpr() {
   }
 
   // Error
-  error_reporter().Report(scanner().current_position(),
-                          sema::ErrorMessages::kExpectingExpression);
+  error_reporter()->Report(scanner()->current_position(),
+                           sema::ErrorMessages::kExpectingExpression);
   Next();
-  return node_factory().NewBadExpr(scanner().current_position());
+  return node_factory()->NewBadExpr(scanner()->current_position());
 }
 
 ast::Expr *Parser::ParseFunctionLitExpr() {
@@ -572,7 +578,7 @@ ast::Expr *Parser::ParseFunctionLitExpr() {
   auto *body = ParseBlockStmt()->As<ast::BlockStmt>();
 
   // Done
-  return node_factory().NewFunctionLitExpr(func_type, body);
+  return node_factory()->NewFunctionLitExpr(func_type, body);
 }
 
 ast::Expr *Parser::ParseType() {
@@ -580,8 +586,8 @@ ast::Expr *Parser::ParseType() {
     case Token::Type::NIL:
     case Token::Type::IDENTIFIER: {
       Next();
-      const SourcePosition &position = scanner().current_position();
-      return node_factory().NewIdentifierExpr(position, GetSymbol());
+      const SourcePosition &position = scanner()->current_position();
+      return node_factory()->NewIdentifierExpr(position, GetSymbol());
     }
     case Token::Type::MAP: {
       return ParseMapType();
@@ -602,8 +608,8 @@ ast::Expr *Parser::ParseType() {
   }
 
   // Error
-  error_reporter().Report(scanner().current_position(),
-                          sema::ErrorMessages::kExpectingType);
+  error_reporter()->Report(scanner()->current_position(),
+                           sema::ErrorMessages::kExpectingType);
 
   return nullptr;
 }
@@ -614,13 +620,13 @@ ast::Expr *Parser::ParseFunctionType() {
 
   Consume(Token::Type::LEFT_PAREN);
 
-  const SourcePosition &position = scanner().current_position();
+  const SourcePosition &position = scanner()->current_position();
 
   util::RegionVector<ast::FieldDecl *> params(region());
   params.reserve(4);
 
   while (peek() != Token::Type::RIGHT_PAREN) {
-    const SourcePosition &field_position = scanner().current_position();
+    const SourcePosition &field_position = scanner()->current_position();
 
     ast::Identifier ident(nullptr);
 
@@ -633,12 +639,12 @@ ast::Expr *Parser::ParseFunctionType() {
     if (Matches(Token::Type::COLON) || ident.data() == nullptr) {
       type = ParseType();
     } else {
-      type = node_factory().NewIdentifierExpr(field_position, ident);
+      type = node_factory()->NewIdentifierExpr(field_position, ident);
       ident = ast::Identifier(nullptr);
     }
 
     // That's it
-    params.push_back(node_factory().NewFieldDecl(field_position, ident, type));
+    params.push_back(node_factory()->NewFieldDecl(field_position, ident, type));
 
     if (!Matches(Token::Type::COMMA)) {
       break;
@@ -650,7 +656,7 @@ ast::Expr *Parser::ParseFunctionType() {
 
   ast::Expr *ret = ParseType();
 
-  return node_factory().NewFunctionType(position, std::move(params), ret);
+  return node_factory()->NewFunctionType(position, std::move(params), ret);
 }
 
 ast::Expr *Parser::ParsePointerType() {
@@ -658,11 +664,11 @@ ast::Expr *Parser::ParsePointerType() {
 
   Expect(Token::Type::STAR);
 
-  const SourcePosition &position = scanner().current_position();
+  const SourcePosition &position = scanner()->current_position();
 
   ast::Expr *base = ParseType();
 
-  return node_factory().NewPointerType(position, base);
+  return node_factory()->NewPointerType(position, base);
 }
 
 ast::Expr *Parser::ParseArrayType() {
@@ -671,7 +677,7 @@ ast::Expr *Parser::ParseArrayType() {
 
   Consume(Token::Type::LEFT_BRACKET);
 
-  const SourcePosition &position = scanner().current_position();
+  const SourcePosition &position = scanner()->current_position();
 
   // If the next token doesn't match a right bracket, it means we have a length
   ast::Expr *len = nullptr;
@@ -684,13 +690,13 @@ ast::Expr *Parser::ParseArrayType() {
   ast::Expr *elem_type = ParseType();
 
   // Done
-  return node_factory().NewArrayType(position, len, elem_type);
+  return node_factory()->NewArrayType(position, len, elem_type);
 }
 
 ast::Expr *Parser::ParseStructType() {
   // StructType = '{' { Ident ':' Type } '}' ;
 
-  const SourcePosition &position = scanner().current_position();
+  const SourcePosition &position = scanner()->current_position();
 
   Consume(Token::Type::LEFT_BRACE);
 
@@ -699,7 +705,7 @@ ast::Expr *Parser::ParseStructType() {
   while (peek() != Token::Type::RIGHT_BRACE) {
     Expect(Token::Type::IDENTIFIER);
 
-    const SourcePosition &field_position = scanner().current_position();
+    const SourcePosition &field_position = scanner()->current_position();
 
     // The parameter name
     ast::Identifier name = GetSymbol();
@@ -711,18 +717,18 @@ ast::Expr *Parser::ParseStructType() {
     ast::Expr *type = ParseType();
 
     // That's it
-    fields.push_back(node_factory().NewFieldDecl(field_position, name, type));
+    fields.push_back(node_factory()->NewFieldDecl(field_position, name, type));
   }
 
   Consume(Token::Type::RIGHT_BRACE);
 
-  return node_factory().NewStructType(position, std::move(fields));
+  return node_factory()->NewStructType(position, std::move(fields));
 }
 
 ast::Expr *Parser::ParseMapType() {
   // MapType = 'map' '[' Expr ']' Expr ;
 
-  const SourcePosition &position = scanner().current_position();
+  const SourcePosition &position = scanner()->current_position();
 
   Consume(Token::Type::MAP);
 
@@ -734,7 +740,7 @@ ast::Expr *Parser::ParseMapType() {
 
   ast::Expr *value_type = ParseType();
 
-  return node_factory().NewMapType(position, key_type, value_type);
+  return node_factory()->NewMapType(position, key_type, value_type);
 }
 
 ast::Attributes *Parser::ParseAttributes() {

@@ -12,7 +12,7 @@
 
 namespace tpl::ast {
 
-class AstContext;
+class Context;
 
 #define TYPE_LIST(F) \
   F(IntegerType)     \
@@ -40,7 +40,7 @@ class Type : public util::RegionObject {
 #undef F
 
   // Context this type was allocated from
-  AstContext &context() const { return ctx_; }
+  Context *context() const { return ctx_; }
 
   // Size (in bytes) of this type
   u32 size() const { return size_; }
@@ -90,11 +90,11 @@ class Type : public util::RegionObject {
   static std::string ToString(const Type *type);
 
  protected:
-  Type(AstContext &ctx, u32 size, u32 alignment, Kind kind)  // NOLINT
+  Type(Context *ctx, u32 size, u32 alignment, Kind kind)
       : ctx_(ctx), size_(size), align_(alignment), kind_(kind) {}
 
  private:
-  AstContext &ctx_;
+  Context *ctx_;
   u32 size_;
   u32 align_;
   Kind kind_;
@@ -118,7 +118,7 @@ class IntegerType : public Type {
 
   IntKind int_kind() const { return int_kind_; }
 
-  static IntegerType *Get(AstContext *ctx, IntKind kind);
+  static IntegerType *Get(Context *ctx, IntKind kind);
 
   u32 BitWidth() const {
     switch (int_kind()) {
@@ -159,9 +159,8 @@ class IntegerType : public Type {
   }
 
  private:
-  friend class AstContext;
-  // NOLINTNEXTLINE
-  IntegerType(AstContext &ctx, u32 size, u32 alignment, IntKind int_kind)
+  friend class Context;
+  IntegerType(Context *ctx, u32 size, u32 alignment, IntKind int_kind)
       : Type(ctx, size, alignment, Type::Kind::IntegerType),
         int_kind_(int_kind) {}
 
@@ -178,16 +177,15 @@ class FloatType : public Type {
 
   FloatKind float_kind() const { return float_kind_; }
 
-  static FloatType *Get(AstContext *ctx, FloatKind kind);
+  static FloatType *Get(Context *ctx, FloatKind kind);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::FloatType;
   }
 
  private:
-  friend class AstContext;
-  // NOLINTNEXTLINE
-  FloatType(AstContext &ctx, u32 size, u32 alignment, FloatKind float_kind)
+  friend class Context;
+  FloatType(Context *ctx, u32 size, u32 alignment, FloatKind float_kind)
       : Type(ctx, size, alignment, Type::Kind::FloatType),
         float_kind_(float_kind) {}
 
@@ -200,31 +198,29 @@ class FloatType : public Type {
  */
 class BoolType : public Type {
  public:
-  static BoolType *Get(AstContext *ctx);
+  static BoolType *Get(Context *ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::BoolType;
   }
 
  private:
-  friend class AstContext;
-  // NOLINTNEXTLINE
-  explicit BoolType(AstContext &ctx)
+  friend class Context;
+  explicit BoolType(Context *ctx)
       : Type(ctx, sizeof(i8), alignof(i8), Type::Kind::BoolType) {}
 };
 
 class StringType : public Type {
  public:
-  static StringType *Get(AstContext *ctx);
+  static StringType *Get(Context *ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::StringType;
   }
 
  private:
-  friend class AstContext;
-  // NOLINTNEXTLINE
-  explicit StringType(AstContext &ctx)
+  friend class Context;
+  explicit StringType(Context *ctx)
       : Type(ctx, sizeof(i8 *), alignof(i8 *), Type::Kind::StringType) {}
 };
 
@@ -233,15 +229,15 @@ class StringType : public Type {
  */
 class NilType : public Type {
  public:
-  static NilType *Get(AstContext *ctx);
+  static NilType *Get(Context *ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::NilType;
   }
 
  private:
-  friend class AstContext;
-  explicit NilType(AstContext &ctx) : Type(ctx, 0, 0, Type::Kind::NilType) {}
+  friend class Context;
+  explicit NilType(Context *ctx) : Type(ctx, 0, 0, Type::Kind::NilType) {}
 };
 
 /**
@@ -339,7 +335,7 @@ class MapType : public Type {
 
   Type *value_type() const { return val_type_; }
 
-  static MapType *Get(Type *key_type, Type *value_type);
+  static MapType *Get(Type *key_type, Type *val_type);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::MapType;
@@ -382,8 +378,7 @@ class StructType : public Type {
     return (this == &other || fields() == other.fields());
   }
 
-  // NOLINTNEXTLINE
-  static StructType *Get(AstContext &ctx, util::RegionVector<Field> &&fields);
+  static StructType *Get(Context *ctx, util::RegionVector<Field> &&fields);
   static StructType *Get(util::RegionVector<Field> &&fields);
 
   static bool classof(const Type *type) {
@@ -391,7 +386,7 @@ class StructType : public Type {
   }
 
  private:
-  explicit StructType(AstContext &ctx, u32 size, u32 alignment,  // NOLINT
+  explicit StructType(Context *ctx, u32 size, u32 alignment,
                       util::RegionVector<Field> &&fields,
                       util::RegionVector<u32> &&field_offsets);
 
@@ -409,11 +404,11 @@ class StructType : public Type {
 // class reference
 // clang-format off
 #define INTERNAL_TYPE_LIST(V) \
-  V(TableVectorIterator, "tpl::sql::TableVectorIterator", ::tpl::sql::TableVectorIterator)                   /* NOLINT */   \
-  V(VectorProjectionIterator, "tpl::sql::VectorProjectionIterator", ::tpl::sql::VectorProjectionIterator)    /* NOLINT */   \
-  V(JoinHashTable, "tpl::sql::JoinHashTable", ::tpl::sql::JoinHashTable)                                     /* NOLINT */   \
-  V(SqlBool, "tpl::sql::Bool", ::tpl::sql::BoolVal)                                                          /* NOLINT */   \
-  V(SqlInteger, "tpl::sql::Integer", ::tpl::sql::Integer)                                                    /* NOLINT */   \
+  V(TableVectorIterator, "tpl::sql::TableVectorIterator", ::tpl::sql::TableVectorIterator)                 /* NOLINT */ \
+  V(VectorProjectionIterator, "tpl::sql::VectorProjectionIterator", ::tpl::sql::VectorProjectionIterator)  /* NOLINT */ \
+  V(JoinHashTable, "tpl::sql::JoinHashTable", ::tpl::sql::JoinHashTable)                                   /* NOLINT */ \
+  V(SqlBool, "tpl::sql::Bool", ::tpl::sql::BoolVal)                                                        /* NOLINT */ \
+  V(SqlInteger, "tpl::sql::Integer", ::tpl::sql::Integer)                                                  /* NOLINT */ \
   V(SqlDecimal, "tpl::sql::Decimal", ::tpl::sql::Decimal)
 // clang-format on
 
@@ -445,7 +440,7 @@ class InternalType : public Type {
   static constexpr u32 NumInternalTypes() { return kNumInternalKinds; }
 
   // Static factory
-  static InternalType *Get(AstContext *ctx, InternalKind kind);
+  static InternalType *Get(Context *ctx, InternalKind kind);
 
   // Type check
   static bool classof(const Type *type) {
@@ -453,9 +448,9 @@ class InternalType : public Type {
   }
 
  private:
-  friend class AstContext;
-  explicit InternalType(AstContext &ctx, Identifier name, u32 size,  // NOLINT
-                        u32 alignment, InternalKind internal_kind)
+  friend class Context;
+  explicit InternalType(Context *ctx, Identifier name, u32 size, u32 alignment,
+                        InternalKind internal_kind)
       : Type(ctx, size, alignment, Type::Kind::InternalType),
         name_(name),
         internal_kind_(internal_kind) {}
@@ -470,8 +465,7 @@ class InternalType : public Type {
  */
 class SqlType : public Type {
  public:
-  // NOLINTNEXTLINE
-  static SqlType *Get(AstContext &ctx, const sql::Type &sql_type);
+  static SqlType *Get(Context *ctx, const sql::Type &sql_type);
 
   const sql::Type &sql_type() const { return sql_type_; }
 
@@ -481,8 +475,7 @@ class SqlType : public Type {
   }
 
  private:
-  // NOLINTNEXTLINE
-  SqlType(AstContext &ctx, u32 size, u32 alignment, const sql::Type &sql_type)
+  SqlType(Context *ctx, u32 size, u32 alignment, const sql::Type &sql_type)
       : Type(ctx, size, alignment, Kind::SqlType), sql_type_(sql_type) {}
 
  private:

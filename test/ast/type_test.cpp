@@ -3,7 +3,7 @@
 
 #include "tpl_test.h"  // NOLINT
 
-#include "ast/ast_context.h"
+#include "ast/context.h"
 #include "ast/type.h"
 #include "sema/error_reporter.h"
 #include "util/region.h"
@@ -13,18 +13,18 @@ namespace tpl::ast::test {
 class TypeTest : public TplTest {
  public:
   TypeTest()
-      : region_("ast_test"), errors_(&region_), ctx_(&region_, errors_) {}
+      : region_("ast_test"), errors_(&region_), ctx_(&region_, &errors_) {}
 
   util::Region *region() { return &region_; }
 
-  ast::AstContext &ctx() { return ctx_; }
+  ast::Context *ctx() { return &ctx_; }
 
-  ast::Identifier Name(const std::string &s) { return ctx().GetIdentifier(s); }
+  ast::Identifier Name(const std::string &s) { return ctx()->GetIdentifier(s); }
 
  private:
   util::Region region_;
   sema::ErrorReporter errors_;
-  ast::AstContext ctx_;
+  ast::Context ctx_;
 };
 
 TEST_F(TypeTest, StructPaddingTest) {
@@ -80,14 +80,14 @@ TEST_F(TypeTest, PrimitiveTypeCacheTest) {
   // integer types
   //
 
-#define GEN_INT_TEST(Kind)                                             \
-  {                                                                    \
-    auto *type1 =                                                      \
+#define GEN_INT_TEST(Kind)                                              \
+  {                                                                     \
+    auto *type1 =                                                       \
         ast::IntegerType::Get(&ctx(), ast::IntegerType::IntKind::Kind); \
-    auto *type2 =                                                      \
+    auto *type2 =                                                       \
         ast::IntegerType::Get(&ctx(), ast::IntegerType::IntKind::Kind); \
-    EXPECT_EQ(type1, type2)                                            \
-        << "Received two different " #Kind " types from context";      \
+    EXPECT_EQ(type1, type2)                                             \
+        << "Received two different " #Kind " types from context";       \
   }
   GEN_INT_TEST(Int8);
   GEN_INT_TEST(Int16);
@@ -103,12 +103,14 @@ TEST_F(TypeTest, PrimitiveTypeCacheTest) {
   // Try the floating point types ...
   //
 
-#define GEN_FLOAT_TEST(Kind)                                                   \
-  {                                                                            \
-    auto *type1 = ast::FloatType::Get(&ctx(), ast::FloatType::FloatKind::Kind); \
-    auto *type2 = ast::FloatType::Get(&ctx(), ast::FloatType::FloatKind::Kind); \
-    EXPECT_EQ(type1, type2)                                                    \
-        << "Received two different " #Kind " types from context";              \
+#define GEN_FLOAT_TEST(Kind)                                          \
+  {                                                                   \
+    auto *type1 =                                                     \
+        ast::FloatType::Get(&ctx(), ast::FloatType::FloatKind::Kind); \
+    auto *type2 =                                                     \
+        ast::FloatType::Get(&ctx(), ast::FloatType::FloatKind::Kind); \
+    EXPECT_EQ(type1, type2)                                           \
+        << "Received two different " #Kind " types from context";     \
   }
   GEN_FLOAT_TEST(Float32)
   GEN_FLOAT_TEST(Float64)
@@ -170,14 +172,14 @@ TEST_F(TypeTest, PointerTypeCacheTest) {
   // pointer equality in a given context
   //
 
-#define GEN_INT_TEST(Kind)                                              \
-  {                                                                     \
-    auto *type1 = ast::PointerType::Get(                                \
+#define GEN_INT_TEST(Kind)                                               \
+  {                                                                      \
+    auto *type1 = ast::PointerType::Get(                                 \
         ast::IntegerType::Get(&ctx(), ast::IntegerType::IntKind::Kind)); \
-    auto *type2 = ast::PointerType::Get(                                \
+    auto *type2 = ast::PointerType::Get(                                 \
         ast::IntegerType::Get(&ctx(), ast::IntegerType::IntKind::Kind)); \
-    EXPECT_EQ(type1, type2)                                             \
-        << "Received two different *" #Kind " types from context";      \
+    EXPECT_EQ(type1, type2)                                              \
+        << "Received two different *" #Kind " types from context";       \
   }
   GEN_INT_TEST(Int8);
   GEN_INT_TEST(Int16);
@@ -212,13 +214,13 @@ TEST_F(TypeTest, FunctionTypeCacheTest) {
 
   {
     auto *type1 = ast::FunctionType::Get(
-        util::RegionVector<ast::Field>({{Name("a"), ast::BoolType::Get(&ctx())}},
-                                       region()),
+        util::RegionVector<ast::Field>(
+            {{Name("a"), ast::BoolType::Get(&ctx())}}, region()),
         ast::BoolType::Get(&ctx()));
 
     auto *type2 = ast::FunctionType::Get(
-        util::RegionVector<ast::Field>({{Name("a"), ast::BoolType::Get(&ctx())}},
-                                       region()),
+        util::RegionVector<ast::Field>(
+            {{Name("a"), ast::BoolType::Get(&ctx())}}, region()),
         ast::BoolType::Get(&ctx()));
 
     EXPECT_EQ(type1, type2);
@@ -233,8 +235,8 @@ TEST_F(TypeTest, FunctionTypeCacheTest) {
   {
     // The first function has type: (bool)->bool
     auto *type1 = ast::FunctionType::Get(
-        util::RegionVector<ast::Field>({{Name("a"), ast::BoolType::Get(&ctx())}},
-                                       region()),
+        util::RegionVector<ast::Field>(
+            {{Name("a"), ast::BoolType::Get(&ctx())}}, region()),
         ast::BoolType::Get(&ctx()));
 
     auto *int_type =

@@ -12,7 +12,10 @@ namespace tpl::sql {
 
 Sorter::Sorter(util::Region *region, ComparisonFunction cmp_fn,
                u32 tuple_size) noexcept
-    : tuple_storage_(region, tuple_size), cmp_fn_(cmp_fn), tuples_(region) {}
+    : tuple_storage_(region, tuple_size),
+      cmp_fn_(cmp_fn),
+      tuples_(region),
+      sorted_(false) {}
 
 Sorter::~Sorter() = default;
 
@@ -46,7 +49,6 @@ void Sorter::AllocInputTupleTopKFinish(u64 top_k) noexcept {
 
   // The most recent insert
   const byte *last_insert = tuples_.back();
-  tuple_storage_.pop_back();
 
   // The current top
   const byte *heap_top = tuples_.front();
@@ -55,17 +57,18 @@ void Sorter::AllocInputTupleTopKFinish(u64 top_k) noexcept {
     // The last inserted tuples belongs in the top-k. Swap it with the current
     // maximum and sift it down.
     tuples_.front() = last_insert;
+    tuples_.pop_back();
     HeapSiftDown();
+  } else {
+    tuples_.pop_back();
   }
 }
 
 void Sorter::BuildHeap() {
-#if 0
   const auto compare = [this](const byte *left, const byte *right) {
     return cmp_fn_(left, right) < 0;
   };
   std::make_heap(tuples_.begin(), tuples_.end(), compare);
-#endif
 }
 
 void Sorter::HeapSiftDown() {
@@ -88,14 +91,23 @@ void Sorter::HeapSiftDown() {
     if (cmp_fn_(top, tuples_[child]) >= 0) {
       break;
     }
-
+    // TODO(Amadou): Could save space by memcpying instead of just swapping
+    // pointers (Too slow for large tuples?) i.e we can call
+    // tuple_storage_.pop_back() only if we memcpy. Otherwise, the same memory
+    // location is reused by subsequent calls AllocateInputTuple(), which will
+    // overwrite existing values.
     std::swap(tuples_[idx], tuples_[child]);
     idx = child;
   }
-  tuples_[idx] = top;
 }
 
-void Sorter::Sort() noexcept {  // NOLINT(bugprone-exception-escape)
+void Sorter::Sort() noexcept {
+  // Exit if the input tuples have already been sorted
+  if (sorted_) {
+    return;
+  }
+
+  // Exit if there are no input tuples
   if (tuples_.empty()) {
     return;
   }
@@ -105,18 +117,21 @@ void Sorter::Sort() noexcept {  // NOLINT(bugprone-exception-escape)
   timer.Start();
 
   // Sort the sucker
-#if 0
   const auto compare = [this](const byte *left, const byte *right) {
-    return cmp_fn_(left, right);
+    return cmp_fn_(left, right) < 0;
   };
   ips4o::sort(tuples_.begin(), tuples_.end(), compare);
-#endif
 
   timer.Stop();
 
+#ifndef NDEBUG
   auto rate = (tuples_.size() / timer.elapsed()) / 1000.0;
   LOG_DEBUG("Sorted %zu tuples in %.2f ms (%.2lf TPS)", tuples_.size(),
             timer.elapsed(), rate);
+#endif
+
+  // Mark complete
+  sorted_ = true;
 }
 
 }  // namespace tpl::sql

@@ -14,6 +14,10 @@
 
 namespace tpl::vm {
 
+// ---------------------------------------------------------
+// Virtual Machine Frame
+// ---------------------------------------------------------
+
 /// An execution frame where all function's local variables and parameters live
 /// for the duration of the function's lifetime.
 class VM::Frame {
@@ -76,59 +80,36 @@ class VM::Frame {
   std::size_t frame_size_;
 };
 
+// ---------------------------------------------------------
+// Virtual Machine
+// ---------------------------------------------------------
+
 VM::VM(const BytecodeModule &module, util::Region *region)
     : our_region_(module.name()),
       region_(region != nullptr ? region : &our_region_),
       stack_(kDefaultInitialStackSize, 0, region_),
       sp_(0),
-      module_(module) {
-  std::memset(bytecode_counts_, 0, sizeof(bytecode_counts_));
-}
+      module_(module),
+      bytecode_counts_{0ull} {}
 
-void VM::InvokeFunction(const FunctionId func, const u8 *const args) {
-  const FunctionInfo *const func_info = module_.GetFuncInfoById(func);
-  const u8 *ip = module_.GetBytecodeForFunction(*func_info);
-
-  // Locals frame
-  Frame frame(this, func_info->frame_size());
-
-  // Copy args into frame
-  {
-    std::vector<const LocalInfo *> arg_infos;
-    func_info->GetParameterInfos(arg_infos);
-    const u32 size = std::accumulate(
-        arg_infos.begin(), arg_infos.end(), u32(0),
-        [](auto size, const auto *local) { return size + local->size(); });
-    std::memcpy(frame.raw_frame(), args, size);
-  }
-
-  Interpret(ip, &frame);
-}
-
-void VM::InvokeFunctionWrapper(const BytecodeModule *module, FunctionId func,
-                               const u8 **args) {
-  // The function we'll invoke
-  const FunctionInfo *const func_info = module->GetFuncInfoById(func);
+// static
+void VM::InvokeFunction(const BytecodeModule &module, const FunctionId func,
+                        const u8 args[]) {
+  const FunctionInfo *const func_info = module.GetFuncInfoById(func);
+  const u8 *ip = module.GetBytecodeForFunction(*func_info);
 
   // The virtual machine
-  VM vm(*module);
+  VM vm(module);
 
-  // Setup the locals frame
+  // Locals frame
   Frame frame(&vm, func_info->frame_size());
 
-  // Copy args
-  {
-    std::vector<const LocalInfo *> arg_infos;
-    func_info->GetParameterInfos(arg_infos);
+  // Copy args into frame
+  std::memcpy(frame.raw_frame() + func_info->params_start_pos(), args,
+              func_info->params_size());
 
-    u8 *const frame_bytes = frame.raw_frame();
-    for (u32 idx = 0; idx < arg_infos.size(); idx++) {
-      const LocalInfo *arg = arg_infos[idx];
-      std::memcpy(frame_bytes + arg->offset(), args[idx], arg->size());
-    }
-  }
-
-  vm.Interpret(module->GetBytecodeForFunction(*func_info), &frame);
+  // Let's go
+  vm.Interpret(ip, &frame);
 }
 
 namespace {

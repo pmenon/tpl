@@ -3,18 +3,18 @@
 
 #include "tpl_test.h"  // NOLINT
 
-#include "ast/ast_context.h"
 #include "ast/ast_node_factory.h"
+#include "ast/context.h"
 #include "sema/error_reporter.h"
 
 namespace tpl::ast::test {
 
-class AstContextTest : public TplTest {};
+class ContextTest : public TplTest {};
 
-TEST_F(AstContextTest, CreateNewStringsTest) {
+TEST_F(ContextTest, CreateNewStringsTest) {
   util::Region region("test");
   sema::ErrorReporter error_reporter(&region);
-  AstContext ctx(&region, error_reporter);
+  Context ctx(&region, &error_reporter);
 
   // We request the strings "string-0", "string-1", ..., "string-99" from the
   // context. We expect duplicate input strings to return the same Identifier!

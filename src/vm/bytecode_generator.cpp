@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "ast/ast_context.h"
 #include "ast/builtins.h"
+#include "ast/context.h"
 #include "ast/type.h"
 #include "logging/logger.h"
 #include "sql/catalog.h"
@@ -194,8 +194,8 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
     LoopBuilder vpi_loop(this);
     vpi_loop.LoopHeader();
 
-    ast::AstContext &ctx = row_type->context();
-    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(&ctx));
+    ast::Context *ctx = row_type->context();
+    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(ctx));
     emitter()->Emit(Bytecode::VPIHasNext, cond, vpi);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    vpi_loop.break_label());
@@ -257,17 +257,17 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   // function, too, that we populate with the instance inside the TVI.
   //
 
-  ast::AstContext &ctx = node->target()->type()->context();
+  ast::Context *ctx = node->target()->type()->context();
 
   bool vectorized = false;
   if (auto *attributes = node->attributes(); attributes != nullptr) {
-    if (attributes->Contains(ctx.GetIdentifier("batch"))) {
+    if (attributes->Contains(ctx->GetIdentifier("batch"))) {
       vectorized = true;
     }
   }
 
   ast::InternalType *table_iter_type = ast::InternalType::Get(
-      &ctx, ast::InternalType::InternalKind::TableVectorIterator);
+      ctx, ast::InternalType::InternalKind::TableVectorIterator);
   LocalVar table_iter =
       current_function()->NewLocal(table_iter_type, "table_iter");
 
@@ -287,7 +287,7 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   //
 
   ast::InternalType *vpi_type = ast::InternalType::Get(
-      &ctx, ast::InternalType::InternalKind::VectorProjectionIterator);
+      ctx, ast::InternalType::InternalKind::VectorProjectionIterator);
   LocalVar vpi = current_function()->NewLocal(vpi_type->PointerTo(), "vpi");
 
   emitter()->Emit(Bytecode::TableVectorIteratorGetVPI, vpi, table_iter);
@@ -303,7 +303,7 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
     LoopBuilder table_loop(this);
     table_loop.LoopHeader();
 
-    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(&ctx));
+    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(ctx));
     emitter()->Emit(Bytecode::TableVectorIteratorNext, cond, table_iter);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    table_loop.break_label());
@@ -328,17 +328,10 @@ void BytecodeGenerator::VisitFieldDecl(ast::FieldDecl *node) {
 
 void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
   // The function's TPL type
-  const auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
-
-  // Collect parameters
-  std::vector<std::pair<ast::Type *, std::string>> params;
-  for (const auto &param : func_type->params()) {
-    params.emplace_back(param.type, param.name.data());
-  }
+  auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
 
   // Allocate the function
-  FunctionInfo *func_info =
-      AllocateFunc(node->name().data(), func_type->return_type(), params);
+  FunctionInfo *func_info = AllocateFunc(node->name().data(), func_type);
 
   {
     // Visit the body of the function. We use this handy scope object to track
@@ -386,17 +379,17 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
   LocalVar input = VisitExpressionForRValue(node->input());
 
   switch (node->cast_kind()) {
-    case ast::ImplicitCastExpr::CastKind::SqlBoolToBool: {
+    case ast::CastKind::SqlBoolToBool: {
       emitter()->Emit(Bytecode::ForceBoolTruth, dest, input);
       execution_result()->set_destination(dest.ValueOf());
       break;
     }
-    case ast::ImplicitCastExpr::CastKind::IntToSqlInt: {
+    case ast::CastKind::IntToSqlInt: {
       emitter()->Emit(Bytecode::InitInteger, dest, input);
       execution_result()->set_destination(dest);
       break;
     }
-    case ast::ImplicitCastExpr::CastKind::IntegralCast: {
+    case ast::CastKind::IntegralCast: {
       BuildAssign(dest, input, node->type());
       break;
     }
@@ -589,9 +582,9 @@ void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
 
 void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
                                                    ast::Builtin builtin) {
-  ast::AstContext &ctx = call->type()->context();
+  ast::Context *ctx = call->type()->context();
   ast::Type *ret_type =
-      ast::IntegerType::Get(&ctx, ast::IntegerType::IntKind::Int32);
+      ast::IntegerType::Get(ctx, ast::IntegerType::IntKind::Int32);
 
   LocalVar ret_val;
   if (execution_result() != nullptr) {
@@ -642,8 +635,8 @@ void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
 void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
   ast::Builtin builtin;
 
-  ast::AstContext &ctx = call->type()->context();
-  ctx.IsBuiltinFunction(call->FuncName(), &builtin);
+  ast::Context *ctx = call->type()->context();
+  ctx->IsBuiltinFunction(call->FuncName(), &builtin);
 
   switch (builtin) {
     case ast::Builtin::FilterEq:
@@ -728,7 +721,7 @@ void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
       break;
     }
     case ast::LitExpr::LitKind::Boolean: {
-      emitter()->EmitAssignImm1(target, static_cast<i8>(node->bool_val()));
+      emitter()->EmitAssignImm1(target, node->bool_val());
       break;
     }
     case ast::LitExpr::LitKind::Int: {
@@ -1119,21 +1112,20 @@ void BytecodeGenerator::VisitMapTypeRepr(ast::MapTypeRepr *node) {
 }
 
 FunctionInfo *BytecodeGenerator::AllocateFunc(
-    const std::string &func_name, ast::Type *return_type,
-    const std::vector<std::pair<ast::Type *, std::string>> &params) {
+    const std::string &func_name, ast::FunctionType *const func_type) {
   // Allocate function
   const auto func_id = static_cast<FunctionId>(functions_.size());
-  functions_.emplace_back(func_id, func_name);
+  functions_.emplace_back(func_id, func_name, func_type);
   FunctionInfo *func = &functions_.back();
 
   // Register return type
-  if (!return_type->IsNilType()) {
+  if (auto *return_type = func_type->return_type(); !return_type->IsNilType()) {
     func->NewParameterLocal(return_type->PointerTo(), "hiddenRv");
   }
 
   // Register parameters
-  for (const auto &[type, name] : params) {
-    func->NewParameterLocal(type, name);
+  for (const auto &param : func_type->params()) {
+    func->NewParameterLocal(param.type, param.name.data());
   }
 
   // Cache
