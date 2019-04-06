@@ -147,13 +147,12 @@ class Type : public util::RegionObject {
   }
 
   /// Perform a "checking cast". This function checks to see if the target type
-  /// is a subclass of Type, returning a pointer to the subclass if so.
-  /// Otherwise, if the target type is not a subclass of Type, this function
-  /// returns a null pointer.
+  /// is a subclass of Type, returning a pointer to the subclass if so, or
+  /// returning a null pointer otherwise.
   ///
   /// You should use this in conditional or control-flow statements when you
-  /// want to check if it's a specific type **AND** get a pointer to the type,
-  /// like so:
+  /// want to check if a type is a specific subtype **AND** get a pointer to the
+  /// subtype, like so:
   ///
   /// \code
   /// if (auto *builtin_type = SafeAs<ast::BuiltinType>()) {
