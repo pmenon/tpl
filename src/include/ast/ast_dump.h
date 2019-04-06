@@ -1,14 +1,13 @@
 #pragma once
 
-#include <string>
-
 namespace tpl::ast {
 
 class AstNode;
 
+/// Class to dump the AST to standard output
 class AstDump {
  public:
-  static void Dump(ast::AstNode *node);
+  static void Dump(AstNode *node);
 };
 
 }  // namespace tpl::ast

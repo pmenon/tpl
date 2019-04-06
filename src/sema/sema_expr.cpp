@@ -217,7 +217,7 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
   if (call->NumCallArgs() != 3) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kMismatchedCallArgs,
-                             call->FuncName(), 3, call->NumCallArgs());
+                             call->GetFuncName(), 3, call->NumCallArgs());
     return;
   }
 
@@ -229,7 +229,7 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
                                 ast::BuiltinType::VectorProjectionIterator);
     error_reporter()->Report(
         call->position(), ErrorMessages::kIncorrectCallArgType,
-        call->arguments()[0]->type(), vpi, call->FuncName());
+        call->arguments()[0]->type(), vpi, call->GetFuncName());
     return;
   }
 
@@ -238,7 +238,8 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kIncorrectCallArgType,
                              call->arguments()[1]->type(),
-                             ast::StringType::Get(context()), call->FuncName());
+                             ast::StringType::Get(context()),
+                             call->GetFuncName());
   }
 
   // Set return type
@@ -249,7 +250,7 @@ void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
   if (call->NumCallArgs() != 3) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kMismatchedCallArgs,
-                             call->FuncName(), 3, call->NumCallArgs());
+                             call->GetFuncName(), 3, call->NumCallArgs());
     return;
   }
 
@@ -290,7 +291,7 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
   if (call->NumCallArgs() != 2) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kMismatchedCallArgs,
-                             call->FuncName(), 3, call->NumCallArgs());
+                             call->GetFuncName(), 3, call->NumCallArgs());
     return;
   }
 
@@ -312,7 +313,7 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
   if (call->NumCallArgs() != 1) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kMismatchedCallArgs,
-                             call->FuncName(), 1, call->NumCallArgs());
+                             call->GetFuncName(), 1, call->NumCallArgs());
     return;
   }
 
@@ -334,7 +335,7 @@ void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
   if (call->NumCallArgs() != 1) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kMismatchedCallArgs,
-                             call->FuncName(), 1, call->NumCallArgs());
+                             call->GetFuncName(), 1, call->NumCallArgs());
     return;
   }
 
@@ -356,7 +357,7 @@ void Sema::CheckBuiltinRegionCall(ast::CallExpr *call) {
   if (call->NumCallArgs() != 1) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kMismatchedCallArgs,
-                             call->FuncName(), 1, call->NumCallArgs());
+                             call->GetFuncName(), 1, call->NumCallArgs());
     return;
   }
 
@@ -426,7 +427,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
 void Sema::VisitCallExpr(ast::CallExpr *node) {
   // Is this a built in?
   if (ast::Builtin builtin;
-      context()->IsBuiltinFunction(node->FuncName(), &builtin)) {
+      context()->IsBuiltinFunction(node->GetFuncName(), &builtin)) {
     // Mark this node as a call into a builtin function
     node->set_call_kind(ast::CallExpr::CallKind::Builtin);
 
@@ -454,7 +455,8 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   auto *func_type = type->As<ast::FunctionType>();
   if (func_type->num_params() != node->NumCallArgs()) {
     error_reporter()->Report(
-        node->position(), ErrorMessages::kMismatchedCallArgs, node->FuncName(),
+        node->position(), ErrorMessages::kMismatchedCallArgs,
+        node->GetFuncName(),
         func_type->num_params(), node->NumCallArgs());
     return;
   }
@@ -475,7 +477,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
       error_reporter()->Report(node->position(),
                                ErrorMessages::kIncorrectCallArgType,
                                actual_call_arg_types[i]->type(),
-                               expected_arg_params[i].type, node->FuncName());
+                               expected_arg_params[i].type, node->GetFuncName());
       return;
     }
   }

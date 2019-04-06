@@ -203,22 +203,22 @@ Identifier Context::GetIdentifier(llvm::StringRef str) {
 Type *Context::GetTplTypeFromSqlType(const sql::Type &sql_type) {
   switch (sql_type.type_id()) {
     case sql::TypeId::Boolean: {
-      return ast::BuiltinType::Get(this, ast::BuiltinType::Boolean);
+      return BuiltinType::Get(this, BuiltinType::Boolean);
     }
     case sql::TypeId::SmallInt:
     case sql::TypeId::Integer:
     case sql::TypeId::BigInt: {
-      return ast::BuiltinType::Get(this, ast::BuiltinType::Integer);
+      return BuiltinType::Get(this, BuiltinType::Integer);
     }
     case sql::TypeId::Decimal: {
-      return ast::BuiltinType::Get(this, ast::BuiltinType::Decimal);
+      return BuiltinType::Get(this, BuiltinType::Decimal);
     }
     case sql::TypeId::Char:
     case sql::TypeId::Varchar: {
-      return ast::BuiltinType::Get(this, ast::BuiltinType::VarBuffer);
+      return BuiltinType::Get(this, BuiltinType::VarBuffer);
     }
     case sql::TypeId::Date: {
-      return ast::BuiltinType::Get(this, ast::BuiltinType::Date);
+      return BuiltinType::Get(this, BuiltinType::Date);
     }
     default: { throw std::runtime_error("No TPL type for sql type"); }
   }

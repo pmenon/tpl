@@ -4,21 +4,49 @@
 
 namespace tpl::ast {
 
+// ---------------------------------------------------------
+// Function Declaration
+// ---------------------------------------------------------
+
 FunctionDecl::FunctionDecl(const SourcePosition &pos, Identifier name,
                            FunctionLitExpr *func)
     : Decl(Kind::FunctionDecl, pos, name, func->type_repr()), func_(func) {}
+
+// ---------------------------------------------------------
+// Structure Declaration
+// ---------------------------------------------------------
 
 StructDecl::StructDecl(const SourcePosition &pos, Identifier name,
                        StructTypeRepr *type_repr)
     : Decl(Kind::StructDecl, pos, name, type_repr) {}
 
+// ---------------------------------------------------------
+// Expression Statement
+// ---------------------------------------------------------
+
 ExpressionStmt::ExpressionStmt(Expr *expr)
     : Stmt(Kind::ExpressionStmt, expr->position()), expr_(expr) {}
+
+// ---------------------------------------------------------
+// Function Literal Expressions
+// ---------------------------------------------------------
 
 FunctionLitExpr::FunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body)
     : Expr(Kind::FunctionLitExpr, type_repr->position()),
       type_repr_(type_repr),
       body_(body) {}
+
+// ---------------------------------------------------------
+// Call Expression
+// ---------------------------------------------------------
+
+Identifier CallExpr::GetFuncName() const {
+  return func_->As<IdentifierExpr>()->name();
+}
+
+// ---------------------------------------------------------
+// Index Expressions
+// ---------------------------------------------------------
 
 bool IndexExpr::IsArrayAccess() const {
   TPL_ASSERT(object() != nullptr, "Object cannot be NULL");
@@ -34,11 +62,19 @@ bool IndexExpr::IsMapAccess() const {
   return object()->type()->IsMapType();
 }
 
+// ---------------------------------------------------------
+// Member expression
+// ---------------------------------------------------------
+
 bool MemberExpr::IsSugaredArrow() const {
   TPL_ASSERT(object()->type() != nullptr,
              "Cannot determine sugared-arrow before type checking!");
   return object()->type()->IsPointerType();
 }
+
+// ---------------------------------------------------------
+// Statement
+// ---------------------------------------------------------
 
 bool Stmt::IsTerminating(Stmt *stmt) {
   switch (stmt->kind()) {
@@ -55,10 +91,6 @@ bool Stmt::IsTerminating(Stmt *stmt) {
     }
     default: { return false; }
   }
-}
-
-ast::Identifier CallExpr::FuncName() const {
-  return func_->As<ast::IdentifierExpr>()->name();
 }
 
 }  // namespace tpl::ast

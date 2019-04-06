@@ -666,7 +666,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
   ast::Builtin builtin;
 
   ast::Context *ctx = call->type()->context();
-  ctx->IsBuiltinFunction(call->FuncName(), &builtin);
+  ctx->IsBuiltinFunction(call->GetFuncName(), &builtin);
 
   switch (builtin) {
     case ast::Builtin::FilterEq:
@@ -725,7 +725,7 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   }
 
   // Emit call
-  const auto func_id = LookupFuncIdByName(call->FuncName().data());
+  const auto func_id = LookupFuncIdByName(call->GetFuncName().data());
   TPL_ASSERT(func_id != FunctionInfo::kInvalidFuncId, "Function not found!");
   emitter()->EmitCall(func_id, params);
 }
