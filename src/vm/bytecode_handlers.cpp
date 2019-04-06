@@ -5,6 +5,16 @@
 extern "C" {
 
 // ---------------------------------------------------------
+// Region
+// ---------------------------------------------------------
+
+void OpRegionInit(tpl::util::Region *region) {
+  new (region) tpl::util::Region("tmp");
+}
+
+void OpRegionFree(tpl::util::Region *region) { region->~Region(); }
+
+// ---------------------------------------------------------
 // Table Vector Iterator
 // ---------------------------------------------------------
 

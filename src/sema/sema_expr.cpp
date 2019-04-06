@@ -269,16 +269,16 @@ void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
       !region_type->IsSpecificBuiltin(ast::BuiltinType::RegionAlloc)) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadArgToHashTableInit,
-                             call->arguments()[0]->type(), 1);
+                             call->arguments()[1]->type(), 1);
     return;
   }
 
   // Third and last argument must be a 32-bit number representing the tuple size
-  auto *entry_size_type = call->arguments()[1]->type();
+  auto *entry_size_type = call->arguments()[2]->type();
   if (!entry_size_type->IsIntegerType()) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadArgToHashTableInit,
-                             call->arguments()[0]->type(), 2);
+                             call->arguments()[2]->type(), 2);
     return;
   }
 
@@ -339,11 +339,32 @@ void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
   }
 
   // The first and only argument must be a pointer to a JoinHashTable
-  auto *jht_type = call->arguments()[0]->type()->GetPointeeType();
+  ast::Type *const jht_type = call->arguments()[0]->type()->GetPointeeType();
   if (jht_type == nullptr ||
       !jht_type->IsSpecificBuiltin(ast::BuiltinType::JoinHashTable)) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadArgToHashTableBuild,
+                             call->arguments()[0]->type());
+    return;
+  }
+
+  // This call returns nothing
+  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+}
+
+void Sema::CheckBuiltinRegionCall(ast::CallExpr *call) {
+  if (call->NumCallArgs() != 1) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kMismatchedCallArgs,
+                             call->FuncName(), 1, call->NumCallArgs());
+    return;
+  }
+
+  ast::Type *const region_type = call->arguments()[0]->type()->GetPointeeType();
+  if (region_type == nullptr ||
+      !region_type->IsSpecificBuiltin(ast::BuiltinType::RegionAlloc)) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kBadArgToRegionFunction,
                              call->arguments()[0]->type());
     return;
   }
@@ -368,6 +389,11 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
     case ast::Builtin::FilterLt:
     case ast::Builtin::FilterLe: {
       CheckBuiltinFilterCall(call);
+      break;
+    }
+    case ast::Builtin::RegionInit:
+    case ast::Builtin::RegionFree: {
+      CheckBuiltinRegionCall(call);
       break;
     }
     case ast::Builtin::HashTableInit: {

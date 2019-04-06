@@ -13,6 +13,9 @@ namespace tpl::ast {
   V(FilterLt, tpl_filter_lt)        \
   V(FilterNe, tpl_filter_ne)        \
                                     \
+  V(RegionInit, tpl_region_init)    \
+  V(RegionFree, tpl_region_free)    \
+                                    \
   /* Joins */                       \
   V(HashTableInit, tpl_ht_init)     \
   V(HashTableInsert, tpl_ht_insert) \

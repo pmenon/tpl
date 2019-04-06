@@ -178,6 +178,10 @@ VM_OP_HOT bool OpJumpIfTrue(bool cond) { return cond; }
 
 VM_OP_HOT bool OpJumpIfFalse(bool cond) { return !cond; }
 
+VM_OP_COLD void OpRegionInit(tpl::util::Region *region);
+
+VM_OP_COLD void OpRegionFree(tpl::util::Region *region);
+
 VM_OP_HOT void OpCall(UNUSED u16 func_id, UNUSED u16 num_args) {}
 
 VM_OP_HOT void OpReturn() {}
