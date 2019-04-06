@@ -19,10 +19,10 @@ class AstTraversalVisitorTest : public TplTest {
 
   AstNode *GenerateAst(const std::string &src) {
     sema::ErrorReporter error(region());
-    ast::AstContext ctx(region(), error);
+    ast::Context ctx(region(), &error);
 
     parsing::Scanner scanner(src);
-    parsing::Parser parser(scanner, ctx);
+    parsing::Parser parser(&scanner, &ctx);
 
     if (error.HasErrors()) {
       error.PrintErrors();
@@ -31,7 +31,7 @@ class AstTraversalVisitorTest : public TplTest {
 
     auto *root = parser.Parse();
 
-    sema::Sema sema(ctx);
+    sema::Sema sema(&ctx);
     auto check = sema.Run(root);
 
     EXPECT_FALSE(check);

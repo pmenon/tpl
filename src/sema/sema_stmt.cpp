@@ -1,7 +1,7 @@
 #include "sema/sema.h"
 
-#include "ast/ast_context.h"
 #include "ast/ast_node_factory.h"
+#include "ast/context.h"
 #include "ast/type.h"
 #include "sql/catalog.h"
 #include "sql/table.h"
@@ -27,9 +27,8 @@ void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
    */
 
   if (src_type->IsIntegerType() || dest_type->IsIntegerType()) {
-    auto *cast_expr = ast_context().node_factory().NewImplicitCastExpr(
-        node->source()->position(),
-        ast::ImplicitCastExpr::CastKind::IntegralCast, dest_type,
+    auto *cast_expr = context()->node_factory()->NewImplicitCastExpr(
+        node->source()->position(), ast::CastKind::IntegralCast, dest_type,
         node->source());
     node->set_source(cast_expr);
     return;
@@ -37,7 +36,7 @@ void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
 }
 
 void Sema::VisitBlockStmt(ast::BlockStmt *node) {
-  SemaScope block_scope(*this, Scope::Kind::Block);
+  SemaScope block_scope(this, Scope::Kind::Block);
 
   for (auto *stmt : node->statements()) {
     Visit(stmt);
@@ -45,7 +44,7 @@ void Sema::VisitBlockStmt(ast::BlockStmt *node) {
 }
 
 void Sema::VisitFile(ast::File *node) {
-  SemaScope file_scope(*this, Scope::Kind::File);
+  SemaScope file_scope(this, Scope::Kind::File);
 
   for (auto *decl : node->declarations()) {
     Visit(decl);
@@ -54,7 +53,7 @@ void Sema::VisitFile(ast::File *node) {
 
 void Sema::VisitForStmt(ast::ForStmt *node) {
   // Create a new scope for variables introduced in initialization block
-  SemaScope for_scope(*this, Scope::Kind::Loop);
+  SemaScope for_scope(this, Scope::Kind::Loop);
 
   if (node->init() != nullptr) {
     Visit(node->init());
@@ -63,8 +62,8 @@ void Sema::VisitForStmt(ast::ForStmt *node) {
   if (node->condition() != nullptr) {
     ast::Type *cond_type = Resolve(node->condition());
     if (!cond_type->IsBoolType()) {
-      error_reporter().Report(node->condition()->position(),
-                              ErrorMessages::kNonBoolForCondition);
+      error_reporter()->Report(node->condition()->position(),
+                               ErrorMessages::kNonBoolForCondition);
     }
   }
 
@@ -77,17 +76,17 @@ void Sema::VisitForStmt(ast::ForStmt *node) {
 }
 
 void Sema::VisitForInStmt(ast::ForInStmt *node) {
-  SemaScope for_scope(*this, Scope::Kind::Loop);
+  SemaScope for_scope(this, Scope::Kind::Loop);
 
   if (!node->target()->IsIdentifierExpr()) {
-    error_reporter().Report(node->target()->position(),
-                            ErrorMessages::kNonIdentifierTargetInForInLoop);
+    error_reporter()->Report(node->target()->position(),
+                             ErrorMessages::kNonIdentifierTargetInForInLoop);
     return;
   }
 
   if (!node->iter()->IsIdentifierExpr()) {
-    error_reporter().Report(node->iter()->position(),
-                            ErrorMessages::kNonIdentifierIterator);
+    error_reporter()->Report(node->iter()->position(),
+                             ErrorMessages::kNonIdentifierIterator);
     return;
   }
 
@@ -97,8 +96,8 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
   // Lookup the table in the catalog
   auto *table = sql::Catalog::Instance()->LookupTableByName(iter->name());
   if (table == nullptr) {
-    error_reporter().Report(iter->position(), ErrorMessages::kNonExistingTable,
-                            iter->name());
+    error_reporter()->Report(iter->position(), ErrorMessages::kNonExistingTable,
+                             iter->name());
     return;
   }
 
@@ -112,10 +111,9 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
   ast::Type *iter_type = nullptr;
   if (auto *attributes = node->attributes();
       attributes != nullptr &&
-      attributes->Contains(ast_context().GetIdentifier("batch"))) {
+      attributes->Contains(context()->GetIdentifier("batch"))) {
     iter_type = ast::InternalType::Get(
-        ast_context(),
-        ast::InternalType::InternalKind::VectorProjectionIterator);
+        context(), ast::InternalType::InternalKind::VectorProjectionIterator);
   } else {
     iter_type = ConvertSchemaToType(table->schema());
     TPL_ASSERT(iter_type->IsStructType(), "Rows must be structs");
@@ -150,16 +148,16 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
   if (auto *type = node->condition()->type()->SafeAs<ast::SqlType>();
       type != nullptr && type->sql_type().type_id() == sql::TypeId::Boolean) {
     ast::Expr *cond = node->condition();
-    cond = ast_context().node_factory().NewImplicitCastExpr(
-        cond->position(), ast::ImplicitCastExpr::CastKind::SqlBoolToBool,
-        ast::BoolType::Get(ast_context()), cond);
-    cond->set_type(ast::BoolType::Get(ast_context()));
+    cond = context()->node_factory()->NewImplicitCastExpr(
+        cond->position(), ast::CastKind::SqlBoolToBool,
+        ast::BoolType::Get(context()), cond);
+    cond->set_type(ast::BoolType::Get(context()));
     node->set_condition(cond);
   }
 
   if (!node->condition()->type()->IsBoolType()) {
-    error_reporter().Report(node->condition()->position(),
-                            ErrorMessages::kNonBoolIfCondition);
+    error_reporter()->Report(node->condition()->position(),
+                             ErrorMessages::kNonBoolIfCondition);
   }
 
   Visit(node->then_stmt());
@@ -173,8 +171,8 @@ void Sema::VisitDeclStmt(ast::DeclStmt *node) { Visit(node->declaration()); }
 
 void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
   if (current_function() == nullptr) {
-    error_reporter().Report(node->position(),
-                            ErrorMessages::kReturnOutsideFunction);
+    error_reporter()->Report(node->position(),
+                             ErrorMessages::kReturnOutsideFunction);
     return;
   }
 
@@ -197,9 +195,9 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
 
   if (func_type->return_type()->IsNilType()) {
     if (return_type != nullptr) {
-      error_reporter().Report(node->position(),
-                              ErrorMessages::kMismatchedReturnType, return_type,
-                              func_type->return_type());
+      error_reporter()->Report(node->position(),
+                               ErrorMessages::kMismatchedReturnType,
+                               return_type, func_type->return_type());
     }
     return;
   }
@@ -214,12 +212,12 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
     // It's possible the return type is null (either because there was an error
     // or there wasn't an expression)
     if (return_type == nullptr) {
-      return_type = ast::NilType::Get(ast_context());
+      return_type = ast::NilType::Get(context());
     }
 
-    error_reporter().Report(node->position(),
-                            ErrorMessages::kMismatchedReturnType, return_type,
-                            func_type->return_type());
+    error_reporter()->Report(node->position(),
+                             ErrorMessages::kMismatchedReturnType, return_type,
+                             func_type->return_type());
     return;
   }
 }

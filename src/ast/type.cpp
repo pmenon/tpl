@@ -1,8 +1,10 @@
 #include "ast/type.h"
 
-#include <unordered_map>
-
 namespace tpl::ast {
+
+// ---------------------------------------------------------
+// Type
+// ---------------------------------------------------------
 
 bool Type::IsArithmetic() const {
   if (IsIntegerType() || IsFloatType()) {
@@ -14,11 +16,19 @@ bool Type::IsArithmetic() const {
   return false;
 }
 
+// ---------------------------------------------------------
+// Function Type
+// ---------------------------------------------------------
+
 FunctionType::FunctionType(util::RegionVector<Field> &&params, Type *ret)
     : Type(ret->context(), sizeof(void *), alignof(void *),
            Type::Kind::FunctionType),
       params_(std::move(params)),
       ret_(ret) {}
+
+// ---------------------------------------------------------
+// Map Type
+// ---------------------------------------------------------
 
 MapType::MapType(Type *key_type, Type *val_type)
     : Type(key_type->context(), sizeof(std::unordered_map<i32, i32>),
@@ -26,7 +36,11 @@ MapType::MapType(Type *key_type, Type *val_type)
       key_type_(key_type),
       val_type_(val_type) {}
 
-StructType::StructType(AstContext &ctx, u32 size, u32 alignment,
+// ---------------------------------------------------------
+// Struct Type
+// ---------------------------------------------------------
+
+StructType::StructType(Context *ctx, u32 size, u32 alignment,
                        util::RegionVector<Field> &&fields,
                        util::RegionVector<u32> &&field_offsets)
     : Type(ctx, size, alignment, Type::Kind::StructType),

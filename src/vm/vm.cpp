@@ -789,6 +789,15 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // Hash Joins
   // -------------------------------------------------------
 
+  OP(JoinHashTableInit) : {
+    auto *join_hash_table =
+        frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
+    auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
+    auto tuple_size = READ_UIMM4();
+    OpJoinHashTableInit(join_hash_table, region, tuple_size);
+    DISPATCH_NEXT();
+  }
+
   OP(JoinHashTableAllocTuple) : {
     auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
     auto *join_hash_table =
@@ -802,6 +811,13 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto *join_hash_table =
         frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
     OpJoinHashTableBuild(join_hash_table);
+    DISPATCH_NEXT();
+  }
+
+  OP(JoinHashTableFree) : {
+    auto *join_hash_table =
+        frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
+    OpJoinHashTableFree(join_hash_table);
     DISPATCH_NEXT();
   }
 

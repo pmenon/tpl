@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #include "ast/ast_dump.h"
@@ -22,6 +23,17 @@
 #include "vm/llvm_engine.h"
 #include "vm/vm.h"
 
+// ---------------------------------------------------------
+// CLI options
+// ---------------------------------------------------------
+
+// clang-format off
+llvm::cl::OptionCategory kTplOptionsCategory("TPL Compiler Options", "Options for controlling the TPL compilation process.");
+llvm::cl::opt<std::string> kInputFile(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::init(""), llvm::cl::cat(kTplOptionsCategory));
+llvm::cl::opt<bool> kPrintAst("print-ast", llvm::cl::desc("Print the programs AST"), llvm::cl::cat(kTplOptionsCategory));
+llvm::cl::opt<bool> kPrintTbc("print-tbc", llvm::cl::desc("Print the generated TPL Bytecode"), llvm::cl::cat(kTplOptionsCategory));
+// clang-format on
+
 namespace tpl {
 
 static constexpr const char *kExitKeyword = ".exit";
@@ -37,10 +49,10 @@ static void CompileAndRun(const std::string &source,
 
   // Let's parse the source
   sema::ErrorReporter error_reporter(&error_region);
-  ast::AstContext context(&region, error_reporter);
+  ast::Context context(&region, &error_reporter);
 
   parsing::Scanner scanner(source.data(), source.length());
-  parsing::Parser parser(scanner, context);
+  parsing::Parser parser(&scanner, &context);
 
   double parse_ms = 0, typecheck_ms = 0, codegen_ms = 0, exec_ms = 0,
          jit_ms = 0;
@@ -61,7 +73,7 @@ static void CompileAndRun(const std::string &source,
   // Type check
   {
     util::ScopedTimer<std::milli> timer(&typecheck_ms);
-    sema::Sema type_check(context);
+    sema::Sema type_check(&context);
     type_check.Run(root);
   }
 
@@ -72,7 +84,9 @@ static void CompileAndRun(const std::string &source,
   }
 
   // Dump AST
-  ast::AstDump::Dump(root);
+  if (kPrintAst) {
+    ast::AstDump::Dump(root);
+  }
 
   // Codegen
   std::unique_ptr<vm::BytecodeModule> module;
@@ -82,7 +96,9 @@ static void CompileAndRun(const std::string &source,
   }
 
   // Dump Bytecode
-  module->PrettyPrint(std::cout);
+  if (kPrintTbc) {
+    module->PrettyPrint(std::cout);
+  }
 
   // Interpret
   {
@@ -188,6 +204,10 @@ void SignalHandler(i32 sig_num) {
 }
 
 int main(int argc, char **argv) {
+  // Parse options
+  llvm::cl::HideUnrelatedOptions(kTplOptionsCategory);
+  llvm::cl::ParseCommandLineOptions(argc, argv);
+
   // Initialize a signal handler to call SignalHandler()
   struct sigaction sa;
   sa.sa_handler = &SignalHandler;
@@ -208,9 +228,8 @@ int main(int argc, char **argv) {
   LOG_INFO("Welcome to TPL (ver. {}.{})", TPL_VERSION_MAJOR, TPL_VERSION_MINOR);
 
   // Either execute a TPL program from a source file, or run REPL
-  if (argc == 2) {
-    std::string filename(argv[1]);
-    tpl::RunFile(filename);
+  if (!kInputFile.empty()) {
+    tpl::RunFile(kInputFile);
   } else if (argc == 1) {
     tpl::RunRepl();
   }

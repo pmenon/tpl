@@ -1,7 +1,7 @@
 #include "vm/bytecode_generator.h"
 
-#include "ast/ast_context.h"
 #include "ast/builtins.h"
+#include "ast/context.h"
 #include "ast/type.h"
 #include "logging/logger.h"
 #include "sql/catalog.h"
@@ -189,7 +189,7 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
     LoopBuilder vpi_loop(this);
     vpi_loop.LoopHeader();
 
-    ast::AstContext &ctx = row_type->context();
+    ast::Context *ctx = row_type->context();
     LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(ctx));
     emitter()->Emit(Bytecode::VPIHasNext, cond, vpi);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
@@ -252,11 +252,11 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   // function, too, that we populate with the instance inside the TVI.
   //
 
-  ast::AstContext &ctx = node->target()->type()->context();
+  ast::Context *ctx = node->target()->type()->context();
 
   bool vectorized = false;
   if (auto *attributes = node->attributes(); attributes != nullptr) {
-    if (attributes->Contains(ctx.GetIdentifier("batch"))) {
+    if (attributes->Contains(ctx->GetIdentifier("batch"))) {
       vectorized = true;
     }
   }
@@ -374,17 +374,17 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
   LocalVar input = VisitExpressionForRValue(node->input());
 
   switch (node->cast_kind()) {
-    case ast::ImplicitCastExpr::CastKind::SqlBoolToBool: {
+    case ast::CastKind::SqlBoolToBool: {
       emitter()->Emit(Bytecode::ForceBoolTruth, dest, input);
       execution_result()->set_destination(dest.ValueOf());
       break;
     }
-    case ast::ImplicitCastExpr::CastKind::IntToSqlInt: {
+    case ast::CastKind::IntToSqlInt: {
       emitter()->Emit(Bytecode::InitInteger, dest, input);
       execution_result()->set_destination(dest);
       break;
     }
-    case ast::ImplicitCastExpr::CastKind::IntegralCast: {
+    case ast::CastKind::IntegralCast: {
       BuildAssign(dest, input, node->type());
       break;
     }
@@ -577,7 +577,7 @@ void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
 
 void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
                                                    ast::Builtin builtin) {
-  ast::AstContext &ctx = call->type()->context();
+  ast::Context *ctx = call->type()->context();
   ast::Type *ret_type =
       ast::IntegerType::Get(ctx, ast::IntegerType::IntKind::Int32);
 
@@ -627,11 +627,20 @@ void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
   emitter()->EmitVPIVectorFilter(bytecode, ret_val, vpi, 0, val);
 }
 
+void BytecodeGenerator::VisitJoinHashTableInsertCallExpr(ast::CallExpr *call) {}
+
+void BytecodeGenerator::VisitJoinHashTableBuildCallExpr(ast::CallExpr *call) {
+  // The first and only argument is a pointer to the hash table. Evaluate it to
+  // get the address now
+  LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
+  emitter()->Emit(Bytecode::JoinHashTableBuild, join_hash_table);
+}
+
 void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
   ast::Builtin builtin;
 
-  ast::AstContext &ctx = call->type()->context();
-  ctx.IsBuiltinFunction(call->FuncName(), &builtin);
+  ast::Context *ctx = call->type()->context();
+  ctx->IsBuiltinFunction(call->FuncName(), &builtin);
 
   switch (builtin) {
     case ast::Builtin::FilterEq:
@@ -641,6 +650,14 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::FilterLe:
     case ast::Builtin::FilterNe: {
       VisitBuiltinFilterCallExpr(call, builtin);
+      break;
+    }
+    case ast::Builtin::HashTableInsert: {
+      VisitJoinHashTableInsertCallExpr(call);
+      break;
+    }
+    case ast::Builtin::HashTableBuild: {
+      VisitJoinHashTableBuildCallExpr(call);
       break;
     }
     default: { UNREACHABLE("Builtin not supported!"); }

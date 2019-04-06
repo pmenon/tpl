@@ -11,8 +11,9 @@
 
 namespace tpl::ast {
 
-class AstContext;
+class Context;
 
+/// List of all concrete types
 #define TYPE_LIST(F) \
   F(IntegerType)     \
   F(FloatType)       \
@@ -39,7 +40,7 @@ class Type : public util::RegionObject {
 #undef F
 
   // Context this type was allocated from
-  AstContext &context() const { return ctx_; }
+  Context *context() const { return ctx_; }
 
   // Size (in bytes) of this type
   u32 size() const { return size_; }
@@ -75,25 +76,33 @@ class Type : public util::RegionObject {
     return (Is<T>() ? As<T>() : nullptr);
   }
 
+  /// Type checks
 #define F(kind) \
   bool Is##kind() const { return Is<kind>(); }
   TYPE_LIST(F)
 #undef F
 
+  /// Is this an arithmetic type (including SQL arithmetic)
   bool IsArithmetic() const;
 
+  /// Return a new type that is a pointer to the current type
   PointerType *PointerTo();
 
+  /// If this is a pointer type, return the type it points to, returning null
+  /// otherwise.
+  Type *GetPointeeType() const;
+
+  /// Get a string representation of this type
   std::string ToString() const { return ToString(this); }
 
   static std::string ToString(const Type *type);
 
  protected:
-  Type(AstContext &ctx, u32 size, u32 alignment, Kind kind)
+  Type(Context *ctx, u32 size, u32 alignment, Kind kind)
       : ctx_(ctx), size_(size), align_(alignment), kind_(kind) {}
 
  private:
-  AstContext &ctx_;
+  Context *ctx_;
   u32 size_;
   u32 align_;
   Kind kind_;
@@ -117,7 +126,7 @@ class IntegerType : public Type {
 
   IntKind int_kind() const { return int_kind_; }
 
-  static IntegerType *Get(AstContext &ctx, IntKind kind);
+  static IntegerType *Get(Context *ctx, IntKind kind);
 
   u32 BitWidth() const {
     switch (int_kind()) {
@@ -158,8 +167,8 @@ class IntegerType : public Type {
   }
 
  private:
-  friend class AstContext;
-  IntegerType(AstContext &ctx, u32 size, u32 alignment, IntKind int_kind)
+  friend class Context;
+  IntegerType(Context *ctx, u32 size, u32 alignment, IntKind int_kind)
       : Type(ctx, size, alignment, Type::Kind::IntegerType),
         int_kind_(int_kind) {}
 
@@ -176,15 +185,15 @@ class FloatType : public Type {
 
   FloatKind float_kind() const { return float_kind_; }
 
-  static FloatType *Get(AstContext &ctx, FloatKind kind);
+  static FloatType *Get(Context *ctx, FloatKind kind);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::FloatType;
   }
 
  private:
-  friend class AstContext;
-  FloatType(AstContext &ctx, u32 size, u32 alignment, FloatKind float_kind)
+  friend class Context;
+  FloatType(Context *ctx, u32 size, u32 alignment, FloatKind float_kind)
       : Type(ctx, size, alignment, Type::Kind::FloatType),
         float_kind_(float_kind) {}
 
@@ -197,29 +206,29 @@ class FloatType : public Type {
  */
 class BoolType : public Type {
  public:
-  static BoolType *Get(AstContext &ctx);
+  static BoolType *Get(Context *ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::BoolType;
   }
 
  private:
-  friend class AstContext;
-  explicit BoolType(AstContext &ctx)
+  friend class Context;
+  explicit BoolType(Context *ctx)
       : Type(ctx, sizeof(i8), alignof(i8), Type::Kind::BoolType) {}
 };
 
 class StringType : public Type {
  public:
-  static StringType *Get(AstContext &ctx);
+  static StringType *Get(Context *ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::StringType;
   }
 
  private:
-  friend class AstContext;
-  explicit StringType(AstContext &ctx)
+  friend class Context;
+  explicit StringType(Context *ctx)
       : Type(ctx, sizeof(i8 *), alignof(i8 *), Type::Kind::StringType) {}
 };
 
@@ -228,15 +237,15 @@ class StringType : public Type {
  */
 class NilType : public Type {
  public:
-  static NilType *Get(AstContext &ctx);
+  static NilType *Get(Context *ctx);
 
   static bool classof(const Type *type) {
     return type->kind() == Type::Kind::NilType;
   }
 
  private:
-  friend class AstContext;
-  explicit NilType(AstContext &ctx) : Type(ctx, 0, 0, Type::Kind::NilType) {}
+  friend class Context;
+  explicit NilType(Context *ctx) : Type(ctx, 0, 0, Type::Kind::NilType) {}
 };
 
 /**
@@ -377,7 +386,7 @@ class StructType : public Type {
     return (this == &other || fields() == other.fields());
   }
 
-  static StructType *Get(AstContext &ctx, util::RegionVector<Field> &&fields);
+  static StructType *Get(Context *ctx, util::RegionVector<Field> &&fields);
   static StructType *Get(util::RegionVector<Field> &&fields);
 
   static bool classof(const Type *type) {
@@ -385,7 +394,7 @@ class StructType : public Type {
   }
 
  private:
-  explicit StructType(AstContext &ctx, u32 size, u32 alignment,
+  explicit StructType(Context *ctx, u32 size, u32 alignment,
                       util::RegionVector<Field> &&fields,
                       util::RegionVector<u32> &&field_offsets);
 
@@ -401,15 +410,26 @@ class StructType : public Type {
 // names of the corresponding classes (i.e., the string form and FQN reference
 // should most likely be the same)
 // class reference
-// clang-format off
-#define INTERNAL_TYPE_LIST(V) \
-  V(TableVectorIterator, "tpl::sql::TableVectorIterator", ::tpl::sql::TableVectorIterator)                                  \
-  V(VectorProjectionIterator, "tpl::sql::VectorProjectionIterator", ::tpl::sql::VectorProjectionIterator)                   \
-  V(JoinHashTable, "tpl::sql::JoinHashTable", ::tpl::sql::JoinHashTable)                                                    \
-  V(SqlBool, "tpl::sql::Bool", ::tpl::sql::BoolVal)                                                                         \
-  V(SqlInteger, "tpl::sql::Integer", ::tpl::sql::Integer)                                                                   \
-  V(SqlDecimal, "tpl::sql::Decimal", ::tpl::sql::Decimal)
-// clang-format on
+#define INTERNAL_TYPE_LIST(V)                             \
+  /* Misc.*/                                              \
+  V(RegionAlloc, tpl::util::Region)                       \
+  /* Runtime Values*/                                     \
+  V(Boolean, tpl::sql::BoolVal)                           \
+  V(Integer, tpl::sql::Integer)                           \
+  V(Decimal, tpl::sql::Decimal)                           \
+  /* Aggregations */                                      \
+  V(CountAggregate, tpl::sql::CountAggregate)             \
+  V(CountStarAggregate, tpl::sql::CountStarAggregate)     \
+  V(IntegerSumAggregate, tpl::sql::IntegerSumAggregate)   \
+  V(AggregationHashTable, tpl::sql::AggregationHashTable) \
+  /* Sorting */                                           \
+  V(Sorter, tpl::sql::Sorter)                             \
+  V(SorterIterator, tpl::sql::SorterIterator)             \
+  /* Hash Joins*/                                         \
+  V(JoinHashTable, tpl::sql::JoinHashTable)               \
+  /* Scans */                                             \
+  V(TableVectorIterator, tpl::sql::TableVectorIterator)   \
+  V(VectorProjectionIterator, tpl::sql::VectorProjectionIterator)
 
 /**
  * Internal types are dedicated to pre-compiled C++ types that we don't want to
@@ -420,7 +440,7 @@ class StructType : public Type {
  */
 class InternalType : public Type {
  public:
-  enum class InternalKind : u8 {
+  enum class InternalKind : u16 {
 #define DECLARE_TYPE(kind, ...) kind,
     INTERNAL_TYPE_LIST(DECLARE_TYPE)
 #undef DECLARE_TYPE
@@ -439,7 +459,7 @@ class InternalType : public Type {
   static constexpr u32 NumInternalTypes() { return kNumInternalKinds; }
 
   // Static factory
-  static InternalType *Get(AstContext &ctx, InternalKind kind);
+  static InternalType *Get(Context *ctx, InternalKind kind);
 
   // Type check
   static bool classof(const Type *type) {
@@ -447,9 +467,9 @@ class InternalType : public Type {
   }
 
  private:
-  friend class AstContext;
-  explicit InternalType(AstContext &ctx, Identifier name, u32 size,
-                        u32 alignment, InternalKind internal_kind)
+  friend class Context;
+  explicit InternalType(Context *ctx, Identifier name, u32 size, u32 alignment,
+                        InternalKind internal_kind)
       : Type(ctx, size, alignment, Type::Kind::InternalType),
         name_(name),
         internal_kind_(internal_kind) {}
@@ -464,7 +484,7 @@ class InternalType : public Type {
  */
 class SqlType : public Type {
  public:
-  static SqlType *Get(AstContext &ctx, const sql::Type &sql_type);
+  static SqlType *Get(Context *ctx, const sql::Type &sql_type);
 
   const sql::Type &sql_type() const { return sql_type_; }
 
@@ -474,11 +494,22 @@ class SqlType : public Type {
   }
 
  private:
-  SqlType(AstContext &ctx, u32 size, u32 alignment, const sql::Type &sql_type)
+  SqlType(Context *ctx, u32 size, u32 alignment, const sql::Type &sql_type)
       : Type(ctx, size, alignment, Kind::SqlType), sql_type_(sql_type) {}
 
  private:
   const sql::Type &sql_type_;
 };
+
+// ---------------------------------------------------------
+// Type implementation below
+// ---------------------------------------------------------
+
+inline Type *Type::GetPointeeType() const {
+  if (auto *ptr_type = SafeAs<PointerType>()) {
+    return ptr_type->base();
+  }
+  return nullptr;
+}
 
 }  // namespace tpl::ast

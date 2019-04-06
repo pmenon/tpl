@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ast/ast.h"
-#include "ast/ast_context.h"
+#include "ast/context.h"
 #include "parsing/parser.h"
 #include "parsing/scanner.h"
 #include "sema/sema.h"
@@ -13,15 +13,15 @@ namespace tpl::vm::test {
 class BytecodeCompiler {
  public:
   BytecodeCompiler()
-      : region_("temp"), errors_(&region_), ctx_(&region_, errors_) {}
+      : region_("temp"), errors_(&region_), ctx_(&region_, &errors_) {}
 
   ast::AstNode *CompileToAst(const std::string &source) {
     parsing::Scanner scanner(source);
-    parsing::Parser parser(scanner, ctx_);
+    parsing::Parser parser(&scanner, &ctx_);
 
     auto *ast = parser.Parse();
 
-    sema::Sema type_check(ctx_);
+    sema::Sema type_check(&ctx_);
     type_check.Run(ast);
 
     if (errors_.HasErrors()) {
@@ -46,7 +46,7 @@ class BytecodeCompiler {
  private:
   util::Region region_;
   sema::ErrorReporter errors_;
-  ast::AstContext ctx_;
+  ast::Context ctx_;
 };
 
 }  // namespace tpl::vm::test

@@ -1,6 +1,6 @@
 #include "tpl_test.h"
 
-#include "ast/ast_context.h"
+#include "ast/context.h"
 #include "ast/type.h"
 #include "sema/error_reporter.h"
 #include "util/region.h"
@@ -10,18 +10,18 @@ namespace tpl::ast::test {
 class TypeTest : public TplTest {
  public:
   TypeTest()
-      : region_("ast_test"), errors_(&region_), ctx_(&region_, errors_) {}
+      : region_("ast_test"), errors_(&region_), ctx_(&region_, &errors_) {}
 
   util::Region *region() { return &region_; }
 
-  ast::AstContext &ctx() { return ctx_; }
+  ast::Context *ctx() { return &ctx_; }
 
-  ast::Identifier Name(const std::string &s) { return ctx().GetIdentifier(s); }
+  ast::Identifier Name(const std::string &s) { return ctx()->GetIdentifier(s); }
 
  private:
   util::Region region_;
   sema::ErrorReporter errors_;
-  ast::AstContext ctx_;
+  ast::Context ctx_;
 };
 
 TEST_F(TypeTest, StructPaddingTest) {

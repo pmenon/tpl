@@ -1,7 +1,7 @@
 #include "tpl_test.h"
 
-#include "ast/ast_context.h"
 #include "ast/ast_node_factory.h"
+#include "ast/context.h"
 #include "ast/type.h"
 #include "sema/sema.h"
 #include "util/region_containers.h"
@@ -12,13 +12,13 @@ class SemaExprTest : public TplTest {
  public:
   SemaExprTest()
       : region_("test"),
-        error_reporter_(region()),
-        ctx_(region(), error_reporter_) {}
+        error_reporter_(&region_),
+        ctx_(&region_, &error_reporter_) {}
 
   util::Region *region() { return &region_; }
   ErrorReporter *error_reporter() { return &error_reporter_; }
-  ast::AstContext *ctx() { return &ctx_; }
-  ast::AstNodeFactory *node_factory() { return &ctx_.node_factory(); }
+  ast::Context *ctx() { return &ctx_; }
+  ast::AstNodeFactory *node_factory() { return ctx_.node_factory(); }
 
   ast::Identifier Ident(const std::string &s) {
     return ctx()->GetIdentifier(s);
@@ -66,7 +66,7 @@ class SemaExprTest : public TplTest {
  private:
   util::Region region_;
   ErrorReporter error_reporter_;
-  ast::AstContext ctx_;
+  ast::Context ctx_;
 
   SourcePosition empty_{0, 0};
 };
@@ -122,7 +122,7 @@ TEST_F(SemaExprTest, LogicalOperationTest) {
   };
 
   for (const auto &test : tests) {
-    Sema sema(*ctx());
+    Sema sema(ctx());
     bool errors = sema.Run(test.tree);
 
     if (test.has_errors) {
@@ -175,7 +175,7 @@ TEST_F(SemaExprTest, ComparisonOperationWithImplicitCastTest) {
   }
 
   for (const auto &test : tests) {
-    Sema sema(*ctx());
+    Sema sema(ctx());
     bool errors = sema.Run(test.tree);
 
     if (test.has_errors) {

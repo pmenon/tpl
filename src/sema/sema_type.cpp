@@ -1,6 +1,6 @@
 #include "sema/sema.h"
 
-#include "ast/ast_context.h"
+#include "ast/context.h"
 #include "ast/type.h"
 
 namespace tpl::sema {
@@ -11,15 +11,15 @@ void Sema::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {
     auto *len_expr = node->length()->SafeAs<ast::LitExpr>();
     if (len_expr == nullptr ||
         len_expr->literal_kind() != ast::LitExpr::LitKind::Int) {
-      error_reporter().Report(node->length()->position(),
-                              ErrorMessages::kNonIntegerArrayLength);
+      error_reporter()->Report(node->length()->position(),
+                               ErrorMessages::kNonIntegerArrayLength);
       return;
     }
 
     auto len = len_expr->int32_val();
     if (len < 0) {
-      error_reporter().Report(node->length()->position(),
-                              ErrorMessages::kNegativeArrayLength);
+      error_reporter()->Report(node->length()->position(),
+                               ErrorMessages::kNegativeArrayLength);
       return;
     }
 
@@ -37,7 +37,7 @@ void Sema::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {
 
 void Sema::VisitFunctionTypeRepr(ast::FunctionTypeRepr *node) {
   // Handle parameters
-  util::RegionVector<ast::Field> param_types(ast_context().region());
+  util::RegionVector<ast::Field> param_types(context()->region());
   for (auto *param : node->parameters()) {
     Visit(param);
     ast::Type *param_type = param->type_repr()->type();
@@ -69,7 +69,7 @@ void Sema::VisitPointerTypeRepr(ast::PointerTypeRepr *node) {
 }
 
 void Sema::VisitStructTypeRepr(ast::StructTypeRepr *node) {
-  util::RegionVector<ast::Field> field_types(ast_context().region());
+  util::RegionVector<ast::Field> field_types(context()->region());
   for (auto *field : node->fields()) {
     Visit(field);
     ast::Type *field_type = field->type_repr()->type();
@@ -79,7 +79,7 @@ void Sema::VisitStructTypeRepr(ast::StructTypeRepr *node) {
     field_types.emplace_back(field->name(), field_type);
   }
 
-  node->set_type(ast::StructType::Get(ast_context(), std::move(field_types)));
+  node->set_type(ast::StructType::Get(context(), std::move(field_types)));
 }
 
 void Sema::VisitMapTypeRepr(ast::MapTypeRepr *node) {

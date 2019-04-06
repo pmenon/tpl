@@ -784,27 +784,31 @@ class IdentifierExpr : public Expr {
 };
 
 /**
- *
+ * An enumeration capturing all possible casting operations
+ */
+enum class CastKind : u8 {
+  // Conversion of a 32-bit integer into a non-nullable SQL Integer value
+  IntToSqlInt,
+
+  // Conversion of a 32-bit integer into a non-nullable SQL Decimal value
+  IntToSqlDecimal,
+
+  // Conversion of a SQL boolean value (potentially nullable) into a primitive
+  // boolean value
+  SqlBoolToBool,
+
+  // A cast between integral types (i.e., 8-bit, 16-bit, 32-bit, or 64-bit
+  // numbers), excluding to boolean! Boils down to a bitcast, a truncation,
+  // a sign-extension, or a zero-extension. The same as in C/C++.
+  IntegralCast,
+};
+
+/**
+ * An implicit cast operation is one that is inserted automatically by the
+ * compiler during semantic analysis.
  */
 class ImplicitCastExpr : public Expr {
  public:
-  enum class CastKind {
-    // Conversion of a 32-bit integer into a non-nullable SQL Integer value
-    IntToSqlInt,
-
-    // Conversino of a 32-bit integer into a non-nullable SQL Decimal value
-    IntToSqlDecimal,
-
-    // Conversion of a SQL boolean value (potentially nullable) into a primitive
-    // boolean value
-    SqlBoolToBool,
-
-    // A cast between integral types (i.e., 8-bit, 16-bit, 32-bit, or 64-bit
-    // numbers), excluding to boolean! Boils down to a bitcast, a truncation,
-    // a sign-extension, or a zero-extension. The same as in C/C++.
-    IntegralCast,
-  };
-
   CastKind cast_kind() const { return cast_kind_; }
 
   Expr *input() { return input_; }
