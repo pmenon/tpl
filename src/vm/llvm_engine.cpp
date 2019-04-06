@@ -332,7 +332,8 @@ class LLVMEngine::CompiledModuleBuilder {
                       std::map<std::size_t, llvm::BasicBlock *> &blocks);
 
   // Convert one TPL function into an LLVM implementation
-  void DefineFunction(const FunctionInfo &func_info, llvm::IRBuilder<> &ir_builder);
+  void DefineFunction(const FunctionInfo &func_info,
+                      llvm::IRBuilder<> &ir_builder);
 
   // Given a bytecode, lookup it's LLVM function handler in the module
   llvm::Function *LookupBytecodeHandler(Bytecode bytecode) const;
