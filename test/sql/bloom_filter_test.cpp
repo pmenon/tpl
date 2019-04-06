@@ -12,7 +12,7 @@ namespace tpl::sql::test {
 class BloomFilterTest : public TplTest {};
 
 template <typename F>
-void GenerateRandom32(std::vector<u32> &vals, u32 n, const F &f) {  // NOLINT
+void GenerateRandom32(std::vector<u32> &vals, u32 n, const F &f) {
   vals.resize(n);
   std::random_device random;
   auto genrand = [&random, &f]() {
@@ -26,12 +26,12 @@ void GenerateRandom32(std::vector<u32> &vals, u32 n, const F &f) {  // NOLINT
   std::generate(vals.begin(), vals.end(), genrand);
 }
 
-void GenerateRandom32(std::vector<u32> &vals, u32 n) {  // NOLINT
+void GenerateRandom32(std::vector<u32> &vals, u32 n) {
   GenerateRandom32(vals, n, [](auto r) { return true; });
 }
 
 // Mix in elements from source into the target vector with probability p
-template <typename T>  // NOLINTNEXTLINE
+template <typename T>
 void Mix(std::vector<T> &target, const std::vector<T> &source, double p) {
   TPL_ASSERT(target.size() > source.size(), "Bad sizes!");
   std::random_device random;

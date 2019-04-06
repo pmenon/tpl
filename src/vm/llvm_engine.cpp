@@ -236,8 +236,7 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
 class LLVMEngine::FunctionLocalsMap {
  public:
   FunctionLocalsMap(const FunctionInfo &func_info, llvm::Function *func,
-                    TypeMap *type_map,
-                    llvm::IRBuilder<> &ir_builder);  // NOLINT
+                    TypeMap *type_map, llvm::IRBuilder<> &ir_builder);
 
   // Given a reference to a local variable in a function's local variable list,
   // return the corresponding LLVM value.
@@ -330,12 +329,10 @@ class LLVMEngine::CompiledModuleBuilder {
  private:
   // Given a TPL function, build a simple CFG using 'blocks' as an output param
   void BuildSimpleCFG(const FunctionInfo &func_info,
-                      std::map<std::size_t,
-                               llvm::BasicBlock *> &blocks);  // NOLINT
+                      std::map<std::size_t, llvm::BasicBlock *> &blocks);
 
   // Convert one TPL function into an LLVM implementation
-  void DefineFunction(const FunctionInfo &func_info,
-                      llvm::IRBuilder<> &ir_builder);  // NOLINT
+  void DefineFunction(const FunctionInfo &func_info, llvm::IRBuilder<> &ir_builder);
 
   // Given a bytecode, lookup it's LLVM function handler in the module
   llvm::Function *LookupBytecodeHandler(Bytecode bytecode) const;

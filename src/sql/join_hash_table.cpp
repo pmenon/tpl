@@ -95,7 +95,6 @@ class ReorderBuffer {
   // Use a 16 KB internal buffer for temporary copies
   static constexpr const u32 kBufferSizeInBytes = 16 * 1024;
 
-  // NOLINTNEXTLINE
   ReorderBuffer(util::ChunkedVector &entries, u64 max_elems, u64 begin_read_idx,
                 u64 end_read_idx) noexcept
       : entry_size_(entries.element_size()),

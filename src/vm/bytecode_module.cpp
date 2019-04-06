@@ -257,7 +257,7 @@ void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
 }
 
 void PrettyPrintFuncCode(std::ostream &os, const FunctionInfo &func,
-                         BytecodeIterator &iter) {  // NOLINT
+                         BytecodeIterator &iter) {
   const u32 max_inst_len = Bytecodes::MaxBytecodeNameLength();
   for (; !iter.Done(); iter.Advance()) {
     Bytecode bytecode = iter.CurrentBytecode();
