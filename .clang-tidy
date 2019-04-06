@@ -31,6 +31,7 @@ Checks:     '
             -clang-analyzer-deadcode.DeadStores,
             -google-readability-braces-around-statements,
             -google-readability-namespace-comments,
+            -google-runtime-references,
             -readability-braces-around-statements,
             '
 WarningsAsErrors: '*'
