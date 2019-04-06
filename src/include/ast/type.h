@@ -36,9 +36,7 @@ class Context;
 //           code. We specialize these because we also want to add SQL-level
 //           type information to these builtins.
 #define BUILTIN_TYPE_LIST(PRIM, NON_PRIM, SQL)                           \
-                                                                         \
   /* Primitive types */                                                  \
-                                                                         \
   PRIM(Nil, u8, "nil")                                                   \
   PRIM(Bool, bool, "bool")                                               \
   PRIM(Int8, i8, "int8")                                                 \
@@ -55,7 +53,6 @@ class Context;
   PRIM(Float64, f64, "float64")                                          \
                                                                          \
   /* Non-primitive builtins */                                           \
-                                                                         \
   NON_PRIM(AggregationHashTable, tpl::sql::AggregationHashTable)         \
   NON_PRIM(BloomFilter, tpl::sql::BloomFilter)                           \
   NON_PRIM(CountAggregate, tpl::sql::CountAggregate)                     \
@@ -68,7 +65,7 @@ class Context;
   NON_PRIM(TableVectorIterator, tpl::sql::TableVectorIterator)           \
   NON_PRIM(VectorProjectionIterator, tpl::sql::VectorProjectionIterator) \
                                                                          \
-  /* Runtime Values*/                                                    \
+  /* Non-primitive SQL Runtime Values */                                 \
   SQL(Boolean, tpl::sql::BoolVal)                                        \
   SQL(Integer, tpl::sql::Integer)                                        \
   SQL(Decimal, tpl::sql::Decimal)                                        \
@@ -103,54 +100,82 @@ TYPE_LIST(F)
 /// equal.
 class Type : public util::RegionObject {
  public:
+  /// The enumeration of all concrete types
+  enum class TypeId : u8 {
 #define F(TypeId) TypeId,
-  enum class TypeId : u8 { TYPE_LIST(F) };
+    TYPE_LIST(F)
 #undef F
+  };
 
-  // Context this type was allocated from
+  /// Return the context this type was allocated in
   Context *context() const { return ctx_; }
 
-  // Size (in bytes) of this type
+  /// Return the size of this type in bytes
   u32 size() const { return size_; }
 
-  // Alignment (in bytes) of this type
+  /// Return the alignment of this type in bytes
   u32 alignment() const { return align_; }
 
-  // The "kind" of type this is (e.g., Integer, Struct, Array, etc.)
+  /// Return the unique type ID of this type (e.g., int16, Array, Struct etc.)
   TypeId type_id() const { return type_id_; }
 
-  template <typename T>
-  bool Is() const {
-    return llvm::isa<T>(this);
-  }
-
+  /// Perform an "checked cast" to convert an instance of this base Type class
+  /// into one of its derived types. If the target class isn't a subclass of
+  /// Type, an assertion failure is thrown in debug mode. In release mode, such
+  /// a call will fail.
+  ///
+  /// You should use this function when you have reasonable certainty that you
+  /// know the concrete type. Example:
+  ///
+  /// \code
+  /// if (!type->IsBuiltinType()) {
+  ///   return;
+  /// }
+  /// ...
+  /// auto *builtin_type = type->As<ast::BuiltinType>();
+  /// ...
+  /// \endcode
+  ///
   template <typename T>
   const T *As() const {
-    return reinterpret_cast<const T *>(this);
+    return llvm::cast<const T>(this);
   }
 
   template <typename T>
   T *As() {
-    return reinterpret_cast<T *>(this);
+    return llvm::cast<T>(this);
   }
 
+  /// Perform a "checking cast". This function checks to see if the target type
+  /// is a subclass of Type, returning a pointer to the subclass if so.
+  /// Otherwise, if the target type is not a subclass of Type, this function
+  /// returns a null pointer.
+  ///
+  /// You should use this in conditional or control-flow statements when you
+  /// want to check if it's a specific type **AND** get a pointer to the type,
+  /// like so:
+  ///
+  /// \code
+  /// if (auto *builtin_type = SafeAs<ast::BuiltinType>()) {
+  ///   // ...
+  /// }
+  /// \endcode
   template <typename T>
   const T *SafeAs() const {
-    return (Is<T>() ? As<T>() : nullptr);
+    return llvm::dyn_cast<const T>(this);
   }
 
   template <typename T>
   T *SafeAs() {
-    return (Is<T>() ? As<T>() : nullptr);
+    return llvm::dyn_cast<T>(this);
   }
 
   /// Type checks
 #define F(TypeClass) \
-  bool Is##TypeClass() const { return Is<TypeClass>(); }
+  bool Is##TypeClass() const { return llvm::isa<TypeClass>(this); }
   TYPE_LIST(F)
 #undef F
 
-  /// Is this an arithmetic type (including SQL arithmetic)
   bool IsArithmetic() const;
   bool IsSpecificBuiltin(u16 kind) const;
   bool IsNilType() const;
@@ -168,16 +193,22 @@ class Type : public util::RegionObject {
   /// Get a string representation of this type
   std::string ToString() const { return ToString(this); }
 
+  /// Get a string representation of the input type
   static std::string ToString(const Type *type);
 
  protected:
+  // Protected to indicate abstract base
   Type(Context *ctx, u32 size, u32 alignment, TypeId type_id)
       : ctx_(ctx), size_(size), align_(alignment), type_id_(type_id) {}
 
  private:
+  // The context this type was created/unique'd in
   Context *ctx_;
+  // The size of this type in bytes
   u32 size_;
+  // The alignment of this type in bytes
   u32 align_;
+  // The unique ID of this type
   TypeId type_id_;
 };
 
