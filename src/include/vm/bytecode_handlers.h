@@ -480,8 +480,13 @@ VM_OP_HOT void OpIntegerSumAggregateFree(tpl::sql::IntegerSumAggregate *agg) {
   agg->~IntegerSumAggregate();
 }
 
+void OpAggregationHashTableInit(tpl::sql::AggregationHashTable *agg_table,
+                                tpl::util::Region *region, u32 entry_size);
+
+void OpAggregationHashTableFree(tpl::sql::AggregationHashTable *agg_table);
+
 // ---------------------------------------------------------
-// SQL Hash Joins
+// Hash Joins
 // ---------------------------------------------------------
 
 void OpJoinHashTableInit(tpl::sql::JoinHashTable *join_hash_table,

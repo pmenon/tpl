@@ -142,6 +142,8 @@ namespace tpl::vm {
   F(IntegerSumAggregateReset, OperandType::Local)                                                                      \
   F(IntegerSumAggregateGetResult, OperandType::Local, OperandType::Local)                                              \
   F(IntegerSumAggregateFree, OperandType::Local)                                                                       \
+  F(AggregationHashTableInit, OperandType::Local, OperandType::Local, OperandType::Local)                              \
+  F(AggregationHashTableFree, OperandType::Local)                                                                      \
                                                                                                                        \
   /* Hash Joins */                                                                                                     \
   F(JoinHashTableInit, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
