@@ -13,30 +13,98 @@ namespace tpl::ast {
 
 class Context;
 
-/// List of all concrete types
+// List of all concrete types
 #define TYPE_LIST(F) \
-  F(IntegerType)     \
-  F(FloatType)       \
-  F(BoolType)        \
+  F(BuiltinType)     \
   F(StringType)      \
-  F(NilType)         \
   F(PointerType)     \
   F(ArrayType)       \
   F(MapType)         \
   F(StructType)      \
-  F(FunctionType)    \
-  F(InternalType)    \
-  F(SqlType)
+  F(FunctionType)
+
+// Macro listing all builtin types. Accepts multiple callback functions to
+// handle the different kinds of builtins.
+//
+// PRIM:     A primitive builtin type (e.g., bool, int32_t etc.)
+//           Args: Kind, C++ type, TPL name (i.e., as it appears in TPL code)
+// NON_PRIM: A builtin type that isn't primitive. These are pre-compiled C++
+//           classes that can be created and manipulated from TPL code.
+//           Args: Kind, C++ type
+// SQL:      These are full-blown SQL types. SQL types have backing C++
+//           implementations, but can also be created and manipulated from TPL
+//           code. We specialize these because we also want to add SQL-level
+//           type information to these builtins.
+#define BUILTIN_TYPE_LIST(PRIM, NON_PRIM, SQL)                           \
+                                                                         \
+  /* Primitive types */                                                  \
+                                                                         \
+  PRIM(Nil, u8, "nil")                                                   \
+  PRIM(Bool, bool, "bool")                                               \
+  PRIM(Int8, i8, "int8")                                                 \
+  PRIM(Int16, i16, "int16")                                              \
+  PRIM(Int32, i32, "int32")                                              \
+  PRIM(Int64, i64, "int64")                                              \
+  PRIM(Uint8, u8, "uint8")                                               \
+  PRIM(Uint16, u16, "uint16")                                            \
+  PRIM(Uint32, u32, "uint32")                                            \
+  PRIM(Uint64, u64, "uint64")                                            \
+  PRIM(Int128, i128, "int128")                                           \
+  PRIM(Uint128, u128, "uint128")                                         \
+  PRIM(Float32, f32, "float32")                                          \
+  PRIM(Float64, f64, "float64")                                          \
+                                                                         \
+  /* Non-primitive builtins */                                           \
+                                                                         \
+  NON_PRIM(AggregationHashTable, tpl::sql::AggregationHashTable)         \
+  NON_PRIM(BloomFilter, tpl::sql::BloomFilter)                           \
+  NON_PRIM(CountAggregate, tpl::sql::CountAggregate)                     \
+  NON_PRIM(CountStarAggregate, tpl::sql::CountStarAggregate)             \
+  NON_PRIM(IntegerSumAggregate, tpl::sql::IntegerSumAggregate)           \
+  NON_PRIM(JoinHashTable, tpl::sql::JoinHashTable)                       \
+  NON_PRIM(RegionAlloc, tpl::util::Region)                               \
+  NON_PRIM(Sorter, tpl::sql::Sorter)                                     \
+  NON_PRIM(SorterIterator, tpl::sql::SorterIterator)                     \
+  NON_PRIM(TableVectorIterator, tpl::sql::TableVectorIterator)           \
+  NON_PRIM(VectorProjectionIterator, tpl::sql::VectorProjectionIterator) \
+                                                                         \
+  /* Runtime Values*/                                                    \
+  SQL(Boolean, tpl::sql::BoolVal)                                        \
+  SQL(Integer, tpl::sql::Integer)                                        \
+  SQL(Decimal, tpl::sql::Decimal)                                        \
+  SQL(VarBuffer, tpl::sql::VarBuffer)                                    \
+  SQL(Date, tpl::sql::Date)                                              \
+  SQL(Timestamp, tpl::sql::Timestamp)
+
+// Ignore a builtin
+#define IGNORE_BUILTIN_TYPE (...)
+
+// Only consider the primitive builtin types
+#define PRIMIMITIVE_BUILTIN_TYPE_LIST(F) \
+  BUILTIN_TYPE_LIST(F, IGNORE_BUILTIN_TYPE, IGNORE_BUILTIN_TYPE)
+
+// Only consider the non-primitive builtin types
+#define NON_PRIMITIVE_BUILTIN_TYPE_LIST(F) \
+  BUILTIN_TYPE_LIST(IGNORE_BUILTIN_TYPE, F, IGNORE_BUILTIN_TYPE)
+
+// Only consider the SQL builtin types
+#define SQL_BUILTIN_TYPE_LIST(F) \
+  BUILTIN_TYPE_LIST(IGNORE_BUILTIN_TYPE, IGNORE_BUILTIN_TYPE, F)
 
 // Forward declare everything first
-#define F(name) class name;
+#define F(TypeClass) class TypeClass;
 TYPE_LIST(F)
 #undef F
 
+/// The base of the TPL type hierarchy. Types, once created, are immutable. Only
+/// one instance of a particular type is ever created, and all instances are
+/// owned by the Context object that created it. Thus, once can use pointer
+/// equality to determine if two types (created within the same Context) are
+/// equal.
 class Type : public util::RegionObject {
  public:
-#define F(kind) kind,
-  enum class Kind : u8 { TYPE_LIST(F) };
+#define F(TypeId) TypeId,
+  enum class TypeId : u8 { TYPE_LIST(F) };
 #undef F
 
   // Context this type was allocated from
@@ -49,7 +117,7 @@ class Type : public util::RegionObject {
   u32 alignment() const { return align_; }
 
   // The "kind" of type this is (e.g., Integer, Struct, Array, etc.)
-  Kind kind() const { return kind_; }
+  TypeId type_id() const { return type_id_; }
 
   template <typename T>
   bool Is() const {
@@ -77,13 +145,18 @@ class Type : public util::RegionObject {
   }
 
   /// Type checks
-#define F(kind) \
-  bool Is##kind() const { return Is<kind>(); }
+#define F(TypeClass) \
+  bool Is##TypeClass() const { return Is<TypeClass>(); }
   TYPE_LIST(F)
 #undef F
 
   /// Is this an arithmetic type (including SQL arithmetic)
   bool IsArithmetic() const;
+  bool IsSpecificBuiltin(u16 kind) const;
+  bool IsNilType() const;
+  bool IsBoolType() const;
+  bool IsIntegerType() const;
+  bool IsFloatType() const;
 
   /// Return a new type that is a pointer to the current type
   PointerType *PointerTo();
@@ -98,159 +171,94 @@ class Type : public util::RegionObject {
   static std::string ToString(const Type *type);
 
  protected:
-  Type(Context *ctx, u32 size, u32 alignment, Kind kind)
-      : ctx_(ctx), size_(size), align_(alignment), kind_(kind) {}
+  Type(Context *ctx, u32 size, u32 alignment, TypeId type_id)
+      : ctx_(ctx), size_(size), align_(alignment), type_id_(type_id) {}
 
  private:
   Context *ctx_;
   u32 size_;
   u32 align_;
+  TypeId type_id_;
+};
+
+/// A builtin type
+class BuiltinType : public Type {
+ public:
+#define F(BKind, ...) BKind,
+  enum Kind : u16 { BUILTIN_TYPE_LIST(F, F, F) };
+#undef F
+
+  /// Get the name of the builtin as it appears in TPL code
+  const char *tpl_name() const { return kTplNames[static_cast<u16>(kind_)]; }
+
+  /// Get the name of the C++ type that backs this builtin. For primitive
+  /// types like 32-bit integers, this will be 'int32'. For non-primitive types
+  /// this will be the fully-qualified name of the class (i.e., the class name
+  /// along with the namespace).
+  const char *cpp_name() const { return kCppNames[static_cast<u16>(kind_)]; }
+
+  /// Get the size of this builtin in bytes
+  u64 size() const { return kSizes[static_cast<u16>(kind_)]; }
+
+  /// Get the required alignment of this builtin in bytes
+  u64 alignment() const { return kAlignments[static_cast<u16>(kind_)]; }
+
+  /// Is this builtin a primitive?
+  bool is_primitive() const { return kPrimitiveFlags[static_cast<u16>(kind_)]; }
+
+  /// Is this builtin a primitive integer?
+  bool is_integer() const {
+    return Kind::Int8 <= kind() && kind() <= Kind::Uint128;
+  }
+
+  /// Is this builtin a primitive floating point number?
+  bool is_floating_point() const {
+    return kFloatingPointFlags[static_cast<u16>(kind_)];
+  }
+
+  /// Return the kind of this builtin
+  Kind kind() const { return kind_; }
+
+  static BuiltinType *Get(Context *ctx, Kind kind);
+
+  static bool classof(const Type *type) {
+    return type->type_id() == TypeId::BuiltinType;
+  }
+
+ private:
+  friend class Context;
+  BuiltinType(Context *ctx, u32 size, u32 alignment, Kind kind)
+      : Type(ctx, size, alignment, TypeId::BuiltinType), kind_(kind) {}
+
+ private:
   Kind kind_;
+
+ private:
+  static const char *kCppNames[];
+  static const char *kTplNames[];
+  static const u64 kSizes[];
+  static const u64 kAlignments[];
+  static const bool kPrimitiveFlags[];
+  static const bool kFloatingPointFlags[];
+  static const bool kSignedFlags[];
 };
 
-/**
- * Integral, fixed width integer type
- */
-class IntegerType : public Type {
- public:
-  enum class IntKind : u8 {
-    Int8,
-    Int16,
-    Int32,
-    Int64,
-    UInt8,
-    UInt16,
-    UInt32,
-    UInt64
-  };
-
-  IntKind int_kind() const { return int_kind_; }
-
-  static IntegerType *Get(Context *ctx, IntKind kind);
-
-  u32 BitWidth() const {
-    switch (int_kind()) {
-      case IntKind::Int8:
-      case IntKind::UInt8: {
-        return 8;
-      }
-      case IntKind::Int16:
-      case IntKind::UInt16: {
-        return 16;
-      }
-      case IntKind::Int32:
-      case IntKind::UInt32: {
-        return 32;
-      }
-      case IntKind::Int64:
-      case IntKind::UInt64: {
-        return 64;
-      }
-      default: { UNREACHABLE("Impossible integer kind"); }
-    }
-  }
-
-  bool IsSigned() const {
-    switch (int_kind()) {
-      case IntKind::Int8:
-      case IntKind::Int16:
-      case IntKind::Int32:
-      case IntKind::Int64: {
-        return true;
-      }
-      default: { return false; }
-    }
-  }
-
-  static bool classof(const Type *type) {
-    return type->kind() == Type::Kind::IntegerType;
-  }
-
- private:
-  friend class Context;
-  IntegerType(Context *ctx, u32 size, u32 alignment, IntKind int_kind)
-      : Type(ctx, size, alignment, Type::Kind::IntegerType),
-        int_kind_(int_kind) {}
-
- private:
-  IntKind int_kind_;
-};
-
-/**
- * Floating point number type
- */
-class FloatType : public Type {
- public:
-  enum class FloatKind : u8 { Float32, Float64 };
-
-  FloatKind float_kind() const { return float_kind_; }
-
-  static FloatType *Get(Context *ctx, FloatKind kind);
-
-  static bool classof(const Type *type) {
-    return type->kind() == Type::Kind::FloatType;
-  }
-
- private:
-  friend class Context;
-  FloatType(Context *ctx, u32 size, u32 alignment, FloatKind float_kind)
-      : Type(ctx, size, alignment, Type::Kind::FloatType),
-        float_kind_(float_kind) {}
-
- private:
-  FloatKind float_kind_;
-};
-
-/**
- * Boolean type
- */
-class BoolType : public Type {
- public:
-  static BoolType *Get(Context *ctx);
-
-  static bool classof(const Type *type) {
-    return type->kind() == Type::Kind::BoolType;
-  }
-
- private:
-  friend class Context;
-  explicit BoolType(Context *ctx)
-      : Type(ctx, sizeof(i8), alignof(i8), Type::Kind::BoolType) {}
-};
-
+/// String type
 class StringType : public Type {
  public:
   static StringType *Get(Context *ctx);
 
   static bool classof(const Type *type) {
-    return type->kind() == Type::Kind::StringType;
+    return type->type_id() == TypeId::StringType;
   }
 
  private:
   friend class Context;
   explicit StringType(Context *ctx)
-      : Type(ctx, sizeof(i8 *), alignof(i8 *), Type::Kind::StringType) {}
+      : Type(ctx, sizeof(i8 *), alignof(i8 *), TypeId::StringType) {}
 };
 
-/**
- * Nil type
- */
-class NilType : public Type {
- public:
-  static NilType *Get(Context *ctx);
-
-  static bool classof(const Type *type) {
-    return type->kind() == Type::Kind::NilType;
-  }
-
- private:
-  friend class Context;
-  explicit NilType(Context *ctx) : Type(ctx, 0, 0, Type::Kind::NilType) {}
-};
-
-/**
- * A pointer type
- */
+/// Pointer type
 class PointerType : public Type {
  public:
   Type *base() const { return base_; }
@@ -258,22 +266,19 @@ class PointerType : public Type {
   static PointerType *Get(Type *base);
 
   static bool classof(const Type *type) {
-    return type->kind() == Type::Kind::PointerType;
+    return type->type_id() == TypeId::PointerType;
   }
 
  private:
   explicit PointerType(Type *base)
-      : Type(base->context(), sizeof(i8 *), alignof(i8 *),
-             Type::Kind::PointerType),
+      : Type(base->context(), sizeof(i8 *), alignof(i8 *), TypeId::PointerType),
         base_(base) {}
 
  private:
   Type *base_;
 };
 
-/**
- * An array type
- */
+/// Array type
 class ArrayType : public Type {
  public:
   u64 length() const { return length_; }
@@ -283,13 +288,13 @@ class ArrayType : public Type {
   static ArrayType *Get(u64 length, Type *elem_type);
 
   static bool classof(const Type *type) {
-    return type->kind() == Type::Kind::ArrayType;
+    return type->type_id() == TypeId::ArrayType;
   }
 
  private:
   explicit ArrayType(u64 length, Type *elem_type)
       : Type(elem_type->context(), elem_type->size() * length,
-             elem_type->alignment(), Type::Kind::ArrayType),
+             elem_type->alignment(), TypeId::ArrayType),
         length_(length),
         elem_type_(elem_type) {}
 
@@ -298,6 +303,8 @@ class ArrayType : public Type {
   Type *elem_type_;
 };
 
+/// A field is a pair containing a name and a type. It is used to represent both
+/// fields within a struct, and parameters to a function.
 struct Field {
   Identifier name;
   Type *type;
@@ -309,9 +316,7 @@ struct Field {
   }
 };
 
-/**
- * A function type
- */
+/// Function type
 class FunctionType : public Type {
  public:
   const util::RegionVector<Field> &params() const { return params_; }
@@ -323,7 +328,7 @@ class FunctionType : public Type {
   static FunctionType *Get(util::RegionVector<Field> &&params, Type *ret);
 
   static bool classof(const Type *type) {
-    return type->kind() == Type::Kind::FunctionType;
+    return type->type_id() == TypeId::FunctionType;
   }
 
  private:
@@ -334,9 +339,7 @@ class FunctionType : public Type {
   Type *ret_;
 };
 
-/**
- * An unordered map (i.e., hashtable)
- */
+/// Hash-map type
 class MapType : public Type {
  public:
   Type *key_type() const { return key_type_; }
@@ -346,7 +349,7 @@ class MapType : public Type {
   static MapType *Get(Type *key_type, Type *val_type);
 
   static bool classof(const Type *type) {
-    return type->kind() == Type::Kind::MapType;
+    return type->type_id() == TypeId::MapType;
   }
 
  private:
@@ -357,9 +360,7 @@ class MapType : public Type {
   Type *val_type_;
 };
 
-/**
- * A struct type
- */
+/// Struct type
 class StructType : public Type {
  public:
   const util::RegionVector<Field> &fields() const { return fields_; }
@@ -390,7 +391,7 @@ class StructType : public Type {
   static StructType *Get(util::RegionVector<Field> &&fields);
 
   static bool classof(const Type *type) {
-    return type->kind() == Type::Kind::StructType;
+    return type->type_id() == TypeId::StructType;
   }
 
  private:
@@ -403,104 +404,6 @@ class StructType : public Type {
   util::RegionVector<u32> field_offsets_;
 };
 
-// This macro lists all internal types. The columns are:
-// internal kind name, fully qualified name of class in string, fully qualified
-// The LLVM engine uses the names below verbatim to look into the runtime
-// for loaded classes. Thus, these names need to be consistent with the FQN
-// names of the corresponding classes (i.e., the string form and FQN reference
-// should most likely be the same)
-// class reference
-#define INTERNAL_TYPE_LIST(V)                             \
-  /* Misc.*/                                              \
-  V(RegionAlloc, tpl::util::Region)                       \
-  /* Runtime Values*/                                     \
-  V(Boolean, tpl::sql::BoolVal)                           \
-  V(Integer, tpl::sql::Integer)                           \
-  V(Decimal, tpl::sql::Decimal)                           \
-  /* Aggregations */                                      \
-  V(CountAggregate, tpl::sql::CountAggregate)             \
-  V(CountStarAggregate, tpl::sql::CountStarAggregate)     \
-  V(IntegerSumAggregate, tpl::sql::IntegerSumAggregate)   \
-  V(AggregationHashTable, tpl::sql::AggregationHashTable) \
-  /* Sorting */                                           \
-  V(Sorter, tpl::sql::Sorter)                             \
-  V(SorterIterator, tpl::sql::SorterIterator)             \
-  /* Hash Joins*/                                         \
-  V(JoinHashTable, tpl::sql::JoinHashTable)               \
-  /* Scans */                                             \
-  V(TableVectorIterator, tpl::sql::TableVectorIterator)   \
-  V(VectorProjectionIterator, tpl::sql::VectorProjectionIterator)
-
-/**
- * Internal types are dedicated to pre-compiled C++ types that we don't want to
- * lift into TPL's type system. While they are usable as regular TPL types, they
- * are not exposed to users (i.e., a user cannot construct one of these types).
- *
- * TODO(pmenon): Is InternalType really a good name for these?
- */
-class InternalType : public Type {
- public:
-  enum class InternalKind : u16 {
-#define DECLARE_TYPE(kind, ...) kind,
-    INTERNAL_TYPE_LIST(DECLARE_TYPE)
-#undef DECLARE_TYPE
-#define COUNT(...) +1
-        Last = -1 INTERNAL_TYPE_LIST(COUNT)
-#undef COUNT
-  };
-
-  static const u32 kNumInternalKinds = static_cast<u32>(InternalKind::Last) + 1;
-
-  const Identifier &name() const { return name_; }
-
-  InternalKind internal_kind() const { return internal_kind_; }
-
-  // Return the number of internal types
-  static constexpr u32 NumInternalTypes() { return kNumInternalKinds; }
-
-  // Static factory
-  static InternalType *Get(Context *ctx, InternalKind kind);
-
-  // Type check
-  static bool classof(const Type *type) {
-    return type->kind() == Type::Kind::InternalType;
-  }
-
- private:
-  friend class Context;
-  explicit InternalType(Context *ctx, Identifier name, u32 size, u32 alignment,
-                        InternalKind internal_kind)
-      : Type(ctx, size, alignment, Type::Kind::InternalType),
-        name_(name),
-        internal_kind_(internal_kind) {}
-
- private:
-  Identifier name_;
-  InternalKind internal_kind_;
-};
-
-/**
- * A SQL type masquerading as a TPL type
- */
-class SqlType : public Type {
- public:
-  static SqlType *Get(Context *ctx, const sql::Type &sql_type);
-
-  const sql::Type &sql_type() const { return sql_type_; }
-
-  // Type check
-  static bool classof(const Type *type) {
-    return type->kind() == Type::Kind::SqlType;
-  }
-
- private:
-  SqlType(Context *ctx, u32 size, u32 alignment, const sql::Type &sql_type)
-      : Type(ctx, size, alignment, Kind::SqlType), sql_type_(sql_type) {}
-
- private:
-  const sql::Type &sql_type_;
-};
-
 // ---------------------------------------------------------
 // Type implementation below
 // ---------------------------------------------------------
@@ -510,6 +413,35 @@ inline Type *Type::GetPointeeType() const {
     return ptr_type->base();
   }
   return nullptr;
+}
+
+inline bool Type::IsSpecificBuiltin(u16 kind) const {
+  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+    return builtin_type->kind() == static_cast<BuiltinType::Kind>(kind);
+  }
+  return false;
+}
+
+inline bool Type::IsNilType() const {
+  return IsSpecificBuiltin(BuiltinType::Nil);
+}
+
+inline bool Type::IsBoolType() const {
+  return IsSpecificBuiltin(BuiltinType::Bool);
+}
+
+inline bool Type::IsIntegerType() const {
+  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+    return builtin_type->is_integer();
+  }
+  return false;
+}
+
+inline bool Type::IsFloatType() const {
+  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+    return builtin_type->is_floating_point();
+  }
+  return false;
 }
 
 }  // namespace tpl::ast

@@ -15,44 +15,37 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
                                              const SourcePosition &pos,
                                              ast::Expr *left,
                                              ast::Expr *right) {
-  /*
-   * If the left expression is a SQL boolean value, we implicitly cast it to a
-   * native boolean. The same is done for the right expression.
-   */
+  // Cache a primitive boolean type here because it's used throughout this func
+  ast::Type *const bool_type =
+      ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
 
-  if (auto *left_type = left->type()->SafeAs<ast::SqlType>();
-      left_type != nullptr && left_type->sql_type().Is<sql::BooleanType>()) {
-    // Implicit cast
+  //
+  // If either the left or right expressions are SQL booleans, implicitly cast
+  // to a primitive boolean type in preparation for the comparison.
+  //
+
+  if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
     left = context()->node_factory()->NewImplicitCastExpr(
-        left->position(), ast::CastKind::SqlBoolToBool,
-        ast::BoolType::Get(context()), left);
-
-    // Resolve
-    left->set_type(ast::BoolType::Get(context()));
+        left->position(), ast::CastKind::SqlBoolToBool, bool_type, left);
+    left->set_type(bool_type);
   }
 
-  if (auto *right_type = right->type()->SafeAs<ast::SqlType>();
-      right_type != nullptr && right_type->sql_type().Is<sql::BooleanType>()) {
-    // Implicit cast
+  if (right->type()->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
     right = context()->node_factory()->NewImplicitCastExpr(
-        right->position(), ast::CastKind::SqlBoolToBool,
-        ast::BoolType::Get(context()), right);
-
-    // Resolve
-    right->set_type(ast::BoolType::Get(context()));
+        right->position(), ast::CastKind::SqlBoolToBool, bool_type, right);
+    right->set_type(bool_type);
   }
 
-  /*
-   * At this point, either left and right expressions are booleans, or there is
-   * a semantic error.
-   */
-
+  // If both input expressions are primitive booleans, we're done
   if (left->type()->IsBoolType() && right->type()->IsBoolType()) {
-    return {ast::BoolType::Get(context()), left, right};
+    return {bool_type, left, right};
   }
+
+  // Okay, there's an error ...
 
   error_reporter()->Report(pos, ErrorMessages::kMismatchedTypesToBinary,
                            left->type(), right->type(), op);
+
   return {nullptr, left, right};
 }
 
@@ -60,102 +53,94 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
                                                 const SourcePosition &pos,
                                                 ast::Expr *left,
                                                 ast::Expr *right) {
-  /*
-   * If neither the left expression or the right expression are arithmetic,
-   * including arithmetic SQL types, there's a semantic error. Early exit.
-   */
-
+  // If neither input expression is arithmetic, it's an ill-formed operation
   if (!left->type()->IsArithmetic() || !right->type()->IsArithmetic()) {
     error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op,
                              left->type(), right->type());
     return {nullptr, left, right};
   }
 
-  /*
-   * Both types are arithmetic. If they're the exact same type, we don't need to
-   * do any additional work. Return.
-   */
-
+  // If the input types are the same, we don't need to do any work
   if (left->type() == right->type()) {
     return {left->type(), left, right};
   }
 
-  ast::Type *sql_int_type =
-      ast::SqlType::Get(context(), sql::IntegerType::InstanceNonNullable());
+  // Cache a SQL integer type here because it's used throughout this function
+  ast::Type *const sql_int_type =
+      ast::BuiltinType::Get(context(), ast::BuiltinType::Integer);
 
-  if (!right->type()->IsSqlType()) {
-    // Implicitly cast the right to a SQL Integer
+  //
+  // If either the left or right types aren't SQL integers, cast them up to one
+  //
+
+  if (!right->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
     right = context()->node_factory()->NewImplicitCastExpr(
         right->position(), ast::CastKind::IntToSqlInt, sql_int_type, right);
-
-    right->set_type(
-        ast::SqlType::Get(context(), sql::IntegerType::InstanceNonNullable()));
+    right->set_type(sql_int_type);
   }
 
-  if (!left->type()->IsSqlType()) {
-    // Implicitly cast the left to a SQL Integer
+  if (!left->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
     left = context()->node_factory()->NewImplicitCastExpr(
         left->position(), ast::CastKind::IntToSqlInt, sql_int_type, left);
-
-    left->set_type(
-        ast::SqlType::Get(context(), sql::IntegerType::InstanceNonNullable()));
+    left->set_type(sql_int_type);
   }
 
-  const sql::Type &ret = left->type()->As<ast::SqlType>()->sql_type();
-  if (left->type()->As<ast::SqlType>()->sql_type().nullable() ||
-      right->type()->As<ast::SqlType>()->sql_type().nullable()) {
-    return {ast::SqlType::Get(context(), ret.GetNullableVersion()), left,
-            right};
-  }
-  return {ast::SqlType::Get(context(), ret), left, right};
+  // Done
+  return {sql_int_type, left, right};
 }
 
 Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
                                                 const SourcePosition &pos,
                                                 ast::Expr *left,
                                                 ast::Expr *right) {
-  ast::Type *left_type = left->type();
-  ast::Type *right_type = right->type();
-
-  // Are left and right types arithmetic? If not, we early exit.
-  if (!left_type->IsArithmetic() || !right_type->IsArithmetic()) {
+  // If neither input expression is arithmetic, it's an ill-formed operation
+  if (!left->type()->IsArithmetic() || !right->type()->IsArithmetic()) {
     error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op,
-                             left_type, right_type);
+                             left->type(), right->type());
     return {nullptr, left, right};
   }
 
-  if (left_type == right_type) {
-    return {ast::BoolType::Get(context()), left, right};
+  // If the input types are the same, we don't need to do any work
+  if (left->type() == right->type()) {
+    ast::Type *ret_type = nullptr;
+    if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Integer) ||
+        left->type()->IsSpecificBuiltin(ast::BuiltinType::Decimal)) {
+      ret_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Boolean);
+    } else {
+      ret_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
+    }
+    return {ret_type, left, right};
   }
 
-  ast::Type *sql_int_type =
-      ast::SqlType::Get(context(), sql::IntegerType::InstanceNonNullable());
+  // Cache a SQL integer type here because it's used throughout this function
+  ast::Type *const sql_int_type =
+      ast::BuiltinType::Get(context(), ast::BuiltinType::Integer);
 
-  if (!right_type->IsSqlType()) {
-    // Implicitly cast the right to a SQL Integer
+  //
+  // If either the left or right types aren't SQL integers, cast them up to one
+  //
+
+  if (!right->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
     right = context()->node_factory()->NewImplicitCastExpr(
         right->position(), ast::CastKind::IntToSqlInt, sql_int_type, right);
-
-    right_type =
-        ast::SqlType::Get(context(), sql::IntegerType::Instance(false));
-    right->set_type(right_type);
+    right->set_type(sql_int_type);
   }
 
-  if (!left_type->IsSqlType()) {
-    // Implicitly cast the left to a SQL Integer
+  if (!left->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
     left = context()->node_factory()->NewImplicitCastExpr(
         left->position(), ast::CastKind::IntToSqlInt, sql_int_type, left);
-
-    left_type = ast::SqlType::Get(context(), sql::IntegerType::Instance(false));
-    left->set_type(left_type);
+    left->set_type(sql_int_type);
   }
 
-  bool res_nullable = left_type->As<ast::SqlType>()->sql_type().nullable() ||
-                      right_type->As<ast::SqlType>()->sql_type().nullable();
-  ast::SqlType *return_type =
-      ast::SqlType::Get(context(), sql::BooleanType::Instance(res_nullable));
-
-  return {return_type, left, right};
+  // Done
+  ast::Type *ret_type = nullptr;
+  if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Integer) ||
+      left->type()->IsSpecificBuiltin(ast::BuiltinType::Decimal)) {
+    ret_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Boolean);
+  } else {
+    ret_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
+  }
+  return {ret_type, left, right};
 }
 
 void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
@@ -248,32 +233,28 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
     return;
   }
 
-  // The call arguments
-  const auto &arguments = call->arguments();
-
   // The first call argument must be a pointer to a VectorProjectionIterator
-  ast::Type *vpi = arguments[0]->type()->GetPointeeType();
-  if (vpi == nullptr || !vpi->IsInternalType() ||
-      vpi->As<ast::InternalType>()->internal_kind() !=
-          ast::InternalType::InternalKind::VectorProjectionIterator) {
-    vpi = ast::InternalType::Get(
-        context(), ast::InternalType::InternalKind::VectorProjectionIterator);
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kIncorrectCallArgType,
-                             arguments[0]->type(), vpi, call->FuncName());
+  ast::Type *vpi = call->arguments()[0]->type()->GetPointeeType();
+  if (!vpi ||
+      !vpi->IsSpecificBuiltin(ast::BuiltinType::VectorProjectionIterator)) {
+    vpi = ast::BuiltinType::Get(context(),
+                                ast::BuiltinType::VectorProjectionIterator);
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kIncorrectCallArgType,
+        call->arguments()[0]->type(), vpi, call->FuncName());
     return;
   }
 
-  if (!arguments[1]->type()->IsStringType()) {
+  // The second call argument must be a string
+  if (!call->arguments()[1]->type()->IsStringType()) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kIncorrectCallArgType,
-                             arguments[1]->type(),
+                             call->arguments()[1]->type(),
                              ast::StringType::Get(context()), call->FuncName());
   }
 
   // Set return type
-  call->set_type(
-      ast::IntegerType::Get(context(), ast::IntegerType::IntKind::Int32));
+  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Int32));
 }
 
 void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
@@ -286,9 +267,8 @@ void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
 
   // First argument must be a pointer to a JoinHashTable
   auto *jht_type = call->arguments()[0]->type()->GetPointeeType();
-  if (jht_type == nullptr || !jht_type->IsInternalType() ||
-      jht_type->As<ast::InternalType>()->internal_kind() !=
-          ast::InternalType::InternalKind::JoinHashTable) {
+  if (!jht_type ||
+      !jht_type->IsSpecificBuiltin(ast::BuiltinType::JoinHashTable)) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadArgToHashTableInit,
                              call->arguments()[0]->type(), 0);
@@ -297,9 +277,8 @@ void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
 
   // Second argument must be a pointer to a RegionAllocator
   auto *region_type = call->arguments()[1]->type()->GetPointeeType();
-  if (region_type == nullptr || !region_type->IsInternalType() ||
-      jht_type->As<ast::InternalType>()->internal_kind() !=
-          ast::InternalType::InternalKind::RegionAlloc) {
+  if (!region_type ||
+      !region_type->IsSpecificBuiltin(ast::BuiltinType::RegionAlloc)) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadArgToHashTableInit,
                              call->arguments()[0]->type(), 1);
@@ -316,7 +295,7 @@ void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
   }
 
   // This call returns nothing
-  call->set_type(ast::NilType::Get(context()));
+  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
 }
 
 void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
@@ -327,22 +306,18 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
     return;
   }
 
-  // Resolve function call arguments
-  const auto &arguments = call->arguments();
-
   // First argument is a pointer to a JoinHashTable
-  auto *jht_type = arguments[0]->type()->GetPointeeType();
-  if (jht_type == nullptr || !jht_type->IsInternalType() ||
-      jht_type->As<ast::InternalType>()->internal_kind() !=
-          ast::InternalType::InternalKind::JoinHashTable) {
+  auto *jht_type = call->arguments()[0]->type()->GetPointeeType();
+  if (!jht_type ||
+      !jht_type->IsSpecificBuiltin(ast::BuiltinType::JoinHashTable)) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadArgToHashTableInsert,
-                             arguments[0]->type(), 0);
+                             call->arguments()[0]->type(), 0);
     return;
   }
 
   // This call returns nothing
-  call->set_type(ast::NilType::Get(context()));
+  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
 }
 
 void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
@@ -355,9 +330,8 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
 
   // The first and only argument must be a pointer to a JoinHashTable
   auto *jht_type = call->arguments()[0]->type()->GetPointeeType();
-  if (jht_type == nullptr || !jht_type->IsInternalType() ||
-      jht_type->As<ast::InternalType>()->internal_kind() !=
-          ast::InternalType::InternalKind::JoinHashTable) {
+  if (!jht_type ||
+      !jht_type->IsSpecificBuiltin(ast::BuiltinType::JoinHashTable)) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadArgToHashTableBuild,
                              call->arguments()[0]->type());
@@ -365,7 +339,7 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
   }
 
   // This call returns nothing
-  call->set_type(ast::NilType::Get(context()));
+  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
 }
 
 void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
@@ -378,9 +352,8 @@ void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
 
   // The first and only argument must be a pointer to a JoinHashTable
   auto *jht_type = call->arguments()[0]->type()->GetPointeeType();
-  if (jht_type == nullptr || !jht_type->IsInternalType() ||
-      jht_type->As<ast::InternalType>()->internal_kind() !=
-          ast::InternalType::InternalKind::JoinHashTable) {
+  if (!jht_type ||
+      !jht_type->IsSpecificBuiltin(ast::BuiltinType::JoinHashTable)) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadArgToHashTableBuild,
                              call->arguments()[0]->type());
@@ -388,7 +361,7 @@ void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
   }
 
   // This call returns nothing
-  call->set_type(ast::NilType::Get(context()));
+  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
 }
 
 void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
@@ -555,79 +528,14 @@ void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
     return;
   }
 
-  // Check the internal types
-  if (auto *type = context()->LookupInternalType(node->name())) {
-    node->set_type(type);
-    return;
-  }
-
   // Error
   error_reporter()->Report(node->position(), ErrorMessages::kUndefinedVariable,
                            node->name());
 }
 
 void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
-  ast::Type *expr_type = Resolve(node->input());
-
-  if (expr_type == nullptr) {
-    // Error
-    return;
-  }
-
-  switch (node->cast_kind()) {
-    case ast::CastKind::IntToSqlInt: {
-      if (!expr_type->IsIntegerType()) {
-        error_reporter()->Report(
-            node->position(), ErrorMessages::kInvalidCastToSqlInt, expr_type);
-        return;
-      }
-
-      // The type is a non-null SQL integer
-      node->set_type(ast::SqlType::Get(
-          expr_type->context(), sql::IntegerType::InstanceNonNullable()));
-
-      break;
-    }
-
-    case ast::CastKind::IntToSqlDecimal: {
-      if (!expr_type->IsIntegerType()) {
-        error_reporter()->Report(node->position(),
-                                 ErrorMessages::kInvalidCastToSqlDecimal,
-                                 expr_type);
-        return;
-      }
-
-      // The type is a non-null SQL decimal
-      node->set_type(ast::SqlType::Get(
-          expr_type->context(), sql::DecimalType::InstanceNonNullable(1, 2)));
-
-      break;
-    }
-
-    case ast::CastKind::SqlBoolToBool: {
-      if (auto *type = expr_type->SafeAs<ast::SqlType>();
-          type == nullptr || !type->sql_type().Is<sql::BooleanType>()) {
-        error_reporter()->Report(
-            node->position(), ErrorMessages::kInvalidSqlCastToBool, expr_type);
-        return;
-      }
-
-      // Type is native boolean
-      node->set_type(ast::BoolType::Get(expr_type->context()));
-
-      break;
-    }
-
-    case ast::CastKind::IntegralCast: {
-      // TODO: Fix me
-      if (!expr_type->IsIntegerType()) {
-        error_reporter()->Report(node->position(),
-                                 ErrorMessages::kInvalidCastToSqlDecimal,
-                                 expr_type);
-      }
-      break;
-    }
-  }
+  throw std::runtime_error(
+      "Should never perform semantic checking on implicit cast expressions");
 }
 
 void Sema::VisitIndexExpr(ast::IndexExpr *node) {
@@ -661,23 +569,22 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
 void Sema::VisitLitExpr(ast::LitExpr *node) {
   switch (node->literal_kind()) {
     case ast::LitExpr::LitKind::Nil: {
-      node->set_type(ast::NilType::Get(context()));
+      node->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
       break;
     }
     case ast::LitExpr::LitKind::Boolean: {
-      node->set_type(ast::BoolType::Get(context()));
+      node->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Bool));
       break;
     }
     case ast::LitExpr::LitKind::Float: {
       // Literal floats default to float32
       node->set_type(
-          ast::FloatType::Get(context(), ast::FloatType::FloatKind::Float32));
+          ast::BuiltinType::Get(context(), ast::BuiltinType::Float32));
       break;
     }
     case ast::LitExpr::LitKind::Int: {
       // Literal integers default to int32
-      node->set_type(
-          ast::IntegerType::Get(context(), ast::IntegerType::IntKind::Int32));
+      node->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Int32));
       break;
     }
     case ast::LitExpr::LitKind::String: {

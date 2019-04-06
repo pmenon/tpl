@@ -1,9 +1,9 @@
 #include "tpl_test.h"
 
-#include "llvm/Support/FormatVariadic.h"
-
 // From test
 #include "vm/bytecode_compiler.h"
+
+#include "logging/logger.h"
 
 namespace tpl::vm::test {
 
@@ -18,26 +18,28 @@ class BytecodeGeneratorTest : public TplTest {
 };
 
 TEST_F(BytecodeGeneratorTest, SimpleTest) {
+  //
+  // Create a function that multiples an input unsigned 32-bit integer by 20
+  //
+
   auto src = R"(
-    fun test(x: uint32) -> uint32 {
-      var y : uint32 = 20
+    fun mul20(x: uint32) -> uint32 {
+      var y: uint32 = 20
       return x * y
     })";
   BytecodeCompiler compiler;
   auto *ast = compiler.CompileToAst(src);
 
   // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(ast, "test");
+  auto module = BytecodeGenerator::Compile(ast, "mul20");
 
-  module->PrettyPrint(std::cout);
+  std::function<u32(u32)> mul_20;
+  EXPECT_TRUE(module->GetFunction("mul20", ExecutionMode::Interpret, mul_20))
+      << "Function 'mul20' not found in module";
 
-  std::function<u32(u32)> f;
-  EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
-      << "Function 'test' not found in module";
-
-  EXPECT_EQ(20u, f(1));
-  EXPECT_EQ(40u, f(2));
-  EXPECT_EQ(60u, f(3));
+  EXPECT_EQ(20u, mul_20(1));
+  EXPECT_EQ(40u, mul_20(2));
+  EXPECT_EQ(60u, mul_20(3));
 }
 
 TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
@@ -62,16 +64,15 @@ TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
   EXPECT_FALSE(f());
 }
 
-TEST_F(BytecodeGeneratorTest, SimpleTypesTest) {
-  auto fn = [](auto type, auto arg) {
-    using ArgType = decltype(arg);
-
-    auto src = llvm::formatv(R"(
-      fun test(a: *{0}) -> void {{
-        *a = 10
-        return
-      })",
-                             type);
+TEST_F(BytecodeGeneratorTest, SimpleArithmeticTest) {
+  const auto gen_compare_func = [](auto arg_type_name, auto dummy_arg, auto op,
+                                   auto cb) {
+    using Type = decltype(dummy_arg);
+    auto src = fmt::format(R"(
+      fun test(a: {0}, b: {0}) -> {0} {{
+        return a {1} b
+      }})",
+                           arg_type_name, op);
 
     BytecodeCompiler compiler;
     auto *ast = compiler.CompileToAst(src);
@@ -79,26 +80,83 @@ TEST_F(BytecodeGeneratorTest, SimpleTypesTest) {
 
     auto module = BytecodeGenerator::Compile(ast, "test");
 
-    module->PrettyPrint(std::cout);
-
-    std::function<void(ArgType *)> f;
-    ASSERT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
+    std::function<Type(Type, Type)> fn;
+    ASSERT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, fn))
         << "Function 'test' not found in module";
 
-    ArgType a = 0;
-
-    f(&a);
-    EXPECT_EQ((ArgType)10, a);
+    // Test the function
+    cb(fn);
   };
 
-  fn("int8", (i8)0);
-  fn("int16", (i16)0);
-  fn("int32", (i32)0);
-  fn("int64", (i64)0);
-  fn("uint8", (u8)0);
-  fn("uint16", (u16)0);
-  fn("uint32", (u32)0);
-  fn("uint64", (u64)0);
+#define CMP_TEST(cpptype, tpltype, op)                                 \
+  gen_compare_func(tpltype, cpptype{0}, #op, [](auto fn) {             \
+    EXPECT_EQ(cpptype{1} op cpptype{1}, fn(cpptype{1}, cpptype{1}));   \
+    EXPECT_EQ(cpptype{-1} op cpptype{1}, fn(cpptype{-1}, cpptype{1})); \
+    EXPECT_EQ(cpptype{2} op cpptype{1}, fn(cpptype{2}, cpptype{1}));   \
+  });
+
+#define TEST_ALL_CMP(cpptype, tpltype) \
+  CMP_TEST(cpptype, tpltype, +)        \
+  CMP_TEST(cpptype, tpltype, -)        \
+  CMP_TEST(cpptype, tpltype, *)        \
+  CMP_TEST(cpptype, tpltype, /)        \
+  CMP_TEST(cpptype, tpltype, %)
+
+  TEST_ALL_CMP(i8, "int8")
+  TEST_ALL_CMP(i16, "int16")
+  TEST_ALL_CMP(i32, "int32")
+  TEST_ALL_CMP(i64, "int64")
+
+#undef TEST_ALL_CMP
+#undef CMP_TEST
+}
+
+TEST_F(BytecodeGeneratorTest, ComparisonTest) {
+  const auto gen_compare_func = [](auto arg_type_name, auto dummy_arg, auto op,
+                                   auto cb) {
+    using Type = decltype(dummy_arg);
+    auto src = fmt::format(R"(
+      fun test(a: {0}, b: {0}) -> bool {{
+        return a {1} b
+      }})",
+                           arg_type_name, op);
+
+    BytecodeCompiler compiler;
+    auto *ast = compiler.CompileToAst(src);
+    ASSERT_FALSE(compiler.HasErrors());
+
+    auto module = BytecodeGenerator::Compile(ast, "test");
+
+    std::function<bool(Type, Type)> fn;
+    ASSERT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, fn))
+        << "Function 'test' not found in module";
+
+    // Test the function
+    cb(fn);
+  };
+
+#define CMP_TEST(cpptype, tpltype, op)                                 \
+  gen_compare_func(tpltype, cpptype{0}, #op, [](auto fn) {             \
+    EXPECT_EQ(cpptype{1} op cpptype{1}, fn(cpptype{1}, cpptype{1}));   \
+    EXPECT_EQ(cpptype{-1} op cpptype{1}, fn(cpptype{-1}, cpptype{1})); \
+    EXPECT_EQ(cpptype{2} op cpptype{1}, fn(cpptype{2}, cpptype{1}));   \
+  });
+
+#define TEST_ALL_CMP(cpptype, tpltype) \
+  CMP_TEST(cpptype, tpltype, <)        \
+  CMP_TEST(cpptype, tpltype, <=)       \
+  CMP_TEST(cpptype, tpltype, ==)       \
+  CMP_TEST(cpptype, tpltype, >)        \
+  CMP_TEST(cpptype, tpltype, >=)       \
+  CMP_TEST(cpptype, tpltype, !=)
+
+  TEST_ALL_CMP(i8, "int8")
+  TEST_ALL_CMP(i16, "int16")
+  TEST_ALL_CMP(i32, "int32")
+  TEST_ALL_CMP(i64, "int64")
+
+#undef TEST_ALL_CMP
+#undef CMP_TEST
 }
 
 TEST_F(BytecodeGeneratorTest, ParameterPassingTest) {

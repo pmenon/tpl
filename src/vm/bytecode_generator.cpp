@@ -190,7 +190,8 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
     vpi_loop.LoopHeader();
 
     ast::Context *ctx = row_type->context();
-    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(ctx));
+    LocalVar cond = current_function()->NewLocal(
+        ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
     emitter()->Emit(Bytecode::VPIHasNext, cond, vpi);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    vpi_loop.break_label());
@@ -261,8 +262,8 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
     }
   }
 
-  ast::InternalType *table_iter_type = ast::InternalType::Get(
-      ctx, ast::InternalType::InternalKind::TableVectorIterator);
+  ast::Type *table_iter_type =
+      ast::BuiltinType::Get(ctx, ast::BuiltinType::TableVectorIterator);
   LocalVar table_iter =
       current_function()->NewLocal(table_iter_type, "table_iter");
 
@@ -281,8 +282,8 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   // Pull out the VPI from the TableVectorIterator we just initialized
   //
 
-  ast::InternalType *vpi_type = ast::InternalType::Get(
-      ctx, ast::InternalType::InternalKind::VectorProjectionIterator);
+  ast::Type *vpi_type =
+      ast::BuiltinType::Get(ctx, ast::BuiltinType::VectorProjectionIterator);
   LocalVar vpi = current_function()->NewLocal(vpi_type->PointerTo(), "vpi");
 
   emitter()->Emit(Bytecode::TableVectorIteratorGetVPI, vpi, table_iter);
@@ -298,7 +299,8 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
     LoopBuilder table_loop(this);
     table_loop.LoopHeader();
 
-    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(ctx));
+    LocalVar cond = current_function()->NewLocal(
+        ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
     emitter()->Emit(Bytecode::TableVectorIteratorNext, cond, table_iter);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    table_loop.break_label());
@@ -578,8 +580,7 @@ void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
 void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
                                                    ast::Builtin builtin) {
   ast::Context *ctx = call->type()->context();
-  ast::Type *ret_type =
-      ast::IntegerType::Get(ctx, ast::IntegerType::IntKind::Int32);
+  ast::Type *ret_type = ast::BuiltinType::Get(ctx, ast::BuiltinType::Int32);
 
   LocalVar ret_val;
   if (execution_result() != nullptr) {
@@ -967,7 +968,11 @@ void BytecodeGenerator::VisitPrimitiveCompareOpExpr(
 void BytecodeGenerator::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
   TPL_ASSERT(execution_result()->IsRValue(),
              "Comparison expressions must be R-Values!");
-  if (node->type()->IsSqlType()) {
+
+  const bool is_primitive_comparison =
+      node->type()->IsSpecificBuiltin(ast::BuiltinType::Bool);
+
+  if (!is_primitive_comparison) {
     VisitSqlCompareOpExpr(node);
   } else {
     VisitPrimitiveCompareOpExpr(node);
@@ -1209,9 +1214,9 @@ void BytecodeGenerator::VisitExpressionForTest(ast::Expr *expr,
 Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode,
                                                 ast::Type *type) {
   TPL_ASSERT(type->IsIntegerType(), "Type must be integer type");
-  auto *int_type = type->SafeAs<ast::IntegerType>();
-  auto int_kind = static_cast<u8>(int_type->int_kind());
-  return Bytecodes::FromByte(Bytecodes::ToByte(bytecode) + int_kind);
+  auto int_kind = type->SafeAs<ast::BuiltinType>()->kind();
+  auto kind_idx = static_cast<u8>(int_kind - ast::BuiltinType::Int8);
+  return Bytecodes::FromByte(Bytecodes::ToByte(bytecode) + kind_idx);
 }
 
 // static

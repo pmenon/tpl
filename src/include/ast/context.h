@@ -14,6 +14,10 @@ namespace sema {
 class ErrorReporter;
 }  // namespace sema
 
+namespace sql {
+class Type;
+}  // namespace sql
+
 namespace ast {
 
 class AstNodeFactory;
@@ -33,13 +37,12 @@ class Context {
   /// Return \a str as a unique string in this context
   Identifier GetIdentifier(llvm::StringRef str);
 
+  /// Convert the SQL type into the equivalent TPL type
+  Type *GetTplTypeFromSqlType(const sql::Type &sql_type);
+
   /// Is the type with name \a identifier a builtin type?
   /// \return A non-null pointer to the Type if a valid builtin; null otherwise
   ast::Type *LookupBuiltinType(Identifier identifier) const;
-
-  /// Is the type with name \a identifier an internal type?
-  /// \return A non-null pointer to the Type if an internal type; null otherwise
-  ast::Type *LookupInternalType(Identifier identifier) const;
 
   /// Is the function with name \a identifier a builtin function?
   /// \param[in] identifier The name of the function to check

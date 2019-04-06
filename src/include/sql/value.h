@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ctime>
+
 #include "util/common.h"
 
 namespace tpl::sql {
@@ -10,6 +12,10 @@ struct Val {
 
   explicit Val(bool is_null = false) noexcept : is_null(is_null) {}
 };
+
+// ---------------------------------------------------------
+// Boolean
+// ---------------------------------------------------------
 
 /// A SQL boolean value
 struct BoolVal : public Val {
@@ -38,6 +44,10 @@ struct BoolVal : public Val {
   }
 };
 
+// ---------------------------------------------------------
+// Integer
+// ---------------------------------------------------------
+
 /// An integral SQL value
 struct Integer : public Val {
   i64 val;
@@ -51,6 +61,10 @@ struct Integer : public Val {
     return val;
   }
 };
+
+// ---------------------------------------------------------
+// Decimal
+// ---------------------------------------------------------
 
 /// A decimal SQL value
 struct Decimal : public Val {
@@ -69,15 +83,52 @@ struct Decimal : public Val {
   }
 };
 
+// ---------------------------------------------------------
+// Strings
+// ---------------------------------------------------------
+
 /// A SQL string
-struct String : public Val {
+struct VarBuffer : public Val {
   u8 *str;
   u32 len;
 
-  String(u8 *str, u32 len) noexcept : Val(str == nullptr), str(str), len(len) {}
+  VarBuffer(u8 *str, u32 len) noexcept
+      : Val(str == nullptr), str(str), len(len) {}
 
   /// Return a NULL varchar/string
-  static String Null() { return String(nullptr, 0); }
+  static VarBuffer Null() { return VarBuffer(nullptr, 0); }
+};
+
+// ---------------------------------------------------------
+// Date
+// ---------------------------------------------------------
+
+struct Date : public Val {
+  i32 date_val;
+
+  explicit Date(i32 date) noexcept : Val(false), date_val(date) {}
+
+  static Date Null() {
+    Date date(0);
+    date.is_null = true;
+    return date;
+  }
+};
+
+// ---------------------------------------------------------
+// Timestamp
+// ---------------------------------------------------------
+
+struct Timestamp : public Val {
+  timespec time;
+
+  explicit Timestamp(timespec time) noexcept : Val(false), time(time) {}
+
+  static Timestamp Null() {
+    Timestamp timestamp({0, 0});
+    timestamp.is_null = true;
+    return timestamp;
+  }
 };
 
 }  // namespace tpl::sql
