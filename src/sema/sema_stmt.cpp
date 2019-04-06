@@ -109,7 +109,7 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
       attributes != nullptr &&
       attributes->Contains(context()->GetIdentifier("batch"))) {
     iter_type = ast::BuiltinType::Get(
-        context(), ast::BuiltinType::VectorProjectionIterator);
+        context(), ast::BuiltinType::VectorProjectionIterator)->PointerTo();
   } else {
     iter_type = GetRowTypeFromSqlSchema(table->schema());
     TPL_ASSERT(iter_type->IsStructType(), "Rows must be structs");

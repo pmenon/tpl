@@ -19,10 +19,8 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
   ast::Type *const bool_type =
       ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
 
-  //
   // If either the left or right expressions are SQL booleans, implicitly cast
   // to a primitive boolean type in preparation for the comparison.
-  //
 
   if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
     left = context()->node_factory()->NewImplicitCastExpr(
@@ -69,9 +67,8 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
   ast::Type *const sql_int_type =
       ast::BuiltinType::Get(context(), ast::BuiltinType::Integer);
 
-  //
-  // If either the left or right types aren't SQL integers, cast them up to one
-  //
+  // If either the left or right types aren't SQL integers, cast them to SQL
+  // integers to perform arithmetic operation
 
   if (!right->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
     right = context()->node_factory()->NewImplicitCastExpr(
@@ -217,15 +214,6 @@ void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
 void Sema::CheckBuiltinMapCall(ast::CallExpr *call) {}
 
 void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
-  //
-  // Filters have three arguments:
-  // 1. A VectorProjectionIterator;
-  // 2. A string representing the name of the column to filter;
-  // 3. Either a constant integer value or a string representing another column
-  //
-  // The return type of the filter is an int32
-  //
-
   if (call->NumCallArgs() != 3) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kMismatchedCallArgs,
@@ -235,7 +223,7 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
 
   // The first call argument must be a pointer to a VectorProjectionIterator
   ast::Type *vpi = call->arguments()[0]->type()->GetPointeeType();
-  if (!vpi ||
+  if (vpi == nullptr ||
       !vpi->IsSpecificBuiltin(ast::BuiltinType::VectorProjectionIterator)) {
     vpi = ast::BuiltinType::Get(context(),
                                 ast::BuiltinType::VectorProjectionIterator);
@@ -267,7 +255,7 @@ void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
 
   // First argument must be a pointer to a JoinHashTable
   auto *jht_type = call->arguments()[0]->type()->GetPointeeType();
-  if (!jht_type ||
+  if (jht_type == nullptr ||
       !jht_type->IsSpecificBuiltin(ast::BuiltinType::JoinHashTable)) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadArgToHashTableInit,
@@ -277,7 +265,7 @@ void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
 
   // Second argument must be a pointer to a RegionAllocator
   auto *region_type = call->arguments()[1]->type()->GetPointeeType();
-  if (!region_type ||
+  if (region_type == nullptr ||
       !region_type->IsSpecificBuiltin(ast::BuiltinType::RegionAlloc)) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadArgToHashTableInit,
@@ -308,7 +296,7 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
 
   // First argument is a pointer to a JoinHashTable
   auto *jht_type = call->arguments()[0]->type()->GetPointeeType();
-  if (!jht_type ||
+  if (jht_type == nullptr ||
       !jht_type->IsSpecificBuiltin(ast::BuiltinType::JoinHashTable)) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadArgToHashTableInsert,
@@ -330,7 +318,7 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
 
   // The first and only argument must be a pointer to a JoinHashTable
   auto *jht_type = call->arguments()[0]->type()->GetPointeeType();
-  if (!jht_type ||
+  if (jht_type == nullptr ||
       !jht_type->IsSpecificBuiltin(ast::BuiltinType::JoinHashTable)) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadArgToHashTableBuild,
@@ -352,7 +340,7 @@ void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
 
   // The first and only argument must be a pointer to a JoinHashTable
   auto *jht_type = call->arguments()[0]->type()->GetPointeeType();
-  if (!jht_type ||
+  if (jht_type == nullptr ||
       !jht_type->IsSpecificBuiltin(ast::BuiltinType::JoinHashTable)) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadArgToHashTableBuild,
@@ -367,7 +355,8 @@ void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
 void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
   // First, resolve all call arguments. If any fail, exit immediately.
   for (auto *arg : call->arguments()) {
-    if (!Resolve(arg)) {
+    auto *resolved_type = Resolve(arg);
+    if (resolved_type == nullptr) {
       return;
     }
   }
