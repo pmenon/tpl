@@ -5,6 +5,7 @@
 
 #include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
+#include "sql/hash_table_entry.h"
 #include "sql/join_hash_table.h"
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
