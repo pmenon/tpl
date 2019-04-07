@@ -14,6 +14,10 @@ namespace sema {
 class ErrorReporter;
 }  // namespace sema
 
+namespace sql {
+class Type;
+}  // namespace sql
+
 namespace ast {
 
 class AstNodeFactory;
@@ -22,7 +26,7 @@ class Type;
 class Context {
  public:
   /// Constructor
-  explicit Context(util::Region *region, sema::ErrorReporter *error_reporter);
+  Context(util::Region *region, sema::ErrorReporter *error_reporter);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(Context);
@@ -33,13 +37,12 @@ class Context {
   /// Return \a str as a unique string in this context
   Identifier GetIdentifier(llvm::StringRef str);
 
+  /// Convert the SQL type into the equivalent TPL type
+  Type *GetTplTypeFromSqlType(const sql::Type &sql_type);
+
   /// Is the type with name \a identifier a builtin type?
   /// \return A non-null pointer to the Type if a valid builtin; null otherwise
-  ast::Type *LookupBuiltinType(Identifier identifier) const;
-
-  /// Is the type with name \a identifier an internal type?
-  /// \return A non-null pointer to the Type if an internal type; null otherwise
-  ast::Type *LookupInternalType(Identifier identifier) const;
+  Type *LookupBuiltinType(Identifier identifier) const;
 
   /// Is the function with name \a identifier a builtin function?
   /// \param[in] identifier The name of the function to check
@@ -56,7 +59,7 @@ class Context {
   struct Implementation;
   Implementation *impl() const { return impl_.get(); }
 
-  ast::AstNodeFactory *node_factory() const { return node_factory_.get(); }
+  AstNodeFactory *node_factory() const { return node_factory_.get(); }
 
   sema::ErrorReporter *error_reporter() const { return error_reporter_; }
 
@@ -70,7 +73,7 @@ class Context {
   sema::ErrorReporter *error_reporter_;
 
   // The factory used for Ast nodes
-  std::unique_ptr<ast::AstNodeFactory> node_factory_;
+  std::unique_ptr<AstNodeFactory> node_factory_;
 
   // Pimpl
   std::unique_ptr<Implementation> impl_;

@@ -40,7 +40,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
     AstDumperImpl *impl;
   };
 
-  void DumpKind(ast::AstNode *node) {
+  void DumpKind(AstNode *node) {
     WithColor color(this, llvm::raw_ostream::CYAN);
     out_ << " " << node->kind_name();
   }
@@ -64,14 +64,14 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
     out_ << ">";
   }
 
-  void DumpNodeCommon(ast::AstNode *node) {
+  void DumpNodeCommon(AstNode *node) {
     DumpKind(node);
     DumpPointer(node);
     DumpPosition(node->position());
     out_ << " ";
   }
 
-  void DumpExpressionCommon(ast::Expr *expr) {
+  void DumpExpressionCommon(Expr *expr) {
     DumpNodeCommon(expr);
     if (expr->type() != nullptr) {
       DumpType(expr->type());
@@ -408,7 +408,7 @@ void AstDumperImpl::VisitMapTypeRepr(MapTypeRepr *node) {
   DumpExpr(node->val());
 }
 
-void AstDump::Dump(ast::AstNode *node) {
+void AstDump::Dump(AstNode *node) {
   AstDumperImpl print(node, fileno(stderr));
   print.Run();
 }

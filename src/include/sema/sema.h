@@ -60,7 +60,7 @@ class Sema : public ast::AstVisitor<Sema> {
   }
 
   // Convert the given schema into a row type
-  ast::Type *ConvertSchemaToType(const sql::Schema &schema);
+  ast::Type *GetRowTypeFromSqlSchema(const sql::Schema &schema);
 
   struct CheckResult {
     ast::Type *result_type;
@@ -88,6 +88,7 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinJoinHashTableInsert(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableBuild(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableFree(ast::CallExpr *call);
+  void CheckBuiltinRegionCall(ast::CallExpr *call);
 
   // -------------------------------------------------------
   // Scoping

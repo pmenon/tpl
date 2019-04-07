@@ -195,7 +195,8 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
     vpi_loop.LoopHeader();
 
     ast::Context *ctx = row_type->context();
-    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(ctx));
+    LocalVar cond = current_function()->NewLocal(
+        ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
     emitter()->Emit(Bytecode::VPIHasNext, cond, vpi);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    vpi_loop.break_label());
@@ -266,8 +267,8 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
     }
   }
 
-  ast::InternalType *table_iter_type = ast::InternalType::Get(
-      ctx, ast::InternalType::InternalKind::TableVectorIterator);
+  ast::Type *table_iter_type =
+      ast::BuiltinType::Get(ctx, ast::BuiltinType::TableVectorIterator);
   LocalVar table_iter =
       current_function()->NewLocal(table_iter_type, "table_iter");
 
@@ -286,8 +287,8 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   // Pull out the VPI from the TableVectorIterator we just initialized
   //
 
-  ast::InternalType *vpi_type = ast::InternalType::Get(
-      ctx, ast::InternalType::InternalKind::VectorProjectionIterator);
+  ast::Type *vpi_type =
+      ast::BuiltinType::Get(ctx, ast::BuiltinType::VectorProjectionIterator);
   LocalVar vpi = current_function()->NewLocal(vpi_type->PointerTo(), "vpi");
 
   emitter()->Emit(Bytecode::TableVectorIteratorGetVPI, vpi, table_iter);
@@ -303,7 +304,8 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
     LoopBuilder table_loop(this);
     table_loop.LoopHeader();
 
-    LocalVar cond = current_function()->NewLocal(ast::BoolType::Get(ctx));
+    LocalVar cond = current_function()->NewLocal(
+        ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
     emitter()->Emit(Bytecode::TableVectorIteratorNext, cond, table_iter);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    table_loop.break_label());
@@ -581,10 +583,9 @@ void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
 }
 
 void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
-                                                   ast::Builtin builtin) {
+                                                   const ast::Builtin builtin) {
   ast::Context *ctx = call->type()->context();
-  ast::Type *ret_type =
-      ast::IntegerType::Get(ctx, ast::IntegerType::IntKind::Int32);
+  ast::Type *ret_type = ast::BuiltinType::Get(ctx, ast::BuiltinType::Int32);
 
   LocalVar ret_val;
   if (execution_result() != nullptr) {
@@ -632,20 +633,45 @@ void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
   emitter()->EmitVPIVectorFilter(bytecode, ret_val, vpi, 0, val);
 }
 
-void BytecodeGenerator::VisitJoinHashTableInsertCallExpr(ast::CallExpr *call) {}
+void BytecodeGenerator::VisitBuiltinJoinHashTableCallExpr(
+    ast::CallExpr *call, const ast::Builtin builtin) {
+  switch (builtin) {
+    case ast::Builtin::HashTableInit: {
+      LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar region = VisitExpressionForRValue(call->arguments()[1]);
+      LocalVar entry_size = VisitExpressionForRValue(call->arguments()[2]);
+      emitter()->Emit(Bytecode::JoinHashTableInit, join_hash_table, region,
+                      entry_size);
+      break;
+    }
+    case ast::Builtin::HashTableInsert: {
+      break;
+    }
+    case ast::Builtin::HashTableBuild: {
+      LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::JoinHashTableBuild, join_hash_table);
+      break;
+    }
+    case ast::Builtin::HashTableFree: {
+      break;
+    }
+    default: { UNREACHABLE("Impossible bytecode"); }
+  }
+}
 
-void BytecodeGenerator::VisitJoinHashTableBuildCallExpr(ast::CallExpr *call) {
-  // The first and only argument is a pointer to the hash table. Evaluate it to
-  // get the address now
-  LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
-  emitter()->Emit(Bytecode::JoinHashTableBuild, join_hash_table);
+void BytecodeGenerator::VisitBuiltinRegionCallExpr(ast::CallExpr *call,
+                                                   const ast::Builtin builtin) {
+  LocalVar region = VisitExpressionForRValue(call->arguments()[0]);
+  auto region_op = builtin == ast::Builtin::RegionInit ? Bytecode::RegionInit
+                                                       : Bytecode::RegionFree;
+  emitter()->Emit(region_op, region);
 }
 
 void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
   ast::Builtin builtin;
 
   ast::Context *ctx = call->type()->context();
-  ctx->IsBuiltinFunction(call->FuncName(), &builtin);
+  ctx->IsBuiltinFunction(call->GetFuncName(), &builtin);
 
   switch (builtin) {
     case ast::Builtin::FilterEq:
@@ -657,12 +683,16 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitBuiltinFilterCallExpr(call, builtin);
       break;
     }
-    case ast::Builtin::HashTableInsert: {
-      VisitJoinHashTableInsertCallExpr(call);
+    case ast::Builtin::RegionInit:
+    case ast::Builtin::RegionFree: {
+      VisitBuiltinRegionCallExpr(call, builtin);
       break;
     }
-    case ast::Builtin::HashTableBuild: {
-      VisitJoinHashTableBuildCallExpr(call);
+    case ast::Builtin::HashTableInit:
+    case ast::Builtin::HashTableInsert:
+    case ast::Builtin::HashTableBuild:
+    case ast::Builtin::HashTableFree: {
+      VisitBuiltinJoinHashTableCallExpr(call, builtin);
       break;
     }
     default: { UNREACHABLE("Builtin not supported!"); }
@@ -700,7 +730,7 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   }
 
   // Emit call
-  const auto func_id = LookupFuncIdByName(call->FuncName().data());
+  const auto func_id = LookupFuncIdByName(call->GetFuncName().data());
   TPL_ASSERT(func_id != FunctionInfo::kInvalidFuncId, "Function not found!");
   emitter()->EmitCall(func_id, params);
 }
@@ -972,7 +1002,11 @@ void BytecodeGenerator::VisitPrimitiveCompareOpExpr(
 void BytecodeGenerator::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
   TPL_ASSERT(execution_result()->IsRValue(),
              "Comparison expressions must be R-Values!");
-  if (node->type()->IsSqlType()) {
+
+  const bool is_primitive_comparison =
+      node->type()->IsSpecificBuiltin(ast::BuiltinType::Bool);
+
+  if (!is_primitive_comparison) {
     VisitSqlCompareOpExpr(node);
   } else {
     VisitPrimitiveCompareOpExpr(node);
@@ -1214,9 +1248,9 @@ void BytecodeGenerator::VisitExpressionForTest(ast::Expr *expr,
 Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode,
                                                 ast::Type *type) {
   TPL_ASSERT(type->IsIntegerType(), "Type must be integer type");
-  auto *int_type = type->SafeAs<ast::IntegerType>();
-  auto int_kind = static_cast<u8>(int_type->int_kind());
-  return Bytecodes::FromByte(Bytecodes::ToByte(bytecode) + int_kind);
+  auto int_kind = type->SafeAs<ast::BuiltinType>()->kind();
+  auto kind_idx = static_cast<u8>(int_kind - ast::BuiltinType::Int8);
+  return Bytecodes::FromByte(Bytecodes::ToByte(bytecode) + kind_idx);
 }
 
 // static

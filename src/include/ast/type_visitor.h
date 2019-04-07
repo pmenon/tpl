@@ -15,11 +15,11 @@ class TypeVisitor {
       static_cast<const Type *>(type));
 
   RetType Visit(const Type *type) {
-    switch (type->kind()) {
+    switch (type->type_id()) {
       default: { llvm_unreachable("Impossible node type"); }
-#define T(kind)          \
-  case Type::Kind::kind: \
-    DISPATCH(kind)
+#define T(TypeClass)            \
+  case Type::TypeId::TypeClass: \
+    DISPATCH(TypeClass)
         TYPE_LIST(T)
 #undef T
     }

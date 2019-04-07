@@ -178,6 +178,10 @@ VM_OP_HOT bool OpJumpIfTrue(bool cond) { return cond; }
 
 VM_OP_HOT bool OpJumpIfFalse(bool cond) { return !cond; }
 
+VM_OP_COLD void OpRegionInit(tpl::util::Region *region);
+
+VM_OP_COLD void OpRegionFree(tpl::util::Region *region);
+
 VM_OP_HOT void OpCall(UNUSED u16 func_id, UNUSED u16 num_args) {}
 
 VM_OP_HOT void OpReturn() {}
@@ -476,8 +480,13 @@ VM_OP_HOT void OpIntegerSumAggregateFree(tpl::sql::IntegerSumAggregate *agg) {
   agg->~IntegerSumAggregate();
 }
 
+void OpAggregationHashTableInit(tpl::sql::AggregationHashTable *agg_table,
+                                tpl::util::Region *region, u32 entry_size);
+
+void OpAggregationHashTableFree(tpl::sql::AggregationHashTable *agg_table);
+
 // ---------------------------------------------------------
-// SQL Hash Joins
+// Hash Joins
 // ---------------------------------------------------------
 
 void OpJoinHashTableInit(tpl::sql::JoinHashTable *join_hash_table,

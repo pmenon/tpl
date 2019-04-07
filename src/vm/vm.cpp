@@ -377,6 +377,18 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(RegionInit) : {
+    auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
+    OpRegionInit(region);
+    DISPATCH_NEXT();
+  }
+
+  OP(RegionFree) : {
+    auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
+    OpRegionFree(region);
+    DISPATCH_NEXT();
+  }
+
   OP(Call) : {
     ip = ExecuteCall(ip, frame);
     DISPATCH_NEXT();
@@ -652,6 +664,22 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(AggregationHashTableInit) : {
+    auto *agg_table =
+        frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
+    auto tuple_size = frame->LocalAt<u32>(READ_LOCAL_ID());
+    OpAggregationHashTableInit(agg_table, region, tuple_size);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationHashTableFree) : {
+    auto *agg_table =
+        frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    OpAggregationHashTableFree(agg_table);
+    DISPATCH_NEXT();
+  }
+
   // -------------------------------------------------------
   // Hash Joins
   // -------------------------------------------------------
@@ -660,7 +688,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto *join_hash_table =
         frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
     auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
-    auto tuple_size = READ_UIMM4();
+    auto tuple_size = frame->LocalAt<u32>(READ_LOCAL_ID());
     OpJoinHashTableInit(join_hash_table, region, tuple_size);
     DISPATCH_NEXT();
   }

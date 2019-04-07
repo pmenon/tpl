@@ -21,10 +21,8 @@ void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
     return;
   }
 
-  /*
-   * The left and right types are no the same. If both types are integral, see
-   * if we can issue an integral cast.
-   */
+  // The left and right types are no the same. If both types are integral, see
+  // if we can issue an integral cast.
 
   if (src_type->IsIntegerType() || dest_type->IsIntegerType()) {
     auto *cast_expr = context()->node_factory()->NewImplicitCastExpr(
@@ -101,21 +99,19 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
     return;
   }
 
-  //
   // Now we resolve the type of the iterable. If the user wanted a row-at-a-time
   // iteration, the type becomes a struct-equivalent representation of the row
   // as stored in the table. If the user wanted a vector-at-a-time iteration,
   // the iterable type becomes a VectorProjectionIterator.
-  //
 
   ast::Type *iter_type = nullptr;
   if (auto *attributes = node->attributes();
       attributes != nullptr &&
       attributes->Contains(context()->GetIdentifier("batch"))) {
-    iter_type = ast::InternalType::Get(
-        context(), ast::InternalType::InternalKind::VectorProjectionIterator);
+    iter_type = ast::BuiltinType::Get(
+        context(), ast::BuiltinType::VectorProjectionIterator)->PointerTo();
   } else {
-    iter_type = ConvertSchemaToType(table->schema());
+    iter_type = GetRowTypeFromSqlSchema(table->schema());
     TPL_ASSERT(iter_type->IsStructType(), "Rows must be structs");
   }
 
@@ -139,22 +135,23 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
     return;
   }
 
-  /*
-   * If the result type of the evaluated condition is a SQL boolean value, we
-   * implicitly cast it to a native boolean value before we feed it into the
-   * if-condition.
-   */
+  // If the result type of the evaluated condition is a SQL boolean value, we
+  // implicitly cast it to a native boolean value before we feed it into the
+  // if-condition.
 
-  if (auto *type = node->condition()->type()->SafeAs<ast::SqlType>();
-      type != nullptr && type->sql_type().type_id() == sql::TypeId::Boolean) {
+  if (node->condition()->type()->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
+    // A primitive boolean
+    auto *bool_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
+
+    // Perform implicit cast from SQL boolean to primitive boolean
     ast::Expr *cond = node->condition();
     cond = context()->node_factory()->NewImplicitCastExpr(
-        cond->position(), ast::CastKind::SqlBoolToBool,
-        ast::BoolType::Get(context()), cond);
-    cond->set_type(ast::BoolType::Get(context()));
+        cond->position(), ast::CastKind::SqlBoolToBool, bool_type, cond);
+    cond->set_type(bool_type);
     node->set_condition(cond);
   }
 
+  // If the conditional isn't an explicit boolean type, error
   if (!node->condition()->type()->IsBoolType()) {
     error_reporter()->Report(node->condition()->position(),
                              ErrorMessages::kNonBoolIfCondition);
@@ -176,20 +173,16 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
     return;
   }
 
-  /*
-   * If there's an expression with the return clause, resolve it now. We'll
-   * check later if we need it.
-   */
+  // If there's an expression with the return clause, resolve it now. We'll
+  // check later if we need it.
 
   ast::Type *return_type = nullptr;
   if (node->HasExpressionValue()) {
     return_type = Resolve(node->ret());
   }
 
-  /*
-   * If the function has a nil-type, we just need to make sure this return
-   * statement doesn't have an attached expression. If it does, that's an error
-   */
+  // If the function has a nil-type, we just need to make sure this return
+  // statement doesn't have an attached expression. If it does, that's an error
 
   auto *func_type = current_function()->type()->As<ast::FunctionType>();
 
@@ -202,17 +195,15 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
     return;
   }
 
-  /*
-   * The function has a non-nil return type. So, we need to make sure the
-   * resolved type of the expression in this return is compatible with the
-   * return type of the function.
-   */
+  // The function has a non-nil return type. So, we need to make sure the
+  // resolved type of the expression in this return is compatible with the
+  // return type of the function.
 
   if (return_type != func_type->return_type()) {
     // It's possible the return type is null (either because there was an error
     // or there wasn't an expression)
     if (return_type == nullptr) {
-      return_type = ast::NilType::Get(context());
+      return_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Nil);
     }
 
     error_reporter()->Report(node->position(),

@@ -346,7 +346,7 @@ class AssignmentStmt : public Stmt {
   friend class sema::Sema;
 
   // Used for implicit casts
-  void set_source(ast::Expr *source) { src_ = source; }
+  void set_source(Expr *source) { src_ = source; }
 
  private:
   Expr *dest_;
@@ -370,7 +370,7 @@ class BlockStmt : public Stmt {
 
   bool IsEmpty() const { return statements_.empty(); }
 
-  ast::Stmt *LastStmt() { return (IsEmpty() ? nullptr : statements_.back()); }
+  Stmt *LastStmt() { return (IsEmpty() ? nullptr : statements_.back()); }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::BlockStmt;
@@ -464,11 +464,10 @@ class ForStmt : public IterationStmt {
 
 class Attributes : public util::RegionObject {
  public:
-  explicit Attributes(
-      util::RegionUnorderedMap<ast::Identifier, ast::Expr *> &&map)
+  explicit Attributes(util::RegionUnorderedMap<Identifier, Expr *> &&map)
       : map_(std::move(map)) {}
 
-  ast::Expr *Find(ast::Identifier identifier) const {
+  Expr *Find(Identifier identifier) const {
     if (const auto iter = map_.find(identifier); iter != map_.end()) {
       return iter->second;
     }
@@ -476,12 +475,12 @@ class Attributes : public util::RegionObject {
     return nullptr;
   }
 
-  bool Contains(ast::Identifier identifier) const {
+  bool Contains(Identifier identifier) const {
     return Find(identifier) != nullptr;
   }
 
  private:
-  util::RegionUnorderedMap<ast::Identifier, ast::Expr *> map_;
+  util::RegionUnorderedMap<Identifier, Expr *> map_;
 };
 
 /**
@@ -669,7 +668,7 @@ class CallExpr : public Expr {
         call_kind_(CallKind::Regular) {}
 
   /// Return the name of the function this node is calling
-  ast::Identifier FuncName() const;
+  Identifier GetFuncName() const;
 
   /// Return the number of arguments to the function this node is calling
   u32 NumCallArgs() const { return static_cast<u32>(args_.size()); }
@@ -822,7 +821,7 @@ class ImplicitCastExpr : public Expr {
   friend class AstNodeFactory;
 
   ImplicitCastExpr(const SourcePosition &pos, CastKind cast_kind,
-                   ast::Type *target_type, Expr *input)
+                   Type *target_type, Expr *input)
       : Expr(Kind::ImplicitCastExpr, pos, target_type),
         cast_kind_(cast_kind),
         input_(input) {}

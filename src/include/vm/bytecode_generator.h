@@ -57,8 +57,9 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   // Dispatched from VisitBuiltinCallExpr() to handle the various builtin
   // functions, including filtering, hash table interaction, sorting etc.
   void VisitBuiltinFilterCallExpr(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitJoinHashTableInsertCallExpr(ast::CallExpr *call);
-  void VisitJoinHashTableBuildCallExpr(ast::CallExpr *call);
+  void VisitBuiltinJoinHashTableCallExpr(ast::CallExpr *call,
+                                         ast::Builtin builtin);
+  void VisitBuiltinRegionCallExpr(ast::CallExpr *call, ast::Builtin builtin);
 
   // Dispatched from VisitCallExpr() for handling builtins
   void VisitBuiltinCallExpr(ast::CallExpr *call);
