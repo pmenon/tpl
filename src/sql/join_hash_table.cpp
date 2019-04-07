@@ -556,7 +556,9 @@ void JoinHashTable::LookupBatchInGenericHashTableInternal(
   for (u32 idx = 0, prefetch_idx = kPrefetchDistance; idx < num_tuples;
        idx++, prefetch_idx++) {
     if constexpr (Prefetch) {
-      generic_hash_table_.PrefetchChainHead<true>(hashes[prefetch_idx]);
+      if (TPL_LIKELY(prefetch_idx < num_tuples)) {
+        generic_hash_table_.PrefetchChainHead<true>(hashes[prefetch_idx]);
+      }
     }
 
     results[idx] = generic_hash_table_.FindChainHead(hashes[idx]);
@@ -581,7 +583,9 @@ void JoinHashTable::LookupBatchInConciseHashTableInternal(
   for (u32 idx = 0, prefetch_idx = kPrefetchDistance; idx < num_tuples;
        idx++, prefetch_idx++) {
     if constexpr (Prefetch) {
-      concise_hash_table_.PrefetchSlotGroup<true>(hashes[prefetch_idx]);
+      if (TPL_LIKELY(prefetch_idx < num_tuples)) {
+        concise_hash_table_.PrefetchSlotGroup<true>(hashes[prefetch_idx]);
+      }
     }
 
     const auto [found, entry_idx] = concise_hash_table_.Lookup(hashes[idx]);
