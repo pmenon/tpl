@@ -1,5 +1,7 @@
 #include "vm/bytecode_iterator.h"
 
+#include <vector>
+
 #include "vm/bytecode_function_info.h"
 #include "vm/bytecode_traits.h"
 

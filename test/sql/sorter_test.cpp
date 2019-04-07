@@ -1,9 +1,11 @@
-#include "tpl_test.h"
-
 #include <algorithm>
+#include <functional>
+#include <limits>
 #include <queue>
 #include <random>
 #include <vector>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "ips4o/ips4o.hpp"
 

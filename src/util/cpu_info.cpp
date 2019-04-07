@@ -1,5 +1,9 @@
 #include "util/cpu_info.h"
 
+#include <algorithm>
+#include <memory>
+#include <string>
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -59,7 +63,7 @@ void CpuInfo::InitCpuInfo() {
   // On MacOS, use sysctl
   {
     size_t size = sizeof(num_cores_);
-    if (sysctlbyname("hw.ncpu", &num_cores_, &size, NULL, 0) < 0) {
+    if (sysctlbyname("hw.ncpu", &num_cores_, &size, nullptr, 0) < 0) {
       LOG_ERROR("Cannot read # CPUs: {}", strerror(errno));
     }
   }
@@ -67,10 +71,10 @@ void CpuInfo::InitCpuInfo() {
   {
     u64 freq = 0;
     size_t size = sizeof(freq);
-    if (sysctlbyname("hw.cpufrequency", &freq, &size, NULL, 0) < 0) {
+    if (sysctlbyname("hw.cpufrequency", &freq, &size, nullptr, 0) < 0) {
       LOG_ERROR("Cannot read CPU Mhz: {}", strerror(errno));
     }
-    cpu_mhz_ = double(freq) / 1000000.0;
+    cpu_mhz_ = static_cast<double>(freq) / 1000000.0;
   }
 #else
   // On linux, just read /proc/cpuinfo
@@ -101,9 +105,9 @@ void CpuInfo::InitCacheInfo() {
 #ifdef __APPLE__
   // Lookup cache sizes
   std::size_t len = 0;
-  sysctlbyname("hw.cachesize", NULL, &len, NULL, 0);
+  sysctlbyname("hw.cachesize", nullptr, &len, nullptr, 0);
   auto data = std::make_unique<u64[]>(len);
-  sysctlbyname("hw.cachesize", data.get(), &len, NULL, 0);
+  sysctlbyname("hw.cachesize", data.get(), &len, nullptr, 0);
   TPL_ASSERT(len / sizeof(uint64_t) >= 3, "Expected three levels of cache!");
 
   // Copy data
@@ -114,9 +118,9 @@ void CpuInfo::InitCacheInfo() {
   // Lookup cache line sizes
   std::size_t linesize;
   std::size_t sizeof_linesize = sizeof(linesize);
-  sysctlbyname("hw.cachelinesize", &linesize, &sizeof_linesize, NULL, 0);
-  for (u32 idx = 0; idx < kNumCacheLevels; idx++) {
-    cache_line_sizes_[idx] = linesize;
+  sysctlbyname("hw.cachelinesize", &linesize, &sizeof_linesize, nullptr, 0);
+  for (auto &cache_line_size : cache_line_sizes_) {
+    cache_line_size = linesize;
   }
 #else
   // Use sysconf to determine cache sizes
@@ -142,9 +146,9 @@ std::string CpuInfo::PrettyPrintInfo() const {
   ss << "  Cores:  " << num_cores_ << std::endl;
   ss << "  Mhz:    " << std::fixed << std::setprecision(2) << cpu_mhz_ << std::endl;
   ss << "  Caches: " << std::endl;
-  ss << "    L1: " << (cache_sizes_[L1_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L1_CACHE] << " byte line)" << std::endl;
-  ss << "    L2: " << (cache_sizes_[L2_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L2_CACHE] << " byte line)" << std::endl;
-  ss << "    L3: " << (cache_sizes_[L3_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L3_CACHE] << " byte line)" << std::endl;
+  ss << "    L1: " << (cache_sizes_[L1_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L1_CACHE] << " byte line)" << std::endl;  // NOLINT
+  ss << "    L2: " << (cache_sizes_[L2_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L2_CACHE] << " byte line)" << std::endl;  // NOLINT
+  ss << "    L3: " << (cache_sizes_[L3_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L3_CACHE] << " byte line)" << std::endl;  // NOLINT
   // clang-format on
 
   ss << "Features: ";

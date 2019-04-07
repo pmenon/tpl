@@ -1,6 +1,7 @@
 #include "sema/error_reporter.h"
 
 #include <cstring>
+#include <string>
 
 #include "ast/type.h"
 #include "ast/type_visitor.h"
@@ -10,6 +11,7 @@ namespace tpl::sema {
 
 namespace {
 #define F(id, str, arg_types) str,
+// NOLINTNEXTLINE(bugprone-suspicious-missing-comma)
 constexpr const char *error_strings[] = {MESSAGE_LIST(F)};
 #undef F
 
@@ -75,7 +77,7 @@ std::string ErrorReporter::MessageWithArgs::FormatMessage() const {
     args_[arg_idx++].FormatMessageArgument(msg);
 
     fmt = pos + 1;
-    while (std::isalnum(*fmt)) {
+    while (std::isalnum(*fmt) != 0) {
       fmt++;
     }
   }

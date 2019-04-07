@@ -1,5 +1,8 @@
 #include "sql/vector_projection.h"
 
+#include <memory>
+#include <vector>
+
 #include "sql/column_vector_iterator.h"
 #include "util/bit_util.h"
 

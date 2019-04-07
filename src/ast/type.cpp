@@ -1,5 +1,8 @@
 #include "ast/type.h"
 
+#include <unordered_map>
+#include <utility>
+
 #include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
 #include "sql/join_hash_table.h"
@@ -14,7 +17,7 @@ namespace tpl::ast {
 // Type
 // ---------------------------------------------------------
 
-// TODO: Fix me
+// TODO(pmenon): Fix me
 bool Type::IsArithmetic() const {
   return IsIntegerType() || IsSpecificBuiltin(BuiltinType::Integer) ||
          IsFloatType() || IsSpecificBuiltin(BuiltinType::Decimal);

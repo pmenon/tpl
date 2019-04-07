@@ -3,6 +3,7 @@
 #include <csignal>
 #include <cstdio>
 #include <iostream>
+#include <memory>
 #include <string>
 
 #include "llvm/Support/CommandLine.h"
@@ -15,7 +16,7 @@
 #include "sema/error_reporter.h"
 #include "sema/sema.h"
 #include "sql/catalog.h"
-#include "tpl.h"
+#include "tpl.h"  // NOLINT
 #include "util/cpu_info.h"
 #include "util/timer.h"
 #include "vm/bytecode_generator.h"
@@ -28,10 +29,10 @@
 // ---------------------------------------------------------
 
 // clang-format off
-llvm::cl::OptionCategory kTplOptionsCategory("TPL Compiler Options", "Options for controlling the TPL compilation process.");
-llvm::cl::opt<std::string> kInputFile(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::init(""), llvm::cl::cat(kTplOptionsCategory));
-llvm::cl::opt<bool> kPrintAst("print-ast", llvm::cl::desc("Print the programs AST"), llvm::cl::cat(kTplOptionsCategory));
-llvm::cl::opt<bool> kPrintTbc("print-tbc", llvm::cl::desc("Print the generated TPL Bytecode"), llvm::cl::cat(kTplOptionsCategory));
+llvm::cl::OptionCategory kTplOptionsCategory("TPL Compiler Options", "Options for controlling the TPL compilation process.");  // NOLINT
+llvm::cl::opt<std::string> kInputFile(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::init(""), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
+llvm::cl::opt<bool> kPrintAst("print-ast", llvm::cl::desc("Print the programs AST"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
+llvm::cl::opt<bool> kPrintTbc("print-tbc", llvm::cl::desc("Print the generated TPL Bytecode"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 // clang-format on
 
 namespace tpl {
@@ -203,7 +204,7 @@ void SignalHandler(i32 sig_num) {
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv) {  // NOLINT(bugprone-exception-escape)
   // Parse options
   llvm::cl::HideUnrelatedOptions(kTplOptionsCategory);
   llvm::cl::ParseCommandLineOptions(argc, argv);

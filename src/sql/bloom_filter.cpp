@@ -39,7 +39,7 @@ void BloomFilter::Init(util::Region *region, u32 num_elems) {
 }
 
 void BloomFilter::Add(hash_t hash) {
-  u32 block_idx = static_cast<u32>(hash & block_mask_);
+  auto block_idx = static_cast<u32>(hash & block_mask_);
 
   auto block = util::simd::Vec8().Load(blocks_[block_idx]);
   auto alt_hash = util::simd::Vec8(static_cast<u32>(hash >> 32));
@@ -60,7 +60,7 @@ void BloomFilter::Add(hash_t hash) {
 }
 
 bool BloomFilter::Contains(hash_t hash) const {
-  u32 block_idx = static_cast<u32>(hash & block_mask_);
+  auto block_idx = static_cast<u32>(hash & block_mask_);
 
   auto block = util::simd::Vec8().Load(blocks_[block_idx]);
   auto alt_hash = util::simd::Vec8(static_cast<u32>(hash >> 32));
@@ -84,7 +84,7 @@ u64 BloomFilter::GetTotalBitsSet() const {
     // Note that we process 64-bits at a time, thus we only need four iterations
     // over a block. We don't use SIMD here because this function isn't
     // performance-critical.
-    const u64 *const chunk = reinterpret_cast<const u64 *>(blocks_[i]);
+    const auto *const chunk = reinterpret_cast<const u64 *>(blocks_[i]);
     for (u32 j = 0; j < 4; j++) {
       count += util::BitUtil::CountBits(chunk[j]);
     }

@@ -1,5 +1,7 @@
 #include "logging/logger.h"
 
+#include <memory>
+
 namespace tpl::logging {
 
 std::shared_ptr<spdlog::sinks::stdout_sink_mt> default_sink;

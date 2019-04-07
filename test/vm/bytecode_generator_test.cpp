@@ -1,4 +1,6 @@
-#include "tpl_test.h"
+#include <string>
+
+#include "tpl_test.h"  // NOLINT
 
 // From test
 #include "vm/bytecode_compiler.h"

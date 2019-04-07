@@ -1,6 +1,7 @@
-#include "tpl_test.h"
-
 #include <random>
+#include <vector>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "sql/join_hash_table.h"
 #include "util/hash.h"
@@ -64,7 +65,8 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
 
   // The table
   for (const auto &tuple : tuples) {
-    auto hash_val = util::Hasher::Hash((const u8 *)&tuple.a, sizeof(tuple.a));
+    auto hash_val = util::Hasher::Hash(reinterpret_cast<const u8 *>(&tuple.a),
+                                       sizeof(tuple.a));
     auto *space = join_hash_table.AllocInputTuple(hash_val);
     *reinterpret_cast<Tuple *>(space) = tuple;
   }
@@ -98,7 +100,8 @@ void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
 
   for (u32 rep = 0; rep < dup_scale_factor; rep++) {
     for (u32 i = 0; i < num_tuples; i++) {
-      auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
+      auto hash_val =
+          util::Hasher::Hash(reinterpret_cast<const u8 *>(&i), sizeof(i));
       auto *space = join_hash_table.AllocInputTuple(hash_val);
       auto *tuple = reinterpret_cast<Tuple *>(space);
       tuple->a = i;
@@ -116,12 +119,14 @@ void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
   //
 
   for (u32 i = 0; i < num_tuples; i++) {
-    auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
+    auto hash_val =
+        util::Hasher::Hash(reinterpret_cast<const u8 *>(&i), sizeof(i));
     Tuple probe_tuple = {i, 0, 0, 0};
     u32 count = 0;
     const HashTableEntry *entry = nullptr;
     for (auto iter = join_hash_table.Lookup<UseConciseHashTable>(hash_val);
-         (entry = iter.NextMatch(TupleKeyEq, nullptr, (void *)&probe_tuple));) {
+         (entry = iter.NextMatch(TupleKeyEq, nullptr,
+                                 reinterpret_cast<void *>(&probe_tuple)));) {
       auto *matched = reinterpret_cast<const Tuple *>(entry->payload);
       EXPECT_EQ(i, matched->a);
       count++;
@@ -136,10 +141,12 @@ void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
   //
 
   for (u32 i = num_tuples; i < num_tuples + 1000; i++) {
-    auto hash_val = util::Hasher::Hash((const u8 *)&i, sizeof(i));
+    auto hash_val =
+        util::Hasher::Hash(reinterpret_cast<const u8 *>(&i), sizeof(i));
     Tuple probe_tuple = {i, 0, 0, 0};
     for (auto iter = join_hash_table.Lookup<UseConciseHashTable>(hash_val);
-         iter.NextMatch(TupleKeyEq, nullptr, (void *)&probe_tuple);) {
+         iter.NextMatch(TupleKeyEq, nullptr,
+                        reinterpret_cast<void *>(&probe_tuple));) {
       FAIL() << "Should not find any matches for key [" << i
              << "] that was not inserted into the join hash table";
     }
@@ -175,8 +182,8 @@ TEST_F(JoinHashTableTest, DISABLED_PerfTest) {
     std::random_device random;
     for (u32 i = 0; i < num_tuples; i++) {
       auto key = random();
-      auto hash_val = util::Hasher::Hash((const u8 *)&key, sizeof(key),
-                                         util::HashMethod::Crc);
+      auto hash_val = util::Hasher::Hash(reinterpret_cast<const u8 *>(&key),
+                                         sizeof(key), util::HashMethod::Crc);
       auto *space = join_hash_table.AllocInputTuple(hash_val);
       auto *tuple = reinterpret_cast<Tuple *>(space);
 

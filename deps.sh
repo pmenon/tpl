@@ -35,7 +35,7 @@ install() {
     LINUX)
       version=$(cat /etc/os-release | grep VERSION_ID | cut -d '"' -f 2)
       case $version in
-        18.10) ;&
+        18.10) install_linux ;;
         18.04) install_linux ;;
         *) give_up ;;
       esac
@@ -68,7 +68,7 @@ install_mac() {
   # Install packages.
   brew ls --versions cmake || brew install cmake
   brew ls --versions git || brew install git
-  (brew ls --versions llvm | grep 6) || brew install llvm@6
+  (brew ls --versions llvm | grep 7) || brew install llvm@7
 }
 
 install_linux() {

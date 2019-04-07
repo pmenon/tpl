@@ -1,6 +1,9 @@
-#include "tpl_test.h"
-
+#include <algorithm>
+#include <memory>
 #include <random>
+#include <vector>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "sql/join_hash_table.h"
 #include "sql/join_hash_table_vector_lookup.h"
@@ -19,8 +22,9 @@ struct Tuple {
 
 template <u8 N>
 static inline hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
-  const u32 *key_ptr = vpi->Get<u32, false>(0, nullptr);
-  return util::Hasher::Hash((const u8 *)key_ptr, sizeof(Tuple<N>::build_key));
+  const auto *key_ptr = vpi->Get<u32, false>(0, nullptr);
+  return util::Hasher::Hash(reinterpret_cast<const u8 *>(key_ptr),
+                            sizeof(Tuple<N>::build_key));
 }
 
 /// The function to determine whether two tuples have equivalent keys
@@ -52,7 +56,8 @@ std::unique_ptr<const JoinHashTable> InsertAndBuild(util::Region *region,
   // Insert
   for (u32 i = 0; i < num_tuples; i++) {
     auto key = key_gen();
-    auto hash = util::Hasher::Hash((const u8 *)&key, sizeof(key));
+    auto hash =
+        util::Hasher::Hash(reinterpret_cast<const u8 *>(&key), sizeof(key));
     auto *tuple = reinterpret_cast<Tuple<N> *>(jht->AllocInputTuple(hash));
     tuple->build_key = key;
   }
@@ -109,7 +114,7 @@ TEST_F(JoinHashTableVectorLookupTest, SimpleGenericLookupTest) {
     u32 size = std::min(kDefaultVectorSize, num_probe - i);
 
     // Setup VP
-    vp.ResetFromRaw((byte *)&probe_keys[i], nullptr, 0, size);
+    vp.ResetFromRaw(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0, size);
     vpi.SetVectorProjection(&vp);
 
     // Lookup
@@ -156,7 +161,8 @@ TEST_F(JoinHashTableVectorLookupTest, DISABLED_PerfLookupTest) {
       u32 size = std::min(kDefaultVectorSize, num_probe - i);
 
       // Setup VP
-      vp.ResetFromRaw((byte *)&probe_keys[i], nullptr, 0, size);
+      vp.ResetFromRaw(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0,
+                      size);
       vpi.SetVectorProjection(&vp);
 
       // Lookup

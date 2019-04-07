@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <vector>
 
 #include "bandit/agent.h"
 #include "bandit/multi_armed_bandit.h"

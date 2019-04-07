@@ -21,7 +21,7 @@ class Schema {
                ColumnEncoding encoding = ColumnEncoding::None)
         : name(std::move(name)), type(type), encoding(encoding) {}
 
-    // TODO: Fix me to change based on encoding
+    // TODO(pmenon): Fix me to change based on encoding
     u32 StorageSize() const {
       switch (type.type_id()) {
         case TypeId::Boolean: {

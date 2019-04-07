@@ -2,6 +2,8 @@
 
 #include <functional>
 #include <iosfwd>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "llvm/Support/Memory.h"

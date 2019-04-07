@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "ast/ast.h"
 #include "ast/context.h"
 #include "parsing/parser.h"

@@ -1,5 +1,13 @@
 #include "ast/context.h"
 
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <tuple>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
@@ -196,7 +204,10 @@ Identifier Context::GetIdentifier(llvm::StringRef str) {
     return Identifier(nullptr);
   }
 
-  auto iter = impl()->string_table.insert(std::make_pair(str, char(0))).first;
+  auto iter =
+      impl()
+          ->string_table.insert(std::make_pair(str, static_cast<char>(0)))
+          .first;
   return Identifier(iter->getKeyData());
 }
 

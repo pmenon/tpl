@@ -1,8 +1,12 @@
 #include "vm/bytecode_module.h"
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <numeric>
+#include <string>
+#include <utility>
+#include <vector>
 
 #define XBYAK_NO_OP_NAMES
 #include "xbyak/xbyak.h"
@@ -139,7 +143,7 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
 
     for (u32 idx = 0; idx < func_type->num_params(); idx++, local_idx++) {
       const auto &local_info = func_.locals()[local_idx];
-      u32 use_64bit_reg = static_cast<u32>(local_info.size() > sizeof(u32));
+      auto use_64bit_reg = static_cast<u32>(local_info.size() > sizeof(u32));
       mov(ptr[rsp + displacement + local_info.offset()],
           arg_regs[use_64bit_reg][idx]);
     }
@@ -234,7 +238,8 @@ void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
 
   u64 max_local_len = 0;
   for (const auto &local : func.locals()) {
-    max_local_len = std::max(max_local_len, (u64)local.name().length());
+    max_local_len =
+        std::max(max_local_len, static_cast<u64>(local.name().length()));
   }
   for (const auto &local : func.locals()) {
     if (local.is_parameter()) {

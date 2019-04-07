@@ -15,8 +15,7 @@ class BytecodeEmitter {
  public:
   /// Construct a bytecode emitter instance that emits bytecode operations into
   /// the provided bytecode vector
-  explicit BytecodeEmitter(std::vector<u8> &bytecode) noexcept
-      : bytecode_(bytecode) {}
+  explicit BytecodeEmitter(std::vector<u8> &bytecode) : bytecode_(bytecode) {}
 
   /// Cannot copy or move this class
   DISALLOW_COPY_AND_MOVE(BytecodeEmitter);

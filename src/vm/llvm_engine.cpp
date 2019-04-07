@@ -1,5 +1,12 @@
 #include "vm/llvm_engine.h"
 
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -156,7 +163,7 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
       break;
     }
     case ast::Type::TypeId::MapType: {
-      // TODO: me
+      // TODO(pmenon): me
       break;
     }
     case ast::Type::TypeId::StructType: {
@@ -364,8 +371,9 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
   // TPL programs. At the moment, we rely on LLVM to discover all CPU features
   // e.g., AVX2 or AVX512, and we make no assumptions about symbol relocations.
   //
-  // TODO: This may change with LLVM8 that comes with TargetMachineBuilders
-  // TODO: Alter the flags as need be
+  // TODO(pmenon): This may change with LLVM8 that comes with
+  // TargetMachineBuilders
+  // TODO(pmenon): Alter the flags as need be
   //
 
   {

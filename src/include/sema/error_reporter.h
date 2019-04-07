@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "ast/identifier.h"
@@ -26,7 +28,8 @@ struct PassArgument {
 
 class ErrorReporter {
  public:
-  ErrorReporter(util::Region *region) : region_(region), errors_(region) {}
+  explicit ErrorReporter(util::Region *region)
+      : region_(region), errors_(region) {}
 
   // Record an error
   template <typename... ArgTypes>

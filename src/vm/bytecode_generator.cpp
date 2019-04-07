@@ -1,5 +1,10 @@
 #include "vm/bytecode_generator.h"
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "ast/builtins.h"
 #include "ast/context.h"
 #include "ast/type.h"
@@ -763,7 +768,7 @@ void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
       break;
     }
     case ast::LitExpr::LitKind::Boolean: {
-      emitter()->EmitAssignImm1(target, node->bool_val());
+      emitter()->EmitAssignImm1(target, static_cast<i8>(node->bool_val()));
       break;
     }
     case ast::LitExpr::LitKind::Int: {
@@ -1254,6 +1259,7 @@ std::unique_ptr<BytecodeModule> BytecodeGenerator::Compile(
   BytecodeGenerator generator;
   generator.Visit(root);
 
+  // NOLINTNEXTLINE
   return std::make_unique<BytecodeModule>(name, std::move(generator.bytecode_),
                                           std::move(generator.functions_));
 }

@@ -1,5 +1,9 @@
 #include "parsing/parser.h"
 
+#include <tuple>
+#include <unordered_set>
+#include <utility>
+
 #include "sema/error_reporter.h"
 
 namespace tpl::parsing {
@@ -27,7 +31,7 @@ ast::AstNode *Parser::Parse() {
   return node_factory()->NewFile(start_pos, std::move(decls));
 }
 
-void Parser::Sync(std::unordered_set<Token::Type> &s) {
+void Parser::Sync(const std::unordered_set<Token::Type> &s) {
   Next();
   while (peek() != Token::Type::EOS) {
     if (s.count(peek()) > 0) {
@@ -239,7 +243,7 @@ class Parser::ForHeader {
         iter(iter),
         attributes(attributes) {}
 
-  explicit ForHeader()
+  ForHeader()
       : ForHeader(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr) {}
 
  private:
@@ -326,11 +330,9 @@ ast::Stmt *Parser::ParseForStmt() {
   if (header.IsStandard()) {
     const auto &[init, cond, next] = header.GetForElements();
     return node_factory()->NewForStmt(position, init, cond, next, body);
-  } else {
-    const auto &[target, iter, attributes] = header.GetForInElements();
-    return node_factory()->NewForInStmt(position, target, iter, attributes,
-                                        body);
   }
+  const auto &[target, iter, attributes] = header.GetForInElements();
+  return node_factory()->NewForInStmt(position, target, iter, attributes, body);
 }
 
 ast::Stmt *Parser::ParseIfStmt() {

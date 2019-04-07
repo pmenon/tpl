@@ -1,7 +1,8 @@
-#include "tpl_test.h"
-
 #include <random>
 #include <unordered_set>
+#include <vector>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "sql/bloom_filter.h"
 #include "util/hash.h"
@@ -57,17 +58,20 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
   util::Region tmp("filter");
   BloomFilter filter(&tmp, num_filter_elems);
   for (const auto elem : insertions) {
-    filter.Add(util::Hasher::Hash((const u8 *)&elem, sizeof(elem)));
+    filter.Add(
+        util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
   }
 
   // All inserted elements **must** be present in filter
   for (const auto elem : insertions) {
-    filter.Add(util::Hasher::Hash((const u8 *)&elem, sizeof(elem)));
+    filter.Add(
+        util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
   }
 
-  double bits_per_elem = (double)filter.GetSizeInBits() / num_filter_elems;
-  double bit_set_prob =
-      (double)filter.GetTotalBitsSet() / filter.GetSizeInBits();
+  auto bits_per_elem =
+      static_cast<double>(filter.GetSizeInBits()) / num_filter_elems;
+  auto bit_set_prob =
+      static_cast<double>(filter.GetTotalBitsSet()) / filter.GetSizeInBits();
   LOG_INFO(
       "Filter: {} elements, {} bits, {} bits/element, {} bits set (p={:.2f})",
       num_filter_elems, filter.GetSizeInBits(), bits_per_elem,
@@ -78,7 +82,7 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
     GenerateRandom32(lookups, num_filter_elems * lookup_scale_factor);
     Mix(lookups, insertions, prob_success);
 
-    u32 expected_found = static_cast<u32>(prob_success * lookups.size());
+    auto expected_found = static_cast<u32>(prob_success * lookups.size());
 
     util::Timer<std::milli> timer;
     timer.Start();
@@ -97,9 +101,10 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
 
     timer.Stop();
 
-    double fpr = (actual_found - expected_found) / (double)lookups.size();
-    double probes_per_sec =
-        (double)lookups.size() / timer.elapsed() * 1000.0 / 1000000.0;
+    double fpr =
+        (actual_found - expected_found) / static_cast<double>(lookups.size());
+    double probes_per_sec = static_cast<double>(lookups.size()) /
+                            timer.elapsed() * 1000.0 / 1000000.0;
     LOG_INFO(
         "p: {:.2f}, {} M probes/sec, FPR: {:2.4f}, (expected: {}, actual: {})",
         prob_success, probes_per_sec, fpr, expected_found, actual_found);

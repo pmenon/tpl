@@ -1,4 +1,4 @@
-#include "tpl_test.h"
+#include "tpl_test.h"  // NOLINT
 
 #include "vm/bytecodes.h"
 
