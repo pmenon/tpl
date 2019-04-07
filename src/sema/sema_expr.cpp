@@ -235,11 +235,10 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
 
   // The second call argument must be a string
   if (!call->arguments()[1]->type()->IsStringType()) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kIncorrectCallArgType,
-                             call->arguments()[1]->type(),
-                             ast::StringType::Get(context()),
-                             call->GetFuncName());
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kIncorrectCallArgType,
+        call->arguments()[1]->type(), ast::StringType::Get(context()),
+        call->GetFuncName());
   }
 
   // Set return type
@@ -456,8 +455,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   if (func_type->num_params() != node->NumCallArgs()) {
     error_reporter()->Report(
         node->position(), ErrorMessages::kMismatchedCallArgs,
-        node->GetFuncName(),
-        func_type->num_params(), node->NumCallArgs());
+        node->GetFuncName(), func_type->num_params(), node->NumCallArgs());
     return;
   }
 
@@ -474,10 +472,10 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   const auto &expected_arg_params = func_type->params();
   for (size_t i = 0; i < actual_call_arg_types.size(); i++) {
     if (actual_call_arg_types[i]->type() != expected_arg_params[i].type) {
-      error_reporter()->Report(node->position(),
-                               ErrorMessages::kIncorrectCallArgType,
-                               actual_call_arg_types[i]->type(),
-                               expected_arg_params[i].type, node->GetFuncName());
+      error_reporter()->Report(
+          node->position(), ErrorMessages::kIncorrectCallArgType,
+          actual_call_arg_types[i]->type(), expected_arg_params[i].type,
+          node->GetFuncName());
       return;
     }
   }

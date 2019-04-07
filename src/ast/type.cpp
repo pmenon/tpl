@@ -17,7 +17,7 @@ namespace tpl::ast {
 // Type
 // ---------------------------------------------------------
 
-// TODO: Fix me
+// TODO(pmenon): Fix me
 bool Type::IsArithmetic() const {
   return IsIntegerType() || IsSpecificBuiltin(BuiltinType::Integer) ||
          IsFloatType() || IsSpecificBuiltin(BuiltinType::Decimal);
