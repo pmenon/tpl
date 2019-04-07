@@ -58,6 +58,7 @@ class Context;
   NON_PRIM(BloomFilter, tpl::sql::BloomFilter)                           \
   NON_PRIM(CountAggregate, tpl::sql::CountAggregate)                     \
   NON_PRIM(CountStarAggregate, tpl::sql::CountStarAggregate)             \
+  NON_PRIM(HashTableEntry, tpl::sql::HashTableEntry)                     \
   NON_PRIM(IntegerSumAggregate, tpl::sql::IntegerSumAggregate)           \
   NON_PRIM(JoinHashTable, tpl::sql::JoinHashTable)                       \
   NON_PRIM(RegionAlloc, tpl::util::Region)                               \
