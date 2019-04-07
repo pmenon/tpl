@@ -6,7 +6,6 @@
 #include "llvm/Support/Casting.h"
 
 #include "ast/identifier.h"
-#include "sql/data_types.h"
 #include "util/region.h"
 #include "util/region_containers.h"
 
@@ -97,9 +96,9 @@ TYPE_LIST(F)
 
 /// The base of the TPL type hierarchy. Types, once created, are immutable. Only
 /// one instance of a particular type is ever created, and all instances are
-/// owned by the Context object that created it. Thus, once can use pointer
-/// equality to determine if two types (created within the same Context) are
-/// equal.
+/// owned by the Context object that created it. Thus, one can use pointer
+/// equality to determine if two types are equal, but only if they were created
+/// within the same Context.
 class Type : public util::RegionObject {
  public:
   /// The enumeration of all concrete types
