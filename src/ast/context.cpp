@@ -1,5 +1,13 @@
 #include "ast/context.h"
 
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <tuple>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
@@ -121,37 +129,22 @@ struct Context::Implementation {
   static constexpr const uint32_t kDefaultStringTableCapacity = 32;
 
   // -------------------------------------------------------
-  // Basic primitive types
+  // Builtin types
   // -------------------------------------------------------
 
-  IntegerType int8;
-  IntegerType int16;
-  IntegerType int32;
-  IntegerType int64;
-  IntegerType uint8;
-  IntegerType uint16;
-  IntegerType uint32;
-  IntegerType uint64;
-
-  FloatType float32;
-  FloatType float64;
-
-  BoolType boolean;
-
-  StringType string;
-
-  NilType nil;
-
-  util::RegionVector<InternalType *> internal_types;
+#define F(BKind, ...) BuiltinType *BKind##Type;
+  BUILTIN_TYPE_LIST(F, F, F)
+#undef F
+  StringType *string;
 
   // -------------------------------------------------------
-  // Complex type caches
+  // Type caches
   // -------------------------------------------------------
 
   llvm::StringMap<char, util::LLVMRegionAllocator> string_table;
+  std::vector<BuiltinType *> builtin_types_list;
   llvm::DenseMap<Identifier, Type *> builtin_types;
   llvm::DenseMap<Identifier, Builtin> builtin_funcs;
-  llvm::DenseMap<Identifier, InternalType::InternalKind> internal_type_names;
   llvm::DenseMap<Type *, PointerType *> pointer_types;
   llvm::DenseMap<std::pair<Type *, uint64_t>, ArrayType *> array_types;
   llvm::DenseMap<std::pair<Type *, Type *>, MapType *> map_types;
@@ -159,22 +152,17 @@ struct Context::Implementation {
   llvm::DenseSet<FunctionType *, FunctionTypeKeyInfo> func_types;
 
   explicit Implementation(Context *ctx)
-      : int8(ctx, sizeof(i8), alignof(i8), IntegerType::IntKind::Int8),
-        int16(ctx, sizeof(i16), alignof(i16), IntegerType::IntKind::Int16),
-        int32(ctx, sizeof(i32), alignof(i32), IntegerType::IntKind::Int32),
-        int64(ctx, sizeof(i64), alignof(i64), IntegerType::IntKind::Int64),
-        uint8(ctx, sizeof(u8), alignof(u8), IntegerType::IntKind::UInt8),
-        uint16(ctx, sizeof(u16), alignof(u16), IntegerType::IntKind::UInt16),
-        uint32(ctx, sizeof(u32), alignof(u32), IntegerType::IntKind::UInt32),
-        uint64(ctx, sizeof(u64), alignof(u64), IntegerType::IntKind::UInt64),
-        float32(ctx, sizeof(f32), alignof(f32), FloatType::FloatKind::Float32),
-        float64(ctx, sizeof(f64), alignof(f64), FloatType::FloatKind::Float64),
-        boolean(ctx),
-        string(ctx),
-        nil(ctx),
-        internal_types(ctx->region()),
-        string_table(kDefaultStringTableCapacity,
-                     util::LLVMRegionAllocator(ctx->region())) {}
+      : string_table(kDefaultStringTableCapacity,
+                     util::LLVMRegionAllocator(ctx->region())) {
+    // Instantiate all the builtins
+#define F(BKind, CppType, ...)      \
+  BKind##Type = new (ctx->region()) \
+      BuiltinType(ctx, sizeof(CppType), alignof(CppType), BuiltinType::BKind);
+    BUILTIN_TYPE_LIST(F, F, F)
+#undef F
+
+    string = new (ctx->region()) StringType(ctx);
+  }
 };
 
 Context::Context(util::Region *region, sema::ErrorReporter *error_reporter)
@@ -182,34 +170,24 @@ Context::Context(util::Region *region, sema::ErrorReporter *error_reporter)
       error_reporter_(error_reporter),
       node_factory_(std::make_unique<AstNodeFactory>(region)),
       impl_(std::make_unique<Implementation>(this)) {
-  // Initialize basic types
-  impl()->builtin_types[GetIdentifier("bool")] = &impl()->boolean;
-  impl()->builtin_types[GetIdentifier("nil")] = &impl()->nil;
-  impl()->builtin_types[GetIdentifier("int8")] = &impl()->int8;
-  impl()->builtin_types[GetIdentifier("int16")] = &impl()->int16;
-  impl()->builtin_types[GetIdentifier("int32")] = &impl()->int32;
-  impl()->builtin_types[GetIdentifier("int64")] = &impl()->int64;
-  impl()->builtin_types[GetIdentifier("uint8")] = &impl()->uint8;
-  impl()->builtin_types[GetIdentifier("uint16")] = &impl()->uint16;
-  impl()->builtin_types[GetIdentifier("uint32")] = &impl()->uint32;
-  impl()->builtin_types[GetIdentifier("uint64")] = &impl()->uint64;
-  impl()->builtin_types[GetIdentifier("float32")] = &impl()->float32;
-  impl()->builtin_types[GetIdentifier("float64")] = &impl()->float64;
-  // Aliases
-  impl()->builtin_types[GetIdentifier("int")] = &impl()->int32;
-  impl()->builtin_types[GetIdentifier("float")] = &impl()->float32;
-  impl()->builtin_types[GetIdentifier("void")] = &impl()->nil;
+  // Put all builtins into list
+#define F(BKind, ...) impl()->builtin_types_list.push_back(impl()->BKind##Type);
+  BUILTIN_TYPE_LIST(F, F, F)
+#undef F
 
-  // Populate all the internal/hidden/opaque types
-  impl()->internal_types.reserve(InternalType::NumInternalTypes());
-#define INIT_TYPE(Kind, CppType)                                        \
-  impl()->internal_types.push_back(new (region) InternalType(           \
-      this, GetIdentifier(#CppType), sizeof(CppType), alignof(CppType), \
-      InternalType::InternalKind::Kind));                               \
-  impl()->internal_type_names[GetIdentifier(#Kind)] =                   \
-      InternalType::InternalKind::Kind;
-  INTERNAL_TYPE_LIST(INIT_TYPE)
-#undef INIT_TYPE
+  // Put all builtins into cache by name
+#define PRIM(BKind, CppType, TplName) \
+  impl()->builtin_types[GetIdentifier(TplName)] = impl()->BKind##Type;
+#define OTHERS(BKind, CppType) \
+  impl()->builtin_types[GetIdentifier(#BKind)] = impl()->BKind##Type;
+  BUILTIN_TYPE_LIST(PRIM, OTHERS, OTHERS)
+#undef OTHERS
+#undef PRIM
+
+  // Builtin aliases
+  impl()->builtin_types[GetIdentifier("int")] = impl()->Int32Type;
+  impl()->builtin_types[GetIdentifier("float")] = impl()->Float32Type;
+  impl()->builtin_types[GetIdentifier("void")] = impl()->NilType;
 
   // Initialize builtin functions
 #define BUILTIN_FUNC(Name, ...)        \
@@ -222,23 +200,44 @@ Context::Context(util::Region *region, sema::ErrorReporter *error_reporter)
 Context::~Context() = default;
 
 Identifier Context::GetIdentifier(llvm::StringRef str) {
-  if (str.empty()) return Identifier(nullptr);
+  if (str.empty()) {
+    return Identifier(nullptr);
+  }
 
-  auto iter = impl()->string_table.insert(std::make_pair(str, char(0))).first;
+  auto iter =
+      impl()
+          ->string_table.insert(std::make_pair(str, static_cast<char>(0)))
+          .first;
   return Identifier(iter->getKeyData());
+}
+
+Type *Context::GetTplTypeFromSqlType(const sql::Type &sql_type) {
+  switch (sql_type.type_id()) {
+    case sql::TypeId::Boolean: {
+      return BuiltinType::Get(this, BuiltinType::Boolean);
+    }
+    case sql::TypeId::SmallInt:
+    case sql::TypeId::Integer:
+    case sql::TypeId::BigInt: {
+      return BuiltinType::Get(this, BuiltinType::Integer);
+    }
+    case sql::TypeId::Decimal: {
+      return BuiltinType::Get(this, BuiltinType::Decimal);
+    }
+    case sql::TypeId::Char:
+    case sql::TypeId::Varchar: {
+      return BuiltinType::Get(this, BuiltinType::VarBuffer);
+    }
+    case sql::TypeId::Date: {
+      return BuiltinType::Get(this, BuiltinType::Date);
+    }
+    default: { throw std::runtime_error("No TPL type for sql type"); }
+  }
 }
 
 Type *Context::LookupBuiltinType(Identifier identifier) const {
   auto iter = impl()->builtin_types.find(identifier);
   return (iter == impl()->builtin_types.end() ? nullptr : iter->second);
-}
-
-ast::Type *Context::LookupInternalType(Identifier identifier) const {
-  if (auto iter = impl()->internal_type_names.find(identifier);
-      iter != impl()->internal_type_names.end()) {
-    return impl()->internal_types[static_cast<u32>(iter->second)];
-  }
-  return nullptr;
 }
 
 bool Context::IsBuiltinFunction(Identifier identifier, Builtin *builtin) const {
@@ -253,61 +252,15 @@ bool Context::IsBuiltinFunction(Identifier identifier, Builtin *builtin) const {
   return false;
 }
 
-// static
 PointerType *Type::PointerTo() { return PointerType::Get(this); }
 
 // static
-IntegerType *IntegerType::Get(Context *ctx, IntegerType::IntKind int_kind) {
-  switch (int_kind) {
-    case IntegerType::IntKind::Int8: {
-      return &ctx->impl()->int8;
-    }
-    case IntegerType::IntKind::Int16: {
-      return &ctx->impl()->int16;
-    }
-    case IntegerType::IntKind::Int32: {
-      return &ctx->impl()->int32;
-    }
-    case IntegerType::IntKind::Int64: {
-      return &ctx->impl()->int64;
-    }
-    case IntegerType::IntKind::UInt8: {
-      return &ctx->impl()->uint8;
-    }
-    case IntegerType::IntKind::UInt16: {
-      return &ctx->impl()->uint16;
-    }
-    case IntegerType::IntKind::UInt32: {
-      return &ctx->impl()->uint32;
-    }
-    case IntegerType::IntKind::UInt64: {
-      return &ctx->impl()->uint64;
-    }
-    default: { UNREACHABLE("Impossible integer kind"); }
-  }
+BuiltinType *BuiltinType::Get(Context *ctx, BuiltinType::Kind kind) {
+  return ctx->impl()->builtin_types_list[kind];
 }
 
 // static
-FloatType *FloatType::Get(Context *ctx, FloatKind float_kind) {
-  switch (float_kind) {
-    case FloatType::FloatKind::Float32: {
-      return &ctx->impl()->float32;
-    }
-    case FloatType::FloatKind::Float64: {
-      return &ctx->impl()->float64;
-    }
-    default: { UNREACHABLE("Impossible floating point kind"); }
-  }
-}
-
-// static
-BoolType *BoolType::Get(Context *ctx) { return &ctx->impl()->boolean; }
-
-// static
-StringType *StringType::Get(Context *ctx) { return &ctx->impl()->string; }
-
-// static
-NilType *NilType::Get(Context *ctx) { return &ctx->impl()->nil; }
+StringType *StringType::Get(Context *ctx) { return ctx->impl()->string; }
 
 // static
 PointerType *PointerType::Get(Type *base) {
@@ -412,46 +365,6 @@ FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
   }
 
   return func_type;
-}
-
-// static
-InternalType *InternalType::Get(Context *ctx, InternalKind kind) {
-  TPL_ASSERT(static_cast<u8>(kind) < kNumInternalKinds,
-             "Invalid internal kind");
-  return ctx->impl()->internal_types[static_cast<u32>(kind)];
-}
-
-SqlType *SqlType::Get(Context *ctx, const sql::Type &sql_type) {
-  // TODO: cache
-  u32 size = 0, alignment = 0;
-  switch (sql_type.type_id()) {
-    case sql::TypeId::Boolean: {
-      size = sizeof(sql::BoolVal);
-      alignment = alignof(sql::BoolVal);
-      break;
-    }
-    case sql::TypeId::SmallInt:
-    case sql::TypeId::Integer:
-    case sql::TypeId::Date:
-    case sql::TypeId::BigInt: {
-      size = sizeof(sql::Integer);
-      alignment = alignof(sql::Integer);
-      break;
-    }
-    case sql::TypeId::Decimal: {
-      size = sizeof(sql::Decimal);
-      alignment = alignof(sql::Decimal);
-      break;
-    }
-    case sql::TypeId::Char:
-    case sql::TypeId::Varchar: {
-      size = sizeof(sql::String);
-      alignment = sizeof(sql::String);
-      break;
-    }
-  }
-
-  return new (ctx->region()) SqlType(ctx, size, alignment, sql_type);
 }
 
 }  // namespace tpl::ast

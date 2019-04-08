@@ -1,5 +1,8 @@
 #include "sql/join_hash_table.h"
 
+#include <algorithm>
+#include <limits>
+
 #include "logging/logger.h"
 #include "util/cpu_info.h"
 #include "util/memory.h"
@@ -113,7 +116,7 @@ class ReorderBuffer {
 
   /// Has the entry \a entry been processed?
   ALWAYS_INLINE bool IsProcessed(HashTableEntry *entry) const noexcept {
-    return entry->cht_slot & kProcessedBit;
+    return (entry->cht_slot & kProcessedBit) != 0u;
   }
 
   /// Mark the entry \entry as processed
@@ -123,7 +126,7 @@ class ReorderBuffer {
 
   /// Has the entry \a entry been buffered
   ALWAYS_INLINE bool IsBuffered(HashTableEntry *entry) const noexcept {
-    return entry->cht_slot & kBufferedBit;
+    return (entry->cht_slot & kBufferedBit) != 0u;
   }
 
   /// Mark the entry \a entry as buffered
@@ -464,7 +467,7 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
   EntryAt(num_entries - 1)->next = nullptr;
 }
 
-void JoinHashTable::VerifyMainEntryOrder() noexcept {
+void JoinHashTable::VerifyMainEntryOrder() {
 #ifndef NDEBUG
   const u64 overflow_idx = entries_.size() - concise_hash_table_.num_overflow();
   for (u32 idx = 0; idx < overflow_idx; idx++) {
@@ -485,7 +488,7 @@ void JoinHashTable::VerifyOverflowEntryOrder() noexcept {
 }
 
 template <bool PrefetchCHT, bool PrefetchEntries>
-void JoinHashTable::BuildConciseHashTableInternal() noexcept {
+void JoinHashTable::BuildConciseHashTableInternal() {
   // Insert all elements
   InsertIntoConciseHashTable<PrefetchCHT>();
 
@@ -510,7 +513,7 @@ void JoinHashTable::BuildConciseHashTableInternal() noexcept {
   VerifyOverflowEntryOrder();
 }
 
-void JoinHashTable::BuildConciseHashTable() noexcept {
+void JoinHashTable::BuildConciseHashTable() {
   // Setup based on number of buffered build-size tuples
   concise_hash_table_.SetSize(num_elements());
 
@@ -553,7 +556,9 @@ void JoinHashTable::LookupBatchInGenericHashTableInternal(
   for (u32 idx = 0, prefetch_idx = kPrefetchDistance; idx < num_tuples;
        idx++, prefetch_idx++) {
     if constexpr (Prefetch) {
-      generic_hash_table_.PrefetchChainHead<true>(hashes[prefetch_idx]);
+      if (TPL_LIKELY(prefetch_idx < num_tuples)) {
+        generic_hash_table_.PrefetchChainHead<true>(hashes[prefetch_idx]);
+      }
     }
 
     results[idx] = generic_hash_table_.FindChainHead(hashes[idx]);
@@ -578,7 +583,9 @@ void JoinHashTable::LookupBatchInConciseHashTableInternal(
   for (u32 idx = 0, prefetch_idx = kPrefetchDistance; idx < num_tuples;
        idx++, prefetch_idx++) {
     if constexpr (Prefetch) {
-      concise_hash_table_.PrefetchSlotGroup<true>(hashes[prefetch_idx]);
+      if (TPL_LIKELY(prefetch_idx < num_tuples)) {
+        concise_hash_table_.PrefetchSlotGroup<true>(hashes[prefetch_idx]);
+      }
     }
 
     const auto [found, entry_idx] = concise_hash_table_.Lookup(hashes[idx]);

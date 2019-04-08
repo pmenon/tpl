@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+#include <utility>
+
 #include "util/common.h"
 #include "util/region.h"
 #include "util/region_containers.h"

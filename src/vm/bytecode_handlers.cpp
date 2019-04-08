@@ -5,6 +5,16 @@
 extern "C" {
 
 // ---------------------------------------------------------
+// Region
+// ---------------------------------------------------------
+
+void OpRegionInit(tpl::util::Region *region) {
+  new (region) tpl::util::Region("tmp");
+}
+
+void OpRegionFree(tpl::util::Region *region) { region->~Region(); }
+
+// ---------------------------------------------------------
 // Table Vector Iterator
 // ---------------------------------------------------------
 
@@ -81,6 +91,19 @@ void OpJoinHashTableBuild(tpl::sql::JoinHashTable *join_hash_table) {
 
 void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table) {
   join_hash_table->~JoinHashTable();
+}
+
+// ---------------------------------------------------------
+// Aggregation Hash Table
+// ---------------------------------------------------------
+
+void OpAggregationHashTableInit(tpl::sql::AggregationHashTable *agg_table,
+                                tpl::util::Region *region, u32 entry_size) {
+  new (agg_table) tpl::sql::AggregationHashTable(region, entry_size);
+}
+
+void OpAggregationHashTableFree(tpl::sql::AggregationHashTable *agg_table) {
+  agg_table->~AggregationHashTable();
 }
 
 }  //

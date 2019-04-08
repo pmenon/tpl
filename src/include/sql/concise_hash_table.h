@@ -1,6 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
+#include <utility>
 
 #include "sql/hash_table_entry.h"
 #include "util/bit_util.h"

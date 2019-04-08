@@ -102,6 +102,10 @@ namespace sema {
   F(BadArgToHashTableBuild,                                                    \
     "Hash table build function expects a pointer to a hash table. Received "   \
     "type '%0'",                                                               \
+    (ast::Type *))                                                             \
+  F(BadArgToRegionFunction,                                                    \
+    "All builtin region functions require a region pointer as the first "      \
+    "argument. Received type '%0'",                                            \
     (ast::Type *))
 
 /**

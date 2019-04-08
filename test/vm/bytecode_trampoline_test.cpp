@@ -1,6 +1,10 @@
-#include "tpl_test.h"
-
+#include <limits>
 #include <random>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "vm/bytecode_compiler.h"
 
@@ -167,6 +171,7 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
     // Try to sort using the generated comparison function
     std::sort(
         numbers.begin(), numbers.end(),
+        // NOLINTNEXTLINE
         [compare](const auto &a, const auto &b) { return compare(&a, &b); });
 
     // Verify
@@ -192,7 +197,7 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
     for (u32 i = 0; i < nelems; i++) {
       elems.emplace_back(random() % 5, random() % 10, random() % 100,
                          random() % 1000);
-    };
+    }
 
     // Generate the comparison function that sorts ascending by S.c
     auto src = R"(

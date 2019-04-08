@@ -1,4 +1,6 @@
-#include "tpl_test.h"
+#include <vector>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "util/region.h"
 #include "vm/bytecode_emitter.h"

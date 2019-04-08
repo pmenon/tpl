@@ -3,6 +3,7 @@ language: cpp
 matrix:
   fast_finish: true
   include:
+# Debug builds on both MacOS and Linux
     - os: osx
       osx_image: xcode9.4
       compiler: clang
@@ -20,7 +21,7 @@ matrix:
         - docker run -itd --name build ubuntu:18.04
         - docker cp . build:/repo
         - docker exec build /bin/sh -c "echo 'y' | /repo/deps.sh"
-# Release builds. Will be replaced by Jenkins.
+# Release builds. Will be replaced by Jenkins
     - os: osx
       osx_image: xcode9.4
       compiler: clang
@@ -38,6 +39,24 @@ matrix:
         - docker run -itd --name build ubuntu:18.04
         - docker cp . build:/repo
         - docker exec build /bin/sh -c "echo 'y' | /repo/deps.sh"
+
+before_script:
+  - if [[ "$DOCKER" = true ]]; then
+      docker exec build /bin/sh -c "mkdir -p /repo/build" &&
+      docker exec -e CMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -e TPL_USE_ASAN="$TPL_USE_ASAN" build /bin/sh -c "cd /repo/build && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DTPL_USE_ASAN=$TERRIER_USE_ASAN .." &&
+      docker exec build /bin/sh -c "cd /repo/build && make check-clang-tidy" &&
+      docker exec build /bin/sh -c "cd /repo/build && make check-format" &&
+      docker exec build /bin/sh -c "cd /repo/build && make check-lint" &&
+      docker exec build /bin/sh -c "cd /repo/build && make check-censored";
+    else
+      mkdir build &&
+      cd build &&
+      cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DTPL_USE_ASAN=$TPL_USE_ASAN .. &&
+      ASAN_OPTIONS=detect_container_overflow=0 make check-clang-tidy &&
+      ASAN_OPTIONS=detect_container_overflow=0 make check-format &&
+      ASAN_OPTIONS=detect_container_overflow=0 make check-lint &&
+      ASAN_OPTIONS=detect_container_overflow=0 make check-censored;
+    fi
 
 script:
   - if [[ "$DOCKER" = true ]]; then

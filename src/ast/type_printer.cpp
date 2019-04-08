@@ -1,5 +1,7 @@
 #include "ast/type.h"
 
+#include <string>
+
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -30,56 +32,23 @@ class TypePrinter : public TypeVisitor<TypePrinter> {
   llvm::raw_ostream &out_;
 };
 
-void TypePrinter::VisitIntegerType(const IntegerType *type) {
-  switch (type->int_kind()) {
-    case IntegerType::IntKind::Int8: {
-      os() << "int8";
-      break;
-    }
-    case IntegerType::IntKind::Int16: {
-      os() << "int16";
-      break;
-    }
-    case IntegerType::IntKind::Int32: {
-      os() << "int32";
-      break;
-    }
-    case IntegerType::IntKind::Int64: {
-      os() << "int64";
-      break;
-    }
-    case IntegerType::IntKind::UInt8: {
-      os() << "uint8";
-      break;
-    }
-    case IntegerType::IntKind::UInt16: {
-      os() << "uint16";
-      break;
-    }
-    case IntegerType::IntKind::UInt32: {
-      os() << "uint32";
-      break;
-    }
-    case IntegerType::IntKind::UInt64: {
-      os() << "uint64";
-      break;
-    }
-  }
+void tpl::ast::TypePrinter::VisitBuiltinType(const BuiltinType *type) {
+  os() << type->tpl_name();
 }
 
 void TypePrinter::VisitFunctionType(const FunctionType *type) {
   os() << "(";
   bool first = true;
   for (const auto &param : type->params()) {
-    if (!first) os() << ",";
+    if (!first) {
+      os() << ",";
+    }
     first = false;
     Visit(param.type);
   }
   os() << ")->";
   Visit(type->return_type());
 }
-
-void TypePrinter::VisitBoolType(const BoolType *type) { os() << "bool"; }
 
 void TypePrinter::VisitStringType(const StringType *type) { os() << "string"; }
 
@@ -88,31 +57,18 @@ void TypePrinter::VisitPointerType(const PointerType *type) {
   Visit(type->base());
 }
 
-void TypePrinter::VisitFloatType(const FloatType *type) {
-  switch (type->float_kind()) {
-    case FloatType::FloatKind::Float32: {
-      os() << "f32";
-      break;
-    }
-    case FloatType::FloatKind::Float64: {
-      os() << "f64";
-      break;
-    }
-  }
-}
-
 void TypePrinter::VisitStructType(const StructType *type) {
   os() << "struct{";
   bool first = true;
   for (const auto &field : type->fields()) {
-    if (!first) os() << ",";
+    if (!first) {
+      os() << ",";
+    }
     first = false;
     Visit(field.type);
   }
   os() << "}";
 }
-
-void TypePrinter::VisitNilType(const NilType *type) { os() << "nil"; }
 
 void TypePrinter::VisitArrayType(const ArrayType *type) {
   os() << "[";
@@ -121,14 +77,6 @@ void TypePrinter::VisitArrayType(const ArrayType *type) {
   }
   os() << "]";
   Visit(type->element_type());
-}
-
-void TypePrinter::VisitInternalType(const InternalType *type) {
-  os() << llvm::StringRef(type->name().data());
-}
-
-void tpl::ast::TypePrinter::VisitSqlType(const SqlType *type) {
-  os() << type->sql_type().GetName();
 }
 
 void tpl::ast::TypePrinter::VisitMapType(const MapType *type) {

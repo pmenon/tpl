@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "sql/column_vector_iterator.h"
 #include "sql/table.h"
 #include "sql/vector_projection.h"

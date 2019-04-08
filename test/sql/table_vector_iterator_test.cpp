@@ -1,4 +1,4 @@
-#include "sql_test.h"
+#include "sql_test.h"  // NOLINT
 
 #include "sql/catalog.h"
 #include "sql/table_vector_iterator.h"

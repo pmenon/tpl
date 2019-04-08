@@ -1,5 +1,7 @@
 #include "sema/sema.h"
 
+#include <utility>
+
 #include "ast/context.h"
 #include "ast/type.h"
 #include "sql/data_types.h"
@@ -21,11 +23,11 @@ bool Sema::Run(ast::AstNode *root) {
   return error_reporter()->HasErrors();
 }
 
-ast::Type *Sema::ConvertSchemaToType(const sql::Schema &schema) {
+ast::Type *Sema::GetRowTypeFromSqlSchema(const sql::Schema &schema) {
   util::RegionVector<ast::Field> cols(context()->region());
   for (const auto &col : schema.columns()) {
     auto col_name = context()->GetIdentifier(col.name);
-    auto col_type = ast::SqlType::Get(context(), col.type);
+    auto *col_type = context()->GetTplTypeFromSqlType(col.type);
     cols.emplace_back(col_name, col_type);
   }
   return ast::StructType::Get(context(), std::move(cols));

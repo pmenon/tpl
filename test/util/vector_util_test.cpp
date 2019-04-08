@@ -1,7 +1,9 @@
-#include "tpl_test.h"
-
 #include <sys/mman.h>
+#include <algorithm>
 #include <random>
+#include <vector>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "util/timer.h"
 #include "util/vector_util.h"
@@ -150,7 +152,7 @@ TEST_F(VectorUtilTest, ComparisonsTest) {
   // Equality
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
-    simd::Vec8 check = 40;
+    auto check = simd::Vec8(40);
     simd::Vec8Mask mask = in == check;
     EXPECT_FALSE(mask[0]);
     EXPECT_FALSE(mask[1]);
@@ -165,7 +167,7 @@ TEST_F(VectorUtilTest, ComparisonsTest) {
   // Greater Than
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
-    simd::Vec8 check = 40;
+    auto check = simd::Vec8(40);
     simd::Vec8Mask mask = in > check;
     EXPECT_FALSE(mask[0]);
     EXPECT_FALSE(mask[1]);
@@ -180,7 +182,7 @@ TEST_F(VectorUtilTest, ComparisonsTest) {
   // Greater Than Equal
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
-    simd::Vec8 check = 40;
+    auto check = simd::Vec8(40);
     simd::Vec8Mask mask = in >= check;
     EXPECT_FALSE(mask[0]);
     EXPECT_FALSE(mask[1]);
@@ -195,7 +197,7 @@ TEST_F(VectorUtilTest, ComparisonsTest) {
   // Less Than
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
-    simd::Vec8 check = 40;
+    auto check = simd::Vec8(40);
     simd::Vec8Mask mask = in < check;
     EXPECT_TRUE(mask[0]);
     EXPECT_TRUE(mask[1]);
@@ -210,7 +212,7 @@ TEST_F(VectorUtilTest, ComparisonsTest) {
   // Less Than Equal
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
-    simd::Vec8 check = 40;
+    auto check = simd::Vec8(40);
     simd::Vec8Mask mask = (in <= check);
     EXPECT_TRUE(mask[0]);
     EXPECT_TRUE(mask[1]);
@@ -225,7 +227,7 @@ TEST_F(VectorUtilTest, ComparisonsTest) {
   // Not Equal
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
-    simd::Vec8 check = 40;
+    auto check = simd::Vec8(40);
     simd::Vec8Mask mask = (in == check);
     EXPECT_FALSE(mask[0]);
     EXPECT_FALSE(mask[1]);
@@ -263,7 +265,7 @@ void SmallScale_NeedleTest(VectorUtilTest *test) {
   constexpr const u32 chunk_size = 1024;
   constexpr const T needle = 16;
 
-  T *arr = test->AllocArray<T>(num_elems);
+  auto *arr = test->AllocArray<T>(num_elems);
 
   u32 actual_count = 0;
 
@@ -295,7 +297,7 @@ void SmallScale_NeedleTest(VectorUtilTest *test) {
 
   // Ensure total found through vector util matches what we generated
   EXPECT_EQ(actual_count, count);
-};
+}
 
 template <typename T>
 void SmallScale_MultiFilterTest(VectorUtilTest *test) {
@@ -306,8 +308,8 @@ void SmallScale_MultiFilterTest(VectorUtilTest *test) {
   constexpr const T needle_1 = 16;
   constexpr const T needle_2 = 10;
 
-  T *arr_1 = test->AllocArray<T>(num_elems);
-  T *arr_2 = test->AllocArray<T>(num_elems);
+  auto *arr_1 = test->AllocArray<T>(num_elems);
+  auto *arr_2 = test->AllocArray<T>(num_elems);
 
   u32 actual_count = 0;
 
@@ -350,7 +352,7 @@ void SmallScale_MultiFilterTest(VectorUtilTest *test) {
 
   // Ensure total found through vector util matches what we generated
   EXPECT_EQ(actual_count, count);
-};
+}
 
 TEST_F(VectorUtilTest, SimpleFilterTest) {
   SmallScale_NeedleTest<i8>(this);
@@ -378,7 +380,7 @@ TEST_F(VectorUtilTest, DISABLED_PerfSelectTest) {
   constexpr u32 num_elems = 128 * 1024u * 1024u;
   constexpr const u32 chunk_size = 4096;
 
-  i32 *arr = AllocArray<i32>(num_elems);
+  auto *arr = AllocArray<i32>(num_elems);
 
   double load_time = 0.0;
   {
@@ -409,8 +411,9 @@ TEST_F(VectorUtilTest, DISABLED_PerfSelectTest) {
       }
     }
 
-    std::cout << "Sel: " << ((double)sel / 100) << ", count: " << count
-              << ", time: " << time << " ms" << std::endl;
+    std::cout << "Sel: " << (static_cast<double>(sel) / 100)
+              << ", count: " << count << ", time: " << time << " ms"
+              << std::endl;
   }
 }
 

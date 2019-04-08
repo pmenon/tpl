@@ -1,4 +1,4 @@
-#include "sql_test.h"
+#include "sql_test.h"  // NOLINT
 
 #include "sql/catalog.h"
 #include "sql/column_vector_iterator.h"
@@ -67,7 +67,7 @@ TEST_F(ColumnIteratorTest, IntegerIterationTest) {
   u32 num_rows = 0;
 
   for (bool has_more = true; has_more; has_more = iter.Advance()) {
-    i32 *col_data = reinterpret_cast<i32 *>(iter.col_data());
+    auto *col_data = reinterpret_cast<i32 *>(iter.col_data());
     for (u32 i = 1; i < iter.NumTuples(); i++) {
       EXPECT_LT(col_data[i - 1], col_data[i]);
       EXPECT_EQ(col_data[i - 1] + 1, col_data[i]);

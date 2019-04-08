@@ -109,7 +109,7 @@ class JoinHashTable {
 
   // Dispatched from Build() to build either a generic or concise hash table
   void BuildGenericHashTable() noexcept;
-  void BuildConciseHashTable() noexcept;
+  void BuildConciseHashTable();
 
   // Dispatched from BuildGenericHashTable()
   template <bool Prefetch>
@@ -118,14 +118,14 @@ class JoinHashTable {
   // Dispatched from BuildConciseHashTable() to construct the concise hash table
   // and to reorder buffered build tuples in place according to the CHT
   template <bool PrefetchCHT, bool PrefetchEntries>
-  void BuildConciseHashTableInternal() noexcept;
+  void BuildConciseHashTableInternal();
   template <bool Prefetch>
   void InsertIntoConciseHashTable() noexcept;
   template <bool PrefetchCHT, bool PrefetchEntries>
   void ReorderMainEntries() noexcept;
   template <bool Prefetch, bool PrefetchEntries>
   void ReorderOverflowEntries() noexcept;
-  void VerifyMainEntryOrder() noexcept;
+  void VerifyMainEntryOrder();
   void VerifyOverflowEntryOrder() noexcept;
 
   // Dispatched from LookupBatch() to lookup from either a generic or concise
@@ -204,7 +204,8 @@ inline const HashTableEntry *JoinHashTable::Iterator::NextMatch(
   while (result != nullptr) {
     next_ = next_->next;
     if (result->hash == hash_ &&
-        key_eq(opaque_ctx, probe_tuple, (void *)result->payload)) {
+        key_eq(opaque_ctx, probe_tuple,
+               reinterpret_cast<void *>(const_cast<byte *>(result->payload)))) {
       break;
     }
     result = next_;

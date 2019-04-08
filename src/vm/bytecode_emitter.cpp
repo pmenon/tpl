@@ -1,5 +1,8 @@
 #include "vm/bytecode_emitter.h"
 
+#include <limits>
+#include <vector>
+
 #include "vm/bytecode_label.h"
 
 namespace tpl::vm {
@@ -91,8 +94,8 @@ void BytecodeEmitter::Bind(BytecodeLabel *label) {
           (curr_offset - jump_location) < std::numeric_limits<i32>::max(),
           "Jump delta exceeds 32-bit value for jump offsets!");
 
-      i32 delta = static_cast<i32>(curr_offset - jump_location);
-      u8 *raw_delta = reinterpret_cast<u8 *>(&delta);
+      auto delta = static_cast<i32>(curr_offset - jump_location);
+      auto *raw_delta = reinterpret_cast<u8 *>(&delta);
       bytecode_[jump_location] = raw_delta[0];
       bytecode_[jump_location + 1] = raw_delta[1];
       bytecode_[jump_location + 2] = raw_delta[2];

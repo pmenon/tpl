@@ -18,7 +18,7 @@ hash_t Hasher::Hash(const u8 *buf, uint64_t len, HashMethod method) {
 }
 
 hash_t Hasher::HashFnv1(const u8 *buf, uint64_t len) {
-  hash_t hash = hash_t(2166136261ull);
+  auto hash = hash_t(2166136261ull);
 
   for (u64 i = 0; i < len; i++) {
     hash ^= buf[i];

@@ -146,7 +146,7 @@ class RegionObject {
    */
   void operator delete(UNUSED void *ptr, UNUSED Region *region) {
     UNREACHABLE("Calling \"delete\" on region object is forbidden!");
-  };
+  }
 };
 
 }  // namespace tpl::util

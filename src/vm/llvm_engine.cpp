@@ -1,5 +1,12 @@
 #include "vm/llvm_engine.h"
 
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -124,31 +131,42 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
   //
 
   llvm::Type *llvm_type = nullptr;
-  switch (type->kind()) {
-    case ast::Type::Kind::BoolType:
-    case ast::Type::Kind::IntegerType:
-    case ast::Type::Kind::FloatType:
-    case ast::Type::Kind::NilType:
-    case ast::Type::Kind::StringType: {
+  switch (type->type_id()) {
+    case ast::Type::TypeId::StringType: {
       // These should be pre-filled in type cache!
       UNREACHABLE("Missing default type not found in cache");
     }
-    case ast::Type::Kind::PointerType: {
+    case ast::Type::TypeId::BuiltinType: {
+      auto *builtin_type = type->As<ast::BuiltinType>();
+      TPL_ASSERT(!builtin_type->is_primitive(),
+                 "Primitive types should be cached!");
+      std::string name = builtin_type->cpp_name();
+      // Try "struct" and "class" prefixes
+      if (auto *t = module()->getTypeByName("struct." + name); t != nullptr) {
+        llvm_type = t;
+      } else if (t = module()->getTypeByName("class." + name); t != nullptr) {
+        llvm_type = t;
+      } else {
+        LOG_ERROR("Could not find LLVM type for TPL type '{}'", name);
+      }
+      break;
+    }
+    case ast::Type::TypeId::PointerType: {
       auto *ptr_type = type->As<ast::PointerType>();
       llvm_type = llvm::PointerType::get(GetLLVMType(ptr_type->base()), 0);
       break;
     }
-    case ast::Type::Kind::ArrayType: {
+    case ast::Type::TypeId::ArrayType: {
       auto *arr_type = type->As<ast::ArrayType>();
       llvm::Type *elem_type = GetLLVMType(arr_type->element_type());
       llvm_type = llvm::ArrayType::get(elem_type, arr_type->length());
       break;
     }
-    case ast::Type::Kind::MapType: {
-      // TODO: me
+    case ast::Type::TypeId::MapType: {
+      // TODO(pmenon): me
       break;
     }
-    case ast::Type::Kind::StructType: {
+    case ast::Type::TypeId::StructType: {
       auto *struct_type = type->As<ast::StructType>();
 
       // Collect all struct field types
@@ -162,7 +180,7 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
 
       break;
     }
-    case ast::Type::Kind::FunctionType: {
+    case ast::Type::TypeId::FunctionType: {
       auto *func_type = type->As<ast::FunctionType>();
 
       // The return type
@@ -177,35 +195,6 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
 
       // Done
       llvm_type = llvm::FunctionType::get(ret_type, param_types, false);
-      break;
-    }
-    case ast::Type::Kind::InternalType: {
-      std::string name = type->As<ast::InternalType>()->name().data();
-      // Try "struct" and "class" prefixes
-      if (auto *t = module()->getTypeByName("struct." + name); t != nullptr) {
-        llvm_type = t;
-      } else if (t = module()->getTypeByName("class." + name); t != nullptr) {
-        llvm_type = t;
-      } else {
-        LOG_ERROR("Could not find LLVM type for TPL type '{}'", name);
-      }
-      break;
-    }
-    case ast::Type::Kind::SqlType: {
-      auto *sql_type = type->As<ast::SqlType>();
-      switch (sql_type->sql_type().type_id()) {
-        case sql::TypeId::Boolean: {
-          llvm_type = module()->getTypeByName("struct.tpl::sql::BoolVal");
-          break;
-        }
-        case sql::TypeId::SmallInt:
-        case sql::TypeId::Integer:
-        case sql::TypeId::BigInt: {
-          llvm_type = module()->getTypeByName("struct.tpl::sql::Integer");
-          break;
-        }
-        default: { break; }
-      }
       break;
     }
   }
@@ -382,8 +371,9 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
   // TPL programs. At the moment, we rely on LLVM to discover all CPU features
   // e.g., AVX2 or AVX512, and we make no assumptions about symbol relocations.
   //
-  // TODO: This may change with LLVM8 that comes with TargetMachineBuilders
-  // TODO: Alter the flags as need be
+  // TODO(pmenon): This may change with LLVM8 that comes with
+  // TargetMachineBuilders
+  // TODO(pmenon): Alter the flags as need be
   //
 
   {

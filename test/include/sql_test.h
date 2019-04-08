@@ -2,8 +2,9 @@
 
 #include "gtest/gtest.h"
 
+#include "tpl_test.h"  // NOLINT
+
 #include "sql/catalog.h"
-#include "tpl_test.h"
 
 namespace tpl {
 

@@ -1,5 +1,8 @@
 #include "sql/sorter.h"
 
+#include <algorithm>
+#include <utility>
+
 #include "ips4o/ips4o.hpp"
 
 #include "logging/logger.h"
@@ -98,7 +101,7 @@ void Sorter::HeapSiftDown() {
   }
 }
 
-void Sorter::Sort() noexcept {
+void Sorter::Sort() {
   // Exit if the input tuples have already been sorted
   if (sorted_) {
     return;

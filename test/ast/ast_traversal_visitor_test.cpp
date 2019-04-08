@@ -1,4 +1,6 @@
-#include "tpl_test.h"
+#include <string>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "ast/ast.h"
 #include "ast/ast_node_factory.h"
@@ -58,8 +60,8 @@ class ForFinder : public AstTraversalVisitor<ForFinder<FindInfinite>> {
   void VisitForStmt(ast::ForStmt *stmt) {
     if constexpr (FindInfinite) {
       bool is_finite_for = (stmt->condition() == nullptr);
-      num_fors_ += is_finite_for;
-    } else {
+      num_fors_ += static_cast<u32>(is_finite_for);
+    } else {  // NOLINT
       num_fors_++;
     }
     AstTraversalVisitor<SelfT>::VisitForStmt(stmt);

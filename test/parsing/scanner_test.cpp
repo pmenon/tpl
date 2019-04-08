@@ -1,6 +1,9 @@
-#include "tpl_test.h"
-
+#include <algorithm>
 #include <functional>
+#include <string>
+#include <vector>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "parsing/scanner.h"
 
@@ -29,7 +32,7 @@ TEST_F(ScannerTest, SimpleSourceTest) {
   EXPECT_EQ(1u, scanner.current_position().line);
 
   // The following "+ 1" is because source positions are 1-based
-  EXPECT_EQ(source.find("x") + 1, scanner.current_position().column);
+  EXPECT_EQ(source.find('x') + 1, scanner.current_position().column);
 
   // '='
   EXPECT_EQ(Token::Type::EQUAL, scanner.peek());

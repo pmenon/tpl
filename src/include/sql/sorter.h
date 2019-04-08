@@ -33,7 +33,7 @@ class Sorter {
   void AllocInputTupleTopKFinish(u64 top_k) noexcept;
 
   /// Sort all inserted entries
-  void Sort() noexcept;
+  void Sort();
 
  private:
   /// Build a max heap from the tuples currently stored in the sorter instance
