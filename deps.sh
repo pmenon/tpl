@@ -77,6 +77,7 @@ install_linux() {
   # Install packages.
   apt-get -y install \
       build-essential \
+      clang-tidy-7 \
       clang-format-7 \
       cmake \
       git \
