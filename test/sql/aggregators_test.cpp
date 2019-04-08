@@ -1,8 +1,7 @@
-#include <sql/value.h>
-
 #include "tpl_test.h"  // NOLINT
 
 #include "sql/aggregators.h"
+#include "sql/value.h"
 
 namespace tpl::sql::test {
 
