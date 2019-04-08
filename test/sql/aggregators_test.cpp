@@ -101,14 +101,14 @@ TEST_F(AggregatorsTest, MergeSumIntegersTest) {
   IntegerSumAggregate sum1;
   EXPECT_TRUE(sum1.GetResultSum().is_null);
   for (u64 i = 0; i < 10; i++) {
-    Integer val = Integer(i);
+    auto val = Integer(i);
     sum1.Advance(&val);
   }
 
   IntegerSumAggregate sum2;
   EXPECT_TRUE(sum2.GetResultSum().is_null);
   for (u64 i = 10; i < 20; i++) {
-    Integer val = Integer(i);
+    auto val = Integer(i);
     sum2.Advance(&val);
   }
   sum1.Merge(sum2);
@@ -121,7 +121,7 @@ TEST_F(AggregatorsTest, MergeSumIntegersTest) {
   EXPECT_EQ(190, sum1.GetResultSum().val);
 
   for (i64 i = 0; i < 20; i++) {
-    Integer val = Integer(-i);
+    auto val = Integer(-i);
     sum3.Advance(&val);
   }
   sum1.Merge(sum3);
@@ -145,7 +145,7 @@ TEST_F(AggregatorsTest, MaxIntegerTest) {
     if (i % 2 == 0) {
       j = -i;
     }
-    Integer val = Integer(j);
+    auto val = Integer(j);
     max.Advance(&val);
   }
 
@@ -161,7 +161,7 @@ TEST_F(AggregatorsTest, MaxIntegerTest) {
     if (i % 2 == 0) {
       j = -i;
     }
-    Integer val = Integer(j);
+    auto val = Integer(j);
     max2.Advance(&val);
   }
 
@@ -194,7 +194,7 @@ TEST_F(AggregatorsTest, MinIntegerTest) {
     if (i % 2 == 0) {
       j = -i;
     }
-    Integer val = Integer(j);
+    auto val = Integer(j);
     min.Advance(&val);
   }
 
@@ -210,7 +210,7 @@ TEST_F(AggregatorsTest, MinIntegerTest) {
     if (i % 2 == 0) {
       j = -i;
     }
-    Integer val = Integer(j);
+    auto val = Integer(j);
     min2.Advance(&val);
   }
 
@@ -239,7 +239,7 @@ TEST_F(AggregatorsTest, AvgIntegerTest) {
   for (i64 i = 0; i < 25; i++) {
     i64 j = i;
 
-    Integer val = Integer(j);
+    auto val = Integer(j);
     avg.Advance(&val);
   }
 
@@ -249,7 +249,7 @@ TEST_F(AggregatorsTest, AvgIntegerTest) {
   IntegerAvgAggregate avg2;
   EXPECT_TRUE(avg2.GetResultAvg().is_null);
   for (i64 i = 0; i > -25; i--) {
-    Integer val = Integer(i);
+    auto val = Integer(i);
     avg2.Advance(&val);
   }
 
