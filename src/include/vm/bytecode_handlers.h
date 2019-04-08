@@ -133,15 +133,15 @@ INT_TYPES(BITS);
 // Memory operations
 // ---------------------------------------------------------
 
-VM_OP_HOT void OpDeref1(i8 *dest, i8 *src) { *dest = *src; }
+VM_OP_HOT void OpDeref1(i8 *dest, const i8 *const src) { *dest = *src; }
 
-VM_OP_HOT void OpDeref2(i16 *dest, i16 *src) { *dest = *src; }
+VM_OP_HOT void OpDeref2(i16 *dest, const i16 *const src) { *dest = *src; }
 
-VM_OP_HOT void OpDeref4(i32 *dest, i32 *src) { *dest = *src; }
+VM_OP_HOT void OpDeref4(i32 *dest, const i32 *const src) { *dest = *src; }
 
-VM_OP_HOT void OpDeref8(i64 *dest, i64 *src) { *dest = *src; }
+VM_OP_HOT void OpDeref8(i64 *dest, const i64 *const src) { *dest = *src; }
 
-VM_OP_HOT void OpDerefN(byte *dest, byte *src, u32 len) {
+VM_OP_HOT void OpDerefN(byte *dest, const byte *const src, u32 len) {
   std::memcpy(dest, src, len);
 }
 
@@ -309,27 +309,25 @@ VM_OP_HOT void OpVPIGetDecimalNull(tpl::sql::Decimal *out,
   out->is_null = false;
 }
 
-VM_OP_COLD void OpVPIFilterEqual(u32 *size,
+void OpVPIFilterEqual(u32 *size, tpl::sql::VectorProjectionIterator *iter,
+                      u16 col_id, i64 val);
+
+void OpVPIFilterGreaterThan(u32 *size, tpl::sql::VectorProjectionIterator *iter,
+                            u16 col_id, i64 val);
+
+void OpVPIFilterGreaterThanEqual(u32 *size,
                                  tpl::sql::VectorProjectionIterator *iter,
                                  u16 col_id, i64 val);
 
-VM_OP_COLD void OpVPIFilterGreaterThan(u32 *size,
-                                       tpl::sql::VectorProjectionIterator *iter,
-                                       u16 col_id, i64 val);
+void OpVPIFilterLessThan(u32 *size, tpl::sql::VectorProjectionIterator *iter,
+                         u16 col_id, i64 val);
 
-VM_OP_COLD void OpVPIFilterGreaterThanEqual(
-    u32 *size, tpl::sql::VectorProjectionIterator *iter, u16 col_id, i64 val);
+void OpVPIFilterLessThanEqual(u32 *size,
+                              tpl::sql::VectorProjectionIterator *iter,
+                              u16 col_id, i64 val);
 
-VM_OP_COLD void OpVPIFilterLessThan(u32 *size,
-                                    tpl::sql::VectorProjectionIterator *iter,
-                                    u16 col_id, i64 val);
-
-VM_OP_COLD void OpVPIFilterLessThanEqual(
-    u32 *size, tpl::sql::VectorProjectionIterator *iter, u16 col_id, i64 val);
-
-VM_OP_COLD void OpVPIFilterNotEqual(u32 *size,
-                                    tpl::sql::VectorProjectionIterator *iter,
-                                    u16 col_id, i64 val);
+void OpVPIFilterNotEqual(u32 *size, tpl::sql::VectorProjectionIterator *iter,
+                         u16 col_id, i64 val);
 
 // ---------------------------------------------------------
 // Scalar SQL comparisons
@@ -344,44 +342,44 @@ VM_OP_HOT void OpInitInteger(tpl::sql::Integer *result, i32 input) {
   result->is_null = false;
 }
 
-VM_OP_HOT void OpGreaterThanInteger(tpl::sql::BoolVal *result,
-                                    tpl::sql::Integer *left,
-                                    tpl::sql::Integer *right) {
+VM_OP_HOT void OpGreaterThanInteger(tpl::sql::BoolVal *const result,
+                                    const tpl::sql::Integer *const left,
+                                    const tpl::sql::Integer *const right) {
   result->val = (left->val > right->val);
   result->is_null = (left->is_null || right->is_null);
 }
 
-VM_OP_HOT void OpGreaterThanEqualInteger(tpl::sql::BoolVal *result,
+VM_OP_HOT void OpGreaterThanEqualInteger(tpl::sql::BoolVal *const result,
                                          tpl::sql::Integer *left,
                                          tpl::sql::Integer *right) {
   result->val = (left->val >= right->val);
   result->is_null = (left->is_null || right->is_null);
 }
 
-VM_OP_HOT void OpEqualInteger(tpl::sql::BoolVal *result,
-                              tpl::sql::Integer *left,
-                              tpl::sql::Integer *right) {
+VM_OP_HOT void OpEqualInteger(tpl::sql::BoolVal *const result,
+                              const tpl::sql::Integer *const left,
+                              const tpl::sql::Integer *const right) {
   result->val = (left->val == right->val);
   result->is_null = (left->is_null || right->is_null);
 }
 
-VM_OP_HOT void OpLessThanInteger(tpl::sql::BoolVal *result,
-                                 tpl::sql::Integer *left,
-                                 tpl::sql::Integer *right) {
+VM_OP_HOT void OpLessThanInteger(tpl::sql::BoolVal *const result,
+                                 const tpl::sql::Integer *const left,
+                                 const tpl::sql::Integer *const right) {
   result->val = (left->val < right->val);
   result->is_null = (left->is_null || right->is_null);
 }
 
-VM_OP_HOT void OpLessThanEqualInteger(tpl::sql::BoolVal *result,
-                                      tpl::sql::Integer *left,
-                                      tpl::sql::Integer *right) {
+VM_OP_HOT void OpLessThanEqualInteger(tpl::sql::BoolVal *const result,
+                                      const tpl::sql::Integer *const left,
+                                      const tpl::sql::Integer *const right) {
   result->val = (left->val <= right->val);
   result->is_null = (left->is_null || right->is_null);
 }
 
-VM_OP_HOT void OpNotEqualInteger(tpl::sql::BoolVal *result,
-                                 tpl::sql::Integer *left,
-                                 tpl::sql::Integer *right) {
+VM_OP_HOT void OpNotEqualInteger(tpl::sql::BoolVal *const result,
+                                 const tpl::sql::Integer *const left,
+                                 const tpl::sql::Integer *const right) {
   result->val = (left->val != right->val);
   result->is_null = (left->is_null || right->is_null);
 }
@@ -389,6 +387,10 @@ VM_OP_HOT void OpNotEqualInteger(tpl::sql::BoolVal *result,
 // ---------------------------------------------------------
 // SQL Aggregations
 // ---------------------------------------------------------
+
+//
+// COUNT
+//
 
 VM_OP_HOT void OpCountAggregateInit(tpl::sql::CountAggregate *agg) {
   new (agg) tpl::sql::CountAggregate();
@@ -418,6 +420,10 @@ VM_OP_HOT void OpCountAggregateFree(tpl::sql::CountAggregate *agg) {
   agg->~CountAggregate();
 }
 
+//
+// COUNT(*)
+//
+
 VM_OP_HOT void OpCountStarAggregateInit(tpl::sql::CountStarAggregate *agg) {
   new (agg) tpl::sql::CountStarAggregate();
 }
@@ -445,6 +451,10 @@ VM_OP_HOT void OpCountStarAggregateGetResult(
 VM_OP_HOT void OpCountStarAggregateFree(tpl::sql::CountStarAggregate *agg) {
   agg->~CountStarAggregate();
 }
+
+//
+// SUM(int_type)
+//
 
 VM_OP_HOT void OpIntegerSumAggregateInit(tpl::sql::IntegerSumAggregate *agg) {
   new (agg) tpl::sql::IntegerSumAggregate();
@@ -480,6 +490,10 @@ VM_OP_HOT void OpIntegerSumAggregateFree(tpl::sql::IntegerSumAggregate *agg) {
   agg->~IntegerSumAggregate();
 }
 
+//
+// MAX(int_type)
+//
+
 VM_OP_HOT void OpIntegerMaxAggregateInit(tpl::sql::IntegerMaxAggregate *agg) {
   new (agg) tpl::sql::IntegerMaxAggregate();
 }
@@ -514,6 +528,10 @@ VM_OP_HOT void OpIntegerMaxAggregateFree(tpl::sql::IntegerMaxAggregate *agg) {
   agg->~IntegerMaxAggregate();
 }
 
+//
+// MIN(int_type)
+//
+
 VM_OP_HOT void OpIntegerMinAggregateInit(tpl::sql::IntegerMinAggregate *agg) {
   new (agg) tpl::sql::IntegerMinAggregate();
 }
@@ -547,6 +565,10 @@ VM_OP_HOT void OpIntegerMinAggregateGetResult(
 VM_OP_HOT void OpIntegerMinAggregateFree(tpl::sql::IntegerMinAggregate *agg) {
   agg->~IntegerMinAggregate();
 }
+
+//
+// AVG(int_type)
+//
 
 VM_OP_HOT void OpIntegerAvgAggregateInit(tpl::sql::IntegerAvgAggregate *agg) {
   new (agg) tpl::sql::IntegerAvgAggregate();

@@ -34,7 +34,7 @@ class VectorProjectionIterator {
 
   /// Set the vector projection to iterate over
   /// \param vp The vector projection
-  void SetVectorProjection(VectorProjection *vp) noexcept;
+  void SetVectorProjection(VectorProjection *vp);
 
   // -------------------------------------------------------
   // Tuple-at-a-time API
@@ -132,16 +132,6 @@ class VectorProjectionIterator {
 // Implementation below
 // ---------------------------------------------------------
 
-inline void VectorProjectionIterator::SetVectorProjection(
-    VectorProjection *vp) noexcept {
-  vector_projection_ = vp;
-  num_selected_ = vp->TotalTupleCount();
-  curr_idx_ = 0;
-  selection_vector_[0] = kInvalidPos;
-  selection_vector_read_idx_ = 0;
-  selection_vector_write_idx_ = 0;
-}
-
 // Retrieve a single column value (and potentially its NULL indicator) from the
 // desired column's input data
 template <typename T, bool Nullable>
@@ -168,7 +158,7 @@ inline void VectorProjectionIterator::Match(bool matched) {
 }
 
 inline bool VectorProjectionIterator::HasNext() const {
-  return curr_idx_ < vector_projection_->TotalTupleCount();
+  return curr_idx_ < vector_projection_->total_tuple_count();
 }
 
 inline bool VectorProjectionIterator::HasNextFiltered() const {
@@ -236,17 +226,15 @@ inline void VectorProjectionIterator::RunFilter(const F &filter) {
 // Filter an entire column's data by the provided constant value
 template <typename T, template <typename> typename Op, bool nullable>
 inline u32 VectorProjectionIterator::FilterColByVal(u32 col_idx, T val) {
+  // Get the input column's data
   const T *input = vector_projection_->GetVectorAs<T>(col_idx);
 
-  if (IsFiltered()) {
-    const u32 *sel_vec = selection_vector_;
-    selection_vector_write_idx_ = util::VectorUtil::FilterVectorByVal<T, Op>(
-        input, num_selected(), val, selection_vector_, sel_vec);
-  } else {
-    u32 num_tuples = vector_projection_->TotalTupleCount();
-    selection_vector_write_idx_ = util::VectorUtil::FilterVectorByVal<T, Op>(
-        input, num_tuples, val, selection_vector_, nullptr);
-  }
+  // Use the existing selection vector if this VPI has been filtered
+  const u32 *sel_vec = (IsFiltered() ? selection_vector_ : nullptr);
+
+  // Filter!
+  selection_vector_write_idx_ = util::VectorUtil::FilterVectorByVal<T, Op>(
+      input, num_selected_, val, selection_vector_, sel_vec);
 
   // After the filter has been run on the entire vector projection, we need to
   // ensure that we reset it so that clients can query the updated state of the

@@ -53,7 +53,7 @@ class VectorProjection {
 
   /// Return the number of active tuples in this projection
   /// \return The number of active tuples
-  u32 TotalTupleCount() const noexcept { return tuple_count_; }
+  u32 total_tuple_count() const { return tuple_count_; }
 
  private:
   // Set the deletions bitmap

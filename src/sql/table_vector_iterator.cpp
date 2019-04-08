@@ -30,7 +30,7 @@ void TableVectorIterator::RefreshVectorProjection() {
   }
 
   // Insert our vector projection instance into the vector projection iterator
-  vector_projection_iterator()->SetVectorProjection(&vector_projection_);
+  vector_projection_iterator_.SetVectorProjection(&vector_projection_);
 }
 
 bool TableVectorIterator::Advance() {
