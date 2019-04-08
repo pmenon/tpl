@@ -480,10 +480,107 @@ VM_OP_HOT void OpIntegerSumAggregateFree(tpl::sql::IntegerSumAggregate *agg) {
   agg->~IntegerSumAggregate();
 }
 
-void OpAggregationHashTableInit(tpl::sql::AggregationHashTable *agg_table,
-                                tpl::util::Region *region, u32 entry_size);
+VM_OP_HOT void OpIntegerMaxAggregateInit(tpl::sql::IntegerMaxAggregate *agg) {
+  new (agg) tpl::sql::IntegerMaxAggregate();
+}
 
-void OpAggregationHashTableFree(tpl::sql::AggregationHashTable *agg_table);
+VM_OP_HOT void OpIntegerMaxAggregateAdvance(tpl::sql::IntegerMaxAggregate *agg,
+                                            tpl::sql::Integer *val) {
+  agg->Advance(val);
+}
+
+VM_OP_HOT void OpIntegerMaxAggregateAdvanceNullable(
+    tpl::sql::IntegerMaxAggregate *agg, tpl::sql::Integer *val) {
+  agg->AdvanceNullable(val);
+}
+
+VM_OP_HOT void OpIntegerMaxAggregateMerge(
+    tpl::sql::IntegerMaxAggregate *agg_1,
+    tpl::sql::IntegerMaxAggregate *agg_2) {
+  TPL_ASSERT(agg_2 != nullptr, "Null aggregate!");
+  agg_1->Merge(*agg_2);
+}
+
+VM_OP_HOT void OpIntegerMaxAggregateReset(tpl::sql::IntegerMaxAggregate *agg) {
+  agg->Reset();
+}
+
+VM_OP_HOT void OpIntegerMaxAggregateGetResult(
+    tpl::sql::Integer *result, tpl::sql::IntegerMaxAggregate *agg) {
+  *result = agg->GetResultMax();
+}
+
+VM_OP_HOT void OpIntegerMaxAggregateFree(tpl::sql::IntegerMaxAggregate *agg) {
+  agg->~IntegerMaxAggregate();
+}
+
+VM_OP_HOT void OpIntegerMinAggregateInit(tpl::sql::IntegerMinAggregate *agg) {
+  new (agg) tpl::sql::IntegerMinAggregate();
+}
+
+VM_OP_HOT void OpIntegerMinAggregateAdvance(tpl::sql::IntegerMinAggregate *agg,
+                                            tpl::sql::Integer *val) {
+  agg->Advance(val);
+}
+
+VM_OP_HOT void OpIntegerMinAggregateAdvanceNullable(
+    tpl::sql::IntegerMinAggregate *agg, tpl::sql::Integer *val) {
+  agg->AdvanceNullable(val);
+}
+
+VM_OP_HOT void OpIntegerMinAggregateMerge(
+    tpl::sql::IntegerMinAggregate *agg_1,
+    tpl::sql::IntegerMinAggregate *agg_2) {
+  TPL_ASSERT(agg_2 != nullptr, "Null aggregate!");
+  agg_1->Merge(*agg_2);
+}
+
+VM_OP_HOT void OpIntegerMinAggregateReset(tpl::sql::IntegerMinAggregate *agg) {
+  agg->Reset();
+}
+
+VM_OP_HOT void OpIntegerMinAggregateGetResult(
+    tpl::sql::Integer *result, tpl::sql::IntegerMinAggregate *agg) {
+  *result = agg->GetResultMin();
+}
+
+VM_OP_HOT void OpIntegerMinAggregateFree(tpl::sql::IntegerMinAggregate *agg) {
+  agg->~IntegerMinAggregate();
+}
+
+VM_OP_HOT void OpIntegerAvgAggregateInit(tpl::sql::IntegerAvgAggregate *agg) {
+  new (agg) tpl::sql::IntegerAvgAggregate();
+}
+
+VM_OP_HOT void OpIntegerAvgAggregateAdvance(tpl::sql::IntegerAvgAggregate *agg,
+                                            tpl::sql::Integer *val) {
+  agg->Advance(val);
+}
+
+VM_OP_HOT void OpIntegerAvgAggregateAdvanceNullable(
+    tpl::sql::IntegerAvgAggregate *agg, tpl::sql::Integer *val) {
+  agg->AdvanceNullable(val);
+}
+
+VM_OP_HOT void OpIntegerAvgAggregateMerge(
+    tpl::sql::IntegerAvgAggregate *agg_1,
+    tpl::sql::IntegerAvgAggregate *agg_2) {
+  TPL_ASSERT(agg_2 != nullptr, "Null aggregate!");
+  agg_1->Merge(*agg_2);
+}
+
+VM_OP_HOT void OpIntegerAvgAggregateReset(tpl::sql::IntegerAvgAggregate *agg) {
+  agg->Reset();
+}
+
+VM_OP_HOT void OpIntegerAvgAggregateGetResult(
+    tpl::sql::Integer *result, tpl::sql::IntegerAvgAggregate *agg) {
+  *result = agg->GetResultAvg();
+}
+
+VM_OP_HOT void OpIntegerAvgAggregateFree(tpl::sql::IntegerAvgAggregate *agg) {
+  agg->~IntegerAvgAggregate();
+}
 
 // ---------------------------------------------------------
 // Hash Joins

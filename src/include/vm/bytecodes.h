@@ -142,8 +142,27 @@ namespace tpl::vm {
   F(IntegerSumAggregateReset, OperandType::Local)                                                                      \
   F(IntegerSumAggregateGetResult, OperandType::Local, OperandType::Local)                                              \
   F(IntegerSumAggregateFree, OperandType::Local)                                                                       \
-  F(AggregationHashTableInit, OperandType::Local, OperandType::Local, OperandType::Local)                              \
-  F(AggregationHashTableFree, OperandType::Local)                                                                      \
+  F(IntegerMaxAggregateInit, OperandType::Local)                                                                       \
+  F(IntegerMaxAggregateAdvance, OperandType::Local, OperandType::Local)                                                \
+  F(IntegerMaxAggregateAdvanceNullable, OperandType::Local, OperandType::Local)                                        \
+  F(IntegerMaxAggregateMerge, OperandType::Local, OperandType::Local)                                                  \
+  F(IntegerMaxAggregateReset, OperandType::Local)                                                                      \
+  F(IntegerMaxAggregateGetResult, OperandType::Local, OperandType::Local)                                              \
+  F(IntegerMaxAggregateFree, OperandType::Local)                                                                       \
+  F(IntegerMinAggregateInit, OperandType::Local)                                                                       \
+  F(IntegerMinAggregateAdvance, OperandType::Local, OperandType::Local)                                                \
+  F(IntegerMinAggregateAdvanceNullable, OperandType::Local, OperandType::Local)                                        \
+  F(IntegerMinAggregateMerge, OperandType::Local, OperandType::Local)                                                  \
+  F(IntegerMinAggregateReset, OperandType::Local)                                                                      \
+  F(IntegerMinAggregateGetResult, OperandType::Local, OperandType::Local)                                              \
+  F(IntegerMinAggregateFree, OperandType::Local)                                                                       \
+  F(IntegerAvgAggregateInit, OperandType::Local)                                                                       \
+  F(IntegerAvgAggregateAdvance, OperandType::Local, OperandType::Local)                                                \
+  F(IntegerAvgAggregateAdvanceNullable, OperandType::Local, OperandType::Local)                                        \
+  F(IntegerAvgAggregateMerge, OperandType::Local, OperandType::Local)                                                  \
+  F(IntegerAvgAggregateReset, OperandType::Local)                                                                      \
+  F(IntegerAvgAggregateGetResult, OperandType::Local, OperandType::Local)                                              \
+  F(IntegerAvgAggregateFree, OperandType::Local)                                                                       \
                                                                                                                        \
   /* Hash Joins */                                                                                                     \
   F(JoinHashTableInit, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
