@@ -81,8 +81,6 @@ if (UNIX)
           "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
           "${CMAKE_CURRENT_SOURCE_DIR}/test/*.h"
           "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp"
-#          "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/*.h"
-#          "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/*.cpp"
           )
 
   find_program(CPPLINT_BIN NAMES cpplint cpplint.py HINTS ${BUILD_SUPPORT_DIR})
@@ -115,13 +113,14 @@ if (UNIX)
 endif (UNIX)
 
 ###########################################################
+#
 # "make format" and "make check-format" targets
+#
 ###########################################################
 
 # we modified the format script to take multiple args
 
 string(CONCAT FORMAT_DIRS
-#         "${CMAKE_CURRENT_SOURCE_DIR}/benchmark,"
         "${CMAKE_CURRENT_SOURCE_DIR}/src,"
         "${CMAKE_CURRENT_SOURCE_DIR}/test,"
         )
@@ -130,22 +129,24 @@ string(CONCAT FORMAT_DIRS
 add_custom_target(format ${BUILD_SUPPORT_DIR}/run_clang_format.py
         ${CLANG_FORMAT_BIN}
         ${BUILD_SUPPORT_DIR}/clang_format_exclusions.txt
-        --source_dirs
-        ${FORMAT_DIRS}
-        --fix
-        ${TERRIER_LINT_QUIET})
+        --source_dirs ${FORMAT_DIRS}
+        --fix ${TERRIER_LINT_QUIET}
+        )
 
 # runs clang format and exits with a non-zero exit code if any files need to be reformatted
 add_custom_target(check-format ${BUILD_SUPPORT_DIR}/run_clang_format.py
         ${CLANG_FORMAT_BIN}
         ${BUILD_SUPPORT_DIR}/clang_format_exclusions.txt
-        --source_dirs
-        ${FORMAT_DIRS}
-        ${TERRIER_LINT_QUIET})
+        --source_dirs ${FORMAT_DIRS}
+        ${TERRIER_LINT_QUIET}
+        )
 
 ###########################################################
+#
 # "make check-clang-tidy" target
+#
 ###########################################################
+
 if (${CLANG_TIDY_FOUND})
   # runs clang-tidy and exits with a non-zero exit code if any errors are found.
   # note that clang-tidy automatically looks for a .clang-tidy file in parent directories
@@ -158,28 +159,34 @@ if (${CLANG_TIDY_FOUND})
 endif ()
 
 ###########################################################
+#
 # "make check-tpl" and "make check-tpl-diff" targets
+#
 ###########################################################
 
-  add_custom_target(check-tpl
-          ${BUILD_SUPPORT_DIR}/run_tpl_tests.py
-          -b ${CMAKE_BINARY_DIR}/bin/tpl
-          -f ${PROJECT_SOURCE_DIR}/sample_tpl/tpl_tests.txt
-          -t ${PROJECT_SOURCE_DIR}/sample_tpl
-          )
-
-  add_custom_target(check-tpl-diff
-        git diff -U0 ../sample_tpl/tpl_tests.txt
-          | grep '^[+][^+-]' | sed 's/^.//' | uniq  # check added files
-          > ${CMAKE_BINARY_DIR}/tpl_tests_diff.txt
-          &&
-        ${BUILD_SUPPORT_DIR}/run_tpl_tests.py
-        -b ${CMAKE_BINARY_DIR}/bin/tpl
-        -f ${CMAKE_BINARY_DIR}/tpl_tests_diff.txt
-        -t ${PROJECT_SOURCE_DIR}/sample_tpl
+# runs the TPL binary on all files in 'sample_tpl' comparing each scripts output
+# to the reference output in 'tpl_tests.txt'
+add_custom_target(check-tpl
+        DEPENDS tpl
+        COMMAND ${BUILD_SUPPORT_DIR}/run_tpl_tests.py
+                -b ${CMAKE_BINARY_DIR}/bin/tpl
+                -f ${PROJECT_SOURCE_DIR}/sample_tpl/tpl_tests.txt
+                -t ${PROJECT_SOURCE_DIR}/sample_tpl
         )
 
-
+# Like 'check-tpl', but runs the test only on added tests to 'tpl_tests.txt'
+add_custom_target(check-tpl-diff
+        DEPENDS tpl
+        COMMAND git diff -U0 ../sample_tpl/tpl_tests.txt
+                | grep '^[+][^+-]'
+                | sed 's/^.//'
+                | uniq > ${CMAKE_BINARY_DIR}/tpl_tests_diff.txt             # create tpl_tests_diff.txt containing the new tests
+                &&
+                ${BUILD_SUPPORT_DIR}/run_tpl_tests.py                       # run the check only on the new tests
+                -b ${CMAKE_BINARY_DIR}/bin/tpl
+                -f ${CMAKE_BINARY_DIR}/tpl_tests_diff.txt
+                -t ${PROJECT_SOURCE_DIR}/sample_tpl
+      )
 
 ############################################################
 #
