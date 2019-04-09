@@ -12,20 +12,41 @@ namespace tpl::sql {
 /// An iterator over a table's data in vector-wise fashion
 class TableVectorIterator {
  public:
-  /// Create a new vectorized iterator over the given table
-  explicit TableVectorIterator(const Table &table);
+  /// Create an iterator over the table with ID \a table_id and project all
+  /// columns
+  /// \param table_id The ID of the table
+  explicit TableVectorIterator(u16 table_id);
+
+  /// Create an iterator over the table with ID \a table_id and project columns
+  /// at the indexes in \a column_indexes from the logical schema for the table.
+  /// This is just a C++ friendly version of the other constructor.
+  /// \param table_id The ID of the table
+  /// \param column_indexes The indexes of the columns to select
+  TableVectorIterator(u16 table_id, std::vector<u32> column_indexes);
+
+  /// Create an iterator over the table with ID \a table_id and project columns
+  /// at the indexes in \a column_indexes from the logical schema for the table.
+  /// This constructor is used from the VM.
+  /// \param table_id The ID of the table
+  /// \param column_indexes The indexes of the columns to select
+  TableVectorIterator(u16 table_id, u32 num_cols, u32 column_indexes[]);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(TableVectorIterator);
+
+  /// Initialize the iterator, returning true if the initialization succeeded
+  /// \return True if the initialization succeeded; false otherwise
+  bool Init();
 
   /// Advance the iterator by a vector of input
   /// \return True if there is more data in the iterator; false otherwise
   bool Advance();
 
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
+  /// Access the table this iterator is scanning
+  /// \return The table if the iterator has been initialized; null otherwise
+  const Table *table() const { return block_iterator_.table(); }
 
+  /// Return the iterator over the current active vector projection
   VectorProjectionIterator *vector_projection_iterator() {
     return &vector_projection_iterator_;
   }
@@ -36,8 +57,11 @@ class TableVectorIterator {
   void RefreshVectorProjection();
 
  private:
+  // The indexes in the column to read
+  std::vector<u32> column_indexes_;
+
   // The iterate over the blocks stored in the table
-  Table::BlockIterator block_iterator_;
+  TableBlockIterator block_iterator_;
 
   // The vector-wise iterators over each column in the table
   std::vector<ColumnVectorIterator> column_iterators_;

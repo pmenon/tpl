@@ -82,13 +82,14 @@ class VectorProjectionIterator {
   template <typename F>
   void ForEach(const F &fn);
 
-  /// Run a generic tuple-at-a-time filter over all active tuples in the
-  /// vector projection
+  /// Run a generic tuple-at-a-time filter over all active tuples in the vector
+  /// projection
   /// \tparam F The generic type of the filter function. This can be any
-  /// functor-like type including raw function pointer, functor or std::function
+  ///           functor-like type including raw function pointer, functor or
+  ///           std::function
   /// \param filter A function that accepts a const version of this VPI and
-  /// returns true if the tuple pointed to by the VPI is valid (i.e., passes the
-  /// filter) or false otherwise
+  ///               returns true if the tuple pointed to by the VPI is valid
+  ///               (i.e., passes the filter) or false otherwise
   template <typename F>
   void RunFilter(const F &filter);
 
@@ -101,7 +102,7 @@ class VectorProjectionIterator {
   /// \param col_idx The index of the column in the vector projection to filter
   /// \param val The value to filter on
   /// \return The number of selected elements
-  template <typename T, template <typename> typename Op, bool nullable>
+  template <typename T, template <typename> typename Op>
   u32 FilterColByVal(u32 col_idx, T val);
 
   /// Return the number of selected tuples after any filters have been applied
@@ -224,7 +225,7 @@ inline void VectorProjectionIterator::RunFilter(const F &filter) {
 }
 
 // Filter an entire column's data by the provided constant value
-template <typename T, template <typename> typename Op, bool nullable>
+template <typename T, template <typename> typename Op>
 inline u32 VectorProjectionIterator::FilterColByVal(u32 col_idx, T val) {
   // Get the input column's data
   const T *input = vector_projection_->GetVectorAs<T>(col_idx);

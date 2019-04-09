@@ -272,21 +272,15 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   LocalVar table_iter =
       current_function()->NewLocal(table_iter_type, "table_iter");
 
-  //
-  // We first initialize the TableVectorIterator and then pull out the VPI*
-  // from the iterator for use in the body of the loop.
-  //
-
-  sql::Table *table = sql::Catalog::Instance()->LookupTableByName(
-      node->iter()->As<ast::IdentifierExpr>()->name().data());
+  // Create the TableVectorIterator and initialize it
+  ast::Identifier table_name = node->iter()->As<ast::IdentifierExpr>()->name();
+  sql::Table *table = sql::Catalog::Instance()->LookupTableByName(table_name);
   TPL_ASSERT(table != nullptr, "Table does not exist!");
   emitter()->EmitTableIteratorInit(Bytecode::TableVectorIteratorInit,
                                    table_iter, table->id());
+  emitter()->Emit(Bytecode::TableVectorIteratorPerformInit, table_iter);
 
-  //
   // Pull out the VPI from the TableVectorIterator we just initialized
-  //
-
   ast::Type *vpi_type =
       ast::BuiltinType::Get(ctx, ast::BuiltinType::VectorProjectionIterator);
   LocalVar vpi = current_function()->NewLocal(vpi_type->PointerTo(), "vpi");
@@ -321,7 +315,7 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   }
 
   // Cleanup
-  emitter()->Emit(Bytecode::TableVectorIteratorClose, table_iter);
+  emitter()->Emit(Bytecode::TableVectorIteratorFree, table_iter);
 }
 
 void BytecodeGenerator::VisitFieldDecl(ast::FieldDecl *node) {

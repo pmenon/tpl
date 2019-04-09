@@ -4,7 +4,7 @@
 
 namespace tpl::sql {
 
-class ColumnVector;
+class ColumnSegment;
 
 /// An iterator over the in-memory contents of a column's data. This iterator
 /// performs an iteration over column data in vector-at-a-time fashion. Each
@@ -12,7 +12,7 @@ class ColumnVector;
 /// fewer than \a vector_size() tuples remaining).
 class ColumnVectorIterator {
  public:
-  explicit ColumnVectorIterator(const Schema::ColumnInfo &col_info) noexcept;
+  explicit ColumnVectorIterator(const Schema::ColumnInfo *col_info) noexcept;
 
   /// Advance this iterator to the next vector of input in the column
   /// \return True if there is more data in the iterator; false otherwise
@@ -25,7 +25,7 @@ class ColumnVectorIterator {
 
   /// Reset the iterator to begin iteration at the start \a column
   /// \param column The column to begin iteration over
-  void Reset(const ColumnVector *column) noexcept;
+  void Reset(const ColumnSegment *column) noexcept;
 
   // -------------------------------------------------------
   // Accessors
@@ -43,10 +43,10 @@ class ColumnVectorIterator {
 
  private:
   // The schema information for the column this iterator operates on
-  const Schema::ColumnInfo &col_info_;
+  const Schema::ColumnInfo *col_info_;
 
-  // The current block we're iterating over
-  const ColumnVector *column_;
+  // The segment we're currently iterating over
+  const ColumnSegment *column_;
 
   // The current position in the current block
   u32 current_block_pos_;

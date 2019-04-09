@@ -89,8 +89,9 @@ namespace tpl::vm {
                                                                                                                        \
   /* Table Vector Iterator */                                                                                          \
   F(TableVectorIteratorInit, OperandType::Local, OperandType::UImm2)                                                   \
+  F(TableVectorIteratorPerformInit, OperandType::Local)                                                                \
   F(TableVectorIteratorNext, OperandType::Local, OperandType::Local)                                                   \
-  F(TableVectorIteratorClose, OperandType::Local)                                                                      \
+  F(TableVectorIteratorFree, OperandType::Local)                                                                       \
   F(TableVectorIteratorGetVPI, OperandType::Local, OperandType::Local)                                                 \
                                                                                                                        \
   /* Vector Projection Iterator (VPI) */                                                                               \

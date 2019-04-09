@@ -37,17 +37,17 @@ class Catalog {
   /// Lookup a table in this catalog by name
   /// \param name The name of the target table
   /// \return A pointer to the table, or NULL if the table doesn't exist.
-  Table *LookupTableByName(const std::string &name);
+  Table *LookupTableByName(const std::string &name) const;
 
   /// Lookup a table in this catalog by name, using an identifier
   /// \param name The name of the target table
   /// \return A pointer to the table, or NULL if the table doesn't exist.
-  Table *LookupTableByName(ast::Identifier name);
+  Table *LookupTableByName(ast::Identifier name) const;
 
   /// Lookup a table in this catalog by ID
   /// \param table_id The ID of the target table
   /// \return A pointer to the table, or NULL if the table doesn't exist.
-  Table *LookupTableById(TableId table_id);
+  Table *LookupTableById(TableId table_id) const;
 
  private:
   Catalog();

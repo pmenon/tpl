@@ -57,14 +57,15 @@ class Schema {
 
   explicit Schema(std::vector<ColumnInfo> &&cols) : cols_(std::move(cols)) {}
 
-  const ColumnInfo &GetColumnInfo(u32 col_idx) const { return cols_[col_idx]; }
+  const ColumnInfo *GetColumnInfo(u32 col_idx) const { return &cols_[col_idx]; }
 
-  u32 NumColumns() const { return static_cast<u32>(columns().size()); }
+  u32 num_columns() const { return static_cast<u32>(columns().size()); }
 
   const std::vector<ColumnInfo> &columns() const { return cols_; }
 
  private:
-  std::vector<ColumnInfo> cols_;
+  // The metadata for each column. This is immutable after construction.
+  const std::vector<ColumnInfo> cols_;
 };
 
 }  // namespace tpl::sql

@@ -1,22 +1,61 @@
 #include "sql/table_vector_iterator.h"
 
+#include <numeric>
+#include <utility>
+#include <vector>
+
 #include "logging/logger.h"
 
 namespace tpl::sql {
 
-TableVectorIterator::TableVectorIterator(const Table &table)
-    : block_iterator_(table.Iterate()),
-      vector_projection_(table.num_columns(), kDefaultVectorSize) {
-  TPL_ASSERT(table.num_columns() > 0, "Cannot scan table with no columns");
+// Iterate over the table and select all columns
+TableVectorIterator::TableVectorIterator(const u16 table_id)
+    : block_iterator_(table_id) {}
 
-  // Reserve space for the column iterators
-  column_iterators_.reserve(table.num_columns());
+// Iterate over the table, but only select the given columns
+TableVectorIterator::TableVectorIterator(const u16 table_id,
+                                         std::vector<u32> column_indexes)
+    : column_indexes_(std::move(column_indexes)), block_iterator_(table_id) {}
 
-  // Set up each column iterator for the columns we'll iterate over
-  for (u32 col_idx = 0; col_idx < table.num_columns(); col_idx++) {
-    const Schema::ColumnInfo &col_info = table.schema().GetColumnInfo(col_idx);
+// Iterate over the table, but only select the given columns. Called from the
+// VM, hence the funky array syntax.
+TableVectorIterator::TableVectorIterator(const u16 table_id, const u32 num_cols,
+                                         u32 column_indexes[])
+    : column_indexes_(column_indexes, column_indexes + num_cols),
+      block_iterator_(table_id) {}
+
+bool TableVectorIterator::Init() {
+  // If we can't initialize the block iterator, fail
+  if (!block_iterator_.Init()) {
+    return false;
+  }
+
+  // The table schema
+  const auto &table_schema = block_iterator_.table()->schema();
+
+  // If the column indexes vector is empty, select all the columns
+  if (column_indexes_.empty()) {
+    column_indexes_.resize(table_schema.num_columns());
+    std::iota(column_indexes_.begin(), column_indexes_.end(), u32{0});
+  }
+
+  // Collect column metadata for the iterators
+  std::vector<const Schema::ColumnInfo *> col_infos(column_indexes_.size());
+  for (u32 idx = 0; idx < column_indexes_.size(); idx++) {
+    col_infos[idx] = table_schema.GetColumnInfo(idx);
+  }
+
+  // Configure the vector projection
+  vector_projection_.Setup(col_infos, kDefaultVectorSize);
+
+  // Create the column iterators
+  column_iterators_.reserve(col_infos.size());
+  for (const auto *col_info : col_infos) {
     column_iterators_.emplace_back(col_info);
   }
+
+  // All good
+  return true;
 }
 
 void TableVectorIterator::RefreshVectorProjection() {
@@ -65,7 +104,7 @@ bool TableVectorIterator::Advance() {
   if (block_iterator_.Advance()) {
     const Table::Block *block = block_iterator_.current_block();
     for (u32 i = 0; i < column_iterators_.size(); i++) {
-      const ColumnVector *col = block->GetColumnData(i);
+      const ColumnSegment *col = block->GetColumnData(i);
       column_iterators_[i].Reset(col);
     }
     RefreshVectorProjection();

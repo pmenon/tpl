@@ -86,10 +86,25 @@ class VectorProjectionIteratorTest : public TplTest {
   };
 
  public:
-  VectorProjectionIteratorTest()
-      : num_tuples_(kDefaultVectorSize),
-        empty_(4, num_tuples()),
-        vp_(4, num_tuples()) {
+  VectorProjectionIteratorTest() : num_tuples_(kDefaultVectorSize) {
+    // Create the schema
+    std::vector<Schema::ColumnInfo> cols = {
+        Schema::ColumnInfo("col_a", SmallIntType::InstanceNonNullable()),
+        Schema::ColumnInfo("col_b", IntegerType::InstanceNullable()),
+        Schema::ColumnInfo("col_c", IntegerType::InstanceNonNullable()),
+        Schema::ColumnInfo("col_b", BigIntType::InstanceNullable())};
+    schema_ = std::make_unique<Schema>(std::move(cols));
+
+    std::vector<const Schema::ColumnInfo *> vp_cols_info = {
+        schema_->GetColumnInfo(0), schema_->GetColumnInfo(1),
+        schema_->GetColumnInfo(2), schema_->GetColumnInfo(3)};
+    vp_ = std::make_unique<VectorProjection>(vp_cols_info, num_tuples());
+
+    // Load the data
+    LoadData();
+  }
+
+  void LoadData() {
     auto cola_data = CreateMonotonicallyIncreasing<i16>(num_tuples());
     auto colb_data = CreateRandom<i32>(num_tuples());
     auto colb_null = CreateRandomNullBitmap(num_tuples());
@@ -107,23 +122,21 @@ class VectorProjectionIteratorTest : public TplTest {
     for (u32 col_idx = 0; col_idx < data_.size(); col_idx++) {
       auto &[data, nulls, num_nulls, num_tuples] = data_[col_idx];
       (void)num_nulls;
-      vp_.ResetFromRaw(data.get(), nulls.get(), col_idx, num_tuples);
+      vp_->ResetFromRaw(data.get(), nulls.get(), col_idx, num_tuples);
     }
   }
 
  protected:
   u32 num_tuples() const { return num_tuples_; }
 
-  VectorProjection *empty_vp() { return &empty_; }
-
-  VectorProjection *vp() { return &vp_; }
+  VectorProjection *vp() { return vp_.get(); }
 
   const ColData &column_data(u32 col_idx) const { return data_[col_idx]; }
 
  private:
   u32 num_tuples_;
-  VectorProjection empty_;
-  VectorProjection vp_;
+  std::unique_ptr<Schema> schema_;
+  std::unique_ptr<VectorProjection> vp_;
   std::vector<ColData> data_;
 };
 
@@ -132,8 +145,10 @@ TEST_F(VectorProjectionIteratorTest, EmptyIteratorTest) {
   // Check to see that iteration doesn't begin without an input block
   //
 
+  std::vector<const Schema::ColumnInfo *> vp_col_info;
+  VectorProjection empty_vecproj(vp_col_info, 0);
   VectorProjectionIterator iter;
-  iter.SetVectorProjection(empty_vp());
+  iter.SetVectorProjection(&empty_vecproj);
 
   for (; iter.HasNext(); iter.Advance()) {
     FAIL() << "Should not iterate with empty vector projection!";
@@ -339,7 +354,7 @@ TEST_F(VectorProjectionIteratorTest, SimpleVectorizedFilterTest) {
   }
 
   // Filter
-  iter.FilterColByVal<i32, std::less, false>(ColId::col_c, 100);
+  iter.FilterColByVal<i32, std::less>(ColId::col_c, 100);
 
   // Check
   u32 count = 0;
@@ -366,8 +381,8 @@ TEST_F(VectorProjectionIteratorTest, MultipleVectorizedFilterTest) {
   VectorProjectionIterator iter;
   iter.SetVectorProjection(vp());
 
-  iter.FilterColByVal<i32, std::less, false>(ColId::col_c, 750);
-  iter.FilterColByVal<i16, std::less, false>(ColId::col_a, 10);
+  iter.FilterColByVal<i32, std::less>(ColId::col_c, 750);
+  iter.FilterColByVal<i16, std::less>(ColId::col_a, 10);
 
   // Check
   u32 count = 0;

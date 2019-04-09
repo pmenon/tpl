@@ -178,9 +178,9 @@ VM_OP_HOT bool OpJumpIfTrue(bool cond) { return cond; }
 
 VM_OP_HOT bool OpJumpIfFalse(bool cond) { return !cond; }
 
-VM_OP_COLD void OpRegionInit(tpl::util::Region *region);
+void OpRegionInit(tpl::util::Region *region);
 
-VM_OP_COLD void OpRegionFree(tpl::util::Region *region);
+void OpRegionFree(tpl::util::Region *region);
 
 VM_OP_HOT void OpCall(UNUSED u16 func_id, UNUSED u16 num_args) {}
 
@@ -190,15 +190,17 @@ VM_OP_HOT void OpReturn() {}
 // Table Vector Iterator
 // ---------------------------------------------------------
 
-VM_OP_COLD void OpTableVectorIteratorInit(tpl::sql::TableVectorIterator *iter,
-                                          u16 table_id);
+void OpTableVectorIteratorInit(tpl::sql::TableVectorIterator *iter,
+                               u16 table_id);
+
+void OpTableVectorIteratorPerformInit(tpl::sql::TableVectorIterator *iter);
 
 VM_OP_HOT void OpTableVectorIteratorNext(bool *has_more,
                                          tpl::sql::TableVectorIterator *iter) {
   *has_more = iter->Advance();
 }
 
-VM_OP_COLD void OpTableVectorIteratorClose(tpl::sql::TableVectorIterator *iter);
+void OpTableVectorIteratorFree(tpl::sql::TableVectorIterator *iter);
 
 VM_OP_HOT void OpTableVectorIteratorGetVPI(
     tpl::sql::VectorProjectionIterator **vpi,

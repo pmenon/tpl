@@ -21,17 +21,15 @@ void OpRegionFree(tpl::util::Region *region) { region->~Region(); }
 void OpTableVectorIteratorInit(tpl::sql::TableVectorIterator *iter,
                                u16 table_id) {
   TPL_ASSERT(iter != nullptr, "Null iterator to initialize");
-
-  auto *table = tpl::sql::Catalog::Instance()->LookupTableById(
-      static_cast<tpl::sql::TableId>(table_id));
-
-  // At this point, the table better exist ...
-  TPL_ASSERT(table != nullptr, "Table can't be null!");
-
-  new (iter) tpl::sql::TableVectorIterator(*table);
+  new (iter) tpl::sql::TableVectorIterator(table_id);
 }
 
-void OpTableVectorIteratorClose(tpl::sql::TableVectorIterator *iter) {
+void OpTableVectorIteratorPerformInit(tpl::sql::TableVectorIterator *iter) {
+  TPL_ASSERT(iter != nullptr, "NULL iterator given to close");
+  iter->Init();
+}
+
+void OpTableVectorIteratorFree(tpl::sql::TableVectorIterator *iter) {
   TPL_ASSERT(iter != nullptr, "NULL iterator given to close");
   iter->~TableVectorIterator();
 }

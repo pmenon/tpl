@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+#include <limits>
+
 #include "sql/value.h"
 #include "util/common.h"
 #include "util/macros.h"

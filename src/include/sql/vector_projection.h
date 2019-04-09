@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "sql/schema.h"
 #include "util/bit_util.h"
 #include "util/common.h"
 #include "util/macros.h"
@@ -15,10 +16,16 @@ class ColumnVectorIterator;
 /// tuples whose columns are stored in columnar format
 class VectorProjection {
  public:
-  VectorProjection(u32 num_cols, u32 size);
+  /// Create a vector projection over columns w
+  VectorProjection(std::vector<const Schema::ColumnInfo *> &col_info, u32 size);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(VectorProjection);
+
+  /// Get the metadata for the column at the given index in this projection
+  const Schema::ColumnInfo *GetColumnInfo(u32 col_idx) const {
+    return column_info_[col_idx];
+  }
 
   /// Get the current vector input for the column at index \a col_idx
   /// \tparam T The data type to interpret the column's data as
@@ -56,10 +63,25 @@ class VectorProjection {
   u32 total_tuple_count() const { return tuple_count_; }
 
  private:
+  friend class TableVectorIterator;
+
+  // The empty constructor and Setup() functions are available only to
+  // TableVectorIterator because it does lazy initialization
+
+  /// Empty/uninitialized constructor
+  VectorProjection();
+
+  /// Set up this vector projection with the given column information and size
+  void Setup(std::vector<const Schema::ColumnInfo *> &column_infos, u32 size);
+
+ private:
   // Set the deletions bitmap
   void ClearDeletions();
 
  private:
+  // Metadata about each column in the projection
+  std::unique_ptr<const Schema::ColumnInfo *[]> column_info_;
+
   // The array of pointers to column data for all columns in this projection
   std::unique_ptr<byte *[]> column_data_;
 

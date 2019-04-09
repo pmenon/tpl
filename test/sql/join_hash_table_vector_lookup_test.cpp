@@ -102,7 +102,10 @@ TEST_F(JoinHashTableVectorLookupTest, SimpleGenericLookupTest) {
   auto probe_keys = std::vector<u32>(num_probe);
   std::generate(probe_keys.begin(), probe_keys.end(), Range(0, num_build - 1));
 
-  VectorProjection vp(2, num_probe);
+  Schema schema({{"pk", IntegerType::InstanceNonNullable()}});
+  std::vector<const Schema::ColumnInfo *> vp_col_info = {
+      schema.GetColumnInfo(0)};
+  VectorProjection vp(vp_col_info, num_probe);
   VectorProjectionIterator vpi(&vp);
 
   // Lookup
@@ -146,7 +149,10 @@ TEST_F(JoinHashTableVectorLookupTest, DISABLED_PerfLookupTest) {
     std::generate(probe_keys.begin(), probe_keys.end(),
                   Range(0, num_build - 1));
 
-    VectorProjection vp(2, kDefaultVectorSize);
+    Schema schema({{"pk", IntegerType::InstanceNonNullable()}});
+    std::vector<const Schema::ColumnInfo *> vp_col_info = {
+        schema.GetColumnInfo(0)};
+    VectorProjection vp(vp_col_info, kDefaultVectorSize);
     VectorProjectionIterator vpi(&vp);
 
     // Lookup

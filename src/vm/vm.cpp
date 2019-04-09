@@ -410,6 +410,12 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(TableVectorIteratorPerformInit) : {
+    auto *iter = frame->LocalAt<sql::TableVectorIterator *>(READ_LOCAL_ID());
+    OpTableVectorIteratorPerformInit(iter);
+    DISPATCH_NEXT();
+  }
+
   OP(TableVectorIteratorNext) : {
     auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
     auto *iter = frame->LocalAt<sql::TableVectorIterator *>(READ_LOCAL_ID());
@@ -417,9 +423,9 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(TableVectorIteratorClose) : {
+  OP(TableVectorIteratorFree) : {
     auto *iter = frame->LocalAt<sql::TableVectorIterator *>(READ_LOCAL_ID());
-    OpTableVectorIteratorClose(iter);
+    OpTableVectorIteratorFree(iter);
     DISPATCH_NEXT();
   }
 

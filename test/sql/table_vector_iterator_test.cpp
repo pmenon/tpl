@@ -13,9 +13,10 @@ TEST_F(TableVectorIteratorTest, EmptyIteratorTest) {
   // Check to see that iteration doesn't begin without an input block
   //
 
-  auto *table = sql::Catalog::Instance()->LookupTableById(TableId::EmptyTable);
+  TableVectorIterator iter(static_cast<u16>(TableId::EmptyTable));
 
-  TableVectorIterator iter(*table);
+  EXPECT_TRUE(iter.Init());
+
   while (iter.Advance()) {
     FAIL() << "Empty table should have no tuples";
   }
@@ -26,9 +27,10 @@ TEST_F(TableVectorIteratorTest, SimpleIteratorTest) {
   // Simple test to ensure we iterate over the whole table
   //
 
-  auto *table = sql::Catalog::Instance()->LookupTableById(TableId::Test1);
+  TableVectorIterator iter(static_cast<u16>(TableId::EmptyTable));
 
-  TableVectorIterator iter(*table);
+  EXPECT_TRUE(iter.Init());
+
   VectorProjectionIterator *vpi = iter.vector_projection_iterator();
 
   u32 num_tuples = 0;
@@ -39,7 +41,7 @@ TEST_F(TableVectorIteratorTest, SimpleIteratorTest) {
     vpi->Reset();
   }
 
-  EXPECT_EQ(table->num_tuples(), num_tuples);
+  EXPECT_EQ(iter.table()->num_tuples(), num_tuples);
 }
 
 }  // namespace tpl::sql::test

@@ -2,12 +2,12 @@
 
 #include <algorithm>
 
-#include "sql/column.h"
+#include "sql/column_segment.h"
 
 namespace tpl::sql {
 
 ColumnVectorIterator::ColumnVectorIterator(
-    const Schema::ColumnInfo &col_info) noexcept
+    const Schema::ColumnInfo *col_info) noexcept
     : col_info_(col_info),
       column_(nullptr),
       current_block_pos_(0),
@@ -20,7 +20,7 @@ bool ColumnVectorIterator::Advance() noexcept {
     return false;
   }
 
-  u32 next_elem_offset = next_block_pos_ * col_info_.StorageSize();
+  u32 next_elem_offset = next_block_pos_ * col_info_->StorageSize();
 
   col_data_ = const_cast<byte *>(column_->AccessRaw(next_elem_offset));
   col_null_bitmap_ = const_cast<u32 *>(column_->AccessRawNullBitmap(0));
@@ -32,7 +32,7 @@ bool ColumnVectorIterator::Advance() noexcept {
   return true;
 }
 
-void ColumnVectorIterator::Reset(const ColumnVector *column) noexcept {
+void ColumnVectorIterator::Reset(const ColumnSegment *column) noexcept {
   TPL_ASSERT(column != nullptr, "Cannot reset iterator with NULL block");
   column_ = column;
 

@@ -12,7 +12,7 @@ TEST_F(ColumnIteratorTest, EmptyIteratorTest) {
   auto *table = sql::Catalog::Instance()->LookupTableById(TableId::Test1);
 
   const auto col_idx = 0;
-  const auto &col_info = table->schema().columns()[col_idx];
+  const auto col_info = table->schema().GetColumnInfo(col_idx);
 
   //
   // Test 1: Check to see that iteration doesn't begin without an input block
@@ -48,7 +48,7 @@ TEST_F(ColumnIteratorTest, IntegerIterationTest) {
   auto *table = sql::Catalog::Instance()->LookupTableById(TableId::Test1);
 
   const u32 col_idx = 0;
-  const auto &col_info = table->schema().columns()[col_idx];
+  const auto col_info = table->schema().GetColumnInfo(col_idx);
 
   //
   // This is a simple test. We iterate over a single block of the Test1 table
@@ -57,7 +57,7 @@ TEST_F(ColumnIteratorTest, IntegerIterationTest) {
   // test.
   //
 
-  ASSERT_TRUE(col_info.type.type_id() == TypeId::Integer);
+  ASSERT_TRUE(col_info->type.type_id() == TypeId::Integer);
 
   const auto *col = table->blocks()[0].GetColumnData(0);
 

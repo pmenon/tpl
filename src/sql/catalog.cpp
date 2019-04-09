@@ -155,7 +155,7 @@ void InitTable(const TableInsertMeta &table_meta, Table *table) {
                     static_cast<u32>(table_meta.num_rows % batch_size != 0);
 
   for (u32 i = 0; i < num_batches; i++) {
-    std::vector<ColumnVector> columns;
+    std::vector<ColumnSegment> columns;
 
     // Generate column data for all columns
     u32 num_vals = std::min(batch_size, table_meta.num_rows - (i * batch_size));
@@ -211,7 +211,7 @@ Catalog *Catalog::Instance() {
   return &kInstance;
 }
 
-Table *Catalog::LookupTableByName(const std::string &name) {
+Table *Catalog::LookupTableByName(const std::string &name) const {
   static std::unordered_map<std::string, TableId> kTableNameMap = {
 #define ENTRY(Name, Str, ...) {Str, TableId::Name},
       TABLES(ENTRY)
@@ -226,11 +226,11 @@ Table *Catalog::LookupTableByName(const std::string &name) {
   return LookupTableById(iter->second);
 }
 
-Table *Catalog::LookupTableByName(const ast::Identifier name) {
+Table *Catalog::LookupTableByName(const ast::Identifier name) const {
   return LookupTableByName(name.data());
 }
 
-Table *Catalog::LookupTableById(TableId table_id) {
+Table *Catalog::LookupTableById(TableId table_id) const {
   auto iter = table_catalog_.find(table_id);
   return (iter == table_catalog_.end() ? nullptr : iter->second.get());
 }
