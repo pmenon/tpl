@@ -3,6 +3,7 @@
 import argparse
 import os
 import subprocess
+import sys
 
 TARGET_STRING = 'VM main() returned: '
 
@@ -15,15 +16,14 @@ def run(tpl_bin, tpl_file):
   return None
 
 
-def check(tpl_bin, tpl_tests_file):
+def check(tpl_bin, tpl_folder, tpl_tests_file):
   with open(tpl_tests_file) as tpl_tests:
-    folder = os.path.dirname(os.path.abspath(tpl_tests_file))
     num_tests, failed = 0, set()
     print('Tests:')
 
     for line in tpl_tests:
       tpl_file, expected_output = [x.strip() for x in line.split(',')]
-      res = run(tpl_bin, os.path.join(folder, tpl_file))
+      res = run(tpl_bin, os.path.join(tpl_folder, tpl_file))
       num_tests += 1
 
       report = 'PASS'
@@ -41,18 +41,17 @@ def check(tpl_bin, tpl_tests_file):
       print('{} failed:'.format(len(failed)))
       for fail in failed:
         print('\t{}'.format(fail))
-      return -1
-
-    return 0
+      sys.exit(-1)
 
 
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument('-b', dest='tpl_bin', help='TPL Binary.')
+  parser.add_argument('-b', dest='tpl_bin', help='TPL binary.')
   parser.add_argument('-f', dest='tpl_tests_file',
     help='File containing <tpl_test, expected_output> lines.')
+  parser.add_argument('-t', dest='tpl_folder', help='TPL tests folder.')
   args = parser.parse_args()
-  return check(args.tpl_bin, args.tpl_tests_file)
+  check(args.tpl_bin, args.tpl_folder, args.tpl_tests_file)
 
 
 if __name__ == '__main__':

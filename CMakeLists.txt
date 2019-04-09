@@ -165,7 +165,21 @@ endif ()
           ${BUILD_SUPPORT_DIR}/run_tpl_tests.py
           -b ${CMAKE_BINARY_DIR}/bin/tpl
           -f ${PROJECT_SOURCE_DIR}/sample_tpl/tpl_tests.txt
+          -t ${PROJECT_SOURCE_DIR}/sample_tpl
           )
+
+  add_custom_target(check-tpl-diff
+        git diff -U0 ../sample_tpl/tpl_tests.txt
+          | grep '^[+][^+-]' | sed 's/^.//' | uniq  # check added files
+          > ${CMAKE_BINARY_DIR}/tpl_tests_diff.txt
+          &&
+        ${BUILD_SUPPORT_DIR}/run_tpl_tests.py
+        -b ${CMAKE_BINARY_DIR}/bin/tpl
+        -f ${CMAKE_BINARY_DIR}/tpl_tests_diff.txt
+        -t ${PROJECT_SOURCE_DIR}/sample_tpl
+        )
+
+
 
 ############################################################
 #
