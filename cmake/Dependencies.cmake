@@ -52,3 +52,9 @@ include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/spdlog/include")
 ############################################################
 
 include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/xbyak")
+
+############################################################
+# JSON
+############################################################
+
+include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/nlohmann")

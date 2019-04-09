@@ -9,6 +9,9 @@ list(REMOVE_ITEM tpl_sources
      "${PROJECT_SOURCE_DIR}/src/vm/gen_opt_bc.cpp"
      "${PROJECT_SOURCE_DIR}/src/vm/bytecode_handlers_ir.cpp")
 
+# Add the json library
+list(APPEND TERRIER_SRCS ${PROJECT_SOURCE_DIR}/third_party/nlohmann/json.hpp)
+
 ##################################################
 # Generate Bytecode Handlers Logic and Cleaner
 #
