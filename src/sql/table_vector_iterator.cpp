@@ -75,4 +75,18 @@ bool TableVectorIterator::Advance() {
   return false;
 }
 
+void TableVectorIterator::Reset(const Table &table) {
+  // Reset the block iterator.
+  block_iterator_ = table.Iterate();
+  if (block_iterator_.Advance()) {
+    // Reset each column iterator.
+    const Table::Block *block = block_iterator_.current_block();
+    for (u32 i = 0; i < column_iterators_.size(); i++) {
+      const ColumnVector *col = block->GetColumnData(i);
+      column_iterators_[i].Reset(col);
+    }
+    RefreshVectorProjection();
+  }
+}
+
 }  // namespace tpl::sql

@@ -22,6 +22,12 @@ class TableVectorIterator {
   /// \return True if there is more data in the iterator; false otherwise
   bool Advance();
 
+  /**
+   * Resets the iterator to the beginning of the table.
+   * @param table is the table to use when resetting.
+   */
+  void Reset(const Table &table);
+
   // -------------------------------------------------------
   // Accessors
   // -------------------------------------------------------
