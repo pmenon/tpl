@@ -97,7 +97,7 @@ class AbstractExpression {
    * @return child of abstract expression at that index
    */
   std::shared_ptr<AbstractExpression> GetChild(uint64_t index) const {
-    TERRIER_ASSERT(index < children_.size(), "Index must be in bounds.");
+    TPL_ASSERT(index < children_.size(), "Index must be in bounds.");
     return children_[index];
   }
 

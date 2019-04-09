@@ -9,7 +9,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "common/macros.h"
+#include "util/macros.h"
 
 namespace terrier::common {
 /*

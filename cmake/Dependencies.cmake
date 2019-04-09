@@ -1,4 +1,4 @@
-set(TPL_LINK_LIBS "")
+set(TPL_LINK_LIBS pg_query)
 
 ############################################################
 # LLVM 7.0+
@@ -52,6 +52,12 @@ include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/spdlog/include")
 ############################################################
 
 include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/xbyak")
+
+############################################################
+# LIBPG for the parser
+############################################################
+
+include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/libpg_query/")
 
 
 # TBB

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/macros.h"
+#include "util/macros.h"
 
 namespace terrier::parser {
 
