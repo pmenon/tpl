@@ -158,7 +158,7 @@ if (${CLANG_TIDY_FOUND})
 endif ()
 
 ###########################################################
-# "make check-tpl" target
+# "make check-tpl" and "make check-tpl-diff" targets
 ###########################################################
 
   add_custom_target(check-tpl
