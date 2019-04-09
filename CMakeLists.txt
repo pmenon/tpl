@@ -157,6 +157,16 @@ if (${CLANG_TIDY_FOUND})
   # TODO(WAN): if we're bringing in gbenchmark and gtest properly, we can set them as dependencies here
 endif ()
 
+###########################################################
+# "make check-tpl" target
+###########################################################
+
+  add_custom_target(check-tpl
+          ${BUILD_SUPPORT_DIR}/run_tpl_tests.py
+          -b ${CMAKE_BINARY_DIR}/bin/tpl
+          -f ${PROJECT_SOURCE_DIR}/sample_tpl/tpl_tests.txt
+          )
+
 ############################################################
 #
 # Done, print final configuration summary
