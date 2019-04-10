@@ -1,6 +1,5 @@
 #include "sql_test.h"  // NOLINT
 
-#include <iostream>
 #include "catalog/catalog_defs.h"
 #include "sql/execution_structures.h"
 #include "sql/table_vector_iterator.h"
@@ -14,12 +13,9 @@ TEST_F(TableVectorIteratorTest, EmptyIteratorTest) {
   //
   // Check to see that iteration doesn't begin without an input block
   //
-  std::cout << "Getting Execution Structures" << std::endl;
   auto *exec = sql::ExecutionStructures::Instance();
   exec->GetCatalog()->CreateTestTables();
-  std::cout << "Getting Table" << std::endl;
   auto *table = exec->GetCatalog()->LookupTableByName("empty_table");
-  std::cout << "Iterating: " << (table == nullptr) << std::endl;
 
   TableVectorIterator iter(*table->GetTable(), *table->GetStorageSchema());
   while (iter.Advance()) {
@@ -33,6 +29,7 @@ TEST_F(TableVectorIteratorTest, SimpleIteratorTest) {
   //
 
   auto *exec = sql::ExecutionStructures::Instance();
+  exec->GetCatalog()->CreateTestTables();
   auto *table = exec->GetCatalog()->LookupTableByName("test_1");
 
   TableVectorIterator iter(*table->GetTable(), *table->GetStorageSchema());
@@ -45,7 +42,6 @@ TEST_F(TableVectorIteratorTest, SimpleIteratorTest) {
     }
     pci->Reset();
   }
-  std::cout << "Read Items = " << num_tuples << std::endl;
   EXPECT_EQ(catalog::test_table_size, num_tuples);
 }
 

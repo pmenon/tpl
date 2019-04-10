@@ -58,40 +58,40 @@ void OpTableVectorIteratorClose(tpl::sql::TableVectorIterator *iter) {
 }
 
 // ---------------------------------------------------------
-// VPI Vectorized Filters
+// PCI Vectorized Filters
 // ---------------------------------------------------------
 
-void OpVPIFilterEqual(u32 *size,
+void OpPCIFilterEqual(u32 *size,
                       UNUSED tpl::sql::ProjectedColumnsIterator *iter,
                       UNUSED u16 col_id, UNUSED i64 val) {
   *size = 0;
 }
 
-void OpVPIFilterGreaterThan(u32 *size,
+void OpPCIFilterGreaterThan(u32 *size,
                             UNUSED tpl::sql::ProjectedColumnsIterator *iter,
                             UNUSED u16 col_id, UNUSED i64 val) {
   *size = 0;
 }
 
-void OpVPIFilterGreaterThanEqual(
+void OpPCIFilterGreaterThanEqual(
     u32 *size, UNUSED tpl::sql::ProjectedColumnsIterator *iter,
     UNUSED u16 col_id, UNUSED i64 val) {
   *size = 0;
 }
 
-void OpVPIFilterLessThan(u32 *size,
+void OpPCIFilterLessThan(u32 *size,
                          UNUSED tpl::sql::ProjectedColumnsIterator *iter,
                          UNUSED u16 col_id, UNUSED i64 val) {
   *size = 0;
 }
 
-void OpVPIFilterLessThanEqual(u32 *size,
+void OpPCIFilterLessThanEqual(u32 *size,
                               UNUSED tpl::sql::ProjectedColumnsIterator *iter,
                               UNUSED u16 col_id, UNUSED i64 val) {
   *size = 0;
 }
 
-void OpVPIFilterNotEqual(u32 *size,
+void OpPCIFilterNotEqual(u32 *size,
                          UNUSED tpl::sql::ProjectedColumnsIterator *iter,
                          UNUSED u16 col_id, UNUSED i64 val) {
   *size = 0;

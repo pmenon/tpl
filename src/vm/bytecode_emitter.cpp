@@ -201,12 +201,12 @@ void BytecodeEmitter::EmitTableIteratorInit(Bytecode bytecode, LocalVar iter,
   EmitAll(bytecode, iter, table_id);
 }
 
-void BytecodeEmitter::EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar pci,
+void BytecodeEmitter::EmitPCIGet(Bytecode bytecode, LocalVar out, LocalVar pci,
                                  u32 col_idx) {
   EmitAll(bytecode, out, pci, col_idx);
 }
 
-void BytecodeEmitter::EmitVPIVectorFilter(Bytecode bytecode, LocalVar selected,
+void BytecodeEmitter::EmitPCIVectorFilter(Bytecode bytecode, LocalVar selected,
                                           LocalVar pci, u32 col_idx, i64 val) {
   EmitAll(bytecode, selected, pci, col_idx, val);
 }

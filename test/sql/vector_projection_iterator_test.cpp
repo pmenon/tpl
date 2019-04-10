@@ -51,7 +51,7 @@ std::unique_ptr<byte[]> CreateRandom(u32 num_elems, T min = 0,
 std::pair<std::unique_ptr<u32[]>, u32> CreateRandomNullBitmap(u32 num_elems) {
   auto input =
       std::make_unique<u32[]>(util::BitUtil::Num32BitWordsFor(num_elems));
-  auto num_nulls = 0;
+  u32 num_nulls = 0;
 
   std::mt19937 generator;
   std::uniform_int_distribution<u32> distribution(0, 10);
@@ -107,16 +107,20 @@ class ProjectedColumnsIteratorTest : public TplTest {
     for (u16 col_idx = 0; col_idx < data_.size(); col_idx++) {
       auto &[data, nulls, num_nulls, num_tuples] = data_[col_idx];
       (void)num_nulls;
+      // Size of an element (e.g. 4 for u32).
       u32 data_size =
           info_->GetStorageSchema()->GetColumns()[col_idx].GetAttrSize();
       projected_columns_->SetNumTuples(num_tuples);
-      if (nulls.get() != nullptr) {
+      if (nulls != nullptr) {
+        // Fill up the null bitmap.
         std::memcpy(projected_columns_->ColumnNullBitmap(col_idx), nulls.get(),
                     num_tuples);
       } else {
+        // Set all rows to non-null.
         std::memset(projected_columns_->ColumnNullBitmap(col_idx), 0,
                     num_tuples);
       }
+      // Fill up the values.
       std::memcpy(projected_columns_->ColumnStart(col_idx), data.get(),
                   data_size * num_tuples);
     }
@@ -125,6 +129,9 @@ class ProjectedColumnsIteratorTest : public TplTest {
   void InitializeColumns() {
     auto *exec = sql::ExecutionStructures::Instance();
     auto *ctl = exec->GetCatalog();
+    // TODO(Amadou): Come up with an easier way to create ProjectedColumns.
+    // This should be done after the catalog PR is merged in.
+    // Create column metadata for every column.
     catalog::Schema::Column storage_col_a =
         ctl->MakeStorageColumn("col_a", sql::IntegerType::Instance(false));
     catalog::Schema::Column storage_col_b =
@@ -142,16 +149,21 @@ class ProjectedColumnsIteratorTest : public TplTest {
     sql::Schema::ColumnInfo sql_col_d("col_d",
                                       sql::IntegerType::Instance(true));
 
+    // Create the table in the catalog.
     catalog::Schema storage_schema(std::vector<catalog::Schema::Column>{
         storage_col_a, storage_col_b, storage_col_c, storage_col_d});
     sql::Schema sql_schema(std::vector<sql::Schema::ColumnInfo>{
         sql_col_a, sql_col_b, sql_col_c, sql_col_d});
     ctl->CreateTable("hash_test_table", std::move(storage_schema),
                      std::move(sql_schema));
+
+    // Get the table's information.
     info_ = ctl->LookupTableByName("hash_test_table");
     std::vector<catalog::col_oid_t> col_oids;
     for (const auto col : info_->GetStorageSchema()->GetColumns())
       col_oids.emplace_back(col.GetOid());
+
+    // Create a ProjectedColumns
     auto initializer_map = info_->GetTable()->InitializerForProjectedColumns(
         col_oids, kDefaultVectorSize);
     buffer_ = common::AllocationUtil::AllocateAligned(
@@ -172,9 +184,9 @@ class ProjectedColumnsIteratorTest : public TplTest {
  private:
   u32 num_tuples_;
   std::vector<ColData> data_;
-  catalog::Catalog::TableInfo *info_;
-  byte *buffer_;
-  storage::ProjectedColumns *projected_columns_;
+  catalog::Catalog::TableInfo *info_ = nullptr;
+  byte *buffer_ = nullptr;
+  storage::ProjectedColumns *projected_columns_ = nullptr;
 };
 
 TEST_F(ProjectedColumnsIteratorTest, EmptyIteratorTest) {
@@ -343,7 +355,7 @@ TEST_F(ProjectedColumnsIteratorTest, ManualFilterTest) {
 TEST_F(ProjectedColumnsIteratorTest, ManagedFilterTest) {
   //
   // Check to see that we can correctly apply a single filter on a single
-  // column using VPI's managed filter. We apply the filter IS_NOT_NULL(col_b)
+  // column using PCI's managed filter. We apply the filter IS_NOT_NULL(col_b)
   //
 
   ProjectedColumnsIterator iter;

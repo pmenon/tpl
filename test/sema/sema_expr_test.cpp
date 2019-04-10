@@ -8,8 +8,8 @@
 #include "ast/context.h"
 #include "ast/type.h"
 #include "sema/sema.h"
-#include "util/region_containers.h"
 #include "sql/execution_structures.h"
+#include "util/region_containers.h"
 
 namespace tpl::sema::test {
 
@@ -19,7 +19,7 @@ class SemaExprTest : public TplTest {
       : region_("test"),
         error_reporter_(&region_),
         ctx_(&region_, &error_reporter_) {
-    auto * exec = sql::ExecutionStructures::Instance();
+    auto *exec = sql::ExecutionStructures::Instance();
     exec->GetCatalog()->CreateTestTables();
   }
 

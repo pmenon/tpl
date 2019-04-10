@@ -17,17 +17,17 @@ namespace terrier::catalog {
 constexpr u32 test_table_size = 200000;
 
 /**
- * Temporary placeholder for Terrier's actual catalog. It will be remove once the catalog PR is in.
- * Catalog::TableInfo should contain all the information needed to interact with a table.
- * Currently this makes a difference between the schema needed by the storage layer, and the schema needed
- * by the execution layer. Eventually, I think we need to unify these schemas.
+ * Temporary placeholder for Terrier's actual catalog. It will be remove once
+ * the catalog PR is in. Catalog::TableInfo should contain all the information
+ * needed to interact with a table. Currently this makes a difference between
+ * the schema needed by the storage layer, and the schema needed by the
+ * execution layer. Eventually, I think we need to unify these schemas.
  */
 class Catalog {
  public:
-
   /**
-   * Contains all the information that should be needed for scans, expressions, plan nodes, ...
-   * Feel free to extend it to add more stuff.
+   * Contains all the information that should be needed for scans, expressions,
+   * plan nodes, ... Feel free to extend it to add more stuff.
    */
   class TableInfo {
    public:

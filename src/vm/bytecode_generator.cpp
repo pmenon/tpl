@@ -184,7 +184,7 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
   LocalVar row = current_function()->NewLocal(row_type, "row");
 
   //
-  // Now, we generate a loop over every element in the VPI. In the beginning of
+  // Now, we generate a loop over every element in the PCI. In the beginning of
   // each iteration, we pull out the column members into the allocated row
   // structure in preparation for the body of the loop that expects rows.
   //
@@ -196,7 +196,7 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
     ast::Context *ctx = row_type->context();
     LocalVar cond = current_function()->NewLocal(
         ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
-    emitter()->Emit(Bytecode::VPIHasNext, cond, pci);
+    emitter()->Emit(Bytecode::PCIHasNext, cond, pci);
     emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
                                    pci_loop.break_label());
 
@@ -206,7 +206,7 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
       LocalVar col_ptr =
           current_function()->NewLocal(fields[col_idx].type->PointerTo());
       emitter()->EmitLea(col_ptr, row, offset);
-      emitter()->EmitVPIGet(Bytecode::VPIGetInteger, col_ptr.ValueOf(), pci,
+      emitter()->EmitPCIGet(Bytecode::PCIGetInteger, col_ptr.ValueOf(), pci,
                             col_idx);
       offset += fields[col_idx].type->size();
     }
@@ -214,8 +214,8 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
     // Generate body
     VisitIterationStatement(node, table_loop);
 
-    // Advance the VPI one row
-    emitter()->Emit(Bytecode::VPIAdvance, pci);
+    // Advance the PCI one row
+    emitter()->Emit(Bytecode::PCIAdvance, pci);
 
     // Finish, loop back around
     pci_loop.JumpToHeader();
@@ -223,23 +223,23 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
 
   // When we're done with one iteration of the loop, we reset the vector
   // projection iterator
-  emitter()->Emit(Bytecode::VPIReset, pci);
+  emitter()->Emit(Bytecode::PCIReset, pci);
 }
 
 void BytecodeGenerator::VisitVectorWiseIteration(ast::ForInStmt *node,
                                                  LocalVar pci,
                                                  LoopBuilder *table_loop) {
   //
-  // When iterating vector-wise, we need to allocate a VPI* with the same name
-  // as the target variable for the loop. We copy the given VPI instance for
+  // When iterating vector-wise, we need to allocate a PCI* with the same name
+  // as the target variable for the loop. We copy the given PCI instance for
   // each iteration
   //
 
-  // Get the name and type of the target VPI iteration variable
+  // Get the name and type of the target PCI iteration variable
   auto type = current_function()->LookupLocalInfo(pci.GetOffset())->type();
   auto iter_name = node->target()->As<ast::IdentifierExpr>()->name().data();
 
-  // Create the variable and assign it the value of the given VPI
+  // Create the variable and assign it the value of the given PCI
   LocalVar iter = current_function()->NewLocal(type, iter_name);
   BuildAssign(iter, pci, type);
 
@@ -251,9 +251,9 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   //
   // For both tuple-at-a-time iteration and vector-at-a-time iteration, we need
   // a TableVectorIterator which we allocate in the function first. We also need
-  // a ProjectedColumnsIterator (VPI) pointer to read individual rows; VPIs are
+  // a ProjectedColumnsIterator (PCI) pointer to read individual rows; PCIs are
   // also needed for vectorized processing because they allow consecutive
-  // iterations and track filtered tuples. Thus, we allocate a VPI* in the
+  // iterations and track filtered tuples. Thus, we allocate a PCI* in the
   // function, too, that we populate with the instance inside the TVI.
   //
 
@@ -272,7 +272,7 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
       current_function()->NewLocal(table_iter_type, "table_iter");
 
   //
-  // We first initialize the TableVectorIterator and then pull out the VPI*
+  // We first initialize the TableVectorIterator and then pull out the PCI*
   // from the iterator for use in the body of the loop.
   //
   // TODO(Amadou): Increase the size of table ids to u32.
@@ -285,20 +285,20 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
                                    static_cast<u16>(uint32_t(table->GetOid())));
 
   //
-  // Pull out the VPI from the TableVectorIterator we just initialized
+  // Pull out the PCI from the TableVectorIterator we just initialized
   //
 
   ast::Type *pci_type =
       ast::BuiltinType::Get(ctx, ast::BuiltinType::ProjectedColumnsIterator);
   LocalVar pci = current_function()->NewLocal(pci_type->PointerTo(), "pci");
 
-  emitter()->Emit(Bytecode::TableVectorIteratorGetVPI, pci, table_iter);
+  emitter()->Emit(Bytecode::TableVectorIteratorGetPCI, pci, table_iter);
 
   //
   // Now, we generate a loop while TableVectorIterator::Advance() returns true,
   // indicating that there is more input data. If the loop is non-vectorized,
   // then we call into VisitRowWiseIteration() to handle iteration over the
-  // VPI, setting up the row pointer, resetting the VPI etc.
+  // PCI, setting up the row pointer, resetting the PCI etc.
   //
 
   {
@@ -602,36 +602,36 @@ void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
       call->arguments()[1]->As<ast::LitExpr>()->raw_string_val();
   i64 val = call->arguments()[2]->As<ast::LitExpr>()->int32_val();
 
-  Bytecode bytecode = Bytecode::VPIFilterEqual;
+  Bytecode bytecode = Bytecode::PCIFilterEqual;
   switch (builtin) {
     case ast::Builtin::FilterEq: {
-      bytecode = Bytecode::VPIFilterEqual;
+      bytecode = Bytecode::PCIFilterEqual;
       break;
     }
     case ast::Builtin::FilterGt: {
-      bytecode = Bytecode::VPIFilterGreaterThan;
+      bytecode = Bytecode::PCIFilterGreaterThan;
       break;
     }
     case ast::Builtin::FilterGe: {
-      bytecode = Bytecode::VPIFilterGreaterThanEqual;
+      bytecode = Bytecode::PCIFilterGreaterThanEqual;
       break;
     }
     case ast::Builtin::FilterLt: {
-      bytecode = Bytecode::VPIFilterLessThan;
+      bytecode = Bytecode::PCIFilterLessThan;
       break;
     }
     case ast::Builtin::FilterLe: {
-      bytecode = Bytecode::VPIFilterLessThanEqual;
+      bytecode = Bytecode::PCIFilterLessThanEqual;
       break;
     }
     case ast::Builtin::FilterNe: {
-      bytecode = Bytecode::VPIFilterNotEqual;
+      bytecode = Bytecode::PCIFilterNotEqual;
       break;
     }
     default: { UNREACHABLE("Impossible bytecode"); }
   }
 
-  emitter()->EmitVPIVectorFilter(bytecode, ret_val, pci, 0, val);
+  emitter()->EmitPCIVectorFilter(bytecode, ret_val, pci, 0, val);
 }
 
 void BytecodeGenerator::VisitBuiltinJoinHashTableCallExpr(

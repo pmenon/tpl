@@ -56,7 +56,7 @@ static void CompileAndRun(const std::string &source,
   parsing::Parser parser(&scanner, &context);
 
   double parse_ms = 0, typecheck_ms = 0, codegen_ms = 0, exec_ms = 0,
-                                                            jit_ms = 0;
+         jit_ms = 0;
 
   // Parse
   ast::AstNode *root;

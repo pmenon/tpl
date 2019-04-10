@@ -221,7 +221,7 @@ void FillTable(const TableInsertMeta &table_meta) {
   auto *txn_manager = exec->GetTxnManager();
   auto *txn = txn_manager->BeginTransaction();
 
-  // Initilize the insert buffer.
+  // Initialize the insert buffer.
   auto pri = table->InitializerForProjectedRow(col_oids);
   auto *insert_buffer_ =
       common::AllocationUtil::AllocateAligned(pri.first.ProjectedRowSize());
@@ -249,10 +249,10 @@ void FillTable(const TableInsertMeta &table_meta) {
           byte *data = insert_->AccessForceNotNull(k);
           u32 data_size = schema->GetColumns()[k].GetAttrSize();
           std::memcpy(data, column_data[k].first + j * data_size, data_size);
-          val_written += 1;
         }
       }
       table->Insert(txn, *insert_);
+      val_written += 1;
     }
     for (const auto &col_data : column_data) {
       std::free(col_data.first);
@@ -265,7 +265,10 @@ void FillTable(const TableInsertMeta &table_meta) {
 }
 
 void Catalog::CreateTestTables() {
+  // Check if tables are already created.
+  if (name_ids.find("empty_table") != name_ids.end()) return;
   for (const auto &table_meta : insert_meta) {
+    // Create the right schema
     std::vector<Schema::Column> storage_cols;
     std::vector<sql::Schema::ColumnInfo> sql_cols;
     for (const auto &col_meta : table_meta.col_meta) {
@@ -275,8 +278,10 @@ void Catalog::CreateTestTables() {
     }
     Schema storage_schema(std::move(storage_cols));
     sql::Schema sql_schema(std::move(sql_cols));
+    // Create the table
     CreateTable(table_meta.name, std::move(storage_schema),
                 std::move(sql_schema));
+    // Fill the table with data
     FillTable(table_meta);
   }
 };

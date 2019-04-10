@@ -87,8 +87,8 @@ class ProjectedColumnsIterator {
   /// ProjectedColumns
   /// \tparam F The generic type of the filter function. This can be any
   /// functor-like type including raw function pointer, functor or std::function
-  /// \param filter A function that accepts a const version of this VPI and
-  /// returns true if the tuple pointed to by the VPI is valid (i.e., passes the
+  /// \param filter A function that accepts a const version of this PCI and
+  /// returns true if the tuple pointed to by the PCI is valid (i.e., passes the
   /// filter) or false otherwise
   template <typename F>
   void RunFilter(const F &filter);
@@ -219,7 +219,7 @@ inline void ProjectedColumnsIterator::RunFilter(const F &filter) {
 
   // After the filter has been run on the entire ProjectedColumns, we need to
   // ensure that we reset it so that clients can query the updated state of the
-  // VPI, and subsequent filters operate only on valid tuples potentially
+  // PCI, and subsequent filters operate only on valid tuples potentially
   // filtered out in this filter.
   ResetFiltered();
 }
@@ -231,7 +231,7 @@ inline u32 ProjectedColumnsIterator::FilterColByVal(u32 col_idx, T val) {
   const T *input =
       reinterpret_cast<T *>(projected_column_->ColumnStart(col_idx));
 
-  // Use the existing selection vector if this VPI has been filtered
+  // Use the existing selection vector if this PCI has been filtered
   const u32 *sel_vec = (IsFiltered() ? selection_vector_ : nullptr);
 
   // Filter!
@@ -240,7 +240,7 @@ inline u32 ProjectedColumnsIterator::FilterColByVal(u32 col_idx, T val) {
 
   // After the filter has been run on the entire ProjectedColumns, we need to
   // ensure that we reset it so that clients can query the updated state of the
-  // VPI, and subsequent filters operate only on valid tuples potentially
+  // PCI, and subsequent filters operate only on valid tuples potentially
   // filtered out in this filter.
   ResetFiltered();
 

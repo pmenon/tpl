@@ -41,7 +41,7 @@ class JoinHashTableVectorLookup {
 // reduce function call overhead.
 inline const HashTableEntry *JoinHashTableVectorLookup::GetNextOutput(
     ProjectedColumnsIterator *pci, const KeyEqFn key_eq_fn) noexcept {
-  TPL_ASSERT(pci != nullptr, "No input VPI!");
+  TPL_ASSERT(pci != nullptr, "No input PCI!");
   TPL_ASSERT(match_idx_ < pci->num_selected(), "Continuing past iteration!");
 
   while (true) {

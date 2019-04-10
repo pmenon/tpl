@@ -24,7 +24,7 @@ struct Tuple {
 };
 
 template <u8 N>
-static inline hash_t HashTupleInVPI(ProjectedColumnsIterator *pci) noexcept {
+static inline hash_t HashTupleInPCI(ProjectedColumnsIterator *pci) noexcept {
   const auto *key_ptr = pci->Get<u32, false>(0, nullptr);
   return util::Hasher::Hash(reinterpret_cast<const u8 *>(key_ptr),
                             sizeof(Tuple<N>::build_key));
@@ -32,7 +32,7 @@ static inline hash_t HashTupleInVPI(ProjectedColumnsIterator *pci) noexcept {
 
 /// The function to determine whether two tuples have equivalent keys
 template <u8 N>
-static inline bool CmpTupleInVPI(const byte *table_tuple,
+static inline bool CmpTupleInPCI(const byte *table_tuple,
                                  ProjectedColumnsIterator *pci) noexcept {
   auto lhs_key = reinterpret_cast<const Tuple<N> *>(table_tuple)->build_key;
   auto rhs_key = *pci->Get<u32, false>(0, nullptr);
@@ -46,6 +46,10 @@ class JoinHashTableVectorLookupTest : public TplTest {
   }
 
   void InitializeColumns() {
+    // TODO(Amadou): Find easier way to make a ProjectedColumns.
+    // This should be done after the catalog PR is in.
+
+    // Create two columns.
     auto *exec = sql::ExecutionStructures::Instance();
     auto *ctl = exec->GetCatalog();
     catalog::Schema::Column storage_col1 =
@@ -55,18 +59,23 @@ class JoinHashTableVectorLookupTest : public TplTest {
     sql::Schema::ColumnInfo sql_col1("col1", sql::IntegerType::Instance(false));
     sql::Schema::ColumnInfo sql_col2("col2", sql::IntegerType::Instance(false));
 
+    // Create the table
     catalog::Schema storage_schema(
         std::vector<catalog::Schema::Column>{storage_col1, storage_col2});
     sql::Schema sql_schema(
         std::vector<sql::Schema::ColumnInfo>{sql_col1, sql_col2});
     ctl->CreateTable("hash_test_table", std::move(storage_schema),
                      std::move(sql_schema));
+
+    // Get the table's info
     info_ = ctl->LookupTableByName("hash_test_table");
     std::vector<catalog::col_oid_t> col_oids;
     for (const auto &col : info_->GetStorageSchema()->GetColumns())
       col_oids.emplace_back(col.GetOid());
     auto initializer_map = info_->GetTable()->InitializerForProjectedColumns(
         col_oids, kDefaultVectorSize);
+
+    // Create the ProjectedColumns
     buffer_ = common::AllocationUtil::AllocateAligned(
         initializer_map.first.ProjectedColumnsSize());
     projected_columns = initializer_map.first.Initialize(buffer_);
@@ -155,10 +164,10 @@ TEST_F(JoinHashTableVectorLookupTest, SimpleGenericLookupTest) {
     pci.SetProjectedColumn(projected_columns);
 
     // Lookup
-    lookup.Prepare(&pci, HashTupleInVPI<N>);
+    lookup.Prepare(&pci, HashTupleInPCI<N>);
 
     // Iterate all
-    while (const auto *entry = lookup.GetNextOutput(&pci, CmpTupleInVPI<N>)) {
+    while (const auto *entry = lookup.GetNextOutput(&pci, CmpTupleInPCI<N>)) {
       count++;
       auto ht_key = entry->PayloadAs<Tuple<N>>()->build_key;
       auto probe_key = *pci.Get<u32, false>(0, nullptr);
@@ -202,10 +211,10 @@ TEST_F(JoinHashTableVectorLookupTest, DISABLED_PerfLookupTest) {
       pci.SetProjectedColumn(projected_columns);
 
       // Lookup
-      lookup.Prepare(&pci, HashTupleInVPI<N>);
+      lookup.Prepare(&pci, HashTupleInPCI<N>);
 
       // Iterate all
-      while (const auto *entry = lookup.GetNextOutput(&pci, CmpTupleInVPI<N>)) {
+      while (const auto *entry = lookup.GetNextOutput(&pci, CmpTupleInPCI<N>)) {
         (void)entry;
         count++;
       }
