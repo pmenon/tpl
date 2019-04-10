@@ -11,7 +11,8 @@ matrix:
         - NAME="Mac [dbg/clang]" CMAKE_BUILD_TYPE=debug TPL_USE_ASAN=On
       install:
         - echo 'y' | ./deps.sh
-        - export PATH=/usr/local/opt/llvm/bin:$PATH
+        - export PATH=/usr/local/opt/llvm@7/bin:$PATH
+        - export LLVM_DIR=/usr/local/opt/llvm@7
     - os: linux
       dist: trusty
       env:
@@ -29,7 +30,8 @@ matrix:
         - NAME="Mac [rel/clang]" CMAKE_BUILD_TYPE=release TPL_USE_ASAN=Off
       install:
         - echo 'y' | ./deps.sh
-        - export PATH=/usr/local/opt/llvm/bin:$PATH
+        - export PATH=/usr/local/opt/llvm@7/bin:$PATH
+        - export LLVM_DIR=/usr/local/opt/llvm@7
     - os: linux
       dist: trusty
       env:
@@ -46,16 +48,14 @@ before_script:
       docker exec -e CMAKE_CXX_FLAGS="-mavx2" -e CMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -e TPL_USE_ASAN="$TPL_USE_ASAN" build /bin/sh -c "cd /repo/build && cmake -DCMAKE_CXX_FLAGS=$CMAKE_CXX_FLAGS -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DTPL_USE_ASAN=$TERRIER_USE_ASAN .." &&
       docker exec build /bin/sh -c "cd /repo/build && make check-clang-tidy" &&
       docker exec build /bin/sh -c "cd /repo/build && make check-format" &&
-      docker exec build /bin/sh -c "cd /repo/build && make check-lint" &&
-      docker exec build /bin/sh -c "cd /repo/build && make check-censored";
+      docker exec build /bin/sh -c "cd /repo/build && make check-lint";
     else
       mkdir build &&
       cd build &&
       cmake -DCMAKE_CXX_FLAGS="-mavx2" -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DTPL_USE_ASAN=$TPL_USE_ASAN .. &&
       ASAN_OPTIONS=detect_container_overflow=0 make check-clang-tidy &&
       ASAN_OPTIONS=detect_container_overflow=0 make check-format &&
-      ASAN_OPTIONS=detect_container_overflow=0 make check-lint &&
-      ASAN_OPTIONS=detect_container_overflow=0 make check-censored;
+      ASAN_OPTIONS=detect_container_overflow=0 make check-lint;
     fi
 
 script:
