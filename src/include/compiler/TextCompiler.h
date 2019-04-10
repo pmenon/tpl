@@ -9,9 +9,12 @@
 namespace tpl::compiler {
 
 class TextCompiler : public AbstractCompiler {
+
+
  public:
   void CompileAndRun() override;
 
+ protected:
   std::string CompilePredicate(
       const std::shared_ptr<terrier::parser::AbstractExpression> expression,
       const std::string &rowName);

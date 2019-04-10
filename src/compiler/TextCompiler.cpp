@@ -28,8 +28,6 @@ void TextCompiler::CompileSubPredicate(
     std::string constVal;
     switch (type) {
       case terrier::parser::ExpressionType::VALUE_TUPLE: {
-        //*stream << reinterpret_cast<terrier::parser::TupleValueExpression
-        //*>(expression.get())->GetTableName();
         *stream << rowName;
         *stream << parsing::Token::GetString(parsing::Token::Type::DOT);
         *stream << reinterpret_cast<terrier::parser::TupleValueExpression *>(
@@ -37,7 +35,6 @@ void TextCompiler::CompileSubPredicate(
                        ->GetColumnName();
         break;
       }
-        // case terrier::parser::ExpressionType::VALUE_PARAMETER:
       case terrier::parser::ExpressionType::VALUE_CONSTANT: {
         terrier::type::TransientValue val =
             reinterpret_cast<terrier::parser::ConstantValueExpression *>(
@@ -94,7 +91,7 @@ void TextCompiler::CompileSubPredicate(
         middleChar = parsing::Token::GetString(parsing::Token::Type::SLASH);
         break;
       }
-        // case terrier::parser::ExpressionType::OPERATOR_CONCAT:
+      // case terrier::parser::ExpressionType::OPERATOR_CONCAT:
       case terrier::parser::ExpressionType::OPERATOR_MOD: {
         middleChar = parsing::Token::GetString(parsing::Token::Type::PERCENT);
         break;
