@@ -3,7 +3,7 @@
 #include <vector>
 #include "storage/sql_table.h"
 
-#include "sql/vector_projection_iterator.h"
+#include "sql/projected_columns_iterator.h"
 
 namespace tpl::sql {
 using namespace terrier;
@@ -24,7 +24,7 @@ class TableVectorIterator {
   bool Advance();
 
   /// Return the iterator over the current active ProjectedColumns
-  VectorProjectionIterator *vector_projection_iterator() {
+  ProjectedColumnsIterator *vector_projection_iterator() {
     return &vector_projection_iterator_;
   }
 
@@ -44,7 +44,7 @@ class TableVectorIterator {
   bool first_call_;
 
   // An iterator over the currently active projection
-  VectorProjectionIterator vector_projection_iterator_;
+  ProjectedColumnsIterator vector_projection_iterator_;
 };
 
 }  // namespace tpl::sql

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "json.hpp"
+#include "nlohmann_json.hpp"
 
 namespace terrier::common {
 /**

@@ -102,14 +102,14 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
   // Now we resolve the type of the iterable. If the user wanted a row-at-a-time
   // iteration, the type becomes a struct-equivalent representation of the row
   // as stored in the table. If the user wanted a vector-at-a-time iteration,
-  // the iterable type becomes a VectorProjectionIterator.
+  // the iterable type becomes a ProjectedColumnsIterator.
 
   ast::Type *iter_type = nullptr;
   if (auto *attributes = node->attributes();
       attributes != nullptr &&
       attributes->Contains(context()->GetIdentifier("batch"))) {
     iter_type = ast::BuiltinType::Get(
-                    context(), ast::BuiltinType::VectorProjectionIterator)
+                    context(), ast::BuiltinType::ProjectedColumnsIterator)
                     ->PointerTo();
   } else {
     iter_type = GetRowTypeFromSqlSchema(*table->GetSqlSchema());

@@ -62,37 +62,37 @@ void OpTableVectorIteratorClose(tpl::sql::TableVectorIterator *iter) {
 // ---------------------------------------------------------
 
 void OpVPIFilterEqual(u32 *size,
-                      UNUSED tpl::sql::VectorProjectionIterator *iter,
+                      UNUSED tpl::sql::ProjectedColumnsIterator *iter,
                       UNUSED u16 col_id, UNUSED i64 val) {
   *size = 0;
 }
 
 void OpVPIFilterGreaterThan(u32 *size,
-                            UNUSED tpl::sql::VectorProjectionIterator *iter,
+                            UNUSED tpl::sql::ProjectedColumnsIterator *iter,
                             UNUSED u16 col_id, UNUSED i64 val) {
   *size = 0;
 }
 
 void OpVPIFilterGreaterThanEqual(
-    u32 *size, UNUSED tpl::sql::VectorProjectionIterator *iter,
+    u32 *size, UNUSED tpl::sql::ProjectedColumnsIterator *iter,
     UNUSED u16 col_id, UNUSED i64 val) {
   *size = 0;
 }
 
 void OpVPIFilterLessThan(u32 *size,
-                         UNUSED tpl::sql::VectorProjectionIterator *iter,
+                         UNUSED tpl::sql::ProjectedColumnsIterator *iter,
                          UNUSED u16 col_id, UNUSED i64 val) {
   *size = 0;
 }
 
 void OpVPIFilterLessThanEqual(u32 *size,
-                              UNUSED tpl::sql::VectorProjectionIterator *iter,
+                              UNUSED tpl::sql::ProjectedColumnsIterator *iter,
                               UNUSED u16 col_id, UNUSED i64 val) {
   *size = 0;
 }
 
 void OpVPIFilterNotEqual(u32 *size,
-                         UNUSED tpl::sql::VectorProjectionIterator *iter,
+                         UNUSED tpl::sql::ProjectedColumnsIterator *iter,
                          UNUSED u16 col_id, UNUSED i64 val) {
   *size = 0;
 }

@@ -447,10 +447,10 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   }
 
   OP(TableVectorIteratorGetVPI) : {
-    auto *vpi =
-        frame->LocalAt<sql::VectorProjectionIterator **>(READ_LOCAL_ID());
+    auto *pci =
+        frame->LocalAt<sql::ProjectedColumnsIterator **>(READ_LOCAL_ID());
     auto *iter = frame->LocalAt<sql::TableVectorIterator *>(READ_LOCAL_ID());
-    OpTableVectorIteratorGetVPI(vpi, iter);
+    OpTableVectorIteratorGetVPI(pci, iter);
     DISPATCH_NEXT();
   }
 
@@ -461,21 +461,21 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(VPIHasNext) : {
     auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
     auto *iter =
-        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+        frame->LocalAt<sql::ProjectedColumnsIterator *>(READ_LOCAL_ID());
     OpVPIHasNext(has_more, iter);
     DISPATCH_NEXT();
   }
 
   OP(VPIAdvance) : {
     auto *iter =
-        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+        frame->LocalAt<sql::ProjectedColumnsIterator *>(READ_LOCAL_ID());
     OpVPIAdvance(iter);
     DISPATCH_NEXT();
   }
 
   OP(VPIReset) : {
     auto *iter =
-        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+        frame->LocalAt<sql::ProjectedColumnsIterator *>(READ_LOCAL_ID());
     OpVPIReset(iter);
     DISPATCH_NEXT();
   }
@@ -487,18 +487,18 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 #define GEN_VPI_ACCESS(type_str, type)                                    \
   OP(VPIGet##type_str) : {                                                \
     auto *result = frame->LocalAt<type *>(READ_LOCAL_ID());               \
-    auto *vpi =                                                           \
-        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
+    auto *pci =                                                           \
+        frame->LocalAt<sql::ProjectedColumnsIterator *>(READ_LOCAL_ID()); \
     auto col_idx = READ_UIMM4();                                          \
-    OpVPIGet##type_str(result, vpi, col_idx);                             \
+    OpVPIGet##type_str(result, pci, col_idx);                             \
     DISPATCH_NEXT();                                                      \
   }                                                                       \
   OP(VPIGet##type_str##Null) : {                                          \
     auto *result = frame->LocalAt<type *>(READ_LOCAL_ID());               \
-    auto *vpi =                                                           \
-        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
+    auto *pci =                                                           \
+        frame->LocalAt<sql::ProjectedColumnsIterator *>(READ_LOCAL_ID()); \
     auto col_idx = READ_UIMM4();                                          \
-    OpVPIGet##type_str##Null(result, vpi, col_idx);                       \
+    OpVPIGet##type_str##Null(result, pci, col_idx);                       \
     DISPATCH_NEXT();                                                      \
   }
   GEN_VPI_ACCESS(SmallInt, sql::Integer)
@@ -511,7 +511,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(VPIFilter##Op) : {                                                   \
     auto *size = frame->LocalAt<u32 *>(READ_LOCAL_ID());                  \
     auto *iter =                                                          \
-        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
+        frame->LocalAt<sql::ProjectedColumnsIterator *>(READ_LOCAL_ID()); \
     auto col_idx = READ_UIMM4();                                          \
     auto val = READ_IMM8();                                               \
     OpVPIFilter##Op(size, iter, col_idx, val);                            \

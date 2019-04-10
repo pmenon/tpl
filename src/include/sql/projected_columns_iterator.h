@@ -11,23 +11,23 @@
 
 namespace tpl::sql {
 using namespace terrier;
-/// An iterator over ProjectedColumns. A VectorProjectionIterator allows both
+/// An iterator over ProjectedColumns. A ProjectedColumnsIterator allows both
 /// tuple-at-a-time iteration over a ProjectedColumns and vector-at-a-time
 /// processing. There are two separate APIs for each and interleaving is
 /// supported only to a certain degree. This class exists so that we can iterate
 /// over a ProjectedColumns multiples times and ensure processing always only
 /// on filtered items.
-class VectorProjectionIterator {
+class ProjectedColumnsIterator {
   static constexpr const u32 kInvalidPos = std::numeric_limits<u32>::max();
 
  public:
-  VectorProjectionIterator();
+  ProjectedColumnsIterator();
 
-  explicit VectorProjectionIterator(
+  explicit ProjectedColumnsIterator(
       storage::ProjectedColumns *projected_column);
 
   /// This class cannot be copied or moved
-  DISALLOW_COPY_AND_MOVE(VectorProjectionIterator);
+  DISALLOW_COPY_AND_MOVE(ProjectedColumnsIterator);
 
   /// Has this ProjectedColumns been filtered?
   /// \return True if filtered; false otherwise
@@ -136,7 +136,7 @@ class VectorProjectionIterator {
 // Retrieve a single column value (and potentially its NULL indicator) from the
 // desired column's input data
 template <typename T, bool Nullable>
-inline const T *VectorProjectionIterator::Get(u32 col_idx, bool *null) const {
+inline const T *ProjectedColumnsIterator::Get(u32 col_idx, bool *null) const {
   if constexpr (Nullable) {
     TPL_ASSERT(null != nullptr, "Missing output variable for NULL indicator");
     *null = projected_column_->ColumnNullBitmap(static_cast<u16>(col_idx))
@@ -147,33 +147,33 @@ inline const T *VectorProjectionIterator::Get(u32 col_idx, bool *null) const {
   return &col_data[curr_idx_];
 }
 
-inline void VectorProjectionIterator::Advance() { curr_idx_++; }
+inline void ProjectedColumnsIterator::Advance() { curr_idx_++; }
 
-inline void VectorProjectionIterator::AdvanceFiltered() {
+inline void ProjectedColumnsIterator::AdvanceFiltered() {
   curr_idx_ = selection_vector_[++selection_vector_read_idx_];
 }
 
-inline void VectorProjectionIterator::Match(bool matched) {
+inline void ProjectedColumnsIterator::Match(bool matched) {
   selection_vector_[selection_vector_write_idx_] = curr_idx_;
   selection_vector_write_idx_ += matched;
 }
 
-inline bool VectorProjectionIterator::HasNext() const {
+inline bool ProjectedColumnsIterator::HasNext() const {
   return curr_idx_ < projected_column_->NumTuples();
 }
 
-inline bool VectorProjectionIterator::HasNextFiltered() const {
+inline bool ProjectedColumnsIterator::HasNextFiltered() const {
   return selection_vector_read_idx_ < num_selected();
 }
 
-inline void VectorProjectionIterator::Reset() {
+inline void ProjectedColumnsIterator::Reset() {
   const auto next_idx = selection_vector_[0];
   curr_idx_ = (next_idx == kInvalidPos ? 0 : next_idx);
   selection_vector_read_idx_ = 0;
   selection_vector_write_idx_ = 0;
 }
 
-inline void VectorProjectionIterator::ResetFiltered() {
+inline void ProjectedColumnsIterator::ResetFiltered() {
   curr_idx_ = selection_vector_[0];
   num_selected_ = selection_vector_write_idx_;
   selection_vector_read_idx_ = 0;
@@ -181,7 +181,7 @@ inline void VectorProjectionIterator::ResetFiltered() {
 }
 
 template <typename F>
-inline void VectorProjectionIterator::ForEach(const F &fn) {
+inline void ProjectedColumnsIterator::ForEach(const F &fn) {
   // Ensure function conforms to expected form
   static_assert(std::is_invocable_r_v<void, F>,
                 "Iteration function must be a no-arg void-return function");
@@ -200,7 +200,7 @@ inline void VectorProjectionIterator::ForEach(const F &fn) {
 }
 
 template <typename F>
-inline void VectorProjectionIterator::RunFilter(const F &filter) {
+inline void ProjectedColumnsIterator::RunFilter(const F &filter) {
   // Ensure filter function conforms to expected form
   static_assert(std::is_invocable_r_v<bool, F>,
                 "Filter function must be a no-arg function returning a bool");
@@ -226,7 +226,7 @@ inline void VectorProjectionIterator::RunFilter(const F &filter) {
 
 // Filter an entire column's data by the provided constant value
 template <typename T, template <typename> typename Op, bool nullable>
-inline u32 VectorProjectionIterator::FilterColByVal(u32 col_idx, T val) {
+inline u32 ProjectedColumnsIterator::FilterColByVal(u32 col_idx, T val) {
   // Get the input column's data
   const T *input =
       reinterpret_cast<T *>(projected_column_->ColumnStart(col_idx));

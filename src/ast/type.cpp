@@ -10,7 +10,7 @@
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
 #include "sql/value.h"
-#include "sql/vector_projection_iterator.h"
+#include "sql/projected_columns_iterator.h"
 
 namespace tpl::ast {
 

@@ -103,10 +103,10 @@ class BytecodeEmitter {
   void EmitTableIteratorInit(Bytecode bytecode, LocalVar iter, u16 table_id);
 
   // Reading integer values from an iterator
-  void EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar vpi, u32 col_idx);
+  void EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar pci, u32 col_idx);
 
   // Filter a column in the iterator by a constant value
-  void EmitVPIVectorFilter(Bytecode bytecode, LocalVar selected, LocalVar vpi,
+  void EmitVPIVectorFilter(Bytecode bytecode, LocalVar selected, LocalVar pci,
                            u32 col_idx, i64 val);
 
  private:

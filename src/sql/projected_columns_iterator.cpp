@@ -1,24 +1,24 @@
-#include "sql/vector_projection_iterator.h"
+#include "sql/projected_columns_iterator.h"
 
 namespace tpl::sql {
 
-VectorProjectionIterator::VectorProjectionIterator()
+ProjectedColumnsIterator::ProjectedColumnsIterator()
     : projected_column_(nullptr),
       curr_idx_(0),
       num_selected_(0),
       selection_vector_{0},
       selection_vector_read_idx_(0),
       selection_vector_write_idx_(0) {
-  selection_vector_[0] = VectorProjectionIterator::kInvalidPos;
+  selection_vector_[0] = ProjectedColumnsIterator::kInvalidPos;
 }
 
-VectorProjectionIterator::VectorProjectionIterator(
+ProjectedColumnsIterator::ProjectedColumnsIterator(
     storage::ProjectedColumns *projected_column)
-    : VectorProjectionIterator() {
+    : ProjectedColumnsIterator() {
   SetProjectedColumn(projected_column);
 }
 
-void VectorProjectionIterator::SetProjectedColumn(
+void ProjectedColumnsIterator::SetProjectedColumn(
     storage::ProjectedColumns *projected_column) {
   projected_column_ = projected_column;
   num_selected_ = projected_column_->NumTuples();

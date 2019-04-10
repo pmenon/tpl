@@ -214,26 +214,26 @@ VM_OP_HOT void OpTableVectorIteratorNext(bool *has_more,
 VM_OP_COLD void OpTableVectorIteratorClose(tpl::sql::TableVectorIterator *iter);
 
 VM_OP_HOT void OpTableVectorIteratorGetVPI(
-    tpl::sql::VectorProjectionIterator **vpi,
+    tpl::sql::ProjectedColumnsIterator **pci,
     tpl::sql::TableVectorIterator *iter) {
-  *vpi = iter->vector_projection_iterator();
+  *pci = iter->vector_projection_iterator();
 }
 
 VM_OP_HOT void OpVPIHasNext(bool *has_more,
-                            tpl::sql::VectorProjectionIterator *vpi) {
-  *has_more = vpi->HasNext();
+                            tpl::sql::ProjectedColumnsIterator *pci) {
+  *has_more = pci->HasNext();
 }
 
-VM_OP_HOT void OpVPIAdvance(tpl::sql::VectorProjectionIterator *vpi) {
-  vpi->Advance();
+VM_OP_HOT void OpVPIAdvance(tpl::sql::ProjectedColumnsIterator *pci) {
+  pci->Advance();
 }
 
-VM_OP_HOT void OpVPIReset(tpl::sql::VectorProjectionIterator *vpi) {
-  vpi->Reset();
+VM_OP_HOT void OpVPIReset(tpl::sql::ProjectedColumnsIterator *pci) {
+  pci->Reset();
 }
 
 VM_OP_HOT void OpVPIGetSmallInt(tpl::sql::Integer *out,
-                                tpl::sql::VectorProjectionIterator *iter,
+                                tpl::sql::ProjectedColumnsIterator *iter,
                                 u32 col_idx) {
   // Read
   auto *ptr = iter->Get<i16, false>(col_idx, nullptr);
@@ -245,7 +245,7 @@ VM_OP_HOT void OpVPIGetSmallInt(tpl::sql::Integer *out,
 }
 
 VM_OP_HOT void OpVPIGetInteger(tpl::sql::Integer *out,
-                               tpl::sql::VectorProjectionIterator *iter,
+                               tpl::sql::ProjectedColumnsIterator *iter,
                                u32 col_idx) {
   // Read
   auto *ptr = iter->Get<i32, false>(col_idx, nullptr);
@@ -257,7 +257,7 @@ VM_OP_HOT void OpVPIGetInteger(tpl::sql::Integer *out,
 }
 
 VM_OP_HOT void OpVPIGetBigInt(tpl::sql::Integer *out,
-                              tpl::sql::VectorProjectionIterator *iter,
+                              tpl::sql::ProjectedColumnsIterator *iter,
                               u32 col_idx) {
   // Read
   auto *ptr = iter->Get<i64, false>(col_idx, nullptr);
@@ -269,7 +269,7 @@ VM_OP_HOT void OpVPIGetBigInt(tpl::sql::Integer *out,
 }
 
 VM_OP_HOT void OpVPIGetDecimal(tpl::sql::Decimal *out,
-                               UNUSED tpl::sql::VectorProjectionIterator *iter,
+                               UNUSED tpl::sql::ProjectedColumnsIterator *iter,
                                UNUSED u32 col_idx) {
   // Set
   out->is_null = false;
@@ -277,7 +277,7 @@ VM_OP_HOT void OpVPIGetDecimal(tpl::sql::Decimal *out,
 }
 
 VM_OP_HOT void OpVPIGetSmallIntNull(tpl::sql::Integer *out,
-                                    tpl::sql::VectorProjectionIterator *iter,
+                                    tpl::sql::ProjectedColumnsIterator *iter,
                                     u32 col_idx) {
   // Read
   bool null = false;
@@ -290,7 +290,7 @@ VM_OP_HOT void OpVPIGetSmallIntNull(tpl::sql::Integer *out,
 }
 
 VM_OP_HOT void OpVPIGetIntegerNull(tpl::sql::Integer *out,
-                                   tpl::sql::VectorProjectionIterator *iter,
+                                   tpl::sql::ProjectedColumnsIterator *iter,
                                    u32 col_idx) {
   // Read
   bool null = false;
@@ -303,7 +303,7 @@ VM_OP_HOT void OpVPIGetIntegerNull(tpl::sql::Integer *out,
 }
 
 VM_OP_HOT void OpVPIGetBigIntNull(tpl::sql::Integer *out,
-                                  tpl::sql::VectorProjectionIterator *iter,
+                                  tpl::sql::ProjectedColumnsIterator *iter,
                                   u32 col_idx) {
   // Read
   bool null = false;
@@ -316,30 +316,30 @@ VM_OP_HOT void OpVPIGetBigIntNull(tpl::sql::Integer *out,
 }
 
 VM_OP_HOT void OpVPIGetDecimalNull(tpl::sql::Decimal *out,
-                                   tpl::sql::VectorProjectionIterator *iter,
+                                   tpl::sql::ProjectedColumnsIterator *iter,
                                    u32 col_idx) {
   out->val = 0;
   out->is_null = false;
 }
 
-void OpVPIFilterEqual(u32 *size, tpl::sql::VectorProjectionIterator *iter,
+void OpVPIFilterEqual(u32 *size, tpl::sql::ProjectedColumnsIterator *iter,
                       u16 col_id, i64 val);
 
-void OpVPIFilterGreaterThan(u32 *size, tpl::sql::VectorProjectionIterator *iter,
+void OpVPIFilterGreaterThan(u32 *size, tpl::sql::ProjectedColumnsIterator *iter,
                             u16 col_id, i64 val);
 
 void OpVPIFilterGreaterThanEqual(u32 *size,
-                                 tpl::sql::VectorProjectionIterator *iter,
+                                 tpl::sql::ProjectedColumnsIterator *iter,
                                  u16 col_id, i64 val);
 
-void OpVPIFilterLessThan(u32 *size, tpl::sql::VectorProjectionIterator *iter,
+void OpVPIFilterLessThan(u32 *size, tpl::sql::ProjectedColumnsIterator *iter,
                          u16 col_id, i64 val);
 
 void OpVPIFilterLessThanEqual(u32 *size,
-                              tpl::sql::VectorProjectionIterator *iter,
+                              tpl::sql::ProjectedColumnsIterator *iter,
                               u16 col_id, i64 val);
 
-void OpVPIFilterNotEqual(u32 *size, tpl::sql::VectorProjectionIterator *iter,
+void OpVPIFilterNotEqual(u32 *size, tpl::sql::ProjectedColumnsIterator *iter,
                          u16 col_id, i64 val);
 
 // ---------------------------------------------------------

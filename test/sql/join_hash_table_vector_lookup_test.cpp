@@ -10,7 +10,7 @@
 #include "sql/execution_structures.h"
 #include "sql/join_hash_table.h"
 #include "sql/join_hash_table_vector_lookup.h"
-#include "sql/vector_projection_iterator.h"
+#include "sql/projected_columns_iterator.h"
 #include "storage/projected_columns.h"
 #include "util/hash.h"
 
@@ -24,8 +24,8 @@ struct Tuple {
 };
 
 template <u8 N>
-static inline hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
-  const auto *key_ptr = vpi->Get<u32, false>(0, nullptr);
+static inline hash_t HashTupleInVPI(ProjectedColumnsIterator *pci) noexcept {
+  const auto *key_ptr = pci->Get<u32, false>(0, nullptr);
   return util::Hasher::Hash(reinterpret_cast<const u8 *>(key_ptr),
                             sizeof(Tuple<N>::build_key));
 }
@@ -33,9 +33,9 @@ static inline hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
 /// The function to determine whether two tuples have equivalent keys
 template <u8 N>
 static inline bool CmpTupleInVPI(const byte *table_tuple,
-                                 VectorProjectionIterator *vpi) noexcept {
+                                 ProjectedColumnsIterator *pci) noexcept {
   auto lhs_key = reinterpret_cast<const Tuple<N> *>(table_tuple)->build_key;
-  auto rhs_key = *vpi->Get<u32, false>(0, nullptr);
+  auto rhs_key = *pci->Get<u32, false>(0, nullptr);
   return lhs_key == rhs_key;
 }
 
@@ -139,7 +139,7 @@ TEST_F(JoinHashTableVectorLookupTest, SimpleGenericLookupTest) {
   auto probe_keys = std::vector<u32>(num_probe);
   std::generate(probe_keys.begin(), probe_keys.end(), Range(0, num_build - 1));
 
-  VectorProjectionIterator vpi(projected_columns);
+  ProjectedColumnsIterator pci(projected_columns);
 
   // Lookup
   JoinHashTableVectorLookup lookup(*jht);
@@ -152,16 +152,16 @@ TEST_F(JoinHashTableVectorLookupTest, SimpleGenericLookupTest) {
     // Setup Projected Column
     projected_columns->SetNumTuples(size);
     std::memcpy(projected_columns->ColumnStart(0), &probe_keys[i], size);
-    vpi.SetProjectedColumn(projected_columns);
+    pci.SetProjectedColumn(projected_columns);
 
     // Lookup
-    lookup.Prepare(&vpi, HashTupleInVPI<N>);
+    lookup.Prepare(&pci, HashTupleInVPI<N>);
 
     // Iterate all
-    while (const auto *entry = lookup.GetNextOutput(&vpi, CmpTupleInVPI<N>)) {
+    while (const auto *entry = lookup.GetNextOutput(&pci, CmpTupleInVPI<N>)) {
       count++;
       auto ht_key = entry->PayloadAs<Tuple<N>>()->build_key;
-      auto probe_key = *vpi.Get<u32, false>(0, nullptr);
+      auto probe_key = *pci.Get<u32, false>(0, nullptr);
       EXPECT_EQ(ht_key, probe_key);
     }
   }
@@ -183,7 +183,7 @@ TEST_F(JoinHashTableVectorLookupTest, DISABLED_PerfLookupTest) {
     std::generate(probe_keys.begin(), probe_keys.end(),
                   Range(0, num_build - 1));
 
-    VectorProjectionIterator vpi(projected_columns);
+    ProjectedColumnsIterator pci(projected_columns);
 
     // Lookup
     JoinHashTableVectorLookup lookup(*jht);
@@ -199,13 +199,13 @@ TEST_F(JoinHashTableVectorLookupTest, DISABLED_PerfLookupTest) {
       // Setup Projected Column
       projected_columns->SetNumTuples(size);
       std::memcpy(projected_columns->ColumnStart(0), &probe_keys[i], size);
-      vpi.SetProjectedColumn(projected_columns);
+      pci.SetProjectedColumn(projected_columns);
 
       // Lookup
-      lookup.Prepare(&vpi, HashTupleInVPI<N>);
+      lookup.Prepare(&pci, HashTupleInVPI<N>);
 
       // Iterate all
-      while (const auto *entry = lookup.GetNextOutput(&vpi, CmpTupleInVPI<N>)) {
+      while (const auto *entry = lookup.GetNextOutput(&pci, CmpTupleInVPI<N>)) {
         (void)entry;
         count++;
       }

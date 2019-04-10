@@ -36,14 +36,14 @@ TEST_F(TableVectorIteratorTest, SimpleIteratorTest) {
   auto *table = exec->GetCatalog()->LookupTableByName("test_1");
 
   TableVectorIterator iter(*table->GetTable(), *table->GetStorageSchema());
-  VectorProjectionIterator *vpi = iter.vector_projection_iterator();
+  ProjectedColumnsIterator *pci = iter.vector_projection_iterator();
 
   u32 num_tuples = 0;
   while (iter.Advance()) {
-    for (; vpi->HasNext(); vpi->Advance()) {
+    for (; pci->HasNext(); pci->Advance()) {
       num_tuples++;
     }
-    vpi->Reset();
+    pci->Reset();
   }
   std::cout << "Read Items = " << num_tuples << std::endl;
   EXPECT_EQ(catalog::test_table_size, num_tuples);

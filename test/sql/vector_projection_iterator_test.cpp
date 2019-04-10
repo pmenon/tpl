@@ -9,7 +9,7 @@
 
 #include "catalog/catalog.h"
 #include "sql/execution_structures.h"
-#include "sql/vector_projection_iterator.h"
+#include "sql/projected_columns_iterator.h"
 
 namespace tpl::sql::test {
 
@@ -68,7 +68,7 @@ std::pair<std::unique_ptr<u32[]>, u32> CreateRandomNullBitmap(u32 num_elems) {
 
 }  // namespace
 
-class VectorProjectionIteratorTest : public TplTest {
+class ProjectedColumnsIteratorTest : public TplTest {
  protected:
   enum ColId : u8 { col_a = 0, col_b = 1, col_c = 2, col_d = 3 };
 
@@ -87,7 +87,7 @@ class VectorProjectionIteratorTest : public TplTest {
   };
 
  public:
-  VectorProjectionIteratorTest() : num_tuples_(kDefaultVectorSize) {
+  ProjectedColumnsIteratorTest() : num_tuples_(kDefaultVectorSize) {
     auto cola_data = CreateMonotonicallyIncreasing<i16>(num_tuples());
     auto colb_data = CreateRandom<i32>(num_tuples());
     auto colb_null = CreateRandomNullBitmap(num_tuples());
@@ -177,12 +177,12 @@ class VectorProjectionIteratorTest : public TplTest {
   storage::ProjectedColumns *projected_columns_;
 };
 
-TEST_F(VectorProjectionIteratorTest, EmptyIteratorTest) {
+TEST_F(ProjectedColumnsIteratorTest, EmptyIteratorTest) {
   //
   // Check to see that iteration doesn't begin without an input block
   //
 
-  VectorProjectionIterator iter;
+  ProjectedColumnsIterator iter;
   SetSize(0);
   iter.SetProjectedColumn(GetProjectedColumn());
 
@@ -191,7 +191,7 @@ TEST_F(VectorProjectionIteratorTest, EmptyIteratorTest) {
   }
 }
 
-TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
+TEST_F(ProjectedColumnsIteratorTest, SimpleIteratorTest) {
   //
   // Check to see that iteration iterates over all tuples in the projection
   //
@@ -199,7 +199,7 @@ TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
   {
     u32 tuple_count = 0;
 
-    VectorProjectionIterator iter;
+    ProjectedColumnsIterator iter;
     SetSize(kDefaultVectorSize);
     iter.SetProjectedColumn(GetProjectedColumn());
 
@@ -216,7 +216,7 @@ TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
   //
 
   {
-    VectorProjectionIterator iter;
+    ProjectedColumnsIterator iter;
     SetSize(kDefaultVectorSize);
     iter.SetProjectedColumn(GetProjectedColumn());
 
@@ -236,12 +236,12 @@ TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
   }
 }
 
-TEST_F(VectorProjectionIteratorTest, ReadNullableColumnsTest) {
+TEST_F(ProjectedColumnsIteratorTest, ReadNullableColumnsTest) {
   //
   // Check to see that we can correctly count all NULL values in NULLable cols
   //
 
-  VectorProjectionIterator iter;
+  ProjectedColumnsIterator iter;
   SetSize(kDefaultVectorSize);
   iter.SetProjectedColumn(GetProjectedColumn());
 
@@ -256,14 +256,14 @@ TEST_F(VectorProjectionIteratorTest, ReadNullableColumnsTest) {
   EXPECT_EQ(column_data(ColId::col_b).num_nulls, num_nulls);
 }
 
-TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
+TEST_F(ProjectedColumnsIteratorTest, ManualFilterTest) {
   //
   // Check to see that we can correctly manually apply a single filter on a
   // single column. We apply the filter IS_NOT_NULL(col_b)
   //
 
   {
-    VectorProjectionIterator iter;
+    ProjectedColumnsIterator iter;
     SetSize(kDefaultVectorSize);
     iter.SetProjectedColumn(GetProjectedColumn());
 
@@ -302,7 +302,7 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
   //
 
   {
-    VectorProjectionIterator iter;
+    ProjectedColumnsIterator iter;
     SetSize(kDefaultVectorSize);
     iter.SetProjectedColumn(GetProjectedColumn());
 
@@ -340,13 +340,13 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
   }
 }
 
-TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
+TEST_F(ProjectedColumnsIteratorTest, ManagedFilterTest) {
   //
   // Check to see that we can correctly apply a single filter on a single
   // column using VPI's managed filter. We apply the filter IS_NOT_NULL(col_b)
   //
 
-  VectorProjectionIterator iter;
+  ProjectedColumnsIterator iter;
   SetSize(kDefaultVectorSize);
   iter.SetProjectedColumn(GetProjectedColumn());
 
@@ -377,13 +377,13 @@ TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
   }
 }
 
-TEST_F(VectorProjectionIteratorTest, SimpleVectorizedFilterTest) {
+TEST_F(ProjectedColumnsIteratorTest, SimpleVectorizedFilterTest) {
   //
   // Check to see that we can correctly apply a single vectorized filter. Here
   // we just check col_c < 100
   //
 
-  VectorProjectionIterator iter;
+  ProjectedColumnsIterator iter;
   SetSize(kDefaultVectorSize);
   iter.SetProjectedColumn(GetProjectedColumn());
 
@@ -410,7 +410,7 @@ TEST_F(VectorProjectionIteratorTest, SimpleVectorizedFilterTest) {
   EXPECT_EQ(expected, count);
 }
 
-TEST_F(VectorProjectionIteratorTest, MultipleVectorizedFilterTest) {
+TEST_F(ProjectedColumnsIteratorTest, MultipleVectorizedFilterTest) {
   //
   // Apply two filters in order:
   //  - col_c < 750
@@ -421,7 +421,7 @@ TEST_F(VectorProjectionIteratorTest, MultipleVectorizedFilterTest) {
   // results because it is a monotonically increasing column beginning at 0.
   //
 
-  VectorProjectionIterator iter;
+  ProjectedColumnsIterator iter;
   SetSize(kDefaultVectorSize);
   iter.SetProjectedColumn(GetProjectedColumn());
 
