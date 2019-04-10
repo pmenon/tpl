@@ -104,7 +104,7 @@ class TransientValueFactory {
    * after instantiating the TransientValue.
    */
   static TransientValue GetVarChar(const char *const value) {
-    TERRIER_ASSERT(value != nullptr, "Cannot build VARCHAR from nullptr.");
+    TPL_ASSERT(value != nullptr, "Cannot build VARCHAR from nullptr.");
     const auto length = static_cast<uint32_t>(std::strlen(value));
     auto *const varchar = new char[length + sizeof(uint32_t)];
     *(reinterpret_cast<uint32_t *const>(varchar)) = length;

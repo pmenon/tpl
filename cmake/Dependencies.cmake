@@ -56,8 +56,8 @@ include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/xbyak")
 ############################################################
 # LIBPG for the parser
 ############################################################
-
 include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/libpg_query/")
+add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/libpg_query/)
 
 
 # TBB

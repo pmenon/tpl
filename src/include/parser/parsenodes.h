@@ -9,7 +9,7 @@
 
 #include <cstdint>
 
-#include "libpg_query/pg_list.h"
+#include "pg_list.h"
 #include "parser/nodes.h"
 
 using SetOperation = enum SetOperation { SETOP_NONE = 0, SETOP_UNION, SETOP_INTERSECT, SETOP_EXCEPT };

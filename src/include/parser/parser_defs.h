@@ -33,7 +33,7 @@ enum class FKConstrMatchType { SIMPLE = 0, PARTIAL = 1, FULL = 2 };
 enum class FKConstrActionType {
   INVALID = INVALID_TYPE_ID,  // invalid
   NOACTION = 1,
-  RESTRICT = 2,
+  RESTRICT_ACTION = 2,
   CASCADE = 3,
   SETNULL = 4,
   SETDEFAULT = 5

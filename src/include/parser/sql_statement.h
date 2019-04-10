@@ -4,8 +4,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "catalog/catalog_defs.h"
-#include "common/macros.h"
 #include "common/sql_node_visitor.h"
 #include "parser/parser_defs.h"
 

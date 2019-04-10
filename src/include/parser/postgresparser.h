@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "libpg_query/pg_query.h"
+#include "pg_query.h"
 #include "parser/parsenodes.h"
 #include "parser/statements.h"
 
@@ -44,7 +44,7 @@ class PostgresParser {
       case 'a':
         return FKConstrActionType::NOACTION;
       case 'r':
-        return FKConstrActionType::RESTRICT;
+        return FKConstrActionType::RESTRICT_ACTION;
       case 'c':
         return FKConstrActionType::CASCADE;
       case 'n':

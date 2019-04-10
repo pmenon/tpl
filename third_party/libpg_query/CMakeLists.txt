@@ -1,4 +1,4 @@
-project(pg_query CXX C)
+project(pg_query)
 
 # this code imitates the Makefile in /third_party/libpg_query/
 file(GLOB_RECURSE pg_query_srcs ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
@@ -18,3 +18,4 @@ add_library(pg_query STATIC ${pg_query_srcs})
 
 set_target_properties(pg_query PROPERTIES LINKER_LANGUAGE C)
 set_target_properties(pg_query PROPERTIES POSITION_INDEPENDENT_CODE ON)
+message("LOLL")

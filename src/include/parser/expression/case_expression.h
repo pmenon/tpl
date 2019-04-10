@@ -3,7 +3,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include "common/macros.h"
+#include "util/macros.h"
 #include "parser/expression/abstract_expression.h"
 #include "parser/expression_defs.h"
 
@@ -67,7 +67,7 @@ class CaseExpression : public AbstractExpression {
 
   bool operator==(const AbstractExpression &rhs) const override {
     if (GetExpressionType() != rhs.GetExpressionType()) return false;
-    auto const &other = dynamic_cast<const CaseExpression &>(rhs);
+    auto const &other = reinterpret_cast<const CaseExpression &>(rhs);
     auto clause_size = GetWhenClauseSize();
     if (clause_size != other.GetWhenClauseSize()) return false;
 
@@ -93,7 +93,7 @@ class CaseExpression : public AbstractExpression {
    * @return condition at that index
    */
   std::shared_ptr<AbstractExpression> GetWhenClauseCondition(size_t index) const {
-    TERRIER_ASSERT(index < when_clauses_.size(), "Index must be in bounds.");
+    TPL_ASSERT(index < when_clauses_.size(), "Index must be in bounds.");
     return when_clauses_[index].condition;
   }
 
@@ -102,7 +102,7 @@ class CaseExpression : public AbstractExpression {
    * @return result at that index
    */
   std::shared_ptr<AbstractExpression> GetWhenClauseResult(size_t index) const {
-    TERRIER_ASSERT(index < when_clauses_.size(), "Index must be in bounds.");
+    TPL_ASSERT(index < when_clauses_.size(), "Index must be in bounds.");
     return when_clauses_[index].then;
   }
 

@@ -28,7 +28,7 @@ class ConstantValueExpression : public AbstractExpression {
     if (GetExpressionType() != other.GetExpressionType()) {
       return false;
     }
-    auto const &const_expr = dynamic_cast<const ConstantValueExpression &>(other);
+    auto const &const_expr = reinterpret_cast<const ConstantValueExpression &>(other);
     return value_ == const_expr.GetValue();
   }
 

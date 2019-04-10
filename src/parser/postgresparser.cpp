@@ -8,10 +8,10 @@
 
 #include "common/exception.h"
 
-#include "libpg_query/pg_list.h"
-#include "libpg_query/pg_query.h"
+#include "pg_list.h"
+#include "pg_query.h"
 
-#include "loggers/parser_logger.h"
+#include "logging/logger.h"
 
 #include "parser/expression/aggregate_expression.h"
 #include "parser/expression/case_expression.h"
@@ -35,8 +35,8 @@
  * TYPE_MSG - message about the type in error
  * ARG - to print, i.e. unknown or unsupported type
  */
-#define PARSER_LOG_AND_THROW(FN_NAME, TYPE_MSG, ARG)           \
-  PARSER_LOG_DEBUG(#FN_NAME #TYPE_MSG " {} unsupported", ARG); \
+#define LOG_AND_THROW(FN_NAME, TYPE_MSG, ARG)           \
+  LOG_DEBUG(#FN_NAME #TYPE_MSG " {} unsupported", ARG); \
   throw PARSER_EXCEPTION(#FN_NAME ":" #TYPE_MSG " unsupported")
 
 namespace terrier {
@@ -52,7 +52,7 @@ std::vector<std::unique_ptr<SQLStatement>> PostgresParser::BuildParseTree(const 
   auto result = pg_query_parse(text);
 
   if (result.error != nullptr) {
-    PARSER_LOG_DEBUG("BuildParseTree error: msg {}, curpos {}", result.error->message, result.error->cursorpos);
+    LOG_DEBUG("BuildParseTree error: msg {}, curpos {}", result.error->message, result.error->cursorpos);
     pg_query_parse_finish(ctx);
     pg_query_free_parse_result(result);
     throw PARSER_EXCEPTION("BuildParseTree error");
@@ -64,7 +64,7 @@ std::vector<std::unique_ptr<SQLStatement>> PostgresParser::BuildParseTree(const 
   } catch (const Exception &e) {
     pg_query_parse_finish(ctx);
     pg_query_free_parse_result(result);
-    PARSER_LOG_DEBUG("BuildParseTree: caught {} {} {} {}", e.get_type(), e.get_file(), e.get_line(), e.what());
+    LOG_DEBUG("BuildParseTree: caught {} {} {} {}", e.get_type(), e.get_file(), e.get_line(), e.what());
     throw;
   }
 
@@ -179,7 +179,7 @@ std::unique_ptr<SQLStatement> PostgresParser::NodeTransform(Node *node) {
       break;
     }
     default: {
-      PARSER_LOG_DEBUG("NodeTransform: statement type {} unsupported", node->type);
+      LOG_DEBUG("NodeTransform: statement type {} unsupported", node->type);
       throw PARSER_EXCEPTION("NodeTransform: unsupported statement type");
     }
   }
@@ -234,7 +234,7 @@ std::unique_ptr<AbstractExpression> PostgresParser::ExprTransform(Node *node) {
       break;
     }
     default: {
-      PARSER_LOG_DEBUG("ExprTransform: type {} unsupported", node->type);
+      LOG_DEBUG("ExprTransform: type {} unsupported", node->type);
       throw PARSER_EXCEPTION("ExprTransform: unsupported type");
     }
   }
@@ -392,7 +392,7 @@ ExpressionType PostgresParser::StringToExpressionType(const std::string &parser_
     return ExpressionType::TABLE_REF;
   }
 
-  PARSER_LOG_DEBUG("StringToExpressionType: type {} unsupported", str.c_str());
+  LOG_DEBUG("StringToExpressionType: type {} unsupported", str.c_str());
   throw PARSER_EXCEPTION("StringToExpressionType: unsupported type");
 }
 
@@ -450,7 +450,7 @@ std::unique_ptr<AbstractExpression> PostgresParser::AExprTransform(A_Expr *root)
       return std::make_unique<ComparisonExpression>(target_type, std::move(children));
     }
     default: {
-      PARSER_LOG_DEBUG("AExprTransform: type {} unsupported", static_cast<int>(target_type));
+      LOG_DEBUG("AExprTransform: type {} unsupported", static_cast<int>(target_type));
       throw PARSER_EXCEPTION("AExprTransform: unsupported type");
     }
   }
@@ -479,7 +479,7 @@ std::unique_ptr<AbstractExpression> PostgresParser::BoolExprTransform(BoolExpr *
       break;
     }
     default: {
-      PARSER_LOG_DEBUG("BoolExprTransform: type {} unsupported", root->boolop);
+      LOG_DEBUG("BoolExprTransform: type {} unsupported", root->boolop);
       throw PARSER_EXCEPTION("BoolExprTransform: unsupported type");
     }
   }
@@ -544,7 +544,7 @@ std::unique_ptr<AbstractExpression> PostgresParser::ColumnRefTransform(ColumnRef
       break;
     }
     default: {
-      PARSER_LOG_DEBUG("ColumnRefTransform: type {} unsupported", node->type);
+      LOG_DEBUG("ColumnRefTransform: type {} unsupported", node->type);
       throw PARSER_EXCEPTION("ColumnRefTransform: unsupported type");
     }
   }
@@ -592,7 +592,7 @@ std::unique_ptr<AbstractExpression> PostgresParser::FuncCallTransform(FuncCall *
       children.emplace_back(std::move(child));
       result = std::make_unique<AggregateExpression>(agg_fun_type, std::move(children), root->agg_distinct);
     } else {
-      PARSER_LOG_DEBUG("FuncCallTransform: Aggregation over multiple cols not supported");
+      LOG_DEBUG("FuncCallTransform: Aggregation over multiple cols not supported");
       throw PARSER_EXCEPTION("FuncCallTransform: Aggregation over multiple cols not supported");
     }
   }
@@ -628,7 +628,7 @@ std::unique_ptr<AbstractExpression> PostgresParser::NullTestTransform(NullTest *
       children.emplace_back(std::move(arg_expr));
       break;
     }
-    default: { PARSER_LOG_AND_THROW("NullTestTransform", "ArgExpr type", root->arg->type); }
+    default: { LOG_AND_THROW("NullTestTransform", "ArgExpr type", root->arg->type); }
   }
 
   ExpressionType type =
@@ -674,7 +674,7 @@ std::unique_ptr<AbstractExpression> PostgresParser::SubqueryExprTransform(SubLin
       result = std::move(subquery_expr);
       break;
     }
-    default: { PARSER_LOG_AND_THROW("SubqueryExprTransform", "Sublink type", node->subLinkType); }
+    default: { LOG_AND_THROW("SubqueryExprTransform", "Sublink type", node->subLinkType); }
   }
 
   return result;
@@ -719,7 +719,7 @@ std::unique_ptr<AbstractExpression> PostgresParser::ValueTransform(value val) {
       break;
     }
 
-    default: { PARSER_LOG_AND_THROW("ValueTransform", "Value type", val.type); }
+    default: { LOG_AND_THROW("ValueTransform", "Value type", val.type); }
   }
   return result;
 }
@@ -757,7 +757,7 @@ std::unique_ptr<SelectStatement> PostgresParser::SelectTransform(SelectStmt *roo
     }
     default: {
       // TODO(Wan): is Set the right message, or should it be Select?
-      PARSER_LOG_AND_THROW("SelectTransform", "Set operation", root->type);
+      LOG_AND_THROW("SelectTransform", "Set operation", root->type);
     }
   }
 
@@ -811,7 +811,7 @@ std::unique_ptr<TableRef> PostgresParser::FromTransform(SelectStmt *select_root)
           refs.emplace_back(RangeSubselectTransform(reinterpret_cast<RangeSubselect *>(node)));
           break;
         }
-        default: { PARSER_LOG_AND_THROW("FromTransform", "FromType", node->type); }
+        default: { LOG_AND_THROW("FromTransform", "FromType", node->type); }
       }
     }
     auto result = TableRef::CreateTableRefByList(std::move(refs));
@@ -836,7 +836,7 @@ std::unique_ptr<TableRef> PostgresParser::FromTransform(SelectStmt *select_root)
       result = RangeSubselectTransform(reinterpret_cast<RangeSubselect *>(node));
       break;
     }
-    default: { PARSER_LOG_AND_THROW("FromTransform", "FromType", node->type); }
+    default: { LOG_AND_THROW("FromTransform", "FromType", node->type); }
   }
 
   return result;
@@ -889,14 +889,14 @@ std::unique_ptr<OrderByDescription> PostgresParser::OrderByTransform(List *order
             types.emplace_back(kOrderAsc);
             break;
           }
-          default: { PARSER_LOG_AND_THROW("OrderByTransform", "Sortby type", sort->sortby_dir); }
+          default: { LOG_AND_THROW("OrderByTransform", "Sortby type", sort->sortby_dir); }
         }
 
         auto target = sort->node;
         exprs.emplace_back(ExprTransform(target));
         break;
       }
-      default: { PARSER_LOG_AND_THROW("OrderByTransform", "OrderBy type", temp->type); }
+      default: { LOG_AND_THROW("OrderByTransform", "OrderBy type", temp->type); }
     }
   }
 
@@ -941,7 +941,7 @@ std::unique_ptr<JoinDefinition> PostgresParser::JoinTransform(JoinExpr *root) {
       type = JoinType::SEMI;
       break;
     }
-    default: { PARSER_LOG_AND_THROW("JoinTransform", "JoinType", root->jointype); }
+    default: { LOG_AND_THROW("JoinTransform", "JoinType", root->jointype); }
   }
 
   std::unique_ptr<TableRef> left;
@@ -959,7 +959,7 @@ std::unique_ptr<JoinDefinition> PostgresParser::JoinTransform(JoinExpr *root) {
       left = TableRef::CreateTableRefByJoin(std::move(join));
       break;
     }
-    default: { PARSER_LOG_AND_THROW("JoinTransform", "JoinArgType", root->larg->type); }
+    default: { LOG_AND_THROW("JoinTransform", "JoinArgType", root->larg->type); }
   }
 
   std::unique_ptr<TableRef> right;
@@ -977,7 +977,7 @@ std::unique_ptr<JoinDefinition> PostgresParser::JoinTransform(JoinExpr *root) {
       right = TableRef::CreateTableRefByJoin(std::move(join));
       break;
     }
-    default: { PARSER_LOG_AND_THROW("JoinTransform", "Right JoinArgType", root->rarg->type); }
+    default: { LOG_AND_THROW("JoinTransform", "Right JoinArgType", root->rarg->type); }
   }
 
   std::unique_ptr<AbstractExpression> condition;
@@ -986,7 +986,7 @@ std::unique_ptr<JoinDefinition> PostgresParser::JoinTransform(JoinExpr *root) {
   // SELECT * FROM tab0 AS cor0 CROSS JOIN tab0 AS cor1 WHERE NULL IS NOT NULL;
   // we should figure out how to treat CROSS JOIN properly
   if (root->quals == nullptr) {
-    PARSER_LOG_AND_THROW("JoinTransform", "root->quals", nullptr);
+    LOG_AND_THROW("JoinTransform", "root->quals", nullptr);
   }
 
   switch (root->quals->type) {
@@ -998,7 +998,7 @@ std::unique_ptr<JoinDefinition> PostgresParser::JoinTransform(JoinExpr *root) {
       condition = BoolExprTransform(reinterpret_cast<BoolExpr *>(root->quals));
       break;
     }
-    default: { PARSER_LOG_AND_THROW("JoinTransform", "Join condition type", root->quals->type); }
+    default: { LOG_AND_THROW("JoinTransform", "Join condition type", root->quals->type); }
   }
 
   auto result = std::make_unique<JoinDefinition>(type, std::move(left), std::move(right), std::move(condition));
@@ -1154,14 +1154,14 @@ std::unique_ptr<SQLStatement> PostgresParser::CreateTransform(CreateStmt *root) 
             break;
           }
           default: {
-            PARSER_LOG_DEBUG("CreateTransform: constraint of type {} not supported", constraint->contype);
+            LOG_DEBUG("CreateTransform: constraint of type {} not supported", constraint->contype);
             throw NOT_IMPLEMENTED_EXCEPTION("CreateTransform error");
           }
         }
         break;
       }
       default: {
-        PARSER_LOG_DEBUG("CreateTransform: tableElt type {} not supported", node->type);
+        LOG_DEBUG("CreateTransform: tableElt type {} not supported", node->type);
         throw NOT_IMPLEMENTED_EXCEPTION("CreateTransform error");
       }
     }
@@ -1246,7 +1246,7 @@ std::unique_ptr<SQLStatement> PostgresParser::CreateFunctionTransform(CreateFunc
       } else if (strcmp(lang, "c") == 0) {
         pl_type = PLType::PL_C;
       } else {
-        PARSER_LOG_AND_THROW("CreateFunctionTransform", "PLType", lang);
+        LOG_AND_THROW("CreateFunctionTransform", "PLType", lang);
       }
     }
   }
@@ -1288,7 +1288,7 @@ std::unique_ptr<SQLStatement> PostgresParser::CreateIndexTransform(IndexStmt *ro
   } else if (strcmp(access_method, "art") == 0) {
     index_type = IndexType::ART;
   } else {
-    PARSER_LOG_DEBUG("CreateIndexTransform: IndexType {} not supported", access_method);
+    LOG_DEBUG("CreateIndexTransform: IndexType {} not supported", access_method);
     throw NOT_IMPLEMENTED_EXCEPTION("CreateIndexTransform error");
   }
 
@@ -1303,7 +1303,7 @@ std::unique_ptr<SQLStatement> PostgresParser::CreateSchemaTransform(CreateSchema
   if (root->schemaname != nullptr) {
     schema_name = root->schemaname;
   } else {
-    TERRIER_ASSERT(root->authrole != nullptr, "We need a schema name.");
+    TPL_ASSERT(root->authrole != nullptr, "We need a schema name.");
     switch (root->authrole->type) {
       case T_RoleSpec: {
         // TODO(WAN): old system said they didn't need the authrole.. not sure if that's true
@@ -1311,7 +1311,7 @@ std::unique_ptr<SQLStatement> PostgresParser::CreateSchemaTransform(CreateSchema
         schema_name = authrole->rolename;
         break;
       }
-      default: { PARSER_LOG_AND_THROW("CreateSchemaTransform", "AuthRole", root->authrole->type); }
+      default: { LOG_AND_THROW("CreateSchemaTransform", "AuthRole", root->authrole->type); }
     }
   }
 
@@ -1321,7 +1321,7 @@ std::unique_ptr<SQLStatement> PostgresParser::CreateSchemaTransform(CreateSchema
   // TODO(WAN): the old system basically didn't implement any of this
 
   if (root->schemaElts != nullptr) {
-    PARSER_LOG_DEBUG("CreateSchemaTransform schema_element unsupported");
+    LOG_DEBUG("CreateSchemaTransform schema_element unsupported");
     throw PARSER_EXCEPTION("CreateSchemaTransform schema_element unsupported");
   }
 
@@ -1390,7 +1390,7 @@ std::unique_ptr<SQLStatement> PostgresParser::CreateViewTransform(ViewStmt *root
       break;
     }
     default: {
-      PARSER_LOG_DEBUG("CREATE VIEW as query only supports SELECT");
+      LOG_DEBUG("CREATE VIEW as query only supports SELECT");
       throw PARSER_EXCEPTION("CREATE VIEW as query only supports SELECT");
     }
   }
@@ -1415,11 +1415,11 @@ PostgresParser::ColumnDefTransResult PostgresParser::ColumnDefTransform(ColumnDe
             varlen = static_cast<size_t>(reinterpret_cast<A_Const *>(node)->val.val.ival);
             break;
           }
-          default: { PARSER_LOG_AND_THROW("ColumnDefTransform", "typmods", node_type); }
+          default: { LOG_AND_THROW("ColumnDefTransform", "typmods", node_type); }
         }
         break;
       }
-      default: { PARSER_LOG_AND_THROW("ColumnDefTransform", "typmods", node->type); }
+      default: { LOG_AND_THROW("ColumnDefTransform", "typmods", node->type); }
     }
   }
 
@@ -1483,7 +1483,7 @@ PostgresParser::ColumnDefTransResult PostgresParser::ColumnDefTransform(ColumnDe
           check_expr = ExprTransform(constraint->raw_expr);
           break;
         }
-        default: { PARSER_LOG_AND_THROW("ColumnDefTransform", "Constraint", constraint->contype); }
+        default: { LOG_AND_THROW("ColumnDefTransform", "Constraint", constraint->contype); }
       }
     }
   }
@@ -1522,7 +1522,7 @@ std::unique_ptr<FuncParameter> PostgresParser::FunctionParameterTransform(Functi
   } else if (strcmp(name, "bool") == 0) {
     data_type = Parameter::DataType::BOOL;
   } else {
-    PARSER_LOG_AND_THROW("FunctionParameterTransform", "DataType", name);
+    LOG_AND_THROW("FunctionParameterTransform", "DataType", name);
   }
 
   auto param_name = root->name != nullptr ? root->name : "";
@@ -1556,7 +1556,7 @@ std::unique_ptr<ReturnType> PostgresParser::ReturnTypeTransform(TypeName *root) 
   } else if (strcmp(name, "bool") == 0) {
     data_type = Parameter::DataType::BOOL;
   } else {
-    PARSER_LOG_AND_THROW("ReturnTypeTransform", "ReturnType", name);
+    LOG_AND_THROW("ReturnTypeTransform", "ReturnType", name);
   }
 
   auto result = std::make_unique<ReturnType>(data_type);
@@ -1578,7 +1578,7 @@ std::unique_ptr<AbstractExpression> PostgresParser::WhenTransform(Node *root) {
       result = BoolExprTransform(reinterpret_cast<BoolExpr *>(root));
       break;
     }
-    default: { PARSER_LOG_AND_THROW("WhenTransform", "WHEN type", root->type); }
+    default: { LOG_AND_THROW("WhenTransform", "WHEN type", root->type); }
   }
   return result;
 }
@@ -1606,7 +1606,7 @@ std::unique_ptr<DropStatement> PostgresParser::DropTransform(DropStmt *root) {
     case ObjectType::OBJECT_TRIGGER: {
       return DropTriggerTransform(root);
     }
-    default: { PARSER_LOG_AND_THROW("DropTransform", "Drop ObjectType", root->removeType); }
+    default: { LOG_AND_THROW("DropTransform", "Drop ObjectType", root->removeType); }
   }
 }
 
@@ -1761,7 +1761,7 @@ std::vector<std::shared_ptr<AbstractExpression>> PostgresParser::ParamListTransf
         result.emplace_back(FuncCallTransform(node));
         break;
       }
-      default: { PARSER_LOG_AND_THROW("ParamListTransform", "ExpressionType", param->type); }
+      default: { LOG_AND_THROW("ParamListTransform", "ExpressionType", param->type); }
     }
   }
 
@@ -1777,7 +1777,7 @@ std::unique_ptr<ExplainStatement> PostgresParser::ExplainTransform(ExplainStmt *
 
 // Postgres.InsertStmt -> terrier.InsertStatement
 std::unique_ptr<InsertStatement> PostgresParser::InsertTransform(InsertStmt *root) {
-  TERRIER_ASSERT(root->selectStmt != nullptr, "Selects from table or directly selects some values.");
+  TPL_ASSERT(root->selectStmt != nullptr, "Selects from table or directly selects some values.");
 
   std::unique_ptr<InsertStatement> result;
 
@@ -1791,7 +1791,7 @@ std::unique_ptr<InsertStatement> PostgresParser::InsertTransform(InsertStmt *roo
     result = std::make_unique<InsertStatement>(std::move(column_names), std::move(table_ref), std::move(select_trans));
   } else {
     // directly insert some values
-    TERRIER_ASSERT(select_stmt->valuesLists != nullptr, "Must have values to insert.");
+    TPL_ASSERT(select_stmt->valuesLists != nullptr, "Must have values to insert.");
     auto insert_values = ValueListsTransform(select_stmt->valuesLists);
     result = std::make_unique<InsertStatement>(std::move(column_names), std::move(table_ref), std::move(insert_values));
   }
@@ -1843,7 +1843,7 @@ std::unique_ptr<std::vector<std::vector<std::shared_ptr<AbstractExpression>>>> P
          * case T_SetToDefault: {
          * TODO(WAN): old system says it wanted to add corresponding expr for default to cur_reuslt
          */
-        default: { PARSER_LOG_AND_THROW("ValueListsTransform", "Value type", expr->type); }
+        default: { LOG_AND_THROW("ValueListsTransform", "Value type", expr->type); }
       }
     }
     result->emplace_back(std::move(cur_result));
@@ -1868,7 +1868,7 @@ std::unique_ptr<TransactionStatement> PostgresParser::TransactionTransform(Trans
       result = std::make_unique<TransactionStatement>(TransactionStatement::kRollback);
       break;
     }
-    default: { PARSER_LOG_AND_THROW("TransactionTransform", "TRANSACTION statement type", transaction_stmt->kind); }
+    default: { LOG_AND_THROW("TransactionTransform", "TRANSACTION statement type", transaction_stmt->kind); }
   }
   return result;
 }
@@ -1905,7 +1905,7 @@ std::unique_ptr<AnalyzeStatement> PostgresParser::VacuumTransform(VacuumStmt *ro
       result = std::make_unique<AnalyzeStatement>(std::move(analyze_table), std::move(analyze_columns));
       break;
     }
-    default: { PARSER_LOG_AND_THROW("VacuumTransform", "Vacuum", root->options); }
+    default: { LOG_AND_THROW("VacuumTransform", "Vacuum", root->options); }
   }
 
   return result;
@@ -1923,7 +1923,7 @@ std::unique_ptr<UpdateStatement> PostgresParser::UpdateTransform(UpdateStmt *upd
 }
 
 // This one is a little weird. The old system had it as a JDBC hack.
-std::unique_ptr<VariableSetStatement> PostgresParser::VariableSetTransform(UNUSED_ATTRIBUTE VariableSetStmt *root) {
+std::unique_ptr<VariableSetStatement> PostgresParser::VariableSetTransform(UNUSED VariableSetStmt *root) {
   auto result = std::make_unique<VariableSetStatement>();
   return result;
 }

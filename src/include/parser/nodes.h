@@ -1,6 +1,6 @@
 #pragma once
 
-#include "libpg_query/nodes.h"
+#include "nodes.h"
 
 /**
  * A value parsenode as produced by the Postgres parser
