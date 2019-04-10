@@ -11,11 +11,11 @@
 
 namespace tpl::sql {
 using namespace terrier;
-/// An iterator over vector projections. A VectorProjectionIterator allows both
-/// tuple-at-a-time iteration over a vector projection and vector-at-a-time
+/// An iterator over ProjectedColumns. A VectorProjectionIterator allows both
+/// tuple-at-a-time iteration over a ProjectedColumns and vector-at-a-time
 /// processing. There are two separate APIs for each and interleaving is
 /// supported only to a certain degree. This class exists so that we can iterate
-/// over a vector projection multiples times and ensure processing always only
+/// over a ProjectedColumns multiples times and ensure processing always only
 /// on filtered items.
 class VectorProjectionIterator {
   static constexpr const u32 kInvalidPos = std::numeric_limits<u32>::max();
@@ -29,11 +29,11 @@ class VectorProjectionIterator {
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(VectorProjectionIterator);
 
-  /// Has this vector projection been filtered?
+  /// Has this ProjectedColumns been filtered?
   /// \return True if filtered; false otherwise
   bool IsFiltered() const { return selection_vector_[0] != kInvalidPos; }
 
-  /// Set the vector projection to iterate over
+  /// Set the ProjectedColumns to iterate over
   /// \param projected_column The projected column
   void SetProjectedColumn(storage::ProjectedColumns *projected_column);
 
@@ -42,7 +42,7 @@ class VectorProjectionIterator {
   // -------------------------------------------------------
 
   /// Get a pointer to the value in the column at index \ref col_idx
-  /// \tparam T The desired data type stored in the vector projection
+  /// \tparam T The desired data type stored in the ProjectedColumns
   /// \tparam nullable Whether the column is NULLable
   /// \param col_idx The index of the column to read from
   /// \param[out] null Whether the given column is null
@@ -54,7 +54,7 @@ class VectorProjectionIterator {
   void Advance();
 
   /// Advance the iterator by a single entry to the next valid tuple in the
-  /// filtered vector projection
+  /// filtered ProjectedColumns
   void AdvanceFiltered();
 
   /// Mark the current tuple as matched/valid (or unmatched/invalid)
@@ -69,13 +69,13 @@ class VectorProjectionIterator {
   /// \return True if there is more input tuples; false otherwise
   bool HasNextFiltered() const;
 
-  /// Reset iteration to the beginning of the vector projection
+  /// Reset iteration to the beginning of the ProjectedColumns
   void Reset();
 
-  /// Reset iteration to the beginning of the filtered vector projection
+  /// Reset iteration to the beginning of the filtered ProjectedColumns
   void ResetFiltered();
 
-  /// Fun a function over each active tuple in the vector projection. This is a
+  /// Fun a function over each active tuple in the ProjectedColumns. This is a
   /// read-only function (despite it being non-const), meaning the callback must
   /// not modify the state of the iterator, but should only query it using const
   /// functions!
@@ -84,7 +84,7 @@ class VectorProjectionIterator {
   void ForEach(const F &fn);
 
   /// Run a generic tuple-at-a-time filter over all active tuples in the
-  /// vector projection
+  /// ProjectedColumns
   /// \tparam F The generic type of the filter function. This can be any
   /// functor-like type including raw function pointer, functor or std::function
   /// \param filter A function that accepts a const version of this VPI and
@@ -99,7 +99,7 @@ class VectorProjectionIterator {
 
   /// Filter the given column by the given value
   /// \tparam Compare The comparison function
-  /// \param col_idx The index of the column in the vector projection to filter
+  /// \param col_idx The index of the column in the ProjectedColumns to filter
   /// \param val The value to filter on
   /// \return The number of selected elements
   template <typename T, template <typename> typename Op, bool nullable>
@@ -113,13 +113,13 @@ class VectorProjectionIterator {
   // The projected column we are iterating over.
   storage::ProjectedColumns *projected_column_;
 
-  // The current raw position in the vector projection we're pointing to
+  // The current raw position in the ProjectedColumns we're pointing to
   u32 curr_idx_;
 
   // The number of tuples from the projection that have been selected (filtered)
   u32 num_selected_;
 
-  // The selection vector used to filter the vector projection
+  // The selection vector used to filter the ProjectedColumns
   u32 selection_vector_[kDefaultVectorSize];
 
   // The next slot in the selection vector to read from
@@ -217,7 +217,7 @@ inline void VectorProjectionIterator::RunFilter(const F &filter) {
     }
   }
 
-  // After the filter has been run on the entire vector projection, we need to
+  // After the filter has been run on the entire ProjectedColumns, we need to
   // ensure that we reset it so that clients can query the updated state of the
   // VPI, and subsequent filters operate only on valid tuples potentially
   // filtered out in this filter.
@@ -238,7 +238,7 @@ inline u32 VectorProjectionIterator::FilterColByVal(u32 col_idx, T val) {
   selection_vector_write_idx_ = util::VectorUtil::FilterVectorByVal<T, Op>(
       input, num_selected_, val, selection_vector_, sel_vec);
 
-  // After the filter has been run on the entire vector projection, we need to
+  // After the filter has been run on the entire ProjectedColumns, we need to
   // ensure that we reset it so that clients can query the updated state of the
   // VPI, and subsequent filters operate only on valid tuples potentially
   // filtered out in this filter.

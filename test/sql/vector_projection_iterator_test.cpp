@@ -14,7 +14,7 @@
 namespace tpl::sql::test {
 
 ///
-/// This test uses a vector projection with four columns. The first column,
+/// This test uses a ProjectedColumns with four columns. The first column,
 /// named "col_a" is a non-nullable small integer column whose values are
 /// monotonically increasing. The second column, "col_b", is a nullable integer
 /// column whose values are random. The third column, "col_c", is a non-nullable
@@ -187,7 +187,7 @@ TEST_F(VectorProjectionIteratorTest, EmptyIteratorTest) {
   iter.SetProjectedColumn(GetProjectedColumn());
 
   for (; iter.HasNext(); iter.Advance()) {
-    FAIL() << "Should not iterate with empty vector projection!";
+    FAIL() << "Should not iterate with empty ProjectedColumns!";
   }
 }
 

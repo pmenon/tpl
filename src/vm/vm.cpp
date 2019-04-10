@@ -423,7 +423,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   }
 
   // -------------------------------------------------------
-  // Table Vector and Vector Projection Iterator (VPI) ops
+  // Table Vector and ProjectedColumns Iterator (VPI) ops
   // -------------------------------------------------------
 
   OP(TableVectorIteratorInit) : {

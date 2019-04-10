@@ -16,14 +16,19 @@ namespace terrier::catalog {
 
 constexpr u32 test_table_size = 200000;
 
-/// A catalog of all the databases and tables in the system. Only one exists
-/// per TPL process, and its instance can be acquired through
-/// \ref Catalog::instance(). At this time, the catalog is read-only after
-/// startup. If you want to add a new table, modify the \ref TABLES macro which
-/// lists the IDs of all tables, and configure your table in the Catalog
-/// initialization function.
+/**
+ * Temporary placeholder for Terrier's actual catalog. It will be remove once the catalog PR is in.
+ * Catalog::TableInfo should contain all the information needed to interact with a table.
+ * Currently this makes a difference between the schema needed by the storage layer, and the schema needed
+ * by the execution layer. Eventually, I think we need to unify these schemas.
+ */
 class Catalog {
  public:
+
+  /**
+   * Contains all the information that should be needed for scans, expressions, plan nodes, ...
+   * Feel free to extend it to add more stuff.
+   */
   class TableInfo {
    public:
     TableInfo(std::unique_ptr<storage::SqlTable> &&table,
@@ -64,24 +69,55 @@ class Catalog {
   /// \return A pointer to the table, or NULL if the table doesn't exist.
   TableInfo *LookupTableById(table_oid_t table_id);
 
+  /**
+   * Creates a table and adds it to the list of tables.
+   * @param table_name the name of the table
+   * @param storage_schema the schema needed by the storage layer.
+   * @param sql_schema the schema needed by the execution layer.
+   * @return true if the creation was successful.
+   */
   bool CreateTable(const std::string &table_name, Schema &&storage_schema,
                    tpl::sql::Schema &&sql_schema);
 
+  /**
+   * Increments the oid counter and returns it.
+   * @return the new oid.
+   */
   table_oid_t GetNewTableOid() {
     curr_id_++;
     return table_oid_t(curr_id_);
   }
 
+  /**
+   * Increments the oid counter and returns it.
+   * @return the new oid.
+   */
   col_oid_t GetNewColOid() {
     curr_id_++;
     return col_oid_t(curr_id_);
   }
 
+  /**
+   * Helper method to create storage column metadata.
+   * @param name of the column.
+   * @param type sql::Type of the column.
+   * @return the new storage column.
+   */
   Schema::Column MakeStorageColumn(const std::string &name,
                                    const tpl::sql::Type &type);
+
+  /**
+   * Helper method to create sql column.
+   * @param name of the column.
+   * @param type sql::Type of the column.
+   * @return the new storage sql column.
+   */
   tpl::sql::Schema::ColumnInfo MakeSqlColumn(const std::string &name,
                                              const tpl::sql::Type &sql_type);
 
+  /**
+   * Used by tests to create test tables.
+   */
   void CreateTestTables();
 
  private:
@@ -89,10 +125,6 @@ class Catalog {
 
   std::unordered_map<table_oid_t, std::unique_ptr<TableInfo>> table_catalog_;
   std::unordered_map<std::string, table_oid_t> name_ids;
-  u32 curr_id_ = 0;  //
+  u32 curr_id_ = 0;  // Global counter.
 };
-
-// Test Tables
-enum TableId { EmptyTable = 1, Test1 = 2 };
-
 }  // namespace terrier::catalog

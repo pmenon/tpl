@@ -39,6 +39,7 @@ bool Catalog::CreateTable(const std::string &table_name,
 Schema::Column Catalog::MakeStorageColumn(const std::string &name,
                                           const sql::Type &sql_type) {
   type::TypeId storage_type;
+  // Conver a sql type to a storage type.
   switch (sql_type.type_id()) {
     case sql::TypeId::BigInt:
       storage_type = type::TypeId::BIGINT;
@@ -76,7 +77,7 @@ sql::Schema::ColumnInfo Catalog::MakeSqlColumn(const std::string &name,
   return sql::Schema::ColumnInfo(name, sql_type);
 }
 
-/// Test Tables
+/// Test Tables. This is adapted from the old catalog.cpp file.
 /**
  * Enumeration to characterize the distribution of values in a given column
  */

@@ -23,7 +23,7 @@ class TableVectorIterator {
   /// \return True if there is more data in the iterator; false otherwise
   bool Advance();
 
-  /// Return the iterator over the current active vector projection
+  /// Return the iterator over the current active ProjectedColumns
   VectorProjectionIterator *vector_projection_iterator() {
     return &vector_projection_iterator_;
   }
