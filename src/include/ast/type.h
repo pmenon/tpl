@@ -64,7 +64,7 @@ class Context;
   NON_PRIM(Sorter, tpl::sql::Sorter)                                     \
   NON_PRIM(SorterIterator, tpl::sql::SorterIterator)                     \
   NON_PRIM(TableVectorIterator, tpl::sql::TableVectorIterator)           \
-  NON_PRIM(VectorProjectionIterator, tpl::sql::VectorProjectionIterator) \
+  NON_PRIM(ProjectedColumnsIterator, tpl::sql::ProjectedColumnsIterator) \
                                                                          \
   /* Non-primitive SQL Runtime Values */                                 \
   SQL(Boolean, tpl::sql::BoolVal)                                        \

@@ -52,3 +52,10 @@ include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/spdlog/include")
 ############################################################
 
 include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/third_party/xbyak")
+
+
+# TBB
+# Intel TBB
+find_package(TBB REQUIRED)
+include_directories(SYSTEM ${TBB_INCLUDE_DIRS})
+list(APPEND TPL_LINK_LIBS ${TBB_LIBRARIES})

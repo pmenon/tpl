@@ -49,9 +49,9 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
   // Dispatched from VisitForInStatement() when using tuple-at-time loops to
   // set up the row structure used in the body of the loop
-  void VisitRowWiseIteration(ast::ForInStmt *node, LocalVar vpi,
+  void VisitRowWiseIteration(ast::ForInStmt *node, LocalVar pci,
                              LoopBuilder *table_loop);
-  void VisitVectorWiseIteration(ast::ForInStmt *node, LocalVar vpi,
+  void VisitVectorWiseIteration(ast::ForInStmt *node, LocalVar pci,
                                 LoopBuilder *table_loop);
 
   // Dispatched from VisitBuiltinCallExpr() to handle the various builtin

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "sql/hash_table_entry.h"
-#include "sql/vector_projection_iterator.h"
+#include "sql/projected_columns_iterator.h"
 #include "util/common.h"
 
 namespace tpl::sql {
@@ -12,18 +12,18 @@ class JoinHashTable;
 class JoinHashTableVectorLookup {
  public:
   // clang-format off
-  using HashFn = hash_t (*)(VectorProjectionIterator *) noexcept;  // NOLINT it appears to parse the function as a cast
-  using KeyEqFn = bool (*)(const byte *, VectorProjectionIterator *) noexcept;
+  using HashFn = hash_t (*)(ProjectedColumnsIterator *) noexcept;  // NOLINT it appears to parse the function as a cast
+  using KeyEqFn = bool (*)(const byte *, ProjectedColumnsIterator *) noexcept;
   // clang-format on
 
   /// Constructor given a hashing function and a key equality function
   explicit JoinHashTableVectorLookup(const JoinHashTable &table) noexcept;
 
-  /// Setup a vectorized lookup using the given input batch \a vpi
-  void Prepare(VectorProjectionIterator *vpi, HashFn hash_fn) noexcept;
+  /// Setup a vectorized lookup using the given input batch \a pci
+  void Prepare(ProjectedColumnsIterator *pci, HashFn hash_fn) noexcept;
 
   /// Return the next match, moving the input iterator if need be
-  const HashTableEntry *GetNextOutput(VectorProjectionIterator *vpi,
+  const HashTableEntry *GetNextOutput(ProjectedColumnsIterator *pci,
                                       KeyEqFn key_eq_fn) noexcept;
 
  private:
@@ -40,30 +40,30 @@ class JoinHashTableVectorLookup {
 // Because this function is a tuple-at-a-time, it's placed in the header to
 // reduce function call overhead.
 inline const HashTableEntry *JoinHashTableVectorLookup::GetNextOutput(
-    VectorProjectionIterator *vpi, const KeyEqFn key_eq_fn) noexcept {
-  TPL_ASSERT(vpi != nullptr, "No input VPI!");
-  TPL_ASSERT(match_idx_ < vpi->num_selected(), "Continuing past iteration!");
+    ProjectedColumnsIterator *pci, const KeyEqFn key_eq_fn) noexcept {
+  TPL_ASSERT(pci != nullptr, "No input PCI!");
+  TPL_ASSERT(match_idx_ < pci->num_selected(), "Continuing past iteration!");
 
   while (true) {
     // Continue along current chain until we find a match
     while (const auto *entry = entries_[match_idx_]) {
       entries_[match_idx_] = entry->next;
       if (entry->hash == hashes_[match_idx_] &&
-          key_eq_fn(entry->payload, vpi)) {
+          key_eq_fn(entry->payload, pci)) {
         return entry;
       }
     }
 
     // No match found, move to the next probe tuple index
-    if (++match_idx_ >= vpi->num_selected()) {
+    if (++match_idx_ >= pci->num_selected()) {
       break;
     }
 
     // Advance probe input
-    if (vpi->IsFiltered()) {
-      vpi->AdvanceFiltered();
+    if (pci->IsFiltered()) {
+      pci->AdvanceFiltered();
     } else {
-      vpi->Advance();
+      pci->Advance();
     }
   }
 

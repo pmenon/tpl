@@ -221,15 +221,15 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
     return;
   }
 
-  // The first call argument must be a pointer to a VectorProjectionIterator
-  ast::Type *vpi = call->arguments()[0]->type()->GetPointeeType();
-  if (vpi == nullptr ||
-      !vpi->IsSpecificBuiltin(ast::BuiltinType::VectorProjectionIterator)) {
-    vpi = ast::BuiltinType::Get(context(),
-                                ast::BuiltinType::VectorProjectionIterator);
+  // The first call argument must be a pointer to a ProjectedColumnsIterator
+  ast::Type *pci = call->arguments()[0]->type()->GetPointeeType();
+  if (pci == nullptr ||
+      !pci->IsSpecificBuiltin(ast::BuiltinType::ProjectedColumnsIterator)) {
+    pci = ast::BuiltinType::Get(context(),
+                                ast::BuiltinType::ProjectedColumnsIterator);
     error_reporter()->Report(
         call->position(), ErrorMessages::kIncorrectCallArgType,
-        call->arguments()[0]->type(), vpi, call->GetFuncName());
+        call->arguments()[0]->type(), pci, call->GetFuncName());
     return;
   }
 

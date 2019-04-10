@@ -1,76 +1,69 @@
 #pragma once
 
 #include <vector>
+#include "storage/sql_table.h"
 
-#include "sql/column_vector_iterator.h"
-#include "sql/table.h"
-#include "sql/vector_projection.h"
-#include "sql/vector_projection_iterator.h"
+#include "sql/projected_columns_iterator.h"
 
 namespace tpl::sql {
-
+using namespace terrier;
 /// An iterator over a table's data in vector-wise fashion
 class TableVectorIterator {
  public:
-  /// Create an iterator over the table with ID \a table_id and project all
-  /// columns
-  /// \param table_id The ID of the table
-  explicit TableVectorIterator(u16 table_id);
-
-  /// Create an iterator over the table with ID \a table_id and project columns
-  /// at the indexes in \a column_indexes from the logical schema for the table.
-  /// This is just a C++ friendly version of the other constructor.
-  /// \param table_id The ID of the table
-  /// \param column_indexes The indexes of the columns to select
-  TableVectorIterator(u16 table_id, std::vector<u32> column_indexes);
-
-  /// Create an iterator over the table with ID \a table_id and project columns
-  /// at the indexes in \a column_indexes from the logical schema for the table.
-  /// This constructor is used from the VM.
-  /// \param table_id The ID of the table
-  /// \param column_indexes The indexes of the columns to select
-  TableVectorIterator(u16 table_id, u32 num_cols, u32 column_indexes[]);
+  /// Create a new vectorized iterator over the given table
+  explicit TableVectorIterator(
+      const terrier::storage::SqlTable &table,
+      const terrier::catalog::Schema &schema,
+      terrier::transaction::TransactionContext *txn = nullptr);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(TableVectorIterator);
-
-  /// Initialize the iterator, returning true if the initialization succeeded
-  /// \return True if the initialization succeeded; false otherwise
-  bool Init();
 
   /// Advance the iterator by a vector of input
   /// \return True if there is more data in the iterator; false otherwise
   bool Advance();
 
-  /// Access the table this iterator is scanning
-  /// \return The table if the iterator has been initialized; null otherwise
-  const Table *table() const { return block_iterator_.table(); }
-
-  /// Return the iterator over the current active vector projection
-  VectorProjectionIterator *vector_projection_iterator() {
+  /// Return the iterator over the current active ProjectedColumns
+  ProjectedColumnsIterator *vector_projection_iterator() {
     return &vector_projection_iterator_;
   }
 
  private:
-  // When the column iterators receive new vectors of input, we need to
-  // refresh the vector projection with new data too
-  void RefreshVectorProjection();
+  /**
+   * Helper method to get the PC initializer.
+   * @param table SqlTable we want to iterate over.
+   * @param schema Schema of the table
+   * @return the initialization pait.
+   */
+  static std::pair<storage::ProjectedColumnsInitializer, storage::ProjectionMap>
+  GetInitializer(const storage::SqlTable &table, const catalog::Schema &schema);
 
- private:
-  // The indexes in the column to read
-  std::vector<u32> column_indexes_;
+  // SqlTable to iterate over
+  const terrier::storage::SqlTable &table_;
 
-  // The iterate over the blocks stored in the table
-  TableBlockIterator block_iterator_;
+  // Schema of the table
+  const terrier::catalog::Schema &schema_;
 
-  // The vector-wise iterators over each column in the table
-  std::vector<ColumnVectorIterator> column_iterators_;
+  // Transaction trying to iterate over the table
+  terrier::transaction::TransactionContext *txn_;
 
-  // The active vector projection
-  VectorProjection vector_projection_;
+  // A PC and its buffer of the PC.
+  byte *buffer_;
+  terrier::storage::ProjectedColumns *projected_columns_;
+
+  // The initilization pair for the PC.
+  std::pair<terrier::storage::ProjectedColumnsInitializer,
+            terrier::storage::ProjectionMap>
+      initializer_;
+
+  // Iterator of the slots in the PC
+  storage::DataTable::SlotIterator iter_;
+
+  // Whether no transaction was passed in.
+  bool null_txn_;
 
   // An iterator over the currently active projection
-  VectorProjectionIterator vector_projection_iterator_;
+  ProjectedColumnsIterator vector_projection_iterator_;
 };
 
 }  // namespace tpl::sql

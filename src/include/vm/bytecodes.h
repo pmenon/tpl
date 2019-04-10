@@ -87,31 +87,36 @@ namespace tpl::vm {
   F(Call, OperandType::FunctionId, OperandType::LocalCount)                                                            \
   F(Return)                                                                                                            \
                                                                                                                        \
+  /* Transactions */                                                                                                   \
+  F(BeginTransaction, OperandType::Local)                                                                              \
+  F(CommitTransaction, OperandType::Local)                                                                            \
+  F(AbortTransaction, OperandType::Local)                                                                             \
+                                                                                                                       \
   /* Table Vector Iterator */                                                                                          \
   F(TableVectorIteratorInit, OperandType::Local, OperandType::UImm2)                                                   \
   F(TableVectorIteratorPerformInit, OperandType::Local)                                                                \
   F(TableVectorIteratorNext, OperandType::Local, OperandType::Local)                                                   \
-  F(TableVectorIteratorFree, OperandType::Local)                                                                       \
-  F(TableVectorIteratorGetVPI, OperandType::Local, OperandType::Local)                                                 \
+  F(TableVectorIteratorFree, OperandType::Local)                                                                      \
+  F(TableVectorIteratorGetPCI, OperandType::Local, OperandType::Local)                                                 \
                                                                                                                        \
-  /* Vector Projection Iterator (VPI) */                                                                               \
-  F(VPIHasNext, OperandType::Local, OperandType::Local)                                                                \
-  F(VPIAdvance, OperandType::Local)                                                                                    \
-  F(VPIReset, OperandType::Local)                                                                                      \
-  F(VPIGetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
-  F(VPIGetInteger, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
-  F(VPIGetBigInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
-  F(VPIGetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
-  F(VPIGetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
-  F(VPIGetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
-  F(VPIGetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
-  F(VPIGetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
-  F(VPIFilterEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                     \
-  F(VPIFilterGreaterThan, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)               \
-  F(VPIFilterGreaterThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)          \
-  F(VPIFilterLessThan, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                  \
-  F(VPIFilterLessThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)             \
-  F(VPIFilterNotEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                  \
+  /* ProjectedColumns Iterator (PCI) */                                                                               \
+  F(PCIHasNext, OperandType::Local, OperandType::Local)                                                                \
+  F(PCIAdvance, OperandType::Local)                                                                                    \
+  F(PCIReset, OperandType::Local)                                                                                      \
+  F(PCIGetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
+  F(PCIGetInteger, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
+  F(PCIGetBigInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
+  F(PCIGetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
+  F(PCIGetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
+  F(PCIGetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
+  F(PCIGetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
+  F(PCIGetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
+  F(PCIFilterEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                     \
+  F(PCIFilterGreaterThan, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)               \
+  F(PCIFilterGreaterThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)          \
+  F(PCIFilterLessThan, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                  \
+  F(PCIFilterLessThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)             \
+  F(PCIFilterNotEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                  \
                                                                                                                        \
   /* SQL type comparisons */                                                                                           \
   F(ForceBoolTruth, OperandType::Local, OperandType::Local)                                                            \

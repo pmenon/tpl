@@ -8,9 +8,9 @@ JoinHashTableVectorLookup::JoinHashTableVectorLookup(
     const JoinHashTable &table) noexcept
     : table_(table), match_idx_(0), hashes_{0}, entries_{nullptr} {}
 
-void JoinHashTableVectorLookup::Prepare(VectorProjectionIterator *vpi,
+void JoinHashTableVectorLookup::Prepare(ProjectedColumnsIterator *pci,
                                         const HashFn hash_fn) noexcept {
-  TPL_ASSERT(vpi->num_selected() <= kDefaultVectorSize,
+  TPL_ASSERT(pci->num_selected() <= kDefaultVectorSize,
              "VectorProjection size must be less than kDefaultVectorSize");
   // Set up
   match_idx_ = 0;
@@ -18,12 +18,12 @@ void JoinHashTableVectorLookup::Prepare(VectorProjectionIterator *vpi,
   // Compute the hashes
   {
     u32 idx = 0;
-    vpi->ForEach(
-        [this, vpi, hash_fn, &idx]() { hashes_[idx++] = hash_fn(vpi); });
+    pci->ForEach(
+        [this, pci, hash_fn, &idx]() { hashes_[idx++] = hash_fn(pci); });
   }
 
   // Perform the initial lookup
-  table_.LookupBatch(vpi->num_selected(), hashes_, entries_);
+  table_.LookupBatch(pci->num_selected(), hashes_, entries_);
 }
 
 }  // namespace tpl::sql

@@ -9,6 +9,7 @@ list(REMOVE_ITEM tpl_sources
      "${PROJECT_SOURCE_DIR}/src/vm/gen_opt_bc.cpp"
      "${PROJECT_SOURCE_DIR}/src/vm/bytecode_handlers_ir.cpp")
 
+
 ##################################################
 # Generate Bytecode Handlers Logic and Cleaner
 #
@@ -69,7 +70,7 @@ add_library(tpl_shared STATIC ${tpl_sources})
 #
 ##################################################
 
-set(tpl_main "${PROJECT_SOURCE_DIR}/src/tpl.cpp")
+set(tpl_main "${PROJECT_SOURCE_DIR}/src/tpl.cpp" catalog/catalog.cpp)
 add_executable(tpl ${tpl_main})
 add_dependencies(tpl gen_opt_bc)
 target_link_libraries(tpl tpl_shared ${TPL_LINK_LIBS})

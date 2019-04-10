@@ -3,8 +3,7 @@
 #include "ast/ast_node_factory.h"
 #include "ast/context.h"
 #include "ast/type.h"
-#include "sql/catalog.h"
-#include "sql/table.h"
+#include "sql/execution_structures.h"
 
 namespace tpl::sema {
 
@@ -92,7 +91,8 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
   auto *iter = node->iter()->As<ast::IdentifierExpr>();
 
   // Lookup the table in the catalog
-  auto *table = sql::Catalog::Instance()->LookupTableByName(iter->name());
+  auto *exec = sql::ExecutionStructures::Instance();
+  auto *table = exec->GetCatalog()->LookupTableByName(iter->name());
   if (table == nullptr) {
     error_reporter()->Report(iter->position(), ErrorMessages::kNonExistingTable,
                              iter->name());
@@ -102,17 +102,17 @@ void Sema::VisitForInStmt(ast::ForInStmt *node) {
   // Now we resolve the type of the iterable. If the user wanted a row-at-a-time
   // iteration, the type becomes a struct-equivalent representation of the row
   // as stored in the table. If the user wanted a vector-at-a-time iteration,
-  // the iterable type becomes a VectorProjectionIterator.
+  // the iterable type becomes a ProjectedColumnsIterator.
 
   ast::Type *iter_type = nullptr;
   if (auto *attributes = node->attributes();
       attributes != nullptr &&
       attributes->Contains(context()->GetIdentifier("batch"))) {
     iter_type = ast::BuiltinType::Get(
-                    context(), ast::BuiltinType::VectorProjectionIterator)
+                    context(), ast::BuiltinType::ProjectedColumnsIterator)
                     ->PointerTo();
   } else {
-    iter_type = GetRowTypeFromSqlSchema(table->schema());
+    iter_type = GetRowTypeFromSqlSchema(*table->GetSqlSchema());
     TPL_ASSERT(iter_type->IsStructType(), "Rows must be structs");
   }
 

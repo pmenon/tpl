@@ -1,6 +1,7 @@
 #include "vm/bytecode_handlers.h"
 
-#include "sql/catalog.h"
+#include "catalog/catalog_defs.h"
+#include "sql/execution_structures.h"
 
 extern "C" {
 
@@ -15,18 +16,39 @@ void OpRegionInit(tpl::util::Region *region) {
 void OpRegionFree(tpl::util::Region *region) { region->~Region(); }
 
 // ---------------------------------------------------------
+// Transactions
+// ---------------------------------------------------------
+void OpBeginTransaction(terrier::transaction::TransactionContext **txn) {
+  auto *exec = tpl::sql::ExecutionStructures::Instance();
+  *txn = exec->GetTxnManager()->BeginTransaction();
+}
+
+void OpCommitTransaction(terrier::transaction::TransactionContext **txn) {
+  auto *exec = tpl::sql::ExecutionStructures::Instance();
+  exec->GetTxnManager()->Commit(*txn, [](void *) { return; }, nullptr);
+}
+
+void OpAbortTransaction(terrier::transaction::TransactionContext **txn) {
+  auto *exec = tpl::sql::ExecutionStructures::Instance();
+  exec->GetTxnManager()->Abort(*txn);
+}
+
+// ---------------------------------------------------------
 // Table Vector Iterator
 // ---------------------------------------------------------
 
 void OpTableVectorIteratorInit(tpl::sql::TableVectorIterator *iter,
                                u16 table_id) {
   TPL_ASSERT(iter != nullptr, "Null iterator to initialize");
-  new (iter) tpl::sql::TableVectorIterator(table_id);
-}
+  auto *exec = tpl::sql::ExecutionStructures::Instance();
+  auto *table = exec->GetCatalog()->LookupTableById(
+      terrier::catalog::table_oid_t(table_id));
 
-void OpTableVectorIteratorPerformInit(tpl::sql::TableVectorIterator *iter) {
-  TPL_ASSERT(iter != nullptr, "NULL iterator given to close");
-  iter->Init();
+  // At this point, the table better exist ...
+  TPL_ASSERT(table != nullptr, "Table can't be null!");
+
+  new (iter) tpl::sql::TableVectorIterator(*table->GetTable(),
+                                           *table->GetStorageSchema());
 }
 
 void OpTableVectorIteratorFree(tpl::sql::TableVectorIterator *iter) {
@@ -35,45 +57,43 @@ void OpTableVectorIteratorFree(tpl::sql::TableVectorIterator *iter) {
 }
 
 // ---------------------------------------------------------
-// VPI Vectorized Filters
+// PCI Vectorized Filters
 // ---------------------------------------------------------
 
-void OpVPIFilterEqual(u32 *size, tpl::sql::VectorProjectionIterator *iter,
-                      u16 col_id, i64 val) {
-  tpl::sql::VectorProjectionIterator::FilterVal v{.bi = val};
-  *size = iter->FilterColByVal<std::equal_to>(col_id, v);
+void OpPCIFilterEqual(u32 *size,
+                      UNUSED tpl::sql::ProjectedColumnsIterator *iter,
+                      UNUSED u16 col_id, UNUSED i64 val) {
+  *size = 0;
 }
 
-void OpVPIFilterGreaterThan(u32 *size, tpl::sql::VectorProjectionIterator *iter,
-                            u16 col_id, i64 val) {
-  tpl::sql::VectorProjectionIterator::FilterVal v{.bi = val};
-  *size = iter->FilterColByVal<std::greater>(col_id, v);
+void OpPCIFilterGreaterThan(u32 *size,
+                            UNUSED tpl::sql::ProjectedColumnsIterator *iter,
+                            UNUSED u16 col_id, UNUSED i64 val) {
+  *size = 0;
 }
 
-void OpVPIFilterGreaterThanEqual(u32 *size,
-                                 tpl::sql::VectorProjectionIterator *iter,
-                                 u16 col_id, i64 val) {
-  tpl::sql::VectorProjectionIterator::FilterVal v{.bi = val};
-  *size = iter->FilterColByVal<std::greater_equal>(col_id, v);
+void OpPCIFilterGreaterThanEqual(
+    u32 *size, UNUSED tpl::sql::ProjectedColumnsIterator *iter,
+    UNUSED u16 col_id, UNUSED i64 val) {
+  *size = 0;
 }
 
-void OpVPIFilterLessThan(u32 *size, tpl::sql::VectorProjectionIterator *iter,
-                         u16 col_id, i64 val) {
-  tpl::sql::VectorProjectionIterator::FilterVal v{.bi = val};
-  *size = iter->FilterColByVal<std::less>(col_id, v);
+void OpPCIFilterLessThan(u32 *size,
+                         UNUSED tpl::sql::ProjectedColumnsIterator *iter,
+                         UNUSED u16 col_id, UNUSED i64 val) {
+  *size = 0;
 }
 
-void OpVPIFilterLessThanEqual(u32 *size,
-                              tpl::sql::VectorProjectionIterator *iter,
-                              u16 col_id, i64 val) {
-  tpl::sql::VectorProjectionIterator::FilterVal v{.bi = val};
-  *size = iter->FilterColByVal<std::less_equal>(col_id, v);
+void OpPCIFilterLessThanEqual(u32 *size,
+                              UNUSED tpl::sql::ProjectedColumnsIterator *iter,
+                              UNUSED u16 col_id, UNUSED i64 val) {
+  *size = 0;
 }
 
-void OpVPIFilterNotEqual(u32 *size, tpl::sql::VectorProjectionIterator *iter,
-                         u16 col_id, i64 val) {
-  tpl::sql::VectorProjectionIterator::FilterVal v{.bi = val};
-  *size = iter->FilterColByVal<std::not_equal_to>(col_id, v);
+void OpPCIFilterNotEqual(u32 *size,
+                         UNUSED tpl::sql::ProjectedColumnsIterator *iter,
+                         UNUSED u16 col_id, UNUSED i64 val) {
+  *size = 0;
 }
 
 // ---------------------------------------------------------
