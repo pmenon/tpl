@@ -43,7 +43,7 @@ matrix:
 before_script:
   - if [[ "$DOCKER" = true ]]; then
       docker exec build /bin/sh -c "mkdir -p /repo/build" &&
-      docker exec -e CMAKE_CXX_FLAGS="-mavx2" CMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -e TPL_USE_ASAN="$TPL_USE_ASAN" build /bin/sh -c "cd /repo/build && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DTPL_USE_ASAN=$TERRIER_USE_ASAN .." &&
+      docker exec -e CMAKE_CXX_FLAGS="-mavx2" -e CMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -e TPL_USE_ASAN="$TPL_USE_ASAN" build /bin/sh -c "cd /repo/build && cmake -DCMAKE_CXX_FLAGS=$CMAKE_CXX_FLAGS -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DTPL_USE_ASAN=$TERRIER_USE_ASAN .." &&
       docker exec build /bin/sh -c "cd /repo/build && make check-clang-tidy" &&
       docker exec build /bin/sh -c "cd /repo/build && make check-format" &&
       docker exec build /bin/sh -c "cd /repo/build && make check-lint" &&
