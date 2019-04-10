@@ -27,7 +27,6 @@ TEST_F(CompilerTest, TextCompilerPredicateTest) {
 
   TextCompiler compiler;
   std::string s = compiler.CompilePredicate(expr, "row");
-  LOG_INFO(s)
   EXPECT_EQ(s, "(row.cola==((1-4)+5))");
 }
 
