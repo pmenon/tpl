@@ -29,8 +29,9 @@ class PrepareStatement : public SQLStatement {
    * @param query - the parsed form of statement
    * @param placeholders - placeholder values? (explain)
    */
-  PrepareStatement(std::string name, std::shared_ptr<SQLStatement> query,
-                   std::vector<std::shared_ptr<ParameterValueExpression>> placeholders)
+  PrepareStatement(
+      std::string name, std::shared_ptr<SQLStatement> query,
+      std::vector<std::shared_ptr<ParameterValueExpression>> placeholders)
       : SQLStatement(StatementType::PREPARE),
         name_(std::move(name)),
         query_(std::move(query)),
@@ -53,7 +54,9 @@ class PrepareStatement : public SQLStatement {
   /**
    * @return placeholders
    */
-  std::vector<std::shared_ptr<ParameterValueExpression>> GetPlaceholders() { return placeholders_; }
+  std::vector<std::shared_ptr<ParameterValueExpression>> GetPlaceholders() {
+    return placeholders_;
+  }
 
  private:
   const std::string name_;

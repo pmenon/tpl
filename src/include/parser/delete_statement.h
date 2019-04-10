@@ -28,15 +28,20 @@ class DeleteStatement : public SQLStatement {
    * @param table deletion target
    * @param expr condition for deletion
    */
-  DeleteStatement(std::shared_ptr<TableRef> table, std::shared_ptr<AbstractExpression> expr)
-      : SQLStatement(StatementType::DELETE), table_ref_(std::move(table)), expr_(std::move(expr)) {}
+  DeleteStatement(std::shared_ptr<TableRef> table,
+                  std::shared_ptr<AbstractExpression> expr)
+      : SQLStatement(StatementType::DELETE),
+        table_ref_(std::move(table)),
+        expr_(std::move(expr)) {}
 
   /**
    * Delete all rows (truncate).
    * @param table deletion target
    */
   explicit DeleteStatement(std::shared_ptr<TableRef> table)
-      : SQLStatement(StatementType::DELETE), table_ref_(std::move(table)), expr_(nullptr) {}
+      : SQLStatement(StatementType::DELETE),
+        table_ref_(std::move(table)),
+        expr_(nullptr) {}
 
   ~DeleteStatement() override = default;
 

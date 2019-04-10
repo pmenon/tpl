@@ -23,7 +23,8 @@ class TransactionStatement : public SQLStatement {
   /**
    * @param type transaction command
    */
-  explicit TransactionStatement(CommandType type) : SQLStatement(StatementType::TRANSACTION), type_(type) {}
+  explicit TransactionStatement(CommandType type)
+      : SQLStatement(StatementType::TRANSACTION), type_(type) {}
 
   void Accept(SqlNodeVisitor *v) override { v->Visit(this); }
 

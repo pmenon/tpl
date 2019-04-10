@@ -23,7 +23,8 @@ class InsertStatement : public SQLStatement {
    * @param table_ref table
    * @param select select statement to insert from
    */
-  InsertStatement(std::shared_ptr<std::vector<std::string>> columns, std::shared_ptr<TableRef> table_ref,
+  InsertStatement(std::shared_ptr<std::vector<std::string>> columns,
+                  std::shared_ptr<TableRef> table_ref,
                   std::shared_ptr<SelectStatement> select)
       : SQLStatement(StatementType::INSERT),
         type_(InsertType::SELECT),
@@ -37,8 +38,12 @@ class InsertStatement : public SQLStatement {
    * @param table_ref table
    * @param insert_values values to be inserted
    */
-  InsertStatement(std::shared_ptr<std::vector<std::string>> columns, std::shared_ptr<TableRef> table_ref,
-                  std::shared_ptr<std::vector<std::vector<std::shared_ptr<AbstractExpression>>>> insert_values)
+  InsertStatement(
+      std::shared_ptr<std::vector<std::string>> columns,
+      std::shared_ptr<TableRef> table_ref,
+      std::shared_ptr<
+          std::vector<std::vector<std::shared_ptr<AbstractExpression>>>>
+          insert_values)
       : SQLStatement(StatementType::INSERT),
         type_(InsertType::VALUES),
         columns_(std::move(columns)),
@@ -48,7 +53,8 @@ class InsertStatement : public SQLStatement {
   /**
    * @param type insert type (SELECT or VALUES)
    */
-  explicit InsertStatement(InsertType type) : SQLStatement(StatementType::INSERT), type_(type) {}
+  explicit InsertStatement(InsertType type)
+      : SQLStatement(StatementType::INSERT), type_(type) {}
 
   ~InsertStatement() override = default;
 
@@ -62,7 +68,9 @@ class InsertStatement : public SQLStatement {
   /**
    * @return columns to insert into
    */
-  std::shared_ptr<std::vector<std::string>> GetInsertColumns() { return columns_; }
+  std::shared_ptr<std::vector<std::string>> GetInsertColumns() {
+    return columns_;
+  }
 
   /**
    * @return table to insert into
@@ -77,7 +85,10 @@ class InsertStatement : public SQLStatement {
   /**
    * @return values that we're inserting
    */
-  std::shared_ptr<std::vector<std::vector<std::shared_ptr<AbstractExpression>>>> GetValues() { return insert_values_; }
+  std::shared_ptr<std::vector<std::vector<std::shared_ptr<AbstractExpression>>>>
+  GetValues() {
+    return insert_values_;
+  }
 
  private:
   const InsertType type_;
@@ -85,7 +96,9 @@ class InsertStatement : public SQLStatement {
   const std::shared_ptr<TableRef> table_ref_;
   const std::shared_ptr<SelectStatement> select_;
   // TODO(WAN): unsure about this one.
-  const std::shared_ptr<std::vector<std::vector<std::shared_ptr<AbstractExpression>>>> insert_values_;
+  const std::shared_ptr<
+      std::vector<std::vector<std::shared_ptr<AbstractExpression>>>>
+      insert_values_;
 };
 
 }  // namespace parser

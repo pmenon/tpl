@@ -15,7 +15,8 @@ class StarExpression : public AbstractExpression {
   /**
    * Instantiates a new star expression, e.g. as in COUNT(*)
    */
-  StarExpression() : AbstractExpression(ExpressionType::STAR, type::TypeId::INVALID, {}) {}
+  StarExpression()
+      : AbstractExpression(ExpressionType::STAR, type::TypeId::INVALID, {}) {}
 
   std::unique_ptr<AbstractExpression> Copy() const override {
     // TODO(Tianyu): This really should be a singleton object

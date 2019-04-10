@@ -16,7 +16,8 @@ class ExplainStatement : public SQLStatement {
    * @param real_sql_stmt the SQL statement to be explained
    */
   explicit ExplainStatement(std::shared_ptr<SQLStatement> real_sql_stmt)
-      : SQLStatement(StatementType::EXPLAIN), real_sql_stmt_(std::move(real_sql_stmt)) {}
+      : SQLStatement(StatementType::EXPLAIN),
+        real_sql_stmt_(std::move(real_sql_stmt)) {}
   ~ExplainStatement() override = default;
 
   void Accept(SqlNodeVisitor *v) override { v->Visit(this); }

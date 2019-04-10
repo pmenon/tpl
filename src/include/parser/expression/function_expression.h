@@ -20,12 +20,16 @@ class FunctionExpression : public AbstractExpression {
    * @param return_value_type function return value type
    * @param children children arguments for the function
    */
-  FunctionExpression(std::string &&func_name, const type::TypeId return_value_type,
-                     std::vector<std::shared_ptr<AbstractExpression>> &&children)
-      : AbstractExpression(ExpressionType::FUNCTION, return_value_type, std::move(children)),
+  FunctionExpression(
+      std::string &&func_name, const type::TypeId return_value_type,
+      std::vector<std::shared_ptr<AbstractExpression>> &&children)
+      : AbstractExpression(ExpressionType::FUNCTION, return_value_type,
+                           std::move(children)),
         func_name_(std::move(func_name)) {}
 
-  std::unique_ptr<AbstractExpression> Copy() const override { return std::make_unique<FunctionExpression>(*this); }
+  std::unique_ptr<AbstractExpression> Copy() const override {
+    return std::make_unique<FunctionExpression>(*this);
+  }
 
   /**
    * @return function name
@@ -35,7 +39,8 @@ class FunctionExpression : public AbstractExpression {
  private:
   std::string func_name_;
 
-  // TODO(Tianyu): Why the hell are these things in the parser nodes anyway? Parsers are dumb. They don't know shit.
+  // TODO(Tianyu): Why the hell are these things in the parser nodes anyway?
+  // Parsers are dumb. They don't know shit.
   // TODO(WAN): doesn't appear in postgres parser code
   // std::vector<TypeId> func_arg_types_;
 

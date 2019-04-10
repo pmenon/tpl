@@ -15,15 +15,20 @@ namespace terrier::parser {
 class SubqueryExpression : public AbstractExpression {
  public:
   /**
-   * Instantiates a new SubqueryExpression with the given sub-select from the parser.
+   * Instantiates a new SubqueryExpression with the given sub-select from the
+   * parser.
    * @param subselect the sub-select
    */
-  explicit SubqueryExpression(std::shared_ptr<parser::SelectStatement> subselect)
-      : AbstractExpression(ExpressionType::ROW_SUBQUERY, type::TypeId::INVALID, {}), subselect_(std::move(subselect)) {}
+  explicit SubqueryExpression(
+      std::shared_ptr<parser::SelectStatement> subselect)
+      : AbstractExpression(ExpressionType::ROW_SUBQUERY, type::TypeId::INVALID,
+                           {}),
+        subselect_(std::move(subselect)) {}
 
   std::unique_ptr<AbstractExpression> Copy() const override {
-    // TODO(WAN): Previous codebase described as a hack, will we need a deep copy?
-    // Tianyu: No need for deep copy if your objects are always immutable! (why even copy at all, but that's beyond me)
+    // TODO(WAN): Previous codebase described as a hack, will we need a deep
+    // copy? Tianyu: No need for deep copy if your objects are always immutable!
+    // (why even copy at all, but that's beyond me)
     return std::make_unique<SubqueryExpression>(*this);
   }
 

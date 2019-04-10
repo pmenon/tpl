@@ -64,7 +64,7 @@ namespace tpl::parsing {
   K(IF, "if", 0)                                   \
   K(IN, "in", 0)                                   \
   K(MAP, "map", 0)                                 \
-  K(NIL, "nil", 0)                                 \
+  K(NIL_VAL, "nil", 0)                             \
   K(RETURN, "return", 0)                           \
   K(STRUCT, "struct", 0)                           \
   K(TRUE, "true", 0)                               \

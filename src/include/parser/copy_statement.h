@@ -27,8 +27,10 @@ class CopyStatement : public SQLStatement {
    * @param quote quote character
    * @param escape escape character
    */
-  CopyStatement(std::shared_ptr<TableRef> table, std::shared_ptr<SelectStatement> select_stmt, std::string file_path,
-                ExternalFileFormat format, bool is_from, char delimiter, char quote, char escape)
+  CopyStatement(std::shared_ptr<TableRef> table,
+                std::shared_ptr<SelectStatement> select_stmt,
+                std::string file_path, ExternalFileFormat format, bool is_from,
+                char delimiter, char quote, char escape)
       : SQLStatement(StatementType::COPY),
         table_(std::move(table)),
         select_stmt_(std::move(select_stmt)),

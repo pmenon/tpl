@@ -53,14 +53,16 @@ class UpdateStatement : public SQLStatement {
    * @param updates update clauses
    * @param where update conditions
    */
-  UpdateStatement(std::shared_ptr<TableRef> table, std::vector<std::shared_ptr<UpdateClause>> updates,
+  UpdateStatement(std::shared_ptr<TableRef> table,
+                  std::vector<std::shared_ptr<UpdateClause>> updates,
                   std::shared_ptr<AbstractExpression> where)
       : SQLStatement(StatementType::UPDATE),
         table_(std::move(table)),
         updates_(std::move(updates)),
         where_(std::move(where)) {}
 
-  UpdateStatement() : SQLStatement(StatementType::UPDATE), table_(nullptr), where_(nullptr) {}
+  UpdateStatement()
+      : SQLStatement(StatementType::UPDATE), table_(nullptr), where_(nullptr) {}
 
   ~UpdateStatement() override = default;
 
@@ -74,7 +76,9 @@ class UpdateStatement : public SQLStatement {
   /**
    * @return update clauses
    */
-  std::vector<std::shared_ptr<UpdateClause>> GetUpdateClauses() { return updates_; }
+  std::vector<std::shared_ptr<UpdateClause>> GetUpdateClauses() {
+    return updates_;
+  }
 
   /**
    * @return update condition

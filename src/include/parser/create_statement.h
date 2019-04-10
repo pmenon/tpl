@@ -20,8 +20,8 @@ namespace parser {
  */
 struct ColumnDefinition {
   // TODO(WAN): I really hate how everything is mashed together.
-  // There were also a number of unused attributes e.g. primary_keys, multi_unique...
-  // that were never used.
+  // There were also a number of unused attributes e.g. primary_keys,
+  // multi_unique... that were never used.
 
   /**
    * Column data types.
@@ -61,8 +61,11 @@ struct ColumnDefinition {
    * @param update_action action to take upon update
    * @param match_type type of foreign key match
    */
-  ColumnDefinition(std::vector<std::string> fk_sources, std::vector<std::string> fk_sinks,
-                   std::string fk_sink_table_name, FKConstrActionType delete_action, FKConstrActionType update_action,
+  ColumnDefinition(std::vector<std::string> fk_sources,
+                   std::vector<std::string> fk_sinks,
+                   std::string fk_sink_table_name,
+                   FKConstrActionType delete_action,
+                   FKConstrActionType update_action,
                    FKConstrMatchType match_type)
       : type_(DataType::FOREIGN),
         fk_sources_(std::move(fk_sources)),
@@ -83,8 +86,10 @@ struct ColumnDefinition {
    * @param check_expr check expression
    * @param varlen size of column if varlen
    */
-  ColumnDefinition(std::string name, DataType type, bool is_primary, bool is_not_null, bool is_unique,
-                   std::shared_ptr<AbstractExpression> default_expr, std::shared_ptr<AbstractExpression> check_expr,
+  ColumnDefinition(std::string name, DataType type, bool is_primary,
+                   bool is_not_null, bool is_unique,
+                   std::shared_ptr<AbstractExpression> default_expr,
+                   std::shared_ptr<AbstractExpression> check_expr,
                    size_t varlen)
       : name_(std::move(name)),
         type_(type),
@@ -148,7 +153,8 @@ struct ColumnDefinition {
     // Transform column type
     if ((strcmp(str, "int") == 0) || (strcmp(str, "int4") == 0)) {
       value_type = type::TypeId::INTEGER;
-    } else if ((strcmp(str, "varchar") == 0) || (strcmp(str, "bpchar") == 0) || (strcmp(str, "text") == 0)) {
+    } else if ((strcmp(str, "varchar") == 0) || (strcmp(str, "bpchar") == 0) ||
+               (strcmp(str, "text") == 0)) {
       value_type = type::TypeId::VARCHAR;
     } else if (strcmp(str, "int8") == 0) {
       value_type = type::TypeId::BIGINT;
@@ -158,8 +164,9 @@ struct ColumnDefinition {
       value_type = type::TypeId::TIMESTAMP;
     } else if (strcmp(str, "bool") == 0) {
       value_type = type::TypeId::BOOLEAN;
-    } else if ((strcmp(str, "double") == 0) || (strcmp(str, "float8") == 0) || (strcmp(str, "real") == 0) ||
-               (strcmp(str, "float4") == 0) || (strcmp(str, "numeric") == 0)) {
+    } else if ((strcmp(str, "double") == 0) || (strcmp(str, "float8") == 0) ||
+               (strcmp(str, "real") == 0) || (strcmp(str, "float4") == 0) ||
+               (strcmp(str, "numeric") == 0)) {
       value_type = type::TypeId::DECIMAL;
     } else if (strcmp(str, "tinyint") == 0) {
       value_type = type::TypeId::TINYINT;
@@ -257,12 +264,16 @@ struct ColumnDefinition {
   /**
    * @return default expression
    */
-  std::shared_ptr<AbstractExpression> GetDefaultExpression() { return default_expr_; }
+  std::shared_ptr<AbstractExpression> GetDefaultExpression() {
+    return default_expr_;
+  }
 
   /**
    * @return check expression
    */
-  std::shared_ptr<AbstractExpression> GetCheckExpression() { return check_expr_; }
+  std::shared_ptr<AbstractExpression> GetCheckExpression() {
+    return check_expr_;
+  }
 
   /**
    * @return varlen size
@@ -309,7 +320,8 @@ struct ColumnDefinition {
   const std::shared_ptr<TableInfo> table_info_ = nullptr;
 
   const DataType type_;
-  bool is_primary_ = false;  // not const because of how the parser returns us columns and primary key info separately
+  bool is_primary_ = false;  // not const because of how the parser returns us
+                             // columns and primary key info separately
   const bool is_not_null_ = false;
   const bool is_unique_ = false;
   const std::shared_ptr<AbstractExpression> default_expr_ = nullptr;
@@ -329,7 +341,8 @@ struct ColumnDefinition {
  * Represents the sql "CREATE ..."
  */
 class CreateStatement : public TableRefStatement {
-  // TODO(WAN): just inherit from CreateStatement instead of dumping members here..
+  // TODO(WAN): just inherit from CreateStatement instead of dumping members
+  // here..
  public:
   /**
    * Create statement type.
@@ -359,7 +372,8 @@ class CreateStatement : public TableRefStatement {
    * @param index_name index name
    * @param index_attrs index attributes
    */
-  CreateStatement(std::shared_ptr<TableInfo> table_info, IndexType index_type, bool unique, std::string index_name,
+  CreateStatement(std::shared_ptr<TableInfo> table_info, IndexType index_type,
+                  bool unique, std::string index_name,
                   std::vector<std::string> index_attrs)
       : TableRefStatement(StatementType::CREATE, std::move(table_info)),
         create_type_(kIndex),
@@ -388,9 +402,12 @@ class CreateStatement : public TableRefStatement {
    * @param trigger_when trigger when clause
    * @param trigger_type trigger type
    */
-  CreateStatement(std::shared_ptr<TableInfo> table_info, std::string trigger_name,
-                  std::vector<std::string> trigger_funcnames, std::vector<std::string> trigger_args,
-                  std::vector<std::string> trigger_columns, std::shared_ptr<AbstractExpression> trigger_when,
+  CreateStatement(std::shared_ptr<TableInfo> table_info,
+                  std::string trigger_name,
+                  std::vector<std::string> trigger_funcnames,
+                  std::vector<std::string> trigger_args,
+                  std::vector<std::string> trigger_columns,
+                  std::shared_ptr<AbstractExpression> trigger_when,
                   int16_t trigger_type)
       : TableRefStatement(StatementType::CREATE, std::move(table_info)),
         create_type_(kTrigger),
@@ -406,7 +423,8 @@ class CreateStatement : public TableRefStatement {
    * @param view_name view name
    * @param view_query query associated with view
    */
-  CreateStatement(std::string view_name, std::shared_ptr<SelectStatement> view_query)
+  CreateStatement(std::string view_name,
+                  std::shared_ptr<SelectStatement> view_query)
       : TableRefStatement(StatementType::CREATE, nullptr),
         create_type_(kView),
         view_name_(std::move(view_name)),
@@ -424,12 +442,16 @@ class CreateStatement : public TableRefStatement {
   /**
    * @return columns for [CREATE TABLE, CREATE DATABASE]
    */
-  std::vector<std::shared_ptr<ColumnDefinition>> GetColumns() { return columns_; }
+  std::vector<std::shared_ptr<ColumnDefinition>> GetColumns() {
+    return columns_;
+  }
 
   /**
    * @return foreign keys for [CREATE TABLE, CREATE DATABASE]
    */
-  std::vector<std::shared_ptr<ColumnDefinition>> GetForeignKeys() { return foreign_keys_; }
+  std::vector<std::shared_ptr<ColumnDefinition>> GetForeignKeys() {
+    return foreign_keys_;
+  }
 
   /**
    * @return index type for [CREATE INDEX]
@@ -482,7 +504,8 @@ class CreateStatement : public TableRefStatement {
   std::shared_ptr<AbstractExpression> GetTriggerWhen() { return trigger_when_; }
 
   /**
-   * @return trigger type, i.e. information about row, timing, events, access by pg_trigger
+   * @return trigger type, i.e. information about row, timing, events, access by
+   * pg_trigger
    */
   int16_t GetTriggerType() { return trigger_type_; }
 

@@ -3,9 +3,9 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include "util/macros.h"
 #include "parser/expression/abstract_expression.h"
 #include "parser/expression_defs.h"
+#include "util/macros.h"
 
 namespace terrier::parser {
 
@@ -23,7 +23,8 @@ class CaseExpression : public AbstractExpression {
      */
     std::shared_ptr<AbstractExpression> condition;
     /**
-     * The value that this expression should have if the corresponding condition is true.
+     * The value that this expression should have if the corresponding condition
+     * is true.
      */
     std::shared_ptr<AbstractExpression> then;
 
@@ -32,7 +33,9 @@ class CaseExpression : public AbstractExpression {
      * @param rhs the other WhenClause to compare to
      * @return if the two are equal
      */
-    bool operator==(const WhenClause &rhs) const { return *condition == *rhs.condition && *then == *rhs.then; }
+    bool operator==(const WhenClause &rhs) const {
+      return *condition == *rhs.condition && *then == *rhs.then;
+    }
     /**
      * Inequality check
      * @param rhs the other WhenClause to compare toz
@@ -47,9 +50,11 @@ class CaseExpression : public AbstractExpression {
    * @param when_clauses list of when clauses
    * @param default_expr default expression for this case
    */
-  CaseExpression(const type::TypeId return_value_type, std::vector<WhenClause> &&when_clauses,
+  CaseExpression(const type::TypeId return_value_type,
+                 std::vector<WhenClause> &&when_clauses,
                  std::shared_ptr<AbstractExpression> default_expr)
-      : AbstractExpression(ExpressionType::OPERATOR_CASE_EXPR, return_value_type, {}),
+      : AbstractExpression(ExpressionType::OPERATOR_CASE_EXPR,
+                           return_value_type, {}),
         when_clauses_(std::move(when_clauses)),
         default_expr_(std::move(default_expr)) {}
 
@@ -81,7 +86,9 @@ class CaseExpression : public AbstractExpression {
     return (*default_exp == *other_default_exp);
   }
 
-  std::unique_ptr<AbstractExpression> Copy() const override { return std::make_unique<CaseExpression>(*this); }
+  std::unique_ptr<AbstractExpression> Copy() const override {
+    return std::make_unique<CaseExpression>(*this);
+  }
 
   /**
    * @return the number of when clauses
@@ -92,7 +99,8 @@ class CaseExpression : public AbstractExpression {
    * @param index index of when clause to get
    * @return condition at that index
    */
-  std::shared_ptr<AbstractExpression> GetWhenClauseCondition(size_t index) const {
+  std::shared_ptr<AbstractExpression> GetWhenClauseCondition(
+      size_t index) const {
     TPL_ASSERT(index < when_clauses_.size(), "Index must be in bounds.");
     return when_clauses_[index].condition;
   }
@@ -109,7 +117,9 @@ class CaseExpression : public AbstractExpression {
   /**
    * @return default clause, if it exists
    */
-  std::shared_ptr<AbstractExpression> GetDefaultClause() const { return default_expr_; }
+  std::shared_ptr<AbstractExpression> GetDefaultClause() const {
+    return default_expr_;
+  }
 
  private:
   std::vector<WhenClause> when_clauses_;

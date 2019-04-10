@@ -19,10 +19,15 @@ class ComparisonExpression : public AbstractExpression {
    * @param cmp_type type of comparison
    * @param children vector containing exactly two children, left then right
    */
-  ComparisonExpression(const ExpressionType cmp_type, std::vector<std::shared_ptr<AbstractExpression>> &&children)
-      : AbstractExpression(cmp_type, type::TypeId::BOOLEAN, std::move(children)) {}
+  ComparisonExpression(
+      const ExpressionType cmp_type,
+      std::vector<std::shared_ptr<AbstractExpression>> &&children)
+      : AbstractExpression(cmp_type, type::TypeId::BOOLEAN,
+                           std::move(children)) {}
 
-  std::unique_ptr<AbstractExpression> Copy() const override { return std::make_unique<ComparisonExpression>(*this); }
+  std::unique_ptr<AbstractExpression> Copy() const override {
+    return std::make_unique<ComparisonExpression>(*this);
+  }
 };
 
 }  // namespace terrier::parser

@@ -28,7 +28,8 @@ class Parameter {
    * @param is_nullable whether the parameter is nullable
    * @return the new constant parameter
    */
-  static Parameter CreateConstantParameter(const type::TypeId type_id, const bool is_nullable) {
+  static Parameter CreateConstantParameter(const type::TypeId type_id,
+                                           const bool is_nullable) {
     return {Mutability::CONSTANT, type_id, is_nullable};
   }
 
@@ -38,7 +39,8 @@ class Parameter {
    * @param is_nullable whether the parameter is nullable
    * @return the new variable parameter
    */
-  static Parameter CreateVariableParameter(const type::TypeId type_id, const bool is_nullable) {
+  static Parameter CreateVariableParameter(const type::TypeId type_id,
+                                           const bool is_nullable) {
     return {Mutability::VARIABLE, type_id, is_nullable};
   }
 

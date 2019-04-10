@@ -17,7 +17,15 @@ class DropStatement : public TableRefStatement {
   /**
    * Drop statement type.
    */
-  enum class DropType { kDatabase, kTable, kSchema, kIndex, kView, kPreparedStatement, kTrigger };
+  enum class DropType {
+    kDatabase,
+    kTable,
+    kSchema,
+    kIndex,
+    kView,
+    kPreparedStatement,
+    kTrigger
+  };
 
   /**
    * DROP DATABASE, DROP TABLE
@@ -25,8 +33,11 @@ class DropStatement : public TableRefStatement {
    * @param type kDatabase or kTable
    * @param if_exists true if "IF EXISTS" was used
    */
-  DropStatement(std::unique_ptr<TableInfo> table_info, DropType type, bool if_exists)
-      : TableRefStatement(StatementType::DROP, std::move(table_info)), type_(type), if_exists_(if_exists) {}
+  DropStatement(std::unique_ptr<TableInfo> table_info, DropType type,
+                bool if_exists)
+      : TableRefStatement(StatementType::DROP, std::move(table_info)),
+        type_(type),
+        if_exists_(if_exists) {}
 
   /**
    * DROP INDEX
@@ -44,7 +55,8 @@ class DropStatement : public TableRefStatement {
    * @param if_exists true if "IF EXISTS" was used
    * @param cascade true if "CASCADE" was used
    */
-  DropStatement(std::unique_ptr<TableInfo> table_info, bool if_exists, bool cascade)
+  DropStatement(std::unique_ptr<TableInfo> table_info, bool if_exists,
+                bool cascade)
       : TableRefStatement(StatementType::DROP, std::move(table_info)),
         type_(DropType::kSchema),
         if_exists_(if_exists),
@@ -52,12 +64,14 @@ class DropStatement : public TableRefStatement {
 
   /**
    * DROP TRIGGER
-   * TODO(WAN): this is a hack to get a different signature, type is unnecessary. Refactor into subclass.
+   * TODO(WAN): this is a hack to get a different signature, type is
+   * unnecessary. Refactor into subclass.
    * @param table_info table information
    * @param type kTrigger
    * @param trigger_name trigger name
    */
-  DropStatement(std::unique_ptr<TableInfo> table_info, DropType type, std::string trigger_name)
+  DropStatement(std::unique_ptr<TableInfo> table_info, DropType type,
+                std::string trigger_name)
       : TableRefStatement(StatementType::DROP, std::move(table_info)),
         type_(DropType::kTrigger),
         trigger_name_(std::move(trigger_name)) {}

@@ -25,9 +25,13 @@ class JoinDefinition {
    * @param right right table
    * @param condition join condition
    */
-  JoinDefinition(JoinType type, std::shared_ptr<TableRef> left, std::shared_ptr<TableRef> right,
+  JoinDefinition(JoinType type, std::shared_ptr<TableRef> left,
+                 std::shared_ptr<TableRef> right,
                  std::shared_ptr<AbstractExpression> condition)
-      : type_(type), left_(std::move(left)), right_(std::move(right)), condition_(std::move(condition)) {}
+      : type_(type),
+        left_(std::move(left)),
+        right_(std::move(right)),
+        condition_(std::move(condition)) {}
 
   // TODO(WAN): not a SQLStatement?
   /**
@@ -74,20 +78,26 @@ struct TableRef {
    * @param table_info table information to use in creation
    */
   TableRef(std::string alias, std::shared_ptr<TableInfo> table_info)
-      : type_(TableReferenceType::NAME), alias_(std::move(alias)), table_info_(std::move(table_info)) {}
+      : type_(TableReferenceType::NAME),
+        alias_(std::move(alias)),
+        table_info_(std::move(table_info)) {}
 
   /**
    * @param alias alias for table ref
    * @param select select statement to use in creation
    */
   TableRef(std::string alias, std::shared_ptr<SelectStatement> select)
-      : type_(TableReferenceType::SELECT), alias_(std::move(alias)), select_(std::move(select)) {}
+      : type_(TableReferenceType::SELECT),
+        alias_(std::move(alias)),
+        select_(std::move(select)) {}
 
   /**
    * @param list table refs to use in creation
    */
   explicit TableRef(std::vector<std::shared_ptr<TableRef>> list)
-      : type_(TableReferenceType::CROSS_PRODUCT), alias_(""), list_(std::move(list)) {}
+      : type_(TableReferenceType::CROSS_PRODUCT),
+        alias_(""),
+        list_(std::move(list)) {}
 
   /**
    * @param join join definition to use in creation
@@ -100,7 +110,8 @@ struct TableRef {
    * @param table_info table info to use in creation
    * @return unique pointer to the created table ref
    */
-  static std::unique_ptr<TableRef> CreateTableRefByName(std::string alias, std::shared_ptr<TableInfo> table_info) {
+  static std::unique_ptr<TableRef> CreateTableRefByName(
+      std::string alias, std::shared_ptr<TableInfo> table_info) {
     return std::make_unique<TableRef>(alias, std::move(table_info));
   }
 
@@ -109,7 +120,8 @@ struct TableRef {
    * @param select select statement to use in creation
    * @return unique pointer to the created table ref
    */
-  static std::unique_ptr<TableRef> CreateTableRefBySelect(std::string alias, std::shared_ptr<SelectStatement> select) {
+  static std::unique_ptr<TableRef> CreateTableRefBySelect(
+      std::string alias, std::shared_ptr<SelectStatement> select) {
     return std::make_unique<TableRef>(alias, std::move(select));
   }
 
@@ -117,7 +129,8 @@ struct TableRef {
    * @param list table refs to use in creation
    * @return unique pointer to the created table ref
    */
-  static std::unique_ptr<TableRef> CreateTableRefByList(std::vector<std::shared_ptr<TableRef>> list) {
+  static std::unique_ptr<TableRef> CreateTableRefByList(
+      std::vector<std::shared_ptr<TableRef>> list) {
     return std::make_unique<TableRef>(std::move(list));
   }
 
@@ -125,7 +138,8 @@ struct TableRef {
    * @param join join definition to use in creation
    * @return unique pointer to the created table ref
    */
-  static std::unique_ptr<TableRef> CreateTableRefByJoin(std::shared_ptr<JoinDefinition> join) {
+  static std::unique_ptr<TableRef> CreateTableRefByJoin(
+      std::shared_ptr<JoinDefinition> join) {
     return std::make_unique<TableRef>(std::move(join));
   }
 

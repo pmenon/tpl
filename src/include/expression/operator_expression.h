@@ -20,11 +20,16 @@ class OperatorExpression : public AbstractExpression {
    * @param return_value_type return type of the operator
    * @param children vector containing arguments to the operator left to right
    */
-  OperatorExpression(const ExpressionType expression_type, const type::TypeId return_value_type,
-                     std::vector<std::shared_ptr<AbstractExpression>> &&children)
-      : AbstractExpression(expression_type, return_value_type, std::move(children)) {}
+  OperatorExpression(
+      const ExpressionType expression_type,
+      const type::TypeId return_value_type,
+      std::vector<std::shared_ptr<AbstractExpression>> &&children)
+      : AbstractExpression(expression_type, return_value_type,
+                           std::move(children)) {}
 
-  std::unique_ptr<AbstractExpression> Copy() const override { return std::make_unique<OperatorExpression>(*this); }
+  std::unique_ptr<AbstractExpression> Copy() const override {
+    return std::make_unique<OperatorExpression>(*this);
+  }
 };
 
 }  // namespace terrier::parser

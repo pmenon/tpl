@@ -73,7 +73,8 @@ struct FuncParameter : Parameter {
    * @param datatype data type of the parameter
    * @param name name of the function parameter
    */
-  FuncParameter(DataType datatype, std::string name) : Parameter(datatype), name_(std::move(name)) {}
+  FuncParameter(DataType datatype, std::string name)
+      : Parameter(datatype), name_(std::move(name)) {}
   ~FuncParameter() override = default;
 
   /**
@@ -99,9 +100,11 @@ class CreateFunctionStatement : public SQLStatement {
    * @param pl_type UDF language type
    * @param as_type executable or query string
    */
-  CreateFunctionStatement(bool replace, std::string func_name, std::vector<std::string> func_body,
-                          std::shared_ptr<ReturnType> return_type,
-                          std::vector<std::shared_ptr<FuncParameter>> func_parameters, PLType pl_type, AsType as_type)
+  CreateFunctionStatement(
+      bool replace, std::string func_name, std::vector<std::string> func_body,
+      std::shared_ptr<ReturnType> return_type,
+      std::vector<std::shared_ptr<FuncParameter>> func_parameters,
+      PLType pl_type, AsType as_type)
       : SQLStatement(StatementType::CREATE_FUNC),
         replace_(replace),
         func_name_(std::move(func_name)),
@@ -136,7 +139,9 @@ class CreateFunctionStatement : public SQLStatement {
   /**
    * @return function parameters
    */
-  std::vector<std::shared_ptr<FuncParameter>> GetFuncParameters() { return func_parameters_; }
+  std::vector<std::shared_ptr<FuncParameter>> GetFuncParameters() {
+    return func_parameters_;
+  }
 
   /**
    * @return programming language type

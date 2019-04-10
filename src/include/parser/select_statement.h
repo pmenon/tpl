@@ -25,7 +25,8 @@ class OrderByDescription {
    * @param types order by types
    * @param exprs order by expressions
    */
-  OrderByDescription(std::vector<OrderType> types, std::vector<std::shared_ptr<AbstractExpression>> exprs)
+  OrderByDescription(std::vector<OrderType> types,
+                     std::vector<std::shared_ptr<AbstractExpression>> exprs)
       : types_(std::move(types)), exprs_(std::move(exprs)) {}
 
   virtual ~OrderByDescription() = default;
@@ -44,7 +45,9 @@ class OrderByDescription {
   /**
    * @return order by expressions
    */
-  std::vector<std::shared_ptr<AbstractExpression>> GetOrderByExpressions() { return exprs_; }
+  std::vector<std::shared_ptr<AbstractExpression>> GetOrderByExpressions() {
+    return exprs_;
+  }
 
  private:
   const std::vector<OrderType> types_;
@@ -69,7 +72,8 @@ class LimitDescription {
    * @param limit limit
    * @param offset offset
    */
-  LimitDescription(int64_t limit, int64_t offset) : limit_(limit), offset_(offset) {}
+  LimitDescription(int64_t limit, int64_t offset)
+      : limit_(limit), offset_(offset) {}
 
   ~LimitDescription() = default;
 
@@ -117,7 +121,9 @@ class GroupByDescription {
   /**
    * @return group by columns
    */
-  std::vector<std::shared_ptr<AbstractExpression>> GetColumns() { return columns_; }
+  std::vector<std::shared_ptr<AbstractExpression>> GetColumns() {
+    return columns_;
+  }
 
   /**
    * @return having clause
@@ -146,9 +152,11 @@ class SelectStatement : public SQLStatement {
    * @param order_by order by condition
    * @param limit limit condition
    */
-  SelectStatement(std::vector<std::shared_ptr<AbstractExpression>> select, const bool &select_distinct,
-                  std::shared_ptr<TableRef> from, std::shared_ptr<AbstractExpression> where,
-                  std::shared_ptr<GroupByDescription> group_by, std::shared_ptr<OrderByDescription> order_by,
+  SelectStatement(std::vector<std::shared_ptr<AbstractExpression>> select,
+                  const bool &select_distinct, std::shared_ptr<TableRef> from,
+                  std::shared_ptr<AbstractExpression> where,
+                  std::shared_ptr<GroupByDescription> group_by,
+                  std::shared_ptr<OrderByDescription> order_by,
                   std::shared_ptr<LimitDescription> limit)
       : SQLStatement(StatementType::SELECT),
         select_(std::move(select)),
@@ -167,7 +175,9 @@ class SelectStatement : public SQLStatement {
   /**
    * @return select columns
    */
-  std::vector<std::shared_ptr<AbstractExpression>> GetSelectColumns() { return select_; }
+  std::vector<std::shared_ptr<AbstractExpression>> GetSelectColumns() {
+    return select_;
+  }
 
   /**
    * @return true if "SELECT DISTINCT", false otherwise
@@ -203,7 +213,9 @@ class SelectStatement : public SQLStatement {
    * Adds a select statement child as a union target.
    * @param select_stmt select statement to union with
    */
-  void SetUnionSelect(std::shared_ptr<SelectStatement> select_stmt) { union_select_ = std::move(select_stmt); }
+  void SetUnionSelect(std::shared_ptr<SelectStatement> select_stmt) {
+    union_select_ = std::move(select_stmt);
+  }
 
  private:
   const std::vector<std::shared_ptr<AbstractExpression>> select_;

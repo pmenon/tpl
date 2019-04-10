@@ -16,15 +16,20 @@ namespace terrier::parser {
 class AbstractExpression {
  protected:
   /**
-   * Instantiates a new abstract expression. Because these are logical expressions, everything should be known
-   * at the time of instantiation, i.e. the resulting object is immutable.
+   * Instantiates a new abstract expression. Because these are logical
+   * expressions, everything should be known at the time of instantiation, i.e.
+   * the resulting object is immutable.
    * @param expression_type what type of expression we have
    * @param return_value_type the type of the expression's value
    * @param children the list of children for this node
    */
-  AbstractExpression(const ExpressionType expression_type, const type::TypeId return_value_type,
-                     std::vector<std::shared_ptr<AbstractExpression>> &&children)
-      : expression_type_(expression_type), return_value_type_(return_value_type), children_(std::move(children)) {}
+  AbstractExpression(
+      const ExpressionType expression_type,
+      const type::TypeId return_value_type,
+      std::vector<std::shared_ptr<AbstractExpression>> &&children)
+      : expression_type_(expression_type),
+        return_value_type_(return_value_type),
+        children_(std::move(children)) {}
 
   /**
    * Copy constructs an abstract expression.
@@ -52,7 +57,8 @@ class AbstractExpression {
    * @return true if the two expressions are logically equal
    */
   virtual bool operator==(const AbstractExpression &rhs) const {
-    if (expression_type_ != rhs.expression_type_ || children_.size() != rhs.children_.size()) {
+    if (expression_type_ != rhs.expression_type_ ||
+        children_.size() != rhs.children_.size()) {
       return false;
     }
     for (size_t i = 0; i < children_.size(); i++) {
@@ -68,13 +74,16 @@ class AbstractExpression {
    * @param rhs other
    * @return true if the two expressions are not logically equal
    */
-  virtual bool operator!=(const AbstractExpression &rhs) const { return !operator==(rhs); }
+  virtual bool operator!=(const AbstractExpression &rhs) const {
+    return !operator==(rhs);
+  }
 
   /**
    * Creates a (shallow) copy of the current AbstractExpression.
    */
-  // It is incorrect to supply a default implementation here since that will return an object
-  // of base type AbstractExpression instead of the desired non-abstract type.
+  // It is incorrect to supply a default implementation here since that will
+  // return an object of base type AbstractExpression instead of the desired
+  // non-abstract type.
   virtual std::unique_ptr<AbstractExpression> Copy() const = 0;
 
   /**
@@ -102,9 +111,10 @@ class AbstractExpression {
   }
 
  private:
-  const ExpressionType expression_type_;                       // type of current expression
-  const type::TypeId return_value_type_;                       // type of return value
-  std::vector<std::shared_ptr<AbstractExpression>> children_;  // list of children
+  const ExpressionType expression_type_;  // type of current expression
+  const type::TypeId return_value_type_;  // type of return value
+  std::vector<std::shared_ptr<AbstractExpression>>
+      children_;  // list of children
 };
 }  // namespace terrier::parser
 
@@ -119,6 +129,8 @@ struct hash<terrier::parser::AbstractExpression> {
    * @param expr the expression to hash
    * @return hash code of the given expression
    */
-  size_t operator()(const terrier::parser::AbstractExpression &expr) const { return expr.Hash(); }
+  size_t operator()(const terrier::parser::AbstractExpression &expr) const {
+    return expr.Hash();
+  }
 };
 }  // namespace std

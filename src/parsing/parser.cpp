@@ -500,8 +500,8 @@ ast::Expr *Parser::ParsePrimaryExpr() {
   //   '(' Expr ')'
 
   switch (peek()) {
-    case Token::Type::NIL: {
-      Consume(Token::Type::NIL);
+    case Token::Type::NIL_VAL: {
+      Consume(Token::Type::NIL_VAL);
       return node_factory()->NewNilLiteral(scanner()->current_position());
     }
     case Token::Type::TRUE: {
@@ -581,7 +581,7 @@ ast::Expr *Parser::ParseFunctionLitExpr() {
 
 ast::Expr *Parser::ParseType() {
   switch (peek()) {
-    case Token::Type::NIL:
+    case Token::Type::NIL_VAL:
     case Token::Type::IDENTIFIER: {
       Next();
       const SourcePosition &position = scanner()->current_position();

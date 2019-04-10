@@ -21,8 +21,11 @@ class ExecuteStatement : public SQLStatement {
    * @param name name of execute statement
    * @param parameters parameters for execute statement
    */
-  ExecuteStatement(std::string name, std::vector<std::shared_ptr<AbstractExpression>> parameters)
-      : SQLStatement(StatementType::EXECUTE), name_(std::move(name)), parameters_(std::move(parameters)) {}
+  ExecuteStatement(std::string name,
+                   std::vector<std::shared_ptr<AbstractExpression>> parameters)
+      : SQLStatement(StatementType::EXECUTE),
+        name_(std::move(name)),
+        parameters_(std::move(parameters)) {}
 
   ~ExecuteStatement() override = default;
 
@@ -36,7 +39,9 @@ class ExecuteStatement : public SQLStatement {
   /**
    * @return execute statement parameters
    */
-  std::vector<std::shared_ptr<AbstractExpression>> GetParameters() { return parameters_; }
+  std::vector<std::shared_ptr<AbstractExpression>> GetParameters() {
+    return parameters_;
+  }
 
  private:
   const std::string name_;

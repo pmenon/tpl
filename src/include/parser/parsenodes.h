@@ -9,10 +9,15 @@
 
 #include <cstdint>
 
-#include "pg_list.h"
 #include "parser/nodes.h"
+#include "pg_list.h"
 
-using SetOperation = enum SetOperation { SETOP_NONE = 0, SETOP_UNION, SETOP_INTERSECT, SETOP_EXCEPT };
+using SetOperation = enum SetOperation {
+  SETOP_NONE = 0,
+  SETOP_UNION,
+  SETOP_INTERSECT,
+  SETOP_EXCEPT
+};
 
 using Alias = struct Alias {
   NodeTag type;
@@ -227,7 +232,11 @@ using SortByDir = enum SortByDir {
   SORTBY_USING /* not allowed in CREATE INDEX ... */
 };
 
-using SortByNulls = enum SortByNulls { SORTBY_NULLS_DEFAULT, SORTBY_NULLS_FIRST, SORTBY_NULLS_LAST };
+using SortByNulls = enum SortByNulls {
+  SORTBY_NULLS_DEFAULT,
+  SORTBY_NULLS_FIRST,
+  SORTBY_NULLS_LAST
+};
 
 using SortBy = struct SortBy {
   NodeTag type;
@@ -257,9 +266,9 @@ using OnConflictClause = struct OnConflictClause {
 
 using InsertStmt = struct InsertStmt {
   NodeTag type;
-  RangeVar *relation;                 /* relation to insert into */
-  List *cols;                         /* optional: names of the target columns */
-  Node *selectStmt;                   /* the source SELECT/VALUES, or NULL */
+  RangeVar *relation; /* relation to insert into */
+  List *cols;         /* optional: names of the target columns */
+  Node *selectStmt;   /* the source SELECT/VALUES, or NULL */
   OnConflictClause *onConflictClause; /* ON CONFLICT clause */
   List *returningList;                /* list of expressions to return */
   WithClause *withClause;             /* WITH clause */
@@ -728,7 +737,11 @@ using RoleSpec = struct RoleSpec {
   int location;          /* token location, or -1 if unknown */
 };
 
-using ViewCheckOption = enum ViewCheckOption { NO_CHECK_OPTION, LOCAL_CHECK_OPTION, CASCADED_CHECK_OPTION };
+using ViewCheckOption = enum ViewCheckOption {
+  NO_CHECK_OPTION,
+  LOCAL_CHECK_OPTION,
+  CASCADED_CHECK_OPTION
+};
 
 using ViewStmt = struct ViewStmt {
   NodeTag type;

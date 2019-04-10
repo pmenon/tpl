@@ -19,7 +19,8 @@ struct TableInfo {
    * @param schema_name schema name
    * @param database_name database name
    */
-  TableInfo(std::string table_name, std::string schema_name, std::string database_name)
+  TableInfo(std::string table_name, std::string schema_name,
+            std::string database_name)
       : table_name_(std::move(table_name)),
         schema_name_(std::move(schema_name)),
         database_name_(std::move(database_name)) {}
@@ -87,7 +88,8 @@ class TableRefStatement : public SQLStatement {
    * @param type type of SQLStatement being referred to
    * @param table_info table being referred to
    */
-  TableRefStatement(const StatementType type, std::shared_ptr<TableInfo> table_info)
+  TableRefStatement(const StatementType type,
+                    std::shared_ptr<TableInfo> table_info)
       : SQLStatement(type), table_info_(std::move(table_info)) {}
 
   ~TableRefStatement() override = default;
@@ -95,17 +97,23 @@ class TableRefStatement : public SQLStatement {
   /**
    * @return table name
    */
-  virtual std::string GetTableName() const { return table_info_->GetTableName(); }
+  virtual std::string GetTableName() const {
+    return table_info_->GetTableName();
+  }
 
   /**
    * @return table schema name (aka namespace)
    */
-  virtual std::string GetSchemaName() const { return table_info_->GetSchemaName(); }
+  virtual std::string GetSchemaName() const {
+    return table_info_->GetSchemaName();
+  }
 
   /**
    * @return database name
    */
-  virtual std::string GetDatabaseName() const { return table_info_->GetDatabaseName(); }
+  virtual std::string GetDatabaseName() const {
+    return table_info_->GetDatabaseName();
+  }
 
  private:
   const std::shared_ptr<TableInfo> table_info_ = nullptr;
