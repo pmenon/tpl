@@ -7,7 +7,6 @@
 #include "util/bit_util.h"
 #include "util/common.h"
 #include "util/macros.h"
-#include "util/vector_util.h"
 
 namespace tpl::sql {
 
@@ -97,17 +96,28 @@ class VectorProjectionIterator {
   // Vectorized API
   // -------------------------------------------------------
 
+  union FilterVal {
+    i16 si;
+    i32 i;
+    i64 bi;
+  };
+
   /// Filter the given column by the given value
   /// \tparam Compare The comparison function
   /// \param col_idx The index of the column in the vector projection to filter
   /// \param val The value to filter on
   /// \return The number of selected elements
-  template <typename T, template <typename> typename Op>
-  u32 FilterColByVal(u32 col_idx, T val);
+  template <template <typename> typename Op>
+  u32 FilterColByVal(u32 col_idx, FilterVal val);
 
   /// Return the number of selected tuples after any filters have been applied
   /// \return The number of selected tuples
   u32 num_selected() const { return num_selected_; }
+
+ private:
+  // Filter a column by a constant value
+  template <typename T, template <typename> typename Op>
+  u32 FilterColByValImpl(u32 col_idx, T val);
 
  private:
   // The vector projection we're iterating over
@@ -132,6 +142,9 @@ class VectorProjectionIterator {
 // ---------------------------------------------------------
 // Implementation below
 // ---------------------------------------------------------
+
+// The below methods are inlined in the header on purpose for performance.
+// Please don't move them.
 
 // Retrieve a single column value (and potentially its NULL indicator) from the
 // desired column's input data
@@ -222,30 +235,6 @@ inline void VectorProjectionIterator::RunFilter(const F &filter) {
   // VPI, and subsequent filters operate only on valid tuples potentially
   // filtered out in this filter.
   ResetFiltered();
-}
-
-// Filter an entire column's data by the provided constant value
-template <typename T, template <typename> typename Op>
-inline u32 VectorProjectionIterator::FilterColByVal(u32 col_idx, T val) {
-  // Get the input column's data
-  const T *input = vector_projection_->GetVectorAs<T>(col_idx);
-
-  // Use the existing selection vector if this VPI has been filtered
-  const u32 *sel_vec = (IsFiltered() ? selection_vector_ : nullptr);
-
-  // Filter!
-  selection_vector_write_idx_ = util::VectorUtil::FilterVectorByVal<T, Op>(
-      input, num_selected_, val, selection_vector_, sel_vec);
-
-  // After the filter has been run on the entire vector projection, we need to
-  // ensure that we reset it so that clients can query the updated state of the
-  // VPI, and subsequent filters operate only on valid tuples potentially
-  // filtered out in this filter.
-  ResetFiltered();
-
-  // After the call to ResetFiltered(), num_selected_ should indicate the number
-  // of valid tuples in the filter.
-  return num_selected();
 }
 
 }  // namespace tpl::sql

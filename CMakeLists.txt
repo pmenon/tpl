@@ -177,7 +177,7 @@ add_custom_target(check-tpl
 # Like 'check-tpl', but runs the test only on added tests to 'tpl_tests.txt'
 add_custom_target(check-tpl-diff
         DEPENDS tpl
-        COMMAND git diff -U0 ../sample_tpl/tpl_tests.txt
+        COMMAND git diff -U0 ${PROJECT_SOURCE_DIR}/sample_tpl/tpl_tests.txt
                 | grep '^[+][^+-]'
                 | sed 's/^.//'
                 | uniq > ${CMAKE_BINARY_DIR}/tpl_tests_diff.txt             # create tpl_tests_diff.txt containing the new tests

@@ -13,12 +13,11 @@
 namespace tpl::sql::test {
 
 ///
-/// This test uses a vector projection with four columns. The first column,
-/// named "col_a" is a non-nullable small integer column whose values are
-/// monotonically increasing. The second column, "col_b", is a nullable integer
-/// column whose values are random. The third column, "col_c", is a non-nullable
-/// integer column whose values are in the range [0, 1000). The last column,
-/// "col_d", is a nullable big-integer column whose values are random.
+/// This test uses a vector projection with four columns:
+///   col_a SMALLINT NOT NULL (Sequential)
+///   col_b INTEGER (Random)
+///   col_c INTEGER NOT NULL (Range [0,1000])
+///   col_d BIGINT (Random)
 ///
 
 namespace {
@@ -354,7 +353,8 @@ TEST_F(VectorProjectionIteratorTest, SimpleVectorizedFilterTest) {
   }
 
   // Filter
-  iter.FilterColByVal<i32, std::less>(ColId::col_c, 100);
+  iter.FilterColByVal<std::less>(ColId::col_c,
+                                 VectorProjectionIterator::FilterVal{.i = 100});
 
   // Check
   u32 count = 0;
@@ -381,8 +381,10 @@ TEST_F(VectorProjectionIteratorTest, MultipleVectorizedFilterTest) {
   VectorProjectionIterator iter;
   iter.SetVectorProjection(vp());
 
-  iter.FilterColByVal<i32, std::less>(ColId::col_c, 750);
-  iter.FilterColByVal<i16, std::less>(ColId::col_a, 10);
+  iter.FilterColByVal<std::less>(ColId::col_c,
+                                 VectorProjectionIterator::FilterVal{.i = 750});
+  iter.FilterColByVal<std::less>(ColId::col_a,
+                                 VectorProjectionIterator::FilterVal{.si = 10});
 
   // Check
   u32 count = 0;

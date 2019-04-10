@@ -28,5 +28,5 @@ struct-field-use.tpl,30
 struct-nested.tpl,10
 struct-pointer.tpl,440
 test.tpl,356405
-vec-filter.tpl,0
+vec-filter.tpl,500
 while.tpl,10
