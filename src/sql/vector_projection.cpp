@@ -11,7 +11,8 @@ namespace tpl::sql {
 VectorProjection::VectorProjection() : tuple_count_(0), vector_size_(0) {}
 
 VectorProjection::VectorProjection(
-    std::vector<const Schema::ColumnInfo *> &col_info, u32 size) {
+    std::vector<const Schema::ColumnInfo *> &col_info, u32 size)
+    : tuple_count_(0), vector_size_(size) {
   Setup(col_info, size);
 }
 
@@ -21,9 +22,16 @@ void VectorProjection::Setup(
   column_info_ = std::make_unique<const Schema::ColumnInfo *[]>(num_cols);
   column_data_ = std::make_unique<byte *[]>(num_cols);
   column_null_bitmaps_ = std::make_unique<u32 *[]>(num_cols);
-  deletions_ = util::BitVector(size);
   tuple_count_ = 0;
   vector_size_ = size;
+
+  // Initialize the deleted-tuples bit vector
+  deletions_.Init(size);
+
+  // Setup the column metadata
+  for (u32 idx = 0; idx < num_cols; idx++) {
+    column_info_[idx] = column_infos[idx];
+  }
 }
 
 void VectorProjection::ResetColumn(

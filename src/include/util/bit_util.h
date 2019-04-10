@@ -68,9 +68,9 @@ class BitUtil {
 
   /// Clear all bits in the bit vector
   /// \param bits The bit vector
-  /// \param size The number of elements in the bit vector
-  ALWAYS_INLINE static void Clear(u32 bits[], const u64 size) {
-    auto num_words = size / kBitWordSize;
+  /// \param num_bits The number of elements in the bit vector
+  ALWAYS_INLINE static void Clear(u32 bits[], const u64 num_bits) {
+    auto num_words = Num32BitWordsFor(num_bits);
     std::memset(bits, 0, num_words * sizeof(u32));
   }
 

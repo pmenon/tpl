@@ -91,9 +91,7 @@ void Table::Dump(std::ostream &os) const {
 // ---------------------------------------------------------
 
 TableBlockIterator::TableBlockIterator(u16 table_id) noexcept
-    : table_id_(table_id),
-      table_(nullptr),
-      curr_block_(nullptr) {}
+    : table_id_(table_id), table_(nullptr), curr_block_(nullptr) {}
 
 bool TableBlockIterator::Init() {
   // Lookup the table

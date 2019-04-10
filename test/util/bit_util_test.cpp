@@ -27,6 +27,21 @@ TEST(BitUtilTest, EmptyBitVectorTest) {
   }
 }
 
+TEST(BitUtilTest, ClearBitsTest) {
+  //
+  // Create a bit vector, set all the bits, clear it, check
+  //
+
+  BitVector bv(10);
+  for (u32 i = 0; i < bv.num_bits(); i++) {
+    bv.Set(i);
+  }
+  bv.ClearAll();
+  for (u32 i = 0; i < bv.num_bits(); i++) {
+    EXPECT_FALSE(bv[i]);
+  }
+}
+
 TEST(BitUtilTest, TestAndSetTest) {
   //
   // Create a BitVector, set every odd bit position
