@@ -42,7 +42,8 @@ class EventUtil {
    * @return A new event_base
    */
   static struct event_base *EventBaseNew() {
-    return Wrap(event_base_new(), NotNull<struct event_base>, "Can't allocate event base");
+    return Wrap(event_base_new(), NotNull<struct event_base>,
+                "Can't allocate event base");
   }
 
   /**
@@ -50,15 +51,19 @@ class EventUtil {
    * @param timeout
    * @return a positive integer or an exception is thrown on failure
    */
-  static int EventBaseLoopExit(struct event_base *base, const struct timeval *timeout) {
-    return Wrap(event_base_loopexit(base, timeout), IsZero, "Error when exiting loop");
+  static int EventBaseLoopExit(struct event_base *base,
+                               const struct timeval *timeout) {
+    return Wrap(event_base_loopexit(base, timeout), IsZero,
+                "Error when exiting loop");
   }
 
   /**
    * @param event The event to delete
    * @return a positive integer or an exception is thrown on failure
    */
-  static int EventDel(struct event *event) { return Wrap(event_del(event), IsZero, "Error when deleting event"); }
+  static int EventDel(struct event *event) {
+    return Wrap(event_del(event), IsZero, "Error when deleting event");
+  }
 
   /**
    * @param event The event to add
@@ -79,9 +84,10 @@ class EventUtil {
    * @param arg Argument to pass to the callback function
    * @return a positive integer or an exception is thrown on failure
    */
-  static int EventAssign(struct event *event, struct event_base *base, int fd, int16_t flags,
-                         event_callback_fn callback, void *arg) {
-    return Wrap(event_assign(event, base, fd, flags, callback, arg), IsZero, "Error when assigning event");
+  static int EventAssign(struct event *event, struct event_base *base, int fd,
+                         int16_t flags, event_callback_fn callback, void *arg) {
+    return Wrap(event_assign(event, base, fd, flags, callback, arg), IsZero,
+                "Error when assigning event");
   }
 
   /**
@@ -90,7 +96,8 @@ class EventUtil {
    * @return a positive integer or an exception is thrown on failure
    */
   static int EventBaseDispatch(struct event_base *base) {
-    return Wrap(event_base_dispatch(base), NonNegative, "Error in event base dispatch");
+    return Wrap(event_base_dispatch(base), NonNegative,
+                "Error in event base dispatch");
   }
 };
 }  // namespace terrier

@@ -6,15 +6,17 @@
 #include "storage/storage_util.h"
 
 namespace terrier::storage {
-// TODO(Tianyu): To be consistent with other places, maybe move val_offset fields in front of col_ids
+// TODO(Tianyu): To be consistent with other places, maybe move val_offset
+// fields in front of col_ids
 /**
  * A projected row is a partial row image of a tuple. It also encodes
  * a projection list that allows for reordering of the columns. Its in-memory
  * layout:
  * -------------------------------------------------------------------------------
- * | size | num_cols | col_id1 | col_id2 | ... | val1_offset | val2_offset | ... |
+ * | size | num_cols | col_id1 | col_id2 | ... | val1_offset | val2_offset | ...
+ * |
  * -------------------------------------------------------------------------------
- * | null-bitmap (pad up to byte) | val1 | val2 | ...                            |
+ * | null-bitmap (pad up to byte) | val1 | val2 | ... |
  * -------------------------------------------------------------------------------
  * Warning, 0 means null in the null-bitmap
  *
@@ -25,26 +27,29 @@ namespace terrier::storage {
  * --------------------------------------------------------
  * Would be the row: { 0 -> 15, 1 -> 721, 2 -> nul}
  */
-// The PACKED directive here is not necessary, but C++ does some weird thing where it will pad sizeof(ProjectedRow)
-// to 8 but the varlen content still points at 6. This should not break any code, but the padding now will be
+// The PACKED directive here is not necessary, but C++ does some weird thing
+// where it will pad sizeof(ProjectedRow) to 8 but the varlen content still
+// points at 6. This should not break any code, but the padding now will be
 // immediately before the values instead of after num_cols, which is weird.
 //
-// This should not have any impact because we disallow direct construction of a ProjectedRow and
-// we will have control over the exact padding and layout by allocating byte arrays on the heap
-// and then initializing using the static factory provided.
+// This should not have any impact because we disallow direct construction of a
+// ProjectedRow and we will have control over the exact padding and layout by
+// allocating byte arrays on the heap and then initializing using the static
+// factory provided.
 class PACKED ProjectedRow {
  public:
   MEM_REINTERPRETATION_ONLY(ProjectedRow)
 
   /**
-   * Populates the ProjectedRow's members based on an existing ProjectedRow. The new ProjectRow has the
-   * same layout as the given one.
+   * Populates the ProjectedRow's members based on an existing ProjectedRow. The
+   * new ProjectRow has the same layout as the given one.
    *
    * @param head pointer to the byte buffer to initialize as a ProjectedRow
    * @param other ProjectedRow to use as template for setup
    * @return pointer to the initialized ProjectedRow
    */
-  static ProjectedRow *CopyProjectedRowLayout(void *head, const ProjectedRow &other);
+  static ProjectedRow *CopyProjectedRowLayout(void *head,
+                                              const ProjectedRow &other);
 
   /**
    * @return the size of this ProjectedRow in memory, in bytes
@@ -60,19 +65,25 @@ class PACKED ProjectedRow {
    * @warning don't use these above the storage layer, they have no meaning
    * @return pointer to the start of the array of column ids
    */
-  col_id_t *ColumnIds() { return reinterpret_cast<col_id_t *>(varlen_contents_); }
+  col_id_t *ColumnIds() {
+    return reinterpret_cast<col_id_t *>(varlen_contents_);
+  }
 
   /**
    * @warning don't use these above the storage layer, they have no meaning
    * @return pointer to the start of the array of column ids
    */
-  const col_id_t *ColumnIds() const { return reinterpret_cast<const col_id_t *>(varlen_contents_); }
+  const col_id_t *ColumnIds() const {
+    return reinterpret_cast<const col_id_t *>(varlen_contents_);
+  }
 
   /**
-   * Access a single attribute within the ProjectedRow with a check of the null bitmap first for nullable types
+   * Access a single attribute within the ProjectedRow with a check of the null
+   * bitmap first for nullable types
    * @param offset The 0-indexed element to access in this ProjectedRow
-   * @return byte pointer to the attribute. reinterpret_cast and dereference to access the value. if attribute is
-   * nullable and set to null, then return value is nullptr
+   * @return byte pointer to the attribute. reinterpret_cast and dereference to
+   * access the value. if attribute is nullable and set to null, then return
+   * value is nullptr
    */
   byte *AccessWithNullCheck(const uint16_t offset) {
     TERRIER_ASSERT(offset < num_cols_, "Column offset out of bounds.");
@@ -81,10 +92,12 @@ class PACKED ProjectedRow {
   }
 
   /**
-   * Access a single attribute within the ProjectedRow with a check of the null bitmap first for nullable types
+   * Access a single attribute within the ProjectedRow with a check of the null
+   * bitmap first for nullable types
    * @param offset The 0-indexed element to access in this ProjectedRow
-   * @return byte pointer to the attribute. reinterpret_cast and dereference to access the value. if attribute is
-   * nullable and set to null, then return value is nullptr
+   * @return byte pointer to the attribute. reinterpret_cast and dereference to
+   * access the value. if attribute is nullable and set to null, then return
+   * value is nullptr
    */
   const byte *AccessWithNullCheck(const uint16_t offset) const {
     TERRIER_ASSERT(offset < num_cols_, "Column offset out of bounds.");
@@ -93,9 +106,11 @@ class PACKED ProjectedRow {
   }
 
   /**
-   * Access a single attribute within the ProjectedRow without a check of the null bitmap first
+   * Access a single attribute within the ProjectedRow without a check of the
+   * null bitmap first
    * @param offset The 0-indexed element to access in this ProjectedRow
-   * @return byte pointer to the attribute. reinterpret_cast and dereference to access the value
+   * @return byte pointer to the attribute. reinterpret_cast and dereference to
+   * access the value
    */
   byte *AccessForceNotNull(const uint16_t offset) {
     TERRIER_ASSERT(offset < num_cols_, "Column offset out of bounds.");
@@ -113,7 +128,8 @@ class PACKED ProjectedRow {
   }
 
   /**
-   * Set the attribute in the ProjectedRow to be not null using the internal bitmap
+   * Set the attribute in the ProjectedRow to be not null using the internal
+   * bitmap
    * @param offset The 0-indexed element to access in this ProjectedRow
    */
   void SetNotNull(const uint16_t offset) {
@@ -137,38 +153,51 @@ class PACKED ProjectedRow {
   uint16_t num_cols_;
   byte varlen_contents_[0];
 
-  uint32_t *AttrValueOffsets() { return StorageUtil::AlignedPtr<uint32_t>(ColumnIds() + num_cols_); }
+  uint32_t *AttrValueOffsets() {
+    return StorageUtil::AlignedPtr<uint32_t>(ColumnIds() + num_cols_);
+  }
 
-  const uint32_t *AttrValueOffsets() const { return StorageUtil::AlignedPtr<const uint32_t>(ColumnIds() + num_cols_); }
+  const uint32_t *AttrValueOffsets() const {
+    return StorageUtil::AlignedPtr<const uint32_t>(ColumnIds() + num_cols_);
+  }
 
-  common::RawBitmap &Bitmap() { return *reinterpret_cast<common::RawBitmap *>(AttrValueOffsets() + num_cols_); }
+  common::RawBitmap &Bitmap() {
+    return *reinterpret_cast<common::RawBitmap *>(AttrValueOffsets() +
+                                                  num_cols_);
+  }
 
   const common::RawBitmap &Bitmap() const {
-    return *reinterpret_cast<const common::RawBitmap *>(AttrValueOffsets() + num_cols_);
+    return *reinterpret_cast<const common::RawBitmap *>(AttrValueOffsets() +
+                                                        num_cols_);
   }
 };
 
 /**
- * A ProjectedRowInitializer calculates and stores information on how to initialize ProjectedRows
- * for a specific layout.
+ * A ProjectedRowInitializer calculates and stores information on how to
+ * initialize ProjectedRows for a specific layout.
  *
- * More specifically, ProjectedRowInitializer will calculate an optimal layout for the given col_ids and layout,
- * treating the vector as an unordered set of ids to include, and stores the information locally so it can be copied
- * into new ProjectedRows. It works almost like compilation, in that the initialization process is slightly more
- * expensive on the first invocation but cheaper on sequential ones. The correct way to use this is to get an
- * initializer and use it multiple times. Avoid throwing these away every time you are done.
+ * More specifically, ProjectedRowInitializer will calculate an optimal layout
+ * for the given col_ids and layout, treating the vector as an unordered set of
+ * ids to include, and stores the information locally so it can be copied into
+ * new ProjectedRows. It works almost like compilation, in that the
+ * initialization process is slightly more expensive on the first invocation but
+ * cheaper on sequential ones. The correct way to use this is to get an
+ * initializer and use it multiple times. Avoid throwing these away every time
+ * you are done.
  */
 class ProjectedRowInitializer {
  public:
   /**
-   * Populates the ProjectedRow's members based on projection list and BlockLayout used to construct this initializer
+   * Populates the ProjectedRow's members based on projection list and
+   * BlockLayout used to construct this initializer
    * @param head pointer to the byte buffer to initialize as a ProjectedRow
    * @return pointer to the initialized ProjectedRow
    */
   ProjectedRow *InitializeRow(void *head) const;
 
   /**
-   * @return size of the ProjectedRow in memory, in bytes, that this initializer constructs.
+   * @return size of the ProjectedRow in memory, in bytes, that this initializer
+   * constructs.
    */
   uint32_t ProjectedRowSize() const { return size_; }
 
@@ -183,46 +212,55 @@ class ProjectedRowInitializer {
   col_id_t ColId(uint16_t i) const { return col_ids_.at(i); }
 
   /**
-   * Constructs a ProjectedRowInitializer. Calculates the size of this ProjectedRow, including all members, values,
-   * bitmap, and potential padding, and the offsets to jump to for each value. This information is cached for repeated
-   * initialization.
+   * Constructs a ProjectedRowInitializer. Calculates the size of this
+   * ProjectedRow, including all members, values, bitmap, and potential padding,
+   * and the offsets to jump to for each value. This information is cached for
+   * repeated initialization.
    *
-   * @warning The ProjectedRowInitializer WILL reorder the given col_ids in its representation for better memory
-   * utilization and performance. Make no assumption about the ordering of these elements and always consult either
+   * @warning The ProjectedRowInitializer WILL reorder the given col_ids in its
+   * representation for better memory utilization and performance. Make no
+   * assumption about the ordering of these elements and always consult either
    * the initializer or the populated ProjectedRow for the true ordering
    * @warning col_ids must be a set (no repeats)
    *
    * @param layout BlockLayout of the RawBlock to be accessed
-   * @param col_ids projection list of column ids to map, should have all unique values (no repeats)
+   * @param col_ids projection list of column ids to map, should have all unique
+   * values (no repeats)
    */
-  static ProjectedRowInitializer CreateProjectedRowInitializer(const BlockLayout &layout,
-                                                               std::vector<col_id_t> col_ids);
+  static ProjectedRowInitializer CreateProjectedRowInitializer(
+      const BlockLayout &layout, std::vector<col_id_t> col_ids);
 
   /**
-   * Constructs a ProjectedRowInitializer. Calculates the size of this ProjectedRow, including all members, values,
-   * bitmap, and potential padding, and the offsets to jump to for each value. This information is cached for repeated
-   * initialization.
+   * Constructs a ProjectedRowInitializer. Calculates the size of this
+   * ProjectedRow, including all members, values, bitmap, and potential padding,
+   * and the offsets to jump to for each value. This information is cached for
+   * repeated initialization.
    *
    * @tparam AttrType datatype of attribute sizes
-   * @param real_attr_sizes unsorted REAL attribute sizes, e.g. they shouldn't use MSB to indicate varlen.
-   * @param pr_offsets pr_offsets[i] = projection list offset of attr_sizes[i] after it gets sorted
+   * @param real_attr_sizes unsorted REAL attribute sizes, e.g. they shouldn't
+   * use MSB to indicate varlen.
+   * @param pr_offsets pr_offsets[i] = projection list offset of attr_sizes[i]
+   * after it gets sorted
    */
   template <typename AttrType>
-  static ProjectedRowInitializer CreateProjectedRowInitializerForIndexes(std::vector<AttrType> real_attr_sizes,
-                                                                         const std::vector<uint16_t> &pr_offsets);
+  static ProjectedRowInitializer CreateProjectedRowInitializerForIndexes(
+      std::vector<AttrType> real_attr_sizes,
+      const std::vector<uint16_t> &pr_offsets);
 
  private:
   /**
-   * Constructs a ProjectedRowInitializer. Calculates the size of this ProjectedRow, including all members, values,
-   * bitmap, and potential padding, and the offsets to jump to for each value. This information is cached for repeated
-   * initialization.
+   * Constructs a ProjectedRowInitializer. Calculates the size of this
+   * ProjectedRow, including all members, values, bitmap, and potential padding,
+   * and the offsets to jump to for each value. This information is cached for
+   * repeated initialization.
    *
    * @tparam AttrType datatype of attribute sizes
    * @param attr_sizes sorted attribute sizes
    * @param col_ids column ids
    */
   template <typename AttrType>
-  ProjectedRowInitializer(const std::vector<AttrType> &attr_sizes, std::vector<col_id_t> col_ids);
+  ProjectedRowInitializer(const std::vector<AttrType> &attr_sizes,
+                          std::vector<col_id_t> col_ids);
 
   uint32_t size_ = 0;
   std::vector<col_id_t> col_ids_;

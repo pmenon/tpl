@@ -7,7 +7,8 @@
 
 #include "tpl_test.h"  // NOLINT
 
-#include "sql/catalog.h"
+#include "catalog/catalog.h"
+#include "sql/execution_structures.h"
 #include "sql/vector_projection_iterator.h"
 
 namespace tpl::sql::test {
@@ -86,10 +87,7 @@ class VectorProjectionIteratorTest : public TplTest {
   };
 
  public:
-  VectorProjectionIteratorTest()
-      : num_tuples_(kDefaultVectorSize),
-        empty_(4, num_tuples()),
-        vp_(4, num_tuples()) {
+  VectorProjectionIteratorTest() : num_tuples_(kDefaultVectorSize) {
     auto cola_data = CreateMonotonicallyIncreasing<i16>(num_tuples());
     auto colb_data = CreateRandom<i32>(num_tuples());
     auto colb_null = CreateRandomNullBitmap(num_tuples());
@@ -104,27 +102,79 @@ class VectorProjectionIteratorTest : public TplTest {
     data_.emplace_back(std::move(cold_data), std::move(cold_null.first),
                        cold_null.second, num_tuples());
 
-    for (u32 col_idx = 0; col_idx < data_.size(); col_idx++) {
+    InitializeColumns();
+    //  Fill up data
+    for (u16 col_idx = 0; col_idx < data_.size(); col_idx++) {
       auto &[data, nulls, num_nulls, num_tuples] = data_[col_idx];
       (void)num_nulls;
-      vp_.ResetFromRaw(data.get(), nulls.get(), col_idx, num_tuples);
+      u32 data_size =
+          info_->GetStorageSchema()->GetColumns()[col_idx].GetAttrSize();
+      projected_columns_->SetNumTuples(num_tuples);
+      if (nulls.get() != nullptr) {
+        std::memcpy(projected_columns_->ColumnNullBitmap(col_idx), nulls.get(),
+                    num_tuples);
+      } else {
+        std::memset(projected_columns_->ColumnNullBitmap(col_idx), 0,
+                    num_tuples);
+      }
+      std::memcpy(projected_columns_->ColumnStart(col_idx), data.get(),
+                  data_size * num_tuples);
     }
   }
+
+  void InitializeColumns() {
+    auto *exec = sql::ExecutionStructures::Instance();
+    auto *ctl = exec->GetCatalog();
+    catalog::Schema::Column storage_col_a =
+        ctl->MakeStorageColumn("col_a", sql::IntegerType::Instance(false));
+    catalog::Schema::Column storage_col_b =
+        ctl->MakeStorageColumn("col_b", sql::IntegerType::Instance(true));
+    catalog::Schema::Column storage_col_c =
+        ctl->MakeStorageColumn("col_c", sql::IntegerType::Instance(false));
+    catalog::Schema::Column storage_col_d =
+        ctl->MakeStorageColumn("col_d", sql::IntegerType::Instance(true));
+    sql::Schema::ColumnInfo sql_col_a("col_a",
+                                      sql::IntegerType::Instance(false));
+    sql::Schema::ColumnInfo sql_col_b("col_b",
+                                      sql::IntegerType::Instance(true));
+    sql::Schema::ColumnInfo sql_col_c("col_c",
+                                      sql::IntegerType::Instance(false));
+    sql::Schema::ColumnInfo sql_col_d("col_d",
+                                      sql::IntegerType::Instance(true));
+
+    catalog::Schema storage_schema(std::vector<catalog::Schema::Column>{
+        storage_col_a, storage_col_b, storage_col_c, storage_col_d});
+    sql::Schema sql_schema(std::vector<sql::Schema::ColumnInfo>{
+        sql_col_a, sql_col_b, sql_col_c, sql_col_d});
+    ctl->CreateTable("hash_test_table", std::move(storage_schema),
+                     std::move(sql_schema));
+    info_ = ctl->LookupTableByName("hash_test_table");
+    std::vector<catalog::col_oid_t> col_oids;
+    for (const auto col : info_->GetStorageSchema()->GetColumns())
+      col_oids.emplace_back(col.GetOid());
+    auto initializer_map = info_->GetTable()->InitializerForProjectedColumns(
+        col_oids, kDefaultVectorSize);
+    buffer_ = common::AllocationUtil::AllocateAligned(
+        initializer_map.first.ProjectedColumnsSize());
+    projected_columns_ = initializer_map.first.Initialize(buffer_);
+    projected_columns_->SetNumTuples(kDefaultVectorSize);
+  }
+
+  void SetSize(u32 size) { projected_columns_->SetNumTuples(size); }
 
  protected:
   u32 num_tuples() const { return num_tuples_; }
 
-  VectorProjection *empty_vp() { return &empty_; }
-
-  VectorProjection *vp() { return &vp_; }
+  storage::ProjectedColumns *GetProjectedColumn() { return projected_columns_; }
 
   const ColData &column_data(u32 col_idx) const { return data_[col_idx]; }
 
  private:
   u32 num_tuples_;
-  VectorProjection empty_;
-  VectorProjection vp_;
   std::vector<ColData> data_;
+  catalog::Catalog::TableInfo *info_;
+  byte *buffer_;
+  storage::ProjectedColumns *projected_columns_;
 };
 
 TEST_F(VectorProjectionIteratorTest, EmptyIteratorTest) {
@@ -133,7 +183,8 @@ TEST_F(VectorProjectionIteratorTest, EmptyIteratorTest) {
   //
 
   VectorProjectionIterator iter;
-  iter.SetVectorProjection(empty_vp());
+  SetSize(0);
+  iter.SetProjectedColumn(GetProjectedColumn());
 
   for (; iter.HasNext(); iter.Advance()) {
     FAIL() << "Should not iterate with empty vector projection!";
@@ -149,13 +200,14 @@ TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
     u32 tuple_count = 0;
 
     VectorProjectionIterator iter;
-    iter.SetVectorProjection(vp());
+    SetSize(kDefaultVectorSize);
+    iter.SetProjectedColumn(GetProjectedColumn());
 
     for (; iter.HasNext(); iter.Advance()) {
       tuple_count++;
     }
 
-    EXPECT_EQ(vp()->total_tuple_count(), tuple_count);
+    EXPECT_EQ(kDefaultVectorSize, tuple_count);
     EXPECT_FALSE(iter.IsFiltered());
   }
 
@@ -165,7 +217,8 @@ TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
 
   {
     VectorProjectionIterator iter;
-    iter.SetVectorProjection(vp());
+    SetSize(kDefaultVectorSize);
+    iter.SetProjectedColumn(GetProjectedColumn());
 
     bool entered = false;
     for (i16 last = -1; iter.HasNext(); iter.Advance()) {
@@ -189,7 +242,8 @@ TEST_F(VectorProjectionIteratorTest, ReadNullableColumnsTest) {
   //
 
   VectorProjectionIterator iter;
-  iter.SetVectorProjection(vp());
+  SetSize(kDefaultVectorSize);
+  iter.SetProjectedColumn(GetProjectedColumn());
 
   u32 num_nulls = 0;
   for (; iter.HasNext(); iter.Advance()) {
@@ -210,7 +264,8 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
 
   {
     VectorProjectionIterator iter;
-    iter.SetVectorProjection(vp());
+    SetSize(kDefaultVectorSize);
+    iter.SetProjectedColumn(GetProjectedColumn());
 
     for (; iter.HasNext(); iter.Advance()) {
       bool null = false;
@@ -248,7 +303,8 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
 
   {
     VectorProjectionIterator iter;
-    iter.SetVectorProjection(vp());
+    SetSize(kDefaultVectorSize);
+    iter.SetProjectedColumn(GetProjectedColumn());
 
     for (; iter.HasNext(); iter.Advance()) {
       auto *val = iter.Get<i16, false>(ColId::col_a, nullptr);
@@ -291,7 +347,8 @@ TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
   //
 
   VectorProjectionIterator iter;
-  iter.SetVectorProjection(vp());
+  SetSize(kDefaultVectorSize);
+  iter.SetProjectedColumn(GetProjectedColumn());
 
   iter.RunFilter([&iter]() {
     bool null = false;
@@ -327,7 +384,8 @@ TEST_F(VectorProjectionIteratorTest, SimpleVectorizedFilterTest) {
   //
 
   VectorProjectionIterator iter;
-  iter.SetVectorProjection(vp());
+  SetSize(kDefaultVectorSize);
+  iter.SetProjectedColumn(GetProjectedColumn());
 
   // Compute expected result
   u32 expected = 0;
@@ -364,7 +422,8 @@ TEST_F(VectorProjectionIteratorTest, MultipleVectorizedFilterTest) {
   //
 
   VectorProjectionIterator iter;
-  iter.SetVectorProjection(vp());
+  SetSize(kDefaultVectorSize);
+  iter.SetProjectedColumn(GetProjectedColumn());
 
   iter.FilterColByVal<i32, std::less, false>(ColId::col_c, 750);
   iter.FilterColByVal<i16, std::less, false>(ColId::col_a, 10);

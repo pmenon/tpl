@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "sql/table.h"
 #include "sql/value.h"
 #include "util/common.h"
 #include "util/timer.h"
@@ -397,6 +396,30 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(Return) : {
     OpReturn();
     return;
+  }
+
+  // -------------------------------------------------------
+  // Transaction ops
+  // -------------------------------------------------------
+  OP(BeginTransaction) : {
+    auto *txn = frame->LocalAt<terrier::transaction::TransactionContext **>(
+        READ_LOCAL_ID());
+    OpBeginTransaction(txn);
+    DISPATCH_NEXT();
+  }
+
+  OP(CommitTransaction) : {
+    auto *txn = frame->LocalAt<terrier::transaction::TransactionContext **>(
+        READ_LOCAL_ID());
+    OpCommitTransaction(txn);
+    DISPATCH_NEXT();
+  }
+
+  OP(AbortTransaction) : {
+    auto *txn = frame->LocalAt<terrier::transaction::TransactionContext **>(
+        READ_LOCAL_ID());
+    OpAbortTransaction(txn);
+    DISPATCH_NEXT();
   }
 
   // -------------------------------------------------------

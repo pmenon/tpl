@@ -21,7 +21,8 @@ class NoMoreObjectException : public std::exception {
    * @param limit the object pool limit size
    */
   explicit NoMoreObjectException(uint64_t limit)
-      : message_("Object Pool have no object to hand out. Exceed size limit " + std::to_string(limit) + ".\n") {}
+      : message_("Object Pool have no object to hand out. Exceed size limit " +
+                 std::to_string(limit) + ".\n") {}
   /**
    * Describe the exception.
    * @return a string of exception description
@@ -43,7 +44,9 @@ class AllocatorFailureException : public std::exception {
    * Describe the exception.
    * @return a string of exception description
    */
-  const char *what() const noexcept override { return "Allocator fails to allocate memory.\n"; }
+  const char *what() const noexcept override {
+    return "Allocator fails to allocate memory.\n";
+  }
 };
 
 /**
@@ -90,25 +93,31 @@ class ObjectPool {
 
   /**
    * Returns a piece of memory to hold an object of T.
-   * @throw NoMoreObjectException if the object pool has reached the limit of how many objects it may hand out.
-   * @throw AllocatorFailureException if the allocator fails to return a valid memory address.
+   * @throw NoMoreObjectException if the object pool has reached the limit of
+   * how many objects it may hand out.
+   * @throw AllocatorFailureException if the allocator fails to return a valid
+   * memory address.
    * @return pointer to memory that can hold T
    */
   T *Get() {
     SpinLatch::ScopedSpinLatch guard(&latch_);
-    if (reuse_queue_.empty() && current_size_ >= size_limit_) throw NoMoreObjectException(size_limit_);
+    if (reuse_queue_.empty() && current_size_ >= size_limit_)
+      throw NoMoreObjectException(size_limit_);
     T *result = nullptr;
     if (reuse_queue_.empty()) {
-      result = alloc_.New();  // result could be null because the allocator may not find enough memory space
+      result = alloc_.New();  // result could be null because the allocator may
+                              // not find enough memory space
       if (result != nullptr) current_size_++;
     } else {
       result = reuse_queue_.front();
       reuse_queue_.pop();
       alloc_.Reuse(result);
     }
-    // If result is nullptr. The call to alloc_.New() failed (i.e. can't allocate more memory from the system).
+    // If result is nullptr. The call to alloc_.New() failed (i.e. can't
+    // allocate more memory from the system).
     if (result == nullptr) throw AllocatorFailureException();
-    TERRIER_ASSERT(current_size_ <= size_limit_, "Object pool has exceeded its size limit.");
+    TERRIER_ASSERT(current_size_ <= size_limit_,
+                   "Object pool has exceeded its size limit.");
     return result;
   }
 
@@ -126,22 +135,24 @@ class ObjectPool {
     if (new_size >= current_size_) {
       // current_size_ might increase and become > new_size if we don't use lock
       size_limit_ = new_size;
-      TERRIER_ASSERT(current_size_ <= size_limit_, "object pool size exceed its size limit");
+      TERRIER_ASSERT(current_size_ <= size_limit_,
+                     "object pool size exceed its size limit");
       return true;
     }
     return false;
   }
 
   /**
-   * Set the reuse limit to a new value. This function always succeed and immediately changes
-   * reuse limit.
+   * Set the reuse limit to a new value. This function always succeed and
+   * immediately changes reuse limit.
    *
-   * A reuse limit simply determines the maximum number of reusable objects the object pool should
-   * maintain and can be any non-negative number.
+   * A reuse limit simply determines the maximum number of reusable objects the
+   * object pool should maintain and can be any non-negative number.
    *
    * If reuse limit > size limit. It's still valid.
-   * It's just that the number of reusable objects in the pool will never reach reuse limit because
-   * # of reusable objects <= current size <= size limit < reuse_limit.
+   * It's just that the number of reusable objects in the pool will never reach
+   * reuse limit because # of reusable objects <= current size <= size limit <
+   * reuse_limit.
    *
    * If it's 0, then the object pool just never reuse object.
    *
@@ -161,8 +172,8 @@ class ObjectPool {
 
   /**
    * Releases the piece of memory given, allowing it to be freed or reused for
-   * later. Although the memory is not necessarily immediately reclaimed, it will
-   * be unsafe to access after entering this call.
+   * later. Although the memory is not necessarily immediately reclaimed, it
+   * will be unsafe to access after entering this call.
    *
    * @param obj pointer to object to release
    */
@@ -180,13 +191,17 @@ class ObjectPool {
  private:
   Allocator alloc_;
   SpinLatch latch_;
-  // TODO(yangjuns): We don't need to reuse objects in a FIFO pattern. We could potentially pass a second template
-  // parameter to define the backing container for the std::queue. That way we can measure each backing container.
+  // TODO(yangjuns): We don't need to reuse objects in a FIFO pattern. We could
+  // potentially pass a second template parameter to define the backing
+  // container for the std::queue. That way we can measure each backing
+  // container.
   std::queue<T *> reuse_queue_;
-  uint64_t size_limit_;   // the maximum number of objects a object pool can have
-  uint64_t reuse_limit_;  // the maximum number of reusable objects in reuse_queue
-  // current_size_ represents the number of objects the object pool has allocated,
-  // including objects that have been given out to callers and those reside in reuse_queue
+  uint64_t size_limit_;  // the maximum number of objects a object pool can have
+  uint64_t
+      reuse_limit_;  // the maximum number of reusable objects in reuse_queue
+  // current_size_ represents the number of objects the object pool has
+  // allocated, including objects that have been given out to callers and those
+  // reside in reuse_queue
   uint64_t current_size_;
 };
 }  // namespace terrier::common

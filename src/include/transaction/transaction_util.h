@@ -17,8 +17,9 @@ class TransactionUtil {
    * @return true if a is newer than b, false otherwise
    */
   static bool NewerThan(const timestamp_t a, const timestamp_t b) {
-    // TODO(Tianyu): This is not very necessary now that I have defined comparison between strong typedefed
-    // values. I am leaving this here because we might want to handle wrap-arounds in the future.
+    // TODO(Tianyu): This is not very necessary now that I have defined
+    // comparison between strong typedefed values. I am leaving this here
+    // because we might want to handle wrap-arounds in the future.
     return a > b;
   }
 
@@ -27,7 +28,9 @@ class TransactionUtil {
    * @param timestamp the timestamp of the transaction or tuple delta to verify
    * @return true if committed, false otherwise
    */
-  static bool Committed(const timestamp_t timestamp) { return static_cast<int64_t>(!timestamp) >= 0; }
+  static bool Committed(const timestamp_t timestamp) {
+    return static_cast<int64_t>(!timestamp) >= 0;
+  }
 };
 
 }  // namespace terrier::transaction

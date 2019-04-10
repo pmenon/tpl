@@ -6,12 +6,14 @@
 namespace terrier::common {
 
 /**
- * A cheap and easy shared (reader-writer) latch, currently wraps tbb::reader_writer_lock. From Intel's docs:
+ * A cheap and easy shared (reader-writer) latch, currently wraps
+ * tbb::reader_writer_lock. From Intel's docs:
  *
- * A reader_writer_lock is scalable and nonrecursive. The implementation handles lock requests on a first-come
- * first-serve basis except that writers have preference over readers. Waiting threads busy wait, which can degrade
- * system performance if the wait is long. However, if the wait is typically short, a reader_writer_lock can provide
- * performance competitive with other mutexes.
+ * A reader_writer_lock is scalable and nonrecursive. The implementation handles
+ * lock requests on a first-come first-serve basis except that writers have
+ * preference over readers. Waiting threads busy wait, which can degrade system
+ * performance if the wait is long. However, if the wait is typically short, a
+ * reader_writer_lock can provide performance competitive with other mutexes.
  */
 class SharedLatch {
  public:
@@ -51,7 +53,10 @@ class SharedLatch {
      * Acquire write lock on ReaderWriterLatch.
      * @param rw_latch pointer to ReaderWriterLatch to acquire
      */
-    explicit ScopedSharedLatch(SharedLatch *const rw_latch) : rw_latch_(rw_latch) { rw_latch_->LockShared(); }
+    explicit ScopedSharedLatch(SharedLatch *const rw_latch)
+        : rw_latch_(rw_latch) {
+      rw_latch_->LockShared();
+    }
     /**
      * Release write lock (if acquired).
      */
@@ -71,7 +76,10 @@ class SharedLatch {
      * Acquire read lock on ReaderWriterLatch.
      * @param rw_latch pointer to ReaderWriterLatch to acquire
      */
-    explicit ScopedExclusiveLatch(SharedLatch *const rw_latch) : rw_latch_(rw_latch) { rw_latch_->LockExclusive(); }
+    explicit ScopedExclusiveLatch(SharedLatch *const rw_latch)
+        : rw_latch_(rw_latch) {
+      rw_latch_->LockExclusive();
+    }
     /**
      * Release read lock (if acquired).
      */

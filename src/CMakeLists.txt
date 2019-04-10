@@ -72,7 +72,7 @@ add_library(tpl_shared STATIC ${tpl_sources})
 #
 ##################################################
 
-set(tpl_main "${PROJECT_SOURCE_DIR}/src/tpl.cpp")
+set(tpl_main "${PROJECT_SOURCE_DIR}/src/tpl.cpp" catalog/catalog.cpp)
 add_executable(tpl ${tpl_main})
 add_dependencies(tpl gen_opt_bc)
 target_link_libraries(tpl tpl_shared ${TPL_LINK_LIBS})

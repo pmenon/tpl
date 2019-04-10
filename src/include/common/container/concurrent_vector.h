@@ -7,7 +7,8 @@ namespace terrier::common {
  * A concurrent implementation of a vector.
  * @tparam T type of element in the vector.
  * @tparam Alloc allocator to be used.
- * @warning Consider the non-trivial overhead associated with a concurrent data structure before defaulting to its use.
+ * @warning Consider the non-trivial overhead associated with a concurrent data
+ * structure before defaulting to its use.
  */
 template <typename T, class Alloc = tbb::cache_aligned_allocator<T>>
 class ConcurrentVector {
@@ -21,7 +22,8 @@ class ConcurrentVector {
      * Constructs a new iterator.
      * @param it type of iterator to be used.
      */
-    explicit Iterator(typename tbb::concurrent_vector<T, Alloc>::iterator it) : it_(it) {}
+    explicit Iterator(typename tbb::concurrent_vector<T, Alloc>::iterator it)
+        : it_(it) {}
 
     /**
      * @return reference to the underlying value
@@ -76,10 +78,12 @@ class ConcurrentVector {
    * @param size number of elements to be held in the vector.
    * @param t allocator for the elements in the vector.
    */
-  explicit ConcurrentVector(uint64_t size, const T &t = T()) : vector_(size, t) {}
+  explicit ConcurrentVector(uint64_t size, const T &t = T())
+      : vector_(size, t) {}
 
   /**
-   * Adds a new element at the end of the vector, after its current last element.
+   * Adds a new element at the end of the vector, after its current last
+   * element.
    * @param item element to be added.
    * @return an iterator pointing to the new element.
    */

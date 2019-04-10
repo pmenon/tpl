@@ -87,6 +87,11 @@ namespace tpl::vm {
   F(Call, OperandType::FunctionId, OperandType::LocalCount)                                                            \
   F(Return)                                                                                                            \
                                                                                                                        \
+  /* Transactions */                                                                                                   \
+  F(BeginTransaction, OperandType::Local)                                                                              \
+  F(CommitTransaction, OperandType::Local)                                                                            \
+  F(AbortTransaction, OperandType::Local)                                                                             \
+                                                                                                                       \
   /* Table Vector Iterator */                                                                                          \
   F(TableVectorIteratorInit, OperandType::Local, OperandType::UImm2)                                                   \
   F(TableVectorIteratorNext, OperandType::Local, OperandType::Local)                                                   \

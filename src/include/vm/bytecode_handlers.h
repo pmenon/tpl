@@ -187,6 +187,19 @@ VM_OP_HOT void OpCall(UNUSED u16 func_id, UNUSED u16 num_args) {}
 VM_OP_HOT void OpReturn() {}
 
 // ---------------------------------------------------------
+// Transactions
+// ---------------------------------------------------------
+
+VM_OP_COLD void OpBeginTransaction(
+    terrier::transaction::TransactionContext **txn);
+
+VM_OP_COLD void OpCommitTransaction(
+    terrier::transaction::TransactionContext **txn);
+
+VM_OP_COLD void OpAbortTransaction(
+    terrier::transaction::TransactionContext **txn);
+
+// ---------------------------------------------------------
 // Table Vector Iterator
 // ---------------------------------------------------------
 

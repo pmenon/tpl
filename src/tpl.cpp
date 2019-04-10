@@ -15,7 +15,7 @@
 #include "parsing/scanner.h"
 #include "sema/error_reporter.h"
 #include "sema/sema.h"
-#include "sql/catalog.h"
+#include "sql/execution_structures.h"
 #include "tpl.h"  // NOLINT
 #include "util/cpu_info.h"
 #include "util/timer.h"
@@ -56,7 +56,7 @@ static void CompileAndRun(const std::string &source,
   parsing::Parser parser(&scanner, &context);
 
   double parse_ms = 0, typecheck_ms = 0, codegen_ms = 0, exec_ms = 0,
-         jit_ms = 0;
+                                                            jit_ms = 0;
 
   // Parse
   ast::AstNode *root;
@@ -177,7 +177,7 @@ void InitTPL() {
 
   tpl::CpuInfo::Instance();
 
-  tpl::sql::Catalog::Instance();
+  tpl::sql::ExecutionStructures::Instance();
 
   tpl::vm::LLVMEngine::Initialize();
 

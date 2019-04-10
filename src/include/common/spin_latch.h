@@ -6,8 +6,8 @@
 namespace terrier::common {
 
 /**
- * A cheap and easy spin latch, currently wraps tbb::spin_mutex to optimize for various architectures' PAUSE
- * characteristics. See:
+ * A cheap and easy spin latch, currently wraps tbb::spin_mutex to optimize for
+ * various architectures' PAUSE characteristics. See:
  * https://software.intel.com/en-us/articles/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops
  */
 class SpinLatch {
@@ -23,7 +23,8 @@ class SpinLatch {
   /**
    * @brief Tries to lock the spin latch.
    *
-   * @return On successful lock acquisition returns true, otherwise returns false.
+   * @return On successful lock acquisition returns true, otherwise returns
+   * false.
    */
   bool TryLock() { return latch_.try_lock(); }
 
@@ -41,7 +42,9 @@ class SpinLatch {
      * Acquire lock on SpinLatch.
      * @param latch pointer to SpinLatch to acquire
      */
-    explicit ScopedSpinLatch(SpinLatch *const latch) : spin_latch_(latch) { spin_latch_->Lock(); }
+    explicit ScopedSpinLatch(SpinLatch *const latch) : spin_latch_(latch) {
+      spin_latch_->Lock();
+    }
 
     /**
      * Release lock (if acquired).

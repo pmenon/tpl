@@ -70,7 +70,7 @@ class BitUtil {
   /// \param bits The bit vector
   /// \param size The number of elements in the bit vector
   ALWAYS_INLINE static void Clear(u32 bits[], const u64 size) {
-    auto num_words = size / kBitWordSize;
+    auto num_words = Num32BitWordsFor(size);
     std::memset(bits, 0, num_words * sizeof(u32));
   }
 

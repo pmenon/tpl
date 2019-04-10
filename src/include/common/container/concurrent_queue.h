@@ -8,7 +8,8 @@ namespace terrier::common {
  * A thread-safe queue implementation
  * @tparam T element type
  * @tparam Alloc allocator used
- * @warning Consider the non-trivial overhead associated with a concurrent data structure before defaulting to its use.
+ * @warning Consider the non-trivial overhead associated with a concurrent data
+ * structure before defaulting to its use.
  */
 template <typename T, typename Alloc = tbb::cache_aligned_allocator<T>>
 class ConcurrentQueue {
@@ -17,7 +18,8 @@ class ConcurrentQueue {
   // most of it for us anyway and incur minimal overhead. (Currently using tbb
   // see https://software.intel.com/en-us/node/506200)
   //
-  // Keep the interface minimalistic until we figure out what implementation to use.
+  // Keep the interface minimalistic until we figure out what implementation to
+  // use.
  public:
   /**
    * Check emptiness
@@ -32,8 +34,8 @@ class ConcurrentQueue {
   void Enqueue(T elem) { queue_.push(elem); }
 
   /**
-   * If value is available, remove the element at the head of the queue and assign
-   * it to the destination.
+   * If value is available, remove the element at the head of the queue and
+   * assign it to the destination.
    * @param dest if an element exists.
    */
   bool Dequeue(T *dest) { return queue_.try_pop(*dest); }

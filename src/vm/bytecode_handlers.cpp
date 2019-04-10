@@ -1,6 +1,7 @@
 #include "vm/bytecode_handlers.h"
 
-#include "sql/catalog.h"
+#include "catalog/catalog_defs.h"
+#include "sql/execution_structures.h"
 
 extern "C" {
 
@@ -15,6 +16,24 @@ void OpRegionInit(tpl::util::Region *region) {
 void OpRegionFree(tpl::util::Region *region) { region->~Region(); }
 
 // ---------------------------------------------------------
+// Transactions
+// ---------------------------------------------------------
+void OpBeginTransaction(terrier::transaction::TransactionContext **txn) {
+  auto *exec = tpl::sql::ExecutionStructures::Instance();
+  *txn = exec->GetTxnManager()->BeginTransaction();
+}
+
+void OpCommitTransaction(terrier::transaction::TransactionContext **txn) {
+  auto *exec = tpl::sql::ExecutionStructures::Instance();
+  exec->GetTxnManager()->Commit(*txn, [](void *) { return; }, nullptr);
+}
+
+void OpAbortTransaction(terrier::transaction::TransactionContext **txn) {
+  auto *exec = tpl::sql::ExecutionStructures::Instance();
+  exec->GetTxnManager()->Abort(*txn);
+}
+
+// ---------------------------------------------------------
 // Table Vector Iterator
 // ---------------------------------------------------------
 
@@ -22,13 +41,15 @@ void OpTableVectorIteratorInit(tpl::sql::TableVectorIterator *iter,
                                u16 table_id) {
   TPL_ASSERT(iter != nullptr, "Null iterator to initialize");
 
-  auto *table = tpl::sql::Catalog::Instance()->LookupTableById(
-      static_cast<tpl::sql::TableId>(table_id));
+  auto *exec = tpl::sql::ExecutionStructures::Instance();
+  auto *table = exec->GetCatalog()->LookupTableById(
+      terrier::catalog::table_oid_t(table_id));
 
   // At this point, the table better exist ...
   TPL_ASSERT(table != nullptr, "Table can't be null!");
 
-  new (iter) tpl::sql::TableVectorIterator(*table);
+  new (iter) tpl::sql::TableVectorIterator(*table->GetTable(),
+                                           *table->GetStorageSchema());
 }
 
 void OpTableVectorIteratorClose(tpl::sql::TableVectorIterator *iter) {

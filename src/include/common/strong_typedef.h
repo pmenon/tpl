@@ -18,8 +18,8 @@ namespace terrier::common {
  *
  * Usually, typedefs (or equivalent 'using' statement) are transparent to the
  * compiler. If you declare A and B to both be int, they are interchangeable.
- * This is not exactly ideal because then it becomes easy for you to do something
- * like this:
+ * This is not exactly ideal because then it becomes easy for you to do
+ * something like this:
  *
  * // some definition
  * A foo(A a, B b);
@@ -30,8 +30,8 @@ namespace terrier::common {
  *
  * ... and the compiler will happily compile and run that code with no warning.
  *
- * With strong typedef, you are required to explicitly convert these types, turning
- * our example into:
+ * With strong typedef, you are required to explicitly convert these types,
+ * turning our example into:
  *
  * A a(42);
  * B b(10);
@@ -46,11 +46,12 @@ namespace terrier::common {
  *
  * This works with all types of ints.
  */
-#define STRONG_TYPEDEF(name, underlying_type) \
-  namespace tags {                            \
-  struct name##_typedef_tag {};               \
-  }                                           \
-  using name = ::terrier::common::StrongTypeAlias<tags::name##_typedef_tag, underlying_type>;
+#define STRONG_TYPEDEF(name, underlying_type)                               \
+  namespace tags {                                                          \
+  struct name##_typedef_tag {};                                             \
+  }                                                                         \
+  using name = ::terrier::common::StrongTypeAlias<tags::name##_typedef_tag, \
+                                                  underlying_type>;
 
 /**
  * A StrongTypeAlias is the underlying implementation of STRONG_TYPEDEF.
@@ -62,7 +63,8 @@ namespace terrier::common {
  */
 template <class Tag, typename IntType>
 class StrongTypeAlias {
-  static_assert(std::is_integral<IntType>::value, "Only int types are defined for strong typedefs");
+  static_assert(std::is_integral<IntType>::value,
+                "Only int types are defined for strong typedefs");
 
  public:
   StrongTypeAlias() = default;
@@ -155,12 +157,15 @@ class StrongTypeAlias {
    * @param operand another int type
    * @return difference between the underlying value and given operand
    */
-  StrongTypeAlias operator-(const IntType &operand) const { return StrongTypeAlias(val_ - operand); }
+  StrongTypeAlias operator-(const IntType &operand) const {
+    return StrongTypeAlias(val_ - operand);
+  }
 
   /**
    * subtraction and assignment
    * @param rhs another int type
-   * @return self-reference after the rhs is subtracted from the underlying value
+   * @return self-reference after the rhs is subtracted from the underlying
+   * value
    */
   StrongTypeAlias &operator-=(const IntType &rhs) {
     val_ -= rhs;
@@ -171,25 +176,33 @@ class StrongTypeAlias {
    * @param other the other type alias to compare to
    * @return whether underlying value of this < other
    */
-  bool operator<(const StrongTypeAlias &other) const { return val_ < other.val_; }
+  bool operator<(const StrongTypeAlias &other) const {
+    return val_ < other.val_;
+  }
 
   /**
    * @param other the other type alias to compare to
    * @return whether underlying value of this < other
    */
-  bool operator<=(const StrongTypeAlias &other) const { return val_ <= other.val_; }
+  bool operator<=(const StrongTypeAlias &other) const {
+    return val_ <= other.val_;
+  }
 
   /**
    * @param other the other type alias to compare to
    * @return whether underlying value of this < other
    */
-  bool operator>(const StrongTypeAlias &other) const { return val_ > other.val_; }
+  bool operator>(const StrongTypeAlias &other) const {
+    return val_ > other.val_;
+  }
 
   /**
    * @param other the other type alias to compare to
    * @return whether underlying value of this < other
    */
-  bool operator>=(const StrongTypeAlias &other) const { return val_ >= other.val_; }
+  bool operator>=(const StrongTypeAlias &other) const {
+    return val_ >= other.val_;
+  }
 
   /**
    * Outputs the StrongTypeAlias to the output stream.
@@ -197,7 +210,10 @@ class StrongTypeAlias {
    * @param alias StrongTypeAlias to be output.
    * @return modified output stream.
    */
-  friend std::ostream &operator<<(std::ostream &os, const StrongTypeAlias &alias) { return os << alias.val_; }
+  friend std::ostream &operator<<(std::ostream &os,
+                                  const StrongTypeAlias &alias) {
+    return os << alias.val_;
+  }
 
  private:
   IntType val_;
@@ -217,7 +233,8 @@ namespace std {
  */
 template <class Tag, class IntType>
 struct atomic<terrier::common::StrongTypeAlias<Tag, IntType>> {
-  static_assert(std::is_integral<IntType>::value, "Only int types are defined for strong typedefs");
+  static_assert(std::is_integral<IntType>::value,
+                "Only int types are defined for strong typedefs");
 
   /**
    * Type alias shorthand.
@@ -240,16 +257,19 @@ struct atomic<terrier::common::StrongTypeAlias<Tag, IntType>> {
 
   /**
    * Checks if the atomic object is lock-free.
-   * @return true if the atomic operations on the objects of this type are lock-free, false otherwise.
+   * @return true if the atomic operations on the objects of this type are
+   * lock-free, false otherwise.
    */
   bool is_lock_free() const noexcept { return underlying_.is_lock_free(); }
 
   /**
-   * Atomically replaces the current value with desired. Memory is affected according to the value of order.
+   * Atomically replaces the current value with desired. Memory is affected
+   * according to the value of order.
    * @param desired	the value to store into the atomic variable.
    * @param order memory order constraints to enforce.
    */
-  void store(t desired, memory_order order = memory_order_seq_cst) volatile noexcept {
+  void store(t desired,
+             memory_order order = memory_order_seq_cst) volatile noexcept {
     underlying_.store(!desired, order);
   }
 
@@ -259,46 +279,62 @@ struct atomic<terrier::common::StrongTypeAlias<Tag, IntType>> {
    * @param order memory order constraints to enforce.
    * @return The current value of the atomic variable.
    */
-  t load(memory_order order = memory_order_seq_cst) const volatile noexcept { return t(underlying_.load(order)); }
+  t load(memory_order order = memory_order_seq_cst) const volatile noexcept {
+    return t(underlying_.load(order));
+  }
 
   /**
-   * Atomically replaces the underlying value with desired. The operation is read-modify-write operation.
-   * Memory is affected according to the value of order.
+   * Atomically replaces the underlying value with desired. The operation is
+   * read-modify-write operation. Memory is affected according to the value of
+   * order.
    * @param desired	value to assign.
    * @param order memory order constraints to enforce.
    * @return The value of the atomic variable before the call.
    */
-  t exchange(t desired, memory_order order = memory_order_seq_cst) volatile noexcept {
+  t exchange(t desired,
+             memory_order order = memory_order_seq_cst) volatile noexcept {
     return t(underlying_.exchange(!desired, order));
   }
 
   /**
-   * Atomically compares the [object representation (until C++20) / value representation (since C++20)] of *this
-   * with that of expected, and if those are bitwise-equal, replaces the former with desired
-   * (performs read-modify-write operation). Otherwise, loads the actual value stored in *this
-   * into expected (performs load operation).
-   * @param expected reference to the value expected to be found in the atomic object.
-   * @param desired the value to store in the atomic object if it is as expected.
+   * Atomically compares the [object representation (until C++20) / value
+   * representation (since C++20)] of *this with that of expected, and if those
+   * are bitwise-equal, replaces the former with desired (performs
+   * read-modify-write operation). Otherwise, loads the actual value stored in
+   * *this into expected (performs load operation).
+   * @param expected reference to the value expected to be found in the atomic
+   * object.
+   * @param desired the value to store in the atomic object if it is as
+   * expected.
    * @param order the memory synchronization ordering for both operations.
-   * @return true if the underlying atomic value was successfully changed, false otherwise.
+   * @return true if the underlying atomic value was successfully changed, false
+   * otherwise.
    */
   // NOLINTNEXTLINE
-  bool compare_exchange_weak(t &expected, t desired, memory_order order = memory_order_seq_cst) volatile noexcept {
+  bool compare_exchange_weak(
+      t &expected, t desired,
+      memory_order order = memory_order_seq_cst) volatile noexcept {
     return underlying_.compare_exchange_weak(!expected, !desired, order);
   }
 
   /**
-   * Atomically compares the [object representation (until C++20) / value representation (since C++20)] of *this
-   * with that of expected, and if those are bitwise-equal, replaces the former with desired
-   * (performs read-modify-write operation). Otherwise, loads the actual value stored in *this
-   * into expected (performs load operation).
-   * @param expected reference to the value expected to be found in the atomic object.
-   * @param desired the value to store in the atomic object if it is as expected.
+   * Atomically compares the [object representation (until C++20) / value
+   * representation (since C++20)] of *this with that of expected, and if those
+   * are bitwise-equal, replaces the former with desired (performs
+   * read-modify-write operation). Otherwise, loads the actual value stored in
+   * *this into expected (performs load operation).
+   * @param expected reference to the value expected to be found in the atomic
+   * object.
+   * @param desired the value to store in the atomic object if it is as
+   * expected.
    * @param order the memory synchronization ordering for both operations.
-   * @return true if the underlying atomic value was successfully changed, false otherwise.
+   * @return true if the underlying atomic value was successfully changed, false
+   * otherwise.
    */
   // NOLINTNEXTLINE
-  bool compare_exchange_strong(t &expected, t desired, memory_order order = memory_order_seq_cst) volatile noexcept {
+  bool compare_exchange_strong(
+      t &expected, t desired,
+      memory_order order = memory_order_seq_cst) volatile noexcept {
     return underlying_.compare_exchange_strong(!expected, !desired, order);
   }
 
@@ -336,7 +372,10 @@ struct hash<terrier::common::StrongTypeAlias<Tag, T>> {
    * @param alias the aliased type to be hashed.
    * @return the hash of the aliased type.
    */
-  size_t operator()(const terrier::common::StrongTypeAlias<Tag, T> &alias) const { return hash<T>()(!alias); }
+  size_t operator()(
+      const terrier::common::StrongTypeAlias<Tag, T> &alias) const {
+    return hash<T>()(!alias);
+  }
 };
 
 /**

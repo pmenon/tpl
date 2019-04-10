@@ -9,8 +9,7 @@
 #include "ast/context.h"
 #include "ast/type.h"
 #include "logging/logger.h"
-#include "sql/catalog.h"
-#include "sql/table.h"
+#include "sql/execution_structures.h"
 #include "util/macros.h"
 #include "vm/bytecode_label.h"
 #include "vm/bytecode_module.h"
@@ -276,12 +275,14 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   // We first initialize the TableVectorIterator and then pull out the VPI*
   // from the iterator for use in the body of the loop.
   //
-
-  sql::Table *table = sql::Catalog::Instance()->LookupTableByName(
+  // TODO(Amadou): Increase the size of table ids to u32.
+  auto *exec = sql::ExecutionStructures::Instance();
+  auto *table = exec->GetCatalog()->LookupTableByName(
       node->iter()->As<ast::IdentifierExpr>()->name().data());
   TPL_ASSERT(table != nullptr, "Table does not exist!");
   emitter()->EmitTableIteratorInit(Bytecode::TableVectorIteratorInit,
-                                   table_iter, table->id());
+                                   table_iter,
+                                   static_cast<u16>(uint32_t(table->GetOid())));
 
   //
   // Pull out the VPI from the TableVectorIterator we just initialized

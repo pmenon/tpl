@@ -6,8 +6,8 @@
 namespace terrier::type {
 
 /**
- * TransientValuePeeker is the static class for generating C types from corresponding SQL types stored in
- * TransientValues.
+ * TransientValuePeeker is the static class for generating C types from
+ * corresponding SQL types stored in TransientValues.
  */
 class TransientValuePeeker {
  public:
@@ -103,8 +103,9 @@ class TransientValuePeeker {
 
   /**
    * @param value TransientValue with TypeId VARCHAR to generate a C type for
-   * @return C string representing the value of the TransientValue. This null-terminated C string lives on the heap, and
-   * should be freed after use by the caller.
+   * @return C string representing the value of the TransientValue. This
+   * null-terminated C string lives on the heap, and should be freed after use
+   * by the caller.
    * @warning TransientValue must be non-NULL. @see TransientValue::Null() first
    */
   static const char *const PeekVarChar(const TransientValue &value) {

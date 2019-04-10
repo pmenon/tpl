@@ -13,27 +13,31 @@
 namespace terrier::catalog {
 
 /**
- * Internal object for representing SQL table schema. Currently minimal until we add more features to the system.
- * TODO(Matt): we should make sure to revisit the fields and their uses as we bring in a catalog to replace some of the
- * reliance on these classes
+ * Internal object for representing SQL table schema. Currently minimal until we
+ * add more features to the system.
+ * TODO(Matt): we should make sure to revisit the fields and their uses as we
+ * bring in a catalog to replace some of the reliance on these classes
  */
 class Schema {
  public:
   /**
-   * Internal object for representing SQL table column. Currently minimal until we add more features to the system.
-   * TODO(Matt): we should make sure to revisit the fields and their uses as we bring in a catalog to replace some of
-   * the reliance on these classes
+   * Internal object for representing SQL table column. Currently minimal until
+   * we add more features to the system.
+   * TODO(Matt): we should make sure to revisit the fields and their uses as we
+   * bring in a catalog to replace some of the reliance on these classes
    */
   class Column {
    public:
     /**
-     * Instantiates a Column object, primary to be used for building a Schema object
+     * Instantiates a Column object, primary to be used for building a Schema
+     * object
      * @param name column name
      * @param type SQL type for this column
      * @param nullable true if the column is nullable, false otherwise
      * @param oid internal unique identifier for this column
      */
-    Column(std::string name, const type::TypeId type, const bool nullable, const col_oid_t oid)
+    Column(std::string name, const type::TypeId type, const bool nullable,
+           const col_oid_t oid)
         : name_(std::move(name)),
           type_(type),
           attr_size_(type::TypeUtil::GetTypeSize(type_)),
@@ -46,9 +50,11 @@ class Schema {
         inlined_ = false;
       }
       TERRIER_ASSERT(
-          attr_size_ == 1 || attr_size_ == 2 || attr_size_ == 4 || attr_size_ == 8 || attr_size_ == VARLEN_COLUMN,
+          attr_size_ == 1 || attr_size_ == 2 || attr_size_ == 4 ||
+              attr_size_ == 8 || attr_size_ == VARLEN_COLUMN,
           "Attribute size must be 1, 2, 4, 8 or VARLEN_COLUMN bytes.");
-      TERRIER_ASSERT(type_ != type::TypeId::INVALID, "Attribute type cannot be INVALID.");
+      TERRIER_ASSERT(type_ != type::TypeId::INVALID,
+                     "Attribute type cannot be INVALID.");
     }
     /**
      * @return column name
@@ -59,11 +65,13 @@ class Schema {
      */
     bool GetNullable() const { return nullable_; }
     /**
-     * @return size of the attribute in bytes. Varlen attributes have the sign bit set.
+     * @return size of the attribute in bytes. Varlen attributes have the sign
+     * bit set.
      */
     uint8_t GetAttrSize() const { return attr_size_; }
     /**
-     * @return true if the attribute is inlined, false if it's a pointer to a varlen entry
+     * @return true if the attribute is inlined, false if it's a pointer to a
+     * varlen entry
      */
     bool GetInlined() const { return inlined_; }
     /**
@@ -88,11 +96,13 @@ class Schema {
 
   /**
    * Instantiates a Schema object from a vector of previously-defined Columns
-   * @param columns description of this SQL table's schema as a collection of Columns
+   * @param columns description of this SQL table's schema as a collection of
+   * Columns
    */
   explicit Schema(std::vector<Column> columns) : columns_(std::move(columns)) {
-    TERRIER_ASSERT(!columns_.empty() && columns_.size() <= common::Constants::MAX_COL,
-                   "Number of columns must be between 1 and 32767.");
+    TERRIER_ASSERT(
+        !columns_.empty() && columns_.size() <= common::Constants::MAX_COL,
+        "Number of columns must be between 1 and 32767.");
     for (uint32_t i = 0; i < columns_.size(); i++) {
       col_oid_to_offset[columns_[i].GetOid()] = i;
     }
@@ -102,7 +112,8 @@ class Schema {
    * @return description of the schema for a specific column
    */
   Column GetColumn(const uint32_t col_offset) const {
-    TERRIER_ASSERT(col_offset < columns_.size(), "column id is out of bounds for this Schema");
+    TERRIER_ASSERT(col_offset < columns_.size(),
+                   "column id is out of bounds for this Schema");
     return columns_[col_offset];
   }
   /**
@@ -110,7 +121,8 @@ class Schema {
    * @return description of the schema for a specific column
    */
   Column GetColumn(const col_oid_t col_oid) const {
-    TERRIER_ASSERT(col_oid_to_offset.count(col_oid) > 0, "col_oid does not exist in this Schema");
+    TERRIER_ASSERT(col_oid_to_offset.count(col_oid) > 0,
+                   "col_oid does not exist in this Schema");
     const uint32_t col_offset = col_oid_to_offset.at(col_oid);
     return columns_[col_offset];
   }

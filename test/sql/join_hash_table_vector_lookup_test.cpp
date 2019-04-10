@@ -5,14 +5,17 @@
 
 #include "tpl_test.h"  // NOLINT
 
+#include "catalog/catalog.h"
+#include "sql/data_types.h"
+#include "sql/execution_structures.h"
 #include "sql/join_hash_table.h"
 #include "sql/join_hash_table_vector_lookup.h"
-#include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
+#include "storage/projected_columns.h"
 #include "util/hash.h"
 
 namespace tpl::sql::test {
-
+using namespace terrier;
 /// This is the tuple we insert into the hash table
 template <u8 N>
 struct Tuple {
@@ -38,12 +41,46 @@ static inline bool CmpTupleInVPI(const byte *table_tuple,
 
 class JoinHashTableVectorLookupTest : public TplTest {
  public:
-  JoinHashTableVectorLookupTest() : region_(GetTestName()) {}
+  JoinHashTableVectorLookupTest() : region_(GetTestName()) {
+    InitializeColumns();
+  }
+
+  void InitializeColumns() {
+    auto *exec = sql::ExecutionStructures::Instance();
+    auto *ctl = exec->GetCatalog();
+    catalog::Schema::Column storage_col1 =
+        ctl->MakeStorageColumn("col1", sql::IntegerType::Instance(false));
+    catalog::Schema::Column storage_col2 =
+        ctl->MakeStorageColumn("col2", sql::IntegerType::Instance(false));
+    sql::Schema::ColumnInfo sql_col1("col1", sql::IntegerType::Instance(false));
+    sql::Schema::ColumnInfo sql_col2("col2", sql::IntegerType::Instance(false));
+
+    catalog::Schema storage_schema(
+        std::vector<catalog::Schema::Column>{storage_col1, storage_col2});
+    sql::Schema sql_schema(
+        std::vector<sql::Schema::ColumnInfo>{sql_col1, sql_col2});
+    ctl->CreateTable("hash_test_table", std::move(storage_schema),
+                     std::move(sql_schema));
+    info_ = ctl->LookupTableByName("hash_test_table");
+    std::vector<catalog::col_oid_t> col_oids;
+    for (const auto &col : info_->GetStorageSchema()->GetColumns())
+      col_oids.emplace_back(col.GetOid());
+    auto initializer_map = info_->GetTable()->InitializerForProjectedColumns(
+        col_oids, kDefaultVectorSize);
+    buffer_ = common::AllocationUtil::AllocateAligned(
+        initializer_map.first.ProjectedColumnsSize());
+    projected_columns = initializer_map.first.Initialize(buffer_);
+    projected_columns->SetNumTuples(kDefaultVectorSize);
+  }
 
   util::Region *region() { return &region_; }
 
+  storage::ProjectedColumns *projected_columns = nullptr;
+
  private:
   util::Region region_;
+  catalog::Catalog::TableInfo *info_ = nullptr;
+  byte *buffer_ = nullptr;
 };
 
 template <u8 N, typename F>
@@ -102,20 +139,20 @@ TEST_F(JoinHashTableVectorLookupTest, SimpleGenericLookupTest) {
   auto probe_keys = std::vector<u32>(num_probe);
   std::generate(probe_keys.begin(), probe_keys.end(), Range(0, num_build - 1));
 
-  VectorProjection vp(2, num_probe);
-  VectorProjectionIterator vpi(&vp);
+  VectorProjectionIterator vpi(projected_columns);
 
   // Lookup
   JoinHashTableVectorLookup lookup(*jht);
 
   // Loop over all matches
   u32 count = 0;
-  for (u32 i = 0; i < num_probe; i += kDefaultVectorSize) {
-    u32 size = std::min(kDefaultVectorSize, num_probe - i);
+  for (u32 i = 0; i < num_probe; i += projected_columns->MaxTuples()) {
+    u32 size = std::min(projected_columns->MaxTuples(), num_probe - i);
 
-    // Setup VP
-    vp.ResetFromRaw(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0, size);
-    vpi.SetVectorProjection(&vp);
+    // Setup Projected Column
+    projected_columns->SetNumTuples(size);
+    std::memcpy(projected_columns->ColumnStart(0), &probe_keys[i], size);
+    vpi.SetProjectedColumn(projected_columns);
 
     // Lookup
     lookup.Prepare(&vpi, HashTupleInVPI<N>);
@@ -146,8 +183,7 @@ TEST_F(JoinHashTableVectorLookupTest, DISABLED_PerfLookupTest) {
     std::generate(probe_keys.begin(), probe_keys.end(),
                   Range(0, num_build - 1));
 
-    VectorProjection vp(2, kDefaultVectorSize);
-    VectorProjectionIterator vpi(&vp);
+    VectorProjectionIterator vpi(projected_columns);
 
     // Lookup
     JoinHashTableVectorLookup lookup(*jht);
@@ -160,10 +196,10 @@ TEST_F(JoinHashTableVectorLookupTest, DISABLED_PerfLookupTest) {
     for (u32 i = 0; i < num_probe; i += kDefaultVectorSize) {
       u32 size = std::min(kDefaultVectorSize, num_probe - i);
 
-      // Setup VP
-      vp.ResetFromRaw(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0,
-                      size);
-      vpi.SetVectorProjection(&vp);
+      // Setup Projected Column
+      projected_columns->SetNumTuples(size);
+      std::memcpy(projected_columns->ColumnStart(0), &probe_keys[i], size);
+      vpi.SetProjectedColumn(projected_columns);
 
       // Lookup
       lookup.Prepare(&vpi, HashTupleInVPI<N>);

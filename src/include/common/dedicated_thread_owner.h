@@ -42,7 +42,8 @@ class DedicatedThreadOwner {
    *
    * TODO(tianyu) turn into async if need be
    */
-  virtual void OnThreadRemoved(const std::shared_ptr<DedicatedThreadTask> &task) {}
+  virtual void OnThreadRemoved(
+      const std::shared_ptr<DedicatedThreadTask> &task) {}
 
  private:
   size_t thread_count_ = 0;

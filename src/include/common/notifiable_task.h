@@ -21,8 +21,10 @@ namespace terrier::common {
  * where int is the fd and short is the flags supplied by libevent.
  *
  */
-#define METHOD_AS_CALLBACK(type, method) \
-  [](int fd, int16_t flags, void *arg) { static_cast<type *>(arg)->method(fd, flags); }
+#define METHOD_AS_CALLBACK(type, method)         \
+  [](int fd, int16_t flags, void *arg) {         \
+    static_cast<type *>(arg)->method(fd, flags); \
+  }
 
 /**
  * @brief NotifiableTasks can be configured to handle events with callbacks, and
@@ -72,7 +74,8 @@ class NotifiableTask : public DedicatedThreadTask {
    *        null which will wait forever
    * @return pointer to the allocated event.
    */
-  struct event *RegisterEvent(int fd, int16_t flags, event_callback_fn callback, void *arg,
+  struct event *RegisterEvent(int fd, int16_t flags, event_callback_fn callback,
+                              void *arg,
                               const struct timeval *timeout = nullptr);
   /**
    * @brief Register a signal event. This is a wrapper around RegisterEvent()
@@ -84,7 +87,8 @@ class NotifiableTask : public DedicatedThreadTask {
    * @param arg an argument to be passed to the callback function
    * @return pointer to the allocated event.
    */
-  struct event *RegisterSignalEvent(int signal, event_callback_fn callback, void *arg) {
+  struct event *RegisterSignalEvent(int signal, event_callback_fn callback,
+                                    void *arg) {
     return RegisterEvent(signal, EV_SIGNAL | EV_PERSIST, callback, arg);
   }
 
@@ -100,7 +104,8 @@ class NotifiableTask : public DedicatedThreadTask {
    * @param arg an argument to be passed to the callback function
    * @return pointer to the allocated event.
    */
-  struct event *RegisterPeriodicEvent(const struct timeval *timeout, event_callback_fn callback, void *arg) {
+  struct event *RegisterPeriodicEvent(const struct timeval *timeout,
+                                      event_callback_fn callback, void *arg) {
     return RegisterEvent(-1, EV_TIMEOUT | EV_PERSIST, callback, arg, timeout);
   }
 
@@ -129,9 +134,11 @@ class NotifiableTask : public DedicatedThreadTask {
    * @param arg Argument to the callback function
    * @param timeout Timeout if any for the event
    */
-  void UpdateEvent(struct event *event, int fd, int16_t flags, event_callback_fn callback, void *arg,
+  void UpdateEvent(struct event *event, int fd, int16_t flags,
+                   event_callback_fn callback, void *arg,
                    const struct timeval *timeout = nullptr) {
-    TERRIER_ASSERT(!(events_.find(event) == events_.end()), "Didn't find event");
+    TERRIER_ASSERT(!(events_.find(event) == events_.end()),
+                   "Didn't find event");
     EventUtil::EventDel(event);
     EventUtil::EventAssign(event, base_, fd, flags, callback, arg);
     EventUtil::EventAdd(event, timeout);

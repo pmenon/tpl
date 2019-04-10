@@ -15,8 +15,9 @@ class TypeUtil {
    * Get the size of the given type
    * @param type_id the type to get the size of
    * @return size in bytes used to represent the given type
-   * @warning variable length types return 0. Handle this appropriately when calling this function and rememeber to use
-   * the size of a pointer to point to the varlen entry
+   * @warning variable length types return 0. Handle this appropriately when
+   * calling this function and rememeber to use the size of a pointer to point
+   * to the varlen entry
    * @throw std::runtime_error if type is unknown
    */
   static uint8_t GetTypeSize(const TypeId type_id) {
@@ -37,7 +38,8 @@ class TypeUtil {
       case TypeId::VARBINARY:
         return VARLEN_COLUMN;
       default:
-        throw std::runtime_error("Unknown TypeId in terrier::type::TypeUtil::GetTypeSize().");
+        throw std::runtime_error(
+            "Unknown TypeId in terrier::type::TypeUtil::GetTypeSize().");
     }
   }
 };

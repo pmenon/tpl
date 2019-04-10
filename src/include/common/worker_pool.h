@@ -28,8 +28,8 @@ using TaskQueue = std::queue<std::function<void()>>;
 class WorkerPool {
  public:
   /**
-   * Initialize the worker pool. Once the number of worker is set by the constructor
-   * it cannot be changed.
+   * Initialize the worker pool. Once the number of worker is set by the
+   * constructor it cannot be changed.
    *
    * After initialization, the worker pool automatically starts up.
    *
@@ -38,7 +38,10 @@ class WorkerPool {
    */
   // NOLINTNEXTLINE  lint thinks it has only one arguement
   WorkerPool(uint32_t num_workers, TaskQueue task_queue)
-      : num_workers_(num_workers), is_running_(false), task_queue_(std::move(task_queue)), busy_workers_{0} {
+      : num_workers_(num_workers),
+        is_running_(false),
+        task_queue_(std::move(task_queue)),
+        busy_workers_{0} {
     Startup();
   }
 
@@ -47,9 +50,9 @@ class WorkerPool {
    */
   ~WorkerPool() {
     std::unique_lock<std::mutex> lock(task_lock_);  // grab the lock
-    is_running_ = false;                            // signal all the threads to shutdown
-    task_cv_.notify_all();                          // wake up all the threads
-    lock.unlock();                                  // free the lock
+    is_running_ = false;    // signal all the threads to shutdown
+    task_cv_.notify_all();  // wake up all the threads
+    lock.unlock();          // free the lock
     for (auto &thread : workers_) thread.join();
   }
 
@@ -73,7 +76,8 @@ class WorkerPool {
 
   /**
    * It tells all worker threads to finish their current task and stop working.
-   * No more tasks will be consumed. It waits until all worker threads stop working.
+   * No more tasks will be consumed. It waits until all worker threads stop
+   * working.
    */
   void Shutdown() {
     {
@@ -96,7 +100,9 @@ class WorkerPool {
    */
   template <typename F>
   void SubmitTask(const F &func) {
-    TERRIER_ASSERT(is_running_, "Only allow to submit task after the thread pool has been started up");
+    TERRIER_ASSERT(
+        is_running_,
+        "Only allow to submit task after the thread pool has been started up");
     {
       std::lock_guard<std::mutex> lock(task_lock_);
       task_queue_.emplace(std::move(func));
@@ -112,7 +118,8 @@ class WorkerPool {
     // wait for all the tasks to complete
 
     // If finished_cv_ is notified by worker threads. Lost notify can happen.
-    finished_cv_.wait(lock, [&] { return busy_workers_ == 0 && task_queue_.empty(); });
+    finished_cv_.wait(
+        lock, [&] { return busy_workers_ == 0 && task_queue_.empty(); });
   }
 
   /**
@@ -123,13 +130,15 @@ class WorkerPool {
   uint32_t NumWorkers() const { return num_workers_; }
 
   /**
-   * Change the number of worker threads. It can only be done when the thread pool
-   * if not running.
+   * Change the number of worker threads. It can only be done when the thread
+   * pool if not running.
    *
    * @param num the number of worker threads.
    */
   void SetNumWorkers(uint32_t num) {
-    TERRIER_ASSERT(!is_running_, "Only allow to set num of workers when the thread pool is not running");
+    TERRIER_ASSERT(
+        !is_running_,
+        "Only allow to set num of workers when the thread pool is not running");
     num_workers_ = num;
   }
 
@@ -160,8 +169,10 @@ class WorkerPool {
         {
           // grab the lock
           std::unique_lock<std::mutex> lock(task_lock_);
-          // task_cv_ is notified by new tasks and shutdown command, but lost notify can happen.
-          task_cv_.wait(lock, [&] { return !is_running_ || !task_queue_.empty(); });
+          // task_cv_ is notified by new tasks and shutdown command, but lost
+          // notify can happen.
+          task_cv_.wait(lock,
+                        [&] { return !is_running_ || !task_queue_.empty(); });
           if (!is_running_) {
             // we are shutting down.
             return;

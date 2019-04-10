@@ -39,9 +39,10 @@
 #define TERRIER_ASSERT(expr, message) ((void)0)
 #else
 /*
- * On assert failure, most existing implementations of C++ will print out the condition.
- * By ANDing the truthy not-null message and our initial expression together, we get
- * asserts-with-messages without needing to bring in iostream or logging.
+ * On assert failure, most existing implementations of C++ will print out the
+ * condition. By ANDing the truthy not-null message and our initial expression
+ * together, we get asserts-with-messages without needing to bring in iostream
+ * or logging.
  */
 #define TERRIER_ASSERT(expr, message) assert((expr) && (message))
 #endif /* NDEBUG */
@@ -108,14 +109,18 @@
   DISALLOW_MOVE(cname);
 
 /**
- * Used to mark a class as only obtainable from reinterpreting a chunk of memory initialized as byte array or a buffer.
+ * Used to mark a class as only obtainable from reinterpreting a chunk of memory
+ * initialized as byte array or a buffer.
  *
- * Such classes typically have variable-length objects, that the c++ compiler cannot initialize or lay out correctly as
- * local variables. Thus we will have to keep track of the memory space and take care to only refer to these objects
- * with pointers.
+ * Such classes typically have variable-length objects, that the c++ compiler
+ * cannot initialize or lay out correctly as local variables. Thus we will have
+ * to keep track of the memory space and take care to only refer to these
+ * objects with pointers.
  *
- * Typically classes marked with these will expose static factory methods that calculate the size of an object in memory
- * given some parameters and an Initialize method to construct a valid object from pointer to a chunk of memory
+ * Typically classes marked with these will expose static factory methods that
+ * calculate the size of an object in memory given some parameters and an
+ * Initialize method to construct a valid object from pointer to a chunk of
+ * memory
  */
 #define MEM_REINTERPRETATION_ONLY(cname) \
   cname() = delete;                      \
@@ -127,9 +132,11 @@
 //===----------------------------------------------------------------------===//
 
 #define LLVM_VERSION_GE(major, minor) \
-  (LLVM_VERSION_MAJOR > (major) || (LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR >= (minor)))
+  (LLVM_VERSION_MAJOR > (major) ||    \
+   (LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR >= (minor)))
 
-#define LLVM_VERSION_EQ(major, minor) (LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR == (minor))
+#define LLVM_VERSION_EQ(major, minor) \
+  (LLVM_VERSION_MAJOR == (major) && LLVM_VERSION_MINOR == (minor))
 
 //===----------------------------------------------------------------------===//
 // switch statements
@@ -151,4 +158,5 @@
 #define GTEST_DEBUG_ONLY(TestName) TestName
 #endif
 
-#define FRIEND_TEST(test_case_name, test_name) friend class test_case_name##_##test_name##_Test
+#define FRIEND_TEST(test_case_name, test_name) \
+  friend class test_case_name##_##test_name##_Test

@@ -31,7 +31,8 @@ class HashUtil {
   static hash_t HashBytes(const byte *bytes, const uint64_t length) {
     hash_t hash = length;
     for (uint64_t i = 0; i < length; ++i) {
-      hash = ((hash << 5) ^ (hash >> 27)) ^ static_cast<uint8_t>(bytes[i]);  // NOLINT
+      hash = ((hash << 5) ^ (hash >> 27)) ^
+             static_cast<uint8_t>(bytes[i]);  // NOLINT
     }
     return hash;
   }
@@ -58,7 +59,8 @@ class HashUtil {
    * @return combined hash
    */
   template <class IteratorType>
-  static hash_t CombineHashInRange(const hash_t base, IteratorType first, IteratorType last) {
+  static hash_t CombineHashInRange(const hash_t base, IteratorType first,
+                                   IteratorType last) {
     hash_t result = base;
     for (; first != last; ++first) result = CombineHashes(result, Hash(*first));
     return result;

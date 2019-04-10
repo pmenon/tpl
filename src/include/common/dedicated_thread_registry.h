@@ -28,7 +28,8 @@ class DedicatedThreadRegistry {
   }
 
   /**
-   * TearDown function to clear the thread registry and stop all dedicated threads gracefully
+   * TearDown function to clear the thread registry and stop all dedicated
+   * threads gracefully
    */
   void TearDown() {
     for (auto &entry : thread_owners_table_) {
@@ -59,10 +60,12 @@ class DedicatedThreadRegistry {
    * @return the DedicatedThreadTask running on new thread
    */
   template <typename Task>
-  void RegisterDedicatedThread(DedicatedThreadOwner *requester, std::shared_ptr<Task> task) {
+  void RegisterDedicatedThread(DedicatedThreadOwner *requester,
+                               std::shared_ptr<Task> task) {
     thread_owners_table_[requester].push_back(task);
     requester->NotifyNewThread();
-    TERRIER_ASSERT(threads_table_.find(task.get()) == threads_table_.end(), "Task is already registered");
+    TERRIER_ASSERT(threads_table_.find(task.get()) == threads_table_.end(),
+                   "Task is already registered");
     threads_table_.emplace(task.get(), std::thread([=] { task->RunTask(); }));
   }
 
@@ -74,7 +77,9 @@ class DedicatedThreadRegistry {
   std::unordered_map<DedicatedThreadTask *, std::thread> threads_table_;
   // Using raw pointer here is also fine since the owner's life cycle is
   // not controlled by the registry
-  std::unordered_map<DedicatedThreadOwner *, std::vector<std::shared_ptr<DedicatedThreadTask>>> thread_owners_table_;
+  std::unordered_map<DedicatedThreadOwner *,
+                     std::vector<std::shared_ptr<DedicatedThreadTask>>>
+      thread_owners_table_;
 };
 
 }  // namespace terrier

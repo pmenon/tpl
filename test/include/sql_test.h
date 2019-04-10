@@ -4,7 +4,7 @@
 
 #include "tpl_test.h"  // NOLINT
 
-#include "sql/catalog.h"
+#include "sql/execution_structures.h"
 
 namespace tpl {
 
@@ -12,7 +12,7 @@ class SqlBasedTest : public TplTest {
  protected:
   void SetUp() override {
     TplTest::SetUp();
-    sql::Catalog::Instance();
+    sql::ExecutionStructures::Instance();
   }
 };
 

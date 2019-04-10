@@ -6,7 +6,6 @@
 #include "ast/type.h"
 #include "sql/data_types.h"
 #include "sql/schema.h"
-#include "sql/table.h"
 
 namespace tpl::sema {
 

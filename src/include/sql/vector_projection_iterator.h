@@ -1,16 +1,16 @@
 #pragma once
 
+#include <storage/projected_columns.h>
 #include <limits>
 #include <type_traits>
 
-#include "sql/vector_projection.h"
 #include "util/bit_util.h"
 #include "util/common.h"
 #include "util/macros.h"
 #include "util/vector_util.h"
 
 namespace tpl::sql {
-
+using namespace terrier;
 /// An iterator over vector projections. A VectorProjectionIterator allows both
 /// tuple-at-a-time iteration over a vector projection and vector-at-a-time
 /// processing. There are two separate APIs for each and interleaving is
@@ -23,7 +23,8 @@ class VectorProjectionIterator {
  public:
   VectorProjectionIterator();
 
-  explicit VectorProjectionIterator(VectorProjection *vp);
+  explicit VectorProjectionIterator(
+      storage::ProjectedColumns *projected_column);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(VectorProjectionIterator);
@@ -33,8 +34,8 @@ class VectorProjectionIterator {
   bool IsFiltered() const { return selection_vector_[0] != kInvalidPos; }
 
   /// Set the vector projection to iterate over
-  /// \param vp The vector projection
-  void SetVectorProjection(VectorProjection *vp);
+  /// \param projected_column The projected column
+  void SetProjectedColumn(storage::ProjectedColumns *projected_column);
 
   // -------------------------------------------------------
   // Tuple-at-a-time API
@@ -109,8 +110,8 @@ class VectorProjectionIterator {
   u32 num_selected() const { return num_selected_; }
 
  private:
-  // The vector projection we're iterating over
-  VectorProjection *vector_projection_;
+  // The projected column we are iterating over.
+  storage::ProjectedColumns *projected_column_;
 
   // The current raw position in the vector projection we're pointing to
   u32 curr_idx_;
@@ -138,11 +139,11 @@ template <typename T, bool Nullable>
 inline const T *VectorProjectionIterator::Get(u32 col_idx, bool *null) const {
   if constexpr (Nullable) {
     TPL_ASSERT(null != nullptr, "Missing output variable for NULL indicator");
-    const u32 *col_null_bitmap = vector_projection_->GetNullBitmap(col_idx);
-    *null = util::BitUtil::Test(col_null_bitmap, curr_idx_);
+    *null = projected_column_->ColumnNullBitmap(static_cast<u16>(col_idx))
+                ->Test(curr_idx_);
   }
-
-  const T *col_data = vector_projection_->GetVectorAs<T>(col_idx);
+  const T *col_data =
+      reinterpret_cast<T *>(projected_column_->ColumnStart(col_idx));
   return &col_data[curr_idx_];
 }
 
@@ -158,7 +159,7 @@ inline void VectorProjectionIterator::Match(bool matched) {
 }
 
 inline bool VectorProjectionIterator::HasNext() const {
-  return curr_idx_ < vector_projection_->total_tuple_count();
+  return curr_idx_ < projected_column_->NumTuples();
 }
 
 inline bool VectorProjectionIterator::HasNextFiltered() const {
@@ -227,7 +228,8 @@ inline void VectorProjectionIterator::RunFilter(const F &filter) {
 template <typename T, template <typename> typename Op, bool nullable>
 inline u32 VectorProjectionIterator::FilterColByVal(u32 col_idx, T val) {
   // Get the input column's data
-  const T *input = vector_projection_->GetVectorAs<T>(col_idx);
+  const T *input =
+      reinterpret_cast<T *>(projected_column_->ColumnStart(col_idx));
 
   // Use the existing selection vector if this VPI has been filtered
   const u32 *sel_vec = (IsFiltered() ? selection_vector_ : nullptr);
