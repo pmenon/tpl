@@ -177,7 +177,8 @@ void InitTPL() {
 
   tpl::CpuInfo::Instance();
 
-  tpl::sql::ExecutionStructures::Instance();
+  auto *exec = tpl::sql::ExecutionStructures::Instance();
+  exec->GetCatalog()->CreateTestTables();
 
   tpl::vm::LLVMEngine::Initialize();
 

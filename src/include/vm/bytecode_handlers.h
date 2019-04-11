@@ -218,7 +218,7 @@ void OpTableVectorIteratorFree(tpl::sql::TableVectorIterator *iter);
 VM_OP_HOT void OpTableVectorIteratorGetPCI(
     tpl::sql::ProjectedColumnsIterator **pci,
     tpl::sql::TableVectorIterator *iter) {
-  *pci = iter->vector_projection_iterator();
+  *pci = iter->projected_columns_iterator();
 }
 
 VM_OP_HOT void OpPCIHasNext(bool *has_more,
@@ -325,24 +325,24 @@ VM_OP_HOT void OpPCIGetDecimalNull(tpl::sql::Decimal *out,
 }
 
 void OpPCIFilterEqual(u32 *size, tpl::sql::ProjectedColumnsIterator *iter,
-                      u16 col_id, i64 val);
+                      u16 col_id, tpl::sql::Type *type, i64 val);
 
 void OpPCIFilterGreaterThan(u32 *size, tpl::sql::ProjectedColumnsIterator *iter,
-                            u16 col_id, i64 val);
+                            u16 col_id, tpl::sql::Type *type, i64 val);
 
 void OpPCIFilterGreaterThanEqual(u32 *size,
                                  tpl::sql::ProjectedColumnsIterator *iter,
-                                 u16 col_id, i64 val);
+                                 u16 col_id, tpl::sql::Type *type, i64 val);
 
 void OpPCIFilterLessThan(u32 *size, tpl::sql::ProjectedColumnsIterator *iter,
-                         u16 col_id, i64 val);
+                         u16 col_id, tpl::sql::Type *type, i64 val);
 
 void OpPCIFilterLessThanEqual(u32 *size,
                               tpl::sql::ProjectedColumnsIterator *iter,
-                              u16 col_id, i64 val);
+                              u16 col_id, tpl::sql::Type *type, i64 val);
 
 void OpPCIFilterNotEqual(u32 *size, tpl::sql::ProjectedColumnsIterator *iter,
-                         u16 col_id, i64 val);
+                         u16 col_id, tpl::sql::Type *type, i64 val);
 
 // ---------------------------------------------------------
 // Scalar SQL comparisons

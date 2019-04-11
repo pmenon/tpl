@@ -519,8 +519,9 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto *iter =                                                          \
         frame->LocalAt<sql::ProjectedColumnsIterator *>(READ_LOCAL_ID()); \
     auto col_idx = READ_UIMM4();                                          \
+    auto *type = frame->LocalAt<sql::Type *>(READ_LOCAL_ID());            \
     auto val = READ_IMM8();                                               \
-    OpPCIFilter##Op(size, iter, col_idx, val);                            \
+    OpPCIFilter##Op(size, iter, col_idx, type, val);                      \
     DISPATCH_NEXT();                                                      \
   }
   GEN_PCI_FILTER(Equal)

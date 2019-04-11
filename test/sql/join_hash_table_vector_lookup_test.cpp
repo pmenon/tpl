@@ -78,17 +78,23 @@ class JoinHashTableVectorLookupTest : public TplTest {
     // Create the ProjectedColumns
     buffer_ = common::AllocationUtil::AllocateAligned(
         initializer_map.first.ProjectedColumnsSize());
-    projected_columns = initializer_map.first.Initialize(buffer_);
-    projected_columns->SetNumTuples(kDefaultVectorSize);
+    projected_columns_ = initializer_map.first.Initialize(buffer_);
+    projected_columns_->SetNumTuples(kDefaultVectorSize);
   }
 
   util::Region *region() { return &region_; }
 
-  storage::ProjectedColumns *projected_columns = nullptr;
+  catalog::Catalog::TableInfo *GetTableInfo() { return info_; }
+
+  storage::ProjectedColumns *GetProjectedColumns() {
+    return projected_columns_;
+  }
+
+  catalog::Catalog::TableInfo *info_ = nullptr;
 
  private:
+  storage::ProjectedColumns *projected_columns_ = nullptr;
   util::Region region_;
-  catalog::Catalog::TableInfo *info_ = nullptr;
   byte *buffer_ = nullptr;
 };
 
@@ -148,7 +154,9 @@ TEST_F(JoinHashTableVectorLookupTest, SimpleGenericLookupTest) {
   auto probe_keys = std::vector<u32>(num_probe);
   std::generate(probe_keys.begin(), probe_keys.end(), Range(0, num_build - 1));
 
-  ProjectedColumnsIterator pci(projected_columns);
+  auto *projected_columns = GetProjectedColumns();
+  auto *table_info = GetTableInfo();
+  ProjectedColumnsIterator pci(projected_columns, table_info->GetSqlSchema());
 
   // Lookup
   JoinHashTableVectorLookup lookup(*jht);
@@ -192,7 +200,9 @@ TEST_F(JoinHashTableVectorLookupTest, DISABLED_PerfLookupTest) {
     std::generate(probe_keys.begin(), probe_keys.end(),
                   Range(0, num_build - 1));
 
-    ProjectedColumnsIterator pci(projected_columns);
+    auto *projected_columns = GetProjectedColumns();
+    auto *table_info = GetTableInfo();
+    ProjectedColumnsIterator pci(projected_columns, table_info->GetSqlSchema());
 
     // Lookup
     JoinHashTableVectorLookup lookup(*jht);

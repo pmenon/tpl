@@ -1,9 +1,10 @@
 #pragma once
 
-#include <storage/projected_columns.h>
 #include <limits>
 #include <type_traits>
+#include "storage/projected_columns.h"
 
+#include "sql/schema.h"
 #include "util/bit_util.h"
 #include "util/common.h"
 #include "util/macros.h"
@@ -20,10 +21,10 @@ class ProjectedColumnsIterator {
   static constexpr const u32 kInvalidPos = std::numeric_limits<u32>::max();
 
  public:
-  ProjectedColumnsIterator();
+  explicit ProjectedColumnsIterator(const sql::Schema *sql_schema);
 
-  explicit ProjectedColumnsIterator(
-      storage::ProjectedColumns *projected_column);
+  explicit ProjectedColumnsIterator(storage::ProjectedColumns *projected_column,
+                                    const sql::Schema *sql_schema);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(ProjectedColumnsIterator);
@@ -104,19 +105,26 @@ class ProjectedColumnsIterator {
 
   /// Filter the given column by the given value
   /// \tparam Compare The comparison function
-  /// \param col_idx The index of the column in the ProjectedColumns to filter
+  /// \param col_idx The index of the column in projected column to filter
   /// \param val The value to filter on
   /// \return The number of selected elements
   template <template <typename> typename Op>
-  u32 FilterColByVal(u32 col_idx, FilterVal val);
+  u32 FilterColByVal(u32 col_idx, const sql::Type &sql_type, FilterVal val);
 
   /// Return the number of selected tuples after any filters have been applied
   /// \return The number of selected tuples
   u32 num_selected() const { return num_selected_; }
 
  private:
+  // Filter a column by a constant value
+  template <typename T, template <typename> typename Op>
+  u32 FilterColByValImpl(u32 col_idx, T val);
+
+ private:
   // The projected column we are iterating over.
   storage::ProjectedColumns *projected_column_;
+  // The table's schema
+  const sql::Schema *sql_schema_;
 
   // The current raw position in the ProjectedColumns we're pointing to
   u32 curr_idx_;
@@ -225,36 +233,11 @@ inline void ProjectedColumnsIterator::RunFilter(const F &filter) {
     }
   }
 
-  // After the filter has been run on the entire ProjectedColumns, we need to
+  // After the filter has been run on the entire projected column, we need to
   // ensure that we reset it so that clients can query the updated state of the
-  // PCI, and subsequent filters operate only on valid tuples potentially
+  // VPI, and subsequent filters operate only on valid tuples potentially
   // filtered out in this filter.
   ResetFiltered();
-}
-
-// Filter an entire column's data by the provided constant value
-template <typename T, template <typename> typename Op, bool nullable>
-inline u32 ProjectedColumnsIterator::FilterColByVal(u32 col_idx, T val) {
-  // Get the input column's data
-  const T *input =
-      reinterpret_cast<T *>(projected_column_->ColumnStart(col_idx));
-
-  // Use the existing selection vector if this PCI has been filtered
-  const u32 *sel_vec = (IsFiltered() ? selection_vector_ : nullptr);
-
-  // Filter!
-  selection_vector_write_idx_ = util::VectorUtil::FilterVectorByVal<T, Op>(
-      input, num_selected_, val, selection_vector_, sel_vec);
-
-  // After the filter has been run on the entire ProjectedColumns, we need to
-  // ensure that we reset it so that clients can query the updated state of the
-  // PCI, and subsequent filters operate only on valid tuples potentially
-  // filtered out in this filter.
-  ResetFiltered();
-
-  // After the call to ResetFiltered(), num_selected_ should indicate the number
-  // of valid tuples in the filter.
-  return num_selected();
 }
 
 }  // namespace tpl::sql

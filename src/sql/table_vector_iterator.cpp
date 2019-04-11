@@ -5,18 +5,20 @@ namespace tpl::sql {
 
 using namespace terrier;
 
-TableVectorIterator::TableVectorIterator(const storage::SqlTable &table,
-                                         const catalog::Schema &schema,
-                                         transaction::TransactionContext *txn)
-    : table_(table),
-      schema_(schema),
+TableVectorIterator::TableVectorIterator(
+    catalog::Catalog::TableInfo *table_info,
+    transaction::TransactionContext *txn)
+    : table_(*table_info->GetTable()),
+      schema_(*table_info->GetStorageSchema()),
+      sql_schema_(*table_info->GetSqlSchema()),
       txn_(txn),
-      initializer_(GetInitializer(table, schema)),
-      iter_(table.begin()),
-      null_txn_(txn == nullptr) {
+      initializer_(GetInitializer(table_, schema_)),
+      iter_(table_.begin()),
+      null_txn_(txn == nullptr),
+      pci_(table_info->GetSqlSchema()) {
   // Get the column oids for the projected columns
   std::vector<catalog::col_oid_t> col_oids;
-  const std::vector<catalog::Schema::Column> &columns = schema.GetColumns();
+  const std::vector<catalog::Schema::Column> &columns = schema_.GetColumns();
   for (const auto &col : columns) {
     col_oids.emplace_back(col.GetOid());
   }
@@ -26,6 +28,8 @@ TableVectorIterator::TableVectorIterator(const storage::SqlTable &table,
   // Initilize the projected columns
   projected_columns_ = initializer_.first.Initialize(buffer_);
 }
+
+bool TableVectorIterator::Init() { return true; }
 
 // Helper method to get the PC initialiazer.
 std::pair<storage::ProjectedColumnsInitializer, storage::ProjectionMap>
@@ -60,7 +64,7 @@ bool TableVectorIterator::Advance() {
   }
   // Scan the table a set the projected column.
   table_.Scan(txn_, &iter_, projected_columns_);
-  vector_projection_iterator_.SetProjectedColumn(projected_columns_);
+  pci_.SetProjectedColumn(projected_columns_);
   return true;
 }
 

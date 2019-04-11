@@ -15,9 +15,9 @@ TEST_F(TableVectorIteratorTest, EmptyIteratorTest) {
   //
   auto *exec = sql::ExecutionStructures::Instance();
   exec->GetCatalog()->CreateTestTables();
-  auto *table = exec->GetCatalog()->LookupTableByName("empty_table");
+  auto *table_info = exec->GetCatalog()->LookupTableByName("empty_table");
 
-  TableVectorIterator iter(*table->GetTable(), *table->GetStorageSchema());
+  TableVectorIterator iter(table_info);
   while (iter.Advance()) {
     FAIL() << "Empty table should have no tuples";
   }
@@ -30,10 +30,10 @@ TEST_F(TableVectorIteratorTest, SimpleIteratorTest) {
 
   auto *exec = sql::ExecutionStructures::Instance();
   exec->GetCatalog()->CreateTestTables();
-  auto *table = exec->GetCatalog()->LookupTableByName("test_1");
+  auto *table_info = exec->GetCatalog()->LookupTableByName("test_1");
 
-  TableVectorIterator iter(*table->GetTable(), *table->GetStorageSchema());
-  ProjectedColumnsIterator *pci = iter.vector_projection_iterator();
+  TableVectorIterator iter(table_info);
+  ProjectedColumnsIterator *pci = iter.projected_columns_iterator();
 
   u32 num_tuples = 0;
   while (iter.Advance()) {

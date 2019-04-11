@@ -1,9 +1,9 @@
 #pragma once
 
 #include <vector>
-#include "storage/sql_table.h"
-
+#include "catalog/catalog.h"
 #include "sql/projected_columns_iterator.h"
+#include "storage/sql_table.h"
 
 namespace tpl::sql {
 using namespace terrier;
@@ -12,8 +12,7 @@ class TableVectorIterator {
  public:
   /// Create a new vectorized iterator over the given table
   explicit TableVectorIterator(
-      const terrier::storage::SqlTable &table,
-      const terrier::catalog::Schema &schema,
+      catalog::Catalog::TableInfo *table_info,
       terrier::transaction::TransactionContext *txn = nullptr);
 
   /// This class cannot be copied or moved
@@ -23,10 +22,11 @@ class TableVectorIterator {
   /// \return True if there is more data in the iterator; false otherwise
   bool Advance();
 
+  // TODO(Amadou): Ask Prashant what Init is for.
+  bool Init();
+
   /// Return the iterator over the current active ProjectedColumns
-  ProjectedColumnsIterator *vector_projection_iterator() {
-    return &vector_projection_iterator_;
-  }
+  ProjectedColumnsIterator *projected_columns_iterator() { return &pci_; }
 
  private:
   /**
@@ -43,6 +43,7 @@ class TableVectorIterator {
 
   // Schema of the table
   const terrier::catalog::Schema &schema_;
+  const sql::Schema &sql_schema_;
 
   // Transaction trying to iterate over the table
   terrier::transaction::TransactionContext *txn_;
@@ -62,8 +63,7 @@ class TableVectorIterator {
   // Whether no transaction was passed in.
   bool null_txn_;
 
-  // An iterator over the currently active projection
-  ProjectedColumnsIterator vector_projection_iterator_;
+  ProjectedColumnsIterator pci_;
 };
 
 }  // namespace tpl::sql

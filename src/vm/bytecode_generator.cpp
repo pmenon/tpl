@@ -277,12 +277,13 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   //
   // TODO(Amadou): Increase the size of table ids to u32.
   auto *exec = sql::ExecutionStructures::Instance();
-  auto *table = exec->GetCatalog()->LookupTableByName(
-      node->iter()->As<ast::IdentifierExpr>()->name().data());
+  ast::Identifier table_name = node->iter()->As<ast::IdentifierExpr>()->name();
+  auto *table UNUSED_ATTRIBUTE =
+      exec->GetCatalog()->LookupTableByName(table_name);
   TPL_ASSERT(table != nullptr, "Table does not exist!");
   emitter()->EmitTableIteratorInit(Bytecode::TableVectorIteratorInit,
-                                   table_iter,
-                                   static_cast<u16>(uint32_t(table->GetOid())));
+                                   table_iter, static_cast<u16>(uint32_t(table->GetOid())));
+  emitter()->Emit(Bytecode::TableVectorIteratorPerformInit, table_iter);
 
   //
   // Pull out the PCI from the TableVectorIterator we just initialized

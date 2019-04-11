@@ -14,7 +14,7 @@
 
 namespace terrier::catalog {
 
-constexpr u32 test_table_size = 200000;
+constexpr u32 test_table_size = 2000000;
 
 /**
  * Temporary placeholder for Terrier's actual catalog. It will be remove once

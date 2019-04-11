@@ -111,12 +111,12 @@ namespace tpl::vm {
   F(PCIGetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(PCIGetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(PCIGetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
-  F(PCIFilterEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                     \
-  F(PCIFilterGreaterThan, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)               \
-  F(PCIFilterGreaterThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)          \
-  F(PCIFilterLessThan, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                  \
-  F(PCIFilterLessThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)             \
-  F(PCIFilterNotEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                  \
+  F(PCIFilterEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Local, OperandType::Imm8)                     \
+  F(PCIFilterGreaterThan, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Local, OperandType::Imm8)               \
+  F(PCIFilterGreaterThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Local, OperandType::Imm8)          \
+  F(PCIFilterLessThan, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Local, OperandType::Imm8)                  \
+  F(PCIFilterLessThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Local, OperandType::Imm8)             \
+  F(PCIFilterNotEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Local, OperandType::Imm8)                  \
                                                                                                                        \
   /* SQL type comparisons */                                                                                           \
   F(ForceBoolTruth, OperandType::Local, OperandType::Local)                                                            \
