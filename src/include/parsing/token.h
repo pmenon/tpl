@@ -58,7 +58,7 @@ namespace tpl::parsing {
                                                    \
   /* Non-binary operator keywords */               \
   K(ELSE, "else", 0)                               \
-  K(FALSE, "false", 0)                             \
+  K(OP_FALSE, "false", 0)                          \
   K(FOR, "for", 0)                                 \
   K(FUN, "fun", 0)                                 \
   K(IF, "if", 0)                                   \
@@ -67,7 +67,7 @@ namespace tpl::parsing {
   K(NIL_VAL, "nil", 0)                             \
   K(RETURN, "return", 0)                           \
   K(STRUCT, "struct", 0)                           \
-  K(TRUE, "true", 0)                               \
+  K(OP_TRUE, "true", 0)                               \
   K(VAR, "var", 0)                                 \
                                                    \
   /* Internal */                                   \

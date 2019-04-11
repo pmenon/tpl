@@ -221,7 +221,7 @@ TEST_F(ScannerTest, UnaryOpSyntaxTest) {
       {"fun test(){ return !false }",
        {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN,
         Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE, Token::Type::RETURN,
-        Token::Type::BANG, Token::Type::FALSE, Token::Type::RIGHT_BRACE}},
+        Token::Type::BANG, Token::Type::OP_FALSE, Token::Type::RIGHT_BRACE}},
   };
 
   RunTests(tests);

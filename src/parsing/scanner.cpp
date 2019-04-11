@@ -284,7 +284,7 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
   GROUP_START('e')                          \
   GROUP_ELEM("else", Token::Type::ELSE)     \
   GROUP_START('f')                          \
-  GROUP_ELEM("false", Token::Type::FALSE)   \
+  GROUP_ELEM("false", Token::Type::OP_FALSE)   \
   GROUP_ELEM("for", Token::Type::FOR)       \
   GROUP_ELEM("fun", Token::Type::FUN)       \
   GROUP_START('i')                          \
@@ -301,7 +301,7 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
   GROUP_START('s')                          \
   GROUP_ELEM("struct", Token::Type::STRUCT) \
   GROUP_START('t')                          \
-  GROUP_ELEM("true", Token::Type::TRUE)     \
+  GROUP_ELEM("true", Token::Type::OP_TRUE)     \
   GROUP_START('v')                          \
   GROUP_ELEM("var", Token::Type::VAR)
 

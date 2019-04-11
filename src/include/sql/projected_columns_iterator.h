@@ -124,7 +124,7 @@ class ProjectedColumnsIterator {
   // The projected column we are iterating over.
   storage::ProjectedColumns *projected_column_;
   // The table's schema
-  const sql::Schema *sql_schema_;
+  UNUSED const sql::Schema *sql_schema_;
 
   // The current raw position in the ProjectedColumns we're pointing to
   u32 curr_idx_;

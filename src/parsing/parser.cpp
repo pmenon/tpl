@@ -504,13 +504,13 @@ ast::Expr *Parser::ParsePrimaryExpr() {
       Consume(Token::Type::NIL_VAL);
       return node_factory()->NewNilLiteral(scanner()->current_position());
     }
-    case Token::Type::TRUE: {
-      Consume(Token::Type::TRUE);
+    case Token::Type::OP_TRUE: {
+      Consume(Token::Type::OP_TRUE);
       return node_factory()->NewBoolLiteral(scanner()->current_position(),
                                             true);
     }
-    case Token::Type::FALSE: {
-      Consume(Token::Type::FALSE);
+    case Token::Type::OP_FALSE: {
+      Consume(Token::Type::OP_FALSE);
       return node_factory()->NewBoolLiteral(scanner()->current_position(),
                                             false);
     }
