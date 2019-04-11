@@ -45,11 +45,11 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-# Setup the compiler and setup the compiler flags
-include(SetupCompiler)
-
 # Ensure dependencies
 include(Dependencies)
+
+# Setup the compiler and setup the compiler flags
+include(SetupCompiler)
 
 ############################################################
 #

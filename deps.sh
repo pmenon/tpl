@@ -69,6 +69,7 @@ install_mac() {
   brew ls --versions cmake || brew install cmake
   brew ls --versions git || brew install git
   (brew ls --versions llvm | grep 7) || brew install llvm@7
+  brew ls --versions jemalloc || brew install jemalloc
 }
 
 install_linux() {
@@ -83,7 +84,8 @@ install_linux() {
       git \
       g++-7 \
       clang-7 \
-      llvm-7
+      llvm-7 \
+      libjemalloc-dev
 }
 
 main "$@"

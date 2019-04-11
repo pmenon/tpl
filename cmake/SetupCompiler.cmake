@@ -112,9 +112,22 @@ if ("${TPL_USE_ASAN}" AND "${TPL_USE_TSAN}")
 endif ()
 
 if (${TPL_USE_ASAN})
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize-address-use-after-scope")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fsanitize-address-use-after-scope")
     message(STATUS "AddressSanitizer (ASAN) enabled")
 elseif (${TPL_USE_TSAN})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread")
     message(STATUS "ThreadSanitizer (TSAN) enabled")
+endif ()
+
+############################################################
+#
+# JeMalloc flags
+#
+############################################################
+
+if (${JEMALLOC_FOUND})
+    set(JEMALLOC_LINK_FLAGS "-Wl,--no-as-needed")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${JEMALLOC_LINK_FLAGS}")
 endif ()
