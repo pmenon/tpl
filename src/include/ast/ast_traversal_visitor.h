@@ -6,18 +6,33 @@
 
 namespace tpl::ast {
 
-/**
- * A visitor that fully traverses an AST tree
- *
- * @tparam Subclass
- */
+/// A visitor that fully and recursively traverses an entire AST tree. Clients
+/// can control which AST nodes by implementing only the Visit() methods on the
+/// node types they're interested. Moreover, clients can cull visitations to
+/// whole classes of nodes by implementing VisitNode() and returning true
+/// only for those node types they're interested.
+///
+/// Usage:
+/// \code
+/// class ForStmtVisitor : public AstTraversalVisitor<ForStmtVisitor> {
+///  public:
+///    ForStmtVisitor(ast::AstNode *root) :
+///      AstTraversalVisitor<ForStmtVisitor>(root) {}
+///
+///   void VisitForStmt(ast::ForStmt *stmt) { ... }
+/// }
+/// \endcode
+/// The \a ForStmtVisitor class will find all for-statement nodes in an AST tree
 template <typename Subclass>
 class AstTraversalVisitor : public AstVisitor<Subclass> {
  public:
+  /// Construct a visitor over the AST rooted at \a root
   explicit AstTraversalVisitor(AstNode *root) : root_(root) {}
 
+  /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(AstTraversalVisitor);
 
+  /// Run the traversal
   void Run() {
     TPL_ASSERT(root_ != nullptr, "Cannot run traversal on NULL tree");
     AstVisitor<Subclass>::Visit(root_);
@@ -29,26 +44,27 @@ class AstTraversalVisitor : public AstVisitor<Subclass> {
 #undef DECLARE_VISIT_METHOD
 
  protected:
+  // Should this iterator visit the given node? This method can be implemented
+  // in subclasses to skip some visiting some nodes. By default, we visit all
+  // nodes.
   bool VisitNode(AstNode *node) { return true; }
 
  private:
   AstNode *root_;
 };
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Implementation below
-///
-////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------
+// Implementation below
+// ---------------------------------------------------------
 
 #define PROCESS_NODE(node)                \
   do {                                    \
     if (!this->impl()->VisitNode(node)) { \
       return;                             \
     }                                     \
-  } while (false);
+  } while (false)
 
-#define RECURSE(call) this->impl()->call;
+#define RECURSE(call) this->impl()->call
 
 template <typename Subclass>
 inline void AstTraversalVisitor<Subclass>::VisitBadExpr(BadExpr *node) {
