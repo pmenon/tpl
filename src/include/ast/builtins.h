@@ -4,30 +4,39 @@
 
 namespace tpl::ast {
 
-#define BUILTINS_LIST(V)            \
-  /* Vectorized Filters */          \
-  V(FilterEq, tpl_filter_eq)        \
-  V(FilterGe, tpl_filter_ge)        \
-  V(FilterGt, tpl_filter_gt)        \
-  V(FilterLe, tpl_filter_le)        \
-  V(FilterLt, tpl_filter_lt)        \
-  V(FilterNe, tpl_filter_ne)        \
-                                    \
-  V(RegionInit, tpl_region_init)    \
-  V(RegionFree, tpl_region_free)    \
-                                    \
-  /* Joins */                       \
-  V(HashTableInit, tpl_ht_init)     \
-  V(HashTableInsert, tpl_ht_insert) \
-  V(HashTableBuild, tpl_ht_build)   \
-  V(HashTableFree, tpl_ht_free)     \
-                                    \
-  /* Generic */                     \
-  V(Map, tpl_map)                   \
-  V(Fold, tpl_fold)                 \
-  V(Gather, tpl_gather)             \
-  V(Scatter, tpl_scatter)           \
-  V(Compress, tpl_compress)
+#define BUILTINS_LIST(F)               \
+  /* Vectorized Filters */             \
+  F(FilterEq, filterEq)                \
+  F(FilterGe, filterGe)                \
+  F(FilterGt, filterGt)                \
+  F(FilterLe, filterLe)                \
+  F(FilterLt, filterLt)                \
+  F(FilterNe, filterNe)                \
+                                       \
+  /* Region Allocator */               \
+  F(RegionInit, regionInit)            \
+  F(RegionFree, regionFree)            \
+                                       \
+  /* Joins */                          \
+  F(JoinHashTableInit, joinHTInit)     \
+  F(JoinHashTableInsert, joinHTInsert) \
+  F(JoinHashTableBuild, joinHTBuild)   \
+  F(JoinHashTableFree, joinHTFree)     \
+                                       \
+  /* Sorting */                        \
+  F(SorterInit, sorterInit)            \
+  F(SorterInsert, sorterInsert)        \
+  F(SorterSort, sorterSort)            \
+  F(SorterFree, sorterFree)            \
+                                       \
+  /* Generic */                        \
+  F(Map, map)                          \
+  F(Fold, fold)                        \
+  F(Gather, gather)                    \
+  F(Scatter, scatter)                  \
+  F(Compress, compress)                \
+  F(SizeOf, sizeOf)                    \
+  F(PtrCast, ptrCast)
 
 enum class Builtin : u8 {
 #define ENTRY(Name, ...) Name,

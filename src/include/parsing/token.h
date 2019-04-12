@@ -52,6 +52,7 @@ namespace tpl::parsing {
                                                    \
   /* Identifiers and literals */                   \
   T(IDENTIFIER, "[ident]", 0)                      \
+  T(BUILTIN_IDENTIFIER, "@[ident]", 0)             \
   T(INTEGER, "num", 0)                             \
   T(FLOAT, "float", 0)                             \
   T(STRING, "str", 0)                              \

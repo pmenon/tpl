@@ -290,7 +290,7 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
   if (call->num_args() != 2) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kMismatchedCallArgs,
-                             call->GetFuncName(), 3, call->num_args());
+                             call->GetFuncName(), 2, call->num_args());
     return;
   }
 
@@ -304,8 +304,18 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
     return;
   }
 
+  // Second argument is a hash value
+  if (!call->arguments()[1]->type()->IsIntegerType()) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kBadArgToHashTableInsert,
+                             call->arguments()[1]->type(), 1);
+    return;
+  }
+
   // This call returns nothing
-  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+  ast::Type *ret_type =
+      ast::BuiltinType::Get(context(), ast::BuiltinType::Uint8)->PointerTo();
+  call->set_type(ret_type);
 }
 
 void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
@@ -373,6 +383,18 @@ void Sema::CheckBuiltinRegionCall(ast::CallExpr *call) {
   call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
 }
 
+void Sema::CheckBuiltinSizeOfCall(ast::CallExpr *call) {
+  if (call->num_args() != 1) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kMismatchedCallArgs,
+                             call->GetFuncName(), 1, call->num_args());
+    return;
+  }
+
+  // This call returns an unsigned 32-bit value for the size of the type
+  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Uint32));
+}
+
 void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
   // First, resolve all call arguments. If any fail, exit immediately.
   for (auto *arg : call->arguments()) {
@@ -396,24 +418,28 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
       CheckBuiltinRegionCall(call);
       break;
     }
-    case ast::Builtin::HashTableInit: {
+    case ast::Builtin::JoinHashTableInit: {
       CheckBuiltinJoinHashTableInit(call);
       break;
     }
-    case ast::Builtin::HashTableInsert: {
+    case ast::Builtin::JoinHashTableInsert: {
       CheckBuiltinJoinHashTableInsert(call);
       break;
     }
-    case ast::Builtin::HashTableBuild: {
+    case ast::Builtin::JoinHashTableBuild: {
       CheckBuiltinJoinHashTableBuild(call);
       break;
     }
-    case ast::Builtin::HashTableFree: {
+    case ast::Builtin::JoinHashTableFree: {
       CheckBuiltinJoinHashTableFree(call);
       break;
     }
     case ast::Builtin::Map: {
       CheckBuiltinMapCall(call);
+      break;
+    }
+    case ast::Builtin::SizeOf: {
+      CheckBuiltinSizeOfCall(call);
       break;
     }
     default: {

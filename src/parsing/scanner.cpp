@@ -52,7 +52,12 @@ void Scanner::Scan() {
     switch (c0_) {
       case '@': {
         Advance();
-        type = Token::Type::AT;
+        if (IsIdentifierChar(c0_)) {
+          ScanIdentifierOrKeyword();
+          type = Token::Type::BUILTIN_IDENTIFIER;
+        } else {
+          type = Token::Type::AT;
+        }
         break;
       }
       case '{': {

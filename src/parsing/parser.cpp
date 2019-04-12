@@ -514,6 +514,7 @@ ast::Expr *Parser::ParsePrimaryExpr() {
       return node_factory()->NewBoolLiteral(scanner()->current_position(),
                                             false);
     }
+    case Token::Type::BUILTIN_IDENTIFIER:
     case Token::Type::IDENTIFIER: {
       Next();
       const SourcePosition &position = scanner()->current_position();

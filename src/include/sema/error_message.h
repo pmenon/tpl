@@ -95,9 +95,9 @@ namespace sema {
     "Received type '%0' in position %1",                                       \
     (ast::Type *, u32))                                                        \
   F(BadArgToHashTableInsert,                                                   \
-    "Hash table insert function expects three arguments: a pointer to hash "   \
-    "table, literal of all key columns, and literal array of all attributes. " \
-    "Received type '%0' in position %1",                                       \
+    "Hash table insert function expects two arguments: a pointer to hash "     \
+    "table and the hash value of the element to insert. Received type '%0' "   \
+    "in position %1",                                                          \
     (ast::Type *, u32))                                                        \
   F(BadArgToHashTableBuild,                                                    \
     "Hash table build function expects a pointer to a hash table. Received "   \

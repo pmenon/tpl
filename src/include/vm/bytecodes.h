@@ -166,7 +166,7 @@ namespace tpl::vm {
   F(IntegerAvgAggregateFree, OperandType::Local)                                                                       \
                                                                                                                        \
   /* Hash Joins */                                                                                                     \
-  F(JoinHashTableInit, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
+  F(JoinHashTableInit, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
   F(JoinHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                               \
   F(JoinHashTableBuild, OperandType::Local)                                                                            \
   F(JoinHashTableFree, OperandType::Local)                                                                             \

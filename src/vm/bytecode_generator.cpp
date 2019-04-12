@@ -576,8 +576,8 @@ void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
   emitter()->EmitReturn();
 }
 
-void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
-                                                   const ast::Builtin builtin) {
+void BytecodeGenerator::VisitBuiltinFilterCall(ast::CallExpr *call,
+                                               ast::Builtin builtin) {
   ast::Context *ctx = call->type()->context();
   ast::Type *ret_type = ast::BuiltinType::Get(ctx, ast::BuiltinType::Int32);
 
@@ -590,7 +590,7 @@ void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
   }
 
   // Collect the three call arguments
-  LocalVar vpi = VisitExpressionForRValue(call->arguments()[0]).ValueOf();
+  LocalVar vpi = VisitExpressionForRValue(call->arguments()[0]);
   UNUSED ast::Identifier col_name =
       call->arguments()[1]->As<ast::LitExpr>()->raw_string_val();
   i64 val = call->arguments()[2]->As<ast::LitExpr>()->int32_val();
@@ -627,10 +627,10 @@ void BytecodeGenerator::VisitBuiltinFilterCallExpr(ast::CallExpr *call,
   emitter()->EmitVPIVectorFilter(bytecode, ret_val, vpi, 0, val);
 }
 
-void BytecodeGenerator::VisitBuiltinJoinHashTableCallExpr(
-    ast::CallExpr *call, const ast::Builtin builtin) {
+void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call,
+                                                      ast::Builtin builtin) {
   switch (builtin) {
-    case ast::Builtin::HashTableInit: {
+    case ast::Builtin::JoinHashTableInit: {
       LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
       LocalVar region = VisitExpressionForRValue(call->arguments()[1]);
       LocalVar entry_size = VisitExpressionForRValue(call->arguments()[2]);
@@ -638,27 +638,42 @@ void BytecodeGenerator::VisitBuiltinJoinHashTableCallExpr(
                       entry_size);
       break;
     }
-    case ast::Builtin::HashTableInsert: {
+    case ast::Builtin::JoinHashTableInsert: {
+      LocalVar dest = execution_result()->GetOrCreateDestination(call->type());
+      LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar hash = VisitExpressionForRValue(call->arguments()[1]);
+      emitter()->Emit(Bytecode::JoinHashTableAllocTuple, dest, join_hash_table,
+                      hash);
       break;
     }
-    case ast::Builtin::HashTableBuild: {
+    case ast::Builtin::JoinHashTableBuild: {
       LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
       emitter()->Emit(Bytecode::JoinHashTableBuild, join_hash_table);
       break;
     }
-    case ast::Builtin::HashTableFree: {
+    case ast::Builtin::JoinHashTableFree: {
+      LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::JoinHashTableFree, join_hash_table);
       break;
     }
     default: { UNREACHABLE("Impossible bytecode"); }
   }
 }
 
-void BytecodeGenerator::VisitBuiltinRegionCallExpr(ast::CallExpr *call,
-                                                   const ast::Builtin builtin) {
+void BytecodeGenerator::VisitBuiltinRegionCall(ast::CallExpr *call,
+                                               ast::Builtin builtin) {
   LocalVar region = VisitExpressionForRValue(call->arguments()[0]);
   auto region_op = builtin == ast::Builtin::RegionInit ? Bytecode::RegionInit
                                                        : Bytecode::RegionFree;
   emitter()->Emit(region_op, region);
+}
+
+void BytecodeGenerator::VisitBuiltinSizeOfCall(ast::CallExpr *call) {
+  ast::Type *target_type = call->arguments()[0]->type();
+  LocalVar size_var = execution_result()->GetOrCreateDestination(
+      ast::BuiltinType::Get(target_type->context(), ast::BuiltinType::Uint32));
+  emitter()->EmitAssignImm4(size_var, target_type->size());
+  execution_result()->set_destination(size_var.ValueOf());
 }
 
 void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
@@ -674,19 +689,23 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::FilterLt:
     case ast::Builtin::FilterLe:
     case ast::Builtin::FilterNe: {
-      VisitBuiltinFilterCallExpr(call, builtin);
+      VisitBuiltinFilterCall(call, builtin);
       break;
     }
     case ast::Builtin::RegionInit:
     case ast::Builtin::RegionFree: {
-      VisitBuiltinRegionCallExpr(call, builtin);
+      VisitBuiltinRegionCall(call, builtin);
       break;
     }
-    case ast::Builtin::HashTableInit:
-    case ast::Builtin::HashTableInsert:
-    case ast::Builtin::HashTableBuild:
-    case ast::Builtin::HashTableFree: {
-      VisitBuiltinJoinHashTableCallExpr(call, builtin);
+    case ast::Builtin::JoinHashTableInit:
+    case ast::Builtin::JoinHashTableInsert:
+    case ast::Builtin::JoinHashTableBuild:
+    case ast::Builtin::JoinHashTableFree: {
+      VisitBuiltinJoinHashTableCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::SizeOf: {
+      VisitBuiltinSizeOfCall(call);
       break;
     }
     default: { UNREACHABLE("Builtin not supported!"); }
