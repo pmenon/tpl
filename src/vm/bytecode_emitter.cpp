@@ -146,28 +146,69 @@ void BytecodeEmitter::EmitConditionalJump(Bytecode bytecode, LocalVar cond,
 }
 
 void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1) {
+  TPL_ASSERT(Bytecodes::NumOperands(bytecode) == 1,
+             "Incorrect operand count for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 0) == OperandType::Local,
+             "Incorrect operand type at index 0 for bytecode");
   EmitAll(bytecode, operand_1);
 }
 
 void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1,
                            LocalVar operand_2) {
+  TPL_ASSERT(Bytecodes::NumOperands(bytecode) == 2,
+             "Incorrect operand count for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 0) == OperandType::Local,
+             "Incorrect operand type at index 0 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 1) == OperandType::Local,
+             "Incorrect operand type at index 1 for bytecode");
   EmitAll(bytecode, operand_1, operand_2);
 }
 
 void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1,
                            LocalVar operand_2, LocalVar operand_3) {
+  TPL_ASSERT(Bytecodes::NumOperands(bytecode) == 3,
+             "Incorrect operand count for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 0) == OperandType::Local,
+             "Incorrect operand type at index 0 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 1) == OperandType::Local,
+             "Incorrect operand type at index 1 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 2) == OperandType::Local,
+             "Incorrect operand type at index 2 for bytecode");
   EmitAll(bytecode, operand_1, operand_2, operand_3);
 }
 
 void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1,
                            LocalVar operand_2, LocalVar operand_3,
                            LocalVar operand_4) {
+  TPL_ASSERT(Bytecodes::NumOperands(bytecode) == 4,
+             "Incorrect operand count for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 0) == OperandType::Local,
+             "Incorrect operand type at index 0 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 1) == OperandType::Local,
+             "Incorrect operand type at index 1 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 2) == OperandType::Local,
+             "Incorrect operand type at index 2 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 3) == OperandType::Local,
+             "Incorrect operand type at index 3 for bytecode");
   EmitAll(bytecode, operand_1, operand_2, operand_3, operand_4);
 }
 
 void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1,
                            LocalVar operand_2, LocalVar operand_3,
                            LocalVar operand_4, LocalVar operand_5) {
+  TPL_ASSERT(Bytecodes::NumOperands(bytecode) == 5,
+             "Incorrect operand count for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 0) == OperandType::Local,
+             "Incorrect operand type at index 0 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 1) == OperandType::Local,
+             "Incorrect operand type at index 1 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 2) == OperandType::Local,
+             "Incorrect operand type at index 2 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 3) == OperandType::Local,
+             "Incorrect operand type at index 3 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 4) == OperandType::Local,
+             "Incorrect operand type at index 4 for bytecode");
+
   EmitAll(bytecode, operand_1, operand_2, operand_3, operand_4, operand_5);
 }
 
@@ -175,6 +216,20 @@ void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1,
                            LocalVar operand_2, LocalVar operand_3,
                            LocalVar operand_4, LocalVar operand_5,
                            LocalVar operand_6) {
+  TPL_ASSERT(Bytecodes::NumOperands(bytecode) == 6,
+             "Incorrect operand count for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 0) == OperandType::Local,
+             "Incorrect operand type at index 0 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 1) == OperandType::Local,
+             "Incorrect operand type at index 1 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 2) == OperandType::Local,
+             "Incorrect operand type at index 2 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 3) == OperandType::Local,
+             "Incorrect operand type at index 3 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 4) == OperandType::Local,
+             "Incorrect operand type at index 4 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 5) == OperandType::Local,
+             "Incorrect operand type at index 5 for bytecode");
   EmitAll(bytecode, operand_1, operand_2, operand_3, operand_4, operand_5,
           operand_6);
 }
@@ -183,6 +238,22 @@ void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1,
                            LocalVar operand_2, LocalVar operand_3,
                            LocalVar operand_4, LocalVar operand_5,
                            LocalVar operand_6, LocalVar operand_7) {
+  TPL_ASSERT(Bytecodes::NumOperands(bytecode) == 7,
+             "Incorrect operand count for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 0) == OperandType::Local,
+             "Incorrect operand type at index 0 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 1) == OperandType::Local,
+             "Incorrect operand type at index 1 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 2) == OperandType::Local,
+             "Incorrect operand type at index 2 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 3) == OperandType::Local,
+             "Incorrect operand type at index 3 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 4) == OperandType::Local,
+             "Incorrect operand type at index 4 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 5) == OperandType::Local,
+             "Incorrect operand type at index 5 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 6) == OperandType::Local,
+             "Incorrect operand type at index 6 for bytecode");
   EmitAll(bytecode, operand_1, operand_2, operand_3, operand_4, operand_5,
           operand_6, operand_7);
 }
@@ -192,6 +263,24 @@ void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1,
                            LocalVar operand_4, LocalVar operand_5,
                            LocalVar operand_6, LocalVar operand_7,
                            LocalVar operand_8) {
+  TPL_ASSERT(Bytecodes::NumOperands(bytecode) == 8,
+             "Incorrect operand count for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 0) == OperandType::Local,
+             "Incorrect operand type at index 0 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 1) == OperandType::Local,
+             "Incorrect operand type at index 1 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 2) == OperandType::Local,
+             "Incorrect operand type at index 2 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 3) == OperandType::Local,
+             "Incorrect operand type at index 3 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 4) == OperandType::Local,
+             "Incorrect operand type at index 4 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 5) == OperandType::Local,
+             "Incorrect operand type at index 5 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 6) == OperandType::Local,
+             "Incorrect operand type at index 6 for bytecode");
+  TPL_ASSERT(Bytecodes::GetNthOperandType(bytecode, 7) == OperandType::Local,
+             "Incorrect operand type at index 7 for bytecode");
   EmitAll(bytecode, operand_1, operand_2, operand_3, operand_4, operand_5,
           operand_6, operand_7, operand_8);
 }

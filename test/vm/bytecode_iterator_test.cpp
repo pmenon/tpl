@@ -27,7 +27,7 @@ TEST_F(BytecodeIteratorTest, SimpleIteratorTest) {
 
   emitter.Emit(Bytecode::BitNeg_i8, v2, v1);
   emitter.EmitBinaryOp(Bytecode::Add_i16, v3, v2, v1);
-  emitter.Emit(Bytecode::BitAnd_i8, v2, v3);
+  emitter.Emit(Bytecode::BitAnd_i8, v1, v2, v3);
 
   vm::BytecodeIterator iter(code(), 0, code().size());
   EXPECT_FALSE(iter.Done());
@@ -47,8 +47,9 @@ TEST_F(BytecodeIteratorTest, SimpleIteratorTest) {
 
   EXPECT_FALSE(iter.Done());
   EXPECT_EQ(Bytecode::BitAnd_i8, iter.CurrentBytecode());
-  EXPECT_EQ(v2, iter.GetLocalOperand(0));
-  EXPECT_EQ(v3, iter.GetLocalOperand(1));
+  EXPECT_EQ(v1, iter.GetLocalOperand(0));
+  EXPECT_EQ(v2, iter.GetLocalOperand(1));
+  EXPECT_EQ(v3, iter.GetLocalOperand(2));
 
   iter.Advance();
 
