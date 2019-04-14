@@ -24,7 +24,8 @@ fun cleanupState(state: *State) -> nil {
 fun pipeline_1(state: *State) -> nil {
   var jht: *JoinHashTable = &state.table
   for (vec in test_1@[batch=2048]) {
-    var elem = @joinHTInsert(jht, 10)
+    var elem: *BuildRow = @joinHTInsert(jht, 10)
+    elem.key = 44
   }
 }
 

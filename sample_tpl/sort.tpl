@@ -8,20 +8,22 @@ fun compareFn(lhs: *Row, rhs: *Row) -> bool {
 }
 
 fun main() -> int32 {
-  var sorter: Sorter
-  @sorterInit(&sorter, &compareFn, @sizeof(row_type))
+  var alloc: RegionAlloc
+  @regionInit(&alloc)
 
-  for (row in test) {
-    var elem = @ptrCast(*Row, @sorterInsert(&sorter))
-    elem.a = row.a
-    elem.b = row.b
+  var sorter: Sorter
+  @sorterInit(&sorter, &alloc, &compareFn, @sizeOf(Row))
+
+  for (row in test_1) {
+    var elem: *Row = @sorterInsert(&sorter)
+    elem.a = row.colA
+    elem.b = row.colB
   }
 
   @sorterSort(&sorter)
 
-  for (row in sorter) {
-
-  }
+  @sorterFree(&sorter)
+  @regionFree(&alloc)
 
   return 0
 }
