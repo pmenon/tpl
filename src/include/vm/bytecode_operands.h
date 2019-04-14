@@ -26,8 +26,7 @@ enum class OperandSize : u8 {
   V(JumpOffset, true, OperandSize::Int)    \
   V(Local, false, OperandSize::Int)        \
   V(LocalCount, false, OperandSize::Short) \
-  V(FunctionId, false, OperandSize::Short) \
-  V(FunctionPtr, false, OperandSize::Short)
+  V(FunctionId, false, OperandSize::Short)
 
 /// This enumeration lists all possible types of operands to any bytecode
 enum class OperandType : u8 {
@@ -39,23 +38,23 @@ enum class OperandType : u8 {
 /// Helper class to query operand types
 class OperandTypes {
  public:
-  static bool IsSignedImmediate(OperandType operand_type) {
+  static constexpr bool IsSignedImmediate(OperandType operand_type) {
     return operand_type == OperandType::Imm1 ||
            operand_type == OperandType::Imm2 ||
            operand_type == OperandType::Imm4 ||
            operand_type == OperandType::Imm8;
   }
 
-  static bool IsUnsignedImmediate(OperandType operand_type) {
+  static constexpr bool IsUnsignedImmediate(OperandType operand_type) {
     return operand_type == OperandType::UImm2 ||
            operand_type == OperandType::UImm4;
   }
 
-  static bool IsLocal(OperandType operand_type) {
+  static constexpr bool IsLocal(OperandType operand_type) {
     return operand_type == OperandType::Local;
   }
 
-  static bool IsLocalCount(OperandType operand_type) {
+  static constexpr bool IsLocalCount(OperandType operand_type) {
     return operand_type == OperandType::LocalCount;
   }
 
