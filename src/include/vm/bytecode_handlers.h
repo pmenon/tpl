@@ -654,6 +654,11 @@ VM_OP_HOT void OpSorterIteratorAdvance(tpl::sql::SorterIterator *iter) {
   iter->operator++();
 }
 
+VM_OP_HOT void OpSorterIteratorGetRow(const byte **row,
+                                      tpl::sql::SorterIterator *iter) {
+  *row = iter->operator*();
+}
+
 void OpSorterIteratorFree(tpl::sql::SorterIterator *iter);
 
 }  // extern "C"
