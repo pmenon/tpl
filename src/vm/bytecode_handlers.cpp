@@ -111,8 +111,7 @@ void OpAggregationHashTableFree(tpl::sql::AggregationHashTable *agg_table) {
 // ---------------------------------------------------------
 
 void OpSorterInit(tpl::sql::Sorter *sorter, tpl::util::Region *region,
-                  tpl::sql::Sorter::ComparisonFunction cmp_fn,
-                  u32 tuple_size) {
+                  tpl::sql::Sorter::ComparisonFunction cmp_fn, u32 tuple_size) {
   new (sorter) tpl::sql::Sorter(region, cmp_fn, tuple_size);
 }
 
