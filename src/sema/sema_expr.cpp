@@ -20,8 +20,7 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
       ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
 
   // If either the left or right expressions are SQL booleans, implicitly cast
-  // to a primitive boolean type in preparation for the comparison.
-
+  // to a primitive boolean type in preparation for the comparison
   if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
     left = context()->node_factory()->NewImplicitCastExpr(
         left->position(), ast::CastKind::SqlBoolToBool, bool_type, left);
@@ -69,7 +68,6 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
 
   // If either the left or right types aren't SQL integers, cast them to SQL
   // integers to perform arithmetic operation
-
   if (!right->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
     right = context()->node_factory()->NewImplicitCastExpr(
         right->position(), ast::CastKind::IntToSqlInt, sql_int_type, right);
@@ -113,10 +111,7 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
   ast::Type *const sql_int_type =
       ast::BuiltinType::Get(context(), ast::BuiltinType::Integer);
 
-  //
   // If either the left or right types aren't SQL integers, cast them up to one
-  //
-
   if (!right->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
     right = context()->node_factory()->NewImplicitCastExpr(
         right->position(), ast::CastKind::IntToSqlInt, sql_int_type, right);
@@ -672,14 +667,9 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   // Recurse into the function body
   Visit(node->body());
 
-  //
-  // If the function is empty or doesn't end in a terminator, we need to check
-  // if the function is **supposed** to return something. If the function has a
-  // non-nil return type and doesn't return anything, it's an error. If the
-  // function has a nil return type, but doesn't return, we synthesize a return
-  // statement here.
-  //
-
+  // Check the return value. We allow functions to be empty or elide a final
+  // "return" statement only if the function has a "nil" return type. In this
+  // case, we automatically insert a "return" statement.
   if (node->IsEmpty() || !ast::Stmt::IsTerminating(node->body())) {
     if (!func_type->return_type()->IsNilType()) {
       error_reporter()->Report(node->body()->right_brace_position(),
