@@ -632,19 +632,19 @@ VM_OP_HOT void OpSorterInit(tpl::sql::Sorter *sorter, tpl::util::Region *region,
   new (sorter) tpl::sql::Sorter(region, cmp_fn, tuple_size);
 }
 
-VM_OP_HOT void OpSorterAllocInputTuple(byte **result,
-                                       tpl::sql::Sorter *sorter) {
+VM_OP_HOT void OpSorterAllocTuple(byte **result,
+                                  tpl::sql::Sorter *sorter) {
   *result = sorter->AllocInputTuple();
 }
 
-VM_OP_HOT void OpSorterAllocInputTupleTopK(byte **result,
-                                           tpl::sql::Sorter *sorter,
-                                           u64 top_k) {
+VM_OP_HOT void OpSorterAllocTupleTopK(byte **result,
+                                      tpl::sql::Sorter *sorter,
+                                      u64 top_k) {
   *result = sorter->AllocInputTupleTopK(top_k);
 }
 
-VM_OP_HOT void OpSorterAllocInputTupleTopKFinish(tpl::sql::Sorter *sorter,
-                                                 u64 top_k) {
+VM_OP_HOT void OpSorterAllocTupleTopKFinish(tpl::sql::Sorter *sorter,
+                                            u64 top_k) {
   sorter->AllocInputTupleTopKFinish(top_k);
 }
 

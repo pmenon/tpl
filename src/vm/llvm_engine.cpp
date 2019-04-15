@@ -648,12 +648,6 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
           }
           break;
         }
-        case OperandType::FunctionPtr: {
-          const u16 func_id = iter.GetFunctionIdOperand(i);
-          const auto &callee_info = tpl_module().GetFuncInfoById(func_id);
-          args.push_back(module()->getFunction(callee_info->name()));
-          break;
-        }
       }
     }
 

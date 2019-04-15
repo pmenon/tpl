@@ -12,7 +12,7 @@ fun main() -> int32 {
   @regionInit(&alloc)
 
   var sorter: Sorter
-  @sorterInit(&sorter, &alloc, &compareFn, @sizeOf(Row))
+  @sorterInit(&sorter, &alloc, compareFn, @sizeOf(Row))
 
   for (row in test_1) {
     var elem: *Row = @sorterInsert(&sorter)

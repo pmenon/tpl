@@ -850,34 +850,35 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
   OP(SorterInit) : {
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
-    auto cmp_func_id = frame->LocalAt<FunctionId>(READ_UIMM2());
-    auto tuple_size = READ_UIMM4();
+    auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
+    auto cmp_func_id = frame->LocalAt<FunctionId>(READ_LOCAL_ID());
+    auto tuple_size = frame->LocalAt<u32>(READ_LOCAL_ID());
 
     auto cmp_fn = reinterpret_cast<sql::Sorter::ComparisonFunction>(
         module().GetFuncTrampoline(cmp_func_id));
-    OpSorterInit(sorter, nullptr, cmp_fn, tuple_size);
+    OpSorterInit(sorter, region, cmp_fn, tuple_size);
     DISPATCH_NEXT();
   }
 
-  OP(SorterAllocInputTuple) : {
+  OP(SorterAllocTuple) : {
     auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
-    OpSorterAllocInputTuple(result, sorter);
+    OpSorterAllocTuple(result, sorter);
     DISPATCH_NEXT();
   }
 
-  OP(SorterAllocInputTupleTopK) : {
+  OP(SorterAllocTupleTopK) : {
     auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
     auto top_k = READ_IMM8();
-    OpSorterAllocInputTupleTopK(result, sorter, top_k);
+    OpSorterAllocTupleTopK(result, sorter, top_k);
     DISPATCH_NEXT();
   }
 
-  OP(SorterAllocInputTupleTopKFinish) : {
+  OP(SorterAllocTupleTopKFinish) : {
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
     auto top_k = READ_IMM8();
-    OpSorterAllocInputTupleTopKFinish(sorter, top_k);
+    OpSorterAllocTupleTopKFinish(sorter, top_k);
     DISPATCH_NEXT();
   }
 

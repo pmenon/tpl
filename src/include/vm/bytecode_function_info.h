@@ -109,6 +109,10 @@ class LocalVar {
   /// \return A "loaded" version of the variable
   LocalVar ValueOf() const { return LocalVar(GetOffset(), AddressMode::Value); }
 
+  LocalVar AddressOf() const {
+    return LocalVar(GetOffset(), AddressMode::Address);
+  }
+
   /// Is this a valid local variable?
   /// \return True if valid; false otherwise
   bool IsInvalid() const { return GetOffset() == kInvalidOffset; }
@@ -171,7 +175,6 @@ class FunctionInfo {
   /// Allocate a new local variable with type \a type and name \a name. This
   /// returns a LocalVar object with the Address addressing mode (i.e., a
   /// pointer to the variable).
-  ///
   /// \param type The TPL type of the variable
   /// \param name The name of the variable. If no name is given, the variable
   ///             is assigned a synthesized one.
@@ -179,17 +182,20 @@ class FunctionInfo {
   LocalVar NewLocal(ast::Type *type, const std::string &name = "");
 
   /// Lookup a local variable by name
-  ///
   /// \param name The name of the local variable
   /// \return A (logical) pointer to the local variable
   LocalVar LookupLocal(const std::string &name) const;
 
+  /// Lookup the information for a local variable in this function by its name
+  /// \param name The name of the local variable to find
+  /// \return A possibly null pointer to the local's information
+  const LocalInfo *LookupLocalInfoByName(const std::string &name) const;
+
   /// Lookup the information for a local variable in this function by the
   /// variable's offset in the function's execution frame
-  ///
   /// \param local The offset in bytes of the local
   /// \return A possible nullptr to the local's information
-  const LocalInfo *LookupLocalInfo(u32 offset) const;
+  const LocalInfo *LookupLocalInfoByOffset(u32 offset) const;
 
   /// Return the ID of the return value for the function
   LocalVar GetReturnValueLocal() const {

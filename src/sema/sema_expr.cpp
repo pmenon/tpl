@@ -395,6 +395,127 @@ void Sema::CheckBuiltinSizeOfCall(ast::CallExpr *call) {
   call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Uint32));
 }
 
+void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
+  if (call->num_args() != 4) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kMismatchedCallArgs,
+                             call->GetFuncName(), 4, call->num_args());
+    return;
+  }
+
+  // First argument must be a pointer to a Sorter
+  auto *sorter_type = call->arguments()[0]->type()->GetPointeeType();
+  if (sorter_type == nullptr ||
+      !sorter_type->IsSpecificBuiltin(ast::BuiltinType::Sorter)) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kBadArgToSorterInit,
+                             call->arguments()[0]->type(), 0);
+    return;
+  }
+
+  // Second argument must be a pointer to a RegionAllocator
+  auto *region_type = call->arguments()[1]->type()->GetPointeeType();
+  if (region_type == nullptr ||
+      !region_type->IsSpecificBuiltin(ast::BuiltinType::RegionAlloc)) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kBadArgToHashTableInit,
+                             call->arguments()[1]->type(), 1);
+    return;
+  }
+
+  // Second argument must be a function
+  auto *cmp_func_type =
+      call->arguments()[2]->type()->SafeAs<ast::FunctionType>();
+  if (!cmp_func_type->IsFunctionType() || cmp_func_type->num_params() != 2 ||
+      !cmp_func_type->return_type()->IsBoolType() ||
+      !cmp_func_type->params()[0].type->IsPointerType() ||
+      !cmp_func_type->params()[1].type->IsPointerType()) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kBadArgToSorterInit,
+                             call->arguments()[2]->type(), 2);
+    return;
+  }
+
+  // Third and last argument must be a 32-bit number representing the tuple size
+  auto *entry_size_type = call->arguments()[3]->type();
+  if (!entry_size_type->IsIntegerType()) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kBadArgToSorterInit,
+                             call->arguments()[3]->type(), 3);
+    return;
+  }
+
+  // This call returns nothing
+  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+}
+
+void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call) {
+  if (call->num_args() != 1) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kMismatchedCallArgs,
+                             call->GetFuncName(), 1, call->num_args());
+    return;
+  }
+
+  // First argument must be a pointer to a Sorter
+  auto *sorter_type = call->arguments()[0]->type()->GetPointeeType();
+  if (sorter_type == nullptr ||
+      !sorter_type->IsSpecificBuiltin(ast::BuiltinType::Sorter)) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kBadArgToSorterInsert,
+                             call->arguments()[0]->type(), 0);
+    return;
+  }
+
+  // This call returns nothing
+  call->set_type(
+      ast::BuiltinType::Get(context(), ast::BuiltinType::Uint8)->PointerTo());
+}
+
+void Sema::CheckBuiltinSorterSort(ast::CallExpr *call) {
+  if (call->num_args() != 1) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kMismatchedCallArgs,
+                             call->GetFuncName(), 3, call->num_args());
+    return;
+  }
+
+  // First argument must be a pointer to a Sorter
+  auto *sorter_type = call->arguments()[0]->type()->GetPointeeType();
+  if (sorter_type == nullptr ||
+      !sorter_type->IsSpecificBuiltin(ast::BuiltinType::Sorter)) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kBadArgToSorterSort,
+                             call->arguments()[0]->type(), 0);
+    return;
+  }
+
+  // This call returns nothing
+  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+}
+
+void Sema::CheckBuiltinSorterFree(ast::CallExpr *call) {
+  if (call->num_args() != 1) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kMismatchedCallArgs,
+                             call->GetFuncName(), 1, call->num_args());
+    return;
+  }
+
+  // First argument must be a pointer to a Sorter
+  auto *sorter_type = call->arguments()[0]->type()->GetPointeeType();
+  if (sorter_type == nullptr ||
+      !sorter_type->IsSpecificBuiltin(ast::BuiltinType::Sorter)) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kBadArgToSorterFree,
+                             call->arguments()[0]->type(), 0);
+    return;
+  }
+
+  // This call returns nothing
+  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+}
+
 void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
   // First, resolve all call arguments. If any fail, exit immediately.
   for (auto *arg : call->arguments()) {
@@ -432,6 +553,22 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
     }
     case ast::Builtin::JoinHashTableFree: {
       CheckBuiltinJoinHashTableFree(call);
+      break;
+    }
+    case ast::Builtin::SorterInit: {
+      CheckBuiltinSorterInit(call);
+      break;
+    }
+    case ast::Builtin::SorterInsert: {
+      CheckBuiltinSorterInsert(call);
+      break;
+    }
+    case ast::Builtin::SorterSort: {
+      CheckBuiltinSorterSort(call);
+      break;
+    }
+    case ast::Builtin::SorterFree: {
+      CheckBuiltinSorterFree(call);
       break;
     }
     case ast::Builtin::Map: {
@@ -679,6 +816,13 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
       break;
     }
     case parsing::Token::Type::AMPERSAND: {
+      if (expr_type->IsFunctionType()) {
+        error_reporter()->Report(node->position(),
+                                 ErrorMessages::kInvalidOperation, node->op(),
+                                 expr_type);
+        return;
+      }
+      
       node->set_type(expr_type->PointerTo());
       break;
     }

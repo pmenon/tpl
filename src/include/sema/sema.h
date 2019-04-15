@@ -88,6 +88,10 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinJoinHashTableInsert(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableBuild(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableFree(ast::CallExpr *call);
+  void CheckBuiltinSorterInit(ast::CallExpr *call);
+  void CheckBuiltinSorterInsert(ast::CallExpr *call);
+  void CheckBuiltinSorterSort(ast::CallExpr *call);
+  void CheckBuiltinSorterFree(ast::CallExpr *call);
   void CheckBuiltinRegionCall(ast::CallExpr *call);
   void CheckBuiltinSizeOfCall(ast::CallExpr *call);
 

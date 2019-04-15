@@ -237,12 +237,12 @@ void BytecodeGenerator::VisitVectorWiseIteration(ast::ForInStmt *node,
   //
 
   // Get the name and type of the target VPI iteration variable
-  auto type = current_function()->LookupLocalInfo(vpi.GetOffset())->type();
-  auto iter_name = node->target()->As<ast::IdentifierExpr>()->name().data();
+  auto *iter_type = node->target()->type();
+  auto *iter_name = node->target()->As<ast::IdentifierExpr>()->name().data();
 
   // Create the variable and assign it the value of the given VPI
-  LocalVar iter = current_function()->NewLocal(type, iter_name);
-  BuildAssign(iter, vpi, type);
+  LocalVar iter = current_function()->NewLocal(iter_type, iter_name);
+  BuildAssign(iter, vpi, iter_type);
 
   // Generate body
   VisitIterationStatement(node, table_loop);
@@ -497,18 +497,14 @@ void BytecodeGenerator::VisitVariableDecl(ast::VariableDecl *node) {
 void BytecodeGenerator::VisitAddressOfExpr(ast::UnaryOpExpr *op) {
   TPL_ASSERT(execution_result()->IsRValue(),
              "Address-of expressions must be R-values!");
-  //
-  // TODO(pmenon): Remove extra assignment
-  //
-  // L-values can't take a target local to store into address values into. Thus,
-  // we evaluate as an R-value into a temporary and copy into the real
-  // destination. Optimize later ...
-  //
-
-  LocalVar dest = execution_result()->GetOrCreateDestination(op->type());
   LocalVar addr = VisitExpressionForLValue(op->expr());
-  BuildAssign(dest, addr, op->type());
-  execution_result()->set_destination(dest.ValueOf());
+  if (execution_result()->HasDestination()) {
+    // Despite the below function's name, we're just getting the destination
+    LocalVar dest = execution_result()->GetOrCreateDestination(op->type());
+    BuildAssign(dest, addr, op->type());
+  } else {
+    execution_result()->set_destination(addr);
+  }
 }
 
 void BytecodeGenerator::VisitDerefExpr(ast::UnaryOpExpr *op) {
@@ -660,6 +656,45 @@ void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call,
   }
 }
 
+void BytecodeGenerator::VisitBuiltinSorterCall(ast::CallExpr *call,
+                                               ast::Builtin builtin) {
+  switch (builtin) {
+    case ast::Builtin::SorterInit: {
+      // TODO(pmenon): Fix me so that the comparison function doesn't have be
+      // listed by name.
+      LocalVar sorter = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar region = VisitExpressionForRValue(call->arguments()[1]);
+      // LocalVar cmp_fn = VisitExpressionForRValue(call->arguments()[2]);
+      const std::string cmp_func_name =
+          call->arguments()[2]->As<ast::IdentifierExpr>()->name().data();
+      auto cmp_fn = current_function()->NewLocal(ast::BuiltinType::Get(
+          call->type()->context(), ast::BuiltinType::Uint16));
+      emitter()->EmitAssignImm2(cmp_fn, LookupFuncIdByName(cmp_func_name));
+      LocalVar entry_size = VisitExpressionForRValue(call->arguments()[3]);
+      emitter()->Emit(Bytecode::SorterInit, sorter, region, cmp_fn.ValueOf(),
+                      entry_size);
+      break;
+    }
+    case ast::Builtin::SorterInsert: {
+      LocalVar dest = execution_result()->GetOrCreateDestination(call->type());
+      LocalVar sorter = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::SorterAllocTuple, dest, sorter);
+      break;
+    }
+    case ast::Builtin::SorterSort: {
+      LocalVar sorter = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::SorterSort, sorter);
+      break;
+    }
+    case ast::Builtin::SorterFree: {
+      LocalVar sorter = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::SorterFree, sorter);
+      break;
+    }
+    default: { UNREACHABLE("Impossible bytecode"); }
+  }
+}
+
 void BytecodeGenerator::VisitBuiltinRegionCall(ast::CallExpr *call,
                                                ast::Builtin builtin) {
   LocalVar region = VisitExpressionForRValue(call->arguments()[0]);
@@ -702,6 +737,13 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::JoinHashTableBuild:
     case ast::Builtin::JoinHashTableFree: {
       VisitBuiltinJoinHashTableCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::SorterInit:
+    case ast::Builtin::SorterInsert:
+    case ast::Builtin::SorterSort:
+    case ast::Builtin::SorterFree: {
+      VisitBuiltinSorterCall(call, builtin);
       break;
     }
     case ast::Builtin::SizeOf: {

@@ -66,18 +66,27 @@ LocalVar FunctionInfo::LookupLocal(const std::string &name) const {
     }
   }
 
-  // Invalid local
   return LocalVar();
 }
 
-const LocalInfo *FunctionInfo::LookupLocalInfo(u32 offset) const {
+const LocalInfo *FunctionInfo::LookupLocalInfoByName(
+    const std::string &name) const {
+  for (const auto &local_info : locals()) {
+    if (local_info.name() == name) {
+      return &local_info;
+    }
+  }
+
+  return nullptr;
+}
+
+const LocalInfo *FunctionInfo::LookupLocalInfoByOffset(u32 offset) const {
   for (const auto &local_info : locals()) {
     if (local_info.offset() == offset) {
       return &local_info;
     }
   }
 
-  // Invalid local
   return nullptr;
 }
 

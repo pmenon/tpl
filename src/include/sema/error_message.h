@@ -106,7 +106,23 @@ namespace sema {
   F(BadArgToRegionFunction,                                                    \
     "All builtin region functions require a region pointer as the first "      \
     "argument. Received type '%0'",                                            \
-    (ast::Type *))
+    (ast::Type *))                                                             \
+  F(BadArgToSorterInit,                                                        \
+    "sorterInit() expects (*Sorter, *Region, (*,*)->bool, u32) argument "      \
+    "types. Received type '%0' in position %1",                                \
+    (ast::Type *, u32))                                                        \
+  F(BadArgToSorterInsert,                                                      \
+    "sorterInsert() expects (*Sorter) argument types. Received type '%0' in "  \
+    "position %1",                                                             \
+    (ast::Type *, u32))                                                        \
+  F(BadArgToSorterSort,                                                        \
+    "sorterSort() expects (*Sorter) argument types. Received type '%0' in "    \
+    "position %1",                                                             \
+    (ast::Type *, u32))                                                        \
+  F(BadArgToSorterFree,                                                        \
+    "sorterFree() expects (*Sorter) argument types. Received type '%0' in "    \
+    "position %1",                                                             \
+    (ast::Type *, u32))
 
 /**
  * Define the ErrorMessageId enumeration

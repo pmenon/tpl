@@ -172,10 +172,10 @@ namespace tpl::vm {
   F(JoinHashTableFree, OperandType::Local)                                                                             \
                                                                                                                        \
   /* Sorting */                                                                                                        \
-  F(SorterInit, OperandType::Local, OperandType::FunctionPtr, OperandType::UImm4)                                      \
-  F(SorterAllocInputTuple, OperandType::Local)                                                                         \
-  F(SorterAllocInputTupleTopK, OperandType::Local)                                                                     \
-  F(SorterAllocInputTupleTopKFinish, OperandType::Local)                                                               \
+  F(SorterInit, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                        \
+  F(SorterAllocTuple, OperandType::Local, OperandType::Local)                                                          \
+  F(SorterAllocTupleTopK, OperandType::Local, OperandType::Local)                                                      \
+  F(SorterAllocTupleTopKFinish, OperandType::Local, OperandType::Local)                                                \
   F(SorterSort, OperandType::Local)                                                                                    \
   F(SorterFree, OperandType::Local)
 
