@@ -894,6 +894,25 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(SorterIteratorInit) : {
+    auto *iter = frame->LocalAt<sql::SorterIterator *>(READ_LOCAL_ID());
+    auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
+    OpSorterIteratorInit(iter, sorter);
+    DISPATCH_NEXT();
+  }
+
+  OP(SorterIteratorAdvance) : {
+    auto *iter = frame->LocalAt<sql::SorterIterator *>(READ_LOCAL_ID());
+    OpSorterIteratorAdvance(iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(SorterIteratorFree) : {
+    auto *iter = frame->LocalAt<sql::SorterIterator *>(READ_LOCAL_ID());
+    OpSorterIteratorFree(iter);
+    DISPATCH_NEXT();
+  }
+
   // Impossible
   UNREACHABLE("Impossible to reach end of interpreter loop. Bad code!");
 }

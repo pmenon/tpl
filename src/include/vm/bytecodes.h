@@ -177,7 +177,10 @@ namespace tpl::vm {
   F(SorterAllocTupleTopK, OperandType::Local, OperandType::Local)                                                      \
   F(SorterAllocTupleTopKFinish, OperandType::Local, OperandType::Local)                                                \
   F(SorterSort, OperandType::Local)                                                                                    \
-  F(SorterFree, OperandType::Local)
+  F(SorterFree, OperandType::Local)                                                                                    \
+  F(SorterIteratorInit, OperandType::Local, OperandType::Local)                                                        \
+  F(SorterIteratorAdvance, OperandType::Local)                                                                         \
+  F(SorterIteratorFree, OperandType::Local)
 
 // clang-format on
 

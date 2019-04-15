@@ -626,19 +626,14 @@ void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table);
 // Sorting
 // ---------------------------------------------------------
 
-VM_OP_HOT void OpSorterInit(tpl::sql::Sorter *sorter, tpl::util::Region *region,
-                            tpl::sql::Sorter::ComparisonFunction cmp_fn,
-                            u32 tuple_size) {
-  new (sorter) tpl::sql::Sorter(region, cmp_fn, tuple_size);
-}
+void OpSorterInit(tpl::sql::Sorter *sorter, tpl::util::Region *region,
+                  tpl::sql::Sorter::ComparisonFunction cmp_fn, u32 tuple_size);
 
-VM_OP_HOT void OpSorterAllocTuple(byte **result,
-                                  tpl::sql::Sorter *sorter) {
+VM_OP_HOT void OpSorterAllocTuple(byte **result, tpl::sql::Sorter *sorter) {
   *result = sorter->AllocInputTuple();
 }
 
-VM_OP_HOT void OpSorterAllocTupleTopK(byte **result,
-                                      tpl::sql::Sorter *sorter,
+VM_OP_HOT void OpSorterAllocTupleTopK(byte **result, tpl::sql::Sorter *sorter,
                                       u64 top_k) {
   *result = sorter->AllocInputTupleTopK(top_k);
 }
@@ -648,8 +643,17 @@ VM_OP_HOT void OpSorterAllocTupleTopKFinish(tpl::sql::Sorter *sorter,
   sorter->AllocInputTupleTopKFinish(top_k);
 }
 
-VM_OP_HOT void OpSorterSort(tpl::sql::Sorter *sorter) { sorter->Sort(); }
+void OpSorterSort(tpl::sql::Sorter *sorter);
 
-VM_OP_HOT void OpSorterFree(tpl::sql::Sorter *sorter) { sorter->~Sorter(); }
+void OpSorterFree(tpl::sql::Sorter *sorter);
+
+void OpSorterIteratorInit(tpl::sql::SorterIterator *iter,
+                          tpl::sql::Sorter *sorter);
+
+VM_OP_HOT void OpSorterIteratorAdvance(tpl::sql::SorterIterator *iter) {
+  iter->operator++();
+}
+
+void OpSorterIteratorFree(tpl::sql::SorterIterator *iter);
 
 }  // extern "C"

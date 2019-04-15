@@ -106,4 +106,27 @@ void OpAggregationHashTableFree(tpl::sql::AggregationHashTable *agg_table) {
   agg_table->~AggregationHashTable();
 }
 
+// ---------------------------------------------------------
+// Sorters
+// ---------------------------------------------------------
+
+void OpSorterInit(tpl::sql::Sorter *sorter, tpl::util::Region *region,
+                  tpl::sql::Sorter::ComparisonFunction cmp_fn,
+                  u32 tuple_size) {
+  new (sorter) tpl::sql::Sorter(region, cmp_fn, tuple_size);
+}
+
+void OpSorterSort(tpl::sql::Sorter *sorter) { sorter->Sort(); }
+
+void OpSorterFree(tpl::sql::Sorter *sorter) { sorter->~Sorter(); }
+
+void OpSorterIteratorInit(tpl::sql::SorterIterator *iter,
+                          tpl::sql::Sorter *sorter) {
+  new (iter) tpl::sql::SorterIterator(sorter);
+}
+
+void OpSorterIteratorFree(tpl::sql::SorterIterator *iter) {
+  iter->~SorterIterator();
+}
+
 }  //
