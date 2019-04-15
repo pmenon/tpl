@@ -822,7 +822,7 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
                                  expr_type);
         return;
       }
-      
+
       node->set_type(expr_type->PointerTo());
       break;
     }
