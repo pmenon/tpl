@@ -75,7 +75,7 @@ class BytecodeModule {
   /// \return True if the function was found and the output parameter was set
   template <typename Ret, typename... ArgTypes>
   bool GetFunction(const std::string &name, ExecutionMode exec_mode,
-                   std::function<Ret(ArgTypes...)> &func) const;
+                   std::function<Ret(ArgTypes...)> &func);
 
   /// Pretty print all the module's contents into the provided output stream
   /// \param os The stream into which we dump the module's contents
@@ -168,7 +168,7 @@ inline void CopyAll(u8 *buffer, const HeadT &head, const RestT &... rest) {
 template <typename RetT, typename... ArgTypes>
 inline bool BytecodeModule::GetFunction(
     const std::string &name, ExecutionMode exec_mode,
-    std::function<RetT(ArgTypes...)> &func) const {
+    std::function<RetT(ArgTypes...)> &func) {
   const FunctionInfo *func_info = GetFuncInfoByName(name);
 
   // Check valid function

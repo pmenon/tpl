@@ -107,25 +107,6 @@ TEST_F(BytecodeTrampolineTest, BigIntFunctionTest) {
     BytecodeCompiler compiler;
 
     auto src = R"(
-    fun test() -> int64 {
-      var x : int64 = 10
-      return x
-    })";
-    auto module = compiler.CompileToModule(src);
-    module->PrettyPrint(std::cout);
-
-    EXPECT_FALSE(compiler.HasErrors());
-
-    auto fn = reinterpret_cast<i64 (*)()>(
-        module->GetFuncTrampoline(module->GetFuncInfoByName("test")->id()));
-
-    EXPECT_EQ(10, fn());
-  }
-
-  {
-    BytecodeCompiler compiler;
-
-    auto src = R"(
     fun mul3(a: int64, b: int64, c: int64) -> int64 {
       return a * b * c
     })";

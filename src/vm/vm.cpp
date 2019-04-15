@@ -1,5 +1,6 @@
 #include "vm/vm.h"
 
+#include <iostream>
 #include <numeric>
 #include <string>
 #include <vector>
@@ -25,14 +26,11 @@ class VM::Frame {
 
  public:
   /// Constructor
-  Frame(VM *vm, std::size_t frame_size) : vm_(vm), frame_size_(frame_size) {
-    frame_data_ = vm->AllocateFrame(frame_size);
+  Frame(u8 *frame_data, std::size_t frame_size)
+      : frame_data_(frame_data), frame_size_(frame_size) {
     TPL_ASSERT(frame_data_ != nullptr, "Frame data cannot be null");
     TPL_ASSERT(frame_size_ >= 0, "Frame size must be >= 0");
   }
-
-  /// Destructor
-  ~Frame() { vm_->ReleaseFrame(frame_size_); }
 
   /// Access the local variable at the given index in the fame. The \ref 'index'
   /// attribute is encoded and indicates whether the local variable is accessed
@@ -72,10 +70,7 @@ class VM::Frame {
   void EnsureInFrame(UNUSED LocalVar var) const {}
 #endif
 
-  u8 *raw_frame() const { return frame_data_; }
-
  private:
-  VM *vm_;
   u8 *frame_data_;
   std::size_t frame_size_;
 };
@@ -84,34 +79,54 @@ class VM::Frame {
 // Virtual Machine
 // ---------------------------------------------------------
 
-VM::VM(const BytecodeModule &module, util::Region *region)
-    : our_region_(module.name()),
-      region_(region != nullptr ? region : &our_region_),
-      stack_(kDefaultInitialStackSize, 0, region_),
-      sp_(0),
-      module_(module),
-      bytecode_counts_{0ull} {
-  (void)bytecode_counts_;
-}  // unused variable
+// The maximum amount of stack to use. If the function requires more than 16K
+// bytes, acquire space from the heap.
+static constexpr const u32 kMaxStackAllocSize = 1ull << 14ull;
+// A soft-maximum amount of stack to use. If a function's frame requires more
+// than 4K (the soft max), try the stack and fallback to heap. If the function
+// requires less, use the stack.
+static constexpr const u32 kSoftMaxStackAllocSize = 1ull << 12ull;
+
+VM::VM(const BytecodeModule &module) : module_(module) {}
 
 // static
-void VM::InvokeFunction(const BytecodeModule &module, const FunctionId func,
+void VM::InvokeFunction(const BytecodeModule &module, const FunctionId func_id,
                         const u8 args[]) {
-  const FunctionInfo *const func_info = module.GetFuncInfoById(func);
-  const u8 *ip = module.GetBytecodeForFunction(*func_info);
+  // The function's info
+  const FunctionInfo *const func_info = module.GetFuncInfoById(func_id);
+  TPL_ASSERT(func_info != nullptr, "Function doesn't exist in module!");
+  const std::size_t frame_size = func_info->frame_size();
 
-  // The virtual machine
-  VM vm(module);
-
-  // Locals frame
-  Frame frame(&vm, func_info->frame_size());
+  // Let's try to get some space
+  bool used_heap = false;
+  u8 *raw_frame = nullptr;
+  if (frame_size > kMaxStackAllocSize) {
+    used_heap = true;
+    raw_frame = static_cast<u8 *>(std::aligned_alloc(alignof(u64), frame_size));
+  } else if (frame_size > kSoftMaxStackAllocSize) {
+    // TODO(pmenon): Check stack before allocation
+    raw_frame = static_cast<u8 *>(alloca(frame_size));
+  } else {
+    raw_frame = static_cast<u8 *>(alloca(frame_size));
+  }
 
   // Copy args into frame
-  std::memcpy(frame.raw_frame() + func_info->params_start_pos(), args,
+  std::memcpy(raw_frame + func_info->params_start_pos(), args,
               func_info->params_size());
 
-  // Let's go
-  vm.Interpret(ip, &frame);
+  // Let's go. First, create the virtual machine instance.
+  VM vm(module);
+
+  // Now get the bytecode for the function and fire it off
+  const u8 *const bytecode = module.GetBytecodeForFunction(*func_info);
+  TPL_ASSERT(bytecode != nullptr, "Bytecode cannot be null");
+  Frame frame(raw_frame, frame_size);
+  vm.Interpret(bytecode, &frame);
+
+  // Cleanup
+  if (used_heap) {
+    std::free(raw_frame);
+  }
 }
 
 namespace {
@@ -925,41 +940,44 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 }
 
 const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
-  //
   // Read the function ID and the argument count to the function first
-  //
+  const u16 func_id = READ_UIMM2();
+  const u16 num_params = READ_UIMM2();
 
-  auto func_id = READ_UIMM2();
-  auto num_params = READ_UIMM2();
-
-  //
   // Lookup the function
-  //
-
   const FunctionInfo *func = module().GetFuncInfoById(func_id);
   TPL_ASSERT(func != nullptr, "Function doesn't exist in module!");
+  const std::size_t frame_size = func->frame_size();
 
-  //
-  // Create the function's execution frame, and initialize it with the call
-  // arguments encoded in the instruction stream
-  //
+  // Get some space for the function's frame
+  bool used_heap = false;
+  u8 *raw_frame = nullptr;
+  if (frame_size > kMaxStackAllocSize) {
+    used_heap = true;
+    raw_frame = static_cast<u8 *>(std::aligned_alloc(alignof(u64), frame_size));
+  } else if (frame_size > kSoftMaxStackAllocSize) {
+    // TODO(pmenon): Check stack before allocation
+    raw_frame = static_cast<u8 *>(alloca(frame_size));
+  } else {
+    raw_frame = static_cast<u8 *>(alloca(frame_size));
+  }
 
-  VM::Frame callee(this, func->frame_size());
-
-  u8 *const raw_frame = callee.raw_frame();
+  // Set up the arguments to the function
   for (u32 i = 0; i < num_params; i++) {
     const LocalInfo &param_info = func->locals()[i];
     const void *const param = caller->LocalAt<void *>(READ_LOCAL_ID());
     std::memcpy(raw_frame + param_info.offset(), &param, param_info.size());
   }
 
-  //
-  // Frame preparation is complete. Let's bounce ...
-  //
-
+  // Let's go
   const u8 *bytecode = module().GetBytecodeForFunction(*func);
   TPL_ASSERT(bytecode != nullptr, "Bytecode cannot be null");
+  VM::Frame callee(raw_frame, func->frame_size());
   Interpret(bytecode, &callee);
+
+  if (used_heap) {
+    std::free(raw_frame);
+  }
 
   return ip;
 }
