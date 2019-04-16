@@ -1,6 +1,5 @@
 #include "vm/vm.h"
 
-#include <iostream>
 #include <numeric>
 #include <string>
 #include <vector>
