@@ -1,5 +1,7 @@
 #pragma once
 
+#include "LLVM/ADT/DenseMap.h"
+
 #include <string>
 #include <unordered_set>
 
@@ -7,6 +9,7 @@
 #include "ast/ast_node_factory.h"
 #include "ast/context.h"
 #include "ast/identifier.h"
+#include "parsing/parsing_context.h"
 #include "parsing/scanner.h"
 #include "sema/error_reporter.h"
 
@@ -89,6 +92,20 @@ class Parser {
     return context()->GetIdentifier(literal);
   }
 
+  // Get the current symbol's name within the parsing context scope
+  ast::Identifier GetScopedSymbol(parsing::ParsingContext *pctx) {
+    const std::string &literal = scanner()->current_literal();
+    std::string sym_name = pctx->GetScopedSymbolName(literal);
+    return context()->GetIdentifier(sym_name);
+  }
+
+  // Get the current symbol, making it unique within this parsing context
+  ast::Identifier GetUniqueSymbol(parsing::ParsingContext *pctx) {
+    const std::string &literal = scanner()->current_literal();
+    const std::string &sym_name = pctx->MakeUniqueSymbolName(literal);
+    return context()->GetIdentifier(sym_name);
+  }
+
   // In case of errors, sync up to any token in the list
   void Sync(const std::unordered_set<Token::Type> &s);
 
@@ -96,55 +113,55 @@ class Parser {
   // Parsing productions
   // -------------------------------------------------------
 
-  ast::Decl *ParseDecl();
+  ast::Decl *ParseDecl(parsing::ParsingContext *pctx);
 
-  ast::Decl *ParseFunctionDecl();
+  ast::Decl *ParseFunctionDecl(parsing::ParsingContext *pctx);
 
-  ast::Decl *ParseStructDecl();
+  ast::Decl *ParseStructDecl(parsing::ParsingContext *pctx);
 
-  ast::Decl *ParseVariableDecl();
+  ast::Decl *ParseVariableDecl(parsing::ParsingContext *pctx);
 
-  ast::Stmt *ParseStmt();
+  ast::Stmt *ParseStmt(parsing::ParsingContext *pctx);
 
-  ast::Stmt *ParseSimpleStmt();
+  ast::Stmt *ParseSimpleStmt(parsing::ParsingContext *pctx);
 
-  ast::Stmt *ParseBlockStmt();
+  ast::Stmt *ParseBlockStmt(parsing::ParsingContext *pctx);
 
   class ForHeader;
 
-  ForHeader ParseForHeader();
+  ForHeader ParseForHeader(parsing::ParsingContext *pctx);
 
-  ast::Stmt *ParseForStmt();
+  ast::Stmt *ParseForStmt(parsing::ParsingContext *pctx);
 
-  ast::Stmt *ParseIfStmt();
+  ast::Stmt *ParseIfStmt(parsing::ParsingContext *pctx);
 
-  ast::Stmt *ParseReturnStmt();
+  ast::Stmt *ParseReturnStmt(parsing::ParsingContext *pctx);
 
-  ast::Expr *ParseExpr();
+  ast::Expr *ParseExpr(parsing::ParsingContext *pctx);
 
-  ast::Expr *ParseBinaryOpExpr(u32 min_prec);
+  ast::Expr *ParseBinaryOpExpr(parsing::ParsingContext *pctx, u32 min_prec);
 
-  ast::Expr *ParseUnaryOpExpr();
+  ast::Expr *ParseUnaryOpExpr(parsing::ParsingContext *pctx);
 
-  ast::Expr *ParseLeftHandSideExpression();
+  ast::Expr *ParseLeftHandSideExpression(parsing::ParsingContext *pctx);
 
-  ast::Expr *ParsePrimaryExpr();
+  ast::Expr *ParsePrimaryExpr(parsing::ParsingContext *pctx);
 
-  ast::Expr *ParseFunctionLitExpr();
+  ast::Expr *ParseFunctionLitExpr(parsing::ParsingContext *pctx);
 
-  ast::Expr *ParseType();
+  ast::Expr *ParseType(parsing::ParsingContext *pctx);
 
-  ast::Expr *ParseFunctionType();
+  ast::Expr *ParseFunctionType(parsing::ParsingContext *pctx);
 
-  ast::Expr *ParsePointerType();
+  ast::Expr *ParsePointerType(parsing::ParsingContext *pctx);
 
-  ast::Expr *ParseArrayType();
+  ast::Expr *ParseArrayType(parsing::ParsingContext *pctx);
 
-  ast::Expr *ParseStructType();
+  ast::Expr *ParseStructType(parsing::ParsingContext *pctx);
 
-  ast::Expr *ParseMapType();
+  ast::Expr *ParseMapType(parsing::ParsingContext *pctx);
 
-  ast::Attributes *ParseAttributes();
+  ast::Attributes *ParseAttributes(parsing::ParsingContext *pctx);
 
  private:
   // The source code scanner
