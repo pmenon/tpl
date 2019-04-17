@@ -116,4 +116,3 @@ class ParsingContext {
   ParsingContext *outer_;
 };
 }  // namespace tpl::parsing
-
