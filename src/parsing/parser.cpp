@@ -51,9 +51,7 @@ ast::Decl *Parser::ParseDecl(parsing::ParsingContext *pctx) {
     case Token::Type::FUN: {
       return ParseFunctionDecl(pctx);
     }
-    default: {
-      break;
-    }
+    default: { break; }
   }
 
   // Report error, sync up and try again
@@ -163,9 +161,7 @@ ast::Stmt *Parser::ParseStmt(parsing::ParsingContext *pctx) {
       ast::Decl *var_decl = ParseVariableDecl(pctx);
       return node_factory()->NewDeclStmt(var_decl);
     }
-    default: {
-      return ParseSimpleStmt(pctx);
-    }
+    default: { return ParseSimpleStmt(pctx); }
   }
 }
 
@@ -564,9 +560,7 @@ ast::Expr *Parser::ParsePrimaryExpr(parsing::ParsingContext *pctx) {
       Expect(Token::Type::RIGHT_PAREN);
       return expr;
     }
-    default: {
-      break;
-    }
+    default: { break; }
   }
 
   // Error
@@ -614,9 +608,7 @@ ast::Expr *Parser::ParseType(parsing::ParsingContext *pctx) {
     case Token::Type::STRUCT: {
       return ParseStructType(pctx);
     }
-    default: {
-      break;
-    }
+    default: { break; }
   }
 
   // Error

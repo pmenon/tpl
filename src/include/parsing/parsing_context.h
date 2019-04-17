@@ -115,6 +115,5 @@ class ParsingContext {
   /* Outer scope. */
   ParsingContext *outer_;
 };
-
 }  // namespace tpl::parsing
 
