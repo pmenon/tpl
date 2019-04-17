@@ -17,9 +17,9 @@ class ParsingContext {
     return ParsingContext(this, scope_level_ + 1);
   }
 
-  bool SymbolNameExists(const std::string &sym_name) {
+  bool SymbolExists(ast::Identifier sym) {
     for (const ParsingContext *ctx = this; ctx != nullptr; ctx = ctx->outer_) {
-      auto iter = ctx->symbols_.find(sym_name);
+      auto iter = ctx->symbols_.find(sym);
       if (iter != ctx->symbols_.end()) {
         return true;
       }
@@ -27,36 +27,37 @@ class ParsingContext {
     return false;
   }
 
-  const std::string &GetScopedSymbolName(const std::string &sym_name) {
+  ast::Identifier GetScopedSymbol(ast::Identifier sym) {
     for (const ParsingContext *ctx = this; ctx != nullptr; ctx = ctx->outer_) {
-      auto iter = ctx->symbols_.find(sym_name);
+      auto iter = ctx->symbols_.find(sym);
       if (iter != ctx->symbols_.end()) {
         return iter->second;
       }
     }
-    TPL_ASSERT(false, "No name?");
-    return sym_name;
+    TPL_ASSERT(false, "Where did the symbol go?");
+    return sym;
   }
 
-  const std::string &MakeUniqueSymbolName(const std::string &sym_name) {
+  ast::Identifier MakeUniqueSymbol(ast::Context *ctx, ast::Identifier sym) {
     // if the symbol doesn't exist, we're good. map the symbol to itself.
-    if (!SymbolNameExists(sym_name)) {
-      symbols_[sym_name] = sym_name;
-      return sym_name;
+    if (!SymbolExists(sym)) {
+      symbols_.insert({sym, sym});
+      return sym;
     }
     // otherwise, we must make a new symbol.
-    // TODO(WAN): more efficient way?
-    auto new_sym_name = new std::string(sym_name);
+    auto new_sym_name = new std::string(sym.data());
     new_sym_name->append(std::to_string(scope_level_));
-    symbols_[sym_name] = *new_sym_name;
-    return *new_sym_name;
+    auto new_sym = ctx->GetIdentifier(*new_sym_name);
+    symbols_.erase(sym);
+    symbols_.insert({sym, new_sym});
+    return new_sym;
   }
 
  private:
   ParsingContext(ParsingContext *outer, u8 scope_level)
       : outer_(outer), scope_level_(scope_level) {}
 
-  llvm::StringMap<std::string> symbols_;
+  llvm::DenseMap<ast::Identifier, ast::Identifier> symbols_;
   ParsingContext *outer_;
   u8 scope_level_;
 };

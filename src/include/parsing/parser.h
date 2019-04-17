@@ -92,20 +92,6 @@ class Parser {
     return context()->GetIdentifier(literal);
   }
 
-  // Get the current symbol's name within the parsing context scope
-  ast::Identifier GetScopedSymbol(parsing::ParsingContext *pctx) {
-    const std::string &literal = scanner()->current_literal();
-    std::string sym_name = pctx->GetScopedSymbolName(literal);
-    return context()->GetIdentifier(sym_name);
-  }
-
-  // Get the current symbol, making it unique within this parsing context
-  ast::Identifier GetUniqueSymbol(parsing::ParsingContext *pctx) {
-    const std::string &literal = scanner()->current_literal();
-    const std::string &sym_name = pctx->MakeUniqueSymbolName(literal);
-    return context()->GetIdentifier(sym_name);
-  }
-
   // In case of errors, sync up to any token in the list
   void Sync(const std::unordered_set<Token::Type> &s);
 

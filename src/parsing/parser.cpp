@@ -112,7 +112,7 @@ ast::Decl *Parser::ParseVariableDecl(parsing::ParsingContext *pctx) {
 
   // The name
   Expect(Token::Type::IDENTIFIER);
-  ast::Identifier name = GetUniqueSymbol(pctx);
+  ast::Identifier name = pctx->MakeUniqueSymbol(context(), GetSymbol());
 
   // The type (if exists)
   ast::Expr *type = nullptr;
@@ -526,7 +526,8 @@ ast::Expr *Parser::ParsePrimaryExpr(parsing::ParsingContext *pctx) {
     case Token::Type::IDENTIFIER: {
       Next();
       const SourcePosition &position = scanner()->current_position();
-      return node_factory()->NewIdentifierExpr(position, GetScopedSymbol(pctx));
+      return node_factory()->NewIdentifierExpr(
+          position, pctx->GetScopedSymbol(GetSymbol()));
     }
     case Token::Type::INTEGER: {
       Next();
