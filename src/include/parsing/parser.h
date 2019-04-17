@@ -27,37 +27,23 @@ class Parser {
   ast::AstNode *Parse();
 
  private:
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
-
-  Scanner *scanner() { return scanner_; }
-
-  ast::Context *context() { return context_; }
-
-  ast::AstNodeFactory *node_factory() { return node_factory_; }
-
-  util::Region *region() { return context()->region(); }
-
-  sema::ErrorReporter *error_reporter() { return error_reporter_; }
-
-  // -------------------------------------------------------
-  // Token logic
-  // -------------------------------------------------------
+  util::Region *region() { return context_->region(); }
 
   // Move to the next token in the stream
-  Token::Type Next() { return scanner()->Next(); }
+  Token::Type Next() { return scanner_->Next(); }
 
   // Peek at the next token in the stream
-  Token::Type peek() { return scanner()->peek(); }
+  Token::Type peek() const { return scanner_->peek(); }
 
+  // Consume one token. In debug mode, throw an error if the next token isn't
+  // what was expected. In release mode, just consume the token without checking
   void Consume(UNUSED Token::Type expected) {
     UNUSED Token::Type next = Next();
 #ifndef NDEBUG
     if (next != expected) {
-      error_reporter()->Report(scanner()->current_position(),
-                               sema::ErrorMessages::kUnexpectedToken, next,
-                               expected);
+      error_reporter_->Report(scanner_->current_position(),
+                              sema::ErrorMessages::kUnexpectedToken, next,
+                              expected);
     }
 #endif
   }
@@ -66,9 +52,9 @@ class Parser {
   void Expect(Token::Type expected) {
     Token::Type next = Next();
     if (next != expected) {
-      error_reporter()->Report(scanner()->current_position(),
-                               sema::ErrorMessages::kUnexpectedToken, next,
-                               expected);
+      error_reporter_->Report(scanner_->current_position(),
+                              sema::ErrorMessages::kUnexpectedToken, next,
+                              expected);
     }
   }
 
@@ -85,8 +71,8 @@ class Parser {
 
   // Get the current symbol as an AST string
   ast::Identifier GetSymbol() {
-    const std::string &literal = scanner()->current_literal();
-    return context()->GetIdentifier(literal);
+    const std::string &literal = scanner_->current_literal();
+    return context_->GetIdentifier(literal);
   }
 
   // In case of errors, sync up to any token in the list
