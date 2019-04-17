@@ -19,6 +19,7 @@ scan-table.tpl,500
 scan-table-2.tpl,1999950
 scan-table-3.tpl,2000000
 scope.tpl,3
+scope-2.tpl,42
 short-circuit.tpl,1
 simple.tpl,44
 single-line-comment.tpl,46
