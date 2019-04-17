@@ -1,6 +1,6 @@
 #pragma once
 
-#include "LLVM/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMap.h"
 
 #include <string>
 #include <unordered_set>
