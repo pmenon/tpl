@@ -8,10 +8,20 @@ fun main() -> int {
   {
     var b = 721
   }
-
-  b = b + a                 // b = 5 + 1 = 6
-  var a = 7
-  b = b * a                 // b = 6 * 7 = 42
+  {
+    b = b + a               // b = 5 + 1 = 6
+    var a = 5
+    b = b * a               // b = 6 * 5 = 30
+  }
+  b = b * a                 // b = 30 * 1 = 30
+  {
+    var c = 12
+    {
+      {
+        b = b + c
+      }
+    }
+  }
 
   return b
 }
