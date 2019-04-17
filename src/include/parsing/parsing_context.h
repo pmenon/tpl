@@ -1,6 +1,8 @@
 #pragma once
 
+#include <string>
 #include <unordered_map>
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 
@@ -115,3 +117,4 @@ class ParsingContext {
 };
 
 }  // namespace tpl::parsing
+

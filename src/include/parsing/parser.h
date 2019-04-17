@@ -1,9 +1,10 @@
 #pragma once
 
-#include "llvm/ADT/DenseMap.h"
 
 #include <string>
 #include <unordered_set>
+
+#include "llvm/ADT/DenseMap.h"
 
 #include "ast/ast.h"
 #include "ast/ast_node_factory.h"
