@@ -51,9 +51,7 @@ ast::Decl *Parser::ParseDecl(ParsingContext *pctx) {
     case Token::Type::FUN: {
       return ParseFunctionDecl(pctx);
     }
-    default: {
-      break;
-    }
+    default: { break; }
   }
 
   // Report error, sync up and try again
@@ -162,9 +160,7 @@ ast::Stmt *Parser::ParseStmt(ParsingContext *pctx) {
       ast::Decl *var_decl = ParseVariableDecl(pctx);
       return node_factory_->NewDeclStmt(var_decl);
     }
-    default: {
-      return ParseSimpleStmt(pctx);
-    }
+    default: { return ParseSimpleStmt(pctx); }
   }
 }
 
@@ -433,9 +429,7 @@ ast::Expr *Parser::ParseUnaryOpExpr(ParsingContext *pctx) {
       ast::Expr *expr = ParseUnaryOpExpr(pctx);
       return node_factory_->NewUnaryOpExpr(position, op, expr);
     }
-    default: {
-      break;
-    }
+    default: { break; }
   }
 
   return ParsePrimaryExpr(pctx);
@@ -483,9 +477,7 @@ ast::Expr *Parser::ParsePrimaryExpr(ParsingContext *pctx) {
         result = node_factory_->NewIndexExpr(result->position(), result, index);
         break;
       }
-      default: {
-        break;
-      }
+      default: { break; }
     }
   } while (Token::IsCallOrMemberOrIndex(peek()));
 
@@ -543,9 +535,7 @@ ast::Expr *Parser::ParseOperand(ParsingContext *pctx) {
       Expect(Token::Type::RIGHT_PAREN);
       return expr;
     }
-    default: {
-      break;
-    }
+    default: { break; }
   }
 
   // Error
@@ -593,9 +583,7 @@ ast::Expr *Parser::ParseType(ParsingContext *pctx) {
     case Token::Type::STRUCT: {
       return ParseStructType(pctx);
     }
-    default: {
-      break;
-    }
+    default: { break; }
   }
 
   // Error

@@ -191,7 +191,7 @@ namespace tpl::vm {
   F(Cos, OperandType::Local, OperandType::Local)                                                                       \
   F(Cot, OperandType::Local, OperandType::Local)                                                                       \
   F(Sin, OperandType::Local, OperandType::Local)                                                                       \
-  F(Tan, OperandType::Local, OperandType::Local)                                                                       \
+  F(Tan, OperandType::Local, OperandType::Local)
 
 // clang-format on
 
