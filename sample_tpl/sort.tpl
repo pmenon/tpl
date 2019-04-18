@@ -3,8 +3,12 @@ struct Row {
   b: int32
 }
 
-fun compareFn(lhs: *Row, rhs: *Row) -> bool {
-  return lhs.a < rhs.a
+fun compareFn(lhs: *Row, rhs: *Row) -> int32 {
+  if (lhs.a < rhs.a) {
+    return -1
+  } else {
+    return 1
+  }
 }
 
 fun main() -> int32 {
@@ -15,9 +19,11 @@ fun main() -> int32 {
   @sorterInit(&sorter, &alloc, compareFn, @sizeOf(Row))
 
   for (row in test_1) {
-    var elem = @ptrCast(*Row, @sorterInsert(&sorter))
-    elem.a = row.colA
-    elem.b = row.colB
+    if (row.colA < 500) {
+      var elem = @ptrCast(*Row, @sorterInsert(&sorter))
+      elem.a = row.colA
+      elem.b = row.colB
+    }
   }
 
   @sorterSort(&sorter)
