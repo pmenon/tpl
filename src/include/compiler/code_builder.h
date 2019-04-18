@@ -12,14 +12,22 @@ class Value {
   Type type_;
 };
 
-class Function {
+class Constant : public Value {
  private:
-  uint16_t numArgs_;
-  std::vector<Block&> blocks_;
+  void *value;
 };
 
-Block *AssignValue(const Value *assignee, const Value *val);
+class Function {
 
-Block *Call(const Function *fn, std::initializer_list<Value*> arguments);
+  Block *AssignConstToValue(const Value *assignee, const Constant *val);
+
+  Block *AssignValueToValue(const Value *assignee, const Value *val);
+
+  Block *Call(const Function *fn, std::initializer_list<Value *> arguments);
+
+ private:
+  uint16_t numArgs_;
+  std::vector<Block &> blocks_;
+};
 
 }

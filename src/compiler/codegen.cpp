@@ -218,7 +218,7 @@ llvm::Value *CodeGen::Sqrt(llvm::Value *val) {
 
 llvm::Value *CodeGen::CallAddWithOverflow(llvm::Value *left, llvm::Value *right,
                                           llvm::Value *&overflow_bit) {
-  PELOTON_ASSERT(left->getType() == right->getType());
+  TPL_ASSERT(left->getType() == right->getType());
 
   // Get the intrinsic that does the addition with overflow checking
   llvm::Function *add_func = llvm::Intrinsic::getDeclaration(
@@ -236,7 +236,7 @@ llvm::Value *CodeGen::CallAddWithOverflow(llvm::Value *left, llvm::Value *right,
 
 llvm::Value *CodeGen::CallSubWithOverflow(llvm::Value *left, llvm::Value *right,
                                           llvm::Value *&overflow_bit) {
-  PELOTON_ASSERT(left->getType() == right->getType());
+  TPL_ASSERT(left->getType() == right->getType());
 
   // Get the intrinsic that does the addition with overflow checking
   llvm::Function *sub_func = llvm::Intrinsic::getDeclaration(
@@ -254,7 +254,7 @@ llvm::Value *CodeGen::CallSubWithOverflow(llvm::Value *left, llvm::Value *right,
 
 llvm::Value *CodeGen::CallMulWithOverflow(llvm::Value *left, llvm::Value *right,
                                           llvm::Value *&overflow_bit) {
-  PELOTON_ASSERT(left->getType() == right->getType());
+  TPL_ASSERT(left->getType() == right->getType());
   llvm::Function *mul_func = llvm::Intrinsic::getDeclaration(
       &GetModule(), llvm::Intrinsic::smul_with_overflow, left->getType());
 
