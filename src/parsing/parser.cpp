@@ -426,9 +426,7 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
       ast::Expr *expr = ParseUnaryOpExpr();
       return node_factory_->NewUnaryOpExpr(position, op, expr);
     }
-    default: {
-      break;
-    }
+    default: { break; }
   }
 
   return ParsePrimaryExpr();

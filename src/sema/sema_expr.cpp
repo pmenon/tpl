@@ -238,8 +238,7 @@ void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call,
             call->position(), ErrorMessages::kInvalidSqlCastToBool, input_type);
         return;
       }
-      call->set_type(
-          ast::BuiltinType::Get(context(), ast::BuiltinType::Real));
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Real));
       break;
     }
     case ast::Builtin::SqlToBool: {
@@ -248,8 +247,7 @@ void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call,
             call->position(), ErrorMessages::kInvalidSqlCastToBool, input_type);
         return;
       }
-      call->set_type(
-          ast::BuiltinType::Get(context(), ast::BuiltinType::Bool));
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Bool));
       break;
     }
     default: { UNREACHABLE("Impossible SQL conversion call"); }

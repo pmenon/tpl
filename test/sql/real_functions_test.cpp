@@ -1,6 +1,8 @@
-#include "tpl_test.h"  // NOLINT
-
+#include <memory>
 #include <random>
+#include <vector>
+
+#include "tpl_test.h"  // NOLINT
 
 #include "sql/value.h"
 #include "sql/value_functions.h"

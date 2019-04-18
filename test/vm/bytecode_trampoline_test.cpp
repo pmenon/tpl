@@ -1,5 +1,4 @@
-#include "tpl_test.h"  // NOLINT
-
+#include <algorithm>
 #include <limits>
 #include <random>
 #include <string>
@@ -7,6 +6,8 @@
 #include <vector>
 
 #include "ips4o/ips4o.hpp"
+
+#include "tpl_test.h"  // NOLINT
 
 #include "sql/sorter.h"
 #include "sql/value.h"
