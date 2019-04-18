@@ -390,6 +390,51 @@ void Sema::CheckBuiltinSizeOfCall(ast::CallExpr *call) {
   call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Uint32));
 }
 
+void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
+  if (call->num_args() != 2) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kMismatchedCallArgs,
+                             call->GetFuncName(), 2, call->num_args());
+    return;
+  }
+
+  // The first argument will be a UnaryOpExpr with the '*' (star) op. This is
+  // because parsing function calls assumes expression arguments, not types. So,
+  // something like '*Type', which would be the first argument to @ptrCast, will
+  // get parsed as a dereference expression before a type expression.
+  // TODO(pmenon): Fix the above to parse correctly
+
+  auto unary_op = call->arguments()[0]->SafeAs<ast::UnaryOpExpr>();
+  if (unary_op == nullptr || unary_op->op() != parsing::Token::Type::STAR) {
+    error_reporter()->Report(call->position(), ErrorMessages::kBadArgToPtrCast,
+                             call->arguments()[0]->type(), 1);
+    return;
+  }
+
+  // Replace the unary with a PointerTypeRepr node and resolve it
+  call->set_argument(0,
+                     context()->node_factory()->NewPointerType(
+                         call->arguments()[0]->position(), unary_op->expr()));
+
+  for (auto *arg : call->arguments()) {
+    auto *resolved_type = Resolve(arg);
+    if (resolved_type == nullptr) {
+      return;
+    }
+  }
+
+  // Both arguments must be pointer types
+  if (!call->arguments()[0]->type()->IsPointerType() ||
+      !call->arguments()[1]->type()->IsPointerType()) {
+    error_reporter()->Report(call->position(), ErrorMessages::kBadArgToPtrCast,
+                             call->arguments()[0]->type(), 1);
+    return;
+  }
+
+  // Apply the cast
+  call->set_type(call->arguments()[0]->type());
+}
+
 void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
   if (call->num_args() != 4) {
     error_reporter()->Report(call->position(),
@@ -512,6 +557,11 @@ void Sema::CheckBuiltinSorterFree(ast::CallExpr *call) {
 }
 
 void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
+  if (builtin == ast::Builtin::PtrCast) {
+    CheckBuiltinPtrCastCall(call);
+    return;
+  }
+
   // First, resolve all call arguments. If any fail, exit immediately.
   for (auto *arg : call->arguments()) {
     auto *resolved_type = Resolve(arg);

@@ -112,9 +112,9 @@ class Parser {
 
   ast::Expr *ParseUnaryOpExpr();
 
-  ast::Expr *ParseLeftHandSideExpression();
-
   ast::Expr *ParsePrimaryExpr();
+
+  ast::Expr *ParseOperand();
 
   ast::Expr *ParseFunctionLitExpr();
 

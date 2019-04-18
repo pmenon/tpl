@@ -411,7 +411,8 @@ ast::Expr *Parser::ParseBinaryOpExpr(uint32_t min_prec) {
 }
 
 ast::Expr *Parser::ParseUnaryOpExpr() {
-  // UnaryOpExpr = [ '&' | '!' | '~' | '^' | '-' | '*' ] UnaryOpExpr ;
+  // UnaryOpExpr = PrimaryExpr | unary_op UnaryOpExpr ;
+  // unary_op = '&' | '!' | '~' | '^' | '-' | '*'
 
   switch (peek()) {
     case Token::Type::AMPERSAND:
@@ -425,21 +426,21 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
       ast::Expr *expr = ParseUnaryOpExpr();
       return node_factory_->NewUnaryOpExpr(position, op, expr);
     }
-    default:
+    default: {
       break;
+    }
   }
 
-  return ParseLeftHandSideExpression();
+  return ParsePrimaryExpr();
 }
 
-ast::Expr *Parser::ParseLeftHandSideExpression() {
-  // LeftHandSideExpression = [ CallExpr | MemberExpr | IndexExpr ] ;
-  //
+ast::Expr *Parser::ParsePrimaryExpr() {
+  // PrimaryExpr = Operand | CallExpr | MemberExpr | IndexExpr ;
   // CallExpr = PrimaryExpr '(' (Expr)* ') ;
   // MemberExpr = PrimaryExpr '.' Expr
   // IndexExpr = PrimaryExpr '[' Expr ']'
 
-  ast::Expr *result = ParsePrimaryExpr();
+  ast::Expr *result = ParseOperand();
 
   do {
     switch (peek()) {
@@ -461,10 +462,11 @@ ast::Expr *Parser::ParseLeftHandSideExpression() {
       case Token::Type::DOT: {
         // Member expression
         Consume(Token::Type::DOT);
-        ast::Expr *member = ParsePrimaryExpr();
+        ast::Expr *member = ParseOperand();
         result =
             node_factory_->NewMemberExpr(result->position(), result, member);
         break;
+        // @ptrCast(*Row, expr)
       }
       case Token::Type::LEFT_BRACKET: {
         // Index expression (i.e., array or map access)
@@ -481,10 +483,10 @@ ast::Expr *Parser::ParseLeftHandSideExpression() {
   return result;
 }
 
-ast::Expr *Parser::ParsePrimaryExpr() {
-  // PrimaryExpr =
-  //   nil | 'true' | 'false' | Ident | Number | String | FunctionLiteral |
-  //   '(' Expr ')'
+ast::Expr *Parser::ParseOperand() {
+  // Operand = Literal | OperandName | '(' Expr ')'
+  // Literal = int_lit | float_lit | 'nil' | 'true' | 'false' | FunctionLiteral
+  // OperandName = identifier
 
   switch (peek()) {
     case Token::Type::NIL: {
@@ -543,7 +545,7 @@ ast::Expr *Parser::ParsePrimaryExpr() {
 }
 
 ast::Expr *Parser::ParseFunctionLitExpr() {
-  // FunctionLiteralExpr = Signature FunctionBody ;
+  // FunctionLiteral = Signature FunctionBody ;
   //
   // FunctionBody = Block ;
 
@@ -733,7 +735,7 @@ ast::Attributes *Parser::ParseAttributes() {
     Expect(Token::Type::EQUAL);
 
     // Then value
-    ast::Expr *expr = ParsePrimaryExpr();
+    ast::Expr *expr = ParseOperand();
 
     attrs.emplace(attribute_name, expr);
   }

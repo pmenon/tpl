@@ -642,6 +642,11 @@ class CallExpr : public Expr {
 
   void set_call_kind(CallKind call_kind) { call_kind_ = call_kind; }
 
+  void set_argument(u32 arg_idx, Expr *expr) {
+    TPL_ASSERT(arg_idx < num_args(), "Out-of-bounds argument access");
+    args_[arg_idx] = expr;
+  }
+
  private:
   Expr *func_;
   util::RegionVector<Expr *> args_;

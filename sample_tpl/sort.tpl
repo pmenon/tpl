@@ -15,7 +15,7 @@ fun main() -> int32 {
   @sorterInit(&sorter, &alloc, compareFn, @sizeOf(Row))
 
   for (row in test_1) {
-    var elem: *Row = @sorterInsert(&sorter)
+    var elem = @ptrCast(*Row, @sorterInsert(&sorter))
     elem.a = row.colA
     elem.b = row.colB
   }

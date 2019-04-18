@@ -94,6 +94,7 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinSorterFree(ast::CallExpr *call);
   void CheckBuiltinRegionCall(ast::CallExpr *call);
   void CheckBuiltinSizeOfCall(ast::CallExpr *call);
+  void CheckBuiltinPtrCastCall(ast::CallExpr *call);
 
   // -------------------------------------------------------
   // Scoping
