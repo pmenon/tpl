@@ -500,33 +500,27 @@ ast::Expr *Parser::ParsePrimaryExpr() {
     case Token::Type::BUILTIN_IDENTIFIER:
     case Token::Type::IDENTIFIER: {
       Next();
-      const SourcePosition &position = scanner_->current_position();
-      return node_factory_->NewIdentifierExpr(position, GetSymbol());
+      return node_factory_->NewIdentifierExpr(scanner_->current_position(),
+                                              GetSymbol());
     }
     case Token::Type::INTEGER: {
       Next();
-
       // Convert the number
       char *end = nullptr;
       i32 num = std::strtol(GetSymbol().data(), &end, 10);
-
-      const SourcePosition &position = scanner_->current_position();
-      return node_factory_->NewIntLiteral(position, num);
+      return node_factory_->NewIntLiteral(scanner_->current_position(), num);
     }
     case Token::Type::FLOAT: {
       Next();
-
       // Convert the number
       char *end = nullptr;
       f32 num = std::strtof(GetSymbol().data(), &end);
-
-      const SourcePosition &position = scanner_->current_position();
-      return node_factory_->NewFloatLiteral(position, num);
+      return node_factory_->NewFloatLiteral(scanner_->current_position(), num);
     }
     case Token::Type::STRING: {
       Next();
-      const SourcePosition &position = scanner_->current_position();
-      return node_factory_->NewStringLiteral(position, GetSymbol());
+      return node_factory_->NewStringLiteral(scanner_->current_position(),
+                                             GetSymbol());
     }
     case Token::Type::FUN: {
       Next();
