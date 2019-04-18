@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace terrier::common {
+namespace tpl::common {
 /**
  * Declare all system-level constants that cannot change at runtime here.
  */

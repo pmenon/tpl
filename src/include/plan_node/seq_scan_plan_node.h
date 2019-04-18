@@ -10,7 +10,7 @@
 #include "plan_node/abstract_plan_node.h"
 #include "plan_node/abstract_scan_plan_node.h"
 
-namespace terrier::plan_node {
+namespace tpl::plan_node {
 
 /**
  * Plan node for sequanial table scan

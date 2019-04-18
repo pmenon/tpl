@@ -7,7 +7,7 @@
 #include "catalog/schema.h"
 #include "plan_node/abstract_plan_node.h"
 
-namespace terrier::plan_node {
+namespace tpl::plan_node {
 
 /**
  * Plan node for a limit operator

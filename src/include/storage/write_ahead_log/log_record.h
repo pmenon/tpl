@@ -3,7 +3,7 @@
 #include "storage/projected_row.h"
 #include "transaction/transaction_defs.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 /**
  * Encapsulates information common to all log records in memory (i.e. a header).
  * Note that the disk representation of log records can be different. Depending

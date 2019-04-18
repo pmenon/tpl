@@ -6,7 +6,7 @@
 #include "transaction/transaction_defs.h"
 #include "transaction/transaction_manager.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 
 /**
  * The garbage collector is responsible for processing a queue of completed

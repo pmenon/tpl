@@ -7,11 +7,11 @@
 #include "storage/block_layout.h"
 #include "storage/storage_defs.h"
 
-namespace terrier::catalog {
+namespace tpl::catalog {
 class Schema;
 }
 
-namespace terrier::storage {
+namespace tpl::storage {
 class ProjectedRow;
 class TupleAccessStrategy;
 class UndoRecord;

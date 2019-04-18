@@ -7,7 +7,7 @@
 #include "parser/expression_defs.h"
 #include "type/transient_value.h"
 
-namespace terrier::parser {
+namespace tpl::parser {
 
 /**
  * Represents an operator.

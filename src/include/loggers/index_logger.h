@@ -4,7 +4,7 @@
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/spdlog.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 extern std::shared_ptr<spdlog::logger> index_logger;
 
 void init_index_logger();

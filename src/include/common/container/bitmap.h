@@ -18,7 +18,7 @@ static_assert(BYTE_SIZE == 8u, "BYTE_SIZE should be set to 8!");
 // n must be [0, 7], all 1 except for 0 on the nth bit in LSB order
 #define LSB_ONE_COLD_MASK(n) (0xFF - LSB_ONE_HOT_MASK(n))
 
-namespace terrier::common {
+namespace tpl::common {
 
 /**
  * A RawBitmap is a bitmap that does not have the compile-time information about

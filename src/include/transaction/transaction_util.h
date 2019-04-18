@@ -1,7 +1,7 @@
 #pragma once
 #include "common/strong_typedef.h"
 
-namespace terrier::transaction {
+namespace tpl::transaction {
 
 /**
  * Helper class for transactions to validate timestamps, versions, etc.

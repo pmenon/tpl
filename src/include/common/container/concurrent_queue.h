@@ -3,7 +3,7 @@
 #include <tbb/concurrent_queue.h>
 #include "common/macros.h"
 
-namespace terrier::common {
+namespace tpl::common {
 /**
  * A thread-safe queue implementation
  * @tparam T element type

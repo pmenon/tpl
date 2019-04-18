@@ -11,7 +11,7 @@
 #include "parser/select_statement.h"
 #include "parser/sql_statement.h"
 
-namespace terrier {
+namespace tpl {
 namespace parser {
 
 /**

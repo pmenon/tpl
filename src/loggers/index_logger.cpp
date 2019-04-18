@@ -2,7 +2,7 @@
 #include <memory>
 #include "loggers/main_logger.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 
 std::shared_ptr<spdlog::logger> index_logger;
 

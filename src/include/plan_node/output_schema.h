@@ -14,7 +14,7 @@
 #include "type/type_id.h"
 #include "type/type_util.h"
 
-namespace terrier::plan_node {
+namespace tpl::plan_node {
 
 /**
  * Internal object for representing output columns of a plan node. This object is to be differentiated from

@@ -5,7 +5,7 @@
 
 #include "catalog/catalog_defs.h"
 
-namespace terrier::plan_node {
+namespace tpl::plan_node {
 
 //===--------------------------------------------------------------------===//
 // JSON (de)serialization declarations

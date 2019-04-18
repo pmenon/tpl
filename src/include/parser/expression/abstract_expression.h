@@ -9,7 +9,7 @@
 #include "type/transient_value.h"
 #include "type/type_id.h"
 
-namespace terrier::parser {
+namespace tpl::parser {
 /**
  * An abstract parser expression. Dumb and immutable.
  */
@@ -123,13 +123,13 @@ namespace std {
  * Implements std::hash for abstract expressions
  */
 template <>
-struct hash<terrier::parser::AbstractExpression> {
+struct hash<tpl::parser::AbstractExpression> {
   /**
    * Hashes the given expression
    * @param expr the expression to hash
    * @return hash code of the given expression
    */
-  size_t operator()(const terrier::parser::AbstractExpression &expr) const {
+  size_t operator()(const tpl::parser::AbstractExpression &expr) const {
     return expr.Hash();
   }
 };

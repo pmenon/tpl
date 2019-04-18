@@ -7,7 +7,7 @@
 #include "parser/expression_defs.h"
 #include "util/macros.h"
 
-namespace terrier::parser {
+namespace tpl::parser {
 
 /**
  * Represents a logical case expression.

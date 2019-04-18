@@ -8,12 +8,12 @@
 #include "storage/tuple_access_strategy.h"
 #include "storage/undo_record.h"
 
-namespace terrier::transaction {
+namespace tpl::transaction {
 class TransactionContext;
 class TransactionManager;
 }  // namespace terrier::transaction
 
-namespace terrier::storage {
+namespace tpl::storage {
 
 // clang-format off
 #define DataTableCounterMembers(f) \

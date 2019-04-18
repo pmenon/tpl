@@ -6,7 +6,7 @@
 #include "parser/expression_defs.h"
 #include "type/type_id.h"
 
-namespace terrier::parser {
+namespace tpl::parser {
 /**
  * Represents a star, e.g. COUNT(*).
  */

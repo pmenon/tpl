@@ -4,7 +4,7 @@
 #include <set>
 #include <utility>
 #include <vector>
-namespace terrier::storage {
+namespace tpl::storage {
 ProjectedColumnsInitializer::ProjectedColumnsInitializer(
     const BlockLayout &layout, std::vector<col_id_t> col_ids,
     const uint32_t max_tuples)

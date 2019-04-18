@@ -62,7 +62,7 @@ tpl_compile_to_ir(vm/bytecode_handlers_ir.cpp)
 #
 ##################################################
 
-add_library(tpl_shared STATIC ${tpl_sources})
+add_library(tpl_shared STATIC ${tpl_sources} compiler/function_builder.cpp include/compiler/function_builder.h)
 
 ##################################################
 #
@@ -70,7 +70,7 @@ add_library(tpl_shared STATIC ${tpl_sources})
 #
 ##################################################
 
-set(tpl_main "${PROJECT_SOURCE_DIR}/src/tpl.cpp" catalog/catalog.cpp)
+set(tpl_main "${PROJECT_SOURCE_DIR}/src/tpl.cpp" catalog/catalog.cpp include/compiler/value/TPLValue.h include/compiler/code_builder.h)
 add_executable(tpl ${tpl_main})
 add_dependencies(tpl gen_opt_bc)
 target_link_libraries(tpl tpl_shared ${TPL_LINK_LIBS})

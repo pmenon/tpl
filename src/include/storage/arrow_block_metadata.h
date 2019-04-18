@@ -5,7 +5,7 @@
 #include "storage/storage_defs.h"
 #include "storage/storage_util.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 
 // TODO(Tianyu): Can use to specify cases where we don't concat per-block in the
 // future (e.g. no need to put

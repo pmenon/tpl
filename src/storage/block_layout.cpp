@@ -6,7 +6,7 @@
 #include "storage/arrow_block_metadata.h"
 #include "storage/storage_util.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 BlockLayout::BlockLayout(std::vector<uint8_t> attr_sizes)
     : attr_sizes_(std::move(attr_sizes)),
       tuple_size_(ComputeTupleSize()),

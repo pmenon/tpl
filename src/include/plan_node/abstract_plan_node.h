@@ -11,7 +11,7 @@
 #include "plan_node/output_schema.h"
 #include "plan_node/plan_node_defs.h"
 
-namespace terrier::plan_node {
+namespace tpl::plan_node {
 
 /**
  * An abstract plan node should be the base class for (almost) all plan nodes
@@ -196,27 +196,27 @@ namespace std {
  * template for std::hash of plan nodes
  */
 template <>
-struct hash<std::shared_ptr<terrier::plan_node::AbstractPlanNode>> {
+struct hash<std::shared_ptr<tpl::plan_node::AbstractPlanNode>> {
   /**
    * Hashes the given plan node
    * @param plan the plan to hash
    * @return hash code of the given plan node
    */
-  size_t operator()(const std::shared_ptr<terrier::plan_node::AbstractPlanNode> &plan) const { return plan->Hash(); }
+  size_t operator()(const std::shared_ptr<tpl::plan_node::AbstractPlanNode> &plan) const { return plan->Hash(); }
 };
 
 /**
  * std template for equality predicate
  */
 template <>
-struct equal_to<std::shared_ptr<terrier::plan_node::AbstractPlanNode>> {
+struct equal_to<std::shared_ptr<tpl::plan_node::AbstractPlanNode>> {
   /**
    * @param lhs left hand side plan node
    * @param rhs right hand side plan node
    * @return true if plan nodes are equivalent
    */
-  bool operator()(const std::shared_ptr<terrier::plan_node::AbstractPlanNode> &lhs,
-                  const std::shared_ptr<terrier::plan_node::AbstractPlanNode> &rhs) const {
+  bool operator()(const std::shared_ptr<tpl::plan_node::AbstractPlanNode> &lhs,
+                  const std::shared_ptr<tpl::plan_node::AbstractPlanNode> &rhs) const {
     return *lhs == *rhs;
   }
 };

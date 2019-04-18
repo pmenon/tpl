@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-namespace terrier::parser {
+namespace tpl::parser {
 
 constexpr int INVALID_TYPE_ID = 0;
 

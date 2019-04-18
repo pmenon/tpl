@@ -7,7 +7,7 @@
 #include "common/sql_node_visitor.h"
 #include "parser/parser_defs.h"
 
-namespace terrier {
+namespace tpl {
 namespace parser {
 
 /**

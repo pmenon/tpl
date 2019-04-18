@@ -2,7 +2,7 @@
 #include <utility>
 #include "common/container/concurrent_bitmap.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 
 TupleAccessStrategy::TupleAccessStrategy(BlockLayout layout)
     : layout_(std::move(layout)), column_offsets_(layout_.NumColumns()) {

@@ -8,18 +8,20 @@
 
 namespace tpl::compiler {
 
+#define DEFAULT_ROW_NAME "row"
+
 class TextCompiler : public AbstractCompiler {
 
  public:
   void CompileAndRun() override;
 
   std::string CompilePredicate(
-      const std::shared_ptr<terrier::parser::AbstractExpression> expression,
+      const std::shared_ptr<tpl::parser::AbstractExpression> expression,
       const std::string &rowName);
 
  private:
   void CompileSubPredicate(
-      const std::shared_ptr<terrier::parser::AbstractExpression> expression,
+      std::shared_ptr<const tpl::parser::AbstractExpression> expression,
       const std::string &rowName, std::stringstream *stream);
 };
 

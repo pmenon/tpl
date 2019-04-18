@@ -3,7 +3,7 @@
 #include <vector>
 #include "common/macros.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 
 std::vector<col_id_t> SqlTable::ColIdsForOids(
     const std::vector<catalog::col_oid_t> &col_oids) const {

@@ -5,7 +5,7 @@
 #include "common/strong_typedef.h"
 #include "storage/storage_util.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 /**
  * ProjectedColumns represents partial images of a collection of tuples, where
  * columns from different tuples are laid out continuously. This can be

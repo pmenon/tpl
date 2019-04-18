@@ -4,7 +4,7 @@
 #include "plan_node/limit_plan_node.h"
 #include "plan_node/seq_scan_plan_node.h"
 
-namespace terrier::plan_node {
+namespace tpl::plan_node {
 
 // nlohmann::json AbstractPlanNode::ToJson() const {
 //  nlohmann::json output;

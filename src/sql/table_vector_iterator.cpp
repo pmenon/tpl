@@ -3,7 +3,7 @@
 
 namespace tpl::sql {
 
-using namespace terrier;
+using namespace tpl;
 
 TableVectorIterator::TableVectorIterator(
     catalog::Catalog::TableInfo *table_info,

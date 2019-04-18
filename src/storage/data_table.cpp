@@ -6,7 +6,7 @@
 #include "transaction/transaction_context.h"
 #include "transaction/transaction_util.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 DataTable::DataTable(BlockStore *const store, const BlockLayout &layout,
                      const layout_version_t layout_version)
     : block_store_(store), layout_version_(layout_version), accessor_(layout) {
@@ -25,9 +25,9 @@ DataTable::~DataTable() {
   }
 }
 
-bool DataTable::Select(terrier::transaction::TransactionContext *txn,
-                       terrier::storage::TupleSlot slot,
-                       terrier::storage::ProjectedRow *out_buffer) const {
+bool DataTable::Select(tpl::transaction::TransactionContext *txn,
+                       tpl::storage::TupleSlot slot,
+                       tpl::storage::ProjectedRow *out_buffer) const {
   data_table_counter_.IncrementNumSelect(1);
   return SelectIntoBuffer(txn, slot, out_buffer);
 }

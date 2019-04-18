@@ -6,7 +6,7 @@
 #include "parser/expression/abstract_expression.h"
 #include "plan_node/abstract_plan_node.h"
 
-namespace terrier::plan_node {
+namespace tpl::plan_node {
 
 /**
  * Base class for sql scans

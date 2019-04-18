@@ -8,7 +8,7 @@
 #include "common/spin_latch.h"
 #include "common/strong_typedef.h"
 
-namespace terrier::common {
+namespace tpl::common {
 // TODO(Yangjun): this class should be moved somewhere else.
 /**
  * An exception thrown by object pools when they reach their size limits and

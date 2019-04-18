@@ -12,7 +12,7 @@
 #include "storage/write_ahead_log/log_record.h"
 #include "transaction/transaction_defs.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 /**
  * A LogManager is responsible for serializing log records out and keeping track
  * of whether changes from a transaction are persistent.

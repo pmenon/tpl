@@ -15,7 +15,7 @@
 #include "util/hash.h"
 
 namespace tpl::sql::test {
-using namespace terrier;
+using namespace tpl;
 /// This is the tuple we insert into the hash table
 template <u8 N>
 struct Tuple {

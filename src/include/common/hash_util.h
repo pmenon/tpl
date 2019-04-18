@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <string>
 #include "common/strong_typedef.h"
-namespace terrier::common {
+namespace tpl::common {
 
 using hash_t = uint64_t;
 

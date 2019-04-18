@@ -2,7 +2,7 @@
 #include <memory>
 #include "loggers/main_logger.h"
 
-namespace terrier::transaction {
+namespace tpl::transaction {
 
 std::shared_ptr<spdlog::logger> transaction_logger;
 

@@ -2,7 +2,7 @@
 
 #include <forward_list>
 #include "common/strong_typedef.h"
-namespace terrier::transaction {
+namespace tpl::transaction {
 STRONG_TYPEDEF(timestamp_t, uint64_t);
 
 class TransactionContext;

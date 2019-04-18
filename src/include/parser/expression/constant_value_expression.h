@@ -6,7 +6,7 @@
 #include "parser/expression/abstract_expression.h"
 #include "type/transient_value.h"
 
-namespace terrier::parser {
+namespace tpl::parser {
 
 /**
  * Represents a logical constant expression.

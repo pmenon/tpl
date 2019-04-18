@@ -2,7 +2,7 @@
 
 #include "util/macros.h"
 
-namespace terrier::parser {
+namespace tpl::parser {
 
 /**
  * All possible expression types.

@@ -3,7 +3,7 @@
 #include "type/transient_value.h"
 #include "type/type_id.h"
 
-namespace terrier::type {
+namespace tpl::type {
 
 /**
  * TransientValuePeeker is the static class for generating C types from

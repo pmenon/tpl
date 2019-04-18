@@ -11,7 +11,7 @@
 #include "storage/write_ahead_log/log_manager.h"
 #include "transaction/transaction_manager.h"
 
-using namespace terrier;
+using namespace tpl;
 
 namespace tpl::sql {
 class ExecutionStructures {
@@ -30,7 +30,7 @@ class ExecutionStructures {
     return txn_manager_.get();
   }
 
-  terrier::catalog::Catalog *GetCatalog() { return catalog_.get(); }
+  tpl::catalog::Catalog *GetCatalog() { return catalog_.get(); }
 
  private:
   explicit ExecutionStructures();

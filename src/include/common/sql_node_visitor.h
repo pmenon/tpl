@@ -1,6 +1,6 @@
 #pragma once
 
-namespace terrier {
+namespace tpl {
 
 namespace parser {
 class SelectStatement;

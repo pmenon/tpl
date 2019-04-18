@@ -4,14 +4,14 @@
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/spdlog.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 extern std::shared_ptr<spdlog::logger> storage_logger;
 
 void init_storage_logger();
 }  // namespace terrier::storage
 
 #define STORAGE_LOG_TRACE(...) \
-  ::terrier::storage::storage_logger->trace(__VA_ARGS__);
+  ::tpl::storage::storage_logger->trace(__VA_ARGS__);
 
 #define STORAGE_LOG_DEBUG(...) \
   ::terrier::storage::storage_logger->debug(__VA_ARGS__);

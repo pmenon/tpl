@@ -18,17 +18,17 @@ void OpRegionFree(tpl::util::Region *region) { region->~Region(); }
 // ---------------------------------------------------------
 // Transactions
 // ---------------------------------------------------------
-void OpBeginTransaction(terrier::transaction::TransactionContext **txn) {
+void OpBeginTransaction(tpl::transaction::TransactionContext **txn) {
   auto *exec = tpl::sql::ExecutionStructures::Instance();
   *txn = exec->GetTxnManager()->BeginTransaction();
 }
 
-void OpCommitTransaction(terrier::transaction::TransactionContext **txn) {
+void OpCommitTransaction(tpl::transaction::TransactionContext **txn) {
   auto *exec = tpl::sql::ExecutionStructures::Instance();
   exec->GetTxnManager()->Commit(*txn, [](void *) { return; }, nullptr);
 }
 
-void OpAbortTransaction(terrier::transaction::TransactionContext **txn) {
+void OpAbortTransaction(tpl::transaction::TransactionContext **txn) {
   auto *exec = tpl::sql::ExecutionStructures::Instance();
   exec->GetTxnManager()->Abort(*txn);
 }
@@ -42,7 +42,7 @@ void OpTableVectorIteratorInit(tpl::sql::TableVectorIterator *iter,
   TPL_ASSERT(iter != nullptr, "Null iterator to initialize");
   auto *exec = tpl::sql::ExecutionStructures::Instance();
   auto *table = exec->GetCatalog()->LookupTableById(
-      terrier::catalog::table_oid_t(table_id));
+      tpl::catalog::table_oid_t(table_id));
 
   // At this point, the table better exist ...
   TPL_ASSERT(table != nullptr, "Table can't be null!");

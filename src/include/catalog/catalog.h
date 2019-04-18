@@ -12,7 +12,7 @@
 #include "storage/sql_table.h"
 #include "util/common.h"
 
-namespace terrier::catalog {
+namespace tpl::catalog {
 
 constexpr u32 test_table_size = 2000000;
 

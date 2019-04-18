@@ -10,7 +10,7 @@
 #include "common/macros.h"
 #include "loggers/storage_logger.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 // TODO(Tianyu): Get rid of magic constant
 #define BUFFER_SIZE (1 << 12)
 

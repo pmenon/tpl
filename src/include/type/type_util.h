@@ -4,7 +4,7 @@
 #include "common/strong_typedef.h"
 #include "type/type_id.h"
 
-namespace terrier::type {
+namespace tpl::type {
 
 /**
  * Static utility class for common functions in type

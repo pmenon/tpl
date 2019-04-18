@@ -8,7 +8,7 @@
 #include "storage/storage_defs.h"
 #include "storage/storage_util.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 /**
  * Code for accessing data within a block. This code is eventually compiled and
  * should be stateless, so no fields other than const BlockLayout.

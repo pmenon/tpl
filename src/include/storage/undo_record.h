@@ -3,7 +3,7 @@
 #include "storage/projected_row.h"
 #include "transaction/transaction_defs.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 class DataTable;
 /**
  * Extension of a ProjectedRow that adds relevant information to be able to

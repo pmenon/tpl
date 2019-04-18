@@ -1,7 +1,7 @@
 #include "storage/record_buffer.h"
 #include "storage/write_ahead_log/log_manager.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 byte *UndoBuffer::NewEntry(const uint32_t size) {
   if (buffers_.empty() || !buffers_.back()->HasBytesLeft(size)) {
     // we are out of space in the buffer. Get a new buffer segment.

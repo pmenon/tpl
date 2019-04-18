@@ -8,11 +8,11 @@
 #include "type/type_id.h"
 #include "type/type_util.h"
 
-namespace terrier::parser {
+namespace tpl::parser {
 class ConstantValueExpression;
 }
 
-namespace terrier::type {
+namespace tpl::type {
 class TransientValueFactory;
 class TransientValuePeeker;
 
@@ -31,7 +31,7 @@ class TransientValuePeeker;
 class TransientValue {
   friend class TransientValueFactory;  // Access to constructor
   friend class TransientValuePeeker;   // Access to GetAs
-  friend class terrier::parser::ConstantValueExpression;  // Access to copy
+  friend class tpl::parser::ConstantValueExpression;  // Access to copy
                                                           // constructor
 
  public:

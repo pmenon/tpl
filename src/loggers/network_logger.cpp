@@ -3,7 +3,7 @@
 #include <memory>
 #include "loggers/main_logger.h"
 
-namespace terrier::network {
+namespace tpl::network {
 
 std::shared_ptr<spdlog::logger> network_logger;
 

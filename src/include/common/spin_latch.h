@@ -3,7 +3,7 @@
 #include <tbb/spin_mutex.h>
 #include "common/macros.h"
 
-namespace terrier::common {
+namespace tpl::common {
 
 /**
  * A cheap and easy spin latch, currently wraps tbb::spin_mutex to optimize for

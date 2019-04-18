@@ -6,7 +6,7 @@
 #include "sql/execution_structures.h"
 #include "util/bit_util.h"
 
-namespace terrier::catalog {
+namespace tpl::catalog {
 
 using namespace tpl;
 Catalog::TableInfo *Catalog::LookupTableByName(const std::string &name) {

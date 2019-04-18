@@ -191,13 +191,13 @@ VM_OP_HOT void OpReturn() {}
 // ---------------------------------------------------------
 
 VM_OP_COLD void OpBeginTransaction(
-    terrier::transaction::TransactionContext **txn);
+    tpl::transaction::TransactionContext **txn);
 
 VM_OP_COLD void OpCommitTransaction(
-    terrier::transaction::TransactionContext **txn);
+    tpl::transaction::TransactionContext **txn);
 
 VM_OP_COLD void OpAbortTransaction(
-    terrier::transaction::TransactionContext **txn);
+    tpl::transaction::TransactionContext **txn);
 
 // ---------------------------------------------------------
 // Table Vector Iterator

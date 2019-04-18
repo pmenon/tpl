@@ -5,11 +5,11 @@
 #include "common/strong_typedef.h"
 #include "storage/undo_record.h"
 
-namespace terrier::transaction {
+namespace tpl::transaction {
 class TransactionManager;
 }  // namespace terrier::transaction
 
-namespace terrier::storage {
+namespace tpl::storage {
 
 /**
  * A RecordBufferSegment is a piece of (reusable) memory used to hold undo

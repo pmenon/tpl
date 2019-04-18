@@ -4,7 +4,7 @@
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/spdlog.h"
 
-namespace terrier {
+namespace tpl {
 extern std::shared_ptr<spdlog::logger> test_logger;
 
 void init_test_logger();

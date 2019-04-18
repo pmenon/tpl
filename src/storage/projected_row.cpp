@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-namespace terrier::storage {
+namespace tpl::storage {
 ProjectedRow *ProjectedRow::CopyProjectedRowLayout(void *head,
                                                    const ProjectedRow &other) {
   auto *result = reinterpret_cast<ProjectedRow *>(head);

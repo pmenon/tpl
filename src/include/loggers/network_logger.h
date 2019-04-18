@@ -4,7 +4,7 @@
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/spdlog.h"
 
-namespace terrier::network {
+namespace tpl::network {
 extern std::shared_ptr<spdlog::logger> network_logger;
 
 void init_network_logger();

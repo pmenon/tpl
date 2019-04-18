@@ -10,7 +10,7 @@
 #include "parser/sql_statement.h"
 #include "parser/table_ref.h"
 
-namespace terrier {
+namespace tpl {
 namespace parser {
 
 /**

@@ -4,7 +4,7 @@
 #include <string>
 #include "common/json.h"
 
-namespace terrier::common {
+namespace tpl::common {
 
 /**
  * An abstract PerformanceCounter that can be converted to and from JSON.
@@ -182,7 +182,7 @@ class PerformanceCounter {
  * Note that every class member is wrapped in std::atomic.
  */
 #define DEFINE_PERFORMANCE_CLASS(ClassName, MemberList)                   \
-  class ClassName : public terrier::common::PerformanceCounter {          \
+  class ClassName : public tpl::common::PerformanceCounter {          \
    private:                                                               \
     std::string name = #ClassName;                                        \
     MemberList(PC_HELPER_DEFINE_MEMBERS);                                 \

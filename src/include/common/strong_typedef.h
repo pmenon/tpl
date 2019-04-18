@@ -11,7 +11,7 @@
 
 #include "util/macros.h"
 
-namespace terrier::common {
+namespace tpl::common {
 /*
  * A strong typedef is like a typedef, except the compiler will enforce explicit
  * conversion for you.
@@ -50,7 +50,7 @@ namespace terrier::common {
   namespace tags {                                                          \
   struct name##_typedef_tag {};                                             \
   }                                                                         \
-  using name = ::terrier::common::StrongTypeAlias<tags::name##_typedef_tag, \
+  using name = ::tpl::common::StrongTypeAlias<tags::name##_typedef_tag, \
                                                   underlying_type>;
 
 /**
@@ -221,7 +221,7 @@ class StrongTypeAlias {
 }  // namespace terrier::common
 
 /* Define all typedefs here */
-namespace terrier {
+namespace tpl {
 using byte = std::byte;
 }
 
@@ -232,14 +232,14 @@ namespace std {
  * @tparam Tag a dummy class type to annotate the underlying uint32_t
  */
 template <class Tag, class IntType>
-struct atomic<terrier::common::StrongTypeAlias<Tag, IntType>> {
+struct atomic<tpl::common::StrongTypeAlias<Tag, IntType>> {
   static_assert(std::is_integral<IntType>::value,
                 "Only int types are defined for strong typedefs");
 
   /**
    * Type alias shorthand.
    */
-  using t = terrier::common::StrongTypeAlias<Tag, IntType>;
+  using t = tpl::common::StrongTypeAlias<Tag, IntType>;
   /**
    * Constructs new atomic variable.
    * @param val value to initialize with.
@@ -366,14 +366,14 @@ struct atomic<terrier::common::StrongTypeAlias<Tag, IntType>> {
  * @tparam T the underlying type.
  */
 template <class Tag, typename T>
-struct hash<terrier::common::StrongTypeAlias<Tag, T>> {
+struct hash<tpl::common::StrongTypeAlias<Tag, T>> {
   /**
    * Returns the hash of the underlying type's contents.
    * @param alias the aliased type to be hashed.
    * @return the hash of the aliased type.
    */
   size_t operator()(
-      const terrier::common::StrongTypeAlias<Tag, T> &alias) const {
+      const tpl::common::StrongTypeAlias<Tag, T> &alias) const {
     return hash<T>()(!alias);
   }
 };
@@ -384,14 +384,14 @@ struct hash<terrier::common::StrongTypeAlias<Tag, T>> {
  * @tparam T the underlying type.
  */
 template <class Tag, class T>
-struct less<terrier::common::StrongTypeAlias<Tag, T>> {
+struct less<tpl::common::StrongTypeAlias<Tag, T>> {
   /**
    * @param x one value
    * @param y other value
    * @return x < y (underlying value)
    */
-  bool operator()(const terrier::common::StrongTypeAlias<Tag, T> &x,
-                  const terrier::common::StrongTypeAlias<Tag, T> &y) const {
+  bool operator()(const tpl::common::StrongTypeAlias<Tag, T> &x,
+                  const tpl::common::StrongTypeAlias<Tag, T> &y) const {
     return std::less<T>()(!x, !y);
   }
 };

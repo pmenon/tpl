@@ -3,7 +3,7 @@
 #include <tbb/reader_writer_lock.h>
 #include "common/macros.h"
 
-namespace terrier::common {
+namespace tpl::common {
 
 /**
  * A cheap and easy shared (reader-writer) latch, currently wraps

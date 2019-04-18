@@ -10,12 +10,12 @@
 #include "storage/write_ahead_log/log_record.h"
 #include "transaction/transaction_util.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 class GarbageCollector;
 class LogManager;
 }  // namespace terrier::storage
 
-namespace terrier::transaction {
+namespace tpl::transaction {
 /**
  * A transaction context encapsulates the information kept while the transaction
  * is running

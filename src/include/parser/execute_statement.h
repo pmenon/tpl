@@ -9,7 +9,7 @@
 #include "parser/expression/abstract_expression.h"
 #include "parser/sql_statement.h"
 
-namespace terrier {
+namespace tpl {
 namespace parser {
 
 /**

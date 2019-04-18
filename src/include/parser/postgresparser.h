@@ -8,7 +8,7 @@
 #include "parser/statements.h"
 #include "pg_query.h"
 
-namespace terrier {
+namespace tpl {
 namespace parser {
 
 /**

@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <utility>
 
-namespace terrier::transaction {
+namespace tpl::transaction {
 TransactionContext *TransactionManager::BeginTransaction() {
   // This latch has to also protect addition of this transaction to the running
   // transaction table. Otherwise, the thread might get scheduled out while

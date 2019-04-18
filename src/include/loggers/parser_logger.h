@@ -4,7 +4,7 @@
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/spdlog.h"
 
-namespace terrier::parser {
+namespace tpl::parser {
 extern std::shared_ptr<spdlog::logger> parser_logger;
 
 void init_parser_logger();

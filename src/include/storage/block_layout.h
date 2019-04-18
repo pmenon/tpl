@@ -5,7 +5,7 @@
 #include <vector>
 #include "storage/storage_defs.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 // Internally we use the sign bit to represent if a column is varlen or not.
 // Down to the implementation detail though, we always allocate 16 bytes for a
 // varlen entry, with the first 8 bytes being the pointer to the value and

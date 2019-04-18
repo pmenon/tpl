@@ -12,7 +12,7 @@ static_assert(sizeof(std::atomic<uint8_t>) == sizeof(uint8_t),
 static_assert(sizeof(std::atomic<uint64_t>) == sizeof(uint64_t),
               "unexpected std::atomic size for 64-bit ints");
 
-namespace terrier::common {
+namespace tpl::common {
 
 /**
  * A RawConcurrentBitmap is a bitmap that does not have the compile-time

@@ -5,7 +5,7 @@
 #include <iostream>
 #include <memory>
 
-namespace terrier {
+namespace tpl {
 
 /**
  * Use the macros below for generating exceptions.

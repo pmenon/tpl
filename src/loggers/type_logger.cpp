@@ -2,7 +2,7 @@
 #include <memory>
 #include "loggers/main_logger.h"
 
-namespace terrier::type {
+namespace tpl::type {
 
 std::shared_ptr<spdlog::logger> type_logger;
 

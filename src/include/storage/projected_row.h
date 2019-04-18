@@ -5,7 +5,7 @@
 #include "common/strong_typedef.h"
 #include "storage/storage_util.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 // TODO(Tianyu): To be consistent with other places, maybe move val_offset
 // fields in front of col_ids
 /**

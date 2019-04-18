@@ -9,7 +9,7 @@
 #include "storage/projected_row.h"
 #include "storage/storage_defs.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 
 /**
  * A SqlTable is a thin layer above DataTable that replaces storage layer

@@ -7,7 +7,7 @@
 #include "storage/projected_columns.h"
 #include "storage/tuple_access_strategy.h"
 #include "storage/undo_record.h"
-namespace terrier::storage {
+namespace tpl::storage {
 
 template <class RowType>
 void StorageUtil::CopyWithNullCheck(const byte *const from, RowType *const to,

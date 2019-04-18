@@ -10,7 +10,7 @@
 #include "transaction/transaction_manager.h"
 #include "transaction/transaction_util.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 
 std::pair<uint32_t, uint32_t> GarbageCollector::PerformGarbageCollection() {
   uint32_t txns_deallocated = ProcessDeallocateQueue();

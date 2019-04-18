@@ -6,6 +6,8 @@
 #include <parsing/token.h>
 #include <util/macros.h>
 #include <sstream>
+#include <plan_node/abstract_plan_node.h>
+#include <plan_node/seq_scan_plan_node.h>
 #include "parser/expression/constant_value_expression.h"
 #include "parser/expression/tuple_value_expression.h"
 #include "parser/expression_defs.h"
@@ -13,44 +15,54 @@
 
 namespace tpl::compiler {
 
-void TextCompiler::CompileAndRun() {}
+void TextCompiler::CompileAndRun(const std::shared_ptr<tpl::plan_node::AbstractPlanNode> plan) {
+  switch(plan->GetPlanNodeType()) {
+    case tpl::plan_node::PlanNodeType::SEQSCAN:
+      const tpl::plan_node::SeqScanPlanNode *scanPlan = reinterpret_cast<const tpl::plan_node::SeqScanPlanNode*>(plan.get());
+      std::string predicate = CompilePredicate(scanPlan->GetPredicate(), DEFAULT_ROW_NAME);
+      std::string template_string =
+      break;
+    default:
+      TPL_ASSERT(false, "UNSUPPORTED PLAN");
+  }
+}
 // trying recursive
 void TextCompiler::CompileSubPredicate(
-    const std::shared_ptr<terrier::parser::AbstractExpression> expression,
+    const std::shared_ptr<tpl::parser::AbstractExpression> expression,
     const std::string &rowName, std::stringstream *stream) {
   size_t numChildren = expression->GetChildrenSize();
   if (numChildren > 2) {
     TPL_ASSERT(false, "Expression not supported yet");
   }
-  terrier::parser::ExpressionType type = expression->GetExpressionType();
+  tpl::parser::ExpressionType type = expression->GetExpressionType();
 
   if (numChildren == 0) {
     std::string constVal;
     switch (type) {
-      case terrier::parser::ExpressionType::VALUE_TUPLE: {
+      case tpl::parser::ExpressionType::VALUE_TUPLE: {
         *stream << rowName;
         *stream << parsing::Token::GetString(parsing::Token::Type::DOT);
-        *stream << reinterpret_cast<terrier::parser::TupleValueExpression *>(
+        *stream << reinterpret_cast<tpl::parser::TupleValueExpression *>(
                        expression.get())
                        ->GetColumnName();
         break;
       }
-      case terrier::parser::ExpressionType::VALUE_CONSTANT: {
-        terrier::type::TransientValue val =
-            reinterpret_cast<terrier::parser::ConstantValueExpression *>(
+      case tpl::parser::ExpressionType::VALUE_CONSTANT: {
+        tpl::type::TransientValue val =
+            reinterpret_cast<tpl::parser::ConstantValueExpression *>(
                 expression.get())
                 ->GetValue();
-        terrier::type::TypeId t = val.Type();
+        tpl::type::TypeId t = val.Type();
 
         // need to figure out a better way to write each case
-        if (t != terrier::type::TypeId::INTEGER) {
+        if (t != tpl::type::TypeId::INTEGER) {
           TPL_ASSERT(false, "Only support integer constants for now");
         }
 
-        *stream << terrier::type::TransientValuePeeker::PeekInteger(val);
+        *stream << tpl::type::TransientValuePeeker::PeekInteger(val);
         break;
       }
-      case terrier::parser::ExpressionType::VALUE_NULL: {
+      case tpl::parser::ExpressionType::VALUE_NULL: {
         *stream << parsing::Token::GetString(parsing::Token::Type::NIL_VAL);
         break;
       }
@@ -65,7 +77,7 @@ void TextCompiler::CompileSubPredicate(
 
   if (numChildren == 1) {
     switch (type) {
-      case terrier::parser::ExpressionType::OPERATOR_NOT:
+      case tpl::parser::ExpressionType::OPERATOR_NOT:
         middleChar = parsing::Token::GetString(parsing::Token::Type::BANG);
       default:
         TPL_ASSERT(false, "Expression not supported");
@@ -75,51 +87,51 @@ void TextCompiler::CompileSubPredicate(
   if (numChildren == 2) {
     CompileSubPredicate(expression->GetChild(0), rowName, stream);
     switch (type) {
-      case terrier::parser::ExpressionType::OPERATOR_PLUS: {
+      case tpl::parser::ExpressionType::OPERATOR_PLUS: {
         middleChar = parsing::Token::GetString(parsing::Token::Type::PLUS);
         break;
       }
-      case terrier::parser::ExpressionType::OPERATOR_MINUS: {
+      case tpl::parser::ExpressionType::OPERATOR_MINUS: {
         middleChar = parsing::Token::GetString(parsing::Token::Type::MINUS);
         break;
       }
-      case terrier::parser::ExpressionType::OPERATOR_MULTIPLY: {
+      case tpl::parser::ExpressionType::OPERATOR_MULTIPLY: {
         middleChar = parsing::Token::GetString(parsing::Token::Type::STAR);
         break;
       }
-      case terrier::parser::ExpressionType::OPERATOR_DIVIDE: {
+      case tpl::parser::ExpressionType::OPERATOR_DIVIDE: {
         middleChar = parsing::Token::GetString(parsing::Token::Type::SLASH);
         break;
       }
       // case terrier::parser::ExpressionType::OPERATOR_CONCAT:
-      case terrier::parser::ExpressionType::OPERATOR_MOD: {
+      case tpl::parser::ExpressionType::OPERATOR_MOD: {
         middleChar = parsing::Token::GetString(parsing::Token::Type::PERCENT);
         break;
       }
-      case terrier::parser::ExpressionType::COMPARE_EQUAL: {
+      case tpl::parser::ExpressionType::COMPARE_EQUAL: {
         middleChar =
             parsing::Token::GetString(parsing::Token::Type::EQUAL_EQUAL);
         break;
       }
-      case terrier::parser::ExpressionType::COMPARE_NOT_EQUAL: {
+      case tpl::parser::ExpressionType::COMPARE_NOT_EQUAL: {
         middleChar =
             parsing::Token::GetString(parsing::Token::Type::BANG_EQUAL);
         break;
       }
-      case terrier::parser::ExpressionType::COMPARE_LESS_THAN: {
+      case tpl::parser::ExpressionType::COMPARE_LESS_THAN: {
         middleChar = parsing::Token::GetString(parsing::Token::Type::LESS);
         break;
       }
-      case terrier::parser::ExpressionType::COMPARE_GREATER_THAN: {
+      case tpl::parser::ExpressionType::COMPARE_GREATER_THAN: {
         middleChar = parsing::Token::GetString(parsing::Token::Type::GREATER);
         break;
       }
-      case terrier::parser::ExpressionType::COMPARE_LESS_THAN_OR_EQUAL_TO: {
+      case tpl::parser::ExpressionType::COMPARE_LESS_THAN_OR_EQUAL_TO: {
         middleChar =
             parsing::Token::GetString(parsing::Token::Type::LESS_EQUAL);
         break;
       }
-      case terrier::parser::ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL_TO: {
+      case tpl::parser::ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL_TO: {
         middleChar =
             parsing::Token::GetString(parsing::Token::Type::GREATER_EQUAL);
         break;
@@ -134,7 +146,7 @@ void TextCompiler::CompileSubPredicate(
 }
 
 std::string TextCompiler::CompilePredicate(
-    const std::shared_ptr<terrier::parser::AbstractExpression> expression,
+    const std::shared_ptr<const tpl::parser::AbstractExpression> expression,
     const std::string &rowName) {
   std::stringstream stream;
   CompileSubPredicate(expression, rowName, &stream);

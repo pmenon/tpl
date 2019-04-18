@@ -1,7 +1,7 @@
 #include "plan_node/seq_scan_plan_node.h"
 #include "common/hash_util.h"
 
-namespace terrier::plan_node {
+namespace tpl::plan_node {
 
 common::hash_t SeqScanPlanNode::Hash() const {
   auto type = GetPlanNodeType();

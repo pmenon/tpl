@@ -1,7 +1,7 @@
 #include "storage/write_ahead_log/log_manager.h"
 #include <transaction/transaction_context.h>
 
-namespace terrier::storage {
+namespace tpl::storage {
 void LogManager::Process() {
   while (true) {
     RecordBufferSegment *buffer;
@@ -45,7 +45,7 @@ void LogManager::Flush() {
   commits_in_buffer_.clear();
 }
 
-void LogManager::SerializeRecord(const terrier::storage::LogRecord &record) {
+void LogManager::SerializeRecord(const tpl::storage::LogRecord &record) {
   WriteValue(record.Size());
   WriteValue(record.RecordType());
   WriteValue(record.TxnBegin());

@@ -6,14 +6,14 @@
 #include "storage/sql_table.h"
 
 namespace tpl::sql {
-using namespace terrier;
+using namespace tpl;
 /// An iterator over a table's data in vector-wise fashion
 class TableVectorIterator {
  public:
   /// Create a new vectorized iterator over the given table
   explicit TableVectorIterator(
       catalog::Catalog::TableInfo *table_info,
-      terrier::transaction::TransactionContext *txn = nullptr);
+      tpl::transaction::TransactionContext *txn = nullptr);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(TableVectorIterator);
@@ -39,22 +39,22 @@ class TableVectorIterator {
   GetInitializer(const storage::SqlTable &table, const catalog::Schema &schema);
 
   // SqlTable to iterate over
-  const terrier::storage::SqlTable &table_;
+  const tpl::storage::SqlTable &table_;
 
   // Schema of the table
-  const terrier::catalog::Schema &schema_;
+  const tpl::catalog::Schema &schema_;
   const sql::Schema &sql_schema_;
 
   // Transaction trying to iterate over the table
-  terrier::transaction::TransactionContext *txn_;
+  tpl::transaction::TransactionContext *txn_;
 
   // A PC and its buffer of the PC.
   byte *buffer_;
-  terrier::storage::ProjectedColumns *projected_columns_;
+  tpl::storage::ProjectedColumns *projected_columns_;
 
   // The initilization pair for the PC.
-  std::pair<terrier::storage::ProjectedColumnsInitializer,
-            terrier::storage::ProjectionMap>
+  std::pair<tpl::storage::ProjectedColumnsInitializer,
+            tpl::storage::ProjectionMap>
       initializer_;
 
   // Iterator of the slots in the PC

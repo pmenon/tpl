@@ -402,21 +402,21 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // Transaction ops
   // -------------------------------------------------------
   OP(BeginTransaction) : {
-    auto *txn = frame->LocalAt<terrier::transaction::TransactionContext **>(
+    auto *txn = frame->LocalAt<tpl::transaction::TransactionContext **>(
         READ_LOCAL_ID());
     OpBeginTransaction(txn);
     DISPATCH_NEXT();
   }
 
   OP(CommitTransaction) : {
-    auto *txn = frame->LocalAt<terrier::transaction::TransactionContext **>(
+    auto *txn = frame->LocalAt<tpl::transaction::TransactionContext **>(
         READ_LOCAL_ID());
     OpCommitTransaction(txn);
     DISPATCH_NEXT();
   }
 
   OP(AbortTransaction) : {
-    auto *txn = frame->LocalAt<terrier::transaction::TransactionContext **>(
+    auto *txn = frame->LocalAt<tpl::transaction::TransactionContext **>(
         READ_LOCAL_ID());
     OpAbortTransaction(txn);
     DISPATCH_NEXT();

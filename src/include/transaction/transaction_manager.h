@@ -11,7 +11,7 @@
 #include "transaction/transaction_context.h"
 #include "transaction/transaction_defs.h"
 
-namespace terrier::transaction {
+namespace tpl::transaction {
 /**
  * A transaction manager maintains global state about all running transactions,
  * and is responsible for creating, committing and aborting transactions

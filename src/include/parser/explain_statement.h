@@ -5,7 +5,7 @@
 
 #include "parser/sql_statement.h"
 
-namespace terrier::parser {
+namespace tpl::parser {
 
 /**
  * Represents the SQL "EXPLAIN ..."

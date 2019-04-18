@@ -8,11 +8,11 @@
 #include "parser/sql_statement.h"
 #include "parser/table_ref.h"
 
-namespace terrier {
+namespace tpl {
 namespace parser {
 
 enum OrderType { kOrderAsc, kOrderDesc };
-using terrier::parser::OrderType;
+using tpl::parser::OrderType;
 
 /**
  * Describes OrderBy clause in a select statement.

@@ -10,7 +10,7 @@
 #include "type/type_id.h"
 #include "type/type_util.h"
 
-namespace terrier::catalog {
+namespace tpl::catalog {
 
 /**
  * Internal object for representing SQL table schema. Currently minimal until we

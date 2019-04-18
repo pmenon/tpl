@@ -2,7 +2,7 @@
 
 #include "common/strong_typedef.h"
 
-namespace terrier::type {
+namespace tpl::type {
 STRONG_TYPEDEF(date_t, uint32_t);
 STRONG_TYPEDEF(timestamp_t, uint64_t);
 

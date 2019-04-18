@@ -2,7 +2,7 @@
 #include <memory>
 #include "loggers/main_logger.h"
 
-namespace terrier {
+namespace tpl {
 
 std::shared_ptr<spdlog::logger> test_logger;
 

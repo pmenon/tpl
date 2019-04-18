@@ -15,14 +15,14 @@
 #include "common/strong_typedef.h"
 #include "storage/block_access_controller.h"
 
-namespace terrier::storage {
+namespace tpl::storage {
 // Write Ahead Logging:
 #define LOGGING_DISABLED nullptr
 
 // All tuples potentially visible to txns should have a non-null attribute of
 // version vector. This is not to be confused with a non-null version vector
 // that has value nullptr (0).
-#define VERSION_POINTER_COLUMN_ID ::terrier::storage::col_id_t(0)
+#define VERSION_POINTER_COLUMN_ID ::tpl::storage::col_id_t(0)
 #define NUM_RESERVED_COLUMNS 1u
 
 STRONG_TYPEDEF(col_id_t, uint16_t);
@@ -360,13 +360,13 @@ namespace std {
  * Implements std::hash for TupleSlot.
  */
 template <>
-struct hash<terrier::storage::TupleSlot> {
+struct hash<tpl::storage::TupleSlot> {
   /**
    * Returns the hash of the slot's contents.
    * @param slot the slot to be hashed.
    * @return the hash of the slot.
    */
-  size_t operator()(const terrier::storage::TupleSlot &slot) const {
+  size_t operator()(const tpl::storage::TupleSlot &slot) const {
     return hash<uintptr_t>()(slot.bytes_);
   }
 };

@@ -10,7 +10,7 @@
 #include "parser/sql_statement.h"
 
 // TODO(WAN): this file is messy
-namespace terrier {
+namespace tpl {
 namespace parser {
 
 /**

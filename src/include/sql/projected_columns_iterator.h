@@ -10,7 +10,7 @@
 #include "util/macros.h"
 
 namespace tpl::sql {
-using namespace terrier;
+using namespace tpl;
 /// An iterator over ProjectedColumns. A ProjectedColumnsIterator allows both
 /// tuple-at-a-time iteration over a ProjectedColumns and vector-at-a-time
 /// processing. There are two separate APIs for each and interleaving is
