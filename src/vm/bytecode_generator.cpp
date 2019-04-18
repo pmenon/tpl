@@ -750,6 +750,10 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitBuiltinSizeOfCall(call);
       break;
     }
+    case ast::Builtin::PtrCast: {
+      Visit(call->arguments()[1]);
+      break;
+    }
     default: { UNREACHABLE("Builtin not supported!"); }
   }
 }

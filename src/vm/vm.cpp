@@ -934,6 +934,71 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  // -------------------------------------------------------
+  // Real-value functions
+  // -------------------------------------------------------
+
+  // -------------------------------------------------------
+  // Trig functions
+  // -------------------------------------------------------
+
+  OP(Acos) : {
+    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    OpAcos(result, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(Asin) : {
+    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    OpAsin(result, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(Atan) : {
+    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    OpAtan(result, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(Atan2) : {
+    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    auto *arg_1 = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    auto *arg_2 = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    OpAtan2(result, arg_1, arg_2);
+    DISPATCH_NEXT();
+  }
+
+  OP(Cos) : {
+    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    OpCos(result, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(Cot) : {
+    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    OpCot(result, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(Sin) : {
+    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    OpSin(result, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(Tan) : {
+    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    OpTan(result, input);
+    DISPATCH_NEXT();
+  }
+
   // Impossible
   UNREACHABLE("Impossible to reach end of interpreter loop. Bad code!");
 }

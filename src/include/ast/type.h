@@ -69,6 +69,7 @@ class Context;
   /* Non-primitive SQL Runtime Values */                                 \
   SQL(Boolean, tpl::sql::BoolVal)                                        \
   SQL(Integer, tpl::sql::Integer)                                        \
+  SQL(Real, tpl::sql::Real)                                              \
   SQL(Decimal, tpl::sql::Decimal)                                        \
   SQL(VarBuffer, tpl::sql::VarBuffer)                                    \
   SQL(Date, tpl::sql::Date)                                              \

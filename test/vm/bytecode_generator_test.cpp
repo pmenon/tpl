@@ -20,28 +20,49 @@ class BytecodeGeneratorTest : public TplTest {
 };
 
 TEST_F(BytecodeGeneratorTest, SimpleTest) {
-  //
-  // Create a function that multiples an input unsigned 32-bit integer by 20
-  //
+  {
+    auto src = "fun test() -> bool { return true }";
+    BytecodeCompiler compiler;
+    auto *ast = compiler.CompileToAst(src);
+    auto module = BytecodeGenerator::Compile(ast, "test");
 
-  auto src = R"(
+    std::function<bool()> func;
+    EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, func));
+    EXPECT_TRUE(func());
+  }
+
+  {
+    auto src = "fun test() -> bool { return false }";
+    BytecodeCompiler compiler;
+    auto *ast = compiler.CompileToAst(src);
+    auto module = BytecodeGenerator::Compile(ast, "test");
+
+    std::function<bool()> func;
+    EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, func));
+    EXPECT_FALSE(func());
+  }
+
+  {
+    // Create a function that multiples an input unsigned 32-bit integer by 20
+    auto src = R"(
     fun mul20(x: uint32) -> uint32 {
       var y: uint32 = 20
       return x * y
     })";
-  BytecodeCompiler compiler;
-  auto *ast = compiler.CompileToAst(src);
+    BytecodeCompiler compiler;
+    auto *ast = compiler.CompileToAst(src);
 
-  // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(ast, "mul20");
+    // Try generating bytecode for this declaration
+    auto module = BytecodeGenerator::Compile(ast, "mul20");
 
-  std::function<u32(u32)> mul_20;
-  EXPECT_TRUE(module->GetFunction("mul20", ExecutionMode::Interpret, mul_20))
-      << "Function 'mul20' not found in module";
+    std::function<u32(u32)> mul_20;
+    EXPECT_TRUE(module->GetFunction("mul20", ExecutionMode::Interpret, mul_20))
+        << "Function 'mul20' not found in module";
 
-  EXPECT_EQ(20u, mul_20(1));
-  EXPECT_EQ(40u, mul_20(2));
-  EXPECT_EQ(60u, mul_20(3));
+    EXPECT_EQ(20u, mul_20(1));
+    EXPECT_EQ(40u, mul_20(2));
+    EXPECT_EQ(60u, mul_20(3));
+  }
 }
 
 TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
@@ -57,8 +78,6 @@ TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
 
   // Try generating bytecode for this declaration
   auto module = BytecodeGenerator::Compile(ast, "test");
-
-  module->PrettyPrint(std::cout);
 
   std::function<bool()> f;
   EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
@@ -178,8 +197,6 @@ TEST_F(BytecodeGeneratorTest, ParameterPassingTest) {
   // Try generating bytecode for this declaration
   auto module = BytecodeGenerator::Compile(ast, "test");
 
-  module->PrettyPrint(std::cout);
-
   struct S {
     int a;
     int b;
@@ -196,10 +213,6 @@ TEST_F(BytecodeGeneratorTest, ParameterPassingTest) {
 }
 
 TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
-  /*
-   * Function with nil return type cannot return expression
-   */
-
   {
     auto src = R"(
     fun test() -> nil {
@@ -211,10 +224,6 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
     compiler.CompileToAst(src);
     EXPECT_TRUE(compiler.HasErrors());
   }
-
-  /*
-   * Function with non-nil return type must have expression
-   */
 
   {
     auto src = R"(
@@ -240,8 +249,6 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
     // Try generating bytecode for this declaration
     auto module = BytecodeGenerator::Compile(ast, "test");
 
-    module->PrettyPrint(std::cout);
-
     std::function<i32()> f;
     EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
         << "Function 'test' not found in module";
@@ -263,8 +270,6 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
 
     // Try generating bytecode for this declaration
     auto module = BytecodeGenerator::Compile(ast, "test");
-
-    module->PrettyPrint(std::cout);
 
     std::function<i32()> f;
     EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
@@ -294,8 +299,6 @@ TEST_F(BytecodeGeneratorTest, FunctionTest) {
 
   // Try generating bytecode for this declaration
   auto module = BytecodeGenerator::Compile(ast, "test");
-
-  module->PrettyPrint(std::cout);
 
   struct S {
     int a;

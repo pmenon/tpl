@@ -9,6 +9,7 @@
 #include "sql/join_hash_table.h"
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
+#include "sql/value_functions.h"
 #include "util/macros.h"
 
 // All VM bytecode op handlers must use this macro
@@ -660,5 +661,42 @@ VM_OP_HOT void OpSorterIteratorGetRow(const byte **row,
 }
 
 void OpSorterIteratorFree(tpl::sql::SorterIterator *iter);
+
+// ---------------------------------------------------------
+// Trig functions
+// ---------------------------------------------------------
+
+VM_OP_HOT void OpAcos(tpl::sql::Real *result, tpl::sql::Real *input) {
+  tpl::sql::ACos::Execute<true>(input, result);
+}
+
+VM_OP_HOT void OpAsin(tpl::sql::Real *result, tpl::sql::Real *input) {
+  tpl::sql::ASin::Execute<true>(input, result);
+}
+
+VM_OP_HOT void OpAtan(tpl::sql::Real *result, tpl::sql::Real *input) {
+  tpl::sql::ATan::Execute<true>(input, result);
+}
+
+VM_OP_HOT void OpAtan2(tpl::sql::Real *result, tpl::sql::Real *arg_1,
+                       tpl::sql::Real *arg_2) {
+  tpl::sql::ATan2::Execute<true>(arg_1, arg_2, result);
+}
+
+VM_OP_HOT void OpCos(tpl::sql::Real *result, tpl::sql::Real *input) {
+  tpl::sql::Cos::Execute<true>(input, result);
+}
+
+VM_OP_HOT void OpCot(tpl::sql::Real *result, tpl::sql::Real *input) {
+  tpl::sql::Cot::Execute<true>(input, result);
+}
+
+VM_OP_HOT void OpSin(tpl::sql::Real *result, tpl::sql::Real *input) {
+  tpl::sql::Sin::Execute<true>(input, result);
+}
+
+VM_OP_HOT void OpTan(tpl::sql::Real *result, tpl::sql::Real *input) {
+  tpl::sql::Tan::Execute<true>(input, result);
+}
 
 }  // extern "C"

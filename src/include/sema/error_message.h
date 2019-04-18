@@ -122,6 +122,10 @@ namespace sema {
   F(BadArgToSorterFree,                                                        \
     "sorterFree() expects (*Sorter) argument types. Received type '%0' in "    \
     "position %1",                                                             \
+    (ast::Type *, u32))                                                        \
+  F(BadArgToPtrCast,                                                           \
+    "ptrCast() expects (compile-time *DestType, *T) arguments.  Received "     \
+    "type '%0' in position %1",                                                \
     (ast::Type *, u32))
 
 /**

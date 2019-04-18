@@ -181,7 +181,17 @@ namespace tpl::vm {
   F(SorterIteratorInit, OperandType::Local, OperandType::Local)                                                        \
   F(SorterIteratorGetRow, OperandType::Local, OperandType::Local)                                                      \
   F(SorterIteratorAdvance, OperandType::Local)                                                                         \
-  F(SorterIteratorFree, OperandType::Local)
+  F(SorterIteratorFree, OperandType::Local)                                                                            \
+                                                                                                                       \
+  /* Trig functions */                                                                                                 \
+  F(Acos, OperandType::Local, OperandType::Local)                                                                      \
+  F(Asin, OperandType::Local, OperandType::Local)                                                                      \
+  F(Atan, OperandType::Local, OperandType::Local)                                                                      \
+  F(Atan2, OperandType::Local, OperandType::Local, OperandType::Local)                                                 \
+  F(Cos, OperandType::Local, OperandType::Local)                                                                       \
+  F(Cot, OperandType::Local, OperandType::Local)                                                                       \
+  F(Sin, OperandType::Local, OperandType::Local)                                                                       \
+  F(Tan, OperandType::Local, OperandType::Local)                                                                       \
 
 // clang-format on
 

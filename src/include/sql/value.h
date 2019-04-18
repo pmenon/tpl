@@ -1,7 +1,7 @@
 #pragma once
 
-#include <util/macros.h>
 #include "util/common.h"
+#include "util/macros.h"
 
 namespace tpl::sql {
 
@@ -47,6 +47,46 @@ struct BoolVal : public Val {
 };
 
 // ---------------------------------------------------------
+// Integer
+// ---------------------------------------------------------
+
+/// An integral SQL value
+struct Integer : public Val {
+  i64 val;
+
+  explicit Integer(i64 val) noexcept : Val(false), val(val) {}
+
+  /// Return a NULL integer value
+  static Integer Null() {
+    Integer val(0);
+    val.is_null = true;
+    return val;
+  }
+
+  /// dumb division for now
+  Integer Divide(const Integer &denom) {
+    return Integer(this->val / denom.val);
+  }
+};
+
+// ---------------------------------------------------------
+// Real
+// ---------------------------------------------------------
+
+struct Real : public Val {
+  double val;
+
+  explicit Real(float val) noexcept : Val(false), val(val) {}
+  explicit Real(double val) noexcept : Val(false), val(val) {}
+
+  static Real Null() {
+    Real real(0.0);
+    real.is_null = true;
+    return real;
+  }
+};
+
+// ---------------------------------------------------------
 // Decimal
 // ---------------------------------------------------------
 
@@ -67,24 +107,6 @@ struct Decimal : public Val {
   }
 };
 
-/// An integral SQL value
-struct Integer : public Val {
-  i64 val;
-
-  explicit Integer(i64 val) noexcept : Val(false), val(val) {}
-
-  /// Return a NULL integer value
-  static Integer Null() {
-    Integer val(0);
-    val.is_null = true;
-    return val;
-  }
-
-  /// dumb division for now
-  Integer Divide(const Integer &denom) {
-    return Integer(this->val / denom.val);
-  }
-};
 // ---------------------------------------------------------
 // Strings
 // ---------------------------------------------------------

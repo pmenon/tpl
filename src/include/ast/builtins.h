@@ -29,6 +29,16 @@ namespace tpl::ast {
   F(SorterSort, sorterSort)            \
   F(SorterFree, sorterFree)            \
                                        \
+  /* Trig */                           \
+  F(ACos, acos)                        \
+  F(ASin, asin)                        \
+  F(ATan, atan)                        \
+  F(ATan2, atan2)                      \
+  F(Cos, cos)                          \
+  F(Cot, cot)                          \
+  F(Sin, sin)                          \
+  F(Tan, tan)                          \
+                                       \
   /* Generic */                        \
   F(Map, map)                          \
   F(Fold, fold)                        \

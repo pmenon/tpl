@@ -642,6 +642,11 @@ class CallExpr : public Expr {
 
   void set_call_kind(CallKind call_kind) { call_kind_ = call_kind; }
 
+  void set_argument(u32 arg_idx, Expr *expr) {
+    TPL_ASSERT(arg_idx < num_args(), "Out-of-bounds argument access");
+    args_[arg_idx] = expr;
+  }
+
  private:
   Expr *func_;
   util::RegionVector<Expr *> args_;
@@ -866,10 +871,7 @@ class LitExpr : public Expr {
   union {
     bool boolean_;
     Identifier str_;
-    i8 int8_;
-    i16 int16_;
     i32 int32_;
-    i64 int64_;
     f32 float32_;
   };
 };
