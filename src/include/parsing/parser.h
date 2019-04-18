@@ -83,35 +83,35 @@ class Parser {
   // Parsing productions
   // -------------------------------------------------------
 
-  ast::Decl *ParseDecl(parsing::ParsingContext *pctx);
+  ast::Decl *ParseDecl(ParsingContext *pctx);
 
-  ast::Decl *ParseFunctionDecl(parsing::ParsingContext *pctx);
+  ast::Decl *ParseFunctionDecl(ParsingContext *pctx);
 
-  ast::Decl *ParseStructDecl(parsing::ParsingContext *pctx);
+  ast::Decl *ParseStructDecl(ParsingContext *pctx);
 
-  ast::Decl *ParseVariableDecl(parsing::ParsingContext *pctx);
+  ast::Decl *ParseVariableDecl(ParsingContext *pctx);
 
-  ast::Stmt *ParseStmt(parsing::ParsingContext *pctx);
+  ast::Stmt *ParseStmt(ParsingContext *pctx);
 
-  ast::Stmt *ParseSimpleStmt(parsing::ParsingContext *pctx);
+  ast::Stmt *ParseSimpleStmt(ParsingContext *pctx);
 
-  ast::Stmt *ParseBlockStmt(parsing::ParsingContext *pctx);
+  ast::Stmt *ParseBlockStmt(ParsingContext *pctx);
 
   class ForHeader;
 
-  ForHeader ParseForHeader(parsing::ParsingContext *pctx);
+  ForHeader ParseForHeader(ParsingContext *pctx);
 
-  ast::Stmt *ParseForStmt(parsing::ParsingContext *pctx);
+  ast::Stmt *ParseForStmt(ParsingContext *pctx);
 
-  ast::Stmt *ParseIfStmt(parsing::ParsingContext *pctx);
+  ast::Stmt *ParseIfStmt(ParsingContext *pctx);
 
-  ast::Stmt *ParseReturnStmt(parsing::ParsingContext *pctx);
+  ast::Stmt *ParseReturnStmt(ParsingContext *pctx);
 
-  ast::Expr *ParseExpr(parsing::ParsingContext *pctx);
+  ast::Expr *ParseExpr(ParsingContext *pctx);
 
-  ast::Expr *ParseBinaryOpExpr(parsing::ParsingContext *pctx, u32 min_prec);
+  ast::Expr *ParseBinaryOpExpr(ParsingContext *pctx, u32 min_prec);
 
-  ast::Expr *ParseUnaryOpExpr(parsing::ParsingContext *pctx);
+  ast::Expr *ParseUnaryOpExpr(ParsingContext *pctx);
 
   ast::Expr *ParsePrimaryExpr(ParsingContext *pctx);
 
@@ -119,19 +119,19 @@ class Parser {
 
   ast::Expr *ParseFunctionLitExpr(ParsingContext *pctx);
 
-  ast::Expr *ParseType(parsing::ParsingContext *pctx);
+  ast::Expr *ParseType(ParsingContext *pctx);
 
-  ast::Expr *ParseFunctionType(parsing::ParsingContext *pctx);
+  ast::Expr *ParseFunctionType(ParsingContext *pctx);
 
-  ast::Expr *ParsePointerType(parsing::ParsingContext *pctx);
+  ast::Expr *ParsePointerType(ParsingContext *pctx);
 
-  ast::Expr *ParseArrayType(parsing::ParsingContext *pctx);
+  ast::Expr *ParseArrayType(ParsingContext *pctx);
 
-  ast::Expr *ParseStructType(parsing::ParsingContext *pctx);
+  ast::Expr *ParseStructType(ParsingContext *pctx);
 
-  ast::Expr *ParseMapType(parsing::ParsingContext *pctx);
+  ast::Expr *ParseMapType(ParsingContext *pctx);
 
-  ast::Attributes *ParseAttributes(parsing::ParsingContext *pctx);
+  ast::Attributes *ParseAttributes(ParsingContext *pctx);
 
  private:
   // The source code scanner

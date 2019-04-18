@@ -22,7 +22,7 @@ ast::AstNode *Parser::Parse() {
 
   const SourcePosition &start_pos = scanner_->current_position();
 
-  parsing::ParsingContext pctx;
+  ParsingContext pctx;
   while (peek() != Token::Type::EOS) {
     if (ast::Decl *decl = ParseDecl(&pctx)) {
       decls.push_back(decl);
@@ -42,7 +42,7 @@ void Parser::Sync(const std::unordered_set<Token::Type> &s) {
   }
 }
 
-ast::Decl *Parser::ParseDecl(parsing::ParsingContext *pctx) {
+ast::Decl *Parser::ParseDecl(ParsingContext *pctx) {
   // At the top-level, we only allow structs and functions
   switch (peek()) {
     case Token::Type::STRUCT: {
@@ -51,7 +51,9 @@ ast::Decl *Parser::ParseDecl(parsing::ParsingContext *pctx) {
     case Token::Type::FUN: {
       return ParseFunctionDecl(pctx);
     }
-    default: { break; }
+    default: {
+      break;
+    }
   }
 
   // Report error, sync up and try again
@@ -61,7 +63,7 @@ ast::Decl *Parser::ParseDecl(parsing::ParsingContext *pctx) {
   return nullptr;
 }
 
-ast::Decl *Parser::ParseFunctionDecl(parsing::ParsingContext *pctx) {
+ast::Decl *Parser::ParseFunctionDecl(ParsingContext *pctx) {
   Expect(Token::Type::FUN);
 
   const SourcePosition &position = scanner_->current_position();
@@ -80,7 +82,7 @@ ast::Decl *Parser::ParseFunctionDecl(parsing::ParsingContext *pctx) {
   return decl;
 }
 
-ast::Decl *Parser::ParseStructDecl(parsing::ParsingContext *pctx) {
+ast::Decl *Parser::ParseStructDecl(ParsingContext *pctx) {
   Expect(Token::Type::STRUCT);
 
   const SourcePosition &position = scanner_->current_position();
@@ -100,7 +102,7 @@ ast::Decl *Parser::ParseStructDecl(parsing::ParsingContext *pctx) {
   return decl;
 }
 
-ast::Decl *Parser::ParseVariableDecl(parsing::ParsingContext *pctx) {
+ast::Decl *Parser::ParseVariableDecl(ParsingContext *pctx) {
   // VariableDecl = 'var' Ident ':' Type [ '=' Expr ] ;
 
   Expect(Token::Type::VAR);
@@ -109,7 +111,7 @@ ast::Decl *Parser::ParseVariableDecl(parsing::ParsingContext *pctx) {
 
   // The name
   Expect(Token::Type::IDENTIFIER);
-  ast::Identifier name = pctx->MakeUniqueSymbol(context(), GetSymbol());
+  ast::Identifier name = pctx->MakeUniqueSymbol(context_, GetSymbol());
 
   // The type (if exists)
   ast::Expr *type = nullptr;
@@ -139,7 +141,7 @@ ast::Decl *Parser::ParseVariableDecl(parsing::ParsingContext *pctx) {
   return decl;
 }
 
-ast::Stmt *Parser::ParseStmt(parsing::ParsingContext *pctx) {
+ast::Stmt *Parser::ParseStmt(ParsingContext *pctx) {
   // Statement = Block | ExpressionStmt | ForStmt | IfStmt | ReturnStmt |
   //             SimpleStmt | VariableDecl ;
 
@@ -160,11 +162,13 @@ ast::Stmt *Parser::ParseStmt(parsing::ParsingContext *pctx) {
       ast::Decl *var_decl = ParseVariableDecl(pctx);
       return node_factory_->NewDeclStmt(var_decl);
     }
-    default: { return ParseSimpleStmt(pctx); }
+    default: {
+      return ParseSimpleStmt(pctx);
+    }
   }
 }
 
-ast::Stmt *Parser::ParseSimpleStmt(parsing::ParsingContext *pctx) {
+ast::Stmt *Parser::ParseSimpleStmt(ParsingContext *pctx) {
   // SimpleStmt = AssignmentStmt | ExpressionStmt ;
   ast::Expr *left = ParseExpr(pctx);
 
@@ -177,7 +181,7 @@ ast::Stmt *Parser::ParseSimpleStmt(parsing::ParsingContext *pctx) {
   return node_factory_->NewExpressionStmt(left);
 }
 
-ast::Stmt *Parser::ParseBlockStmt(parsing::ParsingContext *pctx) {
+ast::Stmt *Parser::ParseBlockStmt(ParsingContext *pctx) {
   // BlockStmt = '{' { Stmt } '}' ;
 
   // Eat the left brace
@@ -188,7 +192,7 @@ ast::Stmt *Parser::ParseBlockStmt(parsing::ParsingContext *pctx) {
   util::RegionVector<ast::Stmt *> statements(region());
   statements.reserve(16);
 
-  parsing::ParsingContext nested_pctx = pctx->NewNestedContext();
+  ParsingContext nested_pctx = pctx->NewNestedContext();
   // Loop while we don't see the right brace
   while (peek() != Token::Type::RIGHT_BRACE && peek() != Token::Type::EOS) {
     ast::Stmt *stmt = ParseStmt(&nested_pctx);
@@ -258,7 +262,7 @@ class Parser::ForHeader {
   ast::Attributes *attributes;
 };
 
-Parser::ForHeader Parser::ParseForHeader(parsing::ParsingContext *pctx) {
+Parser::ForHeader Parser::ParseForHeader(ParsingContext *pctx) {
   // ForHeader = [ '(' ForWhile ')' | '(' ForReg ')' | '(' ForIn ')' ] ;
   //
   // ForWhile = Expr ;
@@ -316,7 +320,7 @@ Parser::ForHeader Parser::ParseForHeader(parsing::ParsingContext *pctx) {
   return ForHeader::Standard(init, cond, next);
 }
 
-ast::Stmt *Parser::ParseForStmt(parsing::ParsingContext *pctx) {
+ast::Stmt *Parser::ParseForStmt(ParsingContext *pctx) {
   // ForStmt = 'for' ForHeader Block ;
   Expect(Token::Type::FOR);
 
@@ -337,7 +341,7 @@ ast::Stmt *Parser::ParseForStmt(parsing::ParsingContext *pctx) {
   return node_factory_->NewForInStmt(position, target, iter, attributes, body);
 }
 
-ast::Stmt *Parser::ParseIfStmt(parsing::ParsingContext *pctx) {
+ast::Stmt *Parser::ParseIfStmt(ParsingContext *pctx) {
   // IfStmt = 'if' '(' Expr ')' Block [ 'else' ( IfStmt | Block ) ] ;
 
   Expect(Token::Type::IF);
@@ -365,7 +369,7 @@ ast::Stmt *Parser::ParseIfStmt(parsing::ParsingContext *pctx) {
   return node_factory_->NewIfStmt(position, cond, then_stmt, else_stmt);
 }
 
-ast::Stmt *Parser::ParseReturnStmt(parsing::ParsingContext *pctx) {
+ast::Stmt *Parser::ParseReturnStmt(ParsingContext *pctx) {
   Expect(Token::Type::RETURN);
 
   const SourcePosition &position = scanner_->current_position();
@@ -378,12 +382,11 @@ ast::Stmt *Parser::ParseReturnStmt(parsing::ParsingContext *pctx) {
   return node_factory_->NewReturnStmt(position, ret);
 }
 
-ast::Expr *Parser::ParseExpr(parsing::ParsingContext *pctx) {
+ast::Expr *Parser::ParseExpr(ParsingContext *pctx) {
   return ParseBinaryOpExpr(pctx, Token::LowestPrecedence() + 1);
 }
 
-ast::Expr *Parser::ParseBinaryOpExpr(parsing::ParsingContext *pctx,
-                                     uint32_t min_prec) {
+ast::Expr *Parser::ParseBinaryOpExpr(ParsingContext *pctx, uint32_t min_prec) {
   TPL_ASSERT(min_prec > 0, "The minimum precedence cannot be 0");
 
   ast::Expr *left = ParseUnaryOpExpr(pctx);
@@ -414,7 +417,7 @@ ast::Expr *Parser::ParseBinaryOpExpr(parsing::ParsingContext *pctx,
   return left;
 }
 
-ast::Expr *Parser::ParseUnaryOpExpr((parsing::ParsingContext *pctx) {
+ast::Expr *Parser::ParseUnaryOpExpr(ParsingContext *pctx) {
   // UnaryOpExpr = PrimaryExpr | unary_op UnaryOpExpr ;
   // unary_op = '&' | '!' | '~' | '^' | '-' | '*'
 
@@ -438,7 +441,7 @@ ast::Expr *Parser::ParseUnaryOpExpr((parsing::ParsingContext *pctx) {
   return ParsePrimaryExpr(pctx);
 }
 
-ast::Expr *Parser::ParsePrimaryExpr((parsing::ParsingContext *pctx) {
+ast::Expr *Parser::ParsePrimaryExpr(ParsingContext *pctx) {
   // PrimaryExpr = Operand | CallExpr | MemberExpr | IndexExpr ;
   // CallExpr = PrimaryExpr '(' (Expr)* ') ;
   // MemberExpr = PrimaryExpr '.' Expr
@@ -480,14 +483,16 @@ ast::Expr *Parser::ParsePrimaryExpr((parsing::ParsingContext *pctx) {
         result = node_factory_->NewIndexExpr(result->position(), result, index);
         break;
       }
-      default: { break; }
+      default: {
+        break;
+      }
     }
   } while (Token::IsCallOrMemberOrIndex(peek()));
 
   return result;
 }
 
-ast::Expr *Parser::ParseOperand((parsing::ParsingContext *pctx) {
+ast::Expr *Parser::ParseOperand(ParsingContext *pctx) {
   // Operand = Literal | OperandName | '(' Expr ')'
   // Literal = int_lit | float_lit | 'nil' | 'true' | 'false' | FunctionLiteral
   // OperandName = identifier
@@ -506,8 +511,8 @@ ast::Expr *Parser::ParseOperand((parsing::ParsingContext *pctx) {
     case Token::Type::BUILTIN_IDENTIFIER:
     case Token::Type::IDENTIFIER: {
       Next();
-      return node_factory_->NewIdentifierExpr(scanner_->current_position(),
-                                              pctx->GetScopedSymbol(GetSymbol()));
+      return node_factory_->NewIdentifierExpr(
+          scanner_->current_position(), pctx->GetScopedSymbol(GetSymbol()));
     }
     case Token::Type::INTEGER: {
       Next();
@@ -538,7 +543,9 @@ ast::Expr *Parser::ParseOperand((parsing::ParsingContext *pctx) {
       Expect(Token::Type::RIGHT_PAREN);
       return expr;
     }
-    default: { break; }
+    default: {
+      break;
+    }
   }
 
   // Error
@@ -548,7 +555,7 @@ ast::Expr *Parser::ParseOperand((parsing::ParsingContext *pctx) {
   return node_factory_->NewBadExpr(scanner_->current_position());
 }
 
-ast::Expr *Parser::ParseFunctionLitExpr((parsing::ParsingContext *pctx) {
+ast::Expr *Parser::ParseFunctionLitExpr(ParsingContext *pctx) {
   // FunctionLiteral = Signature FunctionBody ;
   //
   // FunctionBody = Block ;
@@ -563,7 +570,7 @@ ast::Expr *Parser::ParseFunctionLitExpr((parsing::ParsingContext *pctx) {
   return node_factory_->NewFunctionLitExpr(func_type, body);
 }
 
-ast::Expr *Parser::ParseType(parsing::ParsingContext *pctx) {
+ast::Expr *Parser::ParseType(ParsingContext *pctx) {
   switch (peek()) {
     case Token::Type::NIL:
     case Token::Type::IDENTIFIER: {
@@ -586,7 +593,9 @@ ast::Expr *Parser::ParseType(parsing::ParsingContext *pctx) {
     case Token::Type::STRUCT: {
       return ParseStructType(pctx);
     }
-    default: { break; }
+    default: {
+      break;
+    }
   }
 
   // Error
@@ -596,7 +605,7 @@ ast::Expr *Parser::ParseType(parsing::ParsingContext *pctx) {
   return nullptr;
 }
 
-ast::Expr *Parser::ParseFunctionType(parsing::ParsingContext *pctx) {
+ast::Expr *Parser::ParseFunctionType(ParsingContext *pctx) {
   // FuncType = '(' { ParameterList } ')' '->' Type ;
   // ParameterList = { Ident ':' } Type ;
 
@@ -641,7 +650,7 @@ ast::Expr *Parser::ParseFunctionType(parsing::ParsingContext *pctx) {
   return node_factory_->NewFunctionType(position, std::move(params), ret);
 }
 
-ast::Expr *Parser::ParsePointerType(parsing::ParsingContext *pctx) {
+ast::Expr *Parser::ParsePointerType(ParsingContext *pctx) {
   // PointerTypeRepr = '*' Type ;
 
   Expect(Token::Type::STAR);
@@ -653,7 +662,7 @@ ast::Expr *Parser::ParsePointerType(parsing::ParsingContext *pctx) {
   return node_factory_->NewPointerType(position, base);
 }
 
-ast::Expr *Parser::ParseArrayType(parsing::ParsingContext *pctx) {
+ast::Expr *Parser::ParseArrayType(ParsingContext *pctx) {
   // ArrayTypeRepr = '[' [ Length ] ']' Type ;
   // Length = Expr ;
 
@@ -675,7 +684,7 @@ ast::Expr *Parser::ParseArrayType(parsing::ParsingContext *pctx) {
   return node_factory_->NewArrayType(position, len, elem_type);
 }
 
-ast::Expr *Parser::ParseStructType(parsing::ParsingContext *pctx) {
+ast::Expr *Parser::ParseStructType(ParsingContext *pctx) {
   // StructType = '{' { Ident ':' Type } '}' ;
 
   const SourcePosition &position = scanner_->current_position();
@@ -707,7 +716,7 @@ ast::Expr *Parser::ParseStructType(parsing::ParsingContext *pctx) {
   return node_factory_->NewStructType(position, std::move(fields));
 }
 
-ast::Expr *Parser::ParseMapType(parsing::ParsingContext *pctx) {
+ast::Expr *Parser::ParseMapType(ParsingContext *pctx) {
   // MapType = 'map' '[' Expr ']' Expr ;
 
   const SourcePosition &position = scanner_->current_position();
@@ -725,7 +734,7 @@ ast::Expr *Parser::ParseMapType(parsing::ParsingContext *pctx) {
   return node_factory_->NewMapType(position, key_type, value_type);
 }
 
-ast::Attributes *Parser::ParseAttributes(parsing::ParsingContext *pctx) {
+ast::Attributes *Parser::ParseAttributes(ParsingContext *pctx) {
   util::RegionUnorderedMap<ast::Identifier, ast::Expr *> attrs(region());
 
   Consume(Token::Type::LEFT_BRACKET);
