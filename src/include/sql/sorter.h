@@ -11,7 +11,7 @@ class Sorter {
  public:
   friend class SorterIterator;
 
-  using ComparisonFunction = int (*)(const byte *lhs, const byte *rhs);
+  using ComparisonFunction = i32 (*)(const byte *lhs, const byte *rhs);
 
   /// Construct a sorter using the given allocator, configured to store input
   /// tuples of size \a tuple_size bytes

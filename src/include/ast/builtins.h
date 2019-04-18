@@ -5,6 +5,12 @@
 namespace tpl::ast {
 
 #define BUILTINS_LIST(F)               \
+  /* Primitive <-> SQL */              \
+  F(IntToSql, intToSql)                \
+  F(BoolToSql, boolToSql)              \
+  F(FloatToSql, floatToSql)            \
+  F(SqlToBool, sqlToBool)              \
+                                       \
   /* Vectorized Filters */             \
   F(FilterEq, filterEq)                \
   F(FilterGe, filterGe)                \

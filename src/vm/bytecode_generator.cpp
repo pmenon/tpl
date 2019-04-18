@@ -541,7 +541,7 @@ void BytecodeGenerator::VisitArithmeticUnaryExpr(ast::UnaryOpExpr *op) {
   emitter()->EmitUnaryOp(bytecode, dest, input);
 
   // Mark where the result is
-  execution_result()->set_destination(dest);
+  execution_result()->set_destination(dest.ValueOf());
 }
 
 void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
@@ -570,6 +570,46 @@ void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
     BuildAssign(rv.ValueOf(), result, node->ret()->type());
   }
   emitter()->EmitReturn();
+}
+
+void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call,
+                                               ast::Builtin builtin) {
+  TPL_ASSERT(execution_result()->IsRValue(),
+             "SQL conversions must be R-Values");
+
+  auto *ctx = call->type()->context();
+
+  switch (builtin) {
+    case ast::Builtin::BoolToSql: {
+      auto dest = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Boolean));
+      auto input = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::InitBool, dest, input);
+      break;
+    }
+    case ast::Builtin::IntToSql: {
+      auto dest = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Integer));
+      auto input = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::InitInteger, dest, input);
+      break;
+    }
+    case ast::Builtin::FloatToSql: {
+      auto dest = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Real));
+      auto input = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::InitReal, dest, input);
+      break;
+    }
+    case ast::Builtin::SqlToBool: {
+      auto dest = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
+      auto input = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::ForceBoolTruth, dest, input);
+      break;
+    }
+    default: { UNREACHABLE("Impossible SQL conversion call"); }
+  }
 }
 
 void BytecodeGenerator::VisitBuiltinFilterCall(ast::CallExpr *call,
@@ -718,6 +758,13 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
   ctx->IsBuiltinFunction(call->GetFuncName(), &builtin);
 
   switch (builtin) {
+    case ast::Builtin::BoolToSql:
+    case ast::Builtin::IntToSql:
+    case ast::Builtin::FloatToSql:
+    case ast::Builtin::SqlToBool: {
+      VisitSqlConversionCall(call, builtin);
+      break;
+    }
     case ast::Builtin::FilterEq:
     case ast::Builtin::FilterGt:
     case ast::Builtin::FilterGe:

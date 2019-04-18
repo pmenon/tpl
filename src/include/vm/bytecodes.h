@@ -9,26 +9,24 @@
 
 namespace tpl::vm {
 
-// clang-format off
 // Creates instances of a given opcode for all integer primitive types
-#define CREATE_FOR_INT_TYPES(func, op, ...)      \
-  func(op##_##i8, __VA_ARGS__)                   \
-  func(op##_##i16, __VA_ARGS__)                  \
-  func(op##_##i32, __VA_ARGS__)                  \
-  func(op##_##i64, __VA_ARGS__)                  \
-  func(op##_##u8, __VA_ARGS__)                   \
-  func(op##_##u16, __VA_ARGS__)                  \
-  func(op##_##u32, __VA_ARGS__)                  \
-  func(op##_##u64, __VA_ARGS__)
-// clang-format on
+#define CREATE_FOR_INT_TYPES(F, op, ...) \
+  F(op##_##i8, __VA_ARGS__)              \
+  F(op##_##i16, __VA_ARGS__)             \
+  F(op##_##i32, __VA_ARGS__)             \
+  F(op##_##i64, __VA_ARGS__)             \
+  F(op##_##u8, __VA_ARGS__)              \
+  F(op##_##u16, __VA_ARGS__)             \
+  F(op##_##u32, __VA_ARGS__)             \
+  F(op##_##u64, __VA_ARGS__)
 
 // Creates instances of a given opcode for all floating-point primitive types
 #define CREATE_FOR_FLOAT_TYPES(func, op) func(op, f32) func(op, f64)
 
 // Creates instances of a given opcode for *ALL* primitive types
-#define CREATE_FOR_ALL_TYPES(func, op, ...)   \
-  CREATE_FOR_INT_TYPES(func, op, __VA_ARGS__) \
-  CREATE_FOR_FLOAT_TYPES(func, op, __VA_ARGS__)
+#define CREATE_FOR_ALL_TYPES(F, op, ...)   \
+  CREATE_FOR_INT_TYPES(F, op, __VA_ARGS__) \
+  CREATE_FOR_FLOAT_TYPES(F, op, __VA_ARGS__)
 
 #define GET_BASE_FOR_INT_TYPES(op) (op##_i8)
 #define GET_BASE_FOR_FLOAT_TYPES(op) (op##_f32)
@@ -115,7 +113,9 @@ namespace tpl::vm {
                                                                                                                        \
   /* SQL type comparisons */                                                                                           \
   F(ForceBoolTruth, OperandType::Local, OperandType::Local)                                                            \
+  F(InitBool, OperandType::Local, OperandType::Local)                                                                  \
   F(InitInteger, OperandType::Local, OperandType::Local)                                                               \
+  F(InitReal, OperandType::Local, OperandType::Local)                                                                  \
   F(LessThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
   F(LessThanEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                  \
   F(GreaterThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                    \
@@ -191,7 +191,7 @@ namespace tpl::vm {
   F(Cos, OperandType::Local, OperandType::Local)                                                                       \
   F(Cot, OperandType::Local, OperandType::Local)                                                                       \
   F(Sin, OperandType::Local, OperandType::Local)                                                                       \
-  F(Tan, OperandType::Local, OperandType::Local)                                                                       \
+  F(Tan, OperandType::Local, OperandType::Local)
 
 // clang-format on
 

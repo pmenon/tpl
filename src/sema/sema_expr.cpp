@@ -206,7 +206,55 @@ void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
   }
 }
 
-void Sema::CheckBuiltinMapCall(ast::CallExpr *call) {}
+void Sema::CheckBuiltinMapCall(UNUSED ast::CallExpr *call) {}
+
+void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call,
+                                         ast::Builtin builtin) {
+  auto input_type = call->arguments()[0]->type();
+  switch (builtin) {
+    case ast::Builtin::BoolToSql: {
+      if (!input_type->IsSpecificBuiltin(ast::BuiltinType::Bool)) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kInvalidSqlCastToBool, input_type);
+        return;
+      }
+      call->set_type(
+          ast::BuiltinType::Get(context(), ast::BuiltinType::Boolean));
+      break;
+    }
+    case ast::Builtin::IntToSql: {
+      if (!input_type->IsIntegerType()) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kInvalidSqlCastToBool, input_type);
+        return;
+      }
+      call->set_type(
+          ast::BuiltinType::Get(context(), ast::BuiltinType::Integer));
+      break;
+    }
+    case ast::Builtin::FloatToSql: {
+      if (!input_type->IsFloatType()) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kInvalidSqlCastToBool, input_type);
+        return;
+      }
+      call->set_type(
+          ast::BuiltinType::Get(context(), ast::BuiltinType::Real));
+      break;
+    }
+    case ast::Builtin::SqlToBool: {
+      if (!input_type->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kInvalidSqlCastToBool, input_type);
+        return;
+      }
+      call->set_type(
+          ast::BuiltinType::Get(context(), ast::BuiltinType::Bool));
+      break;
+    }
+    default: { UNREACHABLE("Impossible SQL conversion call"); }
+  }
+}
 
 void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
   if (call->num_args() != 3) {
@@ -467,7 +515,7 @@ void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
   auto *cmp_func_type =
       call->arguments()[2]->type()->SafeAs<ast::FunctionType>();
   if (!cmp_func_type->IsFunctionType() || cmp_func_type->num_params() != 2 ||
-      !cmp_func_type->return_type()->IsBoolType() ||
+      !cmp_func_type->return_type()->IsIntegerType() ||
       !cmp_func_type->params()[0].type->IsPointerType() ||
       !cmp_func_type->params()[1].type->IsPointerType()) {
     error_reporter()->Report(call->position(),
@@ -571,6 +619,13 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 
   switch (builtin) {
+    case ast::Builtin::BoolToSql:
+    case ast::Builtin::IntToSql:
+    case ast::Builtin::FloatToSql:
+    case ast::Builtin::SqlToBool: {
+      CheckBuiltinSqlConversionCall(call, builtin);
+      break;
+    }
     case ast::Builtin::FilterEq:
     case ast::Builtin::FilterGe:
     case ast::Builtin::FilterGt:

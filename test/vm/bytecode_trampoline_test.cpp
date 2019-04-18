@@ -1,11 +1,15 @@
+#include "tpl_test.h"  // NOLINT
+
 #include <limits>
 #include <random>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
+#include "ips4o/ips4o.hpp"
 
+#include "sql/sorter.h"
+#include "sql/value.h"
 #include "vm/bytecode_compiler.h"
 
 namespace tpl::vm::test {
@@ -36,7 +40,6 @@ TEST_F(BytecodeTrampolineTest, BooleanFunctionTest) {
 
   auto src = "fun lt(a: int32, b: int32) -> bool { return a < b }";
   auto module = compiler.CompileToModule(src);
-  module->PrettyPrint(std::cout);
 
   EXPECT_FALSE(compiler.HasErrors());
 
@@ -53,7 +56,6 @@ TEST_F(BytecodeTrampolineTest, IntFunctionTest) {
 
     auto src = "fun test() -> int32 { return 10 }";
     auto module = compiler.CompileToModule(src);
-    module->PrettyPrint(std::cout);
 
     EXPECT_FALSE(compiler.HasErrors());
 
@@ -69,7 +71,6 @@ TEST_F(BytecodeTrampolineTest, IntFunctionTest) {
 
     auto src = "fun add2(a: int32, b: int32) -> int32 { return a + b }";
     auto module = compiler.CompileToModule(src);
-    module->PrettyPrint(std::cout);
 
     EXPECT_FALSE(compiler.HasErrors());
 
@@ -89,7 +90,6 @@ TEST_F(BytecodeTrampolineTest, IntFunctionTest) {
     auto src =
         "fun sub3(a: int32, b: int32, c: int32) -> int32 { return a - b - c }";
     auto module = compiler.CompileToModule(src);
-    module->PrettyPrint(std::cout);
 
     EXPECT_FALSE(compiler.HasErrors());
 
@@ -111,7 +111,6 @@ TEST_F(BytecodeTrampolineTest, BigIntFunctionTest) {
       return a * b * c
     })";
     auto module = compiler.CompileToModule(src);
-    module->PrettyPrint(std::cout);
 
     EXPECT_FALSE(compiler.HasErrors());
 
@@ -139,21 +138,21 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
                   [&random]() { return random() % 100; });
 
     // Generate the comparison function that sorts ascending
-    auto src = "fun compare(a: *int32, b: *int32) -> bool { return *a < *b }";
+    auto src = "fun compare(a: int32, b: int32) -> int32 { return a - b }";
 
     // Compile
     BytecodeCompiler compiler;
     auto module = compiler.CompileToModule(src);
     EXPECT_FALSE(compiler.HasErrors());
-    auto compare = reinterpret_cast<bool (*)(const i32 *, const i32 *)>(
+    auto compare = reinterpret_cast<i32 (*)(const i32, const i32)>(
         module->GetFuncTrampoline(module->GetFuncInfoByName("compare")->id()));
     EXPECT_TRUE(compare != nullptr);
 
     // Try to sort using the generated comparison function
-    std::sort(
+    ips4o::sort(
         numbers.begin(), numbers.end(),
         // NOLINTNEXTLINE
-        [compare](const auto &a, const auto &b) { return compare(&a, &b); });
+        [compare](const auto &a, const auto &b) { return compare(a, b) < 0; });
 
     // Verify
     EXPECT_TRUE(std::is_sorted(numbers.begin(), numbers.end()));
@@ -198,7 +197,7 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
     EXPECT_TRUE(compare != nullptr);
 
     // Try to sort using the generated comparison function
-    std::sort(
+    ips4o::sort(
         elems.begin(), elems.end(),
         [compare](const auto &a, const auto &b) { return compare(&a, &b); });
 
@@ -207,6 +206,72 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
         std::is_sorted(elems.begin(), elems.end(),
                        [](const auto &a, const auto &b) { return a.c < b.c; }));
   }
+}
+
+TEST_F(BytecodeTrampolineTest, DISABLED_PerfGenComparisonForSortTest) {
+  // Try sorting through trampoline
+  auto bench_trampoline = [](auto &vec) {
+    BytecodeCompiler compiler;
+    auto src = "fun compare(a: int32, b: int32) -> int32 { return a - b }";
+    auto module = compiler.CompileToModule(src);
+    auto compare = reinterpret_cast<i32 (*)(const i32, const i32)>(
+        module->GetFuncTrampoline(module->GetFuncInfoByName("compare")->id()));
+
+    util::Timer<std::milli> timer;
+    timer.Start();
+    ips4o::sort(
+        vec.begin(), vec.end(),
+        // NOLINTNEXTLINE
+        [compare](const auto a, const auto b) { return compare(a, b) < 0; });
+    timer.Stop();
+    return timer.elapsed();
+  };
+
+  UNUSED auto bench_func = [](auto &vec) {
+    BytecodeCompiler compiler;
+    auto src = "fun compare(a: int32, b: int32) -> int32 { return a - b }";
+    auto module = compiler.CompileToModule(src);
+    std::function<i32(const i32, const i32)> compare;
+    EXPECT_TRUE(
+        module->GetFunction("compare", ExecutionMode::Interpret, compare));
+
+    util::Timer<std::milli> timer;
+    timer.Start();
+    ips4o::sort(
+        vec.begin(), vec.end(),
+        // NOLINTNEXTLINE
+        [&compare](const auto a, const auto b) { return compare(a, b) < 0; });
+    timer.Stop();
+    return timer.elapsed();
+  };
+
+  UNUSED auto bench_std = [](auto &vec) {
+    BytecodeCompiler compiler;
+    util::Timer<std::milli> timer;
+    timer.Start();
+    ips4o::sort(vec.begin(), vec.end(),
+                // NOLINTNEXTLINE
+                [](const auto &a, const auto &b) { return a < b; });
+    timer.Stop();
+    return timer.elapsed();
+  };
+
+  const u32 nelems = 10000000;
+  std::vector<i32> numbers(nelems);
+  i32 x = 0;
+  UNUSED std::random_device random;
+  std::generate(numbers.begin(), numbers.end(), [&x]() { return x++; });
+
+  auto num2 = numbers;
+  auto num3 = numbers;
+
+  auto tramp_ms = bench_trampoline(numbers);
+  auto func_ms = bench_func(num2);
+  auto std_ms = bench_std(num3);
+
+  std::cout << "Trampoline: " << tramp_ms << " ms, ";
+  std::cout << "Function: " << func_ms << " ms, ";
+  std::cout << "Std: " << std_ms << " ms" << std::endl;
 }
 
 }  // namespace tpl::vm::test

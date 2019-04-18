@@ -533,10 +533,24 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(InitBool) : {
+    auto *sql_bool = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    auto val = frame->LocalAt<bool>(READ_LOCAL_ID());
+    OpInitBool(sql_bool, val);
+    DISPATCH_NEXT();
+  }
+
   OP(InitInteger) : {
     auto *sql_int = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
     auto val = frame->LocalAt<i32>(READ_LOCAL_ID());
     OpInitInteger(sql_int, val);
+    DISPATCH_NEXT();
+  }
+
+  OP(InitReal) : {
+    auto *sql_real = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    auto val = frame->LocalAt<double>(READ_LOCAL_ID());
+    OpInitReal(sql_real, val);
     DISPATCH_NEXT();
   }
 

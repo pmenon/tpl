@@ -340,9 +340,19 @@ VM_OP_HOT void OpForceBoolTruth(bool *result, tpl::sql::BoolVal *input) {
   *result = input->ForceTruth();
 }
 
-VM_OP_HOT void OpInitInteger(tpl::sql::Integer *result, i32 input) {
-  result->val = input;
+VM_OP_HOT void OpInitBool(tpl::sql::BoolVal *result, bool input) {
   result->is_null = false;
+  result->val = input;
+}
+
+VM_OP_HOT void OpInitInteger(tpl::sql::Integer *result, i32 input) {
+  result->is_null = false;
+  result->val = input;
+}
+
+VM_OP_HOT void OpInitReal(tpl::sql::Real *result, double input) {
+  result->is_null = false;
+  result->val = input;
 }
 
 VM_OP_HOT void OpGreaterThanInteger(tpl::sql::BoolVal *const result,
