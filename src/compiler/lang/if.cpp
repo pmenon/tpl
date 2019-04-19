@@ -23,7 +23,7 @@ namespace compiler {
 namespace lang {
 
 If::If(CodeGen &codegen, llvm::Value *cond, std::string name,
-       llvm::BasicBlock *then_bb, llvm::BasicBlock *else_bb)
+       Block *then_bb, Block *else_bb)
     : codegen_(codegen),
       fn_(codegen_->GetInsertBlock()->getParent()),
       then_bb_(nullptr),
@@ -31,11 +31,11 @@ If::If(CodeGen &codegen, llvm::Value *cond, std::string name,
       else_bb_(nullptr),
       last_bb_in_else_(nullptr) {
   Init(cond, then_bb, else_bb);
-  then_bb_->setName(name);
+  //then_bb_->setName(name);
 }
 
 If::If(CodeGen &codegen, const compiler::Value &cond, std::string name,
-       llvm::BasicBlock *then_bb, llvm::BasicBlock *else_bb)
+       Block *then_bb, Block *else_bb)
     : If(codegen, type::Boolean::Instance().Reify(codegen, cond),
          std::move(name), then_bb, else_bb) {}
 

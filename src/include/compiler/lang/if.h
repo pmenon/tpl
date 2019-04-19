@@ -12,7 +12,8 @@
 
 #pragma once
 
-#include "codegen/codegen.h"
+#include <compiler/code_builder.h>
+#include "compiler/codegen.h"
 
 namespace tpl {
 namespace compiler {
@@ -138,8 +139,8 @@ class If {
    * @param name A name to assign to this "if" statement. This is mostly for
    * debugging.
    */
-  If(CodeGen &codegen, llvm::Value *cond, std::string name = "then");
-  If(CodeGen &codegen, const codegen::Value &cond, std::string name = "then");
+  If(CodeGen &codegen, Value *cond, std::string name = "then");
+  If(CodeGen &codegen, const Value &cond, std::string name = "then");
 
   /**
    * This constructor enables the generation of a full-blown if-then-else using
@@ -153,9 +154,9 @@ class If {
    * @param else_bb The block to branch to if the condition is false
    */
   If(CodeGen &codegen, llvm::Value *cond, std::string name,
-     llvm::BasicBlock *then_bb, llvm::BasicBlock *else_bb);
-  If(CodeGen &codegen, const codegen::Value &cond, std::string name,
-     llvm::BasicBlock *then_bb, llvm::BasicBlock *else_bb);
+     Block *then_bb, Block *else_bb);
+  If(CodeGen &codegen, const Value &cond, std::string name,
+     Block *then_bb, Block *else_bb);
 
   /**
    * Start generation for the "else" branch
@@ -176,8 +177,8 @@ class If {
    * @return A value that finalizes the value that potentially was produced in
    * two different code paths.
    */
-  codegen::Value BuildPHI(const codegen::Value &v1, const codegen::Value &v2);
-  llvm::Value *BuildPHI(llvm::Value *v1, llvm::Value *v2);
+  Value BuildPHI(const Value &v1, const Value &v2);
+  llvm::Value *BuildPHI(Value *v1, Value *v2);
 
  private:
   /**
@@ -187,8 +188,8 @@ class If {
    * @param then_bb The (optional) block to move in the "true" branch
    * @param else_bb The (optional) block to move in the "false" branch
    */
-  void Init(llvm::Value *cond, llvm::BasicBlock *then_bb,
-            llvm::BasicBlock *else_bb);
+  void Init(Value *cond, Block *then_bb,
+            Block *else_bb);
 
   /**
    * Branch to the provided block if the current block is not terminated
@@ -197,25 +198,25 @@ class If {
    *
    * @param block The block to branch to
    */
-  void BranchIfNotTerminated(llvm::BasicBlock *block) const;
+  void BranchIfNotTerminated(Block *block) const;
 
  private:
   // The code generator class
   CodeGen &codegen_;
 
   // The function
-  llvm::Function *fn_;
+  Function *fn_;
 
   // The basic block that contains the code contained in the "then" block
-  llvm::BasicBlock *then_bb_;
-  llvm::BasicBlock *last_bb_in_then_;
+  Block *then_bb_;
+  Block *last_bb_in_then_;
 
   // The basic block that contains the code contained in the "else" block
-  llvm::BasicBlock *else_bb_;
-  llvm::BasicBlock *last_bb_in_else_;
+  Block *else_bb_;
+  Block *last_bb_in_else_;
 
   // The block at the end that both the "then" and "else" blocks merge to
-  llvm::BasicBlock *merge_bb_;
+  Block *merge_bb_;
 
   // The actual branch instruction.  We need this in the case where the caller
   // wants to introduce an "else" condition.  In this case, we need to modify
@@ -230,12 +231,12 @@ class If {
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-inline If::If(CodeGen &codegen, llvm::Value *cond, std::string name)
+inline If::If(CodeGen &codegen, Value *cond, std::string name)
     : If(codegen, cond, std::move(name), nullptr, nullptr) {}
 
-inline If::If(CodeGen &codegen, const codegen::Value &cond, std::string name)
+inline If::If(CodeGen &codegen, const Value &cond, std::string name)
     : If(codegen, cond, std::move(name), nullptr, nullptr) {}
 
 }  // namespace lang
-}  // namespace codegen
-}  // namespace peloton
+}  // namespace compiler
+}  // namespace tpl
