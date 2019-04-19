@@ -73,22 +73,18 @@ class ParsingContext {
     }
 
     // Otherwise, a new unique symbol must be created.
-    // TODO(WAN): the string appends probably suck for performance.
 
-    // We append the number of known symbols to our identifier since that
-    // guarantees no conflict between our own generated variables.
+    // We prepend the number of known symbols to our identifier since that
+    // guarantees no conflict between our own generated variables and also
+    // between user-defined variables which cannot start with numbers.
     const std::string num_symbols_str =
-        "_tpl" + std::to_string(root_known_symbols_->size());
+        std::to_string(root_known_symbols_->size());
 
-    std::string new_sym_name(sym.data());
-    new_sym_name.append(num_symbols_str);
+    // sym.data() is technically unnecessary, but may be useful for debugging.
+    std::string new_sym_name(num_symbols_str);
+    new_sym_name.append(sym.data());
 
     auto new_sym = ctx->GetIdentifier(new_sym_name);
-    while (SymbolExists(new_sym)) {
-      new_sym_name.append(num_symbols_str);
-      new_sym = ctx->GetIdentifier(new_sym_name);
-    }
-
     symbols_.erase(sym);
     symbols_.insert({sym, new_sym});
     root_known_symbols_->insert(new_sym);
