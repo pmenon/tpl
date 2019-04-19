@@ -70,59 +70,27 @@ namespace sema {
     "object of member expression has type ('%0') which is not a composite",    \
     (ast::Type *))                                                             \
   F(FieldObjectDoesNotExist,                                                   \
-    "No field with name '%0' exists in composite type '%1'",                   \
+    "no field with name '%0' exists in composite type '%1'",                   \
     (ast::Identifier, ast::Type *))                                            \
   F(InvalidIndexOperation,                                                     \
-    "Invalid operation: type '%0' does not support indexing", (ast::Type *))   \
-  F(InvalidArrayIndexValue, "Non-integer array index", ())                     \
-  F(InvalidCastToSqlInt, "Invalid cast of %0 to SQL integer", (ast::Type *))   \
-  F(InvalidCastToSqlDecimal, "Invalid cast of %0 to SQL decimal",              \
+    "invalid operation: type '%0' does not support indexing", (ast::Type *))   \
+  F(InvalidArrayIndexValue, "non-integer array index", ())                     \
+  F(InvalidCastToSqlInt, "invalid cast of %0 to SQL integer", (ast::Type *))   \
+  F(InvalidCastToSqlDecimal, "invalid cast of %0 to SQL decimal",              \
     (ast::Type *))                                                             \
   F(InvalidSqlCastToBool,                                                      \
-    "Invalid input to cast to native boolean: expected SQL boolean, got %0",   \
+    "invalid input to cast to native boolean: expected SQL boolean, got %0",   \
     (ast::Type *))                                                             \
-  F(MissingReturn, "Missing return at end of function", ())                    \
-  F(InvalidDeclaration, "Non-declaration outside function", ())                \
-  F(BadArgToFilter, "tpl_filter requires array argument, received '%0'",       \
+  F(MissingReturn, "missing return at end of function", ())                    \
+  F(InvalidDeclaration, "non-declaration outside function", ())                \
+  F(BadArgToBuiltin,                                                           \
+    "builtin '%0' expects argument of type '%1' in position '%2'. Received "   \
+    "type '%3'",                                                               \
+    (ast::Identifier, ast::Type *, u32, ast::Type *))                          \
+  F(BadComparisonFunctionForSorter,                                            \
+    "sorterInit requires a comparison function of type (*,*)->int32. "         \
+    "Received type '%0'",                                                      \
     (ast::Type *))                                                             \
-  F(BadFuncToFilter,                                                           \
-    "Filter function to tpl_filter expects input type '%0' and must return a " \
-    "bool. Found input type '%1' and output type '%2'",                        \
-    (ast::Type *, ast::Type *, ast::Type *))                                   \
-  F(BadArgToHashTableInit,                                                     \
-    "Hash table initialization function expects three arguments: a pointer "   \
-    "to hash table, a pointer to a region, and an int32 for the entry size. "  \
-    "Received type '%0' in position %1",                                       \
-    (ast::Type *, u32))                                                        \
-  F(BadArgToHashTableInsert,                                                   \
-    "Hash table insert function expects two arguments: a pointer to hash "     \
-    "table and the hash value of the element to insert. Received type '%0' "   \
-    "in position %1",                                                          \
-    (ast::Type *, u32))                                                        \
-  F(BadArgToHashTableBuild,                                                    \
-    "Hash table build function expects a pointer to a hash table. Received "   \
-    "type '%0'",                                                               \
-    (ast::Type *))                                                             \
-  F(BadArgToRegionFunction,                                                    \
-    "All builtin region functions require a region pointer as the first "      \
-    "argument. Received type '%0'",                                            \
-    (ast::Type *))                                                             \
-  F(BadArgToSorterInit,                                                        \
-    "sorterInit() expects (*Sorter, *Region, (*,*)->bool, u32) argument "      \
-    "types. Received type '%0' in position %1",                                \
-    (ast::Type *, u32))                                                        \
-  F(BadArgToSorterInsert,                                                      \
-    "sorterInsert() expects (*Sorter) argument types. Received type '%0' in "  \
-    "position %1",                                                             \
-    (ast::Type *, u32))                                                        \
-  F(BadArgToSorterSort,                                                        \
-    "sorterSort() expects (*Sorter) argument types. Received type '%0' in "    \
-    "position %1",                                                             \
-    (ast::Type *, u32))                                                        \
-  F(BadArgToSorterFree,                                                        \
-    "sorterFree() expects (*Sorter) argument types. Received type '%0' in "    \
-    "position %1",                                                             \
-    (ast::Type *, u32))                                                        \
   F(BadArgToPtrCast,                                                           \
     "ptrCast() expects (compile-time *DestType, *T) arguments.  Received "     \
     "type '%0' in position %1",                                                \

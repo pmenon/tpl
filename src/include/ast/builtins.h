@@ -4,6 +4,8 @@
 
 namespace tpl::ast {
 
+// The list of all builtin functions
+// Args: internal name, function name
 #define BUILTINS_LIST(F)               \
   /* Primitive <-> SQL */              \
   F(IntToSql, intToSql)                \

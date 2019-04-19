@@ -298,9 +298,11 @@ void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
   auto *jht_type = call->arguments()[0]->type()->GetPointeeType();
   if (jht_type == nullptr ||
       !jht_type->IsSpecificBuiltin(ast::BuiltinType::JoinHashTable)) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToHashTableInit,
-                             call->arguments()[0]->type(), 0);
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::JoinHashTable)
+            ->PointerTo(),
+        0, call->arguments()[0]->type());
     return;
   }
 
@@ -308,18 +310,21 @@ void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
   auto *region_type = call->arguments()[1]->type()->GetPointeeType();
   if (region_type == nullptr ||
       !region_type->IsSpecificBuiltin(ast::BuiltinType::RegionAlloc)) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToHashTableInit,
-                             call->arguments()[1]->type(), 1);
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::RegionAlloc)
+            ->PointerTo(),
+        1, call->arguments()[1]->type());
     return;
   }
 
   // Third and last argument must be a 32-bit number representing the tuple size
   auto *entry_size_type = call->arguments()[2]->type();
   if (!entry_size_type->IsIntegerType()) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToHashTableInit,
-                             call->arguments()[2]->type(), 2);
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::Uint32), 2,
+        call->arguments()[2]->type());
     return;
   }
 
@@ -339,17 +344,20 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
   auto *jht_type = call->arguments()[0]->type()->GetPointeeType();
   if (jht_type == nullptr ||
       !jht_type->IsSpecificBuiltin(ast::BuiltinType::JoinHashTable)) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToHashTableInsert,
-                             call->arguments()[0]->type(), 0);
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::JoinHashTable)
+            ->PointerTo(),
+        0, call->arguments()[0]->type());
     return;
   }
 
   // Second argument is a hash value
   if (!call->arguments()[1]->type()->IsIntegerType()) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToHashTableInsert,
-                             call->arguments()[1]->type(), 1);
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::Int64), 1,
+        call->arguments()[1]->type());
     return;
   }
 
@@ -371,9 +379,11 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
   auto *jht_type = call->arguments()[0]->type()->GetPointeeType();
   if (jht_type == nullptr ||
       !jht_type->IsSpecificBuiltin(ast::BuiltinType::JoinHashTable)) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToHashTableBuild,
-                             call->arguments()[0]->type());
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::JoinHashTable)
+            ->PointerTo(),
+        0, call->arguments()[0]->type());
     return;
   }
 
@@ -393,9 +403,11 @@ void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
   ast::Type *const jht_type = call->arguments()[0]->type()->GetPointeeType();
   if (jht_type == nullptr ||
       !jht_type->IsSpecificBuiltin(ast::BuiltinType::JoinHashTable)) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToHashTableBuild,
-                             call->arguments()[0]->type());
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::JoinHashTable)
+            ->PointerTo(),
+        0, call->arguments()[0]->type());
     return;
   }
 
@@ -414,9 +426,11 @@ void Sema::CheckBuiltinRegionCall(ast::CallExpr *call) {
   ast::Type *const region_type = call->arguments()[0]->type()->GetPointeeType();
   if (region_type == nullptr ||
       !region_type->IsSpecificBuiltin(ast::BuiltinType::RegionAlloc)) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToRegionFunction,
-                             call->arguments()[0]->type());
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::RegionAlloc)
+            ->PointerTo(),
+        0, call->arguments()[0]->type());
     return;
   }
 
@@ -493,9 +507,10 @@ void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
   auto *sorter_type = call->arguments()[0]->type()->GetPointeeType();
   if (sorter_type == nullptr ||
       !sorter_type->IsSpecificBuiltin(ast::BuiltinType::Sorter)) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToSorterInit,
-                             call->arguments()[0]->type(), 0);
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::Sorter)->PointerTo(),
+        0, call->arguments()[0]->type());
     return;
   }
 
@@ -503,9 +518,11 @@ void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
   auto *region_type = call->arguments()[1]->type()->GetPointeeType();
   if (region_type == nullptr ||
       !region_type->IsSpecificBuiltin(ast::BuiltinType::RegionAlloc)) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToHashTableInit,
-                             call->arguments()[1]->type(), 1);
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::RegionAlloc)
+            ->PointerTo(),
+        1, call->arguments()[1]->type());
     return;
   }
 
@@ -513,21 +530,23 @@ void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
   auto *cmp_func_type =
       call->arguments()[2]->type()->SafeAs<ast::FunctionType>();
   if (!cmp_func_type->IsFunctionType() || cmp_func_type->num_params() != 2 ||
-      !cmp_func_type->return_type()->IsIntegerType() ||
+      !cmp_func_type->return_type()->IsSpecificBuiltin(
+          ast::BuiltinType::Int32) ||
       !cmp_func_type->params()[0].type->IsPointerType() ||
       !cmp_func_type->params()[1].type->IsPointerType()) {
     error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToSorterInit,
-                             call->arguments()[2]->type(), 2);
+                             ErrorMessages::kBadComparisonFunctionForSorter,
+                             call->arguments()[2]->type());
     return;
   }
 
   // Third and last argument must be a 32-bit number representing the tuple size
   auto *entry_size_type = call->arguments()[3]->type();
   if (!entry_size_type->IsIntegerType()) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToSorterInit,
-                             call->arguments()[3]->type(), 3);
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::Uint32), 3,
+        call->arguments()[3]->type());
     return;
   }
 
@@ -547,9 +566,10 @@ void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call) {
   auto *sorter_type = call->arguments()[0]->type()->GetPointeeType();
   if (sorter_type == nullptr ||
       !sorter_type->IsSpecificBuiltin(ast::BuiltinType::Sorter)) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToSorterInsert,
-                             call->arguments()[0]->type(), 0);
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::Sorter)->PointerTo(),
+        0, call->arguments()[0]->type());
     return;
   }
 
@@ -570,9 +590,10 @@ void Sema::CheckBuiltinSorterSort(ast::CallExpr *call) {
   auto *sorter_type = call->arguments()[0]->type()->GetPointeeType();
   if (sorter_type == nullptr ||
       !sorter_type->IsSpecificBuiltin(ast::BuiltinType::Sorter)) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToSorterSort,
-                             call->arguments()[0]->type(), 0);
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::Sorter)->PointerTo(),
+        0, call->arguments()[0]->type());
     return;
   }
 
@@ -592,9 +613,10 @@ void Sema::CheckBuiltinSorterFree(ast::CallExpr *call) {
   auto *sorter_type = call->arguments()[0]->type()->GetPointeeType();
   if (sorter_type == nullptr ||
       !sorter_type->IsSpecificBuiltin(ast::BuiltinType::Sorter)) {
-    error_reporter()->Report(call->position(),
-                             ErrorMessages::kBadArgToSorterFree,
-                             call->arguments()[0]->type(), 0);
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::Sorter)->PointerTo(),
+        0, call->arguments()[0]->type());
     return;
   }
 
