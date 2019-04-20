@@ -3,6 +3,7 @@
 #include <sstream>
 #include <ast/ast.h>
 #include <ast/ast_node_factory.h>
+#include <parser/parsenodes.h>
 #include "function_builder.h"
 
 namespace tpl::compiler {
@@ -12,24 +13,31 @@ using Type = ast::Expr;
 class Value {
 
  public:
-  Type &GetType() {
+  Type &GetType() const {
     return type_;
   }
 
-  virtual std::string &GetString() {
-    return name_;
+  virtual ast::Identifier GetIdentifier() const {
+    ast::Identifier ident(name_.data());
+    return ident;
+  }
+
+  Expr *GetExpr() const {
+    return expr_;
   }
 
  private:
   friend class Function;
   std::string name_;
   Type type_;
+  Expr *expr_;
 };
 
 class Constant : public Value {
 
-  std::string &GetString() override {
-    return value_;
+  ast::Identifier GetIdentifier() const override {
+    ast::Identifier ident(value_.data());
+    return ident;
   }
 
  private:
@@ -61,36 +69,23 @@ class Function {
 
   // TODO(tanujnay112) make it not copy strings around
   Block *AssignValue(const Value *assignee, Value *val) {
-    nodeFactory->
+    SourcePosition dummy;
+    auto ret = nodeFactory->NewAssignmentStmt(dummy, nodeFactory->NewIdentifierExpr(dummy, assignee->GetIdentifier()),
+        nodeFactory->NewIdentifierExpr(dummy, val->GetIdentifier()));
+    blocks_.push_back(ret);
+    return ret;
   }
 
-  Block Call(const Function *fn, std::initializer_list<Value *> arguments) {
-
-    //should I leave this to be checked in the TPL to AST compiler?
-    TPL_ASSERT(fn->numArgs_ == arguments.size(), "Incorrect number of arguments");
-    stream.clear();
-    stream << fn->name_ << "(";
-    bool first = true;
-    for(Value *arg : arguments) {
-      if(first) {
-        first = false;
-      }else{
-        stream << ",";
-      }
-      stream << arg->GetString();
+  Block *Call(const Function *fn, std::initializer_list<Value *> arguments) {
+    util::RegionVector<Expr *> args(region_.get());
+    for (auto a : arguments) {
+      args.push_back(a->GetExpr());
     }
-    stream << ")" << ";";
-    Block retBlock = stream.str();
-    blocks_.push_back(retBlock);
-    return retBlock;
+    nodeFactory->NewCallExpr(fn->fnDecl, std::move(args));
   }
 
   Block Compile() {
-    stream.clear();
-    for(auto Block : blocks_) {
-      stream << blocks_;
-    }
-    return stream.str();
+
   }
 
  private:
@@ -99,7 +94,7 @@ class Function {
   std::string name_;
   std::vector<Value *> params_;
   ast::FunctionDecl *fnDecl;
-  std::vector<Block*> blocks_;
+  util::RegionVector<ast::Stmt*> blocks_;
 };
 
 }
