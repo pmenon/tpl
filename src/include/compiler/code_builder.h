@@ -22,7 +22,7 @@ class Value {
     return ident;
   }
 
-  Expr *GetExpr() const {
+  ast::Expr *GetExpr() const {
     return expr_;
   }
 
@@ -63,7 +63,7 @@ class Function {
     }
     ast::FunctionTypeRepr *fnType = nodeFactory->NewFunctionType(dummy, std::move(fields), retType);
     ast::Identifier fnName(name.data());
-    fnDecl = nodeFactory->NewFunctionDecl(dummy, fnName, nodeFactory->NewFunctionLitExpr(fnType, nullptr);
+    fnDecl_ = nodeFactory->NewFunctionDecl(dummy, fnName, nodeFactory->NewFunctionLitExpr(fnType, nullptr);
   }
 
 
@@ -76,16 +76,28 @@ class Function {
     return ret;
   }
 
-  Block *Call(const Function *fn, std::initializer_list<Value *> arguments) {
-    util::RegionVector<Expr *> args(region_.get());
+  ast::Identifier GetIdentifier() {
+    ast::Identifier ident(name_.data());
+    return ident;
+  }
+
+  ast::IdentifierExpr *GetIdentifierExpr() {
+    SourcePosition dummy;
+    return nodeFactory->NewIdentifierExpr(dummy, GetIdentifier());
+  }
+
+  Block *Call(Function *fn, std::initializer_list<Value *> arguments) {
+    util::RegionVector<ast::Expr *> args(region_.get());
     for (auto a : arguments) {
       args.push_back(a->GetExpr());
     }
-    nodeFactory->NewCallExpr(fn->fnDecl, std::move(args));
+    auto retBlock = nodeFactory->NewCallExpr(fn->GetIdentifierExpr(), std::move(args));
+    blocks_.emplace_back(retBlock);
+    return retBlock;
   }
 
-  Block Compile() {
-
+  void Compile() {
+    //compile block statement vector into one BlockStmt and put into fnDecl's LitExpr
   }
 
  private:
@@ -93,7 +105,7 @@ class Function {
   std::unique_ptr<ast::AstNodeFactory> nodeFactory;
   std::string name_;
   std::vector<Value *> params_;
-  ast::FunctionDecl *fnDecl;
+  ast::FunctionDecl *fnDecl_;
   util::RegionVector<ast::Stmt*> blocks_;
 };
 
