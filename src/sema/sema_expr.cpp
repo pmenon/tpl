@@ -341,8 +341,8 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
   }
 
   // First argument is a pointer to a JoinHashTable
-  auto *jht_type = call->arguments()[0]->type()->GetPointeeType();
-  if (jht_type == nullptr ||
+  if (const auto *jht_type = call->arguments()[0]->type()->GetPointeeType();
+      jht_type == nullptr ||
       !jht_type->IsSpecificBuiltin(ast::BuiltinType::JoinHashTable)) {
     error_reporter()->Report(
         call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
@@ -352,11 +352,13 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
     return;
   }
 
-  // Second argument is a hash value
-  if (!call->arguments()[1]->type()->IsIntegerType()) {
+  // Second argument is a 64-bit unsigned hash value
+  if (const auto *hash_val_type = call->arguments()[1]->type();
+      !hash_val_type->IsIntegerType() ||
+      hash_val_type->size() != sizeof(hash_t)) {
     error_reporter()->Report(
         call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
-        ast::BuiltinType::Get(context(), ast::BuiltinType::Int64), 1,
+        ast::BuiltinType::Get(context(), ast::BuiltinType::Uint64), 1,
         call->arguments()[1]->type());
     return;
   }

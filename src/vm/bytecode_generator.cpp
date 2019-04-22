@@ -184,11 +184,9 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
   auto *row_type = node->target()->type()->As<ast::StructType>();
   LocalVar row = current_function()->NewLocal(row_type, "row");
 
-  //
   // Now, we generate a loop over every element in the VPI. In the beginning of
   // each iteration, we pull out the column members into the allocated row
   // structure in preparation for the body of the loop that expects rows.
-  //
 
   {
     LoopBuilder vpi_loop(this);
@@ -230,11 +228,9 @@ void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
 void BytecodeGenerator::VisitVectorWiseIteration(ast::ForInStmt *node,
                                                  LocalVar vpi,
                                                  LoopBuilder *table_loop) {
-  //
   // When iterating vector-wise, we need to allocate a VPI* with the same name
   // as the target variable for the loop. We copy the given VPI instance for
   // each iteration
-  //
 
   // Get the name and type of the target VPI iteration variable
   auto *iter_type = node->target()->type();
@@ -249,14 +245,12 @@ void BytecodeGenerator::VisitVectorWiseIteration(ast::ForInStmt *node,
 }
 
 void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
-  //
   // For both tuple-at-a-time iteration and vector-at-a-time iteration, we need
   // a TableVectorIterator which we allocate in the function first. We also need
   // a VectorProjectionIterator (VPI) pointer to read individual rows; VPIs are
   // also needed for vectorized processing because they allow consecutive
   // iterations and track filtered tuples. Thus, we allocate a VPI* in the
   // function, too, that we populate with the instance inside the TVI.
-  //
 
   ast::Context *ctx = node->target()->type()->context();
 
@@ -287,12 +281,10 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
 
   emitter()->Emit(Bytecode::TableVectorIteratorGetVPI, vpi, table_iter);
 
-  //
   // Now, we generate a loop while TableVectorIterator::Advance() returns true,
   // indicating that there is more input data. If the loop is non-vectorized,
   // then we call into VisitRowWiseIteration() to handle iteration over the
   // VPI, setting up the row pointer, resetting the VPI etc.
-  //
 
   {
     LoopBuilder table_loop(this);
@@ -340,11 +332,9 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
 }
 
 void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
-  //
   // Lookup the local in the current function. It must be there through a
   // previous variable declaration (or parameter declaration). What is returned
   // is a pointer to the variable.
-  //
 
   LocalVar local = current_function()->LookupLocal(node->name().data());
 
@@ -353,12 +343,10 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
     return;
   }
 
-  //
   // The caller wants the R-Value of the identifier. So, we need to load it. If
   // the caller did not provide a destination register, we're done. If the
   // caller provided a destination, we need to move the value of the identifier
   // into the provided destination.
-  //
 
   if (!execution_result()->HasDestination()) {
     execution_result()->set_destination(local.ValueOf());
@@ -397,13 +385,9 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
 }
 
 void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
-  //
   // First, we need to get the base address of the array
-  //
-
   LocalVar arr = VisitExpressionForLValue(node->object());
 
-  //
   // The next step is to compute the address of the element at the desired index
   // stored in the IndexExpr node. There are two cases we handle:
   //
@@ -416,7 +400,6 @@ void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
   // If the index is not a constant, we need to evaluate the expression to
   // produce the index, then issue a LeaScaled instruction to compute the
   // address.
-  //
 
   auto *type = node->object()->type()->As<ast::ArrayType>();
   auto elem_size = type->element_type()->size();
@@ -439,11 +422,9 @@ void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
     return;
   }
 
-  //
   // The caller wants the value of the array element. We just computed the
   // element's pointer (in element_ptr). Just dereference it into the desired
   // location and be done with it.
-  //
 
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
   BuildDeref(dest, elem_ptr, node->type());
@@ -574,11 +555,7 @@ void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
 
 void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call,
                                                ast::Builtin builtin) {
-  TPL_ASSERT(execution_result()->IsRValue(),
-             "SQL conversions must be R-Values");
-
-  auto *ctx = call->type()->context();
-
+  ast::Context *ctx = call->type()->context();
   switch (builtin) {
     case ast::Builtin::BoolToSql: {
       auto dest = execution_result()->GetOrCreateDestination(
@@ -1224,21 +1201,17 @@ LocalVar BytecodeGenerator::BuildLoadPointer(LocalVar double_ptr,
 }
 
 void BytecodeGenerator::VisitMemberExpr(ast::MemberExpr *node) {
-  //
   // We first need to compute the address of the object we're selecting into.
   // Thus, we get the L-Value of the object below.
-  //
 
   LocalVar obj_ptr = VisitExpressionForLValue(node->object());
 
-  //
   // We now need to compute the offset of the field in the composite type. TPL
   // unifies C's arrow and dot syntax for field/member access. Thus, the type
   // of the object may be either a pointer to a struct or the actual struct. If
   // the type is a pointer, then the L-Value of the object is actually a double
   // pointer and we need to dereference it; otherwise, we can use the address
   // as is.
-  //
 
   ast::StructType *obj_type = nullptr;
   if (auto *type = node->object()->type(); node->IsSugaredArrow()) {
@@ -1249,20 +1222,16 @@ void BytecodeGenerator::VisitMemberExpr(ast::MemberExpr *node) {
     obj_type = type->As<ast::StructType>();
   }
 
-  //
   // We're now ready to compute offset. Let's lookup the field's offset in the
   // struct type.
-  //
 
   auto *field_name = node->member()->As<ast::IdentifierExpr>();
   auto offset = obj_type->GetOffsetOfFieldByName(field_name->name());
 
-  //
   // Now that we have a pointer to the composite object, we need to compute a
   // pointer to the field within the object. If the offset of the field in the
   // object is zero, we needn't do anything - we can just reinterpret the object
   // pointer. If the field offset is greater than zero, we generate a LEA.
-  //
 
   LocalVar field_ptr;
   if (offset == 0) {
@@ -1280,12 +1249,10 @@ void BytecodeGenerator::VisitMemberExpr(ast::MemberExpr *node) {
     return;
   }
 
-  //
   // The caller wants the actual value of the field. We just computed a pointer
   // to the field in the object, so we need to load/dereference it. If the
   // caller provided a destination variable, use that; otherwise, create a new
   // temporary variable to store the value.
-  //
 
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
   BuildDeref(dest, field_ptr, node->type());

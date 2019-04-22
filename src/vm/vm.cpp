@@ -92,7 +92,7 @@ VM::VM(const BytecodeModule &module) : module_(module) {}
 void VM::InvokeFunction(const BytecodeModule &module, const FunctionId func_id,
                         const u8 args[]) {
   // The function's info
-  const FunctionInfo *const func_info = module.GetFuncInfoById(func_id);
+  const FunctionInfo *func_info = module.GetFuncInfoById(func_id);
   TPL_ASSERT(func_info != nullptr, "Function doesn't exist in module!");
   const std::size_t frame_size = func_info->frame_size();
 
@@ -113,11 +113,13 @@ void VM::InvokeFunction(const BytecodeModule &module, const FunctionId func_id,
   std::memcpy(raw_frame + func_info->params_start_pos(), args,
               func_info->params_size());
 
+  LOG_DEBUG("Executing function '{}'", func_info->name());
+
   // Let's go. First, create the virtual machine instance.
   VM vm(module);
 
   // Now get the bytecode for the function and fire it off
-  const u8 *const bytecode = module.GetBytecodeForFunction(*func_info);
+  const u8 *bytecode = module.GetBytecodeForFunction(*func_info);
   TPL_ASSERT(bytecode != nullptr, "Bytecode cannot be null");
   Frame frame(raw_frame, frame_size);
   vm.Interpret(bytecode, &frame);
@@ -1023,9 +1025,9 @@ const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
   const u16 num_params = READ_UIMM2();
 
   // Lookup the function
-  const FunctionInfo *func = module().GetFuncInfoById(func_id);
-  TPL_ASSERT(func != nullptr, "Function doesn't exist in module!");
-  const std::size_t frame_size = func->frame_size();
+  const FunctionInfo *func_info = module().GetFuncInfoById(func_id);
+  TPL_ASSERT(func_info != nullptr, "Function doesn't exist in module!");
+  const std::size_t frame_size = func_info->frame_size();
 
   // Get some space for the function's frame
   bool used_heap = false;
@@ -1042,15 +1044,17 @@ const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
 
   // Set up the arguments to the function
   for (u32 i = 0; i < num_params; i++) {
-    const LocalInfo &param_info = func->locals()[i];
-    const void *const param = caller->LocalAt<void *>(READ_LOCAL_ID());
+    const LocalInfo &param_info = func_info->locals()[i];
+    const void *param = caller->LocalAt<void *>(READ_LOCAL_ID());
     std::memcpy(raw_frame + param_info.offset(), &param, param_info.size());
   }
 
+  LOG_DEBUG("Executing function '{}'", func_info->name());
+
   // Let's go
-  const u8 *bytecode = module().GetBytecodeForFunction(*func);
+  const u8 *bytecode = module().GetBytecodeForFunction(*func_info);
   TPL_ASSERT(bytecode != nullptr, "Bytecode cannot be null");
-  VM::Frame callee(raw_frame, func->frame_size());
+  VM::Frame callee(raw_frame, func_info->frame_size());
   Interpret(bytecode, &callee);
 
   if (used_heap) {
