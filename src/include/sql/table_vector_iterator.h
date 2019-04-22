@@ -12,24 +12,16 @@ namespace tpl::sql {
 /// An iterator over a table's data in vector-wise fashion
 class TableVectorIterator {
  public:
-  /// Create an iterator over the table with ID \a table_id and project all
-  /// columns
+  /// Create an iterator over the table with ID \a table_id and project in all
+  /// columns from the logical schema for the table
   /// \param table_id The ID of the table
   explicit TableVectorIterator(u16 table_id);
 
   /// Create an iterator over the table with ID \a table_id and project columns
-  /// at the indexes in \a column_indexes from the logical schema for the table.
-  /// This is just a C++ friendly version of the other constructor.
+  /// at the indexes in \a column_indexes from the logical schema for the table
   /// \param table_id The ID of the table
   /// \param column_indexes The indexes of the columns to select
   TableVectorIterator(u16 table_id, std::vector<u32> column_indexes);
-
-  /// Create an iterator over the table with ID \a table_id and project columns
-  /// at the indexes in \a column_indexes from the logical schema for the table.
-  /// This constructor is used from the VM.
-  /// \param table_id The ID of the table
-  /// \param column_indexes The indexes of the columns to select
-  TableVectorIterator(u16 table_id, u32 num_cols, u32 column_indexes[]);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(TableVectorIterator);
@@ -71,6 +63,9 @@ class TableVectorIterator {
 
   // An iterator over the currently active projection
   VectorProjectionIterator vector_projection_iterator_;
+
+  // Has the iterator been initialized?
+  bool initialized_;
 };
 
 }  // namespace tpl::sql

@@ -10,21 +10,21 @@ namespace tpl::sql {
 
 // Iterate over the table and select all columns
 TableVectorIterator::TableVectorIterator(const u16 table_id)
-    : block_iterator_(table_id) {}
+    : block_iterator_(table_id), initialized_(false) {}
 
 // Iterate over the table, but only select the given columns
 TableVectorIterator::TableVectorIterator(const u16 table_id,
                                          std::vector<u32> column_indexes)
-    : column_indexes_(std::move(column_indexes)), block_iterator_(table_id) {}
-
-// Iterate over the table, but only select the given columns. Called from the
-// VM, hence the funky array syntax.
-TableVectorIterator::TableVectorIterator(const u16 table_id, const u32 num_cols,
-                                         u32 column_indexes[])
-    : column_indexes_(column_indexes, column_indexes + num_cols),
-      block_iterator_(table_id) {}
+    : column_indexes_(std::move(column_indexes)),
+      block_iterator_(table_id),
+      initialized_(false) {}
 
 bool TableVectorIterator::Init() {
+  // No-op if already initialized
+  if (initialized_) {
+    return true;
+  }
+
   // If we can't initialize the block iterator, fail
   if (!block_iterator_.Init()) {
     return false;
@@ -55,6 +55,7 @@ bool TableVectorIterator::Init() {
   }
 
   // All good
+  initialized_ = true;
   return true;
 }
 
@@ -73,7 +74,11 @@ void TableVectorIterator::RefreshVectorProjection() {
 }
 
 bool TableVectorIterator::Advance() {
-  //
+  // Cannot advance if not initialized
+  if (!initialized_) {
+    return false;
+  }
+
   // First, we try to advance all the column iterators. We issue Advance()
   // calls to **all** column iterators to make sure they're consistent. If we're
   // able to advance all the column iterators, then we're certain there is
@@ -88,7 +93,6 @@ bool TableVectorIterator::Advance() {
   //
   // If we are unable to advance the column iterators and the table's block
   // iterator, there isn't any more data to iterate over.
-  //
 
   bool advanced = true;
   for (auto &col_iter : column_iterators_) {
