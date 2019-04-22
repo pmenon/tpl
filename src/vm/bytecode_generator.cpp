@@ -743,6 +743,51 @@ void BytecodeGenerator::VisitBuiltinRegionCall(ast::CallExpr *call,
   emitter()->Emit(region_op, region);
 }
 
+void BytecodeGenerator::VisitBuiltinTrigCall(ast::CallExpr *call,
+                                             ast::Builtin builtin) {
+  ast::Context *ctx = call->type()->context();
+  LocalVar dest = execution_result()->GetOrCreateDestination(
+      ast::BuiltinType::Get(ctx, ast::BuiltinType::Real));
+  LocalVar src = VisitExpressionForRValue(call->arguments()[0]);
+
+  switch (builtin) {
+    case ast::Builtin::ACos: {
+      emitter()->Emit(Bytecode::Acos, dest, src);
+      break;
+    }
+    case ast::Builtin::ASin: {
+      emitter()->Emit(Bytecode::Asin, dest, src);
+      break;
+    }
+    case ast::Builtin::ATan: {
+      emitter()->Emit(Bytecode::Atan, dest, src);
+      break;
+    }
+    case ast::Builtin::ATan2: {
+      emitter()->Emit(Bytecode::Atan2, dest, src);
+      break;
+    }
+    case ast::Builtin::Cos: {
+      emitter()->Emit(Bytecode::Cos, dest, src);
+      break;
+    }
+    case ast::Builtin::Cot: {
+      emitter()->Emit(Bytecode::Cot, dest, src);
+      break;
+    }
+    case ast::Builtin::Sin: {
+      emitter()->Emit(Bytecode::Sin, dest, src);
+      break;
+    }
+    case ast::Builtin::Tan: {
+      emitter()->Emit(Bytecode::Tan, dest, src);
+    }
+    default: { UNREACHABLE("Impossible trigonometric bytecode"); }
+  }
+
+  execution_result()->set_destination(dest.ValueOf());
+}
+
 void BytecodeGenerator::VisitBuiltinSizeOfCall(ast::CallExpr *call) {
   ast::Type *target_type = call->arguments()[0]->type();
   LocalVar size_var = execution_result()->GetOrCreateDestination(
@@ -791,6 +836,17 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::SorterSort:
     case ast::Builtin::SorterFree: {
       VisitBuiltinSorterCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::ACos:
+    case ast::Builtin::ASin:
+    case ast::Builtin::ATan:
+    case ast::Builtin::ATan2:
+    case ast::Builtin::Cos:
+    case ast::Builtin::Cot:
+    case ast::Builtin::Sin:
+    case ast::Builtin::Tan: {
+      VisitBuiltinTrigCall(call, builtin);
       break;
     }
     case ast::Builtin::SizeOf: {

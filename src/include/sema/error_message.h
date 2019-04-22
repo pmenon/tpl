@@ -12,12 +12,10 @@ class Type;
 }  // namespace ast
 
 namespace sema {
-/*
- * The following macro lists out all the semantic and syntactic error messages
- * in TPL. Each macro has three parts: a globally unique textual message ID, the
- * templated string message that will be displayed, and the types of each
- * template argument.
- */
+
+// The following macro lists all the semantic and syntactic error messages in
+// TPL. Each macro has three parts: a unique message ID, a templated string
+// error message that will be displayed, and the types of each template argument
 #define MESSAGE_LIST(F)                                                        \
   F(UnexpectedToken, "unexpected token '%0', expecting '%1'",                  \
     (parsing::Token::Type, parsing::Token::Type))                              \
@@ -96,27 +94,24 @@ namespace sema {
     "type '%0' in position %1",                                                \
     (ast::Type *, u32))
 
-/**
- * Define the ErrorMessageId enumeration
- */
+/// Define the ErrorMessageId enumeration
+enum class ErrorMessageId : u16 {
 #define F(id, str, arg_types) id,
-enum class ErrorMessageId : u16 { MESSAGE_LIST(F) };
+  MESSAGE_LIST(F)
 #undef F
+};
 
-/**
- * A templated struct that captures the ID of an error message and the
- * argument types that must be supplied when the error is reported. The
- * template arguments allow us to type-check to make sure users are providing
- * all info.
- */
+/// A templated struct that captures the ID of an error message and the C++
+/// argument types that must be supplied when the error is reported. The
+/// template arguments allow us to ensure not only that all arguments to the
+/// given error messages are provided, but also that they have the expected
+/// types
 template <typename... ArgTypes>
 struct ErrorMessage {
   const ErrorMessageId id;
 };
 
-/**
- * A container for all TPL error messages
- */
+/// A container for all TPL error messages
 class ErrorMessages {
   template <typename T>
   struct ReflectErrorMessageWithDetails;
