@@ -66,7 +66,7 @@ u32 VectorProjectionIterator::FilterColByVal(const u32 col_idx,
       return FilterColByValImpl<i32, Op>(col_idx, val.i);
     }
     case TypeId::BigInt: {
-      return FilterColByValImpl<i16, Op>(col_idx, val.bi);
+      return FilterColByValImpl<i64, Op>(col_idx, val.bi);
     }
     default: { throw std::runtime_error("Filter not supported on type"); }
   }
