@@ -225,8 +225,7 @@ class LLVMEngine::FunctionLocalsMap {
   llvm::Value *GetArgumentById(LocalVar var);
 
  private:
-  llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>
-      &ir_builder_;
+  llvm::IRBuilder<> &ir_builder_;
   std::unordered_map<u32, llvm::Value *> params_;
   std::unordered_map<u32, llvm::Value *> locals_;
 };
