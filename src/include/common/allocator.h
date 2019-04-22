@@ -69,4 +69,4 @@ class ByteAlignedAllocator {
   // We believe otherwise, hence we're telling it to shut up.
 };
 }  // namespace common
-}  // namespace terrier
+}  // namespace tpl

@@ -58,13 +58,17 @@ class AbstractPlanNode {
   };
 
   /**
-   * Constructor for the base AbstractPlanNode. Derived plan nodes should call this constructor to set output_schema
+   * Constructor for the base AbstractPlanNode. Derived plan nodes should call
+   * this constructor to set output_schema
    * @param children child plan nodes
-   * @param output_schema Schema representing the structure of the output of this plan node
+   * @param output_schema Schema representing the structure of the output of
+   * this plan node
    */
-  explicit AbstractPlanNode(std::vector<std::unique_ptr<AbstractPlanNode>> &&children,
-                            std::shared_ptr<OutputSchema> output_schema)
-      : children_(std::move(children)), output_schema_(std::move(output_schema)) {}
+  explicit AbstractPlanNode(
+      std::vector<std::unique_ptr<AbstractPlanNode>> &&children,
+      std::shared_ptr<OutputSchema> output_schema)
+      : children_(std::move(children)),
+        output_schema_(std::move(output_schema)) {}
 
   /**
    * Constructor for Deserialization and DDL statements
@@ -81,7 +85,9 @@ class AbstractPlanNode {
   /**
    * @return child plan nodes
    */
-  const std::vector<std::unique_ptr<AbstractPlanNode>> &GetChildren() const { return children_; }
+  const std::vector<std::unique_ptr<AbstractPlanNode>> &GetChildren() const {
+    return children_;
+  }
 
   /**
    * @return number of children
@@ -94,7 +100,8 @@ class AbstractPlanNode {
    */
   const AbstractPlanNode *GetChild(uint32_t child_index) const {
     TPL_ASSERT(child_index < children_.size(),
-                   "index into children of plan node should be less than number of children");
+               "index into children of plan node should be less than number of "
+               "children");
     return children_[child_index].get();
   }
 
@@ -103,16 +110,19 @@ class AbstractPlanNode {
   //===--------------------------------------------------------------------===//
 
   /**
-   * Returns plan type, each derived plan class should override this method to return their specific type
+   * Returns plan type, each derived plan class should override this method to
+   * return their specific type
    * @return plan type
    */
   virtual PlanNodeType GetPlanNodeType() const = 0;
 
   /**
-   * @return output schema for the node. The output schema contains information on columns of the output of the plan
-   * node operator
+   * @return output schema for the node. The output schema contains information
+   * on columns of the output of the plan node operator
    */
-  std::shared_ptr<OutputSchema> GetOutputSchema() const { return output_schema_; }
+  std::shared_ptr<OutputSchema> GetOutputSchema() const {
+    return output_schema_;
+  }
 
   //  //===--------------------------------------------------------------------===//
   //  // JSON Serialization/Deserialization
@@ -135,12 +145,14 @@ class AbstractPlanNode {
   //===--------------------------------------------------------------------===//
 
   /**
-   * Derived plan nodes should call this method from their override of Hash() to hash data belonging to the base class
+   * Derived plan nodes should call this method from their override of Hash() to
+   * hash data belonging to the base class
    * @return hash of the plan node
    */
   virtual common::hash_t Hash() const {
     common::hash_t hash = GetOutputSchema()->Hash();
-    hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(GetPlanNodeType()));
+    hash = common::HashUtil::CombineHashes(
+        hash, common::HashUtil::Hash(GetPlanNodeType()));
     for (auto &child : GetChildren()) {
       hash = common::HashUtil::CombineHashes(hash, child->Hash());
     }
@@ -157,12 +169,14 @@ class AbstractPlanNode {
     if ((output_schema == nullptr && other_output_schema != nullptr) ||
         (output_schema != nullptr && other_output_schema == nullptr))
       return false;
-    if (output_schema != nullptr && *output_schema != *other_output_schema) return false;
+    if (output_schema != nullptr && *output_schema != *other_output_schema)
+      return false;
 
     auto num = GetChildren().size();
     if (num != rhs.GetChildren().size()) return false;
     for (unsigned int i = 0; i < num; i++) {
-      if (*GetChild(i) != *const_cast<AbstractPlanNode *>(rhs.GetChild(i))) return false;
+      if (*GetChild(i) != *const_cast<AbstractPlanNode *>(rhs.GetChild(i)))
+        return false;
     }
     return true;
   }
@@ -186,9 +200,10 @@ class AbstractPlanNode {
 
 //// JSON library interface. Do not modify.
 // DEFINE_JSON_DECLARATIONS(AbstractPlanNode);
-// std::unique_ptr<AbstractPlanNode> DeserializePlanNode(const nlohmann::json &json);
+// std::unique_ptr<AbstractPlanNode> DeserializePlanNode(const nlohmann::json
+// &json);
 
-}  // namespace terrier::plan_node
+}  // namespace tpl::plan_node
 
 namespace std {
 
@@ -202,7 +217,10 @@ struct hash<std::shared_ptr<tpl::plan_node::AbstractPlanNode>> {
    * @param plan the plan to hash
    * @return hash code of the given plan node
    */
-  size_t operator()(const std::shared_ptr<tpl::plan_node::AbstractPlanNode> &plan) const { return plan->Hash(); }
+  size_t operator()(
+      const std::shared_ptr<tpl::plan_node::AbstractPlanNode> &plan) const {
+    return plan->Hash();
+  }
 };
 
 /**
@@ -215,8 +233,9 @@ struct equal_to<std::shared_ptr<tpl::plan_node::AbstractPlanNode>> {
    * @param rhs right hand side plan node
    * @return true if plan nodes are equivalent
    */
-  bool operator()(const std::shared_ptr<tpl::plan_node::AbstractPlanNode> &lhs,
-                  const std::shared_ptr<tpl::plan_node::AbstractPlanNode> &rhs) const {
+  bool operator()(
+      const std::shared_ptr<tpl::plan_node::AbstractPlanNode> &lhs,
+      const std::shared_ptr<tpl::plan_node::AbstractPlanNode> &rhs) const {
     return *lhs == *rhs;
   }
 };

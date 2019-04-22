@@ -8,7 +8,7 @@ namespace tpl::parser {
 extern std::shared_ptr<spdlog::logger> parser_logger;
 
 void init_parser_logger();
-}  // namespace terrier::parser
+}  // namespace tpl::parser
 
 #define PARSER_LOG_TRACE(...) \
   ::terrier::parser::parser_logger->trace(__VA_ARGS__);

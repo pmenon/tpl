@@ -12,4 +12,4 @@ class BlockAccessController {
  public:
   uint64_t bytes_;
 };
-}  // namespace terrier::storage
+}  // namespace tpl::storage

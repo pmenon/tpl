@@ -71,4 +71,4 @@ void LogManager::SerializeRecord(const tpl::storage::LogRecord &record) {
   }
 }
 
-}  // namespace terrier::storage
+}  // namespace tpl::storage

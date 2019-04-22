@@ -127,4 +127,4 @@ class TransactionManager {
       const storage::TupleAccessStrategy &accessor) const;
   void GCLastUpdateOnAbort(TransactionContext *txn);
 };
-}  // namespace terrier::transaction
+}  // namespace tpl::transaction

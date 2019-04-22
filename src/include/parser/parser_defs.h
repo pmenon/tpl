@@ -86,4 +86,4 @@ enum class AsType {
   QUERY_STRING = 2
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

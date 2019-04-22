@@ -391,4 +391,4 @@ void DataTable::DeallocateVarlensOnShutdown(RawBlock *block) {
     }
   }
 }
-}  // namespace terrier::storage
+}  // namespace tpl::storage

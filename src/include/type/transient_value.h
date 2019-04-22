@@ -29,10 +29,10 @@ class TransientValuePeeker;
  * @see TransientValuePeeker
  */
 class TransientValue {
-  friend class TransientValueFactory;  // Access to constructor
-  friend class TransientValuePeeker;   // Access to GetAs
+  friend class TransientValueFactory;                 // Access to constructor
+  friend class TransientValuePeeker;                  // Access to GetAs
   friend class tpl::parser::ConstantValueExpression;  // Access to copy
-                                                          // constructor
+                                                      // constructor
 
  public:
   /**
@@ -309,4 +309,4 @@ class TransientValue {
   uintptr_t data_;
 };
 
-}  // namespace terrier::type
+}  // namespace tpl::type

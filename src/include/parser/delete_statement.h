@@ -62,4 +62,4 @@ class DeleteStatement : public SQLStatement {
   std::shared_ptr<AbstractExpression> expr_;
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

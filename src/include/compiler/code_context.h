@@ -68,7 +68,8 @@ class CodeContext {
   void RegisterBuiltin(llvm::Function *func_decl, FuncPtr func_impl);
 
   /// Lookup a builtin function that has been registered in this context
-  std::pair<llvm::Function *, FuncPtr> LookupBuiltin(const std::string &name) const;
+  std::pair<llvm::Function *, FuncPtr> LookupBuiltin(
+      const std::string &name) const;
 
   /// Return the LLVM function for UDF that has been registered in this context
   llvm::Function *GetUDF() const { return udf_func_ptr_; }

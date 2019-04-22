@@ -8,7 +8,7 @@ namespace tpl::transaction {
 extern std::shared_ptr<spdlog::logger> transaction_logger;
 
 void init_transaction_logger();
-}  // namespace terrier::transaction
+}  // namespace tpl::transaction
 
 #define TXN_LOG_TRACE(...) \
   ::terrier::transaction::transaction_logger->trace(__VA_ARGS__);

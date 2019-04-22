@@ -13,4 +13,4 @@ void init_network_logger() {
   spdlog::register_logger(network_logger);
 }
 
-}  // namespace terrier::network
+}  // namespace tpl::network

@@ -242,4 +242,4 @@ class RawConcurrentBitmap {
 // a Vtable to the class layout,
 static_assert(sizeof(RawConcurrentBitmap) == 0,
               "Unexpected RawConcurrentBitmap layout!");
-}  // namespace terrier::common
+}  // namespace tpl::common

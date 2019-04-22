@@ -44,4 +44,4 @@ class TypeUtil {
   }
 };
 
-}  // namespace terrier::type
+}  // namespace tpl::type

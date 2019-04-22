@@ -153,10 +153,10 @@ class If {
    * @param then_bb The block to branch to if the condition is true
    * @param else_bb The block to branch to if the condition is false
    */
-  If(CodeGen &codegen, llvm::Value *cond, std::string name,
-     Block *then_bb, Block *else_bb);
-  If(CodeGen &codegen, const Value &cond, std::string name,
-     Block *then_bb, Block *else_bb);
+  If(CodeGen &codegen, llvm::Value *cond, std::string name, Block *then_bb,
+     Block *else_bb);
+  If(CodeGen &codegen, const Value &cond, std::string name, Block *then_bb,
+     Block *else_bb);
 
   /**
    * Start generation for the "else" branch
@@ -188,8 +188,7 @@ class If {
    * @param then_bb The (optional) block to move in the "true" branch
    * @param else_bb The (optional) block to move in the "false" branch
    */
-  void Init(Value *cond, Block *then_bb,
-            Block *else_bb);
+  void Init(Value *cond, Block *then_bb, Block *else_bb);
 
   /**
    * Branch to the provided block if the current block is not terminated

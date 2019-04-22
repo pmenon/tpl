@@ -11,7 +11,6 @@ namespace tpl::compiler {
 #define DEFAULT_ROW_NAME "row"
 
 class TextCompiler : public AbstractCompiler {
-
  public:
   void CompileAndRun() override;
 

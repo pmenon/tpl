@@ -46,4 +46,4 @@ class TupleValueExpression : public AbstractExpression {
   const std::string table_name_;
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

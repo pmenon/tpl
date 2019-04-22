@@ -62,5 +62,5 @@ Type Type::AsNonNullable() const {
 }
 
 }  // namespace type
-}  // namespace codegen
-}  // namespace peloton
+}  // namespace compiler
+}  // namespace tpl

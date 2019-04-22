@@ -209,4 +209,4 @@ class BufferedLogReader {
 
   void RefillBuffer();
 };
-}  // namespace terrier::storage
+}  // namespace tpl::storage

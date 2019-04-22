@@ -63,5 +63,5 @@ void OperatorTranslator::Consume(ConsumerContext &context,
   });
 }
 
-}  // namespace codegen
-}  // namespace peloton
+}  // namespace compiler
+}  // namespace tpl

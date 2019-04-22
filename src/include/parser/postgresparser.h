@@ -243,4 +243,4 @@ class PostgresParser {
 };
 
 }  // namespace parser
-}  // namespace terrier
+}  // namespace tpl

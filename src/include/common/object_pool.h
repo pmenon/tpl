@@ -204,4 +204,4 @@ class ObjectPool {
   // reside in reuse_queue
   uint64_t current_size_;
 };
-}  // namespace terrier::common
+}  // namespace tpl::common

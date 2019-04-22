@@ -71,4 +71,4 @@ ProjectedColumns *ProjectedColumnsInitializer::Initialize(
   // are in the buffer
   return result;
 }
-}  // namespace terrier::storage
+}  // namespace tpl::storage

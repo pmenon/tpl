@@ -41,8 +41,8 @@ void OpTableVectorIteratorInit(tpl::sql::TableVectorIterator *iter,
                                u16 table_id) {
   TPL_ASSERT(iter != nullptr, "Null iterator to initialize");
   auto *exec = tpl::sql::ExecutionStructures::Instance();
-  auto *table = exec->GetCatalog()->LookupTableById(
-      tpl::catalog::table_oid_t(table_id));
+  auto *table =
+      exec->GetCatalog()->LookupTableById(tpl::catalog::table_oid_t(table_id));
 
   // At this point, the table better exist ...
   TPL_ASSERT(table != nullptr, "Table can't be null!");

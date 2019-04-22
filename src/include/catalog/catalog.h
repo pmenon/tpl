@@ -127,4 +127,4 @@ class Catalog {
   std::unordered_map<std::string, table_oid_t> name_ids;
   u32 curr_id_ = 0;  // Global counter.
 };
-}  // namespace terrier::catalog
+}  // namespace tpl::catalog

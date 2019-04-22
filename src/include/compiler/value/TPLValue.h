@@ -7,7 +7,7 @@ namespace tpl::compiler {
 class TPLValgen;
 
 class TPLValue {
- friend class TPLValgen;
+  friend class TPLValgen;
 
  private:
   explicit TPLValue(ast::Type type, int id) type_{type}, id_{id} {};
@@ -16,7 +16,6 @@ class TPLValue {
 };
 
 class TPLValgen {
-
   TPLValgen() currId{0} {};
 
   TPLValue *CreateVal(ast::Type type) {
@@ -29,21 +28,16 @@ class TPLValgen {
 };
 
 class FunctionVal : public TPLValue {
+  void AddBlock(const Block &b) { blocks_.push_back(b); }
 
-  void AddBlock(const Block &b) {
-    blocks_.push_back(b);
-  }
-
-  Block Compile() {
-
-  }
+  Block Compile() {}
 
  private:
-  explicit FunctionVal(int id, int numArgs) : type_{ast::FunctionType}, id_{id}, numArgs_{numArgs} {};
+  explicit FunctionVal(int id, int numArgs)
+      : type_{ast::FunctionType}, id_{id}, numArgs_{numArgs} {};
   int numArgs_;
 
-  std::vector<Block&> blocks_;
+  std::vector<Block &> blocks_;
 };
 
-
-} //namespace tpl::compiler
+}  // namespace tpl::compiler

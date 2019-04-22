@@ -78,5 +78,5 @@ class VectorizedLoop {
 };
 
 }  // namespace lang
-}  // namespace codegen
-}  // namespace peloton
+}  // namespace compiler
+}  // namespace tpl

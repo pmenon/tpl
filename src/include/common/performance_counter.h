@@ -38,7 +38,7 @@ class PerformanceCounter {
    */
   virtual void FromJson(const json &) = 0;
 };
-}  // namespace terrier::common
+}  // namespace tpl::common
 
 /*
  * Every helper macro needs to appear in both NDEBUG and DEBUG branches.
@@ -182,7 +182,7 @@ class PerformanceCounter {
  * Note that every class member is wrapped in std::atomic.
  */
 #define DEFINE_PERFORMANCE_CLASS(ClassName, MemberList)                   \
-  class ClassName : public tpl::common::PerformanceCounter {          \
+  class ClassName : public tpl::common::PerformanceCounter {              \
    private:                                                               \
     std::string name = #ClassName;                                        \
     MemberList(PC_HELPER_DEFINE_MEMBERS);                                 \

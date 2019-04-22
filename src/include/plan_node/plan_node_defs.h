@@ -11,9 +11,13 @@ namespace tpl::plan_node {
 // JSON (de)serialization declarations
 //===--------------------------------------------------------------------===//
 
-#define DEFINE_JSON_DECLARATIONS(ClassName)                                                    \
-  inline void to_json(nlohmann::json &j, const ClassName &c) { j = c.ToJson(); }  /* NOLINT */ \
-  inline void from_json(const nlohmann::json &j, ClassName &c) { c.FromJson(j); } /* NOLINT */
+#define DEFINE_JSON_DECLARATIONS(ClassName)                      \
+  inline void to_json(nlohmann::json &j, const ClassName &c) {   \
+    j = c.ToJson();                                              \
+  } /* NOLINT */                                                 \
+  inline void from_json(const nlohmann::json &j, ClassName &c) { \
+    c.FromJson(j);                                               \
+  } /* NOLINT */
 
 constexpr int INVALID_TYPE_ID = 0;
 
@@ -125,9 +129,16 @@ enum class DropType {
 // Set Operation Types
 //===--------------------------------------------------------------------===//
 
-enum class SetOpType { INVALID = INVALID_TYPE_ID, INTERSECT = 1, INTERSECT_ALL = 2, EXCEPT = 3, EXCEPT_ALL = 4 };
+enum class SetOpType {
+  INVALID = INVALID_TYPE_ID,
+  INTERSECT = 1,
+  INTERSECT_ALL = 2,
+  EXCEPT = 3,
+  EXCEPT_ALL = 4
+};
 
-// TODO(Gus,Wen) Tuple as a concept does not exist yet, someone need to define it in the storage layer, possibly a
+// TODO(Gus,Wen) Tuple as a concept does not exist yet, someone need to define
+// it in the storage layer, possibly a
 /**
  * Temporary definition of a tuple in the storage layer
  */
@@ -136,4 +147,4 @@ class Tuple {
   Tuple() = default;
 };
 
-}  // namespace terrier::plan_node
+}  // namespace tpl::plan_node

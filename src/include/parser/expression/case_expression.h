@@ -126,4 +126,4 @@ class CaseExpression : public AbstractExpression {
   std::shared_ptr<AbstractExpression> default_expr_;
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

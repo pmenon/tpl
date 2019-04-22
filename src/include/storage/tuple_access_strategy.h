@@ -283,4 +283,4 @@ class TupleAccessStrategy {
   // Start of each mini block, in offset to the start of the block
   std::vector<uint32_t> column_offsets_;
 };
-}  // namespace terrier::storage
+}  // namespace tpl::storage

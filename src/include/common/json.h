@@ -7,4 +7,4 @@ namespace tpl::common {
  * Convenience alias for a JSON object from the nlohmann::json library.
  */
 using json = nlohmann::json;
-}  // namespace terrier::common
+}  // namespace tpl::common

@@ -11,4 +11,4 @@ void init_test_logger() {
   spdlog::register_logger(test_logger);
 }
 
-}  // namespace terrier
+}  // namespace tpl

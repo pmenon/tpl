@@ -230,4 +230,4 @@ class SelectStatement : public SQLStatement {
 };
 
 }  // namespace parser
-}  // namespace terrier
+}  // namespace tpl

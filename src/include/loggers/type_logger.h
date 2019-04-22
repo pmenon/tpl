@@ -8,7 +8,7 @@ namespace tpl::type {
 extern std::shared_ptr<spdlog::logger> type_logger;
 
 void init_type_logger();
-}  // namespace terrier::type
+}  // namespace tpl::type
 
 #define TYPE_LOG_TRACE(...) ::terrier::type::type_logger->trace(__VA_ARGS__);
 

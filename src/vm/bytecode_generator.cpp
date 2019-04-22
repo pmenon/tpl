@@ -282,7 +282,8 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
       exec->GetCatalog()->LookupTableByName(table_name);
   TPL_ASSERT(table != nullptr, "Table does not exist!");
   emitter()->EmitTableIteratorInit(Bytecode::TableVectorIteratorInit,
-                                   table_iter, static_cast<u16>(uint32_t(table->GetOid())));
+                                   table_iter,
+                                   static_cast<u16>(uint32_t(table->GetOid())));
   emitter()->Emit(Bytecode::TableVectorIteratorPerformInit, table_iter);
 
   //

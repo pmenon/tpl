@@ -16,11 +16,13 @@ common::hash_t SeqScanPlanNode::Hash() const {
 
   // Hash is parallel
   auto is_parallel = IsParallel();
-  hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(&is_parallel));
+  hash = common::HashUtil::CombineHashes(hash,
+                                         common::HashUtil::Hash(&is_parallel));
 
   // Hash is_for_update
   auto is_for_update = IsForUpdate();
-  hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(&is_for_update));
+  hash = common::HashUtil::CombineHashes(
+      hash, common::HashUtil::Hash(&is_for_update));
 
   return common::HashUtil::CombineHashes(hash, AbstractPlanNode::Hash());
 }
@@ -33,7 +35,8 @@ bool SeqScanPlanNode::operator==(const AbstractPlanNode &rhs) const {
   // Predicate
   auto *pred = GetPredicate();
   auto *rhs_plan_node_pred = rhs_plan_node.GetPredicate();
-  if ((pred == nullptr && rhs_plan_node_pred != nullptr) || (pred != nullptr && rhs_plan_node_pred == nullptr))
+  if ((pred == nullptr && rhs_plan_node_pred != nullptr) ||
+      (pred != nullptr && rhs_plan_node_pred == nullptr))
     return false;
   if (pred != nullptr && *pred != *rhs_plan_node_pred) return false;
 
@@ -44,4 +47,4 @@ bool SeqScanPlanNode::operator==(const AbstractPlanNode &rhs) const {
   return AbstractPlanNode::operator==(rhs);
 }
 
-}  // namespace terrier::plan_node
+}  // namespace tpl::plan_node

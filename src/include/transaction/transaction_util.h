@@ -33,4 +33,4 @@ class TransactionUtil {
   }
 };
 
-}  // namespace terrier::transaction
+}  // namespace tpl::transaction

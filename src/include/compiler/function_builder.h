@@ -183,5 +183,5 @@ class FunctionBuilder {
   std::unordered_map<std::string, llvm::Value *> cached_vars_;
 };
 
-}  // namespace codegen
-}  // namespace peloton
+}  // namespace compiler
+}  // namespace tpl

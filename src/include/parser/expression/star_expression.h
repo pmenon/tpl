@@ -24,4 +24,4 @@ class StarExpression : public AbstractExpression {
   }
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

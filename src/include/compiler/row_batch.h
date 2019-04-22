@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include <unordered_map>
 #include <parser/expression/abstract_expression.h>
+#include <unordered_map>
 
 #include "compiler/codegen.h"
 #include "compiler/value.h"
@@ -30,7 +30,6 @@ class CompilationContext;
 class Vector;
 
 class RowBatch {
-
  public:
   class AttributeAccess;
   class Row;
@@ -88,9 +87,9 @@ class RowBatch {
 
     // Derive the value of the given attribute (expression) from this row
     compiler::Value DeriveValue(CodeGen &codegen,
-                               const planner::AttributeInfo *ai);
+                                const planner::AttributeInfo *ai);
     compiler::Value DeriveValue(CodeGen &codegen,
-                               const parser::AbstractExpression &expr);
+                                const parser::AbstractExpression &expr);
 
     // Does this row have a given attribute available?
     bool HasAttribute(const planner::AttributeInfo *ai) const;
@@ -283,5 +282,5 @@ class RowBatch {
   DISALLOW_COPY_AND_MOVE(RowBatch);
 };
 
-}  // namespace codegen
+}  // namespace compiler
 }  // namespace tpl

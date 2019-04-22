@@ -43,9 +43,9 @@ class SeqScanPlanNode : public AbstractScanPlanNode {
      * @return plan node
      */
     std::shared_ptr<SeqScanPlanNode> Build() {
-      return std::shared_ptr<SeqScanPlanNode>(new SeqScanPlanNode(std::move(children_), std::move(output_schema_),
-                                                                  std::move(predicate_), is_for_update_, is_parallel_,
-                                                                  table_oid_));
+      return std::shared_ptr<SeqScanPlanNode>(new SeqScanPlanNode(
+          std::move(children_), std::move(output_schema_),
+          std::move(predicate_), is_for_update_, is_parallel_, table_oid_));
     }
 
    protected:
@@ -58,7 +58,8 @@ class SeqScanPlanNode : public AbstractScanPlanNode {
  private:
   /**
    * @param children child plan nodes
-   * @param output_schema Schema representing the structure of the output of this plan node
+   * @param output_schema Schema representing the structure of the output of
+   * this plan node
    * @param predicate scan predicate
    * @param is_for_update flag for if scan is for an update
    * @param is_parallel flag for parallel scan
@@ -66,17 +67,20 @@ class SeqScanPlanNode : public AbstractScanPlanNode {
    */
   SeqScanPlanNode(std::vector<std::unique_ptr<AbstractPlanNode>> &&children,
                   std::shared_ptr<OutputSchema> output_schema,
-                  std::unique_ptr<const parser::AbstractExpression> predicate, bool is_for_update, bool is_parallel,
+                  std::unique_ptr<const parser::AbstractExpression> predicate,
+                  bool is_for_update, bool is_parallel,
                   catalog::table_oid_t table_oid)
-      : AbstractScanPlanNode(std::move(children), std::move(output_schema), std::move(predicate), is_for_update,
-                             is_parallel),
+      : AbstractScanPlanNode(std::move(children), std::move(output_schema),
+                             std::move(predicate), is_for_update, is_parallel),
         table_oid_(table_oid) {}
 
  public:
   /**
    * @return the type of this plan node
    */
-  PlanNodeType GetPlanNodeType() const override { return PlanNodeType::SEQSCAN; }
+  PlanNodeType GetPlanNodeType() const override {
+    return PlanNodeType::SEQSCAN;
+  }
 
   /**
    * @return the OID for the table being scanned
@@ -103,4 +107,4 @@ class SeqScanPlanNode : public AbstractScanPlanNode {
   DISALLOW_COPY_AND_MOVE(SeqScanPlanNode);
 };
 
-}  // namespace terrier::plan_node
+}  // namespace tpl::plan_node

@@ -4,10 +4,10 @@
 
 #include "compiler/TextCompiler.h"
 #include <parsing/token.h>
-#include <util/macros.h>
-#include <sstream>
 #include <plan_node/abstract_plan_node.h>
 #include <plan_node/seq_scan_plan_node.h>
+#include <util/macros.h>
+#include <sstream>
 #include "parser/expression/constant_value_expression.h"
 #include "parser/expression/tuple_value_expression.h"
 #include "parser/expression_defs.h"
@@ -15,13 +15,15 @@
 
 namespace tpl::compiler {
 
-void TextCompiler::CompileAndRun(const std::shared_ptr<tpl::plan_node::AbstractPlanNode> plan) {
-  switch(plan->GetPlanNodeType()) {
+void TextCompiler::CompileAndRun(
+    const std::shared_ptr<tpl::plan_node::AbstractPlanNode> plan) {
+  switch (plan->GetPlanNodeType()) {
     case tpl::plan_node::PlanNodeType::SEQSCAN:
-      const tpl::plan_node::SeqScanPlanNode *scanPlan = reinterpret_cast<const tpl::plan_node::SeqScanPlanNode*>(plan.get());
-      std::string predicate = CompilePredicate(scanPlan->GetPredicate(), DEFAULT_ROW_NAME);
-      std::string template_string =
-      break;
+      const tpl::plan_node::SeqScanPlanNode *scanPlan =
+          reinterpret_cast<const tpl::plan_node::SeqScanPlanNode *>(plan.get());
+      std::string predicate =
+          CompilePredicate(scanPlan->GetPredicate(), DEFAULT_ROW_NAME);
+      std::string template_string = break;
     default:
       TPL_ASSERT(false, "UNSUPPORTED PLAN");
   }

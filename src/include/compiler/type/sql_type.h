@@ -75,5 +75,5 @@ class SqlType {
 };
 
 }  // namespace type
-}  // namespace codegen
-}  // namespace peloton
+}  // namespace compiler
+}  // namespace tpl

@@ -203,4 +203,4 @@ std::vector<uint16_t> StorageUtil::ComputeBaseAttributeOffsets(
   return offsets;
 }
 
-}  // namespace terrier::storage
+}  // namespace tpl::storage

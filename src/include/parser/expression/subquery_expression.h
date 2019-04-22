@@ -41,4 +41,4 @@ class SubqueryExpression : public AbstractExpression {
   std::shared_ptr<parser::SelectStatement> subselect_;
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

@@ -77,4 +77,4 @@ class GarbageCollector {
   transaction::TransactionQueue txns_to_unlink_;
 };
 
-}  // namespace terrier::storage
+}  // namespace tpl::storage

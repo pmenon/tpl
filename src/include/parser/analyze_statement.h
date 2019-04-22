@@ -50,4 +50,4 @@ class AnalyzeStatement : public SQLStatement {
 };
 
 }  // namespace parser
-}  // namespace terrier
+}  // namespace tpl

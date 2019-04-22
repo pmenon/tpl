@@ -304,4 +304,4 @@ void TransactionManager::DeallocateInsertedTupleIfVarlen(
     }
   }
 }
-}  // namespace terrier::transaction
+}  // namespace tpl::transaction

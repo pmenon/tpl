@@ -106,4 +106,4 @@ class ArrowBlockMetadata {
   // arrow_varlen_buffers[num_cols] |
   byte varlen_content_[];
 };
-}  // namespace terrier::storage
+}  // namespace tpl::storage

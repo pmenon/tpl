@@ -286,4 +286,4 @@ void Catalog::CreateTestTables() {
   }
 };
 
-}  // namespace terrier::catalog
+}  // namespace tpl::catalog

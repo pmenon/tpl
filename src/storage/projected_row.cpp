@@ -120,4 +120,4 @@ template ProjectedRowInitializer
 ProjectedRowInitializer::CreateProjectedRowInitializerForIndexes(
     std::vector<uint16_t> attr_sizes, const std::vector<uint16_t> &column_ids);
 
-}  // namespace terrier::storage
+}  // namespace tpl::storage

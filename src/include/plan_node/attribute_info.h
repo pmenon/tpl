@@ -33,4 +33,4 @@ struct AttributeInfo {
 };
 
 }  // namespace planner
-}  // namespace peloton
+}  // namespace tpl

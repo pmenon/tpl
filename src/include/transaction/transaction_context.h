@@ -13,7 +13,7 @@
 namespace tpl::storage {
 class GarbageCollector;
 class LogManager;
-}  // namespace terrier::storage
+}  // namespace tpl::storage
 
 namespace tpl::transaction {
 /**
@@ -158,4 +158,4 @@ class TransactionContext {
   // be garbage-collected safely.
   bool log_processed_ = false;
 };
-}  // namespace terrier::transaction
+}  // namespace tpl::transaction

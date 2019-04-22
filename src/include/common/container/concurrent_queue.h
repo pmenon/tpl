@@ -50,4 +50,4 @@ class ConcurrentQueue {
  private:
   tbb::concurrent_queue<T, Alloc> queue_;
 };
-}  // namespace terrier::common
+}  // namespace tpl::common

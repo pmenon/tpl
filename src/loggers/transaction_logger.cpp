@@ -12,4 +12,4 @@ void init_transaction_logger() {
   spdlog::register_logger(transaction_logger);
 }
 
-}  // namespace terrier::transaction
+}  // namespace tpl::transaction

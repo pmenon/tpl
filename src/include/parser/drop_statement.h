@@ -122,4 +122,4 @@ class DropStatement : public TableRefStatement {
 };
 
 }  // namespace parser
-}  // namespace terrier
+}  // namespace tpl

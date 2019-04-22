@@ -696,6 +696,8 @@ class FunctionLitExpr : public Expr {
 
   BlockStmt *body() const { return body_; }
 
+  void SetBody(BlockStmt *body) { body_ = body; }
+
   bool IsEmpty() const { return body()->IsEmpty(); }
 
   static bool classof(const AstNode *node) {

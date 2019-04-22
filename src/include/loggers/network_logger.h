@@ -8,7 +8,7 @@ namespace tpl::network {
 extern std::shared_ptr<spdlog::logger> network_logger;
 
 void init_network_logger();
-}  // namespace terrier::network
+}  // namespace tpl::network
 
 #define NETWORK_LOG_TRACE(...) \
   ::terrier::network::network_logger->trace(__VA_ARGS__);

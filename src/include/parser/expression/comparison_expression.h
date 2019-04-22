@@ -30,4 +30,4 @@ class ComparisonExpression : public AbstractExpression {
   }
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

@@ -37,4 +37,4 @@ class TransactionStatement : public SQLStatement {
   const CommandType type_;
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

@@ -20,4 +20,4 @@ class VariableSetStatement : public SQLStatement {
   void Accept(SqlNodeVisitor *v) override {}
 };
 }  // namespace parser
-}  // namespace terrier
+}  // namespace tpl

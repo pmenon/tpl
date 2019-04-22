@@ -11,4 +11,4 @@ void init_type_logger() {
   spdlog::register_logger(type_logger);
 }
 
-}  // namespace terrier::type
+}  // namespace tpl::type

@@ -14,13 +14,13 @@
 
 #include <llvm/Support/raw_ostream.h>
 
+#include "common/exception.h"
 #include "compiler/codegen.h"
 #include "compiler/compilation_context.h"
-#include "compiler/row_batch.h"
-#include "compiler/vector.h"
 #include "compiler/lang/loop.h"
 #include "compiler/lang/vectorized_loop.h"
-#include "common/exception.h"
+#include "compiler/row_batch.h"
+#include "compiler/vector.h"
 #include "plan_node/attribute_info.h"
 
 #include "logging/logger.h"
@@ -49,7 +49,8 @@ struct CallbackAdapter : public RowBatch::IterateCallback {
 //===----------------------------------------------------------------------===//
 struct VectorizedCallbackAdapter : public RowBatch::VectorizedIterateCallback {
   typedef std::function<llvm::Value *(
-      RowBatch::VectorizedIterateCallback::IterationInstance &)> Callback;
+      RowBatch::VectorizedIterateCallback::IterationInstance &)>
+      Callback;
 
   // The callback function
   uint32_t vector_size;
@@ -98,7 +99,7 @@ bool RowBatch::Row::HasAttribute(const planner::AttributeInfo *ai) const {
 }
 
 compiler::Value RowBatch::Row::DeriveValue(CodeGen &codegen,
-                                          const planner::AttributeInfo *ai) {
+                                           const planner::AttributeInfo *ai) {
   // First check cache
   auto cache_iter = cache_.find(ai);
   if (cache_iter != cache_.end()) {
@@ -175,7 +176,6 @@ llvm::Value *RowBatch::Row::GetTID(CodeGen &codegen) {
   TPL_ASSERT(tid_ != nullptr, "tid is null");
   return tid_;
 }
-
 
 //===----------------------------------------------------------------------===//
 // OUTPUT TRACKER
@@ -359,7 +359,6 @@ llvm::Value *RowBatch::GetNumTotalRows(CodeGen &codegen) {
   return num_rows_;
 }
 
-
 void RowBatch::UpdateWritePosition(llvm::Value *sz) {
   selection_vector_.SetNumElements(sz);
   filtered_ = true;
@@ -375,5 +374,5 @@ llvm::Value *RowBatch::GetPhysicalPosition(CodeGen &codegen,
   }
 }
 
-}  // namespace codegen
-}  // namespace peloton
+}  // namespace compiler
+}  // namespace tpl

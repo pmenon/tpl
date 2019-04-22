@@ -226,4 +226,4 @@ void GarbageCollector::ReclaimBufferIfVarlen(
       throw std::runtime_error("unexpected delta record type");
   }
 }
-}  // namespace terrier::storage
+}  // namespace tpl::storage

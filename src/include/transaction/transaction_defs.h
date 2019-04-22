@@ -16,4 +16,4 @@ class TransactionContext;
 // faster if it becomes a measurable performance bottleneck.
 using TransactionQueue = std::forward_list<transaction::TransactionContext *>;
 using callback_fn = void (*)(void *);
-}  // namespace terrier::transaction
+}  // namespace tpl::transaction

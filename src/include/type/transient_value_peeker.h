@@ -120,4 +120,4 @@ class TransientValuePeeker {
   }
 };
 
-}  // namespace terrier::type
+}  // namespace tpl::type

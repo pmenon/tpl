@@ -11,7 +11,7 @@
 namespace tpl::transaction {
 class TransactionContext;
 class TransactionManager;
-}  // namespace terrier::transaction
+}  // namespace tpl::transaction
 
 namespace tpl::storage {
 
@@ -317,4 +317,4 @@ class DataTable {
 
   void DeallocateVarlensOnShutdown(RawBlock *block);
 };
-}  // namespace terrier::storage
+}  // namespace tpl::storage

@@ -12,9 +12,9 @@
 
 #pragma once
 
+#include "common/internal_types.h"
 #include "compiler/codegen.h"
 #include "compiler/type/type.h"
-#include "common/internal_types.h"
 
 namespace tpl {
 namespace compiler {

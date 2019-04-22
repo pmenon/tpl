@@ -40,4 +40,4 @@ void RedoBuffer::Finalize(bool committed) {
   else
     buffer_pool_->Release(buffer_seg_);
 }
-}  // namespace terrier::storage
+}  // namespace tpl::storage

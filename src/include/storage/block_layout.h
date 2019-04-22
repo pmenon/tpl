@@ -116,4 +116,4 @@ class BlockLayout {
   uint32_t ComputeNumSlots() const;
   uint32_t ComputeHeaderSize() const;
 };
-}  // namespace terrier::storage
+}  // namespace tpl::storage

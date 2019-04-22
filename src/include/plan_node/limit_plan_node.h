@@ -49,8 +49,8 @@ class LimitPlanNode : public AbstractPlanNode {
      * @return plan node
      */
     std::shared_ptr<LimitPlanNode> Build() {
-      return std::shared_ptr<LimitPlanNode>(
-          new LimitPlanNode(std::move(children_), std::move(output_schema_), limit_, offset_));
+      return std::shared_ptr<LimitPlanNode>(new LimitPlanNode(
+          std::move(children_), std::move(output_schema_), limit_, offset_));
     }
 
    protected:
@@ -67,13 +67,17 @@ class LimitPlanNode : public AbstractPlanNode {
  private:
   /**
    * @param children child plan nodes
-   * @param output_schema Schema representing the structure of the output of this plan node
+   * @param output_schema Schema representing the structure of the output of
+   * this plan node
    * @param limit number of tuples to limit to
    * @param offset offset at which to limit from
    */
-  LimitPlanNode(std::vector<std::unique_ptr<AbstractPlanNode>> &&children, std::shared_ptr<OutputSchema> output_schema,
-                size_t limit, size_t offset)
-      : AbstractPlanNode(std::move(children), std::move(output_schema)), limit_(limit), offset_(offset) {}
+  LimitPlanNode(std::vector<std::unique_ptr<AbstractPlanNode>> &&children,
+                std::shared_ptr<OutputSchema> output_schema, size_t limit,
+                size_t offset)
+      : AbstractPlanNode(std::move(children), std::move(output_schema)),
+        limit_(limit),
+        offset_(offset) {}
 
   /**
    * Constructor used for JSON serialization
@@ -123,4 +127,4 @@ class LimitPlanNode : public AbstractPlanNode {
    */
   DISALLOW_COPY_AND_MOVE(LimitPlanNode);
 };
-}  // namespace terrier::plan_node
+}  // namespace tpl::plan_node

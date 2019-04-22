@@ -145,4 +145,4 @@ class SqlNodeVisitor {
   virtual void Visit(parser::ExplainStatement *node) {}
 };
 
-}  // namespace terrier
+}  // namespace tpl

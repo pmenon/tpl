@@ -12,18 +12,18 @@
 
 #include "compiler/lang/if.h"
 
-#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <compiler/function_builder.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
-#include "compiler/value.h"
 #include "compiler/type/boolean_type.h"
+#include "compiler/value.h"
 
 namespace tpl {
 namespace compiler {
 namespace lang {
 
-If::If(CodeGen &codegen, llvm::Value *cond, std::string name,
-       Block *then_bb, Block *else_bb)
+If::If(CodeGen &codegen, llvm::Value *cond, std::string name, Block *then_bb,
+       Block *else_bb)
     : codegen_(codegen),
       fn_(codegen_->GetInsertBlock()->getParent()),
       then_bb_(nullptr),
@@ -31,7 +31,7 @@ If::If(CodeGen &codegen, llvm::Value *cond, std::string name,
       else_bb_(nullptr),
       last_bb_in_else_(nullptr) {
   Init(cond, then_bb, else_bb);
-  //then_bb_->setName(name);
+  // then_bb_->setName(name);
 }
 
 If::If(CodeGen &codegen, const compiler::Value &cond, std::string name,
@@ -39,8 +39,7 @@ If::If(CodeGen &codegen, const compiler::Value &cond, std::string name,
     : If(codegen, type::Boolean::Instance().Reify(codegen, cond),
          std::move(name), then_bb, else_bb) {}
 
-void If::Init(Value *cond, Block *then_bb,
-              Block *else_bb) {
+void If::Init(Value *cond, Block *then_bb, Block *else_bb) {
   // Set up the "then" block. If one was provided, use it. Otherwise, create a
   // new one now.
   then_bb_ = then_bb;
@@ -104,7 +103,6 @@ void If::EndIf() {
   codegen_->SetInsertPoint(merge_bb_);
 }
 
-
 void If::BranchIfNotTerminated(llvm::BasicBlock *block) const {
   // Get the current block we're generating in
   llvm::BasicBlock *curr_bb = codegen_->GetInsertBlock();
@@ -119,5 +117,5 @@ void If::BranchIfNotTerminated(llvm::BasicBlock *block) const {
 }
 
 }  // namespace lang
-}  // namespace codegen
-}  // namespace peloton
+}  // namespace compiler
+}  // namespace tpl

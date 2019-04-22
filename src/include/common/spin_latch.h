@@ -59,4 +59,4 @@ class SpinLatch {
   tbb::spin_mutex latch_;
 };
 
-}  // namespace terrier::common
+}  // namespace tpl::common

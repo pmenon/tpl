@@ -67,5 +67,5 @@ class Vector {
   llvm::Value *num_elements_;
 };
 
-}  // namespace codegen
-}  // namespace peloton
+}  // namespace compiler
+}  // namespace tpl

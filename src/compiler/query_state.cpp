@@ -80,4 +80,4 @@ llvm::Type *QueryState::GetType() const {
 }
 
 }  // namespace codegen
-}  // namespace peloton
+}  // namespace tpl

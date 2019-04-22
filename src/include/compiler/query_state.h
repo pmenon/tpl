@@ -14,9 +14,9 @@
 
 #include "compiler/codegen.h"
 
+#include <util/macros.h>
 #include <string>
 #include <vector>
-#include <util/macros.h>
 
 namespace tpl {
 namespace compiler {
@@ -63,8 +63,7 @@ class QueryState {
   llvm::Value *LoadStatePtr(CodeGen &codegen, QueryState::Id state_id) const;
 
   /// Get the actual value of the state information with the given ID
-  llvm::Value *LoadStateValue(CodeGen &codegen,
-                              QueryState::Id state_id) const;
+  llvm::Value *LoadStateValue(CodeGen &codegen, QueryState::Id state_id) const;
 
   /// Construct the equivalent LLVM type that represents this runtime state
   llvm::Type *FinalizeType(CodeGen &codegen);

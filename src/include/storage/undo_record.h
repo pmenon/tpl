@@ -227,4 +227,4 @@ static_assert(
     "a projected row inside the undo record needs to be aligned to 8 bytes"
     "to ensure true atomicity");
 
-}  // namespace terrier::storage
+}  // namespace tpl::storage

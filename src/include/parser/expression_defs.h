@@ -71,4 +71,4 @@ enum class ExpressionType : uint8_t {
   TABLE_REF
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

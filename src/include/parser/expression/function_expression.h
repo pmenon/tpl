@@ -55,4 +55,4 @@ class FunctionExpression : public AbstractExpression {
   // bool is_udf_;
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

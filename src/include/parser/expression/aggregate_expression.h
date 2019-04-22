@@ -42,4 +42,4 @@ class AggregateExpression : public AbstractExpression {
   bool distinct_;
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

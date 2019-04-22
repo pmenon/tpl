@@ -327,4 +327,4 @@ class ProjectedColumnsInitializer {
   std::vector<col_id_t> col_ids_;
   std::vector<uint32_t> offsets_;
 };
-}  // namespace terrier::storage
+}  // namespace tpl::storage

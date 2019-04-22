@@ -32,4 +32,4 @@ class OperatorExpression : public AbstractExpression {
   }
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

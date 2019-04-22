@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "compiler/operator/table_scan_translator.h"
 #include <llvm/IR/Value.h>
 #include "compiler/codegen.h"
-#include "compiler/operator/table_scan_translator.h"
 
 #include "plan_node/seq_scan_plan_node.h"
 #include "storage/data_table.h"
@@ -34,8 +34,7 @@ namespace compiler {
  */
 class TableScanTranslator::AttributeAccess : public RowBatch::AttributeAccess {
  public:
-  AttributeAccess(const planner::AttributeInfo *ai)
-      : ai_(ai) {}
+  AttributeAccess(const planner::AttributeInfo *ai) : ai_(ai) {}
 
   // Access an attribute in the given row
   codegen::Value Access(CodeGen &codegen, RowBatch::Row &row) override {
@@ -211,8 +210,8 @@ void TableScanTranslator::ProduceParallel() const {
                                                   codegen.Int64Type()};
 
   // Parallel production
-  auto producer = [this, &codegen](
-      ConsumerContext &ctx, const std::vector<llvm::Value *> params) {
+  auto producer = [this, &codegen](ConsumerContext &ctx,
+                                   const std::vector<llvm::Value *> params) {
     PELOTON_ASSERT(params.size() == 2);
     llvm::Value *tilegroup_start = params[0];
     llvm::Value *tilegroup_end = params[1];
@@ -289,8 +288,12 @@ void TableScanTranslator::ScanConsumer::ProcessTuples(
   PerformReads(codegen, selection_vector_);
 
   // 4. Setup the (filtered) row batch and setup attribute accessors
-  RowBatch batch{ctx_.GetCompilationContext(), tile_group_id_, tid_start,
-                 tid_end, selection_vector_, true};
+  RowBatch batch{ctx_.GetCompilationContext(),
+                 tile_group_id_,
+                 tid_start,
+                 tid_end,
+                 selection_vector_,
+                 true};
 
   std::vector<TableScanTranslator::AttributeAccess> attribute_accesses;
   SetupRowBatch(batch, tile_group_access, attribute_accesses);
@@ -343,8 +346,12 @@ void TableScanTranslator::ScanConsumer::FilterRowsByPredicate(
     llvm::Value *tid_start, llvm::Value *tid_end,
     Vector &selection_vector) const {
   // The batch we're filtering
-  RowBatch batch{ctx_.GetCompilationContext(), tile_group_id_, tid_start,
-                 tid_end, selection_vector, true};
+  RowBatch batch{ctx_.GetCompilationContext(),
+                 tile_group_id_,
+                 tid_start,
+                 tid_end,
+                 selection_vector,
+                 true};
 
   // Determine the attributes the predicate needs
   const auto *predicate = plan_.GetPredicate();

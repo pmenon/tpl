@@ -19,4 +19,4 @@ enum class TypeId : uint8_t {
   VARCHAR,
   VARBINARY
 };
-}  // namespace terrier::type
+}  // namespace tpl::type

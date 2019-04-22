@@ -152,4 +152,4 @@ class StorageUtil {
   static std::vector<uint16_t> ComputeBaseAttributeOffsets(
       const std::vector<uint8_t> &attr_sizes, uint16_t num_reserved_columns);
 };
-}  // namespace terrier::storage
+}  // namespace tpl::storage

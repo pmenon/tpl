@@ -114,4 +114,4 @@ class TransientValueFactory {
   }
 };
 
-}  // namespace terrier::type
+}  // namespace tpl::type

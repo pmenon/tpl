@@ -102,4 +102,4 @@ class InsertStatement : public SQLStatement {
 };
 
 }  // namespace parser
-}  // namespace terrier
+}  // namespace tpl

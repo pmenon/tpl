@@ -240,4 +240,4 @@ class SqlTable {
   ProjectionMap ProjectionMapForInitializer(
       const ProjectionInitializerType &initializer) const;
 };
-}  // namespace terrier::storage
+}  // namespace tpl::storage

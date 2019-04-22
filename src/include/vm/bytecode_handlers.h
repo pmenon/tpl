@@ -190,14 +190,11 @@ VM_OP_HOT void OpReturn() {}
 // Transactions
 // ---------------------------------------------------------
 
-VM_OP_COLD void OpBeginTransaction(
-    tpl::transaction::TransactionContext **txn);
+VM_OP_COLD void OpBeginTransaction(tpl::transaction::TransactionContext **txn);
 
-VM_OP_COLD void OpCommitTransaction(
-    tpl::transaction::TransactionContext **txn);
+VM_OP_COLD void OpCommitTransaction(tpl::transaction::TransactionContext **txn);
 
-VM_OP_COLD void OpAbortTransaction(
-    tpl::transaction::TransactionContext **txn);
+VM_OP_COLD void OpAbortTransaction(tpl::transaction::TransactionContext **txn);
 
 // ---------------------------------------------------------
 // Table Vector Iterator

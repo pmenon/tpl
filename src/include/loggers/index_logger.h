@@ -8,7 +8,7 @@ namespace tpl::storage {
 extern std::shared_ptr<spdlog::logger> index_logger;
 
 void init_index_logger();
-}  // namespace terrier::storage
+}  // namespace tpl::storage
 
 #define INDEX_LOG_TRACE(...) \
   ::terrier::storage::index_logger->trace(__VA_ARGS__);

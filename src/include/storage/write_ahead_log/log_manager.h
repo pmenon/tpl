@@ -101,4 +101,4 @@ class LogManager {
     out_.BufferWrite(&val, sizeof(T));
   }
 };
-}  // namespace terrier::storage
+}  // namespace tpl::storage

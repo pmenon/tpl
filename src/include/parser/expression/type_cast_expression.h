@@ -27,4 +27,4 @@ class TypeCastExpression : public AbstractExpression {
   }
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

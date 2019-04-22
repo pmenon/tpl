@@ -65,4 +65,4 @@ class PrepareStatement : public SQLStatement {
 };
 
 }  // namespace parser
-}  // namespace terrier
+}  // namespace tpl

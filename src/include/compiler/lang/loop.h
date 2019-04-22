@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include <vector>
 #include <compiler/value/TPLValue.h>
+#include <vector>
 
 #include "compiler/codegen.h"
 #include "compiler/value.h"
@@ -71,5 +71,5 @@ class Loop {
 };
 
 }  // namespace lang
-}  // namespace codegen
-}  // namespace peloton
+}  // namespace compiler
+}  // namespace tpl

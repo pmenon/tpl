@@ -12,4 +12,4 @@ void init_storage_logger() {
   spdlog::register_logger(storage_logger);
 }
 
-}  // namespace terrier::storage
+}  // namespace tpl::storage

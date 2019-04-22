@@ -12,10 +12,10 @@
 
 #pragma once
 
+#include <ast/type.h>
+#include <util/macros.h>
 #include <string>
 #include <vector>
-#include <util/macros.h>
-#include <ast/type.h>
 #include "compiler/code_context.h"
 
 namespace tpl::compiler {
@@ -86,9 +86,7 @@ class CodeGen {
   ast::Type *DoubleType() const { return code_context_.double_type_; }
   ast::Type *VoidType() const { return code_context_.void_type_; }
   ast::Type *VoidPtrType() const { return code_context_.void_ptr_type_; }
-  ast::PointerType *CharPtrType() const {
-    return code_context_.char_ptr_type_;
-  }
+  ast::PointerType *CharPtrType() const { return code_context_.char_ptr_type_; }
   // /Generate a call to the function with the provided name and arguments
   llvm::Value *CallFunc(llvm::Value *fn,
                         std::initializer_list<llvm::Value *> args);
@@ -114,8 +112,7 @@ class CodeGen {
   //===--------------------------------------------------------------------===//
   llvm::Value *Printf(const std::string &format,
                       const std::vector<llvm::Value *> &args);
-  llvm::Value *Memcmp(llvm::Value *ptr1, llvm::Value *ptr2,
-                      llvm::Value *len);
+  llvm::Value *Memcmp(llvm::Value *ptr1, llvm::Value *ptr2, llvm::Value *len);
   llvm::Value *Sqrt(llvm::Value *val);
 
   //===--------------------------------------------------------------------===//
@@ -137,7 +134,8 @@ class CodeGen {
   // Function lookup and registration
   //===--------------------------------------------------------------------===//
   llvm::Type *LookupType(const std::string &name) const;
-  std::pair<llvm::Function *, CodeContext::FuncPtr> LookupBuiltin(const std::string &name) const;
+  std::pair<llvm::Function *, CodeContext::FuncPtr> LookupBuiltin(
+      const std::string &name) const;
   llvm::Function *RegisterBuiltin(const std::string &fn_name,
                                   llvm::FunctionType *fn_type, void *func_impl);
 
@@ -183,4 +181,4 @@ class CodeGen {
   CodeContext &code_context_;
 };
 
-}  // namespace tpl::codegen
+}  // namespace tpl::compiler

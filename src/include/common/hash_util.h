@@ -88,4 +88,4 @@ class HashUtil {
   }
 };
 
-}  // namespace terrier::common
+}  // namespace tpl::common

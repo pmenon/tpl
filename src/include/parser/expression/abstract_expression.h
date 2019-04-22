@@ -116,7 +116,7 @@ class AbstractExpression {
   std::vector<std::shared_ptr<AbstractExpression>>
       children_;  // list of children
 };
-}  // namespace terrier::parser
+}  // namespace tpl::parser
 
 namespace std {
 /**

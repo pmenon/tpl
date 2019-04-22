@@ -48,4 +48,4 @@ class ConstantValueExpression : public AbstractExpression {
   type::TransientValue value_;
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

@@ -132,4 +132,4 @@ class RawBitmap {
 // exact layout. Changes include marking a function as virtual, as that adds a
 // Vtable to the class layout,
 static_assert(sizeof(RawBitmap) == 0, "Unexpected RawBitmap layout!");
-}  // namespace terrier::common
+}  // namespace tpl::common

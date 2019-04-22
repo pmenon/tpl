@@ -75,4 +75,4 @@ bool TupleAccessStrategy::Allocate(RawBlock *const block,
 
   return false;
 }
-}  // namespace terrier::storage
+}  // namespace tpl::storage

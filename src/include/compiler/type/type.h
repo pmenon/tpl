@@ -80,7 +80,6 @@ class Type {
   Type AsNonNullable() const;
 };
 
-
 }  // namespace type
 }  // namespace compiler
 }  // namespace tpl

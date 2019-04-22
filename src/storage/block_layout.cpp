@@ -66,4 +66,4 @@ uint32_t BlockLayout::ComputeHeaderSize() const {
       static_header_size_ + common::RawBitmap::SizeInBytes(NumSlots()));
 }
 
-}  // namespace terrier::storage
+}  // namespace tpl::storage

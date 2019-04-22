@@ -24,4 +24,4 @@ struct Constants {
   // experiments.
   static const uint16_t MAX_COL = 12500;
 };
-}  // namespace terrier::common
+}  // namespace tpl::common

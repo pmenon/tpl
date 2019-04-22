@@ -201,4 +201,4 @@ struct TableRef {
 };
 
 }  // namespace parser
-}  // namespace terrier
+}  // namespace tpl

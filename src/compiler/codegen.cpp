@@ -332,7 +332,8 @@ llvm::Type *CodeGen::LookupType(const std::string &name) const {
   return GetModule().getTypeByName(name);
 }
 
-std::pair<llvm::Function *, CodeContext::FuncPtr> CodeGen::LookupBuiltin(const std::string &name) const {
+std::pair<llvm::Function *, CodeContext::FuncPtr> CodeGen::LookupBuiltin(
+    const std::string &name) const {
   return code_context_.LookupBuiltin(name);
 };
 
@@ -396,5 +397,5 @@ void CppProxyMember::Store(CodeGen &codegen, llvm::Value *obj_ptr,
   codegen->CreateStore(val, addr);
 }
 
-}  // namespace codegen
-}  // namespace peloton
+}  // namespace compiler
+}  // namespace tpl

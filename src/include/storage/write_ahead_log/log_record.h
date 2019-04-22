@@ -367,4 +367,4 @@ class CommitRecord {
   transaction::TransactionContext *txn_;
   bool is_read_only_;
 };
-}  // namespace terrier::storage
+}  // namespace tpl::storage

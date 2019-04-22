@@ -49,4 +49,4 @@ class ExecuteStatement : public SQLStatement {
 };
 
 }  // namespace parser
-}  // namespace terrier
+}  // namespace tpl

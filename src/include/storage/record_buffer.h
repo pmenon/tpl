@@ -7,7 +7,7 @@
 
 namespace tpl::transaction {
 class TransactionManager;
-}  // namespace terrier::transaction
+}  // namespace tpl::transaction
 
 namespace tpl::storage {
 
@@ -392,4 +392,4 @@ class RedoBuffer {
   // last operation (which caused the abort)
   byte *last_record_ = nullptr;
 };
-}  // namespace terrier::storage
+}  // namespace tpl::storage

@@ -31,4 +31,4 @@ class ExplainStatement : public SQLStatement {
   std::shared_ptr<SQLStatement> real_sql_stmt_;
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

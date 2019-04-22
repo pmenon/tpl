@@ -13,9 +13,9 @@
 #include "compiler/table.h"
 
 #include "catalog/schema.h"
-#include "compiler/proxy/data_table_proxy.h"
-#include "compiler/lang/loop.h"
 #include "compiler/lang/if.h"
+#include "compiler/lang/loop.h"
+#include "compiler/proxy/data_table_proxy.h"
 #include "compiler/proxy/runtime_functions_proxy.h"
 #include "compiler/proxy/zone_map_proxy.h"
 #include "storage/data_table.h"
@@ -99,15 +99,15 @@ void Table::GenerateScan(CodeGen &codegen, llvm::Value *table_ptr,
                   codegen->CreateICmpULT(tile_group_idx, num_tile_groups),
                   {{"tileGroupIdx", tile_group_idx}}};
 
-    compiler::lang::If should_scan_tilegroup{codegen, cond};
-    should_scan_tilegroup.EndIf();
+  compiler::lang::If should_scan_tilegroup{codegen, cond};
+  should_scan_tilegroup.EndIf();
 
-    // Move to next tile group in the table
-    tile_group_idx = codegen->CreateAdd(tile_group_idx, codegen.Const64(1));
-    loop.LoopEnd(codegen->CreateICmpULT(tile_group_idx, num_tile_groups),
-                 {tile_group_idx});
-  }
+  // Move to next tile group in the table
+  tile_group_idx = codegen->CreateAdd(tile_group_idx, codegen.Const64(1));
+  loop.LoopEnd(codegen->CreateICmpULT(tile_group_idx, num_tile_groups),
+               {tile_group_idx});
 }
-
 }  // namespace compiler
+
+}  // namespace tpl
 }  // namespace tpl

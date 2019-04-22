@@ -46,12 +46,12 @@ namespace tpl::common {
  *
  * This works with all types of ints.
  */
-#define STRONG_TYPEDEF(name, underlying_type)                               \
-  namespace tags {                                                          \
-  struct name##_typedef_tag {};                                             \
-  }                                                                         \
+#define STRONG_TYPEDEF(name, underlying_type)                           \
+  namespace tags {                                                      \
+  struct name##_typedef_tag {};                                         \
+  }                                                                     \
   using name = ::tpl::common::StrongTypeAlias<tags::name##_typedef_tag, \
-                                                  underlying_type>;
+                                              underlying_type>;
 
 /**
  * A StrongTypeAlias is the underlying implementation of STRONG_TYPEDEF.
@@ -218,7 +218,7 @@ class StrongTypeAlias {
  private:
   IntType val_;
 };
-}  // namespace terrier::common
+}  // namespace tpl::common
 
 /* Define all typedefs here */
 namespace tpl {
@@ -372,8 +372,7 @@ struct hash<tpl::common::StrongTypeAlias<Tag, T>> {
    * @param alias the aliased type to be hashed.
    * @return the hash of the aliased type.
    */
-  size_t operator()(
-      const tpl::common::StrongTypeAlias<Tag, T> &alias) const {
+  size_t operator()(const tpl::common::StrongTypeAlias<Tag, T> &alias) const {
     return hash<T>()(!alias);
   }
 };

@@ -353,7 +353,7 @@ struct VarlenContentCompare {
   }
 };
 
-}  // namespace terrier::storage
+}  // namespace tpl::storage
 
 namespace std {
 /**

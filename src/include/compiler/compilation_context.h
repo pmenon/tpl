@@ -12,10 +12,10 @@
 
 #pragma once
 
+#include <src/postgres/include/nodes/parsenodes.h>
 #include <memory>
 #include <unordered_map>
 #include <vector>
-#include <src/postgres/include/nodes/parsenodes.h>
 
 #include "compiler/code_context.h"
 #include "compiler/codegen.h"
@@ -135,16 +135,18 @@ class CompilationContext {
 
   // The mapping of an operator in the tree to its translator
   std::unordered_map<const planner::AbstractPlan *,
-                     std::unique_ptr<OperatorTranslator>> op_translators_;
+                     std::unique_ptr<OperatorTranslator>>
+      op_translators_;
 
   // The mapping of an expression somewhere in the tree to its translator
   std::unordered_map<const expression::AbstractExpression *,
-                     std::unique_ptr<ExpressionTranslator>> exp_translators_;
+                     std::unique_ptr<ExpressionTranslator>>
+      exp_translators_;
 
   // Pre-declared producer functions and their root plan nodes
   std::unordered_map<const planner::AbstractPlan *, FunctionDeclaration>
       auxiliary_producers_;
 };
 
-}  // namespace codegen
+}  // namespace compiler
 }  // namespace tpl

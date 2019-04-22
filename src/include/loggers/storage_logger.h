@@ -8,7 +8,7 @@ namespace tpl::storage {
 extern std::shared_ptr<spdlog::logger> storage_logger;
 
 void init_storage_logger();
-}  // namespace terrier::storage
+}  // namespace tpl::storage
 
 #define STORAGE_LOG_TRACE(...) \
   ::tpl::storage::storage_logger->trace(__VA_ARGS__);

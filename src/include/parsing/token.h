@@ -67,7 +67,7 @@ namespace tpl::parsing {
   K(NIL_VAL, "nil", 0)                             \
   K(RETURN, "return", 0)                           \
   K(STRUCT, "struct", 0)                           \
-  K(OP_TRUE, "true", 0)                               \
+  K(OP_TRUE, "true", 0)                            \
   K(VAR, "var", 0)                                 \
                                                    \
   /* Internal */                                   \

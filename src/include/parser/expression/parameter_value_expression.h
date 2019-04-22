@@ -34,4 +34,4 @@ class ParameterValueExpression : public AbstractExpression {
   uint32_t value_idx_;
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

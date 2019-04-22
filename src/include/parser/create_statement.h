@@ -550,4 +550,4 @@ class CreateStatement : public TableRefStatement {
 };
 
 }  // namespace parser
-}  // namespace terrier
+}  // namespace tpl

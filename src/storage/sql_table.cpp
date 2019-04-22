@@ -50,4 +50,4 @@ SqlTable::ProjectionMapForInitializer<ProjectedColumnsInitializer>(
 template ProjectionMap SqlTable::ProjectionMapForInitializer<
     ProjectedRowInitializer>(const ProjectedRowInitializer &initializer) const;
 
-}  // namespace terrier::storage
+}  // namespace tpl::storage

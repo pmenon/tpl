@@ -12,4 +12,4 @@ void init_parser_logger() {
   spdlog::register_logger(parser_logger);
 }
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

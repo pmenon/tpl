@@ -30,4 +30,4 @@ class ConjunctionExpression : public AbstractExpression {
   }
 };
 
-}  // namespace terrier::parser
+}  // namespace tpl::parser

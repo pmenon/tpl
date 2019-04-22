@@ -32,7 +32,8 @@ namespace tpl::plan_node {
 //  estimated_cardinality_ = json["EstimatedCardinality"].get<int>();
 //}
 //
-// std::unique_ptr<AbstractPlanNode> DeserializePlanNode(const nlohmann::json &json) {
+// std::unique_ptr<AbstractPlanNode> DeserializePlanNode(const nlohmann::json
+// &json) {
 //  std::unique_ptr<AbstractPlanNode> plan_node;
 //
 //  auto plan_type = json["PlanNodeType"].get<PlanNodeType>();
@@ -60,4 +61,4 @@ namespace tpl::plan_node {
 //  return plan_node;
 //}
 
-}  // namespace terrier::plan_node
+}  // namespace tpl::plan_node

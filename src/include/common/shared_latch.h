@@ -93,4 +93,4 @@ class SharedLatch {
   tbb::reader_writer_lock latch_;
 };
 
-}  // namespace terrier::common
+}  // namespace tpl::common
