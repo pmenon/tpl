@@ -16,8 +16,10 @@ class ColumnVectorIterator;
 /// tuples whose columns are stored in columnar format
 class VectorProjection {
  public:
-  /// Create a vector projection over columns w
-  VectorProjection(std::vector<const Schema::ColumnInfo *> &col_info, u32 size);
+  /// Create a vector projection using the column information provided in
+  /// \a col_infos. The vector projection stores vectors of size \a size.
+  VectorProjection(const std::vector<const Schema::ColumnInfo *> &col_infos,
+                   u32 size);
 
   /// This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(VectorProjection);
@@ -72,7 +74,8 @@ class VectorProjection {
   VectorProjection();
 
   /// Set up this vector projection with the given column information and size
-  void Setup(std::vector<const Schema::ColumnInfo *> &column_infos, u32 size);
+  void Setup(const std::vector<const Schema::ColumnInfo *> &col_infos,
+             u32 size);
 
  private:
   // Set the deletions bitmap

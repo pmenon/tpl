@@ -11,14 +11,14 @@ namespace tpl::sql {
 VectorProjection::VectorProjection() : tuple_count_(0), vector_size_(0) {}
 
 VectorProjection::VectorProjection(
-    std::vector<const Schema::ColumnInfo *> &col_info, u32 size)
+    const std::vector<const Schema::ColumnInfo *> &col_infos, u32 size)
     : tuple_count_(0), vector_size_(size) {
-  Setup(col_info, size);
+  Setup(col_infos, size);
 }
 
 void VectorProjection::Setup(
-    std::vector<const Schema::ColumnInfo *> &column_infos, u32 size) {
-  const auto num_cols = column_infos.size();
+    const std::vector<const Schema::ColumnInfo *> &col_infos, u32 size) {
+  const auto num_cols = col_infos.size();
   column_info_ = std::make_unique<const Schema::ColumnInfo *[]>(num_cols);
   column_data_ = std::make_unique<byte *[]>(num_cols);
   column_null_bitmaps_ = std::make_unique<u32 *[]>(num_cols);
@@ -30,7 +30,7 @@ void VectorProjection::Setup(
 
   // Setup the column metadata
   for (u32 idx = 0; idx < num_cols; idx++) {
-    column_info_[idx] = column_infos[idx];
+    column_info_[idx] = col_infos[idx];
   }
 }
 
