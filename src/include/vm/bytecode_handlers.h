@@ -330,8 +330,8 @@ VM_OP_HOT void OpVPIGetBigIntNull(tpl::sql::Integer *out,
 }
 
 VM_OP_HOT void OpVPIGetRealNull(tpl::sql::Real *out,
-                            tpl::sql::VectorProjectionIterator *iter,
-                            u32 col_idx) {
+                                tpl::sql::VectorProjectionIterator *iter,
+                                u32 col_idx) {
   // Read
   bool null = false;
   auto *ptr = iter->Get<f32, true>(col_idx, &null);
@@ -343,8 +343,8 @@ VM_OP_HOT void OpVPIGetRealNull(tpl::sql::Real *out,
 }
 
 VM_OP_HOT void OpVPIGetDoubleNull(tpl::sql::Real *out,
-                              tpl::sql::VectorProjectionIterator *iter,
-                              u32 col_idx) {
+                                  tpl::sql::VectorProjectionIterator *iter,
+                                  u32 col_idx) {
   // Read
   bool null = false;
   auto *ptr = iter->Get<f64, true>(col_idx, &null);
