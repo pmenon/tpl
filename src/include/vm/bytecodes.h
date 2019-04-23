@@ -99,10 +99,14 @@ namespace tpl::vm {
   F(VPIGetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPIGetInteger, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPIGetBigInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
+  F(VPIGetReal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
+  F(VPIGetDouble, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
   F(VPIGetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPIGetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
   F(VPIGetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPIGetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
+  F(VPIGetRealNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
+  F(VPIGetDoubleNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPIGetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPIFilterEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                     \
   F(VPIFilterGreaterThan, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)               \

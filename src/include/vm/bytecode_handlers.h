@@ -258,6 +258,30 @@ VM_OP_HOT void OpVPIGetBigInt(tpl::sql::Integer *out,
   out->val = *ptr;
 }
 
+VM_OP_HOT void OpVPIGetReal(tpl::sql::Real *out,
+                            tpl::sql::VectorProjectionIterator *iter,
+                            u32 col_idx) {
+  // Read
+  auto *ptr = iter->Get<f32, false>(col_idx, nullptr);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read real value");
+
+  // Set
+  out->is_null = false;
+  out->val = *ptr;
+}
+
+VM_OP_HOT void OpVPIGetDouble(tpl::sql::Real *out,
+                              tpl::sql::VectorProjectionIterator *iter,
+                              u32 col_idx) {
+  // Read
+  auto *ptr = iter->Get<f64, false>(col_idx, nullptr);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read double value");
+
+  // Set
+  out->is_null = false;
+  out->val = *ptr;
+}
+
 VM_OP_HOT void OpVPIGetDecimal(tpl::sql::Decimal *out,
                                UNUSED tpl::sql::VectorProjectionIterator *iter,
                                UNUSED u32 col_idx) {
@@ -299,6 +323,32 @@ VM_OP_HOT void OpVPIGetBigIntNull(tpl::sql::Integer *out,
   bool null = false;
   auto *ptr = iter->Get<i64, true>(col_idx, &null);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
+
+  // Set
+  out->is_null = null;
+  out->val = *ptr;
+}
+
+VM_OP_HOT void OpVPIGetRealNull(tpl::sql::Real *out,
+                            tpl::sql::VectorProjectionIterator *iter,
+                            u32 col_idx) {
+  // Read
+  bool null = false;
+  auto *ptr = iter->Get<f32, true>(col_idx, &null);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read real value");
+
+  // Set
+  out->is_null = null;
+  out->val = *ptr;
+}
+
+VM_OP_HOT void OpVPIGetDoubleNull(tpl::sql::Real *out,
+                              tpl::sql::VectorProjectionIterator *iter,
+                              u32 col_idx) {
+  // Read
+  bool null = false;
+  auto *ptr = iter->Get<f64, true>(col_idx, &null);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read double value");
 
   // Set
   out->is_null = null;

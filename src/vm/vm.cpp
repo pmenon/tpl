@@ -503,6 +503,8 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   GEN_VPI_ACCESS(SmallInt, sql::Integer)
   GEN_VPI_ACCESS(Integer, sql::Integer)
   GEN_VPI_ACCESS(BigInt, sql::Integer)
+  GEN_VPI_ACCESS(Real, sql::Real)
+  GEN_VPI_ACCESS(Double, sql::Real)
   GEN_VPI_ACCESS(Decimal, sql::Decimal)
 #undef GEN_VPI_ACCESS
 
