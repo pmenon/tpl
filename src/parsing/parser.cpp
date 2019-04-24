@@ -44,13 +44,15 @@ void Parser::Sync(const std::unordered_set<Token::Type> &s) {
 ast::Expr *Parser::MakeExpr(ast::AstNode *node) {
   if (node == nullptr) {
     return nullptr;
-  } else if (auto *expr_stmt = node->SafeAs<ast::ExpressionStmt>()) {
-    return expr_stmt->expression();
-  } else {
-    error_reporter_->Report(node->position(),
-                            sema::ErrorMessages::kExpectingExpression);
-    return nullptr;
   }
+
+  if (auto *expr_stmt = node->SafeAs<ast::ExpressionStmt>()) {
+    return expr_stmt->expression();
+  }
+
+  const auto err_msg = sema::ErrorMessages::kExpectingExpression;
+  error_reporter_->Report(node->position(), err_msg);
+  return nullptr;
 }
 
 ast::Decl *Parser::ParseDecl() {
