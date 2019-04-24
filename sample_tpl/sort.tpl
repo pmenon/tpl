@@ -1,3 +1,8 @@
+struct State {
+  alloc: RegionAlloc
+  sorter: Sorter
+}
+
 struct Row {
   a: int32
   b: int32
@@ -11,25 +16,51 @@ fun compareFn(lhs: *Row, rhs: *Row) -> int32 {
   }
 }
 
-fun main() -> int32 {
-  var alloc: RegionAlloc
-  @regionInit(&alloc)
+fun setUpState(state: *State) -> nil {
+  @regionInit(&state.alloc)
+  @sorterInit(&state.sorter, &state.alloc, compareFn, @sizeOf(Row))
+}
 
-  var sorter: Sorter
-  @sorterInit(&sorter, &alloc, compareFn, @sizeOf(Row))
-
-  for (row in test_1) {
-    if (row.colA < 500) {
-      var elem = @ptrCast(*Row, @sorterInsert(&sorter))
-      elem.a = row.colA
-      elem.b = row.colB
-    }
+fun pipeline_1(state: *State) -> nil {
+  var tvi: TableVectorIterator
+  for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
+    var vpi = @tableIterGetVPI(&tvi)
   }
+  @tableIterClose(&tvi)
+}
 
-  @sorterSort(&sorter)
+fun pipeline_2(state: *State) -> nil {
+  var sort_iter: SorterIterator
+  for (@sorterIterInit(&sort_iter, &state.sorter);
+       @sorterIterHasNext(&sort_iter);
+       @sorterIterNext(&sort_iter)) {
+    var row = @ptrCast(*Row, @sorterIterGetRow(&sort_iter))
+  }
+  @sorterIterClose(&sort_iter)
+}
 
-  @sorterFree(&sorter)
-  @regionFree(&alloc)
+fun tearDownState(state: *State) -> nil {
+  @sorterFree(&state.sorter)
+  @regionFree(&state.alloc)
+}
+
+fun main() -> int32 {
+  var state: State
+
+  // Initialize
+  setUpState(&state)
+
+  // Pipeline 1
+  pipeline_1(&state)
+
+  // Pipeline 1 end
+  @sorterSort(&state.sorter)
+
+  // Pipeline 2
+  pipeline_2(&state)
+
+  // Cleanup
+  tearDownState(&state)
 
   return 0
 }

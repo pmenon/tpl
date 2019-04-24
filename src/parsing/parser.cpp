@@ -505,7 +505,23 @@ ast::Expr *Parser::ParseOperand() {
       return node_factory_->NewBoolLiteral(scanner_->current_position(),
                                            bool_val);
     }
-    case Token::Type::BUILTIN_IDENTIFIER:
+    case Token::Type::BUILTIN_IDENTIFIER: {
+      // Builtin call expression
+      Next();
+      ast::Expr *func_name = node_factory_->NewIdentifierExpr(
+          scanner_->current_position(), GetSymbol());
+      Consume(Token::Type::LEFT_PAREN);
+      util::RegionVector<ast::Expr *> args(region());
+      while (peek() != Token::Type::RIGHT_PAREN) {
+        ast::Expr *arg = ParseExpr();
+        args.push_back(arg);
+        if (peek() == Token::Type::COMMA) {
+          Next();
+        }
+      }
+      Expect(Token::Type::RIGHT_PAREN);
+      return node_factory_->NewBuiltinCallExpr(func_name, std::move(args));
+    }
     case Token::Type::IDENTIFIER: {
       Next();
       return node_factory_->NewIdentifierExpr(scanner_->current_position(),

@@ -10,8 +10,7 @@
 
 namespace tpl::sql {
 
-Sorter::Sorter(util::Region *region, ComparisonFunction cmp_fn,
-               u32 tuple_size) noexcept
+Sorter::Sorter(util::Region *region, ComparisonFunction cmp_fn, u32 tuple_size)
     : tuple_storage_(region, tuple_size),
       cmp_fn_(cmp_fn),
       tuples_(region),
@@ -19,17 +18,17 @@ Sorter::Sorter(util::Region *region, ComparisonFunction cmp_fn,
 
 Sorter::~Sorter() = default;
 
-byte *Sorter::AllocInputTuple() noexcept {
+byte *Sorter::AllocInputTuple() {
   byte *ret = tuple_storage_.append();
   tuples_.push_back(ret);
   return ret;
 }
 
-byte *Sorter::AllocInputTupleTopK(UNUSED u64 top_k) noexcept {
+byte *Sorter::AllocInputTupleTopK(UNUSED u64 top_k) {
   return AllocInputTuple();
 }
 
-void Sorter::AllocInputTupleTopKFinish(u64 top_k) noexcept {
+void Sorter::AllocInputTupleTopKFinish(u64 top_k) {
   // If the number of buffered tuples is less than the bound, we're done
   if (tuples_.size() < top_k) {
     return;

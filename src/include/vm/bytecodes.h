@@ -184,7 +184,8 @@ namespace tpl::vm {
   F(SorterFree, OperandType::Local)                                                                                    \
   F(SorterIteratorInit, OperandType::Local, OperandType::Local)                                                        \
   F(SorterIteratorGetRow, OperandType::Local, OperandType::Local)                                                      \
-  F(SorterIteratorAdvance, OperandType::Local)                                                                         \
+  F(SorterIteratorHasNext, OperandType::Local, OperandType::Local)                                                     \
+  F(SorterIteratorNext, OperandType::Local)                                                                            \
   F(SorterIteratorFree, OperandType::Local)                                                                            \
                                                                                                                        \
   /* Trig functions */                                                                                                 \

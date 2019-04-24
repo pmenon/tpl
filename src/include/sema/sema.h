@@ -93,9 +93,12 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinSorterInsert(ast::CallExpr *call);
   void CheckBuiltinSorterSort(ast::CallExpr *call);
   void CheckBuiltinSorterFree(ast::CallExpr *call);
+  void CheckBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinRegionCall(ast::CallExpr *call);
   void CheckBuiltinSizeOfCall(ast::CallExpr *call);
   void CheckBuiltinPtrCastCall(ast::CallExpr *call);
+  void CheckBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin);
 
   // -------------------------------------------------------
   // Scoping

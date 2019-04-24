@@ -31,6 +31,8 @@ namespace sema {
     (parsing::Token::Type, ast::Type *))                                       \
   F(VariableRedeclared, "'%0' redeclared in this block", (ast::Identifier))    \
   F(UndefinedVariable, "undefined: '%0'", (ast::Identifier))                   \
+  F(InvalidBuiltinFunction, "'%0' is not a known builtin function",            \
+    (ast::Identifier))                                                         \
   F(NonFunction, "cannot call non-function '%0'", ())                          \
   F(MismatchedCallArgs,                                                        \
     "Wrong number of arguments in call to '%0'. Expected %1, received %2.",    \

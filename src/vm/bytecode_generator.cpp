@@ -245,6 +245,7 @@ void BytecodeGenerator::VisitVectorWiseIteration(ast::ForInStmt *node,
 }
 
 void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
+#if 0
   // For both tuple-at-a-time iteration and vector-at-a-time iteration, we need
   // a TableVectorIterator which we allocate in the function first. We also need
   // a VectorProjectionIterator (VPI) pointer to read individual rows; VPIs are
@@ -270,8 +271,8 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
   ast::Identifier table_name = node->iter()->As<ast::IdentifierExpr>()->name();
   sql::Table *table = sql::Catalog::Instance()->LookupTableByName(table_name);
   TPL_ASSERT(table != nullptr, "Table does not exist!");
-  emitter()->EmitTableIteratorInit(Bytecode::TableVectorIteratorInit,
-                                   table_iter, table->id());
+  emitter()->EmitTableIterInit(Bytecode::TableVectorIteratorInit, table_iter,
+                               table->id());
   emitter()->Emit(Bytecode::TableVectorIteratorPerformInit, table_iter);
 
   // Pull out the VPI from the TableVectorIterator we just initialized
@@ -308,6 +309,7 @@ void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
 
   // Cleanup
   emitter()->Emit(Bytecode::TableVectorIteratorFree, table_iter);
+#endif
 }
 
 void BytecodeGenerator::VisitFieldDecl(ast::FieldDecl *node) {
@@ -589,6 +591,101 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call,
   }
 }
 
+void BytecodeGenerator::VisitBuiltinTableIterCall(ast::CallExpr *call,
+                                                  ast::Builtin builtin) {
+  ast::Context *ctx = call->type()->context();
+
+  // The first argument to all calls is a pointer to the TVI
+  LocalVar iter = VisitExpressionForRValue(call->arguments()[0]);
+
+  switch (builtin) {
+    case ast::Builtin::TableIterInit: {
+      // The second argument is the table name as a literal string
+      ast::Identifier table_name =
+          call->arguments()[1]->As<ast::LitExpr>()->raw_string_val();
+      sql::Table *table =
+          sql::Catalog::Instance()->LookupTableByName(table_name);
+      TPL_ASSERT(table != nullptr, "Table does not exist!");
+      emitter()->EmitTableIterInit(Bytecode::TableVectorIteratorInit, iter,
+                                   table->id());
+      emitter()->Emit(Bytecode::TableVectorIteratorPerformInit, iter);
+      break;
+    }
+    case ast::Builtin::TableIterAdvance: {
+      LocalVar cond = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
+      emitter()->Emit(Bytecode::TableVectorIteratorNext, cond, iter);
+      execution_result()->set_destination(cond.ValueOf());
+      break;
+    }
+    case ast::Builtin::TableIterGetVPI: {
+      ast::Type *vpi_type = ast::BuiltinType::Get(
+          ctx, ast::BuiltinType::VectorProjectionIterator);
+      LocalVar vpi = execution_result()->GetOrCreateDestination(vpi_type);
+      emitter()->Emit(Bytecode::TableVectorIteratorGetVPI, vpi, iter);
+      execution_result()->set_destination(vpi.ValueOf());
+      break;
+    }
+    case ast::Builtin::TableIterClose: {
+      emitter()->Emit(Bytecode::TableVectorIteratorFree, iter);
+      break;
+    }
+    default: { UNREACHABLE("Impossible table iteration call"); }
+  }
+}
+
+void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
+                                            ast::Builtin builtin) {
+  ast::Context *ctx = call->type()->context();
+
+  // The first argument to all calls is a pointer to the TVI
+  LocalVar vpi = VisitExpressionForRValue(call->arguments()[0]);
+
+  switch (builtin) {
+    case ast::Builtin::VPIHasNext: {
+      LocalVar cond = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
+      emitter()->Emit(Bytecode::VPIHasNext, cond, vpi);
+      execution_result()->set_destination(cond.ValueOf());
+      break;
+    }
+    case ast::Builtin::VPIAdvance: {
+      emitter()->Emit(Bytecode::VPIAdvance, vpi);
+      break;
+    }
+    case ast::Builtin::VPIReset: {
+      emitter()->Emit(Bytecode::VPIReset, vpi);
+      break;
+    }
+    case ast::Builtin::VPIGetSmallInt: {
+      LocalVar val = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Integer));
+      auto col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
+      emitter()->EmitVPIGet(Bytecode::VPIGetSmallInt, val, vpi, col_idx);
+      break;
+    }
+    case ast::Builtin::VPIGetInt: {
+      LocalVar val = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Integer));
+      auto col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
+      emitter()->EmitVPIGet(Bytecode::VPIGetInteger, val, vpi, col_idx);
+      break;
+    }
+    case ast::Builtin::VPIGetBigInt: {
+      LocalVar val = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Integer));
+      auto col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
+      emitter()->EmitVPIGet(Bytecode::VPIGetBigInt, val, vpi, col_idx);
+      break;
+    }
+    case ast::Builtin::VPIGetReal:
+    case ast::Builtin::VPIGetDouble: {
+      break;
+    }
+    default: { UNREACHABLE("Impossible table iteration call"); }
+  }
+}
+
 void BytecodeGenerator::VisitBuiltinFilterCall(ast::CallExpr *call,
                                                ast::Builtin builtin) {
   ast::Context *ctx = call->type()->context();
@@ -712,6 +809,45 @@ void BytecodeGenerator::VisitBuiltinSorterCall(ast::CallExpr *call,
   }
 }
 
+void BytecodeGenerator::VisitBuiltinSorterIterCall(ast::CallExpr *call,
+                                                   ast::Builtin builtin) {
+  ast::Context *ctx = call->type()->context();
+
+  // The first argument to all calls is the sorter iterator instance
+  const LocalVar sorter_iter = VisitExpressionForRValue(call->arguments()[0]);
+
+  switch (builtin) {
+    case ast::Builtin::SorterIterInit: {
+      LocalVar sorter = VisitExpressionForRValue(call->arguments()[1]);
+      emitter()->Emit(Bytecode::SorterIteratorInit, sorter_iter, sorter);
+      break;
+    }
+    case ast::Builtin::SorterIterHasNext: {
+      LocalVar cond = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
+      emitter()->Emit(Bytecode::SorterIteratorHasNext, cond, sorter_iter);
+      execution_result()->set_destination(cond.ValueOf());
+      break;
+    }
+    case ast::Builtin::SorterIterNext: {
+      emitter()->Emit(Bytecode::SorterIteratorNext, sorter_iter);
+      break;
+    }
+    case ast::Builtin::SorterIterGetRow: {
+      LocalVar row_ptr = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Uint8)->PointerTo());
+      emitter()->Emit(Bytecode::SorterIteratorGetRow, row_ptr, sorter_iter);
+      execution_result()->set_destination(row_ptr.ValueOf());
+      break;
+    }
+    case ast::Builtin::SorterIterClose: {
+      emitter()->Emit(Bytecode::SorterIteratorFree, sorter_iter);
+      break;
+    }
+    default: { UNREACHABLE("Impossible table iteration call"); }
+  }
+}
+
 void BytecodeGenerator::VisitBuiltinRegionCall(ast::CallExpr *call,
                                                ast::Builtin builtin) {
   LocalVar region = VisitExpressionForRValue(call->arguments()[0]);
@@ -801,6 +937,24 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitBuiltinRegionCall(call, builtin);
       break;
     }
+    case ast::Builtin::TableIterInit:
+    case ast::Builtin::TableIterAdvance:
+    case ast::Builtin::TableIterGetVPI:
+    case ast::Builtin::TableIterClose: {
+      VisitBuiltinTableIterCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::VPIHasNext:
+    case ast::Builtin::VPIAdvance:
+    case ast::Builtin::VPIReset:
+    case ast::Builtin::VPIGetSmallInt:
+    case ast::Builtin::VPIGetInt:
+    case ast::Builtin::VPIGetBigInt:
+    case ast::Builtin::VPIGetReal:
+    case ast::Builtin::VPIGetDouble: {
+      VisitBuiltinVPICall(call, builtin);
+      break;
+    }
     case ast::Builtin::JoinHashTableInit:
     case ast::Builtin::JoinHashTableInsert:
     case ast::Builtin::JoinHashTableBuild:
@@ -813,6 +967,14 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::SorterSort:
     case ast::Builtin::SorterFree: {
       VisitBuiltinSorterCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::SorterIterInit:
+    case ast::Builtin::SorterIterHasNext:
+    case ast::Builtin::SorterIterNext:
+    case ast::Builtin::SorterIterGetRow:
+    case ast::Builtin::SorterIterClose: {
+      VisitBuiltinSorterIterCall(call, builtin);
       break;
     }
     case ast::Builtin::ACos:

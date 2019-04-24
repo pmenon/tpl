@@ -613,10 +613,13 @@ class CallExpr : public Expr {
   enum class CallKind : u8 { Regular, Builtin };
 
   CallExpr(Expr *func, util::RegionVector<Expr *> &&args)
+      : CallExpr(func, std::move(args), CallKind::Regular) {}
+
+  CallExpr(Expr *func, util::RegionVector<Expr *> &&args, CallKind call_kind)
       : Expr(Kind::CallExpr, func->position()),
         func_(func),
         args_(std::move(args)),
-        call_kind_(CallKind::Regular) {}
+        call_kind_(call_kind) {}
 
   /// Return the name of the function this node is calling
   Identifier GetFuncName() const;
@@ -639,8 +642,6 @@ class CallExpr : public Expr {
 
  private:
   friend class sema::Sema;
-
-  void set_call_kind(CallKind call_kind) { call_kind_ = call_kind; }
 
   void set_argument(u32 arg_idx, Expr *expr) {
     TPL_ASSERT(arg_idx < num_args(), "Out-of-bounds argument access");

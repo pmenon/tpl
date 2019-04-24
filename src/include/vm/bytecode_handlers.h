@@ -173,8 +173,6 @@ VM_OP_HOT void OpLeaScaled(byte **dest, byte *base, u32 index, u32 scale,
 
 VM_OP_HOT bool OpJump() { return true; }
 
-VM_OP_HOT bool OpJumpLoop() { return true; }
-
 VM_OP_HOT bool OpJumpIfTrue(bool cond) { return cond; }
 
 VM_OP_HOT bool OpJumpIfFalse(bool cond) { return !cond; }
@@ -711,13 +709,18 @@ void OpSorterFree(tpl::sql::Sorter *sorter);
 void OpSorterIteratorInit(tpl::sql::SorterIterator *iter,
                           tpl::sql::Sorter *sorter);
 
-VM_OP_HOT void OpSorterIteratorAdvance(tpl::sql::SorterIterator *iter) {
-  iter->operator++();
+VM_OP_HOT void OpSorterIteratorHasNext(bool *has_more,
+                                       tpl::sql::SorterIterator *iter) {
+  *has_more = iter->HasNext();
+}
+
+VM_OP_HOT void OpSorterIteratorNext(tpl::sql::SorterIterator *iter) {
+  iter->Next();
 }
 
 VM_OP_HOT void OpSorterIteratorGetRow(const byte **row,
                                       tpl::sql::SorterIterator *iter) {
-  *row = iter->operator*();
+  *row = iter->GetRow();
 }
 
 void OpSorterIteratorFree(tpl::sql::SorterIterator *iter);

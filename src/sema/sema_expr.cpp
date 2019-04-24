@@ -4,6 +4,8 @@
 #include "ast/context.h"
 #include "ast/type.h"
 #include "logging/logger.h"
+#include "sql/catalog.h"
+#include "sql/table.h"
 
 namespace tpl::sema {
 
@@ -440,6 +442,99 @@ void Sema::CheckBuiltinRegionCall(ast::CallExpr *call) {
   call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
 }
 
+void Sema::CheckBuiltinTableIterCall(ast::CallExpr *call,
+                                     ast::Builtin builtin) {
+  const auto &call_args = call->arguments();
+
+  if (auto *tvi_type = call_args[0]->type()->GetPointeeType();
+      tvi_type == nullptr ||
+      !tvi_type->IsSpecificBuiltin(ast::BuiltinType::TableVectorIterator)) {
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), ast::BuiltinType::TableVectorIterator)
+            ->PointerTo(),
+        0, call_args[0]->type());
+    return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::TableIterInit: {
+      // The second argument is the table name as a literal string
+      if (auto *table_name = call_args[1]->SafeAs<ast::LitExpr>();
+          table_name == nullptr ||
+          table_name->literal_kind() != ast::LitExpr::LitKind::String) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kBadArgToBuiltin,
+            call->GetFuncName(), ast::StringType::Get(context()), 1,
+            call_args[1]->type());
+        return;
+      }
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::TableIterAdvance: {
+      // A single-arg builtin returning a boolean
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Bool));
+      break;
+    }
+    case ast::Builtin::TableIterGetVPI: {
+      // A single-arg builtin return a pointer to the current VPI
+      call->set_type(ast::BuiltinType::Get(
+                         context(), ast::BuiltinType::VectorProjectionIterator)
+                         ->PointerTo());
+      break;
+    }
+    case ast::Builtin::TableIterClose: {
+      // A single-arg builtin returning void
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    default: { UNREACHABLE("Impossible table iteration call"); }
+  }
+}
+
+void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
+  if (call->num_args() < 1) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kMismatchedCallArgs,
+                             call->GetFuncName(), 1, call->num_args());
+    return;
+  }
+
+  // The first argument must be a *VPI
+  const auto vpi_kind = ast::BuiltinType::VectorProjectionIterator;
+  if (ast::Type *type = call->arguments()[0]->type()->GetPointeeType();
+      type == nullptr || !type->IsSpecificBuiltin(vpi_kind)) {
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), vpi_kind)->PointerTo(), 0,
+        call->arguments()[0]->type());
+    return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::VPIHasNext:
+    case ast::Builtin::VPIAdvance:
+    case ast::Builtin::VPIReset: {
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Bool));
+      break;
+    }
+    case ast::Builtin::VPIGetSmallInt:
+    case ast::Builtin::VPIGetInt:
+    case ast::Builtin::VPIGetBigInt: {
+      call->set_type(
+          ast::BuiltinType::Get(context(), ast::BuiltinType::Integer));
+      break;
+    }
+    case ast::Builtin::VPIGetReal:
+    case ast::Builtin::VPIGetDouble: {
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Real));
+      break;
+    }
+    default: { UNREACHABLE("Impossible VPI call"); }
+  }
+}
+
 void Sema::CheckBuiltinSizeOfCall(ast::CallExpr *call) {
   if (call->num_args() != 1) {
     error_reporter()->Report(call->position(),
@@ -626,6 +721,55 @@ void Sema::CheckBuiltinSorterFree(ast::CallExpr *call) {
   call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
 }
 
+void Sema::CheckBuiltinSorterIterCall(ast::CallExpr *call,
+                                      ast::Builtin builtin) {
+  const auto sorter_iter_kind = ast::BuiltinType::SorterIterator;
+  if (auto *iter_type = call->arguments()[0]->type()->GetPointeeType();
+      iter_type == nullptr || !iter_type->IsSpecificBuiltin(sorter_iter_kind)) {
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), sorter_iter_kind)->PointerTo(), 0,
+        call->arguments()[0]->type());
+    return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::SorterIterInit: {
+      // The second argument is the sorter instance to iterate over
+      const auto sorter_kind = ast::BuiltinType::Sorter;
+      if (auto *arg_type = call->arguments()[1]->type()->GetPointeeType();
+          arg_type == nullptr || !arg_type->IsSpecificBuiltin(sorter_kind)) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kBadArgToBuiltin,
+            call->GetFuncName(),
+            ast::BuiltinType::Get(context(), sorter_kind)->PointerTo(), 1,
+            call->arguments()[1]->type());
+        return;
+      }
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::SorterIterHasNext: {
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Bool));
+      break;
+    }
+    case ast::Builtin::SorterIterNext: {
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::SorterIterGetRow: {
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Uint8)
+                         ->PointerTo());
+      break;
+    }
+    case ast::Builtin::SorterIterClose: {
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    default: { UNREACHABLE("Impossible table iteration call"); }
+  }
+}
+
 void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
   if (builtin == ast::Builtin::PtrCast) {
     CheckBuiltinPtrCastCall(call);
@@ -661,6 +805,24 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
       CheckBuiltinRegionCall(call);
       break;
     }
+    case ast::Builtin::TableIterInit:
+    case ast::Builtin::TableIterAdvance:
+    case ast::Builtin::TableIterGetVPI:
+    case ast::Builtin::TableIterClose: {
+      CheckBuiltinTableIterCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::VPIHasNext:
+    case ast::Builtin::VPIAdvance:
+    case ast::Builtin::VPIReset:
+    case ast::Builtin::VPIGetSmallInt:
+    case ast::Builtin::VPIGetInt:
+    case ast::Builtin::VPIGetBigInt:
+    case ast::Builtin::VPIGetReal:
+    case ast::Builtin::VPIGetDouble: {
+      CheckBuiltinVPICall(call, builtin);
+      break;
+    }
     case ast::Builtin::JoinHashTableInit: {
       CheckBuiltinJoinHashTableInit(call);
       break;
@@ -693,6 +855,14 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
       CheckBuiltinSorterFree(call);
       break;
     }
+    case ast::Builtin::SorterIterInit:
+    case ast::Builtin::SorterIterHasNext:
+    case ast::Builtin::SorterIterNext:
+    case ast::Builtin::SorterIterGetRow:
+    case ast::Builtin::SorterIterClose: {
+      CheckBuiltinSorterIterCall(call, builtin);
+      break;
+    }
     case ast::Builtin::Map: {
       CheckBuiltinMapCall(call);
       break;
@@ -709,16 +879,18 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
 }
 
 void Sema::VisitCallExpr(ast::CallExpr *node) {
-  // Is this a built in?
-  if (ast::Builtin builtin;
-      context()->IsBuiltinFunction(node->GetFuncName(), &builtin)) {
-    // Mark this node as a call into a builtin function
-    node->set_call_kind(ast::CallExpr::CallKind::Builtin);
+  // If the call claims to be to a builtin, validate it
+  if (node->call_kind() == ast::CallExpr::CallKind::Builtin) {
+    ast::Builtin builtin;
+    if (!context()->IsBuiltinFunction(node->GetFuncName(), &builtin)) {
+      error_reporter()->Report(node->function()->position(),
+                               ErrorMessages::kInvalidBuiltinFunction,
+                               node->GetFuncName());
+      return;
+    }
 
-    // Check it
+    // It's a builtin, check it and finish
     CheckBuiltinCall(node, builtin);
-
-    // Finish
     return;
   }
 
@@ -766,7 +938,6 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   }
 
   // All looks good ...
-  node->set_call_kind(ast::CallExpr::CallKind::Regular);
   node->set_type(func_type->return_type());
 }
 

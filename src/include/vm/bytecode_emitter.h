@@ -100,7 +100,7 @@ class BytecodeEmitter {
   // Tables
   // -------------------------------------------------------
 
-  void EmitTableIteratorInit(Bytecode bytecode, LocalVar iter, u16 table_id);
+  void EmitTableIterInit(Bytecode bytecode, LocalVar iter, u16 table_id);
 
   // Reading integer values from an iterator
   void EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar vpi, u32 col_idx);

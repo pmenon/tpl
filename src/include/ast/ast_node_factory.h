@@ -95,6 +95,11 @@ class AstNodeFactory {
     return new (region_) CallExpr(fun, std::move(args));
   }
 
+  CallExpr *NewBuiltinCallExpr(Expr *fun, util::RegionVector<Expr *> &&args) {
+    return new (region_)
+        CallExpr(fun, std::move(args), CallExpr::CallKind::Builtin);
+  }
+
   LitExpr *NewNilLiteral(const SourcePosition &pos) {
     return new (region_) LitExpr(pos);
   }

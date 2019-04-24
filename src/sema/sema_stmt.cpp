@@ -59,6 +59,11 @@ void Sema::VisitForStmt(ast::ForStmt *node) {
 
   if (node->condition() != nullptr) {
     ast::Type *cond_type = Resolve(node->condition());
+    // If unable to resolve condition type, there was some error
+    if (cond_type == nullptr) {
+      return;
+    }
+    // If the resolved type isn't a boolean, it's an error
     if (!cond_type->IsBoolType()) {
       error_reporter()->Report(node->condition()->position(),
                                ErrorMessages::kNonBoolForCondition);

@@ -285,8 +285,8 @@ void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1,
           operand_6, operand_7, operand_8);
 }
 
-void BytecodeEmitter::EmitTableIteratorInit(Bytecode bytecode, LocalVar iter,
-                                            u16 table_id) {
+void BytecodeEmitter::EmitTableIterInit(Bytecode bytecode, LocalVar iter,
+                                        u16 table_id) {
   EmitAll(bytecode, iter, table_id);
 }
 

@@ -26,6 +26,7 @@ struct.tpl,10
 struct-debug.tpl,100000
 struct-field-use.tpl,30
 struct-nested.tpl,10
+struct-nested-2.tpl,10
 struct-pointer.tpl,440
 test.tpl,356405
 vec-filter.tpl,500

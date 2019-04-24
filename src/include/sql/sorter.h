@@ -15,8 +15,7 @@ class Sorter {
 
   /// Construct a sorter using the given allocator, configured to store input
   /// tuples of size \a tuple_size bytes
-  Sorter(util::Region *region, ComparisonFunction cmp_fn,
-         u32 tuple_size) noexcept;
+  Sorter(util::Region *region, ComparisonFunction cmp_fn, u32 tuple_size);
 
   /// Destructor
   ~Sorter();
@@ -26,11 +25,11 @@ class Sorter {
 
   /// Allocate space for an entry in this sorter, returning a pointer with
   /// at least \a tuple_size contiguous bytes
-  byte *AllocInputTuple() noexcept;
+  byte *AllocInputTuple();
 
   /// Tuple allocation for TopK
-  byte *AllocInputTupleTopK(u64 top_k) noexcept;
-  void AllocInputTupleTopKFinish(u64 top_k) noexcept;
+  byte *AllocInputTupleTopK(u64 top_k);
+  void AllocInputTupleTopKFinish(u64 top_k);
 
   /// Sort all inserted entries
   void Sort();
@@ -61,17 +60,33 @@ class Sorter {
 class SorterIterator {
  public:
   explicit SorterIterator(Sorter *sorter) noexcept
-      : iter_(sorter->tuples_.begin()) {}
+      : iter_(sorter->tuples_.begin()), end_(sorter->tuples_.end()) {}
 
-  const byte *operator*() noexcept { return *iter_; }
+  // -------------------------------------------------------
+  // C++ iterator interface
+  // -------------------------------------------------------
+
+  const byte *operator*() const noexcept { return *iter_; }
 
   SorterIterator &operator++() noexcept {
     ++iter_;
     return *this;
   }
 
+  /// Does this iterate have more data
+  /// \return True if the iterator has more data; false otherwise
+  bool HasNext() const { return iter_ != end_; }
+
+  /// Advance the iterator
+  void Next() { this->operator++(); }
+
+  /// Get a pointer to the row the iterator is pointing to
+  /// Note: This is unsafe at boundaries
+  const byte *GetRow() const { return this->operator*(); }
+
  private:
   util::ChunkedVectorT<const byte *>::Iterator iter_;
+  const util::ChunkedVectorT<const byte *>::Iterator end_;
 };
 
 }  // namespace tpl::sql
