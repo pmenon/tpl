@@ -41,6 +41,18 @@ void Parser::Sync(const std::unordered_set<Token::Type> &s) {
   }
 }
 
+ast::Expr *Parser::MakeExpr(ast::AstNode *node) {
+  if (node == nullptr) {
+    return nullptr;
+  } else if (auto *expr_stmt = node->SafeAs<ast::ExpressionStmt>()) {
+    return expr_stmt->expression();
+  } else {
+    error_reporter_->Report(node->position(),
+                            sema::ErrorMessages::kExpectingExpression);
+    return nullptr;
+  }
+}
+
 ast::Decl *Parser::ParseDecl() {
   // At the top-level, we only allow structs and functions
   switch (peek()) {
@@ -257,14 +269,11 @@ class Parser::ForHeader {
 };
 
 Parser::ForHeader Parser::ParseForHeader() {
-  // ForHeader = [ '(' ForWhile ')' | '(' ForReg ')' | '(' ForIn ')' ] ;
-  //
-  // ForWhile = Expr ;
-  //
-  // ForReg = [ Stmt ] ';' [ Condition ] ';' [ Stmt ] ;
-  //
-  // ForIn = Expr 'in' Expr [ '[' Attributes ']' ] ;
-  // Attributes = Ident '=' Expr ;
+  // ForHeader = [ '(' ForWhile ')' | '(' ForReg ')' | '(' ForIn ')' ] .
+  // ForWhile = Expr .
+  // ForReg = [ Stmt ] ';' [ Expr ] ';' [ Stmt ] .
+  // ForIn = Expr 'in' Expr [ '[' Attributes ']' ] .
+  // Attributes = { Ident '=' Expr } .
 
   // Infinite loop?
   if (peek() == Token::Type::LEFT_BRACE) {
@@ -273,16 +282,17 @@ Parser::ForHeader Parser::ParseForHeader() {
 
   Expect(Token::Type::LEFT_PAREN);
 
-  ast::Stmt *init = nullptr;
-  ast::Expr *cond = nullptr;
-  ast::Stmt *next = nullptr;
+  ast::Stmt *init = nullptr, *cond = nullptr, *next = nullptr;
 
-  init = ParseStmt();
+  if (peek() != Token::Type::SEMI) {
+    cond = ParseStmt();
+  }
 
-  // For-in loop?
+  // If we see an 'in', it's a for-in loop
   if (Matches(Token::Type::IN)) {
-    ast::Expr *target = init->SafeAs<ast::ExpressionStmt>()->expression();
-    ast::Expr *iter = ParseStmt()->SafeAs<ast::ExpressionStmt>()->expression();
+    TPL_ASSERT(cond != nullptr, "Must have parsed can't be null");
+    ast::Expr *target = MakeExpr(cond);
+    ast::Expr *iter = MakeExpr(ParseStmt());
 
     ast::Attributes *attributes = nullptr;
     if (Matches(Token::Type::AT)) {
@@ -293,24 +303,22 @@ Parser::ForHeader Parser::ParseForHeader() {
     return ForHeader::ForIn(target, iter, attributes);
   }
 
-  // Regular for-loop ?
+  // Parse either regular for or for-while
   if (Matches(Token::Type::SEMI)) {
-    if (!Matches(Token::Type::SEMI)) {
-      cond = ParseExpr();
-      Expect(Token::Type::SEMI);
+    init = cond;
+    cond = nullptr;
+    if (peek() != Token::Type::SEMI) {
+      cond = ParseStmt();
     }
-    if (!Matches(Token::Type::RIGHT_PAREN)) {
+    Expect(Token::Type::SEMI);
+    if (peek() != Token::Type::RIGHT_PAREN) {
       next = ParseStmt();
-      Expect(Token::Type::RIGHT_PAREN);
     }
-    return ForHeader::Standard(init, cond, next);
   }
 
-  // While-loop ...
   Expect(Token::Type::RIGHT_PAREN);
-  cond = init->SafeAs<ast::ExpressionStmt>()->expression();
-  init = next = nullptr;
-  return ForHeader::Standard(init, cond, next);
+
+  return ForHeader::Standard(init, MakeExpr(cond), next);
 }
 
 ast::Stmt *Parser::ParseForStmt() {

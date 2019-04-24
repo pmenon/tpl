@@ -78,6 +78,9 @@ class Parser {
   // In case of errors, sync up to any token in the list
   void Sync(const std::unordered_set<Token::Type> &s);
 
+  // Cast the input node into an expression if it is one, otherwise report error
+  ast::Expr *MakeExpr(ast::AstNode *node);
+
   // -------------------------------------------------------
   // Parsing productions
   // -------------------------------------------------------
