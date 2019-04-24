@@ -33,7 +33,7 @@ class Loop {
   };
 
   // Constructor
-  Loop(CodeGen &cg, llvm::Value *start_condition,
+  Loop(CodeGen &cg, Value *start_condition,
        const std::vector<LoopVariable> &loop_vars);
 
   // Get the loop variable at the given index

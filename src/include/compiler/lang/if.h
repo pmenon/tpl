@@ -153,8 +153,8 @@ class If {
    * @param then_bb The block to branch to if the condition is true
    * @param else_bb The block to branch to if the condition is false
    */
-  If(CodeGen &codegen, llvm::Value *cond, std::string name, Block *then_bb,
-     Block *else_bb);
+  If(CodeGen &codegen, Value *cond, std::string name, CodeBlock *then_bb,
+     CodeBlock *else_bb);
   If(CodeGen &codegen, const Value &cond, std::string name, Block *then_bb,
      Block *else_bb);
 
@@ -178,7 +178,7 @@ class If {
    * two different code paths.
    */
   Value BuildPHI(const Value &v1, const Value &v2);
-  llvm::Value *BuildPHI(Value *v1, Value *v2);
+  Value *BuildPHI(Value *v1, Value *v2);
 
  private:
   /**

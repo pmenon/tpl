@@ -1,15 +1,3 @@
-//===----------------------------------------------------------------------===//
-//
-//                         Peloton
-//
-// codegen.cpp
-//
-// Identification: src/codegen/codegen.cpp
-//
-// Copyright (c) 2015-2018, Carnegie Mellon University Database Group
-//
-//===----------------------------------------------------------------------===//
-
 #include "compiler/codegen.h"
 
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
@@ -26,51 +14,62 @@ namespace compiler {
 
 CodeGen::CodeGen(CodeContext &code_context) : code_context_(code_context) {}
 
-llvm::Type *CodeGen::ArrayType(llvm::Type *type, uint32_t num_elements) const {
+Type *CodeGen::ArrayType(llvm::Type *type, uint32_t num_elements) const {
   return llvm::ArrayType::get(type, num_elements);
 }
 
 /// Constant wrappers for bool, int8, int16, int32, int64, strings and NULL
-llvm::Constant *CodeGen::ConstBool(bool val) const {
-  if (val) {
-    return llvm::ConstantInt::getTrue(GetContext());
-  } else {
-    return llvm::ConstantInt::getFalse(GetContext());
-  }
+Constant *CodeGen::ConstBool(bool val) const {
+  Constant *retBool = new Constant(BoolType(), "", std::to_string(val));
+  allocated_vals.push_back(retBool);
+  return retBool;
 }
 
-llvm::Constant *CodeGen::Const8(int8_t val) const {
-  return llvm::ConstantInt::get(Int8Type(), val, true);
+Constant *CodeGen::Const8(int8_t val) const {
+  Constant *retInt = new Constant(Int8Type(), "", std::to_string(val));
+  allocated_vals.push_back(retInt);
+  return retInt;
 }
 
-llvm::Constant *CodeGen::Const16(int16_t val) const {
-  return llvm::ConstantInt::get(Int16Type(), val, true);
+Constant *CodeGen::Const16(int16_t val) const {
+  Constant *retInt = new Constant(Int16Type(), "", std::to_string(val));
+  allocated_vals.push_back(retInt);
+  return retInt;
 }
 
-llvm::Constant *CodeGen::Const32(int32_t val) const {
-  return llvm::ConstantInt::get(Int32Type(), val, true);
+Constant *CodeGen::Const32(int32_t val) const {
+  Constant *retInt = new Constant(Int32Type(), "", std::to_string(val));
+  allocated_vals.push_back(retInt);
+  return retInt;
 }
 
-llvm::Constant *CodeGen::Const64(int64_t val) const {
-  return llvm::ConstantInt::get(Int64Type(), val, true);
+Constant *CodeGen::Const64(int64_t val) const {
+  Constant *retInt = new Constant(Int64Type(), "", std::to_string(val));
+  allocated_vals.push_back(retInt);
+  return retInt;
 }
 
-llvm::Constant *CodeGen::ConstDouble(double val) const {
-  return llvm::ConstantFP::get(DoubleType(), val);
+Constant *CodeGen::ConstDouble(double val) const {
+  Constant *retDouble = new Constant(DoubleType(), "", std::to_string(val));
+  allocated_vals.push_back(retDouble);
+  return retDouble;
 }
 
-llvm::Value *CodeGen::ConstString(const std::string &str_val,
-                                  const std::string &name) const {
+/*Value *CodeGen::ConstString(const std::string &str_val,
+                            const std::string &name) const {
   // Strings are treated as arrays of bytes
   auto *str = llvm::ConstantDataArray::getString(GetContext(), str_val);
   auto *global_var =
       new llvm::GlobalVariable(GetModule(), str->getType(), true,
                                llvm::GlobalValue::InternalLinkage, str, name);
   return GetBuilder().CreateInBoundsGEP(global_var, {Const32(0), Const32(0)});
-}
+  Constant *retInt = new Constant(Type(), name, str_val);
+  allocated_vals.push_back(retInt);
+  return retInt;
+}*/
 
-llvm::Value *CodeGen::ConstGenericBytes(const void *data, uint32_t length,
-                                        const std::string &name) const {
+/*Value *CodeGen::ConstGenericBytes(const void *data, uint32_t length,
+                                  const std::string &name) const {
   // Create the constant data array that wraps the input data
   llvm::ArrayRef<uint8_t> elements{reinterpret_cast<const uint8_t *>(data),
                                    length};
@@ -83,45 +82,33 @@ llvm::Value *CodeGen::ConstGenericBytes(const void *data, uint32_t length,
 
   // Return a pointer to the first element
   return GetBuilder().CreateInBoundsGEP(global_var, {Const32(0), Const32(0)});
-}
+}*/
 
-llvm::Constant *CodeGen::Null(llvm::Type *type) const {
-  return llvm::Constant::getNullValue(type);
-}
+/*Constant *CodeGen::Null(llvm::Type *type) const {
+  Constant *retDouble = new Constant((), "", std::to_string(val));
+  allocated_vals.push_back(retDouble);
+  return retDouble;
+}*/
 
-llvm::Constant *CodeGen::NullPtr(llvm::PointerType *type) const {
+/*Constant *CodeGen::NullPtr(llvm::PointerType *type) const {
   return llvm::ConstantPointerNull::get(type);
-}
+}*/
 
-llvm::Value *CodeGen::AllocateVariable(llvm::Type *type,
-                                       const std::string &name) {
+Value *CodeGen::AllocateVariable(Type *type, const std::string &name) {
   // To allocate a variable, a function must be under construction
-  PELOTON_ASSERT(code_context_.GetCurrentFunction() != nullptr);
+  TPL_ASSERT(code_context_.GetCurrentFunction() != nullptr,
+             "No current function");
 
   // All variable allocations go into the current function's "entry" block. By
   // convention, we insert the allocation instruction before the first
   // instruction in the "entry" block. If the "entry" block is empty, it doesn't
   // matter where we insert it.
 
-  auto *entry_block = code_context_.GetCurrentFunction()->GetEntryBlock();
-#if LLVM_VERSION_GE(5, 0)
-  if (entry_block->empty()) {
-    return new llvm::AllocaInst(type, 0, name, entry_block);
-  } else {
-    return new llvm::AllocaInst(type, 0, name, &entry_block->front());
-  }
-#else
-  if (entry_block->empty()) {
-    return new llvm::AllocaInst(type, name, entry_block);
-  } else {
-    return new llvm::AllocaInst(type, name, &entry_block->front());
-  }
-#endif
+  return code_context_.GetCurrentFunction()->AllocateVariable(type, name);
 }
 
-llvm::Value *CodeGen::AllocateBuffer(llvm::Type *element_type,
-                                     uint32_t num_elems,
-                                     const std::string &name) {
+Value *CodeGen::AllocateBuffer(llvm::Type *element_type, uint32_t num_elems,
+                               const std::string &name) {
   // Allocate the array
   auto *arr_type = ArrayType(element_type, num_elems);
   auto *alloc = AllocateVariable(arr_type, "");
@@ -138,14 +125,8 @@ llvm::Value *CodeGen::AllocateBuffer(llvm::Type *element_type,
   return arr;
 }
 
-llvm::Value *CodeGen::CallFunc(llvm::Value *fn,
-                               std::initializer_list<llvm::Value *> args) {
-  return GetBuilder().CreateCall(fn, args);
-}
-
-llvm::Value *CodeGen::CallFunc(llvm::Value *fn,
-                               const std::vector<llvm::Value *> &args) {
-  return GetBuilder().CreateCall(fn, args);
+void CodeGen::CallFunc(Function *fn, std::initializer_list<Value *> args) {
+  code_context_.GetCurrentFunction()->Call(fn, args);
 }
 
 llvm::Value *CodeGen::Printf(const std::string &format,
@@ -210,18 +191,12 @@ llvm::Value *CodeGen::Memcmp(llvm::Value *ptr1, llvm::Value *ptr2,
   return CallFunc(memcmp_fn, {ptr1, ptr2, len});
 }
 
-llvm::Value *CodeGen::Sqrt(llvm::Value *val) {
-  llvm::Function *sqrt_func = llvm::Intrinsic::getDeclaration(
-      &GetModule(), llvm::Intrinsic::sqrt, val->getType());
-  return CallFunc(sqrt_func, {val});
-}
-
-llvm::Value *CodeGen::CallAddWithOverflow(llvm::Value *left, llvm::Value *right,
-                                          llvm::Value *&overflow_bit) {
+llvm::Value *CodeGen::CallAddWithOverflow(Value *left, Value *right,
+                                          Value *&overflow_bit) {
   TPL_ASSERT(left->getType() == right->getType());
 
   // Get the intrinsic that does the addition with overflow checking
-  llvm::Function *add_func = llvm::Intrinsic::getDeclaration(
+  Function *add_func = llvm::Intrinsic::getDeclaration(
       &GetModule(), llvm::Intrinsic::sadd_with_overflow, left->getType());
 
   // Perform the addition
@@ -307,9 +282,8 @@ void CodeGen::ThrowIfDivideByZero(llvm::Value *divide_by_zero) const {
 }
 
 // Register the given function symbol and the LLVM function type it represents
-llvm::Function *CodeGen::RegisterBuiltin(const std::string &fn_name,
-                                         llvm::FunctionType *fn_type,
-                                         void *func_impl) {
+Function *CodeGen::RegisterBuiltin(const std::string &fn_name,
+                                   std::vector<Value *> params) {
   // Check if this is already registered as a built in, quit if to
   auto *builtin = LookupBuiltin(fn_name).first;
   if (builtin != nullptr) {

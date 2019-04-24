@@ -1,15 +1,3 @@
-//===----------------------------------------------------------------------===//
-//
-//                         Peloton
-//
-// codegen.h
-//
-// Identification: src/include/codegen/codegen.h
-//
-// Copyright (c) 2015-2018, Carnegie Mellon University Database Group
-//
-//===----------------------------------------------------------------------===//
-
 #pragma once
 
 #include <ast/type.h>
@@ -22,9 +10,6 @@ namespace tpl::compiler {
 
 // Forward declare
 class CodeGen;
-
-using Block = std::string;
-using Type = ast::Type;
 
 /**
  * A CppProxyMember defines an access proxy to a member defined in a C++ class.
@@ -77,35 +62,41 @@ class CodeGen {
   llvm::IRBuilder<> *operator->() { return &GetBuilder(); }
 
   /// Type wrappers
-  ast::Type BoolType() const { return code_context_.bool_type_; }
-  ast::Type *Int8Type() const { return code_context_.int8_type_; }
-  ast::Type *ByteType() const { return Int8Type(); }
-  ast::Type *Int16Type() const { return code_context_.int16_type_; }
-  ast::Type *Int32Type() const { return code_context_.int32_type_; }
-  ast::Type *Int64Type() const { return code_context_.int64_type_; }
-  ast::Type *DoubleType() const { return code_context_.double_type_; }
-  ast::Type *VoidType() const { return code_context_.void_type_; }
-  ast::Type *VoidPtrType() const { return code_context_.void_ptr_type_; }
-  ast::PointerType *CharPtrType() const { return code_context_.char_ptr_type_; }
+  Type *BoolType() const { return code_context_.bool_type_; }
+  Type *Int8Type() const { return code_context_.int8_type_; }
+  Type *ByteType() const { return Int8Type(); }
+  Type *Int16Type() const { return code_context_.int16_type_; }
+  Type *Int32Type() const { return code_context_.int32_type_; }
+  Type *Int64Type() const { return code_context_.int64_type_; }
+  Type *DoubleType() const { return code_context_.double_type_; }
+  Type *VoidType() const { return code_context_.void_type_; }
+  Type *VoidPtrType() const { return code_context_.void_ptr_type_; }
+  // PointerType *CharPtrType() const { return code_context_.char_ptr_type_; }
   // /Generate a call to the function with the provided name and arguments
-  llvm::Value *CallFunc(llvm::Value *fn,
-                        std::initializer_list<llvm::Value *> args);
-  llvm::Value *CallFunc(llvm::Value *fn,
-                        const std::vector<llvm::Value *> &args);
+  Value *CallFunc(Function *fn, std::initializer_list<Value *> args);
+
+  Value *CallFunc(Value *fn, const std::vector<Value *> &args);
   template <typename T>
-  llvm::Value *Call(const T &proxy, const std::vector<llvm::Value *> &args) {
+  Value *Call(const T &proxy, const std::vector<Value *> &args) {
     return CallFunc(proxy.GetFunction(*this), args);
   }
 
   template <typename T>
-  llvm::Value *Load(const T &loader, llvm::Value *obj_ptr) {
+  Value *Load(const T &loader, Value *obj_ptr) {
     return loader.Load(*this, obj_ptr);
   }
 
   template <typename T>
-  void Store(const T &storer, llvm::Value *obj_ptr, llvm::Value *val) {
+  void Store(const T &storer, Value *obj_ptr, Value *val) {
     storer.Store(*this, obj_ptr, val);
   }
+
+  //===--------------------------------------------------------------------===//
+  // Constant Generators
+  //===--------------------------------------------------------------------===//
+  Constant *ConstBool(bool val) const;
+  Value *AllocateVariable(Type *type, const std::string &name);
+  void CallFunc(Function *fn, std::initializer_list<Value *> args);
 
   //===--------------------------------------------------------------------===//
   // C/C++ standard library functions
@@ -121,26 +112,22 @@ class CodeGen {
   // and set the overflow_but out-parameter. It is up to the caller to decide
   // how to handle an overflow.
   //===--------------------------------------------------------------------===//
-  llvm::Value *CallAddWithOverflow(llvm::Value *left, llvm::Value *right,
-                                   llvm::Value *&overflow_bit);
-  llvm::Value *CallSubWithOverflow(llvm::Value *left, llvm::Value *right,
-                                   llvm::Value *&overflow_bit);
-  llvm::Value *CallMulWithOverflow(llvm::Value *left, llvm::Value *right,
-                                   llvm::Value *&overflow_bit);
-  void ThrowIfOverflow(llvm::Value *overflow) const;
-  void ThrowIfDivideByZero(llvm::Value *divide_by_zero) const;
+  Value *CallAddWithOverflow(Value *left, Value *right, Value *&overflow_bit);
+  Value *CallSubWithOverflow(Value *left, Value *right, Value *&overflow_bit);
+  Value *CallMulWithOverflow(Value *left, Value *right, Value *&overflow_bit);
+  void ThrowIfOverflow(Value *overflow) const;
+  void ThrowIfDivideByZero(Value *divide_by_zero) const;
 
   //===--------------------------------------------------------------------===//
   // Function lookup and registration
   //===--------------------------------------------------------------------===//
-  llvm::Type *LookupType(const std::string &name) const;
-  std::pair<llvm::Function *, CodeContext::FuncPtr> LookupBuiltin(
-      const std::string &name) const;
-  llvm::Function *RegisterBuiltin(const std::string &fn_name,
-                                  llvm::FunctionType *fn_type, void *func_impl);
+  Type *LookupType(const std::string &name) const;
+  Function *LookupBuiltin(const std::string &name) const;
+  Function *RegisterBuiltin(const std::string &fn_name,
+                            std::vector<Value *> params);
 
   /// Get the runtime state function argument
-  llvm::Value *GetState() const;
+  Value *GetState() const;
 
   /// Return the size of the given type in bytes (returns 1 when size < 1 byte)
   uint64_t SizeOf(llvm::Type *type) const;
@@ -150,11 +137,12 @@ class CodeGen {
   // ACCESSORS
   //===--------------------------------------------------------------------===//
 
-  llvm::LLVMContext &GetContext() const { return code_context_.GetContext(); }
+  // llvm::LLVMContext &GetContext() const { return code_context_.GetContext();
+  // }
 
   CodeContext &GetCodeContext() const { return code_context_; }
 
-  FunctionBuilder *GetCurrentFunction() const {
+  Function *GetCurrentFunction() const {
     return code_context_.GetCurrentFunction();
   }
 
@@ -179,6 +167,8 @@ class CodeGen {
  private:
   // The context/module where all the code this class produces goes
   CodeContext &code_context_;
+
+  std::vector<Constant *&> allocated_vals;
 };
 
 }  // namespace tpl::compiler
