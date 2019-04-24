@@ -47,13 +47,6 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   FunctionInfo *AllocateFunc(const std::string &func_name,
                              ast::FunctionType *func_type);
 
-  // Dispatched from VisitForInStatement() when using tuple-at-time loops to
-  // set up the row structure used in the body of the loop
-  void VisitRowWiseIteration(ast::ForInStmt *node, LocalVar vpi,
-                             LoopBuilder *table_loop);
-  void VisitVectorWiseIteration(ast::ForInStmt *node, LocalVar vpi,
-                                LoopBuilder *table_loop);
-
   // Dispatched from VisitBuiltinCallExpr() to handle the various builtin
   // functions, including filtering, hash table interaction, sorting etc.
   void VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin);

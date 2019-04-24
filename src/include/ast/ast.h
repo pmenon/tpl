@@ -425,44 +425,18 @@ class ForStmt : public IterationStmt {
   Stmt *next_;
 };
 
-/// Generic grab bag of key-value attributes that can be associated with any AST
-/// nodes in the tree.
-class Attributes : public util::RegionObject {
- public:
-  explicit Attributes(util::RegionUnorderedMap<Identifier, Expr *> &&map)
-      : map_(std::move(map)) {}
-
-  Expr *Find(Identifier identifier) const {
-    if (const auto iter = map_.find(identifier); iter != map_.end()) {
-      return iter->second;
-    }
-
-    return nullptr;
-  }
-
-  bool Contains(Identifier identifier) const {
-    return Find(identifier) != nullptr;
-  }
-
- private:
-  util::RegionUnorderedMap<Identifier, Expr *> map_;
-};
-
 /// A range for statement
 class ForInStmt : public IterationStmt {
  public:
   ForInStmt(const SourcePosition &pos, Expr *target, Expr *iter,
-            Attributes *attributes, BlockStmt *body)
+            BlockStmt *body)
       : IterationStmt(pos, AstNode::Kind::ForInStmt, body),
         target_(target),
-        iter_(iter),
-        attributes_(attributes) {}
+        iter_(iter) {}
 
   Expr *target() const { return target_; }
 
   Expr *iter() const { return iter_; }
-
-  Attributes *attributes() const { return attributes_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ForInStmt;
@@ -471,7 +445,6 @@ class ForInStmt : public IterationStmt {
  private:
   Expr *target_;
   Expr *iter_;
-  Attributes *attributes_;
 };
 
 /// An if-then-else statement

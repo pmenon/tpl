@@ -177,139 +177,8 @@ void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
   loop_builder.JumpToHeader();
 }
 
-void BytecodeGenerator::VisitRowWiseIteration(ast::ForInStmt *node,
-                                              LocalVar vpi,
-                                              LoopBuilder *table_loop) {
-  // Allocate the row iteration variable
-  auto *row_type = node->target()->type()->As<ast::StructType>();
-  LocalVar row = current_function()->NewLocal(row_type, "row");
-
-  // Now, we generate a loop over every element in the VPI. In the beginning of
-  // each iteration, we pull out the column members into the allocated row
-  // structure in preparation for the body of the loop that expects rows.
-
-  {
-    LoopBuilder vpi_loop(this);
-    vpi_loop.LoopHeader();
-
-    ast::Context *ctx = row_type->context();
-    LocalVar cond = current_function()->NewLocal(
-        ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
-    emitter()->Emit(Bytecode::VPIHasNext, cond, vpi);
-    emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
-                                   vpi_loop.break_label());
-
-    // Load fields
-    const auto &fields = row_type->fields();
-    for (u32 col_idx = 0, offset = 0; col_idx < fields.size(); col_idx++) {
-      LocalVar col_ptr =
-          current_function()->NewLocal(fields[col_idx].type->PointerTo());
-      emitter()->EmitLea(col_ptr, row, offset);
-      emitter()->EmitVPIGet(Bytecode::VPIGetInteger, col_ptr.ValueOf(), vpi,
-                            col_idx);
-      offset += fields[col_idx].type->size();
-    }
-
-    // Generate body
-    VisitIterationStatement(node, table_loop);
-
-    // Advance the VPI one row
-    emitter()->Emit(Bytecode::VPIAdvance, vpi);
-
-    // Finish, loop back around
-    vpi_loop.JumpToHeader();
-  }
-
-  // When we're done with one iteration of the loop, we reset the vector
-  // projection iterator
-  emitter()->Emit(Bytecode::VPIReset, vpi);
-}
-
-void BytecodeGenerator::VisitVectorWiseIteration(ast::ForInStmt *node,
-                                                 LocalVar vpi,
-                                                 LoopBuilder *table_loop) {
-  // When iterating vector-wise, we need to allocate a VPI* with the same name
-  // as the target variable for the loop. We copy the given VPI instance for
-  // each iteration
-
-  // Get the name and type of the target VPI iteration variable
-  auto *iter_type = node->target()->type();
-  auto *iter_name = node->target()->As<ast::IdentifierExpr>()->name().data();
-
-  // Create the variable and assign it the value of the given VPI
-  LocalVar iter = current_function()->NewLocal(iter_type, iter_name);
-  BuildAssign(iter, vpi, iter_type);
-
-  // Generate body
-  VisitIterationStatement(node, table_loop);
-}
-
-void BytecodeGenerator::VisitForInStmt(ast::ForInStmt *node) {
-#if 0
-  // For both tuple-at-a-time iteration and vector-at-a-time iteration, we need
-  // a TableVectorIterator which we allocate in the function first. We also need
-  // a VectorProjectionIterator (VPI) pointer to read individual rows; VPIs are
-  // also needed for vectorized processing because they allow consecutive
-  // iterations and track filtered tuples. Thus, we allocate a VPI* in the
-  // function, too, that we populate with the instance inside the TVI.
-
-  ast::Context *ctx = node->target()->type()->context();
-
-  bool vectorized = false;
-  if (auto *attributes = node->attributes(); attributes != nullptr) {
-    if (attributes->Contains(ctx->GetIdentifier("batch"))) {
-      vectorized = true;
-    }
-  }
-
-  ast::Type *table_iter_type =
-      ast::BuiltinType::Get(ctx, ast::BuiltinType::TableVectorIterator);
-  LocalVar table_iter =
-      current_function()->NewLocal(table_iter_type, "table_iter");
-
-  // Create the TableVectorIterator and initialize it
-  ast::Identifier table_name = node->iter()->As<ast::IdentifierExpr>()->name();
-  sql::Table *table = sql::Catalog::Instance()->LookupTableByName(table_name);
-  TPL_ASSERT(table != nullptr, "Table does not exist!");
-  emitter()->EmitTableIterInit(Bytecode::TableVectorIteratorInit, table_iter,
-                               table->id());
-  emitter()->Emit(Bytecode::TableVectorIteratorPerformInit, table_iter);
-
-  // Pull out the VPI from the TableVectorIterator we just initialized
-  ast::Type *vpi_type =
-      ast::BuiltinType::Get(ctx, ast::BuiltinType::VectorProjectionIterator);
-  LocalVar vpi = current_function()->NewLocal(vpi_type->PointerTo(), "vpi");
-
-  emitter()->Emit(Bytecode::TableVectorIteratorGetVPI, vpi, table_iter);
-
-  // Now, we generate a loop while TableVectorIterator::Advance() returns true,
-  // indicating that there is more input data. If the loop is non-vectorized,
-  // then we call into VisitRowWiseIteration() to handle iteration over the
-  // VPI, setting up the row pointer, resetting the VPI etc.
-
-  {
-    LoopBuilder table_loop(this);
-    table_loop.LoopHeader();
-
-    LocalVar cond = current_function()->NewLocal(
-        ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
-    emitter()->Emit(Bytecode::TableVectorIteratorNext, cond, table_iter);
-    emitter()->EmitConditionalJump(Bytecode::JumpIfFalse, cond.ValueOf(),
-                                   table_loop.break_label());
-
-    if (vectorized) {
-      VisitVectorWiseIteration(node, vpi.ValueOf(), &table_loop);
-    } else {
-      VisitRowWiseIteration(node, vpi.ValueOf(), &table_loop);
-    }
-
-    // Finish, loop back around
-    table_loop.JumpToHeader();
-  }
-
-  // Cleanup
-  emitter()->Emit(Bytecode::TableVectorIteratorFree, table_iter);
-#endif
+void BytecodeGenerator::VisitForInStmt(UNUSED ast::ForInStmt *node) {
+  TPL_ASSERT(false, "For-in statements not supported");
 }
 
 void BytecodeGenerator::VisitFieldDecl(ast::FieldDecl *node) {
@@ -678,8 +547,18 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
       emitter()->EmitVPIGet(Bytecode::VPIGetBigInt, val, vpi, col_idx);
       break;
     }
-    case ast::Builtin::VPIGetReal:
+    case ast::Builtin::VPIGetReal: {
+      LocalVar val = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Real));
+      auto col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
+      emitter()->EmitVPIGet(Bytecode::VPIGetReal, val, vpi, col_idx);
+      break;
+    }
     case ast::Builtin::VPIGetDouble: {
+      LocalVar val = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Real));
+      auto col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
+      emitter()->EmitVPIGet(Bytecode::VPIGetDouble, val, vpi, col_idx);
       break;
     }
     default: { UNREACHABLE("Impossible table iteration call"); }

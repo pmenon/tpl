@@ -220,13 +220,12 @@ class Parser::ForHeader {
 
   // Header for standard for-loops
   static ForHeader Standard(ast::Stmt *init, ast::Expr *cond, ast::Stmt *next) {
-    return ForHeader(init, cond, next, nullptr, nullptr, nullptr);
+    return ForHeader(init, cond, next, nullptr, nullptr);
   }
 
   // Header for for-in loops
-  static ForHeader ForIn(ast::Expr *target, ast::Expr *iter,
-                         ast::Attributes *attributes) {
-    return ForHeader(nullptr, nullptr, nullptr, target, iter, attributes);
+  static ForHeader ForIn(ast::Expr *target, ast::Expr *iter) {
+    return ForHeader(nullptr, nullptr, nullptr, target, iter);
   }
 
   bool IsForIn() const { return target != nullptr && iter != nullptr; }
@@ -238,24 +237,17 @@ class Parser::ForHeader {
     return {init, cond, next};
   }
 
-  std::tuple<ast::Expr *, ast::Expr *, ast::Attributes *> GetForInElements()
-      const {
+  std::tuple<ast::Expr *, ast::Expr *> GetForInElements() const {
     TPL_ASSERT(IsForIn(), "Loop isn't a for-in");
-    return {target, iter, attributes};
+    return {target, iter};
   }
 
  private:
   ForHeader(ast::Stmt *init, ast::Expr *cond, ast::Stmt *next,
-            ast::Expr *target, ast::Expr *iter, ast::Attributes *attributes)
-      : init(init),
-        cond(cond),
-        next(next),
-        target(target),
-        iter(iter),
-        attributes(attributes) {}
+            ast::Expr *target, ast::Expr *iter)
+      : init(init), cond(cond), next(next), target(target), iter(iter) {}
 
-  ForHeader()
-      : ForHeader(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr) {}
+  ForHeader() : ForHeader(nullptr, nullptr, nullptr, nullptr, nullptr) {}
 
  private:
   ast::Stmt *init;
@@ -264,8 +256,6 @@ class Parser::ForHeader {
 
   ast::Expr *target;
   ast::Expr *iter;
-
-  ast::Attributes *attributes;
 };
 
 Parser::ForHeader Parser::ParseForHeader() {
@@ -293,14 +283,8 @@ Parser::ForHeader Parser::ParseForHeader() {
     TPL_ASSERT(cond != nullptr, "Must have parsed can't be null");
     ast::Expr *target = MakeExpr(cond);
     ast::Expr *iter = MakeExpr(ParseStmt());
-
-    ast::Attributes *attributes = nullptr;
-    if (Matches(Token::Type::AT)) {
-      attributes = ParseAttributes();
-    }
-
     Expect(Token::Type::RIGHT_PAREN);
-    return ForHeader::ForIn(target, iter, attributes);
+    return ForHeader::ForIn(target, iter);
   }
 
   // Parse either regular for or for-while
@@ -338,8 +322,8 @@ ast::Stmt *Parser::ParseForStmt() {
     const auto &[init, cond, next] = header.GetForElements();
     return node_factory_->NewForStmt(position, init, cond, next, body);
   }
-  const auto &[target, iter, attributes] = header.GetForInElements();
-  return node_factory_->NewForInStmt(position, target, iter, attributes, body);
+  const auto &[target, iter] = header.GetForInElements();
+  return node_factory_->NewForInStmt(position, target, iter, body);
 }
 
 ast::Stmt *Parser::ParseIfStmt() {
@@ -741,30 +725,6 @@ ast::Expr *Parser::ParseMapType() {
   ast::Expr *value_type = ParseType();
 
   return node_factory_->NewMapType(position, key_type, value_type);
-}
-
-ast::Attributes *Parser::ParseAttributes() {
-  util::RegionUnorderedMap<ast::Identifier, ast::Expr *> attrs(region());
-
-  Consume(Token::Type::LEFT_BRACKET);
-
-  while (peek() != Token::Type::RIGHT_BRACKET) {
-    // First, the attribute name
-    Expect(Token::Type::IDENTIFIER);
-    ast::Identifier attribute_name = GetSymbol();
-
-    // Then '='
-    Expect(Token::Type::EQUAL);
-
-    // Then value
-    ast::Expr *expr = ParseOperand();
-
-    attrs.emplace(attribute_name, expr);
-  }
-
-  Consume(Token::Type::RIGHT_BRACKET);
-
-  return new (region()) ast::Attributes(std::move(attrs));
 }
 
 }  // namespace tpl::parsing

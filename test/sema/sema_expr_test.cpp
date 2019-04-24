@@ -38,6 +38,10 @@ class SemaExprTest : public TplTest {
 
   ast::Expr *IntLit(u32 i) { return node_factory()->NewIntLiteral(empty_, i); }
 
+  ast::Expr *FloatLit(f32 i) {
+    return node_factory()->NewFloatLiteral(empty_, i);
+  }
+
   ast::Expr *CmpLt(ast::Expr *left, ast::Expr *right) {
     return node_factory()->NewComparisonOpExpr(
         empty_, parsing::Token::Type::LESS, left, right);
@@ -48,24 +52,38 @@ class SemaExprTest : public TplTest {
   }
 
   ast::VariableDecl *DeclVar(ast::Identifier name, ast::Expr *init) {
-    return node_factory()->NewVariableDecl(empty_, name, nullptr, init);
+    return DeclVar(name, nullptr, init);
+  }
+
+  ast::VariableDecl *DeclVar(ast::Identifier name, ast::Expr *type_repr,
+                             ast::Expr *init) {
+    return node_factory()->NewVariableDecl(empty_, name, type_repr, init);
   }
 
   ast::Stmt *DeclStmt(ast::Decl *decl) {
     return node_factory()->NewDeclStmt(decl);
   }
 
-  ast::Stmt *ScanTable(
-      const std::string &table_name,
-      const std::function<void(const std::string &,
-                               util::RegionVector<ast::Stmt *> &)> &body) {
-    util::RegionVector<ast::Stmt *> stmts(region());
-    body("row", stmts);
-
-    return node_factory()->NewForInStmt(
-        empty_, IdentExpr("row"), IdentExpr(table_name), nullptr,
-        node_factory()->NewBlockStmt(empty_, empty_, std::move(stmts)));
+  ast::Stmt *Block(std::initializer_list<ast::Stmt *> stmts) {
+    util::RegionVector<ast::Stmt *> region_stmts(stmts.begin(), stmts.end(),
+                                                 region());
+    return node_factory()->NewBlockStmt(empty_, empty_,
+                                        std::move(region_stmts));
   }
+
+  ast::Stmt *ExprStmt(ast::Expr *expr) {
+    return node_factory()->NewExpressionStmt(expr);
+  }
+
+  ast::Expr *ArrayTypeRepr(ast::Expr *type) {
+    return node_factory()->NewArrayType(empty_, nullptr, type);
+  }
+
+  ast::Expr *ArrayIndex(ast::Expr *arr, ast::Expr *idx) {
+    return node_factory()->NewIndexExpr(empty_, arr, idx);
+  }
+
+  void ResetErrorReporter() { error_reporter()->Reset(); }
 
  private:
   util::Region region_;
@@ -85,39 +103,32 @@ TEST_F(SemaExprTest, LogicalOperationTest) {
   SourcePosition empty{0, 0};
 
   TestCase tests[] = {
-      /*
-       * Test: 1 and 2
-       * Expectation: Error
-       */
+      // Test: 1 and 2
+      // Expectation: Error
       {true, "1 and 2 is not a valid logical operation",
        node_factory()->NewBinaryOpExpr(
            empty, parsing::Token::Type::AND,
            node_factory()->NewIntLiteral(empty, 1),
            node_factory()->NewIntLiteral(empty, 2))},
-      /*
-       * Test: 1 and true
-       * Expectation: Error
-       */
+
+      // Test: 1 and true
+      // Expectation: Error
       {true, "1 and true is not a valid logical operation",
        node_factory()->NewBinaryOpExpr(
            empty, parsing::Token::Type::AND,
            node_factory()->NewIntLiteral(empty, 1),
            node_factory()->NewBoolLiteral(empty, true))},
 
-      /*
-       * Test: false and 2
-       * Expectation: Error
-       */
+      // Test: false and 2
+      // Expectation: Error
       {true, "false and 1 is not a valid logical operation",
        node_factory()->NewBinaryOpExpr(
            empty, parsing::Token::Type::AND,
            node_factory()->NewBoolLiteral(empty, false),
            node_factory()->NewIntLiteral(empty, 2))},
 
-      /*
-       * Test: false and true
-       * Expectation: Valid
-       */
+      // Test: false and true
+      // Expectation: Valid
       {false, "false and true is a valid logical operation",
        node_factory()->NewBinaryOpExpr(
            empty, parsing::Token::Type::AND,
@@ -127,68 +138,97 @@ TEST_F(SemaExprTest, LogicalOperationTest) {
 
   for (const auto &test : tests) {
     Sema sema(ctx());
-    bool errors = sema.Run(test.tree);
-
-    if (test.has_errors) {
-      EXPECT_TRUE(errors) << test.msg;
-    } else {
-      EXPECT_FALSE(errors) << test.msg;
-    }
-
-    error_reporter()->Reset();
+    bool has_errors = sema.Run(test.tree);
+    EXPECT_EQ(test.has_errors, has_errors) << test.msg;
+    ResetErrorReporter();
   }
 }
 
 TEST_F(SemaExprTest, ComparisonOperationWithImplicitCastTest) {
-  std::vector<TestCase> tests;
+  // clang-format off
+  TestCase tests[] = {
+      // Test: Compare a primitive int32 with a SQL integer
+      // Expectation: Valid
+      {false, "SQL integers should be comparable to native integers",
+       Block({
+           DeclStmt(DeclVar(Ident("sqlInt"), IdentExpr("Integer"))),    // var sqlInt: Integer
+           DeclStmt(DeclVar(Ident("i"), IntLit(10))),                   // var i = 10
+           ExprStmt(CmpLt(IdentExpr("sqlInt"), IdentExpr("i"))),        // sqlInt < i
+       })},
 
-  /*
-   * Test: for (row in test_1) { var x = (row.colA < false) }
-   * Expectation: Error
-   */
-  {
-    TestCase t;
-    t.has_errors = true;
-    t.msg = "row.colA < false is not a valid comparison";
+      // Test: Compare a primitive int32 with a SQL integer
+      // Expectation: Valid
+      {false, "SQL integers should be comparable to native integers",
+       Block({
+           DeclStmt(DeclVar(Ident("sqlInt"), IdentExpr("Integer"))),    // var sqlInt: Integer
+           DeclStmt(DeclVar(Ident("i"), IntLit(10))),                   // var i = 10
+           ExprStmt(CmpLt(IdentExpr("i"), IdentExpr("sqlInt"))),        // i < sqlInt
+       })},
 
-    t.tree = ScanTable("test_1", [this](auto row, auto &stmts) {
-      stmts.push_back(DeclStmt(
-          DeclVar(Ident("x"),
-                  CmpLt(Field(IdentExpr("row"), BoolLit(false)), IntLit(10)))));
-    });
-
-    tests.emplace_back(t);
-  }
-
-  /*
-   * Test: for (row in test_1) { var x = (row.colA < 10) }
-   * Expectation: Valid
-   */
-  {
-    TestCase t;
-    t.has_errors = false;
-    t.msg = "row.colA < 10 should implicitly cast the literal to a SQL value";
-
-    t.tree = ScanTable("test_1", [this](auto row, auto &stmts) {
-      stmts.push_back(DeclStmt(DeclVar(
-          Ident("x"),
-          CmpLt(Field(IdentExpr("row"), IdentExpr("colA")), IntLit(10)))));
-    });
-
-    tests.emplace_back(t);
-  }
+      // Test: Compare a primitive bool with a SQL integer
+      // Expectation: Invalid
+      {true, "SQL integers should not be comparable to native boolean values",
+       Block({
+           DeclStmt(DeclVar(Ident("sqlInt"), IdentExpr("Integer"))),    // var sqlInt: Integer
+           DeclStmt(DeclVar(Ident("b"), BoolLit(false))),               // var b = false
+           ExprStmt(CmpLt(IdentExpr("b"), IdentExpr("sqlInt"))),        // b < sqlInt
+       })},
+  };
+  // clang-format on
 
   for (const auto &test : tests) {
     Sema sema(ctx());
-    bool errors = sema.Run(test.tree);
+    bool has_errors = sema.Run(test.tree);
+    EXPECT_EQ(test.has_errors, has_errors) << test.msg;
+    ResetErrorReporter();
+  }
+}
 
-    if (test.has_errors) {
-      EXPECT_TRUE(errors) << test.msg;
-    } else {
-      EXPECT_FALSE(errors) << test.msg;
-    }
+TEST_F(SemaExprTest, ArrayIndexTest) {
+  // clang-format off
+  TestCase tests[] = {
+      // Test: Perform an array index using an integer literal
+      // Expectation: Valid
+      {false, "Array indexes can support literal indexes",
+       Block({
+           DeclStmt(DeclVar(Ident("arr"), ArrayTypeRepr(IdentExpr("int32")))),    // var arr: []int32
+           ExprStmt(ArrayIndex(IdentExpr("arr"), IntLit(10))),                    // arr[10]
+       })},
 
-    error_reporter()->Reset();
+      // Test: Perform an array index using an integer variable
+      // Expectation: Valid
+      {false, "Array indexes can support variable integer indexes",
+       Block({
+           DeclStmt(DeclVar(Ident("arr"), ArrayTypeRepr(IdentExpr("int32")))),    // var arr: []int32
+           DeclStmt(DeclVar(Ident("i"), IntLit(10))),                             // var i = 10
+           ExprStmt(ArrayIndex(IdentExpr("arr"), IdentExpr("i"))),                // arr[i]
+       })},
+
+      // Test: Perform an array index using an floating-point variable
+      // Expectation: Invalid
+      {true, "Array indexes must be integer values",
+       Block({
+           DeclStmt(DeclVar(Ident("arr"), ArrayTypeRepr(IdentExpr("int32")))),    // var arr: []int32
+           DeclStmt(DeclVar(Ident("i"), FloatLit(10.0))),                         // var i: float32 = 10.0
+           ExprStmt(ArrayIndex(IdentExpr("arr"), IdentExpr("i"))),                // arr[i]
+       })},
+
+      // Test: Perform an array index using a SQL integer
+      // Expectation: Invalid
+      {true, "Array indexes must be integer values",
+       Block({
+           DeclStmt(DeclVar(Ident("arr"), ArrayTypeRepr(IdentExpr("int32")))),    // var arr: []int32
+           DeclStmt(DeclVar(Ident("i"), IdentExpr("Integer"), nullptr)),          // var i: Integer
+           ExprStmt(ArrayIndex(IdentExpr("arr"), IdentExpr("i"))),                // arr[i]
+       })},
+  };
+  // clang-format on
+
+  for (const auto &test : tests) {
+    Sema sema(ctx());
+    bool has_errors = sema.Run(test.tree);
+    EXPECT_EQ(test.has_errors, has_errors) << test.msg;
+    ResetErrorReporter();
   }
 }
 

@@ -101,6 +101,7 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
   if (left->type() == right->type()) {
     ast::Type *ret_type = nullptr;
     if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Integer) ||
+        left->type()->IsSpecificBuiltin(ast::BuiltinType::Real) ||
         left->type()->IsSpecificBuiltin(ast::BuiltinType::Decimal)) {
       ret_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Boolean);
     } else {
@@ -129,6 +130,7 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
   // Done
   ast::Type *ret_type = nullptr;
   if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Integer) ||
+      left->type()->IsSpecificBuiltin(ast::BuiltinType::Real) ||
       left->type()->IsSpecificBuiltin(ast::BuiltinType::Decimal)) {
     ret_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Boolean);
   } else {

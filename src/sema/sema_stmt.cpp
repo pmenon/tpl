@@ -79,56 +79,7 @@ void Sema::VisitForStmt(ast::ForStmt *node) {
 }
 
 void Sema::VisitForInStmt(ast::ForInStmt *node) {
-  SemaScope for_scope(this, Scope::Kind::Loop);
-
-  if (!node->target()->IsIdentifierExpr()) {
-    error_reporter()->Report(node->target()->position(),
-                             ErrorMessages::kNonIdentifierTargetInForInLoop);
-    return;
-  }
-
-  if (!node->iter()->IsIdentifierExpr()) {
-    error_reporter()->Report(node->iter()->position(),
-                             ErrorMessages::kNonIdentifierIterator);
-    return;
-  }
-
-  auto *target = node->target()->As<ast::IdentifierExpr>();
-  auto *iter = node->iter()->As<ast::IdentifierExpr>();
-
-  // Lookup the table in the catalog
-  auto *table = sql::Catalog::Instance()->LookupTableByName(iter->name());
-  if (table == nullptr) {
-    error_reporter()->Report(iter->position(), ErrorMessages::kNonExistingTable,
-                             iter->name());
-    return;
-  }
-
-  // Now we resolve the type of the iterable. If the user wanted a row-at-a-time
-  // iteration, the type becomes a struct-equivalent representation of the row
-  // as stored in the table. If the user wanted a vector-at-a-time iteration,
-  // the iterable type becomes a VectorProjectionIterator.
-
-  ast::Type *iter_type = nullptr;
-  if (auto *attributes = node->attributes();
-      attributes != nullptr &&
-      attributes->Contains(context()->GetIdentifier("batch"))) {
-    iter_type = ast::BuiltinType::Get(
-                    context(), ast::BuiltinType::VectorProjectionIterator)
-                    ->PointerTo();
-  } else {
-    iter_type = GetRowTypeFromSqlSchema(table->schema());
-    TPL_ASSERT(iter_type->IsStructType(), "Rows must be structs");
-  }
-
-  // Set the target iterators type
-  target->set_type(iter_type);
-
-  // Declare iteration variable
-  current_scope()->Declare(target->name(), iter_type);
-
-  // Process body
-  Visit(node->body());
+  TPL_ASSERT(false, "Not supported");
 }
 
 void Sema::VisitExpressionStmt(ast::ExpressionStmt *node) {
