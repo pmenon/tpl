@@ -104,7 +104,8 @@ Value *CodeGen::AllocateVariable(Type *type, const std::string &name) {
   // instruction in the "entry" block. If the "entry" block is empty, it doesn't
   // matter where we insert it.
 
-  return code_context_.GetCurrentFunction()->AllocateVariable(type, name);
+  return code_context_.GetCurrentFunction()->GetCodeBlock()->AllocateVariable(
+      type, name);
 }
 
 Value *CodeGen::AllocateBuffer(llvm::Type *element_type, uint32_t num_elems,
@@ -126,7 +127,7 @@ Value *CodeGen::AllocateBuffer(llvm::Type *element_type, uint32_t num_elems,
 }
 
 void CodeGen::CallFunc(Function *fn, std::initializer_list<Value *> args) {
-  code_context_.GetCurrentFunction()->Call(fn, args);
+  code_context_.GetCurrentFunction()->GetCodeBlock()->Call(fn, args);
 }
 
 llvm::Value *CodeGen::Printf(const std::string &format,
@@ -193,11 +194,11 @@ llvm::Value *CodeGen::Memcmp(llvm::Value *ptr1, llvm::Value *ptr2,
 
 llvm::Value *CodeGen::CallAddWithOverflow(Value *left, Value *right,
                                           Value *&overflow_bit) {
-  TPL_ASSERT(left->getType() == right->getType());
+  TPL_ASSERT(left->GetType() == right->GetType(), "Types don't match");
 
   // Get the intrinsic that does the addition with overflow checking
   Function *add_func = llvm::Intrinsic::getDeclaration(
-      &GetModule(), llvm::Intrinsic::sadd_with_overflow, left->getType());
+      &GetModule(), llvm::Intrinsic::sadd_with_overflow, left->GetType());
 
   // Perform the addition
   llvm::Value *add_result = CallFunc(add_func, {left, right});
@@ -348,28 +349,6 @@ uint64_t CodeGen::ElementOffset(llvm::Type *type, uint32_t element_idx) const {
   return struct_layout->getElementOffset(element_idx);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Proxy Member
-///
-////////////////////////////////////////////////////////////////////////////////
-
-llvm::Value *CppProxyMember::Load(CodeGen &codegen,
-                                  llvm::Value *obj_ptr) const {
-  llvm::SmallVector<llvm::Value *, 2> indexes = {codegen.Const32(0),
-                                                 codegen.Const32(slot_)};
-  // TODO(pmenon): Use CreateStructGEP()
-  llvm::Value *addr = codegen->CreateInBoundsGEP(obj_ptr, indexes);
-  return codegen->CreateLoad(addr);
-}
-
-void CppProxyMember::Store(CodeGen &codegen, llvm::Value *obj_ptr,
-                           llvm::Value *val) const {
-  llvm::SmallVector<llvm::Value *, 2> indexes = {codegen.Const32(0),
-                                                 codegen.Const32(slot_)};
-  llvm::Value *addr = codegen->CreateInBoundsGEP(obj_ptr, indexes);
-  codegen->CreateStore(val, addr);
-}
 
 }  // namespace compiler
 }  // namespace tpl

@@ -53,13 +53,14 @@ class CodeGen {
  public:
   /// Constructor and destructor
   explicit CodeGen(CodeContext &code_context);
-  ~CodeGen() = default;
+  ~CodeGen() {
+    for (auto val : allocated_vals) {
+      delete val;
+    }
+  }
 
   /// This class cannot be copy or move-constructed
   DISALLOW_COPY_AND_MOVE(CodeGen);
-
-  /// We forward the -> operator to LLVM's IRBuilder
-  llvm::IRBuilder<> *operator->() { return &GetBuilder(); }
 
   /// Type wrappers
   Type *BoolType() const { return code_context_.bool_type_; }
@@ -73,9 +74,8 @@ class CodeGen {
   Type *VoidPtrType() const { return code_context_.void_ptr_type_; }
   // PointerType *CharPtrType() const { return code_context_.char_ptr_type_; }
   // /Generate a call to the function with the provided name and arguments
-  Value *CallFunc(Function *fn, std::initializer_list<Value *> args);
+  void CallFunc(Function *fn, std::initializer_list<Value *> args);
 
-  Value *CallFunc(Value *fn, const std::vector<Value *> &args);
   template <typename T>
   Value *Call(const T &proxy, const std::vector<Value *> &args) {
     return CallFunc(proxy.GetFunction(*this), args);
@@ -95,8 +95,12 @@ class CodeGen {
   // Constant Generators
   //===--------------------------------------------------------------------===//
   Constant *ConstBool(bool val) const;
+  Constant *Const8(int8_t val) const;
+  Constant *Const16(int16_t val) const;
+  Constant *Const32(int32_t val) const;
+  Constant *Const64(int64_t val) const;
+  Constant *ConstDouble(double val) const;
   Value *AllocateVariable(Type *type, const std::string &name);
-  void CallFunc(Function *fn, std::initializer_list<Value *> args);
 
   //===--------------------------------------------------------------------===//
   // C/C++ standard library functions
@@ -168,7 +172,7 @@ class CodeGen {
   // The context/module where all the code this class produces goes
   CodeContext &code_context_;
 
-  std::vector<Constant *&> allocated_vals;
+  std::vector<Value *&> allocated_vals;
 };
 
 }  // namespace tpl::compiler

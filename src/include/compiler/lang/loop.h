@@ -25,50 +25,45 @@ namespace lang {
 //===----------------------------------------------------------------------===//
 // A utility class to help generate loops in TPL
 //===----------------------------------------------------------------------===//
-class Loop {
+/*class Loop {
  public:
-  struct LoopVariable {
-    std::string name;
-    TPLValue *val;
-  };
+  explicit Loop(CodeBlock *body) : body_(body){};
 
-  // Constructor
-  Loop(CodeGen &cg, Value *start_condition,
-       const std::vector<LoopVariable> &loop_vars);
+  virtual ast::IterationStmt *Compile(ast::AstNodeFactory &factory) = 0;
 
-  // Get the loop variable at the given index
-  llvm::Value *GetLoopVar(uint32_t id) const;
-
-  // Break out of the loop
-  void Break();
-
-  // Mark the end of the loop block.  The loop continues at the top if the end
-  // condition is true
-  void LoopEnd(llvm::Value *end_condition,
-               const std::vector<llvm::Value *> &next);
-
-  // Collect the final values of all loop variables
-  void CollectFinalLoopVariables(std::vector<llvm::Value *> &loop_vals);
+  CodeBlock *GetBody(){return body_};
 
  private:
-  // The code generator
-  CodeGen &cg_;
-  // The function the loop is in
-  llvm::Function *fn_;
-  // The predecessor basic block of this loop
-  llvm::BasicBlock *pre_loop_bb_;
-  // The block where the code for the body of the loop goes
-  llvm::BasicBlock *loop_bb_;
-  // The last BB _inside_ the loop
-  llvm::BasicBlock *last_loop_bb_;
-  // The block at the bottom where the loop jumps to when the loop condition
-  // becomes false
-  llvm::BasicBlock *end_bb_;
-  // The basic blocks that contians the break
-  std::vector<llvm::BasicBlock *> break_bbs_;
-  // The list of PHI nodes (i.e. loop variables)
-  std::vector<llvm::PHINode *> phi_nodes_;
+  CodeBlock *body_;
 };
+
+class ForInLoop : public Loop {
+ public:
+  explicit ForInLoop(Value *target, Value *iter, CodeBlock *body, bool batch)
+      : Loop(body), target_(target), iter_(iter), batch_(batch){};
+
+  ast::IterationStmt *Compile(ast::AstNodeFactory &factory) override {
+    SourcePosition dummy;
+    if (batch_) {
+      util::Region mapRegion("mapregion");
+      util::RegionUnorderedMap<ast::Identifier, ast::Expr *> map(&mapRegion);
+      ast::Identifier batchIdent("batch");
+
+      //TODO (tanujnay112) make the value an actual Expr*
+      map.emplace(std::move(batchIdent), nullptr);
+      ast::Attributes attrib(std::move(map));
+      return factory.NewForInStmt(dummy, target_->GetExpr(), iter_->GetExpr(),
+                                  &attrib, GetBody()->Compile());
+    }
+    return factory.NewForInStmt(dummy, target_->GetExpr(), iter_->GetExpr(),
+                                nullptr, GetBody()->Compile());
+  }
+
+ private:
+  Value *target_;
+  Value *iter_;
+  bool batch_;
+};*/
 
 }  // namespace lang
 }  // namespace compiler

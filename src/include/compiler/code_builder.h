@@ -72,6 +72,8 @@ class CodeBlock {
     return variable;
   }
 
+  Block *CreateForInLoop(Value *target, Value *iter, CodeBlock *body, bool batch);
+
   Block *Call(Function *fn, std::initializer_list<Value *> arguments);
 
   ast::BlockStmt *Compile() {
@@ -88,7 +90,8 @@ class CodeBlock {
 class Function {
  public:
   explicit Function(ast::AstNodeFactory *nodeFactory, std::string name,
-                    std::vector<Value *> &&params, Type *retType, std::shared_ptr<util::Region> region)
+                    std::vector<Value *> &&params, Type *retType,
+                    std::shared_ptr<util::Region> region)
       : nodeFactory_(nodeFactory), name_(name), body_(nodeFactory, region) {
     params_ = std::move(params);
     ast::Identifier identifier(name_.data());
@@ -119,6 +122,8 @@ class Function {
   }
 
   std::string GetName() { return name_; }
+
+  CodeBlock *GetCodeBlock() { return &body_; };
 
   void Compile() {
     // compile block statement vector into one BlockStmt and put into fnDecl's
