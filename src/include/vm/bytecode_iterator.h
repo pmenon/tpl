@@ -11,16 +11,16 @@ class LocalVar;
 
 ///
 /// An iterator over a section of bytecode. Use as follows:
-/// 
+///
 /// \code
 /// for (auto iter = ...; !iter.Done(); iter.Advance() {
 ///   // body
 /// }
 /// \endcode
 ///
-/// At any point, the iterator always points to the start of a bytecode 
-/// instruction. Users can query the current bytecode along with all its operands
-/// through the various operand getter functions.
+/// At any point, the iterator always points to the start of a bytecode
+/// instruction. Users can query the current bytecode along with all its
+/// operands through the various operand getter functions.
 ///
 /// BytecodeIterators support random access of the bytecode through explicit
 /// calls to \a SetPosition(). It is the user's responsibility to ensure these

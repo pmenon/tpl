@@ -663,8 +663,10 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
     switch (bytecode) {
       case Bytecode::Call: {
         //
-        // For internal calls, we read the callee function's ID, lookup the
-        // LLVM declaration and generate the call.
+        // For internal calls, the callee function will be the first element in
+        // the arguments vector; the lookup of the callee function ID in the
+        // module is already done. The remaining elements are legitimate
+        // arguments to the function.
         //
 
         auto *callee = llvm::cast<llvm::Function>(args[0]);
@@ -757,7 +759,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
 
     //
     // If the next bytecode marks the start of a new basic block, we need to
-    // switch insertion points to it before continuing IR generation.
+    // switch insertion points to it before continuing IR generation
     //
 
     auto next_bytecode_pos = iter.GetPosition() + iter.CurrentBytecodeSize();
