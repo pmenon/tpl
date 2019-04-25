@@ -630,7 +630,15 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
               false));
           break;
         }
-        case OperandType::FunctionId:
+        case OperandType::FunctionId: {
+          const u16 target_func_id = iter.GetFunctionIdOperand(i);
+          auto *target_func_info = tpl_module().GetFuncInfoById(target_func_id);
+          auto *target_func = module()->getFunction(target_func_info->name());
+          TPL_ASSERT(target_func != nullptr,
+                     "Function doesn't exist in LLVM module");
+          args.push_back(target_func);
+          break;
+        }
         case OperandType::JumpOffset: {
           // These are handled specially below
           break;
@@ -659,9 +667,8 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
         // LLVM declaration and generate the call.
         //
 
-        const u16 callee_func_id = iter.GetFunctionIdOperand(0);
-        const auto &callee_info = tpl_module().GetFuncInfoById(callee_func_id);
-        llvm::Function *callee = module()->getFunction(callee_info->name());
+        auto *callee = llvm::cast<llvm::Function>(args[0]);
+        args.erase(args.begin());
         ir_builder.CreateCall(callee, args);
         break;
       }

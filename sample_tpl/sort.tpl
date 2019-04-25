@@ -4,8 +4,8 @@ struct State {
 }
 
 struct Row {
-  a: int32
-  b: int32
+  a: Integer 
+  b: Integer
 }
 
 fun compareFn(lhs: *Row, rhs: *Row) -> int32 {
@@ -22,9 +22,16 @@ fun setUpState(state: *State) -> nil {
 }
 
 fun pipeline_1(state: *State) -> nil {
+  var sorter = &state.sorter
   var tvi: TableVectorIterator
   for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
     var vpi = @tableIterGetVPI(&tvi)
+    for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
+      var row = @ptrCast(*Row, @sorterInsert(sorter))
+      row.a = @vpiGetInt(vpi, 0)
+      row.b = @vpiGetInt(vpi, 1)
+    }
+    @vpiReset(vpi)
   }
   @tableIterClose(&tvi)
 }

@@ -1,12 +1,13 @@
 #pragma once
 
 namespace tpl::ast {
-class AstNode;
 class Context;
+class ForInStmt;
+class Stmt;
 }  // namespace tpl::ast
 
-namespace tpl::vm {
+namespace tpl::parsing {
 
-void RewriteForInScans(ast::Context *ctx, ast::AstNode *root);
+ast::Stmt *RewriteForInScan(ast::Context *ctx, ast::ForInStmt *for_in);
 
-}  // namespace tpl::vm
+}  // namespace tpl::parsing

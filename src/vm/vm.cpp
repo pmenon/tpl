@@ -883,7 +883,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(SorterInit) : {
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
     auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
-    auto cmp_func_id = frame->LocalAt<FunctionId>(READ_LOCAL_ID());
+    auto cmp_func_id = READ_UIMM2();
     auto tuple_size = frame->LocalAt<u32>(READ_LOCAL_ID());
 
     auto cmp_fn = reinterpret_cast<sql::Sorter::ComparisonFunction>(

@@ -657,15 +657,11 @@ void BytecodeGenerator::VisitBuiltinSorterCall(ast::CallExpr *call,
       // listed by name.
       LocalVar sorter = VisitExpressionForRValue(call->arguments()[0]);
       LocalVar region = VisitExpressionForRValue(call->arguments()[1]);
-      // LocalVar cmp_fn = VisitExpressionForRValue(call->arguments()[2]);
       const std::string cmp_func_name =
           call->arguments()[2]->As<ast::IdentifierExpr>()->name().data();
-      auto cmp_fn = current_function()->NewLocal(ast::BuiltinType::Get(
-          call->type()->context(), ast::BuiltinType::Uint16));
-      emitter()->EmitAssignImm2(cmp_fn, LookupFuncIdByName(cmp_func_name));
       LocalVar entry_size = VisitExpressionForRValue(call->arguments()[3]);
-      emitter()->Emit(Bytecode::SorterInit, sorter, region, cmp_fn.ValueOf(),
-                      entry_size);
+      emitter()->EmitSorterInit(Bytecode::SorterInit, sorter, region,
+                                LookupFuncIdByName(cmp_func_name), entry_size);
       break;
     }
     case ast::Builtin::SorterInsert: {

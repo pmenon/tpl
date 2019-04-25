@@ -300,4 +300,10 @@ void BytecodeEmitter::EmitVPIVectorFilter(Bytecode bytecode, LocalVar selected,
   EmitAll(bytecode, selected, vpi, col_idx, val);
 }
 
+void BytecodeEmitter::EmitSorterInit(Bytecode bytecode, LocalVar sorter,
+                                     LocalVar region, FunctionId cmp_fn,
+                                     LocalVar tuple_size) {
+  EmitAll(bytecode, sorter, region, cmp_fn, tuple_size);
+}
+
 }  // namespace tpl::vm

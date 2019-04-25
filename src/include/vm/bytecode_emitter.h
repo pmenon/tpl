@@ -109,6 +109,13 @@ class BytecodeEmitter {
   void EmitVPIVectorFilter(Bytecode bytecode, LocalVar selected, LocalVar vpi,
                            u32 col_idx, i64 val);
 
+  // -------------------------------------------------------
+  // Sorter
+  // -------------------------------------------------------
+
+  void EmitSorterInit(Bytecode bytecode, LocalVar sorter, LocalVar region,
+                      FunctionId cmp_fn, LocalVar tuple_size);
+
  private:
   // Copy a scalar immediate value into the bytecode stream
   template <typename T>
