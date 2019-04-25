@@ -1,3 +1,5 @@
+#include <sql/execution_structures.h>
+#include "ast/identifier.h"
 #include "compiler/codegen.h"
 
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
@@ -16,6 +18,26 @@ CodeGen::CodeGen(CodeContext &code_context) : code_context_(code_context) {}
 
 Type *CodeGen::ArrayType(llvm::Type *type, uint32_t num_elements) const {
   return llvm::ArrayType::get(type, num_elements);
+}
+
+/// Generate a row struct type from table schema
+Type *CodeGen::RowType(catalog::table_oid_t oid) {
+  auto *exec = sql::ExecutionStructures::Instance();
+  auto *catalog = exec->GetCatalog();
+  auto *tableInfo = catalog->LookupTableById(oid);
+  auto *schema = tableInfo->GetStorageSchema();
+  const std::vector<catalog::Schema::Column> &columns = schema->GetColumns();
+
+  // TODO (tanujnay112) this is stack allocated, figure out where to get an actual region from
+  util::Region region = util::Region("field region");
+  util::RegionVector<ast::FieldDecl *> fields(&region);
+  SourcePosition dummy;
+  for (auto col : columns) {
+    ast::Identifier ident(col.GetName().data());
+    ast::FieldDecl *decl = nodeFactory_.NewFieldDecl(dummy, ident, GetCodeContext().TypeFromTypeId(col.GetType()));
+    fields.emplace_back(decl);
+  }
+  return nodeFactory_.NewStructType(dummy, std::move(fields));
 }
 
 /// Constant wrappers for bool, int8, int16, int32, int64, strings and NULL

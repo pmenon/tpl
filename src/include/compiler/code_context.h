@@ -19,6 +19,8 @@
 #include "common/macros.h"
 #include "compiler/code_builder.h"
 
+#include "sql/data_types.h"
+
 namespace tpl {
 namespace compiler {
 
@@ -53,6 +55,8 @@ class CodeContext {
 
   /// Register a function that is defined externally
   void RegisterExternalFunction(Function *func_decl, FuncPtr func_impl);
+
+  Type *TypeFromTypeId(sql::TypeId typeId);
 
   /// Register a built-in C/C++ function
   void RegisterBuiltin(Function *func_decl, FuncPtr func_impl);

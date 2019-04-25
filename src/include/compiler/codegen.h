@@ -4,7 +4,10 @@
 #include <util/macros.h>
 #include <string>
 #include <vector>
+#include "catalog/catalog_defs.h"
+#include "catalog/catalog.h"
 #include "compiler/code_context.h"
+
 
 namespace tpl::compiler {
 
@@ -72,6 +75,8 @@ class CodeGen {
   Type *DoubleType() const { return code_context_.double_type_; }
   Type *VoidType() const { return code_context_.void_type_; }
   Type *VoidPtrType() const { return code_context_.void_ptr_type_; }
+
+  Type *RowType(catalog::table_oid_t oid);
   // PointerType *CharPtrType() const { return code_context_.char_ptr_type_; }
   // /Generate a call to the function with the provided name and arguments
   void CallFunc(Function *fn, std::initializer_list<Value *> args);
@@ -169,6 +174,9 @@ class CodeGen {
   CodeBuilder<> &GetBuilder() const { return code_context_.GetBuilder(); }
 
  private:
+
+  ast::AstNodeFactory nodeFactory_;
+
   // The context/module where all the code this class produces goes
   CodeContext &code_context_;
 
