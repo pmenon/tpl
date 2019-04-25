@@ -23,7 +23,14 @@ class Value {
     return ident;
   }
 
+  virtual ast::Expr *GetIdentifierExpr(ast::AstNodeFactory *nodeFactory) const {
+    SourcePosition dummy;
+    return nodeFactory->NewIdentifierExpr(dummy, GetIdentifier());
+  }
+
   ast::Expr *GetExpr() { return type_; }
+
+  std::string &GetName() {return name_; };
 
  private:
   friend class Function;
@@ -44,6 +51,31 @@ class Constant : public Value {
  private:
   friend class Function;
   std::string value_;
+};
+
+class StructMember : public Value {
+ public:
+  explicit StructMember(Type *t, std::string &&name, ast::Identifier parent) : Value(t, std::move(name_)) {
+    hierarchy_.emplace_back(parent);
+  }
+
+  ast::Expr *GetIdentifierExpr(ast::AstNodeFactory *nodeFactory) const override {
+    SourcePosition dummy;
+    return nodeFactory->NewMemberExpr(dummy, nodeFactory->NewIdentifierExpr(dummy,
+        hierarchy_.back()), nodeFactory->NewIdentifierExpr(dummy, GetIdentifier()));
+  }
+
+ private:
+  std::vector<ast::Identifier> hierarchy_;
+};
+
+class StructVal : public Value {
+ public:
+  explicit StructVal(Type *t, std::string &&name) : Value(t, std::move(name)) {}
+
+  StructMember *GetStructMember(std::string &&memberName) {
+    return new StructMember(GetType(), std::move(memberName), GetIdentifier());
+  }
 };
 
 class CodeBlock {
