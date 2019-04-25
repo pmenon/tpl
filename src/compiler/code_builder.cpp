@@ -1,7 +1,7 @@
 #include "compiler/code_builder.h"
 
 namespace tpl::compiler {
-Block *CodeBlock::Call(Function *fn, std::initializer_list<Value *> arguments) {
+ast::CallExpr *CodeBlock::Call(Function *fn, std::initializer_list<Value *> arguments) {
   util::RegionVector<ast::Expr *> args(region_.get());
   for (auto a : arguments) {
     args.push_back(a->GetExpr());

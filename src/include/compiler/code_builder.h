@@ -161,7 +161,7 @@ class CodeBlock {
     return BinaryOp(dest, left, right, parsing::Token::Type::PLUS);
   }
 
-  Block *Call(Function *fn, std::initializer_list<Value *> arguments);
+  ast::CallExpr *Call(Function *fn, std::initializer_list<Value *> arguments);
 
   ast::BlockStmt *Compile() {
     SourcePosition dummy;
