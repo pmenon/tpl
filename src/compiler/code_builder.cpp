@@ -12,7 +12,8 @@ Block *CodeBlock::Call(Function *fn, std::initializer_list<Value *> arguments) {
   return retBlock;
 }
 
-Block *CodeBlock::CreateForInLoop(Value *target, Value *iter, CodeBlock *body, bool batch) {
+Block *CodeBlock::CreateForInLoop(Value *target, Value *iter, CodeBlock *body,
+                                  bool batch) {
   SourcePosition dummy;
   ast::Stmt *retStmt;
   if (batch) {
@@ -20,14 +21,14 @@ Block *CodeBlock::CreateForInLoop(Value *target, Value *iter, CodeBlock *body, b
     util::RegionUnorderedMap<ast::Identifier, ast::Expr *> map(&mapRegion);
     ast::Identifier batchIdent("batch");
 
-    //TODO (tanujnay112) make the value an actual Expr*
+    // TODO (tanujnay112) make the value an actual Expr*
     map.emplace(std::move(batchIdent), nullptr);
     ast::Attributes attrib(std::move(map));
-    retStmt = nodeFactory_->NewForInStmt(dummy, target->GetExpr(), iter->GetExpr(),
-                                         &attrib, body->Compile());
-  }else {
-    retStmt = nodeFactory_->NewForInStmt(dummy, target->GetExpr(), iter->GetExpr(),
-                                         nullptr, body->Compile());
+    retStmt = nodeFactory_->NewForInStmt(
+        dummy, target->GetExpr(), iter->GetExpr(), &attrib, body->Compile());
+  } else {
+    retStmt = nodeFactory_->NewForInStmt(
+        dummy, target->GetExpr(), iter->GetExpr(), nullptr, body->Compile());
   }
   blocks_.push_back(retStmt);
   return retStmt;

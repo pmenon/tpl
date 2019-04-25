@@ -75,7 +75,6 @@ CodeContext::CodeContext(sema::ErrorReporter &errorReporter)
   char_ptr_type_ = llvm::Type::getInt8PtrTy(*context_);*/
 }
 
-
 /// Destructor
 CodeContext::~CodeContext() {
   // We need this empty constructor because we declared a std::unique_ptr<>
@@ -84,9 +83,8 @@ CodeContext::~CodeContext() {
 }
 
 Type *CodeContext::TypeFromTypeId(sql::TypeId typeId) {
-
   // TODO (tanujnay112) find a better way to do this
-  switch(typeId) {
+  switch (typeId) {
     case sql::TypeId::Boolean:
       return bool_type_;
     case sql::TypeId::SmallInt:

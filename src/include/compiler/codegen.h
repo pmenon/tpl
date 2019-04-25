@@ -4,10 +4,9 @@
 #include <util/macros.h>
 #include <string>
 #include <vector>
-#include "catalog/catalog_defs.h"
 #include "catalog/catalog.h"
+#include "catalog/catalog_defs.h"
 #include "compiler/code_context.h"
-
 
 namespace tpl::compiler {
 
@@ -174,7 +173,6 @@ class CodeGen {
   CodeBuilder<> &GetBuilder() const { return code_context_.GetBuilder(); }
 
  private:
-
   ast::AstNodeFactory nodeFactory_;
 
   // The context/module where all the code this class produces goes

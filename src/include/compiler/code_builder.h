@@ -30,7 +30,7 @@ class Value {
 
   ast::Expr *GetExpr() { return type_; }
 
-  std::string &GetName() {return name_; };
+  std::string &GetName() { return name_; };
 
  private:
   friend class Function;
@@ -41,11 +41,19 @@ class Value {
 class Constant : public Value {
  public:
   explicit Constant(Type *t, std::string &&name, std::string &&value)
-      : Value(t, std::move(name)), value_(value) {}
+      : Value(t, std::move(name)), value_(value) {
+    TPL_ASSERT(GetType()->IsLitExpr(), "Not a literal type");
+  }
 
   ast::Identifier GetIdentifier() const override {
     ast::Identifier ident(value_.data());
     return ident;
+  }
+
+  ast::Expr *GetIdentifierExpr(
+      ast::AstNodeFactory *nodeFactory) const override {
+    SourcePosition dummy;
+    return nodeFactory->NewIdentifierExpr(dummy, GetIdentifier());
   }
 
  private:
@@ -55,14 +63,17 @@ class Constant : public Value {
 
 class StructMember : public Value {
  public:
-  explicit StructMember(Type *t, std::string &&name, ast::Identifier parent) : Value(t, std::move(name_)) {
+  explicit StructMember(Type *t, std::string &&name, ast::Identifier parent)
+      : Value(t, std::move(name_)) {
     hierarchy_.emplace_back(parent);
   }
 
-  ast::Expr *GetIdentifierExpr(ast::AstNodeFactory *nodeFactory) const override {
+  ast::Expr *GetIdentifierExpr(
+      ast::AstNodeFactory *nodeFactory) const override {
     SourcePosition dummy;
-    return nodeFactory->NewMemberExpr(dummy, nodeFactory->NewIdentifierExpr(dummy,
-        hierarchy_.back()), nodeFactory->NewIdentifierExpr(dummy, GetIdentifier()));
+    return nodeFactory->NewMemberExpr(
+        dummy, nodeFactory->NewIdentifierExpr(dummy, hierarchy_.back()),
+        nodeFactory->NewIdentifierExpr(dummy, GetIdentifier()));
   }
 
  private:
@@ -104,7 +115,25 @@ class CodeBlock {
     return variable;
   }
 
-  Block *CreateForInLoop(Value *target, Value *iter, CodeBlock *body, bool batch);
+  Block *CreateForInLoop(Value *target, Value *iter, CodeBlock *body,
+                         bool batch);
+
+  ast::BinaryOpExpr *ExecBinaryOp(Value *left, Value *right,
+                                  parsing::Token::Type op) {
+    SourcePosition dummy;
+    return nodeFactory_->NewBinaryOpExpr(
+        dummy, op, left->GetIdentifierExpr(nodeFactory_.get()),
+        right->GetIdentifierExpr(nodeFactory_.get()));
+  }
+
+  Block *OpAdd(Value *dest, Value *left, Value *right) {
+    SourcePosition dummy;
+    auto binOp = ExecBinaryOp(left, right, parsing::Token::Type::PLUS);
+    auto retBlock = nodeFactory_->NewAssignmentStmt(
+        dummy, dest->GetIdentifierExpr(nodeFactory_.get()), binOp);
+    blocks_.emplace_back(retBlock);
+    return retBlock;
+  }
 
   Block *Call(Function *fn, std::initializer_list<Value *> arguments);
 

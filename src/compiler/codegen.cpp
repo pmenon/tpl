@@ -1,6 +1,6 @@
+#include "compiler/codegen.h"
 #include <sql/execution_structures.h>
 #include "ast/identifier.h"
-#include "compiler/codegen.h"
 
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Intrinsics.h"
@@ -28,13 +28,15 @@ Type *CodeGen::RowType(catalog::table_oid_t oid) {
   auto *schema = tableInfo->GetStorageSchema();
   const std::vector<catalog::Schema::Column> &columns = schema->GetColumns();
 
-  // TODO (tanujnay112) this is stack allocated, figure out where to get an actual region from
+  // TODO (tanujnay112) this is stack allocated, figure out where to get an
+  // actual region from
   util::Region region = util::Region("field region");
   util::RegionVector<ast::FieldDecl *> fields(&region);
   SourcePosition dummy;
   for (auto col : columns) {
     ast::Identifier ident(col.GetName().data());
-    ast::FieldDecl *decl = nodeFactory_.NewFieldDecl(dummy, ident, GetCodeContext().TypeFromTypeId(col.GetType()));
+    ast::FieldDecl *decl = nodeFactory_.NewFieldDecl(
+        dummy, ident, GetCodeContext().TypeFromTypeId(col.GetType()));
     fields.emplace_back(decl);
   }
   return nodeFactory_.NewStructType(dummy, std::move(fields));
@@ -370,7 +372,6 @@ uint64_t CodeGen::ElementOffset(llvm::Type *type, uint32_t element_idx) const {
       data_layout.getStructLayout(llvm::cast<llvm::StructType>(type));
   return struct_layout->getElementOffset(element_idx);
 }
-
 
 }  // namespace compiler
 }  // namespace tpl
