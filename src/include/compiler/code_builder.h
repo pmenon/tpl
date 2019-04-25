@@ -7,7 +7,7 @@
 #include "function_builder.h"
 
 namespace tpl::compiler {
-using Block = ast::AstNode;
+using Block = ast::Stmt;
 using Type = ast::Expr;
 
 class Function;
@@ -51,8 +51,7 @@ class Constant : public Value {
     return ident;
   }
 
-  ast::Expr *GetIdentifierExpr(
-      ast::AstNodeFactory *nodeFactory) const override;
+  ast::Expr *GetIdentifierExpr(ast::AstNodeFactory *nodeFactory) const override;
 
  private:
   friend class Function;
@@ -62,7 +61,7 @@ class Constant : public Value {
 class StructMember : public Value {
  public:
   explicit StructMember(Type *t, std::string &&name, ast::Identifier parent)
-      : Value(t, std::move(name_)) {
+      : Value(t, std::move(name)) {
     hierarchy_.emplace_back(parent);
   }
 
@@ -113,6 +112,7 @@ class CodeBlock {
     return variable;
   }
 
+
   Block *CreateForInLoop(Value *target, Value *iter, CodeBlock *body,
                          bool batch);
 
@@ -124,13 +124,41 @@ class CodeBlock {
         right->GetIdentifierExpr(nodeFactory_.get()));
   }
 
-  Block *OpAdd(Value *dest, Value *left, Value *right) {
+  ast::UnaryOpExpr *ExecUnaryOp(Value *target, parsing::Token::Type op) {
     SourcePosition dummy;
-    auto binOp = ExecBinaryOp(left, right, parsing::Token::Type::PLUS);
+    return nodeFactory_->NewUnaryOpExpr(dummy, op, target->GetIdentifierExpr(nodeFactory_.get()));
+  }
+
+  Block *CreateIfStmt(ast::Expr *cond, CodeBlock *thenBlock, CodeBlock *elseBlock) {
+    ast::Stmt *ret;
+    SourcePosition dummy;
+    if(elseBlock == nullptr) {
+      ret = nodeFactory_->NewIfStmt(dummy, cond, thenBlock->Compile(), nullptr);
+    } else {
+      ret = nodeFactory_->NewIfStmt(dummy, cond, thenBlock->Compile(), elseBlock->Compile());
+    }
+    blocks_.emplace_back(ret);
+    return ret;
+  }
+
+  Block *CreateForStmt(Block *init, ast::Expr *cond, Block *next, CodeBlock *body) {
+    SourcePosition dummy;
+    ast::Stmt *ret = nodeFactory_->NewForStmt(dummy, init, cond, next, body->Compile());
+    blocks_.emplace_back(ret);
+    return ret;
+  }
+
+  Block *BinaryOp(Value *dest, Value *left, Value *right, parsing::Token::Type op) {
+    SourcePosition dummy;
+    auto binOp = ExecBinaryOp(left, right, op);
     auto retBlock = nodeFactory_->NewAssignmentStmt(
         dummy, dest->GetIdentifierExpr(nodeFactory_.get()), binOp);
     blocks_.emplace_back(retBlock);
     return retBlock;
+  }
+
+  Block *OpAdd(Value *dest, Value *left, Value *right) {
+    return BinaryOp(dest, left, right, parsing::Token::Type::PLUS);
   }
 
   Block *Call(Function *fn, std::initializer_list<Value *> arguments);

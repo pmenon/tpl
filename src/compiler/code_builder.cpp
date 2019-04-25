@@ -12,6 +12,7 @@ Block *CodeBlock::Call(Function *fn, std::initializer_list<Value *> arguments) {
   return retBlock;
 }
 
+// Templates for Constant identifier expression nodes based on type
 template <>
 ast::Expr *Constant<bool>::GetIdentifierExpr(
     ast::AstNodeFactory *nodeFactory) const {
@@ -26,7 +27,7 @@ ast::Expr *Constant<f32>::GetIdentifierExpr(
   return nodeFactory->NewFloatLiteral(dummy, value_);
 }
 
-template<>
+template <>
 ast::Expr *Constant<i32>::GetIdentifierExpr(
     ast::AstNodeFactory *nodeFactory) const {
   SourcePosition dummy;
