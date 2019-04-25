@@ -1,5 +1,10 @@
 #include "parsing/rewriter.h"
 
+#include <string>
+#include <utility>
+
+#include "llvm/ADT/SmallVector.h"
+
 #include "ast/ast.h"
 #include "ast/ast_node_factory.h"
 #include "ast/context.h"
@@ -10,38 +15,68 @@ namespace tpl::parsing {
 
 namespace {
 
-ast::Stmt *InitTVI(ast::Context *ctx, ast::Identifier tvi_name) {
-  SourcePosition pos{0, 0};
+ast::Decl *DeclareVar(ast::Context *ctx, SourcePosition pos,
+                      const std::string &name, ast::Expr *type_repr,
+                      ast::Expr *init) {
+  auto name_ident = ctx->GetIdentifier(name);
+  return ctx->node_factory()->NewVariableDecl(pos, name_ident, type_repr, init);
+}
 
-  auto *factory = ctx->node_factory();
+ast::Decl *DeclareVarNoType(ast::Context *ctx, SourcePosition pos,
+                            const std::string &name, ast::Expr *init) {
+  return DeclareVar(ctx, pos, name, nullptr, init);
+}
 
-  auto *tvi_type =
-      ast::BuiltinType::Get(ctx, ast::BuiltinType::TableVectorIterator);
+ast::Decl *DeclareVarNoInit(ast::Context *ctx, SourcePosition pos,
+                            const std::string &name, ast::Expr *type_repr) {
+  return DeclareVar(ctx, pos, name, type_repr, nullptr);
+}
 
-  auto tvi_type_ident = ctx->GetIdentifier(tvi_type->tpl_name());
+ast::Decl *DeclareVarNoInit(ast::Context *ctx, SourcePosition pos,
+                            const std::string &name,
+                            ast::BuiltinType::Kind kind) {
+  auto *type = ast::BuiltinType::Get(ctx, kind);
+  auto type_ident = ctx->GetIdentifier(type->tpl_name());
+  auto type_expr = ctx->node_factory()->NewIdentifierExpr(pos, type_ident);
+  return DeclareVarNoInit(ctx, pos, name, type_expr);
+}
 
-  return factory->NewDeclStmt(factory->NewVariableDecl(
-      pos, tvi_name, factory->NewIdentifierExpr(pos, tvi_type_ident), nullptr));
+// Generate a call to the given builtin using the given arguments
+ast::Expr *GenCallBuiltin(ast::Context *ctx, SourcePosition pos,
+                          ast::Builtin builtin,
+                          const llvm::SmallVectorImpl<ast::Expr *> &args) {
+  auto *name = ctx->node_factory()->NewIdentifierExpr(
+      pos, ctx->GetIdentifier(ast::Builtins::GetFunctionName(builtin)));
+  return ctx->node_factory()->NewBuiltinCallExpr(
+      name, {args.begin(), args.end(), ctx->region()});
 }
 
 }  // namespace
 
-ast::Stmt *RewriteForInScans(ast::Context *ctx, ast::ForInStmt *for_in) {
+ast::Stmt *RewriteForInScan(ast::Context *ctx, ast::ForInStmt *for_in) {
   // We want to convert the following:
   //
-  // for ('target' in 'iter') {
+  // for (target in "table_name") {
   //   body
   // }
   //
   // into:
   //
   // var $tvi: TableVectorIterator
-  // for (@tableIterInit(&$tvi, 'iter'); @tableIterAdvance(&$tvi); ) {
-  //   var 'target' = @tableIterGetVPI(&$tvi)
+  // for (@tableIterInit(&$tvi, "table_name"); @tableIterAdvance(&$tvi); ) {
+  //   var target = @tableIterGetVPI(&$tvi)
   //   (body)
+  //   @vpiReset(target)
   // }
   // @tableIterClose(&$tvi)
   //
+
+  TPL_ASSERT(for_in->target()->IsIdentifierExpr(),
+             "Target must be an identifier");
+  TPL_ASSERT(for_in->iter()->IsLitExpr(),
+             "Iterable must be a literal expression");
+  TPL_ASSERT(for_in->iter()->As<ast::LitExpr>()->IsStringLitExpr(),
+             "Iterable must be a string literal");
 
   const auto pos = for_in->position();
   auto *factory = ctx->node_factory();
@@ -50,12 +85,17 @@ ast::Stmt *RewriteForInScans(ast::Context *ctx, ast::ForInStmt *for_in) {
 
   // The iterator's name
   ast::Identifier tvi_name = ctx->GetIdentifier("$tvi");
+
   // An expression computing the address of the iterator. Used all over here.
   ast::Expr *tvi_addr = factory->NewUnaryOpExpr(
       pos, Token::Type::AMPERSAND, factory->NewIdentifierExpr(pos, tvi_name));
 
   // Declare the TVI
-  statements.push_back(InitTVI(ctx, tvi_name));
+  {
+    auto *tvi_decl = DeclareVarNoInit(ctx, pos, tvi_name.data(),
+                                      ast::BuiltinType::TableVectorIterator);
+    statements.push_back(factory->NewDeclStmt(tvi_decl));
+  }
 
   // Now the for-loop
   ast::Stmt *init = nullptr, *next = nullptr;
@@ -63,36 +103,36 @@ ast::Stmt *RewriteForInScans(ast::Context *ctx, ast::ForInStmt *for_in) {
 
   // First the initialization
   {
-    util::RegionVector<ast::Expr *> args({tvi_addr, for_in->target()},
-                                         ctx->region());
-    auto *name = factory->NewIdentifierExpr(
-        pos, ctx->GetIdentifier(
-                 ast::Builtins::GetFunctionName(ast::Builtin::TableIterInit)));
-    auto *call = factory->NewBuiltinCallExpr(name, std::move(args));
+    llvm::SmallVector<ast::Expr *, 2> args = {tvi_addr, for_in->iter()};
+    auto *call = GenCallBuiltin(ctx, pos, ast::Builtin::TableIterInit, args);
     init = factory->NewExpressionStmt(call);
   }
 
-  // Next, the condition
+  // Next, the loop condition
   {
-    util::RegionVector<ast::Expr *> args({tvi_addr}, ctx->region());
-    auto *name = factory->NewIdentifierExpr(
-        pos, ctx->GetIdentifier(ast::Builtins::GetFunctionName(
-                 ast::Builtin::TableIterAdvance)));
-    cond = factory->NewBuiltinCallExpr(name, std::move(args));
+    llvm::SmallVector<ast::Expr *, 1> args = {tvi_addr};
+    cond = GenCallBuiltin(ctx, pos, ast::Builtin::TableIterAdvance, args);
   }
 
   // Splice in the target initialization at the start of the body
   {
-    util::RegionVector<ast::Expr *> args({tvi_addr}, ctx->region());
-    auto *name = factory->NewIdentifierExpr(
-        pos, ctx->GetIdentifier(ast::Builtins::GetFunctionName(
-                 ast::Builtin::TableIterGetVPI)));
-    auto *call = factory->NewBuiltinCallExpr(name, std::move(args));
-    auto *vpi_decl = factory->NewVariableDecl(
-        pos, for_in->target()->As<ast::IdentifierExpr>()->name(), nullptr,
-        call);
     auto &body = for_in->body()->statements();
+
+    // Pull out VPI
+    llvm::SmallVector<ast::Expr *, 1> args = {tvi_addr};
+    auto *call = GenCallBuiltin(ctx, pos, ast::Builtin::TableIterGetVPI, args);
+    auto vpi_ident = for_in->target()->As<ast::IdentifierExpr>()->name();
+    auto *vpi_decl = DeclareVarNoType(ctx, pos, vpi_ident.data(), call);
     body.insert(body.begin(), factory->NewDeclStmt(vpi_decl));
+  }
+
+  {
+    auto &body = for_in->body()->statements();
+
+    auto vpi_ident = for_in->target()->As<ast::IdentifierExpr>();
+    llvm::SmallVector<ast::Expr *, 1> args = {vpi_ident};
+    auto *call = GenCallBuiltin(ctx, pos, ast::Builtin::VPIReset, args);
+    body.push_back(factory->NewExpressionStmt(call));
   }
 
   // Add the loop to the running statements list
@@ -101,11 +141,8 @@ ast::Stmt *RewriteForInScans(ast::Context *ctx, ast::ForInStmt *for_in) {
 
   // Close the iterator after the loop
   {
-    util::RegionVector<ast::Expr *> args({tvi_addr}, ctx->region());
-    auto *name = factory->NewIdentifierExpr(
-        pos, ctx->GetIdentifier(
-                 ast::Builtins::GetFunctionName(ast::Builtin::TableIterClose)));
-    auto *call = factory->NewBuiltinCallExpr(name, std::move(args));
+    llvm::SmallVector<ast::Expr *, 1> args = {tvi_addr};
+    auto *call = GenCallBuiltin(ctx, pos, ast::Builtin::TableIterClose, args);
     statements.push_back(factory->NewExpressionStmt(call));
   }
 

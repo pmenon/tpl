@@ -117,7 +117,7 @@ class AstNodeFactory {
   }
 
   LitExpr *NewStringLiteral(const SourcePosition &pos, Identifier str) {
-    return new (region_) LitExpr(pos, LitExpr::LitKind::String, str);
+    return new (region_) LitExpr(pos, str);
   }
 
   FunctionLitExpr *NewFunctionLitExpr(FunctionTypeRepr *type_repr,

@@ -795,12 +795,10 @@ class LitExpr : public Expr {
       : Expr(Kind::LitExpr, pos), lit_kind_(LitExpr::LitKind::Nil) {}
 
   LitExpr(const SourcePosition &pos, bool val)
-      : Expr(Kind::LitExpr, pos),
-        lit_kind_(LitExpr::LitKind::Boolean),
-        boolean_(val) {}
+      : Expr(Kind::LitExpr, pos), lit_kind_(LitKind::Boolean), boolean_(val) {}
 
-  LitExpr(const SourcePosition &pos, LitExpr::LitKind lit_kind, Identifier str)
-      : Expr(Kind::LitExpr, pos), lit_kind_(lit_kind), str_(str) {}
+  LitExpr(const SourcePosition &pos, Identifier str)
+      : Expr(Kind::LitExpr, pos), lit_kind_(LitKind::String), str_(str) {}
 
   LitExpr(const SourcePosition &pos, i32 num)
       : Expr(Kind::LitExpr, pos), lit_kind_(LitKind::Int), int32_(num) {}
@@ -810,28 +808,29 @@ class LitExpr : public Expr {
 
   LitExpr::LitKind literal_kind() const { return lit_kind_; }
 
+  bool IsNilLitExpr() const { return lit_kind_ == LitKind::Nil; }
+  bool IsBoolLitExpr() const { return lit_kind_ == LitKind::Boolean; }
+  bool IsIntLitExpr() const { return lit_kind_ == LitKind::Int; }
+  bool IsFloatLitExpr() const { return lit_kind_ == LitKind::Float; }
+  bool IsStringLitExpr() const { return lit_kind_ == LitKind::String; }
+
   bool bool_val() const {
-    TPL_ASSERT(literal_kind() == LitKind::Boolean,
-               "Getting boolean value from a non-bool expression!");
+    TPL_ASSERT(IsBoolLitExpr(), "Literal is not a boolean value literal");
     return boolean_;
   }
 
   Identifier raw_string_val() const {
-    TPL_ASSERT(
-        literal_kind() != LitKind::Nil && literal_kind() != LitKind::Boolean,
-        "Getting a raw string value from a non-string or numeric value");
+    TPL_ASSERT(IsStringLitExpr(), "Literal is not a string or identifier");
     return str_;
   }
 
   i32 int32_val() const {
-    TPL_ASSERT(literal_kind() == LitKind::Int,
-               "Getting integer value from a non-integer literal expression");
+    TPL_ASSERT(IsIntLitExpr(), "Literal is not an integer literal");
     return int32_;
   }
 
   f32 float32_val() const {
-    TPL_ASSERT(literal_kind() == LitKind::Float,
-               "Getting float value from a non-float literal expression");
+    TPL_ASSERT(IsFloatLitExpr(), "Literal is not a floating point literal");
     return float32_;
   }
 

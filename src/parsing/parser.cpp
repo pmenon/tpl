@@ -324,6 +324,7 @@ ast::Stmt *Parser::ParseForStmt() {
     const auto &[init, cond, next] = header.GetForElements();
     return node_factory_->NewForStmt(position, init, cond, next, body);
   }
+
   const auto &[target, iter] = header.GetForInElements();
   return node_factory_->NewForInStmt(position, target, iter, body);
 }
