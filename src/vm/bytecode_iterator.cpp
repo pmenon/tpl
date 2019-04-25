@@ -16,13 +16,13 @@ BytecodeIterator::BytecodeIterator(const std::vector<u8> &bytecode,
 
 Bytecode BytecodeIterator::CurrentBytecode() const {
   auto raw_code = *reinterpret_cast<const std::underlying_type_t<Bytecode> *>(
-      &bytecodes_[current_offset()]);
+      &bytecodes_[curr_offset_]);
   return Bytecodes::FromByte(raw_code);
 }
 
-void BytecodeIterator::Advance() { curr_offset_ += CurrentBytecodeSize(); }
+bool BytecodeIterator::Done() const { return curr_offset_ >= end_offset_; }
 
-bool BytecodeIterator::Done() const { return current_offset() >= end_offset(); }
+void BytecodeIterator::Advance() { curr_offset_ += CurrentBytecodeSize(); }
 
 i64 BytecodeIterator::GetImmediateOperand(u32 operand_index) const {
   OperandType operand_type =
@@ -31,7 +31,7 @@ i64 BytecodeIterator::GetImmediateOperand(u32 operand_index) const {
              "Operand type is not a signed immediate");
 
   const u8 *operand_address =
-      bytecodes().data() + current_offset() +
+      bytecodes_.data() + curr_offset_ +
       Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
 
   switch (operand_type) {
@@ -58,7 +58,7 @@ u64 BytecodeIterator::GetUnsignedImmediateOperand(u32 operand_index) const {
              "Operand type is not a signed immediate");
 
   const u8 *operand_address =
-      bytecodes().data() + current_offset() +
+      bytecodes_.data() + curr_offset_ +
       Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
 
   switch (operand_type) {
@@ -68,10 +68,8 @@ u64 BytecodeIterator::GetUnsignedImmediateOperand(u32 operand_index) const {
     case OperandType::UImm4: {
       return *reinterpret_cast<const u32 *>(operand_address);
     }
-    default: { break; }
+    default: { UNREACHABLE("Impossible!"); }
   }
-
-  UNREACHABLE("Impossible!");
 }
 
 i32 BytecodeIterator::GetJumpOffsetOperand(u32 operand_index) const {
@@ -79,7 +77,7 @@ i32 BytecodeIterator::GetJumpOffsetOperand(u32 operand_index) const {
                  OperandType::JumpOffset,
              "Operand isn't a jump offset");
   const u8 *operand_address =
-      bytecodes().data() + current_offset() +
+      bytecodes_.data() + curr_offset_ +
       Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
 
   return *reinterpret_cast<const i32 *>(operand_address);
@@ -90,7 +88,7 @@ LocalVar BytecodeIterator::GetLocalOperand(u32 operand_index) const {
                  CurrentBytecode(), operand_index)),
              "Operand type is not a local variable reference");
   const u8 *operand_address =
-      bytecodes().data() + current_offset() +
+      bytecodes_.data() + curr_offset_ +
       Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
 
   auto encoded_val = *reinterpret_cast<const u32 *>(operand_address);
@@ -104,7 +102,7 @@ u16 BytecodeIterator::GetLocalCountOperand(
              "Operand type is not a local variable count");
 
   const u8 *operand_address =
-      bytecodes().data() + current_offset() +
+      bytecodes_.data() + curr_offset_ +
       Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
 
   u16 num_locals = *reinterpret_cast<const u16 *>(operand_address);
@@ -128,7 +126,7 @@ u16 BytecodeIterator::GetFunctionIdOperand(u32 operand_index) const {
              "Operand type is not a function");
 
   const u8 *operand_address =
-      bytecodes().data() + current_offset() +
+      bytecodes_.data() + curr_offset_ +
       Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
 
   return *reinterpret_cast<const u16 *>(operand_address);
