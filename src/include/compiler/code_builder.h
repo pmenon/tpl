@@ -38,9 +38,10 @@ class Value {
   Type *type_;
 };
 
+template <class T>
 class Constant : public Value {
  public:
-  explicit Constant(Type *t, std::string &&name, std::string &&value)
+  explicit Constant(Type *t, std::string &&name, T value)
       : Value(t, std::move(name)), value_(value) {
     TPL_ASSERT(GetType()->IsLitExpr(), "Not a literal type");
   }
@@ -51,14 +52,11 @@ class Constant : public Value {
   }
 
   ast::Expr *GetIdentifierExpr(
-      ast::AstNodeFactory *nodeFactory) const override {
-    SourcePosition dummy;
-    return nodeFactory->NewIdentifierExpr(dummy, GetIdentifier());
-  }
+      ast::AstNodeFactory *nodeFactory) const override;
 
  private:
   friend class Function;
-  std::string value_;
+  T value_;
 };
 
 class StructMember : public Value {

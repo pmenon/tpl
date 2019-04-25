@@ -12,6 +12,27 @@ Block *CodeBlock::Call(Function *fn, std::initializer_list<Value *> arguments) {
   return retBlock;
 }
 
+template <>
+ast::Expr *Constant<bool>::GetIdentifierExpr(
+    ast::AstNodeFactory *nodeFactory) const {
+  SourcePosition dummy;
+  return nodeFactory->NewBoolLiteral(dummy, value_);
+}
+
+template <>
+ast::Expr *Constant<f32>::GetIdentifierExpr(
+    ast::AstNodeFactory *nodeFactory) const {
+  SourcePosition dummy;
+  return nodeFactory->NewFloatLiteral(dummy, value_);
+}
+
+template<>
+ast::Expr *Constant<i32>::GetIdentifierExpr(
+    ast::AstNodeFactory *nodeFactory) const {
+  SourcePosition dummy;
+  return nodeFactory->NewIntLiteral(dummy, value_);
+}
+
 Block *CodeBlock::CreateForInLoop(Value *target, Value *iter, CodeBlock *body,
                                   bool batch) {
   SourcePosition dummy;
