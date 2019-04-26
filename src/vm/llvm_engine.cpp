@@ -77,10 +77,12 @@ class LLVMEngine::TypeMap {
     type_map_["int16"] = llvm::Type::getInt16Ty(ctx);
     type_map_["int32"] = llvm::Type::getInt32Ty(ctx);
     type_map_["int64"] = llvm::Type::getInt64Ty(ctx);
+    type_map_["int128"] = llvm::Type::getInt128Ty(ctx);
     type_map_["uint8"] = llvm::Type::getInt8Ty(ctx);
     type_map_["uint16"] = llvm::Type::getInt16Ty(ctx);
     type_map_["uint32"] = llvm::Type::getInt32Ty(ctx);
     type_map_["uint64"] = llvm::Type::getInt64Ty(ctx);
+    type_map_["uint128"] = llvm::Type::getInt128Ty(ctx);
     type_map_["float32"] = llvm::Type::getFloatTy(ctx);
     type_map_["float64"] = llvm::Type::getDoubleTy(ctx);
     type_map_["string"] = llvm::Type::getInt8PtrTy(ctx);
