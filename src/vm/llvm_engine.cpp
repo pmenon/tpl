@@ -472,11 +472,12 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
 
     LOG_TRACE("LLVM: Discovered CPU features: {}", target_features.getString());
 
+    // Both relocation=PIC or JIT=true work. Use the latter for now.
     llvm::TargetOptions target_options;
-    llvm::Optional<llvm::Reloc::Model> reloc = llvm::Reloc::Model::PIC_;
+    llvm::Optional<llvm::Reloc::Model> reloc;
     target_machine_.reset(target->createTargetMachine(
         target_triple, llvm::sys::getHostCPUName(), target_features.getString(),
-        target_options, reloc));
+        target_options, reloc, {}, {}, true));
     TPL_ASSERT(target_machine_ != nullptr,
                "LLVM: Unable to find a suitable target machine!");
   }

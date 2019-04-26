@@ -58,7 +58,10 @@ static void CompileAndRun(const std::string &source,
   double parse_ms = 0, typecheck_ms = 0, codegen_ms = 0, exec_ms = 0,
          jit_ms = 0;
 
+  //
   // Parse
+  //
+
   ast::AstNode *root;
   {
     util::ScopedTimer<std::milli> timer(&parse_ms);
@@ -71,7 +74,10 @@ static void CompileAndRun(const std::string &source,
     return;
   }
 
+  //
   // Type check
+  //
+
   {
     util::ScopedTimer<std::milli> timer(&typecheck_ms);
     sema::Sema type_check(&context);
@@ -89,7 +95,10 @@ static void CompileAndRun(const std::string &source,
     ast::AstDump::Dump(root);
   }
 
-  // Codegen
+  //
+  // TBC generation
+  //
+
   std::unique_ptr<vm::BytecodeModule> module;
   {
     util::ScopedTimer<std::milli> timer(&codegen_ms);
@@ -101,7 +110,10 @@ static void CompileAndRun(const std::string &source,
     module->PrettyPrint(std::cout);
   }
 
+  //
   // Interpret
+  //
+
   {
     util::ScopedTimer<std::milli> timer(&exec_ms);
 
@@ -114,7 +126,10 @@ static void CompileAndRun(const std::string &source,
     LOG_INFO("VM main() returned: {}", main_func());
   }
 
+  //
   // JIT
+  //
+
   {
     util::ScopedTimer<std::milli> timer(&jit_ms);
 
