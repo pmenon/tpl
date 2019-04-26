@@ -11,6 +11,7 @@
 #include "ast/type.h"
 #include "logging/logger.h"
 #include "util/memory.h"
+#include "util/timer.h"
 #include "vm/bytecode_function_info.h"
 #include "vm/bytecode_iterator.h"
 #include "vm/llvm_engine.h"
@@ -213,21 +214,14 @@ inline bool BytecodeModule::GetFunction(
         // TODO(pmenon): Check if already compiled
 
         // JIT the module
-        auto compiled = LLVMEngine::Compile(*this);
+        LLVMEngine::CompilerOptions options;
+        auto compiled = LLVMEngine::Compile(*this, options);
 
         void *raw_fn = compiled->GetFunctionPointer(func_info->name());
         TPL_ASSERT(raw_fn != nullptr, "No function");
 
-        if constexpr (std::is_void_v<RetT>) {
-          auto *jit_f = reinterpret_cast<void (*)(ArgTypes...)>(raw_fn);
-          jit_f(args...);
-          return;
-        } else {
-          auto *jit_f = reinterpret_cast<void (*)(RetT *, ArgTypes...)>(raw_fn);
-          RetT rv{};
-          jit_f(&rv, args...);
-          return rv;
-        }
+        auto *jit_f = reinterpret_cast<RetT (*)(ArgTypes...)>(raw_fn);
+        return jit_f(args...);
       };
       break;
     }

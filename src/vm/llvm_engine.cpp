@@ -36,6 +36,20 @@
 
 namespace tpl::vm {
 
+namespace {
+
+bool FunctionHasIndirectReturn(const ast::FunctionType *func_type) {
+  ast::Type *ret_type = func_type->return_type();
+  return (!ret_type->IsNilType() && ret_type->size() > sizeof(i64));
+}
+
+bool FunctionHasDirectReturn(const ast::FunctionType *func_type) {
+  ast::Type *ret_type = func_type->return_type();
+  return (!ret_type->IsNilType() && ret_type->size() <= sizeof(i64));
+}
+
+}  // namespace
+
 // ---------------------------------------------------------
 // TPL's Jit Memory Manager
 // ---------------------------------------------------------
@@ -151,7 +165,7 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
     }
     case ast::Type::TypeId::PointerType: {
       auto *ptr_type = type->As<ast::PointerType>();
-      llvm_type = llvm::PointerType::get(GetLLVMType(ptr_type->base()), 0);
+      llvm_type = llvm::PointerType::getUnqual(GetLLVMType(ptr_type->base()));
       break;
     }
     case ast::Type::TypeId::ArrayType: {
@@ -221,18 +235,36 @@ llvm::StructType *LLVMEngine::TypeMap::GetLLVMStructType(
 
 llvm::FunctionType *LLVMEngine::TypeMap::GetLLVMFunctionType(
     const ast::FunctionType *func_type) {
-  // The return type
-  llvm::Type *ret_type = GetLLVMType(func_type->return_type());
-
-  // Collect the parameter types
+  // Collect parameter types here
   llvm::SmallVector<llvm::Type *, 8> param_types;
-  param_types.resize(func_type->params().size());
-  for (auto &param : func_type->params()) {
-    param_types.push_back(GetLLVMType(param.type));
+
+  //
+  // If the function has an indirect return value, insert it into the parameter
+  // list as the hidden first argument, and setup the function to return void.
+  // Otherwise, the return type of the LLVM function is the same as the TPL
+  // function.
+  //
+
+  llvm::Type *return_type = nullptr;
+  if (FunctionHasIndirectReturn(func_type)) {
+    llvm::Type *rv_param = GetLLVMType(func_type->return_type()->PointerTo());
+    param_types.push_back(rv_param);
+    // Return type of the function is void
+    return_type = VoidType();
+  } else {
+    return_type = GetLLVMType(func_type->return_type());
   }
 
-  // Done
-  return llvm::FunctionType::get(ret_type, param_types, false);
+  //
+  // Now the formal parameters
+  //
+
+  for (const auto &param_info : func_type->params()) {
+    llvm::Type *param_type = GetLLVMType(param_info.type);
+    param_types.push_back(param_type);
+  }
+
+  return llvm::FunctionType::get(return_type, param_types, false);
 }
 
 // ---------------------------------------------------------
@@ -262,16 +294,27 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
                                                  llvm::IRBuilder<> &ir_builder)
     : ir_builder_(ir_builder) {
   u32 local_idx = 0;
-  auto arg_iter = func->arg_begin();
-  for (local_idx = 0; local_idx < func_info.num_params(); local_idx++) {
-    const auto &param = func_info.locals()[local_idx];
+
+  const auto &func_locals = func_info.locals();
+
+  if (const ast::FunctionType *func_type = func_info.func_type();
+      FunctionHasDirectReturn(func_type)) {
+    llvm::Type *ret_type = type_map->GetLLVMType(func_type->return_type());
+    llvm::Value *val = ir_builder.CreateAlloca(ret_type);
+    params_[func_locals[0].offset()] = val;
+    local_idx++;
+  }
+
+  for (auto arg_iter = func->arg_begin(); local_idx < func_info.num_params();
+       ++local_idx, ++arg_iter) {
+    const LocalInfo &param = func_locals[local_idx];
     params_[param.offset()] = &*arg_iter;
-    ++arg_iter;
   }
 
   for (; local_idx < func_info.locals().size(); local_idx++) {
-    const auto &local = func_info.locals()[local_idx];
-    auto *val = ir_builder.CreateAlloca(type_map->GetLLVMType(local.type()));
+    const LocalInfo &local = func_locals[local_idx];
+    llvm::Value *val =
+        ir_builder.CreateAlloca(type_map->GetLLVMType(local.type()));
     locals_[local.offset()] = val;
   }
 }
@@ -331,7 +374,10 @@ class LLVMEngine::CompiledModuleBuilder {
   std::unique_ptr<CompiledModule> Finalize();
 
   // Print the contents of the module to a string and return it
-  std::string DumpModule() const;
+  std::string DumpModuleIR();
+
+  // Print the contents of the module's assembly to a string and return it
+  std::string DumpModuleAsm();
 
  private:
   // Given a TPL function, build a simple CFG using 'blocks' as an output param
@@ -448,7 +494,7 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
                 error.message());
     }
 
-    auto module = llvm::parseBitcodeFile(*(memory_buffer.get()), context());
+    auto module = llvm::parseBitcodeFile(*(memory_buffer.get()), *context_);
     if (!module) {
       auto error = llvm::toString(module.takeError());
       LOG_ERROR("{}", error);
@@ -464,22 +510,9 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
 }
 
 void LLVMEngine::CompiledModuleBuilder::DeclareFunctions() {
-  //
-  // For each TPL function in the bytecode module we build an equivalent LLVM
-  // function declaration
-  //
-
-  for (const auto &func_info : tpl_module().functions()) {
-    llvm::SmallVector<llvm::Type *, 8> param_types;
-
-    for (u32 i = 0; i < func_info.num_params(); i++) {
-      const ast::Type *type = func_info.locals()[i].type();
-      param_types.push_back(type_map()->GetLLVMType(type));
-    }
-
-    llvm::FunctionType *func_type =
-        llvm::FunctionType::get(type_map()->VoidType(), param_types, false);
-
+  for (const auto &func_info : tpl_module_.functions()) {
+    auto *func_type = llvm::cast<llvm::FunctionType>(
+        type_map()->GetLLVMType(func_info.func_type()));
     module()->getOrInsertFunction(func_info.name(), func_type);
   }
 }
@@ -688,15 +721,31 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
     switch (bytecode) {
       case Bytecode::Call: {
         //
-        // For internal calls, the callee function will be the first element in
-        // the arguments vector; the lookup of the callee function ID in the
-        // module is already done. The remaining elements are legitimate
-        // arguments to the function.
+        // For internal calls, the callee function's ID will be the first
+        // operand. We pull it out and lookup the function in the module, in
+        // addition to popping it off the arguments vector.
+        //
+        // If the function has a direct return, the second operand will be the
+        // value to store the result of the invocation into. We pop it off the
+        // argument vector, issue the call, then store the result. The remaining
+        // elements are legitimate arguments to the function.
         //
 
-        auto *callee = llvm::cast<llvm::Function>(args[0]);
+        const auto callee_id = iter.GetFunctionIdOperand(0);
+        const auto *callee_func_info = tpl_module().GetFuncInfoById(callee_id);
+
+        auto *callee = module()->getFunction(callee_func_info->name());
         args.erase(args.begin());
-        ir_builder.CreateCall(callee, args);
+
+        if (FunctionHasDirectReturn(callee_func_info->func_type())) {
+          llvm::Value *dest = args[0];
+          args.erase(args.begin());
+          llvm::Value *ret = ir_builder.CreateCall(callee, args);
+          ir_builder.CreateStore(ret, dest);
+        } else {
+          ir_builder.CreateCall(callee, args);
+        }
+
         break;
       }
 
@@ -749,7 +798,13 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
       }
 
       case Bytecode::Return: {
-        ir_builder.CreateRetVoid();
+        if (FunctionHasDirectReturn(func_info.func_type())) {
+          llvm::Value *ret_val =
+              locals_map.GetArgumentById(func_info.GetReturnValueLocal());
+          ir_builder.CreateRet(ir_builder.CreateLoad(ret_val));
+        } else {
+          ir_builder.CreateRetVoid();
+        }
         break;
       }
 
@@ -763,16 +818,25 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
         llvm::Function *handler = LookupBytecodeHandler(bytecode);
 
         {
-          auto arg_iter = handler->arg_begin();
-          for (u32 i = 0; i < args.size(); ++i, ++arg_iter) {
-            llvm::Argument *arg = &*arg_iter;
-            if (args[i]->getType() != arg->getType()) {
-              if (args[i]->getType()->isIntegerTy()) {
+          auto handler_arg_iter = handler->arg_begin();
+          for (u32 i = 0; i < args.size(); ++i, ++handler_arg_iter) {
+            llvm::Type *expected_type = handler_arg_iter->getType();
+            llvm::Type *provided_type = args[i]->getType();
+
+            if (provided_type == expected_type) {
+              continue;
+            }
+
+            if (expected_type->isIntegerTy()) {
+              if (provided_type->isPointerTy()) {
+                args[i] = ir_builder.CreatePtrToInt(args[i], expected_type);
+              } else {
                 args[i] =
-                    ir_builder.CreateIntCast(args[i], arg->getType(), true);
-              } else if (args[i]->getType()->isPointerTy()) {
-                args[i] = ir_builder.CreatePointerCast(args[i], arg->getType());
+                    ir_builder.CreateIntCast(args[i], expected_type, true);
               }
+            } else if (expected_type->isPointerTy()) {
+              args[i] =
+                  ir_builder.CreateBitOrPointerCast(args[i], expected_type);
             }
           }
         }
@@ -852,6 +916,8 @@ void LLVMEngine::CompiledModuleBuilder::Optimize() {
   function_pm.add(llvm::createTargetTransformInfoWrapperPass(
       target_machine()->getTargetIRAnalysis()));
   function_pm.add(llvm::createCFGSimplificationPass());
+  function_pm.add(llvm::createAggressiveDCEPass());
+  function_pm.add(llvm::createCFGSimplificationPass());
 
   //
   // The module-level optimization passes ...
@@ -895,33 +961,27 @@ LLVMEngine::CompiledModuleBuilder::Finalize() {
 
 std::unique_ptr<llvm::MemoryBuffer>
 LLVMEngine::CompiledModuleBuilder::EmitObject() {
-  //
-  // Generating a raw object file involves running a specialized pass that emits
-  // machine code. Thus, all we need to do is create an in-memory buffer to hold
-  // the machine code, and use that as the output buffer for the pass.
-  //
+  // Buffer holding the machine code. The returned buffer will take ownership of
+  // this one when we return
+  llvm::SmallString<4096> obj_buffer;
 
-  llvm::SmallVector<char, 0> obj_buffer;
+  // The pass manager we insert the EmitMC pass into
+  llvm::legacy::PassManager pass_manager;
+  pass_manager.add(new llvm::TargetLibraryInfoWrapperPass(
+      target_machine()->getTargetTriple()));
+  pass_manager.add(llvm::createTargetTransformInfoWrapperPass(
+      target_machine()->getTargetIRAnalysis()));
 
-  {
-    // The pass manager we insert the EmitMC pass into
-    llvm::legacy::PassManager pass_manager;
-    pass_manager.add(new llvm::TargetLibraryInfoWrapperPass(
-        target_machine()->getTargetTriple()));
-    pass_manager.add(llvm::createTargetTransformInfoWrapperPass(
-        target_machine()->getTargetIRAnalysis()));
-
-    llvm::MCContext *mc_ctx;
-    llvm::raw_svector_ostream obj_buffer_stream(obj_buffer);
-    if (target_machine()->addPassesToEmitMC(pass_manager, mc_ctx,
-                                            obj_buffer_stream)) {
-      LOG_ERROR("The target LLVM machine cannot emit a file of this type");
-      return nullptr;
-    }
-
-    // Generate code
-    pass_manager.run(*module());
+  llvm::MCContext *mc_ctx;
+  llvm::raw_svector_ostream obj_buffer_stream(obj_buffer);
+  if (target_machine()->addPassesToEmitMC(pass_manager, mc_ctx,
+                                          obj_buffer_stream)) {
+    LOG_ERROR("The target LLVM machine cannot emit a file of this type");
+    return nullptr;
   }
+
+  // Generate code
+  pass_manager.run(*llvm_module_);
 
   return std::make_unique<llvm::SmallVectorMemoryBuffer>(std::move(obj_buffer));
 }
@@ -943,11 +1003,27 @@ void LLVMEngine::CompiledModuleBuilder::PersistObjectToFile(
   dest.close();
 }
 
-std::string LLVMEngine::CompiledModuleBuilder::DumpModule() const {
+std::string LLVMEngine::CompiledModuleBuilder::DumpModuleIR() {
   std::string result;
   llvm::raw_string_ostream ostream(result);
-  module().print(ostream, nullptr);
+  llvm_module_->print(ostream, nullptr);
   return result;
+}
+
+std::string LLVMEngine::CompiledModuleBuilder::DumpModuleAsm() {
+  llvm::SmallString<1024> asm_str;
+  llvm::raw_svector_ostream ostream(asm_str);
+
+  llvm::legacy::PassManager pass_manager;
+  pass_manager.add(llvm::createTargetTransformInfoWrapperPass(
+      target_machine()->getTargetIRAnalysis()));
+  target_machine_->Options.MCOptions.AsmVerbose = true;
+  target_machine_->addPassesToEmitFile(pass_manager, ostream, nullptr,
+                                       llvm::TargetMachine::CGFT_AssemblyFile);
+  pass_manager.run(*llvm_module_);
+  target_machine_->Options.MCOptions.AsmVerbose = false;
+
+  return asm_str.str().str();
 }
 
 // ---------------------------------------------------------
