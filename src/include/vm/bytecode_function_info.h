@@ -155,16 +155,7 @@ class FunctionInfo {
   static constexpr FunctionId kInvalidFuncId = std::numeric_limits<u16>::max();
 
   /// Construct a function with the given ID and name \a name
-  FunctionInfo(FunctionId id, std::string name, ast::FunctionType *func_type)
-      : id_(id),
-        name_(std::move(name)),
-        func_type_(func_type),
-        bytecode_range_(std::make_pair(0, 0)),
-        frame_size_(0),
-        params_start_pos_(0),
-        params_size_(0),
-        num_params_(0),
-        num_temps_(0) {}
+  FunctionInfo(FunctionId id, std::string name, ast::FunctionType *func_type);
 
   /// Allocate a new function parameter
   /// \param type The TPL type of the parameter
@@ -181,6 +172,9 @@ class FunctionInfo {
   /// \return A (logical) pointer to the local variable
   LocalVar NewLocal(ast::Type *type, const std::string &name = "");
 
+  /// Return the ID of the return value for the function
+  LocalVar GetReturnValueLocal() const;
+
   /// Lookup a local variable by name
   /// \param name The name of the local variable
   /// \return A (logical) pointer to the local variable
@@ -196,11 +190,6 @@ class FunctionInfo {
   /// \param local The offset in bytes of the local
   /// \return A possible nullptr to the local's information
   const LocalInfo *LookupLocalInfoByOffset(u32 offset) const;
-
-  /// Return the ID of the return value for the function
-  LocalVar GetReturnValueLocal() const {
-    return LocalVar(0u, LocalVar::AddressMode::Address);
-  }
 
   // -------------------------------------------------------
   // Accessors

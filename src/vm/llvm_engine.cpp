@@ -105,7 +105,14 @@ class LLVMEngine::TypeMap {
   llvm::Type *GetLLVMType(const ast::Type *type);
 
  private:
-  llvm::Module *module() { return module_; }
+  // Given a non-primitive builtin type, convert it to an LLVM type
+  llvm::Type *GetLLVMTypeForBuiltin(const ast::BuiltinType *builtin_type);
+
+  // Given a struct type, convert it into an equivalent LLVM struct type
+  llvm::StructType *GetLLVMStructType(const ast::StructType *struct_type);
+
+  // Given a TPL function type, convert it into an equivalent LLVM function type
+  llvm::FunctionType *GetLLVMFunctionType(const ast::FunctionType *func_type);
 
  private:
   llvm::Module *module_;
@@ -137,18 +144,7 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
       UNREACHABLE("Missing default type not found in cache");
     }
     case ast::Type::TypeId::BuiltinType: {
-      auto *builtin_type = type->As<ast::BuiltinType>();
-      TPL_ASSERT(!builtin_type->is_primitive(),
-                 "Primitive types should be cached!");
-      std::string name = builtin_type->cpp_name();
-      // Try "struct" and "class" prefixes
-      if (auto *t = module()->getTypeByName("struct." + name); t != nullptr) {
-        llvm_type = t;
-      } else if (t = module()->getTypeByName("class." + name); t != nullptr) {
-        llvm_type = t;
-      } else {
-        LOG_ERROR("Could not find LLVM type for TPL type '{}'", name);
-      }
+      llvm_type = GetLLVMTypeForBuiltin(type->As<ast::BuiltinType>());
       break;
     }
     case ast::Type::TypeId::PointerType: {
@@ -167,34 +163,11 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
       break;
     }
     case ast::Type::TypeId::StructType: {
-      auto *struct_type = type->As<ast::StructType>();
-
-      // Collect all struct field types
-      llvm::SmallVector<llvm::Type *, 8> fields;
-      for (const auto &field : struct_type->fields()) {
-        fields.push_back(GetLLVMType(field.type));
-      }
-
-      // Done
-      llvm_type = llvm::StructType::create(fields);
-
+      llvm_type = GetLLVMStructType(type->As<ast::StructType>());
       break;
     }
     case ast::Type::TypeId::FunctionType: {
-      auto *func_type = type->As<ast::FunctionType>();
-
-      // The return type
-      llvm::Type *ret_type = GetLLVMType(func_type->return_type());
-
-      // Collect the parameter types
-      llvm::SmallVector<llvm::Type *, 8> param_types;
-      param_types.resize(func_type->params().size());
-      for (auto &param : func_type->params()) {
-        param_types.push_back(GetLLVMType(param.type));
-      }
-
-      // Done
-      llvm_type = llvm::FunctionType::get(ret_type, param_types, false);
+      llvm_type = GetLLVMFunctionType(type->As<ast::FunctionType>());
       break;
     }
   }
@@ -208,6 +181,56 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
   iter->second = llvm_type;
 
   return llvm_type;
+}
+
+llvm::Type *LLVMEngine::TypeMap::GetLLVMTypeForBuiltin(
+    const ast::BuiltinType *builtin_type) {
+  TPL_ASSERT(!builtin_type->is_primitive(),
+             "Primitive types should be cached!");
+
+  // For the builtins, we perform a lookup using the C++ name
+  const std::string name = builtin_type->cpp_name();
+
+  // Try "struct" prefix
+  if (llvm::Type *type = module_->getTypeByName("struct." + name)) {
+    return type;
+  }
+
+  // Try "class" prefix
+  if (llvm::Type *type = module_->getTypeByName("class." + name)) {
+    return type;
+  }
+
+  LOG_ERROR("Could not find LLVM type for TPL type '{}'", name);
+  return nullptr;
+}
+
+llvm::StructType *LLVMEngine::TypeMap::GetLLVMStructType(
+    const ast::StructType *struct_type) {
+  // Collect the fields here
+  llvm::SmallVector<llvm::Type *, 8> fields;
+
+  for (const auto &field : struct_type->fields()) {
+    fields.push_back(GetLLVMType(field.type));
+  }
+
+  return llvm::StructType::create(fields);
+}
+
+llvm::FunctionType *LLVMEngine::TypeMap::GetLLVMFunctionType(
+    const ast::FunctionType *func_type) {
+  // The return type
+  llvm::Type *ret_type = GetLLVMType(func_type->return_type());
+
+  // Collect the parameter types
+  llvm::SmallVector<llvm::Type *, 8> param_types;
+  param_types.resize(func_type->params().size());
+  for (auto &param : func_type->params()) {
+    param_types.push_back(GetLLVMType(param.type));
+  }
+
+  // Done
+  return llvm::FunctionType::get(ret_type, param_types, false);
 }
 
 // ---------------------------------------------------------
@@ -227,8 +250,8 @@ class LLVMEngine::FunctionLocalsMap {
  private:
   llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>
       &ir_builder_;
-  std::unordered_map<u32, llvm::Value *> params_;
-  std::unordered_map<u32, llvm::Value *> locals_;
+  llvm::DenseMap<u32, llvm::Value *> params_;
+  llvm::DenseMap<u32, llvm::Value *> locals_;
 };
 
 LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
@@ -441,7 +464,7 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
 void LLVMEngine::CompiledModuleBuilder::DeclareFunctions() {
   //
   // For each TPL function in the bytecode module we build an equivalent LLVM
-  // function declaration.
+  // function declaration
   //
 
   for (const auto &func_info : tpl_module().functions()) {
