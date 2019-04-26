@@ -447,12 +447,14 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
   // TODO(pmenon): Alter the flags as need be
   //
 
+  const std::string target_triple = llvm::sys::getProcessTriple();
+
   {
-    std::string triple = llvm::sys::getProcessTriple();
     std::string error;
-    auto *target = llvm::TargetRegistry::lookupTarget(triple, error);
+    auto *target = llvm::TargetRegistry::lookupTarget(target_triple, error);
     if (target == nullptr) {
-      LOG_ERROR("LLVM: Unable to find target with triple {}", triple);
+      LOG_ERROR("LLVM: Unable to find target with target_triple {}",
+                target_triple);
       return;
     }
 
@@ -470,11 +472,11 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
 
     LOG_TRACE("LLVM: Discovered CPU features: {}", target_features.getString());
 
-    std::string cpu = llvm::sys::getHostCPUName();
     llvm::TargetOptions target_options;
-    llvm::Optional<llvm::Reloc::Model> reloc;
+    llvm::Optional<llvm::Reloc::Model> reloc = llvm::Reloc::Model::PIC_;
     target_machine_.reset(target->createTargetMachine(
-        triple, cpu, target_features.getString(), target_options, reloc));
+        target_triple, llvm::sys::getHostCPUName(), target_features.getString(),
+        target_options, reloc));
     TPL_ASSERT(target_machine_ != nullptr,
                "LLVM: Unable to find a suitable target machine!");
   }
@@ -504,6 +506,8 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
     llvm_module_ = std::move(module.get());
     llvm_module_->setModuleIdentifier(tpl_module.name());
     llvm_module_->setSourceFileName(tpl_module.name() + ".tpl");
+    llvm_module_->setDataLayout(target_machine_->createDataLayout());
+    llvm_module_->setTargetTriple(target_triple);
   }
 
   type_map_ = std::make_unique<TypeMap>(llvm_module_.get());
