@@ -305,7 +305,7 @@ llvm::Value *LLVMEngine::FunctionLocalsMap::GetArgumentById(LocalVar var) {
 class LLVMEngine::CompiledModuleBuilder {
  public:
   CompiledModuleBuilder(const CompilerOptions &options,
-                        const vm::BytecodeModule &tpl_module);
+                        const BytecodeModule &tpl_module);
 
   // No copying or moving this class
   DISALLOW_COPY_AND_MOVE(CompiledModuleBuilder);
@@ -358,7 +358,7 @@ class LLVMEngine::CompiledModuleBuilder {
 
   const CompilerOptions &options() const { return options_; }
 
-  const vm::BytecodeModule &tpl_module() const { return tpl_module_; }
+  const BytecodeModule &tpl_module() const { return tpl_module_; }
 
   llvm::TargetMachine *target_machine() { return target_machine_.get(); }
 
@@ -372,7 +372,7 @@ class LLVMEngine::CompiledModuleBuilder {
 
  private:
   const CompilerOptions &options_;
-  const vm::BytecodeModule &tpl_module_;
+  const BytecodeModule &tpl_module_;
   std::unique_ptr<llvm::TargetMachine> target_machine_;
   std::unique_ptr<llvm::LLVMContext> context_;
   std::unique_ptr<llvm::Module> llvm_module_;
@@ -384,7 +384,7 @@ class LLVMEngine::CompiledModuleBuilder {
 // ---------------------------------------------------------
 
 LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
-    const CompilerOptions &options, const vm::BytecodeModule &tpl_module)
+    const CompilerOptions &options, const BytecodeModule &tpl_module)
     : options_(options),
       tpl_module_(tpl_module),
       target_machine_(nullptr),
@@ -1057,7 +1057,7 @@ void LLVMEngine::Initialize() {
 void LLVMEngine::Shutdown() { llvm::llvm_shutdown(); }
 
 std::unique_ptr<LLVMEngine::CompiledModule> LLVMEngine::Compile(
-    const vm::BytecodeModule &module, const CompilerOptions &options) {
+    const BytecodeModule &module, const CompilerOptions &options) {
   CompiledModuleBuilder builder(options, module);
 
   builder.DeclareFunctions();

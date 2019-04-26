@@ -48,7 +48,7 @@ class LLVMEngine {
   /// \param module The module to compile
   /// \return The JIT compiled module
   static std::unique_ptr<CompiledModule> Compile(
-      const vm::BytecodeModule &module, const CompilerOptions &options = {});
+      const BytecodeModule &module, const CompilerOptions &options = {});
 
   // -------------------------------------------------------
   // Compiler Options
