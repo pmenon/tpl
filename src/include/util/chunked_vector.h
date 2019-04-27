@@ -150,7 +150,7 @@ class ChunkedVectorRandomIterator {
   byte *operator*() const noexcept { return curr_; }
 
   // In place addition
-  ChunkedVectorRandomIterator &operator+=(const i64 &offset) {
+  ChunkedVectorRandomIterator &operator+=(const i64 offset) {
     // The size (in bytes) of one chunk
     const i64 chunk_size = ChunkedVector::ChunkAllocSize(element_size_);
 
@@ -187,20 +187,20 @@ class ChunkedVectorRandomIterator {
   }
 
   // In place subtraction
-  ChunkedVectorRandomIterator &operator-=(const i64 &offset) {
+  ChunkedVectorRandomIterator &operator-=(const i64 offset) {
     *this += (-offset);
     return *this;
   }
 
   // Addition
-  const ChunkedVectorRandomIterator operator+(const i64 &offset) const {
+  const ChunkedVectorRandomIterator operator+(const i64 offset) const {
     ChunkedVectorRandomIterator copy(*this);
     copy += offset;
     return copy;
   }
 
   // Subtraction
-  const ChunkedVectorRandomIterator operator-(const i64 &offset) const {
+  const ChunkedVectorRandomIterator operator-(const i64 offset) const {
     ChunkedVectorRandomIterator copy(*this);
     copy -= offset;
     return copy;
@@ -271,8 +271,9 @@ class ChunkedVectorRandomIterator {
 
   // Less than
   bool operator<(const ChunkedVectorRandomIterator &that) const noexcept {
-    if (chunks_iter_ != that.chunks_iter_)
+    if (chunks_iter_ != that.chunks_iter_) {
       return chunks_iter_ < that.chunks_iter_;
+    }
     return curr_ < that.curr_;
   }
 
