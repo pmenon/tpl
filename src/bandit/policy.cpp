@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cfloat>
+#include <chrono>  // NOLINT
 #include <cmath>
 #include <limits>
 #include <vector>
@@ -12,6 +13,12 @@
 
 namespace tpl::bandit {
 
+Policy::Policy(Kind kind)
+    : kind_(kind),
+      generator_(std::chrono::high_resolution_clock::now()
+                     .time_since_epoch()
+                     .count()) {}
+
 namespace {
 
 /**
@@ -20,7 +27,7 @@ namespace {
  */
 u32 ChooseBestIndex(const std::vector<double> &values,
                     std::mt19937 *generator) {
-  auto max_value = *std::max_element(values.begin(), values.end());
+  const double max_value = *std::max_element(values.begin(), values.end());
   std::vector<u32> best_indices;
 
   for (u32 i = 0; i < values.size(); ++i) {

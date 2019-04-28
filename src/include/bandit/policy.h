@@ -10,23 +10,31 @@ namespace tpl::bandit {
 class Agent;
 
 /**
- * An enumeration capturing different policies for choosing actions.
- */
-enum class Kind : u8 { EpsilonGreedy, Greedy, Random, UCB, FixedAction };
-
-/**
  * A policy prescribes an action to be taken based on the memory of an agent.
  */
 class Policy {
  public:
-  explicit Policy(Kind kind) : kind_(kind), generator_(time(0)) {}
+  /**
+   * An enumeration capturing different policies for choosing actions.
+   */
+  enum class Kind : u8 { EpsilonGreedy, Greedy, Random, UCB, FixedAction };
 
   /**
-   * Returns the next action according to the policy
+   * Construct a policy of the given kind
+   *
+   * @param kind The specific kind of policy this is
+   */
+  explicit Policy(Kind kind);
+
+  /**
+   * Returns the next action to take according to the policy
    */
   virtual u32 NextAction(Agent *agent) = 0;
 
-  auto kind() { return kind_; }
+  /**
+   * Returns the specific kind of policy this is
+   */
+  Kind kind() { return kind_; }
 
  protected:
   Kind kind_;
@@ -42,14 +50,13 @@ class Policy {
 class EpsilonGreedyPolicy : public Policy {
  public:
   explicit EpsilonGreedyPolicy(double epsilon, Kind kind = Kind::EpsilonGreedy)
-      : Policy(kind),
-        epsilon_(epsilon),
-        real_(std::uniform_real_distribution<double>(0, 1)) {}
+      : Policy(kind), epsilon_(epsilon), real_(0, 1) {}
 
-  virtual u32 NextAction(Agent *agent);
+  u32 NextAction(Agent *agent) override;
 
  private:
   double epsilon_;
+  // Real-valued distribution between [0,1]
   std::uniform_real_distribution<double> real_;
 };
 
@@ -82,7 +89,7 @@ class UCBPolicy : public Policy {
  public:
   explicit UCBPolicy(double c) : Policy(Kind::UCB), c_(c) {}
 
-  u32 NextAction(Agent *agent);
+  u32 NextAction(Agent *agent) override;
 
  private:
   // Hyperparameter that decides the weight of the penalty term.
@@ -98,7 +105,7 @@ class FixedActionPolicy : public Policy {
   explicit FixedActionPolicy(u32 action)
       : Policy(Kind::FixedAction), action_(action) {}
 
-  u32 NextAction(Agent *agent) { return action_; }
+  u32 NextAction(Agent *agent) override { return action_; }
 
  private:
   u32 action_;
