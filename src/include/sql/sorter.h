@@ -50,7 +50,7 @@ class Sorter {
   ComparisonFunction cmp_fn_;
 
   // Vector of pointers to each entry. This is the vector that's sorted.
-  util::ChunkedVectorT<const byte *> tuples_;
+  util::RegionVector<const byte *> tuples_;
 
   // Flag indicating if the contents of the sorter have been sorted
   bool sorted_;
@@ -58,6 +58,7 @@ class Sorter {
 
 /// An iterator over the elements in a sorter instance
 class SorterIterator {
+  using IteratorType = decltype(Sorter::tuples_)::iterator;
  public:
   explicit SorterIterator(Sorter *sorter) noexcept
       : iter_(sorter->tuples_.begin()), end_(sorter->tuples_.end()) {}
@@ -85,8 +86,10 @@ class SorterIterator {
   const byte *GetRow() const { return this->operator*(); }
 
  private:
-  util::ChunkedVectorT<const byte *>::Iterator iter_;
-  const util::ChunkedVectorT<const byte *>::Iterator end_;
+  // The current iterator position
+  IteratorType iter_;
+  // The ending iterator position
+  const IteratorType end_;
 };
 
 }  // namespace tpl::sql
