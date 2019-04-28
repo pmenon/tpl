@@ -9,8 +9,6 @@ class SorterIterator;
 /// A sorter
 class Sorter {
  public:
-  friend class SorterIterator;
-
   using ComparisonFunction = i32 (*)(const byte *lhs, const byte *rhs);
 
   /// Construct a sorter using the given allocator, configured to store input
@@ -43,6 +41,8 @@ class Sorter {
   void HeapSiftDown();
 
  private:
+  friend class SorterIterator;
+
   // Vector of entries
   util::ChunkedVector tuple_storage_;
 
@@ -59,16 +59,17 @@ class Sorter {
 /// An iterator over the elements in a sorter instance
 class SorterIterator {
   using IteratorType = decltype(Sorter::tuples_)::iterator;
+
  public:
   explicit SorterIterator(Sorter *sorter) noexcept
       : iter_(sorter->tuples_.begin()), end_(sorter->tuples_.end()) {}
 
-  // -------------------------------------------------------
-  // C++ iterator interface
-  // -------------------------------------------------------
-
+  /// Dereference operator
+  /// \return A pointer to the current iteration row
   const byte *operator*() const noexcept { return *iter_; }
 
+  /// Pre-increment the iterator
+  /// \return A reference to this iterator after it's been advanced one row
   SorterIterator &operator++() noexcept {
     ++iter_;
     return *this;
