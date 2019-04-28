@@ -16,7 +16,7 @@ void AggregationHashTable::Grow() {
   hash_table_.SetSize(new_size);
 
   // Insert elements again
-  for (auto *untyped_entry : entries_) {
+  for (const auto &untyped_entry : entries_) {
     auto *entry = reinterpret_cast<HashTableEntry *>(untyped_entry);
     hash_table_.Insert<false>(entry, entry->hash);
   }

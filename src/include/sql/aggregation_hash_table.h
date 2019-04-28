@@ -18,8 +18,13 @@ class AggregationHashTable {
   /// Insert a new element into the table
   byte *Insert(hash_t hash) noexcept;
 
+  // The callback function to check if an input probe tuple and an existing
+  // aggregate in the hash table have matching keys.
+  // Convention: The first argument is the probe tuple, the second is an
+  //             existing candidate entry in the hash table
+  using KeyEqFn = bool (*)(const void *, const void *);
+
   /// Lookup the first element in the chain of entries with the hash value
-  using KeyEqFn = bool(const void *, const void *);
   byte *Lookup(hash_t hash, KeyEqFn key_eq_fn, const void *arg) noexcept;
 
  private:
