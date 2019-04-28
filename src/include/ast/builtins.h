@@ -6,75 +6,79 @@ namespace tpl::ast {
 
 // The list of all builtin functions
 // Args: internal name, function name
-#define BUILTINS_LIST(F)                  \
-  /* Primitive <-> SQL */                 \
-  F(IntToSql, intToSql)                   \
-  F(BoolToSql, boolToSql)                 \
-  F(FloatToSql, floatToSql)               \
-  F(SqlToBool, sqlToBool)                 \
-                                          \
-  /* Vectorized Filters */                \
-  F(FilterEq, filterEq)                   \
-  F(FilterGe, filterGe)                   \
-  F(FilterGt, filterGt)                   \
-  F(FilterLe, filterLe)                   \
-  F(FilterLt, filterLt)                   \
-  F(FilterNe, filterNe)                   \
-                                          \
-  /* Region Allocator */                  \
-  F(RegionInit, regionInit)               \
-  F(RegionFree, regionFree)               \
-                                          \
-  /* Table scans */                       \
-  F(TableIterInit, tableIterInit)         \
-  F(TableIterAdvance, tableIterAdvance)   \
-  F(TableIterGetVPI, tableIterGetVPI)     \
-  F(TableIterClose, tableIterClose)       \
-                                          \
-  /* VPI */                               \
-  F(VPIHasNext, vpiHasNext)               \
-  F(VPIAdvance, vpiAdvance)               \
-  F(VPIReset, vpiReset)                   \
-  F(VPIGetSmallInt, vpiGetSmallInt)       \
-  F(VPIGetInt, vpiGetInt)                 \
-  F(VPIGetBigInt, vpiGetBigInt)           \
-  F(VPIGetReal, vpiGetReal)               \
-  F(VPIGetDouble, vpiGetDouble)           \
-                                          \
-  /* Joins */                             \
-  F(JoinHashTableInit, joinHTInit)        \
-  F(JoinHashTableInsert, joinHTInsert)    \
-  F(JoinHashTableBuild, joinHTBuild)      \
-  F(JoinHashTableFree, joinHTFree)        \
-                                          \
-  /* Sorting */                           \
-  F(SorterInit, sorterInit)               \
-  F(SorterInsert, sorterInsert)           \
-  F(SorterSort, sorterSort)               \
-  F(SorterFree, sorterFree)               \
-  F(SorterIterInit, sorterIterInit)       \
-  F(SorterIterHasNext, sorterIterHasNext) \
-  F(SorterIterNext, sorterIterNext)       \
-  F(SorterIterGetRow, sorterIterGetRow)   \
-  F(SorterIterClose, sorterIterClose)     \
-                                          \
-  /* Trig */                              \
-  F(ACos, acos)                           \
-  F(ASin, asin)                           \
-  F(ATan, atan)                           \
-  F(ATan2, atan2)                         \
-  F(Cos, cos)                             \
-  F(Cot, cot)                             \
-  F(Sin, sin)                             \
-  F(Tan, tan)                             \
-                                          \
-  /* Generic */                           \
-  F(Map, map)                             \
-  F(Fold, fold)                           \
-  F(Gather, gather)                       \
-  F(Scatter, scatter)                     \
-  F(Compress, compress)                   \
-  F(SizeOf, sizeOf)                       \
+#define BUILTINS_LIST(F)                    \
+  /* Primitive <-> SQL */                   \
+  F(IntToSql, intToSql)                     \
+  F(BoolToSql, boolToSql)                   \
+  F(FloatToSql, floatToSql)                 \
+  F(SqlToBool, sqlToBool)                   \
+                                            \
+  /* Vectorized Filters */                  \
+  F(FilterEq, filterEq)                     \
+  F(FilterGe, filterGe)                     \
+  F(FilterGt, filterGt)                     \
+  F(FilterLe, filterLe)                     \
+  F(FilterLt, filterLt)                     \
+  F(FilterNe, filterNe)                     \
+                                            \
+  /* Region Allocator */                    \
+  F(RegionInit, regionInit)                 \
+  F(RegionFree, regionFree)                 \
+                                            \
+  /* Table scans */                         \
+  F(TableIterInit, tableIterInit)           \
+  F(TableIterAdvance, tableIterAdvance)     \
+  F(TableIterGetVPI, tableIterGetVPI)       \
+  F(TableIterClose, tableIterClose)         \
+                                            \
+  /* VPI */                                 \
+  F(VPIHasNext, vpiHasNext)                 \
+  F(VPIHasNextFiltered, vpiHasNextFiltered) \
+  F(VPIAdvance, vpiAdvance)                 \
+  F(VPIAdvanceFiltered, vpiAdvanceFiltered) \
+  F(VPIMatch, vpiMatch)                     \
+  F(VPIReset, vpiReset)                     \
+  F(VPIResetFiltered, vpiResetFiltered)     \
+  F(VPIGetSmallInt, vpiGetSmallInt)         \
+  F(VPIGetInt, vpiGetInt)                   \
+  F(VPIGetBigInt, vpiGetBigInt)             \
+  F(VPIGetReal, vpiGetReal)                 \
+  F(VPIGetDouble, vpiGetDouble)             \
+                                            \
+  /* Joins */                               \
+  F(JoinHashTableInit, joinHTInit)          \
+  F(JoinHashTableInsert, joinHTInsert)      \
+  F(JoinHashTableBuild, joinHTBuild)        \
+  F(JoinHashTableFree, joinHTFree)          \
+                                            \
+  /* Sorting */                             \
+  F(SorterInit, sorterInit)                 \
+  F(SorterInsert, sorterInsert)             \
+  F(SorterSort, sorterSort)                 \
+  F(SorterFree, sorterFree)                 \
+  F(SorterIterInit, sorterIterInit)         \
+  F(SorterIterHasNext, sorterIterHasNext)   \
+  F(SorterIterNext, sorterIterNext)         \
+  F(SorterIterGetRow, sorterIterGetRow)     \
+  F(SorterIterClose, sorterIterClose)       \
+                                            \
+  /* Trig */                                \
+  F(ACos, acos)                             \
+  F(ASin, asin)                             \
+  F(ATan, atan)                             \
+  F(ATan2, atan2)                           \
+  F(Cos, cos)                               \
+  F(Cot, cot)                               \
+  F(Sin, sin)                               \
+  F(Tan, tan)                               \
+                                            \
+  /* Generic */                             \
+  F(Map, map)                               \
+  F(Fold, fold)                             \
+  F(Gather, gather)                         \
+  F(Scatter, scatter)                       \
+  F(Compress, compress)                     \
+  F(SizeOf, sizeOf)                         \
   F(PtrCast, ptrCast)
 
 enum class Builtin : u8 {

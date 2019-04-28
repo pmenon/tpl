@@ -30,7 +30,7 @@ class Context;
 //           Args: Kind, C++ type, TPL name (i.e., as it appears in TPL code)
 // NON_PRIM: A builtin type that isn't primitive. These are pre-compiled C++
 //           classes that can be created and manipulated from TPL code.
-//           Args: Kind, C++ type
+//           Args: Kind (also name as it appears in TPL code), C++ type
 // SQL:      These are full-blown SQL types. SQL types have backing C++
 //           implementations, but can also be created and manipulated from TPL
 //           code. We specialize these because we also want to add SQL-level

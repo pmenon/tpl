@@ -511,19 +511,35 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
   LocalVar vpi = VisitExpressionForRValue(call->arguments()[0]);
 
   switch (builtin) {
-    case ast::Builtin::VPIHasNext: {
+    case ast::Builtin::VPIHasNext:
+    case ast::Builtin::VPIHasNextFiltered: {
+      const Bytecode bytecode = builtin == ast::Builtin::VPIHasNext
+                                    ? Bytecode::VPIHasNext
+                                    : Bytecode::VPIHasNextFiltered;
       LocalVar cond = execution_result()->GetOrCreateDestination(
           ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
-      emitter()->Emit(Bytecode::VPIHasNext, cond, vpi);
+      emitter()->Emit(bytecode, cond, vpi);
       execution_result()->set_destination(cond.ValueOf());
       break;
     }
-    case ast::Builtin::VPIAdvance: {
-      emitter()->Emit(Bytecode::VPIAdvance, vpi);
+    case ast::Builtin::VPIAdvance:
+    case ast::Builtin::VPIAdvanceFiltered: {
+      const Bytecode bytecode = builtin == ast::Builtin::VPIAdvance
+                                ? Bytecode::VPIAdvance
+                                : Bytecode::VPIAdvanceFiltered;
+      emitter()->Emit(bytecode, vpi);
+      break;
+    }
+    case ast::Builtin::VPIMatch: {
+      LocalVar match = VisitExpressionForRValue(call->arguments()[1]);
+      emitter()->Emit(Bytecode::VPIMatch, vpi, match);
       break;
     }
     case ast::Builtin::VPIReset: {
-      emitter()->Emit(Bytecode::VPIReset, vpi);
+      const Bytecode bytecode = builtin == ast::Builtin::VPIReset
+                                ? Bytecode::VPIReset
+                                : Bytecode::VPIResetFiltered;
+      emitter()->Emit(bytecode, vpi);
       break;
     }
     case ast::Builtin::VPIGetSmallInt: {
@@ -820,8 +836,12 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       break;
     }
     case ast::Builtin::VPIHasNext:
+    case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:
+    case ast::Builtin::VPIAdvanceFiltered:
+    case ast::Builtin::VPIMatch:
     case ast::Builtin::VPIReset:
+    case ast::Builtin::VPIResetFiltered:
     case ast::Builtin::VPIGetSmallInt:
     case ast::Builtin::VPIGetInt:
     case ast::Builtin::VPIGetBigInt:

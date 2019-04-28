@@ -465,6 +465,14 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(VPIHasNextFiltered) : {
+    auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto *iter =
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    OpVPIHasNextFiltered(has_more, iter);
+    DISPATCH_NEXT();
+  }
+
   OP(VPIAdvance) : {
     auto *iter =
         frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
@@ -472,7 +480,29 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(VPIAdvanceFiltered) : {
+    auto *iter =
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    OpVPIAdvanceFiltered(iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(VPIMatch) : {
+    auto *iter =
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    auto match = frame->LocalAt<bool>(READ_LOCAL_ID());
+    OpVPIMatch(iter, match);
+    DISPATCH_NEXT();
+  }
+
   OP(VPIReset) : {
+    auto *iter =
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    OpVPIReset(iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(VPIResetFiltered) : {
     auto *iter =
         frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
     OpVPIReset(iter);

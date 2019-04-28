@@ -516,9 +516,25 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
 
   switch (builtin) {
     case ast::Builtin::VPIHasNext:
+    case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:
-    case ast::Builtin::VPIReset: {
+    case ast::Builtin::VPIAdvanceFiltered:
+    case ast::Builtin::VPIReset:
+    case ast::Builtin::VPIResetFiltered: {
       call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Bool));
+      break;
+    }
+    case ast::Builtin::VPIMatch: {
+      if (!call->arguments()[1]->type()->IsSpecificBuiltin(
+              ast::BuiltinType::Bool)) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kBadArgToBuiltin,
+            call->GetFuncName(),
+            ast::BuiltinType::Get(context(), ast::BuiltinType::Bool), 1,
+            call->arguments()[1]->type());
+        return;
+      }
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::VPIGetSmallInt:
@@ -815,8 +831,12 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
       break;
     }
     case ast::Builtin::VPIHasNext:
+    case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:
+    case ast::Builtin::VPIAdvanceFiltered:
+    case ast::Builtin::VPIMatch:
     case ast::Builtin::VPIReset:
+    case ast::Builtin::VPIResetFiltered:
     case ast::Builtin::VPIGetSmallInt:
     case ast::Builtin::VPIGetInt:
     case ast::Builtin::VPIGetBigInt:

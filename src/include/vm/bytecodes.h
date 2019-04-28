@@ -94,8 +94,12 @@ namespace tpl::vm {
                                                                                                                        \
   /* Vector Projection Iterator (VPI) */                                                                               \
   F(VPIHasNext, OperandType::Local, OperandType::Local)                                                                \
+  F(VPIHasNextFiltered, OperandType::Local, OperandType::Local)                                                        \
   F(VPIAdvance, OperandType::Local)                                                                                    \
+  F(VPIAdvanceFiltered, OperandType::Local)                                                                            \
+  F(VPIMatch, OperandType::Local, OperandType::Local)                                                                  \
   F(VPIReset, OperandType::Local)                                                                                      \
+  F(VPIResetFiltered, OperandType::Local)                                                                              \
   F(VPIGetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPIGetInteger, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPIGetBigInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \

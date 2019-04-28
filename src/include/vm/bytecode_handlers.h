@@ -212,12 +212,29 @@ VM_OP_HOT void OpVPIHasNext(bool *has_more,
   *has_more = vpi->HasNext();
 }
 
+VM_OP_HOT void OpVPIHasNextFiltered(bool *has_more,
+                                    tpl::sql::VectorProjectionIterator *vpi) {
+  *has_more = vpi->HasNextFiltered();
+}
+
 VM_OP_HOT void OpVPIAdvance(tpl::sql::VectorProjectionIterator *vpi) {
   vpi->Advance();
 }
 
+VM_OP_HOT void OpVPIAdvanceFiltered(tpl::sql::VectorProjectionIterator *vpi) {
+  vpi->AdvanceFiltered();
+}
+
+VM_OP_HOT void OpVPIMatch(tpl::sql::VectorProjectionIterator *vpi, bool match) {
+  vpi->Match(match);
+}
+
 VM_OP_HOT void OpVPIReset(tpl::sql::VectorProjectionIterator *vpi) {
   vpi->Reset();
+}
+
+VM_OP_HOT void OpVPIResetFiltered(tpl::sql::VectorProjectionIterator *vpi) {
+  vpi->ResetFiltered();
 }
 
 VM_OP_HOT void OpVPIGetSmallInt(tpl::sql::Integer *out,
