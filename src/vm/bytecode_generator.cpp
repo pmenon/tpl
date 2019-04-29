@@ -396,6 +396,13 @@ void BytecodeGenerator::VisitArithmeticUnaryExpr(ast::UnaryOpExpr *op) {
   execution_result()->set_destination(dest.ValueOf());
 }
 
+void BytecodeGenerator::VisitLogicalNotExpr(ast::UnaryOpExpr *op) {
+  LocalVar dest = execution_result()->GetOrCreateDestination(op->type());
+  LocalVar input = VisitExpressionForRValue(op->expr());
+  emitter()->EmitUnaryOp(Bytecode::Not, dest, input);
+  execution_result()->set_destination(dest.ValueOf());
+}
+
 void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
   switch (node->op()) {
     case parsing::Token::Type::AMPERSAND: {
@@ -409,6 +416,10 @@ void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
     case parsing::Token::Type::MINUS:
     case parsing::Token::Type::BIT_NOT: {
       VisitArithmeticUnaryExpr(node);
+      break;
+    }
+    case parsing::Token::Type::BANG: {
+      VisitLogicalNotExpr(node);
       break;
     }
     default: { UNREACHABLE("Impossible unary operation"); }
@@ -454,6 +465,7 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call,
           ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
       auto input = VisitExpressionForRValue(call->arguments()[0]);
       emitter()->Emit(Bytecode::ForceBoolTruth, dest, input);
+      execution_result()->set_destination(dest.ValueOf());
       break;
     }
     default: { UNREACHABLE("Impossible SQL conversion call"); }

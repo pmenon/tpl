@@ -62,6 +62,8 @@ INT_TYPES(COMPARISONS);
 
 #undef COMPARISONS
 
+VM_OP_HOT void OpNot(bool *const result, const bool input) { *result = !input; }
+
 // ---------------------------------------------------------
 // Primitive arithmetic
 // ---------------------------------------------------------

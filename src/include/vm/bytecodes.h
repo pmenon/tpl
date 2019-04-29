@@ -55,6 +55,8 @@ namespace tpl::vm {
   CREATE_FOR_INT_TYPES(F, LessThan, OperandType::Local, OperandType::Local, OperandType::Local)                        \
   CREATE_FOR_INT_TYPES(F, LessThanEqual, OperandType::Local, OperandType::Local, OperandType::Local)                   \
   CREATE_FOR_INT_TYPES(F, NotEqual, OperandType::Local, OperandType::Local, OperandType::Local)                        \
+  /* Boolean compliment */                                                                                             \
+  F(Not, OperandType::Local, OperandType::Local)                                                                       \
                                                                                                                        \
   /* Branching */                                                                                                      \
   F(Jump, OperandType::JumpOffset)                                                                                     \

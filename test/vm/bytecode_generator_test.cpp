@@ -66,23 +66,58 @@ TEST_F(BytecodeGeneratorTest, SimpleTest) {
 }
 
 TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
-  auto src = R"(
+  //
+  // Boolean complement check.
+  // Generate function: f(true) = -10, f(false) = 10
+  //
+
+  {
+    auto src = R"(
+    fun test(c: bool) -> int32 {
+      if (!c) {
+        return 10
+      } else {
+        return -10
+      }
+    })";
+    BytecodeCompiler compiler;
+    auto *ast = compiler.CompileToAst(src);
+    ASSERT_FALSE(compiler.HasErrors());
+
+    // Try generating bytecode for this declaration
+    auto module = BytecodeGenerator::Compile(ast, "test");
+
+    std::function<i32(bool)> f;
+    EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
+        << "Function 'test' not found in module";
+    EXPECT_EQ(10, f(false));
+    EXPECT_EQ(-10, f(true));
+  }
+
+  //
+  // Generate a function with a more complex boolean expression
+  //
+
+  {
+    auto src = R"(
     fun test() -> bool {
       var x : int32 = 4
       var t : int32 = 8
       var f : int32 = 10
       return (f > 1 and x < 2) and (t < 100 or x < 3)
     })";
-  BytecodeCompiler compiler;
-  auto *ast = compiler.CompileToAst(src);
+    BytecodeCompiler compiler;
+    auto *ast = compiler.CompileToAst(src);
+    ASSERT_FALSE(compiler.HasErrors());
 
-  // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(ast, "test");
+    // Try generating bytecode for this declaration
+    auto module = BytecodeGenerator::Compile(ast, "test");
 
-  std::function<bool()> f;
-  EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
-      << "Function 'test' not found in module";
-  EXPECT_FALSE(f());
+    std::function<bool()> f;
+    EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
+        << "Function 'test' not found in module";
+    EXPECT_FALSE(f());
+  }
 }
 
 TEST_F(BytecodeGeneratorTest, SimpleArithmeticTest) {

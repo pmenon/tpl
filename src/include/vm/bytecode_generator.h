@@ -73,6 +73,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   void VisitAddressOfExpr(ast::UnaryOpExpr *op);
   void VisitDerefExpr(ast::UnaryOpExpr *op);
   void VisitArithmeticUnaryExpr(ast::UnaryOpExpr *op);
+  void VisitLogicalNotExpr(ast::UnaryOpExpr *op);
 
   // Dispatched from VisitIndexExpr() to distinguish between array and map
   // access.

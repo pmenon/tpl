@@ -298,6 +298,13 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   INT_TYPES(GEN_NEG_OP)
 #undef GEN_NEG_OP
 
+  OP(Not) : {
+    auto *dest = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto input = frame->LocalAt<bool>(READ_LOCAL_ID());
+    OpNot(dest, input);
+    DISPATCH_NEXT();
+  }
+
   // -------------------------------------------------------
   // Jumps
   // -------------------------------------------------------
@@ -513,7 +520,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(VPIResetFiltered) : {
     auto *iter =
         frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    OpVPIReset(iter);
+    OpVPIResetFiltered(iter);
     DISPATCH_NEXT();
   }
 
