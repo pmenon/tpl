@@ -65,7 +65,7 @@ TEST_F(AggregationHashTableTest, SimpleRandomInsertionTest) {
     auto *existing = reinterpret_cast<AggTuple *>(agg_table()->Lookup(
         input.Hash(), TupleKeyEq, reinterpret_cast<const void *>(&input)));
 
-    if (existing) {
+    if (existing != nullptr) {
       // The reference table should have an equivalent aggregate tuple
       auto ref_iter = ref_agg_table.find(input.key);
       ASSERT_TRUE(ref_iter != ref_agg_table.end());

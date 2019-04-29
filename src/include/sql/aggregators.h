@@ -148,6 +148,10 @@ inline void IntegerSumAggregate::Merge(const IntegerSumAggregate &that) {
   }
 }
 
+// ---------------------------------------------------------
+// Max
+// ---------------------------------------------------------
+
 /// Integer Max
 class IntegerMaxAggregate : public NullableAggregate {
  public:
@@ -201,6 +205,10 @@ inline void IntegerMaxAggregate::Merge(const IntegerMaxAggregate &that) {
     max_ = std::max(i.val, max_);
   }
 }
+
+// ---------------------------------------------------------
+// Min
+// ---------------------------------------------------------
 
 /// Integer Min
 class IntegerMinAggregate : public NullableAggregate {
@@ -256,6 +264,10 @@ inline void IntegerMinAggregate::Merge(const IntegerMinAggregate &that) {
   }
 }
 
+// ---------------------------------------------------------
+// Average
+// ---------------------------------------------------------
+
 /// Integer Avg
 class IntegerAvgAggregate : public IntegerSumAggregate {
  public:
@@ -267,13 +279,13 @@ class IntegerAvgAggregate : public IntegerSumAggregate {
 
   /// Return the result of the minimum
   Integer GetResultAvg() const {
-    u64 numUpdates = GetNumUpdates();
-    if (numUpdates == 0) {
+    u64 num_updates = GetNumUpdates();
+    if (num_updates == 0) {
       return Integer::Null();
     }
 
-    Integer avgInt = GetResultSum().Divide(Integer(GetNumUpdates()));
-    return avgInt;
+    Integer avg_result = GetResultSum().Divide(Integer(num_updates));
+    return avg_result;
   }
 };
 
