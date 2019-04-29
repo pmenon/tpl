@@ -6,6 +6,7 @@
 #include "logging/logger.h"
 #include "util/cpu_info.h"
 #include "util/memory.h"
+#include "util/timer.h"
 
 // TODO(pmenon): Use HLL++ to better estimate size of CHT and GHT
 // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists in GHT
@@ -537,11 +538,20 @@ void JoinHashTable::Build() {
     return;
   }
 
+  util::Timer<> timer;
+  timer.Start();
+
+  // Build
   if (use_concise_hash_table()) {
     BuildConciseHashTable();
   } else {
     BuildGenericHashTable();
   }
+
+  timer.Stop();
+  UNUSED double tps = (num_elements() / timer.elapsed()) / 1000.0;
+  LOG_DEBUG("JHT: built {} tuples in {} ms ({:.2f} tps)", num_elements(),
+            timer.elapsed(), tps);
 
   built_ = true;
 }
