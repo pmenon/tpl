@@ -70,10 +70,10 @@ u32 UCBPolicy::NextAction(Agent *agent) {
   std::vector<u32> best_actions;
 
   for (u32 i = 0; i < action_attempts.size(); ++i) {
-    double exploration =
-        action_attempts[i] == 0
-            ? MAX_EXPLORATION_VALUE
-            : std::sqrt((std::log(agent->timestep() + 1) / action_attempts[i]));
+    double exploration = action_attempts[i] == 0
+                             ? MAX_EXPLORATION_VALUE
+                             : std::sqrt((std::log(agent->time_step() + 1) /
+                                          action_attempts[i]));
     values[i] = value_estimates[i] + c_ * exploration;
   }
 

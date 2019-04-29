@@ -14,14 +14,11 @@ namespace tpl::bandit {
  */
 class Agent {
  public:
-  Agent(Policy *policy, u32 num_actions, double prior = 0, double gamma = -1)
-      : policy_(policy),
-        num_actions_(num_actions),
-        prior_(prior),
-        gamma_(gamma) {
-    Reset();
-  }
+  Agent(Policy *policy, u32 num_actions, double prior = 0, double gamma = -1);
 
+  /**
+   * Reset all state this agent has collected.
+   */
   void Reset();
 
   /**
@@ -35,11 +32,17 @@ class Agent {
    */
   void Observe(double reward);
 
-  const auto &value_estimates() { return value_estimates_; }
+  // -------------------------------------------------------
+  // Simple accessors
+  // -------------------------------------------------------
 
-  const auto &action_attempts() { return action_attempts_; }
+  const std::vector<double> &value_estimates() const {
+    return value_estimates_;
+  }
 
-  auto timestep() { return timestep_; }
+  const std::vector<u32> &action_attempts() const { return action_attempts_; }
+
+  u32 time_step() const { return time_step_; }
 
  private:
   // Policy to use for choosing the next action.
@@ -51,8 +54,8 @@ class Agent {
   // Prior value estimate of an action. This is the same for every action.
   double prior_;
 
-  // Hyperparameter to handle dynamic distrbutions. By default, this is set to
-  // 1 / (number of times an action was taken). This equaly weights every
+  // Hyper-parameter to handle dynamic distributions. By default, this is set to
+  // 1 / (number of times an action was taken). This equally weights every
   // reward obtained for the actions in the entire history. This can be set to
   // a constant in [0, 1) to weigh recent rewards more than older ones.
   double gamma_;
@@ -64,7 +67,7 @@ class Agent {
   std::vector<u32> action_attempts_;
 
   // The current time step in the run.
-  u32 timestep_;
+  u32 time_step_;
 
   // Last action that was taken.
   u32 last_action_;
