@@ -542,7 +542,8 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
       emitter()->Emit(Bytecode::VPIMatch, vpi, match);
       break;
     }
-    case ast::Builtin::VPIReset: {
+    case ast::Builtin::VPIReset:
+    case ast::Builtin::VPIResetFiltered: {
       const Bytecode bytecode = builtin == ast::Builtin::VPIReset
                                     ? Bytecode::VPIReset
                                     : Bytecode::VPIResetFiltered;
@@ -842,6 +843,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitBuiltinTableIterCall(call, builtin);
       break;
     }
+    case ast::Builtin::VPIIsFiltered:
     case ast::Builtin::VPIHasNext:
     case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:
