@@ -93,6 +93,7 @@ namespace tpl::vm {
   F(TableVectorIteratorGetVPI, OperandType::Local, OperandType::Local)                                                 \
                                                                                                                        \
   /* Vector Projection Iterator (VPI) */                                                                               \
+  F(VPIIsFiltered, OperandType::Local, OperandType::Local)                                                             \
   F(VPIHasNext, OperandType::Local, OperandType::Local)                                                                \
   F(VPIHasNextFiltered, OperandType::Local, OperandType::Local)                                                        \
   F(VPIAdvance, OperandType::Local)                                                                                    \

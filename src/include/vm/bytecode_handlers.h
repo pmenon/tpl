@@ -207,6 +207,11 @@ VM_OP_HOT void OpTableVectorIteratorGetVPI(
   *vpi = iter->vector_projection_iterator();
 }
 
+VM_OP_HOT void OpVPIIsFiltered(bool *is_filtered,
+                               tpl::sql::VectorProjectionIterator *vpi) {
+  *is_filtered = vpi->IsFiltered();
+}
+
 VM_OP_HOT void OpVPIHasNext(bool *has_more,
                             tpl::sql::VectorProjectionIterator *vpi) {
   *has_more = vpi->HasNext();

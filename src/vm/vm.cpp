@@ -457,6 +457,14 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // VPI iteration operations
   // -------------------------------------------------------
 
+  OP(VPIIsFiltered) : {
+    auto *is_filtered = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto *iter =
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    OpVPIIsFiltered(is_filtered, iter);
+    DISPATCH_NEXT();
+  }
+
   OP(VPIHasNext) : {
     auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
     auto *iter =

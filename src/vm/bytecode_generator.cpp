@@ -511,6 +511,13 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
   LocalVar vpi = VisitExpressionForRValue(call->arguments()[0]);
 
   switch (builtin) {
+    case ast::Builtin::VPIIsFiltered: {
+      LocalVar is_filtered = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
+      emitter()->Emit(Bytecode::VPIIsFiltered, is_filtered, vpi);
+      execution_result()->set_destination(is_filtered.ValueOf());
+      break;
+    }
     case ast::Builtin::VPIHasNext:
     case ast::Builtin::VPIHasNextFiltered: {
       const Bytecode bytecode = builtin == ast::Builtin::VPIHasNext
@@ -525,8 +532,8 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
     case ast::Builtin::VPIAdvance:
     case ast::Builtin::VPIAdvanceFiltered: {
       const Bytecode bytecode = builtin == ast::Builtin::VPIAdvance
-                                ? Bytecode::VPIAdvance
-                                : Bytecode::VPIAdvanceFiltered;
+                                    ? Bytecode::VPIAdvance
+                                    : Bytecode::VPIAdvanceFiltered;
       emitter()->Emit(bytecode, vpi);
       break;
     }
@@ -537,8 +544,8 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
     }
     case ast::Builtin::VPIReset: {
       const Bytecode bytecode = builtin == ast::Builtin::VPIReset
-                                ? Bytecode::VPIReset
-                                : Bytecode::VPIResetFiltered;
+                                    ? Bytecode::VPIReset
+                                    : Bytecode::VPIResetFiltered;
       emitter()->Emit(bytecode, vpi);
       break;
     }

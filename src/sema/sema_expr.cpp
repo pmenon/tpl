@@ -515,6 +515,7 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 
   switch (builtin) {
+    case ast::Builtin::VPIIsFiltered:
     case ast::Builtin::VPIHasNext:
     case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:
@@ -830,6 +831,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
       CheckBuiltinTableIterCall(call, builtin);
       break;
     }
+    case ast::Builtin::VPIIsFiltered:
     case ast::Builtin::VPIHasNext:
     case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:
