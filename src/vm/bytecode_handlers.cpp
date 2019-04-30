@@ -127,12 +127,13 @@ void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table) {
 // Aggregation Hash Table
 // ---------------------------------------------------------
 
-void OpAggregationHashTableInit(tpl::sql::AggregationHashTable *agg_table,
-                                tpl::util::Region *region, u32 entry_size) {
-  new (agg_table) tpl::sql::AggregationHashTable(region, entry_size);
+void OpAggregationHashTableInit(tpl::sql::AggregationHashTable *const agg_table,
+                                tpl::util::Region *region, u32 payload_size) {
+  new (agg_table) tpl::sql::AggregationHashTable(region, payload_size);
 }
 
-void OpAggregationHashTableFree(tpl::sql::AggregationHashTable *agg_table) {
+void OpAggregationHashTableFree(
+    tpl::sql::AggregationHashTable *const agg_table) {
   agg_table->~AggregationHashTable();
 }
 

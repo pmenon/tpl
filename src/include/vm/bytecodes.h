@@ -142,7 +142,15 @@ namespace tpl::vm {
   F(EqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
   F(NotEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
                                                                                                                        \
-  /* Aggregations */                                                                                                   \
+  /* Aggregation Hash Table */                                                                                         \
+  F(AggregationHashTableInit, OperandType::Local, OperandType::Local, OperandType::Local)                              \
+  F(AggregationHashTableInsert, OperandType::Local, OperandType::Local, OperandType::Local)                            \
+  F(AggregationHashTableLookup, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::FunctionId,   \
+      OperandType::Local)                                                                                              \
+  F(AggregationHashTableProcessBatch, OperandType::Local, OperandType::Local, OperandType::FunctionId,                 \
+      OperandType::FunctionId, OperandType::FunctionId)                                                                \
+  F(AggregationHashTableFree, OperandType::Local)                                                                      \
+  /* Aggregates */                                                                                                     \
   F(CountAggregateInit, OperandType::Local)                                                                            \
   F(CountAggregateAdvance, OperandType::Local, OperandType::Local)                                                     \
   F(CountAggregateMerge, OperandType::Local, OperandType::Local)                                                       \

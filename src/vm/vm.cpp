@@ -185,6 +185,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 #define READ_JMP_OFFSET() READ_IMM4()
 #define READ_LOCAL_ID() Read<u32>(&ip)
 #define READ_OP() Read<std::underlying_type_t<Bytecode>>(&ip)
+#define READ_FUNC_ID() READ_UIMM2()
 
 #define OP(name) op_##name
 #define DISPATCH_NEXT()           \
@@ -592,7 +593,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(FilterManagerInsertFlavor) : {
     auto *filter_manager =
         frame->LocalAt<sql::FilterManager *>(READ_LOCAL_ID());
-    auto func_id = READ_UIMM2();
+    auto func_id = READ_FUNC_ID();
     auto fn = reinterpret_cast<sql::FilterManager::MatchFn>(
         module().GetFuncTrampoline(func_id));
     OpFilterManagerInsertFlavor(filter_manager, fn);
@@ -673,6 +674,65 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // -------------------------------------------------------
   // Aggregations
   // -------------------------------------------------------
+
+  OP(AggregationHashTableInit) : {
+    auto *agg_hash_table =
+        frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
+    auto payload_size = frame->LocalAt<u32>(READ_LOCAL_ID());
+    OpAggregationHashTableInit(agg_hash_table, region, payload_size);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationHashTableInsert) : {
+    auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    auto *agg_hash_table =
+        frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto hash = frame->LocalAt<hash_t>(READ_LOCAL_ID());
+    OpAggregationHashTableInsert(result, agg_hash_table, hash);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationHashTableLookup) : {
+    auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    auto *agg_hash_table =
+        frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto hash = frame->LocalAt<hash_t>(READ_LOCAL_ID());
+    auto key_eq_fn_id = READ_FUNC_ID();
+    auto *arg = frame->LocalAt<const void *>(READ_LOCAL_ID());
+
+    auto key_eq_fn = reinterpret_cast<sql::AggregationHashTable::KeyEqFn>(
+        module().GetFuncTrampoline(key_eq_fn_id));
+    OpAggregationHashTableLookup(result, agg_hash_table, hash, key_eq_fn, arg);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationHashTableProcessBatch) : {
+    auto *agg_hash_table =
+        frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto *iters =
+        frame->LocalAt<sql::VectorProjectionIterator **>(READ_LOCAL_ID());
+    auto hash_fn_id = READ_FUNC_ID();
+    auto init_agg_fn_id = READ_FUNC_ID();
+    auto merge_agg_fn_id = READ_FUNC_ID();
+
+    auto hash_fn = reinterpret_cast<sql::AggregationHashTable::HashFn>(
+        module().GetFuncTrampoline(hash_fn_id));
+    auto init_agg_fn = reinterpret_cast<sql::AggregationHashTable::InitAggFn>(
+        module().GetFuncTrampoline(init_agg_fn_id));
+    auto merge_agg_fn = reinterpret_cast<sql::AggregationHashTable::MergeAggFn>(
+        module().GetFuncTrampoline(merge_agg_fn_id));
+    OpAggregationHashTableProcessBatch(agg_hash_table, iters, hash_fn,
+                                       init_agg_fn, merge_agg_fn);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationHashTableFree) : {
+    auto *agg_hash_table =
+        frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    OpAggregationHashTableFree(agg_hash_table);
+    DISPATCH_NEXT();
+  }
 
   OP(CountAggregateInit) : {
     auto *agg = frame->LocalAt<sql::CountAggregate *>(READ_LOCAL_ID());
@@ -979,7 +1039,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(SorterInit) : {
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
     auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
-    auto cmp_func_id = READ_UIMM2();
+    auto cmp_func_id = READ_FUNC_ID();
     auto tuple_size = frame->LocalAt<u32>(READ_LOCAL_ID());
 
     auto cmp_fn = reinterpret_cast<sql::Sorter::ComparisonFunction>(
@@ -1126,7 +1186,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
 const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
   // Read the function ID and the argument count to the function first
-  const u16 func_id = READ_UIMM2();
+  const u16 func_id = READ_FUNC_ID();
   const u16 num_params = READ_UIMM2();
 
   // Lookup the function

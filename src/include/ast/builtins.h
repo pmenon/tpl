@@ -53,6 +53,13 @@ namespace tpl::ast {
   F(FilterManagerRunFilters, filtersRun)                  \
   F(FilterManagerFree, filterManagerFree)                 \
                                                           \
+  /* Aggregations */                                      \
+  F(AggHashTableInit, aggHTInit)                          \
+  F(AggHashTableInsert, aggHTInsert)                      \
+  F(AggHashTableLookup, aggHTLookup)                      \
+  F(AggHashTableProcessBatch, aggHTProcessBatch)          \
+  F(AggHashTableFree, aggHTFree)                          \
+                                                          \
   /* Joins */                                             \
   F(JoinHashTableInit, joinHTInit)                        \
   F(JoinHashTableInsert, joinHTInsert)                    \
