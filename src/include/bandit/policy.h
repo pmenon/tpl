@@ -17,7 +17,7 @@ class Policy {
   /**
    * An enumeration capturing different policies for choosing actions.
    */
-  enum class Kind : u8 { EpsilonGreedy, Greedy, Random, UCB, FixedAction };
+  enum Kind : u8 { EpsilonGreedy, Greedy, Random, UCB, FixedAction };
 
   /**
    * Construct a policy of the given kind
@@ -25,6 +25,11 @@ class Policy {
    * @param kind The specific kind of policy this is
    */
   explicit Policy(Kind kind);
+
+  /**
+   * Virtual destructor
+   */
+  virtual ~Policy() = default;
 
   /**
    * Returns the next action to take according to the policy
@@ -49,6 +54,8 @@ class Policy {
  */
 class EpsilonGreedyPolicy : public Policy {
  public:
+  static constexpr const double kDefaultEpsilon = 0.1;
+
   explicit EpsilonGreedyPolicy(double epsilon, Kind kind = Kind::EpsilonGreedy)
       : Policy(kind), epsilon_(epsilon), real_(0, 1) {}
 
@@ -87,12 +94,14 @@ class RandomPolicy : public EpsilonGreedyPolicy {
  */
 class UCBPolicy : public Policy {
  public:
+  static constexpr const double kDefaultUCBHyperParam = 1.0;
+
   explicit UCBPolicy(double c) : Policy(Kind::UCB), c_(c) {}
 
   u32 NextAction(Agent *agent) override;
 
  private:
-  // Hyperparameter that decides the weight of the penalty term.
+  // Hyper-parameter that decides the weight of the penalty term.
   double c_;
 };
 

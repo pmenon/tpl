@@ -1,5 +1,7 @@
 #include "bandit/agent.h"
 
+#include <algorithm>
+
 namespace tpl::bandit {
 
 Agent::Agent(Policy *policy, u32 num_actions, double prior, double gamma)
@@ -35,6 +37,12 @@ void Agent::Observe(double reward) {
   value_estimates_[last_action_] +=
       g * (reward - value_estimates_[last_action_]);
   time_step_++;
+}
+
+u32 Agent::GetCurrentOptimalAction() const {
+  auto iter_max =
+      std::max_element(value_estimates_.begin(), value_estimates_.end());
+  return std::distance(value_estimates_.begin(), iter_max);
 }
 
 }  // namespace tpl::bandit

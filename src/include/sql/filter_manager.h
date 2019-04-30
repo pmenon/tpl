@@ -1,9 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <utility>
+#include <vector>
 
-#include "util/region.h"
-#include "util/region_containers.h"
+#include "bandit/policy.h"
+#include "util/common.h"
+#include "util/macros.h"
 
 namespace tpl::sql {
 
@@ -34,14 +37,19 @@ class FilterManager {
    * thus, exhibit different runtimes.
    */
   struct Clause {
-    util::RegionVector<MatchFn> flavors;
-    explicit Clause(util::Region *region) : flavors(region) {}
+    std::vector<MatchFn> flavors;
+    u32 num_flavors() const { return flavors.size(); }
   };
 
   /**
    * Virtual destructor for subclasses
    */
   virtual ~FilterManager() = default;
+
+  /**
+   * This class cannot be copied or moved
+   */
+  DISALLOW_COPY_AND_MOVE(FilterManager);
 
   /**
    * Run the filter over all rows in the given input vector projection @em vpi.
@@ -51,14 +59,20 @@ class FilterManager {
 
  protected:
   // Construct a filter manager using the given input filters.
-  explicit FilterManager(util::RegionVector<Clause> &&clauses);
+  explicit FilterManager(std::vector<Clause> &&clauses);
 
   // Const-reference access to filters for subclasses
-  const util::RegionVector<Clause> &clauses() const { return clauses_; }
+  const std::vector<Clause> &clauses() const { return clauses_; }
+
+  // The number of clauses
+  u32 num_clauses() const { return clauses_.size(); }
+
+  // Return the clause at the given index in the filter
+  const Clause *ClauseAt(u32 index) const { return &clauses_[index]; }
 
  private:
   // The clauses in the filter
-  util::RegionVector<Clause> clauses_;
+  std::vector<Clause> clauses_;
 };
 
 // ---------------------------------------------------------
@@ -72,6 +86,11 @@ class FilterManager {
 class SimpleFilterManager : public FilterManager {
  public:
   /**
+   * This class cannot be copied or moved
+   */
+  DISALLOW_COPY_AND_MOVE(SimpleFilterManager);
+
+  /**
    * Run the filters over the given vector projection @em vpi
    * @param vpi The input vector
    */
@@ -80,7 +99,7 @@ class SimpleFilterManager : public FilterManager {
  private:
   friend class FilterManagerBuilder;
   // Private on purpose, use FilterManagerBuilder
-  explicit SimpleFilterManager(util::RegionVector<Clause> &&clauses);
+  explicit SimpleFilterManager(std::vector<Clause> &&clauses);
 };
 
 // ---------------------------------------------------------
@@ -94,22 +113,49 @@ class SimpleFilterManager : public FilterManager {
 class AdaptiveFilterManager : public FilterManager {
  public:
   /**
+   * This class cannot be copied or moved
+   */
+  DISALLOW_COPY_AND_MOVE(AdaptiveFilterManager);
+
+  /**
    * Run the filters over the given vector projection @em vpi
    * @param vpi The input vector
    */
   void RunFilters(VectorProjectionIterator *vpi) override;
 
+  /**
+   * Return the index of the current optimal implementation flavor for the
+   * clause at index @em clause_index
+   * @param clause_index The index of the clause
+   * @return The index of the optimal flavor
+   */
+  u32 GetOptimalFlavorForClause(u32 clause_index) const;
+
  private:
   friend class FilterManagerBuilder;
+
   // Private on purpose, use FilterManagerBuilder
-  explicit AdaptiveFilterManager(util::Region *region,
-                                 util::RegionVector<Clause> &&_clauses);
+  explicit AdaptiveFilterManager(std::vector<Clause> &&_clauses,
+                                 std::unique_ptr<bandit::Policy> policy);
+
+  // Run a specific clause of the filter
+  void RunFilterClause(VectorProjectionIterator *vpi, u32 clause_index);
+
+  // Run the given matching function
+  std::pair<u32, double> RunFilterClauseImpl(VectorProjectionIterator *vpi,
+                                             FilterManager::MatchFn func);
+
+  // Return the agent handling the clause at the given index
+  bandit::Agent *GetAgentFor(u32 clause_index);
+  const bandit::Agent *GetAgentFor(u32 clause_index) const;
 
  private:
   // The optimal order to execute the clauses
-  util::RegionVector<u32> optimal_clause_order_;
-  // The index of the optimal flavor for each clause
-  util::RegionVector<u32> optimal_flavor_;
+  std::vector<u32> optimal_clause_order_;
+  // The adaptive policy to use
+  std::unique_ptr<bandit::Policy> policy_;
+  // The agents, one per clause
+  std::vector<bandit::Agent> agents_;
 };
 
 // ---------------------------------------------------------
@@ -122,7 +168,12 @@ class AdaptiveFilterManager : public FilterManager {
  */
 class FilterManagerBuilder {
  public:
-  explicit FilterManagerBuilder(util::Region *region);
+  FilterManagerBuilder();
+
+  /**
+   * This class cannot be copied or moved
+   */
+  DISALLOW_COPY_AND_MOVE(FilterManagerBuilder);
 
   /**
    * Start a new clause.
@@ -136,11 +187,19 @@ class FilterManagerBuilder {
   void InsertClauseFlavor(FilterManager::MatchFn flavor);
 
   /**
-   * Build a filter manager
-   * @param adaptive Whether to build an adaptive filter or not
+   * Build a simple filter manager using the configured filter clauses
    * @return The constructed filter manager
    */
-  std::unique_ptr<FilterManager> Build(bool adaptive = true);
+  std::unique_ptr<FilterManager> BuildSimple();
+
+  /**
+   * Build an adaptive filter manager using the configured filter clauses using
+   * the adaptive policy @em policy
+   * @param policy_kind The kind of adaptivity to use
+   * @return The constructed filter manager
+   */
+  std::unique_ptr<FilterManager> BuildAdaptive(
+      bandit::Policy::Kind policy_kind = bandit::Policy::EpsilonGreedy);
 
  private:
   FilterManager::Clause &curr_clause() {
@@ -149,11 +208,8 @@ class FilterManagerBuilder {
   }
 
  private:
-  // Region
-  util::Region *region_;
-
   // The filters
-  util::RegionVector<FilterManager::Clause> clauses_;
+  std::vector<FilterManager::Clause> clauses_;
 
   // Has this builder been finalized?
   bool finalized_;

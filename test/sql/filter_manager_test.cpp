@@ -31,14 +31,12 @@ u32 Vectorized_Lt_500(VectorProjectionIterator *vpi) {
 }
 
 TEST_F(FilterManagerTest, SimpleFilterManagerTest) {
-  util::Region region("test");
-
-  FilterManagerBuilder filter_builder(&region);
+  FilterManagerBuilder filter_builder;
   filter_builder.StartNewClause();
   filter_builder.InsertClauseFlavor(TaaT_Lt_500);
   filter_builder.InsertClauseFlavor(Vectorized_Lt_500);
 
-  auto filter = filter_builder.Build(false);
+  auto filter = filter_builder.BuildSimple();
   ASSERT_TRUE(filter != nullptr);
 
   TableVectorIterator tvi(static_cast<u16>(TableId::Test1));
@@ -57,14 +55,12 @@ TEST_F(FilterManagerTest, SimpleFilterManagerTest) {
 }
 
 TEST_F(FilterManagerTest, AdaptiveFilterManagerTest) {
-  util::Region region("test");
-
-  FilterManagerBuilder filter_builder(&region);
+  FilterManagerBuilder filter_builder;
   filter_builder.StartNewClause();
   filter_builder.InsertClauseFlavor(TaaT_Lt_500);
   filter_builder.InsertClauseFlavor(Vectorized_Lt_500);
 
-  auto filter = filter_builder.Build();
+  auto filter = filter_builder.BuildAdaptive();
   ASSERT_TRUE(filter != nullptr);
 
   TableVectorIterator tvi(static_cast<u16>(TableId::Test1));
@@ -80,6 +76,10 @@ TEST_F(FilterManagerTest, AdaptiveFilterManagerTest) {
       EXPECT_LT(cola, 500);
     });
   }
+
+  // The vectorized filter better be the optimal!
+  EXPECT_EQ(1u, reinterpret_cast<AdaptiveFilterManager *>(filter.get())
+                    ->GetOptimalFlavorForClause(0));
 }
 
 }  // namespace tpl::sql::test

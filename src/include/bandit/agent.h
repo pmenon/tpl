@@ -32,6 +32,11 @@ class Agent {
    */
   void Observe(double reward);
 
+  /**
+   * Return the current optimal action.
+   */
+  u32 GetCurrentOptimalAction() const;
+
   // -------------------------------------------------------
   // Simple accessors
   // -------------------------------------------------------
