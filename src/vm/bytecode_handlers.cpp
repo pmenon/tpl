@@ -93,17 +93,17 @@ void OpFilterManagerInsertFlavor(tpl::sql::FilterManager *filter_manager,
   filter_manager->InsertClauseFlavor(flavor);
 }
 
-void OpFilterManagerFinalize(tpl::sql::FilterManager *builder) {
-  builder->Finalize();
+void OpFilterManagerFinalize(tpl::sql::FilterManager *filter_manager) {
+  filter_manager->Finalize();
 }
 
-void OpFilterManagerRunFilters(tpl::sql::FilterManager *filter,
+void OpFilterManagerRunFilters(tpl::sql::FilterManager *filter_manager,
                                tpl::sql::VectorProjectionIterator *vpi) {
-  filter->RunFilters(vpi);
+  filter_manager->RunFilters(vpi);
 }
 
-void OpFilterManagerFree(tpl::sql::FilterManager *filter) {
-  filter->~FilterManager();
+void OpFilterManagerFree(tpl::sql::FilterManager *filter_manager) {
+  filter_manager->~FilterManager();
 }
 
 // ---------------------------------------------------------
@@ -127,14 +127,15 @@ void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table) {
 // Aggregation Hash Table
 // ---------------------------------------------------------
 
-void OpAggregationHashTableInit(tpl::sql::AggregationHashTable *const agg_table,
-                                tpl::util::Region *region, u32 payload_size) {
-  new (agg_table) tpl::sql::AggregationHashTable(region, payload_size);
+void OpAggregationHashTableInit(
+    tpl::sql::AggregationHashTable *const agg_hash_table,
+    tpl::util::Region *const region, const u32 payload_size) {
+  new (agg_hash_table) tpl::sql::AggregationHashTable(region, payload_size);
 }
 
 void OpAggregationHashTableFree(
-    tpl::sql::AggregationHashTable *const agg_table) {
-  agg_table->~AggregationHashTable();
+    tpl::sql::AggregationHashTable *const agg_hash_table) {
+  agg_hash_table->~AggregationHashTable();
 }
 
 // ---------------------------------------------------------
