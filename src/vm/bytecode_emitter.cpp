@@ -300,6 +300,11 @@ void BytecodeEmitter::EmitVPIVectorFilter(Bytecode bytecode, LocalVar selected,
   EmitAll(bytecode, selected, vpi, col_idx, val);
 }
 
+void BytecodeEmitter::EmitFilterManagerInsertFlavor(LocalVar fmb,
+                                                    FunctionId func) {
+  EmitAll(Bytecode::FilterManagerInsertFlavor, fmb, func);
+}
+
 void BytecodeEmitter::EmitSorterInit(Bytecode bytecode, LocalVar sorter,
                                      LocalVar region, FunctionId cmp_fn,
                                      LocalVar tuple_size) {

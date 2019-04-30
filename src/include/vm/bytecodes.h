@@ -122,6 +122,14 @@ namespace tpl::vm {
   F(VPIFilterLessThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)             \
   F(VPIFilterNotEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                  \
                                                                                                                        \
+  /* Filter Manager */                                                                                                 \
+  F(FilterManagerInit, OperandType::Local)                                                                             \
+  F(FilterManagerStartNewClause, OperandType::Local)                                                                   \
+  F(FilterManagerInsertFlavor, OperandType::Local, OperandType::FunctionId)                                            \
+  F(FilterManagerFinalize, OperandType::Local)                                                                         \
+  F(FilterManagerRunFilters, OperandType::Local, OperandType::Local)                                                   \
+  F(FilterManagerFree, OperandType::Local)                                                                             \
+                                                                                                                       \
   /* SQL type comparisons */                                                                                           \
   F(ForceBoolTruth, OperandType::Local, OperandType::Local)                                                            \
   F(InitBool, OperandType::Local, OperandType::Local)                                                                  \

@@ -601,6 +601,45 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
   }
 }
 
+void BytecodeGenerator::VisitBuiltinFilterManagerCall(ast::CallExpr *call,
+                                                      ast::Builtin builtin) {
+  LocalVar filter_manager = VisitExpressionForRValue(call->arguments()[0]);
+  switch (builtin) {
+    case ast::Builtin::FilterManagerInit: {
+      emitter()->Emit(Bytecode::FilterManagerInit, filter_manager);
+      break;
+    }
+    case ast::Builtin::FilterManagerInsertFilter: {
+      emitter()->Emit(Bytecode::FilterManagerStartNewClause, filter_manager);
+
+      // Insert all flavors
+      for (u32 arg_idx = 1; arg_idx < call->num_args(); arg_idx++) {
+        const std::string func_name = call->arguments()[arg_idx]
+                                          ->As<ast::IdentifierExpr>()
+                                          ->name()
+                                          .data();
+        const FunctionId func_id = LookupFuncIdByName(func_name);
+        emitter()->EmitFilterManagerInsertFlavor(filter_manager, func_id);
+      }
+      break;
+    }
+    case ast::Builtin::FilterManagerFinalize: {
+      emitter()->Emit(Bytecode::FilterManagerFinalize, filter_manager);
+      break;
+    }
+    case ast::Builtin::FilterManagerRunFilters: {
+      LocalVar vpi = VisitExpressionForRValue(call->arguments()[1]);
+      emitter()->Emit(Bytecode::FilterManagerRunFilters, filter_manager, vpi);
+      break;
+    }
+    case ast::Builtin::FilterManagerFree: {
+      emitter()->Emit(Bytecode::FilterManagerFree, filter_manager);
+      break;
+    }
+    default: { UNREACHABLE("Impossible filter manager call"); }
+  }
+}
+
 void BytecodeGenerator::VisitBuiltinFilterCall(ast::CallExpr *call,
                                                ast::Builtin builtin) {
   ast::Context *ctx = call->type()->context();
@@ -869,6 +908,14 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::VPIGetReal:
     case ast::Builtin::VPIGetDouble: {
       VisitBuiltinVPICall(call, builtin);
+      break;
+    }
+    case ast::Builtin::FilterManagerInit:
+    case ast::Builtin::FilterManagerInsertFilter:
+    case ast::Builtin::FilterManagerFinalize:
+    case ast::Builtin::FilterManagerRunFilters:
+    case ast::Builtin::FilterManagerFree: {
+      VisitBuiltinFilterManagerCall(call, builtin);
       break;
     }
     case ast::Builtin::JoinHashTableInit:

@@ -109,6 +109,9 @@ class BytecodeEmitter {
   void EmitVPIVectorFilter(Bytecode bytecode, LocalVar selected, LocalVar vpi,
                            u32 col_idx, i64 val);
 
+  // Insert a filter flavor into the filter manager builder
+  void EmitFilterManagerInsertFlavor(LocalVar fmb, FunctionId func);
+
   // -------------------------------------------------------
   // Sorter
   // -------------------------------------------------------

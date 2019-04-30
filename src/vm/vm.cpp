@@ -571,6 +571,57 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   GEN_VPI_FILTER(NotEqual)
 #undef GEN_VPI_FILTER
 
+  // ------------------------------------------------------
+  // Filter Manager
+  // ------------------------------------------------------
+
+  OP(FilterManagerInit) : {
+    auto *filter_manager =
+        frame->LocalAt<sql::FilterManager *>(READ_LOCAL_ID());
+    OpFilterManagerInit(filter_manager);
+    DISPATCH_NEXT();
+  }
+
+  OP(FilterManagerStartNewClause) : {
+    auto *filter_manager =
+        frame->LocalAt<sql::FilterManager *>(READ_LOCAL_ID());
+    OpFilterManagerStartNewClause(filter_manager);
+    DISPATCH_NEXT();
+  }
+
+  OP(FilterManagerInsertFlavor) : {
+    auto *filter_manager =
+        frame->LocalAt<sql::FilterManager *>(READ_LOCAL_ID());
+    auto func_id = READ_UIMM2();
+    auto fn = reinterpret_cast<sql::FilterManager::MatchFn>(
+        module().GetFuncTrampoline(func_id));
+    OpFilterManagerInsertFlavor(filter_manager, fn);
+    DISPATCH_NEXT();
+  }
+
+  OP(FilterManagerFinalize) : {
+    auto *filter_manager =
+        frame->LocalAt<sql::FilterManager *>(READ_LOCAL_ID());
+    OpFilterManagerFinalize(filter_manager);
+    DISPATCH_NEXT();
+  }
+
+  OP(FilterManagerRunFilters) : {
+    auto *filter_manager =
+        frame->LocalAt<sql::FilterManager *>(READ_LOCAL_ID());
+    auto *vpi =
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    OpFilterManagerRunFilters(filter_manager, vpi);
+    DISPATCH_NEXT();
+  }
+
+  OP(FilterManagerFree) : {
+    auto *filter_manager =
+        frame->LocalAt<sql::FilterManager *>(READ_LOCAL_ID());
+    OpFilterManagerFree(filter_manager);
+    DISPATCH_NEXT();
+  }
+
   // -------------------------------------------------------
   // SQL Integer Comparison Operations
   // -------------------------------------------------------

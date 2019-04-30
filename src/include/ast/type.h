@@ -53,17 +53,15 @@ class Context;
   PRIM(Float64, f64, "float64")                                          \
                                                                          \
   /* Non-primitive builtins */                                           \
-  NON_PRIM(AdaptiveFilterManager, tpl::sql::AdaptiveFilterManager)       \
   NON_PRIM(AggregationHashTable, tpl::sql::AggregationHashTable)         \
   NON_PRIM(BloomFilter, tpl::sql::BloomFilter)                           \
   NON_PRIM(CountAggregate, tpl::sql::CountAggregate)                     \
   NON_PRIM(CountStarAggregate, tpl::sql::CountStarAggregate)             \
-  NON_PRIM(FilterManagerBuilder, tpl::sql::FilterManagerBuilder)         \
+  NON_PRIM(FilterManager, tpl::sql::FilterManager)                       \
   NON_PRIM(HashTableEntry, tpl::sql::HashTableEntry)                     \
   NON_PRIM(IntegerSumAggregate, tpl::sql::IntegerSumAggregate)           \
   NON_PRIM(JoinHashTable, tpl::sql::JoinHashTable)                       \
   NON_PRIM(RegionAlloc, tpl::util::Region)                               \
-  NON_PRIM(SimpleFilterManager, tpl::sql::SimpleFilterManager)           \
   NON_PRIM(Sorter, tpl::sql::Sorter)                                     \
   NON_PRIM(SorterIterator, tpl::sql::SorterIterator)                     \
   NON_PRIM(TableVectorIterator, tpl::sql::TableVectorIterator)           \

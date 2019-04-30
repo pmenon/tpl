@@ -6,6 +6,7 @@
 
 #include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
+#include "sql/filter_manager.h"
 #include "sql/join_hash_table.h"
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
@@ -403,6 +404,24 @@ void OpVPIFilterLessThanEqual(u32 *size,
 
 void OpVPIFilterNotEqual(u32 *size, tpl::sql::VectorProjectionIterator *iter,
                          u16 col_id, i64 val);
+
+// ---------------------------------------------------------
+// Filter Manager
+// ---------------------------------------------------------
+
+void OpFilterManagerInit(tpl::sql::FilterManager *filter_manager);
+
+void OpFilterManagerStartNewClause(tpl::sql::FilterManager *filter_manager);
+
+void OpFilterManagerInsertFlavor(tpl::sql::FilterManager *filter_manager,
+                                 tpl::sql::FilterManager::MatchFn flavor);
+
+void OpFilterManagerFinalize(tpl::sql::FilterManager *filter_manager);
+
+void OpFilterManagerRunFilters(tpl::sql::FilterManager *filter,
+                               tpl::sql::VectorProjectionIterator *vpi);
+
+void OpFilterManagerFree(tpl::sql::FilterManager *filter);
 
 // ---------------------------------------------------------
 // Scalar SQL comparisons

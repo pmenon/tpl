@@ -77,6 +77,36 @@ void OpVPIFilterNotEqual(u32 *size, tpl::sql::VectorProjectionIterator *iter,
 }
 
 // ---------------------------------------------------------
+// Filter Manager
+// ---------------------------------------------------------
+
+void OpFilterManagerInit(tpl::sql::FilterManager *filter_manager) {
+  new (filter_manager) tpl::sql::FilterManager();
+}
+
+void OpFilterManagerStartNewClause(tpl::sql::FilterManager *filter_manager) {
+  filter_manager->StartNewClause();
+}
+
+void OpFilterManagerInsertFlavor(tpl::sql::FilterManager *filter_manager,
+                                 tpl::sql::FilterManager::MatchFn flavor) {
+  filter_manager->InsertClauseFlavor(flavor);
+}
+
+void OpFilterManagerFinalize(tpl::sql::FilterManager *builder) {
+  builder->Finalize();
+}
+
+void OpFilterManagerRunFilters(tpl::sql::FilterManager *filter,
+                               tpl::sql::VectorProjectionIterator *vpi) {
+  filter->RunFilters(vpi);
+}
+
+void OpFilterManagerFree(tpl::sql::FilterManager *filter) {
+  filter->~FilterManager();
+}
+
+// ---------------------------------------------------------
 // Join Hash Table
 // ---------------------------------------------------------
 

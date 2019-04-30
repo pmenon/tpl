@@ -554,6 +554,76 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 }
 
+void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call,
+                                         const ast::Builtin builtin) {
+  if (call->num_args() < 1) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kMismatchedCallArgs,
+                             call->GetFuncName(), 1, call->num_args());
+    return;
+  }
+
+  // The first argument must be a *FilterManagerBuilder
+  const auto fm_kind = ast::BuiltinType::FilterManager;
+  if (ast::Type *type = call->arguments()[0]->type()->GetPointeeType();
+      type == nullptr || !type->IsSpecificBuiltin(fm_kind)) {
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kBadArgToBuiltin, call->GetFuncName(),
+        ast::BuiltinType::Get(context(), fm_kind)->PointerTo(), 0,
+        call->arguments()[0]->type());
+    return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::FilterManagerInit:
+    case ast::Builtin::FilterManagerFinalize:
+    case ast::Builtin::FilterManagerFree: {
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::FilterManagerInsertFilter: {
+      for (u32 arg_idx = 1; arg_idx < call->num_args(); arg_idx++) {
+        // clang-format off
+        auto *arg_type = call->arguments()[arg_idx]->type()->SafeAs<ast::FunctionType>();
+        if (arg_type == nullptr ||                                              // not a function
+            !arg_type->return_type()->IsIntegerType() ||                        // doesn't return an integer
+            arg_type->num_params() != 1 ||                                      // isn't a single-arg func
+            arg_type->params()[0].type->GetPointeeType() == nullptr ||          // first arg isn't a *VPI
+            !arg_type->params()[0].type->GetPointeeType()->IsSpecificBuiltin(
+                ast::BuiltinType::VectorProjectionIterator)) {
+          // error
+          error_reporter()->Report(
+              call->position(), ErrorMessages::kBadArgToBuiltin,
+              call->GetFuncName(),
+              ast::BuiltinType::Get(context(), fm_kind)->PointerTo(), arg_idx,
+              call->arguments()[arg_idx]->type());
+          return;
+        }
+        // clang-format on
+      }
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::FilterManagerRunFilters: {
+      auto *vpi_type = call->arguments()[1]->type()->GetPointeeType();
+      if (vpi_type == nullptr ||
+          !vpi_type->IsSpecificBuiltin(
+              ast::BuiltinType::VectorProjectionIterator)) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kBadArgToBuiltin,
+            call->GetFuncName(),
+            ast::BuiltinType::Get(context(),
+                                  ast::BuiltinType::VectorProjectionIterator)
+                ->PointerTo(),
+            1, call->arguments()[1]->type());
+      }
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    default: { UNREACHABLE("Impossible FilterManager call"); }
+  }
+}
+
 void Sema::CheckBuiltinSizeOfCall(ast::CallExpr *call) {
   if (call->num_args() != 1) {
     error_reporter()->Report(call->position(),
@@ -845,6 +915,14 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
     case ast::Builtin::VPIGetReal:
     case ast::Builtin::VPIGetDouble: {
       CheckBuiltinVPICall(call, builtin);
+      break;
+    }
+    case ast::Builtin::FilterManagerInit:
+    case ast::Builtin::FilterManagerInsertFilter:
+    case ast::Builtin::FilterManagerFinalize:
+    case ast::Builtin::FilterManagerRunFilters:
+    case ast::Builtin::FilterManagerFree: {
+      CheckBuiltinFilterManagerCall(call, builtin);
       break;
     }
     case ast::Builtin::JoinHashTableInit: {
