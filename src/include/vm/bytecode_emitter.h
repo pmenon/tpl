@@ -96,10 +96,6 @@ class BytecodeEmitter {
             LocalVar operand_3, LocalVar operand_4, LocalVar operand_5,
             LocalVar operand_6, LocalVar operand_7, LocalVar operand_8);
 
-  // -------------------------------------------------------
-  // Tables
-  // -------------------------------------------------------
-
   void EmitTableIterInit(Bytecode bytecode, LocalVar iter, u16 table_id);
 
   // Reading integer values from an iterator
@@ -112,9 +108,14 @@ class BytecodeEmitter {
   // Insert a filter flavor into the filter manager builder
   void EmitFilterManagerInsertFlavor(LocalVar fmb, FunctionId func);
 
-  // -------------------------------------------------------
-  // Sorter
-  // -------------------------------------------------------
+  // Process a batch of input into the aggregation hash table
+  void EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht, LocalVar hash,
+                              FunctionId key_eq_fn, LocalVar arg);
+
+  // Lookup a single entry in the aggregation hash table
+  void EmitAggHashTableProcessBatch(LocalVar agg_ht, LocalVar iters,
+                                    FunctionId hash_fn, FunctionId init_agg_fn,
+                                    FunctionId merge_agg_fn);
 
   void EmitSorterInit(Bytecode bytecode, LocalVar sorter, LocalVar region,
                       FunctionId cmp_fn, LocalVar tuple_size);

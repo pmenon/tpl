@@ -691,6 +691,56 @@ void BytecodeGenerator::VisitBuiltinFilterCall(ast::CallExpr *call,
   emitter()->EmitVPIVectorFilter(bytecode, ret_val, vpi, 0, val);
 }
 
+void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,
+                                                     ast::Builtin builtin) {
+  switch (builtin) {
+    case ast::Builtin::AggHashTableInit: {
+      LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar region = VisitExpressionForRValue(call->arguments()[1]);
+      LocalVar entry_size = VisitExpressionForRValue(call->arguments()[2]);
+      emitter()->Emit(Bytecode::AggregationHashTableInit, agg_ht, region,
+                      entry_size);
+      break;
+    }
+    case ast::Builtin::AggHashTableInsert: {
+      LocalVar dest = execution_result()->GetOrCreateDestination(call->type());
+      LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar hash = VisitExpressionForRValue(call->arguments()[1]);
+      emitter()->Emit(Bytecode::AggregationHashTableInsert, dest, agg_ht, hash);
+      break;
+    }
+    case ast::Builtin::AggHashTableLookup: {
+      LocalVar dest = execution_result()->GetOrCreateDestination(call->type());
+      LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar hash = VisitExpressionForRValue(call->arguments()[1]);
+      auto key_eq_fn = LookupFuncIdByName(
+          call->arguments()[2]->As<ast::IdentifierExpr>()->name().data());
+      LocalVar arg = VisitExpressionForRValue(call->arguments()[3]);
+      emitter()->EmitAggHashTableLookup(dest, agg_ht, hash, key_eq_fn, arg);
+      break;
+    }
+    case ast::Builtin::AggHashTableProcessBatch: {
+      LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar iters = VisitExpressionForRValue(call->arguments()[1]);
+      auto hash_fn = LookupFuncIdByName(
+          call->arguments()[2]->As<ast::IdentifierExpr>()->name().data());
+      auto init_agg_fn = LookupFuncIdByName(
+          call->arguments()[3]->As<ast::IdentifierExpr>()->name().data());
+      auto merge_agg_fn = LookupFuncIdByName(
+          call->arguments()[4]->As<ast::IdentifierExpr>()->name().data());
+      emitter()->EmitAggHashTableProcessBatch(agg_ht, iters, hash_fn,
+                                              init_agg_fn, merge_agg_fn);
+      break;
+    }
+    case ast::Builtin::AggHashTableFree: {
+      LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::AggregationHashTableFree, agg_ht);
+      break;
+    }
+    default: { UNREACHABLE("Impossible aggregation hash table bytecode"); }
+  }
+}
+
 void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call,
                                                       ast::Builtin builtin) {
   switch (builtin) {
@@ -916,6 +966,14 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::FilterManagerRunFilters:
     case ast::Builtin::FilterManagerFree: {
       VisitBuiltinFilterManagerCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::AggHashTableInit:
+    case ast::Builtin::AggHashTableInsert:
+    case ast::Builtin::AggHashTableLookup:
+    case ast::Builtin::AggHashTableProcessBatch:
+    case ast::Builtin::AggHashTableFree: {
+      VisitBuiltinAggHashTableCall(call, builtin);
       break;
     }
     case ast::Builtin::JoinHashTableInit:
