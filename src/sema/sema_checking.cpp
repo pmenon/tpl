@@ -129,15 +129,16 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
   }
 
   // Cache a SQL integer type here because it's used throughout this function
-  ast::Type *const sql_int =
+  ast::Type *const sql_int_type =
       ast::BuiltinType::Get(context(), ast::BuiltinType::Integer);
 
   // If either the left or right types aren't SQL integers, cast them up to one
   if (!right->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
-    right = ImplCastExprToType(right, sql_int, ast::CastKind::IntToSqlInt);
+    right = ImplCastExprToType(right, sql_int_type, ast::CastKind::IntToSqlInt);
   }
+
   if (!left->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
-    left = ImplCastExprToType(left, sql_int, ast::CastKind::IntToSqlInt);
+    left = ImplCastExprToType(left, sql_int_type, ast::CastKind::IntToSqlInt);
   }
 
   // Done

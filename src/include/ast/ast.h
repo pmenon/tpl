@@ -490,8 +490,6 @@ class ReturnStmt : public Stmt {
 
   Expr *ret() { return ret_; }
 
-  bool HasExpressionValue() const { return ret_ != nullptr; }
-
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ReturnStmt;
   }

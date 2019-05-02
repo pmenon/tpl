@@ -134,7 +134,7 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
   // check later if we need it.
 
   ast::Type *return_type = nullptr;
-  if (node->HasExpressionValue()) {
+  if (node->ret() != nullptr) {
     return_type = Resolve(node->ret());
   }
 
