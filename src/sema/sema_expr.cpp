@@ -477,6 +477,25 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 }
 
+void Sema::CheckBuiltinHashCall(ast::CallExpr *call,
+                                UNUSED ast::Builtin builtin) {
+  if (CheckArgCountAtLeast(call, 1)) {
+    return;
+  }
+
+  // All arguments must be SQL types
+  for (const auto &arg : call->arguments()) {
+    if (!arg->type()->IsSqlValueType()) {
+      error_reporter()->Report(arg->position(), ErrorMessages::kBadHashArg,
+                               arg->type());
+      return;
+    }
+  }
+
+  // Result is a hash value
+  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Uint64));
+}
+
 void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call,
                                          const ast::Builtin builtin) {
   if (CheckArgCountAtLeast(call, 1)) {
@@ -823,6 +842,10 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
     case ast::Builtin::VPIGetReal:
     case ast::Builtin::VPIGetDouble: {
       CheckBuiltinVPICall(call, builtin);
+      break;
+    }
+    case ast::Builtin::Hash: {
+      CheckBuiltinHashCall(call, builtin);
       break;
     }
     case ast::Builtin::FilterManagerInit:

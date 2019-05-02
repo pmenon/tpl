@@ -45,6 +45,13 @@ bool Expr::IsStringLiteral() const {
   return false;
 }
 
+bool Expr::IsIntegerLiteral() const {
+  if (auto *lit_expr = SafeAs<ast::LitExpr>()) {
+    return lit_expr->literal_kind() == ast::LitExpr::LitKind::Int;
+  }
+  return false;
+}
+
 // ---------------------------------------------------------
 // Comparison Expression
 // ---------------------------------------------------------

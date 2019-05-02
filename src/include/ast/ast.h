@@ -524,6 +524,7 @@ class Expr : public AstNode {
 
   bool IsNilLiteral() const;
   bool IsStringLiteral() const;
+  bool IsIntegerLiteral() const;
 
   static bool classof(const AstNode *node) {
     return node->kind() >= Kind::BadExpr &&

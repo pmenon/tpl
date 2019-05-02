@@ -46,6 +46,9 @@ namespace tpl::ast {
   F(VPIGetReal, vpiGetReal)                               \
   F(VPIGetDouble, vpiGetDouble)                           \
                                                           \
+  /* Hashing */                                           \
+  F(Hash, hash)                                           \
+                                                          \
   /* Filter Manager */                                    \
   F(FilterManagerInit, filterManagerInit)                 \
   F(FilterManagerInsertFilter, filterManagerInsertFilter) \

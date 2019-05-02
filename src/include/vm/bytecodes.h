@@ -144,6 +144,12 @@ namespace tpl::vm {
   F(EqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
   F(NotEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
                                                                                                                        \
+  /* Hashing */                                                                                                        \
+  F(HashInt, OperandType::Local, OperandType::Local)                                                                   \
+  F(HashReal, OperandType::Local, OperandType::Local)                                                                  \
+  F(HashString, OperandType::Local, OperandType::Local)                                                                \
+  F(HashCombine, OperandType::Local, OperandType::Local)                                                               \
+                                                                                                                       \
   /* Aggregation Hash Table */                                                                                         \
   F(AggregationHashTableInit, OperandType::Local, OperandType::Local, OperandType::Local)                              \
   F(AggregationHashTableInsert, OperandType::Local, OperandType::Local, OperandType::Local)                            \

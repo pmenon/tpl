@@ -11,6 +11,7 @@
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
 #include "sql/value_functions.h"
+#include "util/hash.h"
 #include "util/macros.h"
 
 // All VM bytecode op handlers must use this macro
@@ -412,6 +413,31 @@ void OpVPIFilterLessThanEqual(u32 *size,
 
 void OpVPIFilterNotEqual(u32 *size, tpl::sql::VectorProjectionIterator *iter,
                          u16 col_id, i64 val);
+
+// ---------------------------------------------------------
+// Hashing
+// ---------------------------------------------------------
+
+VM_OP_HOT void OpHashInt(hash_t *hash_val, tpl::sql::Integer *input) {
+  *hash_val = tpl::util::Hasher::Hash(reinterpret_cast<u8 *>(&input->val),
+                                      sizeof(input->val));
+  *hash_val = input->is_null ? 0 : *hash_val;
+}
+
+VM_OP_HOT void OpHashReal(hash_t *hash_val, tpl::sql::Real *input) {
+  *hash_val = tpl::util::Hasher::Hash(reinterpret_cast<u8 *>(&input->val),
+                                      sizeof(input->val));
+  *hash_val = input->is_null ? 0 : *hash_val;
+}
+
+VM_OP_HOT void OpHashString(hash_t *hash_val, tpl::sql::VarBuffer *input) {
+  *hash_val = tpl::util::Hasher::Hash(input->str, input->len);
+  *hash_val = input->is_null ? 0 : *hash_val;
+}
+
+VM_OP_HOT void OpHashCombine(hash_t *hash_val, hash_t new_hash_val) {
+  *hash_val = tpl::util::Hasher::CombineHashes(*hash_val, new_hash_val);
+}
 
 // ---------------------------------------------------------
 // Filter Manager

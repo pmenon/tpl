@@ -277,8 +277,8 @@ void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
 
   LocalVar elem_ptr = current_function()->NewLocal(node->type()->PointerTo());
 
-  if (auto *literal_index = node->index()->SafeAs<ast::LitExpr>()) {
-    i32 index = literal_index->int32_val();
+  if (node->index()->IsIntegerLiteral()) {
+    const i32 index = node->index()->As<ast::LitExpr>()->int32_val();
     TPL_ASSERT(index >= 0, "Array indexes must be non-negative");
     emitter()->EmitLea(elem_ptr, arr, (elem_size * index));
   } else {
@@ -482,6 +482,8 @@ void BytecodeGenerator::VisitBuiltinTableIterCall(ast::CallExpr *call,
   switch (builtin) {
     case ast::Builtin::TableIterInit: {
       // The second argument is the table name as a literal string
+      TPL_ASSERT(call->arguments()[1]->IsStringLiteral(),
+                 "Table name must be a string literal");
       ast::Identifier table_name =
           call->arguments()[1]->As<ast::LitExpr>()->raw_string_val();
       sql::Table *table =
@@ -599,6 +601,35 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
     }
     default: { UNREACHABLE("Impossible table iteration call"); }
   }
+}
+
+void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call,
+                                             UNUSED ast::Builtin builtin) {
+  LocalVar hash_val = execution_result()->GetOrCreateDestination(call->type());
+  LocalVar tmp = current_function()->NewLocal(call->type());
+  for (u32 idx = 0; idx < call->num_args(); idx++) {
+    LocalVar input = VisitExpressionForLValue(call->arguments()[idx]);
+    TPL_ASSERT(call->arguments()[idx]->type()->IsSqlValueType(),
+               "Input to hash must be a SQL value type");
+    auto *type = call->arguments()[idx]->type()->As<ast::BuiltinType>();
+    switch (type->kind()) {
+      case ast::BuiltinType::Integer: {
+        emitter()->Emit(Bytecode::HashInt, tmp, input);
+        break;
+      }
+      case ast::BuiltinType::Real: {
+        emitter()->Emit(Bytecode::HashReal, tmp, input);
+        break;
+      }
+      case ast::BuiltinType::VarBuffer: {
+        emitter()->Emit(Bytecode::HashString, tmp, input);
+        break;
+      }
+      default: { UNREACHABLE("Hashing this type isn't supported!"); }
+    }
+    emitter()->Emit(Bytecode::HashCombine, hash_val, tmp);
+  }
+  execution_result()->set_destination(hash_val.ValueOf());
 }
 
 void BytecodeGenerator::VisitBuiltinFilterManagerCall(ast::CallExpr *call,
@@ -960,6 +991,10 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitBuiltinVPICall(call, builtin);
       break;
     }
+    case ast::Builtin::Hash: {
+      VisitBuiltinHashCall(call, builtin);
+      break;
+    };
     case ast::Builtin::FilterManagerInit:
     case ast::Builtin::FilterManagerInsertFilter:
     case ast::Builtin::FilterManagerFinalize:

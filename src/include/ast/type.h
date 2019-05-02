@@ -184,6 +184,7 @@ class Type : public util::RegionObject {
   bool IsBoolType() const;
   bool IsIntegerType() const;
   bool IsFloatType() const;
+  bool IsSqlValueType() const;
 
   /// Return a new type that is a pointer to the current type
   PointerType *PointerTo();
@@ -247,6 +248,11 @@ class BuiltinType : public Type {
   /// Is this builtin a primitive floating point number?
   bool is_floating_point() const {
     return kFloatingPointFlags[static_cast<u16>(kind_)];
+  }
+
+  /// Is this type a SQL value type?
+  bool is_sql_value() const {
+    return Kind::Boolean <= kind() && kind() <= Kind::Timestamp;
   }
 
   /// Return the kind of this builtin
@@ -473,6 +479,13 @@ inline bool Type::IsIntegerType() const {
 inline bool Type::IsFloatType() const {
   if (auto *builtin_type = SafeAs<BuiltinType>()) {
     return builtin_type->is_floating_point();
+  }
+  return false;
+}
+
+inline bool Type::IsSqlValueType() const {
+  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+    return builtin_type->is_sql_value();
   }
   return false;
 }

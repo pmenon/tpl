@@ -587,6 +587,38 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 #undef GEN_VPI_FILTER
 
   // ------------------------------------------------------
+  // Hashing
+  // ------------------------------------------------------
+
+  OP(HashInt) : {
+    auto *hash_val = frame->LocalAt<hash_t *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    OpHashInt(hash_val, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(HashReal) : {
+    auto *hash_val = frame->LocalAt<hash_t *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    OpHashReal(hash_val, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(HashString) : {
+    auto *hash_val = frame->LocalAt<hash_t *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::VarBuffer *>(READ_LOCAL_ID());
+    OpHashString(hash_val, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(HashCombine) : {
+    auto *hash_val = frame->LocalAt<hash_t *>(READ_LOCAL_ID());
+    auto new_hash_val = frame->LocalAt<hash_t>(READ_LOCAL_ID());
+    OpHashCombine(hash_val, new_hash_val);
+    DISPATCH_NEXT();
+  }
+
+  // ------------------------------------------------------
   // Filter Manager
   // ------------------------------------------------------
 
@@ -724,7 +756,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(AggregationHashTableProcessBatch) : {
     auto *agg_hash_table =
         frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
-    auto *iters =
+    auto **iters =
         frame->LocalAt<sql::VectorProjectionIterator **>(READ_LOCAL_ID());
     auto hash_fn_id = READ_FUNC_ID();
     auto init_agg_fn_id = READ_FUNC_ID();
