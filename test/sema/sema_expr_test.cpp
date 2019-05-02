@@ -42,9 +42,20 @@ class SemaExprTest : public TplTest {
     return node_factory()->NewFloatLiteral(empty_, i);
   }
 
+  template <parsing::Token::Type OP>
+  ast::Expr *Cmp(ast::Expr *left, ast::Expr *right) {
+    TPL_ASSERT(parsing::Token::IsCompareOp(OP), "Not a comparison");
+    return node_factory()->NewComparisonOpExpr(empty_, OP, left, right);
+  }
+
+  ast::Expr *CmpEq(ast::Expr *left, ast::Expr *right) {
+    return Cmp<parsing::Token::Type::EQUAL_EQUAL>(left, right);
+  }
+  ast::Expr *CmpNe(ast::Expr *left, ast::Expr *right) {
+    return Cmp<parsing::Token::Type::BANG_EQUAL>(left, right);
+  }
   ast::Expr *CmpLt(ast::Expr *left, ast::Expr *right) {
-    return node_factory()->NewComparisonOpExpr(
-        empty_, parsing::Token::Type::LESS, left, right);
+    return Cmp<parsing::Token::Type::LESS>(left, right);
   }
 
   ast::Expr *Field(ast::Expr *obj, ast::Expr *field) {
@@ -73,6 +84,10 @@ class SemaExprTest : public TplTest {
 
   ast::Stmt *ExprStmt(ast::Expr *expr) {
     return node_factory()->NewExpressionStmt(expr);
+  }
+
+  ast::Expr *PtrType(ast::Expr *base) {
+    return node_factory()->NewPointerType(empty_, base);
   }
 
   ast::Expr *ArrayTypeRepr(ast::Expr *type) {
@@ -172,6 +187,55 @@ TEST_F(SemaExprTest, ComparisonOperationWithImplicitCastTest) {
            DeclStmt(DeclVar(Ident("sqlInt"), IdentExpr("Integer"))),    // var sqlInt: Integer
            DeclStmt(DeclVar(Ident("b"), BoolLit(false))),               // var b = false
            ExprStmt(CmpLt(IdentExpr("b"), IdentExpr("sqlInt"))),        // b < sqlInt
+       })},
+  };
+  // clang-format on
+
+  for (const auto &test : tests) {
+    Sema sema(ctx());
+    bool has_errors = sema.Run(test.tree);
+    EXPECT_EQ(test.has_errors, has_errors) << test.msg;
+    ResetErrorReporter();
+  }
+}
+
+TEST_F(SemaExprTest, ComparisonOperationWithPointersTest) {
+  // clang-format off
+  TestCase tests[] = {
+      // Test: Compare a primitive int32 with an integer
+      // Expectation: Invalid
+      {true, "Integers should not be comparable to pointers",
+       Block({
+           DeclStmt(DeclVar(Ident("i"), IntLit(10))),                           // var i = 10
+           DeclStmt(DeclVar(Ident("ptr"), PtrType(IdentExpr("int32")))),        // var ptr: *int32
+           ExprStmt(CmpEq(IdentExpr("i"), IdentExpr("ptr"))),                   // i == ptr
+       })},
+
+      // Test: Compare pointers to primitive int32 and float32
+      // Expectation: Valid
+      {true, "Pointers of different types should not be comparable",
+       Block({
+           DeclStmt(DeclVar(Ident("ptr1"), PtrType(IdentExpr("int32")))),       // var ptr1: *int32
+           DeclStmt(DeclVar(Ident("ptr2"), PtrType(IdentExpr("float32")))),     // var ptr2: *float32
+           ExprStmt(CmpEq(IdentExpr("ptr1"), IdentExpr("ptr"))),                // ptr1 == ptr2
+       })},
+
+      // Test: Compare pointers to the same type
+      // Expectation: Valid
+      {false, "Pointers to the same type should be comparable",
+       Block({
+           DeclStmt(DeclVar(Ident("ptr1"), PtrType(IdentExpr("float32")))),     // var ptr1: *float32
+           DeclStmt(DeclVar(Ident("ptr2"), PtrType(IdentExpr("float32")))),     // var ptr2: *float32
+           ExprStmt(CmpEq(IdentExpr("ptr1"), IdentExpr("ptr2"))),               // ptr1 == ptr2
+       })},
+
+      // Test: Compare pointers to the same type, but using a relational op
+      // Expectation: Invalid
+      {true, "Pointers to the same type should be comparable",
+       Block({
+           DeclStmt(DeclVar(Ident("ptr1"), PtrType(IdentExpr("float32")))),     // var ptr1: *float32
+           DeclStmt(DeclVar(Ident("ptr2"), PtrType(IdentExpr("float32")))),     // var ptr2: *float32
+           ExprStmt(CmpLt(IdentExpr("ptr1"), IdentExpr("ptr2"))),               // ptr1 == ptr2
        })},
   };
   // clang-format on

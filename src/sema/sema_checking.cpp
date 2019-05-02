@@ -108,6 +108,30 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
                                                 const SourcePosition &pos,
                                                 ast::Expr *left,
                                                 ast::Expr *right) {
+  if (left->type()->IsPointerType() || right->type()->IsPointerType()) {
+    if (!parsing::Token::IsEqualityOp(op)) {
+      error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op,
+                               left->type(), right->type());
+      return {nullptr, left, right};
+    }
+
+    auto lhs = left->type()->GetPointeeType();
+    auto rhs = right->type()->GetPointeeType();
+
+    bool same_pointee_type = (lhs != nullptr && lhs == rhs);
+    bool compare_with_nil = (lhs == nullptr && left->type()->IsNilType()) ||
+                            (rhs == nullptr && right->type()->IsNilType());
+    if (same_pointee_type || compare_with_nil) {
+      auto *ret_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
+      return {ret_type, left, right};
+    }
+
+    // Error
+    error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op,
+                             left->type(), right->type());
+    return {nullptr, left, right};
+  }
+
   // If neither input expression is arithmetic, it's an ill-formed operation
   if (!left->type()->IsArithmetic() || !right->type()->IsArithmetic()) {
     error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op,
@@ -115,17 +139,19 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
     return {nullptr, left, right};
   }
 
+  auto built_ret_type = [this](ast::Type *input_type) {
+    if (input_type->IsSpecificBuiltin(ast::BuiltinType::Integer) ||
+        input_type->IsSpecificBuiltin(ast::BuiltinType::Real) ||
+        input_type->IsSpecificBuiltin(ast::BuiltinType::Decimal)) {
+      return ast::BuiltinType::Get(context(), ast::BuiltinType::Boolean);
+    } else {
+      return ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
+    }
+  };
+
   // If the input types are the same, we don't need to do any work
   if (left->type() == right->type()) {
-    ast::Type *ret_type = nullptr;
-    if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Integer) ||
-        left->type()->IsSpecificBuiltin(ast::BuiltinType::Real) ||
-        left->type()->IsSpecificBuiltin(ast::BuiltinType::Decimal)) {
-      ret_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Boolean);
-    } else {
-      ret_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
-    }
-    return {ret_type, left, right};
+    return {built_ret_type(left->type()), left, right};
   }
 
   // Cache a SQL integer type here because it's used throughout this function
@@ -142,15 +168,7 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
   }
 
   // Done
-  ast::Type *ret_type = nullptr;
-  if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Integer) ||
-      left->type()->IsSpecificBuiltin(ast::BuiltinType::Real) ||
-      left->type()->IsSpecificBuiltin(ast::BuiltinType::Decimal)) {
-    ret_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Boolean);
-  } else {
-    ret_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
-  }
-  return {ret_type, left, right};
+  return {built_ret_type(left->type()), left, right};
 }
 
 }  // namespace tpl::sema

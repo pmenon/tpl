@@ -116,6 +116,11 @@ class Token {
             static_cast<u8>(op) <= static_cast<u8>(Type::LESS_EQUAL));
   }
 
+  // If the given token either '==' or '!='
+  static bool IsEqualityOp(Type op) {
+    return op == Type::BANG_EQUAL || op == Type::EQUAL_EQUAL;
+  }
+
   static bool IsCallOrMemberOrIndex(Type op) {
     return (op == Type::LEFT_PAREN || op == Type::DOT ||
             op == Type::LEFT_BRACKET);
