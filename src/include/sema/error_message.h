@@ -35,11 +35,12 @@ namespace sema {
     (ast::Identifier))                                                         \
   F(NonFunction, "cannot call non-function '%0'", ())                          \
   F(MismatchedCallArgs,                                                        \
-    "Wrong number of arguments in call to '%0'. Expected %1, received %2.",    \
+    "wrong number of arguments in call to '%0': expected %1, received %2.",    \
     (ast::Identifier, u32, u32))                                               \
   F(IncorrectCallArgType,                                                      \
-    "cannot use a '%0' as type '%1' in argument to '%2'",                      \
-    (ast::Type *, ast::Type *, ast::Identifier))                               \
+    "function '%0' expects argument of type '%1' in position '%2', received "  \
+    "type '%3'",                                                               \
+    (ast::Identifier, ast::Type *, u32, ast::Type *))                          \
   F(NonBoolIfCondition, "non-bool used as if condition", ())                   \
   F(NonBoolForCondition, "non-bool used as for condition", ())                 \
   F(NonIntegerArrayLength, "non-integer literal used as array size", ())       \
@@ -83,10 +84,6 @@ namespace sema {
     (ast::Type *))                                                             \
   F(MissingReturn, "missing return at end of function", ())                    \
   F(InvalidDeclaration, "non-declaration outside function", ())                \
-  F(BadArgToBuiltin,                                                           \
-    "builtin '%0' expects argument of type '%1' in position '%2'. Received "   \
-    "type '%3'",                                                               \
-    (ast::Identifier, ast::Type *, u32, ast::Type *))                          \
   F(BadComparisonFunctionForSorter,                                            \
     "sorterInit requires a comparison function of type (*,*)->int32. "         \
     "Received type '%0'",                                                      \

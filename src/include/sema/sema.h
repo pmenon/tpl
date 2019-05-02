@@ -20,31 +20,41 @@ class Schema;
 
 namespace sema {
 
-/// This is the main class that performs semantic analysis of TPL programs. It
-/// traverses an untyped TPL abstract syntax tree (AST), fills in types based on
-/// declarations, derives types of expressions and ensures correctness of all
-/// operations in the TPL program.
-///
-/// Usage:
-/// \code
-/// sema::Sema check(context);
-/// bool has_errors = check.Run(ast);
-/// if (has_errors) {
-///   // handle errors
-/// }
-/// \endcode
+/**
+ * This is the main class that performs semantic analysis of TPL programs. It
+ * traverses an untyped TPL abstract syntax tree (AST), fills in types based on
+ * declarations, derives types of expressions and ensures correctness of all
+ * operations in the TPL program.
+ *
+ * Usage:
+ * @code
+ * sema::Sema check(context);
+ * bool has_errors = check.Run(ast);
+ * if (has_errors) {
+ *   // handle errors
+ * }
+ * @encode
+ */
 class Sema : public ast::AstVisitor<Sema> {
  public:
-  /// Constructor
+  /**
+   * Construct using the given context
+   * @param ctx The context used to acquire memory for new ASTs and the
+   *            diagnostic error reporter.
+   */
   explicit Sema(ast::Context *ctx);
 
-  /// This class cannot be copied or moved
+  /**
+   * This class cannot be copied or moved
+   */
   DISALLOW_COPY_AND_MOVE(Sema);
 
-  /// Run the type checker on the provided AST rooted at \a root. Ensures proper
-  /// types of all statements and expressions, and also annotates the AST with
-  /// correct type information.
-  /// \return true if type-checking found errors; false otherwise
+  /**
+   * Run the type checker on the provided AST rooted at \a root. Ensures proper
+   * types of all statements and expressions, and also annotates the AST with
+   * correct type information.
+   * @return True if type-checking found errors; false otherwise
+   */
   bool Run(ast::AstNode *root);
 
   // Declare all node visit methods here
@@ -68,10 +78,22 @@ class Sema : public ast::AstVisitor<Sema> {
     ast::Expr *right;
   };
 
+  // Implicitly cast the input expression into the target type using the
+  // provided cast kind, also setting the type of the casted expression result.
+  ast::Expr *ImplCastExprToType(ast::Expr *expr, ast::Type *target_type,
+                                ast::CastKind cast_kind);
+
+  // Check the number of arguments to the call. Returns true if there was an
+  // error.
+  bool CheckArgCount(ast::CallExpr *call, u32 expected_arg_count);
+  bool CheckArgCountAtLeast(ast::CallExpr *call, u32 expected_arg_count);
+
+  // Check boolean logic operands: and, or
   CheckResult CheckLogicalOperands(parsing::Token::Type op,
                                    const SourcePosition &pos, ast::Expr *left,
                                    ast::Expr *right);
 
+  // Check operands to an arithmetic operation: +, -, *, etc.
   CheckResult CheckArithmeticOperands(parsing::Token::Type op,
                                       const SourcePosition &pos,
                                       ast::Expr *left, ast::Expr *right);
@@ -85,6 +107,7 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinMapCall(ast::CallExpr *call);
   void CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinFilterCall(ast::CallExpr *call);
+  void CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinJoinHashTableInit(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableInsert(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableBuild(ast::CallExpr *call);

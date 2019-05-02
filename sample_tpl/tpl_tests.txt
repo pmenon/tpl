@@ -18,6 +18,7 @@ pointer.tpl,10
 scan-table.tpl,500
 scan-table-2.tpl,1999950
 scan-table-3.tpl,2000000
+scan-vpi-iter.tpl,500
 scope.tpl,3
 short-circuit.tpl,1
 simple.tpl,44
