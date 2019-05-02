@@ -4,12 +4,12 @@ fun Lt500(vpi: *VectorProjectionIterator) -> int32 {
   if (@vpiIsFiltered(vpi)) {
     for (; @vpiHasNextFiltered(vpi); @vpiAdvanceFiltered(vpi)) {
       cola = @vpiGetInt(vpi, 0)
-      @vpiMatch(vpi, @sqlToBool(cola < param))
+      @vpiMatch(vpi, cola < param)
     }
   } else {
     for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
       cola = @vpiGetInt(vpi, 0)
-      @vpiMatch(vpi, @sqlToBool(cola < param))
+      @vpiMatch(vpi, cola < param)
     }
   }
   @vpiResetFiltered(vpi)

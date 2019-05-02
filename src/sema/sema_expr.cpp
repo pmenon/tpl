@@ -443,12 +443,21 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       if (CheckArgCount(call, 2)) {
         return;
       }
-      if (!call->arguments()[1]->type()->IsBoolType()) {
+      // If the match argument is a SQL boolean, implicitly cast to native
+      ast::Expr *match_arg = call->arguments()[1];
+      if (match_arg->type()->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
+        match_arg = ImplCastExprToType(
+            match_arg, ast::BuiltinType::Get(context(), ast::BuiltinType::Bool),
+            ast::CastKind::SqlBoolToBool);
+        call->set_argument(1, match_arg);
+      }
+      // If the match argument isn't a native boolean , error
+      if (!match_arg->type()->IsBoolType()) {
         error_reporter()->Report(
             call->position(), ErrorMessages::kIncorrectCallArgType,
             call->GetFuncName(),
             ast::BuiltinType::Get(context(), ast::BuiltinType::Bool), 1,
-            call->arguments()[1]->type());
+            match_arg->type());
         return;
       }
       call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
