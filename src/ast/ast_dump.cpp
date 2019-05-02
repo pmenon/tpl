@@ -250,7 +250,7 @@ void AstDumperImpl::VisitIfStmt(IfStmt *node) {
 
 void AstDumperImpl::VisitReturnStmt(ReturnStmt *node) {
   DumpNodeCommon(node);
-  if (node->ret()) {
+  if (node->ret() != nullptr) {
     DumpExpr(node->ret());
   }
 }

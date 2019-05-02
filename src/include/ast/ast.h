@@ -517,10 +517,13 @@ class Expr : public AstNode {
   Expr(Kind kind, const SourcePosition &pos, Type *type = nullptr)
       : AstNode(kind, pos), type_(type) {}
 
+  // Type access
   Type *type() { return type_; }
   const Type *type() const { return type_; }
-
   void set_type(Type *type) { type_ = type; }
+
+  bool IsNilLiteral() const;
+  bool IsStringLiteral() const;
 
   static bool classof(const AstNode *node) {
     return node->kind() >= Kind::BadExpr &&
@@ -640,6 +643,12 @@ class ComparisonOpExpr : public Expr {
   Expr *left() { return left_; }
 
   Expr *right() { return right_; }
+
+  /// Is this a comparison between a valid expression and a nil literal?
+  /// \param[out] result If this is a literal nil comparison, result will point
+  ///                    to the expression we're checking nil against
+  /// \return True if this is a nil comparison; false otherwise
+  bool IsLiteralCompareNil(Expr **result) const;
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::ComparisonOpExpr;

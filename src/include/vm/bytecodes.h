@@ -64,6 +64,8 @@ namespace tpl::vm {
   F(JumpIfFalse, OperandType::Local, OperandType::JumpOffset)                                                          \
                                                                                                                        \
   /* Memory/pointer operations */                                                                                      \
+  F(IsNullPtr, OperandType::Local, OperandType::Local)                                                                 \
+  F(IsNotNullPtr, OperandType::Local, OperandType::Local)                                                              \
   F(Deref1, OperandType::Local, OperandType::Local)                                                                    \
   F(Deref2, OperandType::Local, OperandType::Local)                                                                    \
   F(Deref4, OperandType::Local, OperandType::Local)                                                                    \

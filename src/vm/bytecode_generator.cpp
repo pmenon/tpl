@@ -1273,6 +1273,20 @@ void BytecodeGenerator::VisitPrimitiveCompareOpExpr(
              "Comparison expressions must be R-Values!");
 
   LocalVar dest = execution_result()->GetOrCreateDestination(compare->type());
+
+  // nil comparison
+  if (ast::Expr * input_expr; compare->IsLiteralCompareNil(&input_expr)) {
+    LocalVar input = VisitExpressionForRValue(input_expr);
+    Bytecode bytecode = compare->op() == parsing::Token::Type ::EQUAL_EQUAL
+                            ? Bytecode::IsNullPtr
+                            : Bytecode::IsNotNullPtr;
+    emitter()->Emit(bytecode, dest, input);
+    execution_result()->set_destination(dest.ValueOf());
+    return;
+  }
+
+  // regular comparison
+
   LocalVar left = VisitExpressionForRValue(compare->left());
   LocalVar right = VisitExpressionForRValue(compare->right());
 

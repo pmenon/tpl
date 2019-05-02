@@ -344,6 +344,20 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // Low-level memory operations
   // -------------------------------------------------------
 
+  OP(IsNullPtr) : {
+    auto *result = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto *input_ptr = frame->LocalAt<const void *>(READ_LOCAL_ID());
+    OpIsNullPtr(result, input_ptr);
+    DISPATCH_NEXT();
+  }
+
+  OP(IsNotNullPtr) : {
+    auto *result = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto *input_ptr = frame->LocalAt<const void *>(READ_LOCAL_ID());
+    OpIsNotNullPtr(result, input_ptr);
+    DISPATCH_NEXT();
+  }
+
 #define GEN_DEREF(type, size)                             \
   OP(Deref##size) : {                                     \
     auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \

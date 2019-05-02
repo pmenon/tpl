@@ -137,6 +137,14 @@ INT_TYPES(BITS);
 // Memory operations
 // ---------------------------------------------------------
 
+VM_OP_HOT void OpIsNullPtr(bool *result, const void *const ptr) {
+  *result = (ptr == nullptr);
+}
+
+VM_OP_HOT void OpIsNotNullPtr(bool *result, const void *const ptr) {
+  *result = (ptr != nullptr);
+}
+
 VM_OP_HOT void OpDeref1(i8 *dest, const i8 *const src) { *dest = *src; }
 
 VM_OP_HOT void OpDeref2(i16 *dest, const i16 *const src) { *dest = *src; }

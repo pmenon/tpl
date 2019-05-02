@@ -144,9 +144,8 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
         input_type->IsSpecificBuiltin(ast::BuiltinType::Real) ||
         input_type->IsSpecificBuiltin(ast::BuiltinType::Decimal)) {
       return ast::BuiltinType::Get(context(), ast::BuiltinType::Boolean);
-    } else {
-      return ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
     }
+    return ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
   };
 
   // If the input types are the same, we don't need to do any work

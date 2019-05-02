@@ -380,9 +380,7 @@ void Sema::CheckBuiltinTableIterCall(ast::CallExpr *call,
   switch (builtin) {
     case ast::Builtin::TableIterInit: {
       // The second argument is the table name as a literal string
-      if (auto *table_name = call_args[1]->SafeAs<ast::LitExpr>();
-          table_name == nullptr ||
-          table_name->literal_kind() != ast::LitExpr::LitKind::String) {
+      if (!call_args[1]->IsStringLiteral()) {
         error_reporter()->Report(
             call->position(), ErrorMessages::kIncorrectCallArgType,
             call->GetFuncName(), ast::StringType::Get(context()), 1,
