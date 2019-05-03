@@ -127,7 +127,7 @@ struct FunctionTypeKeyInfo {
 };
 
 struct Context::Implementation {
-  static constexpr const uint32_t kDefaultStringTableCapacity = 32;
+  static constexpr const u32 kDefaultStringTableCapacity = 32;
 
   // -------------------------------------------------------
   // Builtin types
@@ -147,7 +147,7 @@ struct Context::Implementation {
   llvm::DenseMap<Identifier, Type *> builtin_types;
   llvm::DenseMap<Identifier, Builtin> builtin_funcs;
   llvm::DenseMap<Type *, PointerType *> pointer_types;
-  llvm::DenseMap<std::pair<Type *, uint64_t>, ArrayType *> array_types;
+  llvm::DenseMap<std::pair<Type *, u64>, ArrayType *> array_types;
   llvm::DenseMap<std::pair<Type *, Type *>, MapType *> map_types;
   llvm::DenseSet<StructType *, StructTypeKeyInfo> struct_types;
   llvm::DenseSet<FunctionType *, FunctionTypeKeyInfo> func_types;
@@ -277,7 +277,7 @@ PointerType *PointerType::Get(Type *base) {
 }
 
 // static
-ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
+ArrayType *ArrayType::Get(u64 length, Type *elem_type) {
   Context *ctx = elem_type->context();
 
   ArrayType *&array_type = ctx->impl()->array_types[{elem_type, length}];

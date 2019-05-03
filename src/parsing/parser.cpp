@@ -374,12 +374,12 @@ ast::Expr *Parser::ParseExpr() {
   return ParseBinaryOpExpr(Token::LowestPrecedence() + 1);
 }
 
-ast::Expr *Parser::ParseBinaryOpExpr(uint32_t min_prec) {
+ast::Expr *Parser::ParseBinaryOpExpr(u32 min_prec) {
   TPL_ASSERT(min_prec > 0, "The minimum precedence cannot be 0");
 
   ast::Expr *left = ParseUnaryOpExpr();
 
-  for (uint32_t prec = Token::GetPrecedence(peek()); prec > min_prec; prec--) {
+  for (u32 prec = Token::GetPrecedence(peek()); prec > min_prec; prec--) {
     // It's possible that we reach a token that has lower precedence than the
     // minimum (e.g., EOS) so we check and early exit
     if (Token::GetPrecedence(peek()) < min_prec) {
