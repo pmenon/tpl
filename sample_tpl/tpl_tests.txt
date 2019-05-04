@@ -1,4 +1,5 @@
 array.tpl,44
+array-reference.tpl,9
 call.tpl,70
 deref.tpl,404
 fib.tpl,832040

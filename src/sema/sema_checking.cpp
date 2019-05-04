@@ -17,10 +17,10 @@ bool Sema::CheckArgCount(ast::CallExpr *call, u32 expected_arg_count) {
     error_reporter()->Report(
         call->position(), ErrorMessages::kMismatchedCallArgs,
         call->GetFuncName(), expected_arg_count, call->num_args());
-    return true;
+    return false;
   }
 
-  return false;
+  return true;
 }
 
 bool Sema::CheckArgCountAtLeast(ast::CallExpr *call, u32 expected_arg_count) {
@@ -28,10 +28,10 @@ bool Sema::CheckArgCountAtLeast(ast::CallExpr *call, u32 expected_arg_count) {
     error_reporter()->Report(
         call->position(), ErrorMessages::kMismatchedCallArgs,
         call->GetFuncName(), expected_arg_count, call->num_args());
-    return true;
+    return false;
   }
 
-  return false;
+  return true;
 }
 
 // and, or
@@ -168,6 +168,55 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
 
   // Done
   return {built_ret_type(left->type()), left, right};
+}
+
+bool Sema::CheckAssignmentConstraints(ast::Type *target_type,
+                                      ast::Expr *&expr) {
+  // If the target and expression types are the same, nothing to do
+  if (expr->type() == target_type) {
+    return true;
+  }
+
+  // Integer expansion
+  if (target_type->IsIntegerType() && expr->type()->IsIntegerType()) {
+    if (target_type->size() > expr->type()->size()) {
+      expr = ImplCastExprToType(expr, target_type, ast::CastKind::IntegralCast);
+    }
+    return true;
+  }
+
+  // Float to integer expansion
+  if (target_type->IsIntegerType() && expr->type()->IsFloatType()) {
+    expr = ImplCastExprToType(expr, target_type, ast::CastKind::FloatToInt);
+    return true;
+  }
+
+  // Integer to float expansion
+  if (target_type->IsFloatType() && expr->type()->IsIntegerType()) {
+    expr = ImplCastExprToType(expr, target_type, ast::CastKind::IntToFloat);
+    return true;
+  }
+
+  // Convert *[N]Type to [*]Type
+  if (auto *target_arr = target_type->SafeAs<ast::ArrayType>()) {
+    if (auto *expr_base = expr->type()->GetPointeeType()) {
+      if (auto *expr_arr = expr_base->SafeAs<ast::ArrayType>()) {
+        if (target_arr->HasUnknownLength() && expr_arr->HasKnownLength()) {
+          expr = ImplCastExprToType(expr, target_type, ast::CastKind::BitCast);
+          return true;
+        }
+      }
+    }
+  }
+
+  // *T to *U
+  if (target_type->IsPointerType() || expr->type()->IsPointerType()) {
+    expr = ImplCastExprToType(expr, target_type, ast::CastKind::BitCast);
+    return true;
+  }
+
+  // Not a valid assignment
+  return false;
 }
 
 }  // namespace tpl::sema

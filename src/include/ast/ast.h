@@ -278,6 +278,11 @@ class VariableDecl : public Decl {
   }
 
  private:
+  friend class sema::Sema;
+
+  void set_initial(ast::Expr *initial) { init_ = initial; }
+
+ private:
   Expr *init_;
 };
 
@@ -307,9 +312,9 @@ class AssignmentStmt : public Stmt {
   AssignmentStmt(const SourcePosition &pos, Expr *dest, Expr *src)
       : Stmt(AstNode::Kind::AssignmentStmt, pos), dest_(dest), src_(src) {}
 
-  Expr *destination() const { return dest_; }
+  Expr *destination() { return dest_; }
 
-  Expr *source() const { return src_; }
+  Expr *source() { return src_; }
 
   static bool classof(const AstNode *node) {
     return node->kind() == Kind::AssignmentStmt;
@@ -733,6 +738,15 @@ enum class CastKind : u8 {
   // numbers), excluding to boolean! Boils down to a bitcast, a truncation,
   // a sign-extension, or a zero-extension. The same as in C/C++.
   IntegralCast,
+
+  // An integer to float cast. Only allows widening.
+  IntToFloat,
+
+  // A float to integer cast. Only allows widening.
+  FloatToInt,
+
+  // A simple bit cast reinterpretation
+  BitCast,
 };
 
 /// An implicit cast operation is one that is inserted automatically by the

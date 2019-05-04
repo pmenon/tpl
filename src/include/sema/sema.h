@@ -83,8 +83,7 @@ class Sema : public ast::AstVisitor<Sema> {
   ast::Expr *ImplCastExprToType(ast::Expr *expr, ast::Type *target_type,
                                 ast::CastKind cast_kind);
 
-  // Check the number of arguments to the call. Returns true if there was an
-  // error.
+  // Check the number of arguments to the call; true if good, false otherwise
   bool CheckArgCount(ast::CallExpr *call, u32 expected_arg_count);
   bool CheckArgCountAtLeast(ast::CallExpr *call, u32 expected_arg_count);
 
@@ -102,8 +101,13 @@ class Sema : public ast::AstVisitor<Sema> {
                                       const SourcePosition &pos,
                                       ast::Expr *left, ast::Expr *right);
 
+  // Check the assignment of the expression to a variable or the target type.
+  // Return true if the assignment is valid, and false otherwise.
+  // Will also apply an implicit cast to make the assignment valid.
+  bool CheckAssignmentConstraints(ast::Type *target_type, ast::Expr *&expr);
+
   // Dispatched from VisitCall() to handle builtin functions
-  void CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckBuiltinCall(ast::CallExpr *call);
   void CheckBuiltinMapCall(ast::CallExpr *call);
   void CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinFilterCall(ast::CallExpr *call);

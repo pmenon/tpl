@@ -659,8 +659,8 @@ ast::Expr *Parser::ParsePointerType() {
 }
 
 ast::Expr *Parser::ParseArrayType() {
-  // ArrayTypeRepr = '[' [ Length ] ']' Type ;
-  // Length = Expr ;
+  // ArrayTypeRepr = '[' Length ']' Type ;
+  // Length = [ '*' | Expr ] ;
 
   Consume(Token::Type::LEFT_BRACKET);
 
@@ -669,7 +669,9 @@ ast::Expr *Parser::ParseArrayType() {
   // If the next token doesn't match a right bracket, it means we have a length
   ast::Expr *len = nullptr;
   if (!Matches(Token::Type::RIGHT_BRACKET)) {
-    len = ParseExpr();
+    if (!Matches(Token::Type::STAR)) {
+      len = ParseExpr();
+    }
     Expect(Token::Type::RIGHT_BRACKET);
   }
 

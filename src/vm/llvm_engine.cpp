@@ -171,7 +171,11 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
     case ast::Type::TypeId::ArrayType: {
       auto *arr_type = type->As<ast::ArrayType>();
       llvm::Type *elem_type = GetLLVMType(arr_type->element_type());
-      llvm_type = llvm::ArrayType::get(elem_type, arr_type->length());
+      if (arr_type->HasKnownLength()) {
+        llvm_type = llvm::ArrayType::get(elem_type, arr_type->length());
+      } else {
+        llvm_type = llvm::PointerType::getUnqual(elem_type);
+      }
       break;
     }
     case ast::Type::TypeId::MapType: {
@@ -722,6 +726,30 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
       }
     }
 
+    const auto issue_call = [&ir_builder](auto *func, auto &args) {
+      auto arg_iter = func->arg_begin();
+      for (u32 i = 0; i < args.size(); ++i, ++arg_iter) {
+        llvm::Type *expected_type = arg_iter->getType();
+        llvm::Type *provided_type = args[i]->getType();
+
+        if (provided_type == expected_type) {
+          continue;
+        }
+
+        if (expected_type->isIntegerTy()) {
+          if (provided_type->isPointerTy()) {
+            args[i] = ir_builder.CreatePtrToInt(args[i], expected_type);
+          } else {
+            args[i] = ir_builder.CreateIntCast(args[i], expected_type, true);
+          }
+        } else if (expected_type->isPointerTy()) {
+          TPL_ASSERT(provided_type->isPointerTy(), "Mismatched types");
+          args[i] = ir_builder.CreateBitCast(args[i], expected_type);
+        }
+      }
+      return ir_builder.CreateCall(func, args);
+    };
+
     // Handle bytecode
     switch (bytecode) {
       case Bytecode::Call: {
@@ -736,19 +764,19 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
         // elements are legitimate arguments to the function.
         //
 
-        const auto callee_id = iter.GetFunctionIdOperand(0);
+        const FunctionId callee_id = iter.GetFunctionIdOperand(0);
         const auto *callee_func_info = tpl_module().GetFuncInfoById(callee_id);
-
-        auto *callee = module()->getFunction(callee_func_info->name());
+        llvm::Function *callee =
+            module()->getFunction(callee_func_info->name());
         args.erase(args.begin());
 
         if (FunctionHasDirectReturn(callee_func_info->func_type())) {
           llvm::Value *dest = args[0];
           args.erase(args.begin());
-          llvm::Value *ret = ir_builder.CreateCall(callee, args);
+          llvm::Value *ret = issue_call(callee, args);
           ir_builder.CreateStore(ret, dest);
         } else {
-          ir_builder.CreateCall(callee, args);
+          issue_call(callee, args);
         }
 
         break;
@@ -815,38 +843,12 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
 
       default: {
         //
-        // In the default case, each bytecode makes a function call into it's
-        // bytecode handler function. We also need to ensure correct types by
-        // inserting casting operations where appropriate.
+        // In the default case, each bytecode makes a function call into its
+        // bytecode handler function.
         //
 
         llvm::Function *handler = LookupBytecodeHandler(bytecode);
-
-        {
-          auto handler_arg_iter = handler->arg_begin();
-          for (u32 i = 0; i < args.size(); ++i, ++handler_arg_iter) {
-            llvm::Type *expected_type = handler_arg_iter->getType();
-            llvm::Type *provided_type = args[i]->getType();
-
-            if (provided_type == expected_type) {
-              continue;
-            }
-
-            if (expected_type->isIntegerTy()) {
-              if (provided_type->isPointerTy()) {
-                args[i] = ir_builder.CreatePtrToInt(args[i], expected_type);
-              } else {
-                args[i] =
-                    ir_builder.CreateIntCast(args[i], expected_type, true);
-              }
-            } else if (expected_type->isPointerTy()) {
-              args[i] =
-                  ir_builder.CreateBitOrPointerCast(args[i], expected_type);
-            }
-          }
-        }
-
-        ir_builder.CreateCall(handler, args);
+        issue_call(handler, args);
         break;
       }
     }

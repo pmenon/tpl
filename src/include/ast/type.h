@@ -324,6 +324,9 @@ class ArrayType : public Type {
 
   Type *element_type() const { return elem_type_; }
 
+  bool HasKnownLength() const { return length_ != 0; }
+  bool HasUnknownLength() const { return !HasKnownLength(); }
+
   static ArrayType *Get(u64 length, Type *elem_type);
 
   static bool classof(const Type *type) {
@@ -332,8 +335,10 @@ class ArrayType : public Type {
 
  private:
   explicit ArrayType(u64 length, Type *elem_type)
-      : Type(elem_type->context(), elem_type->size() * length,
-             elem_type->alignment(), TypeId::ArrayType),
+      : Type(elem_type->context(),
+             (length == 0 ? sizeof(u8 *) : elem_type->size() * length),
+             (length == 0 ? alignof(u8 *) : elem_type->alignment()),
+             TypeId::ArrayType),
         length_(length),
         elem_type_(elem_type) {}
 

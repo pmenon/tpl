@@ -16,20 +16,17 @@ void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
     return;
   }
 
-  // Fast-path
-  if (src_type == dest_type) {
+  // Check assignment
+  ast::Expr *source = node->source();
+  if (!CheckAssignmentConstraints(dest_type, source)) {
+    error_reporter_->Report(node->position(), ErrorMessages::kInvalidAssignment,
+                            src_type, dest_type);
     return;
   }
 
-  // The left and right types are no the same. If both types are integral, see
-  // if we can issue an integral cast.
-
-  if (src_type->IsIntegerType() || dest_type->IsIntegerType()) {
-    auto *cast_expr = context()->node_factory()->NewImplicitCastExpr(
-        node->source()->position(), ast::CastKind::IntegralCast, dest_type,
-        node->source());
-    node->set_source(cast_expr);
-    return;
+  // Assignment looks good, but the source may have been casted
+  if (source != node->source()) {
+    node->set_source(source);
   }
 }
 
@@ -65,8 +62,8 @@ void Sema::VisitForStmt(ast::ForStmt *node) {
     }
     // If the resolved type isn't a boolean, it's an error
     if (!cond_type->IsBoolType()) {
-      error_reporter()->Report(node->condition()->position(),
-                               ErrorMessages::kNonBoolForCondition);
+      error_reporter_->Report(node->condition()->position(),
+                              ErrorMessages::kNonBoolForCondition);
     }
   }
 
@@ -110,8 +107,8 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
 
   // If the conditional isn't an explicit boolean type, error
   if (!node->condition()->type()->IsBoolType()) {
-    error_reporter()->Report(node->condition()->position(),
-                             ErrorMessages::kNonBoolIfCondition);
+    error_reporter_->Report(node->condition()->position(),
+                            ErrorMessages::kNonBoolIfCondition);
   }
 
   Visit(node->then_stmt());
@@ -125,8 +122,8 @@ void Sema::VisitDeclStmt(ast::DeclStmt *node) { Visit(node->declaration()); }
 
 void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
   if (current_function() == nullptr) {
-    error_reporter()->Report(node->position(),
-                             ErrorMessages::kReturnOutsideFunction);
+    error_reporter_->Report(node->position(),
+                            ErrorMessages::kReturnOutsideFunction);
     return;
   }
 
@@ -145,9 +142,9 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
 
   if (func_type->return_type()->IsNilType()) {
     if (return_type != nullptr) {
-      error_reporter()->Report(node->position(),
-                               ErrorMessages::kMismatchedReturnType,
-                               return_type, func_type->return_type());
+      error_reporter_->Report(node->position(),
+                              ErrorMessages::kMismatchedReturnType, return_type,
+                              func_type->return_type());
     }
     return;
   }
@@ -156,16 +153,16 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
   // resolved type of the expression in this return is compatible with the
   // return type of the function.
 
-  if (return_type != func_type->return_type()) {
-    // It's possible the return type is null (either because there was an error
-    // or there wasn't an expression)
-    if (return_type == nullptr) {
-      return_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Nil);
-    }
+  if (return_type == nullptr) {
+    error_reporter_->Report(node->position(), ErrorMessages::kMissingReturn);
+    return;
+  }
 
-    error_reporter()->Report(node->position(),
-                             ErrorMessages::kMismatchedReturnType, return_type,
-                             func_type->return_type());
+  ast::Expr *ret = node->ret();
+  if (!CheckAssignmentConstraints(func_type->return_type(), ret)) {
+    error_reporter_->Report(node->position(),
+                            ErrorMessages::kMismatchedReturnType, return_type,
+                            func_type->return_type());
     return;
   }
 }

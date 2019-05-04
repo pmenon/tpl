@@ -25,6 +25,8 @@ namespace sema {
     (ast::Identifier, ast::Identifier))                                        \
   F(AssignmentUsedAsValue, "assignment '%0' = '%1' used as value",             \
     (ast::Identifier, ast::Identifier))                                        \
+  F(InvalidAssignment, "cannot assign type '%0' to type '%1'",                 \
+    (ast::Type *, ast::Type *))                                                \
   F(ExpectingExpression, "expecting expression", ())                           \
   F(ExpectingType, "expecting type", ())                                       \
   F(InvalidOperation, "invalid operation: '%0' on type '%1'",                  \

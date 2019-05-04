@@ -144,7 +144,7 @@ void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call,
 }
 
 void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
-  if (CheckArgCount(call, 3)) {
+  if (!CheckArgCount(call, 3)) {
     return;
   }
 
@@ -176,7 +176,7 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
 
 void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call,
                                         ast::Builtin builtin) {
-  if (CheckArgCountAtLeast(call, 1)) {
+  if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
 
@@ -220,7 +220,7 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call,
 }
 
 void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
-  if (CheckArgCount(call, 3)) {
+  if (!CheckArgCount(call, 3)) {
     return;
   }
 
@@ -263,7 +263,7 @@ void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
 }
 
 void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
-  if (CheckArgCount(call, 2)) {
+  if (!CheckArgCount(call, 2)) {
     return;
   }
 
@@ -299,7 +299,7 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
 }
 
 void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
-  if (CheckArgCount(call, 1)) {
+  if (!CheckArgCount(call, 1)) {
     return;
   }
 
@@ -321,7 +321,7 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
 }
 
 void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
-  if (CheckArgCount(call, 1)) {
+  if (!CheckArgCount(call, 1)) {
     return;
   }
 
@@ -343,7 +343,7 @@ void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
 }
 
 void Sema::CheckBuiltinRegionCall(ast::CallExpr *call) {
-  if (CheckArgCount(call, 1)) {
+  if (!CheckArgCount(call, 1)) {
     return;
   }
 
@@ -411,7 +411,7 @@ void Sema::CheckBuiltinTableIterCall(ast::CallExpr *call,
 }
 
 void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
-  if (CheckArgCountAtLeast(call, 1)) {
+  if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
 
@@ -438,7 +438,7 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       break;
     }
     case ast::Builtin::VPIMatch: {
-      if (CheckArgCount(call, 2)) {
+      if (!CheckArgCount(call, 2)) {
         return;
       }
       // If the match argument is a SQL boolean, implicitly cast to native
@@ -479,7 +479,7 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
 
 void Sema::CheckBuiltinHashCall(ast::CallExpr *call,
                                 UNUSED ast::Builtin builtin) {
-  if (CheckArgCountAtLeast(call, 1)) {
+  if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
 
@@ -498,7 +498,7 @@ void Sema::CheckBuiltinHashCall(ast::CallExpr *call,
 
 void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call,
                                          const ast::Builtin builtin) {
-  if (CheckArgCountAtLeast(call, 1)) {
+  if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
 
@@ -560,7 +560,7 @@ void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call,
 }
 
 void Sema::CheckBuiltinSizeOfCall(ast::CallExpr *call) {
-  if (CheckArgCount(call, 1)) {
+  if (!CheckArgCount(call, 1)) {
     return;
   }
 
@@ -569,7 +569,7 @@ void Sema::CheckBuiltinSizeOfCall(ast::CallExpr *call) {
 }
 
 void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
-  if (CheckArgCount(call, 2)) {
+  if (!CheckArgCount(call, 2)) {
     return;
   }
 
@@ -611,7 +611,7 @@ void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
 }
 
 void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
-  if (CheckArgCount(call, 4)) {
+  if (!CheckArgCount(call, 4)) {
     return;
   }
 
@@ -668,7 +668,7 @@ void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
 }
 
 void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call) {
-  if (CheckArgCount(call, 1)) {
+  if (!CheckArgCount(call, 1)) {
     return;
   }
 
@@ -689,7 +689,7 @@ void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call) {
 }
 
 void Sema::CheckBuiltinSorterSort(ast::CallExpr *call) {
-  if (CheckArgCount(call, 1)) {
+  if (!CheckArgCount(call, 1)) {
     return;
   }
 
@@ -709,7 +709,7 @@ void Sema::CheckBuiltinSorterSort(ast::CallExpr *call) {
 }
 
 void Sema::CheckBuiltinSorterFree(ast::CallExpr *call) {
-  if (CheckArgCount(call, 1)) {
+  if (!CheckArgCount(call, 1)) {
     return;
   }
 
@@ -730,7 +730,7 @@ void Sema::CheckBuiltinSorterFree(ast::CallExpr *call) {
 
 void Sema::CheckBuiltinSorterIterCall(ast::CallExpr *call,
                                       ast::Builtin builtin) {
-  if (CheckArgCountAtLeast(call, 1)) {
+  if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
 
@@ -748,7 +748,7 @@ void Sema::CheckBuiltinSorterIterCall(ast::CallExpr *call,
 
   switch (builtin) {
     case ast::Builtin::SorterIterInit: {
-      if (CheckArgCount(call, 2)) {
+      if (!CheckArgCount(call, 2)) {
         return;
       }
 
@@ -786,7 +786,15 @@ void Sema::CheckBuiltinSorterIterCall(ast::CallExpr *call,
   }
 }
 
-void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinCall(ast::CallExpr *call) {
+  ast::Builtin builtin;
+  if (!context()->IsBuiltinFunction(call->GetFuncName(), &builtin)) {
+    error_reporter()->Report(call->function()->position(),
+                             ErrorMessages::kInvalidBuiltinFunction,
+                             call->GetFuncName());
+    return;
+  }
+
   if (builtin == ast::Builtin::PtrCast) {
     CheckBuiltinPtrCastCall(call);
     return;
@@ -922,42 +930,29 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call, ast::Builtin builtin) {
 void Sema::VisitCallExpr(ast::CallExpr *node) {
   // If the call claims to be to a builtin, validate it
   if (node->call_kind() == ast::CallExpr::CallKind::Builtin) {
-    ast::Builtin builtin;
-    if (!context()->IsBuiltinFunction(node->GetFuncName(), &builtin)) {
-      error_reporter()->Report(node->function()->position(),
-                               ErrorMessages::kInvalidBuiltinFunction,
-                               node->GetFuncName());
-      return;
-    }
-
-    // It's a builtin, check it and finish
-    CheckBuiltinCall(node, builtin);
+    CheckBuiltinCall(node);
     return;
   }
 
   // Resolve the function type
   ast::Type *type = Resolve(node->function());
-
   if (type == nullptr) {
-    // Some error occurred
     return;
   }
 
-  if (!type->IsFunctionType()) {
+  // Check that the resolved function type is actually a function
+  auto *func_type = type->SafeAs<ast::FunctionType>();
+  if (func_type == nullptr) {
     error_reporter()->Report(node->position(), ErrorMessages::kNonFunction);
     return;
   }
 
-  // First, check to make sure we have the right number of function arguments
-  auto *func_type = type->As<ast::FunctionType>();
-  if (func_type->num_params() != node->num_args()) {
-    error_reporter()->Report(
-        node->position(), ErrorMessages::kMismatchedCallArgs,
-        node->GetFuncName(), func_type->num_params(), node->num_args());
+  // Check argument count matches
+  if (!CheckArgCount(node, func_type->num_params())) {
     return;
   }
 
-  // Now, let's resolve each function argument's type
+  // Resolve function arguments
   for (auto *arg : node->arguments()) {
     ast::Type *arg_type = Resolve(arg);
     if (arg_type == nullptr) {
@@ -965,21 +960,36 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
     }
   }
 
-  // Now, let's make sure the arguments match up
-  const auto &actual_call_arg_types = node->arguments();
-  const auto &expected_arg_params = func_type->params();
-  for (u32 arg_num = 0; arg_num < actual_call_arg_types.size(); arg_num++) {
-    ast::Type *actual_type = actual_call_arg_types[arg_num]->type();
-    ast::Type *expected_type = expected_arg_params[arg_num].type;
-    if (actual_type != expected_type) {
-      error_reporter()->Report(
-          node->position(), ErrorMessages::kIncorrectCallArgType,
-          node->GetFuncName(), expected_type, arg_num, actual_type);
-      return;
+  // Check args
+  bool has_errors = false;
+
+  const auto &actual_args = node->arguments();
+  for (u32 arg_num = 0; arg_num < actual_args.size(); arg_num++) {
+    ast::Type *expected_type = func_type->params()[arg_num].type;
+    ast::Expr *arg = actual_args[arg_num];
+
+    // Function application simplifies to performing an assignment of the
+    // actual call arguments to the function parameters. Do the check now, which
+    // may apply an implicit cast to make the assignment work.
+    if (!CheckAssignmentConstraints(expected_type, arg)) {
+      has_errors = true;
+      error_reporter_->Report(
+          arg->position(), ErrorMessages::kIncorrectCallArgType,
+          node->GetFuncName(), expected_type, arg_num, arg->type());
+      continue;
+    }
+
+    // If the check applied an implicit cast, set the argument
+    if (arg != actual_args[arg_num]) {
+      node->set_argument(arg_num, arg);
     }
   }
 
-  // All looks good ...
+  if (has_errors) {
+    return;
+  }
+
+  // Looks good ...
   node->set_type(func_type->return_type());
 }
 

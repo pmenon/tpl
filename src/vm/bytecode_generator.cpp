@@ -244,20 +244,31 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
       execution_result()->set_destination(dest);
       break;
     }
+    case ast::CastKind::BitCast:
     case ast::CastKind::IntegralCast: {
       BuildAssign(dest, input, node->type());
+      execution_result()->set_destination(dest.ValueOf());
       break;
     }
     default: {
       // Implement me
-      throw std::runtime_error("Implement me");
+      throw std::runtime_error("Implement this cast type");
     }
   }
 }
 
 void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
+  // The type and the element's size
+  auto *type = node->object()->type()->As<ast::ArrayType>();
+  auto elem_size = type->element_type()->size();
+
   // First, we need to get the base address of the array
-  LocalVar arr = VisitExpressionForLValue(node->object());
+  LocalVar arr;
+  if (type->HasKnownLength()) {
+    arr = VisitExpressionForLValue(node->object());
+  } else {
+    arr = VisitExpressionForRValue(node->object());
+  }
 
   // The next step is to compute the address of the element at the desired index
   // stored in the IndexExpr node. There are two cases we handle:
@@ -271,9 +282,6 @@ void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
   // If the index is not a constant, we need to evaluate the expression to
   // produce the index, then issue a LeaScaled instruction to compute the
   // address.
-
-  auto *type = node->object()->type()->As<ast::ArrayType>();
-  auto elem_size = type->element_type()->size();
 
   LocalVar elem_ptr = current_function()->NewLocal(node->type()->PointerTo());
 
