@@ -207,7 +207,8 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   // previous variable declaration (or parameter declaration). What is returned
   // is a pointer to the variable.
 
-  LocalVar local = current_function()->LookupLocal(node->name().data());
+  const std::string local_name = node->name().data();
+  LocalVar local = current_function()->LookupLocal(local_name);
 
   if (execution_result()->IsLValue()) {
     execution_result()->set_destination(local);
@@ -225,7 +226,16 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   }
 
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
-  BuildDeref(dest, local, node->type());
+
+  // If the local we want the R-Value of is a parameter, we can't take its
+  // pointer for the deref, so we use an assignment. Otherwise, a deref is good.
+  if (auto *local_info = current_function()->LookupLocalInfoByName(local_name);
+      local_info->is_parameter()) {
+    BuildAssign(dest, local.ValueOf(), node->type());
+  } else {
+    BuildDeref(dest, local, node->type());
+  }
+
   execution_result()->set_destination(dest);
 }
 

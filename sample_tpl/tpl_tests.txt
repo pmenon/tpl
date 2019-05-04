@@ -15,6 +15,7 @@ loop3.tpl,0
 loop4.tpl,3407912752
 map.tpl,10
 nil.tpl,0
+param.tpl,10
 pointer.tpl,10
 scan-table.tpl,500
 scan-table-2.tpl,1999950
