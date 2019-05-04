@@ -151,8 +151,12 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
 
   void InvokeVMFunction() {
     const ast::FunctionType *func_type = func_.func_type();
-    const u32 ret_type_size = util::MathUtil::AlignTo(
-        func_type->return_type()->size(), sizeof(intptr_t));
+    const ast::Type *ret_type = func_type->return_type();
+    u32 ret_type_size = 0;
+    if (!ret_type->IsNilType()) {
+      ret_type_size =
+          util::MathUtil::AlignTo(ret_type->size(), sizeof(intptr_t));
+    }
 
     // Set up the arguments to VM::InvokeFunction(module, function ID, args)
     mov(rdi, reinterpret_cast<std::size_t>(&module_));
@@ -163,9 +167,8 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
     mov(rax, reinterpret_cast<std::size_t>(&VM::InvokeFunction));
     call(rax);
 
-    if (const ast::Type *return_type = func_type->return_type();
-        !return_type->IsNilType()) {
-      if (return_type->size() < 8) {
+    if (!ret_type->IsNilType()) {
+      if (ret_type->size() < 8) {
         mov(eax, ptr[rsp]);
       } else {
         mov(rax, ptr[rsp]);

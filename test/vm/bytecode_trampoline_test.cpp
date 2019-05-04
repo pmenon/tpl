@@ -124,6 +124,33 @@ TEST_F(BytecodeTrampolineTest, BigIntFunctionTest) {
   }
 }
 
+TEST_F(BytecodeTrampolineTest, VoidReturnTest) {
+  {
+    BytecodeCompiler compiler;
+
+    auto src = R"(
+    fun mul2(a: *int64, b: *int64, ret: *int64) -> nil {
+      *ret = (*a) * (*b)
+    })";
+    auto module = compiler.CompileToModule(src);
+
+    EXPECT_FALSE(compiler.HasErrors());
+
+    auto fn = reinterpret_cast<void (*)(i64 *, i64 *, i64 *)>(
+        module->GetFuncTrampoline(module->GetFuncInfoByName("mul2")->id()));
+
+    i64 a = 2, b = 3;
+    i64 ret = 0;
+
+    fn(&a, &b, &ret);
+    EXPECT_EQ(6, ret);
+
+    a = 10, b = -10, ret = 0;
+    fn(&a, &b, &ret);
+    EXPECT_EQ(-100, ret);
+  }
+}
+
 TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
   //
   // Test 1: Sort a list of signed 32-bit signed integers using a generated TPL
