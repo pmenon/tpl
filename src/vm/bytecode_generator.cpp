@@ -645,7 +645,7 @@ void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call,
       }
       default: { UNREACHABLE("Hashing this type isn't supported!"); }
     }
-    emitter()->Emit(Bytecode::HashCombine, hash_val, tmp);
+    emitter()->Emit(Bytecode::HashCombine, hash_val, tmp.ValueOf());
   }
   execution_result()->set_destination(hash_val.ValueOf());
 }
