@@ -94,7 +94,9 @@ namespace sema {
     "ptrCast() expects (compile-time *DestType, *T) arguments.  Received "     \
     "type '%0' in position %1",                                                \
     (ast::Type *, u32))                                                        \
-  F(BadHashArg, "Cannot hash type '%0'", (ast::Type *))
+  F(BadHashArg, "cannot hash type '%0'", (ast::Type *))                        \
+  F(MissingArrayLength,                                                        \
+    "missing array length (either compile-time number or '*')", ())
 
 /// Define the ErrorMessageId enumeration
 enum class ErrorMessageId : u16 {

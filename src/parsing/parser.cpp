@@ -605,9 +605,9 @@ ast::Expr *Parser::ParseFunctionType() {
   // FuncType = '(' { ParameterList } ')' '->' Type ;
   // ParameterList = { Ident ':' } Type ;
 
-  Consume(Token::Type::LEFT_PAREN);
-
   const SourcePosition &position = scanner_->current_position();
+
+  Consume(Token::Type::LEFT_PAREN);
 
   util::RegionVector<ast::FieldDecl *> params(region());
   params.reserve(4);
@@ -649,9 +649,9 @@ ast::Expr *Parser::ParseFunctionType() {
 ast::Expr *Parser::ParsePointerType() {
   // PointerTypeRepr = '*' Type ;
 
-  Expect(Token::Type::STAR);
-
   const SourcePosition &position = scanner_->current_position();
+
+  Expect(Token::Type::STAR);
 
   ast::Expr *base = ParseType();
 
@@ -662,9 +662,9 @@ ast::Expr *Parser::ParseArrayType() {
   // ArrayTypeRepr = '[' Length ']' Type ;
   // Length = [ '*' | Expr ] ;
 
-  Consume(Token::Type::LEFT_BRACKET);
-
   const SourcePosition &position = scanner_->current_position();
+
+  Consume(Token::Type::LEFT_BRACKET);
 
   // If the next token doesn't match a right bracket, it means we have a length
   ast::Expr *len = nullptr;
@@ -673,6 +673,8 @@ ast::Expr *Parser::ParseArrayType() {
       len = ParseExpr();
     }
     Expect(Token::Type::RIGHT_BRACKET);
+  } else {
+    error_reporter_->Report(position, sema::ErrorMessages::kMissingArrayLength);
   }
 
   // Now the type

@@ -255,4 +255,31 @@ TEST_F(ParserTest, RegularForInStmtTest) {
   ASSERT_NE(nullptr, for_in_stmt->iter());
 }
 
+TEST_F(ParserTest, ArrayTypeTest) {
+  struct TestCase {
+    std::string source;
+    bool valid;
+  };
+
+  TestCase tests[] = {
+      // Array with unknown length = valid
+      {"fun main(arr: [*]int32) -> nil { }", true},
+      // Array with known length = valid
+      {"fun main() -> nil { var arr: [10]int32 }", true},
+      // Array with missing length field = invalid
+      {"fun main(arr: []int32) -> nil { }", false},
+  };
+
+  for (const auto &test_case : tests) {
+    Scanner scanner(test_case.source);
+    Parser parser(&scanner, context());
+
+    // Attempt parse
+    auto *ast = parser.Parse();
+    ASSERT_NE(nullptr, ast);
+    EXPECT_EQ(test_case.valid, !reporter()->HasErrors());
+    reporter()->Reset();
+  }
+}
+
 }  // namespace tpl::parsing::test
