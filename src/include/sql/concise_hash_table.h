@@ -11,6 +11,9 @@
 
 namespace tpl::sql {
 
+/**
+ * A concise hash table that uses a bitmap to determine slot occupation.
+ */
 class ConciseHashTable {
  public:
   // The maximum probe length before falling back into the overflow table
@@ -29,62 +32,110 @@ class ConciseHashTable {
   static constexpr const u32 kSlotsPerGroup = 1u << kLogSlotsPerGroup;
   static constexpr const u32 kGroupBitMask = kSlotsPerGroup - 1;
 
-  /// Create a new uninitialized concise hash table. Callers **must** call
-  /// SetSize() before interacting with the table
+  /**
+   * Create a new uninitialized concise hash table. Callers **must** call
+   * @em SetSize() before interacting with the table
+   * @param probe_threshold The maximum probe threshold before falling back to
+   *                        a secondary overflow entry table.
+   */
   explicit ConciseHashTable(u32 probe_threshold = kProbeThreshold);
 
-  /// Destroy
+  /**
+   * Destructor
+   */
   ~ConciseHashTable();
 
-  /// This class cannot be copied or moved
+  /**
+   * This class cannot be copied or moved
+   */
   DISALLOW_COPY_AND_MOVE(ConciseHashTable)
 
-  /// Set the size of the hash table to support at least \a num_elems elements
+  /**
+   * Set the size of the hash table to support at least @em num_elems entries.
+   * The table will optimize itself in expectation of seeing at most @em
+   * num_elems elements without resizing.
+   * @param num_elems The expected number of elements
+   */
   void SetSize(u32 num_elems);
 
   /// Insert an element with the given hash into the table and return an encoded
   /// slot position
+  /**
+   * Insert an element with the given hash into the table and return an encoded
+   * slot position. Note: while this function takes both the entry and hash
+   * value, the hash value inside the entry should match what's provided here.
+   * TOOD(pmenon): Accept only the entry and use the hash value in the entry
+   * @param entry The entry to insert
+   * @param hash The hash value of the entry to insert
+   */
   void Insert(HashTableEntry *entry, hash_t hash);
 
-  /// Finalize and build this concise hash table
+  /**
+   * Finalize and build this concise hash table. After finalization, no
+   * insertions should be performed.
+   */
   void Build();
 
-  /// Prefetch the slot group for the given slot \a slot
+  /**
+   * Prefetch the slot group for an entry with the given hash value @em hash
+   * @tparam ForRead Is the prefetch for a subsequent read operation
+   * @param hash The hash value of the entry to prefetch
+   */
   template <bool ForRead>
   void PrefetchSlotGroup(hash_t hash) const;
 
-  /// Return the number of occupied slots in the table **before** the given slot
+  /**
+   * Return the number of occupied slots in the table **before** the given slot
+   * @param slot The slot to compute the prefix count for
+   * @return The number of occupied slot before the provided input slot
+   */
   u64 NumFilledSlotsBefore(ConciseHashTableSlot slot) const;
 
-  /// Lookup the slot for the given hash
+  /**
+   * Given the probe entry's hash value, return a boolean indicating whether it
+   * may exist in the table, and if so, the index of the first slot the entry
+   * may be.
+   * @param hash The hash value of the entry to lookup
+   * @return A pair indicating if the entry may exist and the slot to look at
+   */
   std::pair<bool, u64> Lookup(hash_t hash) const;
 
   // -------------------------------------------------------
   // Utility Operations
   // -------------------------------------------------------
 
-  /// Return the number of bytes this hash table has allocated
+  /**
+   * Return the number of bytes this hash table has allocated
+   */
   u64 GetTotalMemoryUsage() const { return sizeof(SlotGroup) * num_groups_; }
 
   // -------------------------------------------------------
   // Accessors
   // -------------------------------------------------------
 
-  /// Return the capacity (the maximum number of elements) this table supports
+  /**
+   * Return the capacity (the maximum number of elements) this table supports
+   */
   u64 capacity() const { return slot_mask_ + 1; }
 
-  /// Return the number of overflows entries in this table
+  /**
+   * Return the number of overflows entries in this table
+   */
   u64 num_overflow() const { return num_overflow_; }
 
-  /// Has the table been built?
+  /**
+   * Has the table been built?
+   */
   bool is_built() const { return built_; }
 
  private:
-  /// A slot group represents a group of 64 slots. Each slot is represented as a
-  /// single bit from the \a bits field. \a count is a count of the number of
-  /// set bits in all slot groups in the group array up to and including this
-  /// group. In other worse, \a count is a prefix count of the number of filled
-  /// slots up to this group.
+  /**
+   * A slot group represents a group of 64 slots. Each slot is represented as a
+   * single bit from the \a bits field. \a count is a count of the number of
+   * set bits in all slot groups in the group array up to and including this
+   * group. In other worse, \a count is a prefix count of the number of filled
+   * slots up to this group.
+   */
   struct SlotGroup {
     // The bitmap indicating whether the slots are occupied or free
     u64 bits;

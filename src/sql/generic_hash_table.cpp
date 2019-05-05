@@ -33,4 +33,34 @@ void GenericHashTable::SetSize(u64 new_size) {
   entries_ = util::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_);
 }
 
+template <bool Prefetch, bool UseTag>
+void GenericHashTable::LookupBatch(u32 num_elems, const hash_t hashes[],
+                                   HashTableEntry *entries[]) const {
+  for (u32 idx = 0, prefetch_idx = kPrefetchDistance; idx < num_elems;
+       idx++, prefetch_idx++) {
+    // Prefetch if requested
+    if constexpr (Prefetch) {
+      if (TPL_LIKELY(prefetch_idx < num_elems)) {
+        PrefetchChainHead<false>(hashes[prefetch_idx]);
+      }
+    }
+
+    // Lookup
+    if constexpr (UseTag) {
+      entries[idx] = FindChainHeadWithTag(hashes[idx]);
+    } else {
+      entries[idx] = FindChainHead(hashes[idx]);
+    }
+  }
+}
+
+template void GenericHashTable::LookupBatch<false, false>(
+    u32, const hash_t[], HashTableEntry *[]) const;
+template void GenericHashTable::LookupBatch<false, true>(
+    u32, const hash_t[], HashTableEntry *[]) const;
+template void GenericHashTable::LookupBatch<true, false>(
+    u32, const hash_t[], HashTableEntry *[]) const;
+template void GenericHashTable::LookupBatch<true, true>(
+    u32, const hash_t[], HashTableEntry *[]) const;
+
 }  // namespace tpl::sql
