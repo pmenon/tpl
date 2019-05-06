@@ -58,13 +58,11 @@ class ConciseHashTable {
    */
   void SetSize(u32 num_elems);
 
-  /// Insert an element with the given hash into the table and return an encoded
-  /// slot position
   /**
    * Insert an element with the given hash into the table and return an encoded
    * slot position. Note: while this function takes both the entry and hash
    * value, the hash value inside the entry should match what's provided here.
-   * TOOD(pmenon): Accept only the entry and use the hash value in the entry
+   * TODO(pmenon): Accept only the entry and use the hash value in the entry
    * @param entry The entry to insert
    * @param hash The hash value of the entry to insert
    */
@@ -100,18 +98,10 @@ class ConciseHashTable {
    */
   std::pair<bool, u64> Lookup(hash_t hash) const;
 
-  // -------------------------------------------------------
-  // Utility Operations
-  // -------------------------------------------------------
-
   /**
    * Return the number of bytes this hash table has allocated
    */
   u64 GetTotalMemoryUsage() const { return sizeof(SlotGroup) * num_groups_; }
-
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
 
   /**
    * Return the capacity (the maximum number of elements) this table supports

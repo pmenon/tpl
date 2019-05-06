@@ -12,65 +12,104 @@ class JoinHashTableTest;
 
 namespace tpl::sql {
 
+/**
+ * The main join hash table. Join hash tables are bulk-loaded through calls to
+ * @em AllocInputTuple() and frozen after calling @em Build(). Thus, they're
+ * write-once read-many (WORM) structures.
+ */
 class JoinHashTable {
  public:
-  /// Construct a hash-table used for join processing using \a region as the
-  /// main memory allocator
+  /**
+   * Construct a join hash table. All memory allocations are sourced from the
+   * injected @em region, and thus, are ephemeral.
+   * @param region The
+   * @param tuple_size
+   * @param use_concise_ht
+   */
   JoinHashTable(util::Region *region, u32 tuple_size,
                 bool use_concise_ht = false) noexcept;
 
-  /// This class cannot be copied or moved
+  /**
+   * This class cannot be copied or moved
+   */
   DISALLOW_COPY_AND_MOVE(JoinHashTable);
 
-  /// Allocate storage in the hash table for an input tuple whose hash value is
-  /// \a hash and whose size (in bytes) is \a tuple_size. Remember that this
-  /// only performs an allocation from the table's memory pool. No insertion
-  /// into the table is performed.
+  /**
+   * Allocate storage in the hash table for an input tuple whose hash value is
+   * @em hash. This function only performs an allocation from the table's memory
+   * pool. No insertion into the table is performed, meaning a subsequent
+   * @em Lookup() for the entry will not return the inserted entry.
+   * @param hash The hash value of the tuple to insert
+   * @return A memory region where the caller can materialize the tuple
+   */
   byte *AllocInputTuple(hash_t hash);
 
-  /// Fully construct the join hash table. If the join hash table has already
-  /// been built, do nothing.
+  /**
+   * Fully construct the join hash table. Nothing is done if the join hash table
+   * has already been built. After building, the table becomes read-only.
+   */
   void Build();
 
-  /// The tuple-at-a-time iterator
+  /**
+   * The tuple-at-a-time iterator interface
+   */
   class Iterator;
 
-  /// Lookup a single entry with hash value \a hash returning an iterator
+  /**
+   * Lookup a single entry with hash value @em hash returning an iterator
+   * @tparam UseCHT Should the lookup use the concise or general table
+   * @param hash The hash value of the element to lookup
+   * @return An iterator over all elements that match the hash
+   */
   template <bool UseCHT>
   Iterator Lookup(hash_t hash) const;
 
-  /// Perform a vectorized lookup
+  /**
+   * Perform a batch lookup of elements whose hash values are stored in @em
+   * hashes, storing the results in @em results
+   * @param num_tuples The number of tuples in the batch
+   * @param hashes The hash values of the probe elements
+   * @param results The heads of the bucket chain of the probed elements
+   */
   void LookupBatch(u32 num_tuples, const hash_t hashes[],
                    const HashTableEntry *results[]) const;
 
-  /// Return the amount of memory the buffered tuples occupy
+  /**
+   * Return the amount of memory the buffered tuples occupy
+   */
   u64 GetBufferedTupleMemoryUsage() const noexcept {
     return entries_.size() * entries_.element_size();
   }
 
-  /// Get the amount of memory used by the join index only (i.e., excluding
-  /// space used to store materialized build-side tuples)
+  /**
+   * Get the amount of memory used by the join index only (i.e., excluding space
+   * used to store materialized build-side tuples)
+   */
   u64 GetJoinIndexMemoryUsage() const noexcept {
     return use_concise_hash_table() ? concise_hash_table_.GetTotalMemoryUsage()
                                     : generic_hash_table_.GetTotalMemoryUsage();
   }
 
-  /// Return the total size of the join hash table in bytes
+  /**
+   * Return the total size of the join hash table in bytes
+   */
   u64 GetTotalMemoryUsage() const noexcept {
     return GetBufferedTupleMemoryUsage() + GetJoinIndexMemoryUsage();
   }
 
-  // -------------------------------------------------------
-  // Simple Accessors
-  // -------------------------------------------------------
-
-  /// Return the total number of inserted elements, including duplicates
+  /**
+   * Return the total number of inserted elements, including duplicates
+   */
   u64 num_elements() const noexcept { return entries_.size(); }
 
-  /// Has the hash table been built?
+  /**
+   * Has the hash table been built?
+   */
   bool is_built() const noexcept { return built_; }
 
-  /// Is this join using a concise hash table?
+  /**
+   * Is this join using a concise hash table?
+   */
   bool use_concise_hash_table() const noexcept { return use_concise_ht_; }
 
  public:
@@ -78,13 +117,33 @@ class JoinHashTable {
   // Tuple-at-a-time Iterator
   // -------------------------------------------------------
 
-  /// The iterator used for generic lookups. This class is used mostly for
-  /// tuple-at-a-time lookups from the hash table.
+  /**
+   * The iterator used for generic lookups. This class is used mostly for
+   * tuple-at-a-time lookups from the hash table.
+   */
   class Iterator {
    public:
+    /**
+     * Construct an iterator beginning at the entry @em initial of the chain
+     * of entries matching the hash value @em hash. This iterator is returned
+     * from @em JoinHashTable::Lookup().
+     * @param initial The first matching entry in the chain of entries
+     * @param hash The hash value of the probe tuple
+     */
     Iterator(const HashTableEntry *initial, hash_t hash);
 
+    /**
+     * Function used to check equality of hash keys
+     */
     using KeyEq = bool(void *opaque_ctx, void *probe_tuple, void *table_tuple);
+
+    /**
+     * Return the next match (of both hash and keys)
+     * @param key_eq The function used to determine key equality
+     * @param opaque_ctx An opaque context passed into the key equality function
+     * @param probe_tuple The probe tuple
+     * @return The next matching entry; null otherwise
+     */
     const HashTableEntry *NextMatch(KeyEq key_eq, void *opaque_ctx,
                                     void *probe_tuple);
 

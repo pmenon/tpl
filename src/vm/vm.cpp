@@ -29,6 +29,7 @@ class VM::Frame {
       : frame_data_(frame_data), frame_size_(frame_size) {
     TPL_ASSERT(frame_data_ != nullptr, "Frame data cannot be null");
     TPL_ASSERT(frame_size_ >= 0, "Frame size must be >= 0");
+    (void)frame_size_;
   }
 
   /// Access the local variable at the given index in the fame. The \ref 'index'

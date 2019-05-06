@@ -85,12 +85,13 @@ namespace {
 // The bits we set in the entry to mark if the entry has been buffered in the
 // reorder buffer and whether the entry has been processed (i.e., if the entry
 // is in its final location in either the main or overflow arenas).
-constexpr const u64 kBufferedBit = 1ull << 62;
-constexpr const u64 kProcessedBit = 1ull << 63;
-constexpr const u64 kCHTSlotMask = kBufferedBit - 1;
+constexpr const u64 kBufferedBit = 1ull << 62ull;
+constexpr const u64 kProcessedBit = 1ull << 63ull;
 
-/// A reorder is a small piece of buffer space into which we temporarily buffer
-/// hash table entries for the purposes of reordering them.
+/**
+ * A reorder is a small piece of buffer space into which we temporarily buffer
+ * hash table entries for the purposes of reordering them.
+ */
 class ReorderBuffer {
  public:
   // Use a 16 KB internal buffer for temporary copies
@@ -106,36 +107,56 @@ class ReorderBuffer {
         end_read_idx_(end_read_idx),
         entries_(entries) {}
 
-  /// This class cannot be copied or moved
+  /**
+   * This class cannot be copied or moved
+   */
   DISALLOW_COPY_AND_MOVE(ReorderBuffer);
 
-  /// Retrieve an entry by index
+  /**
+   * Retrieve an entry in the buffer by its index in the buffer
+   * @tparam T The type to cast the resulting entry into
+   * @param idx The index of the entry to lookup
+   * @return A pointer to the entry
+   */
   template <typename T = byte>
   T *BufEntryAt(u64 idx) {
     return reinterpret_cast<T *>(buffer_ + (idx * entry_size_));
   }
 
-  /// Has the entry \a entry been processed?
-  ALWAYS_INLINE bool IsProcessed(HashTableEntry *entry) const noexcept {
+  /**
+   * Has the entry @em been processed? In other words, is the entry in its
+   * final location in the entry array?
+   */
+  ALWAYS_INLINE bool IsProcessed(const HashTableEntry *entry) const noexcept {
     return (entry->cht_slot & kProcessedBit) != 0u;
   }
 
-  /// Mark the entry \entry as processed
+  /**
+   * Mark the given entry as processed and in its final location
+   */
   ALWAYS_INLINE void SetProcessed(HashTableEntry *entry) const noexcept {
     entry->cht_slot |= kProcessedBit;
   }
 
-  /// Has the entry \a entry been buffered
-  ALWAYS_INLINE bool IsBuffered(HashTableEntry *entry) const noexcept {
+  /**
+   * Has the entry @em entry been buffered in the reorder buffer?
+   */
+  ALWAYS_INLINE bool IsBuffered(const HashTableEntry *entry) const noexcept {
     return (entry->cht_slot & kBufferedBit) != 0u;
   }
 
-  /// Mark the entry \a entry as buffered
+  /**
+   * Mark the entry @em entry as buffered in the reorder buffer
+   */
   ALWAYS_INLINE void SetBuffered(HashTableEntry *entry) const noexcept {
     entry->cht_slot |= kBufferedBit;
   }
 
-  /// Fill the buffer with unprocessed entries
+  /**
+   * Fill this reorder buffer with as many entries as possible. Each entry that
+   * is inserted is marked/tagged as buffered.
+   * @return True if any entries were buffered; false otherwise
+   */
   bool Fill() {
     while (buf_idx_ < max_elems_ && read_idx_ < end_read_idx_) {
       auto *entry = reinterpret_cast<HashTableEntry *>(entries_[read_idx_++]);
@@ -152,7 +173,10 @@ class ReorderBuffer {
     return buf_idx_ > 0;
   }
 
-  /// Reset the index where the next buffered item goes
+  /**
+   * Reset the index where the next buffered entry goes. This is needed when,
+   * in the process of
+   */
   void Reset(const u64 new_buf_idx) noexcept { buf_idx_ = new_buf_idx; }
 
   // -------------------------------------------------------
@@ -470,6 +494,8 @@ void JoinHashTable::ReorderOverflowEntries() noexcept {
 
 void JoinHashTable::VerifyMainEntryOrder() {
 #ifndef NDEBUG
+  constexpr const u64 kCHTSlotMask = kBufferedBit - 1;
+
   const u64 overflow_idx = entries_.size() - concise_hash_table_.num_overflow();
   for (u32 idx = 0; idx < overflow_idx; idx++) {
     auto *entry = reinterpret_cast<HashTableEntry *>(entries_[idx]);
