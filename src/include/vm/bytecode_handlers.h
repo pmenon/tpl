@@ -538,17 +538,20 @@ VM_OP_HOT void OpAggregationHashTableInsert(
 VM_OP_HOT void OpAggregationHashTableLookup(
     byte **result, tpl::sql::AggregationHashTable *const agg_hash_table,
     const hash_t hash_val,
-    const tpl::sql::AggregationHashTable::KeyEqFn key_eq_fn, const void *arg) {
-  *result = agg_hash_table->Lookup(hash_val, key_eq_fn, arg);
+    const tpl::sql::AggregationHashTable::KeyEqFn key_eq_fn,
+    tpl::sql::VectorProjectionIterator *iters[]) {
+  *result = agg_hash_table->Lookup(hash_val, key_eq_fn, iters);
 }
 
 VM_OP_HOT void OpAggregationHashTableProcessBatch(
     tpl::sql::AggregationHashTable *const agg_hash_table,
     tpl::sql::VectorProjectionIterator *iters[],
     const tpl::sql::AggregationHashTable::HashFn hash_fn,
+    const tpl::sql::AggregationHashTable::KeyEqFn key_eq_fn,
     const tpl::sql::AggregationHashTable::InitAggFn init_agg_fn,
     const tpl::sql::AggregationHashTable::MergeAggFn merge_agg_fn) {
-  agg_hash_table->ProcessBatch(iters, hash_fn, init_agg_fn, merge_agg_fn);
+  agg_hash_table->ProcessBatch(iters, hash_fn, key_eq_fn, init_agg_fn,
+                               merge_agg_fn);
 }
 
 void OpAggregationHashTableFree(tpl::sql::AggregationHashTable *agg_hash_table);

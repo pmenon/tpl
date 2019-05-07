@@ -12,7 +12,43 @@ class VectorProjectionIterator;
  */
 class AggregationHashTable {
  public:
+  static constexpr const float kDefaultLoadFactor = 0.7;
   static constexpr const u32 kDefaultInitialTableSize = 256;
+
+  // -------------------------------------------------------
+  // Callback functions to customize aggregations
+  // -------------------------------------------------------
+
+  /**
+   * Function to check the key equality of an input tuple and an existing entry
+   * in the aggregation hash table.
+   * Convention: First argument is the aggregate entry, second argument is the
+   *             input/probe tuple.
+   */
+  using KeyEqFn = bool (*)(const void *, const void *);
+
+  /**
+   * Function that takes an input element and computes a hash value.
+   */
+  using HashFn = hash_t (*)(void *);
+
+  /**
+   * Function to initialize a new aggregate.
+   * Convention: First argument is the aggregate to initialize, second argument
+   *             is the input/probe tuple to initialize the aggregate with.
+   */
+  using InitAggFn = void (*)(void *, void *);
+
+  /**
+   * Function to update an existing aggregate.
+   * Convention: First argument is the existing aggregate to update, second
+   *             argument is the input/probe tuple to update the aggregate with.
+   */
+  using MergeAggFn = void (*)(void *, void *);
+
+  // -------------------------------------------------------
+  // Main API
+  // -------------------------------------------------------
 
   /**
    * Construct an aggregation hash table using the provided memory region, and
@@ -20,7 +56,7 @@ class AggregationHashTable {
    * @param region The memory region to allocate from
    * @param payload_size The size of the elements in the hash table
    */
-  AggregationHashTable(util::Region *region, u32 payload_size) noexcept;
+  AggregationHashTable(util::Region *region, u32 payload_size);
 
   /**
    * This class cannot be copied or moved
@@ -32,16 +68,7 @@ class AggregationHashTable {
    * @param hash The hash value of the element to insert
    * @return A pointer to a memory area where the element can be written to
    */
-  byte *Insert(hash_t hash) noexcept;
-
-  /**
-   * The callback function to check the equality of an input tuple and an
-   * existing entry in the aggregation hash table. This is the function used to
-   * resolve hash collisions.
-   * Convention: The first argument is the probe tuple, the second is an
-   *             existing entry in the hash table to check.
-   */
-  using KeyEqFn = bool (*)(const void *, const void *);
+  byte *Insert(hash_t hash);
 
   /**
    * Lookup and return an entry in the aggregation table that matches a given
@@ -49,38 +76,23 @@ class AggregationHashTable {
    * provided callback function.
    * @param hash The hash value to use for early filtering
    * @param key_eq_fn The key-equality function to resolve hash collisions
-   * @param arg An opaque argument
+   * @param probe_tuple The probe tuple
    * @return A pointer to the matching entry payload; null if no entry is found.
    */
-  byte *Lookup(hash_t hash, KeyEqFn key_eq_fn, const void *arg) noexcept;
-
-  /**
-   * Function that takes an array of vector projections pointing to a row and
-   * computes its hash value.
-   */
-  using HashFn = hash_t (*)(VectorProjectionIterator *[]);
-
-  /**
-   * Function that takes an uninitialized aggregate and an array of
-   * vector projections and initializes the aggregate value.
-   */
-  using InitAggFn = void (*)(byte *, VectorProjectionIterator *[]);
-
-  /**
-   * Function that updates an existing aggregate using values from the input
-   * vector projections.
-   */
-  using MergeAggFn = void (*)(byte *, VectorProjectionIterator *[]);
+  byte *Lookup(hash_t hash, KeyEqFn key_eq_fn, const void *probe_tuple);
 
   /**
    * Process an entire vector if input.
    * @param iters The input vectors
-   * @param hash_fn Function to compute a hash
+   * @param hash_fn Function to compute a hash of an input element
+   * @param key_eq_fn Function to determine key equality of an input element and
+   *                  an existing aggregate
    * @param init_agg_fn Function to initialize/create a new aggregate
    * @param merge_agg_fn Function to merge/update an existing aggregate
    */
   void ProcessBatch(VectorProjectionIterator *iters[], HashFn hash_fn,
-                    InitAggFn init_agg_fn, MergeAggFn merge_agg_fn);
+                    KeyEqFn key_eq_fn, InitAggFn init_agg_fn,
+                    MergeAggFn merge_agg_fn);
 
  private:
   // Does the hash table need to grow?
@@ -89,11 +101,45 @@ class AggregationHashTable {
   // Grow the hash table
   void Grow();
 
+  // Create a new entry without inserting into the hash table
+  HashTableEntry *CreateEntry(hash_t hash);
+
   // Compute the hash value and perform the table lookup for all elements in the
   // input vector projections.
   template <bool Prefetch>
-  void ComputeHashAndLookup(VectorProjectionIterator *iters[], hash_t hashes[],
-                            HashTableEntry *entries[], HashFn hash_fn);
+  void ProcessBatchImpl(VectorProjectionIterator *iters[], u32 num_elems,
+                        hash_t hashes[], HashTableEntry *entries[],
+                        HashFn hash_fn, KeyEqFn key_eq_fn,
+                        InitAggFn init_agg_fn, MergeAggFn merge_agg_fn);
+
+  // Called from ProcessBatch() to lookup a batch of entries. When the function
+  // returns, the hashes vector will contain the hash values of all elements in
+  // the input vector, and entries will contain a pointer to the associated
+  // element's group aggregate, or null if no group exists.
+  template <bool Prefetch>
+  void LookupBatch(VectorProjectionIterator *iters[], u32 num_elems,
+                   hash_t hashes[], HashTableEntry *entries[], HashFn hash_fn,
+                   KeyEqFn key_eq_fn) const;
+
+  // Called from LookupBatch() to compute and fill the hashes input vector with
+  // the hash values of all input tuples, and to load the initial set of
+  // candidate groups into the entries vector. When this function returns, the
+  // hashes vector will be full, and the entries vector will contain either a
+  // pointer to the first (of potentially many) elements in the hash table that
+  // match the input hash value.
+  template <bool Prefetch>
+  u32 ComputeHashAndLoadInitial(VectorProjectionIterator *iters[],
+                                u32 num_elems, hash_t hashes[],
+                                HashTableEntry *entries[],
+                                HashFn hash_fn) const;
+
+  // Called from LookupBatch() to follow the bucket chain for all valid group
+  // candidates in the entries vector, and resolve hash collisions by performing
+  // key equality checks. This function will modify
+  template <bool Prefetch>
+  u32 FollowNextLoop(VectorProjectionIterator *iters[], u32 num_elems,
+                     u32 group_sel_vec[], HashTableEntry *entries[],
+                     KeyEqFn key_eq_fn) const;
 
  private:
   // Where the aggregates are stored

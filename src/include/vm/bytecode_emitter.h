@@ -108,43 +108,45 @@ class BytecodeEmitter {
   // Insert a filter flavor into the filter manager builder
   void EmitFilterManagerInsertFlavor(LocalVar fmb, FunctionId func);
 
-  // Process a batch of input into the aggregation hash table
+  // Lookup a single entry in the aggregation hash table
   void EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht, LocalVar hash,
                               FunctionId key_eq_fn, LocalVar arg);
 
-  // Lookup a single entry in the aggregation hash table
+  // Process a batch of input into the aggregation hash table
   void EmitAggHashTableProcessBatch(LocalVar agg_ht, LocalVar iters,
-                                    FunctionId hash_fn, FunctionId init_agg_fn,
+                                    FunctionId hash_fn, FunctionId key_eq_fn,
+                                    FunctionId init_agg_fn,
                                     FunctionId merge_agg_fn);
 
+  // Initialize a sorter instance
   void EmitSorterInit(Bytecode bytecode, LocalVar sorter, LocalVar region,
                       FunctionId cmp_fn, LocalVar tuple_size);
 
  private:
   // Copy a scalar immediate value into the bytecode stream
   template <typename T>
-  auto EmitScalarValue(T val) -> std::enable_if_t<std::is_integral_v<T>> {
+  auto EmitScalarValue(const T val) -> std::enable_if_t<std::is_integral_v<T>> {
     bytecode_.insert(bytecode_.end(), sizeof(T), 0);
     *reinterpret_cast<T *>(&*(bytecode_.end() - sizeof(T))) = val;
   }
 
   // Emit a bytecode
-  void EmitImpl(Bytecode bytecode) {
+  void EmitImpl(const Bytecode bytecode) {
     EmitScalarValue(Bytecodes::ToByte(bytecode));
   }
 
   // Emit a local variable reference by encoding it into the bytecode stream
-  void EmitImpl(LocalVar local) { EmitScalarValue(local.Encode()); }
+  void EmitImpl(const LocalVar local) { EmitScalarValue(local.Encode()); }
 
   // Emit an integer immediate value
   template <typename T>
-  auto EmitImpl(T val) -> std::enable_if_t<std::is_integral_v<T>> {
+  auto EmitImpl(const T val) -> std::enable_if_t<std::is_integral_v<T>> {
     EmitScalarValue(val);
   }
 
   // Emit all arguments in sequence
   template <typename... ArgTypes>
-  void EmitAll(ArgTypes... args) {
+  void EmitAll(const ArgTypes... args) {
     (EmitImpl(args), ...);
   }
 

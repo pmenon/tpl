@@ -14,12 +14,10 @@
 
 namespace tpl::vm {
 
-// ---------------------------------------------------------
-// Virtual Machine Frame
-// ---------------------------------------------------------
-
-/// An execution frame where all function's local variables and parameters live
-/// for the duration of the function's lifetime.
+/**
+ * An execution frame where all function's local variables and parameters live
+ * for the duration of the function's lifetime.
+ */
 class VM::Frame {
   friend class VM;
 
@@ -32,13 +30,15 @@ class VM::Frame {
     (void)frame_size_;
   }
 
-  /// Access the local variable at the given index in the fame. The \ref 'index'
-  /// attribute is encoded and indicates whether the local variable is accessed
-  /// through an indirection (i.e., if the variable has to be dereferenced or
-  /// loaded)
-  /// \tparam T The type of the variable the user expects
-  /// \param index The encoded index into the frame where the variable is
-  /// \return The value of the variable. Note that this is copied!
+  /**
+   * Access the local variable at the given index in the fame. @em index is an
+   * encoded LocalVar that contains both the byte offset of the variable to
+   * load and the access mode, i.e., whether the local variable is accessed
+   * accessed by address or value.
+   * @tparam T The type of the variable the user expects
+   * @param index The encoded index into the frame where the variable is
+   * @return The value of the variable. Note that this is copied!
+   */
   template <typename T>
   T LocalAt(u32 index) const {
     LocalVar local = LocalVar::Decode(index);
@@ -746,11 +746,13 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
         frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
     auto hash = frame->LocalAt<hash_t>(READ_LOCAL_ID());
     auto key_eq_fn_id = READ_FUNC_ID();
-    auto *arg = frame->LocalAt<const void *>(READ_LOCAL_ID());
+    auto *iters =
+        frame->LocalAt<sql::VectorProjectionIterator **>(READ_LOCAL_ID());
 
     auto key_eq_fn = reinterpret_cast<sql::AggregationHashTable::KeyEqFn>(
         module().GetFuncTrampoline(key_eq_fn_id));
-    OpAggregationHashTableLookup(result, agg_hash_table, hash, key_eq_fn, arg);
+    OpAggregationHashTableLookup(result, agg_hash_table, hash, key_eq_fn,
+                                 iters);
     DISPATCH_NEXT();
   }
 
@@ -760,17 +762,20 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto **iters =
         frame->LocalAt<sql::VectorProjectionIterator **>(READ_LOCAL_ID());
     auto hash_fn_id = READ_FUNC_ID();
+    auto key_eq_fn_id = READ_FUNC_ID();
     auto init_agg_fn_id = READ_FUNC_ID();
     auto merge_agg_fn_id = READ_FUNC_ID();
 
     auto hash_fn = reinterpret_cast<sql::AggregationHashTable::HashFn>(
         module().GetFuncTrampoline(hash_fn_id));
+    auto key_eq_fn = reinterpret_cast<sql::AggregationHashTable::KeyEqFn>(
+        module().GetFuncTrampoline(key_eq_fn_id));
     auto init_agg_fn = reinterpret_cast<sql::AggregationHashTable::InitAggFn>(
         module().GetFuncTrampoline(init_agg_fn_id));
     auto merge_agg_fn = reinterpret_cast<sql::AggregationHashTable::MergeAggFn>(
         module().GetFuncTrampoline(merge_agg_fn_id));
     OpAggregationHashTableProcessBatch(agg_hash_table, iters, hash_fn,
-                                       init_agg_fn, merge_agg_fn);
+                                       key_eq_fn, init_agg_fn, merge_agg_fn);
     DISPATCH_NEXT();
   }
 

@@ -773,11 +773,13 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,
       LocalVar iters = VisitExpressionForRValue(call->arguments()[1]);
       auto hash_fn = LookupFuncIdByName(
           call->arguments()[2]->As<ast::IdentifierExpr>()->name().data());
-      auto init_agg_fn = LookupFuncIdByName(
+      auto key_eq_fn = LookupFuncIdByName(
           call->arguments()[3]->As<ast::IdentifierExpr>()->name().data());
-      auto merge_agg_fn = LookupFuncIdByName(
+      auto init_agg_fn = LookupFuncIdByName(
           call->arguments()[4]->As<ast::IdentifierExpr>()->name().data());
-      emitter()->EmitAggHashTableProcessBatch(agg_ht, iters, hash_fn,
+      auto merge_agg_fn = LookupFuncIdByName(
+          call->arguments()[5]->As<ast::IdentifierExpr>()->name().data());
+      emitter()->EmitAggHashTableProcessBatch(agg_ht, iters, hash_fn, key_eq_fn,
                                               init_agg_fn, merge_agg_fn);
       break;
     }

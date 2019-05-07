@@ -156,7 +156,7 @@ namespace tpl::vm {
   F(AggregationHashTableLookup, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::FunctionId,   \
       OperandType::Local)                                                                                              \
   F(AggregationHashTableProcessBatch, OperandType::Local, OperandType::Local, OperandType::FunctionId,                 \
-      OperandType::FunctionId, OperandType::FunctionId)                                                                \
+      OperandType::FunctionId, OperandType::FunctionId, OperandType::FunctionId)                                       \
   F(AggregationHashTableFree, OperandType::Local)                                                                      \
   /* Aggregates */                                                                                                     \
   F(CountAggregateInit, OperandType::Local)                                                                            \

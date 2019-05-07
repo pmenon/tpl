@@ -98,18 +98,6 @@ class GenericHashTable {
   HashTableEntry *FindChainHeadWithTag(hash_t hash) const;
 
   /**
-   * Lookup a batch of entries in this hash table given their hash values stored
-   * in @em hashes, and store the result of the probe in @em entries. This
-   * performed an untagged probe.
-   * @param num_elems The number of elements in the hashes vector
-   * @param hashes The hash values of the elements to probe
-   * @param[out] entries Where the result of the probe are stored
-   */
-  template <bool Prefetch, bool UseTag>
-  void LookupBatch(u32 num_elems, const hash_t hashes[],
-                   HashTableEntry *entries[]) const;
-
-  /**
    * Return the total number of bytes this hash table has allocated
    */
   u64 GetTotalMemoryUsage() const {

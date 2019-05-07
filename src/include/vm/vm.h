@@ -10,11 +10,15 @@ namespace tpl::vm {
 
 class BytecodeModule;
 
-/// Our virtual machine
+/**
+ * Our virtual machine
+ */
 class VM {
  public:
-  /// Invoke the function with ID \a func in the module \a module. \a args
-  /// contains the output and input parameters stored contiguously.
+  /**
+   * Invoke the function with ID @em func_id in the module @em module. @em args
+   * contains the output and input parameters stored contiguously.
+   */
   static void InvokeFunction(const BytecodeModule &module, FunctionId func_id,
                              const u8 args[]);
 

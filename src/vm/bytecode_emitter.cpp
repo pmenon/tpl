@@ -313,13 +313,11 @@ void BytecodeEmitter::EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht,
           arg);
 }
 
-void BytecodeEmitter::EmitAggHashTableProcessBatch(LocalVar agg_ht,
-                                                   LocalVar iters,
-                                                   FunctionId hash_fn,
-                                                   FunctionId init_agg_fn,
-                                                   FunctionId merge_agg_fn) {
+void BytecodeEmitter::EmitAggHashTableProcessBatch(
+    LocalVar agg_ht, LocalVar iters, FunctionId hash_fn, FunctionId key_eq_fn,
+    FunctionId init_agg_fn, FunctionId merge_agg_fn) {
   EmitAll(Bytecode::AggregationHashTableProcessBatch, agg_ht, iters, hash_fn,
-          init_agg_fn, merge_agg_fn);
+          key_eq_fn, init_agg_fn, merge_agg_fn);
 }
 
 void BytecodeEmitter::EmitSorterInit(Bytecode bytecode, LocalVar sorter,
