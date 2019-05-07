@@ -107,7 +107,7 @@ void AggregationHashTable::LookupBatch(
                                       hash_fn);
 
   // Determine the indexes of entries that are non-null
-  u32 group_sel[kDefaultVectorSize];
+  alignas(CACHELINE_SIZE) u32 group_sel[kDefaultVectorSize];
   u32 num_groups = util::VectorUtil::FilterNe(
       reinterpret_cast<intptr_t *>(entries), iters[0]->num_selected(),
       intptr_t(0), group_sel, nullptr);
