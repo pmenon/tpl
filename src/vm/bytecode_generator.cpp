@@ -623,8 +623,16 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
 
 void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call,
                                              UNUSED ast::Builtin builtin) {
+  // hash_val is where we accumulate all the hash values passed to the @hash()
   LocalVar hash_val = execution_result()->GetOrCreateDestination(call->type());
+
+  // Initialize it to 1
+  emitter()->EmitAssignImm8(hash_val, 1);
+
+  // tmp is a temporary variable we use to store individual hash values. We
+  // combine all values into hash_val above
   LocalVar tmp = current_function()->NewLocal(call->type());
+
   for (u32 idx = 0; idx < call->num_args(); idx++) {
     LocalVar input = VisitExpressionForLValue(call->arguments()[idx]);
     TPL_ASSERT(call->arguments()[idx]->type()->IsSqlValueType(),
