@@ -173,8 +173,6 @@ void AggregationHashTable::FollowNextLoop(
     AggregationHashTable::KeyEqFn key_eq_fn) const {
   // TODO(pmenon): Use prefetch
   while (num_elems > 0) {
-    LOG_INFO("Dup {}", num_elems);
-
     u32 write_idx = 0;
 
     // First, check key equality for selected groups
@@ -235,7 +233,7 @@ void AggregationHashTable::CreateMissingGroups(
   // Insert those elements
   for (u32 idx = 0; idx < num_missing_groups; idx++) {
     hash_t hash = hashes[missing_group_vec[idx]];
-    //LOG_INFO("Checking hash {}", hash);
+
     HashTableEntry *entry = LookupEntryInternal(hash, key_eq_fn, iters);
     if (entry != nullptr) {
       entries[missing_group_vec[idx]] = entry;
@@ -243,7 +241,6 @@ void AggregationHashTable::CreateMissingGroups(
     }
 
     init_agg_fn(Insert(hash), iters);
-    entries[missing_group_vec[idx]] = entry;
   }
 }
 
