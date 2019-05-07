@@ -1,5 +1,6 @@
 #include "sql/aggregation_hash_table.h"
 
+#include "logging/logger.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/cpu_info.h"
 #include "util/vector_util.h"
@@ -49,21 +50,6 @@ byte *AggregationHashTable::Insert(const hash_t hash) {
   return entry->payload;
 }
 
-byte *AggregationHashTable::Lookup(const hash_t hash,
-                                   AggregationHashTable::KeyEqFn key_eq_fn,
-                                   const void *probe) {
-  auto *entry = hash_table_.FindChainHead(hash);
-
-  while (entry != nullptr) {
-    if (entry->hash == hash && key_eq_fn(entry->payload, probe)) {
-      return entry->payload;
-    }
-    entry = entry->next;
-  }
-
-  return nullptr;
-}
-
 void AggregationHashTable::ProcessBatch(
     VectorProjectionIterator *iters[], AggregationHashTable::HashFn hash_fn,
     KeyEqFn key_eq_fn, AggregationHashTable::InitAggFn init_agg_fn,
@@ -72,8 +58,8 @@ void AggregationHashTable::ProcessBatch(
   const u32 num_elems = iters[0]->num_selected();
 
   // Temporary vector for the hash values and hash table entry pointers
-  hash_t hashes[kDefaultVectorSize];
-  HashTableEntry *entries[kDefaultVectorSize];
+  alignas(CACHELINE_SIZE) hash_t hashes[kDefaultVectorSize];
+  alignas(CACHELINE_SIZE) HashTableEntry *entries[kDefaultVectorSize];
 
   u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
   if (hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
@@ -91,23 +77,24 @@ void AggregationHashTable::ProcessBatchImpl(
     HashTableEntry *entries[], AggregationHashTable::HashFn hash_fn,
     KeyEqFn key_eq_fn, AggregationHashTable::InitAggFn init_agg_fn,
     AggregationHashTable::MergeAggFn merge_agg_fn) {
-  // Vector storing all the missing group IDs
-  u32 missing_group_vec[kDefaultVectorSize];
-
   // Lookup batch
   LookupBatch<Prefetch>(iters, num_elems, hashes, entries, hash_fn, key_eq_fn);
 
-  // Determine which elements are missing a group
-  u32 num_missing_groups = util::VectorUtil::FilterEq(
-      reinterpret_cast<intptr_t *>(entries), iters[0]->num_selected(),
-      intptr_t(0), missing_group_vec, nullptr);
+  // Reset
+  iters[0]->Reset();
 
-  for (u32 idx = 0; idx < num_missing_groups; idx++) {
-    hash_t hash = hashes[missing_group_vec[idx]];
-    HashTableEntry *entry = CreateEntry(hash);
-    init_agg_fn(entry->payload, iters);
-    entries[missing_group_vec[idx]] = entry;
-  }
+  // Create missing groups
+  CreateMissingGroups(iters, num_elems, hashes, entries, key_eq_fn,
+                      init_agg_fn);
+
+  // Reset
+  iters[0]->Reset();
+
+  // Update other groups
+  UpdateGroups(iters, num_elems, entries, merge_agg_fn);
+
+  // Reset
+  iters[0]->Reset();
 }
 
 template <bool Prefetch>
@@ -186,16 +173,15 @@ void AggregationHashTable::FollowNextLoop(
     AggregationHashTable::KeyEqFn key_eq_fn) const {
   // TODO(pmenon): Use prefetch
   while (num_elems > 0) {
+    LOG_INFO("Dup {}", num_elems);
+
     u32 write_idx = 0;
 
     // First, check key equality for selected groups
     if constexpr (VPIIsFiltered) {
       for (u32 idx = 0, prev_group_idx = group_sel[0]; idx < num_elems; idx++) {
-        // The group we're checking
         const u32 group_idx = group_sel[idx];
-        // Advance the iterator to the group position
         iters[0]->AdvanceFiltered(group_idx - prev_group_idx);
-        // Check
         const bool not_equal = (entries[group_idx]->hash != hashes[group_idx] ||
                                 !key_eq_fn(entries[group_idx]->payload, iters));
         // If the keys didn't match, write index to move forward
@@ -231,6 +217,50 @@ void AggregationHashTable::FollowNextLoop(
 
     // Next
     num_elems = write_idx;
+  }
+}
+
+void AggregationHashTable::CreateMissingGroups(
+    VectorProjectionIterator *iters[], u32 num_elems, const hash_t hashes[],
+    HashTableEntry *entries[], AggregationHashTable::KeyEqFn key_eq_fn,
+    AggregationHashTable::InitAggFn init_agg_fn) {
+  // Vector storing all the missing group IDs
+  alignas(CACHELINE_SIZE) u32 missing_group_vec[kDefaultVectorSize];
+
+  // Determine which elements are missing a group
+  u32 num_missing_groups = util::VectorUtil::FilterEq(
+      reinterpret_cast<intptr_t *>(entries), num_elems, intptr_t(0),
+      missing_group_vec, nullptr);
+
+  // Insert those elements
+  for (u32 idx = 0; idx < num_missing_groups; idx++) {
+    hash_t hash = hashes[missing_group_vec[idx]];
+    //LOG_INFO("Checking hash {}", hash);
+    HashTableEntry *entry = LookupEntryInternal(hash, key_eq_fn, iters);
+    if (entry != nullptr) {
+      entries[missing_group_vec[idx]] = entry;
+      continue;
+    }
+
+    init_agg_fn(Insert(hash), iters);
+    entries[missing_group_vec[idx]] = entry;
+  }
+}
+
+void AggregationHashTable::UpdateGroups(
+    VectorProjectionIterator *iters[], u32 num_elems, HashTableEntry *entries[],
+    AggregationHashTable::MergeAggFn merge_agg_fn) {
+  // Vector storing all valid group indexes
+  alignas(CACHELINE_SIZE) u32 group_sel[kDefaultVectorSize];
+
+  // Determine which elements are valid groups
+  u32 num_groups =
+      util::VectorUtil::FilterNe(reinterpret_cast<intptr_t *>(entries),
+                                 num_elems, intptr_t(0), group_sel, nullptr);
+
+  for (u32 idx = 0; idx < num_groups; idx++) {
+    HashTableEntry *entry = entries[group_sel[idx]];
+    merge_agg_fn(entry->payload, iters);
   }
 }
 

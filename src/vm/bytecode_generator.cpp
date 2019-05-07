@@ -623,6 +623,10 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
 
 void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call,
                                              UNUSED ast::Builtin builtin) {
+  TPL_ASSERT(call->type()->size() == sizeof(hash_t),
+             "Hash value size (from return type of @hash) doesn't match actual "
+             "size of hash_t type");
+
   // hash_val is where we accumulate all the hash values passed to the @hash()
   LocalVar hash_val = execution_result()->GetOrCreateDestination(call->type());
 

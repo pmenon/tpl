@@ -104,6 +104,10 @@ class AggregationHashTable {
   // Create a new entry without inserting into the hash table
   HashTableEntry *CreateEntry(hash_t hash);
 
+  // Lookup a hash table entry internally
+  HashTableEntry *LookupEntryInternal(hash_t hash, KeyEqFn key_eq_fn,
+                                      const void *probe_tuple) const;
+
   // Compute the hash value and perform the table lookup for all elements in the
   // input vector projections.
   template <bool Prefetch>
@@ -141,6 +145,16 @@ class AggregationHashTable {
                       u32 group_sel[], const hash_t hashes[],
                       HashTableEntry *entries[], KeyEqFn key_eq_fn) const;
 
+  // Called from ProcessBatch() to create missing groups
+  void CreateMissingGroups(VectorProjectionIterator *iters[], u32 num_elems,
+                           const hash_t hashes[], HashTableEntry *entries[],
+                           KeyEqFn key_eq_fn, InitAggFn init_agg_fn);
+
+  // Called from ProcessBatch() to update only the valid entries in the input
+  // vector
+  void UpdateGroups(VectorProjectionIterator *iters[], u32 num_elems,
+                    HashTableEntry *entries[], MergeAggFn merge_agg_fn);
+
  private:
   // Where the aggregates are stored
   util::ChunkedVector entries_;
@@ -151,5 +165,29 @@ class AggregationHashTable {
   // The maximum number of elements in the table before a resize
   u64 max_fill_;
 };
+
+// ---------------------------------------------------------
+// Implementation below
+// ---------------------------------------------------------
+
+inline HashTableEntry *AggregationHashTable::LookupEntryInternal(
+    hash_t hash, AggregationHashTable::KeyEqFn key_eq_fn,
+    const void *probe_tuple) const {
+  HashTableEntry *entry = hash_table_.FindChainHead(hash);
+  while (entry != nullptr) {
+    if (entry->hash == hash && key_eq_fn(entry->payload, probe_tuple)) {
+      return entry;
+    }
+    entry = entry->next;
+  }
+  return nullptr;
+}
+
+inline byte *AggregationHashTable::Lookup(
+    hash_t hash, AggregationHashTable::KeyEqFn key_eq_fn,
+    const void *probe_tuple) {
+  auto *entry = LookupEntryInternal(hash, key_eq_fn, probe_tuple);
+  return (entry == nullptr ? nullptr : entry->payload);
+}
 
 }  // namespace tpl::sql
