@@ -127,7 +127,13 @@ void AggregationHashTable::LookupBatch(
 
   // Candidate groups in 'entries' may have hash collisions. Follow the chain
   // to check key equality.
-  FollowNextLoop<Prefetch>(iters, num_groups, group_sel, entries, key_eq_fn);
+  if (iters[0]->IsFiltered()) {
+    FollowNextLoop<Prefetch, true>(iters, num_groups, group_sel, hashes,
+                                   entries, key_eq_fn);
+  } else {
+    FollowNextLoop<Prefetch, false>(iters, num_groups, group_sel, hashes,
+                                    entries, key_eq_fn);
+  }
 }
 
 template <bool Prefetch>
@@ -135,8 +141,7 @@ u32 AggregationHashTable::ComputeHashAndLoadInitial(
     VectorProjectionIterator *iters[], u32 num_elems, hash_t hashes[],
     HashTableEntry *entries[], AggregationHashTable::HashFn hash_fn) const {
   // Compute hash
-  VectorProjectionIterator *vpi = iters[0];
-  if (vpi->IsFiltered()) {
+  if (auto *vpi = iters[0]; vpi->IsFiltered()) {
     for (u32 idx = 0; vpi->HasNextFiltered(); vpi->AdvanceFiltered()) {
       hashes[idx++] = hash_fn(iters);
     }
@@ -145,6 +150,8 @@ u32 AggregationHashTable::ComputeHashAndLoadInitial(
       hashes[idx++] = hash_fn(iters);
     }
   }
+  // Reset VPI
+  iters[0]->Reset();
 
   // Load entries
   u32 found = 0;
@@ -172,11 +179,59 @@ u32 AggregationHashTable::ComputeHashAndLoadInitial(
   return found;
 }
 
-template <bool Prefetch>
-u32 AggregationHashTable::FollowNextLoop(
-    VectorProjectionIterator *iters[], u32 num_elems, u32 group_sel_vec[],
-    HashTableEntry *entries[], AggregationHashTable::KeyEqFn key_eq_fn) const {
-  return 0;
+template <bool Prefetch, bool VPIIsFiltered>
+void AggregationHashTable::FollowNextLoop(
+    VectorProjectionIterator *iters[], u32 num_elems, u32 group_sel[],
+    const hash_t hashes[], HashTableEntry *entries[],
+    AggregationHashTable::KeyEqFn key_eq_fn) const {
+  // TODO(pmenon): Use prefetch
+  while (num_elems > 0) {
+    u32 write_idx = 0;
+
+    // First, check key equality for selected groups
+    if constexpr (VPIIsFiltered) {
+      for (u32 idx = 0, prev_group_idx = group_sel[0]; idx < num_elems; idx++) {
+        // The group we're checking
+        const u32 group_idx = group_sel[idx];
+        // Advance the iterator to the group position
+        iters[0]->AdvanceFiltered(group_idx - prev_group_idx);
+        // Check
+        const bool not_equal = (entries[group_idx]->hash != hashes[group_idx] ||
+                                !key_eq_fn(entries[group_idx]->payload, iters));
+        // If the keys didn't match, write index to move forward
+        group_sel[write_idx] = group_idx;
+        write_idx += static_cast<u32>(not_equal);
+        // Move along
+        prev_group_idx = group_idx;
+      }
+    } else {
+      for (u32 idx = 0, prev_group_idx = group_sel[0]; idx < num_elems; idx++) {
+        // The group we're checking
+        const u32 group_idx = group_sel[idx];
+        // Advance iterator to the group position
+        iters[0]->Advance(group_idx - prev_group_idx);
+        // Check
+        const bool not_equal = (entries[group_idx]->hash != hashes[group_idx] ||
+                                !key_eq_fn(entries[group_idx]->payload, iters));
+        // If the keys didn't match, write index to move forward
+        group_sel[write_idx] = group_idx;
+        write_idx += static_cast<u32>(not_equal);
+        // Move along
+        prev_group_idx = group_idx;
+      }
+    }
+    // Reset VPI
+    iters[0]->Reset();
+
+    // For any unmatched, move forward
+    for (u32 idx = 0; idx < write_idx; idx++) {
+      HashTableEntry *&entry = entries[group_sel[idx]];
+      entry = entry->next;
+    }
+
+    // Next
+    num_elems = write_idx;
+  }
 }
 
 }  // namespace tpl::sql

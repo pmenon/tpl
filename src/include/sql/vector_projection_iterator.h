@@ -50,10 +50,12 @@ class VectorProjectionIterator {
 
   /// Advance the iterator by a single row
   void Advance();
+  void Advance(u32 n);
 
   /// Advance the iterator by a single entry to the next valid tuple in the
   /// filtered vector projection
   void AdvanceFiltered();
+  void AdvanceFiltered(u32 n);
 
   /// Mark the current tuple as matched/valid (or unmatched/invalid)
   /// \param matched True if the current tuple is matched; false otherwise
@@ -161,9 +163,14 @@ inline const T *VectorProjectionIterator::Get(u32 col_idx, bool *null) const {
 }
 
 inline void VectorProjectionIterator::Advance() { curr_idx_++; }
+inline void VectorProjectionIterator::Advance(u32 n) { curr_idx_ += n; }
 
 inline void VectorProjectionIterator::AdvanceFiltered() {
   curr_idx_ = selection_vector_[++selection_vector_read_idx_];
+}
+inline void VectorProjectionIterator::AdvanceFiltered(u32 n) {
+  selection_vector_read_idx_ += n;
+  curr_idx_ = selection_vector_[selection_vector_read_idx_];
 }
 
 inline void VectorProjectionIterator::Match(bool matched) {

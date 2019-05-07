@@ -133,13 +133,13 @@ class AggregationHashTable {
                                 HashTableEntry *entries[],
                                 HashFn hash_fn) const;
 
-  // Called from LookupBatch() to follow the bucket chain for all valid group
-  // candidates in the entries vector, and resolve hash collisions by performing
-  // key equality checks. This function will modify
-  template <bool Prefetch>
-  u32 FollowNextLoop(VectorProjectionIterator *iters[], u32 num_elems,
-                     u32 group_sel_vec[], HashTableEntry *entries[],
-                     KeyEqFn key_eq_fn) const;
+  // Called from LookupBatch() to follow the entry chain of candidate group
+  // entries filtered through group_sel. Follows the chain and uses the key
+  // equality function to resolve hash collisions.
+  template <bool Prefetch, bool VPIIsFiltered>
+  void FollowNextLoop(VectorProjectionIterator *iters[], u32 num_elems,
+                      u32 group_sel[], const hash_t hashes[],
+                      HashTableEntry *entries[], KeyEqFn key_eq_fn) const;
 
  private:
   // Where the aggregates are stored
