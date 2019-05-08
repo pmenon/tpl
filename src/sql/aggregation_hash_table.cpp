@@ -61,8 +61,7 @@ void AggregationHashTable::ProcessBatch(
   alignas(CACHELINE_SIZE) hash_t hashes[kDefaultVectorSize];
   alignas(CACHELINE_SIZE) HashTableEntry *entries[kDefaultVectorSize];
 
-  u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
-  if (hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
+  if (iters[0]->IsFiltered()) {
     ProcessBatchImpl<true>(iters, num_elems, hashes, entries, hash_fn,
                            key_eq_fn, init_agg_fn, merge_agg_fn);
   } else {
@@ -71,40 +70,35 @@ void AggregationHashTable::ProcessBatch(
   }
 }
 
-template <bool Prefetch>
+template <bool VPIIsFiltered>
 void AggregationHashTable::ProcessBatchImpl(
     VectorProjectionIterator *iters[], u32 num_elems, hash_t hashes[],
     HashTableEntry *entries[], AggregationHashTable::HashFn hash_fn,
     KeyEqFn key_eq_fn, AggregationHashTable::InitAggFn init_agg_fn,
     AggregationHashTable::MergeAggFn merge_agg_fn) {
   // Lookup batch
-  LookupBatch<Prefetch>(iters, num_elems, hashes, entries, hash_fn, key_eq_fn);
-
-  // Reset
+  LookupBatch<VPIIsFiltered>(iters, num_elems, hashes, entries, hash_fn,
+                             key_eq_fn);
   iters[0]->Reset();
 
   // Create missing groups
-  CreateMissingGroups(iters, num_elems, hashes, entries, key_eq_fn,
-                      init_agg_fn);
-
-  // Reset
+  CreateMissingGroups<VPIIsFiltered>(iters, num_elems, hashes, entries,
+                                     key_eq_fn, init_agg_fn);
   iters[0]->Reset();
 
-  // Update other groups
-  UpdateGroups(iters, num_elems, entries, merge_agg_fn);
-
-  // Reset
+  // Update valid groups
+  UpdateGroups<VPIIsFiltered>(iters, num_elems, entries, merge_agg_fn);
   iters[0]->Reset();
 }
 
-template <bool Prefetch>
+template <bool VPIIsFiltered>
 void AggregationHashTable::LookupBatch(
     VectorProjectionIterator *iters[], u32 num_elems, hash_t hashes[],
     HashTableEntry *entries[], AggregationHashTable::HashFn hash_fn,
     AggregationHashTable::KeyEqFn key_eq_fn) const {
   // Compute hash and perform initial lookup
-  ComputeHashAndLoadInitial<Prefetch>(iters, num_elems, hashes, entries,
-                                      hash_fn);
+  ComputeHashAndLoadInitial<VPIIsFiltered>(iters, num_elems, hashes, entries,
+                                           hash_fn);
 
   // Determine the indexes of entries that are non-null
   alignas(CACHELINE_SIZE) u32 group_sel[kDefaultVectorSize];
@@ -114,29 +108,41 @@ void AggregationHashTable::LookupBatch(
 
   // Candidate groups in 'entries' may have hash collisions. Follow the chain
   // to check key equality.
-  if (iters[0]->IsFiltered()) {
-    FollowNextLoop<Prefetch, true>(iters, num_groups, group_sel, hashes,
-                                   entries, key_eq_fn);
-  } else {
-    FollowNextLoop<Prefetch, false>(iters, num_groups, group_sel, hashes,
-                                    entries, key_eq_fn);
-  }
+  FollowNextLoop<VPIIsFiltered>(iters, num_groups, group_sel, hashes, entries,
+                                key_eq_fn);
 }
 
-template <bool Prefetch>
+template <bool VPIIsFiltered>
 u32 AggregationHashTable::ComputeHashAndLoadInitial(
     VectorProjectionIterator *iters[], u32 num_elems, hash_t hashes[],
     HashTableEntry *entries[], AggregationHashTable::HashFn hash_fn) const {
+  // If the hash table is larger than cache, inject prefetch instructions
+  u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
+  if (hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
+    return ComputeHashAndLoadInitialImpl<VPIIsFiltered, true>(
+        iters, num_elems, hashes, entries, hash_fn);
+  }
+
+  return ComputeHashAndLoadInitialImpl<VPIIsFiltered, false>(
+      iters, num_elems, hashes, entries, hash_fn);
+}
+
+template <bool VPIIsFiltered, bool Prefetch>
+u32 AggregationHashTable::ComputeHashAndLoadInitialImpl(
+    VectorProjectionIterator *iters[], u32 num_elems, hash_t hashes[],
+    HashTableEntry *entries[], AggregationHashTable::HashFn hash_fn) const {
   // Compute hash
-  if (auto *vpi = iters[0]; vpi->IsFiltered()) {
-    for (u32 idx = 0; vpi->HasNextFiltered(); vpi->AdvanceFiltered()) {
+  if constexpr (VPIIsFiltered) {
+    for (u32 idx = 0; iters[0]->HasNextFiltered();
+         iters[0]->AdvanceFiltered()) {
       hashes[idx++] = hash_fn(iters);
     }
   } else {
-    for (u32 idx = 0; vpi->HasNext(); vpi->Advance()) {
+    for (u32 idx = 0; iters[0]->HasNext(); iters[0]->Advance()) {
       hashes[idx++] = hash_fn(iters);
     }
   }
+
   // Reset VPI
   iters[0]->Reset();
 
@@ -166,12 +172,11 @@ u32 AggregationHashTable::ComputeHashAndLoadInitial(
   return found;
 }
 
-template <bool Prefetch, bool VPIIsFiltered>
+template <bool VPIIsFiltered>
 void AggregationHashTable::FollowNextLoop(
     VectorProjectionIterator *iters[], u32 num_elems, u32 group_sel[],
     const hash_t hashes[], HashTableEntry *entries[],
     AggregationHashTable::KeyEqFn key_eq_fn) const {
-  // TODO(pmenon): Use prefetch
   while (num_elems > 0) {
     u32 write_idx = 0;
 
@@ -204,6 +209,7 @@ void AggregationHashTable::FollowNextLoop(
         prev_group_idx = group_idx;
       }
     }
+
     // Reset VPI
     iters[0]->Reset();
 
@@ -218,6 +224,7 @@ void AggregationHashTable::FollowNextLoop(
   }
 }
 
+template <bool VPIIsFiltered>
 void AggregationHashTable::CreateMissingGroups(
     VectorProjectionIterator *iters[], u32 num_elems, const hash_t hashes[],
     HashTableEntry *entries[], AggregationHashTable::KeyEqFn key_eq_fn,
@@ -244,6 +251,7 @@ void AggregationHashTable::CreateMissingGroups(
   }
 }
 
+template <bool VPIIsFiltered>
 void AggregationHashTable::UpdateGroups(
     VectorProjectionIterator *iters[], u32 num_elems, HashTableEntry *entries[],
     AggregationHashTable::MergeAggFn merge_agg_fn) {

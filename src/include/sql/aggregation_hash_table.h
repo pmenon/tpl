@@ -110,7 +110,7 @@ class AggregationHashTable {
 
   // Compute the hash value and perform the table lookup for all elements in the
   // input vector projections.
-  template <bool Prefetch>
+  template <bool VPIIsFiltered>
   void ProcessBatchImpl(VectorProjectionIterator *iters[], u32 num_elems,
                         hash_t hashes[], HashTableEntry *entries[],
                         HashFn hash_fn, KeyEqFn key_eq_fn,
@@ -120,7 +120,7 @@ class AggregationHashTable {
   // returns, the hashes vector will contain the hash values of all elements in
   // the input vector, and entries will contain a pointer to the associated
   // element's group aggregate, or null if no group exists.
-  template <bool Prefetch>
+  template <bool VPIIsFiltered>
   void LookupBatch(VectorProjectionIterator *iters[], u32 num_elems,
                    hash_t hashes[], HashTableEntry *entries[], HashFn hash_fn,
                    KeyEqFn key_eq_fn) const;
@@ -131,27 +131,34 @@ class AggregationHashTable {
   // hashes vector will be full, and the entries vector will contain either a
   // pointer to the first (of potentially many) elements in the hash table that
   // match the input hash value.
-  template <bool Prefetch>
+  template <bool VPIIsFiltered>
   u32 ComputeHashAndLoadInitial(VectorProjectionIterator *iters[],
                                 u32 num_elems, hash_t hashes[],
                                 HashTableEntry *entries[],
                                 HashFn hash_fn) const;
+  template <bool VPIIsFiltered, bool Prefetch>
+  u32 ComputeHashAndLoadInitialImpl(VectorProjectionIterator *iters[],
+                                    u32 num_elems, hash_t hashes[],
+                                    HashTableEntry *entries[],
+                                    HashFn hash_fn) const;
 
   // Called from LookupBatch() to follow the entry chain of candidate group
   // entries filtered through group_sel. Follows the chain and uses the key
   // equality function to resolve hash collisions.
-  template <bool Prefetch, bool VPIIsFiltered>
+  template <bool VPIIsFiltered>
   void FollowNextLoop(VectorProjectionIterator *iters[], u32 num_elems,
                       u32 group_sel[], const hash_t hashes[],
                       HashTableEntry *entries[], KeyEqFn key_eq_fn) const;
 
   // Called from ProcessBatch() to create missing groups
+  template <bool VPIIsFiltered>
   void CreateMissingGroups(VectorProjectionIterator *iters[], u32 num_elems,
                            const hash_t hashes[], HashTableEntry *entries[],
                            KeyEqFn key_eq_fn, InitAggFn init_agg_fn);
 
   // Called from ProcessBatch() to update only the valid entries in the input
   // vector
+  template <bool VPIIsFiltered>
   void UpdateGroups(VectorProjectionIterator *iters[], u32 num_elems,
                     HashTableEntry *entries[], MergeAggFn merge_agg_fn);
 
