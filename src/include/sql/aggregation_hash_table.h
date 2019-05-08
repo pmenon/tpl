@@ -132,15 +132,15 @@ class AggregationHashTable {
   // pointer to the first (of potentially many) elements in the hash table that
   // match the input hash value.
   template <bool VPIIsFiltered>
-  u32 ComputeHashAndLoadInitial(VectorProjectionIterator *iters[],
-                                u32 num_elems, hash_t hashes[],
-                                HashTableEntry *entries[],
-                                HashFn hash_fn) const;
+  void ComputeHashAndLoadInitial(VectorProjectionIterator *iters[],
+                                 u32 num_elems, hash_t hashes[],
+                                 HashTableEntry *entries[],
+                                 HashFn hash_fn) const;
   template <bool VPIIsFiltered, bool Prefetch>
-  u32 ComputeHashAndLoadInitialImpl(VectorProjectionIterator *iters[],
-                                    u32 num_elems, hash_t hashes[],
-                                    HashTableEntry *entries[],
-                                    HashFn hash_fn) const;
+  void ComputeHashAndLoadInitialImpl(VectorProjectionIterator *iters[],
+                                     u32 num_elems, hash_t hashes[],
+                                     HashTableEntry *entries[],
+                                     HashFn hash_fn) const;
 
   // Called from LookupBatch() to follow the entry chain of candidate group
   // entries filtered through group_sel. Follows the chain and uses the key

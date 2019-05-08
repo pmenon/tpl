@@ -113,22 +113,22 @@ void AggregationHashTable::LookupBatch(
 }
 
 template <bool VPIIsFiltered>
-u32 AggregationHashTable::ComputeHashAndLoadInitial(
+void AggregationHashTable::ComputeHashAndLoadInitial(
     VectorProjectionIterator *iters[], u32 num_elems, hash_t hashes[],
     HashTableEntry *entries[], AggregationHashTable::HashFn hash_fn) const {
   // If the hash table is larger than cache, inject prefetch instructions
   u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
   if (hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
-    return ComputeHashAndLoadInitialImpl<VPIIsFiltered, true>(
+    ComputeHashAndLoadInitialImpl<VPIIsFiltered, true>(iters, num_elems, hashes,
+                                                       entries, hash_fn);
+  } else {
+    ComputeHashAndLoadInitialImpl<VPIIsFiltered, false>(
         iters, num_elems, hashes, entries, hash_fn);
   }
-
-  return ComputeHashAndLoadInitialImpl<VPIIsFiltered, false>(
-      iters, num_elems, hashes, entries, hash_fn);
 }
 
 template <bool VPIIsFiltered, bool Prefetch>
-u32 AggregationHashTable::ComputeHashAndLoadInitialImpl(
+void AggregationHashTable::ComputeHashAndLoadInitialImpl(
     VectorProjectionIterator *iters[], u32 num_elems, hash_t hashes[],
     HashTableEntry *entries[], AggregationHashTable::HashFn hash_fn) const {
   // Compute hash
@@ -147,7 +147,6 @@ u32 AggregationHashTable::ComputeHashAndLoadInitialImpl(
   iters[0]->Reset();
 
   // Load entries
-  u32 found = 0;
   for (u32 idx = 0, prefetch_idx = kPrefetchDistance; idx < num_elems;
        idx++, prefetch_idx++) {
     if constexpr (Prefetch) {
@@ -161,15 +160,12 @@ u32 AggregationHashTable::ComputeHashAndLoadInitialImpl(
     if (entry != nullptr && entry->hash != hashes[idx]) {
       for (; entry != nullptr; entry = entry->next) {
         if (entry->hash == hashes[idx]) {
-          found++;
           break;
         }
       }
     }
     entries[idx] = entry;
   }
-
-  return found;
 }
 
 template <bool VPIIsFiltered>
@@ -189,16 +185,19 @@ void AggregationHashTable::FollowNextLoop(
           entries[group_sel[idx]]->hash == hashes[group_sel[idx]] &&
           key_eq_fn(entries[group_sel[idx]]->payload, iters);
 
-      // Check if there's a chain to follow
-      const bool has_next = entries[group_sel[idx]]->next != nullptr;
-
       // Move along
       group_sel[write_idx] = group_sel[idx];
-      write_idx += static_cast<u32>(!matched && has_next);
+      write_idx += static_cast<u32>(!matched);
     }
 
     // Reset VPI
     iters[0]->Reset();
+
+    // Move along chain for entries that didn't match
+    for (u32 idx = 0; idx < write_idx; idx++) {
+      HashTableEntry *&entry = entries[group_sel[idx]];
+      entry = entry->next;
+    }
 
     // Next
     num_elems = write_idx;
