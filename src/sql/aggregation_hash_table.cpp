@@ -180,44 +180,25 @@ void AggregationHashTable::FollowNextLoop(
   while (num_elems > 0) {
     u32 write_idx = 0;
 
-    // First, check key equality for selected groups
-    if constexpr (VPIIsFiltered) {
-      for (u32 idx = 0, prev_group_idx = group_sel[0]; idx < num_elems; idx++) {
-        const u32 group_idx = group_sel[idx];
-        iters[0]->AdvanceFiltered(group_idx - prev_group_idx);
-        const bool not_equal = (entries[group_idx]->hash != hashes[group_idx] ||
-                                !key_eq_fn(entries[group_idx]->payload, iters));
-        // If the keys didn't match, write index to move forward
-        group_sel[write_idx] = group_idx;
-        write_idx += static_cast<u32>(not_equal);
-        // Move along
-        prev_group_idx = group_idx;
-      }
-    } else {
-      for (u32 idx = 0, prev_group_idx = group_sel[0]; idx < num_elems; idx++) {
-        // The group we're checking
-        const u32 group_idx = group_sel[idx];
-        // Advance iterator to the group position
-        iters[0]->Advance(group_idx - prev_group_idx);
-        // Check
-        const bool not_equal = (entries[group_idx]->hash != hashes[group_idx] ||
-                                !key_eq_fn(entries[group_idx]->payload, iters));
-        // If the keys didn't match, write index to move forward
-        group_sel[write_idx] = group_idx;
-        write_idx += static_cast<u32>(not_equal);
-        // Move along
-        prev_group_idx = group_idx;
-      }
+    for (u32 idx = 0; idx < num_elems; idx++) {
+      // Move iterator to current group position
+      iters[0]->SetPosition<VPIIsFiltered>(group_sel[idx]);
+
+      // Check if there's a has and key match
+      const bool matched =
+          entries[group_sel[idx]]->hash == hashes[group_sel[idx]] &&
+          key_eq_fn(entries[group_sel[idx]]->payload, iters);
+
+      // Check if there's a chain to follow
+      const bool has_next = entries[group_sel[idx]]->next != nullptr;
+
+      // Move along
+      group_sel[write_idx] = group_sel[idx];
+      write_idx += static_cast<u32>(!matched && has_next);
     }
 
     // Reset VPI
     iters[0]->Reset();
-
-    // For any unmatched, move forward
-    for (u32 idx = 0; idx < write_idx; idx++) {
-      HashTableEntry *&entry = entries[group_sel[idx]];
-      entry = entry->next;
-    }
 
     // Next
     num_elems = write_idx;
@@ -230,23 +211,27 @@ void AggregationHashTable::CreateMissingGroups(
     HashTableEntry *entries[], AggregationHashTable::KeyEqFn key_eq_fn,
     AggregationHashTable::InitAggFn init_agg_fn) {
   // Vector storing all the missing group IDs
-  alignas(CACHELINE_SIZE) u32 missing_group_vec[kDefaultVectorSize];
+  alignas(CACHELINE_SIZE) u32 group_sel[kDefaultVectorSize];
 
   // Determine which elements are missing a group
-  u32 num_missing_groups = util::VectorUtil::FilterEq(
-      reinterpret_cast<intptr_t *>(entries), num_elems, intptr_t(0),
-      missing_group_vec, nullptr);
+  u32 num_groups =
+      util::VectorUtil::FilterEq(reinterpret_cast<intptr_t *>(entries),
+                                 num_elems, intptr_t(0), group_sel, nullptr);
 
   // Insert those elements
-  for (u32 idx = 0; idx < num_missing_groups; idx++) {
-    hash_t hash = hashes[missing_group_vec[idx]];
+  for (u32 idx = 0; idx < num_groups; idx++) {
+    hash_t hash = hashes[group_sel[idx]];
 
     HashTableEntry *entry = LookupEntryInternal(hash, key_eq_fn, iters);
     if (entry != nullptr) {
-      entries[missing_group_vec[idx]] = entry;
+      entries[group_sel[idx]] = entry;
       continue;
     }
 
+    // Move VPI to position of new aggregate
+    iters[0]->SetPosition<VPIIsFiltered>(group_sel[idx]);
+
+    // Initialize
     init_agg_fn(Insert(hash), iters);
   }
 }
@@ -263,8 +248,10 @@ void AggregationHashTable::UpdateGroups(
       util::VectorUtil::FilterNe(reinterpret_cast<intptr_t *>(entries),
                                  num_elems, intptr_t(0), group_sel, nullptr);
 
+  // Update all groups whose indexes are stored in group_sel
   for (u32 idx = 0; idx < num_groups; idx++) {
     HashTableEntry *entry = entries[group_sel[idx]];
+    iters[0]->SetPosition<VPIIsFiltered>(group_sel[idx]);
     merge_agg_fn(entry->payload, iters);
   }
 }

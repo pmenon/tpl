@@ -10,93 +10,131 @@
 
 namespace tpl::sql {
 
-/// An iterator over vector projections. A VectorProjectionIterator allows both
-/// tuple-at-a-time iteration over a vector projection and vector-at-a-time
-/// processing. There are two separate APIs for each and interleaving is
-/// supported only to a certain degree. This class exists so that we can iterate
-/// over a vector projection multiples times and ensure processing always only
-/// on filtered items.
+/**
+ * An iterator over vector projections. A VectorProjectionIterator allows both
+ * tuple-at-a-time iteration over a vector projection and vector-at-a-time
+ * processing. There are two separate APIs for each and interleaving is
+ * supported only to a certain degree. This class exists so that we can iterate
+ * over a vector projection multiples times and ensure processing always only
+ * on filtered items.
+ */
 class VectorProjectionIterator {
   static constexpr const u32 kInvalidPos = std::numeric_limits<u32>::max();
 
  public:
+  /**
+   * Create an empty iterator over an empty projection
+   */
   VectorProjectionIterator();
 
+  /**
+   * Create an iterator over the given projection @em vp
+   * @param vp The projection to iterator over
+   */
   explicit VectorProjectionIterator(VectorProjection *vp);
 
-  /// This class cannot be copied or moved
+  /**
+   * This class cannot be copied or moved
+   */
   DISALLOW_COPY_AND_MOVE(VectorProjectionIterator);
 
-  /// Has this vector projection been filtered?
-  /// \return True if filtered; false otherwise
+  /**
+   * Has this vector projection been filtered? Does it have a selection vector?
+   * @return True if filtered; false otherwise.
+   */
   bool IsFiltered() const { return selection_vector_[0] != kInvalidPos; }
 
-  /// Set the vector projection to iterate over
-  /// \param vp The vector projection
+  /**
+   * Reset this iterator to begin iteration over the given projection @em vp
+   * @param vp The vector projection to iterate over
+   */
   void SetVectorProjection(VectorProjection *vp);
 
-  // -------------------------------------------------------
-  // Tuple-at-a-time API
-  // -------------------------------------------------------
-
-  /// Get a pointer to the value in the column at index \ref col_idx
-  /// \tparam T The desired data type stored in the vector projection
-  /// \tparam nullable Whether the column is NULLable
-  /// \param col_idx The index of the column to read from
-  /// \param[out] null Whether the given column is null
-  /// \return The typed value at the current iterator position in the column
+  /**
+   * Get a pointer to the value in the column at index @em col_idx
+   * @tparam T The desired data type stored in the vector projection
+   * @tparam nullable Whether the column is NULLable
+   * @param col_idx The index of the column to read from
+   * @param[out] null null Whether the given column is null
+   * @return The typed value at the current iterator position in the column
+   */
   template <typename T, bool nullable>
   const T *Get(u32 col_idx, bool *null) const;
 
-  /// Advance the iterator by a single row
+  /**
+   * Set the current iterator position
+   * @tparam IsFiltered Is this VPI filtered?
+   * @param idx The index the iteration should jump to
+   */
+  template <bool IsFiltered>
+  void SetPosition(u32 idx);
+
+  // TODO(pmenon): All Advance/HasNext/Reset should be templatized on if the
+  //               VPI is filtered.
+
+  /**
+   * Advance the iterator by one tuple
+   */
   void Advance();
-  void Advance(u32 n);
 
-  /// Advance the iterator by a single entry to the next valid tuple in the
-  /// filtered vector projection
+  /**
+   * Advance the iterator by a one tuple to the next valid tuple in the
+   * filtered vector projection.
+   */
   void AdvanceFiltered();
-  void AdvanceFiltered(u32 n);
 
-  /// Mark the current tuple as matched/valid (or unmatched/invalid)
-  /// \param matched True if the current tuple is matched; false otherwise
+  /**
+   * Mark the current tuple (i.e., the one the iterator is currently positioned
+   * at) as matched (valid) or unmatched (invalid).
+   * @param matched True if the current tuple is valid; false otherwise
+   */
   void Match(bool matched);
 
-  /// Does the iterator have another tuple?
-  /// \return True if there is more input tuples; false otherwise
+  /**
+   * Does the iterator have another tuple?
+   * @return True if there is more input tuples; false otherwise
+   */
   bool HasNext() const;
 
-  /// Does the iterator have another tuple after the filter has been applied
-  /// \return True if there is more input tuples; false otherwise
+  /**
+   * Does the iterator have another tuple after the filter has been applied?
+   * @return True if there is more input tuples; false otherwise
+   */
   bool HasNextFiltered() const;
 
-  /// Reset iteration to the beginning of the vector projection
+  /**
+   * Reset iteration to the beginning of the vector projection
+   */
   void Reset();
 
-  /// Reset iteration to the beginning of the filtered vector projection
+  /**
+   * Reset iteration to the beginning of the filtered vector projection
+   */
   void ResetFiltered();
 
-  /// Fun a function over each active tuple in the vector projection. This is a
-  /// read-only function (despite it being non-const), meaning the callback must
-  /// not modify the state of the iterator, but should only query it using const
-  /// functions!
-  /// \param fn A callback function
+  /**
+   * Run a function over each active tuple in the vector projection. This is a
+   * read-only function (despite it being non-const), meaning the callback must
+   * not modify the state of the iterator, but should only query it using const
+   * functions!
+   * @tparam F The function type
+   * @param fn A callback function
+   */
   template <typename F>
   void ForEach(const F &fn);
 
-  /// Run a generic tuple-at-a-time filter over all active tuples in the vector
-  /// projection
-  /// \tparam F The generic type of the filter function. This can be any
-  ///           functor-like type including raw function pointer, functor or
-  ///           std::function
-  /// \param filter A function that accepts a const version of this VPI and
-  ///               returns true if the tuple pointed to by the VPI is valid
-  ///               (i.e., passes the filter) or false otherwise
+  /**
+   * Run a generic tuple-at-a-time filter over all active tuples in the vector
+   * projection
+   * @tparam F The generic type of the filter function. This can be any
+   *           functor-like type including raw function pointer, functor or
+   *           std::function
+   * @param filter A function that accepts a const version of this VPI and
+   *               returns true if the tuple pointed to by the VPI is valid
+   *               (i.e., passes the filter) or false otherwise
+   */
   template <typename F>
   void RunFilter(const F &filter);
-
-  // -------------------------------------------------------
-  // Vectorized API
-  // -------------------------------------------------------
 
   union FilterVal {
     i16 si;
@@ -104,16 +142,19 @@ class VectorProjectionIterator {
     i64 bi;
   };
 
-  /// Filter the given column by the given value
-  /// \tparam Compare The comparison function
-  /// \param col_idx The index of the column in the vector projection to filter
-  /// \param val The value to filter on
-  /// \return The number of selected elements
+  /**
+   * Filter the given column by the given value
+   * @param Compare The comparison function
+   * @param col_idx The index of the column in the vector projection to filter
+   * @param val The value to filter on
+   * @return The number of selected elements
+   */
   template <template <typename> typename Op>
   u32 FilterColByVal(u32 col_idx, FilterVal val);
 
-  /// Return the number of selected tuples after any filters have been applied
-  /// \return The number of selected tuples
+  /**
+   * Return the number of selected tuples after any filters have been applied
+   */
   u32 num_selected() const { return num_selected_; }
 
  private:
@@ -132,7 +173,7 @@ class VectorProjectionIterator {
   u32 num_selected_;
 
   // The selection vector used to filter the vector projection
-  u32 selection_vector_[kDefaultVectorSize];
+  alignas(CACHELINE_SIZE) u32 selection_vector_[kDefaultVectorSize];
 
   // The next slot in the selection vector to read from
   u32 selection_vector_read_idx_;
@@ -162,15 +203,23 @@ inline const T *VectorProjectionIterator::Get(u32 col_idx, bool *null) const {
   return &col_data[curr_idx_];
 }
 
+template <bool Filtered>
+inline void VectorProjectionIterator::SetPosition(u32 idx) {
+  TPL_ASSERT(idx < num_selected(), "Out of bounds access");
+  if constexpr (Filtered) {
+    TPL_ASSERT(IsFiltered(), "Attempting to set position in unfiltered VPI");
+    selection_vector_read_idx_ = idx;
+    curr_idx_ = selection_vector_[selection_vector_read_idx_];
+  } else {
+    TPL_ASSERT(!IsFiltered(), "Attempting to set position in filtered VPI");
+    curr_idx_ = idx;
+  }
+}
+
 inline void VectorProjectionIterator::Advance() { curr_idx_++; }
-inline void VectorProjectionIterator::Advance(u32 n) { curr_idx_ += n; }
 
 inline void VectorProjectionIterator::AdvanceFiltered() {
   curr_idx_ = selection_vector_[++selection_vector_read_idx_];
-}
-inline void VectorProjectionIterator::AdvanceFiltered(u32 n) {
-  selection_vector_read_idx_ += n;
-  curr_idx_ = selection_vector_[selection_vector_read_idx_];
 }
 
 inline void VectorProjectionIterator::Match(bool matched) {
