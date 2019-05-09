@@ -96,7 +96,7 @@ class AggregationHashTable {
 
  private:
   // Does the hash table need to grow?
-  bool NeedsToGrow() const { return hash_table_.num_elements() == max_fill_; }
+  bool NeedsToGrow() const { return hash_table_.num_elements() >= max_fill_; }
 
   // Grow the hash table
   void Grow();
