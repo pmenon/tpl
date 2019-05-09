@@ -6,33 +6,42 @@
 
 namespace tpl::ast {
 
-/// A visitor that fully and recursively traverses an entire AST tree. Clients
-/// can control which AST nodes by implementing only the Visit() methods on the
-/// node types they're interested. Moreover, clients can cull visitations to
-/// whole classes of nodes by implementing VisitNode() and returning true
-/// only for those node types they're interested.
-///
-/// Usage:
-/// \code
-/// class ForStmtVisitor : public AstTraversalVisitor<ForStmtVisitor> {
-///  public:
-///    ForStmtVisitor(ast::AstNode *root) :
-///      AstTraversalVisitor<ForStmtVisitor>(root) {}
-///
-///   void VisitForStmt(ast::ForStmt *stmt) { ... }
-/// }
-/// \endcode
-/// The \a ForStmtVisitor class will find all for-statement nodes in an AST tree
+/**
+ * A visitor that fully and recursively traverses an entire AST tree. Clients
+ * can control which AST nodes by implementing only the Visit() methods on the
+ * node types they're interested. Moreover, clients can cull visitations to
+ * whole classes of nodes by implementing VisitNode() and returning true
+ * only for those node types they're interested.
+ *
+ * Usage:
+ * @code
+ * class ForStmtVisitor : public AstTraversalVisitor<ForStmtVisitor> {
+ *  public:
+ *    ForStmtVisitor(ast::AstNode *root) :
+ *      AstTraversalVisitor<ForStmtVisitor>(root) {}
+ *
+ *   void VisitForStmt(ast::ForStmt *stmt) { ... }
+ * }
+ * @endcode
+ * The \a ForStmtVisitor class will find all for-statement nodes in an AST tree
+ */
 template <typename Subclass>
 class AstTraversalVisitor : public AstVisitor<Subclass> {
  public:
-  /// Construct a visitor over the AST rooted at \a root
+  /**
+   * Construct a visitor over the AST rooted at @em root
+   * @param root The root of the AST tree to begin visiting
+   */
   explicit AstTraversalVisitor(AstNode *root) : root_(root) {}
 
-  /// This class cannot be copied or moved
+  /**
+   * This class cannot be copied or moved
+   */
   DISALLOW_COPY_AND_MOVE(AstTraversalVisitor);
 
-  /// Run the traversal
+  /**
+   * Run the traversal
+   */
   void Run() {
     TPL_ASSERT(root_ != nullptr, "Cannot run traversal on NULL tree");
     AstVisitor<Subclass>::Visit(root_);

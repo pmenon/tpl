@@ -9,6 +9,9 @@
 
 namespace tpl::util {
 
+/**
+ * Utility class to deal with bit-level operations.
+ */
 class BitUtil {
  public:
   // The number of bits in one word
@@ -18,77 +21,97 @@ class BitUtil {
   // bit operations cheap
   static_assert(util::MathUtil::IsPowerOf2(kBitWordSize));
 
-  /// Count the number of zeroes from the most significant bit to the first 1 in
-  /// the input number @ref val
-  /// \tparam T The data type of the input value
-  /// \param val The input number
-  /// \return The number of leading zeros
+  /**
+   * Count the number of zeroes from the most significant bit to the first 1 in
+   * the input number @em val
+   * @tparam T The data type of the input value
+   * @param val The input number
+   * @return The number of leading zeros
+   */
   template <typename T>
   ALWAYS_INLINE static u64 CountLeadingZeros(T val) {
     return llvm::countLeadingZeros(val);
   }
 
-  /// Calculate the number of 32-bit words are needed to store a bit vector of
-  /// the given size
-  /// \param num_bits The size of the bit vector, in bits
-  /// \return The number of words needed to store a bit vector of the given size
+  /**
+   * Calculate the number of 32-bit words are needed to store a bit vector of
+   * the given size
+   * @param num_bits The size of the bit vector, in bits
+   * @return The number of words needed to store a bit vector of the given size
+   */
   ALWAYS_INLINE static u64 Num32BitWordsFor(u64 num_bits) {
     return MathUtil::DivRoundUp(num_bits, kBitWordSize);
   }
 
-  /// Test if the bit at index \a idx is set in the bit vector
-  /// \param bits The bit vector
-  /// \param idx The index of the bit to check
-  /// \return True if set; false otherwise
+  /**
+   * Test if the bit at index \a idx is set in the bit vector
+   * @param bits The bit vector
+   * @param idx The index of the bit to check
+   * @return True if set; false otherwise
+   */
   ALWAYS_INLINE static bool Test(const u32 bits[], const u32 idx) {
     const u32 mask = 1u << (idx % kBitWordSize);
     return bits[idx / kBitWordSize] & mask;
   }
 
-  /// Set the bit at index \a idx to 1 in the bit vector \a bits
-  /// \param bits The bit vector
-  /// \param idx The index of the bit to set to 1
+  /**
+   * Set the bit at index \a idx to 1 in the bit vector \a bits
+   * @param bits The bit vector
+   * @param idx The index of the bit to set to 1
+   */
   ALWAYS_INLINE static void Set(u32 bits[], const u32 idx) {
     bits[idx / kBitWordSize] |= 1u << (idx % kBitWordSize);
   }
 
-  /// Set the bit at index \a idx to 0 in the bit vector \a bits
-  /// \param bits The bit vector
-  /// \param idx The index of the bit to unset
+  /**
+   * Set the bit at index \a idx to 0 in the bit vector \a bits
+   * @param bits The bit vector
+   * @param idx The index of the bit to unset
+   */
   ALWAYS_INLINE static void Unset(u32 bits[], const u32 idx) {
     bits[idx / kBitWordSize] &= ~(1u << (idx % kBitWordSize));
   }
 
-  /// Flip the value of the bit at index \a idx in the bit vector
-  /// \param bits The bit vector
-  /// \param idx The index of the bit to flip
+  /**
+   * Flip the value of the bit at index \a idx in the bit vector
+   * @param bits The bit vector
+   * @param idx The index of the bit to flip
+   */
   ALWAYS_INLINE static void Flip(u32 bits[], const u32 idx) {
     bits[idx / kBitWordSize] ^= 1u << (idx % kBitWordSize);
   }
 
-  /// Clear all bits in the bit vector
-  /// \param bits The bit vector
-  /// \param num_bits The number of elements in the bit vector
+  /**
+   * Clear all bits in the bit vector
+   * @param bits The bit vector
+   * @param num_bits The number of elements in the bit vector
+   */
   ALWAYS_INLINE static void Clear(u32 bits[], const u64 num_bits) {
     auto num_words = Num32BitWordsFor(num_bits);
     std::memset(bits, 0, num_words * sizeof(u32));
   }
 
-  /// Count the number of set bits in the given value
+  /**
+   * Count the number of set bits in the given value
+   */
   template <typename T>
   static u32 CountBits(T val) {
     return llvm::countPopulation(val);
   }
 };
 
-/// Common class to bit vectors that are inlined or stored externally to the
-/// class. Uses CRTP to properly access bits and bit-vector size. Subclasses
-/// must implement bits() and num_bits() and provide raw access to the bit
-/// vector data and the number of bits in the bit vector, respectively.
+/**
+ * Common class to bit vectors that are inlined or stored externally to the
+ * class. Uses CRTP to properly access bits and bit-vector size. Subclasses
+ * must implement bits() and num_bits() and provide raw access to the bit
+ * vector data and the number of bits in the bit vector, respectively.
+ */
 template <typename Subclass>
 class BitVectorBase {
  public:
-  /// Test the value of the bit at index \a idx in the bit-vector
+  /**
+   * Test the value of the bit at index \a idx in the bit-vector
+   */
   bool Test(u32 idx) const {
     TPL_ASSERT(idx < impl()->num_bits(), "Index out of range");
     return BitUtil::Test(impl()->bits(), idx);
@@ -118,8 +141,10 @@ class BitVectorBase {
   const Subclass *impl() const { return static_cast<const Subclass *>(this); }
 };
 
-/// A bit vector that either owns the bit set, or can interpret an externally
-/// allocate bit vector
+/**
+ * A bit vector that either owns the bit set, or can interpret an externally
+ * allocate bit vector
+ */
 class BitVector : public BitVectorBase<BitVector> {
  public:
   // Create an uninitialized bit vector. Callers **must** use Init() before
@@ -163,7 +188,9 @@ class BitVector : public BitVectorBase<BitVector> {
   u32 num_bits_;
 };
 
-/// A bit vector that stores the bit set data inline in the class
+/**
+ * A bit vector that stores the bit set data inline in the class
+ */
 template <u32 NumBits>
 class InlinedBitVector : public BitVectorBase<InlinedBitVector<NumBits>> {
   static_assert(NumBits % BitUtil::kBitWordSize == 0,

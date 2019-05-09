@@ -4,7 +4,9 @@
 
 namespace tpl::util {
 
-/// A simple restartable timer
+/**
+ * A simple restartable timer
+ */
 template <typename ResolutionRatio = std::milli>
 class Timer {
   using Clock = std::chrono::high_resolution_clock;
@@ -13,10 +15,14 @@ class Timer {
  public:
   Timer() noexcept : elapsed_(0) { Start(); }
 
-  /// Start the timer
+  /**
+   * Start the timer
+   */
   void Start() noexcept { start_ = Clock::now(); }
 
-  /// Stop the timer
+  /**
+   * Stop the timer
+   */
   void Stop() noexcept {
     stop_ = Clock::now();
 
@@ -26,13 +32,17 @@ class Timer {
             .count();
   }
 
-  /// Return the total number of elapsed time units
+  /**
+   * Return the total number of elapsed time units
+   */
   double elapsed() const noexcept { return elapsed_; }
 
-  /// Time a function \a fn
-  /// \tparam F The functor-type of the parameter function
-  /// \param fn The function (or functor-like object) to time
-  /// \return The elapsed time in whatever resolution ratio the caller wants
+  /**
+   * Time a function \a fn
+   * @tparam F The functor-type of the parameter function
+   * @param fn The function (or functor-like object) to time
+   * @return The elapsed time in whatever resolution ratio the caller wants
+   */
   template <typename F>
   static inline double TimeFunction(const F &fn) {
     Timer<ResolutionRatio> timer;
@@ -49,9 +59,11 @@ class Timer {
   double elapsed_;
 };
 
-/// An RAII timer that begins timing upon construction and stops timing when the
-/// object goes out of scope. The total elapsed time is written to the output
-/// \a elapsed argument.
+/**
+ * An RAII timer that begins timing upon construction and stops timing when the
+ * object goes out of scope. The total elapsed time is written to the output
+ * @em elapsed argument.
+ */
 template <typename ResolutionRatio = std::milli>
 class ScopedTimer {
  public:

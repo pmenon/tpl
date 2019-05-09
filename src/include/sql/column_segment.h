@@ -7,9 +7,11 @@
 
 namespace tpl::sql {
 
-/// A column segment represents a compact array of column values along with a
-/// dense positionally aligned bitmap indicating whether the column value is
-/// NULL.
+/**
+ * A column segment represents a compact array of column values along with a
+ * dense positionally aligned bitmap indicating whether the column value is
+ * NULL.
+ */
 class ColumnSegment {
  public:
   ColumnSegment(const Type &type, byte *data, u32 *null_bitmap,
@@ -28,8 +30,14 @@ class ColumnSegment {
     other.null_bitmap_ = nullptr;
   }
 
+  /**
+   * This class cannot be copied or moved
+   */
   DISALLOW_COPY(ColumnSegment);
 
+  /**
+   * Destructor. Free's data if allocated.
+   */
   ~ColumnSegment() {
     if (data_ != nullptr) {
       std::free(data_);
@@ -37,10 +45,12 @@ class ColumnSegment {
     }
   }
 
-  /// Read the value of type \ref T at the given index within the column's data
-  /// \tparam T The type of the value to read. We make no assumptions on copy
-  /// \param idx
-  /// \return
+  /**
+   * Read the value of type @em T at the given index within the column's data
+   * @tparam T The type of the value to read. We make no assumptions on copy
+   * @param idx
+   * \return A reference to the value at index @em index
+   */
   template <typename T>
   const T &TypedAccessAt(u32 idx) const {
     TPL_ASSERT(idx < num_tuples(), "Invalid row index!");
@@ -48,19 +58,23 @@ class ColumnSegment {
     return typed_data[idx];
   }
 
-  /// Is the value at the given index NULL
-  /// \param idx The index to check
-  /// \return True if the value is null; false otherwise
+  /**
+   * Is the value at the given index NULL
+   * @param idx The index to check
+   * @return True if the value is null; false otherwise
+   */
   bool IsNullAt(u32 idx) const {
     return util::BitUtil::Test(null_bitmap_, idx);
   }
 
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
-
+  /**
+   * Return the type of the column
+   */
   const Type &type() const { return type_; }
 
+  /**
+   * Return the number of values in the column
+   */
   u32 num_tuples() const { return num_tuples_; }
 
  private:

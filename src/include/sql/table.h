@@ -15,11 +15,15 @@ extern i32 current_partition;
 
 namespace tpl::sql {
 
-/// A SQL table. It's stupid and only for testing the system out. It'll be
-/// ripped out when we pull it into the full DBMS
+/**
+ * A SQL table. It's stupid and only for testing the system out. It'll be
+ * ripped out when we pull it into the full DBMS
+ */
 class Table {
  public:
-  /// A collection of column values forming a block of tuples in the table
+  /**
+   * A collection of column values forming a block of tuples in the table
+   */
   class Block {
    public:
     Block(std::vector<ColumnSegment> &&data, u32 num_tuples)
@@ -41,24 +45,32 @@ class Table {
 
   using BlockList = std::vector<Block>;
 
-  /// Create a new table with ID \ref id and physical layout \ref schema
-  /// \param id The desired ID of the table
-  /// \param schema The physical schema of the table
+  /**
+   * Create a new table with ID \ref id and physical layout \ref schema
+   * @param id The desired ID of the table
+   * @param schema The physical schema of the table
+   */
   Table(u16 id, std::unique_ptr<Schema> schema)
       : schema_(std::move(schema)), id_(id), num_tuples_(0) {}
 
-  /// Insert column data from \ref data into the table
-  /// \param block The block of data to insert into the table
+  /**
+   * Insert column data from \ref data into the table
+   * \param block The block of data to insert into the table
+   */
   void Insert(Block &&block);
 
-  /// Iterators over the blocks in the table
+  /**
+   * Iterators over the blocks in the table
+   */
   Table::BlockList::const_iterator begin() const { return blocks_.begin(); }
   Table::BlockList::iterator begin() { return blocks_.begin(); }
   Table::BlockList::const_iterator end() const { return blocks_.end(); }
   Table::BlockList::iterator end() { return blocks_.end(); }
 
-  /// Dump the contents of the table to the output stream in CSV format
-  /// \param os The output stream to write contents into
+  /**
+   * Dump the contents of the table to the output stream in CSV format
+   * @param os The output stream to write contents into
+   */
   void Dump(std::ostream &os) const;
 
   // -------------------------------------------------------
@@ -82,28 +94,36 @@ class Table {
   u32 num_tuples_;
 };
 
-/// An iterator over the blocks in a table
+/**
+ * An iterator over the blocks in a table
+ */
 class TableBlockIterator {
  public:
-  /// Create an iterator over the blocks in the table with the given ID
+  /**
+   * Create an iterator over the blocks in the table with the given ID
+   */
   explicit TableBlockIterator(u16 table_id) noexcept;
 
-  /// Initialize the iterator returning true if it succeeded
-  /// \return True if the initialization succeeded; false otherwise
+  /**
+   * Initialize the iterator returning true if it succeeded
+   * @return True if the initialization succeeded; false otherwise
+   */
   bool Init();
 
-  /// Advance the iterator to the next block in the table
-  /// \return True if there is another block in the iterator; false otherwise
+  /**
+   * Advance the iterator to the next block in the table
+   * @return True if there is another block in the iterator; false otherwise
+   */
   bool Advance();
 
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
-
-  /// Return the table this iterator is scanning over
+  /**
+   * Return the table this iterator is scanning over
+   */
   const Table *table() const { return table_; }
 
-  /// Return the current block
+  /**
+   * Return the current block
+   */
   const Table::Block *current_block() const { return curr_block_; }
 
  private:

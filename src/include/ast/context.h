@@ -23,32 +23,55 @@ namespace ast {
 class AstNodeFactory;
 class Type;
 
+/**
+ * A context holding all TPL ast nodes and types for a program
+ */
 class Context {
  public:
-  /// Constructor
+  /**
+   * Create a context
+   * @param region The region to allocate memory from
+   * @param error_reporter The diagnostic error reporter
+   */
   Context(util::Region *region, sema::ErrorReporter *error_reporter);
 
-  /// This class cannot be copied or moved
+  /**
+   * This class cannot be copied or moved
+   */
   DISALLOW_COPY_AND_MOVE(Context);
 
-  /// Destructor
+  /**
+   * Destructor
+   */
   ~Context();
 
-  /// Return \a str as a unique string in this context
+  /**
+   * Return @em str as a unique string in this context
+   * @param str The input string
+   * @return A uniqued (interned) version of the string in this context
+   */
   Identifier GetIdentifier(llvm::StringRef str);
 
-  /// Convert the SQL type into the equivalent TPL type
+  /**
+   * Convert the SQL type into the equivalent TPL type
+   * @param sql_type The SQL type
+   * @return The equivalent TPL type
+   */
   Type *GetTplTypeFromSqlType(const sql::Type &sql_type);
 
-  /// Is the type with name \a identifier a builtin type?
-  /// \return A non-null pointer to the Type if a valid builtin; null otherwise
+  /**
+   * Is the type with name \a identifier a builtin type?
+   * @return A non-null pointer to the Type if a valid builtin; null otherwise
+   */
   Type *LookupBuiltinType(Identifier identifier) const;
 
-  /// Is the function with name \a identifier a builtin function?
-  /// \param[in] identifier The name of the function to check
-  /// \param[out] builtin If non-null, set to the appropriate builtin
-  ///                     enumeration \return True if the function name is that
-  ///                     of a builtin; false otherwise
+  /**
+   * Is the function with name \a identifier a builtin function?
+   * @param[in] identifier The name of the function to check
+   * @param[out] builtin If non-null, set to the appropriate builtin
+   *                     enumeration \return True if the function name is that
+   *                     of a builtin; false otherwise
+   */
   bool IsBuiltinFunction(Identifier identifier,
                          Builtin *builtin = nullptr) const;
 

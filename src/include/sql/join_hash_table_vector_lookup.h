@@ -8,7 +8,9 @@ namespace tpl::sql {
 
 class JoinHashTable;
 
-/// Helper class to perform vectorized lookups into a JoinHashTable
+/**
+ * Helper class to perform vectorized lookups into a JoinHashTable
+ */
 class JoinHashTableVectorLookup {
  public:
   // clang-format off
@@ -16,13 +18,24 @@ class JoinHashTableVectorLookup {
   using KeyEqFn = bool (*)(const byte *, VectorProjectionIterator *) noexcept;
   // clang-format on
 
-  /// Constructor given a hashing function and a key equality function
+  /**
+   * Constructor given a hashing function and a key equality function
+   */
   explicit JoinHashTableVectorLookup(const JoinHashTable &table) noexcept;
 
-  /// Setup a vectorized lookup using the given input batch \a vpi
+  /**
+   * Setup a vectorized lookup using the given input batch @em vpi
+   * @param vpi The input vector
+   * @param hash_fn The hashing function
+   */
   void Prepare(VectorProjectionIterator *vpi, HashFn hash_fn) noexcept;
 
-  /// Return the next match, moving the input iterator if need be
+  /**
+   * Return the next match, moving the input iterator if need be
+   * @param vpi The input vector projection
+   * @param key_eq_fn The function to check key equality
+   * @return The next matching entry
+   */
   const HashTableEntry *GetNextOutput(VectorProjectionIterator *vpi,
                                       KeyEqFn key_eq_fn) noexcept;
 

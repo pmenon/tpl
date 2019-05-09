@@ -13,14 +13,21 @@ class BytecodeLabel;
 
 class BytecodeEmitter {
  public:
-  /// Construct a bytecode emitter instance that emits bytecode operations into
-  /// the provided bytecode vector
+  /**
+   * Construct a bytecode emitter instance that emits bytecode operations into
+   * the provided bytecode vector
+   * @param bytecode The bytecode array to emit bytecode into
+   */
   explicit BytecodeEmitter(std::vector<u8> &bytecode) : bytecode_(bytecode) {}
 
-  /// Cannot copy or move this class
+  /**
+   * This class cannot be copied or moved
+   */
   DISALLOW_COPY_AND_MOVE(BytecodeEmitter);
 
-  /// Access the current position of the emitter in the bytecode stream
+  /**
+   * Access the current position of the emitter in the bytecode stream
+   */
   std::size_t position() const { return bytecode_.size(); }
 
   // -------------------------------------------------------

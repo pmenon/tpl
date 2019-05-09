@@ -9,21 +9,54 @@
 
 namespace tpl::parsing {
 
+/**
+ * Token scanner
+ */
 class Scanner {
   static constexpr i32 kEndOfInput = -1;
 
  public:
+  /**
+   * Construct a scanner over the given input string
+   * @param source Input TPL source
+   * @param source_len Length (in bytes) of input source
+   */
   Scanner(const char *source, u64 source_len);
+
+  /**
+   * Construct a scanner over the given input string @em source
+   * @param source The input TPL source
+   */
   explicit Scanner(const std::string &source);
 
+  /**
+   * This class cannot be copied or moved
+   */
   DISALLOW_COPY_AND_MOVE(Scanner);
 
+  /**
+   * Move the scanner ahead by one token, returning the token its read
+   */
   Token::Type Next();
 
+  /**
+   * Peek at the next token without moving ahead
+   */
   Token::Type peek() const { return next_.type; }
 
+  /**
+   * Return the token the scanner is currently pointing to
+   */
   Token::Type current_token() const { return curr_.type; }
+
+  /**
+   * If the current token is a literal, return the literal value
+   */
   const std::string &current_literal() const { return curr_.literal; }
+
+  /**
+   * Return the position (line and column) of the scanner
+   */
   const SourcePosition &current_position() const { return curr_.pos; }
 
  private:
@@ -75,7 +108,7 @@ class Scanner {
   // Scan a string literal
   Token::Type ScanString();
 
-  /*
+  /**
    * This struct describes information about a single token, including its type,
    * its position in the origin source, and its literal value if it should have
    * one.
@@ -87,11 +120,9 @@ class Scanner {
     std::string literal;
   };
 
-  //////////////////////////////////////////////////////////////////////////////
-  ///
-  /// Static utilities
-  ///
-  //////////////////////////////////////////////////////////////////////////////
+  // -------------------------------------------------------
+  // Static utilities
+  // -------------------------------------------------------
 
   // Is the current character a character?
   static bool IsInRange(i32 c, i32 lower, i32 upper) {

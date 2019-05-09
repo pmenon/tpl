@@ -19,21 +19,27 @@ class Sema;
 
 namespace ast {
 
-/// Top-level file node
+/**
+ * Top-level file node
+ */
 #define FILE_NODE(T) T(File)
 
-/// All possible declaration types.
-/// NOTE: If you add a new declaration node to either the beginning or end of
-/// the list, remember to modify Decl::classof() to update the bounds check.
+/**
+ * All possible declaration types.
+ * NOTE: If you add a new declaration node to either the beginning or end of
+ * the list, remember to modify Decl::classof() to update the bounds check.
+ */
 #define DECLARATION_NODES(T) \
   T(FieldDecl)               \
   T(FunctionDecl)            \
   T(StructDecl)              \
   T(VariableDecl)
 
-/// All possible statements
-/// NOTE: If you add a new statement node to either the beginning or end of the
-/// list, remember to modify Stmt::classof() to update the bounds check.
+/**
+ * All possible statements
+ * NOTE: If you add a new statement node to either the beginning or end of the
+ * list, remember to modify Stmt::classof() to update the bounds check.
+ */
 #define STATEMENT_NODES(T) \
   T(AssignmentStmt)        \
   T(BlockStmt)             \
@@ -44,9 +50,11 @@ namespace ast {
   T(IfStmt)                \
   T(ReturnStmt)
 
-/// All possible expressions
-/// NOTE: If you add a new expression node to either the beginning or end of the
-/// list, remember to modify Expr::classof() to update the bounds check.
+/**
+ * All possible expressions
+ * NOTE: If you add a new expression node to either the beginning or end of the
+ * list, remember to modify Expr::classof() to update the bounds check.
+ */
 #define EXPRESSION_NODES(T)             \
   T(BadExpr)                            \
   T(BinaryOpExpr)                       \
@@ -66,7 +74,9 @@ namespace ast {
   T(PointerTypeRepr)                    \
   T(StructTypeRepr)
 
-/// All AST nodes
+/**
+ * All AST nodes
+ */
 #define AST_NODES(T)   \
   DECLARATION_NODES(T) \
   EXPRESSION_NODES(T)  \
@@ -88,15 +98,17 @@ AST_NODES(FORWARD_DECLARE)
 // AST Node
 // ---------------------------------------------------------
 
-/// The base class for all AST nodes. AST nodes are emphemeral, and thus, are
-/// only allocated from regions. Once created, they are immutable only during
-/// semantic checks - this is why you'll often see sema::Sema declared as a
-/// friend class in some concrete node subclasses.
-///
-/// All nodes have a "kind" that represents as an ID indicating the specific
-/// kind of AST node it is (i.e., if it's an if-statement or a binary
-/// expression). You can query the node for it's kind, but it's usually more
-/// informative and clear to use the Is() method.
+/**
+ * The base class for all AST nodes. AST nodes are emphemeral, and thus, are
+ * only allocated from regions. Once created, they are immutable only during
+ * semantic checks - this is why you'll often see sema::Sema declared as a
+ * friend class in some concrete node subclasses.
+ *
+ * All nodes have a "kind" that represents as an ID indicating the specific
+ * kind of AST node it is (i.e., if it's an if-statement or a binary
+ * expression). You can query the node for it's kind, but it's usually more
+ * informative and clear to use the Is() method.
+ */
 class AstNode : public util::RegionObject {
  public:
   // The kind enumeration listing all possible node kinds
@@ -104,13 +116,19 @@ class AstNode : public util::RegionObject {
   enum class Kind : u8 { AST_NODES(T) };
 #undef T
 
-  /// Return the kind of this node
+  /**
+   * Return the kind of this node
+   */
   Kind kind() const { return kind_; }
 
-  /// Retrn the position in the source where this element was found
+  /**
+   * Return the position in the source where this element was found
+   */
   const SourcePosition &position() const { return pos_; }
 
-  /// Return the name of this node. NOTE: this is mainly used in tests!
+  /**
+   * Return the name of this node. NOTE: this is mainly used in tests!
+   */
   const char *kind_name() const {
 #define KIND_CASE(kind) \
   case Kind::kind:      \
@@ -199,9 +217,11 @@ class File : public AstNode {
 // Declaration Nodes
 // ---------------------------------------------------------
 
-/// Base class for all declarations in TPL. All declarations have a name, and
-/// an optional type representation. Structure and function declarations have an
-/// explicit type, but variables may not.
+/**
+ * Base class for all declarations in TPL. All declarations have a name, and
+ * an optional type representation. Structure and function declarations have an
+ * explicit type, but variables may not.
+ */
 class Decl : public AstNode {
  public:
   Decl(Kind kind, const SourcePosition &pos, Identifier name, Expr *type_repr)
@@ -221,7 +241,9 @@ class Decl : public AstNode {
   Expr *type_repr_;
 };
 
-/// A generic declaration of a function argument or a field in a struct
+/**
+ * A generic declaration of a function argument or a field in a struct
+ */
 class FieldDecl : public Decl {
  public:
   FieldDecl(const SourcePosition &pos, Identifier name, Expr *type_repr)
@@ -232,7 +254,9 @@ class FieldDecl : public Decl {
   }
 };
 
-/// A function declaration
+/**
+ * A function declaration
+ */
 class FunctionDecl : public Decl {
  public:
   FunctionDecl(const SourcePosition &pos, Identifier name,
@@ -248,7 +272,9 @@ class FunctionDecl : public Decl {
   FunctionLitExpr *func_;
 };
 
-/// A structure declaration
+/**
+ * A structure declaration
+ */
 class StructDecl : public Decl {
  public:
   StructDecl(const SourcePosition &pos, Identifier name,
@@ -259,7 +285,9 @@ class StructDecl : public Decl {
   }
 };
 
-/// A variable declaration
+/**
+ * A variable declaration
+ */
 class VariableDecl : public Decl {
  public:
   VariableDecl(const SourcePosition &pos, Identifier name, Expr *type_repr,
@@ -290,14 +318,18 @@ class VariableDecl : public Decl {
 // Statement Nodes
 // ---------------------------------------------------------
 
-/// Base class for all statement nodes
+/**
+ * Base class for all statement nodes
+ */
 class Stmt : public AstNode {
  public:
   Stmt(Kind kind, const SourcePosition &pos) : AstNode(kind, pos) {}
 
-  /// Determines if \a stmt, the last in a statement list, is terminating
-  /// \param stmt The statement node to check
-  /// \return True if statement has a terminator; false otherwise
+  /**
+   * Determines if \a stmt, the last in a statement list, is terminating
+   * @param stmt The statement node to check
+   * @return True if statement has a terminator; false otherwise
+   */
   static bool IsTerminating(Stmt *stmt);
 
   static bool classof(const AstNode *node) {
@@ -306,7 +338,9 @@ class Stmt : public AstNode {
   }
 };
 
-/// An assignment, dest = source
+/**
+ * An assignment, dest = source
+ */
 class AssignmentStmt : public Stmt {
  public:
   AssignmentStmt(const SourcePosition &pos, Expr *dest, Expr *src)
@@ -331,7 +365,9 @@ class AssignmentStmt : public Stmt {
   Expr *src_;
 };
 
-/// A block of statements
+/**
+ * A block of statements
+ */
 class BlockStmt : public Stmt {
  public:
   BlockStmt(const SourcePosition &pos, const SourcePosition &rbrace_pos,
@@ -357,7 +393,9 @@ class BlockStmt : public Stmt {
   util::RegionVector<Stmt *> statements_;
 };
 
-/// A statement that is just a declaration
+/**
+ * A statement that is just a declaration
+ */
 class DeclStmt : public Stmt {
  public:
   explicit DeclStmt(Decl *decl)
@@ -373,7 +411,9 @@ class DeclStmt : public Stmt {
   Decl *decl_;
 };
 
-/// The bridge between statements and expressions
+/**
+ * The bridge between statements and expressions
+ */
 class ExpressionStmt : public Stmt {
  public:
   explicit ExpressionStmt(Expr *expr);
@@ -388,7 +428,9 @@ class ExpressionStmt : public Stmt {
   Expr *expr_;
 };
 
-/// Base class for all iteration-based statements
+/**
+ * Base class for all iteration-based statements
+ */
 class IterationStmt : public Stmt {
  public:
   IterationStmt(const SourcePosition &pos, AstNode::Kind kind, BlockStmt *body)
@@ -404,7 +446,9 @@ class IterationStmt : public Stmt {
   BlockStmt *body_;
 };
 
-/// A for statement
+/**
+ * A for statement
+ */
 class ForStmt : public IterationStmt {
  public:
   ForStmt(const SourcePosition &pos, Stmt *init, Expr *cond, Stmt *next,
@@ -430,7 +474,9 @@ class ForStmt : public IterationStmt {
   Stmt *next_;
 };
 
-/// A range for statement
+/**
+ * A range for statement
+ */
 class ForInStmt : public IterationStmt {
  public:
   ForInStmt(const SourcePosition &pos, Expr *target, Expr *iter,
@@ -452,7 +498,9 @@ class ForInStmt : public IterationStmt {
   Expr *iter_;
 };
 
-/// An if-then-else statement
+/**
+ * An if-then-else statement
+ */
 class IfStmt : public Stmt {
  public:
   IfStmt(const SourcePosition &pos, Expr *cond, BlockStmt *then_stmt,
@@ -487,7 +535,9 @@ class IfStmt : public Stmt {
   Stmt *else_stmt_;
 };
 
-/// A return statement
+/**
+ * A return statement
+ */
 class ReturnStmt : public Stmt {
  public:
   ReturnStmt(const SourcePosition &pos, Expr *ret)
@@ -507,9 +557,11 @@ class ReturnStmt : public Stmt {
 // Expression Nodes
 // ---------------------------------------------------------
 
-/// Base class for all expression nodes. Expression nodes all have a required
-/// type. This type is filled in during semantic analysis. Thus, type() will
-/// return a null pointer before type-checking.
+/**
+ * Base class for all expression nodes. Expression nodes all have a required
+ * type. This type is filled in during semantic analysis. Thus, type() will
+ * return a null pointer before type-checking.
+ */
 class Expr : public AstNode {
  public:
   enum class Context : u8 {
@@ -540,7 +592,9 @@ class Expr : public AstNode {
   Type *type_;
 };
 
-/// A bad statement
+/**
+ * A bad statement
+ */
 class BadExpr : public Expr {
  public:
   explicit BadExpr(const SourcePosition &pos)
@@ -551,7 +605,9 @@ class BadExpr : public Expr {
   }
 };
 
-/// A binary expression with non-null left and right children and an operator
+/**
+ * A binary expression with non-null left and right children and an operator
+ */
 class BinaryOpExpr : public Expr {
  public:
   BinaryOpExpr(const SourcePosition &pos, parsing::Token::Type op, Expr *left,
@@ -587,7 +643,9 @@ class BinaryOpExpr : public Expr {
   Expr *right_;
 };
 
-/// A function call expression
+/**
+ * A function call expression
+ */
 class CallExpr : public Expr {
  public:
   enum class CallKind : u8 { Regular, Builtin };
@@ -601,19 +659,14 @@ class CallExpr : public Expr {
         args_(std::move(args)),
         call_kind_(call_kind) {}
 
-  /// Return the name of the function this node is calling
   Identifier GetFuncName() const;
 
-  /// Return the function we're calling as an expression node
   Expr *function() { return func_; }
 
-  /// Return a reference to the arguments
   const util::RegionVector<Expr *> &arguments() const { return args_; }
 
-  /// Return the number of arguments to the function this node is calling
   u32 num_args() const { return static_cast<u32>(args_.size()); }
 
-  /// Return the kind of call this node represents
   CallKind call_kind() const { return call_kind_; }
 
   static bool classof(const AstNode *node) {
@@ -634,7 +687,9 @@ class CallExpr : public Expr {
   CallKind call_kind_;
 };
 
-/// A binary comparison operator
+/**
+ * A binary comparison operator
+ */
 class ComparisonOpExpr : public Expr {
  public:
   ComparisonOpExpr(const SourcePosition &pos, parsing::Token::Type op,
@@ -650,10 +705,12 @@ class ComparisonOpExpr : public Expr {
 
   Expr *right() { return right_; }
 
-  /// Is this a comparison between a valid expression and a nil literal?
-  /// \param[out] result If this is a literal nil comparison, result will point
-  ///                    to the expression we're checking nil against
-  /// \return True if this is a nil comparison; false otherwise
+  /**
+   * Is this a comparison between an expression and a nil literal?
+   * @param[out] result If this is a literal nil comparison, result will point
+   *                    to the expression we're checking nil against
+   * @return True if this is a nil comparison; false otherwise
+   */
   bool IsLiteralCompareNil(Expr **result) const;
 
   static bool classof(const AstNode *node) {
@@ -679,7 +736,9 @@ class ComparisonOpExpr : public Expr {
   Expr *right_;
 };
 
-/// A function
+/**
+ * A function literal
+ */
 class FunctionLitExpr : public Expr {
  public:
   FunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body);
@@ -699,7 +758,9 @@ class FunctionLitExpr : public Expr {
   BlockStmt *body_;
 };
 
-/// A reference to a variable, function or struct
+/**
+ * A reference to a variable, function or struct
+ */
 class IdentifierExpr : public Expr {
  public:
   IdentifierExpr(const SourcePosition &pos, Identifier name)
@@ -722,7 +783,9 @@ class IdentifierExpr : public Expr {
   Decl *decl_;
 };
 
-/// An enumeration capturing all possible casting operations
+/**
+ * An enumeration capturing all possible casting operations
+ */
 enum class CastKind : u8 {
   // Conversion of a 32-bit integer into a non-nullable SQL Integer value
   IntToSqlInt,
@@ -749,8 +812,10 @@ enum class CastKind : u8 {
   BitCast,
 };
 
-/// An implicit cast operation is one that is inserted automatically by the
-/// compiler during semantic analysis.
+/**
+ * An implicit cast operation is one that is inserted automatically by the
+ * compiler during semantic analysis.
+ */
 class ImplicitCastExpr : public Expr {
  public:
   CastKind cast_kind() const { return cast_kind_; }
@@ -775,22 +840,26 @@ class ImplicitCastExpr : public Expr {
   Expr *input_;
 };
 
-/// Expressions for array or map accesses, e.g., x[i]. The object ('x' in the
-/// example) can either be an array or a map. The index ('i' in the example)
-/// must evaluate to an integer for array access and the map's associated key
-/// type if the object is a map.
+/**
+ * Expressions for array or map accesses, e.g., x[i]. The object ('x' in the
+ * example) can either be an array or a map. The index ('i' in the example)
+ * must evaluate to an integer for array access and the map's associated key
+ * type if the object is a map.
+ */
 class IndexExpr : public Expr {
  public:
   Expr *object() const { return obj_; }
 
   Expr *index() const { return index_; }
 
-  /// Is this expression for an array access?
-  /// \return True if for array; false otherwise
+  /**
+   * Is this expression for an array access?
+   */
   bool IsArrayAccess() const;
 
-  /// Is this expression for a map access?
-  /// \return True if for a map; false otherwise
+  /**
+   *  Is this expression for a map access?
+   */
   bool IsMapAccess() const;
 
   static bool classof(const AstNode *node) {
@@ -808,7 +877,9 @@ class IndexExpr : public Expr {
   Expr *index_;
 };
 
-/// A literal in the original source code
+/**
+ * A literal in the original source code
+ */
 class LitExpr : public Expr {
  public:
   enum class LitKind : u8 { Nil, Boolean, Int, Float, String };
@@ -871,22 +942,24 @@ class LitExpr : public Expr {
   };
 };
 
-/// Expressions accessing structure members, e.g., x.f
-///
-/// TPL uses the same member access syntax for regular struct member access and
-/// access through a struct pointer. Thus, the language allows the following:
-///
-/// \code
-/// struct X {
-///   a: int
-/// }
-///
-/// var x: X
-/// var px: *X
-///
-/// x.a = 10
-/// px.a = 20
-/// \endcode
+/**
+ * Expressions accessing structure members, e.g., x.f
+ *
+ * TPL uses the same member access syntax for regular struct member access and
+ * access through a struct pointer. Thus, the language allows the following:
+ *
+ * @code
+ * struct X {
+ *   a: int
+ * }
+ *
+ * var x: X
+ * var px: *X
+ *
+ * x.a = 10
+ * px.a = 20
+ * @endcode
+ */
 class MemberExpr : public Expr {
  public:
   Expr *object() const { return object_; }
@@ -910,7 +983,9 @@ class MemberExpr : public Expr {
   Expr *member_;
 };
 
-/// A unary expression with a non-null inner expression and an operator
+/**
+ * A unary expression with a non-null inner expression and an operator
+ */
 class UnaryOpExpr : public Expr {
  public:
   UnaryOpExpr(const SourcePosition &pos, parsing::Token::Type op, Expr *expr)
@@ -940,7 +1015,9 @@ class UnaryOpExpr : public Expr {
 // resolution.
 //
 
-/// Array type
+/**
+ * Arrau Type
+ */
 class ArrayTypeRepr : public Expr {
  public:
   ArrayTypeRepr(const SourcePosition &pos, Expr *len, Expr *elem_type)
@@ -961,7 +1038,9 @@ class ArrayTypeRepr : public Expr {
   Expr *elem_type_;
 };
 
-/// Function type
+/**
+ * Function type
+ */
 class FunctionTypeRepr : public Expr {
  public:
   FunctionTypeRepr(const SourcePosition &pos,
@@ -986,7 +1065,9 @@ class FunctionTypeRepr : public Expr {
   Expr *ret_type_;
 };
 
-/// Map types
+/**
+ * Map types
+ */
 class MapTypeRepr : public Expr {
  public:
   MapTypeRepr(const SourcePosition &pos, Expr *key, Expr *val)
@@ -1005,7 +1086,9 @@ class MapTypeRepr : public Expr {
   Expr *val_;
 };
 
-/// Pointer type
+/**
+ * Pointer type
+ */
 class PointerTypeRepr : public Expr {
  public:
   PointerTypeRepr(const SourcePosition &pos, Expr *base)
@@ -1021,7 +1104,9 @@ class PointerTypeRepr : public Expr {
   Expr *base_;
 };
 
-/// Struct type
+/**
+ * Struct type
+ */
 class StructTypeRepr : public Expr {
  public:
   StructTypeRepr(const SourcePosition &pos,

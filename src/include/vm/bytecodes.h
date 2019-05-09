@@ -32,10 +32,10 @@ namespace tpl::vm {
 #define GET_BASE_FOR_FLOAT_TYPES(op) (op##_f32)
 #define GET_BASE_FOR_BOOL_TYPES(op) (op##_bool)
 
-///
-/// The master list of all bytecodes, flags and operands
-///
 
+/**
+ * The master list of all bytecodes, flags and operands
+ */
 // clang-format off
 #define BYTECODE_LIST(F)                                                                                               \
   /* Primitive operations */                                                                                           \

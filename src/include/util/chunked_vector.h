@@ -11,24 +11,26 @@ namespace tpl::util {
 
 class ChunkedVectorRandomIterator;
 
-/// A ChunkedVector is similar to STL's std::vector, but with three important
-/// distinctions: ChunkedVectors are untyped and are not templated;
-/// ChunkedVectors do not guarantee physical contiguity of all elements, though
-/// the majority of elements are stored contiguously; ChunkedVectors ensures
-/// that pointers into the container are not invalidated through insertions.
-///
-/// ChunkedVectors are composed of a list of fixed-sized memory chunks and one
-/// active chunk. Elements \a within a chunk are stored contiguously, and new
-/// elements are inserted into the active chunk (i.e., the most recently
-/// allocated chunk and the last chunk in the list of chunks). Appending new
-/// elements is an amortized constant O(1) time operation; random access lookups
-/// are also constant O(1) time operations. Iteration performance is comparable
-/// to std::vector since the majority of elements are contiguous.
-///
-/// This class is useful (and usually faster) when you don't need to rely on
-/// contiguity of elements, or when you do not know the number of insertions
-/// into the vector apriori. In fact, when the number of insertions is unknown,
-/// a chunked vector will be roughly 2x faster than a std::vector.
+/**
+ * A ChunkedVector is similar to STL's std::vector, but with three important
+ * distinctions: ChunkedVectors are untyped and are not templated;
+ * ChunkedVectors do not guarantee physical contiguity of all elements, though
+ * the majority of elements are stored contiguously; ChunkedVectors ensures
+ * that pointers into the container are not invalidated through insertions.
+ *
+ * ChunkedVectors are composed of a list of fixed-sized memory chunks and one
+ * active chunk. Elements \a within a chunk are stored contiguously, and new
+ * elements are inserted into the active chunk (i.e., the most recently
+ * allocated chunk and the last chunk in the list of chunks). Appending new
+ * elements is an amortized constant O(1) time operation; random access lookups
+ * are also constant O(1) time operations. Iteration performance is comparable
+ * to std::vector since the majority of elements are contiguous.
+ *
+ * This class is useful (and usually faster) when you don't need to rely on
+ * contiguity of elements, or when you do not know the number of insertions
+ * into the vector apriori. In fact, when the number of insertions is unknown,
+ * a chunked vector will be roughly 2x faster than a std::vector.
+ */
 class ChunkedVector {
  public:
   // clang-format off
@@ -52,11 +54,11 @@ class ChunkedVector {
   // Element access
   // -------------------------------------------------------
 
-  /// Checked indexed lookup
+  // Checked indexed lookup
   byte *at(std::size_t idx);
   const byte *at(std::size_t idx) const;
 
-  /// Unchecked indexed lookup
+  // Unchecked indexed lookup
   byte *operator[](std::size_t idx) noexcept;
   const byte *operator[](std::size_t idx) const noexcept;
   byte *front() noexcept;
@@ -68,8 +70,8 @@ class ChunkedVector {
   // Modification
   // -------------------------------------------------------
 
-  /// Append a new entry at the end of the vector, returning a contiguous memory
-  /// space where the element can be written to by the caller
+  // Append a new entry at the end of the vector, returning a contiguous memory
+  // space where the element can be written to by the caller
   byte *append() noexcept;
   void push_back(const byte *elem);
   void pop_back();
@@ -78,14 +80,14 @@ class ChunkedVector {
   // Size/Capacity
   // -------------------------------------------------------
 
-  /// Is this vector empty?
+  // Is this vector empty?
   bool empty() const noexcept { return size() == 0; }
 
-  /// Return the number of elements in the chunked vector
+  // Return the number of elements in the chunked vector
   std::size_t size() const noexcept { return num_elements_; }
 
-  /// Given the size (in bytes) of an individual element, compute the size of
-  /// each chunk in the chunked vector
+  // Given the size (in bytes) of an individual element, compute the size of
+  // each chunk in the chunked vector
   static constexpr std::size_t ChunkAllocSize(std::size_t element_size) {
     return kNumElementsPerChunk * element_size;
   }
@@ -121,7 +123,9 @@ class ChunkedVector {
 // GenericChunkedVector Iterator
 // ---------------------------------------------------------
 
-/// An iterator over the elements in a generic chunked-vector
+/**
+ * An iterator over the elements in a generic chunked-vector
+ */
 class ChunkedVectorRandomIterator {
  public:
   // Random Iterator typedefs.
@@ -430,7 +434,9 @@ inline void ChunkedVector::pop_back() {
 // Templated ChunkedVector
 // ---------------------------------------------------------
 
-// A typed chunked vector. We use this to make the tests easier to understand.
+/**
+ * A typed chunked vector
+ */
 template <typename T>
 class ChunkedVectorT {
  public:
