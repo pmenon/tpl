@@ -9,16 +9,18 @@ namespace tpl::sql {
 
 AggregationHashTable::AggregationHashTable(util::Region *region,
                                            u32 payload_size)
-    : entries_(region, payload_size),
-      max_fill_(std::llround(kDefaultInitialTableSize * kDefaultLoadFactor)) {
+    : entries_(region, sizeof(HashTableEntry) + payload_size) {
+  // Set the table to a decent initial size and the max fill to determine when
+  // to resize the table next
   hash_table_.SetSize(kDefaultInitialTableSize);
+  max_fill_ = std::llround(hash_table_.capacity() * hash_table_.load_factor());
 }
 
 void AggregationHashTable::Grow() {
   // Resize table
   const u64 new_size = hash_table_.capacity() * 2;
-  max_fill_ = std::llround(new_size * kDefaultLoadFactor);
   hash_table_.SetSize(new_size);
+  max_fill_ = std::llround(new_size * kDefaultLoadFactor);
 
   // Insert elements again
   for (byte *untyped_entry : entries_) {
@@ -180,12 +182,13 @@ void AggregationHashTable::FollowNextLoop(
       // Move iterator to current group position
       iters[0]->SetPosition<VPIIsFiltered>(group_sel[idx]);
 
-      // Check if there's a has and key match
+      // Check if there's a hash and key match
       const bool matched =
           entries[group_sel[idx]]->hash == hashes[group_sel[idx]] &&
           key_eq_fn(entries[group_sel[idx]]->payload, iters);
 
-      // Move along
+      // If there wasn't a match, we need to continue chain; add the group to
+      // the output.
       group_sel[write_idx] = group_sel[idx];
       write_idx += static_cast<u32>(!matched);
     }
@@ -221,8 +224,8 @@ void AggregationHashTable::CreateMissingGroups(
   for (u32 idx = 0; idx < num_groups; idx++) {
     hash_t hash = hashes[group_sel[idx]];
 
-    HashTableEntry *entry = LookupEntryInternal(hash, key_eq_fn, iters);
-    if (entry != nullptr) {
+    if (HashTableEntry *entry = LookupEntryInternal(hash, key_eq_fn, iters);
+        entry != nullptr) {
       entries[group_sel[idx]] = entry;
       continue;
     }

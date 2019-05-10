@@ -115,6 +115,14 @@ class GenericHashTable {
    */
   u64 capacity() const { return capacity_; }
 
+  /**
+   * The configured load factor for the table's directory. Note that this isn't
+   * the load factor value is normally thought of: # elems / # slots. Since
+   * this is a bucket-chained table, load factors can exceed 1.0 if chains are
+   * long.
+   */
+  float load_factor() const { return load_factor_; }
+
  private:
   // -------------------------------------------------------
   // Tag-related operations
