@@ -38,7 +38,7 @@ class CountAggregate {
   /**
    * Reset the aggregate
    */
-  void Reset() noexcept { count_ = 0; }
+  void Reset() { count_ = 0; }
 
   /**
    * Return the current value of the count
@@ -78,7 +78,7 @@ class CountStarAggregate {
   /**
    * Reset the aggregate
    */
-  void Reset() noexcept { count_ = 0; }
+  void Reset() { count_ = 0; }
 
   /**
    * Return the current value of the count
@@ -182,7 +182,7 @@ class IntegerSumAggregate : public NullableAggregate {
   /**
    * Reset the aggregate
    */
-  void Reset() noexcept {
+  void Reset() {
     ResetUpdateCount();
     sum_ = 0;
   }
@@ -253,7 +253,7 @@ class IntegerMaxAggregate : public NullableAggregate {
   /**
    * Reset the aggregate
    */
-  void Reset() noexcept {
+  void Reset() {
     ResetUpdateCount();
     max_ = std::numeric_limits<i64>::min();
   }
@@ -324,7 +324,7 @@ class IntegerMinAggregate : public NullableAggregate {
   /**
    * Reset the aggregate
    */
-  void Reset() noexcept {
+  void Reset() {
     ResetUpdateCount();
     min_ = std::numeric_limits<i64>::max();
   }

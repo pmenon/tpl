@@ -62,6 +62,8 @@ namespace tpl::ast {
   F(AggHashTableLookup, aggHTLookup)                      \
   F(AggHashTableProcessBatch, aggHTProcessBatch)          \
   F(AggHashTableFree, aggHTFree)                          \
+  F(AggInit, aggInit)                                     \
+  F(AggAdvance, aggAdvance)                               \
                                                           \
   /* Joins */                                             \
   F(JoinHashTableInit, joinHTInit)                        \

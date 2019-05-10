@@ -28,6 +28,9 @@ void AggregationHashTable::Grow() {
     auto *entry = reinterpret_cast<HashTableEntry *>(untyped_entry);
     hash_table_.Insert<false>(entry, entry->hash);
   }
+
+  // Update stats
+  stats_.num_growths++;
 }
 
 byte *AggregationHashTable::Insert(const hash_t hash) {

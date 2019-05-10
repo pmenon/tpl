@@ -55,17 +55,22 @@ class Context;
   /* Non-primitive builtins */                                           \
   NON_PRIM(AggregationHashTable, tpl::sql::AggregationHashTable)         \
   NON_PRIM(BloomFilter, tpl::sql::BloomFilter)                           \
-  NON_PRIM(CountAggregate, tpl::sql::CountAggregate)                     \
-  NON_PRIM(CountStarAggregate, tpl::sql::CountStarAggregate)             \
   NON_PRIM(FilterManager, tpl::sql::FilterManager)                       \
   NON_PRIM(HashTableEntry, tpl::sql::HashTableEntry)                     \
-  NON_PRIM(IntegerSumAggregate, tpl::sql::IntegerSumAggregate)           \
   NON_PRIM(JoinHashTable, tpl::sql::JoinHashTable)                       \
   NON_PRIM(RegionAlloc, tpl::util::Region)                               \
   NON_PRIM(Sorter, tpl::sql::Sorter)                                     \
   NON_PRIM(SorterIterator, tpl::sql::SorterIterator)                     \
   NON_PRIM(TableVectorIterator, tpl::sql::TableVectorIterator)           \
   NON_PRIM(VectorProjectionIterator, tpl::sql::VectorProjectionIterator) \
+                                                                         \
+  /* SQL Aggregate types (if you add, remember to update BuiltinType) */ \
+  NON_PRIM(CountAggregate, tpl::sql::CountAggregate)                     \
+  NON_PRIM(CountStarAggregate, tpl::sql::CountStarAggregate)             \
+  NON_PRIM(IntegerAvgAggregate, tpl::sql::IntegerAvgAggregate)           \
+  NON_PRIM(IntegerMaxAggregate, tpl::sql::IntegerMaxAggregate)           \
+  NON_PRIM(IntegerMinAggregate, tpl::sql::IntegerMinAggregate)           \
+  NON_PRIM(IntegerSumAggregate, tpl::sql::IntegerSumAggregate)           \
                                                                          \
   /* Non-primitive SQL Runtime Values */                                 \
   SQL(Boolean, tpl::sql::BoolVal)                                        \
@@ -202,6 +207,7 @@ class Type : public util::RegionObject {
   bool IsIntegerType() const;
   bool IsFloatType() const;
   bool IsSqlValueType() const;
+  bool IsSqlAggregatorType() const;
 
   /**
    * Return a new type that is a pointer to the current type
@@ -296,6 +302,14 @@ class BuiltinType : public Type {
    */
   bool is_sql_value() const {
     return Kind::Boolean <= kind() && kind() <= Kind::Timestamp;
+  }
+
+  /**
+   * Is this type a SQL aggregator type? IntegerSumAggregate, CountAggregate ...
+   */
+  bool is_sql_aggregator_type() const {
+    return Kind::CountAggregate <= kind() &&
+           kind() <= Kind::IntegerSumAggregate;
   }
 
   /**
@@ -550,6 +564,13 @@ inline bool Type::IsFloatType() const {
 inline bool Type::IsSqlValueType() const {
   if (auto *builtin_type = SafeAs<BuiltinType>()) {
     return builtin_type->is_sql_value();
+  }
+  return false;
+}
+
+inline bool Type::IsSqlAggregatorType() const {
+  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+    return builtin_type->is_sql_aggregator_type();
   }
   return false;
 }

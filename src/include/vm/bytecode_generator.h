@@ -16,12 +16,14 @@ namespace tpl::vm {
 class BytecodeModule;
 class LoopBuilder;
 
-/// This class is responsible for generating and compiling a parsed and
-/// type-checked TPL program (as an AST) into TPL bytecode (TBC) as a
-/// BytecodeModule. Once compiled, all functions defined in the module are
-/// fully executable. BytecodeGenerator exposes a single public static function
-/// \a Compile() that performs the heavy lifting and orchestration involved in
-/// the compilation process.
+/**
+ * This class is responsible for generating and compiling a parsed and
+ * type-checked TPL program (as an AST) into TPL bytecode (TBC) as a
+ * BytecodeModule. Once compiled, all functions defined in the module are
+ * fully executable. BytecodeGenerator exposes a single public static function
+ * @em Compile() that performs the heavy lifting and orchestration involved in
+ * the compilation process.
+ */
 class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
  public:
   DISALLOW_COPY_AND_MOVE(BytecodeGenerator);
@@ -56,6 +58,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   void VisitBuiltinFilterManagerCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinFilterCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builtin);
+  void VisitBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinJoinHashTableCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinSorterCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin);

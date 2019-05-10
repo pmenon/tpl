@@ -18,18 +18,16 @@
 
 namespace tpl::vm {
 
-// ---------------------------------------------------------
-// Expression Result Scope
-// ---------------------------------------------------------
-
-/// ExpressionResultScope is an RAII class that provides metadata about the
-/// usage of an expression and its result. Callers construct one of its
-/// subclasses to let children nodes know the context in which the expression's
-/// result is needed (i.e., whether the expression is an L-Value or R-Value).
-/// It also tracks **where** the result of an expression is, somewhat emulating
-/// destination-driven code generation.
-///
-/// This is a base class for both LValue and RValue result scope objects
+/**
+ * ExpressionResultScope is an RAII class that provides metadata about the
+ * usage of an expression and its result. Callers construct one of its
+ * subclasses to let children nodes know the context in which the expression's
+ * result is needed (i.e., whether the expression is an L-Value or R-Value).
+ * It also tracks **where** the result of an expression is, somewhat emulating
+ * destination-driven code generation.
+ *
+ * This is a base class for both LValue and RValue result scope objects
+ */
 class BytecodeGenerator::ExpressionResultScope {
  public:
   ExpressionResultScope(BytecodeGenerator *generator, ast::Expr::Context kind,
@@ -68,11 +66,9 @@ class BytecodeGenerator::ExpressionResultScope {
   ast::Expr::Context kind_;
 };
 
-// ---------------------------------------------------------
-// LValue Result Scope
-// ---------------------------------------------------------
-
-/// An expression result scope that indicates the result is used as an L-Value
+/**
+ * An expression result scope that indicates the result is used as an L-Value
+ */
 class BytecodeGenerator::LValueResultScope
     : public BytecodeGenerator::ExpressionResultScope {
  public:
@@ -81,11 +77,9 @@ class BytecodeGenerator::LValueResultScope
       : ExpressionResultScope(generator, ast::Expr::Context::LValue, dest) {}
 };
 
-// ---------------------------------------------------------
-// RValue Result Scope
-// ---------------------------------------------------------
-
-/// An expression result scope that indicates the result is used as an R-Value
+/**
+ * An expression result scope that indicates the result is used as an R-Value
+ */
 class BytecodeGenerator::RValueResultScope
     : public BytecodeGenerator::ExpressionResultScope {
  public:
@@ -94,13 +88,11 @@ class BytecodeGenerator::RValueResultScope
       : ExpressionResultScope(generator, ast::Expr::Context::RValue, dest) {}
 };
 
-// ---------------------------------------------------------
-// Bytecode Position Scope
-// ---------------------------------------------------------
-
-/// A handy scoped class that tracks the start and end positions in the bytecode
-/// for a given function, automatically setting the range in the function upon
-/// going out of scope.
+/**
+ * A handy scoped class that tracks the start and end positions in the bytecode
+ * for a given function, automatically setting the range in the function upon
+ * going out of scope.
+ */
 class BytecodeGenerator::BytecodePositionScope {
  public:
   BytecodePositionScope(BytecodeGenerator *generator, FunctionInfo *func)
@@ -365,8 +357,8 @@ void BytecodeGenerator::VisitVariableDecl(ast::VariableDecl *node) {
 }
 
 void BytecodeGenerator::VisitAddressOfExpr(ast::UnaryOpExpr *op) {
-  TPL_ASSERT(execution_result()->IsRValue(),
-             "Address-of expressions must be R-values!");
+//  TPL_ASSERT(execution_result()->IsRValue(),
+//             "Address-of expressions must be R-values!");
   LocalVar addr = VisitExpressionForLValue(op->expr());
   if (execution_result()->HasDestination()) {
     // Despite the below function's name, we're just getting the destination
@@ -804,6 +796,87 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,
   }
 }
 
+namespace {
+
+// clang-format off
+#define AGG_CODES(F) \
+  F(CountAggregate, CountAggregateInit, CountAggregateAdvance, CountAggregateGetResult)                                 \
+  F(CountStarAggregate, CountStarAggregateInit, CountStarAggregateAdvance, CountStarAggregateGetResult)                 \
+  F(IntegerAvgAggregate, IntegerAvgAggregateInit, IntegerAvgAggregateAdvance, IntegerAvgAggregateGetResult)             \
+  F(IntegerMaxAggregate, IntegerMaxAggregateInit, IntegerMaxAggregateAdvance, IntegerMaxAggregateGetResult)             \
+  F(IntegerMinAggregate, IntegerMinAggregateInit, IntegerMinAggregateAdvance, IntegerMinAggregateGetResult)             \
+  F(IntegerSumAggregate, IntegerSumAggregateInit, IntegerSumAggregateAdvance, IntegerSumAggregateGetResult)
+// clang-format on
+
+enum class AggOpKind : u8 { Init, Advance, GetResult };
+
+template <AggOpKind OpKind>
+Bytecode OpForAgg(ast::BuiltinType::Kind agg_kind) {
+  if constexpr (OpKind == AggOpKind::Init) {
+    switch (agg_kind) {
+      default: { UNREACHABLE("Impossible aggregate type"); }
+#define ENTRY(Type, Init, Advance, GetResult) \
+  case ast::BuiltinType::Type:                \
+    return Bytecode::Init;
+        AGG_CODES(ENTRY)
+#undef ENTRY
+    }
+  }
+
+  if constexpr (OpKind == AggOpKind::Advance) {
+    switch (agg_kind) {
+      default: { UNREACHABLE("Impossible aggregate type"); }
+#define ENTRY(Type, Init, Advance, GetResult) \
+  case ast::BuiltinType::Type:                \
+    return Bytecode::Advance;
+        AGG_CODES(ENTRY)
+#undef ENTRY
+    }
+  }
+
+  if constexpr (OpKind == AggOpKind::GetResult) {
+    switch (agg_kind) {
+      default: { UNREACHABLE("Impossible aggregate type"); }
+#define ENTRY(Type, Init, Advance, GetResult) \
+  case ast::BuiltinType::Type:                \
+    return Bytecode::GetResult;
+        AGG_CODES(ENTRY)
+#undef ENTRY
+    }
+  }
+}
+
+}  // namespace
+
+void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call,
+                                                   ast::Builtin builtin) {
+  switch (builtin) {
+    case ast::Builtin::AggInit: {
+      for (const auto &arg : call->arguments()) {
+        const auto agg_kind =
+            arg->type()->GetPointeeType()->As<ast::BuiltinType>()->kind();
+        LocalVar input = VisitExpressionForLValue(arg);
+        Bytecode bytecode = OpForAgg<AggOpKind::Init>(agg_kind);
+        emitter()->Emit(bytecode, input);
+      }
+      break;
+    }
+    case ast::Builtin::AggAdvance: {
+      const auto agg_kind = call->arguments()[0]
+                                ->type()
+                                ->GetPointeeType()
+                                ->As<ast::BuiltinType>()
+                                ->kind();
+      LocalVar agg = VisitExpressionForLValue(call->arguments()[0]);
+      LocalVar input = VisitExpressionForLValue(call->arguments()[1]);
+      Bytecode bytecode = OpForAgg<AggOpKind::Advance>(agg_kind);
+      emitter()->Emit(bytecode, agg, input);
+      break;
+    }
+    default: { UNREACHABLE("Impossible aggregator call"); }
+  }
+}
+
 void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call,
                                                       ast::Builtin builtin) {
   switch (builtin) {
@@ -1041,6 +1114,11 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::AggHashTableProcessBatch:
     case ast::Builtin::AggHashTableFree: {
       VisitBuiltinAggHashTableCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::AggInit:
+    case ast::Builtin::AggAdvance: {
+      VisitBuiltinAggregatorCall(call, builtin);
       break;
     }
     case ast::Builtin::JoinHashTableInit:

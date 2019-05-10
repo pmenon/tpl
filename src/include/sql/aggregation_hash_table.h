@@ -46,6 +46,14 @@ class AggregationHashTable {
    */
   using MergeAggFn = void (*)(void *, void *);
 
+  /**
+   * Small class to capture various usage stats
+   */
+  struct Stats {
+    u64 num_growths = 0;
+    u64 num_flushes = 0;
+  };
+
   // -------------------------------------------------------
   // Main API
   // -------------------------------------------------------
@@ -93,6 +101,11 @@ class AggregationHashTable {
   void ProcessBatch(VectorProjectionIterator *iters[], HashFn hash_fn,
                     KeyEqFn key_eq_fn, InitAggFn init_agg_fn,
                     MergeAggFn merge_agg_fn);
+
+  /**
+   * Read-only access to hash table stats
+   */
+  const Stats *stats() const { return &stats_; }
 
  private:
   // Does the hash table need to grow?
@@ -165,6 +178,17 @@ class AggregationHashTable {
 
   // The hash table where the aggregates are stored
   GenericHashTable hash_table_;
+
+  // Overflow partitions
+  //MergingFunction merging_func_;
+  HashTableEntry **partition_heads_;
+  HashTableEntry **partition_tails_;
+  AggregationHashTable **partition_tables_;
+  u64 flush_threshold_;
+  u64 part_shift_bits_;
+
+  // Runtime stats
+  Stats stats_;
 
   // The maximum number of elements in the table before a resize
   u64 max_fill_;

@@ -96,7 +96,8 @@ namespace sema {
     (ast::Type *, u32))                                                        \
   F(BadHashArg, "cannot hash type '%0'", (ast::Type *))                        \
   F(MissingArrayLength,                                                        \
-    "missing array length (either compile-time number or '*')", ())
+    "missing array length (either compile-time number or '*')", ())            \
+  F(NotASQLAggregate, "'%0' is not a SQL aggregator type", (ast::Type *))
 
 /// Define the ErrorMessageId enumeration
 enum class ErrorMessageId : u16 {

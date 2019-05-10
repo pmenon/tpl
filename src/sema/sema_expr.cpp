@@ -219,6 +219,54 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call,
   }
 }
 
+void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call,
+                                      ast::Builtin builtin) {
+  switch (builtin) {
+    case ast::Builtin::AggInit: {
+      // All arguments to @aggInit() must be SQL aggregators
+      for (u32 idx = 0; idx < call->num_args(); idx++) {
+        const auto &arg = call->arguments()[idx];
+        if (!arg->type()->IsPointerType() ||
+            !arg->type()->GetPointeeType()->IsSqlAggregatorType()) {
+          error_reporter()->Report(call->position(),
+                                   ErrorMessages::kNotASQLAggregate,
+                                   call->arguments()[idx]->type());
+          return;
+        }
+      }
+      // Init returns nil
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::AggAdvance: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      // First argument to @aggAdvance() must be a SQL aggregator, second must
+      // be a SQL value
+      const auto &args = call->arguments();
+      if (!args[0]->type()->IsPointerType() ||
+          !args[0]->type()->GetPointeeType()->IsSqlAggregatorType()) {
+        error_reporter()->Report(call->position(),
+                                 ErrorMessages::kNotASQLAggregate,
+                                 args[0]->type());
+        return;
+      }
+      if (!args[1]->type()->IsPointerType() ||
+          !args[1]->type()->GetPointeeType()->IsSqlValueType()) {
+        error_reporter()->Report(call->position(),
+                                 ErrorMessages::kNotASQLAggregate,
+                                 args[1]->type());
+        return;
+      }
+      // Advance returns nil
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    default: { UNREACHABLE("Impossible aggregator call"); }
+  }
+}
+
 void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
   if (!CheckArgCount(call, 3)) {
     return;
@@ -870,6 +918,11 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::AggHashTableProcessBatch:
     case ast::Builtin::AggHashTableFree: {
       CheckBuiltinAggHashTableCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::AggInit:
+    case ast::Builtin::AggAdvance: {
+      CheckBuiltinAggregatorCall(call, builtin);
       break;
     }
     case ast::Builtin::JoinHashTableInit: {
