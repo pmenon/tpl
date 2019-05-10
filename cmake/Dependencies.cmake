@@ -21,6 +21,14 @@ include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
 list(APPEND TPL_LINK_LIBS ${LLVM_LIBRARIES})
 
 ############################################################
+# Intel TBB
+############################################################
+
+find_package(TBB REQUIRED)
+include_directories(SYSTEM ${TBB_INCLUDE_DIRS})
+list(APPEND TPL_LINK_LIBS ${TBB_LIBRARIES})
+
+############################################################
 # Check Clang++ is available. Ideally, you should have
 # either Clang 7 or 6, otherwise your compiler is too
 # old to use with TPL.
