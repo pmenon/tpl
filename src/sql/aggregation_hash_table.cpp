@@ -9,7 +9,8 @@ namespace tpl::sql {
 
 AggregationHashTable::AggregationHashTable(util::Region *region,
                                            u32 payload_size)
-    : entries_(region, sizeof(HashTableEntry) + payload_size) {
+    : entries_(region, sizeof(HashTableEntry) + payload_size),
+      hash_table_(kDefaultLoadFactor) {
   // Set the table to a decent initial size and the max fill to determine when
   // to resize the table next
   hash_table_.SetSize(kDefaultInitialTableSize);
@@ -20,20 +21,13 @@ void AggregationHashTable::Grow() {
   // Resize table
   const u64 new_size = hash_table_.capacity() * 2;
   hash_table_.SetSize(new_size);
-  max_fill_ = std::llround(new_size * kDefaultLoadFactor);
+  max_fill_ = std::llround(hash_table_.capacity() * hash_table_.load_factor());
 
   // Insert elements again
   for (byte *untyped_entry : entries_) {
     auto *entry = reinterpret_cast<HashTableEntry *>(untyped_entry);
     hash_table_.Insert<false>(entry, entry->hash);
   }
-}
-
-HashTableEntry *AggregationHashTable::CreateEntry(const hash_t hash) {
-  auto *entry = reinterpret_cast<HashTableEntry *>(entries_.append());
-  entry->hash = hash;
-  entry->next = nullptr;
-  return entry;
 }
 
 byte *AggregationHashTable::Insert(const hash_t hash) {
@@ -43,7 +37,9 @@ byte *AggregationHashTable::Insert(const hash_t hash) {
   }
 
   // Allocate an entry
-  HashTableEntry *entry = CreateEntry(hash);
+  auto *entry = reinterpret_cast<HashTableEntry *>(entries_.append());
+  entry->hash = hash;
+  entry->next = nullptr;
 
   // Insert into table
   hash_table_.Insert<false>(entry, entry->hash);
@@ -156,17 +152,8 @@ void AggregationHashTable::ComputeHashAndLoadInitialImpl(
         hash_table_.PrefetchChainHead<false>(hashes[prefetch_idx]);
       }
     }
-
-    // Follow chain to find first hash match
-    HashTableEntry *entry = hash_table_.FindChainHead(hashes[idx]);
-    if (entry != nullptr && entry->hash != hashes[idx]) {
-      for (; entry != nullptr; entry = entry->next) {
-        if (entry->hash == hashes[idx]) {
-          break;
-        }
-      }
-    }
-    entries[idx] = entry;
+    // Load chain head
+    entries[idx] = hash_table_.FindChainHead(hashes[idx]);
   }
 }
 
@@ -178,25 +165,25 @@ void AggregationHashTable::FollowNextLoop(
   while (num_elems > 0) {
     u32 write_idx = 0;
 
+    // Simultaneously iterate over valid groups and input probe tuples in the
+    // vector projection and check key equality for each. For mismatches, follow
+    // the bucket chain.
     for (u32 idx = 0; idx < num_elems; idx++) {
-      // Move iterator to current group position
       iters[0]->SetPosition<VPIIsFiltered>(group_sel[idx]);
 
-      // Check if there's a hash and key match
-      const bool matched =
+      const bool keys_match =
           entries[group_sel[idx]]->hash == hashes[group_sel[idx]] &&
           key_eq_fn(entries[group_sel[idx]]->payload, iters);
+      const bool has_next = entries[group_sel[idx]]->next != nullptr;
 
-      // If there wasn't a match, we need to continue chain; add the group to
-      // the output.
       group_sel[write_idx] = group_sel[idx];
-      write_idx += static_cast<u32>(!matched);
+      write_idx += static_cast<u32>(!keys_match && has_next);
     }
 
     // Reset VPI
     iters[0]->Reset();
 
-    // Move along chain for entries that didn't match
+    // Follow chain
     for (u32 idx = 0; idx < write_idx; idx++) {
       HashTableEntry *&entry = entries[group_sel[idx]];
       entry = entry->next;

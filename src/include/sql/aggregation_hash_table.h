@@ -101,9 +101,6 @@ class AggregationHashTable {
   // Grow the hash table
   void Grow();
 
-  // Create a new entry without inserting into the hash table
-  HashTableEntry *CreateEntry(hash_t hash);
-
   // Lookup a hash table entry internally
   HashTableEntry *LookupEntryInternal(hash_t hash, KeyEqFn key_eq_fn,
                                       const void *probe_tuple) const;
