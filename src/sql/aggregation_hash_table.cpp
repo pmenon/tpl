@@ -89,7 +89,7 @@ void AggregationHashTable::FlushToOverflowPartitions() {
   }
 
   // Dump hash table into overflow partition
-  hash_table_.DrainEntries([this](HashTableEntry *entry) {
+  hash_table_.FlushEntries([this](HashTableEntry *entry) {
     const u64 part_idx = (entry->hash >> part_shift_bits_);
     entry->next = partition_heads_[part_idx];
     partition_heads_[part_idx] = entry;

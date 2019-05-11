@@ -98,12 +98,13 @@ class GenericHashTable {
   HashTableEntry *FindChainHeadWithTag(hash_t hash) const;
 
   /**
-   * Empty all entries in this hash table into the sink function
+   * Empty all entries in this hash table into the sink functor. After this
+   * function exits, the hash table is empty.
    * @tparam F The function must be of the form void(*)(HashTableEntry*)
    * @param sink The sink of all entries in the hash table
    */
   template <typename F>
-  void DrainEntries(const F &sink);
+  void FlushEntries(const F &sink);
 
   /**
    * Return the total number of bytes this hash table has allocated
@@ -253,8 +254,8 @@ inline void GenericHashTable::InsertTagged(HashTableEntry *new_entry,
 }
 
 template <typename F>
-void GenericHashTable::DrainEntries(const F &sink) {
-  static_assert(std::is_invocable_r_v<void, F, HashTableEntry *>);
+inline void GenericHashTable::FlushEntries(const F &sink) {
+  static_assert(std::is_invocable_v<F, HashTableEntry *>);
 
   for (u32 idx = 0; idx < capacity_; idx++) {
     HashTableEntry *entry = entries_[idx].load(std::memory_order_relaxed);
