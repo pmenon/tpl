@@ -98,6 +98,14 @@ class GenericHashTable {
   HashTableEntry *FindChainHeadWithTag(hash_t hash) const;
 
   /**
+   * Empty all entries in this hash table into the sink function
+   * @tparam F The function must be of the form void(*)(HashTableEntry*)
+   * @param sink The sink of all entries in the hash table
+   */
+  template <typename F>
+  void DrainEntries(const F &sink);
+
+  /**
    * Return the total number of bytes this hash table has allocated
    */
   u64 GetTotalMemoryUsage() const {
@@ -242,6 +250,23 @@ inline void GenericHashTable::InsertTagged(HashTableEntry *new_entry,
   }
 
   num_elems_++;
+}
+
+template<typename F>
+void GenericHashTable::DrainEntries(const F &sink) {
+  static_assert(std::is_invocable_r_v<void, F, HashTableEntry *>);
+
+  for (u32 idx = 0; idx < capacity_; idx++) {
+    HashTableEntry *entry = entries_[idx].load(std::memory_order_relaxed);
+    while (entry != nullptr) {
+      HashTableEntry *next = entry->next;
+      sink(entry);
+      entry = next;
+    }
+    entries_[idx].store(nullptr, std::memory_order_relaxed);
+  }
+
+  num_elems_ = 0;
 }
 
 }  // namespace tpl::sql

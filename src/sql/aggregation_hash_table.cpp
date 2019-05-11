@@ -2,19 +2,35 @@
 
 #include "logging/logger.h"
 #include "sql/vector_projection_iterator.h"
+#include "util/bit_util.h"
 #include "util/cpu_info.h"
+#include "util/math_util.h"
 #include "util/vector_util.h"
 
 namespace tpl::sql {
 
 AggregationHashTable::AggregationHashTable(util::Region *region,
                                            u32 payload_size)
-    : entries_(region, sizeof(HashTableEntry) + payload_size),
-      hash_table_(kDefaultLoadFactor) {
+    : mem_(region),
+      entries_(region, sizeof(HashTableEntry) + payload_size),
+      hash_table_(kDefaultLoadFactor),
+      partition_heads_(nullptr),
+      partition_tails_(nullptr),
+      partition_tables_(nullptr),
+      part_shift_bits_(
+          util::BitUtil::CountLeadingZeros(u64(kDefaultNumPartitions) - 1)) {
   // Set the table to a decent initial size and the max fill to determine when
   // to resize the table next
   hash_table_.SetSize(kDefaultInitialTableSize);
   max_fill_ = std::llround(hash_table_.capacity() * hash_table_.load_factor());
+
+  // Compute flush threshold. In partitioned mode, we want the thread-local
+  // pre-aggregation hash table to be sized to fit in cache. Target L2.
+  const u64 l2_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L2_CACHE);
+  flush_threshold_ =
+      std::llround(f32(l2_size) / entries_.element_size() * kDefaultLoadFactor);
+  flush_threshold_ =
+      std::max(256ul, util::MathUtil::PowerOf2Floor(flush_threshold_));
 }
 
 void AggregationHashTable::Grow() {
@@ -49,6 +65,39 @@ byte *AggregationHashTable::Insert(const hash_t hash) {
 
   // Give the payload so the client can write into it
   return entry->payload;
+}
+
+byte *AggregationHashTable::InsertPartitioned(const hash_t hash) {
+  byte *ret = Insert(hash);
+  if (hash_table_.num_elements() >= flush_threshold_) {
+    FlushToOverflowPartitions();
+  }
+  return ret;
+}
+
+void AggregationHashTable::FlushToOverflowPartitions() {
+  if (TPL_UNLIKELY(partition_heads_ == nullptr)) {
+    TPL_ASSERT(partition_tails_ == nullptr,
+               "Partition tail isn't null when head is null");
+    std::size_t nbytes = sizeof(HashTableEntry *) * kDefaultNumPartitions;
+    partition_heads_ = static_cast<HashTableEntry **>(mem_->Allocate(nbytes));
+    partition_tails_ = static_cast<HashTableEntry **>(mem_->Allocate(nbytes));
+    std::memset(partition_heads_, 0, nbytes);
+    std::memset(partition_tails_, 0, nbytes);
+  }
+
+  // Dump hash table into overflow partition
+  hash_table_.DrainEntries([this](HashTableEntry *entry) {
+    const u64 part_idx = (entry->hash >> part_shift_bits_);
+    entry->next = partition_heads_[part_idx];
+    partition_heads_[part_idx] = entry;
+    if (TPL_UNLIKELY(partition_tails_[part_idx] == nullptr)) {
+      partition_tails_[part_idx] = entry;
+    }
+  });
+
+  // Update stats
+  stats_.num_flushes++;
 }
 
 void AggregationHashTable::ProcessBatch(
@@ -169,8 +218,8 @@ void AggregationHashTable::FollowNextLoop(
     u32 write_idx = 0;
 
     // Simultaneously iterate over valid groups and input probe tuples in the
-    // vector projection and check key equality for each. For mismatches, follow
-    // the bucket chain.
+    // vector projection and check key equality for each. For mismatches,
+    // follow the bucket chain.
     for (u32 idx = 0; idx < num_elems; idx++) {
       iters[0]->SetPosition<VPIIsFiltered>(group_sel[idx]);
 

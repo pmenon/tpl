@@ -14,6 +14,7 @@ class AggregationHashTable {
  public:
   static constexpr const float kDefaultLoadFactor = 0.7;
   static constexpr const u32 kDefaultInitialTableSize = 256;
+  static constexpr const u32 kDefaultNumPartitions = 512;
 
   // -------------------------------------------------------
   // Callback functions to customize aggregations
@@ -79,6 +80,14 @@ class AggregationHashTable {
   byte *Insert(hash_t hash);
 
   /**
+   * Insert a new element with hash value @em hash into this partitioned
+   * aggregation hash table.
+   * @param hash The hash value of the element to insert
+   * @return A pointer to a memory area where the input element can be written
+   */
+  byte *InsertPartitioned(hash_t hash);
+
+  /**
    * Lookup and return an entry in the aggregation table that matches a given
    * hash and key. The hash value is provided here, keys are checked using the
    * provided callback function.
@@ -117,6 +126,10 @@ class AggregationHashTable {
   // Lookup a hash table entry internally
   HashTableEntry *LookupEntryInternal(hash_t hash, KeyEqFn key_eq_fn,
                                       const void *probe_tuple) const;
+
+  // Flush all entries currently stored in the hash table into the overflow
+  // partitions
+  void FlushToOverflowPartitions();
 
   // Compute the hash value and perform the table lookup for all elements in the
   // input vector projections.
@@ -173,6 +186,9 @@ class AggregationHashTable {
                     HashTableEntry *entries[], MergeAggFn merge_agg_fn);
 
  private:
+  // Allocator
+  util::Region *mem_;
+
   // Where the aggregates are stored
   util::ChunkedVector entries_;
 
