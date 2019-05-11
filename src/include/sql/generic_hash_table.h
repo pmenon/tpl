@@ -252,7 +252,7 @@ inline void GenericHashTable::InsertTagged(HashTableEntry *new_entry,
   num_elems_++;
 }
 
-template<typename F>
+template <typename F>
 void GenericHashTable::DrainEntries(const F &sink) {
   static_assert(std::is_invocable_r_v<void, F, HashTableEntry *>);
 

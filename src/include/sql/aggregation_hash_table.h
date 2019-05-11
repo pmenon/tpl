@@ -196,7 +196,7 @@ class AggregationHashTable {
   GenericHashTable hash_table_;
 
   // Overflow partitions
-  //MergingFunction merging_func_;
+  // MergingFunction merging_func_;
   HashTableEntry **partition_heads_;
   HashTableEntry **partition_tails_;
   AggregationHashTable **partition_tables_;
