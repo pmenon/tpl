@@ -105,7 +105,7 @@ void AggregationHashTable::FlushToOverflowPartitions() {
 void AggregationHashTable::ProcessBatch(
     VectorProjectionIterator *iters[], AggregationHashTable::HashFn hash_fn,
     KeyEqFn key_eq_fn, AggregationHashTable::InitAggFn init_agg_fn,
-    AggregationHashTable::MergeAggFn merge_agg_fn) {
+    AggregationHashTable::AdvanceAggFn advance_agg_fn) {
   TPL_ASSERT(iters != nullptr, "Null input iterators!");
   const u32 num_elems = iters[0]->num_selected();
 
@@ -115,10 +115,10 @@ void AggregationHashTable::ProcessBatch(
 
   if (iters[0]->IsFiltered()) {
     ProcessBatchImpl<true>(iters, num_elems, hashes, entries, hash_fn,
-                           key_eq_fn, init_agg_fn, merge_agg_fn);
+                           key_eq_fn, init_agg_fn, advance_agg_fn);
   } else {
     ProcessBatchImpl<false>(iters, num_elems, hashes, entries, hash_fn,
-                            key_eq_fn, init_agg_fn, merge_agg_fn);
+                            key_eq_fn, init_agg_fn, advance_agg_fn);
   }
 }
 
@@ -127,7 +127,7 @@ void AggregationHashTable::ProcessBatchImpl(
     VectorProjectionIterator *iters[], u32 num_elems, hash_t hashes[],
     HashTableEntry *entries[], AggregationHashTable::HashFn hash_fn,
     KeyEqFn key_eq_fn, AggregationHashTable::InitAggFn init_agg_fn,
-    AggregationHashTable::MergeAggFn merge_agg_fn) {
+    AggregationHashTable::AdvanceAggFn advance_agg_fn) {
   // Lookup batch
   LookupBatch<VPIIsFiltered>(iters, num_elems, hashes, entries, hash_fn,
                              key_eq_fn);
@@ -139,7 +139,7 @@ void AggregationHashTable::ProcessBatchImpl(
   iters[0]->Reset();
 
   // Update valid groups
-  UpdateGroups<VPIIsFiltered>(iters, num_elems, entries, merge_agg_fn);
+  AdvanceGroups<VPIIsFiltered>(iters, num_elems, entries, advance_agg_fn);
   iters[0]->Reset();
 }
 
@@ -280,22 +280,22 @@ void AggregationHashTable::CreateMissingGroups(
 }
 
 template <bool VPIIsFiltered>
-void AggregationHashTable::UpdateGroups(
+void AggregationHashTable::AdvanceGroups(
     VectorProjectionIterator *iters[], u32 num_elems, HashTableEntry *entries[],
-    AggregationHashTable::MergeAggFn merge_agg_fn) {
+    AggregationHashTable::AdvanceAggFn advance_agg_fn) {
   // Vector storing all valid group indexes
   alignas(CACHELINE_SIZE) u32 group_sel[kDefaultVectorSize];
 
-  // Determine which elements are valid groups
+  // All non-null entries are groups that should be updated. Find them now.
   u32 num_groups =
       util::VectorUtil::FilterNe(reinterpret_cast<intptr_t *>(entries),
                                  num_elems, intptr_t(0), group_sel, nullptr);
 
-  // Update all groups whose indexes are stored in group_sel
+  // Group indexes are stored in group_sel, update them now.
   for (u32 idx = 0; idx < num_groups; idx++) {
     HashTableEntry *entry = entries[group_sel[idx]];
     iters[0]->SetPosition<VPIIsFiltered>(group_sel[idx]);
-    merge_agg_fn(entry->payload, iters);
+    advance_agg_fn(entry->payload, iters);
   }
 }
 

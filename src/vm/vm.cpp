@@ -772,10 +772,11 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
         module().GetFuncTrampoline(key_eq_fn_id));
     auto init_agg_fn = reinterpret_cast<sql::AggregationHashTable::InitAggFn>(
         module().GetFuncTrampoline(init_agg_fn_id));
-    auto merge_agg_fn = reinterpret_cast<sql::AggregationHashTable::MergeAggFn>(
-        module().GetFuncTrampoline(merge_agg_fn_id));
+    auto advance_agg_fn =
+        reinterpret_cast<sql::AggregationHashTable::AdvanceAggFn>(
+            module().GetFuncTrampoline(merge_agg_fn_id));
     OpAggregationHashTableProcessBatch(agg_hash_table, iters, hash_fn,
-                                       key_eq_fn, init_agg_fn, merge_agg_fn);
+                                       key_eq_fn, init_agg_fn, advance_agg_fn);
     DISPATCH_NEXT();
   }
 

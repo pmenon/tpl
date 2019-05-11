@@ -41,11 +41,11 @@ class AggregationHashTable {
   using InitAggFn = void (*)(void *, void *);
 
   /**
-   * Function to update an existing aggregate.
+   * Function to advance an existing aggregate with a new input value.
    * Convention: First argument is the existing aggregate to update, second
    *             argument is the input/probe tuple to update the aggregate with.
    */
-  using MergeAggFn = void (*)(void *, void *);
+  using AdvanceAggFn = void (*)(void *, void *);
 
   /**
    * Small class to capture various usage stats
@@ -104,12 +104,12 @@ class AggregationHashTable {
    * @param hash_fn Function to compute a hash of an input element
    * @param key_eq_fn Function to determine key equality of an input element and
    *                  an existing aggregate
-   * @param init_agg_fn Function to initialize/create a new aggregate
-   * @param merge_agg_fn Function to merge/update an existing aggregate
+   * @param init_agg_fn Function to initialize a new aggregate
+   * @param advance_agg_fn Function to advance an existing aggregate
    */
   void ProcessBatch(VectorProjectionIterator *iters[], HashFn hash_fn,
                     KeyEqFn key_eq_fn, InitAggFn init_agg_fn,
-                    MergeAggFn merge_agg_fn);
+                    AdvanceAggFn advance_agg_fn);
 
   /**
    * Read-only access to hash table stats
@@ -137,7 +137,7 @@ class AggregationHashTable {
   void ProcessBatchImpl(VectorProjectionIterator *iters[], u32 num_elems,
                         hash_t hashes[], HashTableEntry *entries[],
                         HashFn hash_fn, KeyEqFn key_eq_fn,
-                        InitAggFn init_agg_fn, MergeAggFn merge_agg_fn);
+                        InitAggFn init_agg_fn, AdvanceAggFn advance_agg_fn);
 
   // Called from ProcessBatch() to lookup a batch of entries. When the function
   // returns, the hashes vector will contain the hash values of all elements in
@@ -182,8 +182,8 @@ class AggregationHashTable {
   // Called from ProcessBatch() to update only the valid entries in the input
   // vector
   template <bool VPIIsFiltered>
-  void UpdateGroups(VectorProjectionIterator *iters[], u32 num_elems,
-                    HashTableEntry *entries[], MergeAggFn merge_agg_fn);
+  void AdvanceGroups(VectorProjectionIterator *iters[], u32 num_elems,
+                     HashTableEntry *entries[], AdvanceAggFn advance_agg_fn);
 
  private:
   // Allocator
