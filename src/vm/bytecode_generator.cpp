@@ -357,12 +357,11 @@ void BytecodeGenerator::VisitVariableDecl(ast::VariableDecl *node) {
 }
 
 void BytecodeGenerator::VisitAddressOfExpr(ast::UnaryOpExpr *op) {
-//  TPL_ASSERT(execution_result()->IsRValue(),
-//             "Address-of expressions must be R-values!");
+  TPL_ASSERT(execution_result()->IsRValue(),
+             "Address-of expressions must be R-values!");
   LocalVar addr = VisitExpressionForLValue(op->expr());
   if (execution_result()->HasDestination()) {
-    // Despite the below function's name, we're just getting the destination
-    LocalVar dest = execution_result()->GetOrCreateDestination(op->type());
+    LocalVar dest = execution_result()->destination();
     BuildAssign(dest, addr, op->type());
   } else {
     execution_result()->set_destination(addr);
@@ -855,7 +854,7 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call,
       for (const auto &arg : call->arguments()) {
         const auto agg_kind =
             arg->type()->GetPointeeType()->As<ast::BuiltinType>()->kind();
-        LocalVar input = VisitExpressionForLValue(arg);
+        LocalVar input = VisitExpressionForRValue(arg);
         Bytecode bytecode = OpForAgg<AggOpKind::Init>(agg_kind);
         emitter()->Emit(bytecode, input);
       }
@@ -867,8 +866,8 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call,
                                 ->GetPointeeType()
                                 ->As<ast::BuiltinType>()
                                 ->kind();
-      LocalVar agg = VisitExpressionForLValue(call->arguments()[0]);
-      LocalVar input = VisitExpressionForLValue(call->arguments()[1]);
+      LocalVar agg = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar input = VisitExpressionForRValue(call->arguments()[1]);
       Bytecode bytecode = OpForAgg<AggOpKind::Advance>(agg_kind);
       emitter()->Emit(bytecode, agg, input);
       break;
