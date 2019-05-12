@@ -316,10 +316,10 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
   }
 
   for (; local_idx < func_info.locals().size(); local_idx++) {
-    const LocalInfo &local = func_locals[local_idx];
-    llvm::Value *val =
-        ir_builder.CreateAlloca(type_map->GetLLVMType(local.type()));
-    locals_[local.offset()] = val;
+    const LocalInfo &local_info = func_locals[local_idx];
+    llvm::Type *llvm_type = type_map->GetLLVMType(local_info.type());
+    llvm::Value *val = ir_builder.CreateAlloca(llvm_type);
+    locals_[local_info.offset()] = val;
   }
 }
 
