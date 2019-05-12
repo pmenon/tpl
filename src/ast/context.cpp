@@ -304,6 +304,14 @@ MapType *MapType::Get(Type *key_type, Type *value_type) {
 
 // static
 StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
+  // Empty structs get an artificial element
+  if (fields.empty()) {
+    // Empty structs get an artificial byte field to ensure non-zero size
+    ast::Identifier name = ctx->GetIdentifier("__field$0$");
+    ast::Type *byte_type = ast::BuiltinType::Get(ctx, ast::BuiltinType::Int8);
+    fields.emplace_back(name, byte_type);
+  }
+
   const StructTypeKeyInfo::KeyTy key(fields);
 
   auto [iter, inserted] = ctx->impl()->struct_types.insert_as(nullptr, key);
@@ -329,8 +337,22 @@ StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
       alignment = std::max(alignment, field.type->alignment());
     }
 
+    // Empty structs have an alignment of 1 byte
+    if (alignment == 0) {
+      alignment = 1;
+    }
+
+    // Add padding at end so that these structs can be placed compactly in an
+    // array and still respect alignment
+    if (!util::MathUtil::IsAligned(size, alignment)) {
+      size = static_cast<u32>(util::MathUtil::AlignTo(size, alignment));
+    }
+
+    // Create type
     struct_type = new (ctx->region()) StructType(
         ctx, size, alignment, std::move(fields), std::move(field_offsets));
+
+    // Set in cache
     *iter = struct_type;
   } else {
     struct_type = *iter;

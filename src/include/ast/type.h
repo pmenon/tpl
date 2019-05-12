@@ -505,6 +505,7 @@ class StructType : public Type {
   }
 
   static StructType *Get(Context *ctx, util::RegionVector<Field> &&fields);
+  // Note: fields cannot be empty!
   static StructType *Get(util::RegionVector<Field> &&fields);
 
   static bool classof(const Type *type) {
