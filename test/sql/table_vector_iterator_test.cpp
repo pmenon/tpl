@@ -1,3 +1,6 @@
+#include <tuple>
+#include <vector>
+
 #include "sql_test.h"  // NOLINT
 
 #include "sql/catalog.h"
