@@ -439,6 +439,26 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   }
 
   // -------------------------------------------------------
+  // Execution Context
+  // -------------------------------------------------------
+
+  OP(GetThreadLocalState) : {
+    auto *state_ptr = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    auto *execution_ctx =
+        frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+    OpGetThreadLocalState(state_ptr, execution_ctx);
+    DISPATCH_NEXT();
+  }
+
+  OP(ResetThreadLocalState) : {
+    auto *execution_ctx =
+        frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+    auto size = READ_UIMM4();
+    OpResetThreadLocalState(execution_ctx, size);
+    DISPATCH_NEXT();
+  }
+
+  // -------------------------------------------------------
   // Table Vector and Vector Projection Iterator (VPI) ops
   // -------------------------------------------------------
 

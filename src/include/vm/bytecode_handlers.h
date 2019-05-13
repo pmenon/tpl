@@ -6,6 +6,7 @@
 
 #include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
+#include "sql/execution_context.h"
 #include "sql/filter_manager.h"
 #include "sql/join_hash_table.h"
 #include "sql/sorter.h"
@@ -196,6 +197,20 @@ void OpRegionFree(tpl::util::Region *region);
 VM_OP_HOT void OpCall(UNUSED u16 func_id, UNUSED u16 num_args) {}
 
 VM_OP_HOT void OpReturn() {}
+
+// ---------------------------------------------------------
+// Execution Context
+// ---------------------------------------------------------
+
+VM_OP_HOT void OpGetThreadLocalState(byte **state_ptr,
+                                     tpl::sql::ExecutionContext *const ctx) {
+  *state_ptr = ctx->GetThreadLocalState();
+}
+
+VM_OP_HOT void OpResetThreadLocalState(tpl::sql::ExecutionContext *const ctx,
+                                       const u32 size) {
+  ctx->ResetThreadLocalState(size);
+}
 
 // ---------------------------------------------------------
 // Table Vector Iterator

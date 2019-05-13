@@ -88,6 +88,10 @@ namespace tpl::vm {
   F(Call, OperandType::FunctionId, OperandType::LocalCount)                                                            \
   F(Return)                                                                                                            \
                                                                                                                        \
+  /* Execution Context */                                                                                              \
+  F(GetThreadLocalState, OperandType::Local, OperandType::Local)                                                       \
+  F(ResetThreadLocalState, OperandType::Local, OperandType::UImm4)                                                     \
+                                                                                                                       \
   /* Table Vector Iterator */                                                                                          \
   F(TableVectorIteratorInit, OperandType::Local, OperandType::UImm2)                                                   \
   F(TableVectorIteratorPerformInit, OperandType::Local)                                                                \
