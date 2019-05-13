@@ -66,7 +66,7 @@ class ExecutionContext::ThreadStateContainer {
 
   // Reset the thread state to a new size. This will destroy all the old state,
   // if any, and create a new, lazily created thread-local state.
-  void Reset(u32 state_size) {
+  void Reset(const std::size_t state_size) {
     thread_states_ = tbb::enumerable_thread_specific<TLSHandle>(state_size);
   }
 
@@ -92,7 +92,7 @@ byte *ExecutionContext::GetThreadLocalState() {
   return thread_states_->AccessThreadLocalState();
 }
 
-void ExecutionContext::ResetThreadLocalState(u32 size) {
+void ExecutionContext::ResetThreadLocalState(std::size_t size) {
   thread_states_->Reset(size);
 }
 

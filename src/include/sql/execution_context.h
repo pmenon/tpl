@@ -58,7 +58,7 @@ class ExecutionContext {
   /**
    * Reset the thread-local states to the given size
    */
-  void ResetThreadLocalState(u32 size);
+  void ResetThreadLocalState(std::size_t size);
 
   /**
    * Collect all thread-local states and store pointers in the output container
