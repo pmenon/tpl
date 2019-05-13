@@ -234,6 +234,12 @@ VM_OP_HOT void OpTableVectorIteratorGetVPI(
   *vpi = iter->vector_projection_iterator();
 }
 
+VM_OP_HOT void OpParallelScanTable(
+    const u16 table_id, tpl::sql::ExecutionContext *const ctx,
+    const tpl::sql::TableVectorIterator::ScanFn scanner) {
+  tpl::sql::TableVectorIterator::ParallelScan(table_id, ctx, scanner);
+}
+
 VM_OP_HOT void OpVPIIsFiltered(bool *is_filtered,
                                tpl::sql::VectorProjectionIterator *vpi) {
   *is_filtered = vpi->IsFiltered();

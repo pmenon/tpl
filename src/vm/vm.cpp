@@ -496,6 +496,17 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(ParallelScanTable) : {
+    auto table_id = READ_UIMM2();
+    auto exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+    auto scan_fn_id = READ_FUNC_ID();
+
+    auto scan_fn = reinterpret_cast<sql::TableVectorIterator::ScanFn>(
+        module().GetFuncTrampoline(scan_fn_id));
+    OpParallelScanTable(table_id, exec_ctx, scan_fn);
+    DISPATCH_NEXT();
+  }
+
   // -------------------------------------------------------
   // VPI iteration operations
   // -------------------------------------------------------
