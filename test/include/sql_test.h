@@ -14,6 +14,10 @@ class SqlBasedTest : public TplTest {
     TplTest::SetUp();
     sql::Catalog::Instance();
   }
+
+  static u16 TableIdToNum(sql::TableId table_id) {
+    return static_cast<u16>(table_id);
+  }
 };
 
 }  // namespace tpl

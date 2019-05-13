@@ -9,17 +9,29 @@
 
 namespace tpl::sql {
 
+class RuntimeContext;
+
 /**
  * An iterator over a table's data in vector-wise fashion
  */
 class TableVectorIterator {
  public:
   /**
-   * Create an iterator over the table with ID \a table_id and project in all
-   * columns from the logical schema for the table
+   * Create an iterator over the table with ID @em table_id and project in all
+   * columns from the logical schema for the table.
    * @param table_id The ID of the table
    */
   explicit TableVectorIterator(u16 table_id);
+
+  /**
+   * Create an iterator over the block range @em [start, end) of the table with
+   * ID @em table_id. The iteration will project in all columns in the logical
+   * schema of the table.
+   * @param table_id The ID of the table
+   * @param start_block_idx The starting block of the iteration
+   * @param end_block_idx The ending block of the iteration
+   */
+  TableVectorIterator(u16 table_id, u32 start_block_idx, u32 end_block_idx);
 
   /**
    * Create an iterator over the table with ID \a table_id and project columns
@@ -28,6 +40,17 @@ class TableVectorIterator {
    * @param column_indexes The indexes of the columns to select
    */
   TableVectorIterator(u16 table_id, std::vector<u32> column_indexes);
+
+  /**
+   * Create an iterator over the table with ID \a table_id and project columns
+   * at the indexes in \a column_indexes from the logical schema for the table
+   * @param table_id The ID of the table
+   * @param start_block_idx The starting block of the iteration
+   * @param end_block_idx The ending block of the iteration
+   * @param column_indexes The indexes of the columns to select
+   */
+  TableVectorIterator(u16 table_id, u32 start_block_idx, u32 end_block_idx,
+                      std::vector<u32> column_indexes);
 
   /**
    * This class cannot be copied or moved
@@ -58,6 +81,22 @@ class TableVectorIterator {
   VectorProjectionIterator *vector_projection_iterator() {
     return &vector_projection_iterator_;
   }
+
+  /**
+   * Scan function callback used to scan a partition of the table
+   */
+  using ScanFn = void (*)(RuntimeContext *, VectorProjectionIterator *);
+
+  /**
+   * Perform a parallel scan over the table with ID @em table_id using the
+   * callback function @em scanner on each input vector projection from the
+   * source table. This call is blocking, meaning that it only returns after
+   * the whole table has been scanned. Iteration order is non-deterministic.
+   * @param table_id The ID of the table to scan
+   * @param ctx The runtime context passed into the callback function
+   * @param scanner The callback function invoked for vectors of table input
+   */
+  static bool ParallelScan(u16 table_id, RuntimeContext *ctx, ScanFn scanner);
 
  private:
   // When the column iterators receive new vectors of input, we need to

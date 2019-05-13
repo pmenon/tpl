@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iosfwd>
+#include <limits>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -10,6 +11,7 @@
 #include "sql/schema.h"
 #include "sql/value.h"
 #include "util/common.h"
+#include "util/macros.h"
 
 extern i32 current_partition;
 
@@ -60,6 +62,14 @@ class Table {
   void Insert(Block &&block);
 
   /**
+   * Return the block at the given index in the table's block list
+   */
+  Block *GetBlock(const u32 block_idx) {
+    TPL_ASSERT(block_idx < blocks_.size(), "Out-of-bounds block access");
+    return &blocks_[block_idx];
+  }
+
+  /**
    * Iterators over the blocks in the table
    */
   Table::BlockList::const_iterator begin() const { return blocks_.begin(); }
@@ -73,19 +83,25 @@ class Table {
    */
   void Dump(std::ostream &os) const;
 
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
-
+  /**
+   * Return the ID of the table
+   */
   u16 id() const { return id_; }
 
+  /**
+   * Return the total number of tuples in the table
+   */
   u32 num_tuples() const { return num_tuples_; }
 
-  u32 num_columns() const { return schema().num_columns(); }
-
+  /**
+   * Return the schema of the table
+   */
   const Schema &schema() const { return *schema_; }
 
-  const BlockList &blocks() const { return blocks_; }
+  /**
+   * Return the number of blocks in the table
+   */
+  u32 num_blocks() const { return blocks_.size(); }
 
  private:
   std::unique_ptr<Schema> schema_;
@@ -100,9 +116,18 @@ class Table {
 class TableBlockIterator {
  public:
   /**
-   * Create an iterator over the blocks in the table with the given ID
+   * Create an iterator over all the blocks in the table with the given ID
    */
-  explicit TableBlockIterator(u16 table_id) noexcept;
+  explicit TableBlockIterator(u16 table_id);
+
+  /**
+   * Create an iterator over a subset of the blocks in the table with ID
+   * @em table_id. Iteration occurs of the range [start, end).
+   * @param table_id The ID of the table
+   * @param start_block_idx The index of the block to begin at
+   * @param end_block_idx The index of the block to stop at
+   */
+  TableBlockIterator(u16 table_id, u32 start_block_idx, u32 end_block_idx);
 
   /**
    * Initialize the iterator returning true if it succeeded
@@ -129,6 +154,10 @@ class TableBlockIterator {
  private:
   // The ID of the table to iterate
   u16 table_id_;
+  // The index of the block to begin iteration
+  u32 start_block_idx_;
+  // The index of the block to end iteration
+  u32 end_block_idx_;
   // The table we're scanning over
   const Table *table_;
   // The current block

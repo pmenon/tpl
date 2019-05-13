@@ -1,22 +1,38 @@
 #include "sql/table_vector_iterator.h"
 
+#include <limits>
 #include <numeric>
 #include <utility>
 #include <vector>
 
+#include "tbb/tbb.h"
+
 #include "logging/logger.h"
+#include "sql/catalog.h"
+#include "util/timer.h"
 
 namespace tpl::sql {
 
 // Iterate over the table and select all columns
 TableVectorIterator::TableVectorIterator(const u16 table_id)
-    : block_iterator_(table_id), initialized_(false) {}
+    : TableVectorIterator(table_id, 0, std::numeric_limits<u32>::max(), {}) {}
+
+// Iterate over a subset of the table and select all columns
+TableVectorIterator::TableVectorIterator(u16 table_id, u32 start_block_idx,
+                                         u32 end_block_idx)
+    : TableVectorIterator(table_id, start_block_idx, end_block_idx, {}) {}
 
 // Iterate over the table, but only select the given columns
 TableVectorIterator::TableVectorIterator(const u16 table_id,
                                          std::vector<u32> column_indexes)
+    : TableVectorIterator(table_id, 0, std::numeric_limits<u32>::max(),
+                          std::move(column_indexes)) {}
+
+TableVectorIterator::TableVectorIterator(u16 table_id, u32 start_block_idx,
+                                         u32 end_block_idx,
+                                         std::vector<u32> column_indexes)
     : column_indexes_(std::move(column_indexes)),
-      block_iterator_(table_id),
+      block_iterator_(table_id, start_block_idx, end_block_idx),
       initialized_(false) {}
 
 bool TableVectorIterator::Init() {
@@ -116,6 +132,43 @@ bool TableVectorIterator::Advance() {
   }
 
   return false;
+}
+
+bool TableVectorIterator::ParallelScan(const u16 table_id, RuntimeContext *ctx,
+                                       const ScanFn scanner) {
+  // Lookup table
+  const Table *table = Catalog::Instance()->LookupTableById(TableId(table_id));
+  if (table == nullptr) {
+    return false;
+  }
+
+  // Time
+  util::Timer<> timer;
+  timer.Start();
+
+  // Execute parallel scan
+  tbb::task_scheduler_init scan_scheduler;
+  tbb::blocked_range<std::size_t> block_range(0, table->num_blocks());
+  tbb::parallel_for(block_range, [table_id, ctx, scanner](const auto &range) {
+    // Create the iterator
+    TableVectorIterator iter(table_id, range.begin(), range.end());
+    // Initialize it
+    if (!iter.Init()) {
+      return;
+    }
+    // Loop over all vectors
+    while (iter.Advance()) {
+      VectorProjectionIterator *vpi = iter.vector_projection_iterator();
+      scanner(ctx, vpi);
+    }
+  });
+
+  timer.Stop();
+  double tps = table->num_tuples() / timer.elapsed();
+  LOG_INFO("Scanned {} blocks ({} tuples) blocks in {} ms ({} tps)",
+           table->num_blocks(), table->num_tuples(), timer.elapsed(), tps);
+
+  return true;
 }
 
 }  // namespace tpl::sql

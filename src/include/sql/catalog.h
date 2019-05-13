@@ -35,36 +35,43 @@ enum class TableId : u16 {
 class Catalog {
  public:
   /**
+   * Destructor
+   */
+  ~Catalog();
+
+  /**
    * Access singleton Catalog object. Singletons are bad blah blah blah ...
    * @return The singleton Catalog object
    */
   static Catalog *Instance();
 
   /**
-   * Lookup a table in this catalog by name
+   * Lookup a table in this catalog by name.
    * @param name The name of the target table
    * @return A pointer to the table, or NULL if the table doesn't exist.
    */
   Table *LookupTableByName(const std::string &name) const;
 
   /**
-   * Lookup a table in this catalog by name, using an identifier
+   * Lookup a table in this catalog by name, using an identifier.
    * @param name The name of the target table
    * @return A pointer to the table, or NULL if the table doesn't exist.
    */
   Table *LookupTableByName(ast::Identifier name) const;
 
   /**
-   * Lookup a table in this catalog by ID
+   * Lookup a table in this catalog by ID.
    * @param table_id The ID of the target table
    * @return A pointer to the table, or NULL if the table doesn't exist.
    */
   Table *LookupTableById(TableId table_id) const;
 
  private:
+  /**
+   * Private on purpose to force access through singleton Instance() method.
+   * @see Catalog::Instance()
+   */
   Catalog();
-
-  ~Catalog();
 
  private:
   std::unordered_map<TableId, std::unique_ptr<Table>> table_catalog_;

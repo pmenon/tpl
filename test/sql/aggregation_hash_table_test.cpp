@@ -89,4 +89,27 @@ TEST_F(AggregationHashTableTest, SimpleRandomInsertionTest) {
   }
 }
 
+TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
+  const u32 num_tuples = 10000;
+
+  std::mt19937 generator;
+  std::uniform_int_distribution<u64> distribution;
+
+  // Insert a few random tuples
+  for (u32 idx = 0; idx < num_tuples; idx++) {
+    InputTuple input(distribution(generator), 1);
+    auto *existing = reinterpret_cast<AggTuple *>(agg_table()->Lookup(
+        input.Hash(), TupleKeyEq, reinterpret_cast<const void *>(&input)));
+
+    if (existing != nullptr) {
+      existing->count1 += input.col_a;
+    } else {
+      // Insert a new entry into the hash table and the reference table
+      existing = new (agg_table()->InsertPartitioned(input.Hash()))
+          AggTuple(input.key);
+      existing->count1 = 0;
+    }
+  }
+}
+
 }  // namespace tpl::sql::test

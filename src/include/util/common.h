@@ -57,4 +57,9 @@ static constexpr const u32 kDefaultVectorSize = 2048;
 /// The default prefetch distance to use
 static constexpr const u32 kPrefetchDistance = 16;
 
+/// Common memory sizes
+constexpr const u32 KB = 1024;
+constexpr const u32 MB = KB * KB;
+constexpr const u32 GB = KB * KB * KB;
+
 }  // namespace tpl

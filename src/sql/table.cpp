@@ -1,6 +1,7 @@
 #include "sql/table.h"
 
 #include <iostream>
+#include <limits>
 #include <utility>
 
 #include "sql/catalog.h"
@@ -15,13 +16,16 @@ namespace tpl::sql {
 // ---------------------------------------------------------
 
 void Table::Insert(Block &&block) {
+#ifndef NDEBUG
   // Sanity check
-  TPL_ASSERT(block.num_cols() == num_columns(), "Column count mismatch");
-  for (u32 i = 0; i < num_columns(); i++) {
-    TPL_ASSERT(
-        schema().GetColumnInfo(i)->type.Equals(block.GetColumnData(i)->type()),
-        "Column type mismatch");
+  TPL_ASSERT(block.num_cols() == schema_->num_columns(),
+             "Column count mismatch");
+  for (u32 i = 0; i < schema_->num_columns(); i++) {
+    const auto &block_col_type = block.GetColumnData(i)->type();
+    const auto &schema_col_type = schema().GetColumnInfo(i)->type;
+    TPL_ASSERT(schema_col_type.Equals(block_col_type), "Column type mismatch");
   }
+#endif
 
   num_tuples_ += block.num_tuples();
   blocks_.emplace_back(std::move(block));
@@ -90,8 +94,16 @@ void Table::Dump(std::ostream &os) const {
 // Table Block Iterator
 // ---------------------------------------------------------
 
-TableBlockIterator::TableBlockIterator(u16 table_id) noexcept
-    : table_id_(table_id), table_(nullptr), curr_block_(nullptr) {}
+TableBlockIterator::TableBlockIterator(u16 table_id)
+    : TableBlockIterator(table_id, 0, std::numeric_limits<u32>::max()) {}
+
+TableBlockIterator::TableBlockIterator(u16 table_id, u32 start_block_idx,
+                                       u32 end_block_idx)
+    : table_id_(table_id),
+      start_block_idx_(start_block_idx),
+      end_block_idx_(end_block_idx),
+      table_(nullptr),
+      curr_block_(nullptr) {}
 
 bool TableBlockIterator::Init() {
   // Lookup the table
@@ -103,10 +115,27 @@ bool TableBlockIterator::Init() {
     return false;
   }
 
+  // Check block range
+  if (start_block_idx_ > table_->num_blocks()) {
+    return false;
+  }
+
+  if (end_block_idx_ != std::numeric_limits<u32>::max()) {
+    if (end_block_idx_ > table_->num_blocks()) {
+      return false;
+    }
+  }
+
+  if (start_block_idx_ >= end_block_idx_) {
+    return false;
+  }
+
   // Setup the block position boundaries
   curr_block_ = nullptr;
-  pos_ = table_->begin();
-  end_ = table_->end();
+  pos_ = table_->begin() + start_block_idx_;
+  end_ = (end_block_idx_ == std::numeric_limits<u32>::max()
+              ? table_->end()
+              : table_->begin() + end_block_idx_);
   return true;
 }
 

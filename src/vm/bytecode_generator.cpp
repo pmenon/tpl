@@ -861,13 +861,11 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call,
       break;
     }
     case ast::Builtin::AggAdvance: {
-      const auto agg_kind = call->arguments()[0]
-                                ->type()
-                                ->GetPointeeType()
-                                ->As<ast::BuiltinType>()
-                                ->kind();
-      LocalVar agg = VisitExpressionForRValue(call->arguments()[0]);
-      LocalVar input = VisitExpressionForRValue(call->arguments()[1]);
+      const auto &args = call->arguments();
+      const auto agg_kind =
+          args[0]->type()->GetPointeeType()->As<ast::BuiltinType>()->kind();
+      LocalVar agg = VisitExpressionForRValue(args[0]);
+      LocalVar input = VisitExpressionForRValue(args[1]);
       Bytecode bytecode = OpForAgg<AggOpKind::Advance>(agg_kind);
       emitter()->Emit(bytecode, agg, input);
       break;

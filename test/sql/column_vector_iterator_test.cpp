@@ -29,7 +29,7 @@ TEST_F(ColumnIteratorTest, EmptyIteratorTest) {
   //
 
   {
-    const auto *col = table->blocks()[0].GetColumnData(0);
+    const auto *col = table->GetBlock(0)->GetColumnData(0);
 
     ColumnVectorIterator iter(col_info);
     iter.Reset(col);
@@ -59,7 +59,7 @@ TEST_F(ColumnIteratorTest, IntegerIterationTest) {
 
   ASSERT_TRUE(col_info->type.type_id() == TypeId::Integer);
 
-  const auto *col = table->blocks()[0].GetColumnData(0);
+  const auto *col = table->GetBlock(0)->GetColumnData(0);
 
   ColumnVectorIterator iter(col_info);
   iter.Reset(col);
