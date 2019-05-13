@@ -9,7 +9,7 @@
 
 namespace tpl::sql {
 
-class RuntimeContext;
+class ExecutionContext;
 
 /**
  * An iterator over a table's data in vector-wise fashion
@@ -85,7 +85,7 @@ class TableVectorIterator {
   /**
    * Scan function callback used to scan a partition of the table
    */
-  using ScanFn = void (*)(RuntimeContext *, VectorProjectionIterator *);
+  using ScanFn = void (*)(ExecutionContext *, VectorProjectionIterator *);
 
   /**
    * Perform a parallel scan over the table with ID @em table_id using the
@@ -96,7 +96,7 @@ class TableVectorIterator {
    * @param ctx The runtime context passed into the callback function
    * @param scanner The callback function invoked for vectors of table input
    */
-  static bool ParallelScan(u16 table_id, RuntimeContext *ctx, ScanFn scanner);
+  static bool ParallelScan(u16 table_id, ExecutionContext *ctx, ScanFn scanner);
 
  private:
   // When the column iterators receive new vectors of input, we need to

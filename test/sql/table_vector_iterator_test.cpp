@@ -4,7 +4,7 @@
 #include "sql_test.h"  // NOLINT
 
 #include "sql/catalog.h"
-#include "sql/runtime_context.h"
+#include "sql/execution_context.h"
 #include "sql/table_vector_iterator.h"
 #include "util/timer.h"
 
@@ -76,14 +76,14 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
     u32 c;
   };
 
-  auto scanner = [](RuntimeContext *ctx, VectorProjectionIterator *vpi) {
+  auto scanner = [](ExecutionContext *ctx, VectorProjectionIterator *vpi) {
     auto *counter = ctx->GetThreadLocalStateAs<Counter>();
     counter->c++;
   };
 
   // Setup thread states
   util::Region tmp("exec");
-  RuntimeContext ctx(&tmp);
+  ExecutionContext ctx(&tmp, 0);
   ctx.ResetThreadLocalState(sizeof(Counter));
 
   // Scan
@@ -91,11 +91,11 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
                                     scanner);
 
   // Combine counters
-  std::vector<Counter *> counters;
-  ctx.CollectThreadLocalStateElements<Counter>(0, counters);
+  std::vector<byte *> counters;
+  ctx.CollectThreadLocalStates(counters);
 
   for (auto *counter : counters) {
-    LOG_INFO("Count: {}", counter->c);
+    LOG_INFO("Count: {}", reinterpret_cast<Counter*>(counter)->c);
   }
 }
 

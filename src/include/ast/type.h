@@ -55,6 +55,7 @@ class Context;
   /* Non-primitive builtins */                                           \
   NON_PRIM(AggregationHashTable, tpl::sql::AggregationHashTable)         \
   NON_PRIM(BloomFilter, tpl::sql::BloomFilter)                           \
+  NON_PRIM(ExecutionContext, tpl::sql::ExecutionContext)                 \
   NON_PRIM(FilterManager, tpl::sql::FilterManager)                       \
   NON_PRIM(HashTableEntry, tpl::sql::HashTableEntry)                     \
   NON_PRIM(JoinHashTable, tpl::sql::JoinHashTable)                       \

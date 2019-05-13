@@ -134,7 +134,7 @@ bool TableVectorIterator::Advance() {
   return false;
 }
 
-bool TableVectorIterator::ParallelScan(const u16 table_id, RuntimeContext *ctx,
+bool TableVectorIterator::ParallelScan(const u16 table_id, ExecutionContext *ctx,
                                        const ScanFn scanner) {
   // Lookup table
   const Table *table = Catalog::Instance()->LookupTableById(TableId(table_id));
@@ -165,7 +165,7 @@ bool TableVectorIterator::ParallelScan(const u16 table_id, RuntimeContext *ctx,
 
   timer.Stop();
   double tps = table->num_tuples() / timer.elapsed();
-  LOG_INFO("Scanned {} blocks ({} tuples) blocks in {} ms ({} tps)",
+  LOG_INFO("Scanned {} blocks ({} tuples) blocks in {} ms ({:.2f} tps)",
            table->num_blocks(), table->num_tuples(), timer.elapsed(), tps);
 
   return true;
