@@ -103,7 +103,10 @@ class BytecodeEmitter {
             LocalVar operand_3, LocalVar operand_4, LocalVar operand_5,
             LocalVar operand_6, LocalVar operand_7, LocalVar operand_8);
 
+  // Initialize a table iterator
   void EmitTableIterInit(Bytecode bytecode, LocalVar iter, u16 table_id);
+  // Emit a parallel table scan
+  void EmitParallelTableScan(u16 table_id, LocalVar ctx, FunctionId scan_fn);
 
   // Reading integer values from an iterator
   void EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar vpi, u32 col_idx);

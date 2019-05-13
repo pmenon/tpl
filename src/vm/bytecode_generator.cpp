@@ -526,6 +526,25 @@ void BytecodeGenerator::VisitBuiltinTableIterCall(ast::CallExpr *call,
   }
 }
 
+void BytecodeGenerator::VisitBuiltinTableIterParallelCall(ast::CallExpr *call) {
+  // First is the table name as a string literal
+  const auto table_name =
+      call->arguments()[0]->As<ast::LitExpr>()->raw_string_val();
+  sql::Table *table = sql::Catalog::Instance()->LookupTableByName(table_name);
+  TPL_ASSERT(table != nullptr, "Table does not exist!");
+
+  // Next is the execution context
+  LocalVar exec_ctx = VisitExpressionForRValue(call->arguments()[1]);
+
+  // Finally the scan function as an identifier
+  const auto scan_fn_name =
+      call->arguments()[2]->As<ast::IdentifierExpr>()->name();
+
+  // Done
+  emitter()->EmitParallelTableScan(table->id(), exec_ctx,
+                                   LookupFuncIdByName(scan_fn_name.data()));
+}
+
 void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
                                             ast::Builtin builtin) {
   ast::Context *ctx = call->type()->context();
@@ -1075,6 +1094,10 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::TableIterGetVPI:
     case ast::Builtin::TableIterClose: {
       VisitBuiltinTableIterCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::TableIterParallel: {
+      VisitBuiltinTableIterParallelCall(call);
       break;
     }
     case ast::Builtin::VPIIsFiltered:

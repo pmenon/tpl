@@ -290,6 +290,11 @@ void BytecodeEmitter::EmitTableIterInit(Bytecode bytecode, LocalVar iter,
   EmitAll(bytecode, iter, table_id);
 }
 
+void BytecodeEmitter::EmitParallelTableScan(u16 table_id, LocalVar ctx,
+                                            FunctionId scan_fn) {
+  EmitAll(Bytecode::ParallelScanTable, table_id, ctx, scan_fn);
+}
+
 void BytecodeEmitter::EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar vpi,
                                  u32 col_idx) {
   EmitAll(bytecode, out, vpi, col_idx);

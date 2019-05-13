@@ -30,6 +30,7 @@ namespace tpl::ast {
   F(TableIterAdvance, tableIterAdvance)                   \
   F(TableIterGetVPI, tableIterGetVPI)                     \
   F(TableIterClose, tableIterClose)                       \
+  F(TableIterParallel, iterateTableParallel)              \
                                                           \
   /* VPI */                                               \
   F(VPIIsFiltered, vpiIsFiltered)                         \

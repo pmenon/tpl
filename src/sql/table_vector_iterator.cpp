@@ -134,7 +134,8 @@ bool TableVectorIterator::Advance() {
   return false;
 }
 
-bool TableVectorIterator::ParallelScan(const u16 table_id, ExecutionContext *ctx,
+bool TableVectorIterator::ParallelScan(const u16 table_id,
+                                       ExecutionContext *const ctx,
                                        const ScanFn scanner) {
   // Lookup table
   const Table *table = Catalog::Instance()->LookupTableById(TableId(table_id));
@@ -156,11 +157,8 @@ bool TableVectorIterator::ParallelScan(const u16 table_id, ExecutionContext *ctx
     if (!iter.Init()) {
       return;
     }
-    // Loop over all vectors
-    while (iter.Advance()) {
-      VectorProjectionIterator *vpi = iter.vector_projection_iterator();
-      scanner(ctx, vpi);
-    }
+    // Let the scan function iterate over the vectors
+    scanner(ctx, &iter);
   });
 
   timer.Stop();

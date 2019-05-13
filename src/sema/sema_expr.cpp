@@ -458,6 +458,57 @@ void Sema::CheckBuiltinTableIterCall(ast::CallExpr *call,
   }
 }
 
+void Sema::CheckBuiltinTableIterParCall(ast::CallExpr *call) {
+  if (!CheckArgCount(call, 3)) {
+    return;
+  }
+
+  const auto &call_args = call->arguments();
+
+  // First argument is table name as a string literal
+  if (!call_args[0]->IsStringLiteral()) {
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kIncorrectCallArgType,
+        call->GetFuncName(), ast::StringType::Get(context()), 0,
+        call_args[0]->type());
+    return;
+  }
+
+  // Second argument is the execution context
+  const auto exec_ctx_kind = ast::BuiltinType::ExecutionContext;
+  if (!IsPointerToSpecificBuiltin(call_args[1]->type(), exec_ctx_kind)) {
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kIncorrectCallArgType,
+        call->GetFuncName(),
+        ast::BuiltinType::Get(context(), exec_ctx_kind)->PointerTo(), 1,
+        call_args[1]->type());
+    return;
+  }
+
+  // Third argument is scanner function
+  auto *scan_fn_type = call_args[2]->type()->SafeAs<ast::FunctionType>();
+  if (scan_fn_type == nullptr) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kBadParallelScanFunction,
+                             call_args[2]->type());
+    return;
+  }
+  // Check type
+  const auto tvi_kind = ast::BuiltinType::TableVectorIterator;
+  const auto &params = scan_fn_type->params();
+  if (params.size() != 2 ||
+      !IsPointerToSpecificBuiltin(params[0].type, exec_ctx_kind) ||
+      !IsPointerToSpecificBuiltin(params[1].type, tvi_kind)) {
+    error_reporter()->Report(call->position(),
+                             ErrorMessages::kBadParallelScanFunction,
+                             call_args[2]->type());
+    return;
+  }
+
+  // Nil
+  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+}
+
 void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
@@ -882,6 +933,10 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::TableIterGetVPI:
     case ast::Builtin::TableIterClose: {
       CheckBuiltinTableIterCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::TableIterParallel: {
+      CheckBuiltinTableIterParCall(call);
       break;
     }
     case ast::Builtin::VPIIsFiltered:

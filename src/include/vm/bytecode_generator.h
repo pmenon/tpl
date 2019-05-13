@@ -53,6 +53,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   // functions, including filtering, hash table interaction, sorting etc.
   void VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
+  void VisitBuiltinTableIterParallelCall(ast::CallExpr *call);
   void VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinHashCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinFilterManagerCall(ast::CallExpr *call, ast::Builtin builtin);

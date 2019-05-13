@@ -85,7 +85,7 @@ class TableVectorIterator {
   /**
    * Scan function callback used to scan a partition of the table
    */
-  using ScanFn = void (*)(ExecutionContext *, VectorProjectionIterator *);
+  using ScanFn = void (*)(ExecutionContext *, TableVectorIterator *);
 
   /**
    * Perform a parallel scan over the table with ID @em table_id using the

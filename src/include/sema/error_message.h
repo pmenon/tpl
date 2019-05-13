@@ -97,7 +97,11 @@ namespace sema {
   F(BadHashArg, "cannot hash type '%0'", (ast::Type *))                        \
   F(MissingArrayLength,                                                        \
     "missing array length (either compile-time number or '*')", ())            \
-  F(NotASQLAggregate, "'%0' is not a SQL aggregator type", (ast::Type *))
+  F(NotASQLAggregate, "'%0' is not a SQL aggregator type", (ast::Type *))      \
+  F(BadParallelScanFunction,                                                   \
+    "parallel scan function must have type (*ExecutionContext, "               \
+    "*TableVectorIterator)->nil, received '%0'",                               \
+    (ast::Type *))
 
 /// Define the ErrorMessageId enumeration
 enum class ErrorMessageId : u16 {
