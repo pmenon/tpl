@@ -90,21 +90,13 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
     return util::MathUtil::AlignTo(required_stack_space, sizeof(intptr_t));
   }
 
-  void Prologue() {
-    push(rbx);
-  }
+  void Prologue() { push(rbx); }
 
-  void Epilogue() {
-    pop(rbx);
-  }
+  void Epilogue() { pop(rbx); }
 
-  void AllocStack(u32 size) {
-    sub(rsp, size);
-  }
+  void AllocStack(u32 size) { sub(rsp, size); }
 
-  void FreeStack(u32 size) {
-    add(rsp, size);
-  }
+  void FreeStack(u32 size) { add(rsp, size); }
 
   // This function pushes all caller arguments onto the stack. We assume that
   // there is enough stack through a previous call to AdjustStack(). There are
