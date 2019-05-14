@@ -47,6 +47,9 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
     // Compute the stack space needed for all arguments
     const u32 required_stack_space = ComputeRequiredStackSpace();
 
+    // Function prologue
+    Prologue();
+
     // Allocate space for arguments
     AllocStack(required_stack_space);
 
@@ -58,6 +61,9 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
 
     // Restore stack
     FreeStack(required_stack_space);
+
+    // Function epilogue
+    Epilogue();
 
     // Return from the trampoline, placing return values where appropriate
     Return();
@@ -84,9 +90,21 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
     return util::MathUtil::AlignTo(required_stack_space, sizeof(intptr_t));
   }
 
-  void AllocStack(u32 size) { sub(rsp, size); }
+  void Prologue() {
+    push(rbx);
+  }
 
-  void FreeStack(u32 size) { add(rsp, size); }
+  void Epilogue() {
+    pop(rbx);
+  }
+
+  void AllocStack(u32 size) {
+    sub(rsp, size);
+  }
+
+  void FreeStack(u32 size) {
+    add(rsp, size);
+  }
 
   // This function pushes all caller arguments onto the stack. We assume that
   // there is enough stack through a previous call to AdjustStack(). There are
