@@ -136,7 +136,8 @@ bool TableVectorIterator::Advance() {
 
 bool TableVectorIterator::ParallelScan(const u16 table_id,
                                        ExecutionContext *const ctx,
-                                       const ScanFn scanner) {
+                                       const ScanFn scanner,
+                                       const u32 min_block_range_size) {
   // Lookup table
   const Table *table = Catalog::Instance()->LookupTableById(TableId(table_id));
   if (table == nullptr) {
@@ -148,8 +149,8 @@ bool TableVectorIterator::ParallelScan(const u16 table_id,
   timer.Start();
 
   // Execute parallel scan
-  tbb::task_scheduler_init scan_scheduler;
-  tbb::blocked_range<std::size_t> block_range(0, table->num_blocks());
+  tbb::blocked_range<std::size_t> block_range(0, table->num_blocks(),
+                                              min_block_range_size);
   tbb::parallel_for(block_range, [table_id, ctx, scanner](const auto &range) {
     // Create the iterator
     TableVectorIterator iter(table_id, range.begin(), range.end());

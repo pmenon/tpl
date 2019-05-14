@@ -16,6 +16,8 @@ class ExecutionContext;
  */
 class TableVectorIterator {
  public:
+  static constexpr const u32 kMinBlockRangeSize = 4;
+
   /**
    * Create an iterator over the table with ID @em table_id and project in all
    * columns from the logical schema for the table.
@@ -95,8 +97,11 @@ class TableVectorIterator {
    * @param table_id The ID of the table to scan
    * @param ctx The runtime context passed into the callback function
    * @param scanner The callback function invoked for vectors of table input
+   * @param min_block_range_size The minimum number of blocks to give a
+   *                             parallel scanning thread
    */
-  static bool ParallelScan(u16 table_id, ExecutionContext *ctx, ScanFn scanner);
+  static bool ParallelScan(u16 table_id, ExecutionContext *ctx, ScanFn scanner,
+                           u32 min_block_range_size = kMinBlockRangeSize);
 
  private:
   // When the column iterators receive new vectors of input, we need to

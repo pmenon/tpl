@@ -37,16 +37,21 @@ class Agent {
    */
   u32 GetCurrentOptimalAction() const;
 
-  // -------------------------------------------------------
-  // Simple accessors
-  // -------------------------------------------------------
-
+  /**
+   * Return estimations of the value of each flavor/action
+   */
   const std::vector<double> &value_estimates() const {
     return value_estimates_;
   }
 
+  /**
+   * Return counts of the number of times each flavor/action was tried
+   */
   const std::vector<u32> &action_attempts() const { return action_attempts_; }
 
+  /**
+   * Return the current time step
+   */
   u32 time_step() const { return time_step_; }
 
  private:

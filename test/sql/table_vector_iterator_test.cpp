@@ -8,6 +8,8 @@
 #include "sql/table_vector_iterator.h"
 #include "util/timer.h"
 
+#include "sql/filter_manager.h"
+
 namespace tpl::sql::test {
 
 class TableVectorIteratorTest : public SqlBasedTest {};
@@ -76,9 +78,11 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
     u32 c;
   };
 
-  auto scanner = [](ExecutionContext *ctx, VectorProjectionIterator *vpi) {
+  auto scanner = [](ExecutionContext *ctx, TableVectorIterator *tvi) {
     auto *counter = ctx->GetThreadLocalStateAs<Counter>();
-    counter->c++;
+    while (tvi->Advance()) {
+      counter->c++;
+    }
   };
 
   // Setup thread states
