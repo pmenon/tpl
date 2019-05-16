@@ -86,8 +86,8 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
           util::MathUtil::AlignTo(return_type->size(), sizeof(intptr_t));
     }
 
-    // Always align
-    return util::MathUtil::AlignTo(required_stack_space, sizeof(intptr_t));
+    // Always align to cacheline boundary
+    return util::MathUtil::AlignTo(required_stack_space, CACHELINE_SIZE);
   }
 
   void Prologue() { push(rbx); }
