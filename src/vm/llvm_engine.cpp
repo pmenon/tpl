@@ -887,7 +887,7 @@ void LLVMEngine::CompiledModuleBuilder::Verify() {
   llvm::raw_string_ostream ostream(result);
   if (bool has_error = llvm::verifyModule(*module(), &ostream); has_error) {
     // TODO(pmenon): Do something more here ...
-    LOG_ERROR("ERROR IN MODULE:\n{}", result);
+    LOG_ERROR("ERROR IN MODULE:\n{}", ostream.str());
   }
 }
 
