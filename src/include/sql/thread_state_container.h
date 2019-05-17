@@ -84,6 +84,29 @@ class ThreadStateContainer {
   void CollectThreadLocalStateElements(std::vector<byte *> &container,
                                        u32 element_offset);
 
+  /**
+   * Collect an element at offset @em element_offset from all thread-local
+   * states, interpret them as @em T, and store pointers in the output
+   * container.
+   * NOTE: This is a little inefficient because it will perform two copies: one
+   *       into a temporary vector, and a final copy into the output container.
+   *       Don't use in performance-critical code.
+   * @tparam T The compile-time type to interpret the state element as
+   * @param[out] container The output container to store the results.
+   * @param element_offset The offset of the element in the thread-local state
+   */
+  template <typename T>
+  void CollectThreadLocalStateElementsAs(std::vector<T *> &container,
+                                         u32 element_offset) {
+    std::vector<byte *> tmp;
+    CollectThreadLocalStates(tmp);
+    container.clear();
+    container.resize(tmp.size());
+    for (u32 idx = 0; idx < tmp.size(); idx++) {
+      container[idx] = reinterpret_cast<T *>(tmp[idx]);
+    }
+  }
+
  private:
   // Memory allocator
   util::Region *memory_;

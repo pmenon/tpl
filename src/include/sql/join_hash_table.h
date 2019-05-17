@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "sql/bloom_filter.h"
 #include "sql/concise_hash_table.h"
 #include "sql/generic_hash_table.h"
@@ -231,6 +233,10 @@ class JoinHashTable {
   void LookupBatchInConciseHashTableInternal(
       u32 num_tuples, const hash_t hashes[],
       const HashTableEntry *results[]) const;
+
+  // Merge the source hash table (which isn't built yet) into this one
+  template <bool Prefetch>
+  void MergeIncompleteMT(JoinHashTable *source);
 
  private:
   // The vector where we store the build-side input

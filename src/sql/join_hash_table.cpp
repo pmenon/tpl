@@ -2,19 +2,19 @@
 
 #include <algorithm>
 #include <limits>
+#include <vector>
 
-#include "tbb/tbb.h"
+// TBB
+#include <tbb/tbb.h>   // NOLINT
 
-#include "count/hll.h"
+// Libcount
+#include <count/hll.h> // NOLINT
 
 #include "logging/logger.h"
 #include "sql/thread_state_container.h"
 #include "util/cpu_info.h"
 #include "util/memory.h"
 #include "util/timer.h"
-
-// TODO(pmenon): Use HLL++ to better estimate size of CHT and GHT
-// TODO(pmenon): Use tagged insertions/probes if no bloom filter exists in GHT
 
 namespace tpl::sql {
 
@@ -666,12 +666,57 @@ void JoinHashTable::LookupBatch(u32 num_tuples, const hash_t hashes[],
   }
 }
 
+template <bool Prefetch>
+void JoinHashTable::MergeIncompleteMT(JoinHashTable *source) {
+  // When performing a parallel merge, always build a generic hash table
+  // TODO(pmenon): Support parallel build of concise tables
+
+  // First, merge entries in the source table into ours in parallel
+  const auto &entries = source->entries_;
+  for (u64 idx = 0, prefetch_idx = kPrefetchDistance; idx < entries.size();
+       idx++, prefetch_idx++) {
+    if constexpr (Prefetch) {
+      if (TPL_LIKELY(prefetch_idx < entries.size())) {
+        auto *prefetch_entry = EntryAt(prefetch_idx);
+        generic_hash_table_.PrefetchChainHead<false>(prefetch_entry->hash);
+      }
+    }
+
+    HashTableEntry *entry = EntryAt(idx);
+    generic_hash_table_.Insert<true>(entry, entry->hash);
+  }
+
+  // Next, take ownership of source table's memory
+}
+
 void JoinHashTable::MergeAllParallel(
     ThreadStateContainer *thread_state_container, u32 hash_table_offset) {
-  std::vector<byte *> tl_hash_tables;
-  thread_state_container->CollectThreadLocalStateElements(tl_hash_tables,
-                                                          hash_table_offset);
+  // Collect thread-local hash tables
+  std::vector<JoinHashTable *> tl_hash_tables;
+  thread_state_container->CollectThreadLocalStateElementsAs<JoinHashTable>(
+      tl_hash_tables, hash_table_offset);
 
+  // Combine HLL counts to get a global estimate
+  for (auto *jht : tl_hash_tables) {
+    hll_estimator_->Merge(jht->hll_estimator_.get());
+  }
+
+  u64 num_elem_estimate = hll_estimator_->Estimate();
+  LOG_INFO("Global unique count: {}", num_elem_estimate);
+
+  // Set size
+  generic_hash_table_.SetSize(num_elem_estimate);
+
+  // Merge all in parallel
+  tbb::blocked_range<u32> jht_range(0, tl_hash_tables.size(), 1);
+  tbb::parallel_for(jht_range, [this, &tl_hash_tables](const auto &range) {
+    u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
+    if (generic_hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
+      MergeIncompleteMT<true>(tl_hash_tables[range.begin()]);
+    } else {
+      MergeIncompleteMT<false>(tl_hash_tables[range.begin()]);
+    }
+  });
 }
 
 }  // namespace tpl::sql
