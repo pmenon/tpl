@@ -81,4 +81,13 @@ void ThreadStateContainer::CollectThreadLocalStates(
   }
 }
 
+void ThreadStateContainer::CollectThreadLocalStateElements(
+    std::vector<byte *> &container, const u32 element_offset) {
+  container.clear();
+  container.reserve(impl_->states_.size());
+  for (auto &tls_handle : impl_->states_) {
+    container.push_back(tls_handle->state() + element_offset);
+  }
+}
+
 }  // namespace tpl::sql

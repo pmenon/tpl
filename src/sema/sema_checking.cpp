@@ -34,7 +34,7 @@ bool Sema::CheckArgCountAtLeast(ast::CallExpr *call, u32 expected_arg_count) {
   return true;
 }
 
-// and, or
+// Logical ops: and, or
 Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
                                              const SourcePosition &pos,
                                              ast::Expr *left,
@@ -68,7 +68,7 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op,
   return {nullptr, left, right};
 }
 
-// Check arithmetic operations: +, -, *, etc.
+// Arithmetic ops: +, -, *, etc.
 Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
                                                 const SourcePosition &pos,
                                                 ast::Expr *left,
@@ -104,6 +104,7 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
   return {sql_int_type, left, right};
 }
 
+// Comparisons: <, <=, >, >=, ==, !=
 Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op,
                                                 const SourcePosition &pos,
                                                 ast::Expr *left,

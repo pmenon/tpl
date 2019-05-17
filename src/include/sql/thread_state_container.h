@@ -70,10 +70,19 @@ class ThreadStateContainer {
 
   /**
    * Collect all thread-local states and store pointers in the output container
-   * @em container
+   * @em container.
    * @param container The output container to store the results.
    */
   void CollectThreadLocalStates(std::vector<byte *> &container);
+
+  /**
+   * Collect an element at offset @em element_offset from all thread-local
+   * states in this container and store pointers in the output container.
+   * @param[out] container The output container to store the results.
+   * @param element_offset The offset of the element in the thread-local state
+   */
+  void CollectThreadLocalStateElements(std::vector<byte *> &container,
+                                       u32 element_offset);
 
  private:
   // Memory allocator

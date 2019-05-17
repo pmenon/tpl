@@ -6,11 +6,17 @@
 #include "util/chunked_vector.h"
 #include "util/region.h"
 
+namespace libcount {
+class HLL;
+}  // namespace libcount
+
 namespace tpl::sql::test {
 class JoinHashTableTest;
 }  // namespace tpl::sql::test
 
 namespace tpl::sql {
+
+class ThreadStateContainer;
 
 /**
  * The main join hash table. Join hash tables are bulk-loaded through calls to
@@ -19,6 +25,8 @@ namespace tpl::sql {
  */
 class JoinHashTable {
  public:
+  static constexpr u32 kDefaultHLLPrecision = 10;
+
   /**
    * Construct a join hash table. All memory allocations are sourced from the
    * injected @em region, and thus, are ephemeral.
@@ -33,6 +41,11 @@ class JoinHashTable {
    * This class cannot be copied or moved
    */
   DISALLOW_COPY_AND_MOVE(JoinHashTable);
+
+  /**
+   * Destructor
+   */
+  ~JoinHashTable();
 
   /**
    * Allocate storage in the hash table for an input tuple whose hash value is
@@ -73,6 +86,19 @@ class JoinHashTable {
    */
   void LookupBatch(u32 num_tuples, const hash_t hashes[],
                    const HashTableEntry *results[]) const;
+
+  /**
+   * Merge all thread-local hash tables stored in the state contained into this
+   * table. Perform the merge in parallel.
+   * @param thread_state_container The container for all thread-local tables
+   * @param hash_table_offset The offset in the state where the hash table is
+   */
+  void MergeAllParallel(ThreadStateContainer *thread_state_container,
+                        u32 hash_table_offset);
+
+  // -------------------------------------------------------
+  // Accessors
+  // -------------------------------------------------------
 
   /**
    * Return the amount of memory the buffered tuples occupy
@@ -218,6 +244,9 @@ class JoinHashTable {
 
   // The bloom filter
   BloomFilter bloom_filter_;
+
+  // Estimator of unique elements
+  std::unique_ptr<libcount::HLL> hll_estimator_;
 
   // Has the hash table been built?
   bool built_;

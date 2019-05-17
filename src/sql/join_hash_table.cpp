@@ -3,7 +3,12 @@
 #include <algorithm>
 #include <limits>
 
+#include "tbb/tbb.h"
+
+#include "count/hll.h"
+
 #include "logging/logger.h"
+#include "sql/thread_state_container.h"
 #include "util/cpu_info.h"
 #include "util/memory.h"
 #include "util/timer.h"
@@ -17,10 +22,18 @@ JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size,
                              bool use_concise_ht) noexcept
     : entries_(region, sizeof(HashTableEntry) + tuple_size),
       concise_hash_table_(0),
+      hll_estimator_(libcount::HLL::Create(kDefaultHLLPrecision)),
       built_(false),
       use_concise_ht_(use_concise_ht) {}
 
+// Needed because we forward-declared HLL from libcount
+JoinHashTable::~JoinHashTable() = default;
+
 byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
+  // Add to unique_count estimation
+  hll_estimator_->Update(hash);
+
+  // Allocate space for a new tuple
   auto *entry = reinterpret_cast<HashTableEntry *>(entries_.append());
   entry->hash = hash;
   entry->next = nullptr;
@@ -564,6 +577,8 @@ void JoinHashTable::Build() {
     return;
   }
 
+  LOG_DEBUG("Unique estimate: {}", hll_estimator_->Estimate());
+
   util::Timer<> timer;
   timer.Start();
 
@@ -649,6 +664,14 @@ void JoinHashTable::LookupBatch(u32 num_tuples, const hash_t hashes[],
   } else {
     LookupBatchInGenericHashTable(num_tuples, hashes, results);
   }
+}
+
+void JoinHashTable::MergeAllParallel(
+    ThreadStateContainer *thread_state_container, u32 hash_table_offset) {
+  std::vector<byte *> tl_hash_tables;
+  thread_state_container->CollectThreadLocalStateElements(tl_hash_tables,
+                                                          hash_table_offset);
+
 }
 
 }  // namespace tpl::sql

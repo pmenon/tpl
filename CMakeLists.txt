@@ -6,6 +6,9 @@ project(tpl)
 set(TPL_VERSION_MAJOR 0)
 set(TPL_VERSION_MINOR 1)
 
+# For external projects
+include(ExternalProject)
+
 # Let CMake know where all the modules are (i.e., in ./cmake)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
