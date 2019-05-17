@@ -5,10 +5,10 @@
 #include <vector>
 
 // TBB
-#include <tbb/tbb.h>   // NOLINT
+#include <tbb/tbb.h>  // NOLINT
 
 // Libcount
-#include <count/hll.h> // NOLINT
+#include <count/hll.h>  // NOLINT
 
 #include "logging/logger.h"
 #include "sql/thread_state_container.h"
@@ -707,14 +707,19 @@ void JoinHashTable::MergeAllParallel(
   // Set size
   generic_hash_table_.SetSize(num_elem_estimate);
 
+  // Is the global hash table out of cache? If so, we'll prefetch during build.
+  const u64 l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
+  const bool out_of_cache =
+      (generic_hash_table_.GetTotalMemoryUsage() > l3_size);
+
   // Merge all in parallel
   tbb::blocked_range<u32> jht_range(0, tl_hash_tables.size(), 1);
-  tbb::parallel_for(jht_range, [this, &tl_hash_tables](const auto &range) {
-    u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
-    if (generic_hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
-      MergeIncompleteMT<true>(tl_hash_tables[range.begin()]);
+  tbb::parallel_for(jht_range, [&](const auto &range) {
+    JoinHashTable *source = tl_hash_tables[range.begin()];
+    if (out_of_cache) {
+      MergeIncompleteMT<true>(source);
     } else {
-      MergeIncompleteMT<false>(tl_hash_tables[range.begin()]);
+      MergeIncompleteMT<false>(source);
     }
   });
 }
