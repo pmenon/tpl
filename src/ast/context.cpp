@@ -22,6 +22,7 @@
 #include "sql/join_hash_table.h"
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
+#include "sql/thread_state_container.h"
 #include "sql/value.h"
 #include "util/common.h"
 #include "util/math_util.h"

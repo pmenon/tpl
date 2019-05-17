@@ -285,14 +285,23 @@ void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1,
           operand_6, operand_7, operand_8);
 }
 
+void BytecodeEmitter::EmitThreadStateContainerReset(LocalVar tls,
+                                                    LocalVar state_size,
+                                                    FunctionId init_fn,
+                                                    FunctionId destroy_fn) {
+  EmitAll(Bytecode::ThreadStateContainerReset, tls, state_size, init_fn,
+          destroy_fn);
+}
+
 void BytecodeEmitter::EmitTableIterInit(Bytecode bytecode, LocalVar iter,
                                         u16 table_id) {
   EmitAll(bytecode, iter, table_id);
 }
 
 void BytecodeEmitter::EmitParallelTableScan(u16 table_id, LocalVar ctx,
+                                            LocalVar thread_states,
                                             FunctionId scan_fn) {
-  EmitAll(Bytecode::ParallelScanTable, table_id, ctx, scan_fn);
+  EmitAll(Bytecode::ParallelScanTable, table_id, ctx, thread_states, scan_fn);
 }
 
 void BytecodeEmitter::EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar vpi,

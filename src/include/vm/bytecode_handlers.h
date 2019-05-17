@@ -11,6 +11,7 @@
 #include "sql/join_hash_table.h"
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
+#include "sql/thread_state_container.h"
 #include "sql/value_functions.h"
 #include "util/hash.h"
 #include "util/macros.h"
@@ -202,15 +203,19 @@ VM_OP_HOT void OpReturn() {}
 // Execution Context
 // ---------------------------------------------------------
 
-VM_OP_HOT void OpGetThreadLocalState(byte **state_ptr,
-                                     tpl::sql::ExecutionContext *const ctx) {
-  *state_ptr = ctx->GetThreadLocalState();
+void OpThreadStateContainerInit(
+    tpl::sql::ThreadStateContainer *thread_state_container,
+    tpl::util::Region *region);
+
+VM_OP_HOT void OpThreadStateContainerReset(
+    tpl::sql::ThreadStateContainer *const thread_state_container,
+    const u32 size, tpl::sql::ThreadStateContainer::InitFn init_fn,
+    tpl::sql::ThreadStateContainer::DestroyFn destroy_fn) {
+  thread_state_container->Reset(size, init_fn, destroy_fn);
 }
 
-VM_OP_HOT void OpResetThreadLocalState(tpl::sql::ExecutionContext *const ctx,
-                                       const u32 size) {
-  ctx->ResetThreadLocalState(size);
-}
+void OpThreadStateContainerFree(
+    tpl::sql::ThreadStateContainer *thread_state_container);
 
 // ---------------------------------------------------------
 // Table Vector Iterator
@@ -236,8 +241,10 @@ VM_OP_HOT void OpTableVectorIteratorGetVPI(
 
 VM_OP_HOT void OpParallelScanTable(
     const u16 table_id, tpl::sql::ExecutionContext *const ctx,
+    tpl::sql::ThreadStateContainer *const thread_state_container,
     const tpl::sql::TableVectorIterator::ScanFn scanner) {
-  tpl::sql::TableVectorIterator::ParallelScan(table_id, ctx, scanner);
+  tpl::sql::TableVectorIterator::ParallelScan(table_id, ctx,
+                                              thread_state_container, scanner);
 }
 
 VM_OP_HOT void OpVPIIsFiltered(bool *is_filtered,

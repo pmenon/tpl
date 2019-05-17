@@ -9,6 +9,7 @@
 
 #include "logging/logger.h"
 #include "sql/catalog.h"
+#include "sql/thread_state_container.h"
 #include "util/timer.h"
 
 namespace tpl::sql {
@@ -134,10 +135,48 @@ bool TableVectorIterator::Advance() {
   return false;
 }
 
-bool TableVectorIterator::ParallelScan(const u16 table_id,
-                                       ExecutionContext *const ctx,
-                                       const ScanFn scanner,
-                                       const u32 min_block_range_size) {
+namespace {
+
+class ScanTask {
+ public:
+  ScanTask(u16 table_id, ExecutionContext *const exec_ctx,
+           ThreadStateContainer *const thread_state_container,
+           TableVectorIterator::ScanFn scanner)
+      : table_id_(table_id),
+        exec_ctx_(exec_ctx),
+        thread_state_container_(thread_state_container),
+        scanner_(scanner) {}
+
+  void operator()(const tbb::blocked_range<u32> &block_range) const {
+    // Create the iterator over the specified block range
+    TableVectorIterator iter(table_id_, block_range.begin(), block_range.end());
+
+    // Initialize it
+    if (!iter.Init()) {
+      return;
+    }
+
+    // Pull out the thread-local state
+    byte *const thread_state =
+        thread_state_container_->AccessThreadStateOfCurrentThread();
+
+    // Call scanning function
+    scanner_(exec_ctx_, thread_state, &iter);
+  }
+
+ private:
+  u16 table_id_;
+  ExecutionContext *const exec_ctx_;
+  ThreadStateContainer *const thread_state_container_;
+  TableVectorIterator::ScanFn scanner_;
+};
+
+}  // namespace
+
+bool TableVectorIterator::ParallelScan(
+    const u16 table_id, ExecutionContext *const exec_ctx,
+    ThreadStateContainer *const thread_state_container, const ScanFn scanner,
+    const u32 min_grain_size) {
   // Lookup table
   const Table *table = Catalog::Instance()->LookupTableById(TableId(table_id));
   if (table == nullptr) {
@@ -149,18 +188,10 @@ bool TableVectorIterator::ParallelScan(const u16 table_id,
   timer.Start();
 
   // Execute parallel scan
-  tbb::blocked_range<std::size_t> block_range(0, table->num_blocks(),
-                                              min_block_range_size);
-  tbb::parallel_for(block_range, [table_id, ctx, scanner](const auto &range) {
-    // Create the iterator
-    TableVectorIterator iter(table_id, range.begin(), range.end());
-    // Initialize it
-    if (!iter.Init()) {
-      return;
-    }
-    // Let the scan function iterate over the vectors
-    scanner(ctx, &iter);
-  });
+  tbb::task_scheduler_init scan_scheduler(1);
+  tbb::blocked_range<u32> block_range(0, table->num_blocks(), min_grain_size);
+  tbb::parallel_for(block_range, ScanTask(table_id, exec_ctx,
+                                          thread_state_container, scanner));
 
   timer.Stop();
   double tps = table->num_tuples() / timer.elapsed();

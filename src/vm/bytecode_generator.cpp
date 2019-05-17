@@ -536,12 +536,17 @@ void BytecodeGenerator::VisitBuiltinTableIterParallelCall(ast::CallExpr *call) {
   // Next is the execution context
   LocalVar exec_ctx = VisitExpressionForRValue(call->arguments()[1]);
 
+  // Next is the thread state container
+  LocalVar thread_state_container =
+      VisitExpressionForRValue(call->arguments()[2]);
+
   // Finally the scan function as an identifier
   const auto scan_fn_name =
-      call->arguments()[2]->As<ast::IdentifierExpr>()->name();
+      call->arguments()[3]->As<ast::IdentifierExpr>()->name();
 
   // Done
   emitter()->EmitParallelTableScan(table->id(), exec_ctx,
+                                   thread_state_container,
                                    LookupFuncIdByName(scan_fn_name.data()));
 }
 
@@ -1008,6 +1013,33 @@ void BytecodeGenerator::VisitBuiltinRegionCall(ast::CallExpr *call,
   emitter()->Emit(region_op, region);
 }
 
+void BytecodeGenerator::VisitBuiltinThreadStateContainerCall(
+    ast::CallExpr *call, ast::Builtin builtin) {
+  LocalVar tls = VisitExpressionForRValue(call->arguments()[0]);
+  switch (builtin) {
+    case ast::Builtin::ThreadStateContainerInit: {
+      LocalVar region = VisitExpressionForRValue(call->arguments()[1]);
+      emitter()->Emit(Bytecode::ThreadStateContainerInit, tls, region);
+      break;
+    }
+    case ast::Builtin::ThreadStateContainerReset: {
+      LocalVar entry_size = VisitExpressionForRValue(call->arguments()[1]);
+      FunctionId init_fn = LookupFuncIdByName(
+          call->arguments()[2]->As<ast::IdentifierExpr>()->name().data());
+      FunctionId destroy_fn = LookupFuncIdByName(
+          call->arguments()[3]->As<ast::IdentifierExpr>()->name().data());
+      emitter()->EmitThreadStateContainerReset(tls, entry_size, init_fn,
+                                               destroy_fn);
+      break;
+    }
+    case ast::Builtin::ThreadStateContainerFree: {
+      emitter()->Emit(Bytecode::ThreadStateContainerFree, tls);
+      break;
+    }
+    default: { UNREACHABLE("Impossible thread state container call"); }
+  }
+}
+
 void BytecodeGenerator::VisitBuiltinTrigCall(ast::CallExpr *call,
                                              ast::Builtin builtin) {
   ast::Context *ctx = call->type()->context();
@@ -1087,6 +1119,12 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::RegionInit:
     case ast::Builtin::RegionFree: {
       VisitBuiltinRegionCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::ThreadStateContainerInit:
+    case ast::Builtin::ThreadStateContainerReset:
+    case ast::Builtin::ThreadStateContainerFree: {
+      VisitBuiltinThreadStateContainerCall(call, builtin);
       break;
     }
     case ast::Builtin::TableIterInit:

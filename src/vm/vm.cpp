@@ -442,19 +442,34 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // Execution Context
   // -------------------------------------------------------
 
-  OP(GetThreadLocalState) : {
-    auto *state_ptr = frame->LocalAt<byte **>(READ_LOCAL_ID());
-    auto *execution_ctx =
-        frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
-    OpGetThreadLocalState(state_ptr, execution_ctx);
+  OP(ThreadStateContainerInit) : {
+    auto *thread_state_container =
+        frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
+    auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
+    OpThreadStateContainerInit(thread_state_container, region);
     DISPATCH_NEXT();
   }
 
-  OP(ResetThreadLocalState) : {
-    auto *execution_ctx =
-        frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
-    auto size = READ_UIMM4();
-    OpResetThreadLocalState(execution_ctx, size);
+  OP(ThreadStateContainerReset) : {
+    auto *thread_state_container =
+        frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
+    auto size = frame->LocalAt<u32>(READ_LOCAL_ID());
+    auto init_fn_id = READ_FUNC_ID();
+    auto destroy_fn_id = READ_FUNC_ID();
+
+    auto init_fn = reinterpret_cast<sql::ThreadStateContainer::InitFn>(
+        module().GetFuncTrampoline(init_fn_id));
+    auto destroy_fn = reinterpret_cast<sql::ThreadStateContainer::DestroyFn>(
+        module().GetFuncTrampoline(destroy_fn_id));
+    OpThreadStateContainerReset(thread_state_container, size, init_fn,
+                                destroy_fn);
+    DISPATCH_NEXT();
+  }
+
+  OP(ThreadStateContainerFree) : {
+    auto *thread_state_container =
+        frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
+    OpThreadStateContainerFree(thread_state_container);
     DISPATCH_NEXT();
   }
 
@@ -499,11 +514,13 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(ParallelScanTable) : {
     auto table_id = READ_UIMM2();
     auto exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+    auto thread_state_container =
+        frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
     auto scan_fn_id = READ_FUNC_ID();
 
     auto scan_fn = reinterpret_cast<sql::TableVectorIterator::ScanFn>(
         module().GetFuncTrampoline(scan_fn_id));
-    OpParallelScanTable(table_id, exec_ctx, scan_fn);
+    OpParallelScanTable(table_id, exec_ctx, thread_state_container, scan_fn);
     DISPATCH_NEXT();
   }
 

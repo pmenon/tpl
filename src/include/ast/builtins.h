@@ -25,6 +25,11 @@ namespace tpl::ast {
   F(RegionInit, regionInit)                               \
   F(RegionFree, regionFree)                               \
                                                           \
+  /* Thread State Container */                            \
+  F(ThreadStateContainerInit, tlsInit)                    \
+  F(ThreadStateContainerReset, tlsReset)                  \
+  F(ThreadStateContainerFree, tlsFree)                    \
+                                                          \
   /* Table scans */                                       \
   F(TableIterInit, tableIterInit)                         \
   F(TableIterAdvance, tableIterAdvance)                   \

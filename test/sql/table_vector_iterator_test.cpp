@@ -6,6 +6,7 @@
 #include "sql/catalog.h"
 #include "sql/execution_context.h"
 #include "sql/table_vector_iterator.h"
+#include "sql/thread_state_container.h"
 #include "util/timer.h"
 
 #include "sql/filter_manager.h"
@@ -78,8 +79,10 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
     u32 c;
   };
 
-  auto scanner = [](ExecutionContext *ctx, TableVectorIterator *tvi) {
-    auto *counter = ctx->GetThreadLocalStateAs<Counter>();
+  auto init_count = [](void *tls) { reinterpret_cast<Counter *>(tls)->c = 0; };
+  auto scanner = [](ExecutionContext *ctx, void *tls,
+                    TableVectorIterator *tvi) {
+    auto *counter = reinterpret_cast<Counter *>(tls);
     while (tvi->Advance()) {
       counter->c++;
     }
@@ -88,18 +91,19 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
   // Setup thread states
   util::Region tmp("exec");
   ExecutionContext ctx(&tmp, 0);
-  ctx.ResetThreadLocalState(sizeof(Counter));
+  ThreadStateContainer thread_state_container(&tmp);
+  thread_state_container.Reset(sizeof(Counter), init_count, nullptr);
 
   // Scan
   TableVectorIterator::ParallelScan(TableIdToNum(TableId::Test1), &ctx,
-                                    scanner);
+                                    &thread_state_container, scanner);
 
   // Combine counters
   std::vector<byte *> counters;
-  ctx.CollectThreadLocalStates(counters);
+  thread_state_container.CollectThreadLocalStates(counters);
 
   for (auto *counter : counters) {
-    LOG_INFO("Count: {}", reinterpret_cast<Counter*>(counter)->c);
+    LOG_INFO("Count: {}", reinterpret_cast<Counter *>(counter)->c);
   }
 }
 

@@ -15,6 +15,21 @@ void OpRegionInit(tpl::util::Region *region) {
 void OpRegionFree(tpl::util::Region *region) { region->~Region(); }
 
 // ---------------------------------------------------------
+// Thread State Container
+// ---------------------------------------------------------
+
+void OpThreadStateContainerInit(
+    tpl::sql::ThreadStateContainer *const thread_state_container,
+    tpl::util::Region *const region) {
+  new (thread_state_container) tpl::sql::ThreadStateContainer(region);
+}
+
+void OpThreadStateContainerFree(
+    tpl::sql::ThreadStateContainer *const thread_state_container) {
+  thread_state_container->~ThreadStateContainer();
+}
+
+// ---------------------------------------------------------
 // Table Vector Iterator
 // ---------------------------------------------------------
 

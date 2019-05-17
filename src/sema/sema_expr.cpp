@@ -411,6 +411,64 @@ void Sema::CheckBuiltinRegionCall(ast::CallExpr *call) {
   call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
 }
 
+void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call,
+                                                ast::Builtin builtin) {
+  if (!CheckArgCountAtLeast(call, 1)) {
+    return;
+  }
+
+  const auto &call_args = call->arguments();
+
+  // First argument must be thread state container pointer
+  auto tls_kind = ast::BuiltinType::ThreadStateContainer;
+  if (!IsPointerToSpecificBuiltin(call_args[0]->type(), tls_kind)) {
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kIncorrectCallArgType,
+        call->GetFuncName(),
+        ast::BuiltinType::Get(context(), tls_kind)->PointerTo(), 0,
+        call_args[0]->type());
+    return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::ThreadStateContainerInit:
+    case ast::Builtin::ThreadStateContainerFree: {
+      break;
+    }
+    case ast::Builtin::ThreadStateContainerReset: {
+      if (!CheckArgCount(call, 4)) {
+        return;
+      }
+      // Second argument must be an integer size of the state
+      if (!call_args[1]->type()->IsIntegerType()) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kIncorrectCallArgType,
+            call->GetFuncName(),
+            ast::BuiltinType::Get(context(), ast::BuiltinType::Uint32), 1,
+            call_args[1]->type());
+        return;
+      }
+      // Third and fourth arguments must be functions
+      // TODO(pmenon): More thorough check
+      if (!call_args[2]->type()->IsFunctionType() ||
+          !call_args[3]->type()->IsFunctionType()) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kIncorrectCallArgType,
+            call->GetFuncName(),
+            ast::BuiltinType::Get(context(), ast::BuiltinType::Uint32), 2,
+            call_args[2]->type());
+        return;
+      }
+
+      break;
+    }
+    default: { UNREACHABLE("Impossible table iteration call"); }
+  }
+
+  // This call returns nothing
+  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+}
+
 void Sema::CheckBuiltinTableIterCall(ast::CallExpr *call,
                                      ast::Builtin builtin) {
   const auto &call_args = call->arguments();
@@ -459,7 +517,7 @@ void Sema::CheckBuiltinTableIterCall(ast::CallExpr *call,
 }
 
 void Sema::CheckBuiltinTableIterParCall(ast::CallExpr *call) {
-  if (!CheckArgCount(call, 3)) {
+  if (!CheckArgCount(call, 4)) {
     return;
   }
 
@@ -485,23 +543,35 @@ void Sema::CheckBuiltinTableIterParCall(ast::CallExpr *call) {
     return;
   }
 
+  // Third argument is the thread state container
+  const auto tls_container_kind = ast::BuiltinType::ThreadStateContainer;
+  if (!IsPointerToSpecificBuiltin(call_args[2]->type(), tls_container_kind)) {
+    error_reporter()->Report(
+        call->position(), ErrorMessages::kIncorrectCallArgType,
+        call->GetFuncName(),
+        ast::BuiltinType::Get(context(), tls_container_kind)->PointerTo(), 2,
+        call_args[2]->type());
+    return;
+  }
+
   // Third argument is scanner function
-  auto *scan_fn_type = call_args[2]->type()->SafeAs<ast::FunctionType>();
+  auto *scan_fn_type = call_args[3]->type()->SafeAs<ast::FunctionType>();
   if (scan_fn_type == nullptr) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadParallelScanFunction,
-                             call_args[2]->type());
+                             call_args[3]->type());
     return;
   }
   // Check type
   const auto tvi_kind = ast::BuiltinType::TableVectorIterator;
   const auto &params = scan_fn_type->params();
-  if (params.size() != 2 ||
+  if (params.size() != 3 ||
       !IsPointerToSpecificBuiltin(params[0].type, exec_ctx_kind) ||
-      !IsPointerToSpecificBuiltin(params[1].type, tvi_kind)) {
+      !params[1].type->IsPointerType() ||
+      !IsPointerToSpecificBuiltin(params[2].type, tvi_kind)) {
     error_reporter()->Report(call->position(),
                              ErrorMessages::kBadParallelScanFunction,
-                             call_args[2]->type());
+                             call_args[3]->type());
     return;
   }
 
@@ -928,6 +998,12 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckBuiltinRegionCall(call);
       break;
     }
+    case ast::Builtin::ThreadStateContainerInit:
+    case ast::Builtin::ThreadStateContainerReset:
+    case ast::Builtin::ThreadStateContainerFree: {
+      CheckBuiltinThreadStateContainerCall(call, builtin);
+      break;
+    }
     case ast::Builtin::TableIterInit:
     case ast::Builtin::TableIterAdvance:
     case ast::Builtin::TableIterGetVPI:
@@ -1028,10 +1104,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckBuiltinSizeOfCall(call);
       break;
     }
-    default: {
-      // No-op
-      break;
-    }
+    default: { UNREACHABLE("Unhandled builtin!"); }
   }
 }
 

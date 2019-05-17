@@ -10,6 +10,7 @@
 namespace tpl::sql {
 
 class ExecutionContext;
+class ThreadStateContainer;
 
 /**
  * An iterator over a table's data in vector-wise fashion
@@ -87,7 +88,8 @@ class TableVectorIterator {
   /**
    * Scan function callback used to scan a partition of the table
    */
-  using ScanFn = void (*)(ExecutionContext *, TableVectorIterator *);
+  using ScanFn = void (*)(ExecutionContext *, void *,
+                          TableVectorIterator *iter);
 
   /**
    * Perform a parallel scan over the table with ID @em table_id using the
@@ -95,13 +97,14 @@ class TableVectorIterator {
    * source table. This call is blocking, meaning that it only returns after
    * the whole table has been scanned. Iteration order is non-deterministic.
    * @param table_id The ID of the table to scan
-   * @param ctx The runtime context passed into the callback function
+   * @param exec_ctx The runtime context passed into the callback function
    * @param scanner The callback function invoked for vectors of table input
-   * @param min_block_range_size The minimum number of blocks to give a
-   *                             parallel scanning thread
+   * @param min_grain_size The minimum number of blocks to give a scan task
    */
-  static bool ParallelScan(u16 table_id, ExecutionContext *ctx, ScanFn scanner,
-                           u32 min_block_range_size = kMinBlockRangeSize);
+  static bool ParallelScan(u16 table_id, ExecutionContext *exec_ctx,
+                           ThreadStateContainer *thread_state_container,
+                           ScanFn scanner,
+                           u32 min_grain_size = kMinBlockRangeSize);
 
  private:
   // When the column iterators receive new vectors of input, we need to

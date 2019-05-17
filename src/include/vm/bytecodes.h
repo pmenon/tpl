@@ -88,9 +88,11 @@ namespace tpl::vm {
   F(Call, OperandType::FunctionId, OperandType::LocalCount)                                                            \
   F(Return)                                                                                                            \
                                                                                                                        \
-  /* Execution Context */                                                                                              \
-  F(GetThreadLocalState, OperandType::Local, OperandType::Local)                                                       \
-  F(ResetThreadLocalState, OperandType::Local, OperandType::UImm4)                                                     \
+  /* Thread State Container */                                                                                         \
+  F(ThreadStateContainerInit, OperandType::Local, OperandType::Local)                                                  \
+  F(ThreadStateContainerReset, OperandType::Local, OperandType::Local, OperandType::FunctionId,                        \
+      OperandType::FunctionId)                                                                                         \
+  F(ThreadStateContainerFree, OperandType::Local)                                                                      \
                                                                                                                        \
   /* Table Vector Iterator */                                                                                          \
   F(TableVectorIteratorInit, OperandType::Local, OperandType::UImm2)                                                   \
@@ -98,7 +100,7 @@ namespace tpl::vm {
   F(TableVectorIteratorNext, OperandType::Local, OperandType::Local)                                                   \
   F(TableVectorIteratorFree, OperandType::Local)                                                                       \
   F(TableVectorIteratorGetVPI, OperandType::Local, OperandType::Local)                                                 \
-  F(ParallelScanTable, OperandType::UImm2, OperandType::Local, OperandType::FunctionId)                                \
+  F(ParallelScanTable, OperandType::UImm2, OperandType::Local, OperandType::Local, OperandType::FunctionId)            \
                                                                                                                        \
   /* Vector Projection Iterator (VPI) */                                                                               \
   F(VPIIsFiltered, OperandType::Local, OperandType::Local)                                                             \
