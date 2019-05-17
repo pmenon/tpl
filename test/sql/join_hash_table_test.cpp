@@ -211,7 +211,7 @@ TEST_F(JoinHashTableTest, DISABLED_PerfTest) {
     LOG_INFO("Insert+Build: {} ms ({:.2f} Mtps)", timer.elapsed(), mtps);
   };
 
-  // bench(false, num_tuples);
+  bench(false, num_tuples);
   bench(true, num_tuples);
 }
 
