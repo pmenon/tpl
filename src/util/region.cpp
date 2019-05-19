@@ -92,7 +92,7 @@ uintptr_t Region::Expand(std::size_t requested) {
 
   // Allocate a new chunk
   LOG_TRACE("Allocating chunk of size {} KB", new_size / 1024.0);
-  auto *new_chunk = static_cast<Chunk *>(util::MallocHuge(new_size));
+  auto *new_chunk = static_cast<Chunk *>(malloc(new_size));
   new_chunk->Init(head_, new_size);
 
   // Link it in

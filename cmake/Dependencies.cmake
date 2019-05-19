@@ -8,6 +8,7 @@ set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party")
 
 find_package(JeMalloc REQUIRED)
 include_directories(SYSTEM ${JEMALLOC_INCLUDE_DIR})
+list(APPEND TPL_LINK_LIBS ${JEMALLOC_LIBRARIES})
 
 ############################################################
 # LLVM 7.0+
@@ -69,8 +70,6 @@ include_directories(SYSTEM "${THIRD_PARTY_DIR}/spdlog/include")
 ############################################################
 
 include_directories(SYSTEM "${THIRD_PARTY_DIR}/xbyak")
-
-include_directories(SYSTEM "${THIRD_PARTY_DIR}/xxHash")
 
 ############################################################
 # Libcount
