@@ -7,6 +7,7 @@
 #include "sql/generic_hash_table.h"
 #include "util/chunked_vector.h"
 #include "util/region.h"
+#include "util/spin_latch.h"
 
 namespace libcount {
 class HLL;
@@ -241,6 +242,11 @@ class JoinHashTable {
  private:
   // The vector where we store the build-side input
   util::ChunkedVector entries_;
+
+  // To protect concurrent access to owned_entries
+  util::SpinLatch owned_entries_latch_;
+  // List of entries this hash table has taken ownership of
+  util::RegionVector<util::ChunkedVector> owned_entries_;
 
   // The generic hash table
   GenericHashTable generic_hash_table_;

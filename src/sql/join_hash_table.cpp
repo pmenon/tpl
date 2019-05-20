@@ -2,13 +2,14 @@
 
 #include <algorithm>
 #include <limits>
+#include <utility>
 #include <vector>
 
 // TBB
 #include <tbb/tbb.h>  // NOLINT
 
 // Libcount
-#include <count/hll.h>  // NOLINT
+#include "count/hll.h"
 
 #include "logging/logger.h"
 #include "sql/thread_state_container.h"
@@ -21,6 +22,7 @@ namespace tpl::sql {
 JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size,
                              bool use_concise_ht) noexcept
     : entries_(region, sizeof(HashTableEntry) + tuple_size),
+      owned_entries_(region),
       concise_hash_table_(0),
       hll_estimator_(libcount::HLL::Create(kDefaultHLLPrecision)),
       built_(false),
@@ -672,29 +674,32 @@ void JoinHashTable::MergeIncompleteMT(JoinHashTable *source) {
   // TODO(pmenon): Support parallel build of concise tables
 
   // First, merge entries in the source table into ours in parallel
-  const auto &entries = source->entries_;
-  for (u64 idx = 0, prefetch_idx = kPrefetchDistance; idx < entries.size();
-       idx++, prefetch_idx++) {
+  for (u64 idx = 0, prefetch_idx = kPrefetchDistance;
+       idx < source->num_elements(); idx++, prefetch_idx++) {
     if constexpr (Prefetch) {
-      if (TPL_LIKELY(prefetch_idx < entries.size())) {
-        auto *prefetch_entry = EntryAt(prefetch_idx);
+      if (TPL_LIKELY(prefetch_idx < source->num_elements())) {
+        auto *prefetch_entry = source->EntryAt(prefetch_idx);
         generic_hash_table_.PrefetchChainHead<false>(prefetch_entry->hash);
       }
     }
 
-    HashTableEntry *entry = EntryAt(idx);
+    HashTableEntry *entry = source->EntryAt(idx);
     generic_hash_table_.Insert<true>(entry, entry->hash);
   }
 
   // Next, take ownership of source table's memory
+  {
+    util::SpinLatch::ScopedSpinLatch latch(&owned_entries_latch_);
+    owned_entries_.emplace_back(std::move(source->entries_));
+  }
 }
 
 void JoinHashTable::MergeAllParallel(
     ThreadStateContainer *thread_state_container, u32 hash_table_offset) {
   // Collect thread-local hash tables
   std::vector<JoinHashTable *> tl_hash_tables;
-  thread_state_container->CollectThreadLocalStateElementsAs<JoinHashTable>(
-      tl_hash_tables, hash_table_offset);
+  thread_state_container->CollectThreadLocalStateElementsAs(tl_hash_tables,
+                                                            hash_table_offset);
 
   // Combine HLL counts to get a global estimate
   for (auto *jht : tl_hash_tables) {
@@ -706,6 +711,11 @@ void JoinHashTable::MergeAllParallel(
 
   // Set size
   generic_hash_table_.SetSize(num_elem_estimate);
+
+  // Resize the owned entries vector now to avoid resizing concurrently during
+  // merge. All the thread-local join table data will get placed into our
+  // owned entries vector
+  owned_entries_.reserve(tl_hash_tables.size());
 
   // Is the global hash table out of cache? If so, we'll prefetch during build.
   const u64 l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
