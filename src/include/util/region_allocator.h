@@ -27,8 +27,7 @@ class StlRegionAllocator {
 
   T *allocate(std::size_t n) { return region_->AllocateArray<T>(n); }
 
-  // No-op
-  void deallocate(T *ptr, std::size_t n) {}
+  void deallocate(T *ptr, std::size_t n) { region_->Deallocate(ptr, n); }
 
   bool operator==(const StlRegionAllocator &other) const {
     return region_ == other.region_;
