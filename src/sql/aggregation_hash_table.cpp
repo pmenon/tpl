@@ -14,7 +14,8 @@ namespace tpl::sql {
 AggregationHashTable::AggregationHashTable(util::Region *region,
                                            u32 payload_size)
     : mem_(region),
-      entries_(region, sizeof(HashTableEntry) + payload_size),
+      entries_(sizeof(HashTableEntry) + payload_size,
+               util::StlRegionAllocator<byte>(region)),
       hash_table_(kDefaultLoadFactor),
       partition_heads_(nullptr),
       partition_tails_(nullptr),

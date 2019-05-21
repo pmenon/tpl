@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "sql/bloom_filter.h"
 #include "sql/concise_hash_table.h"
@@ -241,12 +242,12 @@ class JoinHashTable {
 
  private:
   // The vector where we store the build-side input
-  util::ChunkedVector entries_;
+  util::ChunkedVector<util::StlRegionAllocator<byte>> entries_;
 
   // To protect concurrent access to owned_entries
-  util::SpinLatch owned_entries_latch_;
+  util::SpinLatch owned_latch_;
   // List of entries this hash table has taken ownership of
-  util::RegionVector<util::ChunkedVector> owned_entries_;
+  std::vector<util::ChunkedVector<util::StlRegionAllocator<byte>>> owned_;
 
   // The generic hash table
   GenericHashTable generic_hash_table_;

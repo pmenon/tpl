@@ -21,8 +21,8 @@ namespace tpl::sql {
 
 JoinHashTable::JoinHashTable(util::Region *region, u32 tuple_size,
                              bool use_concise_ht) noexcept
-    : entries_(region, sizeof(HashTableEntry) + tuple_size),
-      owned_entries_(region),
+    : entries_(sizeof(HashTableEntry) + tuple_size,
+               util::StlRegionAllocator<byte>(region)),
       concise_hash_table_(0),
       hll_estimator_(libcount::HLL::Create(kDefaultHLLPrecision)),
       built_(false),
@@ -112,8 +112,8 @@ class ReorderBuffer {
   // Use a 16 KB internal buffer for temporary copies
   static constexpr const u32 kBufferSizeInBytes = 16 * 1024;
 
-  ReorderBuffer(util::ChunkedVector &entries, u64 max_elems, u64 begin_read_idx,
-                u64 end_read_idx) noexcept
+  ReorderBuffer(util::ChunkedVector<> &entries, u64 max_elems,
+                u64 begin_read_idx, u64 end_read_idx) noexcept
       : entry_size_(entries.element_size()),
         buf_idx_(0),
         max_elems_(std::min(max_elems, kBufferSizeInBytes / entry_size_) - 1),
@@ -224,7 +224,7 @@ class ReorderBuffer {
   // The exclusive upper bound index to read from the entries list
   const u64 end_read_idx_;
 
-  util::ChunkedVector &entries_;
+  util::ChunkedVector<> &entries_;
 };
 
 }  // namespace
@@ -689,8 +689,8 @@ void JoinHashTable::MergeIncompleteMT(JoinHashTable *source) {
 
   // Next, take ownership of source table's memory
   {
-    util::SpinLatch::ScopedSpinLatch latch(&owned_entries_latch_);
-    owned_entries_.emplace_back(std::move(source->entries_));
+    util::SpinLatch::ScopedSpinLatch latch(&owned_latch_);
+    owned_.emplace_back(std::move(source->entries_));
   }
 }
 
@@ -715,7 +715,7 @@ void JoinHashTable::MergeAllParallel(
   // Resize the owned entries vector now to avoid resizing concurrently during
   // merge. All the thread-local join table data will get placed into our
   // owned entries vector
-  owned_entries_.reserve(tl_hash_tables.size());
+  owned_.reserve(tl_hash_tables.size());
 
   // Is the global hash table out of cache? If so, we'll prefetch during build.
   const u64 l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);

@@ -15,8 +15,7 @@ class ChunkedVectorTest : public TplTest {};
 TEST_F(ChunkedVectorTest, InsertAndIndexTest) {
   const u32 num_elems = 10;
 
-  util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec(&tmp);
+  ChunkedVectorT<u32> vec;
 
   EXPECT_TRUE(vec.empty());
 
@@ -31,8 +30,7 @@ TEST_F(ChunkedVectorTest, InsertAndIndexTest) {
 TEST_F(ChunkedVectorTest, RandomLookupTest) {
   const u32 num_elems = 1000;
 
-  util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec(&tmp);
+  ChunkedVectorT<u32> vec;
 
   EXPECT_TRUE(vec.empty());
 
@@ -50,7 +48,7 @@ TEST_F(ChunkedVectorTest, RandomLookupTest) {
 
 TEST_F(ChunkedVectorTest, IterationTest) {
   util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec(&tmp);
+  ChunkedVectorT<u32> vec;
 
   for (u32 i = 0; i < 10; i++) {
     vec.push_back(i);
@@ -66,7 +64,7 @@ TEST_F(ChunkedVectorTest, IterationTest) {
 
 TEST_F(ChunkedVectorTest, PopBackTest) {
   util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec(&tmp);
+  ChunkedVectorT<u32> vec;
 
   for (u32 i = 0; i < 10; i++) {
     vec.push_back(i);
@@ -85,7 +83,7 @@ TEST_F(ChunkedVectorTest, PopBackTest) {
 
 TEST_F(ChunkedVectorTest, FrontBackTest) {
   util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec(&tmp);
+  ChunkedVectorT<u32> vec;
 
   for (u32 i = 0; i < 10; i++) {
     vec.push_back(i);
@@ -106,7 +104,7 @@ TEST_F(ChunkedVectorTest, FrontBackTest) {
 
 TEST_F(ChunkedVectorTest, ChunkReuseTest) {
   util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec(&tmp);
+  ChunkedVectorT<u32> vec;
 
   for (u32 i = 0; i < 1000; i++) {
     vec.push_back(i);
@@ -146,7 +144,7 @@ u32 Simple::count = 0;
 
 TEST_F(ChunkedVectorTest, ElementConstructDestructTest) {
   util::Region tmp("tmp");
-  ChunkedVectorT<Simple> vec(&tmp);
+  ChunkedVectorT<Simple> vec;
 
   for (u32 i = 0; i < 1000; i++) {
     vec.emplace_back();
@@ -168,7 +166,7 @@ TEST_F(ChunkedVectorTest, RandomIteratorAdditionTest) {
   const u32 num_rolls = 1000000;  // Number of additions to make
   // Create vector
   util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec(&tmp);
+  ChunkedVectorT<u32> vec;
   for (u32 i = 0; i < num_elems; i++) vec.push_back(i);
 
   // Jump at random offsets within the vector.
@@ -190,7 +188,7 @@ TEST_F(ChunkedVectorTest, RandomIteratorSubtractionTest) {
   const u32 num_rolls = 1000000;  // number of subtractions to make
   // Create vector
   util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec(&tmp);
+  ChunkedVectorT<u32> vec;
   for (u32 i = 0; i < num_elems; i++) vec.push_back(i);
 
   // Jump at random offsets within the vector
@@ -213,7 +211,7 @@ TEST_F(ChunkedVectorTest, RandomIteratorBinaryOpsTest) {
   const u32 num_rolls = 1000000;  // Number of checks to make
   // Create vector
   util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec(&tmp);
+  ChunkedVectorT<u32> vec;
   for (u32 i = 0; i < num_elems; i++) vec.push_back(i);
 
   // Perform binary operations on random indices.
@@ -250,7 +248,7 @@ TEST_F(ChunkedVectorTest, RandomIteratorPreIncrementTest) {
 
   // Create chunked vector
   util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec(&tmp);
+  ChunkedVectorT<u32> vec;
   for (u32 i = 0; i < num_elems; i++) {
     vec.push_back(std_vec[i]);
   }
@@ -277,7 +275,7 @@ TEST_F(ChunkedVectorTest, RandomIteratorPreDecrementTest) {
 
   // Create chunked vector
   util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec(&tmp);
+  ChunkedVectorT<u32> vec;
   for (u32 i = 0; i < num_elems; i++) {
     vec.push_back(std_vec[i]);
   }
@@ -292,7 +290,7 @@ TEST_F(ChunkedVectorTest, RandomIteratorPreDecrementTest) {
 TEST_F(ChunkedVectorTest, SortTest) {
   const u32 num_elems = 1000;
   util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec(&tmp);
+  ChunkedVectorT<u32> vec;
 
   // Insert elements
   for (u32 i = 0; i < num_elems; i++) {
@@ -331,7 +329,8 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfInsertTest) {
 
   auto chunked_ms = Bench(3, []() {
     util::Region tmp("tmp");
-    ChunkedVectorT<u32> v(&tmp);
+    ChunkedVectorT<u32, StlRegionAllocator<u32>> v{
+        util::StlRegionAllocator<u32>(&tmp)};
     for (u32 i = 0; i < 10000000; i++) {
       v.push_back(i);
     }
@@ -351,7 +350,8 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfScanTest) {
       StlRegionAllocator<u32>(&tmp)};
   std::deque<u32, StlRegionAllocator<u32>> stddeque{
       StlRegionAllocator<u32>(&tmp2)};
-  ChunkedVectorT<u32> chunkedvec(&tmp3);
+  ChunkedVectorT<u32, StlRegionAllocator<u32>> chunkedvec{
+      util::StlRegionAllocator<u32>(&tmp3)};
   for (u32 i = 0; i < num_elems; i++) {
     stdvec.push_back(i);
     stddeque.push_back(i);
@@ -398,7 +398,8 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
       StlRegionAllocator<u32>(&tmp)};
   std::deque<u32, StlRegionAllocator<u32>> stddeque{
       StlRegionAllocator<u32>(&tmp2)};
-  ChunkedVectorT<u32> chunkedvec(&tmp3);
+  ChunkedVectorT<u32, StlRegionAllocator<u32>> chunkedvec{
+      util::StlRegionAllocator<u32>(&tmp3)};
   for (u32 i = 0; i < num_elems; i++) {
     stdvec.push_back(i % 4);
     stddeque.push_back(i % 4);

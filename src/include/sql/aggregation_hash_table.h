@@ -190,7 +190,7 @@ class AggregationHashTable {
   util::Region *mem_;
 
   // Where the aggregates are stored
-  util::ChunkedVector entries_;
+  util::ChunkedVector<util::StlRegionAllocator<byte>> entries_;
 
   // The hash table where the aggregates are stored
   GenericHashTable hash_table_;

@@ -13,13 +13,13 @@ class StlRegionAllocator {
  public:
   using value_type = T;
 
-  explicit StlRegionAllocator(Region *region) noexcept : region_(region) {}
+  StlRegionAllocator(Region *region) noexcept : region_(region) {}  // NOLINT
 
   StlRegionAllocator(const StlRegionAllocator &other) noexcept
       : region_(other.region_) {}
 
   template <typename U>
-  explicit StlRegionAllocator(const StlRegionAllocator<U> &other) noexcept
+  StlRegionAllocator(const StlRegionAllocator<U> &other) noexcept  // NOLINT
       : region_(other.region_) {}
 
   template <typename U>

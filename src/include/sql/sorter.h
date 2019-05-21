@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "util/chunked_vector.h"
 
 namespace tpl::sql {
@@ -72,13 +74,13 @@ class Sorter {
   friend class SorterIterator;
 
   // Vector of entries
-  util::ChunkedVector tuple_storage_;
+  util::ChunkedVector<util::StlRegionAllocator<byte>> tuple_storage_;
 
   // The comparison function
   ComparisonFunction cmp_fn_;
 
   // Vector of pointers to each entry. This is the vector that's sorted.
-  util::RegionVector<const byte *> tuples_;
+  std::vector<const byte *> tuples_;
 
   // Flag indicating if the contents of the sorter have been sorted
   bool sorted_;

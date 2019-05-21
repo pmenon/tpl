@@ -189,7 +189,8 @@ TEST_F(SorterTest, DISABLED_PerfSortTest) {
   util::Region sorter_tmp("sorter_tmp");
   std::vector<data, util::StlRegionAllocator<data>> vec{
       util::StlRegionAllocator<data>(&vec_tmp)};
-  util::ChunkedVectorT<data> chunk_vec(&chunk_tmp);
+  util::ChunkedVectorT<data, util::StlRegionAllocator<data>> chunk_vec{
+      util::StlRegionAllocator<data>(&chunk_tmp)};
   sql::Sorter sorter(&sorter_tmp, sorter_cmp_fn, sizeof(data));
   std::cout << "Sizeof(data) is " << (sizeof(data)) << std::endl;
 
