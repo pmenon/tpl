@@ -7,9 +7,13 @@
 
 #include "tpl_test.h"  // NOLINT
 
+#include <tbb/tbb.h>  // NOLINT
+
 #include "ips4o/ips4o.hpp"
 
+#include "sql/execution_context.h"
 #include "sql/sorter.h"
+#include "sql/thread_state_container.h"
 
 #define TestAllSigned(FuncName, Args...) \
   FuncName<i8>(Args);                    \
@@ -236,4 +240,72 @@ TEST_F(SorterTest, DISABLED_PerfSortTest) {
   std::cout << "ips4o::sort(ChunkedVector): " << chunk_ms << " ms" << std::endl;
   std::cout << "Sorter.Sort(): " << sorter_ms << " ms" << std::endl;
 }
+
+template <u32 N>
+struct TestTuple {
+  u32 key;
+  u32 data[N];
+};
+
+TEST_F(SorterTest, ParallelSortTest) {
+  //
+  // Test: Create 'num_sorters' thread-local sorters. Insert
+  //       'num_tuples_per_sorter' tuples into each sorter. Parallel sort all
+  //       into main and check tuple counts and sortedness.
+  //
+
+  const u32 num_sorters = 5;
+  const u32 num_tuples_per_sorter = 10000;
+
+  using Tuple = TestTuple<3>;
+
+  static const auto cmp_fn = [](const void *a, const void *b) -> i32 {
+    const auto tuple_a = reinterpret_cast<const Tuple *>(a);
+    const auto tuple_b = reinterpret_cast<const Tuple *>(b);
+    return tuple_a->key - tuple_b->key;
+  };
+
+  auto init_sorter = [](void *ctx, void *s) {
+    new (s) Sorter(reinterpret_cast<ExecutionContext *>(ctx)->memory_pool(),
+                   cmp_fn, sizeof(Tuple));
+  };
+  auto destroy_sorter = [](UNUSED void *ctx, void *s) {
+    reinterpret_cast<Sorter *>(s)->~Sorter();
+  };
+
+  MemoryPool memory(nullptr);
+  ExecutionContext exec_ctx(&memory);
+  ThreadStateContainer container(&memory);
+
+  container.Reset(sizeof(Sorter), init_sorter, destroy_sorter, &exec_ctx);
+
+  std::vector<u32> v(num_sorters);
+  tbb::task_scheduler_init sched;
+  tbb::parallel_for_each(v.begin(), v.end(), [&container](UNUSED auto vv) {
+    auto *sorter = container.AccessThreadStateOfCurrentThreadAs<Sorter>();
+    for (u32 i = 0; i < 10000; i++) {
+      auto *elem = reinterpret_cast<Tuple *>(sorter->AllocInputTuple());
+      elem->key = i;
+    }
+  });
+
+  // Main parallel sort
+  Sorter main(exec_ctx.memory_pool(), cmp_fn, sizeof(Tuple));
+  main.SortParallel(&container, 0);
+
+  EXPECT_TRUE(main.is_sorted());
+  EXPECT_EQ(num_sorters * num_tuples_per_sorter, main.NumTuples());
+
+  // Ensure sortedness
+  const Tuple *prev = nullptr;
+  for(SorterIterator iter(&main); iter.HasNext(); iter.Next()) {
+    auto *curr = iter.GetRowAs<Tuple>();
+    if (prev != nullptr) {
+      EXPECT_TRUE(cmp_fn(prev, curr) <= 0);
+    }
+    prev = curr;
+  }
+
+}
+
 }  // namespace tpl::sql::test

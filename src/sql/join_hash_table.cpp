@@ -696,8 +696,8 @@ void JoinHashTable::MergeIncomplete(JoinHashTable *source) {
   }
 }
 
-void JoinHashTable::MergeParallel(ThreadStateContainer *thread_state_container,
-                                  u32 jht_offset) {
+void JoinHashTable::MergeParallel(
+    const ThreadStateContainer *thread_state_container, const u32 jht_offset) {
   // Collect thread-local hash tables
   std::vector<JoinHashTable *> tl_join_tables;
   thread_state_container->CollectThreadLocalStateElementsAs(tl_join_tables,

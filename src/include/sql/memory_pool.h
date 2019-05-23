@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <memory>
+#include <vector>
 
 #include "util/common.h"
 #include "util/macros.h"
@@ -114,6 +115,28 @@ class MemoryPoolAllocator {
 
  private:
   MemoryPool *memory_;
+};
+
+template <typename T>
+class MemPoolVector : public std::vector<T, MemoryPoolAllocator<T>> {
+  using BaseType = std::vector<T, MemoryPoolAllocator<T>>;
+
+ public:
+  explicit MemPoolVector(MemoryPool *memory)
+      : BaseType(MemoryPoolAllocator<T>(memory)) {}
+
+  MemPoolVector(std::size_t n, MemoryPool *memory)
+      : BaseType(n, MemoryPoolAllocator<T>(memory)) {}
+
+  MemPoolVector(std::size_t n, const T &elem, MemoryPool *memory)
+      : BaseType(n, elem, MemoryPoolAllocator<T>(memory)) {}
+
+  MemPoolVector(std::initializer_list<T> list, MemoryPool *memory)
+      : BaseType(list, MemoryPoolAllocator<T>(memory)) {}
+
+  template <typename InputIter>
+  MemPoolVector(InputIter first, InputIter last, MemoryPool *memory)
+      : BaseType(first, last, MemoryPoolAllocator<T>(memory)) {}
 };
 
 }  // namespace tpl::sql

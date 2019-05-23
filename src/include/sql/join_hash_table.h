@@ -97,7 +97,7 @@ class JoinHashTable {
    * @param thread_state_container The container for all thread-local tables
    * @param jht_offset The offset in the state where the hash table is
    */
-  void MergeParallel(ThreadStateContainer *thread_state_container,
+  void MergeParallel(const ThreadStateContainer *thread_state_container,
                      u32 jht_offset);
 
   // -------------------------------------------------------

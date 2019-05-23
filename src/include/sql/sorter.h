@@ -4,8 +4,11 @@
 
 #include "sql/memory_pool.h"
 #include "util/chunked_vector.h"
+#include "util/macros.h"
 
 namespace tpl::sql {
+
+class ThreadStateContainer;
 
 /**
  * Sorters
@@ -63,6 +66,43 @@ class Sorter {
    */
   void Sort();
 
+  /**
+   * Perform a parallel sort of all sorter instances stored in the thread state
+   * container object. Each thread-local sorter instance is assumed (but not
+   * required) to be unsorted. Once sorting completes, this sorter instance will
+   * take ownership of all data owned by each thread-local instances.
+   * @param thread_state_container The container holding all thread-local sorter
+   *                               instances.
+   * @param sorter_offset The offset into the container where the sorter
+   *                      instance is.
+   */
+  void SortParallel(const ThreadStateContainer *thread_state_container,
+                    u32 sorter_offset);
+
+  /**
+   * Perform a parallel Top-K of all sorter instances stored in the thread
+   * state container object. Each thread-local sorter instance is assumed (but
+   * not required) to be unsorted. Once sorting completes, this sorter instance
+   * will take ownership of all data owned by each thread-local instances.
+   * @param thread_state_container The container holding all thread-local sorter
+   *                               instances.
+   * @param sorter_offset The offset into the container where the sorter
+   *                      instance is.
+   * @param top_k The number entries at the top the caller cares for.
+   */
+  void SortTopKParallel(const ThreadStateContainer *thread_state_container,
+                        u32 sorter_offset, u64 top_k);
+
+  /**
+   * Return the number of tuples currently in this sorter
+   */
+  u64 NumTuples() const { return tuples_.size(); }
+
+  /**
+   * Has this sorter's contents been sorted?
+   */
+  bool is_sorted() const { return sorted_; }
+
  private:
   // Build a max heap from the tuples currently stored in the sorter instance
   void BuildHeap();
@@ -77,11 +117,14 @@ class Sorter {
   // Vector of entries
   util::ChunkedVector<MemoryPoolAllocator<byte>> tuple_storage_;
 
+  // All tuples this sorter has taken ownership of from thread-local sorters
+  MemPoolVector<util::ChunkedVector<MemoryPoolAllocator<byte>>> owned_tuples_;
+
   // The comparison function
   ComparisonFunction cmp_fn_;
 
   // Vector of pointers to each entry. This is the vector that's sorted.
-  std::vector<const byte *, MemoryPoolAllocator<const byte *>> tuples_;
+  MemPoolVector<const byte *> tuples_;
 
   // Flag indicating if the contents of the sorter have been sorted
   bool sorted_;
@@ -124,10 +167,22 @@ class SorterIterator {
   void Next() { this->operator++(); }
 
   /**
-   * Get a pointer to the row the iterator is pointing to
-   * Note: This is unsafe at boundaries
+   * Return a pointer to the current row. It assumed the called has checked the
+   * iterator is valid.
    */
-  const byte *GetRow() const { return this->operator*(); }
+  const byte *GetRow() const {
+    TPL_ASSERT(iter_ != end_, "Invalid iterator");
+    return this->operator*();
+  }
+
+  /**
+   * Return a pointer to the current row, interpreted as the template type
+   * @em T. It assumed the called has checked the iterator is valid.
+   */
+  template <typename T>
+  const T *GetRowAs() const {
+    return reinterpret_cast<const T *>(GetRow());
+  }
 
  private:
   // The current iterator position

@@ -110,7 +110,7 @@ class BloomFilter {
   u32 block_mask_;
 
   // Temporary vector of lazily added hashes for bulk loading
-  std::vector<hash_t, MemoryPoolAllocator<hash_t>> lazily_added_hashes_;
+  MemPoolVector<hash_t> lazily_added_hashes_;
 };
 
 #if 0

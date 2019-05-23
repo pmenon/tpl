@@ -90,7 +90,7 @@ class ThreadStateContainer {
    * @em container.
    * @param container The output container to store the results.
    */
-  void CollectThreadLocalStates(std::vector<byte *> &container);
+  void CollectThreadLocalStates(std::vector<byte *> &container) const;
 
   /**
    * Collect an element at offset @em element_offset from all thread-local
@@ -99,7 +99,7 @@ class ThreadStateContainer {
    * @param element_offset The offset of the element in the thread-local state
    */
   void CollectThreadLocalStateElements(std::vector<byte *> &container,
-                                       std::size_t element_offset);
+                                       std::size_t element_offset) const;
 
   /**
    * Collect an element at offset @em element_offset from all thread-local
@@ -114,7 +114,7 @@ class ThreadStateContainer {
    */
   template <typename T>
   void CollectThreadLocalStateElementsAs(std::vector<T *> &container,
-                                         std::size_t element_offset) {
+                                         std::size_t element_offset) const {
     std::vector<byte *> tmp;
     CollectThreadLocalStates(tmp);
     container.clear();
@@ -130,7 +130,7 @@ class ThreadStateContainer {
    * @param fn The function to apply
    */
   template <typename T, typename F>
-  void ForEach(const F &fn) {
+  void ForEach(const F &fn) const {
     std::vector<byte *> states;
     CollectThreadLocalStates(states);
 

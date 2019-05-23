@@ -31,8 +31,7 @@ BloomFilter::~BloomFilter() {
 
 void BloomFilter::Init(MemoryPool *memory, u32 num_elems) {
   memory_ = memory;
-  lazily_added_hashes_ = std::vector<hash_t, MemoryPoolAllocator<hash_t>>(
-      MemoryPoolAllocator<hash_t>(memory_));
+  lazily_added_hashes_ = MemPoolVector<hash_t>(memory_);
 
   u64 num_bits = util::MathUtil::PowerOf2Ceil(kBitsPerElement * num_elems);
   u64 num_blocks =
