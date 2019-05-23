@@ -38,9 +38,9 @@ class Timer {
   double elapsed() const noexcept { return elapsed_; }
 
   /**
-   * Time a function \a fn
-   * @tparam F The functor-type of the parameter function
-   * @param fn The function (or functor-like object) to time
+   * Time a function @em func
+   * @tparam F A no-arg void return functor-type
+   * @param fn The functor to time
    * @return The elapsed time in whatever resolution ratio the caller wants
    */
   template <typename F>
