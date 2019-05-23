@@ -62,6 +62,10 @@ class Sema : public ast::AstVisitor<Sema> {
   AST_NODES(DECLARE_AST_VISIT_METHOD)
 #undef DECLARE_AST_VISIT_METHOD
 
+  ast::Context *context() const { return ctx_; }
+
+  ErrorReporter *error_reporter() const { return error_reporter_; }
+
  private:
   // Resolve the type of the input expression
   ast::Type *Resolve(ast::Expr *expr) {
@@ -72,11 +76,17 @@ class Sema : public ast::AstVisitor<Sema> {
   // Convert the given schema into a row type
   ast::Type *GetRowTypeFromSqlSchema(const sql::Schema &schema);
 
+  // Create a builtin type
+  ast::Type *GetBuiltinType(const u16 builtin_kind);
+
   struct CheckResult {
     ast::Type *result_type;
     ast::Expr *left;
     ast::Expr *right;
   };
+
+  void ReportIncorrectCallArg(ast::CallExpr *call, u32 index,
+                              ast::Type *expected);
 
   // Implicitly cast the input expression into the target type using the
   // provided cast kind, also setting the type of the casted expression result.
@@ -211,14 +221,6 @@ class Sema : public ast::AstVisitor<Sema> {
     ast::FunctionLitExpr *prev_func_;
     SemaScope block_scope_;
   };
-
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
-
-  ast::Context *context() const { return ctx_; }
-
-  ErrorReporter *error_reporter() const { return error_reporter_; }
 
   ast::FunctionLitExpr *current_function() const { return curr_func_; }
 

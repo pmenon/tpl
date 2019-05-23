@@ -33,4 +33,9 @@ ast::Type *Sema::GetRowTypeFromSqlSchema(const sql::Schema &schema) {
   return ast::StructType::Get(context(), std::move(cols));
 }
 
+ast::Type *Sema::GetBuiltinType(const u16 builtin_kind) {
+  return ast::BuiltinType::Get(
+      context(), static_cast<ast::BuiltinType::Kind>(builtin_kind));
+}
+
 }  // namespace tpl::sema
