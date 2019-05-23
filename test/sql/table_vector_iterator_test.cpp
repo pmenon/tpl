@@ -93,7 +93,7 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
 
   // Setup thread states
   MemoryPool memory(nullptr);
-  ExecutionContext ctx(&memory, 0);
+  ExecutionContext ctx(&memory);
   ThreadStateContainer thread_state_container(ctx.memory_pool());
   thread_state_container.Reset(sizeof(Counter), init_count, nullptr, nullptr);
 
