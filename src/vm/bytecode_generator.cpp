@@ -966,6 +966,25 @@ void BytecodeGenerator::VisitBuiltinSorterCall(ast::CallExpr *call,
       emitter()->Emit(Bytecode::SorterSort, sorter);
       break;
     }
+    case ast::Builtin::SorterSortParallel: {
+      LocalVar sorter = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar thread_local_container =
+          VisitExpressionForRValue(call->arguments()[1]);
+      LocalVar sorter_offset = VisitExpressionForRValue(call->arguments()[2]);
+      emitter()->Emit(Bytecode::SorterSortParallel, sorter,
+                      thread_local_container, sorter_offset);
+      break;
+    }
+    case ast::Builtin::SorterSortTopKParallel: {
+      LocalVar sorter = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar thread_local_container =
+          VisitExpressionForRValue(call->arguments()[1]);
+      LocalVar sorter_offset = VisitExpressionForRValue(call->arguments()[2]);
+      LocalVar top_k = VisitExpressionForRValue(call->arguments()[3]);
+      emitter()->Emit(Bytecode::SorterSortTopKParallel, sorter,
+                      thread_local_container, sorter_offset, top_k);
+      break;
+    }
     case ast::Builtin::SorterFree: {
       LocalVar sorter = VisitExpressionForRValue(call->arguments()[0]);
       emitter()->Emit(Bytecode::SorterFree, sorter);
@@ -1209,6 +1228,8 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::SorterInit:
     case ast::Builtin::SorterInsert:
     case ast::Builtin::SorterSort:
+    case ast::Builtin::SorterSortParallel:
+    case ast::Builtin::SorterSortTopKParallel:
     case ast::Builtin::SorterFree: {
       VisitBuiltinSorterCall(call, builtin);
       break;

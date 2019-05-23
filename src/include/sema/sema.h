@@ -120,7 +120,7 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinJoinHashTableFree(ast::CallExpr *call);
   void CheckBuiltinSorterInit(ast::CallExpr *call);
   void CheckBuiltinSorterInsert(ast::CallExpr *call);
-  void CheckBuiltinSorterSort(ast::CallExpr *call);
+  void CheckBuiltinSorterSort(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinSorterFree(ast::CallExpr *call);
   void CheckBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinExecutionContextCall(ast::CallExpr *call,

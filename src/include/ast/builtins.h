@@ -79,6 +79,8 @@ namespace tpl::ast {
   F(SorterInit, sorterInit)                               \
   F(SorterInsert, sorterInsert)                           \
   F(SorterSort, sorterSort)                               \
+  F(SorterSortParallel, sorterSortParallel)               \
+  F(SorterSortTopKParallel, sorterSortTopKParallel)       \
   F(SorterFree, sorterFree)                               \
   F(SorterIterInit, sorterIterInit)                       \
   F(SorterIterHasNext, sorterIterHasNext)                 \

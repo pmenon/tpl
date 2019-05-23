@@ -917,20 +917,78 @@ void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call) {
       ast::BuiltinType::Get(context(), ast::BuiltinType::Uint8)->PointerTo());
 }
 
-void Sema::CheckBuiltinSorterSort(ast::CallExpr *call) {
-  if (!CheckArgCount(call, 1)) {
+void Sema::CheckBuiltinSorterSort(ast::CallExpr *call, ast::Builtin builtin) {
+  if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
 
+  const auto &call_args = call->arguments();
+
   // First argument must be a pointer to a Sorter
   const auto sorter_kind = ast::BuiltinType::Sorter;
-  if (!IsPointerToSpecificBuiltin(call->arguments()[0]->type(), sorter_kind)) {
+  if (!IsPointerToSpecificBuiltin(call_args[0]->type(), sorter_kind)) {
     error_reporter()->Report(
         call->position(), ErrorMessages::kIncorrectCallArgType,
         call->GetFuncName(),
         ast::BuiltinType::Get(context(), sorter_kind)->PointerTo(), 0,
-        call->arguments()[0]->type());
+        call_args[0]->type());
     return;
+  }
+
+  const auto check_parallel = [this, call, &call_args]() -> bool {
+    const auto tls_kind = ast::BuiltinType::ThreadStateContainer;
+    if (!IsPointerToSpecificBuiltin(call_args[1]->type(), tls_kind)) {
+      error_reporter()->Report(
+          call->position(), ErrorMessages::kIncorrectCallArgType,
+          call->GetFuncName(),
+          ast::BuiltinType::Get(context(), tls_kind)->PointerTo(), 1,
+          call_args[1]->type());
+      return false;
+    }
+    // Third argument must be a 32-bit integer representing the offset
+    const auto uint32_kind = ast::BuiltinType::Uint32;
+    if (!call_args[2]->type()->IsSpecificBuiltin(uint32_kind)) {
+      error_reporter()->Report(
+          call->position(), ErrorMessages::kIncorrectCallArgType,
+          call->GetFuncName(), ast::BuiltinType::Get(context(), uint32_kind), 2,
+          call_args[2]->type());
+      return false;
+    }
+    return true;
+  };
+
+  switch (builtin) {
+    case ast::Builtin::SorterSort: {
+      if (!CheckArgCount(call, 1)) {
+        return;
+      }
+      break;
+    }
+    case ast::Builtin::SorterSortParallel:
+    case ast::Builtin::SorterSortTopKParallel: {
+      if (!check_parallel()) {
+        return;
+      }
+
+      if (builtin == ast::Builtin::SorterSortTopKParallel) {
+        if (!CheckArgCount(call, 4)) {
+          return;
+        }
+
+        // Last argument must be the TopK value
+        const auto uint64_kind = ast::BuiltinType::Uint64;
+        if (!call_args[3]->type()->IsSpecificBuiltin(uint64_kind)) {
+          error_reporter()->Report(
+              call->position(), ErrorMessages::kIncorrectCallArgType,
+              call->GetFuncName(),
+              ast::BuiltinType::Get(context(), uint64_kind), 3,
+              call_args[3]->type());
+          return;
+        }
+      }
+      break;
+    }
+    default: { UNREACHABLE("Impossible sorter sort call"); }
   }
 
   // This call returns nothing
@@ -1140,8 +1198,10 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckBuiltinSorterInsert(call);
       break;
     }
-    case ast::Builtin::SorterSort: {
-      CheckBuiltinSorterSort(call);
+    case ast::Builtin::SorterSort:
+    case ast::Builtin::SorterSortParallel:
+    case ast::Builtin::SorterSortTopKParallel: {
+      CheckBuiltinSorterSort(call, builtin);
       break;
     }
     case ast::Builtin::SorterFree: {
