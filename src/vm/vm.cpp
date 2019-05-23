@@ -1166,14 +1166,14 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(SorterAllocTupleTopK) : {
     auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
-    auto top_k = READ_IMM8();
+    auto top_k = frame->LocalAt<u64>(READ_LOCAL_ID());
     OpSorterAllocTupleTopK(result, sorter, top_k);
     DISPATCH_NEXT();
   }
 
   OP(SorterAllocTupleTopKFinish) : {
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
-    auto top_k = READ_IMM8();
+    auto top_k = frame->LocalAt<u64>(READ_LOCAL_ID());
     OpSorterAllocTupleTopKFinish(sorter, top_k);
     DISPATCH_NEXT();
   }
@@ -1181,6 +1181,26 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(SorterSort) : {
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
     OpSorterSort(sorter);
+    DISPATCH_NEXT();
+  }
+
+  OP(SorterSortParallel) : {
+    auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
+    auto *thread_state_container =
+        frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
+    auto sorter_offset = frame->LocalAt<u32>(READ_LOCAL_ID());
+    OpSorterSortParallel(sorter, thread_state_container, sorter_offset);
+    DISPATCH_NEXT();
+  }
+
+  OP(SorterSortTopKParallel) : {
+    auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
+    auto *thread_state_container =
+        frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
+    auto sorter_offset = frame->LocalAt<u32>(READ_LOCAL_ID());
+    auto top_k = frame->LocalAt<u64>(READ_LOCAL_ID());
+    OpSorterSortTopKParallel(sorter, thread_state_container, sorter_offset,
+                             top_k);
     DISPATCH_NEXT();
   }
 

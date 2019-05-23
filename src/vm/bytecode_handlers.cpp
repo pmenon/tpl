@@ -162,6 +162,19 @@ void OpSorterInit(tpl::sql::Sorter *const sorter,
 
 void OpSorterSort(tpl::sql::Sorter *sorter) { sorter->Sort(); }
 
+void OpSorterSortParallel(
+    tpl::sql::Sorter *sorter,
+    tpl::sql::ThreadStateContainer *thread_state_container, u32 sorter_offset) {
+  sorter->SortParallel(thread_state_container, sorter_offset);
+}
+
+void OpSorterSortTopKParallel(
+    tpl::sql::Sorter *sorter,
+    tpl::sql::ThreadStateContainer *thread_state_container, u32 sorter_offset,
+    u64 top_k) {
+  sorter->SortTopKParallel(thread_state_container, sorter_offset, top_k);
+}
+
 void OpSorterFree(tpl::sql::Sorter *sorter) { sorter->~Sorter(); }
 
 void OpSorterIteratorInit(tpl::sql::SorterIterator *iter,

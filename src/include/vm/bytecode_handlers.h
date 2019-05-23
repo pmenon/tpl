@@ -845,6 +845,15 @@ VM_OP_HOT void OpSorterAllocTupleTopKFinish(tpl::sql::Sorter *sorter,
 
 void OpSorterSort(tpl::sql::Sorter *sorter);
 
+void OpSorterSortParallel(
+    tpl::sql::Sorter *sorter,
+    tpl::sql::ThreadStateContainer *thread_state_container, u32 sorter_offset);
+
+void OpSorterSortTopKParallel(
+    tpl::sql::Sorter *sorter,
+    tpl::sql::ThreadStateContainer *thread_state_container, u32 sorter_offset,
+    u64 top_k);
+
 void OpSorterFree(tpl::sql::Sorter *sorter);
 
 void OpSorterIteratorInit(tpl::sql::SorterIterator *iter,
