@@ -72,6 +72,7 @@ namespace tpl::ast {
   F(JoinHashTableInit, joinHTInit)                        \
   F(JoinHashTableInsert, joinHTInsert)                    \
   F(JoinHashTableBuild, joinHTBuild)                      \
+  F(JoinHashTableBuildParallel, joinHTBuildParallel)      \
   F(JoinHashTableFree, joinHTFree)                        \
                                                           \
   /* Sorting */                                           \

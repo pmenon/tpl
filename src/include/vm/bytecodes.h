@@ -210,6 +210,7 @@ namespace tpl::vm {
   F(JoinHashTableInit, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
   F(JoinHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                               \
   F(JoinHashTableBuild, OperandType::Local)                                                                            \
+  F(JoinHashTableBuildParallel, OperandType::Local, OperandType::Local, OperandType::Local)                            \
   F(JoinHashTableFree, OperandType::Local)                                                                             \
                                                                                                                        \
   /* Sorting */                                                                                                        \

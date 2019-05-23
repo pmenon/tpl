@@ -816,6 +816,10 @@ VM_OP_HOT void OpJoinHashTableAllocTuple(
 
 void OpJoinHashTableBuild(tpl::sql::JoinHashTable *join_hash_table);
 
+void OpJoinHashTableBuildParallel(
+    tpl::sql::JoinHashTable *join_hash_table,
+    tpl::sql::ThreadStateContainer *thread_state_container, u32 jht_offset);
+
 void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table);
 
 // ---------------------------------------------------------

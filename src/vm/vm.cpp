@@ -1122,6 +1122,17 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(JoinHashTableBuildParallel) : {
+    auto *join_hash_table =
+        frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
+    auto *thread_state_container =
+        frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
+    auto jht_offset = frame->LocalAt<u32>(READ_LOCAL_ID());
+    OpJoinHashTableBuildParallel(join_hash_table, thread_state_container,
+                                 jht_offset);
+    DISPATCH_NEXT();
+  }
+
   OP(JoinHashTableFree) : {
     auto *join_hash_table =
         frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());

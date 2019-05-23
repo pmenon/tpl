@@ -922,6 +922,15 @@ void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call,
       emitter()->Emit(Bytecode::JoinHashTableBuild, join_hash_table);
       break;
     }
+    case ast::Builtin::JoinHashTableBuildParallel: {
+      LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar thread_local_container =
+          VisitExpressionForRValue(call->arguments()[1]);
+      LocalVar jht_offset = VisitExpressionForRValue(call->arguments()[2]);
+      emitter()->Emit(Bytecode::JoinHashTableBuildParallel, join_hash_table,
+                      thread_local_container, jht_offset);
+      break;
+    }
     case ast::Builtin::JoinHashTableFree: {
       LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
       emitter()->Emit(Bytecode::JoinHashTableFree, join_hash_table);
@@ -1192,6 +1201,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::JoinHashTableInit:
     case ast::Builtin::JoinHashTableInsert:
     case ast::Builtin::JoinHashTableBuild:
+    case ast::Builtin::JoinHashTableBuildParallel:
     case ast::Builtin::JoinHashTableFree: {
       VisitBuiltinJoinHashTableCall(call, builtin);
       break;

@@ -115,14 +115,19 @@ void OpFilterManagerFree(tpl::sql::FilterManager *filter_manager) {
 // Join Hash Table
 // ---------------------------------------------------------
 
-void OpJoinHashTableInit(tpl::sql::JoinHashTable *const join_hash_table,
-                         tpl::sql::MemoryPool *const memory,
-                         const u32 tuple_size) {
+void OpJoinHashTableInit(tpl::sql::JoinHashTable *join_hash_table,
+                         tpl::sql::MemoryPool *memory, u32 tuple_size) {
   new (join_hash_table) tpl::sql::JoinHashTable(memory, tuple_size);
 }
 
 void OpJoinHashTableBuild(tpl::sql::JoinHashTable *join_hash_table) {
   join_hash_table->Build();
+}
+
+void OpJoinHashTableBuildParallel(
+    tpl::sql::JoinHashTable *join_hash_table,
+    tpl::sql::ThreadStateContainer *thread_state_container, u32 jht_offset) {
+  join_hash_table->MergeParallel(thread_state_container, jht_offset);
 }
 
 void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table) {

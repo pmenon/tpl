@@ -346,22 +346,55 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
   call->set_type(ret_type);
 }
 
-void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call) {
-  if (!CheckArgCount(call, 1)) {
+void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call,
+                                          ast::Builtin builtin) {
+  if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
 
-  const auto &args = call->arguments();
+  const auto &call_args = call->arguments();
 
   // The first and only argument must be a pointer to a JoinHashTable
   const auto jht_kind = ast::BuiltinType::JoinHashTable;
-  if (!IsPointerToSpecificBuiltin(args[0]->type(), jht_kind)) {
+  if (!IsPointerToSpecificBuiltin(call_args[0]->type(), jht_kind)) {
     error_reporter()->Report(
         call->position(), ErrorMessages::kIncorrectCallArgType,
         call->GetFuncName(),
         ast::BuiltinType::Get(context(), jht_kind)->PointerTo(), 0,
-        args[0]->type());
+        call_args[0]->type());
     return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::JoinHashTableBuild: {
+      break;
+    }
+    case ast::Builtin::JoinHashTableBuildParallel: {
+      if (!CheckArgCount(call, 3)) {
+        return;
+      }
+      // Second argument must be a thread state container pointer
+      const auto tls_kind = ast::BuiltinType::ThreadStateContainer;
+      if (!IsPointerToSpecificBuiltin(call_args[1]->type(), tls_kind)) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kIncorrectCallArgType,
+            call->GetFuncName(),
+            ast::BuiltinType::Get(context(), tls_kind)->PointerTo(), 1,
+            call_args[1]->type());
+        return;
+      }
+      // Third argument must be a 32-bit integer representing the offset
+      const auto uint32_kind = ast::BuiltinType::Uint32;
+      if (!call_args[2]->type()->IsSpecificBuiltin(uint32_kind)) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kIncorrectCallArgType,
+            call->GetFuncName(), ast::BuiltinType::Get(context(), uint32_kind),
+            2, call_args[2]->type());
+        return;
+      }
+      break;
+    }
+    default: { UNREACHABLE("Impossible join hash table build call"); }
   }
 
   // This call returns nothing
@@ -1090,8 +1123,9 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckBuiltinJoinHashTableInsert(call);
       break;
     }
-    case ast::Builtin::JoinHashTableBuild: {
-      CheckBuiltinJoinHashTableBuild(call);
+    case ast::Builtin::JoinHashTableBuild:
+    case ast::Builtin::JoinHashTableBuildParallel: {
+      CheckBuiltinJoinHashTableBuild(call, builtin);
       break;
     }
     case ast::Builtin::JoinHashTableFree: {
