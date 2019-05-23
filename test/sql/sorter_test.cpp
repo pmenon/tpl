@@ -311,16 +311,31 @@ void TestParallelSort(const std::vector<u32> &sorter_sizes) {
 }
 
 TEST_F(SorterTest, BalancedParallelSortTest) {
+  TestParallelSort<2>({1000});
+  TestParallelSort<2>({1000, 1000});
+  TestParallelSort<2>({1000, 1000, 1000});
   TestParallelSort<2>({1000, 1000, 1000, 1000});
 }
 
+TEST_F(SorterTest, SingleThreadLocalParallelSortTest) {
+  // Single thread-local sorter
+  TestParallelSort<2>({0});
+  TestParallelSort<2>({1});
+  TestParallelSort<2>({10});
+  TestParallelSort<2>({100});
+}
+
 TEST_F(SorterTest, UnbalancedParallelSortTest) {
-  // All empty
-  TestParallelSort<2>({0, 0, 0, 0});
-  // Some empty
-  TestParallelSort<2>({1000, 0, 1000, 0});
-  // Generic imbalance
-  TestParallelSort<2>({1000, 1, 100, 10000, 10});
+  // All imbalance permutations
+  for (u32 w : {0, 1, 10, 100, 1000}) {
+    for (u32 x : {0, 1, 10, 100, 1000}) {
+      for (u32 y : {0, 1, 10, 100, 1000}) {
+        for (u32 z : {0, 1, 10, 100, 1000}) {
+          TestParallelSort<2>({w, x, y, z});
+        }
+      }
+    }
+  }
 }
 
 }  // namespace tpl::sql::test
