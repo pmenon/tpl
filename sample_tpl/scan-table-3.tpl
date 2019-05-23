@@ -1,4 +1,4 @@
-fun main() -> int {
+fun main(execCtx: *ExecutionContext) -> int {
   var ret = 0
   var tvi: TableVectorIterator
   for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {

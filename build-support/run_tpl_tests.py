@@ -8,9 +8,12 @@ import sys
 TARGET_STRING = 'VM main() returned: '
 
 
-def run(tpl_bin, tpl_file):
-    proc = subprocess.run([tpl_bin, tpl_file], stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE)
+def run(tpl_bin, tpl_file, is_sql):
+    args = [tpl_bin]
+    if is_sql:
+        args.append("-sql")
+    args.append(tpl_file)
+    proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     for line in reversed(proc.stdout.decode('utf-8').split('\n')):
         idx = line.find(TARGET_STRING)
         if idx != -1:
@@ -24,8 +27,12 @@ def check(tpl_bin, tpl_folder, tpl_tests_file):
         print('Tests:')
 
         for line in tpl_tests:
-            tpl_file, expected_output = [x.strip() for x in line.split(',')]
-            res = run(tpl_bin, os.path.join(tpl_folder, tpl_file))
+            line = line.strip()
+            if not line or line[0] == '#':
+                continue
+            tpl_file, sql, expected_output = [x.strip() for x in line.split(',')]
+            is_sql = sql.lower() == "true"
+            res = run(tpl_bin, os.path.join(tpl_folder, tpl_file), is_sql)
             num_tests += 1
 
             report = 'PASS'

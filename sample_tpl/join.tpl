@@ -1,5 +1,4 @@
 struct State {
-  alloc: RegionAlloc
   table: JoinHashTable
 }
 
@@ -7,28 +6,22 @@ struct BuildRow {
   key: int32
 }
 
-fun setUpState(state: *State) -> nil {
-  // Initialize the region
-  @regionInit(&state.alloc)
-  // Initialize the join hash table
-  @joinHTInit(&state.table, &state.alloc, @sizeOf(BuildRow))
+fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
+  @joinHTInit(&state.table, @execCtxGetMem(execCtx), @sizeOf(BuildRow))
 }
 
 fun tearDownState(state: *State) -> nil {
-  // Cleanup the join hash table
   @joinHTFree(&state.table)
-  // Cleanup the region allocator
-  @regionFree(&state.alloc)
 }
 
 fun pipeline_1(state: *State) -> nil {
   var jht: *JoinHashTable = &state.table
-  var hash_val: uint64 = 10
 
   var tvi: TableVectorIterator
   for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
     var vec = @tableIterGetVPI(&tvi)
 
+    var hash_val = @hash(@vpiGetInt(vec, 0))
     var elem: *BuildRow = @joinHTInsert(jht, hash_val)
     elem.key = 44
 
@@ -46,11 +39,11 @@ fun pipeline_2(state: *State) -> nil {
   @tableIterClose(&tvi)
 }
 
-fun main() -> int32 {
+fun main(execCtx: *ExecutionContext) -> int32 {
   var state: State
 
   // Initialize state
-  setUpState(&state)
+  setUpState(execCtx, &state)
 
   // Run pipeline 1
   pipeline_1(&state)

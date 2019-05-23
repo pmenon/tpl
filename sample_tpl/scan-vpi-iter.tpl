@@ -36,7 +36,7 @@ fun count(vpi: *VectorProjectionIterator) -> int32 {
   return ret
 }
 
-fun main() -> int {
+fun main(execCtx: *ExecutionContext) -> int {
   var ret :int = 0
 
   var filter: FilterManager

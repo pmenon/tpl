@@ -1,5 +1,4 @@
 struct State {
-  alloc: RegionAlloc
   sorter: Sorter
 }
 
@@ -16,9 +15,12 @@ fun compareFn(lhs: *Row, rhs: *Row) -> int32 {
   }
 }
 
-fun setUpState(state: *State) -> nil {
-  @regionInit(&state.alloc)
-  @sorterInit(&state.sorter, &state.alloc, compareFn, @sizeOf(Row))
+fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
+  @sorterInit(&state.sorter, @execCtxGetMem(execCtx), compareFn, @sizeOf(Row))
+}
+
+fun tearDownState(state: *State) -> nil {
+  @sorterFree(&state.sorter)
 }
 
 fun pipeline_1(state: *State) -> nil {
@@ -26,36 +28,35 @@ fun pipeline_1(state: *State) -> nil {
   var tvi: TableVectorIterator
   for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
     var vpi = @tableIterGetVPI(&tvi)
-    for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
+    @filterLt(vpi, "colA", 2000)
+    for (; @vpiHasNextFiltered(vpi); @vpiAdvanceFiltered(vpi)) {
       var row = @ptrCast(*Row, @sorterInsert(sorter))
       row.a = @vpiGetInt(vpi, 0)
       row.b = @vpiGetInt(vpi, 1)
     }
-    @vpiReset(vpi)
+    @vpiResetFiltered(vpi)
   }
   @tableIterClose(&tvi)
 }
 
-fun pipeline_2(state: *State) -> nil {
+fun pipeline_2(state: *State) -> int32 {
+  var ret = 0
   var sort_iter: SorterIterator
   for (@sorterIterInit(&sort_iter, &state.sorter);
        @sorterIterHasNext(&sort_iter);
        @sorterIterNext(&sort_iter)) {
     var row = @ptrCast(*Row, @sorterIterGetRow(&sort_iter))
+    ret = ret + 1
   }
   @sorterIterClose(&sort_iter)
+  return ret
 }
 
-fun tearDownState(state: *State) -> nil {
-  @sorterFree(&state.sorter)
-  @regionFree(&state.alloc)
-}
-
-fun main() -> int32 {
+fun main(execCtx: *ExecutionContext) -> int32 {
   var state: State
 
   // Initialize
-  setUpState(&state)
+  setUpState(execCtx, &state)
 
   // Pipeline 1
   pipeline_1(&state)
@@ -64,10 +65,10 @@ fun main() -> int32 {
   @sorterSort(&state.sorter)
 
   // Pipeline 2
-  pipeline_2(&state)
+  var ret = pipeline_2(&state)
 
   // Cleanup
   tearDownState(&state)
 
-  return 0
+  return ret
 }
