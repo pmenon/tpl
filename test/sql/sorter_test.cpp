@@ -245,67 +245,82 @@ template <u32 N>
 struct TestTuple {
   u32 key;
   u32 data[N];
+
+  i32 Compare(const TestTuple<N> &other) const { return key - other.key; }
 };
 
-TEST_F(SorterTest, ParallelSortTest) {
-  //
-  // Test: Create 'num_sorters' thread-local sorters. Insert
-  //       'num_tuples_per_sorter' tuples into each sorter. Parallel sort all
-  //       into main and check tuple counts and sortedness.
-  //
-
-  const u32 num_sorters = 5;
-  const u32 num_tuples_per_sorter = 10000;
-
-  using Tuple = TestTuple<3>;
-
-  static const auto cmp_fn = [](const void *a, const void *b) -> i32 {
-    const auto tuple_a = reinterpret_cast<const Tuple *>(a);
-    const auto tuple_b = reinterpret_cast<const Tuple *>(b);
-    return tuple_a->key - tuple_b->key;
+// Generic function to perform a parallel sort. The input parameter indicates
+// the sizes of each thread-local sorter that will be created.
+template <u32 N>
+void TestParallelSort(const std::vector<u32> &sorter_sizes) {
+  // Comparison function
+  static const auto cmp_fn = [](const void *left, const void *right) {
+    const auto *l = reinterpret_cast<const TestTuple<N> *>(left);
+    const auto *r = reinterpret_cast<const TestTuple<N> *>(right);
+    return l->Compare(*r);
   };
 
-  auto init_sorter = [](void *ctx, void *s) {
+  // Initialization and destruction function
+  const auto init_sorter = [](void *ctx, void *s) {
     new (s) Sorter(reinterpret_cast<ExecutionContext *>(ctx)->memory_pool(),
-                   cmp_fn, sizeof(Tuple));
+                   cmp_fn, sizeof(TestTuple<N>));
   };
-  auto destroy_sorter = [](UNUSED void *ctx, void *s) {
+  const auto destroy_sorter = [](UNUSED void *ctx, void *s) {
     reinterpret_cast<Sorter *>(s)->~Sorter();
   };
 
+  // Create container
   MemoryPool memory(nullptr);
   ExecutionContext exec_ctx(&memory);
   ThreadStateContainer container(&memory);
 
   container.Reset(sizeof(Sorter), init_sorter, destroy_sorter, &exec_ctx);
 
-  std::vector<u32> v(num_sorters);
+  // Parallel build
   tbb::task_scheduler_init sched;
-  tbb::parallel_for_each(v.begin(), v.end(), [&container](UNUSED auto vv) {
-    auto *sorter = container.AccessThreadStateOfCurrentThreadAs<Sorter>();
-    for (u32 i = 0; i < 10000; i++) {
-      auto *elem = reinterpret_cast<Tuple *>(sorter->AllocInputTuple());
-      elem->key = i;
-    }
-  });
+  tbb::parallel_for_each(
+      sorter_sizes.begin(), sorter_sizes.end(), [&container](auto sorter_size) {
+        auto *sorter = container.AccessThreadStateOfCurrentThreadAs<Sorter>();
+        for (u32 i = 0; i < sorter_size; i++) {
+          auto *elem =
+              reinterpret_cast<TestTuple<N> *>(sorter->AllocInputTuple());
+          elem->key = i;
+        }
+      });
 
   // Main parallel sort
-  Sorter main(exec_ctx.memory_pool(), cmp_fn, sizeof(Tuple));
+  Sorter main(exec_ctx.memory_pool(), cmp_fn, sizeof(TestTuple<N>));
   main.SortParallel(&container, 0);
 
+  u32 expected_total_size =
+      std::accumulate(sorter_sizes.begin(), sorter_sizes.end(), 0u,
+                      [](auto p, auto s) { return p + s; });
+
   EXPECT_TRUE(main.is_sorted());
-  EXPECT_EQ(num_sorters * num_tuples_per_sorter, main.NumTuples());
+  EXPECT_EQ(expected_total_size, main.NumTuples());
 
   // Ensure sortedness
-  const Tuple *prev = nullptr;
-  for(SorterIterator iter(&main); iter.HasNext(); iter.Next()) {
-    auto *curr = iter.GetRowAs<Tuple>();
+  const TestTuple<N> *prev = nullptr;
+  for (SorterIterator iter(&main); iter.HasNext(); iter.Next()) {
+    auto *curr = iter.GetRowAs<TestTuple<N>>();
     if (prev != nullptr) {
       EXPECT_TRUE(cmp_fn(prev, curr) <= 0);
     }
     prev = curr;
   }
+}
 
+TEST_F(SorterTest, BalancedParallelSortTest) {
+  TestParallelSort<2>({1000, 1000, 1000, 1000});
+}
+
+TEST_F(SorterTest, UnbalancedParallelSortTest) {
+  // All empty
+  TestParallelSort<2>({0, 0, 0, 0});
+  // Some empty
+  TestParallelSort<2>({1000, 0, 1000, 0});
+  // Generic imbalance
+  TestParallelSort<2>({1000, 1, 100, 10000, 10});
 }
 
 }  // namespace tpl::sql::test

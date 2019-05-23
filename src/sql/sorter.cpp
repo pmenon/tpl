@@ -5,6 +5,8 @@
 
 #include <tbb/tbb.h>  // NOLINT
 
+#include "llvm/ADT/STLExtras.h"
+
 #include "ips4o/ips4o.hpp"
 
 #include "logging/logger.h"
@@ -152,16 +154,27 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
     return cmp_fn_(left, right) < 0;
   };
 
+  // -------------------------------------------------------
+  // First, collect all non-empty thread-local sorters
+  // -------------------------------------------------------
+
   std::vector<Sorter *> tl_sorters;
   thread_state_container->CollectThreadLocalStateElementsAs(tl_sorters,
                                                             sorter_offset);
+  llvm::erase_if(tl_sorters,
+                 [](Sorter *const sorter) { return sorter->NumTuples() == 0; });
 
-  util::StageTimer<std::milli> timer;
+  // If there's nothing to sort, quit
+  if (tl_sorters.empty()) {
+    sorted_ = true;
+    return;
+  }
 
   // -------------------------------------------------------
   // 1. Make room in this sorter for all result tuples
   // -------------------------------------------------------
 
+  util::StageTimer<std::milli> timer;
   timer.EnterStage("Resize Main Sorter");
 
   const u64 num_tuples =
