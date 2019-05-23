@@ -10,9 +10,10 @@
 
 namespace tpl::sql {
 
-Sorter::Sorter(util::Region *region, ComparisonFunction cmp_fn, u32 tuple_size)
-    : tuple_storage_(tuple_size, util::StlRegionAllocator<byte>(region)),
+Sorter::Sorter(MemoryPool *memory, ComparisonFunction cmp_fn, u32 tuple_size)
+    : tuple_storage_(tuple_size, MemoryPoolAllocator<byte>(memory)),
       cmp_fn_(cmp_fn),
+      tuples_(MemoryPoolAllocator<const byte *>(memory)),
       sorted_(false) {}
 
 Sorter::~Sorter() = default;

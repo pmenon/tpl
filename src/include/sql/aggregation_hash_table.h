@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sql/generic_hash_table.h"
+#include "sql/memory_pool.h"
 #include "util/chunked_vector.h"
 
 namespace tpl::sql {
@@ -60,17 +61,22 @@ class AggregationHashTable {
   // -------------------------------------------------------
 
   /**
-   * Construct an aggregation hash table using the provided memory region, and
+   * Construct an aggregation hash table using the provided memory pool, and
    * configured to store aggregates of size @em payload_size in bytes
-   * @param region The memory region to allocate from
+   * @param memory The memory pool to allocate memory from
    * @param payload_size The size of the elements in the hash table
    */
-  AggregationHashTable(util::Region *region, u32 payload_size);
+  AggregationHashTable(MemoryPool *memory, u32 payload_size);
 
   /**
    * This class cannot be copied or moved
    */
   DISALLOW_COPY_AND_MOVE(AggregationHashTable);
+
+  /**
+   * Destructor
+   */
+  ~AggregationHashTable();
 
   /**
    * Insert a new element with hash value @em hash into the aggregation table.
@@ -187,16 +193,15 @@ class AggregationHashTable {
 
  private:
   // Allocator
-  util::Region *mem_;
+  MemoryPool *memory_;
 
   // Where the aggregates are stored
-  util::ChunkedVector<util::StlRegionAllocator<byte>> entries_;
+  util::ChunkedVector<MemoryPoolAllocator<byte>> entries_;
 
-  // The hash table where the aggregates are stored
+  // The hash index
   GenericHashTable hash_table_;
 
   // Overflow partitions
-  // MergingFunction merging_func_;
   HashTableEntry **partition_heads_;
   HashTableEntry **partition_tails_;
   AggregationHashTable **partition_tables_;

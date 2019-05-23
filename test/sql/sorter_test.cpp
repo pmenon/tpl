@@ -10,7 +10,6 @@
 #include "ips4o/ips4o.hpp"
 
 #include "sql/sorter.h"
-#include "util/region.h"
 
 #define TestAllSigned(FuncName, Args...) \
   FuncName<i8>(Args);                    \
@@ -48,7 +47,7 @@ void TestSortRandomTupleSize(const u32 num_iters, const u32 max_elems,
   // something that we can sizeof(). Limiting ourselves to IntType should be
   // fine.
   constexpr const auto tuple_size = sizeof(IntType);
-  const auto cmp_fn = [](const byte *a, const byte *b) -> i32 {
+  const auto cmp_fn = [](const void *a, const void *b) -> i32 {
     const auto val_a = *reinterpret_cast<const IntType *>(a);
     const auto val_b = *reinterpret_cast<const IntType *>(b);
     return val_a < val_b ? -1 : (val_a == val_b ? 0 : 1);
@@ -64,8 +63,8 @@ void TestSortRandomTupleSize(const u32 num_iters, const u32 max_elems,
     reference.reserve(num_elems);
 
     // Create a sorter.
-    util::Region tmp("tmp");
-    sql::Sorter sorter(&tmp, cmp_fn, tuple_size);
+    MemoryPool memory(nullptr);
+    sql::Sorter sorter(&memory, cmp_fn, tuple_size);
 
     // Randomly create and insert elements to both sorter and reference.
     for (u32 i = 0; i < num_elems; i++) {
@@ -102,7 +101,7 @@ void TestTopKRandomTupleSize(const u32 num_iters, const u32 max_elems,
   // something that we can sizeof(). Limiting ourselves to IntType should be
   // fine.
   const auto tuple_size = sizeof(IntType);
-  auto cmp_fn = [](const byte *a, const byte *b) -> int {
+  auto cmp_fn = [](const void *a, const void *b) -> int {
     const auto val_a = *reinterpret_cast<const IntType *>(a);
     const auto val_b = *reinterpret_cast<const IntType *>(b);
     return val_a < val_b ? -1 : (val_a == val_b ? 0 : 1);
@@ -121,8 +120,8 @@ void TestTopKRandomTupleSize(const u32 num_iters, const u32 max_elems,
         reference;
 
     // Create a sorter.
-    util::Region tmp("tmp");
-    sql::Sorter sorter(&tmp, cmp_fn, tuple_size);
+    MemoryPool memory(nullptr);
+    sql::Sorter sorter(&memory, cmp_fn, tuple_size);
 
     // Randomly create and insert elements to both sorter and reference.
     for (u32 i = 0; i < num_elems; i++) {
@@ -169,7 +168,7 @@ TEST_F(SorterTest, DISABLED_PerfSortTest) {
   const uint32_t num_elems = 10000000;
 
   // The sort comparison function
-  auto sorter_cmp_fn = [](const byte *a, const byte *b) -> i32 {
+  auto sorter_cmp_fn = [](const void *a, const void *b) -> i32 {
     // Just compare the first few bytes
     const auto val_a = *reinterpret_cast<const int_type *>(a);
     const auto val_b = *reinterpret_cast<const int_type *>(b);
@@ -184,14 +183,12 @@ TEST_F(SorterTest, DISABLED_PerfSortTest) {
 
   // Create the different kinds of vectors.
   // Some of these are commented out to reduce the memory usage of this test.
-  util::Region vec_tmp("vec_tmp");
-  util::Region chunk_tmp("chunk_tmp");
-  util::Region sorter_tmp("sorter_tmp");
-  std::vector<data, util::StlRegionAllocator<data>> vec{
-      util::StlRegionAllocator<data>(&vec_tmp)};
-  util::ChunkedVectorT<data, util::StlRegionAllocator<data>> chunk_vec{
-      util::StlRegionAllocator<data>(&chunk_tmp)};
-  sql::Sorter sorter(&sorter_tmp, sorter_cmp_fn, sizeof(data));
+  MemoryPool memory(nullptr);
+  std::vector<data, MemoryPoolAllocator<data>> vec{
+      MemoryPoolAllocator<data>(&memory)};
+  util::ChunkedVectorT<data, MemoryPoolAllocator<data>> chunk_vec{
+      MemoryPoolAllocator<data>(&memory)};
+  sql::Sorter sorter(&memory, sorter_cmp_fn, sizeof(data));
   std::cout << "Sizeof(data) is " << (sizeof(data)) << std::endl;
 
   // Fill up the regular vector. This is our reference.

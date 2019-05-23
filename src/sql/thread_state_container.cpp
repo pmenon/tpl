@@ -3,90 +3,98 @@
 #include <memory>
 #include <vector>
 
-#include "tbb/tbb.h"
+#include <tbb/tbb.h>  // NOLINT
 
 namespace tpl::sql {
 
-/**
- * A handle to a single thread's state
- */
-class TLSHandle {
- public:
-  TLSHandle() : init_fn_(nullptr), destroy_fn_(nullptr), state_(nullptr) {}
+// ---------------------------------------------------------
+// Thread Local State Handle
+// ---------------------------------------------------------
 
-  TLSHandle(std::size_t size, ThreadStateContainer::InitFn init_fn,
-            ThreadStateContainer::DestroyFn destroy_fn)
-      : init_fn_(init_fn),
-        destroy_fn_(destroy_fn),
-        state_(std::make_unique<byte[]>(size)) {
-    if (init_fn_ != nullptr) {
-      init_fn_(state_.get());
-    }
+ThreadStateContainer::TLSHandle::TLSHandle()
+    : container_(nullptr), state_(nullptr) {}
+
+ThreadStateContainer::TLSHandle::TLSHandle(ThreadStateContainer *container)
+    : container_(container) {
+  TPL_ASSERT(container_ != nullptr, "Container must be non-null");
+  const auto state_size = container_->state_size_;
+  state_ = static_cast<byte *>(container_->memory_->Allocate(state_size, true));
+
+  if (auto init_fn = container_->init_fn_; init_fn != nullptr) {
+    init_fn(container_->ctx_, state_);
+  }
+}
+
+ThreadStateContainer::TLSHandle::~TLSHandle() {
+  if (auto destroy_fn = container_->destroy_fn_; destroy_fn != nullptr) {
+    destroy_fn(container_->ctx_, state_);
   }
 
-  ~TLSHandle() {
-    if (destroy_fn_ != nullptr) {
-      destroy_fn_(state_.get());
-    }
-  }
+  const auto state_size = container_->state_size_;
+  container_->memory_->Deallocate(state_, state_size);
+}
 
-  byte *state() { return state_.get(); }
-
- private:
-  ThreadStateContainer::InitFn init_fn_;
-  ThreadStateContainer::DestroyFn destroy_fn_;
-  std::unique_ptr<byte[]> state_;
-};
+// ---------------------------------------------------------
+// Actual container of all thread state
+// ---------------------------------------------------------
 
 /**
  * The actual container for all thread-local state for participating threads
  */
 struct ThreadStateContainer::Impl {
-  tbb::enumerable_thread_specific<std::unique_ptr<TLSHandle>> states_;
+  tbb::enumerable_thread_specific<TLSHandle> states;
 };
 
-ThreadStateContainer::ThreadStateContainer(util::Region *memory)
+// ---------------------------------------------------------
+// Thread State Container
+// ---------------------------------------------------------
+
+ThreadStateContainer::ThreadStateContainer(MemoryPool *memory)
     : memory_(memory),
       state_size_(0),
       init_fn_(nullptr),
       destroy_fn_(nullptr),
-      impl_(std::make_unique<ThreadStateContainer::Impl>()) {}
+      ctx_(nullptr),
+      impl_(std::make_unique<ThreadStateContainer::Impl>()) {
+  impl_->states = tbb::enumerable_thread_specific<TLSHandle>(this);
+}
 
 ThreadStateContainer::~ThreadStateContainer() = default;
 
+void ThreadStateContainer::Clear() { impl_->states.clear(); }
+
 void ThreadStateContainer::Reset(const std::size_t state_size, InitFn init_fn,
-                                 DestroyFn destroy_fn) {
+                                 DestroyFn destroy_fn, void *ctx) {
+  // Ensure we clean before resetting sizes, functions, context
+  Clear();
+
+  // Now we can set these fields since all thread-local state has been cleaned
   state_size_ = state_size;
   init_fn_ = init_fn;
   destroy_fn_ = destroy_fn;
-  impl_->states_.clear();
+  ctx_ = ctx;
 }
 
 byte *ThreadStateContainer::AccessThreadStateOfCurrentThread() {
-  bool exists = false;
-  auto &tls_handle = impl_->states_.local(exists);
-  if (!exists) {
-    tls_handle =
-        std::make_unique<TLSHandle>(state_size_, init_fn_, destroy_fn_);
-  }
-  return tls_handle->state();
+  auto &tls_handle = impl_->states.local();
+  return tls_handle.state();
 }
 
 void ThreadStateContainer::CollectThreadLocalStates(
     std::vector<byte *> &container) {
   container.clear();
-  container.reserve(impl_->states_.size());
-  for (auto &tls_handle : impl_->states_) {
-    container.push_back(tls_handle->state());
+  container.reserve(impl_->states.size());
+  for (auto &tls_handle : impl_->states) {
+    container.push_back(tls_handle.state());
   }
 }
 
 void ThreadStateContainer::CollectThreadLocalStateElements(
-    std::vector<byte *> &container, const u32 element_offset) {
+    std::vector<byte *> &container, std::size_t element_offset) {
   container.clear();
-  container.reserve(impl_->states_.size());
-  for (auto &tls_handle : impl_->states_) {
-    container.push_back(tls_handle->state() + element_offset);
+  container.reserve(impl_->states.size());
+  for (auto &tls_handle : impl_->states) {
+    container.push_back(tls_handle.state() + element_offset);
   }
 }
 

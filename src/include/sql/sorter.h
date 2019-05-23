@@ -2,12 +2,10 @@
 
 #include <vector>
 
+#include "sql/memory_pool.h"
 #include "util/chunked_vector.h"
 
 namespace tpl::sql {
-
-// Forward declare
-class SorterIterator;
 
 /**
  * Sorters
@@ -17,13 +15,16 @@ class Sorter {
   /**
    * The interface of the comparison function used to sort tuples
    */
-  using ComparisonFunction = i32 (*)(const byte *lhs, const byte *rhs);
+  using ComparisonFunction = i32 (*)(const void *lhs, const void *rhs);
 
   /**
-   * Construct a sorter using the given allocator, configured to store input
-   * tuples of size \a tuple_size bytes
+   * Construct a sorter using @em memory as the memory allocator, storing tuples
+   * @em tuple_size size in bytes, and using the comparison function @em cmp_fn.
+   * @param memory The memory pool to allocate memory from
+   * @param cmp_fn The sorting comparison function
+   * @param tuple_size The sizes of the input tuples in bytes
    */
-  Sorter(util::Region *region, ComparisonFunction cmp_fn, u32 tuple_size);
+  Sorter(MemoryPool *memory, ComparisonFunction cmp_fn, u32 tuple_size);
 
   /**
    * Destructor
@@ -74,13 +75,13 @@ class Sorter {
   friend class SorterIterator;
 
   // Vector of entries
-  util::ChunkedVector<util::StlRegionAllocator<byte>> tuple_storage_;
+  util::ChunkedVector<MemoryPoolAllocator<byte>> tuple_storage_;
 
   // The comparison function
   ComparisonFunction cmp_fn_;
 
   // Vector of pointers to each entry. This is the vector that's sorted.
-  std::vector<const byte *> tuples_;
+  std::vector<const byte *, MemoryPoolAllocator<const byte *>> tuples_;
 
   // Flag indicating if the contents of the sorter have been sorted
   bool sorted_;

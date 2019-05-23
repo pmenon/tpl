@@ -81,17 +81,17 @@ namespace tpl::vm {
   F(Lea, OperandType::Local, OperandType::Local, OperandType::Imm4)                                                    \
   F(LeaScaled, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Imm4, OperandType::Imm4)       \
                                                                                                                        \
-  F(RegionInit, OperandType::Local)                                                                                    \
-  F(RegionFree, OperandType::Local)                                                                                    \
-                                                                                                                       \
   /* Function calls */                                                                                                 \
   F(Call, OperandType::FunctionId, OperandType::LocalCount)                                                            \
   F(Return)                                                                                                            \
                                                                                                                        \
+  /* Execution Context */                                                                                              \
+  F(ExecutionContextGetMemoryPool, OperandType::Local, OperandType::Local)                                             \
+                                                                                                                       \
   /* Thread State Container */                                                                                         \
   F(ThreadStateContainerInit, OperandType::Local, OperandType::Local)                                                  \
   F(ThreadStateContainerReset, OperandType::Local, OperandType::Local, OperandType::FunctionId,                        \
-      OperandType::FunctionId)                                                                                         \
+      OperandType::FunctionId, OperandType::Local)                                                                     \
   F(ThreadStateContainerFree, OperandType::Local)                                                                      \
                                                                                                                        \
   /* Table Vector Iterator */                                                                                          \

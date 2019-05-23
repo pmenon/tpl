@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <deque>
 #include <random>
+#include <utility>
 #include <vector>
 
 #include "tpl_test.h"  // NOLINT
@@ -47,7 +48,6 @@ TEST_F(ChunkedVectorTest, RandomLookupTest) {
 }
 
 TEST_F(ChunkedVectorTest, IterationTest) {
-  util::Region tmp("tmp");
   ChunkedVectorT<u32> vec;
 
   for (u32 i = 0; i < 10; i++) {
@@ -63,7 +63,6 @@ TEST_F(ChunkedVectorTest, IterationTest) {
 }
 
 TEST_F(ChunkedVectorTest, PopBackTest) {
-  util::Region tmp("tmp");
   ChunkedVectorT<u32> vec;
 
   for (u32 i = 0; i < 10; i++) {
@@ -82,7 +81,6 @@ TEST_F(ChunkedVectorTest, PopBackTest) {
 }
 
 TEST_F(ChunkedVectorTest, FrontBackTest) {
-  util::Region tmp("tmp");
   ChunkedVectorT<u32> vec;
 
   for (u32 i = 0; i < 10; i++) {
@@ -104,7 +102,8 @@ TEST_F(ChunkedVectorTest, FrontBackTest) {
 
 TEST_F(ChunkedVectorTest, ChunkReuseTest) {
   util::Region tmp("tmp");
-  ChunkedVectorT<u32> vec;
+  ChunkedVectorT<u32, StlRegionAllocator<u32>> vec{
+      StlRegionAllocator<u32>(&tmp)};
 
   for (u32 i = 0; i < 1000; i++) {
     vec.push_back(i);
@@ -160,12 +159,41 @@ TEST_F(ChunkedVectorTest, ElementConstructDestructTest) {
   EXPECT_EQ(0u, Simple::count);
 }
 
+TEST_F(ChunkedVectorTest, MoveConstructorTest) {
+  const u32 num_elems = 1000;
+
+  // Populate vec1
+  ChunkedVectorT<u32> vec1;
+  for (u32 i = 0; i < num_elems; i++) {
+    vec1.push_back(i);
+  }
+
+  ChunkedVectorT<u32> vec2(std::move(vec1));
+  EXPECT_EQ(num_elems, vec2.size());
+}
+
+TEST_F(ChunkedVectorTest, AssignmentMoveTest) {
+  const u32 num_elems = 1000;
+
+  // Populate vec1
+  ChunkedVectorT<u32> vec1;
+  for (u32 i = 0; i < num_elems; i++) {
+    vec1.push_back(i);
+  }
+
+  ChunkedVectorT<u32> vec2;
+  EXPECT_EQ(0u, vec2.size());
+
+  // Move vec1 into vec2
+  vec2 = std::move(vec1);
+  EXPECT_EQ(num_elems, vec2.size());
+}
+
 // Check that adding random integers to the iterator works.
 TEST_F(ChunkedVectorTest, RandomIteratorAdditionTest) {
   const u32 num_elems = 1000;
   const u32 num_rolls = 1000000;  // Number of additions to make
   // Create vector
-  util::Region tmp("tmp");
   ChunkedVectorT<u32> vec;
   for (u32 i = 0; i < num_elems; i++) vec.push_back(i);
 
@@ -187,7 +215,6 @@ TEST_F(ChunkedVectorTest, RandomIteratorSubtractionTest) {
   const u32 num_elems = 1000;
   const u32 num_rolls = 1000000;  // number of subtractions to make
   // Create vector
-  util::Region tmp("tmp");
   ChunkedVectorT<u32> vec;
   for (u32 i = 0; i < num_elems; i++) vec.push_back(i);
 

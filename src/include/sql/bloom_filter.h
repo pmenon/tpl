@@ -1,9 +1,10 @@
 #pragma once
 
+#include <vector>
+
+#include "sql/memory_pool.h"
 #include "util/common.h"
 #include "util/macros.h"
-#include "util/region.h"
-#include "util/region_containers.h"
 
 namespace tpl::sql {
 
@@ -38,17 +39,17 @@ class BloomFilter {
   BloomFilter() noexcept;
 
   /**
-   * Create an uninitialized bloom filter with the given region allocator
-   * @param region The allocator where this filter's memory is sourced from
+   * Create an uninitialized bloom filter with the given memory pool
+   * @param memory The allocator where this filter's memory is sourced from
    */
-  explicit BloomFilter(util::Region *region);
+  explicit BloomFilter(MemoryPool *memory);
 
   /**
    * Create and initialize this filter with the given size @em num_elems
-   * @param region The allocator where this filter's memory is sourced from
+   * @param memory The allocator where this filter's memory is sourced from
    * @param num_elems The expected number of elements
    */
-  BloomFilter(util::Region *region, u32 num_elems);
+  BloomFilter(MemoryPool *memory, u32 num_elems);
 
   /**
    * This class cannot be copied or moved
@@ -56,11 +57,16 @@ class BloomFilter {
   DISALLOW_COPY_AND_MOVE(BloomFilter);
 
   /**
+   * Destructor
+   */
+  ~BloomFilter();
+
+  /**
    * Initialize this bloom filter with the given size
-   * @param region The allocator where this filter's memory is sourced from
+   * @param memory The allocator where this filter's memory is sourced from
    * @param num_elems The expected number of elements
    */
-  void Init(util::Region *region, u32 num_elems);
+  void Init(MemoryPool *memory, u32 num_elems);
 
   /**
    * Add an element to the bloom filter
@@ -94,18 +100,17 @@ class BloomFilter {
   u32 GetNumBlocks() const { return block_mask_ + 1; }
 
  private:
-  // The region allocator we use for all allocations
-  util::Region *region_;
+  // The memory allocator we use for all allocations
+  MemoryPool *memory_;
 
-  // The blocks. Note that this isn't allocated in a region and doesn't need to
-  // be freed on destruction. That will be taken care of when the region gets
-  // destroyed
+  // The blocks array
   Block *blocks_;
 
   // The mask used to determine which block a hash goes into
   u32 block_mask_;
 
-  util::RegionVector<hash_t> lazily_added_hashes_;
+  // Temporary vector of lazily added hashes for bulk loading
+  std::vector<hash_t, MemoryPoolAllocator<hash_t>> lazily_added_hashes_;
 };
 
 #if 0

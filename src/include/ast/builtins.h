@@ -21,11 +21,8 @@ namespace tpl::ast {
   F(FilterLt, filterLt)                                   \
   F(FilterNe, filterNe)                                   \
                                                           \
-  /* Region Allocator */                                  \
-  F(RegionInit, regionInit)                               \
-  F(RegionFree, regionFree)                               \
-                                                          \
   /* Thread State Container */                            \
+  F(ExecutionContextGetMemoryPool, execCtxGetMem)         \
   F(ThreadStateContainerInit, tlsInit)                    \
   F(ThreadStateContainerReset, tlsReset)                  \
   F(ThreadStateContainerFree, tlsFree)                    \

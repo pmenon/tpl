@@ -38,20 +38,20 @@ static inline bool CmpTupleInVPI(const byte *table_tuple,
 
 class JoinHashTableVectorLookupTest : public TplTest {
  public:
-  JoinHashTableVectorLookupTest() : region_(GetTestName()) {}
+  JoinHashTableVectorLookupTest() : memory_(nullptr) {}
 
-  util::Region *region() { return &region_; }
+  MemoryPool *memory() { return &memory_; }
 
  private:
-  util::Region region_;
+  MemoryPool memory_;
 };
 
 template <u8 N, typename F>
-std::unique_ptr<const JoinHashTable> InsertAndBuild(util::Region *region,
+std::unique_ptr<const JoinHashTable> InsertAndBuild(MemoryPool *memory,
                                                     bool concise,
                                                     u32 num_tuples,
                                                     F &&key_gen) {
-  auto jht = std::make_unique<JoinHashTable>(region, sizeof(Tuple<N>), concise);
+  auto jht = std::make_unique<JoinHashTable>(memory, sizeof(Tuple<N>), concise);
 
   // Insert
   for (u32 i = 0; i < num_tuples; i++) {
@@ -96,7 +96,7 @@ TEST_F(JoinHashTableVectorLookupTest, SimpleGenericLookupTest) {
   constexpr const u32 num_probe = num_build * 10;
 
   // Create test JHT
-  auto jht = InsertAndBuild<N>(region(), /*concise*/ false, num_build, Seq(0));
+  auto jht = InsertAndBuild<N>(memory(), /*concise*/ false, num_build, Seq(0));
 
   // Create test probe input
   auto probe_keys = std::vector<u32>(num_probe);
@@ -142,7 +142,7 @@ TEST_F(JoinHashTableVectorLookupTest, DISABLED_PerfLookupTest) {
     constexpr const u32 num_probe = num_build * 10;
 
     // Create test JHT
-    auto jht = InsertAndBuild<N>(region(), concise, num_build, Seq(0));
+    auto jht = InsertAndBuild<N>(memory(), concise, num_build, Seq(0));
 
     // Create test probe input
     auto probe_keys = std::vector<u32>(num_probe);

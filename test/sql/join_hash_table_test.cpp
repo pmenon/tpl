@@ -3,7 +3,10 @@
 
 #include "tpl_test.h"  // NOLINT
 
+#include <tbb/tbb.h>  // NOLINT
+
 #include "sql/join_hash_table.h"
+#include "sql/thread_state_container.h"
 #include "util/hash.h"
 
 namespace tpl::sql::test {
@@ -23,9 +26,9 @@ static inline bool TupleKeyEq(UNUSED void *_, void *probe_tuple,
 
 class JoinHashTableTest : public TplTest {
  public:
-  JoinHashTableTest() : region_(GetTestName()) {}
+  JoinHashTableTest() : memory_(nullptr) {}
 
-  util::Region *region() { return &region_; }
+  MemoryPool *memory() { return &memory_; }
 
   GenericHashTable *GenericTableFor(JoinHashTable *join_hash_table) {
     return &join_hash_table->generic_hash_table_;
@@ -40,7 +43,7 @@ class JoinHashTableTest : public TplTest {
   }
 
  private:
-  util::Region region_;
+  MemoryPool memory_;
 };
 
 TEST_F(JoinHashTableTest, LazyInsertionTest) {
@@ -61,7 +64,7 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
     }
   }
 
-  JoinHashTable join_hash_table(region(), sizeof(Tuple));
+  JoinHashTable join_hash_table(memory(), sizeof(Tuple));
 
   // The table
   for (const auto &tuple : tuples) {
@@ -85,28 +88,33 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
   EXPECT_EQ(num_tuples, GenericTableFor(&join_hash_table)->num_elements());
 }
 
+void PopulateJoinHashTable(JoinHashTable *jht, u32 num_tuples,
+                           u32 dup_scale_factor) {
+  for (u32 rep = 0; rep < dup_scale_factor; rep++) {
+    for (u32 i = 0; i < num_tuples; i++) {
+      auto hash_val =
+          util::Hasher::Hash(reinterpret_cast<const u8 *>(&i), sizeof(i));
+      auto *space = jht->AllocInputTuple(hash_val);
+      auto *tuple = reinterpret_cast<Tuple *>(space);
+      tuple->a = i;
+    }
+  }
+}
+
 template <bool UseConciseHashTable>
 void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
   //
   // The join table
   //
 
-  util::Region region("temp");
-  JoinHashTable join_hash_table(&region, sizeof(Tuple), UseConciseHashTable);
+  MemoryPool memory(nullptr);
+  JoinHashTable join_hash_table(&memory, sizeof(Tuple), UseConciseHashTable);
 
   //
-  // Some inserts
+  // Populate
   //
 
-  for (u32 rep = 0; rep < dup_scale_factor; rep++) {
-    for (u32 i = 0; i < num_tuples; i++) {
-      auto hash_val =
-          util::Hasher::Hash(reinterpret_cast<const u8 *>(&i), sizeof(i));
-      auto *space = join_hash_table.AllocInputTuple(hash_val);
-      auto *tuple = reinterpret_cast<Tuple *>(space);
-      tuple->a = i;
-    }
-  }
+  PopulateJoinHashTable(&join_hash_table, num_tuples, dup_scale_factor);
 
   //
   // Build
@@ -169,11 +177,40 @@ TEST_F(JoinHashTableTest, DuplicateKeyLookupConciseTableTest) {
   BuildAndProbeTest<true>(400, 5);
 }
 
+TEST_F(JoinHashTableTest, ParallelBuildTest) {
+  const u32 num_tuples = 100000;
+
+  MemoryPool memory(nullptr);
+  ThreadStateContainer container(&memory);
+
+  container.Reset(sizeof(JoinHashTable),
+                  [](auto *ctx, auto *s) {
+                    new (s) JoinHashTable(reinterpret_cast<MemoryPool *>(ctx),
+                                          sizeof(Tuple));
+                  },
+                  [](auto *ctx, auto *s) {
+                    reinterpret_cast<JoinHashTable *>(s)->~JoinHashTable();
+                  },
+                  &memory);
+
+  // Parallel populate hash tables
+  tbb::task_scheduler_init sched;
+  tbb::blocked_range<std::size_t> block_range(0, 4, 1);
+  tbb::parallel_for(block_range, [&](const auto &range) {
+    auto *jht = container.AccessThreadStateOfCurrentThreadAs<JoinHashTable>();
+    LOG_INFO("JHT @ {:p}", (void *)jht);
+    PopulateJoinHashTable(jht, num_tuples, 1);
+  });
+
+  JoinHashTable main_jht(&memory, sizeof(Tuple), false);
+  main_jht.MergeParallel(&container, 0);
+}
+
 TEST_F(JoinHashTableTest, DISABLED_PerfTest) {
   const u32 num_tuples = 10000000;
 
   auto bench = [this](bool concise, u32 num_tuples) {
-    JoinHashTable join_hash_table(region(), sizeof(Tuple), concise);
+    JoinHashTable join_hash_table(memory(), sizeof(Tuple), concise);
 
     //
     // Build random input

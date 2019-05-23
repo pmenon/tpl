@@ -6,8 +6,8 @@
 #include "sql/bloom_filter.h"
 #include "sql/concise_hash_table.h"
 #include "sql/generic_hash_table.h"
+#include "sql/memory_pool.h"
 #include "util/chunked_vector.h"
-#include "util/region.h"
 #include "util/spin_latch.h"
 
 namespace libcount {
@@ -33,13 +33,13 @@ class JoinHashTable {
 
   /**
    * Construct a join hash table. All memory allocations are sourced from the
-   * injected @em region, and thus, are ephemeral.
-   * @param region The
-   * @param tuple_size
-   * @param use_concise_ht
+   * injected @em memory, and thus, are ephemeral.
+   * @param memory The memory pool to allocate memory from
+   * @param tuple_size The size of the tuple stored in this join hash table
+   * @param use_concise_ht Whether to use a concise or generic join index
    */
-  JoinHashTable(util::Region *region, u32 tuple_size,
-                bool use_concise_ht = false) noexcept;
+  explicit JoinHashTable(MemoryPool *memory, u32 tuple_size,
+                         bool use_concise_ht = false);
 
   /**
    * This class cannot be copied or moved
@@ -95,10 +95,10 @@ class JoinHashTable {
    * Merge all thread-local hash tables stored in the state contained into this
    * table. Perform the merge in parallel.
    * @param thread_state_container The container for all thread-local tables
-   * @param hash_table_offset The offset in the state where the hash table is
+   * @param jht_offset The offset in the state where the hash table is
    */
-  void MergeAllParallel(ThreadStateContainer *thread_state_container,
-                        u32 hash_table_offset);
+  void MergeParallel(ThreadStateContainer *thread_state_container,
+                     u32 jht_offset);
 
   // -------------------------------------------------------
   // Accessors
@@ -237,17 +237,17 @@ class JoinHashTable {
       const HashTableEntry *results[]) const;
 
   // Merge the source hash table (which isn't built yet) into this one
-  template <bool Prefetch>
-  void MergeIncompleteMT(JoinHashTable *source);
+  template <bool Prefetch, bool Concurrent>
+  void MergeIncomplete(JoinHashTable *source);
 
  private:
   // The vector where we store the build-side input
-  util::ChunkedVector<util::StlRegionAllocator<byte>> entries_;
+  util::ChunkedVector<MemoryPoolAllocator<byte>> entries_;
 
   // To protect concurrent access to owned_entries
   util::SpinLatch owned_latch_;
   // List of entries this hash table has taken ownership of
-  std::vector<util::ChunkedVector<util::StlRegionAllocator<byte>>> owned_;
+  std::vector<util::ChunkedVector<MemoryPoolAllocator<byte>>> owned_;
 
   // The generic hash table
   GenericHashTable generic_hash_table_;

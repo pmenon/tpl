@@ -39,14 +39,14 @@ static inline bool TupleKeyEq(const void *probe_tuple,
 class AggregationHashTableTest : public TplTest {
  public:
   AggregationHashTableTest()
-      : region_(GetTestName()), agg_table_(&region_, sizeof(AggTuple)) {}
+      : memory_(nullptr), agg_table_(&memory_, sizeof(AggTuple)) {}
 
-  util::Region *region() { return &region_; }
+  MemoryPool *memory() { return &memory_; }
 
   AggregationHashTable *agg_table() { return &agg_table_; }
 
  private:
-  util::Region region_;
+  MemoryPool memory_;
   AggregationHashTable agg_table_;
 };
 

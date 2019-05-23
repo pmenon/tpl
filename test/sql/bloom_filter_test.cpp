@@ -55,8 +55,8 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
   // The validation set. We use this to check false negatives.
   std::unordered_set<u32> check(insertions.begin(), insertions.end());
 
-  util::Region tmp("filter");
-  BloomFilter filter(&tmp, num_filter_elems);
+  MemoryPool memory(nullptr);
+  BloomFilter filter(&memory, num_filter_elems);
   for (const auto elem : insertions) {
     filter.Add(
         util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));

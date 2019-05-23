@@ -59,7 +59,7 @@ class Context;
   NON_PRIM(FilterManager, tpl::sql::FilterManager)                       \
   NON_PRIM(HashTableEntry, tpl::sql::HashTableEntry)                     \
   NON_PRIM(JoinHashTable, tpl::sql::JoinHashTable)                       \
-  NON_PRIM(RegionAlloc, tpl::util::Region)                               \
+  NON_PRIM(MemoryPool, tpl::sql::MemoryPool)                             \
   NON_PRIM(Sorter, tpl::sql::Sorter)                                     \
   NON_PRIM(SorterIterator, tpl::sql::SorterIterator)                     \
   NON_PRIM(TableVectorIterator, tpl::sql::TableVectorIterator)           \

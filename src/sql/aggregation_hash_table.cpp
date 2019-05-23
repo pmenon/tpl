@@ -11,11 +11,10 @@
 
 namespace tpl::sql {
 
-AggregationHashTable::AggregationHashTable(util::Region *region,
-                                           u32 payload_size)
-    : mem_(region),
+AggregationHashTable::AggregationHashTable(MemoryPool *memory, u32 payload_size)
+    : memory_(memory),
       entries_(sizeof(HashTableEntry) + payload_size,
-               util::StlRegionAllocator<byte>(region)),
+               MemoryPoolAllocator<byte>(memory)),
       hash_table_(kDefaultLoadFactor),
       partition_heads_(nullptr),
       partition_tails_(nullptr),
@@ -34,6 +33,22 @@ AggregationHashTable::AggregationHashTable(util::Region *region,
       std::llround(f32(l2_size) / entries_.element_size() * kDefaultLoadFactor);
   flush_threshold_ =
       std::max(256ul, util::MathUtil::PowerOf2Floor(flush_threshold_));
+}
+
+AggregationHashTable::~AggregationHashTable() {
+  if (partition_heads_ != nullptr) {
+    const auto num_bytes = kDefaultNumPartitions * sizeof(HashTableEntry *);
+    memory_->Deallocate(partition_heads_, num_bytes);
+  }
+  if (partition_tails_ != nullptr) {
+    const auto num_bytes = kDefaultNumPartitions * sizeof(HashTableEntry *);
+    memory_->Deallocate(partition_tails_, num_bytes);
+  }
+  if (partition_tables_ != nullptr) {
+    const auto num_bytes =
+        kDefaultNumPartitions * sizeof(AggregationHashTable *);
+    memory_->Deallocate(partition_tables_, num_bytes);
+  }
 }
 
 void AggregationHashTable::Grow() {
@@ -82,11 +97,10 @@ void AggregationHashTable::FlushToOverflowPartitions() {
   if (TPL_UNLIKELY(partition_heads_ == nullptr)) {
     TPL_ASSERT(partition_tails_ == nullptr,
                "Partition tail isn't null when head is null");
-    std::size_t nbytes = sizeof(HashTableEntry *) * kDefaultNumPartitions;
-    partition_heads_ = static_cast<HashTableEntry **>(mem_->Allocate(nbytes));
-    partition_tails_ = static_cast<HashTableEntry **>(mem_->Allocate(nbytes));
-    std::memset(partition_heads_, 0, nbytes);
-    std::memset(partition_tails_, 0, nbytes);
+    partition_heads_ =
+        memory_->AllocateArray<HashTableEntry *>(kDefaultNumPartitions, true);
+    partition_tails_ =
+        memory_->AllocateArray<HashTableEntry *>(kDefaultNumPartitions, true);
   }
 
   // Dump hash table into overflow partition

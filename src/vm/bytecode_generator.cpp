@@ -772,9 +772,9 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,
   switch (builtin) {
     case ast::Builtin::AggHashTableInit: {
       LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
-      LocalVar region = VisitExpressionForRValue(call->arguments()[1]);
+      LocalVar memory = VisitExpressionForRValue(call->arguments()[1]);
       LocalVar entry_size = VisitExpressionForRValue(call->arguments()[2]);
-      emitter()->Emit(Bytecode::AggregationHashTableInit, agg_ht, region,
+      emitter()->Emit(Bytecode::AggregationHashTableInit, agg_ht, memory,
                       entry_size);
       break;
     }
@@ -903,9 +903,9 @@ void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call,
   switch (builtin) {
     case ast::Builtin::JoinHashTableInit: {
       LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
-      LocalVar region = VisitExpressionForRValue(call->arguments()[1]);
+      LocalVar memory = VisitExpressionForRValue(call->arguments()[1]);
       LocalVar entry_size = VisitExpressionForRValue(call->arguments()[2]);
-      emitter()->Emit(Bytecode::JoinHashTableInit, join_hash_table, region,
+      emitter()->Emit(Bytecode::JoinHashTableInit, join_hash_table, memory,
                       entry_size);
       break;
     }
@@ -938,11 +938,11 @@ void BytecodeGenerator::VisitBuiltinSorterCall(ast::CallExpr *call,
       // TODO(pmenon): Fix me so that the comparison function doesn't have be
       // listed by name.
       LocalVar sorter = VisitExpressionForRValue(call->arguments()[0]);
-      LocalVar region = VisitExpressionForRValue(call->arguments()[1]);
+      LocalVar memory = VisitExpressionForRValue(call->arguments()[1]);
       const std::string cmp_func_name =
           call->arguments()[2]->As<ast::IdentifierExpr>()->name().data();
       LocalVar entry_size = VisitExpressionForRValue(call->arguments()[3]);
-      emitter()->EmitSorterInit(Bytecode::SorterInit, sorter, region,
+      emitter()->EmitSorterInit(Bytecode::SorterInit, sorter, memory,
                                 LookupFuncIdByName(cmp_func_name), entry_size);
       break;
     }
@@ -1005,12 +1005,22 @@ void BytecodeGenerator::VisitBuiltinSorterIterCall(ast::CallExpr *call,
   }
 }
 
-void BytecodeGenerator::VisitBuiltinRegionCall(ast::CallExpr *call,
-                                               ast::Builtin builtin) {
-  LocalVar region = VisitExpressionForRValue(call->arguments()[0]);
-  auto region_op = builtin == ast::Builtin::RegionInit ? Bytecode::RegionInit
-                                                       : Bytecode::RegionFree;
-  emitter()->Emit(region_op, region);
+void BytecodeGenerator::VisitExecutionContextCall(ast::CallExpr *call,
+                                                  UNUSED ast::Builtin builtin) {
+  ast::Context *ctx = call->type()->context();
+
+  // The memory pool pointer
+  LocalVar mem_pool = execution_result()->GetOrCreateDestination(
+      ast::BuiltinType::Get(ctx, ast::BuiltinType::MemoryPool)->PointerTo());
+
+  // The execution context pointer
+  LocalVar exec_ctx = VisitExpressionForRValue(call->arguments()[0]);
+
+  // Emit bytecode
+  emitter()->Emit(Bytecode::ExecutionContextGetMemoryPool, mem_pool, exec_ctx);
+
+  // Indicate where the result is
+  execution_result()->set_destination(mem_pool.ValueOf());
 }
 
 void BytecodeGenerator::VisitBuiltinThreadStateContainerCall(
@@ -1018,8 +1028,8 @@ void BytecodeGenerator::VisitBuiltinThreadStateContainerCall(
   LocalVar tls = VisitExpressionForRValue(call->arguments()[0]);
   switch (builtin) {
     case ast::Builtin::ThreadStateContainerInit: {
-      LocalVar region = VisitExpressionForRValue(call->arguments()[1]);
-      emitter()->Emit(Bytecode::ThreadStateContainerInit, tls, region);
+      LocalVar memory = VisitExpressionForRValue(call->arguments()[1]);
+      emitter()->Emit(Bytecode::ThreadStateContainerInit, tls, memory);
       break;
     }
     case ast::Builtin::ThreadStateContainerReset: {
@@ -1028,8 +1038,9 @@ void BytecodeGenerator::VisitBuiltinThreadStateContainerCall(
           call->arguments()[2]->As<ast::IdentifierExpr>()->name().data());
       FunctionId destroy_fn = LookupFuncIdByName(
           call->arguments()[3]->As<ast::IdentifierExpr>()->name().data());
+      LocalVar ctx = VisitExpressionForRValue(call->arguments()[4]);
       emitter()->EmitThreadStateContainerReset(tls, entry_size, init_fn,
-                                               destroy_fn);
+                                               destroy_fn, ctx);
       break;
     }
     case ast::Builtin::ThreadStateContainerFree: {
@@ -1116,9 +1127,8 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitBuiltinFilterCall(call, builtin);
       break;
     }
-    case ast::Builtin::RegionInit:
-    case ast::Builtin::RegionFree: {
-      VisitBuiltinRegionCall(call, builtin);
+    case ast::Builtin::ExecutionContextGetMemoryPool: {
+      VisitExecutionContextCall(call, builtin);
       break;
     }
     case ast::Builtin::ThreadStateContainerInit:

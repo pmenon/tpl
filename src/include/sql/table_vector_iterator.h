@@ -17,7 +17,7 @@ class ThreadStateContainer;
  */
 class TableVectorIterator {
  public:
-  static constexpr const u32 kMinBlockRangeSize = 4;
+  static constexpr const u32 kMinBlockRangeSize = 2;
 
   /**
    * Create an iterator over the table with ID @em table_id and project in all

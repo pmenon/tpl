@@ -416,18 +416,6 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(RegionInit) : {
-    auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
-    OpRegionInit(region);
-    DISPATCH_NEXT();
-  }
-
-  OP(RegionFree) : {
-    auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
-    OpRegionFree(region);
-    DISPATCH_NEXT();
-  }
-
   OP(Call) : {
     ip = ExecuteCall(ip, frame);
     DISPATCH_NEXT();
@@ -442,11 +430,18 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // Execution Context
   // -------------------------------------------------------
 
+  OP(ExecutionContextGetMemoryPool) : {
+    auto *memory_pool = frame->LocalAt<sql::MemoryPool **>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+    OpExecutionContextGetMemoryPool(memory_pool, exec_ctx);
+    DISPATCH_NEXT();
+  }
+
   OP(ThreadStateContainerInit) : {
     auto *thread_state_container =
         frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
-    auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
-    OpThreadStateContainerInit(thread_state_container, region);
+    auto *memory = frame->LocalAt<tpl::sql::MemoryPool *>(READ_LOCAL_ID());
+    OpThreadStateContainerInit(thread_state_container, memory);
     DISPATCH_NEXT();
   }
 
@@ -456,13 +451,14 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto size = frame->LocalAt<u32>(READ_LOCAL_ID());
     auto init_fn_id = READ_FUNC_ID();
     auto destroy_fn_id = READ_FUNC_ID();
+    auto *ctx = frame->LocalAt<void *>(READ_LOCAL_ID());
 
     auto init_fn = reinterpret_cast<sql::ThreadStateContainer::InitFn>(
         module().GetFuncTrampoline(init_fn_id));
     auto destroy_fn = reinterpret_cast<sql::ThreadStateContainer::DestroyFn>(
         module().GetFuncTrampoline(destroy_fn_id));
     OpThreadStateContainerReset(thread_state_container, size, init_fn,
-                                destroy_fn);
+                                destroy_fn, ctx);
     DISPATCH_NEXT();
   }
 
@@ -773,9 +769,9 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(AggregationHashTableInit) : {
     auto *agg_hash_table =
         frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
-    auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
+    auto *memory = frame->LocalAt<tpl::sql::MemoryPool *>(READ_LOCAL_ID());
     auto payload_size = frame->LocalAt<u32>(READ_LOCAL_ID());
-    OpAggregationHashTableInit(agg_hash_table, region, payload_size);
+    OpAggregationHashTableInit(agg_hash_table, memory, payload_size);
     DISPATCH_NEXT();
   }
 
@@ -1104,9 +1100,9 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(JoinHashTableInit) : {
     auto *join_hash_table =
         frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
-    auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
+    auto *memory = frame->LocalAt<sql::MemoryPool *>(READ_LOCAL_ID());
     auto tuple_size = frame->LocalAt<u32>(READ_LOCAL_ID());
-    OpJoinHashTableInit(join_hash_table, region, tuple_size);
+    OpJoinHashTableInit(join_hash_table, memory, tuple_size);
     DISPATCH_NEXT();
   }
 
@@ -1139,13 +1135,13 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
   OP(SorterInit) : {
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
-    auto *region = frame->LocalAt<util::Region *>(READ_LOCAL_ID());
+    auto *memory = frame->LocalAt<tpl::sql::MemoryPool *>(READ_LOCAL_ID());
     auto cmp_func_id = READ_FUNC_ID();
     auto tuple_size = frame->LocalAt<u32>(READ_LOCAL_ID());
 
     auto cmp_fn = reinterpret_cast<sql::Sorter::ComparisonFunction>(
         module().GetFuncTrampoline(cmp_func_id));
-    OpSorterInit(sorter, region, cmp_fn, tuple_size);
+    OpSorterInit(sorter, memory, cmp_fn, tuple_size);
     DISPATCH_NEXT();
   }
 

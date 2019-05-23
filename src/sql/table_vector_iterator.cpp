@@ -188,7 +188,7 @@ bool TableVectorIterator::ParallelScan(
   timer.Start();
 
   // Execute parallel scan
-  tbb::task_scheduler_init scan_scheduler(1);
+  tbb::task_scheduler_init scan_scheduler;
   tbb::blocked_range<u32> block_range(0, table->num_blocks(), min_grain_size);
   tbb::parallel_for(block_range, ScanTask(table_id, exec_ctx,
                                           thread_state_container, scanner));

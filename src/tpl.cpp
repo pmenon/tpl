@@ -16,6 +16,7 @@
 #include "sema/error_reporter.h"
 #include "sema/sema.h"
 #include "sql/catalog.h"
+#include "sql/execution_context.h"
 #include "tpl.h"  // NOLINT
 #include "util/cpu_info.h"
 #include "util/timer.h"
@@ -33,6 +34,7 @@ llvm::cl::OptionCategory kTplOptionsCategory("TPL Compiler Options", "Options fo
 llvm::cl::opt<std::string> kInputFile(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::init(""), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kPrintAst("print-ast", llvm::cl::desc("Print the programs AST"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kPrintTbc("print-tbc", llvm::cl::desc("Print the generated TPL Bytecode"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
+llvm::cl::opt<bool> kIsSQL("sql", llvm::cl::desc("Is the input a SQL query?"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 // clang-format on
 
 namespace tpl {
@@ -117,13 +119,25 @@ static void CompileAndRun(const std::string &source,
   {
     util::ScopedTimer<std::milli> timer(&exec_ms);
 
-    std::function<u32()> main_func;
-    if (!module->GetFunction("main", vm::ExecutionMode::Interpret, main_func)) {
-      LOG_ERROR("No main() entry function found with signature ()->int32");
-      return;
+    if (kIsSQL) {
+      std::function<u32(sql::ExecutionContext *)> main;
+      if (!module->GetFunction("main", vm::ExecutionMode::Interpret, main)) {
+        LOG_ERROR(
+            "Missing 'main' entry function with signature "
+            "(*ExecutionContext)->int32");
+        return;
+      }
+      sql::MemoryPool memory(nullptr);
+      sql::ExecutionContext exec_ctx(&memory);
+      LOG_INFO("VM main() returned: {}", main(&exec_ctx));
+    } else {
+      std::function<u32()> main;
+      if (!module->GetFunction("main", vm::ExecutionMode::Interpret, main)) {
+        LOG_ERROR("Missing 'main' entry function with signature ()->int32");
+        return;
+      }
+      LOG_INFO("VM main() returned: {}", main());
     }
-
-    LOG_INFO("VM main() returned: {}", main_func());
   }
 
   //
@@ -133,13 +147,25 @@ static void CompileAndRun(const std::string &source,
   {
     util::ScopedTimer<std::milli> timer(&jit_ms);
 
-    std::function<u32()> main_func;
-    if (!module->GetFunction("main", vm::ExecutionMode::Jit, main_func)) {
-      LOG_ERROR("No main() entry function found with signature ()->int32");
-      return;
+    if (kIsSQL) {
+      std::function<u32(sql::ExecutionContext *)> main;
+      if (!module->GetFunction("main", vm::ExecutionMode::Jit, main)) {
+        LOG_ERROR(
+            "Missing 'main' entry function with signature "
+            "(*ExecutionContext)->int32");
+        return;
+      }
+      sql::MemoryPool memory(nullptr);
+      sql::ExecutionContext exec_ctx(&memory);
+      LOG_INFO("JIT main() returned: {}", main(&exec_ctx));
+    } else {
+      std::function<u32()> main;
+      if (!module->GetFunction("main", vm::ExecutionMode::Jit, main)) {
+        LOG_ERROR("Missing 'main' entry function with signature ()->int32");
+        return;
+      }
+      LOG_INFO("JIT main() returned: {}", main());
     }
-
-    LOG_INFO("JIT main() returned: {}", main_func());
   }
 
   // Dump stats

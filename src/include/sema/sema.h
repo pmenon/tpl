@@ -122,7 +122,8 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinSorterSort(ast::CallExpr *call);
   void CheckBuiltinSorterFree(ast::CallExpr *call);
   void CheckBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinRegionCall(ast::CallExpr *call);
+  void CheckBuiltinExecutionContextCall(ast::CallExpr *call,
+                                        ast::Builtin builtin);
   void CheckBuiltinThreadStateContainerCall(ast::CallExpr *call,
                                             ast::Builtin builtin);
   void CheckBuiltinSizeOfCall(ast::CallExpr *call);

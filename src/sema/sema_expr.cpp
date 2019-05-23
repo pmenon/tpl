@@ -285,8 +285,8 @@ void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
     return;
   }
 
-  // Second argument must be a pointer to a RegionAllocator
-  const auto region_kind = ast::BuiltinType::RegionAlloc;
+  // Second argument must be a pointer to a MemoryPool
+  const auto region_kind = ast::BuiltinType::MemoryPool;
   if (!IsPointerToSpecificBuiltin(args[1]->type(), region_kind)) {
     error_reporter()->Report(
         call->position(), ErrorMessages::kIncorrectCallArgType,
@@ -390,25 +390,26 @@ void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
   call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
 }
 
-void Sema::CheckBuiltinRegionCall(ast::CallExpr *call) {
+void Sema::CheckBuiltinExecutionContextCall(ast::CallExpr *call,
+                                            UNUSED ast::Builtin builtin) {
   if (!CheckArgCount(call, 1)) {
     return;
   }
 
-  const auto &args = call->arguments();
+  const auto &call_args = call->arguments();
 
-  const auto region_kind = ast::BuiltinType::RegionAlloc;
-  if (!IsPointerToSpecificBuiltin(args[0]->type(), region_kind)) {
+  auto exec_ctx_kind = ast::BuiltinType::ExecutionContext;
+  if (!IsPointerToSpecificBuiltin(call_args[0]->type(), exec_ctx_kind)) {
     error_reporter()->Report(
         call->position(), ErrorMessages::kIncorrectCallArgType,
         call->GetFuncName(),
-        ast::BuiltinType::Get(context(), region_kind)->PointerTo(), 0,
-        args[0]->type());
+        ast::BuiltinType::Get(context(), exec_ctx_kind)->PointerTo(), 0,
+        call_args[0]->type());
     return;
   }
 
-  // This call returns nothing
-  call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+  auto mem_pool_kind = ast::BuiltinType::MemoryPool;
+  call->set_type(ast::BuiltinType::Get(context(), mem_pool_kind)->PointerTo());
 }
 
 void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call,
@@ -431,12 +432,28 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call,
   }
 
   switch (builtin) {
-    case ast::Builtin::ThreadStateContainerInit:
+    case ast::Builtin::ThreadStateContainerInit: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+
+      // Second argument is a MemoryPool
+      auto mem_pool_kind = ast::BuiltinType::MemoryPool;
+      if (!IsPointerToSpecificBuiltin(call_args[1]->type(), mem_pool_kind)) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kIncorrectCallArgType,
+            call->GetFuncName(),
+            ast::BuiltinType::Get(context(), mem_pool_kind)->PointerTo(), 1,
+            call_args[1]->type());
+        return;
+      }
+      break;
+    }
     case ast::Builtin::ThreadStateContainerFree: {
       break;
     }
     case ast::Builtin::ThreadStateContainerReset: {
-      if (!CheckArgCount(call, 4)) {
+      if (!CheckArgCount(call, 5)) {
         return;
       }
       // Second argument must be an integer size of the state
@@ -457,6 +474,16 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call,
             call->GetFuncName(),
             ast::BuiltinType::Get(context(), ast::BuiltinType::Uint32), 2,
             call_args[2]->type());
+        return;
+      }
+      // Fifth argument must be a pointer to something or nil
+      if (!call_args[4]->type()->IsPointerType() &&
+          !call_args[4]->type()->IsNilType()) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kIncorrectCallArgType,
+            call->GetFuncName(),
+            ast::BuiltinType::Get(context(), ast::BuiltinType::Uint32), 4,
+            call_args[4]->type());
         return;
       }
 
@@ -797,8 +824,8 @@ void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
     return;
   }
 
-  // Second argument must be a pointer to a RegionAllocator
-  const auto region_kind = ast::BuiltinType::RegionAlloc;
+  // Second argument must be a pointer to a MemoryPool
+  const auto region_kind = ast::BuiltinType::MemoryPool;
   if (!IsPointerToSpecificBuiltin(args[1]->type(), region_kind)) {
     error_reporter()->Report(
         call->position(), ErrorMessages::kIncorrectCallArgType,
@@ -993,9 +1020,8 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckBuiltinFilterCall(call);
       break;
     }
-    case ast::Builtin::RegionInit:
-    case ast::Builtin::RegionFree: {
-      CheckBuiltinRegionCall(call);
+    case ast::Builtin::ExecutionContextGetMemoryPool: {
+      CheckBuiltinExecutionContextCall(call, builtin);
       break;
     }
     case ast::Builtin::ThreadStateContainerInit:

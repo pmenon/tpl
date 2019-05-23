@@ -5,23 +5,13 @@
 extern "C" {
 
 // ---------------------------------------------------------
-// Region
-// ---------------------------------------------------------
-
-void OpRegionInit(tpl::util::Region *region) {
-  new (region) tpl::util::Region("tmp");
-}
-
-void OpRegionFree(tpl::util::Region *region) { region->~Region(); }
-
-// ---------------------------------------------------------
 // Thread State Container
 // ---------------------------------------------------------
 
 void OpThreadStateContainerInit(
     tpl::sql::ThreadStateContainer *const thread_state_container,
-    tpl::util::Region *const region) {
-  new (thread_state_container) tpl::sql::ThreadStateContainer(region);
+    tpl::sql::MemoryPool *const memory) {
+  new (thread_state_container) tpl::sql::ThreadStateContainer(memory);
 }
 
 void OpThreadStateContainerFree(
@@ -125,9 +115,10 @@ void OpFilterManagerFree(tpl::sql::FilterManager *filter_manager) {
 // Join Hash Table
 // ---------------------------------------------------------
 
-void OpJoinHashTableInit(tpl::sql::JoinHashTable *join_hash_table,
-                         tpl::util::Region *region, u32 tuple_size) {
-  new (join_hash_table) tpl::sql::JoinHashTable(region, tuple_size);
+void OpJoinHashTableInit(tpl::sql::JoinHashTable *const join_hash_table,
+                         tpl::sql::MemoryPool *const memory,
+                         const u32 tuple_size) {
+  new (join_hash_table) tpl::sql::JoinHashTable(memory, tuple_size);
 }
 
 void OpJoinHashTableBuild(tpl::sql::JoinHashTable *join_hash_table) {
@@ -144,8 +135,8 @@ void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table) {
 
 void OpAggregationHashTableInit(
     tpl::sql::AggregationHashTable *const agg_hash_table,
-    tpl::util::Region *const region, const u32 payload_size) {
-  new (agg_hash_table) tpl::sql::AggregationHashTable(region, payload_size);
+    tpl::sql::MemoryPool *const memory, const u32 payload_size) {
+  new (agg_hash_table) tpl::sql::AggregationHashTable(memory, payload_size);
 }
 
 void OpAggregationHashTableFree(
@@ -157,9 +148,11 @@ void OpAggregationHashTableFree(
 // Sorters
 // ---------------------------------------------------------
 
-void OpSorterInit(tpl::sql::Sorter *sorter, tpl::util::Region *region,
-                  tpl::sql::Sorter::ComparisonFunction cmp_fn, u32 tuple_size) {
-  new (sorter) tpl::sql::Sorter(region, cmp_fn, tuple_size);
+void OpSorterInit(tpl::sql::Sorter *const sorter,
+                  tpl::sql::MemoryPool *const memory,
+                  const tpl::sql::Sorter::ComparisonFunction cmp_fn,
+                  const u32 tuple_size) {
+  new (sorter) tpl::sql::Sorter(memory, cmp_fn, tuple_size);
 }
 
 void OpSorterSort(tpl::sql::Sorter *sorter) { sorter->Sort(); }

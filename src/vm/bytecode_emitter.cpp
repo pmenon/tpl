@@ -288,9 +288,10 @@ void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1,
 void BytecodeEmitter::EmitThreadStateContainerReset(LocalVar tls,
                                                     LocalVar state_size,
                                                     FunctionId init_fn,
-                                                    FunctionId destroy_fn) {
+                                                    FunctionId destroy_fn,
+                                                    LocalVar ctx) {
   EmitAll(Bytecode::ThreadStateContainerReset, tls, state_size, init_fn,
-          destroy_fn);
+          destroy_fn, ctx);
 }
 
 void BytecodeEmitter::EmitTableIterInit(Bytecode bytecode, LocalVar iter,

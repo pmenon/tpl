@@ -79,7 +79,10 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
     u32 c;
   };
 
-  auto init_count = [](void *tls) { reinterpret_cast<Counter *>(tls)->c = 0; };
+  auto init_count = [](UNUSED void *ctx, void *tls) {
+    reinterpret_cast<Counter *>(tls)->c = 0;
+  };
+
   auto scanner = [](ExecutionContext *ctx, void *tls,
                     TableVectorIterator *tvi) {
     auto *counter = reinterpret_cast<Counter *>(tls);
@@ -89,10 +92,10 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
   };
 
   // Setup thread states
-  util::Region tmp("exec");
-  ExecutionContext ctx(&tmp, 0);
-  ThreadStateContainer thread_state_container(&tmp);
-  thread_state_container.Reset(sizeof(Counter), init_count, nullptr);
+  MemoryPool memory(nullptr);
+  ExecutionContext ctx(&memory, 0);
+  ThreadStateContainer thread_state_container(ctx.memory_pool());
+  thread_state_container.Reset(sizeof(Counter), init_count, nullptr, nullptr);
 
   // Scan
   TableVectorIterator::ParallelScan(TableIdToNum(TableId::Test1), &ctx,

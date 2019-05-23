@@ -1,11 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <vector>
-
+#include "sql/memory_pool.h"
 #include "util/common.h"
 #include "util/macros.h"
-#include "util/region.h"
 
 namespace tpl::sql {
 
@@ -17,9 +14,7 @@ class ExecutionContext {
   /**
    * Constructor.
    */
-  ExecutionContext(util::Region *mem_pool, u32 query_state_size)
-      : mem_pool_(mem_pool),
-        query_state_(mem_pool_->AllocateArray<byte>(query_state_size)) {}
+  explicit ExecutionContext(MemoryPool *mem_pool) : mem_pool_(mem_pool) {}
 
   /**
    * This class cannot be copied or moved.
@@ -29,18 +24,11 @@ class ExecutionContext {
   /**
    * Return the memory pool.
    */
-  util::Region *memory_pool() { return mem_pool_; }
-
-  /**
-   * Access the state for the query.
-   */
-  byte *query_state() { return query_state_; }
+  MemoryPool *memory_pool() { return mem_pool_; }
 
  private:
-  // Temporary memory pool for allocations done during execution
-  util::Region *mem_pool_;
-  // The query state. Opaque because it's defined in generated code.
-  byte *query_state_;
+  // Pool for memory allocations required during execution
+  MemoryPool *mem_pool_;
 };
 
 }  // namespace tpl::sql

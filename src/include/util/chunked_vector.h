@@ -31,7 +31,7 @@ namespace tpl::util {
  * into the vector apriori. In fact, when the number of insertions is unknown,
  * a chunked vector will be roughly 2x faster than a std::vector.
  */
-template <typename Alloc = StlRegionAllocator<byte>>
+template <typename Alloc = std::allocator<byte>>
 class ChunkedVector {
  public:
   // clang-format off
@@ -57,13 +57,63 @@ class ChunkedVector {
   }
 
   /**
+   * Move constructor
+   */
+  ChunkedVector(ChunkedVector &&other) noexcept
+      : allocator_(std::move(other.allocator_)),
+        chunks_(std::move(other.chunks_)) {
+    active_chunk_idx_ = other.active_chunk_idx_;
+    other.active_chunk_idx_ = 0;
+
+    position_ = other.position_;
+    other.position_ = nullptr;
+
+    end_ = other.end_;
+    other.end_ = nullptr;
+
+    element_size_ = other.element_size_;
+    other.element_size_ = 0;
+
+    num_elements_ = other.num_elements_;
+    other.num_elements_ = 0;
+  }
+
+  /**
    * Cleanup the vector, releasing all memory back to the allocator.
    */
-  ~ChunkedVector() noexcept {
-    const std::size_t chunk_size = ChunkAllocSize(element_size());
-    for (auto *chunk : chunks_) {
-      allocator_.deallocate(chunk, chunk_size);
+  ~ChunkedVector() noexcept { DeallocateAll(); }
+
+  // -------------------------------------------------------
+  // Assignment
+  // -------------------------------------------------------
+
+  ChunkedVector &operator=(ChunkedVector &&other) noexcept {
+    if (this == &other) {
+      return *this;
     }
+
+    // Free anything we're allocate so far
+    DeallocateAll();
+
+    allocator_ = std::move(other.allocator_);
+    chunks_ = std::move(other.chunks_);
+
+    active_chunk_idx_ = other.active_chunk_idx_;
+    other.active_chunk_idx_ = 0;
+
+    position_ = other.position_;
+    other.position_ = nullptr;
+
+    end_ = other.end_;
+    other.end_ = 0;
+
+    element_size_ = other.element_size_;
+    other.element_size_ = 0;
+
+    num_elements_ = other.num_elements_;
+    other.num_elements_ = 0;
+
+    return *this;
   }
 
   // -------------------------------------------------------
@@ -425,6 +475,16 @@ class ChunkedVector {
     active_chunk_idx_ = chunks_.size() - 1;
     position_ = new_chunk;
     end_ = new_chunk + alloc_size;
+  }
+
+  void DeallocateAll() {
+    const std::size_t chunk_size = ChunkAllocSize(element_size());
+    for (auto *chunk : chunks_) {
+      allocator_.deallocate(chunk, chunk_size);
+    }
+    chunks_.clear();
+    active_chunk_idx_ = 0;
+    position_ = end_ = nullptr;
   }
 
  private:

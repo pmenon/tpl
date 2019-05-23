@@ -191,10 +191,6 @@ VM_OP_HOT bool OpJumpIfTrue(bool cond) { return cond; }
 
 VM_OP_HOT bool OpJumpIfFalse(bool cond) { return !cond; }
 
-void OpRegionInit(tpl::util::Region *region);
-
-void OpRegionFree(tpl::util::Region *region);
-
 VM_OP_HOT void OpCall(UNUSED u16 func_id, UNUSED u16 num_args) {}
 
 VM_OP_HOT void OpReturn() {}
@@ -203,15 +199,21 @@ VM_OP_HOT void OpReturn() {}
 // Execution Context
 // ---------------------------------------------------------
 
+VM_OP_HOT void OpExecutionContextGetMemoryPool(
+    tpl::sql::MemoryPool **const memory,
+    tpl::sql::ExecutionContext *const exec_ctx) {
+  *memory = exec_ctx->memory_pool();
+}
+
 void OpThreadStateContainerInit(
     tpl::sql::ThreadStateContainer *thread_state_container,
-    tpl::util::Region *region);
+    tpl::sql::MemoryPool *memory);
 
 VM_OP_HOT void OpThreadStateContainerReset(
-    tpl::sql::ThreadStateContainer *const thread_state_container,
-    const u32 size, tpl::sql::ThreadStateContainer::InitFn init_fn,
-    tpl::sql::ThreadStateContainer::DestroyFn destroy_fn) {
-  thread_state_container->Reset(size, init_fn, destroy_fn);
+    tpl::sql::ThreadStateContainer *thread_state_container, u32 size,
+    tpl::sql::ThreadStateContainer::InitFn init_fn,
+    tpl::sql::ThreadStateContainer::DestroyFn destroy_fn, void *ctx) {
+  thread_state_container->Reset(size, init_fn, destroy_fn, ctx);
 }
 
 void OpThreadStateContainerFree(
@@ -555,7 +557,7 @@ VM_OP_HOT void OpNotEqualInteger(tpl::sql::BoolVal *const result,
 // ---------------------------------------------------------
 
 void OpAggregationHashTableInit(tpl::sql::AggregationHashTable *agg_hash_table,
-                                tpl::util::Region *region, u32 payload_size);
+                                tpl::sql::MemoryPool *memory, u32 payload_size);
 
 VM_OP_HOT void OpAggregationHashTableInsert(
     byte **result, tpl::sql::AggregationHashTable *agg_hash_table,
@@ -805,7 +807,7 @@ VM_OP_HOT void OpIntegerAvgAggregateFree(tpl::sql::IntegerAvgAggregate *agg) {
 // ---------------------------------------------------------
 
 void OpJoinHashTableInit(tpl::sql::JoinHashTable *join_hash_table,
-                         tpl::util::Region *region, u32 tuple_size);
+                         tpl::sql::MemoryPool *memory, u32 tuple_size);
 
 VM_OP_HOT void OpJoinHashTableAllocTuple(
     byte **result, tpl::sql::JoinHashTable *join_hash_table, hash_t hash) {
@@ -820,7 +822,7 @@ void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table);
 // Sorting
 // ---------------------------------------------------------
 
-void OpSorterInit(tpl::sql::Sorter *sorter, tpl::util::Region *region,
+void OpSorterInit(tpl::sql::Sorter *sorter, tpl::sql::MemoryPool *memory,
                   tpl::sql::Sorter::ComparisonFunction cmp_fn, u32 tuple_size);
 
 VM_OP_HOT void OpSorterAllocTuple(byte **result, tpl::sql::Sorter *sorter) {
