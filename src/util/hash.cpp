@@ -2,6 +2,8 @@
 
 #include <x86intrin.h>
 
+#include "xxh3.h"  // NOLINT
+
 #include "util/macros.h"
 
 namespace tpl::util {
@@ -12,8 +14,12 @@ hash_t Hasher::Hash(const u8 *buf, u64 len, HashMethod method) {
       return HashFnv1(buf, len);
     case HashMethod::Murmur3:
       return HashMurmur3(buf, len);
-    default:
+    case HashMethod::Crc:
       return HashCrc32(buf, len);
+    case HashMethod::xxHash3: {
+      return HashXXHash3(buf, len);
+    }
+    default: { UNREACHABLE("Impossible hashing method"); }
   }
 }
 
@@ -68,6 +74,10 @@ hash_t Hasher::HashCrc32(const u8 *buf, u64 len) {
   }
 
   return hash;
+}
+
+hash_t Hasher::HashXXHash3(const u8 *buf, const u64 len) {
+  return XXH3_64bits(buf, len);
 }
 
 }  // namespace tpl::util

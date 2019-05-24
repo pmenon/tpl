@@ -72,6 +72,15 @@ include_directories(SYSTEM "${THIRD_PARTY_DIR}/spdlog/include")
 include_directories(SYSTEM "${THIRD_PARTY_DIR}/xbyak")
 
 ############################################################
+# xxHash
+############################################################
+
+option(BUILD_XXHSUM "Disable building xxhsum binary" OFF)
+option(XXHASH_BUNDLED_MODE "Indicate that we're building in bundled mode" ON)
+add_subdirectory(${THIRD_PARTY_DIR}/xxHash/cmake_unofficial)
+include_directories(SYSTEM "${THIRD_PARTY_DIR}/xxHash")
+
+############################################################
 # Libcount
 ############################################################
 
