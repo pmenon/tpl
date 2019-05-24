@@ -6,7 +6,7 @@
 #include "tpl_test.h"  // NOLINT
 
 #include "sql/join_hash_table.h"
-#include "sql/join_hash_table_vector_lookup.h"
+#include "sql/join_hash_table_vector_probe.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/hash.h"
@@ -20,54 +20,55 @@ struct Tuple {
   u32 aux[N];
 };
 
-template <u8 N>
-static inline hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
-  const auto *key_ptr = vpi->Get<u32, false>(0, nullptr);
-  return util::Hasher::Hash(reinterpret_cast<const u8 *>(key_ptr),
-                            sizeof(Tuple<N>::build_key));
-}
-
-/// The function to determine whether two tuples have equivalent keys
-template <u8 N>
-static inline bool CmpTupleInVPI(const byte *table_tuple,
-                                 VectorProjectionIterator *vpi) noexcept {
-  auto lhs_key = reinterpret_cast<const Tuple<N> *>(table_tuple)->build_key;
-  auto rhs_key = *vpi->Get<u32, false>(0, nullptr);
-  return lhs_key == rhs_key;
-}
-
-class JoinHashTableVectorLookupTest : public TplTest {
+class JoinHashTableVectorProbeTest : public TplTest {
  public:
-  JoinHashTableVectorLookupTest() : memory_(nullptr) {}
+  JoinHashTableVectorProbeTest() : memory_(nullptr) {}
 
   MemoryPool *memory() { return &memory_; }
+
+ protected:
+  template <u8 N, typename F>
+  std::unique_ptr<const JoinHashTable> InsertAndBuild(bool concise,
+                                                      u32 num_tuples,
+                                                      F &&key_gen) {
+    auto jht =
+        std::make_unique<JoinHashTable>(memory(), sizeof(Tuple<N>), concise);
+
+    // Insert
+    for (u32 i = 0; i < num_tuples; i++) {
+      auto key = key_gen();
+      auto hash =
+          util::Hasher::Hash(reinterpret_cast<const u8 *>(&key), sizeof(key));
+      auto *tuple = reinterpret_cast<Tuple<N> *>(jht->AllocInputTuple(hash));
+      tuple->build_key = key;
+    }
+
+    // Build
+    jht->Build();
+
+    // Finish
+    return jht;
+  }
+
+  template <u8 N>
+  static hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
+    const auto *key_ptr = vpi->Get<u32, false>(0, nullptr);
+    return util::Hasher::Hash(reinterpret_cast<const u8 *>(key_ptr),
+                              sizeof(Tuple<N>::build_key));
+  }
+
+  /// The function to determine whether two tuples have equivalent keys
+  template <u8 N>
+  static bool CmpTupleInVPI(const void *table_tuple,
+                            VectorProjectionIterator *vpi) noexcept {
+    auto lhs_key = reinterpret_cast<const Tuple<N> *>(table_tuple)->build_key;
+    auto rhs_key = *vpi->Get<u32, false>(0, nullptr);
+    return lhs_key == rhs_key;
+  }
 
  private:
   MemoryPool memory_;
 };
-
-template <u8 N, typename F>
-std::unique_ptr<const JoinHashTable> InsertAndBuild(MemoryPool *memory,
-                                                    bool concise,
-                                                    u32 num_tuples,
-                                                    F &&key_gen) {
-  auto jht = std::make_unique<JoinHashTable>(memory, sizeof(Tuple<N>), concise);
-
-  // Insert
-  for (u32 i = 0; i < num_tuples; i++) {
-    auto key = key_gen();
-    auto hash =
-        util::Hasher::Hash(reinterpret_cast<const u8 *>(&key), sizeof(key));
-    auto *tuple = reinterpret_cast<Tuple<N> *>(jht->AllocInputTuple(hash));
-    tuple->build_key = key;
-  }
-
-  // Build
-  jht->Build();
-
-  // Finish
-  return jht;
-}
 
 // Sequential number functor
 struct Seq {
@@ -90,13 +91,13 @@ struct Rand {
   u32 operator()() noexcept { return random(); }
 };
 
-TEST_F(JoinHashTableVectorLookupTest, SimpleGenericLookupTest) {
+TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
   constexpr const u8 N = 1;
   constexpr const u32 num_build = 1000;
   constexpr const u32 num_probe = num_build * 10;
 
   // Create test JHT
-  auto jht = InsertAndBuild<N>(memory(), /*concise*/ false, num_build, Seq(0));
+  auto jht = InsertAndBuild<N>(/*concise*/ false, num_build, Seq(0));
 
   // Create test probe input
   auto probe_keys = std::vector<u32>(num_probe);
@@ -109,9 +110,8 @@ TEST_F(JoinHashTableVectorLookupTest, SimpleGenericLookupTest) {
   VectorProjectionIterator vpi(&vp);
 
   // Lookup
-  JoinHashTableVectorLookup lookup(*jht);
+  JoinHashTableVectorProbe lookup(*jht);
 
-  // Loop over all matches
   u32 count = 0;
   for (u32 i = 0; i < num_probe; i += kDefaultVectorSize) {
     u32 size = std::min(kDefaultVectorSize, num_probe - i);
@@ -135,14 +135,14 @@ TEST_F(JoinHashTableVectorLookupTest, SimpleGenericLookupTest) {
   EXPECT_EQ(num_probe, count);
 }
 
-TEST_F(JoinHashTableVectorLookupTest, DISABLED_PerfLookupTest) {
+TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
   auto bench = [this](bool concise) {
     constexpr const u8 N = 1;
     constexpr const u32 num_build = 5000000;
     constexpr const u32 num_probe = num_build * 10;
 
     // Create test JHT
-    auto jht = InsertAndBuild<N>(memory(), concise, num_build, Seq(0));
+    auto jht = InsertAndBuild<N>(concise, num_build, Seq(0));
 
     // Create test probe input
     auto probe_keys = std::vector<u32>(num_probe);
@@ -156,7 +156,7 @@ TEST_F(JoinHashTableVectorLookupTest, DISABLED_PerfLookupTest) {
     VectorProjectionIterator vpi(&vp);
 
     // Lookup
-    JoinHashTableVectorLookup lookup(*jht);
+    JoinHashTableVectorProbe lookup(*jht);
 
     util::Timer<std::milli> timer;
     timer.Start();

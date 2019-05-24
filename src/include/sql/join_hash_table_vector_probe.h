@@ -11,24 +11,30 @@ class JoinHashTable;
 /**
  * Helper class to perform vectorized lookups into a JoinHashTable
  */
-class JoinHashTableVectorLookup {
+class JoinHashTableVectorProbe {
  public:
-  // clang-format off
-  using HashFn = hash_t (*)(VectorProjectionIterator *) noexcept;  // NOLINT it appears to parse the function as a cast
-  using KeyEqFn = bool (*)(const byte *, VectorProjectionIterator *) noexcept;
-  // clang-format on
+  /**
+   * Function to hash the tuple the iterator is currently pointing at.
+   */
+  using HashFn = hash_t (*)(VectorProjectionIterator *);
+
+  /**
+   * Function to check if the tuple in the hash table (i.e., the first argument)
+   * is equivalent to the tuple the iterator is currently pointing at.
+   */
+  using KeyEqFn = bool (*)(const void *, VectorProjectionIterator *);
 
   /**
    * Constructor given a hashing function and a key equality function
    */
-  explicit JoinHashTableVectorLookup(const JoinHashTable &table) noexcept;
+  explicit JoinHashTableVectorProbe(const JoinHashTable &table);
 
   /**
    * Setup a vectorized lookup using the given input batch @em vpi
    * @param vpi The input vector
    * @param hash_fn The hashing function
    */
-  void Prepare(VectorProjectionIterator *vpi, HashFn hash_fn) noexcept;
+  void Prepare(VectorProjectionIterator *vpi, HashFn hash_fn);
 
   /**
    * Return the next match, moving the input iterator if need be
@@ -37,12 +43,16 @@ class JoinHashTableVectorLookup {
    * @return The next matching entry
    */
   const HashTableEntry *GetNextOutput(VectorProjectionIterator *vpi,
-                                      KeyEqFn key_eq_fn) noexcept;
+                                      KeyEqFn key_eq_fn);
 
  private:
+  // The table we're probing
   const JoinHashTable &table_;
+  // The current index in the entries output we're iterating over
   u16 match_idx_;
+  // The vector of computed hashes
   hash_t hashes_[kDefaultVectorSize];
+  // The vector of entries
   const HashTableEntry *entries_[kDefaultVectorSize];
 };
 
@@ -52,8 +62,8 @@ class JoinHashTableVectorLookup {
 
 // Because this function is a tuple-at-a-time, it's placed in the header to
 // reduce function call overhead.
-inline const HashTableEntry *JoinHashTableVectorLookup::GetNextOutput(
-    VectorProjectionIterator *vpi, const KeyEqFn key_eq_fn) noexcept {
+inline const HashTableEntry *JoinHashTableVectorProbe::GetNextOutput(
+    VectorProjectionIterator *const vpi, const KeyEqFn key_eq_fn) {
   TPL_ASSERT(vpi != nullptr, "No input VPI!");
   TPL_ASSERT(match_idx_ < vpi->num_selected(), "Continuing past iteration!");
 

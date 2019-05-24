@@ -53,7 +53,7 @@ class MemoryPool {
    * @return An array pointer to at least @em num_elems elements of type @em T
    */
   template <typename T>
-  T *AllocateArray(std::size_t num_elems, bool clear) {
+  T *AllocateArray(const std::size_t num_elems, const bool clear) {
     return reinterpret_cast<T *>(
         AllocateAligned(sizeof(T) * num_elems, alignof(T), clear));
   }
@@ -64,6 +64,18 @@ class MemoryPool {
    * @param size The size of the allocation.
    */
   void Deallocate(void *ptr, std::size_t size);
+
+  /**
+   * Deallocate an array allocated by this pool.
+   * @tparam T The type of the element in the array.
+   * @param ptr The pointer to the array.
+   * @param num_elems The number of elements in the array at the time is was
+   *                  allocated.
+   */
+  template <typename T>
+  void DeallocateArray(T *const ptr, const std::size_t num_elems) {
+    Deallocate(ptr, sizeof(T) * num_elems);
+  }
 
   /**
    * Set the global threshold for when to use MMap and huge pages versus

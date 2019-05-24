@@ -603,7 +603,7 @@ void JoinHashTable::Build() {
 
 template <bool Prefetch>
 void JoinHashTable::LookupBatchInGenericHashTableInternal(
-    u32 num_tuples, const hash_t *hashes,
+    u32 num_tuples, const hash_t hashes[],
     const HashTableEntry *results[]) const {
   // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
 
