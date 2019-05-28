@@ -101,7 +101,7 @@ template <template <typename> typename Op>
 u32 VectorProjectionIterator::FilterColByCol(const u32 col_idx_1,
                                              const u32 col_idx_2) {
   auto *col_1_info = vector_projection_->GetColumnInfo(col_idx_1);
-  auto *col_2_info = vector_projection_->GetColumnInfo(col_idx_2);
+  UNUSED auto *col_2_info = vector_projection_->GetColumnInfo(col_idx_2);
   TPL_ASSERT(col_1_info->type.Equals(col_2_info->type),
              "Incompatible column types for filter");
 
