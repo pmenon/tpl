@@ -21,11 +21,12 @@ fun keyCheck(v: *VectorProjectionIterator, agg: *Agg) -> bool {
 }
 
 fun constructAgg(vpi: *VectorProjectionIterator, agg: *Agg) -> nil {
-
+  @aggInit(&agg.count)
 }
 
 fun updateAgg(vpi: *VectorProjectionIterator, agg: *Agg) -> nil {
-
+  var input = @vpiGetInt(vpi, 0)
+  @aggAdvance(&agg.count, &input)
 }
 
 fun pipeline_1(state: *State) -> nil {

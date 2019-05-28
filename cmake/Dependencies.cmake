@@ -11,10 +11,11 @@ include_directories(SYSTEM ${JEMALLOC_INCLUDE_DIR})
 list(APPEND TPL_LINK_LIBS ${JEMALLOC_LIBRARIES})
 
 ############################################################
-# LLVM 7.0+
+# LLVM
 ############################################################
 
-find_package(LLVM 7 REQUIRED CONFIG)
+# Look for LLVM 7+
+find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 if (${LLVM_PACKAGE_VERSION} VERSION_LESS "7")
     message(FATAL_ERROR "LLVM 7 or newer is required.")
