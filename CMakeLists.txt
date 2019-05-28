@@ -66,16 +66,38 @@ add_subdirectory(test)
 
 ############################################################
 #
+# Code Coverage
+#
+############################################################
+
+if (TPL_GENERATE_COVERAGE)
+  if (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "DEBUG")
+    message(FATAL_ERROR "Coverage can only be generated with a debug build type!")
+  endif ()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
+endif ()
+
+add_custom_target(gen-cov
+        DEPENDS check
+        COMMAND lcov --directory . --capture --output-file coverage.info &&               # capture coverage info
+                lcov --remove coverage.info '/usr/*' --output-file coverage.info          # filter out system
+                     --remove coverage.info '*/build/*' --output-file coverage.info       # filter out build
+                     --remove coverage.info '*/third_party/*' --output-file coverage.info # filter out third_party
+                     --remove coverage.info '*/test/*' --output-file coverage.info        # filter out test
+                     --remove coverage.info '*/src/main/*' --output-file coverage.info    # filter out main
+        )
+
+############################################################
+#
 # Checks from Terrier
 #
 ############################################################
 
 ###########################################################
+#
 # "make check-lint" and "make check-censored" targets
+#
 ###########################################################
-if (NOT TERRIER_VERBOSE_LINT)
-  set(TERRIER_LINT_QUIET "--quiet")
-endif ()
 
 if (UNIX)
 
@@ -189,7 +211,7 @@ add_custom_target(check-tpl-diff
                 -b ${CMAKE_BINARY_DIR}/bin/tpl
                 -f ${CMAKE_BINARY_DIR}/tpl_tests_diff.txt
                 -t ${PROJECT_SOURCE_DIR}/sample_tpl
-      )
+        )
 
 ############################################################
 #

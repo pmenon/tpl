@@ -58,19 +58,6 @@ endif ()
 
 ############################################################
 #
-# Code Coverage
-#
-############################################################
-
-if (TPL_GENERATE_COVERAGE)
-    if (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "DEBUG")
-        message(FATAL_ERROR "Coverage can only be generated with a debug build type!")
-    endif ()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
-endif ()
-
-############################################################
-#
 # Gold linker setup
 #
 ############################################################
