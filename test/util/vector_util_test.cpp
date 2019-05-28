@@ -10,46 +10,7 @@
 
 namespace tpl::util::test {
 
-class VectorUtilTest : public TplTest {
- private:
-  struct AllocInfo {
-    void *ptr;
-    std::size_t size;
-
-    AllocInfo(void *ptr, size_t size) : ptr(ptr), size(size) {}
-  };
-
- public:
-  ~VectorUtilTest() override {
-    for (auto &alloc : allocations_) {
-      FreeHuge(alloc.ptr, alloc.size);
-    }
-  }
-
-  template <typename T>
-  T *AllocArray(std::size_t num_elems) {
-    std::size_t size = sizeof(T) * num_elems;
-    void *ptr = MallocHuge(size);
-    allocations_.emplace_back(ptr, size);
-    return reinterpret_cast<T *>(ptr);
-  }
-
- private:
-  void *MallocHuge(std::size_t size) {
-    void *ptr = mmap(nullptr, size, PROT_READ | PROT_WRITE,
-                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-#if !defined(__APPLE__)
-    madvise(ptr, size, MADV_HUGEPAGE);
-#endif
-    memset(ptr, 0, size);
-    return ptr;
-  }
-
-  void FreeHuge(void *ptr, std::size_t size) { munmap(ptr, size); }
-
- private:
-  std::vector<AllocInfo> allocations_;
-};
+class VectorUtilTest : public TplTest {};
 
 TEST_F(VectorUtilTest, AccessTest) {
   {
@@ -258,14 +219,14 @@ TEST_F(VectorUtilTest, MaskToPositionTest) {
 }
 
 template <typename T>
-void SmallScale_NeedleTest(VectorUtilTest *test) {
+void SmallScale_NeedleTest() {
   static_assert(std::is_integral_v<T>, "This only works for integral types");
 
   constexpr const u32 num_elems = 4400;
   constexpr const u32 chunk_size = 1024;
   constexpr const T needle = 16;
 
-  auto *arr = test->AllocArray<T>(num_elems);
+  std::vector<T> arr(num_elems);
 
   u32 actual_count = 0;
 
@@ -286,7 +247,7 @@ void SmallScale_NeedleTest(VectorUtilTest *test) {
   u32 count = 0;
   for (u32 offset = 0; offset < num_elems; offset += chunk_size) {
     auto size = std::min(chunk_size, num_elems - offset);
-    auto found = VectorUtil::FilterEq(arr + offset, size, needle, out, nullptr);
+    auto found = VectorUtil::FilterEq(&arr[offset], size, needle, out, nullptr);
     count += found;
 
     // Check each element in this vector
@@ -300,7 +261,7 @@ void SmallScale_NeedleTest(VectorUtilTest *test) {
 }
 
 template <typename T>
-void SmallScale_MultiFilterTest(VectorUtilTest *test) {
+void SmallScale_MultiFilterTest() {
   static_assert(std::is_integral_v<T>, "This only works for integral types");
 
   constexpr const u32 num_elems = 4400;
@@ -308,8 +269,8 @@ void SmallScale_MultiFilterTest(VectorUtilTest *test) {
   constexpr const T needle_1 = 16;
   constexpr const T needle_2 = 10;
 
-  auto *arr_1 = test->AllocArray<T>(num_elems);
-  auto *arr_2 = test->AllocArray<T>(num_elems);
+  std::vector<T> arr_1(num_elems);
+  std::vector<T> arr_2(num_elems);
 
   u32 actual_count = 0;
 
@@ -326,8 +287,8 @@ void SmallScale_MultiFilterTest(VectorUtilTest *test) {
     }
   }
 
-  alignas(32) u32 out[chunk_size] = {0};
-  alignas(32) u32 sel[chunk_size] = {0};
+  alignas(CACHELINE_SIZE) u32 out[chunk_size] = {0};
+  alignas(CACHELINE_SIZE) u32 sel[chunk_size] = {0};
 
   u32 count = 0;
   for (u32 offset = 0; offset < num_elems; offset += chunk_size) {
@@ -335,10 +296,10 @@ void SmallScale_MultiFilterTest(VectorUtilTest *test) {
 
     // Apply first filter
     auto found =
-        VectorUtil::FilterLt(arr_1 + offset, size, needle_1, sel, nullptr);
+        VectorUtil::FilterLt(&arr_1[offset], size, needle_1, sel, nullptr);
 
     // Apply second filter
-    found = VectorUtil::FilterLt(arr_2 + offset, found, needle_2, out, sel);
+    found = VectorUtil::FilterLt(&arr_2[offset], found, needle_2, out, sel);
 
     // Count
     count += found;
@@ -355,32 +316,108 @@ void SmallScale_MultiFilterTest(VectorUtilTest *test) {
 }
 
 TEST_F(VectorUtilTest, SimpleFilterTest) {
-  SmallScale_NeedleTest<i8>(this);
-  SmallScale_NeedleTest<u8>(this);
-  SmallScale_NeedleTest<i16>(this);
-  SmallScale_NeedleTest<u16>(this);
-  SmallScale_NeedleTest<i32>(this);
-  SmallScale_NeedleTest<u32>(this);
-  SmallScale_NeedleTest<i64>(this);
-  SmallScale_NeedleTest<u64>(this);
+  SmallScale_NeedleTest<i8>();
+  SmallScale_NeedleTest<u8>();
+  SmallScale_NeedleTest<i16>();
+  SmallScale_NeedleTest<u16>();
+  SmallScale_NeedleTest<i32>();
+  SmallScale_NeedleTest<u32>();
+  SmallScale_NeedleTest<i64>();
+  SmallScale_NeedleTest<u64>();
 }
 
 TEST_F(VectorUtilTest, MultiFilterTest) {
-  SmallScale_MultiFilterTest<i8>(this);
-  SmallScale_MultiFilterTest<u8>(this);
-  SmallScale_MultiFilterTest<i16>(this);
-  SmallScale_MultiFilterTest<u16>(this);
-  SmallScale_MultiFilterTest<i32>(this);
-  SmallScale_MultiFilterTest<u32>(this);
-  SmallScale_MultiFilterTest<i64>(this);
-  SmallScale_MultiFilterTest<u64>(this);
+  SmallScale_MultiFilterTest<i8>();
+  SmallScale_MultiFilterTest<u8>();
+  SmallScale_MultiFilterTest<i16>();
+  SmallScale_MultiFilterTest<u16>();
+  SmallScale_MultiFilterTest<i32>();
+  SmallScale_MultiFilterTest<u32>();
+  SmallScale_MultiFilterTest<i64>();
+  SmallScale_MultiFilterTest<u64>();
+}
+
+TEST_F(VectorUtilTest, VectorVectorFilterTest) {
+  //
+  // Test: two arrays, a1 and a2; a1 contains sequential numbers in the range
+  //       [0, 1000), and s2 contains sequential numbers in range [1,1001).
+  //       - a1 == a2, a1 >= a2, and a1 > a2 should return 0 results
+  //       - a1 <= a2, a1 < a2, and a1 != a2 should return all results
+  //
+
+  const u32 num_elems = 10000;
+
+  std::vector<i32> arr_1(num_elems);
+  std::vector<i32> arr_2(num_elems);
+
+  // Load
+  std::iota(arr_1.begin(), arr_1.end(), 0);
+  std::iota(arr_2.begin(), arr_2.end(), 1);
+
+  alignas(CACHELINE_SIZE) u32 out[kDefaultVectorSize] = {0};
+
+#define CHECK(op, expected_count)                                            \
+  {                                                                          \
+    u32 count = 0;                                                           \
+    for (u32 offset = 0; offset < num_elems; offset += kDefaultVectorSize) { \
+      auto size = std::min(kDefaultVectorSize, num_elems - offset);          \
+      auto found = VectorUtil::Filter##op(&arr_1[offset], &arr_2[offset],    \
+                                          size, out, nullptr);               \
+      count += found;                                                        \
+    }                                                                        \
+    EXPECT_EQ(expected_count, count);                                        \
+  }
+
+  CHECK(Eq, 0u)
+  CHECK(Ge, 0u)
+  CHECK(Gt, 0u)
+  CHECK(Le, num_elems)
+  CHECK(Lt, num_elems)
+  CHECK(Ne, num_elems)
+
+#undef CHECK
+
+  //
+  // Test: fill a1 and a2 with random data. Verify filter with scalar versions.
+  //
+
+#define CHECK(vec_op, scalar_op)                                              \
+  {                                                                           \
+    std::random_device random;                                                \
+    for (u32 idx = 0; idx < num_elems; idx++) {                               \
+      arr_1[idx] = (random() % 100);                                          \
+      arr_2[idx] = (random() % 100);                                          \
+    }                                                                         \
+    u32 vec_count = 0, scalar_count = 0;                                      \
+    for (u32 offset = 0; offset < num_elems; offset += kDefaultVectorSize) {  \
+      auto size = std::min(kDefaultVectorSize, num_elems - offset);           \
+      /* Vector filter*/                                                      \
+      auto found = VectorUtil::Filter##vec_op(&arr_1[offset], &arr_2[offset], \
+                                              size, out, nullptr);            \
+      vec_count += found;                                                     \
+      /* Scalar filter */                                                     \
+      for (u32 iter = offset, end = iter + size; iter != end; iter++) {       \
+        scalar_count += arr_1[iter] scalar_op arr_2[iter];                    \
+      }                                                                       \
+    }                                                                         \
+    EXPECT_EQ(scalar_count, vec_count);                                       \
+  }
+
+  CHECK(Eq, ==)
+  CHECK(Ge, >=)
+  CHECK(Gt, >)
+  CHECK(Le, <=)
+  CHECK(Lt, <)
+  CHECK(Ne, !=)
+
+#undef CHECK
 }
 
 TEST_F(VectorUtilTest, DISABLED_PerfSelectTest) {
   constexpr u32 num_elems = 128 * 1024u * 1024u;
   constexpr const u32 chunk_size = 4096;
 
-  auto *arr = AllocArray<i32>(num_elems);
+  std::vector<i32> arr(num_elems);
 
   double load_time = 0.0;
   {
@@ -395,7 +432,7 @@ TEST_F(VectorUtilTest, DISABLED_PerfSelectTest) {
 
   std::cout << "Load time: " << load_time << " ms" << std::endl;
 
-  u32 out[chunk_size] = {0};
+  alignas(CACHELINE_SIZE) u32 out[chunk_size] = {0};
 
   for (i32 sel : {1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99}) {
     u32 count = 0;
@@ -406,7 +443,7 @@ TEST_F(VectorUtilTest, DISABLED_PerfSelectTest) {
       for (u32 offset = 0; offset < num_elems; offset += chunk_size) {
         auto size = std::min(chunk_size, num_elems - offset);
         auto found =
-            VectorUtil::FilterLt(arr + offset, size, sel, out, nullptr);
+            VectorUtil::FilterLt(&arr[offset], size, sel, out, nullptr);
         count += found;
       }
     }
