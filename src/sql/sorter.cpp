@@ -1,7 +1,9 @@
 #include "sql/sorter.h"
 
 #include <algorithm>
+#include <queue>
 #include <utility>
+#include <vector>
 
 #include <tbb/tbb.h>  // NOLINT
 

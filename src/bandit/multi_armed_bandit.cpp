@@ -1,6 +1,7 @@
 #include "bandit/multi_armed_bandit.h"
 
 #include "util/timer.h"
+#include "vm/module.h"
 
 namespace tpl::bandit {
 

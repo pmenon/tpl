@@ -10,7 +10,7 @@
 #include "util/timer.h"
 #include "vm/bytecode_function_info.h"
 #include "vm/bytecode_handlers.h"
-#include "vm/bytecode_module.h"
+#include "vm/module.h"
 
 namespace tpl::vm {
 
@@ -87,13 +87,13 @@ static constexpr const u32 kMaxStackAllocSize = 1ull << 14ull;
 // requires less, use the stack.
 static constexpr const u32 kSoftMaxStackAllocSize = 1ull << 12ull;
 
-VM::VM(const BytecodeModule &module) : module_(module) {}
+VM::VM(const Module *module) : module_(module) {}
 
 // static
-void VM::InvokeFunction(const BytecodeModule &module, const FunctionId func_id,
+void VM::InvokeFunction(const Module *module, const FunctionId func_id,
                         const u8 args[]) {
   // The function's info
-  const FunctionInfo *func_info = module.GetFuncInfoById(func_id);
+  const FunctionInfo *func_info = module->GetFuncInfoById(func_id);
   TPL_ASSERT(func_info != nullptr, "Function doesn't exist in module!");
   const std::size_t frame_size = func_info->frame_size();
 
@@ -120,7 +120,8 @@ void VM::InvokeFunction(const BytecodeModule &module, const FunctionId func_id,
   VM vm(module);
 
   // Now get the bytecode for the function and fire it off
-  const u8 *bytecode = module.GetBytecodeForFunction(*func_info);
+  const u8 *bytecode =
+      module->bytecode_module()->GetBytecodeForFunction(*func_info);
   TPL_ASSERT(bytecode != nullptr, "Bytecode cannot be null");
   Frame frame(raw_frame, frame_size);
   vm.Interpret(bytecode, &frame);
@@ -454,9 +455,9 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto *ctx = frame->LocalAt<void *>(READ_LOCAL_ID());
 
     auto init_fn = reinterpret_cast<sql::ThreadStateContainer::InitFn>(
-        module().GetFuncTrampoline(init_fn_id));
+        module_->GetRawFunctionImpl(init_fn_id));
     auto destroy_fn = reinterpret_cast<sql::ThreadStateContainer::DestroyFn>(
-        module().GetFuncTrampoline(destroy_fn_id));
+        module_->GetRawFunctionImpl(destroy_fn_id));
     OpThreadStateContainerReset(thread_state_container, size, init_fn,
                                 destroy_fn, ctx);
     DISPATCH_NEXT();
@@ -515,7 +516,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto scan_fn_id = READ_FUNC_ID();
 
     auto scan_fn = reinterpret_cast<sql::TableVectorIterator::ScanFn>(
-        module().GetFuncTrampoline(scan_fn_id));
+        module_->GetRawFunctionImpl(scan_fn_id));
     OpParallelScanTable(table_id, exec_ctx, thread_state_container, scan_fn);
     DISPATCH_NEXT();
   }
@@ -686,7 +687,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
         frame->LocalAt<sql::FilterManager *>(READ_LOCAL_ID());
     auto func_id = READ_FUNC_ID();
     auto fn = reinterpret_cast<sql::FilterManager::MatchFn>(
-        module().GetFuncTrampoline(func_id));
+        module_->GetRawFunctionImpl(func_id));
     OpFilterManagerInsertFlavor(filter_manager, fn);
     DISPATCH_NEXT();
   }
@@ -794,7 +795,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
         frame->LocalAt<sql::VectorProjectionIterator **>(READ_LOCAL_ID());
 
     auto key_eq_fn = reinterpret_cast<sql::AggregationHashTable::KeyEqFn>(
-        module().GetFuncTrampoline(key_eq_fn_id));
+        module_->GetRawFunctionImpl(key_eq_fn_id));
     OpAggregationHashTableLookup(result, agg_hash_table, hash, key_eq_fn,
                                  iters);
     DISPATCH_NEXT();
@@ -811,14 +812,14 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto merge_agg_fn_id = READ_FUNC_ID();
 
     auto hash_fn = reinterpret_cast<sql::AggregationHashTable::HashFn>(
-        module().GetFuncTrampoline(hash_fn_id));
+        module_->GetRawFunctionImpl(hash_fn_id));
     auto key_eq_fn = reinterpret_cast<sql::AggregationHashTable::KeyEqFn>(
-        module().GetFuncTrampoline(key_eq_fn_id));
+        module_->GetRawFunctionImpl(key_eq_fn_id));
     auto init_agg_fn = reinterpret_cast<sql::AggregationHashTable::InitAggFn>(
-        module().GetFuncTrampoline(init_agg_fn_id));
+        module_->GetRawFunctionImpl(init_agg_fn_id));
     auto advance_agg_fn =
         reinterpret_cast<sql::AggregationHashTable::AdvanceAggFn>(
-            module().GetFuncTrampoline(merge_agg_fn_id));
+            module_->GetRawFunctionImpl(merge_agg_fn_id));
     OpAggregationHashTableProcessBatch(agg_hash_table, iters, hash_fn,
                                        key_eq_fn, init_agg_fn, advance_agg_fn);
     DISPATCH_NEXT();
@@ -1151,7 +1152,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto tuple_size = frame->LocalAt<u32>(READ_LOCAL_ID());
 
     auto cmp_fn = reinterpret_cast<sql::Sorter::ComparisonFunction>(
-        module().GetFuncTrampoline(cmp_func_id));
+        module_->GetRawFunctionImpl(cmp_func_id));
     OpSorterInit(sorter, memory, cmp_fn, tuple_size);
     DISPATCH_NEXT();
   }
@@ -1318,7 +1319,7 @@ const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
   const u16 num_params = READ_UIMM2();
 
   // Lookup the function
-  const FunctionInfo *func_info = module().GetFuncInfoById(func_id);
+  const FunctionInfo *func_info = module_->GetFuncInfoById(func_id);
   TPL_ASSERT(func_info != nullptr, "Function doesn't exist in module!");
   const std::size_t frame_size = func_info->frame_size();
 
@@ -1345,7 +1346,8 @@ const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
   LOG_DEBUG("Executing function '{}'", func_info->name());
 
   // Let's go
-  const u8 *bytecode = module().GetBytecodeForFunction(*func_info);
+  const u8 *bytecode =
+      module_->bytecode_module()->GetBytecodeForFunction(*func_info);
   TPL_ASSERT(bytecode != nullptr, "Bytecode cannot be null");
   VM::Frame callee(raw_frame, func_info->frame_size());
   Interpret(bytecode, &callee);

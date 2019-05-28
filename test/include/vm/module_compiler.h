@@ -10,12 +10,13 @@
 #include "sema/sema.h"
 #include "vm/bytecode_generator.h"
 #include "vm/bytecode_module.h"
+#include "vm/module.h"
 
 namespace tpl::vm::test {
 
-class BytecodeCompiler {
+class ModuleCompiler {
  public:
-  BytecodeCompiler()
+  ModuleCompiler()
       : region_("temp"), errors_(&region_), ctx_(&region_, &errors_) {}
 
   ast::AstNode *CompileToAst(const std::string &source) {
@@ -34,10 +35,11 @@ class BytecodeCompiler {
     return ast;
   }
 
-  std::unique_ptr<BytecodeModule> CompileToModule(const std::string &source) {
+  std::unique_ptr<Module> CompileToModule(const std::string &source) {
     auto *ast = CompileToAst(source);
     if (HasErrors()) return nullptr;
-    return vm::BytecodeGenerator::Compile(ast, "test");
+    return std::make_unique<Module>(
+        vm::BytecodeGenerator::Compile(ast, "test"));
   }
 
   // Does the error reporter have any errors?

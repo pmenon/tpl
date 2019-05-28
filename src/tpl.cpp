@@ -5,6 +5,9 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
+
+#include <tbb/task_scheduler_init.h>  // NOLINT
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -23,6 +26,7 @@
 #include "vm/bytecode_generator.h"
 #include "vm/bytecode_module.h"
 #include "vm/llvm_engine.h"
+#include "vm/module.h"
 #include "vm/vm.h"
 
 // ---------------------------------------------------------
@@ -36,6 +40,8 @@ llvm::cl::opt<bool> kPrintAst("print-ast", llvm::cl::desc("Print the programs AS
 llvm::cl::opt<bool> kPrintTbc("print-tbc", llvm::cl::desc("Print the generated TPL Bytecode"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kIsSQL("sql", llvm::cl::desc("Is the input a SQL query?"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 // clang-format on
+
+tbb::task_scheduler_init scheduler;
 
 namespace tpl {
 
@@ -57,8 +63,8 @@ static void CompileAndRun(const std::string &source,
   parsing::Scanner scanner(source.data(), source.length());
   parsing::Parser parser(&scanner, &context);
 
-  double parse_ms = 0, typecheck_ms = 0, codegen_ms = 0, exec_ms = 0,
-         jit_ms = 0;
+  double parse_ms = 0.0, typecheck_ms = 0.0, codegen_ms = 0.0,
+         interp_exec_ms = 0.0, adaptive_exec_ms = 0.0, jit_exec_ms = 0.0;
 
   //
   // Parse
@@ -101,23 +107,25 @@ static void CompileAndRun(const std::string &source,
   // TBC generation
   //
 
-  std::unique_ptr<vm::BytecodeModule> module;
+  std::unique_ptr<vm::BytecodeModule> bytecode_module;
   {
     util::ScopedTimer<std::milli> timer(&codegen_ms);
-    module = vm::BytecodeGenerator::Compile(root, name);
+    bytecode_module = vm::BytecodeGenerator::Compile(root, name);
   }
 
   // Dump Bytecode
   if (kPrintTbc) {
-    module->PrettyPrint(std::cout);
+    bytecode_module->PrettyPrint(std::cout);
   }
+
+  auto module = std::make_unique<vm::Module>(std::move(bytecode_module));
 
   //
   // Interpret
   //
 
   {
-    util::ScopedTimer<std::milli> timer(&exec_ms);
+    util::ScopedTimer<std::milli> timer(&interp_exec_ms);
 
     if (kIsSQL) {
       std::function<u32(sql::ExecutionContext *)> main;
@@ -141,15 +149,42 @@ static void CompileAndRun(const std::string &source,
   }
 
   //
-  // JIT
+  // Adaptive
   //
 
   {
-    util::ScopedTimer<std::milli> timer(&jit_ms);
+    util::ScopedTimer<std::milli> timer(&adaptive_exec_ms);
 
     if (kIsSQL) {
       std::function<u32(sql::ExecutionContext *)> main;
-      if (!module->GetFunction("main", vm::ExecutionMode::Jit, main)) {
+      if (!module->GetFunction("main", vm::ExecutionMode::Adaptive, main)) {
+        LOG_ERROR(
+            "Missing 'main' entry function with signature "
+            "(*ExecutionContext)->int32");
+        return;
+      }
+      sql::MemoryPool memory(nullptr);
+      sql::ExecutionContext exec_ctx(&memory);
+      LOG_INFO("ADAPTIVE main() returned: {}", main(&exec_ctx));
+    } else {
+      std::function<u32()> main;
+      if (!module->GetFunction("main", vm::ExecutionMode::Adaptive, main)) {
+        LOG_ERROR("Missing 'main' entry function with signature ()->int32");
+        return;
+      }
+      LOG_INFO("ADAPTIVE main() returned: {}", main());
+    }
+  }
+
+  //
+  // JIT
+  //
+  {
+    util::ScopedTimer<std::milli> timer(&jit_exec_ms);
+
+    if (kIsSQL) {
+      std::function<u32(sql::ExecutionContext *)> main;
+      if (!module->GetFunction("main", vm::ExecutionMode::Compiled, main)) {
         LOG_ERROR(
             "Missing 'main' entry function with signature "
             "(*ExecutionContext)->int32");
@@ -160,7 +195,7 @@ static void CompileAndRun(const std::string &source,
       LOG_INFO("JIT main() returned: {}", main(&exec_ctx));
     } else {
       std::function<u32()> main;
-      if (!module->GetFunction("main", vm::ExecutionMode::Jit, main)) {
+      if (!module->GetFunction("main", vm::ExecutionMode::Compiled, main)) {
         LOG_ERROR("Missing 'main' entry function with signature ()->int32");
         return;
       }
@@ -170,9 +205,10 @@ static void CompileAndRun(const std::string &source,
 
   // Dump stats
   LOG_INFO(
-      "Parse: {} ms, Type-check: {} ms, Code-gen: {} ms, Exec.: {} ms, "
-      "Jit+Exec.: {} ms",
-      parse_ms, typecheck_ms, codegen_ms, exec_ms, jit_ms);
+      "Parse: {} ms, Type-check: {} ms, Code-gen: {} ms, Interp. Exec.: {} ms, "
+      "Adaptive Exec.: {} ms, Jit+Exec.: {} ms",
+      parse_ms, typecheck_ms, codegen_ms, interp_exec_ms, adaptive_exec_ms,
+      jit_exec_ms);
 }
 
 /// Run the TPL REPL
@@ -232,6 +268,8 @@ void ShutdownTPL() {
   tpl::vm::LLVMEngine::Shutdown();
 
   tpl::logging::ShutdownLogger();
+
+  scheduler.terminate();
 
   LOG_INFO("TPL cleanly shutdown ...");
 }

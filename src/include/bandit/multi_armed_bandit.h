@@ -7,7 +7,10 @@
 
 #include "util/common.h"
 #include "util/macros.h"
-#include "vm/bytecode_module.h"
+
+namespace tpl::vm {
+class Module;
+}  // namespace tpl::vm
 
 namespace tpl::bandit {
 
@@ -16,8 +19,8 @@ namespace tpl::bandit {
  */
 class MultiArmedBandit {
  public:
-  MultiArmedBandit(vm::BytecodeModule *module,
-                   std::vector<std::string> action_names, u32 optimal = 0)
+  MultiArmedBandit(vm::Module *module, std::vector<std::string> action_names,
+                   u32 optimal = 0)
       : module_(module), action_names_(std::move(action_names)) {}
 
   double ExecuteAction(u32 action);
@@ -33,10 +36,9 @@ class MultiArmedBandit {
   static double RewardToExecutionTime(double reward);
 
  private:
-  // TODO(siva): Clean up the members of the class.
   // Not owned. It's is the responsibility of the user to make sure that this
   // is not deleted.
-  vm::BytecodeModule *module_;
+  vm::Module *module_;
 
   // The names of the  actions.
   std::vector<std::string> action_names_;

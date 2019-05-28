@@ -8,6 +8,7 @@
 #include "bandit/agent.h"
 #include "bandit/multi_armed_bandit.h"
 #include "bandit/policy.h"
+#include "logging/logger.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/timer.h"
 

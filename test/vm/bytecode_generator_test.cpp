@@ -3,7 +3,8 @@
 #include "tpl_test.h"  // NOLINT
 
 // From test
-#include "vm/bytecode_compiler.h"
+#include "vm/module.h"
+#include "vm/module_compiler.h"
 
 #include "logging/logger.h"
 
@@ -22,9 +23,9 @@ class BytecodeGeneratorTest : public TplTest {
 TEST_F(BytecodeGeneratorTest, SimpleTest) {
   {
     auto src = "fun test() -> bool { return true }";
-    BytecodeCompiler compiler;
-    auto *ast = compiler.CompileToAst(src);
-    auto module = BytecodeGenerator::Compile(ast, "test");
+    auto compiler = ModuleCompiler();
+    auto module = compiler.CompileToModule(src);
+    ASSERT_TRUE(module != nullptr);
 
     std::function<bool()> func;
     EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, func));
@@ -33,9 +34,9 @@ TEST_F(BytecodeGeneratorTest, SimpleTest) {
 
   {
     auto src = "fun test() -> bool { return false }";
-    BytecodeCompiler compiler;
-    auto *ast = compiler.CompileToAst(src);
-    auto module = BytecodeGenerator::Compile(ast, "test");
+    auto compiler = ModuleCompiler();
+    auto module = compiler.CompileToModule(src);
+    ASSERT_TRUE(module != nullptr);
 
     std::function<bool()> func;
     EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, func));
@@ -49,11 +50,9 @@ TEST_F(BytecodeGeneratorTest, SimpleTest) {
       var y: uint32 = 20
       return x * y
     })";
-    BytecodeCompiler compiler;
-    auto *ast = compiler.CompileToAst(src);
-
-    // Try generating bytecode for this declaration
-    auto module = BytecodeGenerator::Compile(ast, "mul20");
+    auto compiler = ModuleCompiler();
+    auto module = compiler.CompileToModule(src);
+    ASSERT_TRUE(module != nullptr);
 
     std::function<u32(u32)> mul_20;
     EXPECT_TRUE(module->GetFunction("mul20", ExecutionMode::Interpret, mul_20))
@@ -80,12 +79,9 @@ TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
         return -10
       }
     })";
-    BytecodeCompiler compiler;
-    auto *ast = compiler.CompileToAst(src);
-    ASSERT_FALSE(compiler.HasErrors());
-
-    // Try generating bytecode for this declaration
-    auto module = BytecodeGenerator::Compile(ast, "test");
+    auto compiler = ModuleCompiler();
+    auto module = compiler.CompileToModule(src);
+    ASSERT_TRUE(module != nullptr);
 
     std::function<i32(bool)> f;
     EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
@@ -106,12 +102,9 @@ TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
       var f : int32 = 10
       return (f > 1 and x < 2) and (t < 100 or x < 3)
     })";
-    BytecodeCompiler compiler;
-    auto *ast = compiler.CompileToAst(src);
-    ASSERT_FALSE(compiler.HasErrors());
-
-    // Try generating bytecode for this declaration
-    auto module = BytecodeGenerator::Compile(ast, "test");
+    auto compiler = ModuleCompiler();
+    auto module = compiler.CompileToModule(src);
+    ASSERT_TRUE(module != nullptr);
 
     std::function<bool()> f;
     EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
@@ -130,11 +123,9 @@ TEST_F(BytecodeGeneratorTest, SimpleArithmeticTest) {
       }})",
                            arg_type_name, op);
 
-    BytecodeCompiler compiler;
-    auto *ast = compiler.CompileToAst(src);
-    ASSERT_FALSE(compiler.HasErrors());
-
-    auto module = BytecodeGenerator::Compile(ast, "test");
+    auto compiler = ModuleCompiler();
+    auto module = compiler.CompileToModule(src);
+    ASSERT_TRUE(module != nullptr);
 
     std::function<Type(Type, Type)> fn;
     ASSERT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, fn))
@@ -176,12 +167,9 @@ TEST_F(BytecodeGeneratorTest, ComparisonTest) {
         return a {1} b
       }})",
                            arg_type_name, op);
-
-    BytecodeCompiler compiler;
-    auto *ast = compiler.CompileToAst(src);
-    ASSERT_FALSE(compiler.HasErrors());
-
-    auto module = BytecodeGenerator::Compile(ast, "test");
+    auto compiler = ModuleCompiler();
+    auto module = compiler.CompileToModule(src);
+    ASSERT_TRUE(module != nullptr);
 
     std::function<bool(Type, Type)> fn;
     ASSERT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, fn))
@@ -226,11 +214,9 @@ TEST_F(BytecodeGeneratorTest, ParameterPassingTest) {
       s.b = s.a * 2
       return true
     })";
-  BytecodeCompiler compiler;
-  auto *ast = compiler.CompileToAst(src);
-
-  // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(ast, "test");
+  auto compiler = ModuleCompiler();
+  auto module = compiler.CompileToModule(src);
+  ASSERT_TRUE(module != nullptr);
 
   struct S {
     int a;
@@ -255,7 +241,7 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
       return a
     })";
 
-    BytecodeCompiler compiler;
+    auto compiler = ModuleCompiler();
     compiler.CompileToAst(src);
     EXPECT_TRUE(compiler.HasErrors());
   }
@@ -266,7 +252,7 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
       return
     })";
 
-    BytecodeCompiler compiler;
+    auto compiler = ModuleCompiler();
     compiler.CompileToAst(src);
     EXPECT_TRUE(compiler.HasErrors());
   }
@@ -276,13 +262,9 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
     fun test() -> int32 {
       return 10
     })";
-
-    BytecodeCompiler compiler;
-    auto *ast = compiler.CompileToAst(src);
-    EXPECT_FALSE(compiler.HasErrors());
-
-    // Try generating bytecode for this declaration
-    auto module = BytecodeGenerator::Compile(ast, "test");
+    auto compiler = ModuleCompiler();
+    auto module = compiler.CompileToModule(src);
+    ASSERT_TRUE(module != nullptr);
 
     std::function<i32()> f;
     EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
@@ -298,13 +280,8 @@ TEST_F(BytecodeGeneratorTest, FunctionTypeCheckTest) {
       var b: int16 = 40
       return a * b
     })";
-
-    BytecodeCompiler compiler;
-    auto *ast = compiler.CompileToAst(src);
-    EXPECT_FALSE(compiler.HasErrors());
-
-    // Try generating bytecode for this declaration
-    auto module = BytecodeGenerator::Compile(ast, "test");
+    auto compiler = ModuleCompiler();
+    auto module = compiler.CompileToModule(src);
 
     std::function<i32()> f;
     EXPECT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, f))
@@ -329,11 +306,9 @@ TEST_F(BytecodeGeneratorTest, FunctionTest) {
       f(s)
       return true
     })";
-  BytecodeCompiler compiler;
-  auto *ast = compiler.CompileToAst(src);
-
-  // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(ast, "test");
+  auto compiler = ModuleCompiler();
+  auto module = compiler.CompileToModule(src);
+  ASSERT_TRUE(module != nullptr);
 
   struct S {
     int a;

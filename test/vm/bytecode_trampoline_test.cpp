@@ -11,7 +11,8 @@
 
 #include "sql/sorter.h"
 #include "sql/value.h"
-#include "vm/bytecode_compiler.h"
+#include "vm/module.h"
+#include "vm/module_compiler.h"
 
 namespace tpl::vm::test {
 
@@ -20,32 +21,34 @@ namespace tpl::vm::test {
 // TODO(pmenon): We need way more fucking tests for this ...
 //
 
-class BytecodeTrampolineTest : public TplTest {};
+class BytecodeTrampolineTest : public TplTest {
+ protected:
+  void *GetTrampoline(const vm::Module &module, const std::string &func_name) {
+    return module.GetBytecodeImpl(module.GetFuncInfoByName(func_name)->id());
+  }
+};
 
 TEST_F(BytecodeTrampolineTest, VoidFunctionTest) {
-  BytecodeCompiler compiler;
-
   auto src = "fun test() -> nil { }";
+  auto compiler = ModuleCompiler();
   auto module = compiler.CompileToModule(src);
 
   EXPECT_FALSE(compiler.HasErrors());
 
-  auto fn = reinterpret_cast<void (*)()>(
-      module->GetFuncTrampoline(module->GetFuncInfoByName("test")->id()));
+  auto fn = reinterpret_cast<void (*)()>(GetTrampoline(*module, "test"));
 
   fn();
 }
 
 TEST_F(BytecodeTrampolineTest, BooleanFunctionTest) {
-  BytecodeCompiler compiler;
-
   auto src = "fun lt(a: int32, b: int32) -> bool { return a < b }";
+  auto compiler = ModuleCompiler();
   auto module = compiler.CompileToModule(src);
 
   EXPECT_FALSE(compiler.HasErrors());
 
-  auto less_than = reinterpret_cast<bool (*)(i32, i32)>(
-      module->GetFuncTrampoline(module->GetFuncInfoByName("lt")->id()));
+  auto less_than =
+      reinterpret_cast<bool (*)(i32, i32)>(GetTrampoline(*module, "lt"));
 
   EXPECT_EQ(true, less_than(1, 2));
   EXPECT_EQ(false, less_than(2, 1));
@@ -53,30 +56,27 @@ TEST_F(BytecodeTrampolineTest, BooleanFunctionTest) {
 
 TEST_F(BytecodeTrampolineTest, IntFunctionTest) {
   {
-    BytecodeCompiler compiler;
-
     auto src = "fun test() -> int32 { return 10 }";
+    auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
 
     EXPECT_FALSE(compiler.HasErrors());
 
-    auto fn = reinterpret_cast<i32 (*)()>(
-        module->GetFuncTrampoline(module->GetFuncInfoByName("test")->id()));
+    auto fn = reinterpret_cast<i32 (*)()>(GetTrampoline(*module, "test"));
 
     EXPECT_EQ(10, fn());
   }
 
   // Add function
   {
-    BytecodeCompiler compiler;
-
     auto src = "fun add2(a: int32, b: int32) -> int32 { return a + b }";
+    auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
 
     EXPECT_FALSE(compiler.HasErrors());
 
-    auto fn = reinterpret_cast<i32 (*)(i32, i32)>(
-        module->GetFuncTrampoline(module->GetFuncInfoByName("add2")->id()));
+    auto fn =
+        reinterpret_cast<i32 (*)(i32, i32)>(GetTrampoline(*module, "add2"));
 
     EXPECT_EQ(20, fn(10, 10));
     EXPECT_EQ(10, fn(0, 10));
@@ -86,16 +86,15 @@ TEST_F(BytecodeTrampolineTest, IntFunctionTest) {
 
   // Sub function
   {
-    BytecodeCompiler compiler;
-
     auto src =
         "fun sub3(a: int32, b: int32, c: int32) -> int32 { return a - b - c }";
+    auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
 
     EXPECT_FALSE(compiler.HasErrors());
 
     auto fn = reinterpret_cast<i32 (*)(i32, i32, i32)>(
-        module->GetFuncTrampoline(module->GetFuncInfoByName("sub3")->id()));
+        GetTrampoline(*module, "sub3"));
 
     EXPECT_EQ(-10, fn(10, 10, 10));
     EXPECT_EQ(10, fn(30, 10, 10));
@@ -105,18 +104,17 @@ TEST_F(BytecodeTrampolineTest, IntFunctionTest) {
 
 TEST_F(BytecodeTrampolineTest, BigIntFunctionTest) {
   {
-    BytecodeCompiler compiler;
-
     auto src = R"(
     fun mul3(a: int64, b: int64, c: int64) -> int64 {
       return a * b * c
     })";
+    auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
 
     EXPECT_FALSE(compiler.HasErrors());
 
     auto fn = reinterpret_cast<i64 (*)(i64, i64, i64)>(
-        module->GetFuncTrampoline(module->GetFuncInfoByName("mul3")->id()));
+        GetTrampoline(*module, "mul3"));
 
     EXPECT_EQ(6, fn(1, 2, 3));
     EXPECT_EQ(-6, fn(-1, 2, 3));
@@ -126,18 +124,17 @@ TEST_F(BytecodeTrampolineTest, BigIntFunctionTest) {
 
 TEST_F(BytecodeTrampolineTest, VoidReturnTest) {
   {
-    BytecodeCompiler compiler;
-
     auto src = R"(
     fun mul2(a: *int64, b: *int64, ret: *int64) -> nil {
       *ret = (*a) * (*b)
     })";
+    auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
 
     EXPECT_FALSE(compiler.HasErrors());
 
     auto fn = reinterpret_cast<void (*)(i64 *, i64 *, i64 *)>(
-        module->GetFuncTrampoline(module->GetFuncInfoByName("mul2")->id()));
+        GetTrampoline(*module, "mul2"));
 
     i64 a = 2, b = 3;
     i64 ret = 0;
@@ -169,11 +166,11 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
     auto src = "fun compare(a: int32, b: int32) -> int32 { return a - b }";
 
     // Compile
-    BytecodeCompiler compiler;
+    auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
     EXPECT_FALSE(compiler.HasErrors());
     auto compare = reinterpret_cast<i32 (*)(const i32, const i32)>(
-        module->GetFuncTrampoline(module->GetFuncInfoByName("compare")->id()));
+        GetTrampoline(*module, "compare"));
     EXPECT_TRUE(compare != nullptr);
 
     // Try to sort using the generated comparison function
@@ -217,11 +214,11 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
     }
     fun compare(a: *S, b: *S) -> bool { return a.c < b.c })";
 
-    BytecodeCompiler compiler;
+    auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
     EXPECT_FALSE(compiler.HasErrors());
     auto compare = reinterpret_cast<bool (*)(const S *, const S *)>(
-        module->GetFuncTrampoline(module->GetFuncInfoByName("compare")->id()));
+        GetTrampoline(*module, "compare"));
     EXPECT_TRUE(compare != nullptr);
 
     // Try to sort using the generated comparison function
@@ -238,12 +235,12 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
 
 TEST_F(BytecodeTrampolineTest, DISABLED_PerfGenComparisonForSortTest) {
   // Try sorting through trampoline
-  auto bench_trampoline = [](auto &vec) {
-    BytecodeCompiler compiler;
+  auto bench_trampoline = [this](auto &vec) {
     auto src = "fun compare(a: int32, b: int32) -> int32 { return a - b }";
+    auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
     auto compare = reinterpret_cast<i32 (*)(const i32, const i32)>(
-        module->GetFuncTrampoline(module->GetFuncInfoByName("compare")->id()));
+        GetTrampoline(*module, "compare"));
 
     util::Timer<std::milli> timer;
     timer.Start();
@@ -256,8 +253,8 @@ TEST_F(BytecodeTrampolineTest, DISABLED_PerfGenComparisonForSortTest) {
   };
 
   UNUSED auto bench_func = [](auto &vec) {
-    BytecodeCompiler compiler;
     auto src = "fun compare(a: int32, b: int32) -> int32 { return a - b }";
+    auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
     std::function<i32(const i32, const i32)> compare;
     EXPECT_TRUE(
@@ -274,7 +271,7 @@ TEST_F(BytecodeTrampolineTest, DISABLED_PerfGenComparisonForSortTest) {
   };
 
   UNUSED auto bench_std = [](auto &vec) {
-    BytecodeCompiler compiler;
+    auto compiler = ModuleCompiler();
     util::Timer<std::milli> timer;
     timer.Start();
     ips4o::sort(vec.begin(), vec.end(),

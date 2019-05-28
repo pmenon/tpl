@@ -304,7 +304,7 @@ void TestParallelSort(const std::vector<u32> &sorter_sizes) {
   for (SorterIterator iter(&main); iter.HasNext(); iter.Next()) {
     auto *curr = iter.GetRowAs<TestTuple<N>>();
     if (prev != nullptr) {
-      EXPECT_TRUE(cmp_fn(prev, curr) <= 0);
+      EXPECT_LE(cmp_fn(prev, curr), 0);
     }
     prev = curr;
   }

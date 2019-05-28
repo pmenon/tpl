@@ -32,10 +32,7 @@ TEST_F(ThreadStateContainerTest, ContainerResetTest) {
 
 #define RESET(N)                                                              \
   {                                                                           \
-    /*                                                                        \
-     * Reset the container, ensuring constructor and destructor adds to and   \
-     * decrements from global count, respectively, by configured amount.      \
-     */                                                                       \
+    /* Reset the container, add/sub upon creation/destruction by amount */    \
     container.Reset(sizeof(u32),                                              \
                     [](auto *ctx, UNUSED auto *s) {                           \
                       (*reinterpret_cast<decltype(count) *>(ctx)) += N;       \

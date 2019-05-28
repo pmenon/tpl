@@ -8,7 +8,7 @@
 
 namespace tpl::vm {
 
-class BytecodeModule;
+class Module;
 
 /**
  * Our virtual machine
@@ -19,12 +19,12 @@ class VM {
    * Invoke the function with ID @em func_id in the module @em module. @em args
    * contains the output and input parameters stored contiguously.
    */
-  static void InvokeFunction(const BytecodeModule &module, FunctionId func_id,
+  static void InvokeFunction(const Module *module, FunctionId func_id,
                              const u8 args[]);
 
  private:
   // Private constructor to force users to use InvokeFunction
-  explicit VM(const BytecodeModule &module);
+  explicit VM(const Module *module);
 
   // This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(VM);
@@ -38,12 +38,9 @@ class VM {
   // Execute a call instruction
   const u8 *ExecuteCall(const u8 *ip, Frame *caller);
 
-  // Get the bytecode module handle
-  const BytecodeModule &module() const { return module_; }
-
  private:
   // The module
-  const BytecodeModule &module_;
+  const Module *module_;
 };
 
 }  // namespace tpl::vm

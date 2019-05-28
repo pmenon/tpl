@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -7,7 +8,7 @@
 #include "tpl_test.h"  // NOLINT
 
 // From test
-#include "vm/bytecode_compiler.h"
+#include "vm/module_compiler.h"
 
 #include "bandit/agent.h"
 #include "bandit/environment.h"
@@ -135,11 +136,12 @@ TEST_P(BanditTest, DISABLED_SimpleTest) {
 
   auto [src, action_names] = CreateSampleTPLCode();
 
-  BytecodeCompiler compiler;
+  ModuleCompiler compiler;
   auto *ast = compiler.CompileToAst(src);
 
   // Try generating bytecode for this declaration
-  auto module = BytecodeGenerator::Compile(ast, "bandit");
+  auto module =
+      std::make_unique<Module>(BytecodeGenerator::Compile(ast, "bandit"));
 
   auto bandit = bandit::MultiArmedBandit(module.get(), action_names);
 

@@ -115,13 +115,14 @@ class LLVMEngine {
    public:
     /**
      * Construct a module without an in-memory module. Users must call @em
-     * Load() a bytecode module before JIT functions can be invoked.
+     * Load() to load in a pre-compiled shared object library for this compiled
+     * module before this module's functions can be invoked.
      */
     CompiledModule() : CompiledModule(nullptr) {}
 
     /**
      * Construct a compiled module using the provided shared object file.
-     * @param object_code The object file
+     * @param object_code The object file containing code for this module.
      */
     explicit CompiledModule(std::unique_ptr<llvm::MemoryBuffer> object_code);
 
@@ -136,14 +137,14 @@ class LLVMEngine {
     ~CompiledModule();
 
     /**
-     * Get a pointer to the jitted function in this module with name \a name
-     * @return A function pointer if a function exists with name \a name. If no
-     *         function exists, returns null.
+     * Get a pointer to the JIT-ed function in this module with name @em name.
+     * @return A function pointer if a function with the provided name exists.
+     *         If no such function exists, returns null.
      */
     void *GetFunctionPointer(const std::string &name) const;
 
     /**
-     * Load the given module \a module into memory. If this module has already
+     * Load the given module @em module into memory. If this module has already
      * been loaded, it will not be reloaded.
      */
     void Load(const BytecodeModule &module);
