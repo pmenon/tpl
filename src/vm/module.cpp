@@ -79,7 +79,7 @@ namespace {
 // TODO(pmenon): **LOTS** of shit to make this fully ABI compliant ....
 class TrampolineGenerator : public Xbyak::CodeGenerator {
  public:
-  TrampolineGenerator(const Module *module, const FunctionInfo &func_info,
+  TrampolineGenerator(const Module &module, const FunctionInfo &func_info,
                       void *mem)
       : Xbyak::CodeGenerator(Xbyak::DEFAULT_MAX_CODE_SIZE, mem),
         module_(module),
@@ -212,7 +212,7 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
     }
 
     // Set up the arguments to VM::InvokeFunction(module, function ID, args)
-    mov(rdi, reinterpret_cast<std::size_t>(module_));
+    mov(rdi, reinterpret_cast<std::size_t>(&module_));
     mov(rsi, func_.id());
     lea(rdx, ptr[rsp + ret_type_size]);
 
@@ -232,7 +232,7 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
   void Return() { ret(); }
 
  private:
-  const Module *module_;
+  const Module &module_;
   const FunctionInfo &func_;
 };
 
@@ -253,7 +253,7 @@ void Module::CreateFunctionTrampoline(const FunctionInfo &func,
   }
 
   // Generate code
-  TrampolineGenerator generator(this, func, mem.base());
+  TrampolineGenerator generator(*this, func, mem.base());
   generator.Generate();
 
   // Now that the code's been generated and finalized, let's remove write

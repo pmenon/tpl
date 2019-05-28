@@ -77,7 +77,7 @@ void FilterManager::Finalize() {
 }
 
 void FilterManager::RunFilters(VectorProjectionIterator *const vpi) {
-  TPL_ASSERT(finalized_, "Must finalized the filter before it can be used");
+  TPL_ASSERT(finalized_, "Must finalize the filter before it can be used");
 
   // Execute the clauses in what we currently believe to be the optimal order
   for (const u32 opt_clause_idx : optimal_clause_order_) {
