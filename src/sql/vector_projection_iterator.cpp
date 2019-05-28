@@ -72,6 +72,57 @@ u32 VectorProjectionIterator::FilterColByVal(const u32 col_idx,
   }
 }
 
+template <typename T, template <typename> typename Op>
+u32 VectorProjectionIterator::FilterColByColImpl(const u32 col_idx_1,
+                                                 const u32 col_idx_2) {
+  // Get the input column's data
+  const T *input_1 = vector_projection_->GetVectorAs<T>(col_idx_1);
+  const T *input_2 = vector_projection_->GetVectorAs<T>(col_idx_2);
+
+  // Use the existing selection vector if this VPI has been filtered
+  const u32 *sel_vec = (IsFiltered() ? selection_vector_ : nullptr);
+
+  // Filter!
+  selection_vector_write_idx_ = util::VectorUtil::FilterVectorByVector<T, Op>(
+      input_1, input_2, num_selected_, selection_vector_, sel_vec);
+
+  // After the filter has been run on the entire vector projection, we need to
+  // ensure that we reset it so that clients can query the updated state of the
+  // VPI, and subsequent filters operate only on valid tuples potentially
+  // filtered out in this filter.
+  ResetFiltered();
+
+  // After the call to ResetFiltered(), num_selected_ should indicate the number
+  // of valid tuples in the filter.
+  return num_selected();
+}
+
+template <template <typename> typename Op>
+u32 VectorProjectionIterator::FilterColByCol(const u32 col_idx_1,
+                                             const u32 col_idx_2) {
+  auto *col_1_info = vector_projection_->GetColumnInfo(col_idx_1);
+  auto *col_2_info = vector_projection_->GetColumnInfo(col_idx_2);
+  TPL_ASSERT(col_1_info->type.Equals(col_2_info->type),
+             "Incompatible column types for filter");
+
+  switch (col_1_info->type.type_id()) {
+    case TypeId::SmallInt: {
+      return FilterColByColImpl<i16, Op>(col_idx_1, col_idx_2);
+    }
+    case TypeId::Integer: {
+      return FilterColByColImpl<i32, Op>(col_idx_1, col_idx_2);
+    }
+    case TypeId::BigInt: {
+      return FilterColByColImpl<i64, Op>(col_idx_1, col_idx_2);
+    }
+    default: { throw std::runtime_error("Filter not supported on type"); }
+  }
+}
+
+// ---------------------------------------------------------
+// Template instantiations
+// ---------------------------------------------------------
+
 // clang-format off
 template u32 VectorProjectionIterator::FilterColByVal<std::equal_to>(u32, FilterVal);
 template u32 VectorProjectionIterator::FilterColByVal<std::greater>(u32, FilterVal);
@@ -79,6 +130,12 @@ template u32 VectorProjectionIterator::FilterColByVal<std::greater_equal>(u32, F
 template u32 VectorProjectionIterator::FilterColByVal<std::less>(u32, FilterVal);
 template u32 VectorProjectionIterator::FilterColByVal<std::less_equal>(u32, FilterVal);
 template u32 VectorProjectionIterator::FilterColByVal<std::not_equal_to>(u32, FilterVal);
+template u32 VectorProjectionIterator::FilterColByCol<std::equal_to>(u32, u32);
+template u32 VectorProjectionIterator::FilterColByCol<std::greater>(u32, u32);
+template u32 VectorProjectionIterator::FilterColByCol<std::greater_equal>(u32, u32);
+template u32 VectorProjectionIterator::FilterColByCol<std::less>(u32, u32);
+template u32 VectorProjectionIterator::FilterColByCol<std::less_equal>(u32, u32);
+template u32 VectorProjectionIterator::FilterColByCol<std::not_equal_to>(u32, u32);
 // clang-format on
 
 }  // namespace tpl::sql

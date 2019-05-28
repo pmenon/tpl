@@ -13,11 +13,13 @@
 namespace tpl::sql::test {
 
 ///
-/// This test uses a vector projection with four columns:
+/// The tests in this file work from one VectorProjection with five columns:
 ///   col_a SMALLINT NOT NULL (Sequential)
 ///   col_b INTEGER (Random)
 ///   col_c INTEGER NOT NULL (Range [0,1000])
-///   col_d BIGINT (Random)
+///   col_d BIGINT NOT NULL (Random)
+///   col_e BIGINT NOT NULL (Range[0,100])
+///   col_f BIGINT NOT NULL (Range [50,100])
 ///
 
 namespace {
@@ -68,7 +70,15 @@ std::pair<std::unique_ptr<u32[]>, u32> CreateRandomNullBitmap(u32 num_elems) {
 
 class VectorProjectionIteratorTest : public TplTest {
  protected:
-  enum ColId : u8 { col_a = 0, col_b = 1, col_c = 2, col_d = 3 };
+  // The columns
+  enum ColId : u8 {
+    col_a = 0,
+    col_b = 1,
+    col_c = 2,
+    col_d = 3,
+    col_e = 4,
+    col_f = 5
+  };
 
   struct ColData {
     std::unique_ptr<byte[]> data;
@@ -91,12 +101,17 @@ class VectorProjectionIteratorTest : public TplTest {
         Schema::ColumnInfo("col_a", SmallIntType::InstanceNonNullable()),
         Schema::ColumnInfo("col_b", IntegerType::InstanceNullable()),
         Schema::ColumnInfo("col_c", IntegerType::InstanceNonNullable()),
-        Schema::ColumnInfo("col_b", BigIntType::InstanceNullable())};
+        Schema::ColumnInfo("col_d", BigIntType::InstanceNonNullable()),
+        Schema::ColumnInfo("col_e", BigIntType::InstanceNonNullable()),
+        Schema::ColumnInfo("col_f", BigIntType::InstanceNonNullable()),
+    };
     schema_ = std::make_unique<Schema>(std::move(cols));
 
     std::vector<const Schema::ColumnInfo *> vp_cols_info = {
         schema_->GetColumnInfo(0), schema_->GetColumnInfo(1),
-        schema_->GetColumnInfo(2), schema_->GetColumnInfo(3)};
+        schema_->GetColumnInfo(2), schema_->GetColumnInfo(3),
+        schema_->GetColumnInfo(4), schema_->GetColumnInfo(5),
+    };
     vp_ = std::make_unique<VectorProjection>(vp_cols_info, num_tuples());
 
     // Load the data
@@ -106,17 +121,19 @@ class VectorProjectionIteratorTest : public TplTest {
   void LoadData() {
     auto cola_data = CreateMonotonicallyIncreasing<i16>(num_tuples());
     auto colb_data = CreateRandom<i32>(num_tuples());
-    auto colb_null = CreateRandomNullBitmap(num_tuples());
+    auto [colb_null, colb_num_nulls] = CreateRandomNullBitmap(num_tuples());
     auto colc_data = CreateRandom<i32>(num_tuples(), 0, 1000);
     auto cold_data = CreateRandom<i64>(num_tuples());
-    auto cold_null = CreateRandomNullBitmap(num_tuples());
+    auto cole_data = CreateRandom<i64>(num_tuples(), 0, 100);
+    auto colf_data = CreateRandom<i64>(num_tuples(), 50, 100);
 
     data_.emplace_back(std::move(cola_data), nullptr, 0, num_tuples());
-    data_.emplace_back(std::move(colb_data), std::move(colb_null.first),
-                       colb_null.second, num_tuples());
+    data_.emplace_back(std::move(colb_data), std::move(colb_null),
+                       colb_num_nulls, num_tuples());
     data_.emplace_back(std::move(colc_data), nullptr, 0, num_tuples());
-    data_.emplace_back(std::move(cold_data), std::move(cold_null.first),
-                       cold_null.second, num_tuples());
+    data_.emplace_back(std::move(cold_data), nullptr, 0, num_tuples());
+    data_.emplace_back(std::move(cole_data), nullptr, 0, num_tuples());
+    data_.emplace_back(std::move(colf_data), nullptr, 0, num_tuples());
 
     for (u32 col_idx = 0; col_idx < data_.size(); col_idx++) {
       auto &[data, nulls, num_nulls, num_tuples] = data_[col_idx];
@@ -141,7 +158,7 @@ class VectorProjectionIteratorTest : public TplTest {
 
 TEST_F(VectorProjectionIteratorTest, EmptyIteratorTest) {
   //
-  // Check to see that iteration doesn't begin without an input block
+  // Test: check to see that iteration doesn't begin without an input block
   //
 
   std::vector<const Schema::ColumnInfo *> vp_col_info;
@@ -156,7 +173,8 @@ TEST_F(VectorProjectionIteratorTest, EmptyIteratorTest) {
 
 TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
   //
-  // Check to see that iteration iterates over all tuples in the projection
+  // Test: check to see that iteration iterates over all tuples in the
+  //       projection
   //
 
   {
@@ -199,7 +217,8 @@ TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
 
 TEST_F(VectorProjectionIteratorTest, ReadNullableColumnsTest) {
   //
-  // Check to see that we can correctly count all NULL values in NULLable cols
+  // Test: check to see that we can correctly count all NULL values in NULLable
+  //       cols
   //
 
   VectorProjectionIterator iter;
@@ -218,8 +237,8 @@ TEST_F(VectorProjectionIteratorTest, ReadNullableColumnsTest) {
 
 TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
   //
-  // Check to see that we can correctly manually apply a single filter on a
-  // single column. We apply the filter IS_NOT_NULL(col_b)
+  // Test: check to see that we can correctly manually apply a single filter on
+  //       a single column. We apply the filter IS_NOT_NULL(col_b)
   //
 
   {
@@ -250,14 +269,14 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
   }
 
   //
-  // Now try to apply filters individually on separate columns. Let's try:
+  // Test: try to apply filters individually on separate columns.
   //
-  // WHERE col_a < 100 and IS_NULL(col_b)
+  // Apply: WHERE col_a < 100 and IS_NULL(col_b)
   //
-  // The first filter (col_a < 100) should return 100 rows since it's a
-  // monotonically increasing column. The second filter returns a
-  // non-deterministic number of tuples, but it should be less than or equal to
-  // 100. We'll do a manual check to be sure.
+  // Expectation: The first filter (col_a < 100) should return 100 rows since
+  //              it's a monotonically increasing column. The second filter
+  //              returns a non-deterministic number of tuples, but it should be
+  //              less than or equal to 100. We'll do a manual check to be sure.
   //
 
   {
@@ -300,7 +319,7 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
 
 TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
   //
-  // Check to see that we can correctly apply a single filter on a single
+  // Test: check to see that we can correctly apply a single filter on a single
   // column using VPI's managed filter. We apply the filter IS_NOT_NULL(col_b)
   //
 
@@ -320,6 +339,7 @@ TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
   //
   // Ensure subsequent iterations only work on selected items
   //
+
   {
     u32 c = 0;
     iter.ForEach([&iter, &c]() {
@@ -336,8 +356,8 @@ TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
 
 TEST_F(VectorProjectionIteratorTest, SimpleVectorizedFilterTest) {
   //
-  // Check to see that we can correctly apply a single vectorized filter. Here
-  // we just check col_c < 100
+  // Test: check to see that we can correctly apply a single vectorized filter.
+  //       Here we just check col_c < 100
   //
 
   VectorProjectionIterator iter;
@@ -398,6 +418,44 @@ TEST_F(VectorProjectionIteratorTest, MultipleVectorizedFilterTest) {
 
   LOG_INFO("Selected: {}", count);
   EXPECT_LE(count, 10u);
+}
+
+TEST_F(VectorProjectionIteratorTest, FilterColByColTest) {
+  //
+  // Test: check we can apply a single filter on one column by the contents of
+  //       another column. Both columns are the same type.
+  //
+  //       We first determine the correct count by iterating over the VP
+  //       manually, then use the vectorized filter. The selected counts should
+  //       match.
+  //
+
+#define CHECK(functor_op, op)                                                 \
+  {                                                                           \
+    VectorProjectionIterator iter;                                            \
+    iter.SetVectorProjection(vp());                                           \
+                                                                              \
+    /* First check using scalar filter */                                     \
+    u32 expected = 0;                                                         \
+    for (; iter.HasNext(); iter.Advance()) {                                  \
+      auto col_e_val = *iter.Get<i64, false>(ColId::col_e, nullptr);          \
+      auto col_f_val = *iter.Get<i64, false>(ColId::col_f, nullptr);          \
+      expected += static_cast<u32>(col_e_val op col_f_val);                   \
+    }                                                                         \
+                                                                              \
+    /* Now apply vectorized filter */                                         \
+    auto count = iter.FilterColByCol<functor_op>(ColId::col_e, ColId::col_f); \
+    EXPECT_EQ(expected, count);                                               \
+  }
+
+  CHECK(std::equal_to, ==)
+  CHECK(std::greater, >)
+  CHECK(std::greater_equal, >=)
+  CHECK(std::less, <)
+  CHECK(std::less_equal, <=)
+  CHECK(std::not_equal_to, !=)
+
+#undef CHECK
 }
 
 }  // namespace tpl::sql::test

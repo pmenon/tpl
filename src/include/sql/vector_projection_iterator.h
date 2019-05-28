@@ -143,14 +143,25 @@ class VectorProjectionIterator {
   };
 
   /**
-   * Filter the given column by the given value
-   * @param Compare The comparison function
-   * @param col_idx The index of the column in the vector projection to filter
-   * @param val The value to filter on
-   * @return The number of selected elements
+   * Filter the column at index @em col_idx by the given constant value @em val.
+   * @tparam Op The filtering operator.
+   * @param col_idx The index of the column in the vector projection to filter.
+   * @param val The value to filter on.
+   * @return The number of selected elements.
    */
   template <template <typename> typename Op>
   u32 FilterColByVal(u32 col_idx, FilterVal val);
+
+  /**
+   * Filter the column at index @em col_idx_1 with the contents of the column
+   * at index @em col_idx_2.
+   * @tparam Op The filtering operator.
+   * @param col_idx_1 The index of the first column to compare.
+   * @param col_idx_2 The index of the second column to compare.
+   * @return The number of selected elements.
+   */
+  template <template <typename> typename Op>
+  u32 FilterColByCol(u32 col_idx_1, u32 col_idx_2);
 
   /**
    * Return the number of selected tuples after any filters have been applied
@@ -161,6 +172,10 @@ class VectorProjectionIterator {
   // Filter a column by a constant value
   template <typename T, template <typename> typename Op>
   u32 FilterColByValImpl(u32 col_idx, T val);
+
+  // Filter a column by a second column
+  template <typename T, template <typename> typename Op>
+  u32 FilterColByColImpl(u32 col_idx_1, u32 col_idx_2);
 
  private:
   // The vector projection we're iterating over
