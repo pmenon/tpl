@@ -39,7 +39,7 @@ class VectorUtil {
 
     u32 in_pos = 0;
     u32 out_pos =
-        simd::FilterVectorByVal<T, Op>(in, in_count, val, out, sel, in_pos);
+        simd::FilterVectorByVal<T, Op>(in, in_count, val, out, sel, &in_pos);
 
     if (sel == nullptr) {
       for (; in_pos < in_count; in_pos++) {

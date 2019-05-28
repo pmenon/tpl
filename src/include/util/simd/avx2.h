@@ -707,7 +707,7 @@ struct FilterVecSizer<T, std::enable_if_t<std::is_unsigned_v<T>>>
 template <typename T, template <typename> typename Compare>
 static inline u32 FilterVectorByVal(const T *RESTRICT in, u32 in_count, T val,
                                     u32 *RESTRICT out, const u32 *RESTRICT sel,
-                                    u32 &RESTRICT in_pos) {
+                                    u32 *RESTRICT in_pos) {
   using Vec = typename FilterVecSizer<T>::Vec;
   using VecMask = typename FilterVecSizer<T>::VecMask;
 
@@ -719,15 +719,17 @@ static inline u32 FilterVectorByVal(const T *RESTRICT in, u32 in_count, T val,
 
   if (sel == nullptr) {
     Vec in_vec;
-    for (in_pos = 0; in_pos + Vec::Size() < in_count; in_pos += Vec::Size()) {
-      in_vec.Load(in + in_pos);
+    for (*in_pos = 0; *in_pos + Vec::Size() < in_count;
+         *in_pos += Vec::Size()) {
+      in_vec.Load(in + *in_pos);
       VecMask mask = cmp(in_vec, xval);
-      out_pos += mask.ToPositions(out + out_pos, in_pos);
+      out_pos += mask.ToPositions(out + out_pos, *in_pos);
     }
   } else {
     Vec in_vec, sel_vec;
-    for (in_pos = 0; in_pos + Vec::Size() < in_count; in_pos += Vec::Size()) {
-      sel_vec.Load(sel + in_pos);
+    for (*in_pos = 0; *in_pos + Vec::Size() < in_count;
+         *in_pos += Vec::Size()) {
+      sel_vec.Load(sel + *in_pos);
       in_vec.Gather(in, sel_vec);
       VecMask mask = cmp(in_vec, xval);
       out_pos += mask.ToPositions(out + out_pos, sel_vec);
