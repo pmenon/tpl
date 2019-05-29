@@ -10,14 +10,9 @@
 
 namespace tpl::sql::test {
 
-/// This is the tuple tracking aggregate values
-struct AggTuple {
-  u64 key, count1, count2, count3;
-
-  explicit AggTuple(u64 key) : key(key), count1(0), count2(0), count3(0) {}
-};
-
-/// An input tuple, this is what we use to probe and update aggregates
+/**
+ * An input tuple, this is what we use to probe and update aggregates
+ */
 struct InputTuple {
   u64 key, col_a;
 
@@ -28,11 +23,34 @@ struct InputTuple {
   }
 };
 
+/**
+ * This is the tuple tracking aggregate values
+ */
+struct AggTuple {
+  u64 key, count1, count2, count3;
+
+  explicit AggTuple(const InputTuple &input)
+      : key(input.key), count1(0), count2(0), count3(0) {
+    Advance(input);
+  }
+
+  void Advance(const InputTuple &input) {
+    count1 += input.col_a;
+    count2 += input.col_a * 2;
+    count3 += input.col_a * 10;
+  }
+
+  bool operator==(const AggTuple &other) {
+    return key == other.key && count1 == other.count1 &&
+           count2 == other.count2 && count3 == other.count3;
+  }
+};
+
 /// The function to determine whether two tuples have equivalent keys
-static inline bool TupleKeyEq(const void *probe_tuple,
-                              const void *table_tuple) {
-  auto *lhs = reinterpret_cast<const InputTuple *>(probe_tuple);
-  auto *rhs = reinterpret_cast<const AggTuple *>(table_tuple);
+static inline bool TupleKeyEq(const void *table_tuple,
+                              const void *probe_tuple) {
+  auto *lhs = reinterpret_cast<const AggTuple *>(table_tuple);
+  auto *rhs = reinterpret_cast<const InputTuple *>(probe_tuple);
   return lhs->key == rhs->key;
 }
 
@@ -61,31 +79,79 @@ TEST_F(AggregationHashTableTest, SimpleRandomInsertionTest) {
 
   // Insert a few random tuples
   for (u32 idx = 0; idx < num_tuples; idx++) {
-    InputTuple input(distribution(generator), 1);
+    auto input = InputTuple(distribution(generator), 1);
+    auto hash_val = input.Hash();
     auto *existing = reinterpret_cast<AggTuple *>(agg_table()->Lookup(
-        input.Hash(), TupleKeyEq, reinterpret_cast<const void *>(&input)));
+        hash_val, TupleKeyEq, reinterpret_cast<const void *>(&input)));
 
     if (existing != nullptr) {
       // The reference table should have an equivalent aggregate tuple
       auto ref_iter = ref_agg_table.find(input.key);
-      ASSERT_TRUE(ref_iter != ref_agg_table.end());
-      ASSERT_EQ(ref_iter->second->count1, existing->count1);
-
-      // Update aggregate
-      existing->count1 += input.col_a;
-      ref_iter->second->count1 += input.col_a;
+      EXPECT_TRUE(ref_iter != ref_agg_table.end());
+      EXPECT_TRUE(*ref_iter->second == *existing);
+      existing->Advance(input);
+      ref_iter->second->Advance(input);
     } else {
       // The reference table shouldn't have the aggregate
       auto ref_iter = ref_agg_table.find(input.key);
-      ASSERT_TRUE(ref_iter == ref_agg_table.end());
-
-      // Insert a new entry into the hash table and the reference table
-      existing = new (agg_table()->Insert(input.Hash())) AggTuple(input.key);
-      existing->count1 = 0;
-
-      // Make a copy of what we inserted into the agg hash table
-      ref_agg_table.emplace(input.key, std::make_unique<AggTuple>(*existing));
+      if (ref_iter != ref_agg_table.end()) {
+        FAIL();
+      }
+      EXPECT_TRUE(ref_iter == ref_agg_table.end());
+      new (agg_table()->Insert(hash_val)) AggTuple(input);
+      ref_agg_table.emplace(input.key, std::make_unique<AggTuple>(input));
     }
+  }
+}
+
+TEST_F(AggregationHashTableTest, IterationTest) {
+  //
+  // SELECT key, SUM(cola), SUM(cola*2), SUM(cola*10) FROM table GROUP BY key
+  //
+  // Keys are selected continuously from the range [0, 10); all cola values are
+  // equal to 1.
+  //
+  // Each group will receive G=num_inserts/10 tuples, count1 will be G,
+  // count2 will be G*2, and count3 will be G*10.
+  //
+
+  const u32 num_inserts = 10000;
+  const u32 num_groups = 10;
+  const u32 tuples_per_group = num_inserts / num_groups;
+  ASSERT_TRUE(num_inserts % num_groups == 0);
+
+  {
+    for (u32 idx = 0; idx < num_inserts; idx++) {
+      InputTuple input(idx % num_groups, 1);
+      auto *existing = reinterpret_cast<AggTuple *>(agg_table()->Lookup(
+          input.Hash(), TupleKeyEq, reinterpret_cast<const void *>(&input)));
+
+      if (existing != nullptr) {
+        existing->Advance(input);
+      } else {
+        auto *new_agg = agg_table()->Insert(input.Hash());
+        new (new_agg) AggTuple(input);
+      }
+    }
+  }
+
+  //
+  // Iterate resulting aggregates. There should be exactly 10
+  //
+
+  {
+    u32 group_count = 0;
+    for (AggregationHashTableIterator iter(*agg_table()); iter.HasNext();
+         iter.Next()) {
+      auto *agg_tuple =
+          reinterpret_cast<const AggTuple *>(iter.GetCurrentAggregateRow());
+      EXPECT_EQ(tuples_per_group, agg_tuple->count1);
+      EXPECT_EQ(tuples_per_group * 2, agg_tuple->count2);
+      EXPECT_EQ(tuples_per_group * 10, agg_tuple->count3);
+      group_count++;
+    }
+
+    EXPECT_EQ(num_groups, group_count);
   }
 }
 
@@ -102,12 +168,12 @@ TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
         input.Hash(), TupleKeyEq, reinterpret_cast<const void *>(&input)));
 
     if (existing != nullptr) {
-      existing->count1 += input.col_a;
+      // The reference table should have an equivalent aggregate tuple
+      existing->Advance(input);
     } else {
-      // Insert a new entry into the hash table and the reference table
-      existing = new (agg_table()->InsertPartitioned(input.Hash()))
-          AggTuple(input.key);
-      existing->count1 = 0;
+      // The reference table shouldn't have the aggregate
+      auto *new_agg = agg_table()->InsertPartitioned(input.Hash());
+      new (new_agg) AggTuple(input);
     }
   }
 }
