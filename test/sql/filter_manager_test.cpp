@@ -1,7 +1,9 @@
+#include <chrono>  // NOLINT
 #include <limits>
 #include <memory>
 #include <numeric>
 #include <random>
+#include <thread>  // NOLINT
 #include <utility>
 #include <vector>
 
@@ -23,6 +25,11 @@ u32 TaaT_Lt_500(VectorProjectionIterator *vpi) {
     return cola < 500;
   });
   return vpi->num_selected();
+}
+
+u32 Hobbled_TaaT_Lt_500(VectorProjectionIterator *vpi) {
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  return TaaT_Lt_500(vpi);
 }
 
 u32 Vectorized_Lt_500(VectorProjectionIterator *vpi) {
@@ -55,7 +62,7 @@ TEST_F(FilterManagerTest, SimpleFilterManagerTest) {
 TEST_F(FilterManagerTest, AdaptiveFilterManagerTest) {
   FilterManager filter(bandit::Policy::EpsilonGreedy);
   filter.StartNewClause();
-  filter.InsertClauseFlavor(TaaT_Lt_500);
+  filter.InsertClauseFlavor(Hobbled_TaaT_Lt_500);
   filter.InsertClauseFlavor(Vectorized_Lt_500);
   filter.Finalize();
 

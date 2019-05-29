@@ -1,6 +1,5 @@
 #pragma once
 
-#include <x86intrin.h>
 #include <cstdint>
 #include <type_traits>
 

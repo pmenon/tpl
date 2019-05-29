@@ -66,16 +66,9 @@ add_subdirectory(test)
 
 ############################################################
 #
-# Code Coverage
+# "make gen-cov" target
 #
 ############################################################
-
-if (TPL_GENERATE_COVERAGE)
-  if (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "DEBUG")
-    message(FATAL_ERROR "Coverage can only be generated with a debug build type!")
-  endif ()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
-endif ()
 
 add_custom_target(gen-cov
         DEPENDS check
@@ -84,7 +77,8 @@ add_custom_target(gen-cov
                      --remove coverage.info '*/build/*' --output-file coverage.info       # filter out build
                      --remove coverage.info '*/third_party/*' --output-file coverage.info # filter out third_party
                      --remove coverage.info '*/test/*' --output-file coverage.info        # filter out test
-                     --remove coverage.info '*/src/main/*' --output-file coverage.info    # filter out main
+                     --remove coverage.info '*/src/main/*' --output-file coverage.info && # filter out main
+                genhtml coverage.info --output-directory coverage-html
         )
 
 ############################################################
