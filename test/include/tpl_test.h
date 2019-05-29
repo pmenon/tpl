@@ -16,7 +16,7 @@ class TplTest : public ::testing::Test {
     CpuInfo::Instance();
   }
 
-  virtual ~TplTest() { logging::ShutdownLogger(); }
+  ~TplTest() override { logging::ShutdownLogger(); }
 
   const char *GetTestName() const {
     return ::testing::UnitTest::GetInstance()->current_test_info()->name();

@@ -280,14 +280,14 @@ void AggregationHashTable::CreateMissingGroups(
   for (u32 idx = 0; idx < num_groups; idx++) {
     hash_t hash = hashes[group_sel[idx]];
 
+    // Move VPI to position of new aggregate
+    iters[0]->SetPosition<VPIIsFiltered>(group_sel[idx]);
+
     if (HashTableEntry *entry = LookupEntryInternal(hash, key_eq_fn, iters);
         entry != nullptr) {
       entries[group_sel[idx]] = entry;
       continue;
     }
-
-    // Move VPI to position of new aggregate
-    iters[0]->SetPosition<VPIIsFiltered>(group_sel[idx]);
 
     // Initialize
     init_agg_fn(Insert(hash), iters);
