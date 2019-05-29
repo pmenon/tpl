@@ -6,6 +6,9 @@
 #include "tpl_test.h"  // NOLINT
 
 #include "sql/aggregation_hash_table.h"
+#include "sql/schema.h"
+#include "sql/vector_projection.h"
+#include "sql/vector_projection_iterator.h"
 #include "util/hash.h"
 
 namespace tpl::sql::test {
@@ -175,6 +178,67 @@ TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
       auto *new_agg = agg_table()->InsertPartitioned(input.Hash());
       new (new_agg) AggTuple(input);
     }
+  }
+}
+
+TEST_F(AggregationHashTableTest, BatchProcessTest) {
+  const u32 num_groups = 16;
+
+  const auto hash_fn = [](void *x) {
+    auto iters = reinterpret_cast<VectorProjectionIterator **>(x);
+    auto key = iters[0]->Get<u32, false>(0, nullptr);
+    return util::Hasher::Hash(reinterpret_cast<const u8 *>(key), sizeof(u32));
+  };
+
+  const auto key_eq = [](const void *agg, const void *x) {
+    auto agg_tuple = reinterpret_cast<const AggTuple *>(agg);
+    auto iters = reinterpret_cast<const VectorProjectionIterator *const *>(x);
+    auto vpi_key = iters[0]->Get<u32, false>(0, nullptr);
+    return agg_tuple->key == *vpi_key;
+  };
+
+  const auto init_agg = [](void *agg, void *x) {
+    auto iters = reinterpret_cast<VectorProjectionIterator **>(x);
+    auto key = iters[0]->Get<u32, false>(0, nullptr);
+    auto val = iters[0]->Get<u32, false>(1, nullptr);
+    new (agg) AggTuple(InputTuple(*key, *val));
+  };
+
+  const auto advance_agg = [](void *agg, void *x) {
+    auto agg_tuple = reinterpret_cast<AggTuple *>(agg);
+    auto iters = reinterpret_cast<VectorProjectionIterator **>(x);
+    auto key = iters[0]->Get<u32, false>(0, nullptr);
+    auto val = iters[0]->Get<u32, false>(1, nullptr);
+    agg_tuple->Advance(InputTuple(*key, *val));
+  };
+
+  Schema::ColumnInfo key_col("key", IntegerType::InstanceNonNullable());
+  Schema::ColumnInfo val_col("val", IntegerType::InstanceNonNullable());
+  std::vector<const Schema::ColumnInfo *> cols = {&key_col, &val_col};
+
+  VectorProjection vp(cols, kDefaultVectorSize);
+
+  alignas(CACHELINE_SIZE) u32 keys[kDefaultVectorSize];
+  alignas(CACHELINE_SIZE) u32 vals[kDefaultVectorSize];
+
+  for (u32 run = 0; run < 10; run++) {
+    // Fill keys and value
+    std::random_device random;
+    for (u32 idx = 0; idx < kDefaultVectorSize; idx++) {
+      keys[idx] = idx % num_groups;
+      vals[idx] = 1;
+    }
+
+    // Setup projection
+    vp.ResetFromRaw(reinterpret_cast<byte *>(keys), nullptr, 0,
+                    kDefaultVectorSize);
+    vp.ResetFromRaw(reinterpret_cast<byte *>(vals), nullptr, 1,
+                    kDefaultVectorSize);
+
+    // Process
+    VectorProjectionIterator vpi(&vp);
+    VectorProjectionIterator *iters[] = {&vpi};
+    agg_table()->ProcessBatch(iters, hash_fn, key_eq, init_agg, advance_agg);
   }
 }
 
