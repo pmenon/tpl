@@ -51,13 +51,13 @@ class AggregationHashTableTest : public TplTest {
 };
 
 TEST_F(AggregationHashTableTest, SimpleRandomInsertionTest) {
-  const u32 num_tuples = 1000;
+  const u32 num_tuples = 10000;
 
   // The reference table
   std::unordered_map<u64, std::unique_ptr<AggTuple>> ref_agg_table;
 
   std::mt19937 generator;
-  std::uniform_int_distribution<u64> distribution;
+  std::uniform_int_distribution<u64> distribution(0, 10);
 
   // Insert a few random tuples
   for (u32 idx = 0; idx < num_tuples; idx++) {
@@ -93,7 +93,7 @@ TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
   const u32 num_tuples = 10000;
 
   std::mt19937 generator;
-  std::uniform_int_distribution<u64> distribution;
+  std::uniform_int_distribution<u64> distribution(0, 10);
 
   // Insert a few random tuples
   for (u32 idx = 0; idx < num_tuples; idx++) {

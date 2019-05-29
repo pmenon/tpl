@@ -283,6 +283,7 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
   return CheckIdentifierOrKeyword(identifier, identifier_len);
 }
 
+// clang-format off
 #define KEYWORDS()                          \
   GROUP_START('a')                          \
   GROUP_ELEM("and", Token::Type::AND)       \
@@ -309,6 +310,7 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
   GROUP_ELEM("true", Token::Type::TRUE)     \
   GROUP_START('v')                          \
   GROUP_ELEM("var", Token::Type::VAR)
+// clang-format on
 
 Token::Type Scanner::CheckIdentifierOrKeyword(const char *input,
                                               u32 input_len) {
@@ -323,6 +325,7 @@ Token::Type Scanner::CheckIdentifierOrKeyword(const char *input,
   break;               \
   case c:
 
+// clang-format off
 #define GROUP_ELEM(str, typ)                                \
   {                                                         \
     const u64 keyword_len = sizeof(str) - 1;                \
@@ -334,6 +337,7 @@ Token::Type Scanner::CheckIdentifierOrKeyword(const char *input,
       return typ;                                           \
     }                                                       \
   }
+  // clang-format on
 
   // The main switch statement that outlines all keywords
   switch (input[0]) {
