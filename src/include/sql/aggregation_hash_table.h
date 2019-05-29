@@ -123,6 +123,8 @@ class AggregationHashTable {
   const Stats *stats() const { return &stats_; }
 
  private:
+  friend class AggregationHashTableIterator;
+
   // Does the hash table need to grow?
   bool NeedsToGrow() const { return hash_table_.num_elements() >= max_fill_; }
 
@@ -238,5 +240,43 @@ inline byte *AggregationHashTable::Lookup(
   auto *entry = LookupEntryInternal(hash, key_eq_fn, probe_tuple);
   return (entry == nullptr ? nullptr : entry->payload);
 }
+
+// ---------------------------------------------------------
+// Aggregation Hash Table Iterator
+// ---------------------------------------------------------
+
+/**
+ * An iterator over the contents of an aggregation hash table
+ */
+class AggregationHashTableIterator {
+ public:
+  explicit AggregationHashTableIterator(const AggregationHashTable &agg_table)
+      : iter_(agg_table.hash_table_) {}
+
+  /**
+   * Does this iterate have more data
+   * @return True if the iterator has more data; false otherwise
+   */
+  bool HasNext() const { return iter_.HasNext(); }
+
+  /**
+   * Advance the iterator
+   */
+  void Next() { iter_.Next(); }
+
+  /**
+   * Return a pointer to the current row. It assumed the called has checked the
+   * iterator is valid.
+   */
+  const byte *GetCurrentAggregateRow() const {
+    auto *ht_entry = iter_.GetCurrentEntry();
+    return ht_entry->payload;
+  }
+
+ private:
+  // The iterator over the aggregation hash table
+  // TODO(pmenon): Switch to vectorized iterator when perf is better
+  GenericHashTableIterator<false> iter_;
+};
 
 }  // namespace tpl::sql

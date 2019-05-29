@@ -46,16 +46,34 @@ class MemoryPool {
   void *AllocateAligned(std::size_t size, std::size_t alignment, bool clear);
 
   /**
+   * Allocate an array of elements with a specific alignment different than the
+   * alignment of type @em T. The provided alignment must be larger than or
+   * equal to the alignment required for T.
+   * @tparam T The type of each element in the array.
+   * @param num_elems The number of elements in the array.
+   * @param clear Flag to zero-out the contents of the array before returning.
+   * @return @return An array pointer to at least @em num_elems elements of type
+   * @em T
+   */
+  template <typename T>
+  T *AllocateArray(const std::size_t num_elems, std::size_t alignment,
+                   const bool clear) {
+    alignment = std::max(alignof(T), alignment);
+    return reinterpret_cast<T *>(
+        AllocateAligned(sizeof(T) * num_elems, alignment, clear));
+  }
+
+  /**
    * Allocate a contiguous array of elements of the given type from this pool.
    * The alignment of the array will be the alignment of the type @em T.
    * @tparam T The type of each element in the array.
    * @param num_elems The number of requested elements in the array.
+   * @param clear Flag to zero-out the contents of the array before returning.
    * @return An array pointer to at least @em num_elems elements of type @em T
    */
   template <typename T>
   T *AllocateArray(const std::size_t num_elems, const bool clear) {
-    return reinterpret_cast<T *>(
-        AllocateAligned(sizeof(T) * num_elems, alignof(T), clear));
+    return AllocateArray<T>(num_elems, alignof(T), clear);
   }
 
   /**

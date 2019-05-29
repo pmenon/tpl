@@ -3,6 +3,7 @@
 #include <atomic>
 
 #include "sql/hash_table_entry.h"
+#include "sql/memory_pool.h"
 #include "util/common.h"
 #include "util/macros.h"
 #include "util/memory.h"
@@ -133,6 +134,11 @@ class GenericHashTable {
   float load_factor() const { return load_factor_; }
 
  private:
+  template <bool UseTag>
+  friend class GenericHashTableIterator;
+  template <bool UseTag>
+  friend class GenericHashTableVectorIterator;
+
   // -------------------------------------------------------
   // Tag-related operations
   // -------------------------------------------------------
@@ -268,6 +274,195 @@ inline void GenericHashTable::FlushEntries(const F &sink) {
   }
 
   num_elems_ = 0;
+}
+
+// ---------------------------------------------------------
+// Generic Hash Table Iterator
+// ---------------------------------------------------------
+
+/**
+ * An iterator over the entries in a generic hash table.
+ * @tparam UseTag Should the iterator use tagged reads?
+ */
+template <bool UseTag>
+class GenericHashTableIterator {
+ public:
+  /**
+   * Construct an iterator over the given hash table @em table.
+   * @param table The table to iterate over.
+   */
+  explicit GenericHashTableIterator(const GenericHashTable &table) noexcept
+      : table_(table), entries_index_(0), curr_entry_(nullptr) {
+    Next();
+  }
+
+  /**
+   * Is there more data in the iterator?
+   */
+  bool HasNext() const noexcept { return curr_entry_ != nullptr; }
+
+  /**
+   * Advance the iterator one element.
+   */
+  void Next() noexcept;
+
+  /**
+   * Access the element the iterator is currently pointing to.
+   */
+  const HashTableEntry *GetCurrentEntry() const noexcept { return curr_entry_; }
+
+ private:
+  // The table we're iterating over
+  const GenericHashTable &table_;
+  // The index into the hash table's entries directory to read from next
+  u64 entries_index_;
+  // The current entry the iterator is pointing to
+  const HashTableEntry *curr_entry_;
+};
+
+template <bool UseTag>
+inline void GenericHashTableIterator<UseTag>::Next() noexcept {
+  // If the current entry has a next link, use that
+  if (curr_entry_ != nullptr) {
+    curr_entry_ = curr_entry_->next;
+    if (curr_entry_ != nullptr) {
+      return;
+    }
+  }
+
+  // While we haven't exhausted the directory, and haven't found a valid entry
+  // continue on ...
+  while (entries_index_ < table_.capacity()) {
+    curr_entry_ =
+        table_.entries_[entries_index_++].load(std::memory_order_relaxed);
+
+    if constexpr (UseTag) {
+      curr_entry_ = GenericHashTable::UntagPointer(curr_entry_);
+    }
+
+    if (curr_entry_ != nullptr) {
+      return;
+    }
+  }
+}
+
+// ---------------------------------------------------------
+// Generic Hash Table Vector Iterator
+// ---------------------------------------------------------
+
+/**
+ * An iterator over a generic hash table that works vector-at-a-time.
+ * @tparam UseTag Should the iterator use tagged reads?
+ */
+// TODO(pmenon): Fix my performance
+template <bool UseTag>
+class GenericHashTableVectorIterator {
+ public:
+  /**
+   * Construct an iterator over the given hash table @em table.
+   * @param table The table to iterate over.
+   * @param memory The memory pool to use for allocations
+   */
+  GenericHashTableVectorIterator(const GenericHashTable &table,
+                                 MemoryPool *memory) noexcept;
+
+  /**
+   * Deallocate the entry cache array
+   */
+  ~GenericHashTableVectorIterator();
+
+  /**
+   * Is there more data in the iterator?
+   */
+  bool HasNext() const noexcept { return entry_vec_idx_ < entry_vec_end_idx_; }
+
+  /**
+   * Advance the iterator one element.
+   */
+  void Next() noexcept;
+
+  /**
+   * Access the element the iterator is currently pointing to.
+   */
+  const HashTableEntry *GetCurrentEntry() const noexcept {
+    return entry_vec_[entry_vec_idx_];
+  }
+
+ private:
+  void Refill();
+
+ private:
+  // The hash table we're iterating over
+  const GenericHashTable &table_;
+  // Pool to use for memory allocations
+  MemoryPool *memory_;
+  // The temporary cache of valid entries
+  const HashTableEntry **entry_vec_;
+  // The index into the hash table's entries directory to read from next
+  u64 entries_index_;
+  const HashTableEntry *next_;
+  // The index into the entry cache the iterator is pointing to
+  u16 entry_vec_idx_;
+  // The number of valid entries in the entry cache
+  u16 entry_vec_end_idx_;
+};
+
+template <bool UseTag>
+inline GenericHashTableVectorIterator<UseTag>::GenericHashTableVectorIterator(
+    const GenericHashTable &table, MemoryPool *memory) noexcept
+    : table_(table),
+      memory_(memory),
+      entry_vec_(memory_->AllocateArray<const HashTableEntry *>(
+          kDefaultVectorSize, CACHELINE_SIZE, true)),
+      entries_index_(0),
+      next_(nullptr),
+      entry_vec_idx_(0),
+      entry_vec_end_idx_(0) {
+  Refill();
+}
+
+template <bool UseTag>
+inline GenericHashTableVectorIterator<
+    UseTag>::~GenericHashTableVectorIterator() {
+  memory_->DeallocateArray(entry_vec_, kDefaultVectorSize);
+}
+
+template <bool UseTag>
+inline void GenericHashTableVectorIterator<UseTag>::Next() noexcept {
+  if (++entry_vec_idx_ >= entry_vec_end_idx_) {
+    Refill();
+  }
+}
+
+template <bool UseTag>
+inline void GenericHashTableVectorIterator<UseTag>::Refill() {
+  // Reset
+  entry_vec_idx_ = entry_vec_end_idx_ = 0;
+
+  while (true) {
+    // While we're in the middle of a bucket chain and we have room to insert
+    // new entries, continue along the bucket chain.
+    while (next_ != nullptr && entry_vec_end_idx_ < kDefaultVectorSize) {
+      entry_vec_[entry_vec_end_idx_++] = next_;
+      next_ = next_->next;
+    }
+
+    // If we've filled up the entries buffer, drop out
+    if (entry_vec_end_idx_ == kDefaultVectorSize) {
+      return;
+    }
+
+    // If we've exhausted the hash table, drop out
+    if (entries_index_ == table_.capacity()) {
+      return;
+    }
+
+    // Move to next bucket
+    next_ = table_.entries_[entries_index_++].load(std::memory_order_relaxed);
+    if constexpr (UseTag) {
+      next_ = GenericHashTable::UntagPointer(next_);
+    }
+  }
 }
 
 }  // namespace tpl::sql
