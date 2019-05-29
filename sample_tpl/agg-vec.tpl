@@ -16,15 +16,18 @@ fun tearDownState(state: *State) -> nil {
 }
 
 fun keyCheck(agg: *Agg, iters: [*]*VectorProjectionIterator) -> bool {
-  var key = @vpiGetInt(iters[0], 0)
+  var key = @vpiGetInt(iters[0], 1)
   return @sqlToBool(key == agg.key)
 }
 
 fun hashFn(iters: [*]*VectorProjectionIterator) -> uint64 {
-  return @hash(@vpiGetInt(iters[0], 0))
+  return @hash(@vpiGetInt(iters[0], 1))
 }
 
 fun constructAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
+  // Set key
+  agg.key = @vpiGetInt(iters[0], 1)
+  // Initialize aggregate
   @aggInit(&agg.count)
 }
 
