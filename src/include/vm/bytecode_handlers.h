@@ -586,6 +586,28 @@ VM_OP_HOT void OpAggregationHashTableProcessBatch(
 
 void OpAggregationHashTableFree(tpl::sql::AggregationHashTable *agg_hash_table);
 
+void OpAggregationHashTableIteratorInit(
+    tpl::sql::AggregationHashTableIterator *iter,
+    tpl::sql::AggregationHashTable *agg_hash_table);
+
+VM_OP_HOT void OpAggregationHashTableIteratorHasNext(
+    bool *has_more, tpl::sql::AggregationHashTableIterator *iter) {
+  *has_more = iter->HasNext();
+}
+
+VM_OP_HOT void OpAggregationHashTableIteratorNext(
+    tpl::sql::AggregationHashTableIterator *iter) {
+  iter->Next();
+}
+
+VM_OP_HOT void OpAggregationHashTableIteratorGetRow(
+    const byte **row, tpl::sql::AggregationHashTableIterator *iter) {
+  *row = iter->GetCurrentAggregateRow();
+}
+
+void OpAggregationHashTableIteratorFree(
+    tpl::sql::AggregationHashTableIterator *iter);
+
 //
 // COUNT
 //

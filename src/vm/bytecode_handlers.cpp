@@ -149,6 +149,18 @@ void OpAggregationHashTableFree(
   agg_hash_table->~AggregationHashTable();
 }
 
+void OpAggregationHashTableIteratorInit(
+    tpl::sql::AggregationHashTableIterator *iter,
+    tpl::sql::AggregationHashTable *agg_hash_table) {
+  TPL_ASSERT(agg_hash_table != nullptr, "Null hash table");
+  new (iter) tpl::sql::AggregationHashTableIterator(*agg_hash_table);
+}
+
+void OpAggregationHashTableIteratorFree(
+    tpl::sql::AggregationHashTableIterator *iter) {
+  iter->~AggregationHashTableIterator();
+}
+
 // ---------------------------------------------------------
 // Sorters
 // ---------------------------------------------------------
