@@ -819,6 +819,50 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,
   }
 }
 
+void BytecodeGenerator::VisitBuiltinAggHashTableIterCall(ast::CallExpr *call,
+                                                         ast::Builtin builtin) {
+  switch (builtin) {
+    case ast::Builtin::AggHashTableIterInit: {
+      LocalVar agg_ht_iter = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[1]);
+      emitter()->Emit(Bytecode::AggregationHashTableIteratorInit, agg_ht_iter,
+                      agg_ht);
+      break;
+    }
+    case ast::Builtin::AggHashTableIterHasNext: {
+      LocalVar has_more =
+          execution_result()->GetOrCreateDestination(call->type());
+      LocalVar agg_ht_iter = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::AggregationHashTableIteratorHasNext, has_more,
+                      agg_ht_iter);
+      execution_result()->set_destination(has_more.ValueOf());
+      break;
+    }
+    case ast::Builtin::AggHashTableIterNext: {
+      LocalVar agg_ht_iter = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::AggregationHashTableIteratorNext, agg_ht_iter);
+      break;
+    }
+    case ast::Builtin::AggHashTableIterGetRow: {
+      LocalVar row_ptr =
+          execution_result()->GetOrCreateDestination(call->type());
+      LocalVar agg_ht_iter = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::AggregationHashTableIteratorGetRow, row_ptr,
+                      agg_ht_iter);
+      execution_result()->set_destination(row_ptr.ValueOf());
+      break;
+    }
+    case ast::Builtin::AggHashTableIterClose: {
+      LocalVar agg_ht_iter = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::AggregationHashTableIteratorFree, agg_ht_iter);
+      break;
+    }
+    default: {
+      UNREACHABLE("Impossible aggregation hash table iteration bytecode");
+    }
+  }
+}
+
 namespace {
 
 // clang-format off
@@ -1210,6 +1254,14 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::AggHashTableProcessBatch:
     case ast::Builtin::AggHashTableFree: {
       VisitBuiltinAggHashTableCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::AggHashTableIterInit:
+    case ast::Builtin::AggHashTableIterHasNext:
+    case ast::Builtin::AggHashTableIterNext:
+    case ast::Builtin::AggHashTableIterGetRow:
+    case ast::Builtin::AggHashTableIterClose: {
+      VisitBuiltinAggHashTableIterCall(call, builtin);
       break;
     }
     case ast::Builtin::AggInit:

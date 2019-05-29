@@ -65,6 +65,11 @@ namespace tpl::ast {
   F(AggHashTableLookup, aggHTLookup)                      \
   F(AggHashTableProcessBatch, aggHTProcessBatch)          \
   F(AggHashTableFree, aggHTFree)                          \
+  F(AggHashTableIterInit, aggHTIterInit)                  \
+  F(AggHashTableIterHasNext, aggHTIterHasNext)            \
+  F(AggHashTableIterNext, aggHTIterNext)                  \
+  F(AggHashTableIterGetRow, aggHTIterGetRow)              \
+  F(AggHashTableIterClose, aggHTIterClose)                \
   F(AggInit, aggInit)                                     \
   F(AggAdvance, aggAdvance)                               \
                                                           \

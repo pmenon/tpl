@@ -208,6 +208,70 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call,
   }
 }
 
+void Sema::CheckBuiltinAggHashTableIterCall(ast::CallExpr *call,
+                                            ast::Builtin builtin) {
+  if (!CheckArgCountAtLeast(call, 1)) {
+    return;
+  }
+
+  const auto &args = call->arguments();
+
+  const auto agg_ht_iter_kind = ast::BuiltinType::AggregationHashTableIterator;
+  if (!IsPointerToSpecificBuiltin(args[0]->type(), agg_ht_iter_kind)) {
+    ReportIncorrectCallArg(call, 0,
+                           GetBuiltinType(agg_ht_iter_kind)->PointerTo());
+    return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::AggHashTableIterInit: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+
+      const auto agg_ht_kind = ast::BuiltinType::AggregationHashTable;
+      if (!IsPointerToSpecificBuiltin(args[1]->type(), agg_ht_kind)) {
+        ReportIncorrectCallArg(call, 1,
+                               GetBuiltinType(agg_ht_kind)->PointerTo());
+        return;
+      }
+
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::AggHashTableIterHasNext: {
+      if (!CheckArgCount(call, 1)) {
+        return;
+      }
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Bool));
+      break;
+    }
+    case ast::Builtin::AggHashTableIterNext: {
+      if (!CheckArgCount(call, 1)) {
+        return;
+      }
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::AggHashTableIterGetRow: {
+      if (!CheckArgCount(call, 1)) {
+        return;
+      }
+      const auto byte_kind = ast::BuiltinType::Uint8;
+      call->set_type(ast::BuiltinType::Get(context(), byte_kind)->PointerTo());
+      break;
+    }
+    case ast::Builtin::AggHashTableIterClose: {
+      if (!CheckArgCount(call, 1)) {
+        return;
+      }
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    default: { UNREACHABLE("Impossible aggregation hash table iterator call"); }
+  }
+}
+
 void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call,
                                       ast::Builtin builtin) {
   switch (builtin) {
@@ -1025,6 +1089,14 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::AggHashTableProcessBatch:
     case ast::Builtin::AggHashTableFree: {
       CheckBuiltinAggHashTableCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::AggHashTableIterInit:
+    case ast::Builtin::AggHashTableIterHasNext:
+    case ast::Builtin::AggHashTableIterNext:
+    case ast::Builtin::AggHashTableIterGetRow:
+    case ast::Builtin::AggHashTableIterClose: {
+      CheckBuiltinAggHashTableIterCall(call, builtin);
       break;
     }
     case ast::Builtin::AggInit:
