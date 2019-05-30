@@ -584,6 +584,24 @@ VM_OP_HOT void OpAggregationHashTableProcessBatch(
                                merge_agg_fn);
 }
 
+VM_OP_HOT void OpAggregationHashTableTransferPartitions(
+    tpl::sql::AggregationHashTable *const agg_hash_table,
+    tpl::sql::ThreadStateContainer *const thread_state_container,
+    const u32 agg_ht_offset,
+    const tpl::sql::AggregationHashTable::MergePartitionFn merge_partition_fn) {
+  agg_hash_table->TransferMemoryAndPartitions(
+      thread_state_container, agg_ht_offset, merge_partition_fn);
+}
+
+VM_OP_HOT void OpAggregationHashTableExecuteParallelPartitionedScan(
+    tpl::sql::AggregationHashTable *const agg_hash_table,
+    void *const query_state,
+    tpl::sql::ThreadStateContainer *const thread_state_container,
+    const tpl::sql::AggregationHashTable::ScanPartitionFn scan_partition_fn) {
+  agg_hash_table->ExecuteParallelPartitionedScan(
+      query_state, thread_state_container, scan_partition_fn);
+}
+
 void OpAggregationHashTableFree(tpl::sql::AggregationHashTable *agg_hash_table);
 
 void OpAggregationHashTableIteratorInit(

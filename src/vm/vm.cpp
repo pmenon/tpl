@@ -825,6 +825,39 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(AggregationHashTableTransferPartitions) : {
+    auto *agg_hash_table =
+        frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto *thread_state_container =
+        frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
+    auto agg_ht_offset = frame->LocalAt<u32>(READ_LOCAL_ID());
+    auto merge_partition_fn_id = READ_FUNC_ID();
+
+    auto merge_partition_fn =
+        reinterpret_cast<sql::AggregationHashTable::MergePartitionFn>(
+            module_->GetRawFunctionImpl(merge_partition_fn_id));
+    OpAggregationHashTableTransferPartitions(agg_hash_table,
+                                             thread_state_container,
+                                             agg_ht_offset, merge_partition_fn);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationHashTableParallelPartitionedScan) : {
+    auto *agg_hash_table =
+        frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto *query_state = frame->LocalAt<void *>(READ_LOCAL_ID());
+    auto *thread_state_container =
+        frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
+    auto scan_partition_fn_id = READ_FUNC_ID();
+
+    auto scan_partition_fn =
+        reinterpret_cast<sql::AggregationHashTable::ScanPartitionFn>(
+            module_->GetRawFunctionImpl(scan_partition_fn_id));
+    OpAggregationHashTableExecuteParallelPartitionedScan(
+        agg_hash_table, query_state, thread_state_container, scan_partition_fn);
+    DISPATCH_NEXT();
+  }
+
   OP(AggregationHashTableFree) : {
     auto *agg_hash_table =
         frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
