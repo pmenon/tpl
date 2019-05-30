@@ -439,9 +439,9 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(
   return agg_table;
 }
 
-void AggregationHashTable::ExecutePartitionedScan(
-    void *const query_state, ThreadStateContainer *const thread_states,
-    const AggregationHashTable::ScanPartitionFn scan_fn) {
+void AggregationHashTable::ExecuteParallelPartitionedScan(
+    void *query_state, ThreadStateContainer *thread_states,
+    AggregationHashTable::ScanPartitionFn scan_fn) {
   TPL_ASSERT(partition_heads_ != nullptr && merge_partition_fn_ != nullptr,
              "No overflow partitions allocated, or no merging function "
              "allocated. Did you call TransferMemoryAndPartitions() before "

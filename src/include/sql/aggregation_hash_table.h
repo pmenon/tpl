@@ -176,9 +176,31 @@ class AggregationHashTable {
                                    std::size_t agg_ht_offset,
                                    MergePartitionFn merge_partition_fn);
 
-  void ExecutePartitionedScan(void *query_state,
-                              ThreadStateContainer *thread_states,
-                              ScanPartitionFn scan_fn);
+  /**
+   * Execute a parallel scan over this partitioned hash table. It is assumed
+   * that this aggregation table was constructed in a partitioned manner. This
+   * function will build a new aggregation hash table for any non-empty overflow
+   * partition, merge the contents of the partition (using the merging function
+   * provided to the call to @em TransferMemoryAndPartitions()), and invoke the
+   * scan callback function to scan the newly built table. The building and
+   * scanning of the table will be performed entirely in parallel; hence, the
+   * callback function should be thread-safe.
+   *
+   * The thread states container is assumed to already have been configured
+   * prior to this scan call.
+   *
+   * The callback scan function accepts two opaque state objects: an query state
+   * and a thread state. The query state is provided as a function argument. The
+   * thread state will be pulled from the provided ThreadStateContainer object.
+   *
+   * @param query_state The (opaque) query state.
+   * @param thread_states The container holding all thread states.
+   * @param scan_fn The callback scan function that will scan one partition of
+   *                the partitioned aggregation hash table.
+   */
+  void ExecuteParallelPartitionedScan(void *query_state,
+                                      ThreadStateContainer *thread_states,
+                                      ScanPartitionFn scan_fn);
 
   /**
    * How many aggregates are in this table?

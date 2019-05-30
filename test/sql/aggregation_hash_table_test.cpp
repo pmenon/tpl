@@ -432,7 +432,7 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
   container.Clear();
 
   // Scan
-  main_table.ExecutePartitionedScan(&qstate, &container, scan);
+  main_table.ExecuteParallelPartitionedScan(&qstate, &container, scan);
 
   // Check
   EXPECT_EQ(num_aggs, qstate.row_count.load(std::memory_order_seq_cst));
