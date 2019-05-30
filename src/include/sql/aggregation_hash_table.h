@@ -15,6 +15,10 @@ namespace tpl::sql {
 class ThreadStateContainer;
 class VectorProjectionIterator;
 
+// Forward declare
+class AggregationHashTableIterator;
+class AggregationOverflowPartitionIterator;
+
 /**
  * The hash table used when performing aggregations
  */
@@ -66,7 +70,7 @@ class AggregationHashTable {
    *             partitions to merge into the input aggregation hash table.
    */
   using MergePartitionFn = void (*)(void *, AggregationHashTable *,
-                                    HashTableEntry **, u64, u64);
+                                    AggregationOverflowPartitionIterator *);
 
   /**
    * Function to scan an aggregation hash table.
@@ -374,6 +378,86 @@ class AggregationHashTableIterator {
   // The iterator over the aggregation hash table
   // TODO(pmenon): Switch to vectorized iterator when perf is better
   GenericHashTableIterator<false> iter_;
+};
+
+/**
+ * An iterator over a range of overflow partition entries in an aggregation hash
+ * table. The range is provided through the constructor. Each overflow entry's
+ * hash value is accessible through @em GetHash(), along with the opaque payload
+ * through @em GetPayload().
+ */
+class AggregationOverflowPartitionIterator {
+ public:
+  /**
+   * Construct an iterator over the given partition range.
+   * @param partitions_begin The beginning of the range.
+   * @param partitions_end The end of the range.
+   */
+  AggregationOverflowPartitionIterator(HashTableEntry **partitions_begin,
+                                       HashTableEntry **partitions_end)
+      : partitions_iter_(partitions_begin),
+        partitions_end_(partitions_end),
+        curr_(nullptr) {
+    Next();
+  }
+
+  /**
+   * Are there more overflow entries?
+   * @return True if the iterator has more data; false otherwise
+   */
+  bool HasNext() const { return curr_ != nullptr; }
+
+  /**
+   * Move to the next overflow entry.
+   */
+  void Next() {
+    // Try to move along current partition
+    if (curr_ != nullptr) {
+      curr_ = curr_->next;
+      if (curr_ != nullptr) {
+        return;
+      }
+    }
+
+    // Find next non-empty partition
+    while (curr_ == nullptr && partitions_iter_ != partitions_end_) {
+      curr_ = *partitions_iter_++;
+    }
+  }
+
+  /**
+   * Get the hash value of the overflow entry the iterator is currently pointing
+   * to. It is assumed the caller has checked there is data in the iterator.
+   * @return The hash value of the current overflow entry.
+   */
+  const hash_t GetHash() const { return curr_->hash; }
+
+  /**
+   * Get the payload of the overflow entry the iterator is currently pointing
+   * to. It is assumed the caller has checked there is data in the iterator.
+   * @return The opaque payload associated with the current overflow entry.
+   */
+  const byte *GetPayload() const { return curr_->payload; }
+
+  /**
+   * Get the payload of the overflow entry the iterator is currently pointing
+   * to, but interpret it as the given template type @em T. It is assumed the
+   * caller has checked there is data in the iterator.
+   * @tparam T The type of the payload in the current overflow entry.
+   * @return The opaque payload associated with the current overflow entry.
+   */
+  template <typename T>
+  const T *GetPayloadAs() const {
+    return curr_->PayloadAs<T>();
+  }
+
+ private:
+  // The current position in the partitions array
+  HashTableEntry **partitions_iter_;
+  // The ending position in the partitions array
+  HashTableEntry **partitions_end_;
+  // The current overflow entry
+  HashTableEntry *curr_;
 };
 
 }  // namespace tpl::sql

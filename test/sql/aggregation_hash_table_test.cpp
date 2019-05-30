@@ -142,7 +142,7 @@ TEST_F(AggregationHashTableTest, IterationTest) {
   const u32 num_inserts = 10000;
   const u32 num_groups = 10;
   const u32 tuples_per_group = num_inserts / num_groups;
-  ASSERT_EQ(0, num_inserts % num_groups);
+  ASSERT_EQ(0u, num_inserts % num_groups);
 
   {
     for (u32 idx = 0; idx < num_inserts; idx++) {
@@ -260,6 +260,102 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
   }
 }
 
+TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
+  struct Data {
+    u32 key{5};
+    u32 val{10};
+  };
+
+  struct TestEntry : public HashTableEntry {
+    Data data;
+    TestEntry() : HashTableEntry(), data{} {}
+    TestEntry(u32 key, u32 val) : HashTableEntry(), data{key, val} {}
+  };
+
+  constexpr u32 nparts = 50;
+  constexpr u32 nentries_per_part = 10;
+
+  // Allocate partitions
+  std::array<HashTableEntry *, nparts> partitions{};
+  partitions.fill(nullptr);
+
+  //
+  // Test: check iteration over an empty partitions array
+  //
+
+  {
+    u32 count = 0;
+    AggregationOverflowPartitionIterator iter(partitions.begin(),
+                                              partitions.end());
+    for (; iter.HasNext(); iter.Next()) {
+      count++;
+    }
+    EXPECT_EQ(0u, count);
+  }
+
+  //
+  // Test: insert one entry in the middle partition and ensure we find it
+  //
+
+  {
+    std::vector<std::unique_ptr<TestEntry>> entries;
+    entries.emplace_back(std::make_unique<TestEntry>(100, 200));
+
+    HashTableEntry *entry = entries[0].get();
+    const u32 part_idx = nparts / 2;
+    entry->next = partitions[part_idx];
+    partitions[part_idx] = entry;
+
+    // Check
+    u32 count = 0;
+    AggregationOverflowPartitionIterator iter(partitions.begin(),
+                                              partitions.end());
+    for (; iter.HasNext(); iter.Next()) {
+      EXPECT_EQ(100u, iter.GetPayloadAs<Data>()->key);
+      EXPECT_EQ(200u, iter.GetPayloadAs<Data>()->val);
+      count++;
+    }
+    EXPECT_EQ(1u, count);
+  }
+
+  partitions.fill(nullptr);
+
+  //
+  // Test: create a list of nparts partitions and vary the number of entries in
+  //       each partition from [0, nentries_per_part). Ensure the counts match.
+  //
+
+  {
+    std::vector<std::unique_ptr<TestEntry>> entries;
+
+    // Populate each partition
+    std::random_device random;
+    u32 num_entries = 0;
+    for (u32 part_idx = 0; part_idx < nparts; part_idx++) {
+      const u32 nentries = (random() % nentries_per_part);
+      for (u32 i = 0; i < nentries; i++) {
+        // Create entry
+        entries.emplace_back(std::make_unique<TestEntry>());
+        HashTableEntry *entry = entries[entries.size() - 1].get();
+
+        // Link it into partition
+        entry->next = partitions[part_idx];
+        partitions[part_idx] = entry;
+        num_entries++;
+      }
+    }
+
+    // Check
+    u32 count = 0;
+    AggregationOverflowPartitionIterator iter(partitions.begin(),
+                                              partitions.end());
+    for (; iter.HasNext(); iter.Next()) {
+      count++;
+    }
+    EXPECT_EQ(num_entries, count);
+  }
+}
+
 TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
   const u32 num_aggs = 100;
 
@@ -290,19 +386,16 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
   };
 
   auto merge = [](void *ctx, AggregationHashTable *table,
-                  HashTableEntry **partitions, u64 begin, u64 end) {
-    for (u64 part = begin; part < end; part++) {
-      for (auto *entry = partitions[part]; entry != nullptr;
-           entry = entry->next) {
-        auto *partial_agg = entry->PayloadAs<AggTuple>();
-        auto *existing = reinterpret_cast<AggTuple *>(
-            table->Lookup(entry->hash, AggAggKeyEq, partial_agg));
-        if (existing != nullptr) {
-          existing->Merge(*partial_agg);
-        } else {
-          auto *new_agg = table->Insert(entry->hash);
-          new (new_agg) AggTuple(*partial_agg);
-        }
+                  AggregationOverflowPartitionIterator *iter) {
+    for (; iter->HasNext(); iter->Next()) {
+      auto *partial_agg = iter->GetPayloadAs<AggTuple>();
+      auto *existing = reinterpret_cast<AggTuple *>(
+          table->Lookup(iter->GetHash(), AggAggKeyEq, partial_agg));
+      if (existing != nullptr) {
+        existing->Merge(*partial_agg);
+      } else {
+        auto *new_agg = table->Insert(iter->GetHash());
+        new (new_agg) AggTuple(*partial_agg);
       }
     }
   };

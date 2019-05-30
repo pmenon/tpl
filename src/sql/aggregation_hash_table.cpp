@@ -428,8 +428,9 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(
       AggregationHashTable(memory_, payload_size_, estimated_size);
 
   // Build it
-  merge_partition_fn_(query_state, agg_table, partition_heads_, partition_idx,
-                      partition_idx + 1);
+  AggregationOverflowPartitionIterator iter(
+      partition_heads_ + partition_idx, partition_heads_ + partition_idx + 1);
+  merge_partition_fn_(query_state, agg_table, &iter);
 
   // Set it
   partition_tables_[partition_idx] = agg_table;
