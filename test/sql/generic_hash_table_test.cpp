@@ -1,4 +1,5 @@
 #include <random>
+#include <unordered_map>
 #include <vector>
 
 #include "tpl_test.h"  // NOLINT
@@ -211,7 +212,6 @@ TEST_F(GenericHashTableTest, DISABLED_PerfIterationTest) {
   };
 
   u32 sum = 0;
-
 
   double taat_ms = 0;
 #if 0
