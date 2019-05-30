@@ -1,3 +1,4 @@
+#include <atomic>
 #include <memory>
 #include <random>
 #include <unordered_map>
@@ -5,8 +6,12 @@
 
 #include "tpl_test.h"  // NOLINT
 
+#include <tbb/tbb.h>  // NOLINT
+
 #include "sql/aggregation_hash_table.h"
+#include "sql/execution_context.h"
 #include "sql/schema.h"
+#include "sql/thread_state_container.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/hash.h"
@@ -43,17 +48,33 @@ struct AggTuple {
     count3 += input.col_a * 10;
   }
 
+  void Merge(const AggTuple &input) {
+    count1 += input.count1;
+    count2 += input.count2;
+    count3 += input.count3;
+  }
+
   bool operator==(const AggTuple &other) {
     return key == other.key && count1 == other.count1 &&
            count2 == other.count2 && count3 == other.count3;
   }
 };
 
-/// The function to determine whether two tuples have equivalent keys
-static inline bool TupleKeyEq(const void *table_tuple,
-                              const void *probe_tuple) {
+// The function to determine whether an aggregate stored in the hash table and
+// an input have equivalent keys.
+static inline bool AggTupleKeyEq(const void *table_tuple,
+                                 const void *probe_tuple) {
   auto *lhs = reinterpret_cast<const AggTuple *>(table_tuple);
   auto *rhs = reinterpret_cast<const InputTuple *>(probe_tuple);
+  return lhs->key == rhs->key;
+}
+
+// The function to determine whether two aggregates stored in overflow
+// partitions or hash tables have equivalent keys.
+static inline bool AggAggKeyEq(const void *agg_tuple_1,
+                               const void *agg_tuple_2) {
+  auto *lhs = reinterpret_cast<const AggTuple *>(agg_tuple_1);
+  auto *rhs = reinterpret_cast<const AggTuple *>(agg_tuple_2);
   return lhs->key == rhs->key;
 }
 
@@ -78,14 +99,14 @@ TEST_F(AggregationHashTableTest, SimpleRandomInsertionTest) {
   std::unordered_map<u64, std::unique_ptr<AggTuple>> ref_agg_table;
 
   std::mt19937 generator;
-  std::uniform_int_distribution<u64> distribution(0, 10);
+  std::uniform_int_distribution<u64> distribution(0, 9);
 
   // Insert a few random tuples
   for (u32 idx = 0; idx < num_tuples; idx++) {
     auto input = InputTuple(distribution(generator), 1);
     auto hash_val = input.Hash();
     auto *existing = reinterpret_cast<AggTuple *>(agg_table()->Lookup(
-        hash_val, TupleKeyEq, reinterpret_cast<const void *>(&input)));
+        hash_val, AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
 
     if (existing != nullptr) {
       // The reference table should have an equivalent aggregate tuple
@@ -121,13 +142,13 @@ TEST_F(AggregationHashTableTest, IterationTest) {
   const u32 num_inserts = 10000;
   const u32 num_groups = 10;
   const u32 tuples_per_group = num_inserts / num_groups;
-  ASSERT_TRUE(num_inserts % num_groups == 0);
+  ASSERT_EQ(0, num_inserts % num_groups);
 
   {
     for (u32 idx = 0; idx < num_inserts; idx++) {
       InputTuple input(idx % num_groups, 1);
       auto *existing = reinterpret_cast<AggTuple *>(agg_table()->Lookup(
-          input.Hash(), TupleKeyEq, reinterpret_cast<const void *>(&input)));
+          input.Hash(), AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
 
       if (existing != nullptr) {
         existing->Advance(input);
@@ -162,19 +183,16 @@ TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
   const u32 num_tuples = 10000;
 
   std::mt19937 generator;
-  std::uniform_int_distribution<u64> distribution(0, 10);
+  std::uniform_int_distribution<u64> distribution(0, 9);
 
-  // Insert a few random tuples
   for (u32 idx = 0; idx < num_tuples; idx++) {
     InputTuple input(distribution(generator), 1);
     auto *existing = reinterpret_cast<AggTuple *>(agg_table()->Lookup(
-        input.Hash(), TupleKeyEq, reinterpret_cast<const void *>(&input)));
+        input.Hash(), AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
 
     if (existing != nullptr) {
-      // The reference table should have an equivalent aggregate tuple
       existing->Advance(input);
     } else {
-      // The reference table shouldn't have the aggregate
       auto *new_agg = agg_table()->InsertPartitioned(input.Hash());
       new (new_agg) AggTuple(input);
     }
@@ -240,6 +258,91 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
     VectorProjectionIterator *iters[] = {&vpi};
     agg_table()->ProcessBatch(iters, hash_fn, key_eq, init_agg, advance_agg);
   }
+}
+
+TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
+  const u32 num_aggs = 100;
+
+  auto init_ht = [](void *ctx, void *aht) {
+    auto exec_ctx = reinterpret_cast<ExecutionContext *>(ctx);
+    new (aht) AggregationHashTable(exec_ctx->memory_pool(), sizeof(AggTuple));
+  };
+
+  auto destroy_ht = [](void *ctx, void *aht) {
+    reinterpret_cast<AggregationHashTable *>(aht)->~AggregationHashTable();
+  };
+
+  auto build_agg_table = [&](AggregationHashTable *agg_table) {
+    std::mt19937 generator;
+    std::uniform_int_distribution<u64> distribution(0, num_aggs - 1);
+
+    for (u32 idx = 0; idx < 10000; idx++) {
+      InputTuple input(distribution(generator), 1);
+      auto *existing = reinterpret_cast<AggTuple *>(agg_table->Lookup(
+          input.Hash(), AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
+      if (existing != nullptr) {
+        existing->Advance(input);
+      } else {
+        auto *new_agg = agg_table->InsertPartitioned(input.Hash());
+        new (new_agg) AggTuple(input);
+      }
+    }
+  };
+
+  auto merge = [](void *ctx, AggregationHashTable *table,
+                  HashTableEntry **partitions, u64 begin, u64 end) {
+    for (u64 part = begin; part < end; part++) {
+      for (auto *entry = partitions[part]; entry != nullptr;
+           entry = entry->next) {
+        auto *partial_agg = entry->PayloadAs<AggTuple>();
+        auto *existing = reinterpret_cast<AggTuple *>(
+            table->Lookup(entry->hash, AggAggKeyEq, partial_agg));
+        if (existing != nullptr) {
+          existing->Merge(*partial_agg);
+        } else {
+          auto *new_agg = table->Insert(entry->hash);
+          new (new_agg) AggTuple(*partial_agg);
+        }
+      }
+    }
+  };
+
+  struct QS {
+    std::atomic<u32> row_count;
+  };
+
+  auto scan = [](void *query_state, void *thread_state,
+                 const AggregationHashTable *agg_table) {
+    auto *qs = reinterpret_cast<QS *>(query_state);
+    qs->row_count += agg_table->NumElements();
+  };
+
+  QS qstate{0};
+  MemoryPool memory(nullptr);
+  ExecutionContext ctx(&memory);
+  ThreadStateContainer container(&memory);
+
+  // Build thread-local tables
+  container.Reset(sizeof(AggregationHashTable), init_ht, destroy_ht, &ctx);
+  auto aggs = {0, 1, 2, 3};
+  tbb::task_scheduler_init sched;
+  tbb::parallel_for_each(aggs.begin(), aggs.end(), [&](UNUSED auto x) {
+    auto aht =
+        container.AccessThreadStateOfCurrentThreadAs<AggregationHashTable>();
+    build_agg_table(aht);
+  });
+
+  AggregationHashTable main_table(&memory, sizeof(AggTuple));
+
+  // Move memory
+  main_table.TransferMemoryAndPartitions(&container, 0, merge);
+  container.Clear();
+
+  // Scan
+  main_table.ExecutePartitionedScan(&qstate, &container, scan);
+
+  // Check
+  EXPECT_EQ(num_aggs, qstate.row_count.load(std::memory_order_seq_cst));
 }
 
 }  // namespace tpl::sql::test

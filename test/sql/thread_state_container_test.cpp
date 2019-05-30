@@ -15,6 +15,14 @@ namespace tpl::sql::test {
 
 class ThreadStateContainerTest : public TplTest {};
 
+TEST_F(ThreadStateContainerTest, EmptyStateTest) {
+  MemoryPool memory(nullptr);
+  ThreadStateContainer container(&memory);
+  container.Reset(0, nullptr, nullptr, nullptr);
+  UNUSED auto *state = container.AccessThreadStateOfCurrentThread();
+  container.Clear();
+}
+
 TEST_F(ThreadStateContainerTest, ContainerResetTest) {
   // The container
   MemoryPool memory(nullptr);
