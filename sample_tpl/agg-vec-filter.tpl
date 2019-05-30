@@ -23,11 +23,11 @@ fun keyCheck(agg: *Agg, iters: [*]*VectorProjectionIterator) -> bool {
 }
 
 fun hashFn(iters: [*]*VectorProjectionIterator) -> uint64 {
-  var vpi = iters[0]
-  return @hash(@vpiGetInt(vpi, 1))
+  return @hash(@vpiGetInt(iters[0], 1))
 }
 
 fun constructAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
+  agg.key = @vpiGetInt(iters[0], 1)
   @aggInit(&agg.cs, &agg.c, &agg.sum)
 }
 
