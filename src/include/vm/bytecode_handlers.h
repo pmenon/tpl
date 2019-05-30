@@ -626,6 +626,26 @@ VM_OP_HOT void OpAggregationHashTableIteratorGetRow(
 void OpAggregationHashTableIteratorFree(
     tpl::sql::AggregationHashTableIterator *iter);
 
+VM_OP_HOT void OpAggregationOverflowPartitionIteratorHasNext(
+    bool *has_more, tpl::sql::AggregationOverflowPartitionIterator *iter) {
+  *has_more = iter->HasNext();
+}
+
+VM_OP_HOT void OpAggregationOverflowPartitionIteratorNext(
+    tpl::sql::AggregationOverflowPartitionIterator *iter) {
+  iter->Next();
+}
+
+VM_OP_HOT void OpAggregationOverflowPartitionIteratorGetHash(
+    hash_t *hash_val, tpl::sql::AggregationOverflowPartitionIterator *iter) {
+  *hash_val = iter->GetHash();
+}
+
+VM_OP_HOT void OpAggregationOverflowPartitionIteratorGetRow(
+    const byte **row, tpl::sql::AggregationOverflowPartitionIterator *iter) {
+  *row = iter->GetPayload();
+}
+
 //
 // COUNT
 //

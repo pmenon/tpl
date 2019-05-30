@@ -866,19 +866,19 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   }
 
   OP(AggregationHashTableIteratorInit) : {
-    auto *agg_hash_table_iter =
+    auto *iter =
         frame->LocalAt<sql::AggregationHashTableIterator *>(READ_LOCAL_ID());
     auto *agg_hash_table =
         frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
-    OpAggregationHashTableIteratorInit(agg_hash_table_iter, agg_hash_table);
+    OpAggregationHashTableIteratorInit(iter, agg_hash_table);
     DISPATCH_NEXT();
   }
 
   OP(AggregationHashTableIteratorHasNext) : {
     auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
-    auto *agg_hash_table_iter =
+    auto *iter =
         frame->LocalAt<sql::AggregationHashTableIterator *>(READ_LOCAL_ID());
-    OpAggregationHashTableIteratorHasNext(has_more, agg_hash_table_iter);
+    OpAggregationHashTableIteratorHasNext(has_more, iter);
     DISPATCH_NEXT();
   }
 
@@ -891,9 +891,9 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
   OP(AggregationHashTableIteratorGetRow) : {
     auto *row = frame->LocalAt<const byte **>(READ_LOCAL_ID());
-    auto *agg_hash_table_iter =
+    auto *iter =
         frame->LocalAt<sql::AggregationHashTableIterator *>(READ_LOCAL_ID());
-    OpAggregationHashTableIteratorGetRow(row, agg_hash_table_iter);
+    OpAggregationHashTableIteratorGetRow(row, iter);
     DISPATCH_NEXT();
   }
 
@@ -901,6 +901,41 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto *agg_hash_table_iter =
         frame->LocalAt<sql::AggregationHashTableIterator *>(READ_LOCAL_ID());
     OpAggregationHashTableIteratorFree(agg_hash_table_iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationOverflowPartitionIteratorHasNext) : {
+    auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto *overflow_iter =
+        frame->LocalAt<sql::AggregationOverflowPartitionIterator *>(
+            READ_LOCAL_ID());
+    OpAggregationOverflowPartitionIteratorHasNext(has_more, overflow_iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationOverflowPartitionIteratorNext) : {
+    auto *overflow_iter =
+        frame->LocalAt<sql::AggregationOverflowPartitionIterator *>(
+            READ_LOCAL_ID());
+    OpAggregationOverflowPartitionIteratorNext(overflow_iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationOverflowPartitionIteratorGetHash) : {
+    auto *hash = frame->LocalAt<hash_t *>(READ_LOCAL_ID());
+    auto *overflow_iter =
+        frame->LocalAt<sql::AggregationOverflowPartitionIterator *>(
+            READ_LOCAL_ID());
+    OpAggregationOverflowPartitionIteratorGetHash(hash, overflow_iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationOverflowPartitionIteratorGetRow) : {
+    auto *row = frame->LocalAt<const byte **>(READ_LOCAL_ID());
+    auto *overflow_iter =
+        frame->LocalAt<sql::AggregationOverflowPartitionIterator *>(
+            READ_LOCAL_ID());
+    OpAggregationOverflowPartitionIteratorGetRow(row, overflow_iter);
     DISPATCH_NEXT();
   }
 

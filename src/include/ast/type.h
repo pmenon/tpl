@@ -56,6 +56,8 @@ class Context;
   NON_PRIM(AggregationHashTable, tpl::sql::AggregationHashTable)         \
   NON_PRIM(AggregationHashTableIterator,                                 \
            tpl::sql::AggregationHashTableIterator)                       \
+  NON_PRIM(AggOverflowPartIter,                                          \
+           tpl::sql::AggregationOverflowPartitionIterator)               \
   NON_PRIM(BloomFilter, tpl::sql::BloomFilter)                           \
   NON_PRIM(ExecutionContext, tpl::sql::ExecutionContext)                 \
   NON_PRIM(FilterManager, tpl::sql::FilterManager)                       \

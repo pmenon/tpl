@@ -173,6 +173,10 @@ namespace tpl::vm {
   F(AggregationHashTableIteratorNext, OperandType::Local)                                                              \
   F(AggregationHashTableIteratorGetRow, OperandType::Local, OperandType::Local)                                        \
   F(AggregationHashTableIteratorFree, OperandType::Local)                                                              \
+  F(AggregationOverflowPartitionIteratorHasNext, OperandType::Local, OperandType::Local)                               \
+  F(AggregationOverflowPartitionIteratorNext, OperandType::Local)                                                      \
+  F(AggregationOverflowPartitionIteratorGetHash, OperandType::Local, OperandType::Local)                               \
+  F(AggregationOverflowPartitionIteratorGetRow, OperandType::Local, OperandType::Local)                                \
   /* Aggregates */                                                                                                     \
   F(CountAggregateInit, OperandType::Local)                                                                            \
   F(CountAggregateAdvance, OperandType::Local, OperandType::Local)                                                     \
