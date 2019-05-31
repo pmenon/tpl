@@ -33,6 +33,11 @@ class ThreadStateContainer {
   using DestroyFn = void (*)(void *, void *);
 
   /**
+   * Function to iterate over all thread-local states in this container.
+   */
+  using IterateFn = void (*)(void *, void *);
+
+  /**
    * Construct a container for all thread state using the given allocator
    * @param memory The memory allocator to use to allocate thread states
    */
@@ -113,10 +118,10 @@ class ThreadStateContainer {
    * @param element_offset The offset of the element in the thread-local state
    */
   template <typename T>
-  void CollectThreadLocalStateElementsAs(std::vector<T *> &container,
-                                         std::size_t element_offset) const {
+  void CollectThreadLocalStateElementsAs(
+      std::vector<T *> &container, const std::size_t element_offset) const {
     std::vector<byte *> tmp;
-    CollectThreadLocalStates(tmp);
+    CollectThreadLocalStateElements(tmp, element_offset);
     container.clear();
     container.resize(tmp.size());
     for (u32 idx = 0; idx < tmp.size(); idx++) {
@@ -125,18 +130,25 @@ class ThreadStateContainer {
   }
 
   /**
-   * Apply a function on each thread local state
+   * Iterate over all thread-local states in this container invoking the given
+   * callback function @em iterate_fn for each such state.
+   * @param ctx An opaque context object.
+   * @param iterate_fn The function to call for each state.
+   */
+  void IterateStates(void *ctx, IterateFn iterate_fn) const;
+
+  /**
+   * Apply a function on each thread local state. This is mostly for tests from
+   * C++.
    * @tparam F Functor with signature void(const void*)
    * @param fn The function to apply
    */
   template <typename T, typename F>
   void ForEach(const F &fn) const {
-    std::vector<byte *> states;
-    CollectThreadLocalStates(states);
-
-    for (const auto *state : states) {
-      fn(reinterpret_cast<const T *>(state));
-    }
+    IterateStates(const_cast<F *>(&fn), [](void *ctx, void *raw_state) {
+      auto *state = reinterpret_cast<T *>(raw_state);
+      std::invoke(*reinterpret_cast<const F *>(ctx), state);
+    });
   }
 
  private:

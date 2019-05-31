@@ -13,7 +13,16 @@
 
 namespace tpl::sql::test {
 
-class ThreadStateContainerTest : public TplTest {};
+class ThreadStateContainerTest : public TplTest {
+ protected:
+  void ForceCreationOfThreadStates(ThreadStateContainer *container) {
+    std::vector<u32> input(2000);
+    tbb::task_scheduler_init sched;
+    tbb::parallel_for_each(input.begin(), input.end(), [&container](auto c) {
+      container->AccessThreadStateOfCurrentThread();
+    });
+  }
+};
 
 TEST_F(ThreadStateContainerTest, EmptyStateTest) {
   MemoryPool memory(nullptr);
@@ -21,6 +30,36 @@ TEST_F(ThreadStateContainerTest, EmptyStateTest) {
   container.Reset(0, nullptr, nullptr, nullptr);
   UNUSED auto *state = container.AccessThreadStateOfCurrentThread();
   container.Clear();
+}
+
+TEST_F(ThreadStateContainerTest, ComplexObjectContainerTest) {
+  struct Object {
+    u64 x{0};
+    u32 arr[10] = {0};
+    u32 arr_2[2] = {44, 23};
+    Object *next{nullptr};
+    bool initialized{false};
+  };
+
+  MemoryPool memory(nullptr);
+  ThreadStateContainer container(&memory);
+
+  container.Reset(sizeof(Object),
+                  [](UNUSED auto *_, auto *s) {
+                    // Set some stuff to indicate object is initialized
+                    auto obj = new (s) Object();
+                    obj->x = 10;
+                    obj->initialized = true;
+                  },
+                  nullptr, nullptr);
+  ForceCreationOfThreadStates(&container);
+
+  // Check
+  container.ForEach<Object>([](Object *obj) {
+    EXPECT_EQ(10u, obj->x);
+    EXPECT_EQ(nullptr, obj->next);
+    EXPECT_EQ(true, obj->initialized);
+  });
 }
 
 TEST_F(ThreadStateContainerTest, ContainerResetTest) {
@@ -38,23 +77,18 @@ TEST_F(ThreadStateContainerTest, ContainerResetTest) {
   const u32 init_num = 44;
   std::atomic<u32> count(init_num);
 
-#define RESET(N)                                                              \
-  {                                                                           \
-    /* Reset the container, add/sub upon creation/destruction by amount */    \
-    container.Reset(sizeof(u32),                                              \
-                    [](auto *ctx, UNUSED auto *s) {                           \
-                      (*reinterpret_cast<decltype(count) *>(ctx)) += N;       \
-                    },                                                        \
-                    [](auto *ctx, UNUSED auto *s) {                           \
-                      (*reinterpret_cast<decltype(count) *>(ctx)) -= N;       \
-                    },                                                        \
-                    &count);                                                  \
-    /* Do some useless parallel work to create thread-local states */         \
-    std::vector<u32> input(2000);                                             \
-    tbb::task_scheduler_init sched;                                           \
-    tbb::parallel_for_each(input.begin(), input.end(), [&container](auto c) { \
-      container.AccessThreadStateOfCurrentThread();                           \
-    });                                                                       \
+#define RESET(N)                                                           \
+  {                                                                        \
+    /* Reset the container, add/sub upon creation/destruction by amount */ \
+    container.Reset(sizeof(u32),                                           \
+                    [](auto *ctx, UNUSED auto *s) {                        \
+                      (*reinterpret_cast<decltype(count) *>(ctx)) += N;    \
+                    },                                                     \
+                    [](auto *ctx, UNUSED auto *s) {                        \
+                      (*reinterpret_cast<decltype(count) *>(ctx)) -= N;    \
+                    },                                                     \
+                    &count);                                               \
+    ForceCreationOfThreadStates(&container);                               \
   }
 
   RESET(1)

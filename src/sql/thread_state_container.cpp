@@ -99,4 +99,11 @@ void ThreadStateContainer::CollectThreadLocalStateElements(
   }
 }
 
+void ThreadStateContainer::IterateStates(
+    void *const ctx, ThreadStateContainer::IterateFn iterate_fn) const {
+  for (auto &tls_handle : impl_->states) {
+    iterate_fn(ctx, tls_handle.state());
+  }
+}
+
 }  // namespace tpl::sql
