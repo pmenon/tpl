@@ -87,7 +87,7 @@ struct StructTypeKeyInfo {
 
 struct FunctionTypeKeyInfo {
   struct KeyTy {
-    Type *ret_type;
+    Type *const ret_type;
     const util::RegionVector<Field> &params;
 
     explicit KeyTy(Type *ret_type, const util::RegionVector<Field> &ps)
@@ -96,7 +96,9 @@ struct FunctionTypeKeyInfo {
     explicit KeyTy(const FunctionType *func_type)
         : ret_type(func_type->return_type()), params(func_type->params()) {}
 
-    bool operator==(const KeyTy &that) const { return params == that.params; }
+    bool operator==(const KeyTy &that) const {
+      return ret_type == that.ret_type && params == that.params;
+    }
 
     bool operator!=(const KeyTy &that) const { return !this->operator==(that); }
   };
