@@ -285,6 +285,12 @@ void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1,
           operand_6, operand_7, operand_8);
 }
 
+void BytecodeEmitter::EmitThreadStateContainerIterate(LocalVar tls,
+                                                      LocalVar ctx,
+                                                      FunctionId iterate_fn) {
+  EmitAll(Bytecode::ThreadStateContainerIterate, tls, ctx, iterate_fn);
+}
+
 void BytecodeEmitter::EmitThreadStateContainerReset(LocalVar tls,
                                                     LocalVar state_size,
                                                     FunctionId init_fn,

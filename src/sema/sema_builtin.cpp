@@ -598,30 +598,41 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call,
       // TODO(pmenon): More thorough check
       if (!call_args[2]->type()->IsFunctionType() ||
           !call_args[3]->type()->IsFunctionType()) {
-        error_reporter()->Report(
-            call->position(), ErrorMessages::kIncorrectCallArgType,
-            call->GetFuncName(),
-            ast::BuiltinType::Get(context(), ast::BuiltinType::Uint32), 2,
-            call_args[2]->type());
+        ReportIncorrectCallArg(call, 2,
+                               GetBuiltinType(ast::BuiltinType::Uint32));
         return;
       }
       // Fifth argument must be a pointer to something or nil
       if (!call_args[4]->type()->IsPointerType() &&
           !call_args[4]->type()->IsNilType()) {
-        error_reporter()->Report(
-            call->position(), ErrorMessages::kIncorrectCallArgType,
-            call->GetFuncName(),
-            ast::BuiltinType::Get(context(), ast::BuiltinType::Uint32), 4,
-            call_args[4]->type());
+        ReportIncorrectCallArg(call, 4,
+                               GetBuiltinType(ast::BuiltinType::Uint32));
         return;
       }
-
+      break;
+    }
+    case ast::Builtin::ThreadStateContainerIterate: {
+      if (!CheckArgCount(call, 3)) {
+        return;
+      }
+      // Second argument is a pointer to some context
+      if (!call_args[1]->type()->IsPointerType()) {
+        ReportIncorrectCallArg(call, 1,
+                               GetBuiltinType(ast::BuiltinType::Uint32));
+        return;
+      }
+      // Third argument is the iteration function callback
+      if (!call_args[2]->type()->IsFunctionType()) {
+        ReportIncorrectCallArg(call, 2,
+                               GetBuiltinType(ast::BuiltinType::Uint32));
+        return;
+      }
       break;
     }
     default: { UNREACHABLE("Impossible table iteration call"); }
   }
 
-  // This call returns nothing
+  // All these calls return nil
   call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
 }
 
@@ -1131,6 +1142,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     }
     case ast::Builtin::ThreadStateContainerInit:
     case ast::Builtin::ThreadStateContainerReset:
+    case ast::Builtin::ThreadStateContainerIterate:
     case ast::Builtin::ThreadStateContainerFree: {
       CheckBuiltinThreadStateContainerCall(call, builtin);
       break;

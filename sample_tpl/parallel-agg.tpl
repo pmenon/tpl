@@ -1,9 +1,14 @@
 struct State {
   table: AggregationHashTable
+  count: int32
 }
 
 struct ThreadState_1 {
   table: AggregationHashTable
+}
+
+struct ThreadState_2 {
+  count: int32
 }
 
 struct Agg {
@@ -86,12 +91,30 @@ fun p1_mergePartitions(qs: *State, table: *AggregationHashTable, iter: *AggOverf
   }
 }
 
-fun p2_worker(qs: *State, state: *ThreadState_1, table: *AggregationHashTable) -> nil {
-  // Something
+fun p2_worker_initThreadState(execCtx: *ExecutionContext, ts: *ThreadState_2) -> nil {
+  ts.count = 0
+}
+
+fun p2_worker_tearDownThreadState(execCtx: *ExecutionContext, ts: *ThreadState_1) -> nil {
+}
+
+fun p2_finalize(qs: *State, ts: *ThreadState_2) -> nil {
+  qs.count = qs.count + ts.count
+}
+
+fun p2_worker(qs: *State, ts: *ThreadState_2, table: *AggregationHashTable) -> nil {
+  var agg_ht_iter: AggregationHashTableIterator
+  var iter = &agg_ht_iter
+  for (@aggHTIterInit(iter, table); @aggHTIterHasNext(iter); @aggHTIterNext(iter)) {
+    var agg = @ptrCast(*Agg, @aggHTIterGetRow(iter))
+    ts.count = ts.count + 1
+  }
+  @aggHTIterClose(iter)
 }
 
 fun main(execCtx: *ExecutionContext) -> int {
   var state: State
+  state.count = 0
 
   // ---- Init ---- //
 
@@ -114,14 +137,19 @@ fun main(execCtx: *ExecutionContext) -> int {
 
   // ---- Pipeline 2 Begin ---- //
 
+  @tlsReset(&tls, @sizeOf(ThreadState_2), p2_worker_initThreadState, p2_worker_tearDownThreadState, execCtx)
   @aggHTParallelPartScan(&state.table, &state, &tls, p2_worker)
 
   // ---- Pipeline 2 End ---- //
 
+  @tlsIterate(&tls, &state, p2_finalize)
+
   // ---- Clean Up ---- //
+
+  var ret = state.count
 
   @tlsFree(&tls)
   tearDownState(execCtx, &state)
 
-  return 0
+  return ret
 }

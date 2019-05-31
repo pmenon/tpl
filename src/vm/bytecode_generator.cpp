@@ -1221,6 +1221,13 @@ void BytecodeGenerator::VisitBuiltinThreadStateContainerCall(
       emitter()->Emit(Bytecode::ThreadStateContainerInit, tls, memory);
       break;
     }
+    case ast::Builtin::ThreadStateContainerIterate: {
+      LocalVar ctx = VisitExpressionForRValue(call->arguments()[1]);
+      FunctionId iterate_fn = LookupFuncIdByName(
+          call->arguments()[2]->As<ast::IdentifierExpr>()->name().data());
+      emitter()->EmitThreadStateContainerIterate(tls, ctx, iterate_fn);
+      break;
+    }
     case ast::Builtin::ThreadStateContainerReset: {
       LocalVar entry_size = VisitExpressionForRValue(call->arguments()[1]);
       FunctionId init_fn = LookupFuncIdByName(
@@ -1321,6 +1328,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       break;
     }
     case ast::Builtin::ThreadStateContainerInit:
+    case ast::Builtin::ThreadStateContainerIterate:
     case ast::Builtin::ThreadStateContainerReset:
     case ast::Builtin::ThreadStateContainerFree: {
       VisitBuiltinThreadStateContainerCall(call, builtin);

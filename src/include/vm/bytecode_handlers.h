@@ -216,6 +216,12 @@ VM_OP_HOT void OpThreadStateContainerReset(
   thread_state_container->Reset(size, init_fn, destroy_fn, ctx);
 }
 
+VM_OP_HOT void OpThreadStateContainerIterate(
+    tpl::sql::ThreadStateContainer *thread_state_container, void *const state,
+    tpl::sql::ThreadStateContainer::IterateFn iterate_fn) {
+  thread_state_container->IterateStates(state, iterate_fn);
+}
+
 void OpThreadStateContainerFree(
     tpl::sql::ThreadStateContainer *thread_state_container);
 

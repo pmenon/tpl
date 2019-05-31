@@ -107,6 +107,10 @@ class BytecodeEmitter {
   // Special
   // -------------------------------------------------------
 
+  // Iterate over all the states in the container
+  void EmitThreadStateContainerIterate(LocalVar tls, LocalVar ctx,
+                                       FunctionId iterate_fn);
+
   // Reset a thread state container with init and destroy functions
   void EmitThreadStateContainerReset(LocalVar tls, LocalVar state_size,
                                      FunctionId init_fn, FunctionId destroy_fn,

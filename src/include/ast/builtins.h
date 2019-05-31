@@ -25,6 +25,7 @@ namespace tpl::ast {
   F(ExecutionContextGetMemoryPool, execCtxGetMem)               \
   F(ThreadStateContainerInit, tlsInit)                          \
   F(ThreadStateContainerReset, tlsReset)                        \
+  F(ThreadStateContainerIterate, tlsIterate)                    \
   F(ThreadStateContainerFree, tlsFree)                          \
                                                                 \
   /* Table scans */                                             \

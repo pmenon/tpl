@@ -446,6 +446,18 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(ThreadStateContainerIterate) : {
+    auto *thread_state_container =
+        frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
+    auto ctx = frame->LocalAt<void *>(READ_LOCAL_ID());
+    auto iterate_fn_id = READ_FUNC_ID();
+
+    auto iterate_fn = reinterpret_cast<sql::ThreadStateContainer::IterateFn>(
+        module_->GetRawFunctionImpl(iterate_fn_id));
+    OpThreadStateContainerIterate(thread_state_container, ctx, iterate_fn);
+    DISPATCH_NEXT();
+  }
+
   OP(ThreadStateContainerReset) : {
     auto *thread_state_container =
         frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
