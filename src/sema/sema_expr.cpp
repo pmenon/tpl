@@ -183,20 +183,111 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call,
 
   switch (builtin) {
     case ast::Builtin::AggHashTableInit: {
+      if (!CheckArgCount(call, 3)) {
+        return;
+      }
+      // Second argument is a memory pool pointer
+      const auto mem_pool_kind = ast::BuiltinType::MemoryPool;
+      if (!IsPointerToSpecificBuiltin(args[1]->type(), mem_pool_kind)) {
+        ReportIncorrectCallArg(call, 1,
+                               GetBuiltinType(mem_pool_kind)->PointerTo());
+        return;
+      }
+      // Third argument is the payload size, a 32-bit value
+      const auto uint_kind = ast::BuiltinType::Uint32;
+      if (!args[2]->type()->IsSpecificBuiltin(uint_kind)) {
+        ReportIncorrectCallArg(call, 2, GetBuiltinType(uint_kind));
+        return;
+      }
+      // Nil return
       call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::AggHashTableInsert: {
-      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Uint8)
-                         ->PointerTo());
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      // Second argument is the hash value
+      const auto hash_val_kind = ast::BuiltinType::Uint64;
+      if (!args[1]->type()->IsSpecificBuiltin(hash_val_kind)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(hash_val_kind));
+        return;
+      }
+      // Return a byte pointer
+      const auto byte_kind = ast::BuiltinType::Uint8;
+      call->set_type(ast::BuiltinType::Get(context(), byte_kind)->PointerTo());
       break;
     }
     case ast::Builtin::AggHashTableLookup: {
-      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Uint8)
-                         ->PointerTo());
+      if (!CheckArgCount(call, 4)) {
+        return;
+      }
+      // Second argument is the hash value
+      const auto hash_val_kind = ast::BuiltinType::Uint64;
+      if (!args[1]->type()->IsSpecificBuiltin(hash_val_kind)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(hash_val_kind));
+        return;
+      }
+      // Third argument is the key equality function
+      if (!args[2]->type()->IsFunctionType()) {
+        ReportIncorrectCallArg(call, 2, GetBuiltinType(hash_val_kind));
+        return;
+      }
+      // Fourth argument is the vector lookup
+      const auto byte_kind = ast::BuiltinType::Uint8;
+      call->set_type(ast::BuiltinType::Get(context(), byte_kind)->PointerTo());
       break;
     }
     case ast::Builtin::AggHashTableProcessBatch: {
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::AggHashTableMovePartitions: {
+      if (!CheckArgCount(call, 4)) {
+        return;
+      }
+      // Second argument is the thread state container pointer
+      const auto tls_kind = ast::BuiltinType::ThreadStateContainer;
+      if (!IsPointerToSpecificBuiltin(args[1]->type(), tls_kind)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(tls_kind)->PointerTo());
+        return;
+      }
+      // Third argument is the offset of the hash table in thread local state
+      const auto uint32_kind = ast::BuiltinType::Uint32;
+      if (!args[2]->type()->IsSpecificBuiltin(uint32_kind)) {
+        ReportIncorrectCallArg(call, 2, GetBuiltinType(uint32_kind));
+        return;
+      }
+      // Fourth argument is the merging function
+      if (!args[3]->type()->IsFunctionType()) {
+        ReportIncorrectCallArg(call, 3, GetBuiltinType(uint32_kind));
+        return;
+      }
+
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::AggHashTableParallelPartitionedScan: {
+      if (!CheckArgCount(call, 4)) {
+        return;
+      }
+      // Second argument is an opaque context pointer
+      if (!args[1]->type()->IsPointerType()) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(agg_ht_kind));
+        return;
+      }
+      // Third argument is the thread state container pointer
+      const auto tls_kind = ast::BuiltinType::ThreadStateContainer;
+      if (!IsPointerToSpecificBuiltin(args[2]->type(), tls_kind)) {
+        ReportIncorrectCallArg(call, 2, GetBuiltinType(tls_kind)->PointerTo());
+        return;
+      }
+      // Fourth argument is the scanning function
+      if (!args[3]->type()->IsFunctionType()) {
+        ReportIncorrectCallArg(call, 3, GetBuiltinType(tls_kind));
+        return;
+      }
+
       call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
       break;
     }
@@ -269,6 +360,44 @@ void Sema::CheckBuiltinAggHashTableIterCall(ast::CallExpr *call,
       break;
     }
     default: { UNREACHABLE("Impossible aggregation hash table iterator call"); }
+  }
+}
+
+void Sema::CheckBuiltinAggPartIterCall(ast::CallExpr *call,
+                                       ast::Builtin builtin) {
+  if (!CheckArgCount(call, 1)) {
+    return;
+  }
+
+  const auto &args = call->arguments();
+
+  const auto agg_part_iter_kind = ast::BuiltinType::AggOverflowPartIter;
+  if (!IsPointerToSpecificBuiltin(args[0]->type(), agg_part_iter_kind)) {
+    ReportIncorrectCallArg(call, 0,
+                           GetBuiltinType(agg_part_iter_kind)->PointerTo());
+    return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::AggPartIterHasNext: {
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Bool));
+      break;
+    }
+    case ast::Builtin::AggPartIterNext: {
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::AggPartIterGetRow: {
+      const auto byte_kind = ast::BuiltinType::Uint8;
+      call->set_type(ast::BuiltinType::Get(context(), byte_kind)->PointerTo());
+      break;
+    }
+    case ast::Builtin::AggPartIterGetHash: {
+      const auto hash_val_kind = ast::BuiltinType::Uint64;
+      call->set_type(ast::BuiltinType::Get(context(), hash_val_kind));
+      break;
+    }
+    default: { UNREACHABLE("Impossible aggregation partition iterator call"); }
   }
 }
 
@@ -366,17 +495,14 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
   }
 
   // Second argument is a 64-bit unsigned hash value
-  if (const auto *hash_val_type = call->arguments()[1]->type();
-      !hash_val_type->IsIntegerType() ||
-      hash_val_type->size() != sizeof(hash_t)) {
+  if (!args[1]->type()->IsSpecificBuiltin(ast::BuiltinType::Uint64)) {
     ReportIncorrectCallArg(call, 1, GetBuiltinType(ast::BuiltinType::Uint64));
     return;
   }
 
-  // This call returns nothing
-  ast::Type *ret_type =
-      ast::BuiltinType::Get(context(), ast::BuiltinType::Uint8)->PointerTo();
-  call->set_type(ret_type);
+  // This call returns a byte pointer
+  const auto byte_kind = ast::BuiltinType::Uint8;
+  call->set_type(ast::BuiltinType::Get(context(), byte_kind)->PointerTo());
 }
 
 void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call,
@@ -1087,6 +1213,8 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::AggHashTableInsert:
     case ast::Builtin::AggHashTableLookup:
     case ast::Builtin::AggHashTableProcessBatch:
+    case ast::Builtin::AggHashTableMovePartitions:
+    case ast::Builtin::AggHashTableParallelPartitionedScan:
     case ast::Builtin::AggHashTableFree: {
       CheckBuiltinAggHashTableCall(call, builtin);
       break;
@@ -1097,6 +1225,13 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::AggHashTableIterGetRow:
     case ast::Builtin::AggHashTableIterClose: {
       CheckBuiltinAggHashTableIterCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::AggPartIterHasNext:
+    case ast::Builtin::AggPartIterNext:
+    case ast::Builtin::AggPartIterGetRow:
+    case ast::Builtin::AggPartIterGetHash: {
+      CheckBuiltinAggPartIterCall(call, builtin);
       break;
     }
     case ast::Builtin::AggInit:

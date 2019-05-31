@@ -138,6 +138,14 @@ class BytecodeEmitter {
                                     FunctionId init_agg_fn,
                                     FunctionId merge_agg_fn);
 
+  void EmitAggHashTableMovePartitions(LocalVar agg_ht, LocalVar tls,
+                                      LocalVar aht_offset,
+                                      FunctionId merge_part_fn);
+
+  void EmitAggHashTableParallelPartitionedScan(LocalVar agg_ht,
+                                               LocalVar context, LocalVar tls,
+                                               FunctionId scan_part_fn);
+
   // Initialize a sorter instance
   void EmitSorterInit(Bytecode bytecode, LocalVar sorter, LocalVar region,
                       FunctionId cmp_fn, LocalVar tuple_size);

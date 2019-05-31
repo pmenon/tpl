@@ -810,6 +810,26 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,
                                               init_agg_fn, merge_agg_fn);
       break;
     }
+    case ast::Builtin::AggHashTableMovePartitions: {
+      LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar tls = VisitExpressionForRValue(call->arguments()[1]);
+      LocalVar aht_offset = VisitExpressionForRValue(call->arguments()[2]);
+      auto merge_part_fn = LookupFuncIdByName(
+          call->arguments()[3]->As<ast::IdentifierExpr>()->name().data());
+      emitter()->EmitAggHashTableMovePartitions(agg_ht, tls, aht_offset,
+                                                merge_part_fn);
+      break;
+    }
+    case ast::Builtin::AggHashTableParallelPartitionedScan: {
+      LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar ctx = VisitExpressionForRValue(call->arguments()[1]);
+      LocalVar tls = VisitExpressionForRValue(call->arguments()[2]);
+      auto scan_part_fn = LookupFuncIdByName(
+          call->arguments()[3]->As<ast::IdentifierExpr>()->name().data());
+      emitter()->EmitAggHashTableParallelPartitionedScan(agg_ht, ctx, tls,
+                                                         scan_part_fn);
+      break;
+    }
     case ast::Builtin::AggHashTableFree: {
       LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
       emitter()->Emit(Bytecode::AggregationHashTableFree, agg_ht);
@@ -859,6 +879,45 @@ void BytecodeGenerator::VisitBuiltinAggHashTableIterCall(ast::CallExpr *call,
     }
     default: {
       UNREACHABLE("Impossible aggregation hash table iteration bytecode");
+    }
+  }
+}
+
+void BytecodeGenerator::VisitBuiltinAggPartIterCall(ast::CallExpr *call,
+                                                    ast::Builtin builtin) {
+  switch (builtin) {
+    case ast::Builtin::AggPartIterHasNext: {
+      LocalVar has_more =
+          execution_result()->GetOrCreateDestination(call->type());
+      LocalVar iter = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::AggregationOverflowPartitionIteratorHasNext,
+                      has_more, iter);
+      execution_result()->set_destination(has_more.ValueOf());
+      break;
+    }
+    case ast::Builtin::AggPartIterNext: {
+      LocalVar iter = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::AggregationOverflowPartitionIteratorNext, iter);
+      break;
+    }
+    case ast::Builtin::AggPartIterGetRow: {
+      LocalVar row = execution_result()->GetOrCreateDestination(call->type());
+      LocalVar iter = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::AggregationOverflowPartitionIteratorGetRow, row,
+                      iter);
+      execution_result()->set_destination(row.ValueOf());
+      break;
+    }
+    case ast::Builtin::AggPartIterGetHash: {
+      LocalVar hash = execution_result()->GetOrCreateDestination(call->type());
+      LocalVar iter = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::AggregationOverflowPartitionIteratorGetHash,
+                      hash, iter);
+      execution_result()->set_destination(hash.ValueOf());
+      break;
+    }
+    default: {
+      UNREACHABLE("Impossible aggregation partition iterator bytecode");
     }
   }
 }
@@ -968,11 +1027,10 @@ void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call,
     }
     case ast::Builtin::JoinHashTableBuildParallel: {
       LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
-      LocalVar thread_local_container =
-          VisitExpressionForRValue(call->arguments()[1]);
+      LocalVar tls = VisitExpressionForRValue(call->arguments()[1]);
       LocalVar jht_offset = VisitExpressionForRValue(call->arguments()[2]);
       emitter()->Emit(Bytecode::JoinHashTableBuildParallel, join_hash_table,
-                      thread_local_container, jht_offset);
+                      tls, jht_offset);
       break;
     }
     case ast::Builtin::JoinHashTableFree: {
@@ -1012,21 +1070,18 @@ void BytecodeGenerator::VisitBuiltinSorterCall(ast::CallExpr *call,
     }
     case ast::Builtin::SorterSortParallel: {
       LocalVar sorter = VisitExpressionForRValue(call->arguments()[0]);
-      LocalVar thread_local_container =
-          VisitExpressionForRValue(call->arguments()[1]);
+      LocalVar tls = VisitExpressionForRValue(call->arguments()[1]);
       LocalVar sorter_offset = VisitExpressionForRValue(call->arguments()[2]);
-      emitter()->Emit(Bytecode::SorterSortParallel, sorter,
-                      thread_local_container, sorter_offset);
+      emitter()->Emit(Bytecode::SorterSortParallel, sorter, tls, sorter_offset);
       break;
     }
     case ast::Builtin::SorterSortTopKParallel: {
       LocalVar sorter = VisitExpressionForRValue(call->arguments()[0]);
-      LocalVar thread_local_container =
-          VisitExpressionForRValue(call->arguments()[1]);
+      LocalVar tls = VisitExpressionForRValue(call->arguments()[1]);
       LocalVar sorter_offset = VisitExpressionForRValue(call->arguments()[2]);
       LocalVar top_k = VisitExpressionForRValue(call->arguments()[3]);
-      emitter()->Emit(Bytecode::SorterSortTopKParallel, sorter,
-                      thread_local_container, sorter_offset, top_k);
+      emitter()->Emit(Bytecode::SorterSortTopKParallel, sorter, tls,
+                      sorter_offset, top_k);
       break;
     }
     case ast::Builtin::SorterFree: {
@@ -1252,8 +1307,17 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::AggHashTableInsert:
     case ast::Builtin::AggHashTableLookup:
     case ast::Builtin::AggHashTableProcessBatch:
+    case ast::Builtin::AggHashTableMovePartitions:
+    case ast::Builtin::AggHashTableParallelPartitionedScan:
     case ast::Builtin::AggHashTableFree: {
       VisitBuiltinAggHashTableCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::AggPartIterHasNext:
+    case ast::Builtin::AggPartIterNext:
+    case ast::Builtin::AggPartIterGetRow:
+    case ast::Builtin::AggPartIterGetHash: {
+      VisitBuiltinAggPartIterCall(call, builtin);
       break;
     }
     case ast::Builtin::AggHashTableIterInit:
