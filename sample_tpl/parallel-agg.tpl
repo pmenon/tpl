@@ -16,6 +16,10 @@ fun keyCheck(agg: *Agg, iters: [*]*VectorProjectionIterator) -> bool {
   return @sqlToBool(key == agg.key)
 }
 
+fun keyCheckPartial(agg1: *Agg, agg2: *Agg) -> bool {
+  return @sqlToBool(agg1.key == agg2.key)
+}
+
 fun hashFn(iters: [*]*VectorProjectionIterator) -> uint64 {
   return @hash(@vpiGetInt(iters[0], 1))
 }
@@ -25,9 +29,18 @@ fun constructAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
   @aggInit(&agg.cs)
 }
 
+fun constructAggFromPartial(agg: *Agg, partial: *Agg) -> nil {
+  agg.key = partial.key
+  @aggInit(&agg.cs)
+}
+
 fun updateAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
   var input = @vpiGetInt(iters[0], 1)
   @aggAdvance(&agg.cs, &input)
+}
+
+fun updateAggFromPartial(agg: *Agg, partial: *Agg) -> nil {
+  @aggMerge(&agg.cs, &partial.cs)
 }
 
 fun initState(execCtx: *ExecutionContext, state: *State) -> nil {
@@ -61,8 +74,15 @@ fun p1_worker(queryState: *State, state: *ThreadState_1, tvi: *TableVectorIterat
 fun p1_mergePartitions(qs: *State, table: *AggregationHashTable, iter: *AggOverflowPartIter) -> nil {
   var x = 0
   for (; @aggPartIterHasNext(iter); @aggPartIterNext(iter)) {
-    var agg_hash = @aggPartIterGetHash(iter)
-    var agg = @ptrCast(*Agg, @aggPartIterGetRow(iter))
+    var partial_hash = @aggPartIterGetHash(iter)
+    var partial = @ptrCast(*Agg, @aggPartIterGetRow(iter))
+    var agg = @ptrCast(*Agg, @aggHTLookup(table, partial_hash, keyCheckPartial, partial))
+    if (agg == nil) {
+      agg = @ptrCast(*Agg, @aggHTInsert(table, partial_hash))
+      constructAggFromPartial(agg, partial)
+    } else {
+      updateAggFromPartial(agg, partial)
+    }
   }
 }
 

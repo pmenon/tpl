@@ -15,6 +15,20 @@ bool IsPointerToSpecificBuiltin(ast::Type *type, ast::BuiltinType::Kind kind) {
   return false;
 }
 
+bool IsPointerToSQLValue(ast::Type *type) {
+  if (auto *pointee_type = type->GetPointeeType()) {
+    return pointee_type->IsSqlValueType();
+  }
+  return false;
+}
+
+bool IsPointerToAggregatorValue(ast::Type *type) {
+  if (auto *pointee_type = type->GetPointeeType()) {
+    return pointee_type->IsSqlAggregatorType();
+  }
+  return false;
+}
+
 }  // namespace
 
 void Sema::CheckBuiltinMapCall(UNUSED ast::CallExpr *call) {}
@@ -325,16 +339,16 @@ void Sema::CheckBuiltinAggPartIterCall(ast::CallExpr *call,
 
 void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call,
                                       ast::Builtin builtin) {
+  const auto &args = call->arguments();
   switch (builtin) {
-    case ast::Builtin::AggInit: {
-      // All arguments to @aggInit() must be SQL aggregators
+    case ast::Builtin::AggInit:
+    case ast::Builtin::AggReset: {
+      // All arguments to @aggInit() or @aggReset() must be SQL aggregators
       for (u32 idx = 0; idx < call->num_args(); idx++) {
-        const auto &arg = call->arguments()[idx];
-        if (!arg->type()->IsPointerType() ||
-            !arg->type()->GetPointeeType()->IsSqlAggregatorType()) {
+        if (!IsPointerToAggregatorValue(args[idx]->type())) {
           error_reporter()->Report(call->position(),
                                    ErrorMessages::kNotASQLAggregate,
-                                   call->arguments()[idx]->type());
+                                   args[idx]->type());
           return;
         }
       }
@@ -348,22 +362,36 @@ void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call,
       }
       // First argument to @aggAdvance() must be a SQL aggregator, second must
       // be a SQL value
-      const auto &args = call->arguments();
-      if (!args[0]->type()->IsPointerType() ||
-          !args[0]->type()->GetPointeeType()->IsSqlAggregatorType()) {
+      if (!IsPointerToAggregatorValue(args[0]->type())) {
         error_reporter()->Report(call->position(),
                                  ErrorMessages::kNotASQLAggregate,
                                  args[0]->type());
         return;
       }
-      if (!args[1]->type()->IsPointerType() ||
-          !args[1]->type()->GetPointeeType()->IsSqlValueType()) {
+      if (!IsPointerToSQLValue(args[1]->type())) {
         error_reporter()->Report(call->position(),
                                  ErrorMessages::kNotASQLAggregate,
                                  args[1]->type());
         return;
       }
       // Advance returns nil
+      call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::AggMerge: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      // Both arguments must be SQL aggregators
+      bool arg0_is_agg = IsPointerToAggregatorValue(args[0]->type());
+      bool arg1_is_agg = IsPointerToAggregatorValue(args[1]->type());
+      if (!arg0_is_agg || !arg1_is_agg) {
+        error_reporter()->Report(
+            call->position(), ErrorMessages::kNotASQLAggregate,
+            (!arg0_is_agg ? args[0]->type() : args[1]->type()));
+        return;
+      }
+      // Merge returns nil
       call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
       break;
     }
@@ -1156,7 +1184,9 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       break;
     }
     case ast::Builtin::AggInit:
-    case ast::Builtin::AggAdvance: {
+    case ast::Builtin::AggAdvance:
+    case ast::Builtin::AggMerge:
+    case ast::Builtin::AggReset: {
       CheckBuiltinAggregatorCall(call, builtin);
       break;
     }

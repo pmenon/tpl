@@ -926,23 +926,31 @@ namespace {
 
 // clang-format off
 #define AGG_CODES(F) \
-  F(CountAggregate, CountAggregateInit, CountAggregateAdvance, CountAggregateGetResult)                                 \
-  F(CountStarAggregate, CountStarAggregateInit, CountStarAggregateAdvance, CountStarAggregateGetResult)                 \
-  F(IntegerAvgAggregate, IntegerAvgAggregateInit, IntegerAvgAggregateAdvance, IntegerAvgAggregateGetResult)             \
-  F(IntegerMaxAggregate, IntegerMaxAggregateInit, IntegerMaxAggregateAdvance, IntegerMaxAggregateGetResult)             \
-  F(IntegerMinAggregate, IntegerMinAggregateInit, IntegerMinAggregateAdvance, IntegerMinAggregateGetResult)             \
-  F(IntegerSumAggregate, IntegerSumAggregateInit, IntegerSumAggregateAdvance, IntegerSumAggregateGetResult)
+  F(CountAggregate,      CountAggregateInit,      CountAggregateAdvance,      CountAggregateGetResult,      CountAggregateMerge,      CountAggregateReset)                \
+  F(CountStarAggregate,  CountStarAggregateInit,  CountStarAggregateAdvance,  CountStarAggregateGetResult,  CountStarAggregateMerge,  CountStarAggregateReset)            \
+  F(IntegerAvgAggregate, IntegerAvgAggregateInit, IntegerAvgAggregateAdvance, IntegerAvgAggregateGetResult, IntegerAvgAggregateMerge, IntegerAvgAggregateReset)           \
+  F(IntegerMaxAggregate, IntegerMaxAggregateInit, IntegerMaxAggregateAdvance, IntegerMaxAggregateGetResult, IntegerMaxAggregateMerge, IntegerMaxAggregateReset)           \
+  F(IntegerMinAggregate, IntegerMinAggregateInit, IntegerMinAggregateAdvance, IntegerMinAggregateGetResult, IntegerMinAggregateMerge, IntegerMinAggregateReset)           \
+  F(IntegerSumAggregate, IntegerSumAggregateInit, IntegerSumAggregateAdvance, IntegerSumAggregateGetResult, IntegerSumAggregateMerge, IntegerSumAggregateReset)
 // clang-format on
 
-enum class AggOpKind : u8 { Init, Advance, GetResult };
+enum class AggOpKind : u8 {
+  Init = 0,
+  Advance = 1,
+  GetResult = 2,
+  Merge = 3,
+  Reset = 4
+};
 
+// Given an aggregate kind and the operation to perform on it, determine the
+// appropriate bytecode
 template <AggOpKind OpKind>
-Bytecode OpForAgg(ast::BuiltinType::Kind agg_kind) {
+Bytecode OpForAgg(const ast::BuiltinType::Kind agg_kind) {
   if constexpr (OpKind == AggOpKind::Init) {
     switch (agg_kind) {
       default: { UNREACHABLE("Impossible aggregate type"); }
-#define ENTRY(Type, Init, Advance, GetResult) \
-  case ast::BuiltinType::Type:                \
+#define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
+  case ast::BuiltinType::Type:                              \
     return Bytecode::Init;
         AGG_CODES(ENTRY)
 #undef ENTRY
@@ -952,8 +960,8 @@ Bytecode OpForAgg(ast::BuiltinType::Kind agg_kind) {
   if constexpr (OpKind == AggOpKind::Advance) {
     switch (agg_kind) {
       default: { UNREACHABLE("Impossible aggregate type"); }
-#define ENTRY(Type, Init, Advance, GetResult) \
-  case ast::BuiltinType::Type:                \
+#define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
+  case ast::BuiltinType::Type:                              \
     return Bytecode::Advance;
         AGG_CODES(ENTRY)
 #undef ENTRY
@@ -963,9 +971,31 @@ Bytecode OpForAgg(ast::BuiltinType::Kind agg_kind) {
   if constexpr (OpKind == AggOpKind::GetResult) {
     switch (agg_kind) {
       default: { UNREACHABLE("Impossible aggregate type"); }
-#define ENTRY(Type, Init, Advance, GetResult) \
-  case ast::BuiltinType::Type:                \
+#define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
+  case ast::BuiltinType::Type:                              \
     return Bytecode::GetResult;
+        AGG_CODES(ENTRY)
+#undef ENTRY
+    }
+  }
+
+  if constexpr (OpKind == AggOpKind::Merge) {
+    switch (agg_kind) {
+      default: { UNREACHABLE("Impossible aggregate type"); }
+#define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
+  case ast::BuiltinType::Type:                              \
+    return Bytecode::Merge;
+        AGG_CODES(ENTRY)
+#undef ENTRY
+    }
+  }
+
+  if constexpr (OpKind == AggOpKind::Reset) {
+    switch (agg_kind) {
+      default: { UNREACHABLE("Impossible aggregate type"); }
+#define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
+  case ast::BuiltinType::Type:                              \
+    return Bytecode::Reset;
         AGG_CODES(ENTRY)
 #undef ENTRY
     }
@@ -977,12 +1007,18 @@ Bytecode OpForAgg(ast::BuiltinType::Kind agg_kind) {
 void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call,
                                                    ast::Builtin builtin) {
   switch (builtin) {
-    case ast::Builtin::AggInit: {
+    case ast::Builtin::AggInit:
+    case ast::Builtin::AggReset: {
       for (const auto &arg : call->arguments()) {
         const auto agg_kind =
             arg->type()->GetPointeeType()->As<ast::BuiltinType>()->kind();
         LocalVar input = VisitExpressionForRValue(arg);
-        Bytecode bytecode = OpForAgg<AggOpKind::Init>(agg_kind);
+        Bytecode bytecode;
+        if (builtin == ast::Builtin::AggInit) {
+          bytecode = OpForAgg<AggOpKind::Init>(agg_kind);
+        } else {
+          bytecode = OpForAgg<AggOpKind::Reset>(agg_kind);
+        }
         emitter()->Emit(bytecode, input);
       }
       break;
@@ -995,6 +1031,16 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call,
       LocalVar input = VisitExpressionForRValue(args[1]);
       Bytecode bytecode = OpForAgg<AggOpKind::Advance>(agg_kind);
       emitter()->Emit(bytecode, agg, input);
+      break;
+    }
+    case ast::Builtin::AggMerge: {
+      const auto &args = call->arguments();
+      const auto agg_kind =
+          args[0]->type()->GetPointeeType()->As<ast::BuiltinType>()->kind();
+      LocalVar agg_1 = VisitExpressionForRValue(args[0]);
+      LocalVar agg_2 = VisitExpressionForRValue(args[1]);
+      Bytecode bytecode = OpForAgg<AggOpKind::Merge>(agg_kind);
+      emitter()->Emit(bytecode, agg_1, agg_2);
       break;
     }
     default: { UNREACHABLE("Impossible aggregator call"); }
@@ -1329,7 +1375,9 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       break;
     }
     case ast::Builtin::AggInit:
-    case ast::Builtin::AggAdvance: {
+    case ast::Builtin::AggAdvance:
+    case ast::Builtin::AggMerge:
+    case ast::Builtin::AggReset: {
       VisitBuiltinAggregatorCall(call, builtin);
       break;
     }
