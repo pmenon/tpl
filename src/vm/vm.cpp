@@ -853,7 +853,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto scan_partition_fn =
         reinterpret_cast<sql::AggregationHashTable::ScanPartitionFn>(
             module_->GetRawFunctionImpl(scan_partition_fn_id));
-    OpAggregationHashTableExecuteParallelPartitionedScan(
+    OpAggregationHashTableParallelPartitionedScan(
         agg_hash_table, query_state, thread_state_container, scan_partition_fn);
     DISPATCH_NEXT();
   }

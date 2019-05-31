@@ -593,7 +593,7 @@ VM_OP_HOT void OpAggregationHashTableTransferPartitions(
       thread_state_container, agg_ht_offset, merge_partition_fn);
 }
 
-VM_OP_HOT void OpAggregationHashTableExecuteParallelPartitionedScan(
+VM_OP_HOT void OpAggregationHashTableParallelPartitionedScan(
     tpl::sql::AggregationHashTable *const agg_hash_table,
     void *const query_state,
     tpl::sql::ThreadStateContainer *const thread_state_container,
