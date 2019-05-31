@@ -1,3 +1,6 @@
+struct State {
+}
+
 struct ThreadState_1 {
   filter: FilterManager
 }
@@ -34,7 +37,7 @@ fun _1_pipelineWorker_TearDownThreadState(execCtx: *ExecutionContext, state: *Th
   @filterManagerFree(&state.filter)
 }
 
-fun _1_pipelineWorker(ctx: *ExecutionContext, state: *ThreadState_1, tvi: *TableVectorIterator) -> nil {
+fun _1_pipelineWorker(query_state: *State, state: *ThreadState_1, tvi: *TableVectorIterator) -> nil {
   var filter = &state.filter
   for (@tableIterAdvance(tvi)) {
     var vpi = @tableIterGetVPI(tvi)
@@ -44,6 +47,8 @@ fun _1_pipelineWorker(ctx: *ExecutionContext, state: *ThreadState_1, tvi: *Table
 }
 
 fun main(execCtx: *ExecutionContext) -> int {
+  var state: State
+
   // Pipeline 1 - parallel scan table
 
   // First the thread state container
@@ -52,7 +57,7 @@ fun main(execCtx: *ExecutionContext) -> int {
   @tlsReset(&tls, @sizeOf(ThreadState_1), _1_pipelineWorker_InitThreadState, _1_pipelineWorker_TearDownThreadState, execCtx)
 
   // Now scan
-  @iterateTableParallel("test_1", execCtx, &tls, _1_pipelineWorker)
+  @iterateTableParallel("test_1", &state, &tls, _1_pipelineWorker)
 
   // Pipeline 2
 

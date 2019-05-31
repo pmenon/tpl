@@ -46,7 +46,7 @@ fun p1_worker_tearDownThreadState(execCtx: *ExecutionContext, state: *ThreadStat
   @aggHTFree(&state.table)
 }
 
-fun p1_worker(ctx: *ExecutionContext, state: *ThreadState_1, tvi: *TableVectorIterator) -> nil {
+fun p1_worker(queryState: *State, state: *ThreadState_1, tvi: *TableVectorIterator) -> nil {
   var iters: [1]*VectorProjectionIterator
   var ht: *AggregationHashTable = &state.table
 
@@ -77,22 +77,26 @@ fun main(execCtx: *ExecutionContext) -> int {
 
   initState(execCtx, &state)
 
-  // ---- Pipeline 1 ---- // 
+  // ---- Pipeline 1 Begin ---- // 
   
   var tls: ThreadStateContainer
   @tlsInit(&tls, @execCtxGetMem(execCtx))
   @tlsReset(&tls, @sizeOf(ThreadState_1), p1_worker_initThreadState, p1_worker_tearDownThreadState, execCtx)
 
   // Parallel Scan
-  @iterateTableParallel("test_1", execCtx, &tls, p1_worker)
+  @iterateTableParallel("test_1", &state, &tls, p1_worker)
+
+  // ---- Pipeline 1 End ---- // 
 
   // Move thread-local states
   var aht_off: uint32 = 0
   @aggHTMoveParts(&state.table, &tls, aht_off, p1_mergePartitions)
 
-  // ---- Pipeline 2 ---- //
+  // ---- Pipeline 2 Begin ---- //
 
   @aggHTParallelPartScan(&state.table, &state, &tls, p2_worker)
+
+  // ---- Pipeline 2 End ---- //
 
   // ---- Clean Up ---- //
 
