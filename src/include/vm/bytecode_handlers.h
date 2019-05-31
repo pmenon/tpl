@@ -242,11 +242,11 @@ VM_OP_HOT void OpTableVectorIteratorGetVPI(
 }
 
 VM_OP_HOT void OpParallelScanTable(
-    const u16 table_id, tpl::sql::ExecutionContext *const ctx,
-    tpl::sql::ThreadStateContainer *const thread_state_container,
+    const u16 table_id, void *const query_state,
+    tpl::sql::ThreadStateContainer *const thread_states,
     const tpl::sql::TableVectorIterator::ScanFn scanner) {
-  tpl::sql::TableVectorIterator::ParallelScan(table_id, ctx,
-                                              thread_state_container, scanner);
+  tpl::sql::TableVectorIterator::ParallelScan(table_id, query_state,
+                                              thread_states, scanner);
 }
 
 VM_OP_HOT void OpVPIIsFiltered(bool *is_filtered,

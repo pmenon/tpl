@@ -139,11 +139,11 @@ namespace {
 
 class ScanTask {
  public:
-  ScanTask(u16 table_id, ExecutionContext *const exec_ctx,
+  ScanTask(u16 table_id, void *const query_state,
            ThreadStateContainer *const thread_state_container,
            TableVectorIterator::ScanFn scanner)
       : table_id_(table_id),
-        exec_ctx_(exec_ctx),
+        query_state_(query_state),
         thread_state_container_(thread_state_container),
         scanner_(scanner) {}
 
@@ -161,12 +161,12 @@ class ScanTask {
         thread_state_container_->AccessThreadStateOfCurrentThread();
 
     // Call scanning function
-    scanner_(exec_ctx_, thread_state, &iter);
+    scanner_(query_state_, thread_state, &iter);
   }
 
  private:
   u16 table_id_;
-  ExecutionContext *const exec_ctx_;
+  void *const query_state_;
   ThreadStateContainer *const thread_state_container_;
   TableVectorIterator::ScanFn scanner_;
 };
@@ -174,8 +174,8 @@ class ScanTask {
 }  // namespace
 
 bool TableVectorIterator::ParallelScan(
-    const u16 table_id, ExecutionContext *const exec_ctx,
-    ThreadStateContainer *const thread_state_container, const ScanFn scanner,
+    const u16 table_id, void *const query_state,
+    ThreadStateContainer *const thread_states, const ScanFn scan_fn,
     const u32 min_grain_size) {
   // Lookup table
   const Table *table = Catalog::Instance()->LookupTableById(TableId(table_id));
@@ -190,8 +190,8 @@ bool TableVectorIterator::ParallelScan(
   // Execute parallel scan
   tbb::task_scheduler_init scan_scheduler;
   tbb::blocked_range<u32> block_range(0, table->num_blocks(), min_grain_size);
-  tbb::parallel_for(block_range, ScanTask(table_id, exec_ctx,
-                                          thread_state_container, scanner));
+  tbb::parallel_for(block_range,
+                    ScanTask(table_id, query_state, thread_states, scan_fn));
 
   timer.Stop();
   double tps = table->num_tuples() / timer.elapsed();

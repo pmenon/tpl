@@ -634,10 +634,10 @@ void Sema::CheckBuiltinTableIterParCall(ast::CallExpr *call) {
     return;
   }
 
-  // Second argument is the execution context
-  const auto exec_ctx_kind = ast::BuiltinType::ExecutionContext;
-  if (!IsPointerToSpecificBuiltin(call_args[1]->type(), exec_ctx_kind)) {
-    ReportIncorrectCallArg(call, 1, GetBuiltinType(exec_ctx_kind)->PointerTo());
+  // Second argument is an opaque query state. For now, check it's a pointer.
+  const auto void_kind = ast::BuiltinType::Nil;
+  if (!call_args[1]->type()->IsPointerType()) {
+    ReportIncorrectCallArg(call, 1, GetBuiltinType(void_kind)->PointerTo());
     return;
   }
 
@@ -659,8 +659,7 @@ void Sema::CheckBuiltinTableIterParCall(ast::CallExpr *call) {
   // Check type
   const auto tvi_kind = ast::BuiltinType::TableVectorIterator;
   const auto &params = scan_fn_type->params();
-  if (params.size() != 3 ||
-      !IsPointerToSpecificBuiltin(params[0].type, exec_ctx_kind) ||
+  if (params.size() != 3 || !params[0].type->IsPointerType() ||
       !params[1].type->IsPointerType() ||
       !IsPointerToSpecificBuiltin(params[2].type, tvi_kind)) {
     error_reporter()->Report(call->position(),
