@@ -14,6 +14,7 @@
 #include "util/bit_util.h"
 #include "util/cpu_info.h"
 #include "util/math_util.h"
+#include "util/timer.h"
 #include "util/vector_util.h"
 
 namespace tpl::sql {
@@ -58,9 +59,10 @@ AggregationHashTable::~AggregationHashTable() {
     memory_->DeallocateArray(partition_tails_, kDefaultNumPartitions);
   }
   if (partition_estimates_ != nullptr) {
-    // Partition estimates acquires HLL from libcount, which new's the objects.
-    // Hence, we need to manually call delete. We should use unique_ptr, but
-    // then the array definition get's ugly.
+    // The estimates array uses HLL instances acquired from libcount. Libcount
+    // new's HLL objects, hence, we need to manually call delete on all of them.
+    // We could use unique_ptr, but then the definition and usage gets ugly, and
+    // we would still need to iterate over the array to reset each unique_ptr.
     for (u32 i = 0; i < kDefaultNumPartitions; i++) {
       delete partition_estimates_[i];
     }
@@ -421,16 +423,24 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(
   }
 
   // Create it
-  const u64 estimated_size = partition_estimates_[partition_idx]->Estimate();
-  LOG_DEBUG("Partition {} estimated size: {}", partition_idx, estimated_size);
+  auto estimated_size = partition_estimates_[partition_idx]->Estimate();
   auto *agg_table = new (memory_->AllocateAligned(
       sizeof(AggregationHashTable), alignof(AggregationHashTable), false))
       AggregationHashTable(memory_, payload_size_, estimated_size);
+
+  util::Timer<std::milli> timer;
+  timer.Start();
 
   // Build it
   AggregationOverflowPartitionIterator iter(
       partition_heads_ + partition_idx, partition_heads_ + partition_idx + 1);
   merge_partition_fn_(query_state, agg_table, &iter);
+
+  timer.Stop();
+  LOG_DEBUG(
+      "Overflow Partition {}: estimated size = {}, actual size = {}, "
+      "build time = {:2f} ms",
+      partition_idx, estimated_size, agg_table->NumElements(), timer.elapsed());
 
   // Set it
   partition_tables_[partition_idx] = agg_table;
@@ -442,11 +452,22 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(
 void AggregationHashTable::ExecuteParallelPartitionedScan(
     void *query_state, ThreadStateContainer *thread_states,
     AggregationHashTable::ScanPartitionFn scan_fn) {
+  //
+  // At this point, this aggregation table has a list of overflow partitions
+  // that must be merged into a single aggregation hash table. For simplicity,
+  // we create a new aggregation hash table per overflow partition, and merge
+  // the contents of that partition into the new hash table. We use the HLL
+  // estimates to size the hash table before construction so as to minimize the
+  // growth factor. Each aggregation hash table partition will be built and
+  // scanned in parallel.
+  //
+
   TPL_ASSERT(partition_heads_ != nullptr && merge_partition_fn_ != nullptr,
              "No overflow partitions allocated, or no merging function "
              "allocated. Did you call TransferMemoryAndPartitions() before "
              "issuing the partitioned scan?");
 
+  // Determine the non-empty overflow partitions
   alignas(CACHELINE_SIZE) u32 nonempty_parts[kDefaultNumPartitions];
   u32 num_nonempty_parts = util::VectorUtil::FilterNe(
       reinterpret_cast<const intptr_t *>(partition_heads_),
