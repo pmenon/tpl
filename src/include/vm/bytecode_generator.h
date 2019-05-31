@@ -81,6 +81,10 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   void VisitLogicalAndOrExpr(ast::BinaryOpExpr *node);
   void VisitArithmeticExpr(ast::BinaryOpExpr *node);
 
+  // Dispatched from VisitArithmeticExpr for or SQL vs. primitive arithmetic
+  void VisitPrimitiveArithmeticExpr(ast::BinaryOpExpr *node);
+  void VisitSqlArithmeticExpr(ast::BinaryOpExpr *node);
+
   // Dispatched from VisitUnaryOp()
   void VisitAddressOfExpr(ast::UnaryOpExpr *op);
   void VisitDerefExpr(ast::UnaryOpExpr *op);
@@ -129,9 +133,6 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
  private:
   // Lookup a function's ID by its name
   FunctionId LookupFuncIdByName(const std::string &name) const;
-
-  // Lookup a function by its name
-  const FunctionInfo *LookupFuncInfoByName(const std::string &name) const;
 
   // -------------------------------------------------------
   // Accessors

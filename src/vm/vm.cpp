@@ -763,6 +763,21 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   GEN_CMP(NotEqual);
 #undef GEN_CMP
 
+#define GEN_MATH_OPS(op)                                            \
+  OP(op##Integer) : {                                               \
+    auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID()); \
+    auto *left = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());   \
+    auto *right = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());  \
+    Op##op##Integer(result, left, right);                           \
+    DISPATCH_NEXT();                                                \
+  }
+
+  GEN_MATH_OPS(Add)
+  GEN_MATH_OPS(Sub)
+  GEN_MATH_OPS(Mul)
+  GEN_MATH_OPS(Div)
+  GEN_MATH_OPS(Rem)
+
   // -------------------------------------------------------
   // Aggregations
   // -------------------------------------------------------

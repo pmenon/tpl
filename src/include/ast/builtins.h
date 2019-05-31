@@ -80,6 +80,7 @@ namespace tpl::ast {
   F(AggAdvance, aggAdvance)                                     \
   F(AggMerge, aggMerge)                                         \
   F(AggReset, aggReset)                                         \
+  F(AggResult, aggResult)                                       \
                                                                 \
   /* Joins */                                                   \
   F(JoinHashTableInit, joinHTInit)                              \

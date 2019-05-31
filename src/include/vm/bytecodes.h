@@ -149,6 +149,11 @@ namespace tpl::vm {
   F(GreaterThanEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                               \
   F(EqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
   F(NotEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
+  F(AddInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
+  F(SubInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
+  F(MulInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
+  F(DivInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
+  F(RemInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
                                                                                                                        \
   /* Hashing */                                                                                                        \
   F(HashInt, OperandType::Local, OperandType::Local)                                                                   \

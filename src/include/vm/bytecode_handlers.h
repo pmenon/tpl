@@ -552,6 +552,39 @@ VM_OP_HOT void OpNotEqualInteger(tpl::sql::BoolVal *const result,
   result->is_null = (left->is_null || right->is_null);
 }
 
+VM_OP_HOT void OpAddInteger(tpl::sql::Integer *const result,
+                            const tpl::sql::Integer *const left,
+                            const tpl::sql::Integer *const right) {
+  UNUSED bool overflow;
+  *result = left->Add(*right, &overflow);
+}
+
+VM_OP_HOT void OpSubInteger(tpl::sql::Integer *const result,
+                            const tpl::sql::Integer *const left,
+                            const tpl::sql::Integer *const right) {
+  UNUSED bool overflow;
+  *result = left->Sub(*right, &overflow);
+}
+
+VM_OP_HOT void OpMulInteger(tpl::sql::Integer *const result,
+                            const tpl::sql::Integer *const left,
+                            const tpl::sql::Integer *const right) {
+  UNUSED bool overflow;
+  *result = left->Multiply(*right, &overflow);
+}
+
+VM_OP_HOT void OpDivInteger(tpl::sql::Integer *const result,
+                            const tpl::sql::Integer *const left,
+                            const tpl::sql::Integer *const right) {
+  *result = left->Divide(*right);
+}
+
+VM_OP_HOT void OpRemInteger(tpl::sql::Integer *const result,
+                            const tpl::sql::Integer *const left,
+                            const tpl::sql::Integer *const right) {
+  *result = left->Modulo(*right);
+}
+
 // ---------------------------------------------------------
 // SQL Aggregations
 // ---------------------------------------------------------

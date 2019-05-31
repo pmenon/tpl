@@ -945,60 +945,65 @@ enum class AggOpKind : u8 {
 // Given an aggregate kind and the operation to perform on it, determine the
 // appropriate bytecode
 template <AggOpKind OpKind>
-Bytecode OpForAgg(const ast::BuiltinType::Kind agg_kind) {
-  if constexpr (OpKind == AggOpKind::Init) {
-    switch (agg_kind) {
-      default: { UNREACHABLE("Impossible aggregate type"); }
+Bytecode OpForAgg(ast::BuiltinType::Kind agg_kind);
+
+template <>
+Bytecode OpForAgg<AggOpKind::Init>(const ast::BuiltinType::Kind agg_kind) {
+  switch (agg_kind) {
+    default: { UNREACHABLE("Impossible aggregate type"); }
 #define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
   case ast::BuiltinType::Type:                              \
     return Bytecode::Init;
-        AGG_CODES(ENTRY)
+      AGG_CODES(ENTRY)
 #undef ENTRY
-    }
   }
+}
 
-  if constexpr (OpKind == AggOpKind::Advance) {
-    switch (agg_kind) {
-      default: { UNREACHABLE("Impossible aggregate type"); }
+template <>
+Bytecode OpForAgg<AggOpKind::Advance>(const ast::BuiltinType::Kind agg_kind) {
+  switch (agg_kind) {
+    default: { UNREACHABLE("Impossible aggregate type"); }
 #define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
   case ast::BuiltinType::Type:                              \
     return Bytecode::Advance;
-        AGG_CODES(ENTRY)
+      AGG_CODES(ENTRY)
 #undef ENTRY
-    }
   }
+}
 
-  if constexpr (OpKind == AggOpKind::GetResult) {
-    switch (agg_kind) {
-      default: { UNREACHABLE("Impossible aggregate type"); }
+template <>
+Bytecode OpForAgg<AggOpKind::GetResult>(const ast::BuiltinType::Kind agg_kind) {
+  switch (agg_kind) {
+    default: { UNREACHABLE("Impossible aggregate type"); }
 #define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
   case ast::BuiltinType::Type:                              \
     return Bytecode::GetResult;
-        AGG_CODES(ENTRY)
+      AGG_CODES(ENTRY)
 #undef ENTRY
-    }
   }
+}
 
-  if constexpr (OpKind == AggOpKind::Merge) {
-    switch (agg_kind) {
-      default: { UNREACHABLE("Impossible aggregate type"); }
+template <>
+Bytecode OpForAgg<AggOpKind::Merge>(const ast::BuiltinType::Kind agg_kind) {
+  switch (agg_kind) {
+    default: { UNREACHABLE("Impossible aggregate type"); }
 #define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
   case ast::BuiltinType::Type:                              \
     return Bytecode::Merge;
-        AGG_CODES(ENTRY)
+      AGG_CODES(ENTRY)
 #undef ENTRY
-    }
   }
+}
 
-  if constexpr (OpKind == AggOpKind::Reset) {
-    switch (agg_kind) {
-      default: { UNREACHABLE("Impossible aggregate type"); }
+template <>
+Bytecode OpForAgg<AggOpKind::Reset>(const ast::BuiltinType::Kind agg_kind) {
+  switch (agg_kind) {
+    default: { UNREACHABLE("Impossible aggregate type"); }
 #define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
   case ast::BuiltinType::Type:                              \
     return Bytecode::Reset;
-        AGG_CODES(ENTRY)
+      AGG_CODES(ENTRY)
 #undef ENTRY
-    }
   }
 }
 
@@ -1041,6 +1046,17 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call,
       LocalVar agg_2 = VisitExpressionForRValue(args[1]);
       Bytecode bytecode = OpForAgg<AggOpKind::Merge>(agg_kind);
       emitter()->Emit(bytecode, agg_1, agg_2);
+      break;
+    }
+    case ast::Builtin::AggResult: {
+      const auto &args = call->arguments();
+      const auto agg_kind =
+          args[0]->type()->GetPointeeType()->As<ast::BuiltinType>()->kind();
+      LocalVar result =
+          execution_result()->GetOrCreateDestination(call->type());
+      LocalVar agg = VisitExpressionForRValue(args[0]);
+      Bytecode bytecode = OpForAgg<AggOpKind::GetResult>(agg_kind);
+      emitter()->Emit(bytecode, result, agg);
       break;
     }
     default: { UNREACHABLE("Impossible aggregator call"); }
@@ -1377,7 +1393,8 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::AggInit:
     case ast::Builtin::AggAdvance:
     case ast::Builtin::AggMerge:
-    case ast::Builtin::AggReset: {
+    case ast::Builtin::AggReset:
+    case ast::Builtin::AggResult: {
       VisitBuiltinAggregatorCall(call, builtin);
       break;
     }
@@ -1557,7 +1574,7 @@ void BytecodeGenerator::VisitLogicalAndOrExpr(ast::BinaryOpExpr *node) {
   execution_result()->set_destination(dest.ValueOf());
 }
 
-void BytecodeGenerator::VisitArithmeticExpr(ast::BinaryOpExpr *node) {
+void BytecodeGenerator::VisitPrimitiveArithmeticExpr(ast::BinaryOpExpr *node) {
   TPL_ASSERT(execution_result()->IsRValue(),
              "Arithmetic expressions must be R-Values!");
 
@@ -1615,6 +1632,56 @@ void BytecodeGenerator::VisitArithmeticExpr(ast::BinaryOpExpr *node) {
 
   // Mark where the result is
   execution_result()->set_destination(dest.ValueOf());
+}
+
+void BytecodeGenerator::VisitSqlArithmeticExpr(ast::BinaryOpExpr *node) {
+  TPL_ASSERT(execution_result()->IsRValue(),
+             "SQL comparison expressions must be R-Values!");
+
+  LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
+  LocalVar left = VisitExpressionForLValue(node->left());
+  LocalVar right = VisitExpressionForLValue(node->right());
+
+  Bytecode bytecode;
+  switch (node->op()) {
+    case parsing::Token::Type::PLUS: {
+      bytecode = Bytecode::AddInteger;
+      break;
+    }
+    case parsing::Token::Type::MINUS: {
+      bytecode = Bytecode::SubInteger;
+      break;
+    }
+    case parsing::Token::Type::STAR: {
+      bytecode = Bytecode::MulInteger;
+      break;
+    }
+    case parsing::Token::Type::SLASH: {
+      bytecode = Bytecode::DivInteger;
+      break;
+    }
+    case parsing::Token::Type::PERCENT: {
+      bytecode = Bytecode::RemInteger;
+      break;
+    }
+    default: { UNREACHABLE("Impossible arithmetic SQL operation"); }
+  }
+
+  // Emit
+  emitter()->EmitBinaryOp(bytecode, dest, left, right);
+
+  // Mark where the result is
+  execution_result()->set_destination(dest);
+}
+
+void BytecodeGenerator::VisitArithmeticExpr(ast::BinaryOpExpr *node) {
+  TPL_ASSERT(execution_result()->IsRValue(),
+             "Comparison expressions must be R-Values!");
+  if (node->type()->IsSqlValueType()) {
+    VisitSqlArithmeticExpr(node);
+  } else {
+    VisitPrimitiveArithmeticExpr(node);
+  }
 }
 
 void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
@@ -1928,15 +1995,6 @@ FunctionId BytecodeGenerator::LookupFuncIdByName(
   return iter->second;
 }
 
-const FunctionInfo *BytecodeGenerator::LookupFuncInfoByName(
-    const std::string &name) const {
-  const auto iter = func_map_.find(name);
-  if (iter == func_map_.end()) {
-    return nullptr;
-  }
-  return &functions_[iter->second];
-}
-
 LocalVar BytecodeGenerator::VisitExpressionForLValue(ast::Expr *expr) {
   LValueResultScope scope(this);
   Visit(expr);
@@ -1993,7 +2051,8 @@ std::unique_ptr<BytecodeModule> BytecodeGenerator::Compile(
   BytecodeGenerator generator;
   generator.Visit(root);
 
-  // NOLINTNEXTLINE
+  // Create the bytecode module. Note that we move the bytecode and functions
+  // array from the generator into the module.
   return std::make_unique<BytecodeModule>(name, std::move(generator.bytecode_),
                                           std::move(generator.functions_));
 }

@@ -395,6 +395,22 @@ void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call,
       call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
       break;
     }
+    case ast::Builtin::AggResult: {
+      if (!CheckArgCount(call, 1)) {
+        return;
+      }
+      // Argument must be a SQL aggregator
+      if (!IsPointerToAggregatorValue(args[0]->type())) {
+        error_reporter()->Report(call->position(),
+                                 ErrorMessages::kNotASQLAggregate,
+                                 args[0]->type());
+        return;
+      }
+      // TODO(pmenon): Fix me!
+      call->set_type(
+          ast::BuiltinType::Get(context(), ast::BuiltinType::Integer));
+      break;
+    }
     default: { UNREACHABLE("Impossible aggregator call"); }
   }
 }
@@ -1186,7 +1202,8 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::AggInit:
     case ast::Builtin::AggAdvance:
     case ast::Builtin::AggMerge:
-    case ast::Builtin::AggReset: {
+    case ast::Builtin::AggReset:
+    case ast::Builtin::AggResult: {
       CheckBuiltinAggregatorCall(call, builtin);
       break;
     }
