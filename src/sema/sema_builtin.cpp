@@ -93,9 +93,10 @@ void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
     return;
   }
 
-  // The second call argument must be a string
-  if (!args[1]->type()->IsStringType()) {
-    ReportIncorrectCallArg(call, 1, ast::StringType::Get(context()));
+  // The second call argument must an integer for the column index
+  auto int32_kind = ast::BuiltinType::Int32;
+  if (!args[1]->type()->IsSpecificBuiltin(int32_kind)) {
+    ReportIncorrectCallArg(call, 1, GetBuiltinType(int32_kind));
     return;
   }
 

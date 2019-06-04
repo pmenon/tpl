@@ -28,7 +28,7 @@ fun pipeline_1(state: *State) -> nil {
   var tvi: TableVectorIterator
   for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
     var vpi = @tableIterGetVPI(&tvi)
-    @filterLt(vpi, "colA", 2000)
+    @filterLt(vpi, 0, 2000)
     for (; @vpiHasNextFiltered(vpi); @vpiAdvanceFiltered(vpi)) {
       var row = @ptrCast(*Row, @sorterInsert(sorter))
       row.a = @vpiGetInt(vpi, 0)

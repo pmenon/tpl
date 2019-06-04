@@ -718,24 +718,19 @@ void BytecodeGenerator::VisitBuiltinFilterManagerCall(ast::CallExpr *call,
 
 void BytecodeGenerator::VisitBuiltinFilterCall(ast::CallExpr *call,
                                                ast::Builtin builtin) {
-  ast::Context *ctx = call->type()->context();
-  ast::Type *ret_type = ast::BuiltinType::Get(ctx, ast::BuiltinType::Int32);
-
   LocalVar ret_val;
   if (execution_result() != nullptr) {
-    ret_val = execution_result()->GetOrCreateDestination(ret_type);
+    ret_val = execution_result()->GetOrCreateDestination(call->type());
     execution_result()->set_destination(ret_val.ValueOf());
   } else {
-    ret_val = current_function()->NewLocal(ret_type);
+    ret_val = current_function()->NewLocal(call->type());
   }
 
-  // Collect the three call arguments
   LocalVar vpi = VisitExpressionForRValue(call->arguments()[0]);
-  UNUSED ast::Identifier col_name =
-      call->arguments()[1]->As<ast::LitExpr>()->raw_string_val();
+  i32 col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
   i64 val = call->arguments()[2]->As<ast::LitExpr>()->int32_val();
 
-  Bytecode bytecode = Bytecode::VPIFilterEqual;
+  Bytecode bytecode;
   switch (builtin) {
     case ast::Builtin::FilterEq: {
       bytecode = Bytecode::VPIFilterEqual;
@@ -764,7 +759,7 @@ void BytecodeGenerator::VisitBuiltinFilterCall(ast::CallExpr *call,
     default: { UNREACHABLE("Impossible bytecode"); }
   }
 
-  emitter()->EmitVPIVectorFilter(bytecode, ret_val, vpi, 0, val);
+  emitter()->EmitVPIVectorFilter(bytecode, ret_val, vpi, col_idx, val);
 }
 
 void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,

@@ -17,8 +17,7 @@ fun Lt500(vpi: *VectorProjectionIterator) -> int32 {
 }
 
 fun Lt500_Vec(vpi: *VectorProjectionIterator) -> int32 {
-  @filterLt(vpi, "colA", 500)
-  return 0
+  return @filterLt(vpi, 0, 500)
 }
 
 fun count(vpi: *VectorProjectionIterator) -> int32 {

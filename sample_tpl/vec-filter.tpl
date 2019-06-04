@@ -3,7 +3,7 @@ fun main(execCtx: *ExecutionContext) -> int {
   var tvi: TableVectorIterator
   for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi);) {
     var vpi = @tableIterGetVPI(&tvi)
-    ret = ret + @filterLt(vpi, "colA", 500)
+    ret = ret + @filterLt(vpi, 0, 500)
     @vpiReset(vpi)
   }
   @tableIterClose(&tvi)

@@ -38,7 +38,7 @@ fun _1_Lt500(vpi: *VectorProjectionIterator) -> int32 {
 }
 
 fun _1_Lt500_Vec(vpi: *VectorProjectionIterator) -> int32 {
-  return @filterLt(vpi, "colA", 500)
+  return @filterLt(vpi, 0, 500)
 }
 
 fun _1_pipelineWorker_InitThreadState(execCtx: *ExecutionContext, state: *ThreadState_1) -> nil {
