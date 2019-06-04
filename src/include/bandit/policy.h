@@ -17,7 +17,13 @@ class Policy {
   /**
    * An enumeration capturing different policies for choosing actions.
    */
-  enum Kind : u8 { EpsilonGreedy, Greedy, Random, UCB, FixedAction };
+  enum Kind : u8 {
+    EpsilonGreedy = 0,
+    Greedy = 1,
+    Random = 2,
+    UCB = 3,
+    FixedAction = 4
+  };
 
   /**
    * Construct a policy of the given kind
