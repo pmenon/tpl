@@ -8,11 +8,11 @@
 #include "sql/aggregators.h"
 #include "sql/execution_context.h"
 #include "sql/filter_manager.h"
+#include "sql/functions/arithmetic_functions.h"
 #include "sql/join_hash_table.h"
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
-#include "sql/value_functions.h"
 #include "util/hash.h"
 #include "util/macros.h"
 
@@ -978,37 +978,37 @@ void OpSorterIteratorFree(tpl::sql::SorterIterator *iter);
 // Trig functions
 // ---------------------------------------------------------
 
-VM_OP_HOT void OpAcos(tpl::sql::Real *result, tpl::sql::Real *input) {
-  tpl::sql::ACos::Execute<true>(input, result);
+VM_OP_HOT void OpAcos(tpl::sql::Real *result, const tpl::sql::Real *input) {
+  tpl::sql::ArithmeticFunctions::Acos(result, *input);
 }
 
-VM_OP_HOT void OpAsin(tpl::sql::Real *result, tpl::sql::Real *input) {
-  tpl::sql::ASin::Execute<true>(input, result);
+VM_OP_HOT void OpAsin(tpl::sql::Real *result, const tpl::sql::Real *input) {
+  tpl::sql::ArithmeticFunctions::Asin(result, *input);
 }
 
-VM_OP_HOT void OpAtan(tpl::sql::Real *result, tpl::sql::Real *input) {
-  tpl::sql::ATan::Execute<true>(input, result);
+VM_OP_HOT void OpAtan(tpl::sql::Real *result, const tpl::sql::Real *input) {
+  tpl::sql::ArithmeticFunctions::Atan(result, *input);
 }
 
-VM_OP_HOT void OpAtan2(tpl::sql::Real *result, tpl::sql::Real *arg_1,
-                       tpl::sql::Real *arg_2) {
-  tpl::sql::ATan2::Execute<true>(arg_1, arg_2, result);
+VM_OP_HOT void OpAtan2(tpl::sql::Real *result, const tpl::sql::Real *arg_1,
+                       const tpl::sql::Real *arg_2) {
+  tpl::sql::ArithmeticFunctions::Atan2(result, *arg_1, *arg_2);
 }
 
-VM_OP_HOT void OpCos(tpl::sql::Real *result, tpl::sql::Real *input) {
-  tpl::sql::Cos::Execute<true>(input, result);
+VM_OP_HOT void OpCos(tpl::sql::Real *result, const tpl::sql::Real *input) {
+  tpl::sql::ArithmeticFunctions::Cos(result, *input);
 }
 
-VM_OP_HOT void OpCot(tpl::sql::Real *result, tpl::sql::Real *input) {
-  tpl::sql::Cot::Execute<true>(input, result);
+VM_OP_HOT void OpCot(tpl::sql::Real *result, const tpl::sql::Real *input) {
+  tpl::sql::ArithmeticFunctions::Cot(result, *input);
 }
 
-VM_OP_HOT void OpSin(tpl::sql::Real *result, tpl::sql::Real *input) {
-  tpl::sql::Sin::Execute<true>(input, result);
+VM_OP_HOT void OpSin(tpl::sql::Real *result, const tpl::sql::Real *input) {
+  tpl::sql::ArithmeticFunctions::Sin(result, *input);
 }
 
-VM_OP_HOT void OpTan(tpl::sql::Real *result, tpl::sql::Real *input) {
-  tpl::sql::Tan::Execute<true>(input, result);
+VM_OP_HOT void OpTan(tpl::sql::Real *result, const tpl::sql::Real *input) {
+  tpl::sql::ArithmeticFunctions::Tan(result, *input);
 }
 
 }  // extern "C"
