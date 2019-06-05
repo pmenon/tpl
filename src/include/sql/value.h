@@ -2,12 +2,11 @@
 
 #include <cstring>
 
+#include "sql/execution_context.h"
 #include "util/common.h"
 #include "util/macros.h"
 
 namespace tpl::sql {
-
-class MemoryPool;
 
 #define AVG_PRECISION 3
 #define AVG_SCALE 6
@@ -183,6 +182,8 @@ struct Decimal : public Val {
  * A SQL string
  */
 struct StringVal : public Val {
+  static constexpr std::size_t kMaxStingLen = 1 * GB;
+
   byte *ptr;
   u32 len;
 
@@ -208,7 +209,15 @@ struct StringVal : public Val {
    * @param memory The memory pool to allocate this string's contents from
    * @param len The size of the string
    */
-  StringVal(MemoryPool *memory, std::size_t len);
+  StringVal(ExecutionContext::StringAllocator *memory, std::size_t len)
+      : ptr(nullptr), len(len) {
+    if (TPL_UNLIKELY(len > kMaxStingLen)) {
+      len = 0;
+      is_null = true;
+    } else {
+      ptr = reinterpret_cast<byte *>(memory->Allocate(len));
+    }
+  }
 
   /**
    * Compare if this (potentially nullable) string value is equivalent to
@@ -239,7 +248,7 @@ struct StringVal : public Val {
   /**
    * Create a NULL varchar/string
    */
-  static StringVal Null() { return StringVal(static_cast<byte*>(nullptr), 0); }
+  static StringVal Null() { return StringVal(static_cast<byte *>(nullptr), 0); }
 };
 
 // ---------------------------------------------------------

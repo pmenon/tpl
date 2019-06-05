@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <limits>
 
+#include "sql/execution_context.h"
+
 namespace tpl::sql {
 
 void StringFunctions::Substring(UNUSED ExecutionContext *ctx, StringVal *result,
@@ -103,7 +105,30 @@ void StringFunctions::SplitPart(UNUSED ExecutionContext *ctx, StringVal *result,
 }
 
 void StringFunctions::Repeat(ExecutionContext *ctx, StringVal *result,
-                             const StringVal &str, const Integer &n) {}
+                             const StringVal &str, const Integer &n) {
+  if (str.is_null || n.is_null) {
+    *result = StringVal::Null();
+    return;
+  }
+
+  if (str.len == 0 || n.val <= 0) {
+    *result = StringVal("");
+    return;
+  }
+
+  *result = StringVal(ctx->string_allocator(), str.len * n.val);
+
+  if (TPL_UNLIKELY(result->is_null)) {
+    // Allocation failed
+    return;
+  }
+
+  auto *ptr = result->ptr;
+  for (u32 i = 0; i < n.val; i++) {
+    std::memcpy(ptr, str.ptr, str.len);
+    ptr += str.len;
+  }
+}
 
 void StringFunctions::Lpad(ExecutionContext *ctx, StringVal *result,
                            const StringVal &str, const Integer &len,
@@ -113,7 +138,7 @@ void StringFunctions::Rpad(ExecutionContext *ctx, StringVal *result,
                            const StringVal &str, const Integer &,
                            const StringVal &pad) {}
 
-void StringFunctions::Length(ExecutionContext *ctx, Integer *result,
+void StringFunctions::Length(UNUSED ExecutionContext *ctx, Integer *result,
                              const StringVal &str) {
   result->is_null = str.is_null;
   result->val = str.len;

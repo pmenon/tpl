@@ -21,13 +21,14 @@ class StringFunctionsTests : public TplTest {
   ExecutionContext *ctx() { return &ctx_; }
 
  protected:
-  const char *raw_string = "I only love my bed and my momma, I'm sorry";
+  const char *test_string_1 = "I only love my bed and my momma, I'm sorry";
+  const char *test_string_2 = "Drake";
 
  private:
   ExecutionContext ctx_;
 };
 
-TEST_F(StringFunctionsTests, SubstringTests) {
+TEST_F(StringFunctionsTests, Substring) {
   // Nulls
   {
     auto x = StringVal::Null();
@@ -44,7 +45,7 @@ TEST_F(StringFunctionsTests, SubstringTests) {
   }
 
   // Checks
-  auto x = StringVal(raw_string);
+  auto x = StringVal(test_string_1);
   auto result = StringVal("");
 
   // Valid range
@@ -60,9 +61,7 @@ TEST_F(StringFunctionsTests, SubstringTests) {
     auto pos = Integer(-3);
     auto len = Integer(4);
     StringFunctions::Substring(ctx(), &result, x, pos, len);
-    EXPECT_TRUE(StringVal("") == result)
-        << "Expected empty string, got \""
-        << std::string((char *)result.ptr, result.len) << "\"";  // NOLINT
+    EXPECT_TRUE(StringVal("") == result);
   }
 
   // Negative length is null
@@ -82,7 +81,7 @@ TEST_F(StringFunctionsTests, SubstringTests) {
   }
 }
 
-TEST_F(StringFunctionsTests, SplitPartTests) {
+TEST_F(StringFunctionsTests, SplitPart) {
   // Nulls
   {
     auto x = StringVal::Null();
@@ -110,21 +109,18 @@ TEST_F(StringFunctionsTests, SplitPartTests) {
 
   // Invalid field
   {
-    auto x = StringVal(raw_string);
+    auto x = StringVal(test_string_1);
     auto result = StringVal("");
     auto delim = StringVal(" ");
     auto field = Integer(30);
     StringFunctions::SplitPart(ctx(), &result, x, delim, field);
     EXPECT_FALSE(result.is_null);
-    EXPECT_TRUE(StringVal("") == result)
-        << "Expected empty string, got \""
-        << std::string(reinterpret_cast<char *>(result.ptr), result.len)
-        << "\"";
+    EXPECT_TRUE(StringVal("") == result);
   }
 
   // Empty delimiter
   {
-    auto x = StringVal(raw_string);
+    auto x = StringVal(test_string_1);
     auto result = StringVal("");
     auto delim = StringVal("");
     auto field = Integer(3);
@@ -133,13 +129,13 @@ TEST_F(StringFunctionsTests, SplitPartTests) {
     EXPECT_TRUE(x == result);
   }
 
-  auto x = StringVal(raw_string);
+  auto x = StringVal(test_string_1);
   auto result = StringVal("");
 
   // Valid
   {
     const char *delim = " ";
-    auto s = llvm::StringRef(raw_string);
+    auto s = llvm::StringRef(test_string_1);
 
     llvm::SmallVector<llvm::StringRef, 4> splits;
     s.split(splits, delim);
@@ -149,12 +145,60 @@ TEST_F(StringFunctionsTests, SplitPartTests) {
                                  Integer(i + 1));
       EXPECT_FALSE(result.is_null);
       auto split = splits[i].str();
-      EXPECT_TRUE(StringVal(split.c_str()) == result)
-          << "Expected \"" << splits[i].str() << "\", got \""
-          << std::string(reinterpret_cast<char *>(result.ptr), result.len)
-          << "\"";
+      EXPECT_TRUE(StringVal(split.c_str()) == result);
     }
   }
+}
+
+TEST_F(StringFunctionsTests, Repeat) {
+  // Nulls
+  {
+    auto x = StringVal::Null();
+    auto result = StringVal("");
+    auto n = Integer(0);
+
+    StringFunctions::Repeat(ctx(), &result, x, n);
+    EXPECT_TRUE(result.is_null);
+
+    x = StringVal(test_string_2);
+    result = StringVal("");
+    n = Integer::Null();
+
+    StringFunctions::Repeat(ctx(), &result, x, n);
+    EXPECT_TRUE(result.is_null);
+  }
+
+  auto x = StringVal(test_string_2);
+  auto result = StringVal("");
+  auto n = Integer(0);
+
+  // n = 0, expect empty result
+  StringFunctions::Repeat(ctx(), &result, x, n);
+  EXPECT_FALSE(result.is_null);
+  EXPECT_TRUE(StringVal("") == result);
+
+  // n = -1, expect empty
+  n = Integer(-1);
+  StringFunctions::Repeat(ctx(), &result, x, n);
+  EXPECT_FALSE(result.is_null);
+  EXPECT_TRUE(StringVal("") == result);
+
+  // n = 1, expect original back
+  n = Integer(1);
+  StringFunctions::Repeat(ctx(), &result, x, n);
+  EXPECT_FALSE(result.is_null);
+  EXPECT_TRUE(x == result);
+
+  // n = 4, expect four copies
+  const auto repeats = 4;
+
+  std::string s;
+  for (auto i = 0; i < repeats; i++) s += test_string_2;
+
+  n = Integer(repeats);
+  StringFunctions::Repeat(ctx(), &result, x, n);
+  EXPECT_FALSE(result.is_null);
+  EXPECT_TRUE(StringVal(s.c_str()) == result);
 }
 
 }  // namespace tpl::sql::test
