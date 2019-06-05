@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstring>
+
 #include "util/common.h"
 #include "util/macros.h"
 
@@ -178,17 +180,57 @@ struct Decimal : public Val {
 /**
  * A SQL string
  */
-struct VarBuffer : public Val {
-  u8 *str;
+struct StringVal : public Val {
+  byte *ptr;
   u32 len;
 
-  VarBuffer(u8 *str, u32 len) noexcept
-      : Val(str == nullptr), str(str), len(len) {}
+  /**
+   * Create a string value (i.e., a view) over the given potentially non-null
+   * terminated byte sequence.
+   * @param str The byte sequence.
+   * @param len The length of the sequence.
+   */
+  StringVal(byte *str, u32 len) noexcept
+      : Val(str == nullptr), ptr(str), len(len) {}
+
+  /**
+   * Create a string value (i.e., view) over the C-style null-terminated string.
+   * Note that no copy is made.
+   * @param str The C-string.
+   */
+  explicit StringVal(const char *str) noexcept
+      : StringVal((byte *)str, strlen(str)) {}  // NOLINT
+
+  /**
+   * Compare if this (potentially nullable) string value is equivalent to
+   * another string value.
+   * @param that The string value to compare with.
+   * @return True if equivalent; false otherwise.
+   */
+  bool operator==(const StringVal &that) const {
+    if (is_null != that.is_null) {
+      return false;
+    }
+    if (is_null) {
+      return true;
+    }
+    if (len != that.len) {
+      return false;
+    }
+    return ptr == that.ptr || memcmp(ptr, that.ptr, len) == 0;
+  }
+
+  /**
+   * Is this string not equivalent to another?
+   * @param that The string value to compare with.
+   * @return True if not equivalent; false otherwise.
+   */
+  bool operator!=(const StringVal &that) const { return !(*this == that); }
 
   /**
    * Create a NULL varchar/string
    */
-  static VarBuffer Null() { return VarBuffer(nullptr, 0); }
+  static StringVal Null() { return StringVal(nullptr, 0); }
 };
 
 // ---------------------------------------------------------

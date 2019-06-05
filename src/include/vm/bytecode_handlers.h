@@ -467,8 +467,9 @@ VM_OP_HOT void OpHashReal(hash_t *hash_val, tpl::sql::Real *input) {
   *hash_val = input->is_null ? 0 : *hash_val;
 }
 
-VM_OP_HOT void OpHashString(hash_t *hash_val, tpl::sql::VarBuffer *input) {
-  *hash_val = tpl::util::Hasher::Hash(input->str, input->len);
+VM_OP_HOT void OpHashString(hash_t *hash_val, tpl::sql::StringVal *input) {
+  *hash_val =
+      tpl::util::Hasher::Hash(reinterpret_cast<u8 *>(input->ptr), input->len);
   *hash_val = input->is_null ? 0 : *hash_val;
 }
 

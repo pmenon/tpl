@@ -664,7 +664,7 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
   OP(HashString) : {
     auto *hash_val = frame->LocalAt<hash_t *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::VarBuffer *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
     OpHashString(hash_val, input);
     DISPATCH_NEXT();
   }

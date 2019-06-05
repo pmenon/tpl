@@ -666,7 +666,7 @@ void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call,
         emitter()->Emit(Bytecode::HashReal, tmp, input);
         break;
       }
-      case ast::BuiltinType::VarBuffer: {
+      case ast::BuiltinType::StringVal: {
         emitter()->Emit(Bytecode::HashString, tmp, input);
         break;
       }

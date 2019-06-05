@@ -232,7 +232,7 @@ Type *Context::GetTplTypeFromSqlType(const sql::Type &sql_type) {
     }
     case sql::TypeId::Char:
     case sql::TypeId::Varchar: {
-      return BuiltinType::Get(this, BuiltinType::VarBuffer);
+      return BuiltinType::Get(this, BuiltinType::StringVal);
     }
     case sql::TypeId::Date: {
       return BuiltinType::Get(this, BuiltinType::Date);

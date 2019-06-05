@@ -84,7 +84,7 @@ class Context;
   SQL(Integer, tpl::sql::Integer)                                        \
   SQL(Real, tpl::sql::Real)                                              \
   SQL(Decimal, tpl::sql::Decimal)                                        \
-  SQL(VarBuffer, tpl::sql::VarBuffer)                                    \
+  SQL(StringVal, tpl::sql::StringVal)                                    \
   SQL(Date, tpl::sql::Date)                                              \
   SQL(Timestamp, tpl::sql::Timestamp)
 
