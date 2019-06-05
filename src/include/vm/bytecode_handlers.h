@@ -9,6 +9,7 @@
 #include "sql/execution_context.h"
 #include "sql/filter_manager.h"
 #include "sql/functions/arithmetic_functions.h"
+#include "sql/functions/comparison_functions.h"
 #include "sql/join_hash_table.h"
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
@@ -519,43 +520,37 @@ VM_OP_HOT void OpInitReal(tpl::sql::Real *result, double input) {
 VM_OP_HOT void OpGreaterThanInteger(tpl::sql::BoolVal *const result,
                                     const tpl::sql::Integer *const left,
                                     const tpl::sql::Integer *const right) {
-  result->val = (left->val > right->val);
-  result->is_null = (left->is_null || right->is_null);
+  tpl::sql::ComparisonFunctions::GtInteger(result, *left, *right);
 }
 
 VM_OP_HOT void OpGreaterThanEqualInteger(tpl::sql::BoolVal *const result,
                                          tpl::sql::Integer *left,
                                          tpl::sql::Integer *right) {
-  result->val = (left->val >= right->val);
-  result->is_null = (left->is_null || right->is_null);
+  tpl::sql::ComparisonFunctions::GeInteger(result, *left, *right);
 }
 
 VM_OP_HOT void OpEqualInteger(tpl::sql::BoolVal *const result,
                               const tpl::sql::Integer *const left,
                               const tpl::sql::Integer *const right) {
-  result->val = (left->val == right->val);
-  result->is_null = (left->is_null || right->is_null);
+  tpl::sql::ComparisonFunctions::EqInteger(result, *left, *right);
 }
 
 VM_OP_HOT void OpLessThanInteger(tpl::sql::BoolVal *const result,
                                  const tpl::sql::Integer *const left,
                                  const tpl::sql::Integer *const right) {
-  result->val = (left->val < right->val);
-  result->is_null = (left->is_null || right->is_null);
+  tpl::sql::ComparisonFunctions::LtInteger(result, *left, *right);
 }
 
 VM_OP_HOT void OpLessThanEqualInteger(tpl::sql::BoolVal *const result,
                                       const tpl::sql::Integer *const left,
                                       const tpl::sql::Integer *const right) {
-  result->val = (left->val <= right->val);
-  result->is_null = (left->is_null || right->is_null);
+  tpl::sql::ComparisonFunctions::LeInteger(result, *left, *right);
 }
 
 VM_OP_HOT void OpNotEqualInteger(tpl::sql::BoolVal *const result,
                                  const tpl::sql::Integer *const left,
                                  const tpl::sql::Integer *const right) {
-  result->val = (left->val != right->val);
-  result->is_null = (left->is_null || right->is_null);
+  tpl::sql::ComparisonFunctions::NeInteger(result, *left, *right);
 }
 
 VM_OP_HOT void OpAddInteger(tpl::sql::Integer *const result,
