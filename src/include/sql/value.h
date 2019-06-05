@@ -7,6 +7,8 @@
 
 namespace tpl::sql {
 
+class MemoryPool;
+
 #define AVG_PRECISION 3
 #define AVG_SCALE 6
 
@@ -202,6 +204,13 @@ struct StringVal : public Val {
       : StringVal((byte *)str, strlen(str)) {}  // NOLINT
 
   /**
+   * Create a new string using the given memory pool and length.
+   * @param memory The memory pool to allocate this string's contents from
+   * @param len The size of the string
+   */
+  StringVal(MemoryPool *memory, std::size_t len);
+
+  /**
    * Compare if this (potentially nullable) string value is equivalent to
    * another string value.
    * @param that The string value to compare with.
@@ -230,7 +239,7 @@ struct StringVal : public Val {
   /**
    * Create a NULL varchar/string
    */
-  static StringVal Null() { return StringVal(nullptr, 0); }
+  static StringVal Null() { return StringVal(static_cast<byte*>(nullptr), 0); }
 };
 
 // ---------------------------------------------------------
