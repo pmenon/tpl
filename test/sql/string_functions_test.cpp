@@ -1,6 +1,7 @@
 #include <limits>
 #include <memory>
 #include <random>
+#include <string>
 #include <vector>
 
 #include "tpl_test.h"  // NOLINT
@@ -346,7 +347,6 @@ TEST_F(StringFunctionsTests, Left) {
     EXPECT_TRUE(result.is_null);
   }
 
-
   // Positive length
   auto x = StringVal("abcde");
   auto n = Integer(2);
@@ -380,7 +380,6 @@ TEST_F(StringFunctionsTests, Right) {
     StringFunctions::Right(ctx(), &result, StringVal::Null(), Integer::Null());
     EXPECT_TRUE(result.is_null);
   }
-
 
   // Positive length
   auto x = StringVal("abcde");
