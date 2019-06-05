@@ -313,4 +313,99 @@ TEST_F(StringFunctionsTests, Upper) {
   EXPECT_TRUE(StringVal("TEST") == result);
 }
 
+TEST_F(StringFunctionsTests, Reverse) {
+  // Nulls
+  {
+    auto x = StringVal::Null();
+    auto result = StringVal("");
+
+    StringFunctions::Upper(ctx(), &result, x);
+    EXPECT_TRUE(result.is_null);
+  }
+
+  // Empty
+  {
+    auto x = StringVal("");
+    auto result = StringVal("");
+
+    StringFunctions::Upper(ctx(), &result, x);
+    EXPECT_TRUE(x == result);
+  }
+
+  auto x = StringVal("test");
+  auto result = StringVal("");
+  StringFunctions::Reverse(ctx(), &result, x);
+  EXPECT_TRUE(StringVal("tset") == result);
+}
+
+TEST_F(StringFunctionsTests, Left) {
+  // Nulls
+  {
+    auto result = StringVal("");
+    StringFunctions::Left(ctx(), &result, StringVal::Null(), Integer::Null());
+    EXPECT_TRUE(result.is_null);
+  }
+
+
+  // Positive length
+  auto x = StringVal("abcde");
+  auto n = Integer(2);
+  auto result = StringVal("");
+  StringFunctions::Left(ctx(), &result, x, n);
+  EXPECT_TRUE(StringVal("ab") == result);
+
+  // Negative length
+  n = Integer(-2);
+  result = StringVal("");
+  StringFunctions::Left(ctx(), &result, x, n);
+  EXPECT_TRUE(StringVal("abc") == result);
+
+  // Large length
+  n = Integer(10);
+  result = StringVal("");
+  StringFunctions::Left(ctx(), &result, x, n);
+  EXPECT_TRUE(x == result);
+
+  // Large negative length
+  n = Integer(-10);
+  result = StringVal("");
+  StringFunctions::Left(ctx(), &result, x, n);
+  EXPECT_TRUE(StringVal("") == result);
+}
+
+TEST_F(StringFunctionsTests, Right) {
+  // Nulls
+  {
+    auto result = StringVal("");
+    StringFunctions::Right(ctx(), &result, StringVal::Null(), Integer::Null());
+    EXPECT_TRUE(result.is_null);
+  }
+
+
+  // Positive length
+  auto x = StringVal("abcde");
+  auto n = Integer(2);
+  auto result = StringVal("");
+  StringFunctions::Right(ctx(), &result, x, n);
+  EXPECT_TRUE(StringVal("de") == result);
+
+  // Negative length
+  n = Integer(-2);
+  result = StringVal("");
+  StringFunctions::Right(ctx(), &result, x, n);
+  EXPECT_TRUE(StringVal("cde") == result);
+
+  // Large length
+  n = Integer(10);
+  result = StringVal("");
+  StringFunctions::Right(ctx(), &result, x, n);
+  EXPECT_TRUE(x == result);
+
+  // Large negative length
+  n = Integer(-10);
+  result = StringVal("");
+  StringFunctions::Right(ctx(), &result, x, n);
+  EXPECT_TRUE(StringVal("") == result);
+}
+
 }  // namespace tpl::sql::test

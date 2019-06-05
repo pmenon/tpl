@@ -251,20 +251,62 @@ void StringFunctions::Upper(ExecutionContext *ctx, StringVal *result,
   }
 }
 
-void StringFunctions::Replace(ExecutionContext *ctx, StringVal *result,
-                              const StringVal &str, const StringVal &pattern,
-                              const StringVal &replace) {}
-
 void StringFunctions::Reverse(ExecutionContext *ctx, StringVal *result,
-                              const StringVal &str) {}
+                              const StringVal &str) {
+  if (str.is_null) {
+    *result = StringVal::Null();
+    return;
+  }
+
+  if (str.len == 0) {
+    *result = str;
+    return;
+  }
+
+  *result = StringVal(ctx->string_allocator(), str.len);
+
+  if (TPL_UNLIKELY(result->is_null)) {
+    // Allocation failed
+    return;
+  }
+
+  std::reverse_copy(str.ptr, str.ptr + str.len, result->ptr);
+}
 
 void StringFunctions::Trim(ExecutionContext *ctx, StringVal *result,
-                           const StringVal &str) {}
+                           const StringVal &str, const StringVal &chars) {}
 
 void StringFunctions::Ltrim(ExecutionContext *ctx, StringVal *result,
-                            const StringVal &str) {}
+                            const StringVal &str, const StringVal &chars) {}
 
 void StringFunctions::Rtrim(ExecutionContext *ctx, StringVal *result,
-                            const StringVal &str) {}
+                            const StringVal &str, const StringVal &chars) {}
+
+void StringFunctions::Left(UNUSED ExecutionContext *ctx, StringVal *result,
+                           const StringVal &str, const Integer &n) {
+  if (str.is_null || n.is_null) {
+    *result = StringVal::Null();
+    return;
+  }
+
+  const auto len = n.val < 0 ? std::max(0l, str.len + n.val)
+                             : std::min(str.len, static_cast<u32>(n.val));
+  *result = StringVal(str.ptr, len);
+}
+
+void StringFunctions::Right(UNUSED ExecutionContext *ctx, StringVal *result,
+                            const StringVal &str, const Integer &n) {
+  if (str.is_null || n.is_null) {
+    *result = StringVal::Null();
+    return;
+  }
+
+  const auto len = std::min(str.len, static_cast<u32>(std::abs(n.val)));
+  if (n.val > 0) {
+    *result = StringVal(str.ptr + (str.len - len), len);
+  } else {
+    *result = StringVal(str.ptr + len, str.len - len);
+  }
+}
 
 }  // namespace tpl::sql
