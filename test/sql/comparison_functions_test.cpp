@@ -73,54 +73,52 @@ TEST_F(ComparisonFunctionsTests, SimpleComparison) {
 }
 
 TEST_F(ComparisonFunctionsTests, StringComparison) {
+#define CHECK(INPUT1, INPUT2, OP, EXPECTED)            \
+  {                                                    \
+    BoolVal result = BoolVal::Null();                  \
+    StringVal x(INPUT1), y(INPUT2);                    \
+    ComparisonFunctions::OP##StringVal(&result, x, y); \
+    EXPECT_FALSE(result.is_null);                      \
+    EXPECT_EQ(EXPECTED, result.val);                   \
+  }
+
   // Same sizes
-  {
-    StringVal x("test"), y("test");
-    EXPECT_TRUE(x == y);
-    EXPECT_TRUE(x >= y);
-    EXPECT_FALSE(x > y);
-    EXPECT_TRUE(x <= y);
-    EXPECT_FALSE(x < y);
-    EXPECT_FALSE(x != y);
-  }
+  CHECK("test", "test", Eq, true);
+  CHECK("test", "test", Ge, true);
+  CHECK("test", "test", Gt, false);
+  CHECK("test", "test", Le, true);
+  CHECK("test", "test", Lt, false);
+  CHECK("test", "test", Ne, false);
 
   // Different sizes
-  {
-    StringVal x("test"), y("testholla");
-    EXPECT_FALSE(x == y);
-    EXPECT_FALSE(x >= y);
-    EXPECT_FALSE(x > y);
-    EXPECT_TRUE(x <= y);
-    EXPECT_TRUE(x < y);
-    EXPECT_TRUE(x != y);
-
-    x = StringVal("");
-    EXPECT_FALSE(x == y);
-    EXPECT_FALSE(x >= y);
-    EXPECT_FALSE(x > y);
-    EXPECT_TRUE(x <= y);
-    EXPECT_TRUE(x < y);
-    EXPECT_TRUE(x != y);
-  }
+  CHECK("test", "testholla", Eq, false);
+  CHECK("test", "testholla", Ge, false);
+  CHECK("test", "testholla", Gt, false);
+  CHECK("test", "testholla", Le, true);
+  CHECK("test", "testholla", Lt, true);
+  CHECK("test", "testholla", Ne, true);
 
   // Different sizes
-  {
-    StringVal x("testholla"), y("test");
-    EXPECT_FALSE(x == y);
-    EXPECT_TRUE(x >= y);
-    EXPECT_TRUE(x > y);
-    EXPECT_FALSE(x <= y);
-    EXPECT_FALSE(x < y);
-    EXPECT_TRUE(x != y);
+  CHECK("testholla", "test", Eq, false);
+  CHECK("testholla", "test", Ge, true);
+  CHECK("testholla", "test", Gt, true);
+  CHECK("testholla", "test", Le, false);
+  CHECK("testholla", "test", Lt, false);
+  CHECK("testholla", "test", Ne, true);
 
-    y = StringVal("test");
-    EXPECT_FALSE(x == y);
-    EXPECT_TRUE(x >= y);
-    EXPECT_TRUE(x > y);
-    EXPECT_FALSE(x <= y);
-    EXPECT_FALSE(x < y);
-    EXPECT_TRUE(x != y);
-  }
+  CHECK("testholla", "", Eq, false);
+  CHECK("testholla", "", Ge, true);
+  CHECK("testholla", "", Gt, true);
+  CHECK("testholla", "", Le, false);
+  CHECK("testholla", "", Lt, false);
+  CHECK("testholla", "", Ne, true);
+
+  CHECK("", "", Eq, true);
+  CHECK("", "", Ge, true);
+  CHECK("", "", Gt, false);
+  CHECK("", "", Le, true);
+  CHECK("", "", Lt, false);
+  CHECK("", "", Ne, false);
 }
 
 }  // namespace tpl::sql::test
