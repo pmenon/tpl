@@ -144,7 +144,7 @@ void StringFunctions::Lpad(ExecutionContext *ctx, StringVal *result,
     return;
   }
 
-  // If target length is less than input length, trim from right.
+  // If target length is less than input length, truncate.
   if (len.val < str.len) {
     *result = StringVal(str.ptr, len.val);
     return;
@@ -169,8 +169,45 @@ void StringFunctions::Lpad(ExecutionContext *ctx, StringVal *result,
 }
 
 void StringFunctions::Rpad(ExecutionContext *ctx, StringVal *result,
-                           const StringVal &str, const Integer &,
-                           const StringVal &pad) {}
+                           const StringVal &str, const Integer &len,
+                           const StringVal &pad) {
+  if (str.is_null || len.is_null || pad.is_null || len.val < 0) {
+    *result = StringVal::Null();
+    return;
+  }
+
+  // If target length equals input length, nothing to do
+  if (len.val == str.len) {
+    *result = str;
+    return;
+  }
+
+  // If target length is less than input length, truncate.
+  if (len.val < str.len) {
+    *result = StringVal(str.ptr, len.val);
+    return;
+  }
+
+  *result = StringVal(ctx->string_allocator(), len.val);
+
+  if (TPL_UNLIKELY(result->is_null)) {
+    // Allocation failed
+    return;
+  }
+
+  // Copy input string first
+  auto *ptr = result->ptr;
+  std::memcpy(ptr, str.ptr, str.len);
+  ptr += str.len;
+
+  // Then padding
+  for (u32 bytes_left = len.val - str.len; bytes_left > 0; ) {
+    auto copy_len = std::min(pad.len, bytes_left);
+    std::memcpy(ptr, pad.ptr, copy_len);
+    bytes_left -= copy_len;
+    ptr += copy_len;
+  }
+}
 
 void StringFunctions::Length(UNUSED ExecutionContext *ctx, Integer *result,
                              const StringVal &str) {
