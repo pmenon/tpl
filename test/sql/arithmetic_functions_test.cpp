@@ -1,3 +1,4 @@
+#include <limits>
 #include <memory>
 #include <random>
 #include <vector>
@@ -14,6 +15,135 @@ class ArithmeticFunctionsTests : public TplTest {
  protected:
   inline double cotan(const double arg) { return (1.0 / std::tan(arg)); }
 };
+
+TEST_F(ArithmeticFunctionsTests, IntegerValueTests) {
+  // Nulls
+  {
+    Integer a(0), b = Integer::Null(), result(0);
+
+    ArithmeticFunctions::Add(&result, a, b);
+    EXPECT_TRUE(result.is_null);
+
+    result = Integer(0);
+    ArithmeticFunctions::Sub(&result, a, b);
+    EXPECT_TRUE(result.is_null);
+
+    result = Integer(0);
+    ArithmeticFunctions::Mul(&result, a, b);
+    EXPECT_TRUE(result.is_null);
+
+    bool div_by_zero = false;
+    result = Integer(0);
+    ArithmeticFunctions::IntDiv(&result, a, b, &div_by_zero);
+    EXPECT_TRUE(result.is_null);
+  }
+
+  // Proper
+  {
+    const auto aval = 10, bval = 4;
+    Integer a(aval), b(bval), result(0);
+
+    ArithmeticFunctions::Add(&result, a, b);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_EQ(aval + bval, result.val);
+
+    result = Integer(0);
+    ArithmeticFunctions::Sub(&result, a, b);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_EQ(aval - bval, result.val);
+
+    result = Integer(0);
+    ArithmeticFunctions::Mul(&result, a, b);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_EQ(aval * bval, result.val);
+
+    bool div_by_zero = false;
+    result = Integer(0);
+    ArithmeticFunctions::IntDiv(&result, a, b, &div_by_zero);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_EQ(aval / bval, result.val);
+  }
+
+  // Overflow
+  {
+    const auto aval = std::numeric_limits<i64>::max() - 1, bval = 4l;
+    Integer a(aval), b(bval), result(0);
+
+    bool overflow = false;
+    ArithmeticFunctions::Add(&result, a, b, &overflow);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_TRUE(overflow);
+  }
+
+  {
+    const auto aval = std::numeric_limits<i64>::min() + 1, bval = 4l;
+    Integer a(aval), b(bval), result(0);
+
+    bool overflow = false;
+    ArithmeticFunctions::Sub(&result, a, b, &overflow);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_TRUE(overflow);
+  }
+
+  {
+    const auto aval = std::numeric_limits<i64>::max() - 1, bval = aval;
+    Integer a(aval), b(bval), result(0);
+
+    bool overflow = false;
+    ArithmeticFunctions::Mul(&result, a, b, &overflow);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_TRUE(overflow);
+  }
+}
+
+TEST_F(ArithmeticFunctionsTests, RealValueTests) {
+  // Nulls
+  {
+    Real a(0.0), b = Real::Null(), result(0.0);
+
+    ArithmeticFunctions::Add(&result, a, b);
+    EXPECT_TRUE(result.is_null);
+
+    result = Real(0.0);
+    ArithmeticFunctions::Sub(&result, a, b);
+    EXPECT_TRUE(result.is_null);
+
+    result = Real(0.0);
+    ArithmeticFunctions::Mul(&result, a, b);
+    EXPECT_TRUE(result.is_null);
+
+    bool div_by_zero = false;
+    result = Real(0.0);
+    ArithmeticFunctions::Div(&result, a, b, &div_by_zero);
+    EXPECT_TRUE(result.is_null);
+  }
+
+  // Proper
+  {
+    const auto aval = 10.0, bval = 4.0;
+    Real a(aval), b(bval), result(0.0);
+
+    ArithmeticFunctions::Add(&result, a, b);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_EQ(aval + bval, result.val);
+
+    result = Real(0.0);
+    ArithmeticFunctions::Sub(&result, a, b);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_EQ(aval - bval, result.val);
+
+    result = Real(0.0);
+    ArithmeticFunctions::Mul(&result, a, b);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_EQ(aval * bval, result.val);
+
+    bool div_by_zero = false;
+    result = Real(0.0);
+    ArithmeticFunctions::Div(&result, a, b, &div_by_zero);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_EQ(aval / bval, result.val);
+  }
+}
 
 TEST_F(ArithmeticFunctionsTests, SimplePiETest) {
   {

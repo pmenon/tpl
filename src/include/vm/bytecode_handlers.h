@@ -562,33 +562,35 @@ VM_OP_HOT void OpAddInteger(tpl::sql::Integer *const result,
                             const tpl::sql::Integer *const left,
                             const tpl::sql::Integer *const right) {
   UNUSED bool overflow;
-  *result = left->Add(*right, &overflow);
+  tpl::sql::ArithmeticFunctions::Add(result, *left, *right, &overflow);
 }
 
 VM_OP_HOT void OpSubInteger(tpl::sql::Integer *const result,
                             const tpl::sql::Integer *const left,
                             const tpl::sql::Integer *const right) {
   UNUSED bool overflow;
-  *result = left->Sub(*right, &overflow);
+  tpl::sql::ArithmeticFunctions::Sub(result, *left, *right, &overflow);
 }
 
 VM_OP_HOT void OpMulInteger(tpl::sql::Integer *const result,
                             const tpl::sql::Integer *const left,
                             const tpl::sql::Integer *const right) {
   UNUSED bool overflow;
-  *result = left->Multiply(*right, &overflow);
+  tpl::sql::ArithmeticFunctions::Mul(result, *left, *right, &overflow);
 }
 
 VM_OP_HOT void OpDivInteger(tpl::sql::Integer *const result,
                             const tpl::sql::Integer *const left,
                             const tpl::sql::Integer *const right) {
-  *result = left->Divide(*right);
+  UNUSED bool div_by_zero = false;
+  tpl::sql::ArithmeticFunctions::IntDiv(result, *left, *right, &div_by_zero);
 }
 
 VM_OP_HOT void OpRemInteger(tpl::sql::Integer *const result,
                             const tpl::sql::Integer *const left,
                             const tpl::sql::Integer *const right) {
-  *result = left->Modulo(*right);
+  UNUSED bool div_by_zero = false;
+  tpl::sql::ArithmeticFunctions::IntMod(result, *left, *right, &div_by_zero);
 }
 
 // ---------------------------------------------------------
