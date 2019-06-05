@@ -281,4 +281,36 @@ TEST_F(StringFunctionsTests, Rpad) {
   EXPECT_TRUE(StringVal("hixyx") == result);
 }
 
+TEST_F(StringFunctionsTests, Lower) {
+  // Nulls
+  {
+    auto x = StringVal::Null();
+    auto result = StringVal("");
+
+    StringFunctions::Lower(ctx(), &result, x);
+    EXPECT_TRUE(result.is_null);
+  }
+
+  auto x = StringVal("TEST");
+  auto result = StringVal("");
+  StringFunctions::Lower(ctx(), &result, x);
+  EXPECT_TRUE(StringVal("test") == result);
+}
+
+TEST_F(StringFunctionsTests, Upper) {
+  // Nulls
+  {
+    auto x = StringVal::Null();
+    auto result = StringVal("");
+
+    StringFunctions::Upper(ctx(), &result, x);
+    EXPECT_TRUE(result.is_null);
+  }
+
+  auto x = StringVal("test");
+  auto result = StringVal("");
+  StringFunctions::Upper(ctx(), &result, x);
+  EXPECT_TRUE(StringVal("TEST") == result);
+}
+
 }  // namespace tpl::sql::test

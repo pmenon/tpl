@@ -1,5 +1,7 @@
 #pragma once
 
+#include <limits>
+
 #include "sql/value.h"
 
 namespace tpl::sql {
@@ -19,7 +21,9 @@ class StringFunctions {
                         const Integer &len);
 
   static void Substring(ExecutionContext *ctx, StringVal *result,
-                        const StringVal &str, const Integer &pos);
+                        const StringVal &str, const Integer &pos) {
+    Substring(ctx, result, str, pos, Integer(std::numeric_limits<i64>::max()));
+  }
 
   static void SplitPart(ExecutionContext *ctx, StringVal *result,
                         const StringVal &str, const StringVal &delim,
@@ -39,7 +43,9 @@ class StringFunctions {
                      const StringVal &str);
 
   static void CharLength(ExecutionContext *ctx, Integer *result,
-                         const StringVal &str);
+                         const StringVal &str) {
+    Length(ctx, result, str);
+  }
 
   static void Lower(ExecutionContext *ctx, StringVal *result,
                     const StringVal &str);

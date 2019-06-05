@@ -1,7 +1,6 @@
 #include "sql/functions/string_functions.h"
 
 #include <algorithm>
-#include <limits>
 
 #include "sql/execution_context.h"
 
@@ -33,11 +32,6 @@ void StringFunctions::Substring(UNUSED ExecutionContext *ctx, StringVal *result,
 
   // All good
   *result = StringVal(str.ptr + start - 1, end - start);
-}
-
-void StringFunctions::Substring(ExecutionContext *ctx, StringVal *result,
-                                const StringVal &str, const Integer &pos) {
-  Substring(ctx, result, str, pos, Integer(std::numeric_limits<i64>::max()));
 }
 
 namespace {
@@ -158,7 +152,7 @@ void StringFunctions::Lpad(ExecutionContext *ctx, StringVal *result,
   }
 
   auto *ptr = result->ptr;
-  for (u32 bytes_left = len.val - str.len; bytes_left > 0; ) {
+  for (u32 bytes_left = len.val - str.len; bytes_left > 0;) {
     auto copy_len = std::min(pad.len, bytes_left);
     std::memcpy(ptr, pad.ptr, copy_len);
     bytes_left -= copy_len;
@@ -201,7 +195,7 @@ void StringFunctions::Rpad(ExecutionContext *ctx, StringVal *result,
   ptr += str.len;
 
   // Then padding
-  for (u32 bytes_left = len.val - str.len; bytes_left > 0; ) {
+  for (u32 bytes_left = len.val - str.len; bytes_left > 0;) {
     auto copy_len = std::min(pad.len, bytes_left);
     std::memcpy(ptr, pad.ptr, copy_len);
     bytes_left -= copy_len;
@@ -215,14 +209,47 @@ void StringFunctions::Length(UNUSED ExecutionContext *ctx, Integer *result,
   result->val = str.len;
 }
 
-void StringFunctions::CharLength(ExecutionContext *ctx, Integer *result,
-                                 const StringVal &str) {}
-
 void StringFunctions::Lower(ExecutionContext *ctx, StringVal *result,
-                            const StringVal &str) {}
+                            const StringVal &str) {
+  if (str.is_null) {
+    *result = StringVal::Null();
+    return;
+  }
+
+  *result = StringVal(ctx->string_allocator(), str.len);
+
+  if (TPL_UNLIKELY(result->is_null)) {
+    // Allocation failed
+    return;
+  }
+
+  auto *ptr = reinterpret_cast<char *>(result->ptr);
+  auto *src = reinterpret_cast<char *>(str.ptr);
+  for (u32 i = 0; i < str.len; i++) {
+    ptr[i] = std::tolower(src[i]);
+  }
+}
 
 void StringFunctions::Upper(ExecutionContext *ctx, StringVal *result,
-                            const StringVal &str) {}
+                            const StringVal &str) {
+  if (str.is_null) {
+    *result = StringVal::Null();
+    return;
+  }
+
+  *result = StringVal(ctx->string_allocator(), str.len);
+
+  if (TPL_UNLIKELY(result->is_null)) {
+    // Allocation failed
+    return;
+  }
+
+  auto *ptr = reinterpret_cast<char *>(result->ptr);
+  auto *src = reinterpret_cast<char *>(str.ptr);
+  for (u32 i = 0; i < str.len; i++) {
+    ptr[i] = std::toupper(src[i]);
+  }
+}
 
 void StringFunctions::Replace(ExecutionContext *ctx, StringVal *result,
                               const StringVal &str, const StringVal &pattern,
