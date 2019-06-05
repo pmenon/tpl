@@ -40,14 +40,13 @@ void StringFunctions::Substring(ExecutionContext *ctx, StringVal *result,
 
 namespace {
 
-byte *SearchSubstring(byte *haystack, const std::size_t hay_len,
-                      const byte *needle, const std::size_t needle_len) {
+char *SearchSubstring(char *haystack, const std::size_t hay_len,
+                      const char *needle, const std::size_t needle_len) {
   TPL_ASSERT(needle != nullptr, "No search string provided");
   TPL_ASSERT(needle_len > 0, "No search string provided");
   for (u32 i = 0; i < hay_len + needle_len; i++) {
     const auto pos = haystack + i;
-    if (strncmp(reinterpret_cast<char *>(pos),
-                reinterpret_cast<const char *>(needle), needle_len) == 0) {
+    if (strncmp(pos, needle, needle_len) == 0) {
       return pos;
     }
   }
@@ -75,33 +74,32 @@ void StringFunctions::SplitPart(UNUSED ExecutionContext *ctx, StringVal *result,
     return;
   }
 
-  const auto field_index = field.val;
+  // Pointers to the start of the current part, the end of the input string, and
+  // the delimiter string
+  auto curr = reinterpret_cast<char *>(str.ptr);
+  auto const end = curr + str.len;
+  auto const delimiter = reinterpret_cast<const char *>(delim.ptr);
 
-  u32 index = 0;
-  for (auto *curr = str.ptr, *end = str.ptr + str.len; curr != end;) {
-    const std::size_t remaining_len = end - curr;
-    byte *const next_delim =
-        SearchSubstring(curr, remaining_len, delim.ptr, delim.len);
+  for (u32 index = 1;; index++) {
+    const auto remaining_len = end - curr;
+    const auto next_delim =
+        SearchSubstring(curr, remaining_len, delimiter, delim.len);
     if (next_delim == nullptr) {
-      if (index == field_index) {
-        *result = StringVal(curr, remaining_len);
+      if (index == field.val) {
+        *result = StringVal(reinterpret_cast<byte *>(curr), remaining_len);
       } else {
         *result = StringVal("");
       }
       return;
     }
     // Are we at the correct field?
-    if (index == field_index) {
-      *result = StringVal(curr, next_delim - curr);
+    if (index == field.val) {
+      *result = StringVal(reinterpret_cast<byte *>(curr), next_delim - curr);
       return;
     }
     // We haven't reached the field yet, move along
     curr = next_delim + delim.len;
-    index++;
   }
-
-  // Not found
-  *result = StringVal("");
 }
 
 void StringFunctions::Repeat(ExecutionContext *ctx, StringVal *result,

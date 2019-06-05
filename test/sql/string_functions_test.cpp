@@ -108,6 +108,20 @@ TEST_F(StringFunctionsTests, SplitPartTests) {
     EXPECT_TRUE(result.is_null);
   }
 
+  // Invalid field
+  {
+    auto x = StringVal(raw_string);
+    auto result = StringVal("");
+    auto delim = StringVal(" ");
+    auto field = Integer(30);
+    StringFunctions::SplitPart(ctx(), &result, x, delim, field);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_TRUE(StringVal("") == result)
+        << "Expected empty string, got \""
+        << std::string(reinterpret_cast<char *>(result.ptr), result.len)
+        << "\"";
+  }
+
   // Empty delimiter
   {
     auto x = StringVal(raw_string);
@@ -132,7 +146,7 @@ TEST_F(StringFunctionsTests, SplitPartTests) {
 
     for (u32 i = 0; i < splits.size(); i++) {
       StringFunctions::SplitPart(ctx(), &result, x, StringVal(delim),
-                                 Integer(i));
+                                 Integer(i + 1));
       EXPECT_FALSE(result.is_null);
       auto split = splits[i].str();
       EXPECT_TRUE(StringVal(split.c_str()) == result)
