@@ -114,7 +114,6 @@ TEST_F(StringFunctionsTests, SplitPart) {
     auto delim = StringVal(" ");
     auto field = Integer(30);
     StringFunctions::SplitPart(ctx(), &result, x, delim, field);
-    EXPECT_FALSE(result.is_null);
     EXPECT_TRUE(StringVal("") == result);
   }
 
@@ -125,7 +124,6 @@ TEST_F(StringFunctionsTests, SplitPart) {
     auto delim = StringVal("");
     auto field = Integer(3);
     StringFunctions::SplitPart(ctx(), &result, x, delim, field);
-    EXPECT_FALSE(result.is_null);
     EXPECT_TRUE(x == result);
   }
 
@@ -143,7 +141,6 @@ TEST_F(StringFunctionsTests, SplitPart) {
     for (u32 i = 0; i < splits.size(); i++) {
       StringFunctions::SplitPart(ctx(), &result, x, StringVal(delim),
                                  Integer(i + 1));
-      EXPECT_FALSE(result.is_null);
       auto split = splits[i].str();
       EXPECT_TRUE(StringVal(split.c_str()) == result);
     }
@@ -174,19 +171,16 @@ TEST_F(StringFunctionsTests, Repeat) {
 
   // n = 0, expect empty result
   StringFunctions::Repeat(ctx(), &result, x, n);
-  EXPECT_FALSE(result.is_null);
   EXPECT_TRUE(StringVal("") == result);
 
   // n = -1, expect empty
   n = Integer(-1);
   StringFunctions::Repeat(ctx(), &result, x, n);
-  EXPECT_FALSE(result.is_null);
   EXPECT_TRUE(StringVal("") == result);
 
   // n = 1, expect original back
   n = Integer(1);
   StringFunctions::Repeat(ctx(), &result, x, n);
-  EXPECT_FALSE(result.is_null);
   EXPECT_TRUE(x == result);
 
   // n = 4, expect four copies
@@ -199,6 +193,49 @@ TEST_F(StringFunctionsTests, Repeat) {
   StringFunctions::Repeat(ctx(), &result, x, n);
   EXPECT_FALSE(result.is_null);
   EXPECT_TRUE(StringVal(s.c_str()) == result);
+}
+
+TEST_F(StringFunctionsTests, Lpad) {
+  // Nulls
+  {
+    auto x = StringVal::Null();
+    auto result = StringVal("");
+    auto len = Integer(0);
+    auto pad = StringVal("");
+
+    StringFunctions::Lpad(ctx(), &result, x, len, pad);
+    EXPECT_TRUE(result.is_null);
+  }
+
+  // No work
+  {
+    auto x = StringVal("test");
+    auto result = StringVal("");
+    auto len = Integer(4);
+    auto pad = StringVal("");
+
+    StringFunctions::Lpad(ctx(), &result, x, len, pad);
+    EXPECT_TRUE(x == result);
+  }
+
+  // Trim
+  {
+    auto x = StringVal("test");
+    auto result = StringVal("");
+    auto len = Integer(2);
+    auto pad = StringVal("");
+
+    StringFunctions::Lpad(ctx(), &result, x, len, pad);
+    EXPECT_TRUE(StringVal("te") == result);
+  }
+
+  auto x = StringVal("hi");
+  auto result = StringVal("");
+  auto len = Integer(5);
+  auto pad = StringVal("xy");
+
+  StringFunctions::Lpad(ctx(), &result, x, len, pad);
+  EXPECT_TRUE(StringVal("xyxhi") == result);
 }
 
 }  // namespace tpl::sql::test

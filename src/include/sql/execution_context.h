@@ -13,9 +13,11 @@ namespace tpl::sql {
 class ExecutionContext {
  public:
   /**
-   * This context's string allocator. Required because the requirements of
-   * string allocation (small, frequent) are slightly different than that of
-   * generic memory allocator for larger structures.
+   * An allocator for short-ish strings. Needed because the requirements of
+   * string allocation (small size and frequent usage) are slightly different
+   * than that of generic memory allocator for larger structures. This string
+   * allocator relies on memory regions for fast allocations, and bulk
+   * deletions.
    */
   class StringAllocator {
    public:
