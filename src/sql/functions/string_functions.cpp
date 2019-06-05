@@ -82,7 +82,7 @@ void StringFunctions::SplitPart(UNUSED ExecutionContext *ctx, StringVal *result,
         SearchSubstring(curr, remaining_len, delimiter, delim.len);
     if (next_delim == nullptr) {
       if (index == field.val) {
-        *result = StringVal(reinterpret_cast<byte *>(curr), remaining_len);
+        *result = StringVal(curr, remaining_len);
       } else {
         *result = StringVal("");
       }
@@ -90,7 +90,7 @@ void StringFunctions::SplitPart(UNUSED ExecutionContext *ctx, StringVal *result,
     }
     // Are we at the correct field?
     if (index == field.val) {
-      *result = StringVal(reinterpret_cast<byte *>(curr), next_delim - curr);
+      *result = StringVal(curr, next_delim - curr);
       return;
     }
     // We haven't reached the field yet, move along

@@ -13,32 +13,33 @@ namespace tpl::sql::test {
 
 class ComparisonFunctionsTests : public TplTest {};
 
-TEST_F(ComparisonFunctionsTests, NullComparisonTests) {
+TEST_F(ComparisonFunctionsTests, NullComparison) {
 // Nulls
-#define CHECK_NULL(TYPE, OP)                      \
+#define CHECK_NULL(TYPE, OP, INITIAL)             \
   {                                               \
-    TYPE a = TYPE::Null(), b(0);                  \
+    TYPE a = TYPE::Null(), b(INITIAL);            \
     BoolVal result(false);                        \
     ComparisonFunctions::OP##TYPE(&result, a, b); \
     EXPECT_TRUE(result.is_null);                  \
   }
-#define CHECK_NULL_FOR_ALL_COMPARISONS(TYPE) \
-  CHECK_NULL(Integer, Eq)                    \
-  CHECK_NULL(Integer, Ge)                    \
-  CHECK_NULL(Integer, Gt)                    \
-  CHECK_NULL(Integer, Le)                    \
-  CHECK_NULL(Integer, Lt)                    \
-  CHECK_NULL(Integer, Ne)
+#define CHECK_NULL_FOR_ALL_COMPARISONS(TYPE, INITIAL) \
+  CHECK_NULL(TYPE, Eq, INITIAL)                       \
+  CHECK_NULL(TYPE, Ge, INITIAL)                       \
+  CHECK_NULL(TYPE, Gt, INITIAL)                       \
+  CHECK_NULL(TYPE, Le, INITIAL)                       \
+  CHECK_NULL(TYPE, Lt, INITIAL)                       \
+  CHECK_NULL(TYPE, Ne, INITIAL)
 
-  CHECK_NULL_FOR_ALL_COMPARISONS(BoolVal);
-  CHECK_NULL_FOR_ALL_COMPARISONS(Integer);
-  CHECK_NULL_FOR_ALL_COMPARISONS(Real);
+  CHECK_NULL_FOR_ALL_COMPARISONS(BoolVal, true);
+  CHECK_NULL_FOR_ALL_COMPARISONS(Integer, 0);
+  CHECK_NULL_FOR_ALL_COMPARISONS(Real, 0.0);
+  CHECK_NULL_FOR_ALL_COMPARISONS(StringVal, "");
 
 #undef CHECK_NULL_FOR_ALL_COMPARISONS
 #undef CHECK_NULL
 }
 
-TEST_F(ComparisonFunctionsTests, SimpleComparisonTests) {
+TEST_F(ComparisonFunctionsTests, SimpleComparison) {
 #define CHECK_OP(TYPE, OP, INPUT1, INPUT2, EXPECTED) \
   {                                                  \
     TYPE a(INPUT1), b(INPUT2);                       \
@@ -69,6 +70,57 @@ TEST_F(ComparisonFunctionsTests, SimpleComparisonTests) {
 
 #undef CHECK_ALL_COMPARISONS
 #undef CHECK_NULL
+}
+
+TEST_F(ComparisonFunctionsTests, StringComparison) {
+  // Same sizes
+  {
+    StringVal x("test"), y("test");
+    EXPECT_TRUE(x == y);
+    EXPECT_TRUE(x >= y);
+    EXPECT_FALSE(x > y);
+    EXPECT_TRUE(x <= y);
+    EXPECT_FALSE(x < y);
+    EXPECT_FALSE(x != y);
+  }
+
+  // Different sizes
+  {
+    StringVal x("test"), y("testholla");
+    EXPECT_FALSE(x == y);
+    EXPECT_FALSE(x >= y);
+    EXPECT_FALSE(x > y);
+    EXPECT_TRUE(x <= y);
+    EXPECT_TRUE(x < y);
+    EXPECT_TRUE(x != y);
+
+    x = StringVal("");
+    EXPECT_FALSE(x == y);
+    EXPECT_FALSE(x >= y);
+    EXPECT_FALSE(x > y);
+    EXPECT_TRUE(x <= y);
+    EXPECT_TRUE(x < y);
+    EXPECT_TRUE(x != y);
+  }
+
+  // Different sizes
+  {
+    StringVal x("testholla"), y("test");
+    EXPECT_FALSE(x == y);
+    EXPECT_TRUE(x >= y);
+    EXPECT_TRUE(x > y);
+    EXPECT_FALSE(x <= y);
+    EXPECT_FALSE(x < y);
+    EXPECT_TRUE(x != y);
+
+    y = StringVal("test");
+    EXPECT_FALSE(x == y);
+    EXPECT_TRUE(x >= y);
+    EXPECT_TRUE(x > y);
+    EXPECT_FALSE(x <= y);
+    EXPECT_FALSE(x < y);
+    EXPECT_TRUE(x != y);
+  }
 }
 
 }  // namespace tpl::sql::test

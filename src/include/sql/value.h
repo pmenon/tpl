@@ -184,7 +184,7 @@ struct Decimal : public Val {
 struct StringVal : public Val {
   static constexpr std::size_t kMaxStingLen = 1 * GB;
 
-  byte *ptr;
+  char *ptr;
   u32 len;
 
   /**
@@ -193,7 +193,7 @@ struct StringVal : public Val {
    * @param str The byte sequence.
    * @param len The length of the sequence.
    */
-  StringVal(byte *str, u32 len) noexcept
+  StringVal(char *str, u32 len) noexcept
       : Val(str == nullptr), ptr(str), len(len) {}
 
   /**
@@ -202,54 +202,81 @@ struct StringVal : public Val {
    * @param str The C-string.
    */
   explicit StringVal(const char *str) noexcept
-      : StringVal((byte *)str, strlen(str)) {}  // NOLINT
+      : StringVal(const_cast<char *>(str), strlen(str)) {}
 
   /**
    * Create a new string using the given memory pool and length.
    * @param memory The memory pool to allocate this string's contents from
    * @param len The size of the string
    */
-  StringVal(ExecutionContext::StringAllocator *memory, std::size_t len)
-      : ptr(nullptr), len(len) {
-    if (TPL_UNLIKELY(len > kMaxStingLen)) {
-      len = 0;
-      is_null = true;
-    } else {
-      ptr = reinterpret_cast<byte *>(memory->Allocate(len));
-    }
-  }
+  StringVal(ExecutionContext::StringAllocator *memory, std::size_t len);
 
-  /**
-   * Compare if this (potentially nullable) string value is equivalent to
-   * another string value.
-   * @param that The string value to compare with.
-   * @return True if equivalent; false otherwise.
-   */
-  bool operator==(const StringVal &that) const {
-    if (is_null != that.is_null) {
-      return false;
-    }
-    if (is_null) {
-      return true;
-    }
-    if (len != that.len) {
-      return false;
-    }
-    return ptr == that.ptr || memcmp(ptr, that.ptr, len) == 0;
-  }
+  i32 Compare(const StringVal &that) const;
 
-  /**
-   * Is this string not equivalent to another?
-   * @param that The string value to compare with.
-   * @return True if not equivalent; false otherwise.
-   */
-  bool operator!=(const StringVal &that) const { return !(*this == that); }
+  bool Eq(const StringVal &that) const { return Compare(that) == 0; }
+  bool Ge(const StringVal &that) const { return Compare(that) >= 0; }
+  bool Gt(const StringVal &that) const { return Compare(that) > 0; }
+  bool Le(const StringVal &that) const { return Compare(that) <= 0; }
+  bool Lt(const StringVal &that) const { return Compare(that) < 0; }
+  bool Ne(const StringVal &that) const { return Compare(that) != 0; }
+
+  bool operator==(const StringVal &that) const { return Eq(that); }
+  bool operator>=(const StringVal &that) const { return Ge(that); }
+  bool operator>(const StringVal &that) const { return Gt(that); }
+  bool operator<=(const StringVal &that) const { return Le(that); }
+  bool operator<(const StringVal &that) const { return Lt(that); }
+  bool operator!=(const StringVal &that) const { return Ne(that); }
 
   /**
    * Create a NULL varchar/string
    */
-  static StringVal Null() { return StringVal(static_cast<byte *>(nullptr), 0); }
+  static StringVal Null() { return StringVal(static_cast<char *>(nullptr), 0); }
+
+  /**
+   * Compare two strings. Returns:
+   * < 0 if s1 < s2
+   * 0 if s1 == s2
+   * > 0 if s1 > s2
+   *
+   * @param s1 The first string
+   * @param len1 The length of the first string
+   * @param s2 The second string
+   * @param len2 The length of the second string
+   * @param min_len The minimum length between the two input strings
+   * @return The appropriate signed value idicated comparison order
+   */
+  static i32 StringCompare(const char *s1, std::size_t len1, const char *s2,
+                           std::size_t len2, std::size_t min_len);
 };
+
+inline StringVal::StringVal(ExecutionContext::StringAllocator *memory,
+                            std::size_t len)
+    : ptr(nullptr), len(len) {
+  if (TPL_UNLIKELY(len > kMaxStingLen)) {
+    len = 0;
+    is_null = true;
+  } else {
+    ptr = reinterpret_cast<char *>(memory->Allocate(len));
+  }
+}
+
+inline i32 StringVal::StringCompare(const char *s1, std::size_t len1,
+                                    const char *s2, std::size_t len2,
+                                    std::size_t min_len) {
+  const auto result = (min_len == 0) ? 0 : memcmp(s1, s2, min_len);
+  if (result != 0) {
+    return result;
+  }
+  return len1 - len2;
+}
+
+inline i32 StringVal::Compare(const StringVal &that) const {
+  const auto min_len = std::min(len, that.len);
+  if (min_len == 0) {
+    return len == that.len ? 0 : (len == 0 ? -1 : 1);
+  }
+  return StringCompare(ptr, len, that.ptr, that.len, min_len);
+}
 
 // ---------------------------------------------------------
 // Date
