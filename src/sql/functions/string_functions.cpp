@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "sql/execution_context.h"
+#include "util/bit_util.h"
 
 namespace tpl::sql {
 
@@ -273,14 +274,81 @@ void StringFunctions::Reverse(ExecutionContext *ctx, StringVal *result,
   std::reverse_copy(str.ptr, str.ptr + str.len, result->ptr);
 }
 
-void StringFunctions::Trim(ExecutionContext *ctx, StringVal *result,
-                           const StringVal &str, const StringVal &chars) {}
+namespace {
 
-void StringFunctions::Ltrim(ExecutionContext *ctx, StringVal *result,
-                            const StringVal &str, const StringVal &chars) {}
+// TODO(pmenon): The bitset we use can be prepared once before all function
+//               invocations if the characters list is a constant value, and not
+//               a column value (i.e., SELECT ltrim(col, 'abc') FROM ...). This
+//               should be populated in the execution context once apriori
+//               rather that initializing it each invocation.
+// TODO(pmenon): What about non-ASCII strings?
+// Templatized from Postgres
+template <bool TrimLeft, bool TrimRight>
+void DoTrim(StringVal *result, const StringVal &str, const StringVal &chars) {
+  if (str.is_null || chars.is_null) {
+    *result = StringVal::Null();
+    return;
+  }
 
-void StringFunctions::Rtrim(ExecutionContext *ctx, StringVal *result,
-                            const StringVal &str, const StringVal &chars) {}
+  if (str.len == 0) {
+    *result = str;
+    return;
+  }
+
+  util::InlinedBitVector<256> bitset;
+  for (u32 i = 0; i < chars.len; i++) {
+    bitset.Set(chars.ptr[i]);
+  }
+
+  // The valid range
+  i32 begin = 0, end = str.len - 1;
+
+  if constexpr (TrimLeft) {
+    while (begin < static_cast<i32>(str.len) && bitset.Test(str.ptr[begin])) {
+      begin++;
+    }
+  }
+
+  if constexpr (TrimRight) {
+    while (begin <= end && bitset.Test(str.ptr[end])) {
+      end--;
+    }
+  }
+
+  *result = StringVal(str.ptr + begin, end - begin + 1);
+}
+
+}  // namespace
+
+void StringFunctions::Trim(UNUSED ExecutionContext *ctx, StringVal *result,
+                           const StringVal &str) {
+  DoTrim<true, true>(result, str, StringVal(" "));
+}
+
+void StringFunctions::Trim(UNUSED ExecutionContext *ctx, StringVal *result,
+                           const StringVal &str, const StringVal &chars) {
+  DoTrim<true, true>(result, str, chars);
+}
+
+void StringFunctions::Ltrim(UNUSED ExecutionContext *ctx, StringVal *result,
+                            const StringVal &str) {
+  DoTrim<true, false>(result, str, StringVal(" "));
+}
+
+void StringFunctions::Ltrim(UNUSED ExecutionContext *ctx, StringVal *result,
+                            const StringVal &str, const StringVal &chars) {
+  DoTrim<true, false>(result, str, chars);
+}
+
+void StringFunctions::Rtrim(UNUSED ExecutionContext *ctx, StringVal *result,
+                            const StringVal &str) {
+  DoTrim<false, true>(result, str, StringVal(" "));
+}
+
+void StringFunctions::Rtrim(UNUSED ExecutionContext *ctx, StringVal *result,
+                            const StringVal &str, const StringVal &chars) {
+  DoTrim<false, true>(result, str, chars);
+}
 
 void StringFunctions::Left(UNUSED ExecutionContext *ctx, StringVal *result,
                            const StringVal &str, const Integer &n) {

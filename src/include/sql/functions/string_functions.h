@@ -38,9 +38,7 @@ class StringFunctions {
                     const StringVal &str, const StringVal &chars);
 
   static void Ltrim(ExecutionContext *ctx, StringVal *result,
-                    const StringVal &str) {
-    Ltrim(ctx, result, str, StringVal(" "));
-  }
+                    const StringVal &str);
 
   static void Repeat(ExecutionContext *ctx, StringVal *result,
                      const StringVal &str, const Integer &n);
@@ -59,9 +57,7 @@ class StringFunctions {
                     const StringVal &str, const StringVal &chars);
 
   static void Rtrim(ExecutionContext *ctx, StringVal *result,
-                    const StringVal &str) {
-    Rtrim(ctx, result, str, StringVal(" "));
-  }
+                    const StringVal &str);
 
   static void SplitPart(ExecutionContext *ctx, StringVal *result,
                         const StringVal &str, const StringVal &delim,
@@ -80,9 +76,7 @@ class StringFunctions {
                    const StringVal &str, const StringVal &chars);
 
   static void Trim(ExecutionContext *ctx, StringVal *result,
-                   const StringVal &str) {
-    Trim(ctx, result, str, StringVal(" "));
-  }
+                   const StringVal &str);
 
   static void Upper(ExecutionContext *ctx, StringVal *result,
                     const StringVal &str);

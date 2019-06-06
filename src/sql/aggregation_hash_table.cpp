@@ -213,9 +213,8 @@ void AggregationHashTable::LookupBatch(
 
   // Determine the indexes of entries that are non-null
   alignas(CACHELINE_SIZE) u32 group_sel[kDefaultVectorSize];
-  u32 num_groups = util::VectorUtil::FilterNe(
-      reinterpret_cast<intptr_t *>(entries), iters[0]->num_selected(),
-      intptr_t(0), group_sel, nullptr);
+  u32 num_groups = util::VectorUtil::SelectNotNull(
+      entries, iters[0]->num_selected(), group_sel, nullptr);
 
   // Candidate groups in 'entries' may have hash collisions. Follow the chain
   // to check key equality.
@@ -317,8 +316,7 @@ void AggregationHashTable::CreateMissingGroups(
 
   // Determine which elements are missing a group
   u32 num_groups =
-      util::VectorUtil::FilterEq(reinterpret_cast<intptr_t *>(entries),
-                                 num_elems, intptr_t(0), group_sel, nullptr);
+      util::VectorUtil::SelectNull(entries, num_elems, group_sel, nullptr);
 
   // Insert those elements
   for (u32 idx = 0; idx < num_groups; idx++) {
