@@ -17,7 +17,7 @@ struct TestEntry : public HashTableEntry {
   TestEntry(u32 key, u32 value) : HashTableEntry(), key(key), value(value) {}
 };
 
-TEST_F(GenericHashTableTest, EmptyIteratorTest) {
+TEST_F(GenericHashTableTest, EmptyIterator) {
   GenericHashTable table;
 
   //
@@ -62,7 +62,7 @@ TEST_F(GenericHashTableTest, EmptyIteratorTest) {
   }
 }
 
-TEST_F(GenericHashTableTest, SimpleIterationTest) {
+TEST_F(GenericHashTableTest, SimpleIteration) {
   //
   // Test: insert a bunch of entries into the hash table, ensure iteration finds
   //       them all.
@@ -124,7 +124,7 @@ TEST_F(GenericHashTableTest, SimpleIterationTest) {
   }
 }
 
-TEST_F(GenericHashTableTest, LongChainIterationTest) {
+TEST_F(GenericHashTableTest, LongChainIteration) {
   //
   // Test: insert a bunch of identifier entries into the hash table to form a
   //       long chain in a single bucket. Then, iteration should complete over
@@ -177,7 +177,7 @@ TEST_F(GenericHashTableTest, LongChainIterationTest) {
   }
 }
 
-TEST_F(GenericHashTableTest, DISABLED_PerfIterationTest) {
+TEST_F(GenericHashTableTest, DISABLED_PerfIteration) {
   const u32 num_inserts = 5000000;
 
   // The entries
@@ -211,28 +211,21 @@ TEST_F(GenericHashTableTest, DISABLED_PerfIterationTest) {
     return sum;
   };
 
-  u32 sum = 0;
+  u32 sum1 = 0, sum2 = 0;
 
-  double taat_ms = 0;
-#if 0
-  Bench(5, [&]() {
+  double taat_ms = Bench(5, [&]() {
     GenericHashTableIterator<false> iter(table);
-    sum = check(iter);
+    sum1 = check(iter);
   });
-#endif
 
-  LOG_INFO("{}", sum);
-
-  sum = 0;
   double vaat_ms = Bench(5, [&]() {
     MemoryPool pool(nullptr);
     GenericHashTableVectorIterator<false> iter(table, &pool);
-    sum = check(iter);
+    sum2 = check(iter);
   });
 
-  LOG_INFO("{}", sum);
-
-  LOG_INFO("TaaT: {:.2f}, VaaT: {:2f}", taat_ms, vaat_ms);
+  LOG_INFO("TaaT: {:.2f} ms ({}), VaaT: {:2f} ms ({})", taat_ms, sum1, vaat_ms,
+           sum2);
 }
 
 }  // namespace tpl::sql::test
