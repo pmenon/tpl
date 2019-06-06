@@ -407,4 +407,100 @@ TEST_F(StringFunctionsTests, Right) {
   EXPECT_TRUE(StringVal("") == result);
 }
 
+TEST_F(StringFunctionsTests, Ltrim) {
+  // Nulls
+  {
+    auto result = StringVal("");
+    StringFunctions::Ltrim(ctx(), &result, StringVal::Null());
+    EXPECT_TRUE(result.is_null);
+
+    StringFunctions::Ltrim(ctx(), &result, StringVal::Null(), StringVal("xy"));
+    EXPECT_TRUE(result.is_null);
+  }
+
+  // Simple
+  auto x = StringVal("zzzytest");
+  auto chars = StringVal("xyz");
+  auto result = StringVal("");
+  StringFunctions::Ltrim(ctx(), &result, x, chars);
+  EXPECT_TRUE(StringVal("test") == result);
+
+  // Remove all
+  x = StringVal("zzzyxyyz");
+  chars = StringVal("xyz");
+  StringFunctions::Ltrim(ctx(), &result, x, chars);
+  EXPECT_TRUE(StringVal("") == result);
+
+  // Remove spaces
+  x = StringVal("  test");
+  StringFunctions::Ltrim(ctx(), &result, x);
+  EXPECT_TRUE(StringVal("test") == result);
+}
+
+TEST_F(StringFunctionsTests, Rtrim) {
+  // Nulls
+  {
+    auto result = StringVal("");
+    StringFunctions::Rtrim(ctx(), &result, StringVal::Null());
+    EXPECT_TRUE(result.is_null);
+
+    StringFunctions::Rtrim(ctx(), &result, StringVal::Null(), StringVal("xy"));
+    EXPECT_TRUE(result.is_null);
+  }
+
+  // Simple
+  auto x = StringVal("testxxzx");
+  auto chars = StringVal("xyz");
+  auto result = StringVal("");
+  StringFunctions::Rtrim(ctx(), &result, x, chars);
+  EXPECT_TRUE(StringVal("test") == result);
+
+  // Remove all
+  x = StringVal("zzzyxyyz");
+  chars = StringVal("xyz");
+  StringFunctions::Rtrim(ctx(), &result, x, chars);
+  EXPECT_TRUE(StringVal("") == result);
+
+  // Remove spaces
+  x = StringVal("test   ");
+  StringFunctions::Rtrim(ctx(), &result, x);
+  EXPECT_TRUE(StringVal("test") == result);
+}
+
+TEST_F(StringFunctionsTests, Trim) {
+  // Nulls
+  {
+    auto result = StringVal("");
+    StringFunctions::Trim(ctx(), &result, StringVal::Null());
+    EXPECT_TRUE(result.is_null);
+
+    StringFunctions::Trim(ctx(), &result, StringVal::Null(), StringVal("xy"));
+    EXPECT_TRUE(result.is_null);
+  }
+
+  // Simple
+  auto x = StringVal("yxPrashanthxx");
+  auto chars = StringVal("xyz");
+  auto result = StringVal("");
+  StringFunctions::Trim(ctx(), &result, x, chars);
+  EXPECT_TRUE(StringVal("Prashanth") == result);
+
+  // Remove all
+  x = StringVal("zzzyxyyz");
+  chars = StringVal("xyz");
+  StringFunctions::Trim(ctx(), &result, x, chars);
+  EXPECT_TRUE(StringVal("") == result);
+
+  // Remove all, but one
+  x = StringVal("zzzyXxyyz");
+  chars = StringVal("xyz");
+  StringFunctions::Trim(ctx(), &result, x, chars);
+  EXPECT_TRUE(StringVal("X") == result);
+
+  // Remove spaces
+  x = StringVal("   test   ");
+  StringFunctions::Trim(ctx(), &result, x);
+  EXPECT_TRUE(StringVal("test") == result);
+}
+
 }  // namespace tpl::sql::test
