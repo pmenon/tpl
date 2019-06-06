@@ -43,44 +43,35 @@ template <bool UseTag>
 inline void GenericHashTableVectorIterator<UseTag>::Refill() {
   // Invariant: the range of elements [entry_vec_idx_, entry_vec_end_idx_) in
   // the entry cache contains non-null hash table entries.
-  //
-  // To refill, we first move along the chain of all valid entries in the cache.
-  // This may produce some null holes in [entry_vec_idx_, entry_vec_end_idx_).
-  // We find all holes and try to fill in entries from the source table. We then
-  // left-compact all entries again to ensure the invariant is maintained.
 
+  // Index tracks the end of the valid range of entries in the entry cache
+  u32 index = 0;
+
+  // For the current set of valid entries, follow their chain. This may produce
+  // holes in the range, but we'll compact them out in a subsequent filter.
   for (u32 i = 0; i < entry_vec_end_idx_; i++) {
     entry_vec_[i] = entry_vec_[i]->next;
   }
 
-  entry_vec_idx_ = entry_vec_end_idx_ = 0;
+  // Compact out the holes produced in the previous chain lookup.
+  for (u32 i = 0; i < entry_vec_idx_; i++) {
+    entry_vec_[index] = entry_vec_[i];
+    index += (entry_vec_[index] != nullptr);
+  }
 
-  // Try to refill empty entry slots with entries from the source hash table
-  if (table_dir_index_ < table_.capacity()) {
-    // Find all null slots in the entry vector cache
-    const u32 null_count = util::VectorUtil::SelectNull(
-        entry_vec_, kDefaultVectorSize, null_slot_sel_vec_, nullptr);
-
-    // For all null-slots, try to plop in an entry from the source table. Fill
-    // in slots compactly to the left.
-    for (u32 i = 0; i < null_count && table_dir_index_ < table_.capacity();) {
-      const auto index = null_slot_sel_vec_[i];
-      entry_vec_[index] = table_.entries_[table_dir_index_++];
-      if constexpr (UseTag) {
-        entry_vec_[index] = GenericHashTable::UntagPointer(entry_vec_[index]);
-      }
-      i += (entry_vec_[index] != nullptr);
+  // Fill the range [idx, SIZE) in the cache with valid entries from the source
+  // hash table.
+  while (index < kDefaultVectorSize && table_dir_index_ < table_.capacity()) {
+    entry_vec_[index] = table_.entries_[table_dir_index_++];
+    if constexpr (UseTag) {
+      entry_vec_[index] = GenericHashTable::UntagPointer(entry_vec_[index]);
     }
+    index += (entry_vec_[index] != nullptr);
   }
 
-  // Compact the tail
-  for (u32 i = entry_vec_end_idx_; i < kDefaultVectorSize; i++) {
-    entry_vec_[entry_vec_end_idx_] = entry_vec_[i];
-    entry_vec_end_idx_ += (entry_vec_[entry_vec_end_idx_] != nullptr);
-  }
-  for (u32 i = entry_vec_end_idx_; i < kDefaultVectorSize; i++) {
-    entry_vec_[i] = nullptr;
-  }
+  // The new range of valid entries is in [0, idx).
+  entry_vec_idx_ = 0;
+  entry_vec_end_idx_ = index;
 }
 
 template void GenericHashTableVectorIterator<true>::Refill();
