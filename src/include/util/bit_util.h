@@ -44,7 +44,7 @@ class BitUtil {
   }
 
   /**
-   * Test if the bit at index \a idx is set in the bit vector
+   * Test if the bit at index @em idx is set in the bit vector
    * @param bits The bit vector
    * @param idx The index of the bit to check
    * @return True if set; false otherwise
@@ -55,7 +55,7 @@ class BitUtil {
   }
 
   /**
-   * Set the bit at index \a idx to 1 in the bit vector \a bits
+   * Set the bit at index @em idx to 1 in the bit vector @em bits
    * @param bits The bit vector
    * @param idx The index of the bit to set to 1
    */
@@ -64,7 +64,21 @@ class BitUtil {
   }
 
   /**
-   * Set the bit at index \a idx to 0 in the bit vector \a bits
+   * Set the bit at index @em idx to the boolean indicated by @em val
+   * @param bits The bit vector
+   * @param idx The index of the bit to set or unset
+   * @param val The value to set the bit to
+   */
+  ALWAYS_INLINE static void SetTo(u32 bits[], const u32 idx, const bool val) {
+    if (val) {
+      Set(bits, idx);
+    } else {
+      Unset(bits, idx);
+    }
+  }
+
+  /**
+   * Set the bit at index @em idx to 0 in the bit vector @em bits
    * @param bits The bit vector
    * @param idx The index of the bit to unset
    */
@@ -73,7 +87,7 @@ class BitUtil {
   }
 
   /**
-   * Flip the value of the bit at index \a idx in the bit vector
+   * Flip the value of the bit at index @em idx in the bit vector
    * @param bits The bit vector
    * @param idx The index of the bit to flip
    */
@@ -110,31 +124,36 @@ template <typename Subclass>
 class BitVectorBase {
  public:
   /**
-   * Test the value of the bit at index \a idx in the bit-vector
+   * Test the value of the bit at index @em idx in the bit-vector
    */
-  bool Test(u32 idx) const {
+  bool Test(const u32 idx) const {
     TPL_ASSERT(idx < impl()->num_bits(), "Index out of range");
     return BitUtil::Test(impl()->bits(), idx);
   }
 
-  void Set(u32 idx) {
+  void Set(const u32 idx) {
     TPL_ASSERT(idx < impl()->num_bits(), "Index out of range");
     return BitUtil::Set(impl()->bits(), idx);
   }
 
-  void Unset(u32 idx) {
+  void SetTo(const u32 idx, const bool val) {
+    TPL_ASSERT(idx < impl()->num_bits(), "Index out of range");
+    return BitUtil::SetTo(impl()->bits(), idx, val);
+  }
+
+  void Unset(const u32 idx) {
     TPL_ASSERT(idx < impl()->num_bits(), "Index out of range");
     return BitUtil::Unset(impl()->bits(), idx);
   }
 
-  void Flip(u32 idx) {
+  void Flip(const u32 idx) {
     TPL_ASSERT(idx < impl()->num_bits(), "Index out of range");
     return BitUtil::Flip(impl()->bits(), idx);
   }
 
   void ClearAll() { return BitUtil::Clear(impl()->bits(), impl()->num_bits()); }
 
-  bool operator[](u32 idx) const { return Test(idx); }
+  bool operator[](const u32 idx) const { return Test(idx); }
 
  private:
   Subclass *impl() { return static_cast<Subclass *>(this); }

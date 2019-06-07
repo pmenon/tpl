@@ -4,7 +4,7 @@
 
 namespace tpl::util::test {
 
-TEST(BitUtilTest, BitVectorSizeTest) {
+TEST(BitUtilTest, BitVectorSize) {
   // We need at least one word for 1 bit
   EXPECT_EQ(1u, BitUtil::Num32BitWordsFor(1));
 
@@ -16,7 +16,7 @@ TEST(BitUtilTest, BitVectorSizeTest) {
   EXPECT_EQ(2u, BitUtil::Num32BitWordsFor(33));
 }
 
-TEST(BitUtilTest, EmptyBitVectorTest) {
+TEST(BitUtilTest, EmptyBitVector) {
   //
   // Create an empty bit vector, ensure all bits unset
   //
@@ -27,7 +27,7 @@ TEST(BitUtilTest, EmptyBitVectorTest) {
   }
 }
 
-TEST(BitUtilTest, ClearBitsTest) {
+TEST(BitUtilTest, ClearBits) {
   //
   // Create a bit vector, set all the bits, clear it, check
   //
@@ -42,7 +42,7 @@ TEST(BitUtilTest, ClearBitsTest) {
   }
 }
 
-TEST(BitUtilTest, TestAndSetTest) {
+TEST(BitUtilTest, TestAndSet) {
   //
   // Create a BitVector, set every odd bit position
   //
@@ -87,7 +87,31 @@ TEST(BitUtilTest, TestAndSetTest) {
   }
 }
 
-TEST(BitUtilTest, InlinedBitVectorTest) {
+TEST(BitUtilTest, SetToValue) {
+  BitVector bv(100);
+
+  bv.ClearAll();
+  bv.SetTo(10, true);
+
+  for (u32 i = 0; i < bv.num_bits(); i++) {
+    EXPECT_EQ(i == 10u, bv.Test(i));
+  }
+
+  bv.SetTo(80, true);
+  bv.SetTo(10, false);
+
+  for (u32 i = 0; i < bv.num_bits(); i++) {
+    EXPECT_EQ(i == 80u, bv.Test(i));
+  }
+
+  bv.SetTo(80, false);
+  
+  for (u32 i = 0; i < bv.num_bits(); i++) {
+    EXPECT_FALSE(bv.Test(i));
+  }
+}
+
+TEST(BitUtilTest, InlinedBitVector) {
   InlinedBitVector<64> bits;
 
   EXPECT_EQ(64u, bits.num_bits());
