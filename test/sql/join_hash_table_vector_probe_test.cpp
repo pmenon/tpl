@@ -28,9 +28,9 @@ class JoinHashTableVectorProbeTest : public TplTest {
 
  protected:
   template <u8 N, typename F>
-  std::unique_ptr<const JoinHashTable> InsertAndBuild(bool concise,
-                                                      u32 num_tuples,
-                                                      F &&key_gen) {
+  std::unique_ptr<const JoinHashTable> BuildJoinHashTable(bool concise,
+                                                          u32 num_tuples,
+                                                          F &&key_gen) {
     auto jht =
         std::make_unique<JoinHashTable>(memory(), sizeof(Tuple<N>), concise);
 
@@ -50,25 +50,25 @@ class JoinHashTableVectorProbeTest : public TplTest {
     return jht;
   }
 
-  template <u8 N>
-  static hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
-    const auto *key_ptr = vpi->Get<u32, false>(0, nullptr);
-    return util::Hasher::Hash(reinterpret_cast<const u8 *>(key_ptr),
-                              sizeof(Tuple<N>::build_key));
-  }
-
-  /// The function to determine whether two tuples have equivalent keys
-  template <u8 N>
-  static bool CmpTupleInVPI(const void *table_tuple,
-                            VectorProjectionIterator *vpi) noexcept {
-    auto lhs_key = reinterpret_cast<const Tuple<N> *>(table_tuple)->build_key;
-    auto rhs_key = *vpi->Get<u32, false>(0, nullptr);
-    return lhs_key == rhs_key;
-  }
-
  private:
   MemoryPool memory_;
 };
+
+template <u8 N>
+static hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
+  const auto *key_ptr = vpi->Get<u32, false>(0, nullptr);
+  return util::Hasher::Hash(reinterpret_cast<const u8 *>(key_ptr),
+                            sizeof(Tuple<N>::build_key));
+}
+
+/// The function to determine whether two tuples have equivalent keys
+template <u8 N>
+static bool CmpTupleInVPI(const void *table_tuple,
+                          VectorProjectionIterator *vpi) noexcept {
+  auto lhs_key = reinterpret_cast<const Tuple<N> *>(table_tuple)->build_key;
+  auto rhs_key = *vpi->Get<u32, false>(0, nullptr);
+  return lhs_key == rhs_key;
+}
 
 // Sequential number functor
 struct Seq {
@@ -97,16 +97,14 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
   constexpr const u32 num_probe = num_build * 10;
 
   // Create test JHT
-  auto jht = InsertAndBuild<N>(/*concise*/ false, num_build, Seq(0));
+  auto jht = BuildJoinHashTable<N>(/*concise*/ false, num_build, Seq(0));
 
   // Create test probe input
   auto probe_keys = std::vector<u32>(num_probe);
   std::generate(probe_keys.begin(), probe_keys.end(), Range(0, num_build - 1));
 
-  Schema schema({{"pk", IntegerType::InstanceNonNullable()}});
-  std::vector<const Schema::ColumnInfo *> vp_col_info = {
-      schema.GetColumnInfo(0)};
-  VectorProjection vp(vp_col_info, num_probe);
+  Schema schema({{"probeKey", IntegerType::InstanceNonNullable()}});
+  VectorProjection vp({schema.GetColumnInfo(0)}, num_probe);
   VectorProjectionIterator vpi(&vp);
 
   // Lookup
@@ -124,11 +122,11 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
     lookup.Prepare(&vpi, HashTupleInVPI<N>);
 
     // Iterate all
-    while (const auto *entry = lookup.GetNextOutput(&vpi, CmpTupleInVPI<N>)) {
+    while (auto *tuple =
+               lookup.GetNextOutput<Tuple<N>>(&vpi, CmpTupleInVPI<N>)) {
       count++;
-      auto ht_key = entry->PayloadAs<Tuple<N>>()->build_key;
       auto probe_key = *vpi.Get<u32, false>(0, nullptr);
-      EXPECT_EQ(ht_key, probe_key);
+      EXPECT_EQ(tuple->build_key, probe_key);
     }
   }
 
@@ -142,7 +140,7 @@ TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
     constexpr const u32 num_probe = num_build * 10;
 
     // Create test JHT
-    auto jht = InsertAndBuild<N>(concise, num_build, Seq(0));
+    auto jht = BuildJoinHashTable<N>(concise, num_build, Seq(0));
 
     // Create test probe input
     auto probe_keys = std::vector<u32>(num_probe);
@@ -150,9 +148,7 @@ TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
                   Range(0, num_build - 1));
 
     Schema schema({{"pk", IntegerType::InstanceNonNullable()}});
-    std::vector<const Schema::ColumnInfo *> vp_col_info = {
-        schema.GetColumnInfo(0)};
-    VectorProjection vp(vp_col_info, kDefaultVectorSize);
+    VectorProjection vp({schema.GetColumnInfo(0)}, kDefaultVectorSize);
     VectorProjectionIterator vpi(&vp);
 
     // Lookup

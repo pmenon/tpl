@@ -11,6 +11,7 @@
 #include "sql/functions/arithmetic_functions.h"
 #include "sql/functions/comparison_functions.h"
 #include "sql/join_hash_table.h"
+#include "sql/join_hash_table_vector_probe.h"
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
@@ -918,6 +919,28 @@ void OpJoinHashTableBuildParallel(
     tpl::sql::ThreadStateContainer *thread_state_container, u32 jht_offset);
 
 void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table);
+
+void OpJoinHashTableVectorProbeInit(
+    tpl::sql::JoinHashTableVectorProbe *jht_vector_probe,
+    tpl::sql::JoinHashTable *jht);
+
+VM_OP_HOT void OpJoinHashTableVectorProbePrepare(
+    tpl::sql::JoinHashTableVectorProbe *jht_vector_probe,
+    tpl::sql::VectorProjectionIterator *vpi,
+    tpl::sql::JoinHashTableVectorProbe::HashFn hash_fn) {
+  jht_vector_probe->Prepare(vpi, hash_fn);
+}
+
+VM_OP_HOT void OpJoinHashTableVectorProbeGetNextOutput(
+    const byte **result,
+    tpl::sql::JoinHashTableVectorProbe *jht_vector_probe,
+    tpl::sql::VectorProjectionIterator *vpi,
+    tpl::sql::JoinHashTableVectorProbe::KeyEqFn key_eq_fn) {
+  *result = jht_vector_probe->GetNextOutput(vpi, key_eq_fn);
+}
+
+void OpJoinHashTableVectorProbeFree(
+    tpl::sql::JoinHashTableVectorProbe *jht_vector_probe);
 
 // ---------------------------------------------------------
 // Sorting

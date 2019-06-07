@@ -231,6 +231,11 @@ namespace tpl::vm {
   F(JoinHashTableBuild, OperandType::Local)                                                                            \
   F(JoinHashTableBuildParallel, OperandType::Local, OperandType::Local, OperandType::Local)                            \
   F(JoinHashTableFree, OperandType::Local)                                                                             \
+  F(JoinHashTableVectorProbeInit, OperandType::Local, OperandType::Local)                                              \
+  F(JoinHashTableVectorProbePrepare, OperandType::Local, OperandType::Local, OperandType::FunctionId)                  \
+  F(JoinHashTableVectorProbeGetNextOutput, OperandType::Local, OperandType::Local, OperandType::Local,                 \
+      OperandType::FunctionId)                                                                                         \
+  F(JoinHashTableVectorProbeFree, OperandType::Local)                                                                  \
                                                                                                                        \
   /* Sorting */                                                                                                        \
   F(SorterInit, OperandType::Local, OperandType::Local, OperandType::FunctionId, OperandType::Local)                   \

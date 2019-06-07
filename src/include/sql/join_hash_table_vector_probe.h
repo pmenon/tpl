@@ -42,8 +42,8 @@ class JoinHashTableVectorProbe {
    * @param key_eq_fn The function to check key equality
    * @return The next matching entry
    */
-  const HashTableEntry *GetNextOutput(VectorProjectionIterator *vpi,
-                                      KeyEqFn key_eq_fn);
+  template <typename T = byte>
+  const T *GetNextOutput(VectorProjectionIterator *vpi, KeyEqFn key_eq_fn);
 
  private:
   // The table we're probing
@@ -62,7 +62,8 @@ class JoinHashTableVectorProbe {
 
 // Because this function is a tuple-at-a-time, it's placed in the header to
 // reduce function call overhead.
-inline const HashTableEntry *JoinHashTableVectorProbe::GetNextOutput(
+template <typename T>
+inline const T *JoinHashTableVectorProbe::GetNextOutput(
     VectorProjectionIterator *const vpi, const KeyEqFn key_eq_fn) {
   TPL_ASSERT(vpi != nullptr, "No input VPI!");
   TPL_ASSERT(match_idx_ < vpi->num_selected(), "Continuing past iteration!");
@@ -73,7 +74,7 @@ inline const HashTableEntry *JoinHashTableVectorProbe::GetNextOutput(
       entries_[match_idx_] = entry->next;
       if (entry->hash == hashes_[match_idx_] &&
           key_eq_fn(entry->payload, vpi)) {
-        return entry;
+        return entry->PayloadAs<T>();
       }
     }
 
