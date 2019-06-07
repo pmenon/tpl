@@ -56,7 +56,7 @@ class JoinHashTableVectorProbeTest : public TplTest {
 
 template <u8 N>
 static hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
-  const auto *key_ptr = vpi->Get<u32, false>(0, nullptr);
+  const auto *key_ptr = vpi->GetValue<u32, false>(0, nullptr);
   return util::Hasher::Hash(reinterpret_cast<const u8 *>(key_ptr),
                             sizeof(Tuple<N>::build_key));
 }
@@ -66,7 +66,7 @@ template <u8 N>
 static bool CmpTupleInVPI(const void *table_tuple,
                           VectorProjectionIterator *vpi) noexcept {
   auto lhs_key = reinterpret_cast<const Tuple<N> *>(table_tuple)->build_key;
-  auto rhs_key = *vpi->Get<u32, false>(0, nullptr);
+  auto rhs_key = *vpi->GetValue<u32, false>(0, nullptr);
   return lhs_key == rhs_key;
 }
 
@@ -125,7 +125,7 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
     while (auto *tuple =
                lookup.GetNextOutput<Tuple<N>>(&vpi, CmpTupleInVPI<N>)) {
       count++;
-      auto probe_key = *vpi.Get<u32, false>(0, nullptr);
+      auto probe_key = *vpi.GetValue<u32, false>(0, nullptr);
       EXPECT_EQ(tuple->build_key, probe_key);
     }
   }

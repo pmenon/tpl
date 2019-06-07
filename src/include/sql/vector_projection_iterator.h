@@ -59,7 +59,7 @@ class VectorProjectionIterator {
    * @return The typed value at the current iterator position in the column
    */
   template <typename T, bool nullable>
-  const T *Get(u32 col_idx, bool *null) const;
+  const T *GetValue(u32 col_idx, bool *null) const;
 
   /**
    * Set the current iterator position
@@ -207,7 +207,8 @@ class VectorProjectionIterator {
 // Retrieve a single column value (and potentially its NULL indicator) from the
 // desired column's input data
 template <typename T, bool Nullable>
-inline const T *VectorProjectionIterator::Get(u32 col_idx, bool *null) const {
+inline const T *VectorProjectionIterator::GetValue(const u32 col_idx,
+                                                   bool *const null) const {
   if constexpr (Nullable) {
     TPL_ASSERT(null != nullptr, "Missing output variable for NULL indicator");
     const u32 *col_null_bitmap = vector_projection_->GetNullBitmap(col_idx);

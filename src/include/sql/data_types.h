@@ -212,7 +212,7 @@ class BigIntType : public NumberBaseType<i64> {
   explicit BigIntType(bool nullable);
 };
 
-class RealType: public NumberBaseType<double> {
+class RealType : public NumberBaseType<double> {
  public:
   static const RealType &InstanceNonNullable();
 

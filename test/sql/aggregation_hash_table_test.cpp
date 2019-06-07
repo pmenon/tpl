@@ -204,29 +204,29 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
 
   const auto hash_fn = [](void *x) {
     auto iters = reinterpret_cast<VectorProjectionIterator **>(x);
-    auto key = iters[0]->Get<u32, false>(0, nullptr);
+    auto key = iters[0]->GetValue<u32, false>(0, nullptr);
     return util::Hasher::Hash(reinterpret_cast<const u8 *>(key), sizeof(u32));
   };
 
   const auto key_eq = [](const void *agg, const void *x) {
     auto agg_tuple = reinterpret_cast<const AggTuple *>(agg);
     auto iters = reinterpret_cast<const VectorProjectionIterator *const *>(x);
-    auto vpi_key = iters[0]->Get<u32, false>(0, nullptr);
+    auto vpi_key = iters[0]->GetValue<u32, false>(0, nullptr);
     return agg_tuple->key == *vpi_key;
   };
 
   const auto init_agg = [](void *agg, void *x) {
     auto iters = reinterpret_cast<VectorProjectionIterator **>(x);
-    auto key = iters[0]->Get<u32, false>(0, nullptr);
-    auto val = iters[0]->Get<u32, false>(1, nullptr);
+    auto key = iters[0]->GetValue<u32, false>(0, nullptr);
+    auto val = iters[0]->GetValue<u32, false>(1, nullptr);
     new (agg) AggTuple(InputTuple(*key, *val));
   };
 
   const auto advance_agg = [](void *agg, void *x) {
     auto agg_tuple = reinterpret_cast<AggTuple *>(agg);
     auto iters = reinterpret_cast<VectorProjectionIterator **>(x);
-    auto key = iters[0]->Get<u32, false>(0, nullptr);
-    auto val = iters[0]->Get<u32, false>(1, nullptr);
+    auto key = iters[0]->GetValue<u32, false>(0, nullptr);
+    auto val = iters[0]->GetValue<u32, false>(1, nullptr);
     agg_tuple->Advance(InputTuple(*key, *val));
   };
 

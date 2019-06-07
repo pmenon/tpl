@@ -202,7 +202,7 @@ TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
     bool entered = false;
     for (i16 last = -1; iter.HasNext(); iter.Advance()) {
       entered = true;
-      auto *ptr = iter.Get<i16, false>(ColId::col_a, nullptr);
+      auto *ptr = iter.GetValue<i16, false>(ColId::col_a, nullptr);
       EXPECT_NE(nullptr, ptr);
       if (last != -1) {
         EXPECT_LE(last, *ptr);
@@ -227,7 +227,7 @@ TEST_F(VectorProjectionIteratorTest, ReadNullableColumnsTest) {
   u32 num_nulls = 0;
   for (; iter.HasNext(); iter.Advance()) {
     bool null = false;
-    auto *ptr = iter.Get<i32, true>(ColId::col_b, &null);
+    auto *ptr = iter.GetValue<i32, true>(ColId::col_b, &null);
     EXPECT_NE(nullptr, ptr);
     num_nulls += static_cast<u32>(null);
   }
@@ -247,7 +247,7 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
 
     for (; iter.HasNext(); iter.Advance()) {
       bool null = false;
-      iter.Get<i32, true>(ColId::col_b, &null);
+      iter.GetValue<i32, true>(ColId::col_b, &null);
       iter.Match(!null);
     }
 
@@ -257,7 +257,7 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
     u32 num_non_null = 0;
     for (; iter.HasNextFiltered(); iter.AdvanceFiltered()) {
       bool null = false;
-      iter.Get<i32, true>(ColId::col_b, &null);
+      iter.GetValue<i32, true>(ColId::col_b, &null);
       EXPECT_FALSE(null);
       num_non_null++;
     }
@@ -284,7 +284,7 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
     iter.SetVectorProjection(vp());
 
     for (; iter.HasNext(); iter.Advance()) {
-      auto *val = iter.Get<i16, false>(ColId::col_a, nullptr);
+      auto *val = iter.GetValue<i16, false>(ColId::col_a, nullptr);
       iter.Match(*val < 100);
     }
 
@@ -292,7 +292,7 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
 
     for (; iter.HasNextFiltered(); iter.AdvanceFiltered()) {
       bool null = false;
-      iter.Get<i32, true>(ColId::col_b, &null);
+      iter.GetValue<i32, true>(ColId::col_b, &null);
       iter.Match(null);
     }
 
@@ -303,14 +303,14 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
     for (; iter.HasNextFiltered(); iter.AdvanceFiltered()) {
       // col_a must be less than 100
       {
-        auto *val = iter.Get<i16, false>(ColId::col_a, nullptr);
+        auto *val = iter.GetValue<i16, false>(ColId::col_a, nullptr);
         EXPECT_LT(*val, 100);
       }
 
       // col_b must be NULL
       {
         bool null = false;
-        iter.Get<i32, true>(ColId::col_b, &null);
+        iter.GetValue<i32, true>(ColId::col_b, &null);
         EXPECT_TRUE(null);
       }
     }
@@ -328,7 +328,7 @@ TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
 
   iter.RunFilter([&iter]() {
     bool null = false;
-    iter.Get<i32, true>(ColId::col_b, &null);
+    iter.GetValue<i32, true>(ColId::col_b, &null);
     return !null;
   });
 
@@ -345,7 +345,7 @@ TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
     iter.ForEach([&iter, &c]() {
       c++;
       bool null = false;
-      iter.Get<i32, true>(ColId::col_b, &null);
+      iter.GetValue<i32, true>(ColId::col_b, &null);
       EXPECT_FALSE(null);
     });
 
@@ -366,7 +366,7 @@ TEST_F(VectorProjectionIteratorTest, SimpleVectorizedFilterTest) {
   // Compute expected result
   u32 expected = 0;
   for (; iter.HasNext(); iter.Advance()) {
-    auto val = *iter.Get<i32, false>(ColId::col_c, nullptr);
+    auto val = *iter.GetValue<i32, false>(ColId::col_c, nullptr);
     if (val < 100) {
       expected++;
     }
@@ -379,7 +379,7 @@ TEST_F(VectorProjectionIteratorTest, SimpleVectorizedFilterTest) {
   // Check
   u32 count = 0;
   for (; iter.HasNextFiltered(); iter.AdvanceFiltered()) {
-    auto val = *iter.Get<i32, false>(ColId::col_c, nullptr);
+    auto val = *iter.GetValue<i32, false>(ColId::col_c, nullptr);
     EXPECT_LT(val, 100);
     count++;
   }
@@ -409,8 +409,8 @@ TEST_F(VectorProjectionIteratorTest, MultipleVectorizedFilterTest) {
   // Check
   u32 count = 0;
   for (; iter.HasNextFiltered(); iter.AdvanceFiltered()) {
-    auto col_a_val = *iter.Get<i16, false>(ColId::col_a, nullptr);
-    auto col_c_val = *iter.Get<i32, false>(ColId::col_c, nullptr);
+    auto col_a_val = *iter.GetValue<i16, false>(ColId::col_a, nullptr);
+    auto col_c_val = *iter.GetValue<i32, false>(ColId::col_c, nullptr);
     EXPECT_LT(col_a_val, 10);
     EXPECT_LT(col_c_val, 750);
     count++;

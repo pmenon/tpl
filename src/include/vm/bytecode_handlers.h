@@ -296,7 +296,7 @@ VM_OP_HOT void OpVPIGetSmallInt(tpl::sql::Integer *out,
                                 tpl::sql::VectorProjectionIterator *iter,
                                 u32 col_idx) {
   // Read
-  auto *ptr = iter->Get<i16, false>(col_idx, nullptr);
+  auto *ptr = iter->GetValue<i16, false>(col_idx, nullptr);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
 
   // Set
@@ -305,10 +305,10 @@ VM_OP_HOT void OpVPIGetSmallInt(tpl::sql::Integer *out,
 }
 
 VM_OP_HOT void OpVPIGetInteger(tpl::sql::Integer *out,
-                               tpl::sql::VectorProjectionIterator *iter,
-                               u32 col_idx) {
+                               tpl::sql::VectorProjectionIterator *const vpi,
+                               const u32 col_idx) {
   // Read
-  auto *ptr = iter->Get<i32, false>(col_idx, nullptr);
+  auto *ptr = vpi->GetValue<i32, false>(col_idx, nullptr);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
 
   // Set
@@ -317,10 +317,10 @@ VM_OP_HOT void OpVPIGetInteger(tpl::sql::Integer *out,
 }
 
 VM_OP_HOT void OpVPIGetBigInt(tpl::sql::Integer *out,
-                              tpl::sql::VectorProjectionIterator *iter,
-                              u32 col_idx) {
+                              tpl::sql::VectorProjectionIterator *const vpi,
+                              const u32 col_idx) {
   // Read
-  auto *ptr = iter->Get<i64, false>(col_idx, nullptr);
+  auto *ptr = vpi->GetValue<i64, false>(col_idx, nullptr);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
 
   // Set
@@ -329,10 +329,10 @@ VM_OP_HOT void OpVPIGetBigInt(tpl::sql::Integer *out,
 }
 
 VM_OP_HOT void OpVPIGetReal(tpl::sql::Real *out,
-                            tpl::sql::VectorProjectionIterator *iter,
-                            u32 col_idx) {
+                            tpl::sql::VectorProjectionIterator *const vpi,
+                            const u32 col_idx) {
   // Read
-  auto *ptr = iter->Get<f32, false>(col_idx, nullptr);
+  auto *ptr = vpi->GetValue<f32, false>(col_idx, nullptr);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read real value");
 
   // Set
@@ -341,10 +341,10 @@ VM_OP_HOT void OpVPIGetReal(tpl::sql::Real *out,
 }
 
 VM_OP_HOT void OpVPIGetDouble(tpl::sql::Real *out,
-                              tpl::sql::VectorProjectionIterator *iter,
-                              u32 col_idx) {
+                              tpl::sql::VectorProjectionIterator *const vpi,
+                              const u32 col_idx) {
   // Read
-  auto *ptr = iter->Get<f64, false>(col_idx, nullptr);
+  auto *ptr = vpi->GetValue<f64, false>(col_idx, nullptr);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read double value");
 
   // Set
@@ -353,19 +353,19 @@ VM_OP_HOT void OpVPIGetDouble(tpl::sql::Real *out,
 }
 
 VM_OP_HOT void OpVPIGetDecimal(tpl::sql::Decimal *out,
-                               UNUSED tpl::sql::VectorProjectionIterator *iter,
-                               UNUSED u32 col_idx) {
+                               UNUSED tpl::sql::VectorProjectionIterator *vpi,
+                               UNUSED const u32 col_idx) {
   // Set
   out->is_null = false;
   out->val = 0;
 }
 
-VM_OP_HOT void OpVPIGetSmallIntNull(tpl::sql::Integer *out,
-                                    tpl::sql::VectorProjectionIterator *iter,
-                                    u32 col_idx) {
+VM_OP_HOT void OpVPIGetSmallIntNull(
+    tpl::sql::Integer *out, tpl::sql::VectorProjectionIterator *const vpi,
+    const u32 col_idx) {
   // Read
   bool null = false;
-  auto *ptr = iter->Get<i16, true>(col_idx, &null);
+  auto *ptr = vpi->GetValue<i16, true>(col_idx, &null);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
 
   // Set
@@ -373,12 +373,12 @@ VM_OP_HOT void OpVPIGetSmallIntNull(tpl::sql::Integer *out,
   out->val = *ptr;
 }
 
-VM_OP_HOT void OpVPIGetIntegerNull(tpl::sql::Integer *out,
-                                   tpl::sql::VectorProjectionIterator *iter,
-                                   u32 col_idx) {
+VM_OP_HOT void OpVPIGetIntegerNull(
+    tpl::sql::Integer *out, tpl::sql::VectorProjectionIterator *const vpi,
+    const u32 col_idx) {
   // Read
   bool null = false;
-  auto *ptr = iter->Get<i32, true>(col_idx, &null);
+  auto *ptr = vpi->GetValue<i32, true>(col_idx, &null);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
 
   // Set
@@ -387,11 +387,11 @@ VM_OP_HOT void OpVPIGetIntegerNull(tpl::sql::Integer *out,
 }
 
 VM_OP_HOT void OpVPIGetBigIntNull(tpl::sql::Integer *out,
-                                  tpl::sql::VectorProjectionIterator *iter,
-                                  u32 col_idx) {
+                                  tpl::sql::VectorProjectionIterator *const vpi,
+                                  const u32 col_idx) {
   // Read
   bool null = false;
-  auto *ptr = iter->Get<i64, true>(col_idx, &null);
+  auto *ptr = vpi->GetValue<i64, true>(col_idx, &null);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
 
   // Set
@@ -400,11 +400,11 @@ VM_OP_HOT void OpVPIGetBigIntNull(tpl::sql::Integer *out,
 }
 
 VM_OP_HOT void OpVPIGetRealNull(tpl::sql::Real *out,
-                                tpl::sql::VectorProjectionIterator *iter,
-                                u32 col_idx) {
+                                tpl::sql::VectorProjectionIterator *const vpi,
+                                const u32 col_idx) {
   // Read
   bool null = false;
-  auto *ptr = iter->Get<f32, true>(col_idx, &null);
+  auto *ptr = vpi->GetValue<f32, true>(col_idx, &null);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read real value");
 
   // Set
@@ -413,11 +413,11 @@ VM_OP_HOT void OpVPIGetRealNull(tpl::sql::Real *out,
 }
 
 VM_OP_HOT void OpVPIGetDoubleNull(tpl::sql::Real *out,
-                                  tpl::sql::VectorProjectionIterator *iter,
-                                  u32 col_idx) {
+                                  tpl::sql::VectorProjectionIterator *const vpi,
+                                  const u32 col_idx) {
   // Read
   bool null = false;
-  auto *ptr = iter->Get<f64, true>(col_idx, &null);
+  auto *ptr = vpi->GetValue<f64, true>(col_idx, &null);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read double value");
 
   // Set
@@ -425,31 +425,31 @@ VM_OP_HOT void OpVPIGetDoubleNull(tpl::sql::Real *out,
   out->val = *ptr;
 }
 
-VM_OP_HOT void OpVPIGetDecimalNull(tpl::sql::Decimal *out,
-                                   tpl::sql::VectorProjectionIterator *iter,
-                                   u32 col_idx) {
+VM_OP_HOT void OpVPIGetDecimalNull(
+    tpl::sql::Decimal *out, tpl::sql::VectorProjectionIterator *const vpi,
+    const u32 col_idx) {
   out->val = 0;
   out->is_null = false;
 }
 
-void OpVPIFilterEqual(u32 *size, tpl::sql::VectorProjectionIterator *iter,
+void OpVPIFilterEqual(u32 *size, tpl::sql::VectorProjectionIterator *vpi,
                       u16 col_id, i64 val);
 
-void OpVPIFilterGreaterThan(u32 *size, tpl::sql::VectorProjectionIterator *iter,
+void OpVPIFilterGreaterThan(u32 *size, tpl::sql::VectorProjectionIterator *vpi,
                             u16 col_id, i64 val);
 
 void OpVPIFilterGreaterThanEqual(u32 *size,
-                                 tpl::sql::VectorProjectionIterator *iter,
+                                 tpl::sql::VectorProjectionIterator *vpi,
                                  u16 col_id, i64 val);
 
-void OpVPIFilterLessThan(u32 *size, tpl::sql::VectorProjectionIterator *iter,
+void OpVPIFilterLessThan(u32 *size, tpl::sql::VectorProjectionIterator *vpi,
                          u16 col_id, i64 val);
 
 void OpVPIFilterLessThanEqual(u32 *size,
-                              tpl::sql::VectorProjectionIterator *iter,
+                              tpl::sql::VectorProjectionIterator *vpi,
                               u16 col_id, i64 val);
 
-void OpVPIFilterNotEqual(u32 *size, tpl::sql::VectorProjectionIterator *iter,
+void OpVPIFilterNotEqual(u32 *size, tpl::sql::VectorProjectionIterator *vpi,
                          u16 col_id, i64 val);
 
 // ---------------------------------------------------------
@@ -932,8 +932,7 @@ VM_OP_HOT void OpJoinHashTableVectorProbePrepare(
 }
 
 VM_OP_HOT void OpJoinHashTableVectorProbeGetNextOutput(
-    const byte **result,
-    tpl::sql::JoinHashTableVectorProbe *jht_vector_probe,
+    const byte **result, tpl::sql::JoinHashTableVectorProbe *jht_vector_probe,
     tpl::sql::VectorProjectionIterator *vpi,
     tpl::sql::JoinHashTableVectorProbe::KeyEqFn key_eq_fn) {
   *result = jht_vector_probe->GetNextOutput(vpi, key_eq_fn);

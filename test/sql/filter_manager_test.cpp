@@ -21,7 +21,7 @@ enum Col : u8 { A = 0, B = 1, C = 2, D = 3 };
 
 u32 TaaT_Lt_500(VectorProjectionIterator *vpi) {
   vpi->RunFilter([vpi]() -> bool {
-    auto cola = *vpi->Get<i32, false>(Col::A, nullptr);
+    auto cola = *vpi->GetValue<i32, false>(Col::A, nullptr);
     return cola < 500;
   });
   return vpi->num_selected();
@@ -53,7 +53,7 @@ TEST_F(FilterManagerTest, SimpleFilterManagerTest) {
 
     // Check
     vpi->ForEach([vpi]() {
-      auto cola = *vpi->Get<i32, false>(Col::A, nullptr);
+      auto cola = *vpi->GetValue<i32, false>(Col::A, nullptr);
       EXPECT_LT(cola, 500);
     });
   }
@@ -75,7 +75,7 @@ TEST_F(FilterManagerTest, AdaptiveFilterManagerTest) {
 
     // Check
     vpi->ForEach([vpi]() {
-      auto cola = *vpi->Get<i32, false>(Col::A, nullptr);
+      auto cola = *vpi->GetValue<i32, false>(Col::A, nullptr);
       EXPECT_LT(cola, 500);
     });
   }
