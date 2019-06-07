@@ -48,11 +48,6 @@ struct AggTuple {
     count2 += input.col_a * 2;
     count3 += input.col_a * 10;
   }
-
-  bool operator==(const AggTuple &other) {
-    return key == other.key && count1 == other.count1 &&
-           count2 == other.count2 && count3 == other.count3;
-  }
 };
 
 // The function to determine whether an aggregate stored in the hash table and
@@ -79,8 +74,6 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
  public:
   AggregationHashTableVectorIteratorTest() {
     memory_ = std::make_unique<MemoryPool>(nullptr);
-    aht_ =
-        std::make_unique<AggregationHashTable>(memory_.get(), sizeof(AggTuple));
     std::vector<Schema::ColumnInfo> cols = {
         {"key", BigIntType::InstanceNonNullable()},
         {"count1", BigIntType::InstanceNonNullable()},
@@ -90,7 +83,7 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
     schema_ = std::make_unique<Schema>(std::move(cols));
   }
 
-  AggregationHashTable *agg_table() { return aht_.get(); }
+  MemoryPool *memory() { return memory_.get(); }
 
   std::vector<const Schema::ColumnInfo *> output_schema() {
     std::vector<const Schema::ColumnInfo *> ret;
@@ -100,13 +93,14 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
     return ret;
   }
 
-  void PopulateTestAggHT(const u32 num_aggs, const u32 num_rows, u32 cola = 1) {
+  static void PopulateAggHT(AggregationHashTable *aht, const u32 num_aggs,
+                            const u32 num_rows, u32 cola = 1) {
     for (u32 i = 0; i < num_rows; i++) {
       auto input = InputTuple(i % num_aggs, cola);
       auto existing = reinterpret_cast<AggTuple *>(
-          aht_->Lookup(input.Hash(), AggTupleKeyEq, &input));
+          aht->Lookup(input.Hash(), AggTupleKeyEq, &input));
       if (existing == nullptr) {
-        new (aht_->Insert(input.Hash())) AggTuple(input);
+        new (aht->Insert(input.Hash())) AggTuple(input);
       } else {
         existing->Advance(input);
       }
@@ -115,7 +109,6 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
 
  private:
   std::unique_ptr<MemoryPool> memory_;
-  std::unique_ptr<AggregationHashTable> aht_;
   std::unique_ptr<Schema> schema_;
   std::vector<std::unique_ptr<vm::Module>> modules_;
 };
@@ -136,13 +129,15 @@ TEST_F(AggregationHashTableVectorIteratorTest, IterateSmallAggregation) {
   // 2. For each aggregate, the associated count/sums is correct.
   //
 
+  AggregationHashTable agg_ht(memory(), sizeof(AggTuple));
+
   // Populate
-  PopulateTestAggHT(num_aggs, num_tuples, 1 /* cola */);
+  PopulateAggHT(&agg_ht, num_aggs, num_tuples, 1 /* cola */);
 
   std::unordered_set<u64> reference;
 
   // Iterate
-  AHTVectorIterator iter(*agg_table(), output_schema(), Transpose);
+  AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
   for (; iter.HasNext(); iter.Next(Transpose)) {
     auto *vpi = iter.GetVectorProjectionIterator();
     EXPECT_FALSE(vpi->IsFiltered());
@@ -170,17 +165,19 @@ TEST_F(AggregationHashTableVectorIteratorTest, FilterPostAggregation) {
   constexpr u32 group_size = 10;
   constexpr u32 num_tuples = num_aggs * group_size;
 
-  PopulateTestAggHT(num_aggs, num_tuples, 1 /* cola */);
+  AggregationHashTable agg_ht(memory(), sizeof(AggTuple));
+
+  PopulateAggHT(&agg_ht, num_aggs, num_tuples, 1 /* cola */);
 
   constexpr u32 agg_needle_key = 686;
   constexpr u32 agg_max_key = 2600;
 
   // Iterate
   u32 num_needle_keys = 0, num_keys_lt_max = 0;
-  AHTVectorIterator iter(*agg_table(), output_schema(), Transpose);
+  AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
   for (; iter.HasNext(); iter.Next(Transpose)) {
     auto *vpi = iter.GetVectorProjectionIterator();
-    vpi->ForEach([&](){
+    vpi->ForEach([&]() {
       auto agg_key = *vpi->GetValue<u64, false>(0, nullptr);
       num_needle_keys += (agg_key == agg_needle_key);
       num_keys_lt_max += (agg_key < agg_max_key);
@@ -191,6 +188,41 @@ TEST_F(AggregationHashTableVectorIteratorTest, FilterPostAggregation) {
   // use a dense aggregate key range
   EXPECT_EQ(1u, num_needle_keys);
   EXPECT_EQ(agg_max_key, num_keys_lt_max);
+}
+
+TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
+  auto bench = [&](u32 num_aggs, bool vec, i64 filter) {
+    // The table
+    AggregationHashTable agg_ht(memory(), sizeof(AggTuple));
+
+    // Populate
+    PopulateAggHT(&agg_ht, num_aggs, num_aggs * 10, 1 /* cola */);
+
+    u32 ret = 0;
+    if (vec) {
+      AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
+      for (; iter.HasNext(); iter.Next(Transpose)) {
+        auto *vpi = iter.GetVectorProjectionIterator();
+        auto val = VectorProjectionIterator::FilterVal{.bi = filter};
+        ret += vpi->FilterColByVal<std::less>(0, val);
+      }
+    } else {
+      AHTIterator iter(agg_ht);
+      for (; iter.HasNext(); iter.Next()) {
+        auto *agg_row =
+            reinterpret_cast<const AggTuple *>(iter.GetCurrentAggregateRow());
+        ret += (agg_row->key < (u64)filter);
+      }
+    }
+    return ret;
+  };
+
+  for (u32 size : {10, 100, 1000, 10000, 100000, 1000000, 10000000}) {
+    auto taat_ms = Bench(2, [&]() { bench(size, false, 100); });
+    auto vaat_ms = Bench(2, [&]() { bench(size, true, 100); });
+    LOG_INFO("===== Size {} =====", size);
+    LOG_INFO("Taat: {:.2f} ms, Vaat: {:.2f}", taat_ms, vaat_ms);
+  }
 }
 
 }  // namespace tpl::sql::test
