@@ -17,6 +17,7 @@ enum class TypeId : u8 {
   SmallInt,
   Integer,
   BigInt,
+  Real,
   Decimal,
   Date,
   Char,
@@ -209,6 +210,34 @@ class BigIntType : public NumberBaseType<i64> {
 
  private:
   explicit BigIntType(bool nullable);
+};
+
+class RealType: public NumberBaseType<double> {
+ public:
+  static const RealType &InstanceNonNullable();
+
+  static const RealType &InstanceNullable();
+
+  static const RealType &Instance(bool nullable) {
+    return (nullable ? InstanceNullable() : InstanceNonNullable());
+  }
+
+  const Type &GetNonNullableVersion() const override {
+    return InstanceNonNullable();
+  }
+
+  const Type &GetNullableVersion() const override { return InstanceNullable(); }
+
+  std::string GetName() const override;
+
+  bool Equals(const Type &other) const override;
+
+  static bool classof(const Type *type) {
+    return type->type_id() == TypeId::Real;
+  }
+
+ private:
+  explicit RealType(bool nullable);
 };
 
 class DecimalType : public Type {

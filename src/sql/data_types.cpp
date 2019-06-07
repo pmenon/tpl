@@ -126,6 +126,34 @@ const BigIntType &BigIntType::InstanceNullable() {
 }
 
 // ---------------------------------------------------------
+// Real
+// ---------------------------------------------------------
+
+RealType::RealType(bool nullable) : NumberBaseType(TypeId::Real, nullable) {}
+
+std::string RealType::GetName() const {
+  std::string str = "Real";
+  if (nullable()) {
+    str.append("[NULLABLE]");
+  }
+  return str;
+}
+
+bool RealType::Equals(const Type &other) const {
+  return other.Is<RealType>() && nullable() == other.nullable();
+}
+
+const RealType &RealType::InstanceNonNullable() {
+  thread_local RealType kNonNullableBigInt(false);
+  return kNonNullableBigInt;
+}
+
+const RealType &RealType::InstanceNullable() {
+  thread_local RealType kNullableBigInt(true);
+  return kNullableBigInt;
+}
+
+// ---------------------------------------------------------
 // Decimal
 // ---------------------------------------------------------
 

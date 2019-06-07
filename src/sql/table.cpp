@@ -63,6 +63,14 @@ void DumpColValue(std::ostream &os, const Type &type, const ColumnSegment &col,
       }
       break;
     }
+    case TypeId::Real: {
+      if (type.nullable() && col.IsNullAt(row_idx)) {
+        os << "NULL";
+      } else {
+        os << col.TypedAccessAt<double>(row_idx);
+      }
+      break;
+    }
     case TypeId::Decimal:
     case TypeId::Date:
     case TypeId::Char:

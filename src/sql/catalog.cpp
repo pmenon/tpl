@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "logging/logger.h"
@@ -31,12 +32,16 @@ struct ColumnInsertMeta {
   const char *name;
   const Type &type;
   Dist dist;
-  u64 min;
-  u64 max;
+  std::variant<i64, double> min;
+  std::variant<i64, double> max;
 
-  ColumnInsertMeta(const char *name, const Type &type, Dist dist, u64 min,
-                   u64 max)
-      : name(name), type(type), dist(dist), min(min), max(max) {}
+  ColumnInsertMeta(const char *name, const Type &type, Dist dist,
+                   std::variant<i64, double> min, std::variant<i64, double> max)
+      : name(name),
+        type(type),
+        dist(dist),
+        min(std::move(min)),
+        max(std::move(max)) {}
 };
 
 /**
@@ -64,26 +69,40 @@ struct TableInsertMeta {
 TableInsertMeta insert_meta[] = {
     // The empty table
     {TableId::EmptyTable, "empty_table", 0,
-     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0, 0}}},
+     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0l, 0l}}},
 
     // Table 1
     {TableId::Test1, "test_1", 2000000,
-     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0, 0},
-      {"colB", sql::IntegerType::Instance(false), Dist::Uniform, 0, 9},
-      {"colC", sql::IntegerType::Instance(false), Dist::Uniform, 0, 9999},
-      {"colD", sql::IntegerType::Instance(false), Dist::Uniform, 0, 99999}}},
+     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0l, 0l},
+      {"colB", sql::IntegerType::Instance(false), Dist::Uniform, 0l, 9l},
+      {"colC", sql::IntegerType::Instance(false), Dist::Uniform, 0l, 9999l},
+      {"colD", sql::IntegerType::Instance(false), Dist::Uniform, 0l, 99999l}}},
 };
 // clang-format on
 
+template <class T>
+auto GetRandomDistribution(T min, T max)
+    -> std::enable_if_t<std::is_integral_v<T>,
+                        std::uniform_int_distribution<T>> {
+  return std::uniform_int_distribution<T>(min, max);
+}
+
+template <class T>
+auto GetRandomDistribution(T min, T max)
+    -> std::enable_if_t<std::is_floating_point_v<T>,
+                        std::uniform_real_distribution<T>> {
+  return std::uniform_real_distribution<T>(min, max);
+}
+
 template <typename T>
-T *CreateNumberColumnData(Dist dist, u32 num_vals, u64 min, u64 max) {
-  static u64 serial_counter = 0;
+T *CreateNumberColumnData(Dist dist, u32 num_vals, T min, T max) {
+  static T serial_counter = 0;
   auto *val = static_cast<T *>(malloc(sizeof(T) * num_vals));
 
   switch (dist) {
     case Dist::Uniform: {
-      std::mt19937 generator;
-      std::uniform_int_distribution<T> distribution(min, max);
+      auto generator = std::mt19937{};
+      auto distribution = GetRandomDistribution(min, max);
 
       for (u32 i = 0; i < num_vals; i++) {
         val[i] = distribution(generator);
@@ -114,18 +133,27 @@ std::pair<byte *, u32 *> GenerateColumnData(const ColumnInsertMeta &col_meta,
     }
     case TypeId::SmallInt: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i16>(
-          col_meta.dist, num_rows, col_meta.min, col_meta.max));
+          col_meta.dist, num_rows, std::get<i64>(col_meta.min),
+          std::get<i64>(col_meta.max)));
       break;
     }
     case TypeId::Integer: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i32>(
-          col_meta.dist, num_rows, col_meta.min, col_meta.max));
+          col_meta.dist, num_rows, std::get<i64>(col_meta.min),
+          std::get<i64>(col_meta.max)));
       break;
     }
     case TypeId::BigInt:
     case TypeId::Decimal: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i64>(
-          col_meta.dist, num_rows, col_meta.min, col_meta.max));
+          col_meta.dist, num_rows, std::get<i64>(col_meta.min),
+          std::get<i64>(col_meta.max)));
+      break;
+    }
+    case TypeId::Real: {
+      col_data = reinterpret_cast<byte *>(CreateNumberColumnData<double>(
+          col_meta.dist, num_rows, std::get<double>(col_meta.min),
+          std::get<double>(col_meta.max)));
       break;
     }
     case TypeId::Date:
