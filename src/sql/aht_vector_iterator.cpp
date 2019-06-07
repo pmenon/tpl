@@ -16,11 +16,7 @@ AHTVectorIterator::AHTVectorIterator(
       vector_projection_iterator_(std::make_unique<VectorProjectionIterator>()),
       temp_aggregates_vec_(memory_->AllocateArray<const byte *>(
           kDefaultVectorSize, CACHELINE_SIZE, false)) {
-  //
-  // Allocate an array for each aggregate that's been accumulated. This is where
-  // the transposed aggregate data in the vector projection will live.
-  //
-
+  // We need to allocate an array for each component of the aggregation.
   const auto num_elems = kDefaultVectorSize;
   for (const auto *col_info : col_infos) {
     auto size = col_info->StorageSize() * num_elems;
@@ -31,12 +27,7 @@ AHTVectorIterator::AHTVectorIterator(
     projection_data_.emplace_back(std::make_pair(data, nulls));
   }
 
-  //
-  // The hash table iterator may have some data when we instantiated it. Now
-  // that the projection is setup, let's build it over the current batch of
-  // aggregate input.
-  //
-
+  // Build the projection using data from the hash table iterator batch.
   BuildVectorProjection(transpose_fn);
 }
 
@@ -69,8 +60,9 @@ AHTVectorIterator::~AHTVectorIterator() {
 void AHTVectorIterator::BuildVectorProjection(
     const AHTVectorIterator::TransposeFn transpose_fn) {
   //
-  // We have an input batch of hash table entries. For each such entry, we store
-  // a pointer to the payload so that the transposition function is unaware.
+  // We have an input batch of hash table entries. For each such entry, we pull
+  // out the payload pointer into a temporary array in a vectorized fashion.
+  // This vector is fed into the transposition function.
   //
 
   auto [size, entries] = iter_.GetCurrentBatch();
@@ -80,8 +72,7 @@ void AHTVectorIterator::BuildVectorProjection(
   }
 
   //
-  // We update the vector projection because we may potentially have a new
-  // vector size..
+  // Update the vector projection with the new batch size.
   //
 
   u32 idx = 0;
@@ -92,8 +83,8 @@ void AHTVectorIterator::BuildVectorProjection(
   vector_projection_iterator_->SetVectorProjection(vector_projection_.get());
 
   //
-  // Setup is done. Now we can invoke the transposition function so let it do
-  // the heavy lifting.
+  // Invoke the transposition function which does the heavy, query-specific,
+  // lifting of converting rows to columns.
   //
 
   transpose_fn(temp_aggregates_vec_, size, vector_projection_iterator_.get());

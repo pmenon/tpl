@@ -416,6 +416,10 @@ class AHTIterator {
  * exists so that users can generate vector projections from aggregation hash
  * tables, which might be useful when feeding into other operations or
  * performing filters post aggregation.
+ *
+ * To facilitate this, users must provide a transposition function that converts
+ * row-oriented aggregate data into column-oriented vector projections, i.e., a
+ * transposition function.
  */
 class AHTVectorIterator {
  public:
