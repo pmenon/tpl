@@ -191,37 +191,42 @@ TEST_F(AggregationHashTableVectorIteratorTest, FilterPostAggregation) {
 }
 
 TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
-  auto bench = [&](u32 num_aggs, bool vec, i64 filter) {
+  u64 taat_ret = 0, vaat_ret = 0;
+
+  for (u32 size : {10, 100, 1000, 10000, 100000, 1000000, 10000000}) {
     // The table
     AggregationHashTable agg_ht(memory(), sizeof(AggTuple));
 
     // Populate
-    PopulateAggHT(&agg_ht, num_aggs, num_aggs * 10, 1 /* cola */);
+    PopulateAggHT(&agg_ht, size, size * 10, 1 /* cola */);
 
-    u32 ret = 0;
-    if (vec) {
+    constexpr u32 filter = 1000;
+
+    auto vaat_ms = Bench(4, [&]() {
+      vaat_ret = 0;
       AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
       for (; iter.HasNext(); iter.Next(Transpose)) {
         auto *vpi = iter.GetVectorProjectionIterator();
         auto val = VectorProjectionIterator::FilterVal{.bi = filter};
-        ret += vpi->FilterColByVal<std::less>(0, val);
+        vaat_ret += vpi->FilterColByVal<std::less>(0, val);
       }
-    } else {
+    });
+
+    auto taat_ms = Bench(4, [&]() {
+      taat_ret = 0;
       AHTIterator iter(agg_ht);
       for (; iter.HasNext(); iter.Next()) {
         auto *agg_row =
             reinterpret_cast<const AggTuple *>(iter.GetCurrentAggregateRow());
-        ret += (agg_row->key < (u64)filter);
+        if (agg_row->key < (u64)filter) {
+          taat_ret++;
+        }
       }
-    }
-    return ret;
-  };
+    });
 
-  for (u32 size : {10, 100, 1000, 10000, 100000, 1000000, 10000000}) {
-    auto taat_ms = Bench(2, [&]() { bench(size, false, 100); });
-    auto vaat_ms = Bench(2, [&]() { bench(size, true, 100); });
     LOG_INFO("===== Size {} =====", size);
-    LOG_INFO("Taat: {:.2f} ms, Vaat: {:.2f}", taat_ms, vaat_ms);
+    LOG_INFO("Taat: {:.2f} ms ({}), Vaat: {:.2f} ({})", taat_ms, taat_ret,
+             vaat_ms, vaat_ret);
   }
 }
 
