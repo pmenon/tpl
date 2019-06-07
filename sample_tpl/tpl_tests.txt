@@ -39,7 +39,7 @@ while.tpl,false,10
 
 agg.tpl,true,10
 agg-vec.tpl,true,10
-agg-vec-filter.tpl,true,0
+agg-vec-filter.tpl,true,10
 join.tpl,true,0
 parallel-join.tpl,true,0
 parallel-scan.tpl,true,0

@@ -97,11 +97,13 @@ TEST_F(GenericHashTableTest, SimpleIteration) {
     table.Insert<false>(entry, entry->hash);
   }
 
-  auto check = [&](auto &iter) {
+  // Check regular iterator
+  {
+    GenericHashTableIterator<false> iter(table);
     u32 found_entries = 0;
     for (; iter.HasNext(); iter.Next()) {
       auto *row = reinterpret_cast<const TestEntry *>(iter.GetCurrentEntry());
-      ASSERT_TRUE(row != nullptr);
+      EXPECT_TRUE(row != nullptr);
       auto ref_iter = reference.find(row->key);
       ASSERT_NE(ref_iter, reference.end());
       EXPECT_EQ(ref_iter->second.key, row->key);
@@ -110,17 +112,27 @@ TEST_F(GenericHashTableTest, SimpleIteration) {
     }
     EXPECT_EQ(num_inserts, found_entries);
     EXPECT_EQ(reference.size(), found_entries);
-  };
-
-  {
-    GenericHashTableIterator<false> iter(table);
-    check(iter);
   }
 
+  // Check vector iterator
   {
     MemoryPool pool(nullptr);
     GenericHashTableVectorIterator<false> iter(table, &pool);
-    check(iter);
+    u32 found_entries = 0;
+    for (; iter.HasNext(); iter.Next()) {
+      auto [size, batch] = iter.GetCurrentBatch();
+      for (u32 i = 0; i < size; i++) {
+        auto *row = reinterpret_cast<const TestEntry *>(batch[i]);
+        EXPECT_TRUE(row != nullptr);
+        auto ref_iter = reference.find(row->key);
+        ASSERT_NE(ref_iter, reference.end());
+        EXPECT_EQ(ref_iter->second.key, row->key);
+        EXPECT_EQ(ref_iter->second.value, row->value);
+        found_entries++;
+      }
+    }
+    EXPECT_EQ(num_inserts, found_entries);
+    EXPECT_EQ(reference.size(), found_entries);
   }
 }
 
@@ -153,7 +165,9 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
     table.Insert<false>(entry, entry->hash);
   }
 
-  auto check = [&](auto &iter) {
+  // Check regular iterator
+  {
+    GenericHashTableIterator<false> iter(table);
     u32 found_entries = 0;
     for (; iter.HasNext(); iter.Next()) {
       auto *row = reinterpret_cast<const TestEntry *>(iter.GetCurrentEntry());
@@ -163,17 +177,24 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
       found_entries++;
     }
     EXPECT_EQ(num_inserts, found_entries);
-  };
-
-  {
-    GenericHashTableIterator<false> iter(table);
-    check(iter);
   }
 
+  // Check vector iterator
   {
     MemoryPool pool(nullptr);
     GenericHashTableVectorIterator<false> iter(table, &pool);
-    check(iter);
+    u32 found_entries = 0;
+    for (; iter.HasNext(); iter.Next()) {
+      auto [size, batch] = iter.GetCurrentBatch();
+      for (u32 i = 0; i < size; i++) {
+        auto *row = reinterpret_cast<const TestEntry *>(batch[i]);
+        ASSERT_TRUE(row != nullptr);
+        EXPECT_EQ(key, row->key);
+        EXPECT_EQ(value, row->value);
+        found_entries++;
+      }
+    }
+    EXPECT_EQ(num_inserts, found_entries);
   }
 }
 
@@ -202,26 +223,26 @@ TEST_F(GenericHashTableTest, DISABLED_PerfIteration) {
     table.Insert<false>(entry, entry->hash);
   }
 
-  auto check = [&](auto &iter) {
-    u32 sum = 0;
-    for (; iter.HasNext(); iter.Next()) {
-      auto *row = reinterpret_cast<const TestEntry *>(iter.GetCurrentEntry());
-      sum += row->value;
-    }
-    return sum;
-  };
-
   u32 sum1 = 0, sum2 = 0;
 
   double taat_ms = Bench(5, [&]() {
     GenericHashTableIterator<false> iter(table);
-    sum1 = check(iter);
+    for (; iter.HasNext(); iter.Next()) {
+      auto *row = reinterpret_cast<const TestEntry *>(iter.GetCurrentEntry());
+      sum1 += row->value;
+    }
   });
 
   double vaat_ms = Bench(5, [&]() {
     MemoryPool pool(nullptr);
     GenericHashTableVectorIterator<false> iter(table, &pool);
-    sum2 = check(iter);
+    for (; iter.HasNext(); iter.Next()) {
+      auto [size, batch] = iter.GetCurrentBatch();
+      for (u32 i = 0; i < size; i++) {
+        auto *row = reinterpret_cast<const TestEntry *>(batch[i]);
+        sum2 += row->value;
+      }
+    }
   });
 
   LOG_INFO("TaaT: {:.2f} ms ({}), VaaT: {:2f} ms ({})", taat_ms, sum1, vaat_ms,

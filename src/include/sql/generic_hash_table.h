@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <utility>
 
 #include "sql/hash_table_entry.h"
 #include "sql/memory_pool.h"
@@ -367,11 +368,10 @@ class GenericHashTableVectorIterator {
         table_dir_index_(0),
         entry_vec_(memory_->AllocateArray<const HashTableEntry *>(
             kDefaultVectorSize, CACHELINE_SIZE, true)),
-        entry_vec_idx_(0),
         entry_vec_end_idx_(0),
         null_slot_sel_vec_(memory_->AllocateArray<u32>(kDefaultVectorSize,
                                                        CACHELINE_SIZE, false)) {
-    Refill();
+    Next();
   }
 
   /**
@@ -385,26 +385,19 @@ class GenericHashTableVectorIterator {
   /**
    * Is there more data in the iterator?
    */
-  bool HasNext() const noexcept { return entry_vec_idx_ < entry_vec_end_idx_; }
+  bool HasNext() const { return entry_vec_end_idx_ > 0; }
 
   /**
-   * Advance the iterator one element.
+   * Advance the iterator by once vector's worth of data.
    */
-  void Next() noexcept {
-    if (++entry_vec_idx_ >= entry_vec_end_idx_) {
-      Refill();
-    }
-  }
+  void Next();
 
   /**
-   * Access the element the iterator is currently pointing to.
+   * Return the current batch of entries and its size.
    */
-  const HashTableEntry *GetCurrentEntry() const noexcept {
-    return entry_vec_[entry_vec_idx_];
+  std::pair<u16, const HashTableEntry **> GetCurrentBatch() const {
+    return std::make_pair(entry_vec_end_idx_, entry_vec_);
   }
-
- private:
-  void Refill();
 
  private:
   // Pool to use for memory allocations
@@ -416,7 +409,6 @@ class GenericHashTableVectorIterator {
   // The temporary cache of valid entries, and indexes into the entry cache
   // pointing to the current and last valid entry.
   const HashTableEntry **entry_vec_;
-  u16 entry_vec_idx_;
   u16 entry_vec_end_idx_;
   // A temporary buffer used during refill to determine null slots
   u32 *null_slot_sel_vec_;

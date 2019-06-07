@@ -10,6 +10,10 @@ namespace tpl::sql {
 
 VectorProjection::VectorProjection() : tuple_count_(0), vector_size_(0) {}
 
+VectorProjection::VectorProjection(const Schema::ColumnInfo *col_infos,
+                                   u32 num_cols, u32 size)
+    : VectorProjection({col_infos, col_infos + num_cols}, size) {}
+
 VectorProjection::VectorProjection(
     const std::vector<const Schema::ColumnInfo *> &col_infos, u32 size)
     : tuple_count_(0), vector_size_(size) {

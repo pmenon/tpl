@@ -1,9 +1,11 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 
 #include "sql/generic_hash_table.h"
 #include "sql/memory_pool.h"
+#include "sql/schema.h"
 #include "util/chunked_vector.h"
 
 namespace libcount {
@@ -13,11 +15,13 @@ class HLL;
 namespace tpl::sql {
 
 class ThreadStateContainer;
+class VectorProjection;
 class VectorProjectionIterator;
 
 // Forward declare
-class AggregationHashTableIterator;
-class AggregationOverflowPartitionIterator;
+class AHTIterator;
+class AHTVectorIterator;
+class AHTOverflowPartitionIterator;
 
 /**
  * The hash table used when performing aggregations
@@ -70,7 +74,7 @@ class AggregationHashTable {
    *             partitions to merge into the input aggregation hash table.
    */
   using MergePartitionFn = void (*)(void *, AggregationHashTable *,
-                                    AggregationOverflowPartitionIterator *);
+                                    AHTOverflowPartitionIterator *);
 
   /**
    * Function to scan an aggregation hash table.
@@ -213,7 +217,8 @@ class AggregationHashTable {
   const Stats *stats() const { return &stats_; }
 
  private:
-  friend class AggregationHashTableIterator;
+  friend class AHTIterator;
+  friend class AHTVectorIterator;
 
   // Does the hash table need to grow?
   bool NeedsToGrow() const { return hash_table_.num_elements() >= max_fill_; }
@@ -371,19 +376,19 @@ inline byte *AggregationHashTable::Lookup(
 /**
  * An iterator over the contents of an aggregation hash table
  */
-class AggregationHashTableIterator {
+class AHTIterator {
  public:
-  explicit AggregationHashTableIterator(const AggregationHashTable &agg_table)
+  explicit AHTIterator(const AggregationHashTable &agg_table)
       : iter_(agg_table.hash_table_) {}
 
   /**
-   * Does this iterate have more data
+   * Does this iterator have more data?
    * @return True if the iterator has more data; false otherwise
    */
   bool HasNext() const { return iter_.HasNext(); }
 
   /**
-   * Advance the iterator
+   * Advance the iterator one tuple.
    */
   void Next() { iter_.Next(); }
 
@@ -402,21 +407,96 @@ class AggregationHashTableIterator {
   GenericHashTableIterator<false> iter_;
 };
 
+// ---------------------------------------------------------
+// Aggregation Hash Table Vector Iterator
+// ---------------------------------------------------------
+
+/**
+ * A vectorized iterator over the contents of an aggregation hash table.
+ */
+class AHTVectorIterator {
+ public:
+  using TransposeFn = void (*)(const byte **, u64, VectorProjectionIterator *);
+
+  /**
+   * Construct a vector iterator over the given aggregation table.
+   */
+  AHTVectorIterator(const AggregationHashTable &agg_hash_table,
+                    const std::vector<const Schema::ColumnInfo *> &col_infos,
+                    TransposeFn transpose_fn);
+
+  /**
+   * Construct a vector iterator over the given aggregation table.
+   */
+  AHTVectorIterator(const AggregationHashTable &aht,
+                    const Schema::ColumnInfo *col_infos, u32 num_cols,
+                    TransposeFn transpose_fn);
+
+  /**
+   * This class cannot be copied or moved.
+   */
+  DISALLOW_COPY_AND_MOVE(AHTVectorIterator);
+
+  /**
+   * Destructor
+   */
+  ~AHTVectorIterator();
+
+  /**
+   * Does this iterator have more data.?
+   */
+  bool HasNext() const { return iter_.HasNext(); }
+
+  /**
+   * Advance the iterator by, at most, one vector's worth of data.
+   */
+  void Next(TransposeFn transpose_fn) {
+    // Get next vector
+    iter_.Next();
+
+    // Build new vector projection
+    BuildVectorProjection(transpose_fn);
+  }
+
+  /**
+   * Return the next vector output.
+   */
+  VectorProjectionIterator *GetVectorProjectionIterator() {
+    return vector_projection_iterator_.get();
+  }
+
+ private:
+  void BuildVectorProjection(TransposeFn transpose_fn);
+
+ private:
+  // The iterator over the aggregation hash table
+  MemoryPool *memory_;
+  GenericHashTableVectorIterator<false> iter_;
+  std::vector<std::pair<byte *, u32 *>> projection_data_;
+  std::unique_ptr<VectorProjection> vector_projection_;
+  std::unique_ptr<VectorProjectionIterator> vector_projection_iterator_;
+  const byte **temp_aggregates_vec_;
+};
+
+// ---------------------------------------------------------
+// Aggregation Hash Table Overflow Partitions Iterator
+// ---------------------------------------------------------
+
 /**
  * An iterator over a range of overflow partition entries in an aggregation hash
  * table. The range is provided through the constructor. Each overflow entry's
  * hash value is accessible through @em GetHash(), along with the opaque payload
  * through @em GetPayload().
  */
-class AggregationOverflowPartitionIterator {
+class AHTOverflowPartitionIterator {
  public:
   /**
    * Construct an iterator over the given partition range.
    * @param partitions_begin The beginning of the range.
    * @param partitions_end The end of the range.
    */
-  AggregationOverflowPartitionIterator(HashTableEntry **partitions_begin,
-                                       HashTableEntry **partitions_end)
+  AHTOverflowPartitionIterator(HashTableEntry **partitions_begin,
+                               HashTableEntry **partitions_end)
       : partitions_iter_(partitions_begin),
         partitions_end_(partitions_end),
         curr_(nullptr) {

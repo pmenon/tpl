@@ -76,7 +76,7 @@ fun p1_worker(queryState: *State, state: *ThreadState_1, tvi: *TableVectorIterat
   return
 }
 
-fun p1_mergePartitions(qs: *State, table: *AggregationHashTable, iter: *AggOverflowPartIter) -> nil {
+fun p1_mergePartitions(qs: *State, table: *AggregationHashTable, iter: *AHTOverflowPartitionIterator) -> nil {
   var x = 0
   for (; @aggPartIterHasNext(iter); @aggPartIterNext(iter)) {
     var partial_hash = @aggPartIterGetHash(iter)
@@ -103,8 +103,8 @@ fun p2_finalize(qs: *State, ts: *ThreadState_2) -> nil {
 }
 
 fun p2_worker(qs: *State, ts: *ThreadState_2, table: *AggregationHashTable) -> nil {
-  var agg_ht_iter: AggregationHashTableIterator
-  var iter = &agg_ht_iter
+  var aht_iter: AHTIterator
+  var iter = &aht_iter
   for (@aggHTIterInit(iter, table); @aggHTIterHasNext(iter); @aggHTIterNext(iter)) {
     var agg = @ptrCast(*Agg, @aggHTIterGetRow(iter))
     ts.count = ts.count + 1

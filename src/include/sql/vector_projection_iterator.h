@@ -51,15 +51,28 @@ class VectorProjectionIterator {
   void SetVectorProjection(VectorProjection *vp);
 
   /**
-   * Get a pointer to the value in the column at index @em col_idx
-   * @tparam T The desired data type stored in the vector projection
-   * @tparam nullable Whether the column is NULLable
-   * @param col_idx The index of the column to read from
-   * @param[out] null null Whether the given column is null
-   * @return The typed value at the current iterator position in the column
+   * Get a pointer to the value in the column at index @em col_idx.
+   * @tparam T The desired data type stored in the vector projection.
+   * @tparam nullable Whether the column is NULL-able.
+   * @param col_idx The index of the column to read from.
+   * @param[out] null null Whether the given column is null.
+   * @return The typed value at the current iterator position in the column.
    */
-  template <typename T, bool nullable>
+  template <typename T, bool Nullable>
   const T *GetValue(u32 col_idx, bool *null) const;
+
+  /**
+   * Set the value of the column at index @em col_idx for the row the iterator
+   * is currently pointing at to @em val. If the column is NULL-able, the NULL
+   * bit is also set to the provided NULL value @em null.
+   * @tparam T The desired primitive data type of the column.
+   * @tparam Nullable Whether the column is NULL-able.
+   * @param col_idx The index of the column to write to.
+   * @param val The value to write.
+   * @param null Whether the value is NULL.
+   */
+  template <typename T, bool Nullable>
+  void SetValue(u32 col_idx, const T *val, bool null);
 
   /**
    * Set the current iterator position
@@ -211,12 +224,36 @@ inline const T *VectorProjectionIterator::GetValue(const u32 col_idx,
                                                    bool *const null) const {
   if constexpr (Nullable) {
     TPL_ASSERT(null != nullptr, "Missing output variable for NULL indicator");
-    const u32 *col_null_bitmap = vector_projection_->GetNullBitmap(col_idx);
+    const auto *col_null_bitmap = vector_projection_->GetNullBitmap(col_idx);
     *null = util::BitUtil::Test(col_null_bitmap, curr_idx_);
   }
 
-  const T *col_data = vector_projection_->GetVectorAs<T>(col_idx);
+  const auto *col_data = vector_projection_->GetVectorAs<T>(col_idx);
   return &col_data[curr_idx_];
+}
+
+template <typename T, bool Nullable>
+void VectorProjectionIterator::SetValue(const u32 col_idx, const T *val,
+                                        const bool null) {
+  // The column data array
+  auto *col_data = vector_projection_->GetVectorAs<T>(col_idx);
+
+  //
+  // If the column is NULL-able, we only write into the data array if the value
+  // isn't NULL. If the column isn't NULL-able, we directly write into the
+  // column data array and skip setting any NULL bits.
+  //
+
+  if constexpr (Nullable) {
+    auto *col_null_bitmap = vector_projection_->GetNullBitmap(col_idx);
+    util::BitUtil::SetTo(col_null_bitmap, curr_idx_, null);
+
+    if (!null) {
+      col_data[curr_idx_] = *val;
+    }
+  } else {
+    col_data[curr_idx_] = *val;
+  }
 }
 
 template <bool Filtered>

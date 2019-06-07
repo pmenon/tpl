@@ -105,7 +105,7 @@ TEST(BitUtilTest, SetToValue) {
   }
 
   bv.SetTo(80, false);
-  
+
   for (u32 i = 0; i < bv.num_bits(); i++) {
     EXPECT_FALSE(bv.Test(i));
   }

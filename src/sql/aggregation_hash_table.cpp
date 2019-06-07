@@ -430,8 +430,8 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(
   timer.Start();
 
   // Build it
-  AggregationOverflowPartitionIterator iter(
-      partition_heads_ + partition_idx, partition_heads_ + partition_idx + 1);
+  AHTOverflowPartitionIterator iter(partition_heads_ + partition_idx,
+                                    partition_heads_ + partition_idx + 1);
   merge_partition_fn_(query_state, agg_table, &iter);
 
   timer.Stop();

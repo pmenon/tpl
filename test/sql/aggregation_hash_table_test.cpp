@@ -165,8 +165,7 @@ TEST_F(AggregationHashTableTest, IterationTest) {
 
   {
     u32 group_count = 0;
-    for (AggregationHashTableIterator iter(*agg_table()); iter.HasNext();
-         iter.Next()) {
+    for (AHTIterator iter(*agg_table()); iter.HasNext(); iter.Next()) {
       auto *agg_tuple =
           reinterpret_cast<const AggTuple *>(iter.GetCurrentAggregateRow());
       EXPECT_EQ(tuples_per_group, agg_tuple->count1);
@@ -285,8 +284,7 @@ TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
 
   {
     u32 count = 0;
-    AggregationOverflowPartitionIterator iter(partitions.begin(),
-                                              partitions.end());
+    AHTOverflowPartitionIterator iter(partitions.begin(), partitions.end());
     for (; iter.HasNext(); iter.Next()) {
       count++;
     }
@@ -308,8 +306,7 @@ TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
 
     // Check
     u32 count = 0;
-    AggregationOverflowPartitionIterator iter(partitions.begin(),
-                                              partitions.end());
+    AHTOverflowPartitionIterator iter(partitions.begin(), partitions.end());
     for (; iter.HasNext(); iter.Next()) {
       EXPECT_EQ(100u, iter.GetPayloadAs<Data>()->key);
       EXPECT_EQ(200u, iter.GetPayloadAs<Data>()->val);
@@ -347,8 +344,7 @@ TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
 
     // Check
     u32 count = 0;
-    AggregationOverflowPartitionIterator iter(partitions.begin(),
-                                              partitions.end());
+    AHTOverflowPartitionIterator iter(partitions.begin(), partitions.end());
     for (; iter.HasNext(); iter.Next()) {
       count++;
     }
@@ -386,7 +382,7 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
   };
 
   auto merge = [](void *ctx, AggregationHashTable *table,
-                  AggregationOverflowPartitionIterator *iter) {
+                  AHTOverflowPartitionIterator *iter) {
     for (; iter->HasNext(); iter->Next()) {
       auto *partial_agg = iter->GetPayloadAs<AggTuple>();
       auto *existing = reinterpret_cast<AggTuple *>(

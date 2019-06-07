@@ -438,8 +438,8 @@ TEST_F(VectorProjectionIteratorTest, FilterColByColTest) {
     /* First check using scalar filter */                                     \
     u32 expected = 0;                                                         \
     for (; iter.HasNext(); iter.Advance()) {                                  \
-      auto col_e_val = *iter.Get<i64, false>(ColId::col_e, nullptr);          \
-      auto col_f_val = *iter.Get<i64, false>(ColId::col_f, nullptr);          \
+      auto col_e_val = *iter.GetValue<i64, false>(ColId::col_e, nullptr);     \
+      auto col_f_val = *iter.GetValue<i64, false>(ColId::col_f, nullptr);     \
       expected += static_cast<u32>(col_e_val op col_f_val);                   \
     }                                                                         \
                                                                               \

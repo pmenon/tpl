@@ -40,8 +40,8 @@ void GenericHashTable::SetSize(u64 new_size) {
 // ---------------------------------------------------------
 
 template <bool UseTag>
-inline void GenericHashTableVectorIterator<UseTag>::Refill() {
-  // Invariant: the range of elements [entry_vec_idx_, entry_vec_end_idx_) in
+inline void GenericHashTableVectorIterator<UseTag>::Next() {
+  // Invariant: the range of elements [0, entry_vec_end_idx_) in
   // the entry cache contains non-null hash table entries.
 
   // Index tracks the end of the valid range of entries in the entry cache
@@ -54,7 +54,7 @@ inline void GenericHashTableVectorIterator<UseTag>::Refill() {
   }
 
   // Compact out the holes produced in the previous chain lookup.
-  for (u32 i = 0; i < entry_vec_idx_; i++) {
+  for (u32 i = 0; i < entry_vec_end_idx_; i++) {
     entry_vec_[index] = entry_vec_[i];
     index += (entry_vec_[index] != nullptr);
   }
@@ -70,11 +70,10 @@ inline void GenericHashTableVectorIterator<UseTag>::Refill() {
   }
 
   // The new range of valid entries is in [0, idx).
-  entry_vec_idx_ = 0;
   entry_vec_end_idx_ = index;
 }
 
-template void GenericHashTableVectorIterator<true>::Refill();
-template void GenericHashTableVectorIterator<false>::Refill();
+template void GenericHashTableVectorIterator<true>::Next();
+template void GenericHashTableVectorIterator<false>::Next();
 
 }  // namespace tpl::sql

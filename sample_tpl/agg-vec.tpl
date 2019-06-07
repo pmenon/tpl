@@ -10,6 +10,7 @@ struct Agg {
 
 fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
   @aggHTInit(&state.table, @execCtxGetMem(execCtx), @sizeOf(Agg))
+  state.count = 0
 }
 
 fun tearDownState(state: *State) -> nil {
@@ -54,8 +55,8 @@ fun pipeline_1(state: *State) -> nil {
 }
 
 fun pipeline_2(state: *State) -> nil {
-  var agg_ht_iter: AggregationHashTableIterator
-  var iter = &agg_ht_iter
+  var aht_iter: AHTIterator
+  var iter = &aht_iter
   for (@aggHTIterInit(iter, &state.table); @aggHTIterHasNext(iter); @aggHTIterNext(iter)) {
     var agg = @ptrCast(*Agg, @aggHTIterGetRow(iter))
     state.count = state.count + 1
@@ -65,7 +66,6 @@ fun pipeline_2(state: *State) -> nil {
 
 fun main(execCtx: *ExecutionContext) -> int32 {
   var state: State
-  state.count = 0
 
   // Initialize state
   setUpState(execCtx, &state)

@@ -19,6 +19,18 @@ class ColumnVectorIterator;
 class VectorProjection {
  public:
   /**
+   * Create an empty and uninitialized vector projection. Users must call
+   * @em Setup() to initialize the projection with the correct columns.
+   */
+  VectorProjection();
+
+  /**
+   * Create a vector projection using the column information provided in
+   * @em col_infos. The vector projection stores vectors of size @em size.
+   */
+  VectorProjection(const Schema::ColumnInfo *col_infos, u32 num_cols, u32 size);
+
+  /**
    * Create a vector projection using the column information provided in
    * @em col_infos. The vector projection stores vectors of size @em size.
    */
@@ -29,6 +41,15 @@ class VectorProjection {
    * This class cannot be copied or moved
    */
   DISALLOW_COPY_AND_MOVE(VectorProjection);
+
+  /**
+   * Set up this vector projection with the given column information and vector
+   * size.
+   * @param col_infos Metadata for columns in this projection.
+   * @param size The maximum number of elements in the projection.
+   */
+  void Setup(const std::vector<const Schema::ColumnInfo *> &col_infos,
+             u32 size);
 
   /**
    * Get the metadata for the column at the given index in this projection
@@ -49,6 +70,14 @@ class VectorProjection {
   }
 
   /**
+   * Non-const version of GetVectorAs().
+   */
+  template <typename T>
+  T *GetVectorAs(u32 col_idx) {
+    return reinterpret_cast<T *>(column_data_[col_idx]);
+  }
+
+  /**
    * Return the NULL bit vector for the column at index @em col_idx
    * @param col_idx The index of the column
    * @return The NULL bit vector for the desired column
@@ -56,6 +85,8 @@ class VectorProjection {
   const u32 *GetNullBitmap(u32 col_idx) const {
     return column_null_bitmaps_[col_idx];
   }
+
+  u32 *GetNullBitmap(u32 col_idx) { return column_null_bitmaps_[col_idx]; }
 
   /**
    * Reset/reload the data for the column at the given index from the given
@@ -81,19 +112,6 @@ class VectorProjection {
    * @return The number of active tuples
    */
   u32 total_tuple_count() const { return tuple_count_; }
-
- private:
-  friend class TableVectorIterator;
-
-  // The empty constructor and Setup() functions are available only to
-  // TableVectorIterator because it does lazy initialization
-
-  // Empty/uninitialized constructor
-  VectorProjection();
-
-  // Set up this vector projection with the given column information and size
-  void Setup(const std::vector<const Schema::ColumnInfo *> &col_infos,
-             u32 size);
 
  private:
   // Set the deletions bitmap

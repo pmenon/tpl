@@ -643,44 +643,42 @@ VM_OP_HOT void OpAggregationHashTableParallelPartitionedScan(
 void OpAggregationHashTableFree(tpl::sql::AggregationHashTable *agg_hash_table);
 
 void OpAggregationHashTableIteratorInit(
-    tpl::sql::AggregationHashTableIterator *iter,
+    tpl::sql::AHTIterator *iter,
     tpl::sql::AggregationHashTable *agg_hash_table);
 
 VM_OP_HOT void OpAggregationHashTableIteratorHasNext(
-    bool *has_more, tpl::sql::AggregationHashTableIterator *iter) {
+    bool *has_more, tpl::sql::AHTIterator *iter) {
   *has_more = iter->HasNext();
 }
 
-VM_OP_HOT void OpAggregationHashTableIteratorNext(
-    tpl::sql::AggregationHashTableIterator *iter) {
+VM_OP_HOT void OpAggregationHashTableIteratorNext(tpl::sql::AHTIterator *iter) {
   iter->Next();
 }
 
 VM_OP_HOT void OpAggregationHashTableIteratorGetRow(
-    const byte **row, tpl::sql::AggregationHashTableIterator *iter) {
+    const byte **row, tpl::sql::AHTIterator *iter) {
   *row = iter->GetCurrentAggregateRow();
 }
 
-void OpAggregationHashTableIteratorFree(
-    tpl::sql::AggregationHashTableIterator *iter);
+void OpAggregationHashTableIteratorFree(tpl::sql::AHTIterator *iter);
 
 VM_OP_HOT void OpAggregationOverflowPartitionIteratorHasNext(
-    bool *has_more, tpl::sql::AggregationOverflowPartitionIterator *iter) {
+    bool *has_more, tpl::sql::AHTOverflowPartitionIterator *iter) {
   *has_more = iter->HasNext();
 }
 
 VM_OP_HOT void OpAggregationOverflowPartitionIteratorNext(
-    tpl::sql::AggregationOverflowPartitionIterator *iter) {
+    tpl::sql::AHTOverflowPartitionIterator *iter) {
   iter->Next();
 }
 
 VM_OP_HOT void OpAggregationOverflowPartitionIteratorGetHash(
-    hash_t *hash_val, tpl::sql::AggregationOverflowPartitionIterator *iter) {
+    hash_t *hash_val, tpl::sql::AHTOverflowPartitionIterator *iter) {
   *hash_val = iter->GetHash();
 }
 
 VM_OP_HOT void OpAggregationOverflowPartitionIteratorGetRow(
-    const byte **row, tpl::sql::AggregationOverflowPartitionIterator *iter) {
+    const byte **row, tpl::sql::AHTOverflowPartitionIterator *iter) {
   *row = iter->GetPayload();
 }
 

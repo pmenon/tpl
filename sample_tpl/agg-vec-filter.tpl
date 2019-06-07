@@ -1,5 +1,6 @@
 struct State {
   table: AggregationHashTable
+  count: int32
 }
 
 struct Agg {
@@ -11,6 +12,7 @@ struct Agg {
 
 fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
   @aggHTInit(&state.table, @execCtxGetMem(execCtx), @sizeOf(Agg))
+  state.count = 0
 }
 
 fun tearDownState(state: *State) -> nil {
@@ -48,11 +50,21 @@ fun pipeline_1(state: *State) -> nil {
   var tvi: TableVectorIterator
   for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
     var vec = @tableIterGetVPI(&tvi)
-    //@filterLt(vec, "colA", 5000)
+    @filterLt(vec, 0, 5000)
     iters[0] = vec
     @aggHTProcessBatch(ht, &iters, hashFn, keyCheck, constructAgg, updateAgg)
   }
   @tableIterClose(&tvi)
+}
+
+fun pipeline_2(state: *State) -> nil {
+  var aht_iter: AHTIterator
+  var iter = &aht_iter
+  for (@aggHTIterInit(iter, &state.table); @aggHTIterHasNext(iter); @aggHTIterNext(iter)) {
+    var agg = @ptrCast(*Agg, @aggHTIterGetRow(iter))
+    state.count = state.count + 1
+  }
+  @aggHTIterClose(iter)
 }
 
 fun main(execCtx: *ExecutionContext) -> int32 {
@@ -64,8 +76,13 @@ fun main(execCtx: *ExecutionContext) -> int32 {
   // Run pipeline 1
   pipeline_1(&state)
 
+  // Run pipeline 2
+  pipeline_2(&state)
+
+  var ret = state.count
+
   // Cleanup
   tearDownState(&state)
 
-  return 0
+  return ret
 }
