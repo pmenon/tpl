@@ -412,7 +412,10 @@ class AHTIterator {
 // ---------------------------------------------------------
 
 /**
- * A vectorized iterator over the contents of an aggregation hash table.
+ * A vectorized iterator over the contents of an aggregation hash table. This
+ * exists so that users can generate vector projections from aggregation hash
+ * tables, which might be useful when feeding into other operations or
+ * performing filters post aggregation.
  */
 class AHTVectorIterator {
  public:
