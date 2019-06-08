@@ -33,12 +33,6 @@ enum class ExecutionMode : u8 {
 };
 
 /**
- * Base Lambda instance.
- */
-template <typename T>
-class Lambda;
-
-/**
  * A Module instance is used to store all information associated with a single
  * TPL program. Module's are a top-level container for metadata about all TPL
  * functions, data structures, types, etc. They also contain the generated TBC
@@ -203,40 +197,6 @@ class Module {
 // ---------------------------------------------------------
 // Implementation below
 // ---------------------------------------------------------
-
-/**
- * Lambda is like a specialized std::function that knows it's executing within
- * a TPL virtual machine.
- */
-template <typename RetType, typename... ArgTypes>
-class Lambda<RetType(ArgTypes...)> {
- public:
-  using TypedFunc = RetType (*)(ArgTypes...);
-
-  Lambda() noexcept : module_(nullptr), func_id_(0) {}
-
-  Lambda(const vm::Module *module, FunctionId func_id) noexcept
-      : module_(module), func_id_(func_id) {}
-
-  Lambda(const Lambda &other)
-      : module_(other.module_), func_id_(other.func_id) {}
-
-  Lambda &operator=(const Lambda &other) {
-    module_ = other.module_;
-    func_id_ = other.func_id_;
-    return *this;
-  }
-
-  RetType operator()(ArgTypes... args) const {
-    auto func =
-        reinterpret_cast<TypedFunc>(module_->GetRawFunctionImpl(func_id_));
-    return func(std::forward<ArgTypes>(args)...);
-  }
-
- private:
-  const vm::Module *module_;
-  FunctionId func_id_;
-};
 
 namespace detail {
 

@@ -374,7 +374,7 @@ inline byte *AggregationHashTable::Lookup(
 // ---------------------------------------------------------
 
 /**
- * An iterator over the contents of an aggregation hash table
+ * A tuple-at-a-time iterator over the contents of an aggregation hash table.
  */
 class AHTIterator {
  public:
@@ -417,9 +417,9 @@ class AHTIterator {
  * tables, which might be useful when feeding into other operations or
  * performing filters post aggregation.
  *
- * To facilitate this, users must provide a transposition function that converts
- * row-oriented aggregate data into column-oriented vector projections, i.e., a
- * transposition function.
+ * To facilitate this, users must provide a function that converts row-oriented
+ * aggregate data into column-oriented vector projections, i.e., a transpose
+ * function.
  */
 class AHTVectorIterator {
  public:
