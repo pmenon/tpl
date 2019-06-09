@@ -775,12 +775,37 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   GEN_CMP(NotEqual);
 #undef GEN_CMP
 
+#define GEN_UNARY_MATH_OPS(op)                                      \
+  OP(op##Integer) : {                                               \
+    auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID()); \
+    auto *input = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());  \
+    Op##op##Integer(result, input);                                 \
+    DISPATCH_NEXT();                                                \
+  }                                                                 \
+  OP(op##Real) : {                                                  \
+    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());    \
+    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());     \
+    Op##op##Real(result, input);                                    \
+    DISPATCH_NEXT();                                                \
+  }
+
+  GEN_UNARY_MATH_OPS(Abs)
+
+#undef GEN_UNARY_MATH_OPS
+
 #define GEN_MATH_OPS(op)                                            \
   OP(op##Integer) : {                                               \
     auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID()); \
     auto *left = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());   \
     auto *right = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());  \
     Op##op##Integer(result, left, right);                           \
+    DISPATCH_NEXT();                                                \
+  }                                                                 \
+  OP(op##Real) : {                                                  \
+    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());    \
+    auto *left = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());      \
+    auto *right = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());     \
+    Op##op##Real(result, left, right);                              \
     DISPATCH_NEXT();                                                \
   }
 
@@ -789,6 +814,8 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   GEN_MATH_OPS(Mul)
   GEN_MATH_OPS(Div)
   GEN_MATH_OPS(Rem)
+
+#undef GEN_MATH_OPS
 
   // -------------------------------------------------------
   // Aggregations

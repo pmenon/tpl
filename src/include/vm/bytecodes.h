@@ -150,11 +150,21 @@ namespace tpl::vm {
   F(GreaterThanEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                               \
   F(EqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
   F(NotEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
+                                                                                                                       \
+  /* SQL value unary operations */                                                                                     \
+  F(AbsInteger, OperandType::Local, OperandType::Local)                                                                \
+  F(AbsReal, OperandType::Local, OperandType::Local)                                                                   \
+  /* SQL value binary operations */                                                                                    \
   F(AddInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
   F(SubInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
   F(MulInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
   F(DivInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
   F(RemInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
+  F(AddReal, OperandType::Local, OperandType::Local, OperandType::Local)                                               \
+  F(SubReal, OperandType::Local, OperandType::Local, OperandType::Local)                                               \
+  F(MulReal, OperandType::Local, OperandType::Local, OperandType::Local)                                               \
+  F(DivReal, OperandType::Local, OperandType::Local, OperandType::Local)                                               \
+  F(RemReal, OperandType::Local, OperandType::Local, OperandType::Local)                                               \
                                                                                                                        \
   /* Hashing */                                                                                                        \
   F(HashInt, OperandType::Local, OperandType::Local)                                                                   \

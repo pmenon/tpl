@@ -555,6 +555,16 @@ VM_OP_HOT void OpNotEqualInteger(tpl::sql::BoolVal *const result,
   tpl::sql::ComparisonFunctions::NeInteger(result, *left, *right);
 }
 
+VM_OP_WARM void OpAbsInteger(tpl::sql::Integer *const result,
+                             const tpl::sql::Integer *const left) {
+  tpl::sql::ArithmeticFunctions::Abs(result, *left);
+}
+
+VM_OP_WARM void OpAbsReal(tpl::sql::Real *const result,
+                          const tpl::sql::Real *const left) {
+  tpl::sql::ArithmeticFunctions::Abs(result, *left);
+}
+
 VM_OP_HOT void OpAddInteger(tpl::sql::Integer *const result,
                             const tpl::sql::Integer *const left,
                             const tpl::sql::Integer *const right) {
@@ -588,6 +598,38 @@ VM_OP_HOT void OpRemInteger(tpl::sql::Integer *const result,
                             const tpl::sql::Integer *const right) {
   UNUSED bool div_by_zero = false;
   tpl::sql::ArithmeticFunctions::IntMod(result, *left, *right, &div_by_zero);
+}
+
+VM_OP_HOT void OpAddReal(tpl::sql::Real *const result,
+                         const tpl::sql::Real *const left,
+                         const tpl::sql::Real *const right) {
+  tpl::sql::ArithmeticFunctions::Add(result, *left, *right);
+}
+
+VM_OP_HOT void OpSubReal(tpl::sql::Real *const result,
+                         const tpl::sql::Real *const left,
+                         const tpl::sql::Real *const right) {
+  tpl::sql::ArithmeticFunctions::Sub(result, *left, *right);
+}
+
+VM_OP_HOT void OpMulReal(tpl::sql::Real *const result,
+                         const tpl::sql::Real *const left,
+                         const tpl::sql::Real *const right) {
+  tpl::sql::ArithmeticFunctions::Mul(result, *left, *right);
+}
+
+VM_OP_HOT void OpDivReal(tpl::sql::Real *const result,
+                         const tpl::sql::Real *const left,
+                         const tpl::sql::Real *const right) {
+  UNUSED bool div_by_zero = false;
+  tpl::sql::ArithmeticFunctions::Div(result, *left, *right, &div_by_zero);
+}
+
+VM_OP_HOT void OpRemReal(tpl::sql::Real *const result,
+                         const tpl::sql::Real *const left,
+                         const tpl::sql::Real *const right) {
+  UNUSED bool div_by_zero = false;
+  tpl::sql::ArithmeticFunctions::Mod(result, *left, *right, &div_by_zero);
 }
 
 // ---------------------------------------------------------

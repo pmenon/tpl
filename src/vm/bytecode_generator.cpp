@@ -1638,33 +1638,33 @@ void BytecodeGenerator::VisitPrimitiveArithmeticExpr(ast::BinaryOpExpr *node) {
 }
 
 void BytecodeGenerator::VisitSqlArithmeticExpr(ast::BinaryOpExpr *node) {
-  TPL_ASSERT(execution_result()->IsRValue(),
-             "SQL comparison expressions must be R-Values!");
-
   LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
   LocalVar left = VisitExpressionForLValue(node->left());
   LocalVar right = VisitExpressionForLValue(node->right());
 
+  const bool is_integer_math =
+      node->type()->IsSpecificBuiltin(ast::BuiltinType::Integer);
+
   Bytecode bytecode;
   switch (node->op()) {
     case parsing::Token::Type::PLUS: {
-      bytecode = Bytecode::AddInteger;
+      bytecode = (is_integer_math ? Bytecode::AddInteger : Bytecode::AddReal);
       break;
     }
     case parsing::Token::Type::MINUS: {
-      bytecode = Bytecode::SubInteger;
+      bytecode = (is_integer_math ? Bytecode::SubInteger : Bytecode::SubReal);
       break;
     }
     case parsing::Token::Type::STAR: {
-      bytecode = Bytecode::MulInteger;
+      bytecode = (is_integer_math ? Bytecode::MulInteger : Bytecode::MulReal);
       break;
     }
     case parsing::Token::Type::SLASH: {
-      bytecode = Bytecode::DivInteger;
+      bytecode = (is_integer_math ? Bytecode::DivInteger : Bytecode::DivReal);
       break;
     }
     case parsing::Token::Type::PERCENT: {
-      bytecode = Bytecode::RemInteger;
+      bytecode = (is_integer_math ? Bytecode::RemInteger : Bytecode::RemReal);
       break;
     }
     default: { UNREACHABLE("Impossible arithmetic SQL operation"); }
@@ -1678,8 +1678,6 @@ void BytecodeGenerator::VisitSqlArithmeticExpr(ast::BinaryOpExpr *node) {
 }
 
 void BytecodeGenerator::VisitArithmeticExpr(ast::BinaryOpExpr *node) {
-  TPL_ASSERT(execution_result()->IsRValue(),
-             "Comparison expressions must be R-Values!");
   if (node->type()->IsSqlValueType()) {
     VisitSqlArithmeticExpr(node);
   } else {
