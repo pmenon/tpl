@@ -2,6 +2,8 @@
 
 #include <functional>
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include "sql/generic_hash_table.h"
 #include "sql/memory_pool.h"

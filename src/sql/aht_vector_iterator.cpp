@@ -1,5 +1,9 @@
 #include "sql/aggregation_hash_table.h"
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 
