@@ -16,7 +16,7 @@ class ArithmeticFunctionsTests : public TplTest {
   inline double cotan(const double arg) { return (1.0 / std::tan(arg)); }
 };
 
-TEST_F(ArithmeticFunctionsTests, IntegerValueTests) {
+TEST_F(ArithmeticFunctionsTests, IntegerValue) {
   // Nulls
   {
     Integer a(0), b = Integer::Null(), result(0);
@@ -96,7 +96,7 @@ TEST_F(ArithmeticFunctionsTests, IntegerValueTests) {
   }
 }
 
-TEST_F(ArithmeticFunctionsTests, RealValueTests) {
+TEST_F(ArithmeticFunctionsTests, RealValue) {
   // Nulls
   {
     Real a(0.0), b = Real::Null(), result(0.0);
@@ -145,7 +145,7 @@ TEST_F(ArithmeticFunctionsTests, RealValueTests) {
   }
 }
 
-TEST_F(ArithmeticFunctionsTests, SimplePiETest) {
+TEST_F(ArithmeticFunctionsTests, PiAndE) {
   {
     Real pi(0.0);
     ArithmeticFunctions::Pi(&pi);
@@ -161,7 +161,7 @@ TEST_F(ArithmeticFunctionsTests, SimplePiETest) {
   }
 }
 
-TEST_F(ArithmeticFunctionsTests, TrigFunctionsTest) {
+TEST_F(ArithmeticFunctionsTests, TrigFunctions) {
   std::vector<double> inputs, arc_inputs;
 
   std::mt19937 gen;
@@ -188,33 +188,33 @@ TEST_F(ArithmeticFunctionsTests, TrigFunctionsTest) {
     EXPECT_DOUBLE_EQ(C_FUNC(input), ret.val);   \
   }
 
-#define CHECK_FUNC(TPL_FUNC, C_FUNC)   \
-  CHECK_HANDLES_NULL(TPL_FUNC, C_FUNC) \
+#define CHECK_SQL_FUNC(TPL_FUNC, C_FUNC) \
+  CHECK_HANDLES_NULL(TPL_FUNC, C_FUNC)   \
   CHECK_HANDLES_NONNULL(TPL_FUNC, C_FUNC)
 
   // Check some of the trig functions on all inputs
   for (const auto input : inputs) {
-    CHECK_FUNC(Cos, std::cos);
-    CHECK_FUNC(Cot, cotan);
-    CHECK_FUNC(Sin, std::sin);
-    CHECK_FUNC(Tan, std::tan);
-    CHECK_FUNC(Cosh, std::cosh);
-    CHECK_FUNC(Tanh, std::tanh);
-    CHECK_FUNC(Sinh, std::sinh);
+    CHECK_SQL_FUNC(Cos, std::cos);
+    CHECK_SQL_FUNC(Cot, cotan);
+    CHECK_SQL_FUNC(Sin, std::sin);
+    CHECK_SQL_FUNC(Tan, std::tan);
+    CHECK_SQL_FUNC(Cosh, std::cosh);
+    CHECK_SQL_FUNC(Tanh, std::tanh);
+    CHECK_SQL_FUNC(Sinh, std::sinh);
   }
 
   for (const auto input : arc_inputs) {
-    CHECK_FUNC(Acos, std::acos);
-    CHECK_FUNC(Asin, std::asin);
-    CHECK_FUNC(Atan, std::atan);
+    CHECK_SQL_FUNC(Acos, std::acos);
+    CHECK_SQL_FUNC(Asin, std::asin);
+    CHECK_SQL_FUNC(Atan, std::atan);
   }
 
-#undef CHECK_FUNC
+#undef CHECK_SQL_FUNC
 #undef CHECK_HANDLES_NONNULL
 #undef CHECK_HANDLES_NULL
 }
 
-TEST_F(ArithmeticFunctionsTests, MathFuncsTest) {
+TEST_F(ArithmeticFunctionsTests, MathFuncs) {
 #define CHECK_HANDLES_NULL(TPL_FUNC, C_FUNC)  \
   {                                           \
     Real arg = Real::Null();                  \
@@ -231,46 +231,46 @@ TEST_F(ArithmeticFunctionsTests, MathFuncsTest) {
     EXPECT_DOUBLE_EQ(C_FUNC(INPUT), ret.val);          \
   }
 
-#define CHECK_FUNC(TPL_FUNC, C_FUNC, INPUT) \
-  CHECK_HANDLES_NULL(TPL_FUNC, C_FUNC)      \
+#define CHECK_SQL_FUNC(TPL_FUNC, C_FUNC, INPUT) \
+  CHECK_HANDLES_NULL(TPL_FUNC, C_FUNC)          \
   CHECK_HANDLES_NONNULL(TPL_FUNC, C_FUNC, INPUT)
 
-  CHECK_FUNC(Abs, std::fabs, -4.4);
-  CHECK_FUNC(Abs, std::fabs, 1.10);
+  CHECK_SQL_FUNC(Abs, std::fabs, -4.4);
+  CHECK_SQL_FUNC(Abs, std::fabs, 1.10);
 
-  CHECK_FUNC(Sqrt, std::sqrt, 4.0);
-  CHECK_FUNC(Sqrt, std::sqrt, 1.0);
+  CHECK_SQL_FUNC(Sqrt, std::sqrt, 4.0);
+  CHECK_SQL_FUNC(Sqrt, std::sqrt, 1.0);
 
-  CHECK_FUNC(Cbrt, std::cbrt, 4.0);
-  CHECK_FUNC(Cbrt, std::cbrt, 1.0);
+  CHECK_SQL_FUNC(Cbrt, std::cbrt, 4.0);
+  CHECK_SQL_FUNC(Cbrt, std::cbrt, 1.0);
 
-  CHECK_FUNC(Exp, std::exp, 4.0);
-  CHECK_FUNC(Exp, std::exp, 1.0);
+  CHECK_SQL_FUNC(Exp, std::exp, 4.0);
+  CHECK_SQL_FUNC(Exp, std::exp, 1.0);
 
-  CHECK_FUNC(Ceil, std::ceil, 4.4);
-  CHECK_FUNC(Ceil, std::ceil, 1.2);
-  CHECK_FUNC(Ceil, std::ceil, -100.1);
-  CHECK_FUNC(Ceil, std::ceil, -100.34234);
+  CHECK_SQL_FUNC(Ceil, std::ceil, 4.4);
+  CHECK_SQL_FUNC(Ceil, std::ceil, 1.2);
+  CHECK_SQL_FUNC(Ceil, std::ceil, -100.1);
+  CHECK_SQL_FUNC(Ceil, std::ceil, -100.34234);
 
-  CHECK_FUNC(Floor, std::floor, 4.4);
-  CHECK_FUNC(Floor, std::floor, 1.2);
-  CHECK_FUNC(Floor, std::floor, 50.1);
-  CHECK_FUNC(Floor, std::floor, 100.234);
+  CHECK_SQL_FUNC(Floor, std::floor, 4.4);
+  CHECK_SQL_FUNC(Floor, std::floor, 1.2);
+  CHECK_SQL_FUNC(Floor, std::floor, 50.1);
+  CHECK_SQL_FUNC(Floor, std::floor, 100.234);
 
-  CHECK_FUNC(Ln, std::log, 4.4);
-  CHECK_FUNC(Ln, std::log, 1.2);
-  CHECK_FUNC(Ln, std::log, 50.1);
-  CHECK_FUNC(Ln, std::log, 100.234);
+  CHECK_SQL_FUNC(Ln, std::log, 4.4);
+  CHECK_SQL_FUNC(Ln, std::log, 1.2);
+  CHECK_SQL_FUNC(Ln, std::log, 50.1);
+  CHECK_SQL_FUNC(Ln, std::log, 100.234);
 
-  CHECK_FUNC(Log2, std::log2, 4.4);
-  CHECK_FUNC(Log2, std::log2, 1.2);
-  CHECK_FUNC(Log2, std::log2, 50.1);
-  CHECK_FUNC(Log2, std::log2, 100.234);
+  CHECK_SQL_FUNC(Log2, std::log2, 4.4);
+  CHECK_SQL_FUNC(Log2, std::log2, 1.2);
+  CHECK_SQL_FUNC(Log2, std::log2, 50.1);
+  CHECK_SQL_FUNC(Log2, std::log2, 100.234);
 
-  CHECK_FUNC(Log10, std::log10, 4.4);
-  CHECK_FUNC(Log10, std::log10, 1.10);
-  CHECK_FUNC(Log10, std::log10, 50.123);
-  CHECK_FUNC(Log10, std::log10, 100.234);
+  CHECK_SQL_FUNC(Log10, std::log10, 4.4);
+  CHECK_SQL_FUNC(Log10, std::log10, 1.10);
+  CHECK_SQL_FUNC(Log10, std::log10, 50.123);
+  CHECK_SQL_FUNC(Log10, std::log10, 100.234);
 }
 
 }  // namespace tpl::sql::test

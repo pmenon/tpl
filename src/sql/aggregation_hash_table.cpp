@@ -315,7 +315,7 @@ void AggregationHashTable::CreateMissingGroups(
   alignas(CACHELINE_SIZE) u32 group_sel[kDefaultVectorSize];
 
   // Determine which elements are missing a group
-  u32 num_groups =
+  const u32 num_groups =
       util::VectorUtil::SelectNull(entries, num_elems, group_sel, nullptr);
 
   // Insert those elements
@@ -344,9 +344,8 @@ void AggregationHashTable::AdvanceGroups(
   alignas(CACHELINE_SIZE) u32 group_sel[kDefaultVectorSize];
 
   // All non-null entries are groups that should be updated. Find them now.
-  u32 num_groups =
-      util::VectorUtil::FilterNe(reinterpret_cast<intptr_t *>(entries),
-                                 num_elems, intptr_t(0), group_sel, nullptr);
+  const u32 num_groups =
+      util::VectorUtil::SelectNotNull(entries, num_elems, group_sel, nullptr);
 
   // Group indexes are stored in group_sel, update them now.
   for (u32 idx = 0; idx < num_groups; idx++) {
@@ -467,9 +466,8 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(
 
   // Determine the non-empty overflow partitions
   alignas(CACHELINE_SIZE) u32 nonempty_parts[kDefaultNumPartitions];
-  u32 num_nonempty_parts = util::VectorUtil::FilterNe(
-      reinterpret_cast<const intptr_t *>(partition_heads_),
-      kDefaultNumPartitions, intptr_t(0), nonempty_parts, nullptr);
+  const u32 num_nonempty_parts = util::VectorUtil::SelectNotNull(
+      partition_heads_, kDefaultNumPartitions, nonempty_parts, nullptr);
 
   tbb::parallel_for_each(
       nonempty_parts, nonempty_parts + num_nonempty_parts,
