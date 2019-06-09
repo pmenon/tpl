@@ -996,36 +996,36 @@ void OpSorterIteratorFree(tpl::sql::SorterIterator *iter);
 // Trig functions
 // ---------------------------------------------------------
 
-VM_OP_HOT void OpAcos(tpl::sql::Real *result, const tpl::sql::Real *input) {
+VM_OP_WARM void OpAcos(tpl::sql::Real *result, const tpl::sql::Real *input) {
   tpl::sql::ArithmeticFunctions::Acos(result, *input);
 }
 
-VM_OP_HOT void OpAsin(tpl::sql::Real *result, const tpl::sql::Real *input) {
+VM_OP_WARM void OpAsin(tpl::sql::Real *result, const tpl::sql::Real *input) {
   tpl::sql::ArithmeticFunctions::Asin(result, *input);
 }
 
-VM_OP_HOT void OpAtan(tpl::sql::Real *result, const tpl::sql::Real *input) {
+VM_OP_WARM void OpAtan(tpl::sql::Real *result, const tpl::sql::Real *input) {
   tpl::sql::ArithmeticFunctions::Atan(result, *input);
 }
 
-VM_OP_HOT void OpAtan2(tpl::sql::Real *result, const tpl::sql::Real *arg_1,
-                       const tpl::sql::Real *arg_2) {
+VM_OP_WARM void OpAtan2(tpl::sql::Real *result, const tpl::sql::Real *arg_1,
+                        const tpl::sql::Real *arg_2) {
   tpl::sql::ArithmeticFunctions::Atan2(result, *arg_1, *arg_2);
 }
 
-VM_OP_HOT void OpCos(tpl::sql::Real *result, const tpl::sql::Real *input) {
+VM_OP_WARM void OpCos(tpl::sql::Real *result, const tpl::sql::Real *input) {
   tpl::sql::ArithmeticFunctions::Cos(result, *input);
 }
 
-VM_OP_HOT void OpCot(tpl::sql::Real *result, const tpl::sql::Real *input) {
+VM_OP_WARM void OpCot(tpl::sql::Real *result, const tpl::sql::Real *input) {
   tpl::sql::ArithmeticFunctions::Cot(result, *input);
 }
 
-VM_OP_HOT void OpSin(tpl::sql::Real *result, const tpl::sql::Real *input) {
+VM_OP_WARM void OpSin(tpl::sql::Real *result, const tpl::sql::Real *input) {
   tpl::sql::ArithmeticFunctions::Sin(result, *input);
 }
 
-VM_OP_HOT void OpTan(tpl::sql::Real *result, const tpl::sql::Real *input) {
+VM_OP_WARM void OpTan(tpl::sql::Real *result, const tpl::sql::Real *input) {
   tpl::sql::ArithmeticFunctions::Tan(result, *input);
 }
 
