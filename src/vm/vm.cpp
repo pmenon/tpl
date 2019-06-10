@@ -793,6 +793,20 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
 
 #undef GEN_UNARY_MATH_OPS
 
+  OP(ValIsNull) : {
+    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    auto *val = frame->LocalAt<const sql::Val *>(READ_LOCAL_ID());
+    OpValIsNull(result, val);
+    DISPATCH_NEXT();
+  }
+
+  OP(ValIsNotNull) : {
+    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    auto *val = frame->LocalAt<const sql::Val *>(READ_LOCAL_ID());
+    OpValIsNotNull(result, val);
+    DISPATCH_NEXT();
+  }
+
 #define GEN_MATH_OPS(op)                                            \
   OP(op##Integer) : {                                               \
     auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID()); \
