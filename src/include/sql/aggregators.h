@@ -93,56 +93,18 @@ class CountStarAggregate {
 // Sums
 // ---------------------------------------------------------
 
-/**
- * Base class for Sums
- */
-class NullableAggregate {
- public:
-  /**
-   * Construct
-   */
-  NullableAggregate() : num_updates_(0) {}
-
-  /**
-   * This class cannot be copied or moved
-   */
-  DISALLOW_COPY_AND_MOVE(NullableAggregate);
-
-  /**
-   * Increment the number of tuples this aggregate has seen
-   */
-  void IncrementUpdateCount() { num_updates_++; }
-
-  /**
-   * Reset
-   */
-  void ResetUpdateCount() { num_updates_ = 0; }
-
-  /**
-   * Merge this sum with the one provided
-   */
-  void Merge(const NullableAggregate &that) {
-    num_updates_ += that.num_updates_;
-  }
-
-  /**
-   * Return the number of times this aggregate has been updated
-   */
-  u64 GetNumUpdates() const { return num_updates_; }
-
- private:
-  u64 num_updates_;
-};
+// TODO(pmenon): Sums, Min, Max between integers and reals share a lot of code.
+//               Consider refactoring ...
 
 /**
  * Integer Sums
  */
-class IntegerSumAggregate : public NullableAggregate {
+class IntegerSumAggregate {
  public:
   /**
    * Constructor
    */
-  IntegerSumAggregate() : NullableAggregate(), sum_(0) {}
+  IntegerSumAggregate() : sum_(0), null_(true) {}
 
   /**
    * This class cannot be copied or moved
@@ -153,37 +115,29 @@ class IntegerSumAggregate : public NullableAggregate {
    * Advance the aggregate by the non-nullable input value @em val
    */
   void Advance(const Integer *val) {
-    TPL_ASSERT(!val->is_null,
-               "Received NULL input in non-NULLable aggregator!");
-    IncrementUpdateCount();
-    sum_ += val->val;
-  }
-
-  /**
-   * Advance the aggregate by the nullable input value @em val
-   */
-  void AdvanceNullable(const Integer *val) {
-    if (!val->is_null) {
-      Advance(val);
+    if (val->is_null) {
+      return;
     }
+    null_ = false;
+    sum_ += val->val;
   }
 
   /**
    * Merge another aggregate in
    */
   void Merge(const IntegerSumAggregate &that) {
-    NullableAggregate::Merge(that);
-    Integer i = that.GetResultSum();
-    if (!i.is_null) {
-      sum_ += i.val;
+    if (that.null_) {
+      return;
     }
+    null_ = false;
+    sum_ += that.sum_;
   }
 
   /**
    * Reset the aggregate
    */
   void Reset() {
-    ResetUpdateCount();
+    null_ = true;
     sum_ = 0;
   }
 
@@ -192,12 +146,72 @@ class IntegerSumAggregate : public NullableAggregate {
    */
   Integer GetResultSum() const {
     Integer sum(sum_);
-    sum.is_null = (GetNumUpdates() == 0);
+    sum.is_null = null_;
     return sum;
   }
 
  private:
   i64 sum_;
+  bool null_;
+};
+
+/**
+ * Real Sums
+ */
+class RealSumAggregate {
+ public:
+  /**
+   * Constructor
+   */
+  RealSumAggregate() : sum_(0), null_(true) {}
+
+  /**
+   * This class cannot be copied or moved
+   */
+  DISALLOW_COPY_AND_MOVE(RealSumAggregate);
+
+  /**
+   * Advance the aggregate by the non-nullable input value @em val
+   */
+  void Advance(const Real *val) {
+    if (val->is_null) {
+      return;
+    }
+    null_ = false;
+    sum_ += val->val;
+  }
+
+  /**
+   * Merge another aggregate in
+   */
+  void Merge(const RealSumAggregate &that) {
+    if (that.null_) {
+      return;
+    }
+    null_ = false;
+    sum_ += that.sum_;
+  }
+
+  /**
+   * Reset the aggregate
+   */
+  void Reset() {
+    null_ = true;
+    sum_ = 0;
+  }
+
+  /**
+   * Return the result of the summation
+   */
+  Real GetResultSum() const {
+    Real sum(sum_);
+    sum.is_null = null_;
+    return sum;
+  }
+
+ private:
+  double sum_;
+  bool null_;
 };
 
 // ---------------------------------------------------------
@@ -207,13 +221,12 @@ class IntegerSumAggregate : public NullableAggregate {
 /**
  * Integer Max
  */
-class IntegerMaxAggregate : public NullableAggregate {
+class IntegerMaxAggregate {
  public:
   /**
    * Constructor
    */
-  IntegerMaxAggregate()
-      : NullableAggregate(), max_(std::numeric_limits<i64>::min()) {}
+  IntegerMaxAggregate() : max_(std::numeric_limits<i64>::min()), null_(true) {}
 
   /**
    * This class cannot be copied or moved
@@ -224,37 +237,29 @@ class IntegerMaxAggregate : public NullableAggregate {
    * Advance the aggregate by the non-nullable input value @em val
    */
   void Advance(const Integer *val) {
-    TPL_ASSERT(!val->is_null,
-               "Received NULL input in non-NULLable aggregator!");
-    IncrementUpdateCount();
-    max_ = std::max(val->val, max_);
-  }
-
-  /**
-   * Advance the aggregate by the nullable input value @em val
-   */
-  void AdvanceNullable(const Integer *val) {
-    if (!val->is_null) {
-      Advance(val);
+    if (val->is_null) {
+      return;
     }
+    null_ = false;
+    max_ = std::max(val->val, max_);
   }
 
   /**
    * Merge another aggregate in
    */
   void Merge(const IntegerMaxAggregate &that) {
-    NullableAggregate::Merge(that);
-    Integer i = that.GetResultMax();
-    if (!i.is_null) {
-      max_ = std::max(i.val, max_);
+    if (that.null_) {
+      return;
     }
+    null_ = false;
+    max_ = std::max(that.max_, max_);
   }
 
   /**
    * Reset the aggregate
    */
   void Reset() {
-    ResetUpdateCount();
+    null_ = true;
     max_ = std::numeric_limits<i64>::min();
   }
 
@@ -263,12 +268,72 @@ class IntegerMaxAggregate : public NullableAggregate {
    */
   Integer GetResultMax() const {
     Integer max(max_);
-    max.is_null = (GetNumUpdates() == 0);
+    max.is_null = null_;
     return max;
   }
 
  private:
   i64 max_;
+  bool null_;
+};
+
+/**
+ * Real Max
+ */
+class RealMaxAggregate {
+ public:
+  /**
+   * Constructor
+   */
+  RealMaxAggregate() : max_(std::numeric_limits<double>::min()), null_(true) {}
+
+  /**
+   * This class cannot be copied or moved
+   */
+  DISALLOW_COPY_AND_MOVE(RealMaxAggregate);
+
+  /**
+   * Advance the aggregate by the non-nullable input value @em val
+   */
+  void Advance(const Real *val) {
+    if (val->is_null) {
+      return;
+    }
+    null_ = false;
+    max_ = std::max(val->val, max_);
+  }
+
+  /**
+   * Merge another aggregate in
+   */
+  void Merge(const RealMaxAggregate &that) {
+    if (that.null_) {
+      return;
+    }
+    null_ = false;
+    max_ = std::max(that.max_, max_);
+  }
+
+  /**
+   * Reset the aggregate
+   */
+  void Reset() {
+    null_ = true;
+    max_ = std::numeric_limits<double>::min();
+  }
+
+  /**
+   * Return the result of the max
+   */
+  Real GetResultMax() const {
+    Real max(max_);
+    max.is_null = null_;
+    return max;
+  }
+
+ private:
+  double max_;
+  bool null_;
 };
 
 // ---------------------------------------------------------
@@ -278,13 +343,12 @@ class IntegerMaxAggregate : public NullableAggregate {
 /**
  * Integer Min
  */
-class IntegerMinAggregate : public NullableAggregate {
+class IntegerMinAggregate {
  public:
   /**
    * Constructor
    */
-  IntegerMinAggregate()
-      : NullableAggregate(), min_(std::numeric_limits<i64>::max()) {}
+  IntegerMinAggregate() : min_(std::numeric_limits<i64>::max()), null_(true) {}
 
   /**
    * This class cannot be copied or moved
@@ -295,37 +359,29 @@ class IntegerMinAggregate : public NullableAggregate {
    * Advance the aggregate by the non-nullable input value @em val
    */
   void Advance(const Integer *val) {
-    TPL_ASSERT(!val->is_null,
-               "Received NULL input in non-NULLable aggregator!");
-    IncrementUpdateCount();
-    min_ = std::min(val->val, min_);
-  }
-
-  /**
-   * Advance the aggregate by the nullable input value @em val
-   */
-  void AdvanceNullable(const Integer *val) {
-    if (!val->is_null) {
-      Advance(val);
+    if (val->is_null) {
+      return;
     }
+    null_ = false;
+    min_ = std::min(val->val, min_);
   }
 
   /**
    * Merge another aggregate in
    */
   void Merge(const IntegerMinAggregate &that) {
-    NullableAggregate::Merge(that);
-    Integer i = that.GetResultMin();
-    if (!i.is_null) {
-      min_ = std::min(i.val, min_);
+    if (that.null_) {
+      return;
     }
+    null_ = false;
+    min_ = std::min(that.min_, min_);
   }
 
   /**
    * Reset the aggregate
    */
   void Reset() {
-    ResetUpdateCount();
+    null_ = true;
     min_ = std::numeric_limits<i64>::max();
   }
 
@@ -334,12 +390,72 @@ class IntegerMinAggregate : public NullableAggregate {
    */
   Integer GetResultMin() const {
     Integer min(min_);
-    min.is_null = (GetNumUpdates() == 0);
+    min.is_null = null_;
     return min;
   }
 
  private:
   i64 min_;
+  bool null_;
+};
+
+/**
+ * Real Min
+ */
+class RealMinAggregate {
+ public:
+  /**
+   * Constructor
+   */
+  RealMinAggregate() : min_(std::numeric_limits<i64>::max()), null_(true) {}
+
+  /**
+   * This class cannot be copied or moved
+   */
+  DISALLOW_COPY_AND_MOVE(RealMinAggregate);
+
+  /**
+   * Advance the aggregate by the non-nullable input value @em val
+   */
+  void Advance(const Real *val) {
+    if (val->is_null) {
+      return;
+    }
+    null_ = false;
+    min_ = std::min(val->val, min_);
+  }
+
+  /**
+   * Merge another aggregate in
+   */
+  void Merge(const RealMinAggregate &that) {
+    if (that.null_) {
+      return;
+    }
+    null_ = false;
+    min_ = std::min(that.min_, min_);
+  }
+
+  /**
+   * Reset the aggregate
+   */
+  void Reset() {
+    null_ = true;
+    min_ = std::numeric_limits<i64>::max();
+  }
+
+  /**
+   * Return the result of the minimum
+   */
+  Real GetResultMin() const {
+    Real min(min_);
+    min.is_null = null_;
+    return min;
+  }
+
+ private:
+  double min_;
+  bool null_;
 };
 
 // ---------------------------------------------------------
@@ -349,30 +465,59 @@ class IntegerMinAggregate : public NullableAggregate {
 /**
  * Integer Avg
  */
-class IntegerAvgAggregate : public IntegerSumAggregate {
+class AvgAggregate {
  public:
   /**
    * Constructor
    */
-  IntegerAvgAggregate() : IntegerSumAggregate() {}
+  AvgAggregate() : sum_(0.0), count_(0) {}
 
   /**
    * This class cannot be copied or moved
    */
-  DISALLOW_COPY_AND_MOVE(IntegerAvgAggregate);
+  DISALLOW_COPY_AND_MOVE(AvgAggregate);
+
+  /**
+   * Advance the aggregate by the input value @em val.
+   */
+  template <typename T>
+  void Advance(const T *val) {
+    if (val->is_null) {
+      return;
+    }
+    sum_ += val->val;
+    count_++;
+  }
+
+  /**
+   * Merge another aggregate in.
+   */
+  void Merge(const AvgAggregate &that) {
+    sum_ += that.sum_;
+    count_ += that.count_;
+  }
+
+  /**
+   * Reset the aggregate.
+   */
+  void Reset() {
+    sum_ = 0.0;
+    count_ = 0;
+  }
 
   /**
    * Return the result of the minimum
    */
-  Integer GetResultAvg() const {
-    u64 num_updates = GetNumUpdates();
-    if (num_updates == 0) {
-      return Integer::Null();
+  Real GetResultAvg() const {
+    if (count_ == 0) {
+      return Real::Null();
     }
-
-    Integer avg_result = GetResultSum().Divide(Integer(num_updates));
-    return avg_result;
+    return Real(sum_ / count_);
   }
+
+ private:
+  double sum_;
+  u64 count_;
 };
 
 }  // namespace tpl::sql

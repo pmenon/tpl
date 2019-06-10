@@ -74,10 +74,13 @@ class Context;
   /* SQL Aggregate types (if you add, remember to update BuiltinType) */ \
   NON_PRIM(CountAggregate, tpl::sql::CountAggregate)                     \
   NON_PRIM(CountStarAggregate, tpl::sql::CountStarAggregate)             \
-  NON_PRIM(IntegerAvgAggregate, tpl::sql::IntegerAvgAggregate)           \
+  NON_PRIM(AvgAggregate, tpl::sql::AvgAggregate)                         \
   NON_PRIM(IntegerMaxAggregate, tpl::sql::IntegerMaxAggregate)           \
   NON_PRIM(IntegerMinAggregate, tpl::sql::IntegerMinAggregate)           \
   NON_PRIM(IntegerSumAggregate, tpl::sql::IntegerSumAggregate)           \
+  NON_PRIM(RealMaxAggregate, tpl::sql::RealMaxAggregate)                 \
+  NON_PRIM(RealMinAggregate, tpl::sql::RealMinAggregate)                 \
+  NON_PRIM(RealSumAggregate, tpl::sql::RealSumAggregate)                 \
                                                                          \
   /* Non-primitive SQL Runtime Values */                                 \
   SQL(Boolean, tpl::sql::BoolVal)                                        \
@@ -315,8 +318,7 @@ class BuiltinType : public Type {
    * Is this type a SQL aggregator type? IntegerSumAggregate, CountAggregate ...
    */
   bool is_sql_aggregator_type() const {
-    return Kind::CountAggregate <= kind() &&
-           kind() <= Kind::IntegerSumAggregate;
+    return Kind::CountAggregate <= kind() && kind() <= Kind::RealSumAggregate;
   }
 
   /**
