@@ -10,6 +10,7 @@
 #include "sql/filter_manager.h"
 #include "sql/functions/arithmetic_functions.h"
 #include "sql/functions/comparison_functions.h"
+#include "sql/functions/is_null_predicate.h"
 #include "sql/join_hash_table.h"
 #include "sql/join_hash_table_vector_probe.h"
 #include "sql/sorter.h"
@@ -1069,6 +1070,20 @@ VM_OP_WARM void OpSin(tpl::sql::Real *result, const tpl::sql::Real *input) {
 
 VM_OP_WARM void OpTan(tpl::sql::Real *result, const tpl::sql::Real *input) {
   tpl::sql::ArithmeticFunctions::Tan(result, *input);
+}
+
+// ---------------------------------------------------------
+// Null/Not Null predicates
+// ---------------------------------------------------------
+
+VM_OP_WARM void OpValIsNull(tpl::sql::BoolVal *result,
+                            const tpl::sql::Val *val) {
+  tpl::sql::IsNullPredicate::IsNull(result, *val);
+}
+
+VM_OP_WARM void OpValIsNotNull(tpl::sql::BoolVal *result,
+                               const tpl::sql::Val *val) {
+  tpl::sql::IsNullPredicate::IsNotNull(result, *val);
 }
 
 }  // extern "C"
