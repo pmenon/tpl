@@ -11,7 +11,7 @@ namespace tpl::util {
 /**
  * Enumeration of the supported hashing methods
  */
-enum class HashMethod : u8 { Fnv1, Murmur3, Crc, xxHash3 };
+enum class HashMethod : u8 { Fnv1, Crc, xxHash3 };
 
 /**
  * Generic hashing utility class
@@ -48,8 +48,6 @@ class Hasher {
 
  private:
   static hash_t HashFnv1(const u8 *buf, u64 len);
-
-  static hash_t HashMurmur3(const u8 *buf, u64 len);
 
   static hash_t HashCrc32(const u8 *buf, u64 len);
 

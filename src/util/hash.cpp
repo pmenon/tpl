@@ -12,8 +12,6 @@ hash_t Hasher::Hash(const u8 *buf, u64 len, HashMethod method) {
   switch (method) {
     case HashMethod::Fnv1:
       return HashFnv1(buf, len);
-    case HashMethod::Murmur3:
-      return HashMurmur3(buf, len);
     case HashMethod::Crc:
       return HashCrc32(buf, len);
     case HashMethod::xxHash3: {
@@ -33,8 +31,6 @@ hash_t Hasher::HashFnv1(const u8 *buf, u64 len) {
 
   return hash;
 }
-
-hash_t Hasher::HashMurmur3(const u8 *buf, u64 len) { return 0; }
 
 hash_t Hasher::HashCrc32(const u8 *buf, u64 len) {
   // Thanks HyPer
