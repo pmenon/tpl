@@ -36,6 +36,9 @@ std::unique_ptr<bandit::Policy> CreatePolicy(bandit::Policy::Kind policy_kind) {
     case bandit::Policy::FixedAction: {
       return std::make_unique<bandit::FixedActionPolicy>(0);
     }
+    case bandit::Policy::AnnealingEpsilonGreedy: {
+      return std::make_unique<bandit::AnnealingEpsilonGreedyPolicy>();
+    }
     default: { UNREACHABLE("Impossible bandit policy kind"); }
   }
 }
@@ -55,7 +58,8 @@ void FilterManager::StartNewClause() {
 void FilterManager::InsertClauseFlavor(const FilterManager::MatchFn flavor) {
   TPL_ASSERT(!finalized_, "Cannot modify filter manager after finalization");
   TPL_ASSERT(!clauses_.empty(), "Inserting flavor without clause");
-  clauses_.back().flavors.push_back(flavor);
+  auto &current_clause = clauses_.back();
+  current_clause.flavors.push_back(flavor);
 }
 
 void FilterManager::Finalize() {
