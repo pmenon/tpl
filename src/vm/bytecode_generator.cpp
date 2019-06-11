@@ -1710,30 +1710,33 @@ void BytecodeGenerator::VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare) {
   LocalVar left = VisitExpressionForLValue(compare->left());
   LocalVar right = VisitExpressionForLValue(compare->right());
 
+  const bool is_integer_comparison =
+      compare->type()->IsSpecificBuiltin(ast::BuiltinType::Integer);
+
   Bytecode code;
   switch (compare->op()) {
     case parsing::Token::Type::GREATER: {
-      code = Bytecode::GreaterThanInteger;
+      code = (is_integer_comparison ? Bytecode::GreaterThanInteger : Bytecode::GreaterThanReal);
       break;
     }
     case parsing::Token::Type::GREATER_EQUAL: {
-      code = Bytecode::GreaterThanEqualInteger;
+      code = (is_integer_comparison ? Bytecode::GreaterThanEqualInteger : Bytecode::GreaterThanEqualReal);
       break;
     }
     case parsing::Token::Type::EQUAL_EQUAL: {
-      code = Bytecode::EqualInteger;
+      code = (is_integer_comparison ? Bytecode::EqualInteger : Bytecode::EqualReal);
       break;
     }
     case parsing::Token::Type::LESS: {
-      code = Bytecode::LessThanInteger;
+      code = (is_integer_comparison ? Bytecode::LessThanInteger : Bytecode::LessThanReal);
       break;
     }
     case parsing::Token::Type::LESS_EQUAL: {
-      code = Bytecode::LessThanEqualInteger;
+      code = (is_integer_comparison ? Bytecode::LessThanEqualInteger : Bytecode::LessThanEqualReal);
       break;
     }
     case parsing::Token::Type::BANG_EQUAL: {
-      code = Bytecode::NotEqualInteger;
+      code = (is_integer_comparison ? Bytecode::NotEqualInteger : Bytecode::NotEqualReal);
       break;
     }
     default: { UNREACHABLE("Impossible binary operation"); }

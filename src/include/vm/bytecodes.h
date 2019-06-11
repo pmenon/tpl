@@ -150,6 +150,12 @@ namespace tpl::vm {
   F(GreaterThanEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                               \
   F(EqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
   F(NotEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
+  F(LessThanReal, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
+  F(LessThanEqualReal, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
+  F(GreaterThanReal, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
+  F(GreaterThanEqualReal, OperandType::Local, OperandType::Local, OperandType::Local)                                  \
+  F(EqualReal, OperandType::Local, OperandType::Local, OperandType::Local)                                             \
+  F(NotEqualReal, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
                                                                                                                        \
   /* SQL value unary operations */                                                                                     \
   F(AbsInteger, OperandType::Local, OperandType::Local)                                                                \

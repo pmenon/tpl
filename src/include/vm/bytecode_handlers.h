@@ -520,41 +520,42 @@ VM_OP_HOT void OpInitReal(tpl::sql::Real *result, double input) {
   result->val = input;
 }
 
-VM_OP_HOT void OpGreaterThanInteger(tpl::sql::BoolVal *const result,
-                                    const tpl::sql::Integer *const left,
-                                    const tpl::sql::Integer *const right) {
-  tpl::sql::ComparisonFunctions::GtInteger(result, *left, *right);
-}
+#define GEN_SQL_COMPARISONS(TYPE)                                           \
+  VM_OP_HOT void OpGreaterThan##TYPE(tpl::sql::BoolVal *const result,       \
+                                     const tpl::sql::TYPE *const left,      \
+                                     const tpl::sql::TYPE *const right) {   \
+    tpl::sql::ComparisonFunctions::Gt##TYPE(result, *left, *right);         \
+  }                                                                         \
+  VM_OP_HOT void OpGreaterThanEqual##TYPE(tpl::sql::BoolVal *const result,  \
+                                          tpl::sql::TYPE *left,             \
+                                          tpl::sql::TYPE *right) {          \
+    tpl::sql::ComparisonFunctions::Ge##TYPE(result, *left, *right);         \
+  }                                                                         \
+  VM_OP_HOT void OpEqual##TYPE(tpl::sql::BoolVal *const result,             \
+                               const tpl::sql::TYPE *const left,            \
+                               const tpl::sql::TYPE *const right) {         \
+    tpl::sql::ComparisonFunctions::Eq##TYPE(result, *left, *right);         \
+  }                                                                         \
+  VM_OP_HOT void OpLessThan##TYPE(tpl::sql::BoolVal *const result,          \
+                                  const tpl::sql::TYPE *const left,         \
+                                  const tpl::sql::TYPE *const right) {      \
+    tpl::sql::ComparisonFunctions::Lt##TYPE(result, *left, *right);         \
+  }                                                                         \
+  VM_OP_HOT void OpLessThanEqual##TYPE(tpl::sql::BoolVal *const result,     \
+                                       const tpl::sql::TYPE *const left,    \
+                                       const tpl::sql::TYPE *const right) { \
+    tpl::sql::ComparisonFunctions::Le##TYPE(result, *left, *right);         \
+  }                                                                         \
+  VM_OP_HOT void OpNotEqual##TYPE(tpl::sql::BoolVal *const result,          \
+                                  const tpl::sql::TYPE *const left,         \
+                                  const tpl::sql::TYPE *const right) {      \
+    tpl::sql::ComparisonFunctions::Ne##TYPE(result, *left, *right);         \
+  }
 
-VM_OP_HOT void OpGreaterThanEqualInteger(tpl::sql::BoolVal *const result,
-                                         tpl::sql::Integer *left,
-                                         tpl::sql::Integer *right) {
-  tpl::sql::ComparisonFunctions::GeInteger(result, *left, *right);
-}
+GEN_SQL_COMPARISONS(Integer)
+GEN_SQL_COMPARISONS(Real)
 
-VM_OP_HOT void OpEqualInteger(tpl::sql::BoolVal *const result,
-                              const tpl::sql::Integer *const left,
-                              const tpl::sql::Integer *const right) {
-  tpl::sql::ComparisonFunctions::EqInteger(result, *left, *right);
-}
-
-VM_OP_HOT void OpLessThanInteger(tpl::sql::BoolVal *const result,
-                                 const tpl::sql::Integer *const left,
-                                 const tpl::sql::Integer *const right) {
-  tpl::sql::ComparisonFunctions::LtInteger(result, *left, *right);
-}
-
-VM_OP_HOT void OpLessThanEqualInteger(tpl::sql::BoolVal *const result,
-                                      const tpl::sql::Integer *const left,
-                                      const tpl::sql::Integer *const right) {
-  tpl::sql::ComparisonFunctions::LeInteger(result, *left, *right);
-}
-
-VM_OP_HOT void OpNotEqualInteger(tpl::sql::BoolVal *const result,
-                                 const tpl::sql::Integer *const left,
-                                 const tpl::sql::Integer *const right) {
-  tpl::sql::ComparisonFunctions::NeInteger(result, *left, *right);
-}
+#undef GEN_SQL_COMPARISONS
 
 VM_OP_WARM void OpAbsInteger(tpl::sql::Integer *const result,
                              const tpl::sql::Integer *const left) {
