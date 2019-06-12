@@ -26,7 +26,7 @@ TEST_F(AggregatorsTest, Count) {
     CountAggregate count;
     for (u32 i = 0; i < 10; i++) {
       Integer val = (i % 2 == 0 ? Integer::Null() : Integer(i));
-      count.Advance(&val);
+      count.Advance(val);
     }
     EXPECT_EQ(5, count.GetCountResult().val);
   }
@@ -39,11 +39,11 @@ TEST_F(AggregatorsTest, CountMerge) {
   // Insert into count_1
   for (u32 i = 0; i < 100; i++) {
     Integer val = (i % 2 == 0 ? Integer::Null() : Integer(i));
-    count_1.Advance(&val);
+    count_1.Advance(val);
   }
   for (u32 i = 0; i < 100; i++) {
     Integer val(i);
-    count_2.Advance(&val);
+    count_2.Advance(val);
   }
 
   auto merged = count_1.GetCountResult().val + count_2.GetCountResult().val;
@@ -72,7 +72,7 @@ TEST_F(AggregatorsTest, SumInteger) {
     IntegerSumAggregate sum;
     for (u32 i = 0; i < 10; i++) {
       Integer val = (i % 2 == 0 ? Integer::Null() : Integer(i));
-      sum.Advance(&val);
+      sum.Advance(val);
     }
 
     EXPECT_FALSE(sum.GetResultSum().is_null);
@@ -88,7 +88,7 @@ TEST_F(AggregatorsTest, SumInteger) {
     IntegerSumAggregate sum;
     for (u32 i = 0; i < 10; i++) {
       Integer val(i);
-      sum.Advance(&val);
+      sum.Advance(val);
     }
 
     EXPECT_FALSE(sum.GetResultSum().is_null);
@@ -101,14 +101,14 @@ TEST_F(AggregatorsTest, MergeSumIntegers) {
   EXPECT_TRUE(sum1.GetResultSum().is_null);
   for (u64 i = 0; i < 10; i++) {
     auto val = Integer(i);
-    sum1.Advance(&val);
+    sum1.Advance(val);
   }
 
   IntegerSumAggregate sum2;
   EXPECT_TRUE(sum2.GetResultSum().is_null);
   for (u64 i = 10; i < 20; i++) {
     auto val = Integer(i);
-    sum2.Advance(&val);
+    sum2.Advance(val);
   }
   sum1.Merge(sum2);
   EXPECT_FALSE(sum1.GetResultSum().is_null);
@@ -121,7 +121,7 @@ TEST_F(AggregatorsTest, MergeSumIntegers) {
 
   for (i64 i = 0; i < 20; i++) {
     auto val = Integer(-i);
-    sum3.Advance(&val);
+    sum3.Advance(val);
   }
   sum1.Merge(sum3);
   EXPECT_EQ(0, sum1.GetResultSum().val);
@@ -142,7 +142,7 @@ TEST_F(AggregatorsTest, SumReal) {
     EXPECT_TRUE(sum.GetResultSum().is_null);
     for (u32 i = 0; i < 10; i++) {
       Real val = (i % 2 == 0 ? Real::Null() : Real(double(i)));
-      sum.Advance(&val);
+      sum.Advance(val);
     }
 
     EXPECT_FALSE(sum.GetResultSum().is_null);
@@ -155,7 +155,7 @@ TEST_F(AggregatorsTest, SumReal) {
     EXPECT_TRUE(sum2.GetResultSum().is_null);
     for (u32 i = 0; i < 10; i++) {
       Real val{double(i)};
-      sum2.Advance(&val);
+      sum2.Advance(val);
     }
 
     EXPECT_FALSE(sum2.GetResultSum().is_null);
@@ -200,7 +200,7 @@ TEST_F(AggregatorsTest, MaxInteger) {
       }
 
       auto val = Integer(j);
-      max1.Advance(&val);
+      max1.Advance(val);
     }
 
     EXPECT_FALSE(max1.GetResultMax().is_null);
@@ -218,7 +218,7 @@ TEST_F(AggregatorsTest, MaxInteger) {
         j = -i;
       }
       auto val = Integer(j);
-      max2.Advance(&val);
+      max2.Advance(val);
     }
 
     EXPECT_FALSE(max2.GetResultMax().is_null);
@@ -262,7 +262,7 @@ TEST_F(AggregatorsTest, MinInteger) {
       }
 
       auto val = Integer(j);
-      min.Advance(&val);
+      min.Advance(val);
     }
 
     EXPECT_FALSE(min.GetResultMin().is_null);
@@ -280,7 +280,7 @@ TEST_F(AggregatorsTest, MinInteger) {
         j = -i;
       }
       auto val = Integer(j);
-      min2.Advance(&val);
+      min2.Advance(val);
     }
 
     EXPECT_FALSE(min2.GetResultMin().is_null);
@@ -324,7 +324,7 @@ TEST_F(AggregatorsTest, MaxReal) {
       }
 
       auto val = Real(j);
-      max1.Advance(&val);
+      max1.Advance(val);
     }
 
     EXPECT_FALSE(max1.GetResultMax().is_null);
@@ -342,7 +342,7 @@ TEST_F(AggregatorsTest, MaxReal) {
         j = -i;
       }
       auto val = Real(j);
-      max2.Advance(&val);
+      max2.Advance(val);
     }
 
     EXPECT_FALSE(max2.GetResultMax().is_null);
@@ -386,7 +386,7 @@ TEST_F(AggregatorsTest, MinReal) {
       }
 
       auto val = Real(j);
-      min.Advance(&val);
+      min.Advance(val);
     }
 
     EXPECT_FALSE(min.GetResultMin().is_null);
@@ -404,7 +404,7 @@ TEST_F(AggregatorsTest, MinReal) {
         j = -i;
       }
       auto val = Real(j);
-      min2.Advance(&val);
+      min2.Advance(val);
     }
 
     EXPECT_FALSE(min2.GetResultMin().is_null);
@@ -445,7 +445,7 @@ TEST_F(AggregatorsTest, Avg) {
       sum += i;
       count++;
       auto val = Integer(i);
-      avg1.Advance(&val);
+      avg1.Advance(val);
     }
 
     EXPECT_FALSE(avg1.GetResultAvg().is_null);
@@ -460,7 +460,7 @@ TEST_F(AggregatorsTest, Avg) {
       sum += -i;
       count++;
       auto val = Integer(-i);
-      avg2.Advance(&val);
+      avg2.Advance(val);
     }
 
     EXPECT_FALSE(avg2.GetResultAvg().is_null);

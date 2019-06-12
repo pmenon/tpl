@@ -16,32 +16,32 @@ namespace tpl::sql {
 class CountAggregate {
  public:
   /**
-   * Constructor
+   * Constructor.
    */
   CountAggregate() : count_(0) {}
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(CountAggregate);
 
   /**
-   * Advance the count based on the NULLness of the input value
+   * Advance the count based on the NULL-ness of the input value.
    */
-  void Advance(const Val *val) { count_ += !val->is_null; }
+  void Advance(const Val &val) { count_ += !val.is_null; }
 
   /**
-   * Merge this count with the \a that count
+   * Merge this count with the @em that count.
    */
   void Merge(const CountAggregate &that) { count_ += that.count_; }
 
   /**
-   * Reset the aggregate
+   * Reset the aggregate.
    */
   void Reset() { count_ = 0; }
 
   /**
-   * Return the current value of the count
+   * Return the current value of the count.
    */
   Integer GetCountResult() const { return Integer(count_); }
 
@@ -56,32 +56,32 @@ class CountAggregate {
 class CountStarAggregate {
  public:
   /**
-   * Constructor
+   * Constructor.
    */
   CountStarAggregate() : count_(0) {}
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(CountStarAggregate);
 
   /**
-   * Advance the aggregate by one
+   * Advance the aggregate by one.
    */
-  void Advance(UNUSED const Val *val) { count_++; }
+  void Advance(UNUSED const Val &val) { count_++; }
 
   /**
-   * Merge this count with the \a that count
+   * Merge this count with the @em that count.
    */
   void Merge(const CountStarAggregate &that) { count_ += that.count_; }
 
   /**
-   * Reset the aggregate
+   * Reset the aggregate.
    */
   void Reset() { count_ = 0; }
 
   /**
-   * Return the current value of the count
+   * Return the current value of the count.
    */
   Integer GetCountResult() const { return Integer(count_); }
 
@@ -102,28 +102,28 @@ class CountStarAggregate {
 class IntegerSumAggregate {
  public:
   /**
-   * Constructor
+   * Constructor.
    */
   IntegerSumAggregate() : sum_(0), null_(true) {}
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(IntegerSumAggregate);
 
   /**
-   * Advance the aggregate by the non-nullable input value @em val
+   * Advance the aggregate by input value @em val.
    */
-  void Advance(const Integer *val) {
-    if (val->is_null) {
+  void Advance(const Integer &val) {
+    if (val.is_null) {
       return;
     }
     null_ = false;
-    sum_ += val->val;
+    sum_ += val.val;
   }
 
   /**
-   * Merge another aggregate in
+   * Merge a partial sum aggregate into this aggregate.
    */
   void Merge(const IntegerSumAggregate &that) {
     if (that.null_) {
@@ -134,7 +134,7 @@ class IntegerSumAggregate {
   }
 
   /**
-   * Reset the aggregate
+   * Reset the summation.
    */
   void Reset() {
     null_ = true;
@@ -142,7 +142,7 @@ class IntegerSumAggregate {
   }
 
   /**
-   * Return the result of the summation
+   * Return the result of the summation.
    */
   Integer GetResultSum() const {
     Integer sum(sum_);
@@ -161,28 +161,28 @@ class IntegerSumAggregate {
 class RealSumAggregate {
  public:
   /**
-   * Constructor
+   * Constructor.
    */
   RealSumAggregate() : sum_(0), null_(true) {}
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(RealSumAggregate);
 
   /**
-   * Advance the aggregate by the non-nullable input value @em val
+   * Advance the aggregate by the input value @em val.
    */
-  void Advance(const Real *val) {
-    if (val->is_null) {
+  void Advance(const Real &val) {
+    if (val.is_null) {
       return;
     }
     null_ = false;
-    sum_ += val->val;
+    sum_ += val.val;
   }
 
   /**
-   * Merge another aggregate in
+   * Merge a partial real-typed summation into this aggregate.
    */
   void Merge(const RealSumAggregate &that) {
     if (that.null_) {
@@ -193,7 +193,7 @@ class RealSumAggregate {
   }
 
   /**
-   * Reset the aggregate
+   * Reset the aggregate.
    */
   void Reset() {
     null_ = true;
@@ -201,7 +201,7 @@ class RealSumAggregate {
   }
 
   /**
-   * Return the result of the summation
+   * Return the result of the summation.
    */
   Real GetResultSum() const {
     Real sum(sum_);
@@ -224,28 +224,28 @@ class RealSumAggregate {
 class IntegerMaxAggregate {
  public:
   /**
-   * Constructor
+   * Constructor.
    */
   IntegerMaxAggregate() : max_(std::numeric_limits<i64>::min()), null_(true) {}
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(IntegerMaxAggregate);
 
   /**
-   * Advance the aggregate by the non-nullable input value @em val
+   * Advance the aggregate by the input value @em val.
    */
-  void Advance(const Integer *val) {
-    if (val->is_null) {
+  void Advance(const Integer &val) {
+    if (val.is_null) {
       return;
     }
     null_ = false;
-    max_ = std::max(val->val, max_);
+    max_ = std::max(val.val, max_);
   }
 
   /**
-   * Merge another aggregate in
+   * Merge a partial max aggregate into this aggregate.
    */
   void Merge(const IntegerMaxAggregate &that) {
     if (that.null_) {
@@ -256,7 +256,7 @@ class IntegerMaxAggregate {
   }
 
   /**
-   * Reset the aggregate
+   * Reset the aggregate.
    */
   void Reset() {
     null_ = true;
@@ -264,7 +264,7 @@ class IntegerMaxAggregate {
   }
 
   /**
-   * Return the result of the max
+   * Return the result of the max.
    */
   Integer GetResultMax() const {
     Integer max(max_);
@@ -283,28 +283,28 @@ class IntegerMaxAggregate {
 class RealMaxAggregate {
  public:
   /**
-   * Constructor
+   * Constructor.
    */
   RealMaxAggregate() : max_(std::numeric_limits<double>::min()), null_(true) {}
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(RealMaxAggregate);
 
   /**
-   * Advance the aggregate by the non-nullable input value @em val
+   * Advance the aggregate by the input value @em val.
    */
-  void Advance(const Real *val) {
-    if (val->is_null) {
+  void Advance(const Real &val) {
+    if (val.is_null) {
       return;
     }
     null_ = false;
-    max_ = std::max(val->val, max_);
+    max_ = std::max(val.val, max_);
   }
 
   /**
-   * Merge another aggregate in
+   * Merge a partial real-typed max aggregate into this aggregate.
    */
   void Merge(const RealMaxAggregate &that) {
     if (that.null_) {
@@ -315,7 +315,7 @@ class RealMaxAggregate {
   }
 
   /**
-   * Reset the aggregate
+   * Reset the aggregate.
    */
   void Reset() {
     null_ = true;
@@ -323,7 +323,7 @@ class RealMaxAggregate {
   }
 
   /**
-   * Return the result of the max
+   * Return the result of the max.
    */
   Real GetResultMax() const {
     Real max(max_);
@@ -346,28 +346,28 @@ class RealMaxAggregate {
 class IntegerMinAggregate {
  public:
   /**
-   * Constructor
+   * Constructor.
    */
   IntegerMinAggregate() : min_(std::numeric_limits<i64>::max()), null_(true) {}
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(IntegerMinAggregate);
 
   /**
-   * Advance the aggregate by the non-nullable input value @em val
+   * Advance the aggregate by the input value @em val.
    */
-  void Advance(const Integer *val) {
-    if (val->is_null) {
+  void Advance(const Integer &val) {
+    if (val.is_null) {
       return;
     }
     null_ = false;
-    min_ = std::min(val->val, min_);
+    min_ = std::min(val.val, min_);
   }
 
   /**
-   * Merge another aggregate in
+   * Merge a partial min aggregate into this aggregate.
    */
   void Merge(const IntegerMinAggregate &that) {
     if (that.null_) {
@@ -378,7 +378,7 @@ class IntegerMinAggregate {
   }
 
   /**
-   * Reset the aggregate
+   * Reset the aggregate.
    */
   void Reset() {
     null_ = true;
@@ -386,7 +386,7 @@ class IntegerMinAggregate {
   }
 
   /**
-   * Return the result of the minimum
+   * Return the result of the minimum.
    */
   Integer GetResultMin() const {
     Integer min(min_);
@@ -405,28 +405,28 @@ class IntegerMinAggregate {
 class RealMinAggregate {
  public:
   /**
-   * Constructor
+   * Constructor.
    */
-  RealMinAggregate() : min_(std::numeric_limits<i64>::max()), null_(true) {}
+  RealMinAggregate() : min_(std::numeric_limits<double>::max()), null_(true) {}
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(RealMinAggregate);
 
   /**
-   * Advance the aggregate by the non-nullable input value @em val
+   * Advance the aggregate by the input value @em val.
    */
-  void Advance(const Real *val) {
-    if (val->is_null) {
+  void Advance(const Real &val) {
+    if (val.is_null) {
       return;
     }
     null_ = false;
-    min_ = std::min(val->val, min_);
+    min_ = std::min(val.val, min_);
   }
 
   /**
-   * Merge another aggregate in
+   * Merge a partial real-typed min aggregate into this aggregate.
    */
   void Merge(const RealMinAggregate &that) {
     if (that.null_) {
@@ -437,7 +437,7 @@ class RealMinAggregate {
   }
 
   /**
-   * Reset the aggregate
+   * Reset the aggregate.
    */
   void Reset() {
     null_ = true;
@@ -445,7 +445,7 @@ class RealMinAggregate {
   }
 
   /**
-   * Return the result of the minimum
+   * Return the result of the minimum.
    */
   Real GetResultMin() const {
     Real min(min_);
@@ -468,12 +468,12 @@ class RealMinAggregate {
 class AvgAggregate {
  public:
   /**
-   * Constructor
+   * Constructor.
    */
   AvgAggregate() : sum_(0.0), count_(0) {}
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(AvgAggregate);
 
@@ -481,16 +481,16 @@ class AvgAggregate {
    * Advance the aggregate by the input value @em val.
    */
   template <typename T>
-  void Advance(const T *val) {
-    if (val->is_null) {
+  void Advance(const T &val) {
+    if (val.is_null) {
       return;
     }
-    sum_ += val->val;
+    sum_ += val.val;
     count_++;
   }
 
   /**
-   * Merge another aggregate in.
+   * Merge a partial average aggregate into this aggregate.
    */
   void Merge(const AvgAggregate &that) {
     sum_ += that.sum_;
@@ -506,7 +506,7 @@ class AvgAggregate {
   }
 
   /**
-   * Return the result of the minimum
+   * Return the result of the minimum.
    */
   Real GetResultAvg() const {
     if (count_ == 0) {
