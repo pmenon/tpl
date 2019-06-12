@@ -47,7 +47,7 @@ byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
 // ---------------------------------------------------------
 
 template <bool Prefetch>
-void JoinHashTable::BuildGenericHashTableInternal() noexcept {
+void JoinHashTable::BuildGenericHashTableInternal() {
   for (u64 idx = 0, prefetch_idx = kPrefetchDistance; idx < entries_.size();
        idx++, prefetch_idx++) {
     if constexpr (Prefetch) {
@@ -62,7 +62,7 @@ void JoinHashTable::BuildGenericHashTableInternal() noexcept {
   }
 }
 
-void JoinHashTable::BuildGenericHashTable() noexcept {
+void JoinHashTable::BuildGenericHashTable() {
   // Setup based on number of buffered build-size tuples
   generic_hash_table_.SetSize(num_elements());
 
@@ -80,7 +80,7 @@ void JoinHashTable::BuildGenericHashTable() noexcept {
 // ---------------------------------------------------------
 
 template <bool Prefetch>
-void JoinHashTable::InsertIntoConciseHashTable() noexcept {
+void JoinHashTable::InsertIntoConciseHashTable() {
   for (u64 idx = 0, prefetch_idx = kPrefetchDistance; idx < entries_.size();
        idx++, prefetch_idx++) {
     if constexpr (Prefetch) {
@@ -113,7 +113,7 @@ class ReorderBuffer {
   static constexpr const u32 kBufferSizeInBytes = 16 * 1024;
 
   ReorderBuffer(util::ChunkedVector<MemoryPoolAllocator<byte>> &entries,
-                u64 max_elems, u64 begin_read_idx, u64 end_read_idx) noexcept
+                u64 max_elems, u64 begin_read_idx, u64 end_read_idx)
       : entry_size_(entries.element_size()),
         buf_idx_(0),
         max_elems_(std::min(max_elems, kBufferSizeInBytes / entry_size_) - 1),
@@ -142,28 +142,28 @@ class ReorderBuffer {
    * Has the entry @em been processed? In other words, is the entry in its
    * final location in the entry array?
    */
-  ALWAYS_INLINE bool IsProcessed(const HashTableEntry *entry) const noexcept {
+  ALWAYS_INLINE bool IsProcessed(const HashTableEntry *entry) const {
     return (entry->cht_slot & kProcessedBit) != 0u;
   }
 
   /**
    * Mark the given entry as processed and in its final location
    */
-  ALWAYS_INLINE void SetProcessed(HashTableEntry *entry) const noexcept {
+  ALWAYS_INLINE void SetProcessed(HashTableEntry *entry) const {
     entry->cht_slot |= kProcessedBit;
   }
 
   /**
    * Has the entry @em entry been buffered in the reorder buffer?
    */
-  ALWAYS_INLINE bool IsBuffered(const HashTableEntry *entry) const noexcept {
+  ALWAYS_INLINE bool IsBuffered(const HashTableEntry *entry) const {
     return (entry->cht_slot & kBufferedBit) != 0u;
   }
 
   /**
    * Mark the entry @em entry as buffered in the reorder buffer
    */
-  ALWAYS_INLINE void SetBuffered(HashTableEntry *entry) const noexcept {
+  ALWAYS_INLINE void SetBuffered(HashTableEntry *entry) const {
     entry->cht_slot |= kBufferedBit;
   }
 
@@ -192,7 +192,7 @@ class ReorderBuffer {
    * Reset the index where the next buffered entry goes. This is needed when,
    * in the process of
    */
-  void Reset(const u64 new_buf_idx) noexcept { buf_idx_ = new_buf_idx; }
+  void Reset(const u64 new_buf_idx) { buf_idx_ = new_buf_idx; }
 
   // -------------------------------------------------------
   // Accessors
@@ -231,7 +231,7 @@ class ReorderBuffer {
 }  // namespace
 
 template <bool PrefetchCHT, bool PrefetchEntries>
-void JoinHashTable::ReorderMainEntries() noexcept {
+void JoinHashTable::ReorderMainEntries() {
   const u64 elem_size = entries_.element_size();
   const u64 num_overflow_entries = concise_hash_table_.num_overflow();
   const u64 num_main_entries = entries_.size() - num_overflow_entries;
@@ -325,7 +325,7 @@ void JoinHashTable::ReorderMainEntries() noexcept {
 }
 
 template <bool PrefetchCHT, bool PrefetchEntries>
-void JoinHashTable::ReorderOverflowEntries() noexcept {
+void JoinHashTable::ReorderOverflowEntries() {
   const u64 elem_size = entries_.element_size();
   const u64 num_entries = entries_.size();
   const u64 num_overflow_entries = concise_hash_table_.num_overflow();
@@ -525,7 +525,7 @@ void JoinHashTable::VerifyMainEntryOrder() {
 #endif
 }
 
-void JoinHashTable::VerifyOverflowEntryOrder() noexcept {
+void JoinHashTable::VerifyOverflowEntryOrder() {
 #ifndef NDEBUG
 #endif
 }

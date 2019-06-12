@@ -1,8 +1,10 @@
 #include "sql/bloom_filter.h"
 
 #include <limits>
+#include <string>
 #include <vector>
 
+#include "logging/logger.h"
 #include "util/bit_util.h"
 #include "util/simd.h"
 
@@ -12,16 +14,19 @@ BloomFilter::BloomFilter() noexcept
     : memory_(nullptr),
       blocks_(nullptr),
       block_mask_(0),
+      num_additions_(0),
       lazily_added_hashes_(nullptr) {}
 
 BloomFilter::BloomFilter(MemoryPool *memory)
     : memory_(memory),
       blocks_(nullptr),
       block_mask_(0),
+      num_additions_(0),
       lazily_added_hashes_(nullptr) {}
 
-BloomFilter::BloomFilter(MemoryPool *memory, u32 num_elems) : BloomFilter() {
-  Init(memory, num_elems);
+BloomFilter::BloomFilter(MemoryPool *memory, u32 expected_num_elems)
+    : BloomFilter() {
+  Init(memory, expected_num_elems);
 }
 
 BloomFilter::~BloomFilter() {
@@ -29,11 +34,12 @@ BloomFilter::~BloomFilter() {
   memory_->Deallocate(blocks_, num_bytes);
 }
 
-void BloomFilter::Init(MemoryPool *memory, u32 num_elems) {
+void BloomFilter::Init(MemoryPool *memory, u32 expected_num_elems) {
   memory_ = memory;
   lazily_added_hashes_ = MemPoolVector<hash_t>(memory_);
 
-  u64 num_bits = util::MathUtil::PowerOf2Ceil(kBitsPerElement * num_elems);
+  u64 num_bits =
+      util::MathUtil::PowerOf2Ceil(kBitsPerElement * expected_num_elems);
   u64 num_blocks =
       util::MathUtil::DivRoundUp(num_bits, sizeof(Block) * kBitsPerByte);
   u64 num_bytes = num_blocks * sizeof(Block);
@@ -41,6 +47,7 @@ void BloomFilter::Init(MemoryPool *memory, u32 num_elems) {
       memory->AllocateAligned(num_bytes, CACHELINE_SIZE, true));
 
   block_mask_ = static_cast<u32>(num_blocks - 1);
+  num_additions_ = 0;
 }
 
 void BloomFilter::Add(hash_t hash) {
@@ -62,6 +69,8 @@ void BloomFilter::Add(hash_t hash) {
   block |= masks;
 
   block.Store(blocks_[block_idx]);
+
+  num_additions_++;
 }
 
 bool BloomFilter::Contains(hash_t hash) const {
@@ -95,6 +104,15 @@ u64 BloomFilter::GetTotalBitsSet() const {
     }
   }
   return count;
+}
+
+std::string BloomFilter::DebugString() const {
+  auto bits_per_elem = static_cast<double>(GetSizeInBits()) / GetNumAdditions();
+  auto bit_set_prob = static_cast<double>(GetTotalBitsSet()) / GetSizeInBits();
+  return fmt::format(
+      "Filter: {} elements, {} bits, {} bits/element, {} bits set (p={:.2f})",
+      GetNumAdditions(), GetSizeInBits(), bits_per_elem, GetTotalBitsSet(),
+      bit_set_prob);
 }
 
 }  // namespace tpl::sql

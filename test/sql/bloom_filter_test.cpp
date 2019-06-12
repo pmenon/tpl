@@ -9,25 +9,38 @@
 
 namespace tpl::sql::test {
 
-class BloomFilterTest : public TplTest {};
+class BloomFilterTest : public TplTest {
+ public:
+  BloomFilterTest() : memory_(nullptr) {}
 
-template <typename F>
-void GenerateRandom32(std::vector<u32> &vals, u32 n, const F &f) {
-  vals.resize(n);
-  std::random_device random;
-  auto genrand = [&random, &f]() {
-    while (true) {
-      auto r = random();
-      if (f(r)) {
-        return r;
-      }
-    }
-  };
-  std::generate(vals.begin(), vals.end(), genrand);
+  MemoryPool *memory() { return &memory_; }
+
+ protected:
+  template <typename T>
+  auto Hash(const T val) -> std::enable_if_t<std::is_fundamental_v<T>, hash_t> {
+    return util::Hasher::Hash(reinterpret_cast<const u8 *>(&val), sizeof(T));
+  }
+
+ private:
+  MemoryPool memory_;
+};
+
+TEST_F(BloomFilterTest, Simple) {
+  BloomFilter bf(memory(), 10);
+
+  bf.Add(Hash(10));
+  EXPECT_TRUE(bf.Contains(Hash(10)));
+  EXPECT_EQ(1u, bf.GetNumAdditions());
+
+  bf.Add(20);
+  EXPECT_TRUE(bf.Contains(Hash(10)));
+  EXPECT_EQ(2u, bf.GetNumAdditions());
 }
 
 void GenerateRandom32(std::vector<u32> &vals, u32 n) {
-  GenerateRandom32(vals, n, [](auto r) { return true; });
+  vals.resize(n);
+  std::random_device rd;
+  std::generate(vals.begin(), vals.end(), [&]() { return rd(); });
 }
 
 // Mix in elements from source into the target vector with probability p
@@ -44,7 +57,7 @@ void Mix(std::vector<T> &target, const std::vector<T> &source, double p) {
   std::shuffle(target.begin(), target.end(), g);
 }
 
-TEST_F(BloomFilterTest, ComprehensiveTest) {
+TEST_F(BloomFilterTest, Comprehensive) {
   const u32 num_filter_elems = 10000;
   const u32 lookup_scale_factor = 100;
 
@@ -57,25 +70,13 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
 
   MemoryPool memory(nullptr);
   BloomFilter filter(&memory, num_filter_elems);
+
+  // Insert everything
   for (const auto elem : insertions) {
-    filter.Add(
-        util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
+    filter.Add(Hash(elem));
   }
 
-  // All inserted elements **must** be present in filter
-  for (const auto elem : insertions) {
-    filter.Add(
-        util::Hasher::Hash(reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
-  }
-
-  auto bits_per_elem =
-      static_cast<double>(filter.GetSizeInBits()) / num_filter_elems;
-  auto bit_set_prob =
-      static_cast<double>(filter.GetTotalBitsSet()) / filter.GetSizeInBits();
-  LOG_INFO(
-      "Filter: {} elements, {} bits, {} bits/element, {} bits set (p={:.2f})",
-      num_filter_elems, filter.GetSizeInBits(), bits_per_elem,
-      filter.GetTotalBitsSet(), bit_set_prob);
+  LOG_INFO("{}", filter.DebugString());
 
   for (auto prob_success : {0.00, 0.25, 0.50, 0.75, 1.00}) {
     std::vector<u32> lookups;
@@ -89,8 +90,7 @@ TEST_F(BloomFilterTest, ComprehensiveTest) {
 
     u32 actual_found = 0;
     for (const auto elem : lookups) {
-      auto exists = filter.Contains(util::Hasher::Hash(
-          reinterpret_cast<const u8 *>(&elem), sizeof(elem)));
+      auto exists = filter.Contains(Hash(elem));
 
       if (!exists) {
         EXPECT_EQ(0u, check.count(elem));

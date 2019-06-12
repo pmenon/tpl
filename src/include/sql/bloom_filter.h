@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include "sql/memory_pool.h"
@@ -39,62 +40,72 @@ class BloomFilter {
   BloomFilter() noexcept;
 
   /**
-   * Create an uninitialized bloom filter with the given memory pool
-   * @param memory The allocator where this filter's memory is sourced from
+   * Create an uninitialized bloom filter with the given memory pool.
+   * @param memory The allocator where this filter's memory is sourced from.
    */
   explicit BloomFilter(MemoryPool *memory);
 
   /**
-   * Create and initialize this filter with the given size @em num_elems
-   * @param memory The allocator where this filter's memory is sourced from
-   * @param num_elems The expected number of elements
+   * Create and initialize this filter with the given size @em num_elems.
+   * @param memory The allocator where this filter's memory is sourced from.
+   * @param expected_num_elems The expected number of elements.
    */
-  BloomFilter(MemoryPool *memory, u32 num_elems);
+  BloomFilter(MemoryPool *memory, u32 expected_num_elems);
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(BloomFilter);
 
   /**
-   * Destructor
+   * Destructor.
    */
   ~BloomFilter();
 
   /**
-   * Initialize this bloom filter with the given size
-   * @param memory The allocator where this filter's memory is sourced from
-   * @param num_elems The expected number of elements
+   * Initialize this bloom filter with the given size.
+   * @param memory The allocator where this filter's memory is sourced from.
+   * @param expected_num_elems The expected number of elements.
    */
-  void Init(MemoryPool *memory, u32 num_elems);
+  void Init(MemoryPool *memory, u32 expected_num_elems);
 
   /**
-   * Add an element to the bloom filter
-   * @param hash The hash of the element to add
+   * Add an element to the bloom filter.
+   * @param hash The hash of the element to add.
    */
   void Add(hash_t hash);
 
   /**
-   * Check if the given element is contained in the filter
-   * @param hash The hash value of the element to check
-   * @return True if an element may be in the filter; false if definitely not
+   * Check if the given element is contained in the filter.
+   * @param hash The hash value of the element to check.
+   * @return True if an element may be in the filter; false if definitely not.
    */
   bool Contains(hash_t hash) const;
 
   /**
-   * Return the size of the filter in bytes
+   * Return the size of the filter in bytes.
    */
   u64 GetSizeInBytes() const { return sizeof(Block) * GetNumBlocks(); }
 
   /**
-   * Return the number of bits in this filter
+   * Return the number of bits in this filter.
    */
   u64 GetSizeInBits() const { return GetSizeInBytes() * kBitsPerByte; }
 
   /**
-   * Return the number of set bits in this filter
+   * Return the number of set bits in this filter.
    */
   u64 GetTotalBitsSet() const;
+
+  /**
+   * Return the number of elements that have been added to the filter.
+   */
+  u32 GetNumAdditions() const { return num_additions_; }
+
+  /**
+   * Return a debug string representing the bloom filter stats.
+   */
+  std::string DebugString() const;
 
  private:
   u32 GetNumBlocks() const { return block_mask_ + 1; }
@@ -108,6 +119,9 @@ class BloomFilter {
 
   // The mask used to determine which block a hash goes into
   u32 block_mask_;
+
+  // The number of elements that have been added to the bloom filter
+  u32 num_additions_;
 
   // Temporary vector of lazily added hashes for bulk loading
   MemPoolVector<hash_t> lazily_added_hashes_;
