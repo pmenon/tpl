@@ -8,9 +8,6 @@
 
 namespace tpl::sql {
 
-#define AVG_PRECISION 3
-#define AVG_SCALE 6
-
 /**
  * A generic base catch-all SQL value
  */
@@ -76,46 +73,6 @@ struct Integer : public Val {
     Integer val(0);
     val.is_null = true;
     return val;
-  }
-
-  Integer Add(const Integer &that, bool *overflow) const {
-    i64 result;
-    *overflow = __builtin_add_overflow(val, that.val, &result);
-    return Integer(is_null || that.is_null, result);
-  }
-
-  Integer Sub(const Integer &that, bool *overflow) const {
-    i64 result;
-    *overflow = __builtin_sub_overflow(val, that.val, &result);
-    return Integer(is_null || that.is_null, result);
-  }
-
-  Integer Multiply(const Integer &that, bool *overflow) const {
-    i64 result;
-    *overflow = __builtin_mul_overflow(val, that.val, &result);
-    return Integer(is_null || that.is_null, result);
-  }
-
-  Integer Divide(const Integer &that) const {
-    Integer result(0);
-    if (that.val == 0) {
-      result.is_null = true;
-    } else {
-      result.val = (val / that.val);
-      result.is_null = false;
-    }
-    return result;
-  }
-
-  Integer Modulo(const Integer &that) const {
-    Integer result(0);
-    if (that.val == 0) {
-      result.is_null = true;
-    } else {
-      result.val = (val % that.val);
-      result.is_null = false;
-    }
-    return result;
   }
 };
 
