@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <tbb/tbb.h>  // NOLINT
+#include <util/hash.h>
 
 #include "count/hll.h"
 
@@ -32,6 +33,8 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory,
                MemoryPoolAllocator<byte>(memory_)),
       owned_entries_(memory_),
       hash_table_(kDefaultLoadFactor),
+      batch_process_state_(static_cast<BatchProcessState *>(
+          memory_->Allocate(sizeof(BatchProcessState), false))),
       merge_partition_fn_(nullptr),
       partition_heads_(nullptr),
       partition_tails_(nullptr),
@@ -52,6 +55,9 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory,
 }
 
 AggregationHashTable::~AggregationHashTable() {
+  if (batch_process_state_ != nullptr) {
+    memory_->Deallocate(batch_process_state_, sizeof(BatchProcessState));
+  }
   if (partition_heads_ != nullptr) {
     memory_->DeallocateArray(partition_heads_, kDefaultNumPartitions);
   }
@@ -168,9 +174,8 @@ void AggregationHashTable::ProcessBatch(
   TPL_ASSERT(iters != nullptr, "Null input iterators!");
   const u32 num_elems = iters[0]->num_selected();
 
-  // Temporary vector for the hash values and hash table entry pointers
-  alignas(CACHELINE_SIZE) hash_t hashes[kDefaultVectorSize];
-  alignas(CACHELINE_SIZE) HashTableEntry *entries[kDefaultVectorSize];
+  auto *const hashes = batch_process_state_->hashes;
+  auto *const entries = batch_process_state_->entries;
 
   if (iters[0]->IsFiltered()) {
     ProcessBatchImpl<true>(iters, num_elems, hashes, entries, hash_fn,
@@ -212,7 +217,7 @@ void AggregationHashTable::LookupBatch(
                                            hash_fn);
 
   // Determine the indexes of entries that are non-null
-  alignas(CACHELINE_SIZE) u32 group_sel[kDefaultVectorSize];
+  u32 *const group_sel = batch_process_state_->group_sel;
   u32 num_groups = util::VectorUtil::SelectNotNull(
       entries, iters[0]->num_selected(), group_sel, nullptr);
 
@@ -312,7 +317,7 @@ void AggregationHashTable::CreateMissingGroups(
     HashTableEntry *entries[], AggregationHashTable::KeyEqFn key_eq_fn,
     AggregationHashTable::InitAggFn init_agg_fn) {
   // Vector storing all the missing group IDs
-  alignas(CACHELINE_SIZE) u32 group_sel[kDefaultVectorSize];
+  u32 *const group_sel = batch_process_state_->group_sel;
 
   // Determine which elements are missing a group
   const u32 num_groups =
@@ -320,7 +325,7 @@ void AggregationHashTable::CreateMissingGroups(
 
   // Insert those elements
   for (u32 idx = 0; idx < num_groups; idx++) {
-    hash_t hash = hashes[group_sel[idx]];
+    const hash_t hash = hashes[group_sel[idx]];
 
     // Move VPI to position of new aggregate
     iters[0]->SetPosition<VPIIsFiltered>(group_sel[idx]);
@@ -341,7 +346,7 @@ void AggregationHashTable::AdvanceGroups(
     VectorProjectionIterator *iters[], u32 num_elems, HashTableEntry *entries[],
     AggregationHashTable::AdvanceAggFn advance_agg_fn) {
   // Vector storing all valid group indexes
-  alignas(CACHELINE_SIZE) u32 group_sel[kDefaultVectorSize];
+  u32 *const group_sel = batch_process_state_->group_sel;
 
   // All non-null entries are groups that should be updated. Find them now.
   const u32 num_groups =

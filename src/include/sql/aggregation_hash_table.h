@@ -100,9 +100,9 @@ class AggregationHashTable {
 
   /**
    * Construct an aggregation hash table using the provided memory pool, and
-   * configured to store aggregates of size @em payload_size in bytes
-   * @param memory The memory pool to allocate memory from
-   * @param payload_size The size of the elements in the hash table
+   * configured to store aggregates of size @em payload_size in bytes.
+   * @param memory The memory pool to allocate memory from.
+   * @param payload_size The size of the elements in the hash table.
    */
   AggregationHashTable(MemoryPool *memory, std::size_t payload_size);
 
@@ -110,35 +110,35 @@ class AggregationHashTable {
    * Construct an aggregation hash table using the provided memory pool,
    * configured to store aggregates of size @em payload_size in bytes, and whose
    * initial size allows for @em initial_size aggregates.
-   * @param memory The memory pool to allocate memory from
-   * @param payload_size The size of the elements in the hash table
+   * @param memory The memory pool to allocate memory from.
+   * @param payload_size The size of the elements in the hash table.
    * @param initial_size The initial number of aggregates to support.
    */
   AggregationHashTable(MemoryPool *memory, std::size_t payload_size,
                        u32 initial_size);
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(AggregationHashTable);
 
   /**
-   * Destructor
+   * Destructor.
    */
   ~AggregationHashTable();
 
   /**
    * Insert a new element with hash value @em hash into the aggregation table.
-   * @param hash The hash value of the element to insert
-   * @return A pointer to a memory area where the element can be written to
+   * @param hash The hash value of the element to insert.
+   * @return A pointer to a memory area where the element can be written to.
    */
   byte *Insert(hash_t hash);
 
   /**
    * Insert a new element with hash value @em hash into this partitioned
    * aggregation hash table.
-   * @param hash The hash value of the element to insert
-   * @return A pointer to a memory area where the input element can be written
+   * @param hash The hash value of the element to insert.
+   * @return A pointer to a memory area where the input element can be written.
    */
   byte *InsertPartitioned(hash_t hash);
 
@@ -146,21 +146,21 @@ class AggregationHashTable {
    * Lookup and return an entry in the aggregation table that matches a given
    * hash and key. The hash value is provided here, keys are checked using the
    * provided callback function.
-   * @param hash The hash value to use for early filtering
-   * @param key_eq_fn The key-equality function to resolve hash collisions
-   * @param probe_tuple The probe tuple
+   * @param hash The hash value to use for early filtering.
+   * @param key_eq_fn The key-equality function to resolve hash collisions.
+   * @param probe_tuple The probe tuple.
    * @return A pointer to the matching entry payload; null if no entry is found.
    */
   byte *Lookup(hash_t hash, KeyEqFn key_eq_fn, const void *probe_tuple);
 
   /**
    * Process an entire vector of input.
-   * @param iters The input vectors
-   * @param hash_fn Function to compute a hash of an input element
+   * @param iters The input vectors.
+   * @param hash_fn Function to compute a hash of an input element.
    * @param key_eq_fn Function to determine key equality of an input element and
-   *                  an existing aggregate
-   * @param init_agg_fn Function to initialize a new aggregate
-   * @param advance_agg_fn Function to advance an existing aggregate
+   *                  an existing aggregate.
+   * @param init_agg_fn Function to initialize a new aggregate.
+   * @param advance_agg_fn Function to advance an existing aggregate.
    */
   void ProcessBatch(VectorProjectionIterator *iters[], HashFn hash_fn,
                     KeyEqFn key_eq_fn, InitAggFn init_agg_fn,
@@ -173,7 +173,7 @@ class AggregationHashTable {
    * This function only moves memory around, no aggregation hash tables are
    * built. It is used at the end of the build-portion of a parallel aggregation
    * before the thread state container is reset for the next pipeline's thread-
-   * local state
+   * local state.
    *
    * @param thread_states Container for all thread-local tables.
    * @param agg_ht_offset The offset in the container to find the table.
@@ -214,7 +214,7 @@ class AggregationHashTable {
   u64 NumElements() const { return hash_table_.num_elements(); }
 
   /**
-   * Read-only access to hash table stats
+   * Read-only access to hash table stats.
    */
   const Stats *stats() const { return &stats_; }
 
@@ -313,6 +313,15 @@ class AggregationHashTable {
 
   // The hash index.
   GenericHashTable hash_table_;
+
+  // A struct we use to track various metadata during match processing
+  struct BatchProcessState {
+    alignas(CACHELINE_SIZE) hash_t hashes[kDefaultVectorSize];
+    alignas(CACHELINE_SIZE) HashTableEntry *entries[kDefaultVectorSize];
+    alignas(CACHELINE_SIZE) u32 group_sel[kDefaultVectorSize];
+  };
+
+  BatchProcessState *batch_process_state_;
 
   // -------------------------------------------------------
   // Overflow partitions

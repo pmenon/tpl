@@ -107,7 +107,7 @@ class JoinHashTable {
   /**
    * Return the amount of memory the buffered tuples occupy
    */
-  u64 GetBufferedTupleMemoryUsage() const noexcept {
+  u64 GetBufferedTupleMemoryUsage() const {
     return entries_.size() * entries_.element_size();
   }
 
@@ -115,7 +115,7 @@ class JoinHashTable {
    * Get the amount of memory used by the join index only (i.e., excluding space
    * used to store materialized build-side tuples)
    */
-  u64 GetJoinIndexMemoryUsage() const noexcept {
+  u64 GetJoinIndexMemoryUsage() const {
     return use_concise_hash_table() ? concise_hash_table_.GetTotalMemoryUsage()
                                     : generic_hash_table_.GetTotalMemoryUsage();
   }
@@ -123,24 +123,29 @@ class JoinHashTable {
   /**
    * Return the total size of the join hash table in bytes
    */
-  u64 GetTotalMemoryUsage() const noexcept {
+  u64 GetTotalMemoryUsage() const {
     return GetBufferedTupleMemoryUsage() + GetJoinIndexMemoryUsage();
   }
 
   /**
    * Return the total number of inserted elements, including duplicates
    */
-  u64 num_elements() const noexcept { return entries_.size(); }
+  u64 num_elements() const { return entries_.size(); }
 
   /**
    * Has the hash table been built?
    */
-  bool is_built() const noexcept { return built_; }
+  bool is_built() const { return built_; }
 
   /**
    * Is this join using a concise hash table?
    */
-  bool use_concise_hash_table() const noexcept { return use_concise_ht_; }
+  bool use_concise_hash_table() const { return use_concise_ht_; }
+
+  /**
+   * Does this JHT use a separate bloom filter?
+   */
+  bool has_bloom_filter() const { return bloom_filter_.GetNumAdditions() > 0; }
 
  public:
   // -------------------------------------------------------
@@ -188,34 +193,34 @@ class JoinHashTable {
   friend class tpl::sql::test::JoinHashTableTest;
 
   // Access a stored entry by index
-  HashTableEntry *EntryAt(const u64 idx) noexcept {
+  HashTableEntry *EntryAt(const u64 idx) {
     return reinterpret_cast<HashTableEntry *>(entries_[idx]);
   }
 
-  const HashTableEntry *EntryAt(const u64 idx) const noexcept {
+  const HashTableEntry *EntryAt(const u64 idx) const {
     return reinterpret_cast<const HashTableEntry *>(entries_[idx]);
   }
 
   // Dispatched from Build() to build either a generic or concise hash table
-  void BuildGenericHashTable() noexcept;
+  void BuildGenericHashTable();
   void BuildConciseHashTable();
 
   // Dispatched from BuildGenericHashTable()
   template <bool Prefetch>
-  void BuildGenericHashTableInternal() noexcept;
+  void BuildGenericHashTableInternal();
 
   // Dispatched from BuildConciseHashTable() to construct the concise hash table
   // and to reorder buffered build tuples in place according to the CHT
   template <bool PrefetchCHT, bool PrefetchEntries>
   void BuildConciseHashTableInternal();
   template <bool Prefetch>
-  void InsertIntoConciseHashTable() noexcept;
+  void InsertIntoConciseHashTable();
   template <bool PrefetchCHT, bool PrefetchEntries>
-  void ReorderMainEntries() noexcept;
+  void ReorderMainEntries();
   template <bool Prefetch, bool PrefetchEntries>
-  void ReorderOverflowEntries() noexcept;
+  void ReorderOverflowEntries();
   void VerifyMainEntryOrder();
-  void VerifyOverflowEntryOrder() noexcept;
+  void VerifyOverflowEntryOrder();
 
   // Dispatched from LookupBatch() to lookup from either a generic or concise
   // hash table in batched manner
