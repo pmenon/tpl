@@ -282,7 +282,9 @@ inline void GenericHashTable::FlushEntries(const F &sink) {
 // ---------------------------------------------------------
 
 /**
- * An iterator over the entries in a generic hash table.
+ * An iterator over the entries in a generic hash table. It's assumed that the
+ * underlying hash table is not modified during iteration. This is mostly true
+ * for SQL processing where the hash tables are WORM structures.
  * @tparam UseTag Should the iterator use tagged reads?
  */
 template <bool UseTag>
@@ -349,7 +351,9 @@ class GenericHashTableIterator {
 // ---------------------------------------------------------
 
 /**
- * An iterator over a generic hash table that works vector-at-a-time.
+ * An iterator over a generic hash table that works vector-at-a-time. It's
+ * assumed that the underlying hash table is not modified during iteration. This
+ * is mostly true for SQL processing where the hash tables are WORM structures.
  * @tparam UseTag Should the iterator use tagged reads?
  */
 // TODO(pmenon): Fix my performance

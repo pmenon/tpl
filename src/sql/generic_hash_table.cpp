@@ -62,7 +62,8 @@ inline void GenericHashTableVectorIterator<UseTag>::Next() {
   // Fill the range [idx, SIZE) in the cache with valid entries from the source
   // hash table.
   while (index < kDefaultVectorSize && table_dir_index_ < table_.capacity()) {
-    entry_vec_[index] = table_.entries_[table_dir_index_++];
+    entry_vec_[index] =
+        table_.entries_[table_dir_index_++].load(std::memory_order_relaxed);
     if constexpr (UseTag) {
       entry_vec_[index] = GenericHashTable::UntagPointer(entry_vec_[index]);
     }
