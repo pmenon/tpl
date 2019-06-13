@@ -5,7 +5,7 @@
 namespace tpl::sql {
 
 JoinHashTableVectorProbe::JoinHashTableVectorProbe(const JoinHashTable &table)
-    : table_(table), match_idx_(0), hashes_{0}, entries_{nullptr} {}
+    : join_hash_table_(table), match_idx_(0), hashes_{0}, entries_{nullptr} {}
 
 void JoinHashTableVectorProbe::Prepare(VectorProjectionIterator *vpi,
                                        const HashFn hash_fn) {
@@ -30,7 +30,7 @@ void JoinHashTableVectorProbe::Prepare(VectorProjectionIterator *vpi,
   vpi->Reset();
 
   // Perform the initial lookup
-  table_.LookupBatch(vpi->num_selected(), hashes_, entries_);
+  join_hash_table_.LookupBatch(vpi->num_selected(), hashes_, entries_);
 }
 
 }  // namespace tpl::sql

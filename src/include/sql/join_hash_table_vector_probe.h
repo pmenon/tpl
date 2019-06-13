@@ -47,13 +47,13 @@ class JoinHashTableVectorProbe {
 
  private:
   // The table we're probing
-  const JoinHashTable &table_;
+  const JoinHashTable &join_hash_table_;
   // The current index in the entries output we're iterating over
   u16 match_idx_;
   // The vector of computed hashes
-  hash_t hashes_[kDefaultVectorSize];
+  alignas(CACHELINE_SIZE) hash_t hashes_[kDefaultVectorSize];
   // The vector of entries
-  const HashTableEntry *entries_[kDefaultVectorSize];
+  alignas(CACHELINE_SIZE) const HashTableEntry *entries_[kDefaultVectorSize];
 };
 
 // ---------------------------------------------------------
