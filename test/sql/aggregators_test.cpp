@@ -141,7 +141,7 @@ TEST_F(AggregatorsTest, SumReal) {
     // [1, 3, 5, 7, 9]
     EXPECT_TRUE(sum.GetResultSum().is_null);
     for (u32 i = 0; i < 10; i++) {
-      Real val = (i % 2 == 0 ? Real::Null() : Real(double(i)));
+      Real val = (i % 2 == 0 ? Real::Null() : Real(static_cast<double>(i)));
       sum.Advance(val);
     }
 
@@ -154,7 +154,7 @@ TEST_F(AggregatorsTest, SumReal) {
     // [1, 2, 3, 4, 5, 6, 7, 8, 9]
     EXPECT_TRUE(sum2.GetResultSum().is_null);
     for (u32 i = 0; i < 10; i++) {
-      Real val{double(i)};
+      Real val(static_cast<double>(i));
       sum2.Advance(val);
     }
 

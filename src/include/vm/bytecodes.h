@@ -186,7 +186,7 @@ namespace tpl::vm {
   F(AggregationHashTableLookup, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::FunctionId,   \
       OperandType::Local)                                                                                              \
   F(AggregationHashTableProcessBatch, OperandType::Local, OperandType::Local, OperandType::FunctionId,                 \
-      OperandType::FunctionId, OperandType::FunctionId, OperandType::FunctionId)                                       \
+      OperandType::FunctionId, OperandType::FunctionId, OperandType::FunctionId, OperandType::Local)                   \
   F(AggregationHashTableTransferPartitions, OperandType::Local, OperandType::Local, OperandType::Local,                \
       OperandType::FunctionId)                                                                                         \
   F(AggregationHashTableParallelPartitionedScan, OperandType::Local, OperandType::Local, OperandType::Local,           \

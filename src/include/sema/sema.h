@@ -85,6 +85,9 @@ class Sema : public ast::AstVisitor<Sema> {
   void ReportIncorrectCallArg(ast::CallExpr *call, u32 index,
                               ast::Type *expected);
 
+  void ReportIncorrectCallArg(ast::CallExpr *call, u32 index,
+                              const char *expected);
+
   // Implicitly cast the input expression into the target type using the
   // provided cast kind, also setting the type of the casted expression result.
   ast::Expr *ImplCastExprToType(ast::Expr *expr, ast::Type *target_type,

@@ -161,10 +161,11 @@ class AggregationHashTable {
    *                  an existing aggregate.
    * @param init_agg_fn Function to initialize a new aggregate.
    * @param advance_agg_fn Function to advance an existing aggregate.
+   * @param partitioned Whether to perform insertions in partitioned mode.
    */
   void ProcessBatch(VectorProjectionIterator *iters[], HashFn hash_fn,
                     KeyEqFn key_eq_fn, InitAggFn init_agg_fn,
-                    AdvanceAggFn advance_agg_fn);
+                    AdvanceAggFn advance_agg_fn, bool partitioned);
 
   /**
    * Transfer all entries and overflow partitions stored in each thread-local
@@ -245,7 +246,8 @@ class AggregationHashTable {
   void ProcessBatchImpl(VectorProjectionIterator *iters[], u32 num_elems,
                         hash_t hashes[], HashTableEntry *entries[],
                         HashFn hash_fn, KeyEqFn key_eq_fn,
-                        InitAggFn init_agg_fn, AdvanceAggFn advance_agg_fn);
+                        InitAggFn init_agg_fn, AdvanceAggFn advance_agg_fn,
+                        bool partitioned);
 
   // Called from ProcessBatch() to lookup a batch of entries. When the function
   // returns, the hashes vector will contain the hash values of all elements in
@@ -282,7 +284,7 @@ class AggregationHashTable {
                       HashTableEntry *entries[], KeyEqFn key_eq_fn) const;
 
   // Called from ProcessBatch() to create missing groups
-  template <bool VPIIsFiltered>
+  template <bool VPIIsFiltered, bool Partitioned>
   void CreateMissingGroups(VectorProjectionIterator *iters[], u32 num_elems,
                            const hash_t hashes[], HashTableEntry *entries[],
                            KeyEqFn key_eq_fn, InitAggFn init_agg_fn);

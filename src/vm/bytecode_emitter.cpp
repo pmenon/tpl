@@ -336,9 +336,9 @@ void BytecodeEmitter::EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht,
 
 void BytecodeEmitter::EmitAggHashTableProcessBatch(
     LocalVar agg_ht, LocalVar iters, FunctionId hash_fn, FunctionId key_eq_fn,
-    FunctionId init_agg_fn, FunctionId merge_agg_fn) {
+    FunctionId init_agg_fn, FunctionId merge_agg_fn, LocalVar partitioned) {
   EmitAll(Bytecode::AggregationHashTableProcessBatch, agg_ht, iters, hash_fn,
-          key_eq_fn, init_agg_fn, merge_agg_fn);
+          key_eq_fn, init_agg_fn, merge_agg_fn, partitioned);
 }
 
 void BytecodeEmitter::EmitAggHashTableMovePartitions(LocalVar agg_ht,

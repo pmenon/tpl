@@ -13,6 +13,13 @@ void Sema::ReportIncorrectCallArg(ast::CallExpr *call, u32 index,
       call->GetFuncName(), expected, index, call->arguments()[index]->type());
 }
 
+void Sema::ReportIncorrectCallArg(ast::CallExpr *call, u32 index,
+                                  const char *expected) {
+  error_reporter()->Report(
+      call->position(), ErrorMessages::kIncorrectCallArgType2,
+      call->GetFuncName(), expected, index, call->arguments()[index]->type());
+}
+
 ast::Expr *Sema::ImplCastExprToType(ast::Expr *expr, ast::Type *target_type,
                                     ast::CastKind cast_kind) {
   return context()->node_factory()->NewImplicitCastExpr(

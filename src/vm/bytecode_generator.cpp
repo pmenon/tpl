@@ -801,8 +801,10 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,
           call->arguments()[4]->As<ast::IdentifierExpr>()->name().data());
       auto merge_agg_fn = LookupFuncIdByName(
           call->arguments()[5]->As<ast::IdentifierExpr>()->name().data());
+      LocalVar partitioned = VisitExpressionForRValue(call->arguments()[6]);
       emitter()->EmitAggHashTableProcessBatch(agg_ht, iters, hash_fn, key_eq_fn,
-                                              init_agg_fn, merge_agg_fn);
+                                              init_agg_fn, merge_agg_fn,
+                                              partitioned);
       break;
     }
     case ast::Builtin::AggHashTableMovePartitions: {

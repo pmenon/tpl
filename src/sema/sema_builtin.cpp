@@ -29,6 +29,11 @@ bool IsPointerToAggregatorValue(ast::Type *type) {
   return false;
 }
 
+template <typename... ArgTypes>
+bool AreAllFunctions(const ArgTypes... type) {
+  return (true && ... && type->IsFunctionType());
+}
+
 }  // namespace
 
 void Sema::CheckBuiltinMapCall(UNUSED ast::CallExpr *call) {}
@@ -170,12 +175,34 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call,
         ReportIncorrectCallArg(call, 2, GetBuiltinType(hash_val_kind));
         return;
       }
-      // Fourth argument is the vector lookup
+      // Fourth argument is the probe tuple, but any pointer will do
       const auto byte_kind = ast::BuiltinType::Uint8;
       call->set_type(ast::BuiltinType::Get(context(), byte_kind)->PointerTo());
       break;
     }
     case ast::Builtin::AggHashTableProcessBatch: {
+      if (!CheckArgCount(call, 7)) {
+        return;
+      }
+      // Second argument is the VPIs
+      const auto vpi_kind = ast::BuiltinType::Uint64;
+      if (!args[1]->type()->IsPointerType() ||
+          IsPointerToSpecificBuiltin(args[1]->type()->GetPointeeType(),
+                                     vpi_kind)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(vpi_kind)->PointerTo());
+        return;
+      }
+      // Third, fourth, fifth, and sixth are all functions
+      if (!AreAllFunctions(args[2]->type(), args[3]->type(), args[4]->type(),
+                           args[5]->type())) {
+        ReportIncorrectCallArg(call, 2, "function");
+        return;
+      }
+      // Last arg must be a boolean
+      if (!args[6]->type()->IsBoolType()) {
+        ReportIncorrectCallArg(call, 6, GetBuiltinType(ast::BuiltinType::Bool));
+        return;
+      }
       call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
       break;
     }

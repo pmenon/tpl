@@ -71,7 +71,7 @@ fun p1_worker(queryState: *State, state: *ThreadState_1, tvi: *TableVectorIterat
   for (@tableIterAdvance(tvi)) {
     var vec = @tableIterGetVPI(tvi)
     iters[0] = vec
-    @aggHTProcessBatch(ht, &iters, hashFn, keyCheck, constructAgg, updateAgg)
+    @aggHTProcessBatch(ht, &iters, hashFn, keyCheck, constructAgg, updateAgg, true)
   }
   return
 }

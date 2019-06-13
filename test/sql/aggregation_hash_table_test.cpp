@@ -255,7 +255,8 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
     // Process
     VectorProjectionIterator vpi(&vp);
     VectorProjectionIterator *iters[] = {&vpi};
-    agg_table()->ProcessBatch(iters, hash_fn, key_eq, init_agg, advance_agg);
+    agg_table()->ProcessBatch(iters, hash_fn, key_eq, init_agg, advance_agg,
+                              false);
   }
 }
 

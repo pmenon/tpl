@@ -49,7 +49,7 @@ fun pipeline_1(state: *State) -> nil {
   for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
     var vec = @tableIterGetVPI(&tvi)
     iters[0] = vec
-    @aggHTProcessBatch(ht, &iters, hashFn, keyCheck, constructAgg, updateAgg)
+    @aggHTProcessBatch(ht, &iters, hashFn, keyCheck, constructAgg, updateAgg, false)
   }
   @tableIterClose(&tvi)
 }

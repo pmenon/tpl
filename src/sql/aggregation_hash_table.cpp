@@ -5,7 +5,6 @@
 #include <vector>
 
 #include <tbb/tbb.h>  // NOLINT
-#include <util/hash.h>
 
 #include "count/hll.h"
 
@@ -168,9 +167,12 @@ void AggregationHashTable::AllocateOverflowPartitions() {
 }
 
 void AggregationHashTable::ProcessBatch(
-    VectorProjectionIterator *iters[], AggregationHashTable::HashFn hash_fn,
-    KeyEqFn key_eq_fn, AggregationHashTable::InitAggFn init_agg_fn,
-    AggregationHashTable::AdvanceAggFn advance_agg_fn) {
+    VectorProjectionIterator *iters[],
+    const AggregationHashTable::HashFn hash_fn,
+    const AggregationHashTable::KeyEqFn key_eq_fn,
+    const AggregationHashTable::InitAggFn init_agg_fn,
+    const AggregationHashTable::AdvanceAggFn advance_agg_fn,
+    const bool partitioned) {
   TPL_ASSERT(iters != nullptr, "Null input iterators!");
   const u32 num_elems = iters[0]->num_selected();
 
@@ -179,27 +181,35 @@ void AggregationHashTable::ProcessBatch(
 
   if (iters[0]->IsFiltered()) {
     ProcessBatchImpl<true>(iters, num_elems, hashes, entries, hash_fn,
-                           key_eq_fn, init_agg_fn, advance_agg_fn);
+                           key_eq_fn, init_agg_fn, advance_agg_fn, partitioned);
   } else {
     ProcessBatchImpl<false>(iters, num_elems, hashes, entries, hash_fn,
-                            key_eq_fn, init_agg_fn, advance_agg_fn);
+                            key_eq_fn, init_agg_fn, advance_agg_fn,
+                            partitioned);
   }
 }
 
 template <bool VPIIsFiltered>
 void AggregationHashTable::ProcessBatchImpl(
     VectorProjectionIterator *iters[], u32 num_elems, hash_t hashes[],
-    HashTableEntry *entries[], AggregationHashTable::HashFn hash_fn,
-    KeyEqFn key_eq_fn, AggregationHashTable::InitAggFn init_agg_fn,
-    AggregationHashTable::AdvanceAggFn advance_agg_fn) {
+    HashTableEntry *entries[], const AggregationHashTable::HashFn hash_fn,
+    const AggregationHashTable::KeyEqFn key_eq_fn,
+    const AggregationHashTable::InitAggFn init_agg_fn,
+    const AggregationHashTable::AdvanceAggFn advance_agg_fn,
+    const bool partitioned) {
   // Lookup batch
   LookupBatch<VPIIsFiltered>(iters, num_elems, hashes, entries, hash_fn,
                              key_eq_fn);
   iters[0]->Reset();
 
   // Create missing groups
-  CreateMissingGroups<VPIIsFiltered>(iters, num_elems, hashes, entries,
-                                     key_eq_fn, init_agg_fn);
+  if (partitioned) {
+    CreateMissingGroups<VPIIsFiltered, true>(iters, num_elems, hashes, entries,
+                                             key_eq_fn, init_agg_fn);
+  } else {
+    CreateMissingGroups<VPIIsFiltered, false>(iters, num_elems, hashes, entries,
+                                              key_eq_fn, init_agg_fn);
+  }
   iters[0]->Reset();
 
   // Update valid groups
@@ -210,8 +220,8 @@ void AggregationHashTable::ProcessBatchImpl(
 template <bool VPIIsFiltered>
 void AggregationHashTable::LookupBatch(
     VectorProjectionIterator *iters[], u32 num_elems, hash_t hashes[],
-    HashTableEntry *entries[], AggregationHashTable::HashFn hash_fn,
-    AggregationHashTable::KeyEqFn key_eq_fn) const {
+    HashTableEntry *entries[], const AggregationHashTable::HashFn hash_fn,
+    const AggregationHashTable::KeyEqFn key_eq_fn) const {
   // Compute hash and perform initial lookup
   ComputeHashAndLoadInitial<VPIIsFiltered>(iters, num_elems, hashes, entries,
                                            hash_fn);
@@ -278,7 +288,7 @@ template <bool VPIIsFiltered>
 void AggregationHashTable::FollowNextLoop(
     VectorProjectionIterator *iters[], u32 num_elems, u32 group_sel[],
     const hash_t hashes[], HashTableEntry *entries[],
-    AggregationHashTable::KeyEqFn key_eq_fn) const {
+    const AggregationHashTable::KeyEqFn key_eq_fn) const {
   while (num_elems > 0) {
     u32 write_idx = 0;
 
@@ -311,11 +321,11 @@ void AggregationHashTable::FollowNextLoop(
   }
 }
 
-template <bool VPIIsFiltered>
+template <bool VPIIsFiltered, bool Partitioned>
 void AggregationHashTable::CreateMissingGroups(
     VectorProjectionIterator *iters[], u32 num_elems, const hash_t hashes[],
-    HashTableEntry *entries[], AggregationHashTable::KeyEqFn key_eq_fn,
-    AggregationHashTable::InitAggFn init_agg_fn) {
+    HashTableEntry *entries[], const AggregationHashTable::KeyEqFn key_eq_fn,
+    const AggregationHashTable::InitAggFn init_agg_fn) {
   // Vector storing all the missing group IDs
   u32 *const group_sel = batch_process_state_->group_sel;
 
@@ -330,14 +340,17 @@ void AggregationHashTable::CreateMissingGroups(
     // Move VPI to position of new aggregate
     iters[0]->SetPosition<VPIIsFiltered>(group_sel[idx]);
 
-    if (HashTableEntry *entry = LookupEntryInternal(hash, key_eq_fn, iters);
-        entry != nullptr) {
+    if (auto *entry = LookupEntryInternal(hash, key_eq_fn, iters)) {
       entries[group_sel[idx]] = entry;
       continue;
     }
 
     // Initialize
-    init_agg_fn(Insert(hash), iters);
+    if constexpr (Partitioned) {
+      init_agg_fn(InsertPartitioned(hash), iters);
+    } else {
+      init_agg_fn(Insert(hash), iters);
+    }
   }
 }
 
