@@ -175,8 +175,8 @@ class ScanTask {
 
 bool TableVectorIterator::ParallelScan(
     const u16 table_id, void *const query_state,
-    ThreadStateContainer *const thread_states, const ScanFn scan_fn,
-    const u32 min_grain_size) {
+    ThreadStateContainer *const thread_states,
+    const TableVectorIterator::ScanFn scan_fn, const u32 min_grain_size) {
   // Lookup table
   const Table *table = Catalog::Instance()->LookupTableById(TableId(table_id));
   if (table == nullptr) {
@@ -184,7 +184,7 @@ bool TableVectorIterator::ParallelScan(
   }
 
   // Time
-  util::Timer<> timer;
+  util::Timer<std::milli> timer;
   timer.Start();
 
   // Execute parallel scan
@@ -194,8 +194,9 @@ bool TableVectorIterator::ParallelScan(
                     ScanTask(table_id, query_state, thread_states, scan_fn));
 
   timer.Stop();
-  double tps = table->num_tuples() / timer.elapsed();
-  LOG_INFO("Scanned {} blocks ({} tuples) blocks in {} ms ({:.2f} tps)",
+
+  double tps = table->num_tuples() / timer.elapsed() / 1000.0;
+  LOG_INFO("Scanned {} blocks ({} tuples) blocks in {} ms ({:.3f} mtps)",
            table->num_blocks(), table->num_tuples(), timer.elapsed(), tps);
 
   return true;

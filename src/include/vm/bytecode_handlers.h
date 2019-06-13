@@ -651,8 +651,8 @@ VM_OP_HOT void OpAggregationHashTableLookup(
     byte **result, tpl::sql::AggregationHashTable *const agg_hash_table,
     const hash_t hash_val,
     const tpl::sql::AggregationHashTable::KeyEqFn key_eq_fn,
-    tpl::sql::VectorProjectionIterator *iters[]) {
-  *result = agg_hash_table->Lookup(hash_val, key_eq_fn, iters);
+    const void *probe_tuple) {
+  *result = agg_hash_table->Lookup(hash_val, key_eq_fn, probe_tuple);
 }
 
 VM_OP_HOT void OpAggregationHashTableProcessBatch(

@@ -866,13 +866,12 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
         frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
     auto hash = frame->LocalAt<hash_t>(READ_LOCAL_ID());
     auto key_eq_fn_id = READ_FUNC_ID();
-    auto *iters =
-        frame->LocalAt<sql::VectorProjectionIterator **>(READ_LOCAL_ID());
+    auto *probe_tuple = frame->LocalAt<void *>(READ_LOCAL_ID());
 
     auto key_eq_fn = reinterpret_cast<sql::AggregationHashTable::KeyEqFn>(
         module_->GetRawFunctionImpl(key_eq_fn_id));
     OpAggregationHashTableLookup(result, agg_hash_table, hash, key_eq_fn,
-                                 iters);
+                                 probe_tuple);
     DISPATCH_NEXT();
   }
 
