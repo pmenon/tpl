@@ -217,30 +217,6 @@ Identifier Context::GetIdentifier(llvm::StringRef str) {
   return Identifier(iter->getKeyData());
 }
 
-Type *Context::GetTplTypeFromSqlType(const sql::Type &sql_type) {
-  switch (sql_type.type_id()) {
-    case sql::TypeId::Boolean: {
-      return BuiltinType::Get(this, BuiltinType::Boolean);
-    }
-    case sql::TypeId::SmallInt:
-    case sql::TypeId::Integer:
-    case sql::TypeId::BigInt: {
-      return BuiltinType::Get(this, BuiltinType::Integer);
-    }
-    case sql::TypeId::Decimal: {
-      return BuiltinType::Get(this, BuiltinType::Decimal);
-    }
-    case sql::TypeId::Char:
-    case sql::TypeId::Varchar: {
-      return BuiltinType::Get(this, BuiltinType::StringVal);
-    }
-    case sql::TypeId::Date: {
-      return BuiltinType::Get(this, BuiltinType::Date);
-    }
-    default: { throw std::runtime_error("No TPL type for sql type"); }
-  }
-}
-
 Type *Context::LookupBuiltinType(Identifier identifier) const {
   auto iter = impl()->builtin_types.find(identifier);
   return (iter == impl()->builtin_types.end() ? nullptr : iter->second);

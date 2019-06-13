@@ -73,11 +73,8 @@ class Sema : public ast::AstVisitor<Sema> {
     return expr->type();
   }
 
-  // Convert the given schema into a row type
-  ast::Type *GetRowTypeFromSqlSchema(const sql::Schema &schema);
-
   // Create a builtin type
-  ast::Type *GetBuiltinType(const u16 builtin_kind);
+  ast::Type *GetBuiltinType(u16 builtin_kind);
 
   struct CheckResult {
     ast::Type *result_type;

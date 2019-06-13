@@ -23,16 +23,6 @@ bool Sema::Run(ast::AstNode *root) {
   return error_reporter()->HasErrors();
 }
 
-ast::Type *Sema::GetRowTypeFromSqlSchema(const sql::Schema &schema) {
-  util::RegionVector<ast::Field> cols(context()->region());
-  for (const auto &col : schema.columns()) {
-    auto col_name = context()->GetIdentifier(col.name);
-    auto *col_type = context()->GetTplTypeFromSqlType(col.type);
-    cols.emplace_back(col_name, col_type);
-  }
-  return ast::StructType::Get(context(), std::move(cols));
-}
-
 ast::Type *Sema::GetBuiltinType(const u16 builtin_kind) {
   return ast::BuiltinType::Get(
       context(), static_cast<ast::BuiltinType::Kind>(builtin_kind));

@@ -53,13 +53,6 @@ class Context {
   Identifier GetIdentifier(llvm::StringRef str);
 
   /**
-   * Convert the SQL type into the equivalent TPL type
-   * @param sql_type The SQL type
-   * @return The equivalent TPL type
-   */
-  Type *GetTplTypeFromSqlType(const sql::Type &sql_type);
-
-  /**
    * Is the type with name \a identifier a builtin type?
    * @return A non-null pointer to the Type if a valid builtin; null otherwise
    */
