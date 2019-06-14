@@ -20,12 +20,12 @@ TEST_F(HashTest, NumericHash) {
   }
 
   // Check an input value against all possible hashing methods
-#define CHECK_HASH_ON_INPUT(INPUT)                         \
-  {                                                        \
-    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Fnv1, INPUT)    \
-    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Crc, INPUT)     \
-    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Murmur2, INPUT)  \
-    CHECK_HASH_METHOD_ON_INPUT(HashMethod::xxHash3, INPUT) \
+#define CHECK_HASH_ON_INPUT(INPUT)                          \
+  {                                                         \
+    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Fnv1, INPUT);    \
+    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Crc, INPUT);     \
+    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Murmur2, INPUT); \
+    CHECK_HASH_METHOD_ON_INPUT(HashMethod::xxHash3, INPUT); \
   }
 
   CHECK_HASH_ON_INPUT(i8{-1});
@@ -61,12 +61,12 @@ TEST_F(HashTest, StringHash) {
   }
 
   // Check an input value against all possible hashing methods
-#define CHECK_HASH_ON_INPUT(INPUT)                         \
-  {                                                        \
-    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Fnv1, INPUT)    \
-    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Crc, INPUT)     \
-    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Murmur2, INPUT)  \
-    CHECK_HASH_METHOD_ON_INPUT(HashMethod::xxHash3, INPUT) \
+#define CHECK_HASH_ON_INPUT(INPUT)                          \
+  {                                                         \
+    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Fnv1, INPUT);    \
+    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Crc, INPUT);     \
+    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Murmur2, INPUT); \
+    CHECK_HASH_METHOD_ON_INPUT(HashMethod::xxHash3, INPUT); \
   }
 
   CHECK_HASH_ON_INPUT("Fixed input");

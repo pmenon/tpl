@@ -69,25 +69,13 @@ class Hasher {
   }
 
   /**
-   * Compute the hash value of the C-string @em buf. It's assumed the buffer is
-   * null-terminated.
-   * @tparam METHOD The hash method to use.
-   * @param buf The input buffer.
-   * @return The computed hash value based on the contents of the input buffer.
-   */
-  template <HashMethod METHOD = HashMethod::Crc>
-  static hash_t Hash(const char *buf) {
-    return Hash<METHOD>(reinterpret_cast<const u8 *>(buf), strlen(buf));
-  }
-
-  /**
-   * Compute the hash value of an input string @em s.
+   * Compute the hash value of an input string view @em s.
    * @tparam METHOD The hash method to use.
    * @param s The input string.
    * @return The computed hash value based on the contents of the input string.
    */
   template <HashMethod METHOD = HashMethod::Crc>
-  static hash_t Hash(const std::string &s) {
+  static hash_t Hash(const std::string_view s) {
     return Hash<METHOD>(reinterpret_cast<const u8 *>(s.data()), s.length());
   }
 
