@@ -1560,62 +1560,72 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   // Trig functions
   // -------------------------------------------------------
 
-  OP(Acos) : {
+  OP(Pi) : {
     auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    OpAcos(result, input);
+    OpPi(result);
     DISPATCH_NEXT();
   }
 
-  OP(Asin) : {
+  OP(E) : {
     auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    OpAsin(result, input);
+    OpE(result);
     DISPATCH_NEXT();
   }
 
-  OP(Atan) : {
+#define UNARY_REAL_MATH_OP(TOP)                                       \
+  OP(TOP) : {                                                         \
+    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());      \
+    auto *input = frame->LocalAt<const sql::Real *>(READ_LOCAL_ID()); \
+    Op##TOP(result, input);                                           \
+    DISPATCH_NEXT();                                                  \
+  }
+
+#define BINARY_REAL_MATH_OP(TOP)                                       \
+  OP(TOP) : {                                                          \
+    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());       \
+    auto *input1 = frame->LocalAt<const sql::Real *>(READ_LOCAL_ID()); \
+    auto *input2 = frame->LocalAt<const sql::Real *>(READ_LOCAL_ID()); \
+    Op##TOP(result, input1, input2);                                   \
+    DISPATCH_NEXT();                                                   \
+  }
+
+  UNARY_REAL_MATH_OP(Sin);
+  UNARY_REAL_MATH_OP(Asin);
+  UNARY_REAL_MATH_OP(Cos);
+  UNARY_REAL_MATH_OP(Acos);
+  UNARY_REAL_MATH_OP(Tan);
+  UNARY_REAL_MATH_OP(Cot);
+  UNARY_REAL_MATH_OP(Atan);
+  UNARY_REAL_MATH_OP(Cosh);
+  UNARY_REAL_MATH_OP(Tanh);
+  UNARY_REAL_MATH_OP(Sinh);
+  UNARY_REAL_MATH_OP(Sqrt);
+  UNARY_REAL_MATH_OP(Cbrt);
+  UNARY_REAL_MATH_OP(Exp);
+  UNARY_REAL_MATH_OP(Ceil);
+  UNARY_REAL_MATH_OP(Floor);
+  UNARY_REAL_MATH_OP(Truncate);
+  UNARY_REAL_MATH_OP(Ln);
+  UNARY_REAL_MATH_OP(Log2);
+  UNARY_REAL_MATH_OP(Log10);
+  UNARY_REAL_MATH_OP(Sign);
+  UNARY_REAL_MATH_OP(Radians);
+  UNARY_REAL_MATH_OP(Degrees);
+  UNARY_REAL_MATH_OP(Round);
+  BINARY_REAL_MATH_OP(Atan2);
+  BINARY_REAL_MATH_OP(Log);
+  BINARY_REAL_MATH_OP(Pow);
+
+  OP(RoundUpTo) : {
     auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    OpAtan(result, input);
+    auto *v = frame->LocalAt<const sql::Real *>(READ_LOCAL_ID());
+    auto *scale = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
+    OpRoundUpTo(result, v, scale);
     DISPATCH_NEXT();
   }
 
-  OP(Atan2) : {
-    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    auto *arg_1 = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    auto *arg_2 = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    OpAtan2(result, arg_1, arg_2);
-    DISPATCH_NEXT();
-  }
-
-  OP(Cos) : {
-    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    OpCos(result, input);
-    DISPATCH_NEXT();
-  }
-
-  OP(Cot) : {
-    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    OpCot(result, input);
-    DISPATCH_NEXT();
-  }
-
-  OP(Sin) : {
-    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    OpSin(result, input);
-    DISPATCH_NEXT();
-  }
-
-  OP(Tan) : {
-    auto *result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    OpTan(result, input);
-    DISPATCH_NEXT();
-  }
+#undef BINARY_REAL_MATH_OP
+#undef UNARY_REAL_MATH_OP
 
   // Impossible
   UNREACHABLE("Impossible to reach end of interpreter loop. Bad code!");

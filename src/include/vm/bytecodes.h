@@ -285,6 +285,8 @@ namespace tpl::vm {
   F(SorterIteratorFree, OperandType::Local)                                                                            \
                                                                                                                        \
   /* Trig functions */                                                                                                 \
+  F(Pi, OperandType::Local)                                                                                            \
+  F(E, OperandType::Local)                                                                                             \
   F(Acos, OperandType::Local, OperandType::Local)                                                                      \
   F(Asin, OperandType::Local, OperandType::Local)                                                                      \
   F(Atan, OperandType::Local, OperandType::Local)                                                                      \
@@ -292,7 +294,26 @@ namespace tpl::vm {
   F(Cos, OperandType::Local, OperandType::Local)                                                                       \
   F(Cot, OperandType::Local, OperandType::Local)                                                                       \
   F(Sin, OperandType::Local, OperandType::Local)                                                                       \
-  F(Tan, OperandType::Local, OperandType::Local)
+  F(Tan, OperandType::Local, OperandType::Local)                                                                       \
+  F(Cosh, OperandType::Local, OperandType::Local)                                                                      \
+  F(Tanh, OperandType::Local, OperandType::Local)                                                                      \
+  F(Sinh, OperandType::Local, OperandType::Local)                                                                      \
+  F(Sqrt, OperandType::Local, OperandType::Local)                                                                      \
+  F(Cbrt, OperandType::Local, OperandType::Local)                                                                      \
+  F(Exp, OperandType::Local, OperandType::Local)                                                                       \
+  F(Ceil, OperandType::Local, OperandType::Local)                                                                      \
+  F(Floor, OperandType::Local, OperandType::Local)                                                                     \
+  F(Truncate, OperandType::Local, OperandType::Local)                                                                  \
+  F(Ln, OperandType::Local, OperandType::Local)                                                                        \
+  F(Log2, OperandType::Local, OperandType::Local)                                                                      \
+  F(Log10, OperandType::Local, OperandType::Local)                                                                     \
+  F(Sign, OperandType::Local, OperandType::Local)                                                                      \
+  F(Radians, OperandType::Local, OperandType::Local)                                                                   \
+  F(Degrees, OperandType::Local, OperandType::Local)                                                                   \
+  F(Round, OperandType::Local, OperandType::Local)                                                                     \
+  F(RoundUpTo, OperandType::Local, OperandType::Local, OperandType::Local)                                             \
+  F(Log, OperandType::Local, OperandType::Local, OperandType::Local)                                                   \
+  F(Pow, OperandType::Local, OperandType::Local, OperandType::Local)                                                   \
 
 // clang-format on
 
