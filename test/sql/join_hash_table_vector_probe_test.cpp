@@ -18,6 +18,8 @@ template <u8 N>
 struct Tuple {
   u32 build_key;
   u32 aux[N];
+
+  auto Hash() { return util::Hasher::Hash(build_key); }
 };
 
 class JoinHashTableVectorProbeTest : public TplTest {
@@ -37,8 +39,7 @@ class JoinHashTableVectorProbeTest : public TplTest {
     // Insert
     for (u32 i = 0; i < num_tuples; i++) {
       auto key = key_gen();
-      auto hash =
-          util::Hasher::Hash(reinterpret_cast<const u8 *>(&key), sizeof(key));
+      auto hash = util::Hasher::Hash(key);
       auto *tuple = reinterpret_cast<Tuple<N> *>(jht->AllocInputTuple(hash));
       tuple->build_key = key;
     }

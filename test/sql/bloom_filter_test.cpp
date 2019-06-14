@@ -18,7 +18,7 @@ class BloomFilterTest : public TplTest {
  protected:
   template <typename T>
   auto Hash(const T val) -> std::enable_if_t<std::is_fundamental_v<T>, hash_t> {
-    return util::Hasher::Hash(reinterpret_cast<const u8 *>(&val), sizeof(T));
+    return util::Hasher::Hash(val);
   }
 
  private:

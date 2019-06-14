@@ -26,9 +26,7 @@ struct InputTuple {
 
   InputTuple(u64 key, u64 col_a) : key(key), col_a(col_a) {}
 
-  hash_t Hash() const noexcept {
-    return util::Hasher::Hash(reinterpret_cast<const u8 *>(&key), sizeof(key));
-  }
+  hash_t Hash() const noexcept { return util::Hasher::Hash(key); }
 };
 
 /**
