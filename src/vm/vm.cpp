@@ -867,6 +867,15 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(AggregationHashTableInsertPartitioned) : {
+    auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    auto *agg_hash_table =
+        frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto hash = frame->LocalAt<hash_t>(READ_LOCAL_ID());
+    OpAggregationHashTableInsertPartitioned(result, agg_hash_table, hash);
+    DISPATCH_NEXT();
+  }
+
   OP(AggregationHashTableLookup) : {
     auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
     auto *agg_hash_table =
