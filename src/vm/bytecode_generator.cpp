@@ -931,7 +931,8 @@ namespace {
   F(IntegerSumAggregate, IntegerSumAggregateInit, IntegerSumAggregateAdvance, IntegerSumAggregateGetResult, IntegerSumAggregateMerge, IntegerSumAggregateReset)           \
   F(RealMaxAggregate,    RealMaxAggregateInit,    RealMaxAggregateAdvance,    RealMaxAggregateGetResult,    RealMaxAggregateMerge,    RealMaxAggregateReset)              \
   F(RealMinAggregate,    RealMinAggregateInit,    RealMinAggregateAdvance,    RealMinAggregateGetResult,    RealMinAggregateMerge,    RealMinAggregateReset)              \
-  F(RealSumAggregate,    RealSumAggregateInit,    RealSumAggregateAdvance,    RealSumAggregateGetResult,    RealSumAggregateMerge,    RealSumAggregateReset)              \
+  F(RealSumAggregate,    RealSumAggregateInit,    RealSumAggregateAdvance,    RealSumAggregateGetResult,    RealSumAggregateMerge,    RealSumAggregateReset)
+
 // clang-format on
 
 enum class AggOpKind : u8 {
@@ -1718,27 +1719,33 @@ void BytecodeGenerator::VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare) {
   Bytecode code;
   switch (compare->op()) {
     case parsing::Token::Type::GREATER: {
-      code = (is_integer_comparison ? Bytecode::GreaterThanInteger : Bytecode::GreaterThanReal);
+      code = (is_integer_comparison ? Bytecode::GreaterThanInteger
+                                    : Bytecode::GreaterThanReal);
       break;
     }
     case parsing::Token::Type::GREATER_EQUAL: {
-      code = (is_integer_comparison ? Bytecode::GreaterThanEqualInteger : Bytecode::GreaterThanEqualReal);
+      code = (is_integer_comparison ? Bytecode::GreaterThanEqualInteger
+                                    : Bytecode::GreaterThanEqualReal);
       break;
     }
     case parsing::Token::Type::EQUAL_EQUAL: {
-      code = (is_integer_comparison ? Bytecode::EqualInteger : Bytecode::EqualReal);
+      code = (is_integer_comparison ? Bytecode::EqualInteger
+                                    : Bytecode::EqualReal);
       break;
     }
     case parsing::Token::Type::LESS: {
-      code = (is_integer_comparison ? Bytecode::LessThanInteger : Bytecode::LessThanReal);
+      code = (is_integer_comparison ? Bytecode::LessThanInteger
+                                    : Bytecode::LessThanReal);
       break;
     }
     case parsing::Token::Type::LESS_EQUAL: {
-      code = (is_integer_comparison ? Bytecode::LessThanEqualInteger : Bytecode::LessThanEqualReal);
+      code = (is_integer_comparison ? Bytecode::LessThanEqualInteger
+                                    : Bytecode::LessThanEqualReal);
       break;
     }
     case parsing::Token::Type::BANG_EQUAL: {
-      code = (is_integer_comparison ? Bytecode::NotEqualInteger : Bytecode::NotEqualReal);
+      code = (is_integer_comparison ? Bytecode::NotEqualInteger
+                                    : Bytecode::NotEqualReal);
       break;
     }
     default: { UNREACHABLE("Impossible binary operation"); }
