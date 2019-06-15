@@ -322,20 +322,20 @@ namespace tpl::vm {
   F(Pow, OperandType::Local, OperandType::Local, OperandType::Local)                                                   \
                                                                                                                        \
   /* String functions */                                                                                               \
-  F(Left, OperandType::Local, OperandType::Local,OperandType::Local, OperandType::Local)                               \
+  F(Left, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                              \
   F(Length, OperandType::Local, OperandType::Local, OperandType::Local)                                                \
-  F(Lower, OperandType::Local, OperandType::Local,OperandType::Local)                                                  \
-  F(LPad, OperandType::Local, OperandType::Local,OperandType::Local, OperandType::Local, OperandType::Local)           \
-  F(LTrim, OperandType::Local, OperandType::Local,OperandType::Local, OperandType::Local)                              \
+  F(Lower, OperandType::Local, OperandType::Local, OperandType::Local)                                                 \
+  F(LPad, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)          \
+  F(LTrim, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                             \
   F(Repeat, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                            \
   F(Reverse, OperandType::Local, OperandType::Local, OperandType::Local)                                               \
   F(Right, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                             \
-  F(RPad, OperandType::Local, OperandType::Local,OperandType::Local, OperandType::Local, OperandType::Local)           \
-  F(RTrim, OperandType::Local, OperandType::Local,OperandType::Local, OperandType::Local)                              \
-  F(SplitPart, OperandType::Local, OperandType::Local,OperandType::Local, OperandType::Local,OperandType::Local)       \
-  F(Substring, OperandType::Local, OperandType::Local,OperandType::Local, OperandType::Local,OperandType::Local)       \
-  F(Trim, OperandType::Local, OperandType::Local,OperandType::Local, OperandType::Local)                               \
-  F(Upper, OperandType::Local, OperandType::Local,OperandType::Local)                                                  \
+  F(RPad, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)          \
+  F(RTrim, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                             \
+  F(SplitPart, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)     \
+  F(Substring, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)     \
+  F(Trim, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                              \
+  F(Upper, OperandType::Local, OperandType::Local, OperandType::Local)
 
 // clang-format on
 
