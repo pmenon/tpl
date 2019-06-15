@@ -759,20 +759,27 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-#define GEN_CMP(op)                                                 \
-  OP(op##Integer) : {                                               \
-    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID()); \
-    auto *left = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());   \
-    auto *right = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());  \
-    Op##op##Integer(result, left, right);                           \
-    DISPATCH_NEXT();                                                \
-  }                                                                 \
-  OP(op##Real) : {                                                  \
-    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID()); \
-    auto *left = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());      \
-    auto *right = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());     \
-    Op##op##Real(result, left, right);                              \
-    DISPATCH_NEXT();                                                \
+#define GEN_CMP(op)                                                  \
+  OP(op##Integer) : {                                                \
+    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());  \
+    auto *left = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());    \
+    auto *right = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());   \
+    Op##op##Integer(result, left, right);                            \
+    DISPATCH_NEXT();                                                 \
+  }                                                                  \
+  OP(op##Real) : {                                                   \
+    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());  \
+    auto *left = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());       \
+    auto *right = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());      \
+    Op##op##Real(result, left, right);                               \
+    DISPATCH_NEXT();                                                 \
+  }                                                                  \
+  OP(op##String) : {                                                 \
+    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());  \
+    auto *left = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());  \
+    auto *right = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID()); \
+    Op##op##String(result, left, right);                             \
+    DISPATCH_NEXT();                                                 \
   }
   GEN_CMP(GreaterThan);
   GEN_CMP(GreaterThanEqual);
