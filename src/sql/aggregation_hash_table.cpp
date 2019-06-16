@@ -32,8 +32,7 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory,
                MemoryPoolAllocator<byte>(memory_)),
       owned_entries_(memory_),
       hash_table_(kDefaultLoadFactor),
-      batch_process_state_(static_cast<BatchProcessState *>(
-          memory_->Allocate(sizeof(BatchProcessState), false))),
+      batch_process_state_(nullptr),
       merge_partition_fn_(nullptr),
       partition_heads_(nullptr),
       partition_tails_(nullptr),
@@ -173,7 +172,11 @@ void AggregationHashTable::ProcessBatch(
     const AggregationHashTable::InitAggFn init_agg_fn,
     const AggregationHashTable::AdvanceAggFn advance_agg_fn,
     const bool partitioned) {
-  TPL_ASSERT(iters != nullptr, "Null input iterators!");
+  if (TPL_UNLIKELY(batch_process_state_ == nullptr)) {
+    batch_process_state_ = static_cast<BatchProcessState *>(
+        memory_->Allocate(sizeof(BatchProcessState), false));
+  }
+
   const u32 num_elems = iters[0]->num_selected();
 
   auto *const hashes = batch_process_state_->hashes;

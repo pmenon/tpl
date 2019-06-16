@@ -24,7 +24,6 @@ class VectorProjectionIterator;
 class AHTIterator;
 class AHTVectorIterator;
 class AHTOverflowPartitionIterator;
-
 /**
  * The hash table used when performing aggregations
  */
@@ -323,6 +322,7 @@ class AggregationHashTable {
     alignas(CACHELINE_SIZE) u32 group_sel[kDefaultVectorSize];
   };
 
+  // State required when processing batches of input. Allocated on first use.
   BatchProcessState *batch_process_state_;
 
   // -------------------------------------------------------
