@@ -233,8 +233,8 @@ inline const T *VectorProjectionIterator::GetValue(const u32 col_idx,
 }
 
 template <typename T, bool Nullable>
-void VectorProjectionIterator::SetValue(const u32 col_idx, const T *val,
-                                        const bool null) {
+inline void VectorProjectionIterator::SetValue(const u32 col_idx, const T *val,
+                                               const bool null) {
   // The column data array
   auto *col_data = vector_projection_->GetVectorAs<T>(col_idx);
 
