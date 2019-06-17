@@ -128,6 +128,11 @@ class JoinHashTable {
   }
 
   /**
+   * Does this JHT use a separate bloom filter?
+   */
+  bool HasBloomFilter() const { return bloom_filter_.GetNumAdditions() > 0; }
+
+  /**
    * Return the total number of inserted elements, including duplicates
    */
   u64 num_elements() const { return entries_.size(); }
@@ -143,9 +148,9 @@ class JoinHashTable {
   bool use_concise_hash_table() const { return use_concise_ht_; }
 
   /**
-   * Does this JHT use a separate bloom filter?
+   * Access the bloom filter
    */
-  bool has_bloom_filter() const { return bloom_filter_.GetNumAdditions() > 0; }
+  const BloomFilter *bloom_filter() const { return &bloom_filter_; }
 
  public:
   // -------------------------------------------------------

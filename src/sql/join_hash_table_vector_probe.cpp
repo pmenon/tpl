@@ -29,6 +29,23 @@ void JoinHashTableVectorProbe::Prepare(VectorProjectionIterator *vpi,
   // computation loop.
   vpi->Reset();
 
+  // If the join hash table uses a bloom filter, use it to early filter.
+  if (join_hash_table_.HasBloomFilter()) {
+    const BloomFilter *const bloom_filter = join_hash_table_.bloom_filter();
+    if (vpi->IsFiltered()) {
+      for (u32 idx = 0; vpi->HasNextFiltered(); vpi->AdvanceFiltered()) {
+        vpi->Match(bloom_filter->Contains(hashes_[idx++]));
+      }
+    } else {
+      for (u32 idx = 0; vpi->HasNext(); vpi->Advance()) {
+        vpi->Match(bloom_filter->Contains(hashes_[idx++]));
+      }
+    }
+
+    // Reset
+    vpi->ResetFiltered();
+  }
+
   // Perform the initial lookup
   join_hash_table_.LookupBatch(vpi->num_selected(), hashes_, entries_);
 }
