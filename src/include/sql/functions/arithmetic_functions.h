@@ -209,6 +209,7 @@ BINARY_MATH_EXPENSIVE_HIDE_NULL(Pow, Real, Real, Real, std::pow);
 inline void ArithmeticFunctions::Sign(Real *result, const Real &v) {
   if (v.is_null) {
     *result = Real::Null();
+    return;
   }
   *result = Real((v.val > 0) ? 1.0f : ((v.val < 0) ? -1.0f : 0.0f));
 }
@@ -216,6 +217,7 @@ inline void ArithmeticFunctions::Sign(Real *result, const Real &v) {
 inline void ArithmeticFunctions::Radians(Real *result, const Real &v) {
   if (v.is_null) {
     *result = Real::Null();
+    return;
   }
   *result = Real(v.val * M_PI / 180.0);
 }
@@ -223,6 +225,7 @@ inline void ArithmeticFunctions::Radians(Real *result, const Real &v) {
 inline void ArithmeticFunctions::Degrees(Real *result, const Real &v) {
   if (v.is_null) {
     *result = Real::Null();
+    return;
   }
   *result = Real(v.val * 180.0 / M_PI);
 }
@@ -230,6 +233,7 @@ inline void ArithmeticFunctions::Degrees(Real *result, const Real &v) {
 inline void ArithmeticFunctions::Round(Real *result, const Real &v) {
   if (v.is_null) {
     *result = Real::Null();
+    return;
   }
   *result = Real(v.val + ((v.val < 0) ? -0.5 : 0.5));
 }
@@ -238,6 +242,7 @@ inline void ArithmeticFunctions::RoundUpTo(Real *result, const Real &v,
                                            const Integer &scale) {
   if (v.is_null || scale.is_null) {
     *result = Real::Null();
+    return;
   }
   *result = Real(std::floor(v.val * std::pow(10.0, scale.val) + 0.5) /
                  std::pow(10.0, scale.val));
@@ -247,6 +252,7 @@ inline void ArithmeticFunctions::Log(Real *result, const Real &base,
                                      const Real &val) {
   if (base.is_null || val.is_null) {
     *result = Real::Null();
+    return;
   }
   *result = Real(std::log(val.val) / std::log(base.val));
 }
