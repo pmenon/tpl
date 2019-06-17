@@ -271,6 +271,54 @@ TEST_F(ArithmeticFunctionsTests, MathFuncs) {
   CHECK_SQL_FUNC(Log10, std::log10, 1.10);
   CHECK_SQL_FUNC(Log10, std::log10, 50.123);
   CHECK_SQL_FUNC(Log10, std::log10, 100.234);
+
+#undef CHECK_SQL_FUNC
+#undef CHECK_HANDLES_NONNULL
+#undef CHECK_HANDLES_NULL
+
+  // Sign
+  {
+    Real input = Real::Null(), result = Real::Null();
+    ArithmeticFunctions::Sign(&result, input);
+    EXPECT_TRUE(result.is_null);
+
+    input = Real(13523.0);
+    ArithmeticFunctions::Sign(&result, input);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_DOUBLE_EQ(1.0, result.val);
+
+    input = Real(-1231.0);
+    ArithmeticFunctions::Sign(&result, input);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_DOUBLE_EQ(-1.0, result.val);
+
+    input = Real(0.0f);
+    ArithmeticFunctions::Sign(&result, input);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_DOUBLE_EQ(0.0, result.val);
+  };
+
+  // Sign
+  {
+    Real input = Real::Null(), result = Real::Null();
+    ArithmeticFunctions::Sign(&result, input);
+    EXPECT_TRUE(result.is_null);
+
+    input = Real(13523.0);
+    ArithmeticFunctions::Sign(&result, input);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_DOUBLE_EQ(1.0, result.val);
+
+    input = Real(-1231.0);
+    ArithmeticFunctions::Sign(&result, input);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_DOUBLE_EQ(-1.0, result.val);
+
+    input = Real(0.0f);
+    ArithmeticFunctions::Sign(&result, input);
+    EXPECT_FALSE(result.is_null);
+    EXPECT_DOUBLE_EQ(0.0, result.val);
+  };
 }
 
 }  // namespace tpl::sql::test
