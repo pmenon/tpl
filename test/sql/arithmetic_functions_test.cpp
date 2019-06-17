@@ -297,28 +297,6 @@ TEST_F(ArithmeticFunctionsTests, MathFuncs) {
     EXPECT_FALSE(result.is_null);
     EXPECT_DOUBLE_EQ(0.0, result.val);
   };
-
-  // Sign
-  {
-    Real input = Real::Null(), result = Real::Null();
-    ArithmeticFunctions::Sign(&result, input);
-    EXPECT_TRUE(result.is_null);
-
-    input = Real(13523.0);
-    ArithmeticFunctions::Sign(&result, input);
-    EXPECT_FALSE(result.is_null);
-    EXPECT_DOUBLE_EQ(1.0, result.val);
-
-    input = Real(-1231.0);
-    ArithmeticFunctions::Sign(&result, input);
-    EXPECT_FALSE(result.is_null);
-    EXPECT_DOUBLE_EQ(-1.0, result.val);
-
-    input = Real(0.0f);
-    ArithmeticFunctions::Sign(&result, input);
-    EXPECT_FALSE(result.is_null);
-    EXPECT_DOUBLE_EQ(0.0, result.val);
-  };
 }
 
 }  // namespace tpl::sql::test
