@@ -57,7 +57,8 @@ ThreadStateContainer::ThreadStateContainer(MemoryPool *memory)
       destroy_fn_(nullptr),
       ctx_(nullptr),
       impl_(std::make_unique<ThreadStateContainer::Impl>()) {
-  impl_->states = tbb::enumerable_thread_specific<TLSHandle>(this);
+  impl_->states = tbb::enumerable_thread_specific<TLSHandle>(
+      [&]() { return TLSHandle(this); });
 }
 
 ThreadStateContainer::~ThreadStateContainer() = default;
