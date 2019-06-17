@@ -248,14 +248,15 @@ class AggregationHashTable {
                         InitAggFn init_agg_fn, AdvanceAggFn advance_agg_fn,
                         bool partitioned);
 
-  // Called from ProcessBatch() to lookup a batch of entries. When the function
-  // returns, the hashes vector will contain the hash values of all elements in
-  // the input vector, and entries will contain a pointer to the associated
-  // element's group aggregate, or null if no group exists.
+  // Called from ProcessBatch() to lookup matching groups for all tuples in the
+  // input vector projection. Upon return, the hashes vector will contain the
+  // hash values of all elements in the input vector, and entries will contain a
+  // pointer to the associated element's group aggregate, or null if no group
+  // exists.
   template <bool VPIIsFiltered>
-  void LookupBatch(VectorProjectionIterator *iters[], u32 num_elems,
-                   hash_t hashes[], HashTableEntry *entries[], HashFn hash_fn,
-                   KeyEqFn key_eq_fn) const;
+  void LookupGroups(VectorProjectionIterator *iters[], u32 num_elems,
+                    hash_t hashes[], HashTableEntry *entries[], HashFn hash_fn,
+                    KeyEqFn key_eq_fn) const;
 
   // Called from LookupBatch() to compute and fill the hashes input vector with
   // the hash values of all input tuples, and to load the initial set of

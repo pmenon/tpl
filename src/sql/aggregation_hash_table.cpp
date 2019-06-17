@@ -200,12 +200,13 @@ void AggregationHashTable::ProcessBatchImpl(
     const AggregationHashTable::InitAggFn init_agg_fn,
     const AggregationHashTable::AdvanceAggFn advance_agg_fn,
     const bool partitioned) {
-  // Lookup batch
-  LookupBatch<VPIIsFiltered>(iters, num_elems, hashes, entries, hash_fn,
-                             key_eq_fn);
+  // Lookup the groups for all available input tuples
+  LookupGroups<VPIIsFiltered>(iters, num_elems, hashes, entries, hash_fn,
+                              key_eq_fn);
   iters[0]->Reset();
 
-  // Create missing groups
+  // Now, the entries vector contains a NULL pointer for missing groups. Create
+  // them now.
   if (partitioned) {
     CreateMissingGroups<VPIIsFiltered, true>(iters, num_elems, hashes, entries,
                                              key_eq_fn, init_agg_fn);
@@ -215,14 +216,14 @@ void AggregationHashTable::ProcessBatchImpl(
   }
   iters[0]->Reset();
 
-  // Update valid groups
+  // For the remaining non-null groups, update/advance them
   AdvanceGroups<VPIIsFiltered>(iters, num_elems, entries, advance_agg_fn);
   iters[0]->Reset();
 }
 
 template <bool VPIIsFiltered>
-void AggregationHashTable::LookupBatch(
-    VectorProjectionIterator *iters[], u32 num_elems, hash_t hashes[],
+void AggregationHashTable::LookupGroups(
+    VectorProjectionIterator *iters[], const u32 num_elems, hash_t hashes[],
     HashTableEntry *entries[], const AggregationHashTable::HashFn hash_fn,
     const AggregationHashTable::KeyEqFn key_eq_fn) const {
   // Compute hash and perform initial lookup
