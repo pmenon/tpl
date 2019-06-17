@@ -147,15 +147,15 @@ class GenericHashTable {
   // Given a tagged HashTableEntry pointer, strip out the tag bits and return an
   // untagged HashTableEntry pointer
   static HashTableEntry *UntagPointer(const HashTableEntry *const entry) {
-    auto ptr = reinterpret_cast<intptr_t>(entry);
+    auto ptr = reinterpret_cast<uintptr_t>(entry);
     return reinterpret_cast<HashTableEntry *>(ptr & kMaskPointer);
   }
 
   static HashTableEntry *UpdateTag(
       const HashTableEntry *const tagged_old_entry,
       const HashTableEntry *const untagged_new_entry) {
-    auto old_tagged_ptr = reinterpret_cast<intptr_t>(tagged_old_entry);
-    auto new_untagged_ptr = reinterpret_cast<intptr_t>(untagged_new_entry);
+    auto old_tagged_ptr = reinterpret_cast<uintptr_t>(tagged_old_entry);
+    auto new_untagged_ptr = reinterpret_cast<uintptr_t>(untagged_new_entry);
     auto new_tagged_ptr = (new_untagged_ptr & kMaskPointer) |
                           (old_tagged_ptr & kMaskTag) |
                           TagHash(untagged_new_entry->hash);
@@ -207,7 +207,7 @@ inline HashTableEntry *GenericHashTable::FindChainHead(hash_t hash) const {
 inline HashTableEntry *GenericHashTable::FindChainHeadWithTag(
     hash_t hash) const {
   const HashTableEntry *const candidate = FindChainHead(hash);
-  auto exists_in_chain = reinterpret_cast<intptr_t>(candidate) & TagHash(hash);
+  auto exists_in_chain = reinterpret_cast<uintptr_t>(candidate) & TagHash(hash);
   return (exists_in_chain ? UntagPointer(candidate) : nullptr);
 }
 

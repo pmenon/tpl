@@ -13,9 +13,83 @@ class GenericHashTableTest : public TplTest {};
 
 struct TestEntry : public HashTableEntry {
   u32 key, value;
-  TestEntry() : HashTableEntry(), key(0), value(0) {}
-  TestEntry(u32 key, u32 value) : HashTableEntry(), key(key), value(value) {}
+
+  TestEntry() : HashTableEntry(), key(0), value(0) { hash = Hash(); }
+
+  TestEntry(u32 key, u32 value) : HashTableEntry(), key(key), value(value) {
+    hash = Hash();
+  }
+
+  hash_t Hash() { return util::Hasher::Hash(key); }
+
+  bool Eq(const TestEntry &that) const {
+    return key == that.key && value == that.value;
+  }
+
+  bool operator==(const TestEntry &that) const { return this->Eq(that); }
 };
+
+TEST_F(GenericHashTableTest, Insertion) {
+  GenericHashTable table;
+  table.SetSize(10);
+
+  TestEntry entry(1, 2);
+
+  // Looking up an a missing entry should return null
+  {
+    auto *e = table.FindChainHead(entry.Hash());
+    EXPECT_EQ(nullptr, e);
+  }
+
+  // Try insert and lookup
+  {
+    table.Insert<false>(&entry, entry.Hash());
+    auto *e = table.FindChainHead(entry.Hash());
+    EXPECT_NE(nullptr, e);
+    EXPECT_EQ(nullptr, e->next);
+    EXPECT_EQ(entry, *reinterpret_cast<TestEntry *>(e));
+  }
+
+  // Duplicate insert should find both entries
+  {
+    table.Insert<false>(&entry, entry.Hash());
+    auto *e = table.FindChainHead(entry.Hash());
+    EXPECT_NE(nullptr, e);
+    EXPECT_NE(nullptr, e->next);
+    EXPECT_EQ(entry, *reinterpret_cast<TestEntry *>(e));
+    EXPECT_EQ(*reinterpret_cast<TestEntry *>(entry.next),
+              *reinterpret_cast<TestEntry *>(e->next));
+  }
+
+  // Try finding a missing element for the hell of it
+  {
+    TestEntry entry2(10, 11);
+    auto *e = table.FindChainHead(entry2.Hash());
+    EXPECT_EQ(nullptr, e);
+  }
+}
+
+TEST_F(GenericHashTableTest, TaggedInsertion) {
+  GenericHashTable table;
+  table.SetSize(10);
+
+  TestEntry entry(1, 2);
+
+  // Looking up an a missing entry should return null
+  {
+    auto *e = table.FindChainHeadWithTag(entry.Hash());
+    EXPECT_EQ(nullptr, e);
+  }
+
+  // Try insert and lookup
+  {
+    table.InsertTagged<false>(&entry, entry.Hash());
+    auto *e = table.FindChainHeadWithTag(entry.Hash());
+    EXPECT_NE(nullptr, e);
+    EXPECT_EQ(nullptr, e->next);
+    EXPECT_EQ(entry, *reinterpret_cast<TestEntry *>(e));
+  }
+}
 
 TEST_F(GenericHashTableTest, EmptyIterator) {
   GenericHashTable table;
@@ -80,8 +154,7 @@ TEST_F(GenericHashTableTest, SimpleIteration) {
   std::vector<TestEntry> entries;
   for (u32 idx = 0; idx < num_inserts; idx++) {
     TestEntry entry(random(), 20);
-    entry.hash = util::Hasher::Hash(reinterpret_cast<const u8 *>(&entry.key),
-                                    sizeof(entry.key));
+    entry.hash = entry.Hash();
 
     reference[entry.key] = entry;
     entries.emplace_back(entry);
@@ -150,8 +223,7 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
   std::vector<TestEntry> entries;
   for (u32 idx = 0; idx < num_inserts; idx++) {
     TestEntry entry(key, value);
-    entry.hash = util::Hasher::Hash(reinterpret_cast<const u8 *>(&entry.key),
-                                    sizeof(entry.key));
+    entry.hash = entry.Hash();
     entries.emplace_back(entry);
   }
 
@@ -207,8 +279,7 @@ TEST_F(GenericHashTableTest, DISABLED_PerfIteration) {
   std::random_device random;
   for (u32 idx = 0; idx < num_inserts; idx++) {
     TestEntry entry(random(), 20);
-    entry.hash = util::Hasher::Hash(reinterpret_cast<const u8 *>(&entry.key),
-                                    sizeof(entry.key));
+    entry.hash = entry.Hash();
 
     entries.emplace_back(entry);
   }
