@@ -140,6 +140,7 @@ class Sema : public ast::AstVisitor<Sema> {
                                         ast::Builtin builtin);
   void CheckBuiltinThreadStateContainerCall(ast::CallExpr *call,
                                             ast::Builtin builtin);
+  void CheckMathTrigCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinSizeOfCall(ast::CallExpr *call);
   void CheckBuiltinPtrCastCall(ast::CallExpr *call);
   void CheckBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
