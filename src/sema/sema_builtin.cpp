@@ -40,6 +40,9 @@ void Sema::CheckBuiltinMapCall(UNUSED ast::CallExpr *call) {}
 
 void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call,
                                          ast::Builtin builtin) {
+  if (!CheckArgCount(call, 1)) {
+    return;
+  }
   auto input_type = call->arguments()[0]->type();
   switch (builtin) {
     case ast::Builtin::BoolToSql: {

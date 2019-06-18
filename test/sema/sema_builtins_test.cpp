@@ -23,6 +23,87 @@ class SemaBuiltinTest : public TplTest, public ast::test::TestAstBuilder {
   void ResetErrorReporter() { error_reporter()->Reset(); }
 };
 
+TEST_F(SemaBuiltinTest, CheckSqlConversions) {
+  //
+  // Primitive integer to SQL integer
+  //
+
+  // int input to (int -> Integer) is valid
+  {
+    auto input1 = DeclVar(Ident("input"), PrimIntTypeRepr(), nullptr);
+    auto result = Call<ast::Builtin::IntToSql>(DeclRef(input1));
+    auto block = Block({DeclStmt(input1), ExprStmt(result)});
+    EXPECT_EQ(false, Check(block));
+    EXPECT_TRUE(result->type()->IsSpecificBuiltin(ast::BuiltinType::Integer));
+    ResetErrorReporter();
+  }
+
+  // multiple int input to (int -> Integer) is invalid
+  {
+    auto input1 = DeclVar(Ident("input"), PrimIntTypeRepr(), nullptr);
+    auto result =
+        Call<ast::Builtin::IntToSql>(DeclRef(input1), DeclRef(input1));
+    auto block = Block({DeclStmt(input1), ExprStmt(result)});
+    EXPECT_EQ(true, Check(block));
+    ResetErrorReporter();
+  }
+
+  // bool input to (int -> Integer) is invalid
+  {
+    auto input1 = DeclVar(Ident("input"), PrimBoolTypeRepr(), nullptr);
+    auto result = Call<ast::Builtin::IntToSql>(DeclRef(input1));
+    auto block = Block({DeclStmt(input1), ExprStmt(result)});
+    EXPECT_EQ(true, Check(block));
+    ResetErrorReporter();
+  }
+
+  //
+  // Primitive boolean to SQL Boolean
+  //
+
+  // bool input to (bool -> Boolean) is valid
+  {
+    auto input1 = DeclVar(Ident("input"), PrimBoolTypeRepr(), nullptr);
+    auto result = Call<ast::Builtin::BoolToSql>(DeclRef(input1));
+    auto block = Block({DeclStmt(input1), ExprStmt(result)});
+    EXPECT_EQ(false, Check(block));
+    EXPECT_TRUE(result->type()->IsSpecificBuiltin(ast::BuiltinType::Boolean));
+    ResetErrorReporter();
+  }
+
+  // integer input to (bool -> Boolean) is invalid
+  {
+    auto input1 = DeclVar(Ident("input"), PrimIntTypeRepr(), nullptr);
+    auto result = Call<ast::Builtin::BoolToSql>(DeclRef(input1));
+    auto block = Block({DeclStmt(input1), ExprStmt(result)});
+    EXPECT_EQ(true, Check(block));
+    ResetErrorReporter();
+  }
+
+  //
+  // Primitive float to SQL Real
+  //
+
+  // float input to (float -> Real) is valid
+  {
+    auto input1 = DeclVar(Ident("input"), PrimFloatTypeRepr(), nullptr);
+    auto result = Call<ast::Builtin::FloatToSql>(DeclRef(input1));
+    auto block = Block({DeclStmt(input1), ExprStmt(result)});
+    EXPECT_EQ(false, Check(block));
+    EXPECT_TRUE(result->type()->IsSpecificBuiltin(ast::BuiltinType::Real));
+    ResetErrorReporter();
+  }
+
+  // integer input to (float -> Real) is invalid
+  {
+    auto input1 = DeclVar(Ident("input"), PrimIntTypeRepr(), nullptr);
+    auto result = Call<ast::Builtin::FloatToSql>(DeclRef(input1));
+    auto block = Block({DeclStmt(input1), ExprStmt(result)});
+    EXPECT_EQ(true, Check(block));
+    ResetErrorReporter();
+  }
+}
+
 TEST_F(SemaBuiltinTest, CheckTrigBuiltins) {
 #define CHECK_TRIG(BUILTIN)                                                \
   {                                                                        \

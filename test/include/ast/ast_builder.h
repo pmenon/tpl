@@ -85,17 +85,19 @@ class TestAstBuilder {
     return node_factory()->NewPointerType(empty_, base);
   }
 
-  Expr *IntegerSqlTypeRepr() {
-    return IdentExpr(BuiltinType::Get(ctx(), BuiltinType::Integer)->tpl_name());
+  template <BuiltinType::Kind BUILTIN>
+  Expr *BuiltinTypeRepr() {
+    return IdentExpr(BuiltinType::Get(ctx(), BUILTIN)->tpl_name());
   }
 
-  Expr *RealSqlTypeRepr() {
-    return IdentExpr(BuiltinType::Get(ctx(), BuiltinType::Real)->tpl_name());
-  }
+  Expr *PrimIntTypeRepr() { return BuiltinTypeRepr<BuiltinType::Int32>(); }
+  Expr *PrimFloatTypeRepr() { return BuiltinTypeRepr<BuiltinType::Float32>(); }
+  Expr *PrimBoolTypeRepr() { return BuiltinTypeRepr<BuiltinType::Bool>(); }
 
+  Expr *IntegerSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::Integer>(); }
+  Expr *RealSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::Real>(); }
   Expr *StringSqlTypeRepr() {
-    return IdentExpr(
-        BuiltinType::Get(ctx(), BuiltinType::StringVal)->tpl_name());
+    return BuiltinTypeRepr<BuiltinType::StringVal>();
   }
 
   Expr *ArrayTypeRepr(Expr *type) {
