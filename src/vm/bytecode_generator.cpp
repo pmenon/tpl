@@ -1713,8 +1713,10 @@ void BytecodeGenerator::VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare) {
   LocalVar left = VisitExpressionForLValue(compare->left());
   LocalVar right = VisitExpressionForLValue(compare->right());
 
+  TPL_ASSERT(compare->left()->type() == compare->right()->type(),
+             "Left and right input types to comparison are not equal");
   const bool is_integer_comparison =
-      compare->type()->IsSpecificBuiltin(ast::BuiltinType::Integer);
+      compare->left()->type()->IsSpecificBuiltin(ast::BuiltinType::Integer);
 
   Bytecode code;
   switch (compare->op()) {
