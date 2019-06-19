@@ -256,7 +256,7 @@ class AggregationHashTable {
   template <bool VPIIsFiltered>
   void LookupGroups(VectorProjectionIterator *iters[], u32 num_elems,
                     hash_t hashes[], HashTableEntry *entries[], HashFn hash_fn,
-                    KeyEqFn key_eq_fn) const;
+                    KeyEqFn key_eq_fn);
 
   // Called from LookupBatch() to compute and fill the hashes input vector with
   // the hash values of all input tuples, and to load the initial set of

@@ -225,15 +225,15 @@ template <bool VPIIsFiltered>
 void AggregationHashTable::LookupGroups(
     VectorProjectionIterator *iters[], const u32 num_elems, hash_t hashes[],
     HashTableEntry *entries[], const AggregationHashTable::HashFn hash_fn,
-    const AggregationHashTable::KeyEqFn key_eq_fn) const {
+    const AggregationHashTable::KeyEqFn key_eq_fn) {
   // Compute hash and perform initial lookup
   ComputeHashAndLoadInitial<VPIIsFiltered>(iters, num_elems, hashes, entries,
                                            hash_fn);
 
   // Determine the indexes of entries that are non-null
   u32 *const group_sel = batch_process_state_->group_sel;
-  u32 num_groups = util::VectorUtil::SelectNotNull(
-      entries, iters[0]->num_selected(), group_sel, nullptr);
+  const u32 num_groups =
+      util::VectorUtil::SelectNotNull(entries, num_elems, group_sel, nullptr);
 
   // Candidate groups in 'entries' may have hash collisions. Follow the chain
   // to check key equality.
@@ -243,8 +243,9 @@ void AggregationHashTable::LookupGroups(
 
 template <bool VPIIsFiltered>
 void AggregationHashTable::ComputeHashAndLoadInitial(
-    VectorProjectionIterator *iters[], u32 num_elems, hash_t hashes[],
-    HashTableEntry *entries[], AggregationHashTable::HashFn hash_fn) const {
+    VectorProjectionIterator *iters[], const u32 num_elems, hash_t hashes[],
+    HashTableEntry *entries[],
+    const AggregationHashTable::HashFn hash_fn) const {
   // If the hash table is larger than cache, inject prefetch instructions
   u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
   if (hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
@@ -258,8 +259,9 @@ void AggregationHashTable::ComputeHashAndLoadInitial(
 
 template <bool VPIIsFiltered, bool Prefetch>
 void AggregationHashTable::ComputeHashAndLoadInitialImpl(
-    VectorProjectionIterator *iters[], u32 num_elems, hash_t hashes[],
-    HashTableEntry *entries[], AggregationHashTable::HashFn hash_fn) const {
+    VectorProjectionIterator *iters[], const u32 num_elems, hash_t hashes[],
+    HashTableEntry *entries[],
+    const AggregationHashTable::HashFn hash_fn) const {
   // Compute hash
   if constexpr (VPIIsFiltered) {
     for (u32 idx = 0; iters[0]->HasNextFiltered();
@@ -330,10 +332,8 @@ void AggregationHashTable::CreateMissingGroups(
     VectorProjectionIterator *iters[], u32 num_elems, const hash_t hashes[],
     HashTableEntry *entries[], const AggregationHashTable::KeyEqFn key_eq_fn,
     const AggregationHashTable::InitAggFn init_agg_fn) {
-  // Vector storing all the missing group IDs
-  u32 *const group_sel = batch_process_state_->group_sel;
-
   // Determine which elements are missing a group
+  u32 *const group_sel = batch_process_state_->group_sel;
   const u32 num_groups =
       util::VectorUtil::SelectNull(entries, num_elems, group_sel, nullptr);
 
@@ -361,11 +361,9 @@ void AggregationHashTable::CreateMissingGroups(
 template <bool VPIIsFiltered>
 void AggregationHashTable::AdvanceGroups(
     VectorProjectionIterator *iters[], u32 num_elems, HashTableEntry *entries[],
-    AggregationHashTable::AdvanceAggFn advance_agg_fn) {
-  // Vector storing all valid group indexes
-  u32 *const group_sel = batch_process_state_->group_sel;
-
+    const AggregationHashTable::AdvanceAggFn advance_agg_fn) {
   // All non-null entries are groups that should be updated. Find them now.
+  u32 *const group_sel = batch_process_state_->group_sel;
   const u32 num_groups =
       util::VectorUtil::SelectNotNull(entries, num_elems, group_sel, nullptr);
 
