@@ -67,22 +67,18 @@ fun pipeline_2(state: *State) -> nil {
   @aggHTIterClose(iter)
 }
 
+fun execQuery(execCtx: *ExecutionContext, qs: *State) -> nil {
+  pipeline_1(qs)
+  pipeline_2(qs)
+}
+
 fun main(execCtx: *ExecutionContext) -> int32 {
   var state: State
 
-  // Initialize state
   setUpState(execCtx, &state)
-
-  // Run pipeline 1
-  pipeline_1(&state)
-
-  // Run pipeline 2
-  pipeline_2(&state)
-
-  var ret = state.count
-
-  // Cleanup
+  execQuery(execCtx, &state)
   tearDownState(&state)
 
+  var ret = state.count
   return ret
 }

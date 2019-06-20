@@ -638,19 +638,13 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
 
 void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call,
                                              UNUSED ast::Builtin builtin) {
-  TPL_ASSERT(call->type()->size() == sizeof(hash_t),
-             "Hash value size (from return type of @hash) doesn't match actual "
-             "size of hash_t type");
+  TPL_ASSERT(call->type()->IsSpecificBuiltin(ast::BuiltinType::Uint64),
+             "Return type of @hash(...) expected to be 8-byte unsigned hash");
 
-  // hash_val is where we accumulate all the hash values passed to the @hash()
+  // The running hash value. Initialized to zero and fed as the seed to- and
+  // destination for- all hash invocations.
   LocalVar hash_val = execution_result()->GetOrCreateDestination(call->type());
-
-  // Initialize it to 1
-  emitter()->EmitAssignImm8(hash_val, 1);
-
-  // tmp is a temporary variable we use to store individual hash values. We
-  // combine all values into hash_val above
-  LocalVar tmp = current_function()->NewLocal(call->type());
+  emitter()->EmitAssignImm8(hash_val, 0);
 
   for (u32 idx = 0; idx < call->num_args(); idx++) {
     LocalVar input = VisitExpressionForLValue(call->arguments()[idx]);
@@ -659,21 +653,24 @@ void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call,
     auto *type = call->arguments()[idx]->type()->As<ast::BuiltinType>();
     switch (type->kind()) {
       case ast::BuiltinType::Integer: {
-        emitter()->Emit(Bytecode::HashInt, tmp, input);
+        emitter()->Emit(Bytecode::HashInt, hash_val, input, hash_val.ValueOf());
         break;
       }
       case ast::BuiltinType::Real: {
-        emitter()->Emit(Bytecode::HashReal, tmp, input);
+        emitter()->Emit(Bytecode::HashReal, hash_val, input,
+                        hash_val.ValueOf());
         break;
       }
       case ast::BuiltinType::StringVal: {
-        emitter()->Emit(Bytecode::HashString, tmp, input);
+        emitter()->Emit(Bytecode::HashString, hash_val, input,
+                        hash_val.ValueOf());
         break;
       }
       default: { UNREACHABLE("Hashing this type isn't supported!"); }
     }
-    emitter()->Emit(Bytecode::HashCombine, hash_val, tmp.ValueOf());
   }
+
+  // Set return
   execution_result()->set_destination(hash_val.ValueOf());
 }
 

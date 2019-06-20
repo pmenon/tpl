@@ -458,20 +458,31 @@ void OpVPIFilterNotEqual(u32 *size, tpl::sql::VectorProjectionIterator *vpi,
 // Hashing
 // ---------------------------------------------------------
 
-VM_OP_HOT void OpHashInt(hash_t *hash_val, tpl::sql::Integer *input) {
-  *hash_val = tpl::util::Hasher::Hash<tpl::util::HashMethod::Crc>(input->val);
+VM_OP_HOT void OpHashInt(hash_t *const hash_val,
+                         const tpl::sql::Integer *const input,
+                         const hash_t seed) {
+  *hash_val =
+      tpl::util::Hasher::Hash<tpl::util::HashMethod::Crc>(input->val, seed);
   *hash_val = input->is_null ? 0 : *hash_val;
 }
 
-VM_OP_HOT void OpHashReal(hash_t *hash_val, tpl::sql::Real *input) {
-  *hash_val = tpl::util::Hasher::Hash<tpl::util::HashMethod::Crc>(input->val);
+VM_OP_HOT void OpHashReal(hash_t *const hash_val,
+                          const tpl::sql::Real *const input,
+                          const hash_t seed) {
+  *hash_val =
+      tpl::util::Hasher::Hash<tpl::util::HashMethod::Crc>(input->val, seed);
   *hash_val = input->is_null ? 0 : *hash_val;
 }
 
-VM_OP_HOT void OpHashString(hash_t *hash_val, tpl::sql::StringVal *input) {
-  *hash_val = tpl::util::Hasher::Hash<tpl::util::HashMethod::xxHash3>(
-      reinterpret_cast<const u8 *>(input->ptr), input->len);
-  *hash_val = input->is_null ? 0 : *hash_val;
+VM_OP_HOT void OpHashString(hash_t *const hash_val,
+                            const tpl::sql::StringVal *const input,
+                            const hash_t seed) {
+  if (input->is_null) {
+    *hash_val = 0;
+  } else {
+    *hash_val = tpl::util::Hasher::Hash<tpl::util::HashMethod::xxHash3>(
+        reinterpret_cast<const u8 *>(input->ptr), input->len, seed);
+  }
 }
 
 VM_OP_HOT void OpHashCombine(hash_t *hash_val, hash_t new_hash_val) {

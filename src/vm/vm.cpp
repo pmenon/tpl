@@ -651,21 +651,24 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   OP(HashInt) : {
     auto *hash_val = frame->LocalAt<hash_t *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
-    OpHashInt(hash_val, input);
+    auto seed = frame->LocalAt<const hash_t>(READ_LOCAL_ID());
+    OpHashInt(hash_val, input, seed);
     DISPATCH_NEXT();
   }
 
   OP(HashReal) : {
     auto *hash_val = frame->LocalAt<hash_t *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    OpHashReal(hash_val, input);
+    auto seed = frame->LocalAt<const hash_t>(READ_LOCAL_ID());
+    OpHashReal(hash_val, input, seed);
     DISPATCH_NEXT();
   }
 
   OP(HashString) : {
     auto *hash_val = frame->LocalAt<hash_t *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
-    OpHashString(hash_val, input);
+    auto seed = frame->LocalAt<const hash_t>(READ_LOCAL_ID());
+    OpHashString(hash_val, input, seed);
     DISPATCH_NEXT();
   }
 
