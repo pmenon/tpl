@@ -33,6 +33,30 @@ class Hasher {
    * @return The compute hash.
    */
   template <HashMethod METHOD = HashMethod::Crc, typename T>
+  static auto Hash(const T val, const hash_t seed)
+      -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
+    switch (METHOD) {
+      case HashMethod::Fnv1:
+        return HashFnv1(val, seed);
+      case HashMethod::Crc:
+        return HashCrc(val, seed);
+      case HashMethod::Murmur2:
+        return HashMurmur2(val, seed);
+      case HashMethod::xxHash3:
+        return HashXX3(val, seed);
+    }
+  }
+
+  /**
+   * Compute the hash value of an arithmetic input. The input is allowed to be
+   * either an integral numbers (8- to 64-bits) or floating pointer numbers.
+   * @tparam METHOD The hash method to use.
+   * @tparam T The input arithmetic type.
+   * @param val The input value to hash.
+   * @param seed The seed hash value to mix in.
+   * @return The compute hash.
+   */
+  template <HashMethod METHOD = HashMethod::Crc, typename T>
   static auto Hash(const T val)
       -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
     switch (METHOD) {
@@ -65,6 +89,28 @@ class Hasher {
         return HashMurmur2(buf, len);
       case HashMethod::xxHash3:
         return HashXX3(buf, len);
+    }
+  }
+
+  /**
+   * Compute the hash value of an input buffer @em buf with length @em len.
+   * @tparam METHOD The hash method to use.
+   * @param buf The input buffer.
+   * @param len The length of the input buffer to hash.
+   * @param seed The seed hash value to mix in.
+   * @return The computed hash value based on the contents of the input buffer.
+   */
+  template <HashMethod METHOD = HashMethod::Crc>
+  static hash_t Hash(const u8 *buf, u32 len, const hash_t seed) {
+    switch (METHOD) {
+      case HashMethod::Fnv1:
+        return HashFnv1(buf, len, seed);
+      case HashMethod::Crc:
+        return HashCrc(buf, len, seed);
+      case HashMethod::Murmur2:
+        return HashMurmur2(buf, len, seed);
+      case HashMethod::xxHash3:
+        return HashXX3(buf, len, seed);
     }
   }
 
@@ -243,13 +289,21 @@ class Hasher {
   // xx3 Hashing
   // -------------------------------------------------------
 
+  static hash_t HashXX3(const u8 *buf, u32 len, hash_t seed);
+
+  static hash_t HashXX3(const u8 *buf, u32 len) { return HashXX3(buf, len, 0); }
+
+  template <typename T>
+  static auto HashXX3(const T val, const hash_t seed)
+      -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
+    return HashXX3(reinterpret_cast<const u8 *>(&val), sizeof(T), seed);
+  }
+
   template <typename T>
   static auto HashXX3(const T val)
       -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
     return HashXX3(reinterpret_cast<const u8 *>(&val), sizeof(T));
   }
-
-  static hash_t HashXX3(const u8 *buf, u32 len);
 
   // -------------------------------------------------------
   // FNV
@@ -258,12 +312,6 @@ class Hasher {
   // default values recommended by http://isthe.com/chongo/tech/comp/fnv/
   static constexpr u64 kFNV64Prime = 1099511628211UL;
   static constexpr u64 kFNV64Seed = 14695981039346656037UL;
-
-  template <typename T>
-  static auto HashFnv1(const T val)
-      -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
-    return HashFnv1(reinterpret_cast<const u8 *>(&val), sizeof(T));
-  }
 
   static hash_t HashFnv1(const u8 *buf, u32 len, hash_t seed) {
     while (len--) {
@@ -275,6 +323,18 @@ class Hasher {
 
   static hash_t HashFnv1(const u8 *buf, u32 len) {
     return HashFnv1(buf, len, kFNV64Seed);
+  }
+
+  template <typename T>
+  static auto HashFnv1(const T val, const hash_t seed)
+      -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
+    return HashFnv1(reinterpret_cast<const u8 *>(&val), sizeof(T), seed);
+  }
+
+  template <typename T>
+  static auto HashFnv1(const T val)
+      -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
+    return HashFnv1(reinterpret_cast<const u8 *>(&val), sizeof(T));
   }
 };
 
