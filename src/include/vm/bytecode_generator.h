@@ -55,7 +55,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   void VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinTableIterParallelCall(ast::CallExpr *call);
   void VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinHashCall(ast::CallExpr *call, ast::Builtin builtin);
+  void VisitBuiltinHashCall(ast::CallExpr *call);
   void VisitBuiltinFilterManagerCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinFilterCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builtin);
@@ -122,7 +122,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   void VisitPrimitiveCompareOpExpr(ast::ComparisonOpExpr *compare);
 
   void BuildDeref(LocalVar dest, LocalVar ptr, ast::Type *dest_type);
-  void BuildAssign(LocalVar dest, LocalVar ptr, ast::Type *dest_type);
+  void BuildAssign(LocalVar dest, LocalVar val, ast::Type *dest_type);
   LocalVar BuildLoadPointer(LocalVar double_ptr, ast::Type *type);
 
   Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type);

@@ -636,37 +636,55 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
   }
 }
 
-void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call,
-                                             UNUSED ast::Builtin builtin) {
+void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call) {
   TPL_ASSERT(call->type()->IsSpecificBuiltin(ast::BuiltinType::Uint64),
              "Return type of @hash(...) expected to be 8-byte unsigned hash");
+  TPL_ASSERT(!call->arguments().empty(),
+             "@hash() must contain at least one input argument");
+  TPL_ASSERT(execution_result() != nullptr,
+             "Caller of @hash() must use result");
+
+  const bool caller_provided_ret = execution_result()->HasDestination();
 
   // The running hash value. Initialized to zero and fed as the seed to- and
   // destination for- all hash invocations.
   LocalVar hash_val = execution_result()->GetOrCreateDestination(call->type());
-  emitter()->EmitAssignImm8(hash_val, 0);
+
+  LocalVar seed;
+  if (caller_provided_ret) {
+    seed = current_function()->NewLocal(call->type(), "seed");
+  } else {
+    seed = hash_val;
+  }
+
+  // Initialize the seed
+  emitter()->EmitAssignImm8(seed, 0);
 
   for (u32 idx = 0; idx < call->num_args(); idx++) {
-    LocalVar input = VisitExpressionForLValue(call->arguments()[idx]);
     TPL_ASSERT(call->arguments()[idx]->type()->IsSqlValueType(),
                "Input to hash must be a SQL value type");
-    auto *type = call->arguments()[idx]->type()->As<ast::BuiltinType>();
+
+    LocalVar input = VisitExpressionForLValue(call->arguments()[idx]);
+    const auto *type = call->arguments()[idx]->type()->As<ast::BuiltinType>();
     switch (type->kind()) {
       case ast::BuiltinType::Integer: {
-        emitter()->Emit(Bytecode::HashInt, hash_val, input, hash_val.ValueOf());
+        emitter()->Emit(Bytecode::HashInt, hash_val, input, seed.ValueOf());
         break;
       }
       case ast::BuiltinType::Real: {
-        emitter()->Emit(Bytecode::HashReal, hash_val, input,
-                        hash_val.ValueOf());
+        emitter()->Emit(Bytecode::HashReal, hash_val, input, seed.ValueOf());
         break;
       }
       case ast::BuiltinType::StringVal: {
-        emitter()->Emit(Bytecode::HashString, hash_val, input,
-                        hash_val.ValueOf());
+        emitter()->Emit(Bytecode::HashString, hash_val, input, seed.ValueOf());
         break;
       }
       default: { UNREACHABLE("Hashing this type isn't supported!"); }
+    }
+    if (idx != call->num_args() - 1) {
+      if (caller_provided_ret) {
+        BuildDeref(seed, hash_val, call->type());
+      }
     }
   }
 
@@ -1360,7 +1378,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       break;
     }
     case ast::Builtin::Hash: {
-      VisitBuiltinHashCall(call, builtin);
+      VisitBuiltinHashCall(call);
       break;
     };
     case ast::Builtin::FilterManagerInit:
@@ -1843,18 +1861,18 @@ void BytecodeGenerator::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   Visit(node->body());
 }
 
-void BytecodeGenerator::BuildAssign(LocalVar dest, LocalVar ptr,
+void BytecodeGenerator::BuildAssign(LocalVar dest, LocalVar val,
                                     ast::Type *dest_type) {
   // Emit the appropriate assignment
   const u32 size = dest_type->size();
   if (size == 1) {
-    emitter()->EmitAssign(Bytecode::Assign1, dest, ptr);
+    emitter()->EmitAssign(Bytecode::Assign1, dest, val);
   } else if (size == 2) {
-    emitter()->EmitAssign(Bytecode::Assign2, dest, ptr);
+    emitter()->EmitAssign(Bytecode::Assign2, dest, val);
   } else if (size == 4) {
-    emitter()->EmitAssign(Bytecode::Assign4, dest, ptr);
+    emitter()->EmitAssign(Bytecode::Assign4, dest, val);
   } else {
-    emitter()->EmitAssign(Bytecode::Assign8, dest, ptr);
+    emitter()->EmitAssign(Bytecode::Assign8, dest, val);
   }
 }
 
