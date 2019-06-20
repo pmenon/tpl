@@ -37,11 +37,7 @@ struct ColumnInsertMeta {
 
   ColumnInsertMeta(const char *name, const Type &type, Dist dist,
                    std::variant<i64, double> min, std::variant<i64, double> max)
-      : name(name),
-        type(type),
-        dist(dist),
-        min(std::move(min)),
-        max(std::move(max)) {}
+      : name(name), type(type), dist(dist), min(min), max(max) {}
 };
 
 /**
