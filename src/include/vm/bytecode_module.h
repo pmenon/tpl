@@ -66,7 +66,7 @@ class BytecodeModule {
    * Pretty print all the module's contents into the provided output stream
    * @param os The stream into which we dump the module's contents
    */
-  void PrettyPrint(std::ostream &os);
+  void PrettyPrint(std::ostream &os) const;
 
   /**
    * Return the name of the module

@@ -74,7 +74,7 @@ void PrettyPrintFunc(std::ostream &os, const BytecodeModule &module,
 
 }  // namespace
 
-void BytecodeModule::PrettyPrint(std::ostream &os) {
+void BytecodeModule::PrettyPrint(std::ostream &os) const {
   for (const auto &func : functions_) {
     PrettyPrintFunc(os, *this, func);
   }
