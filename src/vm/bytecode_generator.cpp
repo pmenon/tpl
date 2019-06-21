@@ -652,7 +652,7 @@ void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call) {
 
   LocalVar seed;
   if (caller_provided_ret) {
-    seed = current_function()->NewLocal(call->type(), "seed");
+    seed = current_function()->NewLocal(call->type());
   } else {
     seed = hash_val;
   }
