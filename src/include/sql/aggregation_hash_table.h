@@ -9,6 +9,7 @@
 #include "sql/memory_pool.h"
 #include "sql/schema.h"
 #include "util/chunked_vector.h"
+#include "util/fixed_length_buffer.h"
 
 namespace libcount {
 class HLL;
@@ -242,58 +243,48 @@ class AggregationHashTable {
   // Compute the hash value and perform the table lookup for all elements in the
   // input vector projections.
   template <bool VPIIsFiltered>
-  void ProcessBatchImpl(VectorProjectionIterator *iters[], u32 num_elems,
-                        hash_t hashes[], HashTableEntry *entries[],
-                        HashFn hash_fn, KeyEqFn key_eq_fn,
-                        InitAggFn init_agg_fn, AdvanceAggFn advance_agg_fn,
-                        bool partitioned);
+  void ProcessBatchImpl(VectorProjectionIterator *iters[], HashFn hash_fn,
+                        KeyEqFn key_eq_fn, InitAggFn init_agg_fn,
+                        AdvanceAggFn advance_agg_fn, bool partitioned);
 
-  // Called from ProcessBatch() to lookup matching groups for all tuples in the
-  // input vector projection. Upon return, the hashes vector will contain the
-  // hash values of all elements in the input vector, and entries will contain a
-  // pointer to the associated element's group aggregate, or null if no group
-  // exists.
+  // Dispatched from ProcessBatchImpl() to compute the hash values for all input
+  // tuples. Hashes are stored in the 'hashes' array in the batch state.
   template <bool VPIIsFiltered>
-  void LookupGroups(VectorProjectionIterator *iters[], u32 num_elems,
-                    hash_t hashes[], HashTableEntry *entries[], HashFn hash_fn,
-                    KeyEqFn key_eq_fn);
+  void ComputeHash(VectorProjectionIterator *iters[], HashFn hash_fn);
 
-  // Called from LookupBatch() to compute and fill the hashes input vector with
-  // the hash values of all input tuples, and to load the initial set of
-  // candidate groups into the entries vector. When this function returns, the
-  // hashes vector will be full, and the entries vector will contain either a
-  // pointer to the first (of potentially many) elements in the hash table that
-  // match the input hash value.
+  // Called from ProcessBatchImpl() to find matching groups for all tuples in
+  // the input vector projection. This function returns the number of groups
+  // that were found.
   template <bool VPIIsFiltered>
-  void ComputeHashAndLoadInitial(VectorProjectionIterator *iters[],
-                                 u32 num_elems, hash_t hashes[],
-                                 HashTableEntry *entries[],
-                                 HashFn hash_fn) const;
-  template <bool VPIIsFiltered, bool Prefetch>
-  void ComputeHashAndLoadInitialImpl(VectorProjectionIterator *iters[],
-                                     u32 num_elems, hash_t hashes[],
-                                     HashTableEntry *entries[],
-                                     HashFn hash_fn) const;
+  u32 FindGroups(VectorProjectionIterator *iters[], KeyEqFn key_eq_fn);
 
-  // Called from LookupBatch() to follow the entry chain of candidate group
-  // entries filtered through group_sel. Follows the chain and uses the key
-  // equality function to resolve hash collisions.
+  // Called from FindGroups() to lookup initial entries from the hash table for
+  // all input tuples.
+  u32 LookupInitial(u32 num_elems);
+
+  // Specialization of LookupInitial() to control whether to perform lookup with
+  // prefetching enabled.
+  template <bool Prefetch>
+  u32 LookupInitialImpl(u32 num_elems);
+
+  // Called from FindGroups() to check the equality of keys.
   template <bool VPIIsFiltered>
-  void FollowNextLoop(VectorProjectionIterator *iters[], u32 num_elems,
-                      u32 group_sel[], const hash_t hashes[],
-                      HashTableEntry *entries[], KeyEqFn key_eq_fn) const;
+  u32 CheckKeyEquality(VectorProjectionIterator *iters[], u32 num_elems,
+                       KeyEqFn key_eq_fn);
+
+  // Called from FindGroups() to follow the entry chain of candidate groups.
+  u32 FollowNext();
 
   // Called from ProcessBatch() to create missing groups
   template <bool VPIIsFiltered, bool Partitioned>
-  void CreateMissingGroups(VectorProjectionIterator *iters[], u32 num_elems,
-                           const hash_t hashes[], HashTableEntry *entries[],
-                           KeyEqFn key_eq_fn, InitAggFn init_agg_fn);
+  void CreateMissingGroups(VectorProjectionIterator *iters[], KeyEqFn key_eq_fn,
+                           InitAggFn init_agg_fn);
 
   // Called from ProcessBatch() to update only the valid entries in the input
   // vector
   template <bool VPIIsFiltered>
-  void AdvanceGroups(VectorProjectionIterator *iters[], u32 num_elems,
-                     HashTableEntry *entries[], AdvanceAggFn advance_agg_fn);
+  void AdvanceGroups(VectorProjectionIterator *iters[], u32 num_groups,
+                     AdvanceAggFn advance_agg_fn);
 
   // Called during partitioned scan to build an aggregation hash table over a
   // single partition.
@@ -318,13 +309,20 @@ class AggregationHashTable {
 
   // A struct we use to track various metadata during match processing
   struct BatchProcessState {
-    alignas(CACHELINE_SIZE) hash_t hashes[kDefaultVectorSize];
-    alignas(CACHELINE_SIZE) HashTableEntry *entries[kDefaultVectorSize];
-    alignas(CACHELINE_SIZE) u32 group_sel[kDefaultVectorSize];
+    // The array of computed hash values
+    std::array<hash_t, kDefaultVectorSize> hashes;
+    // Buffer containing entry pointers after lookup and key equality checks
+    std::array<HashTableEntry *, kDefaultVectorSize> entries;
+    // Buffer containing indexes of tuples that found a matching group
+    std::array<u32, kDefaultVectorSize> groups_found;
+    // Buffer containing indexes of tuples that did not find a matching group
+    util::FixedLengthBuffer<u32, kDefaultVectorSize> groups_not_found;
+    // Buffer containing indexes of tuples that didn't match keys
+    util::FixedLengthBuffer<u32, kDefaultVectorSize> key_not_eq;
   };
 
   // State required when processing batches of input. Allocated on first use.
-  BatchProcessState *batch_process_state_;
+  BatchProcessState *batch_state_;
 
   // -------------------------------------------------------
   // Overflow partitions
