@@ -58,8 +58,7 @@ class JoinHashTableVectorProbeTest : public TplTest {
 template <u8 N>
 static hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
   const auto *key_ptr = vpi->GetValue<u32, false>(0, nullptr);
-  return util::Hasher::Hash(reinterpret_cast<const u8 *>(key_ptr),
-                            sizeof(Tuple<N>::build_key));
+  return util::Hasher::Hash(*key_ptr);
 }
 
 /// The function to determine whether two tuples have equivalent keys

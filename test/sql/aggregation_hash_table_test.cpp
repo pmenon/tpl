@@ -202,7 +202,7 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
   const auto hash_fn = [](void *x) {
     auto iters = reinterpret_cast<VectorProjectionIterator **>(x);
     auto key = iters[0]->GetValue<u32, false>(0, nullptr);
-    return util::Hasher::Hash(reinterpret_cast<const u8 *>(key), sizeof(u32));
+    return util::Hasher::Hash(*key);
   };
 
   const auto key_eq = [](const void *agg, const void *x) {
