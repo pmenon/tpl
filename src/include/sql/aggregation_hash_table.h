@@ -307,8 +307,10 @@ class AggregationHashTable {
   // The hash index.
   GenericHashTable hash_table_;
 
-  // A struct we use to track various metadata during match processing
+  // A struct we use to track various metadata during batch processing
   struct BatchProcessState {
+    // Unique hash estimator
+    std::unique_ptr<libcount::HLL> hll_estimator;
     // The array of computed hash values
     std::array<hash_t, kDefaultVectorSize> hashes;
     // Buffer containing entry pointers after lookup and key equality checks
@@ -319,10 +321,16 @@ class AggregationHashTable {
     util::FixedLengthBuffer<u32, kDefaultVectorSize> groups_not_found;
     // Buffer containing indexes of tuples that didn't match keys
     util::FixedLengthBuffer<u32, kDefaultVectorSize> key_not_eq;
+
+    // Constructor
+    explicit BatchProcessState(std::unique_ptr<libcount::HLL> estimator);
+
+    // Destructor
+    ~BatchProcessState();
   };
 
   // State required when processing batches of input. Allocated on first use.
-  BatchProcessState *batch_state_;
+  MemPoolPtr<BatchProcessState> batch_state_;
 
   // -------------------------------------------------------
   // Overflow partitions

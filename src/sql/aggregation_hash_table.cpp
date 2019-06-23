@@ -19,6 +19,23 @@
 
 namespace tpl::sql {
 
+// ---------------------------------------------------------
+// Batch Process State
+// ---------------------------------------------------------
+
+AggregationHashTable::BatchProcessState::BatchProcessState(
+    std::unique_ptr<libcount::HLL> estimator)
+    : hll_estimator(std::move(estimator)),
+      hashes{0},
+      entries{nullptr},
+      groups_found{0} {}
+
+AggregationHashTable::BatchProcessState::~BatchProcessState() = default;
+
+// ---------------------------------------------------------
+// Aggregation Hash Table
+// ---------------------------------------------------------
+
 AggregationHashTable::AggregationHashTable(MemoryPool *memory,
                                            std::size_t payload_size)
     : AggregationHashTable(memory, payload_size, kDefaultInitialTableSize) {}
@@ -54,7 +71,7 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory,
 
 AggregationHashTable::~AggregationHashTable() {
   if (batch_state_ != nullptr) {
-    memory_->Deallocate(batch_state_, sizeof(BatchProcessState));
+    memory_->FreeObject(std::move(batch_state_));
   }
   if (partition_heads_ != nullptr) {
     memory_->DeallocateArray(partition_heads_, kDefaultNumPartitions);
@@ -177,8 +194,9 @@ void AggregationHashTable::ProcessBatch(
 
   // Allocate all required batch state, but only on first invocation.
   if (TPL_UNLIKELY(batch_state_ == nullptr)) {
-    batch_state_ = static_cast<BatchProcessState *>(
-        memory_->Allocate(sizeof(BatchProcessState), false));
+    batch_state_ =
+        memory_->NewObject<BatchProcessState>(std::unique_ptr<libcount::HLL>(
+            libcount::HLL::Create(kDefaultHLLPrecision)));
   }
 
   // Launch
