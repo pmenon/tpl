@@ -27,7 +27,7 @@ class MemPoolPtr {
    * Null pointer.
    */
   MemPoolPtr() : obj_(nullptr) {}
-  explicit MemPoolPtr(nullptr_t) : obj_(nullptr) {}
+  explicit MemPoolPtr(std::nullptr_t) : obj_(nullptr) {}
 
   /**
    * Copy.
