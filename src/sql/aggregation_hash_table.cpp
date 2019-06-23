@@ -302,18 +302,18 @@ u32 AggregationHashTable::LookupInitialImpl(const u32 num_elems) {
       if (entry->hash == hash) {
         entries[idx] = entry;
         groups_found[found++] = idx;
-        goto nextChainFiltered;
+        goto nextChain;
       }
       for (entry = entry->next; entry != nullptr; entry = entry->next) {
         if (entry->hash == hash) {
           entries[idx] = entry;
           groups_found[found++] = idx;
-          goto nextChainFiltered;
+          goto nextChain;
         }
       }
     }
     groups_not_found.append(idx);
-  nextChainFiltered:
+  nextChain:
     idx++;
   }
 
@@ -356,7 +356,7 @@ u32 AggregationHashTable::FollowNext() {
   auto &groups_not_found = batch_state_->groups_not_found;
 
   u32 matched = 0;
-  for (u32 i = 0; i < key_not_eq.size(); i++) {
+  for (u32 i = 0; i < key_not_eq.size(); ) {
     const auto index = key_not_eq[i];
     for (auto *entry = entries[index]; entry != nullptr; entry = entry->next) {
       const auto hash = hashes[index];
@@ -365,8 +365,8 @@ u32 AggregationHashTable::FollowNext() {
         groups_found[matched++] = index;
         goto nextChain;
       }
-      groups_not_found.append(index);
     }
+    groups_not_found.append(index);
   nextChain:
     i++;
   }
