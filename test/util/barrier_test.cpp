@@ -1,5 +1,6 @@
-#include <chrono>
-#include <future>
+#include <chrono>  // NOLINT
+#include <future>  // NOLINT
+#include <vector>
 
 #include "tpl_test.h"  // NOLINT
 
@@ -7,7 +8,7 @@
 
 namespace tpl::util::test {
 
-using namespace std::chrono_literals;
+using namespace std::chrono_literals;  // NOLINT
 
 TEST(BarrierTest, Wait) {
   Barrier barrier(2);

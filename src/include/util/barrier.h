@@ -1,7 +1,7 @@
 #pragma once
 
-#include <condition_variable>
-#include <mutex>
+#include <condition_variable>  // NOLINT
+#include <mutex>               // NOLINT
 
 #include "util/common.h"
 #include "util/macros.h"

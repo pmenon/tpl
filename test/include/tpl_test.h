@@ -1,6 +1,7 @@
 #pragma once
 
-#include <thread>
+#include <thread>  // NOLINT
+#include <vector>
 
 #include "gtest/gtest.h"
 

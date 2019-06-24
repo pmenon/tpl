@@ -1,6 +1,7 @@
 #include "sql/aggregation_hash_table.h"
 
 #include <algorithm>
+#include <memory>
 #include <utility>
 #include <vector>
 
