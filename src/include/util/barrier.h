@@ -9,7 +9,14 @@
 namespace tpl::util {
 
 /**
- * A cyclic barrier
+ * A cyclic barrier is a synchronization construct that allows multiple threads
+ * to wait for each other to reach a common barrier point. The barrier is
+ * configured with a particular number of threads (N) and, as each thread
+ * reaches the barrier, must wait until the remaining N threads arrive. Once the
+ * last thread arrive at the barrier point, all waiting threads proceed and the
+ * barrier is reset.
+ *
+ * The barrier is considered "cyclic" because it can be reused.
  */
 class Barrier {
  public:
@@ -25,13 +32,13 @@ class Barrier {
   DISALLOW_COPY_AND_MOVE(Barrier);
 
   /**
-   * Wait at the barrier until the generation ends.
+   * Wait at the barrier point until all remaining threads arrive.
    */
   void Wait() {
     std::unique_lock<std::mutex> lock(mutex_);
 
-    // If we're the last to reach the barrier, bump the generation and notify
-    // everyone waiting.
+    // If we're the last thread to arrive, bump the generation, reset the count
+    // and wake up all waiting threads.
     if (--count_ == 0) {
       generation_++;
       count_ = reset_value_;
@@ -39,13 +46,14 @@ class Barrier {
       return;
     }
 
-    // We're not the last at the barrier, so we wait
+    // Otherwise, we wait for some thread (i.e., the last thread to arrive) to
+    // bump the generation and notify us.
     const u32 gen = generation_;
     cv_.wait(lock, [&]() { return gen != generation_; });
   }
 
   /**
-   * Get the current generation the barrier is on.
+   * Get the current generation the barrier is in.
    */
   u32 GetGeneration() {
     std::unique_lock<std::mutex> lock(mutex_);
@@ -53,7 +61,9 @@ class Barrier {
   }
 
  private:
+  // The mutex used to protect all fields
   std::mutex mutex_;
+  // The condition variable threads wait on
   std::condition_variable cv_;
 
   // The current generation
