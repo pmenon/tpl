@@ -101,24 +101,54 @@ class VectorUtil {
   }
 
   /**
-   * Gather potentially non-contiguous indexes from an input vector and store
+   * Gather non-contiguous elements from an input vector of pointers and store
    * them into an output vector. Only elements whose indexes are stored in the
    * index selection vector are gathered into the output vector.
    * @tparam T The data type of the input vector.
    * @param n The number of elements in the index selection vector.
-   * @param input The input vector to read from.
+   * @param input The input vector of pointers to read from.
    * @param indexes The index selection vector storing input vector indexes.
    * @param out The output vector where results are stored.
    * @return The number of elements that were gathered.
    */
   template <typename T>
-  static u32 Gather(const u32 n, const T *RESTRICT input,
-                    const u32 *RESTRICT indexes, T *RESTRICT out) {
+  static u32 Gather(const u32 n, T **RESTRICT input,
+                    const u32 *RESTRICT indexes, T **RESTRICT out) {
     TPL_ASSERT(input != nullptr, "Input cannot be null");
     TPL_ASSERT(indexes != nullptr, "Indexes vector cannot be null");
 
-    for (std::size_t i = 0; i < n; i++) {
-      out[i] = input[indexes[i]];
+    u64 in = simd::Gather(n, input, indexes, out);
+
+    for (; in < n; in++) {
+      out[in] = input[indexes[in]];
+    }
+
+    return n;
+  }
+
+  /**
+   * Gather non-contiguous elements from an input vector of pointers and store
+   * them into an output vector. Only elements whose indexes are stored in the
+   * index selection vector are gathered into the output vector.
+   * @tparam T The data type of the input vector.
+   * @param n The number of elements in the index selection vector.
+   * @param input The input vector of pointers to read from.
+   * @param hashes The index selection vector storing input vector indexes.
+   * @param out The output vector where results are stored.
+   * @return The number of elements that were gathered.
+   */
+  template <typename T>
+  static u32 GatherWithHashes(const u32 n, T **RESTRICT input,
+                              const hash_t *RESTRICT hashes, const u64 mask,
+                              T **RESTRICT out) {
+    static_assert(sizeof(decltype(mask)) == sizeof(hash_t));
+    TPL_ASSERT(input != nullptr, "Input cannot be null");
+    TPL_ASSERT(hashes != nullptr, "Hashes vector cannot be null");
+
+    u64 in = simd::GatherWithHashes(n, input, hashes, mask, out);
+
+    for (; in < n; in++) {
+      out[in] = input[hashes[in] & mask];
     }
 
     return n;

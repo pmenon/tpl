@@ -515,11 +515,16 @@ TEST_F(VectorUtilTest, DISABLED_PerfSelectTest) {
 }
 
 TEST_F(VectorUtilTest, GatherTest) {
-  auto array = AllocateArray<u32>(800000);
+  constexpr u32 num_elems = 800000;
+  auto array = AllocateArray<u32*>(num_elems);
   auto indexes = AllocateArray<u32>(1000);
-  auto output = AllocateArray<u32>(1000);
+  auto output = AllocateArray<u32*>(1000);
 
-  std::iota(array.begin(), array.end(), 0);
+  std::vector<u32> ref(num_elems);
+  std::iota(ref.begin(), ref.end(), 0);
+  for (u32 i = 0; i < num_elems; i++) {
+    array[i] = &ref[i];
+  }
 
   std::random_device random;
   std::generate(indexes.begin(), indexes.end(),
