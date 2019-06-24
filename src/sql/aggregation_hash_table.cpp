@@ -237,9 +237,15 @@ void AggregationHashTable::ProcessBatchImpl(
   iters[0]->Reset();
 }
 
+// The functions below marked NEVER_INLINE are done so on purpose. Adding them
+// improves instruction locality by reducing the code size for vectorized
+// components. It predictably yields 5-10% improvements to performance to
+// single- and multi-threaded aggregation benchmarks.
+
 template <bool VPIIsFiltered>
-void AggregationHashTable::ComputeHash(VectorProjectionIterator *iters[],
-                                       AggregationHashTable::HashFn hash_fn) {
+NEVER_INLINE void AggregationHashTable::ComputeHash(
+    VectorProjectionIterator *iters[],
+    const AggregationHashTable::HashFn hash_fn) {
   auto &hashes = batch_state_->hashes;
   if constexpr (VPIIsFiltered) {
     for (u32 idx = 0; iters[0]->HasNextFiltered();
@@ -254,7 +260,7 @@ void AggregationHashTable::ComputeHash(VectorProjectionIterator *iters[],
 }
 
 template <bool VPIIsFiltered>
-u32 AggregationHashTable::FindGroups(
+NEVER_INLINE u32 AggregationHashTable::FindGroups(
     VectorProjectionIterator *iters[],
     const AggregationHashTable::KeyEqFn key_eq_fn) {
   batch_state_->key_not_eq.clear();
@@ -270,7 +276,7 @@ u32 AggregationHashTable::FindGroups(
   return keys_equal;
 }
 
-u32 AggregationHashTable::LookupInitial(const u32 num_elems) {
+NEVER_INLINE u32 AggregationHashTable::LookupInitial(const u32 num_elems) {
   // If the hash table is larger than cache, inject prefetch instructions
   u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
   if (hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
@@ -283,7 +289,7 @@ u32 AggregationHashTable::LookupInitial(const u32 num_elems) {
 // This function will perform an initial lookup for all input tuples, storing
 // entries that match on hash value in the 'entries' array.
 template <bool Prefetch>
-u32 AggregationHashTable::LookupInitialImpl(const u32 num_elems) {
+NEVER_INLINE u32 AggregationHashTable::LookupInitialImpl(const u32 num_elems) {
   auto &hashes = batch_state_->hashes;
   auto &entries = batch_state_->entries;
   auto &groups_found = batch_state_->groups_found;
@@ -324,7 +330,7 @@ u32 AggregationHashTable::LookupInitialImpl(const u32 num_elems) {
 // function, groups_found will densely contain the indexes of matching keys,
 // and 'key_not_eq' will contain indexes of tuples that didn't match on key.
 template <bool VPIIsFiltered>
-u32 AggregationHashTable::CheckKeyEquality(
+NEVER_INLINE u32 AggregationHashTable::CheckKeyEquality(
     VectorProjectionIterator *iters[], const u32 num_elems,
     const AggregationHashTable::KeyEqFn key_eq_fn) {
   auto &entries = batch_state_->entries;
@@ -334,8 +340,12 @@ u32 AggregationHashTable::CheckKeyEquality(
   u32 matched = 0;
   for (u32 i = 0; i < num_elems; i++) {
     const u32 index = groups_found[i];
+    // Position the iterator on the tuple we're about the compare keys with
     iters[0]->SetPosition<VPIIsFiltered>(index);
-    if (key_eq_fn(entries[index]->payload, iters)) {
+    // Retrieve the aggregate we're about to compare keys with
+    HashTableEntry *entry = entries[index];
+    // Compare keys of the aggregate and the input tuple
+    if (key_eq_fn(entry->payload, iters)) {
       groups_found[matched++] = index;
     } else {
       key_not_eq.append(index);
@@ -348,7 +358,7 @@ u32 AggregationHashTable::CheckKeyEquality(
 // For all unmatched keys, move along the chain until we find another hash
 // match. After this function, 'groups_found' will densely contain the indexes
 // of tuples that matched on hash and should be checked for keys.
-u32 AggregationHashTable::FollowNext() {
+NEVER_INLINE u32 AggregationHashTable::FollowNext() {
   const auto &hashes = batch_state_->hashes;
   const auto &key_not_eq = batch_state_->key_not_eq;
   auto &entries = batch_state_->entries;
@@ -356,7 +366,7 @@ u32 AggregationHashTable::FollowNext() {
   auto &groups_not_found = batch_state_->groups_not_found;
 
   u32 matched = 0;
-  for (u32 i = 0; i < key_not_eq.size(); ) {
+  for (u32 i = 0; i < key_not_eq.size();) {
     const auto index = key_not_eq[i];
     for (auto *entry = entries[index]; entry != nullptr; entry = entry->next) {
       const auto hash = hashes[index];
@@ -374,7 +384,7 @@ u32 AggregationHashTable::FollowNext() {
 }
 
 template <bool VPIIsFiltered, bool Partitioned>
-void AggregationHashTable::CreateMissingGroups(
+NEVER_INLINE void AggregationHashTable::CreateMissingGroups(
     VectorProjectionIterator *iters[],
     const AggregationHashTable::KeyEqFn key_eq_fn,
     const AggregationHashTable::InitAggFn init_agg_fn) {
@@ -405,7 +415,7 @@ void AggregationHashTable::CreateMissingGroups(
 }
 
 template <bool VPIIsFiltered>
-void AggregationHashTable::AdvanceGroups(
+NEVER_INLINE void AggregationHashTable::AdvanceGroups(
     VectorProjectionIterator *iters[], const u32 num_groups,
     const AggregationHashTable::AdvanceAggFn advance_agg_fn) {
   const auto &entries = batch_state_->entries;
