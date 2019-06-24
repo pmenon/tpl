@@ -100,6 +100,18 @@ class GenericHashTable {
   HashTableEntry *FindChainHeadWithTag(hash_t hash) const;
 
   /**
+   * Lookup a batch of entries. The hashes of all entries are container in
+   * @em hashes, and the result of each input tuple's lookup will be stored in
+   * @em results.
+   * @param num_elems The number of elements to probe.
+   * @param hashes The vector of hashes.
+   * @param[out] results The output vector storing the head of the bucket
+   *                         chain for each input.
+   */
+  void LookupChainHeadBatch(u32 num_elems, const hash_t hashes[],
+                            HashTableEntry *results[]) const;
+
+  /**
    * Empty all entries in this hash table into the sink functor. After this
    * function exits, the hash table is empty.
    * @tparam F The function must be of the form void(*)(HashTableEntry*)
@@ -140,6 +152,12 @@ class GenericHashTable {
   template <bool UseTag>
   friend class GenericHashTableVectorIterator;
 
+  void LookupChainHeadBatchScalar(u32 num_elems, const hash_t hashes[],
+                                  HashTableEntry *results[]) const;
+
+  void LookupChainHeadBatchVector(u32 num_elems, const hash_t hashes[],
+                                  HashTableEntry *results[]) const;
+
   // -------------------------------------------------------
   // Tag-related operations
   // -------------------------------------------------------
@@ -174,7 +192,7 @@ class GenericHashTable {
 
  private:
   // Main bucket table
-  std::atomic<HashTableEntry *> *entries_;
+  HashTableEntry **entries_;
 
   // The mask to use to determine the bucket position of an entry given its hash
   u64 mask_;
@@ -194,67 +212,64 @@ class GenericHashTable {
 // ---------------------------------------------------------
 
 template <bool ForRead>
-void GenericHashTable::PrefetchChainHead(hash_t hash) const {
+void GenericHashTable::PrefetchChainHead(const hash_t hash) const {
   const u64 pos = hash & mask_;
   util::Prefetch<ForRead, Locality::Low>(entries_ + pos);
 }
 
-inline HashTableEntry *GenericHashTable::FindChainHead(hash_t hash) const {
+inline HashTableEntry *GenericHashTable::FindChainHead(
+    const hash_t hash) const {
   const u64 pos = hash & mask_;
-  return entries_[pos].load(std::memory_order_relaxed);
+  return entries_[pos];
 }
 
 inline HashTableEntry *GenericHashTable::FindChainHeadWithTag(
-    hash_t hash) const {
+    const hash_t hash) const {
   const HashTableEntry *const candidate = FindChainHead(hash);
   auto exists_in_chain = reinterpret_cast<uintptr_t>(candidate) & TagHash(hash);
   return (exists_in_chain ? UntagPointer(candidate) : nullptr);
 }
 
 template <bool Concurrent>
-inline void GenericHashTable::Insert(HashTableEntry *new_entry, hash_t hash) {
+inline void GenericHashTable::Insert(HashTableEntry *const new_entry,
+                                     const hash_t hash) {
   const auto pos = hash & mask_;
 
   TPL_ASSERT(pos < capacity(), "Computed table position exceeds capacity!");
   TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
-    std::atomic<HashTableEntry *> &loc = entries_[pos];
-    HashTableEntry *old_entry = loc.load();
+    HashTableEntry *old_entry;
     do {
+      old_entry = entries_[pos];
       new_entry->next = old_entry;
-    } while (!loc.compare_exchange_weak(old_entry, new_entry));
+    } while (!AtomicCAS(&entries_[pos], old_entry, new_entry));
   } else {
-    std::atomic<HashTableEntry *> &loc = entries_[pos];
-    HashTableEntry *old_entry = loc.load(std::memory_order_relaxed);
-    new_entry->next = old_entry;
-    loc.store(new_entry, std::memory_order_relaxed);
+    new_entry->next = entries_[pos];
+    entries_[pos] = new_entry;
   }
 
   num_elems_++;
 }
 
 template <bool Concurrent>
-inline void GenericHashTable::InsertTagged(HashTableEntry *new_entry,
-                                           hash_t hash) {
+inline void GenericHashTable::InsertTagged(HashTableEntry *const new_entry,
+                                           const hash_t hash) {
   const auto pos = hash & mask_;
 
   TPL_ASSERT(pos < capacity(), "Computed table position exceeds capacity!");
   TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
-    std::atomic<HashTableEntry *> &loc = entries_[pos];
-    HashTableEntry *old_entry = loc.load();
+    HashTableEntry *old_entry, *tagged_new_entry;
     do {
+      old_entry = entries_[pos];
       new_entry->next = UntagPointer(old_entry);
-      new_entry = UpdateTag(old_entry, new_entry);
-    } while (!loc.compare_exchange_weak(old_entry, new_entry));
-
+      tagged_new_entry = UpdateTag(old_entry, new_entry);
+    } while (!AtomicCAS(&entries_[pos], old_entry, tagged_new_entry));
   } else {
-    std::atomic<HashTableEntry *> &loc = entries_[pos];
-    HashTableEntry *old_entry = loc.load(std::memory_order_relaxed);
-    new_entry->next = UntagPointer(old_entry);
-    loc.store(UpdateTag(old_entry, new_entry), std::memory_order_relaxed);
+    new_entry->next = UntagPointer(entries_[pos]);
+    entries_[pos] = UpdateTag(entries_[pos], new_entry);
   }
 
   num_elems_++;
@@ -265,13 +280,13 @@ inline void GenericHashTable::FlushEntries(const F &sink) {
   static_assert(std::is_invocable_v<F, HashTableEntry *>);
 
   for (u32 idx = 0; idx < capacity_; idx++) {
-    HashTableEntry *entry = entries_[idx].load(std::memory_order_relaxed);
+    HashTableEntry *entry = entries_[idx];
     while (entry != nullptr) {
       HashTableEntry *next = entry->next;
       sink(entry);
       entry = next;
     }
-    entries_[idx].store(nullptr, std::memory_order_relaxed);
+    entries_[idx] = nullptr;
   }
 
   num_elems_ = 0;
@@ -319,8 +334,7 @@ class GenericHashTableIterator {
     // While we haven't exhausted the directory, and haven't found a valid entry
     // continue on ...
     while (entries_index_ < table_.capacity()) {
-      curr_entry_ =
-          table_.entries_[entries_index_++].load(std::memory_order_relaxed);
+      curr_entry_ = table_.entries_[entries_index_++];
 
       if constexpr (UseTag) {
         curr_entry_ = GenericHashTable::UntagPointer(curr_entry_);

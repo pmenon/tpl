@@ -38,6 +38,11 @@ using hash_t = u64;
 
 namespace tpl {
 
+template <typename T>
+inline bool AtomicCAS(T *object, T old_value, T new_value) {
+  return __sync_bool_compare_and_swap(object, old_value, new_value);
+}
+
 /// A compact structure used during parsing to capture and describe the position
 /// in the source as 1-based line and column number
 struct SourcePosition {
