@@ -1,5 +1,6 @@
 #include <random>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "tpl_test.h"  // NOLINT
@@ -89,6 +90,66 @@ TEST_F(GenericHashTableTest, TaggedInsertion) {
     EXPECT_EQ(nullptr, e->next);
     EXPECT_EQ(entry, *reinterpret_cast<TestEntry *>(e));
   }
+}
+
+TEST_F(GenericHashTableTest, ConcurrentInsertion) {
+  constexpr u32 num_entries = 5000;
+  constexpr u32 num_threads = 4;
+
+  // The entries for all threads. We partition this vector into 'num_threads'
+  // parts. Each thread will insert data from the partition of this vector it
+  // owns. Each partition has 'num_entries' entries with the same key value
+  // data. Thus, after this vector has been populated, there will be
+  // 'num_threads' duplicates of each entry. We'll randomly shuffle the data in
+  // each partition to increase randomness.
+  std::vector<TestEntry> entries;
+
+  // Setup entries
+  {
+    entries.reserve(num_threads * num_entries);
+    for (u32 tid = 0; tid < num_threads; tid++) {
+      for (u32 i = 0; i < num_entries; i++) {
+        entries.emplace_back(i, tid);
+      }
+
+      std::random_device r;
+      auto range_begin = entries.begin() + (tid * num_entries);
+      auto range_end = range_begin + num_entries;
+      std::shuffle(range_begin, range_end, r);
+    }
+  }
+
+  // Size the hash table
+  GenericHashTable hash_table;
+  hash_table.SetSize(num_threads * num_entries);
+
+  // Parallel insert
+  LaunchParallel(num_threads, [&](auto thread_id) {
+    for (u32 idx = thread_id * num_entries, end = idx + num_entries; idx < end;
+         idx++) {
+      auto &entry = entries[idx];
+      hash_table.Insert<true>(&entry, entry.hash);
+    }
+  });
+
+  // After the insertions we should be able to find all entries, including
+  // duplicates.
+  std::array<std::unordered_set<u32>, num_threads> thread_local_entries;
+  GenericHashTableIterator<false> iter(hash_table);
+  u32 found_entries = 0;
+  for (; iter.HasNext(); iter.Next()) {
+    found_entries++;
+
+    auto *entry = reinterpret_cast<const TestEntry *>(iter.GetCurrentEntry());
+    const auto key = entry->key;
+    const auto thread_id = entry->value;
+
+    // Each thread should see a unique set of keys
+    EXPECT_EQ(0u, thread_local_entries[thread_id].count(key));
+    thread_local_entries[thread_id].insert(key);
+  }
+
+  EXPECT_EQ(num_threads * num_entries, found_entries);
 }
 
 TEST_F(GenericHashTableTest, EmptyIterator) {
