@@ -62,10 +62,10 @@ static void Transpose(const byte **raw_aggregates, const u64 size,
   auto **aggs = reinterpret_cast<const AggTuple **>(raw_aggregates);
   for (u32 i = 0; i < size; i++, vpi->Advance()) {
     const auto *agg = aggs[i];
-    vpi->SetValue<u64, false>(0, &agg->key, false);
-    vpi->SetValue<u64, false>(1, &agg->count1, false);
-    vpi->SetValue<u64, false>(2, &agg->count2, false);
-    vpi->SetValue<u64, false>(3, &agg->count3, false);
+    vpi->SetValue<u64, false>(0, agg->key, false);
+    vpi->SetValue<u64, false>(1, agg->count1, false);
+    vpi->SetValue<u64, false>(2, agg->count2, false);
+    vpi->SetValue<u64, false>(3, agg->count3, false);
   }
 }
 

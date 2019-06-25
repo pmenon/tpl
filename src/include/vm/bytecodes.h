@@ -124,6 +124,18 @@ namespace tpl::vm {
   F(VPIGetRealNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPIGetDoubleNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPIGetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
+  F(VPISetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
+  F(VPISetInteger, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
+  F(VPISetBigInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
+  F(VPISetReal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
+  F(VPISetDouble, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
+  F(VPISetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
+  F(VPISetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
+  F(VPISetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
+  F(VPISetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
+  F(VPISetRealNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
+  F(VPISetDoubleNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
+  F(VPISetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPIFilterEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                     \
   F(VPIFilterGreaterThan, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)               \
   F(VPIFilterGreaterThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)          \

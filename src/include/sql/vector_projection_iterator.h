@@ -72,7 +72,7 @@ class VectorProjectionIterator {
    * @param null Whether the value is NULL.
    */
   template <typename T, bool Nullable>
-  void SetValue(u32 col_idx, const T *val, bool null);
+  void SetValue(u32 col_idx, T val, bool null);
 
   /**
    * Set the current iterator position
@@ -233,7 +233,7 @@ inline const T *VectorProjectionIterator::GetValue(const u32 col_idx,
 }
 
 template <typename T, bool Nullable>
-inline void VectorProjectionIterator::SetValue(const u32 col_idx, const T *val,
+inline void VectorProjectionIterator::SetValue(const u32 col_idx, const T val,
                                                const bool null) {
   // The column data array
   auto *col_data = vector_projection_->GetVectorAs<T>(col_idx);
@@ -249,10 +249,10 @@ inline void VectorProjectionIterator::SetValue(const u32 col_idx, const T *val,
     util::BitUtil::SetTo(col_null_bitmap, curr_idx_, null);
 
     if (!null) {
-      col_data[curr_idx_] = *val;
+      col_data[curr_idx_] = val;
     }
   } else {
-    col_data[curr_idx_] = *val;
+    col_data[curr_idx_] = val;
   }
 }
 

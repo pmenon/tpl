@@ -632,6 +632,28 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
       emitter()->EmitVPIGet(Bytecode::VPIGetDouble, val, vpi, col_idx);
       break;
     }
+    case ast::Builtin::VPISetSmallInt:
+    case ast::Builtin::VPISetInt:
+    case ast::Builtin::VPISetBigInt:
+    case ast::Builtin::VPISetReal:
+    case ast::Builtin::VPISetDouble: {
+      Bytecode bytecode;
+      if (builtin == ast::Builtin::VPISetSmallInt) {
+        bytecode = Bytecode::VPISetSmallInt;
+      } else if (builtin == ast::Builtin::VPISetInt) {
+        bytecode = Bytecode::VPISetInteger;
+      } else if (builtin == ast::Builtin::VPISetBigInt) {
+        bytecode = Bytecode::VPISetBigInt;
+      } else if (builtin == ast::Builtin::VPISetReal) {
+        bytecode = Bytecode::VPISetReal;
+      } else {
+        bytecode = Bytecode::VPISetDouble;
+      }
+      auto input = VisitExpressionForLValue(call->arguments()[1]);
+      auto col_idx = call->arguments()[2]->As<ast::LitExpr>()->int32_val();
+      emitter()->EmitVPISet(bytecode, vpi, input, col_idx);
+      break;
+    }
     default: { UNREACHABLE("Impossible table iteration call"); }
   }
 }
@@ -1373,7 +1395,12 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::VPIGetInt:
     case ast::Builtin::VPIGetBigInt:
     case ast::Builtin::VPIGetReal:
-    case ast::Builtin::VPIGetDouble: {
+    case ast::Builtin::VPIGetDouble:
+    case ast::Builtin::VPISetSmallInt:
+    case ast::Builtin::VPISetInt:
+    case ast::Builtin::VPISetBigInt:
+    case ast::Builtin::VPISetReal:
+    case ast::Builtin::VPISetDouble: {
       VisitBuiltinVPICall(call, builtin);
       break;
     }

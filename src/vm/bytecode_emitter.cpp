@@ -316,6 +316,11 @@ void BytecodeEmitter::EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar vpi,
   EmitAll(bytecode, out, vpi, col_idx);
 }
 
+void BytecodeEmitter::EmitVPISet(Bytecode bytecode, LocalVar vpi,
+                                 LocalVar input, u32 col_idx) {
+  EmitAll(bytecode, vpi, input, col_idx);
+}
+
 void BytecodeEmitter::EmitVPIVectorFilter(Bytecode bytecode, LocalVar selected,
                                           LocalVar vpi, u32 col_idx, i64 val) {
   EmitAll(bytecode, selected, vpi, col_idx, val);

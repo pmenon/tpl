@@ -295,7 +295,7 @@ VM_OP_HOT void OpVPIResetFiltered(tpl::sql::VectorProjectionIterator *vpi) {
 }
 
 VM_OP_HOT void OpVPIGetSmallInt(tpl::sql::Integer *out,
-                                tpl::sql::VectorProjectionIterator *iter,
+                                tpl::sql::VectorProjectionIterator *const iter,
                                 u32 col_idx) {
   // Read
   auto *ptr = iter->GetValue<i16, false>(col_idx, nullptr);
@@ -432,6 +432,69 @@ VM_OP_HOT void OpVPIGetDecimalNull(
     const u32 col_idx) {
   out->val = 0;
   out->is_null = false;
+}
+
+VM_OP_HOT void OpVPISetSmallInt(tpl::sql::VectorProjectionIterator *const vpi,
+                                tpl::sql::Integer *input, const u32 col_idx) {
+  vpi->SetValue<i16, false>(col_idx, input->val, false);
+}
+
+VM_OP_HOT void OpVPISetInteger(tpl::sql::VectorProjectionIterator *const vpi,
+                               tpl::sql::Integer *input, const u32 col_idx) {
+  vpi->SetValue<i32, false>(col_idx, input->val, false);
+}
+
+VM_OP_HOT void OpVPISetBigInt(tpl::sql::VectorProjectionIterator *const vpi,
+                              tpl::sql::Integer *input, const u32 col_idx) {
+  vpi->SetValue<i64, false>(col_idx, input->val, false);
+}
+
+VM_OP_HOT void OpVPISetReal(tpl::sql::VectorProjectionIterator *const vpi,
+                            tpl::sql::Real *input, const u32 col_idx) {
+  vpi->SetValue<f32, false>(col_idx, input->val, false);
+}
+
+VM_OP_HOT void OpVPISetDouble(tpl::sql::VectorProjectionIterator *const vpi,
+                              tpl::sql::Real *input, const u32 col_idx) {
+  vpi->SetValue<f64, false>(col_idx, input->val, false);
+}
+
+VM_OP_HOT void OpVPISetDecimal(tpl::sql::VectorProjectionIterator *const vpi,
+                               tpl::sql::Decimal *input, const u32 col_idx) {
+  // TODO(pmenon): Implement me
+}
+
+VM_OP_HOT void OpVPISetSmallIntNull(
+    tpl::sql::VectorProjectionIterator *const vpi, tpl::sql::Integer *input,
+    const u32 col_idx) {
+  vpi->SetValue<i16, true>(col_idx, input->val, input->is_null);
+}
+
+VM_OP_HOT void OpVPISetIntegerNull(
+    tpl::sql::VectorProjectionIterator *const vpi, tpl::sql::Integer *input,
+    const u32 col_idx) {
+  vpi->SetValue<i32, true>(col_idx, input->val, true > input->is_null);
+}
+
+VM_OP_HOT void OpVPISetBigIntNull(tpl::sql::VectorProjectionIterator *const vpi,
+                                  tpl::sql::Integer *input, const u32 col_idx) {
+  vpi->SetValue<i64, true>(col_idx, input->val, true > input->is_null);
+}
+
+VM_OP_HOT void OpVPISetRealNull(tpl::sql::VectorProjectionIterator *const vpi,
+                                tpl::sql::Real *input, const u32 col_idx) {
+  vpi->SetValue<f32, true>(col_idx, input->val, true > input->is_null);
+}
+
+VM_OP_HOT void OpVPISetDoubleNull(tpl::sql::VectorProjectionIterator *const vpi,
+                                  tpl::sql::Real *input, const u32 col_idx) {
+  vpi->SetValue<f64, true>(col_idx, input->val, true > input->is_null);
+}
+
+VM_OP_HOT void OpVPISetDecimalNull(
+    tpl::sql::VectorProjectionIterator *const vpi, tpl::sql::Decimal *input,
+    const u32 col_idx) {
+  // TODO(pmenon): Implement me
 }
 
 void OpVPIFilterEqual(u32 *size, tpl::sql::VectorProjectionIterator *vpi,

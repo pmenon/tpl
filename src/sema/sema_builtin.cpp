@@ -756,9 +756,11 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
     return;
   }
 
+  const auto &call_args = call->arguments();
+
   // The first argument must be a *VPI
   const auto vpi_kind = ast::BuiltinType::VectorProjectionIterator;
-  if (!IsPointerToSpecificBuiltin(call->arguments()[0]->type(), vpi_kind)) {
+  if (!IsPointerToSpecificBuiltin(call_args[0]->type(), vpi_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(vpi_kind)->PointerTo());
     return;
   }
@@ -779,7 +781,7 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
         return;
       }
       // If the match argument is a SQL boolean, implicitly cast to native
-      ast::Expr *match_arg = call->arguments()[1];
+      ast::Expr *match_arg = call_args[1];
       if (match_arg->type()->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
         match_arg = ImplCastExprToType(match_arg,
                                        GetBuiltinType(ast::BuiltinType::Bool),
@@ -796,13 +798,47 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
     }
     case ast::Builtin::VPIGetSmallInt:
     case ast::Builtin::VPIGetInt:
-    case ast::Builtin::VPIGetBigInt: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Integer));
-      break;
-    }
+    case ast::Builtin::VPIGetBigInt:
     case ast::Builtin::VPIGetReal:
     case ast::Builtin::VPIGetDouble: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Real));
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      // Second argument should be column index
+      const auto int32_kind = ast::BuiltinType::Int32;
+      if (call_args[1]->type()->IsSpecificBuiltin(int32_kind)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(int32_kind));
+        return;
+      }
+      call->set_type(builtin == ast::Builtin::VPIGetReal ||
+                             builtin == ast::Builtin::VPIGetDouble
+                         ? GetBuiltinType(ast::BuiltinType::Real)
+                         : GetBuiltinType(ast::BuiltinType::Integer));
+      break;
+    }
+    case ast::Builtin::VPISetSmallInt:
+    case ast::Builtin::VPISetInt:
+    case ast::Builtin::VPISetBigInt:
+    case ast::Builtin::VPISetReal:
+    case ast::Builtin::VPISetDouble: {
+      if (!CheckArgCount(call, 3)) {
+        return;
+      }
+      // Second argument must be either an Integer or Real
+      const auto sql_kind = (builtin == ast::Builtin::VPISetReal ||
+                                     builtin == ast::Builtin::VPISetDouble
+                                 ? ast::BuiltinType::Real
+                                 : ast::BuiltinType::Integer);
+      if (call_args[1]->type()->IsSpecificBuiltin(sql_kind)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(sql_kind));
+        return;
+      }
+      // Third argument must be an integer
+      const auto int32_kind = ast::BuiltinType::Int32;
+      if (call_args[2]->type()->IsSpecificBuiltin(int32_kind)) {
+        ReportIncorrectCallArg(call, 2, GetBuiltinType(int32_kind));
+        return;
+      }
       break;
     }
     default: { UNREACHABLE("Impossible VPI call"); }
@@ -1231,7 +1267,12 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::VPIGetInt:
     case ast::Builtin::VPIGetBigInt:
     case ast::Builtin::VPIGetReal:
-    case ast::Builtin::VPIGetDouble: {
+    case ast::Builtin::VPIGetDouble:
+    case ast::Builtin::VPISetSmallInt:
+    case ast::Builtin::VPISetInt:
+    case ast::Builtin::VPISetBigInt:
+    case ast::Builtin::VPISetReal:
+    case ast::Builtin::VPISetDouble: {
       CheckBuiltinVPICall(call, builtin);
       break;
     }

@@ -122,8 +122,11 @@ class BytecodeEmitter {
   void EmitParallelTableScan(u16 table_id, LocalVar ctx, LocalVar thread_states,
                              FunctionId scan_fn);
 
-  // Reading integer values from an iterator
+  // Reading values from an iterator
   void EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar vpi, u32 col_idx);
+
+  // Setting values in an iterator
+  void EmitVPISet(Bytecode bytecode, LocalVar vpi, LocalVar input, u32 col_idx);
 
   // Filter a column in the iterator by a constant value
   void EmitVPIVectorFilter(Bytecode bytecode, LocalVar selected, LocalVar vpi,
