@@ -1,6 +1,5 @@
 #include "sql/generic_hash_table.h"
 
-#include "util/cpu_info.h"
 #include "util/math_util.h"
 #include "util/vector_util.h"
 
@@ -33,35 +32,7 @@ void GenericHashTable::SetSize(u64 new_size) {
   capacity_ = next_size;
   mask_ = capacity_ - 1;
   num_elems_ = 0;
-  entries_ = util::MallocHugeArray<HashTableEntry *>(capacity_);
-}
-
-void GenericHashTable::LookupChainHeadBatchScalar(
-    const u32 num_elems, const hash_t hashes[],
-    HashTableEntry *results[]) const {
-  for (u32 idx = 0, prefetch_idx = kPrefetchDistance; idx < num_elems; idx++) {
-    if (TPL_LIKELY(prefetch_idx < num_elems)) {
-      PrefetchChainHead<true>(hashes[prefetch_idx++]);
-    }
-    results[idx] = FindChainHead(hashes[idx]);
-  }
-}
-
-void GenericHashTable::LookupChainHeadBatchVector(
-    u32 num_elems, const hash_t hashes[], HashTableEntry *results[]) const {
-  util::VectorUtil::GatherWithHashes(num_elems, entries_, hashes, mask_,
-                                     results);
-}
-
-void GenericHashTable::LookupChainHeadBatch(const u32 num_elems,
-                                            const hash_t hashes[],
-                                            HashTableEntry *results[]) const {
-  u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
-  if (GetTotalMemoryUsage() > l3_cache_size) {
-    LookupChainHeadBatchScalar(num_elems, hashes, results);
-  } else {
-    LookupChainHeadBatchVector(num_elems, hashes, results);
-  }
+  entries_ = util::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_);
 }
 
 // ---------------------------------------------------------
@@ -91,7 +62,8 @@ inline void GenericHashTableVectorIterator<UseTag>::Next() {
   // Fill the range [idx, SIZE) in the cache with valid entries from the source
   // hash table.
   while (index < kDefaultVectorSize && table_dir_index_ < table_.capacity()) {
-    entry_vec_[index] = table_.entries_[table_dir_index_++];
+    entry_vec_[index] =
+        table_.entries_[table_dir_index_++].load(std::memory_order_relaxed);
     if constexpr (UseTag) {
       entry_vec_[index] = GenericHashTable::UntagPointer(entry_vec_[index]);
     }
