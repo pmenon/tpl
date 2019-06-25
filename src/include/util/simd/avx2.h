@@ -776,44 +776,4 @@ static inline u32 FilterVectorByVector(const T *RESTRICT in_1,
   return out_pos;
 }
 
-template <typename T>
-static inline u32 Gather(const u32 n, T **RESTRICT input,
-                         const u32 *RESTRICT indexes, T **RESTRICT out) {
-  static_assert(sizeof(uintptr_t) == sizeof(T *));
-
-  u32 i = 0;
-
-  // Use Vec4 since we're loading 8-byte pointers
-  util::simd::Vec4 vec_indexes, vec_entries;
-  for (i = 0; i + Vec4::Size() < n; i += Vec4::Size()) {
-    vec_indexes.Load(indexes + i);
-    vec_entries.Gather(reinterpret_cast<uintptr_t *>(input), vec_indexes);
-    vec_entries.Store(reinterpret_cast<uintptr_t *>(out + i));
-  }
-
-  return i;
-}
-
-template <typename T>
-static inline u32 GatherWithHashes(const u32 n, T **RESTRICT input,
-                                   const hash_t *RESTRICT hashes,
-                                   const u64 mask, T **RESTRICT out) {
-  static_assert(sizeof(uintptr_t) == sizeof(T *));
-  static_assert(sizeof(decltype(mask)) == sizeof(hash_t));
-
-  u32 i = 0;
-
-  // Use Vec4 since we're loading 8-byte pointers
-  const Vec4 vec_mask(mask);
-  Vec4 vec_indexes, vec_entries;
-  for (i = 0; i + Vec4::Size() < n; i += Vec4::Size()) {
-    vec_indexes.Load(hashes + i);
-    vec_indexes &= vec_mask;
-    vec_entries.Gather(reinterpret_cast<uintptr_t *>(input), vec_indexes);
-    vec_entries.Store(reinterpret_cast<uintptr_t *>(out + i));
-  }
-
-  return i;
-}
-
 }  // namespace tpl::util::simd
