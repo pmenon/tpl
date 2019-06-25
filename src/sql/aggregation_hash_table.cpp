@@ -299,7 +299,7 @@ NEVER_INLINE u32 AggregationHashTable::LookupInitialImpl(const u32 num_elems) {
   u32 found = 0;
   for (u32 idx = 0, prefetch_idx = kPrefetchDistance; idx < num_elems;) {
     if constexpr (Prefetch) {
-      if (TPL_LIKELY(prefetch_idx < idx)) {
+      if (TPL_LIKELY(prefetch_idx < num_elems)) {
         hash_table_.PrefetchChainHead<false>(hashes[prefetch_idx++]);
       }
     }

@@ -20,8 +20,8 @@ class FixedLengthBuffer {
 
   /**
    * Append an element to the end of the buffer. This operation is unsafe if the
-   * buffer is fool, i.e., it's the caller's responsibility to check there is
-   * sufficient room for a new element because no error will be thrown
+   * buffer is full. In other words, it's the caller's responsibility to check
+   * there is sufficient room for a new element because no error will be thrown
    * otherwise.
    * @param val The value to append to the buffer.
    */
