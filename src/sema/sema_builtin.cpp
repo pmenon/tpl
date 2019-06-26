@@ -806,7 +806,7 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       }
       // Second argument should be column index
       const auto int32_kind = ast::BuiltinType::Int32;
-      if (call_args[1]->type()->IsSpecificBuiltin(int32_kind)) {
+      if (!call_args[1]->type()->IsSpecificBuiltin(int32_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(int32_kind));
         return;
       }
@@ -829,13 +829,13 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
                                      builtin == ast::Builtin::VPISetDouble
                                  ? ast::BuiltinType::Real
                                  : ast::BuiltinType::Integer);
-      if (call_args[1]->type()->IsSpecificBuiltin(sql_kind)) {
+      if (!call_args[1]->type()->IsSpecificBuiltin(sql_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(sql_kind));
         return;
       }
       // Third argument must be an integer
       const auto int32_kind = ast::BuiltinType::Int32;
-      if (call_args[2]->type()->IsSpecificBuiltin(int32_kind)) {
+      if (!call_args[2]->type()->IsSpecificBuiltin(int32_kind)) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(int32_kind));
         return;
       }
