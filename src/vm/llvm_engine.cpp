@@ -279,15 +279,14 @@ llvm::FunctionType *LLVMEngine::TypeMap::GetLLVMFunctionType(
 class LLVMEngine::FunctionLocalsMap {
  public:
   FunctionLocalsMap(const FunctionInfo &func_info, llvm::Function *func,
-                    TypeMap *type_map, llvm::IRBuilder<> &ir_builder);
+                    TypeMap *type_map, llvm::IRBuilder<> *ir_builder);
 
   // Given a reference to a local variable in a function's local variable list,
   // return the corresponding LLVM value.
   llvm::Value *GetArgumentById(LocalVar var);
 
  private:
-  llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>
-      &ir_builder_;
+  llvm::IRBuilder<> *ir_builder_;
   llvm::DenseMap<u32, llvm::Value *> params_;
   llvm::DenseMap<u32, llvm::Value *> locals_;
 };
@@ -295,7 +294,7 @@ class LLVMEngine::FunctionLocalsMap {
 LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
                                                  llvm::Function *func,
                                                  TypeMap *type_map,
-                                                 llvm::IRBuilder<> &ir_builder)
+                                                 llvm::IRBuilder<> *ir_builder)
     : ir_builder_(ir_builder) {
   u32 local_idx = 0;
 
@@ -304,7 +303,7 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
   if (const ast::FunctionType *func_type = func_info.func_type();
       FunctionHasDirectReturn(func_type)) {
     llvm::Type *ret_type = type_map->GetLLVMType(func_type->return_type());
-    llvm::Value *val = ir_builder.CreateAlloca(ret_type);
+    llvm::Value *val = ir_builder_->CreateAlloca(ret_type);
     params_[func_locals[0].offset()] = val;
     local_idx++;
   }
@@ -318,7 +317,7 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
   for (; local_idx < func_info.locals().size(); local_idx++) {
     const LocalInfo &local_info = func_locals[local_idx];
     llvm::Type *llvm_type = type_map->GetLLVMType(local_info.type());
-    llvm::Value *val = ir_builder.CreateAlloca(llvm_type);
+    llvm::Value *val = ir_builder_->CreateAlloca(llvm_type);
     locals_[local_info.offset()] = val;
   }
 }
@@ -332,7 +331,7 @@ llvm::Value *LLVMEngine::FunctionLocalsMap::GetArgumentById(LocalVar var) {
     llvm::Value *val = iter->second;
 
     if (var.GetAddressMode() == LocalVar::AddressMode::Value) {
-      val = ir_builder_.CreateLoad(val);
+      val = ir_builder_->CreateLoad(val);
     }
 
     return val;
@@ -390,7 +389,7 @@ class LLVMEngine::CompiledModuleBuilder {
 
   // Convert one TPL function into an LLVM implementation
   void DefineFunction(const FunctionInfo &func_info,
-                      llvm::IRBuilder<> &ir_builder);
+                      llvm::IRBuilder<> *ir_builder);
 
   // Given a bytecode, lookup it's LLVM function handler in the module
   llvm::Function *LookupBytecodeHandler(Bytecode bytecode) const;
@@ -588,8 +587,8 @@ void LLVMEngine::CompiledModuleBuilder::BuildSimpleCFG(
 }
 
 void LLVMEngine::CompiledModuleBuilder::DefineFunction(
-    const FunctionInfo &func_info, llvm::IRBuilder<> &ir_builder) {
-  llvm::LLVMContext &ctx = ir_builder.getContext();
+    const FunctionInfo &func_info, llvm::IRBuilder<> *ir_builder) {
+  llvm::LLVMContext &ctx = ir_builder->getContext();
   llvm::Function *func = llvm_module_->getFunction(func_info.name());
   llvm::BasicBlock *entry = llvm::BasicBlock::Create(ctx, "EntryBB", func);
 
@@ -632,7 +631,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
   // new block.
   //
 
-  ir_builder.SetInsertPoint(entry);
+  ir_builder->SetInsertPoint(entry);
 
   FunctionLocalsMap locals_map(func_info, func, type_map_.get(), ir_builder);
 
@@ -721,16 +720,16 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
 
         if (expected_type->isIntegerTy()) {
           if (provided_type->isPointerTy()) {
-            args[i] = ir_builder.CreatePtrToInt(args[i], expected_type);
+            args[i] = ir_builder->CreatePtrToInt(args[i], expected_type);
           } else {
-            args[i] = ir_builder.CreateIntCast(args[i], expected_type, true);
+            args[i] = ir_builder->CreateIntCast(args[i], expected_type, true);
           }
         } else if (expected_type->isPointerTy()) {
           TPL_ASSERT(provided_type->isPointerTy(), "Mismatched types");
-          args[i] = ir_builder.CreateBitCast(args[i], expected_type);
+          args[i] = ir_builder->CreateBitCast(args[i], expected_type);
         }
       }
-      return ir_builder.CreateCall(func, args);
+      return ir_builder->CreateCall(func, args);
     };
 
     // Handle bytecode
@@ -757,7 +756,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
           llvm::Value *dest = args[0];
           args.erase(args.begin());
           llvm::Value *ret = issue_call(callee, args);
-          ir_builder.CreateStore(ret, dest);
+          ir_builder->CreateStore(ret, dest);
         } else {
           issue_call(callee, args);
         }
@@ -779,7 +778,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
             iter.GetJumpOffsetOperand(0);
         TPL_ASSERT(blocks[branch_target_bb_pos] != nullptr,
                    "Branch target does not point to valid basic block");
-        ir_builder.CreateBr(blocks[branch_target_bb_pos]);
+        ir_builder->CreateBr(blocks[branch_target_bb_pos]);
         break;
       }
 
@@ -801,14 +800,14 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
                    "Branch target does not point to valid basic block");
 
         auto *check = llvm::ConstantInt::get(type_map_->Int8Type(), 1, false);
-        llvm::Value *cond = ir_builder.CreateICmpEQ(args[0], check);
+        llvm::Value *cond = ir_builder->CreateICmpEQ(args[0], check);
 
         if (bytecode == Bytecode::JumpIfTrue) {
-          ir_builder.CreateCondBr(cond, blocks[branch_target_bb_pos],
-                                  blocks[fallthrough_bb_pos]);
+          ir_builder->CreateCondBr(cond, blocks[branch_target_bb_pos],
+                                   blocks[fallthrough_bb_pos]);
         } else {
-          ir_builder.CreateCondBr(cond, blocks[fallthrough_bb_pos],
-                                  blocks[branch_target_bb_pos]);
+          ir_builder->CreateCondBr(cond, blocks[fallthrough_bb_pos],
+                                   blocks[branch_target_bb_pos]);
         }
         break;
       }
@@ -817,9 +816,9 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
         if (FunctionHasDirectReturn(func_info.func_type())) {
           llvm::Value *ret_val =
               locals_map.GetArgumentById(func_info.GetReturnValueLocal());
-          ir_builder.CreateRet(ir_builder.CreateLoad(ret_val));
+          ir_builder->CreateRet(ir_builder->CreateLoad(ret_val));
         } else {
-          ir_builder.CreateRetVoid();
+          ir_builder->CreateRetVoid();
         }
         break;
       }
@@ -846,9 +845,9 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
     if (auto blocks_iter = blocks.find(next_bytecode_pos);
         blocks_iter != blocks.end()) {
       if (!Bytecodes::IsJump(bytecode) && !Bytecodes::IsTerminal(bytecode)) {
-        ir_builder.CreateBr(blocks_iter->second);
+        ir_builder->CreateBr(blocks_iter->second);
       }
-      ir_builder.SetInsertPoint(blocks_iter->second);
+      ir_builder->SetInsertPoint(blocks_iter->second);
     }
   }
 }
@@ -856,7 +855,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
 void LLVMEngine::CompiledModuleBuilder::DefineFunctions() {
   llvm::IRBuilder<> ir_builder(*context_);
   for (const auto &func_info : tpl_module_.functions()) {
-    DefineFunction(func_info, ir_builder);
+    DefineFunction(func_info, &ir_builder);
   }
 }
 
