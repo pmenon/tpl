@@ -1,3 +1,5 @@
 fun main() -> int {
-  return 44
+  var x = 40
+  var y = &x
+  return *y
 }

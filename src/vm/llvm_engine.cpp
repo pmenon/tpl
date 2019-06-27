@@ -735,6 +735,37 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
 
     // Handle bytecode
     switch (bytecode) {
+      case Bytecode::Assign1:
+      case Bytecode::Assign2:
+      case Bytecode::Assign4:
+      case Bytecode::Assign8: {
+        if (args[0]->getType()->getPointerElementType() != args[1]->getType()) {
+          llvm::Type *src_type = args[1]->getType();
+          if (src_type->isPointerTy() &&
+              src_type->getPointerElementType()->isStructTy()) {
+            args[1] = ir_builder->CreateStructGEP(args[1], 0);
+          }
+        }
+        ir_builder->CreateStore(args[1], args[0]);
+        break;
+      }
+
+      case Bytecode::Deref1:
+      case Bytecode::Deref2:
+      case Bytecode::Deref4:
+      case Bytecode::Deref8: {
+        if (args[1]->getType()->getPointerElementType() != args[0]->getType()) {
+          llvm::Type *src_type = args[1]->getType();
+          if (src_type->isPointerTy() &&
+              src_type->getPointerElementType()->isStructTy()) {
+            args[1] = ir_builder->CreateStructGEP(args[1], 0);
+          }
+        }
+        auto val = ir_builder->CreateLoad(args[1]);
+        ir_builder->CreateStore(val, args[0]);
+        break;
+      }
+
       case Bytecode::Call: {
         //
         // For internal calls, the callee function's ID will be the first
@@ -810,6 +841,35 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
           ir_builder->CreateCondBr(cond, blocks[fallthrough_bb_pos],
                                    blocks[branch_target_bb_pos]);
         }
+        break;
+      }
+
+      case Bytecode::Lea: {
+        TPL_ASSERT(args[1]->getType()->isPointerTy(),
+                   "First argument must be a pointer");
+        const llvm::DataLayout &dl = llvm_module_->getDataLayout();
+        llvm::Type *pointee_type = args[1]->getType()->getPointerElementType();
+        i64 offset = llvm::cast<llvm::ConstantInt>(args[2])->getSExtValue();
+        if (auto struct_type = llvm::dyn_cast<llvm::StructType>(pointee_type)) {
+          const u32 elem_index = dl.getStructLayout(struct_type)
+                                     ->getElementContainingOffset(offset);
+          llvm::Value *addr = ir_builder->CreateStructGEP(args[1], elem_index);
+          ir_builder->CreateStore(addr, args[0]);
+        } else {
+          llvm::SmallVector<llvm::Value *, 2> gep_args;
+          u32 elem_size = dl.getTypeSizeInBits(pointee_type);
+          if (llvm::isa<llvm::ArrayType>(pointee_type)) {
+            llvm::Type *const arr_type = pointee_type->getArrayElementType();
+            elem_size = dl.getTypeSizeInBits(arr_type) / kBitsPerByte;
+            gep_args.push_back(
+                llvm::ConstantInt::get(type_map_->Int64Type(), 0));
+          }
+          gep_args.push_back(llvm::ConstantInt::get(type_map_->Int64Type(),
+                                                    offset / elem_size));
+          llvm::Value *addr = ir_builder->CreateInBoundsGEP(args[1], gep_args);
+          ir_builder->CreateStore(addr, args[0]);
+        }
+
         break;
       }
 

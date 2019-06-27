@@ -23,7 +23,7 @@ param.tpl,false,10
 pointer.tpl,false,10
 scope.tpl,false,3
 short-circuit.tpl,false,1
-simple.tpl,false,44
+simple.tpl,false,40
 single-line-comment.tpl,false,46
 struct.tpl,false,10
 struct-debug.tpl,false,100000
