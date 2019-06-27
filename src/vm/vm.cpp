@@ -22,12 +22,15 @@ class VM::Frame {
   friend class VM;
 
  public:
-  /// Constructor
   Frame(u8 *frame_data, std::size_t frame_size)
       : frame_data_(frame_data), frame_size_(frame_size) {
     TPL_ASSERT(frame_data_ != nullptr, "Frame data cannot be null");
     TPL_ASSERT(frame_size_ >= 0, "Frame size must be >= 0");
-    (void)frame_size_;
+  }
+
+  void *PtrToLocalAt(const LocalVar local) const {
+    EnsureInFrame(local);
+    return frame_data_ + local.GetOffset();
   }
 
   /**
@@ -42,15 +45,10 @@ class VM::Frame {
   template <typename T>
   T LocalAt(u32 index) const {
     LocalVar local = LocalVar::Decode(index);
-
-    EnsureInFrame(local);
-
-    auto val = reinterpret_cast<uintptr_t>(&frame_data_[local.GetOffset()]);
-
+    const auto val = reinterpret_cast<uintptr_t>(PtrToLocalAt(local));
     if (local.GetAddressMode() == LocalVar::AddressMode::Value) {
       return *reinterpret_cast<T *>(val);
     }
-
     return (T)(val);  // NOLINT (both static/reinterpret cast semantics)
   }
 
@@ -1636,8 +1634,15 @@ const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
   // Set up the arguments to the function
   for (u32 i = 0; i < num_params; i++) {
     const LocalInfo &param_info = func_info->locals()[i];
-    const void *param = caller->LocalAt<void *>(READ_LOCAL_ID());
-    std::memcpy(raw_frame + param_info.offset(), &param, param_info.size());
+    const LocalVar param = LocalVar::Decode(READ_LOCAL_ID());
+    const void *param_ptr = caller->PtrToLocalAt(param);
+    if (param.GetAddressMode() == LocalVar::AddressMode::Address) {
+      std::memcpy(raw_frame + param_info.offset(), &param_ptr,
+                  param_info.size());
+    } else {
+      std::memcpy(raw_frame + param_info.offset(), param_ptr,
+                  param_info.size());
+    }
   }
 
   LOG_DEBUG("Executing function '{}'", func_info->name());

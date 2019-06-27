@@ -5,7 +5,10 @@ import os
 import subprocess
 import sys
 
-TARGET_STRING = 'VM main() returned: '
+VM_TARGET_STRING = 'VM main() returned: '
+ADAPTIVE_TARGET_STRING = 'ADAPTIVE main() returned: '
+JIT_TARGET_STRING = 'JIT main() returned: '
+TARGET_STRINGS = [VM_TARGET_STRING, ADAPTIVE_TARGET_STRING, JIT_TARGET_STRING]
 
 
 def run(tpl_bin, tpl_file, is_sql):
@@ -14,11 +17,13 @@ def run(tpl_bin, tpl_file, is_sql):
         args.append("-sql")
     args.append(tpl_file)
     proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = []
     for line in reversed(proc.stdout.decode('utf-8').split('\n')):
-        idx = line.find(TARGET_STRING)
-        if idx != -1:
-            return line[idx + len(TARGET_STRING):]
-    return None
+        for target_string in TARGET_STRINGS:
+            idx = line.find(target_string)
+            if idx != -1:
+                result.append(line[idx + len(target_string):])
+    return result
 
 
 def check(tpl_bin, tpl_folder, tpl_tests_file):
@@ -36,10 +41,10 @@ def check(tpl_bin, tpl_folder, tpl_tests_file):
             num_tests += 1
 
             report = 'PASS'
-            if res is None:
+            if not res:
                 report = 'ERR'
                 failed.add(tpl_file)
-            elif res != expected_output:
+            elif not all(output == expected_output for output in res):
                 report = 'FAIL [expect: {}, actual: {}]'.format(expected_output,
                                                                 res)
                 failed.add(tpl_file)

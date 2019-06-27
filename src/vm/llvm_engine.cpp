@@ -28,6 +28,7 @@
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
 
 #include "ast/type.h"
 #include "logging/logger.h"
@@ -812,6 +813,40 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
         break;
       }
 
+      case Bytecode::LeaScaled: {
+        TPL_ASSERT(args[1]->getType()->isPointerTy(),
+                   "First argument must be a pointer");
+        // For any LeaScaled, the scale is handled by LLVM's GEP. If it's an
+        // array of structures, we need to handle the final offset/displacement
+        // into the struct as the last GEP index.
+        llvm::Type *pointee_type = args[1]->getType()->getPointerElementType();
+        if (auto struct_type = llvm::dyn_cast<llvm::StructType>(pointee_type)) {
+          const i64 elem_offset =
+              llvm::cast<llvm::ConstantInt>(args[4])->getSExtValue();
+          const u32 elem_index = llvm_module_->getDataLayout()
+                                     .getStructLayout(struct_type)
+                                     ->getElementContainingOffset(elem_offset);
+          llvm::Value *elem_index_val =
+              llvm::ConstantInt::get(type_map_->Int64Type(), elem_index);
+          llvm::Value *addr =
+              ir_builder->CreateInBoundsGEP(args[1], {args[2], elem_index_val});
+          ir_builder->CreateStore(addr, args[0]);
+        } else {
+          TPL_ASSERT(
+              llvm::cast<llvm::ConstantInt>(args[4])->getSExtValue() == 0,
+              "LeaScaled on arrays cannot have a displacement");
+          llvm::SmallVector<llvm::Value *, 2> gep_args;
+          if (llvm::isa<llvm::ArrayType>(pointee_type)) {
+            gep_args.push_back(
+                llvm::ConstantInt::get(type_map_->Int64Type(), 0));
+          }
+          gep_args.push_back(args[2]);
+          llvm::Value *addr = ir_builder->CreateInBoundsGEP(args[1], gep_args);
+          ir_builder->CreateStore(addr, args[0]);
+        }
+        break;
+      }
+
       case Bytecode::Return: {
         if (FunctionHasDirectReturn(func_info.func_type())) {
           llvm::Value *ret_val =
@@ -869,12 +904,10 @@ void LLVMEngine::CompiledModuleBuilder::Verify() {
 }
 
 void LLVMEngine::CompiledModuleBuilder::Simplify() {
-  //
-  // This function ensures all bytecode handlers marked 'always_inline' are
-  // inlined into the main TPL program. After this inlining, we clean up any
-  // unused functions.
-  //
-
+  // When this function is called, the generated IR consists of many function
+  // calls to cross-compiled bytecode handler functions. We now inline those
+  // function calls directly into the body of the functions we've generated
+  // by running the 'AlwaysInliner' pass.
   llvm::legacy::PassManager pass_manager;
   pass_manager.add(llvm::createAlwaysInlinerLegacyPass());
   pass_manager.add(llvm::createGlobalDCEPass());
@@ -882,30 +915,13 @@ void LLVMEngine::CompiledModuleBuilder::Simplify() {
 }
 
 void LLVMEngine::CompiledModuleBuilder::Optimize() {
-  //
-  // The optimization passes we use are somewhat ad-hoc, but were found to
-  // provide a nice balance of performance and compilation times. We use an
-  // aggressive function inlining pass followed by a CFG simplification pass
-  // that should clean up work done during earlier inlining and DCE work.
-  //
-
   llvm::PassManagerBuilder pm_builder;
+  pm_builder.OptLevel = 3;
   pm_builder.Inliner = llvm::createFunctionInliningPass(3, 0, false);
-
-  //
-  // The function optimization passes ...
-  //
 
   llvm::legacy::FunctionPassManager function_pm(llvm_module_.get());
   function_pm.add(llvm::createTargetTransformInfoWrapperPass(
       target_machine_->getTargetIRAnalysis()));
-  function_pm.add(llvm::createCFGSimplificationPass());
-  function_pm.add(llvm::createAggressiveDCEPass());
-  function_pm.add(llvm::createCFGSimplificationPass());
-
-  //
-  // The module-level optimization passes ...
-  //
 
   llvm::legacy::PassManager module_pm;
   module_pm.add(llvm::createTargetTransformInfoWrapperPass(
@@ -914,21 +930,7 @@ void LLVMEngine::CompiledModuleBuilder::Optimize() {
   pm_builder.populateFunctionPassManager(function_pm);
   pm_builder.populateModulePassManager(module_pm);
 
-  //
-  // First, run the function-level optimizations
-  //
-
-  function_pm.doInitialization();
-  for (const auto &func_info : tpl_module_.functions()) {
-    auto *func = llvm_module_->getFunction(func_info.name());
-    function_pm.run(*func);
-  }
-  function_pm.doFinalization();
-
-  //
-  // Now, run the module-level optimizations
-  //
-
+  // Run all passes
   module_pm.run(*llvm_module_);
 }
 
