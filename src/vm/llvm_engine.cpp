@@ -975,23 +975,31 @@ void LLVMEngine::CompiledModuleBuilder::Simplify() {
 }
 
 void LLVMEngine::CompiledModuleBuilder::Optimize() {
+  llvm::legacy::PassManager module_passes;
+  llvm::legacy::FunctionPassManager function_passes(llvm_module_.get());
+
+  // Add the appropriate TargetLibraryInfo and TargetTransformInfo
+  auto target_library_info_impl = std::make_unique<llvm::TargetLibraryInfoImpl>(
+      target_machine_->getTargetTriple());
+  module_passes.add(
+      new llvm::TargetLibraryInfoWrapperPass(*target_library_info_impl));
+  module_passes.add(llvm::createTargetTransformInfoWrapperPass(
+      target_machine_->getTargetIRAnalysis()));
+
+  // Build up optimization pipeline
   llvm::PassManagerBuilder pm_builder;
   pm_builder.OptLevel = 3;
   pm_builder.Inliner = llvm::createFunctionInliningPass(3, 0, false);
+  pm_builder.populateFunctionPassManager(function_passes);
+  pm_builder.populateModulePassManager(module_passes);
 
-  llvm::legacy::FunctionPassManager function_pm(llvm_module_.get());
-  function_pm.add(llvm::createTargetTransformInfoWrapperPass(
-      target_machine_->getTargetIRAnalysis()));
-
-  llvm::legacy::PassManager module_pm;
-  module_pm.add(llvm::createTargetTransformInfoWrapperPass(
-      target_machine_->getTargetIRAnalysis()));
-
-  pm_builder.populateFunctionPassManager(function_pm);
-  pm_builder.populateModulePassManager(module_pm);
-
-  // Run all passes
-  module_pm.run(*llvm_module_);
+  // Run optimization passes on module
+  function_passes.doInitialization();
+  for (auto &func : *llvm_module_) {
+    function_passes.run(func);
+  }
+  function_passes.doFinalization();
+  module_passes.run(*llvm_module_);
 }
 
 std::unique_ptr<LLVMEngine::CompiledModule>
