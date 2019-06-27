@@ -104,7 +104,22 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
   }
 
   // TODO(pmenon): Fix me to support other arithmetic types
+  // Convert to primitive integers.
+  if (left->type()->IsIntegerType() && right->type()->IsIntegerType()) {
+    // Cast to larger to two sizes
+    if (left->type()->size() < right->type()->size()) {
+      auto new_left = ImplCastExprToType(left, right->type(), ast::CastKind::IntegralCast);
+      return {right->type(), new_left, right};
+    } else {
+      auto new_right = ImplCastExprToType(right, left->type(), ast::CastKind::IntegralCast);
+      return {left->type(), left, new_right};
+    }
+  }
 
+  // TODO(Amadou): Add primitive float->int and float->float
+
+
+  // Convert to sql integer
   ast::Type *const sql_int_type =
       ast::BuiltinType::Get(context(), ast::BuiltinType::Integer);
 
@@ -114,6 +129,8 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
   if (!left->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
     left = ImplCastExprToType(left, sql_int_type, ast::CastKind::IntToSqlInt);
   }
+
+  // TODO(Amadou): Add sql Float->Integer and Integer->Float
 
   return {sql_int_type, left, right};
 }

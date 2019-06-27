@@ -46,11 +46,13 @@ class AggregationHashTable {
    *             input tuple.
    */
   using KeyEqFn = bool (*)(const void *, const void *);
+  using BatchKeyEqFn = void (*)(const void*, const void*, const void*, void*, uint32_t);
 
   /**
    * Function that takes an input element and computes a hash value.
    */
   using HashFn = hash_t (*)(void *);
+  using BatchHashFn = void (*)(void*, void*);
 
   /**
    * Function to initialize a new aggregate.
@@ -58,6 +60,7 @@ class AggregationHashTable {
    *             is the input tuple to initialize the aggregate with.
    */
   using InitAggFn = void (*)(void *, void *);
+  using BatchInitAggFn = InitAggFn;// void (*)(void *, void *, void*, uint32_t);
 
   /**
    * Function to advance an existing aggregate with a new input value.
@@ -65,6 +68,7 @@ class AggregationHashTable {
    *             argument is the input tuple to update the aggregate with.
    */
   using AdvanceAggFn = void (*)(void *, void *);
+  using BatchAdvanceAggFn = void (*)(void *, void *, void*, uint32_t);
 
   /**
    * Function to merge a set of overflow partitions into the given aggregation
@@ -167,6 +171,10 @@ class AggregationHashTable {
                     KeyEqFn key_eq_fn, InitAggFn init_agg_fn,
                     AdvanceAggFn advance_agg_fn, bool partitioned);
 
+  void ProcessBatchArray(VectorProjectionIterator *iters[], BatchHashFn batch_hash_fn,
+                    BatchKeyEqFn batch_key_eq_fn, BatchInitAggFn batch_init_agg_fn,
+                    BatchAdvanceAggFn batch_advance_agg_fn, KeyEqFn single_key_eq_fn, bool partitioned);
+
   /**
    * Transfer all entries and overflow partitions stored in each thread-local
    * aggregation hash table (in the thread state container) into this table.
@@ -247,16 +255,29 @@ class AggregationHashTable {
                         KeyEqFn key_eq_fn, InitAggFn init_agg_fn,
                         AdvanceAggFn advance_agg_fn, bool partitioned);
 
+  template <bool VPIIsFiltered>
+  void ProcessBatchArrayImpl(VectorProjectionIterator *iters[], BatchHashFn batch_hash_fn,
+                         BatchKeyEqFn batch_key_eq_fn, BatchInitAggFn batch_init_agg_fn,
+                         BatchAdvanceAggFn batch_advance_agg_fn, KeyEqFn single_key_eq_fn, bool partitioned);
+
   // Dispatched from ProcessBatchImpl() to compute the hash values for all input
   // tuples. Hashes are stored in the 'hashes' array in the batch state.
   template <bool VPIIsFiltered>
   void ComputeHash(VectorProjectionIterator *iters[], HashFn hash_fn);
+
+  // Dispatched from ProcessBatchImpl() to compute the hash values for all input
+  // tuples. Hashes are stored in the 'hashes' array in the batch state.
+  template <bool VPIIsFiltered>
+  void ComputeHashBatch(VectorProjectionIterator *iters[], BatchHashFn batch_hash_fn);
 
   // Called from ProcessBatchImpl() to find matching groups for all tuples in
   // the input vector projection. This function returns the number of groups
   // that were found.
   template <bool VPIIsFiltered>
   u32 FindGroups(VectorProjectionIterator *iters[], KeyEqFn key_eq_fn);
+
+  template <bool VPIIsFiltered>
+  u32 FindGroupsBatch(VectorProjectionIterator *iters[], BatchKeyEqFn batch_key_eq_fn);
 
   // Called from FindGroups() to lookup initial entries from the hash table for
   // all input tuples.
@@ -272,6 +293,10 @@ class AggregationHashTable {
   u32 CheckKeyEquality(VectorProjectionIterator *iters[], u32 num_elems,
                        KeyEqFn key_eq_fn);
 
+  template <bool VPIIsFiltered>
+  u32 CheckKeyEqualityBatch(VectorProjectionIterator *iters[], u32 num_elems,
+                       BatchKeyEqFn batch_key_eq_fn);
+
   // Called from FindGroups() to follow the entry chain of candidate groups.
   u32 FollowNext();
 
@@ -280,11 +305,19 @@ class AggregationHashTable {
   void CreateMissingGroups(VectorProjectionIterator *iters[], KeyEqFn key_eq_fn,
                            InitAggFn init_agg_fn);
 
+  template <bool VPIIsFiltered, bool Partitioned>
+  void CreateMissingGroupsBatch(VectorProjectionIterator *iters[], BatchKeyEqFn batch_key_eq_fn, KeyEqFn single_key_eq_fn,
+                           BatchInitAggFn batch_init_agg_fn);
+
   // Called from ProcessBatch() to update only the valid entries in the input
   // vector
   template <bool VPIIsFiltered>
   void AdvanceGroups(VectorProjectionIterator *iters[], u32 num_groups,
                      AdvanceAggFn advance_agg_fn);
+
+  template <bool VPIIsFiltered>
+  void AdvanceGroupsBatch(VectorProjectionIterator *iters[], u32 num_groups,
+                     BatchAdvanceAggFn batch_advance_agg_fn);
 
   // Called during partitioned scan to build an aggregation hash table over a
   // single partition.

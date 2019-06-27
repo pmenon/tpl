@@ -22,8 +22,28 @@ fun keyCheck(agg: *Agg, iters: [*]*VectorProjectionIterator) -> bool {
   return @sqlToBool(key == agg.key)
 }
 
+fun batchKeyCheck(aggs: [*]*Agg, iters: [*]*VectorProjectionIterator, indexes: [*]uint32, matches: [*]bool, num_elems: uint32) -> nil {
+  for (var i : uint32 = 0; i < num_elems; i = i + 1) {
+    var agg = aggs[i]
+    var index = indexes[i]
+    @vpiSetPosition(iters[0], index)
+    var key = @vpiGetInt(iters[0], 1)
+    if (key != agg.key) {
+      matches[i] = false
+    }
+  }
+}
+
 fun hashFn(iters: [*]*VectorProjectionIterator) -> uint64 {
   return @hash(@vpiGetInt(iters[0], 1))
+}
+
+fun batchHashFn(iters: [*]*VectorProjectionIterator, hashes: [*]uint64) -> nil {
+  var idx = 0
+  for (; @vpiHasNext(iters[0]); @vpiAdvance(iters[0])) {
+    hashes[idx] = @hash(@vpiGetInt(iters[0], 1))
+    idx = idx + 1
+  }
 }
 
 fun constructAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
@@ -33,9 +53,31 @@ fun constructAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
   @aggInit(&agg.count)
 }
 
+fun batchConstructAgg(aggs: [*]*Agg, iters: [*]*VectorProjectionIterator, indexes: [*]uint32, num_elems: uint32) -> nil {
+  //for (var i : uint32 = 0; i < num_elems; i = i + 1) {
+    // var index = indexes[i]
+    // var agg = aggs[i]
+    // @vpiSetPosition(iters[0], index)
+    // Set key
+    // agg.key = @vpiGetInt(iters[0], 1)
+    // Initialize aggregate
+    // @aggInit(&agg.count)
+  //}
+}
+
 fun updateAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
   var input = @vpiGetInt(iters[0], 0)
   @aggAdvance(&agg.count, &input)
+}
+
+fun batchUpdateAgg(aggs: [*]*Agg, iters: [*]*VectorProjectionIterator, indexes: [*]uint32, num_elems: uint32) -> nil {
+  for (var i : uint32 = 0; i < num_elems; i = i + 1) {
+    //var index = indexes[i]
+    //var agg = aggs[i]
+    //@vpiSetPosition(iters[0], index)
+    //var input = @vpiGetInt(iters[0], 0)
+    //@aggAdvance(&agg.count, &input)
+  }
 }
 
 fun pipeline_1(state: *State) -> nil {
@@ -49,7 +91,8 @@ fun pipeline_1(state: *State) -> nil {
   for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
     var vec = @tableIterGetVPI(&tvi)
     iters[0] = vec
-    @aggHTProcessBatch(ht, &iters, hashFn, keyCheck, constructAgg, updateAgg, false)
+    //@aggHTProcessBatch(ht, &iters, hashFn, keyCheck, constructAgg, updateAgg, false)
+    @aggHTProcessBatchArray(ht, &iters, batchHashFn, batchKeyCheck, constructAgg, batchUpdateAgg, keyCheck, false)
   }
   @tableIterClose(&tvi)
 }
@@ -74,7 +117,7 @@ fun main(execCtx: *ExecutionContext) -> int32 {
   pipeline_1(&state)
 
   // Run pipeline 2
-  pipeline_2(&state)
+  // pipeline_2(&state)
 
   var ret = state.count
 

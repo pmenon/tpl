@@ -584,6 +584,15 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
       emitter()->Emit(bytecode, vpi);
       break;
     }
+    case ast::Builtin::VPISetPosition:
+    case ast::Builtin::VPISetPositionFiltered: {
+      const Bytecode bytecode = builtin == ast::Builtin::VPISetPosition
+                                ? Bytecode::VPISetPosition
+                                : Bytecode::VPISetPositionFiltered;
+      LocalVar pos = VisitExpressionForRValue(call->arguments()[1]);
+      emitter()->Emit(bytecode, vpi, pos);
+      break;
+    }
     case ast::Builtin::VPIMatch: {
       LocalVar match = VisitExpressionForRValue(call->arguments()[1]);
       emitter()->Emit(Bytecode::VPIMatch, vpi, match);
@@ -841,6 +850,25 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,
       LocalVar partitioned = VisitExpressionForRValue(call->arguments()[6]);
       emitter()->EmitAggHashTableProcessBatch(agg_ht, iters, hash_fn, key_eq_fn,
                                               init_agg_fn, merge_agg_fn,
+                                              partitioned);
+      break;
+    }
+    case ast::Builtin::AggHashTableProcessBatchArray: {
+      LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar iters = VisitExpressionForRValue(call->arguments()[1]);
+      auto batch_hash_fn = LookupFuncIdByName(
+          call->arguments()[2]->As<ast::IdentifierExpr>()->name().data());
+      auto batch_key_eq_fn = LookupFuncIdByName(
+          call->arguments()[3]->As<ast::IdentifierExpr>()->name().data());
+      auto batch_init_agg_fn = LookupFuncIdByName(
+          call->arguments()[4]->As<ast::IdentifierExpr>()->name().data());
+      auto batch_merge_agg_fn = LookupFuncIdByName(
+          call->arguments()[5]->As<ast::IdentifierExpr>()->name().data());
+      auto single_key_eq_fn = LookupFuncIdByName(
+          call->arguments()[6]->As<ast::IdentifierExpr>()->name().data());
+      LocalVar partitioned = VisitExpressionForRValue(call->arguments()[7]);
+      emitter()->EmitAggHashTableProcessBatchArray(agg_ht, iters, batch_hash_fn, batch_key_eq_fn,
+                                              batch_init_agg_fn, batch_merge_agg_fn, single_key_eq_fn,
                                               partitioned);
       break;
     }
@@ -1388,6 +1416,8 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:
     case ast::Builtin::VPIAdvanceFiltered:
+    case ast::Builtin::VPISetPosition:
+    case ast::Builtin::VPISetPositionFiltered:
     case ast::Builtin::VPIMatch:
     case ast::Builtin::VPIReset:
     case ast::Builtin::VPIResetFiltered:
@@ -1420,6 +1450,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::AggHashTableInsert:
     case ast::Builtin::AggHashTableLookup:
     case ast::Builtin::AggHashTableProcessBatch:
+    case ast::Builtin::AggHashTableProcessBatchArray:
     case ast::Builtin::AggHashTableMovePartitions:
     case ast::Builtin::AggHashTableParallelPartitionedScan:
     case ast::Builtin::AggHashTableFree: {
