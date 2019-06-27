@@ -335,7 +335,7 @@ NEVER_INLINE u32 AggregationHashTable::CheckKeyEquality(
     VectorProjectionIterator *iters[], const u32 num_elems,
     const AggregationHashTable::KeyEqFn key_eq_fn) {
   auto &entries = batch_state_->entries;
-  auto groups_found = batch_state_->groups_found;
+  auto &groups_found = batch_state_->groups_found;
   auto &key_not_eq = batch_state_->key_not_eq;
 
   u32 matched = 0;
