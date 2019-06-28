@@ -461,9 +461,10 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
     // Both relocation=PIC or JIT=true work. Use the latter for now.
     llvm::TargetOptions target_options;
     llvm::Optional<llvm::Reloc::Model> reloc;
+    const llvm::CodeGenOpt::Level opt_level = llvm::CodeGenOpt::Aggressive;
     target_machine_.reset(target->createTargetMachine(
         target_triple, llvm::sys::getHostCPUName(), target_features.getString(),
-        target_options, reloc, {}, {}, true));
+        target_options, reloc, {}, opt_level, true));
     TPL_ASSERT(target_machine_ != nullptr,
                "LLVM: Unable to find a suitable target machine!");
   }
