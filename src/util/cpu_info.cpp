@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <unordered_set>
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -18,21 +19,26 @@
 #include <sstream>
 
 #include "logging/logger.h"
+#include "util/macros.h"
 
 namespace tpl {
+
+namespace {
 
 struct {
   CpuInfo::Feature feature;
   llvm::SmallVector<const char *, 4> names;
-} features[] = {
+} kFeatures[] = {
     {CpuInfo::SSE_4_2, {"sse4_2"}},
     {CpuInfo::AVX, {"avx"}},
     {CpuInfo::AVX2, {"avx2"}},
     {CpuInfo::AVX512, {"avx512f", "avx512cd"}},
 };
 
+}  // namespace
+
 void CpuInfo::ParseCpuFlags(llvm::StringRef flags) {
-  for (const auto &[feature, names] : features) {
+  for (const auto &[feature, names] : kFeatures) {
     bool has_feature = true;
 
     // Check if all feature flag names exist in the flags string. Only if all
@@ -44,12 +50,7 @@ void CpuInfo::ParseCpuFlags(llvm::StringRef flags) {
       }
     }
 
-    // Set or don't
-    if (has_feature) {
-      hardware_flags_.Set(feature);
-    } else {
-      hardware_flags_.Unset(feature);
-    }
+    hardware_flags_[feature] = has_feature;
   }
 }
 
@@ -62,9 +63,24 @@ void CpuInfo::InitCpuInfo() {
 #ifdef __APPLE__
   // On MacOS, use sysctl
   {
+    size_t size = sizeof(num_processors_);
+    if (sysctlbyname("hw.packages", &num_processors_, &size, nullptr, 0) < 0) {
+      LOG_ERROR("Cannot read # processors: {}", strerror(errno));
+    }
+  }
+
+  {
+    size_t size = sizeof(num_physical_cores_);
+    if (sysctlbyname("hw.physicalcpu", &num_physical_cores_, &size, nullptr,
+                     0) < 0) {
+      LOG_ERROR("Cannot read # physical CPUs: {}", strerror(errno));
+    }
+  }
+
+  {
     size_t size = sizeof(num_cores_);
     if (sysctlbyname("hw.ncpu", &num_cores_, &size, nullptr, 0) < 0) {
-      LOG_ERROR("Cannot read # CPUs: {}", strerror(errno));
+      LOG_ERROR("Cannot read # logical CPUs: {}", strerror(errno));
     }
   }
 
@@ -78,6 +94,9 @@ void CpuInfo::InitCpuInfo() {
   }
 #else
   // On linux, just read /proc/cpuinfo
+  std::unordered_set<i32> processors;
+  std::unordered_set<i32> physical_cores;
+
   std::string line;
   std::ifstream infile("/proc/cpuinfo");
   while (std::getline(infile, line)) {
@@ -87,17 +106,28 @@ void CpuInfo::InitCpuInfo() {
     value = value.trim(" ");
 
     if (name.startswith("processor")) {
-      num_cores_++;
+      num_logical_cores_++;
     } else if (name.startswith("model")) {
       model_name_ = value.str();
     } else if (name.startswith("cpu MHz")) {
       double cpu_mhz;
       value.getAsDouble(cpu_mhz);
       cpu_mhz_ = std::max(cpu_mhz_, cpu_mhz);
+    } else if (name.startswith("physical id")) {
+      i32 processor_id = 0;
+      value.getAsInteger(0, processor_id);
+      processors.insert(processor_id);
+    } else if (name.startswith("core id")) {
+      i32 core_id = 0;
+      value.getAsInteger(0, core_id);
+      physical_cores.insert(core_id);
     } else if (name.startswith("flags")) {
       ParseCpuFlags(value);
     }
   }
+
+  num_processors_ = processors.size();
+  num_physical_cores_ = physical_cores.size();
 #endif
 }
 
@@ -142,9 +172,10 @@ std::string CpuInfo::PrettyPrintInfo() const {
 
   // clang-format off
   ss << "CPU Info: " << std::endl;
-  ss << "  Model:  " << model_name_ << std::endl;
-  ss << "  Cores:  " << num_cores_ << std::endl;
-  ss << "  Mhz:    " << std::fixed << std::setprecision(2) << cpu_mhz_ << std::endl;
+  ss << "  Processors: " << num_processors_ << std::endl;
+  ss << "  Model:      " << model_name_ << std::endl;
+  ss << "  Cores:      " << num_physical_cores_ << " physical, " << num_logical_cores_ << " logical" << std::endl;
+  ss << "  Mhz:        " << std::fixed << std::setprecision(2) << cpu_mhz_ << std::endl;
   ss << "  Caches: " << std::endl;
   ss << "    L1: " << (cache_sizes_[L1_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L1_CACHE] << " byte line)" << std::endl;  // NOLINT
   ss << "    L2: " << (cache_sizes_[L2_CACHE] / 1024.0) << " KB (" << cache_line_sizes_[L2_CACHE] << " byte line)" << std::endl;  // NOLINT
@@ -152,7 +183,7 @@ std::string CpuInfo::PrettyPrintInfo() const {
   // clang-format on
 
   ss << "Features: ";
-  for (const auto &[feature, names] : features) {
+  for (const auto &[feature, names] : kFeatures) {
     if (HasFeature(feature)) {
       for (const auto &name : names) {
         ss << name << " ";
