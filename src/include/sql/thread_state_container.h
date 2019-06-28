@@ -163,9 +163,6 @@ class ThreadStateContainer {
     // Constructor
     explicit TLSHandle(ThreadStateContainer *container);
 
-    // This class cannot be copied, but it can be moved.
-    DISALLOW_COPY(TLSHandle);
-
     // Destructor
     ~TLSHandle();
 

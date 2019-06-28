@@ -26,6 +26,7 @@ class VM::Frame {
       : frame_data_(frame_data), frame_size_(frame_size) {
     TPL_ASSERT(frame_data_ != nullptr, "Frame data cannot be null");
     TPL_ASSERT(frame_size_ >= 0, "Frame size must be >= 0");
+    (void)frame_size_;
   }
 
   void *PtrToLocalAt(const LocalVar local) const {

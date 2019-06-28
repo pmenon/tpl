@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <memory>
 
+#include "sql/memory_tracker.h"
 #include "util/memory.h"
 
 namespace tpl::sql {
@@ -13,7 +14,9 @@ std::atomic<std::size_t> MemoryPool::kMmapThreshold = 64 * MB;
 // Minimum alignment to abide by
 static constexpr u32 kMinMallocAlignment = 8;
 
-MemoryPool::MemoryPool(MemoryTracker *tracker) : tracker_(tracker) {}
+MemoryPool::MemoryPool(MemoryTracker *tracker) : tracker_(tracker) {
+  (void)tracker_;
+}
 
 void *MemoryPool::Allocate(const std::size_t size, const bool clear) {
   return AllocateAligned(size, 0, clear);

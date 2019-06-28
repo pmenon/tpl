@@ -981,6 +981,8 @@ void LLVMEngine::CompiledModuleBuilder::Optimize() {
   // Add the appropriate TargetLibraryInfo and TargetTransformInfo
   auto target_library_info_impl = std::make_unique<llvm::TargetLibraryInfoImpl>(
       target_machine_->getTargetTriple());
+  function_passes.add(llvm::createTargetTransformInfoWrapperPass(
+      target_machine_->getTargetIRAnalysis()));
   module_passes.add(
       new llvm::TargetLibraryInfoWrapperPass(*target_library_info_impl));
   module_passes.add(llvm::createTargetTransformInfoWrapperPass(
@@ -989,7 +991,11 @@ void LLVMEngine::CompiledModuleBuilder::Optimize() {
   // Build up optimization pipeline
   llvm::PassManagerBuilder pm_builder;
   pm_builder.OptLevel = 3;
+#if defined(__clang__)
+  pm_builder.Inliner = llvm::createFunctionInliningPass(2, 0, false);
+#else
   pm_builder.Inliner = llvm::createFunctionInliningPass(3, 0, false);
+#endif
   pm_builder.populateFunctionPassManager(function_passes);
   pm_builder.populateModulePassManager(module_passes);
 
