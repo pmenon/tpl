@@ -54,9 +54,9 @@ class PoolArray {
   T *end() { return raw() + size(); }
 
  private:
-  sql::MemoryPool *memory_;
+  sql::MemoryPool *memory_{nullptr};
   T *arr_;
-  u32 size_;
+  u32 size_{0};
 };
 
 class VectorUtilTest : public TplTest {

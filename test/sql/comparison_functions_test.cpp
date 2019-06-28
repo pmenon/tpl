@@ -39,7 +39,6 @@ TEST_F(ComparisonFunctionsTests, NullComparison) {
 #undef CHECK_NULL
 }
 
-TEST_F(ComparisonFunctionsTests, SimpleComparison) {
 #define CHECK_OP(TYPE, OP, INPUT1, INPUT2, EXPECTED) \
   {                                                  \
     TYPE a(INPUT1), b(INPUT2);                       \
@@ -56,21 +55,29 @@ TEST_F(ComparisonFunctionsTests, SimpleComparison) {
   CHECK_OP(TYPE, Lt, INPUT1, INPUT2, (INPUT1 < INPUT2))  \
   CHECK_OP(TYPE, Ne, INPUT1, INPUT2, (INPUT1 != INPUT2))
 
+TEST_F(ComparisonFunctionsTests, IntegerComparison) {
   CHECK_ALL_COMPARISONS(Integer, 10, 20);
   CHECK_ALL_COMPARISONS(Integer, -10, 20);
   CHECK_ALL_COMPARISONS(Integer, 0, 0);
+  CHECK_ALL_COMPARISONS(Integer, -213, -376);
+}
+
+TEST_F(ComparisonFunctionsTests, RealComparison) {
   CHECK_ALL_COMPARISONS(Real, 0.0, 0.0);
   CHECK_ALL_COMPARISONS(Real, 1.0, 0.0);
   CHECK_ALL_COMPARISONS(Real, -1.0, 0.0);
   CHECK_ALL_COMPARISONS(Real, 1.0, -2.0);
+}
+
+TEST_F(ComparisonFunctionsTests, BoolValComparison) {
   CHECK_ALL_COMPARISONS(BoolVal, false, false);
   CHECK_ALL_COMPARISONS(BoolVal, true, false);
   CHECK_ALL_COMPARISONS(BoolVal, false, true);
   CHECK_ALL_COMPARISONS(BoolVal, true, true);
+}
 
 #undef CHECK_ALL_COMPARISONS
 #undef CHECK_NULL
-}
 
 TEST_F(ComparisonFunctionsTests, StringComparison) {
 #define CHECK(INPUT1, INPUT2, OP, EXPECTED)            \

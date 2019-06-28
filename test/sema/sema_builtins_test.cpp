@@ -13,8 +13,6 @@ namespace tpl::sema::test {
 
 class SemaBuiltinTest : public TplTest, public ast::test::TestAstBuilder {
  public:
-  SemaBuiltinTest() : TestAstBuilder() {}
-
   bool Check(ast::AstNode *node) {
     sema::Sema sema(ctx());
     return sema.Run(node);

@@ -178,8 +178,8 @@ TEST_F(AggregationHashTableVectorIteratorTest, FilterPostAggregation) {
     auto *vpi = iter.GetVectorProjectionIterator();
     vpi->ForEach([&]() {
       auto agg_key = *vpi->GetValue<u64, false>(0, nullptr);
-      num_needle_keys += (agg_key == agg_needle_key);
-      num_keys_lt_max += (agg_key < agg_max_key);
+      num_needle_keys += static_cast<u32>(agg_key == agg_needle_key);
+      num_keys_lt_max += static_cast<u32>(agg_key < agg_max_key);
     });
   }
 
@@ -217,7 +217,7 @@ TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
       for (; iter.HasNext(); iter.Next()) {
         auto *agg_row =
             reinterpret_cast<const AggTuple *>(iter.GetCurrentAggregateRow());
-        if (agg_row->key < (u64)filter) {
+        if (agg_row->key < static_cast<u64>(filter)) {
           taat_ret++;
         }
       }

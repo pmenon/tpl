@@ -253,7 +253,7 @@ NEVER_INLINE void AggregationHashTable::ComputeHash(
          iters[0]->AdvanceFiltered()) {
       hashes[idx++] = hash_fn(iters);
     }
-  } else {
+  } else {  // NOLINT
     for (u32 idx = 0; iters[0]->HasNext(); iters[0]->Advance()) {
       hashes[idx++] = hash_fn(iters);
     }
@@ -282,7 +282,7 @@ NEVER_INLINE u32 AggregationHashTable::LookupInitial(const u32 num_elems) {
   u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
   if (hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
     return LookupInitialImpl<true>(num_elems);
-  } else {
+  } else {  // NOLINT
     return LookupInitialImpl<false>(num_elems);
   }
 }
@@ -409,7 +409,7 @@ NEVER_INLINE void AggregationHashTable::CreateMissingGroups(
     // Initialize
     if constexpr (Partitioned) {
       init_agg_fn(InsertPartitioned(hash), iters);
-    } else {
+    } else {  // NOLINT
       init_agg_fn(Insert(hash), iters);
     }
   }

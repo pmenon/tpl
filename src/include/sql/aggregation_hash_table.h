@@ -312,15 +312,17 @@ class AggregationHashTable {
     // Unique hash estimator
     std::unique_ptr<libcount::HLL> hll_estimator;
     // The array of computed hash values
-    std::array<hash_t, kDefaultVectorSize> hashes;
+    alignas(CACHELINE_SIZE) hash_t hashes[kDefaultVectorSize];
     // Buffer containing entry pointers after lookup and key equality checks
-    std::array<HashTableEntry *, kDefaultVectorSize> entries;
+    alignas(CACHELINE_SIZE) HashTableEntry *entries[kDefaultVectorSize];
     // Buffer containing indexes of tuples that found a matching group
-    std::array<u32, kDefaultVectorSize> groups_found;
+    alignas(CACHELINE_SIZE) u32 groups_found[kDefaultVectorSize];
     // Buffer containing indexes of tuples that did not find a matching group
-    util::FixedLengthBuffer<u32, kDefaultVectorSize> groups_not_found;
+    alignas(CACHELINE_SIZE)
+        util::FixedLengthBuffer<u32, kDefaultVectorSize> groups_not_found;
     // Buffer containing indexes of tuples that didn't match keys
-    util::FixedLengthBuffer<u32, kDefaultVectorSize> key_not_eq;
+    alignas(CACHELINE_SIZE)
+        util::FixedLengthBuffer<u32, kDefaultVectorSize> key_not_eq;
 
     // Constructor
     explicit BatchProcessState(std::unique_ptr<libcount::HLL> estimator);

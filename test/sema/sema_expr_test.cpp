@@ -17,8 +17,6 @@ namespace tpl::sema::test {
 
 class SemaExprTest : public TplTest, public ast::test::TestAstBuilder {
  public:
-  SemaExprTest() : TestAstBuilder() {}
-
   void ResetErrorReporter() { error_reporter()->Reset(); }
 };
 
