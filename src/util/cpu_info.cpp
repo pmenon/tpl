@@ -78,8 +78,8 @@ void CpuInfo::InitCpuInfo() {
   }
 
   {
-    size_t size = sizeof(num_cores_);
-    if (sysctlbyname("hw.ncpu", &num_cores_, &size, nullptr, 0) < 0) {
+    size_t size = sizeof(num_logical_cores_);
+    if (sysctlbyname("hw.ncpu", &num_logical_cores_, &size, nullptr, 0) < 0) {
       LOG_ERROR("Cannot read # logical CPUs: {}", strerror(errno));
     }
   }

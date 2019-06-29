@@ -67,7 +67,7 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory,
   flush_threshold_ =
       std::llround(f32(l2_size) / entries_.element_size() * kDefaultLoadFactor);
   flush_threshold_ =
-      std::max(256ul, util::MathUtil::PowerOf2Floor(flush_threshold_));
+      std::max(u64{256}, util::MathUtil::PowerOf2Floor(flush_threshold_));
 }
 
 AggregationHashTable::~AggregationHashTable() {

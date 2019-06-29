@@ -15,7 +15,7 @@ void StringFunctions::Substring(UNUSED ExecutionContext *ctx, StringVal *result,
     return;
   }
 
-  const auto start = std::max(pos.val, 1l);
+  const auto start = std::max(pos.val, i64{1});
   const auto end = pos.val + std::min(static_cast<i64>(str.len), len.val);
 
   // The end can be before the start only if the length was negative. This is an
@@ -357,7 +357,7 @@ void StringFunctions::Left(UNUSED ExecutionContext *ctx, StringVal *result,
     return;
   }
 
-  const auto len = n.val < 0 ? std::max(0l, str.len + n.val)
+  const auto len = n.val < 0 ? std::max(i64{0}, str.len + n.val)
                              : std::min(str.len, static_cast<u32>(n.val));
   *result = StringVal(str.ptr, len);
 }

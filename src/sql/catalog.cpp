@@ -65,14 +65,14 @@ struct TableInsertMeta {
 TableInsertMeta insert_meta[] = {
     // The empty table
     {TableId::EmptyTable, "empty_table", 0,
-     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0l, 0l}}},
+     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, i64{0}, i64{0}}}},
 
     // Table 1
     {TableId::Test1, "test_1", 2000000,
-     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0l, 0l},
-      {"colB", sql::IntegerType::Instance(false), Dist::Uniform, 0l, 9l},
-      {"colC", sql::IntegerType::Instance(false), Dist::Uniform, 0l, 9999l},
-      {"colD", sql::IntegerType::Instance(false), Dist::Uniform, 0l, 99999l}}},
+     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, i64{0}, i64{0}},
+      {"colB", sql::IntegerType::Instance(false), Dist::Uniform, i64{0}, i64{9}},
+      {"colC", sql::IntegerType::Instance(false), Dist::Uniform, i64{0}, i64{9999}},
+      {"colD", sql::IntegerType::Instance(false), Dist::Uniform, i64{0}, i64{99999}}}},
 };
 // clang-format on
 

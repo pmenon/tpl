@@ -39,7 +39,7 @@ endif()
 set(CXX_FLAGS_DEBUG "-ggdb -O0 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 set(CXX_FLAGS_FASTDEBUG "-ggdb -O1 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 set(CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-set(CXX_FLAGS_RELWITHDEBINFO "-ggdb -O2 -DNDEBUG")
+set(CXX_FLAGS_RELWITHDEBINFO "-ggdb -O2 -DNDEBUG -fno-omit-frame-pointer")
 
 string (TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
 
