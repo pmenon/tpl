@@ -776,6 +776,19 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       call->set_type(GetBuiltinType(ast::BuiltinType::Bool));
       break;
     }
+    case ast::Builtin::VPISetPosition:
+    case ast::Builtin::VPISetPositionFiltered: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      auto unsigned_kind = ast::BuiltinType::Uint32;
+      if (!call_args[1]->type()->IsSpecificBuiltin(unsigned_kind)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(unsigned_kind));
+        return;
+      }
+      call->set_type(GetBuiltinType(ast::BuiltinType::Bool));
+      break;
+    }
     case ast::Builtin::VPIMatch: {
       if (!CheckArgCount(call, 2)) {
         return;
@@ -1260,6 +1273,8 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:
     case ast::Builtin::VPIAdvanceFiltered:
+    case ast::Builtin::VPISetPosition:
+    case ast::Builtin::VPISetPositionFiltered:
     case ast::Builtin::VPIMatch:
     case ast::Builtin::VPIReset:
     case ast::Builtin::VPIResetFiltered:

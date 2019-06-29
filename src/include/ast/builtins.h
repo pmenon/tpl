@@ -41,6 +41,8 @@ namespace tpl::ast {
   F(VPIHasNextFiltered, vpiHasNextFiltered)                     \
   F(VPIAdvance, vpiAdvance)                                     \
   F(VPIAdvanceFiltered, vpiAdvanceFiltered)                     \
+  F(VPISetPosition, vpiSetPosition)                             \
+  F(VPISetPositionFiltered, vpiSetPositionFiltered)             \
   F(VPIMatch, vpiMatch)                                         \
   F(VPIReset, vpiReset)                                         \
   F(VPIResetFiltered, vpiResetFiltered)                         \

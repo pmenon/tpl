@@ -576,12 +576,22 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
       execution_result()->set_destination(cond.ValueOf());
       break;
     }
-    case ast::Builtin::VPIAdvance:
+    case ast::Builtin::VPIAdvance: {
+      emitter()->Emit(Bytecode::VPIAdvance, vpi);
+      break;
+    }
     case ast::Builtin::VPIAdvanceFiltered: {
-      const Bytecode bytecode = builtin == ast::Builtin::VPIAdvance
-                                    ? Bytecode::VPIAdvance
-                                    : Bytecode::VPIAdvanceFiltered;
-      emitter()->Emit(bytecode, vpi);
+      emitter()->Emit(Bytecode::VPIAdvanceFiltered, vpi);
+      break;
+    }
+    case ast::Builtin::VPISetPosition: {
+      LocalVar index = VisitExpressionForRValue(call->arguments()[1]);
+      emitter()->Emit(Bytecode::VPISetPosition, vpi, index);
+      break;
+    }
+    case ast::Builtin::VPISetPositionFiltered: {
+      LocalVar index = VisitExpressionForRValue(call->arguments()[1]);
+      emitter()->Emit(Bytecode::VPISetPositionFiltered, vpi, index);
       break;
     }
     case ast::Builtin::VPIMatch: {
@@ -589,12 +599,12 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
       emitter()->Emit(Bytecode::VPIMatch, vpi, match);
       break;
     }
-    case ast::Builtin::VPIReset:
+    case ast::Builtin::VPIReset: {
+      emitter()->Emit(Bytecode::VPIReset, vpi);
+      break;
+    }
     case ast::Builtin::VPIResetFiltered: {
-      const Bytecode bytecode = builtin == ast::Builtin::VPIReset
-                                    ? Bytecode::VPIReset
-                                    : Bytecode::VPIResetFiltered;
-      emitter()->Emit(bytecode, vpi);
+      emitter()->Emit(Bytecode::VPIResetFiltered, vpi);
       break;
     }
     case ast::Builtin::VPIGetSmallInt: {
@@ -1388,6 +1398,8 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:
     case ast::Builtin::VPIAdvanceFiltered:
+    case ast::Builtin::VPISetPosition:
+    case ast::Builtin::VPISetPositionFiltered:
     case ast::Builtin::VPIMatch:
     case ast::Builtin::VPIReset:
     case ast::Builtin::VPIResetFiltered:

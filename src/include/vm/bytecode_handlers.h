@@ -282,6 +282,16 @@ VM_OP_HOT void OpVPIAdvanceFiltered(tpl::sql::VectorProjectionIterator *vpi) {
   vpi->AdvanceFiltered();
 }
 
+VM_OP_HOT void OpVPISetPosition(tpl::sql::VectorProjectionIterator *const vpi,
+                                const u32 index) {
+  vpi->SetPosition<false>(index);
+}
+
+VM_OP_HOT void OpVPISetPositionFiltered(
+    tpl::sql::VectorProjectionIterator *const vpi, const u32 index) {
+  vpi->SetPosition<true>(index);
+}
+
 VM_OP_HOT void OpVPIMatch(tpl::sql::VectorProjectionIterator *vpi, bool match) {
   vpi->Match(match);
 }
