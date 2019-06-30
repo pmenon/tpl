@@ -825,6 +825,7 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,
       LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
       LocalVar hash = VisitExpressionForRValue(call->arguments()[1]);
       emitter()->Emit(Bytecode::AggregationHashTableInsert, dest, agg_ht, hash);
+      execution_result()->set_destination(dest.ValueOf());
       break;
     }
     case ast::Builtin::AggHashTableLookup: {
@@ -835,6 +836,7 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,
           call->arguments()[2]->As<ast::IdentifierExpr>()->name().data());
       LocalVar arg = VisitExpressionForRValue(call->arguments()[3]);
       emitter()->EmitAggHashTableLookup(dest, agg_ht, hash, key_eq_fn, arg);
+      execution_result()->set_destination(dest.ValueOf());
       break;
     }
     case ast::Builtin::AggHashTableProcessBatch: {
@@ -1128,6 +1130,7 @@ void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call,
       LocalVar hash = VisitExpressionForRValue(call->arguments()[1]);
       emitter()->Emit(Bytecode::JoinHashTableAllocTuple, dest, join_hash_table,
                       hash);
+      execution_result()->set_destination(dest.ValueOf());
       break;
     }
     case ast::Builtin::JoinHashTableBuild: {

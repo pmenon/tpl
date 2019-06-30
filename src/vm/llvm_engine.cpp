@@ -736,37 +736,6 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
 
     // Handle bytecode
     switch (bytecode) {
-      case Bytecode::Assign1:
-      case Bytecode::Assign2:
-      case Bytecode::Assign4:
-      case Bytecode::Assign8: {
-        if (args[0]->getType()->getPointerElementType() != args[1]->getType()) {
-          llvm::Type *src_type = args[1]->getType();
-          if (src_type->isPointerTy() &&
-              src_type->getPointerElementType()->isStructTy()) {
-            args[1] = ir_builder->CreateStructGEP(args[1], 0);
-          }
-        }
-        ir_builder->CreateStore(args[1], args[0]);
-        break;
-      }
-
-      case Bytecode::Deref1:
-      case Bytecode::Deref2:
-      case Bytecode::Deref4:
-      case Bytecode::Deref8: {
-        if (args[1]->getType()->getPointerElementType() != args[0]->getType()) {
-          llvm::Type *src_type = args[1]->getType();
-          if (src_type->isPointerTy() &&
-              src_type->getPointerElementType()->isStructTy()) {
-            args[1] = ir_builder->CreateStructGEP(args[1], 0);
-          }
-        }
-        auto val = ir_builder->CreateLoad(args[1]);
-        ir_builder->CreateStore(val, args[0]);
-        break;
-      }
-
       case Bytecode::Call: {
         //
         // For internal calls, the callee function's ID will be the first
@@ -882,15 +851,16 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
         // into the struct as the last GEP index.
         llvm::Type *pointee_type = args[1]->getType()->getPointerElementType();
         if (auto struct_type = llvm::dyn_cast<llvm::StructType>(pointee_type)) {
-          const i64 elem_offset =
-              llvm::cast<llvm::ConstantInt>(args[4])->getSExtValue();
-          const u32 elem_index = llvm_module_->getDataLayout()
-                                     .getStructLayout(struct_type)
-                                     ->getElementContainingOffset(elem_offset);
-          llvm::Value *elem_index_val =
-              llvm::ConstantInt::get(type_map_->Int64Type(), elem_index);
-          llvm::Value *addr =
-              ir_builder->CreateInBoundsGEP(args[1], {args[2], elem_index_val});
+          llvm::Value *addr = ir_builder->CreateInBoundsGEP(args[1], {args[2]});
+          const u64 elem_offset =
+              llvm::cast<llvm::ConstantInt>(args[4])->getZExtValue();
+          if (elem_offset != 0) {
+            const u32 elem_index =
+                llvm_module_->getDataLayout()
+                    .getStructLayout(struct_type)
+                    ->getElementContainingOffset(elem_offset);
+            addr = ir_builder->CreateStructGEP(addr, elem_index);
+          }
           ir_builder->CreateStore(addr, args[0]);
         } else {
           TPL_ASSERT(
