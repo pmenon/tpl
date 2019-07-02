@@ -4,7 +4,7 @@
 
 array.tpl,false,44
 array-iterate.tpl,false,110
-array-reference.tpl,false,9
+array-iterate-2.tpl,false,110
 call.tpl,false,70
 deref.tpl,false,404
 fib.tpl,false,832040
@@ -27,6 +27,7 @@ simple.tpl,false,40
 single-line-comment.tpl,false,46
 struct.tpl,false,10
 struct-debug.tpl,false,100000
+struct-empty.tpl,false,0
 struct-field-use.tpl,false,30
 struct-nested.tpl,false,10
 struct-nested-2.tpl,false,10
