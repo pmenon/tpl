@@ -193,13 +193,13 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call,
       }
       // Third, fourth, fifth, and sixth are all functions
       if (!AreAllFunctions(args[2]->type(), args[3]->type(), args[4]->type(),
-                           args[5]->type())) {
+                           args[5]->type(), args[6]->type())) {
         ReportIncorrectCallArg(call, 2, "function");
         return;
       }
       // Last arg must be a boolean
-      if (!args[6]->type()->IsBoolType()) {
-        ReportIncorrectCallArg(call, 6, GetBuiltinType(ast::BuiltinType::Bool));
+      if (!args[7]->type()->IsBoolType()) {
+        ReportIncorrectCallArg(call, 7, GetBuiltinType(ast::BuiltinType::Bool));
         return;
       }
       call->set_type(GetBuiltinType(ast::BuiltinType::Nil));

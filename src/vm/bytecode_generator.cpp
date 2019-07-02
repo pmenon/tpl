@@ -830,17 +830,19 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,
     case ast::Builtin::AggHashTableProcessBatch: {
       LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
       LocalVar iters = VisitExpressionForRValue(call->arguments()[1]);
-      auto hash_fn = LookupFuncIdByName(
+      auto vec_hash_fn = LookupFuncIdByName(
           call->arguments()[2]->As<ast::IdentifierExpr>()->name().data());
       auto key_eq_fn = LookupFuncIdByName(
           call->arguments()[3]->As<ast::IdentifierExpr>()->name().data());
-      auto init_agg_fn = LookupFuncIdByName(
+      auto vec_key_eq_fn = LookupFuncIdByName(
           call->arguments()[4]->As<ast::IdentifierExpr>()->name().data());
-      auto merge_agg_fn = LookupFuncIdByName(
+      auto init_agg_fn = LookupFuncIdByName(
           call->arguments()[5]->As<ast::IdentifierExpr>()->name().data());
-      LocalVar partitioned = VisitExpressionForRValue(call->arguments()[6]);
-      emitter()->EmitAggHashTableProcessBatch(agg_ht, iters, hash_fn, key_eq_fn,
-                                              init_agg_fn, merge_agg_fn,
+      auto vec_merge_agg_fn = LookupFuncIdByName(
+          call->arguments()[6]->As<ast::IdentifierExpr>()->name().data());
+      LocalVar partitioned = VisitExpressionForRValue(call->arguments()[7]);
+      emitter()->EmitAggHashTableProcessBatch(agg_ht, iters, vec_hash_fn, key_eq_fn, vec_key_eq_fn,
+                                              init_agg_fn, vec_merge_agg_fn,
                                               partitioned);
       break;
     }

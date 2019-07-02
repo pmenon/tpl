@@ -185,10 +185,11 @@ void AggregationHashTable::AllocateOverflowPartitions() {
 
 void AggregationHashTable::ProcessBatch(
     VectorProjectionIterator *iters[],
-    const AggregationHashTable::HashFn hash_fn,
+    const AggregationHashTable::VecHashFn vec_hash_fn,
     const AggregationHashTable::KeyEqFn key_eq_fn,
+    const AggregationHashTable::VecKeyEqFn vec_key_eq_fn,
     const AggregationHashTable::InitAggFn init_agg_fn,
-    const AggregationHashTable::AdvanceAggFn advance_agg_fn,
+    const AggregationHashTable::VecAdvanceAggFn vec_advance_agg_fn,
     const bool partitioned) {
   TPL_ASSERT(iters[0]->num_selected() <= kDefaultVectorSize,
              "Vector projection is too large");
@@ -202,27 +203,28 @@ void AggregationHashTable::ProcessBatch(
 
   // Launch
   if (iters[0]->IsFiltered()) {
-    ProcessBatchImpl<true>(iters, hash_fn, key_eq_fn, init_agg_fn,
-                           advance_agg_fn, partitioned);
+    ProcessBatchImpl<true>(iters, vec_hash_fn, key_eq_fn, vec_key_eq_fn, init_agg_fn,
+                           vec_advance_agg_fn, partitioned);
   } else {
-    ProcessBatchImpl<false>(iters, hash_fn, key_eq_fn, init_agg_fn,
-                            advance_agg_fn, partitioned);
+    ProcessBatchImpl<false>(iters, vec_hash_fn, key_eq_fn, vec_key_eq_fn, init_agg_fn,
+                            vec_advance_agg_fn, partitioned);
   }
 }
 
 template <bool VPIIsFiltered>
 void AggregationHashTable::ProcessBatchImpl(
     VectorProjectionIterator *iters[],
-    const AggregationHashTable::HashFn hash_fn,
+    const AggregationHashTable::VecHashFn vec_hash_fn,
     const AggregationHashTable::KeyEqFn key_eq_fn,
+    const AggregationHashTable::VecKeyEqFn vec_key_eq_fn,
     const AggregationHashTable::InitAggFn init_agg_fn,
-    const AggregationHashTable::AdvanceAggFn advance_agg_fn,
+    const AggregationHashTable::VecAdvanceAggFn vec_advance_agg_fn,
     const bool partitioned) {
   // Compute the hashes
-  ComputeHash<VPIIsFiltered>(iters, hash_fn);
+  ComputeHash<VPIIsFiltered>(iters, vec_hash_fn);
 
   // Try to find associated groups for all input tuples
-  const u32 found_groups = FindGroups<VPIIsFiltered>(iters, key_eq_fn);
+  const u32 found_groups = FindGroups<VPIIsFiltered>(iters, vec_key_eq_fn);
   iters[0]->Reset();
 
   // Create aggregates for those tuples that didn't find a match
@@ -234,7 +236,7 @@ void AggregationHashTable::ProcessBatchImpl(
   iters[0]->Reset();
 
   // Advance the aggregates for all tuples that did find a match
-  AdvanceGroups<VPIIsFiltered>(iters, found_groups, advance_agg_fn);
+  AdvanceGroups<VPIIsFiltered>(iters, found_groups, vec_advance_agg_fn);
   iters[0]->Reset();
 }
 
@@ -246,33 +248,24 @@ void AggregationHashTable::ProcessBatchImpl(
 template <bool VPIIsFiltered>
 NEVER_INLINE void AggregationHashTable::ComputeHash(
     VectorProjectionIterator *iters[],
-    const AggregationHashTable::HashFn hash_fn) {
+    const AggregationHashTable::VecHashFn vec_hash_fn) {
   auto &hashes = batch_state_->hashes;
-  if constexpr (VPIIsFiltered) {
-    for (u32 idx = 0; iters[0]->HasNextFiltered();
-         iters[0]->AdvanceFiltered()) {
-      hashes[idx++] = hash_fn(iters);
-    }
-  } else {
-    for (u32 idx = 0; iters[0]->HasNext(); iters[0]->Advance()) {
-      hashes[idx++] = hash_fn(iters);
-    }
-  }
+  vec_hash_fn(hashes.data(), iters);
 }
 
 template <bool VPIIsFiltered>
 NEVER_INLINE u32 AggregationHashTable::FindGroups(
     VectorProjectionIterator *iters[],
-    const AggregationHashTable::KeyEqFn key_eq_fn) {
+    const AggregationHashTable::VecKeyEqFn vec_key_eq_fn) {
   batch_state_->key_not_eq.clear();
   batch_state_->groups_not_found.clear();
   u32 found = LookupInitial(iters[0]->num_selected());
-  u32 keys_equal = CheckKeyEquality<VPIIsFiltered>(iters, found, key_eq_fn);
+  u32 keys_equal = CheckKeyEquality<VPIIsFiltered>(iters, found, vec_key_eq_fn);
   while (!batch_state_->key_not_eq.empty()) {
     found = FollowNext();
     if (found == 0) break;
     batch_state_->key_not_eq.clear();
-    keys_equal += CheckKeyEquality<VPIIsFiltered>(iters, found, key_eq_fn);
+    keys_equal += CheckKeyEquality<VPIIsFiltered>(iters, found, vec_key_eq_fn);
   }
   return keys_equal;
 }
@@ -333,26 +326,32 @@ NEVER_INLINE u32 AggregationHashTable::LookupInitialImpl(const u32 num_elems) {
 template <bool VPIIsFiltered>
 NEVER_INLINE u32 AggregationHashTable::CheckKeyEquality(
     VectorProjectionIterator *iters[], const u32 num_elems,
-    const AggregationHashTable::KeyEqFn key_eq_fn) {
+    const AggregationHashTable::VecKeyEqFn vec_key_eq_fn) {
   auto &entries = batch_state_->entries;
   auto &groups_found = batch_state_->groups_found;
   auto &key_not_eq = batch_state_->key_not_eq;
 
   u32 matched = 0;
+  // Faster, but uses the stack
+  std::array<byte*, kDefaultVectorSize> payloads;
+  std::array<bool, kDefaultVectorSize> matches{};
   for (u32 i = 0; i < num_elems; i++) {
     const u32 index = groups_found[i];
-    // Position the iterator on the tuple we're about the compare keys with
-    iters[0]->SetPosition<VPIIsFiltered>(index);
     // Retrieve the aggregate we're about to compare keys with
     HashTableEntry *entry = entries[index];
-    // Compare keys of the aggregate and the input tuple
-    if (key_eq_fn(entry->payload, iters)) {
-      groups_found[matched++] = index;
+    // Add it to the list of payloads
+    payloads[i] = entry->payload;
+  }
+  vec_key_eq_fn(payloads.data(), iters, groups_found.data(), matches.data(), num_elems);
+  // Iterator through matches
+  for (u32 i = 0; i < num_elems; i++) {
+    // Check if there is a match at this index
+    if (matches[i]) {
+      groups_found[matched++] = groups_found[i];
     } else {
-      key_not_eq.append(index);
+      key_not_eq.append(groups_found[i]);
     }
   }
-
   return matched;
 }
 
@@ -418,19 +417,18 @@ NEVER_INLINE void AggregationHashTable::CreateMissingGroups(
 template <bool VPIIsFiltered>
 NEVER_INLINE void AggregationHashTable::AdvanceGroups(
     VectorProjectionIterator *iters[], const u32 num_groups,
-    const AggregationHashTable::AdvanceAggFn advance_agg_fn) {
+    const AggregationHashTable::VecAdvanceAggFn vec_advance_agg_fn) {
   const auto &entries = batch_state_->entries;
   const auto &groups_found = batch_state_->groups_found;
 
+  std::array<std::byte*, kDefaultVectorSize> payloads;
   for (u32 i = 0; i < num_groups; i++) {
     const auto index = groups_found[i];
-    // Position the iterator at the tuple we'll use to update the aggregate
-    iters[0]->SetPosition<VPIIsFiltered>(index);
     // The entry storing the aggregate we'll update
     HashTableEntry *entry = entries[index];
-    // Call the advancement function
-    advance_agg_fn(entry->payload, iters);
+    payloads[i] = entry->payload;
   }
+  vec_advance_agg_fn(payloads.data(), iters, groups_found.data(), num_groups);
 }
 
 void AggregationHashTable::TransferMemoryAndPartitions(

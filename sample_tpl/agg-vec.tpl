@@ -22,8 +22,26 @@ fun keyCheck(agg: *Agg, iters: [*]*VectorProjectionIterator) -> bool {
   return @sqlToBool(key == agg.key)
 }
 
-fun hashFn(iters: [*]*VectorProjectionIterator) -> uint64 {
-  return @hash(@vpiGetInt(iters[0], 1))
+fun vecKeyCheck(aggs: [*]*Agg, iters: [*]*VectorProjectionIterator, indexes: [*]uint32, matches: [*]bool, num_elems: uint32) {
+  var vec = iters[0]
+  for (var i : uint32 = 0; i < num_elems; i = i + 1) {
+    var agg = aggs[i]
+    var index = indexes[i]
+    @vpiSetPosition(vec, index)
+    var key = @vpiGetInt(vec, 1)
+    if (key != agg.key) {
+      matches[i] = false
+    }
+  }
+}
+
+fun vecHashFn(hashes: [*]uint64, iters: [*]*VectorProjectionIterator) -> nil {
+  var vec = iters[0]
+  var idx = 0
+  for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
+    hashes[idx] = @hash(@vpiGetInt(vec, 1))
+    idx = idx + 1
+  }
 }
 
 fun constructAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
@@ -33,9 +51,16 @@ fun constructAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
   @aggInit(&agg.count)
 }
 
-fun updateAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
-  var input = @vpiGetInt(iters[0], 0)
-  @aggAdvance(&agg.count, &input)
+// Same as above
+fun updateAgg(aggs: [*]*Agg, iters: [*]*VectorProjectionIterator, indexes: [*]uint32, num_elems: uint32) -> nil {
+  var vec = iters[0]
+  for (var i : uint32 = 0; i < num_elems; i = i + 1) {
+    var agg = aggs[i]
+    var index = indexes[i]
+    @vpiSetPosition(vec, index)
+    var input = @vpiGetInt(vec, 0)
+    @aggAdvance(&agg.count, &input)
+  }
 }
 
 fun pipeline_1(state: *State) -> nil {
@@ -49,7 +74,7 @@ fun pipeline_1(state: *State) -> nil {
   for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
     var vec = @tableIterGetVPI(&tvi)
     iters[0] = vec
-    @aggHTProcessBatch(ht, &iters, hashFn, keyCheck, constructAgg, updateAgg, false)
+    @aggHTProcessBatch(ht, &iters, vecHashFn, keyCheck, vecKeyCheck, constructAgg, vecUpdateAgg, false)
   }
   @tableIterClose(&tvi)
 }

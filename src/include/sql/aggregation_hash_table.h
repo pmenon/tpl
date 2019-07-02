@@ -48,9 +48,19 @@ class AggregationHashTable {
   using KeyEqFn = bool (*)(const void *, const void *);
 
   /**
-   * Function that takes an input element and computes a hash value.
+   * Batched version of KeyEqFn
+   * First argument is an array of payloads.
+   * Second argument is an array of projections.
+   * Third argument is an array of indexes.
+   * Fourth argument is the output array of matches.
+   * Fifth argument is the number of elements to check.
    */
-  using HashFn = hash_t (*)(void *);
+  using VecKeyEqFn = void (*)(const void *, const void *, const void*, void *, uint32_t);
+
+  /**
+   * Function that takes several input elements and computes hash values into an array.
+   */
+  using VecHashFn = hash_t (*)(void *, void *);
 
   /**
    * Function to initialize a new aggregate.
@@ -60,11 +70,13 @@ class AggregationHashTable {
   using InitAggFn = void (*)(void *, void *);
 
   /**
-   * Function to advance an existing aggregate with a new input value.
-   * Convention: First argument is the existing aggregate to update, second
-   *             argument is the input tuple to update the aggregate with.
+   * Batched call to aggAdvance.
+   * First argument is the array of payloads.
+   * Second element is a projection iterator.
+   * Third element is the array of indexes.
+   * Forth element is the number of elements.
    */
-  using AdvanceAggFn = void (*)(void *, void *);
+  using VecAdvanceAggFn = void (*)(void *, void *, const void *, uint32_t);
 
   /**
    * Function to merge a set of overflow partitions into the given aggregation
@@ -156,16 +168,18 @@ class AggregationHashTable {
   /**
    * Process an entire vector of input.
    * @param iters The input vectors.
-   * @param hash_fn Function to compute a hash of an input element.
-   * @param key_eq_fn Function to determine key equality of an input element and
+   * @param vec_hash_fn Function to compute a hash of a single input element.
+   * @param key_eq_fn Function to determine key equality of a single input element and
+   *                  an existing aggregate.
+   * @param vec_key_eq_fn Function to determine key equality of a set of input element and
    *                  an existing aggregate.
    * @param init_agg_fn Function to initialize a new aggregate.
-   * @param advance_agg_fn Function to advance an existing aggregate.
+   * @param vec_advance_agg_fn Function to advance an existing aggregate.
    * @param partitioned Whether to perform insertions in partitioned mode.
    */
-  void ProcessBatch(VectorProjectionIterator *iters[], HashFn hash_fn,
-                    KeyEqFn key_eq_fn, InitAggFn init_agg_fn,
-                    AdvanceAggFn advance_agg_fn, bool partitioned);
+  void ProcessBatch(VectorProjectionIterator *iters[], VecHashFn vec_hash_fn,
+                    KeyEqFn key_eq_fn, VecKeyEqFn vec_key_eq_fn, InitAggFn init_agg_fn,
+                    VecAdvanceAggFn vec_advance_agg_fn, bool partitioned);
 
   /**
    * Transfer all entries and overflow partitions stored in each thread-local
@@ -243,20 +257,20 @@ class AggregationHashTable {
   // Compute the hash value and perform the table lookup for all elements in the
   // input vector projections.
   template <bool VPIIsFiltered>
-  void ProcessBatchImpl(VectorProjectionIterator *iters[], HashFn hash_fn,
-                        KeyEqFn key_eq_fn, InitAggFn init_agg_fn,
-                        AdvanceAggFn advance_agg_fn, bool partitioned);
+  void ProcessBatchImpl(VectorProjectionIterator *iters[], VecHashFn vec_hash_fn,
+                        KeyEqFn key_eq_fn, VecKeyEqFn vec_key_eq_fn, InitAggFn init_agg_fn,
+                        VecAdvanceAggFn vec_advance_agg_fn, bool partitioned);
 
   // Dispatched from ProcessBatchImpl() to compute the hash values for all input
   // tuples. Hashes are stored in the 'hashes' array in the batch state.
   template <bool VPIIsFiltered>
-  void ComputeHash(VectorProjectionIterator *iters[], HashFn hash_fn);
+  void ComputeHash(VectorProjectionIterator *iters[], VecHashFn hash_fn);
 
   // Called from ProcessBatchImpl() to find matching groups for all tuples in
   // the input vector projection. This function returns the number of groups
   // that were found.
   template <bool VPIIsFiltered>
-  u32 FindGroups(VectorProjectionIterator *iters[], KeyEqFn key_eq_fn);
+  u32 FindGroups(VectorProjectionIterator *iters[], VecKeyEqFn vec_key_eq_fn);
 
   // Called from FindGroups() to lookup initial entries from the hash table for
   // all input tuples.
@@ -270,7 +284,7 @@ class AggregationHashTable {
   // Called from FindGroups() to check the equality of keys.
   template <bool VPIIsFiltered>
   u32 CheckKeyEquality(VectorProjectionIterator *iters[], u32 num_elems,
-                       KeyEqFn key_eq_fn);
+                       VecKeyEqFn vec_key_eq_fn);
 
   // Called from FindGroups() to follow the entry chain of candidate groups.
   u32 FollowNext();
@@ -284,7 +298,7 @@ class AggregationHashTable {
   // vector
   template <bool VPIIsFiltered>
   void AdvanceGroups(VectorProjectionIterator *iters[], u32 num_groups,
-                     AdvanceAggFn advance_agg_fn);
+                     VecAdvanceAggFn vec_advance_agg_fn);
 
   // Called during partitioned scan to build an aggregation hash table over a
   // single partition.
