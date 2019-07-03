@@ -30,14 +30,14 @@ enum class Dist : u8 { Uniform, Zipf_50, Zipf_75, Zipf_95, Zipf_99, Serial };
  */
 struct ColumnInsertMeta {
   const char *name;
-  const Type &type;
+  const SqlType &sql_type;
   Dist dist;
   std::variant<i64, double> min;
   std::variant<i64, double> max;
 
-  ColumnInsertMeta(const char *name, const Type &type, Dist dist,
+  ColumnInsertMeta(const char *name, const SqlType &sql_type, Dist dist,
                    std::variant<i64, double> min, std::variant<i64, double> max)
-      : name(name), type(type), dist(dist), min(min), max(max) {}
+      : name(name), sql_type(sql_type), dist(dist), min(min), max(max) {}
 };
 
 /**
@@ -65,14 +65,14 @@ struct TableInsertMeta {
 TableInsertMeta insert_meta[] = {
     // The empty table
     {TableId::EmptyTable, "empty_table", 0,
-     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0l, 0l}}},
+     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, i64{0}, i64{0}}}},
 
     // Table 1
     {TableId::Test1, "test_1", 2000000,
-     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0l, 0l},
-      {"colB", sql::IntegerType::Instance(false), Dist::Uniform, 0l, 9l},
-      {"colC", sql::IntegerType::Instance(false), Dist::Uniform, 0l, 9999l},
-      {"colD", sql::IntegerType::Instance(false), Dist::Uniform, 0l, 99999l}}},
+     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, i64{0}, i64{0}},
+      {"colB", sql::IntegerType::Instance(false), Dist::Uniform, i64{0}, i64{9}},
+      {"colC", sql::IntegerType::Instance(false), Dist::Uniform, i64{0}, i64{9999}},
+      {"colD", sql::IntegerType::Instance(false), Dist::Uniform, i64{0}, i64{99999}}}},
 };
 // clang-format on
 
@@ -123,45 +123,55 @@ std::pair<byte *, u32 *> GenerateColumnData(const ColumnInsertMeta &col_meta,
                                             u32 num_rows) {
   // Create data
   byte *col_data = nullptr;
-  switch (col_meta.type.type_id()) {
-    case TypeId::Boolean: {
-      throw std::runtime_error("Implement me!");
+  switch (col_meta.sql_type.id()) {
+    case SqlTypeId::TinyInt: {
+      col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i8>(
+          col_meta.dist, num_rows, std::get<i64>(col_meta.min),
+          std::get<i64>(col_meta.max)));
+      break;
     }
-    case TypeId::SmallInt: {
+    case SqlTypeId::SmallInt: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i16>(
           col_meta.dist, num_rows, std::get<i64>(col_meta.min),
           std::get<i64>(col_meta.max)));
       break;
     }
-    case TypeId::Integer: {
+    case SqlTypeId::Integer: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i32>(
           col_meta.dist, num_rows, std::get<i64>(col_meta.min),
           std::get<i64>(col_meta.max)));
       break;
     }
-    case TypeId::BigInt:
-    case TypeId::Decimal: {
+    case SqlTypeId::BigInt:
+    case SqlTypeId::Decimal: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i64>(
           col_meta.dist, num_rows, std::get<i64>(col_meta.min),
           std::get<i64>(col_meta.max)));
       break;
     }
-    case TypeId::Real: {
-      col_data = reinterpret_cast<byte *>(CreateNumberColumnData<double>(
+    case SqlTypeId::Real: {
+      col_data = reinterpret_cast<byte *>(CreateNumberColumnData<f32>(
           col_meta.dist, num_rows, std::get<double>(col_meta.min),
           std::get<double>(col_meta.max)));
       break;
     }
-    case TypeId::Date:
-    case TypeId::Char:
-    case TypeId::Varchar: {
+    case SqlTypeId::Double: {
+      col_data = reinterpret_cast<byte *>(CreateNumberColumnData<f64>(
+          col_meta.dist, num_rows, std::get<double>(col_meta.min),
+          std::get<double>(col_meta.max)));
+      break;
+    }
+    case SqlTypeId::Boolean:
+    case SqlTypeId::Date:
+    case SqlTypeId::Char:
+    case SqlTypeId::Varchar: {
       throw std::runtime_error("Implement me!");
     }
   }
 
   // Create bitmap
   u32 *null_bitmap = nullptr;
-  if (col_meta.type.nullable()) {
+  if (col_meta.sql_type.nullable()) {
     TPL_ASSERT(num_rows != 0, "Cannot have 0 rows.");
     u64 num_words = util::BitUtil::Num32BitWordsFor(num_rows);
     null_bitmap = static_cast<u32 *>(malloc(num_words * sizeof(u32)));
@@ -187,7 +197,7 @@ void InitTable(const TableInsertMeta &table_meta, Table *table) {
     for (const auto &col_meta : table_meta.col_meta) {
       auto [data, null_bitmap] = GenerateColumnData(col_meta, num_vals);
       // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
-      columns.emplace_back(col_meta.type, data, null_bitmap, num_vals);
+      columns.emplace_back(col_meta.sql_type, data, null_bitmap, num_vals);
     }
 
     // Insert into table
@@ -209,7 +219,7 @@ Catalog::Catalog() {
 
     std::vector<Schema::ColumnInfo> cols;
     for (const auto &col_meta : meta.col_meta) {
-      cols.emplace_back(col_meta.name, col_meta.type);
+      cols.emplace_back(col_meta.name, col_meta.sql_type);
     }
 
     // Insert into catalog

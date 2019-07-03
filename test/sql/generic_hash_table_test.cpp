@@ -13,7 +13,7 @@ namespace tpl::sql::test {
 class GenericHashTableTest : public TplTest {};
 
 struct TestEntry : public HashTableEntry {
-  u32 key, value;
+  u32 key{0}, value{0};
 
   TestEntry() : HashTableEntry(), key(0), value(0) { hash = Hash(); }
 

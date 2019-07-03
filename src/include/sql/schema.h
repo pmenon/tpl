@@ -14,37 +14,38 @@ class Schema {
  public:
   struct ColumnInfo {
     std::string name;
-    const Type &type;
+    const SqlType &sql_type;
     ColumnEncoding encoding;
 
-    ColumnInfo(std::string name, const Type &type,
+    ColumnInfo(std::string name, const SqlType &sql_type,
                ColumnEncoding encoding = ColumnEncoding::None)
-        : name(std::move(name)), type(type), encoding(encoding) {}
+        : name(std::move(name)), sql_type(sql_type), encoding(encoding) {}
 
     // TODO(pmenon): Fix me to change based on encoding
     u32 StorageSize() const {
-      switch (type.type_id()) {
-        case TypeId::Boolean: {
+      switch (sql_type.id()) {
+        case SqlTypeId::Boolean:
+        case SqlTypeId::TinyInt: {
           return sizeof(i8);
         }
-        case TypeId::SmallInt: {
+        case SqlTypeId::SmallInt: {
           return sizeof(i16);
         }
-        case TypeId::Date:
-        case TypeId::Integer: {
+        case SqlTypeId::Date:
+        case SqlTypeId::Integer: {
           return sizeof(i32);
         }
-        case TypeId::BigInt: {
+        case SqlTypeId::BigInt: {
           return sizeof(i64);
         }
-        case TypeId::Decimal: {
+        case SqlTypeId::Decimal: {
           return sizeof(i128);
         }
-        case TypeId::Char: {
-          auto *char_type = type.As<CharType>();
+        case SqlTypeId::Char: {
+          auto *char_type = sql_type.As<CharType>();
           return char_type->length() * sizeof(i8);
         }
-        case TypeId::Varchar: {
+        case SqlTypeId::Varchar: {
           return 16;
         }
         default: {

@@ -14,15 +14,15 @@ namespace tpl::sql {
  */
 class ColumnSegment {
  public:
-  ColumnSegment(const Type &type, byte *data, u32 *null_bitmap,
+  ColumnSegment(const SqlType &sql_type, byte *data, u32 *null_bitmap,
                 u32 num_tuples) noexcept
-      : type_(type),
+      : sql_type_(sql_type),
         data_(data),
         null_bitmap_(null_bitmap),
         num_tuples_(num_tuples) {}
 
   ColumnSegment(ColumnSegment &&other) noexcept
-      : type_(other.type_),
+      : sql_type_(other.sql_type_),
         data_(other.data_),
         null_bitmap_(other.null_bitmap_),
         num_tuples_(other.num_tuples_) {
@@ -68,9 +68,9 @@ class ColumnSegment {
   }
 
   /**
-   * Return the type of the column
+   * Return the SQL type of the column.
    */
-  const Type &type() const { return type_; }
+  const SqlType &sql_type() const { return sql_type_; }
 
   /**
    * Return the number of values in the column
@@ -85,7 +85,7 @@ class ColumnSegment {
   auto *AccessRawNullBitmap(u32 idx) const { return &null_bitmap_[idx]; }
 
  private:
-  const Type &type_;
+  const SqlType &sql_type_;
   byte *data_;
   u32 *null_bitmap_;
   u32 num_tuples_;

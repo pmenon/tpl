@@ -151,7 +151,7 @@ class Hasher {
   static auto HashCrc(const T val, const hash_t seed)
       -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
     u64 result1 = _mm_crc32_u64(seed, static_cast<u64>(val));
-    u64 result2 = _mm_crc32_u64(0x04c11db7, static_cast<u64>(val));
+    u64 result2 = _mm_crc32_u64(0x04C11DB7, static_cast<u64>(val));
     return ((result2 << 32u) | result1) * 0x2545F4914F6CDD1Dull;
   }
 

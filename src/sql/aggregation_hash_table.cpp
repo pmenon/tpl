@@ -69,7 +69,7 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory,
   flush_threshold_ = u64(std::llround(
       f32(l2_size) / f64(entries_.element_size()) * kDefaultLoadFactor));
   flush_threshold_ =
-      std::max(256ul, util::MathUtil::PowerOf2Floor(flush_threshold_));
+      std::max(u64{256}, util::MathUtil::PowerOf2Floor(flush_threshold_));
 }
 
 AggregationHashTable::~AggregationHashTable() {
@@ -278,7 +278,7 @@ NEVER_INLINE u32 AggregationHashTable::LookupInitial(const u32 num_elems) {
   u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
   if (hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
     return LookupInitialImpl<true>(num_elems);
-  } else {
+  } else {  // NOLINT
     return LookupInitialImpl<false>(num_elems);
   }
 }

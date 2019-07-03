@@ -235,8 +235,8 @@ class MemoryPool {
   // Metadata tracker for memory allocations
   MemoryTracker *tracker_;
 
-  //
-  static std::atomic<u64> kMmapThreshold;
+  // Variable storing the threshold above which to use MMap allocations
+  static std::atomic<std::size_t> kMmapThreshold;
 };
 
 /**

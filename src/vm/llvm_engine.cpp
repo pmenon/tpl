@@ -461,9 +461,10 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(
     // Both relocation=PIC or JIT=true work. Use the latter for now.
     llvm::TargetOptions target_options;
     llvm::Optional<llvm::Reloc::Model> reloc;
+    const llvm::CodeGenOpt::Level opt_level = llvm::CodeGenOpt::Aggressive;
     target_machine_.reset(target->createTargetMachine(
         target_triple, llvm::sys::getHostCPUName(), target_features.getString(),
-        target_options, reloc, {}, {}, true));
+        target_options, reloc, {}, opt_level, true));
     TPL_ASSERT(target_machine_ != nullptr,
                "LLVM: Unable to find a suitable target machine!");
   }
@@ -735,37 +736,6 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
 
     // Handle bytecode
     switch (bytecode) {
-      case Bytecode::Assign1:
-      case Bytecode::Assign2:
-      case Bytecode::Assign4:
-      case Bytecode::Assign8: {
-        if (args[0]->getType()->getPointerElementType() != args[1]->getType()) {
-          llvm::Type *src_type = args[1]->getType();
-          if (src_type->isPointerTy() &&
-              src_type->getPointerElementType()->isStructTy()) {
-            args[1] = ir_builder->CreateStructGEP(args[1], 0);
-          }
-        }
-        ir_builder->CreateStore(args[1], args[0]);
-        break;
-      }
-
-      case Bytecode::Deref1:
-      case Bytecode::Deref2:
-      case Bytecode::Deref4:
-      case Bytecode::Deref8: {
-        if (args[1]->getType()->getPointerElementType() != args[0]->getType()) {
-          llvm::Type *src_type = args[1]->getType();
-          if (src_type->isPointerTy() &&
-              src_type->getPointerElementType()->isStructTy()) {
-            args[1] = ir_builder->CreateStructGEP(args[1], 0);
-          }
-        }
-        auto val = ir_builder->CreateLoad(args[1]);
-        ir_builder->CreateStore(val, args[0]);
-        break;
-      }
-
       case Bytecode::Call: {
         //
         // For internal calls, the callee function's ID will be the first
@@ -881,15 +851,16 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(
         // into the struct as the last GEP index.
         llvm::Type *pointee_type = args[1]->getType()->getPointerElementType();
         if (auto struct_type = llvm::dyn_cast<llvm::StructType>(pointee_type)) {
-          const i64 elem_offset =
-              llvm::cast<llvm::ConstantInt>(args[4])->getSExtValue();
-          const u32 elem_index = llvm_module_->getDataLayout()
-                                     .getStructLayout(struct_type)
-                                     ->getElementContainingOffset(elem_offset);
-          llvm::Value *elem_index_val =
-              llvm::ConstantInt::get(type_map_->Int64Type(), elem_index);
-          llvm::Value *addr =
-              ir_builder->CreateInBoundsGEP(args[1], {args[2], elem_index_val});
+          llvm::Value *addr = ir_builder->CreateInBoundsGEP(args[1], {args[2]});
+          const u64 elem_offset =
+              llvm::cast<llvm::ConstantInt>(args[4])->getZExtValue();
+          if (elem_offset != 0) {
+            const u32 elem_index =
+                llvm_module_->getDataLayout()
+                    .getStructLayout(struct_type)
+                    ->getElementContainingOffset(elem_offset);
+            addr = ir_builder->CreateStructGEP(addr, elem_index);
+          }
           ir_builder->CreateStore(addr, args[0]);
         } else {
           TPL_ASSERT(
@@ -975,23 +946,37 @@ void LLVMEngine::CompiledModuleBuilder::Simplify() {
 }
 
 void LLVMEngine::CompiledModuleBuilder::Optimize() {
+  llvm::legacy::PassManager module_passes;
+  llvm::legacy::FunctionPassManager function_passes(llvm_module_.get());
+
+  // Add the appropriate TargetLibraryInfo and TargetTransformInfo
+  auto target_library_info_impl = std::make_unique<llvm::TargetLibraryInfoImpl>(
+      target_machine_->getTargetTriple());
+  function_passes.add(llvm::createTargetTransformInfoWrapperPass(
+      target_machine_->getTargetIRAnalysis()));
+  module_passes.add(
+      new llvm::TargetLibraryInfoWrapperPass(*target_library_info_impl));
+  module_passes.add(llvm::createTargetTransformInfoWrapperPass(
+      target_machine_->getTargetIRAnalysis()));
+
+  // Build up optimization pipeline
   llvm::PassManagerBuilder pm_builder;
   pm_builder.OptLevel = 3;
+#if defined(__clang__)
+  pm_builder.Inliner = llvm::createFunctionInliningPass(2, 0, false);
+#else
   pm_builder.Inliner = llvm::createFunctionInliningPass(3, 0, false);
+#endif
+  pm_builder.populateFunctionPassManager(function_passes);
+  pm_builder.populateModulePassManager(module_passes);
 
-  llvm::legacy::FunctionPassManager function_pm(llvm_module_.get());
-  function_pm.add(llvm::createTargetTransformInfoWrapperPass(
-      target_machine_->getTargetIRAnalysis()));
-
-  llvm::legacy::PassManager module_pm;
-  module_pm.add(llvm::createTargetTransformInfoWrapperPass(
-      target_machine_->getTargetIRAnalysis()));
-
-  pm_builder.populateFunctionPassManager(function_pm);
-  pm_builder.populateModulePassManager(module_pm);
-
-  // Run all passes
-  module_pm.run(*llvm_module_);
+  // Run optimization passes on module
+  function_passes.doInitialization();
+  for (auto &func : *llvm_module_) {
+    function_passes.run(func);
+  }
+  function_passes.doFinalization();
+  module_passes.run(*llvm_module_);
 }
 
 std::unique_ptr<LLVMEngine::CompiledModule>

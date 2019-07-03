@@ -4,44 +4,34 @@
 
 #include "llvm/Support/Casting.h"
 
+#include "sql/sql.h"
 #include "util/common.h"
 #include "util/macros.h"
 
 namespace tpl::sql {
 
 /**
- * Supported SQL data types
+ * Base class for algebraic SQL types.
  */
-enum class TypeId : u8 {
-  Boolean,
-  SmallInt,
-  Integer,
-  BigInt,
-  Real,
-  Decimal,
-  Date,
-  Char,
-  Varchar
-};
-
-/// Base algebraic SQL type
-class Type {
+class SqlType {
  public:
-  virtual ~Type() = default;
+  virtual ~SqlType() = default;
 
-  TypeId type_id() const { return type_id_; }
+  SqlTypeId id() const { return id_; }
 
   bool nullable() const { return nullable_; }
 
-  virtual const Type &GetNonNullableVersion() const = 0;
+  virtual const SqlType &GetNonNullableVersion() const = 0;
 
-  virtual const Type &GetNullableVersion() const = 0;
+  virtual const SqlType &GetNullableVersion() const = 0;
+
+  virtual TypeId GetPrimitiveTypeId() const = 0;
 
   virtual std::string GetName() const = 0;
 
   virtual bool IsArithmetic() const = 0;
 
-  virtual bool Equals(const Type &other) const = 0;
+  virtual bool Equals(const SqlType &other) const = 0;
 
   // -------------------------------------------------------
   // Type-checking
@@ -73,16 +63,20 @@ class Type {
   }
 
  protected:
-  explicit Type(TypeId type_id, bool nullable)
-      : type_id_(type_id), nullable_(nullable) {}
+  explicit SqlType(SqlTypeId sql_type_id, bool nullable)
+      : id_(sql_type_id), nullable_(nullable) {}
 
  private:
-  TypeId type_id_;
-
+  // The SQL type ID
+  SqlTypeId id_;
+  // Flag indicating if the type is nullable
   bool nullable_;
 };
 
-class BooleanType : public Type {
+/**
+ * A SQL boolean type.
+ */
+class BooleanType : public SqlType {
  public:
   static const BooleanType &InstanceNonNullable();
 
@@ -92,42 +86,84 @@ class BooleanType : public Type {
     return (nullable ? InstanceNullable() : InstanceNonNullable());
   }
 
-  const Type &GetNonNullableVersion() const override {
+  const SqlType &GetNonNullableVersion() const override {
     return InstanceNonNullable();
   }
 
-  const Type &GetNullableVersion() const override { return InstanceNullable(); }
+  const SqlType &GetNullableVersion() const override {
+    return InstanceNullable();
+  }
+
+  TypeId GetPrimitiveTypeId() const override;
 
   std::string GetName() const override;
 
   bool IsArithmetic() const override;
 
-  bool Equals(const Type &other) const override;
+  bool Equals(const SqlType &other) const override;
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::Boolean;
+  static bool classof(const SqlType *type) {
+    return type->id() == SqlTypeId::Boolean;
   }
 
  private:
   explicit BooleanType(bool nullable);
 };
 
-/// Base for all types that are stored as primitive C/C++ numbers. This includes
-/// the regular SQL numbers (smallint, int, decimal), but also dates and
-/// timestamps.
-///
-/// \tparam CppType The primitive type
+/**
+ * Base for all types that are stored as primitive C/C++ numbers. This includes
+ * the regular SQL numbers (smallint, int, decimal), but also dates and
+ * timestamps.
+ * @tparam CppType The primitive type
+ */
 template <typename CppType>
-class NumberBaseType : public Type {
+class NumberBaseType : public SqlType {
  public:
-  using PrimitiveType = CppType;
+  TypeId GetPrimitiveTypeId() const override { return GetTypeId<CppType>(); }
 
   bool IsArithmetic() const override { return true; }
 
  protected:
-  NumberBaseType(TypeId type_id, bool nullable) : Type(type_id, nullable) {}
+  NumberBaseType(SqlTypeId type_id, bool nullable)
+      : SqlType(type_id, nullable) {}
 };
 
+/**
+ * A SQL tiny-int type..
+ */
+class TinyIntType : public NumberBaseType<i8> {
+ public:
+  static const TinyIntType &InstanceNonNullable();
+
+  static const TinyIntType &InstanceNullable();
+
+  static const TinyIntType &Instance(bool nullable) {
+    return (nullable ? InstanceNullable() : InstanceNonNullable());
+  }
+
+  const SqlType &GetNonNullableVersion() const override {
+    return InstanceNonNullable();
+  }
+
+  const SqlType &GetNullableVersion() const override {
+    return InstanceNullable();
+  }
+
+  std::string GetName() const override;
+
+  bool Equals(const SqlType &other) const override;
+
+  static bool classof(const SqlType *type) {
+    return type->id() == SqlTypeId::TinyInt;
+  }
+
+ private:
+  explicit TinyIntType(bool nullable);
+};
+
+/**
+ * A SQL small-int type..
+ */
 class SmallIntType : public NumberBaseType<i16> {
  public:
   static const SmallIntType &InstanceNonNullable();
@@ -138,24 +174,29 @@ class SmallIntType : public NumberBaseType<i16> {
     return (nullable ? InstanceNullable() : InstanceNonNullable());
   }
 
-  const Type &GetNonNullableVersion() const override {
+  const SqlType &GetNonNullableVersion() const override {
     return InstanceNonNullable();
   }
 
-  const Type &GetNullableVersion() const override { return InstanceNullable(); }
+  const SqlType &GetNullableVersion() const override {
+    return InstanceNullable();
+  }
 
   std::string GetName() const override;
 
-  bool Equals(const Type &other) const override;
+  bool Equals(const SqlType &other) const override;
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::SmallInt;
+  static bool classof(const SqlType *type) {
+    return type->id() == SqlTypeId::SmallInt;
   }
 
  private:
   explicit SmallIntType(bool nullable);
 };
 
+/**
+ * A SQL integer type.
+ */
 class IntegerType : public NumberBaseType<i32> {
  public:
   static const IntegerType &InstanceNonNullable();
@@ -166,24 +207,29 @@ class IntegerType : public NumberBaseType<i32> {
     return (nullable ? InstanceNullable() : InstanceNonNullable());
   }
 
-  const Type &GetNonNullableVersion() const override {
+  const SqlType &GetNonNullableVersion() const override {
     return InstanceNonNullable();
   }
 
-  const Type &GetNullableVersion() const override { return InstanceNullable(); }
+  const SqlType &GetNullableVersion() const override {
+    return InstanceNullable();
+  }
 
   std::string GetName() const override;
 
-  bool Equals(const Type &other) const override;
+  bool Equals(const SqlType &other) const override;
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::Integer;
+  static bool classof(const SqlType *type) {
+    return type->id() == SqlTypeId::Integer;
   }
 
  private:
   explicit IntegerType(bool nullable);
 };
 
+/**
+ * A SQL bigint type.
+ */
 class BigIntType : public NumberBaseType<i64> {
  public:
   static const BigIntType &InstanceNonNullable();
@@ -194,25 +240,30 @@ class BigIntType : public NumberBaseType<i64> {
     return (nullable ? InstanceNullable() : InstanceNonNullable());
   }
 
-  const Type &GetNonNullableVersion() const override {
+  const SqlType &GetNonNullableVersion() const override {
     return InstanceNonNullable();
   }
 
-  const Type &GetNullableVersion() const override { return InstanceNullable(); }
+  const SqlType &GetNullableVersion() const override {
+    return InstanceNullable();
+  }
 
   std::string GetName() const override;
 
-  bool Equals(const Type &other) const override;
+  bool Equals(const SqlType &other) const override;
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::BigInt;
+  static bool classof(const SqlType *type) {
+    return type->id() == SqlTypeId::BigInt;
   }
 
  private:
   explicit BigIntType(bool nullable);
 };
 
-class RealType : public NumberBaseType<double> {
+/**
+ * A SQL real type, i.e., a 4-byte floating point type.
+ */
+class RealType : public NumberBaseType<f32> {
  public:
   static const RealType &InstanceNonNullable();
 
@@ -222,25 +273,63 @@ class RealType : public NumberBaseType<double> {
     return (nullable ? InstanceNullable() : InstanceNonNullable());
   }
 
-  const Type &GetNonNullableVersion() const override {
+  const SqlType &GetNonNullableVersion() const override {
     return InstanceNonNullable();
   }
 
-  const Type &GetNullableVersion() const override { return InstanceNullable(); }
+  const SqlType &GetNullableVersion() const override {
+    return InstanceNullable();
+  }
 
   std::string GetName() const override;
 
-  bool Equals(const Type &other) const override;
+  bool Equals(const SqlType &other) const override;
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::Real;
+  static bool classof(const SqlType *type) {
+    return type->id() == SqlTypeId::Real;
   }
 
  private:
   explicit RealType(bool nullable);
 };
 
-class DecimalType : public Type {
+/**
+ * A SQL double type, i.e., an 8-byte floating point type.
+ */
+class DoubleType : public NumberBaseType<f64> {
+ public:
+  static const DoubleType &InstanceNonNullable();
+
+  static const DoubleType &InstanceNullable();
+
+  static const DoubleType &Instance(bool nullable) {
+    return (nullable ? InstanceNullable() : InstanceNonNullable());
+  }
+
+  const SqlType &GetNonNullableVersion() const override {
+    return InstanceNonNullable();
+  }
+
+  const SqlType &GetNullableVersion() const override {
+    return InstanceNullable();
+  }
+
+  std::string GetName() const override;
+
+  bool Equals(const SqlType &other) const override;
+
+  static bool classof(const SqlType *type) {
+    return type->id() == SqlTypeId::Double;
+  }
+
+ private:
+  explicit DoubleType(bool nullable);
+};
+
+/**
+ * A SQL decimal type.
+ */
+class DecimalType : public SqlType {
  public:
   static const DecimalType &InstanceNonNullable(u32 precision, u32 scale);
 
@@ -251,17 +340,19 @@ class DecimalType : public Type {
                      : InstanceNonNullable(precision, scale));
   }
 
-  const Type &GetNonNullableVersion() const override {
+  const SqlType &GetNonNullableVersion() const override {
     return InstanceNonNullable(precision(), scale());
   }
 
-  const Type &GetNullableVersion() const override {
+  const SqlType &GetNullableVersion() const override {
     return InstanceNullable(precision(), scale());
   }
 
+  TypeId GetPrimitiveTypeId() const override;
+
   std::string GetName() const override;
 
-  bool Equals(const Type &other) const override;
+  bool Equals(const SqlType &other) const override;
 
   bool IsArithmetic() const override;
 
@@ -269,8 +360,8 @@ class DecimalType : public Type {
 
   u32 scale() const;
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::Decimal;
+  static bool classof(const SqlType *type) {
+    return type->id() == SqlTypeId::Decimal;
   }
 
  private:
@@ -284,7 +375,10 @@ class DecimalType : public Type {
   u32 scale_;
 };
 
-class DateType : public Type {
+/**
+ * A SQL date type.
+ */
+class DateType : public SqlType {
  public:
   static const DateType &InstanceNonNullable();
 
@@ -294,27 +388,34 @@ class DateType : public Type {
     return (nullable ? InstanceNullable() : InstanceNonNullable());
   }
 
-  const Type &GetNonNullableVersion() const override {
+  const SqlType &GetNonNullableVersion() const override {
     return InstanceNonNullable();
   }
 
-  const Type &GetNullableVersion() const override { return InstanceNullable(); }
+  const SqlType &GetNullableVersion() const override {
+    return InstanceNullable();
+  }
+
+  TypeId GetPrimitiveTypeId() const override;
 
   std::string GetName() const override;
 
-  bool Equals(const Type &other) const override;
+  bool Equals(const SqlType &other) const override;
 
   bool IsArithmetic() const override { return false; }
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::Date;
+  static bool classof(const SqlType *type) {
+    return type->id() == SqlTypeId::Date;
   }
 
  private:
   explicit DateType(bool nullable);
 };
 
-class CharType : public Type {
+/**
+ * A SQL char type.
+ */
+class CharType : public SqlType {
  public:
   static const CharType &InstanceNonNullable(u32 len);
 
@@ -324,24 +425,26 @@ class CharType : public Type {
     return (nullable ? InstanceNullable(len) : InstanceNonNullable(len));
   }
 
-  const Type &GetNonNullableVersion() const override {
+  const SqlType &GetNonNullableVersion() const override {
     return InstanceNonNullable(length());
   }
 
-  const Type &GetNullableVersion() const override {
+  const SqlType &GetNullableVersion() const override {
     return InstanceNullable(length());
   }
 
+  TypeId GetPrimitiveTypeId() const override;
+
   std::string GetName() const override;
 
-  bool Equals(const Type &other) const override;
+  bool Equals(const SqlType &other) const override;
 
   bool IsArithmetic() const override { return false; }
 
   u32 length() const;
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::Char;
+  static bool classof(const SqlType *type) {
+    return type->id() == SqlTypeId::Char;
   }
 
  private:
@@ -354,7 +457,10 @@ class CharType : public Type {
   u32 length_;
 };
 
-class VarcharType : public Type {
+/**
+ * A SQL varchar type.
+ */
+class VarcharType : public SqlType {
  public:
   static const VarcharType &InstanceNonNullable(u32 max_len);
 
@@ -365,24 +471,26 @@ class VarcharType : public Type {
                      : InstanceNonNullable(max_len));
   }
 
-  const Type &GetNonNullableVersion() const override {
+  const SqlType &GetNonNullableVersion() const override {
     return InstanceNonNullable(max_length());
   }
 
-  const Type &GetNullableVersion() const override {
+  const SqlType &GetNullableVersion() const override {
     return InstanceNullable(max_length());
   }
 
+  TypeId GetPrimitiveTypeId() const override;
+
   std::string GetName() const override;
 
-  bool Equals(const Type &other) const override;
+  bool Equals(const SqlType &other) const override;
 
   bool IsArithmetic() const override { return false; }
 
   u32 max_length() const;
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::Varchar;
+  static bool classof(const SqlType *type) {
+    return type->id() == SqlTypeId::Varchar;
   }
 
  private:

@@ -65,7 +65,7 @@ fun _1_pipelineWorker(queryState: *State, state: *ThreadState_1, tvi: *TableVect
     // Insert into JHT
     for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
       var key = @vpiGetInt(vec, 0)
-      var elem: *BuildRow = @joinHTInsert(jht, @hash(key))
+      var elem = @ptrCast(*BuildRow, @joinHTInsert(jht, @hash(key)))
       elem.key = key
     }
     @vpiResetFiltered(vec)

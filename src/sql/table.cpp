@@ -21,8 +21,8 @@ void Table::Insert(Block &&block) {
   TPL_ASSERT(block.num_cols() == schema_->num_columns(),
              "Column count mismatch");
   for (u32 i = 0; i < schema_->num_columns(); i++) {
-    const auto &block_col_type = block.GetColumnData(i)->type();
-    const auto &schema_col_type = schema().GetColumnInfo(i)->type;
+    const auto &block_col_type = block.GetColumnData(i)->sql_type();
+    const auto &schema_col_type = schema().GetColumnInfo(i)->sql_type;
     TPL_ASSERT(schema_col_type.Equals(block_col_type), "Column type mismatch");
   }
 #endif
@@ -33,48 +33,71 @@ void Table::Insert(Block &&block) {
 
 namespace {
 
-void DumpColValue(std::ostream &os, const Type &type, const ColumnSegment &col,
-                  u32 row_idx) {
-  switch (type.type_id()) {
-    case TypeId::Boolean: {
+void DumpColValue(std::ostream &os, const SqlType &sql_type,
+                  const ColumnSegment &col, u32 row_idx) {
+  switch (sql_type.id()) {
+    case SqlTypeId::Boolean: {
       break;
     }
-    case TypeId::SmallInt: {
-      if (type.nullable() && col.IsNullAt(row_idx)) {
+    case SqlTypeId::TinyInt: {
+      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
+        os << "NULL";
+      } else {
+        os << col.TypedAccessAt<i8>(row_idx);
+      }
+      break;
+    }
+    case SqlTypeId::SmallInt: {
+      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
         os << col.TypedAccessAt<i16>(row_idx);
       }
       break;
     }
-    case TypeId::Integer: {
-      if (type.nullable() && col.IsNullAt(row_idx)) {
+    case SqlTypeId::Integer: {
+      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
         os << col.TypedAccessAt<i32>(row_idx);
       }
       break;
     }
-    case TypeId::BigInt: {
-      if (type.nullable() && col.IsNullAt(row_idx)) {
+    case SqlTypeId::BigInt: {
+      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
         os << col.TypedAccessAt<i64>(row_idx);
       }
       break;
     }
-    case TypeId::Real: {
-      if (type.nullable() && col.IsNullAt(row_idx)) {
+    case SqlTypeId::Real: {
+      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
-        os << col.TypedAccessAt<double>(row_idx);
+        os << col.TypedAccessAt<f32>(row_idx);
       }
       break;
     }
-    case TypeId::Decimal:
-    case TypeId::Date:
-    case TypeId::Char:
-    case TypeId::Varchar: {
+    case SqlTypeId::Double: {
+      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
+        os << "NULL";
+      } else {
+        os << col.TypedAccessAt<f64>(row_idx);
+      }
+      break;
+    }
+    case SqlTypeId::Char:
+    case SqlTypeId::Varchar: {
+      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
+        os << "NULL";
+      } else {
+        os << std::string(col.TypedAccessAt<const char *>(row_idx));
+      }
+      break;
+    }
+    case SqlTypeId::Decimal:
+    case SqlTypeId::Date: {
       break;
     }
   }
@@ -91,7 +114,7 @@ void Table::Dump(std::ostream &os) const {
           os << ", ";
         }
         const auto *col_vector = block.GetColumnData(col_idx);
-        DumpColValue(os, cols_meta[col_idx].type, *col_vector, row_idx);
+        DumpColValue(os, cols_meta[col_idx].sql_type, *col_vector, row_idx);
       }
       os << "\n";
     }

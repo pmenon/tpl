@@ -26,6 +26,7 @@ class VM::Frame {
       : frame_data_(frame_data), frame_size_(frame_size) {
     TPL_ASSERT(frame_data_ != nullptr, "Frame data cannot be null");
     TPL_ASSERT(frame_size_ >= 0, "Frame size must be >= 0");
+    (void)frame_size_;
   }
 
   void *PtrToLocalAt(const LocalVar local) const {
@@ -570,6 +571,22 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto *iter =
         frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
     OpVPIAdvanceFiltered(iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(VPISetPosition) : {
+    auto *iter =
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    auto index = frame->LocalAt<u32>(READ_LOCAL_ID());
+    OpVPISetPosition(iter, index);
+    DISPATCH_NEXT();
+  }
+
+  OP(VPISetPositionFiltered) : {
+    auto *iter =
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    auto index = frame->LocalAt<u32>(READ_LOCAL_ID());
+    OpVPISetPositionFiltered(iter, index);
     DISPATCH_NEXT();
   }
 

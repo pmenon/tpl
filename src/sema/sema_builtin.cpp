@@ -781,14 +781,12 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       if (!CheckArgCount(call, 2)) {
         return;
       }
-      // Second argument is an integer type
-      if (!call_args[1]->type()->IsSpecificBuiltin(ast::BuiltinType::Uint32)) {
-        ReportIncorrectCallArg(call, 1,
-                               GetBuiltinType(ast::BuiltinType::Uint32));
+      auto unsigned_kind = ast::BuiltinType::Uint32;
+      if (!call_args[1]->type()->IsSpecificBuiltin(unsigned_kind)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(unsigned_kind));
         return;
       }
-      // Return nothing
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->set_type(GetBuiltinType(ast::BuiltinType::Bool));
       break;
     }
     case ast::Builtin::VPIMatch: {

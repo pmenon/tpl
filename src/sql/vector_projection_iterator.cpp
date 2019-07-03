@@ -58,14 +58,14 @@ u32 VectorProjectionIterator::FilterColByVal(const u32 col_idx,
                                              const FilterVal val) {
   auto *col_type = vector_projection_->GetColumnInfo(col_idx);
 
-  switch (col_type->type.type_id()) {
-    case TypeId::SmallInt: {
+  switch (col_type->sql_type.id()) {
+    case SqlTypeId::SmallInt: {
       return FilterColByValImpl<i16, Op>(col_idx, val.si);
     }
-    case TypeId::Integer: {
+    case SqlTypeId::Integer: {
       return FilterColByValImpl<i32, Op>(col_idx, val.i);
     }
-    case TypeId::BigInt: {
+    case SqlTypeId::BigInt: {
       return FilterColByValImpl<i64, Op>(col_idx, val.bi);
     }
     default: { throw std::runtime_error("Filter not supported on type"); }
@@ -102,17 +102,17 @@ u32 VectorProjectionIterator::FilterColByCol(const u32 col_idx_1,
                                              const u32 col_idx_2) {
   auto *col_1_info = vector_projection_->GetColumnInfo(col_idx_1);
   UNUSED auto *col_2_info = vector_projection_->GetColumnInfo(col_idx_2);
-  TPL_ASSERT(col_1_info->type.Equals(col_2_info->type),
+  TPL_ASSERT(col_1_info->sql_type.Equals(col_2_info->sql_type),
              "Incompatible column types for filter");
 
-  switch (col_1_info->type.type_id()) {
-    case TypeId::SmallInt: {
+  switch (col_1_info->sql_type.id()) {
+    case SqlTypeId::SmallInt: {
       return FilterColByColImpl<i16, Op>(col_idx_1, col_idx_2);
     }
-    case TypeId::Integer: {
+    case SqlTypeId::Integer: {
       return FilterColByColImpl<i32, Op>(col_idx_1, col_idx_2);
     }
-    case TypeId::BigInt: {
+    case SqlTypeId::BigInt: {
       return FilterColByColImpl<i64, Op>(col_idx_1, col_idx_2);
     }
     default: { throw std::runtime_error("Filter not supported on type"); }

@@ -22,7 +22,7 @@ fun pipeline_1(state: *State) -> nil {
     var vec = @tableIterGetVPI(&tvi)
 
     var hash_val = @hash(@vpiGetInt(vec, 0))
-    var elem: *BuildRow = @joinHTInsert(jht, hash_val)
+    var elem = @ptrCast(*BuildRow, @joinHTInsert(jht, hash_val))
     elem.key = 44
 
     @vpiReset(vec)

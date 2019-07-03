@@ -576,12 +576,22 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
       execution_result()->set_destination(cond.ValueOf());
       break;
     }
-    case ast::Builtin::VPIAdvance:
+    case ast::Builtin::VPIAdvance: {
+      emitter()->Emit(Bytecode::VPIAdvance, vpi);
+      break;
+    }
     case ast::Builtin::VPIAdvanceFiltered: {
-      const Bytecode bytecode = builtin == ast::Builtin::VPIAdvance
-                                    ? Bytecode::VPIAdvance
-                                    : Bytecode::VPIAdvanceFiltered;
-      emitter()->Emit(bytecode, vpi);
+      emitter()->Emit(Bytecode::VPIAdvanceFiltered, vpi);
+      break;
+    }
+    case ast::Builtin::VPISetPosition: {
+      LocalVar index = VisitExpressionForRValue(call->arguments()[1]);
+      emitter()->Emit(Bytecode::VPISetPosition, vpi, index);
+      break;
+    }
+    case ast::Builtin::VPISetPositionFiltered: {
+      LocalVar index = VisitExpressionForRValue(call->arguments()[1]);
+      emitter()->Emit(Bytecode::VPISetPositionFiltered, vpi, index);
       break;
     }
     case ast::Builtin::VPISetPosition:
@@ -598,12 +608,12 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
       emitter()->Emit(Bytecode::VPIMatch, vpi, match);
       break;
     }
-    case ast::Builtin::VPIReset:
+    case ast::Builtin::VPIReset: {
+      emitter()->Emit(Bytecode::VPIReset, vpi);
+      break;
+    }
     case ast::Builtin::VPIResetFiltered: {
-      const Bytecode bytecode = builtin == ast::Builtin::VPIReset
-                                    ? Bytecode::VPIReset
-                                    : Bytecode::VPIResetFiltered;
-      emitter()->Emit(bytecode, vpi);
+      emitter()->Emit(Bytecode::VPIResetFiltered, vpi);
       break;
     }
     case ast::Builtin::VPIGetSmallInt: {
@@ -824,6 +834,7 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,
       LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
       LocalVar hash = VisitExpressionForRValue(call->arguments()[1]);
       emitter()->Emit(Bytecode::AggregationHashTableInsert, dest, agg_ht, hash);
+      execution_result()->set_destination(dest.ValueOf());
       break;
     }
     case ast::Builtin::AggHashTableLookup: {
@@ -834,6 +845,7 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,
           call->arguments()[2]->As<ast::IdentifierExpr>()->name().data());
       LocalVar arg = VisitExpressionForRValue(call->arguments()[3]);
       emitter()->EmitAggHashTableLookup(dest, agg_ht, hash, key_eq_fn, arg);
+      execution_result()->set_destination(dest.ValueOf());
       break;
     }
     case ast::Builtin::AggHashTableProcessBatch: {
@@ -1129,6 +1141,7 @@ void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call,
       LocalVar hash = VisitExpressionForRValue(call->arguments()[1]);
       emitter()->Emit(Bytecode::JoinHashTableAllocTuple, dest, join_hash_table,
                       hash);
+      execution_result()->set_destination(dest.ValueOf());
       break;
     }
     case ast::Builtin::JoinHashTableBuild: {
