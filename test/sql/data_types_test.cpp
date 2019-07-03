@@ -9,7 +9,7 @@ class DataTypesTests : public TplTest {};
 #define CHECK_TYPE_PROPERTIES(TYPE, TYPE_ID, IS_ARITHMETIC) \
   const auto &type = TYPE::Instance(true);                  \
   EXPECT_TRUE(type.nullable());                             \
-  EXPECT_EQ(TYPE_ID, type.type_id());                       \
+  EXPECT_EQ(TYPE_ID, type.id());                            \
   EXPECT_EQ(IS_ARITHMETIC, type.IsArithmetic());            \
   EXPECT_TRUE(type.Equals(TYPE::InstanceNullable()));       \
   EXPECT_FALSE(type.Equals(TYPE::InstanceNonNullable()));
@@ -23,7 +23,7 @@ class DataTypesTests : public TplTest {};
   EXPECT_FALSE(INSTANCE.Equals(OTHER_TYPE::Instance(false, __VA_ARGS__)));
 
 TEST_F(DataTypesTests, BooleanType) {
-  CHECK_TYPE_PROPERTIES(BooleanType, TypeId::Boolean, false);
+  CHECK_TYPE_PROPERTIES(BooleanType, SqlTypeId::Boolean, false);
   CHECK_NOT_EQUAL(type, SmallIntType);
   CHECK_NOT_EQUAL(type, IntegerType);
   CHECK_NOT_EQUAL(type, BigIntType);
@@ -31,8 +31,17 @@ TEST_F(DataTypesTests, BooleanType) {
   CHECK_NOT_EQUAL(type, DateType);
 }
 
+TEST_F(DataTypesTests, TinyIntType) {
+  CHECK_TYPE_PROPERTIES(TinyIntType, SqlTypeId::TinyInt, true);
+  CHECK_NOT_EQUAL(type, BooleanType);
+  CHECK_NOT_EQUAL(type, IntegerType);
+  CHECK_NOT_EQUAL(type, BigIntType);
+  CHECK_NOT_EQUAL(type, RealType);
+  CHECK_NOT_EQUAL(type, DateType);
+}
+
 TEST_F(DataTypesTests, SmallIntType) {
-  CHECK_TYPE_PROPERTIES(SmallIntType, TypeId::SmallInt, true);
+  CHECK_TYPE_PROPERTIES(SmallIntType, SqlTypeId::SmallInt, true);
   CHECK_NOT_EQUAL(type, BooleanType);
   CHECK_NOT_EQUAL(type, IntegerType);
   CHECK_NOT_EQUAL(type, BigIntType);
@@ -41,7 +50,7 @@ TEST_F(DataTypesTests, SmallIntType) {
 }
 
 TEST_F(DataTypesTests, IntegerType) {
-  CHECK_TYPE_PROPERTIES(IntegerType, TypeId::Integer, true);
+  CHECK_TYPE_PROPERTIES(IntegerType, SqlTypeId::Integer, true);
   CHECK_NOT_EQUAL(type, BooleanType);
   CHECK_NOT_EQUAL(type, SmallIntType);
   CHECK_NOT_EQUAL(type, BigIntType);
@@ -50,7 +59,7 @@ TEST_F(DataTypesTests, IntegerType) {
 }
 
 TEST_F(DataTypesTests, BigIntType) {
-  CHECK_TYPE_PROPERTIES(BigIntType, TypeId::BigInt, true);
+  CHECK_TYPE_PROPERTIES(BigIntType, SqlTypeId::BigInt, true);
   CHECK_NOT_EQUAL(type, BooleanType);
   CHECK_NOT_EQUAL(type, SmallIntType);
   CHECK_NOT_EQUAL(type, IntegerType);
@@ -59,7 +68,7 @@ TEST_F(DataTypesTests, BigIntType) {
 }
 
 TEST_F(DataTypesTests, RealType) {
-  CHECK_TYPE_PROPERTIES(RealType, TypeId::Real, true);
+  CHECK_TYPE_PROPERTIES(RealType, SqlTypeId::Real, true);
   CHECK_NOT_EQUAL(type, BooleanType);
   CHECK_NOT_EQUAL(type, SmallIntType);
   CHECK_NOT_EQUAL(type, IntegerType);
@@ -68,7 +77,7 @@ TEST_F(DataTypesTests, RealType) {
 }
 
 TEST_F(DataTypesTests, DateType) {
-  CHECK_TYPE_PROPERTIES(DateType, TypeId::Date, false);
+  CHECK_TYPE_PROPERTIES(DateType, SqlTypeId::Date, false);
   CHECK_NOT_EQUAL(type, BooleanType);
   CHECK_NOT_EQUAL(type, SmallIntType);
   CHECK_NOT_EQUAL(type, IntegerType);
@@ -79,7 +88,7 @@ TEST_F(DataTypesTests, DateType) {
 TEST_F(DataTypesTests, DecimalType) {
   const auto &type1 = DecimalType::InstanceNullable(5, 2);
   EXPECT_TRUE(type1.nullable());
-  EXPECT_EQ(TypeId::Decimal, type1.type_id());
+  EXPECT_EQ(SqlTypeId::Decimal, type1.id());
   EXPECT_EQ(5u, type1.precision());
   EXPECT_EQ(2u, type1.scale());
   EXPECT_TRUE(type1.IsArithmetic());
@@ -98,7 +107,7 @@ TEST_F(DataTypesTests, DecimalType) {
 TEST_F(DataTypesTests, CharType) {
   const auto &type1 = CharType::InstanceNullable(100);
   EXPECT_TRUE(type1.nullable());
-  EXPECT_EQ(TypeId::Char, type1.type_id());
+  EXPECT_EQ(SqlTypeId::Char, type1.id());
   EXPECT_EQ(100u, type1.length());
   EXPECT_FALSE(type1.IsArithmetic());
 
@@ -118,7 +127,7 @@ TEST_F(DataTypesTests, CharType) {
 TEST_F(DataTypesTests, VarcharType) {
   const auto &type1 = VarcharType::InstanceNullable(100);
   EXPECT_TRUE(type1.nullable());
-  EXPECT_EQ(TypeId::Varchar, type1.type_id());
+  EXPECT_EQ(SqlTypeId::Varchar, type1.id());
   EXPECT_EQ(100u, type1.max_length());
   EXPECT_FALSE(type1.IsArithmetic());
 
