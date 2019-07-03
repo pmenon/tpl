@@ -201,7 +201,8 @@ std::string DoubleType::GetName() const {
 }
 
 bool DoubleType::Equals(const SqlType &other) const {
-  return other.Is<RealType>() && nullable() == other.nullable();
+
+  return other.Is<DoubleType>() && nullable() == other.nullable();
 }
 
 const DoubleType &DoubleType::InstanceNonNullable() {

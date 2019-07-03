@@ -29,6 +29,8 @@ TEST_F(DataTypesTests, BooleanType) {
   CHECK_NOT_EQUAL(type, BigIntType);
   CHECK_NOT_EQUAL(type, RealType);
   CHECK_NOT_EQUAL(type, DateType);
+  CHECK_NOT_EQUAL(type, RealType);
+  CHECK_NOT_EQUAL(type, DoubleType);
 }
 
 TEST_F(DataTypesTests, TinyIntType) {
@@ -38,6 +40,8 @@ TEST_F(DataTypesTests, TinyIntType) {
   CHECK_NOT_EQUAL(type, BigIntType);
   CHECK_NOT_EQUAL(type, RealType);
   CHECK_NOT_EQUAL(type, DateType);
+  CHECK_NOT_EQUAL(type, RealType);
+  CHECK_NOT_EQUAL(type, DoubleType);
 }
 
 TEST_F(DataTypesTests, SmallIntType) {
@@ -47,6 +51,8 @@ TEST_F(DataTypesTests, SmallIntType) {
   CHECK_NOT_EQUAL(type, BigIntType);
   CHECK_NOT_EQUAL(type, RealType);
   CHECK_NOT_EQUAL(type, DateType);
+  CHECK_NOT_EQUAL(type, RealType);
+  CHECK_NOT_EQUAL(type, DoubleType);
 }
 
 TEST_F(DataTypesTests, IntegerType) {
@@ -56,6 +62,8 @@ TEST_F(DataTypesTests, IntegerType) {
   CHECK_NOT_EQUAL(type, BigIntType);
   CHECK_NOT_EQUAL(type, RealType);
   CHECK_NOT_EQUAL(type, DateType);
+  CHECK_NOT_EQUAL(type, RealType);
+  CHECK_NOT_EQUAL(type, DoubleType);
 }
 
 TEST_F(DataTypesTests, BigIntType) {
@@ -65,6 +73,8 @@ TEST_F(DataTypesTests, BigIntType) {
   CHECK_NOT_EQUAL(type, IntegerType);
   CHECK_NOT_EQUAL(type, RealType);
   CHECK_NOT_EQUAL(type, DateType);
+  CHECK_NOT_EQUAL(type, RealType);
+  CHECK_NOT_EQUAL(type, DoubleType);
 }
 
 TEST_F(DataTypesTests, RealType) {
@@ -74,6 +84,17 @@ TEST_F(DataTypesTests, RealType) {
   CHECK_NOT_EQUAL(type, IntegerType);
   CHECK_NOT_EQUAL(type, BigIntType);
   CHECK_NOT_EQUAL(type, DateType);
+  CHECK_NOT_EQUAL(type, DoubleType);
+}
+
+TEST_F(DataTypesTests, DoubleType) {
+  CHECK_TYPE_PROPERTIES(DoubleType, SqlTypeId::Double, true);
+  CHECK_NOT_EQUAL(type, BooleanType);
+  CHECK_NOT_EQUAL(type, SmallIntType);
+  CHECK_NOT_EQUAL(type, IntegerType);
+  CHECK_NOT_EQUAL(type, BigIntType);
+  CHECK_NOT_EQUAL(type, DateType);
+  CHECK_NOT_EQUAL(type, RealType);
 }
 
 TEST_F(DataTypesTests, DateType) {
@@ -98,6 +119,8 @@ TEST_F(DataTypesTests, DecimalType) {
   CHECK_NOT_EQUAL(type1, IntegerType);
   CHECK_NOT_EQUAL(type1, BigIntType);
   CHECK_NOT_EQUAL(type1, RealType);
+  CHECK_NOT_EQUAL(type1, RealType);
+  CHECK_NOT_EQUAL(type1, DoubleType);
   CHECK_NOT_EQUAL_ALT(type1, DecimalType, 3, 4);
 
   EXPECT_FALSE(type1.Equals(DecimalType::InstanceNonNullable(5, 2)));
@@ -117,6 +140,8 @@ TEST_F(DataTypesTests, CharType) {
   CHECK_NOT_EQUAL(type1, BigIntType);
   CHECK_NOT_EQUAL(type1, RealType);
   CHECK_NOT_EQUAL(type1, DateType);
+  CHECK_NOT_EQUAL(type1, RealType);
+  CHECK_NOT_EQUAL(type1, DoubleType);
   CHECK_NOT_EQUAL_ALT(type1, DecimalType, 5, 2);
   CHECK_NOT_EQUAL_ALT(type1, CharType, 200);
   CHECK_NOT_EQUAL_ALT(type1, VarcharType, 200);
@@ -137,6 +162,8 @@ TEST_F(DataTypesTests, VarcharType) {
   CHECK_NOT_EQUAL(type1, BigIntType);
   CHECK_NOT_EQUAL(type1, RealType);
   CHECK_NOT_EQUAL(type1, DateType);
+  CHECK_NOT_EQUAL(type1, RealType);
+  CHECK_NOT_EQUAL(type1, DoubleType);
   CHECK_NOT_EQUAL_ALT(type1, DecimalType, 5, 2);
   CHECK_NOT_EQUAL_ALT(type1, VarcharType, 200);
 
