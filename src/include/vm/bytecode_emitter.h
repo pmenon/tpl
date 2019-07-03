@@ -140,20 +140,10 @@ class BytecodeEmitter {
                               FunctionId key_eq_fn, LocalVar arg);
 
   // Emit code to process a batch of input into the aggregation hash table
-  void EmitAggHashTableProcessBatch(LocalVar agg_ht, LocalVar iters,
-                                    FunctionId vec_hash_fn, FunctionId key_eq_fn, FunctionId vec_key_eq_fn,
-                                    FunctionId init_agg_fn,
-                                    FunctionId vec_merge_agg_fn,
-                                    LocalVar partitioned);
-
-
-  // Emit code to process a batch of input into the aggregation hash table using array batches
-  void EmitAggHashTableProcessBatchArray(LocalVar agg_ht, LocalVar iters,
-                                    FunctionId batch_hash_fn, FunctionId batch_key_eq_fn,
-                                    FunctionId batch_init_agg_fn,
-                                    FunctionId batch_merge_agg_fn,
-                                    FunctionId single_key_eq_fn,
-                                    LocalVar partitioned);
+  void EmitAggHashTableProcessBatch(
+      LocalVar agg_ht, LocalVar iters, FunctionId vec_hash_fn,
+      FunctionId key_eq_fn, FunctionId vec_key_eq_fn, FunctionId init_agg_fn,
+      FunctionId vec_merge_agg_fn, LocalVar partitioned);
 
   // Emit code to move thread-local data into main agg table
   void EmitAggHashTableMovePartitions(LocalVar agg_ht, LocalVar tls,

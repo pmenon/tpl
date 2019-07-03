@@ -940,45 +940,17 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
         module_->GetRawFunctionImpl(vec_hash_fn_id));
     auto key_eq_fn = reinterpret_cast<sql::AggregationHashTable::KeyEqFn>(
         module_->GetRawFunctionImpl(key_eq_fn_id));
-  auto vec_key_eq_fn = reinterpret_cast<sql::AggregationHashTable::VecKeyEqFn>(
-      module_->GetRawFunctionImpl(vec_key_eq_fn_id));
+    auto vec_key_eq_fn =
+        reinterpret_cast<sql::AggregationHashTable::VecKeyEqFn>(
+            module_->GetRawFunctionImpl(vec_key_eq_fn_id));
     auto init_agg_fn = reinterpret_cast<sql::AggregationHashTable::InitAggFn>(
         module_->GetRawFunctionImpl(init_agg_fn_id));
     auto vec_advance_agg_fn =
         reinterpret_cast<sql::AggregationHashTable::VecAdvanceAggFn>(
             module_->GetRawFunctionImpl(vec_merge_agg_fn_id));
     OpAggregationHashTableProcessBatch(agg_hash_table, iters, vec_hash_fn,
-                                       key_eq_fn, vec_key_eq_fn, init_agg_fn, vec_advance_agg_fn,
-                                       partitioned);
-    DISPATCH_NEXT();
-  }
-
-  OP(AggregationHashTableProcessBatchArray) : {
-    auto *agg_hash_table =
-        frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
-    auto **iters =
-        frame->LocalAt<sql::VectorProjectionIterator **>(READ_LOCAL_ID());
-    auto batch_hash_fn_id = READ_FUNC_ID();
-    auto batch_key_eq_fn_id = READ_FUNC_ID();
-    auto batch_init_agg_fn_id = READ_FUNC_ID();
-    auto batch_merge_agg_fn_id = READ_FUNC_ID();
-    auto single_key_eq_fn_id = READ_FUNC_ID();
-    auto partitioned = frame->LocalAt<bool>(READ_LOCAL_ID());
-
-    auto batch_hash_fn = reinterpret_cast<sql::AggregationHashTable::BatchHashFn>(
-        module_->GetRawFunctionImpl(batch_hash_fn_id));
-    auto batch_key_eq_fn = reinterpret_cast<sql::AggregationHashTable::BatchKeyEqFn>(
-        module_->GetRawFunctionImpl(batch_key_eq_fn_id));
-    auto batch_init_agg_fn = reinterpret_cast<sql::AggregationHashTable::BatchInitAggFn>(
-        module_->GetRawFunctionImpl(batch_init_agg_fn_id));
-    auto batch_advance_agg_fn =
-        reinterpret_cast<sql::AggregationHashTable::BatchAdvanceAggFn>(
-            module_->GetRawFunctionImpl(batch_merge_agg_fn_id));
-    auto single_key_eq_fn = reinterpret_cast<sql::AggregationHashTable::KeyEqFn>(
-        module_->GetRawFunctionImpl(single_key_eq_fn_id));
-    OpAggregationHashTableProcessBatchArray(agg_hash_table, iters, batch_hash_fn,
-                                       batch_key_eq_fn, batch_init_agg_fn, batch_advance_agg_fn, single_key_eq_fn,
-                                       partitioned);
+                                       key_eq_fn, vec_key_eq_fn, init_agg_fn,
+                                       vec_advance_agg_fn, partitioned);
     DISPATCH_NEXT();
   }
 

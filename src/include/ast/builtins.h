@@ -42,8 +42,8 @@ namespace tpl::ast {
   F(VPIAdvance, vpiAdvance)                                     \
   F(VPIAdvanceFiltered, vpiAdvanceFiltered)                     \
   F(VPIMatch, vpiMatch)                                         \
-  F(VPISetPosition, vpiSetPosition) \
-  F(VPISetPositionFiltered, vpiSetPositionFilterd) \
+  F(VPISetPosition, vpiSetPosition)                             \
+  F(VPISetPositionFiltered, vpiSetPositionFiltered)              \
   F(VPIReset, vpiReset)                                         \
   F(VPIResetFiltered, vpiResetFiltered)                         \
   F(VPIGetSmallInt, vpiGetSmallInt)                             \
@@ -72,7 +72,6 @@ namespace tpl::ast {
   F(AggHashTableInsert, aggHTInsert)                            \
   F(AggHashTableLookup, aggHTLookup)                            \
   F(AggHashTableProcessBatch, aggHTProcessBatch)                \
-  F(AggHashTableProcessBatchArray, aggHTProcessBatchArray)                \
   F(AggHashTableMovePartitions, aggHTMoveParts)                 \
   F(AggHashTableParallelPartitionedScan, aggHTParallelPartScan) \
   F(AggHashTableFree, aggHTFree)                                \

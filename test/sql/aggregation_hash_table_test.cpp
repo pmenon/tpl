@@ -67,14 +67,6 @@ static inline bool AggTupleKeyEq(const void *table_tuple,
   return lhs->key == rhs->key;
 }
 
-static inline bool AggTupleKeyEq(const void *table_tuple,
-                                 const void *probe_tuple) {
-  auto *lhs = reinterpret_cast<const AggTuple *>(table_tuple);
-  auto *rhs = reinterpret_cast<const InputTuple *>(probe_tuple);
-  return lhs->key == rhs->key;
-}
-
-
 // The function to determine whether two aggregates stored in overflow
 // partitions or hash tables have equivalent keys.
 static inline bool AggAggKeyEq(const void *agg_tuple_1,
@@ -207,17 +199,15 @@ TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
 TEST_F(AggregationHashTableTest, BatchProcessTest) {
   const u32 num_groups = 16;
 
-  const auto vec_hash_fn = [](void *x, void* y) {
-    auto iters = reinterpret_cast<VectorProjectionIterator **>(x);
-    auto hashes = reinterpret_cast<uint64_t *>(y);
+  const auto vec_hash_fn = [](void *x, void *y) {
+    auto hashes = reinterpret_cast<uint64_t *>(x);
+    auto iters = reinterpret_cast<VectorProjectionIterator **>(y);
     uint32_t idx = 0;
     for (; iters[0]->HasNext(); iters[0]->Advance()) {
-      auto key = iters[0]->GetValue<u32, false>(0, nullptr)
+      auto key = iters[0]->GetValue<u32, false>(0, nullptr);
       hashes[idx] = util::Hasher::Hash(*key);
       idx = idx + 1;
     }
-    auto key = iters[0]->GetValue<u32, false>(0, nullptr);
-    return util::Hasher::Hash(*key);
   };
 
   const auto key_eq = [](const void *agg, const void *x) {
@@ -227,8 +217,9 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
     return agg_tuple->key == *vpi_key;
   };
 
-  const auto vec_key_eq = [](const void *agg, void *x, const void* y, void *z, uint32_t num_elems) {
-    auto agg_tuples = reinterpret_cast<const AggTuple * const *>(agg);
+  const auto vec_key_eq = [](const void *agg, void *x, const void *y, void *z,
+                             uint32_t num_elems) {
+    auto agg_tuples = reinterpret_cast<const AggTuple *const *>(agg);
     auto iters = reinterpret_cast<VectorProjectionIterator **>(x);
     auto indexes = reinterpret_cast<const uint32_t *>(y);
     auto matches = reinterpret_cast<bool *>(z);
@@ -249,7 +240,8 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
     new (agg) AggTuple(InputTuple(*key, *val));
   };
 
-  const auto vec_advance_agg = [](void *agg, void *x, const void* y, uint32_t num_elems) {
+  const auto vec_advance_agg = [](void *agg, void *x, const void *y,
+                                  uint32_t num_elems) {
     auto agg_tuples = reinterpret_cast<AggTuple **>(agg);
     auto iters = reinterpret_cast<VectorProjectionIterator **>(x);
     auto indexes = reinterpret_cast<const uint32_t *>(y);
@@ -290,8 +282,8 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
     // Process
     VectorProjectionIterator vpi(&vp);
     VectorProjectionIterator *iters[] = {&vpi};
-    agg_table()->ProcessBatch(iters, vec_hash_fn, key_eq, vec_key_eq, init_agg, vec_advance_agg,
-                              false);
+    agg_table()->ProcessBatch(iters, vec_hash_fn, key_eq, vec_key_eq, init_agg,
+                              vec_advance_agg, false);
   }
 }
 

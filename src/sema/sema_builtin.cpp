@@ -180,32 +180,6 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call,
       break;
     }
     case ast::Builtin::AggHashTableProcessBatch: {
-      if (!CheckArgCount(call, 7)) {
-        return;
-      }
-      // Second argument is the VPIs
-      const auto vpi_kind = ast::BuiltinType::Uint64;
-      if (!args[1]->type()->IsPointerType() ||
-          IsPointerToSpecificBuiltin(args[1]->type()->GetPointeeType(),
-                                     vpi_kind)) {
-        ReportIncorrectCallArg(call, 1, GetBuiltinType(vpi_kind)->PointerTo());
-        return;
-      }
-      // Third, fourth, fifth, and sixth are all functions
-      if (!AreAllFunctions(args[2]->type(), args[3]->type(), args[4]->type(),
-                           args[5]->type(), args[6]->type())) {
-        ReportIncorrectCallArg(call, 2, "function");
-        return;
-      }
-      // Last arg must be a boolean
-      if (!args[7]->type()->IsBoolType()) {
-        ReportIncorrectCallArg(call, 7, GetBuiltinType(ast::BuiltinType::Bool));
-        return;
-      }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
-      break;
-    }
-    case ast::Builtin::AggHashTableProcessBatchArray: {
       if (!CheckArgCount(call, 8)) {
         return;
       }
@@ -809,7 +783,8 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       }
       // Second argument is an integer type
       if (!call_args[1]->type()->IsSpecificBuiltin(ast::BuiltinType::Uint32)) {
-        ReportIncorrectCallArg(call, 1, GetBuiltinType(ast::BuiltinType::Uint32));
+        ReportIncorrectCallArg(call, 1,
+                               GetBuiltinType(ast::BuiltinType::Uint32));
         return;
       }
       // Return nothing
@@ -1334,7 +1309,6 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::AggHashTableInsert:
     case ast::Builtin::AggHashTableLookup:
     case ast::Builtin::AggHashTableProcessBatch:
-    case ast::Builtin::AggHashTableProcessBatchArray:
     case ast::Builtin::AggHashTableMovePartitions:
     case ast::Builtin::AggHashTableParallelPartitionedScan:
     case ast::Builtin::AggHashTableFree: {

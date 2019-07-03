@@ -282,11 +282,13 @@ VM_OP_HOT void OpVPIAdvanceFiltered(tpl::sql::VectorProjectionIterator *vpi) {
   vpi->AdvanceFiltered();
 }
 
-VM_OP_HOT void OpVPISetPosition(tpl::sql::VectorProjectionIterator *vpi, uint32_t pos) {
+VM_OP_HOT void OpVPISetPosition(tpl::sql::VectorProjectionIterator *vpi,
+                                uint32_t pos) {
   vpi->SetPosition<false>(pos);
 }
 
-VM_OP_HOT void OpVPISetPositionFiltered(tpl::sql::VectorProjectionIterator *vpi, uint32_t pos) {
+VM_OP_HOT void OpVPISetPositionFiltered(tpl::sql::VectorProjectionIterator *vpi,
+                                        uint32_t pos) {
   vpi->SetPosition<true>(pos);
 }
 
@@ -787,21 +789,8 @@ VM_OP_HOT void OpAggregationHashTableProcessBatch(
     const tpl::sql::AggregationHashTable::InitAggFn init_agg_fn,
     const tpl::sql::AggregationHashTable::VecAdvanceAggFn vec_merge_agg_fn,
     const bool partitioned) {
-  agg_hash_table->ProcessBatch(iters, vec_hash_fn, key_eq_fn, vec_key_eq_fn, init_agg_fn,
-                               vec_merge_agg_fn, partitioned);
-}
-
-VM_OP_HOT void OpAggregationHashTableProcessBatchArray(
-    tpl::sql::AggregationHashTable *const agg_hash_table,
-    tpl::sql::VectorProjectionIterator *iters[],
-    const tpl::sql::AggregationHashTable::BatchHashFn batch_hash_fn,
-    const tpl::sql::AggregationHashTable::BatchKeyEqFn batch_key_eq_fn,
-    const tpl::sql::AggregationHashTable::BatchInitAggFn batch_init_agg_fn,
-    const tpl::sql::AggregationHashTable::BatchAdvanceAggFn batch_merge_agg_fn,
-    const tpl::sql::AggregationHashTable::KeyEqFn single_key_eq_fn,
-    const bool partitioned) {
-  agg_hash_table->ProcessBatchArray(iters, batch_hash_fn, batch_key_eq_fn, batch_init_agg_fn,
-                                    batch_merge_agg_fn, single_key_eq_fn, partitioned);
+  agg_hash_table->ProcessBatch(iters, vec_hash_fn, key_eq_fn, vec_key_eq_fn,
+                               init_agg_fn, vec_merge_agg_fn, partitioned);
 }
 
 VM_OP_HOT void OpAggregationHashTableTransferPartitions(

@@ -55,12 +55,14 @@ class AggregationHashTable {
    * Fourth argument is the output array of matches.
    * Fifth argument is the number of elements to check.
    */
-  using VecKeyEqFn = void (*)(const void *, void *, const void*, void *, uint32_t);
+  using VecKeyEqFn = void (*)(const void *, void *, const void *, void *,
+                              uint32_t);
 
   /**
-   * Function that takes several input elements and computes hash values into an array.
+   * Function that takes several input elements and computes hash values into an
+   * array.
    */
-  using VecHashFn = hash_t (*)(void *, void *);
+  using VecHashFn = void (*)(void *, void *);
 
   /**
    * Function to initialize a new aggregate.
@@ -68,7 +70,8 @@ class AggregationHashTable {
    *             is the input tuple to initialize the aggregate with.
    */
   using InitAggFn = void (*)(void *, void *);
-  using BatchInitAggFn = InitAggFn;// void (*)(void *, void *, void*, uint32_t);
+  using BatchInitAggFn =
+      InitAggFn;  // void (*)(void *, void *, void*, uint32_t);
 
   /**
    * Batched call to aggAdvance.
@@ -170,17 +173,18 @@ class AggregationHashTable {
    * Process an entire vector of input.
    * @param iters The input vectors.
    * @param vec_hash_fn Function to compute a hash of a single input element.
-   * @param key_eq_fn Function to determine key equality of a single input element and
-   *                  an existing aggregate.
-   * @param vec_key_eq_fn Function to determine key equality of a set of input element and
-   *                  an existing aggregate.
+   * @param key_eq_fn Function to determine key equality of a single input
+   * element and an existing aggregate.
+   * @param vec_key_eq_fn Function to determine key equality of a set of input
+   * element and an existing aggregate.
    * @param init_agg_fn Function to initialize a new aggregate.
    * @param vec_advance_agg_fn Function to advance an existing aggregate.
    * @param partitioned Whether to perform insertions in partitioned mode.
    */
   void ProcessBatch(VectorProjectionIterator *iters[], VecHashFn vec_hash_fn,
-                    KeyEqFn key_eq_fn, VecKeyEqFn vec_key_eq_fn, InitAggFn init_agg_fn,
-                    VecAdvanceAggFn vec_advance_agg_fn, bool partitioned);
+                    KeyEqFn key_eq_fn, VecKeyEqFn vec_key_eq_fn,
+                    InitAggFn init_agg_fn, VecAdvanceAggFn vec_advance_agg_fn,
+                    bool partitioned);
 
   /**
    * Transfer all entries and overflow partitions stored in each thread-local
@@ -258,8 +262,9 @@ class AggregationHashTable {
   // Compute the hash value and perform the table lookup for all elements in the
   // input vector projections.
   template <bool VPIIsFiltered>
-  void ProcessBatchImpl(VectorProjectionIterator *iters[], VecHashFn vec_hash_fn,
-                        KeyEqFn key_eq_fn, VecKeyEqFn vec_key_eq_fn, InitAggFn init_agg_fn,
+  void ProcessBatchImpl(VectorProjectionIterator *iters[],
+                        VecHashFn vec_hash_fn, KeyEqFn key_eq_fn,
+                        VecKeyEqFn vec_key_eq_fn, InitAggFn init_agg_fn,
                         VecAdvanceAggFn vec_advance_agg_fn, bool partitioned);
 
   // Dispatched from ProcessBatchImpl() to compute the hash values for all input

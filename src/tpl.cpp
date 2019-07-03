@@ -147,7 +147,7 @@ static void CompileAndRun(const std::string &source,
       LOG_INFO("VM main() returned: {}", main());
     }
   }
-  /*
+
   //
   // Adaptive
   //
@@ -201,7 +201,7 @@ static void CompileAndRun(const std::string &source,
       }
       LOG_INFO("JIT main() returned: {}", main());
     }
-  }*/
+  }
 
   // Dump stats
   LOG_INFO(

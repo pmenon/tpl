@@ -29,8 +29,8 @@ fun vecKeyCheck(aggs: [*]*Agg, iters: [*]*VectorProjectionIterator, indexes: [*]
     var index = indexes[i]
     @vpiSetPosition(vec, index)
     var key = @vpiGetInt(vec, 1)
-    if (key != agg.key) {
-      matches[i] = false
+    if (key == agg.key) {
+      matches[i] = true
     }
   }
 }
@@ -51,8 +51,7 @@ fun constructAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
   @aggInit(&agg.count)
 }
 
-// Same as above
-fun updateAgg(aggs: [*]*Agg, iters: [*]*VectorProjectionIterator, indexes: [*]uint32, num_elems: uint32) -> nil {
+fun vecUpdateAgg(aggs: [*]*Agg, iters: [*]*VectorProjectionIterator, indexes: [*]uint32, num_elems: uint32) -> nil {
   var vec = iters[0]
   for (var i : uint32 = 0; i < num_elems; i = i + 1) {
     var agg = aggs[i]
