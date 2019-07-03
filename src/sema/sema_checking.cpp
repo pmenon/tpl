@@ -106,6 +106,7 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
   // TODO(pmenon): Fix me to support other arithmetic types
   // Primitive int <-> primitive int
   if (left->type()->IsIntegerType() && right->type()->IsIntegerType()) {
+    // Cast to larger to two sizes
     if (left->type()->size() < right->type()->size()) {
       auto new_left = ImplCastExprToType(left, right->type(), ast::CastKind::IntegralCast);
       return {right->type(), new_left, right};
@@ -126,7 +127,7 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
     return {left->type(), left, new_right};
   }
 
-  // TODO(Amadou): Add more types if necessary
+  // TODO(Amadou): Add more types
   error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op, left->type(), right->type());
   return {nullptr, left, right};
 }

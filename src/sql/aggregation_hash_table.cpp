@@ -4,6 +4,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include <tbb/tbb.h>  // NOLINT
 
@@ -59,13 +60,13 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory,
       partition_shift_bits_(
           util::BitUtil::CountLeadingZeros(u64(kDefaultNumPartitions) - 1)) {
   hash_table_.SetSize(initial_size);
-  max_fill_ = std::llround(hash_table_.capacity() * hash_table_.load_factor());
+  max_fill_ = u64(std::llround(hash_table_.capacity() * hash_table_.load_factor()));
 
   // Compute flush threshold. In partitioned mode, we want the thread-local
   // pre-aggregation hash table to be sized to fit in cache. Target L2.
   const u64 l2_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L2_CACHE);
   flush_threshold_ =
-      std::llround(f32(l2_size) / entries_.element_size() * kDefaultLoadFactor);
+      u64(std::llround(f32(l2_size) / f64(entries_.element_size()) * kDefaultLoadFactor));
   flush_threshold_ =
       std::max(256ul, util::MathUtil::PowerOf2Floor(flush_threshold_));
 }
@@ -105,7 +106,7 @@ void AggregationHashTable::Grow() {
   // Resize table
   const u64 new_size = hash_table_.capacity() * 2;
   hash_table_.SetSize(new_size);
-  max_fill_ = std::llround(hash_table_.capacity() * hash_table_.load_factor());
+  max_fill_ = u64(std::llround(hash_table_.capacity() * hash_table_.load_factor()));
 
   // Insert elements again
   for (byte *untyped_entry : entries_) {
@@ -391,7 +392,6 @@ NEVER_INLINE void AggregationHashTable::CreateMissingGroups(
   const auto &hashes = batch_state_->hashes;
   const auto &groups_not_found = batch_state_->groups_not_found;
   auto &entries = batch_state_->entries;
-
   for (u32 i = 0; i < groups_not_found.size(); i++) {
     const auto index = groups_not_found[i];
 
@@ -404,11 +404,10 @@ NEVER_INLINE void AggregationHashTable::CreateMissingGroups(
       entries[index] = entry;
       continue;
     }
-
     // Initialize
     if constexpr (Partitioned) {
       init_agg_fn(InsertPartitioned(hash), iters);
-    } else {
+    } else { // NOLINT
       init_agg_fn(Insert(hash), iters);
     }
   }
@@ -499,7 +498,7 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(
   auto estimated_size = partition_estimates_[partition_idx]->Estimate();
   auto *agg_table = new (memory_->AllocateAligned(
       sizeof(AggregationHashTable), alignof(AggregationHashTable), false))
-      AggregationHashTable(memory_, payload_size_, estimated_size);
+      AggregationHashTable(memory_, payload_size_, static_cast<u32>(estimated_size));
 
   util::Timer<std::milli> timer;
   timer.Start();

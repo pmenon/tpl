@@ -346,6 +346,13 @@ void BytecodeEmitter::EmitAggHashTableProcessBatch(
           key_eq_fn, vec_key_eq_fn, init_agg_fn, vec_merge_agg_fn, partitioned);
 }
 
+void BytecodeEmitter::EmitAggHashTableProcessBatchArray(
+    LocalVar agg_ht, LocalVar iters, FunctionId batch_hash_fn, FunctionId batch_key_eq_fn,
+    FunctionId batch_init_agg_fn, FunctionId batch_merge_agg_fn, FunctionId single_key_eq_fn, LocalVar partitioned) {
+  EmitAll(Bytecode::AggregationHashTableProcessBatchArray, agg_ht, iters, batch_hash_fn,
+          batch_key_eq_fn, batch_init_agg_fn, batch_merge_agg_fn, single_key_eq_fn, partitioned);
+}
+
 void BytecodeEmitter::EmitAggHashTableMovePartitions(LocalVar agg_ht,
                                                      LocalVar tls,
                                                      LocalVar aht_offset,

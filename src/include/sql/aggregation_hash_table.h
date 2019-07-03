@@ -68,6 +68,7 @@ class AggregationHashTable {
    *             is the input tuple to initialize the aggregate with.
    */
   using InitAggFn = void (*)(void *, void *);
+  using BatchInitAggFn = InitAggFn;// void (*)(void *, void *, void*, uint32_t);
 
   /**
    * Batched call to aggAdvance.

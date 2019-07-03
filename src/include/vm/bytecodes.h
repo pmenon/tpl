@@ -109,6 +109,8 @@ namespace tpl::vm {
   F(VPIHasNextFiltered, OperandType::Local, OperandType::Local)                                                        \
   F(VPIAdvance, OperandType::Local)                                                                                    \
   F(VPIAdvanceFiltered, OperandType::Local)                                                                            \
+  F(VPISetPosition, OperandType::Local, OperandType::Local)                                                                            \
+  F(VPISetPositionFiltered, OperandType::Local, OperandType::Local)                                                                            \
   F(VPIMatch, OperandType::Local, OperandType::Local)                                                                  \
   F(VPIReset, OperandType::Local)                                                                                      \
   F(VPIResetFiltered, OperandType::Local)                                                                              \
