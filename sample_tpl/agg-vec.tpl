@@ -22,7 +22,7 @@ fun keyCheck(agg: *Agg, iters: [*]*VectorProjectionIterator) -> bool {
   return @sqlToBool(key == agg.key)
 }
 
-fun vecKeyCheck(aggs: [*]*Agg, iters: [*]*VectorProjectionIterator, indexes: [*]uint32, matches: [*]bool, num_elems: uint32) {
+fun vecKeyCheck(aggs: [*]*Agg, iters: [*]*VectorProjectionIterator, indexes: [*]uint32, matches: [*]bool, num_elems: uint32) -> nil {
   var vec = iters[0]
   for (var i : uint32 = 0; i < num_elems; i = i + 1) {
     var agg = aggs[i]

@@ -55,7 +55,7 @@ class AggregationHashTable {
    * Fourth argument is the output array of matches.
    * Fifth argument is the number of elements to check.
    */
-  using VecKeyEqFn = void (*)(const void *, const void *, const void*, void *, uint32_t);
+  using VecKeyEqFn = void (*)(const void *, void *, const void*, void *, uint32_t);
 
   /**
    * Function that takes several input elements and computes hash values into an array.

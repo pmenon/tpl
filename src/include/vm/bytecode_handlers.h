@@ -776,7 +776,6 @@ VM_OP_HOT void OpAggregationHashTableProcessBatch(
     const tpl::sql::AggregationHashTable::VecHashFn vec_hash_fn,
     const tpl::sql::AggregationHashTable::KeyEqFn key_eq_fn,
     const tpl::sql::AggregationHashTable::VecKeyEqFn vec_key_eq_fn,
-    const tpl::sql::AggregationHashTable::KeyEqFn key_eq_fn,
     const tpl::sql::AggregationHashTable::InitAggFn init_agg_fn,
     const tpl::sql::AggregationHashTable::VecAdvanceAggFn vec_merge_agg_fn,
     const bool partitioned) {
