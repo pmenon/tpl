@@ -15,6 +15,8 @@ namespace tpl::sql {
 BooleanType::BooleanType(bool nullable)
     : SqlType(SqlTypeId::Boolean, nullable) {}
 
+TypeId BooleanType::GetPrimitiveTypeId() const { return TypeId::Boolean; }
+
 std::string BooleanType::GetName() const {
   std::string str = "Boolean";
   if (nullable()) {
@@ -184,6 +186,35 @@ const RealType &RealType::InstanceNullable() {
 }
 
 // ---------------------------------------------------------
+// Double
+// ---------------------------------------------------------
+
+DoubleType::DoubleType(bool nullable)
+    : NumberBaseType(SqlTypeId::Double, nullable) {}
+
+std::string DoubleType::GetName() const {
+  std::string str = "Double";
+  if (nullable()) {
+    str.append("[NULLABLE]");
+  }
+  return str;
+}
+
+bool DoubleType::Equals(const SqlType &other) const {
+  return other.Is<RealType>() && nullable() == other.nullable();
+}
+
+const DoubleType &DoubleType::InstanceNonNullable() {
+  static DoubleType kNonNullableBigInt(false);
+  return kNonNullableBigInt;
+}
+
+const DoubleType &DoubleType::InstanceNullable() {
+  static DoubleType kNullableBigInt(true);
+  return kNullableBigInt;
+}
+
+// ---------------------------------------------------------
 // Decimal
 // ---------------------------------------------------------
 
@@ -191,6 +222,8 @@ DecimalType::DecimalType(bool nullable, u32 precision, u32 scale)
     : SqlType(SqlTypeId::Decimal, nullable),
       precision_(precision),
       scale_(scale) {}
+
+TypeId DecimalType::GetPrimitiveTypeId() const { return TypeId::BigInt; }
 
 std::string DecimalType::GetName() const {
   std::string str =
@@ -253,6 +286,8 @@ const DateType &DateType::InstanceNullable() {
   return kNullableDate;
 }
 
+TypeId DateType::GetPrimitiveTypeId() const { return TypeId::Integer; }
+
 std::string DateType::GetName() const {
   std::string str = "Date";
   if (nullable()) {
@@ -292,6 +327,8 @@ const CharType &CharType::InstanceNullable(u32 len) {
 
 CharType::CharType(bool nullable, u32 length)
     : SqlType(SqlTypeId::Char, nullable), length_(length) {}
+
+TypeId CharType::GetPrimitiveTypeId() const { return TypeId::VarChar; }
 
 std::string CharType::GetName() const {
   std::string str = "Char[" + std::to_string(length());
@@ -339,6 +376,8 @@ const VarcharType &VarcharType::InstanceNullable(u32 max_len) {
 
 VarcharType::VarcharType(bool nullable, u32 max_len)
     : SqlType(SqlTypeId::Varchar, nullable), max_len_(max_len) {}
+
+TypeId VarcharType::GetPrimitiveTypeId() const { return TypeId::VarChar; }
 
 std::string VarcharType::GetName() const {
   std::string str = "Char[" + std::to_string(max_length());

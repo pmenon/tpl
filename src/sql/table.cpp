@@ -75,14 +75,29 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type,
       if (sql_type.nullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
-        os << col.TypedAccessAt<double>(row_idx);
+        os << col.TypedAccessAt<f32>(row_idx);
+      }
+      break;
+    }
+    case SqlTypeId::Double: {
+      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
+        os << "NULL";
+      } else {
+        os << col.TypedAccessAt<f64>(row_idx);
+      }
+      break;
+    }
+    case SqlTypeId::Char:
+    case SqlTypeId::Varchar: {
+      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
+        os << "NULL";
+      } else {
+        os << std::string(col.TypedAccessAt<const char *>(row_idx));
       }
       break;
     }
     case SqlTypeId::Decimal:
-    case SqlTypeId::Date:
-    case SqlTypeId::Char:
-    case SqlTypeId::Varchar: {
+    case SqlTypeId::Date: {
       break;
     }
   }

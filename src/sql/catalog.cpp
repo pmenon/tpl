@@ -124,9 +124,6 @@ std::pair<byte *, u32 *> GenerateColumnData(const ColumnInsertMeta &col_meta,
   // Create data
   byte *col_data = nullptr;
   switch (col_meta.sql_type.id()) {
-    case SqlTypeId::Boolean: {
-      throw std::runtime_error("Implement me!");
-    }
     case SqlTypeId::TinyInt: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i8>(
           col_meta.dist, num_rows, std::get<i64>(col_meta.min),
@@ -153,11 +150,18 @@ std::pair<byte *, u32 *> GenerateColumnData(const ColumnInsertMeta &col_meta,
       break;
     }
     case SqlTypeId::Real: {
-      col_data = reinterpret_cast<byte *>(CreateNumberColumnData<double>(
+      col_data = reinterpret_cast<byte *>(CreateNumberColumnData<f32>(
           col_meta.dist, num_rows, std::get<double>(col_meta.min),
           std::get<double>(col_meta.max)));
       break;
     }
+    case SqlTypeId::Double: {
+      col_data = reinterpret_cast<byte *>(CreateNumberColumnData<f64>(
+          col_meta.dist, num_rows, std::get<double>(col_meta.min),
+          std::get<double>(col_meta.max)));
+      break;
+    }
+    case SqlTypeId::Boolean:
     case SqlTypeId::Date:
     case SqlTypeId::Char:
     case SqlTypeId::Varchar: {
