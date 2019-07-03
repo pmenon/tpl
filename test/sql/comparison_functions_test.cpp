@@ -126,6 +126,8 @@ TEST_F(ComparisonFunctionsTests, StringComparison) {
   CHECK("", "", Le, true);
   CHECK("", "", Lt, false);
   CHECK("", "", Ne, false);
+
+#undef CHECK
 }
 
 }  // namespace tpl::sql::test
