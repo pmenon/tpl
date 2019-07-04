@@ -36,8 +36,8 @@ struct Equal {
     return left == right;
   }
 
-  static bool Apply(const char *str1, const std::size_t len1,
-                    const char *str2, const std::size_t len2) {
+  static bool Apply(const char *str1, const std::size_t len1, const char *str2,
+                    const std::size_t len2) {
     return CompareStrings(str1, len1, str2, len2) == 0;
   }
 };
@@ -56,8 +56,8 @@ struct GreaterThan {
     return left > right;
   }
 
-  static bool Apply(const char *str1, const std::size_t len1,
-                    const char *str2, const std::size_t len2) {
+  static bool Apply(const char *str1, const std::size_t len1, const char *str2,
+                    const std::size_t len2) {
     return CompareStrings(str1, len1, str2, len2) > 0;
   }
 };
@@ -76,8 +76,8 @@ struct GreaterThanEqual {
     return left >= right;
   }
 
-  static bool Apply(const char *str1, const std::size_t len1,
-                    const char *str2, const std::size_t len2) {
+  static bool Apply(const char *str1, const std::size_t len1, const char *str2,
+                    const std::size_t len2) {
     return CompareStrings(str1, len1, str2, len2) >= 0;
   }
 };
@@ -97,8 +97,8 @@ struct LessThan {
     return left < right;
   }
 
-  static bool Apply(const char *str1, const std::size_t len1,
-                    const char *str2, const std::size_t len2) {
+  static bool Apply(const char *str1, const std::size_t len1, const char *str2,
+                    const std::size_t len2) {
     return CompareStrings(str1, len1, str2, len2) < 0;
   }
 };
@@ -117,8 +117,8 @@ struct LessThanEqual {
     return left <= right;
   }
 
-  static bool Apply(const char *str1, const std::size_t len1,
-                    const char *str2, const std::size_t len2) {
+  static bool Apply(const char *str1, const std::size_t len1, const char *str2,
+                    const std::size_t len2) {
     return CompareStrings(str1, len1, str2, len2) <= 0;
   }
 };
@@ -137,8 +137,8 @@ struct NotEqual {
     return left != right;
   }
 
-  static bool Apply(const char *str1, const std::size_t len1,
-                    const char *str2, const std::size_t len2) {
+  static bool Apply(const char *str1, const std::size_t len1, const char *str2,
+                    const std::size_t len2) {
     return CompareStrings(str1, len1, str2, len2) != 0;
   }
 };

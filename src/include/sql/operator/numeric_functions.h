@@ -238,4 +238,4 @@ struct Truncate {
   }
 };
 
-}  // namespace tpl::sql::ops
+}  // namespace tpl::sql

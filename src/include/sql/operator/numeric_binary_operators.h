@@ -76,4 +76,4 @@ inline f64 Modulo::Apply(f64 a, f64 b) {
   return std::fmod(a, b);
 }
 
-}  // namespace tpl::sql::operators
+}  // namespace tpl::sql
