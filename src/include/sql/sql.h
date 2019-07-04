@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/common.h"
+#include "util/macros.h"
 
 namespace tpl::sql {
 
@@ -17,8 +18,8 @@ enum class TypeId : u8 {
   Pointer,   // uintptr_t
   Float,     // f32
   Double,    // f64
-  VarChar,   // char*, representing a null-terminated UTF-8 string
-  VarBinary  // blobs representing arbitrary bytes
+  Varchar,   // char*, representing a null-terminated UTF-8 string
+  Varbinary  // blobs representing arbitrary bytes
 };
 
 /**
@@ -55,10 +56,18 @@ enum class ColumnEncoding : u8 {
 enum class JoinType : u8 { Inner, Outer, Left, Right, Anti, Semi };
 
 /**
+ * Simple structure representing a blob.
+ */
+struct Blob {
+  u8 *data;
+  u64 size;
+};
+
+/**
  * Given a templated type, return the associated internal type ID.
  */
 template <class T>
-constexpr inline TypeId GetTypeId() {
+constexpr static inline TypeId GetTypeId() {
   if constexpr (std::is_same<T, bool>()) {
     return TypeId::Boolean;
   } else if constexpr (std::is_same<std::remove_const_t<T>, i8>()) {
@@ -79,9 +88,66 @@ constexpr inline TypeId GetTypeId() {
     return TypeId::Double;
   } else if constexpr (std::is_same<std::remove_const_t<T>, char *>() ||
                        std::is_same<std::remove_const_t<T>, std::string>()) {
-    return TypeId::VarChar;
+    return TypeId::Varchar;
+  } else if constexpr (std::is_same<std::remove_const_t<T>, Blob>()) {
+    return TypeId::Varbinary;
   } else {
-    return TypeId::VarBinary;
+    static_assert("Not a valid primitive type");
+  }
+}
+
+/**
+ * Return the size in bytes of a value with the primitive type @em type
+ */
+static inline std::size_t GetTypeIdSize(TypeId type) {
+  switch (type) {
+    case TypeId::Boolean:
+      return sizeof(bool);
+    case TypeId::TinyInt:
+      return sizeof(i8);
+    case TypeId::SmallInt:
+      return sizeof(i16);
+    case TypeId::Integer:
+      return sizeof(i32);
+    case TypeId::BigInt:
+      return sizeof(i64);
+    case TypeId::Hash:
+      return sizeof(hash_t);
+    case TypeId::Pointer:
+      return sizeof(uintptr_t);
+    case TypeId::Float:
+      return sizeof(f32);
+    case TypeId::Double:
+      return sizeof(f64);
+    case TypeId::Varchar:
+      return sizeof(char *);
+    case TypeId::Varbinary:
+      return sizeof(Blob);
+    default:
+      UNREACHABLE("Impossible type");
+  }
+}
+
+/**
+ * Is the given type a fixed-size type?
+ */
+static inline bool IsTypeFixedSize(TypeId type) {
+  switch (type) {
+    case TypeId::Boolean:
+    case TypeId::TinyInt:
+    case TypeId::SmallInt:
+    case TypeId::Integer:
+    case TypeId::BigInt:
+    case TypeId::Hash:
+    case TypeId::Pointer:
+    case TypeId::Float:
+    case TypeId::Double:
+      return true;
+    case TypeId::Varchar:
+    case TypeId::Varbinary:
+      return false;
+    default:
+      UNREACHABLE("Impossible type");
   }
 }
 

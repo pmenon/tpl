@@ -1,4 +1,4 @@
-#include "sql/functions/string_functions.h"
+#include "sql/function/string_functions.h"
 
 #include <algorithm>
 

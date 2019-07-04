@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "sql/operator/comparison_operators.h"
 #include "sql/value.h"
 
 namespace tpl::sql {
@@ -47,29 +48,6 @@ class ComparisonFunctions {
                           const StringVal &v2);
   static void NeStringVal(BoolVal *result, const StringVal &v1,
                           const StringVal &v2);
-
- private:
-  /**
-   * Compare two strings. Returns
-   * < 0 if s1 < s2
-   * 0 if s1 == s2
-   * > 0 if s1 > s2
-   *
-   * @param v1 The first string.
-   * @param v2 The second string.
-   * @return The appropriate signed value indicating comparison order.
-   */
-  static i32 CompareStrings(const StringVal &v1, const StringVal &v2) {
-    TPL_ASSERT(!v1.is_null && !v2.is_null,
-               "Both input strings must not be null");
-    const auto min_len = std::min(v1.len, v2.len);
-    const auto result =
-        (min_len == 0) ? 0 : std::memcmp(v1.ptr, v2.ptr, min_len);
-    if (result != 0) {
-      return result;
-    }
-    return v1.len - v2.len;
-  }
 };
 
 // ---------------------------------------------------------
@@ -83,17 +61,17 @@ class ComparisonFunctions {
   inline void ComparisonFunctions::NAME##TYPE(BoolVal *result, const TYPE &v1, \
                                               const TYPE &v2) {                \
     result->is_null = (v1.is_null || v2.is_null);                              \
-    result->val = v1.val OP v2.val;                                            \
+    result->val = OP::Apply(v1.val, v2.val);                                   \
   }
 
-#define BINARY_COMPARISON_STRING_FN_HIDE_NULL(NAME, TYPE, OP)                  \
-  inline void ComparisonFunctions::NAME##TYPE(BoolVal *result, const TYPE &v1, \
-                                              const TYPE &v2) {                \
-    if (v1.is_null || v2.is_null) {                                            \
-      *result = BoolVal::Null();                                               \
-      return;                                                                  \
-    }                                                                          \
-    *result = BoolVal(CompareStrings(v1, v2) OP 0);                            \
+#define BINARY_COMPARISON_STRING_FN_HIDE_NULL(NAME, TYPE, OP)      \
+  inline void ComparisonFunctions::NAME##TYPE(                     \
+      BoolVal *result, const StringVal &v1, const StringVal &v2) { \
+    if (v1.is_null || v2.is_null) {                                \
+      *result = BoolVal::Null();                                   \
+      return;                                                      \
+    }                                                              \
+    *result = BoolVal(OP::Apply(v1.ptr, v1.len, v2.ptr, v2.len));  \
   }
 
 #define BINARY_COMPARISON_NUMERIC_TYPES(NAME, OP)           \
@@ -102,12 +80,12 @@ class ComparisonFunctions {
   BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, Real, OP)    \
   BINARY_COMPARISON_STRING_FN_HIDE_NULL(NAME, StringVal, OP)
 
-BINARY_COMPARISON_NUMERIC_TYPES(Eq, ==);
-BINARY_COMPARISON_NUMERIC_TYPES(Ge, >=);
-BINARY_COMPARISON_NUMERIC_TYPES(Gt, >);
-BINARY_COMPARISON_NUMERIC_TYPES(Le, <=);
-BINARY_COMPARISON_NUMERIC_TYPES(Lt, <);
-BINARY_COMPARISON_NUMERIC_TYPES(Ne, !=);
+BINARY_COMPARISON_NUMERIC_TYPES(Eq, Equal);
+BINARY_COMPARISON_NUMERIC_TYPES(Ge, GreaterThanEqual);
+BINARY_COMPARISON_NUMERIC_TYPES(Gt, GreaterThan);
+BINARY_COMPARISON_NUMERIC_TYPES(Le, LessThanEqual);
+BINARY_COMPARISON_NUMERIC_TYPES(Lt, LessThan);
+BINARY_COMPARISON_NUMERIC_TYPES(Ne, NotEqual);
 
 #undef BINARY_COMPARISON_NUMERIC_TYPES
 #undef BINARY_COMPARISON_STRING_FN_HIDE_NULL

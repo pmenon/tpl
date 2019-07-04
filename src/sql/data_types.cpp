@@ -329,7 +329,7 @@ const CharType &CharType::InstanceNullable(u32 len) {
 CharType::CharType(bool nullable, u32 length)
     : SqlType(SqlTypeId::Char, nullable), length_(length) {}
 
-TypeId CharType::GetPrimitiveTypeId() const { return TypeId::VarChar; }
+TypeId CharType::GetPrimitiveTypeId() const { return TypeId::Varchar; }
 
 std::string CharType::GetName() const {
   std::string str = "Char[" + std::to_string(length());
@@ -378,7 +378,7 @@ const VarcharType &VarcharType::InstanceNullable(u32 max_len) {
 VarcharType::VarcharType(bool nullable, u32 max_len)
     : SqlType(SqlTypeId::Varchar, nullable), max_len_(max_len) {}
 
-TypeId VarcharType::GetPrimitiveTypeId() const { return TypeId::VarChar; }
+TypeId VarcharType::GetPrimitiveTypeId() const { return TypeId::Varchar; }
 
 std::string VarcharType::GetName() const {
   std::string str = "Char[" + std::to_string(max_length());

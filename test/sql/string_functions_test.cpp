@@ -9,7 +9,7 @@
 #include "llvm/ADT/StringRef.h"
 
 #include "sql/execution_context.h"
-#include "sql/functions/string_functions.h"
+#include "sql/function/string_functions.h"
 #include "sql/value.h"
 #include "util/timer.h"
 

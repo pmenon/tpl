@@ -5,7 +5,7 @@
 
 #include "tpl_test.h"  // NOLINT
 
-#include "sql/functions/arithmetic_functions.h"
+#include "sql/function/arithmetic_functions.h"
 #include "sql/value.h"
 #include "util/timer.h"
 
@@ -13,7 +13,7 @@ namespace tpl::sql::test {
 
 class ArithmeticFunctionsTests : public TplTest {
  protected:
-  inline double cotan(const double arg) { return (1.0 / std::tan(arg)); }
+  double cotan(const double arg) { return Cot::Apply(arg); }
 };
 
 TEST_F(ArithmeticFunctionsTests, IntegerValue) {

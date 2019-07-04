@@ -5,7 +5,7 @@
 
 #include "tpl_test.h"  // NOLINT
 
-#include "sql/functions/comparison_functions.h"
+#include "sql/function/comparison_functions.h"
 #include "sql/value.h"
 #include "util/timer.h"
 
