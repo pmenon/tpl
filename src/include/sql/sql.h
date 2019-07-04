@@ -151,4 +151,27 @@ static inline bool IsTypeFixedSize(TypeId type) {
   }
 }
 
+/**
+ * Is the given type a numeric?
+ */
+static inline bool IsTypeNumeric(TypeId type) {
+  switch (type) {
+    case TypeId::Boolean:
+    case TypeId::TinyInt:
+    case TypeId::SmallInt:
+    case TypeId::Integer:
+    case TypeId::BigInt:
+    case TypeId::Hash:
+    case TypeId::Pointer:
+    case TypeId::Float:
+    case TypeId::Double:
+      return true;
+    case TypeId::Varchar:
+    case TypeId::Varbinary:
+      return false;
+    default:
+      UNREACHABLE("Impossible type");
+  }
+}
+
 }  // namespace tpl::sql

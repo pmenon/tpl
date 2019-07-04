@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "sql/operator/comparison_operators.h"
+#include "sql/operations/comparison_operators.h"
 #include "sql/value.h"
 
 namespace tpl::sql {
