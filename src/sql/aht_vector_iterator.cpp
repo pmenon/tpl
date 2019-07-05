@@ -15,8 +15,7 @@ AHTVectorIterator::AHTVectorIterator(
     const AHTVectorIterator::TransposeFn transpose_fn)
     : memory_(agg_hash_table.memory_),
       iter_(agg_hash_table.hash_table_, memory_),
-      vector_projection_(
-          std::make_unique<VectorProjection>(col_infos, kDefaultVectorSize)),
+      vector_projection_(std::make_unique<VectorProjection>(col_infos)),
       vector_projection_iterator_(std::make_unique<VectorProjectionIterator>()),
       temp_aggregates_vec_(memory_->AllocateArray<const byte *>(
           kDefaultVectorSize, CACHELINE_SIZE, false)) {

@@ -16,7 +16,7 @@ namespace tpl::sql::test {
 /// This is the tuple we insert into the hash table
 template <u8 N>
 struct Tuple {
-  u32 build_key;
+  i32 build_key;
   u32 aux[N];
 
   auto Hash() { return util::Hasher::Hash(build_key); }
@@ -57,7 +57,7 @@ class JoinHashTableVectorProbeTest : public TplTest {
 
 template <u8 N>
 static hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
-  const auto *key_ptr = vpi->GetValue<u32, false>(0, nullptr);
+  const auto *key_ptr = vpi->GetValue<i32, false>(0, nullptr);
   return util::Hasher::Hash(*key_ptr);
 }
 
@@ -66,29 +66,29 @@ template <u8 N>
 static bool CmpTupleInVPI(const void *table_tuple,
                           VectorProjectionIterator *vpi) noexcept {
   auto lhs_key = reinterpret_cast<const Tuple<N> *>(table_tuple)->build_key;
-  auto rhs_key = *vpi->GetValue<u32, false>(0, nullptr);
+  auto rhs_key = *vpi->GetValue<i32, false>(0, nullptr);
   return lhs_key == rhs_key;
 }
 
 // Sequential number functor
 struct Seq {
-  u32 c;
+  i32 c;
   explicit Seq(u32 cc) : c(cc) {}
-  u32 operator()() noexcept { return c++; }
+  i32 operator()() noexcept { return c++; }
 };
 
 struct Range {
   std::random_device random;
   std::uniform_int_distribution<u32> dist;
-  Range(u32 min, u32 max) : dist(min, max) {}
-  u32 operator()() noexcept { return dist(random); }
+  Range(i32 min, i32 max) : dist(min, max) {}
+  i32 operator()() noexcept { return dist(random); }
 };
 
 // Random number functor
 struct Rand {
   std::random_device random;
   Rand() = default;
-  u32 operator()() noexcept { return random(); }
+  i32 operator()() noexcept { return random(); }
 };
 
 TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
@@ -104,7 +104,7 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
   std::generate(probe_keys.begin(), probe_keys.end(), Range(0, num_build - 1));
 
   Schema schema({{"probeKey", IntegerType::InstanceNonNullable()}});
-  VectorProjection vp({schema.GetColumnInfo(0)}, num_probe);
+  VectorProjection vp({schema.GetColumnInfo(0)});
   VectorProjectionIterator vpi(&vp);
 
   // Lookup
@@ -125,7 +125,7 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
     while (auto *tuple =
                lookup.GetNextOutput<Tuple<N>>(&vpi, CmpTupleInVPI<N>)) {
       count++;
-      auto probe_key = *vpi.GetValue<u32, false>(0, nullptr);
+      auto probe_key = *vpi.GetValue<i32, false>(0, nullptr);
       EXPECT_EQ(tuple->build_key, probe_key);
     }
   }
@@ -148,7 +148,7 @@ TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
                   Range(0, num_build - 1));
 
     Schema schema({{"pk", IntegerType::InstanceNonNullable()}});
-    VectorProjection vp({schema.GetColumnInfo(0)}, kDefaultVectorSize);
+    VectorProjection vp({schema.GetColumnInfo(0)});
     VectorProjectionIterator vpi(&vp);
 
     // Lookup

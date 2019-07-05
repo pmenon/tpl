@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "sql/schema.h"
-#include "util/bit_util.h"
+#include "sql/vector.h"
 #include "util/common.h"
 #include "util/macros.h"
 
@@ -28,14 +28,8 @@ class VectorProjection {
    * Create a vector projection using the column information provided in
    * @em col_infos. The vector projection stores vectors of size @em size.
    */
-  VectorProjection(const Schema::ColumnInfo *col_infos, u32 num_cols, u32 size);
-
-  /**
-   * Create a vector projection using the column information provided in
-   * @em col_infos. The vector projection stores vectors of size @em size.
-   */
-  VectorProjection(const std::vector<const Schema::ColumnInfo *> &col_infos,
-                   u32 size);
+  explicit VectorProjection(
+      const std::vector<const Schema::ColumnInfo *> &col_infos);
 
   /**
    * This class cannot be copied or moved
@@ -48,8 +42,7 @@ class VectorProjection {
    * @param col_infos Metadata for columns in this projection.
    * @param size The maximum number of elements in the projection.
    */
-  void Setup(const std::vector<const Schema::ColumnInfo *> &col_infos,
-             u32 size);
+  void Setup(const std::vector<const Schema::ColumnInfo *> &col_infos);
 
   /**
    * Get the metadata for the column at the given index in this projection
@@ -59,34 +52,18 @@ class VectorProjection {
   }
 
   /**
-   * Get the current vector input for the column at index @em col_idx
-   * @tparam T The data type to interpret the column's data as
-   * @param col_idx The index of the column
-   * @return The typed vector of column data in this vector projection
+   *
+   * @param col_idx
+   * @return
    */
-  template <typename T>
-  const T *GetVectorAs(u32 col_idx) const {
-    return reinterpret_cast<T *>(column_data_[col_idx]);
-  }
+  const Vector *GetColumn(u32 col_idx) const { return columns_[col_idx].get(); }
 
   /**
-   * Non-const version of GetVectorAs().
+   *
+   * @param col_idx
+   * @return
    */
-  template <typename T>
-  T *GetVectorAs(u32 col_idx) {
-    return reinterpret_cast<T *>(column_data_[col_idx]);
-  }
-
-  /**
-   * Return the NULL bit vector for the column at index @em col_idx
-   * @param col_idx The index of the column
-   * @return The NULL bit vector for the desired column
-   */
-  const u32 *GetNullBitmap(u32 col_idx) const {
-    return column_null_bitmaps_[col_idx];
-  }
-
-  u32 *GetNullBitmap(u32 col_idx) { return column_null_bitmaps_[col_idx]; }
+  Vector *GetColumn(u32 col_idx) { return columns_[col_idx].get(); }
 
   /**
    * Reset/reload the data for the column at the given index from the given
@@ -114,28 +91,12 @@ class VectorProjection {
   u32 total_tuple_count() const { return tuple_count_; }
 
  private:
-  // Set the deletions bitmap
-  void ClearDeletions();
-
- private:
-  // Metadata about each column in the projection
-  std::unique_ptr<const Schema::ColumnInfo *[]> column_info_;
-
-  // The array of pointers to column data for all columns in this projection
-  std::unique_ptr<byte *[]> column_data_;
-
-  // The array of pointers to column NULL bitmaps for all columns in this
-  // projection
-  std::unique_ptr<u32 *[]> column_null_bitmaps_;
-
-  // A bitmap tracking which tuples have been marked for deletion
-  util::BitVector deletions_;
-
+  // Column meta
+  std::vector<const Schema::ColumnInfo *> column_info_;
+  // The column's data
+  std::vector<std::unique_ptr<Vector>> columns_;
   // The number of active tuples
   u32 tuple_count_;
-
-  // The maximum supported size of input tuple vectors
-  u32 vector_size_;
 };
 
 }  // namespace tpl::sql

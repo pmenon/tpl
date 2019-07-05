@@ -112,7 +112,7 @@ class VectorProjectionIteratorTest : public TplTest {
         schema_->GetColumnInfo(2), schema_->GetColumnInfo(3),
         schema_->GetColumnInfo(4), schema_->GetColumnInfo(5),
     };
-    vp_ = std::make_unique<VectorProjection>(vp_cols_info, num_tuples());
+    vp_ = std::make_unique<VectorProjection>(vp_cols_info);
 
     // Load the data
     LoadData();
@@ -162,7 +162,7 @@ TEST_F(VectorProjectionIteratorTest, EmptyIteratorTest) {
   //
 
   std::vector<const Schema::ColumnInfo *> vp_col_info;
-  VectorProjection empty_vecproj(vp_col_info, 0);
+  VectorProjection empty_vecproj(vp_col_info);
   VectorProjectionIterator iter;
   iter.SetVectorProjection(&empty_vecproj);
 
@@ -227,8 +227,7 @@ TEST_F(VectorProjectionIteratorTest, ReadNullableColumnsTest) {
   u32 num_nulls = 0;
   for (; iter.HasNext(); iter.Advance()) {
     bool null = false;
-    auto *ptr = iter.GetValue<i32, true>(ColId::col_b, &null);
-    EXPECT_NE(nullptr, ptr);
+    iter.GetValue<i32, true>(ColId::col_b, &null);
     num_nulls += static_cast<u32>(null);
   }
 

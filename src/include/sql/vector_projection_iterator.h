@@ -222,21 +222,25 @@ class VectorProjectionIterator {
 template <typename T, bool Nullable>
 inline const T *VectorProjectionIterator::GetValue(const u32 col_idx,
                                                    bool *const null) const {
+  // Column's vector data
+  const Vector *const col_vector = vector_projection_->GetColumn(col_idx);
+
+  // TODO(pmenon): Implement strings/blobs
+  const T *ret = col_vector->GetValue<T>(curr_idx_);
+
   if constexpr (Nullable) {
     TPL_ASSERT(null != nullptr, "Missing output variable for NULL indicator");
-    const auto *col_null_bitmap = vector_projection_->GetNullBitmap(col_idx);
-    *null = util::BitUtil::Test(col_null_bitmap, curr_idx_);
+    *null = (ret == nullptr);
   }
 
-  const auto *col_data = vector_projection_->GetVectorAs<T>(col_idx);
-  return &col_data[curr_idx_];
+  return ret;
 }
 
 template <typename T, bool Nullable>
 inline void VectorProjectionIterator::SetValue(const u32 col_idx, const T val,
                                                const bool null) {
-  // The column data array
-  auto *col_data = vector_projection_->GetVectorAs<T>(col_idx);
+  // Column's vector data
+  Vector *const col_vector = vector_projection_->GetColumn(col_idx);
 
   //
   // If the column is NULL-able, we only write into the data array if the value
@@ -245,14 +249,12 @@ inline void VectorProjectionIterator::SetValue(const u32 col_idx, const T val,
   //
 
   if constexpr (Nullable) {
-    auto *col_null_bitmap = vector_projection_->GetNullBitmap(col_idx);
-    util::BitUtil::SetTo(col_null_bitmap, curr_idx_, null);
-
+    col_vector->SetNull(curr_idx_, null);
     if (!null) {
-      col_data[curr_idx_] = val;
+      col_vector->SetValue(curr_idx_, val);
     }
   } else {
-    col_data[curr_idx_] = val;
+    col_vector->SetValue(curr_idx_, val);
   }
 }
 

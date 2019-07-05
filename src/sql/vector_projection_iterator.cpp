@@ -32,7 +32,8 @@ void VectorProjectionIterator::SetVectorProjection(VectorProjection *vp) {
 template <typename T, template <typename> typename Op>
 u32 VectorProjectionIterator::FilterColByValImpl(u32 col_idx, T val) {
   // Get the input column's data
-  const T *input = vector_projection_->GetVectorAs<T>(col_idx);
+  const Vector *const column = vector_projection_->GetColumn(col_idx);
+  const T *input = reinterpret_cast<const T *>(column->data());
 
   // Use the existing selection vector if this VPI has been filtered
   const u32 *sel_vec = (IsFiltered() ? selection_vector_ : nullptr);
@@ -76,8 +77,10 @@ template <typename T, template <typename> typename Op>
 u32 VectorProjectionIterator::FilterColByColImpl(const u32 col_idx_1,
                                                  const u32 col_idx_2) {
   // Get the input column's data
-  const T *input_1 = vector_projection_->GetVectorAs<T>(col_idx_1);
-  const T *input_2 = vector_projection_->GetVectorAs<T>(col_idx_2);
+  const Vector *const column_1 = vector_projection_->GetColumn(col_idx_1);
+  const Vector *const column_2 = vector_projection_->GetColumn(col_idx_2);
+  const T *input_1 = reinterpret_cast<const T *>(column_1->data());
+  const T *input_2 = reinterpret_cast<const T *>(column_2->data());
 
   // Use the existing selection vector if this VPI has been filtered
   const u32 *sel_vec = (IsFiltered() ? selection_vector_ : nullptr);
