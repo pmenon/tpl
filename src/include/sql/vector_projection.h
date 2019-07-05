@@ -47,23 +47,29 @@ class VectorProjection {
   /**
    * Get the metadata for the column at the given index in this projection
    */
-  const Schema::ColumnInfo *GetColumnInfo(u32 col_idx) const {
+  const Schema::ColumnInfo *GetColumnInfo(const u32 col_idx) const {
     return column_info_[col_idx];
   }
 
   /**
-   *
-   * @param col_idx
-   * @return
+   * Access the column at index @em col_idx as it appears in this projection.
+   * @param col_idx The index of the column.
+   * @return The column's vector.
    */
-  const Vector *GetColumn(u32 col_idx) const { return columns_[col_idx].get(); }
+  const Vector *GetColumn(const u32 col_idx) const {
+    TPL_ASSERT(col_idx < num_columns(), "Out-of-bounds column access");
+    return columns_[col_idx].get();
+  }
 
   /**
-   *
-   * @param col_idx
-   * @return
+   * Access the column at index @em col_idx as it appears in this projection.
+   * @param col_idx The index of the column.
+   * @return The column's vector.
    */
-  Vector *GetColumn(u32 col_idx) { return columns_[col_idx].get(); }
+  Vector *GetColumn(const u32 col_idx) {
+    TPL_ASSERT(col_idx < num_columns(), "Out-of-bounds column access");
+    return columns_[col_idx].get();
+  }
 
   /**
    * Reset/reload the data for the column at the given index from the given
@@ -85,8 +91,12 @@ class VectorProjection {
                     u32 num_tuples);
 
   /**
-   * Return the number of active tuples in this projection
-   * @return The number of active tuples
+   * Return the number of columns in this projection.
+   */
+  u32 num_columns() const { return static_cast<u32>(columns_.size()); }
+
+  /**
+   * Return the number of active tuples in this projection.
    */
   u32 total_tuple_count() const { return tuple_count_; }
 
