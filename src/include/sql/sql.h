@@ -64,6 +64,37 @@ struct Blob {
 };
 
 /**
+ * Given an internal type, return the simplest SQL type. Note that this
+ * conversion is a lossy since some internal types are used as the underlying
+ * storage for multiple SQL types. For example, i32 is used for SQL Integers and
+ * SQL Dates).
+ */
+static inline SqlTypeId GetSqlTypeFromInternalType(TypeId type) {
+  switch (type) {
+    case TypeId::Boolean:
+      return SqlTypeId::Boolean;
+    case TypeId::TinyInt:
+      return SqlTypeId::TinyInt;
+    case TypeId::SmallInt:
+      return SqlTypeId::SmallInt;
+    case TypeId::Integer:
+      return SqlTypeId::Integer;
+    case TypeId::BigInt:
+      return SqlTypeId::BigInt;
+    case TypeId::Float:
+      return SqlTypeId::Real;
+    case TypeId::Double:
+      return SqlTypeId::Double;
+    case TypeId::Varchar:
+      return SqlTypeId::Varchar;
+    case TypeId::Varbinary:
+      return SqlTypeId::Varchar;
+    default:
+      UNREACHABLE("Impossible internal type");
+  }
+}
+
+/**
  * Given a templated type, return the associated internal type ID.
  */
 template <class T>
@@ -87,13 +118,15 @@ constexpr static inline TypeId GetTypeId() {
   } else if constexpr (std::is_same<std::remove_const_t<T>, f64>()) {
     return TypeId::Double;
   } else if constexpr (std::is_same<std::remove_const_t<T>, char *>() ||
-                       std::is_same<std::remove_const_t<T>, std::string>()) {
+                       std::is_same<std::remove_const_t<T>, const char *>() ||
+                       std::is_same<std::remove_const_t<T>, std::string>() ||
+                       std::is_same<std::remove_const_t<T>,
+                                    std::string_view>()) {
     return TypeId::Varchar;
   } else if constexpr (std::is_same<std::remove_const_t<T>, Blob>()) {
     return TypeId::Varbinary;
-  } else {
-    static_assert("Not a valid primitive type");
   }
+  static_assert("Not a valid primitive type");
 }
 
 /**
