@@ -217,29 +217,29 @@ class VectorProjectionIterator {
 // The below methods are inlined in the header on purpose for performance.
 // Please don't move them.
 
-// Retrieve a single column value (and potentially its NULL indicator) from the
-// desired column's input data
+// Note: The getting and setter functions operate on the underlying vector's
+// raw data rather than going through Vector::GetValue() or Vector::SetValue().
+// This is because the iterator is aware of the selection vector and is aware of
+// the nullability of the column. We take advantage of that here.
+
 template <typename T, bool Nullable>
 inline const T *VectorProjectionIterator::GetValue(const u32 col_idx,
                                                    bool *const null) const {
   // Column's vector data
   const Vector *const col_vector = vector_projection_->GetColumn(col_idx);
 
-  // TODO(pmenon): Implement strings/blobs
-  const T *ret = col_vector->GetValue<T>(curr_idx_);
-
   if constexpr (Nullable) {
     TPL_ASSERT(null != nullptr, "Missing output variable for NULL indicator");
-    *null = (ret == nullptr);
+    *null = col_vector->null_mask_[curr_idx_];
   }
 
-  return ret;
+  return reinterpret_cast<const T *>(col_vector->data_) + curr_idx_;
 }
 
 template <typename T, bool Nullable>
 inline void VectorProjectionIterator::SetValue(const u32 col_idx, const T val,
                                                const bool null) {
-  // Column's vector data
+  // Column's vector
   Vector *const col_vector = vector_projection_->GetColumn(col_idx);
 
   //
@@ -249,12 +249,12 @@ inline void VectorProjectionIterator::SetValue(const u32 col_idx, const T val,
   //
 
   if constexpr (Nullable) {
-    col_vector->SetNull(curr_idx_, null);
+    col_vector->null_mask_[curr_idx_] = null;
     if (!null) {
-      col_vector->SetValue(curr_idx_, val);
+      reinterpret_cast<T *>(col_vector->data_)[curr_idx_] = val;
     }
   } else {
-    col_vector->SetValue(curr_idx_, val);
+    reinterpret_cast<T *>(col_vector->data_)[curr_idx_] = val;
   }
 }
 

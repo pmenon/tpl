@@ -44,6 +44,7 @@ namespace tpl::sql {
  */
 class Vector {
   friend class VectorOps;
+  friend class VectorProjectionIterator;
 
  public:
   using NullMask = std::bitset<kDefaultVectorSize>;
