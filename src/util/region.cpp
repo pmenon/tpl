@@ -9,8 +9,8 @@
 
 namespace tpl::util {
 
-Region::Region(std::string name) noexcept
-    : name_(std::move(name)),
+Region::Region(std::string_view name) noexcept
+    : name_(name.data()),
       allocated_(0),
       alignment_waste_(0),
       chunk_bytes_allocated_(0),
@@ -52,7 +52,8 @@ void Region::FreeAll() {
   LOG_TRACE(
       "Region['{}', allocated: {} bytes, alignment waste: {} bytes, total "
       "chunks: {} bytes]",
-      name().c_str(), allocated(), alignment_waste(), total_memory());
+      (name() == nullptr ? "empty" : name()), allocated(), alignment_waste(),
+      total_memory());
 
   Chunk *head = head_;
   while (head != nullptr) {
@@ -64,6 +65,7 @@ void Region::FreeAll() {
   // Clean up member variables
   head_ = nullptr;
   allocated_ = 0;
+  alignment_waste_ = 0;
   chunk_bytes_allocated_ = 0;
   position_ = 0;
   end_ = 0;

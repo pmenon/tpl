@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <limits>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 #include "util/macros.h"
@@ -24,17 +25,27 @@ class Region {
    * Construct a region with the given name @em name. No allocations are
    * performed upon construction, only at the first call to @em Allocate().
    */
-  explicit Region(std::string name) noexcept;
+  explicit Region(std::string_view name) noexcept;
 
   /**
-   * Regions cannot be copied or moved
+   * Default move constructor.
    */
-  DISALLOW_COPY_AND_MOVE(Region);
+  Region(Region &&) = default;
+
+  /**
+   * Regions cannot be copied.
+   */
+  DISALLOW_COPY(Region);
 
   /**
    * Destructor. All allocated memory is freed here.
    */
   ~Region();
+
+  /**
+   * Default move assignment.
+   */
+  Region &operator=(Region &&) = default;
 
   /**
    * Allocate memory from this region
@@ -77,7 +88,7 @@ class Region {
   // -------------------------------------------------------
 
   // The name of the region
-  const std::string &name() const { return name_; }
+  const char *name() const { return name_; }
 
   // The number of bytes this region has given out
   u64 allocated() const { return allocated_; }
@@ -123,7 +134,7 @@ class Region {
   static const std::size_t kMaxChunkAllocation = 1 * 1024 * 1024;
 
   // The name of the region
-  const std::string name_;
+  const char *name_;
 
   // The number of bytes allocated by this region
   std::size_t allocated_;
