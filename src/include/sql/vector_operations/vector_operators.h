@@ -1,5 +1,7 @@
 #pragma once
 
+#include <variant>
+
 #include "sql/vector.h"
 #include "util/common.h"
 
@@ -55,12 +57,27 @@ class VectorOps {
                    SqlTypeId target_type);
 
   /**
-   *
-   * @param vector
-   * @param start
-   * @param increment
+   * Fill the input vector @em vector with sequentially increasing values
+   * beginning at @em start and incrementing by @em increment.
+   * @param vector The vector to fill.
+   * @param start The first element to insert.
+   * @param increment The amount to jump.
    */
   static void Generate(Vector *vector, i64 start, i64 increment);
+
+  /**
+   * Fill the input vector @em vector with a given non-null value @em value.
+   * @param vector The vector to modify.
+   * @param value The value to fill the vector with.
+   */
+  static void Fill(Vector *vector,
+                   const std::variant<bool, i64, f64, std::string_view> &value);
+
+  /**
+   * Fill the input vector with NULL values.
+   * @param vector The vector to modify.
+   */
+  static void FillNull(Vector *vector);
 
   /**
    * Apply a function to every active element in the vector. The callback
