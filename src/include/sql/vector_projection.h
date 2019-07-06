@@ -73,8 +73,9 @@ class VectorProjection {
   }
 
   /**
-   * Reset/reload the data for the column at the given index from the given
-   * column iterator instance.
+   * Reset/reload the data for the column at position @em col_idx in this
+   * projection using the data from the column iterator at the same position in
+   * the provided vector @em col_iters.
    * @param col_iters A vector of all column iterators.
    * @param col_idx The index of the column in this projection to reset.
    */
@@ -82,14 +83,16 @@ class VectorProjection {
                    u32 col_idx);
 
   /**
-   * Reset the column data at index \a col_idx with \a col_data and the.
+   * Reset/reload the data for the column at position @em col_idx in this
+   * projection using @em col_data and @em col_null_bitmap for the raw data and
+   * NULL bitmap, respectively.
    * @param col_data The raw (potentially compressed) data for the column.
    * @param col_null_bitmap The null bitmap for the column.
    * @param col_idx The index of the column to reset.
    * @param num_tuples The number of tuples stored in the input.
    */
-  void ResetFromRaw(byte col_data[], u32 col_null_bitmap[], u32 col_idx,
-                    u32 num_tuples);
+  void ResetColumn(byte *col_data, u32 *col_null_bitmap, u32 col_idx,
+                   u32 num_tuples);
 
   /**
    * Return the number of columns in this projection.

@@ -246,10 +246,10 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
     }
 
     // Setup projection
-    vp.ResetFromRaw(reinterpret_cast<byte *>(keys), nullptr, 0,
-                    kDefaultVectorSize);
-    vp.ResetFromRaw(reinterpret_cast<byte *>(vals), nullptr, 1,
-                    kDefaultVectorSize);
+    vp.ResetColumn(reinterpret_cast<byte *>(keys), nullptr, 0,
+                   kDefaultVectorSize);
+    vp.ResetColumn(reinterpret_cast<byte *>(vals), nullptr, 1,
+                   kDefaultVectorSize);
 
     // Process
     VectorProjectionIterator vpi(&vp);

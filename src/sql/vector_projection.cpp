@@ -45,8 +45,8 @@ void VectorProjection::ResetColumn(
   tuple_count_ = col_iter.NumTuples();
 }
 
-void VectorProjection::ResetFromRaw(byte col_data[], u32 col_null_bitmap[],
-                                    const u32 col_idx, const u32 num_tuples) {
+void VectorProjection::ResetColumn(byte *col_data, u32 *col_null_bitmap,
+                                   u32 col_idx, u32 num_tuples) {
   // Reset tuple count
   tuple_count_ = num_tuples;
 

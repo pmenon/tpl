@@ -80,7 +80,7 @@ void AHTVectorIterator::BuildVectorProjection(
 
   u32 idx = 0;
   for (auto &[col_data, col_null_bitmap] : projection_data_) {
-    vector_projection_->ResetFromRaw(col_data, col_null_bitmap, idx++, size);
+    vector_projection_->ResetColumn(col_data, col_null_bitmap, idx++, size);
   }
 
   vector_projection_iterator_->SetVectorProjection(vector_projection_.get());

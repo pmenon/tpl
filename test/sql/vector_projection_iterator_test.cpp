@@ -138,7 +138,7 @@ class VectorProjectionIteratorTest : public TplTest {
     for (u32 col_idx = 0; col_idx < data_.size(); col_idx++) {
       auto &[data, nulls, num_nulls, num_tuples] = data_[col_idx];
       (void)num_nulls;
-      vp_->ResetFromRaw(data.get(), nulls.get(), col_idx, num_tuples);
+      vp_->ResetColumn(data.get(), nulls.get(), col_idx, num_tuples);
     }
   }
 
