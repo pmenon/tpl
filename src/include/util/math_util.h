@@ -134,6 +134,25 @@ class MathUtil {
                                                  std::size_t alignment) {
     return MathUtil::AlignAddress(addr, alignment) - addr;
   }
+
+  /**
+   * Are the two input 32-bit floating point values equal given the tolerances
+   * on this machine?
+   * @param left The first input value.
+   * @param right The second input value.
+   * @return True if they're equal; false otherwise.
+   */
+  static bool ApproxEqual(f32 left, f32 right);
+
+  /**
+   * Are the two input 64-bit floating point values equal given the tolerances
+   * on this machine?
+   * @param left The first input value.
+   * @param right The second input value.
+   * @return True if they're equal; false otherwise.
+   */
+  static bool ApproxEqual(f64 left, f64 right);
+
 };
 
 }  // namespace tpl::util
