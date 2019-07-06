@@ -126,7 +126,7 @@ class Vector {
   /**
    * Is this vector holding a single constant value?
    */
-  bool IsConstant() { return count_ == 1 && sel_vector_ == nullptr; }
+  bool IsConstant() const { return count_ == 1 && sel_vector_ == nullptr; }
 
   /**
    * Is the value at position @em index NULL?
