@@ -203,6 +203,70 @@ void Vector::SetValue(const u64 index, const GenericValue &val) {
   }
 }
 
+void Vector::Reference(GenericValue *value) {
+  // Cleanup
+  Destroy();
+
+  // Start from scratch
+  type_ = value->type_id();
+  count_ = 1;
+
+  if (value->is_null()) {
+    null_mask_[0] = true;
+  }
+
+  switch (value->type_id()) {
+    case TypeId::Boolean: {
+      data_ = reinterpret_cast<byte *>(&value->value_.boolean);
+      break;
+    }
+    case TypeId::TinyInt: {
+      data_ = reinterpret_cast<byte *>(&value->value_.tinyint);
+      break;
+    }
+    case TypeId::SmallInt: {
+      data_ = reinterpret_cast<byte *>(&value->value_.smallint);
+      break;
+    }
+    case TypeId::Integer: {
+      data_ = reinterpret_cast<byte *>(&value->value_.integer);
+      break;
+    }
+    case TypeId::BigInt: {
+      data_ = reinterpret_cast<byte *>(&value->value_.bigint);
+      break;
+    }
+    case TypeId::Float: {
+      data_ = reinterpret_cast<byte *>(&value->value_.float_);
+      break;
+    }
+    case TypeId::Double: {
+      data_ = reinterpret_cast<byte *>(&value->value_.double_);
+      break;
+    }
+    case TypeId::Hash: {
+      data_ = reinterpret_cast<byte *>(&value->value_.hash);
+      break;
+    }
+    case TypeId::Pointer: {
+      data_ = reinterpret_cast<byte *>(&value->value_.pointer);
+      break;
+    }
+    case TypeId::Varchar: {
+      // Single-element array
+      owned_data_ = std::make_unique<byte[]>(sizeof(byte *));
+      data_ = owned_data_.get();
+      reinterpret_cast<const char **>(data_)[0] = value->str_value_.c_str();
+      break;
+    }
+    default: {
+      auto msg =
+          "Cannot reference value of type [" + TypeIdToString(type_) + "]";
+      throw std::runtime_error(msg);
+    }
+  }
+}
+
 void Vector::Reference(TypeId type_id, byte *data, u32 *nullmask, u64 count) {
   TPL_ASSERT(owned_data_ == nullptr,
              "Cannot reference a vector if owning data");

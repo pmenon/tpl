@@ -200,6 +200,12 @@ class Vector {
   void Flatten();
 
   /**
+   * Reference a single value.
+   * @param value The value to reference.
+   */
+  void Reference(GenericValue *value);
+
+  /**
    * Reference a specific chunk of data.
    * @param type_id The ID of the type.
    * @param data The data.
