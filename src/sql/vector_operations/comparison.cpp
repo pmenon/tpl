@@ -32,6 +32,10 @@ void ComparisonOperation(const Vector &left, const Vector &right,
       BinaryOperationLoop<i64, i64, bool, Op>(left, right, result);
       break;
     }
+    case TypeId::Hash: {
+      BinaryOperationLoop<hash_t, hash_t, bool, Op>(left, right, result);
+      break;
+    }
     case TypeId::Pointer: {
       BinaryOperationLoop<uintptr_t, uintptr_t, bool, Op>(left, right, result);
       break;

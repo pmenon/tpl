@@ -31,7 +31,7 @@ class GenericValue {
   bool is_null() const { return is_null_; }
 
   /**
-   * Is this value equal to the provided value?
+   * Is this value equal to the provided value? This is NOT SQL equivalence!
    * @param other The value to compare with.
    * @return True if equal; false otherwise.
    */

@@ -17,6 +17,9 @@ bool GenericValue::Equals(const GenericValue &other) const {
   if (is_null_ != other.is_null_) {
     return false;
   }
+  if (is_null_ && other.is_null_) {
+    return true;
+  }
   switch (type_id_) {
     case TypeId::Boolean:
       return value_.boolean == other.value_.boolean;

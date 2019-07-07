@@ -393,76 +393,15 @@ void Vector::Append(Vector &other) {
   }
 }
 
-namespace {
-
-struct StringifyVal {
-  template <typename T>
-  static std::string Apply(T val) {
-    return std::to_string(val);
-  }
-};
-
-template <>
-std::string StringifyVal::Apply(bool val) {
-  return val ? "True" : "False";
-}
-
-template <>
-std::string StringifyVal::Apply(const char *val) {
-  return "Varchar('" + std::string(val) + "')";
-}
-
-template <>
-std::string StringifyVal::Apply(Blob val) {
-  return "Blob(sz=" + std::to_string(val.size) + ")";
-}
-
-template <typename T>
-std::string Stringify(const Vector &vec) {
+std::string Vector::ToString() const {
   std::string result;
   bool first = true;
-  const auto *data = reinterpret_cast<T *>(vec.data());
-  VectorOps::Exec(vec, [&](u64 i, u64 k) {
+  VectorOps::Exec(*this, [&](u64 i, u64 k) {
     if (!first) result += ",";
     first = false;
-    if (vec.null_mask()[i]) {
-      result += "NULL";
-    } else {
-      result += StringifyVal::Apply(data[i]);
-    }
+    result += GetValue(i).ToString();
   });
   return result;
-}
-
-}  // namespace
-
-std::string Vector::ToString() const {
-  switch (type_) {
-    case TypeId::Boolean:
-      return Stringify<bool>(*this);
-    case TypeId::TinyInt:
-      return Stringify<i8>(*this);
-    case TypeId::SmallInt:
-      return Stringify<i16>(*this);
-    case TypeId::Integer:
-      return Stringify<i32>(*this);
-    case TypeId::BigInt:
-      return Stringify<i64>(*this);
-    case TypeId::Hash:
-      return Stringify<hash_t>(*this);
-    case TypeId::Pointer:
-      return Stringify<uintptr_t>(*this);
-    case TypeId::Float:
-      return Stringify<f32>(*this);
-    case TypeId::Double:
-      return Stringify<f64>(*this);
-    case TypeId::Varchar:
-      return Stringify<const char *>(*this);
-    case TypeId::Varbinary:
-      return Stringify<Blob>(*this);
-    default:
-      UNREACHABLE("Impossible primitive type");
-  }
 }
 
 void Vector::Dump(std::ostream &os) const { os << ToString(); }

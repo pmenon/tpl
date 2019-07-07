@@ -17,9 +17,10 @@ struct And {
 };
 
 /**
- * Boolean AND with NULL-able inputs.
+ * Determine if the result of a boolean AND with the given values and NULL-ness
+ * is also NULL.
  */
-struct AndNullable {
+struct AndNullMask {
   static bool Apply(bool left, bool right, bool left_null, bool right_null) {
     return (left_null && (right_null || right)) || (right_null && left);
   }
@@ -33,7 +34,8 @@ struct Or {
 };
 
 /**
- * Boolean OR with NULL-able inputs.
+ * Determine if the result of a boolean OR with the given values and NULL-ness
+ * is also NULL.
  */
 struct OrNullable {
   static bool Apply(bool left, bool right, bool left_null, bool right_null) {
