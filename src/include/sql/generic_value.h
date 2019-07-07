@@ -38,6 +38,12 @@ class GenericValue {
   bool Equals(const GenericValue &other) const;
 
   /**
+   * Cast this value to the given type.
+   * @param type The type to cast to.
+   */
+  GenericValue CastTo(TypeId type);
+
+  /**
    * Copy this value.
    */
   GenericValue Copy() const { return GenericValue(*this); }
@@ -111,15 +117,14 @@ class GenericValue {
   friend std::ostream &operator<<(std::ostream &out, const GenericValue &val);
 
  private:
-  explicit GenericValue(TypeId type_id) noexcept
-      : type_id_(type_id), is_null_(true) {}
+  explicit GenericValue(TypeId type_id) : type_id_(type_id), is_null_(true) {}
 
  private:
-  // The primitive type of the value
+  // The primitive type
   TypeId type_id_;
   // Is this value null?
   bool is_null_;
-  // The value of the object, if it is of a constant size type
+  // The value of the object if it's a fixed-length type
   union Val {
     bool boolean;
     i8 tinyint;
@@ -131,7 +136,7 @@ class GenericValue {
     f32 float_;
     f64 double_;
   } value_;
-  // The value of the object, if it's a variable size type
+  // The value of the object if it's a variable size type.
   std::string str_value_;
 };
 

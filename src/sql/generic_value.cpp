@@ -2,6 +2,9 @@
 
 #include <iostream>
 
+#include "sql/constant_vector.h"
+#include "sql/vector.h"
+#include "sql/vector_operations/vector_operators.h"
 #include "util/macros.h"
 #include "util/math_util.h"
 
@@ -39,6 +42,17 @@ bool GenericValue::Equals(const GenericValue &other) const {
       TPL_ASSERT(false, "Not allowed");
   }
   return false;
+}
+
+GenericValue GenericValue::CastTo(TypeId type) {
+  // Copy if same type
+  if (type_id_ == type) {
+    return GenericValue(*this);
+  }
+  // Use vector to cast
+  ConstantVector result(*this);
+  result.Cast(type);
+  return result.GetValue(0);
 }
 
 std::string GenericValue::ToString() const {
