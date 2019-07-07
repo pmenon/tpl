@@ -141,12 +141,56 @@ class VectorOps {
    */
   static void NotEqual(const Vector &left, const Vector &right, Vector *result);
 
+  // -------------------------------------------------------
+  //
+  // NULL checking
+  //
+  // -------------------------------------------------------
+
+  /**
+   * Check which elements of the vector @em input are NULL and store the results
+   * in the boolean output vector @em result.
+   * @param input The input vector whose elements are checked.
+   * @param[out] result The output vector storing the results.
+   */
+  static void IsNull(const Vector &input, Vector *result);
+
+  /**
+   * Check which elements of the vector @em input are not NULL and store the
+   * results in the boolean output vector @em result.
+   * @param input The input vector whose elements are checked.
+   * @param[out] result The output vector storing the results.
+   */
+  static void IsNotNull(const Vector &input, Vector *result);
+
+  // -------------------------------------------------------
+  //
+  // Boolean checking
+  //
+  // -------------------------------------------------------
+
+  /**
+   * Check if every active element in the boolean input vector @em input is
+   * non-null and true.
+   * @param input The vector to check. Must be a boolean vector.
+   * @return True if every element is non-null and true; false otherwise.
+   */
+  static bool AllTrue(const Vector &input);
+
+  /**
+   * Check if there is any active element in the boolean input vector @em input
+   * that is both non-null and true.
+   * @param input The vector to check. Must be a boolean vector.
+   * @return True if every element is non-null and true; false otherwise.
+   */
+  static bool AnyTrue(const Vector &input);
+
   /**
    * Apply a function to every active element in the vector. The callback
    * function will receive two indexes: i = index, dependent on the selection
    * vector, and k = count.
    */
-  template <class T>
+  template <typename T>
   static void Exec(const u32 *sel_vector, u64 count, T &&fun, u64 offset = 0) {
     // TODO(pmenon): Typically, these types of loops use the __restrict__
     //               on arrays to let the compiler know that two arrays (i.e.,
@@ -170,10 +214,10 @@ class VectorOps {
 
   /**
    * Apply a function to every active element in the vector. The callback
-   * function will receive two indexes: i = index, dependent on the selection
+   * function will receive two arguments: i = index, dependent on the selection
    * vector, and k = count.
    */
-  template <class T>
+  template <typename T>
   static void Exec(const Vector &vector, T &&fun, u64 offset = 0,
                    u64 count = 0) {
     if (count == 0) {
@@ -183,6 +227,19 @@ class VectorOps {
     }
 
     Exec(vector.sel_vector_, count, fun, offset);
+  }
+
+  /**
+   * Apply a function to every active element in the vector. The callback
+   * function will receive three arguments, val = the value of the element at
+   * the current iteration position, i = index, dependent on the selection
+   * vector, and k = count.
+   */
+  template <typename T, typename F>
+  static void ExecTyped(const Vector &vector, F &&fun, u64 offset = 0,
+                        u64 count = 0) {
+    auto data = reinterpret_cast<const T *>(vector.data());
+    Exec(vector, [&](u64 i, u64 k) { fun(data[i], i, k); }, offset, count);
   }
 };
 
