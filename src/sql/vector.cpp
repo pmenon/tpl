@@ -2,9 +2,12 @@
 
 #include <cstring>
 #include <iostream>
-#include <util/bit_util.h>
+#include <memory>
+#include <string>
+#include <utility>
 
 #include "sql/vector_operations/vector_operators.h"
+#include "util/bit_util.h"
 
 namespace tpl::sql {
 
@@ -76,6 +79,128 @@ void Vector::Destroy() {
   count_ = 0;
   sel_vector_ = nullptr;
   null_mask_.reset();
+}
+
+GenericValue Vector::GetValue(const u64 index) const {
+  TPL_ASSERT(index <= count_, "Out-of-bounds vector access");
+  if (IsNull(index)) {
+    return GenericValue::CreateNull(type_);
+  }
+  auto actual_index = (sel_vector_ != nullptr ? sel_vector_[index] : index);
+  switch (type_) {
+    case TypeId::Boolean: {
+      return GenericValue::CreateBoolean(
+          reinterpret_cast<bool *>(data_)[actual_index]);
+    }
+    case TypeId::TinyInt: {
+      return GenericValue::CreateTinyInt(
+          reinterpret_cast<i8 *>(data_)[actual_index]);
+    }
+    case TypeId::SmallInt: {
+      return GenericValue::CreateSmallInt(
+          reinterpret_cast<i16 *>(data_)[actual_index]);
+    }
+    case TypeId::Integer: {
+      return GenericValue::CreateInteger(
+          reinterpret_cast<i32 *>(data_)[actual_index]);
+    }
+    case TypeId::BigInt: {
+      return GenericValue::CreateBigInt(
+          reinterpret_cast<i64 *>(data_)[actual_index]);
+    }
+    case TypeId::Hash: {
+      return GenericValue::CreateHash(
+          reinterpret_cast<hash_t *>(data_)[actual_index]);
+    }
+    case TypeId::Pointer: {
+      return GenericValue::CreatePointer(
+          reinterpret_cast<uintptr_t *>(data_)[actual_index]);
+    }
+    case TypeId::Float: {
+      return GenericValue::CreateReal(
+          reinterpret_cast<f32 *>(data_)[actual_index]);
+      case TypeId::Double: {
+        return GenericValue::CreateDouble(
+            reinterpret_cast<f64 *>(data_)[actual_index]);
+      }
+      case TypeId::Varchar: {
+        auto *str = reinterpret_cast<const char **>(data_)[actual_index];
+        TPL_ASSERT(str != nullptr, "Null string in position not marked NULL!");
+        return GenericValue::CreateString(str);
+      }
+      default: {
+        auto msg = "Cannot read value of type [" + TypeIdToString(type_) + "]";
+        throw std::runtime_error(msg);
+      }
+    }
+  }
+}
+
+void Vector::SetValue(const u64 index, const GenericValue &val) {
+  TPL_ASSERT(index <= count_, "Out-of-bounds vector access");
+  TPL_ASSERT(type_ == val.type_id(), "Mismatched types");
+  SetNull(index, val.is_null());
+  uint64_t actual_index = sel_vector_ ? sel_vector_[index] : index;
+  switch (type_) {
+    case TypeId::Boolean: {
+      const auto new_boolean = val.is_null() ? 0 : val.value_.boolean;
+      reinterpret_cast<bool *>(data_)[actual_index] = new_boolean;
+      break;
+    }
+    case TypeId::TinyInt: {
+      const auto new_tinyint = val.is_null() ? 0 : val.value_.tinyint;
+      reinterpret_cast<int8_t *>(data_)[actual_index] = new_tinyint;
+      break;
+    }
+    case TypeId::SmallInt: {
+      const auto new_smallint = val.is_null() ? 0 : val.value_.smallint;
+      reinterpret_cast<int16_t *>(data_)[actual_index] = new_smallint;
+      break;
+    }
+    case TypeId::Integer: {
+      const auto new_integer = val.is_null() ? 0 : val.value_.integer;
+      reinterpret_cast<int32_t *>(data_)[actual_index] = new_integer;
+      break;
+    }
+    case TypeId::BigInt: {
+      const auto new_bigint = val.is_null() ? 0 : val.value_.bigint;
+      reinterpret_cast<int64_t *>(data_)[actual_index] = new_bigint;
+      break;
+    }
+    case TypeId::Float: {
+      const auto new_float = val.is_null() ? 0 : val.value_.float_;
+      reinterpret_cast<float *>(data_)[actual_index] = new_float;
+      break;
+    }
+    case TypeId::Double: {
+      const auto new_double = val.is_null() ? 0 : val.value_.double_;
+      reinterpret_cast<double *>(data_)[actual_index] = new_double;
+      break;
+    }
+    case TypeId::Hash: {
+      const auto new_hash = val.is_null() ? 0 : val.value_.hash;
+      reinterpret_cast<uintptr_t *>(data_)[actual_index] = new_hash;
+      break;
+    }
+    case TypeId::Pointer: {
+      const auto new_pointer = val.is_null() ? 0 : val.value_.pointer;
+      reinterpret_cast<uintptr_t *>(data_)[actual_index] = new_pointer;
+      break;
+    }
+    case TypeId::Varchar: {
+      if (val.is_null()) {
+        reinterpret_cast<const char **>(data_)[actual_index] = nullptr;
+      } else {
+        reinterpret_cast<const char **>(data_)[actual_index] =
+            strings_.AddString(val.str_value_);
+      }
+      break;
+    }
+    default: {
+      auto msg = "Cannot set value of type [" + TypeIdToString(type_) + "]";
+      throw std::runtime_error(msg);
+    }
+  }
 }
 
 void Vector::Reference(TypeId type_id, byte *data, u32 *nullmask, u64 count) {

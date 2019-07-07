@@ -3,8 +3,9 @@
 #include <bitset>
 #include <iosfwd>
 #include <memory>
-#include <vector>
+#include <string>
 
+#include "sql/generic_value.h"
 #include "sql/sql.h"
 #include "util/common.h"
 #include "util/macros.h"
@@ -48,8 +49,6 @@ class Vector {
 
  public:
   using NullMask = std::bitset<kDefaultVectorSize>;
-
-  static constexpr NullMask kZeroMask{0};
 
   /**
    * Create an empty vector.
@@ -116,6 +115,11 @@ class Vector {
   const NullMask &null_mask() const { return null_mask_; }
 
   /**
+   * Set the mask.
+   */
+  void set_null_mask(const NullMask &other) { null_mask_ = other; }
+
+  /**
    * Set the selection vector.
    */
   void SetSelectionVector(u32 *sel_vector, u64 count) {
@@ -143,50 +147,26 @@ class Vector {
   }
 
   /**
-   * Retrieve a pointer to the element at position @em index in the vector. If
-   * the value is NULL, a null pointer is returned.
+   * Returns the value of the element at the given position in the vector.
    *
-   * This function will perform some checks to ensure the right type is
-   * provided, but the checks are incomplete since some SQL types use the same
-   * primitive underlying types. Be careful!
+   * NOTE: This shouldn't be used in performance-critial code. It's mostly for
+   * debugging and validity checks, or for read-once-per-vector type operations.
    *
-   * @tparam T The type of the value.
    * @param index The position in the vector to read.
-   * @return The element at the specified position, or NULL if the value is
-   *         marked as such in the vector.
+   * @return The element at the specified position.
    */
-  template <typename T>
-  const T *GetValue(u64 index) const;
-
-  /**
-   * Return the string value of the element at the given index, or a NULL
-   * pointer if the value at the index is NULL.
-   * @param index The position in the vector to read.
-   * @return The string at the index, or NULL if the value is marked NULL.
-   */
-  const char *GetStringValue(u64 index) const;
+  GenericValue GetValue(u64 index) const;
 
   /**
    * Set the value a position @em index in the vector to the value @em value.
-   * This function will perform some checks to ensure the correct type is
-   * provided, but the checks are incomplete. For example, it's possible to
-   * store a BigInt value into a hash array because they both use unsigned
-   * 64-bit primitive storage types. Be careful!
    *
-   * @tparam T The type of the value.
+   * NOTE: This shouldn't be used in performance-critial code. It's mostly for
+   * debugging and validity checks, or for read-once-per-vector type operations.
+   *
    * @param index The position in the index to modify.
    * @param val The value to set in the vector.
    */
-  template <typename T>
-  void SetValue(u64 index, T val);
-
-  /**
-   * Set the value at position @em index in the vector to the given string
-   * value @em val by copying the string.
-   * @param index The index to set.
-   * @param val The string value to copy into the vector.
-   */
-  void SetStringValue(u64 index, std::string_view val);
+  void SetValue(u64 index, const GenericValue &val);
 
   /**
    * Cast this vector to a potentially different type.
@@ -220,11 +200,11 @@ class Vector {
   void Flatten();
 
   /**
-   *
-   * @param type_id
-   * @param data
-   * @param nullmask
-   * @param count
+   * Reference a specific chunk of data.
+   * @param type_id The ID of the type.
+   * @param data The data.
+   * @param nullmask The NULL bitmap.
+   * @param count The number of elements in the array.
    */
   void Reference(TypeId type_id, byte *data, u32 *nullmask, u64 count);
 
@@ -302,50 +282,5 @@ class Vector {
   // String container
   Strings strings_;
 };
-
-// ---------------------------------------------------------
-// Implementation below
-// ---------------------------------------------------------
-
-// Reading non-string values
-template <typename T>
-inline const T *Vector::GetValue(const u64 index) const {
-  TPL_ASSERT(type_ == GetTypeId<T>(),
-             "Attempt to access element from vector with different type");
-  if (IsNull(index)) {
-    return nullptr;
-  }
-  auto actual_index = (sel_vector_ != nullptr ? sel_vector_[index] : index);
-  return reinterpret_cast<T *>(data_) + actual_index;
-}
-
-inline const char *Vector::GetStringValue(u64 index) const {
-  TPL_ASSERT(type_ == TypeId::Varchar,
-             "Attempt to access element from vector with different type");
-  if (IsNull(index)) {
-    return nullptr;
-  }
-  auto actual_index = (sel_vector_ != nullptr ? sel_vector_[index] : index);
-  return reinterpret_cast<const char **>(data_)[actual_index];
-}
-
-// Non-string set
-template <typename T>
-inline void Vector::SetValue(const u64 index, const T val) {
-  TPL_ASSERT(IsTypeFixedSize(type_), "Setting value must be fixed length type");
-  TPL_ASSERT(type_ == GetTypeId<T>(), "Mismatched types");
-  TPL_ASSERT(index < count_, "Out-of-range access");
-  auto actual_index = (sel_vector_ != nullptr ? sel_vector_[index] : index);
-  reinterpret_cast<T *>(data_)[actual_index] = val;
-}
-
-inline void Vector::SetStringValue(const u64 index,
-                                   const std::string_view val) {
-  TPL_ASSERT(type_ == TypeId::Varchar, "Setting string in non-string vector");
-  TPL_ASSERT(index < count_, "Out-of-range access");
-  auto actual_index = (sel_vector_ != nullptr ? sel_vector_[index] : index);
-  reinterpret_cast<const char **>(data_)[actual_index] =
-      strings_.AddString(val);
-}
 
 }  // namespace tpl::sql

@@ -17,9 +17,7 @@ void FillImpl(Vector *vector, T val) {
 
 }  // namespace
 
-void VectorOps::Fill(
-    Vector *vector,
-    const std::variant<bool, i64, f64, std::string_view> &value) {
+void VectorOps::Fill(Vector *vector, const GenericValue &value) {
   if (vector->count_ == 0) {
     return;
   }
@@ -28,43 +26,51 @@ void VectorOps::Fill(
 
   switch (vector->type_) {
     case TypeId::Boolean: {
-      TPL_ASSERT(value.index() == 0, "Bool value not set in value!");
-      FillImpl(vector, std::get<0>(value));
+      TPL_ASSERT(value.type_id() == TypeId::Boolean,
+                 "Bool value not set in value!");
+      FillImpl(vector, value.value_.boolean);
       break;
     }
     case TypeId::TinyInt: {
-      TPL_ASSERT(value.index() == 1, "Integer value not set in value!");
-      FillImpl(vector, static_cast<i8>(std::get<1>(value)));
+      TPL_ASSERT(value.type_id() == TypeId::TinyInt,
+                 "Integer value not set in value!");
+      FillImpl(vector, value.value_.tinyint);
       break;
     }
     case TypeId::SmallInt: {
-      TPL_ASSERT(value.index() == 1, "Integer value not set in value!");
-      FillImpl(vector, static_cast<i16>(std::get<1>(value)));
+      TPL_ASSERT(value.type_id() == TypeId::SmallInt,
+                 "Integer value not set in value!");
+      FillImpl(vector, value.value_.smallint);
       break;
     }
     case TypeId::Integer: {
-      TPL_ASSERT(value.index() == 1, "Integer value not set in value!");
-      FillImpl(vector, static_cast<i32>(std::get<1>(value)));
+      TPL_ASSERT(value.type_id() == TypeId::Integer,
+                 "Integer value not set in value!");
+      FillImpl(vector, value.value_.integer);
       break;
     }
     case TypeId::BigInt: {
-      TPL_ASSERT(value.index() == 1, "Integer value not set in value!");
-      FillImpl(vector, std::get<1>(value));
+      TPL_ASSERT(value.type_id() == TypeId::BigInt,
+                 "Integer value not set in value!");
+      FillImpl(vector, value.value_.bigint);
       break;
     }
     case TypeId::Float: {
-      TPL_ASSERT(value.index() == 2, "Floating point value not set in value!");
-      FillImpl(vector, static_cast<f32>(std::get<2>(value)));
+      TPL_ASSERT(value.type_id() == TypeId::Float,
+                 "Floating point value not set in value!");
+      FillImpl(vector, value.value_.float_);
       break;
     }
     case TypeId::Double: {
-      TPL_ASSERT(value.index() == 2, "Floating point value not set in value!");
-      FillImpl(vector, std::get<2>(value));
+      TPL_ASSERT(value.type_id() == TypeId::Double,
+                 "Floating point value not set in value!");
+      FillImpl(vector, value.value_.double_);
       break;
     }
     case TypeId::Varchar: {
-      TPL_ASSERT(value.index() == 3, "String value not set in value!");
-      auto *str = vector->strings_.AddString(std::get<3>(value));
+      TPL_ASSERT(value.type_id() == TypeId::Varchar,
+                 "String value not set in value!");
+      auto *str = vector->strings_.AddString(value.str_value_);
       FillImpl(vector, str);
       break;
     }

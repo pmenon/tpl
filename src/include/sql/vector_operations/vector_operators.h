@@ -1,7 +1,6 @@
 #pragma once
 
-#include <variant>
-
+#include "sql/generic_value.h"
 #include "sql/vector.h"
 #include "util/common.h"
 
@@ -70,14 +69,77 @@ class VectorOps {
    * @param vector The vector to modify.
    * @param value The value to fill the vector with.
    */
-  static void Fill(Vector *vector,
-                   const std::variant<bool, i64, f64, std::string_view> &value);
+  static void Fill(Vector *vector, const GenericValue &value);
 
   /**
    * Fill the input vector with NULL values.
    * @param vector The vector to modify.
    */
   static void FillNull(Vector *vector);
+
+  // -------------------------------------------------------
+  //
+  // Comparisons
+  //
+  // -------------------------------------------------------
+
+  /**
+   * Perform an equality comparison on each element from the left and right
+   * input vectors and store the result in the output vector @em result.
+   * @param left The left input to the comparison.
+   * @param right The right input to the comparison
+   * @param[out] result The vector storing the result of the comparison.
+   */
+  static void Equal(const Vector &left, const Vector &right, Vector *result);
+
+  /**
+   * Perform a greater-than comparison on each element from the left and right
+   * input vectors and store the result in the output vector @em result.
+   * @param left The left input to the comparison.
+   * @param right The right input to the comparison
+   * @param[out] result The vector storing the result of the comparison.
+   */
+  static void GreaterThan(const Vector &left, const Vector &right,
+                          Vector *result);
+
+  /**
+   * Perform a greater-than-or-equal comparison on each element from the left
+   * and right input vectors and store the result in the output vector
+   * @em result.
+   * @param left The left input to the comparison.
+   * @param right The right input to the comparison
+   * @param[out] result The vector storing the result of the comparison.
+   */
+  static void GreaterThanEqual(const Vector &left, const Vector &right,
+                               Vector *result);
+
+  /**
+   * Perform a less-than comparison on each element from the left and right
+   * input vectors and store the result in the output vector @em result.
+   * @param left The left input to the comparison.
+   * @param right The right input to the comparison
+   * @param[out] result The vector storing the result of the comparison.
+   */
+  static void LessThan(const Vector &left, const Vector &right, Vector *result);
+
+  /**
+   * Perform a less-than-or-equal comparison on each element from the left and
+   * right input vectors and store the result in the output vector @em result.
+   * @param left The left input to the comparison.
+   * @param right The right input to the comparison
+   * @param[out] result The vector storing the result of the comparison.
+   */
+  static void LessThanEqual(const Vector &left, const Vector &right,
+                            Vector *result);
+
+  /**
+   * Perform an inequality comparison on each element from the left and right
+   * input vectors and store the result in the output vector @em result.
+   * @param left The left input to the comparison.
+   * @param right The right input to the comparison
+   * @param[out] result The vector storing the result of the comparison.
+   */
+  static void NotEqual(const Vector &left, const Vector &right, Vector *result);
 
   /**
    * Apply a function to every active element in the vector. The callback

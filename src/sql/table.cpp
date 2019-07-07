@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <limits>
+#include <string>
 #include <utility>
 
 #include "sql/catalog.h"

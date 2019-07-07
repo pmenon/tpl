@@ -152,7 +152,6 @@ class MathUtil {
    * @return True if they're equal; false otherwise.
    */
   static bool ApproxEqual(f64 left, f64 right);
-
 };
 
 }  // namespace tpl::util

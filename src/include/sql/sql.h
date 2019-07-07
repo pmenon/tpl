@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "util/common.h"
 #include "util/macros.h"
 
@@ -202,6 +204,40 @@ static inline bool IsTypeNumeric(TypeId type) {
     case TypeId::Varchar:
     case TypeId::Varbinary:
       return false;
+    default:
+      UNREACHABLE("Impossible type");
+  }
+}
+
+/**
+ * Convert a TypeId to a string value.
+ * @param type_id The type ID to stringify.
+ * @return The string representation of the type ID.
+ */
+static inline std::string TypeIdToString(TypeId type) {
+  switch (type) {
+    case TypeId::Boolean:
+      return "Boolean";
+    case TypeId::TinyInt:
+      return "TinyInt";
+    case TypeId::SmallInt:
+      return "SmallInt";
+    case TypeId::Integer:
+      return "Integer";
+    case TypeId::BigInt:
+      return "BigInt";
+    case TypeId::Hash:
+      return "Hash";
+    case TypeId::Pointer:
+      return "Pointer";
+    case TypeId::Float:
+      return "Float";
+    case TypeId::Double:
+      return "Double";
+    case TypeId::Varchar:
+      return "VarChar";
+    case TypeId::Varbinary:
+      return "VarBinary";
     default:
       UNREACHABLE("Impossible type");
   }
