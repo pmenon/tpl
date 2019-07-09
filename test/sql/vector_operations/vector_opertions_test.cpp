@@ -306,4 +306,40 @@ TEST_F(VectorOperationsTest, BooleanLogic) {
   EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(3));
 }
 
+TEST_F(VectorOperationsTest, SelectedBooleanLogic) {
+  Vector a(TypeId::Boolean, true, false);
+  Vector b(TypeId::Boolean, true, false);
+  ConstantVector c(GenericValue::CreateBoolean(false));
+  Vector result(TypeId::Boolean, true, false);
+
+  // a = [NULL, false, true, true], b = [false, true, false, true]
+  a.set_count(4); b.set_count(4);
+  a.SetValue(0, GenericValue::CreateNull(TypeId::Boolean));
+  a.SetValue(1, GenericValue::CreateNull(TypeId::Boolean));
+  a.SetValue(2, GenericValue::CreateBoolean(true));
+  a.SetValue(3, GenericValue::CreateBoolean(true));
+
+  b.SetValue(0, GenericValue::CreateBoolean(false));
+  b.SetValue(1, GenericValue::CreateBoolean(true));
+  b.SetValue(2, GenericValue::CreateBoolean(false));
+  b.SetValue(3, GenericValue::CreateBoolean(true));
+
+  // a = [NULL, false, true], b = [false, true, true]
+  std::vector<u32> sel = {0, 1, 3};
+  a.SetSelectionVector(sel.data(), sel.size());
+  b.SetSelectionVector(sel.data(), sel.size());
+
+  // result = [NULL, false, true]
+  VectorOps::And(a, b, &result);
+  EXPECT_EQ(3u, result.count());
+  EXPECT_NE(nullptr, result.selection_vector());
+  EXPECT_TRUE(result.null_mask().any());
+  // NULL && false = false
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(0));
+  // NULL && true = NULL
+  EXPECT_EQ(GenericValue::CreateNull(TypeId::Boolean), result.GetValue(1));
+  // true && true = true
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(2));
+}
+
 }  // namespace tpl::sql::test

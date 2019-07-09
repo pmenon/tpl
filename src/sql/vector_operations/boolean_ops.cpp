@@ -14,8 +14,11 @@ void BooleanLogicOperation(const Vector &left, const Vector &right,
       left.type_id() == TypeId::Boolean && right.type_id() == TypeId::Boolean,
       "Inputs to boolean logic op must be boolean");
 
-  auto *left_data = reinterpret_cast<const bool *>(left.data());
-  auto *right_data = reinterpret_cast<const bool *>(right.data());
+  const auto *left_data = reinterpret_cast<const bool *>(left.data());
+  const auto *right_data = reinterpret_cast<const bool *>(right.data());
+  const auto &left_null_mask = left.null_mask();
+  const auto &right_null_mask = right.null_mask();
+
   auto *result_data = reinterpret_cast<bool *>(result->data());
   Vector::NullMask result_mask;
 
@@ -23,7 +26,7 @@ void BooleanLogicOperation(const Vector &left, const Vector &right,
     VectorOps::Exec(right, [&](u64 i, u64 k) {
       result_data[i] = Op::Apply(left_data[0], right_data[i]);
       result_mask[i] = OpNull::Apply(left_data[0], right_data[i],
-                                     left.IsNull(0), right.IsNull(i));
+                                     left_null_mask[0], right_null_mask[i]);
     });
   } else if (right.IsConstant()) {
     BooleanLogicOperation<Op, OpNull>(right, left, result);
@@ -35,7 +38,7 @@ void BooleanLogicOperation(const Vector &left, const Vector &right,
     VectorOps::Exec(left, [&](u64 i, u64 k) {
       result_data[i] = Op::Apply(left_data[i], right_data[i]);
       result_mask[i] = OpNull::Apply(left_data[i], right_data[i],
-                                     left.IsNull(i), right.IsNull(i));
+                                     left_null_mask[i], right_null_mask[i]);
     });
   }
 
