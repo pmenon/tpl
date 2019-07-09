@@ -217,13 +217,20 @@ class VectorOps {
    */
   static bool AnyTrue(const Vector &input);
 
+  // -------------------------------------------------------
+  //
+  // Main - Vector Iteration Logic
+  //
+  // -------------------------------------------------------
+
   /**
    * Apply a function to every active element in the vector. The callback
    * function will receive two indexes: i = index, dependent on the selection
    * vector, and k = count.
    */
   template <typename T>
-  static void Exec(const u32 *sel_vector, u64 count, T &&fun, u64 offset = 0) {
+  static void Exec(const u32 *RESTRICT sel_vector, const u64 count, T &&fun,
+                   const u64 offset = 0) {
     // TODO(pmenon): Typically, these types of loops use the __restrict__
     //               on arrays to let the compiler know that two arrays (i.e.,
     //               pointer ranges) don't alias or overlap, thus allowing it
@@ -232,8 +239,7 @@ class VectorOps {
     //               #pragma GCC ivdep ? And is that always true? Should (or can
     //               we) force callers to assert non-overlapping ranges?
 
-    // If there's a selection vector, use it.
-    if (sel_vector) {
+    if (sel_vector != nullptr) {
       for (u64 i = offset; i < count; i++) {
         fun(sel_vector[i], i);
       }
