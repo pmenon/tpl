@@ -1,4 +1,6 @@
+#include <limits>
 #include <numeric>
+#include <vector>
 
 #include "tpl_test.h"  // NOLINT
 

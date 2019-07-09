@@ -3,6 +3,7 @@
 #include <memory>
 #include <numeric>
 #include <random>
+#include <string>
 #include <thread>  // NOLINT
 #include <utility>
 #include <vector>

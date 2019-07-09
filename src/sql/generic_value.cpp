@@ -1,6 +1,7 @@
 #include "sql/generic_value.h"
 
 #include <iostream>
+#include <string>
 
 #include "sql/constant_vector.h"
 #include "sql/vector.h"

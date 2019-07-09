@@ -1,4 +1,5 @@
 #include <numeric>
+#include <vector>
 
 #include "tpl_test.h"  // NOLINT
 
@@ -274,7 +275,7 @@ TEST_F(VectorOperationsTest, BooleanLogic) {
   EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(3));
 
   // Nulls
-  Vector aa(TypeId::Boolean, true, false);;
+  Vector aa(TypeId::Boolean, true, false);
   a.CopyTo(&aa);
   aa.SetValue(1, GenericValue::CreateNull(TypeId::Boolean));
   VectorOps::And(aa, b, &result);
@@ -313,7 +314,8 @@ TEST_F(VectorOperationsTest, SelectedBooleanLogic) {
   Vector result(TypeId::Boolean, true, false);
 
   // a = [NULL, false, true, true], b = [false, true, false, true]
-  a.set_count(4); b.set_count(4);
+  a.set_count(4);
+  b.set_count(4);
   a.SetValue(0, GenericValue::CreateNull(TypeId::Boolean));
   a.SetValue(1, GenericValue::CreateNull(TypeId::Boolean));
   a.SetValue(2, GenericValue::CreateBoolean(true));
