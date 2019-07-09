@@ -4,7 +4,7 @@ namespace tpl::sql {
 
 template <typename LeftType, typename RightType, typename ResultType,
           typename Op>
-static inline void BinaryOperationLoop_LeftConstant(
+static inline void TemplatedBinaryOperationLoop_Constant_Vector(
     LeftType left_data, RightType *RESTRICT right_data,
     ResultType *RESTRICT result_data, u64 count, u32 *RESTRICT sel_vector) {
   VectorOps::Exec(sel_vector, count, [&](u64 i, u64 k) {
@@ -14,7 +14,7 @@ static inline void BinaryOperationLoop_LeftConstant(
 
 template <typename LeftType, typename RightType, typename ResultType,
           typename Op>
-static inline void BinaryOperationLoop_RightConstant(
+static inline void TemplatedBinaryOperationLoop_Vector_Constant(
     LeftType *RESTRICT left_data, RightType right_data,
     ResultType *RESTRICT result_data, u64 count, u32 *RESTRICT sel_vector) {
   VectorOps::Exec(sel_vector, count, [&](u64 i, u64 k) {
@@ -24,10 +24,11 @@ static inline void BinaryOperationLoop_RightConstant(
 
 template <typename LeftType, typename RightType, typename ResultType,
           typename Op>
-void BinaryOperationLoop_VectorVector(LeftType *RESTRICT left_data,
-                                      RightType *RESTRICT right_data,
-                                      ResultType *RESTRICT result_data,
-                                      u64 count, u32 *RESTRICT sel_vector) {
+void TemplatedBinaryOperation_Vector_Vector(LeftType *RESTRICT left_data,
+                                            RightType *RESTRICT right_data,
+                                            ResultType *RESTRICT result_data,
+                                            u64 count,
+                                            u32 *RESTRICT sel_vector) {
   VectorOps::Exec(sel_vector, count, [&](u64 i, u64 k) {
     result_data[i] = Op::Apply(left_data[i], right_data[i]);
   });
@@ -35,8 +36,9 @@ void BinaryOperationLoop_VectorVector(LeftType *RESTRICT left_data,
 
 template <typename LeftType, typename RightType, typename ResultType,
           typename Op, bool IgnoreNull = false>
-static inline void BinaryOperationLoop(const Vector &left, const Vector &right,
-                                       Vector *result) {
+static inline void TemplatedBinaryOperation(const Vector &left,
+                                            const Vector &right,
+                                            Vector *result) {
   auto *left_data = reinterpret_cast<LeftType *>(left.data());
   auto *right_data = reinterpret_cast<RightType *>(right.data());
   auto *result_data = reinterpret_cast<ResultType *>(result->data());
@@ -61,7 +63,8 @@ static inline void BinaryOperationLoop(const Vector &left, const Vector &right,
               }
             });
       } else {
-        BinaryOperationLoop_LeftConstant<LeftType, RightType, ResultType, Op>(
+        TemplatedBinaryOperationLoop_Constant_Vector<LeftType, RightType,
+                                                     ResultType, Op>(
             left_const_val, right_data, result_data, right.count(),
             right.selection_vector());
       }
@@ -90,7 +93,8 @@ static inline void BinaryOperationLoop(const Vector &left, const Vector &right,
               }
             });
       } else {
-        BinaryOperationLoop_RightConstant<LeftType, RightType, ResultType, Op>(
+        TemplatedBinaryOperationLoop_Vector_Constant<LeftType, RightType,
+                                                     ResultType, Op>(
             left_data, right_const_value, result_data, left.count(),
             left.selection_vector());
       }
@@ -113,7 +117,7 @@ static inline void BinaryOperationLoop(const Vector &left, const Vector &right,
       }
     });
   } else {
-    BinaryOperationLoop_VectorVector<LeftType, RightType, ResultType, Op>(
+    TemplatedBinaryOperation_Vector_Vector<LeftType, RightType, ResultType, Op>(
         left_data, right_data, result_data, left.count(),
         left.selection_vector());
   }

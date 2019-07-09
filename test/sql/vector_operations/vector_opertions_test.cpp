@@ -224,4 +224,86 @@ TEST_F(VectorOperationsTest, AnyOrAllTrue) {
   EXPECT_TRUE(VectorOps::AllTrue(vec));
 }
 
+TEST_F(VectorOperationsTest, BooleanLogic) {
+  Vector a(TypeId::Boolean, true, false);
+  Vector b(TypeId::Boolean, true, false);
+  ConstantVector c(GenericValue::CreateBoolean(false));
+  Vector result(TypeId::Boolean, true, false);
+
+  a.set_count(4);
+  b.set_count(4);
+
+  a.SetValue(0, GenericValue::CreateBoolean(false));
+  a.SetValue(1, GenericValue::CreateBoolean(false));
+  a.SetValue(2, GenericValue::CreateBoolean(true));
+  a.SetValue(3, GenericValue::CreateBoolean(true));
+
+  b.SetValue(0, GenericValue::CreateBoolean(false));
+  b.SetValue(1, GenericValue::CreateBoolean(true));
+  b.SetValue(2, GenericValue::CreateBoolean(false));
+  b.SetValue(3, GenericValue::CreateBoolean(true));
+
+  // And
+  VectorOps::And(a, b, &result);
+  EXPECT_EQ(4u, result.count());
+  EXPECT_EQ(nullptr, result.selection_vector());
+  EXPECT_FALSE(result.null_mask().any());
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(1));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(3));
+
+  // Or
+  VectorOps::Or(a, b, &result);
+  EXPECT_EQ(4u, result.count());
+  EXPECT_EQ(nullptr, result.selection_vector());
+  EXPECT_FALSE(result.null_mask().any());
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(1));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(3));
+
+  // Not
+  VectorOps::Not(a, &result);
+  EXPECT_EQ(4u, result.count());
+  EXPECT_EQ(nullptr, result.selection_vector());
+  EXPECT_FALSE(result.null_mask().any());
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(1));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(3));
+
+  // Nulls
+  Vector aa(TypeId::Boolean, true, false);;
+  a.CopyTo(&aa);
+  aa.SetValue(1, GenericValue::CreateNull(TypeId::Boolean));
+  VectorOps::And(aa, b, &result);
+  EXPECT_EQ(4u, result.count());
+  EXPECT_EQ(nullptr, result.selection_vector());
+  EXPECT_TRUE(result.null_mask().any());
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(0));
+  EXPECT_EQ(GenericValue::CreateNull(TypeId::Boolean), result.GetValue(1));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(3));
+
+  // Constants
+  VectorOps::And(a, c, &result);
+  EXPECT_EQ(4u, result.count());
+  EXPECT_EQ(nullptr, result.selection_vector());
+  EXPECT_FALSE(result.null_mask().any());
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(1));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(3));
+
+  VectorOps::And(c, a, &result);
+  EXPECT_EQ(4u, result.count());
+  EXPECT_EQ(nullptr, result.selection_vector());
+  EXPECT_FALSE(result.null_mask().any());
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(1));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(3));
+}
+
 }  // namespace tpl::sql::test

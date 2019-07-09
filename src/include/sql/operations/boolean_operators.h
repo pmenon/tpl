@@ -20,7 +20,7 @@ struct And {
  * Determine if the result of a boolean AND with the given values and NULL-ness
  * is also NULL.
  */
-struct AndNullMask {
+struct AndNullable {
   static bool Apply(bool left, bool right, bool left_null, bool right_null) {
     return (left_null && (right_null || right)) || (right_null && left);
   }

@@ -120,6 +120,11 @@ class Vector {
   void set_null_mask(const NullMask &other) { null_mask_ = other; }
 
   /**
+   * Set the mask to the provided mask.
+   */
+  void set_null_mask(NullMask &&other) { null_mask_ = other; }
+
+  /**
    * Set the selection vector.
    */
   void SetSelectionVector(u32 *sel_vector, u64 count) {

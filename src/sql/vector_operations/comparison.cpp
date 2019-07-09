@@ -13,43 +13,44 @@ void ComparisonOperation(const Vector &left, const Vector &right,
                          Vector *result) {
   switch (left.type_id()) {
     case TypeId::Boolean: {
-      BinaryOperationLoop<bool, bool, bool, Op>(left, right, result);
+      TemplatedBinaryOperation<bool, bool, bool, Op>(left, right, result);
       break;
     }
     case TypeId::TinyInt: {
-      BinaryOperationLoop<i8, i8, bool, Op>(left, right, result);
+      TemplatedBinaryOperation<i8, i8, bool, Op>(left, right, result);
       break;
     }
     case TypeId::SmallInt: {
-      BinaryOperationLoop<i16, i16, bool, Op>(left, right, result);
+      TemplatedBinaryOperation<i16, i16, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Integer: {
-      BinaryOperationLoop<i32, i32, bool, Op>(left, right, result);
+      TemplatedBinaryOperation<i32, i32, bool, Op>(left, right, result);
       break;
     }
     case TypeId::BigInt: {
-      BinaryOperationLoop<i64, i64, bool, Op>(left, right, result);
+      TemplatedBinaryOperation<i64, i64, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Hash: {
-      BinaryOperationLoop<hash_t, hash_t, bool, Op>(left, right, result);
+      TemplatedBinaryOperation<hash_t, hash_t, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Pointer: {
-      BinaryOperationLoop<uintptr_t, uintptr_t, bool, Op>(left, right, result);
+      TemplatedBinaryOperation<uintptr_t, uintptr_t, bool, Op>(left, right,
+                                                               result);
       break;
     }
     case TypeId::Float: {
-      BinaryOperationLoop<f32, f32, bool, Op>(left, right, result);
+      TemplatedBinaryOperation<f32, f32, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Double: {
-      BinaryOperationLoop<f64, f64, bool, Op>(left, right, result);
+      TemplatedBinaryOperation<f64, f64, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Varchar: {
-      BinaryOperationLoop<const char *, const char *, bool, Op, true>(
+      TemplatedBinaryOperation<const char *, const char *, bool, Op, true>(
           left, right, result);
       break;
     }

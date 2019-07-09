@@ -143,6 +143,38 @@ class VectorOps {
 
   // -------------------------------------------------------
   //
+  // Boolean operations
+  //
+  // -------------------------------------------------------
+
+  /**
+   * Perform a boolean AND of the boolean elements in the left and right input
+   * vectors and store the result in the output vector @em result.
+   * @param left The left input.
+   * @param right The right input.
+   * @param[out] result The vector storing the result of the AND.
+   */
+  static void And(const Vector &left, const Vector &right, Vector *result);
+
+  /**
+   * Perform a boolean OR of the boolean elements in the left and right input
+   * vectors and store the result in the output vector @em result.
+   * @param left The left input.
+   * @param right The right input.
+   * @param[out] result The vector storing the result of the OR.
+   */
+  static void Or(const Vector &left, const Vector &right, Vector *result);
+
+  /**
+   * Perform a boolean negation of the boolean elements in the input vector and
+   * store the result in the output vector @em result.
+   * @param input The boolean input.
+   * @param[out] result The vector storing the result of the AND.
+   */
+  static void Not(const Vector &input, Vector *result);
+
+  // -------------------------------------------------------
+  //
   // NULL checking
   //
   // -------------------------------------------------------
