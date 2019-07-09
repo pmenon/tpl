@@ -13,45 +13,44 @@ void ComparisonOperation(const Vector &left, const Vector &right,
                          Vector *result) {
   switch (left.type_id()) {
     case TypeId::Boolean: {
-      TemplatedBinaryOperation<bool, bool, bool, Op>(left, right, result);
+      BinaryOperation<bool, bool, bool, Op>(left, right, result);
       break;
     }
     case TypeId::TinyInt: {
-      TemplatedBinaryOperation<i8, i8, bool, Op>(left, right, result);
+      BinaryOperation<i8, i8, bool, Op>(left, right, result);
       break;
     }
     case TypeId::SmallInt: {
-      TemplatedBinaryOperation<i16, i16, bool, Op>(left, right, result);
+      BinaryOperation<i16, i16, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Integer: {
-      TemplatedBinaryOperation<i32, i32, bool, Op>(left, right, result);
+      BinaryOperation<i32, i32, bool, Op>(left, right, result);
       break;
     }
     case TypeId::BigInt: {
-      TemplatedBinaryOperation<i64, i64, bool, Op>(left, right, result);
+      BinaryOperation<i64, i64, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Hash: {
-      TemplatedBinaryOperation<hash_t, hash_t, bool, Op>(left, right, result);
+      BinaryOperation<hash_t, hash_t, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Pointer: {
-      TemplatedBinaryOperation<uintptr_t, uintptr_t, bool, Op>(left, right,
-                                                               result);
+      BinaryOperation<uintptr_t, uintptr_t, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Float: {
-      TemplatedBinaryOperation<f32, f32, bool, Op>(left, right, result);
+      BinaryOperation<f32, f32, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Double: {
-      TemplatedBinaryOperation<f64, f64, bool, Op>(left, right, result);
+      BinaryOperation<f64, f64, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Varchar: {
-      TemplatedBinaryOperation<const char *, const char *, bool, Op, true>(
-          left, right, result);
+      BinaryOperation<const char *, const char *, bool, Op, true>(left, right,
+                                                                  result);
       break;
     }
     default: { TPL_ASSERT(false, "Type not supported for comparison"); }
