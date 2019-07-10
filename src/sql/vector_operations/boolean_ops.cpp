@@ -23,11 +23,19 @@ void BooleanLogicOperation(const Vector &left, const Vector &right,
   Vector::NullMask result_mask;
 
   if (left.IsConstant()) {
-    VectorOps::Exec(right, [&](u64 i, u64 k) {
-      result_data[i] = Op::Apply(left_data[0], right_data[i]);
-      result_mask[i] = OpNull::Apply(left_data[0], right_data[i],
-                                     left_null_mask[0], right_null_mask[i]);
-    });
+    if (right_null_mask.any()) {
+      // Slow-path: need to check NULLs
+      VectorOps::Exec(right, [&](u64 i, u64 k) {
+        result_data[i] = Op::Apply(left_data[0], right_data[i]);
+        result_mask[i] = OpNull::Apply(left_data[0], right_data[i],
+                                       left_null_mask[0], right_null_mask[i]);
+      });
+    } else {
+      // Fast-path: no NULL checks
+      VectorOps::Exec(right, [&](u64 i, u64 k) {
+        result_data[i] = Op::Apply(left_data[0], right_data[i]);
+      });
+    }
   } else if (right.IsConstant()) {
     BooleanLogicOperation<Op, OpNull>(right, left, result);
     return;
@@ -35,11 +43,19 @@ void BooleanLogicOperation(const Vector &left, const Vector &right,
     TPL_ASSERT(left.selection_vector() == right.selection_vector(),
                "Mismatched selection vectors");
     TPL_ASSERT(left.count() == right.count(), "Mismatched counts");
-    VectorOps::Exec(left, [&](u64 i, u64 k) {
-      result_data[i] = Op::Apply(left_data[i], right_data[i]);
-      result_mask[i] = OpNull::Apply(left_data[i], right_data[i],
-                                     left_null_mask[i], right_null_mask[i]);
-    });
+    if (!left_null_mask.any() && !right_null_mask.any()) {
+      // Fast-path: no NULL checks
+      VectorOps::Exec(left, [&](u64 i, u64 k) {
+        result_data[i] = Op::Apply(left_data[i], right_data[i]);
+      });
+    } else {
+      // Slow-path: need to check NULLs
+      VectorOps::Exec(left, [&](u64 i, u64 k) {
+        result_data[i] = Op::Apply(left_data[i], right_data[i]);
+        result_mask[i] = OpNull::Apply(left_data[i], right_data[i],
+                                       left_null_mask[i], right_null_mask[i]);
+      });
+    }
   }
 
   result->set_null_mask(result_mask);
