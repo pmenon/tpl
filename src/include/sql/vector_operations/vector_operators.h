@@ -229,7 +229,7 @@ class VectorOps {
    * vector, and k = count.
    */
   template <typename T>
-  static void Exec(const u32 *RESTRICT sel_vector, const u64 count, T &&fun,
+  static void Exec(const sel_t *RESTRICT sel_vector, const u64 count, T &&fun,
                    const u64 offset = 0) {
     // TODO(pmenon): Typically, these types of loops use the __restrict__
     //               on arrays to let the compiler know that two arrays (i.e.,

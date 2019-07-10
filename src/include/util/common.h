@@ -18,6 +18,7 @@ using f32 = float;
 using f64 = double;
 using byte = std::byte;
 
+using sel_t = u16;
 using hash_t = u64;
 
 #define FOR_EACH_SIGNED_INT_TYPE(F, ...) \

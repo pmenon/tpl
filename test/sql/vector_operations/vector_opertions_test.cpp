@@ -327,7 +327,7 @@ TEST_F(VectorOperationsTest, SelectedBooleanLogic) {
   b.SetValue(3, GenericValue::CreateBoolean(true));
 
   // a = [NULL, false, true], b = [false, true, true]
-  std::vector<u32> sel = {0, 1, 3};
+  std::vector<sel_t> sel = {0, 1, 3};
   a.SetSelectionVector(sel.data(), sel.size());
   b.SetSelectionVector(sel.data(), sel.size());
 

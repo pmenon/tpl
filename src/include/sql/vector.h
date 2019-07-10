@@ -107,7 +107,7 @@ class Vector {
   /**
    * Return the selection vector, NULL if there isn't one.
    */
-  u32 *selection_vector() const { return sel_vector_; }
+  sel_t *selection_vector() const { return sel_vector_; }
 
   /**
    * Return the NULL bitmask of elements in this vector.
@@ -127,7 +127,7 @@ class Vector {
   /**
    * Set the selection vector.
    */
-  void SetSelectionVector(u32 *sel_vector, u64 count) {
+  void SetSelectionVector(sel_t *sel_vector, u64 count) {
     sel_vector_ = sel_vector;
     count_ = count;
   }
@@ -287,7 +287,7 @@ class Vector {
   // A pointer to the data.
   byte *data_;
   // The selection vector of the vector.
-  u32 *sel_vector_;
+  sel_t *sel_vector_;
   // The null mask used to indicate if an element in the vector is NULL.
   NullMask null_mask_;
   // String container

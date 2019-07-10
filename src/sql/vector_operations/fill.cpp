@@ -5,7 +5,7 @@ namespace tpl::sql {
 namespace {
 
 template <typename T>
-void FillImpl(T *RESTRICT data, T val, u64 count, u32 *RESTRICT sel_vector) {
+void FillImpl(T *RESTRICT data, T val, u64 count, u16 *RESTRICT sel_vector) {
   VectorOps::Exec(sel_vector, count, [&](u64 i, u64 k) { data[i] = val; });
 }
 

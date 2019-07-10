@@ -6,7 +6,7 @@ namespace {
 
 template <typename T>
 void GenerateSequenceImpl(T *RESTRICT data, T start, T increment, u64 count,
-                          u32 *RESTRICT sel_vector) {
+                          sel_t *RESTRICT sel_vector) {
   T value = start;
   VectorOps::Exec(sel_vector, count, [&](u64 i, u64 k) {
     data[i] = value;
@@ -29,7 +29,6 @@ void VectorOps::Generate(tpl::sql::Vector *vector, i64 start, i64 increment) {
         "Sequence generation only allowed on numeric vectors");
   }
   switch (vector->type_id()) {
-    case TypeId::Boolean:
     case TypeId::TinyInt: {
       GenerateSequenceImpl<i8>(vector, start, increment);
       break;

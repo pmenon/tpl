@@ -120,7 +120,7 @@ TEST_F(VectorTest, Reference) {
 
 TEST_F(VectorTest, Move) {
   // First try to reference a backing STL vector
-  std::vector<u32> sel = {0, 2, 4, 6, 8};
+  std::vector<sel_t> sel = {0, 2, 4, 6, 8};
 
   Vector vec(TypeId::Integer, true, true);
   vec.set_count(10);
@@ -153,7 +153,7 @@ TEST_F(VectorTest, Move) {
 
 TEST_F(VectorTest, Copy) {
   // First try to reference a backing STL vector
-  std::vector<u32> sel = {0, 2, 4, 6, 8};
+  std::vector<sel_t> sel = {0, 2, 4, 6, 8};
 
   Vector vec(TypeId::Integer, true, true);
   vec.set_count(10);
@@ -176,7 +176,7 @@ TEST_F(VectorTest, Copy) {
 }
 
 TEST_F(VectorTest, CopyWithOffset) {
-  std::vector<u32> sel = {0, 2, 4, 6, 8};
+  std::vector<sel_t> sel = {0, 2, 4, 6, 8};
 
   Vector vec(TypeId::Integer, true, true);
   vec.set_count(10);
@@ -208,7 +208,7 @@ TEST_F(VectorTest, CopyStringVector) {
   }
 
   // Filter the even elements
-  std::vector<u32> sel = {0, 2, 4, 6, 8};
+  std::vector<sel_t> sel = {0, 2, 4, 6, 8};
   vec.SetSelectionVector(sel.data(), sel.size());
   vec.SetNull(1, true);
 
@@ -225,7 +225,7 @@ TEST_F(VectorTest, CopyStringVector) {
 TEST_F(VectorTest, Cast) {
   // First try to reference a backing STL vector
   std::vector<i32> base_stdvec = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  std::vector<u32> sel = {0, 2, 4, 6, 8};
+  std::vector<sel_t> sel = {0, 2, 4, 6, 8};
 
   // First, try happy-path upcast from i32 -> i64
   {
@@ -308,7 +308,7 @@ TEST_F(VectorTest, Append) {
 }
 
 TEST_F(VectorTest, AppendWithSelectionVector) {
-  std::vector<u32> sel1 = {1};
+  std::vector<sel_t> sel1 = {1};
   Vector vec1(TypeId::Double, true, true);
   vec1.set_count(3);
   vec1.SetValue(0, GenericValue::CreateDouble(1.0));
