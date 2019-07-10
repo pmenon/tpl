@@ -96,6 +96,8 @@ void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right,
       result_data[i] = Op::Apply(left_data[i], right_data[i]);
     });
   }
+
+  result->SetSelectionVector(left.selection_vector(), left.count());
 }
 
 template <typename LeftType, typename RightType, typename ResultType,
