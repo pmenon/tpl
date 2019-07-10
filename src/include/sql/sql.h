@@ -71,30 +71,7 @@ struct Blob {
  * storage for multiple SQL types. For example, i32 is used for SQL Integers and
  * SQL Dates).
  */
-static inline SqlTypeId GetSqlTypeFromInternalType(TypeId type) {
-  switch (type) {
-    case TypeId::Boolean:
-      return SqlTypeId::Boolean;
-    case TypeId::TinyInt:
-      return SqlTypeId::TinyInt;
-    case TypeId::SmallInt:
-      return SqlTypeId::SmallInt;
-    case TypeId::Integer:
-      return SqlTypeId::Integer;
-    case TypeId::BigInt:
-      return SqlTypeId::BigInt;
-    case TypeId::Float:
-      return SqlTypeId::Real;
-    case TypeId::Double:
-      return SqlTypeId::Double;
-    case TypeId::Varchar:
-      return SqlTypeId::Varchar;
-    case TypeId::Varbinary:
-      return SqlTypeId::Varchar;
-    default:
-      UNREACHABLE("Impossible internal type");
-  }
-}
+SqlTypeId GetSqlTypeFromInternalType(TypeId type);
 
 /**
  * Given a templated type, return the associated internal type ID.
@@ -132,115 +109,23 @@ constexpr static inline TypeId GetTypeId() {
 }
 
 /**
- * Return the size in bytes of a value with the primitive type @em type
+ * Return the size in bytes of a value with the primitive type @em type.
  */
-static inline std::size_t GetTypeIdSize(TypeId type) {
-  switch (type) {
-    case TypeId::Boolean:
-      return sizeof(bool);
-    case TypeId::TinyInt:
-      return sizeof(i8);
-    case TypeId::SmallInt:
-      return sizeof(i16);
-    case TypeId::Integer:
-      return sizeof(i32);
-    case TypeId::BigInt:
-      return sizeof(i64);
-    case TypeId::Hash:
-      return sizeof(hash_t);
-    case TypeId::Pointer:
-      return sizeof(uintptr_t);
-    case TypeId::Float:
-      return sizeof(f32);
-    case TypeId::Double:
-      return sizeof(f64);
-    case TypeId::Varchar:
-      return sizeof(char *);
-    case TypeId::Varbinary:
-      return sizeof(Blob);
-    default:
-      UNREACHABLE("Impossible type");
-  }
-}
+std::size_t GetTypeIdSize(TypeId type);
 
 /**
  * Is the given type a fixed-size type?
  */
-static inline bool IsTypeFixedSize(TypeId type) {
-  switch (type) {
-    case TypeId::Boolean:
-    case TypeId::TinyInt:
-    case TypeId::SmallInt:
-    case TypeId::Integer:
-    case TypeId::BigInt:
-    case TypeId::Hash:
-    case TypeId::Pointer:
-    case TypeId::Float:
-    case TypeId::Double:
-      return true;
-    case TypeId::Varchar:
-    case TypeId::Varbinary:
-      return false;
-    default:
-      UNREACHABLE("Impossible type");
-  }
-}
+bool IsTypeFixedSize(TypeId type);
 
 /**
  * Is the given type a numeric?
  */
-static inline bool IsTypeNumeric(TypeId type) {
-  switch (type) {
-    case TypeId::Boolean:
-    case TypeId::TinyInt:
-    case TypeId::SmallInt:
-    case TypeId::Integer:
-    case TypeId::BigInt:
-    case TypeId::Hash:
-    case TypeId::Pointer:
-    case TypeId::Float:
-    case TypeId::Double:
-      return true;
-    case TypeId::Varchar:
-    case TypeId::Varbinary:
-      return false;
-    default:
-      UNREACHABLE("Impossible type");
-  }
-}
+bool IsTypeNumeric(TypeId type);
 
 /**
  * Convert a TypeId to a string value.
- * @param type_id The type ID to stringify.
- * @return The string representation of the type ID.
  */
-static inline std::string TypeIdToString(TypeId type) {
-  switch (type) {
-    case TypeId::Boolean:
-      return "Boolean";
-    case TypeId::TinyInt:
-      return "TinyInt";
-    case TypeId::SmallInt:
-      return "SmallInt";
-    case TypeId::Integer:
-      return "Integer";
-    case TypeId::BigInt:
-      return "BigInt";
-    case TypeId::Hash:
-      return "Hash";
-    case TypeId::Pointer:
-      return "Pointer";
-    case TypeId::Float:
-      return "Float";
-    case TypeId::Double:
-      return "Double";
-    case TypeId::Varchar:
-      return "VarChar";
-    case TypeId::Varbinary:
-      return "VarBinary";
-    default:
-      UNREACHABLE("Impossible type");
-  }
-}
+const char *TypeIdToString(TypeId type);
 
 }  // namespace tpl::sql

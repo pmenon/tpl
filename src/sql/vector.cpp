@@ -6,6 +6,7 @@
 #include <string>
 #include <utility>
 
+#include "logging/logger.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "util/bit_util.h"
 
@@ -129,8 +130,8 @@ GenericValue Vector::GetValue(const u64 index) const {
         return GenericValue::CreateString(str);
       }
       default: {
-        auto msg = "Cannot read value of type [" + TypeIdToString(type_) + "]";
-        throw std::runtime_error(msg);
+        throw std::runtime_error(fmt::format("Cannot read value of type '{}'",
+                                             TypeIdToString(type_)));
       }
     }
   }
@@ -197,8 +198,8 @@ void Vector::SetValue(const u64 index, const GenericValue &val) {
       break;
     }
     default: {
-      auto msg = "Cannot set value of type [" + TypeIdToString(type_) + "]";
-      throw std::runtime_error(msg);
+      throw std::runtime_error(fmt::format("Cannot read value of type '{}'",
+                                           TypeIdToString(type_)));
     }
   }
 }
@@ -260,9 +261,8 @@ void Vector::Reference(GenericValue *value) {
       break;
     }
     default: {
-      auto msg =
-          "Cannot reference value of type [" + TypeIdToString(type_) + "]";
-      throw std::runtime_error(msg);
+      throw std::runtime_error(fmt::format("Cannot read value of type '{}'",
+                                           TypeIdToString(type_)));
     }
   }
 }
