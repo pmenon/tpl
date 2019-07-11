@@ -58,7 +58,7 @@ TEST_F(VectorOperationsTest, Fill) {
   CHECK_SIMPLE_FILL(Double, f64(-3.14));
 }
 
-TEST_F(VectorOperationsTest, CompareWithConstant) {
+TEST_F(VectorOperationsTest, CompareNumeric) {
   // Input vector: [0,1,2,3,4,5]
   Vector vec(TypeId::BigInt, true, false);
   vec.set_count(6);
@@ -150,22 +150,32 @@ TEST_F(VectorOperationsTest, CompareWithConstant) {
   }
 }
 
+TEST_F(VectorOperationsTest, CompareStrings) {
+  auto a = MakeVarcharVector({"first", "second", nullptr, "fourth"},
+                             {false, false, true, false});
+  auto b = MakeVarcharVector({nullptr, "second", nullptr, "baka not nice"},
+                             {true, false, true, false});
+  auto result = MakeEmptyMatchVector();
+
+  VectorOps::Equal(*a, *b, result.get());
+  EXPECT_EQ(4u, result->count());
+  EXPECT_EQ(nullptr, result->selection_vector());
+  EXPECT_TRUE(result->IsNull(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(1));
+  EXPECT_TRUE(result->IsNull(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(3));
+}
+
 TEST_F(VectorOperationsTest, CompareWithNulls) {
-  const u32 num_elems = 6;
-  Vector vec(TypeId::BigInt, true, false);
-  vec.set_count(num_elems);
-  VectorOps::Generate(&vec, 0, 1);
+  auto input = MakeBigIntVector({0, 1, 2, 3}, {false, false, false, false});
+  auto null = ConstantVector(GenericValue::CreateNull(TypeId::BigInt));
+  auto result = MakeEmptyMatchVector();
 
-  ConstantVector _null(GenericValue::CreateNull(TypeId::BigInt));
-  Vector result(TypeId::Boolean, true, true);
-
-  VectorOps::Equal(vec, _null, &result);
-  EXPECT_TRUE(result.GetValue(0).is_null());
-  EXPECT_TRUE(result.GetValue(1).is_null());
-  EXPECT_TRUE(result.GetValue(2).is_null());
-  EXPECT_TRUE(result.GetValue(3).is_null());
-  EXPECT_TRUE(result.GetValue(4).is_null());
-  EXPECT_TRUE(result.GetValue(5).is_null());
+  VectorOps::Equal(*input, null, result.get());
+  EXPECT_TRUE(result->IsNull(0));
+  EXPECT_TRUE(result->IsNull(1));
+  EXPECT_TRUE(result->IsNull(2));
+  EXPECT_TRUE(result->IsNull(3));
 }
 
 TEST_F(VectorOperationsTest, NullChecking) {
