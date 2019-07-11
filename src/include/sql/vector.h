@@ -77,7 +77,7 @@ class Vector {
   /**
    * Vector's cannot be implicitly copied.
    */
-  DISALLOW_COPY(Vector);
+  DISALLOW_COPY_AND_MOVE(Vector);
 
   /**
    * Destructor.
