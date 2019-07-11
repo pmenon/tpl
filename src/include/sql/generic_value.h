@@ -178,14 +178,14 @@ class GenericValue {
    * @param value The value.
    * @return A Varchar value.
    */
-  static GenericValue CreateString(const char *str);
+  static GenericValue CreateVarchar(const char *str);
 
   /**
    * Create a non-NULL varchar value.
    * @param value The value.
    * @return A Varchar value.
    */
-  static GenericValue CreateString(std::string_view str);
+  static GenericValue CreateVarchar(std::string_view str);
 
   // Output
   friend std::ostream &operator<<(std::ostream &out, const GenericValue &val);

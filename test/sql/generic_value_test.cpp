@@ -67,7 +67,7 @@ TEST_F(GenericValueTests, Equality) {
   EXPECT_EQ(bigint_val, GenericValue::CreateBigInt(19));
   EXPECT_NE(bigint_val, GenericValue::CreateInteger(1));
   EXPECT_NE(bigint_val, GenericValue::CreateReal(1));
-  EXPECT_NE(bigint_val, GenericValue::CreateString("blah"));
+  EXPECT_NE(bigint_val, GenericValue::CreateVarchar("blah"));
   EXPECT_NE(bigint_val, GenericValue::CreateNull(TypeId::BigInt));
 
   auto real_val = GenericValue::CreateReal(10.34f);
@@ -75,15 +75,15 @@ TEST_F(GenericValueTests, Equality) {
   EXPECT_NE(real_val, GenericValue::CreateInteger(1));
   EXPECT_NE(real_val, GenericValue::CreateReal(1));
   EXPECT_NE(real_val, GenericValue::CreateDouble(1));
-  EXPECT_NE(real_val, GenericValue::CreateString("blah"));
+  EXPECT_NE(real_val, GenericValue::CreateVarchar("blah"));
   EXPECT_NE(real_val, GenericValue::CreateNull(TypeId::Float));
 
-  auto string_val = GenericValue::CreateString("hello");
-  EXPECT_EQ(string_val, GenericValue::CreateString("hello"));
+  auto string_val = GenericValue::CreateVarchar("hello");
+  EXPECT_EQ(string_val, GenericValue::CreateVarchar("hello"));
   EXPECT_NE(string_val, GenericValue::CreateInteger(1));
   EXPECT_NE(string_val, GenericValue::CreateReal(1));
   EXPECT_NE(string_val, GenericValue::CreateDouble(1));
-  EXPECT_NE(string_val, GenericValue::CreateString("blah"));
+  EXPECT_NE(string_val, GenericValue::CreateVarchar("blah"));
   EXPECT_NE(string_val, GenericValue::CreateNull(TypeId::Varchar));
 }
 

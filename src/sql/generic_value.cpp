@@ -174,14 +174,14 @@ GenericValue GenericValue::CreateTimestamp(UNUSED i32 year, UNUSED i32 month,
   throw std::logic_error("Creating Timestamp generic value not supported!");
 }
 
-GenericValue GenericValue::CreateString(const char *str) {
+GenericValue GenericValue::CreateVarchar(const char *str) {
   GenericValue result(TypeId::Varchar);
   result.is_null_ = false;
   result.str_value_ = (str != nullptr ? str : std::string{});
   return result;
 }
 
-GenericValue GenericValue::CreateString(std::string_view str) {
+GenericValue GenericValue::CreateVarchar(std::string_view str) {
   GenericValue result(TypeId::Varchar);
   result.is_null_ = false;
   result.str_value_ = str;

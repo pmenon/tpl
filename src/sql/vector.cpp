@@ -127,7 +127,7 @@ GenericValue Vector::GetValue(const u64 index) const {
       case TypeId::Varchar: {
         auto *str = reinterpret_cast<const char **>(data_)[actual_index];
         TPL_ASSERT(str != nullptr, "Null string in position not marked NULL!");
-        return GenericValue::CreateString(str);
+        return GenericValue::CreateVarchar(str);
       }
       default: {
         throw std::runtime_error(fmt::format("Cannot read value of type '{}'",

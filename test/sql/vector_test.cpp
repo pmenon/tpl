@@ -64,7 +64,7 @@ TEST_F(VectorTest, InitFromArray) {
 
     for (u32 i = 0; i < num_elems; i++) {
       auto val = vec.GetValue(i);
-      EXPECT_EQ(GenericValue::CreateString(arr[i]), val);
+      EXPECT_EQ(GenericValue::CreateVarchar(arr[i]), val);
     }
   }
 }
@@ -90,8 +90,8 @@ TEST_F(VectorTest, GetAndSetString) {
   Vector vec(TypeId::Varchar, true, false);
   vec.set_count(10);
 
-  vec.SetValue(0, GenericValue::CreateString("hello"));
-  EXPECT_EQ(GenericValue::CreateString("hello"), vec.GetValue(0));
+  vec.SetValue(0, GenericValue::CreateVarchar("hello"));
+  EXPECT_EQ(GenericValue::CreateVarchar("hello"), vec.GetValue(0));
 
   vec.SetNull(0, true);
   EXPECT_TRUE(vec.GetValue(0).is_null());
@@ -204,7 +204,7 @@ TEST_F(VectorTest, CopyStringVector) {
   Vector vec(TypeId::Varchar, true, true);
   vec.set_count(10);
   for (u32 i = 0; i < 10; i++) {
-    vec.SetValue(i, GenericValue::CreateString("val-" + std::to_string(i)));
+    vec.SetValue(i, GenericValue::CreateVarchar("val-" + std::to_string(i)));
   }
 
   // Filter the even elements
