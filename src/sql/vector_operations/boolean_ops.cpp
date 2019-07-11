@@ -65,12 +65,12 @@ void BooleanLogicOperation(const Vector &left, const Vector &right,
 }  // namespace
 
 void VectorOps::And(const Vector &left, const Vector &right, Vector *result) {
-  BooleanLogicOperation<tpl::sql::And, tpl::sql::AndNullable>(left, right,
+  BooleanLogicOperation<tpl::sql::And, tpl::sql::AndNullMask>(left, right,
                                                               result);
 }
 
 void VectorOps::Or(const Vector &left, const Vector &right, Vector *result) {
-  BooleanLogicOperation<tpl::sql::Or, tpl::sql::OrNullable>(left, right,
+  BooleanLogicOperation<tpl::sql::Or, tpl::sql::OrNullMask>(left, right,
                                                             result);
 }
 

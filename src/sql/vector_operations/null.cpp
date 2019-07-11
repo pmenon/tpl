@@ -5,7 +5,7 @@ namespace tpl::sql {
 namespace {
 
 template <bool FindNull>
-void NullCheckLoop(const Vector &input, Vector *result) {
+void NullCheckOperation(const Vector &input, Vector *result) {
   TPL_ASSERT(result->type_id() == TypeId::Boolean, "Result must be boolean");
   const auto &null_mask = input.null_mask();
   auto result_data = reinterpret_cast<bool *>(result->data());
@@ -18,11 +18,11 @@ void NullCheckLoop(const Vector &input, Vector *result) {
 }  // namespace
 
 void VectorOps::IsNull(const Vector &input, Vector *result) {
-  NullCheckLoop<true>(input, result);
+  NullCheckOperation<true>(input, result);
 }
 
 void VectorOps::IsNotNull(const Vector &input, Vector *result) {
-  NullCheckLoop<false>(input, result);
+  NullCheckOperation<false>(input, result);
 }
 
 }  // namespace tpl::sql
