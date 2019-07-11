@@ -77,11 +77,15 @@ class VectorOps {
    */
   static void FillNull(Vector *vector);
 
-  // -------------------------------------------------------
+  //===--------------------------------------------------------------------===//
   //
   // Comparisons
   //
-  // -------------------------------------------------------
+  // Comparisons produce a selection byte vector, i.e., result[i] is true if
+  // the comparison between input vectors left[i] and right[i] evaluate to true
+  // for a given comparison function.
+  //
+  //===--------------------------------------------------------------------===//
 
   /**
    * Perform an equality comparison on each element from the left and right
@@ -141,11 +145,89 @@ class VectorOps {
    */
   static void NotEqual(const Vector &left, const Vector &right, Vector *result);
 
-  // -------------------------------------------------------
+  //===--------------------------------------------------------------------===//
+  //
+  // Selection operations
+  //
+  // Selections are like comparisons, but generate a compact/compressed
+  // selection index vector rather than a boolean match vector.
+  //
+  //===--------------------------------------------------------------------===//
+
+  /**
+   * Store the positions of all equal elements in the left and right input
+   * vectors into the output selection index vector.
+   * @param left The left input into the comparison.
+   * @param right The right input into the comparison.
+   * @param[out] out_sel_vector The output selection index vector.
+   * @return The number of items selected.
+   */
+  static u32 SelectEqual(const Vector &left, const Vector &right,
+                         u32 out_sel_vector[]);
+
+  /**
+   * Store the positions where the left input element is strictly greater than
+   * the element in the right input vector into the output selection index
+   * vector.
+   * @param left The left input into the comparison.
+   * @param right The right input into the comparison.
+   * @param[out] out_sel_vector The output selection index vector.
+   * @return The number of items selected.
+   */
+  static u32 SelectGreaterThan(const Vector &left, const Vector &right,
+                               u32 out_sel_vector[]);
+
+  /**
+   * Store the positions where the left input element is greater than or equal
+   * to the element in the right input vector into the output selection index
+   * vector.
+   * @param left The left input into the comparison.
+   * @param right The right input into the comparison.
+   * @param[out] out_sel_vector The output selection index vector.
+   * @return The number of items selected.
+   */
+  static u32 SelectGreaterThanEqual(const Vector &left, const Vector &right,
+                                    u32 out_sel_vector[]);
+
+  /**
+   * Store the positions where the left input element is strictly less than the
+   * element in the right input vector into the output selection index vector.
+   * @param left The left input into the comparison.
+   * @param right The right input into the comparison.
+   * @param[out] out_sel_vector The output selection index vector.
+   * @return The number of items selected.
+   */
+  static u32 SelectLessThan(const Vector &left, const Vector &right,
+                            u32 out_sel_vector[]);
+
+  /**
+   * Store the positions where the left input element is less than or equal to
+   * the element in the right input vector into the output selection index
+   * vector.
+   * @param left The left input into the comparison.
+   * @param right The right input into the comparison.
+   * @param[out] out_sel_vector The output selection index vector.
+   * @return The number of items selected.
+   */
+  static u32 SelectLessThanEqual(const Vector &left, const Vector &right,
+                                 u32 out_sel_vector[]);
+
+  /**
+   * Store the positions of all unequal elements in the left and right input
+   * vectors into the output selection index vector.
+   * @param left The left input into the comparison.
+   * @param right The right input into the comparison.
+   * @param[out] out_sel_vector The output selection index vector.
+   * @return The number of items selected.
+   */
+  static u32 SelectNotEqual(const Vector &left, const Vector &right,
+                            u32 out_sel_vector[]);
+
+  //===--------------------------------------------------------------------===//
   //
   // Boolean operations
   //
-  // -------------------------------------------------------
+  //===--------------------------------------------------------------------===//
 
   /**
    * Perform a boolean AND of the boolean elements in the left and right input
@@ -173,11 +255,11 @@ class VectorOps {
    */
   static void Not(const Vector &input, Vector *result);
 
-  // -------------------------------------------------------
+  //===--------------------------------------------------------------------===//
   //
   // NULL checking
   //
-  // -------------------------------------------------------
+  //===--------------------------------------------------------------------===//
 
   /**
    * Check which elements of the vector @em input are NULL and store the results
@@ -195,11 +277,11 @@ class VectorOps {
    */
   static void IsNotNull(const Vector &input, Vector *result);
 
-  // -------------------------------------------------------
+  //===--------------------------------------------------------------------===//
   //
   // Boolean checking
   //
-  // -------------------------------------------------------
+  //===--------------------------------------------------------------------===//
 
   /**
    * Check if every active element in the boolean input vector @em input is
@@ -217,11 +299,11 @@ class VectorOps {
    */
   static bool AnyTrue(const Vector &input);
 
-  // -------------------------------------------------------
+  //===--------------------------------------------------------------------===//
   //
   // Main - Vector Iteration Logic
   //
-  // -------------------------------------------------------
+  //===--------------------------------------------------------------------===//
 
   /**
    * Apply a function to every active element in the vector. The callback

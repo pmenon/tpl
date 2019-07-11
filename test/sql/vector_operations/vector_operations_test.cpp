@@ -1,11 +1,13 @@
 #include <numeric>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
+#include "sql_test.h"  // NOLINT
 
 #include "sql/constant_vector.h"
 #include "sql/vector.h"
 #include "sql/vector_operations/vector_operators.h"
+#include "util/fast_rand.h"
+#include "util/vector_util.h"
 
 namespace tpl::sql::test {
 
@@ -342,6 +344,62 @@ TEST_F(VectorOperationsTest, SelectedBooleanLogic) {
   EXPECT_EQ(GenericValue::CreateNull(TypeId::Boolean), result.GetValue(1));
   // true && true = true
   EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(2));
+}
+
+TEST_F(VectorOperationsTest, SelectWithConstant) {
+  auto a = MakeTinyIntVector({0, 1, 2, 3, 4, 5},
+                             {true, false, false, false, false, false});
+  auto _2 = ConstantVector(GenericValue::CreateTinyInt(2));
+  auto result = std::array<u32, kDefaultVectorSize>();
+
+  for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer,
+                       TypeId::BigInt, TypeId::Float, TypeId::Double}) {
+    a->Cast(type_id);
+    _2.Cast(type_id);
+
+    // a < 2
+    auto n = VectorOps::SelectLessThan(*a, _2, result.data());
+    EXPECT_EQ(1u, n);
+    EXPECT_EQ(1u, result[0]);
+
+    // 2 < a
+    n = VectorOps::SelectLessThan(_2, *a, result.data());
+    EXPECT_EQ(3u, n);
+    EXPECT_EQ(3u, result[0]);
+    EXPECT_EQ(4u, result[1]);
+    EXPECT_EQ(5u, result[2]);
+
+    n = VectorOps::SelectEqual(_2, *a, result.data());
+    EXPECT_EQ(1u, n);
+    EXPECT_EQ(2u, result[0]);
+  }
+}
+
+TEST_F(VectorOperationsTest, Select) {
+  auto a = MakeTinyIntVector({0, 1, 2, 3, 4, 5},
+                             {false, false, false, false, false, false});
+  auto b = MakeTinyIntVector({0, 1, 4, 3, 5, 5},
+                             {true, false, false, false, false, false});
+  auto result = std::array<u32, kDefaultVectorSize>();
+
+  for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer,
+                       TypeId::BigInt, TypeId::Float, TypeId::Double}) {
+    a->Cast(type_id);
+    b->Cast(type_id);
+
+    // a != b
+    auto n = VectorOps::SelectNotEqual(*a, *b, result.data());
+    EXPECT_EQ(2u, n);
+    EXPECT_EQ(2u, result[0]);
+    EXPECT_EQ(4u, result[1]);
+
+    // b == a
+    n = VectorOps::SelectEqual(*b, *a, result.data());
+    EXPECT_EQ(3u, n);
+    EXPECT_EQ(1u, result[0]);
+    EXPECT_EQ(3u, result[1]);
+    EXPECT_EQ(5u, result[2]);
+  }
 }
 
 }  // namespace tpl::sql::test
