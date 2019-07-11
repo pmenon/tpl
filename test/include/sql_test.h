@@ -23,13 +23,12 @@ class SqlBasedTest : public TplTest {
   }
 };
 
-static inline std::unique_ptr<sql::Vector> MakeEmptyMatchVector() {
-  auto vec = std::make_unique<sql::Vector>(sql::TypeId::Boolean, true, true);
-  vec->set_count(kDefaultVectorSize);
-  return vec;
-}
-
 #define MAKE_VEC_TYPE(TYPE, CPP_TYPE)                                        \
+  static inline std::unique_ptr<sql::Vector> MakeEmpty##TYPE##Vector() {     \
+    auto vec = std::make_unique<sql::Vector>(sql::TypeId::TYPE, true, true); \
+    vec->set_count(kDefaultVectorSize);                                      \
+    return vec;                                                              \
+  }                                                                          \
   static inline std::unique_ptr<sql::Vector> Make##TYPE##Vector(             \
       const std::vector<CPP_TYPE> &vals, const std::vector<bool> &nulls) {   \
     auto vec = std::make_unique<sql::Vector>(sql::TypeId::TYPE, true, true); \

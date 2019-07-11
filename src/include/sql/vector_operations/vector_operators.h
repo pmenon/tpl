@@ -163,7 +163,7 @@ class VectorOps {
    * @return The number of items selected.
    */
   static u32 SelectEqual(const Vector &left, const Vector &right,
-                         u32 out_sel_vector[]);
+                         sel_t out_sel_vector[]);
 
   /**
    * Store the positions where the left input element is strictly greater than
@@ -175,7 +175,7 @@ class VectorOps {
    * @return The number of items selected.
    */
   static u32 SelectGreaterThan(const Vector &left, const Vector &right,
-                               u32 out_sel_vector[]);
+                               sel_t out_sel_vector[]);
 
   /**
    * Store the positions where the left input element is greater than or equal
@@ -187,7 +187,7 @@ class VectorOps {
    * @return The number of items selected.
    */
   static u32 SelectGreaterThanEqual(const Vector &left, const Vector &right,
-                                    u32 out_sel_vector[]);
+                                    sel_t out_sel_vector[]);
 
   /**
    * Store the positions where the left input element is strictly less than the
@@ -198,7 +198,7 @@ class VectorOps {
    * @return The number of items selected.
    */
   static u32 SelectLessThan(const Vector &left, const Vector &right,
-                            u32 out_sel_vector[]);
+                            sel_t out_sel_vector[]);
 
   /**
    * Store the positions where the left input element is less than or equal to
@@ -210,7 +210,7 @@ class VectorOps {
    * @return The number of items selected.
    */
   static u32 SelectLessThanEqual(const Vector &left, const Vector &right,
-                                 u32 out_sel_vector[]);
+                                 sel_t out_sel_vector[]);
 
   /**
    * Store the positions of all unequal elements in the left and right input
@@ -221,7 +221,7 @@ class VectorOps {
    * @return The number of items selected.
    */
   static u32 SelectNotEqual(const Vector &left, const Vector &right,
-                            u32 out_sel_vector[]);
+                            sel_t out_sel_vector[]);
 
   //===--------------------------------------------------------------------===//
   //

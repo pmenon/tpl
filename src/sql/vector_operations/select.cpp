@@ -8,11 +8,11 @@ namespace {
 
 template <typename T, typename Op, bool IgnoreNull = false>
 u32 TemplatedSelectOperation(const Vector &left, const Vector &right,
-                             u32 *RESTRICT out_sel_vector) {
+                             sel_t *RESTRICT out_sel_vector) {
   auto *left_data = reinterpret_cast<const T *>(left.data());
   auto *right_data = reinterpret_cast<const T *>(right.data());
 
-  u32 out_idx = 0;
+  sel_t out_idx = 0;
 
   if (right.IsConstant() && !right.IsNull(0)) {
     // Right is a non-null constant, need to do some work.
@@ -64,7 +64,7 @@ u32 TemplatedSelectOperation(const Vector &left, const Vector &right,
 
 template <typename Op>
 u32 SelectOperation(const Vector &left, const Vector &right,
-                    u32 out_sel_vector[]) {
+                    sel_t out_sel_vector[]) {
   switch (left.type_id()) {
     case TypeId::Boolean:
       return TemplatedSelectOperation<bool, Op>(left, right, out_sel_vector);
@@ -96,33 +96,33 @@ u32 SelectOperation(const Vector &left, const Vector &right,
 }  // namespace
 
 u32 VectorOps::SelectEqual(const Vector &left, const Vector &right,
-                           u32 out_sel_vector[]) {
+                           sel_t out_sel_vector[]) {
   return SelectOperation<tpl::sql::Equal>(left, right, out_sel_vector);
 }
 
 u32 VectorOps::SelectGreaterThan(const Vector &left, const Vector &right,
-                                 u32 out_sel_vector[]) {
+                                 sel_t out_sel_vector[]) {
   return SelectOperation<tpl::sql::GreaterThan>(left, right, out_sel_vector);
 }
 
 u32 VectorOps::SelectGreaterThanEqual(const Vector &left, const Vector &right,
-                                      u32 out_sel_vector[]) {
+                                      sel_t out_sel_vector[]) {
   return SelectOperation<tpl::sql::GreaterThanEqual>(left, right,
                                                      out_sel_vector);
 }
 
 u32 VectorOps::SelectLessThan(const Vector &left, const Vector &right,
-                              u32 out_sel_vector[]) {
+                              sel_t out_sel_vector[]) {
   return SelectOperation<tpl::sql::LessThan>(left, right, out_sel_vector);
 }
 
 u32 VectorOps::SelectLessThanEqual(const Vector &left, const Vector &right,
-                                   u32 out_sel_vector[]) {
+                                   sel_t out_sel_vector[]) {
   return SelectOperation<tpl::sql::LessThanEqual>(left, right, out_sel_vector);
 }
 
 u32 VectorOps::SelectNotEqual(const Vector &left, const Vector &right,
-                              u32 out_sel_vector[]) {
+                              sel_t out_sel_vector[]) {
   return SelectOperation<tpl::sql::NotEqual>(left, right, out_sel_vector);
 }
 

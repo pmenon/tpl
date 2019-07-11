@@ -155,7 +155,7 @@ TEST_F(VectorOperationsTest, CompareStrings) {
                              {false, false, true, false});
   auto b = MakeVarcharVector({nullptr, "second", nullptr, "baka not nice"},
                              {true, false, true, false});
-  auto result = MakeEmptyMatchVector();
+  auto result = MakeEmptyBooleanVector();
 
   VectorOps::Equal(*a, *b, result.get());
   EXPECT_EQ(4u, result->count());
@@ -169,7 +169,7 @@ TEST_F(VectorOperationsTest, CompareStrings) {
 TEST_F(VectorOperationsTest, CompareWithNulls) {
   auto input = MakeBigIntVector({0, 1, 2, 3}, {false, false, false, false});
   auto null = ConstantVector(GenericValue::CreateNull(TypeId::BigInt));
-  auto result = MakeEmptyMatchVector();
+  auto result = MakeEmptyBooleanVector();
 
   VectorOps::Equal(*input, null, result.get());
   EXPECT_TRUE(result->IsNull(0));
@@ -179,62 +179,46 @@ TEST_F(VectorOperationsTest, CompareWithNulls) {
 }
 
 TEST_F(VectorOperationsTest, NullChecking) {
-  Vector vec(TypeId::Float, true, false);
-  vec.set_count(4);
+  auto vec = MakeFloatVector({1.0, 0.0, 1.0, 0.0}, {false, true, false, true});
+  auto result = MakeEmptyBooleanVector();
 
-  vec.SetValue(0, GenericValue::CreateFloat(1.0));
-  vec.SetValue(1, GenericValue::CreateNull(TypeId::Float));
-  vec.SetValue(2, GenericValue::CreateFloat(1.0));
-  vec.SetValue(3, GenericValue::CreateNull(TypeId::Float));
+  // IS NULL vec, only 1 and 3
+  VectorOps::IsNull(*vec, result.get());
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(1));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(3));
 
-  {
-    Vector result(TypeId::Boolean, true, true);
-    VectorOps::IsNull(vec, &result);
-    EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(0));
-    EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(1));
-    EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(2));
-    EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(3));
-  }
-
-  {
-    Vector result(TypeId::Boolean, true, true);
-    VectorOps::IsNotNull(vec, &result);
-    EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(0));
-    EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(1));
-    EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(2));
-    EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(3));
-  }
+  // IS NOT NULL vec, only 0 and 2
+  VectorOps::IsNotNull(*vec, result.get());
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(1));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(3));
 }
 
 TEST_F(VectorOperationsTest, AnyOrAllTrue) {
-  Vector vec(TypeId::Boolean, true, false);
-  vec.set_count(4);
+  auto vec = MakeBooleanVector({false, false, false, false},
+                               {false, false, false, false});
 
-  vec.SetValue(0, GenericValue::CreateBoolean(false));
-  vec.SetValue(1, GenericValue::CreateBoolean(false));
-  vec.SetValue(2, GenericValue::CreateBoolean(false));
-  vec.SetValue(3, GenericValue::CreateBoolean(false));
+  EXPECT_FALSE(VectorOps::AnyTrue(*vec));
+  EXPECT_FALSE(VectorOps::AllTrue(*vec));
 
-  EXPECT_FALSE(VectorOps::AnyTrue(vec));
-  EXPECT_FALSE(VectorOps::AllTrue(vec));
+  vec->SetValue(3, GenericValue::CreateNull(TypeId::Boolean));
 
-  vec.SetValue(3, GenericValue::CreateNull(TypeId::Boolean));
+  EXPECT_FALSE(VectorOps::AnyTrue(*vec));
+  EXPECT_FALSE(VectorOps::AllTrue(*vec));
 
-  EXPECT_FALSE(VectorOps::AnyTrue(vec));
-  EXPECT_FALSE(VectorOps::AllTrue(vec));
+  vec->SetValue(3, GenericValue::CreateBoolean(true));
 
-  vec.SetValue(3, GenericValue::CreateBoolean(true));
+  EXPECT_TRUE(VectorOps::AnyTrue(*vec));
+  EXPECT_FALSE(VectorOps::AllTrue(*vec));
 
-  EXPECT_TRUE(VectorOps::AnyTrue(vec));
-  EXPECT_FALSE(VectorOps::AllTrue(vec));
+  vec =
+      MakeBooleanVector({true, true, true, true}, {false, false, false, false});
 
-  vec.SetValue(0, GenericValue::CreateBoolean(true));
-  vec.SetValue(1, GenericValue::CreateBoolean(true));
-  vec.SetValue(2, GenericValue::CreateBoolean(true));
-  vec.SetValue(3, GenericValue::CreateBoolean(true));
-
-  EXPECT_TRUE(VectorOps::AnyTrue(vec));
-  EXPECT_TRUE(VectorOps::AllTrue(vec));
+  EXPECT_TRUE(VectorOps::AnyTrue(*vec));
+  EXPECT_TRUE(VectorOps::AllTrue(*vec));
 }
 
 TEST_F(VectorOperationsTest, BooleanLogic) {
@@ -360,7 +344,7 @@ TEST_F(VectorOperationsTest, SelectWithConstant) {
   auto a = MakeTinyIntVector({0, 1, 2, 3, 4, 5},
                              {true, false, false, false, false, false});
   auto _2 = ConstantVector(GenericValue::CreateTinyInt(2));
-  auto result = std::array<u32, kDefaultVectorSize>();
+  auto result = std::array<sel_t, kDefaultVectorSize>();
 
   for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer,
                        TypeId::BigInt, TypeId::Float, TypeId::Double}) {
@@ -390,7 +374,7 @@ TEST_F(VectorOperationsTest, Select) {
                              {false, false, false, false, false, false});
   auto b = MakeTinyIntVector({0, 1, 4, 3, 5, 5},
                              {true, false, false, false, false, false});
-  auto result = std::array<u32, kDefaultVectorSize>();
+  auto result = std::array<sel_t, kDefaultVectorSize>();
 
   for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer,
                        TypeId::BigInt, TypeId::Float, TypeId::Double}) {
