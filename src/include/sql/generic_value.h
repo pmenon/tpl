@@ -54,63 +54,137 @@ class GenericValue {
    */
   std::string ToString() const;
 
+  /**
+   * Generic value equality. This is NOT SQL equality!
+   */
   bool operator==(const GenericValue &that) const { return this->Equals(that); }
+
+  /**
+   * Generic value inequality. This is NOT SQL inequality!
+   */
   bool operator!=(const GenericValue &that) const { return !(*this == that); }
 
-  // -------------------------------------------------------
+  //===--------------------------------------------------------------------===//
+  //
   // Static factory methods
-  // -------------------------------------------------------
+  //
+  //===--------------------------------------------------------------------===//
 
+  /**
+   * Create a NULL value.
+   * @param type_id The type of the value.
+   * @return A NULL value.
+   */
   static GenericValue CreateNull(TypeId type_id);
 
-  // Create a tinyint value from a specified value.
+  /**
+   * Create a non-NULL boolean value.
+   * @param value The value.
+   * @return A Boolean value.
+   */
   static GenericValue CreateBoolean(bool value);
 
-  // Create a tinyint value from a specified value.
+  /**
+   * Create a non-NULL tinyint value.
+   * @param value The value.
+   * @return A TinyInt value.
+   */
   static GenericValue CreateTinyInt(i8 value);
 
-  // Create a smallint value from a specified value.
+  /**
+   * Create a non-NULL smallint value.
+   * @param value The value.
+   * @return A SmallInt value.
+   */
   static GenericValue CreateSmallInt(i16 value);
 
-  // Create an integer value from a specified value.
+  /**
+   * Create a non-NULL integer value.
+   * @param value The value.
+   * @return An Integer value.
+   */
   static GenericValue CreateInteger(i32 value);
 
-  // Create a bigint value from a specified value.
+  /**
+   * Create a non-NULL bigint value.
+   * @param value The value.
+   * @return A BigInt value.
+   */
   static GenericValue CreateBigInt(i64 value);
 
-  // Create a value representing the specified hash value.
+  /**
+   * Create a non-NULL hash value.
+   * @param value The value.
+   * @return A hash value.
+   */
   static GenericValue CreateHash(hash_t value);
 
-  // Create a value representing the specified opaque pointer
+  /**
+   * Create a non-NULL pointer value.
+   * @param value The value.
+   * @return A pointer value.
+   */
   static GenericValue CreatePointer(uintptr_t value);
 
-  // Create a value representing a pointer value.
+  /**
+   * Create a non-NULL pointer value.
+   * @param value The value.
+   * @return A pointer value.
+   */
   template <typename T>
   static GenericValue CreatePointer(T *pointer) {
     return CreatePointer(reinterpret_cast<uintptr_t>(pointer));
   }
 
-  // Create a real value from a specified value.
+  /**
+   * Create a non-NULL real value.
+   * @param value The value.
+   * @return A Real value.
+   */
   static GenericValue CreateReal(f32 value);
 
-  // Create a float value from a specified value.
+  /**
+   * Create a non-NULL float value.
+   * @param value The value.
+   * @return A float value.
+   */
   static GenericValue CreateFloat(f32 value) { return CreateReal(value); }
 
-  // Create a double value from a specified value.
+  /**
+   * Create a non-NULL double value.
+   * @param value The value.
+   * @return A Double value.
+   */
   static GenericValue CreateDouble(f64 value);
 
-  // Create a date value from a specified date.
+  /**
+   * Create a non-NULL date value.
+   * @param value The value.
+   * @return A Date value.
+   */
   static GenericValue CreateDate(i32 year, i32 month, i32 day);
 
-  // Create a timestamp value from a specified timestamp in separate
-  // values.
+  /**
+   * Create a non-NULL timestamp value.
+   * @param value The value.
+   * @return A Timestamp value.
+   */
   static GenericValue CreateTimestamp(i32 year, i32 month, i32 day, i32 hour,
                                       i32 min, i32 sec, i32 msec);
 
-  // Create a string value from a NULL-terminated C-style string.
+  /**
+   * Create a non-NULL varchar value. No ownership exchange, the string is
+   * copied into the returned value.
+   * @param value The value.
+   * @return A Varchar value.
+   */
   static GenericValue CreateString(const char *str);
 
-  // Create a string value from a C++ string.
+  /**
+   * Create a non-NULL varchar value.
+   * @param value The value.
+   * @return A Varchar value.
+   */
   static GenericValue CreateString(std::string_view str);
 
   // Output
