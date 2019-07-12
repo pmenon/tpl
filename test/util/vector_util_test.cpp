@@ -514,24 +514,4 @@ TEST_F(VectorUtilTest, DISABLED_PerfSelectTest) {
   }
 }
 
-TEST_F(VectorUtilTest, GatherTest) {
-  auto array = AllocateArray<u32>(800000);
-  auto indexes = AllocateArray<u32>(1000);
-  auto output = AllocateArray<u32>(1000);
-
-  std::iota(array.begin(), array.end(), 0);
-
-  std::random_device random;
-  std::generate(indexes.begin(), indexes.end(),
-                [&]() { return random() % array.size(); });
-
-  // Perform gather
-  VectorUtil::Gather(indexes.size(), array.raw(), indexes.raw(), output.raw());
-
-  // Check
-  for (u32 i = 0; i < indexes.size(); i++) {
-    EXPECT_EQ(array[indexes[i]], output[i]);
-  }
-}
-
 }  // namespace tpl::util::test
