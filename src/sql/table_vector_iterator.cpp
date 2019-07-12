@@ -63,7 +63,7 @@ bool TableVectorIterator::Init() {
   }
 
   // Configure the vector projection
-  vector_projection_.Setup(col_infos);
+  vector_projection_.Initialize(col_infos);
 
   // Create the column iterators
   column_iterators_.reserve(col_infos.size());

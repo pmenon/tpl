@@ -42,7 +42,7 @@ class VectorProjection {
    * @param col_infos Metadata for columns in this projection.
    * @param size The maximum number of elements in the projection.
    */
-  void Setup(const std::vector<const Schema::ColumnInfo *> &col_infos);
+  void Initialize(const std::vector<const Schema::ColumnInfo *> &col_infos);
 
   /**
    * Access metadata for the column at position @em col_idx in this projection.
