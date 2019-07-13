@@ -150,37 +150,37 @@ void Vector::SetValue(const u64 index, const GenericValue &val) {
     }
     case TypeId::TinyInt: {
       const auto new_tinyint = val.is_null() ? 0 : val.value_.tinyint;
-      reinterpret_cast<int8_t *>(data_)[actual_index] = new_tinyint;
+      reinterpret_cast<i8 *>(data_)[actual_index] = new_tinyint;
       break;
     }
     case TypeId::SmallInt: {
       const auto new_smallint = val.is_null() ? 0 : val.value_.smallint;
-      reinterpret_cast<int16_t *>(data_)[actual_index] = new_smallint;
+      reinterpret_cast<i16 *>(data_)[actual_index] = new_smallint;
       break;
     }
     case TypeId::Integer: {
       const auto new_integer = val.is_null() ? 0 : val.value_.integer;
-      reinterpret_cast<int32_t *>(data_)[actual_index] = new_integer;
+      reinterpret_cast<i32 *>(data_)[actual_index] = new_integer;
       break;
     }
     case TypeId::BigInt: {
       const auto new_bigint = val.is_null() ? 0 : val.value_.bigint;
-      reinterpret_cast<int64_t *>(data_)[actual_index] = new_bigint;
+      reinterpret_cast<i64 *>(data_)[actual_index] = new_bigint;
       break;
     }
     case TypeId::Float: {
       const auto new_float = val.is_null() ? 0 : val.value_.float_;
-      reinterpret_cast<float *>(data_)[actual_index] = new_float;
+      reinterpret_cast<f32 *>(data_)[actual_index] = new_float;
       break;
     }
     case TypeId::Double: {
       const auto new_double = val.is_null() ? 0 : val.value_.double_;
-      reinterpret_cast<double *>(data_)[actual_index] = new_double;
+      reinterpret_cast<f64 *>(data_)[actual_index] = new_double;
       break;
     }
     case TypeId::Hash: {
       const auto new_hash = val.is_null() ? 0 : val.value_.hash;
-      reinterpret_cast<uintptr_t *>(data_)[actual_index] = new_hash;
+      reinterpret_cast<hash_t *>(data_)[actual_index] = new_hash;
       break;
     }
     case TypeId::Pointer: {
@@ -189,17 +189,13 @@ void Vector::SetValue(const u64 index, const GenericValue &val) {
       break;
     }
     case TypeId::Varchar: {
-      if (val.is_null()) {
-        reinterpret_cast<const char **>(data_)[actual_index] = nullptr;
-      } else {
-        reinterpret_cast<const char **>(data_)[actual_index] =
-            strings_.AddString(val.str_value_);
-      }
+      auto str = (val.is_null() ? nullptr : strings_.AddString(val.str_value_));
+      reinterpret_cast<const char **>(data_)[actual_index] = str;
       break;
     }
     default: {
-      throw std::runtime_error(fmt::format("Cannot read value of type '{}'",
-                                           TypeIdToString(type_)));
+      throw std::runtime_error(
+          fmt::format("Cannot read value of type '{}'", TypeIdToString(type_)));
     }
   }
 }
@@ -261,8 +257,8 @@ void Vector::Reference(GenericValue *value) {
       break;
     }
     default: {
-      throw std::runtime_error(fmt::format("Cannot read value of type '{}'",
-                                           TypeIdToString(type_)));
+      throw std::runtime_error(
+          fmt::format("Cannot read value of type '{}'", TypeIdToString(type_)));
     }
   }
 }

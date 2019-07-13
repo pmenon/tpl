@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iosfwd>
 #include <memory>
 #include <vector>
 
@@ -37,18 +38,28 @@ class VectorProjection {
   DISALLOW_COPY_AND_MOVE(VectorProjection);
 
   /**
-   * Set up this vector projection with the given column information and vector
-   * size.
+   * Initialize a vector projection and create a vector of the specified type
+   * for each type provided in the column metadata list @em col_infos. All
+   * vectors will allocate data, but are initially empty.
    * @param col_infos Metadata for columns in this projection.
-   * @param size The maximum number of elements in the projection.
    */
   void Initialize(const std::vector<const Schema::ColumnInfo *> &col_infos);
+
+  /**
+   * Initializes an empty vector projection. This will create an empty vector of
+   * the specified type for each type provided in the column metadata list
+   * @em col_infos. Vectors will **NOT** allocate data and are only allowed to
+   * reference data stored and owned externally through calls to ResetColumn().
+   * @param col_infos Metadata for columns in this projection.
+   */
+  void InitializeEmpty(
+      const std::vector<const Schema::ColumnInfo *> &col_infos);
 
   /**
    * Access metadata for the column at position @em col_idx in this projection.
    */
   const Schema::ColumnInfo *GetColumnInfo(const u32 col_idx) const {
-    TPL_ASSERT(col_idx < num_columns(), "Out-of-bounds column access");
+    TPL_ASSERT(col_idx < GetNumColumns(), "Out-of-bounds column access");
     return column_info_[col_idx];
   }
 
@@ -58,7 +69,7 @@ class VectorProjection {
    * @return The column's vector.
    */
   const Vector *GetColumn(const u32 col_idx) const {
-    TPL_ASSERT(col_idx < num_columns(), "Out-of-bounds column access");
+    TPL_ASSERT(col_idx < GetNumColumns(), "Out-of-bounds column access");
     return columns_[col_idx].get();
   }
 
@@ -68,7 +79,7 @@ class VectorProjection {
    * @return The column's vector.
    */
   Vector *GetColumn(const u32 col_idx) {
-    TPL_ASSERT(col_idx < num_columns(), "Out-of-bounds column access");
+    TPL_ASSERT(col_idx < GetNumColumns(), "Out-of-bounds column access");
     return columns_[col_idx].get();
   }
 
@@ -95,20 +106,33 @@ class VectorProjection {
                    u32 num_tuples);
 
   /**
+   * Convert to and return a string representation of this vector.
+   */
+  std::string ToString() const;
+
+  /**
+   * Print a string representation of this vector projection to the provided
+   * output stream @em stream.
+   */
+  void Dump(std::ostream &stream) const;
+
+  /**
    * Return the number of columns in this projection.
    */
-  u32 num_columns() const { return static_cast<u32>(columns_.size()); }
+  u32 GetNumColumns() const { return columns_.size(); }
 
   /**
    * Return the number of active tuples in this projection.
    */
-  u32 total_tuple_count() const { return tuple_count_; }
+  u32 GetTupleCount() const { return tuple_count_; }
 
  private:
-  // Column meta
+  // Column metadata
   std::vector<const Schema::ColumnInfo *> column_info_;
+
   // The column's data
   std::vector<std::unique_ptr<Vector>> columns_;
+
   // The number of active tuples
   u32 tuple_count_;
 };

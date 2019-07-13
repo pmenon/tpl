@@ -1,5 +1,6 @@
 #include "sql/vector_projection.h"
 
+#include <iostream>
 #include <memory>
 #include <vector>
 
@@ -14,18 +15,24 @@ VectorProjection::VectorProjection() : tuple_count_(0) {}
 VectorProjection::VectorProjection(
     const std::vector<const Schema::ColumnInfo *> &col_infos)
     : tuple_count_(0) {
-  Initialize(col_infos);
+  InitializeEmpty(col_infos);
 }
 
 void VectorProjection::Initialize(
     const std::vector<const Schema::ColumnInfo *> &col_infos) {
-  // On setup, there's no data so the tuple count is zero
   tuple_count_ = 0;
-
-  // Setup column metadata
   column_info_ = col_infos;
+  columns_.resize(col_infos.size());
+  for (u32 i = 0; i < columns_.size(); i++) {
+    const TypeId col_type = col_infos[i]->sql_type.GetPrimitiveTypeId();
+    columns_[i] = std::make_unique<Vector>(col_type, true, true);
+  }
+}
 
-  // Create vectors for each column
+void VectorProjection::InitializeEmpty(
+    const std::vector<const Schema::ColumnInfo *> &col_infos) {
+  tuple_count_ = 0;
+  column_info_ = col_infos;
   columns_.resize(col_infos.size());
   for (u32 i = 0; i < columns_.size(); i++) {
     const TypeId col_type = col_infos[i]->sql_type.GetPrimitiveTypeId();
@@ -49,6 +56,18 @@ void VectorProjection::ResetColumn(
   ResetColumn(col_iters[col_idx].col_data(),
               col_iters[col_idx].col_null_bitmap(), col_idx,
               col_iters[col_idx].NumTuples());
+}
+
+std::string VectorProjection::ToString() const {
+  auto result = "Chunk(#cols=" + std::to_string(columns_.size()) + "):\n";
+  for (auto &col : columns_) {
+    result += "- " + col->ToString() + "\n";
+  }
+  return result;
+}
+
+void VectorProjection::Dump(std::ostream &stream) const {
+  stream << ToString() << std::endl;
 }
 
 }  // namespace tpl::sql

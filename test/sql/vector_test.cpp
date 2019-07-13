@@ -2,7 +2,7 @@
 #include <numeric>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
+#include "sql_test.h"  // NOLINT
 
 #include "sql/vector.h"
 #include "util/bit_util.h"
@@ -333,31 +333,29 @@ TEST_F(VectorTest, AppendWithSelectionVector) {
 
 TEST_F(VectorTest, Print) {
   {
-    Vector vec(TypeId::Boolean, true, true);
-    vec.set_count(4);
-    vec.SetValue(0, GenericValue::CreateBoolean(false));
-    vec.SetValue(1, GenericValue::CreateBoolean(true));
-    vec.SetValue(2, GenericValue::CreateBoolean(true));
-    vec.SetValue(3, GenericValue::CreateBoolean(false));
-    EXPECT_EQ("False,True,True,False", vec.ToString());
+    auto vec = MakeBooleanVector({false, true, true, false},
+                                 {false, false, false, false});
+    EXPECT_EQ("Boolean=[False,True,True,False]", vec->ToString());
   }
 
-#define CHECK_NUMERIC_VECTOR_PRINT(TYPE)             \
-  {                                                  \
-    Vector vec(TypeId::TYPE, true, true);            \
-    vec.set_count(4);                                \
-    vec.SetValue(0, GenericValue::Create##TYPE(10)); \
-    vec.SetValue(1, GenericValue::Create##TYPE(20)); \
-    vec.SetValue(2, GenericValue::Create##TYPE(30)); \
-    vec.SetValue(3, GenericValue::Create##TYPE(40)); \
-    vec.SetNull(1, true);                            \
-    EXPECT_EQ("10,NULL,30,40", vec.ToString());      \
+#define CHECK_NUMERIC_VECTOR_PRINT(TYPE)                                   \
+  {                                                                        \
+    auto vec =                                                             \
+        Make##TYPE##Vector({10, 20, 30, 40}, {false, true, false, false}); \
+    EXPECT_EQ(#TYPE "=[10,NULL,30,40]", vec->ToString());                  \
   };
 
   CHECK_NUMERIC_VECTOR_PRINT(TinyInt);
   CHECK_NUMERIC_VECTOR_PRINT(SmallInt);
   CHECK_NUMERIC_VECTOR_PRINT(Integer);
   CHECK_NUMERIC_VECTOR_PRINT(BigInt);
+#undef CHECK_NUMERIC_VECTOR_PRINT
+
+  {
+    auto vec =
+        MakeVarcharVector({"first", "second", "third"}, {false, true, false});
+    EXPECT_EQ("VarChar=['first',NULL,'third']", vec->ToString());
+  }
 }
 
 }  // namespace tpl::sql::test

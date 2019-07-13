@@ -51,6 +51,12 @@ class VectorProjectionIterator {
   void SetVectorProjection(VectorProjection *vp);
 
   /**
+   * Return the vector projection this iterator is interating over.
+   * @return The vector projection that's being iterated over.
+   */
+  VectorProjection *GetVectorProjection() const { return vector_projection_; }
+
+  /**
    * Get a pointer to the value in the column at index @em col_idx.
    * @tparam T The desired data type stored in the vector projection.
    * @tparam nullable Whether the column is NULL-able.
@@ -283,7 +289,7 @@ inline void VectorProjectionIterator::Match(bool matched) {
 }
 
 inline bool VectorProjectionIterator::HasNext() const {
-  return curr_idx_ < vector_projection_->total_tuple_count();
+  return curr_idx_ < vector_projection_->GetTupleCount();
 }
 
 inline bool VectorProjectionIterator::HasNextFiltered() const {

@@ -95,7 +95,7 @@ class VectorProjectionIteratorTest : public TplTest {
   };
 
  public:
-  VectorProjectionIteratorTest() : num_tuples_(kDefaultVectorSize) {
+  VectorProjectionIteratorTest() : num_tuples_(10) {
     // Create the schema
     std::vector<Schema::ColumnInfo> cols = {
         Schema::ColumnInfo("col_a", SmallIntType::InstanceNonNullable()),
@@ -187,7 +187,7 @@ TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
       tuple_count++;
     }
 
-    EXPECT_EQ(vp()->total_tuple_count(), tuple_count);
+    EXPECT_EQ(vp()->GetTupleCount(), tuple_count);
     EXPECT_FALSE(iter.IsFiltered());
   }
 
