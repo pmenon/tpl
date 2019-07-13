@@ -83,7 +83,7 @@ std::string GenericValue::ToString() const {
     case TypeId::Double:
       return std::to_string(value_.double_);
     case TypeId::Varchar:
-      return str_value_;
+      return "'" + str_value_ + "'";
     default:
       UNREACHABLE("Impossible type");
   }

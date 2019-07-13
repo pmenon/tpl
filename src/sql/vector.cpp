@@ -394,16 +394,17 @@ void Vector::Append(Vector &other) {
 }
 
 std::string Vector::ToString() const {
-  std::string result;
+  std::string result = std::string(TypeIdToString(type_)) + "=[";
   bool first = true;
   VectorOps::Exec(*this, [&](u64 i, u64 k) {
     if (!first) result += ",";
     first = false;
     result += GetValue(i).ToString();
   });
+  result += "]";
   return result;
 }
 
-void Vector::Dump(std::ostream &os) const { os << ToString(); }
+void Vector::Dump(std::ostream &os) const { os << ToString() << std::endl; }
 
 }  // namespace tpl::sql
