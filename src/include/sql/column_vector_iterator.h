@@ -7,48 +7,40 @@ namespace tpl::sql {
 class ColumnSegment;
 
 /**
- * An iterator over the in-memory contents of a column's data. This iterator
- * performs an iteration over column data in vector-at-a-time fashion. Each
- * iteration returns at most \a vector_size() tuples (less if the column has
- * fewer than \a vector_size() tuples remaining).
+ * A vector-at-a-time iterator over the in-memory contents of a column's data.
+ * Each iteration returns at most @em kDefaultVectorSize (i.e., 2048) elements.
  */
 class ColumnVectorIterator {
  public:
   explicit ColumnVectorIterator(const Schema::ColumnInfo *col_info) noexcept;
 
   /**
-   * Advance this iterator to the next vector of input in the column
-   * @return True if there is more data in the iterator; false otherwise
+   * Advance this iterator to the next vector of input in the column.
+   * @return True if there is more data in the iterator; false otherwise.
    */
   bool Advance() noexcept;
 
   /**
    * The number of tuples in the input. Or, in other words, the number of
-   * elements in the array returned by \a col_data() or \a col_null_bitmap()
-   * @return The number of tuples in the currently active vector
+   * elements in the array returned by @em col_data() or @em col_null_bitmap()
+   * @return The number of tuples in the currently active vector.
    */
   u32 NumTuples() const { return next_block_pos_ - current_block_pos_; }
 
   /**
-   * Reset the iterator to begin iteration at the start \a column
-   * @param column The column to begin iteration over
+   * Reset the iterator to begin iteration at the start of column @em column.
+   * @param column The column to begin iteration over.
    */
   void Reset(const ColumnSegment *column) noexcept;
 
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
-
-  static constexpr u32 vector_size() { return kDefaultVectorSize; }
-
   /**
-   * Access the current vector of raw untyped column data
+   * Access the current vector of raw untyped column data.
    */
   byte *col_data() noexcept { return col_data_; }
   byte *col_data() const noexcept { return col_data_; }
 
   /**
-   * Access the current raw NULL bitmap
+   * Access the current raw NULL bitmap.
    */
   u32 *col_null_bitmap() noexcept { return col_null_bitmap_; }
   u32 *col_null_bitmap() const noexcept { return col_null_bitmap_; }
