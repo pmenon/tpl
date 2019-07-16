@@ -86,6 +86,32 @@ TEST_F(VectorTest, GetAndSet) {
   EXPECT_EQ(GenericValue::CreateBoolean(true), vec.GetValue(0));
 }
 
+TEST_F(VectorTest, GetAndSetNumeric) {
+#define GEN_TEST(TYPE)                                         \
+  {                                                            \
+    Vector vec(TypeId::TYPE, true, false);                     \
+    vec.set_count(10);                                         \
+    vec.SetValue(0, GenericValue::Create##TYPE(1));            \
+    EXPECT_EQ(GenericValue::Create##TYPE(1), vec.GetValue(0)); \
+    vec.SetNull(0, true);                                      \
+    EXPECT_TRUE(vec.IsNull(0));                                \
+    EXPECT_TRUE(vec.GetValue(0).is_null());                    \
+    vec.SetValue(0, GenericValue::Create##TYPE(2));            \
+    EXPECT_EQ(GenericValue::Create##TYPE(2), vec.GetValue(0)); \
+  }
+
+  GEN_TEST(TinyInt);
+  GEN_TEST(SmallInt);
+  GEN_TEST(Integer);
+  GEN_TEST(BigInt);
+  GEN_TEST(Float);
+  GEN_TEST(Double);
+  GEN_TEST(Hash);
+  GEN_TEST(Pointer);
+
+#undef GEN_TEST
+}
+
 TEST_F(VectorTest, GetAndSetString) {
   Vector vec(TypeId::Varchar, true, false);
   vec.set_count(10);

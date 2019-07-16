@@ -136,14 +136,14 @@ GenericValue GenericValue::CreateBigInt(const i64 value) {
 }
 GenericValue GenericValue::CreateHash(hash_t value) {
   GenericValue result(TypeId::Hash);
-  result.value_.integer = value;
+  result.value_.hash = value;
   result.is_null_ = false;
   return result;
 }
 
 GenericValue GenericValue::CreatePointer(uintptr_t value) {
   GenericValue result(TypeId::Pointer);
-  result.value_.integer = value;
+  result.value_.pointer = value;
   result.is_null_ = false;
   return result;
 }

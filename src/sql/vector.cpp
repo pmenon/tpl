@@ -120,19 +120,19 @@ GenericValue Vector::GetValue(const u64 index) const {
     case TypeId::Float: {
       return GenericValue::CreateReal(
           reinterpret_cast<f32 *>(data_)[actual_index]);
-      case TypeId::Double: {
-        return GenericValue::CreateDouble(
-            reinterpret_cast<f64 *>(data_)[actual_index]);
-      }
-      case TypeId::Varchar: {
-        auto *str = reinterpret_cast<const char **>(data_)[actual_index];
-        TPL_ASSERT(str != nullptr, "Null string in position not marked NULL!");
-        return GenericValue::CreateVarchar(str);
-      }
-      default: {
-        throw std::runtime_error(fmt::format("Cannot read value of type '{}'",
-                                             TypeIdToString(type_)));
-      }
+    }
+    case TypeId::Double: {
+      return GenericValue::CreateDouble(
+          reinterpret_cast<f64 *>(data_)[actual_index]);
+    }
+    case TypeId::Varchar: {
+      auto *str = reinterpret_cast<const char **>(data_)[actual_index];
+      TPL_ASSERT(str != nullptr, "Null string in position not marked NULL!");
+      return GenericValue::CreateVarchar(str);
+    }
+    default: {
+      throw std::runtime_error(
+          fmt::format("Cannot read value of type '{}'", TypeIdToString(type_)));
     }
   }
 }
