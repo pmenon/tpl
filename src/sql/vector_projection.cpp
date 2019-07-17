@@ -59,7 +59,8 @@ void VectorProjection::ResetColumn(
 }
 
 std::string VectorProjection::ToString() const {
-  auto result = "Chunk(#cols=" + std::to_string(columns_.size()) + "):\n";
+  auto result =
+      "VectorProjection(#cols=" + std::to_string(columns_.size()) + "):\n";
   for (auto &col : columns_) {
     result += "- " + col->ToString() + "\n";
   }

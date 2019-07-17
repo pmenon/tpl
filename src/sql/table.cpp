@@ -12,9 +12,11 @@ i32 current_partition = -1;
 
 namespace tpl::sql {
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Table
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 void Table::Insert(Block &&block) {
 #ifndef NDEBUG
@@ -106,25 +108,27 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type,
 
 }  // namespace
 
-void Table::Dump(std::ostream &os) const {
+void Table::Dump(std::ostream &stream) const {
   const auto &cols_meta = schema().columns();
   for (const auto &block : blocks_) {
     for (u32 row_idx = 0; row_idx < block.num_tuples(); row_idx++) {
       for (u32 col_idx = 0; col_idx < cols_meta.size(); col_idx++) {
         if (col_idx != 0) {
-          os << ", ";
+          stream << ", ";
         }
         const auto *col_vector = block.GetColumnData(col_idx);
-        DumpColValue(os, cols_meta[col_idx].sql_type, *col_vector, row_idx);
+        DumpColValue(stream, cols_meta[col_idx].sql_type, *col_vector, row_idx);
       }
-      os << "\n";
+      stream << "\n";
     }
   }
 }
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Table Block Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 TableBlockIterator::TableBlockIterator(u16 table_id)
     : TableBlockIterator(table_id, 0, std::numeric_limits<u32>::max()) {}

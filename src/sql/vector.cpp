@@ -401,6 +401,8 @@ std::string Vector::ToString() const {
   return result;
 }
 
-void Vector::Dump(std::ostream &os) const { os << ToString() << std::endl; }
+void Vector::Dump(std::ostream &stream) const {
+  stream << ToString() << std::endl;
+}
 
 }  // namespace tpl::sql

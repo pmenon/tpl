@@ -233,7 +233,7 @@ class Vector {
   /**
    * Print a string representation of this vector to the output stream.
    */
-  void Dump(std::ostream &os) const;
+  void Dump(std::ostream &stream) const;
 
  private:
   // Create a new vector with the specified type. Any existing data is

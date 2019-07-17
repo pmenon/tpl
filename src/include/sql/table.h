@@ -79,9 +79,9 @@ class Table {
 
   /**
    * Dump the contents of the table to the output stream in CSV format
-   * @param os The output stream to write contents into
+   * @param stream The output stream to write contents into
    */
-  void Dump(std::ostream &os) const;
+  void Dump(std::ostream &stream) const;
 
   /**
    * Return the ID of the table
