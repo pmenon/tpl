@@ -10,16 +10,19 @@
 
 namespace tpl::sql {
 
-VectorProjection::VectorProjection() : tuple_count_(0) {}
+VectorProjection::VectorProjection() : sel_vector_{0}, tuple_count_(0) {
+  sel_vector_[0] = kInvalidPos;
+}
 
 VectorProjection::VectorProjection(
     const std::vector<const Schema::ColumnInfo *> &col_infos)
-    : tuple_count_(0) {
+    : sel_vector_{0}, tuple_count_(0) {
   InitializeEmpty(col_infos);
 }
 
 void VectorProjection::Initialize(
     const std::vector<const Schema::ColumnInfo *> &col_infos) {
+  sel_vector_[0] = kInvalidPos;
   tuple_count_ = 0;
   column_info_ = col_infos;
   columns_.resize(col_infos.size());
@@ -31,6 +34,7 @@ void VectorProjection::Initialize(
 
 void VectorProjection::InitializeEmpty(
     const std::vector<const Schema::ColumnInfo *> &col_infos) {
+  sel_vector_[0] = kInvalidPos;
   tuple_count_ = 0;
   column_info_ = col_infos;
   columns_.resize(col_infos.size());
