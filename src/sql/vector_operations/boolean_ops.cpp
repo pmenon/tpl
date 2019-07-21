@@ -75,7 +75,7 @@ void VectorOps::Or(const Vector &left, const Vector &right, Vector *result) {
 }
 
 void VectorOps::Not(const Vector &input, Vector *result) {
-  TemplatedUnaryOperation<bool, bool, tpl::sql::Not>(input, result);
+  UnaryOperation<bool, bool, tpl::sql::Not>(input, result);
 }
 
 }  // namespace tpl::sql

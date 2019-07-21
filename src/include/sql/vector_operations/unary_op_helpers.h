@@ -5,8 +5,7 @@
 namespace tpl::sql {
 
 template <typename InputType, typename ResultType, typename Op>
-static inline void TemplatedUnaryOperation(const Vector &input,
-                                           Vector *result) {
+static inline void UnaryOperation(const Vector &input, Vector *result) {
   auto *input_data = reinterpret_cast<InputType *>(input.data());
   auto *result_data = reinterpret_cast<ResultType *>(result->data());
 
