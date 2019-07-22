@@ -2,6 +2,8 @@
 
 namespace tpl::sql {
 
+// This file contains functions that fold vectors into a single return value.
+
 bool VectorOps::AllTrue(const Vector &input) {
   TPL_ASSERT(input.type_id() == TypeId::Boolean,
              "Input vector to AllTrue() must be boolean");
