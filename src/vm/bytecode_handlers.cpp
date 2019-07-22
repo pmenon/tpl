@@ -202,7 +202,7 @@ void OpSorterFree(tpl::sql::Sorter *sorter) { sorter->~Sorter(); }
 
 void OpSorterIteratorInit(tpl::sql::SorterIterator *iter,
                           tpl::sql::Sorter *sorter) {
-  new (iter) tpl::sql::SorterIterator(sorter);
+  new (iter) tpl::sql::SorterIterator(*sorter);
 }
 
 void OpSorterIteratorFree(tpl::sql::SorterIterator *iter) {

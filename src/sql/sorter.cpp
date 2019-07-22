@@ -18,7 +18,8 @@
 namespace tpl::sql {
 
 Sorter::Sorter(MemoryPool *memory, ComparisonFunction cmp_fn, u32 tuple_size)
-    : tuple_storage_(tuple_size, MemoryPoolAllocator<byte>(memory)),
+    : memory_(memory),
+      tuple_storage_(tuple_size, MemoryPoolAllocator<byte>(memory)),
       owned_tuples_(memory),
       cmp_fn_(cmp_fn),
       tuples_(memory),

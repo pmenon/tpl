@@ -83,7 +83,7 @@ void TestSortRandomTupleSize(const u32 num_iters, const u32 max_elems,
     sorter.Sort();
 
     // Check that the elements are in the same order.
-    sql::SorterIterator iter(&sorter);
+    sql::SorterIterator iter(sorter);
     for (u32 i = 0; i < num_elems; i++) {
       EXPECT_EQ(*reinterpret_cast<const IntType *>(*iter), reference[i]);
       ++iter;
@@ -140,7 +140,7 @@ void TestTopKRandomTupleSize(const u32 num_iters, const u32 max_elems,
 
     // Check that only the top k elements are left.
     sorter.Sort();  // Sort because the reference is sorted.
-    sql::SorterIterator iter(&sorter);
+    sql::SorterIterator iter(sorter);
     for (u32 i = 0; i < top_k; i++) {
       const auto ref_elem = reference.top();
       reference.pop();
@@ -226,7 +226,7 @@ TEST_F(SorterTest, DISABLED_PerfSortTest) {
     ips4o::sort(chunk_vec.begin(), chunk_vec.end(), cmp_fn);
   });
 
-  auto sorter_ms = Bench(1, [&sorter]() { sorter.Sort(); });
+  auto sorter_ms = Bench(1, [&]() { sorter.Sort(); });
 
   for (u32 i = 0; i < num_elems; i++) {
     const auto std_a = *reinterpret_cast<const int_type *>(vec[i].data());
@@ -252,7 +252,7 @@ struct TestTuple {
 // Generic function to perform a parallel sort. The input parameter indicates
 // the sizes of each thread-local sorter that will be created.
 template <u32 N>
-void TestParallelSort(const std::vector<u32> &sorter_sizes) {
+void TestParallelSort(const std::vector<u32> sorter_sizes) {
   // Comparison function
   static const auto cmp_fn = [](const void *left, const void *right) {
     const auto *l = reinterpret_cast<const TestTuple<N> *>(left);
@@ -301,7 +301,7 @@ void TestParallelSort(const std::vector<u32> &sorter_sizes) {
 
   // Ensure sortedness
   const TestTuple<N> *prev = nullptr;
-  for (SorterIterator iter(&main); iter.HasNext(); iter.Next()) {
+  for (SorterIterator iter(main); iter.HasNext(); iter.Next()) {
     auto *curr = iter.GetRowAs<TestTuple<N>>();
     if (prev != nullptr) {
       EXPECT_LE(cmp_fn(prev, curr), 0);

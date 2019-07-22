@@ -1,14 +1,18 @@
 #pragma once
 
+#include <iterator>
 #include <vector>
 
 #include "sql/memory_pool.h"
+#include "sql/schema.h"
 #include "util/chunked_vector.h"
 #include "util/macros.h"
 
 namespace tpl::sql {
 
 class ThreadStateContainer;
+class VectorProjection;
+class VectorProjectionIterator;
 
 /**
  * Sorters
@@ -113,6 +117,10 @@ class Sorter {
 
  private:
   friend class SorterIterator;
+  friend class SorterVectorIterator;
+
+  // Memory pool
+  MemoryPool *memory_;
 
   // Vector of entries
   util::ChunkedVector<MemoryPoolAllocator<byte>> tuple_storage_;
@@ -131,40 +139,45 @@ class Sorter {
 };
 
 /**
- * An iterator over the elements in a sorter instance
+ * An iterator over the elements in a sorter instance.
  */
 class SorterIterator {
-  using IteratorType = decltype(Sorter::tuples_)::iterator;
+  using IteratorType = decltype(Sorter::tuples_)::const_iterator;
 
  public:
-  explicit SorterIterator(Sorter *sorter) noexcept
-      : iter_(sorter->tuples_.begin()), end_(sorter->tuples_.end()) {}
+  explicit SorterIterator(const Sorter &sorter) noexcept
+      : iter_(sorter.tuples_.begin()), end_(sorter.tuples_.end()) {}
 
   /**
-   * Dereference operator
-   * @return A pointer to the current iteration row
+   * Dereference operator.
+   * @return A pointer to the current iteration row.
    */
-  const byte *operator*() const noexcept { return *iter_; }
+  const byte *operator*() const noexcept { return GetRow(); }
 
   /**
-   * Pre-increment the iterator
-   * @return A reference to this iterator after it's been advanced one row
+   * Pre-increment the iterator.
+   * @return A reference to this iterator after it's been advanced one row.
    */
   SorterIterator &operator++() noexcept {
-    ++iter_;
+    Next();
     return *this;
   }
 
   /**
-   * Does this iterate have more data
-   * @return True if the iterator has more data; false otherwise
+   * Does this iterator have more data.
+   * @return True if the iterator has more data; false otherwise.
    */
   bool HasNext() const { return iter_ != end_; }
 
   /**
-   * Advance the iterator
+   * Advance the iterator.
    */
-  void Next() { this->operator++(); }
+  void Next() { ++iter_; }
+
+  /**
+   * Determine the number of rows remaining in the iteration.
+   */
+  u32 NumRemaining() const { return std::distance(iter_, end_); }
 
   /**
    * Return a pointer to the current row. It assumed the called has checked the
@@ -172,7 +185,7 @@ class SorterIterator {
    */
   const byte *GetRow() const {
     TPL_ASSERT(iter_ != end_, "Invalid iterator");
-    return this->operator*();
+    return *iter_;
   }
 
   /**
@@ -189,6 +202,66 @@ class SorterIterator {
   IteratorType iter_;
   // The ending iterator position
   const IteratorType end_;
+};
+
+/**
+ * A vectorized iterator over the elements in a sorter instance.
+ */
+class SorterVectorIterator {
+ public:
+  using TransposeFn = void (*)(const byte **, u64, VectorProjectionIterator *);
+
+  /**
+   * Construct a vector iterator over the given sorter instance.
+   */
+  SorterVectorIterator(
+      const Sorter &sorter,
+      const std::vector<const Schema::ColumnInfo *> &column_info,
+      TransposeFn transpose_fn);
+
+  /**
+   * Construct a vector iterator over the given sorter instance.
+   */
+  SorterVectorIterator(const Sorter &sorter,
+                       const Schema::ColumnInfo *column_info, u32 num_cols,
+                       TransposeFn transpose_fn);
+
+  /**
+   * Destructor.
+   */
+  ~SorterVectorIterator();
+
+  /**
+   * Does this iterator have more data?
+   */
+  bool HasNext() const;
+
+  /**
+   * Advance the iterator by, at most, one vector's worth of data.
+   */
+  void Next(TransposeFn transpose_fn);
+
+  /**
+   * Return the next vector output.
+   */
+  VectorProjectionIterator *GetVectorProjectionIterator() {
+    return vector_projection_iterator_.get();
+  }
+
+ private:
+  void BuildVectorProjection(TransposeFn transpose_fn);
+
+ private:
+  // The memory pool
+  MemoryPool *memory_;
+  // The current and ending iterator positions, respectively.
+  SorterIterator iter_;
+  // Temporary array storing the sorter rows
+  const byte **temp_rows_;
+  // The vector projections produced by this iterator
+  std::unique_ptr<VectorProjection> vector_projection_;
+  // The iterator over the vector projection
+  std::unique_ptr<VectorProjectionIterator> vector_projection_iterator_;
 };
 
 }  // namespace tpl::sql
