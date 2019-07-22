@@ -402,6 +402,7 @@ _CPP_HEADERS = frozenset([
     'stdexcept',
     'streambuf',
     'string',
+    'string_view',
     'strstream',
     'system_error',
     'thread',
@@ -413,6 +414,7 @@ _CPP_HEADERS = frozenset([
     'unordered_set',
     'utility',
     'valarray',
+    'variant',
     'vector',
     # 17.6.1.2 C++ headers for C library facilities
     'cassert',
