@@ -108,12 +108,12 @@ inline bool operator!=(const MemPoolPtr<T1> &a, const MemPoolPtr<T2> &b) {
 
 template <typename T>
 inline bool operator!=(std::nullptr_t, const MemPoolPtr<T> &a) noexcept {
-  return (bool)a;
+  return static_cast<bool>(a);
 }
 
 template <typename T>
 inline bool operator!=(const MemPoolPtr<T> &a, std::nullptr_t) noexcept {
-  return (bool)a;
+  return static_cast<bool>(a);
 }
 
 /**

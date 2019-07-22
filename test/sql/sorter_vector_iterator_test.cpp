@@ -1,4 +1,5 @@
 #include <random>
+#include <vector>
 
 #include "tpl_test.h"  // NOLINT
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iterator>
+#include <memory>
 #include <vector>
 
 #include "sql/memory_pool.h"

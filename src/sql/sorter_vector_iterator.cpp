@@ -1,5 +1,9 @@
 #include "sql/sorter.h"
 
+#include <algorithm>
+#include <memory>
+#include <vector>
+
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 

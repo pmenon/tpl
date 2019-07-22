@@ -1,7 +1,9 @@
 #pragma once
 
 #include <iosfwd>
+#include <limits>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "sql/schema.h"
