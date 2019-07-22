@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -408,6 +409,24 @@ std::string Vector::ToString() const {
 
 void Vector::Dump(std::ostream &stream) const {
   stream << ToString() << std::endl;
+}
+
+void Vector::CheckIntegrity() const {
+#ifndef NDEBUG
+  if (type_ == TypeId::Varchar) {
+    VectorOps::ExecTyped<const char *>(*this, [&](const char *string, u64 i,
+                                                  u64 k) {
+      if (!null_mask_[i]) {
+        TPL_ASSERT(string != nullptr, "NULL pointer in non-null vector slot");
+        // The following check is unsafe. But, we're in debug mode presumably
+        // with ASAN on, so a corrupt string will trigger an ASAN fault.
+        TPL_ASSERT(
+            std::strlen(string) < std::numeric_limits<std::size_t>::max(),
+            "Invalid string length");
+      }
+    });
+  }
+#endif
 }
 
 }  // namespace tpl::sql

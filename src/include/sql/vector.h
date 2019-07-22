@@ -235,6 +235,12 @@ class Vector {
    */
   void Dump(std::ostream &stream) const;
 
+  /**
+   * Perform an integrity check on this vector instance. This is used in debug
+   * mode for sanity checks.
+   */
+  void CheckIntegrity() const;
+
  private:
   // Create a new vector with the specified type. Any existing data is
   // destroyed.

@@ -149,6 +149,12 @@ class VectorProjection {
    */
   void Dump(std::ostream &stream) const;
 
+  /**
+   * Perform an integrity check on this vector projection instance. This is used
+   * in debug mode for sanity checks.
+   */
+  void CheckIntegrity() const;
+
  private:
   // Metadata for all columns in this projection.
   std::vector<const Schema::ColumnInfo *> column_info_;

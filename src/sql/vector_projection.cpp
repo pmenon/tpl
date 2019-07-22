@@ -43,7 +43,7 @@ void VectorProjection::Initialize(
   // Update vectors to reference the buffer we created
   byte *ptr = owned_buffer_.get();
   for (const auto &col : columns_) {
-    col->Reference(col->type_id(), ptr, nullptr, kDefaultVectorSize);
+    col->Reference(col->type_id(), ptr, nullptr, 0);
     ptr += GetTypeIdSize(col->type_id()) * kDefaultVectorSize;
   }
 }
@@ -78,6 +78,20 @@ std::string VectorProjection::ToString() const {
 
 void VectorProjection::Dump(std::ostream &stream) const {
   stream << ToString() << std::endl;
+}
+
+void VectorProjection::CheckIntegrity() const {
+#ifndef NDEBUG
+  // Check that all contained vectors have the same size
+  for (const auto &col : columns_) {
+    TPL_ASSERT(GetTupleCount() == col->count(),
+               "Vector size does not match rest of projection");
+  }
+  // Let the vectors do an integrity check
+  for (const auto &col : columns_) {
+    col->CheckIntegrity();
+  }
+#endif
 }
 
 }  // namespace tpl::sql
