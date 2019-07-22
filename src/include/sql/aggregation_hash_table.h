@@ -457,8 +457,8 @@ class AHTVectorIterator {
   /**
    * Construct a vector iterator over the given aggregation table.
    */
-  AHTVectorIterator(const AggregationHashTable &aht,
-                    const Schema::ColumnInfo *col_infos, u32 num_cols,
+  AHTVectorIterator(const AggregationHashTable &agg_hash_table,
+                    const Schema::ColumnInfo *column_info, u32 num_cols,
                     TransposeFn transpose_fn);
 
   /**
@@ -472,20 +472,14 @@ class AHTVectorIterator {
   ~AHTVectorIterator();
 
   /**
-   * Does this iterator have more data.?
+   * Does this iterator have more data?
    */
   bool HasNext() const { return iter_.HasNext(); }
 
   /**
    * Advance the iterator by, at most, one vector's worth of data.
    */
-  void Next(TransposeFn transpose_fn) {
-    // Get next vector
-    iter_.Next();
-
-    // Build new vector projection
-    BuildVectorProjection(transpose_fn);
-  }
+  void Next(TransposeFn transpose_fn);
 
   /**
    * Return the next vector output.
@@ -501,7 +495,6 @@ class AHTVectorIterator {
   // The iterator over the aggregation hash table
   MemoryPool *memory_;
   GenericHashTableVectorIterator<false> iter_;
-  std::vector<std::pair<byte *, u32 *>> projection_data_;
   std::unique_ptr<VectorProjection> vector_projection_;
   std::unique_ptr<VectorProjectionIterator> vector_projection_iterator_;
   const byte **temp_aggregates_vec_;

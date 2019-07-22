@@ -133,7 +133,12 @@ class VectorProjection {
   /**
    * Return the number of active tuples in this projection.
    */
-  u32 GetTupleCount() const { return tuple_count_; }
+  u32 GetTupleCount() const {
+    if (columns_.empty()) {
+      return 0;
+    }
+    return columns_[0]->count();
+  }
 
   /**
    * Return a string representation of this vector.
@@ -164,10 +169,6 @@ class VectorProjection {
 
   // The selection vector for the projection.
   alignas(CACHELINE_SIZE) sel_t sel_vector_[kDefaultVectorSize];
-
-  // The number of active tuples; either the number of elements in the selection
-  // vector if it's in use, or the total number of elements in the projection.
-  u32 tuple_count_;
 
   // If the vector projection allocates memory for all contained vectors, this
   // pointer owns that memory.

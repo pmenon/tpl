@@ -112,6 +112,17 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
   std::vector<std::unique_ptr<vm::Module>> modules_;
 };
 
+TEST_F(AggregationHashTableVectorIteratorTest, IterateEmptyAggregation) {
+  // Empty table
+  AggregationHashTable agg_ht(memory(), sizeof(AggTuple));
+
+  // Iterate
+  AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
+  for (; iter.HasNext(); iter.Next(Transpose)) {
+    FAIL() << "Iteration should not occur on empty aggregation hash table";
+  }
+}
+
 TEST_F(AggregationHashTableVectorIteratorTest, IterateSmallAggregation) {
   constexpr u32 num_aggs = 4000;
   constexpr u32 group_size = 10;

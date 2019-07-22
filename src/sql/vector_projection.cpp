@@ -10,8 +10,7 @@
 
 namespace tpl::sql {
 
-VectorProjection::VectorProjection()
-    : sel_vector_{0}, tuple_count_(0), owned_buffer_(nullptr) {
+VectorProjection::VectorProjection() : sel_vector_{0}, owned_buffer_(nullptr) {
   sel_vector_[0] = kInvalidPos;
 }
 
@@ -20,7 +19,6 @@ void VectorProjection::InitializeEmpty(
   TPL_ASSERT(!column_info.empty(),
              "Cannot create projection with zero columns");
   sel_vector_[0] = kInvalidPos;
-  tuple_count_ = 0;
   column_info_ = column_info;
   columns_.resize(column_info.size());
   for (u32 i = 0; i < columns_.size(); i++) {
@@ -50,13 +48,8 @@ void VectorProjection::Initialize(
 
 void VectorProjection::ResetColumn(byte *col_data, u32 *col_null_bitmap,
                                    u32 col_idx, u32 num_tuples) {
-  // Reset tuple count
-  tuple_count_ = num_tuples;
-
-  // Reset the vector to reference the input data
-  auto col_type_id = GetColumnInfo(col_idx)->sql_type.GetPrimitiveTypeId();
-  columns_[col_idx]->Reference(col_type_id, col_data, col_null_bitmap,
-                               num_tuples);
+  auto col_type = GetColumnInfo(col_idx)->sql_type.GetPrimitiveTypeId();
+  columns_[col_idx]->Reference(col_type, col_data, col_null_bitmap, num_tuples);
 }
 
 void VectorProjection::ResetColumn(
