@@ -107,12 +107,13 @@ class VectorProjectionIteratorTest : public TplTest {
     };
     schema_ = std::make_unique<Schema>(std::move(cols));
 
-    std::vector<const Schema::ColumnInfo *> vp_cols_info = {
+    std::vector<const Schema::ColumnInfo *> column_info = {
         schema_->GetColumnInfo(0), schema_->GetColumnInfo(1),
         schema_->GetColumnInfo(2), schema_->GetColumnInfo(3),
         schema_->GetColumnInfo(4), schema_->GetColumnInfo(5),
     };
-    vp_ = std::make_unique<VectorProjection>(vp_cols_info);
+    vp_ = std::make_unique<VectorProjection>();
+    vp_->InitializeEmpty(column_info);
 
     // Load the data
     LoadData();

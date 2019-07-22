@@ -451,7 +451,7 @@ class AHTVectorIterator {
    * Construct a vector iterator over the given aggregation table.
    */
   AHTVectorIterator(const AggregationHashTable &agg_hash_table,
-                    const std::vector<const Schema::ColumnInfo *> &col_infos,
+                    const std::vector<const Schema::ColumnInfo *> &column_info,
                     TransposeFn transpose_fn);
 
   /**

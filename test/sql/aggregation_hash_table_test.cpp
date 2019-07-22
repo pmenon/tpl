@@ -232,7 +232,8 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
   Schema::ColumnInfo val_col("val", IntegerType::InstanceNonNullable());
   std::vector<const Schema::ColumnInfo *> cols = {&key_col, &val_col};
 
-  VectorProjection vp(cols);
+  VectorProjection vp;
+  vp.InitializeEmpty(cols);
 
   alignas(CACHELINE_SIZE) u32 keys[kDefaultVectorSize];
   alignas(CACHELINE_SIZE) u32 vals[kDefaultVectorSize];

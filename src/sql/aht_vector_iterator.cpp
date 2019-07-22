@@ -11,17 +11,20 @@ namespace tpl::sql {
 
 AHTVectorIterator::AHTVectorIterator(
     const AggregationHashTable &agg_hash_table,
-    const std::vector<const Schema::ColumnInfo *> &col_infos,
+    const std::vector<const Schema::ColumnInfo *> &column_info,
     const AHTVectorIterator::TransposeFn transpose_fn)
     : memory_(agg_hash_table.memory_),
       iter_(agg_hash_table.hash_table_, memory_),
-      vector_projection_(std::make_unique<VectorProjection>(col_infos)),
+      vector_projection_(std::make_unique<VectorProjection>()),
       vector_projection_iterator_(std::make_unique<VectorProjectionIterator>()),
       temp_aggregates_vec_(memory_->AllocateArray<const byte *>(
           kDefaultVectorSize, CACHELINE_SIZE, false)) {
-  // We need to allocate an array for each component of the aggregation.
+  // First, initialize the vector projection.
+  vector_projection_->InitializeEmpty(column_info);
+
+  // Next, allocate an array for each component of the aggregation.
   const auto num_elems = kDefaultVectorSize;
-  for (const auto *col_info : col_infos) {
+  for (const auto *col_info : column_info) {
     auto size = col_info->GetStorageSize() * num_elems;
     auto null_bitmap_size =
         sizeof(u32) * util::BitUtil::Num32BitWordsFor(num_elems);

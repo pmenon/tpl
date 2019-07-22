@@ -45,15 +45,6 @@ class VectorProjection {
   VectorProjection();
 
   /**
-   * Create a vector projection using the column information provided in the
-   * input. An empty vector with the appropriate type is created and initialized
-   * for each element in the input vector.
-   * @param column_info Metadata for each column in the projection.
-   */
-  explicit VectorProjection(
-      const std::vector<const Schema::ColumnInfo *> &column_info);
-
-  /**
    * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(VectorProjection);

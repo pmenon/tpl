@@ -11,12 +11,8 @@
 namespace tpl::sql {
 
 VectorProjection::VectorProjection()
-    : sel_vector_{kInvalidPos}, tuple_count_(0), owned_buffer_(nullptr) {}
-
-VectorProjection::VectorProjection(
-    const std::vector<const Schema::ColumnInfo *> &column_info)
-    : sel_vector_{kInvalidPos}, tuple_count_(0), owned_buffer_(nullptr) {
-  InitializeEmpty(column_info);
+    : sel_vector_{0}, tuple_count_(0), owned_buffer_(nullptr) {
+  sel_vector_[0] = kInvalidPos;
 }
 
 void VectorProjection::InitializeEmpty(
