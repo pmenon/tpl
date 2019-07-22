@@ -22,7 +22,7 @@ AHTVectorIterator::AHTVectorIterator(
   // We need to allocate an array for each component of the aggregation.
   const auto num_elems = kDefaultVectorSize;
   for (const auto *col_info : col_infos) {
-    auto size = col_info->StorageSize() * num_elems;
+    auto size = col_info->GetStorageSize() * num_elems;
     auto null_bitmap_size =
         sizeof(u32) * util::BitUtil::Num32BitWordsFor(num_elems);
     auto *data = static_cast<byte *>(memory_->Allocate(size, true));
@@ -46,7 +46,7 @@ AHTVectorIterator::~AHTVectorIterator() {
 
   for (u32 i = 0; i < projection_data_.size(); i++) {
     const auto col_info = vector_projection_->GetColumnInfo(i);
-    auto size = col_info->StorageSize() * kDefaultVectorSize;
+    auto size = col_info->GetStorageSize() * kDefaultVectorSize;
     auto null_bitmap_size =
         sizeof(u32) * util::BitUtil::Num32BitWordsFor(kDefaultVectorSize);
     memory_->Deallocate(projection_data_[i].first, size);

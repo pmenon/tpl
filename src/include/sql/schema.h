@@ -21,38 +21,11 @@ class Schema {
                ColumnEncoding encoding = ColumnEncoding::None)
         : name(std::move(name)), sql_type(sql_type), encoding(encoding) {}
 
-    // TODO(pmenon): Fix me to change based on encoding
-    u32 StorageSize() const {
-      switch (sql_type.id()) {
-        case SqlTypeId::Boolean:
-        case SqlTypeId::TinyInt: {
-          return sizeof(i8);
-        }
-        case SqlTypeId::SmallInt: {
-          return sizeof(i16);
-        }
-        case SqlTypeId::Date:
-        case SqlTypeId::Integer: {
-          return sizeof(i32);
-        }
-        case SqlTypeId::BigInt: {
-          return sizeof(i64);
-        }
-        case SqlTypeId::Decimal: {
-          return sizeof(i128);
-        }
-        case SqlTypeId::Char: {
-          auto *char_type = sql_type.As<CharType>();
-          return char_type->length() * sizeof(i8);
-        }
-        case SqlTypeId::Varchar: {
-          return 16;
-        }
-        default: {
-          TPL_UNLIKELY("Impossible type");
-          return 0;
-        }
-      }
+    std::size_t GetStorageSize() const {
+      TPL_ASSERT(encoding == ColumnEncoding::None,
+                 "Only supports uncompressed encodings");
+      const auto prim_type = sql_type.GetPrimitiveTypeId();
+      return GetTypeIdSize(prim_type);
     }
   };
 

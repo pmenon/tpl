@@ -12,9 +12,11 @@
 
 namespace tpl::sql {
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Strings
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 Vector::Strings::Strings() : region_("vector-strings"), num_strings_(0) {}
 
@@ -33,9 +35,11 @@ char *Vector::Strings::AddString(const std::string_view str) {
 
 void Vector::Strings::Destroy() { region_.FreeAll(); }
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Vector
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 Vector::Vector(TypeId type)
     : type_(type),
@@ -131,8 +135,8 @@ GenericValue Vector::GetValue(const u64 index) const {
       return GenericValue::CreateVarchar(str);
     }
     default: {
-      throw std::runtime_error(
-          fmt::format("Cannot read value of type '{}'", TypeIdToString(type_)));
+      throw std::runtime_error(fmt::format(
+          "Cannot read value of type '{}' from vector", TypeIdToString(type_)));
     }
   }
 }
@@ -195,7 +199,8 @@ void Vector::SetValue(const u64 index, const GenericValue &val) {
     }
     default: {
       throw std::runtime_error(
-          fmt::format("Cannot read value of type '{}'", TypeIdToString(type_)));
+          fmt::format("Cannot write value of type '{}' into vector",
+                      TypeIdToString(type_)));
     }
   }
 }
@@ -377,8 +382,8 @@ void Vector::Append(Vector &other) {
     VectorOps::Copy(other, data_ + old_count * GetTypeIdSize(type_));
   } else {
     TPL_ASSERT(type_ == TypeId::Varchar, "Append on varchars");
-    auto src_data = reinterpret_cast<const char **>(other.data_);
-    auto target_data = reinterpret_cast<const char **>(data_);
+    auto src_data = reinterpret_cast<const char **const>(other.data_);
+    auto target_data = reinterpret_cast<const char **const>(data_);
     VectorOps::Exec(other, [&](u64 i, u64 k) {
       if (other.null_mask_[i]) {
         target_data[old_count + k] = nullptr;

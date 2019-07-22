@@ -159,13 +159,13 @@ class VectorProjection {
   void Dump(std::ostream &stream) const;
 
  private:
-  // Column metadata
+  // Metadata for all columns in this projection.
   std::vector<const Schema::ColumnInfo *> column_info_;
 
-  // The column's data
+  // Vector containing column data for all columns in this projection.
   std::vector<std::unique_ptr<Vector>> columns_;
 
-  // The selection vector of the projection
+  // The selection vector for the projection.
   alignas(CACHELINE_SIZE) sel_t sel_vector_[kDefaultVectorSize];
 
   // The number of active tuples; either the number of elements in the selection

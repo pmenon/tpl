@@ -20,7 +20,7 @@ bool ColumnVectorIterator::Advance() noexcept {
     return false;
   }
 
-  u32 next_elem_offset = next_block_pos_ * col_info_->StorageSize();
+  u32 next_elem_offset = next_block_pos_ * col_info_->GetStorageSize();
 
   col_data_ = const_cast<byte *>(column_->AccessRaw(next_elem_offset));
   col_null_bitmap_ = const_cast<u32 *>(column_->AccessRawNullBitmap(0));
