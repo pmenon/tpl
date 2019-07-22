@@ -36,17 +36,22 @@ class VectorProjection {
  public:
   /**
    * Create an empty and uninitialized vector projection. Users must call
-   * @em Setup() to initialize the projection with the correct columns.
+   * @em Initialize() or @em InitializeEmpty() to appropriately initialize the
+   * projection with the correct columns.
+   *
+   * @see Initialize()
+   * @see InitializeEmpty()
    */
   VectorProjection();
 
   /**
-   * Create a vector projection using the column information provided in
-   * @em col_infos.
-   * @param col_infos The metadata of each column in the projection.
+   * Create a vector projection using the column information provided in the
+   * input. An empty vector with the appropriate type is created and initialized
+   * for each element in the input vector.
+   * @param column_info Metadata for each column in the projection.
    */
   explicit VectorProjection(
-      const std::vector<const Schema::ColumnInfo *> &col_infos);
+      const std::vector<const Schema::ColumnInfo *> &column_info);
 
   /**
    * This class cannot be copied or moved.
@@ -55,21 +60,22 @@ class VectorProjection {
 
   /**
    * Initialize a vector projection and create a vector of the specified type
-   * for each type provided in the column metadata list @em col_infos. All
-   * vectors will allocate data, but are initially empty.
-   * @param col_infos Metadata for columns in the projection.
+   * for each type provided in the column metadata list @em column_info. All
+   * vectors will reference data owned by this vector projection.
+   * @param column_info Metadata for columns in the projection.
    */
-  void Initialize(const std::vector<const Schema::ColumnInfo *> &col_infos);
+  void Initialize(const std::vector<const Schema::ColumnInfo *> &column_info);
 
   /**
-   * Initializes an empty vector projection. This will create an empty vector of
+   * Initialize an empty vector projection. This will create an empty vector of
    * the specified type for each type provided in the column metadata list
-   * @em col_infos. Vectors will **NOT** allocate data and are only allowed to
-   * reference data stored and owned externally through calls to ResetColumn().
-   * @param col_infos Metadata for columns in the projection.
+   * @em column_info. All vectors are referencing vectors that reference data
+   * stored (and owned) externally. Column vector data is reset/refreshed
+   * through calls to ResetColumn().
+   * @param column_info Metadata for columns in the projection.
    */
   void InitializeEmpty(
-      const std::vector<const Schema::ColumnInfo *> &col_infos);
+      const std::vector<const Schema::ColumnInfo *> &column_info);
 
   /**
    * Has this projection been filtered through a selection vector?
@@ -109,11 +115,11 @@ class VectorProjection {
   /**
    * Reset/reload the data for the column at position @em col_idx in the
    * projection using the data from the column iterator at the same position in
-   * the provided vector @em col_iters.
-   * @param col_iters A vector of all column iterators.
+   * the provided vector @em column_iterators.
+   * @param column_iterators A vector of all column iterators.
    * @param col_idx The index of the column in this projection to reset.
    */
-  void ResetColumn(const std::vector<ColumnVectorIterator> &col_iters,
+  void ResetColumn(const std::vector<ColumnVectorIterator> &column_iterators,
                    u32 col_idx);
 
   /**
@@ -139,7 +145,7 @@ class VectorProjection {
   u32 GetTupleCount() const { return tuple_count_; }
 
   /**
-   * Convert to and return a string representation of this vector.
+   * Return a string representation of this vector.
    * @return A string representation of the projection's contents.
    */
   std::string ToString() const;
@@ -165,6 +171,10 @@ class VectorProjection {
   // The number of active tuples; either the number of elements in the selection
   // vector if it's in use, or the total number of elements in the projection.
   u32 tuple_count_;
+
+  // If the vector projection allocates memory for all contained vectors, this
+  // pointer owns that memory.
+  std::unique_ptr<byte[]> owned_buffer_;
 };
 
 }  // namespace tpl::sql

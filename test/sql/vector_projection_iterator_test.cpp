@@ -161,10 +161,9 @@ TEST_F(VectorProjectionIteratorTest, EmptyIteratorTest) {
   // Test: check to see that iteration doesn't begin without an input block
   //
 
-  std::vector<const Schema::ColumnInfo *> vp_col_info;
-  VectorProjection empty_vecproj(vp_col_info);
+  VectorProjection empty_vector_proj;
   VectorProjectionIterator iter;
-  iter.SetVectorProjection(&empty_vecproj);
+  iter.SetVectorProjection(&empty_vector_proj);
 
   for (; iter.HasNext(); iter.Advance()) {
     FAIL() << "Should not iterate with empty vector projection!";
