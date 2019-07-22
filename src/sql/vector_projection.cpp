@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -32,18 +33,19 @@ void VectorProjection::Initialize(
     const std::vector<const Schema::ColumnInfo *> &column_info) {
   InitializeEmpty(column_info);
 
-  // Determine total size of projection in bytes
-  std::size_t size_in_bytes = 0;
-  for (const auto &col : columns_) {
-    size_in_bytes += GetTypeIdSize(col->type_id()) * kDefaultVectorSize;
-  }
+  const auto size_in_bytes = std::accumulate(
+      columns_.begin(), columns_.end(), 0, [&](auto curr_size, auto &col) {
+        const auto type_size = GetTypeIdSize(col->type_id());
+        return curr_size + (type_size * kDefaultVectorSize);
+      });
+  TPL_ASSERT(size_in_bytes > 0, "Cannot have zero-size vector projection");
   owned_buffer_ = std::make_unique<byte[]>(size_in_bytes);
 
-  // Update vectors to reference the buffer we created
   byte *ptr = owned_buffer_.get();
   for (const auto &col : columns_) {
     col->Reference(col->type_id(), ptr, nullptr, 0);
-    ptr += GetTypeIdSize(col->type_id()) * kDefaultVectorSize;
+    const auto type_size = GetTypeIdSize(col->type_id());
+    ptr += (type_size * kDefaultVectorSize);
   }
 }
 

@@ -7,7 +7,8 @@
 #include <string>
 #include <utility>
 
-#include "logging/logger.h"
+#include "spdlog/fmt/fmt.h"
+
 #include "sql/vector_operations/vector_operators.h"
 #include "util/bit_util.h"
 
@@ -22,7 +23,6 @@ namespace tpl::sql {
 Vector::Strings::Strings() : region_("vector-strings"), num_strings_(0) {}
 
 char *Vector::Strings::AddString(const std::string_view str) {
-  // Track the number of strings
   num_strings_++;
 
   // Allocate string-length bytes + 1 for the NULL terminator
@@ -30,7 +30,6 @@ char *Vector::Strings::AddString(const std::string_view str) {
   auto ptr = region_.Allocate(num_bytes, alignof(char *));
   std::memcpy(ptr, str.data(), num_bytes);
 
-  // Done
   return reinterpret_cast<char *>(ptr);
 }
 
