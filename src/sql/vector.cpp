@@ -146,10 +146,10 @@ void Vector::SetValue(const u64 index, const GenericValue &val) {
   TPL_ASSERT(index <= count_, "Out-of-bounds vector access");
   TPL_ASSERT(type_ == val.type_id(), "Mismatched types");
   SetNull(index, val.is_null());
-  uint64_t actual_index = sel_vector_ ? sel_vector_[index] : index;
+  const u64 actual_index = sel_vector_ != nullptr ? sel_vector_[index] : index;
   switch (type_) {
     case TypeId::Boolean: {
-      const auto new_boolean = val.is_null() ? 0 : val.value_.boolean;
+      const auto new_boolean = val.is_null() ? false : val.value_.boolean;
       reinterpret_cast<bool *>(data_)[actual_index] = new_boolean;
       break;
     }

@@ -252,7 +252,7 @@ struct TestTuple {
 // Generic function to perform a parallel sort. The input parameter indicates
 // the sizes of each thread-local sorter that will be created.
 template <u32 N>
-void TestParallelSort(const std::vector<u32> sorter_sizes) {
+void TestParallelSort(const std::vector<u32> &sorter_sizes) {
   // Comparison function
   static const auto cmp_fn = [](const void *left, const void *right) {
     const auto *l = reinterpret_cast<const TestTuple<N> *>(left);

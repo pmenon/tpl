@@ -73,14 +73,14 @@ bool IsSorted(const Vector &vec) {
   for (u32 i = 1; i < vec.count(); i++) {
     bool left_null = vec.null_mask()[i];
     bool right_null = vec.null_mask()[i];
-    if (!left_null && right_null) {
+    if (left_null != right_null) {
       return false;
-    } else if (left_null) {
+    }
+    if (left_null) {
       continue;
-    } else {
-      if (!LessThanEqual::Apply<T>(data[i], data[i])) {
-        return false;
-      }
+    }
+    if (!LessThanEqual::Apply<T>(data[i], data[i])) {
+      return false;
     }
   }
   return true;
