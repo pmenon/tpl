@@ -1,10 +1,10 @@
 #include "tpl_test.h"  // NOLINT
 
-#include "util/bit_util.h"
+#include "util/bit_vector.h"
 
 namespace tpl::util::test {
 
-TEST(BitUtilTest, BitVectorSize) {
+TEST(BitVectorTest, BitVectorSize) {
   // We need at least one word for 1 bit
   EXPECT_EQ(1u, BitUtil::Num32BitWordsFor(1));
 
@@ -16,45 +16,45 @@ TEST(BitUtilTest, BitVectorSize) {
   EXPECT_EQ(2u, BitUtil::Num32BitWordsFor(33));
 }
 
-TEST(BitUtilTest, EmptyBitVector) {
+TEST(BitVectorTest, EmptyBitVector) {
   //
   // Create an empty bit vector, ensure all bits unset
   //
 
   BitVector bv(100);
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (u32 i = 0; i < bv.GetNumBits(); i++) {
     EXPECT_FALSE(bv[i]);
   }
 }
 
-TEST(BitUtilTest, ClearBits) {
+TEST(BitVectorTest, ClearBits) {
   //
   // Create a bit vector, set all the bits, clear it, check
   //
 
   BitVector bv(10);
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (u32 i = 0; i < bv.GetNumBits(); i++) {
     bv.Set(i);
   }
   bv.ClearAll();
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (u32 i = 0; i < bv.GetNumBits(); i++) {
     EXPECT_FALSE(bv[i]);
   }
 }
 
-TEST(BitUtilTest, TestAndSet) {
+TEST(BitVectorTest, TestAndSet) {
   //
   // Create a BitVector, set every odd bit position
   //
 
   BitVector bv(100);
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (u32 i = 0; i < bv.GetNumBits(); i++) {
     if (i % 2 == 0) {
       bv.Set(i);
     }
   }
 
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (u32 i = 0; i < bv.GetNumBits(); i++) {
     if (i % 2 == 0) {
       EXPECT_TRUE(bv[i]);
     } else {
@@ -63,12 +63,12 @@ TEST(BitUtilTest, TestAndSet) {
   }
 
   // Flip every bit
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (u32 i = 0; i < bv.GetNumBits(); i++) {
     bv.Flip(i);
   }
 
   // Now, every even bit position should be set
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (u32 i = 0; i < bv.GetNumBits(); i++) {
     if (i % 2 == 0) {
       EXPECT_FALSE(bv[i]);
     } else {
@@ -77,59 +77,59 @@ TEST(BitUtilTest, TestAndSet) {
   }
 
   // Now, manually unset every bit
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (u32 i = 0; i < bv.GetNumBits(); i++) {
     bv.Unset(i);
   }
 
   // Ensure all unset
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (u32 i = 0; i < bv.GetNumBits(); i++) {
     EXPECT_FALSE(bv[i]);
   }
 }
 
-TEST(BitUtilTest, SetToValue) {
+TEST(BitVectorTest, SetToValue) {
   BitVector bv(100);
 
   bv.ClearAll();
   bv.SetTo(10, true);
 
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (u32 i = 0; i < bv.GetNumBits(); i++) {
     EXPECT_EQ(i == 10u, bv.Test(i));
   }
 
   bv.SetTo(80, true);
   bv.SetTo(10, false);
 
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (u32 i = 0; i < bv.GetNumBits(); i++) {
     EXPECT_EQ(i == 80u, bv.Test(i));
   }
 
   bv.SetTo(80, false);
 
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (u32 i = 0; i < bv.GetNumBits(); i++) {
     EXPECT_FALSE(bv.Test(i));
   }
 }
 
-TEST(BitUtilTest, InlinedBitVector) {
+TEST(BitVectorTest, InlinedBitVector) {
   InlinedBitVector<64> bits;
 
-  EXPECT_EQ(64u, bits.num_bits());
+  EXPECT_EQ(64u, bits.GetNumBits());
 
   // Initially all false
-  for (u32 i = 0; i < bits.num_bits(); i++) {
+  for (u32 i = 0; i < bits.GetNumBits(); i++) {
     EXPECT_FALSE(bits.Test(i));
   }
 
   // Set even bits
-  for (u32 i = 0; i < bits.num_bits(); i++) {
+  for (u32 i = 0; i < bits.GetNumBits(); i++) {
     if (i % 2 == 0) {
       bits.Set(i);
     }
   }
 
   // Check
-  for (u32 i = 0; i < bits.num_bits(); i++) {
+  for (u32 i = 0; i < bits.GetNumBits(); i++) {
     auto set = bits.Test(i);
     if (i % 2 == 0) {
       EXPECT_TRUE(set);
@@ -142,7 +142,7 @@ TEST(BitUtilTest, InlinedBitVector) {
   bits.ClearAll();
 
   // Final check all 0
-  for (u32 i = 0; i < bits.num_bits(); i++) {
+  for (u32 i = 0; i < bits.GetNumBits(); i++) {
     EXPECT_FALSE(bits.Test(i));
   }
 }

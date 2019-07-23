@@ -1,9 +1,9 @@
 #include "sql/functions/string_functions.h"
 
 #include <algorithm>
+#include <bitset>
 
 #include "sql/execution_context.h"
-#include "util/bit_util.h"
 
 namespace tpl::sql {
 
@@ -295,22 +295,22 @@ void DoTrim(StringVal *result, const StringVal &str, const StringVal &chars) {
     return;
   }
 
-  util::InlinedBitVector<256> bitset;
+  std::bitset<256> bitset;
   for (u32 i = 0; i < chars.len; i++) {
-    bitset.Set(chars.ptr[i]);
+    bitset.set(chars.ptr[i]);
   }
 
   // The valid range
   i32 begin = 0, end = str.len - 1;
 
   if constexpr (TrimLeft) {
-    while (begin < static_cast<i32>(str.len) && bitset.Test(str.ptr[begin])) {
+    while (begin < static_cast<i32>(str.len) && bitset.test(str.ptr[begin])) {
       begin++;
     }
   }
 
   if constexpr (TrimRight) {
-    while (begin <= end && bitset.Test(str.ptr[end])) {
+    while (begin <= end && bitset.test(str.ptr[end])) {
       end--;
     }
   }
