@@ -13,23 +13,16 @@ namespace tpl::util {
 class BitVector {
  public:
   /**
-   * Create an uninitialized bit vector. Callers **MUST** use Init() before
-   * interacting with the BitVector.
-   */
-  BitVector() : owned_bits_(nullptr), bits_(nullptr), num_bits_(0) {}
-
-  /**
    * Create a new bit vector with the specified number of bits.
    * @param num_bits The number of bits in the vector.
    */
-  explicit BitVector(u32 num_bits, bool clear = true)
+  explicit BitVector(const u32 num_bits)
       : owned_bits_(
             std::make_unique<u32[]>(BitUtil::Num32BitWordsFor(num_bits))),
         bits_(owned_bits_.get()),
         num_bits_(num_bits) {
-    if (clear) {
-      ClearAll();
-    }
+    TPL_ASSERT(num_bits_ > 0, "Cannot create bit vector with zero bits");
+    ClearAll();
   }
 
   /**
@@ -38,17 +31,11 @@ class BitVector {
    * @param unowned_bits The externally managed bit vector.
    * @param num_bits The number of bits in the vector.
    */
-  BitVector(u32 *unowned_bits, u32 num_bits)
-      : owned_bits_(nullptr), bits_(unowned_bits), num_bits_(num_bits) {}
-
-  /**
-   * Initialize a new bit vector with the given size.
-   * @param num_bits The number of bits to size the vector with.
-   */
-  void Init(u32 num_bits) {
-    owned_bits_ = std::make_unique<u32[]>(BitUtil::Num32BitWordsFor(num_bits));
-    bits_ = owned_bits_.get();
-    num_bits_ = num_bits;
+  BitVector(u32 *const unowned_bits, const u32 num_bits)
+      : owned_bits_(nullptr), bits_(unowned_bits), num_bits_(num_bits) {
+    TPL_ASSERT(bits_ != nullptr,
+               "Cannot create bit vector referencing NULL bitmap");
+    TPL_ASSERT(num_bits_ > 0, "Cannot create bit vector with zero bits");
   }
 
   /**
@@ -101,12 +88,17 @@ class BitVector {
   /**
    * Write zeroes to all bits in the bit vector.
    */
-  void ClearAll() { return BitUtil::Clear(bits_, num_bits_); }
+  void ClearAll() { BitUtil::SetAll(bits_, num_bits_, false); }
+
+  /**
+   * Write ones to all bits in the bit vector.
+   */
+  void SetAll() { BitUtil::SetAll(bits_, num_bits_, true); }
 
   /**
    * Return the number of bits in the bit vector.
    */
-  u32 GetNumBits() const noexcept { return num_bits_; }
+  u32 num_bits() const noexcept { return num_bits_; }
 
   /**
    * Access the boolean value of the bit a the given index using an array

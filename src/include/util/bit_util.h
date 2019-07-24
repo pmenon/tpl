@@ -96,13 +96,16 @@ class BitUtil {
   }
 
   /**
-   * Clear all bits in the bit vector
-   * @param bits The bit vector
-   * @param num_bits The number of elements in the bit vector
+   * Set all bits in the bit vector to the given value.
+   * @param bits The bit vector.
+   * @param num_bits The number of elements in the bit vector.
+   * @param val The value to set all bits to; 1 if true, false otherwise.
    */
-  ALWAYS_INLINE static void Clear(u32 bits[], const u64 num_bits) {
-    auto num_words = Num32BitWordsFor(num_bits);
-    std::memset(bits, 0, num_words * sizeof(u32));
+  ALWAYS_INLINE static void SetAll(u32 bits[], const u64 num_bits,
+                                   const bool val) {
+    const auto num_words = Num32BitWordsFor(num_bits);
+    const auto num_bytes = num_words * sizeof(u32);
+    std::memset(bits, val ? 1 : 0, num_bytes);
   }
 
   /**
