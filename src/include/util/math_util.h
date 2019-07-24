@@ -21,7 +21,7 @@ class MathUtil {
    * @param denominator The denominator
    * @return The result of the division rounded up to the next integer value
    */
-  static u64 DivRoundUp(u64 numerator, u64 denominator) {
+  constexpr static u64 DivRoundUp(u64 numerator, u64 denominator) {
     return (numerator + denominator - 1) / denominator;
   }
 
@@ -30,7 +30,7 @@ class MathUtil {
    * @param val The value to check
    * @return True if the value is a power of two > 0
    */
-  static constexpr bool IsPowerOf2(u64 val) { return llvm::isPowerOf2_64(val); }
+  constexpr static bool IsPowerOf2(u64 val) { return llvm::isPowerOf2_64(val); }
 
   /**
    * Compute the next power of two strictly greater than the input @em val
@@ -63,7 +63,7 @@ class MathUtil {
    * @param alignment The desired alignment
    * @return Whether the value has the desired alignment
    */
-  static bool IsAligned(u64 value, u64 alignment) {
+  constexpr static bool IsAligned(u64 value, u64 alignment) {
     TPL_ASSERT(alignment != 0u && IsPowerOf2(alignment),
                "Align must be a non-zero power of two.");
     return (value & (alignment - 1)) == 0;
@@ -84,7 +84,7 @@ class MathUtil {
    * @param alignment
    * @return
    */
-  static bool IsAlignedGeneric(u64 value, u64 alignment) {
+  constexpr static bool IsAlignedGeneric(u64 value, u64 alignment) {
     TPL_ASSERT(alignment != 0u, "Align must be non-zero.");
     return (value % alignment) == 0;
   }
