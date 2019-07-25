@@ -84,7 +84,7 @@ class BitVectorBase {
   }
 
   /**
-   * Write zeroes to all bits in the bit vector.
+   * Set all bits to 0.
    */
   void UnsetAll() {
     const auto num_bytes = impl()->num_words() * kWordSizeBytes;
@@ -100,6 +100,22 @@ class BitVectorBase {
     TPL_ASSERT(position < impl()->num_bits(), "Index out of range");
     WordType *data = impl()->data_array();
     data[position / kWordSizeBits] ^= WordType(1) << (position % kWordSizeBits);
+  }
+
+  /**
+   * Invert all bits.
+   */
+  void FlipAll() {
+    auto *data_array = impl()->data_array();
+    const auto num_words = impl()->num_words();
+    // Invert all words in vector except the last
+    for (u32 i = 0; i < num_words - 1; i++) {
+      data_array[i] = ~data_array[i];
+    }
+    // The last word is special
+    const auto mask = ~static_cast<WordType>(0) >>
+                      (num_words * kWordSizeBits - impl()->num_bits());
+    data_array[num_words - 1] = (mask & ~data_array[num_words - 1]);
   }
 
   /**
@@ -157,11 +173,9 @@ class BitVectorBase {
     const auto *data_array = impl()->data_array();
 
     auto word_idx = position / kWordSizeBits;
-    auto bit_idx = position % kWordSizeBits;
 
-    if (bool mid_word = bit_idx != 0; mid_word) {
-      auto word =
-          data_array[word_idx] >> (position - (word_idx * kWordSizeBits));
+    if (const auto bit_idx = position % kWordSizeBits; bit_idx != 0) {
+      const auto word = data_array[word_idx] >> bit_idx;
       if (word != 0) {
         return position + BitUtil::CountTrailingZeros(word);
       }

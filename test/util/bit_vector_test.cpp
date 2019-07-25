@@ -1,8 +1,27 @@
+#include <unordered_set>
+
 #include "tpl_test.h"  // NOLINT
 
 #include "util/bit_vector.h"
 
 namespace tpl::util::test {
+
+namespace {
+
+// Verify that only specific bits are set
+template <typename BitVectorType>
+bool Verify(BitVectorType &bv, std::initializer_list<u32> idxs) {
+  std::unordered_set<u32> positions(idxs);
+  for (u32 i = 0; i < bv.num_bits(); i++) {
+    bool expected_in_bits = positions.count(i);
+    if (expected_in_bits != bv[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+}  // namespace
 
 TEST(BitVectorTest, BitVectorSize) {
   // We need at least one word for 1 bit
@@ -16,7 +35,7 @@ TEST(BitVectorTest, BitVectorSize) {
   EXPECT_EQ(2u, BitVector::NumNeededWords(65));
 }
 
-TEST(BitVectorTest, Simple) {
+TEST(BitVectorTest, Init) {
   BitVector bv(100);
   EXPECT_EQ(2u, bv.num_words());
   EXPECT_EQ(100u, bv.num_bits());
@@ -26,18 +45,40 @@ TEST(BitVectorTest, Simple) {
   }
 }
 
-TEST(BitVectorTest, SetAndClearAll) {
+TEST(BitVectorTest, Set) {
   BitVector bv(10);
 
+  bv.Set(2);
+  Verify(bv, {2});
+
+  bv.Set(0);
+  Verify(bv, {0, 2});
+
+  bv.Set(7);
+  Verify(bv, {0, 2, 7});
+
   bv.SetAll();
+  Verify(bv, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+}
+
+TEST(BitVectorTest, Unset) {
+  BitVector bv(10);
+
+  // Set every 3rd bit
   for (u32 i = 0; i < bv.num_bits(); i++) {
-    EXPECT_TRUE(bv[i]);
+    if (i % 3 == 0) {
+      bv.Set(i);
+    }
   }
 
+  bv.Unset(3);
+  Verify(bv, {0, 6, 9});
+
+  bv.Unset(9);
+  Verify(bv, {0, 9});
+
   bv.UnsetAll();
-  for (u32 i = 0; i < bv.num_bits(); i++) {
-    EXPECT_FALSE(bv[i]);
-  }
+  Verify(bv, {});
 }
 
 TEST(BitVectorTest, TestAndSet) {
@@ -64,7 +105,7 @@ TEST(BitVectorTest, TestAndSet) {
 }
 
 TEST(BitVectorTest, Flip) {
-  BitVector bv(100);
+  BitVector bv(10);
 
   // Set even bits
   for (u32 i = 0; i < bv.num_bits(); i++) {
@@ -72,37 +113,16 @@ TEST(BitVectorTest, Flip) {
       bv.Set(i);
     }
   }
+  Verify(bv, {0, 2, 4, 6, 8});
 
-  // Flip every bit, now odd bits are set
-  for (u32 i = 0; i < bv.num_bits(); i++) {
-    bv.Flip(i);
-  }
+  bv.Flip(0);
+  Verify(bv, {2, 4, 6, 8});
 
-  // Now, every odd bit position should be set
-  for (u32 i = 0; i < bv.num_bits(); i++) {
-    if (i % 2 == 0) {
-      EXPECT_FALSE(bv[i]);
-    } else {
-      EXPECT_TRUE(bv[i]);
-    }
-  }
-}
+  bv.Flip(8);
+  Verify(bv, {2, 4, 6});
 
-TEST(BitVectorTest, Unset) {
-  BitVector bv(100);
-
-  // Set all to 1
-  bv.SetAll();
-
-  // Now, manually unset every bit
-  for (u32 i = 0; i < bv.num_bits(); i++) {
-    bv.Unset(i);
-  }
-
-  // Ensure all unset
-  for (u32 i = 0; i < bv.num_bits(); i++) {
-    EXPECT_FALSE(bv[i]);
-  }
+  bv.FlipAll();
+  Verify(bv, {0, 1, 3, 5, 7, 8, 9});
 }
 
 TEST(BitVectorTest, Any) {
