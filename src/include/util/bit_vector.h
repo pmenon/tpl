@@ -123,7 +123,7 @@ class BitVectorBase {
    * @return True if any bit in the vector is set to 1; false otherwise.
    */
   bool Any() const {
-    const auto *data_array = impl()->data_array();
+    const WordType *data_array = impl()->data_array();
     for (u32 i = 0; i < impl()->num_words(); i++) {
       if (data_array[i] != static_cast<WordType>(0)) {
         return true;
@@ -137,7 +137,7 @@ class BitVectorBase {
    * @return True if all bits are set to 1; false otherwise.
    */
   bool All() const {
-    const auto *data_array = impl()->data_array();
+    const WordType *data_array = impl()->data_array();
     const auto num_words = impl()->num_words();
     for (u32 i = 0; i < num_words - 1; i++) {
       if (data_array[i] != ~static_cast<WordType>(0)) {
@@ -154,7 +154,7 @@ class BitVectorBase {
    * @return True if all bits are set to 0; false otherwise.
    */
   bool None() const {
-    const auto *data_array = impl()->data_array();
+    const WordType *data_array = impl()->data_array();
     for (u32 i = 0; i < impl()->num_words(); i++) {
       if (data_array[i] != static_cast<WordType>(0)) {
         return false;
@@ -164,61 +164,29 @@ class BitVectorBase {
   }
 
   /**
-   * Find the first 1-bit at or after the given position in this bit vector.
-   * @param position The starting position to search from.
-   * @return The index of the first 1-bit at or after @em position. If there are
-   *         no 1-bits, return the size of the bit vector.
+   * Iterate all bits in this vector and invoke the callback with the index of
+   * set bits only.
+   * @tparam F The type of the callback function. Must accept a single unsigned
+   *           integer value.
+   * @param callback The callback function to invoke with the index of set bits.
    */
-  u32 FirstOne(u32 position = 0) const {
-    const auto *data_array = impl()->data_array();
+  template <typename F>
+  void IterateSetBits(F &&callback) const {
+    static_assert(std::is_invocable_v<F, u32>,
+                  "Callback must be a single-argument functor accepting an "
+                  "unsigned 32-bit index");
 
-    auto word_idx = position / kWordSizeBits;
+    const WordType *data_array = impl()->data_array();
 
-    if (const auto bit_idx = position % kWordSizeBits; bit_idx != 0) {
-      const auto word = data_array[word_idx] >> bit_idx;
-      if (word != 0) {
-        return position + BitUtil::CountTrailingZeros(word);
+    for (u32 i = 0; i < impl()->num_words(); i++) {
+      WordType word = data_array[i];
+      while (word != 0) {
+        const WordType t = word & -word;
+        const i32 r = BitUtil::CountTrailingZeros(word);
+        callback(i * kWordSizeBits + r);
+        word ^= t;
       }
-      word_idx++;
     }
-
-    for (u32 i = word_idx; i < impl()->num_words(); i++) {
-      if (data_array[i] != static_cast<WordType>(0)) {
-        return (i * kWordSizeBits) + BitUtil::CountTrailingZeros(data_array[i]);
-      }
-    }
-
-    return impl()->num_bits();
-  }
-
-  /**
-   * Find the first 0-bit at or after the given position in this bit vector.
-   * @param position The starting position to search from.
-   * @return The index of the first 1-bit at or after @em position. If there are
-   *         no 0-bits, return the size of the bit vector.
-   */
-  u32 FirstZero(const u32 position = 0) const {
-    throw std::runtime_error("Implement me");
-  }
-
-  /**
-   * Find the last 0-bit strictly before the given position in this bit vector.
-   * @param position The starting position to search from.
-   * @return The index of the last 0-bit strictly before the given position. If
-   *         there are no 0-bits, return 0.
-   */
-  u32 LastOne(const u32 position = std::numeric_limits<u32>::max()) const {
-    throw std::runtime_error("Implement me");
-  }
-
-  /**
-   * Find the last 0-bit strictly before the given position in this bit vector.
-   * @param position The starting position to search from.
-   * @return The index of the last 0-bit strictly before the given position. If
-   *         there are no 0-bits, return 0.
-   */
-  u32 LastZero(const u32 position = std::numeric_limits<u32>::max()) const {
-    throw std::runtime_error("Implement me");
   }
 
   /**
@@ -228,7 +196,7 @@ class BitVectorBase {
    */
   u32 CountOnes(const u32 position = 0) const {
     u32 count = 0;
-    const auto *data_array = impl()->data_array();
+    const WordType *data_array = impl()->data_array();
     for (u32 i = 0; i < impl()->num_words(); i++) {
       count += util::BitUtil::CountBits(data_array[i]);
     }

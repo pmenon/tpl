@@ -181,23 +181,19 @@ TEST(BitVectorTest, None) {
   EXPECT_TRUE(bv.None());
 }
 
-TEST(BitVectorTest, FindFirstOne) {
+TEST(BitVectorTest, Iterate) {
   // Simple
   {
     BitVector bv(100);
-    EXPECT_EQ(bv.num_bits(), bv.FirstOne());
+    bv.IterateSetBits([](UNUSED auto idx) {
+      FAIL() << "Empty bit vectors shouldn't have any set bits";
+    });
 
-    bv.Set(10);
-    EXPECT_EQ(10u, bv.FirstOne());
-    EXPECT_EQ(bv.num_bits(), bv.FirstOne(11));
-
-    bv.Set(32);
-    EXPECT_EQ(32u, bv.FirstOne(11));
-    EXPECT_EQ(bv.num_bits(), bv.FirstOne(33));
+    bv.Set(99);
+    bv.IterateSetBits([](auto idx) { EXPECT_EQ(99u, idx); });
 
     bv.Set(64);
-    EXPECT_EQ(64u, bv.FirstOne(33));
-    EXPECT_EQ(bv.num_bits(), bv.FirstOne(65));
+    bv.IterateSetBits([](auto idx) { EXPECT_TRUE(idx == 64 || idx == 99); });
   }
 
   // Complex 1
@@ -209,11 +205,13 @@ TEST(BitVectorTest, FindFirstOne) {
         bv.Set(i);
       }
     }
+
     // Check
-    auto position = bv.FirstOne();
-    for (; position != bv.num_bits(); position = bv.FirstOne(position + 1)) {
-      EXPECT_TRUE(position % 2 == 0);
-    }
+    bv.IterateSetBits([](auto idx) { EXPECT_TRUE(idx % 2 == 0); });
+
+    // Flip and check again
+    bv.FlipAll();
+    bv.IterateSetBits([](auto idx) { EXPECT_TRUE(idx % 2 != 0); });
   }
 }
 
