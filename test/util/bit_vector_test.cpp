@@ -61,6 +61,29 @@ TEST(BitVectorTest, Set) {
   Verify(bv, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
 }
 
+TEST(BitVectorTest, SetTo) {
+  BitVector bv(10);
+
+  bv.SetTo(2, true);
+  Verify(bv, {2});
+
+  // Repeats work
+  bv.SetTo(2, true);
+  Verify(bv, {2});
+
+  bv.SetTo(2, false);
+  Verify(bv, {});
+
+  bv.SetTo(3, true);
+  Verify(bv, {3});
+
+  bv.SetTo(2, true);
+  Verify(bv, {2, 3});
+
+  bv.SetAll();
+  Verify(bv, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+}
+
 TEST(BitVectorTest, Unset) {
   BitVector bv(10);
 

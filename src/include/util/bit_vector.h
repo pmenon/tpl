@@ -43,7 +43,7 @@ class BitVectorBase {
    */
   bool Test(const u32 position) const {
     TPL_ASSERT(position < impl()->num_bits(), "Index out of range");
-    const WordType *data = impl()->data_array();
+    const WordType *const data = impl()->data_array();
     const WordType mask = WordType(1) << (position % kWordSizeBits);
     return data[position / kWordSizeBits] & mask;
   }
@@ -54,8 +54,21 @@ class BitVectorBase {
    */
   void Set(const u32 position) {
     TPL_ASSERT(position < impl()->num_bits(), "Index out of range");
-    WordType *data = impl()->data_array();
+    WordType *const data = impl()->data_array();
     data[position / kWordSizeBits] |= WordType(1) << (position % kWordSizeBits);
+  }
+
+  /**
+   * Set the bit at the given position to a given value.
+   * @param position The index of the bit to set.
+   * @param v The value to set the bit to.
+   */
+  void SetTo(const u32 position, const bool v) {
+    TPL_ASSERT(position < impl()->num_bits(), "Index out of range");
+    WordType *const data = impl()->data_array();
+    WordType mask = static_cast<WordType>(1) << (position % kWordSizeBits);
+    data[position / kWordSizeBits] ^=
+        (-static_cast<WordType>(v) ^ data[position / kWordSizeBits]) & mask;
   }
 
   /**
