@@ -1,5 +1,7 @@
 #pragma once
 
+#include <immintrin.h>
+
 #include "util/bit_util.h"
 #include "util/common.h"
 #include "util/math_util.h"
@@ -214,6 +216,41 @@ class BitVectorBase {
       count += util::BitUtil::CountBits(data_array[i]);
     }
     return count;
+  }
+
+  /**
+   * Populate this bit vector from the values stored in the given bytes. The
+   * byte array is assumed to be a "saturated" match vector, i.e., true values
+   * are all 1's (255 = 11111111 = std::numeric_limits<u8>::max()), and false
+   * values are all 0.
+   * @param bytes The array of saturated bytes to read.
+   * @param num_bytes The number of bytes in the input array.
+   */
+  void SetFromBytes(const i8 *const bytes, const u32 num_bytes) {
+    TPL_ASSERT(bytes != nullptr, "Null input");
+    TPL_ASSERT(num_bytes == impl()->num_bits(), "Byte vector too small");
+
+    // The words making up the bit vector.
+    WordType *const data_array = impl()->data_array();
+
+    // The index used to read from input byte array.
+    u32 i = 0;
+
+    // Primary SIMD section. Process 64 entries at a time.
+    for (u32 k = 0; i + 64 <= num_bytes; i += 64, k++) {
+      const auto v_lo =
+          _mm256_loadu_si256(reinterpret_cast<const __m256i *>(bytes + i));
+      const auto v_hi =
+          _mm256_loadu_si256(reinterpret_cast<const __m256i *>(bytes + i + 32));
+      const auto hi = static_cast<u32>(_mm256_movemask_epi8(v_hi));
+      const auto lo = static_cast<u32>(_mm256_movemask_epi8(v_lo));
+      data_array[k] |= (static_cast<WordType>(hi) << 32u) | lo;
+    }
+
+    // Process the tail of the array.
+    for (; i < num_bytes; i++) {
+      SetTo(i, bytes[i]);
+    }
   }
 
   /**

@@ -1,3 +1,4 @@
+#include <random>
 #include <unordered_set>
 
 #include "tpl_test.h"  // NOLINT
@@ -15,6 +16,17 @@ bool Verify(BitVectorType &bv, std::initializer_list<u32> idxs) {
   for (u32 i = 0; i < bv.num_bits(); i++) {
     bool expected_in_bits = positions.count(i);
     if (expected_in_bits != bv[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Verify that the callback returns true for all set indexes
+template <typename BitVectorType, typename F>
+bool Verify(BitVectorType &bv, F &&f) {
+  for (u32 i = 0; i < bv.num_bits(); i++) {
+    if (bv[i] && !f(i)) {
       return false;
     }
   }
@@ -49,39 +61,39 @@ TEST(BitVectorTest, Set) {
   BitVector bv(10);
 
   bv.Set(2);
-  Verify(bv, {2});
+  EXPECT_TRUE(Verify(bv, {2}));
 
   bv.Set(0);
-  Verify(bv, {0, 2});
+  EXPECT_TRUE(Verify(bv, {0, 2}));
 
   bv.Set(7);
-  Verify(bv, {0, 2, 7});
+  EXPECT_TRUE(Verify(bv, {0, 2, 7}));
 
   bv.SetAll();
-  Verify(bv, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+  EXPECT_TRUE(Verify(bv, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
 }
 
 TEST(BitVectorTest, SetTo) {
   BitVector bv(10);
 
   bv.SetTo(2, true);
-  Verify(bv, {2});
+  EXPECT_TRUE(Verify(bv, {2}));
 
   // Repeats work
   bv.SetTo(2, true);
-  Verify(bv, {2});
+  EXPECT_TRUE(Verify(bv, {2}));
 
   bv.SetTo(2, false);
-  Verify(bv, {});
+  EXPECT_TRUE(Verify(bv, {}));
 
   bv.SetTo(3, true);
-  Verify(bv, {3});
+  EXPECT_TRUE(Verify(bv, {3}));
 
   bv.SetTo(2, true);
-  Verify(bv, {2, 3});
+  EXPECT_TRUE(Verify(bv, {2, 3}));
 
   bv.SetAll();
-  Verify(bv, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+  EXPECT_TRUE(Verify(bv, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
 }
 
 TEST(BitVectorTest, Unset) {
@@ -93,15 +105,16 @@ TEST(BitVectorTest, Unset) {
       bv.Set(i);
     }
   }
+  EXPECT_TRUE(Verify(bv, {0, 3, 6, 9}));
 
   bv.Unset(3);
-  Verify(bv, {0, 6, 9});
+  EXPECT_TRUE(Verify(bv, {0, 6, 9}));
 
   bv.Unset(9);
-  Verify(bv, {0, 9});
+  EXPECT_TRUE(Verify(bv, {0, 6}));
 
   bv.UnsetAll();
-  Verify(bv, {});
+  EXPECT_TRUE(Verify(bv, {}));
 }
 
 TEST(BitVectorTest, TestAndSet) {
@@ -136,16 +149,16 @@ TEST(BitVectorTest, Flip) {
       bv.Set(i);
     }
   }
-  Verify(bv, {0, 2, 4, 6, 8});
+  EXPECT_TRUE(Verify(bv, {0, 2, 4, 6, 8}));
 
   bv.Flip(0);
-  Verify(bv, {2, 4, 6, 8});
+  EXPECT_TRUE(Verify(bv, {2, 4, 6, 8}));
 
   bv.Flip(8);
-  Verify(bv, {2, 4, 6});
+  EXPECT_TRUE(Verify(bv, {2, 4, 6}));
 
   bv.FlipAll();
-  Verify(bv, {0, 1, 3, 5, 7, 8, 9});
+  EXPECT_TRUE(Verify(bv, {0, 1, 3, 5, 7, 8, 9}));
 }
 
 TEST(BitVectorTest, Any) {
@@ -202,6 +215,44 @@ TEST(BitVectorTest, None) {
 
   bv.UnsetAll();
   EXPECT_TRUE(bv.None());
+}
+
+TEST(BitVectorTest, SetFromBytes) {
+  // Simple
+  {
+    BitVector bv(10);
+
+    // Set first last bit only
+    bv.SetFromBytes(std::vector<i8>{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1}.data(), 10);
+    EXPECT_TRUE(Verify(bv, {0, 9}));
+
+    // Set odd bits
+    bv.SetFromBytes(std::vector<i8>{0, -1, 0, -1, 0, -1, 0, -1, 0, -1}.data(),
+                    10);
+    EXPECT_TRUE(Verify(bv, {1, 3, 5, 7, 9}));
+  }
+
+  // Complex
+  {
+    // Use a non-multiple of the vector size to force execution of the tail
+    // process loop.
+    constexpr u32 vec_size = kDefaultVectorSize + 101 /* prime */;
+    BitVector bv(vec_size);
+
+    // Set even indexes
+    std::random_device r;
+    alignas(16) i8 bytes[vec_size] = {0};
+    u32 num_set = 0;
+    for (auto &byte : bytes) {
+      byte = -(r() % 4 == 0);
+      num_set += (byte == -1);
+    }
+
+    // Check only even indexes set
+    bv.SetFromBytes(bytes, vec_size);
+    EXPECT_TRUE(Verify(bv, [&](u32 idx) { return bytes[idx] == -1; }));
+    EXPECT_EQ(num_set, bv.CountOnes());
+  }
 }
 
 TEST(BitVectorTest, Iterate) {
