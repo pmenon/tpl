@@ -180,24 +180,24 @@ class BitVectorBase {
 
   /**
    * Return the index of the n-th 1-bit in this bit vector.
-   * @param n The starting position to search from.
+   * @param n Which 1-bit to look for.
    * @return The index of the n-th 1-bit. If there are fewer than @em n bits,
    *         return the size of the bit vector.
    */
   u32 NthOne(u32 n) const {
     const WordType *data_array = impl()->data_array();
-    const u32 num_bits = impl()->num_bits();
+
     for (u32 i = 0; i < impl()->num_words(); i++) {
       const WordType word = data_array[i];
       const u32 count = BitUtil::CountBits(word);
       if (n < count) {
         const WordType mask = _pdep_u64(static_cast<WordType>(1) << n, word);
         const u32 pos = BitUtil::CountTrailingZeros(mask);
-        return std::min(num_bits, (i * kWordSizeBits) + pos);
+        return std::min(impl()->num_bits(), (i * kWordSizeBits) + pos);
       }
       n -= count;
     }
-    return num_bits;
+    return impl()->num_bits();
   }
 
   /**
@@ -219,7 +219,7 @@ class BitVectorBase {
       WordType word = data_array[i];
       while (word != 0) {
         const WordType t = word & -word;
-        const i32 r = BitUtil::CountTrailingZeros(word);
+        const u32 r = BitUtil::CountTrailingZeros(word);
         callback(i * kWordSizeBits + r);
         word ^= t;
       }
