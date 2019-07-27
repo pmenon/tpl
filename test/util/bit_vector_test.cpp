@@ -35,6 +35,13 @@ bool Verify(BitVectorType &bv, F &&f) {
 
 }  // namespace
 
+BitVector Make(std::initializer_list<u32> vals) {
+  BitVector bv(vals.size());
+  std::for_each(vals.begin(), vals.end(),
+                [&, i = 0](auto &bval) mutable { bv.SetTo(i++, bval); });
+  return bv;
+}
+
 TEST(BitVectorTest, BitVectorSize) {
   // We need at least one word for 1 bit
   EXPECT_EQ(1u, BitVector::NumNeededWords(1));
@@ -252,6 +259,32 @@ TEST(BitVectorTest, SetFromBytes) {
     bv.SetFromBytes(bytes, vec_size);
     EXPECT_TRUE(Verify(bv, [&](u32 idx) { return bytes[idx] == -1; }));
     EXPECT_EQ(num_set, bv.CountOnes());
+  }
+}
+
+TEST(BitVectorTest, NthOne) {
+  {
+    BitVector bv = Make({0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0});
+    EXPECT_EQ(2u, bv.NthOne(0));
+    EXPECT_EQ(5u, bv.NthOne(1));
+    EXPECT_EQ(7u, bv.NthOne(2));
+    EXPECT_EQ(8u, bv.NthOne(3));
+    EXPECT_EQ(10u, bv.NthOne(4));
+    EXPECT_EQ(bv.num_bits(), bv.NthOne(10));
+  }
+
+  // Multi-word
+  {
+    BitVector bv(140);
+    EXPECT_EQ(bv.num_bits(), bv.NthOne(0));
+
+    bv.Set(7);
+    bv.Set(71);
+    bv.Set(131);
+
+    EXPECT_EQ(7u, bv.NthOne(0));
+    EXPECT_EQ(71u, bv.NthOne(1));
+    EXPECT_EQ(131u, bv.NthOne(2));
   }
 }
 

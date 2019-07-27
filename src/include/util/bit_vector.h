@@ -179,6 +179,28 @@ class BitVectorBase {
   }
 
   /**
+   * Return the index of the n-th 1-bit in this bit vector.
+   * @param n The starting position to search from.
+   * @return The index of the n-th 1-bit. If there are fewer than @em n bits,
+   *         return the size of the bit vector.
+   */
+  u32 NthOne(u32 n) const {
+    const WordType *data_array = impl()->data_array();
+    const u32 num_bits = impl()->num_bits();
+    for (u32 i = 0; i < impl()->num_words(); i++) {
+      const WordType word = data_array[i];
+      const u32 count = BitUtil::CountBits(word);
+      if (n < count) {
+        const WordType mask = _pdep_u64(static_cast<WordType>(1) << n, word);
+        const u32 pos = BitUtil::CountTrailingZeros(mask);
+        return std::min(num_bits, (i * kWordSizeBits) + pos);
+      }
+      n -= count;
+    }
+    return num_bits;
+  }
+
+  /**
    * Iterate all bits in this vector and invoke the callback with the index of
    * set bits only.
    * @tparam F The type of the callback function. Must accept a single unsigned
