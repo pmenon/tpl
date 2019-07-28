@@ -11,15 +11,23 @@ namespace {
 
 // Verify that only specific bits are set
 template <typename BitVectorType>
-bool Verify(BitVectorType &bv, std::initializer_list<u32> idxs) {
+::testing::AssertionResult Verify(const BitVectorType &bv,
+                                  std::initializer_list<u32> idxs) {
   std::unordered_set<u32> positions(idxs);
+  u32 num_set = 0;
   for (u32 i = 0; i < bv.num_bits(); i++) {
-    bool expected_in_bits = positions.count(i);
-    if (expected_in_bits != bv[i]) {
-      return false;
+    if (bv[i] && positions.count(i) == 0) {
+      return ::testing::AssertionFailure()
+             << "Bit at position " << i
+             << " is set, but not in expected-set list";
     }
+    num_set += bv[i];
   }
-  return true;
+  if (num_set != positions.size()) {
+    return ::testing::AssertionFailure()
+           << num_set << " bit set, not " << positions.size();
+  }
+  return ::testing::AssertionSuccess();
 }
 
 // Verify that the callback returns true for all set indexes
@@ -286,6 +294,27 @@ TEST(BitVectorTest, NthOne) {
     EXPECT_EQ(71u, bv.NthOne(1));
     EXPECT_EQ(131u, bv.NthOne(2));
   }
+}
+
+TEST(BitVectorTest, Intersect) {
+  BitVector bv1 = Make({0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0});
+  BitVector bv2 = Make({0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0});
+  bv1.Intersect(bv2);
+  EXPECT_TRUE(Verify(bv1, {5, 7, 10}));
+}
+
+TEST(BitVectorTest, Union) {
+  BitVector bv1 = Make({0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0});
+  BitVector bv2 = Make({0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0});
+  bv1.Union(bv2);
+  EXPECT_TRUE(Verify(bv1, {1, 2, 5, 7, 8, 10}));
+}
+
+TEST(BitVectorTest, Difference) {
+  BitVector bv1 = Make({0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0});
+  BitVector bv2 = Make({0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0});
+  bv1.Difference(bv2);
+  EXPECT_TRUE(Verify(bv1, {2, 8}));
 }
 
 TEST(BitVectorTest, Iterate) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <immintrin.h>
+#include <string>
 
 #include "util/bit_util.h"
 #include "util/common.h"
@@ -179,6 +180,20 @@ class BitVectorBase {
   }
 
   /**
+   * Count the 1-bits in the bit vector starting at the given position.
+   * @param position The starting position to search from.
+   * @return The number of 1-bits in the bit vector starting at @em position.
+   */
+  u32 CountOnes(const u32 position = 0) const {
+    u32 count = 0;
+    const WordType *data_array = impl()->data_array();
+    for (u32 i = 0; i < impl()->num_words(); i++) {
+      count += util::BitUtil::CountBits(data_array[i]);
+    }
+    return count;
+  }
+
+  /**
    * Return the index of the n-th 1-bit in this bit vector.
    * @param n Which 1-bit to look for.
    * @return The index of the n-th 1-bit. If there are fewer than @em n bits,
@@ -198,6 +213,57 @@ class BitVectorBase {
       n -= count;
     }
     return impl()->num_bits();
+  }
+
+  /**
+   * Perform the bitwise intersection of this bit vector with the provided
+   * @em other bit vector, modifying this bit vector in-place.
+   * @tparam T The CRTP type of the other bit vector.
+   * @param other The bit vector to intersect with. Lengths must match exactly.
+   */
+  template <typename T>
+  void Intersect(const BitVectorBase<T> &other) {
+    TPL_ASSERT(impl()->num_bits() == other.impl()->num_bits(),
+               "Mismatched bit vector size");
+    auto *data = impl()->data_array();
+    auto *other_data = other.impl()->data_array();
+    for (u32 i = 0; i < impl()->num_words(); i++) {
+      data[i] &= other_data[i];
+    }
+  }
+
+  /**
+   * Perform the bitwise union of this bit vector with the provided @em other
+   * bit vector, modifying this bit vector in-place.
+   * @tparam T The CRTP type of the other bit vector.
+   * @param other The bit vector to union with. Lengths must match exactly.
+   */
+  template <typename T>
+  void Union(const BitVectorBase<T> &other) {
+    TPL_ASSERT(impl()->num_bits() == other.impl()->num_bits(),
+               "Mismatched bit vector size");
+    auto *data = impl()->data_array();
+    auto *other_data = other.impl()->data_array();
+    for (u32 i = 0; i < impl()->num_words(); i++) {
+      data[i] |= other_data[i];
+    }
+  }
+
+  /**
+   * Clear all bits in this bit vector whose corresponding bit is set in the
+   * provided bit vector.
+   * @tparam T The CRTP type of the other bit vector.
+   * @param other The bit vector to diff with. Lengths must match exactly.
+   */
+  template <typename T>
+  void Difference(const BitVectorBase<T> &other) {
+    TPL_ASSERT(impl()->num_bits() == other.impl()->num_bits(),
+               "Mismatched bit vector size");
+    auto *data = impl()->data_array();
+    auto *other_data = other.impl()->data_array();
+    for (u32 i = 0; i < impl()->num_words(); i++) {
+      data[i] &= ~other_data[i];
+    }
   }
 
   /**
@@ -224,20 +290,6 @@ class BitVectorBase {
         word ^= t;
       }
     }
-  }
-
-  /**
-   * Count the 1-bits in the bit vector starting at the given position.
-   * @param position The starting position to search from.
-   * @return The number of 1-bits in the bit vector starting at @em position.
-   */
-  u32 CountOnes(const u32 position = 0) const {
-    u32 count = 0;
-    const WordType *data_array = impl()->data_array();
-    for (u32 i = 0; i < impl()->num_words(); i++) {
-      count += util::BitUtil::CountBits(data_array[i]);
-    }
-    return count;
   }
 
   /**
@@ -273,6 +325,22 @@ class BitVectorBase {
     for (; i < num_bytes; i++) {
       SetTo(i, bytes[i]);
     }
+  }
+
+  /**
+   * Return a string representation of this bit vector.
+   * @return String representation of this vector.
+   */
+  std::string ToString() const {
+    std::string result = "BitVector=[";
+    bool first = true;
+    for (u32 i = 0; i < impl()->num_bits(); i++) {
+      if (!first) result += ",";
+      first = false;
+      result += Test(i) ? "1" : "0";
+    }
+    result += "]";
+    return result;
   }
 
   /**
