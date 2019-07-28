@@ -100,7 +100,7 @@ u64 BloomFilter::GetTotalBitsSet() const {
     // performance-critical.
     const auto *const chunk = reinterpret_cast<const u64 *>(blocks_[i]);
     for (u32 j = 0; j < 4; j++) {
-      count += util::BitUtil::CountBits(chunk[j]);
+      count += util::BitUtil::CountPopulation(chunk[j]);
     }
   }
   return count;

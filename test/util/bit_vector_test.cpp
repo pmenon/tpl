@@ -9,36 +9,42 @@ namespace tpl::util::test {
 
 namespace {
 
+// Verify that the callback returns true for all set bit indexes
+template <typename BitVectorType, typename F>
+::testing::AssertionResult Verify(BitVectorType &bv, F &&f) {
+  for (u32 i = 0; i < bv.num_bits(); i++) {
+    if (bv[i] && !f(i)) {
+      return ::testing::AssertionFailure()
+             << "bv[" << i << "]=true, but expected to be false";
+    }
+  }
+  return ::testing::AssertionSuccess();
+}
+
 // Verify that only specific bits are set
 template <typename BitVectorType>
 ::testing::AssertionResult Verify(const BitVectorType &bv,
                                   std::initializer_list<u32> idxs) {
   std::unordered_set<u32> positions(idxs);
+
   u32 num_set = 0;
-  for (u32 i = 0; i < bv.num_bits(); i++) {
-    if (bv[i] && positions.count(i) == 0) {
-      return ::testing::AssertionFailure()
-             << "Bit at position " << i
-             << " is set, but not in expected-set list";
-    }
-    num_set += bv[i];
+  auto success = Verify(bv, [&](auto idx) {
+    num_set++;
+    return positions.count(idx) != 0;
+  });
+
+  if (!success) {
+    return success;
   }
+
   if (num_set != positions.size()) {
     return ::testing::AssertionFailure()
-           << num_set << " bit set, not " << positions.size();
-  }
-  return ::testing::AssertionSuccess();
-}
+        << "Unmatched # set bits. Actual: " << num_set
+        << ", Expected: " << positions.size();
 
-// Verify that the callback returns true for all set indexes
-template <typename BitVectorType, typename F>
-bool Verify(BitVectorType &bv, F &&f) {
-  for (u32 i = 0; i < bv.num_bits(); i++) {
-    if (bv[i] && !f(i)) {
-      return false;
-    }
   }
-  return true;
+
+  return ::testing::AssertionSuccess();
 }
 
 }  // namespace

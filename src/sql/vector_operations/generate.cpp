@@ -5,20 +5,13 @@ namespace tpl::sql {
 namespace {
 
 template <typename T>
-void GenerateSequenceImpl(T *RESTRICT data, T start, T increment, u64 count,
-                          sel_t *RESTRICT sel_vector) {
-  T value = start;
-  VectorOps::Exec(sel_vector, count, [&](u64 i, u64 k) {
+void GenerateSequenceImpl(Vector *vector, T start, T increment) {
+  auto *data = reinterpret_cast<T *>(vector->data());
+  auto value = start;
+  VectorOps::Exec(*vector, [&](u64 i, u64 k) {
     data[i] = value;
     value += increment;
   });
-}
-
-template <typename T>
-void GenerateSequenceImpl(tpl::sql::Vector *vector, T start, T increment) {
-  auto *data = reinterpret_cast<T *>(vector->data());
-  GenerateSequenceImpl(data, start, increment, vector->count(),
-                       vector->selection_vector());
 }
 
 }  // namespace

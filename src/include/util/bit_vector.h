@@ -180,15 +180,14 @@ class BitVectorBase {
   }
 
   /**
-   * Count the 1-bits in the bit vector starting at the given position.
-   * @param position The starting position to search from.
-   * @return The number of 1-bits in the bit vector starting at @em position.
+   * Count the 1-bits in the bit vector.
+   * @return The number of 1-bits in the bit vector.
    */
-  u32 CountOnes(const u32 position = 0) const {
+  u32 CountOnes() const {
     u32 count = 0;
     const WordType *data_array = impl()->data_array();
     for (u32 i = 0; i < impl()->num_words(); i++) {
-      count += util::BitUtil::CountBits(data_array[i]);
+      count += util::BitUtil::CountPopulation(data_array[i]);
     }
     return count;
   }
@@ -204,7 +203,7 @@ class BitVectorBase {
 
     for (u32 i = 0; i < impl()->num_words(); i++) {
       const WordType word = data_array[i];
-      const u32 count = BitUtil::CountBits(word);
+      const u32 count = BitUtil::CountPopulation(word);
       if (n < count) {
         const WordType mask = _pdep_u64(static_cast<WordType>(1) << n, word);
         const u32 pos = BitUtil::CountTrailingZeros(mask);
@@ -304,13 +303,13 @@ class BitVectorBase {
     TPL_ASSERT(bytes != nullptr, "Null input");
     TPL_ASSERT(num_bytes == impl()->num_bits(), "Byte vector too small");
 
-    // The words making up the bit vector.
+    // The words making up the bit vector
     WordType *const data_array = impl()->data_array();
 
-    // The index used to read from input byte array.
+    // The index used to read from input byte array
     u32 i = 0;
 
-    // Primary SIMD section. Process 64 entries at a time.
+    // The primary loop processes 64 entries at a time
     for (u32 k = 0; i + 64 <= num_bytes; i += 64, k++) {
       const auto v_lo =
           _mm256_loadu_si256(reinterpret_cast<const __m256i *>(bytes + i));
@@ -321,7 +320,7 @@ class BitVectorBase {
       data_array[k] |= (static_cast<WordType>(hi) << 32u) | lo;
     }
 
-    // Process the tail of the array.
+    // The tail loop is scalar
     for (; i < num_bytes; i++) {
       SetTo(i, bytes[i]);
     }

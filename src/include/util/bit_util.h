@@ -49,7 +49,7 @@ class BitUtil {
    * Count the number of set bits in the given value.
    */
   template <typename T>
-  constexpr static u32 CountBits(T val) {
+  constexpr static u32 CountPopulation(T val) {
     return llvm::countPopulation(val);
   }
 
@@ -59,7 +59,7 @@ class BitUtil {
    * @param num_bits The size of the bit vector, in bits
    * @return The number of words needed to store a bit vector of the given size
    */
-  ALWAYS_INLINE static u64 Num32BitWordsFor(u64 num_bits) {
+  constexpr static u64 Num32BitWordsFor(u64 num_bits) {
     return MathUtil::DivRoundUp(num_bits, kBitWordSize);
   }
 
@@ -69,7 +69,7 @@ class BitUtil {
    * @param idx The index of the bit to check
    * @return True if set; false otherwise
    */
-  ALWAYS_INLINE static bool Test(const u32 bits[], const u32 idx) {
+  constexpr static bool Test(const u32 bits[], const u32 idx) {
     const u32 mask = 1u << (idx % kBitWordSize);
     return bits[idx / kBitWordSize] & mask;
   }
@@ -79,7 +79,7 @@ class BitUtil {
    * @param bits The bit vector
    * @param idx The index of the bit to set to 1
    */
-  ALWAYS_INLINE static void Set(u32 bits[], const u32 idx) {
+  constexpr static void Set(u32 bits[], const u32 idx) {
     bits[idx / kBitWordSize] |= 1u << (idx % kBitWordSize);
   }
 
@@ -88,7 +88,7 @@ class BitUtil {
    * @param bits The bit vector
    * @param idx The index of the bit to flip
    */
-  ALWAYS_INLINE static void Flip(u32 bits[], const u32 idx) {
+  constexpr static void Flip(u32 bits[], const u32 idx) {
     bits[idx / kBitWordSize] ^= 1u << (idx % kBitWordSize);
   }
 };
