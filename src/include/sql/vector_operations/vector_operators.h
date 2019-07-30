@@ -310,17 +310,9 @@ class VectorOps {
    * function will receive two indexes: i = index, dependent on the selection
    * vector, and k = count.
    */
-  template <typename T>
-  static void Exec(const sel_t *RESTRICT sel_vector, const u64 count, T &&fun,
+  template <typename F>
+  static void Exec(const sel_t *RESTRICT sel_vector, const u64 count, F &&fun,
                    const u64 offset = 0) {
-    // TODO(pmenon): Typically, these types of loops use the __restrict__
-    //               on arrays to let the compiler know that two arrays (i.e.,
-    //               pointer ranges) don't alias or overlap, thus allowing it
-    //               to more aggresively optimize the loop. But, I don't know
-    //               how that works with templates. Can we mark the loop with
-    //               #pragma GCC ivdep ? And is that always true? Should (or can
-    //               we) force callers to assert non-overlapping ranges?
-
     if (sel_vector != nullptr) {
       for (u64 i = offset; i < count; i++) {
         fun(sel_vector[i], i);
@@ -337,8 +329,8 @@ class VectorOps {
    * function will receive two arguments: i = index, dependent on the selection
    * vector, and k = count.
    */
-  template <typename T>
-  static void Exec(const Vector &vector, T &&fun, u64 offset = 0,
+  template <typename F>
+  static void Exec(const Vector &vector, F &&fun, u64 offset = 0,
                    u64 count = 0) {
     if (count == 0) {
       count = vector.count_;
@@ -356,10 +348,9 @@ class VectorOps {
    * vector, and k = count.
    */
   template <typename T, typename F>
-  static void ExecTyped(const Vector &vector, F &&fun, u64 offset = 0,
-                        u64 count = 0) {
-    auto data = reinterpret_cast<const T *>(vector.data());
-    Exec(vector, [&](u64 i, u64 k) { fun(data[i], i, k); }, offset, count);
+  static void ExecTyped(const Vector &vector, F &&fun) {
+    const auto *data = reinterpret_cast<const T *>(vector.data());
+    Exec(vector, [&](u64 i, u64 k) { fun(data[i], i, k); });
   }
 };
 
