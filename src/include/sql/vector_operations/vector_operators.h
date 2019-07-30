@@ -77,15 +77,11 @@ class VectorOps {
    */
   static void FillNull(Vector *vector);
 
-  //===--------------------------------------------------------------------===//
+  // -------------------------------------------------------
   //
   // Comparisons
   //
-  // Comparisons produce a selection byte vector, i.e., result[i] is true if
-  // the comparison between input vectors left[i] and right[i] evaluate to true
-  // for a given comparison function.
-  //
-  //===--------------------------------------------------------------------===//
+  // -------------------------------------------------------
 
   /**
    * Perform an equality comparison on each element from the left and right
@@ -145,14 +141,14 @@ class VectorOps {
    */
   static void NotEqual(const Vector &left, const Vector &right, Vector *result);
 
-  //===--------------------------------------------------------------------===//
+  // -------------------------------------------------------
   //
   // Selection operations
   //
   // Selections are like comparisons, but generate a compact/compressed
   // selection index vector rather than a boolean match vector.
   //
-  //===--------------------------------------------------------------------===//
+  // -------------------------------------------------------
 
   /**
    * Store the positions of all equal elements in the left and right input
@@ -223,11 +219,11 @@ class VectorOps {
   static u32 SelectNotEqual(const Vector &left, const Vector &right,
                             sel_t out_sel_vector[]);
 
-  //===--------------------------------------------------------------------===//
+  // -------------------------------------------------------
   //
   // Boolean operations
   //
-  //===--------------------------------------------------------------------===//
+  // -------------------------------------------------------
 
   /**
    * Perform a boolean AND of the boolean elements in the left and right input
@@ -255,11 +251,11 @@ class VectorOps {
    */
   static void Not(const Vector &input, Vector *result);
 
-  //===--------------------------------------------------------------------===//
+  // -------------------------------------------------------
   //
   // NULL checking
   //
-  //===--------------------------------------------------------------------===//
+  // -------------------------------------------------------
 
   /**
    * Check which elements of the vector @em input are NULL and store the results
@@ -277,11 +273,11 @@ class VectorOps {
    */
   static void IsNotNull(const Vector &input, Vector *result);
 
-  //===--------------------------------------------------------------------===//
+  // -------------------------------------------------------
   //
   // Boolean checking
   //
-  //===--------------------------------------------------------------------===//
+  // -------------------------------------------------------
 
   /**
    * Check if every active element in the boolean input vector @em input is
@@ -299,11 +295,11 @@ class VectorOps {
    */
   static bool AnyTrue(const Vector &input);
 
-  //===--------------------------------------------------------------------===//
+  // -------------------------------------------------------
   //
-  // Main - Vector Iteration Logic
+  // Vector Iteration Logic
   //
-  //===--------------------------------------------------------------------===//
+  // -------------------------------------------------------
 
   /**
    * Apply a function to every active element in the vector. The callback
@@ -350,7 +346,8 @@ class VectorOps {
   template <typename T, typename F>
   static void ExecTyped(const Vector &vector, F &&fun) {
     const auto *data = reinterpret_cast<const T *>(vector.data());
-    Exec(vector, [&](u64 i, u64 k) { fun(data[i], i, k); });
+    Exec(vector.sel_vector_, vector.count_,
+         [&](u64 i, u64 k) { fun(data[i], i, k); });
   }
 };
 
