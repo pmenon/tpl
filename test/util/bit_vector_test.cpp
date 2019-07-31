@@ -39,9 +39,8 @@ template <typename BitVectorType>
 
   if (num_set != positions.size()) {
     return ::testing::AssertionFailure()
-        << "Unmatched # set bits. Actual: " << num_set
-        << ", Expected: " << positions.size();
-
+           << "Unmatched # set bits. Actual: " << num_set
+           << ", Expected: " << positions.size();
   }
 
   return ::testing::AssertionSuccess();
@@ -244,12 +243,14 @@ TEST(BitVectorTest, SetFromBytes) {
     BitVector bv(10);
 
     // Set first last bit only
-    bv.SetFromBytes(std::vector<i8>{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1}.data(), 10);
+    bv.SetFromBytes(std::vector<u8>{0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0xff}.data(),
+                    10);
     EXPECT_TRUE(Verify(bv, {0, 9}));
 
     // Set odd bits
-    bv.SetFromBytes(std::vector<i8>{0, -1, 0, -1, 0, -1, 0, -1, 0, -1}.data(),
-                    10);
+    bv.SetFromBytes(
+        std::vector<u8>{0, 0xff, 0, 0xff, 0, 0xff, 0, 0xff, 0, 0xff}.data(),
+        10);
     EXPECT_TRUE(Verify(bv, {1, 3, 5, 7, 9}));
   }
 
@@ -262,16 +263,16 @@ TEST(BitVectorTest, SetFromBytes) {
 
     // Set even indexes
     std::random_device r;
-    alignas(16) i8 bytes[vec_size] = {0};
+    alignas(16) u8 bytes[vec_size] = {0};
     u32 num_set = 0;
     for (auto &byte : bytes) {
       byte = -(r() % 4 == 0);
-      num_set += (byte == -1);
+      num_set += (byte == 0xff);
     }
 
     // Check only even indexes set
     bv.SetFromBytes(bytes, vec_size);
-    EXPECT_TRUE(Verify(bv, [&](u32 idx) { return bytes[idx] == -1; }));
+    EXPECT_TRUE(Verify(bv, [&](u32 idx) { return bytes[idx] == 0xff; }));
     EXPECT_EQ(num_set, bv.CountOnes());
   }
 }
