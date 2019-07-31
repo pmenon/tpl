@@ -159,6 +159,52 @@ class VectorUtil {
     return FilterNe(reinterpret_cast<const intptr_t *>(in), in_count,
                     intptr_t(0), out, sel);
   }
+
+  /**
+   * Convert a selection vector into a byte vector. For each index stored in the
+   * selection vector, set the corresponding index in the byte vector to the
+   * saturated 8-bit integer (0xFF = 255 = 11111111).
+   * @param n The number of elements in the selection vector, and the minimum
+   *          capacity of the byte vector.
+   * @param sel_vector The input selection index vector.
+   * @param[out] byte_vector The output byte vector.
+   */
+  static void SelectionVectorToByteVector(u32 n, const sel_t *sel_vector,
+                                          u8 *byte_vector);
+
+  /**
+   * Convert a byte vector into a selection vector. For all elements in the byte
+   * vector whose value is a saturated 8-bit integer (0xFF = 255 = 11111111),
+   * left-pack the indexes of the elements into the selection vector.
+   * @param n The number of elements in the byte vector, and the minimum
+   *          capacity of the selection vector.
+   * @param byte_vector The input byte vector.
+   * @param[out] sel_vector The output selection vector.
+   * @param[out] size The number of elements in the selection vector.
+   */
+  static void ByteVectorToSelectionVector(u32 n, const u8 *byte_vector,
+                                          sel_t *sel_vector, u32 *size);
+
+  /**
+   * Convert a byte vector to a bit vector. For all elements in the byte vector
+   * whose value is a saturated 8-bit integer (0xFF = 255 = 11111111), set the
+   * corresponding bit in the bit vector to 1.
+   * @param n The number of elements in the byte vector, and the minimum
+   *          capacity (in bits) of the bit vector.
+   * @param byte_vector The input byte vector.
+   * @param bit_vector The output bit vector.
+   */
+  static void ByteVectorToBitVector(u32 n, const u8 *byte_vector,
+                                    u64 *bit_vector);
+
+  /**
+   * Perform a bitwise AND on all bytes in the byte vectors, storing the result
+   * in @em byte_vector_2.
+   * @param n The number of elements in both byte vectors.
+   * @param byte_vector_1 The first input byte vector.
+   * @param byte_vector_2 The second byte vector storing the result.
+   */
+  static void ByteVectorAnd(u32 n, const u8 *byte_vector_1, u8 *byte_vector_2);
 };
 
 }  // namespace tpl::util
