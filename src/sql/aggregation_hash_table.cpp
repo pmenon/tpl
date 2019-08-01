@@ -526,8 +526,7 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(
 
 void AggregationHashTable::ExecuteParallelPartitionedScan(
     void *query_state, ThreadStateContainer *thread_states,
-    AggregationHashTable::ScanPartitionFn scan_fn) {
-  //
+    const AggregationHashTable::ScanPartitionFn scan_fn) {
   // At this point, this aggregation table has a list of overflow partitions
   // that must be merged into a single aggregation hash table. For simplicity,
   // we create a new aggregation hash table per overflow partition, and merge
@@ -535,7 +534,6 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(
   // estimates to size the hash table before construction so as to minimize the
   // growth factor. Each aggregation hash table partition will be built and
   // scanned in parallel.
-  //
 
   TPL_ASSERT(partition_heads_ != nullptr && merge_partition_fn_ != nullptr,
              "No overflow partitions allocated, or no merging function "
@@ -543,22 +541,24 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(
              "issuing the partitioned scan?");
 
   // Determine the non-empty overflow partitions
-  alignas(CACHELINE_SIZE) u32 nonempty_parts[kDefaultNumPartitions];
-  const u32 num_nonempty_parts = util::VectorUtil::SelectNotNull(
-      partition_heads_, kDefaultNumPartitions, nonempty_parts, nullptr);
+  std::vector<u32> nonempty_parts;
+  nonempty_parts.reserve(kDefaultNumPartitions);
+  for (u32 i = 0; i < kDefaultNumPartitions; i++) {
+    if (partition_heads_[i] != nullptr) {
+      nonempty_parts.push_back(i);
+    }
+  }
 
-  tbb::parallel_for_each(
-      nonempty_parts, nonempty_parts + num_nonempty_parts,
-      [&](const u32 part_idx) {
-        // Build a hash table over the given partition
-        auto *agg_table_part = BuildTableOverPartition(query_state, part_idx);
+  tbb::parallel_for_each(nonempty_parts, [&](const u32 part_idx) {
+    // Build a hash table over the given partition
+    auto *agg_table_part = BuildTableOverPartition(query_state, part_idx);
 
-        // Get a handle to the thread-local state of the executing thread
-        auto *thread_state = thread_states->AccessThreadStateOfCurrentThread();
+    // Get a handle to the thread-local state of the executing thread
+    auto *thread_state = thread_states->AccessThreadStateOfCurrentThread();
 
-        // Scan the partition
-        scan_fn(query_state, thread_state, agg_table_part);
-      });
+    // Scan the partition
+    scan_fn(query_state, thread_state, agg_table_part);
+  });
 }
 
 }  // namespace tpl::sql
