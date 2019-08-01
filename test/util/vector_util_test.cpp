@@ -492,6 +492,25 @@ TEST_F(VectorUtilTest, ByteToSelectionVector) {
   EXPECT_EQ(12u, sel[7]);
 }
 
+TEST_F(VectorUtilTest, BitToSelectionVector) {
+  // Set all even bits in 127-bit vector
+  u64 bits[] = {0x5555555555555555ull, 0x1555555555555555};
+
+  sel_t sel[kDefaultVectorSize];
+  u32 size = 0;
+
+  // Ensure only even bits set
+  util::VectorUtil::BitVectorToSelectionVector(127, bits, sel, &size);
+
+  // Only 63 bits are set (remember there are only 127-bits)
+  EXPECT_EQ(63u, size);
+
+  // Ensure the indexes that are set are even
+  for (u32 i = 0; i < size; i++) {
+    EXPECT_TRUE(sel[i] % 2 == 0);
+  }
+}
+
 TEST_F(VectorUtilTest, DISABLED_PerfSelect) {
   constexpr u32 num_elems = 128 * 1024u * 1024u;
   constexpr const u32 chunk_size = 4096;

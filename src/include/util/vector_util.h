@@ -192,7 +192,7 @@ class VectorUtil {
    * @param n The number of elements in the byte vector, and the minimum
    *          capacity (in bits) of the bit vector.
    * @param byte_vector The input byte vector.
-   * @param bit_vector The output bit vector.
+   * @param[out] bit_vector The output bit vector.
    */
   static void ByteVectorToBitVector(u32 n, const u8 *byte_vector,
                                     u64 *bit_vector);
@@ -205,6 +205,20 @@ class VectorUtil {
    * @param byte_vector_2 The second byte vector storing the result.
    */
   static void ByteVectorAnd(u32 n, const u8 *byte_vector_1, u8 *byte_vector_2);
+
+  /**
+   * Convert a bit vector into a densely packed selection vector. For all bits
+   * in the bit vector that are true, insert their indexes into the output
+   * selection vector. The resulting selection vector is guaranteed to be
+   * sorted ascending.
+   * @param n The number of bits in the bit vector, and the minimum capacity of
+   *          the selection vector.
+   * @param bit_vector The input bit vector.
+   * @param[out] sel_vector The output selection vector.
+   * @param[out] size The number of element in the selection vector.
+   */
+  static void BitVectorToSelectionVector(u32 n, const u64 *bit_vector,
+                                         sel_t *sel_vector, u32 *size);
 };
 
 }  // namespace tpl::util

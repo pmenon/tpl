@@ -3,6 +3,7 @@
 #include <immintrin.h>
 
 #include "util/bit_util.h"
+#include "util/math_util.h"
 
 namespace tpl::util {
 
@@ -14,7 +15,7 @@ void VectorUtil::SelectionVectorToByteVector(const u32 n,
   }
 }
 
-// TODO(pmenon): Consider splitting into dense vs. sparse options?
+// TODO(pmenon): Consider splitting into dense and sparse implementations.
 void VectorUtil::ByteVectorToSelectionVector(const u32 n,
                                              const u8 *RESTRICT byte_vector,
                                              sel_t *RESTRICT sel_vector,
@@ -50,7 +51,8 @@ void VectorUtil::ByteVectorToSelectionVector(const u32 n,
   *size = k;
 }
 
-void VectorUtil::ByteVectorToBitVector(u32 n, const u8 *RESTRICT byte_vector,
+void VectorUtil::ByteVectorToBitVector(const u32 n,
+                                       const u8 *RESTRICT byte_vector,
                                        u64 *RESTRICT bit_vector) {
   // Byte-vector index
   u32 i = 0;
@@ -77,11 +79,31 @@ void VectorUtil::ByteVectorToBitVector(u32 n, const u8 *RESTRICT byte_vector,
   }
 }
 
-void VectorUtil::ByteVectorAnd(u32 n, const u8 *RESTRICT byte_vector_1,
+void VectorUtil::ByteVectorAnd(const u32 n, const u8 *RESTRICT byte_vector_1,
                                u8 *RESTRICT byte_vector_2) {
   for (u32 i = 0; i < n; i++) {
     byte_vector_2[i] &= byte_vector_1[i];
   }
+}
+
+// TODO(pmenon): Consider splitting into dense and sparse implementations.
+void VectorUtil::BitVectorToSelectionVector(const u32 n,
+                                            const u64 *RESTRICT bit_vector,
+                                            sel_t *RESTRICT sel_vector,
+                                            u32 *RESTRICT size) {
+  const u32 num_words = MathUtil::DivRoundUp(n, 64);
+  
+  u32 k = 0;
+  for (u32 i = 0; i < num_words; i++) {
+    u64 word = bit_vector[i];
+    while (word != 0) {
+      const u64 t = word & -word;
+      const u32 r = BitUtil::CountTrailingZeros(word);
+      sel_vector[k++] = i * 64 + r;
+      word ^= t;
+    }
+  }
+  *size = k;
 }
 
 }  // namespace tpl::util
