@@ -2,6 +2,8 @@
 
 #include <immintrin.h>
 
+#include "util/bit_util.h"
+
 namespace tpl::util {
 
 void VectorUtil::SelectionVectorToByteVector(const u32 n,
@@ -12,10 +14,41 @@ void VectorUtil::SelectionVectorToByteVector(const u32 n,
   }
 }
 
-void VectorUtil::ByteVectorToSelectionVector(u32 n,
+// TODO(pmenon): Consider splitting into dense vs. sparse options?
+void VectorUtil::ByteVectorToSelectionVector(const u32 n,
                                              const u8 *RESTRICT byte_vector,
                                              sel_t *RESTRICT sel_vector,
-                                             u32 *size) {}
+                                             u32 *RESTRICT size) {
+  // Byte-vector index
+  u32 i = 0;
+
+  // Selection vector write index
+  u32 k = 0;
+
+  // Main vector loop
+  const auto eight = _mm_set1_epi16(8);
+  auto idx = _mm_set1_epi16(0);
+  for (; i + 8 <= n; i += 8) {
+    const auto word = *reinterpret_cast<const u64 *>(byte_vector + i);
+    const auto mask = _pext_u64(word, 0x202020202020202);
+    TPL_ASSERT(mask < 256, "Out-of-bounds mask");
+    const auto match_pos_scaled = _mm_loadl_epi64(
+        reinterpret_cast<const __m128i *>(&simd::k8BitMatchLUT[mask]));
+    const auto match_pos = _mm_cvtepi8_epi16(match_pos_scaled);
+    const auto pos_vec = _mm_add_epi16(idx, match_pos);
+    idx = _mm_add_epi16(idx, eight);
+    _mm_storeu_si128(reinterpret_cast<__m128i *>(sel_vector + k), pos_vec);
+    k += BitUtil::CountPopulation(static_cast<u32>(mask));
+  }
+
+  // Tail
+  for (; i < n; i++) {
+    sel_vector[k] = i;
+    k += static_cast<u32>(byte_vector[i] == 0xFF);
+  }
+
+  *size = k;
+}
 
 void VectorUtil::ByteVectorToBitVector(u32 n, const u8 *RESTRICT byte_vector,
                                        u64 *RESTRICT bit_vector) {
@@ -38,8 +71,8 @@ void VectorUtil::ByteVectorToBitVector(u32 n, const u8 *RESTRICT byte_vector,
 
   // Tail
   for (; i < n; i++) {
-    const i8 val = static_cast<i8>(byte_vector[i]);
-    u64 mask = static_cast<u64>(1) << (i % 64u);
+    const auto val = static_cast<i8>(byte_vector[i]);
+    const auto mask = static_cast<u64>(1) << (i % 64u);
     bit_vector[k] ^= (static_cast<u64>(val) ^ bit_vector[k]) & mask;
   }
 }

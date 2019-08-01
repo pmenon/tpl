@@ -72,7 +72,7 @@ class VectorUtilTest : public TplTest {
   sql::MemoryPool pool_;
 };
 
-TEST_F(VectorUtilTest, AccessTest) {
+TEST_F(VectorUtilTest, Access) {
   {
     simd::Vec8 in(44);
     for (u32 i = 0; i < simd::Vec8::Size(); i++) {
@@ -90,7 +90,7 @@ TEST_F(VectorUtilTest, AccessTest) {
   }
 }
 
-TEST_F(VectorUtilTest, ArithmeticTest) {
+TEST_F(VectorUtilTest, Arithmetic) {
   // Addition
   {
     simd::Vec8 v(1, 2, 3, 4, 5, 6, 7, 8);
@@ -137,7 +137,7 @@ TEST_F(VectorUtilTest, ArithmeticTest) {
   }
 }
 
-TEST_F(VectorUtilTest, BitwiseOperationsTest) {
+TEST_F(VectorUtilTest, BitwiseOperations) {
   // Left shift
   {
     simd::Vec8 v(1, 2, 3, 4, 5, 6, 7, 8);
@@ -169,7 +169,7 @@ TEST_F(VectorUtilTest, BitwiseOperationsTest) {
   }
 }
 
-TEST_F(VectorUtilTest, ComparisonsTest) {
+TEST_F(VectorUtilTest, Comparisons) {
   // Equality
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
@@ -261,7 +261,7 @@ TEST_F(VectorUtilTest, ComparisonsTest) {
   }
 }
 
-TEST_F(VectorUtilTest, MaskToPositionTest) {
+TEST_F(VectorUtilTest, MaskToPosition) {
   simd::Vec8 vec(3, 0, 4, 1, 5, 2, 6, 2);
   simd::Vec8 val(2);
 
@@ -375,7 +375,7 @@ void SmallScale_MultiFilterTest() {
   EXPECT_EQ(actual_count, count);
 }
 
-TEST_F(VectorUtilTest, SimpleFilterTest) {
+TEST_F(VectorUtilTest, SimpleFilter) {
   SmallScale_NeedleTest<i8>();
   SmallScale_NeedleTest<u8>();
   SmallScale_NeedleTest<i16>();
@@ -386,7 +386,7 @@ TEST_F(VectorUtilTest, SimpleFilterTest) {
   SmallScale_NeedleTest<u64>();
 }
 
-TEST_F(VectorUtilTest, MultiFilterTest) {
+TEST_F(VectorUtilTest, MultiFilter) {
   SmallScale_MultiFilterTest<i8>();
   SmallScale_MultiFilterTest<u8>();
   SmallScale_MultiFilterTest<i16>();
@@ -397,7 +397,7 @@ TEST_F(VectorUtilTest, MultiFilterTest) {
   SmallScale_MultiFilterTest<u64>();
 }
 
-TEST_F(VectorUtilTest, VectorVectorFilterTest) {
+TEST_F(VectorUtilTest, VectorVectorFilter) {
   //
   // Test: two arrays, a1 and a2; a1 contains sequential numbers in the range
   //       [0, 1000), and s2 contains sequential numbers in range [1,1001).
@@ -473,7 +473,26 @@ TEST_F(VectorUtilTest, VectorVectorFilterTest) {
 #undef CHECK
 }
 
-TEST_F(VectorUtilTest, DISABLED_PerfSelectTest) {
+TEST_F(VectorUtilTest, ByteToSelectionVector) {
+  constexpr u32 n = 14;
+  u8 bytes[n] = {0xFF, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00,
+                 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00};
+  sel_t sel[n];
+
+  u32 size = 0;
+  VectorUtil::ByteVectorToSelectionVector(n, bytes, sel, &size);
+  EXPECT_EQ(8u, size);
+  EXPECT_EQ(0u, sel[0]);
+  EXPECT_EQ(3u, sel[1]);
+  EXPECT_EQ(5u, sel[2]);
+  EXPECT_EQ(7u, sel[3]);
+  EXPECT_EQ(8u, sel[4]);
+  EXPECT_EQ(10u, sel[5]);
+  EXPECT_EQ(11u, sel[6]);
+  EXPECT_EQ(12u, sel[7]);
+}
+
+TEST_F(VectorUtilTest, DISABLED_PerfSelect) {
   constexpr u32 num_elems = 128 * 1024u * 1024u;
   constexpr const u32 chunk_size = 4096;
 
