@@ -13,14 +13,6 @@ namespace tpl::ast {
   F(FloatToSql, floatToSql)                                     \
   F(SqlToBool, sqlToBool)                                       \
                                                                 \
-  /* Vectorized Filters */                                      \
-  F(FilterEq, filterEq)                                         \
-  F(FilterGe, filterGe)                                         \
-  F(FilterGt, filterGt)                                         \
-  F(FilterLe, filterLe)                                         \
-  F(FilterLt, filterLt)                                         \
-  F(FilterNe, filterNe)                                         \
-                                                                \
   /* Thread State Container */                                  \
   F(ExecutionContextGetMemoryPool, execCtxGetMem)               \
   F(ThreadStateContainerInit, tlsInit)                          \

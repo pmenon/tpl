@@ -1237,15 +1237,6 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckBuiltinSqlConversionCall(call, builtin);
       break;
     }
-    case ast::Builtin::FilterEq:
-    case ast::Builtin::FilterGe:
-    case ast::Builtin::FilterGt:
-    case ast::Builtin::FilterLt:
-    case ast::Builtin::FilterNe:
-    case ast::Builtin::FilterLe: {
-      CheckBuiltinFilterCall(call);
-      break;
-    }
     case ast::Builtin::ExecutionContextGetMemoryPool: {
       CheckBuiltinExecutionContextCall(call, builtin);
       break;

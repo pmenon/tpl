@@ -763,52 +763,6 @@ void BytecodeGenerator::VisitBuiltinFilterManagerCall(ast::CallExpr *call,
   }
 }
 
-void BytecodeGenerator::VisitBuiltinFilterCall(ast::CallExpr *call,
-                                               ast::Builtin builtin) {
-  LocalVar ret_val;
-  if (execution_result() != nullptr) {
-    ret_val = execution_result()->GetOrCreateDestination(call->type());
-    execution_result()->set_destination(ret_val.ValueOf());
-  } else {
-    ret_val = current_function()->NewLocal(call->type());
-  }
-
-  LocalVar vpi = VisitExpressionForRValue(call->arguments()[0]);
-  i32 col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
-  i64 val = call->arguments()[2]->As<ast::LitExpr>()->int32_val();
-
-  Bytecode bytecode;
-  switch (builtin) {
-    case ast::Builtin::FilterEq: {
-      bytecode = Bytecode::VPIFilterEqual;
-      break;
-    }
-    case ast::Builtin::FilterGt: {
-      bytecode = Bytecode::VPIFilterGreaterThan;
-      break;
-    }
-    case ast::Builtin::FilterGe: {
-      bytecode = Bytecode::VPIFilterGreaterThanEqual;
-      break;
-    }
-    case ast::Builtin::FilterLt: {
-      bytecode = Bytecode::VPIFilterLessThan;
-      break;
-    }
-    case ast::Builtin::FilterLe: {
-      bytecode = Bytecode::VPIFilterLessThanEqual;
-      break;
-    }
-    case ast::Builtin::FilterNe: {
-      bytecode = Bytecode::VPIFilterNotEqual;
-      break;
-    }
-    default: { UNREACHABLE("Impossible bytecode"); }
-  }
-
-  emitter()->EmitVPIVectorFilter(bytecode, ret_val, vpi, col_idx, val);
-}
-
 void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call,
                                                      ast::Builtin builtin) {
   switch (builtin) {
@@ -1363,15 +1317,6 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::FloatToSql:
     case ast::Builtin::SqlToBool: {
       VisitSqlConversionCall(call, builtin);
-      break;
-    }
-    case ast::Builtin::FilterEq:
-    case ast::Builtin::FilterGt:
-    case ast::Builtin::FilterGe:
-    case ast::Builtin::FilterLt:
-    case ast::Builtin::FilterLe:
-    case ast::Builtin::FilterNe: {
-      VisitBuiltinFilterCall(call, builtin);
       break;
     }
     case ast::Builtin::ExecutionContextGetMemoryPool: {

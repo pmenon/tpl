@@ -507,26 +507,6 @@ VM_OP_HOT void OpVPISetDecimalNull(
   // TODO(pmenon): Implement me
 }
 
-void OpVPIFilterEqual(u32 *size, tpl::sql::VectorProjectionIterator *vpi,
-                      u16 col_id, i64 val);
-
-void OpVPIFilterGreaterThan(u32 *size, tpl::sql::VectorProjectionIterator *vpi,
-                            u16 col_id, i64 val);
-
-void OpVPIFilterGreaterThanEqual(u32 *size,
-                                 tpl::sql::VectorProjectionIterator *vpi,
-                                 u16 col_id, i64 val);
-
-void OpVPIFilterLessThan(u32 *size, tpl::sql::VectorProjectionIterator *vpi,
-                         u16 col_id, i64 val);
-
-void OpVPIFilterLessThanEqual(u32 *size,
-                              tpl::sql::VectorProjectionIterator *vpi,
-                              u16 col_id, i64 val);
-
-void OpVPIFilterNotEqual(u32 *size, tpl::sql::VectorProjectionIterator *vpi,
-                         u16 col_id, i64 val);
-
 // ---------------------------------------------------------
 // Hashing
 // ---------------------------------------------------------

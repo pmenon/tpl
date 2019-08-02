@@ -138,12 +138,6 @@ namespace tpl::vm {
   F(VPISetRealNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPISetDoubleNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPISetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
-  F(VPIFilterEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                     \
-  F(VPIFilterGreaterThan, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)               \
-  F(VPIFilterGreaterThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)          \
-  F(VPIFilterLessThan, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                  \
-  F(VPIFilterLessThanEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)             \
-  F(VPIFilterNotEqual, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm8)                  \
                                                                                                                        \
   /* Filter Manager */                                                                                                 \
   F(FilterManagerInit, OperandType::Local)                                                                             \

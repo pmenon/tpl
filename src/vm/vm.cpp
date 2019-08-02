@@ -657,24 +657,6 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
   GEN_VPI_ACCESS(Decimal, sql::Decimal)
 #undef GEN_VPI_ACCESS
 
-#define GEN_VPI_FILTER(Op)                                                \
-  OP(VPIFilter##Op) : {                                                   \
-    auto *size = frame->LocalAt<u32 *>(READ_LOCAL_ID());                  \
-    auto *iter =                                                          \
-        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
-    auto col_idx = READ_UIMM4();                                          \
-    auto val = READ_IMM8();                                               \
-    OpVPIFilter##Op(size, iter, col_idx, val);                            \
-    DISPATCH_NEXT();                                                      \
-  }
-  GEN_VPI_FILTER(Equal)
-  GEN_VPI_FILTER(GreaterThan)
-  GEN_VPI_FILTER(GreaterThanEqual)
-  GEN_VPI_FILTER(LessThan)
-  GEN_VPI_FILTER(LessThanEqual)
-  GEN_VPI_FILTER(NotEqual)
-#undef GEN_VPI_FILTER
-
   // ------------------------------------------------------
   // Hashing
   // ------------------------------------------------------

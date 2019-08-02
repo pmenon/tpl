@@ -40,48 +40,6 @@ void OpTableVectorIteratorFree(tpl::sql::TableVectorIterator *iter) {
 }
 
 // ---------------------------------------------------------
-// VPI Vectorized Filters
-// ---------------------------------------------------------
-
-void OpVPIFilterEqual(u32 *size, tpl::sql::VectorProjectionIterator *vpi,
-                      u16 col_id, i64 val) {
-  tpl::sql::VectorProjectionIterator::FilterVal v{.bi = val};
-  *size = vpi->FilterColByVal<std::equal_to>(col_id, v);
-}
-
-void OpVPIFilterGreaterThan(u32 *size, tpl::sql::VectorProjectionIterator *vpi,
-                            u16 col_id, i64 val) {
-  tpl::sql::VectorProjectionIterator::FilterVal v{.bi = val};
-  *size = vpi->FilterColByVal<std::greater>(col_id, v);
-}
-
-void OpVPIFilterGreaterThanEqual(u32 *size,
-                                 tpl::sql::VectorProjectionIterator *vpi,
-                                 u16 col_id, i64 val) {
-  tpl::sql::VectorProjectionIterator::FilterVal v{.bi = val};
-  *size = vpi->FilterColByVal<std::greater_equal>(col_id, v);
-}
-
-void OpVPIFilterLessThan(u32 *size, tpl::sql::VectorProjectionIterator *vpi,
-                         u16 col_id, i64 val) {
-  tpl::sql::VectorProjectionIterator::FilterVal v{.bi = val};
-  *size = vpi->FilterColByVal<std::less>(col_id, v);
-}
-
-void OpVPIFilterLessThanEqual(u32 *size,
-                              tpl::sql::VectorProjectionIterator *vpi,
-                              u16 col_id, i64 val) {
-  tpl::sql::VectorProjectionIterator::FilterVal v{.bi = val};
-  *size = vpi->FilterColByVal<std::less_equal>(col_id, v);
-}
-
-void OpVPIFilterNotEqual(u32 *size, tpl::sql::VectorProjectionIterator *vpi,
-                         u16 col_id, i64 val) {
-  tpl::sql::VectorProjectionIterator::FilterVal v{.bi = val};
-  *size = vpi->FilterColByVal<std::not_equal_to>(col_id, v);
-}
-
-// ---------------------------------------------------------
 // Filter Manager
 // ---------------------------------------------------------
 
