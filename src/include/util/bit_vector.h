@@ -374,6 +374,22 @@ class BitVector : public BitVectorBase<BitVector> {
   }
 
   /**
+   * Take a slice from this bit vector starting at bit position @em offset and
+   * assuming @em size bits. The bit position must be a multiple of a word,
+   * i.e., 64, 128, 256, etc.
+   * @param offset The bit offset from the start to begin the slice from.
+   * @param size The number of bits to size the slice.
+   * @return
+   */
+  BitVector Slice(const u32 offset, const u32 size) {
+    TPL_ASSERT(offset / kWordSizeBits < num_words_, "Out-of-bounds access");
+    TPL_ASSERT(offset % kWordSizeBits == 0, "Invalid offset");
+    const auto word_idx = offset / kWordSizeBits;
+    const auto len = std::min(num_bits_ - (word_idx * kWordSizeBits), size);
+    return BitVector(data_array_ + word_idx, len);
+  }
+
+  /**
    * Return the number of bits in the bit vector.
    */
   u32 num_bits() const { return num_bits_; }
@@ -383,6 +399,9 @@ class BitVector : public BitVectorBase<BitVector> {
    */
   u32 num_words() const { return num_words_; }
 
+  /**
+   * Return a constant reference to the underlying word data.
+   */
   const u64 *data_array() const { return data_array_; }
 
  private:
@@ -439,7 +458,6 @@ class InlinedBitVector : public BitVectorBase<InlinedBitVector<NumBits>> {
   friend class BitVectorBase<InlinedBitVector<NumBits>>;
 
   u64 *data_array() { return data_array_; }
-
 
  private:
   u64 data_array_[kNumWords];
