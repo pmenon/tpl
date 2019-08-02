@@ -112,6 +112,11 @@ class VectorProjection {
   }
 
   /**
+   * Reset this vector projection to the state after initialization.
+   */
+  void Reset();
+
+  /**
    * Reset/reload the data for the column at position @em col_idx in the
    * projection using the data from the column iterator at the same position in
    * the provided vector @em column_iterators.
