@@ -267,7 +267,7 @@ TEST_F(VectorUtilTest, MaskToPosition) {
 
   simd::Vec8Mask mask = vec > val;
 
-  alignas(64) u32 positions[8] = {0};
+  alignas(64) u16 positions[8] = {0};
 
   u32 count = mask.ToPositions(positions, 0);
   EXPECT_EQ(4u, count);
@@ -302,72 +302,17 @@ void SmallScale_NeedleTest() {
     }
   }
 
-  u32 out[chunk_size] = {0};
+  sel_t out[chunk_size] = {0};
 
   u32 count = 0;
   for (u32 offset = 0; offset < num_elems; offset += chunk_size) {
     auto size = std::min(chunk_size, num_elems - offset);
-    auto found = VectorUtil::FilterEq(&arr[offset], size, needle, out, nullptr);
+    auto found = VectorUtil::FilterEq(&arr[offset], size, needle, out);
     count += found;
 
     // Check each element in this vector
     for (u32 i = 0; i < found; i++) {
       EXPECT_EQ(needle, arr[offset + out[i]]);
-    }
-  }
-
-  // Ensure total found through vector util matches what we generated
-  EXPECT_EQ(actual_count, count);
-}
-
-template <typename T>
-void SmallScale_MultiFilterTest() {
-  static_assert(std::is_integral_v<T>, "This only works for integral types");
-
-  constexpr const u32 num_elems = 4400;
-  constexpr const u32 chunk_size = 1024;
-  constexpr const T needle_1 = 16;
-  constexpr const T needle_2 = 10;
-
-  std::vector<T> arr_1(num_elems);
-  std::vector<T> arr_2(num_elems);
-
-  u32 actual_count = 0;
-
-  // Load
-  {
-    std::mt19937 gen;
-    std::uniform_int_distribution<T> dist(0, 100);
-    for (u32 i = 0; i < num_elems; i++) {
-      arr_1[i] = dist(gen);
-      arr_2[i] = dist(gen);
-      if (arr_1[i] < needle_1 && arr_2[i] < needle_2) {
-        actual_count++;
-      }
-    }
-  }
-
-  alignas(CACHELINE_SIZE) u32 out[chunk_size] = {0};
-  alignas(CACHELINE_SIZE) u32 sel[chunk_size] = {0};
-
-  u32 count = 0;
-  for (u32 offset = 0; offset < num_elems; offset += chunk_size) {
-    auto size = std::min(chunk_size, num_elems - offset);
-
-    // Apply first filter
-    auto found =
-        VectorUtil::FilterLt(&arr_1[offset], size, needle_1, sel, nullptr);
-
-    // Apply second filter
-    found = VectorUtil::FilterLt(&arr_2[offset], found, needle_2, out, sel);
-
-    // Count
-    count += found;
-
-    // Check each element in this vector
-    for (u32 i = 0; i < found; i++) {
-      EXPECT_LT(arr_1[offset + out[i]], needle_1);
-      EXPECT_LT(arr_2[offset + out[i]], needle_2);
     }
   }
 
@@ -384,17 +329,6 @@ TEST_F(VectorUtilTest, SimpleFilter) {
   SmallScale_NeedleTest<u32>();
   SmallScale_NeedleTest<i64>();
   SmallScale_NeedleTest<u64>();
-}
-
-TEST_F(VectorUtilTest, MultiFilter) {
-  SmallScale_MultiFilterTest<i8>();
-  SmallScale_MultiFilterTest<u8>();
-  SmallScale_MultiFilterTest<i16>();
-  SmallScale_MultiFilterTest<u16>();
-  SmallScale_MultiFilterTest<i32>();
-  SmallScale_MultiFilterTest<u32>();
-  SmallScale_MultiFilterTest<i64>();
-  SmallScale_MultiFilterTest<u64>();
 }
 
 TEST_F(VectorUtilTest, VectorVectorFilter) {
@@ -414,15 +348,15 @@ TEST_F(VectorUtilTest, VectorVectorFilter) {
   std::iota(arr_1.begin(), arr_1.end(), 0);
   std::iota(arr_2.begin(), arr_2.end(), 1);
 
-  alignas(CACHELINE_SIZE) u32 out[kDefaultVectorSize] = {0};
+  alignas(CACHELINE_SIZE) sel_t out[kDefaultVectorSize] = {0};
 
 #define CHECK(op, expected_count)                                            \
   {                                                                          \
     u32 count = 0;                                                           \
     for (u32 offset = 0; offset < num_elems; offset += kDefaultVectorSize) { \
       auto size = std::min(kDefaultVectorSize, num_elems - offset);          \
-      auto found = VectorUtil::Filter##op(&arr_1[offset], &arr_2[offset],    \
-                                          size, out, nullptr);               \
+      auto found =                                                           \
+          VectorUtil::Filter##op(&arr_1[offset], &arr_2[offset], size, out); \
       count += found;                                                        \
     }                                                                        \
     EXPECT_EQ(expected_count, count);                                        \
@@ -453,7 +387,7 @@ TEST_F(VectorUtilTest, VectorVectorFilter) {
       auto size = std::min(kDefaultVectorSize, num_elems - offset);           \
       /* Vector filter*/                                                      \
       auto found = VectorUtil::Filter##vec_op(&arr_1[offset], &arr_2[offset], \
-                                              size, out, nullptr);            \
+                                              size, out);                     \
       vec_count += found;                                                     \
       /* Scalar filter */                                                     \
       for (u32 iter = offset, end = iter + size; iter != end; iter++) {       \
@@ -530,7 +464,7 @@ TEST_F(VectorUtilTest, DISABLED_PerfSelect) {
 
   std::cout << "Load time: " << load_time << " ms" << std::endl;
 
-  alignas(CACHELINE_SIZE) u32 out[chunk_size] = {0};
+  alignas(CACHELINE_SIZE) sel_t out[chunk_size] = {0};
 
   for (i32 sel : {1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99}) {
     u32 count = 0;
@@ -540,8 +474,7 @@ TEST_F(VectorUtilTest, DISABLED_PerfSelect) {
       ScopedTimer<std::milli> timer(&time);
       for (u32 offset = 0; offset < num_elems; offset += chunk_size) {
         auto size = std::min(chunk_size, num_elems - offset);
-        auto found =
-            VectorUtil::FilterLt(&arr[offset], size, sel, out, nullptr);
+        auto found = VectorUtil::FilterLt(&arr[offset], size, sel, out);
         count += found;
       }
     }

@@ -23,7 +23,7 @@ class Vec256b {
   explicit Vec256b(const __m256i &reg) : reg_(reg) {}
 
   // Type-cast operator so that Vec*'s can be used directly with intrinsics
-  ALWAYS_INLINE operator __m256i() const { return reg_; }
+  operator __m256i() const { return reg_; }
 
   /// Store the contents of this vector into the provided unaligned pointer
   void Store(void *ptr) const {
@@ -106,20 +106,20 @@ class Vec4 : public Vec256b {
 // ---------------------------------------------------------
 
 template <typename T>
-ALWAYS_INLINE inline Vec4 &Vec4::Load(const T *ptr) {
+inline Vec4 &Vec4::Load(const T *ptr) {
   using signed_t = std::make_signed_t<T>;
   return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
 }
 
 template <>
-ALWAYS_INLINE inline Vec4 &Vec4::Load<i32>(const i32 *ptr) {
+inline Vec4 &Vec4::Load<i32>(const i32 *ptr) {
   auto tmp = _mm_loadu_si128((const __m128i *)ptr);
   reg_ = _mm256_cvtepi32_epi64(tmp);
   return *this;
 }
 
 template <>
-ALWAYS_INLINE inline Vec4 &Vec4::Load<i64>(const i64 *ptr) {
+inline Vec4 &Vec4::Load<i64>(const i64 *ptr) {
   // Load aligned and unaligned have almost no performance different on AVX2
   // machines. To alleviate some pain from clients having to know this info
   // we always use an unaligned load.
@@ -128,13 +128,13 @@ ALWAYS_INLINE inline Vec4 &Vec4::Load<i64>(const i64 *ptr) {
 }
 
 template <typename T>
-ALWAYS_INLINE inline Vec4 &Vec4::Gather(const T *ptr, const Vec4 &pos) {
+inline Vec4 &Vec4::Gather(const T *ptr, const Vec4 &pos) {
   using signed_t = std::make_signed_t<T>;
   return Gather<signed_t>(reinterpret_cast<const signed_t *>(ptr), pos);
 }
 
 template <>
-ALWAYS_INLINE inline Vec4 &Vec4::Gather<i64>(const i64 *ptr, const Vec4 &pos) {
+inline Vec4 &Vec4::Gather<i64>(const i64 *ptr, const Vec4 &pos) {
 #if USE_GATHER == 1
   reg_ = _mm256_i64gather_epi64(ptr, pos, 8);
 #else
@@ -147,12 +147,12 @@ ALWAYS_INLINE inline Vec4 &Vec4::Gather<i64>(const i64 *ptr, const Vec4 &pos) {
 
 // Truncate the four 64-bit values in this vector and store them into the first
 // four elements of the provided array
-ALWAYS_INLINE inline void Vec4::Store(i32 *arr) const {
+inline void Vec4::Store(i32 *arr) const {
   auto truncated = _mm256_cvtepi64_epi32(reg());
   _mm_store_si128(reinterpret_cast<__m128i *>(arr), truncated);
 }
 
-ALWAYS_INLINE inline void Vec4::Store(i64 *arr) const {
+inline void Vec4::Store(i64 *arr) const {
   Vec256b::Store(reinterpret_cast<void *>(arr));
 }
 
@@ -200,14 +200,14 @@ class Vec8 : public Vec256b {
   /// Return the number of elements that can be stored in this vector
   static constexpr u32 Size() { return 8; }
 
-  ALWAYS_INLINE i32 Extract(u32 index) const {
+  i32 Extract(u32 index) const {
     TPL_ASSERT(index < 8, "Out-of-bounds mask element access");
     alignas(32) i32 x[Size()];
     Store(x);
     return x[index & 7];
   }
 
-  ALWAYS_INLINE i32 operator[](u32 index) const { return Extract(index); }
+  i32 operator[](u32 index) const { return Extract(index); }
 };
 
 // ---------------------------------------------------------
@@ -219,27 +219,27 @@ class Vec8 : public Vec256b {
 // are up-casted to 32-bits when appropriate.
 
 template <typename T>
-ALWAYS_INLINE inline Vec8 &Vec8::Load(const T *ptr) {
+inline Vec8 &Vec8::Load(const T *ptr) {
   using signed_t = std::make_signed_t<T>;
   return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
 }
 
 template <>
-ALWAYS_INLINE inline Vec8 &Vec8::Load<i8>(const i8 *ptr) {
+inline Vec8 &Vec8::Load<i8>(const i8 *ptr) {
   auto tmp = _mm_loadu_si128((const __m128i *)ptr);
   reg_ = _mm256_cvtepi8_epi32(tmp);
   return *this;
 }
 
 template <>
-ALWAYS_INLINE inline Vec8 &Vec8::Load<i16>(const i16 *ptr) {
+inline Vec8 &Vec8::Load<i16>(const i16 *ptr) {
   auto tmp = _mm_loadu_si128((const __m128i *)ptr);
   reg_ = _mm256_cvtepi16_epi32(tmp);
   return *this;
 }
 
 template <>
-ALWAYS_INLINE inline Vec8 &Vec8::Load<i32>(const i32 *ptr) {
+inline Vec8 &Vec8::Load<i32>(const i32 *ptr) {
   reg_ = _mm256_loadu_si256((const __m256i *)ptr);
   return *this;
 }
@@ -250,13 +250,13 @@ ALWAYS_INLINE inline Vec8 &Vec8::Load<i32>(const i32 *ptr) {
 // elements are up-casted when appropriate.
 
 template <typename T>
-ALWAYS_INLINE inline Vec8 &Vec8::Gather(const T *ptr, const Vec8 &pos) {
+inline Vec8 &Vec8::Gather(const T *ptr, const Vec8 &pos) {
   using signed_t = std::make_signed_t<T>;
   return Gather<signed_t>(reinterpret_cast<const signed_t *>(ptr), pos);
 }
 
 template <>
-ALWAYS_INLINE inline Vec8 &Vec8::Gather<i8>(const i8 *ptr, const Vec8 &pos) {
+inline Vec8 &Vec8::Gather<i8>(const i8 *ptr, const Vec8 &pos) {
 #if USE_GATHER == 1
   reg_ = _mm256_i32gather_epi32(ptr, pos, 1);
   reg_ = _mm256_srai_epi32(reg_, 24);
@@ -270,7 +270,7 @@ ALWAYS_INLINE inline Vec8 &Vec8::Gather<i8>(const i8 *ptr, const Vec8 &pos) {
 }
 
 template <>
-ALWAYS_INLINE inline Vec8 &Vec8::Gather<i16>(const i16 *ptr, const Vec8 &pos) {
+inline Vec8 &Vec8::Gather<i16>(const i16 *ptr, const Vec8 &pos) {
 #if USE_GATHER == 1
   reg_ = _mm256_i32gather_epi32(ptr, pos, 2);
   reg_ = _mm256_srai_epi32(reg_, 16);
@@ -284,7 +284,7 @@ ALWAYS_INLINE inline Vec8 &Vec8::Gather<i16>(const i16 *ptr, const Vec8 &pos) {
 }
 
 template <>
-ALWAYS_INLINE inline Vec8 &Vec8::Gather<i32>(const i32 *ptr, const Vec8 &pos) {
+inline Vec8 &Vec8::Gather<i32>(const i32 *ptr, const Vec8 &pos) {
 #if USE_GATHER == 1
   reg_ = _mm256_i32gather_epi32(ptr, pos, 4);
 #else
@@ -296,7 +296,7 @@ ALWAYS_INLINE inline Vec8 &Vec8::Gather<i32>(const i32 *ptr, const Vec8 &pos) {
   return *this;
 }
 
-ALWAYS_INLINE inline void Vec8::Store(i32 *arr) const {
+inline void Vec8::Store(i32 *arr) const {
   Vec256b::Store(reinterpret_cast<void *>(arr));
 }
 
@@ -311,46 +311,21 @@ class Vec8Mask : public Vec8 {
   Vec8Mask() = default;
   explicit Vec8Mask(const __m256i &reg) : Vec8(reg) {}
 
-  /// Extract the value of the bit at index \a index in this mask
   bool Extract(u32 idx) const { return Vec8::Extract(idx) != 0; }
 
-  /// Extract the value of the bit at index \a index in this mask
   bool operator[](u32 idx) const { return Extract(idx); }
 
-  u32 ToPositions(u32 *positions, u32 offset) const;
-
-  u32 ToPositions(u32 *positions, const Vec8 &pos) const;
+  sel_t ToPositions(sel_t *positions, sel_t offset) const {
+    i32 mask = _mm256_movemask_ps(_mm256_castsi256_ps(reg()));
+    TPL_ASSERT(mask < 256, "8-bit mask must be less than 256");
+    __m128i match_pos_scaled = _mm_loadl_epi64(
+        reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask]));
+    __m128i match_pos = _mm_cvtepi8_epi16(match_pos_scaled);
+    __m128i pos_vec = _mm_add_epi16(_mm_set1_epi16(offset), match_pos);
+    _mm_storeu_si128(reinterpret_cast<__m128i *>(positions), pos_vec);
+    return __builtin_popcount(mask);
+  }
 };
-
-// ---------------------------------------------------------
-// Vec8Mask Implementation
-// ---------------------------------------------------------
-
-ALWAYS_INLINE inline u32 Vec8Mask::ToPositions(u32 *positions,
-                                               u32 offset) const {
-  i32 mask = _mm256_movemask_ps(_mm256_castsi256_ps(reg()));
-  TPL_ASSERT(mask < 256, "8-bit mask must be less than 256");
-  __m128i match_pos_scaled =
-      _mm_loadl_epi64(reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask]));
-  __m256i match_pos = _mm256_cvtepi8_epi32(match_pos_scaled);
-  __m256i pos_vec = _mm256_add_epi32(_mm256_set1_epi32(offset), match_pos);
-  _mm256_storeu_si256(reinterpret_cast<__m256i *>(positions), pos_vec);
-  return __builtin_popcount(mask);
-}
-
-ALWAYS_INLINE inline u32 Vec8Mask::ToPositions(
-    u32 *positions, const tpl::util::simd::Vec8 &pos) const {
-  i32 mask = _mm256_movemask_ps(_mm256_castsi256_ps(reg()));
-  TPL_ASSERT(mask < 256, "8-bit mask must be less than 256");
-  __m128i perm_comp =
-      _mm_loadl_epi64(reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask]));
-  __m256i perm = _mm256_cvtepi8_epi32(perm_comp);
-  __m256i perm_pos = _mm256_permutevar8x32_epi32(pos, perm);
-  __m256i perm_mask = _mm256_permutevar8x32_epi32(reg(), perm);
-  _mm256_maskstore_epi32(reinterpret_cast<i32 *>(positions), perm_mask,
-                         perm_pos);
-  return __builtin_popcount(mask);
-}
 
 // ---------------------------------------------------------
 // Vec4Mask Definition
@@ -365,33 +340,13 @@ class Vec4Mask : public Vec4 {
 
   i32 operator[](u32 index) const { return Extract(index); }
 
-  ALWAYS_INLINE inline u32 ToPositions(u32 *positions, u32 offset) const {
+  sel_t ToPositions(sel_t *positions, sel_t offset) const {
     i32 mask = _mm256_movemask_pd(_mm256_castsi256_pd(reg()));
     TPL_ASSERT(mask < 16, "4-bit mask must be less than 16");
-    __m128i match_pos_scaled = _mm_loadl_epi64(
+    __m128i match_pos = _mm_loadl_epi64(
         reinterpret_cast<__m128i *>(const_cast<u64 *>(&k4BitMatchLUT[mask])));
-    __m128i match_pos = _mm_cvtepi16_epi32(match_pos_scaled);
     __m128i pos_vec = _mm_add_epi32(_mm_set1_epi32(offset), match_pos);
     _mm_storeu_si128(reinterpret_cast<__m128i *>(positions), pos_vec);
-    return __builtin_popcount(mask);
-  }
-
-  ALWAYS_INLINE inline u32 ToPositions(u32 *positions, const Vec4 &pos) const {
-    i32 mask = _mm256_movemask_pd(_mm256_castsi256_pd(reg()));
-    TPL_ASSERT(mask < 16, "4-bit mask must be less than 16");
-
-    // TODO(pmenon): Fix this slowness!
-    {
-      alignas(32) i64 m_arr[Size()];
-      alignas(32) i64 p_arr[Size()];
-      Store(m_arr);
-      pos.Store(p_arr);
-      for (u32 idx = 0, i = 0; i < 4; i++) {
-        positions[idx] = static_cast<u32>(p_arr[i]);
-        idx += (m_arr[i] != 0);
-      }
-    }
-
     return __builtin_popcount(mask);
   }
 };
@@ -401,19 +356,19 @@ class Vec4Mask : public Vec4 {
 // ---------------------------------------------------------
 
 // Bit-wise NOT
-ALWAYS_INLINE inline Vec256b operator~(const Vec256b &v) {
+inline Vec256b operator~(const Vec256b &v) {
   return Vec256b(_mm256_xor_si256(v, _mm256_set1_epi32(-1)));
 }
 
-ALWAYS_INLINE inline Vec256b operator&(const Vec256b &a, const Vec256b &b) {
+inline Vec256b operator&(const Vec256b &a, const Vec256b &b) {
   return Vec256b(_mm256_and_si256(a, b));
 }
 
-ALWAYS_INLINE inline Vec256b operator|(const Vec256b &a, const Vec256b &b) {
+inline Vec256b operator|(const Vec256b &a, const Vec256b &b) {
   return Vec256b(_mm256_or_si256(a, b));
 }
 
-ALWAYS_INLINE inline Vec256b operator^(const Vec256b &a, const Vec256b &b) {
+inline Vec256b operator^(const Vec256b &a, const Vec256b &b) {
   return Vec256b(_mm256_xor_si256(a, b));
 }
 
@@ -421,7 +376,7 @@ ALWAYS_INLINE inline Vec256b operator^(const Vec256b &a, const Vec256b &b) {
 // Vec8Mask
 // ---------------------------------------------------------
 
-ALWAYS_INLINE inline Vec8Mask operator&(const Vec8Mask &a, const Vec8Mask &b) {
+inline Vec8Mask operator&(const Vec8Mask &a, const Vec8Mask &b) {
   return Vec8Mask(Vec256b(a) & Vec256b(b));
 }
 
@@ -429,7 +384,7 @@ ALWAYS_INLINE inline Vec8Mask operator&(const Vec8Mask &a, const Vec8Mask &b) {
 // Vec4Mask
 // ---------------------------------------------------------
 
-ALWAYS_INLINE inline Vec4Mask operator&(const Vec4Mask &a, const Vec4Mask &b) {
+inline Vec4Mask operator&(const Vec4Mask &a, const Vec4Mask &b) {
   return Vec4Mask(Vec256b(a) & Vec256b(b));
 }
 
@@ -437,27 +392,23 @@ ALWAYS_INLINE inline Vec4Mask operator&(const Vec4Mask &a, const Vec4Mask &b) {
 // Vec4 - Comparison Operations
 // ---------------------------------------------------------
 
-ALWAYS_INLINE inline Vec4Mask operator>(const Vec4 &a, const Vec4 &b) {
+inline Vec4Mask operator>(const Vec4 &a, const Vec4 &b) {
   return Vec4Mask(_mm256_cmpgt_epi64(a, b));
 }
 
-ALWAYS_INLINE inline Vec4Mask operator==(const Vec4 &a, const Vec4 &b) {
+inline Vec4Mask operator==(const Vec4 &a, const Vec4 &b) {
   return Vec4Mask(_mm256_cmpeq_epi64(a, b));
 }
 
-ALWAYS_INLINE inline Vec4Mask operator>=(const Vec4 &a, const Vec4 &b) {
+inline Vec4Mask operator>=(const Vec4 &a, const Vec4 &b) {
   return Vec4Mask(~(b > a));
 }
 
-ALWAYS_INLINE inline Vec4Mask operator<(const Vec4 &a, const Vec4 &b) {
-  return b > a;
-}
+inline Vec4Mask operator<(const Vec4 &a, const Vec4 &b) { return b > a; }
 
-ALWAYS_INLINE inline Vec4Mask operator<=(const Vec4 &a, const Vec4 &b) {
-  return b >= a;
-}
+inline Vec4Mask operator<=(const Vec4 &a, const Vec4 &b) { return b >= a; }
 
-ALWAYS_INLINE inline Vec4Mask operator!=(const Vec4 &a, const Vec4 &b) {
+inline Vec4Mask operator!=(const Vec4 &a, const Vec4 &b) {
   return Vec4Mask(~Vec256b(a == b));
 }
 
@@ -465,83 +416,83 @@ ALWAYS_INLINE inline Vec4Mask operator!=(const Vec4 &a, const Vec4 &b) {
 // Vec4 - Arithmetic Operations
 // ---------------------------------------------------------
 
-ALWAYS_INLINE inline Vec4 operator+(const Vec4 &a, const Vec4 &b) {
+inline Vec4 operator+(const Vec4 &a, const Vec4 &b) {
   return Vec4(_mm256_add_epi64(a, b));
 }
 
-ALWAYS_INLINE inline Vec4 &operator+=(Vec4 &a, const Vec4 &b) {
+inline Vec4 &operator+=(Vec4 &a, const Vec4 &b) {
   a = a + b;
   return a;
 }
 
-ALWAYS_INLINE inline Vec4 operator-(const Vec4 &a, const Vec4 &b) {
+inline Vec4 operator-(const Vec4 &a, const Vec4 &b) {
   return Vec4(_mm256_sub_epi64(a, b));
 }
 
-ALWAYS_INLINE inline Vec4 &operator-=(Vec4 &a, const Vec4 &b) {
+inline Vec4 &operator-=(Vec4 &a, const Vec4 &b) {
   a = a - b;
   return a;
 }
 
-ALWAYS_INLINE inline Vec4 operator&(const Vec4 &a, const Vec4 &b) {
+inline Vec4 operator&(const Vec4 &a, const Vec4 &b) {
   return Vec4(Vec256b(a) & Vec256b(b));
 }
 
-ALWAYS_INLINE inline Vec4 &operator&=(Vec4 &a, const Vec4 &b) {
+inline Vec4 &operator&=(Vec4 &a, const Vec4 &b) {
   a = a & b;
   return a;
 }
 
-ALWAYS_INLINE inline Vec4 operator|(const Vec4 &a, const Vec4 &b) {
+inline Vec4 operator|(const Vec4 &a, const Vec4 &b) {
   return Vec4(Vec256b(a) | Vec256b(b));
 }
 
-ALWAYS_INLINE inline Vec4 &operator|=(Vec4 &a, const Vec4 &b) {
+inline Vec4 &operator|=(Vec4 &a, const Vec4 &b) {
   a = a | b;
   return a;
 }
 
-ALWAYS_INLINE inline Vec4 operator^(const Vec4 &a, const Vec4 &b) {
+inline Vec4 operator^(const Vec4 &a, const Vec4 &b) {
   return Vec4(Vec256b(a) ^ Vec256b(b));
 }
 
-ALWAYS_INLINE inline Vec4 &operator^=(Vec4 &a, const Vec4 &b) {
+inline Vec4 &operator^=(Vec4 &a, const Vec4 &b) {
   a = a ^ b;
   return a;
 }
 
-ALWAYS_INLINE inline Vec4 operator>>(const Vec4 &a, const u32 shift) {
+inline Vec4 operator>>(const Vec4 &a, const u32 shift) {
   return Vec4(_mm256_srli_epi64(a, shift));
 }
 
-ALWAYS_INLINE inline Vec4 &operator>>=(Vec4 &a, const u32 shift) {
+inline Vec4 &operator>>=(Vec4 &a, const u32 shift) {
   a = a >> shift;
   return a;
 }
 
-ALWAYS_INLINE inline Vec4 operator<<(const Vec4 &a, const u32 shift) {
+inline Vec4 operator<<(const Vec4 &a, const u32 shift) {
   return Vec4(_mm256_slli_epi64(a, shift));
 }
 
-ALWAYS_INLINE inline Vec4 &operator<<=(Vec4 &a, const u32 shift) {
+inline Vec4 &operator<<=(Vec4 &a, const u32 shift) {
   a = a << shift;
   return a;
 }
 
-ALWAYS_INLINE inline Vec4 operator>>(const Vec4 &a, const Vec4 &b) {
+inline Vec4 operator>>(const Vec4 &a, const Vec4 &b) {
   return Vec4(_mm256_srlv_epi64(a, b));
 }
 
-ALWAYS_INLINE inline Vec4 &operator>>=(Vec4 &a, const Vec4 &b) {
+inline Vec4 &operator>>=(Vec4 &a, const Vec4 &b) {
   a = a >> b;
   return a;
 }
 
-ALWAYS_INLINE inline Vec4 operator<<(const Vec4 &a, const Vec4 &b) {
+inline Vec4 operator<<(const Vec4 &a, const Vec4 &b) {
   return Vec4(_mm256_sllv_epi64(a, b));
 }
 
-ALWAYS_INLINE inline Vec4 &operator<<=(Vec4 &a, const Vec4 &b) {
+inline Vec4 &operator<<=(Vec4 &a, const Vec4 &b) {
   a = a << b;
   return a;
 }
@@ -550,28 +501,24 @@ ALWAYS_INLINE inline Vec4 &operator<<=(Vec4 &a, const Vec4 &b) {
 // Vec8 - Comparison Operations
 // ---------------------------------------------------------
 
-ALWAYS_INLINE inline Vec8Mask operator>(const Vec8 &a, const Vec8 &b) {
+inline Vec8Mask operator>(const Vec8 &a, const Vec8 &b) {
   return Vec8Mask(_mm256_cmpgt_epi32(a, b));
 }
 
-ALWAYS_INLINE inline Vec8Mask operator==(const Vec8 &a, const Vec8 &b) {
+inline Vec8Mask operator==(const Vec8 &a, const Vec8 &b) {
   return Vec8Mask(_mm256_cmpeq_epi32(a, b));
 }
 
-ALWAYS_INLINE inline Vec8Mask operator>=(const Vec8 &a, const Vec8 &b) {
+inline Vec8Mask operator>=(const Vec8 &a, const Vec8 &b) {
   __m256i max_a_b = _mm256_max_epu32(a, b);
   return Vec8Mask(_mm256_cmpeq_epi32(a, max_a_b));
 }
 
-ALWAYS_INLINE inline Vec8Mask operator<(const Vec8 &a, const Vec8 &b) {
-  return b > a;
-}
+inline Vec8Mask operator<(const Vec8 &a, const Vec8 &b) { return b > a; }
 
-ALWAYS_INLINE inline Vec8Mask operator<=(const Vec8 &a, const Vec8 &b) {
-  return b >= a;
-}
+inline Vec8Mask operator<=(const Vec8 &a, const Vec8 &b) { return b >= a; }
 
-ALWAYS_INLINE inline Vec8Mask operator!=(const Vec8 &a, const Vec8 &b) {
+inline Vec8Mask operator!=(const Vec8 &a, const Vec8 &b) {
   return Vec8Mask(~Vec256b(a == b));
 }
 
@@ -579,92 +526,92 @@ ALWAYS_INLINE inline Vec8Mask operator!=(const Vec8 &a, const Vec8 &b) {
 // Vec8 - Arithmetic Operations
 // ---------------------------------------------------------
 
-ALWAYS_INLINE inline Vec8 operator+(const Vec8 &a, const Vec8 &b) {
+inline Vec8 operator+(const Vec8 &a, const Vec8 &b) {
   return Vec8(_mm256_add_epi32(a, b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator+=(Vec8 &a, const Vec8 &b) {
+inline Vec8 &operator+=(Vec8 &a, const Vec8 &b) {
   a = a + b;
   return a;
 }
 
-ALWAYS_INLINE inline Vec8 operator-(const Vec8 &a, const Vec8 &b) {
+inline Vec8 operator-(const Vec8 &a, const Vec8 &b) {
   return Vec8(_mm256_sub_epi32(a, b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator-=(Vec8 &a, const Vec8 &b) {
+inline Vec8 &operator-=(Vec8 &a, const Vec8 &b) {
   a = a - b;
   return a;
 }
 
-ALWAYS_INLINE inline Vec8 operator*(const Vec8 &a, const Vec8 &b) {
+inline Vec8 operator*(const Vec8 &a, const Vec8 &b) {
   return Vec8(_mm256_mullo_epi32(a, b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator*=(Vec8 &a, const Vec8 &b) {
+inline Vec8 &operator*=(Vec8 &a, const Vec8 &b) {
   a = a * b;
   return a;
 }
 
-ALWAYS_INLINE inline Vec8 operator&(const Vec8 &a, const Vec8 &b) {
+inline Vec8 operator&(const Vec8 &a, const Vec8 &b) {
   return Vec8(Vec256b(a) & Vec256b(b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator&=(Vec8 &a, const Vec8 &b) {
+inline Vec8 &operator&=(Vec8 &a, const Vec8 &b) {
   a = a & b;
   return a;
 }
 
-ALWAYS_INLINE inline Vec8 operator|(const Vec8 &a, const Vec8 &b) {
+inline Vec8 operator|(const Vec8 &a, const Vec8 &b) {
   return Vec8(Vec256b(a) | Vec256b(b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator|=(Vec8 &a, const Vec8 &b) {
+inline Vec8 &operator|=(Vec8 &a, const Vec8 &b) {
   a = a | b;
   return a;
 }
 
-ALWAYS_INLINE inline Vec8 operator^(const Vec8 &a, const Vec8 &b) {
+inline Vec8 operator^(const Vec8 &a, const Vec8 &b) {
   return Vec8(Vec256b(a) ^ Vec256b(b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator^=(Vec8 &a, const Vec8 &b) {
+inline Vec8 &operator^=(Vec8 &a, const Vec8 &b) {
   a = a ^ b;
   return a;
 }
 
-ALWAYS_INLINE inline Vec8 operator>>(const Vec8 &a, const u32 shift) {
+inline Vec8 operator>>(const Vec8 &a, const u32 shift) {
   return Vec8(_mm256_srli_epi32(a, shift));
 }
 
-ALWAYS_INLINE inline Vec8 &operator>>=(Vec8 &a, const u32 shift) {
+inline Vec8 &operator>>=(Vec8 &a, const u32 shift) {
   a = a >> shift;
   return a;
 }
 
-ALWAYS_INLINE inline Vec8 operator<<(const Vec8 &a, const u32 shift) {
+inline Vec8 operator<<(const Vec8 &a, const u32 shift) {
   return Vec8(_mm256_slli_epi32(a, shift));
 }
 
-ALWAYS_INLINE inline Vec8 &operator<<=(Vec8 &a, const u32 shift) {
+inline Vec8 &operator<<=(Vec8 &a, const u32 shift) {
   a = a << shift;
   return a;
 }
 
-ALWAYS_INLINE inline Vec8 operator>>(const Vec8 &a, const Vec8 &b) {
+inline Vec8 operator>>(const Vec8 &a, const Vec8 &b) {
   return Vec8(_mm256_srlv_epi32(a, b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator>>=(Vec8 &a, const Vec8 &b) {
+inline Vec8 &operator>>=(Vec8 &a, const Vec8 &b) {
   a = a >> b;
   return a;
 }
 
-ALWAYS_INLINE inline Vec8 operator<<(const Vec8 &a, const Vec8 &b) {
+inline Vec8 operator<<(const Vec8 &a, const Vec8 &b) {
   return Vec8(_mm256_sllv_epi32(a, b));
 }
 
-ALWAYS_INLINE inline Vec8 &operator<<=(Vec8 &a, const Vec8 &b) {
+inline Vec8 &operator<<=(Vec8 &a, const Vec8 &b) {
   a = a << b;
   return a;
 }
@@ -705,8 +652,8 @@ struct FilterVecSizer<T, std::enable_if_t<std::is_unsigned_v<T>>>
     : public FilterVecSizer<std::make_signed_t<T>> {};
 
 template <typename T, template <typename> typename Compare>
-static inline u32 FilterVectorByVal(const T *RESTRICT in, u32 in_count, T val,
-                                    u32 *RESTRICT out, const u32 *RESTRICT sel,
+static inline u32 FilterVectorByVal(const T *RESTRICT in, const u32 in_count,
+                                    const T val, sel_t *RESTRICT out,
                                     u32 *RESTRICT in_pos) {
   using Vec = typename FilterVecSizer<T>::Vec;
   using VecMask = typename FilterVecSizer<T>::VecMask;
@@ -717,23 +664,11 @@ static inline u32 FilterVectorByVal(const T *RESTRICT in, u32 in_count, T val,
 
   u32 out_pos = 0;
 
-  if (sel == nullptr) {
-    Vec in_vec;
-    for (*in_pos = 0; *in_pos + Vec::Size() < in_count;
-         *in_pos += Vec::Size()) {
-      in_vec.Load(in + *in_pos);
-      VecMask mask = cmp(in_vec, xval);
-      out_pos += mask.ToPositions(out + out_pos, *in_pos);
-    }
-  } else {
-    Vec in_vec, sel_vec;
-    for (*in_pos = 0; *in_pos + Vec::Size() < in_count;
-         *in_pos += Vec::Size()) {
-      sel_vec.Load(sel + *in_pos);
-      in_vec.Gather(in, sel_vec);
-      VecMask mask = cmp(in_vec, xval);
-      out_pos += mask.ToPositions(out + out_pos, sel_vec);
-    }
+  Vec in_vec;
+  for (*in_pos = 0; *in_pos + Vec::Size() < in_count; *in_pos += Vec::Size()) {
+    in_vec.Load(in + *in_pos);
+    VecMask mask = cmp(in_vec, xval);
+    out_pos += mask.ToPositions(out + out_pos, *in_pos);
   }
 
   return out_pos;
@@ -742,8 +677,7 @@ static inline u32 FilterVectorByVal(const T *RESTRICT in, u32 in_count, T val,
 template <typename T, template <typename> typename Compare>
 static inline u32 FilterVectorByVector(const T *RESTRICT in_1,
                                        const T *RESTRICT in_2,
-                                       const u32 in_count, u32 *RESTRICT out,
-                                       const u32 *RESTRICT sel,
+                                       const u32 in_count, sel_t *RESTRICT out,
                                        u32 *RESTRICT in_pos) {
   using Vec = typename FilterVecSizer<T>::Vec;
   using VecMask = typename FilterVecSizer<T>::VecMask;
@@ -752,25 +686,12 @@ static inline u32 FilterVectorByVector(const T *RESTRICT in_1,
 
   u32 out_pos = 0;
 
-  if (sel == nullptr) {
-    Vec in_1_vec, in_2_vec;
-    for (*in_pos = 0; *in_pos + Vec::Size() < in_count;
-         *in_pos += Vec::Size()) {
-      in_1_vec.Load(in_1 + *in_pos);
-      in_2_vec.Load(in_2 + *in_pos);
-      VecMask mask = cmp(in_1_vec, in_2_vec);
-      out_pos += mask.ToPositions(out + out_pos, *in_pos);
-    }
-  } else {
-    Vec in_1_vec, in_2_vec, sel_vec;
-    for (*in_pos = 0; *in_pos + Vec::Size() < in_count;
-         *in_pos += Vec::Size()) {
-      sel_vec.Load(sel + *in_pos);
-      in_1_vec.Gather(in_1, sel_vec);
-      in_2_vec.Gather(in_2, sel_vec);
-      VecMask mask = cmp(in_1_vec, in_2_vec);
-      out_pos += mask.ToPositions(out + out_pos, sel_vec);
-    }
+  Vec in_1_vec, in_2_vec;
+  for (*in_pos = 0; *in_pos + Vec::Size() < in_count; *in_pos += Vec::Size()) {
+    in_1_vec.Load(in_1 + *in_pos);
+    in_2_vec.Load(in_2 + *in_pos);
+    VecMask mask = cmp(in_1_vec, in_2_vec);
+    out_pos += mask.ToPositions(out + out_pos, *in_pos);
   }
 
   return out_pos;

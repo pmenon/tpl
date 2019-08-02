@@ -19,7 +19,7 @@ namespace tpl::sql {
  * on filtered items.
  */
 class VectorProjectionIterator {
-  static constexpr const u32 kInvalidPos = std::numeric_limits<u32>::max();
+  static constexpr const u32 kInvalidPos = std::numeric_limits<sel_t>::max();
 
  public:
   /**
@@ -162,39 +162,9 @@ class VectorProjectionIterator {
   };
 
   /**
-   * Filter the column at index @em col_idx by the given constant value @em val.
-   * @tparam Op The filtering operator.
-   * @param col_idx The index of the column in the vector projection to filter.
-   * @param val The value to filter on.
-   * @return The number of selected elements.
-   */
-  template <template <typename> typename Op>
-  u32 FilterColByVal(u32 col_idx, FilterVal val);
-
-  /**
-   * Filter the column at index @em col_idx_1 with the contents of the column
-   * at index @em col_idx_2.
-   * @tparam Op The filtering operator.
-   * @param col_idx_1 The index of the first column to compare.
-   * @param col_idx_2 The index of the second column to compare.
-   * @return The number of selected elements.
-   */
-  template <template <typename> typename Op>
-  u32 FilterColByCol(u32 col_idx_1, u32 col_idx_2);
-
-  /**
    * Return the number of selected tuples after any filters have been applied
    */
   u32 num_selected() const { return num_selected_; }
-
- private:
-  // Filter a column by a constant value
-  template <typename T, template <typename> typename Op>
-  u32 FilterColByValImpl(u32 col_idx, T val);
-
-  // Filter a column by a second column
-  template <typename T, template <typename> typename Op>
-  u32 FilterColByColImpl(u32 col_idx_1, u32 col_idx_2);
 
  private:
   // The vector projection we're iterating over
@@ -207,7 +177,7 @@ class VectorProjectionIterator {
   u32 num_selected_;
 
   // The selection vector used to filter the vector projection
-  alignas(CACHELINE_SIZE) u32 selection_vector_[kDefaultVectorSize];
+  sel_t selection_vector_[kDefaultVectorSize];
 
   // The next slot in the selection vector to read from
   u32 selection_vector_read_idx_;

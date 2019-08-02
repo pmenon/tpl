@@ -216,9 +216,9 @@ TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
       vaat_ret = 0;
       AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
       for (; iter.HasNext(); iter.Next(Transpose)) {
-        auto *vpi = iter.GetVectorProjectionIterator();
-        auto val = VectorProjectionIterator::FilterVal{.bi = filter};
-        vaat_ret += vpi->FilterColByVal<std::less>(0, val);
+//        auto *vpi = iter.GetVectorProjectionIterator();
+//        auto val = VectorProjectionIterator::FilterVal{.bi = filter};
+//        vaat_ret += vpi->FilterColByVal<std::less>(0, val);
       }
     });
 

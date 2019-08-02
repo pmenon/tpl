@@ -34,8 +34,11 @@ u32 Hobbled_TaaT_Lt_500(VectorProjectionIterator *vpi) {
 }
 
 u32 Vectorized_Lt_500(VectorProjectionIterator *vpi) {
-  VectorProjectionIterator::FilterVal param{.i = 500};
-  return vpi->FilterColByVal<std::less>(Col::A, param);
+  vpi->RunFilter([vpi]() -> bool {
+    auto cola = *vpi->GetValue<i32, false>(Col::A, nullptr);
+    return cola < 500;
+  });
+  return vpi->num_selected();
 }
 
 TEST_F(FilterManagerTest, SimpleFilterManagerTest) {
