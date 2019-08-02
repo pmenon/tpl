@@ -38,6 +38,9 @@ namespace tpl::sql {
  * The selection vector is used primarily to activate and deactivate elements in
  * the vector.
  *
+ * Vectors have a maximum capacity determined by the global constant
+ * @em kDefaultVectorSize usually set to 2048 elements.
+ *
  * CAUTION: While there are methods to get/set individual vector elements, this
  * should be used very very sparingly. If you find yourself invoking this is in
  * a hot-loop, or very often, reconsider your interaction pattern with Vector,
@@ -122,7 +125,7 @@ class Vector {
   /**
    * Set the selection vector.
    */
-  void SetSelectionVector(sel_t *sel_vector, u64 count) {
+  void SetSelectionVector(sel_t *const sel_vector, const u64 count) {
     sel_vector_ = sel_vector;
     count_ = count;
   }
@@ -131,6 +134,14 @@ class Vector {
    * Is this vector holding a single constant value?
    */
   bool IsConstant() const { return count_ == 1 && sel_vector_ == nullptr; }
+
+  /**
+   * Compute the selectivity of the vector. Constant vectors always have a
+   * selectivity of 1.0 (100%).
+   */
+  f64 ComputeSelectivity() const {
+    return IsConstant() ? 1.0 : static_cast<f64>(count_) / kDefaultVectorSize;
+  }
 
   /**
    * Is the value at position @em index NULL?

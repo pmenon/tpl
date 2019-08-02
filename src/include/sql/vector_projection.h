@@ -77,6 +77,12 @@ class VectorProjection {
   bool IsFiltered() const { return sel_vector_[0] != kInvalidPos; }
 
   /**
+   * Return a reference to the selection vector. If no selection vector exists
+   * for the projection, a null pointer is returned;
+   */
+  sel_t *GetSelectionVector() { return IsFiltered() ? sel_vector_ : nullptr; }
+
+  /**
    * Access metadata for the column at position @em col_idx in the projection.
    * @return The metadata for the column at the given index in the projection.
    */
@@ -143,6 +149,18 @@ class VectorProjection {
   }
 
   /**
+   * Compute the selectivity of this projection.
+   * @return A number between [0.0, 1.0] representing the selectivity, i.e., the
+   *         fraction of tuples that are active and visible.
+   */
+  f64 ComputeSelectivity() const {
+    if (columns_.empty()) {
+      return 0;
+    }
+    return columns_[0]->ComputeSelectivity();
+  }
+
+  /**
    * Return a string representation of this vector.
    * @return A string representation of the projection's contents.
    */
@@ -170,7 +188,7 @@ class VectorProjection {
   std::vector<std::unique_ptr<Vector>> columns_;
 
   // The selection vector for the projection.
-  alignas(CACHELINE_SIZE) sel_t sel_vector_[kDefaultVectorSize];
+  sel_t sel_vector_[kDefaultVectorSize];
 
   // If the vector projection allocates memory for all contained vectors, this
   // pointer owns that memory.

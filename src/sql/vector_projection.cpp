@@ -78,8 +78,10 @@ void VectorProjection::Dump(std::ostream &stream) const {
 
 void VectorProjection::CheckIntegrity() const {
 #ifndef NDEBUG
-  // Check that all contained vectors have the same size
+  // Check that all contained vectors have the same size and selection vector
   for (const auto &col : columns_) {
+    TPL_ASSERT(!IsFiltered() || sel_vector_ == col->selection_vector(),
+               "Vector in projection with different selection vector");
     TPL_ASSERT(GetTupleCount() == col->count(),
                "Vector size does not match rest of projection");
   }
