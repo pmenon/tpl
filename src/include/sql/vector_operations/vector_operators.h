@@ -156,10 +156,10 @@ class VectorOps {
    * @param left The left input into the comparison.
    * @param right The right input into the comparison.
    * @param[out] out_sel_vector The output selection index vector.
-   * @return The number of items selected.
+   * @param[out] out_count The number of items selected.
    */
-  static u32 SelectEqual(const Vector &left, const Vector &right,
-                         sel_t out_sel_vector[]);
+  static void SelectEqual(const Vector &left, const Vector &right,
+                          sel_t *out_sel_vector, u32 *out_count);
 
   /**
    * Store the positions where the left input element is strictly greater than
@@ -168,10 +168,10 @@ class VectorOps {
    * @param left The left input into the comparison.
    * @param right The right input into the comparison.
    * @param[out] out_sel_vector The output selection index vector.
-   * @return The number of items selected.
+   * @param[out] out_count The number of items selected.
    */
-  static u32 SelectGreaterThan(const Vector &left, const Vector &right,
-                               sel_t out_sel_vector[]);
+  static void SelectGreaterThan(const Vector &left, const Vector &right,
+                                sel_t *out_sel_vector, u32 *out_count);
 
   /**
    * Store the positions where the left input element is greater than or equal
@@ -180,10 +180,10 @@ class VectorOps {
    * @param left The left input into the comparison.
    * @param right The right input into the comparison.
    * @param[out] out_sel_vector The output selection index vector.
-   * @return The number of items selected.
+   * @param[out] out_count The number of items selected.
    */
-  static u32 SelectGreaterThanEqual(const Vector &left, const Vector &right,
-                                    sel_t out_sel_vector[]);
+  static void SelectGreaterThanEqual(const Vector &left, const Vector &right,
+                                     sel_t *out_sel_vector, u32 *out_count);
 
   /**
    * Store the positions where the left input element is strictly less than the
@@ -191,10 +191,10 @@ class VectorOps {
    * @param left The left input into the comparison.
    * @param right The right input into the comparison.
    * @param[out] out_sel_vector The output selection index vector.
-   * @return The number of items selected.
+   * @param[out] out_count The number of items selected.
    */
-  static u32 SelectLessThan(const Vector &left, const Vector &right,
-                            sel_t out_sel_vector[]);
+  static void SelectLessThan(const Vector &left, const Vector &right,
+                             sel_t *out_sel_vector, u32 *out_count);
 
   /**
    * Store the positions where the left input element is less than or equal to
@@ -203,10 +203,10 @@ class VectorOps {
    * @param left The left input into the comparison.
    * @param right The right input into the comparison.
    * @param[out] out_sel_vector The output selection index vector.
-   * @return The number of items selected.
+   * @param[out] out_count The number of items selected.
    */
-  static u32 SelectLessThanEqual(const Vector &left, const Vector &right,
-                                 sel_t out_sel_vector[]);
+  static void SelectLessThanEqual(const Vector &left, const Vector &right,
+                                  sel_t *out_sel_vector, u32 *out_count);
 
   /**
    * Store the positions of all unequal elements in the left and right input
@@ -214,10 +214,10 @@ class VectorOps {
    * @param left The left input into the comparison.
    * @param right The right input into the comparison.
    * @param[out] out_sel_vector The output selection index vector.
-   * @return The number of items selected.
+   * @param[out] out_count The number of items selected.
    */
-  static u32 SelectNotEqual(const Vector &left, const Vector &right,
-                            sel_t out_sel_vector[]);
+  static void SelectNotEqual(const Vector &left, const Vector &right,
+                             sel_t *out_sel_vector, u32 *out_count);
 
   // -------------------------------------------------------
   //

@@ -383,11 +383,12 @@ class BitVector : public BitVectorBase<BitVector> {
    */
   u32 num_words() const { return num_words_; }
 
+  const u64 *data_array() const { return data_array_; }
+
  private:
   friend class BitVectorBase<BitVector>;
 
   u64 *data_array() { return data_array_; }
-  const u64 *data_array() const { return data_array_; }
 
  private:
   // The array of bits.
@@ -432,11 +433,13 @@ class InlinedBitVector : public BitVectorBase<InlinedBitVector<NumBits>> {
    */
   u32 num_words() const { return kNumWords; }
 
+  const u64 *data_array() const { return data_array_; }
+
  private:
   friend class BitVectorBase<InlinedBitVector<NumBits>>;
 
   u64 *data_array() { return data_array_; }
-  const u64 *data_array() const { return data_array_; }
+
 
  private:
   u64 data_array_[kNumWords];
