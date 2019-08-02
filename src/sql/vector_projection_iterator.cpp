@@ -8,11 +8,9 @@ VectorProjectionIterator::VectorProjectionIterator()
     : vector_projection_(nullptr),
       curr_idx_(0),
       num_selected_(0),
-      selection_vector_{0},
+      selection_vector_(nullptr),
       selection_vector_read_idx_(0),
-      selection_vector_write_idx_(0) {
-  selection_vector_[0] = VectorProjectionIterator::kInvalidPos;
-}
+      selection_vector_write_idx_(0) {}
 
 VectorProjectionIterator::VectorProjectionIterator(VectorProjection *vp)
     : VectorProjectionIterator() {
@@ -23,7 +21,7 @@ void VectorProjectionIterator::SetVectorProjection(VectorProjection *vp) {
   vector_projection_ = vp;
   num_selected_ = vp->GetTupleCount();
   curr_idx_ = 0;
-  selection_vector_[0] = kInvalidPos;
+  selection_vector_ = vp->sel_vector_;
   selection_vector_read_idx_ = 0;
   selection_vector_write_idx_ = 0;
 }

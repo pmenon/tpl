@@ -19,8 +19,6 @@ namespace tpl::sql {
  * on filtered items.
  */
 class VectorProjectionIterator {
-  static constexpr const u32 kInvalidPos = std::numeric_limits<sel_t>::max();
-
  public:
   /**
    * Create an empty iterator over an empty projection
@@ -42,7 +40,7 @@ class VectorProjectionIterator {
    * Has this vector projection been filtered? Does it have a selection vector?
    * @return True if filtered; false otherwise.
    */
-  bool IsFiltered() const { return selection_vector_[0] != kInvalidPos; }
+  bool IsFiltered() const { return vector_projection_->IsFiltered(); }
 
   /**
    * Reset this iterator to begin iteration over the given projection @em vp
@@ -51,7 +49,7 @@ class VectorProjectionIterator {
   void SetVectorProjection(VectorProjection *vp);
 
   /**
-   * Return the vector projection this iterator is interating over.
+   * Return the vector projection this iterator is iterating over.
    * @return The vector projection that's being iterated over.
    */
   VectorProjection *GetVectorProjection() const { return vector_projection_; }
@@ -155,12 +153,6 @@ class VectorProjectionIterator {
   template <typename F>
   void RunFilter(const F &filter);
 
-  union FilterVal {
-    i16 si;
-    i32 i;
-    i64 bi;
-  };
-
   /**
    * Return the number of selected tuples after any filters have been applied
    */
@@ -177,7 +169,7 @@ class VectorProjectionIterator {
   u32 num_selected_;
 
   // The selection vector used to filter the vector projection
-  sel_t selection_vector_[kDefaultVectorSize];
+  sel_t *selection_vector_;
 
   // The next slot in the selection vector to read from
   u32 selection_vector_read_idx_;
@@ -255,7 +247,7 @@ inline void VectorProjectionIterator::AdvanceFiltered() {
 
 inline void VectorProjectionIterator::Match(bool matched) {
   selection_vector_[selection_vector_write_idx_] = curr_idx_;
-  selection_vector_write_idx_ += matched;
+  selection_vector_write_idx_ += static_cast<u32>(matched);
 }
 
 inline bool VectorProjectionIterator::HasNext() const {
@@ -267,8 +259,7 @@ inline bool VectorProjectionIterator::HasNextFiltered() const {
 }
 
 inline void VectorProjectionIterator::Reset() {
-  const auto next_idx = selection_vector_[0];
-  curr_idx_ = (next_idx == kInvalidPos ? 0 : next_idx);
+  curr_idx_ = IsFiltered() ? selection_vector_[0] : 0;
   selection_vector_read_idx_ = 0;
   selection_vector_write_idx_ = 0;
 }
