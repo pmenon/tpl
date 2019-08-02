@@ -35,9 +35,11 @@ TEST_F(VectorOperationsTest, Generate) {
   CHECK_SIMPLE_GENERATE(BigInt)
   CHECK_SIMPLE_GENERATE(Float)
   CHECK_SIMPLE_GENERATE(Double)
+#undef CHECK_SIMPLE_GENERATE
 }
 
 TEST_F(VectorOperationsTest, Fill) {
+  // Fill a vector with the given type with the given value of that type
 #define CHECK_SIMPLE_FILL(TYPE, FILL_VALUE)                        \
   {                                                                \
     Vector vec(TypeId::TYPE, true, false);                         \
@@ -56,6 +58,8 @@ TEST_F(VectorOperationsTest, Fill) {
   CHECK_SIMPLE_FILL(BigInt, i64(-24987));
   CHECK_SIMPLE_FILL(Float, f64(-3.10));
   CHECK_SIMPLE_FILL(Double, f64(-3.14));
+  CHECK_SIMPLE_FILL(Varchar, "P-Money In The Bank");
+#undef CHECK_SIMPLE_FILL
 }
 
 TEST_F(VectorOperationsTest, CompareNumeric) {
@@ -222,85 +226,80 @@ TEST_F(VectorOperationsTest, AnyOrAllTrue) {
 }
 
 TEST_F(VectorOperationsTest, BooleanLogic) {
-  Vector a(TypeId::Boolean, true, false);
-  Vector b(TypeId::Boolean, true, false);
-  ConstantVector c(GenericValue::CreateBoolean(false));
-  Vector result(TypeId::Boolean, true, false);
+  // a = [false, false, true, true]
+  // b = [false, true, false, true]
+  // c = false
+  auto a = MakeBooleanVector({false, false, true, true},
+                             {false, false, false, false});
+  auto b = MakeBooleanVector({false, true, false, true},
+                             {false, false, false, false});
+  auto c = ConstantVector(GenericValue::CreateBoolean(false));
+  auto result = MakeEmptyBooleanVector();
 
-  a.set_count(4);
-  b.set_count(4);
+  // a && b = [false, false, false, true]
+  VectorOps::And(*a, *b, result.get());
+  EXPECT_EQ(4u, result->count());
+  EXPECT_EQ(nullptr, result->selection_vector());
+  EXPECT_FALSE(result->null_mask().any());
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(1));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(3));
 
-  a.SetValue(0, GenericValue::CreateBoolean(false));
-  a.SetValue(1, GenericValue::CreateBoolean(false));
-  a.SetValue(2, GenericValue::CreateBoolean(true));
-  a.SetValue(3, GenericValue::CreateBoolean(true));
+  // a || b = [false, true, true, true]
+  VectorOps::Or(*a, *b, result.get());
+  EXPECT_EQ(4u, result->count());
+  EXPECT_EQ(nullptr, result->selection_vector());
+  EXPECT_FALSE(result->null_mask().any());
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(1));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(3));
 
-  b.SetValue(0, GenericValue::CreateBoolean(false));
-  b.SetValue(1, GenericValue::CreateBoolean(true));
-  b.SetValue(2, GenericValue::CreateBoolean(false));
-  b.SetValue(3, GenericValue::CreateBoolean(true));
+  // !a = [true, true, false, false]
+  VectorOps::Not(*a, result.get());
+  EXPECT_EQ(4u, result->count());
+  EXPECT_EQ(nullptr, result->selection_vector());
+  EXPECT_FALSE(result->null_mask().any());
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(1));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(3));
 
-  // And
-  VectorOps::And(a, b, &result);
-  EXPECT_EQ(4u, result.count());
-  EXPECT_EQ(nullptr, result.selection_vector());
-  EXPECT_FALSE(result.null_mask().any());
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(0));
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(1));
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(2));
-  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(3));
+  // a = [false, NULL, true, true]
+  auto aa = MakeEmptyBooleanVector();
+  a->CopyTo(aa.get());
+  aa->SetValue(1, GenericValue::CreateNull(TypeId::Boolean));
 
-  // Or
-  VectorOps::Or(a, b, &result);
-  EXPECT_EQ(4u, result.count());
-  EXPECT_EQ(nullptr, result.selection_vector());
-  EXPECT_FALSE(result.null_mask().any());
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(0));
-  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(1));
-  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(2));
-  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(3));
+  // aa && b = [false, NULL, false, true]
+  VectorOps::And(*aa, *b, result.get());
+  EXPECT_EQ(4u, result->count());
+  EXPECT_EQ(nullptr, result->selection_vector());
+  EXPECT_TRUE(result->null_mask().any());
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
+  EXPECT_EQ(GenericValue::CreateNull(TypeId::Boolean), result->GetValue(1));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(3));
 
-  // Not
-  VectorOps::Not(a, &result);
-  EXPECT_EQ(4u, result.count());
-  EXPECT_EQ(nullptr, result.selection_vector());
-  EXPECT_FALSE(result.null_mask().any());
-  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(0));
-  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(1));
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(2));
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(3));
+  // a && c = [false, false, false, false]
+  VectorOps::And(*a, c, result.get());
+  EXPECT_EQ(4u, result->count());
+  EXPECT_EQ(nullptr, result->selection_vector());
+  EXPECT_FALSE(result->null_mask().any());
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(1));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(3));
 
-  // Nulls
-  Vector aa(TypeId::Boolean, true, false);
-  a.CopyTo(&aa);
-  aa.SetValue(1, GenericValue::CreateNull(TypeId::Boolean));
-  VectorOps::And(aa, b, &result);
-  EXPECT_EQ(4u, result.count());
-  EXPECT_EQ(nullptr, result.selection_vector());
-  EXPECT_TRUE(result.null_mask().any());
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(0));
-  EXPECT_EQ(GenericValue::CreateNull(TypeId::Boolean), result.GetValue(1));
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(2));
-  EXPECT_EQ(GenericValue::CreateBoolean(true), result.GetValue(3));
-
-  // Constants
-  VectorOps::And(a, c, &result);
-  EXPECT_EQ(4u, result.count());
-  EXPECT_EQ(nullptr, result.selection_vector());
-  EXPECT_FALSE(result.null_mask().any());
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(0));
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(1));
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(2));
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(3));
-
-  VectorOps::And(c, a, &result);
-  EXPECT_EQ(4u, result.count());
-  EXPECT_EQ(nullptr, result.selection_vector());
-  EXPECT_FALSE(result.null_mask().any());
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(0));
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(1));
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(2));
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result.GetValue(3));
+  // c && a = [false, false, false, false]
+  VectorOps::And(c, *a, result.get());
+  EXPECT_EQ(4u, result->count());
+  EXPECT_EQ(nullptr, result->selection_vector());
+  EXPECT_FALSE(result->null_mask().any());
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(1));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(3));
 }
 
 TEST_F(VectorOperationsTest, FilteredBooleanLogic) {
