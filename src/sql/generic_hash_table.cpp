@@ -1,7 +1,6 @@
 #include "sql/generic_hash_table.h"
 
 #include "util/math_util.h"
-#include "util/vector_util.h"
 
 namespace tpl::sql {
 

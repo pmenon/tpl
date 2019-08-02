@@ -16,7 +16,6 @@
 #include "util/cpu_info.h"
 #include "util/math_util.h"
 #include "util/timer.h"
-#include "util/vector_util.h"
 
 namespace tpl::sql {
 
