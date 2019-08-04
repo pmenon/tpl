@@ -83,6 +83,14 @@ class VectorProjection {
   sel_t *GetSelectionVector() { return IsFiltered() ? sel_vector_ : nullptr; }
 
   /**
+   * Set the selection vector for this projection to the contents of the one
+   * provided.
+   * @param new_sel_vector The new selection vector.
+   * @param count The number of elements in the new selection vector.
+   */
+  void SetSelectionVector(const sel_t *new_sel_vector, u32 count);
+
+  /**
    * Access metadata for the column at position @em col_idx in the projection.
    * @return The metadata for the column at the given index in the projection.
    */
@@ -146,24 +154,14 @@ class VectorProjection {
   /**
    * Return the number of active tuples in this projection.
    */
-  u32 GetTupleCount() const {
-    if (columns_.empty()) {
-      return 0;
-    }
-    return columns_[0]->count();
-  }
+  u64 GetTupleCount() const { return columns_.empty() ? 0 : columns_[0]->count(); }
 
   /**
    * Compute the selectivity of this projection.
    * @return A number between [0.0, 1.0] representing the selectivity, i.e., the
    *         fraction of tuples that are active and visible.
    */
-  f64 ComputeSelectivity() const {
-    if (columns_.empty()) {
-      return 0;
-    }
-    return columns_[0]->ComputeSelectivity();
-  }
+  f64 ComputeSelectivity() const { return columns_.empty() ? 0 : columns_[0]->ComputeSelectivity(); }
 
   /**
    * Return a string representation of this vector.

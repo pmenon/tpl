@@ -189,7 +189,7 @@ void AggregationHashTable::ProcessBatch(
     const AggregationHashTable::InitAggFn init_agg_fn,
     const AggregationHashTable::AdvanceAggFn advance_agg_fn,
     const bool partitioned) {
-  TPL_ASSERT(iters[0]->num_selected() <= kDefaultVectorSize,
+  TPL_ASSERT(iters[0]->GetTupleCount() <= kDefaultVectorSize,
              "Vector projection is too large");
 
   // Allocate all required batch state, but only on first invocation.
@@ -265,7 +265,7 @@ NEVER_INLINE u32 AggregationHashTable::FindGroups(
     const AggregationHashTable::KeyEqFn key_eq_fn) {
   batch_state_->key_not_eq.clear();
   batch_state_->groups_not_found.clear();
-  u32 found = LookupInitial(iters[0]->num_selected());
+  u32 found = LookupInitial(iters[0]->GetTupleCount());
   u32 keys_equal = CheckKeyEquality<VPIIsFiltered>(iters, found, key_eq_fn);
   while (!batch_state_->key_not_eq.empty()) {
     found = FollowNext();

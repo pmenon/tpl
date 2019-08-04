@@ -82,7 +82,7 @@ void TableVectorIterator::RefreshVectorProjection() {
 
   vector_projection_.Reset();
 
-  for (u32 col_idx = 0; col_idx < column_iterators_.size(); col_idx++) {
+  for (u64 col_idx = 0; col_idx < column_iterators_.size(); col_idx++) {
     vector_projection_.ResetColumn(column_iterators_, col_idx);
   }
 

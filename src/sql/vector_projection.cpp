@@ -43,10 +43,24 @@ void VectorProjection::Initialize(
   owned_buffer_ = std::make_unique<byte[]>(size_in_bytes);
 
   // Setup the vector's to reference our data chunk
-  byte *ptr = owned_buffer_.get();
+  auto ptr = owned_buffer_.get();
   for (const auto &col : columns_) {
     col->Reference(col->type_id(), ptr, nullptr, 0);
     ptr += GetTypeIdSize(col->type_id()) * kDefaultVectorSize;
+  }
+}
+
+void VectorProjection::SetSelectionVector(const sel_t *const new_sel_vector,
+                                          const u32 count) {
+  TPL_ASSERT(new_sel_vector != nullptr, "Null input selection vector");
+  TPL_ASSERT(count < kDefaultVectorSize, "Invalid count");
+
+  // Copy into our selection vector
+  std::memcpy(sel_vector_, new_sel_vector, count * sizeof(sel_t));
+
+  // Update vectors
+  for (const auto &col : columns_) {
+    col->SetSelectionVector(sel_vector_, count);
   }
 }
 
@@ -55,10 +69,11 @@ void VectorProjection::Reset() {
   sel_vector_[0] = kInvalidPos;
 
   // Force vector's to reference memory managed by us.
-  byte *ptr = owned_buffer_.get();
+  auto ptr = owned_buffer_.get();
   for (const auto &col : columns_) {
-    col->Reference(col->type_id(), ptr, nullptr, 0);
-    ptr += GetTypeIdSize(col->type_id()) * kDefaultVectorSize;
+    const auto col_type = col->type_id();
+    col->Reference(col_type, ptr, nullptr, 0);
+    ptr += GetTypeIdSize(col_type) * kDefaultVectorSize;
   }
 }
 

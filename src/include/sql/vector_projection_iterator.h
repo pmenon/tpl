@@ -21,18 +21,26 @@ namespace tpl::sql {
 class VectorProjectionIterator {
  public:
   /**
-   * Create an empty iterator over an empty projection
+   * Create an empty iterator over an empty projection.
    */
-  VectorProjectionIterator();
+  VectorProjectionIterator()
+      : vector_projection_(nullptr),
+        curr_idx_(0),
+        selection_vector_(nullptr),
+        selection_vector_read_idx_(0),
+        selection_vector_write_idx_(0) {}
 
   /**
-   * Create an iterator over the given projection @em vp
-   * @param vp The projection to iterator over
+   * Create an iterator over the given projection @em vp.
+   * @param vp The projection to iterator over.
    */
-  explicit VectorProjectionIterator(VectorProjection *vp);
+  explicit VectorProjectionIterator(VectorProjection *vp)
+      : VectorProjectionIterator() {
+    SetVectorProjection(vp);
+  }
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(VectorProjectionIterator);
 
@@ -156,7 +164,7 @@ class VectorProjectionIterator {
   /**
    * Return the number of selected tuples after any filters have been applied
    */
-  u32 num_selected() const { return num_selected_; }
+  u32 GetTupleCount() const { return vector_projection_->GetTupleCount(); }
 
  private:
   // The vector projection we're iterating over
@@ -164,9 +172,6 @@ class VectorProjectionIterator {
 
   // The current raw position in the vector projection we're pointing to
   u32 curr_idx_;
-
-  // The number of tuples from the projection that have been selected (filtered)
-  u32 num_selected_;
 
   // The selection vector used to filter the vector projection
   sel_t *selection_vector_;
@@ -184,6 +189,15 @@ class VectorProjectionIterator {
 
 // The below methods are inlined in the header on purpose for performance.
 // Please don't move them.
+
+inline void VectorProjectionIterator::SetVectorProjection(
+    VectorProjection *vp) {
+  vector_projection_ = vp;
+  curr_idx_ = 0;
+  selection_vector_ = vp->sel_vector_;
+  selection_vector_read_idx_ = 0;
+  selection_vector_write_idx_ = 0;
+}
 
 // Note: The getting and setter functions operate on the underlying vector's
 // raw data rather than going through Vector::GetValue() or Vector::SetValue().
@@ -228,7 +242,7 @@ inline void VectorProjectionIterator::SetValue(const u32 col_idx, const T val,
 
 template <bool Filtered>
 inline void VectorProjectionIterator::SetPosition(u32 idx) {
-  TPL_ASSERT(idx < num_selected(), "Out of bounds access");
+  TPL_ASSERT(idx < GetTupleCount(), "Out of bounds access");
   if constexpr (Filtered) {
     TPL_ASSERT(IsFiltered(), "Attempting to set position in unfiltered VPI");
     selection_vector_read_idx_ = idx;
@@ -255,7 +269,7 @@ inline bool VectorProjectionIterator::HasNext() const {
 }
 
 inline bool VectorProjectionIterator::HasNextFiltered() const {
-  return selection_vector_read_idx_ < num_selected();
+  return selection_vector_read_idx_ < vector_projection_->GetTupleCount();
 }
 
 inline void VectorProjectionIterator::Reset() {
@@ -265,8 +279,14 @@ inline void VectorProjectionIterator::Reset() {
 }
 
 inline void VectorProjectionIterator::ResetFiltered() {
+  // Update the projection counts
+  const auto new_count = selection_vector_write_idx_;
+  for (const auto &col : vector_projection_->columns_) {
+    col->set_count(new_count);
+  }
+
+  // Reset
   curr_idx_ = selection_vector_[0];
-  num_selected_ = selection_vector_write_idx_;
   selection_vector_read_idx_ = 0;
   selection_vector_write_idx_ = 0;
 }
@@ -308,10 +328,6 @@ inline void VectorProjectionIterator::RunFilter(const F &filter) {
     }
   }
 
-  // After the filter has been run on the entire vector projection, we need to
-  // ensure that we reset it so that clients can query the updated state of the
-  // VPI, and subsequent filters operate only on valid tuples potentially
-  // filtered out in this filter.
   ResetFiltered();
 }
 
