@@ -4,6 +4,7 @@
 #include "sql_test.h"  // NOLINT
 
 #include "sql/constant_vector.h"
+#include "sql/tuple_id_list.h"
 #include "sql/vector.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "util/fast_rand.h"
@@ -47,6 +48,7 @@ TEST_F(VectorOperationsTest, Fill) {
     VectorOps::Fill(&vec, GenericValue::Create##TYPE(FILL_VALUE)); \
     for (u32 i = 0; i < vec.count(); i++) {                        \
       auto val = vec.GetValue(i);                                  \
+      EXPECT_FALSE(val.is_null());                                 \
       EXPECT_EQ(GenericValue::Create##TYPE(FILL_VALUE), val);      \
     }                                                              \
   }

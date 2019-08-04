@@ -17,6 +17,11 @@ void VectorOps::Fill(Vector *vector, const GenericValue &value) {
     return;
   }
 
+  if (value.is_null()) {
+    vector->null_mask_.set();
+    return;
+  }
+
   vector->null_mask_.reset();
 
   switch (vector->type_) {
