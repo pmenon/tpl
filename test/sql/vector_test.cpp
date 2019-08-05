@@ -27,8 +27,7 @@ TEST_F(VectorTest, CheckEmpty) {
 
 TEST_F(VectorTest, Clear) {
   // Allocate and clear vector
-  Vector vec(TypeId::TinyInt, true, true);
-  vec.set_count(10);
+  Vector vec(TypeId::TinyInt, 10, true);
 
   // All elements should 0
   for (u32 i = 0; i < 10; i++) {
@@ -70,8 +69,7 @@ TEST_F(VectorTest, InitFromArray) {
 }
 
 TEST_F(VectorTest, GetAndSet) {
-  Vector vec(TypeId::Boolean, true, false);
-  vec.set_count(10);
+  Vector vec(TypeId::Boolean, 10, false);
 
   // vec[0] = false
   vec.SetValue(0, GenericValue::CreateBoolean(false));
@@ -89,8 +87,7 @@ TEST_F(VectorTest, GetAndSet) {
 TEST_F(VectorTest, GetAndSetNumeric) {
 #define GEN_TEST(TYPE)                                         \
   {                                                            \
-    Vector vec(TypeId::TYPE, true, false);                     \
-    vec.set_count(10);                                         \
+    Vector vec(TypeId::TYPE, 10, false);                     \
     vec.SetValue(0, GenericValue::Create##TYPE(1));            \
     EXPECT_EQ(GenericValue::Create##TYPE(1), vec.GetValue(0)); \
     vec.SetNull(0, true);                                      \
@@ -113,8 +110,7 @@ TEST_F(VectorTest, GetAndSetNumeric) {
 }
 
 TEST_F(VectorTest, GetAndSetString) {
-  Vector vec(TypeId::Varchar, true, false);
-  vec.set_count(10);
+  Vector vec(TypeId::Varchar, 10, false);
 
   vec.SetValue(0, GenericValue::CreateVarchar("hello"));
   EXPECT_EQ(GenericValue::CreateVarchar("hello"), vec.GetValue(0));
@@ -124,8 +120,7 @@ TEST_F(VectorTest, GetAndSetString) {
 }
 
 TEST_F(VectorTest, Reference) {
-  Vector vec(TypeId::Integer, true, true);
-  vec.set_count(10);
+  Vector vec(TypeId::Integer, 10, true);
   for (u32 i = 0; i < 10; i++) {
     vec.SetValue(i, GenericValue::CreateInteger(i));
   }
@@ -148,8 +143,7 @@ TEST_F(VectorTest, Move) {
   // First try to reference a backing STL vector
   std::vector<sel_t> sel = {0, 2, 4, 6, 8};
 
-  Vector vec(TypeId::Integer, true, true);
-  vec.set_count(10);
+  Vector vec(TypeId::Integer, 10, true);
   for (u32 i = 0; i < 10; i++) {
     vec.SetValue(i, GenericValue::CreateInteger(i));
   }
@@ -181,8 +175,7 @@ TEST_F(VectorTest, Copy) {
   // First try to reference a backing STL vector
   std::vector<sel_t> sel = {0, 2, 4, 6, 8};
 
-  Vector vec(TypeId::Integer, true, true);
-  vec.set_count(10);
+  Vector vec(TypeId::Integer, 10, true);
   for (u32 i = 0; i < 10; i++) {
     vec.SetValue(i, GenericValue::CreateInteger(i));
   }
@@ -204,8 +197,7 @@ TEST_F(VectorTest, Copy) {
 TEST_F(VectorTest, CopyWithOffset) {
   std::vector<sel_t> sel = {0, 2, 4, 6, 8};
 
-  Vector vec(TypeId::Integer, true, true);
-  vec.set_count(10);
+  Vector vec(TypeId::Integer, 10, true);
   for (u32 i = 0; i < 10; i++) {
     vec.SetValue(i, GenericValue::CreateInteger(i));
   }
@@ -227,8 +219,7 @@ TEST_F(VectorTest, CopyWithOffset) {
 }
 
 TEST_F(VectorTest, CopyStringVector) {
-  Vector vec(TypeId::Varchar, true, true);
-  vec.set_count(10);
+  Vector vec(TypeId::Varchar, 10, true);
   for (u32 i = 0; i < 10; i++) {
     vec.SetValue(i, GenericValue::CreateVarchar("val-" + std::to_string(i)));
   }
@@ -255,8 +246,7 @@ TEST_F(VectorTest, Cast) {
 
   // First, try happy-path upcast from i32 -> i64
   {
-    Vector vec(TypeId::Integer, true, true);
-    vec.set_count(10);
+    Vector vec(TypeId::Integer, 10, true);
     for (u32 i = 0; i < 10; i++) {
       vec.SetValue(i, GenericValue::CreateInteger(i));
     }
@@ -275,8 +265,7 @@ TEST_F(VectorTest, Cast) {
 
   // Second happy path, try i32 -> i16 with valid i16 values
   {
-    Vector vec(TypeId::Integer, true, true);
-    vec.set_count(10);
+    Vector vec(TypeId::Integer, 10, true);
     for (u32 i = 0; i < 10; i++) {
       vec.SetValue(i, GenericValue::CreateInteger(i));
     }
@@ -293,10 +282,9 @@ TEST_F(VectorTest, Cast) {
     }
   }
 
-  // Third, try i32 -> i16 again, but make one of the valid values out of range
+  // Third, try i32 -> i16 again, but make one of the values out of range
   {
-    Vector vec(TypeId::Integer, true, true);
-    vec.set_count(10);
+    Vector vec(TypeId::Integer, 10, true);
     for (u32 i = 0; i < 10; i++) {
       vec.SetValue(i, GenericValue::CreateInteger(i));
     }
@@ -310,14 +298,12 @@ TEST_F(VectorTest, Cast) {
 }
 
 TEST_F(VectorTest, Append) {
-  Vector vec1(TypeId::Double, true, true);
-  vec1.set_count(3);
+  Vector vec1(TypeId::Double, 3, true);
   vec1.SetValue(0, GenericValue::CreateDouble(1.0));
   vec1.SetValue(1, GenericValue::CreateDouble(2.0));
   vec1.SetValue(2, GenericValue::CreateDouble(3.0));
 
-  Vector vec2(TypeId::Double, true, false);
-  vec2.set_count(2);
+  Vector vec2(TypeId::Double, 2, false);
   vec2.SetValue(0, GenericValue::CreateDouble(10.0));
   vec2.SetValue(1, GenericValue::CreateDouble(11.0));
 
@@ -335,15 +321,13 @@ TEST_F(VectorTest, Append) {
 
 TEST_F(VectorTest, AppendWithSelectionVector) {
   std::vector<sel_t> sel1 = {1};
-  Vector vec1(TypeId::Double, true, true);
-  vec1.set_count(3);
+  Vector vec1(TypeId::Double, 3, true);
   vec1.SetValue(0, GenericValue::CreateDouble(1.0));
   vec1.SetValue(1, GenericValue::CreateDouble(2.0));
   vec1.SetValue(2, GenericValue::CreateDouble(3.0));
   vec1.SetSelectionVector(sel1.data(), sel1.size());
 
-  Vector vec2(TypeId::Double, true, false);
-  vec2.set_count(2);
+  Vector vec2(TypeId::Double, 2, false);
   vec2.SetValue(0, GenericValue::CreateDouble(10.0));
   vec2.SetValue(1, GenericValue::CreateDouble(11.0));
 

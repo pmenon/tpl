@@ -1,11 +1,5 @@
 #include <chrono>  // NOLINT
-#include <limits>
-#include <memory>
-#include <numeric>
-#include <random>
-#include <string>
 #include <thread>  // NOLINT
-#include <utility>
 #include <vector>
 
 #include "sql_test.h"  // NOLINT
@@ -25,7 +19,7 @@ u32 TaaT_Lt_500(VectorProjectionIterator *vpi) {
     auto cola = *vpi->GetValue<i32, false>(Col::A, nullptr);
     return cola < 500;
   });
-  return vpi->num_selected();
+  return vpi->GetTupleCount();
 }
 
 u32 Hobbled_TaaT_Lt_500(VectorProjectionIterator *vpi) {
@@ -34,11 +28,12 @@ u32 Hobbled_TaaT_Lt_500(VectorProjectionIterator *vpi) {
 }
 
 u32 Vectorized_Lt_500(VectorProjectionIterator *vpi) {
+  // TODO(pmenon): Fix me when proper vectorized filters are fixed
   vpi->RunFilter([vpi]() -> bool {
     auto cola = *vpi->GetValue<i32, false>(Col::A, nullptr);
     return cola < 500;
   });
-  return vpi->num_selected();
+  return vpi->GetTupleCount();
 }
 
 TEST_F(FilterManagerTest, SimpleFilterManagerTest) {

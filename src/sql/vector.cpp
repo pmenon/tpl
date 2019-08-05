@@ -48,6 +48,12 @@ Vector::Vector(TypeId type)
       sel_vector_(nullptr),
       null_mask_(0) {}
 
+Vector::Vector(TypeId type, u64 count, bool clear)
+    : type_(type), count_(count), data_(nullptr), sel_vector_(nullptr) {
+  TPL_ASSERT(count <= kDefaultVectorSize, "Count too large");
+  Initialize(type, clear);
+}
+
 Vector::Vector(TypeId type, byte *data, u64 count)
     : type_(type),
       count_(count),
@@ -57,18 +63,12 @@ Vector::Vector(TypeId type, byte *data, u64 count)
   TPL_ASSERT(data != nullptr, "Cannot create vector from NULL data pointer");
 }
 
-Vector::Vector(TypeId type, bool create_data, bool clear)
-    : type_(type), count_(0), data_(nullptr), sel_vector_(nullptr) {
-  if (create_data) {
-    Initialize(type, clear);
-  }
-}
-
 Vector::~Vector() { Destroy(); }
 
 void Vector::Initialize(const TypeId new_type, const bool clear) {
-  type_ = new_type;
   strings_.Destroy();
+
+  type_ = new_type;
   const auto num_bytes = kDefaultVectorSize * GetTypeIdSize(type_);
   owned_data_ = std::make_unique<byte[]>(num_bytes);
   data_ = owned_data_.get();
@@ -316,7 +316,7 @@ void Vector::Flatten() {
     return;
   }
 
-  Vector other(type_, true, false);
+  Vector other(type_, count_, false);
   CopyTo(&other);
   other.MoveTo(this);
 }
@@ -356,7 +356,7 @@ void Vector::Cast(TypeId new_type) {
     return;
   }
 
-  Vector new_vector(new_type, true, false);
+  Vector new_vector(new_type, count_, false);
   VectorOps::Cast(*this, &new_vector);
   new_vector.MoveTo(this);
 }

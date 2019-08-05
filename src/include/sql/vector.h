@@ -14,29 +14,27 @@
 namespace tpl::sql {
 
 /**
- * A vector serves as the smallest unit of execution used by the execution
- * engine. It represents a contiguous chunk of values of a single type. Values
- * in a vector may not necessarily be SQL types; for example, we use vectors to
- * store pointers and hash values.
+ * A vector serves as the smallest work unit used by the execution engine when
+ * operating in vectorized mode. It represents a contiguous chunk of values of a
+ * single type. A vector may (1) own its data, or (2) reference data owned by
+ * another entity, e.g., the base columns, data within another vector, or a
+ * constant value.
  *
- * A vector may own its data, reference data owned by another entity (e.g., the
- * base columns or data within another vector), or reference a single constant
- * value.
- *
- * A vector also has an optional selection vector containing indexes of the
+ * A vector also has an optional selection vector containing the indexes of the
  * valid elements in the vector. When a selection vector is available, it must
  * be used to access the vector's data since the vector may hold invalid data in
- * those positions (e.g., null pointers). An example of such indirect access:
+ * other positions (e.g., null pointers). This functionality is provided for you
+ * through @em VectorOps::Exec(). An example loop:
  *
  * @code
  * u64 x = 0;
  * for (u64 i = 0; i < count; i++) {
- *   x += data[sel_vector[i]];
+ *   x += data_[sel_vector_[i]];
  * }
  * @endcode
  *
  * The selection vector is used primarily to activate and deactivate elements in
- * the vector.
+ * the vector without copying or moving data.
  *
  * Vectors have a maximum capacity determined by the global constant
  * @em kDefaultVectorSize usually set to 2048 elements.
@@ -60,22 +58,22 @@ class Vector {
   explicit Vector(TypeId type);
 
   /**
+   * Create a new owning vector with a given size (at most kDefaultVectorSize
+   * elements). If the @em clear flag is set, the vector's data will be
+   * zeroed out.
+   * @param type The primitive type ID of the elements in this vector.
+   * @param create_data Should the vector actually allocate data?
+   * @param clear Should the vector zero out the data if it allocates any?
+   */
+  Vector(TypeId type, u64 count, bool clear);
+
+  /**
    * Create a non-owning vector that references the specified data.
    * @param type The primitive type ID of the elements in the vector.
    * @param data A pointer to the data.
    * @param count The number of elements in the vector
    */
   Vector(TypeId type, byte *data, u64 count);
-
-  /**
-   * Create a new owning vector that holds at most kDefaultVectorSize elements.
-   * If the @em create_data flag is set, the vector will allocate data. If the
-   * @em zero_data flag is set, the vector's data will be zeroed out.
-   * @param type The primitive type ID of the elements in this vector.
-   * @param create_data Should the vector actually allocate data?
-   * @param clear Should the vector zero out the data if it allocates any?
-   */
-  Vector(TypeId type, bool create_data, bool clear);
 
   /**
    * Vector's cannot be implicitly copied.
@@ -160,7 +158,7 @@ class Vector {
   /**
    * Returns the value of the element at the given position in the vector.
    *
-   * NOTE: This shouldn't be used in performance-critial code. It's mostly for
+   * NOTE: This shouldn't be used in performance-critical code. It's mostly for
    * debugging and validity checks, or for read-once-per-vector type operations.
    *
    * @param index The position in the vector to read.
@@ -169,23 +167,24 @@ class Vector {
   GenericValue GetValue(u64 index) const;
 
   /**
-   * Set the value a position @em index in the vector to the value @em value.
+   * Set the value at position @em index in the vector to the value @em value.
    *
-   * NOTE: This shouldn't be used in performance-critial code. It's mostly for
+   * NOTE: This shouldn't be used in performance-critical code. It's mostly for
    * debugging and validity checks, or for read-once-per-vector type operations.
    *
-   * @param index The position in the index to modify.
-   * @param val The value to set in the vector.
+   * @param index The (zero-based) index in the element to modify.
+   * @param val The value to set the element to.
    */
   void SetValue(u64 index, const GenericValue &val);
 
   /**
-   * Cast this vector to a potentially different type.
+   * Cast this vector to a different type. If the target type is the same as the
+   * current type, nothing is done.
    */
   void Cast(TypeId new_type);
 
   /**
-   * Append the contents of vector @em other into this vector.
+   * Append the contents of the provided vector @em other into this vector.
    */
   void Append(Vector &other);
 
@@ -247,12 +246,18 @@ class Vector {
    */
   void CheckIntegrity() const;
 
+ protected:
+  // For subclasses
+  void SetData(std::unique_ptr<byte[]> data) {
+    owned_data_ = std::move(data);
+    data_ = owned_data_.get();
+  }
+
  private:
-  // Create a new vector with the specified type. Any existing data is
-  // destroyed.
+  // Create a new vector with the provided type. Any existing data is destroyed.
   void Initialize(TypeId new_type, bool clear);
 
-  // Destroy the vector, delete any owned data and reset it to an empty vector.
+  // Destroy the vector, delete any owned data, and reset it to an empty vector.
   void Destroy();
 
  private:
@@ -287,10 +292,6 @@ class Vector {
     u32 num_strings_;
   };
 
- protected:
-  // If the vector holds allocated data, this field manages it.
-  std::unique_ptr<byte[]> owned_data_;
-
  private:
   // The type of the elements stored in the vector.
   TypeId type_;
@@ -304,6 +305,8 @@ class Vector {
   NullMask null_mask_;
   // String container
   Strings strings_;
+  // If the vector holds allocated data, this field manages it.
+  std::unique_ptr<byte[]> owned_data_;
 };
 
 }  // namespace tpl::sql

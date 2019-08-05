@@ -1,14 +1,11 @@
-#include <numeric>
 #include <vector>
 
 #include "sql_test.h"  // NOLINT
 
 #include "sql/constant_vector.h"
-#include "sql/tuple_id_list.h"
 #include "sql/vector.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "util/fast_rand.h"
-#include "util/vector_util.h"
 
 namespace tpl::sql::test {
 
@@ -19,15 +16,14 @@ TEST_F(VectorOperationsTest, Generate) {
 
   // Generate odd sequence of numbers starting at 1 inclusive. In other words,
   // generate the values [2*i+1 for i in range(0,50)]
-#define CHECK_SIMPLE_GENERATE(TYPE)                               \
-  {                                                               \
-    Vector vec(TypeId::TYPE, true, false);                        \
-    vec.set_count(num_elems);                                     \
-    VectorOps::Generate(&vec, 1, 2);                              \
-    for (u32 i = 0; i < vec.count(); i++) {                       \
-      auto val = vec.GetValue(i);                                 \
-      EXPECT_EQ(GenericValue::Create##TYPE(2 * i32(i) + 1), val); \
-    }                                                             \
+#define CHECK_SIMPLE_GENERATE(TYPE)                          \
+  {                                                          \
+    auto vec = Make##TYPE##Vector(num_elems);                \
+    VectorOps::Generate(vec.get(), 1, 2);                    \
+    for (u64 i = 0; i < vec->count(); i++) {                 \
+      auto val = vec->GetValue(i);                           \
+      EXPECT_EQ(GenericValue::Create##TYPE(2 * i + 1), val); \
+    }                                                        \
   }
 
   CHECK_SIMPLE_GENERATE(TinyInt)
@@ -41,16 +37,15 @@ TEST_F(VectorOperationsTest, Generate) {
 
 TEST_F(VectorOperationsTest, Fill) {
   // Fill a vector with the given type with the given value of that type
-#define CHECK_SIMPLE_FILL(TYPE, FILL_VALUE)                        \
-  {                                                                \
-    Vector vec(TypeId::TYPE, true, false);                         \
-    vec.set_count(10);                                             \
-    VectorOps::Fill(&vec, GenericValue::Create##TYPE(FILL_VALUE)); \
-    for (u32 i = 0; i < vec.count(); i++) {                        \
-      auto val = vec.GetValue(i);                                  \
-      EXPECT_FALSE(val.is_null());                                 \
-      EXPECT_EQ(GenericValue::Create##TYPE(FILL_VALUE), val);      \
-    }                                                              \
+#define CHECK_SIMPLE_FILL(TYPE, FILL_VALUE)                             \
+  {                                                                     \
+    auto vec = Make##TYPE##Vector(10);                                  \
+    VectorOps::Fill(vec.get(), GenericValue::Create##TYPE(FILL_VALUE)); \
+    for (u64 i = 0; i < vec->count(); i++) {                            \
+      auto val = vec->GetValue(i);                                      \
+      EXPECT_FALSE(val.is_null());                                      \
+      EXPECT_EQ(GenericValue::Create##TYPE(FILL_VALUE), val);           \
+    }                                                                   \
   }
 
   CHECK_SIMPLE_FILL(Boolean, true);
@@ -66,8 +61,7 @@ TEST_F(VectorOperationsTest, Fill) {
 
 TEST_F(VectorOperationsTest, CompareNumeric) {
   // Input vector: [0,1,2,3,4,5]
-  Vector vec(TypeId::BigInt, true, false);
-  vec.set_count(6);
+  Vector vec(TypeId::BigInt, 6, false);
   VectorOps::Generate(&vec, 0, 1);
 
   for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer,
@@ -161,7 +155,7 @@ TEST_F(VectorOperationsTest, CompareStrings) {
                              {false, false, true, false});
   auto b = MakeVarcharVector({nullptr, "second", nullptr, "baka not nice"},
                              {true, false, true, false});
-  auto result = MakeEmptyBooleanVector();
+  auto result = MakeBooleanVector();
 
   VectorOps::Equal(*a, *b, result.get());
   EXPECT_EQ(4u, result->count());
@@ -175,7 +169,7 @@ TEST_F(VectorOperationsTest, CompareStrings) {
 TEST_F(VectorOperationsTest, CompareWithNulls) {
   auto input = MakeBigIntVector({0, 1, 2, 3}, {false, false, false, false});
   auto null = ConstantVector(GenericValue::CreateNull(TypeId::BigInt));
-  auto result = MakeEmptyBooleanVector();
+  auto result = MakeBooleanVector();
 
   VectorOps::Equal(*input, null, result.get());
   EXPECT_TRUE(result->IsNull(0));
@@ -186,7 +180,7 @@ TEST_F(VectorOperationsTest, CompareWithNulls) {
 
 TEST_F(VectorOperationsTest, NullChecking) {
   auto vec = MakeFloatVector({1.0, 0.0, 1.0, 0.0}, {false, true, false, true});
-  auto result = MakeEmptyBooleanVector();
+  auto result = MakeBooleanVector();
 
   // IS NULL vec, only 1 and 3
   VectorOps::IsNull(*vec, result.get());
@@ -236,7 +230,7 @@ TEST_F(VectorOperationsTest, BooleanLogic) {
   auto b = MakeBooleanVector({false, true, false, true},
                              {false, false, false, false});
   auto c = ConstantVector(GenericValue::CreateBoolean(false));
-  auto result = MakeEmptyBooleanVector();
+  auto result = MakeBooleanVector();
 
   // a && b = [false, false, false, true]
   VectorOps::And(*a, *b, result.get());
@@ -268,8 +262,8 @@ TEST_F(VectorOperationsTest, BooleanLogic) {
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(2));
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(3));
 
-  // a = [false, NULL, true, true]
-  auto aa = MakeEmptyBooleanVector();
+  // aa = [false, NULL, true, true]
+  auto aa = MakeBooleanVector();
   a->CopyTo(aa.get());
   aa->SetValue(1, GenericValue::CreateNull(TypeId::Boolean));
 
@@ -310,7 +304,7 @@ TEST_F(VectorOperationsTest, FilteredBooleanLogic) {
       MakeBooleanVector({false, false, true, true}, {true, true, false, false});
   auto b = MakeBooleanVector({false, true, false, true},
                              {false, false, false, false});
-  auto result = MakeEmptyBooleanVector();
+  auto result = MakeBooleanVector();
   auto selected_tids = MakeTupleIdList({0, 1, 3});
   std::vector<u16> sel = {0, 1, 3};
 

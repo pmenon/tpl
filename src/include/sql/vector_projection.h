@@ -154,14 +154,18 @@ class VectorProjection {
   /**
    * Return the number of active tuples in this projection.
    */
-  u64 GetTupleCount() const { return columns_.empty() ? 0 : columns_[0]->count(); }
+  u64 GetTupleCount() const {
+    return columns_.empty() ? 0 : columns_[0]->count();
+  }
 
   /**
    * Compute the selectivity of this projection.
    * @return A number between [0.0, 1.0] representing the selectivity, i.e., the
    *         fraction of tuples that are active and visible.
    */
-  f64 ComputeSelectivity() const { return columns_.empty() ? 0 : columns_[0]->ComputeSelectivity(); }
+  f64 ComputeSelectivity() const {
+    return columns_.empty() ? 0 : columns_[0]->ComputeSelectivity();
+  }
 
   /**
    * Return a string representation of this vector.
