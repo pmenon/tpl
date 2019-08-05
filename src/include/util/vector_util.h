@@ -144,13 +144,16 @@ class VectorUtil {
                                     u64 *bit_vector);
 
   /**
-   * Perform a bitwise AND on all bytes in the byte vectors, storing the result
-   * in @em byte_vector_2.
-   * @param n The number of elements in both byte vectors.
-   * @param byte_vector_1 The first input byte vector.
-   * @param byte_vector_2 The second byte vector storing the result.
+   * Convert a bit vector into a byte vector. For all set bits in the input bit
+   * vector, set the corresponding byte to a saturated 8-bit integer. The input
+   * bit vector has @em n bits, and the output byte vector has @em n bytes.
+   * @param n The number of bits in the bit vector, and the minimum capacity of
+   *          the byte vector
+   * @param bit_vector The input bit vector, passed along as an array of words.
+   * @param byte_vector The output byte vector.
    */
-  static void ByteVectorAnd(u32 n, const u8 *byte_vector_1, u8 *byte_vector_2);
+  static void BitVectorToByteVector(u32 n, const u64 *bit_vector,
+                                    u8 *byte_vector);
 
   /**
    * Convert a bit vector into a densely packed selection vector. For all bits

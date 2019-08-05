@@ -62,7 +62,7 @@ class Vector {
    * elements). If the @em clear flag is set, the vector's data will be
    * zeroed out.
    * @param type The primitive type ID of the elements in this vector.
-   * @param create_data Should the vector actually allocate data?
+   * @param count The size of the vector.
    * @param clear Should the vector zero out the data if it allocates any?
    */
   Vector(TypeId type, u64 count, bool clear);

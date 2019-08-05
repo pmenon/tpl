@@ -79,10 +79,43 @@ void VectorUtil::ByteVectorToBitVector(const u32 n,
   }
 }
 
-void VectorUtil::ByteVectorAnd(const u32 n, const u8 *RESTRICT byte_vector_1,
-                               u8 *RESTRICT byte_vector_2) {
-  for (u32 i = 0; i < n; i++) {
-    byte_vector_2[i] &= byte_vector_1[i];
+void VectorUtil::BitVectorToByteVector(u32 n, const u64 *bit_vector,
+                                       u8 *byte_vector) {
+  const __m256i shuffle =
+      _mm256_setr_epi64x(0x0000000000000000, 0x0101010101010101,
+                         0x0202020202020202, 0x0303030303030303);
+  const __m256i bit_mask = _mm256_set1_epi64x(0x7fbfdfeff7fbfdfe);
+
+  // Byte-vector write index
+  u32 k = 0;
+
+  // Main vector loop processes 64 elements per iteration
+  for (u32 i = 0; i < n / 64; i++, k += 64) {
+    u64 word = bit_vector[i];
+
+    // Lower 32-bits first
+    __m256i vmask = _mm256_set1_epi32(static_cast<u32>(word));
+    vmask = _mm256_shuffle_epi8(vmask, shuffle);
+    vmask = _mm256_or_si256(vmask, bit_mask);
+    __m256i vbytes = _mm256_cmpeq_epi8(vmask, _mm256_set1_epi64x(-1));
+    _mm256_storeu_si256(reinterpret_cast<__m256i *>(byte_vector + k), vbytes);
+
+    // Upper 32-bits
+    vmask = _mm256_set1_epi32(static_cast<i32>(word >> 32u));
+    vmask = _mm256_shuffle_epi8(vmask, shuffle);
+    vmask = _mm256_or_si256(vmask, bit_mask);
+    vbytes = _mm256_cmpeq_epi8(vmask, _mm256_set1_epi64x(-1));
+    _mm256_storeu_si256(reinterpret_cast<__m256i *>(byte_vector + k + 32),
+                        vbytes);
+  }
+
+  // Process last word in scalar loop
+  if (auto tail_size = n % 64; tail_size != 0) {
+    u64 word = bit_vector[n / 64];
+    for (u32 i = 0; i < tail_size; i++, k++) {
+      byte_vector[k] = -((word & 0x1ull) == 1);
+      word >>= 1u;
+    }
   }
 }
 
@@ -92,7 +125,7 @@ void VectorUtil::BitVectorToSelectionVector(const u32 n,
                                             sel_t *RESTRICT sel_vector,
                                             u32 *RESTRICT size) {
   const u32 num_words = MathUtil::DivRoundUp(n, 64);
-  
+
   u32 k = 0;
   for (u32 i = 0; i < num_words; i++) {
     u64 word = bit_vector[i];

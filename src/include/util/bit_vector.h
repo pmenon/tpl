@@ -404,9 +404,9 @@ class BitVector : public BitVectorBase<BitVector> {
    */
   const u64 *data_array() const { return data_array_; }
 
- private:
-  friend class BitVectorBase<BitVector>;
-
+  /**
+   * Return a reference to the underlying word data.
+   */
   u64 *data_array() { return data_array_; }
 
  private:
@@ -452,11 +452,14 @@ class InlinedBitVector : public BitVectorBase<InlinedBitVector<NumBits>> {
    */
   u32 num_words() const { return kNumWords; }
 
+  /**
+   * Return a constant reference to the underlying word data.
+   */
   const u64 *data_array() const { return data_array_; }
 
- private:
-  friend class BitVectorBase<InlinedBitVector<NumBits>>;
-
+  /**
+   * Return a reference to the underlying word data.
+   */
   u64 *data_array() { return data_array_; }
 
  private:

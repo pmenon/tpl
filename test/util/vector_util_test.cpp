@@ -7,6 +7,7 @@
 #include "tpl_test.h"  // NOLINT
 
 #include "sql/memory_pool.h"
+#include "util/bit_vector.h"
 #include "util/timer.h"
 #include "util/vector_util.h"
 
@@ -426,17 +427,47 @@ TEST_F(VectorUtilTest, ByteToSelectionVector) {
   EXPECT_EQ(12u, sel[7]);
 }
 
+TEST_F(VectorUtilTest, BitToByteVector) {
+  // Large enough to run through both vector-loop and scalar tail
+  constexpr u32 num_bits = 97;
+
+  // The input bit vector output byte vector
+  BitVector bv(num_bits);
+  u8 bytes[num_bits];
+
+  // Set some random bits
+  bv.Set(1);
+  bv.Set(2);
+  bv.Set(7);
+  bv.Set(31);
+  bv.Set(44);
+  bv.Set(73);
+
+  util::VectorUtil::BitVectorToByteVector(bv.num_bits(), bv.data_array(),
+                                          bytes);
+
+  for (u32 i = 0; i < bv.num_bits(); i++) {
+    EXPECT_EQ(bv[i], bytes[i] == 0xFF);
+  }
+}
+
 TEST_F(VectorUtilTest, BitToSelectionVector) {
-  // Set all even bits in 127-bit vector
-  u64 bits[] = {0x5555555555555555ull, 0x1555555555555555};
-
+  // 126-bit vector and the output selection vector
+  constexpr u32 num_bits = 126;
+  BitVector bv(num_bits);
   sel_t sel[kDefaultVectorSize];
+
+  // Set even bits
+  for (u32 i = 0; i < num_bits; i++) {
+    bv.SetTo(i, i % 2 == 0);
+  }
+
+  // Transform
   u32 size = 0;
+  util::VectorUtil::BitVectorToSelectionVector(num_bits, bv.data_array(), sel,
+                                               &size);
 
-  // Ensure only even bits set
-  util::VectorUtil::BitVectorToSelectionVector(127, bits, sel, &size);
-
-  // Only 63 bits are set (remember there are only 127-bits)
+  // Only 63 bits are set (remember there are only 126-bits)
   EXPECT_EQ(63u, size);
 
   // Ensure the indexes that are set are even
