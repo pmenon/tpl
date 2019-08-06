@@ -16,7 +16,7 @@ static inline void BinaryOperation_Constant_Vector(const Vector &left,
   } else {
     const auto &right_mask = right.null_mask();
     result->set_null_mask(right_mask);
-    if (IgnoreNull || right_mask.any()) {
+    if (IgnoreNull && right_mask.any()) {
       // Slow-path: need to check NULLs
       VectorOps::Exec(
           right.selection_vector(), right.count(), [&](u64 i, u64 k) {
@@ -50,7 +50,7 @@ static inline void BinaryOperation_Vector_Constant(const Vector &left,
   } else {
     const auto &left_mask = left.null_mask();
     result->set_null_mask(left_mask);
-    if (IgnoreNull || left_mask.any()) {
+    if (IgnoreNull && left_mask.any()) {
       // Slow-path: need to check NULLs
       VectorOps::Exec(left.selection_vector(), left.count(), [&](u64 i, u64 k) {
         if (!left_mask[i]) {
@@ -83,7 +83,7 @@ void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right,
 
   result->set_null_mask(left.null_mask() | right.null_mask());
 
-  if (IgnoreNull || result->null_mask().any()) {
+  if (IgnoreNull && result->null_mask().any()) {
     // Slow-path: need to check NULLs
     VectorOps::Exec(left.selection_vector(), left.count(), [&](u64 i, u64 k) {
       if (!result->null_mask()[i]) {
