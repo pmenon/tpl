@@ -49,10 +49,7 @@ void SorterVectorIterator::Next(
   }
 
   // Setup vector projection
-  for (u32 i = 0; i < vector_projection_->GetNumColumns(); i++) {
-    Vector *column = vector_projection_->GetColumn(i);
-    column->set_count(size);
-  }
+  vector_projection_->SetTupleCount(size);
 
   // Build the vector projection
   if (size > 0) {

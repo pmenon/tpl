@@ -47,10 +47,7 @@ void AHTVectorIterator::BuildVectorProjection(
   }
 
   // Update the vector projection with the new batch size.
-  for (u32 i = 0; i < vector_projection_->GetNumColumns(); i++) {
-    Vector *const column = vector_projection_->GetColumn(i);
-    column->set_count(size);
-  }
+  vector_projection_->SetTupleCount(size);
   vector_projection_iterator_->SetVectorProjection(vector_projection_.get());
 
   // Invoke the transposition function which does the heavy, query-specific,

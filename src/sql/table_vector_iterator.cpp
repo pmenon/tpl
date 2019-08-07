@@ -81,10 +81,10 @@ void TableVectorIterator::RefreshVectorProjection() {
   // iterators.
 
   vector_projection_.Reset();
-
   for (u64 col_idx = 0; col_idx < column_iterators_.size(); col_idx++) {
     vector_projection_.ResetColumn(column_iterators_, col_idx);
   }
+  vector_projection_.CheckIntegrity();
 
   // Insert our vector projection instance into the vector projection iterator
   vector_projection_iterator_.SetVectorProjection(&vector_projection_);

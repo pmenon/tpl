@@ -159,6 +159,12 @@ class VectorProjection {
   }
 
   /**
+   * Set the current count of tuples in this projection..
+   * @param count The count.
+   */
+  void SetTupleCount(u64 count);
+
+  /**
    * Compute the selectivity of this projection.
    * @return A number between [0.0, 1.0] representing the selectivity, i.e., the
    *         fraction of tuples that are active and visible.

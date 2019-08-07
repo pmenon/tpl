@@ -26,9 +26,9 @@ class VectorProjectionIterator {
   VectorProjectionIterator()
       : vector_projection_(nullptr),
         curr_idx_(0),
-        selection_vector_(nullptr),
-        selection_vector_read_idx_(0),
-        selection_vector_write_idx_(0) {}
+        sel_vector_(nullptr),
+        sel_vector_read_idx_(0),
+        sel_vector_write_idx_(0) {}
 
   /**
    * Create an iterator over the given projection @em vp.
@@ -51,10 +51,16 @@ class VectorProjectionIterator {
   bool IsFiltered() const { return vector_projection_->IsFiltered(); }
 
   /**
-   * Reset this iterator to begin iteration over the given projection @em vp
-   * @param vp The vector projection to iterate over
+   * Reset this iterator to begin iteration over the given projection @em vp.
+   * @param vp The vector projection to iterate over.
    */
-  void SetVectorProjection(VectorProjection *vp);
+  void SetVectorProjection(VectorProjection *vp) {
+    vector_projection_ = vp;
+    curr_idx_ = vector_projection_->IsFiltered() ? vp->sel_vector_[0] : 0;
+    sel_vector_ = vp->sel_vector_;
+    sel_vector_read_idx_ = 0;
+    sel_vector_write_idx_ = 0;
+  }
 
   /**
    * Return the vector projection this iterator is iterating over.
@@ -87,30 +93,27 @@ class VectorProjectionIterator {
   void SetValue(u32 col_idx, T val, bool null);
 
   /**
-   * Set the current iterator position
+   * Set the current iterator position.
    * @tparam IsFiltered Is this VPI filtered?
    * @param idx The index the iteration should jump to
    */
   template <bool IsFiltered>
   void SetPosition(u32 idx);
 
-  // TODO(pmenon): All Advance/HasNext/Reset should be templatized on if the
-  //               VPI is filtered.
-
   /**
-   * Advance the iterator by one tuple
+   * Advance the iterator by one tuple.
    */
   void Advance();
 
   /**
-   * Advance the iterator by a one tuple to the next valid tuple in the
-   * filtered vector projection.
+   * Advance the iterator by one to the next valid tuple in the filtered
+   * projection.
    */
   void AdvanceFiltered();
 
   /**
-   * Mark the current tuple (i.e., the one the iterator is currently positioned
-   * at) as matched (valid) or unmatched (invalid).
+   * Mark the tuple this iterator is currently positioned at as matched (valid)
+   * or unmatched (invalid).
    * @param matched True if the current tuple is valid; false otherwise
    */
   void Match(bool matched);
@@ -128,12 +131,12 @@ class VectorProjectionIterator {
   bool HasNextFiltered() const;
 
   /**
-   * Reset iteration to the beginning of the vector projection
+   * Reset iteration to the beginning of the vector projection.
    */
   void Reset();
 
   /**
-   * Reset iteration to the beginning of the filtered vector projection
+   * Reset iteration to the beginning of the filtered vector projection.
    */
   void ResetFiltered();
 
@@ -162,7 +165,7 @@ class VectorProjectionIterator {
   void RunFilter(const F &filter);
 
   /**
-   * Return the number of selected tuples after any filters have been applied
+   * Return the number of selected tuples after any filters have been applied.
    */
   u32 GetTupleCount() const { return vector_projection_->GetTupleCount(); }
 
@@ -174,13 +177,13 @@ class VectorProjectionIterator {
   u32 curr_idx_;
 
   // The selection vector used to filter the vector projection
-  sel_t *selection_vector_;
+  sel_t *sel_vector_;
 
   // The next slot in the selection vector to read from
-  u32 selection_vector_read_idx_;
+  u32 sel_vector_read_idx_;
 
   // The next slot in the selection vector to write into
-  u32 selection_vector_write_idx_;
+  u32 sel_vector_write_idx_;
 };
 
 // ---------------------------------------------------------
@@ -188,16 +191,7 @@ class VectorProjectionIterator {
 // ---------------------------------------------------------
 
 // The below methods are inlined in the header on purpose for performance.
-// Please don't move them.
-
-inline void VectorProjectionIterator::SetVectorProjection(
-    VectorProjection *vp) {
-  vector_projection_ = vp;
-  curr_idx_ = 0;
-  selection_vector_ = vp->sel_vector_;
-  selection_vector_read_idx_ = 0;
-  selection_vector_write_idx_ = 0;
-}
+// Please do not move them.
 
 // Note: The getting and setter functions operate on the underlying vector's
 // raw data rather than going through Vector::GetValue() or Vector::SetValue().
@@ -245,8 +239,8 @@ inline void VectorProjectionIterator::SetPosition(u32 idx) {
   TPL_ASSERT(idx < GetTupleCount(), "Out of bounds access");
   if constexpr (Filtered) {
     TPL_ASSERT(IsFiltered(), "Attempting to set position in unfiltered VPI");
-    selection_vector_read_idx_ = idx;
-    curr_idx_ = selection_vector_[selection_vector_read_idx_];
+    sel_vector_read_idx_ = idx;
+    curr_idx_ = sel_vector_[sel_vector_read_idx_];
   } else {
     TPL_ASSERT(!IsFiltered(), "Attempting to set position in filtered VPI");
     curr_idx_ = idx;
@@ -256,12 +250,12 @@ inline void VectorProjectionIterator::SetPosition(u32 idx) {
 inline void VectorProjectionIterator::Advance() { curr_idx_++; }
 
 inline void VectorProjectionIterator::AdvanceFiltered() {
-  curr_idx_ = selection_vector_[++selection_vector_read_idx_];
+  curr_idx_ = sel_vector_[++sel_vector_read_idx_];
 }
 
 inline void VectorProjectionIterator::Match(bool matched) {
-  selection_vector_[selection_vector_write_idx_] = curr_idx_;
-  selection_vector_write_idx_ += static_cast<u32>(matched);
+  sel_vector_[sel_vector_write_idx_] = curr_idx_;
+  sel_vector_write_idx_ += static_cast<u32>(matched);
 }
 
 inline bool VectorProjectionIterator::HasNext() const {
@@ -269,26 +263,23 @@ inline bool VectorProjectionIterator::HasNext() const {
 }
 
 inline bool VectorProjectionIterator::HasNextFiltered() const {
-  return selection_vector_read_idx_ < vector_projection_->GetTupleCount();
+  return sel_vector_read_idx_ < vector_projection_->GetTupleCount();
 }
 
 inline void VectorProjectionIterator::Reset() {
-  curr_idx_ = IsFiltered() ? selection_vector_[0] : 0;
-  selection_vector_read_idx_ = 0;
-  selection_vector_write_idx_ = 0;
+  curr_idx_ = IsFiltered() ? sel_vector_[0] : 0;
+  sel_vector_read_idx_ = 0;
+  sel_vector_write_idx_ = 0;
 }
 
 inline void VectorProjectionIterator::ResetFiltered() {
   // Update the projection counts
-  const auto new_count = selection_vector_write_idx_;
-  for (const auto &col : vector_projection_->columns_) {
-    col->set_count(new_count);
-  }
+  vector_projection_->SetTupleCount(sel_vector_write_idx_);
 
   // Reset
-  curr_idx_ = selection_vector_[0];
-  selection_vector_read_idx_ = 0;
-  selection_vector_write_idx_ = 0;
+  curr_idx_ = sel_vector_[0];
+  sel_vector_read_idx_ = 0;
+  sel_vector_write_idx_ = 0;
 }
 
 template <typename F>

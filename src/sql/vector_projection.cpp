@@ -91,6 +91,12 @@ void VectorProjection::ResetColumn(
               column_iterators[col_idx].NumTuples());
 }
 
+void VectorProjection::SetTupleCount(u64 count) {
+  for (auto &col : columns_) {
+    col->set_count(count);
+  }
+}
+
 std::string VectorProjection::ToString() const {
   std::string result =
       "VectorProjection(#cols=" + std::to_string(columns_.size()) + "):\n";
