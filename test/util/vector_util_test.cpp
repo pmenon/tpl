@@ -476,6 +476,34 @@ TEST_F(VectorUtilTest, BitToSelectionVector) {
   }
 }
 
+TEST_F(VectorUtilTest, DiffSelected) {
+  sel_t input[kDefaultVectorSize] = {0, 2, 3, 5, 7, 9};
+  sel_t output[kDefaultVectorSize];
+  u32 out_count = 0;
+
+  VectorUtil::DiffSelected(10, input, 6, output, &out_count);
+  EXPECT_EQ(4u, out_count);
+  EXPECT_EQ(1u, output[0]);
+  EXPECT_EQ(4u, output[1]);
+  EXPECT_EQ(6u, output[2]);
+  EXPECT_EQ(8u, output[3]);
+}
+
+TEST_F(VectorUtilTest, DiffSelectedWithScratcPad) {
+  sel_t input[kDefaultVectorSize] = {2, 3, 5, 7, 9};
+  sel_t output[kDefaultVectorSize];
+  u8 scratchpad[kDefaultVectorSize];
+  u32 out_count = 0;
+
+  VectorUtil::DiffSelected(10, input, 5, output, &out_count, scratchpad);
+  EXPECT_EQ(5u, out_count);
+  EXPECT_EQ(0u, output[0]);
+  EXPECT_EQ(1u, output[1]);
+  EXPECT_EQ(4u, output[2]);
+  EXPECT_EQ(6u, output[3]);
+  EXPECT_EQ(8u, output[4]);
+}
+
 TEST_F(VectorUtilTest, DISABLED_PerfSelect) {
   constexpr u32 num_elems = 128 * 1024u * 1024u;
   constexpr const u32 chunk_size = 4096;

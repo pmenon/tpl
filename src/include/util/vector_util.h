@@ -107,6 +107,35 @@ class VectorUtil {
 #undef GEN_FILTER
 
   /**
+   * Populate the output selection vector @em out_sel_vector with all indexes
+   * that do not appear in the input selection vector @em sel_vector.
+   * @param n The maximum number of indexes that can appear in the selection
+   *          vector.
+   * @param sel_vector The input selection vector.
+   * @param m The number of elements in the input selection vector.
+   * @param[out] out_sel_vector The output selection vector.
+   * @param[out] count The number of elements in the output selection vector.
+   */
+  static void DiffSelected(u32 n, const sel_t *sel_vector, u32 m,
+                           sel_t *out_sel_vector, u32 *count);
+
+
+  /**
+   * Populate the output selection vector @em out_sel_vector with all indexes
+   * that do not appear in the input selection vector @em sel_vector.
+   * @param n The maximum number of indexes that can appear in the selection
+   *          vector.
+   * @param sel_vector The input selection vector.
+   * @param m The number of elements in the input selection vector.
+   * @param[out] out_sel_vector The output selection vector.
+   * @param[out] count The number of elements in the output selection vector.
+   * @param scratch A scratch vector with at least @em n available bytes.
+   */
+  static void DiffSelected(u32 n, const sel_t *sel_vector, u32 m,
+                           sel_t *out_sel_vector, u32 *count,
+                           u8 scratch[kDefaultVectorSize]);
+
+  /**
    * Convert a selection vector into a byte vector. For each index stored in the
    * selection vector, set the corresponding index in the byte vector to the
    * saturated 8-bit integer (0xFF = 255 = 11111111).

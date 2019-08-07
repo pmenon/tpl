@@ -7,6 +7,35 @@
 
 namespace tpl::util {
 
+// Wasteful, but faster due to SIMD.
+void VectorUtil::DiffSelected(const u32 n, const sel_t *sel_vector, const u32 m,
+                              sel_t *out_sel_vector, u32 *count,
+                              u8 scratch[kDefaultVectorSize]) {
+  TPL_ASSERT(n <= kDefaultVectorSize, "Selection vector too large");
+  std::memset(scratch, 0, n);
+  SelectionVectorToByteVector(m, sel_vector, scratch);
+  for (u32 i = 0; i < n; i++) {
+    scratch[i] = ~scratch[i];
+  }
+  ByteVectorToSelectionVector(n, scratch, out_sel_vector, count);
+}
+
+// Vanilla scalar implementation.
+void VectorUtil::DiffSelected(const u32 n, const sel_t *sel_vector, const u32 m,
+                              sel_t *out_sel_vector, u32 *count) {
+  u32 i = 0, j = 0, k = 0;
+  for (; i < m; i++, j++) {
+    while (j < sel_vector[i]) {
+      out_sel_vector[k++] = j++;
+    }
+  }
+  while (j < n) {
+    out_sel_vector[k++] = j++;
+  }
+
+  *count = n - m;
+}
+
 void VectorUtil::SelectionVectorToByteVector(const u32 n,
                                              const sel_t *RESTRICT sel_vector,
                                              u8 *RESTRICT byte_vector) {
