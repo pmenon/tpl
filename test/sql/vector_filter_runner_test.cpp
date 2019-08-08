@@ -45,7 +45,7 @@ class VectorFilterRunnerTest : public TplTest {
   // colb(tinyint)  = [0,1,2,0,1,2,0,1,2,0]
   // colc(smallint) = [4,5,6,7,8,9,10,11,12,13]
   // cold(real)     = [1.1,2,2,3.3,4.4,5.5,6.6,7.7,8.8,9.9,10.1]
-  // colc(varchar)  = ['one','two','three','four','five','six','seven','eight','nine','ten']
+  // cole(varchar)  = ['one','two','three','four','five','six','seven','eight','nine','ten']
   // colf(smallint) = [1,5,2,7,3,9,4,11,5,13]
   // clang-format on
   std::unique_ptr<VectorProjection> CreateTestVectorProj() {
@@ -83,16 +83,16 @@ TEST_F(VectorFilterRunnerTest, ColumnWithConstant) {
     }
   };
 
-  // cola = t
+  // cole = 'ten'
   {
     auto vp = CreateTestVectorProj();
     VectorFilterRunner filter(vp.get());
-    filter.SelectEqVal(Col::A, GenericValue::CreateBoolean(true));
+    filter.SelectEqVal(Col::E, GenericValue::CreateVarchar("ten"));
     filter.Finish();
 
-    check_loop(vp.get(), 5, [](VectorProjectionIterator *iter) {
-      auto cola = *iter->GetValue<bool, false>(Col::A, nullptr);
-      EXPECT_TRUE(cola);
+    check_loop(vp.get(), 1, [](VectorProjectionIterator *iter) {
+      auto cole = *iter->GetValue<char *, false>(Col::E, nullptr);
+      EXPECT_STREQ("ten", cole);
     });
   }
 

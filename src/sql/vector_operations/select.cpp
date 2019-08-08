@@ -15,19 +15,28 @@ u32 TemplatedSelectOperation_Vector_Constant(const Vector &left,
 
   sel_t out_idx = 0;
 
-  if (IgnoreNull || left.null_mask().any()) {
-    // Slow-path: left vector has NULLs that need to be checked.
+  const auto &left_nulls = left.null_mask();
+  const auto left_has_nulls = left_nulls.any();
+  if (IgnoreNull && left_has_nulls) {
+    // Slow-path: manually skip NULLs
     VectorOps::Exec(left, [&](u64 i, u64 k) {
-      if (!left.null_mask()[i]) {
+      if (!left_nulls[i]) {
         out_sel_vector[out_idx] = i;
-        out_idx += static_cast<u32>(Op::Apply(left_data[i], right_data[0]));
+        out_idx += Op::Apply(left_data[i], right_data[0]);
       }
     });
-  } else {
-    // Fast-path: left vector has no NULLs.
+  } else if (left_has_nulls) {
+    // Slow-path: evaluate NULLs and condition
     VectorOps::Exec(left, [&](u64 i, u64 k) {
       out_sel_vector[out_idx] = i;
-      out_idx += static_cast<u32>(Op::Apply(left_data[i], right_data[0]));
+      out_idx += !left_nulls[i] && Op::Apply(left_data[i], right_data[0]);
+      ;
+    });
+  } else {
+    // Fast-path: no NULLs
+    VectorOps::Exec(left, [&](u64 i, u64 k) {
+      out_sel_vector[out_idx] = i;
+      out_idx += Op::Apply(left_data[i], right_data[0]);
     });
   }
 
@@ -48,20 +57,27 @@ u32 TemplatedSelectOperation_Vector_Vector(const Vector &left,
 
   sel_t out_idx = 0;
 
-  if (IgnoreNull || left.null_mask().any() || right.null_mask().any()) {
-    // Left or right inputs have some NULLs, need to check.
-    Vector::NullMask result_mask = left.null_mask() | right.null_mask();
+  const auto result_mask = left.null_mask() | right.null_mask();
+  const auto has_nulls = result_mask.any();
+  if (IgnoreNull && has_nulls) {
+    // Slow-path: manually skip NULLs
     VectorOps::Exec(left, [&](u64 i, u64 k) {
       if (!result_mask[i]) {
         out_sel_vector[out_idx] = i;
-        out_idx += static_cast<u32>(Op::Apply(left_data[i], right_data[i]));
+        out_idx += Op::Apply(left_data[i], right_data[i]);
       }
     });
-  } else {
-    // Fast-path: neither input has NULLs.
+  } else if (has_nulls) {
+    // Slow-path: evaluate NULLs and condition
     VectorOps::Exec(left, [&](u64 i, u64 k) {
       out_sel_vector[out_idx] = i;
-      out_idx += static_cast<u32>(Op::Apply(left_data[i], right_data[i]));
+      out_idx += !result_mask[i] && Op::Apply(left_data[i], right_data[i]);
+    });
+  } else {
+    // Fast-path: no NULLs
+    VectorOps::Exec(left, [&](u64 i, u64 k) {
+      out_sel_vector[out_idx] = i;
+      out_idx += Op::Apply(left_data[i], right_data[i]);
     });
   }
 
