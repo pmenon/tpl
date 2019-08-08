@@ -4,7 +4,6 @@
 #include <string>
 #include <utility>
 
-#include "logging/logger.h"
 #include "util/memory.h"
 
 namespace tpl::util {
@@ -49,12 +48,6 @@ void *Region::Allocate(std::size_t size, std::size_t alignment) {
 }
 
 void Region::FreeAll() {
-  LOG_TRACE(
-      "Region['{}', allocated: {} bytes, alignment waste: {} bytes, total "
-      "chunks: {} bytes]",
-      (name() == nullptr ? "empty" : name()), allocated(), alignment_waste(),
-      total_memory());
-
   Chunk *head = head_;
   while (head != nullptr) {
     Chunk *next = head->next;
@@ -93,7 +86,6 @@ uintptr_t Region::Expand(std::size_t requested) {
   }
 
   // Allocate a new chunk
-  LOG_TRACE("Allocating chunk of size {} KB", new_size / 1024.0);
   auto *new_chunk = static_cast<Chunk *>(std::malloc(new_size));
   new_chunk->Init(head_, new_size);
 
