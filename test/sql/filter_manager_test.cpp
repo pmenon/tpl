@@ -6,6 +6,7 @@
 
 #include "sql/catalog.h"
 #include "sql/filter_manager.h"
+#include "sql/vector_filter_runner.h"
 #include "sql/table_vector_iterator.h"
 
 namespace tpl::sql::test {
@@ -28,11 +29,9 @@ u32 Hobbled_TaaT_Lt_500(VectorProjectionIterator *vpi) {
 }
 
 u32 Vectorized_Lt_500(VectorProjectionIterator *vpi) {
-  // TODO(pmenon): Fix me when proper vectorized filters are fixed
-  vpi->RunFilter([vpi]() -> bool {
-    auto cola = *vpi->GetValue<i32, false>(Col::A, nullptr);
-    return cola < 500;
-  });
+  VectorFilterRunner filter(vpi);
+  filter.SelectLtVal(Col::A, GenericValue::CreateInteger(500));
+  filter.Finish();
   return vpi->GetTupleCount();
 }
 
