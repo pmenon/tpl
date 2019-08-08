@@ -46,18 +46,105 @@ class VectorFilterRunner {
   explicit VectorFilterRunner(
       VectorProjectionIterator *vector_projection_iterator);
 
+  /**
+   * Select tuples in the column stored at the given index (@em col_idx) in the
+   * vector projection that are equal to the provided constant value (@em val).
+   * @param col_idx The index of the column to compare with.
+   * @param val The value to compare with.
+   */
   void SelectEqVal(u32 col_idx, const GenericValue &val);
+
+  /**
+   * Select tuples in the column stored at the given index (@em col_idx) in the
+   * vector projection that are greater than or equal to the provided constant
+   * value (@em val).
+   * @param col_idx The index of the column to compare with.
+   * @param val The value to compare with.
+   */
   void SelectGeVal(u32 col_idx, const GenericValue &val);
+
+  /**
+   * Select tuples in the column stored at the given index (@em col_idx) in the
+   * vector projection that are strictly greater than the provided constant
+   * value (@em val).
+   * @param col_idx The index of the column to compare with.
+   * @param val The value to compare with.
+   */
   void SelectGtVal(u32 col_idx, const GenericValue &val);
+
+  /**
+   * Select tuples in the column stored at the given index (@em col_idx) in the
+   * vector projection that are less than or equal to the provided constant
+   * value (@em val).
+   * @param col_idx The index of the column to compare with.
+   * @param val The value to compare with.
+   */
   void SelectLeVal(u32 col_idx, const GenericValue &val);
+
+  /**
+   * Select tuples in the column stored at the given index (@em col_idx) in the
+   * vector projection that are strictly less than the provided constant value
+   * (@em val).
+   * @param col_idx The index of the column to compare with.
+   * @param val The value to compare with.
+   */
   void SelectLtVal(u32 col_idx, const GenericValue &val);
+
+  /**
+   * Select tuples in the column stored at the given index (@em col_idx) in the
+   * vector projection that are not equal to the provided constant value
+   * (@em val).
+   * @param col_idx The index of the column to compare with.
+   * @param val The value to compare with.
+   */
   void SelectNeVal(u32 col_idx, const GenericValue &val);
 
+  /**
+   * Select tuples whose values in the left (first) column are equal to the
+   * values in the right (second) column.
+   * @param left_col_idx The index of the left column to compare with.
+   * @param right_col_idx The index of the right column to compare with.
+   */
   void SelectEq(u32 left_col_idx, u32 right_col_idx);
+
+  /**
+   * Select tuples whose values in the left (first) column are greater than or
+   * equal to the values in the right (second) column.
+   * @param left_col_idx The index of the left column to compare with.
+   * @param right_col_idx The index of the right column to compare with.
+   */
   void SelectGe(u32 left_col_idx, u32 right_col_idx);
+
+  /**
+   * Select tuples whose values in the left (first) column are greater than the
+   * values in the right (second) column.
+   * @param left_col_idx The index of the left column to compare with.
+   * @param right_col_idx The index of the right column to compare with.
+   */
   void SelectGt(u32 left_col_idx, u32 right_col_idx);
+
+  /**
+   * Select tuples whose values in the left (first) column are less than or
+   * equal to the values in the right (second) column.
+   * @param left_col_idx The index of the left column to compare with.
+   * @param right_col_idx The index of the right column to compare with.
+   */
   void SelectLe(u32 left_col_idx, u32 right_col_idx);
+
+  /**
+   * Select tuples whose values in the left (first) column are less than the
+   * values in the right (second) column.
+   * @param left_col_idx The index of the left column to compare with.
+   * @param right_col_idx The index of the right column to compare with.
+   */
   void SelectLt(u32 left_col_idx, u32 right_col_idx);
+
+  /**
+   * Select tuples whose values in the left (first) column are not equal to the
+   * values in the right (second) column.
+   * @param left_col_idx The index of the left column to compare with.
+   * @param right_col_idx The index of the right column to compare with.
+   */
   void SelectNe(u32 col_idx, u32 right_col_idx);
 
   using VectorFilterFn = std::function<u32(const Vector *[], sel_t[])>;
