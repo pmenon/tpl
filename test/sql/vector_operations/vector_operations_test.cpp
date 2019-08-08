@@ -346,30 +346,30 @@ TEST_F(VectorOperationsTest, Select) {
     _2.Cast(type_id);
 
     // a < 2
-    VectorOps::SelectLessThan(*a, _2, result.data(), &n);
+    n = VectorOps::SelectLessThan(*a, _2, result.data());
     EXPECT_EQ(1u, n);
     EXPECT_EQ(1u, result[0]);
 
     // 2 < a
-    VectorOps::SelectLessThan(_2, *a, result.data(), &n);
+    n = VectorOps::SelectLessThan(_2, *a, result.data());
     EXPECT_EQ(3u, n);
     EXPECT_EQ(3u, result[0]);
     EXPECT_EQ(4u, result[1]);
     EXPECT_EQ(5u, result[2]);
 
     // 2 == a
-    VectorOps::SelectEqual(_2, *a, result.data(), &n);
+    n = VectorOps::SelectEqual(_2, *a, result.data());
     EXPECT_EQ(1u, n);
     EXPECT_EQ(2u, result[0]);
 
-    // a != b = [
-    VectorOps::SelectNotEqual(*a, *b, result.data(), &n);
+    // a != b
+    n = VectorOps::SelectNotEqual(*a, *b, result.data());
     EXPECT_EQ(2u, n);
     EXPECT_EQ(2u, result[0]);
     EXPECT_EQ(4u, result[1]);
 
     // b == a
-    VectorOps::SelectEqual(*b, *a, result.data(), &n);
+    n = VectorOps::SelectEqual(*b, *a, result.data());
     EXPECT_EQ(3u, n);
     EXPECT_EQ(1u, result[0]);
     EXPECT_EQ(3u, result[1]);
