@@ -1,5 +1,8 @@
 #include "tpl_test.h"  // NOLINT
 
+#include <memory>
+#include <vector>
+
 #include "sql/schema.h"
 #include "sql/vector_filter_runner.h"
 #include "sql/vector_operations/vector_operators.h"
@@ -102,7 +105,7 @@ TEST_F(VectorFilterRunnerTest, ColumnWithConstant) {
 
     check_loop(vp.get(), 3, [](VectorProjectionIterator *iter) {
       auto colb = *iter->GetValue<i8, false>(Col::B, nullptr);
-      EXPECT_TRUE(colb > 1);
+      EXPECT_GT(colb, 1);
     });
   }
 
@@ -115,7 +118,7 @@ TEST_F(VectorFilterRunnerTest, ColumnWithConstant) {
 
     check_loop(vp.get(), 4, [](VectorProjectionIterator *iter) {
       auto colb = *iter->GetValue<i16, false>(Col::C, nullptr);
-      EXPECT_TRUE(colb >= 10);
+      EXPECT_GE(colb, 10);
     });
   }
 

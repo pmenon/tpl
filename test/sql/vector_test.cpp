@@ -87,7 +87,7 @@ TEST_F(VectorTest, GetAndSet) {
 TEST_F(VectorTest, GetAndSetNumeric) {
 #define GEN_TEST(TYPE)                                         \
   {                                                            \
-    Vector vec(TypeId::TYPE, 10, false);                     \
+    Vector vec(TypeId::TYPE, 10, false);                       \
     vec.SetValue(0, GenericValue::Create##TYPE(1));            \
     EXPECT_EQ(GenericValue::Create##TYPE(1), vec.GetValue(0)); \
     vec.SetNull(0, true);                                      \

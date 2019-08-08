@@ -119,7 +119,6 @@ class VectorUtil {
   static void DiffSelected(u32 n, const sel_t *sel_vector, u32 m,
                            sel_t *out_sel_vector, u32 *count);
 
-
   /**
    * Populate the output selection vector @em out_sel_vector with all indexes
    * that do not appear in the input selection vector @em sel_vector.

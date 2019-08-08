@@ -7,6 +7,7 @@
 #include "sql/aggregators.h"
 #include "sql/execution_context.h"
 #include "sql/filter_manager.h"
+#include "sql/generic_value.h"
 #include "sql/hash_table_entry.h"
 #include "sql/join_hash_table.h"
 #include "sql/join_hash_table_vector_probe.h"
@@ -14,6 +15,7 @@
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
 #include "sql/value.h"
+#include "sql/vector_filter_runner.h"
 #include "sql/vector_projection_iterator.h"
 
 namespace tpl::ast {

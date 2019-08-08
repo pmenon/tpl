@@ -1,5 +1,6 @@
 #include <random>
 #include <unordered_set>
+#include <vector>
 
 #include "tpl_test.h"  // NOLINT
 
@@ -350,11 +351,11 @@ TEST(BitVectorTest, Iterate) {
     }
 
     // Check
-    bv.IterateSetBits([](auto idx) { EXPECT_TRUE(idx % 2 == 0); });
+    bv.IterateSetBits([](auto idx) { EXPECT_EQ(0u, idx % 2); });
 
     // Flip and check again
     bv.FlipAll();
-    bv.IterateSetBits([](auto idx) { EXPECT_TRUE(idx % 2 != 0); });
+    bv.IterateSetBits([](auto idx) { EXPECT_NE(0u, idx % 2); });
   }
 }
 

@@ -1,5 +1,7 @@
 #include "sql/vector_filter_runner.h"
 
+#include <vector>
+
 #include "sql/constant_vector.h"
 #include "sql/scoped_selection.h"
 #include "sql/vector_operations/vector_operators.h"

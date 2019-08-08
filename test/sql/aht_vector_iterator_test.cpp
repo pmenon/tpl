@@ -11,6 +11,7 @@
 
 #include "sql/aggregation_hash_table.h"
 #include "sql/execution_context.h"
+#include "sql/vector_filter_runner.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/hash.h"
@@ -210,15 +211,15 @@ TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
     // Populate
     PopulateAggHT(&agg_ht, size, size * 10, 1 /* cola */);
 
-    constexpr i32 filter = 1000;
+    constexpr i32 filter_val = 1000;
 
     auto vaat_ms = Bench(4, [&]() {
       vaat_ret = 0;
       AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
       for (; iter.HasNext(); iter.Next(Transpose)) {
-//        auto *vpi = iter.GetVectorProjectionIterator();
-//        auto val = VectorProjectionIterator::FilterVal{.bi = filter};
-//        vaat_ret += vpi->FilterColByVal<std::less>(0, val);
+        VectorFilterRunner filter(iter.GetVectorProjectionIterator());
+        filter.SelectLtVal(0, GenericValue::CreateBigInt(filter_val));
+        filter.Finish();
       }
     });
 
@@ -228,7 +229,7 @@ TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
       for (; iter.HasNext(); iter.Next()) {
         auto *agg_row =
             reinterpret_cast<const AggTuple *>(iter.GetCurrentAggregateRow());
-        if (agg_row->key < filter) {
+        if (agg_row->key < filter_val) {
           taat_ret++;
         }
       }

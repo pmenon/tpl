@@ -1,6 +1,8 @@
 #pragma once
 
 #include <immintrin.h>
+#include <algorithm>
+#include <memory>
 #include <string>
 
 #include "util/bit_util.h"

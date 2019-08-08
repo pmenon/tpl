@@ -4,6 +4,7 @@
 #include <iosfwd>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "sql/generic_value.h"
 #include "sql/sql.h"
