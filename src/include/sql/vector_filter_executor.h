@@ -171,6 +171,11 @@ class VectorFilterExecutor {
   void Finish();
 
  private:
+  // Helper to invoke a given filter function over a collection of input vectors
+  template <typename F>
+  void SelectInternal(const u32 col_indexes[], u32 num_cols, F &&filter);
+
+ private:
   // The vector projection we're filtering.
   VectorProjection *vector_projection_;
   // The currently active selection vector. In general, we read using this
