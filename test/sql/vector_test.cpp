@@ -17,12 +17,8 @@ TEST_F(VectorTest, CheckEmpty) {
   EXPECT_EQ(0u, vec1.count());
   EXPECT_EQ(nullptr, vec1.selection_vector());
 
-  Vector vec2(TypeId::Integer, false, true);
-  EXPECT_EQ(0u, vec2.count());
-  EXPECT_EQ(nullptr, vec2.selection_vector());
-
   // Vectors that allocate must clean up
-  Vector vec3(TypeId::Boolean, true, false);
+  Vector vec3(TypeId::Boolean, 10u, false);
 }
 
 TEST_F(VectorTest, Clear) {
@@ -182,7 +178,7 @@ TEST_F(VectorTest, Copy) {
   vec.SetSelectionVector(sel.data(), sel.size());
 
   // Move the original vector to the target
-  Vector target(vec.type_id(), true, true);
+  Vector target(vec.type_id(), vec.count(), true);
   vec.CopyTo(&target);
 
   // Expect same count, but no selection vector
@@ -206,7 +202,7 @@ TEST_F(VectorTest, CopyWithOffset) {
   const u32 offset = 2;
 
   // Move the original vector to the target
-  Vector target(vec.type_id(), true, true);
+  Vector target(vec.type_id(), vec.count(), true);
   vec.CopyTo(&target, offset);
 
   // Expect same count, but no selection vector
@@ -229,7 +225,7 @@ TEST_F(VectorTest, CopyStringVector) {
   vec.SetSelectionVector(sel.data(), sel.size());
   vec.SetNull(1, true);
 
-  Vector target(TypeId::Varchar, true, true);
+  Vector target(TypeId::Varchar, vec.count(), true);
   vec.CopyTo(&target);
 
   for (u32 i = 0; i < target.count(); i++) {
