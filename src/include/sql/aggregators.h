@@ -93,377 +93,232 @@ class CountStarAggregate {
 // Sums
 // ---------------------------------------------------------
 
-// TODO(pmenon): Sums, Min, Max between integers and reals share a lot of code.
-//               Consider refactoring ...
-
 /**
- * Integer Sums
+ * Generic summations.
  */
-class IntegerSumAggregate {
+template <typename T>
+class SumAggregate {
+  static_assert(std::is_base_of_v<Val, T>, "Template type must subclass value");
+
  public:
   /**
    * Constructor.
    */
-  IntegerSumAggregate() : sum_(0), null_(true) {}
+  SumAggregate() : sum_(static_cast<decltype(T::val)>(0)) {
+    sum_.is_null = true;
+  }
 
   /**
    * This class cannot be copied or moved.
    */
-  DISALLOW_COPY_AND_MOVE(IntegerSumAggregate);
+  DISALLOW_COPY_AND_MOVE(SumAggregate);
 
   /**
-   * Advance the aggregate by input value @em val.
+   * Advance the aggregate by a given input value. If the input is NULL, no
+   * change is applied to the aggregate.
+   * @param val The (potentially NULL) value to advance the sum by.
    */
-  void Advance(const Integer &val) {
+  void Advance(const T &val) {
     if (val.is_null) {
       return;
     }
-    null_ = false;
-    sum_ += val.val;
+    sum_.is_null = false;
+    sum_.val += val.val;
   }
 
   /**
-   * Merge a partial sum aggregate into this aggregate.
+   * Merge a partial sum aggregate into this aggregate. If the partial sum is
+   * NULL, no change is applied to this aggregate.
+   * @param that The (potentially NULL) value to merge into this aggregate.
    */
-  void Merge(const IntegerSumAggregate &that) {
-    if (that.null_) {
+  void Merge(const SumAggregate<T> &that) {
+    if (that.sum_.is_null) {
       return;
     }
-    null_ = false;
-    sum_ += that.sum_;
+    sum_.is_null = false;
+    sum_.val += that.sum_.val;
   }
 
   /**
    * Reset the summation.
    */
   void Reset() {
-    null_ = true;
-    sum_ = 0;
+    sum_.is_null = true;
+    sum_.val = 0;
   }
 
   /**
    * Return the result of the summation.
+   * @return The current value of the sum.
    */
-  Integer GetResultSum() const {
-    Integer sum(sum_);
-    sum.is_null = null_;
-    return sum;
-  }
+  const T &GetResultSum() const { return sum_; }
 
  private:
-  i64 sum_;
-  bool null_;
+  T sum_;
 };
+
+/**
+ * Integer Sums
+ */
+class IntegerSumAggregate : public SumAggregate<Integer> {};
 
 /**
  * Real Sums
  */
-class RealSumAggregate {
- public:
-  /**
-   * Constructor.
-   */
-  RealSumAggregate() : sum_(0), null_(true) {}
-
-  /**
-   * This class cannot be copied or moved.
-   */
-  DISALLOW_COPY_AND_MOVE(RealSumAggregate);
-
-  /**
-   * Advance the aggregate by the input value @em val.
-   */
-  void Advance(const Real &val) {
-    if (val.is_null) {
-      return;
-    }
-    null_ = false;
-    sum_ += val.val;
-  }
-
-  /**
-   * Merge a partial real-typed summation into this aggregate.
-   */
-  void Merge(const RealSumAggregate &that) {
-    if (that.null_) {
-      return;
-    }
-    null_ = false;
-    sum_ += that.sum_;
-  }
-
-  /**
-   * Reset the aggregate.
-   */
-  void Reset() {
-    null_ = true;
-    sum_ = 0;
-  }
-
-  /**
-   * Return the result of the summation.
-   */
-  Real GetResultSum() const {
-    Real sum(sum_);
-    sum.is_null = null_;
-    return sum;
-  }
-
- private:
-  double sum_;
-  bool null_;
-};
+class RealSumAggregate : public SumAggregate<Real> {};
 
 // ---------------------------------------------------------
 // Max
 // ---------------------------------------------------------
 
 /**
- * Integer Max
+ * Generic max.
  */
-class IntegerMaxAggregate {
+template <typename T>
+class MaxAggregate {
+  static_assert(std::is_base_of_v<Val, T>, "Template type must subclass value");
+
  public:
   /**
    * Constructor.
    */
-  IntegerMaxAggregate() : max_(std::numeric_limits<i64>::min()), null_(true) {}
+  MaxAggregate() : max_(std::numeric_limits<decltype(T::val)>::min()) {
+    max_.is_null = true;
+  }
 
   /**
    * This class cannot be copied or moved.
    */
-  DISALLOW_COPY_AND_MOVE(IntegerMaxAggregate);
+  DISALLOW_COPY_AND_MOVE(MaxAggregate);
 
   /**
    * Advance the aggregate by the input value @em val.
    */
-  void Advance(const Integer &val) {
+  void Advance(const T &val) {
     if (val.is_null) {
       return;
     }
-    null_ = false;
-    max_ = std::max(val.val, max_);
+    max_.is_null = false;
+    max_.val = std::max(val.val, max_.val);
   }
 
   /**
    * Merge a partial max aggregate into this aggregate.
    */
-  void Merge(const IntegerMaxAggregate &that) {
-    if (that.null_) {
+  void Merge(const MaxAggregate<T> &that) {
+    if (that.max_.is_null) {
       return;
     }
-    null_ = false;
-    max_ = std::max(that.max_, max_);
+    max_.is_null = false;
+    max_.val = std::max(that.max_.val, max_.val);
   }
 
   /**
    * Reset the aggregate.
    */
   void Reset() {
-    null_ = true;
-    max_ = std::numeric_limits<i64>::min();
+    max_.is_null = true;
+    max_.val = std::numeric_limits<decltype(T::val)>::min();
   }
 
   /**
    * Return the result of the max.
    */
-  Integer GetResultMax() const {
-    Integer max(max_);
-    max.is_null = null_;
-    return max;
-  }
+  const T &GetResultMax() const { return max_; }
 
  private:
-  i64 max_;
-  bool null_;
+  T max_;
 };
+
+/**
+ * Integer Max
+ */
+class IntegerMaxAggregate : public MaxAggregate<Integer> {};
 
 /**
  * Real Max
  */
-class RealMaxAggregate {
- public:
-  /**
-   * Constructor.
-   */
-  RealMaxAggregate() : max_(std::numeric_limits<double>::min()), null_(true) {}
-
-  /**
-   * This class cannot be copied or moved.
-   */
-  DISALLOW_COPY_AND_MOVE(RealMaxAggregate);
-
-  /**
-   * Advance the aggregate by the input value @em val.
-   */
-  void Advance(const Real &val) {
-    if (val.is_null) {
-      return;
-    }
-    null_ = false;
-    max_ = std::max(val.val, max_);
-  }
-
-  /**
-   * Merge a partial real-typed max aggregate into this aggregate.
-   */
-  void Merge(const RealMaxAggregate &that) {
-    if (that.null_) {
-      return;
-    }
-    null_ = false;
-    max_ = std::max(that.max_, max_);
-  }
-
-  /**
-   * Reset the aggregate.
-   */
-  void Reset() {
-    null_ = true;
-    max_ = std::numeric_limits<double>::min();
-  }
-
-  /**
-   * Return the result of the max.
-   */
-  Real GetResultMax() const {
-    Real max(max_);
-    max.is_null = null_;
-    return max;
-  }
-
- private:
-  double max_;
-  bool null_;
-};
+class RealMaxAggregate : public MaxAggregate<Real> {};
 
 // ---------------------------------------------------------
 // Min
 // ---------------------------------------------------------
 
 /**
- * Integer Min
+ * Generic min.
  */
-class IntegerMinAggregate {
+template <typename T>
+class MinAggregate {
+  static_assert(std::is_base_of_v<Val, T>, "Template type must subclass value");
+
  public:
   /**
    * Constructor.
    */
-  IntegerMinAggregate() : min_(std::numeric_limits<i64>::max()), null_(true) {}
+  MinAggregate() : min_(std::numeric_limits<decltype(T::val)>::max()) {
+    min_.is_null = true;
+  }
 
   /**
    * This class cannot be copied or moved.
    */
-  DISALLOW_COPY_AND_MOVE(IntegerMinAggregate);
+  DISALLOW_COPY_AND_MOVE(MinAggregate);
 
   /**
    * Advance the aggregate by the input value @em val.
    */
-  void Advance(const Integer &val) {
+  void Advance(const T &val) {
     if (val.is_null) {
       return;
     }
-    null_ = false;
-    min_ = std::min(val.val, min_);
+    min_.is_null = false;
+    min_.val = std::min(val.val, min_.val);
   }
 
   /**
    * Merge a partial min aggregate into this aggregate.
    */
-  void Merge(const IntegerMinAggregate &that) {
-    if (that.null_) {
+  void Merge(const MinAggregate<T> &that) {
+    if (that.min_.is_null) {
       return;
     }
-    null_ = false;
-    min_ = std::min(that.min_, min_);
+    min_.is_null = false;
+    min_.val = std::min(that.min_.val, min_.val);
   }
 
   /**
    * Reset the aggregate.
    */
   void Reset() {
-    null_ = true;
-    min_ = std::numeric_limits<i64>::max();
+    min_.is_null = true;
+    min_.val = std::numeric_limits<decltype(T::val)>::max();
   }
 
   /**
    * Return the result of the minimum.
    */
-  Integer GetResultMin() const {
-    Integer min(min_);
-    min.is_null = null_;
-    return min;
-  }
+  const T &GetResultMin() const { return min_; }
 
  private:
-  i64 min_;
-  bool null_;
+  T min_;
 };
+
+/**
+ * Integer Min
+ */
+class IntegerMinAggregate : public MinAggregate<Integer> {};
 
 /**
  * Real Min
  */
-class RealMinAggregate {
- public:
-  /**
-   * Constructor.
-   */
-  RealMinAggregate() : min_(std::numeric_limits<double>::max()), null_(true) {}
-
-  /**
-   * This class cannot be copied or moved.
-   */
-  DISALLOW_COPY_AND_MOVE(RealMinAggregate);
-
-  /**
-   * Advance the aggregate by the input value @em val.
-   */
-  void Advance(const Real &val) {
-    if (val.is_null) {
-      return;
-    }
-    null_ = false;
-    min_ = std::min(val.val, min_);
-  }
-
-  /**
-   * Merge a partial real-typed min aggregate into this aggregate.
-   */
-  void Merge(const RealMinAggregate &that) {
-    if (that.null_) {
-      return;
-    }
-    null_ = false;
-    min_ = std::min(that.min_, min_);
-  }
-
-  /**
-   * Reset the aggregate.
-   */
-  void Reset() {
-    null_ = true;
-    min_ = std::numeric_limits<i64>::max();
-  }
-
-  /**
-   * Return the result of the minimum.
-   */
-  Real GetResultMin() const {
-    Real min(min_);
-    min.is_null = null_;
-    return min;
-  }
-
- private:
-  double min_;
-  bool null_;
-};
+class RealMinAggregate : public MinAggregate<Real> {};
 
 // ---------------------------------------------------------
 // Average
 // ---------------------------------------------------------
 
 /**
- * Integer Avg
+ * Average aggregate.
  */
 class AvgAggregate {
  public:
