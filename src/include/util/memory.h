@@ -3,9 +3,7 @@
 #include <sys/mman.h>
 #include <cstddef>
 #include <cstring>
-#if defined(__APPLE__)
-#include <malloc.h>
-#endif
+#include <cstdlib>
 
 #include "util/common.h"
 #include "util/macros.h"
@@ -31,7 +29,7 @@ inline void *MallocAligned(const std::size_t size,
   void *ptr = nullptr;
 #if defined(__APPLE__)
   i32 ret = posix_memalign(&ptr, alignment, size);
-  TPL_ASSERT(ret == 0, "Allocation failed")
+  TPL_ASSERT(ret == 0, "Allocation failed");
 #else
   ptr = std::aligned_alloc(alignment, size);
 #endif
