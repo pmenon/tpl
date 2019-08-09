@@ -173,14 +173,6 @@ class GenericValue {
                                       i32 min, i32 sec, i32 msec);
 
   /**
-   * Create a non-NULL varchar value. No ownership exchange, the string is
-   * copied into the returned value.
-   * @param value The value.
-   * @return A Varchar value.
-   */
-  static GenericValue CreateVarchar(const char *str);
-
-  /**
    * Create a non-NULL varchar value.
    * @param value The value.
    * @return A Varchar value.
