@@ -39,7 +39,7 @@ void *MemoryPool::AllocateAligned(const std::size_t size,
         buf = std::malloc(size);
       }
     } else {
-      buf = std::aligned_alloc(alignment, size);
+      buf = util::MallocAligned(size, alignment);
       if (clear) {
         std::memset(buf, 0, size);
       }

@@ -3,6 +3,9 @@
 #include <sys/mman.h>
 #include <cstddef>
 #include <cstring>
+#if defined(__APPLE__)
+#include <malloc.h>
+#endif
 
 #include "util/common.h"
 #include "util/macros.h"
@@ -17,6 +20,23 @@ namespace tpl::util {
 // ---------------------------------------------------------
 // Allocations
 // ---------------------------------------------------------
+
+inline void *MallocAligned(const std::size_t size,
+                           const std::size_t alignment) {
+  TPL_ASSERT(alignment % sizeof(void *) == 0,
+             "Alignment must be a multiple of sizeof(void*)");
+  TPL_ASSERT((alignment & (alignment - 1)) == 0,
+             "Alignment must be a power of two");
+
+  void *ptr = nullptr;
+#if defined(__APPLE__)
+  i32 ret = posix_memalign(&ptr, alignment, size);
+  TPL_ASSERT(ret == 0, "Allocation failed")
+#else
+  ptr = std::aligned_alloc(alignment, size);
+#endif
+  return ptr;
+}
 
 inline void *MallocHuge(std::size_t size) {
   // Attempt to map

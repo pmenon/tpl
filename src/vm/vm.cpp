@@ -2,12 +2,10 @@
 
 #include <numeric>
 #include <string>
-#include <vector>
 
-#include "sql/table.h"
 #include "sql/value.h"
 #include "util/common.h"
-#include "util/timer.h"
+#include "util/memory.h"
 #include "vm/bytecode_function_info.h"
 #include "vm/bytecode_handlers.h"
 #include "vm/module.h"
@@ -101,7 +99,8 @@ void VM::InvokeFunction(const Module *module, const FunctionId func_id,
   u8 *raw_frame = nullptr;
   if (frame_size > kMaxStackAllocSize) {
     used_heap = true;
-    raw_frame = static_cast<u8 *>(std::aligned_alloc(alignof(u64), frame_size));
+    raw_frame =
+        static_cast<u8 *>(util::MallocAligned(frame_size, alignof(u64)));
   } else if (frame_size > kSoftMaxStackAllocSize) {
     // TODO(pmenon): Check stack before allocation
     raw_frame = static_cast<u8 *>(alloca(frame_size));
@@ -1622,7 +1621,8 @@ const u8 *VM::ExecuteCall(const u8 *ip, VM::Frame *caller) {
   u8 *raw_frame = nullptr;
   if (frame_size > kMaxStackAllocSize) {
     used_heap = true;
-    raw_frame = static_cast<u8 *>(std::aligned_alloc(alignof(u64), frame_size));
+    raw_frame =
+        static_cast<u8 *>(util::MallocAligned(frame_size, alignof(u64)));
   } else if (frame_size > kSoftMaxStackAllocSize) {
     // TODO(pmenon): Check stack before allocation
     raw_frame = static_cast<u8 *>(alloca(frame_size));
