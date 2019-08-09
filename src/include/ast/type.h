@@ -70,7 +70,7 @@ class Context;
   NON_PRIM(SorterIterator, tpl::sql::SorterIterator)                     \
   NON_PRIM(TableVectorIterator, tpl::sql::TableVectorIterator)           \
   NON_PRIM(ThreadStateContainer, tpl::sql::ThreadStateContainer)         \
-  NON_PRIM(VectorFilterRunner, tpl::sql::VectorFilterRunner)             \
+  NON_PRIM(VectorFilterExecutor, tpl::sql::VectorFilterExecutor)         \
   NON_PRIM(VectorProjectionIterator, tpl::sql::VectorProjectionIterator) \
                                                                          \
   /* SQL Aggregate types (if you add, remember to update BuiltinType) */ \
