@@ -4,14 +4,14 @@
 #include <vector>
 
 #include "sql/schema.h"
-#include "sql/vector_filter_runner.h"
+#include "sql/vector_filter_executor.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 
 namespace tpl::sql::test {
 
-class VectorFilterRunnerTest : public TplTest {
+class VectorFilterExecutorTest : public TplTest {
  public:
   enum Col {
     A = 0,
@@ -22,7 +22,7 @@ class VectorFilterRunnerTest : public TplTest {
     F = 5,
   };
 
-  VectorFilterRunnerTest() {
+  VectorFilterExecutorTest() {
     cols_.emplace_back("colA", BooleanType::InstanceNonNullable());
     cols_.emplace_back("colB", TinyIntType::InstanceNonNullable());
     cols_.emplace_back("colC", SmallIntType::InstanceNonNullable());
@@ -74,7 +74,7 @@ class VectorFilterRunnerTest : public TplTest {
   std::vector<Schema::ColumnInfo> cols_;
 };
 
-TEST_F(VectorFilterRunnerTest, ColumnWithConstant) {
+TEST_F(VectorFilterExecutorTest, ColumnWithConstant) {
   auto check_loop = [](VectorProjection *vp, u32 expected_size, auto cb) {
     EXPECT_EQ(expected_size, vp->GetTupleCount());
     for (VectorProjectionIterator iter(vp); iter.HasNextFiltered();
@@ -86,7 +86,7 @@ TEST_F(VectorFilterRunnerTest, ColumnWithConstant) {
   // cole = 'ten'
   {
     auto vp = CreateTestVectorProj();
-    VectorFilterRunner filter(vp.get());
+    VectorFilterExecutor filter(vp.get());
     filter.SelectEqVal(Col::E, GenericValue::CreateVarchar("ten"));
     filter.Finish();
 
@@ -99,7 +99,7 @@ TEST_F(VectorFilterRunnerTest, ColumnWithConstant) {
   // colb > 1
   {
     auto vp = CreateTestVectorProj();
-    VectorFilterRunner filter(vp.get());
+    VectorFilterExecutor filter(vp.get());
     filter.SelectGtVal(Col::B, GenericValue::CreateTinyInt(1));
     filter.Finish();
 
@@ -112,7 +112,7 @@ TEST_F(VectorFilterRunnerTest, ColumnWithConstant) {
   // colc >= 10
   {
     auto vp = CreateTestVectorProj();
-    VectorFilterRunner filter(vp.get());
+    VectorFilterExecutor filter(vp.get());
     filter.SelectGeVal(Col::C, GenericValue::CreateSmallInt(10));
     filter.Finish();
 
@@ -125,7 +125,7 @@ TEST_F(VectorFilterRunnerTest, ColumnWithConstant) {
   // cold < 4.0
   {
     auto vp = CreateTestVectorProj();
-    VectorFilterRunner filter(vp.get());
+    VectorFilterExecutor filter(vp.get());
     filter.SelectLtVal(Col::D, GenericValue::CreateReal(4.0));
     filter.Finish();
 
@@ -138,7 +138,7 @@ TEST_F(VectorFilterRunnerTest, ColumnWithConstant) {
   // colb <= 4
   {
     auto vp = CreateTestVectorProj();
-    VectorFilterRunner filter(vp.get());
+    VectorFilterExecutor filter(vp.get());
     filter.SelectLeVal(Col::B, GenericValue::CreateTinyInt(4));
     filter.Finish();
 
@@ -152,7 +152,7 @@ TEST_F(VectorFilterRunnerTest, ColumnWithConstant) {
   // cola != t
   {
     auto vp = CreateTestVectorProj();
-    VectorFilterRunner filter(vp.get());
+    VectorFilterExecutor filter(vp.get());
     filter.SelectNeVal(Col::A, GenericValue::CreateBoolean(true));
     filter.Finish();
 
@@ -163,12 +163,12 @@ TEST_F(VectorFilterRunnerTest, ColumnWithConstant) {
   }
 }
 
-TEST_F(VectorFilterRunnerTest, Conjunction_Between) {
+TEST_F(VectorFilterExecutorTest, Conjunction_Between) {
   auto vp = CreateTestVectorProj();
 
   // colc >= 8 AND colc <= 10
   i16 colc_lo = 8, colc_hi = 10;
-  VectorFilterRunner filter(vp.get());
+  VectorFilterExecutor filter(vp.get());
   filter.SelectGeVal(Col::C, GenericValue::CreateSmallInt(colc_lo));
   filter.SelectLeVal(Col::C, GenericValue::CreateSmallInt(colc_hi));
   filter.Finish();
@@ -181,7 +181,7 @@ TEST_F(VectorFilterRunnerTest, Conjunction_Between) {
   }
 }
 
-TEST_F(VectorFilterRunnerTest, ColumnWithColumn) {
+TEST_F(VectorFilterExecutorTest, ColumnWithColumn) {
   auto check_loop = [](VectorProjection *vp, u32 expected_size, auto cb) {
     EXPECT_EQ(expected_size, vp->GetTupleCount());
     for (VectorProjectionIterator iter(vp); iter.HasNextFiltered();
@@ -193,7 +193,7 @@ TEST_F(VectorFilterRunnerTest, ColumnWithColumn) {
   // colc = colf
   {
     auto vp = CreateTestVectorProj();
-    VectorFilterRunner filter(vp.get());
+    VectorFilterExecutor filter(vp.get());
     filter.SelectEq(Col::C, Col::F);
     filter.Finish();
     check_loop(vp.get(), 5, [](VectorProjectionIterator *iter) {
@@ -206,7 +206,7 @@ TEST_F(VectorFilterRunnerTest, ColumnWithColumn) {
   // colc >= colf
   {
     auto vp = CreateTestVectorProj();
-    VectorFilterRunner filter(vp.get());
+    VectorFilterExecutor filter(vp.get());
     filter.SelectGe(Col::C, Col::F);
     filter.Finish();
     check_loop(vp.get(), 10, [](VectorProjectionIterator *iter) {
@@ -219,7 +219,7 @@ TEST_F(VectorFilterRunnerTest, ColumnWithColumn) {
   // colc > colf
   {
     auto vp = CreateTestVectorProj();
-    VectorFilterRunner filter(vp.get());
+    VectorFilterExecutor filter(vp.get());
     filter.SelectGt(Col::C, Col::F);
     filter.Finish();
     check_loop(vp.get(), 5, [](VectorProjectionIterator *iter) {
@@ -232,7 +232,7 @@ TEST_F(VectorFilterRunnerTest, ColumnWithColumn) {
   // colc < colf
   {
     auto vp = CreateTestVectorProj();
-    VectorFilterRunner filter(vp.get());
+    VectorFilterExecutor filter(vp.get());
     filter.SelectLt(Col::C, Col::F);
     filter.Finish();
     check_loop(vp.get(), 0, [](VectorProjectionIterator *iter) { FAIL(); });
@@ -241,7 +241,7 @@ TEST_F(VectorFilterRunnerTest, ColumnWithColumn) {
   // colc <= colf
   {
     auto vp = CreateTestVectorProj();
-    VectorFilterRunner filter(vp.get());
+    VectorFilterExecutor filter(vp.get());
     filter.SelectLe(Col::C, Col::F);
     filter.Finish();
     check_loop(vp.get(), 5, [](VectorProjectionIterator *iter) {
@@ -254,7 +254,7 @@ TEST_F(VectorFilterRunnerTest, ColumnWithColumn) {
   // colc <> colf
   {
     auto vp = CreateTestVectorProj();
-    VectorFilterRunner filter(vp.get());
+    VectorFilterExecutor filter(vp.get());
     filter.SelectNe(Col::C, Col::F);
     filter.Finish();
     check_loop(vp.get(), 5, [](VectorProjectionIterator *iter) {

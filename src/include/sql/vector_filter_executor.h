@@ -29,13 +29,13 @@ class VectorProjectionIterator;
  * be finalized through a call to @em Finish(). After this call, the projection
  * will only contain those tuples that passed all filtering operations.
  */
-class VectorFilterRunner {
+class VectorFilterExecutor {
  public:
   /**
    * Create a filter runner using the provided vector projection as input.
    * @param vector_projection The input projection the filter operates on.
    */
-  explicit VectorFilterRunner(VectorProjection *vector_projection);
+  explicit VectorFilterExecutor(VectorProjection *vector_projection);
 
   /**
    * Create a filter runner using the projection contained within provided
@@ -43,7 +43,7 @@ class VectorFilterRunner {
    * @param vector_projection_iterator A vector projection iterator storing the
    *                                   projection to filter.
    */
-  explicit VectorFilterRunner(
+  explicit VectorFilterExecutor(
       VectorProjectionIterator *vector_projection_iterator);
 
   /**

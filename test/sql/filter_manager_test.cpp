@@ -6,7 +6,7 @@
 
 #include "sql/catalog.h"
 #include "sql/filter_manager.h"
-#include "sql/vector_filter_runner.h"
+#include "sql/vector_filter_executor.h"
 #include "sql/table_vector_iterator.h"
 
 namespace tpl::sql::test {
@@ -29,7 +29,7 @@ u32 Hobbled_TaaT_Lt_500(VectorProjectionIterator *vpi) {
 }
 
 u32 Vectorized_Lt_500(VectorProjectionIterator *vpi) {
-  VectorFilterRunner filter(vpi);
+  VectorFilterExecutor filter(vpi);
   filter.SelectLtVal(Col::A, GenericValue::CreateInteger(500));
   filter.Finish();
   return vpi->GetTupleCount();

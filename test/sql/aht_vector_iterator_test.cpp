@@ -11,7 +11,7 @@
 
 #include "sql/aggregation_hash_table.h"
 #include "sql/execution_context.h"
-#include "sql/vector_filter_runner.h"
+#include "sql/vector_filter_executor.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/hash.h"
@@ -217,7 +217,7 @@ TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
       vaat_ret = 0;
       AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
       for (; iter.HasNext(); iter.Next(Transpose)) {
-        VectorFilterRunner filter(iter.GetVectorProjectionIterator());
+        VectorFilterExecutor filter(iter.GetVectorProjectionIterator());
         filter.SelectLtVal(0, GenericValue::CreateBigInt(filter_val));
         filter.Finish();
       }
