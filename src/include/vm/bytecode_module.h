@@ -11,7 +11,10 @@
 namespace tpl::vm {
 
 /**
- * A module represents all code in a single TPL source file
+ * A bytecode module is a container for all the TPL bytecode (TBC) for a TPL
+ * source file. Bytecode modules directly contain a list of all the physical
+ * bytecode that make up the program, and a list of functions that store
+ * information about the functions in the TPL program.
  */
 class BytecodeModule {
  public:
@@ -63,6 +66,17 @@ class BytecodeModule {
   }
 
   /**
+   * Return the number of bytecode instructions in this module.
+   */
+  std::size_t GetInstructionCount() const {
+    std::size_t count = 0;
+    for (BytecodeIterator iter(code_); !iter.Done(); iter.Advance()) {
+      count++;
+    }
+    return count;
+  }
+
+  /**
    * Pretty print all the module's contents into the provided output stream
    * @param os The stream into which we dump the module's contents
    */
@@ -77,11 +91,6 @@ class BytecodeModule {
    * Return a constant view of all functions
    */
   const std::vector<FunctionInfo> &functions() const { return functions_; }
-
-  /**
-   * Return the number of bytecode instructions in this module
-   */
-  std::size_t instruction_count() const { return code_.size(); }
 
   /**
    * Return the number of functions defined in this module

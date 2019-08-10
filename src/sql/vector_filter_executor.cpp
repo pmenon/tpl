@@ -22,7 +22,7 @@ VectorFilterExecutor::VectorFilterExecutor(
     : VectorFilterExecutor(vector_projection_iterator->GetVectorProjection()) {}
 
 template <typename F>
-void VectorFilterExecutor::SelectInternal(const u32 *col_indexes,
+void VectorFilterExecutor::SelectInternal(const u32 col_indexes[],
                                           const u32 num_cols, F &&filter) {
   // Collect input vectors
   std::vector<Vector *> inputs(num_cols);
@@ -49,7 +49,7 @@ void VectorFilterExecutor::SelectGeneric(
 
 void VectorFilterExecutor::SelectEqVal(const u32 col_idx,
                                        const GenericValue &val) {
-  u32 col_indexes[1] = {col_idx};
+  const u32 col_indexes[1] = {col_idx};
   SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
                  [&val](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectEqual(*inputs[0],
@@ -59,7 +59,7 @@ void VectorFilterExecutor::SelectEqVal(const u32 col_idx,
 
 void VectorFilterExecutor::SelectGeVal(const u32 col_idx,
                                        const GenericValue &val) {
-  u32 col_indexes[1] = {col_idx};
+  const u32 col_indexes[1] = {col_idx};
   SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
                  [&val](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectGreaterThanEqual(
@@ -69,7 +69,7 @@ void VectorFilterExecutor::SelectGeVal(const u32 col_idx,
 
 void VectorFilterExecutor::SelectGtVal(const u32 col_idx,
                                        const GenericValue &val) {
-  u32 col_indexes[1] = {col_idx};
+  const u32 col_indexes[1] = {col_idx};
   SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
                  [&val](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectGreaterThan(
@@ -79,7 +79,7 @@ void VectorFilterExecutor::SelectGtVal(const u32 col_idx,
 
 void VectorFilterExecutor::SelectLeVal(const u32 col_idx,
                                        const GenericValue &val) {
-  u32 col_indexes[1] = {col_idx};
+  const u32 col_indexes[1] = {col_idx};
   SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
                  [&val](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectLessThanEqual(
@@ -89,7 +89,7 @@ void VectorFilterExecutor::SelectLeVal(const u32 col_idx,
 
 void VectorFilterExecutor::SelectLtVal(const u32 col_idx,
                                        const GenericValue &val) {
-  u32 col_indexes[1] = {col_idx};
+  const u32 col_indexes[1] = {col_idx};
   SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
                  [&val](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectLessThan(
@@ -99,7 +99,7 @@ void VectorFilterExecutor::SelectLtVal(const u32 col_idx,
 
 void VectorFilterExecutor::SelectNeVal(const u32 col_idx,
                                        const GenericValue &val) {
-  u32 col_indexes[1] = {col_idx};
+  const u32 col_indexes[1] = {col_idx};
   SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
                  [&val](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectNotEqual(
@@ -109,7 +109,7 @@ void VectorFilterExecutor::SelectNeVal(const u32 col_idx,
 
 void VectorFilterExecutor::SelectEq(const u32 left_col_idx,
                                     const u32 right_col_idx) {
-  u32 col_indexes[2] = {left_col_idx, right_col_idx};
+  const u32 col_indexes[2] = {left_col_idx, right_col_idx};
   SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
                  [](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectEqual(*inputs[0], *inputs[1],
@@ -119,7 +119,7 @@ void VectorFilterExecutor::SelectEq(const u32 left_col_idx,
 
 void VectorFilterExecutor::SelectGe(const u32 left_col_idx,
                                     const u32 right_col_idx) {
-  u32 col_indexes[2] = {left_col_idx, right_col_idx};
+  const u32 col_indexes[2] = {left_col_idx, right_col_idx};
   SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
                  [](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectGreaterThanEqual(*inputs[0],
@@ -129,7 +129,7 @@ void VectorFilterExecutor::SelectGe(const u32 left_col_idx,
 
 void VectorFilterExecutor::SelectGt(const u32 left_col_idx,
                                     const u32 right_col_idx) {
-  u32 col_indexes[2] = {left_col_idx, right_col_idx};
+  const u32 col_indexes[2] = {left_col_idx, right_col_idx};
   SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
                  [](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectGreaterThan(*inputs[0], *inputs[1],
@@ -139,7 +139,7 @@ void VectorFilterExecutor::SelectGt(const u32 left_col_idx,
 
 void VectorFilterExecutor::SelectLe(const u32 left_col_idx,
                                     const u32 right_col_idx) {
-  u32 col_indexes[2] = {left_col_idx, right_col_idx};
+  const u32 col_indexes[2] = {left_col_idx, right_col_idx};
   SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
                  [](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectLessThanEqual(*inputs[0], *inputs[1],
@@ -149,7 +149,7 @@ void VectorFilterExecutor::SelectLe(const u32 left_col_idx,
 
 void VectorFilterExecutor::SelectLt(const u32 left_col_idx,
                                     const u32 right_col_idx) {
-  u32 col_indexes[2] = {left_col_idx, right_col_idx};
+  const u32 col_indexes[2] = {left_col_idx, right_col_idx};
   SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
                  [](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectLessThan(*inputs[0], *inputs[1],
@@ -159,7 +159,7 @@ void VectorFilterExecutor::SelectLt(const u32 left_col_idx,
 
 void VectorFilterExecutor::SelectNe(const u32 left_col_idx,
                                     const u32 right_col_idx) {
-  u32 col_indexes[2] = {left_col_idx, right_col_idx};
+  const u32 col_indexes[2] = {left_col_idx, right_col_idx};
   SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
                  [](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectNotEqual(*inputs[0], *inputs[1],
