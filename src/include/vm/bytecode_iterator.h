@@ -39,6 +39,13 @@ class BytecodeIterator {
                    std::size_t end);
 
   /**
+   * Construct an iterator over all the bytecode container in the input bytecode
+   * vector.
+   * @param bytecode The underlying bytecode.
+   */
+  explicit BytecodeIterator(const std::vector<u8> &bytecode);
+
+  /**
    * Get the bytecode instruction the iterator is currently pointing to
    * @return The current bytecode instruction
    */
