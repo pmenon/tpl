@@ -310,17 +310,6 @@ void Vector::MoveTo(Vector *other) {
   Destroy();
 }
 
-void Vector::Flatten() {
-  // If there's no selection vector, nothing to do since we're already flat
-  if (sel_vector_ == nullptr) {
-    return;
-  }
-
-  Vector other(type_, count_, false);
-  CopyTo(&other);
-  other.MoveTo(this);
-}
-
 void Vector::CopyTo(Vector *other, u64 offset) {
   TPL_ASSERT(
       type_ == other->type_,

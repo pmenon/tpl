@@ -15,17 +15,17 @@
 namespace tpl::sql {
 
 /**
- * A vector serves as the smallest work unit used by the execution engine when
- * operating in vectorized mode. It represents a contiguous chunk of values of a
- * single type. A vector may (1) own its data, or (2) reference data owned by
- * another entity, e.g., the base columns, data within another vector, or a
+ * A vector represents a contiguous chunk of values of a single type. A vector
+ * may (1) own its data, or (2) reference data owned by another entity, e.g.,
+ * base table column data, data within another (intermediate) vector, or a
  * constant value.
  *
  * A vector also has an optional selection vector containing the indexes of the
  * valid elements in the vector. When a selection vector is available, it must
  * be used to access the vector's data since the vector may hold invalid data in
- * other positions (e.g., null pointers). This functionality is provided for you
- * through @em VectorOps::Exec(). An example loop:
+ * unselected positions (e.g., null pointers). This functionality is provided
+ * for you through @em VectorOps::Exec(), but can be done manually as the below
+ * example illustrates:
  *
  * @code
  * u64 x = 0;
@@ -44,6 +44,8 @@ namespace tpl::sql {
  * should be used very very sparingly. If you find yourself invoking this is in
  * a hot-loop, or very often, reconsider your interaction pattern with Vector,
  * and think about writing a new vector primitive to achieve your objective.
+ *
+ * Inspired by VectorWise.
  */
 class Vector {
   friend class VectorOps;
@@ -204,11 +206,6 @@ class Vector {
    * @param other The vector that will take ownership of all our data, if any.
    */
   void MoveTo(Vector *other);
-
-  /**
-   * Flattens the vector, removing any selection vector.
-   */
-  void Flatten();
 
   /**
    * Reference a single value.

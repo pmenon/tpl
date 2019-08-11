@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include "llvm/ADT/SmallVector.h"
+
 #include "sql/constant_vector.h"
 #include "sql/scoped_selection.h"
 #include "sql/vector_operations/vector_operators.h"
@@ -25,7 +27,7 @@ template <typename F>
 void VectorFilterExecutor::SelectInternal(const u32 col_indexes[],
                                           const u32 num_cols, F &&filter) {
   // Collect input vectors
-  std::vector<Vector *> inputs(num_cols);
+  llvm::SmallVector<Vector *, 8> inputs(num_cols);
   for (u64 i = 0; i < num_cols; i++) {
     inputs[i] = vector_projection_->GetColumn(col_indexes[i]);
   }
