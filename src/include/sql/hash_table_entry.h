@@ -39,7 +39,16 @@ struct HashTableEntry {
 };
 
 /**
- * An iterator over a chain of hash table entries.
+ * An iterator over a chain of hash table entries. Use as follows:
+ *
+ * @code
+ * for (auto iter = jht.Lookup(hash); iter.HasNext(key_eq_fn);) {
+ *   auto entry = iter.NextMatch();
+ *   // Use entry
+ * }
+ * @endcode
+ *
+ * @em NextMatch() must be called per iteration.
  */
 struct HashTableEntryIterator {
  public:
@@ -63,20 +72,22 @@ struct HashTableEntryIterator {
 
   /**
    * Advance to the next match and return true if it is found.
-   * @tparam F A functor with the interface: bool(const byte*). The argument is
+   * @tparam T The templated type of the payload within the entry.
+   * @tparam F A functor with the interface: bool(const T *). The argument is
    *           is a pointer to the tuple in the hash table entry. The return
    *           value is a boolean indicating if the entry matches what the user
    *           is probing for.
    * @param key_eq The function used to determine key equality.
    * @return True if there is at least one more match.
    */
-  template <typename F>
+  template <typename T, typename F>
   bool HasNext(F &&key_eq) {
-    static_assert(std::is_invocable_r_v<bool, F, const byte *>,
-                  "Key-equality must be invocable as: bool(const byte *)");
+    static_assert(std::is_invocable_r_v<bool, F, const T *>,
+                  "Key-equality must be invocable as: bool(const T *)");
 
     while (next_ != nullptr) {
-      if (next_->hash == hash_ && key_eq(next_->payload)) {
+      if (next_->hash == hash_ &&
+          key_eq(reinterpret_cast<const T *>(next_->payload))) {
         return true;
       }
       next_ = next_->next;
@@ -94,10 +105,8 @@ struct HashTableEntryIterator {
    * @return
    */
   bool HasNext(KeyEq key_eq, void *ctx, void *probe_tuple) {
-    return HasNext([&](const byte *const_table_tuple) -> bool {
-      auto table_tuple =
-          reinterpret_cast<void *>(const_cast<byte *>(const_table_tuple));
-      return key_eq(ctx, probe_tuple, table_tuple);
+    return HasNext<void *>([&](const void *table_tuple) -> bool {
+      return key_eq(ctx, probe_tuple, const_cast<void *>(table_tuple));
     });
   }
 

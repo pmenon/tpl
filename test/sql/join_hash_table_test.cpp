@@ -96,14 +96,14 @@ void PopulateJoinHashTable(JoinHashTable *jht, u32 num_tuples,
   }
 }
 
-template <bool UseConciseHashTable>
+template <bool UseCHT>
 void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
   //
   // The join table
   //
 
   MemoryPool memory(nullptr);
-  JoinHashTable join_hash_table(&memory, sizeof(Tuple), UseConciseHashTable);
+  JoinHashTable join_hash_table(&memory, sizeof(Tuple), UseCHT);
 
   //
   // Populate
@@ -124,17 +124,11 @@ void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
   for (u32 i = 0; i < num_tuples; i++) {
     // The probe tuple
     Tuple probe_tuple = {i, 0, 0, 0};
-
-    // Key equality
-    auto key_eq = [&probe_tuple](const byte *table_tuple) {
-      return reinterpret_cast<const Tuple *>(table_tuple)->a == probe_tuple.a;
-    };
-
+    auto key_eq = [&](const Tuple *t) { return t->a == probe_tuple.a; };
     // Perform probe
     u32 count = 0;
-    for (auto iter =
-             join_hash_table.Lookup<UseConciseHashTable>(probe_tuple.Hash());
-         iter.HasNext(key_eq);) {
+    for (auto iter = join_hash_table.Lookup<UseCHT>(probe_tuple.Hash());
+         iter.template HasNext<Tuple>(key_eq);) {
       auto *entry = iter.NextMatch();
       auto *matched = reinterpret_cast<const Tuple *>(entry->payload);
       EXPECT_EQ(i, matched->a);
@@ -152,16 +146,10 @@ void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
   for (u32 i = num_tuples; i < num_tuples + 1000; i++) {
     // A tuple that should NOT find any join partners
     Tuple probe_tuple = {i, 0, 0, 0};
-
-    // Key equality
-    auto key_eq = [&probe_tuple](const byte *table_tuple) {
-      return reinterpret_cast<const Tuple *>(table_tuple)->a == probe_tuple.a;
-    };
-
+    auto key_eq = [&](const Tuple *t) { return t->a == probe_tuple.a; };
     // Lookups should fail
-    for (auto iter =
-             join_hash_table.Lookup<UseConciseHashTable>(probe_tuple.Hash());
-         iter.HasNext(key_eq);) {
+    for (auto iter = join_hash_table.Lookup<UseCHT>(probe_tuple.Hash());
+         iter.template HasNext<Tuple>(key_eq);) {
       FAIL() << "Should not find any matches for key [" << i
              << "] that was not inserted into the join hash table";
     }
@@ -225,12 +213,11 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
 
   for (u32 i = 0; i < num_tuples; i++) {
     auto probe = Tuple{i, 1, 2, 3};
-    auto key_eq = [&](auto *table_tuple) {
-      return reinterpret_cast<const Tuple *>(table_tuple)->a == probe.a;
-    };
+    auto key_eq = [&](const Tuple *t) { return t->a == probe.a; };
+
     u32 count = 0;
     for (auto iter = main_jht.Lookup<use_concise_ht>(probe.Hash());
-         iter.HasNext(key_eq);) {
+         iter.HasNext<Tuple>(key_eq); iter.NextMatch()) {
       count++;
     }
     EXPECT_EQ(num_thread_local_tables, count);
