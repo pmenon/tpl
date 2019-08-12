@@ -98,6 +98,11 @@ class BloomFilter {
   u64 GetTotalBitsSet() const;
 
   /**
+   * Is the filter empty?
+   */
+  bool Empty() const { return num_additions_ == 0; }
+
+  /**
    * Return the number of elements that have been added to the filter.
    */
   u32 GetNumAdditions() const { return num_additions_; }

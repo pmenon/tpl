@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 #include "util/common.h"
 
 namespace tpl::sql {
@@ -34,6 +36,85 @@ struct HashTableEntry {
   const T *PayloadAs() const noexcept {
     return reinterpret_cast<const T *>(payload);
   }
+};
+
+/**
+ * An iterator over a chain of hash table entries.
+ */
+struct HashTableEntryIterator {
+ public:
+  /**
+   * Construct an iterator beginning at the entry @em initial of the chain
+   * of entries matching the hash value @em hash. This iterator is returned
+   * from @em JoinHashTable::Lookup().
+   * @param initial The first matching entry in the chain of entries
+   * @param hash The hash value of the probe tuple
+   */
+  HashTableEntryIterator(const HashTableEntry *initial, hash_t hash)
+      : next_(initial), hash_(hash) {}
+
+  /**
+   * Function used to check equality of hash keys.
+   * First argument is an opaque context object provided by the caller.
+   * Second argument is the probe/input tuple we're matching on through keys.
+   * Last argument is a candidate entry in the chain we'll check keys with.
+   */
+  using KeyEq = bool (*)(void *, void *, void *);
+
+  /**
+   * Advance to the next match and return true if it is found.
+   * @tparam F A functor with the interface: bool(const byte*). The argument is
+   *           is a pointer to the tuple in the hash table entry. The return
+   *           value is a boolean indicating if the entry matches what the user
+   *           is probing for.
+   * @param key_eq The function used to determine key equality.
+   * @return True if there is at least one more match.
+   */
+  template <typename F>
+  bool HasNext(F &&key_eq) {
+    static_assert(std::is_invocable_r_v<bool, F, const byte *>,
+                  "Key-equality must be invocable as: bool(const byte *)");
+
+    while (next_ != nullptr) {
+      if (next_->hash == hash_ && key_eq(next_->payload)) {
+        return true;
+      }
+      next_ = next_->next;
+    }
+
+    return false;
+  }
+
+  /**
+   * A more cumbersome API to iterate used in code-gen because lambda's don't
+   * exist at that level.
+   * @param key_eq
+   * @param ctx
+   * @param probe_tuple
+   * @return
+   */
+  bool HasNext(KeyEq key_eq, void *ctx, void *probe_tuple) {
+    return HasNext([&](const byte *const_table_tuple) -> bool {
+      auto table_tuple =
+          reinterpret_cast<void *>(const_cast<byte *>(const_table_tuple));
+      return key_eq(ctx, probe_tuple, table_tuple);
+    });
+  }
+
+  /**
+   * Return the next match.
+   */
+  const HashTableEntry *NextMatch() {
+    const HashTableEntry *result = next_;
+    next_ = next_->next;
+    return result;
+  }
+
+ private:
+  // The next element the iterator produces
+  const HashTableEntry *next_;
+  // The hash value we're looking up
+  hash_t hash_;
 };
 
 }  // namespace tpl::sql

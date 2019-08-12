@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <vector>
+#include <numeric>
 
 #include "sql/bloom_filter.h"
 #include "sql/concise_hash_table.h"
@@ -26,6 +27,11 @@ class ThreadStateContainer;
  * The main join hash table. Join hash tables are bulk-loaded through calls to
  * @em AllocInputTuple() and frozen after calling @em Build(). Thus, they're
  * write-once read-many (WORM) structures.
+ *
+ * In parallel mode, thread-local join hash tables are lazily built and merged
+ * in parallel into a global join hash table through a call to
+ * @em MergeParallel(). After this call, the global table takes ownership of all
+ * thread-local allocated memory and hash index.
  */
 class JoinHashTable {
  public:
@@ -79,7 +85,7 @@ class JoinHashTable {
    * @return An iterator over all elements that match the hash
    */
   template <bool UseCHT>
-  Iterator Lookup(hash_t hash) const;
+  HashTableEntryIterator Lookup(hash_t hash) const;
 
   /**
    * Perform a batch lookup of elements whose hash values are stored in @em
@@ -130,12 +136,27 @@ class JoinHashTable {
   /**
    * Does this JHT use a separate bloom filter?
    */
-  bool HasBloomFilter() const { return bloom_filter_.GetNumAdditions() > 0; }
+  bool HasBloomFilter() const { return !bloom_filter_.Empty(); }
 
   /**
    * Return the total number of inserted elements, including duplicates
    */
-  u64 num_elements() const { return entries_.size(); }
+  u64 GetElementCount() {
+    // We don't know if this table was built in parallel. To be sure, we acquire
+    // the latch before checking the owned entries vector.
+
+    util::SpinLatch::ScopedSpinLatch latch(&owned_latch_);
+    if (!owned_.empty()) {
+      u64 count = 0;
+      for (const auto &entries : owned_) {
+        count += entries.size();
+      }
+      return count;
+    }
+
+    // Not built in parallel, check the entry vector.
+    return entries_.size();
+  }
 
   /**
    * Has the hash table been built?
@@ -151,48 +172,6 @@ class JoinHashTable {
    * Access the bloom filter
    */
   const BloomFilter *bloom_filter() const { return &bloom_filter_; }
-
- public:
-  // -------------------------------------------------------
-  // Tuple-at-a-time Iterator
-  // -------------------------------------------------------
-
-  /**
-   * The iterator used for generic lookups. This class is used mostly for
-   * tuple-at-a-time lookups from the hash table.
-   */
-  class Iterator {
-   public:
-    /**
-     * Construct an iterator beginning at the entry @em initial of the chain
-     * of entries matching the hash value @em hash. This iterator is returned
-     * from @em JoinHashTable::Lookup().
-     * @param initial The first matching entry in the chain of entries
-     * @param hash The hash value of the probe tuple
-     */
-    Iterator(const HashTableEntry *initial, hash_t hash);
-
-    /**
-     * Function used to check equality of hash keys
-     */
-    using KeyEq = bool(void *opaque_ctx, void *probe_tuple, void *table_tuple);
-
-    /**
-     * Return the next match (of both hash and keys)
-     * @param key_eq The function used to determine key equality
-     * @param opaque_ctx An opaque context passed into the key equality function
-     * @param probe_tuple The probe tuple
-     * @return The next matching entry; null otherwise
-     */
-    const HashTableEntry *NextMatch(KeyEq key_eq, void *opaque_ctx,
-                                    void *probe_tuple);
-
-   private:
-    // The next element the iterator produces
-    const HashTableEntry *next_;
-    // The hash value we're looking up
-    hash_t hash_;
-  };
 
  private:
   friend class tpl::sql::test::JoinHashTableTest;
@@ -283,45 +262,21 @@ class JoinHashTable {
 // ---------------------------------------------------------
 
 template <>
-inline JoinHashTable::Iterator JoinHashTable::Lookup<false>(
+inline HashTableEntryIterator JoinHashTable::Lookup<false>(
     const hash_t hash) const {
   HashTableEntry *entry = generic_hash_table_.FindChainHead(hash);
   while (entry != nullptr && entry->hash != hash) {
     entry = entry->next;
   }
-  return JoinHashTable::Iterator(entry, hash);
+  return HashTableEntryIterator(entry, hash);
 }
 
 template <>
-inline JoinHashTable::Iterator JoinHashTable::Lookup<true>(
+inline HashTableEntryIterator JoinHashTable::Lookup<true>(
     const hash_t hash) const {
   const auto [found, idx] = concise_hash_table_.Lookup(hash);
   auto *entry = (found ? EntryAt(idx) : nullptr);
-  return JoinHashTable::Iterator(entry, hash);
-}
-
-// ---------------------------------------------------------
-// JoinHashTable's Iterator implementation
-// ---------------------------------------------------------
-
-inline JoinHashTable::Iterator::Iterator(const HashTableEntry *initial,
-                                         hash_t hash)
-    : next_(initial), hash_(hash) {}
-
-inline const HashTableEntry *JoinHashTable::Iterator::NextMatch(
-    JoinHashTable::Iterator::KeyEq key_eq, void *opaque_ctx,
-    void *probe_tuple) {
-  const HashTableEntry *result = next_;
-  while (result != nullptr) {
-    next_ = next_->next;
-    if (result->hash == hash_ &&
-        key_eq(opaque_ctx, probe_tuple,
-               reinterpret_cast<void *>(const_cast<byte *>(result->payload)))) {
-      break;
-    }
-    result = next_;
-  }
-  return result;
+  return HashTableEntryIterator(entry, hash);
 }
 
 }  // namespace tpl::sql

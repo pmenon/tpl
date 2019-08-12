@@ -14,15 +14,9 @@ namespace tpl::sql::test {
 /// This is the tuple we insert into the hash table
 struct Tuple {
   u64 a, b, c, d;
-};
 
-/// The function to determine whether two tuples have equivalent keys
-static inline bool TupleKeyEq(UNUSED void *_, void *probe_tuple,
-                              void *table_tuple) {
-  auto *lhs = reinterpret_cast<const Tuple *>(probe_tuple);
-  auto *rhs = reinterpret_cast<const Tuple *>(table_tuple);
-  return lhs->a == rhs->a;
-}
+  hash_t Hash() const { return util::Hasher::Hash(a); }
+};
 
 class JoinHashTableTest : public TplTest {
  public:
@@ -68,14 +62,15 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
 
   // The table
   for (const auto &tuple : tuples) {
-    auto hash_val = util::Hasher::Hash(tuple.a);
-    auto *space = join_hash_table.AllocInputTuple(hash_val);
+    // Allocate
+    auto *space = join_hash_table.AllocInputTuple(tuple.Hash());
+    // Insert (by copying) into table
     *reinterpret_cast<Tuple *>(space) = tuple;
   }
 
   // Before build, the generic hash table shouldn't be populated, but the join
   // table's storage should have buffered all input tuples
-  EXPECT_EQ(num_tuples, join_hash_table.num_elements());
+  EXPECT_EQ(num_tuples, join_hash_table.GetElementCount());
   EXPECT_EQ(0u, GenericTableFor(&join_hash_table)->num_elements());
 
   // Try to build
@@ -83,7 +78,7 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
 
   // Post-build, the sizes should be synced up since all tuples were inserted
   // into the GHT
-  EXPECT_EQ(num_tuples, join_hash_table.num_elements());
+  EXPECT_EQ(num_tuples, join_hash_table.GetElementCount());
   EXPECT_EQ(num_tuples, GenericTableFor(&join_hash_table)->num_elements());
 }
 
@@ -91,10 +86,12 @@ void PopulateJoinHashTable(JoinHashTable *jht, u32 num_tuples,
                            u32 dup_scale_factor) {
   for (u32 rep = 0; rep < dup_scale_factor; rep++) {
     for (u32 i = 0; i < num_tuples; i++) {
-      auto hash_val = util::Hasher::Hash(i);
-      auto *space = jht->AllocInputTuple(hash_val);
-      auto *tuple = reinterpret_cast<Tuple *>(space);
-      tuple->a = i;
+      // Create tuple
+      auto tuple = Tuple{i, 1, 2};
+      // Allocate in hash table
+      auto *space = jht->AllocInputTuple(tuple.Hash());
+      // Copy contents into hash
+      *reinterpret_cast<Tuple *>(space) = tuple;
     }
   }
 }
@@ -125,13 +122,20 @@ void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
   //
 
   for (u32 i = 0; i < num_tuples; i++) {
-    auto hash_val = util::Hasher::Hash(i);
+    // The probe tuple
     Tuple probe_tuple = {i, 0, 0, 0};
+
+    // Key equality
+    auto key_eq = [&probe_tuple](const byte *table_tuple) {
+      return reinterpret_cast<const Tuple *>(table_tuple)->a == probe_tuple.a;
+    };
+
+    // Perform probe
     u32 count = 0;
-    const HashTableEntry *entry = nullptr;
-    for (auto iter = join_hash_table.Lookup<UseConciseHashTable>(hash_val);
-         (entry = iter.NextMatch(TupleKeyEq, nullptr,
-                                 reinterpret_cast<void *>(&probe_tuple)));) {
+    for (auto iter =
+             join_hash_table.Lookup<UseConciseHashTable>(probe_tuple.Hash());
+         iter.HasNext(key_eq);) {
+      auto *entry = iter.NextMatch();
       auto *matched = reinterpret_cast<const Tuple *>(entry->payload);
       EXPECT_EQ(i, matched->a);
       count++;
@@ -146,11 +150,18 @@ void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
   //
 
   for (u32 i = num_tuples; i < num_tuples + 1000; i++) {
-    auto hash_val = util::Hasher::Hash(i);
+    // A tuple that should NOT find any join partners
     Tuple probe_tuple = {i, 0, 0, 0};
-    for (auto iter = join_hash_table.Lookup<UseConciseHashTable>(hash_val);
-         iter.NextMatch(TupleKeyEq, nullptr,
-                        reinterpret_cast<void *>(&probe_tuple));) {
+
+    // Key equality
+    auto key_eq = [&probe_tuple](const byte *table_tuple) {
+      return reinterpret_cast<const Tuple *>(table_tuple)->a == probe_tuple.a;
+    };
+
+    // Lookups should fail
+    for (auto iter =
+             join_hash_table.Lookup<UseConciseHashTable>(probe_tuple.Hash());
+         iter.HasNext(key_eq);) {
       FAIL() << "Should not find any matches for key [" << i
              << "] that was not inserted into the join hash table";
     }
@@ -174,7 +185,9 @@ TEST_F(JoinHashTableTest, DuplicateKeyLookupConciseTableTest) {
 }
 
 TEST_F(JoinHashTableTest, ParallelBuildTest) {
-  const u32 num_tuples = 100000;
+  constexpr bool use_concise_ht = false;
+  const u32 num_tuples = 10000;
+  const u32 num_thread_local_tables = 4;
 
   MemoryPool memory(nullptr);
   ThreadStateContainer container(&memory);
@@ -182,16 +195,16 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
   container.Reset(sizeof(JoinHashTable),
                   [](auto *ctx, auto *s) {
                     new (s) JoinHashTable(reinterpret_cast<MemoryPool *>(ctx),
-                                          sizeof(Tuple));
+                                          sizeof(Tuple), use_concise_ht);
                   },
                   [](auto *ctx, auto *s) {
                     reinterpret_cast<JoinHashTable *>(s)->~JoinHashTable();
                   },
                   &memory);
 
-  // Parallel populate hash tables
+  // Parallel populate each of the thread-local hash tables
   tbb::task_scheduler_init sched;
-  tbb::blocked_range<std::size_t> block_range(0, 4, 1);
+  tbb::blocked_range<std::size_t> block_range(0, num_thread_local_tables, 1);
   tbb::parallel_for(block_range, [&](const auto &range) {
     auto *jht = container.AccessThreadStateOfCurrentThreadAs<JoinHashTable>();
     LOG_INFO("JHT @ {:p}", (void *)jht);
@@ -200,6 +213,28 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
 
   JoinHashTable main_jht(&memory, sizeof(Tuple), false);
   main_jht.MergeParallel(&container, 0);
+
+  // Each of the thread-local tables inserted the same data, i.e., tuples whose
+  // keys are in the range [0, num_tuples). Thus, in the final table there
+  // should be num_thread_local_tables * num_tuples keys, where each of the
+  // num_tuples tuples have num_thread_local_tables duplicates.
+  //
+  // Check now.
+
+  EXPECT_EQ(num_tuples * num_thread_local_tables, main_jht.GetElementCount());
+
+  for (u32 i = 0; i < num_tuples; i++) {
+    auto probe = Tuple{i, 1, 2, 3};
+    auto key_eq = [&](auto *table_tuple) {
+      return reinterpret_cast<const Tuple *>(table_tuple)->a == probe.a;
+    };
+    u32 count = 0;
+    for (auto iter = main_jht.Lookup<use_concise_ht>(probe.Hash());
+         iter.HasNext(key_eq);) {
+      count++;
+    }
+    EXPECT_EQ(num_thread_local_tables, count);
+  }
 }
 
 TEST_F(JoinHashTableTest, DISABLED_PerfTest) {
@@ -215,11 +250,10 @@ TEST_F(JoinHashTableTest, DISABLED_PerfTest) {
     std::random_device random;
     for (u32 i = 0; i < num_tuples; i++) {
       auto key = random();
-      auto hash_val = util::Hasher::Hash(key);
-      auto *space = join_hash_table.AllocInputTuple(hash_val);
-      auto *tuple = reinterpret_cast<Tuple *>(space);
+      auto *tuple = reinterpret_cast<Tuple *>(
+          join_hash_table.AllocInputTuple(util::Hasher::Hash(key)));
 
-      tuple->a = hash_val;
+      tuple->a = key;
       tuple->b = i + 1;
       tuple->c = i + 2;
       tuple->d = i + 3;
