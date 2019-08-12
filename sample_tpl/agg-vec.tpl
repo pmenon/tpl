@@ -26,6 +26,30 @@ fun hashFn(iters: [*]*VectorProjectionIterator) -> uint64 {
   return @hash(@vpiGetInt(iters[0], 1))
 }
 
+fun vecHashFnFiltered(hashes: [*]uint64, iters: [*]*VectorProjectionIterator) -> nil {
+  var vec = iters[0]
+  for (var idx = 0; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
+    hashes[idx] = @hash(@vpiGetInt(vec, 1))
+    idx = idx + 1
+  }
+}
+
+fun vecHashFnUnfiltered(hashes: [*]uint64, iters: [*]*VectorProjectionIterator) -> nil {
+  var vec = iters[0]
+  for (var idx = 0; @vpiHasNext(vec); @vpiAdvance(vec)) {
+    hashes[idx] = @hash(@vpiGetInt(vec, 1))
+    idx = idx + 1
+  }
+}
+
+fun vecHashFn(hashes: [*]uint64, iters: [*]*VectorProjectionIterator) -> nil {
+  if (@vpiIsFiltered(iters[0])) {
+    vecHashFnFiltered(hashes, iters)
+  } else {
+    vecHashFnUnfiltered(hashes, iters)
+  }
+}
+
 fun constructAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
   // Set key
   agg.key = @vpiGetInt(iters[0], 1)
@@ -37,6 +61,8 @@ fun updateAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
   var input = @vpiGetInt(iters[0], 0)
   @aggAdvance(&agg.count, &input)
 }
+
+
 
 fun pipeline_1(state: *State) -> nil {
   var iters: [1]*VectorProjectionIterator

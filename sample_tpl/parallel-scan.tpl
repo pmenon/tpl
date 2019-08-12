@@ -24,7 +24,12 @@ fun _1_Lt500(vpi: *VectorProjectionIterator) -> int32 {
 }
 
 fun _1_Lt500_Vec(vpi: *VectorProjectionIterator) -> int32 {
-  return @filterLt(vpi, 0, 500)
+  var filter: VectorFilterExecutor
+  @filterExecInit(&filter, vpi)
+  @filterExecLt(&filter, 0, @intToSql(500))
+  @filterExecFinish(&filter)
+  @filterExecFree(&filter)
+  return 0
 }
 
 fun _1_pipelineWorker_InitThreadState(execCtx: *ExecutionContext, state: *ThreadState_1) -> nil {

@@ -40,6 +40,14 @@ fun updateAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
   @aggAdvance(&agg.sum, &input)
 }
 
+fun pipeline_1_filter(vpi: *VectorProjectionIterator) -> nil {
+  var filter: VectorFilterExecutor
+  @filterExecInit(&filter, vpi)
+  @filterExecLt(&filter, 0, @intToSql(5000))
+  @filterExecFinish(&filter)
+  @filterExecFree(&filter)
+}
+
 fun pipeline_1(state: *State) -> nil {
   var iters: [1]*VectorProjectionIterator
 
@@ -50,7 +58,9 @@ fun pipeline_1(state: *State) -> nil {
   var tvi: TableVectorIterator
   for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
     var vec = @tableIterGetVPI(&tvi)
-    @filterLt(vec, 0, 5000)
+    // Filter
+    pipeline_1_filter(vec)
+    // Aggregate
     iters[0] = vec
     @aggHTProcessBatch(ht, &iters, hashFn, keyCheck, constructAgg, updateAgg, false)
   }
