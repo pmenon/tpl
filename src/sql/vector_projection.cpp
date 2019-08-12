@@ -53,7 +53,7 @@ void VectorProjection::Initialize(
 void VectorProjection::SetSelectionVector(const sel_t *const new_sel_vector,
                                           const u32 count) {
   TPL_ASSERT(new_sel_vector != nullptr, "Null input selection vector");
-  TPL_ASSERT(count < kDefaultVectorSize, "Invalid count");
+  TPL_ASSERT(count <= kDefaultVectorSize, "Invalid count");
 
   // Copy into our selection vector
   std::memcpy(sel_vector_, new_sel_vector, count * sizeof(sel_t));
