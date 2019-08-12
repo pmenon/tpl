@@ -305,12 +305,11 @@ TEST_F(VectorOperationsTest, FilteredBooleanLogic) {
   auto b = MakeBooleanVector({false, true, false, true},
                              {false, false, false, false});
   auto result = MakeBooleanVector();
-  auto selected_tids = MakeTupleIdList({0, 1, 3});
   std::vector<u16> sel = {0, 1, 3};
 
   // Set selection vector for both a and b
-  a->SetSelectionVector(sel.data(), selected_tids->GetNumTuples());
-  b->SetSelectionVector(sel.data(), selected_tids->GetNumTuples());
+  a->SetSelectionVector(sel.data(), sel.size());
+  b->SetSelectionVector(sel.data(), sel.size());
 
   // result = a && b
   VectorOps::And(*a, *b, result.get());
