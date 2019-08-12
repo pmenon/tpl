@@ -3,7 +3,7 @@ struct State {
 }
 
 struct BuildRow {
-  key: int32
+  key: Integer
 }
 
 fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
@@ -21,9 +21,10 @@ fun pipeline_1(state: *State) -> nil {
   for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
     var vec = @tableIterGetVPI(&tvi)
 
-    var hash_val = @hash(@vpiGetInt(vec, 0))
+    var key = @vpiGetInt(vec, 0)
+    var hash_val = @hash(key)
     var elem = @ptrCast(*BuildRow, @joinHTInsert(jht, hash_val))
-    elem.key = 44
+    elem.key = key
 
     @vpiReset(vec)
   }
