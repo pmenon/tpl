@@ -17,6 +17,7 @@
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
+#include "sql/vector_filter_executor.h"
 #include "util/hash.h"
 #include "util/macros.h"
 
@@ -259,18 +260,27 @@ VM_OP_HOT void OpParallelScanTable(
                                               thread_states, scanner);
 }
 
+// ---------------------------------------------------------
+// Vector Projection Iterator
+// ---------------------------------------------------------
+
 VM_OP_HOT void OpVPIIsFiltered(bool *is_filtered,
-                               tpl::sql::VectorProjectionIterator *vpi) {
+                               const tpl::sql::VectorProjectionIterator *vpi) {
   *is_filtered = vpi->IsFiltered();
 }
 
+VM_OP_HOT void OpVPIGetSelectedRowCount(
+    u32 *count, const tpl::sql::VectorProjectionIterator *vpi) {
+  *count = vpi->GetTupleCount();
+}
+
 VM_OP_HOT void OpVPIHasNext(bool *has_more,
-                            tpl::sql::VectorProjectionIterator *vpi) {
+                            const tpl::sql::VectorProjectionIterator *vpi) {
   *has_more = vpi->HasNext();
 }
 
-VM_OP_HOT void OpVPIHasNextFiltered(bool *has_more,
-                                    tpl::sql::VectorProjectionIterator *vpi) {
+VM_OP_HOT void OpVPIHasNextFiltered(
+    bool *has_more, const tpl::sql::VectorProjectionIterator *vpi) {
   *has_more = vpi->HasNextFiltered();
 }
 
@@ -282,7 +292,7 @@ VM_OP_HOT void OpVPIAdvanceFiltered(tpl::sql::VectorProjectionIterator *vpi) {
   vpi->AdvanceFiltered();
 }
 
-VM_OP_HOT void OpVPISetPosition(tpl::sql::VectorProjectionIterator *const vpi,
+VM_OP_HOT void OpVPISetPosition(tpl::sql::VectorProjectionIterator *vpi,
                                 const u32 index) {
   vpi->SetPosition<false>(index);
 }
@@ -292,7 +302,8 @@ VM_OP_HOT void OpVPISetPositionFiltered(
   vpi->SetPosition<true>(index);
 }
 
-VM_OP_HOT void OpVPIMatch(tpl::sql::VectorProjectionIterator *vpi, bool match) {
+VM_OP_HOT void OpVPIMatch(tpl::sql::VectorProjectionIterator *vpi,
+                          const bool match) {
   vpi->Match(match);
 }
 
@@ -306,7 +317,7 @@ VM_OP_HOT void OpVPIResetFiltered(tpl::sql::VectorProjectionIterator *vpi) {
 
 VM_OP_HOT void OpVPIGetSmallInt(tpl::sql::Integer *out,
                                 tpl::sql::VectorProjectionIterator *const iter,
-                                u32 col_idx) {
+                                const u32 col_idx) {
   // Read
   auto *ptr = iter->GetValue<i16, false>(col_idx, nullptr);
   TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");

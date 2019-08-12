@@ -61,7 +61,6 @@ class Context;
   NON_PRIM(BloomFilter, tpl::sql::BloomFilter)                           \
   NON_PRIM(ExecutionContext, tpl::sql::ExecutionContext)                 \
   NON_PRIM(FilterManager, tpl::sql::FilterManager)                       \
-  NON_PRIM(GenericValue, tpl::sql::GenericValue)                         \
   NON_PRIM(HashTableEntry, tpl::sql::HashTableEntry)                     \
   NON_PRIM(JoinHashTable, tpl::sql::JoinHashTable)                       \
   NON_PRIM(JoinHashTableVectorProbe, tpl::sql::JoinHashTableVectorProbe) \

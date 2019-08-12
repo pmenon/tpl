@@ -87,35 +87,66 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op,
                                                 const SourcePosition &pos,
                                                 ast::Expr *left,
                                                 ast::Expr *right) {
-  //
-  // 1. If neither type is arithmetic, it's an error, report and quit.
-  // 2. If the types are the same arithmetic, all good.
-  // 3. Some casting is required ...
-  //
-
+  // If neither inputs are arithmetic, fail early
   if (!left->type()->IsArithmetic() || !right->type()->IsArithmetic()) {
     error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op,
                              left->type(), right->type());
     return {nullptr, left, right};
   }
 
+  // If the inputs match up (and are arithmetic from the earlier check), finish.
   if (left->type() == right->type()) {
     return {left->type(), left, right};
   }
 
+  // primitive int <OP> primitive int
+  if (left->type()->IsIntegerType() && right->type()->IsIntegerType()) {
+    if (left->type()->size() < right->type()->size()) {
+      auto new_left =
+          ImplCastExprToType(left, right->type(), ast::CastKind::IntegralCast);
+      return {right->type(), new_left, right};
+    }
+    auto new_right =
+        ImplCastExprToType(right, left->type(), ast::CastKind::IntegralCast);
+    return {left->type(), left, new_right};
+  }
+
+  // primitive int <OP> SQL int
+  if (left->type()->IsIntegerType() &&
+      right->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
+    auto new_left =
+        ImplCastExprToType(left, right->type(), ast::CastKind::IntToSqlInt);
+    return {right->type(), new_left, right};
+  }
+
+  // SQL int <OP> primitive int
+  if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Integer) &&
+      right->type()->IsIntegerType()) {
+    auto new_right =
+        ImplCastExprToType(right, left->type(), ast::CastKind::IntToSqlInt);
+    return {left->type(), left, new_right};
+  }
+
+  // primitive float <OP> SQL real
+  if (left->type()->IsFloatType() &&
+      right->type()->IsSpecificBuiltin(ast::BuiltinType::Real)) {
+    auto new_left =
+        ImplCastExprToType(left, right->type(), ast::CastKind::FloatToSqlReal);
+    return {right->type(), new_left, right};
+  }
+
+  // SQL real <OP> primitive float
+  if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Real) &&
+      right->type()->IsFloatType()) {
+    auto new_right =
+        ImplCastExprToType(right, left->type(), ast::CastKind::FloatToSqlReal);
+    return {left->type(), left, new_right};
+  }
+
   // TODO(pmenon): Fix me to support other arithmetic types
-
-  ast::Type *const sql_int_type =
-      ast::BuiltinType::Get(context(), ast::BuiltinType::Integer);
-
-  if (!right->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
-    right = ImplCastExprToType(right, sql_int_type, ast::CastKind::IntToSqlInt);
-  }
-  if (!left->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
-    left = ImplCastExprToType(left, sql_int_type, ast::CastKind::IntToSqlInt);
-  }
-
-  return {sql_int_type, left, right};
+  error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op,
+                           left->type(), right->type());
+  return {nullptr, left, right};
 }
 
 // Comparisons: <, <=, >, >=, ==, !=

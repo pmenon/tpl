@@ -232,30 +232,42 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
 }
 
 void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
-  LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
   LocalVar input = VisitExpressionForRValue(node->input());
 
   switch (node->cast_kind()) {
     case ast::CastKind::SqlBoolToBool: {
+      LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
       emitter()->Emit(Bytecode::ForceBoolTruth, dest, input);
       execution_result()->set_destination(dest.ValueOf());
       break;
     }
     case ast::CastKind::IntToSqlInt: {
+      LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
       emitter()->Emit(Bytecode::InitInteger, dest, input);
       execution_result()->set_destination(dest);
       break;
     }
     case ast::CastKind::BitCast:
     case ast::CastKind::IntegralCast: {
-      BuildAssign(dest, input, node->type());
-      execution_result()->set_destination(dest.ValueOf());
+      // As an optimization, we only issue a new assignment if the input and
+      // output types of the cast have different sizes.
+      if (node->input()->type()->size() != node->type()->size()) {
+        LocalVar dest =
+            execution_result()->GetOrCreateDestination(node->type());
+        BuildAssign(dest, input, node->type());
+        execution_result()->set_destination(dest.ValueOf());
+      } else {
+        execution_result()->set_destination(input);
+      }
       break;
     }
-    default: {
-      // Implement me
-      throw std::runtime_error("Implement this cast type");
+    case ast::CastKind::FloatToSqlReal: {
+      LocalVar dest = execution_result()->GetOrCreateDestination(node->type());
+      emitter()->Emit(Bytecode::InitReal, dest, input);
+      execution_result()->set_destination(dest);
+      break;
     }
+    default: { throw std::runtime_error("Implement this cast type"); }
   }
 }
 
@@ -563,6 +575,13 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call,
           ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
       emitter()->Emit(Bytecode::VPIIsFiltered, is_filtered, vpi);
       execution_result()->set_destination(is_filtered.ValueOf());
+      break;
+    }
+    case ast::Builtin::VPIGetSelectedRowCount: {
+      LocalVar count = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Uint32));
+      emitter()->Emit(Bytecode::VPIGetSelectedRowCount, count, vpi);
+      execution_result()->set_destination(count.ValueOf());
       break;
     }
     case ast::Builtin::VPIHasNext:
@@ -1342,6 +1361,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       break;
     }
     case ast::Builtin::VPIIsFiltered:
+    case ast::Builtin::VPIGetSelectedRowCount:
     case ast::Builtin::VPIHasNext:
     case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:

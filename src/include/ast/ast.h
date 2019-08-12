@@ -784,7 +784,7 @@ class IdentifierExpr : public Expr {
 };
 
 /**
- * An enumeration capturing all possible casting operations
+ * An enumeration capturing all possible casting operations.
  */
 enum class CastKind : u8 {
   // Conversion of a 32-bit integer into a non-nullable SQL Integer value
@@ -810,6 +810,9 @@ enum class CastKind : u8 {
 
   // A simple bit cast reinterpretation
   BitCast,
+
+  // Conversion of a 64-bit float into a non-nullable SQL Real value
+  FloatToSqlReal,
 };
 
 /**
