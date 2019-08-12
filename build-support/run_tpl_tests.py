@@ -9,7 +9,7 @@ VM_TARGET_STRING = 'VM main() returned: '
 ADAPTIVE_TARGET_STRING = 'ADAPTIVE main() returned: '
 JIT_TARGET_STRING = 'JIT main() returned: '
 TARGET_STRINGS = [VM_TARGET_STRING, ADAPTIVE_TARGET_STRING, JIT_TARGET_STRING]
-
+ERROR_STRS = ['ERROR', 'error', 'fail', 'abort']
 
 def run(tpl_bin, tpl_file, is_sql):
     args = [tpl_bin]
@@ -19,7 +19,7 @@ def run(tpl_bin, tpl_file, is_sql):
     proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     result = []
     for line in reversed(proc.stdout.decode('utf-8').split('\n')):
-        if "ERROR" in line or "error" in line:
+        if any(s in line for s in ERROR_STRS):
             return []
         for target_string in TARGET_STRINGS:
             idx = line.find(target_string)

@@ -21,6 +21,7 @@ map.tpl,false,10
 nil.tpl,false,0
 param.tpl,false,10
 pointer.tpl,false,10
+return-expr.tpl,false,15
 scope.tpl,false,3
 short-circuit.tpl,false,1
 simple.tpl,false,40
