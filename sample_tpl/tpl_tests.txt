@@ -6,6 +6,7 @@ array.tpl,false,44
 array-iterate.tpl,false,110
 array-iterate-2.tpl,false,110
 call.tpl,false,70
+compare.tpl,false,200
 deref.tpl,false,404
 fib.tpl,false,832040
 function_pointer.tpl,false,20
