@@ -100,6 +100,30 @@ void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right,
   result->SetSelectionVector(left.selection_vector(), left.count());
 }
 
+/**
+ * Helper function to execute a binary operation on two input vectors and store
+ * the result into an output vector. The operations are performed only on the
+ * active elements in the input vectors. It is assumed that the input vectors
+ * have the same size and selection vectors (if any).
+ *
+ * After the function returns, the result vector will have the same selection
+ * vector and count as the inputs.
+ *
+ * @tparam LeftType The native CPP type of the elements in the first input
+ *                  vector.
+ * @tparam RightType The native CPP type of the elements in the second input
+ *                   vector.
+ * @tparam ResultType The native CPP type of the elements in the result output
+ *                    vector.
+ * @tparam Op The binary operation to perform. Each invocation will receive an
+ *            element from the first and second input vectors and must produce
+ *            an element that is stored in the result vector.
+ * @tparam IgnoreNull Flag indicating if the operation should skip NULL values
+ *                    as they occur in either inputs.
+ * @param left The left input.
+ * @param right The right input.
+ * @param[out] result The result vector.
+ */
 template <typename LeftType, typename RightType, typename ResultType,
           typename Op, bool IgnoreNull = false>
 static inline void BinaryOperation(const Vector &left, const Vector &right,
