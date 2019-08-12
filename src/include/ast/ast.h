@@ -550,6 +550,11 @@ class ReturnStmt : public Stmt {
   }
 
  private:
+  friend class sema::Sema;
+
+  void set_ret(ast::Expr *ret) { ret_ = ret; }
+
+ private:
   Expr *ret_;
 };
 

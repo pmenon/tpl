@@ -165,6 +165,10 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
                             func_type->return_type());
     return;
   }
+
+  if (ret != node->ret()) {
+    node->set_ret(ret);
+  }
 }
 
 }  // namespace tpl::sema
