@@ -4,6 +4,7 @@
 #include <string>
 
 #include "sql/constant_vector.h"
+#include "sql/value.h"
 #include "sql/vector.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "util/macros.h"
@@ -164,14 +165,14 @@ GenericValue GenericValue::CreateDouble(const f64 value) {
 
 GenericValue GenericValue::CreateDate(UNUSED i32 year, UNUSED i32 month,
                                       UNUSED i32 day) {
-  throw std::logic_error("Creating Date generic value not supported!");
+  throw std::runtime_error("Creating Date generic value not supported!");
 }
 
 GenericValue GenericValue::CreateTimestamp(UNUSED i32 year, UNUSED i32 month,
                                            UNUSED i32 day, UNUSED i32 hour,
                                            UNUSED i32 min, UNUSED i32 sec,
                                            UNUSED i32 msec) {
-  throw std::logic_error("Creating Timestamp generic value not supported!");
+  throw std::runtime_error("Creating Timestamp generic value not supported!");
 }
 
 GenericValue GenericValue::CreateVarchar(std::string_view str) {
@@ -179,6 +180,33 @@ GenericValue GenericValue::CreateVarchar(std::string_view str) {
   result.is_null_ = false;
   result.str_value_ = str;
   return result;
+}
+
+GenericValue GenericValue::CreateFromRuntimeValue(const TypeId type_id,
+                                                  const Val &val) {
+  switch (type_id) {
+    case TypeId::Boolean:
+      return GenericValue::CreateBoolean(static_cast<const BoolVal &>(val).val);
+    case TypeId::TinyInt:
+      return GenericValue::CreateTinyInt(static_cast<const Integer &>(val).val);
+    case TypeId::SmallInt:
+      return GenericValue::CreateSmallInt(
+          static_cast<const Integer &>(val).val);
+    case TypeId::Integer:
+      return GenericValue::CreateInteger(static_cast<const Integer &>(val).val);
+    case TypeId::BigInt:
+      return GenericValue::CreateBigInt(static_cast<const Integer &>(val).val);
+    case TypeId::Float:
+      return GenericValue::CreateFloat(static_cast<const Real &>(val).val);
+    case TypeId::Double:
+      return GenericValue::CreateDouble(static_cast<const Real &>(val).val);
+    case TypeId::Varchar:
+      return GenericValue::CreateVarchar(
+          static_cast<const StringVal &>(val).ptr);
+    default:
+      throw std::runtime_error("Type " + std::string(TypeIdToString(type_id)) +
+                               " not supported as runtime value");
+  }
 }
 
 }  // namespace tpl::sql

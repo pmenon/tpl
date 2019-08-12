@@ -9,6 +9,8 @@
 
 namespace tpl::sql {
 
+struct Val;
+
 /**
  * A generic value is a glorified typed-union representing some primitive value.
  * This is purely a container class and isn't used for actual expression
@@ -179,6 +181,14 @@ class GenericValue {
    */
   static GenericValue CreateVarchar(std::string_view str);
 
+  /**
+   * Create a generic value from a runtime value.
+   * @param type_id
+   * @param val
+   * @return
+   */
+  static GenericValue CreateFromRuntimeValue(TypeId type_id, const Val &val);
+
   // Output
   friend std::ostream &operator<<(std::ostream &out, const GenericValue &val);
 
@@ -191,7 +201,7 @@ class GenericValue {
   // Is this value null?
   bool is_null_;
   // The value of the object if it's a fixed-length type
-  union Val {
+  union {
     bool boolean;
     i8 tinyint;
     i16 smallint;
