@@ -8,6 +8,7 @@
 namespace tpl::sql {
 
 class GenericValue;
+struct Val;
 class Vector;
 class VectorProjection;
 class VectorProjectionIterator;
@@ -56,12 +57,29 @@ class VectorFilterExecutor {
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the
+   * vector projection that are equal to the provided constant value (@em val).
+   * @param col_idx The index of the column to compare with.
+   * @param val The value to compare with.
+   */
+  void SelectEqVal(u32 col_idx, const Val &val);
+
+  /**
+   * Select tuples in the column stored at the given index (@em col_idx) in the
    * vector projection that are greater than or equal to the provided constant
    * value (@em val).
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
   void SelectGeVal(u32 col_idx, const GenericValue &val);
+
+  /**
+   * Select tuples in the column stored at the given index (@em col_idx) in the
+   * vector projection that are greater than or equal to the provided constant
+   * value (@em val).
+   * @param col_idx The index of the column to compare with.
+   * @param val The value to compare with.
+   */
+  void SelectGeVal(u32 col_idx, const Val &val);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the
@@ -74,12 +92,30 @@ class VectorFilterExecutor {
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the
+   * vector projection that are strictly greater than the provided constant
+   * value (@em val).
+   * @param col_idx The index of the column to compare with.
+   * @param val The value to compare with.
+   */
+  void SelectGtVal(u32 col_idx, const Val &val);
+
+  /**
+   * Select tuples in the column stored at the given index (@em col_idx) in the
    * vector projection that are less than or equal to the provided constant
    * value (@em val).
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
   void SelectLeVal(u32 col_idx, const GenericValue &val);
+
+  /**
+   * Select tuples in the column stored at the given index (@em col_idx) in the
+   * vector projection that are less than or equal to the provided constant
+   * value (@em val).
+   * @param col_idx The index of the column to compare with.
+   * @param val The value to compare with.
+   */
+  void SelectLeVal(u32 col_idx, const Val &val);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the
@@ -92,12 +128,30 @@ class VectorFilterExecutor {
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the
+   * vector projection that are strictly less than the provided constant value
+   * (@em val).
+   * @param col_idx The index of the column to compare with.
+   * @param val The value to compare with.
+   */
+  void SelectLtVal(u32 col_idx, const Val &val);
+
+  /**
+   * Select tuples in the column stored at the given index (@em col_idx) in the
    * vector projection that are not equal to the provided constant value
    * (@em val).
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
   void SelectNeVal(u32 col_idx, const GenericValue &val);
+
+  /**
+   * Select tuples in the column stored at the given index (@em col_idx) in the
+   * vector projection that are not equal to the provided constant value
+   * (@em val).
+   * @param col_idx The index of the column to compare with.
+   * @param val The value to compare with.
+   */
+  void SelectNeVal(u32 col_idx, const Val &val);
 
   /**
    * Select tuples whose values in the left (first) column are equal to the

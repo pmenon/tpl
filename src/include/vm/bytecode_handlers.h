@@ -572,6 +572,97 @@ void OpFilterManagerRunFilters(tpl::sql::FilterManager *filter,
 void OpFilterManagerFree(tpl::sql::FilterManager *filter);
 
 // ---------------------------------------------------------
+// Vector Filter Executor
+// ---------------------------------------------------------
+
+VM_OP_HOT void OpVectorFilterExecuteInit(
+    tpl::sql::VectorFilterExecutor *filter_exec,
+    tpl::sql::VectorProjectionIterator *vpi) {
+  new (filter_exec) tpl::sql::VectorFilterExecutor(vpi);
+}
+
+VM_OP_HOT void OpVectorFilterExecuteEqual(
+    tpl::sql::VectorFilterExecutor *filter_exec, const u32 left_col_idx,
+    const u32 right_col_idx) {
+  filter_exec->SelectEq(left_col_idx, right_col_idx);
+}
+VM_OP_HOT void OpVectorFilterExecuteEqualVal(
+    tpl::sql::VectorFilterExecutor *filter_exec, const u32 left_col_idx,
+    const tpl::sql::Val *val) {
+  filter_exec->SelectEqVal(left_col_idx, *val);
+}
+
+VM_OP_HOT void OpVectorFilterExecuteGreaterThan(
+    tpl::sql::VectorFilterExecutor *filter_exec, const u32 left_col_idx,
+    const u32 right_col_idx) {
+  filter_exec->SelectGt(left_col_idx, right_col_idx);
+}
+
+VM_OP_HOT void OpVectorFilterExecuteGreaterThanVal(
+    tpl::sql::VectorFilterExecutor *filter_exec, const u32 left_col_idx,
+    const tpl::sql::Val *val) {
+  filter_exec->SelectGtVal(left_col_idx, *val);
+}
+
+VM_OP_HOT void OpVectorFilterExecuteGreaterThanEqual(
+    tpl::sql::VectorFilterExecutor *filter_exec, const u32 left_col_idx,
+    const u32 right_col_idx) {
+  filter_exec->SelectGe(left_col_idx, right_col_idx);
+}
+
+VM_OP_HOT void OpVectorFilterExecuteGreaterThanEqualVal(
+    tpl::sql::VectorFilterExecutor *filter_exec, const u32 left_col_idx,
+    const tpl::sql::Val *val) {
+  filter_exec->SelectGeVal(left_col_idx, *val);
+}
+
+VM_OP_HOT void OpVectorFilterExecuteLessThan(
+    tpl::sql::VectorFilterExecutor *filter_exec, const u32 left_col_idx,
+    const u32 right_col_idx) {
+  filter_exec->SelectLt(left_col_idx, right_col_idx);
+}
+
+VM_OP_HOT void OpVectorFilterExecuteLessThanVal(
+    tpl::sql::VectorFilterExecutor *filter_exec, const u32 left_col_idx,
+    const tpl::sql::Val *val) {
+  filter_exec->SelectLtVal(left_col_idx, *val);
+}
+
+VM_OP_HOT void OpVectorFilterExecuteLessThanEqual(
+    tpl::sql::VectorFilterExecutor *filter_exec, const u32 left_col_idx,
+    const u32 right_col_idx) {
+  filter_exec->SelectLe(left_col_idx, right_col_idx);
+}
+
+VM_OP_HOT void OpVectorFilterExecuteLessThanEqualVal(
+    tpl::sql::VectorFilterExecutor *filter_exec, const u32 left_col_idx,
+    const tpl::sql::Val *val) {
+  filter_exec->SelectLeVal(left_col_idx, *val);
+}
+
+VM_OP_HOT void OpVectorFilterExecuteNotEqual(
+    tpl::sql::VectorFilterExecutor *filter_exec, const u32 left_col_idx,
+    const u32 right_col_idx) {
+  filter_exec->SelectNe(left_col_idx, right_col_idx);
+}
+
+VM_OP_HOT void OpVectorFilterExecuteNotEqualVal(
+    tpl::sql::VectorFilterExecutor *filter_exec, const u32 left_col_idx,
+    const tpl::sql::Val *val) {
+  filter_exec->SelectNeVal(left_col_idx, *val);
+}
+
+VM_OP_HOT void OpVectorFilterExecuteFinish(
+    tpl::sql::VectorFilterExecutor *filter_exec) {
+  filter_exec->Finish();
+}
+
+VM_OP_HOT void OpVectorFilterExecuteFree(
+    tpl::sql::VectorFilterExecutor *filter_exec) {
+  filter_exec->~VectorFilterExecutor();
+}
+
+// ---------------------------------------------------------
 // Scalar SQL comparisons
 // ---------------------------------------------------------
 

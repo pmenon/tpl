@@ -148,6 +148,23 @@ namespace tpl::vm {
   F(FilterManagerRunFilters, OperandType::Local, OperandType::Local)                                                   \
   F(FilterManagerFree, OperandType::Local)                                                                             \
                                                                                                                        \
+  /* Vector Filter Executor */                                                                                         \
+  F(VectorFilterExecuteInit, OperandType::Local, OperandType::Local)                                                   \
+  F(VectorFilterExecuteEqual, OperandType::Local, OperandType::Local, OperandType::Local)                              \
+  F(VectorFilterExecuteEqualVal, OperandType::Local, OperandType::Local, OperandType::Local)                           \
+  F(VectorFilterExecuteGreaterThan, OperandType::Local, OperandType::Local, OperandType::Local)                        \
+  F(VectorFilterExecuteGreaterThanVal, OperandType::Local, OperandType::Local, OperandType::Local)                     \
+  F(VectorFilterExecuteGreaterThanEqual, OperandType::Local, OperandType::Local, OperandType::Local)                   \
+  F(VectorFilterExecuteGreaterThanEqualVal, OperandType::Local, OperandType::Local, OperandType::Local)                \
+  F(VectorFilterExecuteLessThan, OperandType::Local, OperandType::Local, OperandType::Local)                           \
+  F(VectorFilterExecuteLessThanVal, OperandType::Local, OperandType::Local, OperandType::Local)                        \
+  F(VectorFilterExecuteLessThanEqual, OperandType::Local, OperandType::Local, OperandType::Local)                      \
+  F(VectorFilterExecuteLessThanEqualVal, OperandType::Local, OperandType::Local, OperandType::Local)                   \
+  F(VectorFilterExecuteNotEqual, OperandType::Local, OperandType::Local, OperandType::Local)                           \
+  F(VectorFilterExecuteNotEqualVal, OperandType::Local, OperandType::Local, OperandType::Local)                        \
+  F(VectorFilterExecuteFinish, OperandType::Local)                                                                     \
+  F(VectorFilterExecuteFree, OperandType::Local)                                                                       \
+                                                                                                                       \
   /* SQL type comparisons */                                                                                           \
   F(ForceBoolTruth, OperandType::Local, OperandType::Local)                                                            \
   F(InitBool, OperandType::Local, OperandType::Local)                                                                  \

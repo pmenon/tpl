@@ -937,6 +937,60 @@ void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call,
   }
 }
 
+void Sema::CheckBuiltinVectorFilterExecCall(ast::CallExpr *call,
+                                            ast::Builtin builtin) {
+  if (!CheckArgCountAtLeast(call, 1)) {
+    return;
+  }
+
+  // The first argument must be a *VectorFilterExecutor
+  const auto filter_kind = ast::BuiltinType::VectorFilterExecutor;
+  if (!IsPointerToSpecificBuiltin(call->arguments()[0]->type(), filter_kind)) {
+    ReportIncorrectCallArg(call, 0, GetBuiltinType(filter_kind)->PointerTo());
+    return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::VectorFilterExecInit:
+    case ast::Builtin::VectorFilterExecFinish:
+    case ast::Builtin::VectorFilterExecFree: {
+      break;
+    }
+    case ast::Builtin::VectorFilterExecEqual:
+    case ast::Builtin::VectorFilterExecGreaterThan:
+    case ast::Builtin::VectorFilterExecGreaterThanEqual:
+    case ast::Builtin::VectorFilterExecLessThan:
+    case ast::Builtin::VectorFilterExecLessThanEqual:
+    case ast::Builtin::VectorFilterExecNotEqual: {
+      if (!CheckArgCount(call, 3)) {
+        return;
+      }
+
+      // Second argument is the column index
+      const auto &call_args = call->arguments();
+      const auto int32_kind = ast::BuiltinType::Int32;
+      const auto uint32_kind = ast::BuiltinType::Uint32;
+      if (!call_args[1]->type()->IsSpecificBuiltin(int32_kind) &&
+          !call_args[1]->type()->IsSpecificBuiltin(uint32_kind)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(int32_kind));
+        return;
+      }
+
+      // Third argument is either an integer or a pointer to a generic value
+      if (!call_args[2]->type()->IsSpecificBuiltin(int32_kind) &&
+          !call_args[2]->type()->IsSqlValueType()) {
+        ReportIncorrectCallArg(call, 2, GetBuiltinType(int32_kind));
+        return;
+      }
+
+      break;
+    }
+    default: { UNREACHABLE("Impossible vector filter call"); }
+  }
+
+  call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+}
+
 void Sema::CheckMathTrigCall(ast::CallExpr *call, ast::Builtin builtin) {
   const auto real_kind = ast::BuiltinType::Real;
 
@@ -1297,6 +1351,18 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::FilterManagerRunFilters:
     case ast::Builtin::FilterManagerFree: {
       CheckBuiltinFilterManagerCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::VectorFilterExecInit:
+    case ast::Builtin::VectorFilterExecEqual:
+    case ast::Builtin::VectorFilterExecGreaterThan:
+    case ast::Builtin::VectorFilterExecGreaterThanEqual:
+    case ast::Builtin::VectorFilterExecLessThan:
+    case ast::Builtin::VectorFilterExecLessThanEqual:
+    case ast::Builtin::VectorFilterExecNotEqual:
+    case ast::Builtin::VectorFilterExecFinish:
+    case ast::Builtin::VectorFilterExecFree: {
+      CheckBuiltinVectorFilterExecCall(call, builtin);
       break;
     }
     case ast::Builtin::AggHashTableInit:

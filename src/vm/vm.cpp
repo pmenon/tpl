@@ -750,6 +750,58 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  // ------------------------------------------------------
+  // Vector Filter Executor
+  // ------------------------------------------------------
+
+  OP(VectorFilterExecuteInit) : {
+    auto *filter_exec =
+        frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID());
+    auto *vpi =
+        frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    OpVectorFilterExecuteInit(filter_exec, vpi);
+    DISPATCH_NEXT();
+  }
+
+#define GEN_VEC_FILTER(BYTECODE)                                      \
+  OP(BYTECODE) : {                                                    \
+    auto *filter_exec =                                               \
+        frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID()); \
+    auto left_col_idx = frame->LocalAt<u32>(READ_LOCAL_ID());         \
+    auto right_col_idx = frame->LocalAt<u32>(READ_LOCAL_ID());        \
+    Op##BYTECODE(filter_exec, left_col_idx, right_col_idx);           \
+    DISPATCH_NEXT();                                                  \
+  }                                                                   \
+  OP(BYTECODE##Val) : {                                               \
+    auto *filter_exec =                                               \
+        frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID()); \
+    auto left_col_idx = frame->LocalAt<u32>(READ_LOCAL_ID());         \
+    auto right_val = frame->LocalAt<sql::Val *>(READ_LOCAL_ID());     \
+    Op##BYTECODE##Val(filter_exec, left_col_idx, right_val);          \
+    DISPATCH_NEXT();                                                  \
+  }
+  GEN_VEC_FILTER(VectorFilterExecuteEqual)
+  GEN_VEC_FILTER(VectorFilterExecuteGreaterThan)
+  GEN_VEC_FILTER(VectorFilterExecuteGreaterThanEqual)
+  GEN_VEC_FILTER(VectorFilterExecuteLessThan)
+  GEN_VEC_FILTER(VectorFilterExecuteLessThanEqual)
+  GEN_VEC_FILTER(VectorFilterExecuteNotEqual)
+#undef GEN_VEC_FILTER
+
+  OP(VectorFilterExecuteFinish) : {
+    auto *filter_exec =
+        frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID());
+    OpVectorFilterExecuteFinish(filter_exec);
+    DISPATCH_NEXT();
+  }
+
+  OP(VectorFilterExecuteFree) : {
+    auto *filter_exec =
+        frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID());
+    OpVectorFilterExecuteFree(filter_exec);
+    DISPATCH_NEXT();
+  }
+
   // -------------------------------------------------------
   // SQL Integer Comparison Operations
   // -------------------------------------------------------

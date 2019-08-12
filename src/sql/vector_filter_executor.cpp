@@ -59,6 +59,18 @@ void VectorFilterExecutor::SelectEqVal(const u32 col_idx,
                  });
 }
 
+void VectorFilterExecutor::SelectEqVal(u32 col_idx, const Val &val) {
+  const u32 col_indexes[1] = {col_idx};
+  SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
+                 [&val](const Vector *inputs[], sel_t output[]) {
+                   const auto generic_val =
+                       GenericValue::CreateFromRuntimeValue(
+                           inputs[0]->type_id(), val);
+                   return VectorOps::SelectEqual(
+                       *inputs[0], ConstantVector(generic_val), output);
+                 });
+}
+
 void VectorFilterExecutor::SelectGeVal(const u32 col_idx,
                                        const GenericValue &val) {
   const u32 col_indexes[1] = {col_idx};
@@ -66,6 +78,18 @@ void VectorFilterExecutor::SelectGeVal(const u32 col_idx,
                  [&val](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectGreaterThanEqual(
                        *inputs[0], ConstantVector(val), output);
+                 });
+}
+
+void VectorFilterExecutor::SelectGeVal(u32 col_idx, const Val &val) {
+  const u32 col_indexes[1] = {col_idx};
+  SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
+                 [&val](const Vector *inputs[], sel_t output[]) {
+                   const auto generic_val =
+                       GenericValue::CreateFromRuntimeValue(
+                           inputs[0]->type_id(), val);
+                   return VectorOps::SelectGreaterThanEqual(
+                       *inputs[0], ConstantVector(generic_val), output);
                  });
 }
 
@@ -79,6 +103,18 @@ void VectorFilterExecutor::SelectGtVal(const u32 col_idx,
                  });
 }
 
+void VectorFilterExecutor::SelectGtVal(u32 col_idx, const Val &val) {
+  const u32 col_indexes[1] = {col_idx};
+  SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
+                 [&val](const Vector *inputs[], sel_t output[]) {
+                   const auto generic_val =
+                       GenericValue::CreateFromRuntimeValue(
+                           inputs[0]->type_id(), val);
+                   return VectorOps::SelectGreaterThan(
+                       *inputs[0], ConstantVector(generic_val), output);
+                 });
+}
+
 void VectorFilterExecutor::SelectLeVal(const u32 col_idx,
                                        const GenericValue &val) {
   const u32 col_indexes[1] = {col_idx};
@@ -86,6 +122,18 @@ void VectorFilterExecutor::SelectLeVal(const u32 col_idx,
                  [&val](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectLessThanEqual(
                        *inputs[0], ConstantVector(val), output);
+                 });
+}
+
+void VectorFilterExecutor::SelectLeVal(u32 col_idx, const Val &val) {
+  const u32 col_indexes[1] = {col_idx};
+  SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
+                 [&val](const Vector *inputs[], sel_t output[]) {
+                   const auto generic_val =
+                       GenericValue::CreateFromRuntimeValue(
+                           inputs[0]->type_id(), val);
+                   return VectorOps::SelectLessThanEqual(
+                       *inputs[0], ConstantVector(generic_val), output);
                  });
 }
 
@@ -99,6 +147,18 @@ void VectorFilterExecutor::SelectLtVal(const u32 col_idx,
                  });
 }
 
+void VectorFilterExecutor::SelectLtVal(u32 col_idx, const Val &val) {
+  const u32 col_indexes[1] = {col_idx};
+  SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
+                 [&val](const Vector *inputs[], sel_t output[]) {
+                   const auto generic_val =
+                       GenericValue::CreateFromRuntimeValue(
+                           inputs[0]->type_id(), val);
+                   return VectorOps::SelectLessThan(
+                       *inputs[0], ConstantVector(generic_val), output);
+                 });
+}
+
 void VectorFilterExecutor::SelectNeVal(const u32 col_idx,
                                        const GenericValue &val) {
   const u32 col_indexes[1] = {col_idx};
@@ -106,6 +166,18 @@ void VectorFilterExecutor::SelectNeVal(const u32 col_idx,
                  [&val](const Vector *inputs[], sel_t output[]) {
                    return VectorOps::SelectNotEqual(
                        *inputs[0], ConstantVector(val), output);
+                 });
+}
+
+void VectorFilterExecutor::SelectNeVal(u32 col_idx, const Val &val) {
+  const u32 col_indexes[1] = {col_idx};
+  SelectInternal(col_indexes, sizeof(col_indexes) / sizeof(col_indexes[0]),
+                 [&val](const Vector *inputs[], sel_t output[]) {
+                   const auto generic_val =
+                       GenericValue::CreateFromRuntimeValue(
+                           inputs[0]->type_id(), val);
+                   return VectorOps::SelectNotEqual(
+                       *inputs[0], ConstantVector(generic_val), output);
                  });
 }
 
