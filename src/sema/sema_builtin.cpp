@@ -539,6 +539,36 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call,
   call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
+void Sema::CheckBuiltinJoinHashTableLookup(ast::CallExpr *call) {
+  if (!CheckArgCount(call, 3)) {
+    return;
+  }
+
+  const auto &args = call->arguments();
+
+  // First argument must be a pointer to a JoinHashTable
+  const auto jht_kind = ast::BuiltinType::JoinHashTable;
+  if (!IsPointerToSpecificBuiltin(args[0]->type(), jht_kind)) {
+    ReportIncorrectCallArg(call, 0, GetBuiltinType(jht_kind)->PointerTo());
+    return;
+  }
+
+  // Second argument is a HashTableEntryIterator
+  auto iter_kind = ast::BuiltinType::HashTableEntryIterator;
+  if (!IsPointerToSpecificBuiltin(call->arguments()[1]->type(), iter_kind)) {
+    ReportIncorrectCallArg(call, 1, GetBuiltinType(iter_kind)->PointerTo());
+    return;
+  }
+
+  // Third argument is a 64-bit unsigned hash value
+  if (!args[2]->type()->IsSpecificBuiltin(ast::BuiltinType::Uint64)) {
+    ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Uint64));
+    return;
+  }
+
+  call->set_type(GetBuiltinType(ast::BuiltinType::HashTableEntryIterator));
+}
+
 void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
   if (!CheckArgCount(call, 1)) {
     return;
@@ -555,6 +585,65 @@ void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
 
   // This call returns nothing
   call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+}
+
+void Sema::CheckBuiltinHashTableEntryIterCall(ast::CallExpr *call,
+                                              ast::Builtin builtin) {
+  if (!CheckArgCountAtLeast(call, 1)) {
+    return;
+  }
+
+  // First argument must be the hash table entry iterator
+  auto iter_kind = ast::BuiltinType::HashTableEntryIterator;
+  if (!IsPointerToSpecificBuiltin(call->arguments()[0]->type(), iter_kind)) {
+    ReportIncorrectCallArg(call, 0, GetBuiltinType(iter_kind)->PointerTo());
+    return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::HashTableEntryIterHasNext: {
+      if (!CheckArgCount(call, 4)) {
+        return;
+      }
+
+      const auto &args = call->arguments();
+
+      // Second argument must be key-equality function
+      auto *const key_eq_func_type =
+          args[1]->type()->SafeAs<ast::FunctionType>();
+      if (key_eq_func_type == nullptr || key_eq_func_type->num_params() != 3 ||
+          !key_eq_func_type->return_type()->IsSpecificBuiltin(
+              ast::BuiltinType::Bool) ||
+          !key_eq_func_type->params()[0].type->IsPointerType() ||
+          !key_eq_func_type->params()[1].type->IsPointerType() ||
+          !key_eq_func_type->params()[2].type->IsPointerType()) {
+        error_reporter()->Report(
+            call->position(),
+            ErrorMessages::kBadKeyEqualityCheckFunctionForJoinTableLookup,
+            args[1]->type());
+        return;
+      }
+
+      // Third and fourth arguments should be pointers
+      const auto byte_kind = ast::BuiltinType::Uint8;
+      if (!args[2]->type()->IsPointerType()) {
+        ReportIncorrectCallArg(call, 2, GetBuiltinType(byte_kind)->PointerTo());
+        return;
+      }
+      if (!args[3]->type()->IsPointerType()) {
+        ReportIncorrectCallArg(call, 3, GetBuiltinType(byte_kind)->PointerTo());
+        return;
+      }
+
+      call->set_type(GetBuiltinType(ast::BuiltinType::Bool));
+      break;
+    }
+    case ast::Builtin::HashTableEntryIterGetRow: {
+      call->set_type(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
+      break;
+    }
+    default: { UNREACHABLE("Impossible hash table entry iterator call"); }
+  }
 }
 
 void Sema::CheckBuiltinExecutionContextCall(ast::CallExpr *call,
@@ -1411,8 +1500,17 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckBuiltinJoinHashTableBuild(call, builtin);
       break;
     }
+    case ast::Builtin::JoinHashTableLookup: {
+      CheckBuiltinJoinHashTableLookup(call);
+      break;
+    }
     case ast::Builtin::JoinHashTableFree: {
       CheckBuiltinJoinHashTableFree(call);
+      break;
+    }
+    case ast::Builtin::HashTableEntryIterHasNext:
+    case ast::Builtin::HashTableEntryIterGetRow: {
+      CheckBuiltinHashTableEntryIterCall(call, builtin);
       break;
     }
     case ast::Builtin::SorterInit: {

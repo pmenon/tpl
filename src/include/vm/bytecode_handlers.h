@@ -1238,6 +1238,12 @@ void OpJoinHashTableBuildParallel(
     tpl::sql::JoinHashTable *join_hash_table,
     tpl::sql::ThreadStateContainer *thread_state_container, u32 jht_offset);
 
+VM_OP_HOT void OpJoinHashTableLookup(
+    tpl::sql::JoinHashTable *join_hash_table,
+    tpl::sql::HashTableEntryIterator *ht_entry_iter, const hash_t hash_val) {
+  *ht_entry_iter = join_hash_table->Lookup<false>(hash_val);
+}
+
 void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table);
 
 void OpJoinHashTableVectorProbeInit(
@@ -1260,6 +1266,18 @@ VM_OP_HOT void OpJoinHashTableVectorProbeGetNextOutput(
 
 void OpJoinHashTableVectorProbeFree(
     tpl::sql::JoinHashTableVectorProbe *jht_vector_probe);
+
+VM_OP_HOT void OpHashTableEntryIteratorHasNext(
+    bool *has_next, tpl::sql::HashTableEntryIterator *ht_entry_iter,
+    tpl::sql::HashTableEntryIterator::KeyEq key_eq, void *ctx,
+    void *probe_tuple) {
+  *has_next = ht_entry_iter->HasNext(key_eq, ctx, probe_tuple);
+}
+
+VM_OP_HOT void OpHashTableEntryIteratorGetRow(
+    const byte **row, tpl::sql::HashTableEntryIterator *ht_entry_iter) {
+  *row = ht_entry_iter->NextMatch()->PayloadAs<byte>();
+}
 
 // ---------------------------------------------------------
 // Sorting

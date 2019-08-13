@@ -128,12 +128,14 @@ class BytecodeEmitter {
   // Setting values in an iterator
   void EmitVPISet(Bytecode bytecode, LocalVar vpi, LocalVar input, u32 col_idx);
 
-  // Filter a column in the iterator by a constant value
-  void EmitVPIVectorFilter(Bytecode bytecode, LocalVar selected, LocalVar vpi,
-                           u32 col_idx, i64 val);
-
   // Insert a filter flavor into the filter manager builder
   void EmitFilterManagerInsertFlavor(LocalVar fmb, FunctionId func);
+
+  // Check if a hash table entry iterator has more rows
+  void EmitHashTableEntryIteratorHasNext(LocalVar has_next,
+                                         LocalVar ht_entry_iter,
+                                         FunctionId key_eq, LocalVar ctx,
+                                         LocalVar probe_tuple);
 
   // Lookup a single entry in the aggregation hash table
   void EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht, LocalVar hash,

@@ -321,20 +321,29 @@ void BytecodeEmitter::EmitVPISet(Bytecode bytecode, LocalVar vpi,
   EmitAll(bytecode, vpi, input, col_idx);
 }
 
-void BytecodeEmitter::EmitVPIVectorFilter(Bytecode bytecode, LocalVar selected,
-                                          LocalVar vpi, u32 col_idx, i64 val) {
-  EmitAll(bytecode, selected, vpi, col_idx, val);
-}
-
 void BytecodeEmitter::EmitFilterManagerInsertFlavor(LocalVar fmb,
                                                     FunctionId func) {
   EmitAll(Bytecode::FilterManagerInsertFlavor, fmb, func);
+}
+
+void BytecodeEmitter::EmitHashTableEntryIteratorHasNext(LocalVar has_next,
+                                                        LocalVar ht_entry_iter,
+                                                        FunctionId key_eq,
+                                                        LocalVar ctx,
+                                                        LocalVar probe_tuple) {
+  TPL_ASSERT(
+      Bytecodes::NumOperands(Bytecode::HashTableEntryIteratorHasNext) == 5,
+      "HashTableEntryIteratorHasNext expects 5 bytecodes");
+  EmitAll(Bytecode::HashTableEntryIteratorHasNext, has_next, ht_entry_iter,
+          key_eq, ctx, probe_tuple);
 }
 
 void BytecodeEmitter::EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht,
                                              LocalVar hash,
                                              FunctionId key_eq_fn,
                                              LocalVar arg) {
+  TPL_ASSERT(Bytecodes::NumOperands(Bytecode::AggregationHashTableLookup) == 5,
+             "AggregationHashTableLookup expects 5 bytecodes");
   EmitAll(Bytecode::AggregationHashTableLookup, dest, agg_ht, hash, key_eq_fn,
           arg);
 }

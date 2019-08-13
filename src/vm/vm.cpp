@@ -1304,6 +1304,16 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(JoinHashTableLookup) : {
+    auto *join_hash_table =
+        frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
+    auto *ht_entry_iter =
+        frame->LocalAt<sql::HashTableEntryIterator *>(READ_LOCAL_ID());
+    auto hash_val = frame->LocalAt<hash_t>(READ_LOCAL_ID());
+    OpJoinHashTableLookup(join_hash_table, ht_entry_iter, hash_val);
+    DISPATCH_NEXT();
+  }
+
   OP(JoinHashTableFree) : {
     auto *join_hash_table =
         frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
@@ -1351,6 +1361,29 @@ void VM::Interpret(const u8 *ip, Frame *frame) {
     auto *jht_vector_probe =
         frame->LocalAt<sql::JoinHashTableVectorProbe *>(READ_LOCAL_ID());
     OpJoinHashTableVectorProbeFree(jht_vector_probe);
+    DISPATCH_NEXT();
+  }
+
+  OP(HashTableEntryIteratorHasNext) : {
+    auto *has_next = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto *ht_entry_iter =
+        frame->LocalAt<sql::HashTableEntryIterator *>(READ_LOCAL_ID());
+    auto key_eq_fn_id = READ_FUNC_ID();
+    auto *ctx = frame->LocalAt<void *>(READ_LOCAL_ID());
+    auto *probe_tuple = frame->LocalAt<void *>(READ_LOCAL_ID());
+
+    auto key_eq_fn = reinterpret_cast<sql::HashTableEntryIterator::KeyEq>(
+        module_->GetRawFunctionImpl(key_eq_fn_id));
+    OpHashTableEntryIteratorHasNext(has_next, ht_entry_iter, key_eq_fn, ctx,
+                                    probe_tuple);
+    DISPATCH_NEXT();
+  }
+
+  OP(HashTableEntryIteratorGetRow) : {
+    const auto **row = frame->LocalAt<const byte **>(READ_LOCAL_ID());
+    auto *ht_entry_iter =
+        frame->LocalAt<sql::HashTableEntryIterator *>(READ_LOCAL_ID());
+    OpHashTableEntryIteratorGetRow(row, ht_entry_iter);
     DISPATCH_NEXT();
   }
 

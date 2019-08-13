@@ -1145,9 +1145,11 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call,
 
 void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call,
                                                       ast::Builtin builtin) {
+  // The join hash table is always the first argument to all JHT calls
+  LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
+
   switch (builtin) {
     case ast::Builtin::JoinHashTableInit: {
-      LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
       LocalVar memory = VisitExpressionForRValue(call->arguments()[1]);
       LocalVar entry_size = VisitExpressionForRValue(call->arguments()[2]);
       emitter()->Emit(Bytecode::JoinHashTableInit, join_hash_table, memory,
@@ -1156,7 +1158,6 @@ void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call,
     }
     case ast::Builtin::JoinHashTableInsert: {
       LocalVar dest = execution_result()->GetOrCreateDestination(call->type());
-      LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
       LocalVar hash = VisitExpressionForRValue(call->arguments()[1]);
       emitter()->Emit(Bytecode::JoinHashTableAllocTuple, dest, join_hash_table,
                       hash);
@@ -1164,24 +1165,57 @@ void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call,
       break;
     }
     case ast::Builtin::JoinHashTableBuild: {
-      LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
       emitter()->Emit(Bytecode::JoinHashTableBuild, join_hash_table);
       break;
     }
     case ast::Builtin::JoinHashTableBuildParallel: {
-      LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
       LocalVar tls = VisitExpressionForRValue(call->arguments()[1]);
       LocalVar jht_offset = VisitExpressionForRValue(call->arguments()[2]);
       emitter()->Emit(Bytecode::JoinHashTableBuildParallel, join_hash_table,
                       tls, jht_offset);
       break;
     }
+    case ast::Builtin::JoinHashTableLookup: {
+      LocalVar ht_entry_iter = VisitExpressionForRValue(call->arguments()[1]);
+      LocalVar hash = VisitExpressionForRValue(call->arguments()[2]);
+      emitter()->Emit(Bytecode::JoinHashTableLookup, join_hash_table,
+                      ht_entry_iter, hash);
+      break;
+    }
     case ast::Builtin::JoinHashTableFree: {
-      LocalVar join_hash_table = VisitExpressionForRValue(call->arguments()[0]);
       emitter()->Emit(Bytecode::JoinHashTableFree, join_hash_table);
       break;
     }
-    default: { UNREACHABLE("Impossible bytecode"); }
+    default: { UNREACHABLE("Impossible join hash table call"); }
+  }
+}
+
+void BytecodeGenerator::VisitBuiltinHashTableEntryIteratorCall(
+    ast::CallExpr *call, ast::Builtin builtin) {
+  // The hash table entry iterator is always the first argument to all calls
+  LocalVar ht_entry_iter = VisitExpressionForRValue(call->arguments()[0]);
+
+  switch (builtin) {
+    case ast::Builtin::HashTableEntryIterHasNext: {
+      LocalVar has_more =
+          execution_result()->GetOrCreateDestination(call->type());
+      const std::string key_eq_func_name =
+          call->arguments()[1]->As<ast::IdentifierExpr>()->name().data();
+      LocalVar ctx = VisitExpressionForRValue(call->arguments()[2]);
+      LocalVar probe_tuple = VisitExpressionForRValue(call->arguments()[3]);
+      emitter()->EmitHashTableEntryIteratorHasNext(
+          has_more, ht_entry_iter, LookupFuncIdByName(key_eq_func_name), ctx,
+          probe_tuple);
+      execution_result()->set_destination(has_more.ValueOf());
+      break;
+    }
+    case ast::Builtin::HashTableEntryIterGetRow: {
+      LocalVar row = execution_result()->GetOrCreateDestination(call->type());
+      emitter()->Emit(Bytecode::HashTableEntryIteratorGetRow, row,
+                      ht_entry_iter);
+      break;
+    }
+    default: { UNREACHABLE("Impossible hash table entry iterator call"); }
   }
 }
 
@@ -1502,8 +1536,14 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::JoinHashTableInsert:
     case ast::Builtin::JoinHashTableBuild:
     case ast::Builtin::JoinHashTableBuildParallel:
+    case ast::Builtin::JoinHashTableLookup:
     case ast::Builtin::JoinHashTableFree: {
       VisitBuiltinJoinHashTableCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::HashTableEntryIterHasNext:
+    case ast::Builtin::HashTableEntryIterGetRow: {
+      VisitBuiltinHashTableEntryIteratorCall(call, builtin);
       break;
     }
     case ast::Builtin::SorterInit:
@@ -1542,7 +1582,6 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       Visit(call->arguments()[1]);
       break;
     }
-    default: { UNREACHABLE("Builtin not supported!"); }
   }
 }
 

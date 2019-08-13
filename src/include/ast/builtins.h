@@ -99,7 +99,12 @@ namespace tpl::ast {
   F(JoinHashTableInsert, joinHTInsert)                          \
   F(JoinHashTableBuild, joinHTBuild)                            \
   F(JoinHashTableBuildParallel, joinHTBuildParallel)            \
+  F(JoinHashTableLookup, joinHTLookup)                          \
   F(JoinHashTableFree, joinHTFree)                              \
+                                                                \
+  /* Hash Table Entry Iterator (for hash joins) */              \
+  F(HashTableEntryIterHasNext, htEntryIterHasNext)              \
+  F(HashTableEntryIterGetRow, htEntryIterGetRow)                \
                                                                 \
   /* Sorting */                                                 \
   F(SorterInit, sorterInit)                                     \
