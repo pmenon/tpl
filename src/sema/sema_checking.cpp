@@ -261,6 +261,13 @@ bool Sema::CheckAssignmentConstraints(ast::Type *target_type,
     return true;
   }
 
+  // SQL bool to primitive bool
+  if (target_type->IsBoolType() &&
+      expr->type()->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
+    expr = ImplCastExprToType(expr, target_type, ast::CastKind::SqlBoolToBool);
+    return true;
+  }
+
   // Not a valid assignment
   return false;
 }
