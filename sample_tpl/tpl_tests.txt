@@ -44,9 +44,9 @@ while.tpl,false,10
 agg.tpl,true,10
 agg-vec.tpl,true,10
 agg-vec-filter.tpl,true,10
-join.tpl,true,0
+join.tpl,true,200000
 parallel-agg.tpl,true,10
-parallel-join.tpl,true,0
+parallel-join.tpl,true,50000
 parallel-scan.tpl,true,0
 scan-table.tpl,true,500
 scan-table-2.tpl,true,1999950
