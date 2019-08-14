@@ -7,6 +7,7 @@
 
 #include "util/common.h"
 #include "util/macros.h"
+#include "util/math_util.h"
 
 // Needed for some Darwin machine that don't have MAP_ANONYMOUS
 #ifndef MAP_ANONYMOUS
@@ -28,10 +29,12 @@ inline void *MallocAligned(const std::size_t size,
 
   void *ptr = nullptr;
 #if defined(__APPLE__)
-  i32 ret = posix_memalign(&ptr, alignment, size);
+  UNUSED i32 ret = posix_memalign(&ptr, alignment, size);
   TPL_ASSERT(ret == 0, "Allocation failed");
 #else
-  ptr = std::aligned_alloc(alignment, size);
+  // STL's aligned allocation requires that the size is a multiple of the
+  // alignment, too.
+  ptr = std::aligned_alloc(alignment, MathUtil::AlignTo(size, alignment));
 #endif
   return ptr;
 }
