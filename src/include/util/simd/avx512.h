@@ -52,16 +52,53 @@ class Vec8 : public Vec512b {
 
   static constexpr u32 Size() { return 8; }
 
-  template <typename T>
-  Vec8 &Load(const T *ptr);
+  /// Load and sign-extend eight 32-bit values stored contiguously from the
+  /// input pointer array.
+  Vec8 &Load(const i32 *ptr);
+  Vec8 &Load(const u32 *ptr) {
+    return Load(reinterpret_cast<const i32 *>(ptr));
+  }
+
+  /// Load and sign-extend eight 64-bit values stored contiguously from the
+  /// input pointer array.
+  Vec8 &Load(const i64 *ptr);
+  Vec8 &Load(const u64 *ptr) {
+    return Load(reinterpret_cast<const i64 *>(ptr));
+  }
+
+#ifdef __APPLE__
+  static_assert(sizeof(long) == sizeof(i64), "On MacOS, long isn't 64-bits!");
+  Vec8 &Load(const long *ptr) {
+    return Load(reinterpret_cast<const i64 *>(ptr));
+  }
+  Vec8 &Load(const unsigned long *ptr) {
+    return Load(reinterpret_cast<const i64 *>(ptr));
+  }
+#endif
 
   template <typename T>
   Vec8 &Gather(const T *ptr, const Vec8 &pos);
 
+  /// Truncate eight 64-bit integers to eight 8-bit integers and store the
+  /// result into the output array.
   void Store(i8 *arr) const;
+
+  /// Truncate eight 64-bit integers to eight 16-bit integers and store the
+  /// result into the output array.
   void Store(i16 *arr) const;
+
+  /// Truncate eight 64-bit integers to eight 32-bit integers and store the
+  /// result into the output array.
   void Store(i32 *arr) const;
+
+  /// Store the eight 64-bit integers in this vector into the output array.
   void Store(i64 *arr) const;
+
+#ifdef __APPLE__
+  static_assert(sizeof(long) == sizeof(i64), "On MacOS, long isn't 64-bits!");
+  void Store(long *arr) const { Store(reinterpret_cast<i64 *>(arr)); }
+  void Store(unsigned long *arr) const { Store(reinterpret_cast<i64 *>(ptr)); }
+#endif
 
   template <typename T>
   typename std::enable_if_t<
@@ -87,21 +124,13 @@ class Vec8 : public Vec512b {
 // Vec8 Implementation
 // ---------------------------------------------------------
 
-template <typename T>
-inline Vec8 &Vec8::Load(const T *ptr) {
-  using signed_t = std::make_signed_t<T>;
-  return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
-}
-
-template <>
-inline Vec8 &Vec8::Load<i32>(const i32 *ptr) {
+inline Vec8 &Vec8::Load(const i32 *ptr) {
   auto tmp = _mm256_load_si256(reinterpret_cast<const __m256i *>(ptr));
   reg_ = _mm512_cvtepi32_epi64(tmp);
   return *this;
 }
 
-template <>
-inline Vec8 &Vec8::Load<i64>(const i64 *ptr) {
+inline Vec8 &Vec8::Load(const i64 *ptr) {
   reg_ = _mm512_loadu_si512((const __m512i *)ptr);
   return *this;
 }
@@ -161,23 +190,40 @@ class Vec16 : public Vec512b {
 
   static constexpr int Size() { return 16; }
 
-  template <typename T>
-  Vec16 &Load(const T *ptr);
+  /// Load and sign-extend 16 8-bit values stored contiguously from the input
+  /// pointer array.
+  Vec16 &Load(const i8 *ptr);
+  Vec16 &Load(const u8 *ptr) { return Load(reinterpret_cast<const i8 *>(ptr)); }
+
+  /// Load and sign-extend 16 16-bit values stored contiguously from the input
+  /// pointer array.
+  Vec16 &Load(const i16 *ptr);
+  Vec16 &Load(const u16 *ptr) {
+    return Load(reinterpret_cast<const i16 *>(ptr));
+  }
+
+  /// Load 16 32-bit values stored contiguously from the input pointer array.
+  Vec16 &Load(const i32 *ptr);
+  Vec16 &Load(const u32 *ptr) {
+    return Load(reinterpret_cast<const i32 *>(ptr));
+  }
 
   template <typename T>
   Vec16 &Gather(const T *ptr, const Vec16 &pos);
 
+  /// Truncate the 16 32-bit integers in this vector to 16 8-bit integers and
+  /// store the result in the output array.
   void Store(i8 *arr) const;
-  void Store(i16 *arr) const;
-  void Store(i32 *arr) const;
+  void Store(u8 *arr) const { Store(reinterpret_cast<i8 *>(arr)); }
 
-  template <typename T>
-  typename std::enable_if_t<
-      std::conjunction_v<std::is_integral<T>, std::is_unsigned<T>>>
-  Store(T *arr) const {
-    using SignedType = std::make_signed_t<T>;
-    Store(reinterpret_cast<SignedType *>(arr));
-  }
+  /// Truncate the 16 32-bit integers in this vector to 16 16-bit integers and
+  /// store the result in the output array.
+  void Store(i16 *arr) const;
+  void Store(u16 *arr) const { Store(reinterpret_cast<i16 *>(arr)); }
+
+  /// Store the 16 32-bit integers in the output array.
+  void Store(i32 *arr) const;
+  void Store(u32 *arr) const { Store(reinterpret_cast<i32 *>(arr)); }
 
   /// Given a vector of 16 32-bit masks, return true if all corresponding bits
   /// in this vector are set
@@ -196,28 +242,19 @@ class Vec16 : public Vec512b {
 // Vec16 Implementation
 // ---------------------------------------------------------
 
-template <typename T>
-inline Vec16 &Vec16::Load(const T *ptr) {
-  using signed_t = std::make_signed_t<T>;
-  return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
-}
-
-template <>
-inline Vec16 &Vec16::Load<i8>(const i8 *ptr) {
+inline Vec16 &Vec16::Load(const i8 *ptr) {
   auto tmp = _mm_loadu_si128(reinterpret_cast<const __m128i *>(ptr));
   reg_ = _mm512_cvtepi8_epi32(tmp);
   return *this;
 }
 
-template <>
-inline Vec16 &Vec16::Load<i16>(const i16 *ptr) {
+inline Vec16 &Vec16::Load(const i16 *ptr) {
   auto tmp = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(ptr));
   reg_ = _mm512_cvtepi16_epi32(tmp);
   return *this;
 }
 
-template <>
-inline Vec16 &Vec16::Load<i32>(const i32 *ptr) {
+inline Vec16 &Vec16::Load(const i32 *ptr) {
   reg_ = _mm512_loadu_si512(ptr);
   return *this;
 }

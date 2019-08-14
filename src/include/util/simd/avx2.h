@@ -67,28 +67,41 @@ class Vec4 : public Vec256b {
   /// Return the number of elements that can be stored in this vector
   static constexpr u32 Size() { return 4; }
 
-  /// Load four 64-bit values stored contiguously from the unaligned input
-  /// pointer. The underlying data type of the array \a ptr can be either 32-bit
-  /// or 64-bit integers. Up-casting is performed when appropriate.
-  template <typename T>
-  Vec4 &Load(const T *ptr);
+  /// Load and sign-extend four 32-bit values from the input array
+  Vec4 &Load(const i32 *ptr);
+  Vec4 &Load(const u32 *ptr) {
+    return Load(reinterpret_cast<const i32 *>(ptr));
+  }
+
+  /// Load four 64-bit values from the input array
+  Vec4 &Load(const i64 *ptr);
+  Vec4 &Load(const u64 *ptr) {
+    return Load(reinterpret_cast<const i64 *>(ptr));
+  }
+
+#ifdef __APPLE__
+  static_assert(sizeof(long) == sizeof(i64), "On MacOS, long isn't 64-bits!");
+  Vec4 &Load(const long *ptr) {
+    return Load(reinterpret_cast<const i64 *>(ptr));
+  }
+  Vec4 &Load(const unsigned long *ptr) {
+    return Load(reinterpret_cast<const i64 *>(ptr));
+  }
+#endif
 
   /// Gather non-contiguous elements from the input array \a ptr stored at
   /// index positions from \a pos
   template <typename T>
   Vec4 &Gather(const T *ptr, const Vec4 &pos);
 
+  /// Truncates the four 64-bit elements into 32-bit elements and stores them
+  /// into the output array.
   void Store(i32 *arr) const;
-  void Store(i64 *arr) const;
+  void Store(u32 *arr) const { Store(reinterpret_cast<i32 *>(arr)); }
 
-  /// Store the contents of this vector contiguously into the input array \a ptr
-  template <typename T>
-  typename std::enable_if_t<
-      std::conjunction_v<std::is_integral<T>, std::is_unsigned<T>>>
-  Store(T *arr) const {
-    using SignedType = std::make_signed_t<T>;
-    Store(reinterpret_cast<SignedType *>(arr));
-  }
+  /// Stores the four 64-bit elements in this vector into the output array.
+  void Store(i64 *arr) const;
+  void Store(u64 *arr) const { Store(reinterpret_cast<i64 *>(arr)); }
 
   /// Extract the integer at the given index from this vector
   i64 Extract(u32 index) const {
@@ -105,21 +118,13 @@ class Vec4 : public Vec256b {
 // Vec4 Implementation
 // ---------------------------------------------------------
 
-template <typename T>
-inline Vec4 &Vec4::Load(const T *ptr) {
-  using signed_t = std::make_signed_t<T>;
-  return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
-}
-
-template <>
-inline Vec4 &Vec4::Load<i32>(const i32 *ptr) {
+inline Vec4 &Vec4::Load(const i32 *ptr) {
   auto tmp = _mm_loadu_si128((const __m128i *)ptr);
   reg_ = _mm256_cvtepi32_epi64(tmp);
   return *this;
 }
 
-template <>
-inline Vec4 &Vec4::Load<i64>(const i64 *ptr) {
+inline Vec4 &Vec4::Load(const i64 *ptr) {
   // Load aligned and unaligned have almost no performance different on AVX2
   // machines. To alleviate some pain from clients having to know this info
   // we always use an unaligned load.
@@ -172,11 +177,23 @@ class Vec8 : public Vec256b {
     reg_ = _mm256_setr_epi32(val1, val2, val3, val4, val5, val6, val7, val8);
   }
 
-  /// Load 8 32-bit values stored contiguously from the input pointer \a ptr.
-  /// The underlying data type of the array \a ptr can be either 8-bit, 16-bit,
-  /// or 32-bit integers. Up-casting is performed when appropriate.
-  template <typename T>
-  Vec8 &Load(const T *ptr);
+  /// Load and sign-extend eight 8-bit values stored contiguously from the input
+  /// pointer array.
+  Vec8 &Load(const i8 *ptr);
+  Vec8 &Load(const u8 *ptr) { return Load(reinterpret_cast<const i8 *>(ptr)); }
+
+  /// Load and sign-extend eight 16-bit values stored contiguously from the
+  /// input pointer array.
+  Vec8 &Load(const i16 *ptr);
+  Vec8 &Load(const u16 *ptr) {
+    return Load(reinterpret_cast<const i16 *>(ptr));
+  }
+
+  /// Load 8 32-bit values stored contiguously from the input pointer array.
+  Vec8 &Load(const i32 *ptr);
+  Vec8 &Load(const u32 *ptr) {
+    return Load(reinterpret_cast<const i32 *>(ptr));
+  }
 
   /// Gather non-contiguous elements from the input array \a ptr stored at
   /// index positions from \a pos
@@ -186,16 +203,9 @@ class Vec8 : public Vec256b {
   template <typename T>
   Vec8 &Gather(const T *ptr, const Vec8 &pos);
 
+  /// Store the eight 32-bit integers in this vector into the output array.
   void Store(i32 *arr) const;
-
-  /// Store the contents of this vector contiguously into the input array \a ptr
-  template <typename T>
-  typename std::enable_if_t<
-      std::conjunction_v<std::is_integral<T>, std::is_unsigned<T>>>
-  Store(T *arr) const {
-    using SignedType = std::make_signed_t<T>;
-    Store(reinterpret_cast<SignedType *>(arr));
-  }
+  void Store(u32 *arr) const { Store(reinterpret_cast<i32 *>(arr)); }
 
   /// Return the number of elements that can be stored in this vector
   static constexpr u32 Size() { return 8; }
@@ -218,28 +228,19 @@ class Vec8 : public Vec256b {
 // equal to 32-bits. Eight elements are always read from the input array, but
 // are up-casted to 32-bits when appropriate.
 
-template <typename T>
-inline Vec8 &Vec8::Load(const T *ptr) {
-  using signed_t = std::make_signed_t<T>;
-  return Load<signed_t>(reinterpret_cast<const signed_t *>(ptr));
-}
-
-template <>
-inline Vec8 &Vec8::Load<i8>(const i8 *ptr) {
+inline Vec8 &Vec8::Load(const i8 *ptr) {
   auto tmp = _mm_loadu_si128((const __m128i *)ptr);
   reg_ = _mm256_cvtepi8_epi32(tmp);
   return *this;
 }
 
-template <>
-inline Vec8 &Vec8::Load<i16>(const i16 *ptr) {
+inline Vec8 &Vec8::Load(const i16 *ptr) {
   auto tmp = _mm_loadu_si128((const __m128i *)ptr);
   reg_ = _mm256_cvtepi16_epi32(tmp);
   return *this;
 }
 
-template <>
-inline Vec8 &Vec8::Load<i32>(const i32 *ptr) {
+inline Vec8 &Vec8::Load(const i32 *ptr) {
   reg_ = _mm256_loadu_si256((const __m256i *)ptr);
   return *this;
 }
