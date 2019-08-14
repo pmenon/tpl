@@ -117,6 +117,35 @@ TEST(BitVectorTest, SetTo) {
   EXPECT_TRUE(Verify(bv, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
 }
 
+TEST(BitVectorTest, SetWord) {
+  BitVector bv(10);
+
+  // bv[0] = true
+  bv.SetWord(0, 0x00000001);
+
+  EXPECT_TRUE(bv.Test(0));
+  for (u32 i = 1; i < bv.num_bits(); i++) {
+    EXPECT_FALSE(bv.Test(i));
+  }
+
+  // bv[9] = true
+  bv.SetWord(0, 0x00000200);
+  EXPECT_TRUE(bv.Test(9));
+  for (u32 i = 0; i < bv.num_bits() - 1; i++) {
+    EXPECT_FALSE(bv.Test(i));
+  }
+
+  // Try setting out of bound bits
+  bv.SetWord(0, 0xfffff800);
+  EXPECT_FALSE(bv.Any());
+
+  // Even bits only
+  bv.SetWord(0, 0x55555555);
+  for (u32 i = 0; i < bv.num_bits(); i++) {
+    EXPECT_EQ(i % 2 == 0, bv.Test(i));
+  }
+}
+
 TEST(BitVectorTest, Unset) {
   BitVector bv(10);
 

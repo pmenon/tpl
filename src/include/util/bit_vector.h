@@ -31,6 +31,8 @@ class BitVectorBase {
   // is optimized into bit shifts.
   static_assert(MathUtil::IsPowerOf2(kWordSizeBits),
                 "Word size in bits expected to be a power of two");
+  // Word value with all ones.
+  static constexpr WordType kAllOnesWord = ~static_cast<WordType>(0);
 
  public:
   /**
@@ -78,17 +80,34 @@ class BitVectorBase {
   }
 
   /**
+   * Set the value of the word at the given word index to the provided value.
+   * If the size of the bit vector is not a multiple of the word size, the tail
+   * bits are masked off.
+   * @param word_position The index of the word to set.
+   * @param word_val The value to set.
+   */
+  void SetWord(const u32 word_position, const WordType word_val) {
+    TPL_ASSERT(word_position < impl()->num_words(), "Index out of range");
+    WordType *const data = impl()->data_array();
+    const u32 num_words = impl()->num_words();
+    data[word_position] = word_val;
+    if (word_position == num_words - 1) {
+      data[num_words - 1] &=
+          kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
+    }
+  }
+
+  /**
    * Set all bits to 1.
    */
   void SetAll() {
-    auto *data_array = impl()->data_array();
+    auto *data = impl()->data_array();
     const auto num_words = impl()->num_words();
     // Set all bits in all words but the last
-    std::memset(data_array, 255, kWordSizeBytes * (num_words - 1));
+    std::memset(data, 255, kWordSizeBytes * (num_words - 1));
     // The last word is special
-    data_array[num_words - 1] =
-        ~static_cast<WordType>(0) >>
-        (num_words * kWordSizeBits - impl()->num_bits());
+    data[num_words - 1] =
+        kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
   }
 
   /**
@@ -132,8 +151,8 @@ class BitVectorBase {
       data_array[i] = ~data_array[i];
     }
     // The last word is special
-    const auto mask = ~static_cast<WordType>(0) >>
-                      (num_words * kWordSizeBits - impl()->num_bits());
+    const auto mask =
+        kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
     data_array[num_words - 1] = (mask & ~data_array[num_words - 1]);
   }
 
@@ -159,13 +178,13 @@ class BitVectorBase {
     const WordType *data_array = impl()->data_array();
     const auto num_words = impl()->num_words();
     for (u32 i = 0; i < num_words - 1; i++) {
-      if (data_array[i] != ~static_cast<WordType>(0)) {
+      if (data_array[i] != kAllOnesWord) {
         return false;
       }
     }
     const WordType hi_word = data_array[num_words - 1];
-    return hi_word == ~static_cast<WordType>(0) >>
-                          (num_words * kWordSizeBits - impl()->num_bits());
+    return hi_word ==
+           kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
   }
 
   /**

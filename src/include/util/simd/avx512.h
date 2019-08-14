@@ -82,31 +82,27 @@ class Vec8 : public Vec512b {
   /// Truncate eight 64-bit integers to eight 8-bit integers and store the
   /// result into the output array.
   void Store(i8 *arr) const;
+  void Store(u8 *arr) const { Store(reinterpret_cast<i8 *>(arr)); }
 
   /// Truncate eight 64-bit integers to eight 16-bit integers and store the
   /// result into the output array.
   void Store(i16 *arr) const;
+  void Store(u16 *arr) const { Store(reinterpret_cast<i16 *>(arr)); }
 
   /// Truncate eight 64-bit integers to eight 32-bit integers and store the
   /// result into the output array.
   void Store(i32 *arr) const;
+  void Store(u32 *arr) const { Store(reinterpret_cast<i32 *>(arr)); }
 
   /// Store the eight 64-bit integers in this vector into the output array.
   void Store(i64 *arr) const;
+  void Store(u64 *arr) const { Store(reinterpret_cast<i64 *>(arr)); }
 
 #ifdef __APPLE__
   static_assert(sizeof(long) == sizeof(i64), "On MacOS, long isn't 64-bits!");
   void Store(long *arr) const { Store(reinterpret_cast<i64 *>(arr)); }
-  void Store(unsigned long *arr) const { Store(reinterpret_cast<i64 *>(ptr)); }
+  void Store(unsigned long *arr) const { Store(reinterpret_cast<i64 *>(arr)); }
 #endif
-
-  template <typename T>
-  typename std::enable_if_t<
-      std::conjunction_v<std::is_integral<T>, std::is_unsigned<T>>>
-  Store(T *arr) const {
-    using SignedType = std::make_signed_t<T>;
-    Store(reinterpret_cast<SignedType *>(arr));
-  }
 
   bool AllBitsAtPositionsSet(const Vec8 &mask) const;
 

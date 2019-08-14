@@ -106,7 +106,7 @@ class Vec4 : public Vec256b {
 #ifdef __APPLE__
   static_assert(sizeof(long) == sizeof(i64), "On MacOS, long isn't 64-bits!");
   void Store(long *arr) const { Store(reinterpret_cast<i64 *>(arr)); }
-  void Store(unsigned long *arr) const { Store(reinterpret_cast<i64 *>(ptr)); }
+  void Store(unsigned long *arr) const { Store(reinterpret_cast<i64 *>(arr)); }
 #endif
 
   /// Extract the integer at the given index from this vector
