@@ -103,6 +103,12 @@ class Vec4 : public Vec256b {
   void Store(i64 *arr) const;
   void Store(u64 *arr) const { Store(reinterpret_cast<i64 *>(arr)); }
 
+#ifdef __APPLE__
+  static_assert(sizeof(long) == sizeof(i64), "On MacOS, long isn't 64-bits!");
+  void Store(long *arr) const { Store(reinterpret_cast<i64 *>(arr)); }
+  void Store(unsigned long *arr) const { Store(reinterpret_cast<i64 *>(ptr)); }
+#endif
+
   /// Extract the integer at the given index from this vector
   i64 Extract(u32 index) const {
     alignas(32) i64 x[Size()];
