@@ -3,6 +3,7 @@
 #include <type_traits>
 
 #include "util/common.h"
+#include "sql.h"
 
 namespace tpl::sql {
 
@@ -99,10 +100,14 @@ struct HashTableEntryIterator {
   /**
    * A more cumbersome API to iterate used in code-gen because lambda's don't
    * exist at that level.
-   * @param key_eq
-   * @param ctx
-   * @param probe_tuple
-   * @return
+   * @param key_eq Function pointer to check the equality of a tuple to one
+   *               provided.
+   * @param ctx An opaque user-provided object. Passed directly into
+   *            key-equality callback. Not used in the function.
+   * @param probe_tuple The probe tuple we want to find a match for. This is
+   *                    provided to the key-equality callback to find the next
+   *                    match.
+   * @return True if there is at least one more match.
    */
   bool HasNext(KeyEq key_eq, void *ctx, void *probe_tuple) {
     return HasNext<void *>([&](const void *table_tuple) -> bool {
