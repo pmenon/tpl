@@ -80,6 +80,16 @@ class BitVectorBase {
   }
 
   /**
+   * Get the word at the given word index.
+   * @param word_position The index of the word to set.
+   * @return Value of the word.
+   */
+  WordType GetWord(const u32 word_position) const {
+    TPL_ASSERT(word_position < impl()->num_words(), "Index out of range");
+    return impl()->data_array()[word_position];
+  }
+
+  /**
    * Set the value of the word at the given word index to the provided value.
    * If the size of the bit vector is not a multiple of the word size, the tail
    * bits are masked off.
