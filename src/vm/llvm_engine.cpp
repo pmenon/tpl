@@ -962,11 +962,7 @@ void LLVMEngine::CompiledModuleBuilder::Optimize() {
   // Build up optimization pipeline
   llvm::PassManagerBuilder pm_builder;
   pm_builder.OptLevel = 3;
-#if defined(__clang__)
-  pm_builder.Inliner = llvm::createFunctionInliningPass(2, 0, false);
-#else
   pm_builder.Inliner = llvm::createFunctionInliningPass(3, 0, false);
-#endif
   pm_builder.populateFunctionPassManager(function_passes);
   pm_builder.populateModulePassManager(module_passes);
 

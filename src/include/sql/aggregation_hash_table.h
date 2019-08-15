@@ -312,17 +312,15 @@ class AggregationHashTable {
     // Unique hash estimator
     std::unique_ptr<libcount::HLL> hll_estimator;
     // The array of computed hash values
-    alignas(CACHELINE_SIZE) hash_t hashes[kDefaultVectorSize];
+    hash_t hashes[kDefaultVectorSize];
     // Buffer containing entry pointers after lookup and key equality checks
-    alignas(CACHELINE_SIZE) HashTableEntry *entries[kDefaultVectorSize];
+    HashTableEntry *entries[kDefaultVectorSize];
     // Buffer containing indexes of tuples that found a matching group
-    alignas(CACHELINE_SIZE) u32 groups_found[kDefaultVectorSize];
+    sel_t groups_found[kDefaultVectorSize];
     // Buffer containing indexes of tuples that did not find a matching group
-    alignas(CACHELINE_SIZE)
-        util::FixedLengthBuffer<u32, kDefaultVectorSize> groups_not_found;
+    util::FixedLengthBuffer<sel_t, kDefaultVectorSize> groups_not_found;
     // Buffer containing indexes of tuples that didn't match keys
-    alignas(CACHELINE_SIZE)
-        util::FixedLengthBuffer<u32, kDefaultVectorSize> key_not_eq;
+    util::FixedLengthBuffer<sel_t, kDefaultVectorSize> key_not_eq;
 
     // Constructor
     explicit BatchProcessState(std::unique_ptr<libcount::HLL> estimator);
@@ -554,7 +552,7 @@ class AHTOverflowPartitionIterator {
    * to. It is assumed the caller has checked there is data in the iterator.
    * @return The hash value of the current overflow entry.
    */
-  const hash_t GetHash() const { return curr_->hash; }
+  hash_t GetHash() const { return curr_->hash; }
 
   /**
    * Get the payload of the overflow entry the iterator is currently pointing
