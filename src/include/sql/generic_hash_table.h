@@ -366,25 +366,12 @@ class GenericHashTableVectorIterator {
    * @param memory The memory pool to use for allocations
    */
   GenericHashTableVectorIterator(const GenericHashTable &table,
-                                 MemoryPool *memory) noexcept
-      : memory_(memory),
-        table_(table),
-        table_dir_index_(0),
-        entry_vec_(memory_->AllocateArray<const HashTableEntry *>(
-            kDefaultVectorSize, CACHELINE_SIZE, true)),
-        entry_vec_end_idx_(0),
-        null_slot_sel_vec_(memory_->AllocateArray<u32>(kDefaultVectorSize,
-                                                       CACHELINE_SIZE, false)) {
-    Next();
-  }
+                                 MemoryPool *memory) noexcept;
 
   /**
    * Deallocate the entry cache array
    */
-  ~GenericHashTableVectorIterator() {
-    memory_->DeallocateArray(entry_vec_, kDefaultVectorSize);
-    memory_->DeallocateArray(null_slot_sel_vec_, kDefaultVectorSize);
-  }
+  ~GenericHashTableVectorIterator();
 
   /**
    * Is there more data in the iterator?
@@ -414,8 +401,6 @@ class GenericHashTableVectorIterator {
   // pointing to the current and last valid entry.
   const HashTableEntry **entry_vec_;
   u16 entry_vec_end_idx_;
-  // A temporary buffer used during refill to determine null slots
-  u32 *null_slot_sel_vec_;
 };
 
 }  // namespace tpl::sql

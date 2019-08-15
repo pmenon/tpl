@@ -39,7 +39,24 @@ void GenericHashTable::SetSize(u64 new_size) {
 // ---------------------------------------------------------
 
 template <bool UseTag>
-inline void GenericHashTableVectorIterator<UseTag>::Next() {
+GenericHashTableVectorIterator<UseTag>::GenericHashTableVectorIterator(
+    const GenericHashTable &table, MemoryPool *memory) noexcept
+    : memory_(memory),
+      table_(table),
+      table_dir_index_(0),
+      entry_vec_(memory_->AllocateArray<const HashTableEntry *>(
+          kDefaultVectorSize, CACHELINE_SIZE, true)),
+      entry_vec_end_idx_(0) {
+  Next();
+}
+
+template <bool UseTag>
+GenericHashTableVectorIterator<UseTag>::~GenericHashTableVectorIterator() {
+  memory_->DeallocateArray(entry_vec_, kDefaultVectorSize);
+}
+
+template <bool UseTag>
+void GenericHashTableVectorIterator<UseTag>::Next() {
   // Invariant: the range of elements [0, entry_vec_end_idx_) in
   // the entry cache contains non-null hash table entries.
 
@@ -73,7 +90,7 @@ inline void GenericHashTableVectorIterator<UseTag>::Next() {
   entry_vec_end_idx_ = index;
 }
 
-template void GenericHashTableVectorIterator<true>::Next();
-template void GenericHashTableVectorIterator<false>::Next();
+template class GenericHashTableVectorIterator<true>;
+template class GenericHashTableVectorIterator<false>;
 
 }  // namespace tpl::sql
