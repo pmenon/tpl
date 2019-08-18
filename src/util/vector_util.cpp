@@ -7,22 +7,44 @@
 
 namespace tpl::util {
 
-// Wasteful, but faster due to SIMD.
-void VectorUtil::DiffSelected(const u32 n, const sel_t *sel_vector, const u32 m,
-                              sel_t *out_sel_vector, u32 *count,
-                              u8 scratch[kDefaultVectorSize]) {
-  TPL_ASSERT(n <= kDefaultVectorSize, "Selection vector too large");
-  std::memset(scratch, 0, n);
-  SelectionVectorToByteVector(m, sel_vector, scratch);
-  for (u32 i = 0; i < n; i++) {
-    scratch[i] = ~scratch[i];
+u32 VectorUtil::IntersectSelected_Scalar(const sel_t *v1, const u32 v1_count,
+                                         const sel_t *v2, const u32 v2_count,
+                                         sel_t *out_v) {
+  u32 i = 0, j = 0, k = 0;
+  while (i < v1_count && j < v2_count) {
+    if (v1[i] == v2[j]) {
+      out_v[k++] = v1[i];
+      i++;
+      j++;
+    } else if (v1[i] < v2[j]) {
+      i++;
+    } else {
+      j++;
+    }
   }
-  ByteVectorToSelectionVector(n, scratch, out_sel_vector, count);
+
+  return k;
 }
 
-// Vanilla scalar implementation.
-void VectorUtil::DiffSelected(const u32 n, const sel_t *sel_vector, const u32 m,
-                              sel_t *out_sel_vector, u32 *count) {
+u32 VectorUtil::IntersectSelected(const sel_t *v1, const u32 v1_count,
+                                  const sel_t *v2, const u32 v2_count,
+                                  sel_t *const out_v) {
+  // No-op if either vector is empty
+  if (v1_count == 0 || v2_count == 0) {
+    return 0;
+  }
+
+  // Canonical-ize; ensure the first vector is smaller than the second
+  if (v1_count > v2_count) {
+    return IntersectSelected(v2, v2_count, v1, v1_count, out_v);
+  }
+
+  // Run
+  return IntersectSelected_Scalar(v1, v1_count, v2, v2_count, out_v);
+}
+
+u32 VectorUtil::DiffSelected_Scalar(const u32 n, const sel_t *sel_vector,
+                                    const u32 m, sel_t *out_sel_vector) {
   u32 i = 0, j = 0, k = 0;
   for (; i < m; i++, j++) {
     while (j < sel_vector[i]) {
@@ -33,7 +55,26 @@ void VectorUtil::DiffSelected(const u32 n, const sel_t *sel_vector, const u32 m,
     out_sel_vector[k++] = j++;
   }
 
-  *count = n - m;
+  return n - m;
+}
+
+u32 VectorUtil::DiffSelected_WithScratchpad(const u32 n,
+                                            const sel_t *sel_vector,
+                                            const u32 m, sel_t *out_sel_vector,
+                                            u8 scratch[2048]) {
+  TPL_ASSERT(n <= kDefaultVectorSize, "Selection vector too large");
+  std::memset(scratch, 0, n);
+  VectorUtil::SelectionVectorToByteVector(m, sel_vector, scratch);
+  for (u32 i = 0; i < n; i++) {
+    scratch[i] = ~scratch[i];
+  }
+  return VectorUtil::ByteVectorToSelectionVector(n, scratch, out_sel_vector);
+}
+
+u32 VectorUtil::DiffSelected(const u32 n, const sel_t *sel_vector, const u32 m,
+                             sel_t *out_sel_vector) {
+  u8 scratch[kDefaultVectorSize];
+  return DiffSelected_WithScratchpad(n, sel_vector, m, out_sel_vector, scratch);
 }
 
 void VectorUtil::SelectionVectorToByteVector(const u32 n,
@@ -45,10 +86,8 @@ void VectorUtil::SelectionVectorToByteVector(const u32 n,
 }
 
 // TODO(pmenon): Consider splitting into dense and sparse implementations.
-void VectorUtil::ByteVectorToSelectionVector(const u32 n,
-                                             const u8 *RESTRICT byte_vector,
-                                             sel_t *RESTRICT sel_vector,
-                                             u32 *RESTRICT size) {
+u32 VectorUtil::ByteVectorToSelectionVector(const u32 n, const u8 *byte_vector,
+                                            sel_t *sel_vector) {
   // Byte-vector index
   u32 i = 0;
 
@@ -77,7 +116,7 @@ void VectorUtil::ByteVectorToSelectionVector(const u32 n,
     k += static_cast<u32>(byte_vector[i] == 0xFF);
   }
 
-  *size = k;
+  return k;
 }
 
 void VectorUtil::ByteVectorToBitVector(const u32 n,
@@ -149,10 +188,8 @@ void VectorUtil::BitVectorToByteVector(u32 n, const u64 *bit_vector,
 }
 
 // TODO(pmenon): Consider splitting into dense and sparse implementations.
-void VectorUtil::BitVectorToSelectionVector(const u32 n,
-                                            const u64 *RESTRICT bit_vector,
-                                            sel_t *RESTRICT sel_vector,
-                                            u32 *RESTRICT size) {
+u32 VectorUtil::BitVectorToSelectionVector(const u32 n, const u64 *bit_vector,
+                                           sel_t *sel_vector) {
   const u32 num_words = MathUtil::DivRoundUp(n, 64);
 
   u32 k = 0;
@@ -165,7 +202,7 @@ void VectorUtil::BitVectorToSelectionVector(const u32 n,
       word ^= t;
     }
   }
-  *size = k;
+  return k;
 }
 
 }  // namespace tpl::util

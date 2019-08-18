@@ -8,72 +8,15 @@
 
 #include "sql/memory_pool.h"
 #include "util/bit_vector.h"
+#include "util/fast_rand.h"
 #include "util/timer.h"
 #include "util/vector_util.h"
 
-namespace tpl::util::test {
+namespace tpl::util {
 
-template <typename T>
-class PoolArray {
- public:
-  PoolArray() : memory_(nullptr), arr_(nullptr), size_(0) {}
-  PoolArray(sql::MemoryPool *memory, u32 num_elems)
-      : memory_(memory),
-        arr_(memory_->AllocateArray<T>(num_elems, CACHELINE_SIZE, true)),
-        size_(num_elems) {}
-  PoolArray(PoolArray &&other) noexcept
-      : memory_(other.memory_), arr_(other.arr_), size_(other.size) {
-    other.memory_ = nullptr;
-    other.arr_ = nullptr;
-    other.size_ = 0;
-  }
+class VectorUtilTest : public TplTest {};
 
-  PoolArray &operator=(PoolArray &&other) noexcept {
-    std::swap(memory_, other.memory_);
-    std::swap(arr_, other.arr_);
-    std::swap(size_, other.size_);
-  }
-
-  DISALLOW_COPY(PoolArray);
-
-  ~PoolArray() {
-    if (arr_ != nullptr) {
-      TPL_ASSERT(memory_ != nullptr, "No memory pool to return to!");
-      memory_->DeallocateArray(arr_, size_);
-    }
-    arr_ = nullptr;
-    size_ = 0;
-  }
-
-  T &operator[](std::size_t n) { return arr_[n]; }
-
-  T *raw() { return arr_; }
-  const T *raw() const { return arr_; }
-  u32 size() { return size_; }
-
-  T *begin() { return raw(); }
-  T *end() { return raw() + size(); }
-
- private:
-  sql::MemoryPool *memory_{nullptr};
-  T *arr_;
-  u32 size_{0};
-};
-
-class VectorUtilTest : public TplTest {
- public:
-  VectorUtilTest() : pool_(nullptr) {}
-
-  template <typename T>
-  PoolArray<T> AllocateArray(const u32 num_elems) {
-    return PoolArray<T>(&pool_, num_elems);
-  }
-
- private:
-  sql::MemoryPool pool_;
-};
-
-TEST_F(VectorUtilTest, Access) {
+TEST(VectorUtilTest, Access) {
   {
     simd::Vec8 in(44);
     for (u32 i = 0; i < simd::Vec8::Size(); i++) {
@@ -91,7 +34,7 @@ TEST_F(VectorUtilTest, Access) {
   }
 }
 
-TEST_F(VectorUtilTest, Arithmetic) {
+TEST(VectorUtilTest, Arithmetic) {
   // Addition
   {
     simd::Vec8 v(1, 2, 3, 4, 5, 6, 7, 8);
@@ -138,7 +81,7 @@ TEST_F(VectorUtilTest, Arithmetic) {
   }
 }
 
-TEST_F(VectorUtilTest, BitwiseOperations) {
+TEST(VectorUtilTest, BitwiseOperations) {
   // Left shift
   {
     simd::Vec8 v(1, 2, 3, 4, 5, 6, 7, 8);
@@ -170,7 +113,7 @@ TEST_F(VectorUtilTest, BitwiseOperations) {
   }
 }
 
-TEST_F(VectorUtilTest, Comparisons) {
+TEST(VectorUtilTest, Comparisons) {
   // Equality
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
@@ -262,7 +205,7 @@ TEST_F(VectorUtilTest, Comparisons) {
   }
 }
 
-TEST_F(VectorUtilTest, MaskToPosition) {
+TEST(VectorUtilTest, MaskToPosition) {
   simd::Vec8 vec(3, 0, 4, 1, 5, 2, 6, 2);
   simd::Vec8 val(2);
 
@@ -321,7 +264,7 @@ void SmallScale_NeedleTest() {
   EXPECT_EQ(actual_count, count);
 }
 
-TEST_F(VectorUtilTest, SimpleFilter) {
+TEST(VectorUtilTest, SimpleFilter) {
   SmallScale_NeedleTest<i8>();
   SmallScale_NeedleTest<u8>();
   SmallScale_NeedleTest<i16>();
@@ -332,7 +275,7 @@ TEST_F(VectorUtilTest, SimpleFilter) {
   SmallScale_NeedleTest<u64>();
 }
 
-TEST_F(VectorUtilTest, VectorVectorFilter) {
+TEST(VectorUtilTest, VectorVectorFilter) {
   //
   // Test: two arrays, a1 and a2; a1 contains sequential numbers in the range
   //       [0, 1000), and s2 contains sequential numbers in range [1,1001).
@@ -408,14 +351,13 @@ TEST_F(VectorUtilTest, VectorVectorFilter) {
 #undef CHECK
 }
 
-TEST_F(VectorUtilTest, ByteToSelectionVector) {
+TEST(VectorUtilTest, ByteToSelectionVector) {
   constexpr u32 n = 14;
   u8 bytes[n] = {0xFF, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00,
                  0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00};
   sel_t sel[n];
 
-  u32 size = 0;
-  VectorUtil::ByteVectorToSelectionVector(n, bytes, sel, &size);
+  u32 size = VectorUtil::ByteVectorToSelectionVector(n, bytes, sel);
   EXPECT_EQ(8u, size);
   EXPECT_EQ(0u, sel[0]);
   EXPECT_EQ(3u, sel[1]);
@@ -427,7 +369,7 @@ TEST_F(VectorUtilTest, ByteToSelectionVector) {
   EXPECT_EQ(12u, sel[7]);
 }
 
-TEST_F(VectorUtilTest, BitToByteVector) {
+TEST(VectorUtilTest, BitToByteVector) {
   // Large enough to run through both vector-loop and scalar tail
   constexpr u32 num_bits = 97;
 
@@ -451,7 +393,7 @@ TEST_F(VectorUtilTest, BitToByteVector) {
   }
 }
 
-TEST_F(VectorUtilTest, BitToSelectionVector) {
+TEST(VectorUtilTest, BitToSelectionVector) {
   // 126-bit vector and the output selection vector
   constexpr u32 num_bits = 126;
   BitVector bv(num_bits);
@@ -463,9 +405,8 @@ TEST_F(VectorUtilTest, BitToSelectionVector) {
   }
 
   // Transform
-  u32 size = 0;
-  util::VectorUtil::BitVectorToSelectionVector(num_bits, bv.data_array(), sel,
-                                               &size);
+  u32 size = util::VectorUtil::BitVectorToSelectionVector(num_bits,
+                                                          bv.data_array(), sel);
 
   // Only 63 bits are set (remember there are only 126-bits)
   EXPECT_EQ(63u, size);
@@ -476,12 +417,10 @@ TEST_F(VectorUtilTest, BitToSelectionVector) {
   }
 }
 
-TEST_F(VectorUtilTest, DiffSelected) {
+TEST(VectorUtilTest, DiffSelected) {
   sel_t input[kDefaultVectorSize] = {0, 2, 3, 5, 7, 9};
   sel_t output[kDefaultVectorSize];
-  u32 out_count = 0;
-
-  VectorUtil::DiffSelected(10, input, 6, output, &out_count);
+  u32 out_count = VectorUtil::DiffSelected_Scalar(10, input, 6, output);
   EXPECT_EQ(4u, out_count);
   EXPECT_EQ(1u, output[0]);
   EXPECT_EQ(4u, output[1]);
@@ -489,14 +428,14 @@ TEST_F(VectorUtilTest, DiffSelected) {
   EXPECT_EQ(8u, output[3]);
 }
 
-TEST_F(VectorUtilTest, DiffSelectedWithScratcPad) {
+TEST(VectorUtilTest, DiffSelectedWithScratcPad) {
   sel_t input[kDefaultVectorSize] = {2, 3, 5, 7, 9};
   sel_t output[kDefaultVectorSize];
   u8 scratchpad[kDefaultVectorSize];
-  u32 out_count = 0;
 
-  VectorUtil::DiffSelected(10, input, 5, output, &out_count, scratchpad);
-  EXPECT_EQ(5u, out_count);
+  auto count =
+      VectorUtil::DiffSelected_WithScratchpad(10, input, 5, output, scratchpad);
+  EXPECT_EQ(5u, count);
   EXPECT_EQ(0u, output[0]);
   EXPECT_EQ(1u, output[1]);
   EXPECT_EQ(4u, output[2]);
@@ -504,7 +443,7 @@ TEST_F(VectorUtilTest, DiffSelectedWithScratcPad) {
   EXPECT_EQ(8u, output[4]);
 }
 
-TEST_F(VectorUtilTest, DISABLED_PerfSelect) {
+TEST(VectorUtilTest, DISABLED_PerfSelect) {
   constexpr u32 num_elems = 128 * 1024u * 1024u;
   constexpr const u32 chunk_size = 4096;
 
@@ -544,4 +483,59 @@ TEST_F(VectorUtilTest, DISABLED_PerfSelect) {
   }
 }
 
-}  // namespace tpl::util::test
+#if 0
+TEST_F(VectorUtilTest, DISABLED_PerfInvertSel) {
+  LOG_INFO("Sel., Scalar (ms), Vector (ms)");
+
+  for (f64 sel :
+       {0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}) {
+    u32 num_selected = std::round(sel * kDefaultVectorSize);
+
+    u16 sel_vec[kDefaultVectorSize] = {0};
+    u16 normal_sel_out[kDefaultVectorSize] = {0};
+    u16 full_sel_out[kDefaultVectorSize] = {0};
+
+    u32 normal_count = 0, full_count = 0;
+
+    util::FastRand rand;
+
+    // Compute selection vector
+    std::bitset<kDefaultVectorSize> set;
+    while (set.count() < num_selected) {
+      auto idx = rand.Next() % kDefaultVectorSize;
+      if (!set[idx]) {
+        set[idx] = true;
+      }
+    }
+
+    // Populate selection vector
+    for (u32 i = 0, idx = 0; i < kDefaultVectorSize; i++) {
+      if (set[i]) {
+        sel_vec[idx++] = i;
+      }
+    }
+
+    auto normal_ms = Bench(5, [&]() {
+      for (u32 i = 0; i < 500; i++) {
+        normal_count = util::VectorUtil::DiffSelected_Scalar(
+            kDefaultVectorSize, sel_vec, num_selected, normal_sel_out);
+      }
+    });
+
+    auto full_ms = Bench(5, [&]() {
+      for (u32 i = 0; i < 500; i++) {
+        full_count = util::VectorUtil::DiffSelected_WithScratchpad(kDefaultVectorSize, sel_vec,
+                                                    num_selected, full_sel_out);
+      }
+    });
+
+    EXPECT_EQ(kDefaultVectorSize - num_selected, full_count);
+    for (u32 i = 0; i < kDefaultVectorSize - num_selected; i++) {
+      EXPECT_EQ(normal_sel_out[i], full_sel_out[i]);
+    }
+    LOG_INFO("{:>4.0f},{:>12.2f},{:>12.2f}", sel * 100.0, normal_ms, full_ms);
+  }
+}
+#endif
+
+}  // namespace tpl::util

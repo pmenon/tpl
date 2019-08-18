@@ -2,6 +2,9 @@
 
 #include <functional>
 
+// Needed for friend tests
+#include "gtest/gtest_prod.h"
+
 #include "util/common.h"
 #include "util/simd.h"
 
@@ -31,8 +34,9 @@ class VectorUtil {
    * @return The number of elements that pass the filter.
    */
   template <typename T, template <typename> typename Op>
-  static u32 FilterVectorByVal(const T *RESTRICT in, const u32 in_count,
-                               const T val, sel_t *RESTRICT out) {
+  [[nodiscard]] static u32 FilterVectorByVal(const T *RESTRICT in,
+                                             const u32 in_count, const T val,
+                                             sel_t *RESTRICT out) {
     // Simple check to make sure the provided filter operation returns bool
     static_assert(std::is_same_v<bool, std::invoke_result_t<Op<T>, T, T>>);
 
@@ -64,9 +68,10 @@ class VectorUtil {
    * @return The number of elements that pass the filter.
    */
   template <typename T, template <typename> typename Op>
-  static u32 FilterVectorByVector(const T *RESTRICT in_1,
-                                  const T *RESTRICT in_2, const u32 in_count,
-                                  sel_t *RESTRICT out) {
+  [[nodiscard]] static u32 FilterVectorByVector(const T *RESTRICT in_1,
+                                                const T *RESTRICT in_2,
+                                                const u32 in_count,
+                                                sel_t *RESTRICT out) {
     // Simple check to make sure the provided filter operation returns bool
     static_assert(std::is_same_v<bool, std::invoke_result_t<Op<T>, T, T>>);
 
@@ -89,13 +94,15 @@ class VectorUtil {
 
 #define GEN_FILTER(Op, Comparison)                                         \
   template <typename T>                                                    \
-  static u32 Filter##Op(const T *RESTRICT in, u32 in_count, T val,         \
-                        sel_t *RESTRICT out) {                             \
+  [[nodiscard]] static u32 Filter##Op(const T *RESTRICT in,                \
+                                      const u32 in_count, const T val,     \
+                                      sel_t *RESTRICT out) {               \
     return FilterVectorByVal<T, Comparison>(in, in_count, val, out);       \
   }                                                                        \
   template <typename T>                                                    \
-  static u32 Filter##Op(const T *RESTRICT in_1, const T *RESTRICT in_2,    \
-                        u32 in_count, sel_t *RESTRICT out) {               \
+  [[nodiscard]] static u32 Filter##Op(                                     \
+      const T *RESTRICT in_1, const T *RESTRICT in_2, const u32 in_count,  \
+      sel_t *RESTRICT out) {                                               \
     return FilterVectorByVector<T, Comparison>(in_1, in_2, in_count, out); \
   }
   GEN_FILTER(Eq, std::equal_to)
@@ -107,17 +114,20 @@ class VectorUtil {
 #undef GEN_FILTER
 
   /**
-   * Populate the output selection vector @em out_sel_vector with all indexes
-   * that do not appear in the input selection vector @em sel_vector.
-   * @param n The maximum number of indexes that can appear in the selection
-   *          vector.
-   * @param sel_vector The input selection vector.
-   * @param m The number of elements in the input selection vector.
-   * @param[out] out_sel_vector The output selection vector.
-   * @param[out] count The number of elements in the output selection vector.
+   * Intersect the sorted input selection vectors @em v1 and @em v2, with
+   * lengths @em v1_count and @em v2_count, respectively, and store the result
+   * of the intersection in the output selection vector @em out_v.
+   * @param v1 The first input selection vector.
+   * @param v1_count The length of the first input selection vector.
+   * @param v2 The second input selection vector.
+   * @param v2_count The length of the second input selection vector.
+   * @param out_v The output selection vector storing the result of the
+   *              intersection.
+   * @return The number of elements in the output selection vector.
    */
-  static void DiffSelected(u32 n, const sel_t *sel_vector, u32 m,
-                           sel_t *out_sel_vector, u32 *count);
+  [[nodiscard]] static u32
+      IntersectSelected(const sel_t *v1, u32 v1_count, const sel_t *v2,
+                        u32 v2_count, sel_t *out_v);
 
   /**
    * Populate the output selection vector @em out_sel_vector with all indexes
@@ -128,11 +138,9 @@ class VectorUtil {
    * @param m The number of elements in the input selection vector.
    * @param[out] out_sel_vector The output selection vector.
    * @param[out] count The number of elements in the output selection vector.
-   * @param scratch A scratch vector with at least @em n available bytes.
    */
-  static void DiffSelected(u32 n, const sel_t *sel_vector, u32 m,
-                           sel_t *out_sel_vector, u32 *count,
-                           u8 scratch[kDefaultVectorSize]);
+  [[nodiscard]] static u32 DiffSelected(u32 n, const sel_t *sel_vector, u32 m,
+                                        sel_t *out_sel_vector);
 
   /**
    * Convert a selection vector into a byte vector. For each index stored in the
@@ -156,8 +164,9 @@ class VectorUtil {
    * @param[out] sel_vector The output selection vector.
    * @param[out] size The number of elements in the selection vector.
    */
-  static void ByteVectorToSelectionVector(u32 n, const u8 *byte_vector,
-                                          sel_t *sel_vector, u32 *size);
+  [[nodiscard]] static u32 ByteVectorToSelectionVector(u32 n,
+                                                       const u8 *byte_vector,
+                                                       sel_t *sel_vector);
 
   /**
    * Convert a byte vector to a bit vector. For all elements in the byte vector
@@ -194,8 +203,32 @@ class VectorUtil {
    * @param[out] sel_vector The output selection vector.
    * @param[out] size The number of element in the selection vector.
    */
-  static void BitVectorToSelectionVector(u32 n, const u64 *bit_vector,
-                                         sel_t *sel_vector, u32 *size);
+  [[nodiscard]] static u32 BitVectorToSelectionVector(u32 n,
+                                                      const u64 *bit_vector,
+                                                      sel_t *sel_vector);
+
+ private:
+  FRIEND_TEST(VectorUtilTest, DiffSelected);
+  FRIEND_TEST(VectorUtilTest, DiffSelectedWithScratcPad);
+
+  // A sorter-set intersection implementation using scalar operations
+  [[nodiscard]] static u32 IntersectSelected_Scalar(const sel_t *v1,
+                                                    u32 v1_count,
+                                                    const sel_t *v2,
+                                                    u32 v2_count, sel_t *out_v);
+
+  // A sorted-set difference implementation using purely scalar operations
+  [[nodiscard]] static u32 DiffSelected_Scalar(u32 n, const sel_t *sel_vector,
+                                               u32 m, sel_t *out_sel_vector);
+
+  // A sorted-set difference implementation that uses a little extra memory
+  // (the scratchpad) and executes more instructions, but has better CPI, and is
+  // faster in the common case.
+  [[nodiscard]] static u32 DiffSelected_WithScratchpad(u32 n,
+                                                       const sel_t *sel_vector,
+                                                       u32 m,
+                                                       sel_t *out_sel_vector,
+                                                       u8 scratch[2048]);
 };
 
 }  // namespace tpl::util

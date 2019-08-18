@@ -101,3 +101,9 @@ add_dependencies(libcount libcount_build)
 
 include_directories(SYSTEM "${THIRD_PARTY_DIR}/libcount/include")
 list(APPEND TPL_LINK_LIBS libcount)
+
+############################################################
+# Google Test
+############################################################
+
+include_directories(SYSTEM ${PROJECT_SOURCE_DIR}/third_party/gtest/include)

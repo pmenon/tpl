@@ -242,9 +242,8 @@ void VectorFilterExecutor::SelectNe(const u32 left_col_idx,
 }
 
 void VectorFilterExecutor::InvertSelection() {
-  u8 scratch[kDefaultVectorSize];
-  util::VectorUtil::DiffSelected(kDefaultVectorSize, sel_vector_, count_,
-                                 owned_sel_vector_, &count_, scratch);
+  count_ = util::VectorUtil::DiffSelected(kDefaultVectorSize, sel_vector_,
+                                          count_, owned_sel_vector_);
   sel_vector_ = owned_sel_vector_;
 }
 
