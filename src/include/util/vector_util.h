@@ -137,7 +137,7 @@ class VectorUtil {
    * @param sel_vector The input selection vector.
    * @param m The number of elements in the input selection vector.
    * @param[out] out_sel_vector The output selection vector.
-   * @param[out] count The number of elements in the output selection vector.
+   * @return The number of elements in the output selection vector.
    */
   [[nodiscard]] static u32 DiffSelected(u32 n, const sel_t *sel_vector, u32 m,
                                         sel_t *out_sel_vector);
@@ -162,7 +162,7 @@ class VectorUtil {
    *          capacity of the selection vector.
    * @param byte_vector The input byte vector.
    * @param[out] sel_vector The output selection vector.
-   * @param[out] size The number of elements in the selection vector.
+   * @return The number of elements in the selection vector.
    */
   [[nodiscard]] static u32 ByteVectorToSelectionVector(u32 n,
                                                        const u8 *byte_vector,
@@ -201,7 +201,7 @@ class VectorUtil {
    *          the selection vector.
    * @param bit_vector The input bit vector.
    * @param[out] sel_vector The output selection vector.
-   * @param[out] size The number of element in the selection vector.
+   * @return The number of elements in the selection vector.
    */
   [[nodiscard]] static u32 BitVectorToSelectionVector(u32 n,
                                                       const u64 *bit_vector,
