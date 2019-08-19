@@ -2,8 +2,8 @@
 
 #include <type_traits>
 
-#include "util/common.h"
 #include "sql.h"
+#include "util/common.h"
 
 namespace tpl::sql {
 

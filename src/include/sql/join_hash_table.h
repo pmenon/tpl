@@ -1,8 +1,8 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include <numeric>
+#include <vector>
 
 #include "sql/bloom_filter.h"
 #include "sql/concise_hash_table.h"
