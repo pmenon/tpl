@@ -11,7 +11,7 @@
 
 #include "sql/filter_manager.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class TableVectorIteratorTest : public SqlBasedTest {};
 
@@ -109,4 +109,4 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
   }
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

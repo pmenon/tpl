@@ -2,7 +2,7 @@
 
 #include "util/math_util.h"
 
-namespace tpl::util::test {
+namespace tpl::util {
 
 TEST(MathUtilTest, AlignToTest) {
   EXPECT_EQ(2u, MathUtil::AlignTo(1, 2));
@@ -13,4 +13,4 @@ TEST(MathUtilTest, AlignToTest) {
   EXPECT_EQ(16u, MathUtil::AlignTo(9, 8));
 }
 
-}  // namespace tpl::util::test
+}  // namespace tpl::util

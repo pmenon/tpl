@@ -9,7 +9,7 @@
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class VectorFilterExecutorTest : public TplTest {
  public:
@@ -265,4 +265,4 @@ TEST_F(VectorFilterExecutorTest, ColumnWithColumn) {
   }
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

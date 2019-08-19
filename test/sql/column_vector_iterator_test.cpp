@@ -4,7 +4,7 @@
 #include "sql/column_vector_iterator.h"
 #include "sql/table.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class ColumnIteratorTest : public SqlBasedTest {};
 
@@ -79,4 +79,4 @@ TEST_F(ColumnIteratorTest, IntegerIterationTest) {
   EXPECT_EQ(col->num_tuples(), num_rows);
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

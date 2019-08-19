@@ -1,5 +1,4 @@
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "tpl_test.h"  // NOLINT
@@ -8,14 +7,11 @@
 #include "ast/ast_builder.h"
 
 #include "ast/ast_node_factory.h"
-#include "ast/context.h"
-#include "ast/type.h"
 #include "sema/sema.h"
-#include "util/region_containers.h"
 
-namespace tpl::sema::test {
+namespace tpl::sema {
 
-class SemaExprTest : public TplTest, public ast::test::TestAstBuilder {
+class SemaExprTest : public TplTest, public ast::TestAstBuilder {
  public:
   void ResetErrorReporter() { error_reporter()->Reset(); }
 };
@@ -194,4 +190,4 @@ TEST_F(SemaExprTest, ArrayIndexTest) {
   }
 }
 
-}  // namespace tpl::sema::test
+}  // namespace tpl::sema

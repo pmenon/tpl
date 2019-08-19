@@ -7,7 +7,7 @@
 
 #include "util/hash.h"
 
-namespace tpl::util::test {
+namespace tpl::util {
 
 class HashTest : public TplTest {};
 
@@ -91,4 +91,4 @@ TEST_F(HashTest, StringHash) {
 #undef CHECK_HASH_METHOD_ON_INPUT
 }
 
-}  // namespace tpl::util::test
+}  // namespace tpl::util

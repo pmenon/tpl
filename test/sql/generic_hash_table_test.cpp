@@ -8,7 +8,7 @@
 #include "sql/generic_hash_table.h"
 #include "util/hash.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class GenericHashTableTest : public TplTest {};
 
@@ -381,4 +381,4 @@ TEST_F(GenericHashTableTest, DISABLED_PerfIteration) {
            sum2);
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

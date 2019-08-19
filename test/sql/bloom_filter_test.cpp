@@ -7,7 +7,7 @@
 #include "sql/bloom_filter.h"
 #include "util/hash.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class BloomFilterTest : public TplTest {
  public:
@@ -111,4 +111,4 @@ TEST_F(BloomFilterTest, Comprehensive) {
   }
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

@@ -30,7 +30,7 @@
 #define TestAllIntegral(FuncName, Args...) \
   TestAllSigned(FuncName, Args) TestAllUnsigned(FuncName, Args)
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class SorterTest : public TplTest {
  public:
@@ -336,4 +336,4 @@ TEST_F(SorterTest, UnbalancedParallelSortTest) {
   }
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

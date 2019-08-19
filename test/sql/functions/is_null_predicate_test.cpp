@@ -3,7 +3,7 @@
 #include "sql/functions/is_null_predicate.h"
 #include "sql/value.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class IsNullPredicateTests : public TplTest {};
 
@@ -51,4 +51,4 @@ TEST_F(IsNullPredicateTests, IsNotNull) {
 #undef CHECK_IS_NOT_NULL_FOR_TYPE
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

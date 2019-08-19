@@ -6,7 +6,7 @@
 
 #include "util/barrier.h"
 
-namespace tpl::util::test {
+namespace tpl::util {
 
 using namespace std::chrono_literals;  // NOLINT
 
@@ -75,4 +75,4 @@ TEST(BarrierTest, WaitCycle) {
   }
 }
 
-}  // namespace tpl::util::test
+}  // namespace tpl::util

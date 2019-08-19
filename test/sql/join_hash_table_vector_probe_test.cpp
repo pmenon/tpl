@@ -11,7 +11,7 @@
 #include "sql/vector_projection_iterator.h"
 #include "util/hash.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 /// This is the tuple we insert into the hash table
 template <u8 N>
@@ -194,4 +194,4 @@ TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
   bench(true);
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

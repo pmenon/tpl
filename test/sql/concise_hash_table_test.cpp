@@ -7,7 +7,7 @@
 #include "util/hash.h"
 #include "util/macros.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 /// This is the tuple we insert into the hash table
 struct Tuple {
@@ -231,4 +231,4 @@ TEST_F(ConciseHashTableTest, MultiGroupBuildTest) {
   }
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

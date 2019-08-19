@@ -12,11 +12,10 @@
 #include "vm/bytecode_module.h"
 #include "vm/llvm_engine.h"
 
-namespace tpl::vm::test {
-class BytecodeTrampolineTest;
-}  // namespace tpl::vm::test
-
 namespace tpl::vm {
+
+// Test
+class BytecodeTrampolineTest;
 
 /**
  * An enumeration capturing different execution methods and optimization levels.
@@ -118,7 +117,9 @@ class Module {
  private:
   friend class VM;
   friend class AsyncCompileTask;
-  friend class test::BytecodeTrampolineTest;
+
+  // Accesses the trampoline functions
+  friend class BytecodeTrampolineTest;
 
   // This class encapsulates the ability to asynchronously JIT compile a module.
   class AsyncCompileTask;

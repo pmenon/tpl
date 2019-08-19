@@ -13,7 +13,7 @@
 #include "sql/value.h"
 #include "util/timer.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class StringFunctionsTests : public TplTest {
  public:
@@ -503,4 +503,4 @@ TEST_F(StringFunctionsTests, Trim) {
   EXPECT_TRUE(StringVal("test") == result);
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

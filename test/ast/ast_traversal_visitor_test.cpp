@@ -9,7 +9,7 @@
 #include "parsing/scanner.h"
 #include "sema/sema.h"
 
-namespace tpl::ast::test {
+namespace tpl::ast {
 
 class AstTraversalVisitorTest : public TplTest {
  public:
@@ -303,4 +303,4 @@ TEST_F(AstTraversalVisitorTest, CountIfTest) {
   }
 }
 
-}  // namespace tpl::ast::test
+}  // namespace tpl::ast

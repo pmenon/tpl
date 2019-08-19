@@ -7,7 +7,7 @@
 
 #include "sql/generic_value.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class GenericValueTests : public TplTest {};
 
@@ -87,4 +87,4 @@ TEST_F(GenericValueTests, Equality) {
   EXPECT_NE(string_val, GenericValue::CreateNull(TypeId::Varchar));
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

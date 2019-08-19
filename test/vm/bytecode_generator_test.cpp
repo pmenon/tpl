@@ -8,7 +8,7 @@
 
 #include "logging/logger.h"
 
-namespace tpl::vm::test {
+namespace tpl::vm {
 
 class BytecodeGeneratorTest : public TplTest {
  public:
@@ -325,4 +325,4 @@ TEST_F(BytecodeGeneratorTest, FunctionTest) {
   EXPECT_EQ(20, s.b);
 }
 
-}  // namespace tpl::vm::test
+}  // namespace tpl::vm

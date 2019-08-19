@@ -2,7 +2,7 @@
 
 #include "vm/bytecodes.h"
 
-namespace tpl::vm::test {
+namespace tpl::vm {
 
 class BytecodesTest : public TplTest {};
 
@@ -115,4 +115,4 @@ TEST_F(BytecodesTest, OperandTypesTest) {
             Bytecodes::GetNthOperandType(Bytecode::Add_i32, 2));
 }
 
-}  // namespace tpl::vm::test
+}  // namespace tpl::vm

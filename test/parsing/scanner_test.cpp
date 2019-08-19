@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <functional>
 #include <string>
 #include <vector>
@@ -7,7 +6,7 @@
 
 #include "parsing/scanner.h"
 
-namespace tpl::parsing::test {
+namespace tpl::parsing {
 
 class ScannerTest : public TplTest {};
 
@@ -47,11 +46,15 @@ TEST_F(ScannerTest, SimpleSourceTest) {
   EXPECT_EQ(Token::Type::EOS, scanner.Next());
 }
 
-struct Test {
+namespace {
+
+struct TestCase {
   const std::string source;
   std::vector<Token::Type> expected_tokens;
   std::function<void(Scanner &scanner, uint32_t token_idx)> check;
 };
+
+}  // namespace
 
 void CheckEquality(uint32_t test_idx, const std::vector<Token::Type> &expected,
                    const std::vector<Token::Type> &actual) {
@@ -66,7 +69,7 @@ void CheckEquality(uint32_t test_idx, const std::vector<Token::Type> &expected,
   }
 }
 
-void RunTests(const std::vector<Test> &tests) {
+void RunTests(const std::vector<TestCase> &tests) {
   for (unsigned test_idx = 0; test_idx < tests.size(); test_idx++) {
     const auto &test = tests[test_idx];
     Scanner scanner(test.source.data(), test.source.length());
@@ -89,7 +92,7 @@ void RunTests(const std::vector<Test> &tests) {
 }
 
 TEST_F(ScannerTest, VariableSyntaxTest) {
-  std::vector<test::Test> tests = {
+  std::vector<TestCase> tests = {
       // Variable with no type
       {"var x = 10",
        {Token::Type::VAR, Token::Type::IDENTIFIER, Token::Type::EQUAL,
@@ -121,7 +124,7 @@ TEST_F(ScannerTest, VariableSyntaxTest) {
 }
 
 TEST_F(ScannerTest, IfSyntaxTest) {
-  std::vector<test::Test> tests = {
+  std::vector<TestCase> tests = {
       {"if (x == 0) { }",
        {Token::Type::IF, Token::Type::LEFT_PAREN, Token::Type::IDENTIFIER,
         Token::Type::EQUAL_EQUAL, Token::Type::INTEGER,
@@ -133,7 +136,7 @@ TEST_F(ScannerTest, IfSyntaxTest) {
 }
 
 TEST_F(ScannerTest, ForSyntaxTest) {
-  std::vector<test::Test> tests = {
+  std::vector<TestCase> tests = {
       // Simple for
       {"for () {}",
        {Token::Type::FOR, Token::Type::LEFT_PAREN, Token::Type::RIGHT_PAREN,
@@ -184,7 +187,7 @@ TEST_F(ScannerTest, ForSyntaxTest) {
 }
 
 TEST_F(ScannerTest, FunctionSyntaxTest) {
-  std::vector<test::Test> tests = {
+  std::vector<TestCase> tests = {
       // Empty function test
       {"fun test(){}",
        {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN,
@@ -212,7 +215,7 @@ TEST_F(ScannerTest, FunctionSyntaxTest) {
 }
 
 TEST_F(ScannerTest, UnaryOpSyntaxTest) {
-  std::vector<test::Test> tests = {
+  std::vector<TestCase> tests = {
       // Empty function test
       {"fun test(){ return -1 }",
        {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN,
@@ -228,7 +231,7 @@ TEST_F(ScannerTest, UnaryOpSyntaxTest) {
 }
 
 TEST_F(ScannerTest, BinOpSyntaxTest) {
-  std::vector<test::Test> tests = {
+  std::vector<TestCase> tests = {
       // Empty function test
       {"fun test(){ return 1 & 2 }",
        {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN,
@@ -251,7 +254,7 @@ TEST_F(ScannerTest, BinOpSyntaxTest) {
 }
 
 TEST_F(ScannerTest, CommentTest) {
-  std::vector<test::Test> tests = {
+  std::vector<TestCase> tests = {
       // Empty function test
       {"fun test(){ /* comment */ return 1 & 2 }",
        {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN,
@@ -263,4 +266,4 @@ TEST_F(ScannerTest, CommentTest) {
   RunTests(tests);
 }
 
-}  // namespace tpl::parsing::test
+}  // namespace tpl::parsing

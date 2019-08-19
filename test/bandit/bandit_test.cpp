@@ -17,7 +17,7 @@
 
 #define NUM_EXPERIMENTS 10
 
-namespace tpl::vm::test {
+namespace tpl::vm {
 
 struct TestConf {
   std::string pred1;
@@ -277,4 +277,4 @@ std::vector<TestConf> confs = {
 INSTANTIATE_TEST_CASE_P(SimpleTestInstance, BanditTest,
                         ::testing::ValuesIn(confs));
 
-}  // namespace tpl::vm::test
+}  // namespace tpl::vm

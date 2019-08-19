@@ -9,7 +9,7 @@
 #include "sql/value.h"
 #include "util/timer.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class ArithmeticFunctionsTests : public TplTest {
  protected:
@@ -289,4 +289,4 @@ TEST_F(ArithmeticFunctionsTests, Sign) {
   EXPECT_DOUBLE_EQ(0.0, result.val);
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

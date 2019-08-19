@@ -7,7 +7,7 @@
 #include "sql/vector.h"
 #include "util/bit_util.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class VectorTest : public TplTest {};
 
@@ -364,4 +364,4 @@ TEST_F(VectorTest, Print) {
   }
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

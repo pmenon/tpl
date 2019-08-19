@@ -8,7 +8,7 @@
 #include "sema/error_reporter.h"
 #include "util/region.h"
 
-namespace tpl::ast::test {
+namespace tpl::ast {
 
 class TypeTest : public TplTest {
  public:
@@ -247,4 +247,4 @@ TEST_F(TypeTest, FunctionTypeCacheTest) {
   }
 }
 
-}  // namespace tpl::ast::test
+}  // namespace tpl::ast

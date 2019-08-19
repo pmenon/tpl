@@ -4,7 +4,7 @@
 
 #include "sql/memory_pool.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class MemoryPoolTest : public TplTest {};
 
@@ -59,4 +59,4 @@ TEST_F(MemoryPoolTest, ComplexPointers) {
   pool.FreeObject(std::move(obj1));
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

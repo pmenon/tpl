@@ -16,7 +16,7 @@
 #include "sql/vector_projection_iterator.h"
 #include "util/hash.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 /**
  * An input tuple, this is what we use to probe and update aggregates
@@ -435,4 +435,4 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
   EXPECT_EQ(num_aggs, qstate.row_count.load(std::memory_order_seq_cst));
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

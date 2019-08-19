@@ -8,7 +8,7 @@
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 namespace {
 
@@ -147,4 +147,4 @@ TEST_F(SorterVectorIteratorTest, Iterate) {
   EXPECT_EQ(num_elems, num_found);
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

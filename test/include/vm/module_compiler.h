@@ -12,7 +12,7 @@
 #include "vm/bytecode_module.h"
 #include "vm/module.h"
 
-namespace tpl::vm::test {
+namespace tpl::vm {
 
 class ModuleCompiler {
  public:
@@ -54,4 +54,4 @@ class ModuleCompiler {
   ast::Context ctx_;
 };
 
-}  // namespace tpl::vm::test
+}  // namespace tpl::vm

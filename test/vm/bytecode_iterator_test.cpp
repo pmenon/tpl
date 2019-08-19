@@ -8,7 +8,7 @@
 #include "vm/bytecode_label.h"
 #include "vm/vm.h"
 
-namespace tpl::vm::test {
+namespace tpl::vm {
 
 class BytecodeIteratorTest : public TplTest {
  public:
@@ -84,4 +84,4 @@ TEST_F(BytecodeIteratorTest, JumpTest) {
   EXPECT_EQ(v1, iter.GetLocalOperand(2));
 }
 
-}  // namespace tpl::vm::test
+}  // namespace tpl::vm

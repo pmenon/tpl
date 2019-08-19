@@ -9,7 +9,7 @@
 #include "sql/thread_state_container.h"
 #include "util/hash.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 /// This is the tuple we insert into the hash table
 struct Tuple {
@@ -23,18 +23,6 @@ class JoinHashTableTest : public TplTest {
   JoinHashTableTest() : memory_(nullptr) {}
 
   MemoryPool *memory() { return &memory_; }
-
-  GenericHashTable *GenericTableFor(JoinHashTable *join_hash_table) {
-    return &join_hash_table->generic_hash_table_;
-  }
-
-  ConciseHashTable *ConciseTableFor(JoinHashTable *join_hash_table) {
-    return &join_hash_table->concise_hash_table_;
-  }
-
-  BloomFilter *BloomFilterFor(JoinHashTable *join_hash_table) {
-    return &join_hash_table->bloom_filter_;
-  }
 
  private:
   MemoryPool memory_;
@@ -71,7 +59,7 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
   // Before build, the generic hash table shouldn't be populated, but the join
   // table's storage should have buffered all input tuples
   EXPECT_EQ(num_tuples, join_hash_table.GetElementCount());
-  EXPECT_EQ(0u, GenericTableFor(&join_hash_table)->num_elements());
+  EXPECT_EQ(0u, join_hash_table.generic_hash_table_.num_elements());
 
   // Try to build
   join_hash_table.Build();
@@ -79,7 +67,7 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
   // Post-build, the sizes should be synced up since all tuples were inserted
   // into the GHT
   EXPECT_EQ(num_tuples, join_hash_table.GetElementCount());
-  EXPECT_EQ(num_tuples, GenericTableFor(&join_hash_table)->num_elements());
+  EXPECT_EQ(num_tuples, join_hash_table.generic_hash_table_.num_elements());
 }
 
 void PopulateJoinHashTable(JoinHashTable *jht, u32 num_tuples,
@@ -224,7 +212,8 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
   }
 }
 
-TEST_F(JoinHashTableTest, DISABLED_PerfTest) {
+#if 0
+TEST_F(JoinHashTableTest, PerfTest) {
   const u32 num_tuples = 10000000;
 
   auto bench = [this](bool concise, u32 num_tuples) {
@@ -267,5 +256,6 @@ TEST_F(JoinHashTableTest, DISABLED_PerfTest) {
   bench(false, num_tuples);
   bench(true, num_tuples);
 }
+#endif
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

@@ -8,7 +8,7 @@
 
 #include "util/fixed_length_buffer.h"
 
-namespace tpl::util::test {
+namespace tpl::util {
 
 class FixedLengthBufferTest : public TplTest {};
 
@@ -65,4 +65,4 @@ TEST_F(FixedLengthBufferTest, OutOfBoundsAccess) {
   EXPECT_THROW(buffer.at(2), std::out_of_range);
 }
 
-}  // namespace tpl::util::test
+}  // namespace tpl::util

@@ -11,7 +11,7 @@
 
 #include "sql/thread_state_container.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class ThreadStateContainerTest : public TplTest {
  protected:
@@ -144,4 +144,4 @@ TEST_F(ThreadStateContainerTest, SimpleContainerTest) {
   }
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

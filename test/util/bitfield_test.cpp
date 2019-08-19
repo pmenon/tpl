@@ -2,7 +2,7 @@
 
 #include "util/bitfield.h"
 
-namespace tpl::util::test {
+namespace tpl::util {
 
 TEST(BitfieldTest, SingleElementTest) {
   // Try to encode a single 8-bit character element in a 32-bit integer
@@ -91,4 +91,4 @@ TEST(BitfieldTest, BooleanElementTest) {
   EXPECT_FALSE(BF::Decode(bitfield_3));
 }
 
-}  // namespace tpl::util::test
+}  // namespace tpl::util

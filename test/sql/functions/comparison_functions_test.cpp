@@ -9,7 +9,7 @@
 #include "sql/value.h"
 #include "util/timer.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class ComparisonFunctionsTests : public TplTest {};
 
@@ -130,4 +130,4 @@ TEST_F(ComparisonFunctionsTests, StringComparison) {
 #undef CHECK
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

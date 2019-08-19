@@ -9,7 +9,7 @@
 #include "ips4o/ips4o.hpp"
 #include "util/chunked_vector.h"
 
-namespace tpl::util::test {
+namespace tpl::util {
 
 class ChunkedVectorTest : public TplTest {};
 
@@ -468,4 +468,4 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
   std::cout << "ChunkedVector: " << chunked_ms << " ms" << std::endl;
 }
 
-}  // namespace tpl::util::test
+}  // namespace tpl::util

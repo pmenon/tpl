@@ -1,5 +1,3 @@
-#include <string>
-#include <utility>
 #include <vector>
 
 #include "tpl_test.h"  // NOLINT
@@ -9,9 +7,9 @@
 
 #include "sema/sema.h"
 
-namespace tpl::sema::test {
+namespace tpl::sema {
 
-class SemaBuiltinTest : public TplTest, public ast::test::TestAstBuilder {
+class SemaBuiltinTest : public TplTest, public ast::TestAstBuilder {
  public:
   bool Check(ast::AstNode *node) {
     sema::Sema sema(ctx());
@@ -155,4 +153,4 @@ TEST_F(SemaBuiltinTest, CheckTrigBuiltins) {
   }
 }
 
-}  // namespace tpl::sema::test
+}  // namespace tpl::sema

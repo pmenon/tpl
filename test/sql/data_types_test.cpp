@@ -2,7 +2,7 @@
 
 #include "sql/data_types.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class DataTypesTests : public TplTest {};
 
@@ -170,4 +170,4 @@ TEST_F(DataTypesTests, VarcharType) {
   EXPECT_TRUE(type1.Equals(VarcharType::InstanceNullable(100)));
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

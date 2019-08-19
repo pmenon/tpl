@@ -17,7 +17,7 @@
 #include "util/hash.h"
 #include "vm/module.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 /**
  * An input tuple, this is what we use to probe and update aggregates
@@ -241,4 +241,4 @@ TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
   }
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

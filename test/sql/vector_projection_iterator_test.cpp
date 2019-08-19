@@ -10,7 +10,7 @@
 #include "sql/catalog.h"
 #include "sql/vector_projection_iterator.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 ///
 /// The tests in this file work from one VectorProjection with five columns:
@@ -353,4 +353,4 @@ TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
   }
 }
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql

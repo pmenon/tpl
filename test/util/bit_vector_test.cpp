@@ -6,7 +6,7 @@
 
 #include "util/bit_vector.h"
 
-namespace tpl::util::test {
+namespace tpl::util {
 
 namespace {
 
@@ -452,4 +452,4 @@ TEST(BitVectorTest, InlinedBitVector) {
   }
 }
 
-}  // namespace tpl::util::test
+}  // namespace tpl::util

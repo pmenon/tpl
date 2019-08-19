@@ -4,6 +4,9 @@
 #include <numeric>
 #include <vector>
 
+// Needed for friend tests
+#include "gtest/gtest_prod.h"
+
 #include "sql/bloom_filter.h"
 #include "sql/concise_hash_table.h"
 #include "sql/generic_hash_table.h"
@@ -14,10 +17,6 @@
 namespace libcount {
 class HLL;
 }  // namespace libcount
-
-namespace tpl::sql::test {
-class JoinHashTableTest;
-}  // namespace tpl::sql::test
 
 namespace tpl::sql {
 
@@ -174,7 +173,8 @@ class JoinHashTable {
   const BloomFilter *bloom_filter() const { return &bloom_filter_; }
 
  private:
-  friend class tpl::sql::test::JoinHashTableTest;
+  FRIEND_TEST(JoinHashTableTest, LazyInsertionTest);
+  FRIEND_TEST(JoinHashTableTest, PerfTest);
 
   // Access a stored entry by index
   HashTableEntry *EntryAt(const u64 idx) {

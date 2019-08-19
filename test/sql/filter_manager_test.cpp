@@ -6,10 +6,10 @@
 
 #include "sql/catalog.h"
 #include "sql/filter_manager.h"
-#include "sql/vector_filter_executor.h"
 #include "sql/table_vector_iterator.h"
+#include "sql/vector_filter_executor.h"
 
-namespace tpl::sql::test {
+namespace tpl::sql {
 
 class FilterManagerTest : public SqlBasedTest {};
 
@@ -293,4 +293,4 @@ TEST_F(FilterManagerTest, Experiment) {
 }
 #endif
 
-}  // namespace tpl::sql::test
+}  // namespace tpl::sql
