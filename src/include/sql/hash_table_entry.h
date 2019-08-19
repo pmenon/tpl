@@ -2,7 +2,7 @@
 
 #include <type_traits>
 
-#include "sql.h"
+#include "sql/sql.h"
 #include "util/common.h"
 
 namespace tpl::sql {

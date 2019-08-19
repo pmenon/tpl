@@ -30,7 +30,6 @@ u32 TemplatedSelectOperation_Vector_Constant(const Vector &left,
     VectorOps::Exec(left, [&](u64 i, u64 k) {
       out_sel_vector[out_idx] = i;
       out_idx += !left_nulls[i] && Op::Apply(left_data[i], right_data[0]);
-      ;
     });
   } else {
     // Fast-path: no NULLs
