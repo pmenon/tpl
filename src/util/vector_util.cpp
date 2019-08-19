@@ -3,20 +3,41 @@
 #include <immintrin.h>
 
 #include "util/bit_util.h"
+#include "util/bit_vector.h"
 #include "util/math_util.h"
+#include "util/simd/types.h"
 
 namespace tpl::util {
 
-u32 VectorUtil::IntersectSelected_Scalar(const sel_t *v1, const u32 v1_count,
-                                         const sel_t *v2, const u32 v2_count,
-                                         sel_t *out_v) {
+u32 VectorUtil::IntersectSelected(const sel_t *sel_vector_1,
+                                  const u32 sel_vector_1_len,
+                                  const sel_t *sel_vector_2,
+                                  const u32 sel_vector_2_len,
+                                  sel_t *out_sel_vector) {
+  // No-op if either vector is empty
+  if (sel_vector_1_len == 0 || sel_vector_2_len == 0) {
+    return 0;
+  }
+
+  // Canonical-ize; ensure the first vector is smaller than the second
+  if (sel_vector_1_len > sel_vector_2_len) {
+    return IntersectSelected(sel_vector_2, sel_vector_2_len, sel_vector_1,
+                             sel_vector_1_len, out_sel_vector);
+  }
+
+  // Run
+
+  // TODO(pmenon): We can use something faster or adaptive, like Katsov et.al or
+  //               Inoue et. al, but there isn't a need for fast sorted-set
+  //               intersection at the moment.
+
   u32 i = 0, j = 0, k = 0;
-  while (i < v1_count && j < v2_count) {
-    if (v1[i] == v2[j]) {
-      out_v[k++] = v1[i];
+  while (i < sel_vector_1_len && j < sel_vector_2_len) {
+    if (sel_vector_1[i] == sel_vector_2[j]) {
+      out_sel_vector[k++] = sel_vector_1[i];
       i++;
       j++;
-    } else if (v1[i] < v2[j]) {
+    } else if (sel_vector_1[i] < sel_vector_2[j]) {
       i++;
     } else {
       j++;
@@ -26,21 +47,20 @@ u32 VectorUtil::IntersectSelected_Scalar(const sel_t *v1, const u32 v1_count,
   return k;
 }
 
-u32 VectorUtil::IntersectSelected(const sel_t *v1, const u32 v1_count,
-                                  const sel_t *v2, const u32 v2_count,
-                                  sel_t *const out_v) {
-  // No-op if either vector is empty
-  if (v1_count == 0 || v2_count == 0) {
-    return 0;
-  }
+u32 VectorUtil::IntersectSelected(const sel_t *sel_vector,
+                                  const u32 sel_vector_len,
+                                  const u64 *bit_vector,
+                                  const u32 bit_vector_len,
+                                  sel_t *out_sel_vector) {
+  BitVector bv(const_cast<u64 *>(bit_vector), bit_vector_len);
 
-  // Canonical-ize; ensure the first vector is smaller than the second
-  if (v1_count > v2_count) {
-    return IntersectSelected(v2, v2_count, v1, v1_count, out_v);
+  u32 k = 0;
+  for (u32 i = 0; i < sel_vector_len; i++) {
+    const auto index = sel_vector[i];
+    out_sel_vector[k] = index;
+    k += bv.Test(index);
   }
-
-  // Run
-  return IntersectSelected_Scalar(v1, v1_count, v2, v2_count, out_v);
+  return k;
 }
 
 u32 VectorUtil::DiffSelected_Scalar(const u32 n, const sel_t *sel_vector,
@@ -58,23 +78,25 @@ u32 VectorUtil::DiffSelected_Scalar(const u32 n, const sel_t *sel_vector,
   return n - m;
 }
 
-u32 VectorUtil::DiffSelected_WithScratchpad(const u32 n,
+u32 VectorUtil::DiffSelected_WithScratchPad(const u32 n,
                                             const sel_t *sel_vector,
-                                            const u32 m, sel_t *out_sel_vector,
-                                            u8 scratch[2048]) {
+                                            const u32 sel_vector_len,
+                                            sel_t *out_sel_vector,
+                                            u8 *scratch) {
   TPL_ASSERT(n <= kDefaultVectorSize, "Selection vector too large");
   std::memset(scratch, 0, n);
-  VectorUtil::SelectionVectorToByteVector(m, sel_vector, scratch);
+  VectorUtil::SelectionVectorToByteVector(sel_vector_len, sel_vector, scratch);
   for (u32 i = 0; i < n; i++) {
     scratch[i] = ~scratch[i];
   }
   return VectorUtil::ByteVectorToSelectionVector(n, scratch, out_sel_vector);
 }
 
-u32 VectorUtil::DiffSelected(const u32 n, const sel_t *sel_vector, const u32 m,
-                             sel_t *out_sel_vector) {
+u32 VectorUtil::DiffSelected(const u32 n, const sel_t *sel_vector,
+                             const u32 sel_vector_len, sel_t *out_sel_vector) {
   u8 scratch[kDefaultVectorSize];
-  return DiffSelected_WithScratchpad(n, sel_vector, m, out_sel_vector, scratch);
+  return DiffSelected_WithScratchPad(n, sel_vector, sel_vector_len,
+                                     out_sel_vector, scratch);
 }
 
 void VectorUtil::SelectionVectorToByteVector(const u32 n,

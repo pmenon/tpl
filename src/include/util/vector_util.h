@@ -117,17 +117,37 @@ class VectorUtil {
    * Intersect the sorted input selection vectors @em v1 and @em v2, with
    * lengths @em v1_count and @em v2_count, respectively, and store the result
    * of the intersection in the output selection vector @em out_v.
-   * @param v1 The first input selection vector.
-   * @param v1_count The length of the first input selection vector.
-   * @param v2 The second input selection vector.
-   * @param v2_count The length of the second input selection vector.
-   * @param out_v The output selection vector storing the result of the
+   * @param sel_vector_1 The first input selection vector.
+   * @param sel_vector_1_len The length of the first input selection vector.
+   * @param sel_vector_2 The second input selection vector.
+   * @param sel_vector_2_len The length of the second input selection vector.
+   * @param out_sel_vector The output selection vector storing the result of the
    *              intersection.
    * @return The number of elements in the output selection vector.
    */
   [[nodiscard]] static u32
-      IntersectSelected(const sel_t *v1, u32 v1_count, const sel_t *v2,
-                        u32 v2_count, sel_t *out_v);
+      IntersectSelected(const sel_t *sel_vector_1, u32 sel_vector_1_len,
+                        const sel_t *sel_vector_2, u32 sel_vector_2_len,
+                        sel_t *out_sel_vector);
+
+  /**
+   * Intersect the sorted input selection vector @em v1 and the input bit vector
+   * @em bit_vector, and store the result of the intersection in the output
+   * selection vector @em out_v.
+   *
+   * @param sel_vector The input selection vector.
+   * @param sel_vector_len The length of the input selection vector.
+   * @param bit_vector The input bit vector.
+   * @param bit_vector_len The length of the bit vector in bits.
+   * @param[out] out_sel_vector The output selection vector storing the result
+   *                            of the intersection.
+   * @return The number of elements in the output selection vector.
+   */
+  [[nodiscard]] static u32 IntersectSelected(const sel_t *sel_vector,
+                                             u32 sel_vector_len,
+                                             const u64 *bit_vector,
+                                             u32 bit_vector_len,
+                                             sel_t *out_sel_vector);
 
   /**
    * Populate the output selection vector @em out_sel_vector with all indexes
@@ -135,11 +155,12 @@ class VectorUtil {
    * @param n The maximum number of indexes that can appear in the selection
    *          vector.
    * @param sel_vector The input selection vector.
-   * @param m The number of elements in the input selection vector.
+   * @param sel_vector_len The number of elements in the input selection vector.
    * @param[out] out_sel_vector The output selection vector.
    * @return The number of elements in the output selection vector.
    */
-  [[nodiscard]] static u32 DiffSelected(u32 n, const sel_t *sel_vector, u32 m,
+  [[nodiscard]] static u32 DiffSelected(u32 n, const sel_t *sel_vector,
+                                        u32 sel_vector_len,
                                         sel_t *out_sel_vector);
 
   /**
@@ -208,14 +229,10 @@ class VectorUtil {
                                                       sel_t *sel_vector);
 
  private:
+  FRIEND_TEST(VectorUtilTest, IntersectScalar);
   FRIEND_TEST(VectorUtilTest, DiffSelected);
-  FRIEND_TEST(VectorUtilTest, DiffSelectedWithScratcPad);
-
-  // A sorter-set intersection implementation using scalar operations
-  [[nodiscard]] static u32 IntersectSelected_Scalar(const sel_t *v1,
-                                                    u32 v1_count,
-                                                    const sel_t *v2,
-                                                    u32 v2_count, sel_t *out_v);
+  FRIEND_TEST(VectorUtilTest, DiffSelectedWithScratchPad);
+  FRIEND_TEST(VectorUtilTest, PerfIntersectSelected);
 
   // A sorted-set difference implementation using purely scalar operations
   [[nodiscard]] static u32 DiffSelected_Scalar(u32 n, const sel_t *sel_vector,
@@ -224,11 +241,11 @@ class VectorUtil {
   // A sorted-set difference implementation that uses a little extra memory
   // (the scratchpad) and executes more instructions, but has better CPI, and is
   // faster in the common case.
-  [[nodiscard]] static u32 DiffSelected_WithScratchpad(u32 n,
+  [[nodiscard]] static u32 DiffSelected_WithScratchPad(u32 n,
                                                        const sel_t *sel_vector,
-                                                       u32 m,
+                                                       u32 sel_vector_len,
                                                        sel_t *out_sel_vector,
-                                                       u8 scratch[2048]);
+                                                       u8 *scratch);
 };
 
 }  // namespace tpl::util

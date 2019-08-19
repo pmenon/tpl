@@ -6,7 +6,7 @@
 
 #include "tpl_test.h"  // NOLINT
 
-#include "sql/memory_pool.h"
+#include "sql/sql.h"
 #include "util/bit_vector.h"
 #include "util/fast_rand.h"
 #include "util/timer.h"
@@ -16,7 +16,7 @@ namespace tpl::util {
 
 class VectorUtilTest : public TplTest {};
 
-TEST(VectorUtilTest, Access) {
+TEST_F(VectorUtilTest, Access) {
   {
     simd::Vec8 in(44);
     for (u32 i = 0; i < simd::Vec8::Size(); i++) {
@@ -34,7 +34,7 @@ TEST(VectorUtilTest, Access) {
   }
 }
 
-TEST(VectorUtilTest, Arithmetic) {
+TEST_F(VectorUtilTest, Arithmetic) {
   // Addition
   {
     simd::Vec8 v(1, 2, 3, 4, 5, 6, 7, 8);
@@ -81,7 +81,7 @@ TEST(VectorUtilTest, Arithmetic) {
   }
 }
 
-TEST(VectorUtilTest, BitwiseOperations) {
+TEST_F(VectorUtilTest, BitwiseOperations) {
   // Left shift
   {
     simd::Vec8 v(1, 2, 3, 4, 5, 6, 7, 8);
@@ -113,7 +113,7 @@ TEST(VectorUtilTest, BitwiseOperations) {
   }
 }
 
-TEST(VectorUtilTest, Comparisons) {
+TEST_F(VectorUtilTest, Comparisons) {
   // Equality
   {
     simd::Vec8 in(10, 20, 30, 40, 50, 60, 70, 80);
@@ -205,7 +205,7 @@ TEST(VectorUtilTest, Comparisons) {
   }
 }
 
-TEST(VectorUtilTest, MaskToPosition) {
+TEST_F(VectorUtilTest, MaskToPosition) {
   simd::Vec8 vec(3, 0, 4, 1, 5, 2, 6, 2);
   simd::Vec8 val(2);
 
@@ -264,7 +264,7 @@ void SmallScale_NeedleTest() {
   EXPECT_EQ(actual_count, count);
 }
 
-TEST(VectorUtilTest, SimpleFilter) {
+TEST_F(VectorUtilTest, SimpleFilter) {
   SmallScale_NeedleTest<i8>();
   SmallScale_NeedleTest<u8>();
   SmallScale_NeedleTest<i16>();
@@ -275,7 +275,7 @@ TEST(VectorUtilTest, SimpleFilter) {
   SmallScale_NeedleTest<u64>();
 }
 
-TEST(VectorUtilTest, VectorVectorFilter) {
+TEST_F(VectorUtilTest, VectorVectorFilter) {
   //
   // Test: two arrays, a1 and a2; a1 contains sequential numbers in the range
   //       [0, 1000), and s2 contains sequential numbers in range [1,1001).
@@ -351,7 +351,7 @@ TEST(VectorUtilTest, VectorVectorFilter) {
 #undef CHECK
 }
 
-TEST(VectorUtilTest, ByteToSelectionVector) {
+TEST_F(VectorUtilTest, ByteToSelectionVector) {
   constexpr u32 n = 14;
   u8 bytes[n] = {0xFF, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00,
                  0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00};
@@ -369,7 +369,7 @@ TEST(VectorUtilTest, ByteToSelectionVector) {
   EXPECT_EQ(12u, sel[7]);
 }
 
-TEST(VectorUtilTest, BitToByteVector) {
+TEST_F(VectorUtilTest, BitToByteVector) {
   // Large enough to run through both vector-loop and scalar tail
   constexpr u32 num_bits = 97;
 
@@ -393,7 +393,7 @@ TEST(VectorUtilTest, BitToByteVector) {
   }
 }
 
-TEST(VectorUtilTest, BitToSelectionVector) {
+TEST_F(VectorUtilTest, BitToSelectionVector) {
   // 126-bit vector and the output selection vector
   constexpr u32 num_bits = 126;
   BitVector bv(num_bits);
@@ -417,7 +417,7 @@ TEST(VectorUtilTest, BitToSelectionVector) {
   }
 }
 
-TEST(VectorUtilTest, DiffSelected) {
+TEST_F(VectorUtilTest, DiffSelected) {
   sel_t input[kDefaultVectorSize] = {0, 2, 3, 5, 7, 9};
   sel_t output[kDefaultVectorSize];
   u32 out_count = VectorUtil::DiffSelected_Scalar(10, input, 6, output);
@@ -428,13 +428,13 @@ TEST(VectorUtilTest, DiffSelected) {
   EXPECT_EQ(8u, output[3]);
 }
 
-TEST(VectorUtilTest, DiffSelectedWithScratcPad) {
+TEST_F(VectorUtilTest, DiffSelectedWithScratchPad) {
   sel_t input[kDefaultVectorSize] = {2, 3, 5, 7, 9};
   sel_t output[kDefaultVectorSize];
-  u8 scratchpad[kDefaultVectorSize];
+  u8 scratch[kDefaultVectorSize];
 
   auto count =
-      VectorUtil::DiffSelected_WithScratchpad(10, input, 5, output, scratchpad);
+      VectorUtil::DiffSelected_WithScratchPad(10, input, 5, output, scratch);
   EXPECT_EQ(5u, count);
   EXPECT_EQ(0u, output[0]);
   EXPECT_EQ(1u, output[1]);
@@ -443,7 +443,38 @@ TEST(VectorUtilTest, DiffSelectedWithScratcPad) {
   EXPECT_EQ(8u, output[4]);
 }
 
-TEST(VectorUtilTest, DISABLED_PerfSelect) {
+TEST_F(VectorUtilTest, IntersectSelectionVectors) {
+  sel_t a[] = {2, 3, 5, 7, 9};
+  sel_t b[] = {1, 2, 4, 7, 8, 9, 10, 11};
+  sel_t out[kDefaultVectorSize];
+
+  auto out_count = VectorUtil::IntersectSelected(a, sizeof(a) / sizeof(a[0]), b,
+                                                 sizeof(b) / sizeof(b[0]), out);
+  EXPECT_EQ(3u, out_count);
+  EXPECT_EQ(2u, out[0]);
+  EXPECT_EQ(7u, out[1]);
+  EXPECT_EQ(9u, out[2]);
+
+  // Reverse arguments, should still work
+  out_count = VectorUtil::IntersectSelected(b, sizeof(b) / sizeof(b[0]), a,
+                                            sizeof(a) / sizeof(a[0]), out);
+  EXPECT_EQ(3u, out_count);
+  EXPECT_EQ(2u, out[0]);
+  EXPECT_EQ(7u, out[1]);
+  EXPECT_EQ(9u, out[2]);
+
+  // Empty arguments should work
+  out_count = VectorUtil::IntersectSelected(nullptr, 0, b,
+                                            sizeof(b) / sizeof(b[0]), out);
+  EXPECT_EQ(0u, out_count);
+
+  out_count = VectorUtil::IntersectSelected(
+      b, sizeof(b) / sizeof(b[0]), static_cast<sel_t *>(nullptr), 0, out);
+  EXPECT_EQ(0u, out_count);
+}
+
+#if 0
+TEST_F(VectorUtilTest, DISABLED_PerfSelect) {
   constexpr u32 num_elems = 128 * 1024u * 1024u;
   constexpr const u32 chunk_size = 4096;
 
@@ -483,7 +514,6 @@ TEST(VectorUtilTest, DISABLED_PerfSelect) {
   }
 }
 
-#if 0
 TEST_F(VectorUtilTest, DISABLED_PerfInvertSel) {
   LOG_INFO("Sel., Scalar (ms), Vector (ms)");
 
