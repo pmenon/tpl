@@ -334,7 +334,7 @@ class BitVectorBase {
   void SetFromBytes(const u8 *const bytes, const u32 num_bytes) {
     TPL_ASSERT(bytes != nullptr, "Null input");
     TPL_ASSERT(num_bytes == impl()->num_bits(), "Byte vector too small");
-    util::VectorUtil::ByteVectorToBitVector(num_bytes, bytes,
+    util::VectorUtil::ByteVectorToBitVector(bytes, num_bytes,
                                             impl()->data_array());
   }
 

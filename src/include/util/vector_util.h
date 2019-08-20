@@ -167,50 +167,50 @@ class VectorUtil {
    * Convert a selection vector into a byte vector. For each index stored in the
    * selection vector, set the corresponding index in the byte vector to the
    * saturated 8-bit integer (0xFF = 255 = 11111111).
-   * @param n The number of elements in the selection vector, and the minimum
-   *          capacity of the byte vector.
+   * @param num_elems The number of elements in the selection vector, and the
+   *                  minimum capacity of the byte vector.
    * @param sel_vector The input selection index vector.
    * @param[out] byte_vector The output byte vector.
    */
-  static void SelectionVectorToByteVector(u32 n, const sel_t *sel_vector,
-                                          u8 *byte_vector);
+  static void SelectionVectorToByteVector(const sel_t *sel_vector,
+                                          u32 num_elems, u8 *byte_vector);
 
   /**
    * Convert a byte vector into a selection vector. For all elements in the byte
    * vector whose value is a saturated 8-bit integer (0xFF = 255 = 11111111),
    * left-pack the indexes of the elements into the selection vector.
-   * @param n The number of elements in the byte vector, and the minimum
-   *          capacity of the selection vector.
+   * @param num_bytes The number of elements in the byte vector, and the minimum
+   *                  capacity of the selection vector.
    * @param byte_vector The input byte vector.
    * @param[out] sel_vector The output selection vector.
    * @return The number of elements in the selection vector.
    */
-  [[nodiscard]] static u32 ByteVectorToSelectionVector(u32 n,
-                                                       const u8 *byte_vector,
+  [[nodiscard]] static u32 ByteVectorToSelectionVector(const u8 *byte_vector,
+                                                       u32 num_bytes,
                                                        sel_t *sel_vector);
 
   /**
    * Convert a byte vector to a bit vector. For all elements in the byte vector
    * whose value is a saturated 8-bit integer (0xFF = 255 = 11111111), set the
    * corresponding bit in the bit vector to 1.
-   * @param n The number of elements in the byte vector, and the minimum
-   *          capacity (in bits) of the bit vector.
+   * @param num_bytes The number of elements in the byte vector, and the minimum
+   *                  capacity (in bits) of the bit vector.
    * @param byte_vector The input byte vector.
    * @param[out] bit_vector The output bit vector.
    */
-  static void ByteVectorToBitVector(u32 n, const u8 *byte_vector,
+  static void ByteVectorToBitVector(const u8 *byte_vector, u32 num_bytes,
                                     u64 *bit_vector);
 
   /**
    * Convert a bit vector into a byte vector. For all set bits in the input bit
    * vector, set the corresponding byte to a saturated 8-bit integer. The input
    * bit vector has @em n bits, and the output byte vector has @em n bytes.
-   * @param n The number of bits in the bit vector, and the minimum capacity of
-   *          the byte vector
+   * @param num_bits The number of bits in the bit vector, and the minimum
+   *                 capacity of the byte vector
    * @param bit_vector The input bit vector, passed along as an array of words.
    * @param byte_vector The output byte vector.
    */
-  static void BitVectorToByteVector(u32 n, const u64 *bit_vector,
+  static void BitVectorToByteVector(const u64 *bit_vector, u32 num_bits,
                                     u8 *byte_vector);
 
   /**
@@ -218,14 +218,14 @@ class VectorUtil {
    * in the bit vector that are true, insert their indexes into the output
    * selection vector. The resulting selection vector is guaranteed to be
    * sorted ascending.
-   * @param n The number of bits in the bit vector, and the minimum capacity of
-   *          the selection vector.
+   * @param num_bits The number of bits in the bit vector, and the minimum
+   *                 capacity of the selection vector.
    * @param bit_vector The input bit vector.
    * @param[out] sel_vector The output selection vector.
    * @return The number of elements in the selection vector.
    */
-  [[nodiscard]] static u32 BitVectorToSelectionVector(u32 n,
-                                                      const u64 *bit_vector,
+  [[nodiscard]] static u32 BitVectorToSelectionVector(const u64 *bit_vector,
+                                                      u32 num_bits,
                                                       sel_t *sel_vector);
 
  private:

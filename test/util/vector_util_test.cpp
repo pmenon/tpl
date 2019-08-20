@@ -357,7 +357,7 @@ TEST_F(VectorUtilTest, ByteToSelectionVector) {
                  0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00};
   sel_t sel[n];
 
-  u32 size = VectorUtil::ByteVectorToSelectionVector(n, bytes, sel);
+  u32 size = VectorUtil::ByteVectorToSelectionVector(bytes, n, sel);
   EXPECT_EQ(8u, size);
   EXPECT_EQ(0u, sel[0]);
   EXPECT_EQ(3u, sel[1]);
@@ -385,7 +385,7 @@ TEST_F(VectorUtilTest, BitToByteVector) {
   bv.Set(44);
   bv.Set(73);
 
-  util::VectorUtil::BitVectorToByteVector(bv.num_bits(), bv.data_array(),
+  util::VectorUtil::BitVectorToByteVector(bv.data_array(), bv.num_bits(),
                                           bytes);
 
   for (u32 i = 0; i < bv.num_bits(); i++) {
@@ -405,8 +405,8 @@ TEST_F(VectorUtilTest, BitToSelectionVector) {
   }
 
   // Transform
-  u32 size = util::VectorUtil::BitVectorToSelectionVector(num_bits,
-                                                          bv.data_array(), sel);
+  u32 size = util::VectorUtil::BitVectorToSelectionVector(bv.data_array(),
+                                                          num_bits, sel);
 
   // Only 63 bits are set (remember there are only 126-bits)
   EXPECT_EQ(63u, size);
