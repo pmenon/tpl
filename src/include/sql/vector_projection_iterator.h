@@ -56,7 +56,7 @@ class VectorProjectionIterator {
    */
   void SetVectorProjection(VectorProjection *vp) {
     vector_projection_ = vp;
-    curr_idx_ = vector_projection_->IsFiltered() ? vp->sel_vector_[0] : 0;
+    curr_idx_ = vp->IsFiltered() ? vp->sel_vector_[0] : 0;
     sel_vector_ = vp->sel_vector_;
     sel_vector_read_idx_ = 0;
     sel_vector_write_idx_ = 0;
