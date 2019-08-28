@@ -25,15 +25,24 @@ class VectorProjectionIterator;
 class AHTIterator;
 class AHTVectorIterator;
 class AHTOverflowPartitionIterator;
+
 /**
- * The hash table used when performing aggregations
+ * The hash table used when performing aggregations.
  */
 class AggregationHashTable {
  public:
-  static constexpr float kDefaultLoadFactor = 0.7;
-  static constexpr u32 kDefaultInitialTableSize = 256;
-  static constexpr u32 kDefaultNumPartitions = 512;
-  static constexpr u32 kDefaultHLLPrecision = 10;
+  // The default load factor we allow the hash table to reach before resizing
+  constexpr static f32 kDefaultLoadFactor = 0.7;
+
+  // The default initial size we set the hash table on construction
+  constexpr static u32 kDefaultInitialTableSize = 256;
+
+  // The default number of partitions we use in partitioned aggregation mode
+  constexpr static u32 kDefaultNumPartitions = 512;
+
+  // The default precision we use to configure the HyperLogLog instances. Set to
+  // optimize accuracy and space manually.
+  constexpr static u32 kDefaultHLLPrecision = 10;
 
   // -------------------------------------------------------
   // Callback functions to customize aggregations

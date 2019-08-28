@@ -24,15 +24,18 @@ class BitVectorBase {
 
   // The size of a word (in bytes) used to store a contiguous set of bits. This
   // is the smallest granularity we store bits at.
-  static constexpr u32 kWordSizeBytes = sizeof(u64);
+  static constexpr u32 kWordSizeBytes = sizeof(WordType);
+
   // The size of a word in bits.
   static constexpr u32 kWordSizeBits = kWordSizeBytes * kBitsPerByte;
+
+  // Word value with all ones.
+  static constexpr WordType kAllOnesWord = ~static_cast<WordType>(0);
+
   // Ensure the size is a power of two so all the division and modulo math we do
   // is optimized into bit shifts.
   static_assert(MathUtil::IsPowerOf2(kWordSizeBits),
                 "Word size in bits expected to be a power of two");
-  // Word value with all ones.
-  static constexpr WordType kAllOnesWord = ~static_cast<WordType>(0);
 
  public:
   /**
