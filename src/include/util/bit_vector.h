@@ -19,7 +19,8 @@ namespace tpl::util {
  */
 template <typename Subclass>
 class BitVectorBase {
- protected:
+ public:
+  // Bits are grouped into chunks (also known as words) of 64-bits.
   using WordType = u64;
 
   // The size of a word (in bytes) used to store a contiguous set of bits. This
@@ -37,7 +38,6 @@ class BitVectorBase {
   static_assert(MathUtil::IsPowerOf2(kWordSizeBits),
                 "Word size in bits expected to be a power of two");
 
- public:
   /**
    * Return the number of words required to store at least @em num_bits number
    * if bits in a bit vector. Note that this may potentially over allocate.
@@ -315,11 +315,11 @@ class BitVectorBase {
 
     const WordType *data_array = impl()->data_array();
 
-    for (u32 i = 0; i < impl()->num_words(); i++) {
+    for (WordType i = 0; i < impl()->num_words(); i++) {
       WordType word = data_array[i];
       while (word != 0) {
-        const WordType t = word & -word;
-        const u32 r = BitUtil::CountTrailingZeros(word);
+        const auto t = word & -word;
+        const auto r = BitUtil::CountTrailingZeros(word);
         callback(i * kWordSizeBits + r);
         word ^= t;
       }
@@ -468,7 +468,7 @@ class InlinedBitVector : public BitVectorBase<InlinedBitVector<NumBits>> {
                 "Inlined bit vectors only support vectors that are a multiple "
                 "of the word size (i.e., 64 bits, 128 bits, etc.");
 
-  static constexpr u32 kNumWords = Base::NumNeededWords(NumBits);
+  constexpr static u32 kNumWords = Base::NumNeededWords(NumBits);
 
  public:
   /**
