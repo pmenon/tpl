@@ -3,11 +3,9 @@
 #include "sql_test.h"  // NOLINT
 
 #include "sql/constant_vector.h"
-#include "sql/tuple_id_list.h"
 #include "sql/vector.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "util/fast_rand.h"
-#include "util/vector_util.h"
 
 namespace tpl::sql {
 
