@@ -45,16 +45,28 @@ class TupleIdList {
 
   /**
    * Is the tuple with the given ID in this list?
-   * @param tuple_id The tuple ID to check.
+   * @param tid The tuple ID to check.
    * @return True if the tuple is in the list; false otherwise.
    */
-  bool Contains(const u32 tuple_id) const { return bit_vector_.Test(tuple_id); }
+  bool Contains(const u32 tid) const { return bit_vector_.Test(tid); }
 
   /**
    * Set a given tuple as active in the list.
-   * @param tuple_id The ID of the tuple.
+   * @param tid The ID of the tuple.
    */
-  void Add(const u32 tuple_id) { bit_vector_.Set(tuple_id); }
+  void Add(const u32 tid) { bit_vector_.Set(tid); }
+
+  /**
+   * Add all tuples whose IDs are in the range [start_tid, end_tid). Note the
+   * half-open interval!
+   * @param start_tid The left inclusive range boundary.
+   * @param end_tid The right inclusive range boundary.
+   */
+  void AddRange(const u32 start_tid, const u32 end_tid) {
+    TPL_ASSERT(start_tid <= end_tid, "Cannot set backward range");
+    TPL_ASSERT(end_tid <= kDefaultVectorSize, "Start TID out of range");
+    bit_vector_.SetRange(start_tid, end_tid);
+  }
 
   /**
    * Add all tuple IDs this list can support.
@@ -65,18 +77,18 @@ class TupleIdList {
    * Either enable or disable the tuple with the given ID depending on the
    * value of @em enable. If @em enable is true, the tuple is added to the list,
    * and otherwise it is disabled.
-   * @param tuple_id The ID to add or remove from the list.
+   * @param tid The ID to add or remove from the list.
    * @param enable The flag indicating if the tuple is added or removed.
    */
-  void Enable(const u32 tuple_id, const bool enable) {
-    bit_vector_.SetTo(tuple_id, enable);
+  void Enable(const u32 tid, const bool enable) {
+    bit_vector_.SetTo(tid, enable);
   }
 
   /**
    * Remove the tuple with the given ID from the list.
-   * @param tuple_id The ID of the tuple.
+   * @param tid The ID of the tuple.
    */
-  void Remove(const u32 tuple_id) { bit_vector_.Unset(tuple_id); }
+  void Remove(const u32 tid) { bit_vector_.Unset(tid); }
 
   /**
    * Intersect the set of tuple IDs in this list with the tuple IDs in the
