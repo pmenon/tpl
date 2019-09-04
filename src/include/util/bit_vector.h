@@ -70,6 +70,43 @@ class BitVectorBase {
   }
 
   /**
+   * Efficiently set all bits in the range [start, end).
+   * @param start The start bit position.
+   * @param end The end bit position.
+   */
+  void SetRange(u32 start, u32 end) {
+    TPL_ASSERT(start <= end, "Cannot set backward range");
+    TPL_ASSERT(end <= impl()->num_bits(), "End position out of range");
+
+    if (start == end) {
+      return;
+    }
+
+    WordType *data = impl()->data_array();
+
+    const auto start_word_idx = start / kWordSizeBits;
+    const auto end_word_idx = end / kWordSizeBits;
+
+    if (start_word_idx == end_word_idx) {
+      const WordType prefix_mask = kAllOnesWord << (start % kWordSizeBits);
+      const WordType postfix_mask = ~(kAllOnesWord << (end % kWordSizeBits));
+      data[start_word_idx] |= (prefix_mask & postfix_mask);
+      return;
+    }
+
+    // Prefix
+    data[start_word_idx] |= kAllOnesWord << (start % kWordSizeBits);
+
+    // Middle
+    for (u32 i = start_word_idx + 1; i < end_word_idx; i++) {
+      data[i] = kAllOnesWord;
+    }
+
+    // Postfix
+    data[end_word_idx] |= ~(kAllOnesWord << (end % kWordSizeBits));
+  }
+
+  /**
    * Set the bit at the given position to a given value.
    * @param position The index of the bit to set.
    * @param v The value to set the bit to.

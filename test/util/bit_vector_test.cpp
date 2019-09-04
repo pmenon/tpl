@@ -94,6 +94,43 @@ TEST(BitVectorTest, Set) {
   EXPECT_TRUE(Verify(bv, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
 }
 
+TEST(BitVectorDeathTest, SetRange) {
+  BitVector bv(300);
+
+  EXPECT_DEATH(bv.SetRange(20, 10), "backward");
+  EXPECT_DEATH(bv.SetRange(10, bv.num_bits() + 20), "range");
+}
+
+TEST(BitVectorTest, SetRange) {
+  BitVector bv(300);
+
+  // Check if lo <= v < hi, if v is in the range [lo, hi)
+  const auto in_range = [](u32 v, u32 lo, u32 hi) { return lo <= v && v < hi; };
+
+  // No change
+  bv.SetRange(0, 0);
+  EXPECT_TRUE(Verify(bv, {}));
+
+  // Only bv[0] is set
+  bv.SetRange(0, 1);
+  EXPECT_TRUE(Verify(bv, {0}));
+
+  // Try larger within-word change
+  bv.UnsetAll();
+  bv.SetRange(27, 57);
+  EXPECT_TRUE(Verify(bv, [&](auto idx) { return in_range(idx, 27, 57); }));
+
+  // Try cross-word change with end at boundary
+  bv.UnsetAll();
+  bv.SetRange(10, 64);
+  EXPECT_TRUE(Verify(bv, [&](auto idx) { return in_range(idx, 10, 64); }));
+
+  // Try multi-word change
+  bv.UnsetAll();
+  bv.SetRange(60, 300);
+  EXPECT_TRUE(Verify(bv, [&](auto idx) { return in_range(idx, 60, 300); }));
+}
+
 TEST(BitVectorTest, SetTo) {
   BitVector bv(10);
 
