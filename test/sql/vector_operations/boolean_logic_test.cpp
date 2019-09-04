@@ -1,3 +1,5 @@
+#include <vector>
+
 #include "sql_test.h"
 
 #include "sql/constant_vector.h"

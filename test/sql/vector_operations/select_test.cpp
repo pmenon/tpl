@@ -1,3 +1,5 @@
+#include <vector>
+
 #include "sql_test.h"  // NOLINT
 
 #include "sql/constant_vector.h"

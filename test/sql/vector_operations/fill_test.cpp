@@ -33,13 +33,13 @@ TEST_F(VectorFillTest, SimpleNonNull) {
 
 TEST_F(VectorFillTest, Null) {
   // Fill a vector with the given type with the given value of that type
-#define CHECK_SIMPLE_FILL(TYPE)  \
+#define CHECK_SIMPLE_FILL(TYPE)              \
   {                                          \
     auto vec = Make##TYPE##Vector(10);       \
     VectorOps::FillNull(vec.get());          \
     for (u64 i = 0; i < vec->count(); i++) { \
       auto val = vec->GetValue(i);           \
-      EXPECT_TRUE(val.is_null());           \
+      EXPECT_TRUE(val.is_null());            \
     }                                        \
   }
 
