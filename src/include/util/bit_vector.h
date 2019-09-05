@@ -54,7 +54,7 @@ class BitVectorBase {
    */
   bool Test(const u32 position) const {
     TPL_ASSERT(position < impl()->num_bits(), "Index out of range");
-    const WordType *const data = impl()->data_array();
+    const WordType *data = impl()->data_array();
     const WordType mask = WordType(1) << (position % kWordSizeBits);
     return data[position / kWordSizeBits] & mask;
   }
@@ -65,7 +65,7 @@ class BitVectorBase {
    */
   void Set(const u32 position) {
     TPL_ASSERT(position < impl()->num_bits(), "Index out of range");
-    WordType *const data = impl()->data_array();
+    WordType *data = impl()->data_array();
     data[position / kWordSizeBits] |= WordType(1) << (position % kWordSizeBits);
   }
 
@@ -138,7 +138,7 @@ class BitVectorBase {
    */
   void SetWord(const u32 word_position, const WordType word_val) {
     TPL_ASSERT(word_position < impl()->num_words(), "Index out of range");
-    WordType *const data = impl()->data_array();
+    WordType *data = impl()->data_array();
     const u32 num_words = impl()->num_words();
     data[word_position] = word_val;
     if (word_position == num_words - 1) {
@@ -151,10 +151,12 @@ class BitVectorBase {
    * Set all bits to 1.
    */
   void SetAll() {
-    auto *data = impl()->data_array();
+    WordType *data = impl()->data_array();
     const auto num_words = impl()->num_words();
-    // Set all bits in all words but the last
-    std::memset(data, 255, kWordSizeBytes * (num_words - 1));
+    // Set all words but the last
+    for (u64 i = 0; i < num_words - 1; i++) {
+      data[i] = kAllOnesWord;
+    }
     // The last word is special
     data[num_words - 1] =
         kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
@@ -194,7 +196,7 @@ class BitVectorBase {
    * Invert all bits.
    */
   void FlipAll() {
-    auto *data_array = impl()->data_array();
+    WordType *data_array = impl()->data_array();
     const auto num_words = impl()->num_words();
     // Invert all words in vector except the last
     for (u32 i = 0; i < num_words - 1; i++) {
@@ -296,8 +298,8 @@ class BitVectorBase {
   void Intersect(const BitVectorBase<T> &other) {
     TPL_ASSERT(impl()->num_bits() == other.impl()->num_bits(),
                "Mismatched bit vector size");
-    auto *data = impl()->data_array();
-    auto *other_data = other.impl()->data_array();
+    WordType *data = impl()->data_array();
+    const WordType *other_data = other.impl()->data_array();
     for (u32 i = 0; i < impl()->num_words(); i++) {
       data[i] &= other_data[i];
     }
@@ -313,8 +315,8 @@ class BitVectorBase {
   void Union(const BitVectorBase<T> &other) {
     TPL_ASSERT(impl()->num_bits() == other.impl()->num_bits(),
                "Mismatched bit vector size");
-    auto *data = impl()->data_array();
-    auto *other_data = other.impl()->data_array();
+    WordType *data = impl()->data_array();
+    const WordType *other_data = other.impl()->data_array();
     for (u32 i = 0; i < impl()->num_words(); i++) {
       data[i] |= other_data[i];
     }
@@ -330,8 +332,8 @@ class BitVectorBase {
   void Difference(const BitVectorBase<T> &other) {
     TPL_ASSERT(impl()->num_bits() == other.impl()->num_bits(),
                "Mismatched bit vector size");
-    auto *data = impl()->data_array();
-    auto *other_data = other.impl()->data_array();
+    WordType *data = impl()->data_array();
+    const WordType *other_data = other.impl()->data_array();
     for (u32 i = 0; i < impl()->num_words(); i++) {
       data[i] &= ~other_data[i];
     }

@@ -89,9 +89,19 @@ TEST(BitVectorTest, Set) {
 
   bv.Set(7);
   EXPECT_TRUE(Verify(bv, {0, 2, 7}));
+}
+
+TEST(BitVectorTest, SetAll) {
+  BitVector bv(300);
+
+  bv.Set(2);
+  EXPECT_TRUE(Verify(bv, {2}));
+
+  bv.Set(299);
+  EXPECT_TRUE(Verify(bv, {2, 299}));
 
   bv.SetAll();
-  EXPECT_TRUE(Verify(bv, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
+  EXPECT_TRUE(Verify(bv, [n = u32{0}] (auto idx) mutable { return idx == n++; }));
 }
 
 TEST(BitVectorDeathTest, SetRange) {
