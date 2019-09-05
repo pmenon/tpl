@@ -21,8 +21,7 @@ namespace tpl::sql {
 void Table::Insert(Block &&block) {
 #ifndef NDEBUG
   // Sanity check
-  TPL_ASSERT(block.num_cols() == schema_->num_columns(),
-             "Column count mismatch");
+  TPL_ASSERT(block.num_cols() == schema_->num_columns(), "Column count mismatch");
   for (u32 i = 0; i < schema_->num_columns(); i++) {
     const auto &block_col_type = block.GetColumnData(i)->sql_type();
     const auto &schema_col_type = schema().GetColumnInfo(i)->sql_type;
@@ -36,8 +35,8 @@ void Table::Insert(Block &&block) {
 
 namespace {
 
-void DumpColValue(std::ostream &os, const SqlType &sql_type,
-                  const ColumnSegment &col, u32 row_idx) {
+void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment &col,
+                  u32 row_idx) {
   switch (sql_type.id()) {
     case SqlTypeId::Boolean: {
       break;
@@ -133,8 +132,7 @@ void Table::Dump(std::ostream &stream) const {
 TableBlockIterator::TableBlockIterator(u16 table_id)
     : TableBlockIterator(table_id, 0, std::numeric_limits<u32>::max()) {}
 
-TableBlockIterator::TableBlockIterator(u16 table_id, u32 start_block_idx,
-                                       u32 end_block_idx)
+TableBlockIterator::TableBlockIterator(u16 table_id, u32 start_block_idx, u32 end_block_idx)
     : table_id_(table_id),
       start_block_idx_(start_block_idx),
       end_block_idx_(end_block_idx),
@@ -169,9 +167,8 @@ bool TableBlockIterator::Init() {
   // Setup the block position boundaries
   curr_block_ = nullptr;
   pos_ = table_->begin() + start_block_idx_;
-  end_ = (end_block_idx_ == std::numeric_limits<u32>::max()
-              ? table_->end()
-              : table_->begin() + end_block_idx_);
+  end_ = (end_block_idx_ == std::numeric_limits<u32>::max() ? table_->end()
+                                                            : table_->begin() + end_block_idx_);
   return true;
 }
 

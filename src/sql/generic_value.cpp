@@ -163,14 +163,12 @@ GenericValue GenericValue::CreateDouble(const f64 value) {
   return result;
 }
 
-GenericValue GenericValue::CreateDate(UNUSED i32 year, UNUSED i32 month,
-                                      UNUSED i32 day) {
+GenericValue GenericValue::CreateDate(UNUSED i32 year, UNUSED i32 month, UNUSED i32 day) {
   throw std::runtime_error("Creating Date generic value not supported!");
 }
 
-GenericValue GenericValue::CreateTimestamp(UNUSED i32 year, UNUSED i32 month,
-                                           UNUSED i32 day, UNUSED i32 hour,
-                                           UNUSED i32 min, UNUSED i32 sec,
+GenericValue GenericValue::CreateTimestamp(UNUSED i32 year, UNUSED i32 month, UNUSED i32 day,
+                                           UNUSED i32 hour, UNUSED i32 min, UNUSED i32 sec,
                                            UNUSED i32 msec) {
   throw std::runtime_error("Creating Timestamp generic value not supported!");
 }
@@ -182,16 +180,14 @@ GenericValue GenericValue::CreateVarchar(std::string_view str) {
   return result;
 }
 
-GenericValue GenericValue::CreateFromRuntimeValue(const TypeId type_id,
-                                                  const Val &val) {
+GenericValue GenericValue::CreateFromRuntimeValue(const TypeId type_id, const Val &val) {
   switch (type_id) {
     case TypeId::Boolean:
       return GenericValue::CreateBoolean(static_cast<const BoolVal &>(val).val);
     case TypeId::TinyInt:
       return GenericValue::CreateTinyInt(static_cast<const Integer &>(val).val);
     case TypeId::SmallInt:
-      return GenericValue::CreateSmallInt(
-          static_cast<const Integer &>(val).val);
+      return GenericValue::CreateSmallInt(static_cast<const Integer &>(val).val);
     case TypeId::Integer:
       return GenericValue::CreateInteger(static_cast<const Integer &>(val).val);
     case TypeId::BigInt:
@@ -201,8 +197,7 @@ GenericValue GenericValue::CreateFromRuntimeValue(const TypeId type_id,
     case TypeId::Double:
       return GenericValue::CreateDouble(static_cast<const Real &>(val).val);
     case TypeId::Varchar:
-      return GenericValue::CreateVarchar(
-          static_cast<const StringVal &>(val).ptr);
+      return GenericValue::CreateVarchar(static_cast<const StringVal &>(val).ptr);
     default:
       throw std::runtime_error("Type " + std::string(TypeIdToString(type_id)) +
                                " not supported as runtime value");

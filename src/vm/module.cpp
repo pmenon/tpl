@@ -45,10 +45,8 @@ Module::Module(std::unique_ptr<BytecodeModule> bytecode_module,
                std::unique_ptr<LLVMEngine::CompiledModule> llvm_module)
     : bytecode_module_(std::move(bytecode_module)),
       jit_module_(std::move(llvm_module)),
-      functions_(std::make_unique<std::atomic<void *>[]>(
-          bytecode_module_->num_functions())),
-      bytecode_trampolines_(
-          std::make_unique<Trampoline[]>(bytecode_module_->num_functions())) {
+      functions_(std::make_unique<std::atomic<void *>[]>(bytecode_module_->num_functions())),
+      bytecode_trampolines_(std::make_unique<Trampoline[]>(bytecode_module_->num_functions())) {
   // Create the trampolines for all bytecode functions
   for (const auto &func : bytecode_module_->functions()) {
     CreateFunctionTrampoline(func.id());
@@ -79,8 +77,7 @@ namespace {
 // TODO(pmenon): **LOTS** of shit to make this fully ABI compliant ....
 class TrampolineGenerator : public Xbyak::CodeGenerator {
  public:
-  TrampolineGenerator(const Module &module, const FunctionInfo &func_info,
-                      void *mem)
+  TrampolineGenerator(const Module &module, const FunctionInfo &func_info, void *mem)
       : Xbyak::CodeGenerator(Xbyak::DEFAULT_MAX_CODE_SIZE, mem),
         module_(module),
         func_(func_info) {}
@@ -125,8 +122,7 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
     // argument
     const ast::Type *return_type = func_.func_type()->return_type();
     if (!return_type->IsNilType()) {
-      required_stack_space +=
-          util::MathUtil::AlignTo(return_type->size(), sizeof(intptr_t));
+      required_stack_space += util::MathUtil::AlignTo(return_type->size(), sizeof(intptr_t));
     }
 
     // Always align to cacheline boundary
@@ -167,12 +163,10 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
   // placed on the stack.
   //
   void PushCallerArgsOntoStack() {
-    const Xbyak::Reg arg_regs[][6] = {{edi, esi, edx, ecx, r8d, r9d},
-                                      {rdi, rsi, rdx, rcx, r8, r9}};
+    const Xbyak::Reg arg_regs[][6] = {{edi, esi, edx, ecx, r8d, r9d}, {rdi, rsi, rdx, rcx, r8, r9}};
 
     const ast::FunctionType *func_type = func_.func_type();
-    TPL_ASSERT(func_type->num_params() < sizeof(arg_regs),
-               "Too many function arguments");
+    TPL_ASSERT(func_type->num_params() < sizeof(arg_regs), "Too many function arguments");
 
     u32 displacement = 0;
     u32 local_idx = 0;
@@ -182,10 +176,8 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
     // If the function returns a non-void value, insert the pointer now.
     //
 
-    if (const ast::Type *return_type = func_type->return_type();
-        !return_type->IsNilType()) {
-      displacement =
-          util::MathUtil::AlignTo(return_type->size(), sizeof(intptr_t));
+    if (const ast::Type *return_type = func_type->return_type(); !return_type->IsNilType()) {
+      displacement = util::MathUtil::AlignTo(return_type->size(), sizeof(intptr_t));
       mov(ptr[rsp + displacement], rsp);
       local_idx++;
     }
@@ -197,8 +189,7 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
     for (u32 idx = 0; idx < func_type->num_params(); idx++, local_idx++) {
       const auto &local_info = func_.locals()[local_idx];
       auto use_64bit_reg = static_cast<u32>(local_info.size() > sizeof(u32));
-      mov(ptr[rsp + displacement + local_info.offset()],
-          arg_regs[use_64bit_reg][idx]);
+      mov(ptr[rsp + displacement + local_info.offset()], arg_regs[use_64bit_reg][idx]);
     }
   }
 
@@ -207,8 +198,7 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
     const ast::Type *ret_type = func_type->return_type();
     u32 ret_type_size = 0;
     if (!ret_type->IsNilType()) {
-      ret_type_size =
-          util::MathUtil::AlignTo(ret_type->size(), sizeof(intptr_t));
+      ret_type_size = util::MathUtil::AlignTo(ret_type->size(), sizeof(intptr_t));
     }
 
     // Set up the arguments to VM::InvokeFunction(module, function ID, args)
@@ -238,17 +228,15 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
 
 }  // namespace
 
-void Module::CreateFunctionTrampoline(const FunctionInfo &func,
-                                      Trampoline &trampoline) {
+void Module::CreateFunctionTrampoline(const FunctionInfo &func, Trampoline &trampoline) {
   // Allocate memory
   std::error_code error;
-  u32 flags = llvm::sys::Memory::ProtectionFlags::MF_READ |
-              llvm::sys::Memory::ProtectionFlags::MF_WRITE;
+  u32 flags =
+      llvm::sys::Memory::ProtectionFlags::MF_READ | llvm::sys::Memory::ProtectionFlags::MF_WRITE;
   llvm::sys::MemoryBlock mem =
       llvm::sys::Memory::allocateMappedMemory(1 << 12, nullptr, flags, error);
   if (error) {
-    LOG_ERROR("There was an error allocating executable memory {}",
-              error.message());
+    LOG_ERROR("There was an error allocating executable memory {}", error.message());
     return;
   }
 
@@ -258,9 +246,8 @@ void Module::CreateFunctionTrampoline(const FunctionInfo &func,
 
   // Now that the code's been generated and finalized, let's remove write
   // protections and just make is read+exec.
-  llvm::sys::Memory::protectMappedMemory(
-      mem, llvm::sys::Memory::ProtectionFlags::MF_READ |
-               llvm::sys::Memory::ProtectionFlags::MF_EXEC);
+  llvm::sys::Memory::protectMappedMemory(mem, llvm::sys::Memory::ProtectionFlags::MF_READ |
+                                                  llvm::sys::Memory::ProtectionFlags::MF_EXEC);
 
   // Done
   trampoline = Trampoline(llvm::sys::OwningMemoryBlock(mem));
@@ -298,8 +285,7 @@ void Module::CompileToMachineCode() {
     // Setup function pointers
     for (const auto &func_info : bytecode_module_->functions()) {
       auto *jit_function = jit_module_->GetFunctionPointer(func_info.name());
-      TPL_ASSERT(jit_function != nullptr,
-                 "Missing function in compiled module!");
+      TPL_ASSERT(jit_function != nullptr, "Missing function in compiled module!");
       functions_[func_info.id()].store(jit_function, std::memory_order_relaxed);
     }
   });

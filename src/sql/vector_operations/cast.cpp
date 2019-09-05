@@ -26,8 +26,7 @@ void CastFromSrcTypeToDestType(const Vector &source, Vector *target) {
 }
 
 template <typename SrcT, typename Op>
-void CastFromSrcType(const Vector &source, Vector *target,
-                     SqlTypeId target_type) {
+void CastFromSrcType(const Vector &source, Vector *target, SqlTypeId target_type) {
   switch (target_type) {
     case SqlTypeId::Boolean: {
       CastFromSrcTypeToDestType<SrcT, bool, Op>(source, target);
@@ -68,8 +67,8 @@ void CastFromSrcType(const Vector &source, Vector *target,
 
 }  // namespace
 
-void VectorOps::Cast(const Vector &source, Vector *target,
-                     SqlTypeId source_type, SqlTypeId target_type) {
+void VectorOps::Cast(const Vector &source, Vector *target, SqlTypeId source_type,
+                     SqlTypeId target_type) {
   target->sel_vector_ = source.sel_vector_;
   target->count_ = source.count_;
   target->null_mask_ = source.null_mask_;

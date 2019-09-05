@@ -64,8 +64,7 @@ class MathUtil {
    * @return Whether the value has the desired alignment
    */
   constexpr static bool IsAligned(u64 value, u64 alignment) {
-    TPL_ASSERT(alignment != 0u && IsPowerOf2(alignment),
-               "Align must be a non-zero power of two.");
+    TPL_ASSERT(alignment != 0u && IsPowerOf2(alignment), "Align must be a non-zero power of two.");
     return (value & (alignment - 1)) == 0;
   }
 
@@ -105,9 +104,7 @@ class MathUtil {
    * @return The next value greater than the input value that has the desired
    * alignment.
    */
-  static u64 AlignTo(u64 value, u64 align) {
-    return llvm::alignTo(value, align);
-  }
+  static u64 AlignTo(u64 value, u64 align) { return llvm::alignTo(value, align); }
 
   /**
    * Align @em addr to the given alignment @em alignment
@@ -115,8 +112,7 @@ class MathUtil {
    * @param alignment The desired alignment
    * @return The input address aligned to the desired alignment
    */
-  static constexpr uintptr_t AlignAddress(uintptr_t addr,
-                                          std::size_t alignment) {
+  static constexpr uintptr_t AlignAddress(uintptr_t addr, std::size_t alignment) {
     TPL_ASSERT(alignment > 0 && MathUtil::IsPowerOf2(alignment),
                "Alignment is not a power of two!");
     return (addr + alignment - 1) & ~(alignment - 1);
@@ -130,8 +126,7 @@ class MathUtil {
    * @return The number of bytes required to adjust the input address to the
    * desired alignment
    */
-  static constexpr uintptr_t AlignmentAdjustment(uintptr_t addr,
-                                                 std::size_t alignment) {
+  static constexpr uintptr_t AlignmentAdjustment(uintptr_t addr, std::size_t alignment) {
     return MathUtil::AlignAddress(addr, alignment) - addr;
   }
 

@@ -62,9 +62,8 @@ void CheckEquality(uint32_t test_idx, const std::vector<Token::Type> &expected,
   for (unsigned i = 0; i < std::min(actual.size(), expected.size()); i++) {
     if (expected[i] != actual[i]) {
       EXPECT_EQ(expected[i], actual[i])
-          << "Test " << test_idx << ": expected token type '"
-          << Token::GetString(expected[i]) << "' at pos " << i << " but got '"
-          << Token::GetString(actual[i]) << "'";
+          << "Test " << test_idx << ": expected token type '" << Token::GetString(expected[i])
+          << "' at pos " << i << " but got '" << Token::GetString(actual[i]) << "'";
     }
   }
 }
@@ -95,8 +94,7 @@ TEST_F(ScannerTest, VariableSyntaxTest) {
   std::vector<TestCase> tests = {
       // Variable with no type
       {"var x = 10",
-       {Token::Type::VAR, Token::Type::IDENTIFIER, Token::Type::EQUAL,
-        Token::Type::INTEGER},
+       {Token::Type::VAR, Token::Type::IDENTIFIER, Token::Type::EQUAL, Token::Type::INTEGER},
        [](Scanner &scanner, uint32_t token_idx) {
          if (token_idx == 1) {
            EXPECT_EQ("x", scanner.current_literal());
@@ -107,8 +105,8 @@ TEST_F(ScannerTest, VariableSyntaxTest) {
 
       // Variable with type
       {"var x:i32 = 10",
-       {Token::Type::VAR, Token::Type::IDENTIFIER, Token::Type::COLON,
-        Token::Type::IDENTIFIER, Token::Type::EQUAL, Token::Type::INTEGER},
+       {Token::Type::VAR, Token::Type::IDENTIFIER, Token::Type::COLON, Token::Type::IDENTIFIER,
+        Token::Type::EQUAL, Token::Type::INTEGER},
        [](Scanner &scanner, uint32_t token_idx) {
          if (token_idx == 3) {
            EXPECT_EQ("i32", scanner.current_literal());
@@ -116,8 +114,7 @@ TEST_F(ScannerTest, VariableSyntaxTest) {
        }},
       // Variable with float number
       {"var x = 10.123",
-       {Token::Type::VAR, Token::Type::IDENTIFIER, Token::Type::EQUAL,
-        Token::Type::FLOAT},
+       {Token::Type::VAR, Token::Type::IDENTIFIER, Token::Type::EQUAL, Token::Type::FLOAT},
        nullptr}};
 
   RunTests(tests);
@@ -126,9 +123,8 @@ TEST_F(ScannerTest, VariableSyntaxTest) {
 TEST_F(ScannerTest, IfSyntaxTest) {
   std::vector<TestCase> tests = {
       {"if (x == 0) { }",
-       {Token::Type::IF, Token::Type::LEFT_PAREN, Token::Type::IDENTIFIER,
-        Token::Type::EQUAL_EQUAL, Token::Type::INTEGER,
-        Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE,
+       {Token::Type::IF, Token::Type::LEFT_PAREN, Token::Type::IDENTIFIER, Token::Type::EQUAL_EQUAL,
+        Token::Type::INTEGER, Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE,
         Token::Type::RIGHT_BRACE}},
   };
 
@@ -145,9 +141,9 @@ TEST_F(ScannerTest, ForSyntaxTest) {
 
       // For as a while loop
       {"for (i < 10) {}",
-       {Token::Type::FOR, Token::Type::LEFT_PAREN, Token::Type::IDENTIFIER,
-        Token::Type::LESS, Token::Type::INTEGER, Token::Type::RIGHT_PAREN,
-        Token::Type::LEFT_BRACE, Token::Type::RIGHT_BRACE},
+       {Token::Type::FOR, Token::Type::LEFT_PAREN, Token::Type::IDENTIFIER, Token::Type::LESS,
+        Token::Type::INTEGER, Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE,
+        Token::Type::RIGHT_BRACE},
        [](Scanner &scanner, uint32_t token_idx) {
          // Check that the fourth token is the number "10"
          if (token_idx == 4) {
@@ -158,11 +154,10 @@ TEST_F(ScannerTest, ForSyntaxTest) {
 
       // For as a while loop with simple body
       {"for (i < 10) { println(\"hi\") }",
-       {Token::Type::FOR, Token::Type::LEFT_PAREN, Token::Type::IDENTIFIER,
-        Token::Type::LESS, Token::Type::INTEGER, Token::Type::RIGHT_PAREN,
-        Token::Type::LEFT_BRACE, Token::Type::IDENTIFIER,
-        Token::Type::LEFT_PAREN, Token::Type::STRING, Token::Type::RIGHT_PAREN,
-        Token::Type::RIGHT_BRACE},
+       {Token::Type::FOR, Token::Type::LEFT_PAREN, Token::Type::IDENTIFIER, Token::Type::LESS,
+        Token::Type::INTEGER, Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE,
+        Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN, Token::Type::STRING,
+        Token::Type::RIGHT_PAREN, Token::Type::RIGHT_BRACE},
        [](Scanner &scanner, uint32_t token_idx) {
          // Check that the fourth token is the number "10"
          if (token_idx == 9) {
@@ -173,13 +168,11 @@ TEST_F(ScannerTest, ForSyntaxTest) {
 
       // Full blown for loop
       {"for (var x = 0; x < 10; x = x + 1) {}",
-       {Token::Type::FOR, Token::Type::LEFT_PAREN, Token::Type::VAR,
-        Token::Type::IDENTIFIER, Token::Type::EQUAL, Token::Type::INTEGER,
-        Token::Type::SEMI, Token::Type::IDENTIFIER, Token::Type::LESS,
-        Token::Type::INTEGER, Token::Type::SEMI, Token::Type::IDENTIFIER,
-        Token::Type::EQUAL, Token::Type::IDENTIFIER, Token::Type::PLUS,
-        Token::Type::INTEGER, Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE,
-        Token::Type::RIGHT_BRACE},
+       {Token::Type::FOR, Token::Type::LEFT_PAREN, Token::Type::VAR, Token::Type::IDENTIFIER,
+        Token::Type::EQUAL, Token::Type::INTEGER, Token::Type::SEMI, Token::Type::IDENTIFIER,
+        Token::Type::LESS, Token::Type::INTEGER, Token::Type::SEMI, Token::Type::IDENTIFIER,
+        Token::Type::EQUAL, Token::Type::IDENTIFIER, Token::Type::PLUS, Token::Type::INTEGER,
+        Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE, Token::Type::RIGHT_BRACE},
        nullptr},
   };
 
@@ -191,8 +184,7 @@ TEST_F(ScannerTest, FunctionSyntaxTest) {
       // Empty function test
       {"fun test(){}",
        {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN,
-        Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE,
-        Token::Type::RIGHT_BRACE},
+        Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE, Token::Type::RIGHT_BRACE},
        [](Scanner &scanner, uint32_t token_idx) {
          if (token_idx == 1) {
            EXPECT_EQ("test", scanner.current_literal());
@@ -201,10 +193,9 @@ TEST_F(ScannerTest, FunctionSyntaxTest) {
 
       // Variable with type
       {"fun test(a:i32){}",
-       {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN,
-        Token::Type::IDENTIFIER, Token::Type::COLON, Token::Type::IDENTIFIER,
-        Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE,
-        Token::Type::RIGHT_BRACE},
+       {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN, Token::Type::IDENTIFIER,
+        Token::Type::COLON, Token::Type::IDENTIFIER, Token::Type::RIGHT_PAREN,
+        Token::Type::LEFT_BRACE, Token::Type::RIGHT_BRACE},
        [](Scanner &scanner, uint32_t token_idx) {
          if (token_idx == 3) {
            EXPECT_EQ("a", scanner.current_literal());
@@ -219,12 +210,12 @@ TEST_F(ScannerTest, UnaryOpSyntaxTest) {
       // Empty function test
       {"fun test(){ return -1 }",
        {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN,
-        Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE, Token::Type::RETURN,
-        Token::Type::MINUS, Token::Type::INTEGER, Token::Type::RIGHT_BRACE}},
+        Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE, Token::Type::RETURN, Token::Type::MINUS,
+        Token::Type::INTEGER, Token::Type::RIGHT_BRACE}},
       {"fun test(){ return !false }",
        {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN,
-        Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE, Token::Type::RETURN,
-        Token::Type::BANG, Token::Type::FALSE, Token::Type::RIGHT_BRACE}},
+        Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE, Token::Type::RETURN, Token::Type::BANG,
+        Token::Type::FALSE, Token::Type::RIGHT_BRACE}},
   };
 
   RunTests(tests);
@@ -246,8 +237,7 @@ TEST_F(ScannerTest, BinOpSyntaxTest) {
       {"fun test(){ return 1 | 2 }",
        {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN,
         Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE, Token::Type::RETURN,
-        Token::Type::INTEGER, Token::Type::BIT_OR, Token::Type::INTEGER,
-        Token::Type::RIGHT_BRACE}},
+        Token::Type::INTEGER, Token::Type::BIT_OR, Token::Type::INTEGER, Token::Type::RIGHT_BRACE}},
   };
 
   RunTests(tests);

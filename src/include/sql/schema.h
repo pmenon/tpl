@@ -22,8 +22,7 @@ class Schema {
         : name(std::move(name)), sql_type(sql_type), encoding(encoding) {}
 
     std::size_t GetStorageSize() const {
-      TPL_ASSERT(encoding == ColumnEncoding::None,
-                 "Only supports uncompressed encodings");
+      TPL_ASSERT(encoding == ColumnEncoding::None, "Only supports uncompressed encodings");
       const auto prim_type = sql_type.GetPrimitiveTypeId();
       return GetTypeIdSize(prim_type);
     }

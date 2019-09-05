@@ -70,8 +70,7 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
   EXPECT_EQ(num_tuples, join_hash_table.generic_hash_table_.num_elements());
 }
 
-void PopulateJoinHashTable(JoinHashTable *jht, u32 num_tuples,
-                           u32 dup_scale_factor) {
+void PopulateJoinHashTable(JoinHashTable *jht, u32 num_tuples, u32 dup_scale_factor) {
   for (u32 rep = 0; rep < dup_scale_factor; rep++) {
     for (u32 i = 0; i < num_tuples; i++) {
       // Create tuple
@@ -123,8 +122,8 @@ void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
       count++;
     }
     EXPECT_EQ(dup_scale_factor, count)
-        << "Expected to find " << dup_scale_factor << " matches, but key [" << i
-        << "] found " << count << " matches";
+        << "Expected to find " << dup_scale_factor << " matches, but key [" << i << "] found "
+        << count << " matches";
   }
 
   //
@@ -144,21 +143,13 @@ void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
   }
 }
 
-TEST_F(JoinHashTableTest, UniqueKeyLookupTest) {
-  BuildAndProbeTest<false>(400, 1);
-}
+TEST_F(JoinHashTableTest, UniqueKeyLookupTest) { BuildAndProbeTest<false>(400, 1); }
 
-TEST_F(JoinHashTableTest, DuplicateKeyLookupTest) {
-  BuildAndProbeTest<false>(400, 5);
-}
+TEST_F(JoinHashTableTest, DuplicateKeyLookupTest) { BuildAndProbeTest<false>(400, 5); }
 
-TEST_F(JoinHashTableTest, UniqueKeyConciseTableTest) {
-  BuildAndProbeTest<true>(400, 1);
-}
+TEST_F(JoinHashTableTest, UniqueKeyConciseTableTest) { BuildAndProbeTest<true>(400, 1); }
 
-TEST_F(JoinHashTableTest, DuplicateKeyLookupConciseTableTest) {
-  BuildAndProbeTest<true>(400, 5);
-}
+TEST_F(JoinHashTableTest, DuplicateKeyLookupConciseTableTest) { BuildAndProbeTest<true>(400, 5); }
 
 TEST_F(JoinHashTableTest, ParallelBuildTest) {
   constexpr bool use_concise_ht = false;
@@ -168,15 +159,12 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
   MemoryPool memory(nullptr);
   ThreadStateContainer container(&memory);
 
-  container.Reset(sizeof(JoinHashTable),
-                  [](auto *ctx, auto *s) {
-                    new (s) JoinHashTable(reinterpret_cast<MemoryPool *>(ctx),
-                                          sizeof(Tuple), use_concise_ht);
-                  },
-                  [](auto *ctx, auto *s) {
-                    reinterpret_cast<JoinHashTable *>(s)->~JoinHashTable();
-                  },
-                  &memory);
+  container.Reset(
+      sizeof(JoinHashTable),
+      [](auto *ctx, auto *s) {
+        new (s) JoinHashTable(reinterpret_cast<MemoryPool *>(ctx), sizeof(Tuple), use_concise_ht);
+      },
+      [](auto *ctx, auto *s) { reinterpret_cast<JoinHashTable *>(s)->~JoinHashTable(); }, &memory);
 
   // Parallel populate each of the thread-local hash tables
   tbb::task_scheduler_init sched;
@@ -204,8 +192,8 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
     auto key_eq = [&](const Tuple *t) { return t->a == probe.a; };
 
     u32 count = 0;
-    for (auto iter = main_jht.Lookup<use_concise_ht>(probe.Hash());
-         iter.HasNext<Tuple>(key_eq); iter.NextMatch()) {
+    for (auto iter = main_jht.Lookup<use_concise_ht>(probe.Hash()); iter.HasNext<Tuple>(key_eq);
+         iter.NextMatch()) {
       count++;
     }
     EXPECT_EQ(num_thread_local_tables, count);

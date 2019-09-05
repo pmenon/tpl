@@ -9,8 +9,7 @@ namespace {
 
 template <typename Src, typename Dest>
 static bool DoSafeCheckedCast(Src source, Dest *dest) {
-  if (source < std::numeric_limits<Dest>::min() ||
-      source > std::numeric_limits<Dest>::max()) {
+  if (source < std::numeric_limits<Dest>::min() || source > std::numeric_limits<Dest>::max()) {
     return false;
   }
   *dest = static_cast<Dest>(source);

@@ -114,8 +114,7 @@ TEST_F(BytecodeGeneratorTest, BooleanEvaluationTest) {
 }
 
 TEST_F(BytecodeGeneratorTest, SimpleArithmeticTest) {
-  const auto gen_compare_func = [](auto arg_type_name, auto dummy_arg, auto op,
-                                   auto cb) {
+  const auto gen_compare_func = [](auto arg_type_name, auto dummy_arg, auto op, auto cb) {
     using Type = decltype(dummy_arg);
     auto src = fmt::format(R"(
       fun test(a: {0}, b: {0}) -> {0} {{
@@ -159,8 +158,7 @@ TEST_F(BytecodeGeneratorTest, SimpleArithmeticTest) {
 }
 
 TEST_F(BytecodeGeneratorTest, ComparisonTest) {
-  const auto gen_compare_func = [](auto arg_type_name, auto dummy_arg, auto op,
-                                   auto cb) {
+  const auto gen_compare_func = [](auto arg_type_name, auto dummy_arg, auto op, auto cb) {
     using Type = decltype(dummy_arg);
     auto src = fmt::format(R"(
       fun test(a: {0}, b: {0}) -> bool {{

@@ -23,8 +23,7 @@ class Barrier {
   /**
    * Create a new barrier with the given count.
    */
-  explicit Barrier(const u32 count)
-      : generation_(0), count_(count), reset_value_(count) {}
+  explicit Barrier(const u32 count) : generation_(0), count_(count), reset_value_(count) {}
 
   /**
    * This class cannot be copied or moved.

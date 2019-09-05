@@ -40,9 +40,7 @@ class Agent {
   /**
    * Return estimations of the value of each flavor/action
    */
-  const std::vector<double> &value_estimates() const {
-    return value_estimates_;
-  }
+  const std::vector<double> &value_estimates() const { return value_estimates_; }
 
   /**
    * Return counts of the number of times each flavor/action was tried

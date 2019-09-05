@@ -45,8 +45,7 @@ class ChunkedVector {
    * Construct a chunked vector whose elements have size @em element_size in
    * bytes using the provided allocator.
    */
-  explicit ChunkedVector(std::size_t element_size,
-                         Alloc allocator = {}) noexcept
+  explicit ChunkedVector(std::size_t element_size, Alloc allocator = {}) noexcept
       : allocator_(allocator),
         active_chunk_idx_(0),
         position_(nullptr),
@@ -60,8 +59,7 @@ class ChunkedVector {
    * Move constructor
    */
   ChunkedVector(ChunkedVector &&other) noexcept
-      : allocator_(std::move(other.allocator_)),
-        chunks_(std::move(other.chunks_)) {
+      : allocator_(std::move(other.allocator_)), chunks_(std::move(other.chunks_)) {
     active_chunk_idx_ = other.active_chunk_idx_;
     other.active_chunk_idx_ = 0;
 
@@ -136,9 +134,7 @@ class ChunkedVector {
 
     Iterator(std::vector<byte *>::iterator chunks_iter, byte *position,
              std::size_t element_size) noexcept
-        : chunks_iter_(chunks_iter),
-          element_size_(element_size),
-          curr_(position) {
+        : chunks_iter_(chunks_iter), element_size_(element_size), curr_(position) {
       if (*chunks_iter + ChunkAllocSize(element_size) == position) {
         ++chunks_iter_;
         curr_ = *chunks_iter_;
@@ -154,8 +150,7 @@ class ChunkedVector {
       const i64 chunk_size = ChunkAllocSize(element_size_);
 
       // The total number of bytes between the new and current position
-      const i64 byte_offset =
-          offset * static_cast<i64>(element_size_) + (curr_ - *chunks_iter_);
+      const i64 byte_offset = offset * static_cast<i64>(element_size_) + (curr_ - *chunks_iter_);
 
       // Offset of the new chunk relative to the current chunk
       i64 chunk_offset;
@@ -171,8 +166,7 @@ class ChunkedVector {
       } else {
         // When offset is large, division can't be avoided. Force rounding
         // towards negative infinity when the offset is negative.
-        chunk_offset =
-            (byte_offset - (offset < 0) * (chunk_size - 1)) / chunk_size;
+        chunk_offset = (byte_offset - (offset < 0) * (chunk_size - 1)) / chunk_size;
       }
 
       // Update the chunk pointer
@@ -210,8 +204,7 @@ class ChunkedVector {
     // when the offset is known.
     Iterator &operator++() noexcept {
       const i64 chunk_size = ChunkAllocSize(element_size_);
-      const i64 byte_offset =
-          static_cast<i64>(element_size_) + (curr_ - *chunks_iter_);
+      const i64 byte_offset = static_cast<i64>(element_size_) + (curr_ - *chunks_iter_);
       // NOTE: an explicit if statement is a bit faster despite the possibility
       // of branch misprediction.
       if (byte_offset >= chunk_size) {
@@ -235,8 +228,7 @@ class ChunkedVector {
     // when the offset is known.
     Iterator &operator--() noexcept {
       const i64 chunk_size = ChunkAllocSize(element_size_);
-      const i64 byte_offset =
-          -static_cast<i64>(element_size_) + (curr_ - *chunks_iter_);
+      const i64 byte_offset = -static_cast<i64>(element_size_) + (curr_ - *chunks_iter_);
       // NOTE: an explicit if statement is a bit faster despite the possibility
       // of branch misprediction.
       if (byte_offset < 0) {
@@ -259,14 +251,10 @@ class ChunkedVector {
     byte *operator[](const i64 &idx) const noexcept { return *(*this + idx); }
 
     // Equality
-    bool operator==(const Iterator &that) const noexcept {
-      return curr_ == that.curr_;
-    }
+    bool operator==(const Iterator &that) const noexcept { return curr_ == that.curr_; }
 
     // Difference
-    bool operator!=(const Iterator &that) const noexcept {
-      return !(this->operator==(that));
-    }
+    bool operator!=(const Iterator &that) const noexcept { return !(this->operator==(that)); }
 
     // Less than
     bool operator<(const Iterator &that) const noexcept {
@@ -282,14 +270,10 @@ class ChunkedVector {
     }
 
     // Less than or equal to
-    bool operator<=(const Iterator &that) const noexcept {
-      return !(this->operator>(that));
-    }
+    bool operator<=(const Iterator &that) const noexcept { return !(this->operator>(that)); }
 
     // Greater than or equal to
-    bool operator>=(const Iterator &that) const noexcept {
-      return !(this->operator<(that));
-    }
+    bool operator>=(const Iterator &that) const noexcept { return !(this->operator<(that)); }
 
     difference_type operator-(const Iterator &that) const noexcept {
       const i64 chunk_size = ChunkAllocSize(element_size_);
@@ -511,13 +495,11 @@ template <typename T, typename Alloc = std::allocator<T>>
 class ChunkedVectorT {
   // Type when we rebind the given template allocator to one needed by
   // ChunkedVector
-  using ReboundAlloc =
-      typename std::allocator_traits<Alloc>::template rebind_alloc<byte>;
+  using ReboundAlloc = typename std::allocator_traits<Alloc>::template rebind_alloc<byte>;
 
   // Iterator type over the base chunked vector when templating with our rebound
   // allocator
-  using BaseChunkedVectorIterator =
-      typename ChunkedVector<ReboundAlloc>::Iterator;
+  using BaseChunkedVectorIterator = typename ChunkedVector<ReboundAlloc>::Iterator;
 
  public:
   /**
@@ -553,13 +535,9 @@ class ChunkedVectorT {
       return *this;
     }
 
-    const Iterator operator+(const i64 &offset) const noexcept {
-      return Iterator(iter_ + offset);
-    }
+    const Iterator operator+(const i64 &offset) const noexcept { return Iterator(iter_ + offset); }
 
-    const Iterator operator-(const i64 &offset) const noexcept {
-      return Iterator(iter_ - offset);
-    }
+    const Iterator operator-(const i64 &offset) const noexcept { return Iterator(iter_ - offset); }
 
     Iterator &operator++() noexcept {
       ++iter_;
@@ -575,9 +553,7 @@ class ChunkedVectorT {
 
     const Iterator operator--(int) noexcept { return Iterator(iter_--); }
 
-    T &operator[](const i64 &idx) const noexcept {
-      return *reinterpret_cast<T *>(iter_[idx]);
-    }
+    T &operator[](const i64 &idx) const noexcept { return *reinterpret_cast<T *>(iter_[idx]); }
 
     bool operator==(const Iterator &that) const { return iter_ == that.iter_; }
 
@@ -591,9 +567,7 @@ class ChunkedVectorT {
 
     bool operator>=(const Iterator &that) const { return iter_ >= that.iter_; }
 
-    difference_type operator-(const Iterator &that) const {
-      return iter_ - that.iter_;
-    }
+    difference_type operator-(const Iterator &that) const { return iter_ - that.iter_; }
 
    private:
     BaseChunkedVectorIterator iter_;
@@ -619,17 +593,13 @@ class ChunkedVectorT {
    * Return a read-write reference to the element at index @em idx, skipping any
    * bounds check.
    */
-  T &operator[](std::size_t idx) noexcept {
-    return *reinterpret_cast<T *>(vec_[idx]);
-  }
+  T &operator[](std::size_t idx) noexcept { return *reinterpret_cast<T *>(vec_[idx]); }
 
   /**
    * Return a read-only reference to the element at index @em idx, skipping any
    * bounds check.
    */
-  const T &operator[](std::size_t idx) const noexcept {
-    return *reinterpret_cast<T *>(vec_[idx]);
-  }
+  const T &operator[](std::size_t idx) const noexcept { return *reinterpret_cast<T *>(vec_[idx]); }
 
   /**
    * Return a read-write reference to the first element in this vector. Has
@@ -641,9 +611,7 @@ class ChunkedVectorT {
    * Return a read-only reference to the first element in this vector. Has
    * undefined behavior when accessing an empty vector.
    */
-  const T &front() const noexcept {
-    return *reinterpret_cast<const T *>(vec_.front());
-  }
+  const T &front() const noexcept { return *reinterpret_cast<const T *>(vec_.front()); }
 
   /**
    * Return a read-write reference to the last element in the vector. Has
@@ -655,9 +623,7 @@ class ChunkedVectorT {
    * Return a read-only reference to the last element in the vector. Has
    * undefined behavior when accessing an empty vector.
    */
-  const T &back() const noexcept {
-    return *reinterpret_cast<const T *>(vec_.back());
-  }
+  const T &back() const noexcept { return *reinterpret_cast<const T *>(vec_.back()); }
 
   // -------------------------------------------------------
   // Size/Capacity

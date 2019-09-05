@@ -104,9 +104,7 @@ class SumAggregate {
   /**
    * Constructor.
    */
-  SumAggregate() : sum_(static_cast<decltype(T::val)>(0)) {
-    sum_.is_null = true;
-  }
+  SumAggregate() : sum_(static_cast<decltype(T::val)>(0)) { sum_.is_null = true; }
 
   /**
    * This class cannot be copied or moved.
@@ -182,9 +180,7 @@ class MaxAggregate {
   /**
    * Constructor.
    */
-  MaxAggregate() : max_(std::numeric_limits<decltype(T::val)>::min()) {
-    max_.is_null = true;
-  }
+  MaxAggregate() : max_(std::numeric_limits<decltype(T::val)>::min()) { max_.is_null = true; }
 
   /**
    * This class cannot be copied or moved.
@@ -255,9 +251,7 @@ class MinAggregate {
   /**
    * Constructor.
    */
-  MinAggregate() : min_(std::numeric_limits<decltype(T::val)>::max()) {
-    min_.is_null = true;
-  }
+  MinAggregate() : min_(std::numeric_limits<decltype(T::val)>::max()) { min_.is_null = true; }
 
   /**
    * This class cannot be copied or moved.

@@ -34,14 +34,12 @@ void Agent::Observe(double reward) {
     g = gamma_;
   }
 
-  value_estimates_[last_action_] +=
-      g * (reward - value_estimates_[last_action_]);
+  value_estimates_[last_action_] += g * (reward - value_estimates_[last_action_]);
   time_step_++;
 }
 
 u32 Agent::GetCurrentOptimalAction() const {
-  auto iter_max =
-      std::max_element(value_estimates_.begin(), value_estimates_.end());
+  auto iter_max = std::max_element(value_estimates_.begin(), value_estimates_.end());
   return std::distance(value_estimates_.begin(), iter_max);
 }
 

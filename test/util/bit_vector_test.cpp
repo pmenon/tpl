@@ -15,8 +15,7 @@ template <typename BitVectorType, typename F>
 ::testing::AssertionResult Verify(BitVectorType &bv, F &&f) {
   for (u32 i = 0; i < bv.num_bits(); i++) {
     if (bv[i] && !f(i)) {
-      return ::testing::AssertionFailure()
-             << "bv[" << i << "]=true, but expected to be false";
+      return ::testing::AssertionFailure() << "bv[" << i << "]=true, but expected to be false";
     }
   }
   return ::testing::AssertionSuccess();
@@ -24,8 +23,7 @@ template <typename BitVectorType, typename F>
 
 // Verify that only specific bits are set
 template <typename BitVectorType>
-::testing::AssertionResult Verify(const BitVectorType &bv,
-                                  std::initializer_list<u32> idxs) {
+::testing::AssertionResult Verify(const BitVectorType &bv, std::initializer_list<u32> idxs) {
   std::unordered_set<u32> positions(idxs);
 
   u32 num_set = 0;
@@ -40,8 +38,7 @@ template <typename BitVectorType>
 
   if (num_set != positions.size()) {
     return ::testing::AssertionFailure()
-           << "Unmatched # set bits. Actual: " << num_set
-           << ", Expected: " << positions.size();
+           << "Unmatched # set bits. Actual: " << num_set << ", Expected: " << positions.size();
   }
 
   return ::testing::AssertionSuccess();
@@ -51,8 +48,7 @@ template <typename BitVectorType>
 
 BitVector Make(std::initializer_list<u32> vals) {
   BitVector bv(vals.size());
-  std::for_each(vals.begin(), vals.end(),
-                [&, i = 0](auto &bval) mutable { bv.SetTo(i++, bval); });
+  std::for_each(vals.begin(), vals.end(), [&, i = 0](auto &bval) mutable { bv.SetTo(i++, bval); });
   return bv;
 }
 
@@ -101,7 +97,7 @@ TEST(BitVectorTest, SetAll) {
   EXPECT_TRUE(Verify(bv, {2, 299}));
 
   bv.SetAll();
-  EXPECT_TRUE(Verify(bv, [n = u32{0}] (auto idx) mutable { return idx == n++; }));
+  EXPECT_TRUE(Verify(bv, [n = u32{0}](auto idx) mutable { return idx == n++; }));
 }
 
 TEST(BitVectorDeathTest, SetRange) {
@@ -320,14 +316,11 @@ TEST(BitVectorTest, SetFromBytes) {
     BitVector bv(10);
 
     // Set first last bit only
-    bv.SetFromBytes(std::vector<u8>{0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0xff}.data(),
-                    10);
+    bv.SetFromBytes(std::vector<u8>{0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0xff}.data(), 10);
     EXPECT_TRUE(Verify(bv, {0, 9}));
 
     // Set odd bits
-    bv.SetFromBytes(
-        std::vector<u8>{0, 0xff, 0, 0xff, 0, 0xff, 0, 0xff, 0, 0xff}.data(),
-        10);
+    bv.SetFromBytes(std::vector<u8>{0, 0xff, 0, 0xff, 0, 0xff, 0, 0xff, 0, 0xff}.data(), 10);
     EXPECT_TRUE(Verify(bv, {1, 3, 5, 7, 9}));
   }
 
@@ -405,9 +398,8 @@ TEST(BitVectorTest, Iterate) {
   // Simple
   {
     BitVector bv(100);
-    bv.IterateSetBits([](UNUSED auto idx) {
-      FAIL() << "Empty bit vectors shouldn't have any set bits";
-    });
+    bv.IterateSetBits(
+        [](UNUSED auto idx) { FAIL() << "Empty bit vectors shouldn't have any set bits"; });
 
     bv.Set(99);
     bv.IterateSetBits([](auto idx) { EXPECT_EQ(99u, idx); });

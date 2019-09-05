@@ -15,8 +15,7 @@ namespace tpl::parsing {
 
 class ParserTest : public TplTest {
  public:
-  ParserTest()
-      : region_("test"), reporter_(&region_), ctx_(&region_, &reporter_) {}
+  ParserTest() : region_("test"), reporter_(&region_), ctx_(&region_, &reporter_) {}
 
   ast::Context *context() { return &ctx_; }
   sema::ErrorReporter *reporter() { return &reporter_; }
@@ -53,13 +52,11 @@ TEST_F(ParserTest, RegularForStmtTest) {
   ASSERT_EQ(std::size_t{1}, func_decl->function()->body()->statements().size());
 
   // Only one for statement, all elements are non-null
-  auto *for_stmt =
-      func_decl->function()->body()->statements()[0]->SafeAs<ast::ForStmt>();
+  auto *for_stmt = func_decl->function()->body()->statements()[0]->SafeAs<ast::ForStmt>();
   ASSERT_NE(nullptr, for_stmt);
   ASSERT_NE(nullptr, for_stmt->init());
   ASSERT_TRUE(for_stmt->init()->IsDeclStmt());
-  ASSERT_TRUE(
-      for_stmt->init()->As<ast::DeclStmt>()->declaration()->IsVariableDecl());
+  ASSERT_TRUE(for_stmt->init()->As<ast::DeclStmt>()->declaration()->IsVariableDecl());
   ASSERT_NE(nullptr, for_stmt->condition());
   ASSERT_NE(nullptr, for_stmt->next());
 }
@@ -109,12 +106,10 @@ TEST_F(ParserTest, ExhaustiveForStmtTest) {
     auto *func_decl = decl->As<ast::FunctionDecl>();
     ASSERT_NE(nullptr, func_decl->function());
     ASSERT_NE(nullptr, func_decl->function()->body());
-    ASSERT_EQ(std::size_t{1},
-              func_decl->function()->body()->statements().size());
+    ASSERT_EQ(std::size_t{1}, func_decl->function()->body()->statements().size());
 
     // Only one for statement, all elements are non-null
-    auto *for_stmt =
-        func_decl->function()->body()->statements()[0]->SafeAs<ast::ForStmt>();
+    auto *for_stmt = func_decl->function()->body()->statements()[0]->SafeAs<ast::ForStmt>();
     ASSERT_NE(nullptr, for_stmt);
     ASSERT_EQ(test.init_null, for_stmt->init() == nullptr);
     ASSERT_EQ(test.cond_null, for_stmt->condition() == nullptr);
@@ -201,8 +196,7 @@ TEST_F(ParserTest, RegularForStmt_WhileTest) {
     auto *func_decl = decl->As<ast::FunctionDecl>();
     ASSERT_NE(nullptr, func_decl->function());
     ASSERT_NE(nullptr, func_decl->function()->body());
-    ASSERT_EQ(std::size_t{2},
-              func_decl->function()->body()->statements().size());
+    ASSERT_EQ(std::size_t{2}, func_decl->function()->body()->statements().size());
 
     // Two statements in function
 

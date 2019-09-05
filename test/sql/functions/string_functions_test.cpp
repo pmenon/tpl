@@ -140,8 +140,7 @@ TEST_F(StringFunctionsTests, SplitPart) {
     s.split(splits, delim);
 
     for (u32 i = 0; i < splits.size(); i++) {
-      StringFunctions::SplitPart(ctx(), &result, x, StringVal(delim),
-                                 Integer(i + 1));
+      StringFunctions::SplitPart(ctx(), &result, x, StringVal(delim), Integer(i + 1));
       auto split = splits[i].str();
       EXPECT_TRUE(StringVal(split.c_str()) == result);
     }

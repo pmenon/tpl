@@ -55,16 +55,14 @@ class BytecodeEmitter {
   void Bind(BytecodeLabel *label);
 
   void EmitJump(Bytecode bytecode, BytecodeLabel *label);
-  void EmitConditionalJump(Bytecode bytecode, LocalVar cond,
-                           BytecodeLabel *label);
+  void EmitConditionalJump(Bytecode bytecode, LocalVar cond, BytecodeLabel *label);
 
   // -------------------------------------------------------
   // Load-effective-address
   // -------------------------------------------------------
 
   void EmitLea(LocalVar dest, LocalVar src, u32 offset);
-  void EmitLeaScaled(LocalVar dest, LocalVar src, LocalVar index, u32 scale,
-                     u32 offset);
+  void EmitLeaScaled(LocalVar dest, LocalVar src, LocalVar index, u32 scale, u32 offset);
 
   // -------------------------------------------------------
   // Calls and returns
@@ -78,8 +76,7 @@ class BytecodeEmitter {
   // -------------------------------------------------------
 
   void EmitUnaryOp(Bytecode bytecode, LocalVar dest, LocalVar input);
-  void EmitBinaryOp(Bytecode bytecode, LocalVar dest, LocalVar lhs,
-                    LocalVar rhs);
+  void EmitBinaryOp(Bytecode bytecode, LocalVar dest, LocalVar lhs, LocalVar rhs);
 
   // -------------------------------------------------------
   // Generic emissions
@@ -87,34 +84,29 @@ class BytecodeEmitter {
 
   void Emit(Bytecode bytecode, LocalVar operand_1);
   void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2);
-  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2,
-            LocalVar operand_3);
-  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2,
-            LocalVar operand_3, LocalVar operand_4);
-  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2,
-            LocalVar operand_3, LocalVar operand_4, LocalVar operand_5);
-  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2,
-            LocalVar operand_3, LocalVar operand_4, LocalVar operand_5,
-            LocalVar operand_6);
-  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2,
-            LocalVar operand_3, LocalVar operand_4, LocalVar operand_5,
-            LocalVar operand_6, LocalVar operand_7);
-  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2,
-            LocalVar operand_3, LocalVar operand_4, LocalVar operand_5,
-            LocalVar operand_6, LocalVar operand_7, LocalVar operand_8);
+  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2, LocalVar operand_3);
+  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2, LocalVar operand_3,
+            LocalVar operand_4);
+  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2, LocalVar operand_3,
+            LocalVar operand_4, LocalVar operand_5);
+  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2, LocalVar operand_3,
+            LocalVar operand_4, LocalVar operand_5, LocalVar operand_6);
+  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2, LocalVar operand_3,
+            LocalVar operand_4, LocalVar operand_5, LocalVar operand_6, LocalVar operand_7);
+  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2, LocalVar operand_3,
+            LocalVar operand_4, LocalVar operand_5, LocalVar operand_6, LocalVar operand_7,
+            LocalVar operand_8);
 
   // -------------------------------------------------------
   // Special
   // -------------------------------------------------------
 
   // Iterate over all the states in the container
-  void EmitThreadStateContainerIterate(LocalVar tls, LocalVar ctx,
-                                       FunctionId iterate_fn);
+  void EmitThreadStateContainerIterate(LocalVar tls, LocalVar ctx, FunctionId iterate_fn);
 
   // Reset a thread state container with init and destroy functions
-  void EmitThreadStateContainerReset(LocalVar tls, LocalVar state_size,
-                                     FunctionId init_fn, FunctionId destroy_fn,
-                                     LocalVar ctx);
+  void EmitThreadStateContainerReset(LocalVar tls, LocalVar state_size, FunctionId init_fn,
+                                     FunctionId destroy_fn, LocalVar ctx);
 
   // Initialize a table iterator
   void EmitTableIterInit(Bytecode bytecode, LocalVar iter, u16 table_id);
@@ -132,35 +124,29 @@ class BytecodeEmitter {
   void EmitFilterManagerInsertFlavor(LocalVar fmb, FunctionId func);
 
   // Check if a hash table entry iterator has more rows
-  void EmitHashTableEntryIteratorHasNext(LocalVar has_next,
-                                         LocalVar ht_entry_iter,
-                                         FunctionId key_eq, LocalVar ctx,
-                                         LocalVar probe_tuple);
+  void EmitHashTableEntryIteratorHasNext(LocalVar has_next, LocalVar ht_entry_iter,
+                                         FunctionId key_eq, LocalVar ctx, LocalVar probe_tuple);
 
   // Lookup a single entry in the aggregation hash table
-  void EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht, LocalVar hash,
-                              FunctionId key_eq_fn, LocalVar arg);
+  void EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht, LocalVar hash, FunctionId key_eq_fn,
+                              LocalVar arg);
 
   // Emit code to process a batch of input into the aggregation hash table
-  void EmitAggHashTableProcessBatch(LocalVar agg_ht, LocalVar iters,
-                                    FunctionId hash_fn, FunctionId key_eq_fn,
-                                    FunctionId init_agg_fn,
-                                    FunctionId merge_agg_fn,
-                                    LocalVar partitioned);
+  void EmitAggHashTableProcessBatch(LocalVar agg_ht, LocalVar iters, FunctionId hash_fn,
+                                    FunctionId key_eq_fn, FunctionId init_agg_fn,
+                                    FunctionId merge_agg_fn, LocalVar partitioned);
 
   // Emit code to move thread-local data into main agg table
-  void EmitAggHashTableMovePartitions(LocalVar agg_ht, LocalVar tls,
-                                      LocalVar aht_offset,
+  void EmitAggHashTableMovePartitions(LocalVar agg_ht, LocalVar tls, LocalVar aht_offset,
                                       FunctionId merge_part_fn);
 
   // Emit code to scan an agg table in parallel
-  void EmitAggHashTableParallelPartitionedScan(LocalVar agg_ht,
-                                               LocalVar context, LocalVar tls,
+  void EmitAggHashTableParallelPartitionedScan(LocalVar agg_ht, LocalVar context, LocalVar tls,
                                                FunctionId scan_part_fn);
 
   // Initialize a sorter instance
-  void EmitSorterInit(Bytecode bytecode, LocalVar sorter, LocalVar region,
-                      FunctionId cmp_fn, LocalVar tuple_size);
+  void EmitSorterInit(Bytecode bytecode, LocalVar sorter, LocalVar region, FunctionId cmp_fn,
+                      LocalVar tuple_size);
 
  private:
   // Copy a scalar immediate value into the bytecode stream
@@ -171,9 +157,7 @@ class BytecodeEmitter {
   }
 
   // Emit a bytecode
-  void EmitImpl(const Bytecode bytecode) {
-    EmitScalarValue(Bytecodes::ToByte(bytecode));
-  }
+  void EmitImpl(const Bytecode bytecode) { EmitScalarValue(Bytecodes::ToByte(bytecode)); }
 
   // Emit a local variable reference by encoding it into the bytecode stream
   void EmitImpl(const LocalVar local) { EmitScalarValue(local.Encode()); }

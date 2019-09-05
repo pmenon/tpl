@@ -19,8 +19,7 @@ namespace tpl::bandit {
  */
 class MultiArmedBandit {
  public:
-  MultiArmedBandit(vm::Module *module, std::vector<std::string> action_names,
-                   u32 optimal = 0)
+  MultiArmedBandit(vm::Module *module, std::vector<std::string> action_names, u32 optimal = 0)
       : module_(module), action_names_(std::move(action_names)) {}
 
   double ExecuteAction(u32 action);

@@ -9,8 +9,7 @@ namespace tpl::sql {
  */
 class ConstantVector : public Vector {
  public:
-  explicit ConstantVector(const GenericValue &value)
-      : Vector(value.type_id()), value_(value) {
+  explicit ConstantVector(const GenericValue &value) : Vector(value.type_id()), value_(value) {
     Reference(&value_);
   }
 

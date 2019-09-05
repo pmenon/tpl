@@ -45,8 +45,7 @@ class Vec8 : public Vec512b {
   Vec8() = default;
   explicit Vec8(i64 val) { reg_ = _mm512_set1_epi64(val); }
   explicit Vec8(const __m512i &reg) : Vec512b(reg) {}
-  Vec8(i64 val1, i64 val2, i64 val3, i64 val4, i64 val5, i64 val6, i64 val7,
-       i64 val8) {
+  Vec8(i64 val1, i64 val2, i64 val3, i64 val4, i64 val5, i64 val6, i64 val7, i64 val8) {
     reg_ = _mm512_setr_epi64(val1, val2, val3, val4, val5, val6, val7, val8);
   }
 
@@ -55,25 +54,17 @@ class Vec8 : public Vec512b {
   /// Load and sign-extend eight 32-bit values stored contiguously from the
   /// input pointer array.
   Vec8 &Load(const i32 *ptr);
-  Vec8 &Load(const u32 *ptr) {
-    return Load(reinterpret_cast<const i32 *>(ptr));
-  }
+  Vec8 &Load(const u32 *ptr) { return Load(reinterpret_cast<const i32 *>(ptr)); }
 
   /// Load and sign-extend eight 64-bit values stored contiguously from the
   /// input pointer array.
   Vec8 &Load(const i64 *ptr);
-  Vec8 &Load(const u64 *ptr) {
-    return Load(reinterpret_cast<const i64 *>(ptr));
-  }
+  Vec8 &Load(const u64 *ptr) { return Load(reinterpret_cast<const i64 *>(ptr)); }
 
 #ifdef __APPLE__
   static_assert(sizeof(long) == sizeof(i64), "On MacOS, long isn't 64-bits!");
-  Vec8 &Load(const long *ptr) {
-    return Load(reinterpret_cast<const i64 *>(ptr));
-  }
-  Vec8 &Load(const unsigned long *ptr) {
-    return Load(reinterpret_cast<const i64 *>(ptr));
-  }
+  Vec8 &Load(const long *ptr) { return Load(reinterpret_cast<const i64 *>(ptr)); }
+  Vec8 &Load(const unsigned long *ptr) { return Load(reinterpret_cast<const i64 *>(ptr)); }
 #endif
 
   template <typename T>
@@ -138,8 +129,8 @@ inline Vec8 &Vec8::Gather(const T *ptr, const Vec8 &pos) {
 #else
   alignas(64) i64 x[Size()];
   pos.Store(x);
-  reg_ = _mm512_setr_epi64(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
-                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
+  reg_ = _mm512_setr_epi64(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]], ptr[x[4]], ptr[x[5]],
+                           ptr[x[6]], ptr[x[7]]);
 #endif
   return *this;
 }
@@ -159,9 +150,7 @@ inline void Vec8::Store(i32 *arr) const {
   _mm512_mask_cvtepi64_storeu_epi32(reinterpret_cast<void *>(arr), all, reg());
 }
 
-inline void Vec8::Store(i64 *arr) const {
-  Vec512b::StoreUnaligned(reinterpret_cast<void *>(arr));
-}
+inline void Vec8::Store(i64 *arr) const { Vec512b::StoreUnaligned(reinterpret_cast<void *>(arr)); }
 
 inline bool Vec8::AllBitsAtPositionsSet(const Vec8 &mask) const {
   return _mm512_testn_epi64_mask(reg(), mask) == 0;
@@ -176,12 +165,10 @@ class Vec16 : public Vec512b {
   Vec16() = default;
   explicit Vec16(i32 val) { reg_ = _mm512_set1_epi32(val); }
   explicit Vec16(const __m512i &reg) : Vec512b(reg) {}
-  Vec16(i32 val1, i32 val2, i32 val3, i32 val4, i32 val5, i32 val6, i32 val7,
-        i32 val8, i32 val9, i32 val10, i32 val11, i32 val12, i32 val13,
-        i32 val14, i32 val15, i32 val16) {
-    reg_ =
-        _mm512_setr_epi32(val1, val2, val3, val4, val5, val6, val7, val8, val9,
-                          val10, val11, val12, val13, val14, val15, val16);
+  Vec16(i32 val1, i32 val2, i32 val3, i32 val4, i32 val5, i32 val6, i32 val7, i32 val8, i32 val9,
+        i32 val10, i32 val11, i32 val12, i32 val13, i32 val14, i32 val15, i32 val16) {
+    reg_ = _mm512_setr_epi32(val1, val2, val3, val4, val5, val6, val7, val8, val9, val10, val11,
+                             val12, val13, val14, val15, val16);
   }
 
   static constexpr int Size() { return 16; }
@@ -194,15 +181,11 @@ class Vec16 : public Vec512b {
   /// Load and sign-extend 16 16-bit values stored contiguously from the input
   /// pointer array.
   Vec16 &Load(const i16 *ptr);
-  Vec16 &Load(const u16 *ptr) {
-    return Load(reinterpret_cast<const i16 *>(ptr));
-  }
+  Vec16 &Load(const u16 *ptr) { return Load(reinterpret_cast<const i16 *>(ptr)); }
 
   /// Load 16 32-bit values stored contiguously from the input pointer array.
   Vec16 &Load(const i32 *ptr);
-  Vec16 &Load(const u32 *ptr) {
-    return Load(reinterpret_cast<const i32 *>(ptr));
-  }
+  Vec16 &Load(const u32 *ptr) { return Load(reinterpret_cast<const i32 *>(ptr)); }
 
   template <typename T>
   Vec16 &Gather(const T *ptr, const Vec16 &pos);
@@ -265,9 +248,8 @@ template <>
 inline Vec16 &Vec16::Gather<i8>(const i8 *ptr, const Vec16 &pos) {
   alignas(64) i32 x[Size()];
   pos.Store(x);
-  reg_ = _mm512_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
-                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]],
-                           ptr[x[8]], ptr[x[9]], ptr[x[10]], ptr[x[11]],
+  reg_ = _mm512_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]], ptr[x[4]], ptr[x[5]],
+                           ptr[x[6]], ptr[x[7]], ptr[x[8]], ptr[x[9]], ptr[x[10]], ptr[x[11]],
                            ptr[x[12]], ptr[x[13]], ptr[x[14]], ptr[x[15]]);
   return *this;
 }
@@ -276,9 +258,8 @@ template <>
 inline Vec16 &Vec16::Gather<i16>(const i16 *ptr, const Vec16 &pos) {
   alignas(64) i32 x[Size()];
   pos.Store(x);
-  reg_ = _mm512_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
-                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]],
-                           ptr[x[8]], ptr[x[9]], ptr[x[10]], ptr[x[11]],
+  reg_ = _mm512_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]], ptr[x[4]], ptr[x[5]],
+                           ptr[x[6]], ptr[x[7]], ptr[x[8]], ptr[x[9]], ptr[x[10]], ptr[x[11]],
                            ptr[x[12]], ptr[x[13]], ptr[x[14]], ptr[x[15]]);
   return *this;
 }
@@ -299,9 +280,7 @@ inline void Vec16::Store(i16 *arr) const {
   _mm512_mask_cvtepi32_storeu_epi16(reinterpret_cast<void *>(arr), all, reg());
 }
 
-inline void Vec16::Store(i32 *arr) const {
-  Vec512b::StoreUnaligned(reinterpret_cast<void *>(arr));
-}
+inline void Vec16::Store(i32 *arr) const { Vec512b::StoreUnaligned(reinterpret_cast<void *>(arr)); }
 
 inline bool Vec16::AllBitsAtPositionsSet(const Vec16 &mask) const {
   return _mm512_testn_epi32_mask(reg(), mask) == 0;
@@ -326,9 +305,7 @@ class Vec8Mask {
 
   static constexpr int Size() { return 8; }
 
-  bool Extract(u32 index) const {
-    return (static_cast<u32>(mask_) >> index) & 1;
-  }
+  bool Extract(u32 index) const { return (static_cast<u32>(mask_) >> index) & 1; }
 
   bool operator[](u32 index) const { return Extract(index); }
 
@@ -350,17 +327,14 @@ class Vec16Mask {
   static constexpr int Size() { return 16; }
 
   u32 ToPositions(u32 *positions, u32 offset) const {
-    __m512i sequence =
-        _mm512_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+    __m512i sequence = _mm512_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
     __m512i pos_vec = _mm512_add_epi32(sequence, _mm512_set1_epi32(offset));
     __m256i pos_vec_comp = _mm512_cvtepi32_epi16(pos_vec);
     _mm256_mask_compressstoreu_epi16(positions, mask_, pos_vec_comp);
     return __builtin_popcountll(mask_);
   }
 
-  bool Extract(u32 index) const {
-    return (static_cast<u32>(mask_) >> index) & 1;
-  }
+  bool Extract(u32 index) const { return (static_cast<u32>(mask_) >> index) & 1; }
 
   bool operator[](u32 index) const { return Extract(index); }
 
@@ -418,90 +392,70 @@ inline Vec8Mask operator!=(const Vec8 &a, const Vec8 &b) {
 // Vec8 Arithmetic Operations
 // ---------------------------------------------------------
 
-inline Vec8 operator+(const Vec8 &a, const Vec8 &b) {
-  return Vec8(_mm512_add_epi64(a, b));
-}
+inline Vec8 operator+(const Vec8 &a, const Vec8 &b) { return Vec8(_mm512_add_epi64(a, b)); }
 
 inline Vec8 &operator+=(Vec8 &a, const Vec8 &b) {
   a = a + b;
   return a;
 }
 
-inline Vec8 operator-(const Vec8 &a, const Vec8 &b) {
-  return Vec8(_mm512_sub_epi64(a, b));
-}
+inline Vec8 operator-(const Vec8 &a, const Vec8 &b) { return Vec8(_mm512_sub_epi64(a, b)); }
 
 inline Vec8 &operator-=(Vec8 &a, const Vec8 &b) {
   a = a - b;
   return a;
 }
 
-inline Vec8 operator*(const Vec8 &a, const Vec8 &b) {
-  return Vec8(_mm512_mullo_epi64(a, b));
-}
+inline Vec8 operator*(const Vec8 &a, const Vec8 &b) { return Vec8(_mm512_mullo_epi64(a, b)); }
 
 inline Vec8 &operator*=(Vec8 &a, const Vec8 &b) {
   a = a * b;
   return a;
 }
 
-inline Vec8 operator&(const Vec8 &a, const Vec8 &b) {
-  return Vec8(_mm512_and_epi64(a, b));
-}
+inline Vec8 operator&(const Vec8 &a, const Vec8 &b) { return Vec8(_mm512_and_epi64(a, b)); }
 
 inline Vec8 &operator&=(Vec8 &a, const Vec8 &b) {
   a = a & b;
   return a;
 }
 
-inline Vec8 operator|(const Vec8 &a, const Vec8 &b) {
-  return Vec8(_mm512_or_epi64(a, b));
-}
+inline Vec8 operator|(const Vec8 &a, const Vec8 &b) { return Vec8(_mm512_or_epi64(a, b)); }
 
 inline Vec8 &operator|=(Vec8 &a, const Vec8 &b) {
   a = a | b;
   return a;
 }
 
-inline Vec8 operator^(const Vec8 &a, const Vec8 &b) {
-  return Vec8(_mm512_xor_epi64(a, b));
-}
+inline Vec8 operator^(const Vec8 &a, const Vec8 &b) { return Vec8(_mm512_xor_epi64(a, b)); }
 
 inline Vec8 &operator^=(Vec8 &a, const Vec8 &b) {
   a = a ^ b;
   return a;
 }
 
-inline Vec8 operator>>(const Vec8 &a, const u32 shift) {
-  return Vec8(_mm512_srli_epi64(a, shift));
-}
+inline Vec8 operator>>(const Vec8 &a, const u32 shift) { return Vec8(_mm512_srli_epi64(a, shift)); }
 
 inline Vec8 &operator>>=(Vec8 &a, const u32 shift) {
   a = a >> shift;
   return a;
 }
 
-inline Vec8 operator<<(const Vec8 &a, const u32 shift) {
-  return Vec8(_mm512_slli_epi64(a, shift));
-}
+inline Vec8 operator<<(const Vec8 &a, const u32 shift) { return Vec8(_mm512_slli_epi64(a, shift)); }
 
 inline Vec8 &operator<<=(Vec8 &a, const u32 shift) {
   a = a << shift;
   return a;
 }
 
-inline Vec8 operator>>(const Vec8 &a, const Vec8 &b) {
-  return Vec8(_mm512_srlv_epi64(a, b));
-}
+inline Vec8 operator>>(const Vec8 &a, const Vec8 &b) { return Vec8(_mm512_srlv_epi64(a, b)); }
 
 inline Vec8 &operator>>=(Vec8 &a, const Vec8 &b) {
   a = a >> b;
   return a;
 }
 
-inline Vec8 operator<<(const Vec8 &a, const Vec8 &b) {
-  return Vec8(_mm512_sllv_epi64(a, b));
-}
+inline Vec8 operator<<(const Vec8 &a, const Vec8 &b) { return Vec8(_mm512_sllv_epi64(a, b)); }
 
 inline Vec8 &operator<<=(Vec8 &a, const Vec8 &b) {
   a = a << b;
@@ -540,45 +494,35 @@ inline Vec16Mask operator!=(const Vec16 &a, const Vec16 &b) {
 // Vec16 Arithmetic Operations
 // ---------------------------------------------------------
 
-inline Vec16 operator+(const Vec16 &a, const Vec16 &b) {
-  return Vec16(_mm512_add_epi32(a, b));
-}
+inline Vec16 operator+(const Vec16 &a, const Vec16 &b) { return Vec16(_mm512_add_epi32(a, b)); }
 
 inline Vec16 &operator+=(Vec16 &a, const Vec16 &b) {
   a = a + b;
   return a;
 }
 
-inline Vec16 operator-(const Vec16 &a, const Vec16 &b) {
-  return Vec16(_mm512_sub_epi32(a, b));
-}
+inline Vec16 operator-(const Vec16 &a, const Vec16 &b) { return Vec16(_mm512_sub_epi32(a, b)); }
 
 inline Vec16 &operator-=(Vec16 &a, const Vec16 &b) {
   a = a - b;
   return a;
 }
 
-inline Vec16 operator&(const Vec16 &a, const Vec16 &b) {
-  return Vec16(_mm512_and_epi32(a, b));
-}
+inline Vec16 operator&(const Vec16 &a, const Vec16 &b) { return Vec16(_mm512_and_epi32(a, b)); }
 
 inline Vec16 &operator&=(Vec16 &a, const Vec16 &b) {
   a = a & b;
   return a;
 }
 
-inline Vec16 operator|(const Vec16 &a, const Vec16 &b) {
-  return Vec16(_mm512_or_epi32(a, b));
-}
+inline Vec16 operator|(const Vec16 &a, const Vec16 &b) { return Vec16(_mm512_or_epi32(a, b)); }
 
 inline Vec16 &operator|=(Vec16 &a, const Vec16 &b) {
   a = a | b;
   return a;
 }
 
-inline Vec16 operator^(const Vec16 &a, const Vec16 &b) {
-  return Vec16(_mm512_xor_epi32(a, b));
-}
+inline Vec16 operator^(const Vec16 &a, const Vec16 &b) { return Vec16(_mm512_xor_epi32(a, b)); }
 
 inline Vec16 &operator^=(Vec16 &a, const Vec16 &b) {
   a = a ^ b;
@@ -603,18 +547,14 @@ inline Vec16 &operator<<=(Vec16 &a, const u32 shift) {
   return a;
 }
 
-inline Vec16 operator>>(const Vec16 &a, const Vec16 &b) {
-  return Vec16(_mm512_srlv_epi32(a, b));
-}
+inline Vec16 operator>>(const Vec16 &a, const Vec16 &b) { return Vec16(_mm512_srlv_epi32(a, b)); }
 
 inline Vec16 &operator>>=(Vec16 &a, const Vec16 &b) {
   a = a >> b;
   return a;
 }
 
-inline Vec16 operator<<(const Vec16 &a, const Vec16 &b) {
-  return Vec16(_mm512_sllv_epi32(a, b));
-}
+inline Vec16 operator<<(const Vec16 &a, const Vec16 &b) { return Vec16(_mm512_sllv_epi32(a, b)); }
 
 inline Vec16 &operator<<=(Vec16 &a, const Vec16 &b) {
   a = a << b;
@@ -657,9 +597,8 @@ struct FilterVecSizer<T, std::enable_if_t<std::is_unsigned_v<T>>>
     : public FilterVecSizer<std::make_signed_t<T>> {};
 
 template <typename T, template <typename> typename Compare>
-static inline u32 FilterVectorByVal(const T *RESTRICT in, const u32 in_count,
-                                    const T val, sel_t *RESTRICT out,
-                                    u32 *RESTRICT in_pos) {
+static inline u32 FilterVectorByVal(const T *RESTRICT in, const u32 in_count, const T val,
+                                    sel_t *RESTRICT out, u32 *RESTRICT in_pos) {
   using Vec = typename FilterVecSizer<T>::Vec;
   using VecMask = typename FilterVecSizer<T>::VecMask;
 
@@ -680,8 +619,7 @@ static inline u32 FilterVectorByVal(const T *RESTRICT in, const u32 in_count,
 }
 
 template <typename T, template <typename> typename Compare>
-static inline u32 FilterVectorByVector(const T *RESTRICT in_1,
-                                       const T *RESTRICT in_2,
+static inline u32 FilterVectorByVector(const T *RESTRICT in_1, const T *RESTRICT in_2,
                                        const u32 in_count, sel_t *RESTRICT out,
                                        u32 *RESTRICT in_pos) {
   using Vec = typename FilterVecSizer<T>::Vec;

@@ -8,11 +8,9 @@ namespace tpl::sql {
 namespace {
 
 template <typename Op, typename OpNull>
-void BooleanLogicOperation(const Vector &left, const Vector &right,
-                           Vector *result) {
-  TPL_ASSERT(
-      left.type_id() == TypeId::Boolean && right.type_id() == TypeId::Boolean,
-      "Inputs to boolean logic op must be boolean");
+void BooleanLogicOperation(const Vector &left, const Vector &right, Vector *result) {
+  TPL_ASSERT(left.type_id() == TypeId::Boolean && right.type_id() == TypeId::Boolean,
+             "Inputs to boolean logic op must be boolean");
 
   const auto *left_data = reinterpret_cast<const bool *>(left.data());
   const auto *right_data = reinterpret_cast<const bool *>(right.data());
@@ -27,33 +25,30 @@ void BooleanLogicOperation(const Vector &left, const Vector &right,
       // Slow-path: need to check NULLs
       VectorOps::Exec(right, [&](u64 i, u64 k) {
         result_data[i] = Op::Apply(left_data[0], right_data[i]);
-        result_mask[i] = OpNull::Apply(left_data[0], right_data[i],
-                                       left_null_mask[0], right_null_mask[i]);
+        result_mask[i] =
+            OpNull::Apply(left_data[0], right_data[i], left_null_mask[0], right_null_mask[i]);
       });
     } else {
       // Fast-path: no NULL checks
-      VectorOps::Exec(right, [&](u64 i, u64 k) {
-        result_data[i] = Op::Apply(left_data[0], right_data[i]);
-      });
+      VectorOps::Exec(
+          right, [&](u64 i, u64 k) { result_data[i] = Op::Apply(left_data[0], right_data[i]); });
     }
   } else if (right.IsConstant()) {
     BooleanLogicOperation<Op, OpNull>(right, left, result);
     return;
   } else {
-    TPL_ASSERT(left.selection_vector() == right.selection_vector(),
-               "Mismatched selection vectors");
+    TPL_ASSERT(left.selection_vector() == right.selection_vector(), "Mismatched selection vectors");
     TPL_ASSERT(left.count() == right.count(), "Mismatched counts");
     if (!left_null_mask.any() && !right_null_mask.any()) {
       // Fast-path: no NULL checks
-      VectorOps::Exec(left, [&](u64 i, u64 k) {
-        result_data[i] = Op::Apply(left_data[i], right_data[i]);
-      });
+      VectorOps::Exec(
+          left, [&](u64 i, u64 k) { result_data[i] = Op::Apply(left_data[i], right_data[i]); });
     } else {
       // Slow-path: need to check NULLs
       VectorOps::Exec(left, [&](u64 i, u64 k) {
         result_data[i] = Op::Apply(left_data[i], right_data[i]);
-        result_mask[i] = OpNull::Apply(left_data[i], right_data[i],
-                                       left_null_mask[i], right_null_mask[i]);
+        result_mask[i] =
+            OpNull::Apply(left_data[i], right_data[i], left_null_mask[i], right_null_mask[i]);
       });
     }
   }
@@ -65,13 +60,11 @@ void BooleanLogicOperation(const Vector &left, const Vector &right,
 }  // namespace
 
 void VectorOps::And(const Vector &left, const Vector &right, Vector *result) {
-  BooleanLogicOperation<tpl::sql::And, tpl::sql::AndNullMask>(left, right,
-                                                              result);
+  BooleanLogicOperation<tpl::sql::And, tpl::sql::AndNullMask>(left, right, result);
 }
 
 void VectorOps::Or(const Vector &left, const Vector &right, Vector *result) {
-  BooleanLogicOperation<tpl::sql::Or, tpl::sql::OrNullMask>(left, right,
-                                                            result);
+  BooleanLogicOperation<tpl::sql::Or, tpl::sql::OrNullMask>(left, right, result);
 }
 
 void VectorOps::Not(const Vector &input, Vector *result) {

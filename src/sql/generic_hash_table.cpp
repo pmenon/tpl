@@ -5,11 +5,7 @@
 namespace tpl::sql {
 
 GenericHashTable::GenericHashTable(float load_factor) noexcept
-    : entries_(nullptr),
-      mask_(0),
-      capacity_(0),
-      num_elems_(0),
-      load_factor_(load_factor) {}
+    : entries_(nullptr), mask_(0), capacity_(0), num_elems_(0), load_factor_(load_factor) {}
 
 GenericHashTable::~GenericHashTable() {
   if (entries_ != nullptr) {
@@ -44,8 +40,8 @@ GenericHashTableVectorIterator<UseTag>::GenericHashTableVectorIterator(
     : memory_(memory),
       table_(table),
       table_dir_index_(0),
-      entry_vec_(memory_->AllocateArray<const HashTableEntry *>(
-          kDefaultVectorSize, CACHELINE_SIZE, true)),
+      entry_vec_(
+          memory_->AllocateArray<const HashTableEntry *>(kDefaultVectorSize, CACHELINE_SIZE, true)),
       entry_vec_end_idx_(0) {
   Next();
 }
@@ -78,8 +74,7 @@ void GenericHashTableVectorIterator<UseTag>::Next() {
   // Fill the range [idx, SIZE) in the cache with valid entries from the source
   // hash table.
   while (index < kDefaultVectorSize && table_dir_index_ < table_.capacity()) {
-    entry_vec_[index] =
-        table_.entries_[table_dir_index_++].load(std::memory_order_relaxed);
+    entry_vec_[index] = table_.entries_[table_dir_index_++].load(std::memory_order_relaxed);
     if constexpr (UseTag) {
       entry_vec_[index] = GenericHashTable::UntagPointer(entry_vec_[index]);
     }

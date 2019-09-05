@@ -81,8 +81,7 @@ class Sorter {
    * @param sorter_offset The offset into the container where the sorter
    *                      instance is.
    */
-  void SortParallel(const ThreadStateContainer *thread_state_container,
-                    u32 sorter_offset);
+  void SortParallel(const ThreadStateContainer *thread_state_container, u32 sorter_offset);
 
   /**
    * Perform a parallel Top-K of all sorter instances stored in the thread
@@ -95,8 +94,8 @@ class Sorter {
    *                      instance is.
    * @param top_k The number entries at the top the caller cares for.
    */
-  void SortTopKParallel(const ThreadStateContainer *thread_state_container,
-                        u32 sorter_offset, u64 top_k);
+  void SortTopKParallel(const ThreadStateContainer *thread_state_container, u32 sorter_offset,
+                        u64 top_k);
 
   /**
    * Return the number of tuples currently in this sorter
@@ -215,16 +214,14 @@ class SorterVectorIterator {
   /**
    * Construct a vector iterator over the given sorter instance.
    */
-  SorterVectorIterator(
-      const Sorter &sorter,
-      const std::vector<const Schema::ColumnInfo *> &column_info,
-      TransposeFn transpose_fn);
+  SorterVectorIterator(const Sorter &sorter,
+                       const std::vector<const Schema::ColumnInfo *> &column_info,
+                       TransposeFn transpose_fn);
 
   /**
    * Construct a vector iterator over the given sorter instance.
    */
-  SorterVectorIterator(const Sorter &sorter,
-                       const Schema::ColumnInfo *column_info, u32 num_cols,
+  SorterVectorIterator(const Sorter &sorter, const Schema::ColumnInfo *column_info, u32 num_cols,
                        TransposeFn transpose_fn);
 
   /**

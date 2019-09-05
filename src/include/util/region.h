@@ -53,8 +53,7 @@ class Region {
    * @param alignment The desired alignment
    * @return A pointer to the start of the allocated space
    */
-  void *Allocate(std::size_t size,
-                 std::size_t alignment = kDefaultByteAlignment);
+  void *Allocate(std::size_t size, std::size_t alignment = kDefaultByteAlignment);
 
   /**
    * Allocate a (contiguous) array of elements of the given type
@@ -116,9 +115,7 @@ class Region {
       this->size = size;
     }
 
-    uintptr_t Start() const {
-      return reinterpret_cast<uintptr_t>(this) + sizeof(Chunk);
-    }
+    uintptr_t Start() const { return reinterpret_cast<uintptr_t>(this) + sizeof(Chunk); }
 
     uintptr_t End() const { return reinterpret_cast<uintptr_t>(this) + size; }
   };
@@ -165,9 +162,7 @@ class RegionObject {
   void *operator new(std::size_t size) = delete;
   void operator delete(void *ptr) = delete;
 
-  void *operator new(std::size_t size, Region *region) {
-    return region->Allocate(size);
-  }
+  void *operator new(std::size_t size, Region *region) { return region->Allocate(size); }
 
   // Objects from a Region shouldn't be deleted individually. They'll be deleted
   // when the region is destroyed. You can invoke this behavior manually by

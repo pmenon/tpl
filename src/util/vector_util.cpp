@@ -9,10 +9,8 @@
 
 namespace tpl::util {
 
-u32 VectorUtil::IntersectSelected(const sel_t *sel_vector_1,
-                                  const u32 sel_vector_1_len,
-                                  const sel_t *sel_vector_2,
-                                  const u32 sel_vector_2_len,
+u32 VectorUtil::IntersectSelected(const sel_t *sel_vector_1, const u32 sel_vector_1_len,
+                                  const sel_t *sel_vector_2, const u32 sel_vector_2_len,
                                   sel_t *out_sel_vector) {
   // No-op if either vector is empty
   if (sel_vector_1_len == 0 || sel_vector_2_len == 0) {
@@ -21,8 +19,8 @@ u32 VectorUtil::IntersectSelected(const sel_t *sel_vector_1,
 
   // Canonical-ize; ensure the first vector is smaller than the second
   if (sel_vector_1_len > sel_vector_2_len) {
-    return IntersectSelected(sel_vector_2, sel_vector_2_len, sel_vector_1,
-                             sel_vector_1_len, out_sel_vector);
+    return IntersectSelected(sel_vector_2, sel_vector_2_len, sel_vector_1, sel_vector_1_len,
+                             out_sel_vector);
   }
 
   // Run
@@ -47,10 +45,8 @@ u32 VectorUtil::IntersectSelected(const sel_t *sel_vector_1,
   return k;
 }
 
-u32 VectorUtil::IntersectSelected(const sel_t *sel_vector,
-                                  const u32 sel_vector_len,
-                                  const u64 *bit_vector,
-                                  const u32 bit_vector_len,
+u32 VectorUtil::IntersectSelected(const sel_t *sel_vector, const u32 sel_vector_len,
+                                  const u64 *bit_vector, const u32 bit_vector_len,
                                   sel_t *out_sel_vector) {
   BitVector bv(const_cast<u64 *>(bit_vector), bit_vector_len);
 
@@ -63,8 +59,8 @@ u32 VectorUtil::IntersectSelected(const sel_t *sel_vector,
   return k;
 }
 
-u32 VectorUtil::DiffSelected_Scalar(const u32 n, const sel_t *sel_vector,
-                                    const u32 m, sel_t *out_sel_vector) {
+u32 VectorUtil::DiffSelected_Scalar(const u32 n, const sel_t *sel_vector, const u32 m,
+                                    sel_t *out_sel_vector) {
   u32 i = 0, j = 0, k = 0;
   for (; i < m; i++, j++) {
     while (j < sel_vector[i]) {
@@ -78,10 +74,8 @@ u32 VectorUtil::DiffSelected_Scalar(const u32 n, const sel_t *sel_vector,
   return n - m;
 }
 
-u32 VectorUtil::DiffSelected_WithScratchPad(const u32 n,
-                                            const sel_t *sel_vector,
-                                            const u32 sel_vector_len,
-                                            sel_t *out_sel_vector,
+u32 VectorUtil::DiffSelected_WithScratchPad(const u32 n, const sel_t *sel_vector,
+                                            const u32 sel_vector_len, sel_t *out_sel_vector,
                                             u8 *scratch) {
   TPL_ASSERT(n <= kDefaultVectorSize, "Selection vector too large");
   std::memset(scratch, 0, n);
@@ -92,15 +86,13 @@ u32 VectorUtil::DiffSelected_WithScratchPad(const u32 n,
   return VectorUtil::ByteVectorToSelectionVector(scratch, n, out_sel_vector);
 }
 
-u32 VectorUtil::DiffSelected(const u32 n, const sel_t *sel_vector,
-                             const u32 sel_vector_len, sel_t *out_sel_vector) {
+u32 VectorUtil::DiffSelected(const u32 n, const sel_t *sel_vector, const u32 sel_vector_len,
+                             sel_t *out_sel_vector) {
   u8 scratch[kDefaultVectorSize];
-  return DiffSelected_WithScratchPad(n, sel_vector, sel_vector_len,
-                                     out_sel_vector, scratch);
+  return DiffSelected_WithScratchPad(n, sel_vector, sel_vector_len, out_sel_vector, scratch);
 }
 
-void VectorUtil::SelectionVectorToByteVector(const sel_t *sel_vector,
-                                             const u32 num_elems,
+void VectorUtil::SelectionVectorToByteVector(const sel_t *sel_vector, const u32 num_elems,
                                              u8 *byte_vector) {
   for (u32 i = 0; i < num_elems; i++) {
     byte_vector[sel_vector[i]] = 0xff;
@@ -108,8 +100,7 @@ void VectorUtil::SelectionVectorToByteVector(const sel_t *sel_vector,
 }
 
 // TODO(pmenon): Consider splitting into dense and sparse implementations.
-u32 VectorUtil::ByteVectorToSelectionVector(const u8 *byte_vector,
-                                            const u32 num_bytes,
+u32 VectorUtil::ByteVectorToSelectionVector(const u8 *byte_vector, const u32 num_bytes,
                                             sel_t *sel_vector) {
   // Byte-vector index
   u32 i = 0;
@@ -124,8 +115,8 @@ u32 VectorUtil::ByteVectorToSelectionVector(const u8 *byte_vector,
     const auto word = *reinterpret_cast<const u64 *>(byte_vector + i);
     const auto mask = _pext_u64(word, 0x202020202020202);
     TPL_ASSERT(mask < 256, "Out-of-bounds mask");
-    const auto match_pos_scaled = _mm_loadl_epi64(
-        reinterpret_cast<const __m128i *>(&simd::k8BitMatchLUT[mask]));
+    const auto match_pos_scaled =
+        _mm_loadl_epi64(reinterpret_cast<const __m128i *>(&simd::k8BitMatchLUT[mask]));
     const auto match_pos = _mm_cvtepi8_epi16(match_pos_scaled);
     const auto pos_vec = _mm_add_epi16(idx, match_pos);
     idx = _mm_add_epi16(idx, eight);
@@ -142,8 +133,8 @@ u32 VectorUtil::ByteVectorToSelectionVector(const u8 *byte_vector,
   return k;
 }
 
-void VectorUtil::ByteVectorToBitVector(const u8 *byte_vector,
-                                       const u32 num_bytes, u64 *bit_vector) {
+void VectorUtil::ByteVectorToBitVector(const u8 *byte_vector, const u32 num_bytes,
+                                       u64 *bit_vector) {
   // Byte-vector index
   u32 i = 0;
 
@@ -152,10 +143,8 @@ void VectorUtil::ByteVectorToBitVector(const u8 *byte_vector,
 
   // Main vector loop
   for (; i + 64 <= num_bytes; i += 64, k++) {
-    const auto v_lo =
-        _mm256_loadu_si256(reinterpret_cast<const __m256i *>(byte_vector + i));
-    const auto v_hi = _mm256_loadu_si256(
-        reinterpret_cast<const __m256i *>(byte_vector + i + 32));
+    const auto v_lo = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(byte_vector + i));
+    const auto v_hi = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(byte_vector + i + 32));
     const auto hi = static_cast<u32>(_mm256_movemask_epi8(v_hi));
     const auto lo = static_cast<u32>(_mm256_movemask_epi8(v_lo));
     bit_vector[k] = (static_cast<u64>(hi) << 32u) | lo;
@@ -169,11 +158,9 @@ void VectorUtil::ByteVectorToBitVector(const u8 *byte_vector,
   }
 }
 
-void VectorUtil::BitVectorToByteVector(const u64 *bit_vector,
-                                       const u32 num_bits, u8 *byte_vector) {
-  const __m256i shuffle =
-      _mm256_setr_epi64x(0x0000000000000000, 0x0101010101010101,
-                         0x0202020202020202, 0x0303030303030303);
+void VectorUtil::BitVectorToByteVector(const u64 *bit_vector, const u32 num_bits, u8 *byte_vector) {
+  const __m256i shuffle = _mm256_setr_epi64x(0x0000000000000000, 0x0101010101010101,
+                                             0x0202020202020202, 0x0303030303030303);
   const __m256i bit_mask = _mm256_set1_epi64x(0x7fbfdfeff7fbfdfe);
 
   // Byte-vector write index
@@ -195,8 +182,7 @@ void VectorUtil::BitVectorToByteVector(const u64 *bit_vector,
     vmask = _mm256_shuffle_epi8(vmask, shuffle);
     vmask = _mm256_or_si256(vmask, bit_mask);
     vbytes = _mm256_cmpeq_epi8(vmask, _mm256_set1_epi64x(-1));
-    _mm256_storeu_si256(reinterpret_cast<__m256i *>(byte_vector + k + 32),
-                        vbytes);
+    _mm256_storeu_si256(reinterpret_cast<__m256i *>(byte_vector + k + 32), vbytes);
   }
 
   // Process last word in scalar loop
@@ -210,8 +196,7 @@ void VectorUtil::BitVectorToByteVector(const u64 *bit_vector,
 }
 
 // TODO(pmenon): Consider splitting into dense and sparse implementations.
-u32 VectorUtil::BitVectorToSelectionVector(const u64 *bit_vector,
-                                           const u32 num_bits,
+u32 VectorUtil::BitVectorToSelectionVector(const u64 *bit_vector, const u32 num_bits,
                                            sel_t *sel_vector) {
   const u32 num_words = MathUtil::DivRoundUp(num_bits, 64);
 

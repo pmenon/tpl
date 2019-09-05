@@ -1,19 +1,8 @@
 # Options for Clang Formatter
 
-# We'll use defaults from the Google style,
 BasedOnStyle: Google
-
-# 2 columns tab indentation.
 TabWidth: 2
-
-# No tabs
 UseTab: Never
-
-# Don't automatically derive the alignment of & and *
 DerivePointerAlignment: false
-
-# Always align pointer and reference to the right
 PointerAlignment: Right
-
-# TODO(WAN): switching to terrier makes it want to reformat the world
-# we can probably punt on it until we're merge-ready
+ColumnLimit: 100

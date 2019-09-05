@@ -42,11 +42,7 @@ void Vector::Strings::Destroy() { region_.FreeAll(); }
 //===----------------------------------------------------------------------===//
 
 Vector::Vector(TypeId type)
-    : type_(type),
-      count_(0),
-      data_(nullptr),
-      sel_vector_(nullptr),
-      null_mask_(0) {}
+    : type_(type), count_(0), data_(nullptr), sel_vector_(nullptr), null_mask_(0) {}
 
 Vector::Vector(TypeId type, u64 count, bool clear)
     : type_(type), count_(count), data_(nullptr), sel_vector_(nullptr) {
@@ -55,11 +51,7 @@ Vector::Vector(TypeId type, u64 count, bool clear)
 }
 
 Vector::Vector(TypeId type, byte *data, u64 count)
-    : type_(type),
-      count_(count),
-      data_(data),
-      sel_vector_(nullptr),
-      null_mask_(0) {
+    : type_(type), count_(count), data_(data), sel_vector_(nullptr), null_mask_(0) {
   TPL_ASSERT(data != nullptr, "Cannot create vector from NULL data pointer");
 }
 
@@ -94,40 +86,31 @@ GenericValue Vector::GetValue(const u64 index) const {
   auto actual_index = (sel_vector_ != nullptr ? sel_vector_[index] : index);
   switch (type_) {
     case TypeId::Boolean: {
-      return GenericValue::CreateBoolean(
-          reinterpret_cast<bool *>(data_)[actual_index]);
+      return GenericValue::CreateBoolean(reinterpret_cast<bool *>(data_)[actual_index]);
     }
     case TypeId::TinyInt: {
-      return GenericValue::CreateTinyInt(
-          reinterpret_cast<i8 *>(data_)[actual_index]);
+      return GenericValue::CreateTinyInt(reinterpret_cast<i8 *>(data_)[actual_index]);
     }
     case TypeId::SmallInt: {
-      return GenericValue::CreateSmallInt(
-          reinterpret_cast<i16 *>(data_)[actual_index]);
+      return GenericValue::CreateSmallInt(reinterpret_cast<i16 *>(data_)[actual_index]);
     }
     case TypeId::Integer: {
-      return GenericValue::CreateInteger(
-          reinterpret_cast<i32 *>(data_)[actual_index]);
+      return GenericValue::CreateInteger(reinterpret_cast<i32 *>(data_)[actual_index]);
     }
     case TypeId::BigInt: {
-      return GenericValue::CreateBigInt(
-          reinterpret_cast<i64 *>(data_)[actual_index]);
+      return GenericValue::CreateBigInt(reinterpret_cast<i64 *>(data_)[actual_index]);
     }
     case TypeId::Hash: {
-      return GenericValue::CreateHash(
-          reinterpret_cast<hash_t *>(data_)[actual_index]);
+      return GenericValue::CreateHash(reinterpret_cast<hash_t *>(data_)[actual_index]);
     }
     case TypeId::Pointer: {
-      return GenericValue::CreatePointer(
-          reinterpret_cast<uintptr_t *>(data_)[actual_index]);
+      return GenericValue::CreatePointer(reinterpret_cast<uintptr_t *>(data_)[actual_index]);
     }
     case TypeId::Float: {
-      return GenericValue::CreateReal(
-          reinterpret_cast<f32 *>(data_)[actual_index]);
+      return GenericValue::CreateReal(reinterpret_cast<f32 *>(data_)[actual_index]);
     }
     case TypeId::Double: {
-      return GenericValue::CreateDouble(
-          reinterpret_cast<f64 *>(data_)[actual_index]);
+      return GenericValue::CreateDouble(reinterpret_cast<f64 *>(data_)[actual_index]);
     }
     case TypeId::Varchar: {
       auto *str = reinterpret_cast<const char **>(data_)[actual_index];
@@ -135,8 +118,8 @@ GenericValue Vector::GetValue(const u64 index) const {
       return GenericValue::CreateVarchar(str);
     }
     default: {
-      throw std::runtime_error(fmt::format(
-          "Cannot read value of type '{}' from vector", TypeIdToString(type_)));
+      throw std::runtime_error(
+          fmt::format("Cannot read value of type '{}' from vector", TypeIdToString(type_)));
     }
   }
 }
@@ -199,8 +182,7 @@ void Vector::SetValue(const u64 index, const GenericValue &val) {
     }
     default: {
       throw std::runtime_error(
-          fmt::format("Cannot write value of type '{}' into vector",
-                      TypeIdToString(type_)));
+          fmt::format("Cannot write value of type '{}' into vector", TypeIdToString(type_)));
     }
   }
 }
@@ -269,8 +251,7 @@ void Vector::Reference(GenericValue *value) {
 }
 
 void Vector::Reference(TypeId type_id, byte *data, u32 *nullmask, u64 count) {
-  TPL_ASSERT(owned_data_ == nullptr,
-             "Cannot reference a vector if owning data");
+  TPL_ASSERT(owned_data_ == nullptr, "Cannot reference a vector if owning data");
   count_ = count;
   data_ = data;
   sel_vector_ = nullptr;
@@ -287,8 +268,7 @@ void Vector::Reference(TypeId type_id, byte *data, u32 *nullmask, u64 count) {
 }
 
 void Vector::Reference(Vector *other) {
-  TPL_ASSERT(owned_data_ == nullptr,
-             "Cannot reference a vector if owning data");
+  TPL_ASSERT(owned_data_ == nullptr, "Cannot reference a vector if owning data");
   count_ = other->count_;
   data_ = other->data_;
   sel_vector_ = other->sel_vector_;
@@ -311,9 +291,8 @@ void Vector::MoveTo(Vector *other) {
 }
 
 void Vector::CopyTo(Vector *other, u64 offset) {
-  TPL_ASSERT(
-      type_ == other->type_,
-      "Copying to vector of different type. Did you mean to cast instead?");
+  TPL_ASSERT(type_ == other->type_,
+             "Copying to vector of different type. Did you mean to cast instead?");
   TPL_ASSERT(other->sel_vector_ == nullptr,
              "Copying to a vector with a selection vector isn't supported");
 
@@ -332,8 +311,7 @@ void Vector::CopyTo(Vector *other, u64 offset) {
                         other->null_mask_[k - offset] = true;
                         target_data[k - offset] = nullptr;
                       } else {
-                        target_data[k - offset] =
-                            other->strings_.AddString(src_data[i]);
+                        target_data[k - offset] = other->strings_.AddString(src_data[i]);
                       }
                     },
                     offset);
@@ -351,8 +329,7 @@ void Vector::Cast(TypeId new_type) {
 }
 
 void Vector::Append(Vector &other) {
-  TPL_ASSERT(sel_vector_ == nullptr,
-             "Appending to vector with selection vector not supported");
+  TPL_ASSERT(sel_vector_ == nullptr, "Appending to vector with selection vector not supported");
   TPL_ASSERT(type_ == other.type_, "Can only append vector of same type");
 
   if (count_ + other.count_ > kDefaultVectorSize) {
@@ -363,9 +340,7 @@ void Vector::Append(Vector &other) {
   count_ += other.count_;
 
   // merge NULL mask
-  VectorOps::Exec(other, [&](u64 i, u64 k) {
-    null_mask_[old_count + k] = other.null_mask_[i];
-  });
+  VectorOps::Exec(other, [&](u64 i, u64 k) { null_mask_[old_count + k] = other.null_mask_[i]; });
 
   if (IsTypeFixedSize(type_)) {
     VectorOps::Copy(other, data_ + old_count * GetTypeIdSize(type_));
@@ -395,22 +370,18 @@ std::string Vector::ToString() const {
   return result;
 }
 
-void Vector::Dump(std::ostream &stream) const {
-  stream << ToString() << std::endl;
-}
+void Vector::Dump(std::ostream &stream) const { stream << ToString() << std::endl; }
 
 void Vector::CheckIntegrity() const {
 #ifndef NDEBUG
   if (type_ == TypeId::Varchar) {
-    VectorOps::ExecTyped<const char *>(*this, [&](const char *string, u64 i,
-                                                  u64 k) {
+    VectorOps::ExecTyped<const char *>(*this, [&](const char *string, u64 i, u64 k) {
       if (!null_mask_[i]) {
         TPL_ASSERT(string != nullptr, "NULL pointer in non-null vector slot");
         // The following check is unsafe. But, we're in debug mode presumably
         // with ASAN on, so a corrupt string will trigger an ASAN fault.
-        TPL_ASSERT(
-            std::strlen(string) < std::numeric_limits<std::size_t>::max(),
-            "Invalid string length");
+        TPL_ASSERT(std::strlen(string) < std::numeric_limits<std::size_t>::max(),
+                   "Invalid string length");
       }
     });
   }

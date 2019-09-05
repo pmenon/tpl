@@ -82,33 +82,27 @@ class Sema : public ast::AstVisitor<Sema> {
     ast::Expr *right;
   };
 
-  void ReportIncorrectCallArg(ast::CallExpr *call, u32 index,
-                              ast::Type *expected);
+  void ReportIncorrectCallArg(ast::CallExpr *call, u32 index, ast::Type *expected);
 
-  void ReportIncorrectCallArg(ast::CallExpr *call, u32 index,
-                              const char *expected);
+  void ReportIncorrectCallArg(ast::CallExpr *call, u32 index, const char *expected);
 
   // Implicitly cast the input expression into the target type using the
   // provided cast kind, also setting the type of the casted expression result.
-  ast::Expr *ImplCastExprToType(ast::Expr *expr, ast::Type *target_type,
-                                ast::CastKind cast_kind);
+  ast::Expr *ImplCastExprToType(ast::Expr *expr, ast::Type *target_type, ast::CastKind cast_kind);
 
   // Check the number of arguments to the call; true if good, false otherwise
   bool CheckArgCount(ast::CallExpr *call, u32 expected_arg_count);
   bool CheckArgCountAtLeast(ast::CallExpr *call, u32 expected_arg_count);
 
   // Check boolean logic operands: and, or
-  CheckResult CheckLogicalOperands(parsing::Token::Type op,
-                                   const SourcePosition &pos, ast::Expr *left,
-                                   ast::Expr *right);
+  CheckResult CheckLogicalOperands(parsing::Token::Type op, const SourcePosition &pos,
+                                   ast::Expr *left, ast::Expr *right);
 
   // Check operands to an arithmetic operation: +, -, *, etc.
-  CheckResult CheckArithmeticOperands(parsing::Token::Type op,
-                                      const SourcePosition &pos,
+  CheckResult CheckArithmeticOperands(parsing::Token::Type op, const SourcePosition &pos,
                                       ast::Expr *left, ast::Expr *right);
 
-  CheckResult CheckComparisonOperands(parsing::Token::Type op,
-                                      const SourcePosition &pos,
+  CheckResult CheckComparisonOperands(parsing::Token::Type op, const SourcePosition &pos,
                                       ast::Expr *left, ast::Expr *right);
 
   // Check the assignment of the expression to a variable or the target type.
@@ -122,27 +116,22 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinFilterCall(ast::CallExpr *call);
   void CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinAggHashTableIterCall(ast::CallExpr *call,
-                                        ast::Builtin builtin);
+  void CheckBuiltinAggHashTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinAggPartIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinJoinHashTableInit(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableInsert(ast::CallExpr *call);
-  void CheckBuiltinJoinHashTableBuild(ast::CallExpr *call,
-                                      ast::Builtin builtin);
+  void CheckBuiltinJoinHashTableBuild(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinJoinHashTableLookup(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableFree(ast::CallExpr *call);
-  void CheckBuiltinHashTableEntryIterCall(ast::CallExpr *call,
-                                          ast::Builtin builtin);
+  void CheckBuiltinHashTableEntryIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinSorterInit(ast::CallExpr *call);
   void CheckBuiltinSorterInsert(ast::CallExpr *call);
   void CheckBuiltinSorterSort(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinSorterFree(ast::CallExpr *call);
   void CheckBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinExecutionContextCall(ast::CallExpr *call,
-                                        ast::Builtin builtin);
-  void CheckBuiltinThreadStateContainerCall(ast::CallExpr *call,
-                                            ast::Builtin builtin);
+  void CheckBuiltinExecutionContextCall(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckMathTrigCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinSizeOfCall(ast::CallExpr *call);
   void CheckBuiltinPtrCastCall(ast::CallExpr *call);
@@ -150,8 +139,7 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinTableIterParCall(ast::CallExpr *call);
   void CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinFilterManagerCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinVectorFilterExecCall(ast::CallExpr *call,
-                                        ast::Builtin builtin);
+  void CheckBuiltinVectorFilterExecCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinHashCall(ast::CallExpr *call, ast::Builtin builtin);
 
   // -------------------------------------------------------
@@ -189,8 +177,7 @@ class Sema : public ast::AstVisitor<Sema> {
   /// RAII scope class to track the current scope
   class SemaScope {
    public:
-    SemaScope(Sema *check, Scope::Kind scope_kind)
-        : check_(check), exited_(false) {
+    SemaScope(Sema *check, Scope::Kind scope_kind) : check_(check), exited_(false) {
       check->EnterScope(scope_kind);
     }
 
@@ -214,8 +201,7 @@ class Sema : public ast::AstVisitor<Sema> {
   class FunctionSemaScope {
    public:
     FunctionSemaScope(Sema *check, ast::FunctionLitExpr *func)
-        : prev_func_(check->current_function()),
-          block_scope_(check, Scope::Kind::Function) {
+        : prev_func_(check->current_function()), block_scope_(check, Scope::Kind::Function) {
       check->curr_func_ = func;
     }
 

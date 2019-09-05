@@ -142,8 +142,7 @@ class BitVectorBase {
     const u32 num_words = impl()->num_words();
     data[word_position] = word_val;
     if (word_position == num_words - 1) {
-      data[num_words - 1] &=
-          kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
+      data[num_words - 1] &= kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
     }
   }
 
@@ -158,8 +157,7 @@ class BitVectorBase {
       data[i] = kAllOnesWord;
     }
     // The last word is special
-    data[num_words - 1] =
-        kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
+    data[num_words - 1] = kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
   }
 
   /**
@@ -169,8 +167,7 @@ class BitVectorBase {
   void Unset(const u32 position) {
     TPL_ASSERT(position < impl()->num_bits(), "Index out of range");
     WordType *data = impl()->data_array();
-    data[position / kWordSizeBits] &=
-        ~(WordType(1) << (position % kWordSizeBits));
+    data[position / kWordSizeBits] &= ~(WordType(1) << (position % kWordSizeBits));
   }
 
   /**
@@ -203,8 +200,7 @@ class BitVectorBase {
       data_array[i] = ~data_array[i];
     }
     // The last word is special
-    const auto mask =
-        kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
+    const auto mask = kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
     data_array[num_words - 1] = (mask & ~data_array[num_words - 1]);
   }
 
@@ -235,8 +231,7 @@ class BitVectorBase {
       }
     }
     const WordType hi_word = data_array[num_words - 1];
-    return hi_word ==
-           kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
+    return hi_word == kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
   }
 
   /**
@@ -296,8 +291,7 @@ class BitVectorBase {
    */
   template <typename T>
   void Intersect(const BitVectorBase<T> &other) {
-    TPL_ASSERT(impl()->num_bits() == other.impl()->num_bits(),
-               "Mismatched bit vector size");
+    TPL_ASSERT(impl()->num_bits() == other.impl()->num_bits(), "Mismatched bit vector size");
     WordType *data = impl()->data_array();
     const WordType *other_data = other.impl()->data_array();
     for (u32 i = 0; i < impl()->num_words(); i++) {
@@ -313,8 +307,7 @@ class BitVectorBase {
    */
   template <typename T>
   void Union(const BitVectorBase<T> &other) {
-    TPL_ASSERT(impl()->num_bits() == other.impl()->num_bits(),
-               "Mismatched bit vector size");
+    TPL_ASSERT(impl()->num_bits() == other.impl()->num_bits(), "Mismatched bit vector size");
     WordType *data = impl()->data_array();
     const WordType *other_data = other.impl()->data_array();
     for (u32 i = 0; i < impl()->num_words(); i++) {
@@ -330,8 +323,7 @@ class BitVectorBase {
    */
   template <typename T>
   void Difference(const BitVectorBase<T> &other) {
-    TPL_ASSERT(impl()->num_bits() == other.impl()->num_bits(),
-               "Mismatched bit vector size");
+    TPL_ASSERT(impl()->num_bits() == other.impl()->num_bits(), "Mismatched bit vector size");
     WordType *data = impl()->data_array();
     const WordType *other_data = other.impl()->data_array();
     for (u32 i = 0; i < impl()->num_words(); i++) {
@@ -376,8 +368,7 @@ class BitVectorBase {
   void SetFromBytes(const u8 *const bytes, const u32 num_bytes) {
     TPL_ASSERT(bytes != nullptr, "Null input");
     TPL_ASSERT(num_bytes == impl()->num_bits(), "Byte vector too small");
-    util::VectorUtil::ByteVectorToBitVector(bytes, num_bytes,
-                                            impl()->data_array());
+    util::VectorUtil::ByteVectorToBitVector(bytes, num_bytes, impl()->data_array());
   }
 
   /**
@@ -441,8 +432,7 @@ class BitVector : public BitVectorBase<BitVector> {
         num_bits_(num_bits),
         num_words_(NumNeededWords(num_bits)),
         owned_data_(nullptr) {
-    TPL_ASSERT(data_array_ != nullptr,
-               "Cannot create bit vector referencing NULL bitmap");
+    TPL_ASSERT(data_array_ != nullptr, "Cannot create bit vector referencing NULL bitmap");
     TPL_ASSERT(num_bits_ > 0, "Cannot create bit vector with zero bits");
   }
 

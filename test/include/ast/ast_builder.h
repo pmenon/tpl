@@ -13,19 +13,14 @@ namespace tpl::ast {
 
 class TestAstBuilder {
  public:
-  TestAstBuilder()
-      : region_("test"),
-        error_reporter_(&region_),
-        ctx_(&region_, &error_reporter_) {}
+  TestAstBuilder() : region_("test"), error_reporter_(&region_), ctx_(&region_, &error_reporter_) {}
 
   Context *ctx() { return &ctx_; }
   sema::ErrorReporter *error_reporter() { return &error_reporter_; }
 
   Identifier Ident(const std::string &s) { return ctx()->GetIdentifier(s); }
 
-  Expr *IdentExpr(Identifier ident) {
-    return node_factory()->NewIdentifierExpr(empty_, ident);
-  }
+  Expr *IdentExpr(Identifier ident) { return node_factory()->NewIdentifierExpr(empty_, ident); }
 
   Expr *IdentExpr(const std::string &s) { return IdentExpr(Ident(s)); }
 
@@ -52,17 +47,11 @@ class TestAstBuilder {
   Expr *CmpNe(Expr *left, Expr *right) {
     return Cmp<parsing::Token::Type::BANG_EQUAL>(left, right);
   }
-  Expr *CmpLt(Expr *left, Expr *right) {
-    return Cmp<parsing::Token::Type::LESS>(left, right);
-  }
+  Expr *CmpLt(Expr *left, Expr *right) { return Cmp<parsing::Token::Type::LESS>(left, right); }
 
-  Expr *Field(Expr *obj, Expr *field) {
-    return node_factory()->NewMemberExpr(empty_, obj, field);
-  }
+  Expr *Field(Expr *obj, Expr *field) { return node_factory()->NewMemberExpr(empty_, obj, field); }
 
-  VariableDecl *DeclVar(Identifier name, Expr *init) {
-    return DeclVar(name, nullptr, init);
-  }
+  VariableDecl *DeclVar(Identifier name, Expr *init) { return DeclVar(name, nullptr, init); }
 
   VariableDecl *DeclVar(Identifier name, Expr *type_repr, Expr *init) {
     return node_factory()->NewVariableDecl(empty_, name, type_repr, init);
@@ -73,17 +62,13 @@ class TestAstBuilder {
   Stmt *DeclStmt(Decl *decl) { return node_factory()->NewDeclStmt(decl); }
 
   Stmt *Block(std::initializer_list<Stmt *> stmts) {
-    util::RegionVector<Stmt *> region_stmts(stmts.begin(), stmts.end(),
-                                            &region_);
-    return node_factory()->NewBlockStmt(empty_, empty_,
-                                        std::move(region_stmts));
+    util::RegionVector<Stmt *> region_stmts(stmts.begin(), stmts.end(), &region_);
+    return node_factory()->NewBlockStmt(empty_, empty_, std::move(region_stmts));
   }
 
   Stmt *ExprStmt(Expr *expr) { return node_factory()->NewExpressionStmt(expr); }
 
-  Expr *PtrType(Expr *base) {
-    return node_factory()->NewPointerType(empty_, base);
-  }
+  Expr *PtrType(Expr *base) { return node_factory()->NewPointerType(empty_, base); }
 
   template <BuiltinType::Kind BUILTIN>
   Expr *BuiltinTypeRepr() {
@@ -96,23 +81,16 @@ class TestAstBuilder {
 
   Expr *IntegerSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::Integer>(); }
   Expr *RealSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::Real>(); }
-  Expr *StringSqlTypeRepr() {
-    return BuiltinTypeRepr<BuiltinType::StringVal>();
-  }
+  Expr *StringSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::StringVal>(); }
 
-  Expr *ArrayTypeRepr(Expr *type) {
-    return node_factory()->NewArrayType(empty_, nullptr, type);
-  }
+  Expr *ArrayTypeRepr(Expr *type) { return node_factory()->NewArrayType(empty_, nullptr, type); }
 
-  Expr *ArrayIndex(Expr *arr, Expr *idx) {
-    return node_factory()->NewIndexExpr(empty_, arr, idx);
-  }
+  Expr *ArrayIndex(Expr *arr, Expr *idx) { return node_factory()->NewIndexExpr(empty_, arr, idx); }
 
   template <Builtin BUILTIN, typename... Args>
   CallExpr *Call(Args... args) {
     auto fn = IdentExpr(Builtins::GetFunctionName(BUILTIN));
-    auto call_args =
-        util::RegionVector<Expr *>({std::forward<Args>(args)...}, &region_);
+    auto call_args = util::RegionVector<Expr *>({std::forward<Args>(args)...}, &region_);
     return node_factory()->NewBuiltinCallExpr(fn, std::move(call_args));
   }
 

@@ -17,15 +17,11 @@ struct TestEntry : public HashTableEntry {
 
   TestEntry() : HashTableEntry(), key(0), value(0) { hash = Hash(); }
 
-  TestEntry(u32 key, u32 value) : HashTableEntry(), key(key), value(value) {
-    hash = Hash();
-  }
+  TestEntry(u32 key, u32 value) : HashTableEntry(), key(key), value(value) { hash = Hash(); }
 
   hash_t Hash() { return util::Hasher::Hash(key); }
 
-  bool Eq(const TestEntry &that) const {
-    return key == that.key && value == that.value;
-  }
+  bool Eq(const TestEntry &that) const { return key == that.key && value == that.value; }
 
   bool operator==(const TestEntry &that) const { return this->Eq(that); }
 };
@@ -58,8 +54,7 @@ TEST_F(GenericHashTableTest, Insertion) {
     EXPECT_NE(nullptr, e);
     EXPECT_NE(nullptr, e->next);
     EXPECT_EQ(entry, *reinterpret_cast<TestEntry *>(e));
-    EXPECT_EQ(*reinterpret_cast<TestEntry *>(entry.next),
-              *reinterpret_cast<TestEntry *>(e->next));
+    EXPECT_EQ(*reinterpret_cast<TestEntry *>(entry.next), *reinterpret_cast<TestEntry *>(e->next));
   }
 
   // Try finding a missing element for the hell of it
@@ -125,8 +120,7 @@ TEST_F(GenericHashTableTest, ConcurrentInsertion) {
 
   // Parallel insert
   LaunchParallel(num_threads, [&](auto thread_id) {
-    for (u32 idx = thread_id * num_entries, end = idx + num_entries; idx < end;
-         idx++) {
+    for (u32 idx = thread_id * num_entries, end = idx + num_entries; idx < end; idx++) {
       auto &entry = entries[idx];
       hash_table.Insert<true>(&entry, entry.hash);
     }
@@ -377,8 +371,7 @@ TEST_F(GenericHashTableTest, DISABLED_PerfIteration) {
     }
   });
 
-  LOG_INFO("TaaT: {:.2f} ms ({}), VaaT: {:2f} ms ({})", taat_ms, sum1, vaat_ms,
-           sum2);
+  LOG_INFO("TaaT: {:.2f} ms ({}), VaaT: {:2f} ms ({})", taat_ms, sum1, vaat_ms, sum2);
 }
 
 }  // namespace tpl::sql

@@ -86,9 +86,7 @@ class TupleIdList {
    * @param tid The ID to add or remove from the list.
    * @param enable The flag indicating if the tuple is added or removed.
    */
-  void Enable(const u32 tid, const bool enable) {
-    bit_vector_.SetTo(tid, enable);
-  }
+  void Enable(const u32 tid, const bool enable) { bit_vector_.SetTo(tid, enable); }
 
   /**
    * Remove the tuple with the given ID from the list.
@@ -101,27 +99,21 @@ class TupleIdList {
    * provided list, modifying this list in-place.
    * @param other The list to intersect with.
    */
-  void IntersectWith(const TupleIdList &other) {
-    bit_vector_.Intersect(other.bit_vector_);
-  }
+  void IntersectWith(const TupleIdList &other) { bit_vector_.Intersect(other.bit_vector_); }
 
   /**
    * Union the set of tuple IDs in this list with the tuple IDs in the provided
    * list, modifying this list in-place.
    * @param other The list to union with.
    */
-  void UnionWith(const TupleIdList &other) {
-    bit_vector_.Union(other.bit_vector_);
-  }
+  void UnionWith(const TupleIdList &other) { bit_vector_.Union(other.bit_vector_); }
 
   /**
    * Remove all tuple IDs from this list that are also present in the provided
    * list, modifying this list in-place.
    * @param other The list to unset from.
    */
-  void UnsetFrom(const TupleIdList &other) {
-    bit_vector_.Difference(other.bit_vector_);
-  }
+  void UnsetFrom(const TupleIdList &other) { bit_vector_.Difference(other.bit_vector_); }
 
   /**
    * Build a list of tuple IDs as a subset of the IDs in the input list
@@ -185,8 +177,7 @@ class TupleIdList {
     }
 
     // Scalar tail
-    for (BitVectorT::WordType i =
-             bit_vector_.num_words() * BitVectorT::kWordSizeBits;
+    for (BitVectorT::WordType i = bit_vector_.num_words() * BitVectorT::kWordSizeBits;
          i < kDefaultVectorSize; i++) {
       bit_vector_.SetTo(i, f(i));
     }
@@ -228,9 +219,7 @@ class TupleIdList {
    * @return The selectivity of the list, i.e., the fraction of the tuples that
    *         are considered "active".
    */
-  f32 ComputeSelectivity() const {
-    return static_cast<f32>(GetTupleCount()) / GetListCapacity();
-  }
+  f32 ComputeSelectivity() const { return static_cast<f32>(GetTupleCount()) / GetListCapacity(); }
 
   /**
    * Convert this tuple ID list into a dense selection index vector.

@@ -43,9 +43,7 @@ class ArithmeticOverflow {
    * @param[out] res Where the result of the addition is written to.
    * @return True if the addition overflowed; false otherwise.
    */
-  static bool Add(const i32 a, const i32 b, i32 *res) {
-    return __builtin_sadd_overflow(a, b, res);
-  }
+  static bool Add(const i32 a, const i32 b, i32 *res) { return __builtin_sadd_overflow(a, b, res); }
 
   /**
    * Add two signed 64-bit integer values and store their result in @em res.
@@ -80,9 +78,7 @@ class ArithmeticOverflow {
    * @param[out] res Where the result of the addition is written to.
    * @return True if the addition overflowed; false otherwise.
    */
-  static bool Add(const u32 a, const u32 b, u32 *res) {
-    return __builtin_uadd_overflow(a, b, res);
-  }
+  static bool Add(const u32 a, const u32 b, u32 *res) { return __builtin_uadd_overflow(a, b, res); }
 
   /**
    * Add two unsigned 64-bit integer values and store their result in @em res.
@@ -134,9 +130,7 @@ class ArithmeticOverflow {
    * @param[out] res Where the result of the subtraction is written to.
    * @return True if the subtraction overflowed; false otherwise.
    */
-  static bool Sub(const i32 a, const i32 b, i32 *res) {
-    return __builtin_ssub_overflow(a, b, res);
-  }
+  static bool Sub(const i32 a, const i32 b, i32 *res) { return __builtin_ssub_overflow(a, b, res); }
 
   /**
    * Subtract two signed 64-bit values and store their result in @em res. Return
@@ -171,9 +165,7 @@ class ArithmeticOverflow {
    * @param[out] res Where the result of the subtraction is written to.
    * @return True if the subtraction overflowed; false otherwise.
    */
-  static bool Sub(const u32 a, const u32 b, u32 *res) {
-    return __builtin_usub_overflow(a, b, res);
-  }
+  static bool Sub(const u32 a, const u32 b, u32 *res) { return __builtin_usub_overflow(a, b, res); }
 
   /**
    * Subtract two unsigned 64-bit values and store their result in @em res.
@@ -225,9 +217,7 @@ class ArithmeticOverflow {
    * @param[out] res Where the result of the multiplication is written to.
    * @return True if the subtraction overflowed; false otherwise.
    */
-  static bool Mul(const i32 a, const i32 b, i32 *res) {
-    return __builtin_smul_overflow(a, b, res);
-  }
+  static bool Mul(const i32 a, const i32 b, i32 *res) { return __builtin_smul_overflow(a, b, res); }
 
   /**
    * Multiply two signed 64-bit integer values and store their result in @em
@@ -266,9 +256,7 @@ class ArithmeticOverflow {
    * @param[out] res Where the result of the multiplication is written to.
    * @return True if the subtraction overflowed; false otherwise.
    */
-  static bool Mul(const u32 a, const u32 b, u32 *res) {
-    return __builtin_umul_overflow(a, b, res);
-  }
+  static bool Mul(const u32 a, const u32 b, u32 *res) { return __builtin_umul_overflow(a, b, res); }
 
   /**
    * Multiply two unsigned 64-bit integer values and store their result in @em

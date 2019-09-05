@@ -17,25 +17,18 @@ class ArithmeticFunctions {
   ArithmeticFunctions() = delete;
 
   static void Add(Integer *result, const Integer &a, const Integer &b);
-  static void Add(Integer *result, const Integer &a, const Integer &b,
-                  bool *overflow);
+  static void Add(Integer *result, const Integer &a, const Integer &b, bool *overflow);
   static void Add(Real *result, const Real &a, const Real &b);
   static void Sub(Integer *result, const Integer &a, const Integer &b);
-  static void Sub(Integer *result, const Integer &a, const Integer &b,
-                  bool *overflow);
+  static void Sub(Integer *result, const Integer &a, const Integer &b, bool *overflow);
   static void Sub(Real *result, const Real &a, const Real &b);
   static void Mul(Integer *result, const Integer &a, const Integer &b);
-  static void Mul(Integer *result, const Integer &a, const Integer &b,
-                  bool *overflow);
+  static void Mul(Integer *result, const Integer &a, const Integer &b, bool *overflow);
   static void Mul(Real *result, const Real &a, const Real &b);
-  static void IntDiv(Integer *result, const Integer &a, const Integer &b,
-                     bool *div_by_zero);
-  static void Div(Real *result, const Real &a, const Real &b,
-                  bool *div_by_zero);
-  static void IntMod(Integer *result, const Integer &a, const Integer &b,
-                     bool *div_by_zero);
-  static void Mod(Real *result, const Real &a, const Real &b,
-                  bool *div_by_zero);
+  static void IntDiv(Integer *result, const Integer &a, const Integer &b, bool *div_by_zero);
+  static void Div(Real *result, const Real &a, const Real &b, bool *div_by_zero);
+  static void IntMod(Integer *result, const Integer &a, const Integer &b, bool *div_by_zero);
+  static void Mod(Real *result, const Real &a, const Real &b, bool *div_by_zero);
 
   static void Pi(Real *result);
   static void E(Real *result);
@@ -86,45 +79,39 @@ class ArithmeticFunctions {
     *result = RET_TYPE(OP::Apply(v.val));                                      \
   }
 
-#define BINARY_MATH_EXPENSIVE_HIDE_NULL(OP, RET_TYPE, INPUT_TYPE1,            \
-                                        INPUT_TYPE2)                          \
-  inline void ArithmeticFunctions::OP(RET_TYPE *result, const INPUT_TYPE1 &a, \
-                                      const INPUT_TYPE2 &b) {                 \
-    if (a.is_null || b.is_null) {                                             \
-      *result = RET_TYPE::Null();                                             \
-      return;                                                                 \
-    }                                                                         \
-    *result = RET_TYPE(OP::Apply(a.val, b.val));                              \
+#define BINARY_MATH_EXPENSIVE_HIDE_NULL(OP, RET_TYPE, INPUT_TYPE1, INPUT_TYPE2) \
+  inline void ArithmeticFunctions::OP(RET_TYPE *result, const INPUT_TYPE1 &a,   \
+                                      const INPUT_TYPE2 &b) {                   \
+    if (a.is_null || b.is_null) {                                               \
+      *result = RET_TYPE::Null();                                               \
+      return;                                                                   \
+    }                                                                           \
+    *result = RET_TYPE(OP::Apply(a.val, b.val));                                \
   }
 
-#define BINARY_MATH_FAST_HIDE_NULL(NAME, RET_TYPE, INPUT_TYPE1, INPUT_TYPE2, \
-                                   OP)                                       \
-  inline void ArithmeticFunctions::NAME(                                     \
-      RET_TYPE *result, const INPUT_TYPE1 &a, const INPUT_TYPE2 &b) {        \
-    result->is_null = (a.is_null || b.is_null);                              \
-    result->val = OP::Apply(a.val, b.val);                                   \
+#define BINARY_MATH_FAST_HIDE_NULL(NAME, RET_TYPE, INPUT_TYPE1, INPUT_TYPE2, OP) \
+  inline void ArithmeticFunctions::NAME(RET_TYPE *result, const INPUT_TYPE1 &a,  \
+                                        const INPUT_TYPE2 &b) {                  \
+    result->is_null = (a.is_null || b.is_null);                                  \
+    result->val = OP::Apply(a.val, b.val);                                       \
   }
 
-#define BINARY_MATH_FAST_HIDE_NULL_OVERFLOW(NAME, RET_TYPE, INPUT_TYPE1, \
-                                            INPUT_TYPE2, OP)             \
-  inline void ArithmeticFunctions::NAME(                                 \
-      RET_TYPE *result, const INPUT_TYPE1 &a, const INPUT_TYPE2 &b,      \
-      bool *overflow) {                                                  \
-    result->is_null = (a.is_null || b.is_null);                          \
-    *overflow = OP::Apply(a.val, b.val, &result->val);                   \
+#define BINARY_MATH_FAST_HIDE_NULL_OVERFLOW(NAME, RET_TYPE, INPUT_TYPE1, INPUT_TYPE2, OP) \
+  inline void ArithmeticFunctions::NAME(RET_TYPE *result, const INPUT_TYPE1 &a,           \
+                                        const INPUT_TYPE2 &b, bool *overflow) {           \
+    result->is_null = (a.is_null || b.is_null);                                           \
+    *overflow = OP::Apply(a.val, b.val, &result->val);                                    \
   }
 
-#define BINARY_MATH_CHECK_ZERO_HIDE_NULL(NAME, RET_TYPE, INPUT_TYPE1, \
-                                         INPUT_TYPE2, OP)             \
-  inline void ArithmeticFunctions::NAME(                              \
-      RET_TYPE *result, const INPUT_TYPE1 &a, const INPUT_TYPE2 &b,   \
-      bool *div_by_zero) {                                            \
-    if (a.is_null || b.is_null || b.val == 0) {                       \
-      *div_by_zero = true;                                            \
-      *result = RET_TYPE::Null();                                     \
-      return;                                                         \
-    }                                                                 \
-    *result = RET_TYPE(OP::Apply(a.val, b.val));                      \
+#define BINARY_MATH_CHECK_ZERO_HIDE_NULL(NAME, RET_TYPE, INPUT_TYPE1, INPUT_TYPE2, OP) \
+  inline void ArithmeticFunctions::NAME(RET_TYPE *result, const INPUT_TYPE1 &a,        \
+                                        const INPUT_TYPE2 &b, bool *div_by_zero) {     \
+    if (a.is_null || b.is_null || b.val == 0) {                                        \
+      *div_by_zero = true;                                                             \
+      *result = RET_TYPE::Null();                                                      \
+      return;                                                                          \
+    }                                                                                  \
+    *result = RET_TYPE(OP::Apply(a.val, b.val));                                       \
   }
 
 BINARY_MATH_FAST_HIDE_NULL(Add, Integer, Integer, Integer, Add);

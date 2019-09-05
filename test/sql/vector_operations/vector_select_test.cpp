@@ -14,16 +14,14 @@ class VectorSelectTest : public TplTest {};
 TEST_F(VectorSelectTest, Select) {
   // a = [NULL, 1, 2, 3, 4, 5]
   // b = [NULL, 1, 4, 3, 5, 5]
-  auto a = MakeTinyIntVector({0, 1, 2, 3, 4, 5},
-                             {true, false, false, false, false, false});
-  auto b = MakeTinyIntVector({0, 1, 4, 3, 5, 5},
-                             {true, false, false, false, false, false});
+  auto a = MakeTinyIntVector({0, 1, 2, 3, 4, 5}, {true, false, false, false, false, false});
+  auto b = MakeTinyIntVector({0, 1, 4, 3, 5, 5}, {true, false, false, false, false, false});
   auto _2 = ConstantVector(GenericValue::CreateTinyInt(2));
   auto result = std::array<sel_t, kDefaultVectorSize>();
 
   u32 n;
-  for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer,
-                       TypeId::BigInt, TypeId::Float, TypeId::Double}) {
+  for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer, TypeId::BigInt,
+                       TypeId::Float, TypeId::Double}) {
     a->Cast(type_id);
     b->Cast(type_id);
     _2.Cast(type_id);

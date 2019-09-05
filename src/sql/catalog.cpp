@@ -78,15 +78,13 @@ TableInsertMeta insert_meta[] = {
 
 template <class T>
 auto GetRandomDistribution(T min, T max)
-    -> std::enable_if_t<std::is_integral_v<T>,
-                        std::uniform_int_distribution<T>> {
+    -> std::enable_if_t<std::is_integral_v<T>, std::uniform_int_distribution<T>> {
   return std::uniform_int_distribution<T>(min, max);
 }
 
 template <class T>
 auto GetRandomDistribution(T min, T max)
-    -> std::enable_if_t<std::is_floating_point_v<T>,
-                        std::uniform_real_distribution<T>> {
+    -> std::enable_if_t<std::is_floating_point_v<T>, std::uniform_real_distribution<T>> {
   return std::uniform_real_distribution<T>(min, max);
 }
 
@@ -119,46 +117,39 @@ T *CreateNumberColumnData(Dist dist, u32 num_vals, T min, T max) {
   return val;
 }
 
-std::pair<byte *, u32 *> GenerateColumnData(const ColumnInsertMeta &col_meta,
-                                            u32 num_rows) {
+std::pair<byte *, u32 *> GenerateColumnData(const ColumnInsertMeta &col_meta, u32 num_rows) {
   // Create data
   byte *col_data = nullptr;
   switch (col_meta.sql_type.id()) {
     case SqlTypeId::TinyInt: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i8>(
-          col_meta.dist, num_rows, std::get<i64>(col_meta.min),
-          std::get<i64>(col_meta.max)));
+          col_meta.dist, num_rows, std::get<i64>(col_meta.min), std::get<i64>(col_meta.max)));
       break;
     }
     case SqlTypeId::SmallInt: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i16>(
-          col_meta.dist, num_rows, std::get<i64>(col_meta.min),
-          std::get<i64>(col_meta.max)));
+          col_meta.dist, num_rows, std::get<i64>(col_meta.min), std::get<i64>(col_meta.max)));
       break;
     }
     case SqlTypeId::Integer: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i32>(
-          col_meta.dist, num_rows, std::get<i64>(col_meta.min),
-          std::get<i64>(col_meta.max)));
+          col_meta.dist, num_rows, std::get<i64>(col_meta.min), std::get<i64>(col_meta.max)));
       break;
     }
     case SqlTypeId::BigInt:
     case SqlTypeId::Decimal: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<i64>(
-          col_meta.dist, num_rows, std::get<i64>(col_meta.min),
-          std::get<i64>(col_meta.max)));
+          col_meta.dist, num_rows, std::get<i64>(col_meta.min), std::get<i64>(col_meta.max)));
       break;
     }
     case SqlTypeId::Real: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<f32>(
-          col_meta.dist, num_rows, std::get<double>(col_meta.min),
-          std::get<double>(col_meta.max)));
+          col_meta.dist, num_rows, std::get<double>(col_meta.min), std::get<double>(col_meta.max)));
       break;
     }
     case SqlTypeId::Double: {
       col_data = reinterpret_cast<byte *>(CreateNumberColumnData<f64>(
-          col_meta.dist, num_rows, std::get<double>(col_meta.min),
-          std::get<double>(col_meta.max)));
+          col_meta.dist, num_rows, std::get<double>(col_meta.min), std::get<double>(col_meta.max)));
       break;
     }
     case SqlTypeId::Boolean:
@@ -181,12 +172,11 @@ std::pair<byte *, u32 *> GenerateColumnData(const ColumnInsertMeta &col_meta,
 }
 
 void InitTable(const TableInsertMeta &table_meta, Table *table) {
-  LOG_INFO("Populating table instance '{}' with {} rows", table_meta.name,
-           table_meta.num_rows);
+  LOG_INFO("Populating table instance '{}' with {} rows", table_meta.name, table_meta.num_rows);
 
   u32 batch_size = 10000;
-  u32 num_batches = table_meta.num_rows / batch_size +
-                    static_cast<u32>(table_meta.num_rows % batch_size != 0);
+  u32 num_batches =
+      table_meta.num_rows / batch_size + static_cast<u32>(table_meta.num_rows % batch_size != 0);
 
   for (u32 i = 0; i < num_batches; i++) {
     std::vector<ColumnSegment> columns;
@@ -223,8 +213,8 @@ Catalog::Catalog() {
     }
 
     // Insert into catalog
-    table_catalog_[meta.id] = std::make_unique<Table>(
-        static_cast<u16>(meta.id), std::make_unique<Schema>(std::move(cols)));
+    table_catalog_[meta.id] = std::make_unique<Table>(static_cast<u16>(meta.id),
+                                                      std::make_unique<Schema>(std::move(cols)));
   }
 
   // Populate all tables

@@ -19,8 +19,8 @@ void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
   // Check assignment
   ast::Expr *source = node->source();
   if (!CheckAssignmentConstraints(dest_type, source)) {
-    error_reporter_->Report(node->position(), ErrorMessages::kInvalidAssignment,
-                            src_type, dest_type);
+    error_reporter_->Report(node->position(), ErrorMessages::kInvalidAssignment, src_type,
+                            dest_type);
     return;
   }
 
@@ -62,8 +62,7 @@ void Sema::VisitForStmt(ast::ForStmt *node) {
     }
     // If the resolved type isn't a boolean, it's an error
     if (!cond_type->IsBoolType()) {
-      error_reporter_->Report(node->condition()->position(),
-                              ErrorMessages::kNonBoolForCondition);
+      error_reporter_->Report(node->condition()->position(), ErrorMessages::kNonBoolForCondition);
     }
   }
 
@@ -75,13 +74,9 @@ void Sema::VisitForStmt(ast::ForStmt *node) {
   Visit(node->body());
 }
 
-void Sema::VisitForInStmt(ast::ForInStmt *node) {
-  TPL_ASSERT(false, "Not supported");
-}
+void Sema::VisitForInStmt(ast::ForInStmt *node) { TPL_ASSERT(false, "Not supported"); }
 
-void Sema::VisitExpressionStmt(ast::ExpressionStmt *node) {
-  Visit(node->expression());
-}
+void Sema::VisitExpressionStmt(ast::ExpressionStmt *node) { Visit(node->expression()); }
 
 void Sema::VisitIfStmt(ast::IfStmt *node) {
   if (ast::Type *cond_type = Resolve(node->condition()); cond_type == nullptr) {
@@ -107,8 +102,7 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
 
   // If the conditional isn't an explicit boolean type, error
   if (!node->condition()->type()->IsBoolType()) {
-    error_reporter_->Report(node->condition()->position(),
-                            ErrorMessages::kNonBoolIfCondition);
+    error_reporter_->Report(node->condition()->position(), ErrorMessages::kNonBoolIfCondition);
   }
 
   Visit(node->then_stmt());
@@ -122,8 +116,7 @@ void Sema::VisitDeclStmt(ast::DeclStmt *node) { Visit(node->declaration()); }
 
 void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
   if (current_function() == nullptr) {
-    error_reporter_->Report(node->position(),
-                            ErrorMessages::kReturnOutsideFunction);
+    error_reporter_->Report(node->position(), ErrorMessages::kReturnOutsideFunction);
     return;
   }
 
@@ -142,8 +135,7 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
 
   if (func_type->return_type()->IsNilType()) {
     if (return_type != nullptr) {
-      error_reporter_->Report(node->position(),
-                              ErrorMessages::kMismatchedReturnType, return_type,
+      error_reporter_->Report(node->position(), ErrorMessages::kMismatchedReturnType, return_type,
                               func_type->return_type());
     }
     return;
@@ -160,8 +152,7 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
 
   ast::Expr *ret = node->ret();
   if (!CheckAssignmentConstraints(func_type->return_type(), ret)) {
-    error_reporter_->Report(node->position(),
-                            ErrorMessages::kMismatchedReturnType, return_type,
+    error_reporter_->Report(node->position(), ErrorMessages::kMismatchedReturnType, return_type,
                             func_type->return_type());
     return;
   }

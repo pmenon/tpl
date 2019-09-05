@@ -7,8 +7,7 @@
 #include "util/simd/types.h"
 
 #ifndef SIMD_TOP_LEVEL
-#error \
-    "Don't include <util/simd/avx2.h> directly; instead, include <util/simd.h>"
+#error "Don't include <util/simd/avx2.h> directly; instead, include <util/simd.h>"
 #endif
 
 namespace tpl::util::simd {
@@ -26,9 +25,7 @@ class Vec256b {
   operator __m256i() const { return reg_; }
 
   /// Store the contents of this vector into the provided unaligned pointer
-  void Store(void *ptr) const {
-    _mm256_storeu_si256(reinterpret_cast<__m256i *>(ptr), reg());
-  }
+  void Store(void *ptr) const { _mm256_storeu_si256(reinterpret_cast<__m256i *>(ptr), reg()); }
 
   /// Store the contents of this vector into the provided aligned pointer
   void StoreAligned(void *ptr) const {
@@ -69,24 +66,16 @@ class Vec4 : public Vec256b {
 
   /// Load and sign-extend four 32-bit values from the input array
   Vec4 &Load(const i32 *ptr);
-  Vec4 &Load(const u32 *ptr) {
-    return Load(reinterpret_cast<const i32 *>(ptr));
-  }
+  Vec4 &Load(const u32 *ptr) { return Load(reinterpret_cast<const i32 *>(ptr)); }
 
   /// Load four 64-bit values from the input array
   Vec4 &Load(const i64 *ptr);
-  Vec4 &Load(const u64 *ptr) {
-    return Load(reinterpret_cast<const i64 *>(ptr));
-  }
+  Vec4 &Load(const u64 *ptr) { return Load(reinterpret_cast<const i64 *>(ptr)); }
 
 #ifdef __APPLE__
   static_assert(sizeof(long) == sizeof(i64), "On MacOS, long isn't 64-bits!");
-  Vec4 &Load(const long *ptr) {
-    return Load(reinterpret_cast<const i64 *>(ptr));
-  }
-  Vec4 &Load(const unsigned long *ptr) {
-    return Load(reinterpret_cast<const i64 *>(ptr));
-  }
+  Vec4 &Load(const long *ptr) { return Load(reinterpret_cast<const i64 *>(ptr)); }
+  Vec4 &Load(const unsigned long *ptr) { return Load(reinterpret_cast<const i64 *>(ptr)); }
 #endif
 
   /// Gather non-contiguous elements from the input array \a ptr stored at
@@ -163,9 +152,7 @@ inline void Vec4::Store(i32 *arr) const {
   _mm_store_si128(reinterpret_cast<__m128i *>(arr), truncated);
 }
 
-inline void Vec4::Store(i64 *arr) const {
-  Vec256b::Store(reinterpret_cast<void *>(arr));
-}
+inline void Vec4::Store(i64 *arr) const { Vec256b::Store(reinterpret_cast<void *>(arr)); }
 
 // ---------------------------------------------------------
 // Vec8 Definition
@@ -178,8 +165,7 @@ class Vec8 : public Vec256b {
   Vec8() = default;
   explicit Vec8(i32 val) { reg_ = _mm256_set1_epi32(val); }
   explicit Vec8(const __m256i &reg) : Vec256b(reg) {}
-  Vec8(i32 val1, i32 val2, i32 val3, i32 val4, i32 val5, i32 val6, i32 val7,
-       i32 val8) {
+  Vec8(i32 val1, i32 val2, i32 val3, i32 val4, i32 val5, i32 val6, i32 val7, i32 val8) {
     reg_ = _mm256_setr_epi32(val1, val2, val3, val4, val5, val6, val7, val8);
   }
 
@@ -191,15 +177,11 @@ class Vec8 : public Vec256b {
   /// Load and sign-extend eight 16-bit values stored contiguously from the
   /// input pointer array.
   Vec8 &Load(const i16 *ptr);
-  Vec8 &Load(const u16 *ptr) {
-    return Load(reinterpret_cast<const i16 *>(ptr));
-  }
+  Vec8 &Load(const u16 *ptr) { return Load(reinterpret_cast<const i16 *>(ptr)); }
 
   /// Load 8 32-bit values stored contiguously from the input pointer array.
   Vec8 &Load(const i32 *ptr);
-  Vec8 &Load(const u32 *ptr) {
-    return Load(reinterpret_cast<const i32 *>(ptr));
-  }
+  Vec8 &Load(const u32 *ptr) { return Load(reinterpret_cast<const i32 *>(ptr)); }
 
   /// Gather non-contiguous elements from the input array \a ptr stored at
   /// index positions from \a pos
@@ -270,8 +252,8 @@ inline Vec8 &Vec8::Gather<i8>(const i8 *ptr, const Vec8 &pos) {
 #else
   alignas(32) i32 x[Size()];
   pos.Store(x);
-  reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
-                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
+  reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]], ptr[x[4]], ptr[x[5]],
+                           ptr[x[6]], ptr[x[7]]);
 #endif
   return *this;
 }
@@ -284,8 +266,8 @@ inline Vec8 &Vec8::Gather<i16>(const i16 *ptr, const Vec8 &pos) {
 #else
   alignas(32) i32 x[Size()];
   pos.Store(x);
-  reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
-                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
+  reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]], ptr[x[4]], ptr[x[5]],
+                           ptr[x[6]], ptr[x[7]]);
 #endif
   return *this;
 }
@@ -297,15 +279,13 @@ inline Vec8 &Vec8::Gather<i32>(const i32 *ptr, const Vec8 &pos) {
 #else
   alignas(32) i32 x[Size()];
   pos.Store(x);
-  reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]],
-                           ptr[x[4]], ptr[x[5]], ptr[x[6]], ptr[x[7]]);
+  reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]], ptr[x[4]], ptr[x[5]],
+                           ptr[x[6]], ptr[x[7]]);
 #endif
   return *this;
 }
 
-inline void Vec8::Store(i32 *arr) const {
-  Vec256b::Store(reinterpret_cast<void *>(arr));
-}
+inline void Vec8::Store(i32 *arr) const { Vec256b::Store(reinterpret_cast<void *>(arr)); }
 
 // --------------------------------------------------------
 // Vec8Mask Definition
@@ -325,8 +305,8 @@ class Vec8Mask : public Vec8 {
   sel_t ToPositions(sel_t *positions, sel_t offset) const {
     i32 mask = _mm256_movemask_ps(_mm256_castsi256_ps(reg()));
     TPL_ASSERT(mask < 256, "8-bit mask must be less than 256");
-    __m128i match_pos_scaled = _mm_loadl_epi64(
-        reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask]));
+    __m128i match_pos_scaled =
+        _mm_loadl_epi64(reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask]));
     __m128i match_pos = _mm_cvtepi8_epi16(match_pos_scaled);
     __m128i pos_vec = _mm_add_epi16(_mm_set1_epi16(offset), match_pos);
     _mm_storeu_si128(reinterpret_cast<__m128i *>(positions), pos_vec);
@@ -350,8 +330,8 @@ class Vec4Mask : public Vec4 {
   sel_t ToPositions(sel_t *positions, sel_t offset) const {
     i32 mask = _mm256_movemask_pd(_mm256_castsi256_pd(reg()));
     TPL_ASSERT(mask < 16, "4-bit mask must be less than 16");
-    __m128i match_pos = _mm_loadl_epi64(
-        reinterpret_cast<__m128i *>(const_cast<u64 *>(&k4BitMatchLUT[mask])));
+    __m128i match_pos =
+        _mm_loadl_epi64(reinterpret_cast<__m128i *>(const_cast<u64 *>(&k4BitMatchLUT[mask])));
     __m128i pos_vec = _mm_add_epi32(_mm_set1_epi32(offset), match_pos);
     _mm_storeu_si128(reinterpret_cast<__m128i *>(positions), pos_vec);
     return __builtin_popcount(mask);
@@ -407,97 +387,75 @@ inline Vec4Mask operator==(const Vec4 &a, const Vec4 &b) {
   return Vec4Mask(_mm256_cmpeq_epi64(a, b));
 }
 
-inline Vec4Mask operator>=(const Vec4 &a, const Vec4 &b) {
-  return Vec4Mask(~(b > a));
-}
+inline Vec4Mask operator>=(const Vec4 &a, const Vec4 &b) { return Vec4Mask(~(b > a)); }
 
 inline Vec4Mask operator<(const Vec4 &a, const Vec4 &b) { return b > a; }
 
 inline Vec4Mask operator<=(const Vec4 &a, const Vec4 &b) { return b >= a; }
 
-inline Vec4Mask operator!=(const Vec4 &a, const Vec4 &b) {
-  return Vec4Mask(~Vec256b(a == b));
-}
+inline Vec4Mask operator!=(const Vec4 &a, const Vec4 &b) { return Vec4Mask(~Vec256b(a == b)); }
 
 // ---------------------------------------------------------
 // Vec4 - Arithmetic Operations
 // ---------------------------------------------------------
 
-inline Vec4 operator+(const Vec4 &a, const Vec4 &b) {
-  return Vec4(_mm256_add_epi64(a, b));
-}
+inline Vec4 operator+(const Vec4 &a, const Vec4 &b) { return Vec4(_mm256_add_epi64(a, b)); }
 
 inline Vec4 &operator+=(Vec4 &a, const Vec4 &b) {
   a = a + b;
   return a;
 }
 
-inline Vec4 operator-(const Vec4 &a, const Vec4 &b) {
-  return Vec4(_mm256_sub_epi64(a, b));
-}
+inline Vec4 operator-(const Vec4 &a, const Vec4 &b) { return Vec4(_mm256_sub_epi64(a, b)); }
 
 inline Vec4 &operator-=(Vec4 &a, const Vec4 &b) {
   a = a - b;
   return a;
 }
 
-inline Vec4 operator&(const Vec4 &a, const Vec4 &b) {
-  return Vec4(Vec256b(a) & Vec256b(b));
-}
+inline Vec4 operator&(const Vec4 &a, const Vec4 &b) { return Vec4(Vec256b(a) & Vec256b(b)); }
 
 inline Vec4 &operator&=(Vec4 &a, const Vec4 &b) {
   a = a & b;
   return a;
 }
 
-inline Vec4 operator|(const Vec4 &a, const Vec4 &b) {
-  return Vec4(Vec256b(a) | Vec256b(b));
-}
+inline Vec4 operator|(const Vec4 &a, const Vec4 &b) { return Vec4(Vec256b(a) | Vec256b(b)); }
 
 inline Vec4 &operator|=(Vec4 &a, const Vec4 &b) {
   a = a | b;
   return a;
 }
 
-inline Vec4 operator^(const Vec4 &a, const Vec4 &b) {
-  return Vec4(Vec256b(a) ^ Vec256b(b));
-}
+inline Vec4 operator^(const Vec4 &a, const Vec4 &b) { return Vec4(Vec256b(a) ^ Vec256b(b)); }
 
 inline Vec4 &operator^=(Vec4 &a, const Vec4 &b) {
   a = a ^ b;
   return a;
 }
 
-inline Vec4 operator>>(const Vec4 &a, const u32 shift) {
-  return Vec4(_mm256_srli_epi64(a, shift));
-}
+inline Vec4 operator>>(const Vec4 &a, const u32 shift) { return Vec4(_mm256_srli_epi64(a, shift)); }
 
 inline Vec4 &operator>>=(Vec4 &a, const u32 shift) {
   a = a >> shift;
   return a;
 }
 
-inline Vec4 operator<<(const Vec4 &a, const u32 shift) {
-  return Vec4(_mm256_slli_epi64(a, shift));
-}
+inline Vec4 operator<<(const Vec4 &a, const u32 shift) { return Vec4(_mm256_slli_epi64(a, shift)); }
 
 inline Vec4 &operator<<=(Vec4 &a, const u32 shift) {
   a = a << shift;
   return a;
 }
 
-inline Vec4 operator>>(const Vec4 &a, const Vec4 &b) {
-  return Vec4(_mm256_srlv_epi64(a, b));
-}
+inline Vec4 operator>>(const Vec4 &a, const Vec4 &b) { return Vec4(_mm256_srlv_epi64(a, b)); }
 
 inline Vec4 &operator>>=(Vec4 &a, const Vec4 &b) {
   a = a >> b;
   return a;
 }
 
-inline Vec4 operator<<(const Vec4 &a, const Vec4 &b) {
-  return Vec4(_mm256_sllv_epi64(a, b));
-}
+inline Vec4 operator<<(const Vec4 &a, const Vec4 &b) { return Vec4(_mm256_sllv_epi64(a, b)); }
 
 inline Vec4 &operator<<=(Vec4 &a, const Vec4 &b) {
   a = a << b;
@@ -525,98 +483,76 @@ inline Vec8Mask operator<(const Vec8 &a, const Vec8 &b) { return b > a; }
 
 inline Vec8Mask operator<=(const Vec8 &a, const Vec8 &b) { return b >= a; }
 
-inline Vec8Mask operator!=(const Vec8 &a, const Vec8 &b) {
-  return Vec8Mask(~Vec256b(a == b));
-}
+inline Vec8Mask operator!=(const Vec8 &a, const Vec8 &b) { return Vec8Mask(~Vec256b(a == b)); }
 
 // ---------------------------------------------------------
 // Vec8 - Arithmetic Operations
 // ---------------------------------------------------------
 
-inline Vec8 operator+(const Vec8 &a, const Vec8 &b) {
-  return Vec8(_mm256_add_epi32(a, b));
-}
+inline Vec8 operator+(const Vec8 &a, const Vec8 &b) { return Vec8(_mm256_add_epi32(a, b)); }
 
 inline Vec8 &operator+=(Vec8 &a, const Vec8 &b) {
   a = a + b;
   return a;
 }
 
-inline Vec8 operator-(const Vec8 &a, const Vec8 &b) {
-  return Vec8(_mm256_sub_epi32(a, b));
-}
+inline Vec8 operator-(const Vec8 &a, const Vec8 &b) { return Vec8(_mm256_sub_epi32(a, b)); }
 
 inline Vec8 &operator-=(Vec8 &a, const Vec8 &b) {
   a = a - b;
   return a;
 }
 
-inline Vec8 operator*(const Vec8 &a, const Vec8 &b) {
-  return Vec8(_mm256_mullo_epi32(a, b));
-}
+inline Vec8 operator*(const Vec8 &a, const Vec8 &b) { return Vec8(_mm256_mullo_epi32(a, b)); }
 
 inline Vec8 &operator*=(Vec8 &a, const Vec8 &b) {
   a = a * b;
   return a;
 }
 
-inline Vec8 operator&(const Vec8 &a, const Vec8 &b) {
-  return Vec8(Vec256b(a) & Vec256b(b));
-}
+inline Vec8 operator&(const Vec8 &a, const Vec8 &b) { return Vec8(Vec256b(a) & Vec256b(b)); }
 
 inline Vec8 &operator&=(Vec8 &a, const Vec8 &b) {
   a = a & b;
   return a;
 }
 
-inline Vec8 operator|(const Vec8 &a, const Vec8 &b) {
-  return Vec8(Vec256b(a) | Vec256b(b));
-}
+inline Vec8 operator|(const Vec8 &a, const Vec8 &b) { return Vec8(Vec256b(a) | Vec256b(b)); }
 
 inline Vec8 &operator|=(Vec8 &a, const Vec8 &b) {
   a = a | b;
   return a;
 }
 
-inline Vec8 operator^(const Vec8 &a, const Vec8 &b) {
-  return Vec8(Vec256b(a) ^ Vec256b(b));
-}
+inline Vec8 operator^(const Vec8 &a, const Vec8 &b) { return Vec8(Vec256b(a) ^ Vec256b(b)); }
 
 inline Vec8 &operator^=(Vec8 &a, const Vec8 &b) {
   a = a ^ b;
   return a;
 }
 
-inline Vec8 operator>>(const Vec8 &a, const u32 shift) {
-  return Vec8(_mm256_srli_epi32(a, shift));
-}
+inline Vec8 operator>>(const Vec8 &a, const u32 shift) { return Vec8(_mm256_srli_epi32(a, shift)); }
 
 inline Vec8 &operator>>=(Vec8 &a, const u32 shift) {
   a = a >> shift;
   return a;
 }
 
-inline Vec8 operator<<(const Vec8 &a, const u32 shift) {
-  return Vec8(_mm256_slli_epi32(a, shift));
-}
+inline Vec8 operator<<(const Vec8 &a, const u32 shift) { return Vec8(_mm256_slli_epi32(a, shift)); }
 
 inline Vec8 &operator<<=(Vec8 &a, const u32 shift) {
   a = a << shift;
   return a;
 }
 
-inline Vec8 operator>>(const Vec8 &a, const Vec8 &b) {
-  return Vec8(_mm256_srlv_epi32(a, b));
-}
+inline Vec8 operator>>(const Vec8 &a, const Vec8 &b) { return Vec8(_mm256_srlv_epi32(a, b)); }
 
 inline Vec8 &operator>>=(Vec8 &a, const Vec8 &b) {
   a = a >> b;
   return a;
 }
 
-inline Vec8 operator<<(const Vec8 &a, const Vec8 &b) {
-  return Vec8(_mm256_sllv_epi32(a, b));
-}
+inline Vec8 operator<<(const Vec8 &a, const Vec8 &b) { return Vec8(_mm256_sllv_epi32(a, b)); }
 
 inline Vec8 &operator<<=(Vec8 &a, const Vec8 &b) {
   a = a << b;
@@ -659,9 +595,8 @@ struct FilterVecSizer<T, std::enable_if_t<std::is_unsigned_v<T>>>
     : public FilterVecSizer<std::make_signed_t<T>> {};
 
 template <typename T, template <typename> typename Compare>
-static inline u32 FilterVectorByVal(const T *RESTRICT in, const u32 in_count,
-                                    const T val, sel_t *RESTRICT out,
-                                    u32 *RESTRICT in_pos) {
+static inline u32 FilterVectorByVal(const T *RESTRICT in, const u32 in_count, const T val,
+                                    sel_t *RESTRICT out, u32 *RESTRICT in_pos) {
   using Vec = typename FilterVecSizer<T>::Vec;
   using VecMask = typename FilterVecSizer<T>::VecMask;
 
@@ -682,8 +617,7 @@ static inline u32 FilterVectorByVal(const T *RESTRICT in, const u32 in_count,
 }
 
 template <typename T, template <typename> typename Compare>
-static inline u32 FilterVectorByVector(const T *RESTRICT in_1,
-                                       const T *RESTRICT in_2,
+static inline u32 FilterVectorByVector(const T *RESTRICT in_1, const T *RESTRICT in_2,
                                        const u32 in_count, sel_t *RESTRICT out,
                                        u32 *RESTRICT in_pos) {
   using Vec = typename FilterVecSizer<T>::Vec;

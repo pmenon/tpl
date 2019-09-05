@@ -40,9 +40,7 @@ void PopulateSorter(Sorter *sorter, u32 num_tuples = kDefaultVectorSize + 7) {
  * @param rhs The second tuple.
  * @return < 0 if lhs < rhs, 0 if lhs = rhs, > 0 if lhs > rhs.
  */
-i32 CompareTuple(const Tuple &lhs, const Tuple &rhs) {
-  return lhs.key - rhs.key;
-}
+i32 CompareTuple(const Tuple &lhs, const Tuple &rhs) { return lhs.key - rhs.key; }
 
 /**
  * Convert row-oriented data in the rows vector to columnar format in the given
@@ -51,8 +49,7 @@ i32 CompareTuple(const Tuple &lhs, const Tuple &rhs) {
  * @param num_rows The number of rows in the array.
  * @param iter The output vector projection iterator.
  */
-void Transpose(const byte *rows[], u64 num_rows,
-               VectorProjectionIterator *iter) {
+void Transpose(const byte *rows[], u64 num_rows, VectorProjectionIterator *iter) {
   for (u32 i = 0; i < num_rows; i++) {
     auto tuple = reinterpret_cast<const Tuple *>(rows[i]);
     iter->SetValue<i64, false>(0, tuple->key, false);

@@ -71,8 +71,7 @@ void CpuInfo::InitCpuInfo() {
 
   {
     size_t size = sizeof(num_physical_cores_);
-    if (sysctlbyname("hw.physicalcpu", &num_physical_cores_, &size, nullptr,
-                     0) < 0) {
+    if (sysctlbyname("hw.physicalcpu", &num_physical_cores_, &size, nullptr, 0) < 0) {
       LOG_ERROR("Cannot read # physical CPUs: {}", strerror(errno));
     }
   }
@@ -158,12 +157,9 @@ void CpuInfo::InitCacheInfo() {
   cache_sizes_[L2_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL2_CACHE_SIZE));
   cache_sizes_[L3_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL3_CACHE_SIZE));
 
-  cache_line_sizes_[L1_CACHE] =
-      static_cast<u32>(sysconf(_SC_LEVEL1_DCACHE_LINESIZE));
-  cache_line_sizes_[L2_CACHE] =
-      static_cast<u32>(sysconf(_SC_LEVEL2_CACHE_LINESIZE));
-  cache_line_sizes_[L3_CACHE] =
-      static_cast<u32>(sysconf(_SC_LEVEL3_CACHE_LINESIZE));
+  cache_line_sizes_[L1_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL1_DCACHE_LINESIZE));
+  cache_line_sizes_[L2_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL2_CACHE_LINESIZE));
+  cache_line_sizes_[L3_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL3_CACHE_LINESIZE));
 #endif
 }
 

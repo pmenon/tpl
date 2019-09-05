@@ -79,9 +79,7 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
     u32 c;
   };
 
-  auto init_count = [](UNUSED void *ctx, void *tls) {
-    reinterpret_cast<Counter *>(tls)->c = 0;
-  };
+  auto init_count = [](UNUSED void *ctx, void *tls) { reinterpret_cast<Counter *>(tls)->c = 0; };
 
   auto scanner = [](UNUSED void *state, void *tls, TableVectorIterator *tvi) {
     auto *counter = reinterpret_cast<Counter *>(tls);
@@ -97,8 +95,8 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
   thread_state_container.Reset(sizeof(Counter), init_count, nullptr, nullptr);
 
   // Scan
-  TableVectorIterator::ParallelScan(TableIdToNum(TableId::Test1), nullptr,
-                                    &thread_state_container, scanner);
+  TableVectorIterator::ParallelScan(TableIdToNum(TableId::Test1), nullptr, &thread_state_container,
+                                    scanner);
 
   // Combine counters
   std::vector<byte *> counters;

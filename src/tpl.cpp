@@ -51,8 +51,7 @@ static constexpr const char *kExitKeyword = ".exit";
 /// compiled mode
 /// \param source The TPL source
 /// \param name The name of the module/program
-static void CompileAndRun(const std::string &source,
-                          const std::string &name = "tmp-tpl") {
+static void CompileAndRun(const std::string &source, const std::string &name = "tmp-tpl") {
   util::Region region("repl-ast");
   util::Region error_region("repl-error");
 
@@ -63,8 +62,8 @@ static void CompileAndRun(const std::string &source,
   parsing::Scanner scanner(source.data(), source.length());
   parsing::Parser parser(&scanner, &context);
 
-  double parse_ms = 0.0, typecheck_ms = 0.0, codegen_ms = 0.0,
-         interp_exec_ms = 0.0, adaptive_exec_ms = 0.0, jit_exec_ms = 0.0;
+  double parse_ms = 0.0, typecheck_ms = 0.0, codegen_ms = 0.0, interp_exec_ms = 0.0,
+         adaptive_exec_ms = 0.0, jit_exec_ms = 0.0;
 
   //
   // Parse
@@ -207,8 +206,7 @@ static void CompileAndRun(const std::string &source,
   LOG_INFO(
       "Parse: {} ms, Type-check: {} ms, Code-gen: {} ms, Interp. Exec.: {} ms, "
       "Adaptive Exec.: {} ms, Jit+Exec.: {} ms",
-      parse_ms, typecheck_ms, codegen_ms, interp_exec_ms, adaptive_exec_ms,
-      jit_exec_ms);
+      parse_ms, typecheck_ms, codegen_ms, interp_exec_ms, adaptive_exec_ms, jit_exec_ms);
 }
 
 /// Run the TPL REPL
@@ -237,8 +235,7 @@ static void RunRepl() {
 static void RunFile(const std::string &filename) {
   auto file = llvm::MemoryBuffer::getFile(filename);
   if (std::error_code error = file.getError()) {
-    LOG_ERROR("There was an error reading file '{}': {}", filename,
-              error.message());
+    LOG_ERROR("There was an error reading file '{}': {}", filename, error.message());
     return;
   }
 

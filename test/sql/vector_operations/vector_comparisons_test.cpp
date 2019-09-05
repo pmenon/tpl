@@ -17,10 +17,9 @@ TEST_F(VectorComparisonTest, CompareNumeric) {
   // The first input vector consists of six non-null big-ints: [0,1,2,3,4,5].
   //
 
-  for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer,
-                       TypeId::BigInt, TypeId::Float, TypeId::Double}) {
-    auto vec = MakeBigIntVector({0, 1, 2, 3, 4, 5},
-                                {false, false, false, false, false, false});
+  for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer, TypeId::BigInt,
+                       TypeId::Float, TypeId::Double}) {
+    auto vec = MakeBigIntVector({0, 1, 2, 3, 4, 5}, {false, false, false, false, false, false});
     vec->Cast(type_id);
 
     // Try to find
@@ -115,10 +114,9 @@ TEST_F(VectorComparisonTest, CompareStrings) {
   // We store the result of the comparison into the 'result' vector.
   //
 
-  auto a = MakeVarcharVector({"first", "second", nullptr, "fourth"},
-                             {false, false, true, false});
-  auto b = MakeVarcharVector({nullptr, "second", nullptr, "baka not nice"},
-                             {true, false, true, false});
+  auto a = MakeVarcharVector({"first", "second", nullptr, "fourth"}, {false, false, true, false});
+  auto b =
+      MakeVarcharVector({nullptr, "second", nullptr, "baka not nice"}, {true, false, true, false});
   auto result = MakeBooleanVector();
 
   // a == b, only (1)

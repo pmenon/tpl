@@ -81,9 +81,7 @@ class TableVectorIterator {
   /**
    * Return the iterator over the current active vector projection
    */
-  VectorProjectionIterator *vector_projection_iterator() {
-    return &vector_projection_iterator_;
-  }
+  VectorProjectionIterator *vector_projection_iterator() { return &vector_projection_iterator_; }
 
   /**
    * Scan function callback used to scan a partition of the table.
@@ -105,9 +103,8 @@ class TableVectorIterator {
    * @param scan_fn The callback function invoked for vectors of table input
    * @param min_grain_size The minimum number of blocks to give a scan task
    */
-  static bool ParallelScan(u16 table_id, void *query_state,
-                           ThreadStateContainer *thread_states, ScanFn scan_fn,
-                           u32 min_grain_size = kMinBlockRangeSize);
+  static bool ParallelScan(u16 table_id, void *query_state, ThreadStateContainer *thread_states,
+                           ScanFn scan_fn, u32 min_grain_size = kMinBlockRangeSize);
 
  private:
   // When the column iterators receive new vectors of input, we need to

@@ -54,8 +54,7 @@ class ForFinder : public AstTraversalVisitor<ForFinder<FindInfinite>> {
   using SelfT = ForFinder<FindInfinite>;
 
  public:
-  explicit ForFinder(ast::AstNode *root)
-      : AstTraversalVisitor<SelfT>(root), num_fors_(0) {}
+  explicit ForFinder(ast::AstNode *root) : AstTraversalVisitor<SelfT>(root), num_fors_(0) {}
 
   void VisitForStmt(ast::ForStmt *stmt) {
     if constexpr (FindInfinite) {
@@ -159,13 +158,11 @@ namespace {
 // Visitor to find function declarations or, optionally, all function literals
 // (i.e., lambdas) as well.
 template <bool CountLiterals = false>
-class FunctionFinder
-    : public AstTraversalVisitor<FunctionFinder<CountLiterals>> {
+class FunctionFinder : public AstTraversalVisitor<FunctionFinder<CountLiterals>> {
   using SelfT = FunctionFinder<CountLiterals>;
 
  public:
-  explicit FunctionFinder(ast::AstNode *root)
-      : AstTraversalVisitor<SelfT>(root), num_funcs_(0) {}
+  explicit FunctionFinder(ast::AstNode *root) : AstTraversalVisitor<SelfT>(root), num_funcs_(0) {}
 
   void VisitFunctionDecl(ast::FunctionDecl *decl) {
     if constexpr (!CountLiterals) {
@@ -235,8 +232,7 @@ namespace {
 
 class IfFinder : public AstTraversalVisitor<IfFinder> {
  public:
-  explicit IfFinder(ast::AstNode *root)
-      : AstTraversalVisitor(root), num_ifs_(0) {}
+  explicit IfFinder(ast::AstNode *root) : AstTraversalVisitor(root), num_ifs_(0) {}
 
   void VisitIfStmt(ast::IfStmt *stmt) {
     num_ifs_++;

@@ -26,8 +26,7 @@ TEST_F(VectorUtilTest, Access) {
 
   {
     i32 base = 44;
-    simd::Vec8 in(base, base + 1, base + 2, base + 3, base + 4, base + 5,
-                  base + 6, base + 7);
+    simd::Vec8 in(base, base + 1, base + 2, base + 3, base + 4, base + 5, base + 6, base + 7);
     for (i32 i = 0; i < static_cast<i32>(simd::Vec8::Size()); i++) {
       EXPECT_EQ(base + i, in[i]);
     }
@@ -294,16 +293,15 @@ TEST_F(VectorUtilTest, VectorVectorFilter) {
 
   alignas(CACHELINE_SIZE) sel_t out[kDefaultVectorSize] = {0};
 
-#define CHECK(op, expected_count)                                            \
-  {                                                                          \
-    u32 count = 0;                                                           \
-    for (u32 offset = 0; offset < num_elems; offset += kDefaultVectorSize) { \
-      auto size = std::min(kDefaultVectorSize, num_elems - offset);          \
-      auto found =                                                           \
-          VectorUtil::Filter##op(&arr_1[offset], &arr_2[offset], size, out); \
-      count += found;                                                        \
-    }                                                                        \
-    EXPECT_EQ(expected_count, count);                                        \
+#define CHECK(op, expected_count)                                                     \
+  {                                                                                   \
+    u32 count = 0;                                                                    \
+    for (u32 offset = 0; offset < num_elems; offset += kDefaultVectorSize) {          \
+      auto size = std::min(kDefaultVectorSize, num_elems - offset);                   \
+      auto found = VectorUtil::Filter##op(&arr_1[offset], &arr_2[offset], size, out); \
+      count += found;                                                                 \
+    }                                                                                 \
+    EXPECT_EQ(expected_count, count);                                                 \
   }
 
   CHECK(Eq, 0u)
@@ -319,26 +317,25 @@ TEST_F(VectorUtilTest, VectorVectorFilter) {
   // Test: fill a1 and a2 with random data. Verify filter with scalar versions.
   //
 
-#define CHECK(vec_op, scalar_op)                                              \
-  {                                                                           \
-    std::random_device random;                                                \
-    for (u32 idx = 0; idx < num_elems; idx++) {                               \
-      arr_1[idx] = (random() % 100);                                          \
-      arr_2[idx] = (random() % 100);                                          \
-    }                                                                         \
-    u32 vec_count = 0, scalar_count = 0;                                      \
-    for (u32 offset = 0; offset < num_elems; offset += kDefaultVectorSize) {  \
-      auto size = std::min(kDefaultVectorSize, num_elems - offset);           \
-      /* Vector filter*/                                                      \
-      auto found = VectorUtil::Filter##vec_op(&arr_1[offset], &arr_2[offset], \
-                                              size, out);                     \
-      vec_count += found;                                                     \
-      /* Scalar filter */                                                     \
-      for (u32 iter = offset, end = iter + size; iter != end; iter++) {       \
-        scalar_count += arr_1[iter] scalar_op arr_2[iter];                    \
-      }                                                                       \
-    }                                                                         \
-    EXPECT_EQ(scalar_count, vec_count);                                       \
+#define CHECK(vec_op, scalar_op)                                                          \
+  {                                                                                       \
+    std::random_device random;                                                            \
+    for (u32 idx = 0; idx < num_elems; idx++) {                                           \
+      arr_1[idx] = (random() % 100);                                                      \
+      arr_2[idx] = (random() % 100);                                                      \
+    }                                                                                     \
+    u32 vec_count = 0, scalar_count = 0;                                                  \
+    for (u32 offset = 0; offset < num_elems; offset += kDefaultVectorSize) {              \
+      auto size = std::min(kDefaultVectorSize, num_elems - offset);                       \
+      /* Vector filter*/                                                                  \
+      auto found = VectorUtil::Filter##vec_op(&arr_1[offset], &arr_2[offset], size, out); \
+      vec_count += found;                                                                 \
+      /* Scalar filter */                                                                 \
+      for (u32 iter = offset, end = iter + size; iter != end; iter++) {                   \
+        scalar_count += arr_1[iter] scalar_op arr_2[iter];                                \
+      }                                                                                   \
+    }                                                                                     \
+    EXPECT_EQ(scalar_count, vec_count);                                                   \
   }
 
   CHECK(Eq, ==)
@@ -385,8 +382,7 @@ TEST_F(VectorUtilTest, BitToByteVector) {
   bv.Set(44);
   bv.Set(73);
 
-  util::VectorUtil::BitVectorToByteVector(bv.data_array(), bv.num_bits(),
-                                          bytes);
+  util::VectorUtil::BitVectorToByteVector(bv.data_array(), bv.num_bits(), bytes);
 
   for (u32 i = 0; i < bv.num_bits(); i++) {
     EXPECT_EQ(bv[i], bytes[i] == 0xFF);
@@ -405,8 +401,7 @@ TEST_F(VectorUtilTest, BitToSelectionVector) {
   }
 
   // Transform
-  u32 size = util::VectorUtil::BitVectorToSelectionVector(bv.data_array(),
-                                                          num_bits, sel);
+  u32 size = util::VectorUtil::BitVectorToSelectionVector(bv.data_array(), num_bits, sel);
 
   // Only 63 bits are set (remember there are only 126-bits)
   EXPECT_EQ(63u, size);
@@ -433,8 +428,7 @@ TEST_F(VectorUtilTest, DiffSelectedWithScratchPad) {
   sel_t output[kDefaultVectorSize];
   u8 scratch[kDefaultVectorSize];
 
-  auto count =
-      VectorUtil::DiffSelected_WithScratchPad(10, input, 5, output, scratch);
+  auto count = VectorUtil::DiffSelected_WithScratchPad(10, input, 5, output, scratch);
   EXPECT_EQ(5u, count);
   EXPECT_EQ(0u, output[0]);
   EXPECT_EQ(1u, output[1]);
@@ -448,28 +442,27 @@ TEST_F(VectorUtilTest, IntersectSelectionVectors) {
   sel_t b[] = {1, 2, 4, 7, 8, 9, 10, 11};
   sel_t out[kDefaultVectorSize];
 
-  auto out_count = VectorUtil::IntersectSelected(a, sizeof(a) / sizeof(a[0]), b,
-                                                 sizeof(b) / sizeof(b[0]), out);
+  auto out_count =
+      VectorUtil::IntersectSelected(a, sizeof(a) / sizeof(a[0]), b, sizeof(b) / sizeof(b[0]), out);
   EXPECT_EQ(3u, out_count);
   EXPECT_EQ(2u, out[0]);
   EXPECT_EQ(7u, out[1]);
   EXPECT_EQ(9u, out[2]);
 
   // Reverse arguments, should still work
-  out_count = VectorUtil::IntersectSelected(b, sizeof(b) / sizeof(b[0]), a,
-                                            sizeof(a) / sizeof(a[0]), out);
+  out_count =
+      VectorUtil::IntersectSelected(b, sizeof(b) / sizeof(b[0]), a, sizeof(a) / sizeof(a[0]), out);
   EXPECT_EQ(3u, out_count);
   EXPECT_EQ(2u, out[0]);
   EXPECT_EQ(7u, out[1]);
   EXPECT_EQ(9u, out[2]);
 
   // Empty arguments should work
-  out_count = VectorUtil::IntersectSelected(nullptr, 0, b,
-                                            sizeof(b) / sizeof(b[0]), out);
+  out_count = VectorUtil::IntersectSelected(nullptr, 0, b, sizeof(b) / sizeof(b[0]), out);
   EXPECT_EQ(0u, out_count);
 
-  out_count = VectorUtil::IntersectSelected(
-      b, sizeof(b) / sizeof(b[0]), static_cast<sel_t *>(nullptr), 0, out);
+  out_count = VectorUtil::IntersectSelected(b, sizeof(b) / sizeof(b[0]),
+                                            static_cast<sel_t *>(nullptr), 0, out);
   EXPECT_EQ(0u, out_count);
 }
 

@@ -87,8 +87,7 @@ struct HashTableEntryIterator {
                   "Key-equality must be invocable as: bool(const T *)");
 
     while (next_ != nullptr) {
-      if (next_->hash == hash_ &&
-          key_eq(reinterpret_cast<const T *>(next_->payload))) {
+      if (next_->hash == hash_ && key_eq(reinterpret_cast<const T *>(next_->payload))) {
         return true;
       }
       next_ = next_->next;

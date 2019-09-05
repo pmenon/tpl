@@ -49,8 +49,7 @@ std::unique_ptr<byte[]> CreateRandom(u32 num_elems, T min = 0,
 }
 
 std::pair<std::unique_ptr<u32[]>, u32> CreateRandomNullBitmap(u32 num_elems) {
-  auto input =
-      std::make_unique<u32[]>(util::BitUtil::Num32BitWordsFor(num_elems));
+  auto input = std::make_unique<u32[]>(util::BitUtil::Num32BitWordsFor(num_elems));
   auto num_nulls = 0;
 
   std::mt19937 generator;
@@ -71,14 +70,7 @@ std::pair<std::unique_ptr<u32[]>, u32> CreateRandomNullBitmap(u32 num_elems) {
 class VectorProjectionIteratorTest : public TplTest {
  protected:
   // The columns
-  enum ColId : u8 {
-    col_a = 0,
-    col_b = 1,
-    col_c = 2,
-    col_d = 3,
-    col_e = 4,
-    col_f = 5
-  };
+  enum ColId : u8 { col_a = 0, col_b = 1, col_c = 2, col_d = 3, col_e = 4, col_f = 5 };
 
   struct ColData {
     std::unique_ptr<byte[]> data;
@@ -86,8 +78,8 @@ class VectorProjectionIteratorTest : public TplTest {
     u32 num_nulls;
     u32 num_tuples;
 
-    ColData(std::unique_ptr<byte[]> data, std::unique_ptr<u32[]> nulls,
-            u32 num_nulls, u32 num_tuples)
+    ColData(std::unique_ptr<byte[]> data, std::unique_ptr<u32[]> nulls, u32 num_nulls,
+            u32 num_tuples)
         : data(std::move(data)),
           nulls(std::move(nulls)),
           num_nulls(num_nulls),
@@ -108,9 +100,8 @@ class VectorProjectionIteratorTest : public TplTest {
     schema_ = std::make_unique<Schema>(std::move(cols));
 
     std::vector<const Schema::ColumnInfo *> column_info = {
-        schema_->GetColumnInfo(0), schema_->GetColumnInfo(1),
-        schema_->GetColumnInfo(2), schema_->GetColumnInfo(3),
-        schema_->GetColumnInfo(4), schema_->GetColumnInfo(5),
+        schema_->GetColumnInfo(0), schema_->GetColumnInfo(1), schema_->GetColumnInfo(2),
+        schema_->GetColumnInfo(3), schema_->GetColumnInfo(4), schema_->GetColumnInfo(5),
     };
     vp_ = std::make_unique<VectorProjection>();
     vp_->InitializeEmpty(column_info);
@@ -129,8 +120,7 @@ class VectorProjectionIteratorTest : public TplTest {
     auto colf_data = CreateRandom<i64>(num_tuples(), 50, 100);
 
     data_.emplace_back(std::move(cola_data), nullptr, 0, num_tuples());
-    data_.emplace_back(std::move(colb_data), std::move(colb_null),
-                       colb_num_nulls, num_tuples());
+    data_.emplace_back(std::move(colb_data), std::move(colb_null), colb_num_nulls, num_tuples());
     data_.emplace_back(std::move(colc_data), nullptr, 0, num_tuples());
     data_.emplace_back(std::move(cold_data), nullptr, 0, num_tuples());
     data_.emplace_back(std::move(cole_data), nullptr, 0, num_tuples());

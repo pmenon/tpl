@@ -20,12 +20,9 @@ namespace tpl::util {
 // Allocations
 // ---------------------------------------------------------
 
-inline void *MallocAligned(const std::size_t size,
-                           const std::size_t alignment) {
-  TPL_ASSERT(alignment % sizeof(void *) == 0,
-             "Alignment must be a multiple of sizeof(void*)");
-  TPL_ASSERT((alignment & (alignment - 1)) == 0,
-             "Alignment must be a power of two");
+inline void *MallocAligned(const std::size_t size, const std::size_t alignment) {
+  TPL_ASSERT(alignment % sizeof(void *) == 0, "Alignment must be a multiple of sizeof(void*)");
+  TPL_ASSERT((alignment & (alignment - 1)) == 0, "Alignment must be a power of two");
 
   void *ptr = nullptr;
 #if defined(__APPLE__)
@@ -41,8 +38,7 @@ inline void *MallocAligned(const std::size_t size,
 
 inline void *MallocHuge(std::size_t size) {
   // Attempt to map
-  void *ptr = mmap(nullptr, size, PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  void *ptr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
   // If failed, return null. Let client worry.
   if (ptr == MAP_FAILED) {

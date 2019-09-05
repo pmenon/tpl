@@ -9,8 +9,7 @@ namespace tpl::sql {
 namespace {
 
 template <typename Op>
-void ComparisonOperation(const Vector &left, const Vector &right,
-                         Vector *result) {
+void ComparisonOperation(const Vector &left, const Vector &right, Vector *result) {
   switch (left.type_id()) {
     case TypeId::Boolean: {
       BinaryOperation<bool, bool, bool, Op>(left, right, result);
@@ -49,8 +48,7 @@ void ComparisonOperation(const Vector &left, const Vector &right,
       break;
     }
     case TypeId::Varchar: {
-      BinaryOperation<const char *, const char *, bool, Op, true>(left, right,
-                                                                  result);
+      BinaryOperation<const char *, const char *, bool, Op, true>(left, right, result);
       break;
     }
     default: { TPL_ASSERT(false, "Type not supported for comparison"); }
@@ -63,28 +61,23 @@ void VectorOps::Equal(const Vector &left, const Vector &right, Vector *result) {
   ComparisonOperation<tpl::sql::Equal>(left, right, result);
 }
 
-void VectorOps::GreaterThan(const Vector &left, const Vector &right,
-                            Vector *result) {
+void VectorOps::GreaterThan(const Vector &left, const Vector &right, Vector *result) {
   ComparisonOperation<tpl::sql::GreaterThan>(left, right, result);
 }
 
-void VectorOps::GreaterThanEqual(const Vector &left, const Vector &right,
-                                 Vector *result) {
+void VectorOps::GreaterThanEqual(const Vector &left, const Vector &right, Vector *result) {
   ComparisonOperation<tpl::sql::GreaterThanEqual>(left, right, result);
 }
 
-void VectorOps::LessThan(const Vector &left, const Vector &right,
-                         Vector *result) {
+void VectorOps::LessThan(const Vector &left, const Vector &right, Vector *result) {
   ComparisonOperation<tpl::sql::LessThan>(left, right, result);
 }
 
-void VectorOps::LessThanEqual(const Vector &left, const Vector &right,
-                              Vector *result) {
+void VectorOps::LessThanEqual(const Vector &left, const Vector &right, Vector *result) {
   ComparisonOperation<tpl::sql::LessThanEqual>(left, right, result);
 }
 
-void VectorOps::NotEqual(const Vector &left, const Vector &right,
-                         Vector *result) {
+void VectorOps::NotEqual(const Vector &left, const Vector &right, Vector *result) {
   ComparisonOperation<tpl::sql::NotEqual>(left, right, result);
 }
 

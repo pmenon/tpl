@@ -19,8 +19,7 @@ class VM {
    * Invoke the function with ID @em func_id in the module @em module. @em args
    * contains the output and input parameters stored contiguously.
    */
-  static void InvokeFunction(const Module *module, FunctionId func_id,
-                             const u8 args[]);
+  static void InvokeFunction(const Module *module, FunctionId func_id, const u8 args[]);
 
  private:
   // Private constructor to force users to use InvokeFunction

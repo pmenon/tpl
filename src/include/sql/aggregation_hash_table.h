@@ -84,16 +84,14 @@ class AggregationHashTable {
    *             and the fourth and fifth argument are the range of overflow
    *             partitions to merge into the input aggregation hash table.
    */
-  using MergePartitionFn = void (*)(void *, AggregationHashTable *,
-                                    AHTOverflowPartitionIterator *);
+  using MergePartitionFn = void (*)(void *, AggregationHashTable *, AHTOverflowPartitionIterator *);
 
   /**
    * Function to scan an aggregation hash table.
    * Convention: First argument is query state, second argument is thread-local
    *             state, last argument is the aggregation hash table to scan.
    */
-  using ScanPartitionFn = void (*)(void *, void *,
-                                   const AggregationHashTable *);
+  using ScanPartitionFn = void (*)(void *, void *, const AggregationHashTable *);
 
   /**
    * Small class to capture various usage stats
@@ -123,8 +121,7 @@ class AggregationHashTable {
    * @param payload_size The size of the elements in the hash table.
    * @param initial_size The initial number of aggregates to support.
    */
-  AggregationHashTable(MemoryPool *memory, std::size_t payload_size,
-                       u32 initial_size);
+  AggregationHashTable(MemoryPool *memory, std::size_t payload_size, u32 initial_size);
 
   /**
    * This class cannot be copied or moved.
@@ -172,9 +169,8 @@ class AggregationHashTable {
    * @param advance_agg_fn Function to advance an existing aggregate.
    * @param partitioned Whether to perform insertions in partitioned mode.
    */
-  void ProcessBatch(VectorProjectionIterator *iters[], HashFn hash_fn,
-                    KeyEqFn key_eq_fn, InitAggFn init_agg_fn,
-                    AdvanceAggFn advance_agg_fn, bool partitioned);
+  void ProcessBatch(VectorProjectionIterator *iters[], HashFn hash_fn, KeyEqFn key_eq_fn,
+                    InitAggFn init_agg_fn, AdvanceAggFn advance_agg_fn, bool partitioned);
 
   /**
    * Transfer all entries and overflow partitions stored in each thread-local
@@ -188,8 +184,7 @@ class AggregationHashTable {
    * @param thread_states Container for all thread-local tables.
    * @param agg_ht_offset The offset in the container to find the table.
    */
-  void TransferMemoryAndPartitions(ThreadStateContainer *thread_states,
-                                   std::size_t agg_ht_offset,
+  void TransferMemoryAndPartitions(ThreadStateContainer *thread_states, std::size_t agg_ht_offset,
                                    MergePartitionFn merge_partition_fn);
 
   /**
@@ -214,8 +209,7 @@ class AggregationHashTable {
    * @param scan_fn The callback scan function that will scan one partition of
    *                the partitioned aggregation hash table.
    */
-  void ExecuteParallelPartitionedScan(void *query_state,
-                                      ThreadStateContainer *thread_states,
+  void ExecuteParallelPartitionedScan(void *query_state, ThreadStateContainer *thread_states,
                                       ScanPartitionFn scan_fn);
 
   /**
@@ -252,9 +246,8 @@ class AggregationHashTable {
   // Compute the hash value and perform the table lookup for all elements in the
   // input vector projections.
   template <bool VPIIsFiltered>
-  void ProcessBatchImpl(VectorProjectionIterator *iters[], HashFn hash_fn,
-                        KeyEqFn key_eq_fn, InitAggFn init_agg_fn,
-                        AdvanceAggFn advance_agg_fn, bool partitioned);
+  void ProcessBatchImpl(VectorProjectionIterator *iters[], HashFn hash_fn, KeyEqFn key_eq_fn,
+                        InitAggFn init_agg_fn, AdvanceAggFn advance_agg_fn, bool partitioned);
 
   // Dispatched from ProcessBatchImpl() to compute the hash values for all input
   // tuples. Hashes are stored in the 'hashes' array in the batch state.
@@ -278,8 +271,7 @@ class AggregationHashTable {
 
   // Called from FindGroups() to check the equality of keys.
   template <bool VPIIsFiltered>
-  u32 CheckKeyEquality(VectorProjectionIterator *iters[], u32 num_elems,
-                       KeyEqFn key_eq_fn);
+  u32 CheckKeyEquality(VectorProjectionIterator *iters[], u32 num_elems, KeyEqFn key_eq_fn);
 
   // Called from FindGroups() to follow the entry chain of candidate groups.
   u32 FollowNext();
@@ -297,8 +289,7 @@ class AggregationHashTable {
 
   // Called during partitioned scan to build an aggregation hash table over a
   // single partition.
-  AggregationHashTable *BuildTableOverPartition(void *query_state,
-                                                u32 partition_idx);
+  AggregationHashTable *BuildTableOverPartition(void *query_state, u32 partition_idx);
 
  private:
   // Memory allocator.
@@ -379,8 +370,7 @@ class AggregationHashTable {
 // ---------------------------------------------------------
 
 inline HashTableEntry *AggregationHashTable::LookupEntryInternal(
-    hash_t hash, AggregationHashTable::KeyEqFn key_eq_fn,
-    const void *probe_tuple) const {
+    hash_t hash, AggregationHashTable::KeyEqFn key_eq_fn, const void *probe_tuple) const {
   HashTableEntry *entry = hash_table_.FindChainHead(hash);
   while (entry != nullptr) {
     if (entry->hash == hash && key_eq_fn(entry->payload, probe_tuple)) {
@@ -391,9 +381,8 @@ inline HashTableEntry *AggregationHashTable::LookupEntryInternal(
   return nullptr;
 }
 
-inline byte *AggregationHashTable::Lookup(
-    hash_t hash, AggregationHashTable::KeyEqFn key_eq_fn,
-    const void *probe_tuple) {
+inline byte *AggregationHashTable::Lookup(hash_t hash, AggregationHashTable::KeyEqFn key_eq_fn,
+                                          const void *probe_tuple) {
   auto *entry = LookupEntryInternal(hash, key_eq_fn, probe_tuple);
   return (entry == nullptr ? nullptr : entry->payload);
 }
@@ -407,8 +396,7 @@ inline byte *AggregationHashTable::Lookup(
  */
 class AHTIterator {
  public:
-  explicit AHTIterator(const AggregationHashTable &agg_table)
-      : iter_(agg_table.hash_table_) {}
+  explicit AHTIterator(const AggregationHashTable &agg_table) : iter_(agg_table.hash_table_) {}
 
   /**
    * Does this iterator have more data?
@@ -465,8 +453,7 @@ class AHTVectorIterator {
    * Construct a vector iterator over the given aggregation table.
    */
   AHTVectorIterator(const AggregationHashTable &agg_hash_table,
-                    const Schema::ColumnInfo *column_info, u32 num_cols,
-                    TransposeFn transpose_fn);
+                    const Schema::ColumnInfo *column_info, u32 num_cols, TransposeFn transpose_fn);
 
   /**
    * This class cannot be copied or moved.
@@ -524,11 +511,8 @@ class AHTOverflowPartitionIterator {
    * @param partitions_begin The beginning of the range.
    * @param partitions_end The end of the range.
    */
-  AHTOverflowPartitionIterator(HashTableEntry **partitions_begin,
-                               HashTableEntry **partitions_end)
-      : partitions_iter_(partitions_begin),
-        partitions_end_(partitions_end),
-        curr_(nullptr) {
+  AHTOverflowPartitionIterator(HashTableEntry **partitions_begin, HashTableEntry **partitions_end)
+      : partitions_iter_(partitions_begin), partitions_end_(partitions_end), curr_(nullptr) {
     Next();
   }
 

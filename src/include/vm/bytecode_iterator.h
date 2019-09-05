@@ -35,8 +35,7 @@ class BytecodeIterator {
    * @param start The start position
    * @param end The end position
    */
-  BytecodeIterator(const std::vector<u8> &bytecode, std::size_t start,
-                   std::size_t end);
+  BytecodeIterator(const std::vector<u8> &bytecode, std::size_t start, std::size_t end);
 
   /**
    * Construct an iterator over all the bytecode container in the input bytecode
@@ -104,8 +103,7 @@ class BytecodeIterator {
    * @param operand_index The index of the operand to read
    * @return The number of operands
    */
-  u16 GetLocalCountOperand(u32 operand_index,
-                           std::vector<LocalVar> &locals) const;
+  u16 GetLocalCountOperand(u32 operand_index, std::vector<LocalVar> &locals) const;
 
   /**
    * Read the operand at @a operand_index for the current bytecode as a count

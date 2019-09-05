@@ -33,9 +33,7 @@ byte *Sorter::AllocInputTuple() {
   return ret;
 }
 
-byte *Sorter::AllocInputTupleTopK(UNUSED u64 top_k) {
-  return AllocInputTuple();
-}
+byte *Sorter::AllocInputTupleTopK(UNUSED u64 top_k) { return AllocInputTuple(); }
 
 void Sorter::AllocInputTupleTopKFinish(const u64 top_k) {
   // If the number of buffered tuples is less than top_k, we're done
@@ -128,8 +126,7 @@ void Sorter::Sort() {
   timer.Stop();
 
   UNUSED double tps = (tuples_.size() / timer.elapsed()) / 1000.0;
-  LOG_DEBUG("Sorted {} tuples in {} ms ({:.2f} tps)", tuples_.size(),
-            timer.elapsed(), tps);
+  LOG_DEBUG("Sorted {} tuples in {} ms ({:.2f} tps)", tuples_.size(), timer.elapsed(), tps);
 
   // Mark complete
   sorted_ = true;
@@ -162,10 +159,8 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   // -------------------------------------------------------
 
   std::vector<Sorter *> tl_sorters;
-  thread_state_container->CollectThreadLocalStateElementsAs(tl_sorters,
-                                                            sorter_offset);
-  llvm::erase_if(tl_sorters,
-                 [](Sorter *const sorter) { return sorter->NumTuples() == 0; });
+  thread_state_container->CollectThreadLocalStateElementsAs(tl_sorters, sorter_offset);
+  llvm::erase_if(tl_sorters, [](Sorter *const sorter) { return sorter->NumTuples() == 0; });
 
   // If there's nothing to sort, quit
   if (tl_sorters.empty()) {
@@ -180,11 +175,9 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   util::StageTimer<std::milli> timer;
   timer.EnterStage("Resize Main Sorter");
 
-  const u64 num_tuples =
-      std::accumulate(tl_sorters.begin(), tl_sorters.end(), u64(0),
-                      [](const u64 partial, const Sorter *const sorter) {
-                        return partial + sorter->NumTuples();
-                      });
+  const u64 num_tuples = std::accumulate(
+      tl_sorters.begin(), tl_sorters.end(), u64(0),
+      [](const u64 partial, const Sorter *const sorter) { return partial + sorter->NumTuples(); });
   tuples_.resize(num_tuples);
 
   timer.ExitStage();
@@ -271,8 +264,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
         // Get the [start,end) range in the current sorter such that
         // start <= splitter < end
         Sorter *const sorter = tl_sorters[sorter_idx];
-        auto start =
-            (idx == 0 ? sorter->tuples_.begin() : next_start[sorter_idx]);
+        auto start = (idx == 0 ? sorter->tuples_.begin() : next_start[sorter_idx]);
         auto end = sorter->tuples_.end();
         if (idx < splitters.size() - 1) {
           end = std::upper_bound(start, end, splitter, comp);
@@ -303,16 +295,13 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
 
   timer.EnterStage("Parallel Merge");
 
-  auto heap_cmp = [this](const MergeWorkType::Range &l,
-                         const MergeWorkType::Range &r) {
+  auto heap_cmp = [this](const MergeWorkType::Range &l, const MergeWorkType::Range &r) {
     return cmp_fn_(*l.first, *r.first) >= 0;
   };
 
   tbb::parallel_for_each(
-      merge_work.begin(), merge_work.end(),
-      [&heap_cmp](const MergeWork<SeqTypeIter> &work) {
-        std::priority_queue<MergeWorkType::Range,
-                            std::vector<MergeWorkType::Range>,
+      merge_work.begin(), merge_work.end(), [&heap_cmp](const MergeWork<SeqTypeIter> &work) {
+        std::priority_queue<MergeWorkType::Range, std::vector<MergeWorkType::Range>,
                             decltype(heap_cmp)>
             heap(heap_cmp, work.input_ranges);
         SeqTypeIter dest = work.destination;
@@ -354,9 +343,8 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   }
 }
 
-void Sorter::SortTopKParallel(
-    const ThreadStateContainer *thread_state_container, const u32 sorter_offset,
-    const u64 top_k) {
+void Sorter::SortTopKParallel(const ThreadStateContainer *thread_state_container,
+                              const u32 sorter_offset, const u64 top_k) {
   // Parallel sort
   SortParallel(thread_state_container, sorter_offset);
 

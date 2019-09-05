@@ -24,8 +24,7 @@ BloomFilter::BloomFilter(MemoryPool *memory)
       num_additions_(0),
       lazily_added_hashes_(nullptr) {}
 
-BloomFilter::BloomFilter(MemoryPool *memory, u32 expected_num_elems)
-    : BloomFilter() {
+BloomFilter::BloomFilter(MemoryPool *memory, u32 expected_num_elems) : BloomFilter() {
   Init(memory, expected_num_elems);
 }
 
@@ -38,13 +37,10 @@ void BloomFilter::Init(MemoryPool *memory, u32 expected_num_elems) {
   memory_ = memory;
   lazily_added_hashes_ = MemPoolVector<hash_t>(memory_);
 
-  u64 num_bits =
-      util::MathUtil::PowerOf2Ceil(kBitsPerElement * expected_num_elems);
-  u64 num_blocks =
-      util::MathUtil::DivRoundUp(num_bits, sizeof(Block) * kBitsPerByte);
+  u64 num_bits = util::MathUtil::PowerOf2Ceil(kBitsPerElement * expected_num_elems);
+  u64 num_blocks = util::MathUtil::DivRoundUp(num_bits, sizeof(Block) * kBitsPerByte);
   u64 num_bytes = num_blocks * sizeof(Block);
-  blocks_ = reinterpret_cast<Block *>(
-      memory->AllocateAligned(num_bytes, CACHELINE_SIZE, true));
+  blocks_ = reinterpret_cast<Block *>(memory->AllocateAligned(num_bytes, CACHELINE_SIZE, true));
 
   block_mask_ = static_cast<u32>(num_blocks - 1);
   num_additions_ = 0;
@@ -109,10 +105,9 @@ u64 BloomFilter::GetTotalBitsSet() const {
 std::string BloomFilter::DebugString() const {
   auto bits_per_elem = static_cast<double>(GetSizeInBits()) / GetNumAdditions();
   auto bit_set_prob = static_cast<double>(GetTotalBitsSet()) / GetSizeInBits();
-  return fmt::format(
-      "Filter: {} elements, {} bits, {} bits/element, {} bits set (p={:.2f})",
-      GetNumAdditions(), GetSizeInBits(), bits_per_elem, GetTotalBitsSet(),
-      bit_set_prob);
+  return fmt::format("Filter: {} elements, {} bits, {} bits/element, {} bits set (p={:.2f})",
+                     GetNumAdditions(), GetSizeInBits(), bits_per_elem, GetTotalBitsSet(),
+                     bit_set_prob);
 }
 
 }  // namespace tpl::sql

@@ -30,8 +30,7 @@ std::unique_ptr<bandit::Policy> CreatePolicy(bandit::Policy::Kind policy_kind) {
       return std::make_unique<bandit::RandomPolicy>();
     }
     case bandit::Policy::UCB: {
-      return std::make_unique<bandit::UCBPolicy>(
-          bandit::UCBPolicy::kDefaultUCBHyperParam);
+      return std::make_unique<bandit::UCBPolicy>(bandit::UCBPolicy::kDefaultUCBHyperParam);
     }
     case bandit::Policy::FixedAction: {
       return std::make_unique<bandit::FixedActionPolicy>(0);
@@ -89,8 +88,7 @@ void FilterManager::RunFilters(VectorProjectionIterator *const vpi) {
   }
 }
 
-void FilterManager::RunFilterClause(VectorProjectionIterator *const vpi,
-                                    const u32 clause_index) {
+void FilterManager::RunFilterClause(VectorProjectionIterator *const vpi, const u32 clause_index) {
   //
   // This function will execute the clause at the given clause index. But, we'll
   // be smart about it. We'll use our multi-armed bandit agent to predict the
@@ -117,8 +115,8 @@ void FilterManager::RunFilterClause(VectorProjectionIterator *const vpi,
   LOG_DEBUG("Clause {} observed reward {}", clause_index, reward);
 }
 
-std::pair<u32, double> FilterManager::RunFilterClauseImpl(
-    VectorProjectionIterator *const vpi, const FilterManager::MatchFn func) {
+std::pair<u32, double> FilterManager::RunFilterClauseImpl(VectorProjectionIterator *const vpi,
+                                                          const FilterManager::MatchFn func) {
   // Time and execute the match function, returning the number of selected
   // tuples and the execution time in milliseconds
   util::Timer<> timer;
@@ -133,9 +131,7 @@ u32 FilterManager::GetOptimalFlavorForClause(const u32 clause_index) const {
   return agent->GetCurrentOptimalAction();
 }
 
-bandit::Agent *FilterManager::GetAgentFor(const u32 clause_index) {
-  return &agents_[clause_index];
-}
+bandit::Agent *FilterManager::GetAgentFor(const u32 clause_index) { return &agents_[clause_index]; }
 
 const bandit::Agent *FilterManager::GetAgentFor(const u32 clause_index) const {
   return &agents_[clause_index];

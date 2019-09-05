@@ -14,10 +14,8 @@ TEST_F(VectorBooleanLogicTest, BooleanLogic) {
   // a = [false, false, true, true]
   // b = [false, true, false, true]
   // c = false
-  auto a = MakeBooleanVector({false, false, true, true},
-                             {false, false, false, false});
-  auto b = MakeBooleanVector({false, true, false, true},
-                             {false, false, false, false});
+  auto a = MakeBooleanVector({false, false, true, true}, {false, false, false, false});
+  auto b = MakeBooleanVector({false, true, false, true}, {false, false, false, false});
   auto c = ConstantVector(GenericValue::CreateBoolean(false));
   auto result = MakeBooleanVector();
 
@@ -89,10 +87,8 @@ TEST_F(VectorBooleanLogicTest, BooleanLogic) {
 
 TEST_F(VectorBooleanLogicTest, FilteredBooleanLogic) {
   // a = [NULL, false, true, true], b = [false, true, false, true]
-  auto a =
-      MakeBooleanVector({false, false, true, true}, {true, true, false, false});
-  auto b = MakeBooleanVector({false, true, false, true},
-                             {false, false, false, false});
+  auto a = MakeBooleanVector({false, false, true, true}, {true, true, false, false});
+  auto b = MakeBooleanVector({false, true, false, true}, {false, false, false, false});
   auto result = MakeBooleanVector();
   std::vector<u16> sel = {0, 1, 3};
 
@@ -136,8 +132,7 @@ TEST_F(VectorBooleanLogicTest, NullChecking) {
 }
 
 TEST_F(VectorBooleanLogicTest, AnyOrAllTrue) {
-  auto vec = MakeBooleanVector({false, false, false, false},
-                               {false, false, false, false});
+  auto vec = MakeBooleanVector({false, false, false, false}, {false, false, false, false});
 
   EXPECT_FALSE(VectorOps::AnyTrue(*vec));
   EXPECT_FALSE(VectorOps::AllTrue(*vec));
@@ -152,8 +147,7 @@ TEST_F(VectorBooleanLogicTest, AnyOrAllTrue) {
   EXPECT_TRUE(VectorOps::AnyTrue(*vec));
   EXPECT_FALSE(VectorOps::AllTrue(*vec));
 
-  vec =
-      MakeBooleanVector({true, true, true, true}, {false, false, false, false});
+  vec = MakeBooleanVector({true, true, true, true}, {false, false, false, false});
 
   EXPECT_TRUE(VectorOps::AnyTrue(*vec));
   EXPECT_TRUE(VectorOps::AllTrue(*vec));

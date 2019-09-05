@@ -166,24 +166,21 @@ struct StringVal : public Val {
    * @param str The byte sequence.
    * @param len The length of the sequence.
    */
-  StringVal(char *str, u32 len) noexcept
-      : Val(str == nullptr), ptr(str), len(len) {}
+  StringVal(char *str, u32 len) noexcept : Val(str == nullptr), ptr(str), len(len) {}
 
   /**
    * Create a string value (i.e., view) over the C-style null-terminated string.
    * Note that no copy is made.
    * @param str The C-string.
    */
-  explicit StringVal(const char *str) noexcept
-      : StringVal(const_cast<char *>(str), strlen(str)) {}
+  explicit StringVal(const char *str) noexcept : StringVal(const_cast<char *>(str), strlen(str)) {}
 
   /**
    * Create a new string using the given memory pool and length.
    * @param memory The memory pool to allocate this string's contents from
    * @param len The size of the string
    */
-  StringVal(ExecutionContext::StringAllocator *memory, std::size_t len)
-      : ptr(nullptr), len(len) {
+  StringVal(ExecutionContext::StringAllocator *memory, std::size_t len) : ptr(nullptr), len(len) {
     if (TPL_UNLIKELY(len > kMaxStingLen)) {
       len = 0;
       is_null = true;

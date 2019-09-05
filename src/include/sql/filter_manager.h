@@ -38,8 +38,7 @@ class FilterManager {
    * Construct the filter using the given adaptive policy
    * @param policy_kind
    */
-  explicit FilterManager(
-      bandit::Policy::Kind policy_kind = bandit::Policy::EpsilonGreedy);
+  explicit FilterManager(bandit::Policy::Kind policy_kind = bandit::Policy::EpsilonGreedy);
 
   /**
    * Destructor

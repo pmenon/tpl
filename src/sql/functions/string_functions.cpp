@@ -8,8 +8,7 @@
 namespace tpl::sql {
 
 void StringFunctions::Substring(UNUSED ExecutionContext *ctx, StringVal *result,
-                                const StringVal &str, const Integer &pos,
-                                const Integer &len) {
+                                const StringVal &str, const Integer &pos, const Integer &len) {
   if (str.is_null || pos.is_null || len.is_null) {
     *result = StringVal::Null();
     return;
@@ -37,8 +36,8 @@ void StringFunctions::Substring(UNUSED ExecutionContext *ctx, StringVal *result,
 
 namespace {
 
-char *SearchSubstring(char *haystack, const std::size_t hay_len,
-                      const char *needle, const std::size_t needle_len) {
+char *SearchSubstring(char *haystack, const std::size_t hay_len, const char *needle,
+                      const std::size_t needle_len) {
   TPL_ASSERT(needle != nullptr, "No search string provided");
   TPL_ASSERT(needle_len > 0, "No search string provided");
   for (u32 i = 0; i < hay_len + needle_len; i++) {
@@ -79,8 +78,7 @@ void StringFunctions::SplitPart(UNUSED ExecutionContext *ctx, StringVal *result,
 
   for (u32 index = 1;; index++) {
     const auto remaining_len = end - curr;
-    const auto next_delim =
-        SearchSubstring(curr, remaining_len, delimiter, delim.len);
+    const auto next_delim = SearchSubstring(curr, remaining_len, delimiter, delim.len);
     if (next_delim == nullptr) {
       if (index == field.val) {
         *result = StringVal(curr, remaining_len);
@@ -99,8 +97,8 @@ void StringFunctions::SplitPart(UNUSED ExecutionContext *ctx, StringVal *result,
   }
 }
 
-void StringFunctions::Repeat(ExecutionContext *ctx, StringVal *result,
-                             const StringVal &str, const Integer &n) {
+void StringFunctions::Repeat(ExecutionContext *ctx, StringVal *result, const StringVal &str,
+                             const Integer &n) {
   if (str.is_null || n.is_null) {
     *result = StringVal::Null();
     return;
@@ -125,9 +123,8 @@ void StringFunctions::Repeat(ExecutionContext *ctx, StringVal *result,
   }
 }
 
-void StringFunctions::Lpad(ExecutionContext *ctx, StringVal *result,
-                           const StringVal &str, const Integer &len,
-                           const StringVal &pad) {
+void StringFunctions::Lpad(ExecutionContext *ctx, StringVal *result, const StringVal &str,
+                           const Integer &len, const StringVal &pad) {
   if (str.is_null || len.is_null || pad.is_null || len.val < 0) {
     *result = StringVal::Null();
     return;
@@ -163,9 +160,8 @@ void StringFunctions::Lpad(ExecutionContext *ctx, StringVal *result,
   std::memcpy(ptr, str.ptr, str.len);
 }
 
-void StringFunctions::Rpad(ExecutionContext *ctx, StringVal *result,
-                           const StringVal &str, const Integer &len,
-                           const StringVal &pad) {
+void StringFunctions::Rpad(ExecutionContext *ctx, StringVal *result, const StringVal &str,
+                           const Integer &len, const StringVal &pad) {
   if (str.is_null || len.is_null || pad.is_null || len.val < 0) {
     *result = StringVal::Null();
     return;
@@ -204,14 +200,12 @@ void StringFunctions::Rpad(ExecutionContext *ctx, StringVal *result,
   }
 }
 
-void StringFunctions::Length(UNUSED ExecutionContext *ctx, Integer *result,
-                             const StringVal &str) {
+void StringFunctions::Length(UNUSED ExecutionContext *ctx, Integer *result, const StringVal &str) {
   result->is_null = str.is_null;
   result->val = str.len;
 }
 
-void StringFunctions::Lower(ExecutionContext *ctx, StringVal *result,
-                            const StringVal &str) {
+void StringFunctions::Lower(ExecutionContext *ctx, StringVal *result, const StringVal &str) {
   if (str.is_null) {
     *result = StringVal::Null();
     return;
@@ -231,8 +225,7 @@ void StringFunctions::Lower(ExecutionContext *ctx, StringVal *result,
   }
 }
 
-void StringFunctions::Upper(ExecutionContext *ctx, StringVal *result,
-                            const StringVal &str) {
+void StringFunctions::Upper(ExecutionContext *ctx, StringVal *result, const StringVal &str) {
   if (str.is_null) {
     *result = StringVal::Null();
     return;
@@ -252,8 +245,7 @@ void StringFunctions::Upper(ExecutionContext *ctx, StringVal *result,
   }
 }
 
-void StringFunctions::Reverse(ExecutionContext *ctx, StringVal *result,
-                              const StringVal &str) {
+void StringFunctions::Reverse(ExecutionContext *ctx, StringVal *result, const StringVal &str) {
   if (str.is_null) {
     *result = StringVal::Null();
     return;
@@ -320,50 +312,47 @@ void DoTrim(StringVal *result, const StringVal &str, const StringVal &chars) {
 
 }  // namespace
 
-void StringFunctions::Trim(UNUSED ExecutionContext *ctx, StringVal *result,
-                           const StringVal &str) {
+void StringFunctions::Trim(UNUSED ExecutionContext *ctx, StringVal *result, const StringVal &str) {
   DoTrim<true, true>(result, str, StringVal(" "));
 }
 
-void StringFunctions::Trim(UNUSED ExecutionContext *ctx, StringVal *result,
-                           const StringVal &str, const StringVal &chars) {
+void StringFunctions::Trim(UNUSED ExecutionContext *ctx, StringVal *result, const StringVal &str,
+                           const StringVal &chars) {
   DoTrim<true, true>(result, str, chars);
 }
 
-void StringFunctions::Ltrim(UNUSED ExecutionContext *ctx, StringVal *result,
-                            const StringVal &str) {
+void StringFunctions::Ltrim(UNUSED ExecutionContext *ctx, StringVal *result, const StringVal &str) {
   DoTrim<true, false>(result, str, StringVal(" "));
 }
 
-void StringFunctions::Ltrim(UNUSED ExecutionContext *ctx, StringVal *result,
-                            const StringVal &str, const StringVal &chars) {
+void StringFunctions::Ltrim(UNUSED ExecutionContext *ctx, StringVal *result, const StringVal &str,
+                            const StringVal &chars) {
   DoTrim<true, false>(result, str, chars);
 }
 
-void StringFunctions::Rtrim(UNUSED ExecutionContext *ctx, StringVal *result,
-                            const StringVal &str) {
+void StringFunctions::Rtrim(UNUSED ExecutionContext *ctx, StringVal *result, const StringVal &str) {
   DoTrim<false, true>(result, str, StringVal(" "));
 }
 
-void StringFunctions::Rtrim(UNUSED ExecutionContext *ctx, StringVal *result,
-                            const StringVal &str, const StringVal &chars) {
+void StringFunctions::Rtrim(UNUSED ExecutionContext *ctx, StringVal *result, const StringVal &str,
+                            const StringVal &chars) {
   DoTrim<false, true>(result, str, chars);
 }
 
-void StringFunctions::Left(UNUSED ExecutionContext *ctx, StringVal *result,
-                           const StringVal &str, const Integer &n) {
+void StringFunctions::Left(UNUSED ExecutionContext *ctx, StringVal *result, const StringVal &str,
+                           const Integer &n) {
   if (str.is_null || n.is_null) {
     *result = StringVal::Null();
     return;
   }
 
-  const auto len = n.val < 0 ? std::max(i64{0}, str.len + n.val)
-                             : std::min(str.len, static_cast<u32>(n.val));
+  const auto len =
+      n.val < 0 ? std::max(i64{0}, str.len + n.val) : std::min(str.len, static_cast<u32>(n.val));
   *result = StringVal(str.ptr, len);
 }
 
-void StringFunctions::Right(UNUSED ExecutionContext *ctx, StringVal *result,
-                            const StringVal &str, const Integer &n) {
+void StringFunctions::Right(UNUSED ExecutionContext *ctx, StringVal *result, const StringVal &str,
+                            const Integer &n) {
   if (str.is_null || n.is_null) {
     *result = StringVal::Null();
     return;

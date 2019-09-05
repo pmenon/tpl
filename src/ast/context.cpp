@@ -47,12 +47,9 @@ struct StructTypeKeyInfo {
 
     explicit KeyTy(const util::RegionVector<Field> &es) : elements(es) {}
 
-    explicit KeyTy(const StructType *struct_type)
-        : elements(struct_type->fields()) {}
+    explicit KeyTy(const StructType *struct_type) : elements(struct_type->fields()) {}
 
-    bool operator==(const KeyTy &that) const {
-      return elements == that.elements;
-    }
+    bool operator==(const KeyTy &that) const { return elements == that.elements; }
 
     bool operator!=(const KeyTy &that) const { return !this->operator==(that); }
   };
@@ -78,9 +75,7 @@ struct StructTypeKeyInfo {
     return lhs == KeyTy(rhs);
   }
 
-  static bool isEqual(const StructType *lhs, const StructType *rhs) {
-    return lhs == rhs;
-  }
+  static bool isEqual(const StructType *lhs, const StructType *rhs) { return lhs == rhs; }
 };
 
 // ---------------------------------------------------------
@@ -114,9 +109,8 @@ struct FunctionTypeKeyInfo {
   }
 
   static std::size_t getHashValue(const KeyTy &key) {
-    return llvm::hash_combine(
-        key.ret_type,
-        llvm::hash_combine_range(key.params.begin(), key.params.end()));
+    return llvm::hash_combine(key.ret_type,
+                              llvm::hash_combine_range(key.params.begin(), key.params.end()));
   }
 
   static std::size_t getHashValue(const FunctionType *func_type) {
@@ -128,9 +122,7 @@ struct FunctionTypeKeyInfo {
     return lhs == KeyTy(rhs);
   }
 
-  static bool isEqual(const FunctionType *lhs, const FunctionType *rhs) {
-    return lhs == rhs;
-  }
+  static bool isEqual(const FunctionType *lhs, const FunctionType *rhs) { return lhs == rhs; }
 };
 
 struct Context::Implementation {
@@ -160,12 +152,11 @@ struct Context::Implementation {
   llvm::DenseSet<FunctionType *, FunctionTypeKeyInfo> func_types;
 
   explicit Implementation(Context *ctx)
-      : string_table(kDefaultStringTableCapacity,
-                     util::LLVMRegionAllocator(ctx->region())) {
+      : string_table(kDefaultStringTableCapacity, util::LLVMRegionAllocator(ctx->region())) {
     // Instantiate all the builtins
-#define F(BKind, CppType, ...)      \
-  BKind##Type = new (ctx->region()) \
-      BuiltinType(ctx, sizeof(CppType), alignof(CppType), BuiltinType::BKind);
+#define F(BKind, CppType, ...) \
+  BKind##Type =                \
+      new (ctx->region()) BuiltinType(ctx, sizeof(CppType), alignof(CppType), BuiltinType::BKind);
     BUILTIN_TYPE_LIST(F, F, F)
 #undef F
 
@@ -186,8 +177,7 @@ Context::Context(util::Region *region, sema::ErrorReporter *error_reporter)
   // Put all builtins into cache by name
 #define PRIM(BKind, CppType, TplName) \
   impl()->builtin_types[GetIdentifier(TplName)] = impl()->BKind##Type;
-#define OTHERS(BKind, CppType) \
-  impl()->builtin_types[GetIdentifier(#BKind)] = impl()->BKind##Type;
+#define OTHERS(BKind, CppType) impl()->builtin_types[GetIdentifier(#BKind)] = impl()->BKind##Type;
   BUILTIN_TYPE_LIST(PRIM, OTHERS, OTHERS)
 #undef OTHERS
 #undef PRIM
@@ -198,9 +188,8 @@ Context::Context(util::Region *region, sema::ErrorReporter *error_reporter)
   impl()->builtin_types[GetIdentifier("void")] = impl()->NilType;
 
   // Initialize builtin functions
-#define BUILTIN_FUNC(Name, ...)        \
-  impl()->builtin_funcs[GetIdentifier( \
-      Builtins::GetFunctionName(Builtin::Name))] = Builtin::Name;
+#define BUILTIN_FUNC(Name, ...) \
+  impl()->builtin_funcs[GetIdentifier(Builtins::GetFunctionName(Builtin::Name))] = Builtin::Name;
   BUILTINS_LIST(BUILTIN_FUNC)
 #undef BUILTIN_FUNC
 }
@@ -212,10 +201,7 @@ Identifier Context::GetIdentifier(llvm::StringRef str) {
     return Identifier(nullptr);
   }
 
-  auto iter =
-      impl()
-          ->string_table.insert(std::make_pair(str, static_cast<char>(0)))
-          .first;
+  auto iter = impl()->string_table.insert(std::make_pair(str, static_cast<char>(0))).first;
   return Identifier(iter->getKeyData());
 }
 
@@ -225,8 +211,7 @@ Type *Context::LookupBuiltinType(Identifier identifier) const {
 }
 
 bool Context::IsBuiltinFunction(Identifier identifier, Builtin *builtin) const {
-  if (auto iter = impl()->builtin_funcs.find(identifier);
-      iter != impl()->builtin_funcs.end()) {
+  if (auto iter = impl()->builtin_funcs.find(identifier); iter != impl()->builtin_funcs.end()) {
     if (builtin != nullptr) {
       *builtin = iter->second;
     }
@@ -332,8 +317,8 @@ StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
     }
 
     // Create type
-    struct_type = new (ctx->region()) StructType(
-        ctx, size, alignment, std::move(fields), std::move(field_offsets));
+    struct_type = new (ctx->region())
+        StructType(ctx, size, alignment, std::move(fields), std::move(field_offsets));
 
     // Set in cache
     *iter = struct_type;
@@ -346,8 +331,7 @@ StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
 
 // static
 StructType *StructType::Get(util::RegionVector<Field> &&fields) {
-  TPL_ASSERT(!fields.empty(),
-             "Cannot use StructType::Get(fields) with an empty list of fields");
+  TPL_ASSERT(!fields.empty(), "Cannot use StructType::Get(fields) with an empty list of fields");
   return StructType::Get(fields[0].type->context(), std::move(fields));
 }
 

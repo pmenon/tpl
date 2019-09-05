@@ -19,18 +19,15 @@ TableVectorIterator::TableVectorIterator(const u16 table_id)
     : TableVectorIterator(table_id, 0, std::numeric_limits<u32>::max(), {}) {}
 
 // Iterate over a subset of the table and select all columns
-TableVectorIterator::TableVectorIterator(u16 table_id, u32 start_block_idx,
-                                         u32 end_block_idx)
+TableVectorIterator::TableVectorIterator(u16 table_id, u32 start_block_idx, u32 end_block_idx)
     : TableVectorIterator(table_id, start_block_idx, end_block_idx, {}) {}
 
 // Iterate over the table, but only select the given columns
-TableVectorIterator::TableVectorIterator(const u16 table_id,
-                                         std::vector<u32> column_indexes)
-    : TableVectorIterator(table_id, 0, std::numeric_limits<u32>::max(),
-                          std::move(column_indexes)) {}
+TableVectorIterator::TableVectorIterator(const u16 table_id, std::vector<u32> column_indexes)
+    : TableVectorIterator(table_id, 0, std::numeric_limits<u32>::max(), std::move(column_indexes)) {
+}
 
-TableVectorIterator::TableVectorIterator(u16 table_id, u32 start_block_idx,
-                                         u32 end_block_idx,
+TableVectorIterator::TableVectorIterator(u16 table_id, u32 start_block_idx, u32 end_block_idx,
                                          std::vector<u32> column_indexes)
     : column_indexes_(std::move(column_indexes)),
       block_iterator_(table_id, start_block_idx, end_block_idx),
@@ -140,8 +137,7 @@ namespace {
 class ScanTask {
  public:
   ScanTask(u16 table_id, void *const query_state,
-           ThreadStateContainer *const thread_state_container,
-           TableVectorIterator::ScanFn scanner)
+           ThreadStateContainer *const thread_state_container, TableVectorIterator::ScanFn scanner)
       : table_id_(table_id),
         query_state_(query_state),
         thread_state_container_(thread_state_container),
@@ -157,8 +153,7 @@ class ScanTask {
     }
 
     // Pull out the thread-local state
-    byte *const thread_state =
-        thread_state_container_->AccessThreadStateOfCurrentThread();
+    byte *const thread_state = thread_state_container_->AccessThreadStateOfCurrentThread();
 
     // Call scanning function
     scanner_(query_state_, thread_state, &iter);
@@ -173,10 +168,10 @@ class ScanTask {
 
 }  // namespace
 
-bool TableVectorIterator::ParallelScan(
-    const u16 table_id, void *const query_state,
-    ThreadStateContainer *const thread_states,
-    const TableVectorIterator::ScanFn scan_fn, const u32 min_grain_size) {
+bool TableVectorIterator::ParallelScan(const u16 table_id, void *const query_state,
+                                       ThreadStateContainer *const thread_states,
+                                       const TableVectorIterator::ScanFn scan_fn,
+                                       const u32 min_grain_size) {
   // Lookup table
   const Table *table = Catalog::Instance()->LookupTableById(TableId(table_id));
   if (table == nullptr) {
@@ -190,14 +185,13 @@ bool TableVectorIterator::ParallelScan(
   // Execute parallel scan
   tbb::task_scheduler_init scan_scheduler;
   tbb::blocked_range<u32> block_range(0, table->num_blocks(), min_grain_size);
-  tbb::parallel_for(block_range,
-                    ScanTask(table_id, query_state, thread_states, scan_fn));
+  tbb::parallel_for(block_range, ScanTask(table_id, query_state, thread_states, scan_fn));
 
   timer.Stop();
 
   double tps = table->num_tuples() / timer.elapsed() / 1000.0;
-  LOG_INFO("Scanned {} blocks ({} tuples) blocks in {} ms ({:.3f} mtps)",
-           table->num_blocks(), table->num_tuples(), timer.elapsed(), tps);
+  LOG_INFO("Scanned {} blocks ({} tuples) blocks in {} ms ({:.3f} mtps)", table->num_blocks(),
+           table->num_tuples(), timer.elapsed(), tps);
 
   return true;
 }

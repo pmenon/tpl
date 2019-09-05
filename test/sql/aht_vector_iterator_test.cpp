@@ -38,8 +38,7 @@ struct InputTuple {
 struct AggTuple {
   i64 key, count1, count2, count3;
 
-  explicit AggTuple(const InputTuple &input)
-      : key(input.key), count1(0), count2(0), count3(0) {
+  explicit AggTuple(const InputTuple &input) : key(input.key), count1(0), count2(0), count3(0) {
     Advance(input);
   }
 
@@ -93,12 +92,12 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
     return ret;
   }
 
-  static void PopulateAggHT(AggregationHashTable *aht, const u32 num_aggs,
-                            const u32 num_rows, u32 cola = 1) {
+  static void PopulateAggHT(AggregationHashTable *aht, const u32 num_aggs, const u32 num_rows,
+                            u32 cola = 1) {
     for (u32 i = 0; i < num_rows; i++) {
       auto input = InputTuple(i % num_aggs, cola);
-      auto existing = reinterpret_cast<AggTuple *>(
-          aht->Lookup(input.Hash(), AggTupleKeyEq, &input));
+      auto existing =
+          reinterpret_cast<AggTuple *>(aht->Lookup(input.Hash(), AggTupleKeyEq, &input));
       if (existing == nullptr) {
         new (aht->Insert(input.Hash())) AggTuple(input);
       } else {
@@ -227,8 +226,7 @@ TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
       taat_ret = 0;
       AHTIterator iter(agg_ht);
       for (; iter.HasNext(); iter.Next()) {
-        auto *agg_row =
-            reinterpret_cast<const AggTuple *>(iter.GetCurrentAggregateRow());
+        auto *agg_row = reinterpret_cast<const AggTuple *>(iter.GetCurrentAggregateRow());
         if (agg_row->key < filter_val) {
           taat_ret++;
         }
@@ -236,8 +234,7 @@ TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
     });
 
     LOG_INFO("===== Size {} =====", size);
-    LOG_INFO("Taat: {:.2f} ms ({}), Vaat: {:.2f} ({})", taat_ms, taat_ret,
-             vaat_ms, vaat_ret);
+    LOG_INFO("Taat: {:.2f} ms ({}), Vaat: {:.2f} ({})", taat_ms, taat_ret, vaat_ms, vaat_ret);
   }
 }
 

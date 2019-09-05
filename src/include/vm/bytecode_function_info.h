@@ -107,16 +107,13 @@ class LocalVar {
    * @param address_mode The addressing mode for this variable
    */
   LocalVar(u32 offset, AddressMode address_mode)
-      : bitfield_(AddressModeField::Encode(address_mode) |
-                  LocalOffsetField::Encode(offset)) {}
+      : bitfield_(AddressModeField::Encode(address_mode) | LocalOffsetField::Encode(offset)) {}
 
   /**
    * Return the addressing mode of for this local variable
    * @return The addressing mode (direct or indirect) of this local
    */
-  AddressMode GetAddressMode() const {
-    return AddressModeField::Decode(bitfield_);
-  }
+  AddressMode GetAddressMode() const { return AddressModeField::Decode(bitfield_); }
 
   /**
    * Return the offset of this local variable in the function's execution frame
@@ -146,9 +143,7 @@ class LocalVar {
   /**
    * Return a LocalVar that represents this address of this local
    */
-  LocalVar AddressOf() const {
-    return LocalVar(GetOffset(), AddressMode::Address);
-  }
+  LocalVar AddressOf() const { return LocalVar(GetOffset(), AddressMode::Address); }
 
   /**
    * Is this a valid local variable?
@@ -162,8 +157,7 @@ class LocalVar {
    * @return True if equal; false otherwise
    */
   bool operator==(const LocalVar &other) const noexcept {
-    return GetOffset() == other.GetOffset() &&
-           GetAddressMode() == other.GetAddressMode();
+    return GetOffset() == other.GetOffset() && GetAddressMode() == other.GetAddressMode();
   }
 
  private:
@@ -171,8 +165,7 @@ class LocalVar {
   class AddressModeField : public util::BitField32<AddressMode, 0, 1> {};
 
   // The offset of the local variable in the function's execution frame
-  class LocalOffsetField
-      : public util::BitField32<u32, AddressModeField::kNextBit, 31> {};
+  class LocalOffsetField : public util::BitField32<u32, AddressModeField::kNextBit, 31> {};
 
  private:
   explicit LocalVar(u32 bitfield) : bitfield_(bitfield) {}
@@ -268,9 +261,7 @@ class FunctionInfo {
   /**
    * Return the range of bytecode for this function in the bytecode module
    */
-  std::pair<std::size_t, std::size_t> bytecode_range() const {
-    return bytecode_range_;
-  }
+  std::pair<std::size_t, std::size_t> bytecode_range() const { return bytecode_range_; }
 
   /**
    * Return a constant view of all the local variables in this function
@@ -306,14 +297,12 @@ class FunctionInfo {
   // bytecode range has been discovered.
   void set_bytecode_range(std::size_t start_offset, std::size_t end_offset) {
     // Functions must have, at least, one bytecode instruction (i.e., RETURN)
-    TPL_ASSERT(start_offset < end_offset,
-               "Starting offset must be smaller than ending offset");
+    TPL_ASSERT(start_offset < end_offset, "Starting offset must be smaller than ending offset");
     bytecode_range_ = std::make_pair(start_offset, end_offset);
   }
 
   // Allocate a new local variable in the function
-  LocalVar NewLocal(ast::Type *type, const std::string &name,
-                    LocalInfo::Kind kind);
+  LocalVar NewLocal(ast::Type *type, const std::string &name, LocalInfo::Kind kind);
 
  private:
   // The ID of the function in the module. IDs are unique within a module.

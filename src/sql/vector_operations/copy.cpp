@@ -8,13 +8,11 @@ template <typename T>
 void CopyLoop(const Vector &source, void *target, u64 offset, u64 count) {
   auto src_data = reinterpret_cast<T *>(source.data());
   auto target_data = reinterpret_cast<T *>(target);
-  VectorOps::Exec(source,
-                  [&](u64 i, u64 k) { target_data[k - offset] = src_data[i]; },
-                  offset, count);
+  VectorOps::Exec(source, [&](u64 i, u64 k) { target_data[k - offset] = src_data[i]; }, offset,
+                  count);
 }
 
-void GenericCopyLoop(const Vector &source, void *target, u64 offset,
-                     u64 element_count) {
+void GenericCopyLoop(const Vector &source, void *target, u64 offset, u64 element_count) {
   if (source.count() == 0) {
     return;
   }
@@ -62,20 +60,15 @@ void GenericCopyLoop(const Vector &source, void *target, u64 offset,
 
 }  // namespace
 
-void VectorOps::Copy(const Vector &source, void *target, u64 offset,
-                     u64 element_count) {
-  TPL_ASSERT(IsTypeFixedSize(source.type_),
-             "Copy should only be used for fixed-length types");
+void VectorOps::Copy(const Vector &source, void *target, u64 offset, u64 element_count) {
+  TPL_ASSERT(IsTypeFixedSize(source.type_), "Copy should only be used for fixed-length types");
   GenericCopyLoop(source, target, offset, element_count);
 }
 
 void VectorOps::Copy(const Vector &source, Vector *target, u64 offset) {
   TPL_ASSERT(offset < source.count_, "Out-of-bounds offset");
   target->count_ = source.count_ - offset;
-  Exec(source,
-       [&](u64 i, u64 k) {
-         target->null_mask_[k - offset] = source.null_mask_[i];
-       },
+  Exec(source, [&](u64 i, u64 k) { target->null_mask_[k - offset] = source.null_mask_[i]; },
        offset);
   Copy(source, target->data_, offset, target->count_);
 }

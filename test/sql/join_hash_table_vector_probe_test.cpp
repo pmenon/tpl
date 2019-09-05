@@ -30,11 +30,9 @@ class JoinHashTableVectorProbeTest : public TplTest {
 
  protected:
   template <u8 N, typename F>
-  std::unique_ptr<const JoinHashTable> BuildJoinHashTable(bool concise,
-                                                          u32 num_tuples,
+  std::unique_ptr<const JoinHashTable> BuildJoinHashTable(bool concise, u32 num_tuples,
                                                           F &&key_gen) {
-    auto jht =
-        std::make_unique<JoinHashTable>(memory(), sizeof(Tuple<N>), concise);
+    auto jht = std::make_unique<JoinHashTable>(memory(), sizeof(Tuple<N>), concise);
 
     // Insert
     for (u32 i = 0; i < num_tuples; i++) {
@@ -63,8 +61,7 @@ static hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
 
 /// The function to determine whether two tuples have equivalent keys
 template <u8 N>
-static bool CmpTupleInVPI(const void *table_tuple,
-                          VectorProjectionIterator *vpi) noexcept {
+static bool CmpTupleInVPI(const void *table_tuple, VectorProjectionIterator *vpi) noexcept {
   auto lhs_key = reinterpret_cast<const Tuple<N> *>(table_tuple)->build_key;
   auto rhs_key = *vpi->GetValue<i32, false>(0, nullptr);
   return lhs_key == rhs_key;
@@ -125,8 +122,7 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
     lookup.Prepare(&vpi, HashTupleInVPI<N>);
 
     // Iterate all
-    while (auto *tuple =
-               lookup.GetNextOutput<Tuple<N>>(&vpi, CmpTupleInVPI<N>)) {
+    while (auto *tuple = lookup.GetNextOutput<Tuple<N>>(&vpi, CmpTupleInVPI<N>)) {
       count++;
       auto probe_key = *vpi.GetValue<i32, false>(0, nullptr);
       EXPECT_EQ(tuple->build_key, probe_key);
@@ -147,8 +143,7 @@ TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
 
     // Create test probe input
     auto probe_keys = std::vector<u32>(num_probe);
-    std::generate(probe_keys.begin(), probe_keys.end(),
-                  Range(0, num_build - 1));
+    std::generate(probe_keys.begin(), probe_keys.end(), Range(0, num_build - 1));
 
     Schema schema({{"probeKey", IntegerType::InstanceNonNullable()}});
 
@@ -169,8 +164,7 @@ TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
       u32 size = std::min(kDefaultVectorSize, num_probe - i);
 
       // Setup VP
-      vp.ResetColumn(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0,
-                     size);
+      vp.ResetColumn(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0, size);
       vpi.SetVectorProjection(&vp);
 
       // Lookup

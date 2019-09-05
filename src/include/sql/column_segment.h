@@ -14,12 +14,8 @@ namespace tpl::sql {
  */
 class ColumnSegment {
  public:
-  ColumnSegment(const SqlType &sql_type, byte *data, u32 *null_bitmap,
-                u32 num_tuples) noexcept
-      : sql_type_(sql_type),
-        data_(data),
-        null_bitmap_(null_bitmap),
-        num_tuples_(num_tuples) {}
+  ColumnSegment(const SqlType &sql_type, byte *data, u32 *null_bitmap, u32 num_tuples) noexcept
+      : sql_type_(sql_type), data_(data), null_bitmap_(null_bitmap), num_tuples_(num_tuples) {}
 
   ColumnSegment(ColumnSegment &&other) noexcept
       : sql_type_(other.sql_type_),
@@ -63,9 +59,7 @@ class ColumnSegment {
    * @param idx The index to check
    * @return True if the value is null; false otherwise
    */
-  bool IsNullAt(u32 idx) const {
-    return util::BitUtil::Test(null_bitmap_, idx);
-  }
+  bool IsNullAt(u32 idx) const { return util::BitUtil::Test(null_bitmap_, idx); }
 
   /**
    * Return the SQL type of the column.

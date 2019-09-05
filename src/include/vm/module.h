@@ -102,17 +102,14 @@ class Module {
    * @return The function address if it exists; null otherwise.
    */
   void *GetRawFunctionImpl(const FunctionId func_id) const {
-    TPL_ASSERT(func_id < bytecode_module_->num_functions(),
-               "Out-of-bounds function access");
+    TPL_ASSERT(func_id < bytecode_module_->num_functions(), "Out-of-bounds function access");
     return functions_[func_id].load(std::memory_order_relaxed);
   }
 
   /**
    * Return the TPL bytecode module
    */
-  const BytecodeModule *bytecode_module() const {
-    return bytecode_module_.get();
-  }
+  const BytecodeModule *bytecode_module() const { return bytecode_module_.get(); }
 
  private:
   friend class VM;
@@ -133,8 +130,7 @@ class Module {
     Trampoline() = default;
 
     // Create a trampoline over the given memory block
-    explicit Trampoline(llvm::sys::OwningMemoryBlock &&mem) noexcept
-        : mem_(std::move(mem)) {}
+    explicit Trampoline(llvm::sys::OwningMemoryBlock &&mem) noexcept : mem_(std::move(mem)) {}
 
     // Move assignment
     Trampoline &operator=(Trampoline &&other) noexcept {
@@ -154,8 +150,7 @@ class Module {
   void CreateFunctionTrampoline(FunctionId func_id);
 
   // Generate a trampoline for the function
-  void CreateFunctionTrampoline(const FunctionInfo &func,
-                                Trampoline &trampoline);
+  void CreateFunctionTrampoline(const FunctionInfo &func, Trampoline &trampoline);
 
   // Access the raw bytecode trampoline function
   void *GetBytecodeImpl(const FunctionId func_id) const {
@@ -215,8 +210,7 @@ inline void CopyAll(u8 *buffer, const HeadT &head, const RestT &... rest) {
 }  // namespace detail
 
 template <typename Ret, typename... ArgTypes>
-inline bool Module::GetFunction(const std::string &name,
-                                const ExecutionMode exec_mode,
+inline bool Module::GetFunction(const std::string &name, const ExecutionMode exec_mode,
                                 std::function<Ret(ArgTypes...)> &func) {
   // Lookup function
   const FunctionInfo *func_info = bytecode_module_->GetFuncInfoByName(name);
@@ -265,8 +259,7 @@ inline bool Module::GetFunction(const std::string &name,
     case ExecutionMode::Compiled: {
       CompileToMachineCode();
       func = [this, func_info](ArgTypes... args) -> Ret {
-        void *raw_func =
-            functions_[func_info->id()].load(std::memory_order_relaxed);
+        void *raw_func = functions_[func_info->id()].load(std::memory_order_relaxed);
         auto *jit_f = reinterpret_cast<Ret (*)(ArgTypes...)>(raw_func);
         return jit_f(args...);
       };

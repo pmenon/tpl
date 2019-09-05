@@ -63,8 +63,8 @@ class JoinHashTableVectorProbe {
 // Because this function is a tuple-at-a-time, it's placed in the header to
 // reduce function call overhead.
 template <typename T>
-inline const T *JoinHashTableVectorProbe::GetNextOutput(
-    VectorProjectionIterator *const vpi, const KeyEqFn key_eq_fn) {
+inline const T *JoinHashTableVectorProbe::GetNextOutput(VectorProjectionIterator *const vpi,
+                                                        const KeyEqFn key_eq_fn) {
   TPL_ASSERT(vpi != nullptr, "No input VPI!");
   TPL_ASSERT(match_idx_ < vpi->GetTupleCount(), "Continuing past iteration!");
 
@@ -72,8 +72,7 @@ inline const T *JoinHashTableVectorProbe::GetNextOutput(
     // Continue along current chain until we find a match
     while (const auto *entry = entries_[match_idx_]) {
       entries_[match_idx_] = entry->next;
-      if (entry->hash == hashes_[match_idx_] &&
-          key_eq_fn(entry->payload, vpi)) {
+      if (entry->hash == hashes_[match_idx_] && key_eq_fn(entry->payload, vpi)) {
         return entry->PayloadAs<T>();
       }
     }

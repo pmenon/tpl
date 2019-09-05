@@ -22,8 +22,7 @@ class VectorOps {
    * @param offset The index into the source vector to begin copying from.
    * @param element_count The number of elements to copy.
    */
-  static void Copy(const Vector &source, void *target, u64 offset = 0,
-                   u64 element_count = 0);
+  static void Copy(const Vector &source, void *target, u64 offset = 0, u64 element_count = 0);
 
   /**
    * Copy all elements from @em source to the target vector @em target, starting
@@ -99,8 +98,7 @@ class VectorOps {
    * @param right The right input to the comparison
    * @param[out] result The vector storing the result of the comparison.
    */
-  static void GreaterThan(const Vector &left, const Vector &right,
-                          Vector *result);
+  static void GreaterThan(const Vector &left, const Vector &right, Vector *result);
 
   /**
    * Perform a greater-than-or-equal comparison on each element from the left
@@ -110,8 +108,7 @@ class VectorOps {
    * @param right The right input to the comparison
    * @param[out] result The vector storing the result of the comparison.
    */
-  static void GreaterThanEqual(const Vector &left, const Vector &right,
-                               Vector *result);
+  static void GreaterThanEqual(const Vector &left, const Vector &right, Vector *result);
 
   /**
    * Perform a less-than comparison on each element from the left and right
@@ -129,8 +126,7 @@ class VectorOps {
    * @param right The right input to the comparison
    * @param[out] result The vector storing the result of the comparison.
    */
-  static void LessThanEqual(const Vector &left, const Vector &right,
-                            Vector *result);
+  static void LessThanEqual(const Vector &left, const Vector &right, Vector *result);
 
   /**
    * Perform an inequality comparison on each element from the left and right
@@ -158,8 +154,7 @@ class VectorOps {
    * @param[out] out_sel_vector The output selection index vector.
    * @return The number of elements selected.
    */
-  static u32 SelectEqual(const Vector &left, const Vector &right,
-                         sel_t out_sel_vector[]);
+  static u32 SelectEqual(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
 
   /**
    * Store the positions where the left input element is strictly greater than
@@ -170,8 +165,7 @@ class VectorOps {
    * @param[out] out_sel_vector The output selection index vector.
    * @return The number of elements selected.
    */
-  static u32 SelectGreaterThan(const Vector &left, const Vector &right,
-                               sel_t out_sel_vector[]);
+  static u32 SelectGreaterThan(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
 
   /**
    * Store the positions where the left input element is greater than or equal
@@ -193,8 +187,7 @@ class VectorOps {
    * @param[out] out_sel_vector The output selection index vector.
    * @return The number of elements selected.
    */
-  static u32 SelectLessThan(const Vector &left, const Vector &right,
-                            sel_t out_sel_vector[]);
+  static u32 SelectLessThan(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
 
   /**
    * Store the positions where the left input element is less than or equal to
@@ -205,8 +198,7 @@ class VectorOps {
    * @param[out] out_sel_vector The output selection index vector.
    * @return The number of elements selected.
    */
-  static u32 SelectLessThanEqual(const Vector &left, const Vector &right,
-                                 sel_t out_sel_vector[]);
+  static u32 SelectLessThanEqual(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
 
   /**
    * Store the positions of all unequal elements in the left and right input
@@ -216,8 +208,7 @@ class VectorOps {
    * @param[out] out_sel_vector The output selection index vector.
    * @return The number of elements selected.
    */
-  static u32 SelectNotEqual(const Vector &left, const Vector &right,
-                            sel_t out_sel_vector[]);
+  static u32 SelectNotEqual(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
 
   // -------------------------------------------------------
   //
@@ -326,8 +317,7 @@ class VectorOps {
    * vector, and k = count.
    */
   template <typename F>
-  static void Exec(const Vector &vector, F &&fun, u64 offset = 0,
-                   u64 count = 0) {
+  static void Exec(const Vector &vector, F &&fun, u64 offset = 0, u64 count = 0) {
     if (count == 0) {
       count = vector.count_;
     } else {
@@ -346,8 +336,7 @@ class VectorOps {
   template <typename T, typename F>
   static void ExecTyped(const Vector &vector, F &&fun) {
     const auto *data = reinterpret_cast<const T *>(vector.data());
-    Exec(vector.sel_vector_, vector.count_,
-         [&](u64 i, u64 k) { fun(data[i], i, k); });
+    Exec(vector.sel_vector_, vector.count_, [&](u64 i, u64 k) { fun(data[i], i, k); });
   }
 };
 

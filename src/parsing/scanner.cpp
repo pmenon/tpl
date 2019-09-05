@@ -6,8 +6,7 @@
 
 namespace tpl::parsing {
 
-Scanner::Scanner(const std::string &source)
-    : Scanner(source.data(), source.length()) {}
+Scanner::Scanner(const std::string &source) : Scanner(source.data(), source.length()) {}
 
 Scanner::Scanner(const char *source, u64 source_len)
     : source_(source), source_len_(source_len), offset_(0) {
@@ -312,8 +311,7 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
   GROUP_ELEM("var", Token::Type::VAR)
 // clang-format on
 
-Token::Type Scanner::CheckIdentifierOrKeyword(const char *input,
-                                              u32 input_len) {
+Token::Type Scanner::CheckIdentifierOrKeyword(const char *input, u32 input_len) {
   static constexpr u32 kMinKeywordLen = 2;
   static constexpr u32 kMaxKeywordLen = 6;
 

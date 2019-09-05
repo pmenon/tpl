@@ -10,38 +10,31 @@
 namespace tpl::sql {
 
 SorterVectorIterator::SorterVectorIterator(
-    const Sorter &sorter,
-    const std::vector<const Schema::ColumnInfo *> &column_info,
+    const Sorter &sorter, const std::vector<const Schema::ColumnInfo *> &column_info,
     const SorterVectorIterator::TransposeFn transpose_fn)
     : memory_(sorter.memory_),
       iter_(sorter),
-      temp_rows_(
-          memory_->AllocateArray<const byte *>(kDefaultVectorSize, false)),
+      temp_rows_(memory_->AllocateArray<const byte *>(kDefaultVectorSize, false)),
       vector_projection_(std::make_unique<VectorProjection>()),
-      vector_projection_iterator_(
-          std::make_unique<VectorProjectionIterator>()) {
+      vector_projection_iterator_(std::make_unique<VectorProjectionIterator>()) {
   // First, initialize the vector projection
   vector_projection_->Initialize(column_info);
   // Now, move the iterator to the next valid position
   Next(transpose_fn);
 }
 
-SorterVectorIterator::SorterVectorIterator(
-    const Sorter &sorter, const Schema::ColumnInfo *column_info, u32 num_cols,
-    const SorterVectorIterator::TransposeFn transpose_fn)
-    : SorterVectorIterator(sorter, {column_info, column_info + num_cols},
-                           transpose_fn) {}
+SorterVectorIterator::SorterVectorIterator(const Sorter &sorter,
+                                           const Schema::ColumnInfo *column_info, u32 num_cols,
+                                           const SorterVectorIterator::TransposeFn transpose_fn)
+    : SorterVectorIterator(sorter, {column_info, column_info + num_cols}, transpose_fn) {}
 
 SorterVectorIterator::~SorterVectorIterator() {
   memory_->DeallocateArray(temp_rows_, kDefaultVectorSize);
 }
 
-bool SorterVectorIterator::HasNext() const {
-  return vector_projection_->GetTupleCount() > 0;
-}
+bool SorterVectorIterator::HasNext() const { return vector_projection_->GetTupleCount() > 0; }
 
-void SorterVectorIterator::Next(
-    const SorterVectorIterator::TransposeFn transpose_fn) {
+void SorterVectorIterator::Next(const SorterVectorIterator::TransposeFn transpose_fn) {
   // Pull rows into temporary array
   u32 size = std::min(iter_.NumRemaining(), kDefaultVectorSize);
   for (u32 i = 0; i < size; ++i, ++iter_) {
@@ -64,8 +57,7 @@ void SorterVectorIterator::BuildVectorProjection(
 
   // Invoke the transposition function which does the heavy, query-specific,
   // lifting of converting rows to columns.
-  transpose_fn(temp_rows_, vector_projection_->GetTupleCount(),
-               vector_projection_iterator_.get());
+  transpose_fn(temp_rows_, vector_projection_->GetTupleCount(), vector_projection_iterator_.get());
 
   // The vector projection is now filled with sorted rows in columnar format.
   // Reset the VPI so that it's ready for iteration.

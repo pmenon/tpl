@@ -38,10 +38,9 @@ class SorterTest : public TplTest {
 };
 
 template <typename IntType, typename Random>
-void TestSortRandomTupleSize(const u32 num_iters, const u32 max_elems,
-                             Random *generator) {
-  std::uniform_int_distribution<IntType> rng(
-      std::numeric_limits<IntType>::min(), std::numeric_limits<IntType>::max());
+void TestSortRandomTupleSize(const u32 num_iters, const u32 max_elems, Random *generator) {
+  std::uniform_int_distribution<IntType> rng(std::numeric_limits<IntType>::min(),
+                                             std::numeric_limits<IntType>::max());
   std::uniform_int_distribution<u32> rng_elems(std::numeric_limits<u32>::min(),
                                                std::numeric_limits<u32>::max());
 
@@ -92,10 +91,9 @@ void TestSortRandomTupleSize(const u32 num_iters, const u32 max_elems,
 }
 
 template <typename IntType, typename Random>
-void TestTopKRandomTupleSize(const u32 num_iters, const u32 max_elems,
-                             Random *generator) {
-  std::uniform_int_distribution<IntType> rng(
-      std::numeric_limits<IntType>::min(), std::numeric_limits<IntType>::max());
+void TestTopKRandomTupleSize(const u32 num_iters, const u32 max_elems, Random *generator) {
+  std::uniform_int_distribution<IntType> rng(std::numeric_limits<IntType>::min(),
+                                             std::numeric_limits<IntType>::max());
   std::uniform_int_distribution<u32> rng_elems(std::numeric_limits<u32>::min(),
                                                std::numeric_limits<u32>::max());
 
@@ -115,13 +113,11 @@ void TestTopKRandomTupleSize(const u32 num_iters, const u32 max_elems,
     // Test a random number of elements.
     const auto num_elems = (rng_elems(*generator) % max_elems) + 1;
     // For a random number of top k.
-    const auto top_k =
-        std::uniform_int_distribution<u32>(1, num_elems)(*generator);
+    const auto top_k = std::uniform_int_distribution<u32>(1, num_elems)(*generator);
 
     // Create a reference top-K min-heap. This contains our real data, and
     // sorter should match it at the end.
-    std::priority_queue<IntType, std::vector<IntType>, std::greater<>>
-        reference;
+    std::priority_queue<IntType, std::vector<IntType>, std::greater<>> reference;
 
     // Create a sorter.
     MemoryPool memory(nullptr);
@@ -132,8 +128,7 @@ void TestTopKRandomTupleSize(const u32 num_iters, const u32 max_elems,
       const auto rand_data = rng(*generator);
       reference.push(rand_data);
 
-      auto *elem =
-          reinterpret_cast<IntType *>(sorter.AllocInputTupleTopK(top_k));
+      auto *elem = reinterpret_cast<IntType *>(sorter.AllocInputTupleTopK(top_k));
       *elem = rand_data;
       sorter.AllocInputTupleTopKFinish(top_k);
     }
@@ -188,8 +183,7 @@ TEST_F(SorterTest, DISABLED_PerfSortTest) {
   // Create the different kinds of vectors.
   // Some of these are commented out to reduce the memory usage of this test.
   MemoryPool memory(nullptr);
-  std::vector<data, MemoryPoolAllocator<data>> vec{
-      MemoryPoolAllocator<data>(&memory)};
+  std::vector<data, MemoryPoolAllocator<data>> vec{MemoryPoolAllocator<data>(&memory)};
   util::ChunkedVectorT<data, MemoryPoolAllocator<data>> chunk_vec{
       MemoryPoolAllocator<data>(&memory)};
   sql::Sorter sorter(&memory, sorter_cmp_fn, sizeof(data));
@@ -219,19 +213,16 @@ TEST_F(SorterTest, DISABLED_PerfSortTest) {
   // NOTE: keep the number of runs to 1.
   // Otherwise the vector will be presorted in subsequent runs, which avoids
   // copies and speeds up the function.
-  auto stdvec_ms = Bench(
-      1, [&vec, &cmp_fn]() { ips4o::sort(vec.begin(), vec.end(), cmp_fn); });
+  auto stdvec_ms = Bench(1, [&vec, &cmp_fn]() { ips4o::sort(vec.begin(), vec.end(), cmp_fn); });
 
-  auto chunk_ms = Bench(1, [&chunk_vec, &cmp_fn]() {
-    ips4o::sort(chunk_vec.begin(), chunk_vec.end(), cmp_fn);
-  });
+  auto chunk_ms = Bench(
+      1, [&chunk_vec, &cmp_fn]() { ips4o::sort(chunk_vec.begin(), chunk_vec.end(), cmp_fn); });
 
   auto sorter_ms = Bench(1, [&]() { sorter.Sort(); });
 
   for (u32 i = 0; i < num_elems; i++) {
     const auto std_a = *reinterpret_cast<const int_type *>(vec[i].data());
-    const auto chunk_a =
-        *reinterpret_cast<const int_type *>(chunk_vec[i].data());
+    const auto chunk_a = *reinterpret_cast<const int_type *>(chunk_vec[i].data());
     EXPECT_EQ(std_a, chunk_a);
   }
 
@@ -262,8 +253,8 @@ void TestParallelSort(const std::vector<u32> &sorter_sizes) {
 
   // Initialization and destruction function
   const auto init_sorter = [](void *ctx, void *s) {
-    new (s) Sorter(reinterpret_cast<ExecutionContext *>(ctx)->memory_pool(),
-                   cmp_fn, sizeof(TestTuple<N>));
+    new (s) Sorter(reinterpret_cast<ExecutionContext *>(ctx)->memory_pool(), cmp_fn,
+                   sizeof(TestTuple<N>));
   };
   const auto destroy_sorter = [](UNUSED void *ctx, void *s) {
     reinterpret_cast<Sorter *>(s)->~Sorter();
@@ -278,23 +269,20 @@ void TestParallelSort(const std::vector<u32> &sorter_sizes) {
 
   // Parallel build
   tbb::task_scheduler_init sched;
-  tbb::parallel_for_each(
-      sorter_sizes.begin(), sorter_sizes.end(), [&container](auto sorter_size) {
-        auto *sorter = container.AccessThreadStateOfCurrentThreadAs<Sorter>();
-        for (u32 i = 0; i < sorter_size; i++) {
-          auto *elem =
-              reinterpret_cast<TestTuple<N> *>(sorter->AllocInputTuple());
-          elem->key = i;
-        }
-      });
+  tbb::parallel_for_each(sorter_sizes.begin(), sorter_sizes.end(), [&container](auto sorter_size) {
+    auto *sorter = container.AccessThreadStateOfCurrentThreadAs<Sorter>();
+    for (u32 i = 0; i < sorter_size; i++) {
+      auto *elem = reinterpret_cast<TestTuple<N> *>(sorter->AllocInputTuple());
+      elem->key = i;
+    }
+  });
 
   // Main parallel sort
   Sorter main(exec_ctx.memory_pool(), cmp_fn, sizeof(TestTuple<N>));
   main.SortParallel(&container, 0);
 
-  u32 expected_total_size =
-      std::accumulate(sorter_sizes.begin(), sorter_sizes.end(), 0u,
-                      [](auto p, auto s) { return p + s; });
+  u32 expected_total_size = std::accumulate(sorter_sizes.begin(), sorter_sizes.end(), 0u,
+                                            [](auto p, auto s) { return p + s; });
 
   EXPECT_TRUE(main.is_sorted());
   EXPECT_EQ(expected_total_size, main.NumTuples());

@@ -7,8 +7,7 @@ namespace tpl::sql {
 JoinHashTableVectorProbe::JoinHashTableVectorProbe(const JoinHashTable &table)
     : join_hash_table_(table), match_idx_(0), hashes_{0}, entries_{nullptr} {}
 
-void JoinHashTableVectorProbe::Prepare(VectorProjectionIterator *vpi,
-                                       const HashFn hash_fn) {
+void JoinHashTableVectorProbe::Prepare(VectorProjectionIterator *vpi, const HashFn hash_fn) {
   TPL_ASSERT(vpi->GetTupleCount() <= kDefaultVectorSize,
              "VectorProjection size must be less than kDefaultVectorSize");
   // Set up

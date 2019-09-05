@@ -23,12 +23,8 @@ namespace tpl::sql {
 // Batch Process State
 // ---------------------------------------------------------
 
-AggregationHashTable::BatchProcessState::BatchProcessState(
-    std::unique_ptr<libcount::HLL> estimator)
-    : hll_estimator(std::move(estimator)),
-      hashes{0},
-      entries{nullptr},
-      groups_found{0} {}
+AggregationHashTable::BatchProcessState::BatchProcessState(std::unique_ptr<libcount::HLL> estimator)
+    : hll_estimator(std::move(estimator)), hashes{0}, entries{nullptr}, groups_found{0} {}
 
 AggregationHashTable::BatchProcessState::~BatchProcessState() = default;
 
@@ -36,17 +32,14 @@ AggregationHashTable::BatchProcessState::~BatchProcessState() = default;
 // Aggregation Hash Table
 // ---------------------------------------------------------
 
-AggregationHashTable::AggregationHashTable(MemoryPool *memory,
-                                           std::size_t payload_size)
+AggregationHashTable::AggregationHashTable(MemoryPool *memory, std::size_t payload_size)
     : AggregationHashTable(memory, payload_size, kDefaultInitialTableSize) {}
 
-AggregationHashTable::AggregationHashTable(MemoryPool *memory,
-                                           const std::size_t payload_size,
+AggregationHashTable::AggregationHashTable(MemoryPool *memory, const std::size_t payload_size,
                                            const u32 initial_size)
     : memory_(memory),
       payload_size_(payload_size),
-      entries_(sizeof(HashTableEntry) + payload_size_,
-               MemoryPoolAllocator<byte>(memory_)),
+      entries_(sizeof(HashTableEntry) + payload_size_, MemoryPoolAllocator<byte>(memory_)),
       owned_entries_(memory_),
       hash_table_(kDefaultLoadFactor),
       batch_state_(nullptr),
@@ -55,18 +48,15 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory,
       partition_tails_(nullptr),
       partition_estimates_(nullptr),
       partition_tables_(nullptr),
-      partition_shift_bits_(
-          util::BitUtil::CountLeadingZeros(u64(kDefaultNumPartitions) - 1)) {
+      partition_shift_bits_(util::BitUtil::CountLeadingZeros(u64(kDefaultNumPartitions) - 1)) {
   hash_table_.SetSize(initial_size);
   max_fill_ = std::llround(hash_table_.capacity() * hash_table_.load_factor());
 
   // Compute flush threshold. In partitioned mode, we want the thread-local
   // pre-aggregation hash table to be sized to fit in cache. Target L2.
   const u64 l2_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L2_CACHE);
-  flush_threshold_ =
-      std::llround(f32(l2_size) / entries_.element_size() * kDefaultLoadFactor);
-  flush_threshold_ =
-      std::max(u64{256}, util::MathUtil::PowerOf2Floor(flush_threshold_));
+  flush_threshold_ = std::llround(f32(l2_size) / entries_.element_size() * kDefaultLoadFactor);
+  flush_threshold_ = std::max(u64{256}, util::MathUtil::PowerOf2Floor(flush_threshold_));
 }
 
 AggregationHashTable::~AggregationHashTable() {
@@ -163,60 +153,49 @@ void AggregationHashTable::FlushToOverflowPartitions() {
 }
 
 void AggregationHashTable::AllocateOverflowPartitions() {
-  TPL_ASSERT(
-      (partition_heads_ == nullptr) == (partition_tails_ == nullptr),
-      "Head and tail of overflow partitions list are not equally allocated");
+  TPL_ASSERT((partition_heads_ == nullptr) == (partition_tails_ == nullptr),
+             "Head and tail of overflow partitions list are not equally allocated");
 
   if (partition_heads_ == nullptr) {
-    partition_heads_ =
-        memory_->AllocateArray<HashTableEntry *>(kDefaultNumPartitions, true);
-    partition_tails_ =
-        memory_->AllocateArray<HashTableEntry *>(kDefaultNumPartitions, true);
-    partition_estimates_ =
-        memory_->AllocateArray<libcount::HLL *>(kDefaultNumPartitions, false);
+    partition_heads_ = memory_->AllocateArray<HashTableEntry *>(kDefaultNumPartitions, true);
+    partition_tails_ = memory_->AllocateArray<HashTableEntry *>(kDefaultNumPartitions, true);
+    partition_estimates_ = memory_->AllocateArray<libcount::HLL *>(kDefaultNumPartitions, false);
     for (u32 i = 0; i < kDefaultNumPartitions; i++) {
       partition_estimates_[i] = libcount::HLL::Create(kDefaultHLLPrecision);
     }
-    partition_tables_ = memory_->AllocateArray<AggregationHashTable *>(
-        kDefaultNumPartitions, true);
+    partition_tables_ = memory_->AllocateArray<AggregationHashTable *>(kDefaultNumPartitions, true);
   }
 }
 
-void AggregationHashTable::ProcessBatch(
-    VectorProjectionIterator *iters[],
-    const AggregationHashTable::HashFn hash_fn,
-    const AggregationHashTable::KeyEqFn key_eq_fn,
-    const AggregationHashTable::InitAggFn init_agg_fn,
-    const AggregationHashTable::AdvanceAggFn advance_agg_fn,
-    const bool partitioned) {
-  TPL_ASSERT(iters[0]->GetTupleCount() <= kDefaultVectorSize,
-             "Vector projection is too large");
+void AggregationHashTable::ProcessBatch(VectorProjectionIterator *iters[],
+                                        const AggregationHashTable::HashFn hash_fn,
+                                        const AggregationHashTable::KeyEqFn key_eq_fn,
+                                        const AggregationHashTable::InitAggFn init_agg_fn,
+                                        const AggregationHashTable::AdvanceAggFn advance_agg_fn,
+                                        const bool partitioned) {
+  TPL_ASSERT(iters[0]->GetTupleCount() <= kDefaultVectorSize, "Vector projection is too large");
 
   // Allocate all required batch state, but only on first invocation.
   if (TPL_UNLIKELY(batch_state_ == nullptr)) {
-    batch_state_ =
-        memory_->NewObject<BatchProcessState>(std::unique_ptr<libcount::HLL>(
-            libcount::HLL::Create(kDefaultHLLPrecision)));
+    batch_state_ = memory_->NewObject<BatchProcessState>(
+        std::unique_ptr<libcount::HLL>(libcount::HLL::Create(kDefaultHLLPrecision)));
   }
 
   // Launch
   if (iters[0]->IsFiltered()) {
-    ProcessBatchImpl<true>(iters, hash_fn, key_eq_fn, init_agg_fn,
-                           advance_agg_fn, partitioned);
+    ProcessBatchImpl<true>(iters, hash_fn, key_eq_fn, init_agg_fn, advance_agg_fn, partitioned);
   } else {
-    ProcessBatchImpl<false>(iters, hash_fn, key_eq_fn, init_agg_fn,
-                            advance_agg_fn, partitioned);
+    ProcessBatchImpl<false>(iters, hash_fn, key_eq_fn, init_agg_fn, advance_agg_fn, partitioned);
   }
 }
 
 template <bool VPIIsFiltered>
-void AggregationHashTable::ProcessBatchImpl(
-    VectorProjectionIterator *iters[],
-    const AggregationHashTable::HashFn hash_fn,
-    const AggregationHashTable::KeyEqFn key_eq_fn,
-    const AggregationHashTable::InitAggFn init_agg_fn,
-    const AggregationHashTable::AdvanceAggFn advance_agg_fn,
-    const bool partitioned) {
+void AggregationHashTable::ProcessBatchImpl(VectorProjectionIterator *iters[],
+                                            const AggregationHashTable::HashFn hash_fn,
+                                            const AggregationHashTable::KeyEqFn key_eq_fn,
+                                            const AggregationHashTable::InitAggFn init_agg_fn,
+                                            const AggregationHashTable::AdvanceAggFn advance_agg_fn,
+                                            const bool partitioned) {
   // Compute the hashes
   ComputeHash<VPIIsFiltered>(iters, hash_fn);
 
@@ -243,13 +222,11 @@ void AggregationHashTable::ProcessBatchImpl(
 // single- and multi-threaded aggregation benchmarks.
 
 template <bool VPIIsFiltered>
-NEVER_INLINE void AggregationHashTable::ComputeHash(
-    VectorProjectionIterator *iters[],
-    const AggregationHashTable::HashFn hash_fn) {
+NEVER_INLINE void AggregationHashTable::ComputeHash(VectorProjectionIterator *iters[],
+                                                    const AggregationHashTable::HashFn hash_fn) {
   auto &hashes = batch_state_->hashes;
   if constexpr (VPIIsFiltered) {
-    for (u32 idx = 0; iters[0]->HasNextFiltered();
-         iters[0]->AdvanceFiltered()) {
+    for (u32 idx = 0; iters[0]->HasNextFiltered(); iters[0]->AdvanceFiltered()) {
       hashes[idx++] = hash_fn(iters);
     }
   } else {  // NOLINT
@@ -260,9 +237,8 @@ NEVER_INLINE void AggregationHashTable::ComputeHash(
 }
 
 template <bool VPIIsFiltered>
-NEVER_INLINE u32 AggregationHashTable::FindGroups(
-    VectorProjectionIterator *iters[],
-    const AggregationHashTable::KeyEqFn key_eq_fn) {
+NEVER_INLINE u32 AggregationHashTable::FindGroups(VectorProjectionIterator *iters[],
+                                                  const AggregationHashTable::KeyEqFn key_eq_fn) {
   batch_state_->key_not_eq.clear();
   batch_state_->groups_not_found.clear();
   u32 found = LookupInitial(iters[0]->GetTupleCount());
@@ -330,9 +306,9 @@ NEVER_INLINE u32 AggregationHashTable::LookupInitialImpl(const u32 num_elems) {
 // function, groups_found will densely contain the indexes of matching keys,
 // and 'key_not_eq' will contain indexes of tuples that didn't match on key.
 template <bool VPIIsFiltered>
-NEVER_INLINE u32 AggregationHashTable::CheckKeyEquality(
-    VectorProjectionIterator *iters[], const u32 num_elems,
-    const AggregationHashTable::KeyEqFn key_eq_fn) {
+NEVER_INLINE u32
+AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *iters[], const u32 num_elems,
+                                       const AggregationHashTable::KeyEqFn key_eq_fn) {
   auto &entries = batch_state_->entries;
   auto &groups_found = batch_state_->groups_found;
   auto &key_not_eq = batch_state_->key_not_eq;
@@ -385,8 +361,7 @@ NEVER_INLINE u32 AggregationHashTable::FollowNext() {
 
 template <bool VPIIsFiltered, bool Partitioned>
 NEVER_INLINE void AggregationHashTable::CreateMissingGroups(
-    VectorProjectionIterator *iters[],
-    const AggregationHashTable::KeyEqFn key_eq_fn,
+    VectorProjectionIterator *iters[], const AggregationHashTable::KeyEqFn key_eq_fn,
     const AggregationHashTable::InitAggFn init_agg_fn) {
   const auto &hashes = batch_state_->hashes;
   const auto &groups_not_found = batch_state_->groups_not_found;
@@ -462,10 +437,9 @@ void AggregationHashTable::TransferMemoryAndPartitions(
     // Now, move over their memory
     owned_entries_.emplace_back(std::move(table->entries_));
 
-    TPL_ASSERT(
-        table->owned_entries_.empty(),
-        "A thread-local aggregation table should not have any owned "
-        "entries themselves. Nested/recursive aggregations not supported.");
+    TPL_ASSERT(table->owned_entries_.empty(),
+               "A thread-local aggregation table should not have any owned "
+               "entries themselves. Nested/recursive aggregations not supported.");
 
     // Now, move over their overflow partitions list
     for (u32 part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
@@ -477,17 +451,15 @@ void AggregationHashTable::TransferMemoryAndPartitions(
           partition_tails_[part_idx] = table->partition_tails_[part_idx];
         }
         // Update the partition's unique-count estimate
-        partition_estimates_[part_idx]->Merge(
-            table->partition_estimates_[part_idx]);
+        partition_estimates_[part_idx]->Merge(table->partition_estimates_[part_idx]);
       }
     }
   }
 }
 
-AggregationHashTable *AggregationHashTable::BuildTableOverPartition(
-    void *const query_state, const u32 partition_idx) {
-  TPL_ASSERT(partition_idx < kDefaultNumPartitions,
-             "Out-of-bounds partition access");
+AggregationHashTable *AggregationHashTable::BuildTableOverPartition(void *const query_state,
+                                                                    const u32 partition_idx) {
+  TPL_ASSERT(partition_idx < kDefaultNumPartitions, "Out-of-bounds partition access");
   TPL_ASSERT(partition_heads_[partition_idx] != nullptr,
              "Should not build aggregation table over empty partition!");
 
@@ -498,8 +470,8 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(
 
   // Create it
   auto estimated_size = partition_estimates_[partition_idx]->Estimate();
-  auto *agg_table = new (memory_->AllocateAligned(
-      sizeof(AggregationHashTable), alignof(AggregationHashTable), false))
+  auto *agg_table = new (
+      memory_->AllocateAligned(sizeof(AggregationHashTable), alignof(AggregationHashTable), false))
       AggregationHashTable(memory_, payload_size_, estimated_size);
 
   util::Timer<std::milli> timer;

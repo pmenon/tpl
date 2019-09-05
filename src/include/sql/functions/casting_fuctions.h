@@ -30,16 +30,11 @@ class CastingFunctions {
   static void CastToReal(Real *result, const Date &v);
   static void CastToReal(Real *result, const Timestamp &v);
 
-  static void CastToStringVal(ExecutionContext *ctx, StringVal *result,
-                              const BoolVal &v);
-  static void CastToStringVal(ExecutionContext *ctx, StringVal *result,
-                              const Integer &v);
-  static void CastToStringVal(ExecutionContext *ctx, StringVal *result,
-                              const Real &v);
-  static void CastToStringVal(ExecutionContext *ctx, StringVal *result,
-                              const Date &v);
-  static void CastToStringVal(ExecutionContext *ctx, StringVal *result,
-                              const Timestamp &v);
+  static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const BoolVal &v);
+  static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const Integer &v);
+  static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const Real &v);
+  static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const Date &v);
+  static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const Timestamp &v);
 };
 
 // ---------------------------------------------------------
@@ -49,11 +44,10 @@ class CastingFunctions {
 // The functions below are inlined in the header for performance. Don't move it
 // unless you know what you're doing.
 
-#define CAST_HIDE_NULL_FAST(FROM_TYPE, TO_TYPE)                       \
-  inline void CastingFunctions::CastTo##TO_TYPE(TO_TYPE *result,      \
-                                                const FROM_TYPE &v) { \
-    result->is_null = v.is_null;                                      \
-    result->val = v.val;                                              \
+#define CAST_HIDE_NULL_FAST(FROM_TYPE, TO_TYPE)                                        \
+  inline void CastingFunctions::CastTo##TO_TYPE(TO_TYPE *result, const FROM_TYPE &v) { \
+    result->is_null = v.is_null;                                                       \
+    result->val = v.val;                                                               \
   }
 
 CAST_HIDE_NULL_FAST(Integer, BoolVal);

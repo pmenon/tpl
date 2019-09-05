@@ -15,10 +15,7 @@ namespace tpl::ast {
 class AstDumperImpl : public AstVisitor<AstDumperImpl> {
  public:
   explicit AstDumperImpl(AstNode *root, int out_fd)
-      : root_(root),
-        top_level_(true),
-        first_child_(true),
-        out_(out_fd, false) {}
+      : root_(root), top_level_(true), first_child_(true), out_(out_fd, false) {}
 
   void Run() { Visit(root_); }
 
@@ -30,8 +27,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
  private:
   class WithColor {
    public:
-    WithColor(AstDumperImpl *impl, llvm::raw_ostream::Colors color)
-        : impl_(impl) {
+    WithColor(AstDumperImpl *impl, llvm::raw_ostream::Colors color) : impl_(impl) {
       impl_->out_.changeColor(color);
     }
     ~WithColor() { impl_->out_.resetColor(); }

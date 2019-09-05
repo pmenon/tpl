@@ -47,8 +47,7 @@ TEST_F(BytecodeTrampolineTest, BooleanFunctionTest) {
 
   EXPECT_FALSE(compiler.HasErrors());
 
-  auto less_than =
-      reinterpret_cast<bool (*)(i32, i32)>(GetTrampoline(*module, "lt"));
+  auto less_than = reinterpret_cast<bool (*)(i32, i32)>(GetTrampoline(*module, "lt"));
 
   EXPECT_EQ(true, less_than(1, 2));
   EXPECT_EQ(false, less_than(2, 1));
@@ -75,8 +74,7 @@ TEST_F(BytecodeTrampolineTest, IntFunctionTest) {
 
     EXPECT_FALSE(compiler.HasErrors());
 
-    auto fn =
-        reinterpret_cast<i32 (*)(i32, i32)>(GetTrampoline(*module, "add2"));
+    auto fn = reinterpret_cast<i32 (*)(i32, i32)>(GetTrampoline(*module, "add2"));
 
     EXPECT_EQ(20, fn(10, 10));
     EXPECT_EQ(10, fn(0, 10));
@@ -86,15 +84,13 @@ TEST_F(BytecodeTrampolineTest, IntFunctionTest) {
 
   // Sub function
   {
-    auto src =
-        "fun sub3(a: int32, b: int32, c: int32) -> int32 { return a - b - c }";
+    auto src = "fun sub3(a: int32, b: int32, c: int32) -> int32 { return a - b - c }";
     auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
 
     EXPECT_FALSE(compiler.HasErrors());
 
-    auto fn = reinterpret_cast<i32 (*)(i32, i32, i32)>(
-        GetTrampoline(*module, "sub3"));
+    auto fn = reinterpret_cast<i32 (*)(i32, i32, i32)>(GetTrampoline(*module, "sub3"));
 
     EXPECT_EQ(-10, fn(10, 10, 10));
     EXPECT_EQ(10, fn(30, 10, 10));
@@ -113,8 +109,7 @@ TEST_F(BytecodeTrampolineTest, BigIntFunctionTest) {
 
     EXPECT_FALSE(compiler.HasErrors());
 
-    auto fn = reinterpret_cast<i64 (*)(i64, i64, i64)>(
-        GetTrampoline(*module, "mul3"));
+    auto fn = reinterpret_cast<i64 (*)(i64, i64, i64)>(GetTrampoline(*module, "mul3"));
 
     EXPECT_EQ(6, fn(1, 2, 3));
     EXPECT_EQ(-6, fn(-1, 2, 3));
@@ -133,8 +128,7 @@ TEST_F(BytecodeTrampolineTest, VoidReturnTest) {
 
     EXPECT_FALSE(compiler.HasErrors());
 
-    auto fn = reinterpret_cast<void (*)(i64 *, i64 *, i64 *)>(
-        GetTrampoline(*module, "mul2"));
+    auto fn = reinterpret_cast<void (*)(i64 *, i64 *, i64 *)>(GetTrampoline(*module, "mul2"));
 
     i64 a = 2, b = 3;
     i64 ret = 0;
@@ -159,8 +153,7 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
     const u32 nelems = 100;
     std::vector<i32> numbers(nelems);
     std::random_device random;
-    std::generate(numbers.begin(), numbers.end(),
-                  [&random]() { return random() % 100; });
+    std::generate(numbers.begin(), numbers.end(), [&random]() { return random() % 100; });
 
     // Generate the comparison function that sorts ascending
     auto src = "fun compare(a: int32, b: int32) -> int32 { return a - b }";
@@ -169,15 +162,14 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
     auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
     EXPECT_FALSE(compiler.HasErrors());
-    auto compare = reinterpret_cast<i32 (*)(const i32, const i32)>(
-        GetTrampoline(*module, "compare"));
+    auto compare =
+        reinterpret_cast<i32 (*)(const i32, const i32)>(GetTrampoline(*module, "compare"));
     EXPECT_TRUE(compare != nullptr);
 
     // Try to sort using the generated comparison function
-    ips4o::sort(
-        numbers.begin(), numbers.end(),
-        // NOLINTNEXTLINE
-        [compare](const auto &a, const auto &b) { return compare(a, b) < 0; });
+    ips4o::sort(numbers.begin(), numbers.end(),
+                // NOLINTNEXTLINE
+                [compare](const auto &a, const auto &b) { return compare(a, b) < 0; });
 
     // Verify
     EXPECT_TRUE(std::is_sorted(numbers.begin(), numbers.end()));
@@ -200,8 +192,7 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
     std::vector<S> elems;
     std::random_device random;
     for (u32 i = 0; i < nelems; i++) {
-      elems.emplace_back(random() % 5, random() % 10, random() % 100,
-                         random() % 1000);
+      elems.emplace_back(random() % 5, random() % 10, random() % 100, random() % 1000);
     }
 
     // Generate the comparison function that sorts ascending by S.c
@@ -217,19 +208,17 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
     auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
     EXPECT_FALSE(compiler.HasErrors());
-    auto compare = reinterpret_cast<bool (*)(const S *, const S *)>(
-        GetTrampoline(*module, "compare"));
+    auto compare =
+        reinterpret_cast<bool (*)(const S *, const S *)>(GetTrampoline(*module, "compare"));
     EXPECT_TRUE(compare != nullptr);
 
     // Try to sort using the generated comparison function
-    ips4o::sort(
-        elems.begin(), elems.end(),
-        [compare](const auto &a, const auto &b) { return compare(&a, &b); });
+    ips4o::sort(elems.begin(), elems.end(),
+                [compare](const auto &a, const auto &b) { return compare(&a, &b); });
 
     // Verify
-    EXPECT_TRUE(
-        std::is_sorted(elems.begin(), elems.end(),
-                       [](const auto &a, const auto &b) { return a.c < b.c; }));
+    EXPECT_TRUE(std::is_sorted(elems.begin(), elems.end(),
+                               [](const auto &a, const auto &b) { return a.c < b.c; }));
   }
 }
 
@@ -239,15 +228,14 @@ TEST_F(BytecodeTrampolineTest, DISABLED_PerfGenComparisonForSortTest) {
     auto src = "fun compare(a: int32, b: int32) -> int32 { return a - b }";
     auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
-    auto compare = reinterpret_cast<i32 (*)(const i32, const i32)>(
-        GetTrampoline(*module, "compare"));
+    auto compare =
+        reinterpret_cast<i32 (*)(const i32, const i32)>(GetTrampoline(*module, "compare"));
 
     util::Timer<std::milli> timer;
     timer.Start();
-    ips4o::sort(
-        vec.begin(), vec.end(),
-        // NOLINTNEXTLINE
-        [compare](const auto a, const auto b) { return compare(a, b) < 0; });
+    ips4o::sort(vec.begin(), vec.end(),
+                // NOLINTNEXTLINE
+                [compare](const auto a, const auto b) { return compare(a, b) < 0; });
     timer.Stop();
     return timer.elapsed();
   };
@@ -257,15 +245,13 @@ TEST_F(BytecodeTrampolineTest, DISABLED_PerfGenComparisonForSortTest) {
     auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
     std::function<i32(const i32, const i32)> compare;
-    EXPECT_TRUE(
-        module->GetFunction("compare", ExecutionMode::Interpret, compare));
+    EXPECT_TRUE(module->GetFunction("compare", ExecutionMode::Interpret, compare));
 
     util::Timer<std::milli> timer;
     timer.Start();
-    ips4o::sort(
-        vec.begin(), vec.end(),
-        // NOLINTNEXTLINE
-        [&compare](const auto a, const auto b) { return compare(a, b) < 0; });
+    ips4o::sort(vec.begin(), vec.end(),
+                // NOLINTNEXTLINE
+                [&compare](const auto a, const auto b) { return compare(a, b) < 0; });
     timer.Stop();
     return timer.elapsed();
   };

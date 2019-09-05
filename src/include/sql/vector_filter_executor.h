@@ -44,8 +44,7 @@ class VectorFilterExecutor {
    * @param vector_projection_iterator A vector projection iterator storing the
    *                                   projection to filter.
    */
-  explicit VectorFilterExecutor(
-      VectorProjectionIterator *vector_projection_iterator);
+  explicit VectorFilterExecutor(VectorProjectionIterator *vector_projection_iterator);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the
@@ -210,8 +209,7 @@ class VectorFilterExecutor {
    * @param filter The filtering function that writes valid selection indexes
    *               into a provided output selection vector.
    */
-  void SelectGeneric(const std::vector<u32> &col_indexes,
-                     const VectorFilterFn &filter);
+  void SelectGeneric(const std::vector<u32> &col_indexes, const VectorFilterFn &filter);
 
   /**
    * Invert the current active selection, i.e., select all currently unselected

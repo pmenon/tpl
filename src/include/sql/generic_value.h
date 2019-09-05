@@ -171,8 +171,8 @@ class GenericValue {
    * @param value The value.
    * @return A Timestamp value.
    */
-  static GenericValue CreateTimestamp(i32 year, i32 month, i32 day, i32 hour,
-                                      i32 min, i32 sec, i32 msec);
+  static GenericValue CreateTimestamp(i32 year, i32 month, i32 day, i32 hour, i32 min, i32 sec,
+                                      i32 msec);
 
   /**
    * Create a non-NULL varchar value.

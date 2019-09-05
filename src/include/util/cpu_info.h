@@ -68,23 +68,17 @@ class CpuInfo {
   /**
    * Return the size of the cache at level @em level in bytes.
    */
-  u32 GetCacheSize(const CacheLevel level) const noexcept {
-    return cache_sizes_[level];
-  }
+  u32 GetCacheSize(const CacheLevel level) const noexcept { return cache_sizes_[level]; }
 
   /**
    * Return the size of a cache line at level @em level.
    */
-  u32 GetCacheLineSize(const CacheLevel level) const noexcept {
-    return cache_line_sizes_[level];
-  }
+  u32 GetCacheLineSize(const CacheLevel level) const noexcept { return cache_line_sizes_[level]; }
 
   /**
    * Does the CPU have the given hardware feature?
    */
-  bool HasFeature(const Feature feature) const noexcept {
-    return hardware_flags_[feature];
-  }
+  bool HasFeature(const Feature feature) const noexcept { return hardware_flags_[feature]; }
 
   /**
    * Pretty print CPU information to a string.

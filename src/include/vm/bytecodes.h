@@ -384,8 +384,7 @@ enum class Bytecode : u32 {
 class Bytecodes {
  public:
   // The total number of bytecode instructions
-  static constexpr const u32 kBytecodeCount =
-      static_cast<u32>(Bytecode::Last) + 1;
+  static constexpr const u32 kBytecodeCount = static_cast<u32>(Bytecode::Last) + 1;
 
   static constexpr u32 NumBytecodes() { return kBytecodeCount; }
 
@@ -452,9 +451,7 @@ class Bytecodes {
             bytecode == Bytecode::JumpIfTrue);
   }
 
-  static constexpr bool IsCall(Bytecode bytecode) {
-    return bytecode == Bytecode::Call;
-  }
+  static constexpr bool IsCall(Bytecode bytecode) { return bytecode == Bytecode::Call; }
 
   static constexpr bool IsTerminal(Bytecode bytecode) {
     return bytecode == Bytecode::Jump || bytecode == Bytecode::Return;

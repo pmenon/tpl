@@ -14,16 +14,13 @@ std::atomic<std::size_t> MemoryPool::kMmapThreshold = 64 * MB;
 // Minimum alignment to abide by
 static constexpr u32 kMinMallocAlignment = 8;
 
-MemoryPool::MemoryPool(MemoryTracker *tracker) : tracker_(tracker) {
-  (void)tracker_;
-}
+MemoryPool::MemoryPool(MemoryTracker *tracker) : tracker_(tracker) { (void)tracker_; }
 
 void *MemoryPool::Allocate(const std::size_t size, const bool clear) {
   return AllocateAligned(size, 0, clear);
 }
 
-void *MemoryPool::AllocateAligned(const std::size_t size,
-                                  const std::size_t alignment,
+void *MemoryPool::AllocateAligned(const std::size_t size, const std::size_t alignment,
                                   const bool clear) {
   void *buf = nullptr;
 
@@ -58,8 +55,6 @@ void MemoryPool::Deallocate(void *ptr, std::size_t size) {
   }
 }
 
-void MemoryPool::SetMMapSizeThreshold(const std::size_t size) {
-  kMmapThreshold = size;
-}
+void MemoryPool::SetMMapSizeThreshold(const std::size_t size) { kMmapThreshold = size; }
 
 }  // namespace tpl::sql

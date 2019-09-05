@@ -121,8 +121,7 @@ class UCBPolicy : public Policy {
  */
 class FixedActionPolicy : public Policy {
  public:
-  explicit FixedActionPolicy(u32 action)
-      : Policy(Kind::FixedAction), action_(action) {}
+  explicit FixedActionPolicy(u32 action) : Policy(Kind::FixedAction), action_(action) {}
 
   u32 NextAction(Agent *agent) override { return action_; }
 
@@ -136,8 +135,7 @@ class FixedActionPolicy : public Policy {
  */
 class AnnealingEpsilonGreedyPolicy : public EpsilonGreedyPolicy {
  public:
-  AnnealingEpsilonGreedyPolicy()
-      : EpsilonGreedyPolicy(Kind::AnnealingEpsilonGreedy) {}
+  AnnealingEpsilonGreedyPolicy() : EpsilonGreedyPolicy(Kind::AnnealingEpsilonGreedy) {}
 
   u32 NextAction(Agent *agent) override;
 };

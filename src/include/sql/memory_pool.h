@@ -38,9 +38,7 @@ class MemPoolPtr {
   /**
    * Move.
    */
-  MemPoolPtr(MemPoolPtr<T> &&ptr) noexcept : obj_(ptr.obj_) {
-    ptr.obj_ = nullptr;
-  }
+  MemPoolPtr(MemPoolPtr<T> &&ptr) noexcept : obj_(ptr.obj_) { ptr.obj_ = nullptr; }
 
   /**
    * Arrow operation.
@@ -160,11 +158,9 @@ class MemoryPool {
    * @em T
    */
   template <typename T>
-  T *AllocateArray(const std::size_t num_elems, std::size_t alignment,
-                   const bool clear) {
+  T *AllocateArray(const std::size_t num_elems, std::size_t alignment, const bool clear) {
     alignment = std::max(alignof(T), alignment);
-    return reinterpret_cast<T *>(
-        AllocateAligned(sizeof(T) * num_elems, alignment, clear));
+    return reinterpret_cast<T *>(AllocateAligned(sizeof(T) * num_elems, alignment, clear));
   }
 
   /**
@@ -250,8 +246,7 @@ class MemoryPoolAllocator {
 
   MemoryPoolAllocator(MemoryPool *memory) : memory_(memory) {}  // NOLINT
 
-  MemoryPoolAllocator(const MemoryPoolAllocator &other)
-      : memory_(other.memory_) {}
+  MemoryPoolAllocator(const MemoryPoolAllocator &other) : memory_(other.memory_) {}
 
   template <typename U>
   MemoryPoolAllocator(const MemoryPoolAllocator<U> &other)  // NOLINT
@@ -264,13 +259,9 @@ class MemoryPoolAllocator {
 
   void deallocate(T *ptr, std::size_t n) { memory_->Deallocate(ptr, n); }
 
-  bool operator==(const MemoryPoolAllocator &other) const {
-    return memory_ == other.memory_;
-  }
+  bool operator==(const MemoryPoolAllocator &other) const { return memory_ == other.memory_; }
 
-  bool operator!=(const MemoryPoolAllocator &other) const {
-    return !(*this == other);
-  }
+  bool operator!=(const MemoryPoolAllocator &other) const { return !(*this == other); }
 
  private:
   MemoryPool *memory_;
@@ -281,11 +272,9 @@ class MemPoolVector : public std::vector<T, MemoryPoolAllocator<T>> {
   using BaseType = std::vector<T, MemoryPoolAllocator<T>>;
 
  public:
-  explicit MemPoolVector(MemoryPool *memory)
-      : BaseType(MemoryPoolAllocator<T>(memory)) {}
+  explicit MemPoolVector(MemoryPool *memory) : BaseType(MemoryPoolAllocator<T>(memory)) {}
 
-  MemPoolVector(std::size_t n, MemoryPool *memory)
-      : BaseType(n, MemoryPoolAllocator<T>(memory)) {}
+  MemPoolVector(std::size_t n, MemoryPool *memory) : BaseType(n, MemoryPoolAllocator<T>(memory)) {}
 
   MemPoolVector(std::size_t n, const T &elem, MemoryPool *memory)
       : BaseType(n, elem, MemoryPoolAllocator<T>(memory)) {}

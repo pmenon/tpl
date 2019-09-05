@@ -37,8 +37,7 @@ TEST_F(SemaBuiltinTest, CheckSqlConversions) {
   // multiple int input to (int -> Integer) is invalid
   {
     auto input1 = DeclVar(Ident("input"), PrimIntTypeRepr(), nullptr);
-    auto result =
-        Call<ast::Builtin::IntToSql>(DeclRef(input1), DeclRef(input1));
+    auto result = Call<ast::Builtin::IntToSql>(DeclRef(input1), DeclRef(input1));
     auto block = Block({DeclStmt(input1), ExprStmt(result)});
     EXPECT_EQ(true, Check(block));
     ResetErrorReporter();
@@ -101,35 +100,35 @@ TEST_F(SemaBuiltinTest, CheckSqlConversions) {
 }
 
 TEST_F(SemaBuiltinTest, CheckTrigBuiltins) {
-#define CHECK_TRIG(BUILTIN)                                                \
-  {                                                                        \
-    auto input1 = DeclVar(Ident("input"), RealSqlTypeRepr(), nullptr);     \
-    auto input2 = DeclVar(Ident("input2"), RealSqlTypeRepr(), nullptr);    \
-    auto input3 = DeclVar(Ident("input3"), IntegerSqlTypeRepr(), nullptr); \
-    /* Check valid inputs */                                               \
-    {                                                                      \
-      auto result = Call<BUILTIN>(DeclRef(input1));                        \
-      auto block = Block({DeclStmt(input1), DeclStmt(input2),              \
-                          DeclStmt(input3), ExprStmt(result)});            \
-      EXPECT_EQ(false, Check(block));                                      \
-      ResetErrorReporter();                                                \
-    }                                                                      \
-    /* Check single invalid input */                                       \
-    {                                                                      \
-      auto result = Call<BUILTIN>(DeclRef(input3));                        \
-      auto block = Block({DeclStmt(input1), DeclStmt(input2),              \
-                          DeclStmt(input3), ExprStmt(result)});            \
-      EXPECT_EQ(true, Check(block));                                       \
-      ResetErrorReporter();                                                \
-    }                                                                      \
-    /* Check wrong number of args input */                                 \
-    {                                                                      \
-      auto result = Call<BUILTIN>(DeclRef(input1), DeclRef(input2));       \
-      auto block = Block({DeclStmt(input1), DeclStmt(input2),              \
-                          DeclStmt(input3), ExprStmt(result)});            \
-      EXPECT_EQ(true, Check(block));                                       \
-      ResetErrorReporter();                                                \
-    }                                                                      \
+#define CHECK_TRIG(BUILTIN)                                                                \
+  {                                                                                        \
+    auto input1 = DeclVar(Ident("input"), RealSqlTypeRepr(), nullptr);                     \
+    auto input2 = DeclVar(Ident("input2"), RealSqlTypeRepr(), nullptr);                    \
+    auto input3 = DeclVar(Ident("input3"), IntegerSqlTypeRepr(), nullptr);                 \
+    /* Check valid inputs */                                                               \
+    {                                                                                      \
+      auto result = Call<BUILTIN>(DeclRef(input1));                                        \
+      auto block =                                                                         \
+          Block({DeclStmt(input1), DeclStmt(input2), DeclStmt(input3), ExprStmt(result)}); \
+      EXPECT_EQ(false, Check(block));                                                      \
+      ResetErrorReporter();                                                                \
+    }                                                                                      \
+    /* Check single invalid input */                                                       \
+    {                                                                                      \
+      auto result = Call<BUILTIN>(DeclRef(input3));                                        \
+      auto block =                                                                         \
+          Block({DeclStmt(input1), DeclStmt(input2), DeclStmt(input3), ExprStmt(result)}); \
+      EXPECT_EQ(true, Check(block));                                                       \
+      ResetErrorReporter();                                                                \
+    }                                                                                      \
+    /* Check wrong number of args input */                                                 \
+    {                                                                                      \
+      auto result = Call<BUILTIN>(DeclRef(input1), DeclRef(input2));                       \
+      auto block =                                                                         \
+          Block({DeclStmt(input1), DeclStmt(input2), DeclStmt(input3), ExprStmt(result)}); \
+      EXPECT_EQ(true, Check(block));                                                       \
+      ResetErrorReporter();                                                                \
+    }                                                                                      \
   }
 
   CHECK_TRIG(ast::Builtin::ACos);

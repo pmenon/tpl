@@ -18,8 +18,7 @@ void GenerateSequenceImpl(Vector *vector, T start, T increment) {
 
 void VectorOps::Generate(tpl::sql::Vector *vector, i64 start, i64 increment) {
   if (!IsTypeNumeric(vector->type_id())) {
-    throw std::runtime_error(
-        "Sequence generation only allowed on numeric vectors");
+    throw std::runtime_error("Sequence generation only allowed on numeric vectors");
   }
   switch (vector->type_id()) {
     case TypeId::TinyInt: {

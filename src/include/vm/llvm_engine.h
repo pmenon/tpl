@@ -55,8 +55,8 @@ class LLVMEngine {
    * @param module The module to compile
    * @return The JIT compiled module
    */
-  static std::unique_ptr<CompiledModule> Compile(
-      const BytecodeModule &module, const CompilerOptions &options = {});
+  static std::unique_ptr<CompiledModule> Compile(const BytecodeModule &module,
+                                                 const CompilerOptions &options = {});
 
   // -------------------------------------------------------
   // Compiler Options
@@ -67,8 +67,7 @@ class LLVMEngine {
    */
   class CompilerOptions {
    public:
-    CompilerOptions()
-        : debug_(false), write_obj_file_(false), output_file_name_() {}
+    CompilerOptions() : debug_(false), write_obj_file_(false), output_file_name_() {}
 
     CompilerOptions &SetDebug(bool debug) {
       debug_ = debug;
@@ -89,13 +88,9 @@ class LLVMEngine {
       return *this;
     }
 
-    const std::string &GetOutputObjectFileName() const {
-      return output_file_name_;
-    }
+    const std::string &GetOutputObjectFileName() const { return output_file_name_; }
 
-    std::string GetBytecodeHandlersBcPath() const {
-      return "./bytecode_handlers_ir.bc";
-    }
+    std::string GetBytecodeHandlersBcPath() const { return "./bytecode_handlers_ir.bc"; }
 
    private:
     bool debug_;
@@ -146,9 +141,7 @@ class LLVMEngine {
     /**
      * Return the size of the module's object code in-memory in bytes.
      */
-    std::size_t GetModuleObjectCodeSizeInBytes() const {
-      return object_code_->getBufferSize();
-    }
+    std::size_t GetModuleObjectCodeSizeInBytes() const { return object_code_->getBufferSize(); }
 
     /**
      * Load the given module @em module into memory. If this module has already

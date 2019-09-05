@@ -23,8 +23,8 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
   switch (node->op()) {
     case parsing::Token::Type::AND:
     case parsing::Token::Type::OR: {
-      auto [result_type, left, right] = CheckLogicalOperands(
-          node->op(), node->position(), node->left(), node->right());
+      auto [result_type, left, right] =
+          CheckLogicalOperands(node->op(), node->position(), node->left(), node->right());
       node->set_type(result_type);
       if (node->left() != left) node->set_left(left);
       if (node->right() != right) node->set_right(right);
@@ -38,17 +38,14 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
     case parsing::Token::Type::STAR:
     case parsing::Token::Type::SLASH:
     case parsing::Token::Type::PERCENT: {
-      auto [result_type, left, right] = CheckArithmeticOperands(
-          node->op(), node->position(), node->left(), node->right());
+      auto [result_type, left, right] =
+          CheckArithmeticOperands(node->op(), node->position(), node->left(), node->right());
       node->set_type(result_type);
       if (node->left() != left) node->set_left(left);
       if (node->right() != right) node->set_right(right);
       break;
     }
-    default: {
-      LOG_ERROR("{} is not a binary operation!",
-                parsing::Token::GetString(node->op()));
-    }
+    default: { LOG_ERROR("{} is not a binary operation!", parsing::Token::GetString(node->op())); }
   }
 }
 
@@ -68,16 +65,15 @@ void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
     case parsing::Token::Type::GREATER_EQUAL:
     case parsing::Token::Type::LESS:
     case parsing::Token::Type::LESS_EQUAL: {
-      auto [result_type, left, right] = CheckComparisonOperands(
-          node->op(), node->position(), node->left(), node->right());
+      auto [result_type, left, right] =
+          CheckComparisonOperands(node->op(), node->position(), node->left(), node->right());
       node->set_type(result_type);
       if (node->left() != left) node->set_left(left);
       if (node->right() != right) node->set_right(right);
       break;
     }
     default: {
-      LOG_ERROR("{} is not a comparison operation",
-                parsing::Token::GetString(node->op()));
+      LOG_ERROR("{} is not a comparison operation", parsing::Token::GetString(node->op()));
     }
   }
 }
@@ -128,9 +124,8 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
     // may apply an implicit cast to make the assignment work.
     if (!CheckAssignmentConstraints(expected_type, arg)) {
       has_errors = true;
-      error_reporter_->Report(
-          arg->position(), ErrorMessages::kIncorrectCallArgType,
-          node->GetFuncName(), expected_type, arg_num, arg->type());
+      error_reporter_->Report(arg->position(), ErrorMessages::kIncorrectCallArgType,
+                              node->GetFuncName(), expected_type, arg_num, arg->type());
       continue;
     }
 
@@ -177,8 +172,7 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   // case, we automatically insert a "return" statement.
   if (node->IsEmpty() || !ast::Stmt::IsTerminating(node->body())) {
     if (!func_type->return_type()->IsNilType()) {
-      error_reporter()->Report(node->body()->right_brace_position(),
-                               ErrorMessages::kMissingReturn);
+      error_reporter()->Report(node->body()->right_brace_position(), ErrorMessages::kMissingReturn);
       return;
     }
 
@@ -202,13 +196,11 @@ void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   }
 
   // Error
-  error_reporter()->Report(node->position(), ErrorMessages::kUndefinedVariable,
-                           node->name());
+  error_reporter()->Report(node->position(), ErrorMessages::kUndefinedVariable, node->name());
 }
 
 void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
-  throw std::runtime_error(
-      "Should never perform semantic checking on implicit cast expressions");
+  throw std::runtime_error("Should never perform semantic checking on implicit cast expressions");
 }
 
 void Sema::VisitIndexExpr(ast::IndexExpr *node) {
@@ -221,14 +213,12 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
   }
 
   if (!obj_type->IsArrayType() && !obj_type->IsMapType()) {
-    error_reporter()->Report(node->position(),
-                             ErrorMessages::kInvalidIndexOperation, obj_type);
+    error_reporter()->Report(node->position(), ErrorMessages::kInvalidIndexOperation, obj_type);
     return;
   }
 
   if (!index_type->IsIntegerType()) {
-    error_reporter()->Report(node->position(),
-                             ErrorMessages::kInvalidArrayIndexValue);
+    error_reporter()->Report(node->position(), ErrorMessages::kInvalidArrayIndexValue);
     return;
   }
 
@@ -251,8 +241,7 @@ void Sema::VisitLitExpr(ast::LitExpr *node) {
     }
     case ast::LitExpr::LitKind::Float: {
       // Literal floats default to float32
-      node->set_type(
-          ast::BuiltinType::Get(context(), ast::BuiltinType::Float32));
+      node->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Float32));
       break;
     }
     case ast::LitExpr::LitKind::Int: {
@@ -279,8 +268,7 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
   switch (node->op()) {
     case parsing::Token::Type::BANG: {
       if (!expr_type->IsBoolType()) {
-        error_reporter()->Report(node->position(),
-                                 ErrorMessages::kInvalidOperation, node->op(),
+        error_reporter()->Report(node->position(), ErrorMessages::kInvalidOperation, node->op(),
                                  expr_type);
         return;
       }
@@ -290,8 +278,7 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
     }
     case parsing::Token::Type::MINUS: {
       if (!expr_type->IsArithmetic()) {
-        error_reporter()->Report(node->position(),
-                                 ErrorMessages::kInvalidOperation, node->op(),
+        error_reporter()->Report(node->position(), ErrorMessages::kInvalidOperation, node->op(),
                                  expr_type);
         return;
       }
@@ -301,8 +288,7 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
     }
     case parsing::Token::Type::STAR: {
       if (!expr_type->IsPointerType()) {
-        error_reporter()->Report(node->position(),
-                                 ErrorMessages::kInvalidOperation, node->op(),
+        error_reporter()->Report(node->position(), ErrorMessages::kInvalidOperation, node->op(),
                                  expr_type);
         return;
       }
@@ -312,8 +298,7 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
     }
     case parsing::Token::Type::AMPERSAND: {
       if (expr_type->IsFunctionType()) {
-        error_reporter()->Report(node->position(),
-                                 ErrorMessages::kInvalidOperation, node->op(),
+        error_reporter()->Report(node->position(), ErrorMessages::kInvalidOperation, node->op(),
                                  expr_type);
         return;
       }
@@ -338,8 +323,7 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
   }
 
   if (!obj_type->IsStructType()) {
-    error_reporter()->Report(
-        node->position(), ErrorMessages::kMemberObjectNotComposite, obj_type);
+    error_reporter()->Report(node->position(), ErrorMessages::kMemberObjectNotComposite, obj_type);
     return;
   }
 
@@ -351,13 +335,11 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
 
   ast::Identifier member = node->member()->As<ast::IdentifierExpr>()->name();
 
-  ast::Type *member_type =
-      obj_type->As<ast::StructType>()->LookupFieldByName(member);
+  ast::Type *member_type = obj_type->As<ast::StructType>()->LookupFieldByName(member);
 
   if (member_type == nullptr) {
-    error_reporter()->Report(node->member()->position(),
-                             ErrorMessages::kFieldObjectDoesNotExist, member,
-                             obj_type);
+    error_reporter()->Report(node->member()->position(), ErrorMessages::kFieldObjectDoesNotExist,
+                             member, obj_type);
     return;
   }
 

@@ -51,8 +51,7 @@ TEST_F(VectorTest, InitFromArray) {
 
   // Now a string array
   {
-    const char *arr[num_elems] = {"go loko", "hot-line bling", "kawhi", "6ix",
-                                  "king city"};
+    const char *arr[num_elems] = {"go loko", "hot-line bling", "kawhi", "6ix", "king city"};
     Vector vec(TypeId::Varchar, reinterpret_cast<byte *>(arr), num_elems);
     EXPECT_EQ(num_elems, vec.count());
     EXPECT_EQ(nullptr, vec.selection_vector());
@@ -254,8 +253,7 @@ TEST_F(VectorTest, Cast) {
     EXPECT_NE(nullptr, vec.selection_vector());
 
     for (u32 i = 0; i < vec.count(); i++) {
-      EXPECT_EQ(GenericValue::CreateBigInt(base_stdvec[sel[i]]),
-                vec.GetValue(i));
+      EXPECT_EQ(GenericValue::CreateBigInt(base_stdvec[sel[i]]), vec.GetValue(i));
     }
   }
 
@@ -273,8 +271,7 @@ TEST_F(VectorTest, Cast) {
     EXPECT_NE(nullptr, vec.selection_vector());
 
     for (u32 i = 0; i < vec.count(); i++) {
-      EXPECT_EQ(GenericValue::CreateSmallInt(base_stdvec[sel[i]]),
-                vec.GetValue(i));
+      EXPECT_EQ(GenericValue::CreateSmallInt(base_stdvec[sel[i]]), vec.GetValue(i));
     }
   }
 
@@ -286,8 +283,7 @@ TEST_F(VectorTest, Cast) {
     }
     vec.SetSelectionVector(sel.data(), sel.size());
 
-    vec.SetValue(
-        1, GenericValue::CreateInteger(std::numeric_limits<i16>::max() + 44));
+    vec.SetValue(1, GenericValue::CreateInteger(std::numeric_limits<i16>::max() + 44));
 
     EXPECT_THROW(vec.Cast(TypeId::SmallInt), std::runtime_error);
   }
@@ -339,16 +335,14 @@ TEST_F(VectorTest, AppendWithSelectionVector) {
 
 TEST_F(VectorTest, Print) {
   {
-    auto vec = MakeBooleanVector({false, true, true, false},
-                                 {false, false, false, false});
+    auto vec = MakeBooleanVector({false, true, true, false}, {false, false, false, false});
     EXPECT_EQ("Boolean=[False,True,True,False]", vec->ToString());
   }
 
-#define CHECK_NUMERIC_VECTOR_PRINT(TYPE)                                   \
-  {                                                                        \
-    auto vec =                                                             \
-        Make##TYPE##Vector({10, 20, 30, 40}, {false, true, false, false}); \
-    EXPECT_EQ(#TYPE "=[10,NULL,30,40]", vec->ToString());                  \
+#define CHECK_NUMERIC_VECTOR_PRINT(TYPE)                                          \
+  {                                                                               \
+    auto vec = Make##TYPE##Vector({10, 20, 30, 40}, {false, true, false, false}); \
+    EXPECT_EQ(#TYPE "=[10,NULL,30,40]", vec->ToString());                         \
   };
 
   CHECK_NUMERIC_VECTOR_PRINT(TinyInt);
@@ -358,8 +352,7 @@ TEST_F(VectorTest, Print) {
 #undef CHECK_NUMERIC_VECTOR_PRINT
 
   {
-    auto vec =
-        MakeVarcharVector({"first", "second", "third"}, {false, true, false});
+    auto vec = MakeVarcharVector({"first", "second", "third"}, {false, true, false});
     EXPECT_EQ("VarChar=['first',NULL,'third']", vec->ToString());
   }
 }

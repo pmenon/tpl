@@ -67,8 +67,7 @@ class VectorProjection {
    * through calls to ResetColumn().
    * @param column_info Metadata for columns in the projection.
    */
-  void InitializeEmpty(
-      const std::vector<const Schema::ColumnInfo *> &column_info);
+  void InitializeEmpty(const std::vector<const Schema::ColumnInfo *> &column_info);
 
   /**
    * Has this projection been filtered through a selection vector?
@@ -131,8 +130,7 @@ class VectorProjection {
    * @param column_iterators A vector of all column iterators.
    * @param col_idx The index of the column in this projection to reset.
    */
-  void ResetColumn(const std::vector<ColumnVectorIterator> &column_iterators,
-                   u32 col_idx);
+  void ResetColumn(const std::vector<ColumnVectorIterator> &column_iterators, u32 col_idx);
 
   /**
    * Reset/reload the data for the column at position @em col_idx in this
@@ -143,8 +141,7 @@ class VectorProjection {
    * @param col_idx The index of the column to reset.
    * @param num_tuples The number of tuples stored in the input.
    */
-  void ResetColumn(byte *col_data, u32 *col_null_bitmap, u32 col_idx,
-                   u32 num_tuples);
+  void ResetColumn(byte *col_data, u32 *col_null_bitmap, u32 col_idx, u32 num_tuples);
 
   /**
    * Return the number of columns in this projection.
@@ -154,9 +151,7 @@ class VectorProjection {
   /**
    * Return the number of active tuples in this projection.
    */
-  u64 GetTupleCount() const {
-    return columns_.empty() ? 0 : columns_[0]->count();
-  }
+  u64 GetTupleCount() const { return columns_.empty() ? 0 : columns_[0]->count(); }
 
   /**
    * Set the current count of tuples in this projection..

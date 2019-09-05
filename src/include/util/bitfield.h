@@ -49,9 +49,7 @@ class BitFieldBase {
 
   static constexpr const S kMask = ((kOne << size) - 1) << shift;
 
-  ALWAYS_INLINE static constexpr S Encode(T val) {
-    return static_cast<S>(val) << shift;
-  }
+  ALWAYS_INLINE static constexpr S Encode(T val) { return static_cast<S>(val) << shift; }
 
   ALWAYS_INLINE static constexpr T Decode(S storage) {
     if constexpr (std::is_same_v<T, bool>) {

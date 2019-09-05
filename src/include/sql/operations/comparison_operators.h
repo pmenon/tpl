@@ -24,8 +24,8 @@ struct NotEqual;
  * @param v2 The second string.
  * @return The appropriate signed value indicating comparison order.
  */
-static inline i32 CompareStrings(const char *str1, const std::size_t len1,
-                                 const char *str2, const std::size_t len2) {
+static inline i32 CompareStrings(const char *str1, const std::size_t len1, const char *str2,
+                                 const std::size_t len2) {
   const auto min_len = std::min(len1, len2);
   const auto result = (min_len == 0) ? 0 : std::memcmp(str1, str2, min_len);
   if (result != 0) {

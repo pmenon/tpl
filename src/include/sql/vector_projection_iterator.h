@@ -34,8 +34,7 @@ class VectorProjectionIterator {
    * Create an iterator over the given projection @em vp.
    * @param vp The projection to iterator over.
    */
-  explicit VectorProjectionIterator(VectorProjection *vp)
-      : VectorProjectionIterator() {
+  explicit VectorProjectionIterator(VectorProjection *vp) : VectorProjectionIterator() {
     SetVectorProjection(vp);
   }
 
@@ -199,8 +198,7 @@ class VectorProjectionIterator {
 // the nullability of the column. We take advantage of that here.
 
 template <typename T, bool Nullable>
-inline const T *VectorProjectionIterator::GetValue(const u32 col_idx,
-                                                   bool *const null) const {
+inline const T *VectorProjectionIterator::GetValue(const u32 col_idx, bool *const null) const {
   // Column's vector data
   const Vector *const col_vector = vector_projection_->GetColumn(col_idx);
 
@@ -213,8 +211,7 @@ inline const T *VectorProjectionIterator::GetValue(const u32 col_idx,
 }
 
 template <typename T, bool Nullable>
-inline void VectorProjectionIterator::SetValue(const u32 col_idx, const T val,
-                                               const bool null) {
+inline void VectorProjectionIterator::SetValue(const u32 col_idx, const T val, const bool null) {
   // Column's vector
   Vector *const col_vector = vector_projection_->GetColumn(col_idx);
 

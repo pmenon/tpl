@@ -102,8 +102,7 @@ TEST_F(ChunkedVectorTest, FrontBackTest) {
 
 TEST_F(ChunkedVectorTest, ChunkReuseTest) {
   util::Region tmp("tmp");
-  ChunkedVectorT<u32, StlRegionAllocator<u32>> vec{
-      StlRegionAllocator<u32>(&tmp)};
+  ChunkedVectorT<u32, StlRegionAllocator<u32>> vec{StlRegionAllocator<u32>(&tmp)};
 
   for (u32 i = 0; i < 1000; i++) {
     vec.push_back(i);
@@ -356,8 +355,7 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfInsertTest) {
 
   auto chunked_ms = Bench(3, []() {
     util::Region tmp("tmp");
-    ChunkedVectorT<u32, StlRegionAllocator<u32>> v{
-        util::StlRegionAllocator<u32>(&tmp)};
+    ChunkedVectorT<u32, StlRegionAllocator<u32>> v{util::StlRegionAllocator<u32>(&tmp)};
     for (u32 i = 0; i < 10000000; i++) {
       v.push_back(i);
     }
@@ -373,12 +371,9 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfScanTest) {
   static const u32 num_elems = 10000000;
 
   util::Region tmp("vec"), tmp2("deque"), tmp3("chunk");
-  std::vector<u32, StlRegionAllocator<u32>> stdvec{
-      StlRegionAllocator<u32>(&tmp)};
-  std::deque<u32, StlRegionAllocator<u32>> stddeque{
-      StlRegionAllocator<u32>(&tmp2)};
-  ChunkedVectorT<u32, StlRegionAllocator<u32>> chunkedvec{
-      util::StlRegionAllocator<u32>(&tmp3)};
+  std::vector<u32, StlRegionAllocator<u32>> stdvec{StlRegionAllocator<u32>(&tmp)};
+  std::deque<u32, StlRegionAllocator<u32>> stddeque{StlRegionAllocator<u32>(&tmp2)};
+  ChunkedVectorT<u32, StlRegionAllocator<u32>> chunkedvec{util::StlRegionAllocator<u32>(&tmp3)};
   for (u32 i = 0; i < num_elems; i++) {
     stdvec.push_back(i);
     stddeque.push_back(i);
@@ -421,12 +416,9 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
   std::uniform_int_distribution<u32> rng(0, num_elems);
 
   util::Region tmp("vec"), tmp2("deque"), tmp3("chunk");
-  std::vector<u32, StlRegionAllocator<u32>> stdvec{
-      StlRegionAllocator<u32>(&tmp)};
-  std::deque<u32, StlRegionAllocator<u32>> stddeque{
-      StlRegionAllocator<u32>(&tmp2)};
-  ChunkedVectorT<u32, StlRegionAllocator<u32>> chunkedvec{
-      util::StlRegionAllocator<u32>(&tmp3)};
+  std::vector<u32, StlRegionAllocator<u32>> stdvec{StlRegionAllocator<u32>(&tmp)};
+  std::deque<u32, StlRegionAllocator<u32>> stddeque{StlRegionAllocator<u32>(&tmp2)};
+  ChunkedVectorT<u32, StlRegionAllocator<u32>> chunkedvec{util::StlRegionAllocator<u32>(&tmp3)};
   for (u32 i = 0; i < num_elems; i++) {
     stdvec.push_back(i % 4);
     stddeque.push_back(i % 4);

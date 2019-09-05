@@ -35,62 +35,61 @@ class Context;
 //           implementations, but can also be created and manipulated from TPL
 //           code. We specialize these because we also want to add SQL-level
 //           type information to these builtins.
-#define BUILTIN_TYPE_LIST(PRIM, NON_PRIM, SQL)                           \
-  /* Primitive types */                                                  \
-  PRIM(Nil, u8, "nil")                                                   \
-  PRIM(Bool, bool, "bool")                                               \
-  PRIM(Int8, i8, "int8")                                                 \
-  PRIM(Int16, i16, "int16")                                              \
-  PRIM(Int32, i32, "int32")                                              \
-  PRIM(Int64, i64, "int64")                                              \
-  PRIM(Uint8, u8, "uint8")                                               \
-  PRIM(Uint16, u16, "uint16")                                            \
-  PRIM(Uint32, u32, "uint32")                                            \
-  PRIM(Uint64, u64, "uint64")                                            \
-  PRIM(Int128, i128, "int128")                                           \
-  PRIM(Uint128, u128, "uint128")                                         \
-  PRIM(Float32, f32, "float32")                                          \
-  PRIM(Float64, f64, "float64")                                          \
-                                                                         \
-  /* Non-primitive builtins */                                           \
-  NON_PRIM(AggregationHashTable, tpl::sql::AggregationHashTable)         \
-  NON_PRIM(AHTIterator, tpl::sql::AHTIterator)                           \
-  NON_PRIM(AHTVectorIterator, tpl::sql::AHTVectorIterator)               \
-  NON_PRIM(AHTOverflowPartitionIterator,                                 \
-           tpl::sql::AHTOverflowPartitionIterator)                       \
-  NON_PRIM(BloomFilter, tpl::sql::BloomFilter)                           \
-  NON_PRIM(ExecutionContext, tpl::sql::ExecutionContext)                 \
-  NON_PRIM(FilterManager, tpl::sql::FilterManager)                       \
-  NON_PRIM(HashTableEntry, tpl::sql::HashTableEntry)                     \
-  NON_PRIM(HashTableEntryIterator, tpl::sql::HashTableEntryIterator)     \
-  NON_PRIM(JoinHashTable, tpl::sql::JoinHashTable)                       \
-  NON_PRIM(JoinHashTableVectorProbe, tpl::sql::JoinHashTableVectorProbe) \
-  NON_PRIM(MemoryPool, tpl::sql::MemoryPool)                             \
-  NON_PRIM(Sorter, tpl::sql::Sorter)                                     \
-  NON_PRIM(SorterIterator, tpl::sql::SorterIterator)                     \
-  NON_PRIM(TableVectorIterator, tpl::sql::TableVectorIterator)           \
-  NON_PRIM(ThreadStateContainer, tpl::sql::ThreadStateContainer)         \
-  NON_PRIM(VectorFilterExecutor, tpl::sql::VectorFilterExecutor)         \
-  NON_PRIM(VectorProjectionIterator, tpl::sql::VectorProjectionIterator) \
-                                                                         \
-  /* SQL Aggregate types (if you add, remember to update BuiltinType) */ \
-  NON_PRIM(CountAggregate, tpl::sql::CountAggregate)                     \
-  NON_PRIM(CountStarAggregate, tpl::sql::CountStarAggregate)             \
-  NON_PRIM(AvgAggregate, tpl::sql::AvgAggregate)                         \
-  NON_PRIM(IntegerMaxAggregate, tpl::sql::IntegerMaxAggregate)           \
-  NON_PRIM(IntegerMinAggregate, tpl::sql::IntegerMinAggregate)           \
-  NON_PRIM(IntegerSumAggregate, tpl::sql::IntegerSumAggregate)           \
-  NON_PRIM(RealMaxAggregate, tpl::sql::RealMaxAggregate)                 \
-  NON_PRIM(RealMinAggregate, tpl::sql::RealMinAggregate)                 \
-  NON_PRIM(RealSumAggregate, tpl::sql::RealSumAggregate)                 \
-                                                                         \
-  /* Non-primitive SQL Runtime Values */                                 \
-  SQL(Boolean, tpl::sql::BoolVal)                                        \
-  SQL(Integer, tpl::sql::Integer)                                        \
-  SQL(Real, tpl::sql::Real)                                              \
-  SQL(Decimal, tpl::sql::Decimal)                                        \
-  SQL(StringVal, tpl::sql::StringVal)                                    \
-  SQL(Date, tpl::sql::Date)                                              \
+#define BUILTIN_TYPE_LIST(PRIM, NON_PRIM, SQL)                                   \
+  /* Primitive types */                                                          \
+  PRIM(Nil, u8, "nil")                                                           \
+  PRIM(Bool, bool, "bool")                                                       \
+  PRIM(Int8, i8, "int8")                                                         \
+  PRIM(Int16, i16, "int16")                                                      \
+  PRIM(Int32, i32, "int32")                                                      \
+  PRIM(Int64, i64, "int64")                                                      \
+  PRIM(Uint8, u8, "uint8")                                                       \
+  PRIM(Uint16, u16, "uint16")                                                    \
+  PRIM(Uint32, u32, "uint32")                                                    \
+  PRIM(Uint64, u64, "uint64")                                                    \
+  PRIM(Int128, i128, "int128")                                                   \
+  PRIM(Uint128, u128, "uint128")                                                 \
+  PRIM(Float32, f32, "float32")                                                  \
+  PRIM(Float64, f64, "float64")                                                  \
+                                                                                 \
+  /* Non-primitive builtins */                                                   \
+  NON_PRIM(AggregationHashTable, tpl::sql::AggregationHashTable)                 \
+  NON_PRIM(AHTIterator, tpl::sql::AHTIterator)                                   \
+  NON_PRIM(AHTVectorIterator, tpl::sql::AHTVectorIterator)                       \
+  NON_PRIM(AHTOverflowPartitionIterator, tpl::sql::AHTOverflowPartitionIterator) \
+  NON_PRIM(BloomFilter, tpl::sql::BloomFilter)                                   \
+  NON_PRIM(ExecutionContext, tpl::sql::ExecutionContext)                         \
+  NON_PRIM(FilterManager, tpl::sql::FilterManager)                               \
+  NON_PRIM(HashTableEntry, tpl::sql::HashTableEntry)                             \
+  NON_PRIM(HashTableEntryIterator, tpl::sql::HashTableEntryIterator)             \
+  NON_PRIM(JoinHashTable, tpl::sql::JoinHashTable)                               \
+  NON_PRIM(JoinHashTableVectorProbe, tpl::sql::JoinHashTableVectorProbe)         \
+  NON_PRIM(MemoryPool, tpl::sql::MemoryPool)                                     \
+  NON_PRIM(Sorter, tpl::sql::Sorter)                                             \
+  NON_PRIM(SorterIterator, tpl::sql::SorterIterator)                             \
+  NON_PRIM(TableVectorIterator, tpl::sql::TableVectorIterator)                   \
+  NON_PRIM(ThreadStateContainer, tpl::sql::ThreadStateContainer)                 \
+  NON_PRIM(VectorFilterExecutor, tpl::sql::VectorFilterExecutor)                 \
+  NON_PRIM(VectorProjectionIterator, tpl::sql::VectorProjectionIterator)         \
+                                                                                 \
+  /* SQL Aggregate types (if you add, remember to update BuiltinType) */         \
+  NON_PRIM(CountAggregate, tpl::sql::CountAggregate)                             \
+  NON_PRIM(CountStarAggregate, tpl::sql::CountStarAggregate)                     \
+  NON_PRIM(AvgAggregate, tpl::sql::AvgAggregate)                                 \
+  NON_PRIM(IntegerMaxAggregate, tpl::sql::IntegerMaxAggregate)                   \
+  NON_PRIM(IntegerMinAggregate, tpl::sql::IntegerMinAggregate)                   \
+  NON_PRIM(IntegerSumAggregate, tpl::sql::IntegerSumAggregate)                   \
+  NON_PRIM(RealMaxAggregate, tpl::sql::RealMaxAggregate)                         \
+  NON_PRIM(RealMinAggregate, tpl::sql::RealMinAggregate)                         \
+  NON_PRIM(RealSumAggregate, tpl::sql::RealSumAggregate)                         \
+                                                                                 \
+  /* Non-primitive SQL Runtime Values */                                         \
+  SQL(Boolean, tpl::sql::BoolVal)                                                \
+  SQL(Integer, tpl::sql::Integer)                                                \
+  SQL(Real, tpl::sql::Real)                                                      \
+  SQL(Decimal, tpl::sql::Decimal)                                                \
+  SQL(StringVal, tpl::sql::StringVal)                                            \
+  SQL(Date, tpl::sql::Date)                                                      \
   SQL(Timestamp, tpl::sql::Timestamp)
 
 // Ignore a builtin
@@ -105,8 +104,7 @@ class Context;
   BUILTIN_TYPE_LIST(IGNORE_BUILTIN_TYPE, F, IGNORE_BUILTIN_TYPE)
 
 // Only consider the SQL builtin types
-#define SQL_BUILTIN_TYPE_LIST(F) \
-  BUILTIN_TYPE_LIST(IGNORE_BUILTIN_TYPE, IGNORE_BUILTIN_TYPE, F)
+#define SQL_BUILTIN_TYPE_LIST(F) BUILTIN_TYPE_LIST(IGNORE_BUILTIN_TYPE, IGNORE_BUILTIN_TYPE, F)
 
 // Forward declare everything first
 #define F(TypeClass) class TypeClass;
@@ -298,23 +296,17 @@ class BuiltinType : public Type {
   /**
    * Is this builtin a primitive integer?
    */
-  bool is_integer() const {
-    return Kind::Int8 <= kind() && kind() <= Kind::Uint128;
-  }
+  bool is_integer() const { return Kind::Int8 <= kind() && kind() <= Kind::Uint128; }
 
   /**
    * Is this builtin a primitive floating point number?
    */
-  bool is_floating_point() const {
-    return kFloatingPointFlags[static_cast<u16>(kind_)];
-  }
+  bool is_floating_point() const { return kFloatingPointFlags[static_cast<u16>(kind_)]; }
 
   /**
    * Is this type a SQL value type?
    */
-  bool is_sql_value() const {
-    return Kind::Boolean <= kind() && kind() <= Kind::Timestamp;
-  }
+  bool is_sql_value() const { return Kind::Boolean <= kind() && kind() <= Kind::Timestamp; }
 
   /**
    * Is this type a SQL aggregator type? IntegerSumAggregate, CountAggregate ...
@@ -330,9 +322,7 @@ class BuiltinType : public Type {
 
   static BuiltinType *Get(Context *ctx, Kind kind);
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::BuiltinType;
-  }
+  static bool classof(const Type *type) { return type->type_id() == TypeId::BuiltinType; }
 
  private:
   friend class Context;
@@ -359,14 +349,11 @@ class StringType : public Type {
  public:
   static StringType *Get(Context *ctx);
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::StringType;
-  }
+  static bool classof(const Type *type) { return type->type_id() == TypeId::StringType; }
 
  private:
   friend class Context;
-  explicit StringType(Context *ctx)
-      : Type(ctx, sizeof(i8 *), alignof(i8 *), TypeId::StringType) {}
+  explicit StringType(Context *ctx) : Type(ctx, sizeof(i8 *), alignof(i8 *), TypeId::StringType) {}
 };
 
 /**
@@ -378,14 +365,11 @@ class PointerType : public Type {
 
   static PointerType *Get(Type *base);
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::PointerType;
-  }
+  static bool classof(const Type *type) { return type->type_id() == TypeId::PointerType; }
 
  private:
   explicit PointerType(Type *base)
-      : Type(base->context(), sizeof(i8 *), alignof(i8 *), TypeId::PointerType),
-        base_(base) {}
+      : Type(base->context(), sizeof(i8 *), alignof(i8 *), TypeId::PointerType), base_(base) {}
 
  private:
   Type *base_;
@@ -405,16 +389,12 @@ class ArrayType : public Type {
 
   static ArrayType *Get(u64 length, Type *elem_type);
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::ArrayType;
-  }
+  static bool classof(const Type *type) { return type->type_id() == TypeId::ArrayType; }
 
  private:
   explicit ArrayType(u64 length, Type *elem_type)
-      : Type(elem_type->context(),
-             (length == 0 ? sizeof(u8 *) : elem_type->size() * length),
-             (length == 0 ? alignof(u8 *) : elem_type->alignment()),
-             TypeId::ArrayType),
+      : Type(elem_type->context(), (length == 0 ? sizeof(u8 *) : elem_type->size() * length),
+             (length == 0 ? alignof(u8 *) : elem_type->alignment()), TypeId::ArrayType),
         length_(length),
         elem_type_(elem_type) {}
 
@@ -451,9 +431,7 @@ class FunctionType : public Type {
 
   static FunctionType *Get(util::RegionVector<Field> &&params, Type *ret);
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::FunctionType;
-  }
+  static bool classof(const Type *type) { return type->type_id() == TypeId::FunctionType; }
 
  private:
   explicit FunctionType(util::RegionVector<Field> &&params, Type *ret);
@@ -474,9 +452,7 @@ class MapType : public Type {
 
   static MapType *Get(Type *key_type, Type *value_type);
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::MapType;
-  }
+  static bool classof(const Type *type) { return type->type_id() == TypeId::MapType; }
 
  private:
   MapType(Type *key_type, Type *val_type);
@@ -519,13 +495,10 @@ class StructType : public Type {
   // Note: fields cannot be empty!
   static StructType *Get(util::RegionVector<Field> &&fields);
 
-  static bool classof(const Type *type) {
-    return type->type_id() == TypeId::StructType;
-  }
+  static bool classof(const Type *type) { return type->type_id() == TypeId::StructType; }
 
  private:
-  explicit StructType(Context *ctx, u32 size, u32 alignment,
-                      util::RegionVector<Field> &&fields,
+  explicit StructType(Context *ctx, u32 size, u32 alignment, util::RegionVector<Field> &&fields,
                       util::RegionVector<u32> &&field_offsets);
 
  private:
@@ -551,13 +524,9 @@ inline bool Type::IsSpecificBuiltin(u16 kind) const {
   return false;
 }
 
-inline bool Type::IsNilType() const {
-  return IsSpecificBuiltin(BuiltinType::Nil);
-}
+inline bool Type::IsNilType() const { return IsSpecificBuiltin(BuiltinType::Nil); }
 
-inline bool Type::IsBoolType() const {
-  return IsSpecificBuiltin(BuiltinType::Bool);
-}
+inline bool Type::IsBoolType() const { return IsSpecificBuiltin(BuiltinType::Bool); }
 
 inline bool Type::IsIntegerType() const {
   if (auto *builtin_type = SafeAs<BuiltinType>()) {

@@ -15,8 +15,7 @@ struct SimpleObj {
 struct ComplexObj {
   MemoryPool *memory;
   MemPoolPtr<SimpleObj> nested;
-  ComplexObj(MemoryPool *m, MemPoolPtr<SimpleObj> n)
-      : memory(m), nested(std::move(n)) {}
+  ComplexObj(MemoryPool *m, MemPoolPtr<SimpleObj> n) : memory(m), nested(std::move(n)) {}
   ~ComplexObj() { memory->FreeObject(std::move(nested)); }
 };
 

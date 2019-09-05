@@ -26,10 +26,8 @@ namespace tpl::ast {
 
 // TODO(pmenon): Fix me
 bool Type::IsArithmetic() const {
-  return IsIntegerType() || IsFloatType() ||
-         IsSpecificBuiltin(BuiltinType::Integer) ||
-         IsSpecificBuiltin(BuiltinType::Real) ||
-         IsSpecificBuiltin(BuiltinType::Decimal);
+  return IsIntegerType() || IsFloatType() || IsSpecificBuiltin(BuiltinType::Integer) ||
+         IsSpecificBuiltin(BuiltinType::Real) || IsSpecificBuiltin(BuiltinType::Decimal);
 }
 
 // ---------------------------------------------------------
@@ -84,8 +82,7 @@ const bool BuiltinType::kSignedFlags[] = {
 // ---------------------------------------------------------
 
 FunctionType::FunctionType(util::RegionVector<Field> &&params, Type *ret)
-    : Type(ret->context(), sizeof(void *), alignof(void *),
-           TypeId::FunctionType),
+    : Type(ret->context(), sizeof(void *), alignof(void *), TypeId::FunctionType),
       params_(std::move(params)),
       ret_(ret) {}
 
@@ -103,8 +100,7 @@ MapType::MapType(Type *key_type, Type *val_type)
 // Struct Type
 // ---------------------------------------------------------
 
-StructType::StructType(Context *ctx, u32 size, u32 alignment,
-                       util::RegionVector<Field> &&fields,
+StructType::StructType(Context *ctx, u32 size, u32 alignment, util::RegionVector<Field> &&fields,
                        util::RegionVector<u32> &&field_offsets)
     : Type(ctx, size, alignment, TypeId::StructType),
       fields_(std::move(fields)),

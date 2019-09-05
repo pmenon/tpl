@@ -25,8 +25,7 @@ class BytecodeModule {
    * @param code The bytecode that makes up the module
    * @param functions The functions within the module
    */
-  BytecodeModule(std::string name, std::vector<u8> &&code,
-                 std::vector<FunctionInfo> &&functions);
+  BytecodeModule(std::string name, std::vector<u8> &&code, std::vector<FunctionInfo> &&functions);
 
   /**
    * This class cannot be copied or moved

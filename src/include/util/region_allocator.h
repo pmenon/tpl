@@ -15,8 +15,7 @@ class StlRegionAllocator {
 
   StlRegionAllocator(Region *region) noexcept : region_(region) {}  // NOLINT
 
-  StlRegionAllocator(const StlRegionAllocator &other) noexcept
-      : region_(other.region_) {}
+  StlRegionAllocator(const StlRegionAllocator &other) noexcept : region_(other.region_) {}
 
   template <typename U>
   StlRegionAllocator(const StlRegionAllocator<U> &other) noexcept  // NOLINT
@@ -29,13 +28,9 @@ class StlRegionAllocator {
 
   void deallocate(T *ptr, std::size_t n) { region_->Deallocate(ptr, n); }
 
-  bool operator==(const StlRegionAllocator &other) const {
-    return region_ == other.region_;
-  }
+  bool operator==(const StlRegionAllocator &other) const { return region_ == other.region_; }
 
-  bool operator!=(const StlRegionAllocator &other) const {
-    return !(*this == other);
-  }
+  bool operator!=(const StlRegionAllocator &other) const { return !(*this == other); }
 
  private:
   Region *region_;
@@ -54,9 +49,7 @@ class LLVMRegionAllocator : public llvm::AllocatorBase<LLVMRegionAllocator> {
   // Pull in base class overloads.
   using AllocatorBase<LLVMRegionAllocator>::Allocate;
 
-  void Deallocate(const void *ptr, std::size_t size) {
-    region_->Deallocate(ptr, size);
-  }
+  void Deallocate(const void *ptr, std::size_t size) { region_->Deallocate(ptr, size); }
 
   // Pull in base class overloads.
   using AllocatorBase<LLVMRegionAllocator>::Deallocate;

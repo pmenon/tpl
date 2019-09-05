@@ -12,13 +12,9 @@ class IsNullPredicate {
   // Delete to force only static functions
   IsNullPredicate() = delete;
 
-  static void IsNull(BoolVal *result, const Val &val) {
-    *result = BoolVal(val.is_null);
-  }
+  static void IsNull(BoolVal *result, const Val &val) { *result = BoolVal(val.is_null); }
 
-  static void IsNotNull(BoolVal *result, const Val &val) {
-    *result = BoolVal(!val.is_null);
-  }
+  static void IsNotNull(BoolVal *result, const Val &val) { *result = BoolVal(!val.is_null); }
 };
 
 }  // namespace tpl::sql

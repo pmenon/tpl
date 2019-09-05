@@ -36,18 +36,12 @@ class ComparisonFunctions {
   static void LtReal(BoolVal *result, const Real &v1, const Real &v2);
   static void NeReal(BoolVal *result, const Real &v1, const Real &v2);
 
-  static void EqStringVal(BoolVal *result, const StringVal &v1,
-                          const StringVal &v2);
-  static void GeStringVal(BoolVal *result, const StringVal &v1,
-                          const StringVal &v2);
-  static void GtStringVal(BoolVal *result, const StringVal &v1,
-                          const StringVal &v2);
-  static void LeStringVal(BoolVal *result, const StringVal &v1,
-                          const StringVal &v2);
-  static void LtStringVal(BoolVal *result, const StringVal &v1,
-                          const StringVal &v2);
-  static void NeStringVal(BoolVal *result, const StringVal &v1,
-                          const StringVal &v2);
+  static void EqStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
+  static void GeStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
+  static void GtStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
+  static void LeStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
+  static void LtStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
+  static void NeStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
 };
 
 // ---------------------------------------------------------
@@ -57,21 +51,20 @@ class ComparisonFunctions {
 // The functions below are inlined in the header for performance. Don't move it
 // unless you know what you're doing.
 
-#define BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, TYPE, OP)                 \
-  inline void ComparisonFunctions::NAME##TYPE(BoolVal *result, const TYPE &v1, \
-                                              const TYPE &v2) {                \
-    result->is_null = (v1.is_null || v2.is_null);                              \
-    result->val = OP::Apply(v1.val, v2.val);                                   \
+#define BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, TYPE, OP)                                   \
+  inline void ComparisonFunctions::NAME##TYPE(BoolVal *result, const TYPE &v1, const TYPE &v2) { \
+    result->is_null = (v1.is_null || v2.is_null);                                                \
+    result->val = OP::Apply(v1.val, v2.val);                                                     \
   }
 
-#define BINARY_COMPARISON_STRING_FN_HIDE_NULL(NAME, TYPE, OP)      \
-  inline void ComparisonFunctions::NAME##TYPE(                     \
-      BoolVal *result, const StringVal &v1, const StringVal &v2) { \
-    if (v1.is_null || v2.is_null) {                                \
-      *result = BoolVal::Null();                                   \
-      return;                                                      \
-    }                                                              \
-    *result = BoolVal(OP::Apply(v1.ptr, v1.len, v2.ptr, v2.len));  \
+#define BINARY_COMPARISON_STRING_FN_HIDE_NULL(NAME, TYPE, OP)                       \
+  inline void ComparisonFunctions::NAME##TYPE(BoolVal *result, const StringVal &v1, \
+                                              const StringVal &v2) {                \
+    if (v1.is_null || v2.is_null) {                                                 \
+      *result = BoolVal::Null();                                                    \
+      return;                                                                       \
+    }                                                                               \
+    *result = BoolVal(OP::Apply(v1.ptr, v1.len, v2.ptr, v2.len));                   \
   }
 
 #define BINARY_COMPARISONS(NAME, OP)                        \

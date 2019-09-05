@@ -27,8 +27,7 @@ class Timer {
     stop_ = Clock::now();
 
     elapsed_ =
-        std::chrono::duration_cast<
-            std::chrono::duration<double, ResolutionRatio>>(stop_ - start_)
+        std::chrono::duration_cast<std::chrono::duration<double, ResolutionRatio>>(stop_ - start_)
             .count();
   }
 

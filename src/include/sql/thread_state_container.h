@@ -73,8 +73,7 @@ class ThreadStateContainer {
    * @param ctx The (optional) context object to pass to both initialization and
    *            destruction functions.
    */
-  void Reset(std::size_t state_size, InitFn init_fn, DestroyFn destroy_fn,
-             void *ctx);
+  void Reset(std::size_t state_size, InitFn init_fn, DestroyFn destroy_fn, void *ctx);
 
   /**
    * Access the calling thread's thread-local state.
@@ -118,8 +117,8 @@ class ThreadStateContainer {
    * @param element_offset The offset of the element in the thread-local state
    */
   template <typename T>
-  void CollectThreadLocalStateElementsAs(
-      std::vector<T *> &container, const std::size_t element_offset) const {
+  void CollectThreadLocalStateElementsAs(std::vector<T *> &container,
+                                         const std::size_t element_offset) const {
     std::vector<byte *> tmp;
     CollectThreadLocalStateElements(tmp, element_offset);
     container.clear();

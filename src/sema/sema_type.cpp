@@ -11,15 +11,13 @@ void Sema::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {
   u64 arr_len = 0;
   if (node->length() != nullptr) {
     if (!node->length()->IsIntegerLiteral()) {
-      error_reporter()->Report(node->length()->position(),
-                               ErrorMessages::kNonIntegerArrayLength);
+      error_reporter()->Report(node->length()->position(), ErrorMessages::kNonIntegerArrayLength);
       return;
     }
 
     auto length = node->length()->As<ast::LitExpr>()->int32_val();
     if (length < 0) {
-      error_reporter()->Report(node->length()->position(),
-                               ErrorMessages::kNegativeArrayLength);
+      error_reporter()->Report(node->length()->position(), ErrorMessages::kNegativeArrayLength);
       return;
     }
 
@@ -54,8 +52,7 @@ void Sema::VisitFunctionTypeRepr(ast::FunctionTypeRepr *node) {
   }
 
   // Create type
-  ast::FunctionType *func_type =
-      ast::FunctionType::Get(std::move(param_types), ret);
+  ast::FunctionType *func_type = ast::FunctionType::Get(std::move(param_types), ret);
   node->set_type(func_type);
 }
 
