@@ -68,11 +68,11 @@ TEST_F(ParserTest, ExhaustiveForStmtTest) {
   struct Test {
     const std::string source;
     bool init_null, cond_null, next_null;
-    Test(std::string source, bool initNull, bool condNull, bool nextNull)
+    Test(std::string source, bool init_null, bool cond_null, bool next_null)
         : source(std::move(source)),
-          init_null(initNull),
-          cond_null(condNull),
-          next_null(nextNull) {}
+          init_null(init_null),
+          cond_null(cond_null),
+          next_null(next_null) {}
   };
 
   // All possible permutations of init, condition, and next statements in loops

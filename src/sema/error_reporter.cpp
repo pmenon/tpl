@@ -12,7 +12,7 @@ namespace tpl::sema {
 namespace {
 #define F(id, str, arg_types) str,
 // NOLINTNEXTLINE(bugprone-suspicious-missing-comma)
-constexpr const char *error_strings[] = {MESSAGE_LIST(F)};
+constexpr const char *kErrorStrings[] = {MESSAGE_LIST(F)};
 #undef F
 
 }  // namespace
@@ -57,7 +57,7 @@ std::string ErrorReporter::MessageWithArgs::FormatMessage() const {
   msg.append("Line: ").append(std::to_string(position().line)).append(", ");
   msg.append("Col: ").append(std::to_string(position().column)).append(" => ");
 
-  const char *fmt = error_strings[msg_idx];
+  const char *fmt = kErrorStrings[msg_idx];
   if (args_.empty()) {
     msg.append(fmt);
     return msg;

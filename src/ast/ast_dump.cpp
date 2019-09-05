@@ -31,13 +31,13 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
   class WithColor {
    public:
     WithColor(AstDumperImpl *impl, llvm::raw_ostream::Colors color)
-        : impl(impl) {
-      impl->out_.changeColor(color);
+        : impl_(impl) {
+      impl_->out_.changeColor(color);
     }
-    ~WithColor() { impl->out_.resetColor(); }
+    ~WithColor() { impl_->out_.resetColor(); }
 
    private:
-    AstDumperImpl *impl;
+    AstDumperImpl *impl_;
   };
 
   void DumpKind(AstNode *node) {

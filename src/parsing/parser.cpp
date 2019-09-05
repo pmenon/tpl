@@ -230,34 +230,34 @@ class Parser::ForHeader {
     return ForHeader(nullptr, nullptr, nullptr, target, iter);
   }
 
-  bool IsForIn() const { return target != nullptr && iter != nullptr; }
+  bool IsForIn() const { return target_ != nullptr && iter_ != nullptr; }
 
   bool IsStandard() const { return !IsForIn(); }
 
   std::tuple<ast::Stmt *, ast::Expr *, ast::Stmt *> GetForElements() const {
     TPL_ASSERT(IsStandard(), "Loop isn't a standard for-loop");
-    return {init, cond, next};
+    return {init_, cond_, next_};
   }
 
   std::tuple<ast::Expr *, ast::Expr *> GetForInElements() const {
     TPL_ASSERT(IsForIn(), "Loop isn't a for-in");
-    return {target, iter};
+    return {target_, iter_};
   }
 
  private:
   ForHeader(ast::Stmt *init, ast::Expr *cond, ast::Stmt *next,
             ast::Expr *target, ast::Expr *iter)
-      : init(init), cond(cond), next(next), target(target), iter(iter) {}
+      : init_(init), cond_(cond), next_(next), target_(target), iter_(iter) {}
 
   ForHeader() : ForHeader(nullptr, nullptr, nullptr, nullptr, nullptr) {}
 
  private:
-  ast::Stmt *init;
-  ast::Expr *cond;
-  ast::Stmt *next;
+  ast::Stmt *init_;
+  ast::Expr *cond_;
+  ast::Stmt *next_;
 
-  ast::Expr *target;
-  ast::Expr *iter;
+  ast::Expr *target_;
+  ast::Expr *iter_;
 };
 
 Parser::ForHeader Parser::ParseForHeader() {

@@ -58,7 +58,7 @@ u32 VectorUtil::IntersectSelected(const sel_t *sel_vector,
   for (u32 i = 0; i < sel_vector_len; i++) {
     const auto index = sel_vector[i];
     out_sel_vector[k] = index;
-    k += bv.Test(index);
+    k += static_cast<u32>(bv.Test(index));
   }
   return k;
 }
@@ -203,7 +203,7 @@ void VectorUtil::BitVectorToByteVector(const u64 *bit_vector,
   if (auto tail_size = num_bits % 64; tail_size != 0) {
     u64 word = bit_vector[num_bits / 64];
     for (u32 i = 0; i < tail_size; i++, k++) {
-      byte_vector[k] = -((word & 0x1ull) == 1);
+      byte_vector[k] = -static_cast<u8>((word & 0x1ull) == 1);
       word >>= 1u;
     }
   }
