@@ -10,9 +10,9 @@ namespace tpl::sql {
  * @tparam ResultType The native CPP type of the values in the result vector.
  * @tparam Op The unary operation to perform on each element in the input.
  * @param input The input vector to read values from.
- * @param[out] result The output vector where the results of the unary operation
- *                    are written into. The result vector will have the same
- *                    selection vector and count as the input vector.
+ * @param[out] result The output vector where the results of the unary operation are written into.
+ *                    The result vector will have the same selection vector and count as the input
+ *                    vector.
  */
 template <typename InputType, typename ResultType, typename Op>
 static inline void UnaryOperation_HandleNull(const Vector &input, Vector *result) {
@@ -34,16 +34,15 @@ static inline void UnaryOperation_HandleNull(const Vector &input, Vector *result
 }
 
 /**
- * Helper function to execute a unary function on all active elements in an
- * input vector and store the results into an output vector. The function is
- * evaluated on all active elements, including NULL elements.
+ * Helper function to execute a unary function on all active elements in an input vector and store
+ * the results into an output vector. The function is evaluated on all active elements, including
+ * NULL elements.
  * @tparam InputType The native CPP type of the values in the input vector.
  * @tparam ResultType The native CPP type of the values in the result vector.
  * @tparam Op The unary operation to perform on each element in the input.
  * @param input The input vector to read values from.
- * @param result The output vector where the results of the unary operation
- *               are written into. The result vector will have the same
- *               selection vector and count as the input vector.
+ * @param result The output vector where the results of the unary operation are written into. The
+ *               result vector will have the same selection vector and count as the input vector.
  */
 template <typename InputType, typename ResultType, typename Op>
 static inline void UnaryOperation(const Vector &input, Vector *result) {

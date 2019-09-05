@@ -15,17 +15,15 @@
 namespace tpl::sql {
 
 /**
- * A vector represents a contiguous chunk of values of a single type. A vector
- * may (1) own its data, or (2) reference data owned by another entity, e.g.,
- * base table column data, data within another (intermediate) vector, or a
- * constant value.
+ * A vector represents a contiguous chunk of values of a single type. A vector may (1) own its data,
+ * or (2) reference data owned by another entity, e.g., base table column data, data within another
+ * (intermediate) vector, or a constant value.
  *
- * A vector also has an optional selection vector containing the indexes of the
- * valid elements in the vector. When a selection vector is available, it must
- * be used to access the vector's data since the vector may hold invalid data in
- * unselected positions (e.g., null pointers). This functionality is provided
- * for you through @em VectorOps::Exec(), but can be done manually as the below
- * example illustrates:
+ * A vector also has an optional selection vector containing the indexes of the valid elements in
+ * the vector. When a selection vector is available, it must be used to access the vector's data
+ * since the vector may hold invalid data in unselected positions (e.g., null pointers). This
+ * functionality is provided for you through @em VectorOps::Exec(), but can be done manually as the
+ * below example illustrates:
  *
  * @code
  * u64 x = 0;
@@ -34,16 +32,16 @@ namespace tpl::sql {
  * }
  * @endcode
  *
- * The selection vector is used primarily to activate and deactivate elements in
- * the vector without copying or moving data.
+ * The selection vector is used primarily to activate and deactivate elements in the vector without
+ * copying or moving data.
  *
- * Vectors have a maximum capacity determined by the global constant
- * @em kDefaultVectorSize usually set to 2048 elements.
+ * Vectors have a maximum capacity determined by the global constant @em kDefaultVectorSize usually
+ * set to 2048 elements.
  *
- * CAUTION: While there are methods to get/set individual vector elements, this
- * should be used very very sparingly. If you find yourself invoking this is in
- * a hot-loop, or very often, reconsider your interaction pattern with Vector,
- * and think about writing a new vector primitive to achieve your objective.
+ * CAUTION: While there are methods to get/set individual vector elements, this should be used
+ * sparingly. If you find yourself invoking this is in a hot-loop, or very often, reconsider your
+ * interaction pattern with Vector, and think about writing a new vector primitive to achieve your
+ * objective.
  *
  * Inspired by VectorWise.
  */
