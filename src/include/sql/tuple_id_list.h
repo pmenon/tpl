@@ -41,7 +41,9 @@ namespace tpl::sql {
  */
 class TupleIdList {
  public:
-  using BitVectorT = util::InlinedBitVector<kDefaultVectorSize>;
+  using BitVectorT = util::BitVector;
+
+  explicit TupleIdList(u32 size = kDefaultVectorSize) : bit_vector_(size) {}
 
   /**
    * Is the tuple with the given ID in this list?
@@ -49,6 +51,12 @@ class TupleIdList {
    * @return True if the tuple is in the list; false otherwise.
    */
   bool Contains(const u32 tid) const { return bit_vector_.Test(tid); }
+
+  /**
+   * Is the list empty?
+   * @return True if empty; false otherwise.
+   */
+  bool IsEmpty() const { return bit_vector_.None(); }
 
   /**
    * Set a given tuple as active in the list.
@@ -63,8 +71,6 @@ class TupleIdList {
    * @param end_tid The right inclusive range boundary.
    */
   void AddRange(const u32 start_tid, const u32 end_tid) {
-    TPL_ASSERT(start_tid <= end_tid, "Cannot set backward range");
-    TPL_ASSERT(end_tid <= kDefaultVectorSize, "Start TID out of range");
     bit_vector_.SetRange(start_tid, end_tid);
   }
 
@@ -206,14 +212,16 @@ class TupleIdList {
   void Clear() { bit_vector_.UnsetAll(); }
 
   /**
-   * Is the list empty?
+   * Return the number of active tuples in the list.
+   * @return The number of active tuples in the list.
    */
-  bool IsEmpty() const { return bit_vector_.None(); }
+  u32 GetTupleCount() const { return bit_vector_.CountOnes(); }
 
   /**
-   * Return the number of active tuples in the list.
+   * Return the capacity of the list.
+   * @return The capacity of the TID list.
    */
-  u32 GetNumTuples() const { return bit_vector_.CountOnes(); }
+  u32 GetListCapacity() const { return bit_vector_.num_bits(); }
 
   /**
    * Return the selectivity of the list as a fraction in the range [0.0, 1.0].
@@ -221,9 +229,7 @@ class TupleIdList {
    *         are considered "active".
    */
   f32 ComputeSelectivity() const {
-    const u32 num_tuples = GetNumTuples();
-    const u32 capacity = bit_vector_.num_bits();
-    return static_cast<f32>(num_tuples) / capacity;
+    return static_cast<f32>(GetTupleCount()) / GetListCapacity();
   }
 
   /**
@@ -252,6 +258,11 @@ class TupleIdList {
    * Print a string representation of this vector to the output stream.
    */
   void Dump(std::ostream &stream) const;
+
+  /**
+   * Access the internal bit vector.
+   */
+  const BitVectorT *GetMutableBits() { return &bit_vector_; }
 
  private:
   // The validity bit vector
