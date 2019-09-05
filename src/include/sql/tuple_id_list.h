@@ -251,7 +251,7 @@ class TupleIdList {
   /**
    * Access the internal bit vector.
    */
-  const BitVectorT *GetMutableBits() { return &bit_vector_; }
+  BitVectorT *GetMutableBits() { return &bit_vector_; }
 
  private:
   // The validity bit vector
