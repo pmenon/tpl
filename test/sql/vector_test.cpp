@@ -127,7 +127,7 @@ TEST_F(VectorTest, Reference) {
     vec2.Reference(&vec);
     EXPECT_TRUE(vec2.type_id() == TypeId::Integer);
     EXPECT_EQ(vec.count(), vec2.count());
-    for (u32 i = 0; i < vec.count(); i++) {
+    for (u64 i = 0; i < vec.count(); i++) {
       EXPECT_FALSE(vec2.IsNull(i));
       EXPECT_EQ(vec2.GetValue(i), vec2.GetValue(i));
     }
@@ -160,32 +160,45 @@ TEST_F(VectorTest, Move) {
 
   // The original vector was [0,9], the selection vector selects the even
   // elements [0,2,4,6,8]
-  for (u32 i = 0; i < target.count(); i++) {
+  for (u64 i = 0; i < target.count(); i++) {
     EXPECT_FALSE(vec.IsNull(i));
     EXPECT_EQ(GenericValue::CreateInteger(sel[i]), target.GetValue(i));
   }
 }
 
 TEST_F(VectorTest, Copy) {
-  // First try to reference a backing STL vector
-  std::vector<sel_t> sel = {0, 2, 4, 6, 8};
+  constexpr u32 num_elems = 10;
 
-  Vector vec(TypeId::Integer, 10, true);
-  for (u32 i = 0; i < 10; i++) {
-    vec.SetValue(i, GenericValue::CreateInteger(i));
-  }
-  vec.SetSelectionVector(sel.data(), sel.size());
+  for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer, TypeId::BigInt,
+                       TypeId::Float, TypeId::Double}) {
+    //
+    // vec = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    // visible vec = [0, 2, 4, 6, 8]
+    //
 
-  // Move the original vector to the target
-  Vector target(vec.type_id(), vec.count(), true);
-  vec.CopyTo(&target);
+    Vector vec(type_id, num_elems, true);
+    for (u32 i = 0; i < num_elems; i++) {
+      vec.SetValue(i, GenericValue::CreateTinyInt(i).CastTo(type_id));
+    }
 
-  // Expect same count, but no selection vector
-  EXPECT_EQ(sel.size(), target.count());
-  EXPECT_EQ(nullptr, target.selection_vector());
+    std::vector<sel_t> sel = {0, 2, 4, 6, 8};
+    vec.SetSelectionVector(sel.data(), sel.size());
 
-  for (u32 i = 0; i < target.count(); i++) {
-    EXPECT_EQ(vec.GetValue(i), target.GetValue(i));
+    //
+    // Copy the original vector to the target with a potentially different, but compatible type.
+    // Copying densifies the target vector!
+    //
+
+    Vector target(type_id, vec.count(), true);
+    vec.CopyTo(&target);
+
+    // Expect same count, but no selection vector
+    EXPECT_EQ(sel.size(), target.count());
+    EXPECT_EQ(nullptr, target.selection_vector());
+
+    for (u64 i = 0; i < target.count(); i++) {
+      EXPECT_EQ(vec.GetValue(i).CastTo(type_id), target.GetValue(i));
+    }
   }
 }
 
@@ -237,7 +250,7 @@ TEST_F(VectorTest, CopyStringVector) {
   Vector target(TypeId::Varchar, vec.count(), true);
   vec.CopyTo(&target);
 
-  for (u32 i = 0; i < target.count(); i++) {
+  for (u64 i = 0; i < target.count(); i++) {
     auto src_val_ptr = vec.GetValue(i);
     auto target_val_ptr = target.GetValue(i);
     EXPECT_EQ(vec.GetValue(i), target.GetValue(i));
@@ -262,7 +275,7 @@ TEST_F(VectorTest, Cast) {
     EXPECT_EQ(sel.size(), vec.count());
     EXPECT_NE(nullptr, vec.selection_vector());
 
-    for (u32 i = 0; i < vec.count(); i++) {
+    for (u64 i = 0; i < vec.count(); i++) {
       EXPECT_EQ(GenericValue::CreateBigInt(base_stdvec[sel[i]]), vec.GetValue(i));
     }
   }
@@ -280,7 +293,7 @@ TEST_F(VectorTest, Cast) {
     EXPECT_EQ(sel.size(), vec.count());
     EXPECT_NE(nullptr, vec.selection_vector());
 
-    for (u32 i = 0; i < vec.count(); i++) {
+    for (u64 i = 0; i < vec.count(); i++) {
       EXPECT_EQ(GenericValue::CreateSmallInt(base_stdvec[sel[i]]), vec.GetValue(i));
     }
   }
@@ -319,13 +332,50 @@ TEST_F(VectorTest, CastWithNulls) {
   EXPECT_EQ(10u, vec.count());
   EXPECT_EQ(nullptr, vec.selection_vector());
 
-  for (u32 i = 0; i < vec.count(); i++) {
+  for (u64 i = 0; i < vec.count(); i++) {
     if (i == 4 || i == 8) {
       EXPECT_TRUE(vec.IsNull(i));
     } else {
       EXPECT_EQ(GenericValue::CreateBigInt(i), vec.GetValue(i));
     }
   }
+}
+
+TEST_F(VectorTest, SafeDownCast) {
+#define CHECK_CAST(SRC_TYPE, DEST_TYPE)                               \
+  {                                                                   \
+    Vector vec(TypeId::SRC_TYPE, 10, true);                           \
+    for (u32 i = 0; i < 10; i++) {                                    \
+      vec.SetValue(i, GenericValue::Create##SRC_TYPE(i));             \
+    }                                                                 \
+    EXPECT_NO_THROW(vec.Cast(TypeId::DEST_TYPE));                     \
+    EXPECT_TRUE(vec.type_id() == TypeId::DEST_TYPE);                  \
+    EXPECT_EQ(10u, vec.count());                                      \
+    EXPECT_EQ(nullptr, vec.selection_vector());                       \
+    for (u64 i = 0; i < vec.count(); i++) {                           \
+      EXPECT_EQ(GenericValue::Create##DEST_TYPE(i), vec.GetValue(i)); \
+    }                                                                 \
+  }
+
+  CHECK_CAST(Double, TinyInt);
+  CHECK_CAST(Float, TinyInt);
+  CHECK_CAST(BigInt, TinyInt);
+  CHECK_CAST(Integer, TinyInt);
+  CHECK_CAST(SmallInt, TinyInt);
+
+  CHECK_CAST(Double, SmallInt);
+  CHECK_CAST(Float, SmallInt);
+  CHECK_CAST(BigInt, SmallInt);
+  CHECK_CAST(Integer, SmallInt);
+
+  CHECK_CAST(Double, Integer);
+  CHECK_CAST(Float, Integer);
+  CHECK_CAST(BigInt, Integer);
+
+  CHECK_CAST(Double, BigInt);
+  CHECK_CAST(Float, BigInt);
+
+  CHECK_CAST(Double, Float);
 }
 
 TEST_F(VectorTest, Append) {

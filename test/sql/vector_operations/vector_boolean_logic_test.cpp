@@ -14,9 +14,11 @@ TEST_F(VectorBooleanLogicTest, BooleanLogic) {
   // a = [false, false, true, true]
   // b = [false, true, false, true]
   // c = false
+  // d = NULL(boolean)
   auto a = MakeBooleanVector({false, false, true, true}, {false, false, false, false});
   auto b = MakeBooleanVector({false, true, false, true}, {false, false, false, false});
   auto c = ConstantVector(GenericValue::CreateBoolean(false));
+  auto d = ConstantVector(GenericValue::CreateNull(c.type_id()));
   auto result = MakeBooleanVector();
 
   // a && b = [false, false, false, true]
@@ -83,6 +85,26 @@ TEST_F(VectorBooleanLogicTest, BooleanLogic) {
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(1));
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(2));
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(3));
+
+  // d && a = [false, false, NULL, NULL]
+  VectorOps::And(d, *a, result.get());
+  EXPECT_EQ(4u, result->count());
+  EXPECT_EQ(nullptr, result->selection_vector());
+  EXPECT_TRUE(result->null_mask().Any());
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(1));
+  EXPECT_EQ(d.GetValue(0), result->GetValue(2));
+  EXPECT_EQ(d.GetValue(0), result->GetValue(3));
+
+  // d || b = [NULL, true, NULL, true]
+  VectorOps::Or(d, *b, result.get());
+  EXPECT_EQ(4u, result->count());
+  EXPECT_EQ(nullptr, result->selection_vector());
+  EXPECT_TRUE(result->null_mask().Any());
+  EXPECT_EQ(d.GetValue(0), result->GetValue(0));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(1));
+  EXPECT_EQ(d.GetValue(0), result->GetValue(2));
+  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(3));
 }
 
 TEST_F(VectorBooleanLogicTest, FilteredBooleanLogic) {
