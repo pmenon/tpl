@@ -10,17 +10,17 @@ template <typename SrcT, typename DestT, typename Op>
 void CastFromSrcTypeToDestType(const Vector &source, Vector *target) {
   auto src_data = reinterpret_cast<SrcT *>(source.data());
   auto target_data = reinterpret_cast<DestT *>(target->data());
-  if (!source.null_mask().any()) {
-    // Fast path: no nulls in source vector, direct cast
-    VectorOps::Exec(source, [&](u64 i, u64 k) {
-      target_data[i] = Op::template Apply<SrcT, DestT>(src_data[i]);
-    });
-  } else {
+  if (source.null_mask().Any()) {
     // Slow-path need to check NULLs
     VectorOps::Exec(source, [&](u64 i, u64 k) {
       if (!source.null_mask()[i]) {
         target_data[i] = Op::template Apply<SrcT, DestT>(src_data[i]);
       }
+    });
+  } else {
+    // Fast path: no nulls in source vector, direct cast
+    VectorOps::Exec(source, [&](u64 i, u64 k) {
+      target_data[i] = Op::template Apply<SrcT, DestT>(src_data[i]);
     });
   }
 }

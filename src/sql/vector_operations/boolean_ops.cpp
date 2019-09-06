@@ -21,12 +21,12 @@ void BooleanLogicOperation(const Vector &left, const Vector &right, Vector *resu
   Vector::NullMask result_mask;
 
   if (left.IsConstant()) {
-    if (right_null_mask.any()) {
+    if (right_null_mask.Any()) {
       // Slow-path: need to check NULLs
       VectorOps::Exec(right, [&](u64 i, u64 k) {
         result_data[i] = Op::Apply(left_data[0], right_data[i]);
-        result_mask[i] =
-            OpNull::Apply(left_data[0], right_data[i], left_null_mask[0], right_null_mask[i]);
+        result_mask.SetTo(
+            i, OpNull::Apply(left_data[0], right_data[i], left_null_mask[0], right_null_mask[i]));
       });
     } else {
       // Fast-path: no NULL checks
@@ -39,7 +39,8 @@ void BooleanLogicOperation(const Vector &left, const Vector &right, Vector *resu
   } else {
     TPL_ASSERT(left.selection_vector() == right.selection_vector(), "Mismatched selection vectors");
     TPL_ASSERT(left.count() == right.count(), "Mismatched counts");
-    if (!left_null_mask.any() && !right_null_mask.any()) {
+
+    if (!left_null_mask.Any() && !right_null_mask.Any()) {
       // Fast-path: no NULL checks
       VectorOps::Exec(
           left, [&](u64 i, u64 k) { result_data[i] = Op::Apply(left_data[i], right_data[i]); });
@@ -47,8 +48,8 @@ void BooleanLogicOperation(const Vector &left, const Vector &right, Vector *resu
       // Slow-path: need to check NULLs
       VectorOps::Exec(left, [&](u64 i, u64 k) {
         result_data[i] = Op::Apply(left_data[i], right_data[i]);
-        result_mask[i] =
-            OpNull::Apply(left_data[i], right_data[i], left_null_mask[i], right_null_mask[i]);
+        result_mask.SetTo(
+            i, OpNull::Apply(left_data[i], right_data[i], left_null_mask[i], right_null_mask[i]));
       });
     }
   }

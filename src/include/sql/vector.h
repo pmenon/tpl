@@ -8,6 +8,7 @@
 
 #include "sql/generic_value.h"
 #include "sql/sql.h"
+#include "util/bit_vector.h"
 #include "util/common.h"
 #include "util/macros.h"
 #include "util/region.h"
@@ -50,7 +51,7 @@ class Vector {
   friend class VectorProjectionIterator;
 
  public:
-  using NullMask = std::bitset<kDefaultVectorSize>;
+  using NullMask = util::InlinedBitVector<kDefaultVectorSize>;
 
   /**
    * Create an empty vector.
@@ -119,7 +120,7 @@ class Vector {
   /**
    * Set the mask.
    */
-  void set_null_mask(const NullMask &other) { null_mask_ = other; }
+  void set_null_mask(NullMask other) { null_mask_ = other; }
 
   /**
    * Set the selection vector.
@@ -128,6 +129,11 @@ class Vector {
     sel_vector_ = sel_vector;
     count_ = count;
   }
+
+  /**
+   * Reset NULL bitmask.
+   */
+  void ResetNulls() { null_mask_.UnsetAll(); }
 
   /**
    * Is this vector holding a single constant value?
@@ -146,14 +152,14 @@ class Vector {
    * Is the value at position @em index NULL?
    */
   bool IsNull(const u64 index) const {
-    return null_mask_[sel_vector_ != nullptr ? sel_vector_[index] : index];
+    return null_mask_.Test(sel_vector_ != nullptr ? sel_vector_[index] : index);
   }
 
   /**
    * Set the value at position @em index to @em null.
    */
   void SetNull(const u64 index, const bool null) {
-    null_mask_[sel_vector_ != nullptr ? sel_vector_[index] : index] = null;
+    null_mask_.SetTo(sel_vector_ != nullptr ? sel_vector_[index] : index, null);
   }
 
   /**

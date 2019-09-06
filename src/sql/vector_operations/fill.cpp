@@ -18,11 +18,11 @@ void VectorOps::Fill(Vector *vector, const GenericValue &value) {
   }
 
   if (value.is_null()) {
-    vector->null_mask_.set();
+    vector->null_mask_.SetAll();
     return;
   }
 
-  vector->null_mask_.reset();
+  vector->ResetNulls();
 
   switch (vector->type_) {
     case TypeId::Boolean: {
@@ -70,6 +70,6 @@ void VectorOps::Fill(Vector *vector, const GenericValue &value) {
   }
 }
 
-void VectorOps::FillNull(Vector *vector) { vector->null_mask_.set(); }
+void VectorOps::FillNull(Vector *vector) { vector->null_mask_.SetAll(); }
 
 }  // namespace tpl::sql

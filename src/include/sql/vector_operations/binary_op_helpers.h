@@ -6,16 +6,16 @@ template <typename LeftType, typename RightType, typename ResultType, typename O
           bool IgnoreNull = false>
 static inline void BinaryOperation_Constant_Vector(const Vector &left, const Vector &right,
                                                    Vector *result) {
-  auto *RESTRICT left_data = reinterpret_cast<LeftType *>(left.data());
-  auto *RESTRICT right_data = reinterpret_cast<RightType *>(right.data());
-  auto *RESTRICT result_data = reinterpret_cast<ResultType *>(result->data());
+  auto *left_data = reinterpret_cast<LeftType *>(left.data());
+  auto *right_data = reinterpret_cast<RightType *>(right.data());
+  auto *result_data = reinterpret_cast<ResultType *>(result->data());
 
   if (left.IsNull(0)) {
     VectorOps::FillNull(result);
   } else {
     const auto &right_mask = right.null_mask();
     result->set_null_mask(right_mask);
-    if (IgnoreNull && right_mask.any()) {
+    if (IgnoreNull && right_mask.Any()) {
       // Slow-path: need to check NULLs
       VectorOps::Exec(right.selection_vector(), right.count(), [&](u64 i, u64 k) {
         if (!right_mask[i]) {
@@ -37,16 +37,16 @@ template <typename LeftType, typename RightType, typename ResultType, typename O
           bool IgnoreNull = false>
 static inline void BinaryOperation_Vector_Constant(const Vector &left, const Vector &right,
                                                    Vector *result) {
-  auto *RESTRICT left_data = reinterpret_cast<LeftType *>(left.data());
-  auto *RESTRICT right_data = reinterpret_cast<RightType *>(right.data());
-  auto *RESTRICT result_data = reinterpret_cast<ResultType *>(result->data());
+  auto *left_data = reinterpret_cast<LeftType *>(left.data());
+  auto *right_data = reinterpret_cast<RightType *>(right.data());
+  auto *result_data = reinterpret_cast<ResultType *>(result->data());
 
   if (right.IsNull(0)) {
     VectorOps::FillNull(result);
   } else {
     const auto &left_mask = left.null_mask();
     result->set_null_mask(left_mask);
-    if (IgnoreNull && left_mask.any()) {
+    if (IgnoreNull && left_mask.Any()) {
       // Slow-path: need to check NULLs
       VectorOps::Exec(left.selection_vector(), left.count(), [&](u64 i, u64 k) {
         if (!left_mask[i]) {
@@ -71,16 +71,16 @@ void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right, Vect
              "Mismatched selection vectors for comparison");
   TPL_ASSERT(left.count() == right.count(), "Mismatched vector counts for comparison");
 
-  auto *RESTRICT left_data = reinterpret_cast<LeftType *>(left.data());
-  auto *RESTRICT right_data = reinterpret_cast<RightType *>(right.data());
-  auto *RESTRICT result_data = reinterpret_cast<ResultType *>(result->data());
+  auto *left_data = reinterpret_cast<LeftType *>(left.data());
+  auto *right_data = reinterpret_cast<RightType *>(right.data());
+  auto *result_data = reinterpret_cast<ResultType *>(result->data());
 
-  result->set_null_mask(left.null_mask() | right.null_mask());
+  const Vector::NullMask result_mask = left.null_mask() | right.null_mask();
 
-  if (IgnoreNull && result->null_mask().any()) {
+  if (IgnoreNull && result_mask.Any()) {
     // Slow-path: need to check NULLs
     VectorOps::Exec(left.selection_vector(), left.count(), [&](u64 i, u64 k) {
-      if (!result->null_mask()[i]) {
+      if (!result_mask[i]) {
         result_data[i] = Op::Apply(left_data[i], right_data[i]);
       }
     });
@@ -90,6 +90,7 @@ void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right, Vect
                     [&](u64 i, u64 k) { result_data[i] = Op::Apply(left_data[i], right_data[i]); });
   }
 
+  result->set_null_mask(result_mask);
   result->SetSelectionVector(left.selection_vector(), left.count());
 }
 
@@ -98,8 +99,8 @@ void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right, Vect
  * output vector. The operations are performed only on the active elements in the input vectors. It
  * is assumed that the input vectors have the same size and selection vectors (if any).
  *
- * After the function returns, the result vector will have the same selection
- * vector and count as the inputs.
+ * After the function returns, the result vector will have the same selection vector and count as
+ * the inputs.
  *
  * @tparam LeftType The native CPP type of the elements in the first input vector.
  * @tparam RightType The native CPP type of the elements in the second input vector.

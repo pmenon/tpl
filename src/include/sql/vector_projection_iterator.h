@@ -222,7 +222,7 @@ inline void VectorProjectionIterator::SetValue(const u32 col_idx, const T val, c
   //
 
   if constexpr (Nullable) {
-    col_vector->null_mask_[curr_idx_] = null;
+    col_vector->null_mask_.SetTo(curr_idx_, null);
     if (!null) {
       reinterpret_cast<T *>(col_vector->data_)[curr_idx_] = val;
     }

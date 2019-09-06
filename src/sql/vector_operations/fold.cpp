@@ -11,7 +11,7 @@ bool VectorOps::AllTrue(const Vector &input) {
   }
 
   bool result = true;
-  if (input.null_mask().any()) {
+  if (input.null_mask().Any()) {
     // Slow-path: Input has NULLs we need to check
     ExecTyped<bool>(
         input, [&](bool val, u64 i, u64 k) { result = result && (!input.null_mask_[i] && val); });
@@ -29,7 +29,7 @@ bool VectorOps::AnyTrue(const Vector &input) {
   }
 
   bool result = false;
-  if (input.null_mask().any()) {
+  if (input.null_mask().Any()) {
     // Slow-path: Input has NULLs we need to check
     ExecTyped<bool>(
         input, [&](bool val, u64 i, u64 k) { result = result || (!input.null_mask_[i] && val); });

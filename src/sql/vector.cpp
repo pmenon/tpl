@@ -37,8 +37,7 @@ void Vector::Strings::Destroy() { region_.FreeAll(); }
 // Vector
 // ---------------------------------------------------------
 
-Vector::Vector(TypeId type)
-    : type_(type), count_(0), data_(nullptr), sel_vector_(nullptr), null_mask_(0) {}
+Vector::Vector(TypeId type) : type_(type), count_(0), data_(nullptr), sel_vector_(nullptr) {}
 
 Vector::Vector(TypeId type, u64 count, bool clear)
     : type_(type), count_(count), data_(nullptr), sel_vector_(nullptr) {
@@ -47,7 +46,7 @@ Vector::Vector(TypeId type, u64 count, bool clear)
 }
 
 Vector::Vector(TypeId type, byte *data, u64 count)
-    : type_(type), count_(count), data_(data), sel_vector_(nullptr), null_mask_(0) {
+    : type_(type), count_(count), data_(data), sel_vector_(nullptr) {
   TPL_ASSERT(data != nullptr, "Cannot create vector from NULL data pointer");
 }
 
@@ -71,7 +70,7 @@ void Vector::Destroy() {
   data_ = nullptr;
   count_ = 0;
   sel_vector_ = nullptr;
-  null_mask_.reset();
+  null_mask_.UnsetAll();
 }
 
 GenericValue Vector::GetValue(const u64 index) const {
@@ -192,7 +191,7 @@ void Vector::Reference(GenericValue *value) {
   count_ = 1;
 
   if (value->is_null()) {
-    null_mask_[0] = true;
+    null_mask_.Set(0);
   }
 
   switch (value->type_id()) {
@@ -255,10 +254,11 @@ void Vector::Reference(TypeId type_id, byte *data, u32 *nullmask, u64 count) {
 
   // TODO(pmenon): Optimize me if this is a bottleneck
   if (nullmask == nullptr) {
-    null_mask_.reset();
+    null_mask_.UnsetAll();
   } else {
-    for (u32 i = 0; i < count; i++) {
-      null_mask_[i] = util::BitUtil::Test(nullmask, i);
+    for (u64 i = 0; i < count; i++) {
+      const bool is_null = util::BitUtil::Test(nullmask, i);
+      null_mask_.SetTo(i, is_null);
     }
   }
 }
@@ -292,7 +292,7 @@ void Vector::CopyTo(Vector *other, u64 offset) {
   TPL_ASSERT(other->sel_vector_ == nullptr,
              "Copying to a vector with a selection vector isn't supported");
 
-  other->null_mask_.reset();
+  other->null_mask_.UnsetAll();
 
   if (IsTypeFixedSize(type_)) {
     VectorOps::Copy(*this, other, offset);
@@ -304,7 +304,7 @@ void Vector::CopyTo(Vector *other, u64 offset) {
     VectorOps::Exec(*this,
                     [&](u64 i, u64 k) {
                       if (null_mask_[i]) {
-                        other->null_mask_[k - offset] = true;
+                        other->null_mask_.Set(k - offset);
                         target_data[k - offset] = nullptr;
                       } else {
                         target_data[k - offset] = other->strings_.AddString(src_data[i]);
@@ -336,7 +336,10 @@ void Vector::Append(Vector &other) {
   count_ += other.count_;
 
   // merge NULL mask
-  VectorOps::Exec(other, [&](u64 i, u64 k) { null_mask_[old_count + k] = other.null_mask_[i]; });
+  VectorOps::Exec(other, [&](u64 i, u64 k) {
+    const bool other_is_null = other.null_mask_.Test(i);
+    null_mask_.SetTo(old_count + k, other_is_null);
+  });
 
   if (IsTypeFixedSize(type_)) {
     VectorOps::Copy(other, data_ + old_count * GetTypeIdSize(type_));

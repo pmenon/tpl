@@ -104,6 +104,53 @@ TEST_F(VectorComparisonTest, CompareNumeric) {
   }
 }
 
+TEST_F(VectorComparisonTest, CompareNumericWithNulls) {
+  //
+  // vec1 = [0, NULL, 2, 3, NULL, 5]
+  // vec2 = [-2, 0, NULL, 3, NULL, 5]
+  //
+
+  auto vec1 = MakeBigIntVector({0, 1, 2, 3, 4, 5}, {false, true, false, false, true, false});
+  auto vec2 = MakeBigIntVector({-2, 0, 1, 3, 4, 5}, {false, false, true, false, true, false});
+
+  for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer, TypeId::BigInt,
+                       TypeId::Float, TypeId::Double}) {
+    vec1->Cast(type_id);
+    vec2->Cast(type_id);
+
+    ConstantVector null_int(GenericValue::CreateNull(vec1->type_id()));
+
+    auto result = MakeBooleanVector();
+
+    // vec1 == vec2 = [false, NULL, NULL, true, NULL, true]
+    {
+      VectorOps::Equal(*vec1, *vec2, result.get());
+      EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
+      EXPECT_EQ(GenericValue::CreateNull(result->type_id()), result->GetValue(1));
+      EXPECT_EQ(GenericValue::CreateNull(result->type_id()), result->GetValue(2));
+      EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(3));
+      EXPECT_EQ(GenericValue::CreateNull(result->type_id()), result->GetValue(4));
+      EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(5));
+    }
+
+    // vec1 == NULL
+    {
+      VectorOps::Equal(*vec1, null_int, result.get());
+      for (u32 i = 0; i < result->count(); i++) {
+        EXPECT_TRUE(result->IsNull(i));
+      }
+    }
+
+    // NULL == vec2
+    {
+      VectorOps::Equal(null_int, *vec2, result.get());
+      for (u32 i = 0; i < result->count(); i++) {
+        EXPECT_TRUE(result->IsNull(i));
+      }
+    }
+  }
+}
+
 TEST_F(VectorComparisonTest, CompareStrings) {
   //
   // String comparisons. We have two input vectors:

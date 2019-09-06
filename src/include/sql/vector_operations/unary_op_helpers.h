@@ -5,10 +5,13 @@
 namespace tpl::sql {
 
 /**
- * Helper function for unary operations that want to handle NULLs specifically.
+ * Helper function for unary operations that want to handle NULLs specifically. The primary
+ * difference between this function and @em UnaryOperation() below is that the templated @em Op
+ * functor also accepts the boolean NULL indicator flag for each input element.
  * @tparam InputType The native CPP type of the values in the input vector.
  * @tparam ResultType The native CPP type of the values in the result vector.
- * @tparam Op The unary operation to perform on each element in the input.
+ * @tparam Op The unary operation to perform on each element in the input. Receives both the input
+ *            value and boolean NULL indicator flag.
  * @param input The input vector to read values from.
  * @param[out] result The output vector where the results of the unary operation are written into.
  *                    The result vector will have the same selection vector and count as the input
@@ -19,15 +22,14 @@ static inline void UnaryOperation_HandleNull(const Vector &input, Vector *result
   auto *input_data = reinterpret_cast<InputType *>(input.data());
   auto *result_data = reinterpret_cast<ResultType *>(result->data());
 
-  auto null_mask = input.null_mask();
-  result->set_null_mask(null_mask.reset());
+  result->ResetNulls();
 
-  if (!input.null_mask().any()) {
-    VectorOps::Exec(input, [&](u64 i, u64 k) { result_data[i] = Op::Apply(input_data[i], false); });
-  } else {
+  if (input.null_mask().Any()) {
     VectorOps::Exec(input, [&](u64 i, u64 k) {
       result_data[i] = Op::Apply(input_data[i], input.null_mask()[i]);
     });
+  } else {
+    VectorOps::Exec(input, [&](u64 i, u64 k) { result_data[i] = Op::Apply(input_data[i], false); });
   }
 
   result->SetSelectionVector(input.selection_vector(), input.count());

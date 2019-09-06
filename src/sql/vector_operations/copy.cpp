@@ -68,7 +68,8 @@ void VectorOps::Copy(const Vector &source, void *target, u64 offset, u64 element
 void VectorOps::Copy(const Vector &source, Vector *target, u64 offset) {
   TPL_ASSERT(offset < source.count_, "Out-of-bounds offset");
   target->count_ = source.count_ - offset;
-  Exec(source, [&](u64 i, u64 k) { target->null_mask_[k - offset] = source.null_mask_[i]; },
+  Exec(source,
+       [&](u64 i, u64 k) { target->null_mask_.SetTo(k - offset, source.null_mask_.Test(i)); },
        offset);
   Copy(source, target->data_, offset, target->count_);
 }

@@ -23,7 +23,7 @@ TEST_F(VectorBooleanLogicTest, BooleanLogic) {
   VectorOps::And(*a, *b, result.get());
   EXPECT_EQ(4u, result->count());
   EXPECT_EQ(nullptr, result->selection_vector());
-  EXPECT_FALSE(result->null_mask().any());
+  EXPECT_FALSE(result->null_mask().Any());
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(1));
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(2));
@@ -33,7 +33,7 @@ TEST_F(VectorBooleanLogicTest, BooleanLogic) {
   VectorOps::Or(*a, *b, result.get());
   EXPECT_EQ(4u, result->count());
   EXPECT_EQ(nullptr, result->selection_vector());
-  EXPECT_FALSE(result->null_mask().any());
+  EXPECT_FALSE(result->null_mask().Any());
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
   EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(1));
   EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(2));
@@ -43,7 +43,7 @@ TEST_F(VectorBooleanLogicTest, BooleanLogic) {
   VectorOps::Not(*a, result.get());
   EXPECT_EQ(4u, result->count());
   EXPECT_EQ(nullptr, result->selection_vector());
-  EXPECT_FALSE(result->null_mask().any());
+  EXPECT_FALSE(result->null_mask().Any());
   EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(0));
   EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(1));
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(2));
@@ -58,7 +58,7 @@ TEST_F(VectorBooleanLogicTest, BooleanLogic) {
   VectorOps::And(*aa, *b, result.get());
   EXPECT_EQ(4u, result->count());
   EXPECT_EQ(nullptr, result->selection_vector());
-  EXPECT_TRUE(result->null_mask().any());
+  EXPECT_TRUE(result->null_mask().Any());
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
   EXPECT_EQ(GenericValue::CreateNull(TypeId::Boolean), result->GetValue(1));
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(2));
@@ -68,7 +68,7 @@ TEST_F(VectorBooleanLogicTest, BooleanLogic) {
   VectorOps::And(*a, c, result.get());
   EXPECT_EQ(4u, result->count());
   EXPECT_EQ(nullptr, result->selection_vector());
-  EXPECT_FALSE(result->null_mask().any());
+  EXPECT_FALSE(result->null_mask().Any());
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(1));
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(2));
@@ -78,7 +78,7 @@ TEST_F(VectorBooleanLogicTest, BooleanLogic) {
   VectorOps::And(c, *a, result.get());
   EXPECT_EQ(4u, result->count());
   EXPECT_EQ(nullptr, result->selection_vector());
-  EXPECT_FALSE(result->null_mask().any());
+  EXPECT_FALSE(result->null_mask().Any());
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(1));
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(2));
@@ -100,7 +100,7 @@ TEST_F(VectorBooleanLogicTest, FilteredBooleanLogic) {
   VectorOps::And(*a, *b, result.get());
   EXPECT_EQ(3u, result->count());
   EXPECT_NE(nullptr, result->selection_vector());
-  EXPECT_TRUE(result->null_mask().any());
+  EXPECT_TRUE(result->null_mask().Any());
 
   // result[0] = NULL && false = false
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
@@ -131,22 +131,26 @@ TEST_F(VectorBooleanLogicTest, NullChecking) {
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(3));
 }
 
-TEST_F(VectorBooleanLogicTest, AnyOrAllTrue) {
+TEST_F(VectorBooleanLogicTest, AnyOrAll) {
+  // vec = [false, false, false, false]
   auto vec = MakeBooleanVector({false, false, false, false}, {false, false, false, false});
 
   EXPECT_FALSE(VectorOps::AnyTrue(*vec));
   EXPECT_FALSE(VectorOps::AllTrue(*vec));
 
+  // vec = [false, false, false, NULL]
   vec->SetValue(3, GenericValue::CreateNull(TypeId::Boolean));
 
   EXPECT_FALSE(VectorOps::AnyTrue(*vec));
   EXPECT_FALSE(VectorOps::AllTrue(*vec));
 
+  // vec = [false, false, false, true]
   vec->SetValue(3, GenericValue::CreateBoolean(true));
 
   EXPECT_TRUE(VectorOps::AnyTrue(*vec));
   EXPECT_FALSE(VectorOps::AllTrue(*vec));
 
+  // vec = [true, true, true, true]
   vec = MakeBooleanVector({true, true, true, true}, {false, false, false, false});
 
   EXPECT_TRUE(VectorOps::AnyTrue(*vec));

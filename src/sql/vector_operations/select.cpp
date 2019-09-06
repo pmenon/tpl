@@ -15,7 +15,7 @@ u32 TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &r
   sel_t out_idx = 0;
 
   const auto &left_nulls = left.null_mask();
-  const auto left_has_nulls = left_nulls.any();
+  const auto left_has_nulls = left_nulls.Any();
   if (IgnoreNull && left_has_nulls) {
     // Slow-path: manually skip NULLs
     VectorOps::Exec(left, [&](u64 i, u64 k) {
@@ -53,8 +53,9 @@ u32 TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &rig
 
   sel_t out_idx = 0;
 
-  const auto result_mask = left.null_mask() | right.null_mask();
-  const auto has_nulls = result_mask.any();
+  const Vector::NullMask result_mask = left.null_mask() | right.null_mask();
+  const bool has_nulls = result_mask.Any();
+
   if (IgnoreNull && has_nulls) {
     // Slow-path: manually skip NULLs
     VectorOps::Exec(left, [&](u64 i, u64 k) {

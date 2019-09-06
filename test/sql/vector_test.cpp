@@ -192,25 +192,35 @@ TEST_F(VectorTest, Copy) {
 TEST_F(VectorTest, CopyWithOffset) {
   std::vector<sel_t> sel = {0, 2, 4, 6, 8};
 
+  // vec = [0, 1, 2, 3, NULL, 5, 6, 7, NULL, 9]
+  // visible vec = [0, 2, NULL, 6, NULL]
+
   Vector vec(TypeId::Integer, 10, true);
   for (u32 i = 0; i < 10; i++) {
-    vec.SetValue(i, GenericValue::CreateInteger(i));
+    if (i == 4 || i == 8) {
+      vec.SetValue(i, GenericValue::CreateNull(vec.type_id()));
+    } else {
+      vec.SetValue(i, GenericValue::CreateInteger(i));
+    }
   }
   vec.SetSelectionVector(sel.data(), sel.size());
 
   const u32 offset = 2;
 
-  // Move the original vector to the target
+  EXPECT_EQ(3u, sel.size() - offset);
+
+  // Copy visible vector contents in range [2, 5)
+  // target = [NULL, 6, NULL]
+
   Vector target(vec.type_id(), vec.count(), true);
   vec.CopyTo(&target, offset);
 
-  // Expect same count, but no selection vector
-  EXPECT_EQ(sel.size() - offset, target.count());
+  EXPECT_EQ(3u, target.count());
   EXPECT_EQ(nullptr, target.selection_vector());
 
-  for (u32 i = 0; i < target.count(); i++) {
-    EXPECT_EQ(vec.GetValue(i + offset), target.GetValue(i));
-  }
+  EXPECT_EQ(GenericValue::CreateNull(target.type_id()), target.GetValue(0));
+  EXPECT_EQ(GenericValue::CreateInteger(6), target.GetValue(1));
+  EXPECT_EQ(GenericValue::CreateNull(target.type_id()), target.GetValue(2));
 }
 
 TEST_F(VectorTest, CopyStringVector) {
@@ -286,6 +296,35 @@ TEST_F(VectorTest, Cast) {
     vec.SetValue(1, GenericValue::CreateInteger(std::numeric_limits<i16>::max() + 44));
 
     EXPECT_THROW(vec.Cast(TypeId::SmallInt), std::runtime_error);
+  }
+}
+
+TEST_F(VectorTest, CastWithNulls) {
+  // vec(int) = [0, 1, 2, 3, NULL, 5, 6, 7, NULL, 9]
+
+  Vector vec(TypeId::Integer, 10, true);
+  for (u32 i = 0; i < 10; i++) {
+    if (i == 4 || i == 8) {
+      vec.SetValue(i, GenericValue::CreateNull(vec.type_id()));
+    } else {
+      vec.SetValue(i, GenericValue::CreateInteger(i));
+    }
+  }
+
+  // After casting vec(int) to vec(bigint), the NULL values are retained
+  // vec(bigint) = [0, 1, 2, 3, NULL, 5, 6, 7, NULL, 9]
+
+  EXPECT_NO_THROW(vec.Cast(TypeId::BigInt));
+  EXPECT_TRUE(vec.type_id() == TypeId::BigInt);
+  EXPECT_EQ(10u, vec.count());
+  EXPECT_EQ(nullptr, vec.selection_vector());
+
+  for (u32 i = 0; i < vec.count(); i++) {
+    if (i == 4 || i == 8) {
+      EXPECT_TRUE(vec.IsNull(i));
+    } else {
+      EXPECT_EQ(GenericValue::CreateBigInt(i), vec.GetValue(i));
+    }
   }
 }
 

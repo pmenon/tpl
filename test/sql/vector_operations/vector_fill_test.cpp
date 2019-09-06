@@ -31,7 +31,17 @@ TEST_F(VectorFillTest, SimpleNonNull) {
 #undef CHECK_SIMPLE_FILL
 }
 
-TEST_F(VectorFillTest, Null) {
+TEST_F(VectorFillTest, NullValue) {
+  // Fill with a NULL value, ensure the whole vector is filled with NULLs
+  auto vec = MakeIntegerVector(10);
+  VectorOps::Fill(vec.get(), GenericValue::CreateNull(vec->type_id()));
+
+  for (u64 i = 0; i < vec->count(); i++) {
+    EXPECT_TRUE(vec->IsNull(i));
+  }
+}
+
+TEST_F(VectorFillTest, ExplicitNull) {
   // Fill a vector with the given type with the given value of that type
 #define CHECK_SIMPLE_FILL(TYPE)              \
   {                                          \
