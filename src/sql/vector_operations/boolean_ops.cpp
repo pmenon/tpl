@@ -21,7 +21,7 @@ void BooleanLogicOperation(const Vector &left, const Vector &right, Vector *resu
   Vector::NullMask result_mask;
 
   if (left.IsConstant()) {
-    if (right_null_mask.Any()) {
+    if (left_null_mask.Any() || right_null_mask.Any()) {
       // Slow-path: need to check NULLs
       VectorOps::Exec(right, [&](u64 i, u64 k) {
         result_data[i] = Op::Apply(left_data[0], right_data[i]);
