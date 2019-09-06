@@ -13,9 +13,11 @@
 namespace tpl::util {
 
 /**
- * Base class for bit vectors. Uses CRTP to access bits and bit-vector size.
- * Subclasses must implement bits() and num_bits() to provide raw access to the
- * bit vector data and the number of bits, respectively.
+ * Base class for bit vector implementations. Uses the CRTP pattern to lift algorithmic
+ * implementation into single class while delegating actual memory layout and storage semantics to
+ * base classes. All implementation subclasses must implement num_bits() to return the size of the
+ * bit vector in bits, num_words() to return the number of 64-bit words that make up the bit vector,
+ * and data_array() to return the array of words constituting the bit vector.
  */
 template <typename Subclass>
 class BitVectorBase {
@@ -39,8 +41,8 @@ class BitVectorBase {
                 "Word size in bits expected to be a power of two");
 
   /**
-   * Return the number of words required to store at least @em num_bits number
-   * if bits in a bit vector. Note that this may potentially over allocate.
+   * Return the number of words required to store at least @em num_bits number if bits in a bit
+   * vector. Note that this may potentially over allocate.
    * @param num_bits The number of bits.
    * @return The number of words required to store the given number of bits.
    */
@@ -130,9 +132,8 @@ class BitVectorBase {
   }
 
   /**
-   * Set the value of the word at the given word index to the provided value.
-   * If the size of the bit vector is not a multiple of the word size, the tail
-   * bits are masked off.
+   * Set the value of the word at the given word index to the provided value. If the size of the bit
+   * vector is not a multiple of the word size, the tail bits are masked off.
    * @param word_position The index of the word to set.
    * @param word_val The value to set.
    */
@@ -179,8 +180,8 @@ class BitVectorBase {
   }
 
   /**
-   * Complement the value of the bit at the given index. If it is currently 1,
-   * it will be flipped to 0; if it is currently 0, its flipped to 1.
+   * Complement the value of the bit at the given index. If it is currently 1, it will be flipped
+   * to 0; if it is currently 0, its flipped to 1.
    * @param position The index of the bit to flip.
    */
   void Flip(const u32 position) {
@@ -284,8 +285,7 @@ class BitVectorBase {
   }
 
   /**
-   * Perform the bitwise intersection of this bit vector with the provided
-   * @em other bit vector, modifying this bit vector in-place.
+   * Perform the bitwise intersection of this bit vector with the provided @em other bit vector.
    * @tparam T The CRTP type of the other bit vector.
    * @param other The bit vector to intersect with. Lengths must match exactly.
    */
@@ -300,8 +300,7 @@ class BitVectorBase {
   }
 
   /**
-   * Perform the bitwise union of this bit vector with the provided @em other
-   * bit vector, modifying this bit vector in-place.
+   * Perform the bitwise union of this bit vector with the provided @em other bit vector.
    * @tparam T The CRTP type of the other bit vector.
    * @param other The bit vector to union with. Lengths must match exactly.
    */
@@ -316,8 +315,7 @@ class BitVectorBase {
   }
 
   /**
-   * Clear all bits in this bit vector whose corresponding bit is set in the
-   * provided bit vector.
+   * Clear all bits in this bit vector whose corresponding bit is set in the provided bit vector.
    * @tparam T The CRTP type of the other bit vector.
    * @param other The bit vector to diff with. Lengths must match exactly.
    */
@@ -332,10 +330,8 @@ class BitVectorBase {
   }
 
   /**
-   * Iterate all bits in this vector and invoke the callback with the index of
-   * set bits only.
-   * @tparam F The type of the callback function. Must accept a single unsigned
-   *           integer value.
+   * Iterate all bits in this vector and invoke the callback with the index of set bits only.
+   * @tparam F The type of the callback function. Must accept a single unsigned integer value.
    * @param callback The callback function to invoke with the index of set bits.
    */
   template <typename F>
@@ -358,10 +354,9 @@ class BitVectorBase {
   }
 
   /**
-   * Populate this bit vector from the values stored in the given bytes. The
-   * byte array is assumed to be a "saturated" match vector, i.e., true values
-   * are all 1's (255 = 11111111 = std::numeric_limits<u8>::max()), and false
-   * values are all 0.
+   * Populate this bit vector from the values stored in the given bytes. The byte array is assumed
+   * to be a "saturated" match vector, i.e., true values are all 1's
+   * (255 = 11111111 = std::numeric_limits<u8>::max()), and false values are all 0.
    * @param bytes The array of saturated bytes to read.
    * @param num_bytes The number of bytes in the input array.
    */
@@ -387,13 +382,41 @@ class BitVectorBase {
     return result;
   }
 
-  /**
-   * Access the boolean value of the bit a the given index using an array
-   * operator.
-   * @param position The index of the bit to read.
-   * @return True if the bit is set; false otherwise.
-   */
+  // -------------------------------------------------------
+  // Operator overloads -- should be fairly obvious ...
+  // -------------------------------------------------------
+
   bool operator[](const u32 position) const { return Test(position); }
+
+  Subclass &operator-=(const Subclass &other) {
+    Difference(other);
+    return *impl();
+  }
+
+  Subclass &operator&=(const Subclass &other) {
+    Intersect(other);
+    return *impl();
+  }
+
+  Subclass &operator|=(const Subclass &other) {
+    Union(other);
+    return *impl();
+  }
+
+  friend Subclass operator-(Subclass a, const Subclass &b) {
+    a -= b;
+    return a;
+  }
+
+  friend Subclass operator&(Subclass a, const Subclass &b) {
+    a &= b;
+    return a;
+  }
+
+  friend Subclass operator|(Subclass a, const Subclass &b) {
+    a |= b;
+    return a;
+  }
 
  private:
   // Access this instance as an instance of the templated subclass
