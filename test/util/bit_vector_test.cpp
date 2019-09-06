@@ -254,6 +254,23 @@ TEST(BitVectorTest, Flip) {
   EXPECT_TRUE(Verify(bv, {0, 1, 3, 5, 7, 8, 9}));
 }
 
+TEST(BitVectorTest, FlipAll) {
+  BitVector bv(257);
+
+  // Set even bits
+  for (u32 i = 0; i < bv.num_bits(); i++) {
+    if (i % 2 == 0) {
+      bv.Set(i);
+    }
+  }
+
+  // Alternate between even and odd set bits, checking each time
+  for (u32 i = 0; i < 1000; i++) {
+    EXPECT_TRUE(Verify(bv, [&](auto idx) { return i % 2 == idx % 2; }));
+    bv.FlipAll();
+  }
+}
+
 TEST(BitVectorTest, Any) {
   BitVector bv(100);
   EXPECT_FALSE(bv.Any());
@@ -378,6 +395,22 @@ TEST(BitVectorTest, Intersect) {
   BitVector bv2 = Make({0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0});
   bv1.Intersect(bv2);
   EXPECT_TRUE(Verify(bv1, {5, 7, 10}));
+}
+
+TEST(BitVectorTest, AssignmentIntersect) {
+  BitVector bv1(100), bv2(100);
+  bv1.SetRange(24, 80);
+  bv2.SetRange(10, 30);
+  bv1 &= bv2;
+  EXPECT_TRUE(Verify(bv1, {24, 25, 26, 27, 28, 29}));
+}
+
+TEST(BitVectorTest, NonMemberIntersect) {
+  BitVector bv1(100), bv2(100);
+  bv1.SetRange(60, 100);
+  bv2.SetRange(20, 70);
+  BitVector result = bv1 & bv2;
+  EXPECT_TRUE(Verify(result, {60, 61, 62, 63, 64, 65, 66, 67, 68, 69}));
 }
 
 TEST(BitVectorTest, Union) {

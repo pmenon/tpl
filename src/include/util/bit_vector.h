@@ -460,6 +460,34 @@ class BitVector : public BitVectorBase<BitVector> {
   }
 
   /**
+   * Create a copy of the provided bit vector.
+   * @param other The bit vector to copy.
+   */
+  BitVector(const BitVector &other) : num_bits_(other.num_bits_), num_words_(other.num_words_) {
+    owned_data_ = std::make_unique<u64[]>(num_words_);
+    data_array_ = owned_data_.get();
+    for (u32 i = 0; i < num_words_; i++) {
+      data_array_[i] = other.data_array_[i];
+    }
+  }
+
+  /**
+   * Copy the provided bit vector into this bit vector.
+   * @param other The bit vector to copy.
+   * @return This bit vector as a copy of the input vector.
+   */
+  BitVector &operator=(const BitVector &other) {
+    num_bits_ = other.num_bits_;
+    num_words_ = other.num_words_;
+    owned_data_ = std::make_unique<u64[]>(num_words_);
+    data_array_ = owned_data_.get();
+    for (u32 i = 0; i < num_words_; i++) {
+      data_array_[i] = other.data_array_[i];
+    }
+    return *this;
+  }
+
+  /**
    * Take a slice from this bit vector starting at bit position @em offset and
    * assuming @em size bits. The bit position must be a multiple of a word,
    * i.e., 64, 128, 256, etc.
