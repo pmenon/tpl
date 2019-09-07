@@ -354,7 +354,7 @@ class StringType : public Type {
  private:
   friend class Context;
   explicit StringType(Context *ctx)
-      : Type(ctx, sizeof(int8_t *), alignof(int8_t *), TypeId::StringType) {}
+      : Type(ctx, sizeof(char *), alignof(char *), TypeId::StringType) {}
 };
 
 /**
@@ -370,8 +370,7 @@ class PointerType : public Type {
 
  private:
   explicit PointerType(Type *base)
-      : Type(base->context(), sizeof(int8_t *), alignof(int8_t *), TypeId::PointerType),
-        base_(base) {}
+      : Type(base->context(), sizeof(void *), alignof(void *), TypeId::PointerType), base_(base) {}
 
  private:
   Type *base_;

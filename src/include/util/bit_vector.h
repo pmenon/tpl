@@ -472,6 +472,19 @@ class BitVector : public BitVectorBase<BitVector> {
   }
 
   /**
+   * Move constructor.
+   * @param other Move the given bit vector into this.
+   */
+  BitVector(BitVector &&other) = default;
+
+  /**
+   * Move assignment.
+   * @param other The bit vector we're moving.
+   * @return This vector.
+   */
+  BitVector &operator=(BitVector &&other) = default;
+
+  /**
    * Copy the provided bit vector into this bit vector.
    * @param other The bit vector to copy.
    * @return This bit vector as a copy of the input vector.
