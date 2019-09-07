@@ -1,5 +1,6 @@
 # Main libcount library
 add_library(count
+        STATIC
         ${CMAKE_CURRENT_SOURCE_DIR}/c.cc
         ${CMAKE_CURRENT_SOURCE_DIR}/empirical_data.cc
         ${CMAKE_CURRENT_SOURCE_DIR}/hll.cc
