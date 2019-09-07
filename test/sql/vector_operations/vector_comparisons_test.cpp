@@ -136,7 +136,7 @@ TEST_F(VectorComparisonTest, CompareNumericWithNulls) {
     // vec1 == NULL
     {
       VectorOps::Equal(*vec1, null_int, result.get());
-      for (u32 i = 0; i < result->count(); i++) {
+      for (uint32_t i = 0; i < result->count(); i++) {
         EXPECT_TRUE(result->IsNull(i));
       }
     }
@@ -144,7 +144,7 @@ TEST_F(VectorComparisonTest, CompareNumericWithNulls) {
     // NULL == vec2
     {
       VectorOps::Equal(null_int, *vec2, result.get());
-      for (u32 i = 0; i < result->count(); i++) {
+      for (uint32_t i = 0; i < result->count(); i++) {
         EXPECT_TRUE(result->IsNull(i));
       }
     }

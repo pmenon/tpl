@@ -34,7 +34,7 @@ TEST_F(ColumnIteratorTest, EmptyIteratorTest) {
     ColumnVectorIterator iter(col_info);
     iter.Reset(col);
 
-    u32 num_rows = 0;
+    uint32_t num_rows = 0;
     for (bool has_more = true; has_more; has_more = iter.Advance()) {
       num_rows += iter.NumTuples();
     }
@@ -47,7 +47,7 @@ TEST_F(ColumnIteratorTest, EmptyIteratorTest) {
 TEST_F(ColumnIteratorTest, IntegerIterationTest) {
   auto *table = sql::Catalog::Instance()->LookupTableById(TableId::Test1);
 
-  const u32 col_idx = 0;
+  const uint32_t col_idx = 0;
   const auto col_info = table->schema().GetColumnInfo(col_idx);
 
   //
@@ -64,11 +64,11 @@ TEST_F(ColumnIteratorTest, IntegerIterationTest) {
   ColumnVectorIterator iter(col_info);
   iter.Reset(col);
 
-  u32 num_rows = 0;
+  uint32_t num_rows = 0;
 
   for (bool has_more = true; has_more; has_more = iter.Advance()) {
-    auto *col_data = reinterpret_cast<i32 *>(iter.col_data());
-    for (u32 i = 1; i < iter.NumTuples(); i++) {
+    auto *col_data = reinterpret_cast<int32_t *>(iter.col_data());
+    for (uint32_t i = 1; i < iter.NumTuples(); i++) {
       EXPECT_LT(col_data[i - 1], col_data[i]);
       EXPECT_EQ(col_data[i - 1] + 1, col_data[i]);
     }

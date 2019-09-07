@@ -13,7 +13,7 @@ namespace {
 // Verify that the callback returns true for all set bit indexes
 template <typename BitVectorType, typename F>
 ::testing::AssertionResult Verify(BitVectorType &bv, F &&f) {
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.num_bits(); i++) {
     if (bv[i] && !f(i)) {
       return ::testing::AssertionFailure() << "bv[" << i << "]=true, but expected to be false";
     }
@@ -23,10 +23,10 @@ template <typename BitVectorType, typename F>
 
 // Verify that only specific bits are set
 template <typename BitVectorType>
-::testing::AssertionResult Verify(const BitVectorType &bv, std::initializer_list<u32> idxs) {
-  std::unordered_set<u32> positions(idxs);
+::testing::AssertionResult Verify(const BitVectorType &bv, std::initializer_list<uint32_t> idxs) {
+  std::unordered_set<uint32_t> positions(idxs);
 
-  u32 num_set = 0;
+  uint32_t num_set = 0;
   auto success = Verify(bv, [&](auto idx) {
     num_set++;
     return positions.count(idx) != 0;
@@ -46,7 +46,7 @@ template <typename BitVectorType>
 
 }  // namespace
 
-BitVector Make(std::initializer_list<u32> vals) {
+BitVector Make(std::initializer_list<uint32_t> vals) {
   BitVector bv(vals.size());
   std::for_each(vals.begin(), vals.end(), [&, i = 0](auto &bval) mutable { bv.SetTo(i++, bval); });
   return bv;
@@ -69,7 +69,7 @@ TEST(BitVectorTest, Init) {
   EXPECT_EQ(2u, bv.num_words());
   EXPECT_EQ(100u, bv.num_bits());
 
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.num_bits(); i++) {
     EXPECT_FALSE(bv[i]);
   }
 }
@@ -97,7 +97,7 @@ TEST(BitVectorTest, SetAll) {
   EXPECT_TRUE(Verify(bv, {2, 299}));
 
   bv.SetAll();
-  EXPECT_TRUE(Verify(bv, [n = u32{0}](auto idx) mutable { return idx == n++; }));
+  EXPECT_TRUE(Verify(bv, [n = uint32_t{0}](auto idx) mutable { return idx == n++; }));
 }
 
 TEST(BitVectorDeathTest, SetRange) {
@@ -111,7 +111,7 @@ TEST(BitVectorTest, SetRange) {
   BitVector bv(300);
 
   // Check if lo <= v < hi, if v is in the range [lo, hi)
-  const auto in_range = [](u32 v, u32 lo, u32 hi) { return lo <= v && v < hi; };
+  const auto in_range = [](uint32_t v, uint32_t lo, uint32_t hi) { return lo <= v && v < hi; };
 
   // No change
   bv.SetRange(0, 0);
@@ -167,14 +167,14 @@ TEST(BitVectorTest, SetWord) {
   bv.SetWord(0, 0x00000001);
 
   EXPECT_TRUE(bv.Test(0));
-  for (u32 i = 1; i < bv.num_bits(); i++) {
+  for (uint32_t i = 1; i < bv.num_bits(); i++) {
     EXPECT_FALSE(bv.Test(i));
   }
 
   // bv[9] = true
   bv.SetWord(0, 0x00000200);
   EXPECT_TRUE(bv.Test(9));
-  for (u32 i = 0; i < bv.num_bits() - 1; i++) {
+  for (uint32_t i = 0; i < bv.num_bits() - 1; i++) {
     EXPECT_FALSE(bv.Test(i));
   }
 
@@ -184,7 +184,7 @@ TEST(BitVectorTest, SetWord) {
 
   // Even bits only
   bv.SetWord(0, 0x55555555);
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.num_bits(); i++) {
     EXPECT_EQ(i % 2 == 0, bv.Test(i));
   }
 }
@@ -193,7 +193,7 @@ TEST(BitVectorTest, Unset) {
   BitVector bv(10);
 
   // Set every 3rd bit
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.num_bits(); i++) {
     if (i % 3 == 0) {
       bv.Set(i);
     }
@@ -222,12 +222,12 @@ TEST(BitVectorTest, TestAndSet) {
   // Set even bits only, then check
   {
     BitVector bv(100);
-    for (u32 i = 0; i < bv.num_bits(); i++) {
+    for (uint32_t i = 0; i < bv.num_bits(); i++) {
       if (i % 2 == 0) {
         bv.Set(i);
       }
     }
-    for (u32 i = 0; i < bv.num_bits(); i++) {
+    for (uint32_t i = 0; i < bv.num_bits(); i++) {
       EXPECT_EQ(i % 2 == 0, bv[i]);
     }
   }
@@ -237,7 +237,7 @@ TEST(BitVectorTest, Flip) {
   BitVector bv(10);
 
   // Set even bits
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.num_bits(); i++) {
     if (i % 2 == 0) {
       bv.Set(i);
     }
@@ -258,14 +258,14 @@ TEST(BitVectorTest, FlipAll) {
   BitVector bv(257);
 
   // Set even bits
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.num_bits(); i++) {
     if (i % 2 == 0) {
       bv.Set(i);
     }
   }
 
   // Alternate between even and odd set bits, checking each time
-  for (u32 i = 0; i < 1000; i++) {
+  for (uint32_t i = 0; i < 1000; i++) {
     EXPECT_TRUE(Verify(bv, [&](auto idx) { return i % 2 == idx % 2; }));
     bv.FlipAll();
   }
@@ -293,7 +293,7 @@ TEST(BitVectorTest, All) {
   EXPECT_FALSE(bv.All());
 
   // Set all but one
-  for (u32 i = 0; i < bv.num_bits() - 1; i++) {
+  for (uint32_t i = 0; i < bv.num_bits() - 1; i++) {
     bv.Set(i);
   }
   EXPECT_FALSE(bv.All());
@@ -333,11 +333,11 @@ TEST(BitVectorTest, SetFromBytes) {
     BitVector bv(10);
 
     // Set first last bit only
-    bv.SetFromBytes(std::vector<u8>{0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0xff}.data(), 10);
+    bv.SetFromBytes(std::vector<uint8_t>{0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0xff}.data(), 10);
     EXPECT_TRUE(Verify(bv, {0, 9}));
 
     // Set odd bits
-    bv.SetFromBytes(std::vector<u8>{0, 0xff, 0, 0xff, 0, 0xff, 0, 0xff, 0, 0xff}.data(), 10);
+    bv.SetFromBytes(std::vector<uint8_t>{0, 0xff, 0, 0xff, 0, 0xff, 0, 0xff, 0, 0xff}.data(), 10);
     EXPECT_TRUE(Verify(bv, {1, 3, 5, 7, 9}));
   }
 
@@ -345,13 +345,13 @@ TEST(BitVectorTest, SetFromBytes) {
   {
     // Use a non-multiple of the vector size to force execution of the tail
     // process loop.
-    constexpr u32 vec_size = kDefaultVectorSize + 101 /* prime */;
+    constexpr uint32_t vec_size = kDefaultVectorSize + 101 /* prime */;
     BitVector bv(vec_size);
 
     // Set even indexes
     std::random_device r;
-    alignas(16) u8 bytes[vec_size] = {0};
-    u32 num_set = 0;
+    alignas(16) uint8_t bytes[vec_size] = {0};
+    uint32_t num_set = 0;
     for (auto &byte : bytes) {
       byte = -(r() % 4 == 0);
       num_set += (byte == 0xff);
@@ -359,7 +359,7 @@ TEST(BitVectorTest, SetFromBytes) {
 
     // Check only even indexes set
     bv.SetFromBytes(bytes, vec_size);
-    EXPECT_TRUE(Verify(bv, [&](u32 idx) { return bytes[idx] == 0xff; }));
+    EXPECT_TRUE(Verify(bv, [&](uint32_t idx) { return bytes[idx] == 0xff; }));
     EXPECT_EQ(num_set, bv.CountOnes());
   }
 }
@@ -445,7 +445,7 @@ TEST(BitVectorTest, Iterate) {
   {
     BitVector bv(100);
     // Set even bits
-    for (u32 i = 0; i < bv.num_bits(); i++) {
+    for (uint32_t i = 0; i < bv.num_bits(); i++) {
       if (i % 2 == 0) {
         bv.Set(i);
       }
@@ -471,7 +471,7 @@ TEST(BitVectorTest, Slice) {
   BitVector bv2 = bv.Slice(64, 10);
   EXPECT_FALSE(bv2[0]);
   EXPECT_TRUE(bv2[1]);
-  for (u32 i = 2; i < bv2.num_bits(); i++) {
+  for (uint32_t i = 2; i < bv2.num_bits(); i++) {
     EXPECT_FALSE(bv2[i]) << "bv_2[" << i << "]=true, expected false";
   }
 
@@ -494,19 +494,19 @@ TEST(BitVectorTest, InlinedBitVector) {
   EXPECT_EQ(64u, bits.num_bits());
 
   // Initially all false
-  for (u32 i = 0; i < bits.num_bits(); i++) {
+  for (uint32_t i = 0; i < bits.num_bits(); i++) {
     EXPECT_FALSE(bits.Test(i));
   }
 
   // Set even bits
-  for (u32 i = 0; i < bits.num_bits(); i++) {
+  for (uint32_t i = 0; i < bits.num_bits(); i++) {
     if (i % 2 == 0) {
       bits.Set(i);
     }
   }
 
   // Check
-  for (u32 i = 0; i < bits.num_bits(); i++) {
+  for (uint32_t i = 0; i < bits.num_bits(); i++) {
     auto set = bits.Test(i);
     if (i % 2 == 0) {
       EXPECT_TRUE(set);
@@ -519,7 +519,7 @@ TEST(BitVectorTest, InlinedBitVector) {
   bits.UnsetAll();
 
   // Final check all 0
-  for (u32 i = 0; i < bits.num_bits(); i++) {
+  for (uint32_t i = 0; i < bits.num_bits(); i++) {
     EXPECT_FALSE(bits.Test(i));
   }
 }

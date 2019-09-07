@@ -7,7 +7,7 @@
 
 namespace tpl::sql {
 
-using ConciseHashTableSlot = u64;
+using ConciseHashTableSlot = uint64_t;
 
 /**
  * A generic structure used to represent an entry in either a generic hash
@@ -24,7 +24,7 @@ struct HashTableEntry {
     ConciseHashTableSlot cht_slot;
 
     // Used during reordering over overflow entries when constructing a CHT
-    u64 overflow_count;
+    uint64_t overflow_count;
   };
 
   hash_t hash;

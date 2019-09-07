@@ -7,12 +7,12 @@ namespace tpl::sql {
 class TupleIdListTest : public TplTest {};
 
 TEST_F(TupleIdListTest, Add) {
-  constexpr u32 num_tids = 10;
+  constexpr uint32_t num_tids = 10;
 
   TupleIdList list(num_tids);
 
   // Initially, no TIDs
-  for (u32 tid = 0; tid < num_tids; tid++) {
+  for (uint32_t tid = 0; tid < num_tids; tid++) {
     EXPECT_FALSE(list.Contains(tid));
   }
 
@@ -21,28 +21,28 @@ TEST_F(TupleIdListTest, Add) {
 }
 
 TEST_F(TupleIdListTest, AddAll) {
-  constexpr u32 num_tids = 10;
+  constexpr uint32_t num_tids = 10;
 
   TupleIdList list(num_tids);
 
   list.AddAll();
-  for (u32 tid = 0; tid < num_tids; tid++) {
+  for (uint32_t tid = 0; tid < num_tids; tid++) {
     EXPECT_TRUE(list.Contains(tid));
   }
 }
 
 TEST_F(TupleIdListTest, AddRange) {
-  constexpr u32 num_tids = 10;
+  constexpr uint32_t num_tids = 10;
 
   TupleIdList list(num_tids);
   list.AddRange(4, 6);
-  for (u32 tid = 0; tid < num_tids; tid++) {
+  for (uint32_t tid = 0; tid < num_tids; tid++) {
     EXPECT_EQ(4 <= tid && tid < 6, list.Contains(tid));
   }
 }
 
 TEST_F(TupleIdListTest, Enable) {
-  constexpr u32 num_tids = 10;
+  constexpr uint32_t num_tids = 10;
 
   TupleIdList list(num_tids);
   list.Enable(4, false);
@@ -56,7 +56,7 @@ TEST_F(TupleIdListTest, Enable) {
 }
 
 TEST_F(TupleIdListTest, Remove) {
-  constexpr u32 num_tids = 10;
+  constexpr uint32_t num_tids = 10;
 
   TupleIdList list(num_tids);
   list.Add(4);
@@ -77,12 +77,12 @@ TEST_F(TupleIdListTest, Remove) {
 }
 
 TEST_F(TupleIdListTest, Clear) {
-  constexpr u32 num_tids = 10;
+  constexpr uint32_t num_tids = 10;
 
   TupleIdList list(num_tids);
   list.AddAll();
   list.Clear();
-  for (u32 tid = 0; tid < num_tids; tid++) {
+  for (uint32_t tid = 0; tid < num_tids; tid++) {
     EXPECT_FALSE(list.Contains(tid));
   }
 }
@@ -119,7 +119,7 @@ TEST_F(TupleIdListTest, Intersection) {
   // list1 = list1 ∩ list2 = [4, 8, 9]
   list1.IntersectWith(list2);
 
-  for (u32 tid = 0; tid < 10; tid++) {
+  for (uint32_t tid = 0; tid < 10; tid++) {
     EXPECT_EQ(tid == 4 || tid == 8 || tid == 9, list1.Contains(tid));
   }
 }
@@ -141,7 +141,7 @@ TEST_F(TupleIdListTest, Union) {
 
   // list1 = list1 ∪ list2 = [0, 1, 2, 3, 4, 7, 8, 9]
   list1.UnionWith(list2);
-  for (u32 tid = 0; tid < 10; tid++) {
+  for (uint32_t tid = 0; tid < 10; tid++) {
     EXPECT_EQ(!(tid == 5 || tid == 6), list1.Contains(tid));
   }
 }
@@ -163,7 +163,7 @@ TEST_F(TupleIdListTest, UnsetFrom) {
 
   // list1 = list1 - list2 = [1, 3, 7]
   list1.UnsetFrom(list2);
-  for (u32 tid = 0; tid < 10; tid++) {
+  for (uint32_t tid = 0; tid < 10; tid++) {
     EXPECT_EQ(tid == 1 || tid == 3 || tid == 7, list1.Contains(tid));
   }
 }
@@ -184,13 +184,13 @@ TEST_F(TupleIdListTest, Selectivity) {
 }
 
 TEST_F(TupleIdListTest, ConvertToSelectionVector) {
-  u16 sel[kDefaultVectorSize];
+  uint16_t sel[kDefaultVectorSize];
 
   TupleIdList list(10);
   list.Add(0);
   list.AddRange(3, 7);
 
-  u32 n = list.AsSelectionVector(sel);
+  uint32_t n = list.AsSelectionVector(sel);
   EXPECT_EQ(5u, n);
   EXPECT_EQ(0u, sel[0]);
   EXPECT_EQ(3u, sel[1]);

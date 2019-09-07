@@ -14,10 +14,10 @@
 namespace tpl::sql {
 
 /// This is the tuple we insert into the hash table
-template <u8 N>
+template <uint8_t N>
 struct Tuple {
-  i32 build_key;
-  u32 aux[N];
+  int32_t build_key;
+  uint32_t aux[N];
 
   auto Hash() { return util::Hasher::Hash(build_key); }
 };
@@ -29,13 +29,13 @@ class JoinHashTableVectorProbeTest : public TplTest {
   MemoryPool *memory() { return &memory_; }
 
  protected:
-  template <u8 N, typename F>
-  std::unique_ptr<const JoinHashTable> BuildJoinHashTable(bool concise, u32 num_tuples,
+  template <uint8_t N, typename F>
+  std::unique_ptr<const JoinHashTable> BuildJoinHashTable(bool concise, uint32_t num_tuples,
                                                           F &&key_gen) {
     auto jht = std::make_unique<JoinHashTable>(memory(), sizeof(Tuple<N>), concise);
 
     // Insert
-    for (u32 i = 0; i < num_tuples; i++) {
+    for (uint32_t i = 0; i < num_tuples; i++) {
       auto key = key_gen();
       auto hash = util::Hasher::Hash(key);
       auto *tuple = reinterpret_cast<Tuple<N> *>(jht->AllocInputTuple(hash));
@@ -53,51 +53,51 @@ class JoinHashTableVectorProbeTest : public TplTest {
   MemoryPool memory_;
 };
 
-template <u8 N>
+template <uint8_t N>
 static hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
-  const auto *key_ptr = vpi->GetValue<i32, false>(0, nullptr);
+  const auto *key_ptr = vpi->GetValue<int32_t, false>(0, nullptr);
   return util::Hasher::Hash(*key_ptr);
 }
 
 /// The function to determine whether two tuples have equivalent keys
-template <u8 N>
+template <uint8_t N>
 static bool CmpTupleInVPI(const void *table_tuple, VectorProjectionIterator *vpi) noexcept {
   auto lhs_key = reinterpret_cast<const Tuple<N> *>(table_tuple)->build_key;
-  auto rhs_key = *vpi->GetValue<i32, false>(0, nullptr);
+  auto rhs_key = *vpi->GetValue<int32_t, false>(0, nullptr);
   return lhs_key == rhs_key;
 }
 
 // Sequential number functor
 struct Seq {
-  i32 c;
-  explicit Seq(u32 cc) : c(cc) {}
-  i32 operator()() noexcept { return c++; }
+  int32_t c;
+  explicit Seq(uint32_t cc) : c(cc) {}
+  int32_t operator()() noexcept { return c++; }
 };
 
 struct Range {
   std::random_device random;
-  std::uniform_int_distribution<u32> dist;
-  Range(i32 min, i32 max) : dist(min, max) {}
-  i32 operator()() noexcept { return dist(random); }
+  std::uniform_int_distribution<uint32_t> dist;
+  Range(int32_t min, int32_t max) : dist(min, max) {}
+  int32_t operator()() noexcept { return dist(random); }
 };
 
 // Random number functor
 struct Rand {
   std::random_device random;
   Rand() = default;
-  i32 operator()() noexcept { return random(); }
+  int32_t operator()() noexcept { return random(); }
 };
 
 TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
-  constexpr const u8 N = 1;
-  constexpr const u32 num_build = 1000;
-  constexpr const u32 num_probe = num_build * 10;
+  constexpr const uint8_t N = 1;
+  constexpr const uint32_t num_build = 1000;
+  constexpr const uint32_t num_probe = num_build * 10;
 
   // Create test JHT
   auto jht = BuildJoinHashTable<N>(/*concise*/ false, num_build, Seq(0));
 
   // Create test probe input
-  auto probe_keys = std::vector<u32>(num_probe);
+  auto probe_keys = std::vector<uint32_t>(num_probe);
   std::generate(probe_keys.begin(), probe_keys.end(), Range(0, num_build - 1));
 
   Schema schema({{"probeKey", IntegerType::InstanceNonNullable()}});
@@ -110,9 +110,9 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
   // Lookup
   JoinHashTableVectorProbe lookup(*jht);
 
-  u32 count = 0;
-  for (u32 i = 0; i < num_probe; i += kDefaultVectorSize) {
-    u32 size = std::min(kDefaultVectorSize, num_probe - i);
+  uint32_t count = 0;
+  for (uint32_t i = 0; i < num_probe; i += kDefaultVectorSize) {
+    uint32_t size = std::min(kDefaultVectorSize, num_probe - i);
 
     // Setup VP
     vp.ResetColumn(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0, size);
@@ -124,7 +124,7 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
     // Iterate all
     while (auto *tuple = lookup.GetNextOutput<Tuple<N>>(&vpi, CmpTupleInVPI<N>)) {
       count++;
-      auto probe_key = *vpi.GetValue<i32, false>(0, nullptr);
+      auto probe_key = *vpi.GetValue<int32_t, false>(0, nullptr);
       EXPECT_EQ(tuple->build_key, probe_key);
     }
   }
@@ -134,15 +134,15 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
 
 TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
   auto bench = [this](bool concise) {
-    constexpr const u8 N = 1;
-    constexpr const u32 num_build = 5000000;
-    constexpr const u32 num_probe = num_build * 10;
+    constexpr const uint8_t N = 1;
+    constexpr const uint32_t num_build = 5000000;
+    constexpr const uint32_t num_probe = num_build * 10;
 
     // Create test JHT
     auto jht = BuildJoinHashTable<N>(concise, num_build, Seq(0));
 
     // Create test probe input
-    auto probe_keys = std::vector<u32>(num_probe);
+    auto probe_keys = std::vector<uint32_t>(num_probe);
     std::generate(probe_keys.begin(), probe_keys.end(), Range(0, num_build - 1));
 
     Schema schema({{"probeKey", IntegerType::InstanceNonNullable()}});
@@ -159,9 +159,9 @@ TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
     timer.Start();
 
     // Loop over all matches
-    u32 count = 0;
-    for (u32 i = 0; i < num_probe; i += kDefaultVectorSize) {
-      u32 size = std::min(kDefaultVectorSize, num_probe - i);
+    uint32_t count = 0;
+    for (uint32_t i = 0; i < num_probe; i += kDefaultVectorSize) {
+      uint32_t size = std::min(kDefaultVectorSize, num_probe - i);
 
       // Setup VP
       vp.ResetColumn(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0, size);

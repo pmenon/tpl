@@ -90,13 +90,13 @@ class Region {
   const char *name() const { return name_; }
 
   // The number of bytes this region has given out
-  u64 allocated() const { return allocated_; }
+  uint64_t allocated() const { return allocated_; }
 
   // The number of bytes wasted due to alignment requirements
-  u64 alignment_waste() const { return alignment_waste_; }
+  uint64_t alignment_waste() const { return alignment_waste_; }
 
   // The total number of bytes acquired from the OS
-  u64 total_memory() const { return chunk_bytes_allocated_; }
+  uint64_t total_memory() const { return chunk_bytes_allocated_; }
 
  private:
   // Expand the region
@@ -108,9 +108,9 @@ class Region {
   // Each individual region allocation is sourced from a chunk.
   struct Chunk {
     Chunk *next;
-    u64 size;
+    uint64_t size;
 
-    void Init(Chunk *next, u64 size) {
+    void Init(Chunk *next, uint64_t size) {
       this->next = next;
       this->size = size;
     }
@@ -122,7 +122,7 @@ class Region {
 
  private:
   // The alignment of all pointers
-  static const u32 kDefaultByteAlignment = 8;
+  static const uint32_t kDefaultByteAlignment = 8;
 
   // Min chunk allocation is 8KB
   static const std::size_t kMinChunkAllocation = 8 * 1024;

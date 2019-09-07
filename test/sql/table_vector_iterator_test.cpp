@@ -19,7 +19,7 @@ TEST_F(TableVectorIteratorTest, InvalidBlockRangeIteratorTest) {
   auto table_id = TableIdToNum(TableId::Test1);
   auto *table = Catalog::Instance()->LookupTableById(TableId::Test1);
 
-  const std::tuple<u32, u32, bool> test_cases[] = {
+  const std::tuple<uint32_t, uint32_t, bool> test_cases[] = {
       {0, 10, true},
       {10, 0, false},
       {-10, 2, false},
@@ -59,7 +59,7 @@ TEST_F(TableVectorIteratorTest, SimpleIteratorTest) {
 
   VectorProjectionIterator *vpi = iter.vector_projection_iterator();
 
-  u32 num_tuples = 0;
+  uint32_t num_tuples = 0;
   while (iter.Advance()) {
     for (; vpi->HasNext(); vpi->Advance()) {
       num_tuples++;
@@ -76,7 +76,7 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
   //
 
   struct Counter {
-    u32 c;
+    uint32_t c;
   };
 
   auto init_count = [](UNUSED void *ctx, void *tls) { reinterpret_cast<Counter *>(tls)->c = 0; };

@@ -10,16 +10,16 @@ namespace tpl::sql {
 /**
  * The primitive types underlying the SQL types.
  */
-enum class TypeId : u8 {
+enum class TypeId : uint8_t {
   Boolean,   // bool
-  TinyInt,   // i8
-  SmallInt,  // i16
-  Integer,   // i32
-  BigInt,    // i64
+  TinyInt,   // int8_t
+  SmallInt,  // int16_t
+  Integer,   // int32_t
+  BigInt,    // int64_t
   Hash,      // hash_t
   Pointer,   // uintptr_t
-  Float,     // f32
-  Double,    // f64
+  Float,     // float
+  Double,    // double
   Varchar,   // char*, representing a null-terminated UTF-8 string
   Varbinary  // blobs representing arbitrary bytes
 };
@@ -27,7 +27,7 @@ enum class TypeId : u8 {
 /**
  * Supported SQL data types.
  */
-enum class SqlTypeId : u8 {
+enum class SqlTypeId : uint8_t {
   Boolean,
   TinyInt,   // 1-byte integer
   SmallInt,  // 2-byte integer
@@ -44,7 +44,7 @@ enum class SqlTypeId : u8 {
 /**
  * The possible column compression/encodings.
  */
-enum class ColumnEncoding : u8 {
+enum class ColumnEncoding : uint8_t {
   None,
   Rle,
   Delta,
@@ -55,20 +55,20 @@ enum class ColumnEncoding : u8 {
 /**
  * All possible JOIN types.
  */
-enum class JoinType : u8 { Inner, Outer, Left, Right, Anti, Semi };
+enum class JoinType : uint8_t { Inner, Outer, Left, Right, Anti, Semi };
 
 /**
  * Simple structure representing a blob.
  */
 struct Blob {
-  u8 *data;
-  u64 size;
+  uint8_t *data;
+  uint64_t size;
 };
 
 /**
  * Given an internal type, return the simplest SQL type. Note that this
  * conversion is a lossy since some internal types are used as the underlying
- * storage for multiple SQL types. For example, i32 is used for SQL Integers and
+ * storage for multiple SQL types. For example, int32_t is used for SQL Integers and
  * SQL Dates).
  */
 SqlTypeId GetSqlTypeFromInternalType(TypeId type);
@@ -80,21 +80,21 @@ template <class T>
 constexpr static inline TypeId GetTypeId() {
   if constexpr (std::is_same<T, bool>()) {
     return TypeId::Boolean;
-  } else if constexpr (std::is_same<std::remove_const_t<T>, i8>()) {
+  } else if constexpr (std::is_same<std::remove_const_t<T>, int8_t>()) {
     return TypeId::TinyInt;
-  } else if constexpr (std::is_same<std::remove_const_t<T>, i16>()) {
+  } else if constexpr (std::is_same<std::remove_const_t<T>, int16_t>()) {
     return TypeId::SmallInt;
-  } else if constexpr (std::is_same<std::remove_const_t<T>, i32>()) {
+  } else if constexpr (std::is_same<std::remove_const_t<T>, int32_t>()) {
     return TypeId::Integer;
-  } else if constexpr (std::is_same<std::remove_const_t<T>, i64>()) {
+  } else if constexpr (std::is_same<std::remove_const_t<T>, int64_t>()) {
     return TypeId::BigInt;
   } else if constexpr (std::is_same<std::remove_const_t<T>, hash_t>()) {
     return TypeId::Hash;
   } else if constexpr (std::is_same<std::remove_const_t<T>, uintptr_t>()) {
     return TypeId::Pointer;
-  } else if constexpr (std::is_same<std::remove_const_t<T>, f32>()) {
+  } else if constexpr (std::is_same<std::remove_const_t<T>, float>()) {
     return TypeId::Float;
-  } else if constexpr (std::is_same<std::remove_const_t<T>, f64>()) {
+  } else if constexpr (std::is_same<std::remove_const_t<T>, double>()) {
     return TypeId::Double;
   } else if constexpr (std::is_same<std::remove_const_t<T>, char *>() ||
                        std::is_same<std::remove_const_t<T>, const char *>() ||

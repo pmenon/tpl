@@ -5,7 +5,7 @@
 namespace tpl::vm {
 
 /// This enumeration lists all possible sizes of operands to any bytecode
-enum class OperandSize : u8 { None = 0, Byte = 1, Short = 2, Int = 4, Long = 8 };
+enum class OperandSize : uint8_t { None = 0, Byte = 1, Short = 2, Int = 4, Long = 8 };
 
 /// This macro list provides information about all possible operand types to a
 /// bytecode operation. The format is: Name, IsSigned, BaseSize
@@ -23,7 +23,7 @@ enum class OperandSize : u8 { None = 0, Byte = 1, Short = 2, Int = 4, Long = 8 }
   V(FunctionId, false, OperandSize::Short)
 
 /// This enumeration lists all possible types of operands to any bytecode
-enum class OperandType : u8 {
+enum class OperandType : uint8_t {
 #define OP_TYPE(Name, ...) Name,
   OPERAND_TYPE_LIST(OP_TYPE)
 #undef OP_TYPE
@@ -49,7 +49,7 @@ class OperandTypes {
     return operand_type == OperandType::LocalCount;
   }
 
-  static i32 MaxJumpOffset();
+  static int32_t MaxJumpOffset();
 };
 
 }  // namespace tpl::vm

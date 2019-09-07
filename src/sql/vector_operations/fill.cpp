@@ -7,7 +7,7 @@ namespace {
 template <typename T>
 void FillImpl(Vector *vector, T val) {
   auto *data = reinterpret_cast<T *>(vector->data());
-  VectorOps::Exec(*vector, [&](u64 i, u64 k) { data[i] = val; });
+  VectorOps::Exec(*vector, [&](uint64_t i, uint64_t k) { data[i] = val; });
 }
 
 }  // namespace

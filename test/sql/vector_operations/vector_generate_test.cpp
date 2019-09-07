@@ -10,7 +10,7 @@ namespace tpl::sql {
 class VectorGenerateTest : public TplTest {};
 
 TEST_F(VectorGenerateTest, Simple) {
-  const u32 num_elems = 50;
+  const uint32_t num_elems = 50;
 
 // Generate odd sequence of numbers starting at 1 inclusive. In other words,
 // generate the values [2*i+1 for i in range(0,50)]
@@ -18,7 +18,7 @@ TEST_F(VectorGenerateTest, Simple) {
   {                                                          \
     auto vec = Make##TYPE##Vector(num_elems);                \
     VectorOps::Generate(vec.get(), 1, 2);                    \
-    for (u64 i = 0; i < vec->count(); i++) {                 \
+    for (uint64_t i = 0; i < vec->count(); i++) {                 \
       auto val = vec->GetValue(i);                           \
       EXPECT_FALSE(val.is_null());                           \
       EXPECT_EQ(GenericValue::Create##TYPE(2 * i + 1), val); \

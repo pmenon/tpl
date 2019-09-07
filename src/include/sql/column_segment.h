@@ -14,7 +14,8 @@ namespace tpl::sql {
  */
 class ColumnSegment {
  public:
-  ColumnSegment(const SqlType &sql_type, byte *data, u32 *null_bitmap, u32 num_tuples) noexcept
+  ColumnSegment(const SqlType &sql_type, byte *data, uint32_t *null_bitmap,
+                uint32_t num_tuples) noexcept
       : sql_type_(sql_type), data_(data), null_bitmap_(null_bitmap), num_tuples_(num_tuples) {}
 
   ColumnSegment(ColumnSegment &&other) noexcept
@@ -48,7 +49,7 @@ class ColumnSegment {
    * \return A reference to the value at index @em index
    */
   template <typename T>
-  const T &TypedAccessAt(u32 idx) const {
+  const T &TypedAccessAt(uint32_t idx) const {
     TPL_ASSERT(idx < num_tuples(), "Invalid row index!");
     const T *typed_data = reinterpret_cast<const T *>(data_);
     return typed_data[idx];
@@ -59,7 +60,7 @@ class ColumnSegment {
    * @param idx The index to check
    * @return True if the value is null; false otherwise
    */
-  bool IsNullAt(u32 idx) const { return util::BitUtil::Test(null_bitmap_, idx); }
+  bool IsNullAt(uint32_t idx) const { return util::BitUtil::Test(null_bitmap_, idx); }
 
   /**
    * Return the SQL type of the column.
@@ -69,20 +70,20 @@ class ColumnSegment {
   /**
    * Return the number of values in the column
    */
-  u32 num_tuples() const { return num_tuples_; }
+  uint32_t num_tuples() const { return num_tuples_; }
 
  private:
   friend class ColumnVectorIterator;
 
-  auto *AccessRaw(u32 idx) const { return &data_[idx]; }
+  auto *AccessRaw(uint32_t idx) const { return &data_[idx]; }
 
-  auto *AccessRawNullBitmap(u32 idx) const { return &null_bitmap_[idx]; }
+  auto *AccessRawNullBitmap(uint32_t idx) const { return &null_bitmap_[idx]; }
 
  private:
   const SqlType &sql_type_;
   byte *data_;
-  u32 *null_bitmap_;
-  u32 num_tuples_;
+  uint32_t *null_bitmap_;
+  uint32_t num_tuples_;
 };
 
 }  // namespace tpl::sql

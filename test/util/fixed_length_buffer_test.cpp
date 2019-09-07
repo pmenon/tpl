@@ -13,7 +13,7 @@ namespace tpl::util {
 class FixedLengthBufferTest : public TplTest {};
 
 TEST_F(FixedLengthBufferTest, Append) {
-  FixedLengthBuffer<u32, 10> buffer;
+  FixedLengthBuffer<uint32_t, 10> buffer;
 
   EXPECT_TRUE(buffer.empty());
   buffer.append(200u);
@@ -28,14 +28,14 @@ TEST_F(FixedLengthBufferTest, Append) {
 }
 
 TEST_F(FixedLengthBufferTest, Iteration) {
-  constexpr u32 nelems = 100;
+  constexpr uint32_t nelems = 100;
 
-  std::vector<u32> reference;
-  FixedLengthBuffer<u32, nelems> buffer;
+  std::vector<uint32_t> reference;
+  FixedLengthBuffer<uint32_t, nelems> buffer;
 
   std::random_device r;
-  for (u32 i = 0; i < nelems; i++) {
-    u32 num = r();
+  for (uint32_t i = 0; i < nelems; i++) {
+    uint32_t num = r();
     buffer.append(num);
     reference.push_back(num);
     EXPECT_EQ(num, buffer[i]);
@@ -48,7 +48,7 @@ TEST_F(FixedLengthBufferTest, Iteration) {
 }
 
 TEST_F(FixedLengthBufferTest, OutOfBoundsAccess) {
-  FixedLengthBuffer<u32, 2> buffer;
+  FixedLengthBuffer<uint32_t, 2> buffer;
 
   EXPECT_THROW(buffer.at(0), std::out_of_range);
 

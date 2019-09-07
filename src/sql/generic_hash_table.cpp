@@ -13,13 +13,13 @@ GenericHashTable::~GenericHashTable() {
   }
 }
 
-void GenericHashTable::SetSize(u64 new_size) {
+void GenericHashTable::SetSize(uint64_t new_size) {
   TPL_ASSERT(new_size > 0, "New size cannot be zero!");
   if (entries_ != nullptr) {
     util::FreeHugeArray(entries_, capacity());
   }
 
-  u64 next_size = util::MathUtil::PowerOf2Ceil(new_size);
+  uint64_t next_size = util::MathUtil::PowerOf2Ceil(new_size);
   if (next_size < new_size / load_factor_) {
     next_size *= 2;
   }
@@ -57,16 +57,16 @@ void GenericHashTableVectorIterator<UseTag>::Next() {
   // the entry cache contains non-null hash table entries.
 
   // Index tracks the end of the valid range of entries in the entry cache
-  u32 index = 0;
+  uint32_t index = 0;
 
   // For the current set of valid entries, follow their chain. This may produce
   // holes in the range, but we'll compact them out in a subsequent filter.
-  for (u32 i = 0; i < entry_vec_end_idx_; i++) {
+  for (uint32_t i = 0; i < entry_vec_end_idx_; i++) {
     entry_vec_[i] = entry_vec_[i]->next;
   }
 
   // Compact out the holes produced in the previous chain lookup.
-  for (u32 i = 0; i < entry_vec_end_idx_; i++) {
+  for (uint32_t i = 0; i < entry_vec_end_idx_; i++) {
     entry_vec_[index] = entry_vec_[i];
     index += (entry_vec_[index] != nullptr);
   }

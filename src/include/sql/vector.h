@@ -27,8 +27,8 @@ namespace tpl::sql {
  * below example illustrates:
  *
  * @code
- * u64 x = 0;
- * for (u64 i = 0; i < count; i++) {
+ * uint64_t x = 0;
+ * for (uint64_t i = 0; i < count; i++) {
  *   x += data_[sel_vector_[i]];
  * }
  * @endcode
@@ -67,7 +67,7 @@ class Vector {
    * @param count The size of the vector.
    * @param clear Should the vector zero out the data if it allocates any?
    */
-  Vector(TypeId type, u64 count, bool clear);
+  Vector(TypeId type, uint64_t count, bool clear);
 
   /**
    * Create a non-owning vector that references the specified data.
@@ -75,7 +75,7 @@ class Vector {
    * @param data A pointer to the data.
    * @param count The number of elements in the vector
    */
-  Vector(TypeId type, byte *data, u64 count);
+  Vector(TypeId type, byte *data, uint64_t count);
 
   /**
    * Vector's cannot be implicitly copied.
@@ -95,12 +95,12 @@ class Vector {
   /**
    * Return the number of elements in the vector.
    */
-  u64 count() const { return count_; }
+  uint64_t count() const { return count_; }
 
   /**
    * Set the count.
    */
-  void set_count(u64 count) { count_ = count; }
+  void set_count(uint64_t count) { count_ = count; }
 
   /**
    * Return the raw data pointer.
@@ -125,7 +125,7 @@ class Vector {
   /**
    * Set the selection vector.
    */
-  void SetSelectionVector(sel_t *const sel_vector, const u64 count) {
+  void SetSelectionVector(sel_t *const sel_vector, const uint64_t count) {
     sel_vector_ = sel_vector;
     count_ = count;
   }
@@ -144,21 +144,21 @@ class Vector {
    * Compute the selectivity of the vector. Constant vectors always have a
    * selectivity of 1.0 (100%).
    */
-  f64 ComputeSelectivity() const {
-    return IsConstant() ? 1.0 : static_cast<f64>(count_) / kDefaultVectorSize;
+  double ComputeSelectivity() const {
+    return IsConstant() ? 1.0 : static_cast<double>(count_) / kDefaultVectorSize;
   }
 
   /**
    * Is the value at position @em index NULL?
    */
-  bool IsNull(const u64 index) const {
+  bool IsNull(const uint64_t index) const {
     return null_mask_.Test(sel_vector_ != nullptr ? sel_vector_[index] : index);
   }
 
   /**
    * Set the value at position @em index to @em null.
    */
-  void SetNull(const u64 index, const bool null) {
+  void SetNull(const uint64_t index, const bool null) {
     null_mask_.SetTo(sel_vector_ != nullptr ? sel_vector_[index] : index, null);
   }
 
@@ -171,7 +171,7 @@ class Vector {
    * @param index The position in the vector to read.
    * @return The element at the specified position.
    */
-  GenericValue GetValue(u64 index) const;
+  GenericValue GetValue(uint64_t index) const;
 
   /**
    * Set the value at position @em index in the vector to the value @em value.
@@ -182,7 +182,7 @@ class Vector {
    * @param index The (zero-based) index in the element to modify.
    * @param val The value to set the element to.
    */
-  void SetValue(u64 index, const GenericValue &val);
+  void SetValue(uint64_t index, const GenericValue &val);
 
   /**
    * Cast this vector to a different type. If the target type is the same as the
@@ -202,7 +202,7 @@ class Vector {
    * @param other The vector to copy into.
    * @param offset The offset in this vector to begin copying.
    */
-  void CopyTo(Vector *other, u64 offset = 0);
+  void CopyTo(Vector *other, uint64_t offset = 0);
 
   /**
    * Move the data from this vector into another vector, and empty initialize
@@ -224,7 +224,7 @@ class Vector {
    * @param nullmask The NULL bitmap.
    * @param count The number of elements in the array.
    */
-  void Reference(TypeId type_id, byte *data, u32 *nullmask, u64 count);
+  void Reference(TypeId type_id, byte *data, uint32_t *nullmask, uint64_t count);
 
   /**
    * Create a vector that references data held (and owned!) by another vector.
@@ -279,7 +279,7 @@ class Vector {
     Strings &operator=(Strings &&) = default;
 
     // Return the number of strings are in this container
-    u32 GetNumStrings() const { return num_strings_; }
+    uint32_t GetNumStrings() const { return num_strings_; }
 
     // Copy the given string into this container, returning a pointer to it.
     char *AddString(std::string_view str);
@@ -291,14 +291,14 @@ class Vector {
     // Where the strings live
     util::Region region_;
     // Number of strings
-    u32 num_strings_;
+    uint32_t num_strings_;
   };
 
  private:
   // The type of the elements stored in the vector.
   TypeId type_;
   // The number of elements in the vector.
-  u64 count_;
+  uint64_t count_;
   // A pointer to the data.
   byte *data_;
   // The selection vector of the vector.

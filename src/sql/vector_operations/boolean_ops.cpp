@@ -23,15 +23,16 @@ void BooleanLogicOperation(const Vector &left, const Vector &right, Vector *resu
   if (left.IsConstant()) {
     if (left_null_mask.Any() || right_null_mask.Any()) {
       // Slow-path: need to check NULLs
-      VectorOps::Exec(right, [&](u64 i, u64 k) {
+      VectorOps::Exec(right, [&](uint64_t i, uint64_t k) {
         result_data[i] = Op::Apply(left_data[0], right_data[i]);
         result_mask.SetTo(
             i, OpNull::Apply(left_data[0], right_data[i], left_null_mask[0], right_null_mask[i]));
       });
     } else {
       // Fast-path: no NULL checks
-      VectorOps::Exec(
-          right, [&](u64 i, u64 k) { result_data[i] = Op::Apply(left_data[0], right_data[i]); });
+      VectorOps::Exec(right, [&](uint64_t i, uint64_t k) {
+        result_data[i] = Op::Apply(left_data[0], right_data[i]);
+      });
     }
   } else if (right.IsConstant()) {
     BooleanLogicOperation<Op, OpNull>(right, left, result);
@@ -42,11 +43,12 @@ void BooleanLogicOperation(const Vector &left, const Vector &right, Vector *resu
 
     if (!left_null_mask.Any() && !right_null_mask.Any()) {
       // Fast-path: no NULL checks
-      VectorOps::Exec(
-          left, [&](u64 i, u64 k) { result_data[i] = Op::Apply(left_data[i], right_data[i]); });
+      VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
+        result_data[i] = Op::Apply(left_data[i], right_data[i]);
+      });
     } else {
       // Slow-path: need to check NULLs
-      VectorOps::Exec(left, [&](u64 i, u64 k) {
+      VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
         result_data[i] = Op::Apply(left_data[i], right_data[i]);
         result_mask.SetTo(
             i, OpNull::Apply(left_data[i], right_data[i], left_null_mask[i], right_null_mask[i]));

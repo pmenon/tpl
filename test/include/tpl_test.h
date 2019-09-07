@@ -28,7 +28,7 @@ class TplTest : public ::testing::Test {
 };
 
 template <typename F>
-static inline double Bench(u32 repeat, const F &f) {
+static inline double Bench(uint32_t repeat, const F &f) {
   if (repeat > 4) {
     // Warmup
     f();
@@ -38,7 +38,7 @@ static inline double Bench(u32 repeat, const F &f) {
   util::Timer<std::milli> timer;
   timer.Start();
 
-  for (u32 i = 0; i < repeat; i++) {
+  for (uint32_t i = 0; i < repeat; i++) {
     f();
   }
 
@@ -47,12 +47,12 @@ static inline double Bench(u32 repeat, const F &f) {
 }
 
 template <typename F>
-static inline void LaunchParallel(u32 num_threads, const F &f) {
+static inline void LaunchParallel(uint32_t num_threads, const F &f) {
   util::Barrier barrier(num_threads + 1);
 
   std::vector<std::thread> thread_group;
 
-  for (u32 thread_idx = 0; thread_idx < num_threads; thread_idx++) {
+  for (uint32_t thread_idx = 0; thread_idx < num_threads; thread_idx++) {
     thread_group.emplace_back(
         [&](auto tid) {
           barrier.Wait();
@@ -63,7 +63,7 @@ static inline void LaunchParallel(u32 num_threads, const F &f) {
 
   barrier.Wait();
 
-  for (u32 i = 0; i < num_threads; i++) {
+  for (uint32_t i = 0; i < num_threads; i++) {
     thread_group[i].join();
   }
 }

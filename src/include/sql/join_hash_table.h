@@ -34,7 +34,7 @@ class ThreadStateContainer;
  */
 class JoinHashTable {
  public:
-  static constexpr u32 kDefaultHLLPrecision = 10;
+  static constexpr uint32_t kDefaultHLLPrecision = 10;
 
   /**
    * Construct a join hash table. All memory allocations are sourced from the
@@ -43,7 +43,7 @@ class JoinHashTable {
    * @param tuple_size The size of the tuple stored in this join hash table
    * @param use_concise_ht Whether to use a concise or generic join index
    */
-  explicit JoinHashTable(MemoryPool *memory, u32 tuple_size, bool use_concise_ht = false);
+  explicit JoinHashTable(MemoryPool *memory, uint32_t tuple_size, bool use_concise_ht = false);
 
   /**
    * This class cannot be copied or moved
@@ -92,7 +92,8 @@ class JoinHashTable {
    * @param hashes The hash values of the probe elements
    * @param results The heads of the bucket chain of the probed elements
    */
-  void LookupBatch(u32 num_tuples, const hash_t hashes[], const HashTableEntry *results[]) const;
+  void LookupBatch(uint32_t num_tuples, const hash_t hashes[],
+                   const HashTableEntry *results[]) const;
 
   /**
    * Merge all thread-local hash tables stored in the state contained into this
@@ -100,7 +101,7 @@ class JoinHashTable {
    * @param thread_state_container The container for all thread-local tables
    * @param jht_offset The offset in the state where the hash table is
    */
-  void MergeParallel(const ThreadStateContainer *thread_state_container, u32 jht_offset);
+  void MergeParallel(const ThreadStateContainer *thread_state_container, uint32_t jht_offset);
 
   // -------------------------------------------------------
   // Accessors
@@ -109,13 +110,13 @@ class JoinHashTable {
   /**
    * Return the amount of memory the buffered tuples occupy
    */
-  u64 GetBufferedTupleMemoryUsage() const { return entries_.size() * entries_.element_size(); }
+  uint64_t GetBufferedTupleMemoryUsage() const { return entries_.size() * entries_.element_size(); }
 
   /**
    * Get the amount of memory used by the join index only (i.e., excluding space
    * used to store materialized build-side tuples)
    */
-  u64 GetJoinIndexMemoryUsage() const {
+  uint64_t GetJoinIndexMemoryUsage() const {
     return use_concise_hash_table() ? concise_hash_table_.GetTotalMemoryUsage()
                                     : generic_hash_table_.GetTotalMemoryUsage();
   }
@@ -123,7 +124,7 @@ class JoinHashTable {
   /**
    * Return the total size of the join hash table in bytes
    */
-  u64 GetTotalMemoryUsage() const {
+  uint64_t GetTotalMemoryUsage() const {
     return GetBufferedTupleMemoryUsage() + GetJoinIndexMemoryUsage();
   }
 
@@ -135,13 +136,13 @@ class JoinHashTable {
   /**
    * Return the total number of inserted elements, including duplicates
    */
-  u64 GetElementCount() {
+  uint64_t GetElementCount() {
     // We don't know if this table was built in parallel. To be sure, we acquire
     // the latch before checking the owned entries vector.
 
     util::SpinLatch::ScopedSpinLatch latch(&owned_latch_);
     if (!owned_.empty()) {
-      u64 count = 0;
+      uint64_t count = 0;
       for (const auto &entries : owned_) {
         count += entries.size();
       }
@@ -172,11 +173,11 @@ class JoinHashTable {
   FRIEND_TEST(JoinHashTableTest, PerfTest);
 
   // Access a stored entry by index
-  HashTableEntry *EntryAt(const u64 idx) {
+  HashTableEntry *EntryAt(const uint64_t idx) {
     return reinterpret_cast<HashTableEntry *>(entries_[idx]);
   }
 
-  const HashTableEntry *EntryAt(const u64 idx) const {
+  const HashTableEntry *EntryAt(const uint64_t idx) const {
     return reinterpret_cast<const HashTableEntry *>(entries_[idx]);
   }
 
@@ -203,19 +204,19 @@ class JoinHashTable {
 
   // Dispatched from LookupBatch() to lookup from either a generic or concise
   // hash table in batched manner
-  void LookupBatchInGenericHashTable(u32 num_tuples, const hash_t hashes[],
+  void LookupBatchInGenericHashTable(uint32_t num_tuples, const hash_t hashes[],
                                      const HashTableEntry *results[]) const;
-  void LookupBatchInConciseHashTable(u32 num_tuples, const hash_t hashes[],
+  void LookupBatchInConciseHashTable(uint32_t num_tuples, const hash_t hashes[],
                                      const HashTableEntry *results[]) const;
 
   // Dispatched from LookupBatchInGenericHashTable()
   template <bool Prefetch>
-  void LookupBatchInGenericHashTableInternal(u32 num_tuples, const hash_t hashes[],
+  void LookupBatchInGenericHashTableInternal(uint32_t num_tuples, const hash_t hashes[],
                                              const HashTableEntry *results[]) const;
 
   // Dispatched from LookupBatchInConciseHashTable()
   template <bool Prefetch>
-  void LookupBatchInConciseHashTableInternal(u32 num_tuples, const hash_t hashes[],
+  void LookupBatchInConciseHashTableInternal(uint32_t num_tuples, const hash_t hashes[],
                                              const HashTableEntry *results[]) const;
 
   // Merge the source hash table (which isn't built yet) into this one

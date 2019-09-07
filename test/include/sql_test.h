@@ -19,11 +19,11 @@ class SqlBasedTest : public TplTest {
     sql::Catalog::Instance();
   }
 
-  static u16 TableIdToNum(sql::TableId table_id) { return static_cast<u16>(table_id); }
+  static uint16_t TableIdToNum(sql::TableId table_id) { return static_cast<uint16_t>(table_id); }
 };
 
 #define MAKE_VEC_TYPE(TYPE, CPP_TYPE)                                                              \
-  static inline std::unique_ptr<sql::Vector> Make##TYPE##Vector(u32 size) {                        \
+  static inline std::unique_ptr<sql::Vector> Make##TYPE##Vector(uint32_t size) {                        \
     return std::make_unique<sql::Vector>(sql::TypeId::TYPE, size, true);                           \
   }                                                                                                \
   static inline std::unique_ptr<sql::Vector> Make##TYPE##Vector() {                                \
@@ -32,7 +32,7 @@ class SqlBasedTest : public TplTest {
   static inline std::unique_ptr<sql::Vector> Make##TYPE##Vector(const std::vector<CPP_TYPE> &vals, \
                                                                 const std::vector<bool> &nulls) {  \
     auto vec = Make##TYPE##Vector(vals.size());                                                    \
-    for (u64 i = 0; i < vals.size(); i++) {                                                        \
+    for (uint64_t i = 0; i < vals.size(); i++) {                                                        \
       if (nulls[i]) {                                                                              \
         vec->SetValue(i, sql::GenericValue::CreateNull(vec->type_id()));                           \
       } else {                                                                                     \
@@ -43,12 +43,12 @@ class SqlBasedTest : public TplTest {
   }
 
 MAKE_VEC_TYPE(Boolean, bool)
-MAKE_VEC_TYPE(TinyInt, i8)
-MAKE_VEC_TYPE(SmallInt, i16)
-MAKE_VEC_TYPE(Integer, i32)
-MAKE_VEC_TYPE(BigInt, i64)
-MAKE_VEC_TYPE(Float, f32)
-MAKE_VEC_TYPE(Double, f64)
+MAKE_VEC_TYPE(TinyInt, int8_t)
+MAKE_VEC_TYPE(SmallInt, int16_t)
+MAKE_VEC_TYPE(Integer, int32_t)
+MAKE_VEC_TYPE(BigInt, int64_t)
+MAKE_VEC_TYPE(Float, float)
+MAKE_VEC_TYPE(Double, double)
 MAKE_VEC_TYPE(Varchar, std::string_view)
 
 #undef MAKE_VEC_TYPE

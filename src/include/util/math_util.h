@@ -21,7 +21,7 @@ class MathUtil {
    * @param denominator The denominator
    * @return The result of the division rounded up to the next integer value
    */
-  constexpr static u64 DivRoundUp(u64 numerator, u64 denominator) {
+  constexpr static uint64_t DivRoundUp(uint64_t numerator, uint64_t denominator) {
     return (numerator + denominator - 1) / denominator;
   }
 
@@ -30,22 +30,22 @@ class MathUtil {
    * @param val The value to check
    * @return True if the value is a power of two > 0
    */
-  constexpr static bool IsPowerOf2(u64 val) { return llvm::isPowerOf2_64(val); }
+  constexpr static bool IsPowerOf2(uint64_t val) { return llvm::isPowerOf2_64(val); }
 
   /**
    * Compute the next power of two strictly greater than the input @em val
    */
-  static u64 NextPowerOf2(u64 val) { return llvm::NextPowerOf2(val); }
+  static uint64_t NextPowerOf2(uint64_t val) { return llvm::NextPowerOf2(val); }
 
   /**
    * Return the next power of two greater than or equal to the input @em val
    */
-  static u64 PowerOf2Ceil(u64 val) { return llvm::PowerOf2Ceil(val); }
+  static uint64_t PowerOf2Ceil(uint64_t val) { return llvm::PowerOf2Ceil(val); }
 
   /**
    * Compute the power of tww loweer than the provided input @em val
    */
-  static u64 PowerOf2Floor(u64 val) { return llvm::PowerOf2Floor(val); }
+  static uint64_t PowerOf2Floor(uint64_t val) { return llvm::PowerOf2Floor(val); }
 
   /**
    * Returns whether @em value is aligned to @em alignment. The desired
@@ -63,7 +63,7 @@ class MathUtil {
    * @param alignment The desired alignment
    * @return Whether the value has the desired alignment
    */
-  constexpr static bool IsAligned(u64 value, u64 alignment) {
+  constexpr static bool IsAligned(uint64_t value, uint64_t alignment) {
     TPL_ASSERT(alignment != 0u && IsPowerOf2(alignment), "Align must be a non-zero power of two.");
     return (value & (alignment - 1)) == 0;
   }
@@ -83,7 +83,7 @@ class MathUtil {
    * @param alignment
    * @return
    */
-  constexpr static bool IsAlignedGeneric(u64 value, u64 alignment) {
+  constexpr static bool IsAlignedGeneric(uint64_t value, uint64_t alignment) {
     TPL_ASSERT(alignment != 0u, "Align must be non-zero.");
     return (value % alignment) == 0;
   }
@@ -104,7 +104,7 @@ class MathUtil {
    * @return The next value greater than the input value that has the desired
    * alignment.
    */
-  static u64 AlignTo(u64 value, u64 align) { return llvm::alignTo(value, align); }
+  static uint64_t AlignTo(uint64_t value, uint64_t align) { return llvm::alignTo(value, align); }
 
   /**
    * Align @em addr to the given alignment @em alignment
@@ -137,7 +137,7 @@ class MathUtil {
    * @param right The second input value.
    * @return True if they're equal; false otherwise.
    */
-  static bool ApproxEqual(f32 left, f32 right);
+  static bool ApproxEqual(float left, float right);
 
   /**
    * Are the two input 64-bit floating point values equal given the tolerances
@@ -146,7 +146,7 @@ class MathUtil {
    * @param right The second input value.
    * @return True if they're equal; false otherwise.
    */
-  static bool ApproxEqual(f64 left, f64 right);
+  static bool ApproxEqual(double left, double right);
 };
 
 }  // namespace tpl::util

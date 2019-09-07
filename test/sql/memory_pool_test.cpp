@@ -9,7 +9,7 @@ namespace tpl::sql {
 class MemoryPoolTest : public TplTest {};
 
 struct SimpleObj {
-  u32 a, b, c, d;
+  uint32_t a, b, c, d;
 };
 
 struct ComplexObj {

@@ -41,12 +41,12 @@ namespace {
 
 bool FunctionHasIndirectReturn(const ast::FunctionType *func_type) {
   ast::Type *ret_type = func_type->return_type();
-  return (!ret_type->IsNilType() && ret_type->size() > sizeof(i64));
+  return (!ret_type->IsNilType() && ret_type->size() > sizeof(int64_t));
 }
 
 bool FunctionHasDirectReturn(const ast::FunctionType *func_type) {
   ast::Type *ret_type = func_type->return_type();
-  return (!ret_type->IsNilType() && ret_type->size() <= sizeof(i64));
+  return (!ret_type->IsNilType() && ret_type->size() <= sizeof(int64_t));
 }
 
 }  // namespace
@@ -284,15 +284,15 @@ class LLVMEngine::FunctionLocalsMap {
 
  private:
   llvm::IRBuilder<> *ir_builder_;
-  llvm::DenseMap<u32, llvm::Value *> params_;
-  llvm::DenseMap<u32, llvm::Value *> locals_;
+  llvm::DenseMap<uint32_t, llvm::Value *> params_;
+  llvm::DenseMap<uint32_t, llvm::Value *> locals_;
 };
 
 LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
                                                  llvm::Function *func, TypeMap *type_map,
                                                  llvm::IRBuilder<> *ir_builder)
     : ir_builder_(ir_builder) {
-  u32 local_idx = 0;
+  uint32_t local_idx = 0;
 
   const auto &func_locals = func_info.locals();
 
@@ -588,7 +588,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
   BuildSimpleCFG(func_info, blocks);
 
   {
-    u32 i = 1;
+    uint32_t i = 1;
     for (auto &[_, block] : blocks) {
       (void)_;
       if (block == nullptr) {
@@ -625,7 +625,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
 
     // Collect arguments
     llvm::SmallVector<llvm::Value *, 8> args;
-    for (u32 i = 0; i < Bytecodes::NumOperands(bytecode); i++) {
+    for (uint32_t i = 0; i < Bytecodes::NumOperands(bytecode); i++) {
       switch (Bytecodes::GetNthOperandType(bytecode, i)) {
         case OperandType::None: {
           break;
@@ -661,7 +661,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
           break;
         }
         case OperandType::FunctionId: {
-          const u16 target_func_id = iter.GetFunctionIdOperand(i);
+          const uint16_t target_func_id = iter.GetFunctionIdOperand(i);
           auto *target_func_info = tpl_module_.GetFuncInfoById(target_func_id);
           auto *target_func = llvm_module_->getFunction(target_func_info->name());
           TPL_ASSERT(target_func != nullptr, "Function doesn't exist in LLVM module");
@@ -690,7 +690,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
 
     const auto issue_call = [&ir_builder](auto *func, auto &args) {
       auto arg_iter = func->arg_begin();
-      for (u32 i = 0; i < args.size(); ++i, ++arg_iter) {
+      for (uint32_t i = 0; i < args.size(); ++i, ++arg_iter) {
         llvm::Type *expected_type = arg_iter->getType();
         llvm::Type *provided_type = args[i]->getType();
 
@@ -792,15 +792,15 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
         TPL_ASSERT(args[1]->getType()->isPointerTy(), "First argument must be a pointer");
         const llvm::DataLayout &dl = llvm_module_->getDataLayout();
         llvm::Type *pointee_type = args[1]->getType()->getPointerElementType();
-        i64 offset = llvm::cast<llvm::ConstantInt>(args[2])->getSExtValue();
+        int64_t offset = llvm::cast<llvm::ConstantInt>(args[2])->getSExtValue();
         if (auto struct_type = llvm::dyn_cast<llvm::StructType>(pointee_type)) {
-          const u32 elem_index =
+          const uint32_t elem_index =
               dl.getStructLayout(struct_type)->getElementContainingOffset(offset);
           llvm::Value *addr = ir_builder->CreateStructGEP(args[1], elem_index);
           ir_builder->CreateStore(addr, args[0]);
         } else {
           llvm::SmallVector<llvm::Value *, 2> gep_args;
-          u32 elem_size = dl.getTypeSizeInBits(pointee_type);
+          uint32_t elem_size = dl.getTypeSizeInBits(pointee_type);
           if (llvm::isa<llvm::ArrayType>(pointee_type)) {
             llvm::Type *const arr_type = pointee_type->getArrayElementType();
             elem_size = dl.getTypeSizeInBits(arr_type) / kBitsPerByte;
@@ -822,11 +822,11 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
         llvm::Type *pointee_type = args[1]->getType()->getPointerElementType();
         if (auto struct_type = llvm::dyn_cast<llvm::StructType>(pointee_type)) {
           llvm::Value *addr = ir_builder->CreateInBoundsGEP(args[1], {args[2]});
-          const u64 elem_offset = llvm::cast<llvm::ConstantInt>(args[4])->getZExtValue();
+          const uint64_t elem_offset = llvm::cast<llvm::ConstantInt>(args[4])->getZExtValue();
           if (elem_offset != 0) {
-            const u32 elem_index = llvm_module_->getDataLayout()
-                                       .getStructLayout(struct_type)
-                                       ->getElementContainingOffset(elem_offset);
+            const uint32_t elem_index = llvm_module_->getDataLayout()
+                                            .getStructLayout(struct_type)
+                                            ->getElementContainingOffset(elem_offset);
             addr = ir_builder->CreateStructGEP(addr, elem_index);
           }
           ir_builder->CreateStore(addr, args[0]);

@@ -16,19 +16,19 @@ void ComparisonOperation(const Vector &left, const Vector &right, Vector *result
       break;
     }
     case TypeId::TinyInt: {
-      BinaryOperation<i8, i8, bool, Op>(left, right, result);
+      BinaryOperation<int8_t, int8_t, bool, Op>(left, right, result);
       break;
     }
     case TypeId::SmallInt: {
-      BinaryOperation<i16, i16, bool, Op>(left, right, result);
+      BinaryOperation<int16_t, int16_t, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Integer: {
-      BinaryOperation<i32, i32, bool, Op>(left, right, result);
+      BinaryOperation<int32_t, int32_t, bool, Op>(left, right, result);
       break;
     }
     case TypeId::BigInt: {
-      BinaryOperation<i64, i64, bool, Op>(left, right, result);
+      BinaryOperation<int64_t, int64_t, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Hash: {
@@ -40,11 +40,11 @@ void ComparisonOperation(const Vector &left, const Vector &right, Vector *result
       break;
     }
     case TypeId::Float: {
-      BinaryOperation<f32, f32, bool, Op>(left, right, result);
+      BinaryOperation<float, float, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Double: {
-      BinaryOperation<f64, f64, bool, Op>(left, right, result);
+      BinaryOperation<double, double, bool, Op>(left, right, result);
       break;
     }
     case TypeId::Varchar: {

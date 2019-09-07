@@ -288,7 +288,7 @@ void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
   LocalVar elem_ptr = current_function()->NewLocal(node->type()->PointerTo());
 
   if (node->index()->IsIntegerLiteral()) {
-    const i32 index = node->index()->As<ast::LitExpr>()->int32_val();
+    const int32_t index = node->index()->As<ast::LitExpr>()->int32_val();
     TPL_ASSERT(index >= 0, "Array indexes must be non-negative");
     emitter()->EmitLea(elem_ptr, arr, (elem_size * index));
   } else {
@@ -681,7 +681,7 @@ void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call) {
   // Initialize the seed
   emitter()->EmitAssignImm8(seed, 0);
 
-  for (u32 idx = 0; idx < call->num_args(); idx++) {
+  for (uint32_t idx = 0; idx < call->num_args(); idx++) {
     TPL_ASSERT(call->arguments()[idx]->type()->IsSqlValueType(),
                "Input to hash must be a SQL value type");
 
@@ -724,7 +724,7 @@ void BytecodeGenerator::VisitBuiltinFilterManagerCall(ast::CallExpr *call, ast::
       emitter()->Emit(Bytecode::FilterManagerStartNewClause, filter_manager);
 
       // Insert all flavors
-      for (u32 arg_idx = 1; arg_idx < call->num_args(); arg_idx++) {
+      for (uint32_t arg_idx = 1; arg_idx < call->num_args(); arg_idx++) {
         const std::string func_name =
             call->arguments()[arg_idx]->As<ast::IdentifierExpr>()->name().data();
         const FunctionId func_id = LookupFuncIdByName(func_name);
@@ -962,7 +962,7 @@ namespace {
 
 // clang-format on
 
-enum class AggOpKind : u8 { Init = 0, Advance = 1, GetResult = 2, Merge = 3, Reset = 4 };
+enum class AggOpKind : uint8_t { Init = 0, Advance = 1, GetResult = 2, Merge = 3, Reset = 4 };
 
 // Given an aggregate kind and the operation to perform on it, determine the
 // appropriate bytecode
@@ -1532,7 +1532,7 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   }
 
   // Collect non-return-value parameters as usual
-  for (u32 i = 0; i < func_type->num_params(); i++) {
+  for (uint32_t i = 0; i < func_type->num_params(); i++) {
     params.push_back(VisitExpressionForRValue(call->arguments()[i]));
   }
 
@@ -1574,7 +1574,7 @@ void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
       break;
     }
     case ast::LitExpr::LitKind::Boolean: {
-      emitter()->EmitAssignImm1(target, static_cast<i8>(node->bool_val()));
+      emitter()->EmitAssignImm1(target, static_cast<int8_t>(node->bool_val()));
       break;
     }
     case ast::LitExpr::LitKind::Int: {
@@ -1871,7 +1871,7 @@ void BytecodeGenerator::VisitFunctionLitExpr(ast::FunctionLitExpr *node) { Visit
 
 void BytecodeGenerator::BuildAssign(LocalVar dest, LocalVar val, ast::Type *dest_type) {
   // Emit the appropriate assignment
-  const u32 size = dest_type->size();
+  const uint32_t size = dest_type->size();
   if (size == 1) {
     emitter()->EmitAssign(Bytecode::Assign1, dest, val);
   } else if (size == 2) {
@@ -1885,7 +1885,7 @@ void BytecodeGenerator::BuildAssign(LocalVar dest, LocalVar val, ast::Type *dest
 
 void BytecodeGenerator::BuildDeref(LocalVar dest, LocalVar ptr, ast::Type *dest_type) {
   // Emit the appropriate deref
-  const u32 size = dest_type->size();
+  const uint32_t size = dest_type->size();
   if (size == 1) {
     emitter()->EmitDeref(Bytecode::Deref1, dest, ptr);
   } else if (size == 2) {
@@ -2072,7 +2072,7 @@ void BytecodeGenerator::VisitExpressionForTest(ast::Expr *expr, BytecodeLabel *t
 Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode, ast::Type *type) {
   TPL_ASSERT(type->IsIntegerType(), "Type must be integer type");
   auto int_kind = type->SafeAs<ast::BuiltinType>()->kind();
-  auto kind_idx = static_cast<u8>(int_kind - ast::BuiltinType::Int8);
+  auto kind_idx = static_cast<uint8_t>(int_kind - ast::BuiltinType::Int8);
   return Bytecodes::FromByte(Bytecodes::ToByte(bytecode) + kind_idx);
 }
 

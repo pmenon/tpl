@@ -126,7 +126,7 @@ struct FunctionTypeKeyInfo {
 };
 
 struct Context::Implementation {
-  static constexpr const u32 kDefaultStringTableCapacity = 32;
+  static constexpr const uint32_t kDefaultStringTableCapacity = 32;
 
   // -------------------------------------------------------
   // Builtin types
@@ -146,7 +146,7 @@ struct Context::Implementation {
   llvm::DenseMap<Identifier, Type *> builtin_types;
   llvm::DenseMap<Identifier, Builtin> builtin_funcs;
   llvm::DenseMap<Type *, PointerType *> pointer_types;
-  llvm::DenseMap<std::pair<Type *, u64>, ArrayType *> array_types;
+  llvm::DenseMap<std::pair<Type *, uint64_t>, ArrayType *> array_types;
   llvm::DenseMap<std::pair<Type *, Type *>, MapType *> map_types;
   llvm::DenseSet<StructType *, StructTypeKeyInfo> struct_types;
   llvm::DenseSet<FunctionType *, FunctionTypeKeyInfo> func_types;
@@ -245,7 +245,7 @@ PointerType *PointerType::Get(Type *base) {
 }
 
 // static
-ArrayType *ArrayType::Get(u64 length, Type *elem_type) {
+ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
   Context *ctx = elem_type->context();
 
   ArrayType *&array_type = ctx->impl()->array_types[{elem_type, length}];
@@ -289,14 +289,14 @@ StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
   if (inserted) {
     // Compute size and alignment. Alignment of struct is alignment of largest
     // struct element.
-    u32 size = 0;
-    u32 alignment = 0;
-    util::RegionVector<u32> field_offsets(ctx->region());
+    uint32_t size = 0;
+    uint32_t alignment = 0;
+    util::RegionVector<uint32_t> field_offsets(ctx->region());
     for (const auto &field : fields) {
       // Check if the type needs to be padded
-      u32 field_align = field.type->alignment();
+      uint32_t field_align = field.type->alignment();
       if (!util::MathUtil::IsAligned(size, field_align)) {
-        size = static_cast<u32>(util::MathUtil::AlignTo(size, field_align));
+        size = static_cast<uint32_t>(util::MathUtil::AlignTo(size, field_align));
       }
 
       // Update size and calculate alignment
@@ -313,7 +313,7 @@ StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
     // Add padding at end so that these structs can be placed compactly in an
     // array and still respect alignment
     if (!util::MathUtil::IsAligned(size, alignment)) {
-      size = static_cast<u32>(util::MathUtil::AlignTo(size, alignment));
+      size = static_cast<uint32_t>(util::MathUtil::AlignTo(size, alignment));
     }
 
     // Create type

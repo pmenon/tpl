@@ -19,15 +19,15 @@ class VectorUtilTest : public TplTest {};
 TEST_F(VectorUtilTest, Access) {
   {
     simd::Vec8 in(44);
-    for (u32 i = 0; i < simd::Vec8::Size(); i++) {
+    for (uint32_t i = 0; i < simd::Vec8::Size(); i++) {
       EXPECT_EQ(44, in[i]);
     }
   }
 
   {
-    i32 base = 44;
+    int32_t base = 44;
     simd::Vec8 in(base, base + 1, base + 2, base + 3, base + 4, base + 5, base + 6, base + 7);
-    for (i32 i = 0; i < static_cast<i32>(simd::Vec8::Size()); i++) {
+    for (int32_t i = 0; i < static_cast<int32_t>(simd::Vec8::Size()); i++) {
       EXPECT_EQ(base + i, in[i]);
     }
   }
@@ -38,13 +38,13 @@ TEST_F(VectorUtilTest, Arithmetic) {
   {
     simd::Vec8 v(1, 2, 3, 4, 5, 6, 7, 8);
     simd::Vec8 add = v + simd::Vec8(10);
-    for (i32 i = 0; i < 8; i++) {
+    for (int32_t i = 0; i < 8; i++) {
       EXPECT_EQ(10 + (i + 1), add[i]);
     }
 
     // Update the original vector
     v += simd::Vec8(10);
-    for (i32 i = 0; i < 8; i++) {
+    for (int32_t i = 0; i < 8; i++) {
       EXPECT_EQ(10 + (i + 1), v[i]);
     }
   }
@@ -53,13 +53,13 @@ TEST_F(VectorUtilTest, Arithmetic) {
   {
     simd::Vec8 v(11, 12, 13, 14, 15, 16, 17, 18);
     simd::Vec8 sub = v - simd::Vec8(10);
-    for (i32 i = 0; i < 8; i++) {
+    for (int32_t i = 0; i < 8; i++) {
       EXPECT_EQ(i + 1, sub[i]);
     }
 
     // Update the original vector
     v -= simd::Vec8(10);
-    for (i32 i = 0; i < 8; i++) {
+    for (int32_t i = 0; i < 8; i++) {
       EXPECT_EQ(i + 1, v[i]);
     }
   }
@@ -68,13 +68,13 @@ TEST_F(VectorUtilTest, Arithmetic) {
   {
     simd::Vec8 v(1, 2, 3, 4, 5, 6, 7, 8);
     simd::Vec8 add = v * simd::Vec8(10);
-    for (i32 i = 0; i < 8; i++) {
+    for (int32_t i = 0; i < 8; i++) {
       EXPECT_EQ(10 * (i + 1), add[i]);
     }
 
     // Update the original vector
     v *= simd::Vec8(10);
-    for (i32 i = 0; i < 8; i++) {
+    for (int32_t i = 0; i < 8; i++) {
       EXPECT_EQ(10 * (i + 1), v[i]);
     }
   }
@@ -85,13 +85,13 @@ TEST_F(VectorUtilTest, BitwiseOperations) {
   {
     simd::Vec8 v(1, 2, 3, 4, 5, 6, 7, 8);
     simd::Vec8 left_shift = v << 2;
-    for (i32 i = 0; i < 8; i++) {
+    for (int32_t i = 0; i < 8; i++) {
       EXPECT_EQ(v[i] * 4, left_shift[i]);
     }
 
     // Update the original vector
     v <<= 2;
-    for (i32 i = 0; i < 8; i++) {
+    for (int32_t i = 0; i < 8; i++) {
       EXPECT_EQ(left_shift[i], v[i]);
     }
   }
@@ -100,13 +100,13 @@ TEST_F(VectorUtilTest, BitwiseOperations) {
   {
     simd::Vec8 v(4, 8, 16, 32, 64, 128, 256, 512);
     simd::Vec8 right_shift = v >> 1;
-    for (i32 i = 0; i < 8; i++) {
+    for (int32_t i = 0; i < 8; i++) {
       EXPECT_EQ(v[i] / 2, right_shift[i]);
     }
 
     // Update the original vector
     v >>= 1;
-    for (i32 i = 0; i < 8; i++) {
+    for (int32_t i = 0; i < 8; i++) {
       EXPECT_EQ(right_shift[i], v[i]);
     }
   }
@@ -210,9 +210,9 @@ TEST_F(VectorUtilTest, MaskToPosition) {
 
   simd::Vec8Mask mask = vec > val;
 
-  alignas(64) u16 positions[8] = {0};
+  alignas(64) uint16_t positions[8] = {0};
 
-  u32 count = mask.ToPositions(positions, 0);
+  uint32_t count = mask.ToPositions(positions, 0);
   EXPECT_EQ(4u, count);
 
   EXPECT_EQ(0u, positions[0]);
@@ -225,19 +225,19 @@ template <typename T>
 void SmallScale_NeedleTest() {
   static_assert(std::is_integral_v<T>, "This only works for integral types");
 
-  constexpr const u32 num_elems = 4400;
-  constexpr const u32 chunk_size = 1024;
+  constexpr const uint32_t num_elems = 4400;
+  constexpr const uint32_t chunk_size = 1024;
   constexpr const T needle = 16;
 
   std::vector<T> arr(num_elems);
 
-  u32 actual_count = 0;
+  uint32_t actual_count = 0;
 
   // Load
   {
     std::mt19937 gen;
     std::uniform_int_distribution<T> dist(0, 100);
-    for (u32 i = 0; i < num_elems; i++) {
+    for (uint32_t i = 0; i < num_elems; i++) {
       arr[i] = dist(gen);
       if (arr[i] == needle) {
         actual_count++;
@@ -247,14 +247,14 @@ void SmallScale_NeedleTest() {
 
   sel_t out[chunk_size] = {0};
 
-  u32 count = 0;
-  for (u32 offset = 0; offset < num_elems; offset += chunk_size) {
+  uint32_t count = 0;
+  for (uint32_t offset = 0; offset < num_elems; offset += chunk_size) {
     auto size = std::min(chunk_size, num_elems - offset);
     auto found = VectorUtil::FilterEq(&arr[offset], size, needle, out);
     count += found;
 
     // Check each element in this vector
-    for (u32 i = 0; i < found; i++) {
+    for (uint32_t i = 0; i < found; i++) {
       EXPECT_EQ(needle, arr[offset + out[i]]);
     }
   }
@@ -264,14 +264,14 @@ void SmallScale_NeedleTest() {
 }
 
 TEST_F(VectorUtilTest, SimpleFilter) {
-  SmallScale_NeedleTest<i8>();
-  SmallScale_NeedleTest<u8>();
-  SmallScale_NeedleTest<i16>();
-  SmallScale_NeedleTest<u16>();
-  SmallScale_NeedleTest<i32>();
-  SmallScale_NeedleTest<u32>();
-  SmallScale_NeedleTest<i64>();
-  SmallScale_NeedleTest<u64>();
+  SmallScale_NeedleTest<int8_t>();
+  SmallScale_NeedleTest<uint8_t>();
+  SmallScale_NeedleTest<int16_t>();
+  SmallScale_NeedleTest<uint16_t>();
+  SmallScale_NeedleTest<int32_t>();
+  SmallScale_NeedleTest<uint32_t>();
+  SmallScale_NeedleTest<int64_t>();
+  SmallScale_NeedleTest<uint64_t>();
 }
 
 TEST_F(VectorUtilTest, VectorVectorFilter) {
@@ -282,10 +282,10 @@ TEST_F(VectorUtilTest, VectorVectorFilter) {
   //       - a1 <= a2, a1 < a2, and a1 != a2 should return all results
   //
 
-  const u32 num_elems = 10000;
+  const uint32_t num_elems = 10000;
 
-  std::vector<i32> arr_1(num_elems);
-  std::vector<i32> arr_2(num_elems);
+  std::vector<int32_t> arr_1(num_elems);
+  std::vector<int32_t> arr_2(num_elems);
 
   // Load
   std::iota(arr_1.begin(), arr_1.end(), 0);
@@ -295,8 +295,8 @@ TEST_F(VectorUtilTest, VectorVectorFilter) {
 
 #define CHECK(op, expected_count)                                                     \
   {                                                                                   \
-    u32 count = 0;                                                                    \
-    for (u32 offset = 0; offset < num_elems; offset += kDefaultVectorSize) {          \
+    uint32_t count = 0;                                                                    \
+    for (uint32_t offset = 0; offset < num_elems; offset += kDefaultVectorSize) {          \
       auto size = std::min(kDefaultVectorSize, num_elems - offset);                   \
       auto found = VectorUtil::Filter##op(&arr_1[offset], &arr_2[offset], size, out); \
       count += found;                                                                 \
@@ -320,18 +320,18 @@ TEST_F(VectorUtilTest, VectorVectorFilter) {
 #define CHECK(vec_op, scalar_op)                                                          \
   {                                                                                       \
     std::random_device random;                                                            \
-    for (u32 idx = 0; idx < num_elems; idx++) {                                           \
+    for (uint32_t idx = 0; idx < num_elems; idx++) {                                           \
       arr_1[idx] = (random() % 100);                                                      \
       arr_2[idx] = (random() % 100);                                                      \
     }                                                                                     \
-    u32 vec_count = 0, scalar_count = 0;                                                  \
-    for (u32 offset = 0; offset < num_elems; offset += kDefaultVectorSize) {              \
+    uint32_t vec_count = 0, scalar_count = 0;                                                  \
+    for (uint32_t offset = 0; offset < num_elems; offset += kDefaultVectorSize) {              \
       auto size = std::min(kDefaultVectorSize, num_elems - offset);                       \
       /* Vector filter*/                                                                  \
       auto found = VectorUtil::Filter##vec_op(&arr_1[offset], &arr_2[offset], size, out); \
       vec_count += found;                                                                 \
       /* Scalar filter */                                                                 \
-      for (u32 iter = offset, end = iter + size; iter != end; iter++) {                   \
+      for (uint32_t iter = offset, end = iter + size; iter != end; iter++) {                   \
         scalar_count += arr_1[iter] scalar_op arr_2[iter];                                \
       }                                                                                   \
     }                                                                                     \
@@ -349,12 +349,12 @@ TEST_F(VectorUtilTest, VectorVectorFilter) {
 }
 
 TEST_F(VectorUtilTest, ByteToSelectionVector) {
-  constexpr u32 n = 14;
-  u8 bytes[n] = {0xFF, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00,
+  constexpr uint32_t n = 14;
+  uint8_t bytes[n] = {0xFF, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00,
                  0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00};
   sel_t sel[n];
 
-  u32 size = VectorUtil::ByteVectorToSelectionVector(bytes, n, sel);
+  uint32_t size = VectorUtil::ByteVectorToSelectionVector(bytes, n, sel);
   EXPECT_EQ(8u, size);
   EXPECT_EQ(0u, sel[0]);
   EXPECT_EQ(3u, sel[1]);
@@ -368,11 +368,11 @@ TEST_F(VectorUtilTest, ByteToSelectionVector) {
 
 TEST_F(VectorUtilTest, BitToByteVector) {
   // Large enough to run through both vector-loop and scalar tail
-  constexpr u32 num_bits = 97;
+  constexpr uint32_t num_bits = 97;
 
   // The input bit vector output byte vector
   BitVector bv(num_bits);
-  u8 bytes[num_bits];
+  uint8_t bytes[num_bits];
 
   // Set some random bits
   bv.Set(1);
@@ -384,30 +384,30 @@ TEST_F(VectorUtilTest, BitToByteVector) {
 
   util::VectorUtil::BitVectorToByteVector(bv.data_array(), bv.num_bits(), bytes);
 
-  for (u32 i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.num_bits(); i++) {
     EXPECT_EQ(bv[i], bytes[i] == 0xFF);
   }
 }
 
 TEST_F(VectorUtilTest, BitToSelectionVector) {
   // 126-bit vector and the output selection vector
-  constexpr u32 num_bits = 126;
+  constexpr uint32_t num_bits = 126;
   BitVector bv(num_bits);
   sel_t sel[kDefaultVectorSize];
 
   // Set even bits
-  for (u32 i = 0; i < num_bits; i++) {
+  for (uint32_t i = 0; i < num_bits; i++) {
     bv.SetTo(i, i % 2 == 0);
   }
 
   // Transform
-  u32 size = util::VectorUtil::BitVectorToSelectionVector(bv.data_array(), num_bits, sel);
+  uint32_t size = util::VectorUtil::BitVectorToSelectionVector(bv.data_array(), num_bits, sel);
 
   // Only 63 bits are set (remember there are only 126-bits)
   EXPECT_EQ(63u, size);
 
   // Ensure the indexes that are set are even
-  for (u32 i = 0; i < size; i++) {
+  for (uint32_t i = 0; i < size; i++) {
     EXPECT_TRUE(sel[i] % 2 == 0);
   }
 }
@@ -415,7 +415,7 @@ TEST_F(VectorUtilTest, BitToSelectionVector) {
 TEST_F(VectorUtilTest, DiffSelected) {
   sel_t input[kDefaultVectorSize] = {0, 2, 3, 5, 7, 9};
   sel_t output[kDefaultVectorSize];
-  u32 out_count = VectorUtil::DiffSelected_Scalar(10, input, 6, output);
+  uint32_t out_count = VectorUtil::DiffSelected_Scalar(10, input, 6, output);
   EXPECT_EQ(4u, out_count);
   EXPECT_EQ(1u, output[0]);
   EXPECT_EQ(4u, output[1]);
@@ -426,7 +426,7 @@ TEST_F(VectorUtilTest, DiffSelected) {
 TEST_F(VectorUtilTest, DiffSelectedWithScratchPad) {
   sel_t input[kDefaultVectorSize] = {2, 3, 5, 7, 9};
   sel_t output[kDefaultVectorSize];
-  u8 scratch[kDefaultVectorSize];
+  uint8_t scratch[kDefaultVectorSize];
 
   auto count = VectorUtil::DiffSelected_WithScratchPad(10, input, 5, output, scratch);
   EXPECT_EQ(5u, count);
@@ -468,18 +468,18 @@ TEST_F(VectorUtilTest, IntersectSelectionVectors) {
 
 #if 0
 TEST_F(VectorUtilTest, DISABLED_PerfSelect) {
-  constexpr u32 num_elems = 128 * 1024u * 1024u;
-  constexpr const u32 chunk_size = 4096;
+  constexpr uint32_t num_elems = 128 * 1024u * 1024u;
+  constexpr const uint32_t chunk_size = 4096;
 
-  std::vector<i32> arr(num_elems);
+  std::vector<int32_t> arr(num_elems);
 
   double load_time = 0.0;
   {
     ScopedTimer<std::milli> timer(&load_time);
 
     std::mt19937 gen;
-    std::uniform_int_distribution<u32> dist(0, 100);
-    for (u32 i = 0; i < num_elems; i++) {
+    std::uniform_int_distribution<uint32_t> dist(0, 100);
+    for (uint32_t i = 0; i < num_elems; i++) {
       arr[i] = dist(gen);
     }
   }
@@ -488,13 +488,13 @@ TEST_F(VectorUtilTest, DISABLED_PerfSelect) {
 
   alignas(CACHELINE_SIZE) sel_t out[chunk_size] = {0};
 
-  for (i32 sel : {1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99}) {
-    u32 count = 0;
+  for (int32_t sel : {1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99}) {
+    uint32_t count = 0;
     double time = 0.0;
 
     {
       ScopedTimer<std::milli> timer(&time);
-      for (u32 offset = 0; offset < num_elems; offset += chunk_size) {
+      for (uint32_t offset = 0; offset < num_elems; offset += chunk_size) {
         auto size = std::min(chunk_size, num_elems - offset);
         auto found = VectorUtil::FilterLt(&arr[offset], size, sel, out);
         count += found;
@@ -510,15 +510,15 @@ TEST_F(VectorUtilTest, DISABLED_PerfSelect) {
 TEST_F(VectorUtilTest, DISABLED_PerfInvertSel) {
   LOG_INFO("Sel., Scalar (ms), Vector (ms)");
 
-  for (f64 sel :
+  for (double sel :
        {0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}) {
-    u32 num_selected = std::round(sel * kDefaultVectorSize);
+    uint32_t num_selected = std::round(sel * kDefaultVectorSize);
 
-    u16 sel_vec[kDefaultVectorSize] = {0};
-    u16 normal_sel_out[kDefaultVectorSize] = {0};
-    u16 full_sel_out[kDefaultVectorSize] = {0};
+    uint16_t sel_vec[kDefaultVectorSize] = {0};
+    uint16_t normal_sel_out[kDefaultVectorSize] = {0};
+    uint16_t full_sel_out[kDefaultVectorSize] = {0};
 
-    u32 normal_count = 0, full_count = 0;
+    uint32_t normal_count = 0, full_count = 0;
 
     util::FastRand rand;
 
@@ -532,28 +532,28 @@ TEST_F(VectorUtilTest, DISABLED_PerfInvertSel) {
     }
 
     // Populate selection vector
-    for (u32 i = 0, idx = 0; i < kDefaultVectorSize; i++) {
+    for (uint32_t i = 0, idx = 0; i < kDefaultVectorSize; i++) {
       if (set[i]) {
         sel_vec[idx++] = i;
       }
     }
 
     auto normal_ms = Bench(5, [&]() {
-      for (u32 i = 0; i < 500; i++) {
+      for (uint32_t i = 0; i < 500; i++) {
         normal_count = util::VectorUtil::DiffSelected_Scalar(
             kDefaultVectorSize, sel_vec, num_selected, normal_sel_out);
       }
     });
 
     auto full_ms = Bench(5, [&]() {
-      for (u32 i = 0; i < 500; i++) {
+      for (uint32_t i = 0; i < 500; i++) {
         full_count = util::VectorUtil::DiffSelected_WithScratchpad(kDefaultVectorSize, sel_vec,
                                                     num_selected, full_sel_out);
       }
     });
 
     EXPECT_EQ(kDefaultVectorSize - num_selected, full_count);
-    for (u32 i = 0; i < kDefaultVectorSize - num_selected; i++) {
+    for (uint32_t i = 0; i < kDefaultVectorSize - num_selected; i++) {
       EXPECT_EQ(normal_sel_out[i], full_sel_out[i]);
     }
     LOG_INFO("{:>4.0f},{:>12.2f},{:>12.2f}", sel * 100.0, normal_ms, full_ms);

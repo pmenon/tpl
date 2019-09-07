@@ -17,14 +17,14 @@ static inline void BinaryOperation_Constant_Vector(const Vector &left, const Vec
     result->set_null_mask(right_mask);
     if (IgnoreNull && right_mask.Any()) {
       // Slow-path: need to check NULLs
-      VectorOps::Exec(right.selection_vector(), right.count(), [&](u64 i, u64 k) {
+      VectorOps::Exec(right.selection_vector(), right.count(), [&](uint64_t i, uint64_t k) {
         if (!right_mask[i]) {
           result_data[i] = Op::Apply(left_data[0], right_data[i]);
         }
       });
     } else {
       // Fast-path: no NULL checks
-      VectorOps::Exec(right.selection_vector(), right.count(), [&](u64 i, u64 k) {
+      VectorOps::Exec(right.selection_vector(), right.count(), [&](uint64_t i, uint64_t k) {
         result_data[i] = Op::Apply(left_data[0], right_data[i]);
       });
     }
@@ -48,14 +48,14 @@ static inline void BinaryOperation_Vector_Constant(const Vector &left, const Vec
     result->set_null_mask(left_mask);
     if (IgnoreNull && left_mask.Any()) {
       // Slow-path: need to check NULLs
-      VectorOps::Exec(left.selection_vector(), left.count(), [&](u64 i, u64 k) {
+      VectorOps::Exec(left.selection_vector(), left.count(), [&](uint64_t i, uint64_t k) {
         if (!left_mask[i]) {
           result_data[i] = Op::Apply(left_data[i], right_data[0]);
         }
       });
     } else {
       // Fast-path: no NULL checks
-      VectorOps::Exec(left.selection_vector(), left.count(), [&](u64 i, u64 k) {
+      VectorOps::Exec(left.selection_vector(), left.count(), [&](uint64_t i, uint64_t k) {
         result_data[i] = Op::Apply(left_data[i], right_data[0]);
       });
     }
@@ -79,15 +79,16 @@ void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right, Vect
 
   if (IgnoreNull && result_mask.Any()) {
     // Slow-path: need to check NULLs
-    VectorOps::Exec(left.selection_vector(), left.count(), [&](u64 i, u64 k) {
+    VectorOps::Exec(left.selection_vector(), left.count(), [&](uint64_t i, uint64_t k) {
       if (!result_mask[i]) {
         result_data[i] = Op::Apply(left_data[i], right_data[i]);
       }
     });
   } else {
     // Fast-path: no NULL checks
-    VectorOps::Exec(left.selection_vector(), left.count(),
-                    [&](u64 i, u64 k) { result_data[i] = Op::Apply(left_data[i], right_data[i]); });
+    VectorOps::Exec(left.selection_vector(), left.count(), [&](uint64_t i, uint64_t k) {
+      result_data[i] = Op::Apply(left_data[i], right_data[i]);
+    });
   }
 
   result->set_null_mask(result_mask);

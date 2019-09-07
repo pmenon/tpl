@@ -13,11 +13,12 @@ bool VectorOps::AllTrue(const Vector &input) {
   bool result = true;
   if (input.null_mask().Any()) {
     // Slow-path: Input has NULLs we need to check
-    ExecTyped<bool>(
-        input, [&](bool val, u64 i, u64 k) { result = result && (!input.null_mask_[i] && val); });
+    ExecTyped<bool>(input, [&](bool val, uint64_t i, uint64_t k) {
+      result = result && (!input.null_mask_[i] && val);
+    });
   } else {
     // Fast-path: No NULL check needed
-    ExecTyped<bool>(input, [&](bool val, u64 i, u64 k) { result = result && val; });
+    ExecTyped<bool>(input, [&](bool val, uint64_t i, uint64_t k) { result = result && val; });
   }
   return result;
 }
@@ -31,11 +32,12 @@ bool VectorOps::AnyTrue(const Vector &input) {
   bool result = false;
   if (input.null_mask().Any()) {
     // Slow-path: Input has NULLs we need to check
-    ExecTyped<bool>(
-        input, [&](bool val, u64 i, u64 k) { result = result || (!input.null_mask_[i] && val); });
+    ExecTyped<bool>(input, [&](bool val, uint64_t i, uint64_t k) {
+      result = result || (!input.null_mask_[i] && val);
+    });
   } else {
     // Fast-path: No NULL check needed
-    ExecTyped<bool>(input, [&](bool val, u64 i, u64 k) { result = result || val; });
+    ExecTyped<bool>(input, [&](bool val, uint64_t i, uint64_t k) { result = result || val; });
   }
   return result;
 }

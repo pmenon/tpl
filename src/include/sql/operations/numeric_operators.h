@@ -185,7 +185,7 @@ struct RoundUpTo {
       scale = 0;
     }
     T modifier = std::pow(10, scale);
-    return (static_cast<i64>(input * modifier)) / modifier;
+    return (static_cast<int64_t>(input * modifier)) / modifier;
   }
 };
 

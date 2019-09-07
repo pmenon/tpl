@@ -212,7 +212,7 @@ const DoubleType &DoubleType::InstanceNullable() {
 // Decimal
 // ---------------------------------------------------------
 
-DecimalType::DecimalType(bool nullable, u32 precision, u32 scale)
+DecimalType::DecimalType(bool nullable, uint32_t precision, uint32_t scale)
     : SqlType(SqlTypeId::Decimal, nullable), precision_(precision), scale_(scale) {}
 
 TypeId DecimalType::GetPrimitiveTypeId() const { return TypeId::BigInt; }
@@ -236,13 +236,14 @@ bool DecimalType::Equals(const SqlType &other) const {
 
 bool DecimalType::IsArithmetic() const { return true; }
 
-u32 DecimalType::precision() const { return precision_; }
+uint32_t DecimalType::precision() const { return precision_; }
 
-u32 DecimalType::scale() const { return scale_; }
+uint32_t DecimalType::scale() const { return scale_; }
 
 template <bool Nullable>
-const DecimalType &DecimalType::InstanceInternal(u32 precision, u32 scale) {
-  static llvm::DenseMap<std::pair<u32, u32>, std::unique_ptr<DecimalType>> kDecimalTypeMap;
+const DecimalType &DecimalType::InstanceInternal(uint32_t precision, uint32_t scale) {
+  static llvm::DenseMap<std::pair<uint32_t, uint32_t>, std::unique_ptr<DecimalType>>
+      kDecimalTypeMap;
 
   auto key = std::make_pair(precision, scale);
   if (auto iter = kDecimalTypeMap.find(key); iter != kDecimalTypeMap.end()) {
@@ -253,11 +254,11 @@ const DecimalType &DecimalType::InstanceInternal(u32 precision, u32 scale) {
   return *iter.first->second;
 }
 
-const DecimalType &DecimalType::InstanceNonNullable(u32 precision, u32 scale) {
+const DecimalType &DecimalType::InstanceNonNullable(uint32_t precision, uint32_t scale) {
   return InstanceInternal<false>(precision, scale);
 }
 
-const DecimalType &DecimalType::InstanceNullable(u32 precision, u32 scale) {
+const DecimalType &DecimalType::InstanceNullable(uint32_t precision, uint32_t scale) {
   return InstanceInternal<true>(precision, scale);
 }
 
@@ -296,8 +297,8 @@ DateType::DateType(bool nullable) : SqlType(SqlTypeId::Date, nullable) {}
 // ---------------------------------------------------------
 
 template <bool Nullable>
-const CharType &CharType::InstanceInternal(u32 length) {
-  static llvm::DenseMap<u32, std::unique_ptr<CharType>> kCharTypeMap;
+const CharType &CharType::InstanceInternal(uint32_t length) {
+  static llvm::DenseMap<uint32_t, std::unique_ptr<CharType>> kCharTypeMap;
 
   if (auto iter = kCharTypeMap.find(length); iter != kCharTypeMap.end()) {
     return *iter->second;
@@ -307,10 +308,10 @@ const CharType &CharType::InstanceInternal(u32 length) {
   return *iter.first->second;
 }
 
-const CharType &CharType::InstanceNonNullable(u32 len) { return InstanceInternal<false>(len); }
-const CharType &CharType::InstanceNullable(u32 len) { return InstanceInternal<true>(len); }
+const CharType &CharType::InstanceNonNullable(uint32_t len) { return InstanceInternal<false>(len); }
+const CharType &CharType::InstanceNullable(uint32_t len) { return InstanceInternal<true>(len); }
 
-CharType::CharType(bool nullable, u32 length)
+CharType::CharType(bool nullable, uint32_t length)
     : SqlType(SqlTypeId::Char, nullable), length_(length) {}
 
 TypeId CharType::GetPrimitiveTypeId() const { return TypeId::Varchar; }
@@ -331,15 +332,15 @@ bool CharType::Equals(const SqlType &other) const {
   return false;
 }
 
-u32 CharType::length() const { return length_; }
+uint32_t CharType::length() const { return length_; }
 
 // ---------------------------------------------------------
 // Variable-length strings
 // ---------------------------------------------------------
 
 template <bool Nullable>
-const VarcharType &VarcharType::InstanceInternal(u32 length) {
-  static llvm::DenseMap<u32, std::unique_ptr<VarcharType>> kVarcharTypeMap;
+const VarcharType &VarcharType::InstanceInternal(uint32_t length) {
+  static llvm::DenseMap<uint32_t, std::unique_ptr<VarcharType>> kVarcharTypeMap;
 
   if (auto iter = kVarcharTypeMap.find(length); iter != kVarcharTypeMap.end()) {
     return *iter->second;
@@ -349,15 +350,15 @@ const VarcharType &VarcharType::InstanceInternal(u32 length) {
   return *iter.first->second;
 }
 
-const VarcharType &VarcharType::InstanceNonNullable(u32 max_len) {
+const VarcharType &VarcharType::InstanceNonNullable(uint32_t max_len) {
   return InstanceInternal<false>(max_len);
 }
 
-const VarcharType &VarcharType::InstanceNullable(u32 max_len) {
+const VarcharType &VarcharType::InstanceNullable(uint32_t max_len) {
   return InstanceInternal<true>(max_len);
 }
 
-VarcharType::VarcharType(bool nullable, u32 max_len)
+VarcharType::VarcharType(bool nullable, uint32_t max_len)
     : SqlType(SqlTypeId::Varchar, nullable), max_len_(max_len) {}
 
 TypeId VarcharType::GetPrimitiveTypeId() const { return TypeId::Varchar; }
@@ -378,6 +379,6 @@ bool VarcharType::Equals(const SqlType &other) const {
   return false;
 }
 
-u32 VarcharType::max_length() const { return max_len_; }
+uint32_t VarcharType::max_length() const { return max_len_; }
 
 }  // namespace tpl::sql

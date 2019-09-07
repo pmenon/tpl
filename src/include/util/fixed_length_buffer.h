@@ -16,7 +16,7 @@ namespace tpl::util {
  * @tparam T The type of the elements in the container.
  * @tparam N The maximum number of elements in the buffer.
  */
-template <typename T, u32 N>
+template <typename T, uint32_t N>
 class FixedLengthBuffer {
  public:
   using value_type = T;
@@ -72,7 +72,7 @@ class FixedLengthBuffer {
    * @param idx The index of the element to access.
    * @return A const reference to the element in this buffer at a given index.
    */
-  constexpr const_reference operator[](const u32 idx) const noexcept {
+  constexpr const_reference operator[](const uint32_t idx) const noexcept {
     TPL_ASSERT(idx < size(), "Out-of-bounds buffer access");
     return buf_[idx];
   }
@@ -84,7 +84,7 @@ class FixedLengthBuffer {
    * @param idx The index of the element to access.
    * @return A const reference to the element in this buffer at a given index.
    */
-  constexpr reference operator[](const u32 idx) noexcept {
+  constexpr reference operator[](const uint32_t idx) noexcept {
     TPL_ASSERT(idx < size(), "Out-of-bounds buffer access");
     return buf_[idx];
   }
@@ -94,7 +94,7 @@ class FixedLengthBuffer {
    * @param idx The index of the element to access.
    * @return A const reference to the element in this buffer at a given index.
    */
-  constexpr const_reference at(const u32 idx) const {
+  constexpr const_reference at(const uint32_t idx) const {
     if (idx >= size()) {
       throw std::out_of_range("Out-of-range access");
     }
@@ -106,7 +106,7 @@ class FixedLengthBuffer {
    * @param idx The index of the element to access.
    * @return A reference to the element in this buffer at a given index.
    */
-  constexpr reference at(const u32 idx) {
+  constexpr reference at(const uint32_t idx) {
     if (idx >= size()) {
       throw std::out_of_range("Out-of-range access");
     }
@@ -130,7 +130,7 @@ class FixedLengthBuffer {
   // The backing container.
   std::array<T, N> buf_;
   // The index where the next element is inserted.
-  u32 index_;
+  uint32_t index_;
 };
 
 }  // namespace tpl::util

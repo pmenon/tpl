@@ -16,8 +16,8 @@ namespace {
  * The input tuples. All sorter instances use this tuple as input and output.
  */
 struct Tuple {
-  i64 key;
-  i64 attributes;
+  int64_t key;
+  int64_t attributes;
 };
 
 /**
@@ -25,9 +25,9 @@ struct Tuple {
  * @param sorter The sorter to insert into.
  * @param num_tuples The number of tuple to insert.
  */
-void PopulateSorter(Sorter *sorter, u32 num_tuples = kDefaultVectorSize + 7) {
+void PopulateSorter(Sorter *sorter, uint32_t num_tuples = kDefaultVectorSize + 7) {
   std::random_device r;
-  for (u32 i = 0; i < num_tuples; i++) {
+  for (uint32_t i = 0; i < num_tuples; i++) {
     auto tuple = reinterpret_cast<Tuple *>(sorter->AllocInputTuple());
     tuple->key = r() % num_tuples;
     tuple->attributes = r() % 10;
@@ -40,7 +40,7 @@ void PopulateSorter(Sorter *sorter, u32 num_tuples = kDefaultVectorSize + 7) {
  * @param rhs The second tuple.
  * @return < 0 if lhs < rhs, 0 if lhs = rhs, > 0 if lhs > rhs.
  */
-i32 CompareTuple(const Tuple &lhs, const Tuple &rhs) { return lhs.key - rhs.key; }
+int32_t CompareTuple(const Tuple &lhs, const Tuple &rhs) { return lhs.key - rhs.key; }
 
 /**
  * Convert row-oriented data in the rows vector to columnar format in the given
@@ -49,11 +49,11 @@ i32 CompareTuple(const Tuple &lhs, const Tuple &rhs) { return lhs.key - rhs.key;
  * @param num_rows The number of rows in the array.
  * @param iter The output vector projection iterator.
  */
-void Transpose(const byte *rows[], u64 num_rows, VectorProjectionIterator *iter) {
-  for (u32 i = 0; i < num_rows; i++) {
+void Transpose(const byte *rows[], uint64_t num_rows, VectorProjectionIterator *iter) {
+  for (uint32_t i = 0; i < num_rows; i++) {
     auto tuple = reinterpret_cast<const Tuple *>(rows[i]);
-    iter->SetValue<i64, false>(0, tuple->key, false);
-    iter->SetValue<i64, false>(1, tuple->attributes, false);
+    iter->SetValue<int64_t, false>(0, tuple->key, false);
+    iter->SetValue<int64_t, false>(1, tuple->attributes, false);
     iter->Advance();
   }
 }
@@ -67,7 +67,7 @@ void Transpose(const byte *rows[], u64 num_rows, VectorProjectionIterator *iter)
 template <class T>
 bool IsSorted(const Vector &vec) {
   const auto data = reinterpret_cast<const T *>(vec.data());
-  for (u32 i = 1; i < vec.count(); i++) {
+  for (uint32_t i = 1; i < vec.count(); i++) {
     bool left_null = vec.null_mask()[i];
     bool right_null = vec.null_mask()[i];
     if (left_null != right_null) {
@@ -122,7 +122,7 @@ TEST_F(SorterVectorIteratorTest, EmptyIterator) {
 }
 
 TEST_F(SorterVectorIteratorTest, Iterate) {
-  const u32 num_elems = kDefaultVectorSize + 29;
+  const uint32_t num_elems = kDefaultVectorSize + 29;
   const auto compare = [](const void *lhs, const void *rhs) {
     return CompareTuple(*reinterpret_cast<const Tuple *>(lhs),
                         *reinterpret_cast<const Tuple *>(rhs));
@@ -131,14 +131,14 @@ TEST_F(SorterVectorIteratorTest, Iterate) {
   PopulateSorter(&sorter, num_elems);
   sorter.Sort();
 
-  u32 num_found = 0;
+  uint32_t num_found = 0;
   for (SorterVectorIterator iter(sorter, row_meta(), Transpose); iter.HasNext();
        iter.Next(Transpose)) {
     auto *vpi = iter.GetVectorProjectionIterator();
     // Count
     num_found += vpi->GetTupleCount();
     // Verify sorted
-    IsSorted<i64>(*vpi->GetVectorProjection()->GetColumn(0));
+    IsSorted<int64_t>(*vpi->GetVectorProjection()->GetColumn(0));
   }
 
   EXPECT_EQ(num_elems, num_found);

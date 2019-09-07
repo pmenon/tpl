@@ -27,7 +27,7 @@ AHTVectorIterator::AHTVectorIterator(const AggregationHashTable &agg_hash_table,
 }
 
 AHTVectorIterator::AHTVectorIterator(const AggregationHashTable &agg_hash_table,
-                                     const Schema::ColumnInfo *column_info, const u32 num_cols,
+                                     const Schema::ColumnInfo *column_info, const uint32_t num_cols,
                                      const AHTVectorIterator::TransposeFn transpose_fn)
     : AHTVectorIterator(agg_hash_table, {column_info, column_info + num_cols}, transpose_fn) {}
 
@@ -38,7 +38,7 @@ AHTVectorIterator::~AHTVectorIterator() {
 void AHTVectorIterator::BuildVectorProjection(const AHTVectorIterator::TransposeFn transpose_fn) {
   // Pull out payload pointers from hash table entries into our temporary array.
   auto [size, entries] = iter_.GetCurrentBatch();
-  for (u32 i = 0; i < size; i++) {
+  for (uint32_t i = 0; i < size; i++) {
     temp_aggregates_vec_[i] = entries[i]->payload;
   }
 

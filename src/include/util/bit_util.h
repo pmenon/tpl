@@ -15,7 +15,7 @@ namespace tpl::util {
 class BitUtil {
  public:
   // The number of bits in one word
-  static constexpr const u32 kBitWordSize = sizeof(u32) * kBitsPerByte;
+  static constexpr const uint32_t kBitWordSize = sizeof(uint32_t) * kBitsPerByte;
 
   // Make sure the number of bits in a word is a power of two to make all these
   // bit operations cheap
@@ -29,7 +29,7 @@ class BitUtil {
    * @return The number of leading zeros
    */
   template <typename T>
-  constexpr static u64 CountLeadingZeros(T val) {
+  constexpr static uint64_t CountLeadingZeros(T val) {
     return llvm::countLeadingZeros(val);
   }
 
@@ -41,7 +41,7 @@ class BitUtil {
    * @return The number of leading zeros
    */
   template <typename T>
-  constexpr static u64 CountTrailingZeros(T val) {
+  constexpr static uint64_t CountTrailingZeros(T val) {
     return llvm::countTrailingZeros(val);
   }
 
@@ -49,7 +49,7 @@ class BitUtil {
    * Count the number of set bits in the given value.
    */
   template <typename T>
-  constexpr static u32 CountPopulation(T val) {
+  constexpr static uint32_t CountPopulation(T val) {
     return llvm::countPopulation(val);
   }
 
@@ -59,7 +59,7 @@ class BitUtil {
    * @param num_bits The size of the bit vector, in bits
    * @return The number of words needed to store a bit vector of the given size
    */
-  constexpr static u64 Num32BitWordsFor(u64 num_bits) {
+  constexpr static uint64_t Num32BitWordsFor(uint64_t num_bits) {
     return MathUtil::DivRoundUp(num_bits, kBitWordSize);
   }
 
@@ -69,8 +69,8 @@ class BitUtil {
    * @param idx The index of the bit to check
    * @return True if set; false otherwise
    */
-  constexpr static bool Test(const u32 bits[], const u32 idx) {
-    const u32 mask = 1u << (idx % kBitWordSize);
+  constexpr static bool Test(const uint32_t bits[], const uint32_t idx) {
+    const uint32_t mask = 1u << (idx % kBitWordSize);
     return bits[idx / kBitWordSize] & mask;
   }
 
@@ -79,7 +79,7 @@ class BitUtil {
    * @param bits The bit vector
    * @param idx The index of the bit to set to 1
    */
-  constexpr static void Set(u32 bits[], const u32 idx) {
+  constexpr static void Set(uint32_t bits[], const uint32_t idx) {
     bits[idx / kBitWordSize] |= 1u << (idx % kBitWordSize);
   }
 
@@ -88,7 +88,7 @@ class BitUtil {
    * @param bits The bit vector
    * @param idx The index of the bit to flip
    */
-  constexpr static void Flip(u32 bits[], const u32 idx) {
+  constexpr static void Flip(uint32_t bits[], const uint32_t idx) {
     bits[idx / kBitWordSize] ^= 1u << (idx % kBitWordSize);
   }
 };

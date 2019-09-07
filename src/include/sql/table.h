@@ -13,7 +13,7 @@
 #include "util/common.h"
 #include "util/macros.h"
 
-extern i32 current_partition;
+extern int32_t current_partition;
 
 namespace tpl::sql {
 
@@ -28,21 +28,21 @@ class Table {
    */
   class Block {
    public:
-    Block(std::vector<ColumnSegment> &&data, u32 num_tuples)
+    Block(std::vector<ColumnSegment> &&data, uint32_t num_tuples)
         : data_(std::move(data)), num_tuples_(num_tuples) {}
 
-    u32 num_cols() const { return static_cast<u32>(data_.size()); }
+    uint32_t num_cols() const { return static_cast<uint32_t>(data_.size()); }
 
-    u32 num_tuples() const { return num_tuples_; }
+    uint32_t num_tuples() const { return num_tuples_; }
 
-    const ColumnSegment *GetColumnData(u32 col_idx) const {
+    const ColumnSegment *GetColumnData(uint32_t col_idx) const {
       TPL_ASSERT(col_idx < num_cols(), "Invalid column index!");
       return &data_[col_idx];
     }
 
    private:
     std::vector<ColumnSegment> data_;
-    u32 num_tuples_;
+    uint32_t num_tuples_;
   };
 
   using BlockList = std::vector<Block>;
@@ -52,7 +52,7 @@ class Table {
    * @param id The desired ID of the table
    * @param schema The physical schema of the table
    */
-  Table(u16 id, std::unique_ptr<Schema> schema)
+  Table(uint16_t id, std::unique_ptr<Schema> schema)
       : schema_(std::move(schema)), id_(id), num_tuples_(0) {}
 
   /**
@@ -64,7 +64,7 @@ class Table {
   /**
    * Return the block at the given index in the table's block list
    */
-  Block *GetBlock(const u32 block_idx) {
+  Block *GetBlock(const uint32_t block_idx) {
     TPL_ASSERT(block_idx < blocks_.size(), "Out-of-bounds block access");
     return &blocks_[block_idx];
   }
@@ -86,12 +86,12 @@ class Table {
   /**
    * Return the ID of the table
    */
-  u16 id() const { return id_; }
+  uint16_t id() const { return id_; }
 
   /**
    * Return the total number of tuples in the table
    */
-  u32 num_tuples() const { return num_tuples_; }
+  uint32_t num_tuples() const { return num_tuples_; }
 
   /**
    * Return the schema of the table
@@ -101,13 +101,13 @@ class Table {
   /**
    * Return the number of blocks in the table
    */
-  u32 num_blocks() const { return blocks_.size(); }
+  uint32_t num_blocks() const { return blocks_.size(); }
 
  private:
   std::unique_ptr<Schema> schema_;
   BlockList blocks_;
-  u16 id_;
-  u32 num_tuples_;
+  uint16_t id_;
+  uint32_t num_tuples_;
 };
 
 /**
@@ -118,7 +118,7 @@ class TableBlockIterator {
   /**
    * Create an iterator over all the blocks in the table with the given ID
    */
-  explicit TableBlockIterator(u16 table_id);
+  explicit TableBlockIterator(uint16_t table_id);
 
   /**
    * Create an iterator over a subset of the blocks in the table with ID
@@ -127,7 +127,7 @@ class TableBlockIterator {
    * @param start_block_idx The index of the block to begin at
    * @param end_block_idx The index of the block to stop at
    */
-  TableBlockIterator(u16 table_id, u32 start_block_idx, u32 end_block_idx);
+  TableBlockIterator(uint16_t table_id, uint32_t start_block_idx, uint32_t end_block_idx);
 
   /**
    * Initialize the iterator returning true if it succeeded
@@ -153,11 +153,11 @@ class TableBlockIterator {
 
  private:
   // The ID of the table to iterate
-  u16 table_id_;
+  uint16_t table_id_;
   // The index of the block to begin iteration
-  u32 start_block_idx_;
+  uint32_t start_block_idx_;
   // The index of the block to end iteration
-  u32 end_block_idx_;
+  uint32_t end_block_idx_;
   // The table we're scanning over
   const Table *table_;
   // The current block

@@ -7,8 +7,8 @@ namespace tpl::sql {
 namespace {
 
 template <typename T, typename Op, bool IgnoreNull>
-u32 TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &right,
-                                             sel_t out_sel_vector[]) {
+uint32_t TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &right,
+                                                  sel_t out_sel_vector[]) {
   auto *left_data = reinterpret_cast<const T *>(left.data());
   auto *right_data = reinterpret_cast<const T *>(right.data());
 
@@ -18,7 +18,7 @@ u32 TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &r
   const auto left_has_nulls = left_nulls.Any();
   if (IgnoreNull && left_has_nulls) {
     // Slow-path: manually skip NULLs
-    VectorOps::Exec(left, [&](u64 i, u64 k) {
+    VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
       if (!left_nulls[i]) {
         out_sel_vector[out_idx] = i;
         out_idx += Op::Apply(left_data[i], right_data[0]);
@@ -26,13 +26,13 @@ u32 TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &r
     });
   } else if (left_has_nulls) {
     // Slow-path: evaluate NULLs and condition
-    VectorOps::Exec(left, [&](u64 i, u64 k) {
+    VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
       out_sel_vector[out_idx] = i;
       out_idx += !left_nulls[i] && Op::Apply(left_data[i], right_data[0]);
     });
   } else {
     // Fast-path: no NULLs
-    VectorOps::Exec(left, [&](u64 i, u64 k) {
+    VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
       out_sel_vector[out_idx] = i;
       out_idx += Op::Apply(left_data[i], right_data[0]);
     });
@@ -42,8 +42,8 @@ u32 TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &r
 }
 
 template <typename T, typename Op, bool IgnoreNull>
-u32 TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &right,
-                                           sel_t out_sel_vector[]) {
+uint32_t TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &right,
+                                                sel_t out_sel_vector[]) {
   TPL_ASSERT(left.selection_vector() == right.selection_vector(),
              "Vectors must have the same selection vector, or none at all");
   TPL_ASSERT(left.count() == right.count(), "Count must be less than input vector size");
@@ -58,7 +58,7 @@ u32 TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &rig
 
   if (IgnoreNull && has_nulls) {
     // Slow-path: manually skip NULLs
-    VectorOps::Exec(left, [&](u64 i, u64 k) {
+    VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
       if (!result_mask[i]) {
         out_sel_vector[out_idx] = i;
         out_idx += Op::Apply(left_data[i], right_data[i]);
@@ -66,13 +66,13 @@ u32 TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &rig
     });
   } else if (has_nulls) {
     // Slow-path: evaluate NULLs and condition
-    VectorOps::Exec(left, [&](u64 i, u64 k) {
+    VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
       out_sel_vector[out_idx] = i;
       out_idx += !result_mask[i] && Op::Apply(left_data[i], right_data[i]);
     });
   } else {
     // Fast-path: no NULLs
-    VectorOps::Exec(left, [&](u64 i, u64 k) {
+    VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
       out_sel_vector[out_idx] = i;
       out_idx += Op::Apply(left_data[i], right_data[i]);
     });
@@ -82,7 +82,7 @@ u32 TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &rig
 }
 
 template <typename T, typename Op, bool IgnoreNull = false>
-u32 TemplatedSelectOperation(const Vector &left, const Vector &right, sel_t out_sel_vector[]) {
+uint32_t TemplatedSelectOperation(const Vector &left, const Vector &right, sel_t out_sel_vector[]) {
   if (right.IsConstant() && !right.IsNull(0)) {
     return TemplatedSelectOperation_Vector_Constant<T, Op, IgnoreNull>(left, right, out_sel_vector);
   } else if (left.IsConstant() && !left.IsNull(0)) {
@@ -95,23 +95,23 @@ u32 TemplatedSelectOperation(const Vector &left, const Vector &right, sel_t out_
 }
 
 template <typename Op>
-u32 SelectOperation(const Vector &left, const Vector &right, sel_t out_sel_vector[]) {
+uint32_t SelectOperation(const Vector &left, const Vector &right, sel_t out_sel_vector[]) {
   TPL_ASSERT(left.type_id() == right.type_id(), "Mismatched vector inputs to selection");
   switch (left.type_id()) {
     case TypeId::Boolean:
       return TemplatedSelectOperation<bool, Op>(left, right, out_sel_vector);
     case TypeId::TinyInt:
-      return TemplatedSelectOperation<i8, Op>(left, right, out_sel_vector);
+      return TemplatedSelectOperation<int8_t, Op>(left, right, out_sel_vector);
     case TypeId::SmallInt:
-      return TemplatedSelectOperation<i16, Op>(left, right, out_sel_vector);
+      return TemplatedSelectOperation<int16_t, Op>(left, right, out_sel_vector);
     case TypeId::Integer:
-      return TemplatedSelectOperation<i32, Op>(left, right, out_sel_vector);
+      return TemplatedSelectOperation<int32_t, Op>(left, right, out_sel_vector);
     case TypeId::BigInt:
-      return TemplatedSelectOperation<i64, Op>(left, right, out_sel_vector);
+      return TemplatedSelectOperation<int64_t, Op>(left, right, out_sel_vector);
     case TypeId::Float:
-      return TemplatedSelectOperation<f32, Op>(left, right, out_sel_vector);
+      return TemplatedSelectOperation<float, Op>(left, right, out_sel_vector);
     case TypeId::Double:
-      return TemplatedSelectOperation<f64, Op>(left, right, out_sel_vector);
+      return TemplatedSelectOperation<double, Op>(left, right, out_sel_vector);
     case TypeId::Varchar:
       return TemplatedSelectOperation<const char *, Op, true>(left, right, out_sel_vector);
     default: { throw std::runtime_error("Type not supported for selection"); }
@@ -120,29 +120,32 @@ u32 SelectOperation(const Vector &left, const Vector &right, sel_t out_sel_vecto
 
 }  // namespace
 
-u32 VectorOps::SelectEqual(const Vector &left, const Vector &right, sel_t out_sel_vector[]) {
+uint32_t VectorOps::SelectEqual(const Vector &left, const Vector &right, sel_t out_sel_vector[]) {
   return SelectOperation<tpl::sql::Equal>(left, right, out_sel_vector);
 }
 
-u32 VectorOps::SelectGreaterThan(const Vector &left, const Vector &right, sel_t out_sel_vector[]) {
+uint32_t VectorOps::SelectGreaterThan(const Vector &left, const Vector &right,
+                                      sel_t out_sel_vector[]) {
   return SelectOperation<tpl::sql::GreaterThan>(left, right, out_sel_vector);
 }
 
-u32 VectorOps::SelectGreaterThanEqual(const Vector &left, const Vector &right,
-                                      sel_t out_sel_vector[]) {
+uint32_t VectorOps::SelectGreaterThanEqual(const Vector &left, const Vector &right,
+                                           sel_t out_sel_vector[]) {
   return SelectOperation<tpl::sql::GreaterThanEqual>(left, right, out_sel_vector);
 }
 
-u32 VectorOps::SelectLessThan(const Vector &left, const Vector &right, sel_t out_sel_vector[]) {
+uint32_t VectorOps::SelectLessThan(const Vector &left, const Vector &right,
+                                   sel_t out_sel_vector[]) {
   return SelectOperation<tpl::sql::LessThan>(left, right, out_sel_vector);
 }
 
-u32 VectorOps::SelectLessThanEqual(const Vector &left, const Vector &right,
-                                   sel_t out_sel_vector[]) {
+uint32_t VectorOps::SelectLessThanEqual(const Vector &left, const Vector &right,
+                                        sel_t out_sel_vector[]) {
   return SelectOperation<tpl::sql::LessThanEqual>(left, right, out_sel_vector);
 }
 
-u32 VectorOps::SelectNotEqual(const Vector &left, const Vector &right, sel_t out_sel_vector[]) {
+uint32_t VectorOps::SelectNotEqual(const Vector &left, const Vector &right,
+                                   sel_t out_sel_vector[]) {
   return SelectOperation<tpl::sql::NotEqual>(left, right, out_sel_vector);
 }
 

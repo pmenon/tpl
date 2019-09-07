@@ -18,7 +18,7 @@ class BytecodeEmitter {
    * the provided bytecode vector
    * @param bytecode The bytecode array to emit bytecode into
    */
-  explicit BytecodeEmitter(std::vector<u8> &bytecode) : bytecode_(bytecode) {}
+  explicit BytecodeEmitter(std::vector<uint8_t> &bytecode) : bytecode_(bytecode) {}
 
   /**
    * This class cannot be copied or moved
@@ -35,17 +35,17 @@ class BytecodeEmitter {
   // -------------------------------------------------------
 
   void EmitDeref(Bytecode bytecode, LocalVar dest, LocalVar src);
-  void EmitDerefN(LocalVar dest, LocalVar src, u32 len);
+  void EmitDerefN(LocalVar dest, LocalVar src, uint32_t len);
 
   // -------------------------------------------------------
   // Assignment
   // -------------------------------------------------------
 
   void EmitAssign(Bytecode bytecode, LocalVar dest, LocalVar src);
-  void EmitAssignImm1(LocalVar dest, i8 val);
-  void EmitAssignImm2(LocalVar dest, i16 val);
-  void EmitAssignImm4(LocalVar dest, i32 val);
-  void EmitAssignImm8(LocalVar dest, i64 val);
+  void EmitAssignImm1(LocalVar dest, int8_t val);
+  void EmitAssignImm2(LocalVar dest, int16_t val);
+  void EmitAssignImm4(LocalVar dest, int32_t val);
+  void EmitAssignImm8(LocalVar dest, int64_t val);
 
   // -------------------------------------------------------
   // Jumps
@@ -61,8 +61,8 @@ class BytecodeEmitter {
   // Load-effective-address
   // -------------------------------------------------------
 
-  void EmitLea(LocalVar dest, LocalVar src, u32 offset);
-  void EmitLeaScaled(LocalVar dest, LocalVar src, LocalVar index, u32 scale, u32 offset);
+  void EmitLea(LocalVar dest, LocalVar src, uint32_t offset);
+  void EmitLeaScaled(LocalVar dest, LocalVar src, LocalVar index, uint32_t scale, uint32_t offset);
 
   // -------------------------------------------------------
   // Calls and returns
@@ -109,16 +109,16 @@ class BytecodeEmitter {
                                      FunctionId destroy_fn, LocalVar ctx);
 
   // Initialize a table iterator
-  void EmitTableIterInit(Bytecode bytecode, LocalVar iter, u16 table_id);
+  void EmitTableIterInit(Bytecode bytecode, LocalVar iter, uint16_t table_id);
   // Emit a parallel table scan
-  void EmitParallelTableScan(u16 table_id, LocalVar ctx, LocalVar thread_states,
+  void EmitParallelTableScan(uint16_t table_id, LocalVar ctx, LocalVar thread_states,
                              FunctionId scan_fn);
 
   // Reading values from an iterator
-  void EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar vpi, u32 col_idx);
+  void EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar vpi, uint32_t col_idx);
 
   // Setting values in an iterator
-  void EmitVPISet(Bytecode bytecode, LocalVar vpi, LocalVar input, u32 col_idx);
+  void EmitVPISet(Bytecode bytecode, LocalVar vpi, LocalVar input, uint32_t col_idx);
 
   // Insert a filter flavor into the filter manager builder
   void EmitFilterManagerInsertFlavor(LocalVar fmb, FunctionId func);
@@ -178,7 +178,7 @@ class BytecodeEmitter {
   void EmitJump(BytecodeLabel *label);
 
  private:
-  std::vector<u8> &bytecode_;
+  std::vector<uint8_t> &bytecode_;
 };
 
 }  // namespace tpl::vm

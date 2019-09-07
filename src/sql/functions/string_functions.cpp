@@ -14,8 +14,8 @@ void StringFunctions::Substring(UNUSED ExecutionContext *ctx, StringVal *result,
     return;
   }
 
-  const auto start = std::max(pos.val, i64{1});
-  const auto end = pos.val + std::min(static_cast<i64>(str.len), len.val);
+  const auto start = std::max(pos.val, int64_t{1});
+  const auto end = pos.val + std::min(static_cast<int64_t>(str.len), len.val);
 
   // The end can be before the start only if the length was negative. This is an
   // error.
@@ -40,7 +40,7 @@ char *SearchSubstring(char *haystack, const std::size_t hay_len, const char *nee
                       const std::size_t needle_len) {
   TPL_ASSERT(needle != nullptr, "No search string provided");
   TPL_ASSERT(needle_len > 0, "No search string provided");
-  for (u32 i = 0; i < hay_len + needle_len; i++) {
+  for (uint32_t i = 0; i < hay_len + needle_len; i++) {
     const auto pos = haystack + i;
     if (strncmp(pos, needle, needle_len) == 0) {
       return pos;
@@ -76,7 +76,7 @@ void StringFunctions::SplitPart(UNUSED ExecutionContext *ctx, StringVal *result,
   auto const end = curr + str.len;
   auto const delimiter = reinterpret_cast<const char *>(delim.ptr);
 
-  for (u32 index = 1;; index++) {
+  for (uint32_t index = 1;; index++) {
     const auto remaining_len = end - curr;
     const auto next_delim = SearchSubstring(curr, remaining_len, delimiter, delim.len);
     if (next_delim == nullptr) {
@@ -117,7 +117,7 @@ void StringFunctions::Repeat(ExecutionContext *ctx, StringVal *result, const Str
   }
 
   auto *ptr = result->ptr;
-  for (u32 i = 0; i < n.val; i++) {
+  for (uint32_t i = 0; i < n.val; i++) {
     std::memcpy(ptr, str.ptr, str.len);
     ptr += str.len;
   }
@@ -150,7 +150,7 @@ void StringFunctions::Lpad(ExecutionContext *ctx, StringVal *result, const Strin
   }
 
   auto *ptr = result->ptr;
-  for (u32 bytes_left = len.val - str.len; bytes_left > 0;) {
+  for (uint32_t bytes_left = len.val - str.len; bytes_left > 0;) {
     auto copy_len = std::min(pad.len, bytes_left);
     std::memcpy(ptr, pad.ptr, copy_len);
     bytes_left -= copy_len;
@@ -192,7 +192,7 @@ void StringFunctions::Rpad(ExecutionContext *ctx, StringVal *result, const Strin
   ptr += str.len;
 
   // Then padding
-  for (u32 bytes_left = len.val - str.len; bytes_left > 0;) {
+  for (uint32_t bytes_left = len.val - str.len; bytes_left > 0;) {
     auto copy_len = std::min(pad.len, bytes_left);
     std::memcpy(ptr, pad.ptr, copy_len);
     bytes_left -= copy_len;
@@ -220,7 +220,7 @@ void StringFunctions::Lower(ExecutionContext *ctx, StringVal *result, const Stri
 
   auto *ptr = reinterpret_cast<char *>(result->ptr);
   auto *src = reinterpret_cast<char *>(str.ptr);
-  for (u32 i = 0; i < str.len; i++) {
+  for (uint32_t i = 0; i < str.len; i++) {
     ptr[i] = std::tolower(src[i]);
   }
 }
@@ -240,7 +240,7 @@ void StringFunctions::Upper(ExecutionContext *ctx, StringVal *result, const Stri
 
   auto *ptr = reinterpret_cast<char *>(result->ptr);
   auto *src = reinterpret_cast<char *>(str.ptr);
-  for (u32 i = 0; i < str.len; i++) {
+  for (uint32_t i = 0; i < str.len; i++) {
     ptr[i] = std::toupper(src[i]);
   }
 }
@@ -288,15 +288,15 @@ void DoTrim(StringVal *result, const StringVal &str, const StringVal &chars) {
   }
 
   std::bitset<256> bitset;
-  for (u32 i = 0; i < chars.len; i++) {
+  for (uint32_t i = 0; i < chars.len; i++) {
     bitset.set(chars.ptr[i]);
   }
 
   // The valid range
-  i32 begin = 0, end = str.len - 1;
+  int32_t begin = 0, end = str.len - 1;
 
   if constexpr (TrimLeft) {
-    while (begin < static_cast<i32>(str.len) && bitset.test(str.ptr[begin])) {
+    while (begin < static_cast<int32_t>(str.len) && bitset.test(str.ptr[begin])) {
       begin++;
     }
   }
@@ -346,8 +346,8 @@ void StringFunctions::Left(UNUSED ExecutionContext *ctx, StringVal *result, cons
     return;
   }
 
-  const auto len =
-      n.val < 0 ? std::max(i64{0}, str.len + n.val) : std::min(str.len, static_cast<u32>(n.val));
+  const auto len = n.val < 0 ? std::max(int64_t{0}, str.len + n.val)
+                             : std::min(str.len, static_cast<uint32_t>(n.val));
   *result = StringVal(str.ptr, len);
 }
 
@@ -358,7 +358,7 @@ void StringFunctions::Right(UNUSED ExecutionContext *ctx, StringVal *result, con
     return;
   }
 
-  const auto len = std::min(str.len, static_cast<u32>(std::abs(n.val)));
+  const auto len = std::min(str.len, static_cast<uint32_t>(std::abs(n.val)));
   if (n.val > 0) {
     *result = StringVal(str.ptr + (str.len - len), len);
   } else {

@@ -21,7 +21,7 @@ void VectorProjection::InitializeEmpty(const std::vector<const Schema::ColumnInf
   sel_vector_[0] = kInvalidPos;
   column_info_ = column_info;
   columns_.resize(column_info.size());
-  for (u32 i = 0; i < columns_.size(); i++) {
+  for (uint32_t i = 0; i < columns_.size(); i++) {
     const auto col_type = column_info[i]->sql_type.GetPrimitiveTypeId();
     columns_[i] = std::make_unique<Vector>(col_type);
   }
@@ -33,7 +33,7 @@ void VectorProjection::Initialize(const std::vector<const Schema::ColumnInfo *> 
   // Determine the total size of the data chunk we need to support the columns
   // we manage.
   const auto size_in_bytes =
-      std::accumulate(columns_.begin(), columns_.end(), 0u, [&](u32 curr_size, auto &col) {
+      std::accumulate(columns_.begin(), columns_.end(), 0u, [&](uint32_t curr_size, auto &col) {
         return curr_size + (GetTypeIdSize(col->type_id()) * kDefaultVectorSize);
       });
   TPL_ASSERT(size_in_bytes > 0, "Cannot have zero-size vector projection");
@@ -47,7 +47,7 @@ void VectorProjection::Initialize(const std::vector<const Schema::ColumnInfo *> 
   }
 }
 
-void VectorProjection::SetSelectionVector(const sel_t *const new_sel_vector, const u32 count) {
+void VectorProjection::SetSelectionVector(const sel_t *const new_sel_vector, const uint32_t count) {
   TPL_ASSERT(new_sel_vector != nullptr, "Null input selection vector");
   TPL_ASSERT(count <= kDefaultVectorSize, "Invalid count");
 
@@ -73,19 +73,19 @@ void VectorProjection::Reset() {
   }
 }
 
-void VectorProjection::ResetColumn(byte *col_data, u32 *col_null_bitmap, u32 col_idx,
-                                   u32 num_tuples) {
+void VectorProjection::ResetColumn(byte *col_data, uint32_t *col_null_bitmap, uint32_t col_idx,
+                                   uint32_t num_tuples) {
   auto col_type = GetColumnInfo(col_idx)->sql_type.GetPrimitiveTypeId();
   columns_[col_idx]->Reference(col_type, col_data, col_null_bitmap, num_tuples);
 }
 
 void VectorProjection::ResetColumn(const std::vector<ColumnVectorIterator> &column_iterators,
-                                   const u32 col_idx) {
+                                   const uint32_t col_idx) {
   ResetColumn(column_iterators[col_idx].col_data(), column_iterators[col_idx].col_null_bitmap(),
               col_idx, column_iterators[col_idx].NumTuples());
 }
 
-void VectorProjection::SetTupleCount(u64 count) {
+void VectorProjection::SetTupleCount(uint64_t count) {
   for (auto &col : columns_) {
     col->set_count(count);
   }

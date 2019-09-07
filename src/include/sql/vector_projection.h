@@ -87,13 +87,13 @@ class VectorProjection {
    * @param new_sel_vector The new selection vector.
    * @param count The number of elements in the new selection vector.
    */
-  void SetSelectionVector(const sel_t *new_sel_vector, u32 count);
+  void SetSelectionVector(const sel_t *new_sel_vector, uint32_t count);
 
   /**
    * Access metadata for the column at position @em col_idx in the projection.
    * @return The metadata for the column at the given index in the projection.
    */
-  const Schema::ColumnInfo *GetColumnInfo(const u32 col_idx) const {
+  const Schema::ColumnInfo *GetColumnInfo(const uint32_t col_idx) const {
     TPL_ASSERT(col_idx < GetNumColumns(), "Out-of-bounds column access");
     return column_info_[col_idx];
   }
@@ -103,7 +103,7 @@ class VectorProjection {
    * @param col_idx The index of the column.
    * @return The column's vector data.
    */
-  const Vector *GetColumn(const u32 col_idx) const {
+  const Vector *GetColumn(const uint32_t col_idx) const {
     TPL_ASSERT(col_idx < GetNumColumns(), "Out-of-bounds column access");
     return columns_[col_idx].get();
   }
@@ -113,7 +113,7 @@ class VectorProjection {
    * @param col_idx The index of the column.
    * @return The column's vector data.
    */
-  Vector *GetColumn(const u32 col_idx) {
+  Vector *GetColumn(const uint32_t col_idx) {
     TPL_ASSERT(col_idx < GetNumColumns(), "Out-of-bounds column access");
     return columns_[col_idx].get();
   }
@@ -130,7 +130,7 @@ class VectorProjection {
    * @param column_iterators A vector of all column iterators.
    * @param col_idx The index of the column in this projection to reset.
    */
-  void ResetColumn(const std::vector<ColumnVectorIterator> &column_iterators, u32 col_idx);
+  void ResetColumn(const std::vector<ColumnVectorIterator> &column_iterators, uint32_t col_idx);
 
   /**
    * Reset/reload the data for the column at position @em col_idx in this
@@ -141,30 +141,31 @@ class VectorProjection {
    * @param col_idx The index of the column to reset.
    * @param num_tuples The number of tuples stored in the input.
    */
-  void ResetColumn(byte *col_data, u32 *col_null_bitmap, u32 col_idx, u32 num_tuples);
+  void ResetColumn(byte *col_data, uint32_t *col_null_bitmap, uint32_t col_idx,
+                   uint32_t num_tuples);
 
   /**
    * Return the number of columns in this projection.
    */
-  u32 GetNumColumns() const { return columns_.size(); }
+  uint32_t GetNumColumns() const { return columns_.size(); }
 
   /**
    * Return the number of active tuples in this projection.
    */
-  u64 GetTupleCount() const { return columns_.empty() ? 0 : columns_[0]->count(); }
+  uint64_t GetTupleCount() const { return columns_.empty() ? 0 : columns_[0]->count(); }
 
   /**
    * Set the current count of tuples in this projection..
    * @param count The count.
    */
-  void SetTupleCount(u64 count);
+  void SetTupleCount(uint64_t count);
 
   /**
    * Compute the selectivity of this projection.
    * @return A number between [0.0, 1.0] representing the selectivity, i.e., the
    *         fraction of tuples that are active and visible.
    */
-  f64 ComputeSelectivity() const {
+  double ComputeSelectivity() const {
     return columns_.empty() ? 0 : columns_[0]->ComputeSelectivity();
   }
 

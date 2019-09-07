@@ -91,28 +91,28 @@ class GenericValue {
    * @param value The value.
    * @return A TinyInt value.
    */
-  static GenericValue CreateTinyInt(i8 value);
+  static GenericValue CreateTinyInt(int8_t value);
 
   /**
    * Create a non-NULL smallint value.
    * @param value The value.
    * @return A SmallInt value.
    */
-  static GenericValue CreateSmallInt(i16 value);
+  static GenericValue CreateSmallInt(int16_t value);
 
   /**
    * Create a non-NULL integer value.
    * @param value The value.
    * @return An Integer value.
    */
-  static GenericValue CreateInteger(i32 value);
+  static GenericValue CreateInteger(int32_t value);
 
   /**
    * Create a non-NULL bigint value.
    * @param value The value.
    * @return A BigInt value.
    */
-  static GenericValue CreateBigInt(i64 value);
+  static GenericValue CreateBigInt(int64_t value);
 
   /**
    * Create a non-NULL hash value.
@@ -143,36 +143,36 @@ class GenericValue {
    * @param value The value.
    * @return A Real value.
    */
-  static GenericValue CreateReal(f32 value);
+  static GenericValue CreateReal(float value);
 
   /**
    * Create a non-NULL float value.
    * @param value The value.
    * @return A float value.
    */
-  static GenericValue CreateFloat(f32 value) { return CreateReal(value); }
+  static GenericValue CreateFloat(float value) { return CreateReal(value); }
 
   /**
    * Create a non-NULL double value.
    * @param value The value.
    * @return A Double value.
    */
-  static GenericValue CreateDouble(f64 value);
+  static GenericValue CreateDouble(double value);
 
   /**
    * Create a non-NULL date value.
    * @param value The value.
    * @return A Date value.
    */
-  static GenericValue CreateDate(i32 year, i32 month, i32 day);
+  static GenericValue CreateDate(int32_t year, int32_t month, int32_t day);
 
   /**
    * Create a non-NULL timestamp value.
    * @param value The value.
    * @return A Timestamp value.
    */
-  static GenericValue CreateTimestamp(i32 year, i32 month, i32 day, i32 hour, i32 min, i32 sec,
-                                      i32 msec);
+  static GenericValue CreateTimestamp(int32_t year, int32_t month, int32_t day, int32_t hour,
+                                      int32_t min, int32_t sec, int32_t msec);
 
   /**
    * Create a non-NULL varchar value.
@@ -203,14 +203,14 @@ class GenericValue {
   // The value of the object if it's a fixed-length type
   union {
     bool boolean;
-    i8 tinyint;
-    i16 smallint;
-    i32 integer;
-    i64 bigint;
+    int8_t tinyint;
+    int16_t smallint;
+    int32_t integer;
+    int64_t bigint;
     hash_t hash;
     uintptr_t pointer;
-    f32 float_;
-    f64 double_;
+    float float_;
+    double double_;
   } value_;
   // The value of the object if it's a variable size type.
   std::string str_value_;

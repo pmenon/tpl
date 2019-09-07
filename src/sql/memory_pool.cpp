@@ -12,7 +12,7 @@ namespace tpl::sql {
 std::atomic<std::size_t> MemoryPool::kMmapThreshold = 64 * MB;
 
 // Minimum alignment to abide by
-static constexpr u32 kMinMallocAlignment = 8;
+static constexpr uint32_t kMinMallocAlignment = 8;
 
 MemoryPool::MemoryPool(MemoryTracker *tracker) : tracker_(tracker) { (void)tracker_; }
 

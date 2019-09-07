@@ -55,12 +55,12 @@ class VectorFilterExecutorTest : public TplTest {
 
     static const char *nums[] = {"one", "two",   "three", "four", "five",
                                  "six", "seven", "eight", "nine", "ten"};
-    for (u64 i = 0; i < vp->GetTupleCount(); i++) {
+    for (uint64_t i = 0; i < vp->GetTupleCount(); i++) {
       vp->GetColumn(Col::A)->SetValue(i, GenericValue::CreateBoolean(i >= 5));
       vp->GetColumn(Col::B)->SetValue(i, GenericValue::CreateTinyInt(i % 3));
       vp->GetColumn(Col::C)->SetValue(i, GenericValue::CreateSmallInt(i + 4));
       vp->GetColumn(Col::D)->SetValue(
-          i, GenericValue::CreateReal((i + 1) + static_cast<f32>(i + 1) / 10.0));
+          i, GenericValue::CreateReal((i + 1) + static_cast<float>(i + 1) / 10.0));
       vp->GetColumn(Col::E)->SetValue(i, GenericValue::CreateVarchar(nums[i]));
       vp->GetColumn(Col::F)->SetValue(i, GenericValue::CreateSmallInt(i % 2 == 0 ? i + 1 : i + 4));
     }
@@ -73,7 +73,7 @@ class VectorFilterExecutorTest : public TplTest {
 };
 
 TEST_F(VectorFilterExecutorTest, ColumnWithConstant) {
-  auto check_loop = [](VectorProjection *vp, u32 expected_size, auto cb) {
+  auto check_loop = [](VectorProjection *vp, uint32_t expected_size, auto cb) {
     EXPECT_EQ(expected_size, vp->GetTupleCount());
     for (VectorProjectionIterator iter(vp); iter.HasNextFiltered(); iter.AdvanceFiltered()) {
       cb(&iter);
@@ -101,7 +101,7 @@ TEST_F(VectorFilterExecutorTest, ColumnWithConstant) {
     filter.Finish();
 
     check_loop(vp.get(), 3, [](VectorProjectionIterator *iter) {
-      auto colb = *iter->GetValue<i8, false>(Col::B, nullptr);
+      auto colb = *iter->GetValue<int8_t, false>(Col::B, nullptr);
       EXPECT_GT(colb, 1);
     });
   }
@@ -114,7 +114,7 @@ TEST_F(VectorFilterExecutorTest, ColumnWithConstant) {
     filter.Finish();
 
     check_loop(vp.get(), 4, [](VectorProjectionIterator *iter) {
-      auto colb = *iter->GetValue<i16, false>(Col::C, nullptr);
+      auto colb = *iter->GetValue<int16_t, false>(Col::C, nullptr);
       EXPECT_GE(colb, 10);
     });
   }
@@ -127,7 +127,7 @@ TEST_F(VectorFilterExecutorTest, ColumnWithConstant) {
     filter.Finish();
 
     check_loop(vp.get(), 3, [](VectorProjectionIterator *iter) {
-      auto cold = *iter->GetValue<f32, false>(Col::D, nullptr);
+      auto cold = *iter->GetValue<float, false>(Col::D, nullptr);
       EXPECT_LT(cold, 4.0);
     });
   }
@@ -140,7 +140,7 @@ TEST_F(VectorFilterExecutorTest, ColumnWithConstant) {
     filter.Finish();
 
     check_loop(vp.get(), vp->GetTupleCount(), [](VectorProjectionIterator *iter) {
-      auto colb = *iter->GetValue<i8, false>(Col::B, nullptr);
+      auto colb = *iter->GetValue<int8_t, false>(Col::B, nullptr);
       EXPECT_LE(colb, 4);
     });
   }
@@ -163,7 +163,7 @@ TEST_F(VectorFilterExecutorTest, Conjunction_Between) {
   auto vp = CreateTestVectorProj();
 
   // colc >= 8 AND colc <= 10
-  i16 colc_lo = 8, colc_hi = 10;
+  int16_t colc_lo = 8, colc_hi = 10;
   VectorFilterExecutor filter(vp.get());
   filter.SelectGeVal(Col::C, GenericValue::CreateSmallInt(colc_lo));
   filter.SelectLeVal(Col::C, GenericValue::CreateSmallInt(colc_hi));
@@ -171,13 +171,13 @@ TEST_F(VectorFilterExecutorTest, Conjunction_Between) {
 
   EXPECT_EQ(3u, vp->GetTupleCount());
   for (VectorProjectionIterator iter(vp.get()); iter.HasNextFiltered(); iter.AdvanceFiltered()) {
-    auto colc = *iter.GetValue<i16, false>(Col::C, nullptr);
+    auto colc = *iter.GetValue<int16_t, false>(Col::C, nullptr);
     EXPECT_TRUE(colc >= colc_lo && colc <= colc_hi);
   }
 }
 
 TEST_F(VectorFilterExecutorTest, ColumnWithColumn) {
-  auto check_loop = [](VectorProjection *vp, u32 expected_size, auto cb) {
+  auto check_loop = [](VectorProjection *vp, uint32_t expected_size, auto cb) {
     EXPECT_EQ(expected_size, vp->GetTupleCount());
     for (VectorProjectionIterator iter(vp); iter.HasNextFiltered(); iter.AdvanceFiltered()) {
       cb(&iter);
@@ -191,8 +191,8 @@ TEST_F(VectorFilterExecutorTest, ColumnWithColumn) {
     filter.SelectEq(Col::C, Col::F);
     filter.Finish();
     check_loop(vp.get(), 5, [](VectorProjectionIterator *iter) {
-      auto colc = *iter->GetValue<i16, false>(Col::C, nullptr);
-      auto colf = *iter->GetValue<i16, false>(Col::F, nullptr);
+      auto colc = *iter->GetValue<int16_t, false>(Col::C, nullptr);
+      auto colf = *iter->GetValue<int16_t, false>(Col::F, nullptr);
       EXPECT_EQ(colc, colf);
     });
   }
@@ -204,8 +204,8 @@ TEST_F(VectorFilterExecutorTest, ColumnWithColumn) {
     filter.SelectGe(Col::C, Col::F);
     filter.Finish();
     check_loop(vp.get(), 10, [](VectorProjectionIterator *iter) {
-      auto colc = *iter->GetValue<i16, false>(Col::C, nullptr);
-      auto colf = *iter->GetValue<i16, false>(Col::F, nullptr);
+      auto colc = *iter->GetValue<int16_t, false>(Col::C, nullptr);
+      auto colf = *iter->GetValue<int16_t, false>(Col::F, nullptr);
       EXPECT_GE(colc, colf);
     });
   }
@@ -217,8 +217,8 @@ TEST_F(VectorFilterExecutorTest, ColumnWithColumn) {
     filter.SelectGt(Col::C, Col::F);
     filter.Finish();
     check_loop(vp.get(), 5, [](VectorProjectionIterator *iter) {
-      auto colc = *iter->GetValue<i16, false>(Col::C, nullptr);
-      auto colf = *iter->GetValue<i16, false>(Col::F, nullptr);
+      auto colc = *iter->GetValue<int16_t, false>(Col::C, nullptr);
+      auto colf = *iter->GetValue<int16_t, false>(Col::F, nullptr);
       EXPECT_GT(colc, colf);
     });
   }
@@ -239,8 +239,8 @@ TEST_F(VectorFilterExecutorTest, ColumnWithColumn) {
     filter.SelectLe(Col::C, Col::F);
     filter.Finish();
     check_loop(vp.get(), 5, [](VectorProjectionIterator *iter) {
-      auto colc = *iter->GetValue<i16, false>(Col::C, nullptr);
-      auto colf = *iter->GetValue<i16, false>(Col::F, nullptr);
+      auto colc = *iter->GetValue<int16_t, false>(Col::C, nullptr);
+      auto colf = *iter->GetValue<int16_t, false>(Col::F, nullptr);
       EXPECT_LE(colc, colf);
     });
   }
@@ -252,8 +252,8 @@ TEST_F(VectorFilterExecutorTest, ColumnWithColumn) {
     filter.SelectNe(Col::C, Col::F);
     filter.Finish();
     check_loop(vp.get(), 5, [](VectorProjectionIterator *iter) {
-      auto colc = *iter->GetValue<i16, false>(Col::C, nullptr);
-      auto colf = *iter->GetValue<i16, false>(Col::F, nullptr);
+      auto colc = *iter->GetValue<int16_t, false>(Col::C, nullptr);
+      auto colf = *iter->GetValue<int16_t, false>(Col::F, nullptr);
       EXPECT_NE(colc, colf);
     });
   }

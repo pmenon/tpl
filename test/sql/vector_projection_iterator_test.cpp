@@ -25,7 +25,7 @@ namespace tpl::sql {
 namespace {
 
 template <typename T>
-std::unique_ptr<byte[]> CreateMonotonicallyIncreasing(u32 num_elems) {
+std::unique_ptr<byte[]> CreateMonotonicallyIncreasing(uint32_t num_elems) {
   auto input = std::make_unique<byte[]>(num_elems * sizeof(T));
   auto *typed_input = reinterpret_cast<T *>(input.get());
   std::iota(typed_input, &typed_input[num_elems], static_cast<T>(0));
@@ -33,7 +33,7 @@ std::unique_ptr<byte[]> CreateMonotonicallyIncreasing(u32 num_elems) {
 }
 
 template <typename T>
-std::unique_ptr<byte[]> CreateRandom(u32 num_elems, T min = 0,
+std::unique_ptr<byte[]> CreateRandom(uint32_t num_elems, T min = 0,
                                      T max = std::numeric_limits<T>::max()) {
   auto input = std::make_unique<byte[]>(num_elems * sizeof(T));
 
@@ -41,21 +41,21 @@ std::unique_ptr<byte[]> CreateRandom(u32 num_elems, T min = 0,
   std::uniform_int_distribution<T> distribution(min, max);
 
   auto *typed_input = reinterpret_cast<T *>(input.get());
-  for (u32 i = 0; i < num_elems; i++) {
+  for (uint32_t i = 0; i < num_elems; i++) {
     typed_input[i] = distribution(generator);
   }
 
   return input;
 }
 
-std::pair<std::unique_ptr<u32[]>, u32> CreateRandomNullBitmap(u32 num_elems) {
-  auto input = std::make_unique<u32[]>(util::BitUtil::Num32BitWordsFor(num_elems));
+std::pair<std::unique_ptr<uint32_t[]>, uint32_t> CreateRandomNullBitmap(uint32_t num_elems) {
+  auto input = std::make_unique<uint32_t[]>(util::BitUtil::Num32BitWordsFor(num_elems));
   auto num_nulls = 0;
 
   std::mt19937 generator;
-  std::uniform_int_distribution<u32> distribution(0, 10);
+  std::uniform_int_distribution<uint32_t> distribution(0, 10);
 
-  for (u32 i = 0; i < num_elems; i++) {
+  for (uint32_t i = 0; i < num_elems; i++) {
     if (distribution(generator) < 5) {
       util::BitUtil::Flip(input.get(), i);
       num_nulls++;
@@ -70,16 +70,16 @@ std::pair<std::unique_ptr<u32[]>, u32> CreateRandomNullBitmap(u32 num_elems) {
 class VectorProjectionIteratorTest : public TplTest {
  protected:
   // The columns
-  enum ColId : u8 { col_a = 0, col_b = 1, col_c = 2, col_d = 3, col_e = 4, col_f = 5 };
+  enum ColId : uint8_t { col_a = 0, col_b = 1, col_c = 2, col_d = 3, col_e = 4, col_f = 5 };
 
   struct ColData {
     std::unique_ptr<byte[]> data;
-    std::unique_ptr<u32[]> nulls;
-    u32 num_nulls;
-    u32 num_tuples;
+    std::unique_ptr<uint32_t[]> nulls;
+    uint32_t num_nulls;
+    uint32_t num_tuples;
 
-    ColData(std::unique_ptr<byte[]> data, std::unique_ptr<u32[]> nulls, u32 num_nulls,
-            u32 num_tuples)
+    ColData(std::unique_ptr<byte[]> data, std::unique_ptr<uint32_t[]> nulls, uint32_t num_nulls,
+            uint32_t num_tuples)
         : data(std::move(data)),
           nulls(std::move(nulls)),
           num_nulls(num_nulls),
@@ -111,13 +111,13 @@ class VectorProjectionIteratorTest : public TplTest {
   }
 
   void LoadData() {
-    auto cola_data = CreateMonotonicallyIncreasing<i16>(num_tuples());
-    auto colb_data = CreateRandom<i32>(num_tuples());
+    auto cola_data = CreateMonotonicallyIncreasing<int16_t>(num_tuples());
+    auto colb_data = CreateRandom<int32_t>(num_tuples());
     auto [colb_null, colb_num_nulls] = CreateRandomNullBitmap(num_tuples());
-    auto colc_data = CreateRandom<i32>(num_tuples(), 0, 1000);
-    auto cold_data = CreateRandom<i64>(num_tuples());
-    auto cole_data = CreateRandom<i64>(num_tuples(), 0, 100);
-    auto colf_data = CreateRandom<i64>(num_tuples(), 50, 100);
+    auto colc_data = CreateRandom<int32_t>(num_tuples(), 0, 1000);
+    auto cold_data = CreateRandom<int64_t>(num_tuples());
+    auto cole_data = CreateRandom<int64_t>(num_tuples(), 0, 100);
+    auto colf_data = CreateRandom<int64_t>(num_tuples(), 50, 100);
 
     data_.emplace_back(std::move(cola_data), nullptr, 0, num_tuples());
     data_.emplace_back(std::move(colb_data), std::move(colb_null), colb_num_nulls, num_tuples());
@@ -126,7 +126,7 @@ class VectorProjectionIteratorTest : public TplTest {
     data_.emplace_back(std::move(cole_data), nullptr, 0, num_tuples());
     data_.emplace_back(std::move(colf_data), nullptr, 0, num_tuples());
 
-    for (u32 col_idx = 0; col_idx < data_.size(); col_idx++) {
+    for (uint32_t col_idx = 0; col_idx < data_.size(); col_idx++) {
       auto &[data, nulls, num_nulls, num_tuples] = data_[col_idx];
       (void)num_nulls;
       vp_->ResetColumn(data.get(), nulls.get(), col_idx, num_tuples);
@@ -134,14 +134,14 @@ class VectorProjectionIteratorTest : public TplTest {
   }
 
  protected:
-  u32 num_tuples() const { return num_tuples_; }
+  uint32_t num_tuples() const { return num_tuples_; }
 
   VectorProjection *vp() { return vp_.get(); }
 
-  const ColData &column_data(u32 col_idx) const { return data_[col_idx]; }
+  const ColData &column_data(uint32_t col_idx) const { return data_[col_idx]; }
 
  private:
-  u32 num_tuples_;
+  uint32_t num_tuples_;
   std::unique_ptr<Schema> schema_;
   std::unique_ptr<VectorProjection> vp_;
   std::vector<ColData> data_;
@@ -168,7 +168,7 @@ TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
   //
 
   {
-    u32 tuple_count = 0;
+    uint32_t tuple_count = 0;
 
     VectorProjectionIterator iter;
     iter.SetVectorProjection(vp());
@@ -190,9 +190,9 @@ TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
     iter.SetVectorProjection(vp());
 
     bool entered = false;
-    for (i16 last = -1; iter.HasNext(); iter.Advance()) {
+    for (int16_t last = -1; iter.HasNext(); iter.Advance()) {
       entered = true;
-      auto *ptr = iter.GetValue<i16, false>(ColId::col_a, nullptr);
+      auto *ptr = iter.GetValue<int16_t, false>(ColId::col_a, nullptr);
       EXPECT_NE(nullptr, ptr);
       if (last != -1) {
         EXPECT_LE(last, *ptr);
@@ -214,11 +214,11 @@ TEST_F(VectorProjectionIteratorTest, ReadNullableColumnsTest) {
   VectorProjectionIterator iter;
   iter.SetVectorProjection(vp());
 
-  u32 num_nulls = 0;
+  uint32_t num_nulls = 0;
   for (; iter.HasNext(); iter.Advance()) {
     bool null = false;
-    iter.GetValue<i32, true>(ColId::col_b, &null);
-    num_nulls += static_cast<u32>(null);
+    iter.GetValue<int32_t, true>(ColId::col_b, &null);
+    num_nulls += static_cast<uint32_t>(null);
   }
 
   EXPECT_EQ(column_data(ColId::col_b).num_nulls, num_nulls);
@@ -236,23 +236,23 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
 
     for (; iter.HasNext(); iter.Advance()) {
       bool null = false;
-      iter.GetValue<i32, true>(ColId::col_b, &null);
+      iter.GetValue<int32_t, true>(ColId::col_b, &null);
       iter.Match(!null);
     }
 
     iter.ResetFiltered();
 
     // Now all selected/active elements must not be null
-    u32 num_non_null = 0;
+    uint32_t num_non_null = 0;
     for (; iter.HasNextFiltered(); iter.AdvanceFiltered()) {
       bool null = false;
-      iter.GetValue<i32, true>(ColId::col_b, &null);
+      iter.GetValue<int32_t, true>(ColId::col_b, &null);
       EXPECT_FALSE(null);
       num_non_null++;
     }
 
     const auto &col_data = column_data(ColId::col_b);
-    u32 actual_non_null = col_data.num_tuples - col_data.num_nulls;
+    uint32_t actual_non_null = col_data.num_tuples - col_data.num_nulls;
     EXPECT_EQ(actual_non_null, num_non_null);
     EXPECT_EQ(actual_non_null, iter.GetTupleCount());
   }
@@ -273,7 +273,7 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
     iter.SetVectorProjection(vp());
 
     for (; iter.HasNext(); iter.Advance()) {
-      auto *val = iter.GetValue<i16, false>(ColId::col_a, nullptr);
+      auto *val = iter.GetValue<int16_t, false>(ColId::col_a, nullptr);
       iter.Match(*val < 100);
     }
 
@@ -281,7 +281,7 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
 
     for (; iter.HasNextFiltered(); iter.AdvanceFiltered()) {
       bool null = false;
-      iter.GetValue<i32, true>(ColId::col_b, &null);
+      iter.GetValue<int32_t, true>(ColId::col_b, &null);
       iter.Match(null);
     }
 
@@ -292,14 +292,14 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
     for (; iter.HasNextFiltered(); iter.AdvanceFiltered()) {
       // col_a must be less than 100
       {
-        auto *val = iter.GetValue<i16, false>(ColId::col_a, nullptr);
+        auto *val = iter.GetValue<int16_t, false>(ColId::col_a, nullptr);
         EXPECT_LT(*val, 100);
       }
 
       // col_b must be NULL
       {
         bool null = false;
-        iter.GetValue<i32, true>(ColId::col_b, &null);
+        iter.GetValue<int32_t, true>(ColId::col_b, &null);
         EXPECT_TRUE(null);
       }
     }
@@ -317,12 +317,12 @@ TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
 
   iter.RunFilter([&iter]() {
     bool null = false;
-    iter.GetValue<i32, true>(ColId::col_b, &null);
+    iter.GetValue<int32_t, true>(ColId::col_b, &null);
     return !null;
   });
 
   const auto &col_data = column_data(ColId::col_b);
-  u32 actual_non_null = col_data.num_tuples - col_data.num_nulls;
+  uint32_t actual_non_null = col_data.num_tuples - col_data.num_nulls;
   EXPECT_EQ(actual_non_null, iter.GetTupleCount());
 
   //
@@ -330,11 +330,11 @@ TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
   //
 
   {
-    u32 c = 0;
+    uint32_t c = 0;
     iter.ForEach([&iter, &c]() {
       c++;
       bool null = false;
-      iter.GetValue<i32, true>(ColId::col_b, &null);
+      iter.GetValue<int32_t, true>(ColId::col_b, &null);
       EXPECT_FALSE(null);
     });
 

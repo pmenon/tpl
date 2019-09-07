@@ -23,7 +23,7 @@ class Barrier {
   /**
    * Create a new barrier with the given count.
    */
-  explicit Barrier(const u32 count) : generation_(0), count_(count), reset_value_(count) {}
+  explicit Barrier(const uint32_t count) : generation_(0), count_(count), reset_value_(count) {}
 
   /**
    * This class cannot be copied or moved.
@@ -47,14 +47,14 @@ class Barrier {
 
     // Otherwise, we wait for some thread (i.e., the last thread to arrive) to
     // bump the generation and notify us.
-    const u32 gen = generation_;
+    const uint32_t gen = generation_;
     cv_.wait(lock, [&]() { return gen != generation_; });
   }
 
   /**
    * Get the current generation the barrier is in.
    */
-  u32 GetGeneration() {
+  uint32_t GetGeneration() {
     std::unique_lock<std::mutex> lock(mutex_);
     return generation_;
   }
@@ -66,11 +66,11 @@ class Barrier {
   std::condition_variable cv_;
 
   // The current generation
-  u32 generation_;
+  uint32_t generation_;
   // The current outstanding count
-  u32 count_;
+  uint32_t count_;
   // The value to reset the count to when rolling into a new generation
-  u32 reset_value_;
+  uint32_t reset_value_;
 };
 
 }  // namespace tpl::util

@@ -30,9 +30,9 @@ class Schema {
 
   explicit Schema(std::vector<ColumnInfo> &&cols) : cols_(std::move(cols)) {}
 
-  const ColumnInfo *GetColumnInfo(u32 col_idx) const { return &cols_[col_idx]; }
+  const ColumnInfo *GetColumnInfo(uint32_t col_idx) const { return &cols_[col_idx]; }
 
-  u32 num_columns() const { return static_cast<u32>(columns().size()); }
+  uint32_t num_columns() const { return static_cast<uint32_t>(columns().size()); }
 
   const std::vector<ColumnInfo> &columns() const { return cols_; }
 

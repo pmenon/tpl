@@ -7,7 +7,7 @@
 
 namespace tpl::sql {
 
-u32 TupleIdList::AsSelectionVector(u16 *sel_vec) const {
+uint32_t TupleIdList::AsSelectionVector(uint16_t *sel_vec) const {
   return util::VectorUtil::BitVectorToSelectionVector(bit_vector_.data_array(),
                                                       bit_vector_.num_bits(), sel_vec);
 }
@@ -15,7 +15,7 @@ u32 TupleIdList::AsSelectionVector(u16 *sel_vec) const {
 std::string TupleIdList::ToString() const {
   std::string result = "TIDs=[";
   bool first = true;
-  Iterate([&](const u64 i) {
+  Iterate([&](const uint64_t i) {
     if (!first) result += ",";
     first = false;
     result += std::to_string(i);

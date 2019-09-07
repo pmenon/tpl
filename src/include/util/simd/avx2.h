@@ -55,22 +55,22 @@ class Vec4 : public Vec256b {
 
  public:
   Vec4() = default;
-  explicit Vec4(i64 val) { reg_ = _mm256_set1_epi64x(val); }
+  explicit Vec4(int64_t val) { reg_ = _mm256_set1_epi64x(val); }
   explicit Vec4(const __m256i &reg) : Vec256b(reg) {}
-  Vec4(i64 val1, i64 val2, i64 val3, i64 val4) {
+  Vec4(int64_t val1, int64_t val2, int64_t val3, int64_t val4) {
     reg_ = _mm256_setr_epi64x(val1, val2, val3, val4);
   }
 
   /// Return the number of elements that can be stored in this vector
-  static constexpr u32 Size() { return 4; }
+  static constexpr uint32_t Size() { return 4; }
 
   /// Load and sign-extend four 32-bit values from the input array
-  Vec4 &Load(const i32 *ptr);
-  Vec4 &Load(const u32 *ptr) { return Load(reinterpret_cast<const i32 *>(ptr)); }
+  Vec4 &Load(const int32_t *ptr);
+  Vec4 &Load(const uint32_t *ptr) { return Load(reinterpret_cast<const int32_t *>(ptr)); }
 
   /// Load four 64-bit values from the input array
-  Vec4 &Load(const i64 *ptr);
-  Vec4 &Load(const u64 *ptr) { return Load(reinterpret_cast<const i64 *>(ptr)); }
+  Vec4 &Load(const int64_t *ptr);
+  Vec4 &Load(const uint64_t *ptr) { return Load(reinterpret_cast<const int64_t *>(ptr)); }
 
 #ifdef __APPLE__
   static_assert(sizeof(long) == sizeof(i64), "On MacOS, long isn't 64-bits!");
@@ -85,41 +85,41 @@ class Vec4 : public Vec256b {
 
   /// Truncates the four 64-bit elements into 32-bit elements and stores them
   /// into the output array.
-  void Store(i32 *arr) const;
-  void Store(u32 *arr) const { Store(reinterpret_cast<i32 *>(arr)); }
+  void Store(int32_t *arr) const;
+  void Store(uint32_t *arr) const { Store(reinterpret_cast<int32_t *>(arr)); }
 
   /// Stores the four 64-bit elements in this vector into the output array.
-  void Store(i64 *arr) const;
-  void Store(u64 *arr) const { Store(reinterpret_cast<i64 *>(arr)); }
+  void Store(int64_t *arr) const;
+  void Store(uint64_t *arr) const { Store(reinterpret_cast<int64_t *>(arr)); }
 
 #ifdef __APPLE__
-  static_assert(sizeof(long) == sizeof(i64), "On MacOS, long isn't 64-bits!");
-  void Store(long *arr) const { Store(reinterpret_cast<i64 *>(arr)); }
-  void Store(unsigned long *arr) const { Store(reinterpret_cast<i64 *>(arr)); }
+  static_assert(sizeof(long) == sizeof(int64_t), "On MacOS, long isn't 64-bits!");
+  void Store(long *arr) const { Store(reinterpret_cast<int64_t *>(arr)); }
+  void Store(unsigned long *arr) const { Store(reinterpret_cast<int64_t *>(arr)); }
 #endif
 
   /// Extract the integer at the given index from this vector
-  i64 Extract(u32 index) const {
-    alignas(32) i64 x[Size()];
+  int64_t Extract(uint32_t index) const {
+    alignas(32) int64_t x[Size()];
     Store(x);
     return x[index & 3];
   }
 
   /// Extract the integer at the given index from this vector
-  i64 operator[](u32 index) const { return Extract(index); }
+  int64_t operator[](uint32_t index) const { return Extract(index); }
 };
 
 // ---------------------------------------------------------
 // Vec4 Implementation
 // ---------------------------------------------------------
 
-inline Vec4 &Vec4::Load(const i32 *ptr) {
+inline Vec4 &Vec4::Load(const int32_t *ptr) {
   auto tmp = _mm_loadu_si128((const __m128i *)ptr);
   reg_ = _mm256_cvtepi32_epi64(tmp);
   return *this;
 }
 
-inline Vec4 &Vec4::Load(const i64 *ptr) {
+inline Vec4 &Vec4::Load(const int64_t *ptr) {
   // Load aligned and unaligned have almost no performance different on AVX2
   // machines. To alleviate some pain from clients having to know this info
   // we always use an unaligned load.
@@ -134,11 +134,11 @@ inline Vec4 &Vec4::Gather(const T *ptr, const Vec4 &pos) {
 }
 
 template <>
-inline Vec4 &Vec4::Gather<i64>(const i64 *ptr, const Vec4 &pos) {
+inline Vec4 &Vec4::Gather<int64_t>(const int64_t *ptr, const Vec4 &pos) {
 #if USE_GATHER == 1
   reg_ = _mm256_i64gather_epi64(ptr, pos, 8);
 #else
-  alignas(32) i64 x[Size()];
+  alignas(32) int64_t x[Size()];
   pos.Store(x);
   reg_ = _mm256_setr_epi64x(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]]);
 #endif
@@ -147,12 +147,12 @@ inline Vec4 &Vec4::Gather<i64>(const i64 *ptr, const Vec4 &pos) {
 
 // Truncate the four 64-bit values in this vector and store them into the first
 // four elements of the provided array
-inline void Vec4::Store(i32 *arr) const {
+inline void Vec4::Store(int32_t *arr) const {
   auto truncated = _mm256_cvtepi64_epi32(reg());
   _mm_store_si128(reinterpret_cast<__m128i *>(arr), truncated);
 }
 
-inline void Vec4::Store(i64 *arr) const { Vec256b::Store(reinterpret_cast<void *>(arr)); }
+inline void Vec4::Store(int64_t *arr) const { Vec256b::Store(reinterpret_cast<void *>(arr)); }
 
 // ---------------------------------------------------------
 // Vec8 Definition
@@ -163,25 +163,26 @@ class Vec8 : public Vec256b {
  public:
   // The below constructors are not explicit on purpose
   Vec8() = default;
-  explicit Vec8(i32 val) { reg_ = _mm256_set1_epi32(val); }
+  explicit Vec8(int32_t val) { reg_ = _mm256_set1_epi32(val); }
   explicit Vec8(const __m256i &reg) : Vec256b(reg) {}
-  Vec8(i32 val1, i32 val2, i32 val3, i32 val4, i32 val5, i32 val6, i32 val7, i32 val8) {
+  Vec8(int32_t val1, int32_t val2, int32_t val3, int32_t val4, int32_t val5, int32_t val6,
+       int32_t val7, int32_t val8) {
     reg_ = _mm256_setr_epi32(val1, val2, val3, val4, val5, val6, val7, val8);
   }
 
   /// Load and sign-extend eight 8-bit values stored contiguously from the input
   /// pointer array.
-  Vec8 &Load(const i8 *ptr);
-  Vec8 &Load(const u8 *ptr) { return Load(reinterpret_cast<const i8 *>(ptr)); }
+  Vec8 &Load(const int8_t *ptr);
+  Vec8 &Load(const uint8_t *ptr) { return Load(reinterpret_cast<const int8_t *>(ptr)); }
 
   /// Load and sign-extend eight 16-bit values stored contiguously from the
   /// input pointer array.
-  Vec8 &Load(const i16 *ptr);
-  Vec8 &Load(const u16 *ptr) { return Load(reinterpret_cast<const i16 *>(ptr)); }
+  Vec8 &Load(const int16_t *ptr);
+  Vec8 &Load(const uint16_t *ptr) { return Load(reinterpret_cast<const int16_t *>(ptr)); }
 
   /// Load 8 32-bit values stored contiguously from the input pointer array.
-  Vec8 &Load(const i32 *ptr);
-  Vec8 &Load(const u32 *ptr) { return Load(reinterpret_cast<const i32 *>(ptr)); }
+  Vec8 &Load(const int32_t *ptr);
+  Vec8 &Load(const uint32_t *ptr) { return Load(reinterpret_cast<const int32_t *>(ptr)); }
 
   /// Gather non-contiguous elements from the input array \a ptr stored at
   /// index positions from \a pos
@@ -192,20 +193,20 @@ class Vec8 : public Vec256b {
   Vec8 &Gather(const T *ptr, const Vec8 &pos);
 
   /// Store the eight 32-bit integers in this vector into the output array.
-  void Store(i32 *arr) const;
-  void Store(u32 *arr) const { Store(reinterpret_cast<i32 *>(arr)); }
+  void Store(int32_t *arr) const;
+  void Store(uint32_t *arr) const { Store(reinterpret_cast<int32_t *>(arr)); }
 
   /// Return the number of elements that can be stored in this vector
-  static constexpr u32 Size() { return 8; }
+  static constexpr uint32_t Size() { return 8; }
 
-  i32 Extract(u32 index) const {
+  int32_t Extract(uint32_t index) const {
     TPL_ASSERT(index < 8, "Out-of-bounds mask element access");
-    alignas(32) i32 x[Size()];
+    alignas(32) int32_t x[Size()];
     Store(x);
     return x[index & 7];
   }
 
-  i32 operator[](u32 index) const { return Extract(index); }
+  int32_t operator[](uint32_t index) const { return Extract(index); }
 };
 
 // ---------------------------------------------------------
@@ -216,19 +217,19 @@ class Vec8 : public Vec256b {
 // equal to 32-bits. Eight elements are always read from the input array, but
 // are up-casted to 32-bits when appropriate.
 
-inline Vec8 &Vec8::Load(const i8 *ptr) {
+inline Vec8 &Vec8::Load(const int8_t *ptr) {
   auto tmp = _mm_loadu_si128((const __m128i *)ptr);
   reg_ = _mm256_cvtepi8_epi32(tmp);
   return *this;
 }
 
-inline Vec8 &Vec8::Load(const i16 *ptr) {
+inline Vec8 &Vec8::Load(const int16_t *ptr) {
   auto tmp = _mm_loadu_si128((const __m128i *)ptr);
   reg_ = _mm256_cvtepi16_epi32(tmp);
   return *this;
 }
 
-inline Vec8 &Vec8::Load(const i32 *ptr) {
+inline Vec8 &Vec8::Load(const int32_t *ptr) {
   reg_ = _mm256_loadu_si256((const __m256i *)ptr);
   return *this;
 }
@@ -245,12 +246,12 @@ inline Vec8 &Vec8::Gather(const T *ptr, const Vec8 &pos) {
 }
 
 template <>
-inline Vec8 &Vec8::Gather<i8>(const i8 *ptr, const Vec8 &pos) {
+inline Vec8 &Vec8::Gather<int8_t>(const int8_t *ptr, const Vec8 &pos) {
 #if USE_GATHER == 1
   reg_ = _mm256_i32gather_epi32(ptr, pos, 1);
   reg_ = _mm256_srai_epi32(reg_, 24);
 #else
-  alignas(32) i32 x[Size()];
+  alignas(32) int32_t x[Size()];
   pos.Store(x);
   reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]], ptr[x[4]], ptr[x[5]],
                            ptr[x[6]], ptr[x[7]]);
@@ -259,12 +260,12 @@ inline Vec8 &Vec8::Gather<i8>(const i8 *ptr, const Vec8 &pos) {
 }
 
 template <>
-inline Vec8 &Vec8::Gather<i16>(const i16 *ptr, const Vec8 &pos) {
+inline Vec8 &Vec8::Gather<int16_t>(const int16_t *ptr, const Vec8 &pos) {
 #if USE_GATHER == 1
   reg_ = _mm256_i32gather_epi32(ptr, pos, 2);
   reg_ = _mm256_srai_epi32(reg_, 16);
 #else
-  alignas(32) i32 x[Size()];
+  alignas(32) int32_t x[Size()];
   pos.Store(x);
   reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]], ptr[x[4]], ptr[x[5]],
                            ptr[x[6]], ptr[x[7]]);
@@ -273,11 +274,11 @@ inline Vec8 &Vec8::Gather<i16>(const i16 *ptr, const Vec8 &pos) {
 }
 
 template <>
-inline Vec8 &Vec8::Gather<i32>(const i32 *ptr, const Vec8 &pos) {
+inline Vec8 &Vec8::Gather<int32_t>(const int32_t *ptr, const Vec8 &pos) {
 #if USE_GATHER == 1
   reg_ = _mm256_i32gather_epi32(ptr, pos, 4);
 #else
-  alignas(32) i32 x[Size()];
+  alignas(32) int32_t x[Size()];
   pos.Store(x);
   reg_ = _mm256_setr_epi32(ptr[x[0]], ptr[x[1]], ptr[x[2]], ptr[x[3]], ptr[x[4]], ptr[x[5]],
                            ptr[x[6]], ptr[x[7]]);
@@ -285,7 +286,7 @@ inline Vec8 &Vec8::Gather<i32>(const i32 *ptr, const Vec8 &pos) {
   return *this;
 }
 
-inline void Vec8::Store(i32 *arr) const { Vec256b::Store(reinterpret_cast<void *>(arr)); }
+inline void Vec8::Store(int32_t *arr) const { Vec256b::Store(reinterpret_cast<void *>(arr)); }
 
 // --------------------------------------------------------
 // Vec8Mask Definition
@@ -298,12 +299,12 @@ class Vec8Mask : public Vec8 {
   Vec8Mask() = default;
   explicit Vec8Mask(const __m256i &reg) : Vec8(reg) {}
 
-  bool Extract(u32 idx) const { return Vec8::Extract(idx) != 0; }
+  bool Extract(uint32_t idx) const { return Vec8::Extract(idx) != 0; }
 
-  bool operator[](u32 idx) const { return Extract(idx); }
+  bool operator[](uint32_t idx) const { return Extract(idx); }
 
   sel_t ToPositions(sel_t *positions, sel_t offset) const {
-    i32 mask = _mm256_movemask_ps(_mm256_castsi256_ps(reg()));
+    int32_t mask = _mm256_movemask_ps(_mm256_castsi256_ps(reg()));
     TPL_ASSERT(mask < 256, "8-bit mask must be less than 256");
     __m128i match_pos_scaled =
         _mm_loadl_epi64(reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask]));
@@ -323,15 +324,15 @@ class Vec4Mask : public Vec4 {
   Vec4Mask() = default;
   explicit Vec4Mask(const __m256i &reg) : Vec4(reg) {}
 
-  i32 Extract(u32 index) const { return Vec4::Extract(index) != 0; }
+  int32_t Extract(uint32_t index) const { return Vec4::Extract(index) != 0; }
 
-  i32 operator[](u32 index) const { return Extract(index); }
+  int32_t operator[](uint32_t index) const { return Extract(index); }
 
   sel_t ToPositions(sel_t *positions, sel_t offset) const {
-    i32 mask = _mm256_movemask_pd(_mm256_castsi256_pd(reg()));
+    int32_t mask = _mm256_movemask_pd(_mm256_castsi256_pd(reg()));
     TPL_ASSERT(mask < 16, "4-bit mask must be less than 16");
     __m128i match_pos =
-        _mm_loadl_epi64(reinterpret_cast<__m128i *>(const_cast<u64 *>(&k4BitMatchLUT[mask])));
+        _mm_loadl_epi64(reinterpret_cast<__m128i *>(const_cast<uint64_t *>(&k4BitMatchLUT[mask])));
     __m128i pos_vec = _mm_add_epi32(_mm_set1_epi32(offset), match_pos);
     _mm_storeu_si128(reinterpret_cast<__m128i *>(positions), pos_vec);
     return __builtin_popcount(mask);
@@ -434,16 +435,20 @@ inline Vec4 &operator^=(Vec4 &a, const Vec4 &b) {
   return a;
 }
 
-inline Vec4 operator>>(const Vec4 &a, const u32 shift) { return Vec4(_mm256_srli_epi64(a, shift)); }
+inline Vec4 operator>>(const Vec4 &a, const uint32_t shift) {
+  return Vec4(_mm256_srli_epi64(a, shift));
+}
 
-inline Vec4 &operator>>=(Vec4 &a, const u32 shift) {
+inline Vec4 &operator>>=(Vec4 &a, const uint32_t shift) {
   a = a >> shift;
   return a;
 }
 
-inline Vec4 operator<<(const Vec4 &a, const u32 shift) { return Vec4(_mm256_slli_epi64(a, shift)); }
+inline Vec4 operator<<(const Vec4 &a, const uint32_t shift) {
+  return Vec4(_mm256_slli_epi64(a, shift));
+}
 
-inline Vec4 &operator<<=(Vec4 &a, const u32 shift) {
+inline Vec4 &operator<<=(Vec4 &a, const uint32_t shift) {
   a = a << shift;
   return a;
 }
@@ -531,16 +536,20 @@ inline Vec8 &operator^=(Vec8 &a, const Vec8 &b) {
   return a;
 }
 
-inline Vec8 operator>>(const Vec8 &a, const u32 shift) { return Vec8(_mm256_srli_epi32(a, shift)); }
+inline Vec8 operator>>(const Vec8 &a, const uint32_t shift) {
+  return Vec8(_mm256_srli_epi32(a, shift));
+}
 
-inline Vec8 &operator>>=(Vec8 &a, const u32 shift) {
+inline Vec8 &operator>>=(Vec8 &a, const uint32_t shift) {
   a = a >> shift;
   return a;
 }
 
-inline Vec8 operator<<(const Vec8 &a, const u32 shift) { return Vec8(_mm256_slli_epi32(a, shift)); }
+inline Vec8 operator<<(const Vec8 &a, const uint32_t shift) {
+  return Vec8(_mm256_slli_epi32(a, shift));
+}
 
-inline Vec8 &operator<<=(Vec8 &a, const u32 shift) {
+inline Vec8 &operator<<=(Vec8 &a, const uint32_t shift) {
   a = a << shift;
   return a;
 }
@@ -567,25 +576,25 @@ template <typename T, typename Enable = void>
 struct FilterVecSizer;
 
 template <>
-struct FilterVecSizer<i8> {
+struct FilterVecSizer<int8_t> {
   using Vec = Vec8;
   using VecMask = Vec8Mask;
 };
 
 template <>
-struct FilterVecSizer<i16> {
+struct FilterVecSizer<int16_t> {
   using Vec = Vec8;
   using VecMask = Vec8Mask;
 };
 
 template <>
-struct FilterVecSizer<i32> {
+struct FilterVecSizer<int32_t> {
   using Vec = Vec8;
   using VecMask = Vec8Mask;
 };
 
 template <>
-struct FilterVecSizer<i64> {
+struct FilterVecSizer<int64_t> {
   using Vec = Vec4;
   using VecMask = Vec4Mask;
 };
@@ -595,8 +604,8 @@ struct FilterVecSizer<T, std::enable_if_t<std::is_unsigned_v<T>>>
     : public FilterVecSizer<std::make_signed_t<T>> {};
 
 template <typename T, template <typename> typename Compare>
-static inline u32 FilterVectorByVal(const T *RESTRICT in, const u32 in_count, const T val,
-                                    sel_t *RESTRICT out, u32 *RESTRICT in_pos) {
+static inline uint32_t FilterVectorByVal(const T *RESTRICT in, const uint32_t in_count, const T val,
+                                         sel_t *RESTRICT out, uint32_t *RESTRICT in_pos) {
   using Vec = typename FilterVecSizer<T>::Vec;
   using VecMask = typename FilterVecSizer<T>::VecMask;
 
@@ -604,7 +613,7 @@ static inline u32 FilterVectorByVal(const T *RESTRICT in, const u32 in_count, co
 
   const Vec xval(val);
 
-  u32 out_pos = 0;
+  uint32_t out_pos = 0;
 
   Vec in_vec;
   for (*in_pos = 0; *in_pos + Vec::Size() < in_count; *in_pos += Vec::Size()) {
@@ -617,15 +626,15 @@ static inline u32 FilterVectorByVal(const T *RESTRICT in, const u32 in_count, co
 }
 
 template <typename T, template <typename> typename Compare>
-static inline u32 FilterVectorByVector(const T *RESTRICT in_1, const T *RESTRICT in_2,
-                                       const u32 in_count, sel_t *RESTRICT out,
-                                       u32 *RESTRICT in_pos) {
+static inline uint32_t FilterVectorByVector(const T *RESTRICT in_1, const T *RESTRICT in_2,
+                                            const uint32_t in_count, sel_t *RESTRICT out,
+                                            uint32_t *RESTRICT in_pos) {
   using Vec = typename FilterVecSizer<T>::Vec;
   using VecMask = typename FilterVecSizer<T>::VecMask;
 
   const Compare cmp;
 
-  u32 out_pos = 0;
+  uint32_t out_pos = 0;
 
   Vec in_1_vec, in_2_vec;
   for (*in_pos = 0; *in_pos + Vec::Size() < in_count; *in_pos += Vec::Size()) {

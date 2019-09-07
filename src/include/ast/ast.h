@@ -113,7 +113,7 @@ class AstNode : public util::RegionObject {
  public:
   // The kind enumeration listing all possible node kinds
 #define T(kind) kind,
-  enum class Kind : u8 { AST_NODES(T) };
+  enum class Kind : uint8_t { AST_NODES(T) };
 #undef T
 
   /**
@@ -523,7 +523,7 @@ class ReturnStmt : public Stmt {
  */
 class Expr : public AstNode {
  public:
-  enum class Context : u8 {
+  enum class Context : uint8_t {
     LValue,
     RValue,
     Test,
@@ -600,7 +600,7 @@ class BinaryOpExpr : public Expr {
  */
 class CallExpr : public Expr {
  public:
-  enum class CallKind : u8 { Regular, Builtin };
+  enum class CallKind : uint8_t { Regular, Builtin };
 
   CallExpr(Expr *func, util::RegionVector<Expr *> &&args)
       : CallExpr(func, std::move(args), CallKind::Regular) {}
@@ -617,7 +617,7 @@ class CallExpr : public Expr {
 
   const util::RegionVector<Expr *> &arguments() const { return args_; }
 
-  u32 num_args() const { return static_cast<u32>(args_.size()); }
+  uint32_t num_args() const { return static_cast<uint32_t>(args_.size()); }
 
   CallKind call_kind() const { return call_kind_; }
 
@@ -626,7 +626,7 @@ class CallExpr : public Expr {
  private:
   friend class sema::Sema;
 
-  void set_argument(u32 arg_idx, Expr *expr) {
+  void set_argument(uint32_t arg_idx, Expr *expr) {
     TPL_ASSERT(arg_idx < num_args(), "Out-of-bounds argument access");
     args_[arg_idx] = expr;
   }
@@ -726,7 +726,7 @@ class IdentifierExpr : public Expr {
 /**
  * An enumeration capturing all possible casting operations.
  */
-enum class CastKind : u8 {
+enum class CastKind : uint8_t {
   // Conversion of a 32-bit integer into a non-nullable SQL Integer value
   IntToSqlInt,
 
@@ -818,7 +818,7 @@ class IndexExpr : public Expr {
  */
 class LitExpr : public Expr {
  public:
-  enum class LitKind : u8 { Nil, Boolean, Int, Float, String };
+  enum class LitKind : uint8_t { Nil, Boolean, Int, Float, String };
 
   explicit LitExpr(const SourcePosition &pos)
       : Expr(Kind::LitExpr, pos), lit_kind_(LitExpr::LitKind::Nil) {}
@@ -829,10 +829,10 @@ class LitExpr : public Expr {
   LitExpr(const SourcePosition &pos, Identifier str)
       : Expr(Kind::LitExpr, pos), lit_kind_(LitKind::String), str_(str) {}
 
-  LitExpr(const SourcePosition &pos, i32 num)
+  LitExpr(const SourcePosition &pos, int32_t num)
       : Expr(Kind::LitExpr, pos), lit_kind_(LitKind::Int), int32_(num) {}
 
-  LitExpr(const SourcePosition &pos, f32 num)
+  LitExpr(const SourcePosition &pos, float num)
       : Expr(Kind::LitExpr, pos), lit_kind_(LitKind::Float), float32_(num) {}
 
   LitExpr::LitKind literal_kind() const { return lit_kind_; }
@@ -853,12 +853,12 @@ class LitExpr : public Expr {
     return str_;
   }
 
-  i32 int32_val() const {
+  int32_t int32_val() const {
     TPL_ASSERT(IsIntLitExpr(), "Literal is not an integer literal");
     return int32_;
   }
 
-  f32 float32_val() const {
+  float float32_val() const {
     TPL_ASSERT(IsFloatLitExpr(), "Literal is not a floating point literal");
     return float32_;
   }
@@ -871,8 +871,8 @@ class LitExpr : public Expr {
   union {
     bool boolean_;
     Identifier str_;
-    i32 int32_;
-    f32 float32_;
+    int32_t int32_;
+    float float32_;
   };
 };
 

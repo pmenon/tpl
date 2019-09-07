@@ -23,9 +23,9 @@ namespace tpl::sql {
  * An input tuple, this is what we use to probe and update aggregates
  */
 struct InputTuple {
-  i64 key, col_a;
+  int64_t key, col_a;
 
-  InputTuple(u64 key, u64 col_a) : key(key), col_a(col_a) {}
+  InputTuple(uint64_t key, uint64_t col_a) : key(key), col_a(col_a) {}
 
   hash_t Hash() const noexcept { return util::Hasher::Hash(key); }
 };
@@ -36,7 +36,7 @@ struct InputTuple {
  * SELECT key, SUM(col_a), SUM(col_a*2), SUM(col_a*10) ...
  */
 struct AggTuple {
-  i64 key, count1, count2, count3;
+  int64_t key, count1, count2, count3;
 
   explicit AggTuple(const InputTuple &input) : key(input.key), count1(0), count2(0), count3(0) {
     Advance(input);
@@ -57,15 +57,15 @@ static bool AggTupleKeyEq(const void *table_tuple, const void *probe_tuple) {
   return lhs->key == rhs->key;
 }
 
-static void Transpose(const byte **raw_aggregates, const u64 size,
+static void Transpose(const byte **raw_aggregates, const uint64_t size,
                       VectorProjectionIterator *const vpi) {
   auto **aggs = reinterpret_cast<const AggTuple **>(raw_aggregates);
-  for (u32 i = 0; i < size; i++, vpi->Advance()) {
+  for (uint32_t i = 0; i < size; i++, vpi->Advance()) {
     const auto *agg = aggs[i];
-    vpi->SetValue<i64, false>(0, agg->key, false);
-    vpi->SetValue<i64, false>(1, agg->count1, false);
-    vpi->SetValue<i64, false>(2, agg->count2, false);
-    vpi->SetValue<i64, false>(3, agg->count3, false);
+    vpi->SetValue<int64_t, false>(0, agg->key, false);
+    vpi->SetValue<int64_t, false>(1, agg->count1, false);
+    vpi->SetValue<int64_t, false>(2, agg->count2, false);
+    vpi->SetValue<int64_t, false>(3, agg->count3, false);
   }
 }
 
@@ -92,9 +92,9 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
     return ret;
   }
 
-  static void PopulateAggHT(AggregationHashTable *aht, const u32 num_aggs, const u32 num_rows,
-                            u32 cola = 1) {
-    for (u32 i = 0; i < num_rows; i++) {
+  static void PopulateAggHT(AggregationHashTable *aht, const uint32_t num_aggs, const uint32_t num_rows,
+                            uint32_t cola = 1) {
+    for (uint32_t i = 0; i < num_rows; i++) {
       auto input = InputTuple(i % num_aggs, cola);
       auto existing =
           reinterpret_cast<AggTuple *>(aht->Lookup(input.Hash(), AggTupleKeyEq, &input));
@@ -124,9 +124,9 @@ TEST_F(AggregationHashTableVectorIteratorTest, IterateEmptyAggregation) {
 }
 
 TEST_F(AggregationHashTableVectorIteratorTest, IterateSmallAggregation) {
-  constexpr u32 num_aggs = 4000;
-  constexpr u32 group_size = 10;
-  constexpr u32 num_tuples = num_aggs * group_size;
+  constexpr uint32_t num_aggs = 4000;
+  constexpr uint32_t group_size = 10;
+  constexpr uint32_t num_tuples = num_aggs * group_size;
 
   //
   // Insert 'num_tuples' into an aggregation table to force the creation of
@@ -144,7 +144,7 @@ TEST_F(AggregationHashTableVectorIteratorTest, IterateSmallAggregation) {
   // Populate
   PopulateAggHT(&agg_ht, num_aggs, num_tuples, 1 /* cola */);
 
-  std::unordered_set<u64> reference;
+  std::unordered_set<uint64_t> reference;
 
   // Iterate
   AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
@@ -153,10 +153,10 @@ TEST_F(AggregationHashTableVectorIteratorTest, IterateSmallAggregation) {
     EXPECT_FALSE(vpi->IsFiltered());
 
     for (; vpi->HasNext(); vpi->Advance()) {
-      auto agg_key = *vpi->GetValue<i64, false>(0, nullptr);
-      auto agg_count_1 = *vpi->GetValue<i64, false>(1, nullptr);
-      auto agg_count_2 = *vpi->GetValue<i64, false>(2, nullptr);
-      auto agg_count_3 = *vpi->GetValue<i64, false>(3, nullptr);
+      auto agg_key = *vpi->GetValue<int64_t, false>(0, nullptr);
+      auto agg_count_1 = *vpi->GetValue<int64_t, false>(1, nullptr);
+      auto agg_count_2 = *vpi->GetValue<int64_t, false>(2, nullptr);
+      auto agg_count_3 = *vpi->GetValue<int64_t, false>(3, nullptr);
       EXPECT_TRUE(agg_key < num_aggs);
       EXPECT_EQ(group_size, agg_count_1);
       EXPECT_EQ(agg_count_1 * 2u, agg_count_2);
@@ -171,26 +171,26 @@ TEST_F(AggregationHashTableVectorIteratorTest, IterateSmallAggregation) {
 }
 
 TEST_F(AggregationHashTableVectorIteratorTest, FilterPostAggregation) {
-  constexpr u32 num_aggs = 4000;
-  constexpr u32 group_size = 10;
-  constexpr u32 num_tuples = num_aggs * group_size;
+  constexpr uint32_t num_aggs = 4000;
+  constexpr uint32_t group_size = 10;
+  constexpr uint32_t num_tuples = num_aggs * group_size;
 
   AggregationHashTable agg_ht(memory(), sizeof(AggTuple));
 
   PopulateAggHT(&agg_ht, num_aggs, num_tuples, 1 /* cola */);
 
-  constexpr i32 agg_needle_key = 686;
-  constexpr i32 agg_max_key = 2600;
+  constexpr int32_t agg_needle_key = 686;
+  constexpr int32_t agg_max_key = 2600;
 
   // Iterate
-  i32 num_needle_keys = 0, num_keys_lt_max = 0;
+  int32_t num_needle_keys = 0, num_keys_lt_max = 0;
   AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
   for (; iter.HasNext(); iter.Next(Transpose)) {
     auto *vpi = iter.GetVectorProjectionIterator();
     vpi->ForEach([&]() {
-      auto agg_key = *vpi->GetValue<i64, false>(0, nullptr);
-      num_needle_keys += static_cast<u32>(agg_key == agg_needle_key);
-      num_keys_lt_max += static_cast<u32>(agg_key < agg_max_key);
+      auto agg_key = *vpi->GetValue<int64_t, false>(0, nullptr);
+      num_needle_keys += static_cast<uint32_t>(agg_key == agg_needle_key);
+      num_keys_lt_max += static_cast<uint32_t>(agg_key < agg_max_key);
     });
   }
 
@@ -201,16 +201,16 @@ TEST_F(AggregationHashTableVectorIteratorTest, FilterPostAggregation) {
 }
 
 TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
-  u64 taat_ret = 0, vaat_ret = 0;
+  uint64_t taat_ret = 0, vaat_ret = 0;
 
-  for (u32 size : {10, 100, 1000, 10000, 100000, 1000000, 10000000}) {
+  for (uint32_t size : {10, 100, 1000, 10000, 100000, 1000000, 10000000}) {
     // The table
     AggregationHashTable agg_ht(memory(), sizeof(AggTuple));
 
     // Populate
     PopulateAggHT(&agg_ht, size, size * 10, 1 /* cola */);
 
-    constexpr i32 filter_val = 1000;
+    constexpr int32_t filter_val = 1000;
 
     auto vaat_ms = Bench(4, [&]() {
       vaat_ret = 0;

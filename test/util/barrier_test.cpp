@@ -37,18 +37,18 @@ TEST(BarrierTest, Wait) {
 }
 
 TEST(BarrierTest, WaitCycle) {
-  constexpr u32 num_threads = 4;
+  constexpr uint32_t num_threads = 4;
 
-  std::atomic<u32> count = 0;
+  std::atomic<uint32_t> count = 0;
   Barrier barrier(num_threads + 1);
 
-  for (u32 num_cycles = 0; num_cycles < 5; num_cycles++) {
+  for (uint32_t num_cycles = 0; num_cycles < 5; num_cycles++) {
     count = 0;
     EXPECT_EQ(num_cycles, barrier.GetGeneration());
 
     // Spawn some threads
     std::vector<std::thread> thread_group;
-    for (u32 thread_idx = 0; thread_idx < num_threads; thread_idx++) {
+    for (uint32_t thread_idx = 0; thread_idx < num_threads; thread_idx++) {
       thread_group.emplace_back([&]() {
         barrier.Wait();
         count++;
@@ -65,7 +65,7 @@ TEST(BarrierTest, WaitCycle) {
     barrier.Wait();
 
     // Wait
-    for (u32 thread_idx = 0; thread_idx < num_threads; thread_idx++) {
+    for (uint32_t thread_idx = 0; thread_idx < num_threads; thread_idx++) {
       thread_group[thread_idx].join();
     }
 

@@ -26,7 +26,7 @@ inline void *MallocAligned(const std::size_t size, const std::size_t alignment) 
 
   void *ptr = nullptr;
 #if defined(__APPLE__)
-  UNUSED i32 ret = posix_memalign(&ptr, alignment, size);
+  UNUSED int32_t ret = posix_memalign(&ptr, alignment, size);
   TPL_ASSERT(ret == 0, "Allocation failed");
 #else
   // STL's aligned allocation requires that the size is a multiple of the
@@ -84,7 +84,7 @@ inline void Prefetch(const void *const addr) noexcept {
   // 'rw': indicates read-write intention; 0 is for a read, 1 is for a write
   // 'locality': indicates the degree of temporal locality represented in the
   // range {0-3}. 0 means no locality; 3 is high temporal locality.
-  __builtin_prefetch(addr, READ ? 0 : 1, static_cast<u8>(LOCALITY));
+  __builtin_prefetch(addr, READ ? 0 : 1, static_cast<uint8_t>(LOCALITY));
 }
 
 }  // namespace tpl::util

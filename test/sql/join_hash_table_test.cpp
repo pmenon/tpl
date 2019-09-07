@@ -13,7 +13,7 @@ namespace tpl::sql {
 
 /// This is the tuple we insert into the hash table
 struct Tuple {
-  u64 a, b, c, d;
+  uint64_t a, b, c, d;
 
   hash_t Hash() const { return util::Hasher::Hash(a); }
 };
@@ -30,15 +30,15 @@ class JoinHashTableTest : public TplTest {
 
 TEST_F(JoinHashTableTest, LazyInsertionTest) {
   // Test data
-  const u32 num_tuples = 10;
+  const uint32_t num_tuples = 10;
   std::vector<Tuple> tuples(num_tuples);
 
   // Populate test data
   {
     std::mt19937 generator;
-    std::uniform_int_distribution<u64> distribution;
+    std::uniform_int_distribution<uint64_t> distribution;
 
-    for (u32 i = 0; i < num_tuples; i++) {
+    for (uint32_t i = 0; i < num_tuples; i++) {
       tuples[i].a = distribution(generator);
       tuples[i].b = distribution(generator);
       tuples[i].c = distribution(generator);
@@ -70,9 +70,9 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
   EXPECT_EQ(num_tuples, join_hash_table.generic_hash_table_.num_elements());
 }
 
-void PopulateJoinHashTable(JoinHashTable *jht, u32 num_tuples, u32 dup_scale_factor) {
-  for (u32 rep = 0; rep < dup_scale_factor; rep++) {
-    for (u32 i = 0; i < num_tuples; i++) {
+void PopulateJoinHashTable(JoinHashTable *jht, uint32_t num_tuples, uint32_t dup_scale_factor) {
+  for (uint32_t rep = 0; rep < dup_scale_factor; rep++) {
+    for (uint32_t i = 0; i < num_tuples; i++) {
       // Create tuple
       auto tuple = Tuple{i, 1, 2};
       // Allocate in hash table
@@ -84,7 +84,7 @@ void PopulateJoinHashTable(JoinHashTable *jht, u32 num_tuples, u32 dup_scale_fac
 }
 
 template <bool UseCHT>
-void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
+void BuildAndProbeTest(uint32_t num_tuples, uint32_t dup_scale_factor) {
   //
   // The join table
   //
@@ -108,12 +108,12 @@ void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
   // Do some successful lookups
   //
 
-  for (u32 i = 0; i < num_tuples; i++) {
+  for (uint32_t i = 0; i < num_tuples; i++) {
     // The probe tuple
     Tuple probe_tuple = {i, 0, 0, 0};
     auto key_eq = [&](const Tuple *t) { return t->a == probe_tuple.a; };
     // Perform probe
-    u32 count = 0;
+    uint32_t count = 0;
     for (auto iter = join_hash_table.Lookup<UseCHT>(probe_tuple.Hash());
          iter.template HasNext<Tuple>(key_eq);) {
       auto *entry = iter.NextMatch();
@@ -130,7 +130,7 @@ void BuildAndProbeTest(u32 num_tuples, u32 dup_scale_factor) {
   // Do some unsuccessful lookups.
   //
 
-  for (u32 i = num_tuples; i < num_tuples + 1000; i++) {
+  for (uint32_t i = num_tuples; i < num_tuples + 1000; i++) {
     // A tuple that should NOT find any join partners
     Tuple probe_tuple = {i, 0, 0, 0};
     auto key_eq = [&](const Tuple *t) { return t->a == probe_tuple.a; };
@@ -153,8 +153,8 @@ TEST_F(JoinHashTableTest, DuplicateKeyLookupConciseTableTest) { BuildAndProbeTes
 
 TEST_F(JoinHashTableTest, ParallelBuildTest) {
   constexpr bool use_concise_ht = false;
-  const u32 num_tuples = 10000;
-  const u32 num_thread_local_tables = 4;
+  const uint32_t num_tuples = 10000;
+  const uint32_t num_thread_local_tables = 4;
 
   MemoryPool memory(nullptr);
   ThreadStateContainer container(&memory);
@@ -187,11 +187,11 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
 
   EXPECT_EQ(num_tuples * num_thread_local_tables, main_jht.GetElementCount());
 
-  for (u32 i = 0; i < num_tuples; i++) {
+  for (uint32_t i = 0; i < num_tuples; i++) {
     auto probe = Tuple{i, 1, 2, 3};
     auto key_eq = [&](const Tuple *t) { return t->a == probe.a; };
 
-    u32 count = 0;
+    uint32_t count = 0;
     for (auto iter = main_jht.Lookup<use_concise_ht>(probe.Hash()); iter.HasNext<Tuple>(key_eq);
          iter.NextMatch()) {
       count++;
@@ -202,9 +202,9 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
 
 #if 0
 TEST_F(JoinHashTableTest, PerfTest) {
-  const u32 num_tuples = 10000000;
+  const uint32_t num_tuples = 10000000;
 
-  auto bench = [this](bool concise, u32 num_tuples) {
+  auto bench = [this](bool concise, uint32_t num_tuples) {
     JoinHashTable join_hash_table(memory(), sizeof(Tuple), concise);
 
     //
@@ -212,7 +212,7 @@ TEST_F(JoinHashTableTest, PerfTest) {
     //
 
     std::random_device random;
-    for (u32 i = 0; i < num_tuples; i++) {
+    for (uint32_t i = 0; i < num_tuples; i++) {
       auto key = random();
       auto *tuple = reinterpret_cast<Tuple *>(
           join_hash_table.AllocInputTuple(util::Hasher::Hash(key)));

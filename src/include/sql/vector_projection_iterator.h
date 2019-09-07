@@ -76,7 +76,7 @@ class VectorProjectionIterator {
    * @return The typed value at the current iterator position in the column.
    */
   template <typename T, bool Nullable>
-  const T *GetValue(u32 col_idx, bool *null) const;
+  const T *GetValue(uint32_t col_idx, bool *null) const;
 
   /**
    * Set the value of the column at index @em col_idx for the row the iterator
@@ -89,7 +89,7 @@ class VectorProjectionIterator {
    * @param null Whether the value is NULL.
    */
   template <typename T, bool Nullable>
-  void SetValue(u32 col_idx, T val, bool null);
+  void SetValue(uint32_t col_idx, T val, bool null);
 
   /**
    * Set the current iterator position.
@@ -97,7 +97,7 @@ class VectorProjectionIterator {
    * @param idx The index the iteration should jump to
    */
   template <bool IsFiltered>
-  void SetPosition(u32 idx);
+  void SetPosition(uint32_t idx);
 
   /**
    * Advance the iterator by one tuple.
@@ -166,23 +166,23 @@ class VectorProjectionIterator {
   /**
    * Return the number of selected tuples after any filters have been applied.
    */
-  u32 GetTupleCount() const { return vector_projection_->GetTupleCount(); }
+  uint32_t GetTupleCount() const { return vector_projection_->GetTupleCount(); }
 
  private:
   // The vector projection we're iterating over
   VectorProjection *vector_projection_;
 
   // The current raw position in the vector projection we're pointing to
-  u32 curr_idx_;
+  uint32_t curr_idx_;
 
   // The selection vector used to filter the vector projection
   sel_t *sel_vector_;
 
   // The next slot in the selection vector to read from
-  u32 sel_vector_read_idx_;
+  uint32_t sel_vector_read_idx_;
 
   // The next slot in the selection vector to write into
-  u32 sel_vector_write_idx_;
+  uint32_t sel_vector_write_idx_;
 };
 
 // ---------------------------------------------------------
@@ -198,7 +198,7 @@ class VectorProjectionIterator {
 // the nullability of the column. We take advantage of that here.
 
 template <typename T, bool Nullable>
-inline const T *VectorProjectionIterator::GetValue(const u32 col_idx, bool *const null) const {
+inline const T *VectorProjectionIterator::GetValue(const uint32_t col_idx, bool *const null) const {
   // Column's vector data
   const Vector *const col_vector = vector_projection_->GetColumn(col_idx);
 
@@ -211,7 +211,8 @@ inline const T *VectorProjectionIterator::GetValue(const u32 col_idx, bool *cons
 }
 
 template <typename T, bool Nullable>
-inline void VectorProjectionIterator::SetValue(const u32 col_idx, const T val, const bool null) {
+inline void VectorProjectionIterator::SetValue(const uint32_t col_idx, const T val,
+                                               const bool null) {
   // Column's vector
   Vector *const col_vector = vector_projection_->GetColumn(col_idx);
 
@@ -232,7 +233,7 @@ inline void VectorProjectionIterator::SetValue(const u32 col_idx, const T val, c
 }
 
 template <bool Filtered>
-inline void VectorProjectionIterator::SetPosition(u32 idx) {
+inline void VectorProjectionIterator::SetPosition(uint32_t idx) {
   TPL_ASSERT(idx < GetTupleCount(), "Out of bounds access");
   if constexpr (Filtered) {
     TPL_ASSERT(IsFiltered(), "Attempting to set position in unfiltered VPI");
@@ -252,7 +253,7 @@ inline void VectorProjectionIterator::AdvanceFiltered() {
 
 inline void VectorProjectionIterator::Match(bool matched) {
   sel_vector_[sel_vector_write_idx_] = curr_idx_;
-  sel_vector_write_idx_ += static_cast<u32>(matched);
+  sel_vector_write_idx_ += static_cast<uint32_t>(matched);
 }
 
 inline bool VectorProjectionIterator::HasNext() const {

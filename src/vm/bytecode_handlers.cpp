@@ -21,7 +21,7 @@ void OpThreadStateContainerFree(tpl::sql::ThreadStateContainer *const thread_sta
 // Table Vector Iterator
 // ---------------------------------------------------------
 
-void OpTableVectorIteratorInit(tpl::sql::TableVectorIterator *iter, u16 table_id) {
+void OpTableVectorIteratorInit(tpl::sql::TableVectorIterator *iter, uint16_t table_id) {
   TPL_ASSERT(iter != nullptr, "Null iterator to initialize");
   new (iter) tpl::sql::TableVectorIterator(table_id);
 }
@@ -71,7 +71,7 @@ void OpFilterManagerFree(tpl::sql::FilterManager *filter_manager) {
 // ---------------------------------------------------------
 
 void OpJoinHashTableInit(tpl::sql::JoinHashTable *join_hash_table, tpl::sql::MemoryPool *memory,
-                         u32 tuple_size) {
+                         uint32_t tuple_size) {
   new (join_hash_table) tpl::sql::JoinHashTable(memory, tuple_size);
 }
 
@@ -79,7 +79,7 @@ void OpJoinHashTableBuild(tpl::sql::JoinHashTable *join_hash_table) { join_hash_
 
 void OpJoinHashTableBuildParallel(tpl::sql::JoinHashTable *join_hash_table,
                                   tpl::sql::ThreadStateContainer *thread_state_container,
-                                  u32 jht_offset) {
+                                  uint32_t jht_offset) {
   join_hash_table->MergeParallel(thread_state_container, jht_offset);
 }
 
@@ -102,7 +102,7 @@ void OpJoinHashTableVectorProbeFree(tpl::sql::JoinHashTableVectorProbe *jht_vect
 // ---------------------------------------------------------
 
 void OpAggregationHashTableInit(tpl::sql::AggregationHashTable *const agg_hash_table,
-                                tpl::sql::MemoryPool *const memory, const u32 payload_size) {
+                                tpl::sql::MemoryPool *const memory, const uint32_t payload_size) {
   new (agg_hash_table) tpl::sql::AggregationHashTable(memory, payload_size);
 }
 
@@ -123,7 +123,7 @@ void OpAggregationHashTableIteratorFree(tpl::sql::AHTIterator *iter) { iter->~AH
 // ---------------------------------------------------------
 
 void OpSorterInit(tpl::sql::Sorter *const sorter, tpl::sql::MemoryPool *const memory,
-                  const tpl::sql::Sorter::ComparisonFunction cmp_fn, const u32 tuple_size) {
+                  const tpl::sql::Sorter::ComparisonFunction cmp_fn, const uint32_t tuple_size) {
   new (sorter) tpl::sql::Sorter(memory, cmp_fn, tuple_size);
 }
 
@@ -131,13 +131,13 @@ void OpSorterSort(tpl::sql::Sorter *sorter) { sorter->Sort(); }
 
 void OpSorterSortParallel(tpl::sql::Sorter *sorter,
                           tpl::sql::ThreadStateContainer *thread_state_container,
-                          u32 sorter_offset) {
+                          uint32_t sorter_offset) {
   sorter->SortParallel(thread_state_container, sorter_offset);
 }
 
 void OpSorterSortTopKParallel(tpl::sql::Sorter *sorter,
                               tpl::sql::ThreadStateContainer *thread_state_container,
-                              u32 sorter_offset, u64 top_k) {
+                              uint32_t sorter_offset, uint64_t top_k) {
   sorter->SortTopKParallel(thread_state_container, sorter_offset, top_k);
 }
 

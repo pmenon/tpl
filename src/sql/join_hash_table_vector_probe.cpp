@@ -15,11 +15,11 @@ void JoinHashTableVectorProbe::Prepare(VectorProjectionIterator *vpi, const Hash
 
   // Compute the hashes
   if (vpi->IsFiltered()) {
-    for (u32 idx = 0; vpi->HasNextFiltered(); vpi->AdvanceFiltered()) {
+    for (uint32_t idx = 0; vpi->HasNextFiltered(); vpi->AdvanceFiltered()) {
       hashes_[idx++] = hash_fn(vpi);
     }
   } else {
-    for (u32 idx = 0; vpi->HasNext(); vpi->Advance()) {
+    for (uint32_t idx = 0; vpi->HasNext(); vpi->Advance()) {
       hashes_[idx++] = hash_fn(vpi);
     }
   }
@@ -32,11 +32,11 @@ void JoinHashTableVectorProbe::Prepare(VectorProjectionIterator *vpi, const Hash
   if (join_hash_table_.HasBloomFilter()) {
     const BloomFilter *const bloom_filter = join_hash_table_.bloom_filter();
     if (vpi->IsFiltered()) {
-      for (u32 idx = 0; vpi->HasNextFiltered(); vpi->AdvanceFiltered()) {
+      for (uint32_t idx = 0; vpi->HasNextFiltered(); vpi->AdvanceFiltered()) {
         vpi->Match(bloom_filter->Contains(hashes_[idx++]));
       }
     } else {
-      for (u32 idx = 0; vpi->HasNext(); vpi->Advance()) {
+      for (uint32_t idx = 0; vpi->HasNext(); vpi->Advance()) {
         vpi->Match(bloom_filter->Contains(hashes_[idx++]));
       }
     }

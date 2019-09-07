@@ -71,10 +71,10 @@ struct BoolVal : public Val {
  * An integral SQL value
  */
 struct Integer : public Val {
-  i64 val;
+  int64_t val;
 
-  explicit Integer(i64 val) noexcept : Integer(false, val) {}
-  explicit Integer(bool null, i64 val) noexcept : Val(null), val(val) {}
+  explicit Integer(int64_t val) noexcept : Integer(false, val) {}
+  explicit Integer(bool null, int64_t val) noexcept : Val(null), val(val) {}
 
   /**
    * Create a NULL integer
@@ -128,11 +128,11 @@ struct Real : public Val {
  * A fixed-point decimal SQL value
  */
 struct Decimal : public Val {
-  u64 val;
-  u32 precision;
-  u32 scale;
+  uint64_t val;
+  uint32_t precision;
+  uint32_t scale;
 
-  Decimal(u64 val, u32 precision, u32 scale) noexcept
+  Decimal(uint64_t val, uint32_t precision, uint32_t scale) noexcept
       : Val(false), val(val), precision(precision), scale(scale) {}
 
   /**
@@ -158,7 +158,7 @@ struct StringVal : public Val {
   static constexpr std::size_t kMaxStingLen = 1 * GB;
 
   char *ptr;
-  u32 len;
+  uint32_t len;
 
   /**
    * Create a string value (i.e., a view) over the given potentially non-null
@@ -166,7 +166,7 @@ struct StringVal : public Val {
    * @param str The byte sequence.
    * @param len The length of the sequence.
    */
-  StringVal(char *str, u32 len) noexcept : Val(str == nullptr), ptr(str), len(len) {}
+  StringVal(char *str, uint32_t len) noexcept : Val(str == nullptr), ptr(str), len(len) {}
 
   /**
    * Create a string value (i.e., view) over the C-style null-terminated string.
@@ -231,9 +231,9 @@ struct StringVal : public Val {
  * A SQL date value
  */
 struct Date : public Val {
-  i32 date_val;
+  int32_t date_val;
 
-  explicit Date(i32 date) noexcept : Val(false), date_val(date) {}
+  explicit Date(int32_t date) noexcept : Val(false), date_val(date) {}
 
   /**
    * Create a NULL date

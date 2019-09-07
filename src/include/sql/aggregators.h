@@ -46,7 +46,7 @@ class CountAggregate {
   Integer GetCountResult() const { return Integer(count_); }
 
  private:
-  u64 count_;
+  uint64_t count_;
 };
 
 // ---------------------------------------------------------
@@ -86,7 +86,7 @@ class CountStarAggregate {
   Integer GetCountResult() const { return Integer(count_); }
 
  private:
-  u64 count_;
+  uint64_t count_;
 };
 
 // ---------------------------------------------------------
@@ -366,7 +366,7 @@ class AvgAggregate {
 
  private:
   double sum_;
-  u64 count_;
+  uint64_t count_;
 };
 
 }  // namespace tpl::sql

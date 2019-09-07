@@ -16,7 +16,7 @@ class Table;
   V(EmptyTable, "empty_table") \
   V(Test1, "test_1")
 
-enum class TableId : u16 {
+enum class TableId : uint16_t {
 #define ENTRY(Id, ...) Id,
   TABLES(ENTRY)
 #undef ENTRY

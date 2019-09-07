@@ -8,7 +8,7 @@ namespace tpl::parsing {
 
 Scanner::Scanner(const std::string &source) : Scanner(source.data(), source.length()) {}
 
-Scanner::Scanner(const char *source, u64 source_len)
+Scanner::Scanner(const char *source, uint64_t source_len)
     : source_(source), source_len_(source_len), offset_(0) {
   // Setup current token information
   curr_.type = Token::Type::UNINIITIALIZED;
@@ -252,7 +252,7 @@ void Scanner::SkipLineComment() {
 }
 
 void Scanner::SkipBlockComment() {
-  i32 c;
+  int32_t c;
   do {
     c = c0_;
     Advance();
@@ -277,7 +277,7 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
   }
 
   const auto *identifier = next_.literal.data();
-  auto identifier_len = static_cast<u32>(next_.literal.length());
+  auto identifier_len = static_cast<uint32_t>(next_.literal.length());
 
   return CheckIdentifierOrKeyword(identifier, identifier_len);
 }
@@ -311,9 +311,9 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
   GROUP_ELEM("var", Token::Type::VAR)
 // clang-format on
 
-Token::Type Scanner::CheckIdentifierOrKeyword(const char *input, u32 input_len) {
-  static constexpr u32 kMinKeywordLen = 2;
-  static constexpr u32 kMaxKeywordLen = 6;
+Token::Type Scanner::CheckIdentifierOrKeyword(const char *input, uint32_t input_len) {
+  static constexpr uint32_t kMinKeywordLen = 2;
+  static constexpr uint32_t kMaxKeywordLen = 6;
 
   if (input_len < kMinKeywordLen || input_len > kMaxKeywordLen) {
     return Token::Type::IDENTIFIER;
@@ -326,7 +326,7 @@ Token::Type Scanner::CheckIdentifierOrKeyword(const char *input, u32 input_len) 
 // clang-format off
 #define GROUP_ELEM(str, typ)                                \
   {                                                         \
-    const u64 keyword_len = sizeof(str) - 1;                \
+    const uint64_t keyword_len = sizeof(str) - 1;                \
     if (keyword_len == input_len && (str)[1] == input[1] && \
         (keyword_len < 3 || (str)[2] == input[2]) &&        \
         (keyword_len < 4 || (str)[3] == input[3]) &&        \

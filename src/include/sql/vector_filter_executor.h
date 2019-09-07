@@ -49,7 +49,7 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectEqVal(u32 col_idx, const GenericValue &val);
+  void SelectEqVal(uint32_t col_idx, const GenericValue &val);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -57,7 +57,7 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectEqVal(u32 col_idx, const Val &val);
+  void SelectEqVal(uint32_t col_idx, const Val &val);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -65,7 +65,7 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectGeVal(u32 col_idx, const GenericValue &val);
+  void SelectGeVal(uint32_t col_idx, const GenericValue &val);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -73,7 +73,7 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectGeVal(u32 col_idx, const Val &val);
+  void SelectGeVal(uint32_t col_idx, const Val &val);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -81,7 +81,7 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectGtVal(u32 col_idx, const GenericValue &val);
+  void SelectGtVal(uint32_t col_idx, const GenericValue &val);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -89,7 +89,7 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectGtVal(u32 col_idx, const Val &val);
+  void SelectGtVal(uint32_t col_idx, const Val &val);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -97,7 +97,7 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectLeVal(u32 col_idx, const GenericValue &val);
+  void SelectLeVal(uint32_t col_idx, const GenericValue &val);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -105,7 +105,7 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectLeVal(u32 col_idx, const Val &val);
+  void SelectLeVal(uint32_t col_idx, const Val &val);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -113,7 +113,7 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectLtVal(u32 col_idx, const GenericValue &val);
+  void SelectLtVal(uint32_t col_idx, const GenericValue &val);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -121,7 +121,7 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectLtVal(u32 col_idx, const Val &val);
+  void SelectLtVal(uint32_t col_idx, const Val &val);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -129,7 +129,7 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectNeVal(u32 col_idx, const GenericValue &val);
+  void SelectNeVal(uint32_t col_idx, const GenericValue &val);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -137,7 +137,7 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectNeVal(u32 col_idx, const Val &val);
+  void SelectNeVal(uint32_t col_idx, const Val &val);
 
   /**
    * Select tuples whose values in the left (first) column are equal to the values in the right
@@ -145,7 +145,7 @@ class VectorFilterExecutor {
    * @param left_col_idx The index of the left column to compare with.
    * @param right_col_idx The index of the right column to compare with.
    */
-  void SelectEq(u32 left_col_idx, u32 right_col_idx);
+  void SelectEq(uint32_t left_col_idx, uint32_t right_col_idx);
 
   /**
    * Select tuples whose values in the left (first) column are greater than or equal to the values
@@ -153,7 +153,7 @@ class VectorFilterExecutor {
    * @param left_col_idx The index of the left column to compare with.
    * @param right_col_idx The index of the right column to compare with.
    */
-  void SelectGe(u32 left_col_idx, u32 right_col_idx);
+  void SelectGe(uint32_t left_col_idx, uint32_t right_col_idx);
 
   /**
    * Select tuples whose values in the left (first) column are greater than the values in the right
@@ -161,7 +161,7 @@ class VectorFilterExecutor {
    * @param left_col_idx The index of the left column to compare with.
    * @param right_col_idx The index of the right column to compare with.
    */
-  void SelectGt(u32 left_col_idx, u32 right_col_idx);
+  void SelectGt(uint32_t left_col_idx, uint32_t right_col_idx);
 
   /**
    * Select tuples whose values in the left (first) column are less than or equal to the values in
@@ -169,7 +169,7 @@ class VectorFilterExecutor {
    * @param left_col_idx The index of the left column to compare with.
    * @param right_col_idx The index of the right column to compare with.
    */
-  void SelectLe(u32 left_col_idx, u32 right_col_idx);
+  void SelectLe(uint32_t left_col_idx, uint32_t right_col_idx);
 
   /**
    * Select tuples whose values in the left (first) column are less than the values in the right
@@ -177,7 +177,7 @@ class VectorFilterExecutor {
    * @param left_col_idx The index of the left column to compare with.
    * @param right_col_idx The index of the right column to compare with.
    */
-  void SelectLt(u32 left_col_idx, u32 right_col_idx);
+  void SelectLt(uint32_t left_col_idx, uint32_t right_col_idx);
 
   /**
    * Select tuples whose values in the left (first) column are not equal to the values in the right
@@ -185,9 +185,9 @@ class VectorFilterExecutor {
    * @param left_col_idx The index of the left column to compare with.
    * @param right_col_idx The index of the right column to compare with.
    */
-  void SelectNe(u32 col_idx, u32 right_col_idx);
+  void SelectNe(uint32_t col_idx, uint32_t right_col_idx);
 
-  using VectorFilterFn = std::function<u32(const Vector *[], sel_t[])>;
+  using VectorFilterFn = std::function<uint32_t(const Vector *[], sel_t[])>;
 
   /**
    * Apply a generic selection filter using the vectors at indexes stored in @em col_indexes as
@@ -196,7 +196,7 @@ class VectorFilterExecutor {
    * @param filter The filtering function that writes valid selection indexes
    *               into a provided output selection vector.
    */
-  void SelectGeneric(const std::vector<u32> &col_indexes, const VectorFilterFn &filter);
+  void SelectGeneric(const std::vector<uint32_t> &col_indexes, const VectorFilterFn &filter);
 
   /**
    * Invert the current active selection, i.e., select all currently unselected tuples.
@@ -211,7 +211,7 @@ class VectorFilterExecutor {
  private:
   // Helper to invoke a given filter function over a collection of input vectors
   template <typename F>
-  void SelectInternal(const u32 col_indexes[], u32 num_cols, F &&filter);
+  void SelectInternal(const uint32_t col_indexes[], uint32_t num_cols, F &&filter);
 
  private:
   // The vector projection we're filtering.
@@ -222,7 +222,7 @@ class VectorFilterExecutor {
   // Where we collect the results of a filter.
   sel_t owned_sel_vector_[kDefaultVectorSize];
   // The number of elements in the selection vector.
-  u32 count_;
+  uint32_t count_;
 };
 
 }  // namespace tpl::sql

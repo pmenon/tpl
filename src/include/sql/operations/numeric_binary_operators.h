@@ -65,13 +65,13 @@ struct Modulo {
 };
 
 template <>
-inline f32 Modulo::Apply(f32 a, f32 b) {
+inline float Modulo::Apply(float a, float b) {
   TPL_ASSERT(b != 0, "Divide by zero");
   return std::fmod(a, b);
 }
 
 template <>
-inline f64 Modulo::Apply(f64 a, f64 b) {
+inline double Modulo::Apply(double a, double b) {
   TPL_ASSERT(b != 0, "Divide by zero");
   return std::fmod(a, b);
 }

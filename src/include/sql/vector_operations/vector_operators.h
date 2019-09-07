@@ -24,7 +24,8 @@ class VectorOps {
    * @param offset The index into the source vector to begin copying from.
    * @param element_count The number of elements to copy.
    */
-  static void Copy(const Vector &source, void *target, u64 offset = 0, u64 element_count = 0);
+  static void Copy(const Vector &source, void *target, uint64_t offset = 0,
+                   uint64_t element_count = 0);
 
   /**
    * Copy all elements from @em source to the target vector @em target, starting at offset
@@ -33,7 +34,7 @@ class VectorOps {
    * @param target The vector to copy into.
    * @param offset The offset in the source vector to begin reading.
    */
-  static void Copy(const Vector &source, Vector *target, u64 offset = 0);
+  static void Copy(const Vector &source, Vector *target, uint64_t offset = 0);
 
   /**
    * Cast all elements in the source vector @em source into elements of the type the target vector
@@ -61,7 +62,7 @@ class VectorOps {
    * @param start The first element to insert.
    * @param increment The amount to jump.
    */
-  static void Generate(Vector *vector, i64 start, i64 increment);
+  static void Generate(Vector *vector, int64_t start, int64_t increment);
 
   /**
    * Fill the input vector @em vector with a given non-null value @em value.
@@ -153,7 +154,7 @@ class VectorOps {
    * @param[out] out_sel_vector The output selection index vector.
    * @return The number of elements selected.
    */
-  static u32 SelectEqual(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
+  static uint32_t SelectEqual(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
 
   /**
    * Store the positions where the left input element is strictly greater than the element in the
@@ -163,7 +164,8 @@ class VectorOps {
    * @param[out] out_sel_vector The output selection index vector.
    * @return The number of elements selected.
    */
-  static u32 SelectGreaterThan(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
+  static uint32_t SelectGreaterThan(const Vector &left, const Vector &right,
+                                    sel_t out_sel_vector[]);
 
   /**
    * Store the positions where the left input element is greater than or equal to the element in the
@@ -173,8 +175,8 @@ class VectorOps {
    * @param[out] out_sel_vector The output selection index vector.
    * @return The number of elements selected.
    */
-  static u32 SelectGreaterThanEqual(const Vector &left, const Vector &right,
-                                    sel_t out_sel_vector[]);
+  static uint32_t SelectGreaterThanEqual(const Vector &left, const Vector &right,
+                                         sel_t out_sel_vector[]);
 
   /**
    * Store the positions where the left input element is strictly less than the element in the right
@@ -184,7 +186,7 @@ class VectorOps {
    * @param[out] out_sel_vector The output selection index vector.
    * @return The number of elements selected.
    */
-  static u32 SelectLessThan(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
+  static uint32_t SelectLessThan(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
 
   /**
    * Store the positions where the left input element is less than or equal to the element in the
@@ -194,7 +196,8 @@ class VectorOps {
    * @param[out] out_sel_vector The output selection index vector.
    * @return The number of elements selected.
    */
-  static u32 SelectLessThanEqual(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
+  static uint32_t SelectLessThanEqual(const Vector &left, const Vector &right,
+                                      sel_t out_sel_vector[]);
 
   /**
    * Store the positions of all unequal elements in the left and right input vectors into the output
@@ -204,7 +207,7 @@ class VectorOps {
    * @param[out] out_sel_vector The output selection index vector.
    * @return The number of elements selected.
    */
-  static u32 SelectNotEqual(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
+  static uint32_t SelectNotEqual(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
 
   // -------------------------------------------------------
   //
@@ -303,14 +306,14 @@ class VectorOps {
    * @param offset The offset from the beginning to begin iteration.
    */
   template <typename F>
-  static void Exec(const sel_t *RESTRICT sel_vector, const u64 count, F &&fun,
-                   const u64 offset = 0) {
+  static void Exec(const sel_t *RESTRICT sel_vector, const uint64_t count, F &&fun,
+                   const uint64_t offset = 0) {
     if (sel_vector != nullptr) {
-      for (u64 i = offset; i < count; i++) {
+      for (uint64_t i = offset; i < count; i++) {
         fun(sel_vector[i], i);
       }
     } else {
-      for (u64 i = offset; i < count; i++) {
+      for (uint64_t i = offset; i < count; i++) {
         fun(i, i);
       }
     }
@@ -334,7 +337,7 @@ class VectorOps {
    * @param offset The offset from the beginning to begin iteration.
    */
   template <typename F>
-  static void Exec(const Vector &vector, F &&fun, u64 offset = 0, u64 count = 0) {
+  static void Exec(const Vector &vector, F &&fun, uint64_t offset = 0, uint64_t count = 0) {
     if (count == 0) {
       count = vector.count_;
     } else {
@@ -352,7 +355,7 @@ class VectorOps {
   template <typename T, typename F>
   static void ExecTyped(const Vector &vector, F &&fun) {
     const auto *data = reinterpret_cast<const T *>(vector.data());
-    Exec(vector.sel_vector_, vector.count_, [&](u64 i, u64 k) { fun(data[i], i, k); });
+    Exec(vector.sel_vector_, vector.count_, [&](uint64_t i, uint64_t k) { fun(data[i], i, k); });
   }
 };
 

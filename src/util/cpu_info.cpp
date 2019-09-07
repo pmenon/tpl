@@ -84,7 +84,7 @@ void CpuInfo::InitCpuInfo() {
   }
 
   {
-    u64 freq = 0;
+    uint64_t freq = 0;
     size_t size = sizeof(freq);
     if (sysctlbyname("hw.cpufrequency", &freq, &size, nullptr, 0) < 0) {
       LOG_ERROR("Cannot read CPU Mhz: {}", strerror(errno));
@@ -93,8 +93,8 @@ void CpuInfo::InitCpuInfo() {
   }
 #else
   // On linux, just read /proc/cpuinfo
-  std::unordered_set<i32> processors;
-  std::unordered_set<i32> physical_cores;
+  std::unordered_set<int32_t> processors;
+  std::unordered_set<int32_t> physical_cores;
 
   std::string line;
   std::ifstream infile("/proc/cpuinfo");
@@ -113,11 +113,11 @@ void CpuInfo::InitCpuInfo() {
       value.getAsDouble(cpu_mhz);
       cpu_mhz_ = std::max(cpu_mhz_, cpu_mhz);
     } else if (name.startswith("physical id")) {
-      i32 processor_id = 0;
+      int32_t processor_id = 0;
       value.getAsInteger(0, processor_id);
       processors.insert(processor_id);
     } else if (name.startswith("core id")) {
-      i32 core_id = 0;
+      int32_t core_id = 0;
       value.getAsInteger(0, core_id);
       physical_cores.insert(core_id);
     } else if (name.startswith("flags")) {
@@ -135,12 +135,12 @@ void CpuInfo::InitCacheInfo() {
   // Lookup cache sizes
   std::size_t len = 0;
   sysctlbyname("hw.cachesize", nullptr, &len, nullptr, 0);
-  auto data = std::make_unique<u64[]>(len);
+  auto data = std::make_unique<uint64_t[]>(len);
   sysctlbyname("hw.cachesize", data.get(), &len, nullptr, 0);
-  TPL_ASSERT(len / sizeof(u64) >= 3, "Expected three levels of cache!");
+  TPL_ASSERT(len / sizeof(uint64_t) >= 3, "Expected three levels of cache!");
 
   // Copy data
-  for (u32 idx = 0; idx < kNumCacheLevels; idx++) {
+  for (uint32_t idx = 0; idx < kNumCacheLevels; idx++) {
     cache_sizes_[idx] = data[idx];
   }
 
@@ -153,13 +153,13 @@ void CpuInfo::InitCacheInfo() {
   }
 #else
   // Use sysconf to determine cache sizes
-  cache_sizes_[L1_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL1_DCACHE_SIZE));
-  cache_sizes_[L2_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL2_CACHE_SIZE));
-  cache_sizes_[L3_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL3_CACHE_SIZE));
+  cache_sizes_[L1_CACHE] = static_cast<uint32_t>(sysconf(_SC_LEVEL1_DCACHE_SIZE));
+  cache_sizes_[L2_CACHE] = static_cast<uint32_t>(sysconf(_SC_LEVEL2_CACHE_SIZE));
+  cache_sizes_[L3_CACHE] = static_cast<uint32_t>(sysconf(_SC_LEVEL3_CACHE_SIZE));
 
-  cache_line_sizes_[L1_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL1_DCACHE_LINESIZE));
-  cache_line_sizes_[L2_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL2_CACHE_LINESIZE));
-  cache_line_sizes_[L3_CACHE] = static_cast<u32>(sysconf(_SC_LEVEL3_CACHE_LINESIZE));
+  cache_line_sizes_[L1_CACHE] = static_cast<uint32_t>(sysconf(_SC_LEVEL1_DCACHE_LINESIZE));
+  cache_line_sizes_[L2_CACHE] = static_cast<uint32_t>(sysconf(_SC_LEVEL2_CACHE_LINESIZE));
+  cache_line_sizes_[L3_CACHE] = static_cast<uint32_t>(sysconf(_SC_LEVEL3_CACHE_LINESIZE));
 #endif
 }
 

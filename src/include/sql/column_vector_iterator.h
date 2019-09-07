@@ -25,7 +25,7 @@ class ColumnVectorIterator {
    * elements in the array returned by @em col_data() or @em col_null_bitmap()
    * @return The number of tuples in the currently active vector.
    */
-  u32 NumTuples() const { return next_block_pos_ - current_block_pos_; }
+  uint32_t NumTuples() const { return next_block_pos_ - current_block_pos_; }
 
   /**
    * Reset the iterator to begin iteration at the start of column @em column.
@@ -42,8 +42,8 @@ class ColumnVectorIterator {
   /**
    * Access the current raw NULL bitmap.
    */
-  u32 *col_null_bitmap() noexcept { return col_null_bitmap_; }
-  u32 *col_null_bitmap() const noexcept { return col_null_bitmap_; }
+  uint32_t *col_null_bitmap() noexcept { return col_null_bitmap_; }
+  uint32_t *col_null_bitmap() const noexcept { return col_null_bitmap_; }
 
  private:
   // The schema information for the column this iterator operates on
@@ -53,16 +53,16 @@ class ColumnVectorIterator {
   const ColumnSegment *column_;
 
   // The current position in the current block
-  u32 current_block_pos_;
+  uint32_t current_block_pos_;
 
   // The position in the current block to find the next vector of input
-  u32 next_block_pos_;
+  uint32_t next_block_pos_;
 
   // Pointer to column data
   byte *col_data_;
 
   // Pointer to the column's bitmap
-  u32 *col_null_bitmap_;
+  uint32_t *col_null_bitmap_;
 };
 
 }  // namespace tpl::sql

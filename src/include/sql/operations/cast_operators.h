@@ -26,79 +26,79 @@ struct TryCast {
 };
 
 // ---------------------------------------------------------
-// Downcasting Numeric -> TinyInt (i8)
+// Downcasting Numeric -> TinyInt (int8_t)
 // ---------------------------------------------------------
 
 template <>
-i8 Cast::Apply(i16);
+int8_t Cast::Apply(int16_t);
 template <>
-i8 Cast::Apply(i32);
+int8_t Cast::Apply(int32_t);
 template <>
-i8 Cast::Apply(i64);
+int8_t Cast::Apply(int64_t);
 template <>
-i8 Cast::Apply(f32);
+int8_t Cast::Apply(float);
 template <>
-i8 Cast::Apply(f64);
+int8_t Cast::Apply(double);
 template <>
-bool TryCast::Apply(i16, i8 *);
+bool TryCast::Apply(int16_t, int8_t *);
 template <>
-bool TryCast::Apply(i32, i8 *);
+bool TryCast::Apply(int32_t, int8_t *);
 template <>
-bool TryCast::Apply(i64, i8 *);
+bool TryCast::Apply(int64_t, int8_t *);
 template <>
-bool TryCast::Apply(f32, i8 *);
+bool TryCast::Apply(float, int8_t *);
 template <>
-bool TryCast::Apply(f64, i8 *);
+bool TryCast::Apply(double, int8_t *);
 
 // ---------------------------------------------------------
-// Downcasting Numeric -> SmallInt (i16)
-// ---------------------------------------------------------
-
-template <>
-i16 Cast::Apply(i32);
-template <>
-i16 Cast::Apply(i64);
-template <>
-i16 Cast::Apply(f32);
-template <>
-i16 Cast::Apply(f64);
-template <>
-bool TryCast::Apply(i32, i16 *);
-template <>
-bool TryCast::Apply(i64, i16 *);
-template <>
-bool TryCast::Apply(f32, i16 *);
-template <>
-bool TryCast::Apply(f64, i16 *);
-
-// ---------------------------------------------------------
-// Downcasting Numeric -> Int (i32)
+// Downcasting Numeric -> SmallInt (int16_t)
 // ---------------------------------------------------------
 
 template <>
-i32 Cast::Apply(i64);
+int16_t Cast::Apply(int32_t);
 template <>
-i32 Cast::Apply(f32);
+int16_t Cast::Apply(int64_t);
 template <>
-i32 Cast::Apply(f64);
+int16_t Cast::Apply(float);
 template <>
-bool TryCast::Apply(i64, i32 *);
+int16_t Cast::Apply(double);
 template <>
-bool TryCast::Apply(f32, i32 *);
+bool TryCast::Apply(int32_t, int16_t *);
 template <>
-bool TryCast::Apply(f64, i32 *);
+bool TryCast::Apply(int64_t, int16_t *);
+template <>
+bool TryCast::Apply(float, int16_t *);
+template <>
+bool TryCast::Apply(double, int16_t *);
 
 // ---------------------------------------------------------
-// Downcasting Numeric -> BigInt (i64)
+// Downcasting Numeric -> Int (int32_t)
 // ---------------------------------------------------------
 
 template <>
-i64 Cast::Apply(f32);
+int32_t Cast::Apply(int64_t);
 template <>
-i64 Cast::Apply(f64);
+int32_t Cast::Apply(float);
 template <>
-bool TryCast::Apply(f32, i64 *);
+int32_t Cast::Apply(double);
 template <>
-bool TryCast::Apply(f64, i64 *);
+bool TryCast::Apply(int64_t, int32_t *);
+template <>
+bool TryCast::Apply(float, int32_t *);
+template <>
+bool TryCast::Apply(double, int32_t *);
+
+// ---------------------------------------------------------
+// Downcasting Numeric -> BigInt (int64_t)
+// ---------------------------------------------------------
+
+template <>
+int64_t Cast::Apply(float);
+template <>
+int64_t Cast::Apply(double);
+template <>
+bool TryCast::Apply(float, int64_t *);
+template <>
+bool TryCast::Apply(double, int64_t *);
 
 }  // namespace tpl::sql

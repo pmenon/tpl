@@ -37,24 +37,24 @@ class HashTest : public TplTest {};
 TEST_F(HashTest, IntegerHash) {
   std::random_device random_seed;
 
-  CHECK_HASH_ON_INPUT(i8{-1});
-  CHECK_HASH_ON_INPUT(i16{-22});
-  CHECK_HASH_ON_INPUT(i32{-333});
-  CHECK_HASH_ON_INPUT(i64{-4444});
-  CHECK_HASH_ON_INPUT(u8{1});
-  CHECK_HASH_ON_INPUT(u16{22});
-  CHECK_HASH_ON_INPUT(u32{333});
-  CHECK_HASH_ON_INPUT(u64{444});
+  CHECK_HASH_ON_INPUT(int8_t{-1});
+  CHECK_HASH_ON_INPUT(int16_t{-22});
+  CHECK_HASH_ON_INPUT(int32_t{-333});
+  CHECK_HASH_ON_INPUT(int64_t{-4444});
+  CHECK_HASH_ON_INPUT(uint8_t{1});
+  CHECK_HASH_ON_INPUT(uint16_t{22});
+  CHECK_HASH_ON_INPUT(uint32_t{333});
+  CHECK_HASH_ON_INPUT(uint64_t{444});
 }
 
 TEST_F(HashTest, FloatingPointHash) {
   std::random_device random_seed;
 
-  CHECK_HASH_ON_INPUT(f32{0});
-  CHECK_HASH_ON_INPUT(f32{-213.89});
-  CHECK_HASH_ON_INPUT(f64{0});
-  CHECK_HASH_ON_INPUT(f64{230984.234});
-  CHECK_HASH_ON_INPUT(f64{-230984.234});
+  CHECK_HASH_ON_INPUT(float{0});
+  CHECK_HASH_ON_INPUT(float{-213.89});
+  CHECK_HASH_ON_INPUT(double{0});
+  CHECK_HASH_ON_INPUT(double{230984.234});
+  CHECK_HASH_ON_INPUT(double{-230984.234});
 }
 
 #undef CHECK_HASH_ON_INPUT
@@ -63,7 +63,7 @@ TEST_F(HashTest, FloatingPointHash) {
 TEST_F(HashTest, StringHash) {
   const auto small_input = "This is a kinda long string";
   auto large_input = std::string();
-  for (u32 i = 0; i < 40; i++) {
+  for (uint32_t i = 0; i < 40; i++) {
     large_input += small_input;
   }
 

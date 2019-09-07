@@ -127,7 +127,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
     util::ScopedTimer<std::milli> timer(&interp_exec_ms);
 
     if (kIsSQL) {
-      std::function<u32(sql::ExecutionContext *)> main;
+      std::function<uint32_t(sql::ExecutionContext *)> main;
       if (!module->GetFunction("main", vm::ExecutionMode::Interpret, main)) {
         LOG_ERROR(
             "Missing 'main' entry function with signature "
@@ -138,7 +138,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
       sql::ExecutionContext exec_ctx(&memory);
       LOG_INFO("VM main() returned: {}", main(&exec_ctx));
     } else {
-      std::function<u32()> main;
+      std::function<uint32_t()> main;
       if (!module->GetFunction("main", vm::ExecutionMode::Interpret, main)) {
         LOG_ERROR("Missing 'main' entry function with signature ()->int32");
         return;
@@ -155,7 +155,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
     util::ScopedTimer<std::milli> timer(&adaptive_exec_ms);
 
     if (kIsSQL) {
-      std::function<u32(sql::ExecutionContext *)> main;
+      std::function<uint32_t(sql::ExecutionContext *)> main;
       if (!module->GetFunction("main", vm::ExecutionMode::Adaptive, main)) {
         LOG_ERROR(
             "Missing 'main' entry function with signature "
@@ -166,7 +166,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
       sql::ExecutionContext exec_ctx(&memory);
       LOG_INFO("ADAPTIVE main() returned: {}", main(&exec_ctx));
     } else {
-      std::function<u32()> main;
+      std::function<uint32_t()> main;
       if (!module->GetFunction("main", vm::ExecutionMode::Adaptive, main)) {
         LOG_ERROR("Missing 'main' entry function with signature ()->int32");
         return;
@@ -182,7 +182,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
     util::ScopedTimer<std::milli> timer(&jit_exec_ms);
 
     if (kIsSQL) {
-      std::function<u32(sql::ExecutionContext *)> main;
+      std::function<uint32_t(sql::ExecutionContext *)> main;
       if (!module->GetFunction("main", vm::ExecutionMode::Compiled, main)) {
         LOG_ERROR(
             "Missing 'main' entry function with signature "
@@ -193,7 +193,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
       sql::ExecutionContext exec_ctx(&memory);
       LOG_INFO("JIT main() returned: {}", main(&exec_ctx));
     } else {
-      std::function<u32()> main;
+      std::function<uint32_t()> main;
       if (!module->GetFunction("main", vm::ExecutionMode::Compiled, main)) {
         LOG_ERROR("Missing 'main' entry function with signature ()->int32");
         return;
@@ -273,7 +273,7 @@ void ShutdownTPL() {
 
 }  // namespace tpl
 
-void SignalHandler(i32 sig_num) {
+void SignalHandler(int32_t sig_num) {
   if (sig_num == SIGINT) {
     tpl::ShutdownTPL();
     exit(0);

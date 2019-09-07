@@ -8,7 +8,7 @@
 #include "sql/catalog.h"
 
 // TODO(siva): Hack! Fix me!
-i32 current_partition = -1;
+int32_t current_partition = -1;
 
 namespace tpl::sql {
 
@@ -22,7 +22,7 @@ void Table::Insert(Block &&block) {
 #ifndef NDEBUG
   // Sanity check
   TPL_ASSERT(block.num_cols() == schema_->num_columns(), "Column count mismatch");
-  for (u32 i = 0; i < schema_->num_columns(); i++) {
+  for (uint32_t i = 0; i < schema_->num_columns(); i++) {
     const auto &block_col_type = block.GetColumnData(i)->sql_type();
     const auto &schema_col_type = schema().GetColumnInfo(i)->sql_type;
     TPL_ASSERT(schema_col_type.Equals(block_col_type), "Column type mismatch");
@@ -36,7 +36,7 @@ void Table::Insert(Block &&block) {
 namespace {
 
 void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment &col,
-                  u32 row_idx) {
+                  uint32_t row_idx) {
   switch (sql_type.id()) {
     case SqlTypeId::Boolean: {
       break;
@@ -45,7 +45,7 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment
       if (sql_type.nullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
-        os << col.TypedAccessAt<i8>(row_idx);
+        os << col.TypedAccessAt<int8_t>(row_idx);
       }
       break;
     }
@@ -53,7 +53,7 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment
       if (sql_type.nullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
-        os << col.TypedAccessAt<i16>(row_idx);
+        os << col.TypedAccessAt<int16_t>(row_idx);
       }
       break;
     }
@@ -61,7 +61,7 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment
       if (sql_type.nullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
-        os << col.TypedAccessAt<i32>(row_idx);
+        os << col.TypedAccessAt<int32_t>(row_idx);
       }
       break;
     }
@@ -69,7 +69,7 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment
       if (sql_type.nullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
-        os << col.TypedAccessAt<i64>(row_idx);
+        os << col.TypedAccessAt<int64_t>(row_idx);
       }
       break;
     }
@@ -77,7 +77,7 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment
       if (sql_type.nullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
-        os << col.TypedAccessAt<f32>(row_idx);
+        os << col.TypedAccessAt<float>(row_idx);
       }
       break;
     }
@@ -85,7 +85,7 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment
       if (sql_type.nullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
-        os << col.TypedAccessAt<f64>(row_idx);
+        os << col.TypedAccessAt<double>(row_idx);
       }
       break;
     }
@@ -110,8 +110,8 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment
 void Table::Dump(std::ostream &stream) const {
   const auto &cols_meta = schema().columns();
   for (const auto &block : blocks_) {
-    for (u32 row_idx = 0; row_idx < block.num_tuples(); row_idx++) {
-      for (u32 col_idx = 0; col_idx < cols_meta.size(); col_idx++) {
+    for (uint32_t row_idx = 0; row_idx < block.num_tuples(); row_idx++) {
+      for (uint32_t col_idx = 0; col_idx < cols_meta.size(); col_idx++) {
         if (col_idx != 0) {
           stream << ", ";
         }
@@ -129,10 +129,11 @@ void Table::Dump(std::ostream &stream) const {
 //
 //===----------------------------------------------------------------------===//
 
-TableBlockIterator::TableBlockIterator(u16 table_id)
-    : TableBlockIterator(table_id, 0, std::numeric_limits<u32>::max()) {}
+TableBlockIterator::TableBlockIterator(uint16_t table_id)
+    : TableBlockIterator(table_id, 0, std::numeric_limits<uint32_t>::max()) {}
 
-TableBlockIterator::TableBlockIterator(u16 table_id, u32 start_block_idx, u32 end_block_idx)
+TableBlockIterator::TableBlockIterator(uint16_t table_id, uint32_t start_block_idx,
+                                       uint32_t end_block_idx)
     : table_id_(table_id),
       start_block_idx_(start_block_idx),
       end_block_idx_(end_block_idx),
@@ -154,7 +155,7 @@ bool TableBlockIterator::Init() {
     return false;
   }
 
-  if (end_block_idx_ != std::numeric_limits<u32>::max()) {
+  if (end_block_idx_ != std::numeric_limits<uint32_t>::max()) {
     if (end_block_idx_ > table_->num_blocks()) {
       return false;
     }
@@ -167,8 +168,9 @@ bool TableBlockIterator::Init() {
   // Setup the block position boundaries
   curr_block_ = nullptr;
   pos_ = table_->begin() + start_block_idx_;
-  end_ = (end_block_idx_ == std::numeric_limits<u32>::max() ? table_->end()
-                                                            : table_->begin() + end_block_idx_);
+  end_ =
+      (end_block_idx_ == std::numeric_limits<uint32_t>::max() ? table_->end()
+                                                              : table_->begin() + end_block_idx_);
   return true;
 }
 

@@ -43,14 +43,14 @@ class TupleIdList {
  public:
   using BitVectorT = util::BitVector;
 
-  explicit TupleIdList(u32 size = kDefaultVectorSize) : bit_vector_(size) {}
+  explicit TupleIdList(uint32_t size = kDefaultVectorSize) : bit_vector_(size) {}
 
   /**
    * Is the tuple with the given ID in this list?
    * @param tid The tuple ID to check.
    * @return True if the tuple is in the list; false otherwise.
    */
-  bool Contains(const u32 tid) const { return bit_vector_.Test(tid); }
+  bool Contains(const uint32_t tid) const { return bit_vector_.Test(tid); }
 
   /**
    * Is the list empty?
@@ -62,7 +62,7 @@ class TupleIdList {
    * Set a given tuple as active in the list.
    * @param tid The ID of the tuple.
    */
-  void Add(const u32 tid) { bit_vector_.Set(tid); }
+  void Add(const uint32_t tid) { bit_vector_.Set(tid); }
 
   /**
    * Add all tuples whose IDs are in the range [start_tid, end_tid). Note the
@@ -70,7 +70,7 @@ class TupleIdList {
    * @param start_tid The left inclusive range boundary.
    * @param end_tid The right inclusive range boundary.
    */
-  void AddRange(const u32 start_tid, const u32 end_tid) {
+  void AddRange(const uint32_t start_tid, const uint32_t end_tid) {
     bit_vector_.SetRange(start_tid, end_tid);
   }
 
@@ -86,13 +86,13 @@ class TupleIdList {
    * @param tid The ID to add or remove from the list.
    * @param enable The flag indicating if the tuple is added or removed.
    */
-  void Enable(const u32 tid, const bool enable) { bit_vector_.SetTo(tid, enable); }
+  void Enable(const uint32_t tid, const bool enable) { bit_vector_.SetTo(tid, enable); }
 
   /**
    * Remove the tuple with the given ID from the list.
    * @param tid The ID of the tuple.
    */
-  void Remove(const u32 tid) { bit_vector_.Unset(tid); }
+  void Remove(const uint32_t tid) { bit_vector_.Unset(tid); }
 
   /**
    * Intersect the set of tuple IDs in this list with the tuple IDs in the
@@ -125,7 +125,7 @@ class TupleIdList {
    */
   template <typename F>
   void BuildFromOtherList(const TupleIdList &input, F &&f) {
-    static_assert(std::is_invocable_r_v<bool, F, u32>,
+    static_assert(std::is_invocable_r_v<bool, F, uint32_t>,
                   "List construction callback must a single-argument functor "
                   "accepting an unsigned 32-bit index and returning a boolean "
                   "indicating if the given TID is considered 'valid' and "
@@ -158,7 +158,7 @@ class TupleIdList {
    */
   template <typename F>
   void BuildFromFunction(F &&f) {
-    static_assert(std::is_invocable_r_v<bool, F, u32>,
+    static_assert(std::is_invocable_r_v<bool, F, uint32_t>,
                   "List construction callback must a single-argument functor "
                   "accepting an unsigned 32-bit index and returning a boolean "
                   "indicating if the given TID is considered 'valid' and "
@@ -193,7 +193,7 @@ class TupleIdList {
    * @param matches The match vector.
    * @param size The number of elements in the match vector.
    */
-  void BuildFromMatchVector(const u8 *const matches, const u32 size) {
+  void BuildFromMatchVector(const uint8_t *const matches, const uint32_t size) {
     bit_vector_.SetFromBytes(matches, size);
   }
 
@@ -206,27 +206,29 @@ class TupleIdList {
    * Return the number of active tuples in the list.
    * @return The number of active tuples in the list.
    */
-  u32 GetTupleCount() const { return bit_vector_.CountOnes(); }
+  uint32_t GetTupleCount() const { return bit_vector_.CountOnes(); }
 
   /**
    * Return the capacity of the list.
    * @return The capacity of the TID list.
    */
-  u32 GetListCapacity() const { return bit_vector_.num_bits(); }
+  uint32_t GetListCapacity() const { return bit_vector_.num_bits(); }
 
   /**
    * Return the selectivity of the list as a fraction in the range [0.0, 1.0].
    * @return The selectivity of the list, i.e., the fraction of the tuples that
    *         are considered "active".
    */
-  f32 ComputeSelectivity() const { return static_cast<f32>(GetTupleCount()) / GetListCapacity(); }
+  float ComputeSelectivity() const {
+    return static_cast<float>(GetTupleCount()) / GetListCapacity();
+  }
 
   /**
    * Convert this tuple ID list into a dense selection index vector.
    * @param[out] sel_vec The output selection vector.
    * @return The number of elements in the generated selection vector.
    */
-  u32 AsSelectionVector(u16 *sel_vec) const;
+  uint32_t AsSelectionVector(uint16_t *sel_vec) const;
 
   /**
    * Iterate all TIDs in this list.

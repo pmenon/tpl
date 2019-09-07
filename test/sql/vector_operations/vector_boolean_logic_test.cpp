@@ -112,7 +112,7 @@ TEST_F(VectorBooleanLogicTest, FilteredBooleanLogic) {
   auto a = MakeBooleanVector({false, false, true, true}, {true, true, false, false});
   auto b = MakeBooleanVector({false, true, false, true}, {false, false, false, false});
   auto result = MakeBooleanVector();
-  std::vector<u16> sel = {0, 1, 3};
+  std::vector<uint16_t> sel = {0, 1, 3};
 
   // Set selection vector for both a and b
   a->SetSelectionVector(sel.data(), sel.size());

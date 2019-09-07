@@ -133,7 +133,7 @@ namespace tpl::ast {
   F(SizeOf, sizeOf)                                             \
   F(PtrCast, ptrCast)
 
-enum class Builtin : u8 {
+enum class Builtin : uint8_t {
 #define ENTRY(Name, ...) Name,
   BUILTINS_LIST(ENTRY)
 #undef ENTRY
@@ -145,13 +145,13 @@ enum class Builtin : u8 {
 class Builtins {
  public:
   // The total number of builtin functions
-  static const u32 kBuiltinsCount = static_cast<u32>(Builtin ::Last) + 1;
+  static const uint32_t kBuiltinsCount = static_cast<uint32_t>(Builtin ::Last) + 1;
 
   // Return the total number of bytecodes
-  static constexpr u32 NumBuiltins() { return kBuiltinsCount; }
+  static constexpr uint32_t NumBuiltins() { return kBuiltinsCount; }
 
   static const char *GetFunctionName(Builtin builtin) {
-    return kBuiltinFunctionNames[static_cast<u8>(builtin)];
+    return kBuiltinFunctionNames[static_cast<uint8_t>(builtin)];
   }
 
  private:

@@ -39,13 +39,13 @@ void Vector::Strings::Destroy() { region_.FreeAll(); }
 
 Vector::Vector(TypeId type) : type_(type), count_(0), data_(nullptr), sel_vector_(nullptr) {}
 
-Vector::Vector(TypeId type, u64 count, bool clear)
+Vector::Vector(TypeId type, uint64_t count, bool clear)
     : type_(type), count_(count), data_(nullptr), sel_vector_(nullptr) {
   TPL_ASSERT(count <= kDefaultVectorSize, "Count too large");
   Initialize(type, clear);
 }
 
-Vector::Vector(TypeId type, byte *data, u64 count)
+Vector::Vector(TypeId type, byte *data, uint64_t count)
     : type_(type), count_(count), data_(data), sel_vector_(nullptr) {
   TPL_ASSERT(data != nullptr, "Cannot create vector from NULL data pointer");
 }
@@ -73,7 +73,7 @@ void Vector::Destroy() {
   null_mask_.UnsetAll();
 }
 
-GenericValue Vector::GetValue(const u64 index) const {
+GenericValue Vector::GetValue(const uint64_t index) const {
   TPL_ASSERT(index <= count_, "Out-of-bounds vector access");
   if (IsNull(index)) {
     return GenericValue::CreateNull(type_);
@@ -84,16 +84,16 @@ GenericValue Vector::GetValue(const u64 index) const {
       return GenericValue::CreateBoolean(reinterpret_cast<bool *>(data_)[actual_index]);
     }
     case TypeId::TinyInt: {
-      return GenericValue::CreateTinyInt(reinterpret_cast<i8 *>(data_)[actual_index]);
+      return GenericValue::CreateTinyInt(reinterpret_cast<int8_t *>(data_)[actual_index]);
     }
     case TypeId::SmallInt: {
-      return GenericValue::CreateSmallInt(reinterpret_cast<i16 *>(data_)[actual_index]);
+      return GenericValue::CreateSmallInt(reinterpret_cast<int16_t *>(data_)[actual_index]);
     }
     case TypeId::Integer: {
-      return GenericValue::CreateInteger(reinterpret_cast<i32 *>(data_)[actual_index]);
+      return GenericValue::CreateInteger(reinterpret_cast<int32_t *>(data_)[actual_index]);
     }
     case TypeId::BigInt: {
-      return GenericValue::CreateBigInt(reinterpret_cast<i64 *>(data_)[actual_index]);
+      return GenericValue::CreateBigInt(reinterpret_cast<int64_t *>(data_)[actual_index]);
     }
     case TypeId::Hash: {
       return GenericValue::CreateHash(reinterpret_cast<hash_t *>(data_)[actual_index]);
@@ -102,10 +102,10 @@ GenericValue Vector::GetValue(const u64 index) const {
       return GenericValue::CreatePointer(reinterpret_cast<uintptr_t *>(data_)[actual_index]);
     }
     case TypeId::Float: {
-      return GenericValue::CreateReal(reinterpret_cast<f32 *>(data_)[actual_index]);
+      return GenericValue::CreateReal(reinterpret_cast<float *>(data_)[actual_index]);
     }
     case TypeId::Double: {
-      return GenericValue::CreateDouble(reinterpret_cast<f64 *>(data_)[actual_index]);
+      return GenericValue::CreateDouble(reinterpret_cast<double *>(data_)[actual_index]);
     }
     case TypeId::Varchar: {
       auto *str = reinterpret_cast<const char **>(data_)[actual_index];
@@ -119,11 +119,11 @@ GenericValue Vector::GetValue(const u64 index) const {
   }
 }
 
-void Vector::SetValue(const u64 index, const GenericValue &val) {
+void Vector::SetValue(const uint64_t index, const GenericValue &val) {
   TPL_ASSERT(index <= count_, "Out-of-bounds vector access");
   TPL_ASSERT(type_ == val.type_id(), "Mismatched types");
   SetNull(index, val.is_null());
-  const u64 actual_index = sel_vector_ != nullptr ? sel_vector_[index] : index;
+  const uint64_t actual_index = sel_vector_ != nullptr ? sel_vector_[index] : index;
   switch (type_) {
     case TypeId::Boolean: {
       const auto new_boolean = val.is_null() ? false : val.value_.boolean;
@@ -132,32 +132,32 @@ void Vector::SetValue(const u64 index, const GenericValue &val) {
     }
     case TypeId::TinyInt: {
       const auto new_tinyint = val.is_null() ? 0 : val.value_.tinyint;
-      reinterpret_cast<i8 *>(data_)[actual_index] = new_tinyint;
+      reinterpret_cast<int8_t *>(data_)[actual_index] = new_tinyint;
       break;
     }
     case TypeId::SmallInt: {
       const auto new_smallint = val.is_null() ? 0 : val.value_.smallint;
-      reinterpret_cast<i16 *>(data_)[actual_index] = new_smallint;
+      reinterpret_cast<int16_t *>(data_)[actual_index] = new_smallint;
       break;
     }
     case TypeId::Integer: {
       const auto new_integer = val.is_null() ? 0 : val.value_.integer;
-      reinterpret_cast<i32 *>(data_)[actual_index] = new_integer;
+      reinterpret_cast<int32_t *>(data_)[actual_index] = new_integer;
       break;
     }
     case TypeId::BigInt: {
       const auto new_bigint = val.is_null() ? 0 : val.value_.bigint;
-      reinterpret_cast<i64 *>(data_)[actual_index] = new_bigint;
+      reinterpret_cast<int64_t *>(data_)[actual_index] = new_bigint;
       break;
     }
     case TypeId::Float: {
       const auto new_float = val.is_null() ? 0 : val.value_.float_;
-      reinterpret_cast<f32 *>(data_)[actual_index] = new_float;
+      reinterpret_cast<float *>(data_)[actual_index] = new_float;
       break;
     }
     case TypeId::Double: {
       const auto new_double = val.is_null() ? 0 : val.value_.double_;
-      reinterpret_cast<f64 *>(data_)[actual_index] = new_double;
+      reinterpret_cast<double *>(data_)[actual_index] = new_double;
       break;
     }
     case TypeId::Hash: {
@@ -245,7 +245,7 @@ void Vector::Reference(GenericValue *value) {
   }
 }
 
-void Vector::Reference(TypeId type_id, byte *data, u32 *nullmask, u64 count) {
+void Vector::Reference(TypeId type_id, byte *data, uint32_t *nullmask, uint64_t count) {
   TPL_ASSERT(owned_data_ == nullptr, "Cannot reference a vector if owning data");
   count_ = count;
   data_ = data;
@@ -256,7 +256,7 @@ void Vector::Reference(TypeId type_id, byte *data, u32 *nullmask, u64 count) {
   if (nullmask == nullptr) {
     null_mask_.UnsetAll();
   } else {
-    for (u64 i = 0; i < count; i++) {
+    for (uint64_t i = 0; i < count; i++) {
       const bool is_null = util::BitUtil::Test(nullmask, i);
       null_mask_.SetTo(i, is_null);
     }
@@ -286,7 +286,7 @@ void Vector::MoveTo(Vector *other) {
   Destroy();
 }
 
-void Vector::CopyTo(Vector *other, u64 offset) {
+void Vector::CopyTo(Vector *other, uint64_t offset) {
   TPL_ASSERT(type_ == other->type_,
              "Copying to vector of different type. Did you mean to cast instead?");
   TPL_ASSERT(other->sel_vector_ == nullptr,
@@ -302,7 +302,7 @@ void Vector::CopyTo(Vector *other, u64 offset) {
     auto src_data = reinterpret_cast<const char **>(data_);
     auto target_data = reinterpret_cast<const char **>(other->data_);
     VectorOps::Exec(*this,
-                    [&](u64 i, u64 k) {
+                    [&](uint64_t i, uint64_t k) {
                       if (null_mask_[i]) {
                         other->null_mask_.Set(k - offset);
                         target_data[k - offset] = nullptr;
@@ -332,11 +332,11 @@ void Vector::Append(Vector &other) {
     throw std::out_of_range("Cannot append to vector: vector is too large");
   }
 
-  u64 old_count = count_;
+  uint64_t old_count = count_;
   count_ += other.count_;
 
   // merge NULL mask
-  VectorOps::Exec(other, [&](u64 i, u64 k) {
+  VectorOps::Exec(other, [&](uint64_t i, uint64_t k) {
     const bool other_is_null = other.null_mask_.Test(i);
     null_mask_.SetTo(old_count + k, other_is_null);
   });
@@ -347,7 +347,7 @@ void Vector::Append(Vector &other) {
     TPL_ASSERT(type_ == TypeId::Varchar, "Append on varchars");
     auto src_data = reinterpret_cast<const char **const>(other.data_);
     auto target_data = reinterpret_cast<const char **const>(data_);
-    VectorOps::Exec(other, [&](u64 i, u64 k) {
+    VectorOps::Exec(other, [&](uint64_t i, uint64_t k) {
       if (other.null_mask_[i]) {
         target_data[old_count + k] = nullptr;
       } else {
@@ -360,7 +360,7 @@ void Vector::Append(Vector &other) {
 std::string Vector::ToString() const {
   std::string result = std::string(TypeIdToString(type_)) + "=[";
   bool first = true;
-  VectorOps::Exec(*this, [&](u64 i, u64 k) {
+  VectorOps::Exec(*this, [&](uint64_t i, uint64_t k) {
     if (!first) result += ",";
     first = false;
     result += GetValue(i).ToString();
@@ -374,7 +374,7 @@ void Vector::Dump(std::ostream &stream) const { stream << ToString() << std::end
 void Vector::CheckIntegrity() const {
 #ifndef NDEBUG
   if (type_ == TypeId::Varchar) {
-    VectorOps::ExecTyped<const char *>(*this, [&](const char *string, u64 i, u64 k) {
+    VectorOps::ExecTyped<const char *>(*this, [&](const char *string, uint64_t i, uint64_t k) {
       if (!null_mask_[i]) {
         TPL_ASSERT(string != nullptr, "NULL pointer in non-null vector slot");
         // The following check is unsafe. But, we're in debug mode presumably

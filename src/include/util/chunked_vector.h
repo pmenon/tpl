@@ -36,9 +36,9 @@ class ChunkedVector {
  public:
   // clang-format off
   // We store 256 elements in each chunk of the vector
-  static constexpr const u32 kLogNumElementsPerChunk = 8;
-  static constexpr const u32 kNumElementsPerChunk = (1u << kLogNumElementsPerChunk);
-  static constexpr const u32 kChunkPositionMask = kNumElementsPerChunk - 1;
+  static constexpr const uint32_t kLogNumElementsPerChunk = 8;
+  static constexpr const uint32_t kNumElementsPerChunk = (1u << kLogNumElementsPerChunk);
+  static constexpr const uint32_t kChunkPositionMask = kNumElementsPerChunk - 1;
   // clang-format on
 
   /**
@@ -124,7 +124,7 @@ class ChunkedVector {
   class Iterator {
    public:
     // Iterator typedefs
-    using difference_type = i64;
+    using difference_type = int64_t;
     using value_type = byte *;
     using iterator_category = std::random_access_iterator_tag;
     using pointer = byte **;
@@ -145,15 +145,16 @@ class ChunkedVector {
     byte *operator*() const noexcept { return curr_; }
 
     // In place addition
-    Iterator &operator+=(const i64 offset) {
+    Iterator &operator+=(const int64_t offset) {
       // The size (in bytes) of one chunk
-      const i64 chunk_size = ChunkAllocSize(element_size_);
+      const int64_t chunk_size = ChunkAllocSize(element_size_);
 
       // The total number of bytes between the new and current position
-      const i64 byte_offset = offset * static_cast<i64>(element_size_) + (curr_ - *chunks_iter_);
+      const int64_t byte_offset =
+          offset * static_cast<int64_t>(element_size_) + (curr_ - *chunks_iter_);
 
       // Offset of the new chunk relative to the current chunk
-      i64 chunk_offset;
+      int64_t chunk_offset;
 
       // Optimize for the common case where offset is relatively small. This
       // reduces the number of integer divisions.
@@ -180,20 +181,20 @@ class ChunkedVector {
     }
 
     // In place subtraction
-    Iterator &operator-=(const i64 offset) {
+    Iterator &operator-=(const int64_t offset) {
       *this += (-offset);
       return *this;
     }
 
     // Addition
-    const Iterator operator+(const i64 offset) const {
+    const Iterator operator+(const int64_t offset) const {
       Iterator copy(*this);
       copy += offset;
       return copy;
     }
 
     // Subtraction
-    const Iterator operator-(const i64 offset) const {
+    const Iterator operator-(const int64_t offset) const {
       Iterator copy(*this);
       copy -= offset;
       return copy;
@@ -203,8 +204,8 @@ class ChunkedVector {
     // NOTE: This is not implemented in terms of += to optimize for the cases
     // when the offset is known.
     Iterator &operator++() noexcept {
-      const i64 chunk_size = ChunkAllocSize(element_size_);
-      const i64 byte_offset = static_cast<i64>(element_size_) + (curr_ - *chunks_iter_);
+      const int64_t chunk_size = ChunkAllocSize(element_size_);
+      const int64_t byte_offset = static_cast<int64_t>(element_size_) + (curr_ - *chunks_iter_);
       // NOTE: an explicit if statement is a bit faster despite the possibility
       // of branch misprediction.
       if (byte_offset >= chunk_size) {
@@ -227,8 +228,8 @@ class ChunkedVector {
     // NOTE: This is not implemented in terms of += to optimize for the cases
     // when the offset is known.
     Iterator &operator--() noexcept {
-      const i64 chunk_size = ChunkAllocSize(element_size_);
-      const i64 byte_offset = -static_cast<i64>(element_size_) + (curr_ - *chunks_iter_);
+      const int64_t chunk_size = ChunkAllocSize(element_size_);
+      const int64_t byte_offset = -static_cast<int64_t>(element_size_) + (curr_ - *chunks_iter_);
       // NOTE: an explicit if statement is a bit faster despite the possibility
       // of branch misprediction.
       if (byte_offset < 0) {
@@ -248,7 +249,7 @@ class ChunkedVector {
     }
 
     // Indexing
-    byte *operator[](const i64 &idx) const noexcept { return *(*this + idx); }
+    byte *operator[](const int64_t &idx) const noexcept { return *(*this + idx); }
 
     // Equality
     bool operator==(const Iterator &that) const noexcept { return curr_ == that.curr_; }
@@ -276,8 +277,8 @@ class ChunkedVector {
     bool operator>=(const Iterator &that) const noexcept { return !(this->operator<(that)); }
 
     difference_type operator-(const Iterator &that) const noexcept {
-      const i64 chunk_size = ChunkAllocSize(element_size_);
-      const i64 elem_size = static_cast<i64>(element_size_);
+      const int64_t chunk_size = ChunkAllocSize(element_size_);
+      const int64_t elem_size = static_cast<int64_t>(element_size_);
 
       return ((chunks_iter_ - that.chunks_iter_) * chunk_size +
               ((curr_ - *chunks_iter_) - (that.curr_ - *that.chunks_iter_))) /
@@ -525,19 +526,23 @@ class ChunkedVectorT {
 
     T &operator*() const noexcept { return *reinterpret_cast<T *>(*iter_); }
 
-    Iterator &operator+=(const i64 &offset) noexcept {
+    Iterator &operator+=(const int64_t &offset) noexcept {
       iter_ += offset;
       return *this;
     }
 
-    Iterator &operator-=(const i64 &offset) noexcept {
+    Iterator &operator-=(const int64_t &offset) noexcept {
       iter_ -= offset;
       return *this;
     }
 
-    const Iterator operator+(const i64 &offset) const noexcept { return Iterator(iter_ + offset); }
+    const Iterator operator+(const int64_t &offset) const noexcept {
+      return Iterator(iter_ + offset);
+    }
 
-    const Iterator operator-(const i64 &offset) const noexcept { return Iterator(iter_ - offset); }
+    const Iterator operator-(const int64_t &offset) const noexcept {
+      return Iterator(iter_ - offset);
+    }
 
     Iterator &operator++() noexcept {
       ++iter_;
@@ -553,7 +558,7 @@ class ChunkedVectorT {
 
     const Iterator operator--(int) noexcept { return Iterator(iter_--); }
 
-    T &operator[](const i64 &idx) const noexcept { return *reinterpret_cast<T *>(iter_[idx]); }
+    T &operator[](const int64_t &idx) const noexcept { return *reinterpret_cast<T *>(iter_[idx]); }
 
     bool operator==(const Iterator &that) const { return iter_ == that.iter_; }
 

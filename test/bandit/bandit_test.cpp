@@ -67,7 +67,7 @@ class BanditTest : public TplTest, public ::testing::WithParamInterface<TestConf
     std::string tpl_code;
     std::vector<std::string> function_names;
 
-    for (u32 i = 0; i < permuataions.size(); ++i) {
+    for (uint32_t i = 0; i < permuataions.size(); ++i) {
       auto [src, function_name] = CreateSampleTPLFunction(i, permuataions[i]);
       tpl_code += src;
       function_names.push_back(function_name);
@@ -86,15 +86,15 @@ class BanditTest : public TplTest, public ::testing::WithParamInterface<TestConf
 };
 
 void RunExperiment(bandit::MultiArmedBandit *bandit, bandit::Agent *agent, bool shuffle,
-                   int num_trials, u32 optimal_action, std::vector<double> *avg_rewards,
+                   int num_trials, uint32_t optimal_action, std::vector<double> *avg_rewards,
                    std::vector<double> *optimal, double *avg_exec_time, double *avg_total_time) {
   auto environment = bandit::Environment(bandit, agent);
 
   std::vector<double> rewards;
-  std::vector<u32> actions;
+  std::vector<uint32_t> actions;
 
   double total_time = 0;
-  for (u32 exp = 0; exp < NUM_EXPERIMENTS; exp++) {
+  for (uint32_t exp = 0; exp < NUM_EXPERIMENTS; exp++) {
     environment.Reset();
     {
       util::ScopedTimer<std::milli> timer(&total_time);
@@ -138,8 +138,8 @@ TEST_P(BanditTest, DISABLED_SimpleTest) {
 
   auto bandit = bandit::MultiArmedBandit(module.get(), action_names);
 
-  u32 num_actions = action_names.size();
-  u32 num_trials = 200;
+  uint32_t num_actions = action_names.size();
+  uint32_t num_trials = 200;
 
   std::vector<double> exec_time_individual(num_actions, 0.0);
   std::vector<double> total_time_individual(num_actions, 0.0);
@@ -149,10 +149,10 @@ TEST_P(BanditTest, DISABLED_SimpleTest) {
                                                       std::vector<double>(num_trials, 0.0));
 
   double min_time_so_far = DBL_MAX;
-  u32 optimal_action = 0;
+  uint32_t optimal_action = 0;
 
   // Run using FixedAction policy for each action
-  for (u32 action = 0; action < num_actions; action++) {
+  for (uint32_t action = 0; action < num_actions; action++) {
     auto policy = bandit::FixedActionPolicy(action);
     auto agent = bandit::Agent(&policy, 10);
 
@@ -209,7 +209,7 @@ TEST_P(BanditTest, DISABLED_SimpleTest) {
 
   out_file << "Timestep/Partition, ";
 
-  for (u32 action = 0; action < num_actions; action++) {
+  for (uint32_t action = 0; action < num_actions; action++) {
     out_file << "Action" << action << ", ";
   }
 
@@ -217,10 +217,10 @@ TEST_P(BanditTest, DISABLED_SimpleTest) {
   out_file << "EpsGreedy: exec_time, EpsGreedy: optimal, " << std::endl;
 
   // print execution time on each timestep.
-  for (u32 i = 0; i < num_trials; ++i) {
+  for (uint32_t i = 0; i < num_trials; ++i) {
     out_file << i << ", ";
 
-    for (u32 action = 0; action < num_actions; action++) {
+    for (uint32_t action = 0; action < num_actions; action++) {
       out_file << rewards_individual[action][i] << ", ";
     }
 
@@ -231,7 +231,7 @@ TEST_P(BanditTest, DISABLED_SimpleTest) {
   // print overall execution time.=
   out_file << "exec_time, ";
 
-  for (u32 action = 0; action < num_actions; action++) {
+  for (uint32_t action = 0; action < num_actions; action++) {
     out_file << exec_time_individual[action] << ", ";
   }
 
@@ -240,7 +240,7 @@ TEST_P(BanditTest, DISABLED_SimpleTest) {
   // print overall execution time with overhead.
   out_file << "total_time, ";
 
-  for (u32 action = 0; action < num_actions; action++) {
+  for (uint32_t action = 0; action < num_actions; action++) {
     out_file << total_time_individual[action] << ", ";
   }
 

@@ -123,7 +123,7 @@ class NumberBaseType : public SqlType {
 /**
  * A SQL tiny-int type..
  */
-class TinyIntType : public NumberBaseType<i8> {
+class TinyIntType : public NumberBaseType<int8_t> {
  public:
   static const TinyIntType &InstanceNonNullable();
 
@@ -150,7 +150,7 @@ class TinyIntType : public NumberBaseType<i8> {
 /**
  * A SQL small-int type..
  */
-class SmallIntType : public NumberBaseType<i16> {
+class SmallIntType : public NumberBaseType<int16_t> {
  public:
   static const SmallIntType &InstanceNonNullable();
 
@@ -177,7 +177,7 @@ class SmallIntType : public NumberBaseType<i16> {
 /**
  * A SQL integer type.
  */
-class IntegerType : public NumberBaseType<i32> {
+class IntegerType : public NumberBaseType<int32_t> {
  public:
   static const IntegerType &InstanceNonNullable();
 
@@ -204,7 +204,7 @@ class IntegerType : public NumberBaseType<i32> {
 /**
  * A SQL bigint type.
  */
-class BigIntType : public NumberBaseType<i64> {
+class BigIntType : public NumberBaseType<int64_t> {
  public:
   static const BigIntType &InstanceNonNullable();
 
@@ -231,7 +231,7 @@ class BigIntType : public NumberBaseType<i64> {
 /**
  * A SQL real type, i.e., a 4-byte floating point type.
  */
-class RealType : public NumberBaseType<f32> {
+class RealType : public NumberBaseType<float> {
  public:
   static const RealType &InstanceNonNullable();
 
@@ -258,7 +258,7 @@ class RealType : public NumberBaseType<f32> {
 /**
  * A SQL double type, i.e., an 8-byte floating point type.
  */
-class DoubleType : public NumberBaseType<f64> {
+class DoubleType : public NumberBaseType<double> {
  public:
   static const DoubleType &InstanceNonNullable();
 
@@ -287,11 +287,11 @@ class DoubleType : public NumberBaseType<f64> {
  */
 class DecimalType : public SqlType {
  public:
-  static const DecimalType &InstanceNonNullable(u32 precision, u32 scale);
+  static const DecimalType &InstanceNonNullable(uint32_t precision, uint32_t scale);
 
-  static const DecimalType &InstanceNullable(u32 precision, u32 scale);
+  static const DecimalType &InstanceNullable(uint32_t precision, uint32_t scale);
 
-  static const DecimalType &Instance(bool nullable, u32 precision, u32 scale) {
+  static const DecimalType &Instance(bool nullable, uint32_t precision, uint32_t scale) {
     return (nullable ? InstanceNullable(precision, scale) : InstanceNonNullable(precision, scale));
   }
 
@@ -311,21 +311,21 @@ class DecimalType : public SqlType {
 
   bool IsArithmetic() const override;
 
-  u32 precision() const;
+  uint32_t precision() const;
 
-  u32 scale() const;
+  uint32_t scale() const;
 
   static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Decimal; }
 
  private:
-  DecimalType(bool nullable, u32 precision, u32 scale);
+  DecimalType(bool nullable, uint32_t precision, uint32_t scale);
 
   template <bool nullable>
-  static const DecimalType &InstanceInternal(u32 precision, u32 scale);
+  static const DecimalType &InstanceInternal(uint32_t precision, uint32_t scale);
 
  private:
-  u32 precision_;
-  u32 scale_;
+  uint32_t precision_;
+  uint32_t scale_;
 };
 
 /**
@@ -364,11 +364,11 @@ class DateType : public SqlType {
  */
 class CharType : public SqlType {
  public:
-  static const CharType &InstanceNonNullable(u32 len);
+  static const CharType &InstanceNonNullable(uint32_t len);
 
-  static const CharType &InstanceNullable(u32 len);
+  static const CharType &InstanceNullable(uint32_t len);
 
-  static const CharType &Instance(bool nullable, u32 len) {
+  static const CharType &Instance(bool nullable, uint32_t len) {
     return (nullable ? InstanceNullable(len) : InstanceNonNullable(len));
   }
 
@@ -384,18 +384,18 @@ class CharType : public SqlType {
 
   bool IsArithmetic() const override { return false; }
 
-  u32 length() const;
+  uint32_t length() const;
 
   static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Char; }
 
  private:
-  explicit CharType(bool nullable, u32 length);
+  explicit CharType(bool nullable, uint32_t length);
 
   template <bool nullable>
-  static const CharType &InstanceInternal(u32 length);
+  static const CharType &InstanceInternal(uint32_t length);
 
  private:
-  u32 length_;
+  uint32_t length_;
 };
 
 /**
@@ -403,11 +403,11 @@ class CharType : public SqlType {
  */
 class VarcharType : public SqlType {
  public:
-  static const VarcharType &InstanceNonNullable(u32 max_len);
+  static const VarcharType &InstanceNonNullable(uint32_t max_len);
 
-  static const VarcharType &InstanceNullable(u32 max_len);
+  static const VarcharType &InstanceNullable(uint32_t max_len);
 
-  static const VarcharType &Instance(bool nullable, u32 max_len) {
+  static const VarcharType &Instance(bool nullable, uint32_t max_len) {
     return (nullable ? InstanceNullable(max_len) : InstanceNonNullable(max_len));
   }
 
@@ -425,18 +425,18 @@ class VarcharType : public SqlType {
 
   bool IsArithmetic() const override { return false; }
 
-  u32 max_length() const;
+  uint32_t max_length() const;
 
   static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Varchar; }
 
  private:
-  explicit VarcharType(bool nullable, u32 max_len);
+  explicit VarcharType(bool nullable, uint32_t max_len);
 
   template <bool nullable>
-  static const VarcharType &InstanceInternal(u32 length);
+  static const VarcharType &InstanceInternal(uint32_t length);
 
  private:
-  u32 max_len_;
+  uint32_t max_len_;
 };
 
 }  // namespace tpl::sql

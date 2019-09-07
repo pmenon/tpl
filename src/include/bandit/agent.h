@@ -14,7 +14,7 @@ namespace tpl::bandit {
  */
 class Agent {
  public:
-  Agent(Policy *policy, u32 num_actions, double prior = 0, double gamma = -1);
+  Agent(Policy *policy, uint32_t num_actions, double prior = 0, double gamma = -1);
 
   /**
    * Reset all state this agent has collected.
@@ -24,7 +24,7 @@ class Agent {
   /**
    * Return the next action to be taken.
    */
-  u32 NextAction();
+  uint32_t NextAction();
 
   /**
    * Update the state based on reward obtained by playing the action chosen
@@ -35,7 +35,7 @@ class Agent {
   /**
    * Return the current optimal action.
    */
-  u32 GetCurrentOptimalAction() const;
+  uint32_t GetCurrentOptimalAction() const;
 
   /**
    * Return estimations of the value of each flavor/action
@@ -45,19 +45,19 @@ class Agent {
   /**
    * Return counts of the number of times each flavor/action was tried
    */
-  const std::vector<u32> &action_attempts() const { return action_attempts_; }
+  const std::vector<uint32_t> &action_attempts() const { return action_attempts_; }
 
   /**
    * Return the current time step
    */
-  u32 time_step() const { return time_step_; }
+  uint32_t time_step() const { return time_step_; }
 
  private:
   // Policy to use for choosing the next action.
   Policy *policy_;
 
   // Number of actions available.
-  u32 num_actions_;
+  uint32_t num_actions_;
 
   // Prior value estimate of an action. This is the same for every action.
   double prior_;
@@ -72,13 +72,13 @@ class Agent {
   std::vector<double> value_estimates_;
 
   // Number of times each action was taken.
-  std::vector<u32> action_attempts_;
+  std::vector<uint32_t> action_attempts_;
 
   // The current time step in the run.
-  u32 time_step_;
+  uint32_t time_step_;
 
   // Last action that was taken.
-  u32 last_action_;
+  uint32_t last_action_;
 };
 
 }  // namespace tpl::bandit

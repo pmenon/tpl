@@ -17,7 +17,7 @@
 
 namespace tpl::sql {
 
-Sorter::Sorter(MemoryPool *memory, ComparisonFunction cmp_fn, u32 tuple_size)
+Sorter::Sorter(MemoryPool *memory, ComparisonFunction cmp_fn, uint32_t tuple_size)
     : memory_(memory),
       tuple_storage_(tuple_size, MemoryPoolAllocator<byte>(memory)),
       owned_tuples_(memory),
@@ -33,9 +33,9 @@ byte *Sorter::AllocInputTuple() {
   return ret;
 }
 
-byte *Sorter::AllocInputTupleTopK(UNUSED u64 top_k) { return AllocInputTuple(); }
+byte *Sorter::AllocInputTupleTopK(UNUSED uint64_t top_k) { return AllocInputTuple(); }
 
-void Sorter::AllocInputTupleTopKFinish(const u64 top_k) {
+void Sorter::AllocInputTupleTopKFinish(const uint64_t top_k) {
   // If the number of buffered tuples is less than top_k, we're done
   if (tuples_.size() < top_k) {
     return;
@@ -75,13 +75,13 @@ void Sorter::BuildHeap() {
 }
 
 void Sorter::HeapSiftDown() {
-  const u64 size = tuples_.size();
-  u32 idx = 0;
+  const uint64_t size = tuples_.size();
+  uint32_t idx = 0;
 
   const byte *top = tuples_[idx];
 
   while (true) {
-    u32 child = (2 * idx) + 1;
+    uint32_t child = (2 * idx) + 1;
 
     if (child >= size) {
       break;
@@ -149,7 +149,7 @@ struct MergeWork {
 }  // namespace
 
 void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
-                          const u32 sorter_offset) {
+                          const uint32_t sorter_offset) {
   const auto comp = [this](const byte *left, const byte *right) {
     return cmp_fn_(left, right) < 0;
   };
@@ -175,9 +175,11 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   util::StageTimer<std::milli> timer;
   timer.EnterStage("Resize Main Sorter");
 
-  const u64 num_tuples = std::accumulate(
-      tl_sorters.begin(), tl_sorters.end(), u64(0),
-      [](const u64 partial, const Sorter *const sorter) { return partial + sorter->NumTuples(); });
+  const uint64_t num_tuples =
+      std::accumulate(tl_sorters.begin(), tl_sorters.end(), uint64_t(0),
+                      [](const uint64_t partial, const Sorter *const sorter) {
+                        return partial + sorter->NumTuples();
+                      });
   tuples_.resize(num_tuples);
 
   timer.ExitStage();
@@ -206,16 +208,16 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   // found in each sorter, and each column indicates the set of splitter keys in
   // a single sorter. In other words, splitters[i][j] indicates the i-th
   // splitter key found in the j-th sorter instance.
-  const u32 num_buckets = tl_sorters.size();
+  const uint32_t num_buckets = tl_sorters.size();
   std::vector<std::vector<const byte *>> splitters(num_buckets - 1);
   for (auto &splitter : splitters) {
     splitter.resize(tl_sorters.size());
   }
 
-  for (u32 sorter_idx = 0; sorter_idx < tl_sorters.size(); sorter_idx++) {
+  for (uint32_t sorter_idx = 0; sorter_idx < tl_sorters.size(); sorter_idx++) {
     const Sorter *const sorter = tl_sorters[sorter_idx];
     auto part_size = sorter->NumTuples() / (splitters.size() + 1);
-    for (u32 i = 0; i < splitters.size(); i++) {
+    for (uint32_t i = 0; i < splitters.size(); i++) {
       splitters[i][sorter_idx] = sorter->tuples_[(i + 1) * part_size];
     }
   }
@@ -249,7 +251,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
     // and upper range around the splitter key.
     std::vector<SeqTypeIter> next_start(tl_sorters.size());
 
-    for (u32 idx = 0; idx < splitters.size(); idx++) {
+    for (uint32_t idx = 0; idx < splitters.size(); idx++) {
       // Sort the local separators and choose the median
       ips4o::sort(splitters[idx].begin(), splitters[idx].end(), comp);
 
@@ -260,7 +262,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
       std::vector<MergeWork<SeqTypeIter>::Range> input_ranges;
 
       SeqTypeIter::difference_type part_size = 0;
-      for (u32 sorter_idx = 0; sorter_idx < tl_sorters.size(); sorter_idx++) {
+      for (uint32_t sorter_idx = 0; sorter_idx < tl_sorters.size(); sorter_idx++) {
         // Get the [start,end) range in the current sorter such that
         // start <= splitter < end
         Sorter *const sorter = tl_sorters[sorter_idx];
@@ -344,7 +346,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
 }
 
 void Sorter::SortTopKParallel(const ThreadStateContainer *thread_state_container,
-                              const u32 sorter_offset, const u64 top_k) {
+                              const uint32_t sorter_offset, const uint64_t top_k) {
   // Parallel sort
   SortParallel(thread_state_container, sorter_offset);
 

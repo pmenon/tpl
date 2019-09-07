@@ -32,17 +32,17 @@ class AHTOverflowPartitionIterator;
 class AggregationHashTable {
  public:
   // The default load factor we allow the hash table to reach before resizing
-  constexpr static f32 kDefaultLoadFactor = 0.7;
+  constexpr static float kDefaultLoadFactor = 0.7;
 
   // The default initial size we set the hash table on construction
-  constexpr static u32 kDefaultInitialTableSize = 256;
+  constexpr static uint32_t kDefaultInitialTableSize = 256;
 
   // The default number of partitions we use in partitioned aggregation mode
-  constexpr static u32 kDefaultNumPartitions = 512;
+  constexpr static uint32_t kDefaultNumPartitions = 512;
 
   // The default precision we use to configure the HyperLogLog instances. Set to
   // optimize accuracy and space manually.
-  constexpr static u32 kDefaultHLLPrecision = 10;
+  constexpr static uint32_t kDefaultHLLPrecision = 10;
 
   // -------------------------------------------------------
   // Callback functions to customize aggregations
@@ -97,8 +97,8 @@ class AggregationHashTable {
    * Small class to capture various usage stats
    */
   struct Stats {
-    u64 num_growths = 0;
-    u64 num_flushes = 0;
+    uint64_t num_growths = 0;
+    uint64_t num_flushes = 0;
   };
 
   // -------------------------------------------------------
@@ -121,7 +121,7 @@ class AggregationHashTable {
    * @param payload_size The size of the elements in the hash table.
    * @param initial_size The initial number of aggregates to support.
    */
-  AggregationHashTable(MemoryPool *memory, std::size_t payload_size, u32 initial_size);
+  AggregationHashTable(MemoryPool *memory, std::size_t payload_size, uint32_t initial_size);
 
   /**
    * This class cannot be copied or moved.
@@ -215,7 +215,7 @@ class AggregationHashTable {
   /**
    * How many aggregates are in this table?
    */
-  u64 NumElements() const { return hash_table_.num_elements(); }
+  uint64_t NumElements() const { return hash_table_.num_elements(); }
 
   /**
    * Read-only access to hash table stats.
@@ -258,23 +258,24 @@ class AggregationHashTable {
   // the input vector projection. This function returns the number of groups
   // that were found.
   template <bool VPIIsFiltered>
-  u32 FindGroups(VectorProjectionIterator *iters[], KeyEqFn key_eq_fn);
+  uint32_t FindGroups(VectorProjectionIterator *iters[], KeyEqFn key_eq_fn);
 
   // Called from FindGroups() to lookup initial entries from the hash table for
   // all input tuples.
-  u32 LookupInitial(u32 num_elems);
+  uint32_t LookupInitial(uint32_t num_elems);
 
   // Specialization of LookupInitial() to control whether to perform lookup with
   // prefetching enabled.
   template <bool Prefetch>
-  u32 LookupInitialImpl(u32 num_elems);
+  uint32_t LookupInitialImpl(uint32_t num_elems);
 
   // Called from FindGroups() to check the equality of keys.
   template <bool VPIIsFiltered>
-  u32 CheckKeyEquality(VectorProjectionIterator *iters[], u32 num_elems, KeyEqFn key_eq_fn);
+  uint32_t CheckKeyEquality(VectorProjectionIterator *iters[], uint32_t num_elems,
+                            KeyEqFn key_eq_fn);
 
   // Called from FindGroups() to follow the entry chain of candidate groups.
-  u32 FollowNext();
+  uint32_t FollowNext();
 
   // Called from ProcessBatch() to create missing groups
   template <bool VPIIsFiltered, bool Partitioned>
@@ -284,12 +285,12 @@ class AggregationHashTable {
   // Called from ProcessBatch() to update only the valid entries in the input
   // vector
   template <bool VPIIsFiltered>
-  void AdvanceGroups(VectorProjectionIterator *iters[], u32 num_groups,
+  void AdvanceGroups(VectorProjectionIterator *iters[], uint32_t num_groups,
                      AdvanceAggFn advance_agg_fn);
 
   // Called during partitioned scan to build an aggregation hash table over a
   // single partition.
-  AggregationHashTable *BuildTableOverPartition(void *query_state, u32 partition_idx);
+  AggregationHashTable *BuildTableOverPartition(void *query_state, uint32_t partition_idx);
 
  private:
   // Memory allocator.
@@ -353,16 +354,16 @@ class AggregationHashTable {
   // The number of elements that can be inserted into the main hash table before
   // we flush into the overflow partitions. We size this so that the entries
   // are roughly L2-sized.
-  u64 flush_threshold_;
+  uint64_t flush_threshold_;
   // The number of bits to shift the hash value to determine its overflow
   // partition.
-  u64 partition_shift_bits_;
+  uint64_t partition_shift_bits_;
 
   // Runtime stats.
   Stats stats_;
 
   // The maximum number of elements in the table before a resize.
-  u64 max_fill_;
+  uint64_t max_fill_;
 };
 
 // ---------------------------------------------------------
@@ -440,7 +441,7 @@ class AHTIterator {
  */
 class AHTVectorIterator {
  public:
-  using TransposeFn = void (*)(const byte **, u64, VectorProjectionIterator *);
+  using TransposeFn = void (*)(const byte **, uint64_t, VectorProjectionIterator *);
 
   /**
    * Construct a vector iterator over the given aggregation table.
@@ -453,7 +454,8 @@ class AHTVectorIterator {
    * Construct a vector iterator over the given aggregation table.
    */
   AHTVectorIterator(const AggregationHashTable &agg_hash_table,
-                    const Schema::ColumnInfo *column_info, u32 num_cols, TransposeFn transpose_fn);
+                    const Schema::ColumnInfo *column_info, uint32_t num_cols,
+                    TransposeFn transpose_fn);
 
   /**
    * This class cannot be copied or moved.

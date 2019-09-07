@@ -26,17 +26,17 @@ class FastRand {
     // slower PRNG.
     std::random_device rand_dev;
     std::mt19937_64 mt(rand_dev());
-    std::uniform_int_distribution<u64> dist;
+    std::uniform_int_distribution<uint64_t> dist;
     state_ = dist(mt);
   }
 
-  u64 Next() {
+  uint64_t Next() {
     state_ *= 0xda942042e4dd58b5ull;
     return state_ >> 64u;
   }
 
  private:
-  u128 state_;
+  uint128_t state_;
 };
 
 }  // namespace tpl::util

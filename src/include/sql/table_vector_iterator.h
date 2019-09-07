@@ -17,14 +17,14 @@ class ThreadStateContainer;
  */
 class TableVectorIterator {
  public:
-  static constexpr const u32 kMinBlockRangeSize = 2;
+  static constexpr const uint32_t kMinBlockRangeSize = 2;
 
   /**
    * Create an iterator over the table with ID @em table_id and project in all
    * columns from the logical schema for the table.
    * @param table_id The ID of the table
    */
-  explicit TableVectorIterator(u16 table_id);
+  explicit TableVectorIterator(uint16_t table_id);
 
   /**
    * Create an iterator over the block range @em [start, end) of the table with
@@ -34,7 +34,7 @@ class TableVectorIterator {
    * @param start_block_idx The starting block of the iteration
    * @param end_block_idx The ending block of the iteration
    */
-  TableVectorIterator(u16 table_id, u32 start_block_idx, u32 end_block_idx);
+  TableVectorIterator(uint16_t table_id, uint32_t start_block_idx, uint32_t end_block_idx);
 
   /**
    * Create an iterator over the table with ID \a table_id and project columns
@@ -42,7 +42,7 @@ class TableVectorIterator {
    * @param table_id The ID of the table
    * @param column_indexes The indexes of the columns to select
    */
-  TableVectorIterator(u16 table_id, std::vector<u32> column_indexes);
+  TableVectorIterator(uint16_t table_id, std::vector<uint32_t> column_indexes);
 
   /**
    * Create an iterator over the table with ID \a table_id and project columns
@@ -52,8 +52,8 @@ class TableVectorIterator {
    * @param end_block_idx The ending block of the iteration
    * @param column_indexes The indexes of the columns to select
    */
-  TableVectorIterator(u16 table_id, u32 start_block_idx, u32 end_block_idx,
-                      std::vector<u32> column_indexes);
+  TableVectorIterator(uint16_t table_id, uint32_t start_block_idx, uint32_t end_block_idx,
+                      std::vector<uint32_t> column_indexes);
 
   /**
    * This class cannot be copied or moved
@@ -103,8 +103,9 @@ class TableVectorIterator {
    * @param scan_fn The callback function invoked for vectors of table input
    * @param min_grain_size The minimum number of blocks to give a scan task
    */
-  static bool ParallelScan(u16 table_id, void *query_state, ThreadStateContainer *thread_states,
-                           ScanFn scan_fn, u32 min_grain_size = kMinBlockRangeSize);
+  static bool ParallelScan(uint16_t table_id, void *query_state,
+                           ThreadStateContainer *thread_states, ScanFn scan_fn,
+                           uint32_t min_grain_size = kMinBlockRangeSize);
 
  private:
   // When the column iterators receive new vectors of input, we need to
@@ -113,7 +114,7 @@ class TableVectorIterator {
 
  private:
   // The indexes in the column to read
-  std::vector<u32> column_indexes_;
+  std::vector<uint32_t> column_indexes_;
 
   // The iterate over the blocks stored in the table
   TableBlockIterator block_iterator_;

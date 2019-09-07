@@ -37,20 +37,20 @@ class Context;
 //           type information to these builtins.
 #define BUILTIN_TYPE_LIST(PRIM, NON_PRIM, SQL)                                   \
   /* Primitive types */                                                          \
-  PRIM(Nil, u8, "nil")                                                           \
+  PRIM(Nil, uint8_t, "nil")                                                      \
   PRIM(Bool, bool, "bool")                                                       \
-  PRIM(Int8, i8, "int8")                                                         \
-  PRIM(Int16, i16, "int16")                                                      \
-  PRIM(Int32, i32, "int32")                                                      \
-  PRIM(Int64, i64, "int64")                                                      \
-  PRIM(Uint8, u8, "uint8")                                                       \
-  PRIM(Uint16, u16, "uint16")                                                    \
-  PRIM(Uint32, u32, "uint32")                                                    \
-  PRIM(Uint64, u64, "uint64")                                                    \
-  PRIM(Int128, i128, "int128")                                                   \
-  PRIM(Uint128, u128, "uint128")                                                 \
-  PRIM(Float32, f32, "float32")                                                  \
-  PRIM(Float64, f64, "float64")                                                  \
+  PRIM(Int8, int8_t, "int8")                                                     \
+  PRIM(Int16, int16_t, "int16")                                                  \
+  PRIM(Int32, int32_t, "int32")                                                  \
+  PRIM(Int64, int64_t, "int64")                                                  \
+  PRIM(Uint8, uint8_t, "uint8")                                                  \
+  PRIM(Uint16, uint16_t, "uint16")                                               \
+  PRIM(Uint32, uint32_t, "uint32")                                               \
+  PRIM(Uint64, uint64_t, "uint64")                                               \
+  PRIM(Int128, int128_t, "int128")                                               \
+  PRIM(Uint128, uint128_t, "uint128")                                            \
+  PRIM(Float32, float, "float32")                                                \
+  PRIM(Float64, double, "float64")                                               \
                                                                                  \
   /* Non-primitive builtins */                                                   \
   NON_PRIM(AggregationHashTable, tpl::sql::AggregationHashTable)                 \
@@ -123,7 +123,7 @@ class Type : public util::RegionObject {
   /**
    * The enumeration of all concrete types
    */
-  enum class TypeId : u8 {
+  enum class TypeId : uint8_t {
 #define F(TypeId) TypeId,
     TYPE_LIST(F)
 #undef F
@@ -137,12 +137,12 @@ class Type : public util::RegionObject {
   /**
    * Return the size of this type in bytes
    */
-  u32 size() const { return size_; }
+  uint32_t size() const { return size_; }
 
   /**
    * Return the alignment of this type in bytes
    */
-  u32 alignment() const { return align_; }
+  uint32_t alignment() const { return align_; }
 
   /**
    * Return the unique type ID of this type (e.g., int16, Array, Struct etc.)
@@ -211,7 +211,7 @@ class Type : public util::RegionObject {
 #undef F
 
   bool IsArithmetic() const;
-  bool IsSpecificBuiltin(u16 kind) const;
+  bool IsSpecificBuiltin(uint16_t kind) const;
   bool IsNilType() const;
   bool IsBoolType() const;
   bool IsIntegerType() const;
@@ -242,16 +242,16 @@ class Type : public util::RegionObject {
 
  protected:
   // Protected to indicate abstract base
-  Type(Context *ctx, u32 size, u32 alignment, TypeId type_id)
+  Type(Context *ctx, uint32_t size, uint32_t alignment, TypeId type_id)
       : ctx_(ctx), size_(size), align_(alignment), type_id_(type_id) {}
 
  private:
   // The context this type was created/unique'd in
   Context *ctx_;
   // The size of this type in bytes
-  u32 size_;
+  uint32_t size_;
   // The alignment of this type in bytes
-  u32 align_;
+  uint32_t align_;
   // The unique ID of this type
   TypeId type_id_;
 };
@@ -262,13 +262,13 @@ class Type : public util::RegionObject {
 class BuiltinType : public Type {
  public:
 #define F(BKind, ...) BKind,
-  enum Kind : u16 { BUILTIN_TYPE_LIST(F, F, F) };
+  enum Kind : uint16_t { BUILTIN_TYPE_LIST(F, F, F) };
 #undef F
 
   /**
    * Get the name of the builtin as it appears in TPL code
    */
-  const char *tpl_name() const { return kTplNames[static_cast<u16>(kind_)]; }
+  const char *tpl_name() const { return kTplNames[static_cast<uint16_t>(kind_)]; }
 
   /**
    * Get the name of the C++ type that backs this builtin. For primitive
@@ -276,22 +276,22 @@ class BuiltinType : public Type {
    * this will be the fully-qualified name of the class (i.e., the class name
    * along with the namespace).
    */
-  const char *cpp_name() const { return kCppNames[static_cast<u16>(kind_)]; }
+  const char *cpp_name() const { return kCppNames[static_cast<uint16_t>(kind_)]; }
 
   /**
    * Get the size of this builtin in bytes
    */
-  u64 size() const { return kSizes[static_cast<u16>(kind_)]; }
+  uint64_t size() const { return kSizes[static_cast<uint16_t>(kind_)]; }
 
   /**
    * Get the required alignment of this builtin in bytes
    */
-  u64 alignment() const { return kAlignments[static_cast<u16>(kind_)]; }
+  uint64_t alignment() const { return kAlignments[static_cast<uint16_t>(kind_)]; }
 
   /**
    * Is this builtin a primitive?
    */
-  bool is_primitive() const { return kPrimitiveFlags[static_cast<u16>(kind_)]; }
+  bool is_primitive() const { return kPrimitiveFlags[static_cast<uint16_t>(kind_)]; }
 
   /**
    * Is this builtin a primitive integer?
@@ -301,7 +301,7 @@ class BuiltinType : public Type {
   /**
    * Is this builtin a primitive floating point number?
    */
-  bool is_floating_point() const { return kFloatingPointFlags[static_cast<u16>(kind_)]; }
+  bool is_floating_point() const { return kFloatingPointFlags[static_cast<uint16_t>(kind_)]; }
 
   /**
    * Is this type a SQL value type?
@@ -326,7 +326,7 @@ class BuiltinType : public Type {
 
  private:
   friend class Context;
-  BuiltinType(Context *ctx, u32 size, u32 alignment, Kind kind)
+  BuiltinType(Context *ctx, uint32_t size, uint32_t alignment, Kind kind)
       : Type(ctx, size, alignment, TypeId::BuiltinType), kind_(kind) {}
 
  private:
@@ -335,8 +335,8 @@ class BuiltinType : public Type {
  private:
   static const char *kCppNames[];
   static const char *kTplNames[];
-  static const u64 kSizes[];
-  static const u64 kAlignments[];
+  static const uint64_t kSizes[];
+  static const uint64_t kAlignments[];
   static const bool kPrimitiveFlags[];
   static const bool kFloatingPointFlags[];
   static const bool kSignedFlags[];
@@ -353,7 +353,8 @@ class StringType : public Type {
 
  private:
   friend class Context;
-  explicit StringType(Context *ctx) : Type(ctx, sizeof(i8 *), alignof(i8 *), TypeId::StringType) {}
+  explicit StringType(Context *ctx)
+      : Type(ctx, sizeof(int8_t *), alignof(int8_t *), TypeId::StringType) {}
 };
 
 /**
@@ -369,7 +370,8 @@ class PointerType : public Type {
 
  private:
   explicit PointerType(Type *base)
-      : Type(base->context(), sizeof(i8 *), alignof(i8 *), TypeId::PointerType), base_(base) {}
+      : Type(base->context(), sizeof(int8_t *), alignof(int8_t *), TypeId::PointerType),
+        base_(base) {}
 
  private:
   Type *base_;
@@ -380,26 +382,26 @@ class PointerType : public Type {
  */
 class ArrayType : public Type {
  public:
-  u64 length() const { return length_; }
+  uint64_t length() const { return length_; }
 
   Type *element_type() const { return elem_type_; }
 
   bool HasKnownLength() const { return length_ != 0; }
   bool HasUnknownLength() const { return !HasKnownLength(); }
 
-  static ArrayType *Get(u64 length, Type *elem_type);
+  static ArrayType *Get(uint64_t length, Type *elem_type);
 
   static bool classof(const Type *type) { return type->type_id() == TypeId::ArrayType; }
 
  private:
-  explicit ArrayType(u64 length, Type *elem_type)
-      : Type(elem_type->context(), (length == 0 ? sizeof(u8 *) : elem_type->size() * length),
-             (length == 0 ? alignof(u8 *) : elem_type->alignment()), TypeId::ArrayType),
+  explicit ArrayType(uint64_t length, Type *elem_type)
+      : Type(elem_type->context(), (length == 0 ? sizeof(uint8_t *) : elem_type->size() * length),
+             (length == 0 ? alignof(uint8_t *) : elem_type->alignment()), TypeId::ArrayType),
         length_(length),
         elem_type_(elem_type) {}
 
  private:
-  u64 length_;
+  uint64_t length_;
   Type *elem_type_;
 };
 
@@ -425,7 +427,7 @@ class FunctionType : public Type {
  public:
   const util::RegionVector<Field> &params() const { return params_; }
 
-  u32 num_params() const { return static_cast<u32>(params().size()); }
+  uint32_t num_params() const { return static_cast<uint32_t>(params().size()); }
 
   Type *return_type() const { return ret_; }
 
@@ -478,8 +480,8 @@ class StructType : public Type {
     return nullptr;
   }
 
-  u32 GetOffsetOfFieldByName(Identifier name) const {
-    for (u32 i = 0; i < fields_.size(); i++) {
+  uint32_t GetOffsetOfFieldByName(Identifier name) const {
+    for (uint32_t i = 0; i < fields_.size(); i++) {
       if (fields_[i].name == name) {
         return field_offsets_[i];
       }
@@ -498,12 +500,13 @@ class StructType : public Type {
   static bool classof(const Type *type) { return type->type_id() == TypeId::StructType; }
 
  private:
-  explicit StructType(Context *ctx, u32 size, u32 alignment, util::RegionVector<Field> &&fields,
-                      util::RegionVector<u32> &&field_offsets);
+  explicit StructType(Context *ctx, uint32_t size, uint32_t alignment,
+                      util::RegionVector<Field> &&fields,
+                      util::RegionVector<uint32_t> &&field_offsets);
 
  private:
   util::RegionVector<Field> fields_;
-  util::RegionVector<u32> field_offsets_;
+  util::RegionVector<uint32_t> field_offsets_;
 };
 
 // ---------------------------------------------------------
@@ -517,7 +520,7 @@ inline Type *Type::GetPointeeType() const {
   return nullptr;
 }
 
-inline bool Type::IsSpecificBuiltin(u16 kind) const {
+inline bool Type::IsSpecificBuiltin(uint16_t kind) const {
   if (auto *builtin_type = SafeAs<BuiltinType>()) {
     return builtin_type->kind() == static_cast<BuiltinType::Kind>(kind);
   }

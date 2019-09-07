@@ -37,7 +37,7 @@ TEST_F(BloomFilterTest, Simple) {
   EXPECT_EQ(2u, bf.GetNumAdditions());
 }
 
-void GenerateRandom32(std::vector<u32> &vals, u32 n) {
+void GenerateRandom32(std::vector<uint32_t> &vals, uint32_t n) {
   vals.resize(n);
   std::random_device rd;
   std::generate(vals.begin(), vals.end(), [&]() { return rd(); });
@@ -50,7 +50,7 @@ void Mix(std::vector<T> &target, const std::vector<T> &source, double p) {
   std::random_device random;
   std::mt19937 g(random());
 
-  for (u32 i = 0; i < (p * target.size()); i++) {
+  for (uint32_t i = 0; i < (p * target.size()); i++) {
     target[i] = source[g() % source.size()];
   }
 
@@ -58,15 +58,15 @@ void Mix(std::vector<T> &target, const std::vector<T> &source, double p) {
 }
 
 TEST_F(BloomFilterTest, Comprehensive) {
-  const u32 num_filter_elems = 10000;
-  const u32 lookup_scale_factor = 100;
+  const uint32_t num_filter_elems = 10000;
+  const uint32_t lookup_scale_factor = 100;
 
   // Create a vector of data to insert into the filter
-  std::vector<u32> insertions;
+  std::vector<uint32_t> insertions;
   GenerateRandom32(insertions, num_filter_elems);
 
   // The validation set. We use this to check false negatives.
-  std::unordered_set<u32> check(insertions.begin(), insertions.end());
+  std::unordered_set<uint32_t> check(insertions.begin(), insertions.end());
 
   MemoryPool memory(nullptr);
   BloomFilter filter(&memory, num_filter_elems);
@@ -79,16 +79,16 @@ TEST_F(BloomFilterTest, Comprehensive) {
   LOG_INFO("{}", filter.DebugString());
 
   for (auto prob_success : {0.00, 0.25, 0.50, 0.75, 1.00}) {
-    std::vector<u32> lookups;
+    std::vector<uint32_t> lookups;
     GenerateRandom32(lookups, num_filter_elems * lookup_scale_factor);
     Mix(lookups, insertions, prob_success);
 
-    auto expected_found = static_cast<u32>(prob_success * lookups.size());
+    auto expected_found = static_cast<uint32_t>(prob_success * lookups.size());
 
     util::Timer<std::milli> timer;
     timer.Start();
 
-    u32 actual_found = 0;
+    uint32_t actual_found = 0;
     for (const auto elem : lookups) {
       auto exists = filter.Contains(Hash(elem));
 
@@ -96,7 +96,7 @@ TEST_F(BloomFilterTest, Comprehensive) {
         EXPECT_EQ(0u, check.count(elem));
       }
 
-      actual_found += static_cast<u32>(exists);
+      actual_found += static_cast<uint32_t>(exists);
     }
 
     timer.Stop();

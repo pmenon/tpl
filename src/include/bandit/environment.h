@@ -29,7 +29,7 @@ class Environment {
    * chosen randomly without replacement. Else, it is chosen from 0 to
    * num_trials.
    */
-  void Run(u32 num_trials, std::vector<double> *rewards, std::vector<u32> *actions,
+  void Run(uint32_t num_trials, std::vector<double> *rewards, std::vector<uint32_t> *actions,
            bool shuffle = false);
 
  private:

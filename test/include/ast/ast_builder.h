@@ -26,9 +26,9 @@ class TestAstBuilder {
 
   Expr *BoolLit(bool b) { return node_factory()->NewBoolLiteral(empty_, b); }
 
-  Expr *IntLit(i32 i) { return node_factory()->NewIntLiteral(empty_, i); }
+  Expr *IntLit(int32_t i) { return node_factory()->NewIntLiteral(empty_, i); }
 
-  Expr *FloatLit(f32 i) { return node_factory()->NewFloatLiteral(empty_, i); }
+  Expr *FloatLit(float i) { return node_factory()->NewFloatLiteral(empty_, i); }
 
   template <parsing::Token::Type OP>
   Expr *BinOp(Expr *left, Expr *right) {

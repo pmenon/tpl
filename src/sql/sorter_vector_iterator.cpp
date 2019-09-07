@@ -24,7 +24,7 @@ SorterVectorIterator::SorterVectorIterator(
 }
 
 SorterVectorIterator::SorterVectorIterator(const Sorter &sorter,
-                                           const Schema::ColumnInfo *column_info, u32 num_cols,
+                                           const Schema::ColumnInfo *column_info, uint32_t num_cols,
                                            const SorterVectorIterator::TransposeFn transpose_fn)
     : SorterVectorIterator(sorter, {column_info, column_info + num_cols}, transpose_fn) {}
 
@@ -36,8 +36,8 @@ bool SorterVectorIterator::HasNext() const { return vector_projection_->GetTuple
 
 void SorterVectorIterator::Next(const SorterVectorIterator::TransposeFn transpose_fn) {
   // Pull rows into temporary array
-  u32 size = std::min(iter_.NumRemaining(), kDefaultVectorSize);
-  for (u32 i = 0; i < size; ++i, ++iter_) {
+  uint32_t size = std::min(iter_.NumRemaining(), kDefaultVectorSize);
+  for (uint32_t i = 0; i < size; ++i, ++iter_) {
     temp_rows_[i] = iter_.GetRow();
   }
 

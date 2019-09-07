@@ -34,21 +34,21 @@ std::size_t GetTypeIdSize(TypeId type) {
     case TypeId::Boolean:
       return sizeof(bool);
     case TypeId::TinyInt:
-      return sizeof(i8);
+      return sizeof(int8_t);
     case TypeId::SmallInt:
-      return sizeof(i16);
+      return sizeof(int16_t);
     case TypeId::Integer:
-      return sizeof(i32);
+      return sizeof(int32_t);
     case TypeId::BigInt:
-      return sizeof(i64);
+      return sizeof(int64_t);
     case TypeId::Hash:
       return sizeof(hash_t);
     case TypeId::Pointer:
       return sizeof(uintptr_t);
     case TypeId::Float:
-      return sizeof(f32);
+      return sizeof(float);
     case TypeId::Double:
-      return sizeof(f64);
+      return sizeof(double);
     case TypeId::Varchar:
       return sizeof(char *);
     case TypeId::Varbinary:

@@ -94,11 +94,11 @@ class AstNodeFactory {
     return new (region_) LitExpr(pos, val);
   }
 
-  LitExpr *NewIntLiteral(const SourcePosition &pos, i32 num) {
+  LitExpr *NewIntLiteral(const SourcePosition &pos, int32_t num) {
     return new (region_) LitExpr(pos, num);
   }
 
-  LitExpr *NewFloatLiteral(const SourcePosition &pos, f32 num) {
+  LitExpr *NewFloatLiteral(const SourcePosition &pos, float num) {
     return new (region_) LitExpr(pos, num);
   }
 

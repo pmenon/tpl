@@ -36,7 +36,7 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory, std::size_t paylo
     : AggregationHashTable(memory, payload_size, kDefaultInitialTableSize) {}
 
 AggregationHashTable::AggregationHashTable(MemoryPool *memory, const std::size_t payload_size,
-                                           const u32 initial_size)
+                                           const uint32_t initial_size)
     : memory_(memory),
       payload_size_(payload_size),
       entries_(sizeof(HashTableEntry) + payload_size_, MemoryPoolAllocator<byte>(memory_)),
@@ -48,15 +48,15 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory, const std::size_t
       partition_tails_(nullptr),
       partition_estimates_(nullptr),
       partition_tables_(nullptr),
-      partition_shift_bits_(util::BitUtil::CountLeadingZeros(u64(kDefaultNumPartitions) - 1)) {
+      partition_shift_bits_(util::BitUtil::CountLeadingZeros(uint64_t(kDefaultNumPartitions) - 1)) {
   hash_table_.SetSize(initial_size);
   max_fill_ = std::llround(hash_table_.capacity() * hash_table_.load_factor());
 
   // Compute flush threshold. In partitioned mode, we want the thread-local
   // pre-aggregation hash table to be sized to fit in cache. Target L2.
-  const u64 l2_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L2_CACHE);
-  flush_threshold_ = std::llround(f32(l2_size) / entries_.element_size() * kDefaultLoadFactor);
-  flush_threshold_ = std::max(u64{256}, util::MathUtil::PowerOf2Floor(flush_threshold_));
+  const uint64_t l2_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L2_CACHE);
+  flush_threshold_ = std::llround(float(l2_size) / entries_.element_size() * kDefaultLoadFactor);
+  flush_threshold_ = std::max(uint64_t{256}, util::MathUtil::PowerOf2Floor(flush_threshold_));
 }
 
 AggregationHashTable::~AggregationHashTable() {
@@ -74,13 +74,13 @@ AggregationHashTable::~AggregationHashTable() {
     // new's HLL objects, hence, we need to manually call delete on all of them.
     // We could use unique_ptr, but then the definition and usage gets ugly, and
     // we would still need to iterate over the array to reset each unique_ptr.
-    for (u32 i = 0; i < kDefaultNumPartitions; i++) {
+    for (uint32_t i = 0; i < kDefaultNumPartitions; i++) {
       delete partition_estimates_[i];
     }
     memory_->DeallocateArray(partition_estimates_, kDefaultNumPartitions);
   }
   if (partition_tables_ != nullptr) {
-    for (u32 i = 0; i < kDefaultNumPartitions; i++) {
+    for (uint32_t i = 0; i < kDefaultNumPartitions; i++) {
       if (partition_tables_[i] != nullptr) {
         partition_tables_[i]->~AggregationHashTable();
         memory_->Deallocate(partition_tables_[i], sizeof(AggregationHashTable));
@@ -92,7 +92,7 @@ AggregationHashTable::~AggregationHashTable() {
 
 void AggregationHashTable::Grow() {
   // Resize table
-  const u64 new_size = hash_table_.capacity() * 2;
+  const uint64_t new_size = hash_table_.capacity() * 2;
   hash_table_.SetSize(new_size);
   max_fill_ = std::llround(hash_table_.capacity() * hash_table_.load_factor());
 
@@ -139,7 +139,7 @@ void AggregationHashTable::FlushToOverflowPartitions() {
 
   // Dump hash table into overflow partition
   hash_table_.FlushEntries([this](HashTableEntry *entry) {
-    const u64 part_idx = (entry->hash >> partition_shift_bits_);
+    const uint64_t part_idx = (entry->hash >> partition_shift_bits_);
     entry->next = partition_heads_[part_idx];
     partition_heads_[part_idx] = entry;
     if (TPL_UNLIKELY(partition_tails_[part_idx] == nullptr)) {
@@ -160,7 +160,7 @@ void AggregationHashTable::AllocateOverflowPartitions() {
     partition_heads_ = memory_->AllocateArray<HashTableEntry *>(kDefaultNumPartitions, true);
     partition_tails_ = memory_->AllocateArray<HashTableEntry *>(kDefaultNumPartitions, true);
     partition_estimates_ = memory_->AllocateArray<libcount::HLL *>(kDefaultNumPartitions, false);
-    for (u32 i = 0; i < kDefaultNumPartitions; i++) {
+    for (uint32_t i = 0; i < kDefaultNumPartitions; i++) {
       partition_estimates_[i] = libcount::HLL::Create(kDefaultHLLPrecision);
     }
     partition_tables_ = memory_->AllocateArray<AggregationHashTable *>(kDefaultNumPartitions, true);
@@ -200,7 +200,7 @@ void AggregationHashTable::ProcessBatchImpl(VectorProjectionIterator *iters[],
   ComputeHash<VPIIsFiltered>(iters, hash_fn);
 
   // Try to find associated groups for all input tuples
-  const u32 found_groups = FindGroups<VPIIsFiltered>(iters, key_eq_fn);
+  const uint32_t found_groups = FindGroups<VPIIsFiltered>(iters, key_eq_fn);
   iters[0]->Reset();
 
   // Create aggregates for those tuples that didn't find a match
@@ -226,23 +226,23 @@ NEVER_INLINE void AggregationHashTable::ComputeHash(VectorProjectionIterator *it
                                                     const AggregationHashTable::HashFn hash_fn) {
   auto &hashes = batch_state_->hashes;
   if constexpr (VPIIsFiltered) {
-    for (u32 idx = 0; iters[0]->HasNextFiltered(); iters[0]->AdvanceFiltered()) {
+    for (uint32_t idx = 0; iters[0]->HasNextFiltered(); iters[0]->AdvanceFiltered()) {
       hashes[idx++] = hash_fn(iters);
     }
   } else {  // NOLINT
-    for (u32 idx = 0; iters[0]->HasNext(); iters[0]->Advance()) {
+    for (uint32_t idx = 0; iters[0]->HasNext(); iters[0]->Advance()) {
       hashes[idx++] = hash_fn(iters);
     }
   }
 }
 
 template <bool VPIIsFiltered>
-NEVER_INLINE u32 AggregationHashTable::FindGroups(VectorProjectionIterator *iters[],
-                                                  const AggregationHashTable::KeyEqFn key_eq_fn) {
+NEVER_INLINE uint32_t AggregationHashTable::FindGroups(
+    VectorProjectionIterator *iters[], const AggregationHashTable::KeyEqFn key_eq_fn) {
   batch_state_->key_not_eq.clear();
   batch_state_->groups_not_found.clear();
-  u32 found = LookupInitial(iters[0]->GetTupleCount());
-  u32 keys_equal = CheckKeyEquality<VPIIsFiltered>(iters, found, key_eq_fn);
+  uint32_t found = LookupInitial(iters[0]->GetTupleCount());
+  uint32_t keys_equal = CheckKeyEquality<VPIIsFiltered>(iters, found, key_eq_fn);
   while (!batch_state_->key_not_eq.empty()) {
     found = FollowNext();
     if (found == 0) break;
@@ -252,9 +252,9 @@ NEVER_INLINE u32 AggregationHashTable::FindGroups(VectorProjectionIterator *iter
   return keys_equal;
 }
 
-NEVER_INLINE u32 AggregationHashTable::LookupInitial(const u32 num_elems) {
+NEVER_INLINE uint32_t AggregationHashTable::LookupInitial(const uint32_t num_elems) {
   // If the hash table is larger than cache, inject prefetch instructions
-  u64 l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
+  uint64_t l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
   if (hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
     return LookupInitialImpl<true>(num_elems);
   } else {  // NOLINT
@@ -265,14 +265,14 @@ NEVER_INLINE u32 AggregationHashTable::LookupInitial(const u32 num_elems) {
 // This function will perform an initial lookup for all input tuples, storing
 // entries that match on hash value in the 'entries' array.
 template <bool Prefetch>
-NEVER_INLINE u32 AggregationHashTable::LookupInitialImpl(const u32 num_elems) {
+NEVER_INLINE uint32_t AggregationHashTable::LookupInitialImpl(const uint32_t num_elems) {
   auto &hashes = batch_state_->hashes;
   auto &entries = batch_state_->entries;
   auto &groups_found = batch_state_->groups_found;
   auto &groups_not_found = batch_state_->groups_not_found;
 
-  u32 found = 0;
-  for (u32 idx = 0, prefetch_idx = kPrefetchDistance; idx < num_elems;) {
+  uint32_t found = 0;
+  for (uint32_t idx = 0, prefetch_idx = kPrefetchDistance; idx < num_elems;) {
     if constexpr (Prefetch) {
       if (TPL_LIKELY(prefetch_idx < num_elems)) {
         hash_table_.PrefetchChainHead<false>(hashes[prefetch_idx++]);
@@ -306,16 +306,16 @@ NEVER_INLINE u32 AggregationHashTable::LookupInitialImpl(const u32 num_elems) {
 // function, groups_found will densely contain the indexes of matching keys,
 // and 'key_not_eq' will contain indexes of tuples that didn't match on key.
 template <bool VPIIsFiltered>
-NEVER_INLINE u32
-AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *iters[], const u32 num_elems,
+NEVER_INLINE uint32_t
+AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *iters[], const uint32_t num_elems,
                                        const AggregationHashTable::KeyEqFn key_eq_fn) {
   auto &entries = batch_state_->entries;
   auto &groups_found = batch_state_->groups_found;
   auto &key_not_eq = batch_state_->key_not_eq;
 
-  u32 matched = 0;
-  for (u32 i = 0; i < num_elems; i++) {
-    const u32 index = groups_found[i];
+  uint32_t matched = 0;
+  for (uint32_t i = 0; i < num_elems; i++) {
+    const uint32_t index = groups_found[i];
     // Position the iterator on the tuple we're about the compare keys with
     iters[0]->SetPosition<VPIIsFiltered>(index);
     // Retrieve the aggregate we're about to compare keys with
@@ -334,15 +334,15 @@ AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *iters[], const 
 // For all unmatched keys, move along the chain until we find another hash
 // match. After this function, 'groups_found' will densely contain the indexes
 // of tuples that matched on hash and should be checked for keys.
-NEVER_INLINE u32 AggregationHashTable::FollowNext() {
+NEVER_INLINE uint32_t AggregationHashTable::FollowNext() {
   const auto &hashes = batch_state_->hashes;
   const auto &key_not_eq = batch_state_->key_not_eq;
   auto &entries = batch_state_->entries;
   auto &groups_found = batch_state_->groups_found;
   auto &groups_not_found = batch_state_->groups_not_found;
 
-  u32 matched = 0;
-  for (u32 i = 0; i < key_not_eq.size();) {
+  uint32_t matched = 0;
+  for (uint32_t i = 0; i < key_not_eq.size();) {
     const auto index = key_not_eq[i];
     for (auto *entry = entries[index]; entry != nullptr; entry = entry->next) {
       const auto hash = hashes[index];
@@ -367,7 +367,7 @@ NEVER_INLINE void AggregationHashTable::CreateMissingGroups(
   const auto &groups_not_found = batch_state_->groups_not_found;
   auto &entries = batch_state_->entries;
 
-  for (u32 i = 0; i < groups_not_found.size(); i++) {
+  for (uint32_t i = 0; i < groups_not_found.size(); i++) {
     const auto index = groups_not_found[i];
 
     // Position the iterator to the tuple we're inserting
@@ -391,12 +391,12 @@ NEVER_INLINE void AggregationHashTable::CreateMissingGroups(
 
 template <bool VPIIsFiltered>
 NEVER_INLINE void AggregationHashTable::AdvanceGroups(
-    VectorProjectionIterator *iters[], const u32 num_groups,
+    VectorProjectionIterator *iters[], const uint32_t num_groups,
     const AggregationHashTable::AdvanceAggFn advance_agg_fn) {
   const auto &entries = batch_state_->entries;
   const auto &groups_found = batch_state_->groups_found;
 
-  for (u32 i = 0; i < num_groups; i++) {
+  for (uint32_t i = 0; i < num_groups; i++) {
     const auto index = groups_found[i];
     // Position the iterator at the tuple we'll use to update the aggregate
     iters[0]->SetPosition<VPIIsFiltered>(index);
@@ -442,7 +442,7 @@ void AggregationHashTable::TransferMemoryAndPartitions(
                "entries themselves. Nested/recursive aggregations not supported.");
 
     // Now, move over their overflow partitions list
-    for (u32 part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
+    for (uint32_t part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
       if (table->partition_heads_[part_idx] != nullptr) {
         // Link in the partition list
         table->partition_tails_[part_idx]->next = partition_heads_[part_idx];
@@ -458,7 +458,7 @@ void AggregationHashTable::TransferMemoryAndPartitions(
 }
 
 AggregationHashTable *AggregationHashTable::BuildTableOverPartition(void *const query_state,
-                                                                    const u32 partition_idx) {
+                                                                    const uint32_t partition_idx) {
   TPL_ASSERT(partition_idx < kDefaultNumPartitions, "Out-of-bounds partition access");
   TPL_ASSERT(partition_heads_[partition_idx] != nullptr,
              "Should not build aggregation table over empty partition!");
@@ -512,15 +512,15 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(
              "issuing the partitioned scan?");
 
   // Determine the non-empty overflow partitions
-  std::vector<u32> nonempty_parts;
+  std::vector<uint32_t> nonempty_parts;
   nonempty_parts.reserve(kDefaultNumPartitions);
-  for (u32 i = 0; i < kDefaultNumPartitions; i++) {
+  for (uint32_t i = 0; i < kDefaultNumPartitions; i++) {
     if (partition_heads_[i] != nullptr) {
       nonempty_parts.push_back(i);
     }
   }
 
-  tbb::parallel_for_each(nonempty_parts, [&](const u32 part_idx) {
+  tbb::parallel_for_each(nonempty_parts, [&](const uint32_t part_idx) {
     // Build a hash table over the given partition
     auto *agg_table_part = BuildTableOverPartition(query_state, part_idx);
 

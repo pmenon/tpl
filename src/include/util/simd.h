@@ -6,7 +6,7 @@
 namespace tpl::util::simd {
 
 struct Bitwidth {
-  static constexpr const u32
+  static constexpr const uint32_t
 #if defined(__AVX512F__)
       value = 512;
 #elif defined(__AVX2__)
@@ -18,7 +18,7 @@ struct Bitwidth {
 
 template <typename T>
 struct Lane {
-  static constexpr const u32 count = Bitwidth::value / (sizeof(T) * 8);
+  static constexpr const uint32_t count = Bitwidth::value / (sizeof(T) * 8);
 };
 
 }  // namespace tpl::util::simd

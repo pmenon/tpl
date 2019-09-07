@@ -56,7 +56,7 @@ TEST_F(GenericValueTests, Hash) {
 }
 
 TEST_F(GenericValueTests, Pointer) {
-  i32 x = 10;
+  int32_t x = 10;
   auto value = GenericValue::CreatePointer(&x);
   EXPECT_FALSE(value.is_null());
   EXPECT_EQ(TypeId::Pointer, value.type_id());

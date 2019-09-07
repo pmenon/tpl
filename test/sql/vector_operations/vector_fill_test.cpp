@@ -13,7 +13,7 @@ TEST_F(VectorFillTest, SimpleNonNull) {
   {                                                                     \
     auto vec = Make##TYPE##Vector(10);                                  \
     VectorOps::Fill(vec.get(), GenericValue::Create##TYPE(FILL_VALUE)); \
-    for (u64 i = 0; i < vec->count(); i++) {                            \
+    for (uint64_t i = 0; i < vec->count(); i++) {                            \
       auto val = vec->GetValue(i);                                      \
       EXPECT_FALSE(val.is_null());                                      \
       EXPECT_EQ(GenericValue::Create##TYPE(FILL_VALUE), val);           \
@@ -21,12 +21,12 @@ TEST_F(VectorFillTest, SimpleNonNull) {
   }
 
   CHECK_SIMPLE_FILL(Boolean, true);
-  CHECK_SIMPLE_FILL(TinyInt, i64(-24));
-  CHECK_SIMPLE_FILL(SmallInt, i64(47));
-  CHECK_SIMPLE_FILL(Integer, i64(1234));
-  CHECK_SIMPLE_FILL(BigInt, i64(-24987));
-  CHECK_SIMPLE_FILL(Float, f64(-3.10));
-  CHECK_SIMPLE_FILL(Double, f64(-3.14));
+  CHECK_SIMPLE_FILL(TinyInt, int64_t(-24));
+  CHECK_SIMPLE_FILL(SmallInt, int64_t(47));
+  CHECK_SIMPLE_FILL(Integer, int64_t(1234));
+  CHECK_SIMPLE_FILL(BigInt, int64_t(-24987));
+  CHECK_SIMPLE_FILL(Float, double(-3.10));
+  CHECK_SIMPLE_FILL(Double, double(-3.14));
   CHECK_SIMPLE_FILL(Varchar, "P-Money In The Bank");
 #undef CHECK_SIMPLE_FILL
 }
@@ -36,7 +36,7 @@ TEST_F(VectorFillTest, NullValue) {
   auto vec = MakeIntegerVector(10);
   VectorOps::Fill(vec.get(), GenericValue::CreateNull(vec->type_id()));
 
-  for (u64 i = 0; i < vec->count(); i++) {
+  for (uint64_t i = 0; i < vec->count(); i++) {
     EXPECT_TRUE(vec->IsNull(i));
   }
 }
@@ -47,7 +47,7 @@ TEST_F(VectorFillTest, ExplicitNull) {
   {                                          \
     auto vec = Make##TYPE##Vector(10);       \
     VectorOps::FillNull(vec.get());          \
-    for (u64 i = 0; i < vec->count(); i++) { \
+    for (uint64_t i = 0; i < vec->count(); i++) { \
       auto val = vec->GetValue(i);           \
       EXPECT_TRUE(val.is_null());            \
     }                                        \

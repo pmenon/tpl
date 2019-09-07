@@ -26,24 +26,24 @@ TEST_F(VectorTest, Clear) {
   Vector vec(TypeId::TinyInt, 10, true);
 
   // All elements should 0
-  for (u32 i = 0; i < 10; i++) {
+  for (uint32_t i = 0; i < 10; i++) {
     auto val = vec.GetValue(i);
     EXPECT_EQ(GenericValue::CreateTinyInt(0), val);
   }
 }
 
 TEST_F(VectorTest, InitFromArray) {
-  const u32 num_elems = 5;
+  const uint32_t num_elems = 5;
 
   // Try simple arithmetic vector
   {
-    f32 arr[num_elems] = {-1.2, -34.56, 6.7, 8.91011, 1213.1415};
+    float arr[num_elems] = {-1.2, -34.56, 6.7, 8.91011, 1213.1415};
 
     Vector vec(TypeId::Float, reinterpret_cast<byte *>(arr), num_elems);
     EXPECT_EQ(num_elems, vec.count());
     EXPECT_EQ(nullptr, vec.selection_vector());
 
-    for (u32 i = 0; i < num_elems; i++) {
+    for (uint32_t i = 0; i < num_elems; i++) {
       auto val = vec.GetValue(i);
       EXPECT_EQ(GenericValue::CreateReal(arr[i]), val);
     }
@@ -56,7 +56,7 @@ TEST_F(VectorTest, InitFromArray) {
     EXPECT_EQ(num_elems, vec.count());
     EXPECT_EQ(nullptr, vec.selection_vector());
 
-    for (u32 i = 0; i < num_elems; i++) {
+    for (uint32_t i = 0; i < num_elems; i++) {
       auto val = vec.GetValue(i);
       EXPECT_EQ(GenericValue::CreateVarchar(arr[i]), val);
     }
@@ -116,7 +116,7 @@ TEST_F(VectorTest, GetAndSetString) {
 
 TEST_F(VectorTest, Reference) {
   Vector vec(TypeId::Integer, 10, true);
-  for (u32 i = 0; i < 10; i++) {
+  for (uint32_t i = 0; i < 10; i++) {
     vec.SetValue(i, GenericValue::CreateInteger(i));
   }
 
@@ -127,7 +127,7 @@ TEST_F(VectorTest, Reference) {
     vec2.Reference(&vec);
     EXPECT_TRUE(vec2.type_id() == TypeId::Integer);
     EXPECT_EQ(vec.count(), vec2.count());
-    for (u64 i = 0; i < vec.count(); i++) {
+    for (uint64_t i = 0; i < vec.count(); i++) {
       EXPECT_FALSE(vec2.IsNull(i));
       EXPECT_EQ(vec2.GetValue(i), vec2.GetValue(i));
     }
@@ -139,7 +139,7 @@ TEST_F(VectorTest, Move) {
   std::vector<sel_t> sel = {0, 2, 4, 6, 8};
 
   Vector vec(TypeId::Integer, 10, true);
-  for (u32 i = 0; i < 10; i++) {
+  for (uint32_t i = 0; i < 10; i++) {
     vec.SetValue(i, GenericValue::CreateInteger(i));
   }
   vec.SetSelectionVector(sel.data(), sel.size());
@@ -160,14 +160,14 @@ TEST_F(VectorTest, Move) {
 
   // The original vector was [0,9], the selection vector selects the even
   // elements [0,2,4,6,8]
-  for (u64 i = 0; i < target.count(); i++) {
+  for (uint64_t i = 0; i < target.count(); i++) {
     EXPECT_FALSE(vec.IsNull(i));
     EXPECT_EQ(GenericValue::CreateInteger(sel[i]), target.GetValue(i));
   }
 }
 
 TEST_F(VectorTest, Copy) {
-  constexpr u32 num_elems = 10;
+  constexpr uint32_t num_elems = 10;
 
   for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer, TypeId::BigInt,
                        TypeId::Float, TypeId::Double}) {
@@ -177,7 +177,7 @@ TEST_F(VectorTest, Copy) {
     //
 
     Vector vec(type_id, num_elems, true);
-    for (u32 i = 0; i < num_elems; i++) {
+    for (uint32_t i = 0; i < num_elems; i++) {
       vec.SetValue(i, GenericValue::CreateTinyInt(i).CastTo(type_id));
     }
 
@@ -196,7 +196,7 @@ TEST_F(VectorTest, Copy) {
     EXPECT_EQ(sel.size(), target.count());
     EXPECT_EQ(nullptr, target.selection_vector());
 
-    for (u64 i = 0; i < target.count(); i++) {
+    for (uint64_t i = 0; i < target.count(); i++) {
       EXPECT_EQ(vec.GetValue(i).CastTo(type_id), target.GetValue(i));
     }
   }
@@ -209,7 +209,7 @@ TEST_F(VectorTest, CopyWithOffset) {
   // visible vec = [0, 2, NULL, 6, NULL]
 
   Vector vec(TypeId::Integer, 10, true);
-  for (u32 i = 0; i < 10; i++) {
+  for (uint32_t i = 0; i < 10; i++) {
     if (i == 4 || i == 8) {
       vec.SetValue(i, GenericValue::CreateNull(vec.type_id()));
     } else {
@@ -218,7 +218,7 @@ TEST_F(VectorTest, CopyWithOffset) {
   }
   vec.SetSelectionVector(sel.data(), sel.size());
 
-  const u32 offset = 2;
+  const uint32_t offset = 2;
 
   EXPECT_EQ(3u, sel.size() - offset);
 
@@ -238,7 +238,7 @@ TEST_F(VectorTest, CopyWithOffset) {
 
 TEST_F(VectorTest, CopyStringVector) {
   Vector vec(TypeId::Varchar, 10, true);
-  for (u32 i = 0; i < 10; i++) {
+  for (uint32_t i = 0; i < 10; i++) {
     vec.SetValue(i, GenericValue::CreateVarchar("val-" + std::to_string(i)));
   }
 
@@ -250,7 +250,7 @@ TEST_F(VectorTest, CopyStringVector) {
   Vector target(TypeId::Varchar, vec.count(), true);
   vec.CopyTo(&target);
 
-  for (u64 i = 0; i < target.count(); i++) {
+  for (uint64_t i = 0; i < target.count(); i++) {
     auto src_val_ptr = vec.GetValue(i);
     auto target_val_ptr = target.GetValue(i);
     EXPECT_EQ(vec.GetValue(i), target.GetValue(i));
@@ -259,13 +259,13 @@ TEST_F(VectorTest, CopyStringVector) {
 
 TEST_F(VectorTest, Cast) {
   // First try to reference a backing STL vector
-  std::vector<i32> base_stdvec = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  std::vector<int32_t> base_stdvec = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<sel_t> sel = {0, 2, 4, 6, 8};
 
-  // First, try happy-path upcast from i32 -> i64
+  // First, try happy-path upcast from int32_t -> int64_t
   {
     Vector vec(TypeId::Integer, 10, true);
-    for (u32 i = 0; i < 10; i++) {
+    for (uint32_t i = 0; i < 10; i++) {
       vec.SetValue(i, GenericValue::CreateInteger(i));
     }
     vec.SetSelectionVector(sel.data(), sel.size());
@@ -275,15 +275,15 @@ TEST_F(VectorTest, Cast) {
     EXPECT_EQ(sel.size(), vec.count());
     EXPECT_NE(nullptr, vec.selection_vector());
 
-    for (u64 i = 0; i < vec.count(); i++) {
+    for (uint64_t i = 0; i < vec.count(); i++) {
       EXPECT_EQ(GenericValue::CreateBigInt(base_stdvec[sel[i]]), vec.GetValue(i));
     }
   }
 
-  // Second happy path, try i32 -> i16 with valid i16 values
+  // Second happy path, try int32_t -> int16_t with valid int16_t values
   {
     Vector vec(TypeId::Integer, 10, true);
-    for (u32 i = 0; i < 10; i++) {
+    for (uint32_t i = 0; i < 10; i++) {
       vec.SetValue(i, GenericValue::CreateInteger(i));
     }
     vec.SetSelectionVector(sel.data(), sel.size());
@@ -293,20 +293,20 @@ TEST_F(VectorTest, Cast) {
     EXPECT_EQ(sel.size(), vec.count());
     EXPECT_NE(nullptr, vec.selection_vector());
 
-    for (u64 i = 0; i < vec.count(); i++) {
+    for (uint64_t i = 0; i < vec.count(); i++) {
       EXPECT_EQ(GenericValue::CreateSmallInt(base_stdvec[sel[i]]), vec.GetValue(i));
     }
   }
 
-  // Third, try i32 -> i16 again, but make one of the values out of range
+  // Third, try int32_t -> int16_t again, but make one of the values out of range
   {
     Vector vec(TypeId::Integer, 10, true);
-    for (u32 i = 0; i < 10; i++) {
+    for (uint32_t i = 0; i < 10; i++) {
       vec.SetValue(i, GenericValue::CreateInteger(i));
     }
     vec.SetSelectionVector(sel.data(), sel.size());
 
-    vec.SetValue(1, GenericValue::CreateInteger(std::numeric_limits<i16>::max() + 44));
+    vec.SetValue(1, GenericValue::CreateInteger(std::numeric_limits<int16_t>::max() + 44));
 
     EXPECT_THROW(vec.Cast(TypeId::SmallInt), std::runtime_error);
   }
@@ -316,7 +316,7 @@ TEST_F(VectorTest, CastWithNulls) {
   // vec(int) = [0, 1, 2, 3, NULL, 5, 6, 7, NULL, 9]
 
   Vector vec(TypeId::Integer, 10, true);
-  for (u32 i = 0; i < 10; i++) {
+  for (uint32_t i = 0; i < 10; i++) {
     if (i == 4 || i == 8) {
       vec.SetValue(i, GenericValue::CreateNull(vec.type_id()));
     } else {
@@ -332,7 +332,7 @@ TEST_F(VectorTest, CastWithNulls) {
   EXPECT_EQ(10u, vec.count());
   EXPECT_EQ(nullptr, vec.selection_vector());
 
-  for (u64 i = 0; i < vec.count(); i++) {
+  for (uint64_t i = 0; i < vec.count(); i++) {
     if (i == 4 || i == 8) {
       EXPECT_TRUE(vec.IsNull(i));
     } else {
@@ -345,14 +345,14 @@ TEST_F(VectorTest, SafeDownCast) {
 #define CHECK_CAST(SRC_TYPE, DEST_TYPE)                               \
   {                                                                   \
     Vector vec(TypeId::SRC_TYPE, 10, true);                           \
-    for (u32 i = 0; i < 10; i++) {                                    \
+    for (uint32_t i = 0; i < 10; i++) {                                    \
       vec.SetValue(i, GenericValue::Create##SRC_TYPE(i));             \
     }                                                                 \
     EXPECT_NO_THROW(vec.Cast(TypeId::DEST_TYPE));                     \
     EXPECT_TRUE(vec.type_id() == TypeId::DEST_TYPE);                  \
     EXPECT_EQ(10u, vec.count());                                      \
     EXPECT_EQ(nullptr, vec.selection_vector());                       \
-    for (u64 i = 0; i < vec.count(); i++) {                           \
+    for (uint64_t i = 0; i < vec.count(); i++) {                           \
       EXPECT_EQ(GenericValue::Create##DEST_TYPE(i), vec.GetValue(i)); \
     }                                                                 \
   }

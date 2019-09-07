@@ -19,7 +19,7 @@ TEST_F(VectorSelectTest, Select) {
   auto _2 = ConstantVector(GenericValue::CreateTinyInt(2));
   auto result = std::array<sel_t, kDefaultVectorSize>();
 
-  u32 n;
+  uint32_t n;
   for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer, TypeId::BigInt,
                        TypeId::Float, TypeId::Double}) {
     a->Cast(type_id);

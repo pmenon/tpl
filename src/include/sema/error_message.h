@@ -33,15 +33,15 @@ namespace sema {
   F(InvalidBuiltinFunction, "'%0' is not a known builtin function", (ast::Identifier))             \
   F(NonFunction, "cannot call non-function '%0'", ())                                              \
   F(MismatchedCallArgs, "wrong number of arguments in call to '%0': expected %1, received %2.",    \
-    (ast::Identifier, u32, u32))                                                                   \
+    (ast::Identifier, uint32_t, uint32_t))                                                         \
   F(IncorrectCallArgType,                                                                          \
     "function '%0' expects argument of type '%1' in position '%2', received "                      \
     "type '%3'",                                                                                   \
-    (ast::Identifier, ast::Type *, u32, ast::Type *))                                              \
+    (ast::Identifier, ast::Type *, uint32_t, ast::Type *))                                         \
   F(IncorrectCallArgType2,                                                                         \
     "function '%0' expects '%1' argument in position '%2', received type "                         \
     "'%3'",                                                                                        \
-    (ast::Identifier, const char *, u32, ast::Type *))                                             \
+    (ast::Identifier, const char *, uint32_t, ast::Type *))                                        \
   F(NonBoolIfCondition, "non-bool used as if condition", ())                                       \
   F(NonBoolForCondition, "non-bool used as for condition", ())                                     \
   F(NonIntegerArrayLength, "non-integer literal used as array size", ())                           \
@@ -81,7 +81,7 @@ namespace sema {
   F(BadArgToPtrCast,                                                                               \
     "ptrCast() expects (compile-time *DestType, *T) arguments.  Received "                         \
     "type '%0' in position %1",                                                                    \
-    (ast::Type *, u32))                                                                            \
+    (ast::Type *, uint32_t))                                                                       \
   F(BadHashArg, "cannot hash type '%0'", (ast::Type *))                                            \
   F(MissingArrayLength, "missing array length (either compile-time number or '*')", ())            \
   F(NotASQLAggregate, "'%0' is not a SQL aggregator type", (ast::Type *))                          \
@@ -95,7 +95,7 @@ namespace sema {
     (ast::Type *))
 
 /// Define the ErrorMessageId enumeration
-enum class ErrorMessageId : u16 {
+enum class ErrorMessageId : uint16_t {
 #define F(id, str, arg_types) id,
   MESSAGE_LIST(F)
 #undef F

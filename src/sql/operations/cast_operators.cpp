@@ -28,153 +28,153 @@ static Dest DoCheckedCast(Src source) {
 }  // namespace
 
 // ---------------------------------------------------------
-// Downcasting Numeric -> TinyInt (i8)
+// Downcasting Numeric -> TinyInt (int8_t)
 // ---------------------------------------------------------
 
 template <>
-i8 Cast::Apply(i16 source) {
-  return DoCheckedCast<i16, i8>(source);
+int8_t Cast::Apply(int16_t source) {
+  return DoCheckedCast<int16_t, int8_t>(source);
 }
 
 template <>
-i8 Cast::Apply(i32 source) {
-  return DoCheckedCast<i32, i8>(source);
+int8_t Cast::Apply(int32_t source) {
+  return DoCheckedCast<int32_t, int8_t>(source);
 }
 
 template <>
-i8 Cast::Apply(i64 source) {
-  return DoCheckedCast<i64, i8>(source);
+int8_t Cast::Apply(int64_t source) {
+  return DoCheckedCast<int64_t, int8_t>(source);
 }
 
 template <>
-i8 Cast::Apply(f32 source) {
-  return DoCheckedCast<f32, i8>(source);
+int8_t Cast::Apply(float source) {
+  return DoCheckedCast<float, int8_t>(source);
 }
 
 template <>
-i8 Cast::Apply(f64 source) {
-  return DoCheckedCast<f64, i8>(source);
+int8_t Cast::Apply(double source) {
+  return DoCheckedCast<double, int8_t>(source);
 }
 
 template <>
-bool TryCast::Apply(i16 source, i8 *dest) {
-  return DoSafeCheckedCast<i16, i8>(source, dest);
+bool TryCast::Apply(int16_t source, int8_t *dest) {
+  return DoSafeCheckedCast<int16_t, int8_t>(source, dest);
 }
 
 template <>
-bool TryCast::Apply(i32 source, i8 *dest) {
-  return DoSafeCheckedCast<i32, i8>(source, dest);
+bool TryCast::Apply(int32_t source, int8_t *dest) {
+  return DoSafeCheckedCast<int32_t, int8_t>(source, dest);
 }
 
 template <>
-bool TryCast::Apply(i64 source, i8 *dest) {
-  return DoSafeCheckedCast<i64, i8>(source, dest);
+bool TryCast::Apply(int64_t source, int8_t *dest) {
+  return DoSafeCheckedCast<int64_t, int8_t>(source, dest);
 }
 
 template <>
-bool TryCast::Apply(f32 source, i8 *dest) {
-  return DoSafeCheckedCast<f32, i8>(source, dest);
+bool TryCast::Apply(float source, int8_t *dest) {
+  return DoSafeCheckedCast<float, int8_t>(source, dest);
 }
 
 template <>
-bool TryCast::Apply(f64 source, i8 *dest) {
-  return DoSafeCheckedCast<f64, i8>(source, dest);
-}
-
-// ---------------------------------------------------------
-// Downcasting Numeric -> SmallInt (i16)
-// ---------------------------------------------------------
-
-template <>
-i16 Cast::Apply(i32 source) {
-  return DoCheckedCast<i32, i16>(source);
-}
-template <>
-i16 Cast::Apply(i64 source) {
-  return DoCheckedCast<i64, i16>(source);
-}
-template <>
-i16 Cast::Apply(f32 source) {
-  return DoCheckedCast<f32, i16>(source);
-}
-template <>
-i16 Cast::Apply(f64 source) {
-  return DoCheckedCast<f64, i16>(source);
-}
-
-template <>
-bool TryCast::Apply(i32 source, i16 *dest) {
-  return DoSafeCheckedCast<i32, i16>(source, dest);
-}
-template <>
-bool TryCast::Apply(i64 source, i16 *dest) {
-  return DoSafeCheckedCast<i64, i16>(source, dest);
-}
-template <>
-bool TryCast::Apply(f32 source, i16 *dest) {
-  return DoSafeCheckedCast<f32, i16>(source, dest);
-}
-template <>
-bool TryCast::Apply(f64 source, i16 *dest) {
-  return DoSafeCheckedCast<f64, i16>(source, dest);
+bool TryCast::Apply(double source, int8_t *dest) {
+  return DoSafeCheckedCast<double, int8_t>(source, dest);
 }
 
 // ---------------------------------------------------------
-// Downcasting Numeric -> Int (i32)
+// Downcasting Numeric -> SmallInt (int16_t)
 // ---------------------------------------------------------
 
 template <>
-i32 Cast::Apply(i64 source) {
-  return DoCheckedCast<i64, i32>(source);
+int16_t Cast::Apply(int32_t source) {
+  return DoCheckedCast<int32_t, int16_t>(source);
+}
+template <>
+int16_t Cast::Apply(int64_t source) {
+  return DoCheckedCast<int64_t, int16_t>(source);
+}
+template <>
+int16_t Cast::Apply(float source) {
+  return DoCheckedCast<float, int16_t>(source);
+}
+template <>
+int16_t Cast::Apply(double source) {
+  return DoCheckedCast<double, int16_t>(source);
 }
 
 template <>
-i32 Cast::Apply(f32 source) {
-  return DoCheckedCast<f32, i32>(source);
+bool TryCast::Apply(int32_t source, int16_t *dest) {
+  return DoSafeCheckedCast<int32_t, int16_t>(source, dest);
 }
-
 template <>
-i32 Cast::Apply(f64 source) {
-  return DoCheckedCast<f64, i32>(source);
+bool TryCast::Apply(int64_t source, int16_t *dest) {
+  return DoSafeCheckedCast<int64_t, int16_t>(source, dest);
 }
-
 template <>
-bool TryCast::Apply(i64 source, i32 *dest) {
-  return DoSafeCheckedCast<i64, i32>(source, dest);
+bool TryCast::Apply(float source, int16_t *dest) {
+  return DoSafeCheckedCast<float, int16_t>(source, dest);
 }
-
 template <>
-bool TryCast::Apply(f32 source, i32 *dest) {
-  return DoSafeCheckedCast<f32, i32>(source, dest);
-}
-
-template <>
-bool TryCast::Apply(f64 source, i32 *dest) {
-  return DoSafeCheckedCast<f64, i32>(source, dest);
+bool TryCast::Apply(double source, int16_t *dest) {
+  return DoSafeCheckedCast<double, int16_t>(source, dest);
 }
 
 // ---------------------------------------------------------
-// Downcasting Numeric -> BigInt (i64)
+// Downcasting Numeric -> Int (int32_t)
 // ---------------------------------------------------------
 
 template <>
-i64 Cast::Apply(f32 source) {
-  return DoCheckedCast<f32, i64>(source);
+int32_t Cast::Apply(int64_t source) {
+  return DoCheckedCast<int64_t, int32_t>(source);
 }
 
 template <>
-i64 Cast::Apply(f64 source) {
-  return DoCheckedCast<f64, i64>(source);
+int32_t Cast::Apply(float source) {
+  return DoCheckedCast<float, int32_t>(source);
 }
 
 template <>
-bool TryCast::Apply(f32 source, i64 *dest) {
-  return DoSafeCheckedCast<f32, i64>(source, dest);
+int32_t Cast::Apply(double source) {
+  return DoCheckedCast<double, int32_t>(source);
 }
 
 template <>
-bool TryCast::Apply(f64 source, i64 *dest) {
-  return DoSafeCheckedCast<f32, i64>(source, dest);
+bool TryCast::Apply(int64_t source, int32_t *dest) {
+  return DoSafeCheckedCast<int64_t, int32_t>(source, dest);
+}
+
+template <>
+bool TryCast::Apply(float source, int32_t *dest) {
+  return DoSafeCheckedCast<float, int32_t>(source, dest);
+}
+
+template <>
+bool TryCast::Apply(double source, int32_t *dest) {
+  return DoSafeCheckedCast<double, int32_t>(source, dest);
+}
+
+// ---------------------------------------------------------
+// Downcasting Numeric -> BigInt (int64_t)
+// ---------------------------------------------------------
+
+template <>
+int64_t Cast::Apply(float source) {
+  return DoCheckedCast<float, int64_t>(source);
+}
+
+template <>
+int64_t Cast::Apply(double source) {
+  return DoCheckedCast<double, int64_t>(source);
+}
+
+template <>
+bool TryCast::Apply(float source, int64_t *dest) {
+  return DoSafeCheckedCast<float, int64_t>(source, dest);
+}
+
+template <>
+bool TryCast::Apply(double source, int64_t *dest) {
+  return DoSafeCheckedCast<float, int64_t>(source, dest);
 }
 
 }  // namespace tpl::sql

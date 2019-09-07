@@ -108,28 +108,28 @@ GenericValue GenericValue::CreateBoolean(const bool value) {
   return result;
 }
 
-GenericValue GenericValue::CreateTinyInt(const i8 value) {
+GenericValue GenericValue::CreateTinyInt(const int8_t value) {
   GenericValue result(TypeId::TinyInt);
   result.value_.tinyint = value;
   result.is_null_ = false;
   return result;
 }
 
-GenericValue GenericValue::CreateSmallInt(const i16 value) {
+GenericValue GenericValue::CreateSmallInt(const int16_t value) {
   GenericValue result(TypeId::SmallInt);
   result.value_.smallint = value;
   result.is_null_ = false;
   return result;
 }
 
-GenericValue GenericValue::CreateInteger(const i32 value) {
+GenericValue GenericValue::CreateInteger(const int32_t value) {
   GenericValue result(TypeId::Integer);
   result.value_.integer = value;
   result.is_null_ = false;
   return result;
 }
 
-GenericValue GenericValue::CreateBigInt(const i64 value) {
+GenericValue GenericValue::CreateBigInt(const int64_t value) {
   GenericValue result(TypeId::BigInt);
   result.value_.bigint = value;
   result.is_null_ = false;
@@ -149,27 +149,29 @@ GenericValue GenericValue::CreatePointer(uintptr_t value) {
   return result;
 }
 
-GenericValue GenericValue::CreateReal(const f32 value) {
+GenericValue GenericValue::CreateReal(const float value) {
   GenericValue result(TypeId::Float);
   result.value_.float_ = value;
   result.is_null_ = false;
   return result;
 }
 
-GenericValue GenericValue::CreateDouble(const f64 value) {
+GenericValue GenericValue::CreateDouble(const double value) {
   GenericValue result(TypeId::Double);
   result.value_.double_ = value;
   result.is_null_ = false;
   return result;
 }
 
-GenericValue GenericValue::CreateDate(UNUSED i32 year, UNUSED i32 month, UNUSED i32 day) {
+GenericValue GenericValue::CreateDate(UNUSED int32_t year, UNUSED int32_t month,
+                                      UNUSED int32_t day) {
   throw std::runtime_error("Creating Date generic value not supported!");
 }
 
-GenericValue GenericValue::CreateTimestamp(UNUSED i32 year, UNUSED i32 month, UNUSED i32 day,
-                                           UNUSED i32 hour, UNUSED i32 min, UNUSED i32 sec,
-                                           UNUSED i32 msec) {
+GenericValue GenericValue::CreateTimestamp(UNUSED int32_t year, UNUSED int32_t month,
+                                           UNUSED int32_t day, UNUSED int32_t hour,
+                                           UNUSED int32_t min, UNUSED int32_t sec,
+                                           UNUSED int32_t msec) {
   throw std::runtime_error("Creating Timestamp generic value not supported!");
 }
 

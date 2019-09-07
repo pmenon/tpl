@@ -13,11 +13,11 @@ namespace tpl::sql {
 class GenericHashTableTest : public TplTest {};
 
 struct TestEntry : public HashTableEntry {
-  u32 key{0}, value{0};
+  uint32_t key{0}, value{0};
 
   TestEntry() : HashTableEntry(), key(0), value(0) { hash = Hash(); }
 
-  TestEntry(u32 key, u32 value) : HashTableEntry(), key(key), value(value) { hash = Hash(); }
+  TestEntry(uint32_t key, uint32_t value) : HashTableEntry(), key(key), value(value) { hash = Hash(); }
 
   hash_t Hash() { return util::Hasher::Hash(key); }
 
@@ -88,8 +88,8 @@ TEST_F(GenericHashTableTest, TaggedInsertion) {
 }
 
 TEST_F(GenericHashTableTest, ConcurrentInsertion) {
-  constexpr u32 num_entries = 5000;
-  constexpr u32 num_threads = 4;
+  constexpr uint32_t num_entries = 5000;
+  constexpr uint32_t num_threads = 4;
 
   // The entries for all threads. We partition this vector into 'num_threads'
   // parts. Each thread will insert data from the partition of this vector it
@@ -102,8 +102,8 @@ TEST_F(GenericHashTableTest, ConcurrentInsertion) {
   // Setup entries
   {
     entries.reserve(num_threads * num_entries);
-    for (u32 tid = 0; tid < num_threads; tid++) {
-      for (u32 i = 0; i < num_entries; i++) {
+    for (uint32_t tid = 0; tid < num_threads; tid++) {
+      for (uint32_t i = 0; i < num_entries; i++) {
         entries.emplace_back(i, tid);
       }
 
@@ -120,7 +120,7 @@ TEST_F(GenericHashTableTest, ConcurrentInsertion) {
 
   // Parallel insert
   LaunchParallel(num_threads, [&](auto thread_id) {
-    for (u32 idx = thread_id * num_entries, end = idx + num_entries; idx < end; idx++) {
+    for (uint32_t idx = thread_id * num_entries, end = idx + num_entries; idx < end; idx++) {
       auto &entry = entries[idx];
       hash_table.Insert<true>(&entry, entry.hash);
     }
@@ -128,9 +128,9 @@ TEST_F(GenericHashTableTest, ConcurrentInsertion) {
 
   // After the insertions we should be able to find all entries, including
   // duplicates.
-  std::array<std::unordered_set<u32>, num_threads> thread_local_entries;
+  std::array<std::unordered_set<uint32_t>, num_threads> thread_local_entries;
   GenericHashTableIterator<false> iter(hash_table);
-  u32 found_entries = 0;
+  uint32_t found_entries = 0;
   for (; iter.HasNext(); iter.Next()) {
     found_entries++;
 
@@ -197,9 +197,9 @@ TEST_F(GenericHashTableTest, SimpleIteration) {
   //       them all.
   //
 
-  using Key = u32;
+  using Key = uint32_t;
 
-  const u32 num_inserts = 500;
+  const uint32_t num_inserts = 500;
 
   std::random_device random;
 
@@ -207,7 +207,7 @@ TEST_F(GenericHashTableTest, SimpleIteration) {
 
   // The entries
   std::vector<TestEntry> entries;
-  for (u32 idx = 0; idx < num_inserts; idx++) {
+  for (uint32_t idx = 0; idx < num_inserts; idx++) {
     TestEntry entry(random(), 20);
     entry.hash = entry.Hash();
 
@@ -220,7 +220,7 @@ TEST_F(GenericHashTableTest, SimpleIteration) {
   table.SetSize(1000);
 
   // Insert
-  for (u32 idx = 0; idx < num_inserts; idx++) {
+  for (uint32_t idx = 0; idx < num_inserts; idx++) {
     auto entry = &entries[idx];
     table.Insert<false>(entry, entry->hash);
   }
@@ -228,7 +228,7 @@ TEST_F(GenericHashTableTest, SimpleIteration) {
   // Check regular iterator
   {
     GenericHashTableIterator<false> iter(table);
-    u32 found_entries = 0;
+    uint32_t found_entries = 0;
     for (; iter.HasNext(); iter.Next()) {
       auto *row = reinterpret_cast<const TestEntry *>(iter.GetCurrentEntry());
       EXPECT_TRUE(row != nullptr);
@@ -246,10 +246,10 @@ TEST_F(GenericHashTableTest, SimpleIteration) {
   {
     MemoryPool pool(nullptr);
     GenericHashTableVectorIterator<false> iter(table, &pool);
-    u32 found_entries = 0;
+    uint32_t found_entries = 0;
     for (; iter.HasNext(); iter.Next()) {
       auto [size, batch] = iter.GetCurrentBatch();
-      for (u32 i = 0; i < size; i++) {
+      for (uint32_t i = 0; i < size; i++) {
         auto *row = reinterpret_cast<const TestEntry *>(batch[i]);
         EXPECT_TRUE(row != nullptr);
         auto ref_iter = reference.find(row->key);
@@ -271,12 +271,12 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
   //       all inserted entries.
   //
 
-  const u32 num_inserts = 500;
-  const u32 key = 10, value = 20;
+  const uint32_t num_inserts = 500;
+  const uint32_t key = 10, value = 20;
 
   // The entries
   std::vector<TestEntry> entries;
-  for (u32 idx = 0; idx < num_inserts; idx++) {
+  for (uint32_t idx = 0; idx < num_inserts; idx++) {
     TestEntry entry(key, value);
     entry.hash = entry.Hash();
     entries.emplace_back(entry);
@@ -287,7 +287,7 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
   table.SetSize(1000);
 
   // Insert
-  for (u32 idx = 0; idx < num_inserts; idx++) {
+  for (uint32_t idx = 0; idx < num_inserts; idx++) {
     auto entry = &entries[idx];
     table.Insert<false>(entry, entry->hash);
   }
@@ -295,7 +295,7 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
   // Check regular iterator
   {
     GenericHashTableIterator<false> iter(table);
-    u32 found_entries = 0;
+    uint32_t found_entries = 0;
     for (; iter.HasNext(); iter.Next()) {
       auto *row = reinterpret_cast<const TestEntry *>(iter.GetCurrentEntry());
       ASSERT_TRUE(row != nullptr);
@@ -310,10 +310,10 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
   {
     MemoryPool pool(nullptr);
     GenericHashTableVectorIterator<false> iter(table, &pool);
-    u32 found_entries = 0;
+    uint32_t found_entries = 0;
     for (; iter.HasNext(); iter.Next()) {
       auto [size, batch] = iter.GetCurrentBatch();
-      for (u32 i = 0; i < size; i++) {
+      for (uint32_t i = 0; i < size; i++) {
         auto *row = reinterpret_cast<const TestEntry *>(batch[i]);
         ASSERT_TRUE(row != nullptr);
         EXPECT_EQ(key, row->key);
@@ -326,13 +326,13 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
 }
 
 TEST_F(GenericHashTableTest, DISABLED_PerfIteration) {
-  const u32 num_inserts = 5000000;
+  const uint32_t num_inserts = 5000000;
 
   // The entries
   std::vector<TestEntry> entries;
 
   std::random_device random;
-  for (u32 idx = 0; idx < num_inserts; idx++) {
+  for (uint32_t idx = 0; idx < num_inserts; idx++) {
     TestEntry entry(random(), 20);
     entry.hash = entry.Hash();
 
@@ -344,12 +344,12 @@ TEST_F(GenericHashTableTest, DISABLED_PerfIteration) {
   table.SetSize(num_inserts);
 
   // Insert
-  for (u32 idx = 0; idx < num_inserts; idx++) {
+  for (uint32_t idx = 0; idx < num_inserts; idx++) {
     auto entry = &entries[idx];
     table.Insert<false>(entry, entry->hash);
   }
 
-  u32 sum1 = 0, sum2 = 0;
+  uint32_t sum1 = 0, sum2 = 0;
 
   double taat_ms = Bench(5, [&]() {
     GenericHashTableIterator<false> iter(table);
@@ -364,7 +364,7 @@ TEST_F(GenericHashTableTest, DISABLED_PerfIteration) {
     GenericHashTableVectorIterator<false> iter(table, &pool);
     for (; iter.HasNext(); iter.Next()) {
       auto [size, batch] = iter.GetCurrentBatch();
-      for (u32 i = 0; i < size; i++) {
+      for (uint32_t i = 0; i < size; i++) {
         auto *row = reinterpret_cast<const TestEntry *>(batch[i]);
         sum2 += row->value;
       }

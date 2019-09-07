@@ -22,7 +22,7 @@ class SelectionScope {
       "iteration");
 
  public:
-  SelectionScope(sel_t *sel_vector, const u32 count, const ContainerT &vectors)
+  SelectionScope(sel_t *sel_vector, const uint32_t count, const ContainerT &vectors)
       : vectors_(vectors) {
     old_sel_vector_ = vectors_[0]->selection_vector();
     old_count_ = vectors_[0]->count();
@@ -47,7 +47,7 @@ class SelectionScope {
   sel_t *old_sel_vector_;
   // The previous count of the selection vector, or the original size of the
   // input vector.
-  u32 old_count_;
+  uint32_t old_count_;
 };
 
 }  // namespace tpl::sql

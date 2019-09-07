@@ -6,12 +6,12 @@
 
 namespace tpl::sema {
 
-void Sema::ReportIncorrectCallArg(ast::CallExpr *call, u32 index, ast::Type *expected) {
+void Sema::ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, ast::Type *expected) {
   error_reporter()->Report(call->position(), ErrorMessages::kIncorrectCallArgType,
                            call->GetFuncName(), expected, index, call->arguments()[index]->type());
 }
 
-void Sema::ReportIncorrectCallArg(ast::CallExpr *call, u32 index, const char *expected) {
+void Sema::ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, const char *expected) {
   error_reporter()->Report(call->position(), ErrorMessages::kIncorrectCallArgType2,
                            call->GetFuncName(), expected, index, call->arguments()[index]->type());
 }
@@ -22,7 +22,7 @@ ast::Expr *Sema::ImplCastExprToType(ast::Expr *expr, ast::Type *target_type,
                                                         expr);
 }
 
-bool Sema::CheckArgCount(ast::CallExpr *call, u32 expected_arg_count) {
+bool Sema::CheckArgCount(ast::CallExpr *call, uint32_t expected_arg_count) {
   if (call->num_args() != expected_arg_count) {
     error_reporter()->Report(call->position(), ErrorMessages::kMismatchedCallArgs,
                              call->GetFuncName(), expected_arg_count, call->num_args());
@@ -32,7 +32,7 @@ bool Sema::CheckArgCount(ast::CallExpr *call, u32 expected_arg_count) {
   return true;
 }
 
-bool Sema::CheckArgCountAtLeast(ast::CallExpr *call, u32 expected_arg_count) {
+bool Sema::CheckArgCountAtLeast(ast::CallExpr *call, uint32_t expected_arg_count) {
   if (call->num_args() < expected_arg_count) {
     error_reporter()->Report(call->position(), ErrorMessages::kMismatchedCallArgs,
                              call->GetFuncName(), expected_arg_count, call->num_args());

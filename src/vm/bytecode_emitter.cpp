@@ -14,7 +14,7 @@ void BytecodeEmitter::EmitDeref(Bytecode bytecode, LocalVar dest, LocalVar src) 
   EmitAll(bytecode, dest, src);
 }
 
-void BytecodeEmitter::EmitDerefN(LocalVar dest, LocalVar src, u32 len) {
+void BytecodeEmitter::EmitDerefN(LocalVar dest, LocalVar src, uint32_t len) {
   EmitAll(Bytecode::DerefN, dest, src, len);
 }
 
@@ -25,19 +25,19 @@ void BytecodeEmitter::EmitAssign(Bytecode bytecode, LocalVar dest, LocalVar src)
   EmitAll(bytecode, dest, src);
 }
 
-void BytecodeEmitter::EmitAssignImm1(LocalVar dest, i8 val) {
+void BytecodeEmitter::EmitAssignImm1(LocalVar dest, int8_t val) {
   EmitAll(Bytecode::AssignImm1, dest, val);
 }
 
-void BytecodeEmitter::EmitAssignImm2(LocalVar dest, i16 val) {
+void BytecodeEmitter::EmitAssignImm2(LocalVar dest, int16_t val) {
   EmitAll(Bytecode::AssignImm2, dest, val);
 }
 
-void BytecodeEmitter::EmitAssignImm4(LocalVar dest, i32 val) {
+void BytecodeEmitter::EmitAssignImm4(LocalVar dest, int32_t val) {
   EmitAll(Bytecode::AssignImm4, dest, val);
 }
 
-void BytecodeEmitter::EmitAssignImm8(LocalVar dest, i64 val) {
+void BytecodeEmitter::EmitAssignImm8(LocalVar dest, int64_t val) {
   EmitAll(Bytecode::AssignImm8, dest, val);
 }
 
@@ -49,21 +49,21 @@ void BytecodeEmitter::EmitBinaryOp(Bytecode bytecode, LocalVar dest, LocalVar lh
   EmitAll(bytecode, dest, lhs, rhs);
 }
 
-void BytecodeEmitter::EmitLea(LocalVar dest, LocalVar src, u32 offset) {
+void BytecodeEmitter::EmitLea(LocalVar dest, LocalVar src, uint32_t offset) {
   EmitAll(Bytecode::Lea, dest, src, offset);
 }
 
-void BytecodeEmitter::EmitLeaScaled(LocalVar dest, LocalVar src, LocalVar index, u32 scale,
-                                    u32 offset) {
+void BytecodeEmitter::EmitLeaScaled(LocalVar dest, LocalVar src, LocalVar index, uint32_t scale,
+                                    uint32_t offset) {
   EmitAll(Bytecode::LeaScaled, dest, src, index, scale, offset);
 }
 
 void BytecodeEmitter::EmitCall(FunctionId func_id, const std::vector<LocalVar> &params) {
   TPL_ASSERT(Bytecodes::GetNthOperandSize(Bytecode::Call, 1) == OperandSize::Short,
              "Expected argument count to be 2-byte short");
-  TPL_ASSERT(params.size() < std::numeric_limits<u16>::max(), "Too many parameters!");
+  TPL_ASSERT(params.size() < std::numeric_limits<uint16_t>::max(), "Too many parameters!");
 
-  EmitAll(Bytecode::Call, static_cast<u16>(func_id), static_cast<u16>(params.size()));
+  EmitAll(Bytecode::Call, static_cast<uint16_t>(func_id), static_cast<uint16_t>(params.size()));
   for (LocalVar local : params) {
     EmitImpl(local);
   }
@@ -82,11 +82,11 @@ void BytecodeEmitter::Bind(BytecodeLabel *label) {
     auto &jump_locations = label->referrer_offsets();
 
     for (const auto &jump_location : jump_locations) {
-      TPL_ASSERT((curr_offset - jump_location) < std::numeric_limits<i32>::max(),
+      TPL_ASSERT((curr_offset - jump_location) < std::numeric_limits<int32_t>::max(),
                  "Jump delta exceeds 32-bit value for jump offsets!");
 
-      auto delta = static_cast<i32>(curr_offset - jump_location);
-      auto *raw_delta = reinterpret_cast<u8 *>(&delta);
+      auto delta = static_cast<int32_t>(curr_offset - jump_location);
+      auto *raw_delta = reinterpret_cast<uint8_t *>(&delta);
       bytecode_[jump_location] = raw_delta[0];
       bytecode_[jump_location + 1] = raw_delta[1];
       bytecode_[jump_location + 2] = raw_delta[2];
@@ -98,7 +98,7 @@ void BytecodeEmitter::Bind(BytecodeLabel *label) {
 }
 
 void BytecodeEmitter::EmitJump(BytecodeLabel *label) {
-  static const i32 kJumpPlaceholder = std::numeric_limits<i32>::max() - 1;
+  static const int32_t kJumpPlaceholder = std::numeric_limits<int32_t>::max() - 1;
 
   std::size_t curr_offset = position();
 
@@ -108,11 +108,11 @@ void BytecodeEmitter::EmitJump(BytecodeLabel *label) {
     TPL_ASSERT(label->offset() <= curr_offset,
                "Label for backwards jump cannot be beyond current bytecode position");
     std::size_t delta = curr_offset - label->offset();
-    TPL_ASSERT(delta < std::numeric_limits<i32>::max(),
+    TPL_ASSERT(delta < std::numeric_limits<int32_t>::max(),
                "Jump delta exceeds 32-bit value for jump offsets!");
 
     // Immediately emit the delta
-    EmitScalarValue(-static_cast<i32>(delta));
+    EmitScalarValue(-static_cast<int32_t>(delta));
   } else {
     // The label is not bound yet so this must be a forward jump. We set the
     // reference position in the label and use a placeholder offset in the
@@ -268,20 +268,21 @@ void BytecodeEmitter::EmitThreadStateContainerReset(LocalVar tls, LocalVar state
   EmitAll(Bytecode::ThreadStateContainerReset, tls, state_size, init_fn, destroy_fn, ctx);
 }
 
-void BytecodeEmitter::EmitTableIterInit(Bytecode bytecode, LocalVar iter, u16 table_id) {
+void BytecodeEmitter::EmitTableIterInit(Bytecode bytecode, LocalVar iter, uint16_t table_id) {
   EmitAll(bytecode, iter, table_id);
 }
 
-void BytecodeEmitter::EmitParallelTableScan(u16 table_id, LocalVar ctx, LocalVar thread_states,
+void BytecodeEmitter::EmitParallelTableScan(uint16_t table_id, LocalVar ctx, LocalVar thread_states,
                                             FunctionId scan_fn) {
   EmitAll(Bytecode::ParallelScanTable, table_id, ctx, thread_states, scan_fn);
 }
 
-void BytecodeEmitter::EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar vpi, u32 col_idx) {
+void BytecodeEmitter::EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar vpi, uint32_t col_idx) {
   EmitAll(bytecode, out, vpi, col_idx);
 }
 
-void BytecodeEmitter::EmitVPISet(Bytecode bytecode, LocalVar vpi, LocalVar input, u32 col_idx) {
+void BytecodeEmitter::EmitVPISet(Bytecode bytecode, LocalVar vpi, LocalVar input,
+                                 uint32_t col_idx) {
   EmitAll(bytecode, vpi, input, col_idx);
 }
 

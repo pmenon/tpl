@@ -15,20 +15,23 @@
 namespace tpl::sql {
 
 // Iterate over the table and select all columns
-TableVectorIterator::TableVectorIterator(const u16 table_id)
-    : TableVectorIterator(table_id, 0, std::numeric_limits<u32>::max(), {}) {}
+TableVectorIterator::TableVectorIterator(const uint16_t table_id)
+    : TableVectorIterator(table_id, 0, std::numeric_limits<uint32_t>::max(), {}) {}
 
 // Iterate over a subset of the table and select all columns
-TableVectorIterator::TableVectorIterator(u16 table_id, u32 start_block_idx, u32 end_block_idx)
+TableVectorIterator::TableVectorIterator(uint16_t table_id, uint32_t start_block_idx,
+                                         uint32_t end_block_idx)
     : TableVectorIterator(table_id, start_block_idx, end_block_idx, {}) {}
 
 // Iterate over the table, but only select the given columns
-TableVectorIterator::TableVectorIterator(const u16 table_id, std::vector<u32> column_indexes)
-    : TableVectorIterator(table_id, 0, std::numeric_limits<u32>::max(), std::move(column_indexes)) {
-}
+TableVectorIterator::TableVectorIterator(const uint16_t table_id,
+                                         std::vector<uint32_t> column_indexes)
+    : TableVectorIterator(table_id, 0, std::numeric_limits<uint32_t>::max(),
+                          std::move(column_indexes)) {}
 
-TableVectorIterator::TableVectorIterator(u16 table_id, u32 start_block_idx, u32 end_block_idx,
-                                         std::vector<u32> column_indexes)
+TableVectorIterator::TableVectorIterator(uint16_t table_id, uint32_t start_block_idx,
+                                         uint32_t end_block_idx,
+                                         std::vector<uint32_t> column_indexes)
     : column_indexes_(std::move(column_indexes)),
       block_iterator_(table_id, start_block_idx, end_block_idx),
       initialized_(false) {}
@@ -50,12 +53,12 @@ bool TableVectorIterator::Init() {
   // If the column indexes vector is empty, select all the columns
   if (column_indexes_.empty()) {
     column_indexes_.resize(table_schema.num_columns());
-    std::iota(column_indexes_.begin(), column_indexes_.end(), u32{0});
+    std::iota(column_indexes_.begin(), column_indexes_.end(), uint32_t{0});
   }
 
   // Collect column metadata for the iterators
   std::vector<const Schema::ColumnInfo *> col_infos(column_indexes_.size());
-  for (u32 idx = 0; idx < column_indexes_.size(); idx++) {
+  for (uint32_t idx = 0; idx < column_indexes_.size(); idx++) {
     col_infos[idx] = table_schema.GetColumnInfo(idx);
   }
 
@@ -78,7 +81,7 @@ void TableVectorIterator::RefreshVectorProjection() {
   // iterators.
 
   vector_projection_.Reset();
-  for (u64 col_idx = 0; col_idx < column_iterators_.size(); col_idx++) {
+  for (uint64_t col_idx = 0; col_idx < column_iterators_.size(); col_idx++) {
     vector_projection_.ResetColumn(column_iterators_, col_idx);
   }
   vector_projection_.CheckIntegrity();
@@ -121,7 +124,7 @@ bool TableVectorIterator::Advance() {
   // Check block iterator
   if (block_iterator_.Advance()) {
     const Table::Block *block = block_iterator_.current_block();
-    for (u32 i = 0; i < column_iterators_.size(); i++) {
+    for (uint32_t i = 0; i < column_iterators_.size(); i++) {
       const ColumnSegment *col = block->GetColumnData(i);
       column_iterators_[i].Reset(col);
     }
@@ -136,14 +139,14 @@ namespace {
 
 class ScanTask {
  public:
-  ScanTask(u16 table_id, void *const query_state,
+  ScanTask(uint16_t table_id, void *const query_state,
            ThreadStateContainer *const thread_state_container, TableVectorIterator::ScanFn scanner)
       : table_id_(table_id),
         query_state_(query_state),
         thread_state_container_(thread_state_container),
         scanner_(scanner) {}
 
-  void operator()(const tbb::blocked_range<u32> &block_range) const {
+  void operator()(const tbb::blocked_range<uint32_t> &block_range) const {
     // Create the iterator over the specified block range
     TableVectorIterator iter(table_id_, block_range.begin(), block_range.end());
 
@@ -160,7 +163,7 @@ class ScanTask {
   }
 
  private:
-  u16 table_id_;
+  uint16_t table_id_;
   void *const query_state_;
   ThreadStateContainer *const thread_state_container_;
   TableVectorIterator::ScanFn scanner_;
@@ -168,10 +171,10 @@ class ScanTask {
 
 }  // namespace
 
-bool TableVectorIterator::ParallelScan(const u16 table_id, void *const query_state,
+bool TableVectorIterator::ParallelScan(const uint16_t table_id, void *const query_state,
                                        ThreadStateContainer *const thread_states,
                                        const TableVectorIterator::ScanFn scan_fn,
-                                       const u32 min_grain_size) {
+                                       const uint32_t min_grain_size) {
   // Lookup table
   const Table *table = Catalog::Instance()->LookupTableById(TableId(table_id));
   if (table == nullptr) {
@@ -184,7 +187,7 @@ bool TableVectorIterator::ParallelScan(const u16 table_id, void *const query_sta
 
   // Execute parallel scan
   tbb::task_scheduler_init scan_scheduler;
-  tbb::blocked_range<u32> block_range(0, table->num_blocks(), min_grain_size);
+  tbb::blocked_range<uint32_t> block_range(0, table->num_blocks(), min_grain_size);
   tbb::parallel_for(block_range, ScanTask(table_id, query_state, thread_states, scan_fn));
 
   timer.Stop();

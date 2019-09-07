@@ -34,18 +34,18 @@ class VectorUtil {
    * @return The number of elements that pass the filter.
    */
   template <typename T, template <typename> typename Op>
-  [[nodiscard]] static u32 FilterVectorByVal(const T *RESTRICT in, const u32 in_count, const T val,
-                                             sel_t *RESTRICT out) {
+  [[nodiscard]] static uint32_t FilterVectorByVal(const T *RESTRICT in, const uint32_t in_count,
+                                                  const T val, sel_t *RESTRICT out) {
     // Simple check to make sure the provided filter operation returns bool
     static_assert(std::is_same_v<bool, std::invoke_result_t<Op<T>, T, T>>);
 
-    u32 in_pos = 0;
-    u32 out_pos = simd::FilterVectorByVal<T, Op>(in, in_count, val, out, &in_pos);
+    uint32_t in_pos = 0;
+    uint32_t out_pos = simd::FilterVectorByVal<T, Op>(in, in_count, val, out, &in_pos);
 
     for (; in_pos < in_count; in_pos++) {
       bool cmp = Op<T>()(in[in_pos], val);
       out[out_pos] = in_pos;
-      out_pos += static_cast<u32>(cmp);
+      out_pos += static_cast<uint32_t>(cmp);
     }
 
     return out_pos;
@@ -66,18 +66,18 @@ class VectorUtil {
    * @return The number of elements that pass the filter.
    */
   template <typename T, template <typename> typename Op>
-  [[nodiscard]] static u32 FilterVectorByVector(const T *RESTRICT in_1, const T *RESTRICT in_2,
-                                                const u32 in_count, sel_t *RESTRICT out) {
+  [[nodiscard]] static uint32_t FilterVectorByVector(const T *RESTRICT in_1, const T *RESTRICT in_2,
+                                                     const uint32_t in_count, sel_t *RESTRICT out) {
     // Simple check to make sure the provided filter operation returns bool
     static_assert(std::is_same_v<bool, std::invoke_result_t<Op<T>, T, T>>);
 
-    u32 in_pos = 0;
-    u32 out_pos = simd::FilterVectorByVector<T, Op>(in_1, in_2, in_count, out, &in_pos);
+    uint32_t in_pos = 0;
+    uint32_t out_pos = simd::FilterVectorByVector<T, Op>(in_1, in_2, in_count, out, &in_pos);
 
     for (; in_pos < in_count; in_pos++) {
       bool cmp = Op<T>()(in_1[in_pos], in_2[in_pos]);
       out[out_pos] = in_pos;
-      out_pos += static_cast<u32>(cmp);
+      out_pos += static_cast<uint32_t>(cmp);
     }
 
     return out_pos;
@@ -87,16 +87,16 @@ class VectorUtil {
   // Generate specialized vectorized filters
   // -------------------------------------------------------
 
-#define GEN_FILTER(Op, Comparison)                                                           \
-  template <typename T>                                                                      \
-  [[nodiscard]] static u32 Filter##Op(const T *RESTRICT in, const u32 in_count, const T val, \
-                                      sel_t *RESTRICT out) {                                 \
-    return FilterVectorByVal<T, Comparison>(in, in_count, val, out);                         \
-  }                                                                                          \
-  template <typename T>                                                                      \
-  [[nodiscard]] static u32 Filter##Op(const T *RESTRICT in_1, const T *RESTRICT in_2,        \
-                                      const u32 in_count, sel_t *RESTRICT out) {             \
-    return FilterVectorByVector<T, Comparison>(in_1, in_2, in_count, out);                   \
+#define GEN_FILTER(Op, Comparison)                                                         \
+  template <typename T>                                                                    \
+  [[nodiscard]] static uint32_t Filter##Op(const T *RESTRICT in, const uint32_t in_count,  \
+                                           const T val, sel_t *RESTRICT out) {             \
+    return FilterVectorByVal<T, Comparison>(in, in_count, val, out);                       \
+  }                                                                                        \
+  template <typename T>                                                                    \
+  [[nodiscard]] static uint32_t Filter##Op(const T *RESTRICT in_1, const T *RESTRICT in_2, \
+                                           const uint32_t in_count, sel_t *RESTRICT out) { \
+    return FilterVectorByVector<T, Comparison>(in_1, in_2, in_count, out);                 \
   }
   GEN_FILTER(Eq, std::equal_to)
   GEN_FILTER(Gt, std::greater)
@@ -118,9 +118,10 @@ class VectorUtil {
    *              intersection.
    * @return The number of elements in the output selection vector.
    */
-  [[nodiscard]] static u32
-      IntersectSelected(const sel_t *sel_vector_1, u32 sel_vector_1_len, const sel_t *sel_vector_2,
-                        u32 sel_vector_2_len, sel_t *out_sel_vector);
+  [[nodiscard]] static uint32_t
+      IntersectSelected(const sel_t *sel_vector_1, uint32_t sel_vector_1_len,
+                        const sel_t *sel_vector_2, uint32_t sel_vector_2_len,
+                        sel_t *out_sel_vector);
 
   /**
    * Intersect the sorted input selection vector @em v1 and the input bit vector
@@ -135,9 +136,9 @@ class VectorUtil {
    *                            of the intersection.
    * @return The number of elements in the output selection vector.
    */
-  [[nodiscard]] static u32 IntersectSelected(const sel_t *sel_vector, u32 sel_vector_len,
-                                             const u64 *bit_vector, u32 bit_vector_len,
-                                             sel_t *out_sel_vector);
+  [[nodiscard]] static uint32_t IntersectSelected(const sel_t *sel_vector, uint32_t sel_vector_len,
+                                                  const uint64_t *bit_vector,
+                                                  uint32_t bit_vector_len, sel_t *out_sel_vector);
 
   /**
    * Populate the output selection vector @em out_sel_vector with all indexes
@@ -149,8 +150,8 @@ class VectorUtil {
    * @param[out] out_sel_vector The output selection vector.
    * @return The number of elements in the output selection vector.
    */
-  [[nodiscard]] static u32 DiffSelected(u32 n, const sel_t *sel_vector, u32 sel_vector_len,
-                                        sel_t *out_sel_vector);
+  [[nodiscard]] static uint32_t DiffSelected(uint32_t n, const sel_t *sel_vector,
+                                             uint32_t sel_vector_len, sel_t *out_sel_vector);
 
   /**
    * Convert a selection vector into a byte vector. For each index stored in the
@@ -161,7 +162,8 @@ class VectorUtil {
    * @param sel_vector The input selection index vector.
    * @param[out] byte_vector The output byte vector.
    */
-  static void SelectionVectorToByteVector(const sel_t *sel_vector, u32 num_elems, u8 *byte_vector);
+  static void SelectionVectorToByteVector(const sel_t *sel_vector, uint32_t num_elems,
+                                          uint8_t *byte_vector);
 
   /**
    * Convert a byte vector into a selection vector. For all elements in the byte
@@ -173,8 +175,8 @@ class VectorUtil {
    * @param[out] sel_vector The output selection vector.
    * @return The number of elements in the selection vector.
    */
-  [[nodiscard]] static u32 ByteVectorToSelectionVector(const u8 *byte_vector, u32 num_bytes,
-                                                       sel_t *sel_vector);
+  [[nodiscard]] static uint32_t ByteVectorToSelectionVector(const uint8_t *byte_vector,
+                                                            uint32_t num_bytes, sel_t *sel_vector);
 
   /**
    * Convert a byte vector to a bit vector. For all elements in the byte vector
@@ -185,7 +187,8 @@ class VectorUtil {
    * @param byte_vector The input byte vector.
    * @param[out] bit_vector The output bit vector.
    */
-  static void ByteVectorToBitVector(const u8 *byte_vector, u32 num_bytes, u64 *bit_vector);
+  static void ByteVectorToBitVector(const uint8_t *byte_vector, uint32_t num_bytes,
+                                    uint64_t *bit_vector);
 
   /**
    * Convert a bit vector into a byte vector. For all set bits in the input bit
@@ -196,7 +199,8 @@ class VectorUtil {
    * @param bit_vector The input bit vector, passed along as an array of words.
    * @param byte_vector The output byte vector.
    */
-  static void BitVectorToByteVector(const u64 *bit_vector, u32 num_bits, u8 *byte_vector);
+  static void BitVectorToByteVector(const uint64_t *bit_vector, uint32_t num_bits,
+                                    uint8_t *byte_vector);
 
   /**
    * Convert a bit vector into a densely packed selection vector. For all bits
@@ -209,8 +213,8 @@ class VectorUtil {
    * @param[out] sel_vector The output selection vector.
    * @return The number of elements in the selection vector.
    */
-  [[nodiscard]] static u32 BitVectorToSelectionVector(const u64 *bit_vector, u32 num_bits,
-                                                      sel_t *sel_vector);
+  [[nodiscard]] static uint32_t BitVectorToSelectionVector(const uint64_t *bit_vector,
+                                                           uint32_t num_bits, sel_t *sel_vector);
 
  private:
   FRIEND_TEST(VectorUtilTest, IntersectScalar);
@@ -219,15 +223,16 @@ class VectorUtil {
   FRIEND_TEST(VectorUtilTest, PerfIntersectSelected);
 
   // A sorted-set difference implementation using purely scalar operations
-  [[nodiscard]] static u32 DiffSelected_Scalar(u32 n, const sel_t *sel_vector, u32 m,
-                                               sel_t *out_sel_vector);
+  [[nodiscard]] static uint32_t DiffSelected_Scalar(uint32_t n, const sel_t *sel_vector, uint32_t m,
+                                                    sel_t *out_sel_vector);
 
   // A sorted-set difference implementation that uses a little extra memory
   // (the scratchpad) and executes more instructions, but has better CPI, and is
   // faster in the common case.
-  [[nodiscard]] static u32 DiffSelected_WithScratchPad(u32 n, const sel_t *sel_vector,
-                                                       u32 sel_vector_len, sel_t *out_sel_vector,
-                                                       u8 *scratch);
+  [[nodiscard]] static uint32_t DiffSelected_WithScratchPad(uint32_t n, const sel_t *sel_vector,
+                                                            uint32_t sel_vector_len,
+                                                            sel_t *out_sel_vector,
+                                                            uint8_t *scratch);
 };
 
 }  // namespace tpl::util

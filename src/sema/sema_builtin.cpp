@@ -358,7 +358,7 @@ void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin)
     case ast::Builtin::AggInit:
     case ast::Builtin::AggReset: {
       // All arguments to @aggInit() or @aggReset() must be SQL aggregators
-      for (u32 idx = 0; idx < call->num_args(); idx++) {
+      for (uint32_t idx = 0; idx < call->num_args(); idx++) {
         if (!IsPointerToAggregatorValue(args[idx]->type())) {
           error_reporter()->Report(call->position(), ErrorMessages::kNotASQLAggregate,
                                    args[idx]->type());
@@ -952,7 +952,7 @@ void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call, const ast::B
       break;
     }
     case ast::Builtin::FilterManagerInsertFilter: {
-      for (u32 arg_idx = 1; arg_idx < call->num_args(); arg_idx++) {
+      for (uint32_t arg_idx = 1; arg_idx < call->num_args(); arg_idx++) {
         // clang-format off
         auto *arg_type = call->arguments()[arg_idx]->type()->SafeAs<ast::FunctionType>();
         if (arg_type == nullptr ||                                              // not a function

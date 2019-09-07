@@ -21,11 +21,11 @@ TEST_F(BytecodesTest, OperandCountTest) {
   EXPECT_EQ(2u, Bytecodes::NumOperands(Bytecode::JumpIfFalse));
 
   // Binary ops
-  EXPECT_EQ(3u, Bytecodes::NumOperands(Bytecode::Add_i32));
-  EXPECT_EQ(3u, Bytecodes::NumOperands(Bytecode::Mul_i32));
-  EXPECT_EQ(3u, Bytecodes::NumOperands(Bytecode::Div_i32));
-  EXPECT_EQ(3u, Bytecodes::NumOperands(Bytecode::Rem_i32));
-  EXPECT_EQ(3u, Bytecodes::NumOperands(Bytecode::Sub_i32));
+  EXPECT_EQ(3u, Bytecodes::NumOperands(Bytecode::Add_int32_t));
+  EXPECT_EQ(3u, Bytecodes::NumOperands(Bytecode::Mul_int32_t));
+  EXPECT_EQ(3u, Bytecodes::NumOperands(Bytecode::Div_int32_t));
+  EXPECT_EQ(3u, Bytecodes::NumOperands(Bytecode::Rem_int32_t));
+  EXPECT_EQ(3u, Bytecodes::NumOperands(Bytecode::Sub_int32_t));
 
   // Return has no arguments
   EXPECT_EQ(0u, Bytecodes::NumOperands(Bytecode::Return));
@@ -50,9 +50,9 @@ TEST_F(BytecodesTest, OperandSizeTest) {
   EXPECT_EQ(OperandSize::Int, Bytecodes::GetNthOperandSize(Bytecode::JumpIfFalse, 1));
 
   // Binary ops usually have three operands, all 4-byte register IDs
-  EXPECT_EQ(OperandSize::Int, Bytecodes::GetNthOperandSize(Bytecode::Add_i32, 0));
-  EXPECT_EQ(OperandSize::Int, Bytecodes::GetNthOperandSize(Bytecode::Add_i32, 1));
-  EXPECT_EQ(OperandSize::Int, Bytecodes::GetNthOperandSize(Bytecode::Add_i32, 2));
+  EXPECT_EQ(OperandSize::Int, Bytecodes::GetNthOperandSize(Bytecode::Add_int32_t, 0));
+  EXPECT_EQ(OperandSize::Int, Bytecodes::GetNthOperandSize(Bytecode::Add_int32_t, 1));
+  EXPECT_EQ(OperandSize::Int, Bytecodes::GetNthOperandSize(Bytecode::Add_int32_t, 2));
 }
 
 TEST_F(BytecodesTest, OperandOffsetTest) {
@@ -72,9 +72,9 @@ TEST_F(BytecodesTest, OperandOffsetTest) {
   EXPECT_EQ(8u, Bytecodes::GetNthOperandOffset(Bytecode::JumpIfFalse, 1));
 
   // Binary ops usually have three operands, all 4-byte register IDs
-  EXPECT_EQ(4u, Bytecodes::GetNthOperandOffset(Bytecode::Add_i32, 0));
-  EXPECT_EQ(8u, Bytecodes::GetNthOperandOffset(Bytecode::Add_i32, 1));
-  EXPECT_EQ(12u, Bytecodes::GetNthOperandOffset(Bytecode::Add_i32, 2));
+  EXPECT_EQ(4u, Bytecodes::GetNthOperandOffset(Bytecode::Add_int32_t, 0));
+  EXPECT_EQ(8u, Bytecodes::GetNthOperandOffset(Bytecode::Add_int32_t, 1));
+  EXPECT_EQ(12u, Bytecodes::GetNthOperandOffset(Bytecode::Add_int32_t, 2));
 }
 
 TEST_F(BytecodesTest, OperandTypesTest) {
@@ -93,9 +93,9 @@ TEST_F(BytecodesTest, OperandTypesTest) {
   EXPECT_EQ(OperandType::JumpOffset, Bytecodes::GetNthOperandType(Bytecode::JumpIfTrue, 1));
 
   // Binary ops usually have three operands, all 2-byte register IDs
-  EXPECT_EQ(OperandType::Local, Bytecodes::GetNthOperandType(Bytecode::Add_i32, 0));
-  EXPECT_EQ(OperandType::Local, Bytecodes::GetNthOperandType(Bytecode::Add_i32, 1));
-  EXPECT_EQ(OperandType::Local, Bytecodes::GetNthOperandType(Bytecode::Add_i32, 2));
+  EXPECT_EQ(OperandType::Local, Bytecodes::GetNthOperandType(Bytecode::Add_int32_t, 0));
+  EXPECT_EQ(OperandType::Local, Bytecodes::GetNthOperandType(Bytecode::Add_int32_t, 1));
+  EXPECT_EQ(OperandType::Local, Bytecodes::GetNthOperandType(Bytecode::Add_int32_t, 2));
 }
 
 }  // namespace tpl::vm
