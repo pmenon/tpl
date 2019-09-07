@@ -12,13 +12,6 @@ endif ()
 # ---- Setup initial CXX flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Werror -mcx16 -march=native")
 
-# ---- Set color diagnostics
-if(("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=auto")
-endif()
-
 ############################################################
 #
 # Configure all CXX flags
@@ -75,14 +68,16 @@ if (TPL_USE_GOLD)
 endif ()
 
 ############################################################
+# All executables that rely on code-generation need to be
+# correcty linked with -rdynamic; otherwise, LLVM can't find
+# dependent TPL symbols at runtime.
 #
-# We need to ensure we export all symbols so that LLVM can
-# pick up and resolve them when we JIT
-#
+# Rather than setting ENABLE_EXPORTS globally (as below),
+# each target has to explicitly enable the ENABLE_EXPORTS
+# target property.
 ############################################################
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
+#set(CMAKE_ENABLE_EXPORTS true)
 
 ############################################################
 #

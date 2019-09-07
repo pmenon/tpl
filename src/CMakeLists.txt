@@ -48,6 +48,7 @@ endfunction(tpl_compile_to_ir)
 # Build the "gen_opt_bc" executable. This is dependent on all cross-compiled bitcode
 # set up through tpl_compile_to_ir()
 add_executable(gen_opt_bc "${PROJECT_SOURCE_DIR}/src/vm/gen_opt_bc.cpp")
+set_target_properties(gen_opt_bc PROPERTIES ENABLE_EXPORTS true)
 target_link_libraries(gen_opt_bc ${TPL_LINK_LIBS})
 
 # Cross-compile the bytecode handlers
@@ -73,6 +74,7 @@ add_library(tpl_shared STATIC ${tpl_sources})
 set(tpl_main "${PROJECT_SOURCE_DIR}/src/tpl.cpp")
 add_executable(tpl ${tpl_main})
 add_dependencies(tpl gen_opt_bc)
+set_target_properties(tpl PROPERTIES ENABLE_EXPORTS true)
 target_link_libraries(tpl tpl_shared ${TPL_LINK_LIBS})
 
 ##################################################
