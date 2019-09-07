@@ -33,6 +33,23 @@ include_directories(SYSTEM ${TBB_INCLUDE_DIRS})
 list(APPEND TPL_LINK_LIBS ${TBB_LIBRARIES})
 
 ############################################################
+# xxHash
+############################################################
+
+option(BUILD_XXHSUM "Disable building xxhsum binary" OFF)
+option(XXHASH_BUNDLED_MODE "Indicate that we're building in bundled mode" ON)
+add_subdirectory(${THIRD_PARTY_DIR}/xxHash/cmake_unofficial)
+include_directories(SYSTEM "${THIRD_PARTY_DIR}/xxHash")
+
+############################################################
+# Libcount
+############################################################
+
+add_subdirectory(${THIRD_PARTY_DIR}/libcount)
+include_directories(SYSTEM "${THIRD_PARTY_DIR}/libcount/include")
+list(APPEND TPL_LINK_LIBS count)
+
+############################################################
 # Check Clang++ is available. Ideally, you should have
 # either Clang 7 or 6, otherwise your compiler is too
 # old to use with TPL.
@@ -71,36 +88,6 @@ include_directories(SYSTEM "${THIRD_PARTY_DIR}/spdlog/include")
 ############################################################
 
 include_directories(SYSTEM "${THIRD_PARTY_DIR}/xbyak")
-
-############################################################
-# xxHash
-############################################################
-
-option(BUILD_XXHSUM "Disable building xxhsum binary" OFF)
-option(XXHASH_BUNDLED_MODE "Indicate that we're building in bundled mode" ON)
-add_subdirectory(${THIRD_PARTY_DIR}/xxHash/cmake_unofficial)
-include_directories(SYSTEM "${THIRD_PARTY_DIR}/xxHash")
-
-############################################################
-# Libcount
-############################################################
-
-ExternalProject_Add(
-        libcount_build
-        PREFIX "${THIRD_PARTY_DIR}/libcount"
-        SOURCE_DIR "${THIRD_PARTY_DIR}/libcount"
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND make
-        INSTALL_COMMAND ""
-        BUILD_IN_SOURCE 1
-        LOG_BUILD 1
-)
-add_library(libcount STATIC IMPORTED)
-set_property(TARGET libcount PROPERTY IMPORTED_LOCATION ${THIRD_PARTY_DIR}/libcount/libcount.a)
-add_dependencies(libcount libcount_build)
-
-include_directories(SYSTEM "${THIRD_PARTY_DIR}/libcount/include")
-list(APPEND TPL_LINK_LIBS libcount)
 
 ############################################################
 # Google Test

@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
   const int kPrecision = 9;
 
   // Create an HLL object to track set cardinality.
-  HLL* hll = HLL::Create(kPrecision);
+  std::unique_ptr<HLL>  hll = HLL::Create(kPrecision);
 
   // Count 'kIterations' elements with 'kTrueCardinality' cardinality.
   const uint64_t kIterations = 1000000;
@@ -58,9 +58,6 @@ int main(int argc, char* argv[]) {
   // Display results.
   cout << "actual cardinality:    " << kTrueCardinality << endl;
   cout << "estimated cardinality: " << estimate << endl;
-
-  // Delete object.
-  delete hll;
 
   return 0;
 }

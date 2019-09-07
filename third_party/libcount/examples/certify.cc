@@ -88,7 +88,7 @@ int certify(int precision, uint64_t size, uint64_t cardinality,
   results->estimate = 0;
   results->percent_error = 0.0;
 
-  HLL* hll = HLL::Create(precision);
+  std::unique_ptr<HLL> hll = HLL::Create(precision);
   if (!hll) {
     return EINVAL;
   }
@@ -109,9 +109,6 @@ int certify(int precision, uint64_t size, uint64_t cardinality,
 
   // Report percentage error.
   results->percent_error = percent;
-
-  // Cleanup.
-  delete hll;
 
   return 0;
 }

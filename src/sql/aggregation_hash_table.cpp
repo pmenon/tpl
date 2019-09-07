@@ -161,7 +161,7 @@ void AggregationHashTable::AllocateOverflowPartitions() {
     partition_tails_ = memory_->AllocateArray<HashTableEntry *>(kDefaultNumPartitions, true);
     partition_estimates_ = memory_->AllocateArray<libcount::HLL *>(kDefaultNumPartitions, false);
     for (uint32_t i = 0; i < kDefaultNumPartitions; i++) {
-      partition_estimates_[i] = libcount::HLL::Create(kDefaultHLLPrecision);
+      partition_estimates_[i] = libcount::HLL::Create(kDefaultHLLPrecision).release();
     }
     partition_tables_ = memory_->AllocateArray<AggregationHashTable *>(kDefaultNumPartitions, true);
   }

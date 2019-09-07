@@ -43,8 +43,8 @@ int main(int argc, char* argv[]) {
   const int kPrecision = 14;
 
   // Create two HLL objects to track set cardinality.
-  HLL* hll_1 = HLL::Create(kPrecision);
-  HLL* hll_2 = HLL::Create(kPrecision);
+  std::unique_ptr<HLL> hll_1 = HLL::Create(kPrecision);
+  std::unique_ptr<HLL> hll_2 = HLL::Create(kPrecision);
 
   // Count 'kIterations' elements with 'kTrueCardinality' cardinality. In our
   // simulation, each object will get unique items, so that when we perform
@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Merge contents of hll_2 into hll_1.
-  hll_1->Merge(hll_2);
+  hll_1->Merge(hll_2.get());
 
   // Obtain the cardinality estimate.
   const uint64_t estimate = hll_1->Estimate();
@@ -66,10 +66,6 @@ int main(int argc, char* argv[]) {
   // Display results.
   cout << "actual cardinality:    " << (kTrueCardinality * 2) << endl;
   cout << "estimated cardinality: " << estimate << endl;
-
-  // Delete object.
-  delete hll_2;
-  delete hll_1;
 
   return 0;
 }

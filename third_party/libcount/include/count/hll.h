@@ -17,7 +17,9 @@
 #define INCLUDE_COUNT_HLL_H_
 
 #include <assert.h>
+#include <memory>
 #include <stdint.h>
+#include <algorithm>
 #include <vector>
 #include "count/hll_limits.h"
 #include "count/utility.h"
@@ -32,7 +34,7 @@ class HLL {
   // for precision are [4..18] inclusive, and govern the precision of the
   // estimate. Returns NULL on failure. In the event of failure, the caller
   // may provide a pointer to an integer to learn the reason.
-  static HLL* Create(int precision, int* error = 0);
+  static std::unique_ptr<HLL> Create(int precision, int* error = 0);
 
   // Update the instance to record the observation of an element. It is
   // assumed that the caller uses a high-quality 64-bit hash function that
@@ -101,9 +103,7 @@ inline void HLL::Update(const uint64_t hash) {
   assert(count <= 64);
 
   // Update the appropriate register if the new count is greater than current.
-  if (count > registers_[index]) {
-    registers_[index] = count;
-  }
+  registers_[index] = std::max(registers_[index], count);
 }
 
 }  // namespace libcount

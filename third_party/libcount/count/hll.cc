@@ -56,12 +56,13 @@ HLL::HLL(int precision)
 
 HLL::~HLL() { delete[] registers_; }
 
-HLL* HLL::Create(int precision, int* error) {
+std::unique_ptr<HLL> HLL::Create(int precision, int* error) {
   if ((precision < HLL_MIN_PRECISION) || (precision > HLL_MAX_PRECISION)) {
     MaybeAssign(error, EINVAL);
     return NULL;
   }
-  return new HLL(precision);
+  // Can't use std::make_unique() because the HLL constructor is private.
+  return std::unique_ptr<HLL>(new HLL(precision));
 }
 
 void HLL::UpdateMany(const uint64_t *const hashes, int num_hashes) {
