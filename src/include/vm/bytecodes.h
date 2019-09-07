@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <cstdint>
 
-#include "util/common.h"
-#include "util/macros.h"
+#include "common/common.h"
+#include "common/macros.h"
 #include "vm/bytecode_operands.h"
 
 namespace tpl::vm {

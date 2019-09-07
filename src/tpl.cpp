@@ -13,6 +13,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 #include "ast/ast_dump.h"
+#include "common/cpu_info.h"
 #include "logging/logger.h"
 #include "parsing/parser.h"
 #include "parsing/scanner.h"
@@ -21,7 +22,6 @@
 #include "sql/catalog.h"
 #include "sql/execution_context.h"
 #include "tpl.h"  // NOLINT
-#include "util/cpu_info.h"
 #include "util/timer.h"
 #include "vm/bytecode_generator.h"
 #include "vm/bytecode_module.h"

@@ -2,8 +2,9 @@
 
 #include <cstdint>
 
-#include "util/common.h"
+#include "common/common.h"
 
+#include "common/macros.h"
 #include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
 #include "sql/execution_context.h"
@@ -19,7 +20,6 @@
 #include "sql/thread_state_container.h"
 #include "sql/vector_filter_executor.h"
 #include "util/hash.h"
-#include "util/macros.h"
 
 // All VM bytecode op handlers must use this macro
 #define VM_OP

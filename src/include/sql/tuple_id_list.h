@@ -4,8 +4,8 @@
 #include <string>
 #include <type_traits>
 
+#include "common/macros.h"
 #include "util/bit_vector.h"
-#include "util/macros.h"
 
 namespace tpl::sql {
 

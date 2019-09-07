@@ -3,9 +3,9 @@
 #include <cstdint>
 #include <string>
 
+#include "common/common.h"
+#include "common/macros.h"
 #include "parsing/token.h"
-#include "util/common.h"
-#include "util/macros.h"
 
 namespace tpl::parsing {
 

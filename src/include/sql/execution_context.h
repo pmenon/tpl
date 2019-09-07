@@ -1,8 +1,8 @@
 #pragma once
 
+#include "common/common.h"
+#include "common/macros.h"
 #include "sql/memory_pool.h"
-#include "util/common.h"
-#include "util/macros.h"
 #include "util/region.h"
 
 namespace tpl::sql {

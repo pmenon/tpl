@@ -3,11 +3,11 @@
 #include <iostream>
 #include <string>
 
+#include "common/macros.h"
 #include "sql/constant_vector.h"
 #include "sql/value.h"
 #include "sql/vector.h"
 #include "sql/vector_operations/vector_operators.h"
-#include "util/macros.h"
 #include "util/math_util.h"
 
 namespace tpl::sql {

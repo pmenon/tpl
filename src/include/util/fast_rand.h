@@ -2,7 +2,7 @@
 
 #include <random>
 
-#include "util/common.h"
+#include "common/common.h"
 
 namespace tpl::util {
 

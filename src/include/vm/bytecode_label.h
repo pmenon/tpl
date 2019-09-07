@@ -3,7 +3,7 @@
 #include <limits>
 #include <vector>
 
-#include "util/macros.h"
+#include "common/macros.h"
 
 namespace tpl::vm {
 

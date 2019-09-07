@@ -3,7 +3,7 @@
 #include <random>
 #include <vector>
 
-#include "util/common.h"
+#include "common/common.h"
 
 namespace tpl::bandit {
 

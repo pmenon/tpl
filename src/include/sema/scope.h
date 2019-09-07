@@ -3,7 +3,7 @@
 #include "llvm/ADT/DenseMap.h"
 
 #include "ast/identifier.h"
-#include "util/common.h"
+#include "common/common.h"
 
 namespace tpl {
 

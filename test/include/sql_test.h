@@ -23,7 +23,7 @@ class SqlBasedTest : public TplTest {
 };
 
 #define MAKE_VEC_TYPE(TYPE, CPP_TYPE)                                                              \
-  static inline std::unique_ptr<sql::Vector> Make##TYPE##Vector(uint32_t size) {                        \
+  static inline std::unique_ptr<sql::Vector> Make##TYPE##Vector(uint32_t size) {                   \
     return std::make_unique<sql::Vector>(sql::TypeId::TYPE, size, true);                           \
   }                                                                                                \
   static inline std::unique_ptr<sql::Vector> Make##TYPE##Vector() {                                \
@@ -32,7 +32,7 @@ class SqlBasedTest : public TplTest {
   static inline std::unique_ptr<sql::Vector> Make##TYPE##Vector(const std::vector<CPP_TYPE> &vals, \
                                                                 const std::vector<bool> &nulls) {  \
     auto vec = Make##TYPE##Vector(vals.size());                                                    \
-    for (uint64_t i = 0; i < vals.size(); i++) {                                                        \
+    for (uint64_t i = 0; i < vals.size(); i++) {                                                   \
       if (nulls[i]) {                                                                              \
         vec->SetValue(i, sql::GenericValue::CreateNull(vec->type_id()));                           \
       } else {                                                                                     \

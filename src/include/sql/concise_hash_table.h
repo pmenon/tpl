@@ -4,9 +4,9 @@
 #include <memory>
 #include <utility>
 
+#include "common/common.h"
 #include "sql/hash_table_entry.h"
 #include "util/bit_util.h"
-#include "util/common.h"
 #include "util/memory.h"
 
 namespace tpl::sql {

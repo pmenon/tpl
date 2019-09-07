@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "util/macros.h"
+#include "common/macros.h"
 #include "util/timer.h"
 
 namespace tpl::util {

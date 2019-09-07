@@ -3,7 +3,7 @@
 #include <bitset>
 #include <string>
 
-#include "util/common.h"
+#include "common/common.h"
 
 namespace llvm {
 class StringRef;

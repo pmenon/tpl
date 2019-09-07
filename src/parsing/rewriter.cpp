@@ -9,7 +9,7 @@
 #include "ast/ast_node_factory.h"
 #include "ast/context.h"
 #include "ast/type.h"
-#include "util/macros.h"
+#include "common/macros.h"
 
 namespace tpl::parsing {
 

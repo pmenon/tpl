@@ -17,7 +17,9 @@ struct TestEntry : public HashTableEntry {
 
   TestEntry() : HashTableEntry(), key(0), value(0) { hash = Hash(); }
 
-  TestEntry(uint32_t key, uint32_t value) : HashTableEntry(), key(key), value(value) { hash = Hash(); }
+  TestEntry(uint32_t key, uint32_t value) : HashTableEntry(), key(key), value(value) {
+    hash = Hash();
+  }
 
   hash_t Hash() { return util::Hasher::Hash(key); }
 

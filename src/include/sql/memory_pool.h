@@ -6,8 +6,8 @@
 #include <utility>
 #include <vector>
 
-#include "util/common.h"
-#include "util/macros.h"
+#include "common/common.h"
+#include "common/macros.h"
 #include "util/spin_latch.h"
 
 namespace tpl::sql {

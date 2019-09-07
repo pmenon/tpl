@@ -5,10 +5,10 @@
 
 #include "gtest/gtest.h"
 
+#include "common/common.h"
+#include "common/cpu_info.h"
 #include "logging/logger.h"
 #include "util/barrier.h"
-#include "util/common.h"
-#include "util/cpu_info.h"
 #include "util/timer.h"
 
 namespace tpl {

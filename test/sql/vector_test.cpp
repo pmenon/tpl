@@ -345,14 +345,14 @@ TEST_F(VectorTest, SafeDownCast) {
 #define CHECK_CAST(SRC_TYPE, DEST_TYPE)                               \
   {                                                                   \
     Vector vec(TypeId::SRC_TYPE, 10, true);                           \
-    for (uint32_t i = 0; i < 10; i++) {                                    \
+    for (uint32_t i = 0; i < 10; i++) {                               \
       vec.SetValue(i, GenericValue::Create##SRC_TYPE(i));             \
     }                                                                 \
     EXPECT_NO_THROW(vec.Cast(TypeId::DEST_TYPE));                     \
     EXPECT_TRUE(vec.type_id() == TypeId::DEST_TYPE);                  \
     EXPECT_EQ(10u, vec.count());                                      \
     EXPECT_EQ(nullptr, vec.selection_vector());                       \
-    for (uint64_t i = 0; i < vec.count(); i++) {                           \
+    for (uint64_t i = 0; i < vec.count(); i++) {                      \
       EXPECT_EQ(GenericValue::Create##DEST_TYPE(i), vec.GetValue(i)); \
     }                                                                 \
   }

@@ -3,8 +3,8 @@
 #include <numeric>
 #include <string>
 
+#include "common/common.h"
 #include "sql/value.h"
-#include "util/common.h"
 #include "util/memory.h"
 #include "vm/bytecode_function_info.h"
 #include "vm/bytecode_handlers.h"

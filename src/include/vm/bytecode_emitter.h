@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "util/common.h"
+#include "common/common.h"
 #include "vm/bytecode_function_info.h"
 #include "vm/bytecodes.h"
 

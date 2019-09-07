@@ -3,10 +3,10 @@
 #include <limits>
 #include <type_traits>
 
+#include "common/common.h"
+#include "common/macros.h"
 #include "sql/vector_projection.h"
 #include "util/bit_util.h"
-#include "util/common.h"
-#include "util/macros.h"
 
 namespace tpl::sql {
 

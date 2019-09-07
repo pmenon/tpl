@@ -18,7 +18,7 @@ TEST_F(VectorGenerateTest, Simple) {
   {                                                          \
     auto vec = Make##TYPE##Vector(num_elems);                \
     VectorOps::Generate(vec.get(), 1, 2);                    \
-    for (uint64_t i = 0; i < vec->count(); i++) {                 \
+    for (uint64_t i = 0; i < vec->count(); i++) {            \
       auto val = vec->GetValue(i);                           \
       EXPECT_FALSE(val.is_null());                           \
       EXPECT_EQ(GenericValue::Create##TYPE(2 * i + 1), val); \

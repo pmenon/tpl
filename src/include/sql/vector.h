@@ -6,11 +6,11 @@
 #include <string>
 #include <utility>
 
+#include "common/common.h"
+#include "common/macros.h"
 #include "sql/generic_value.h"
 #include "sql/sql.h"
 #include "util/bit_vector.h"
-#include "util/common.h"
-#include "util/macros.h"
 #include "util/region.h"
 
 namespace tpl::sql {

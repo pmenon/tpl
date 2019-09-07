@@ -4,7 +4,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 
-#include "util/macros.h"
+#include "common/macros.h"
 
 namespace tpl::ast {
 

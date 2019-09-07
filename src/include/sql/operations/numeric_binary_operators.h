@@ -2,8 +2,8 @@
 
 #include <cmath>
 
+#include "common/macros.h"
 #include "util/arithmetic_overflow.h"
-#include "util/macros.h"
 
 namespace tpl::sql {
 

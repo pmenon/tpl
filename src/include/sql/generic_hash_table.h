@@ -3,10 +3,10 @@
 #include <atomic>
 #include <utility>
 
+#include "common/common.h"
+#include "common/macros.h"
 #include "sql/hash_table_entry.h"
 #include "sql/memory_pool.h"
-#include "util/common.h"
-#include "util/macros.h"
 #include "util/memory.h"
 
 namespace tpl::sql {

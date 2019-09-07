@@ -5,8 +5,8 @@
 #include <memory>
 #include <string>
 
+#include "common/common.h"
 #include "util/bit_util.h"
-#include "util/common.h"
 #include "util/math_util.h"
 #include "util/vector_util.h"
 

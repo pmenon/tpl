@@ -1,4 +1,4 @@
-#include "util/cpu_info.h"
+#include "common/cpu_info.h"
 
 #include <algorithm>
 #include <memory>
@@ -18,8 +18,8 @@
 #include <iomanip>
 #include <sstream>
 
+#include "common/macros.h"
 #include "logging/logger.h"
-#include "util/macros.h"
 
 namespace tpl {
 

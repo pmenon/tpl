@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "util/common.h"
-#include "util/macros.h"
+#include "common/common.h"
+#include "common/macros.h"
 
 namespace tpl::vm {
 class Module;

@@ -6,9 +6,9 @@
 #include <utility>
 #include <vector>
 
+#include "common/common.h"
+#include "common/macros.h"
 #include "util/bitfield.h"
-#include "util/common.h"
-#include "util/macros.h"
 
 namespace tpl {
 

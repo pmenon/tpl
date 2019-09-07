@@ -7,11 +7,11 @@
 #include <utility>
 #include <vector>
 
+#include "common/common.h"
+#include "common/macros.h"
 #include "sql/column_segment.h"
 #include "sql/schema.h"
 #include "sql/value.h"
-#include "util/common.h"
-#include "util/macros.h"
 
 extern int32_t current_partition;
 

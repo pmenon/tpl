@@ -3,7 +3,7 @@
 #include <functional>
 #include <vector>
 
-#include "util/common.h"
+#include "common/common.h"
 
 namespace tpl::sql {
 

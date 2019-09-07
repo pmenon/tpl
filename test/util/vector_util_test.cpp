@@ -295,8 +295,8 @@ TEST_F(VectorUtilTest, VectorVectorFilter) {
 
 #define CHECK(op, expected_count)                                                     \
   {                                                                                   \
-    uint32_t count = 0;                                                                    \
-    for (uint32_t offset = 0; offset < num_elems; offset += kDefaultVectorSize) {          \
+    uint32_t count = 0;                                                               \
+    for (uint32_t offset = 0; offset < num_elems; offset += kDefaultVectorSize) {     \
       auto size = std::min(kDefaultVectorSize, num_elems - offset);                   \
       auto found = VectorUtil::Filter##op(&arr_1[offset], &arr_2[offset], size, out); \
       count += found;                                                                 \
@@ -320,18 +320,18 @@ TEST_F(VectorUtilTest, VectorVectorFilter) {
 #define CHECK(vec_op, scalar_op)                                                          \
   {                                                                                       \
     std::random_device random;                                                            \
-    for (uint32_t idx = 0; idx < num_elems; idx++) {                                           \
+    for (uint32_t idx = 0; idx < num_elems; idx++) {                                      \
       arr_1[idx] = (random() % 100);                                                      \
       arr_2[idx] = (random() % 100);                                                      \
     }                                                                                     \
-    uint32_t vec_count = 0, scalar_count = 0;                                                  \
-    for (uint32_t offset = 0; offset < num_elems; offset += kDefaultVectorSize) {              \
+    uint32_t vec_count = 0, scalar_count = 0;                                             \
+    for (uint32_t offset = 0; offset < num_elems; offset += kDefaultVectorSize) {         \
       auto size = std::min(kDefaultVectorSize, num_elems - offset);                       \
       /* Vector filter*/                                                                  \
       auto found = VectorUtil::Filter##vec_op(&arr_1[offset], &arr_2[offset], size, out); \
       vec_count += found;                                                                 \
       /* Scalar filter */                                                                 \
-      for (uint32_t iter = offset, end = iter + size; iter != end; iter++) {                   \
+      for (uint32_t iter = offset, end = iter + size; iter != end; iter++) {              \
         scalar_count += arr_1[iter] scalar_op arr_2[iter];                                \
       }                                                                                   \
     }                                                                                     \
@@ -351,7 +351,7 @@ TEST_F(VectorUtilTest, VectorVectorFilter) {
 TEST_F(VectorUtilTest, ByteToSelectionVector) {
   constexpr uint32_t n = 14;
   uint8_t bytes[n] = {0xFF, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00,
-                 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00};
+                      0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00};
   sel_t sel[n];
 
   uint32_t size = VectorUtil::ByteVectorToSelectionVector(bytes, n, sel);

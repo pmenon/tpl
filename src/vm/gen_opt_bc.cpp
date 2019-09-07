@@ -6,8 +6,8 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 
-#include "util/common.h"
-#include "util/macros.h"
+#include "common/common.h"
+#include "common/macros.h"
 
 //
 // This is a stand-alone executable that reads a bitcode file, cleans, and

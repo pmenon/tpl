@@ -355,7 +355,8 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfInsertTest) {
 
   auto chunked_ms = Bench(3, []() {
     util::Region tmp("tmp");
-    ChunkedVectorT<uint32_t, StlRegionAllocator<uint32_t>> v{util::StlRegionAllocator<uint32_t>(&tmp)};
+    ChunkedVectorT<uint32_t, StlRegionAllocator<uint32_t>> v{
+        util::StlRegionAllocator<uint32_t>(&tmp)};
     for (uint32_t i = 0; i < 10000000; i++) {
       v.push_back(i);
     }
@@ -373,7 +374,8 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfScanTest) {
   util::Region tmp("vec"), tmp2("deque"), tmp3("chunk");
   std::vector<uint32_t, StlRegionAllocator<uint32_t>> stdvec{StlRegionAllocator<uint32_t>(&tmp)};
   std::deque<uint32_t, StlRegionAllocator<uint32_t>> stddeque{StlRegionAllocator<uint32_t>(&tmp2)};
-  ChunkedVectorT<uint32_t, StlRegionAllocator<uint32_t>> chunkedvec{util::StlRegionAllocator<uint32_t>(&tmp3)};
+  ChunkedVectorT<uint32_t, StlRegionAllocator<uint32_t>> chunkedvec{
+      util::StlRegionAllocator<uint32_t>(&tmp3)};
   for (uint32_t i = 0; i < num_elems; i++) {
     stdvec.push_back(i);
     stddeque.push_back(i);
@@ -418,7 +420,8 @@ TEST_F(ChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
   util::Region tmp("vec"), tmp2("deque"), tmp3("chunk");
   std::vector<uint32_t, StlRegionAllocator<uint32_t>> stdvec{StlRegionAllocator<uint32_t>(&tmp)};
   std::deque<uint32_t, StlRegionAllocator<uint32_t>> stddeque{StlRegionAllocator<uint32_t>(&tmp2)};
-  ChunkedVectorT<uint32_t, StlRegionAllocator<uint32_t>> chunkedvec{util::StlRegionAllocator<uint32_t>(&tmp3)};
+  ChunkedVectorT<uint32_t, StlRegionAllocator<uint32_t>> chunkedvec{
+      util::StlRegionAllocator<uint32_t>(&tmp3)};
   for (uint32_t i = 0; i < num_elems; i++) {
     stdvec.push_back(i % 4);
     stddeque.push_back(i % 4);

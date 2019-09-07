@@ -6,10 +6,10 @@
 #include <string>
 #include <vector>
 
+#include "common/common.h"
+#include "common/macros.h"
 #include "sql/schema.h"
 #include "sql/vector.h"
-#include "util/common.h"
-#include "util/macros.h"
 
 namespace tpl::sql {
 

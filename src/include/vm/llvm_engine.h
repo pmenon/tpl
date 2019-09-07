@@ -6,8 +6,8 @@
 
 #include "llvm/Support/MemoryBuffer.h"
 
-#include "util/common.h"
-#include "util/macros.h"
+#include "common/common.h"
+#include "common/macros.h"
 #include "vm/bytecodes.h"
 
 namespace tpl::ast {

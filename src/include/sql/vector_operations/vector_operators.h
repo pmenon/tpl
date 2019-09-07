@@ -1,8 +1,8 @@
 #pragma once
 
+#include "common/common.h"
 #include "sql/generic_value.h"
 #include "sql/vector.h"
-#include "util/common.h"
 
 namespace tpl::sql {
 
@@ -208,6 +208,14 @@ class VectorOps {
    * @return The number of elements selected.
    */
   static uint32_t SelectNotEqual(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
+
+  static void SelectEqual(const Vector &left, const Vector &right, TupleIdList *tid_list);
+  static void SelectGreaterThan(const Vector &left, const Vector &right, TupleIdList *tid_list);
+  static void SelectGreaterThanEqual(const Vector &left, const Vector &right,
+                                     TupleIdList *tid_list);
+  static void SelectLessThan(const Vector &left, const Vector &right, TupleIdList *tid_list);
+  static void SelectLessThanEqual(const Vector &left, const Vector &right, TupleIdList *tid_list);
+  static void SelectNotEqual(const Vector &left, const Vector &right, TupleIdList *tid_list);
 
   // -------------------------------------------------------
   //

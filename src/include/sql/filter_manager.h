@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "bandit/policy.h"
-#include "util/common.h"
-#include "util/macros.h"
+#include "common/common.h"
+#include "common/macros.h"
 
 namespace tpl::sql {
 

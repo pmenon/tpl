@@ -2,7 +2,7 @@
 
 #include <tbb/spin_mutex.h>  // NOLINT
 
-#include "util/macros.h"
+#include "common/macros.h"
 
 namespace tpl::util {
 

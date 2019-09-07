@@ -4,9 +4,9 @@
 
 #include "llvm/Support/Casting.h"
 
+#include "common/common.h"
+#include "common/macros.h"
 #include "sql/sql.h"
-#include "util/common.h"
-#include "util/macros.h"
 
 namespace tpl::sql {
 

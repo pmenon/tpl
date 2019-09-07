@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "bandit/policy.h"
-#include "util/common.h"
+#include "common/common.h"
 
 namespace tpl::bandit {
 

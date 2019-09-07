@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "ast/identifier.h"
-#include "util/common.h"
+#include "common/common.h"
 
 namespace tpl::sql {
 

@@ -16,15 +16,15 @@
 #include "sql/thread_state_container.h"
 
 #define TestAllSigned(FuncName, Args...) \
-  FuncName<int8_t>(Args);                    \
-  FuncName<int16_t>(Args);                   \
-  FuncName<int32_t>(Args);                   \
+  FuncName<int8_t>(Args);                \
+  FuncName<int16_t>(Args);               \
+  FuncName<int32_t>(Args);               \
   FuncName<int64_t>(Args);
 
 #define TestAllUnsigned(FuncName, Args...) \
-  FuncName<uint8_t>(Args);                      \
-  FuncName<uint16_t>(Args);                     \
-  FuncName<uint32_t>(Args);                     \
+  FuncName<uint8_t>(Args);                 \
+  FuncName<uint16_t>(Args);                \
+  FuncName<uint32_t>(Args);                \
   FuncName<uint64_t>(Args);
 
 #define TestAllIntegral(FuncName, Args...) \
@@ -38,11 +38,12 @@ class SorterTest : public TplTest {
 };
 
 template <typename IntType, typename Random>
-void TestSortRandomTupleSize(const uint32_t num_iters, const uint32_t max_elems, Random *generator) {
+void TestSortRandomTupleSize(const uint32_t num_iters, const uint32_t max_elems,
+                             Random *generator) {
   std::uniform_int_distribution<IntType> rng(std::numeric_limits<IntType>::min(),
                                              std::numeric_limits<IntType>::max());
   std::uniform_int_distribution<uint32_t> rng_elems(std::numeric_limits<uint32_t>::min(),
-                                               std::numeric_limits<uint32_t>::max());
+                                                    std::numeric_limits<uint32_t>::max());
 
   // We insert tuples of size IntType. It would be nice to std::memcmp, but
   // cmp_fn must be a function pointer which means the lambda cannot capture
@@ -91,11 +92,12 @@ void TestSortRandomTupleSize(const uint32_t num_iters, const uint32_t max_elems,
 }
 
 template <typename IntType, typename Random>
-void TestTopKRandomTupleSize(const uint32_t num_iters, const uint32_t max_elems, Random *generator) {
+void TestTopKRandomTupleSize(const uint32_t num_iters, const uint32_t max_elems,
+                             Random *generator) {
   std::uniform_int_distribution<IntType> rng(std::numeric_limits<IntType>::min(),
                                              std::numeric_limits<IntType>::max());
   std::uniform_int_distribution<uint32_t> rng_elems(std::numeric_limits<uint32_t>::min(),
-                                               std::numeric_limits<uint32_t>::max());
+                                                    std::numeric_limits<uint32_t>::max());
 
   // We insert tuples of size IntType. It would be nice to std::memcmp, but
   // cmp_fn must be a function pointer which means the lambda cannot capture
@@ -282,7 +284,7 @@ void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
   main.SortParallel(&container, 0);
 
   uint32_t expected_total_size = std::accumulate(sorter_sizes.begin(), sorter_sizes.end(), 0u,
-                                            [](auto p, auto s) { return p + s; });
+                                                 [](auto p, auto s) { return p + s; });
 
   EXPECT_TRUE(main.is_sorted());
   EXPECT_EQ(expected_total_size, main.NumTuples());

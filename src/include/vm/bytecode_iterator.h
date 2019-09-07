@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "util/common.h"
+#include "common/common.h"
 #include "vm/bytecodes.h"
 
 namespace tpl::vm {

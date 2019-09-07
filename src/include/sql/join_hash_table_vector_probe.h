@@ -1,8 +1,8 @@
 #pragma once
 
+#include "common/common.h"
 #include "sql/hash_table_entry.h"
 #include "sql/vector_projection_iterator.h"
-#include "util/common.h"
 
 namespace tpl::sql {
 

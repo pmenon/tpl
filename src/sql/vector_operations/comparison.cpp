@@ -1,8 +1,8 @@
 #include "sql/vector_operations/vector_operators.h"
 
+#include "common/common.h"
 #include "sql/operations/comparison_operators.h"
 #include "sql/vector_operations/binary_op_helpers.h"
-#include "util/common.h"
 
 namespace tpl::sql {
 

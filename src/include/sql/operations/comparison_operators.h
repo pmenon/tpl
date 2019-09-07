@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cstring>
 
-#include "util/common.h"
+#include "common/common.h"
 
 namespace tpl::sql {
 

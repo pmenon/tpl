@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/common.h"
+#include "common/common.h"
 
 namespace tpl::ast {
 

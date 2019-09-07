@@ -2,8 +2,8 @@
 
 #include <immintrin.h>
 
-#include "util/common.h"
-#include "util/macros.h"
+#include "common/common.h"
+#include "common/macros.h"
 #include "util/simd/types.h"
 
 #ifndef SIMD_TOP_LEVEL
@@ -73,9 +73,9 @@ class Vec4 : public Vec256b {
   Vec4 &Load(const uint64_t *ptr) { return Load(reinterpret_cast<const int64_t *>(ptr)); }
 
 #ifdef __APPLE__
-  static_assert(sizeof(long) == sizeof(i64), "On MacOS, long isn't 64-bits!");
-  Vec4 &Load(const long *ptr) { return Load(reinterpret_cast<const i64 *>(ptr)); }
-  Vec4 &Load(const unsigned long *ptr) { return Load(reinterpret_cast<const i64 *>(ptr)); }
+  static_assert(sizeof(long) == sizeof(int64_t), "On MacOS, long isn't 64-bits!");
+  Vec4 &Load(const long *ptr) { return Load(reinterpret_cast<const int64_t *>(ptr)); }
+  Vec4 &Load(const unsigned long *ptr) { return Load(reinterpret_cast<const int64_t *>(ptr)); }
 #endif
 
   /// Gather non-contiguous elements from the input array \a ptr stored at

@@ -4,10 +4,10 @@
 #include <memory>
 #include <vector>
 
+#include "common/macros.h"
 #include "sql/memory_pool.h"
 #include "sql/schema.h"
 #include "util/chunked_vector.h"
-#include "util/macros.h"
 
 namespace tpl::sql {
 

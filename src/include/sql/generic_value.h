@@ -4,8 +4,8 @@
 #include <string>
 #include <string_view>
 
+#include "common/common.h"
 #include "sql/data_types.h"
-#include "util/common.h"
 
 namespace tpl::sql {
 

@@ -9,10 +9,10 @@
 
 #include "count/hll.h"
 
+#include "common/cpu_info.h"
 #include "logging/logger.h"
 #include "sql/memory_pool.h"
 #include "sql/thread_state_container.h"
-#include "util/cpu_info.h"
 #include "util/memory.h"
 #include "util/timer.h"
 

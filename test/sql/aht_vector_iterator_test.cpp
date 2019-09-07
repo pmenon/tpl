@@ -92,8 +92,8 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
     return ret;
   }
 
-  static void PopulateAggHT(AggregationHashTable *aht, const uint32_t num_aggs, const uint32_t num_rows,
-                            uint32_t cola = 1) {
+  static void PopulateAggHT(AggregationHashTable *aht, const uint32_t num_aggs,
+                            const uint32_t num_rows, uint32_t cola = 1) {
     for (uint32_t i = 0; i < num_rows; i++) {
       auto input = InputTuple(i % num_aggs, cola);
       auto existing =

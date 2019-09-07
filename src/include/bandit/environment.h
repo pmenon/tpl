@@ -4,7 +4,7 @@
 
 #include "bandit/agent.h"
 #include "bandit/multi_armed_bandit.h"
-#include "util/common.h"
+#include "common/common.h"
 
 namespace tpl::bandit {
 

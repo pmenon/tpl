@@ -4,7 +4,7 @@
 #include <cmath>
 #include <stdexcept>
 
-#include "util/common.h"
+#include "common/common.h"
 
 namespace tpl::sql {
 

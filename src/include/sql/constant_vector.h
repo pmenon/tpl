@@ -13,6 +13,8 @@ class ConstantVector : public Vector {
     Reference(&value_);
   }
 
+  const GenericValue &GetConstantValue() const { return value_; }
+
  private:
   GenericValue value_;
 };

@@ -1,7 +1,7 @@
 #pragma once
 
+#include "common/common.h"
 #include "logging/logger.h"
-#include "util/common.h"
 #include "util/region_containers.h"
 #include "vm/bytecode_function_info.h"
 #include "vm/bytecodes.h"

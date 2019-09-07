@@ -6,7 +6,7 @@
 #include <string_view>
 #include <type_traits>
 
-#include "util/macros.h"
+#include "common/macros.h"
 #include "util/math_util.h"
 
 namespace tpl::util {

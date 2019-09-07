@@ -1,9 +1,9 @@
 #pragma once
 
+#include "common/common.h"
+#include "common/macros.h"
 #include "sql/data_types.h"
 #include "util/bit_util.h"
-#include "util/common.h"
-#include "util/macros.h"
 
 namespace tpl::sql {
 

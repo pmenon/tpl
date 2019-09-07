@@ -90,7 +90,8 @@ TEST_F(BytecodeTrampolineTest, IntFunctionTest) {
 
     EXPECT_FALSE(compiler.HasErrors());
 
-    auto fn = reinterpret_cast<int32_t (*)(int32_t, int32_t, int32_t)>(GetTrampoline(*module, "sub3"));
+    auto fn =
+        reinterpret_cast<int32_t (*)(int32_t, int32_t, int32_t)>(GetTrampoline(*module, "sub3"));
 
     EXPECT_EQ(-10, fn(10, 10, 10));
     EXPECT_EQ(10, fn(30, 10, 10));
@@ -109,7 +110,8 @@ TEST_F(BytecodeTrampolineTest, BigIntFunctionTest) {
 
     EXPECT_FALSE(compiler.HasErrors());
 
-    auto fn = reinterpret_cast<int64_t (*)(int64_t, int64_t, int64_t)>(GetTrampoline(*module, "mul3"));
+    auto fn =
+        reinterpret_cast<int64_t (*)(int64_t, int64_t, int64_t)>(GetTrampoline(*module, "mul3"));
 
     EXPECT_EQ(6, fn(1, 2, 3));
     EXPECT_EQ(-6, fn(-1, 2, 3));
@@ -128,7 +130,8 @@ TEST_F(BytecodeTrampolineTest, VoidReturnTest) {
 
     EXPECT_FALSE(compiler.HasErrors());
 
-    auto fn = reinterpret_cast<void (*)(int64_t *, int64_t *, int64_t *)>(GetTrampoline(*module, "mul2"));
+    auto fn =
+        reinterpret_cast<void (*)(int64_t *, int64_t *, int64_t *)>(GetTrampoline(*module, "mul2"));
 
     int64_t a = 2, b = 3;
     int64_t ret = 0;
@@ -162,8 +165,8 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
     auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
     EXPECT_FALSE(compiler.HasErrors());
-    auto compare =
-        reinterpret_cast<int32_t (*)(const int32_t, const int32_t)>(GetTrampoline(*module, "compare"));
+    auto compare = reinterpret_cast<int32_t (*)(const int32_t, const int32_t)>(
+        GetTrampoline(*module, "compare"));
     EXPECT_TRUE(compare != nullptr);
 
     // Try to sort using the generated comparison function
@@ -228,8 +231,8 @@ TEST_F(BytecodeTrampolineTest, DISABLED_PerfGenComparisonForSortTest) {
     auto src = "fun compare(a: int32, b: int32) -> int32 { return a - b }";
     auto compiler = ModuleCompiler();
     auto module = compiler.CompileToModule(src);
-    auto compare =
-        reinterpret_cast<int32_t (*)(const int32_t, const int32_t)>(GetTrampoline(*module, "compare"));
+    auto compare = reinterpret_cast<int32_t (*)(const int32_t, const int32_t)>(
+        GetTrampoline(*module, "compare"));
 
     util::Timer<std::milli> timer;
     timer.Start();

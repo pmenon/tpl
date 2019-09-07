@@ -5,8 +5,8 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "util/common.h"
-#include "util/macros.h"
+#include "common/common.h"
+#include "common/macros.h"
 #include "util/math_util.h"
 
 // Needed for some Darwin machine that don't have MAP_ANONYMOUS

@@ -80,7 +80,7 @@ TEST_F(ThreadStateContainerTest, ContainerResetTest) {
   {                                                                                          \
     /* Reset the container, add/sub upon creation/destruction by amount */                   \
     container.Reset(                                                                         \
-        sizeof(uint32_t),                                                                         \
+        sizeof(uint32_t),                                                                    \
         [](auto *ctx, UNUSED auto *s) { (*reinterpret_cast<decltype(count) *>(ctx)) += N; }, \
         [](auto *ctx, UNUSED auto *s) { (*reinterpret_cast<decltype(count) *>(ctx)) -= N; }, \
         &count);                                                                             \
@@ -106,8 +106,9 @@ TEST_F(ThreadStateContainerTest, SimpleContainerTest) {
 
   MemoryPool memory(nullptr);
   ThreadStateContainer container(&memory);
-  container.Reset(sizeof(uint32_t), [](UNUSED auto *ctx, auto *s) { *reinterpret_cast<uint32_t *>(s) = 0; },
-                  nullptr, nullptr);
+  container.Reset(sizeof(uint32_t),
+                  [](UNUSED auto *ctx, auto *s) { *reinterpret_cast<uint32_t *>(s) = 0; }, nullptr,
+                  nullptr);
 
   std::vector<uint32_t> input(10000);
   std::iota(input.begin(), input.end(), 0);

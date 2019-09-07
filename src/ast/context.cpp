@@ -15,6 +15,7 @@
 #include "ast/ast_node_factory.h"
 #include "ast/builtins.h"
 #include "ast/type.h"
+#include "common/common.h"
 #include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
 #include "sql/execution_context.h"
@@ -27,7 +28,6 @@
 #include "sql/thread_state_container.h"
 #include "sql/value.h"
 #include "sql/vector_filter_executor.h"
-#include "util/common.h"
 #include "util/math_util.h"
 
 namespace tpl::ast {

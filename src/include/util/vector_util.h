@@ -5,7 +5,7 @@
 // Needed for friend tests
 #include "gtest/gtest_prod.h"
 
-#include "util/common.h"
+#include "common/common.h"
 #include "util/simd.h"
 
 namespace tpl::util {
