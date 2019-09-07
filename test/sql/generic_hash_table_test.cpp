@@ -3,10 +3,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "sql/generic_hash_table.h"
 #include "util/hash.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 

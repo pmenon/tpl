@@ -4,9 +4,8 @@
 #include <utility>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "util/fixed_length_buffer.h"
+#include "util/test_harness.h"
 
 namespace tpl::util {
 

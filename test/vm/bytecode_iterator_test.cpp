@@ -1,8 +1,7 @@
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "util/region.h"
+#include "util/test_harness.h"
 #include "vm/bytecode_emitter.h"
 #include "vm/bytecode_iterator.h"
 #include "vm/bytecode_label.h"

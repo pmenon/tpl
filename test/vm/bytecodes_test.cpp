@@ -1,6 +1,5 @@
-#include "tpl_test.h"  // NOLINT
-
 #include "vm/bytecodes.h"
+#include "util/test_harness.h"
 
 namespace tpl::vm {
 

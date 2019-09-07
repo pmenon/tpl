@@ -1,12 +1,11 @@
 #include <tuple>
 #include <vector>
 
-#include "sql_test.h"  // NOLINT
-
 #include "sql/catalog.h"
 #include "sql/execution_context.h"
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
+#include "util/sql_test_harness.h"
 #include "util/timer.h"
 
 #include "sql/filter_manager.h"

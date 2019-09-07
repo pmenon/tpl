@@ -5,15 +5,14 @@
 #include <random>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
-#include <tbb/tbb.h>  // NOLINT
+#include "tbb/tbb.h"
 
 #include "ips4o/ips4o.hpp"
 
 #include "sql/execution_context.h"
 #include "sql/sorter.h"
 #include "sql/thread_state_container.h"
+#include "util/test_harness.h"
 
 #define TestAllSigned(FuncName, Args...) \
   FuncName<int8_t>(Args);                \

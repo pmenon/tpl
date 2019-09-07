@@ -1,9 +1,7 @@
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
-// From test
 #include "ast/ast_builder.h"
+#include "util/test_harness.h"
 
 #include "sema/sema.h"
 

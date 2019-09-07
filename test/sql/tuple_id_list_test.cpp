@@ -1,6 +1,5 @@
-#include "tpl_test.h"
-
 #include "sql/tuple_id_list.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 

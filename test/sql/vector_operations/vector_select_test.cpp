@@ -1,11 +1,10 @@
 #include <vector>
 
-#include "sql_test.h"  // NOLINT
-
 #include "sql/constant_vector.h"
 #include "sql/tuple_id_list.h"
 #include "sql/vector.h"
 #include "sql/vector_operations/vector_operators.h"
+#include "util/sql_test_harness.h"
 
 namespace tpl::sql {
 

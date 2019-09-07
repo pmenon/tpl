@@ -4,9 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
-#include <tbb/tbb.h>  // NOLINT
+#include "tbb/tbb.h"
 
 #include "sql/aggregation_hash_table.h"
 #include "sql/execution_context.h"
@@ -15,6 +13,7 @@
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/hash.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 

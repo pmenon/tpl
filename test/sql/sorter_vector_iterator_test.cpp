@@ -1,12 +1,11 @@
 #include <random>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "sql/operations/comparison_operators.h"
 #include "sql/sorter.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 

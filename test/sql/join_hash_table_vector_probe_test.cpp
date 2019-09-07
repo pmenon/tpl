@@ -3,13 +3,12 @@
 #include <random>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "sql/join_hash_table.h"
 #include "sql/join_hash_table_vector_probe.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/hash.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 

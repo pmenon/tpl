@@ -3,9 +3,8 @@
 #include <random>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "sql/generic_value.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 

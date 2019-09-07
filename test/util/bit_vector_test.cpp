@@ -2,9 +2,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "util/bit_vector.h"
+#include "util/test_harness.h"
 
 namespace tpl::util {
 

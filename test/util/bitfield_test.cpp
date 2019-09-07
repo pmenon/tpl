@@ -1,6 +1,5 @@
-#include "tpl_test.h"  // NOLINT
-
 #include "util/bitfield.h"
+#include "util/test_harness.h"
 
 namespace tpl::util {
 

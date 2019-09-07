@@ -2,10 +2,9 @@
 #include <numeric>
 #include <vector>
 
-#include "sql_test.h"  // NOLINT
-
 #include "sql/vector.h"
 #include "util/bit_util.h"
+#include "util/sql_test_harness.h"
 
 namespace tpl::sql {
 

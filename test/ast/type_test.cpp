@@ -1,12 +1,11 @@
 #include <string>
 #include <utility>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "ast/context.h"
 #include "ast/type.h"
 #include "sema/error_reporter.h"
 #include "util/region.h"
+#include "util/test_harness.h"
 
 namespace tpl::ast {
 

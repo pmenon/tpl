@@ -3,10 +3,9 @@
 #include <random>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "sql/functions/arithmetic_functions.h"
 #include "sql/value.h"
+#include "util/test_harness.h"
 #include "util/timer.h"
 
 namespace tpl::sql {

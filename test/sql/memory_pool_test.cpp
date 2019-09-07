@@ -1,8 +1,7 @@
 #include <utility>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "sql/memory_pool.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 

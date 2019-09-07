@@ -4,10 +4,9 @@
 #include <utility>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "ips4o/ips4o.hpp"
 #include "util/chunked_vector.h"
+#include "util/test_harness.h"
 
 namespace tpl::util {
 

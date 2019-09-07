@@ -5,15 +5,12 @@
 #include <utility>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
-// From test
-#include "vm/module_compiler.h"
-
 #include "bandit/agent.h"
 #include "bandit/environment.h"
 #include "bandit/multi_armed_bandit.h"
 #include "bandit/policy.h"
+#include "util/test_harness.h"
+#include "vm/module_compiler.h"
 
 #define NUM_EXPERIMENTS 10
 

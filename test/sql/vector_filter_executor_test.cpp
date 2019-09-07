@@ -1,4 +1,3 @@
-#include "tpl_test.h"  // NOLINT
 
 #include <memory>
 #include <vector>
@@ -8,6 +7,7 @@
 #include "sql/vector_operations/vector_operators.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 

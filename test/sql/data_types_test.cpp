@@ -1,6 +1,5 @@
-#include "tpl_test.h"  // NOLINT
-
 #include "sql/data_types.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 

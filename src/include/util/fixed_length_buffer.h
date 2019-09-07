@@ -3,6 +3,8 @@
 #include <array>
 #include <iterator>
 
+#include "common/macros.h"
+
 namespace tpl::util {
 
 /**

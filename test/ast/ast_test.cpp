@@ -1,7 +1,6 @@
-#include "tpl_test.h"  // NOLINT
-
 #include "ast/ast.h"
 #include "ast/ast_node_factory.h"
+#include "util/test_harness.h"
 
 namespace tpl::ast {
 

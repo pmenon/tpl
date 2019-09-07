@@ -2,9 +2,8 @@
 #include <future>  // NOLINT
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "util/barrier.h"
+#include "util/test_harness.h"
 
 namespace tpl::util {
 

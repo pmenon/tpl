@@ -4,13 +4,12 @@
 #include <string>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "llvm/ADT/StringRef.h"
 
 #include "sql/execution_context.h"
 #include "sql/functions/string_functions.h"
 #include "sql/value.h"
+#include "util/test_harness.h"
 #include "util/timer.h"
 
 namespace tpl::sql {

@@ -3,9 +3,8 @@
 #include <utility>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "util/hash.h"
+#include "util/test_harness.h"
 
 namespace tpl::util {
 

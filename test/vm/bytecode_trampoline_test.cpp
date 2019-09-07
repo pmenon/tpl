@@ -7,10 +7,9 @@
 
 #include "ips4o/ips4o.hpp"
 
-#include "tpl_test.h"  // NOLINT
-
 #include "sql/sorter.h"
 #include "sql/value.h"
+#include "util/test_harness.h"
 #include "vm/module.h"
 #include "vm/module_compiler.h"
 

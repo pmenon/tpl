@@ -1,8 +1,7 @@
-#include "sql_test.h"  // NOLINT
-
-#include "sql/catalog.h"
 #include "sql/column_vector_iterator.h"
+#include "sql/catalog.h"
 #include "sql/table.h"
+#include "util/sql_test_harness.h"
 
 namespace tpl::sql {
 

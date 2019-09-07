@@ -5,10 +5,9 @@
 #include <utility>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "sql/catalog.h"
 #include "sql/vector_projection_iterator.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 

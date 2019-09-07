@@ -1,11 +1,10 @@
 #include <string>
 #include <unordered_set>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "ast/ast_node_factory.h"
 #include "ast/context.h"
 #include "sema/error_reporter.h"
+#include "util/test_harness.h"
 
 namespace tpl::ast {
 

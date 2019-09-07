@@ -1,12 +1,9 @@
 #include <string>
 
-#include "tpl_test.h"  // NOLINT
-
-// From test
+#include "logging/logger.h"
+#include "util/test_harness.h"
 #include "vm/module.h"
 #include "vm/module_compiler.h"
-
-#include "logging/logger.h"
 
 namespace tpl::vm {
 

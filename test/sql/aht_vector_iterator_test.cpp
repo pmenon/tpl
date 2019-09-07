@@ -4,9 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
-// From test
+#include "util/test_harness.h"
 #include "vm/module_compiler.h"
 
 #include "sql/aggregation_hash_table.h"

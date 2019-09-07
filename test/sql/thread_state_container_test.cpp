@@ -5,11 +5,10 @@
 #include <utility>
 #include <vector>
 
-#include <tbb/tbb.h>  // NOLINT
-
-#include "tpl_test.h"  // NOLINT
+#include "tbb/tbb.h"
 
 #include "sql/thread_state_container.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 

@@ -2,12 +2,11 @@
 #include <thread>  // NOLINT
 #include <vector>
 
-#include "sql_test.h"  // NOLINT
-
 #include "sql/catalog.h"
 #include "sql/filter_manager.h"
 #include "sql/table_vector_iterator.h"
 #include "sql/vector_filter_executor.h"
+#include "util/sql_test_harness.h"
 
 namespace tpl::sql {
 

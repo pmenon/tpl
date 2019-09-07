@@ -1,7 +1,6 @@
-#include "tpl_test.h"  // NOLINT
-
 #include "sql/functions/is_null_predicate.h"
 #include "sql/value.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 

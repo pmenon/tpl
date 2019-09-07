@@ -1,11 +1,10 @@
 #include <random>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "common/macros.h"
 #include "sql/concise_hash_table.h"
 #include "util/hash.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 

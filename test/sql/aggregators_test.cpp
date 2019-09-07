@@ -1,7 +1,6 @@
-#include "tpl_test.h"  // NOLINT
-
 #include "sql/aggregators.h"
 #include "sql/value.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 

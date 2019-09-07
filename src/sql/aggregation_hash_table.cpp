@@ -55,7 +55,8 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory, const std::size_t
   // Compute flush threshold. In partitioned mode, we want the thread-local
   // pre-aggregation hash table to be sized to fit in cache. Target L2.
   const uint64_t l2_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L2_CACHE);
-  flush_threshold_ = std::llround(float(l2_size) / entries_.element_size() * kDefaultLoadFactor);
+  flush_threshold_ =
+      std::llround(static_cast<float>(l2_size) / entries_.element_size() * kDefaultLoadFactor);
   flush_threshold_ = std::max(uint64_t{256}, util::MathUtil::PowerOf2Floor(flush_threshold_));
 }
 

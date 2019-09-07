@@ -1,6 +1,5 @@
-#include "tpl_test.h"  // NOLINT
-
 #include "util/math_util.h"
+#include "util/test_harness.h"
 
 namespace tpl::util {
 

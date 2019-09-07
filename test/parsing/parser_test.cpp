@@ -5,11 +5,10 @@
 #include <string>
 #include <vector>
 
-#include "tpl_test.h"  // NOLINT
-
 #include "ast/ast_dump.h"
 #include "parsing/parser.h"
 #include "parsing/scanner.h"
+#include "util/test_harness.h"
 
 namespace tpl::parsing {
 
