@@ -76,7 +76,6 @@ void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right, Vect
   auto *right_data = reinterpret_cast<RightType *>(right.data());
   auto *result_data = reinterpret_cast<ResultType *>(result->data());
 
-  TypeIdToString(TypeId::Hash);
   result->mutable_null_mask()->Copy(left.null_mask() | right.null_mask());
 
   if (IgnoreNull && result->null_mask().Any()) {
