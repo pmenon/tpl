@@ -200,7 +200,7 @@ class TupleIdList {
   /**
    * Remove all tuples from the list.
    */
-  void Clear() { bit_vector_.UnsetAll(); }
+  void Clear() { bit_vector_.Reset(); }
 
   /**
    * Return the number of active tuples in the list.

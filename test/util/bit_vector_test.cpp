@@ -121,17 +121,17 @@ TEST(BitVectorTest, SetRange) {
   EXPECT_TRUE(Verify(bv, {0}));
 
   // Try larger within-word change
-  bv.UnsetAll();
+  bv.Reset();
   bv.SetRange(27, 57);
   EXPECT_TRUE(Verify(bv, [&](auto idx) { return in_range(idx, 27, 57); }));
 
   // Try cross-word change with end at boundary
-  bv.UnsetAll();
+  bv.Reset();
   bv.SetRange(10, 64);
   EXPECT_TRUE(Verify(bv, [&](auto idx) { return in_range(idx, 10, 64); }));
 
   // Try multi-word change
-  bv.UnsetAll();
+  bv.Reset();
   bv.SetRange(60, 300);
   EXPECT_TRUE(Verify(bv, [&](auto idx) { return in_range(idx, 60, 300); }));
 }
@@ -205,7 +205,7 @@ TEST(BitVectorTest, Unset) {
   bv.Unset(9);
   EXPECT_TRUE(Verify(bv, {0, 6}));
 
-  bv.UnsetAll();
+  bv.Reset();
   EXPECT_TRUE(Verify(bv, {}));
 }
 
@@ -274,7 +274,7 @@ TEST(BitVectorTest, Any) {
   BitVector bv(100);
   EXPECT_FALSE(bv.Any());
 
-  bv.UnsetAll();
+  bv.Reset();
   EXPECT_FALSE(bv.Any());
 
   bv.Set(64);
@@ -285,7 +285,7 @@ TEST(BitVectorTest, All) {
   BitVector bv(100);
   EXPECT_FALSE(bv.All());
 
-  bv.UnsetAll();
+  bv.Reset();
   EXPECT_FALSE(bv.All());
 
   bv.Set(64);
@@ -301,7 +301,7 @@ TEST(BitVectorTest, All) {
   bv.Set(99);
   EXPECT_TRUE(bv.All());
 
-  bv.UnsetAll();
+  bv.Reset();
   bv.SetAll();
   EXPECT_TRUE(bv.All());
 }
@@ -310,7 +310,7 @@ TEST(BitVectorTest, None) {
   BitVector bv(100);
   EXPECT_TRUE(bv.None());
 
-  bv.UnsetAll();
+  bv.Reset();
   EXPECT_TRUE(bv.None());
 
   bv.Set(64);
@@ -322,7 +322,7 @@ TEST(BitVectorTest, None) {
   bv.SetAll();
   EXPECT_FALSE(bv.None());
 
-  bv.UnsetAll();
+  bv.Reset();
   EXPECT_TRUE(bv.None());
 }
 
@@ -487,7 +487,7 @@ TEST(BitVectorTest, InlinedBitVector) {
   }
 
   // Clear
-  bits.UnsetAll();
+  bits.Reset();
 
   // Final check all 0
   for (uint32_t i = 0; i < bits.num_bits(); i++) {

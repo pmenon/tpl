@@ -122,6 +122,65 @@ class BitVectorBase {
   }
 
   /**
+   * Set all bits to 1.
+   */
+  void SetAll() {
+    WordType *data = impl()->data_array();
+    const auto num_words = impl()->num_words();
+    // Set all words but the last
+    for (uint64_t i = 0; i < num_words - 1; i++) {
+      data[i] = kAllOnesWord;
+    }
+    // The last word is special
+    data[num_words - 1] = kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
+  }
+
+  /**
+   * Blindly set the bit at the given index to 0.
+   * @param position The index of the bit to set.
+   */
+  void Unset(const uint32_t position) {
+    TPL_ASSERT(position < impl()->num_bits(), "Index out of range");
+    WordType *data_array = impl()->data_array();
+    data_array[position / kWordSizeBits] &= ~(WordType(1) << (position % kWordSizeBits));
+  }
+
+  /**
+   * Set all bits to 0.
+   */
+  void Reset() {
+    WordType *data_array = impl()->data_array();
+    for (uint32_t i = 0; i < impl()->num_words(); i++) {
+      data_array[i] = WordType(0);
+    }
+  }
+
+  /**
+   * Flip the bit at the given bit position, i.e., change the bit to 1 if it's 0 and to 0 if it's 1.
+   * @param position The index of the bit to flip.
+   */
+  void Flip(const uint32_t position) {
+    TPL_ASSERT(position < impl()->num_bits(), "Index out of range");
+    WordType *data = impl()->data_array();
+    data[position / kWordSizeBits] ^= WordType(1) << (position % kWordSizeBits);
+  }
+
+  /**
+   * Invert all bits.
+   */
+  void FlipAll() {
+    WordType *data_array = impl()->data_array();
+    const auto num_words = impl()->num_words();
+    // Invert all words in vector except the last
+    for (uint32_t i = 0; i < num_words - 1; i++) {
+      data_array[i] = ~data_array[i];
+    }
+    // The last word is special
+    const auto mask = kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
+    data_array[num_words - 1] = (mask & ~data_array[num_words - 1]);
+  }
+
+  /**
    * Get the word at the given word index.
    * @param word_position The index of the word to set.
    * @return Value of the word.
@@ -145,64 +204,6 @@ class BitVectorBase {
     if (word_position == num_words - 1) {
       data[num_words - 1] &= kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
     }
-  }
-
-  /**
-   * Set all bits to 1.
-   */
-  void SetAll() {
-    WordType *data = impl()->data_array();
-    const auto num_words = impl()->num_words();
-    // Set all words but the last
-    for (uint64_t i = 0; i < num_words - 1; i++) {
-      data[i] = kAllOnesWord;
-    }
-    // The last word is special
-    data[num_words - 1] = kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
-  }
-
-  /**
-   * Blindly set the bit at the given index to 0.
-   * @param position The index of the bit to set.
-   */
-  void Unset(const uint32_t position) {
-    TPL_ASSERT(position < impl()->num_bits(), "Index out of range");
-    WordType *data = impl()->data_array();
-    data[position / kWordSizeBits] &= ~(WordType(1) << (position % kWordSizeBits));
-  }
-
-  /**
-   * Set all bits to 0.
-   */
-  void UnsetAll() {
-    const auto num_bytes = impl()->num_words() * kWordSizeBytes;
-    std::memset(impl()->data_array(), 0, num_bytes);
-  }
-
-  /**
-   * Complement the value of the bit at the given index. If it is currently 1, it will be flipped
-   * to 0; if it is currently 0, its flipped to 1.
-   * @param position The index of the bit to flip.
-   */
-  void Flip(const uint32_t position) {
-    TPL_ASSERT(position < impl()->num_bits(), "Index out of range");
-    WordType *data = impl()->data_array();
-    data[position / kWordSizeBits] ^= WordType(1) << (position % kWordSizeBits);
-  }
-
-  /**
-   * Invert all bits.
-   */
-  void FlipAll() {
-    WordType *data_array = impl()->data_array();
-    const auto num_words = impl()->num_words();
-    // Invert all words in vector except the last
-    for (uint32_t i = 0; i < num_words - 1; i++) {
-      data_array[i] = ~data_array[i];
-    }
-    // The last word is special
-    const auto mask = kAllOnesWord >> (num_words * kWordSizeBits - impl()->num_bits());
-    data_array[num_words - 1] = (mask & ~data_array[num_words - 1]);
   }
 
   /**
@@ -239,15 +240,7 @@ class BitVectorBase {
    * Check if all bits in the vector are zero.
    * @return True if all bits are set to 0; false otherwise.
    */
-  bool None() const {
-    const WordType *data_array = impl()->data_array();
-    for (uint32_t i = 0; i < impl()->num_words(); i++) {
-      if (data_array[i] != static_cast<WordType>(0)) {
-        return false;
-      }
-    }
-    return true;
-  }
+  bool None() const { return !Any(); }
 
   /**
    * Count the 1-bits in the bit vector.
@@ -263,10 +256,9 @@ class BitVectorBase {
   }
 
   /**
-   * Return the index of the n-th 1-bit in this bit vector.
+   * Return the index of the n-th 1 in this bit vector.
    * @param n Which 1-bit to look for.
-   * @return The index of the n-th 1-bit. If there are fewer than @em n bits,
-   *         return the size of the bit vector.
+   * @return The index of the n-th 1-bit. If there are fewer than @em n bits, return the size.
    */
   uint32_t NthOne(uint32_t n) const {
     const WordType *data_array = impl()->data_array();
@@ -446,7 +438,7 @@ class BitVector : public BitVectorBase<BitVector> {
       : num_bits_(num_bits), num_words_(NumNeededWords(num_bits)) {
     TPL_ASSERT(num_bits_ > 0, "Cannot create bit vector with zero bits");
     data_array_ = std::make_unique<uint64_t[]>(num_words_);
-    UnsetAll();
+    Reset();
   }
 
   /**

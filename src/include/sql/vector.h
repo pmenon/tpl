@@ -133,7 +133,7 @@ class Vector {
   /**
    * Reset NULL bitmask.
    */
-  void ResetNulls() { null_mask_.UnsetAll(); }
+  void ResetNulls() { null_mask_.Reset(); }
 
   /**
    * Is this vector holding a single constant value?

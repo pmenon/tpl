@@ -70,7 +70,7 @@ void Vector::Destroy() {
   data_ = nullptr;
   count_ = 0;
   sel_vector_ = nullptr;
-  null_mask_.UnsetAll();
+  null_mask_.Reset();
 }
 
 GenericValue Vector::GetValue(const uint64_t index) const {
@@ -254,7 +254,7 @@ void Vector::Reference(TypeId type_id, byte *data, uint32_t *nullmask, uint64_t 
 
   // TODO(pmenon): Optimize me if this is a bottleneck
   if (nullmask == nullptr) {
-    null_mask_.UnsetAll();
+    null_mask_.Reset();
   } else {
     for (uint64_t i = 0; i < count; i++) {
       const bool is_null = util::BitUtil::Test(nullmask, i);
@@ -292,7 +292,7 @@ void Vector::CopyTo(Vector *other, uint64_t offset) {
   TPL_ASSERT(other->sel_vector_ == nullptr,
              "Copying to a vector with a selection vector isn't supported");
 
-  other->null_mask_.UnsetAll();
+  other->null_mask_.Reset();
 
   if (IsTypeFixedSize(type_)) {
     VectorOps::Copy(*this, other, offset);
