@@ -20,12 +20,12 @@ TEST_F(VectorFillTest, SimpleNonNull) {
   }
 
   CHECK_SIMPLE_FILL(Boolean, true);
-  CHECK_SIMPLE_FILL(TinyInt, int64_t(-24));
-  CHECK_SIMPLE_FILL(SmallInt, int64_t(47));
-  CHECK_SIMPLE_FILL(Integer, int64_t(1234));
-  CHECK_SIMPLE_FILL(BigInt, int64_t(-24987));
-  CHECK_SIMPLE_FILL(Float, double(-3.10));
-  CHECK_SIMPLE_FILL(Double, double(-3.14));
+  CHECK_SIMPLE_FILL(TinyInt, int8_t{-24});
+  CHECK_SIMPLE_FILL(SmallInt, int16_t{47});
+  CHECK_SIMPLE_FILL(Integer, int32_t{1234});
+  CHECK_SIMPLE_FILL(BigInt, int64_t{-24987});
+  CHECK_SIMPLE_FILL(Float, float{-3.10});
+  CHECK_SIMPLE_FILL(Double, double{-3.14});
   CHECK_SIMPLE_FILL(Varchar, "P-Money In The Bank");
 #undef CHECK_SIMPLE_FILL
 }
