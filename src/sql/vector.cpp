@@ -37,16 +37,29 @@ void Vector::Strings::Destroy() { region_.FreeAll(); }
 // Vector
 // ---------------------------------------------------------
 
-Vector::Vector(TypeId type) : type_(type), count_(0), data_(nullptr), sel_vector_(nullptr) {}
+Vector::Vector(TypeId type)
+    : type_(type),
+      count_(0),
+      data_(nullptr),
+      sel_vector_(nullptr),
+      null_mask_(kDefaultVectorSize) {}
 
 Vector::Vector(TypeId type, uint64_t count, bool clear)
-    : type_(type), count_(count), data_(nullptr), sel_vector_(nullptr) {
+    : type_(type),
+      count_(count),
+      data_(nullptr),
+      sel_vector_(nullptr),
+      null_mask_(kDefaultVectorSize) {
   TPL_ASSERT(count <= kDefaultVectorSize, "Count too large");
   Initialize(type, clear);
 }
 
 Vector::Vector(TypeId type, byte *data, uint64_t count)
-    : type_(type), count_(count), data_(data), sel_vector_(nullptr) {
+    : type_(type),
+      count_(count),
+      data_(data),
+      sel_vector_(nullptr),
+      null_mask_(kDefaultVectorSize) {
   TPL_ASSERT(data != nullptr, "Cannot create vector from NULL data pointer");
 }
 

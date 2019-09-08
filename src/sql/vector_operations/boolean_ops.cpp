@@ -18,14 +18,16 @@ void BooleanLogicOperation(const Vector &left, const Vector &right, Vector *resu
   const auto &right_null_mask = right.null_mask();
 
   auto *result_data = reinterpret_cast<bool *>(result->data());
-  Vector::NullMask result_mask;
+  auto *result_nulls = result->mutable_null_mask();
+
+  result_nulls->Reset();
 
   if (left.IsConstant()) {
     if (left_null_mask.Any() || right_null_mask.Any()) {
       // Slow-path: need to check NULLs
       VectorOps::Exec(right, [&](uint64_t i, uint64_t k) {
         result_data[i] = Op::Apply(left_data[0], right_data[i]);
-        result_mask.SetTo(
+        result_nulls->SetTo(
             i, OpNull::Apply(left_data[0], right_data[i], left_null_mask[0], right_null_mask[i]));
       });
     } else {
@@ -50,13 +52,12 @@ void BooleanLogicOperation(const Vector &left, const Vector &right, Vector *resu
       // Slow-path: need to check NULLs
       VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
         result_data[i] = Op::Apply(left_data[i], right_data[i]);
-        result_mask.SetTo(
+        result_nulls->SetTo(
             i, OpNull::Apply(left_data[i], right_data[i], left_null_mask[i], right_null_mask[i]));
       });
     }
   }
 
-  result->set_null_mask(result_mask);
   result->SetSelectionVector(right.selection_vector(), right.count());
 }
 

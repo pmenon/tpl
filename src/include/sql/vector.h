@@ -51,8 +51,6 @@ class Vector {
   friend class VectorProjectionIterator;
 
  public:
-  using NullMask = util::InlinedBitVector<kDefaultVectorSize>;
-
   /**
    * Create an empty vector.
    * @param type The type of the elements in the vector.
@@ -115,12 +113,12 @@ class Vector {
   /**
    * Return the NULL bitmask of elements in this vector.
    */
-  const NullMask &null_mask() const { return null_mask_; }
+  const util::BitVector<> &null_mask() const { return null_mask_; }
 
   /**
-   * Set the mask.
+   * Return a mutable instance of the NULL bitmask in this vector.
    */
-  void set_null_mask(NullMask other) { null_mask_ = other; }
+  util::BitVector<> *mutable_null_mask() { return &null_mask_; }
 
   /**
    * Set the selection vector.
@@ -129,11 +127,6 @@ class Vector {
     sel_vector_ = sel_vector;
     count_ = count;
   }
-
-  /**
-   * Reset NULL bitmask.
-   */
-  void ResetNulls() { null_mask_.Reset(); }
 
   /**
    * Is this vector holding a single constant value?
@@ -304,7 +297,7 @@ class Vector {
   // The selection vector of the vector.
   sel_t *sel_vector_;
   // The null mask used to indicate if an element in the vector is NULL.
-  NullMask null_mask_;
+  util::BitVector<> null_mask_;
   // String container
   Strings strings_;
   // If the vector holds allocated data, this field manages it.

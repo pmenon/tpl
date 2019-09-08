@@ -41,7 +41,7 @@ namespace tpl::sql {
  */
 class TupleIdList {
  public:
-  using BitVectorT = util::BitVector;
+  using BitVectorT = util::BitVector<uint64_t>;
 
   explicit TupleIdList(uint32_t size = kDefaultVectorSize) : bit_vector_(size) {}
 

@@ -22,7 +22,7 @@ void VectorOps::Fill(Vector *vector, const GenericValue &value) {
     return;
   }
 
-  vector->ResetNulls();
+  vector->null_mask_.Reset();
 
   switch (vector->type_) {
     case TypeId::Boolean: {

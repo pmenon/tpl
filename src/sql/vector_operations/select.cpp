@@ -53,7 +53,7 @@ uint32_t TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector
 
   sel_t out_idx = 0;
 
-  const Vector::NullMask result_mask = left.null_mask() | right.null_mask();
+  const auto result_mask = left.null_mask() | right.null_mask();
   const bool has_nulls = result_mask.Any();
 
   if (IgnoreNull && has_nulls) {

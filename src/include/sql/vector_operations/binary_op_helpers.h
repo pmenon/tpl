@@ -13,14 +13,12 @@ static inline void BinaryOperation_Constant_Vector(const Vector &left, const Vec
   if (left.IsNull(0)) {
     VectorOps::FillNull(result);
   } else {
-    // Right input vector's NULL mask becomes result's NULL mask
-    const Vector::NullMask &right_mask = right.null_mask();
-    result->set_null_mask(right_mask);
+    result->mutable_null_mask()->Copy(right.null_mask());
 
-    if (IgnoreNull && right_mask.Any()) {
+    if (IgnoreNull && result->null_mask().Any()) {
       // Slow-path: need to check NULLs
       VectorOps::Exec(right.selection_vector(), right.count(), [&](uint64_t i, uint64_t k) {
-        if (!right_mask[i]) {
+        if (!result->null_mask()[i]) {
           result_data[i] = Op::Apply(left_data[0], right_data[i]);
         }
       });
@@ -47,13 +45,12 @@ static inline void BinaryOperation_Vector_Constant(const Vector &left, const Vec
     VectorOps::FillNull(result);
   } else {
     // Left input vector's NULL mask becomes result's NULL mask
-    const auto &left_mask = left.null_mask();
-    result->set_null_mask(left_mask);
+    result->mutable_null_mask()->Copy(left.null_mask());
 
-    if (IgnoreNull && left_mask.Any()) {
+    if (IgnoreNull && result->null_mask().Any()) {
       // Slow-path: need to check NULLs
       VectorOps::Exec(left.selection_vector(), left.count(), [&](uint64_t i, uint64_t k) {
-        if (!left_mask[i]) {
+        if (!result->null_mask()[i]) {
           result_data[i] = Op::Apply(left_data[i], right_data[0]);
         }
       });
@@ -79,23 +76,21 @@ void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right, Vect
   auto *right_data = reinterpret_cast<RightType *>(right.data());
   auto *result_data = reinterpret_cast<ResultType *>(result->data());
 
-  const Vector::NullMask result_mask = left.null_mask() | right.null_mask();
+  TypeIdToString(TypeId::Hash);
+  result->mutable_null_mask()->Copy(left.null_mask() | right.null_mask());
 
-  if (IgnoreNull && result_mask.Any()) {
-    // Slow-path: need to check NULLs
+  if (IgnoreNull && result->null_mask().Any()) {
     VectorOps::Exec(left.selection_vector(), left.count(), [&](uint64_t i, uint64_t k) {
-      if (!result_mask[i]) {
+      if (!result->null_mask()[i]) {
         result_data[i] = Op::Apply(left_data[i], right_data[i]);
       }
     });
   } else {
-    // Fast-path: no NULL checks
     VectorOps::Exec(left.selection_vector(), left.count(), [&](uint64_t i, uint64_t k) {
       result_data[i] = Op::Apply(left_data[i], right_data[i]);
     });
   }
 
-  result->set_null_mask(result_mask);
   result->SetSelectionVector(left.selection_vector(), left.count());
 }
 

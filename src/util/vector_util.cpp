@@ -48,13 +48,12 @@ uint32_t VectorUtil::IntersectSelected(const sel_t *sel_vector_1, const uint32_t
 uint32_t VectorUtil::IntersectSelected(const sel_t *sel_vector, const uint32_t sel_vector_len,
                                        const uint64_t *bit_vector, const uint32_t bit_vector_len,
                                        sel_t *out_sel_vector) {
-  BitVectorView bv(const_cast<uint64_t *>(bit_vector), bit_vector_len);
-
   uint32_t k = 0;
   for (uint32_t i = 0; i < sel_vector_len; i++) {
     const auto index = sel_vector[i];
+    const bool bit = bit_vector[index / 64] & (static_cast<uint64_t>(1) << (index % 64));
     out_sel_vector[k] = index;
-    k += static_cast<uint32_t>(bv.Test(index));
+    k += bit;
   }
   return k;
 }
