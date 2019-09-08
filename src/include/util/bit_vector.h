@@ -388,32 +388,38 @@ class BitVectorBase {
 
   bool operator[](const uint32_t position) const { return Test(position); }
 
-  Subclass &operator-=(const Subclass &other) {
+  template <typename T>
+  Subclass &operator-=(const BitVectorBase<T> &other) {
     Difference(other);
     return *impl();
   }
 
-  Subclass &operator&=(const Subclass &other) {
+  template <typename T>
+  Subclass &operator&=(const BitVectorBase<T> &other) {
     Intersect(other);
     return *impl();
   }
 
-  Subclass &operator|=(const Subclass &other) {
+  template <typename T>
+  Subclass &operator|=(const BitVectorBase<T> &other) {
     Union(other);
     return *impl();
   }
 
-  friend Subclass operator-(Subclass a, const Subclass &b) {
+  template <typename T>
+  friend Subclass operator-(Subclass a, const BitVectorBase<T> &b) {
     a -= b;
     return a;
   }
 
-  friend Subclass operator&(Subclass a, const Subclass &b) {
+  template <typename T>
+  friend Subclass operator&(Subclass a, const BitVectorBase<T> &b) {
     a &= b;
     return a;
   }
 
-  friend Subclass operator|(Subclass a, const Subclass &b) {
+  template <typename T>
+  friend Subclass operator|(Subclass a, const BitVectorBase<T> &b) {
     a |= b;
     return a;
   }
@@ -439,24 +445,8 @@ class BitVector : public BitVectorBase<BitVector> {
   explicit BitVector(const uint32_t num_bits)
       : num_bits_(num_bits), num_words_(NumNeededWords(num_bits)) {
     TPL_ASSERT(num_bits_ > 0, "Cannot create bit vector with zero bits");
-    owned_data_ = std::make_unique<uint64_t[]>(num_words_);
-    data_array_ = owned_data_.get();
+    data_array_ = std::make_unique<uint64_t[]>(num_words_);
     UnsetAll();
-  }
-
-  /**
-   * Create a new bit vector that references the given raw bit vector without
-   * taking ownership.
-   * @param unowned_data_array The externally managed bit vector.
-   * @param num_bits The number of bits in the vector.
-   */
-  BitVector(uint64_t *const unowned_data_array, const uint32_t num_bits)
-      : data_array_(unowned_data_array),
-        num_bits_(num_bits),
-        num_words_(NumNeededWords(num_bits)),
-        owned_data_(nullptr) {
-    TPL_ASSERT(data_array_ != nullptr, "Cannot create bit vector referencing NULL bitmap");
-    TPL_ASSERT(num_bits_ > 0, "Cannot create bit vector with zero bits");
   }
 
   /**
@@ -464,8 +454,7 @@ class BitVector : public BitVectorBase<BitVector> {
    * @param other The bit vector to copy.
    */
   BitVector(const BitVector &other) : num_bits_(other.num_bits_), num_words_(other.num_words_) {
-    owned_data_ = std::make_unique<uint64_t[]>(num_words_);
-    data_array_ = owned_data_.get();
+    data_array_ = std::make_unique<uint64_t[]>(num_words_);
     for (uint32_t i = 0; i < num_words_; i++) {
       data_array_[i] = other.data_array_[i];
     }
@@ -490,30 +479,15 @@ class BitVector : public BitVectorBase<BitVector> {
    * @return This bit vector as a copy of the input vector.
    */
   BitVector &operator=(const BitVector &other) {
-    num_bits_ = other.num_bits_;
-    num_words_ = other.num_words_;
-    owned_data_ = std::make_unique<uint64_t[]>(num_words_);
-    data_array_ = owned_data_.get();
+    if (num_bits() != other.num_bits()) {
+      num_bits_ = other.num_bits_;
+      num_words_ = other.num_words_;
+      data_array_ = std::make_unique<uint64_t[]>(num_words_);
+    }
     for (uint32_t i = 0; i < num_words_; i++) {
       data_array_[i] = other.data_array_[i];
     }
     return *this;
-  }
-
-  /**
-   * Take a slice from this bit vector starting at bit position @em offset and
-   * assuming @em size bits. The bit position must be a multiple of a word,
-   * i.e., 64, 128, 256, etc.
-   * @param offset The bit offset from the start to begin the slice from.
-   * @param size The number of bits to size the slice.
-   * @return
-   */
-  BitVector Slice(const uint32_t offset, const uint32_t size) {
-    TPL_ASSERT(offset / kWordSizeBits < num_words_, "Out-of-bounds access");
-    TPL_ASSERT(offset % kWordSizeBits == 0, "Invalid offset");
-    const auto word_idx = offset / kWordSizeBits;
-    const auto len = std::min(num_bits_ - (word_idx * kWordSizeBits), size);
-    return BitVector(data_array_ + word_idx, len);
   }
 
   /**
@@ -529,6 +503,51 @@ class BitVector : public BitVectorBase<BitVector> {
   /**
    * Return a constant reference to the underlying word data.
    */
+  const uint64_t *data_array() const { return data_array_.get(); }
+
+  /**
+   * Return a reference to the underlying word data.
+   */
+  uint64_t *data_array() { return data_array_.get(); }
+
+ private:
+  // The number of bits in the bit vector
+  uint32_t num_bits_;
+  // The number of words in the bit vector
+  uint32_t num_words_;
+  // The array of words making up the bit vector
+  std::unique_ptr<uint64_t[]> data_array_;
+};
+
+/**
+ * A view over an existing raw bit vector.
+ */
+class BitVectorView : public BitVectorBase<BitVectorView> {
+ public:
+  /**
+   * Create a new bit vector that references the given raw bit vector without taking ownership.
+   * @param unowned_data_array The externally managed bit vector.
+   * @param num_bits The number of bits in the vector.
+   */
+  BitVectorView(uint64_t *const unowned_data_array, const uint32_t num_bits)
+      : data_array_(unowned_data_array), num_bits_(num_bits) {
+    TPL_ASSERT(data_array_ != nullptr, "Cannot create bit vector referencing NULL bitmap");
+    TPL_ASSERT(num_bits_ > 0, "Cannot create bit vector with zero bits");
+  }
+
+  /**
+   * Return the number of bits in the bit vector.
+   */
+  uint32_t num_bits() const { return num_bits_; }
+
+  /**
+   * Return the number of words used by the bit vector.
+   */
+  uint32_t num_words() const { return NumNeededWords(num_bits_); }
+
+  /**
+   * Return a constant reference to the underlying word data.
+   */
   const uint64_t *data_array() const { return data_array_; }
 
   /**
@@ -537,17 +556,10 @@ class BitVector : public BitVectorBase<BitVector> {
   uint64_t *data_array() { return data_array_; }
 
  private:
-  // The array of bits.
+  // The array of words making up the bit vector
   uint64_t *data_array_;
-
-  // The number of bits in the bit vector.
+  // The number of bits in the bit vector
   uint32_t num_bits_;
-
-  // The number of words in the bit vector.
-  uint32_t num_words_;
-
-  // If this vector allocated its bits, this pointer owns it.
-  std::unique_ptr<uint64_t[]> owned_data_;
 };
 
 /**

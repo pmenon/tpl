@@ -459,34 +459,6 @@ TEST(BitVectorTest, Iterate) {
   }
 }
 
-TEST(BitVectorTest, Slice) {
-  BitVector bv(100);
-
-  bv.Set(65);
-  bv.Set(74);
-  bv.Set(99);
-
-  // Simple, bv2 only has position 1 (65 in original) set.
-  BitVector bv2 = bv.Slice(64, 10);
-  EXPECT_FALSE(bv2[0]);
-  EXPECT_TRUE(bv2[1]);
-  for (uint32_t i = 2; i < bv2.num_bits(); i++) {
-    EXPECT_FALSE(bv2[i]) << "bv_2[" << i << "]=true, expected false";
-  }
-
-  // Oversize
-  BitVector bv3 = bv.Slice(64, 100);
-  EXPECT_EQ(36u, bv3.num_bits());
-  EXPECT_TRUE(bv3[10]);
-  EXPECT_TRUE(bv3[35]);
-
-  // Nesting
-  BitVector bv4 = bv3.Slice(0, 10);
-  bv4.Set(5);
-  EXPECT_TRUE(bv4[5]);
-  EXPECT_TRUE(bv3[5]);
-}
-
 TEST(BitVectorTest, InlinedBitVector) {
   InlinedBitVector<64> bits;
 
