@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <type_traits>
 
 #include "common/common.h"
 #include "util/bit_util.h"
@@ -14,11 +15,14 @@ namespace tpl::util {
 
 /**
  * A BitVector whose size is known at run-time.
+ *
  * @tparam Word The integer type used to block the bits.
  */
 template <typename Word = uint64_t>
 class BitVector {
  public:
+  static_assert(std::is_integral_v<Word>, "Template type 'Word' must be integral");
+
   // Bits are grouped into chunks (also known as words) of 64-bits.
   using WordType = std::make_unsigned_t<Word>;
 
@@ -46,6 +50,13 @@ class BitVector {
   constexpr static uint32_t NumNeededWords(uint32_t num_bits) {
     return util::MathUtil::DivRoundUp(num_bits, kWordSizeBits);
   }
+
+  /**
+   * Create an empty bit vector. Users must call @em Resize() before interacting with it.
+   *
+   * @ref BitVector::Resize()
+   */
+  BitVector() : num_bits_(0), num_words_(0), words_(nullptr) {}
 
   /**
    * Create a new bit vector with the specified number of bits. After construction, all bits are
@@ -290,7 +301,7 @@ class BitVector {
         }
       }
       const WordType mask = ~(kAllOnesWord << GetNumExtraBits());
-      return  words_[num_words_ - 1] == mask;
+      return words_[num_words_ - 1] == mask;
     }
   }
 
