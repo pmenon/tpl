@@ -396,7 +396,7 @@ TEST_F(VectorUtilTest, BitToSelectionVector) {
 
   // Set even bits
   for (uint32_t i = 0; i < num_bits; i++) {
-    bv.SetTo(i, i % 2 == 0);
+    bv.Set(i, i % 2 == 0);
   }
 
   // Transform

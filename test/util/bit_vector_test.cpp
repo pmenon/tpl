@@ -47,7 +47,7 @@ template <typename BitVectorType>
 
 BitVector<>Make(std::initializer_list<uint32_t> vals) {
   BitVector<>bv(vals.size());
-  std::for_each(vals.begin(), vals.end(), [&, i = 0](auto &bval) mutable { bv.SetTo(i++, bval); });
+  std::for_each(vals.begin(), vals.end(), [&, i = 0](auto &bval) mutable { bv.Set(i++, bval); });
   return bv;
 }
 
@@ -141,20 +141,20 @@ TEST(BitVectorTest, SetRange) {
 TEST(BitVectorTest, SetTo) {
   BitVector<>bv(10);
 
-  bv.SetTo(2, true);
+  bv.Set(2, true);
   EXPECT_TRUE(Verify(bv, {2}));
 
   // Repeats work
-  bv.SetTo(2, true);
+  bv.Set(2, true);
   EXPECT_TRUE(Verify(bv, {2}));
 
-  bv.SetTo(2, false);
+  bv.Set(2, false);
   EXPECT_TRUE(Verify(bv, {}));
 
-  bv.SetTo(3, true);
+  bv.Set(3, true);
   EXPECT_TRUE(Verify(bv, {3}));
 
-  bv.SetTo(2, true);
+  bv.Set(2, true);
   EXPECT_TRUE(Verify(bv, {2, 3}));
 
   bv.SetAll();

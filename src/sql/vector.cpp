@@ -271,7 +271,7 @@ void Vector::Reference(TypeId type_id, byte *data, uint32_t *nullmask, uint64_t 
   } else {
     for (uint64_t i = 0; i < count; i++) {
       const bool is_null = util::BitUtil::Test(nullmask, i);
-      null_mask_.SetTo(i, is_null);
+      null_mask_.Set(i, is_null);
     }
   }
 }
@@ -351,7 +351,7 @@ void Vector::Append(Vector &other) {
   // merge NULL mask
   VectorOps::Exec(other, [&](uint64_t i, uint64_t k) {
     const bool other_is_null = other.null_mask_.Test(i);
-    null_mask_.SetTo(old_count + k, other_is_null);
+    null_mask_.Set(old_count + k, other_is_null);
   });
 
   if (IsTypeFixedSize(type_)) {

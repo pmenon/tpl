@@ -27,7 +27,7 @@ void BooleanLogicOperation(const Vector &left, const Vector &right, Vector *resu
       // Slow-path: need to check NULLs
       VectorOps::Exec(right, [&](uint64_t i, uint64_t k) {
         result_data[i] = Op::Apply(left_data[0], right_data[i]);
-        result_nulls->SetTo(
+        result_nulls->Set(
             i, OpNull::Apply(left_data[0], right_data[i], left_null_mask[0], right_null_mask[i]));
       });
     } else {
@@ -52,7 +52,7 @@ void BooleanLogicOperation(const Vector &left, const Vector &right, Vector *resu
       // Slow-path: need to check NULLs
       VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
         result_data[i] = Op::Apply(left_data[i], right_data[i]);
-        result_nulls->SetTo(
+        result_nulls->Set(
             i, OpNull::Apply(left_data[i], right_data[i], left_null_mask[i], right_null_mask[i]));
       });
     }

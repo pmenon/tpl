@@ -76,7 +76,7 @@ class Vector {
   Vector(TypeId type, byte *data, uint64_t count);
 
   /**
-   * Vector's cannot be implicitly copied.
+   * Vector's cannot be implicitly copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(Vector);
 
@@ -152,7 +152,7 @@ class Vector {
    * Set the value at position @em index to @em null.
    */
   void SetNull(const uint64_t index, const bool null) {
-    null_mask_.SetTo(sel_vector_ != nullptr ? sel_vector_[index] : index, null);
+    null_mask_.Set(sel_vector_ != nullptr ? sel_vector_[index] : index, null);
   }
 
   /**

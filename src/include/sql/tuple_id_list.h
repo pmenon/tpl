@@ -10,34 +10,31 @@
 namespace tpl::sql {
 
 /**
- * An ordered set of tuple IDs used during query execution to efficiently
- * represent valid tuples in a vector projection. A TupleIdList can store TIDs
- * in the range [0, kDefaultVectorSize] (either 1024 or 2048), typical during
- * vector processing.
+ * An ordered set of tuple IDs used during query execution to efficiently represent valid tuples in
+ * a vector projection. A TupleIdList can store TIDs in the range [0, kDefaultVectorSize] (either
+ * 1024 or 2048), typical during vector processing.
  *
- * Checking the existence of a TID in the list is a constant time operation, as
- * is adding or removing (one or all) TIDs from the list. Intersection, union,
- * and difference are efficient operations linear in the capacity of the list.
+ * Checking the existence of a TID in the list is a constant time operation, as is adding or
+ * removing (one or all) TIDs from the list. Intersection, union, and difference are efficient
+ * operations linear in the capacity of the list.
  *
- * Users can iterate over the TIDs in the list through TupleIdList::Iterate(),
- * and build/update lists from subsets of other lists using
- * TupleIdList::BuildFromOtherList().
+ * Users can iterate over the TIDs in the list through TupleIdList::Iterate(), and build/update
+ * lists from subsets of other lists using TupleIdList::BuildFromOtherList().
  *
  * Tuple ID lists can also be converted into dense selection vectors through
  * TupleIdList::AsSelectionVector().
  *
  * Implementation:
  * ---------------
- * TupleIdList is implemented as a very thin wrapper around a bit-vector. Thus,
- * they occupy 128 or 256 bytes of memory to represent 1024 or 2048 tuples,
- * respectively. Using a bit vector as the underlying data structure enables
- * efficient implementations of list intersection, union, and difference
- * required during expression evaluation. Moreover, bit vectors are amenable to
+ * TupleIdList is implemented as a very thin wrapper around a bit-vector. Thus, they occupy 128 or
+ * 256 bytes of memory to represent 1024 or 2048 tuples, respectively. Using a bit vector as the
+ * underlying data structure enables efficient implementations of list intersection, union, and
+ * difference required during expression evaluation. Moreover, bit vectors are amenable to
  * auto-vectorization by the compiler.
  *
- * The primary drawback of bit vectors is iteration: dense RID lists (also
- * known as selection vectors) are faster to iterate over than bit vectors,
- * more so when the selectivity of the vector is low.
+ * The primary drawback of bit vectors is iteration: dense RID lists (also known as selection
+ * vectors) are faster to iterate over than bit vectors, more so when the selectivity of the vector
+ * is low.
  */
 class TupleIdList {
  public:
@@ -86,7 +83,7 @@ class TupleIdList {
    * @param tid The ID to add or remove from the list.
    * @param enable The flag indicating if the tuple is added or removed.
    */
-  void Enable(const uint32_t tid, const bool enable) { bit_vector_.SetTo(tid, enable); }
+  void Enable(const uint32_t tid, const bool enable) { bit_vector_.Set(tid, enable); }
 
   /**
    * Remove the tuple with the given ID from the list.
@@ -179,7 +176,7 @@ class TupleIdList {
     // Scalar tail
     for (BitVectorT::WordType i = bit_vector_.num_words() * BitVectorT::kWordSizeBits;
          i < kDefaultVectorSize; i++) {
-      bit_vector_.SetTo(i, f(i));
+      bit_vector_.Set(i, f(i));
     }
   }
 

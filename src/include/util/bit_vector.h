@@ -108,6 +108,7 @@ class BitVector {
   /**
    * Blindly set the bit at the given index to 1.
    * @param position The index of the bit to set.
+   * @return This bit vector.
    */
   BitVector &Set(const uint32_t position) {
     TPL_ASSERT(position < num_bits(), "Index out of range");
@@ -116,9 +117,41 @@ class BitVector {
   }
 
   /**
+   * Set the bit at the given position to a given value.
+   * @param position The index of the bit to set.
+   * @param v The value to set the bit to.
+   * @return This bit vector.
+   */
+  BitVector &Set(const uint32_t position, const bool v) {
+    TPL_ASSERT(position < num_bits(), "Index out of range");
+    WordType mask = static_cast<WordType>(1) << (position % kWordSizeBits);
+    data_array_[position / kWordSizeBits] ^=
+        (-static_cast<WordType>(v) ^ data_array_[position / kWordSizeBits]) & mask;
+    return *this;
+  }
+
+  /**
+   * Set all bits to 1.
+   * @return This bit vector.
+   */
+  BitVector &SetAll() {
+    // Set all words but the last
+    for (uint64_t i = 0; i < num_words_ - 1; i++) {
+      data_array_[i] = kAllOnesWord;
+    }
+    // The last word is special
+    data_array_[num_words_ - 1] = kAllOnesWord >> (num_words_ * kWordSizeBits - num_bits_);
+    return *this;
+  }
+
+  /**
    * Efficiently set all bits in the range [start, end).
+   *
+   * @pre start <= end <= num_bits()
+   *
    * @param start The start bit position.
    * @param end The end bit position.
+   * @return This bit vector.
    */
   BitVector &SetRange(uint32_t start, uint32_t end) {
     TPL_ASSERT(start <= end, "Cannot set backward range");
@@ -153,34 +186,9 @@ class BitVector {
   }
 
   /**
-   * Set the bit at the given position to a given value.
-   * @param position The index of the bit to set.
-   * @param v The value to set the bit to.
-   */
-  BitVector &SetTo(const uint32_t position, const bool v) {
-    TPL_ASSERT(position < num_bits(), "Index out of range");
-    WordType mask = static_cast<WordType>(1) << (position % kWordSizeBits);
-    data_array_[position / kWordSizeBits] ^=
-        (-static_cast<WordType>(v) ^ data_array_[position / kWordSizeBits]) & mask;
-    return *this;
-  }
-
-  /**
-   * Set all bits to 1.
-   */
-  BitVector &SetAll() {
-    // Set all words but the last
-    for (uint64_t i = 0; i < num_words_ - 1; i++) {
-      data_array_[i] = kAllOnesWord;
-    }
-    // The last word is special
-    data_array_[num_words_ - 1] = kAllOnesWord >> (num_words_ * kWordSizeBits - num_bits_);
-    return *this;
-  }
-
-  /**
    * Blindly set the bit at the given index to 0.
    * @param position The index of the bit to set.
+   * @return This bit vector.
    */
   BitVector &Unset(const uint32_t position) {
     TPL_ASSERT(position < num_bits(), "Index out of range");
@@ -189,7 +197,8 @@ class BitVector {
   }
 
   /**
-   * Set all bits to 0.
+   * Set all bits in the bit vector to 0.
+   * @return This bit vector.
    */
   BitVector &Reset() {
     for (uint32_t i = 0; i < num_words(); i++) {
@@ -201,6 +210,7 @@ class BitVector {
   /**
    * Flip the bit at the given bit position, i.e., change the bit to 1 if it's 0 and to 0 if it's 1.
    * @param position The index of the bit to flip.
+   * @return This bit vector.
    */
   BitVector &Flip(const uint32_t position) {
     TPL_ASSERT(position < num_bits(), "Index out of range");
@@ -209,7 +219,8 @@ class BitVector {
   }
 
   /**
-   * Invert all bits.
+   * Flip all bits in the bit vector.
+   * @return This bit vector.
    */
   BitVector &FlipAll() {
     // Invert all words in vector except the last
@@ -237,6 +248,7 @@ class BitVector {
    * vector is not a multiple of the word size, the tail bits are masked off.
    * @param word_position The index of the word to set.
    * @param word_val The value to set.
+   * @return This bit vector.
    */
   BitVector &SetWord(const uint32_t word_position, const WordType word_val) {
     TPL_ASSERT(word_position < num_words(), "Index out of range");
@@ -312,8 +324,12 @@ class BitVector {
   }
 
   /**
+   * Copy the bit vector @em other into this bit vector.
    *
-   * @param other
+   * @pre The sizes of the bit vectors must be the same.
+   *
+   * @param other The bit vector to read and copy from.
+   * @return This bit vector.
    */
   BitVector &Copy(const BitVector &other) {
     TPL_ASSERT(num_bits() == other.num_bits(), "Mismatched bit vector size");
@@ -325,7 +341,11 @@ class BitVector {
 
   /**
    * Perform the bitwise intersection of this bit vector with the provided @em other bit vector.
+   *
+   * @pre The sizes of the bit vectors must be the same.
+   *
    * @param other The bit vector to intersect with. Lengths must match exactly.
+   * @return This bit vector.
    */
   BitVector &Intersect(const BitVector &other) {
     TPL_ASSERT(num_bits() == other.num_bits(), "Mismatched bit vector size");
@@ -337,7 +357,11 @@ class BitVector {
 
   /**
    * Perform the bitwise union of this bit vector with the provided @em other bit vector.
+   *
+   * @pre The sizes of the bit vectors must be the same.
+   *
    * @param other The bit vector to union with. Lengths must match exactly.
+   * @return This bit vector.
    */
   BitVector &Union(const BitVector &other) {
     TPL_ASSERT(num_bits() == other.num_bits(), "Mismatched bit vector size");
@@ -349,7 +373,11 @@ class BitVector {
 
   /**
    * Clear all bits in this bit vector whose corresponding bit is set in the provided bit vector.
+   *
+   * @pre The sizes of the bit vectors must be the same.
+   *
    * @param other The bit vector to diff with. Lengths must match exactly.
+   * @return This bit vector.
    */
   BitVector &Difference(const BitVector &other) {
     TPL_ASSERT(num_bits() == other.num_bits(), "Mismatched bit vector size");
