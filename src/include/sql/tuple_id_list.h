@@ -38,9 +38,21 @@ namespace tpl::sql {
  */
 class TupleIdList {
  public:
-  using BitVectorT = util::BitVector<uint64_t>;
+  using BitVectorType = util::BitVector<uint64_t>;
 
-  explicit TupleIdList(uint32_t size = kDefaultVectorSize) : bit_vector_(size) {}
+  /**
+   * Construct a TID list with the given maximum size.
+   * @param size The maximum size of the list.
+   */
+  explicit TupleIdList(uint32_t size) : bit_vector_(size) {}
+
+  /**
+   *
+   */
+  void Resize(uint32_t size) {
+    TPL_ASSERT(size <= bit_vector_.num_bits(), "Cannot grow TupleIDLists");
+    bit_vector_.Resize(size);
+  }
 
   /**
    * Is the tuple with the given ID in this list?
@@ -128,15 +140,15 @@ class TupleIdList {
                   "indicating if the given TID is considered 'valid' and "
                   "should be included in the output list");
 
-    for (BitVectorT::WordType i = 0; i < input.bit_vector_.num_words(); i++) {
-      const auto start = i * BitVectorT::kWordSizeBits;
-      BitVectorT::WordType word = input.bit_vector_.GetWord(i);
-      BitVectorT::WordType word_result = 0;
+    for (BitVectorType::WordType i = 0; i < input.bit_vector_.num_words(); i++) {
+      const auto start = i * BitVectorType::kWordSizeBits;
+      BitVectorType::WordType word = input.bit_vector_.GetWord(i);
+      BitVectorType::WordType word_result = 0;
       while (word != 0) {
         const auto t = word & -word;
         const auto r = util::BitUtil::CountTrailingZeros(word);
         const auto tid = start + r;
-        const auto cond = static_cast<BitVectorT::WordType>(f(tid));
+        const auto cond = static_cast<BitVectorType::WordType>(f(tid));
         word_result |= (cond << r);
         word ^= t;
       }
@@ -163,18 +175,18 @@ class TupleIdList {
 
     // Process batches of 64 at-a-time. This loop should be fully vectorized for
     // fundamental types.
-    for (BitVectorT::WordType i = 0; i < bit_vector_.num_words(); i++) {
-      const auto start = i * BitVectorT::kWordSizeBits;
-      BitVectorT::WordType word_result = 0;
-      for (BitVectorT::WordType j = 0; j < BitVectorT::kWordSizeBits; j++) {
-        const auto cond = static_cast<BitVectorT::WordType>(f(start + j));
+    for (BitVectorType::WordType i = 0; i < bit_vector_.num_words(); i++) {
+      const auto start = i * BitVectorType::kWordSizeBits;
+      BitVectorType::WordType word_result = 0;
+      for (BitVectorType::WordType j = 0; j < BitVectorType::kWordSizeBits; j++) {
+        const auto cond = static_cast<BitVectorType::WordType>(f(start + j));
         word_result |= (cond << j);
       }
       bit_vector_.SetWord(i, word_result);
     }
 
     // Scalar tail
-    for (BitVectorT::WordType i = bit_vector_.num_words() * BitVectorT::kWordSizeBits;
+    for (BitVectorType::WordType i = bit_vector_.num_words() * BitVectorType::kWordSizeBits;
          i < kDefaultVectorSize; i++) {
       bit_vector_.Set(i, f(i));
     }
@@ -250,11 +262,11 @@ class TupleIdList {
   /**
    * Access the internal bit vector.
    */
-  BitVectorT *GetMutableBits() { return &bit_vector_; }
+  BitVectorType *GetMutableBits() { return &bit_vector_; }
 
  private:
   // The validity bit vector
-  BitVectorT bit_vector_;
+  BitVectorType bit_vector_;
 };
 
 }  // namespace tpl::sql
