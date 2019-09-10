@@ -158,8 +158,8 @@ class Vector {
   /**
    * Returns the value of the element at the given position in the vector.
    *
-   * NOTE: This shouldn't be used in performance-critical code. It's mostly for
-   * debugging and validity checks, or for read-once-per-vector type operations.
+   * NOTE: This shouldn't be used in performance-critical code. It's mostly for debugging and
+   * validity checks, or for read-once-per-vector type operations.
    *
    * @param index The position in the vector to read.
    * @return The element at the specified position.
@@ -169,8 +169,8 @@ class Vector {
   /**
    * Set the value at position @em index in the vector to the value @em value.
    *
-   * NOTE: This shouldn't be used in performance-critical code. It's mostly for
-   * debugging and validity checks, or for read-once-per-vector type operations.
+   * NOTE: This shouldn't be used in performance-critical code. It's mostly for debugging and
+   * validity checks, or for read-once-per-vector type operations.
    *
    * @param index The (zero-based) index in the element to modify.
    * @param val The value to set the element to.
@@ -178,8 +178,8 @@ class Vector {
   void SetValue(uint64_t index, const GenericValue &val);
 
   /**
-   * Cast this vector to a different type. If the target type is the same as the
-   * current type, nothing is done.
+   * Cast this vector to a different type. If the target type is the same as the current type,
+   * nothing is done.
    */
   void Cast(TypeId new_type);
 
@@ -189,17 +189,17 @@ class Vector {
   void Append(Vector &other);
 
   /**
-   * Copies the contents of this vector into another vector. Callers can
-   * optionally specify at what offset to begin copying at, but data is always
-   * copied into the start of the destination vector. The default is 0.
+   * Copies the contents of this vector into another vector. Callers can optionally specify at what
+   * offset to begin copying at, but data is always copied into the start of the destination vector.
+   * The default is 0.
+   *
    * @param other The vector to copy into.
    * @param offset The offset in this vector to begin copying.
    */
   void CopyTo(Vector *other, uint64_t offset = 0);
 
   /**
-   * Move the data from this vector into another vector, and empty initialize
-   * this vector.
+   * Move the data from this vector into another vector, and empty initialize this vector.
    * @param other The vector that will take ownership of all our data, if any.
    */
   void MoveTo(Vector *other);
@@ -236,8 +236,7 @@ class Vector {
   void Dump(std::ostream &stream) const;
 
   /**
-   * Perform an integrity check on this vector instance. This is used in debug
-   * mode for sanity checks.
+   * Perform an integrity check on this vector. This is used in debug mode for sanity checks.
    */
   void CheckIntegrity() const;
 
