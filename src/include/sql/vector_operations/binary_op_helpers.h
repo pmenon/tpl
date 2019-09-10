@@ -76,7 +76,7 @@ void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right, Vect
   auto *right_data = reinterpret_cast<RightType *>(right.data());
   auto *result_data = reinterpret_cast<ResultType *>(result->data());
 
-  result->mutable_null_mask()->Copy(left.null_mask() | right.null_mask());
+  result->mutable_null_mask()->Copy(left.null_mask()).Union(right.null_mask());
 
   if (IgnoreNull && result->null_mask().Any()) {
     VectorOps::Exec(left.selection_vector(), left.count(), [&](uint64_t i, uint64_t k) {

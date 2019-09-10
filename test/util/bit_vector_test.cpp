@@ -86,6 +86,27 @@ TEST(BitVectorTest, Set) {
   EXPECT_TRUE(Verify(bv, {0, 2, 7}));
 }
 
+TEST(BitVectorTest, IndexOperator) {
+  BitVector<> bv(10);
+
+  bv[2] = true;
+  EXPECT_TRUE(Verify(bv, {2}));
+
+  bv[0] = true;
+  EXPECT_TRUE(Verify(bv, {0, 2}));
+
+  bv[7] = true;
+  EXPECT_TRUE(Verify(bv, {0, 2, 7}));
+
+  bv[0] = bv[7] = false;
+  EXPECT_TRUE(Verify(bv, {2}));
+
+  bv.Reset();
+  bv[8] = true;
+  bv[9] = bv[8];
+  EXPECT_TRUE(Verify(bv, {8, 9}));
+}
+
 TEST(BitVectorTest, SetAll) {
   BitVector<> bv(300);
 

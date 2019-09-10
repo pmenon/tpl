@@ -51,6 +51,8 @@ class Vector {
   friend class VectorProjectionIterator;
 
  public:
+  using NullMask = util::BitVector<uint64_t>;
+
   /**
    * Create an empty vector.
    * @param type The type of the elements in the vector.
@@ -58,9 +60,8 @@ class Vector {
   explicit Vector(TypeId type);
 
   /**
-   * Create a new owning vector with a given size (at most kDefaultVectorSize
-   * elements). If the @em clear flag is set, the vector's data will be
-   * zeroed out.
+   * Create a new owning vector with a given size (at most kDefaultVectorSize elements). If the
+   * @em clear flag is set, the vector's data will be zeroed out.
    * @param type The primitive type ID of the elements in this vector.
    * @param count The size of the vector.
    * @param clear Should the vector zero out the data if it allocates any?
@@ -113,12 +114,12 @@ class Vector {
   /**
    * Return the NULL bitmask of elements in this vector.
    */
-  const util::BitVector<> &null_mask() const { return null_mask_; }
+  const NullMask &null_mask() const { return null_mask_; }
 
   /**
    * Return a mutable instance of the NULL bitmask in this vector.
    */
-  util::BitVector<> *mutable_null_mask() { return &null_mask_; }
+  NullMask *mutable_null_mask() { return &null_mask_; }
 
   /**
    * Set the selection vector.
@@ -134,8 +135,7 @@ class Vector {
   bool IsConstant() const { return count_ == 1 && sel_vector_ == nullptr; }
 
   /**
-   * Compute the selectivity of the vector. Constant vectors always have a
-   * selectivity of 1.0 (100%).
+   * Compute the selectivity, i.e., the fraction of tuples that are externally visible.
    */
   double ComputeSelectivity() const {
     return IsConstant() ? 1.0 : static_cast<double>(count_) / kDefaultVectorSize;
@@ -145,14 +145,14 @@ class Vector {
    * Is the value at position @em index NULL?
    */
   bool IsNull(const uint64_t index) const {
-    return null_mask_.Test(sel_vector_ != nullptr ? sel_vector_[index] : index);
+    return null_mask_[sel_vector_ != nullptr ? sel_vector_[index] : index];
   }
 
   /**
    * Set the value at position @em index to @em null.
    */
   void SetNull(const uint64_t index, const bool null) {
-    null_mask_.Set(sel_vector_ != nullptr ? sel_vector_[index] : index, null);
+    null_mask_[sel_vector_ != nullptr ? sel_vector_[index] : index] = null;
   }
 
   /**
@@ -297,7 +297,7 @@ class Vector {
   // The selection vector of the vector.
   sel_t *sel_vector_;
   // The null mask used to indicate if an element in the vector is NULL.
-  util::BitVector<> null_mask_;
+  NullMask null_mask_;
   // String container
   Strings strings_;
   // If the vector holds allocated data, this field manages it.

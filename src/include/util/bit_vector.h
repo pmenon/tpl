@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #include "common/common.h"
 #include "util/bit_util.h"
@@ -52,11 +53,56 @@ class BitVector {
   }
 
   /**
+   * Abstracts a reference to one bit in the bit vector.
+   */
+  class BitReference {
+   public:
+    /**
+     * Test the value of the bit.
+     * @return True if the bit is 1; false otherwise.
+     */
+    operator bool() const { return ((*word_) & mask_) != 0; }
+
+    /**
+     * Assign the value of the bit to the boolean @em val. If input value is true, the bit is set to
+     * 1. If the input value is false, the bit is set to 0.
+     * @param val The value to assign the bit.
+     * @return This bit.
+     */
+    BitReference &operator=(bool val) {
+      Assign(val);
+      return *this;
+    }
+
+    /**
+     * Assign the value of the bit the value of another bit in the bit vector.
+     * @param other The other bit to read from.
+     * @return This bit.
+     */
+    BitReference &operator=(const BitReference &other) {
+      Assign(other);
+      return *this;
+    }
+
+   private:
+    friend class BitVector<Word>;
+
+    BitReference(WordType *word, uint32_t bit_pos) : word_(word), mask_(WordType(1) << bit_pos) {}
+
+    // Assign the bit to the given value
+    void Assign(bool val) { (*word_) ^= (-static_cast<WordType>(val) ^ *word_) & mask_; }
+
+   private:
+    WordType *word_;
+    WordType mask_;
+  };
+
+  /**
    * Create an empty bit vector. Users must call @em Resize() before interacting with it.
    *
    * @ref BitVector::Resize()
    */
-  BitVector() : num_bits_(0), num_words_(0), words_(nullptr) {}
+  BitVector() : num_bits_(0) {}
 
   /**
    * Create a new bit vector with the specified number of bits. After construction, all bits are
@@ -64,23 +110,15 @@ class BitVector {
    * @param num_bits The number of bits in the vector.
    */
   explicit BitVector(const uint32_t num_bits)
-      : num_bits_(num_bits),
-        num_words_(NumNeededWords(num_bits)),
-        words_(std::make_unique<WordType[]>(num_words_)) {
+      : num_bits_(num_bits), words_(NumNeededWords(num_bits), WordType(0)) {
     TPL_ASSERT(num_bits_ > 0, "Cannot create bit vector with zero bits");
-    // Note: We don't explicitly call Reset() because std::make_unique<[]>() value-initializes to 0.
   }
 
   /**
    * Create a copy of the provided bit vector.
    * @param other The bit vector to copy.
    */
-  BitVector(const BitVector &other)
-      : num_bits_(other.num_bits_),
-        num_words_(other.num_words_),
-        words_(std::make_unique<WordType[]>(num_words_)) {
-    Copy(other);
-  }
+  BitVector(const BitVector &other) : num_bits_(other.num_bits_), words_(other.words_) {}
 
   /**
    * Move constructor.
@@ -94,12 +132,8 @@ class BitVector {
    * @return This bit vector as a copy of the input vector.
    */
   BitVector &operator=(const BitVector &other) {
-    if (num_bits() != other.num_bits()) {
-      num_bits_ = other.num_bits_;
-      num_words_ = other.num_words_;
-      words_ = std::make_unique<WordType[]>(num_words_);
-    }
-    Copy(other);
+    num_bits_ = other.num_bits_;
+    words_ = other.words_;
     return *this;
   }
 
@@ -301,7 +335,7 @@ class BitVector {
         }
       }
       const WordType mask = ~(kAllOnesWord << GetNumExtraBits());
-      return words_[num_words_ - 1] == mask;
+      return words_[num_words() - 1] == mask;
     }
   }
 
@@ -421,15 +455,11 @@ class BitVector {
 
     uint32_t new_num_words = NumNeededWords(num_bits);
 
-    // Allocate new words if needed
-    if (num_words_ < new_num_words) {
-      auto new_words = std::make_unique<WordType[]>(new_num_words);
-      std::memcpy(new_words.get(), words_.get(), num_words_ * kWordSizeBytes);
-      words_ = std::move(new_words);
+    if (num_words() != new_num_words) {
+      words_.resize(new_num_words, WordType(0));
     }
 
     num_bits_ = num_bits;
-    num_words_ = new_num_words;
     ZeroUnusedBits();
   }
 
@@ -465,7 +495,7 @@ class BitVector {
   void SetFromBytes(const uint8_t *const bytes, const uint32_t num_bytes) {
     TPL_ASSERT(bytes != nullptr, "Null input");
     TPL_ASSERT(num_bytes == num_bits(), "Byte vector too small");
-    util::VectorUtil::ByteVectorToBitVector(bytes, num_bytes, words_.get());
+    util::VectorUtil::ByteVectorToBitVector(bytes, num_bytes, words_.data());
   }
 
   /**
@@ -473,7 +503,7 @@ class BitVector {
    * @return String representation of this vector.
    */
   std::string ToString() const {
-    std::string result = "BitVector=[";
+    std::string result = "BitVector(#bits=" + std::to_string(num_bits()) + ")=[";
     bool first = true;
     for (uint32_t i = 0; i < num_bits(); i++) {
       if (!first) result += ",";
@@ -489,6 +519,11 @@ class BitVector {
   // -------------------------------------------------------
 
   bool operator[](const uint32_t position) const { return Test(position); }
+
+  BitReference operator[](const uint32_t position) {
+    TPL_ASSERT(position < num_bits(), "Out-of-range access");
+    return BitReference(&words_[position / kWordSizeBits], position % kWordSizeBits);
+  }
 
   BitVector &operator-=(const BitVector &other) {
     Difference(other);
@@ -507,11 +542,11 @@ class BitVector {
 
   uint32_t num_bits() const { return num_bits_; }
 
-  uint32_t num_words() const { return num_words_; }
+  uint32_t num_words() const { return words_.size(); }
 
-  const WordType *words() const { return words_.get(); }
+  const WordType *words() const { return words_.data(); }
 
-  WordType *words() { return words_.get(); }
+  WordType *words() { return words_.data(); }
 
  private:
   // The number of used bits in the last word
@@ -521,17 +556,15 @@ class BitVector {
   void ZeroUnusedBits() {
     uint32_t extra_bits = GetNumExtraBits();
     if (extra_bits != 0) {
-      words_[num_words_ - 1] &= ~(kAllOnesWord << extra_bits);
+      words_[num_words() - 1] &= ~(kAllOnesWord << extra_bits);
     }
   }
 
  private:
   // The number of bits in the bit vector
   uint32_t num_bits_;
-  // The number of words in the bit vector
-  uint32_t num_words_;
   // The array of words making up the bit vector
-  std::unique_ptr<WordType[]> words_;
+  std::vector<WordType> words_;
 };
 
 template <typename T>
