@@ -122,20 +122,17 @@ TEST_F(AggregationHashTableVectorIteratorTest, IterateEmptyAggregation) {
 }
 
 TEST_F(AggregationHashTableVectorIteratorTest, IterateSmallAggregation) {
-  constexpr uint32_t num_aggs = 4000;
+  constexpr uint32_t num_aggs = 400;
   constexpr uint32_t group_size = 10;
   constexpr uint32_t num_tuples = num_aggs * group_size;
 
-  //
-  // Insert 'num_tuples' into an aggregation table to force the creation of
-  // 'num_aggs' unique aggregates. Each aggregate should receive 'group_size'
-  // tuples as input whose column value is 'cola'. The key range of aggregates
-  // is [0, num_aggs).
+  // Insert 'num_tuples' into an aggregation table to force the creation of 'num_aggs' unique
+  // aggregates. Each aggregate should receive 'group_size' tuples as input whose column value
+  // is 'cola'. The key range of aggregates is [0, num_aggs).
   //
   // We need to ensure:
   // 1. After transposition, we receive exactly 'num_aggs' unique aggregates.
   // 2. For each aggregate, the associated count/sums is correct.
-  //
 
   AggregationHashTable agg_ht(memory(), sizeof(AggTuple));
 
