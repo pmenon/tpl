@@ -241,13 +241,6 @@ class Vector {
    */
   void CheckIntegrity() const;
 
- protected:
-  // For subclasses
-  void SetData(std::unique_ptr<byte[]> data) {
-    owned_data_ = std::move(data);
-    data_ = owned_data_.get();
-  }
-
  private:
   // Create a new vector with the provided type. Any existing data is destroyed.
   void Initialize(TypeId new_type, bool clear);
