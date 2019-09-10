@@ -69,9 +69,8 @@ void CastFromSrcType(const Vector &source, Vector *target, SqlTypeId target_type
 
 void VectorOps::Cast(const Vector &source, Vector *target, SqlTypeId source_type,
                      SqlTypeId target_type) {
-  target->sel_vector_ = source.sel_vector_;
-  target->count_ = source.count_;
-  target->null_mask_ = source.null_mask_;
+  target->SetSelectionVector(source.sel_vector_, source.count_);
+  target->mutable_null_mask()->Copy(source.null_mask());
   switch (source_type) {
     case SqlTypeId::Boolean: {
       CastFromSrcType<bool, tpl::sql::Cast>(source, target, target_type);
