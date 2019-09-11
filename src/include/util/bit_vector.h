@@ -61,7 +61,7 @@ class BitVector {
      * Test the value of the bit.
      * @return True if the bit is 1; false otherwise.
      */
-    operator bool() const { return ((*word_) & mask_) != 0; }
+    operator bool() const noexcept { return ((*word_) & mask_) != 0; }  // NOLINT
 
     /**
      * Assign the value of the bit to the boolean @em val. If input value is true, the bit is set to
@@ -69,7 +69,7 @@ class BitVector {
      * @param val The value to assign the bit.
      * @return This bit.
      */
-    BitReference &operator=(bool val) {
+    BitReference &operator=(bool val) noexcept {
       Assign(val);
       return *this;
     }
@@ -79,7 +79,7 @@ class BitVector {
      * @param other The other bit to read from.
      * @return This bit.
      */
-    BitReference &operator=(const BitReference &other) {
+    BitReference &operator=(const BitReference &other) noexcept {
       Assign(other);
       return *this;
     }
@@ -89,8 +89,8 @@ class BitVector {
 
     BitReference(WordType *word, uint32_t bit_pos) : word_(word), mask_(WordType(1) << bit_pos) {}
 
-    // Assign the bit to the given value
-    void Assign(bool val) { (*word_) ^= (-static_cast<WordType>(val) ^ *word_) & mask_; }
+    // Assign this bit to the given value
+    void Assign(bool val) noexcept { (*word_) ^= (-static_cast<WordType>(val) ^ *word_) & mask_; }
 
    private:
     WordType *word_;
