@@ -7,8 +7,20 @@ namespace tpl::sql {
 class ColumnSegment;
 
 /**
- * A vector-at-a-time iterator over the in-memory contents of a column's data.
- * Each iteration returns at most @em kDefaultVectorSize (i.e., 2048) elements.
+ * A vector-at-a-time iterator over the in-memory contents of a column's data. Each iteration
+ * returns at most <i>kDefaultVectorSize</i> (i.e., 2048) elements. After construction, callers
+ * initialize the iterator through ColumnVectorIterator::Reset() providing a column segment to
+ * iterate over.
+ *
+ * Use as follows:
+ * @code
+ * ColumnVectorIterator iter(...);
+ * iter.Reset(column_segment);
+ * while (iter.Advance()) {
+ *   auto *vector_data = iter.col_data();
+ *   ...
+ * }
+ * @endcode
  */
 class ColumnVectorIterator {
  public:
@@ -21,8 +33,7 @@ class ColumnVectorIterator {
   bool Advance() noexcept;
 
   /**
-   * The number of tuples in the input. Or, in other words, the number of
-   * elements in the array returned by @em col_data() or @em col_null_bitmap()
+   * Return the number of tuples in the current vector of input data.
    * @return The number of tuples in the currently active vector.
    */
   uint32_t NumTuples() const { return next_block_pos_ - current_block_pos_; }
