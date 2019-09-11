@@ -407,7 +407,7 @@ TEST_F(VectorUtilTest, BitToSelectionVector) {
 
   // Ensure the indexes that are set are even
   for (uint32_t i = 0; i < size; i++) {
-    EXPECT_TRUE(sel[i] % 2 == 0);
+    EXPECT_EQ(0u, sel[i] % 2);
   }
 }
 
