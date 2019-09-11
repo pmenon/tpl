@@ -26,8 +26,8 @@ std::string BooleanType::GetName() const {
 
 bool BooleanType::IsArithmetic() const { return false; }
 
-bool BooleanType::Equals(const SqlType &other) const {
-  return other.Is<BooleanType>() && nullable() == other.nullable();
+bool BooleanType::Equals(const SqlType &that) const {
+  return that.Is<BooleanType>() && nullable() == that.nullable();
 }
 
 const BooleanType &BooleanType::InstanceNonNullable() {
@@ -54,8 +54,8 @@ std::string TinyIntType::GetName() const {
   return str;
 }
 
-bool TinyIntType::Equals(const SqlType &other) const {
-  return other.Is<TinyIntType>() && nullable() == other.nullable();
+bool TinyIntType::Equals(const SqlType &that) const {
+  return that.Is<TinyIntType>() && nullable() == that.nullable();
 }
 
 const TinyIntType &TinyIntType::InstanceNonNullable() {
@@ -82,8 +82,8 @@ std::string SmallIntType::GetName() const {
   return str;
 }
 
-bool SmallIntType::Equals(const SqlType &other) const {
-  return other.Is<SmallIntType>() && nullable() == other.nullable();
+bool SmallIntType::Equals(const SqlType &that) const {
+  return that.Is<SmallIntType>() && nullable() == that.nullable();
 }
 
 const SmallIntType &SmallIntType::InstanceNonNullable() {
@@ -110,8 +110,8 @@ std::string IntegerType::GetName() const {
   return str;
 }
 
-bool IntegerType::Equals(const SqlType &other) const {
-  return other.Is<IntegerType>() && nullable() == other.nullable();
+bool IntegerType::Equals(const SqlType &that) const {
+  return that.Is<IntegerType>() && nullable() == that.nullable();
 }
 
 const IntegerType &IntegerType::InstanceNonNullable() {
@@ -138,8 +138,8 @@ std::string BigIntType::GetName() const {
   return str;
 }
 
-bool BigIntType::Equals(const SqlType &other) const {
-  return other.Is<BigIntType>() && nullable() == other.nullable();
+bool BigIntType::Equals(const SqlType &that) const {
+  return that.Is<BigIntType>() && nullable() == that.nullable();
 }
 
 const BigIntType &BigIntType::InstanceNonNullable() {
@@ -166,8 +166,8 @@ std::string RealType::GetName() const {
   return str;
 }
 
-bool RealType::Equals(const SqlType &other) const {
-  return other.Is<RealType>() && nullable() == other.nullable();
+bool RealType::Equals(const SqlType &that) const {
+  return that.Is<RealType>() && nullable() == that.nullable();
 }
 
 const RealType &RealType::InstanceNonNullable() {
@@ -194,8 +194,8 @@ std::string DoubleType::GetName() const {
   return str;
 }
 
-bool DoubleType::Equals(const SqlType &other) const {
-  return other.Is<DoubleType>() && nullable() == other.nullable();
+bool DoubleType::Equals(const SqlType &that) const {
+  return that.Is<DoubleType>() && nullable() == that.nullable();
 }
 
 const DoubleType &DoubleType::InstanceNonNullable() {
@@ -226,10 +226,10 @@ std::string DecimalType::GetName() const {
   return str;
 }
 
-bool DecimalType::Equals(const SqlType &other) const {
-  if (auto *other_decimal = other.SafeAs<DecimalType>()) {
+bool DecimalType::Equals(const SqlType &that) const {
+  if (auto *other_decimal = that.SafeAs<DecimalType>()) {
     return precision() == other_decimal->precision() && scale() == other_decimal->scale() &&
-           nullable() == other.nullable();
+           nullable() == that.nullable();
   }
   return false;
 }
@@ -286,8 +286,8 @@ std::string DateType::GetName() const {
   return str;
 }
 
-bool DateType::Equals(const SqlType &other) const {
-  return other.Is<DateType>() && nullable() == other.nullable();
+bool DateType::Equals(const SqlType &that) const {
+  return that.Is<DateType>() && nullable() == that.nullable();
 }
 
 DateType::DateType(bool nullable) : SqlType(SqlTypeId::Date, nullable) {}
@@ -325,8 +325,8 @@ std::string CharType::GetName() const {
   return str;
 }
 
-bool CharType::Equals(const SqlType &other) const {
-  if (auto *other_char = other.SafeAs<CharType>()) {
+bool CharType::Equals(const SqlType &that) const {
+  if (auto *other_char = that.SafeAs<CharType>()) {
     return length() == other_char->length() && nullable() == other_char->nullable();
   }
   return false;
@@ -372,8 +372,8 @@ std::string VarcharType::GetName() const {
   return str;
 }
 
-bool VarcharType::Equals(const SqlType &other) const {
-  if (auto *other_varchar = other.SafeAs<VarcharType>()) {
+bool VarcharType::Equals(const SqlType &that) const {
+  if (auto *other_varchar = that.SafeAs<VarcharType>()) {
     return max_length() == other_varchar->max_length() && nullable() == other_varchar->nullable();
   }
   return false;

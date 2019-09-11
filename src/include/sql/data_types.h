@@ -31,7 +31,11 @@ class SqlType {
 
   virtual bool IsArithmetic() const = 0;
 
-  virtual bool Equals(const SqlType &other) const = 0;
+  virtual bool Equals(const SqlType &that) const = 0;
+
+  bool operator==(const SqlType &that) const noexcept { return Equals(that); }
+
+  bool operator!=(const SqlType &that) const noexcept { return !(*this == that); }
 
   // -------------------------------------------------------
   // Type-checking
@@ -95,7 +99,7 @@ class BooleanType : public SqlType {
 
   bool IsArithmetic() const override;
 
-  bool Equals(const SqlType &other) const override;
+  bool Equals(const SqlType &that) const override;
 
   static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Boolean; }
 
@@ -139,7 +143,7 @@ class TinyIntType : public NumberBaseType<int8_t> {
 
   std::string GetName() const override;
 
-  bool Equals(const SqlType &other) const override;
+  bool Equals(const SqlType &that) const override;
 
   static bool classof(const SqlType *type) { return type->id() == SqlTypeId::TinyInt; }
 
@@ -166,7 +170,7 @@ class SmallIntType : public NumberBaseType<int16_t> {
 
   std::string GetName() const override;
 
-  bool Equals(const SqlType &other) const override;
+  bool Equals(const SqlType &that) const override;
 
   static bool classof(const SqlType *type) { return type->id() == SqlTypeId::SmallInt; }
 
@@ -193,7 +197,7 @@ class IntegerType : public NumberBaseType<int32_t> {
 
   std::string GetName() const override;
 
-  bool Equals(const SqlType &other) const override;
+  bool Equals(const SqlType &that) const override;
 
   static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Integer; }
 
@@ -220,7 +224,7 @@ class BigIntType : public NumberBaseType<int64_t> {
 
   std::string GetName() const override;
 
-  bool Equals(const SqlType &other) const override;
+  bool Equals(const SqlType &that) const override;
 
   static bool classof(const SqlType *type) { return type->id() == SqlTypeId::BigInt; }
 
@@ -247,7 +251,7 @@ class RealType : public NumberBaseType<float> {
 
   std::string GetName() const override;
 
-  bool Equals(const SqlType &other) const override;
+  bool Equals(const SqlType &that) const override;
 
   static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Real; }
 
@@ -274,7 +278,7 @@ class DoubleType : public NumberBaseType<double> {
 
   std::string GetName() const override;
 
-  bool Equals(const SqlType &other) const override;
+  bool Equals(const SqlType &that) const override;
 
   static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Double; }
 
@@ -307,7 +311,7 @@ class DecimalType : public SqlType {
 
   std::string GetName() const override;
 
-  bool Equals(const SqlType &other) const override;
+  bool Equals(const SqlType &that) const override;
 
   bool IsArithmetic() const override;
 
@@ -349,7 +353,7 @@ class DateType : public SqlType {
 
   std::string GetName() const override;
 
-  bool Equals(const SqlType &other) const override;
+  bool Equals(const SqlType &that) const override;
 
   bool IsArithmetic() const override { return false; }
 
@@ -380,7 +384,7 @@ class CharType : public SqlType {
 
   std::string GetName() const override;
 
-  bool Equals(const SqlType &other) const override;
+  bool Equals(const SqlType &that) const override;
 
   bool IsArithmetic() const override { return false; }
 
@@ -421,7 +425,7 @@ class VarcharType : public SqlType {
 
   std::string GetName() const override;
 
-  bool Equals(const SqlType &other) const override;
+  bool Equals(const SqlType &that) const override;
 
   bool IsArithmetic() const override { return false; }
 
