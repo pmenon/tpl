@@ -23,7 +23,7 @@ TEST_F(VectorComparisonTest, CompareNumeric) {
 
     // Try to find
     ConstantVector _4(GenericValue::CreateBigInt(4).CastTo(type_id));
-    auto result = MakeBooleanVector();
+    auto result = MakeBooleanVector(vec->num_elements());
 
     // Check vec == 4. Only index 4 is valid.
     {
@@ -119,7 +119,7 @@ TEST_F(VectorComparisonTest, CompareNumericWithNulls) {
 
     ConstantVector null_int(GenericValue::CreateNull(vec1->type_id()));
 
-    auto result = MakeBooleanVector();
+    auto result = MakeBooleanVector(vec1->num_elements());
 
     // vec1 == vec2 = [false, NULL, NULL, true, NULL, true]
     {
@@ -163,7 +163,7 @@ TEST_F(VectorComparisonTest, CompareStrings) {
   auto a = MakeVarcharVector({"first", "second", nullptr, "fourth"}, {false, false, true, false});
   auto b =
       MakeVarcharVector({nullptr, "second", nullptr, "baka not nice"}, {true, false, true, false});
-  auto result = MakeBooleanVector();
+  auto result = MakeBooleanVector(a->num_elements());
 
   // a == b, only (1)
   VectorOps::Equal(*a, *b, result.get());
@@ -178,7 +178,7 @@ TEST_F(VectorComparisonTest, CompareStrings) {
 TEST_F(VectorComparisonTest, CompareWithNulls) {
   auto input = MakeBigIntVector({0, 1, 2, 3}, {false, false, false, false});
   auto null = ConstantVector(GenericValue::CreateNull(TypeId::BigInt));
-  auto result = MakeBooleanVector();
+  auto result = MakeBooleanVector(input->num_elements());
 
   VectorOps::Equal(*input, null, result.get());
   EXPECT_TRUE(result->IsNull(0));

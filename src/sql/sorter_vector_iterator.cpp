@@ -32,7 +32,9 @@ SorterVectorIterator::~SorterVectorIterator() {
   memory_->DeallocateArray(temp_rows_, kDefaultVectorSize);
 }
 
-bool SorterVectorIterator::HasNext() const { return vector_projection_->GetTupleCount() > 0; }
+bool SorterVectorIterator::HasNext() const {
+  return vector_projection_->GetSelectedTupleCount() > 0;
+}
 
 void SorterVectorIterator::Next(const SorterVectorIterator::TransposeFn transpose_fn) {
   // Pull rows into temporary array
@@ -42,7 +44,7 @@ void SorterVectorIterator::Next(const SorterVectorIterator::TransposeFn transpos
   }
 
   // Setup vector projection
-  vector_projection_->SetTupleCount(size);
+  vector_projection_->Resize(size);
 
   // Build the vector projection
   if (size > 0) {
@@ -57,7 +59,8 @@ void SorterVectorIterator::BuildVectorProjection(
 
   // Invoke the transposition function which does the heavy, query-specific,
   // lifting of converting rows to columns.
-  transpose_fn(temp_rows_, vector_projection_->GetTupleCount(), vector_projection_iterator_.get());
+  transpose_fn(temp_rows_, vector_projection_->GetSelectedTupleCount(),
+               vector_projection_iterator_.get());
 
   // The vector projection is now filled with sorted rows in columnar format.
   // Reset the VPI so that it's ready for iteration.

@@ -13,16 +13,16 @@ void FillImpl(Vector *vector, T val) {
 }  // namespace
 
 void VectorOps::Fill(Vector *vector, const GenericValue &value) {
-  if (vector->count_ == 0) {
+  if (vector->count() == 0) {
     return;
   }
 
   if (value.is_null()) {
-    vector->null_mask_.SetAll();
+    vector->mutable_null_mask()->SetAll();
     return;
   }
 
-  vector->null_mask_.Reset();
+  vector->mutable_null_mask()->Reset();
 
   switch (vector->type_) {
     case TypeId::Boolean: {

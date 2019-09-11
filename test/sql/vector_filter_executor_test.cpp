@@ -51,11 +51,11 @@ class VectorFilterExecutorTest : public TplTest {
   std::unique_ptr<VectorProjection> CreateTestVectorProj() {
     auto vp = std::make_unique<VectorProjection>();
     vp->Initialize(Cols());
-    vp->SetTupleCount(10);
+    vp->Resize(10);
 
     static const char *nums[] = {"one", "two",   "three", "four", "five",
                                  "six", "seven", "eight", "nine", "ten"};
-    for (uint64_t i = 0; i < vp->GetTupleCount(); i++) {
+    for (uint64_t i = 0; i < vp->GetSelectedTupleCount(); i++) {
       vp->GetColumn(Col::A)->SetValue(i, GenericValue::CreateBoolean(i >= 5));
       vp->GetColumn(Col::B)->SetValue(i, GenericValue::CreateTinyInt(i % 3));
       vp->GetColumn(Col::C)->SetValue(i, GenericValue::CreateSmallInt(i + 4));
@@ -74,7 +74,7 @@ class VectorFilterExecutorTest : public TplTest {
 
 TEST_F(VectorFilterExecutorTest, ColumnWithConstant) {
   auto check_loop = [](VectorProjection *vp, uint32_t expected_size, auto cb) {
-    EXPECT_EQ(expected_size, vp->GetTupleCount());
+    EXPECT_EQ(expected_size, vp->GetSelectedTupleCount());
     for (VectorProjectionIterator iter(vp); iter.HasNextFiltered(); iter.AdvanceFiltered()) {
       cb(&iter);
     }
@@ -139,7 +139,7 @@ TEST_F(VectorFilterExecutorTest, ColumnWithConstant) {
     filter.SelectLeVal(Col::B, GenericValue::CreateTinyInt(4));
     filter.Finish();
 
-    check_loop(vp.get(), vp->GetTupleCount(), [](VectorProjectionIterator *iter) {
+    check_loop(vp.get(), vp->GetSelectedTupleCount(), [](VectorProjectionIterator *iter) {
       auto colb = *iter->GetValue<int8_t, false>(Col::B, nullptr);
       EXPECT_LE(colb, 4);
     });
@@ -169,7 +169,7 @@ TEST_F(VectorFilterExecutorTest, Conjunction_Between) {
   filter.SelectLeVal(Col::C, GenericValue::CreateSmallInt(colc_hi));
   filter.Finish();
 
-  EXPECT_EQ(3u, vp->GetTupleCount());
+  EXPECT_EQ(3u, vp->GetSelectedTupleCount());
   for (VectorProjectionIterator iter(vp.get()); iter.HasNextFiltered(); iter.AdvanceFiltered()) {
     auto colc = *iter.GetValue<int16_t, false>(Col::C, nullptr);
     EXPECT_TRUE(colc >= colc_lo && colc <= colc_hi);
@@ -178,7 +178,7 @@ TEST_F(VectorFilterExecutorTest, Conjunction_Between) {
 
 TEST_F(VectorFilterExecutorTest, ColumnWithColumn) {
   auto check_loop = [](VectorProjection *vp, uint32_t expected_size, auto cb) {
-    EXPECT_EQ(expected_size, vp->GetTupleCount());
+    EXPECT_EQ(expected_size, vp->GetSelectedTupleCount());
     for (VectorProjectionIterator iter(vp); iter.HasNextFiltered(); iter.AdvanceFiltered()) {
       cb(&iter);
     }

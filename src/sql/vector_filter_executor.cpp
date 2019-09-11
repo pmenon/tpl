@@ -17,7 +17,7 @@ VectorFilterExecutor::VectorFilterExecutor(VectorProjection *vector_projection)
     : vector_projection_(vector_projection),
       sel_vector_(vector_projection_->GetSelectionVector()),
       owned_sel_vector_{0},
-      count_(vector_projection_->GetTupleCount()) {}
+      count_(vector_projection_->GetSelectedTupleCount()) {}
 
 VectorFilterExecutor::VectorFilterExecutor(VectorProjectionIterator *vector_projection_iterator)
     : VectorFilterExecutor(vector_projection_iterator->GetVectorProjection()) {}

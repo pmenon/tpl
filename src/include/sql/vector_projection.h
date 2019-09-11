@@ -16,17 +16,60 @@ namespace tpl::sql {
 class ColumnVectorIterator;
 
 /**
- * A vector projection is a container representing a collection of tuples whose attributes are
- * stored in columnar/vector format. It is used in the execution engine to represent subsets of
- * materialized state including base tables and any intermediate state such as hash tables or sorter
- * instances.
+ * A container representing a collection of tuples whose attributes are stored in columnar format.
+ * It's used in the execution engine to represent subsets of materialized state such partitions of
+ * base tables and intermediate state including hash tables or sorter instances.
  *
- * Vectors in the projection have a well-defined order and are accessed using this unchanging order.
- * All vectors have the same size.
+ * Columns in the projection have a well-defined order and are accessed using this unchanging order.
+ * All columns in the projection have the same size and selection count at any given time.
  *
  * In addition to holding just the vector data, vector projections also contain a selection index
  * vector containing the indexes of the tuples that are externally visible. All column vectors
- * contain references to the selection index vector owned by this projection.
+ * contain references to the selection index vector owned by this projection. At any given time,
+ * projections have a selected count (see VectorProjection::GetSelectedTupleCount()) that is <=
+ * the total tuple count (see VectorProjection::GetTotalTupleCount()).
+ *
+ * VectorProjections come in two flavors: referencing and owning projections. A referencing vector
+ * projection contains a set of column vectors that reference data stored externally. An owning
+ * vector projection allocates and owns a chunk of data that it partitions and assigns to all child
+ * vectors. By default, it will allocate enough data for each child to have a capacity determined by
+ * the global constant ::tpl::kDefaultVectorSize, usually 2048 elements. After construction, and
+ * owning vector projection has a <b>zero</b> size (though it's capacity is
+ * ::tpl::kDefaultVectorSize). Thus, users must explicitly set the size through
+ * VectorProjection::Resize() before interacting with the projection. Resizing sets up all contained
+ * column vectors.
+ *
+ * To create a referencing vector, use VectorProjection::InitializeEmpty(), and fill each column
+ * vector with VectorProjection::ResetColumn():
+ * @code
+ * VectorProjection vp;
+ * vp.InitializeEmpty(...);
+ * vp.ResetColumn(0, ...);
+ * vp.ResetColumn(1, ...);
+ * ...
+ * @endcode
+ *
+ * To create an owning vector, use VectorProjection::Initialize():
+ * @code
+ * VectorProjection vp;
+ * vp.Initialize(...);
+ * vp.Resize(10);
+ * VectorOps::Fill(vp.GetColumn(0), ...);
+ * @endcode
+ *
+ * To remove any selection vector, call VectorProjection::Reset(). This returns the projection to
+ * the a state as immediately following initialization.
+ *
+ * @code
+ * VectorProjection vp;
+ * vp.Initialize(...);
+ * vp.Resize(10);
+ * // vp size and selected is 10
+ * vp.Reset();
+ * // vp size and selected are 0
+ * vp.Resize(20);
+ * // vp size and selected is 20
+ * @endcode
  */
 class VectorProjection {
   friend class VectorProjectionIterator;
@@ -118,6 +161,13 @@ class VectorProjection {
   }
 
   /**
+   * Set the size of this projection and all child vectors to the given size. This size must be less
+   * than the maximum capacity of the vector projection.
+   * @param num_tuples The size to set the projection.
+   */
+  void Resize(uint64_t num_tuples);
+
+  /**
    * Reset this vector projection to the state after initialization. This will set the counts to 0,
    * and reset each child vector to point to data owned by this projection (if it owns any).
    */
@@ -149,16 +199,19 @@ class VectorProjection {
   uint32_t GetNumColumns() const { return columns_.size(); }
 
   /**
-   * Return the number of active (i.e., externally visible) tuples in this projection.
+   * Return the number of active, i.e., externally visible, tuples in this projection. The selected
+   * tuple count is always <= the total tuple count.
    * @return The number of externally visible tuples in this projection.
    */
-  uint64_t GetTupleCount() const { return columns_.empty() ? 0 : columns_[0]->count(); }
+  uint64_t GetSelectedTupleCount() const { return columns_.empty() ? 0 : columns_[0]->count(); }
 
   /**
-   * Set the current count of tuples in this projection.
-   * @param count The count.
+   * Return the total number of tuples in the projection, including those that may have been
+   * filtered out by a selection vector, if one exists. The total tuple count is >= the selected
+   * tuple count.
+   * @return The total number of tuples in the projection.
    */
-  void SetTupleCount(uint64_t count);
+  uint64_t GetTotalTupleCount() const { return columns_.empty() ? 0 : columns_[0]->num_elements(); }
 
   /**
    * Compute the selectivity of this projection.

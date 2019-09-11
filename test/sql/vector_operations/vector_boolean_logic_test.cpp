@@ -18,7 +18,7 @@ TEST_F(VectorBooleanLogicTest, BooleanLogic) {
   auto b = MakeBooleanVector({false, true, false, true}, {false, false, false, false});
   auto c = ConstantVector(GenericValue::CreateBoolean(false));
   auto d = ConstantVector(GenericValue::CreateNull(c.type_id()));
-  auto result = MakeBooleanVector();
+  auto result = MakeBooleanVector(a->num_elements());
 
   // a && b = [false, false, false, true]
   VectorOps::And(*a, *b, result.get());
@@ -51,7 +51,7 @@ TEST_F(VectorBooleanLogicTest, BooleanLogic) {
   EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(3));
 
   // aa = [false, NULL, true, true]
-  auto aa = MakeBooleanVector();
+  auto aa = MakeBooleanVector(a->num_elements());
   a->CopyTo(aa.get());
   aa->SetValue(1, GenericValue::CreateNull(TypeId::Boolean));
 
@@ -110,7 +110,7 @@ TEST_F(VectorBooleanLogicTest, FilteredBooleanLogic) {
   // a = [NULL, false, true, true], b = [false, true, false, true]
   auto a = MakeBooleanVector({false, false, true, true}, {true, true, false, false});
   auto b = MakeBooleanVector({false, true, false, true}, {false, false, false, false});
-  auto result = MakeBooleanVector();
+  auto result = MakeBooleanVector(a->num_elements());
   std::vector<uint16_t> sel = {0, 1, 3};
 
   // Set selection vector for both a and b
@@ -135,7 +135,7 @@ TEST_F(VectorBooleanLogicTest, FilteredBooleanLogic) {
 
 TEST_F(VectorBooleanLogicTest, NullChecking) {
   auto vec = MakeFloatVector({1.0, 0.0, 1.0, 0.0}, {false, true, false, true});
-  auto result = MakeBooleanVector();
+  auto result = MakeBooleanVector(vec->num_elements());
 
   // IS NULL vec, only 1 and 3
   VectorOps::IsNull(*vec, result.get());

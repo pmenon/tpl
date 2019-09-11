@@ -21,29 +21,31 @@ void VectorProjection::InitializeEmpty(const std::vector<const Schema::ColumnInf
   sel_vector_[0] = kInvalidPos;
   column_info_ = column_info;
   columns_.resize(column_info.size());
-  for (uint32_t i = 0; i < columns_.size(); i++) {
+  for (uint64_t i = 0; i < columns_.size(); i++) {
     const auto col_type = column_info[i]->sql_type.GetPrimitiveTypeId();
     columns_[i] = std::make_unique<Vector>(col_type);
   }
 }
 
 void VectorProjection::Initialize(const std::vector<const Schema::ColumnInfo *> &column_info) {
+  // First initialize an empty projection
   InitializeEmpty(column_info);
 
-  // Determine the total size of the data chunk we need to support the columns
-  // we manage.
-  const auto size_in_bytes =
-      std::accumulate(columns_.begin(), columns_.end(), 0u, [&](uint32_t curr_size, auto &col) {
-        return curr_size + (GetTypeIdSize(col->type_id()) * kDefaultVectorSize);
-      });
-  TPL_ASSERT(size_in_bytes > 0, "Cannot have zero-size vector projection");
+  // Now allocate space to accommodate all child vector data
+  std::size_t size_in_bytes = 0;
+  for (const auto &col_info : column_info) {
+    size_in_bytes += col_info->GetStorageSize() * kDefaultVectorSize;
+  }
+
+  // Note that std::make_unique<[]>() will zero-out the array for us due to value-initialization. We
+  // don't need to explicitly memset() it.
   owned_buffer_ = std::make_unique<byte[]>(size_in_bytes);
 
   // Setup the vector's to reference our data chunk
-  auto ptr = owned_buffer_.get();
-  for (const auto &col : columns_) {
-    col->Reference(col->type_id(), ptr, nullptr, 0);
-    ptr += GetTypeIdSize(col->type_id()) * kDefaultVectorSize;
+  byte *ptr = owned_buffer_.get();
+  for (uint64_t i = 0; i < column_info.size(); i++) {
+    columns_[i]->Reference(ptr, nullptr, 0);
+    ptr += column_info[i]->GetStorageSize() * kDefaultVectorSize;
   }
 }
 
@@ -60,35 +62,35 @@ void VectorProjection::SetSelectionVector(const sel_t *const new_sel_vector, con
   }
 }
 
+void VectorProjection::Resize(uint64_t num_tuples) {
+  for (auto &col : columns_) {
+    col->Resize(num_tuples);
+  }
+}
+
 void VectorProjection::Reset() {
   // Reset selection vector.
   sel_vector_[0] = kInvalidPos;
 
   // Force vector's to reference memory managed by us.
-  auto ptr = owned_buffer_.get();
-  for (const auto &col : columns_) {
-    const auto col_type = col->type_id();
-    col->Reference(col_type, ptr, nullptr, 0);
-    ptr += GetTypeIdSize(col_type) * kDefaultVectorSize;
+  if (owned_buffer_ != nullptr) {
+    auto ptr = owned_buffer_.get();
+    for (const auto &col : columns_) {
+      col->Reference(ptr, nullptr, 0);
+      ptr += GetTypeIdSize(col->type_id()) * kDefaultVectorSize;
+    }
   }
 }
 
 void VectorProjection::ResetColumn(byte *col_data, uint32_t *col_null_bitmap, uint32_t col_idx,
                                    uint32_t num_tuples) {
-  auto col_type = GetColumnInfo(col_idx)->sql_type.GetPrimitiveTypeId();
-  columns_[col_idx]->Reference(col_type, col_data, col_null_bitmap, num_tuples);
+  columns_[col_idx]->Reference(col_data, col_null_bitmap, num_tuples);
 }
 
 void VectorProjection::ResetColumn(const std::vector<ColumnVectorIterator> &column_iterators,
                                    const uint32_t col_idx) {
   ResetColumn(column_iterators[col_idx].col_data(), column_iterators[col_idx].col_null_bitmap(),
               col_idx, column_iterators[col_idx].NumTuples());
-}
-
-void VectorProjection::SetTupleCount(uint64_t count) {
-  for (auto &col : columns_) {
-    col->set_count(count);
-  }
 }
 
 std::string VectorProjection::ToString() const {
@@ -107,7 +109,8 @@ void VectorProjection::CheckIntegrity() const {
   for (const auto &col : columns_) {
     TPL_ASSERT(!IsFiltered() || sel_vector_ == col->selection_vector(),
                "Vector in projection with different selection vector");
-    TPL_ASSERT(GetTupleCount() == col->count(), "Vector size does not match rest of projection");
+    TPL_ASSERT(GetSelectedTupleCount() == col->count(),
+               "Vector size does not match rest of projection");
   }
   // Let the vectors do an integrity check
   for (const auto &col : columns_) {

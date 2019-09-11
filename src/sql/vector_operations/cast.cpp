@@ -69,7 +69,8 @@ void CastFromSrcType(const Vector &source, Vector *target, SqlTypeId target_type
 
 void VectorOps::Cast(const Vector &source, Vector *target, SqlTypeId source_type,
                      SqlTypeId target_type) {
-  target->SetSelectionVector(source.sel_vector_, source.count_);
+  target->Resize(source.num_elements());
+  target->SetSelectionVector(source.selection_vector(), source.count());
   target->mutable_null_mask()->Copy(source.null_mask());
   switch (source_type) {
     case SqlTypeId::Boolean: {
@@ -110,9 +111,9 @@ void VectorOps::Cast(const Vector &source, Vector *target, SqlTypeId source_type
 }
 
 void VectorOps::Cast(const Vector &source, Vector *target) {
-  const auto source_sql_type = GetSqlTypeFromInternalType(source.type_);
-  const auto target_sql_type = GetSqlTypeFromInternalType(target->type_);
-  Cast(source, target, source_sql_type, target_sql_type);
+  const SqlTypeId src_type = GetSqlTypeFromInternalType(source.type_);
+  const SqlTypeId target_type = GetSqlTypeFromInternalType(target->type_);
+  Cast(source, target, src_type, target_type);
 }
 
 }  // namespace tpl::sql

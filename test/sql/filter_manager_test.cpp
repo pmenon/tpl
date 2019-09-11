@@ -1,7 +1,7 @@
 #include <chrono>  // NOLINT
+#include <string>
 #include <thread>  // NOLINT
 #include <vector>
-#include <string>
 
 #include "sql/catalog.h"
 #include "sql/filter_manager.h"

@@ -40,23 +40,27 @@ void Vector::Strings::Destroy() { region_.FreeAll(); }
 Vector::Vector(TypeId type)
     : type_(type),
       count_(0),
+      num_elems_(0),
       data_(nullptr),
       sel_vector_(nullptr),
       null_mask_(kDefaultVectorSize) {}
 
-Vector::Vector(TypeId type, uint64_t count, bool clear)
+Vector::Vector(TypeId type, bool create_data, bool clear)
     : type_(type),
-      count_(count),
+      count_(0),
+      num_elems_(0),
       data_(nullptr),
       sel_vector_(nullptr),
       null_mask_(kDefaultVectorSize) {
-  TPL_ASSERT(count <= kDefaultVectorSize, "Count too large");
-  Initialize(type, clear);
+  if (create_data) {
+    Initialize(type, clear);
+  }
 }
 
-Vector::Vector(TypeId type, byte *data, uint64_t count)
+Vector::Vector(TypeId type, byte *data, uint64_t size)
     : type_(type),
-      count_(count),
+      count_(size),
+      num_elems_(size),
       data_(data),
       sel_vector_(nullptr),
       null_mask_(kDefaultVectorSize) {
@@ -69,12 +73,17 @@ void Vector::Initialize(const TypeId new_type, const bool clear) {
   strings_.Destroy();
 
   type_ = new_type;
-  const auto num_bytes = kDefaultVectorSize * GetTypeIdSize(type_);
-  owned_data_ = std::make_unique<byte[]>(num_bytes);
+
+  // Since the caller controls whether we zero the vector's memory upon creation, we need to be
+  // careful about exactly how we allocate it. std::make_unique<T[]>(...) will always zero-out the
+  // memory since it value-initializes the array. Similarly, new T[...]() also value-initializes
+  // each element. We want to avoid both of these if the caller didn't explicitly request it. So, we
+  // allocate the array using new T[...] (without the '()'), and clear the contents if requested.
+
+  std::size_t num_bytes = kDefaultVectorSize * GetTypeIdSize(type_);
+  owned_data_ = std::unique_ptr<byte[]>(new byte[num_bytes]);
   data_ = owned_data_.get();
-  if (clear) {
-    std::memset(data_, 0, num_bytes);
-  }
+  if (clear) std::memset(data_, 0, num_bytes);
 }
 
 void Vector::Destroy() {
@@ -82,6 +91,7 @@ void Vector::Destroy() {
   strings_.Destroy();
   data_ = nullptr;
   count_ = 0;
+  num_elems_ = 0;
   sel_vector_ = nullptr;
   null_mask_.Reset();
 }
@@ -130,6 +140,14 @@ GenericValue Vector::GetValue(const uint64_t index) const {
           fmt::format("Cannot read value of type '{}' from vector", TypeIdToString(type_)));
     }
   }
+}
+
+void Vector::Resize(uint32_t size) {
+  TPL_ASSERT(size <= kDefaultVectorSize, "Size too large");
+
+  sel_vector_ = nullptr;
+  count_ = size;
+  num_elems_ = size;
 }
 
 void Vector::SetValue(const uint64_t index, const GenericValue &val) {
@@ -201,10 +219,10 @@ void Vector::Reference(GenericValue *value) {
 
   // Start from scratch
   type_ = value->type_id();
-  count_ = 1;
+  num_elems_ = count_ = 1;
 
   if (value->is_null()) {
-    null_mask_.Set(0);
+    SetNull(0, true);
   }
 
   switch (value->type_id()) {
@@ -258,42 +276,43 @@ void Vector::Reference(GenericValue *value) {
   }
 }
 
-void Vector::Reference(TypeId type_id, byte *data, uint32_t *nullmask, uint64_t count) {
+void Vector::Reference(byte *data, uint32_t *nullmask, uint64_t size) {
   TPL_ASSERT(owned_data_ == nullptr, "Cannot reference a vector if owning data");
-  count_ = count;
+  count_ = size;
+  num_elems_ = size;
   data_ = data;
   sel_vector_ = nullptr;
-  type_ = type_id;
 
   // TODO(pmenon): Optimize me if this is a bottleneck
   if (nullmask == nullptr) {
     null_mask_.Reset();
   } else {
-    for (uint64_t i = 0; i < count; i++) {
-      const bool is_null = util::BitUtil::Test(nullmask, i);
-      null_mask_[i] = is_null;
+    for (uint64_t i = 0; i < size; i++) {
+      null_mask_[i] = util::BitUtil::Test(nullmask, i);
     }
   }
 }
 
 void Vector::Reference(Vector *other) {
   TPL_ASSERT(owned_data_ == nullptr, "Cannot reference a vector if owning data");
+  type_ = other->type_;
   count_ = other->count_;
+  num_elems_ = other->num_elems_;
   data_ = other->data_;
   sel_vector_ = other->sel_vector_;
-  type_ = other->type_;
   null_mask_ = other->null_mask_;
 }
 
 void Vector::MoveTo(Vector *other) {
   other->Destroy();
-  other->owned_data_ = move(owned_data_);
-  other->strings_ = std::move(strings_);
+  other->type_ = type_;
   other->count_ = count_;
+  other->num_elems_ = num_elems_;
   other->data_ = data_;
   other->sel_vector_ = sel_vector_;
-  other->type_ = type_;
   other->null_mask_ = null_mask_;
+  other->owned_data_ = move(owned_data_);
+  other->strings_ = std::move(strings_);
 
   // Cleanup
   Destroy();
@@ -305,13 +324,13 @@ void Vector::CopyTo(Vector *other, uint64_t offset) {
   TPL_ASSERT(other->sel_vector_ == nullptr,
              "Copying to a vector with a selection vector isn't supported");
 
-  other->null_mask_.Reset();
+  other->mutable_null_mask()->Reset();
 
   if (IsTypeFixedSize(type_)) {
     VectorOps::Copy(*this, other, offset);
   } else {
     TPL_ASSERT(type_ == TypeId::Varchar, "Wrong type for copy");
-    other->count_ = count_ - offset;
+    other->Resize(count_ - offset);
     auto src_data = reinterpret_cast<const char **>(data_);
     auto target_data = reinterpret_cast<const char **>(other->data_);
     VectorOps::Exec(*this,
@@ -332,7 +351,7 @@ void Vector::Cast(TypeId new_type) {
     return;
   }
 
-  Vector new_vector(new_type, count_, false);
+  Vector new_vector(new_type, true, false);
   VectorOps::Cast(*this, &new_vector);
   new_vector.MoveTo(this);
 }
@@ -341,28 +360,29 @@ void Vector::Append(Vector &other) {
   TPL_ASSERT(sel_vector_ == nullptr, "Appending to vector with selection vector not supported");
   TPL_ASSERT(type_ == other.type_, "Can only append vector of same type");
 
-  if (count_ + other.count_ > kDefaultVectorSize) {
+  if (num_elements() + other.count() > kDefaultVectorSize) {
     throw std::out_of_range("Cannot append to vector: vector is too large");
   }
 
-  uint64_t old_count = count_;
-  count_ += other.count_;
+  uint64_t old_size = count_;
+  num_elems_ += other.count();
+  count_ += other.count();
 
   // merge NULL mask
   VectorOps::Exec(other,
-                  [&](uint64_t i, uint64_t k) { null_mask_[old_count + k] = other.null_mask_[i]; });
+                  [&](uint64_t i, uint64_t k) { null_mask_[old_size + k] = other.null_mask_[i]; });
 
   if (IsTypeFixedSize(type_)) {
-    VectorOps::Copy(other, data_ + old_count * GetTypeIdSize(type_));
+    VectorOps::Copy(other, data_ + old_size * GetTypeIdSize(type_));
   } else {
     TPL_ASSERT(type_ == TypeId::Varchar, "Append on varchars");
     auto src_data = reinterpret_cast<const char **const>(other.data_);
     auto target_data = reinterpret_cast<const char **const>(data_);
     VectorOps::Exec(other, [&](uint64_t i, uint64_t k) {
       if (other.null_mask_[i]) {
-        target_data[old_count + k] = nullptr;
+        target_data[old_size + k] = nullptr;
       } else {
-        target_data[old_count + k] = strings_.AddString(src_data[i]);
+        target_data[old_size + k] = strings_.AddString(src_data[i]);
       }
     });
   }
@@ -383,6 +403,10 @@ std::string Vector::ToString() const {
 void Vector::Dump(std::ostream &stream) const { stream << ToString() << std::endl; }
 
 void Vector::CheckIntegrity() const {
+  if (sel_vector_ == nullptr) {
+    TPL_ASSERT(count_ == num_elems_,
+               "Vector count() and num_elems() do not match when missing selection vector");
+  }
 #ifndef NDEBUG
   if (type_ == TypeId::Varchar) {
     VectorOps::ExecTyped<const char *>(*this, [&](const char *string, uint64_t i, uint64_t k) {

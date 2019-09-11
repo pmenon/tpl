@@ -44,7 +44,7 @@ void AHTVectorIterator::BuildVectorProjection(const AHTVectorIterator::Transpose
   }
 
   // Update the vector projection with the new batch size.
-  vector_projection_->SetTupleCount(size);
+  vector_projection_->Resize(size);
   vector_projection_iterator_->SetVectorProjection(vector_projection_.get());
 
   // If there isn't data, exit.
@@ -54,7 +54,7 @@ void AHTVectorIterator::BuildVectorProjection(const AHTVectorIterator::Transpose
 
   // Invoke the transposition function. After the call, row-wise aggregates stored in the temporary
   // aggregate buffer will be converted into column-wise data in vectors within the projection.
-  transpose_fn(temp_aggregates_vec_, vector_projection_->GetTupleCount(),
+  transpose_fn(temp_aggregates_vec_, vector_projection_->GetSelectedTupleCount(),
                vector_projection_iterator_.get());
 
   // The vector projection is now filled with vector aggregate data. Reset the VPI so that it's
