@@ -272,7 +272,9 @@ inline void VectorProjectionIterator::Reset() {
 
 inline void VectorProjectionIterator::ResetFiltered() {
   // Update the projection counts
-  vector_projection_->SetTupleCount(sel_vector_write_idx_);
+  for (uint32_t i = 0; i < vector_projection_->GetNumColumns(); i++) {
+    vector_projection_->GetColumn(i)->SetSelectionVector(sel_vector_, sel_vector_write_idx_);
+  }
 
   // Reset
   curr_idx_ = sel_vector_[0];
