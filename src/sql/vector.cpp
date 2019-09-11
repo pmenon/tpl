@@ -371,11 +371,11 @@ void Vector::Append(Vector &other) {
 std::string Vector::ToString() const {
   std::string result = std::string(TypeIdToString(type_)) + "=[";
   bool first = true;
-  VectorOps::Exec(*this, [&](uint64_t i, uint64_t k) {
+  for (uint64_t i = 0; i < count(); i++) {
     if (!first) result += ",";
     first = false;
     result += GetValue(i).ToString();
-  });
+  }
   result += "]";
   return result;
 }
