@@ -444,6 +444,19 @@ TEST(BitVectorTest, NonMemberIntersect) {
   EXPECT_TRUE(Verify(result, {60, 61, 62, 63, 64, 65, 66, 67, 68, 69}));
 }
 
+TEST(BitVectorTest, IntersectFlipped) {
+  BitVector<> bv1 = Make({0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1});
+  BitVector<> bv2 = bv1;
+  BitVector<> bv3 = Make({1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1});
+
+  bv1.IntersectFlipped(bv2);
+  EXPECT_TRUE(bv1.None());
+
+  bv2.IntersectFlipped(bv3);
+  EXPECT_TRUE(Verify(bv2, {3, 7, 9}));
+}
+
+
 TEST(BitVectorTest, Union) {
   BitVector<> bv1 = Make({0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0});
   BitVector<> bv2 = Make({0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0});

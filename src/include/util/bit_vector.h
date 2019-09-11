@@ -409,6 +409,22 @@ class BitVector {
   }
 
   /**
+   * Perform the bitwise intersection of this bit vector with the complement of the provided vector.
+   *
+   * @pre The sizes of the bit vectors must be the same.
+   *
+   * @param other The bit vector to intersect with. Lengths must match exactly.
+   * @return This bit vector.
+   */
+  BitVector &IntersectFlipped(const BitVector &other) {
+    TPL_ASSERT(num_bits() == other.num_bits(), "Mismatched bit vector size");
+    for (uint32_t i = 0; i < num_words(); i++) {
+      words_[i] &= ~other.words_[i];
+    }
+    return *this;
+  }
+
+  /**
    * Perform the bitwise union of this bit vector with the provided @em other bit vector.
    *
    * @pre The sizes of the bit vectors must be the same.
