@@ -81,8 +81,7 @@ class TupleIdList {
   void Add(const uint32_t tid) { bit_vector_.Set(tid); }
 
   /**
-   * Add all tuples whose IDs are in the range [start_tid, end_tid). Note the
-   * half-open interval!
+   * Add all tuples whose IDs are in the range [start_tid, end_tid). Note the half-open interval!
    * @param start_tid The left inclusive range boundary.
    * @param end_tid The right inclusive range boundary.
    */
@@ -96,9 +95,8 @@ class TupleIdList {
   void AddAll() { bit_vector_.SetAll(); }
 
   /**
-   * Either enable or disable the tuple with the given ID depending on the
-   * value of @em enable. If @em enable is true, the tuple is added to the list,
-   * and otherwise it is disabled.
+   * Enable or disable the tuple with the given ID depending on the value of @em enable. If
+   * @em enable is true, the tuple is added to the list, and otherwise it is disabled.
    * @param tid The ID to add or remove from the list.
    * @param enable The flag indicating if the tuple is added or removed.
    */
@@ -111,33 +109,33 @@ class TupleIdList {
   void Remove(const uint32_t tid) { bit_vector_.Unset(tid); }
 
   /**
-   * Intersect the set of tuple IDs in this list with the tuple IDs in the
-   * provided list, modifying this list in-place.
+   * Intersect the set of tuple IDs in this list with the tuple IDs in the provided list, modifying
+   * this list in-place.
    * @param other The list to intersect with.
    */
   void IntersectWith(const TupleIdList &other) { bit_vector_.Intersect(other.bit_vector_); }
 
   /**
-   * Union the set of tuple IDs in this list with the tuple IDs in the provided
-   * list, modifying this list in-place.
+   * Union the set of tuple IDs in this list with the tuple IDs in the provided list, modifying this
+   * list in-place.
    * @param other The list to union with.
    */
   void UnionWith(const TupleIdList &other) { bit_vector_.Union(other.bit_vector_); }
 
   /**
-   * Remove all tuple IDs from this list that are also present in the provided
-   * list, modifying this list in-place.
+   * Remove all tuple IDs from this list that are also present in the provided list, modifying this
+   * list in-place.
    * @param other The list to unset from.
    */
   void UnsetFrom(const TupleIdList &other) { bit_vector_.Difference(other.bit_vector_); }
 
   /**
-   * Build a list of tuple IDs as a subset of the IDs in the input list
-   * @em input for which the provided function @em f returns true.
+   * Build a list of tuple IDs as a subset of the IDs in the input list @em input for which the
+   * provided function @em f returns true.
    * @tparam F A functor that accepts a 32-bit tuple ID and returns a boolean.
    * @param input The input list to read from.
-   * @param f The function that filters the IDs from the input, returning true
-   *          for valid tuples, and false otherwise.
+   * @param f The function that filters the IDs from the input, returning true for valid tuples, and
+   *          false otherwise.
    */
   template <typename F>
   void BuildFromOtherList(const TupleIdList &input, F &&f) {
@@ -164,13 +162,12 @@ class TupleIdList {
   }
 
   /**
-   * Build a list of tuple IDs as a subset of all TIDs this list can support
-   * (i.e., in the range [0, kDefaultVectorSize]) for which the provided
-   * function @em f returns true.
+   * Build a list of tuple IDs as a subset of all TIDs this list can support (i.e., in the range
+   * [0, kDefaultVectorSize]) for which the provided function @em f returns true.
    * @tparam F A functor that accepts a 32-bit tuple ID and returns a boolean.
    * @param input The input list to read from.
-   * @param f The function that filters the IDs from the input, returning true
-   *          for valid tuples, and false otherwise.
+   * @param f The function that filters the IDs from the input, returning true for valid tuples, and
+   *          false otherwise.
    */
   template <typename F>
   void BuildFromFunction(F &&f) {
@@ -207,11 +204,10 @@ class TupleIdList {
   void BuildFromSelectionVector(sel_t *sel_vector, uint32_t size);
 
   /**
-   * Convert the given selection match vector to a TID list. The match vector is
-   * assumed to be boolean-like array, but with saturated values. This means
-   * that the value 'true' or 1 is physically encoded as all-1s, i.e., a true
-   * value is the 8-byte value 255 = 11111111b, and the value 'false' or 0 is
-   * encoded as all zeros. This is typically used during selections which
+   * Convert the given selection match vector to a TID list. The match vector is assumed to be
+   * boolean-like array, but with saturated values. This means that the value 'true' or 1 is
+   * physically encoded as all-1s, i.e., a true value is the 8-byte value 255 = 11111111b, and the
+   * value 'false' or 0 is encoded as all zeros. This is typically used during selections which
    * naturally produce saturated match vectors.
    * @param matches The match vector.
    * @param size The number of elements in the match vector.
@@ -235,16 +231,14 @@ class TupleIdList {
    * Return the capacity of the list.
    * @return The capacity of the TID list.
    */
-  uint32_t GetListCapacity() const { return bit_vector_.num_bits(); }
+  uint32_t GetCapacity() const { return bit_vector_.num_bits(); }
 
   /**
    * Return the selectivity of the list as a fraction in the range [0.0, 1.0].
-   * @return The selectivity of the list, i.e., the fraction of the tuples that
-   *         are considered "active".
+   * @return The selectivity of the list, i.e., the fraction of the tuples that are considered
+   *         "active".
    */
-  float ComputeSelectivity() const {
-    return static_cast<float>(GetTupleCount()) / GetListCapacity();
-  }
+  float ComputeSelectivity() const { return static_cast<float>(GetTupleCount()) / GetCapacity(); }
 
   /**
    * Convert this tuple ID list into a dense selection index vector.
@@ -270,11 +264,13 @@ class TupleIdList {
 
   /**
    * Print a string representation of this vector to the output stream.
+   * @param stream Where the string representation is printed to.
    */
   void Dump(std::ostream &stream) const;
 
   /**
    * Access the internal bit vector.
+   * @return The internal bit vector representation of the list.
    */
   BitVectorType *GetMutableBits() { return &bit_vector_; }
 
