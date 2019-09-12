@@ -77,7 +77,7 @@ SqlTypeId GetSqlTypeFromInternalType(TypeId type);
  * Given a templated type, return the associated internal type ID.
  */
 template <class T>
-constexpr static inline TypeId GetTypeId() {
+constexpr inline TypeId GetTypeId() {
   if constexpr (std::is_same<T, bool>()) {
     return TypeId::Boolean;
   } else if constexpr (std::is_same<std::remove_const_t<T>, int8_t>()) {

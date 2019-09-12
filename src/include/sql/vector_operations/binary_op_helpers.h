@@ -4,8 +4,8 @@ namespace tpl::sql {
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
           bool IgnoreNull = false>
-static inline void BinaryOperation_Constant_Vector(const Vector &left, const Vector &right,
-                                                   Vector *result) {
+inline void BinaryOperation_Constant_Vector(const Vector &left, const Vector &right,
+                                            Vector *result) {
   auto *left_data = reinterpret_cast<LeftType *>(left.data());
   auto *right_data = reinterpret_cast<RightType *>(right.data());
   auto *result_data = reinterpret_cast<ResultType *>(result->data());
@@ -35,8 +35,8 @@ static inline void BinaryOperation_Constant_Vector(const Vector &left, const Vec
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
           bool IgnoreNull = false>
-static inline void BinaryOperation_Vector_Constant(const Vector &left, const Vector &right,
-                                                   Vector *result) {
+inline void BinaryOperation_Vector_Constant(const Vector &left, const Vector &right,
+                                            Vector *result) {
   auto *left_data = reinterpret_cast<LeftType *>(left.data());
   auto *right_data = reinterpret_cast<RightType *>(right.data());
   auto *result_data = reinterpret_cast<ResultType *>(result->data());
@@ -67,7 +67,7 @@ static inline void BinaryOperation_Vector_Constant(const Vector &left, const Vec
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
           bool IgnoreNull = false>
-void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right, Vector *result) {
+inline void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right, Vector *result) {
   TPL_ASSERT(left.selection_vector() == right.selection_vector(),
              "Mismatched selection vectors for comparison");
   TPL_ASSERT(left.count() == right.count(), "Mismatched vector counts for comparison");
@@ -115,7 +115,7 @@ void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right, Vect
  */
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
           bool IgnoreNull = false>
-static inline void BinaryOperation(const Vector &left, const Vector &right, Vector *result) {
+inline void BinaryOperation(const Vector &left, const Vector &right, Vector *result) {
   if (left.IsConstant()) {
     BinaryOperation_Constant_Vector<LeftType, RightType, ResultType, Op, IgnoreNull>(left, right,
                                                                                      result);

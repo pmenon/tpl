@@ -54,11 +54,11 @@ struct StructTypeKeyInfo {
     bool operator!=(const KeyTy &that) const { return !this->operator==(that); }
   };
 
-  static inline StructType *getEmptyKey() {
+  static StructType *getEmptyKey() {
     return llvm::DenseMapInfo<StructType *>::getEmptyKey();
   }
 
-  static inline StructType *getTombstoneKey() {
+  static StructType *getTombstoneKey() {
     return llvm::DenseMapInfo<StructType *>::getTombstoneKey();
   }
 
@@ -100,11 +100,11 @@ struct FunctionTypeKeyInfo {
     bool operator!=(const KeyTy &that) const { return !this->operator==(that); }
   };
 
-  static inline FunctionType *getEmptyKey() {
+  static FunctionType *getEmptyKey() {
     return llvm::DenseMapInfo<FunctionType *>::getEmptyKey();
   }
 
-  static inline FunctionType *getTombstoneKey() {
+  static FunctionType *getTombstoneKey() {
     return llvm::DenseMapInfo<FunctionType *>::getTombstoneKey();
   }
 

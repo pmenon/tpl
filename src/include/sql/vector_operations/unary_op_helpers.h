@@ -18,7 +18,7 @@ namespace tpl::sql {
  *                    vector.
  */
 template <typename InputType, typename ResultType, typename Op>
-static inline void UnaryOperation_HandleNull(const Vector &input, Vector *result) {
+inline void UnaryOperation_HandleNull(const Vector &input, Vector *result) {
   auto *input_data = reinterpret_cast<InputType *>(input.data());
   auto *result_data = reinterpret_cast<ResultType *>(result->data());
 
@@ -48,7 +48,7 @@ static inline void UnaryOperation_HandleNull(const Vector &input, Vector *result
  *               result vector will have the same selection vector and count as the input vector.
  */
 template <typename InputType, typename ResultType, typename Op>
-static inline void UnaryOperation(const Vector &input, Vector *result) {
+inline void UnaryOperation(const Vector &input, Vector *result) {
   auto *input_data = reinterpret_cast<InputType *>(input.data());
   auto *result_data = reinterpret_cast<ResultType *>(result->data());
 

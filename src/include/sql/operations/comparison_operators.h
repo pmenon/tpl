@@ -24,8 +24,8 @@ struct NotEqual;
  * @param v2 The second string.
  * @return The appropriate signed value indicating comparison order.
  */
-static inline int32_t CompareStrings(const char *str1, const std::size_t len1, const char *str2,
-                                     const std::size_t len2) {
+inline int32_t CompareStrings(const char *str1, const std::size_t len1, const char *str2,
+                              const std::size_t len2) {
   const auto min_len = std::min(len1, len2);
   const auto result = (min_len == 0) ? 0 : std::memcmp(str1, str2, min_len);
   if (result != 0) {
@@ -35,7 +35,7 @@ static inline int32_t CompareStrings(const char *str1, const std::size_t len1, c
 }
 
 /**
- * Equality
+ * Equality operator.
  */
 struct Equal {
   using SymmetricOp = Equal;
@@ -57,7 +57,7 @@ inline bool Equal::Apply(const char *left, const char *right) {
 }
 
 /**
- * Greater-than
+ * Greater-than operator.
  */
 struct GreaterThan {
   using SymmetricOp = LessThan;
@@ -79,7 +79,7 @@ inline bool GreaterThan::Apply(const char *left, const char *right) {
 }
 
 /**
- * Greater-than or equal
+ * Greater-than or equal operator.
  */
 struct GreaterThanEqual {
   using SymmetricOp = LessThanEqual;
@@ -101,9 +101,8 @@ inline bool GreaterThanEqual::Apply(const char *left, const char *right) {
 }
 
 /**
- * Less-than
+ * Less-than operator.
  */
-
 struct LessThan {
   using SymmetricOp = GreaterThan;
 
@@ -124,7 +123,7 @@ inline bool LessThan::Apply(const char *left, const char *right) {
 }
 
 /**
- * Less-than or equal
+ * Less-than or equal operator.
  */
 struct LessThanEqual {
   using SymmetricOp = GreaterThanEqual;
@@ -146,7 +145,7 @@ inline bool LessThanEqual::Apply(const char *left, const char *right) {
 }
 
 /**
- * Inequality
+ * Inequality operator.
  */
 struct NotEqual {
   using SymmetricOp = NotEqual;
