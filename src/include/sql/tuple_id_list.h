@@ -63,6 +63,12 @@ class TupleIdList {
   bool Contains(const uint32_t tid) const { return bit_vector_.Test(tid); }
 
   /**
+   * Does the list contain all TIDs in the range of TIDs it tracks?
+   * @return True if full; false otherwise.
+   */
+  bool IsFull() const { return bit_vector_.All(); }
+
+  /**
    * Is the list empty?
    * @return True if empty; false otherwise.
    */
@@ -194,6 +200,13 @@ class TupleIdList {
   }
 
   /**
+   * Build a list of TIDs from the IDs in the input selection vector.
+   * @param sel_vector The selection vector.
+   * @param size The number of elements in the selection vector.
+   */
+  void BuildFromSelectionVector(sel_t *sel_vector, uint32_t size);
+
+  /**
    * Convert the given selection match vector to a TID list. The match vector is
    * assumed to be boolean-like array, but with saturated values. This means
    * that the value 'true' or 1 is physically encoded as all-1s, i.e., a true
@@ -238,7 +251,7 @@ class TupleIdList {
    * @param[out] sel_vec The output selection vector.
    * @return The number of elements in the generated selection vector.
    */
-  uint32_t AsSelectionVector(uint16_t *sel_vec) const;
+  [[nodiscard]] uint32_t AsSelectionVector(sel_t *sel_vec) const;
 
   /**
    * Iterate all TIDs in this list.
