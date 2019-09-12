@@ -456,7 +456,6 @@ TEST(BitVectorTest, IntersectFlipped) {
   EXPECT_TRUE(Verify(bv2, {3, 7, 9}));
 }
 
-
 TEST(BitVectorTest, Union) {
   BitVector<> bv1 = Make({0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0});
   BitVector<> bv2 = Make({0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0});
