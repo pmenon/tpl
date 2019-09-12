@@ -201,7 +201,7 @@ GenericValue GenericValue::CreateFromRuntimeValue(const TypeId type_id, const Va
     case TypeId::Varchar:
       return GenericValue::CreateVarchar(static_cast<const StringVal &>(val).ptr);
     default:
-      throw std::runtime_error("Type " + std::string(TypeIdToString(type_id)) +
+      throw std::runtime_error("Type " + TypeIdToString(type_id) +
                                " not supported as runtime value");
   }
 }

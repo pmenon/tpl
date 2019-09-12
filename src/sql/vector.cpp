@@ -389,7 +389,7 @@ void Vector::Append(Vector &other) {
 }
 
 std::string Vector::ToString() const {
-  std::string result = std::string(TypeIdToString(type_)) + "=[";
+  std::string result = TypeIdToString(type_) + "=[";
   bool first = true;
   for (uint64_t i = 0; i < count(); i++) {
     if (!first) result += ",";

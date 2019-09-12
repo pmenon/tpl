@@ -125,6 +125,6 @@ bool IsTypeNumeric(TypeId type);
 /**
  * Convert a TypeId to a string value.
  */
-const char *TypeIdToString(TypeId type);
+std::string TypeIdToString(TypeId type);
 
 }  // namespace tpl::sql

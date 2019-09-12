@@ -101,7 +101,7 @@ bool IsTypeNumeric(TypeId type) {
 }
 
 // static
-const char *TypeIdToString(TypeId type) {
+std::string TypeIdToString(TypeId type) {
   switch (type) {
     case TypeId::Boolean:
       return "Boolean";
