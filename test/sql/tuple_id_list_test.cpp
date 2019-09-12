@@ -86,6 +86,17 @@ TEST_F(TupleIdListTest, Clear) {
   }
 }
 
+TEST_F(TupleIdListTest, IsFull) {
+  TupleIdList list(10);
+  EXPECT_FALSE(list.IsFull());
+
+  list.Add(9);
+  EXPECT_FALSE(list.IsFull());
+
+  list.AddRange(0, 9);
+  EXPECT_TRUE(list.IsFull());
+}
+
 TEST_F(TupleIdListTest, Empty) {
   TupleIdList list(10);
   EXPECT_TRUE(list.IsEmpty());
@@ -196,6 +207,38 @@ TEST_F(TupleIdListTest, ConvertToSelectionVector) {
   EXPECT_EQ(4u, sel[2]);
   EXPECT_EQ(5u, sel[3]);
   EXPECT_EQ(6u, sel[4]);
+}
+
+TEST_F(TupleIdListTest, BuildFromSelectionVector) {
+  TupleIdList list(10);
+
+  // Empty selection vector
+  {
+    sel_t sel[] = {};
+    list.BuildFromSelectionVector(sel, sizeof(sel) / sizeof(sel[0]));
+    EXPECT_TRUE(list.IsEmpty());
+  }
+
+  list.Clear();
+
+  // Simple
+  {
+    sel_t sel[] = {0, 4, 9};
+    list.BuildFromSelectionVector(sel, sizeof(sel) / sizeof(sel[0]));
+    EXPECT_EQ(3u, list.GetTupleCount());
+    EXPECT_TRUE(list.Contains(0));
+    EXPECT_TRUE(list.Contains(4));
+    EXPECT_TRUE(list.Contains(9));
+  }
+
+  list.Clear();
+
+  // All
+  {
+    sel_t sel[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    list.BuildFromSelectionVector(sel, sizeof(sel) / sizeof(sel[0]));
+    EXPECT_TRUE(list.IsFull());
+  }
 }
 
 }  // namespace tpl::sql
