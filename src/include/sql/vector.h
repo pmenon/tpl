@@ -180,13 +180,18 @@ class Vector {
   /**
    * Is this vector holding a single constant value?
    */
-  bool IsConstant() const { return count_ == 1 && sel_vector_ == nullptr; }
+  bool IsConstant() const noexcept { return num_elems_ == 1 && sel_vector_ == nullptr; }
+
+  /**
+   * Is this vector empty?
+   */
+  bool IsEmpty() const noexcept { return num_elems_ == 0; }
 
   /**
    * Compute the selectivity, i.e., the fraction of tuples that are externally visible.
    */
-  float ComputeSelectivity() const {
-    return num_elems_ == 0 ? 0 : static_cast<float>(count_) / num_elems_;
+  float ComputeSelectivity() const noexcept {
+    return IsEmpty() ? 0 : static_cast<float>(count_) / num_elems_;
   }
 
   /**
