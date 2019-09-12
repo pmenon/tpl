@@ -43,7 +43,9 @@ Vector::Vector(TypeId type)
       num_elems_(0),
       data_(nullptr),
       sel_vector_(nullptr),
-      null_mask_(kDefaultVectorSize) {}
+      null_mask_(kDefaultVectorSize) {
+  null_mask_.Resize(num_elems_);
+}
 
 Vector::Vector(TypeId type, bool create_data, bool clear)
     : type_(type),
@@ -52,6 +54,7 @@ Vector::Vector(TypeId type, bool create_data, bool clear)
       data_(nullptr),
       sel_vector_(nullptr),
       null_mask_(kDefaultVectorSize) {
+  null_mask_.Resize(num_elems_);
   if (create_data) {
     Initialize(type, clear);
   }
@@ -65,6 +68,7 @@ Vector::Vector(TypeId type, byte *data, uint64_t size)
       sel_vector_(nullptr),
       null_mask_(kDefaultVectorSize) {
   TPL_ASSERT(data != nullptr, "Cannot create vector from NULL data pointer");
+  null_mask_.Resize(num_elems_);
 }
 
 Vector::~Vector() { Destroy(); }
@@ -148,6 +152,7 @@ void Vector::Resize(uint32_t size) {
   sel_vector_ = nullptr;
   count_ = size;
   num_elems_ = size;
+  null_mask_.Resize(num_elems_);
 }
 
 void Vector::SetValue(const uint64_t index, const GenericValue &val) {
@@ -220,6 +225,7 @@ void Vector::Reference(GenericValue *value) {
   // Start from scratch
   type_ = value->type_id();
   num_elems_ = count_ = 1;
+  null_mask_.Resize(num_elems_);
 
   if (value->is_null()) {
     SetNull(0, true);
@@ -282,6 +288,7 @@ void Vector::Reference(byte *data, uint32_t *nullmask, uint64_t size) {
   num_elems_ = size;
   data_ = data;
   sel_vector_ = nullptr;
+  null_mask_.Resize(num_elems_);
 
   // TODO(pmenon): Optimize me if this is a bottleneck
   if (nullmask == nullptr) {
@@ -367,6 +374,9 @@ void Vector::Append(Vector &other) {
   uint64_t old_size = count_;
   num_elems_ += other.count();
   count_ += other.count();
+
+  // Since the vector's size has changed, we need to also resize the NULL bitmask.
+  null_mask_.Resize(num_elems_);
 
   // merge NULL mask
   VectorOps::Exec(other,
