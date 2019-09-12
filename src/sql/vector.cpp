@@ -97,7 +97,7 @@ void Vector::Destroy() {
 }
 
 GenericValue Vector::GetValue(const uint64_t index) const {
-  TPL_ASSERT(index <= count_, "Out-of-bounds vector access");
+  TPL_ASSERT(index < count_, "Out-of-bounds vector access");
   if (IsNull(index)) {
     return GenericValue::CreateNull(type_);
   }
@@ -151,7 +151,7 @@ void Vector::Resize(uint32_t size) {
 }
 
 void Vector::SetValue(const uint64_t index, const GenericValue &val) {
-  TPL_ASSERT(index <= count_, "Out-of-bounds vector access");
+  TPL_ASSERT(index < count_, "Out-of-bounds vector access");
   TPL_ASSERT(type_ == val.type_id(), "Mismatched types");
   SetNull(index, val.is_null());
   const uint64_t actual_index = sel_vector_ != nullptr ? sel_vector_[index] : index;
