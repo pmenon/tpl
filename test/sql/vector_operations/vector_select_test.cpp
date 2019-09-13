@@ -13,14 +13,12 @@ class VectorSelectTest : public TplTest {};
 TEST_F(VectorSelectTest, Select) {
   // a = [NULL, 1, 2, 3, 4, 5]
   // b = [NULL, 1, 4, 3, 5, 5]
-  auto a = MakeTinyIntVector({0, 1, 2, 3, 4, 5},
-                             {true, false, false, false, false, false});
-  auto b = MakeTinyIntVector({0, 1, 4, 3, 5, 5},
-                             {true, false, false, false, false, false});
+  auto a = MakeTinyIntVector({0, 1, 2, 3, 4, 5}, {true, false, false, false, false, false});
+  auto b = MakeTinyIntVector({0, 1, 4, 3, 5, 5}, {true, false, false, false, false, false});
   auto _2 = ConstantVector(GenericValue::CreateTinyInt(2));
 
-  for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer,
-                       TypeId::BigInt, TypeId::Float, TypeId::Double}) {
+  for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer, TypeId::BigInt,
+                       TypeId::Float, TypeId::Double}) {
     a->Cast(type_id);
     b->Cast(type_id);
     _2.Cast(type_id);
@@ -66,6 +64,37 @@ TEST_F(VectorSelectTest, Select) {
     EXPECT_EQ(3u, input_list[1]);
     EXPECT_EQ(5u, input_list[2]);
   }
+}
+
+TEST_F(VectorSelectTest, SelectNullConstant) {
+  // a = [0, 1, NULL, NULL, 4, 5]
+  auto a = MakeIntegerVector({0, 1, 2, 3, 4, 5}, {false, false, true, true, false, false});
+  auto null_constant = ConstantVector(GenericValue::CreateNull(a->type_id()));
+
+#define NULL_TEST(OP)                                \
+  /* a <OP> NULL */                                  \
+  {                                                  \
+    TupleIdList list(a->num_elements());             \
+    list.AddAll();                                   \
+    VectorOps::Select##OP(*a, null_constant, &list); \
+    EXPECT_TRUE(list.IsEmpty());                     \
+  }                                                  \
+  /* NULL <OP> a */                                  \
+  {                                                  \
+    TupleIdList list(a->num_elements());             \
+    list.AddAll();                                   \
+    VectorOps::Select##OP(*a, null_constant, &list); \
+    EXPECT_TRUE(list.IsEmpty());                     \
+  }
+
+  NULL_TEST(Equal)
+  NULL_TEST(GreaterThan)
+  NULL_TEST(GreaterThanEqual)
+  NULL_TEST(LessThan)
+  NULL_TEST(LessThanEqual)
+  NULL_TEST(NotEqual)
+
+#undef NULL_TEST
 }
 
 }  // namespace tpl::sql
