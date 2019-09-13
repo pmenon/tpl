@@ -26,7 +26,14 @@ namespace tpl {
    * wins only when the selectivity of the input selection vector or TID list is sufficiently      \
    * large.                                                                                        \
    */                                                                                              \
-  COMPUTED(SelectOptThreshold, double, DeriveOptimalFullSelectionThreshold)
+  COMPUTED(SelectOptThreshold, double, DeriveOptimalFullSelectionThreshold)                        \
+                                                                                                   \
+  /*                                                                                               \
+   * Selections can use either a branching or branch-less strategy. Experimentally, branch-less    \
+   * selections work best when the selectivity of the predicate is in the range [0.1, 0.9].        \
+   */                                                                                              \
+  CONST(SelectBranchingThreshold_Low, double, 0.1)                                                 \
+  CONST(SelectBranchingThreshold_High, double, 0.9)
 
 class Settings {
  public:
