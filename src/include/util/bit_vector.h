@@ -457,6 +457,13 @@ class BitVector {
   }
 
   /**
+   * Reserve enough space in the bit vector to store @em num_bits bits. This does not change the
+   * size of the bit vector, but may allocate additional memory.
+   * @param num_bits The desired number of bits to reserve for.
+   */
+  void Reserve(const uint32_t num_bits) { words_.reserve(NumNeededWords(num_bits)); }
+
+  /**
    * Change the number of bits in the bit vector to @em num_bits. If @em num_bits > num_bits() then
    * the bits in the range [0, num_bits()) are unchanged, and the remaining bits are set to zero. If
    * @em num_bits < @em num_bits() then the bits in the range [0, num_bits) are unchanged the
@@ -480,6 +487,60 @@ class BitVector {
   }
 
   /**
+   *
+   * @tparam P
+   * @param p
+   */
+  template <typename P>
+  void UpdateFull(P &&p) {
+    static_assert(std::is_invocable_r_v<bool, P, uint32_t>,
+                  "Predicate must be accept an unsigned 32-bit index and return a bool");
+    if (num_bits() == 0) {
+      return;
+    }
+
+    const uint32_t num_batches = GetNumExtraBits() == 0 ? num_words() : num_words() - 1;
+
+    for (WordType i = 0; i < num_batches; i++) {
+      WordType word_result = 0;
+      for (WordType j = 0; j < kWordSizeBits; j++) {
+        word_result |= static_cast<WordType>(p(i * kWordSizeBits + j)) << j;
+      }
+      words_[i] &= word_result;
+    }
+
+    // Scalar tail
+    for (WordType i = num_batches * kWordSizeBits; i < num_bits(); i++) {
+      if (!p(i)) {
+        Unset(i);
+      }
+    }
+  }
+
+  /**
+   *
+   * @tparam P
+   * @param p
+   */
+  template <typename P>
+  void UpdateSetBits(P &&p) {
+    static_assert(std::is_invocable_r_v<bool, P, uint32_t>,
+                  "Predicate must be accept an unsigned 32-bit index and return a bool");
+
+    for (WordType i = 0; i < num_words(); i++) {
+      WordType word = words_[i];
+      WordType word_result = 0;
+      while (word != 0) {
+        const auto t = word & -word;
+        const auto r = util::BitUtil::CountTrailingZeros(word);
+        word_result |= static_cast<WordType>(p(i * kWordSizeBits + r)) << r;
+        word ^= t;
+      }
+      words_[i] &= word_result;
+    }
+  }
+
+  /**
    * Iterate all bits in this vector and invoke the callback with the index of set bits only.
    * @tparam F The type of the callback function. Must accept a single unsigned integer value.
    * @param callback The callback function to invoke with the index of set bits.
@@ -487,8 +548,7 @@ class BitVector {
   template <typename F>
   void IterateSetBits(F &&callback) const {
     static_assert(std::is_invocable_v<F, uint32_t>,
-                  "Callback must be a single-argument functor accepting an "
-                  "unsigned 32-bit index");
+                  "Callback must be a single-argument functor accepting an unsigned 32-bit index");
 
     for (WordType i = 0; i < num_words(); i++) {
       WordType word = words_[i];

@@ -50,10 +50,7 @@ class TupleIdList {
    * Resize the list to the given size. If growing the list, the contents of the list remain
    * unchanged. If shrinking the list, previously added/active elements are discarded.
    */
-  void Resize(uint32_t size) {
-    TPL_ASSERT(size <= bit_vector_.num_bits(), "Cannot grow TupleIDLists");
-    bit_vector_.Resize(size);
-  }
+  void Resize(uint32_t size) { bit_vector_.Resize(size); }
 
   /**
    * Is the tuple with the given ID in this list?

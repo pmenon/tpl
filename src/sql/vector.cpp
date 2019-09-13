@@ -38,22 +38,18 @@ void Vector::Strings::Destroy() { region_.FreeAll(); }
 // ---------------------------------------------------------
 
 Vector::Vector(TypeId type)
-    : type_(type),
-      count_(0),
-      num_elems_(0),
-      data_(nullptr),
-      sel_vector_(nullptr),
-      null_mask_(kDefaultVectorSize) {
+    : type_(type), count_(0), num_elems_(0), data_(nullptr), sel_vector_(nullptr) {
+  // Since vector capacity can never exceed kDefaultVectorSize, we reserve upon creation to remove
+  // allocations as the vector is resized.
+  null_mask_.Reserve(kDefaultVectorSize);
   null_mask_.Resize(num_elems_);
 }
 
 Vector::Vector(TypeId type, bool create_data, bool clear)
-    : type_(type),
-      count_(0),
-      num_elems_(0),
-      data_(nullptr),
-      sel_vector_(nullptr),
-      null_mask_(kDefaultVectorSize) {
+    : type_(type), count_(0), num_elems_(0), data_(nullptr), sel_vector_(nullptr) {
+  // Since vector capacity can never exceed kDefaultVectorSize, we reserve upon creation to remove
+  // allocations as the vector is resized.
+  null_mask_.Reserve(kDefaultVectorSize);
   null_mask_.Resize(num_elems_);
   if (create_data) {
     Initialize(type, clear);
@@ -61,13 +57,11 @@ Vector::Vector(TypeId type, bool create_data, bool clear)
 }
 
 Vector::Vector(TypeId type, byte *data, uint64_t size)
-    : type_(type),
-      count_(size),
-      num_elems_(size),
-      data_(data),
-      sel_vector_(nullptr),
-      null_mask_(kDefaultVectorSize) {
+    : type_(type), count_(size), num_elems_(size), data_(data), sel_vector_(nullptr) {
   TPL_ASSERT(data != nullptr, "Cannot create vector from NULL data pointer");
+  // Since vector capacity can never exceed kDefaultVectorSize, we reserve upon creation to remove
+  // allocations as the vector is resized.
+  null_mask_.Reserve(kDefaultVectorSize);
   null_mask_.Resize(num_elems_);
 }
 
@@ -417,6 +411,7 @@ void Vector::CheckIntegrity() const {
     TPL_ASSERT(count_ == num_elems_,
                "Vector count() and num_elems() do not match when missing selection vector");
   }
+  TPL_ASSERT(num_elems_ == null_mask_.num_bits(), "NULL bitmask size doesn't match vector size");
 #ifndef NDEBUG
   if (type_ == TypeId::Varchar) {
     VectorOps::ExecTyped<const char *>(*this, [&](const char *string, uint64_t i, uint64_t k) {
