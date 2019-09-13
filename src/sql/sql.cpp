@@ -1,5 +1,7 @@
 #include "sql/sql.h"
 
+#include <string>
+
 namespace tpl::sql {
 
 // static

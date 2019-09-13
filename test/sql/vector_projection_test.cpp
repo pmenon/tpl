@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "sql/vector_projection.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "util/test_harness.h"

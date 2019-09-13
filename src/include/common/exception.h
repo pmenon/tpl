@@ -2,6 +2,7 @@
 
 #include <cstdarg>
 #include <stdexcept>
+#include <string>
 
 #include "spdlog/fmt/fmt.h"
 
