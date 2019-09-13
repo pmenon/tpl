@@ -471,40 +471,9 @@ class BitVector {
   }
 
   /**
-   *
-   * @tparam P
-   * @param p
-   */
-  template <typename P>
-  void UpdateFull(P &&p) {
-    static_assert(std::is_invocable_r_v<bool, P, uint32_t>,
-                  "Predicate must be accept an unsigned 32-bit index and return a bool");
-    if (num_bits() == 0) {
-      return;
-    }
-
-    const uint32_t num_batches = GetNumExtraBits() == 0 ? num_words() : num_words() - 1;
-
-    for (WordType i = 0; i < num_batches; i++) {
-      WordType word_result = 0;
-      for (WordType j = 0; j < kWordSizeBits; j++) {
-        word_result |= static_cast<WordType>(p(i * kWordSizeBits + j)) << j;
-      }
-      words_[i] &= word_result;
-    }
-
-    // Scalar tail
-    for (WordType i = num_batches * kWordSizeBits; i < num_bits(); i++) {
-      if (!p(i)) {
-        Unset(i);
-      }
-    }
-  }
-
-  /**
-   *
-   * @tparam P
-   * @param p
+   * Retain all set bits in the bit vector for which the predicate returns true.
+   * @tparam P A predicate functor that accepts an unsigned 32-bit integer and returns a boolean.
+   * @param p The predicate to apply to each set bit position.
    */
   template <typename P>
   void UpdateSetBits(P &&p) {
@@ -521,6 +490,44 @@ class BitVector {
         word ^= t;
       }
       words_[i] &= word_result;
+    }
+  }
+
+  /**
+   * Like BitVector::UpdateSetBits(), this function will also retain all set bits in the bit vector
+   * for which the predicate returns true. The important difference is that this function will
+   * invoke the predicate function on ALL bit positions, not just those positions that are set to 1.
+   * This optimization takes advantage of SIMD to enable up-to 4x faster execution times, but the
+   * caller must safely tolerate operating on both set and unset bit positions.
+   *
+   * @tparam P A predicate functor that accepts an unsigned 32-bit integer and returns a boolean.
+   * @param p The predicate to apply to each bit position.
+   */
+  template <typename P>
+  void UpdateFull(P &&p) {
+    static_assert(std::is_invocable_r_v<bool, P, uint32_t>,
+                  "Predicate must be accept an unsigned 32-bit index and return a bool");
+    if (num_bits() == 0) {
+      return;
+    }
+
+    const uint32_t num_full_words = GetNumExtraBits() == 0 ? num_words() : num_words() - 1;
+
+    // This first loop processes all FULL words in the bit vector. It should be fully vectorized
+    // if the predicate function can also vectorized.
+    for (WordType i = 0; i < num_full_words; i++) {
+      WordType word_result = 0;
+      for (WordType j = 0; j < kWordSizeBits; j++) {
+        word_result |= static_cast<WordType>(p(i * kWordSizeBits + j)) << j;
+      }
+      words_[i] &= word_result;
+    }
+
+    // If the last word isn't full, process it using a scalar loop.
+    for (WordType i = num_full_words * kWordSizeBits; i < num_bits(); i++) {
+      if (!p(i)) {
+        Unset(i);
+      }
     }
   }
 
