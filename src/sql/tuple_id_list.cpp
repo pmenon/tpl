@@ -7,7 +7,7 @@
 
 namespace tpl::sql {
 
-void TupleIdList::BuildFromSelectionVector(sel_t *sel_vector, uint32_t size) {
+void TupleIdList::BuildFromSelectionVector(const sel_t *sel_vector, uint32_t size) {
   for (uint32_t i = 0; i < size; i++) {
     bit_vector_.Set(sel_vector[i]);
   }

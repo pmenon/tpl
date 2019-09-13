@@ -198,7 +198,7 @@ class TupleIdList {
    * @param sel_vector The selection vector.
    * @param size The number of elements in the selection vector.
    */
-  void BuildFromSelectionVector(sel_t *sel_vector, uint32_t size);
+  void BuildFromSelectionVector(const sel_t *sel_vector, uint32_t size);
 
   /**
    * Convert the given selection match vector to a TID list. The match vector is assumed to be
