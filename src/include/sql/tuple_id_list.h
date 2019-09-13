@@ -127,70 +127,14 @@ class TupleIdList {
   void UnsetFrom(const TupleIdList &other) { bit_vector_.Difference(other.bit_vector_); }
 
   /**
-   * Build a list of tuple IDs as a subset of the IDs in the input list @em input for which the
-   * provided function @em f returns true.
+   * Filter the TIDs in this list based on the given function.
    * @tparam F A functor that accepts a 32-bit tuple ID and returns a boolean.
-   * @param input The input list to read from.
    * @param f The function that filters the IDs from the input, returning true for valid tuples, and
    *          false otherwise.
    */
   template <typename F>
-  void BuildFromOtherList(const TupleIdList &input, F &&f) {
-    static_assert(std::is_invocable_r_v<bool, F, uint32_t>,
-                  "List construction callback must a single-argument functor "
-                  "accepting an unsigned 32-bit index and returning a boolean "
-                  "indicating if the given TID is considered 'valid' and "
-                  "should be included in the output list");
-
-    for (BitVectorType::WordType i = 0; i < input.bit_vector_.num_words(); i++) {
-      const auto start = i * BitVectorType::kWordSizeBits;
-      BitVectorType::WordType word = input.bit_vector_.GetWord(i);
-      BitVectorType::WordType word_result = 0;
-      while (word != 0) {
-        const auto t = word & -word;
-        const auto r = util::BitUtil::CountTrailingZeros(word);
-        const auto tid = start + r;
-        const auto cond = static_cast<BitVectorType::WordType>(f(tid));
-        word_result |= (cond << r);
-        word ^= t;
-      }
-      bit_vector_.SetWord(i, word_result);
-    }
-  }
-
-  /**
-   * Build a list of tuple IDs as a subset of all TIDs this list can support (i.e., in the range
-   * [0, kDefaultVectorSize]) for which the provided function @em f returns true.
-   * @tparam F A functor that accepts a 32-bit tuple ID and returns a boolean.
-   * @param input The input list to read from.
-   * @param f The function that filters the IDs from the input, returning true for valid tuples, and
-   *          false otherwise.
-   */
-  template <typename F>
-  void BuildFromFunction(F &&f) {
-    static_assert(std::is_invocable_r_v<bool, F, uint32_t>,
-                  "List construction callback must a single-argument functor "
-                  "accepting an unsigned 32-bit index and returning a boolean "
-                  "indicating if the given TID is considered 'valid' and "
-                  "should be included in the output list");
-
-    // Process batches of 64 at-a-time. This loop should be fully vectorized for
-    // fundamental types.
-    for (BitVectorType::WordType i = 0; i < bit_vector_.num_words(); i++) {
-      const auto start = i * BitVectorType::kWordSizeBits;
-      BitVectorType::WordType word_result = 0;
-      for (BitVectorType::WordType j = 0; j < BitVectorType::kWordSizeBits; j++) {
-        const auto cond = static_cast<BitVectorType::WordType>(f(start + j));
-        word_result |= (cond << j);
-      }
-      bit_vector_.SetWord(i, word_result);
-    }
-
-    // Scalar tail
-    for (BitVectorType::WordType i = bit_vector_.num_words() * BitVectorType::kWordSizeBits;
-         i < kDefaultVectorSize; i++) {
-      bit_vector_.Set(i, f(i));
-    }
+  void Filter(F &&f) {
+    bit_vector_.UpdateSetBits(f);
   }
 
   /**
