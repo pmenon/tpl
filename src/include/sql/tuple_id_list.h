@@ -271,6 +271,16 @@ class TupleIdList {
    */
   BitVectorType *GetMutableBits() { return &bit_vector_; }
 
+  /**
+   * Access an element in the list by it's index in the total order.
+   * @param i The index of the element to select.
+   * @return The value of the element at the given index.
+   */
+  std::size_t operator[](const std::size_t i) const {
+    TPL_ASSERT(i < GetTupleCount(), "Out-of-bounds list access");
+    return bit_vector_.NthOne(i);
+  }
+
  private:
   // The validity bit vector
   BitVectorType bit_vector_;
