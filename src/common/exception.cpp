@@ -34,8 +34,6 @@ std::string Exception::ExceptionTypeToString(ExceptionType type) {
       return "Unknown";
   }
 }
-std::ostream &operator<<(std::ostream &os, const Exception &e) {
-  return os << e.what();
-}
+std::ostream &operator<<(std::ostream &os, const Exception &e) { return os << e.what(); }
 
 }  // namespace tpl
