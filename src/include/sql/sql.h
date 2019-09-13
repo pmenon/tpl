@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <string>
 
 #include "common/common.h"
@@ -36,9 +37,9 @@ enum class SqlTypeId : uint8_t {
   Real,      // 4-byte float
   Double,    // 8-byte float
   Decimal,   // Arbitrary-precision numeric
-  Date,
-  Char,    // Fixed-length string
-  Varchar  // Variable-length string
+  Date,      // Dates
+  Char,      // Fixed-length string
+  Varchar    // Variable-length string
 };
 
 /**
@@ -63,6 +64,12 @@ enum class JoinType : uint8_t { Inner, Outer, Left, Right, Anti, Semi };
 struct Blob {
   uint8_t *data;
   uint64_t size;
+
+  bool operator==(const Blob &that) const noexcept {
+    return size == that.size && std::memcmp(data, that.data, size) == 0;
+  }
+
+  bool operator!=(const Blob &that) const noexcept { return !(*this == that); }
 };
 
 /**
