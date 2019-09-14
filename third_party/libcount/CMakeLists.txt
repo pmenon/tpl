@@ -23,9 +23,8 @@ string (TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
 
 # Optimization CXX flags
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "DEBUG")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb -O0 -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize-address-use-after-scope")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fsanitize-address-use-after-scope")
-    message(STATUS "AddressSanitizer (ASAN) enabled")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb -O0 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
 elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RELEASE")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG")
 elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RELWITHDEBINFO")
