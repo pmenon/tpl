@@ -51,7 +51,7 @@ void CastFromSrcType(const Vector &source, Vector *target, SqlTypeId target_type
       CastFromSrcTypeToDestType<SrcT, double, Op>(source, target);
       break;
     default:
-      throw NotImplementedException("Casting vector of type '{}' to '{}' not supported",
+      throw NotImplementedException("casting vector of type '{}' to '{}' not supported",
                                     TypeIdToString(source.type_id()),
                                     TypeIdToString(target->type_id()));
   }
@@ -87,7 +87,7 @@ void VectorOps::Cast(const Vector &source, Vector *target, SqlTypeId source_type
       CastFromSrcType<double, tpl::sql::Cast>(source, target, target_type);
       break;
     default:
-      throw NotImplementedException("Casting vector of type '{}' not supported",
+      throw NotImplementedException("casting vector of type '{}' not supported",
                                     TypeIdToString(source.type_id()));
   }
 }

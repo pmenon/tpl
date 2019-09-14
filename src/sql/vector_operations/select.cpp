@@ -123,42 +123,33 @@ void SelectOperation(const Vector &left, const Vector &right, TupleIdList *tid_l
 
   // Lift-off
   switch (left.type_id()) {
-    case TypeId::Boolean: {
+    case TypeId::Boolean:
       TemplatedSelectOperation<bool, Op>(left, right, tid_list);
       break;
-    }
-    case TypeId::TinyInt: {
+    case TypeId::TinyInt:
       TemplatedSelectOperation<int8_t, Op>(left, right, tid_list);
       break;
-    }
-    case TypeId::SmallInt: {
+    case TypeId::SmallInt:
       TemplatedSelectOperation<int16_t, Op>(left, right, tid_list);
       break;
-    }
-    case TypeId::Integer: {
+    case TypeId::Integer:
       TemplatedSelectOperation<int32_t, Op>(left, right, tid_list);
       break;
-    }
-    case TypeId::BigInt: {
+    case TypeId::BigInt:
       TemplatedSelectOperation<int64_t, Op>(left, right, tid_list);
       break;
-    }
-    case TypeId::Float: {
+    case TypeId::Float:
       TemplatedSelectOperation<float, Op>(left, right, tid_list);
       break;
-    }
-    case TypeId::Double: {
+    case TypeId::Double:
       TemplatedSelectOperation<double, Op>(left, right, tid_list);
       break;
-    }
-    case TypeId::Varchar: {
+    case TypeId::Varchar:
       TemplatedSelectOperation<const char *, Op, true>(left, right, tid_list);
       break;
-    }
-    default: {
+    default:
       throw NotImplementedException("selections on vector type '{}' not supported",
                                     TypeIdToString(left.type_id()));
-    }
   }
 }
 

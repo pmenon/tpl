@@ -53,6 +53,8 @@ void VectorOps::Hash(const Vector &input, Vector *result) {
       throw NotImplementedException("hashing not supported for vectors of type '{}'",
                                     TypeIdToString(input.type_id()));
   }
+
+  result->SetSelectionVector(input.selection_vector(), input.count());
 }
 
 }  // namespace tpl::sql

@@ -12,50 +12,39 @@ namespace {
 template <typename Op>
 void ComparisonOperation(const Vector &left, const Vector &right, Vector *result) {
   switch (left.type_id()) {
-    case TypeId::Boolean: {
+    case TypeId::Boolean:
       BinaryOperation<bool, bool, bool, Op>(left, right, result);
       break;
-    }
-    case TypeId::TinyInt: {
+    case TypeId::TinyInt:
       BinaryOperation<int8_t, int8_t, bool, Op>(left, right, result);
       break;
-    }
-    case TypeId::SmallInt: {
+    case TypeId::SmallInt:
       BinaryOperation<int16_t, int16_t, bool, Op>(left, right, result);
       break;
-    }
-    case TypeId::Integer: {
+    case TypeId::Integer:
       BinaryOperation<int32_t, int32_t, bool, Op>(left, right, result);
       break;
-    }
-    case TypeId::BigInt: {
+    case TypeId::BigInt:
       BinaryOperation<int64_t, int64_t, bool, Op>(left, right, result);
       break;
-    }
-    case TypeId::Hash: {
+    case TypeId::Hash:
       BinaryOperation<hash_t, hash_t, bool, Op>(left, right, result);
       break;
-    }
-    case TypeId::Pointer: {
+    case TypeId::Pointer:
       BinaryOperation<uintptr_t, uintptr_t, bool, Op>(left, right, result);
       break;
-    }
-    case TypeId::Float: {
+    case TypeId::Float:
       BinaryOperation<float, float, bool, Op>(left, right, result);
       break;
-    }
-    case TypeId::Double: {
+    case TypeId::Double:
       BinaryOperation<double, double, bool, Op>(left, right, result);
       break;
-    }
-    case TypeId::Varchar: {
+    case TypeId::Varchar:
       BinaryOperation<const char *, const char *, bool, Op, true>(left, right, result);
       break;
-    }
-    default: {
+    default:
       throw NotImplementedException("comparison not supported for vectors of type '{}'",
                                     TypeIdToString(left.type_id()));
-    }
   }
 }
 
