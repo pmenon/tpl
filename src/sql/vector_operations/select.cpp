@@ -12,20 +12,20 @@ namespace {
 void CheckSelection(const Vector &left, const Vector &right, TupleIdList *result) {
   if (left.type_id() != right.type_id()) {
     throw TypeMismatchException(left.type_id(), right.type_id(),
-                                "input vector types must match for comparisons");
+                                "input vector types must match for selections");
   }
   if (!left.IsConstant() && !right.IsConstant()) {
     if (left.num_elements() != right.num_elements()) {
       throw Exception(ExceptionType::Execution,
-                      "Left and right vectors to comparison have different sizes");
+                      "left and right vectors to comparison have different sizes");
     }
     if (left.count() != right.count()) {
       throw Exception(ExceptionType::Execution,
-                      "Left and right vectors to comparison have different counts");
+                      "left and right vectors to comparison have different counts");
     }
     if (result->GetCapacity() != left.num_elements()) {
       throw Exception(ExceptionType::Execution,
-                      "Result TupleIdList is not large enough to store all TIDs in vector");
+                      "result list not large enough to store all TIDs in input vector");
     }
   }
 }
