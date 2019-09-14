@@ -6,7 +6,7 @@ namespace tpl {
 
 Exception::Exception(ExceptionType exception_type, const std::string &message)
     : std::exception(), type_(exception_type) {
-  exception_message_ = ExceptionTypeToString(exception_type) + ": " + message;
+  exception_message_ = ExceptionTypeToString(type_) + ": " + message;
 }
 
 const char *Exception::what() const noexcept { return exception_message_.c_str(); }
