@@ -357,7 +357,7 @@ void Vector::Cast(TypeId new_type) {
   new_vector.MoveTo(this);
 }
 
-void Vector::Append(Vector &other) {
+void Vector::Append(const Vector &other) {
   TPL_ASSERT(sel_vector_ == nullptr, "Appending to vector with selection vector not supported");
   TPL_ASSERT(type_ == other.type_, "Can only append vector of same type");
 

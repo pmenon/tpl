@@ -249,7 +249,7 @@ class Vector {
   /**
    * Append the contents of the provided vector @em other into this vector.
    */
-  void Append(Vector &other);
+  void Append(const Vector &other);
 
   /**
    * Copies the contents of this vector into another vector. Callers can optionally specify at what
