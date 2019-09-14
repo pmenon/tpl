@@ -1,6 +1,7 @@
 #include "sql/vector_operations/vector_operators.h"
 
 #include "common/common.h"
+#include "common/exception.h"
 #include "sql/operations/comparison_operators.h"
 #include "sql/vector_operations/binary_op_helpers.h"
 
@@ -51,7 +52,10 @@ void ComparisonOperation(const Vector &left, const Vector &right, Vector *result
       BinaryOperation<const char *, const char *, bool, Op, true>(left, right, result);
       break;
     }
-    default: { TPL_ASSERT(false, "Type not supported for comparison"); }
+    default: {
+      throw NotImplementedException("comparison not supported for vectors of type '{}'",
+                                    TypeIdToString(left.type_id()));
+    }
   }
 }
 
