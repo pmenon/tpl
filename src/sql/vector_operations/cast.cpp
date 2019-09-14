@@ -1,5 +1,6 @@
 #include "sql/vector_operations/vector_operators.h"
 
+#include "common/exception.h"
 #include "sql/operations/cast_operators.h"
 
 namespace tpl::sql {
@@ -28,40 +29,31 @@ void CastFromSrcTypeToDestType(const Vector &source, Vector *target) {
 template <typename SrcT, typename Op>
 void CastFromSrcType(const Vector &source, Vector *target, SqlTypeId target_type) {
   switch (target_type) {
-    case SqlTypeId::Boolean: {
+    case SqlTypeId::Boolean:
       CastFromSrcTypeToDestType<SrcT, bool, Op>(source, target);
       break;
-    }
-    case SqlTypeId::TinyInt: {
+    case SqlTypeId::TinyInt:
       CastFromSrcTypeToDestType<SrcT, int8_t, Op>(source, target);
       break;
-    }
-    case SqlTypeId::SmallInt: {
+    case SqlTypeId::SmallInt:
       CastFromSrcTypeToDestType<SrcT, int16_t, Op>(source, target);
       break;
-    }
-    case SqlTypeId::Integer: {
+    case SqlTypeId::Integer:
       CastFromSrcTypeToDestType<SrcT, int32_t, Op>(source, target);
       break;
-    }
-    case SqlTypeId::BigInt: {
+    case SqlTypeId::BigInt:
       CastFromSrcTypeToDestType<SrcT, int64_t, Op>(source, target);
       break;
-    }
-    case SqlTypeId::Real: {
+    case SqlTypeId::Real:
       CastFromSrcTypeToDestType<SrcT, float, Op>(source, target);
       break;
-    }
-    case SqlTypeId::Double: {
+    case SqlTypeId::Double:
       CastFromSrcTypeToDestType<SrcT, double, Op>(source, target);
       break;
-    }
-    case SqlTypeId::Decimal:
-    case SqlTypeId::Date:
-    case SqlTypeId::Char:
-    case SqlTypeId::Varchar: {
-      throw std::runtime_error("Implement me");
-    }
+    default:
+      throw NotImplementedException("casting vector of type '{}' to '{}' not supported",
+                                    TypeIdToString(source.type_id()),
+                                    TypeIdToString(target->type_id()));
   }
 }
 
@@ -69,51 +61,41 @@ void CastFromSrcType(const Vector &source, Vector *target, SqlTypeId target_type
 
 void VectorOps::Cast(const Vector &source, Vector *target, SqlTypeId source_type,
                      SqlTypeId target_type) {
-  target->sel_vector_ = source.sel_vector_;
-  target->count_ = source.count_;
-  target->null_mask_ = source.null_mask_;
+  target->Resize(source.num_elements());
+  target->SetSelectionVector(source.selection_vector(), source.count());
+  target->mutable_null_mask()->Copy(source.null_mask());
   switch (source_type) {
-    case SqlTypeId::Boolean: {
+    case SqlTypeId::Boolean:
       CastFromSrcType<bool, tpl::sql::Cast>(source, target, target_type);
       break;
-    }
-    case SqlTypeId::TinyInt: {
+    case SqlTypeId::TinyInt:
       CastFromSrcType<int8_t, tpl::sql::Cast>(source, target, target_type);
       break;
-    }
-    case SqlTypeId::SmallInt: {
+    case SqlTypeId::SmallInt:
       CastFromSrcType<int16_t, tpl::sql::Cast>(source, target, target_type);
       break;
-    }
-    case SqlTypeId::Integer: {
+    case SqlTypeId::Integer:
       CastFromSrcType<int32_t, tpl::sql::Cast>(source, target, target_type);
       break;
-    }
-    case SqlTypeId::BigInt: {
+    case SqlTypeId::BigInt:
       CastFromSrcType<int64_t, tpl::sql::Cast>(source, target, target_type);
       break;
-    }
-    case SqlTypeId::Real: {
+    case SqlTypeId::Real:
       CastFromSrcType<float, tpl::sql::Cast>(source, target, target_type);
       break;
-    }
-    case SqlTypeId::Double: {
+    case SqlTypeId::Double:
       CastFromSrcType<double, tpl::sql::Cast>(source, target, target_type);
       break;
-    }
-    case SqlTypeId::Decimal:
-    case SqlTypeId::Date:
-    case SqlTypeId::Char:
-    case SqlTypeId::Varchar: {
-      throw std::runtime_error("Implement me");
-    }
+    default:
+      throw NotImplementedException("casting vector of type '{}' not supported",
+                                    TypeIdToString(source.type_id()));
   }
 }
 
 void VectorOps::Cast(const Vector &source, Vector *target) {
-  const auto source_sql_type = GetSqlTypeFromInternalType(source.type_);
-  const auto target_sql_type = GetSqlTypeFromInternalType(target->type_);
-  Cast(source, target, source_sql_type, target_sql_type);
+  const SqlTypeId src_type = GetSqlTypeFromInternalType(source.type_);
+  const SqlTypeId target_type = GetSqlTypeFromInternalType(target->type_);
+  Cast(source, target, src_type, target_type);
 }
 
 }  // namespace tpl::sql

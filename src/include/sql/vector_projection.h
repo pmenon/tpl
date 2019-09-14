@@ -16,18 +16,60 @@ namespace tpl::sql {
 class ColumnVectorIterator;
 
 /**
- * A vector projection is a container representing a collection of tuples whose
- * attributes are stored in columnar/vector format. It is used in the execution
- * engine to represent subsets of materialized state including base tables and
- * any intermediate state such as hash tables or sorter instances.
+ * A container representing a collection of tuples whose attributes are stored in columnar format.
+ * It's used in the execution engine to represent subsets of materialized state such partitions of
+ * base tables and intermediate state including hash tables or sorter instances.
  *
- * Vectors in the projection have a well-defined order and are accessed using
- * this unchanging order. All vectors have the same size.
+ * Columns in the projection have a well-defined order and are accessed using this unchanging order.
+ * All columns in the projection have the same size and selection count at any given time.
  *
- * In addition to holding just the vector data, vector projections also contain
- * a selection index vector containing the indexes of the tuples that are
- * externally visible. All column vectors contain references to the selection
- * index vector owned by this projection.
+ * In addition to holding just the vector data, vector projections also contain a selection index
+ * vector containing the indexes of the tuples that are externally visible. All column vectors
+ * contain references to the selection index vector owned by this projection. At any given time,
+ * projections have a selected count (see VectorProjection::GetSelectedTupleCount()) that is <=
+ * the total tuple count (see VectorProjection::GetTotalTupleCount()).
+ *
+ * VectorProjections come in two flavors: referencing and owning projections. A referencing vector
+ * projection contains a set of column vectors that reference data stored externally. An owning
+ * vector projection allocates and owns a chunk of data that it partitions and assigns to all child
+ * vectors. By default, it will allocate enough data for each child to have a capacity determined by
+ * the global constant ::tpl::kDefaultVectorSize, usually 2048 elements. After construction, and
+ * owning vector projection has a <b>zero</b> size (though it's capacity is
+ * ::tpl::kDefaultVectorSize). Thus, users must explicitly set the size through
+ * VectorProjection::Resize() before interacting with the projection. Resizing sets up all contained
+ * column vectors.
+ *
+ * To create a referencing vector, use VectorProjection::InitializeEmpty(), and fill each column
+ * vector with VectorProjection::ResetColumn():
+ * @code
+ * VectorProjection vp;
+ * vp.InitializeEmpty(...);
+ * vp.ResetColumn(0, ...);
+ * vp.ResetColumn(1, ...);
+ * ...
+ * @endcode
+ *
+ * To create an owning vector, use VectorProjection::Initialize():
+ * @code
+ * VectorProjection vp;
+ * vp.Initialize(...);
+ * vp.Resize(10);
+ * VectorOps::Fill(vp.GetColumn(0), ...);
+ * @endcode
+ *
+ * To remove any selection vector, call VectorProjection::Reset(). This returns the projection to
+ * the a state as immediately following initialization.
+ *
+ * @code
+ * VectorProjection vp;
+ * vp.Initialize(...);
+ * vp.Resize(10);
+ * // vp size and selected is 10
+ * vp.Reset();
+ * // vp size and selected are 0
+ * vp.Resize(20);
+ * // vp size and selected is 20
+ * @endcode
  */
 class VectorProjection {
   friend class VectorProjectionIterator;
@@ -37,9 +79,8 @@ class VectorProjection {
 
  public:
   /**
-   * Create an empty and uninitialized vector projection. Users must call
-   * @em Initialize() or @em InitializeEmpty() to appropriately initialize the
-   * projection with the correct columns.
+   * Create an empty and uninitialized vector projection. Users must call @em Initialize() or
+   * @em InitializeEmpty() to appropriately initialize the projection with the correct columns.
    *
    * @see Initialize()
    * @see InitializeEmpty()
@@ -52,19 +93,22 @@ class VectorProjection {
   DISALLOW_COPY_AND_MOVE(VectorProjection);
 
   /**
-   * Initialize a vector projection and create a vector of the specified type
-   * for each type provided in the column metadata list @em column_info. All
-   * vectors will reference data owned by this vector projection.
+   * Initialize a vector projection with column vectors of the provided types. This will create one
+   * vector for each type provided in the column metadata list @em column_info. All vectors will
+   * will be initialized with a maximum capacity of kDefaultVectorSize (e.g., 2048), are empty, and
+   * will reference data owned by this vector projection.
    * @param column_info Metadata for columns in the projection.
    */
   void Initialize(const std::vector<const Schema::ColumnInfo *> &column_info);
 
   /**
-   * Initialize an empty vector projection. This will create an empty vector of
-   * the specified type for each type provided in the column metadata list
-   * @em column_info. All vectors are referencing vectors that reference data
-   * stored (and owned) externally. Column vector data is reset/refreshed
-   * through calls to ResetColumn().
+   * Initialize an empty vector projection with columns of the provided types. This will create an
+   * empty vector of the specified type for each type provided in the column metadata list
+   * @em column_info. Column vectors may only reference external data set and refreshed through
+   * @em ResetColumn().
+   *
+   * @see VectorProjection::ResetColumn()
+   *
    * @param column_info Metadata for columns in the projection.
    */
   void InitializeEmpty(const std::vector<const Schema::ColumnInfo *> &column_info);
@@ -76,14 +120,12 @@ class VectorProjection {
   bool IsFiltered() const { return sel_vector_[0] != kInvalidPos; }
 
   /**
-   * Return a reference to the selection vector. If no selection vector exists
-   * for the projection, a null pointer is returned;
+   * Return the selection vector. If no selection vector exists, returns NULL.
    */
   sel_t *GetSelectionVector() { return IsFiltered() ? sel_vector_ : nullptr; }
 
   /**
-   * Set the selection vector for this projection to the contents of the one
-   * provided.
+   * Filter elements from the vector based on the indexes in the provided selection index vector.
    * @param new_sel_vector The new selection vector.
    * @param count The number of elements in the new selection vector.
    */
@@ -119,23 +161,29 @@ class VectorProjection {
   }
 
   /**
-   * Reset this vector projection to the state after initialization.
+   * Set the size of this projection and all child vectors to the given size. This size must be less
+   * than the maximum capacity of the vector projection.
+   * @param num_tuples The size to set the projection.
+   */
+  void Resize(uint64_t num_tuples);
+
+  /**
+   * Reset this vector projection to the state after initialization. This will set the counts to 0,
+   * and reset each child vector to point to data owned by this projection (if it owns any).
    */
   void Reset();
 
   /**
-   * Reset/reload the data for the column at position @em col_idx in the
-   * projection using the data from the column iterator at the same position in
-   * the provided vector @em column_iterators.
+   * Reset the data for the column vector at position @em col_idx in the projection using the data
+   * from the column iterator at the same index.
    * @param column_iterators A vector of all column iterators.
    * @param col_idx The index of the column in this projection to reset.
    */
   void ResetColumn(const std::vector<ColumnVectorIterator> &column_iterators, uint32_t col_idx);
 
   /**
-   * Reset/reload the data for the column at position @em col_idx in this
-   * projection using @em col_data and @em col_null_bitmap for the raw data and
-   * NULL bitmap, respectively.
+   * Reset/reload the data for the column at position @em col_idx in this projection using
+   * @em col_data and @em col_null_bitmap for the raw data and NULL bitmap, respectively.
    * @param col_data The raw (potentially compressed) data for the column.
    * @param col_null_bitmap The null bitmap for the column.
    * @param col_idx The index of the column to reset.
@@ -146,24 +194,29 @@ class VectorProjection {
 
   /**
    * Return the number of columns in this projection.
+   * @return The number of columns in the projection.
    */
   uint32_t GetNumColumns() const { return columns_.size(); }
 
   /**
-   * Return the number of active tuples in this projection.
+   * Return the number of active, i.e., externally visible, tuples in this projection. The selected
+   * tuple count is always <= the total tuple count.
+   * @return The number of externally visible tuples in this projection.
    */
-  uint64_t GetTupleCount() const { return columns_.empty() ? 0 : columns_[0]->count(); }
+  uint64_t GetSelectedTupleCount() const { return columns_.empty() ? 0 : columns_[0]->count(); }
 
   /**
-   * Set the current count of tuples in this projection..
-   * @param count The count.
+   * Return the total number of tuples in the projection, including those that may have been
+   * filtered out by a selection vector, if one exists. The total tuple count is >= the selected
+   * tuple count.
+   * @return The total number of tuples in the projection.
    */
-  void SetTupleCount(uint64_t count);
+  uint64_t GetTotalTupleCount() const { return columns_.empty() ? 0 : columns_[0]->num_elements(); }
 
   /**
    * Compute the selectivity of this projection.
-   * @return A number between [0.0, 1.0] representing the selectivity, i.e., the
-   *         fraction of tuples that are active and visible.
+   * @return A number between [0.0, 1.0] representing the selectivity, i.e., the fraction of tuples
+   *         that are active and visible.
    */
   double ComputeSelectivity() const {
     return columns_.empty() ? 0 : columns_[0]->ComputeSelectivity();
@@ -176,16 +229,13 @@ class VectorProjection {
   std::string ToString() const;
 
   /**
-   * Print a string representation of this vector projection to the provided
-   * output stream @em stream.
-   * @param stream The stream where the string representation of this projection
-   *               is written to.
+   * Print a string representation of this vector projection to the provided output stream.
+   * @param stream The stream where the string representation of this projection is written to.
    */
   void Dump(std::ostream &stream) const;
 
   /**
-   * Perform an integrity check on this vector projection instance. This is used
-   * in debug mode for sanity checks.
+   * Perform an integrity check on this vector projection instance. This is used in debug mode.
    */
   void CheckIntegrity() const;
 

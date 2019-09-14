@@ -9,9 +9,9 @@
 namespace tpl::ast {
 
 /**
- * A uniqued string identifier in some AST context. This serves as a super-
- * lightweight string reference. Two identifiers are equal if they point to the
- * same string (i.e., we don't need to check contents).
+ * A uniqued string identifier in some AST context. This serves as a super-lightweight string
+ * reference. Two identifiers allocated from the same AST context are equal if they have the same
+ * pointer value - we don't need to check contents.
  */
 class Identifier {
  public:
@@ -48,15 +48,13 @@ class Identifier {
 namespace llvm {
 
 /**
- * Make Identifiers usable from LLVM DenseMaps
+ * Functor to make Identifiers usable from LLVM DenseMap.
  */
 template <>
 struct DenseMapInfo<tpl::ast::Identifier> {
-  static inline tpl::ast::Identifier getEmptyKey() { return tpl::ast::Identifier::GetEmptyKey(); }
+  static tpl::ast::Identifier getEmptyKey() { return tpl::ast::Identifier::GetEmptyKey(); }
 
-  static inline tpl::ast::Identifier getTombstoneKey() {
-    return tpl::ast::Identifier::GetTombstoneKey();
-  }
+  static tpl::ast::Identifier getTombstoneKey() { return tpl::ast::Identifier::GetTombstoneKey(); }
 
   static unsigned getHashValue(const tpl::ast::Identifier identifier) {
     return DenseMapInfo<const void *>::getHashValue(static_cast<const void *>(identifier.data()));
@@ -72,13 +70,13 @@ struct DenseMapInfo<tpl::ast::Identifier> {
 namespace std {
 
 /**
- * Make Identifiers usable as keys in STL/TPL maps
+ * Functor to make Identifiers usable as keys in STL/TPL maps.
  */
 template <>
 struct hash<tpl::ast::Identifier> {
-  std::size_t operator()(const tpl::ast::Identifier &ident) const noexcept {
-    std::string_view s(ident.data(), ident.length());
-    return std::hash<decltype(s)>()(s);
+  std::size_t operator()(const tpl::ast::Identifier &identifier) const noexcept {
+    const std::string_view s(identifier.data(), identifier.length());
+    return std::hash<std::string_view>()(s);
   }
 };
 

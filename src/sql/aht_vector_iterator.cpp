@@ -21,9 +21,10 @@ AHTVectorIterator::AHTVectorIterator(const AggregationHashTable &agg_hash_table,
   // First, initialize the vector projection.
   vector_projection_->Initialize(column_info);
 
-  // Next, since we have a batch of hash table input, build the projection using
-  // data from the hash table iterator batch.
-  BuildVectorProjection(transpose_fn);
+  // If the iterator has data, build up the projection and the current input.
+  if (iter_.HasNext()) {
+    BuildVectorProjection(transpose_fn);
+  }
 }
 
 AHTVectorIterator::AHTVectorIterator(const AggregationHashTable &agg_hash_table,
@@ -43,15 +44,21 @@ void AHTVectorIterator::BuildVectorProjection(const AHTVectorIterator::Transpose
   }
 
   // Update the vector projection with the new batch size.
-  vector_projection_->SetTupleCount(size);
+  vector_projection_->Resize(size);
   vector_projection_iterator_->SetVectorProjection(vector_projection_.get());
 
-  // Invoke the transposition function which does the heavy, query-specific,
-  // lifting of converting rows to columns.
-  transpose_fn(temp_aggregates_vec_, size, vector_projection_iterator_.get());
+  // If there isn't data, exit.
+  if (size == 0) {
+    return;
+  }
 
-  // The vector projection is now filled with aggregate data. Reset the VPI
-  // so that it's ready for iteration.
+  // Invoke the transposition function. After the call, row-wise aggregates stored in the temporary
+  // aggregate buffer will be converted into column-wise data in vectors within the projection.
+  transpose_fn(temp_aggregates_vec_, vector_projection_->GetSelectedTupleCount(),
+               vector_projection_iterator_.get());
+
+  // The vector projection is now filled with vector aggregate data. Reset the VPI so that it's
+  // ready for iteration.
   TPL_ASSERT(!vector_projection_iterator_->IsFiltered(),
              "VPI shouldn't be filtered during a transpose");
   vector_projection_iterator_->Reset();

@@ -176,7 +176,7 @@ TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
       tuple_count++;
     }
 
-    EXPECT_EQ(vp()->GetTupleCount(), tuple_count);
+    EXPECT_EQ(vp()->GetSelectedTupleCount(), tuple_count);
     EXPECT_FALSE(iter.IsFiltered());
   }
 

@@ -1,5 +1,7 @@
 #include "sql/vector_operations/vector_operators.h"
 
+#include "common/exception.h"
+
 namespace tpl::sql {
 
 namespace {
@@ -19,43 +21,36 @@ void GenericCopyOperation(const Vector &source, void *target, uint64_t offset,
   }
 
   switch (source.type_id()) {
-    case TypeId::Boolean: {
+    case TypeId::Boolean:
       TemplatedCopyOperation<bool>(source, target, offset, element_count);
       break;
-    }
-    case TypeId::TinyInt: {
+    case TypeId::TinyInt:
       TemplatedCopyOperation<int8_t>(source, target, offset, element_count);
       break;
-    }
-    case TypeId::SmallInt: {
+    case TypeId::SmallInt:
       TemplatedCopyOperation<int16_t>(source, target, offset, element_count);
       break;
-    }
-    case TypeId::Integer: {
+    case TypeId::Integer:
       TemplatedCopyOperation<int32_t>(source, target, offset, element_count);
       break;
-    }
-    case TypeId::BigInt: {
+    case TypeId::BigInt:
       TemplatedCopyOperation<int64_t>(source, target, offset, element_count);
       break;
-    }
-    case TypeId::Hash: {
+    case TypeId::Hash:
       TemplatedCopyOperation<hash_t>(source, target, offset, element_count);
       break;
-    }
-    case TypeId::Pointer: {
+    case TypeId::Pointer:
       TemplatedCopyOperation<uintptr_t>(source, target, offset, element_count);
       break;
-    }
-    case TypeId::Float: {
+    case TypeId::Float:
       TemplatedCopyOperation<float>(source, target, offset, element_count);
       break;
-    }
-    case TypeId::Double: {
+    case TypeId::Double:
       TemplatedCopyOperation<double>(source, target, offset, element_count);
       break;
-    }
-    default: { throw std::logic_error("Don't use Copy for varlen types"); }
+    default:
+      throw NotImplementedException("copying vector of type '{}' not supported",
+                                    TypeIdToString(source.type_id()));
   }
 }
 
@@ -68,13 +63,18 @@ void VectorOps::Copy(const Vector &source, void *target, uint64_t offset, uint64
 
 void VectorOps::Copy(const Vector &source, Vector *target, uint64_t offset) {
   TPL_ASSERT(offset < source.count_, "Out-of-bounds offset");
-  target->count_ = source.count_ - offset;
+  TPL_ASSERT(target->selection_vector() == nullptr, "Cannot copy into filtered vector");
+
+  // Resize the target vector to accommodate count-offset elements from the source vector
+  target->Resize(source.count() - offset);
+
+  // Copy NULLs
   Exec(source,
-       [&](uint64_t i, uint64_t k) {
-         target->null_mask_.SetTo(k - offset, source.null_mask_.Test(i));
-       },
+       [&](uint64_t i, uint64_t k) { target->null_mask_[k - offset] = source.null_mask_[i]; },
        offset);
-  Copy(source, target->data_, offset, target->count_);
+
+  // Copy data
+  Copy(source, target->data(), offset, target->count());
 }
 
 }  // namespace tpl::sql

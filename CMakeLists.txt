@@ -30,6 +30,7 @@ option(TPL_USE_ASAN "Build TPL with AddressSanitizer enabled" OFF)
 option(TPL_USE_TSAN "Build TPL with ThreadSanitizer enabled" OFF)
 option(TPL_USE_GOLD "Use the GNU Gold linker if available" OFF)
 option(TPL_GENERATE_COVERAGE "Build TPL with code coverage enabled" OFF)
+option(TPL_BUILD_DOC "Build Doxygen documentation" OFF)
 
 # Is this MacOS ?
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -206,6 +207,34 @@ add_custom_target(check-tpl-diff
                 -f ${CMAKE_BINARY_DIR}/tpl_tests_diff.txt
                 -t ${PROJECT_SOURCE_DIR}/sample_tpl
         )
+
+############################################################
+#
+# Doxygen
+#
+############################################################
+
+# check if Doxygen is installed
+find_package(Doxygen)
+if (TPL_BUILD_DOC)
+  if(NOT DOXYGEN_FOUND)
+    message(FATAL_ERROR "Doxygen is needed to build the documentation.")
+  endif()
+
+  # set input and output files
+  set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/apidoc/Doxyfile.in)
+  set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+
+  # request to configure the file
+  configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+  message(STATUS "Doxygen build configured")
+
+  add_custom_target(docs
+          COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+          COMMENT "Generating API documentation with Doxygen"
+          VERBATIM )
+endif ()
 
 ############################################################
 #

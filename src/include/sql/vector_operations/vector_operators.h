@@ -141,73 +141,64 @@ class VectorOps {
   //
   // Selection operations
   //
-  // Selections are like comparisons, but generate a compact/compressed
-  // selection index vector rather than a boolean match vector.
+  // Selections are like comparisons, but read from and write results into a TID list.
   //
   // -------------------------------------------------------
 
   /**
-   * Store the positions of all equal elements in the left and right input vectors into the output
-   * selection index vector.
-   * @param left The left input into the comparison.
-   * @param right The right input into the comparison.
-   * @param[out] out_sel_vector The output selection index vector.
-   * @return The number of elements selected.
+   * Filter the TID list @em tid_list with all elements in @em left that are equal to elements in
+   * @em right.
+   * @param left The left input into the selection.
+   * @param right The right input into the selection
+   * @param[in,out] tid_list The list of TIDs to read and update.
    */
-  static uint32_t SelectEqual(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
+  static void SelectEqual(const Vector &left, const Vector &right, TupleIdList *tid_list);
 
   /**
-   * Store the positions where the left input element is strictly greater than the element in the
-   * right input vector into the output selection index vector.
-   * @param left The left input into the comparison.
-   * @param right The right input into the comparison.
-   * @param[out] out_sel_vector The output selection index vector.
-   * @return The number of elements selected.
+   * Filter the TID list @em tid_list with all elements in @em left that are strictly greater than
+   * elements in @em right.
+   * @param left The left input into the selection.
+   * @param right The right input into the selection
+   * @param[in,out] tid_list The list of TIDs to read and update.
    */
-  static uint32_t SelectGreaterThan(const Vector &left, const Vector &right,
-                                    sel_t out_sel_vector[]);
+  static void SelectGreaterThan(const Vector &left, const Vector &right, TupleIdList *tid_list);
 
   /**
-   * Store the positions where the left input element is greater than or equal to the element in the
-   * right input vector into the output selection index vector.
-   * @param left The left input into the comparison.
-   * @param right The right input into the comparison.
-   * @param[out] out_sel_vector The output selection index vector.
-   * @return The number of elements selected.
+   * Filter the TID list @em tid_list with all elements in @em left that are greater than or equal
+   * to elements @em right.
+   * @param left The left input into the selection.
+   * @param right The right input into the selection
+   * @param[in,out] tid_list The list of TIDs to read and update.
    */
-  static uint32_t SelectGreaterThanEqual(const Vector &left, const Vector &right,
-                                         sel_t out_sel_vector[]);
+  static void SelectGreaterThanEqual(const Vector &left, const Vector &right,
+                                     TupleIdList *tid_list);
 
   /**
-   * Store the positions where the left input element is strictly less than the element in the right
-   * input vector into the output selection index vector.
-   * @param left The left input into the comparison.
-   * @param right The right input into the comparison.
-   * @param[out] out_sel_vector The output selection index vector.
-   * @return The number of elements selected.
+   * Filter the TID list @em tid_list with all elements in @em left that are strictly less than
+   * elements in @em right.
+   * @param left The left input into the selection.
+   * @param right The right input into the selection
+   * @param[in,out] tid_list The list of TIDs to read and update.
    */
-  static uint32_t SelectLessThan(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
+  static void SelectLessThan(const Vector &left, const Vector &right, TupleIdList *tid_list);
 
   /**
-   * Store the positions where the left input element is less than or equal to the element in the
-   * right input vector into the output selection index vector.
-   * @param left The left input into the comparison.
-   * @param right The right input into the comparison.
-   * @param[out] out_sel_vector The output selection index vector.
-   * @return The number of elements selected.
+   * Filter the TID list @em tid_list with all elements in @em left that are less than or equal to
+   * elements in @em right.
+   * @param left The left input into the selection.
+   * @param right The right input into the selection
+   * @param[in,out] tid_list The list of TIDs to read and update.
    */
-  static uint32_t SelectLessThanEqual(const Vector &left, const Vector &right,
-                                      sel_t out_sel_vector[]);
+  static void SelectLessThanEqual(const Vector &left, const Vector &right, TupleIdList *tid_list);
 
   /**
-   * Store the positions of all unequal elements in the left and right input vectors into the output
-   * selection index vector.
-   * @param left The left input into the comparison.
-   * @param right The right input into the comparison.
-   * @param[out] out_sel_vector The output selection index vector.
-   * @return The number of elements selected.
+   * Filter the TID list @em tid_list with all elements in @em left that are not equal to elements
+   * in @em right.
+   * @param left The left input into the selection.
+   * @param right The right input into the selection
+   * @param[in,out] tid_list The list of TIDs to read and update.
    */
-  static uint32_t SelectNotEqual(const Vector &left, const Vector &right, sel_t out_sel_vector[]);
+  static void SelectNotEqual(const Vector &left, const Vector &right, TupleIdList *tid_list);
 
   // -------------------------------------------------------
   //
@@ -283,6 +274,19 @@ class VectorOps {
    * @return True if every element is non-null and true; false otherwise.
    */
   static bool AnyTrue(const Vector &input);
+
+  // -------------------------------------------------------
+  //
+  // Hashing
+  //
+  // -------------------------------------------------------
+
+  /**
+   * Hash vector elements from @em input into @em result.
+   * @param input The input to hash.
+   * @param[out] result The vector containing the hashed values.
+   */
+  static void Hash(const Vector &input, Vector *result);
 
   // -------------------------------------------------------
   //

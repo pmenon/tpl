@@ -11,8 +11,13 @@ namespace tpl::sql {
 
 /**
  * An ordered set of tuple IDs used during query execution to efficiently represent valid tuples in
+<<<<<<< HEAD
  * a vector projection. A TupleIdList can store TIDs in the range [0, kDefaultVectorSize] (either
  * 1024 or 2048), typical during vector processing.
+=======
+ * a vector projection. TupleIdLists can represent all TIDs in the range [0, capacity), set up
+ * upon construction, but can also be resized afterwards to large or smaller capacities.
+>>>>>>> bits
  *
  * Checking the existence of a TID in the list is a constant time operation, as is adding or
  * removing (one or all) TIDs from the list. Intersection, union, and difference are efficient
@@ -38,7 +43,19 @@ namespace tpl::sql {
  */
 class TupleIdList {
  public:
-  using BitVectorType = util::InlinedBitVector<kDefaultVectorSize>;
+  using BitVectorType = util::BitVector<uint64_t>;
+
+  /**
+   * Construct a TID list with the given maximum size.
+   * @param size The maximum size of the list.
+   */
+  explicit TupleIdList(uint32_t size) : bit_vector_(size) {}
+
+  /**
+   * Resize the list to the given size. If growing the list, the contents of the list remain
+   * unchanged. If shrinking the list, previously added/active elements are discarded.
+   */
+  void Resize(uint32_t size) { bit_vector_.Resize(size); }
 
   /**
    * Is the tuple with the given ID in this list?
@@ -46,6 +63,12 @@ class TupleIdList {
    * @return True if the tuple is in the list; false otherwise.
    */
   bool Contains(const uint32_t tid) const { return bit_vector_.Test(tid); }
+
+  /**
+   * Does the list contain all TIDs in the range of TIDs it tracks?
+   * @return True if full; false otherwise.
+   */
+  bool IsFull() const { return bit_vector_.All(); }
 
   /**
    * Is the list empty?
@@ -60,8 +83,7 @@ class TupleIdList {
   void Add(const uint32_t tid) { bit_vector_.Set(tid); }
 
   /**
-   * Add all tuples whose IDs are in the range [start_tid, end_tid). Note the
-   * half-open interval!
+   * Add all tuples whose IDs are in the range [start_tid, end_tid). Note the half-open interval!
    * @param start_tid The left inclusive range boundary.
    * @param end_tid The right inclusive range boundary.
    */
@@ -75,12 +97,12 @@ class TupleIdList {
   void AddAll() { bit_vector_.SetAll(); }
 
   /**
-   * Either enable or disable the tuple with the given ID depending on the value of @em enable. If
+   * Enable or disable the tuple with the given ID depending on the value of @em enable. If
    * @em enable is true, the tuple is added to the list, and otherwise it is disabled.
    * @param tid The ID to add or remove from the list.
    * @param enable The flag indicating if the tuple is added or removed.
    */
-  void Enable(const uint32_t tid, const bool enable) { bit_vector_.SetTo(tid, enable); }
+  void Enable(const uint32_t tid, const bool enable) { bit_vector_.Set(tid, enable); }
 
   /**
    * Remove the tuple with the given ID from the list.
@@ -107,70 +129,22 @@ class TupleIdList {
   void UnsetFrom(const TupleIdList &other) { bit_vector_.Difference(other.bit_vector_); }
 
   /**
-   * Build a list of tuple IDs as a subset of the IDs in the input list @em input for which the
-   * provided function @em f returns true.
+   * Filter the TIDs in this list based on the given function.
    * @tparam F A functor that accepts a 32-bit tuple ID and returns a boolean.
-   * @param input The input list to read from.
-   * @param f A function that filters determines whether TIDs from the input list are valid and
-   *          should be added to this list.
+   * @param f The function that filters the IDs from the input, returning true for valid tuples, and
+   *          false otherwise.
    */
   template <typename F>
-  void BuildFromOtherList(const TupleIdList &input, F &&f) {
-    static_assert(std::is_invocable_r_v<bool, F, uint32_t>,
-                  "List construction callback must a single-argument functor "
-                  "accepting an unsigned 32-bit index and returning a boolean "
-                  "indicating if the given TID is considered 'valid' and "
-                  "should be included in the output list");
-
-    for (BitVectorType::WordType i = 0; i < input.bit_vector_.num_words(); i++) {
-      const auto start = i * BitVectorType::kWordSizeBits;
-      BitVectorType::WordType word = input.bit_vector_.GetWord(i);
-      BitVectorType::WordType word_result = 0;
-      while (word != 0) {
-        const auto t = word & -word;
-        const auto r = util::BitUtil::CountTrailingZeros(word);
-        const auto tid = start + r;
-        const auto cond = static_cast<BitVectorType::WordType>(f(tid));
-        word_result |= (cond << r);
-        word ^= t;
-      }
-      bit_vector_.SetWord(i, word_result);
-    }
+  void Filter(F &&f) {
+    bit_vector_.UpdateSetBits(f);
   }
 
   /**
-   * Build a list of tuple IDs as a subset of all TIDs this list can support (i.e., in the range
-   * [0, kDefaultVectorSize]) for which the provided function @em f returns true.
-   * @tparam F A functor that accepts a 32-bit tuple ID and returns a boolean.
-   * @param input The input list to read from.
-   * @param f A function that filters TIDs.
+   * Build a list of TIDs from the IDs in the input selection vector.
+   * @param sel_vector The selection vector.
+   * @param size The number of elements in the selection vector.
    */
-  template <typename F>
-  void BuildFromFunction(F &&f) {
-    static_assert(std::is_invocable_r_v<bool, F, uint32_t>,
-                  "List construction callback must a single-argument functor "
-                  "accepting an unsigned 32-bit index and returning a boolean "
-                  "indicating if the given TID is considered 'valid' and "
-                  "should be included in the output list");
-
-    // Process batches of 64 at-a-time. This loop should be fully vectorized for
-    // fundamental types.
-    for (BitVectorType::WordType i = 0; i < bit_vector_.num_words(); i++) {
-      const auto start = i * BitVectorType::kWordSizeBits;
-      BitVectorType::WordType word_result = 0;
-      for (BitVectorType::WordType j = 0; j < BitVectorType::kWordSizeBits; j++) {
-        const auto cond = static_cast<BitVectorType::WordType>(f(start + j));
-        word_result |= (cond << j);
-      }
-      bit_vector_.SetWord(i, word_result);
-    }
-
-    // Scalar tail
-    for (BitVectorType::WordType i = bit_vector_.num_words() * BitVectorType::kWordSizeBits;
-         i < kDefaultVectorSize; i++) {
-      bit_vector_.SetTo(i, f(i));
-    }
-  }
+  void BuildFromSelectionVector(const sel_t *sel_vector, uint32_t size);
 
   /**
    * Convert the given selection match vector to a TID list. The match vector is assumed to be
@@ -203,19 +177,18 @@ class TupleIdList {
   uint32_t GetCapacity() const { return bit_vector_.num_bits(); }
 
   /**
-   * Return the selectivity of the list, i.e., the fraction of TIDs that are active.
-   * @return The selectivity of the list as a fraction in the range [0.0, 1.0].
+   * Return the selectivity of the list as a fraction in the range [0.0, 1.0].
+   * @return The selectivity of the list, i.e., the fraction of the tuples that are considered
+   *         "active".
    */
-  float ComputeSelectivity() const {
-    return static_cast<float>(GetTupleCount()) / GetCapacity();
-  }
+  float ComputeSelectivity() const { return static_cast<float>(GetTupleCount()) / GetCapacity(); }
 
   /**
    * Convert this tuple ID list into a dense selection index vector.
    * @param[out] sel_vec The output selection vector.
    * @return The number of elements in the generated selection vector.
    */
-  uint32_t AsSelectionVector(sel_t *sel_vec) const;
+  [[nodiscard]] uint32_t AsSelectionVector(sel_t *sel_vec) const;
 
   /**
    * Iterate all TIDs in this list.
@@ -234,13 +207,25 @@ class TupleIdList {
 
   /**
    * Print a string representation of this vector to the output stream.
+   * @param stream Where the string representation is printed to.
    */
   void Dump(std::ostream &stream) const;
 
   /**
    * Access the internal bit vector.
+   * @return The internal bit vector representation of the list.
    */
   BitVectorType *GetMutableBits() { return &bit_vector_; }
+
+  /**
+   * Access an element in the list by it's index in the total order.
+   * @param i The index of the element to select.
+   * @return The value of the element at the given index.
+   */
+  std::size_t operator[](const std::size_t i) const {
+    TPL_ASSERT(i < GetTupleCount(), "Out-of-bounds list access");
+    return bit_vector_.NthOne(i);
+  }
 
  private:
   // The validity bit vector

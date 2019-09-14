@@ -166,7 +166,7 @@ class VectorProjectionIterator {
   /**
    * Return the number of selected tuples after any filters have been applied.
    */
-  uint32_t GetTupleCount() const { return vector_projection_->GetTupleCount(); }
+  uint32_t GetTupleCount() const { return vector_projection_->GetSelectedTupleCount(); }
 
  private:
   // The vector projection we're iterating over
@@ -223,7 +223,7 @@ inline void VectorProjectionIterator::SetValue(const uint32_t col_idx, const T v
   //
 
   if constexpr (Nullable) {
-    col_vector->null_mask_.SetTo(curr_idx_, null);
+    col_vector->null_mask_[curr_idx_] = null;
     if (!null) {
       reinterpret_cast<T *>(col_vector->data_)[curr_idx_] = val;
     }
@@ -257,11 +257,11 @@ inline void VectorProjectionIterator::Match(bool matched) {
 }
 
 inline bool VectorProjectionIterator::HasNext() const {
-  return curr_idx_ < vector_projection_->GetTupleCount();
+  return curr_idx_ < vector_projection_->GetSelectedTupleCount();
 }
 
 inline bool VectorProjectionIterator::HasNextFiltered() const {
-  return sel_vector_read_idx_ < vector_projection_->GetTupleCount();
+  return sel_vector_read_idx_ < vector_projection_->GetSelectedTupleCount();
 }
 
 inline void VectorProjectionIterator::Reset() {
@@ -272,7 +272,9 @@ inline void VectorProjectionIterator::Reset() {
 
 inline void VectorProjectionIterator::ResetFiltered() {
   // Update the projection counts
-  vector_projection_->SetTupleCount(sel_vector_write_idx_);
+  for (uint32_t i = 0; i < vector_projection_->GetNumColumns(); i++) {
+    vector_projection_->GetColumn(i)->SetSelectionVector(sel_vector_, sel_vector_write_idx_);
+  }
 
   // Reset
   curr_idx_ = sel_vector_[0];

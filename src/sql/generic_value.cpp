@@ -1,12 +1,11 @@
 #include "sql/generic_value.h"
 
-#include <iostream>
 #include <string>
 
+#include "common/exception.h"
 #include "common/macros.h"
 #include "sql/constant_vector.h"
 #include "sql/value.h"
-#include "sql/vector.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "util/math_util.h"
 
@@ -44,7 +43,8 @@ bool GenericValue::Equals(const GenericValue &other) const {
     case TypeId::Varchar:
       return str_value_ == other.str_value_;
     default:
-      TPL_ASSERT(false, "Not allowed");
+      throw NotImplementedException("Equality of '{}' generic value is unsupported",
+                                    TypeIdToString(type_id_));
   }
   return false;
 }
@@ -86,7 +86,8 @@ std::string GenericValue::ToString() const {
     case TypeId::Varchar:
       return "'" + str_value_ + "'";
     default:
-      UNREACHABLE("Impossible type");
+      throw NotImplementedException("String-ification of '{}' generic value is unsupported",
+                                    TypeIdToString(type_id_));
   }
 }
 
@@ -165,14 +166,14 @@ GenericValue GenericValue::CreateDouble(const double value) {
 
 GenericValue GenericValue::CreateDate(UNUSED int32_t year, UNUSED int32_t month,
                                       UNUSED int32_t day) {
-  throw std::runtime_error("Creating Date generic value not supported!");
+  throw NotImplementedException("Date generic values are not supported");
 }
 
 GenericValue GenericValue::CreateTimestamp(UNUSED int32_t year, UNUSED int32_t month,
                                            UNUSED int32_t day, UNUSED int32_t hour,
                                            UNUSED int32_t min, UNUSED int32_t sec,
                                            UNUSED int32_t msec) {
-  throw std::runtime_error("Creating Timestamp generic value not supported!");
+  throw NotImplementedException("Timestamp generic values are not supported");
 }
 
 GenericValue GenericValue::CreateVarchar(std::string_view str) {
@@ -201,8 +202,8 @@ GenericValue GenericValue::CreateFromRuntimeValue(const TypeId type_id, const Va
     case TypeId::Varchar:
       return GenericValue::CreateVarchar(static_cast<const StringVal &>(val).ptr);
     default:
-      throw std::runtime_error("Type " + std::string(TypeIdToString(type_id)) +
-                               " not supported as runtime value");
+      throw NotImplementedException("Run-time value of type '{}' not supported as generic value",
+                                    TypeIdToString(type_id));
   }
 }
 

@@ -381,7 +381,7 @@ TEST_F(VectorUtilTest, BitToByteVector) {
   bv.Set(44);
   bv.Set(73);
 
-  util::VectorUtil::BitVectorToByteVector(bv.data_array(), bv.num_bits(), bytes);
+  util::VectorUtil::BitVectorToByteVector(bv.words(), bv.num_bits(), bytes);
 
   for (uint32_t i = 0; i < bv.num_bits(); i++) {
     EXPECT_EQ(bv[i], bytes[i] == 0xFF);
@@ -396,18 +396,18 @@ TEST_F(VectorUtilTest, BitToSelectionVector) {
 
   // Set even bits
   for (uint32_t i = 0; i < num_bits; i++) {
-    bv.SetTo(i, i % 2 == 0);
+    bv.Set(i, i % 2 == 0);
   }
 
   // Transform
-  uint32_t size = util::VectorUtil::BitVectorToSelectionVector(bv.data_array(), num_bits, sel);
+  uint32_t size = util::VectorUtil::BitVectorToSelectionVector(bv.words(), num_bits, sel);
 
   // Only 63 bits are set (remember there are only 126-bits)
   EXPECT_EQ(63u, size);
 
   // Ensure the indexes that are set are even
   for (uint32_t i = 0; i < size; i++) {
-    EXPECT_TRUE(sel[i] % 2 == 0);
+    EXPECT_EQ(0u, sel[i] % 2);
   }
 }
 

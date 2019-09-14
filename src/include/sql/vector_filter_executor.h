@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "common/common.h"
+#include "sql/tuple_id_list.h"
 
 namespace tpl::sql {
 
@@ -187,21 +188,16 @@ class VectorFilterExecutor {
    */
   void SelectNe(uint32_t col_idx, uint32_t right_col_idx);
 
-  using VectorFilterFn = std::function<uint32_t(const Vector *[], sel_t[])>;
+  // Generic filtering function. Accepts a list of input vectors and the TID list to update.
+  using VectorFilterFn = std::function<uint32_t(const Vector *[], TupleIdList *)>;
 
   /**
    * Apply a generic selection filter using the vectors at indexes stored in @em col_indexes as
    * input vectors.
    * @param col_indexes The indexes of the columns to operate on.
-   * @param filter The filtering function that writes valid selection indexes
-   *               into a provided output selection vector.
+   * @param filter The filtering function that updates the TID list.
    */
   void SelectGeneric(const std::vector<uint32_t> &col_indexes, const VectorFilterFn &filter);
-
-  /**
-   * Invert the current active selection, i.e., select all currently unselected tuples.
-   */
-  void InvertSelection();
 
   /**
    * Materialize the results of the filter in the input vector projection.
@@ -209,20 +205,11 @@ class VectorFilterExecutor {
   void Finish();
 
  private:
-  // Helper to invoke a given filter function over a collection of input vectors
-  template <typename F>
-  void SelectInternal(const uint32_t col_indexes[], uint32_t num_cols, F &&filter);
-
- private:
-  // The vector projection we're filtering.
+  // The vector projection we're filtering
   VectorProjection *vector_projection_;
-  // The currently active selection vector. In general, we read using this
-  // vector and write using the owned/output selection vector.
-  sel_t *sel_vector_;
-  // Where we collect the results of a filter.
-  sel_t owned_sel_vector_[kDefaultVectorSize];
-  // The number of elements in the selection vector.
-  uint32_t count_;
+
+  // The list where we collect the result of the filter
+  TupleIdList tid_list_;
 };
 
 }  // namespace tpl::sql

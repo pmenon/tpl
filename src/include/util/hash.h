@@ -77,7 +77,7 @@ class Hasher {
    * @param len The length of the input buffer to hash.
    * @return The computed hash value based on the contents of the input buffer.
    */
-  template <HashMethod METHOD = HashMethod::Crc>
+  template <HashMethod METHOD = HashMethod::xxHash3>
   static hash_t Hash(const uint8_t *buf, uint32_t len) {
     switch (METHOD) {
       case HashMethod::Fnv1:
@@ -99,7 +99,7 @@ class Hasher {
    * @param seed The seed hash value to mix in.
    * @return The computed hash value based on the contents of the input buffer.
    */
-  template <HashMethod METHOD = HashMethod::Crc>
+  template <HashMethod METHOD = HashMethod::xxHash3>
   static hash_t Hash(const uint8_t *buf, uint32_t len, const hash_t seed) {
     switch (METHOD) {
       case HashMethod::Fnv1:
@@ -119,7 +119,7 @@ class Hasher {
    * @param s The input string.
    * @return The computed hash value based on the contents of the input string.
    */
-  template <HashMethod METHOD = HashMethod::Crc>
+  template <HashMethod METHOD = HashMethod::xxHash3>
   static hash_t Hash(const std::string_view s) {
     return Hash<METHOD>(reinterpret_cast<const uint8_t *>(s.data()), s.length());
   }

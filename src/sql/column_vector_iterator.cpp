@@ -38,8 +38,8 @@ void ColumnVectorIterator::Reset(const ColumnSegment *column) noexcept {
   col_data_ = const_cast<byte *>(column->AccessRaw(0));
   col_null_bitmap_ = const_cast<uint32_t *>(column->AccessRawNullBitmap(0));
 
-  // Setup the current position (0) and the next position (the minimum of the
-  // length of the column or one vector's length of data)
+  // Setup the current position (0) and the next position (the minimum of the length of the column
+  // or one vector's length of data)
   current_block_pos_ = 0;
   next_block_pos_ = std::min(column->num_tuples(), kDefaultVectorSize);
 }

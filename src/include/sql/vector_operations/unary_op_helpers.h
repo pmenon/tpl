@@ -18,11 +18,11 @@ namespace tpl::sql {
  *                    vector.
  */
 template <typename InputType, typename ResultType, typename Op>
-static inline void UnaryOperation_HandleNull(const Vector &input, Vector *result) {
+inline void UnaryOperation_HandleNull(const Vector &input, Vector *result) {
   auto *input_data = reinterpret_cast<InputType *>(input.data());
   auto *result_data = reinterpret_cast<ResultType *>(result->data());
 
-  result->ResetNulls();
+  result->mutable_null_mask()->Reset();
 
   if (input.null_mask().Any()) {
     VectorOps::Exec(input, [&](uint64_t i, uint64_t k) {
@@ -48,14 +48,14 @@ static inline void UnaryOperation_HandleNull(const Vector &input, Vector *result
  *               result vector will have the same selection vector and count as the input vector.
  */
 template <typename InputType, typename ResultType, typename Op>
-static inline void UnaryOperation(const Vector &input, Vector *result) {
+inline void UnaryOperation(const Vector &input, Vector *result) {
   auto *input_data = reinterpret_cast<InputType *>(input.data());
   auto *result_data = reinterpret_cast<ResultType *>(result->data());
 
   VectorOps::Exec(input,
                   [&](uint64_t i, uint64_t k) { result_data[i] = Op::Apply(input_data[i]); });
 
-  result->set_null_mask(input.null_mask());
+  result->mutable_null_mask()->Copy(input.null_mask());
   result->SetSelectionVector(input.selection_vector(), input.count());
 }
 
