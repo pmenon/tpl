@@ -8,7 +8,6 @@
 
 #include "sql/column_vector_iterator.h"
 #include "sql/vector.h"
-#include "util/bit_util.h"
 
 namespace tpl::sql {
 

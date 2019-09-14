@@ -1,5 +1,7 @@
 #include "common/exception.h"
 
+#include <string>
+
 namespace tpl {
 
 Exception::Exception(ExceptionType exception_type, const std::string &message)
