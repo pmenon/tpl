@@ -277,6 +277,19 @@ class VectorOps {
 
   // -------------------------------------------------------
   //
+  // Hashing
+  //
+  // -------------------------------------------------------
+
+  /**
+   * Hash vector elements from @em input into @em result.
+   * @param input The input to hash.
+   * @param[out] result The vector containing the hashed values.
+   */
+  static void Hash(const Vector &input, Vector *result);
+
+  // -------------------------------------------------------
+  //
   // Vector Iteration Logic
   //
   // -------------------------------------------------------
