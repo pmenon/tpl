@@ -15,17 +15,25 @@
 namespace tpl::util {
 
 /**
- * A BitVector whose size is known at run-time.
+ * A BitVector represents a set of bits. It provides access to individual bits through
+ * BitVector::operator[], along with a collection of operations commonly performed on bit vectors
+ * such as intersection (operator&), union (operator|), and difference (operator-).
  *
- * @tparam Word The integer type used to block the bits.
+ * There are a few important differences between BitVector and std::bitset<>:
+ * 1. The size of a BitVector is provided at run-time during construction and is resizable over its
+ *    lifetime, whereas the size of a std::bitset<> is a compile-time constant provided through a
+ *    template argument.
+ * 2. BitVectors allow using wider underlying "storage blocks" as the unit of bit storage. For
+ *    sparse bit vectors, this enables faster iteration while not compromising on dense vectors.
+ * 3. BitVectors support bulk-update features that can leverage SIMD instructions.
+ * 4. BitVectors allow faster conversion to selection index vectors.
+ *
+ * @tparam WordType An unsigned integral type where the bits of the bit vector are stored.
  */
-template <typename Word = uint64_t>
+template <typename WordType = uint64_t, typename Allocator = std::allocator<WordType>>
 class BitVector {
- public:
-  static_assert(std::is_integral_v<Word>, "Template type 'Word' must be integral");
-
-  // Bits are grouped into chunks (also known as words) of 64-bits.
-  using WordType = std::make_unsigned_t<Word>;
+  static_assert(std::is_integral_v<WordType> && std::is_unsigned_v<WordType>,
+                "Template type 'Word' must be an unsigned integral");
 
   // The size of a word (in bytes) used to store a contiguous set of bits. This
   // is the smallest granularity we store bits at.
@@ -42,6 +50,7 @@ class BitVector {
   static_assert(MathUtil::IsPowerOf2(kWordSizeBits),
                 "Word size in bits expected to be a power of two");
 
+ public:
   /**
    * Return the number of words required to store at least @em num_bits number if bits in a bit
    * vector. Note that this may potentially over allocate.
@@ -85,7 +94,7 @@ class BitVector {
     }
 
    private:
-    friend class BitVector<Word>;
+    friend class BitVector<WordType>;
 
     BitReference(WordType *word, uint32_t bit_pos) : word_(word), mask_(WordType(1) << bit_pos) {}
 
