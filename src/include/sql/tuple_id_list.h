@@ -11,13 +11,8 @@ namespace tpl::sql {
 
 /**
  * An ordered set of tuple IDs used during query execution to efficiently represent valid tuples in
-<<<<<<< HEAD
- * a vector projection. A TupleIdList can store TIDs in the range [0, kDefaultVectorSize] (either
- * 1024 or 2048), typical during vector processing.
-=======
  * a vector projection. TupleIdLists can represent all TIDs in the range [0, capacity), set up
  * upon construction, but can also be resized afterwards to large or smaller capacities.
->>>>>>> bits
  *
  * Checking the existence of a TID in the list is a constant time operation, as is adding or
  * removing (one or all) TIDs from the list. Intersection, union, and difference are efficient
