@@ -11,10 +11,10 @@ namespace tpl::sql {
 class VectorSelectTest : public TplTest {};
 
 TEST_F(VectorSelectTest, Select) {
-  // a = [NULL, 1, 2, 3, 4, 5]
-  // b = [NULL, 1, 4, 3, 5, 5]
-  auto a = MakeTinyIntVector({0, 1, 2, 3, 4, 5}, {true, false, false, false, false, false});
-  auto b = MakeTinyIntVector({0, 1, 4, 3, 5, 5}, {true, false, false, false, false, false});
+  // a = [NULL, 1, 6, NULL, 4, 5]
+  // b = [0, NULL, 4, NULL, 5, 5]
+  auto a = MakeTinyIntVector({0, 1, 6, 3, 4, 5}, {true, false, false, true, false, false});
+  auto b = MakeTinyIntVector({0, 1, 4, 3, 5, 5}, {false, true, false, true, false, false});
   auto _2 = ConstantVector(GenericValue::CreateTinyInt(2));
 
   for (auto type_id : {TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer, TypeId::BigInt,
@@ -29,14 +29,14 @@ TEST_F(VectorSelectTest, Select) {
     // a < 2
     VectorOps::SelectLessThan(*a, _2, &input_list);
     EXPECT_EQ(1u, input_list.GetTupleCount());
-    EXPECT_TRUE(input_list.Contains(1));
+    EXPECT_EQ(1u, input_list[0]);
 
     input_list.AddAll();
 
     // 2 < a
     VectorOps::SelectLessThan(_2, *a, &input_list);
     EXPECT_EQ(3u, input_list.GetTupleCount());
-    EXPECT_EQ(3u, input_list[0]);
+    EXPECT_EQ(2u, input_list[0]);
     EXPECT_EQ(4u, input_list[1]);
     EXPECT_EQ(5u, input_list[2]);
 
@@ -44,12 +44,11 @@ TEST_F(VectorSelectTest, Select) {
 
     // 2 == a
     VectorOps::SelectEqual(_2, *a, &input_list);
-    EXPECT_EQ(1u, input_list.GetTupleCount());
-    EXPECT_EQ(2u, input_list[0]);
+    EXPECT_TRUE(input_list.IsEmpty());
 
     input_list.AddAll();
 
-    // a != b
+    // a != b = [2, 4]
     VectorOps::SelectNotEqual(*a, *b, &input_list);
     EXPECT_EQ(2u, input_list.GetTupleCount());
     EXPECT_EQ(2u, input_list[0]);
@@ -57,12 +56,32 @@ TEST_F(VectorSelectTest, Select) {
 
     input_list.AddAll();
 
-    // b == a
+    // b == a = [5]
     VectorOps::SelectEqual(*b, *a, &input_list);
-    EXPECT_EQ(3u, input_list.GetTupleCount());
-    EXPECT_EQ(1u, input_list[0]);
-    EXPECT_EQ(3u, input_list[1]);
-    EXPECT_EQ(5u, input_list[2]);
+    EXPECT_EQ(1u, input_list.GetTupleCount());
+    EXPECT_EQ(5u, input_list[0]);
+
+    input_list.AddAll();
+
+    // a < b = [4]
+    VectorOps::SelectLessThan(*a, *b, &input_list);
+    EXPECT_EQ(1u, input_list.GetTupleCount());
+    EXPECT_EQ(4u, input_list[0]);
+
+    input_list.AddAll();
+
+    // a <= b = [4, 5]
+    VectorOps::SelectLessThanEqual(*a, *b, &input_list);
+    EXPECT_EQ(2, input_list.GetTupleCount());
+    EXPECT_EQ(4u, input_list[0]);
+    EXPECT_EQ(5u, input_list[1]);
+
+    input_list.AddAll();
+
+    // a > b = [2]
+    VectorOps::SelectGreaterThan(*a, *b, &input_list);
+    EXPECT_EQ(1, input_list.GetTupleCount());
+    EXPECT_EQ(2u, input_list[0]);
   }
 }
 

@@ -97,7 +97,7 @@ void TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &ri
 
   if (IgnoreNull && result_mask.Any()) {
     tid_list->Filter([&](uint64_t i) {
-      return left.null_mask()[i] ? false : Op::Apply(left_data[i], right_data[i]);
+      return result_mask[i] ? false : Op::Apply(left_data[i], right_data[i]);
     });
   } else {
     tid_list->Filter([&](uint64_t i) { return Op::Apply(left_data[i], right_data[i]); });
