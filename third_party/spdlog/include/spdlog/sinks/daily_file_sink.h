@@ -1,14 +1,15 @@
-//
-// Copyright(c) 2015 Gabi Melman.
+// Copyright(c) 2015-present, Gabi Melman & spdlog contributors.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
-//
 
 #pragma once
+
+#include "spdlog/common.h"
 #include "spdlog/details/file_helper.h"
 #include "spdlog/details/null_mutex.h"
 #include "spdlog/fmt/fmt.h"
 #include "spdlog/sinks/base_sink.h"
-#include "spdlog/spdlog.h"
+#include "spdlog/details/os.h"
+#include "spdlog/details/synchronous_factory.h"
 
 #include <chrono>
 #include <cstdio>
@@ -28,11 +29,9 @@ struct daily_filename_calculator
     static filename_t calc_filename(const filename_t &filename, const tm &now_tm)
     {
         filename_t basename, ext;
-        std::tie(basename, ext) = details::file_helper::split_by_extenstion(filename);
-        std::conditional<std::is_same<filename_t::value_type, char>::value, fmt::memory_buffer, fmt::wmemory_buffer>::type w;
-        fmt::format_to(
-            w, SPDLOG_FILENAME_T("{}_{:04d}-{:02d}-{:02d}{}"), basename, now_tm.tm_year + 1900, now_tm.tm_mon + 1, now_tm.tm_mday, ext);
-        return fmt::to_string(w);
+        std::tie(basename, ext) = details::file_helper::split_by_extension(filename);
+        return fmt::format(
+            SPDLOG_FILENAME_T("{}_{:04d}-{:02d}-{:02d}{}"), basename, now_tm.tm_year + 1900, now_tm.tm_mon + 1, now_tm.tm_mday, ext);
     }
 };
 
@@ -40,7 +39,7 @@ struct daily_filename_calculator
  * Rotating file sink based on date. rotates at midnight
  */
 template<typename Mutex, typename FileNameCalc = daily_filename_calculator>
-class daily_file_sink SPDLOG_FINAL : public base_sink<Mutex>
+class daily_file_sink final : public base_sink<Mutex>
 {
 public:
     // create daily file sink which rotates on given time
@@ -52,24 +51,33 @@ public:
     {
         if (rotation_hour < 0 || rotation_hour > 23 || rotation_minute < 0 || rotation_minute > 59)
         {
-            throw spdlog_ex("daily_file_sink: Invalid rotation time in ctor");
+            SPDLOG_THROW(spdlog_ex("daily_file_sink: Invalid rotation time in ctor"));
         }
         auto now = log_clock::now();
         file_helper_.open(FileNameCalc::calc_filename(base_filename_, now_tm(now)), truncate_);
         rotation_tp_ = next_rotation_tp_();
     }
 
+    const filename_t &filename() const
+    {
+        return file_helper_.filename();
+    }
+
 protected:
     void sink_it_(const details::log_msg &msg) override
     {
-
-        if (msg.time >= rotation_tp_)
+#ifdef SPDLOG_NO_DATETIME
+        auto time = log_clock::now();
+#else
+        auto time = msg.time;
+#endif
+        if (time >= rotation_tp_)
         {
-            file_helper_.open(FileNameCalc::calc_filename(base_filename_, now_tm(msg.time)), truncate_);
+            file_helper_.open(FileNameCalc::calc_filename(base_filename_, now_tm(time)), truncate_);
             rotation_tp_ = next_rotation_tp_();
         }
-        fmt::memory_buffer formatted;
-        sink::formatter_->format(msg, formatted);
+        memory_buf_t formatted;
+        base_sink<Mutex>::formatter_->format(msg, formatted);
         file_helper_.write(formatted);
     }
 
@@ -116,14 +124,14 @@ using daily_file_sink_st = daily_file_sink<details::null_mutex>;
 //
 // factory functions
 //
-template<typename Factory = default_factory>
+template<typename Factory = spdlog::synchronous_factory>
 inline std::shared_ptr<logger> daily_logger_mt(
     const std::string &logger_name, const filename_t &filename, int hour = 0, int minute = 0, bool truncate = false)
 {
     return Factory::template create<sinks::daily_file_sink_mt>(logger_name, filename, hour, minute, truncate);
 }
 
-template<typename Factory = default_factory>
+template<typename Factory = spdlog::synchronous_factory>
 inline std::shared_ptr<logger> daily_logger_st(
     const std::string &logger_name, const filename_t &filename, int hour = 0, int minute = 0, bool truncate = false)
 {

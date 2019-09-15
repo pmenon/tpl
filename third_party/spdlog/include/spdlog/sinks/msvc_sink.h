@@ -1,7 +1,5 @@
-//
 // Copyright(c) 2016 Alexander Dalshov.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
-//
 
 #pragma once
 
@@ -30,8 +28,8 @@ protected:
     void sink_it_(const details::log_msg &msg) override
     {
 
-        fmt::memory_buffer formatted;
-        sink::formatter_->format(msg, formatted);
+        memory_buf_t formatted;
+        base_sink<Mutex>::formatter_->format(msg, formatted);
         OutputDebugStringA(fmt::to_string(formatted).c_str());
     }
 
