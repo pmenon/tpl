@@ -1,5 +1,6 @@
 #include <vector>
 
+#include "common/exception.h"
 #include "sql/constant_vector.h"
 #include "sql/tuple_id_list.h"
 #include "sql/vector.h"
@@ -10,7 +11,49 @@ namespace tpl::sql {
 
 class VectorSelectTest : public TplTest {};
 
-TEST_F(VectorSelectTest, Select) {
+TEST_F(VectorSelectTest, MismatchedInputTypes) {
+  auto a = MakeTinyIntVector(2);
+  auto b = MakeBigIntVector(2);
+  auto result = TupleIdList(a->num_elements());
+  result.AddAll();
+  EXPECT_THROW(VectorOps::SelectEqual(*a, *b, &result), TypeMismatchException);
+}
+
+TEST_F(VectorSelectTest, MismatchedSizes) {
+  auto a = MakeTinyIntVector(54);
+  auto b = MakeBigIntVector(19);
+  auto result = TupleIdList(a->num_elements());
+  result.AddAll();
+  EXPECT_THROW(VectorOps::SelectEqual(*a, *b, &result), Exception);
+}
+
+TEST_F(VectorSelectTest, MismatchedCounts) {
+  auto a = MakeTinyIntVector(10);
+  auto b = MakeBigIntVector(10);
+
+  sel_t sel_1[] = {0, 1, 2};
+  sel_t sel_2[] = {9, 8};
+
+  a->SetSelectionVector(sel_1, 3);
+  b->SetSelectionVector(sel_2, 2);
+
+  auto result = TupleIdList(a->num_elements());
+  result.AddAll();
+
+  EXPECT_THROW(VectorOps::SelectEqual(*a, *b, &result), Exception);
+}
+
+TEST_F(VectorSelectTest, InvalidTIDListSize) {
+  auto a = MakeTinyIntVector(10);
+  auto b = MakeBigIntVector(10);
+
+  auto result = TupleIdList(1);
+  result.AddAll();
+
+  EXPECT_THROW(VectorOps::SelectEqual(*a, *b, &result), Exception);
+}
+
+TEST_F(VectorSelectTest, BasicSelect) {
   // a = [NULL, 1, 6, NULL, 4, 5]
   // b = [0, NULL, 4, NULL, 5, 5]
   auto a = MakeTinyIntVector({0, 1, 6, 3, 4, 5}, {true, false, false, true, false, false});
@@ -82,6 +125,14 @@ TEST_F(VectorSelectTest, Select) {
     VectorOps::SelectGreaterThan(*a, *b, &input_list);
     EXPECT_EQ(1, input_list.GetTupleCount());
     EXPECT_EQ(2u, input_list[0]);
+
+    input_list.AddAll();
+
+    // a >= b = [2]
+    VectorOps::SelectGreaterThanEqual(*a, *b, &input_list);
+    EXPECT_EQ(2, input_list.GetTupleCount());
+    EXPECT_EQ(2u, input_list[0]);
+    EXPECT_EQ(5u, input_list[1]);
   }
 }
 

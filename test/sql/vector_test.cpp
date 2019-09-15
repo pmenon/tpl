@@ -372,41 +372,48 @@ TEST_F(VectorTest, CastWithNulls) {
 }
 
 TEST_F(VectorTest, NumericDowncast) {
-#define CHECK_CAST(SRC_TYPE, DEST_TYPE)                                \
-  {                                                                    \
-    auto vec = Make##SRC_TYPE##Vector(10);                             \
-    for (uint32_t i = 0; i < vec->num_elements(); i++) {               \
-      vec->SetValue(i, GenericValue::Create##SRC_TYPE(i));             \
-    }                                                                  \
-    EXPECT_NO_THROW(vec->Cast(TypeId::DEST_TYPE));                     \
-    EXPECT_TRUE(vec->type_id() == TypeId::DEST_TYPE);                  \
-    EXPECT_EQ(10u, vec->num_elements());                               \
-    EXPECT_EQ(10u, vec->count());                                      \
-    EXPECT_EQ(nullptr, vec->selection_vector());                       \
-    for (uint64_t i = 0; i < vec->num_elements(); i++) {               \
-      EXPECT_EQ(GenericValue::Create##DEST_TYPE(i), vec->GetValue(i)); \
-    }                                                                  \
+#define CHECK_CAST(SRC_TYPE, DEST_TYPE, DEST_CPP_TYPE)                                             \
+  {                                                                                                \
+    auto vec = Make##SRC_TYPE##Vector(10);                                                         \
+    for (uint32_t i = 0; i < vec->num_elements(); i++) {                                           \
+      vec->SetValue(i, GenericValue::Create##SRC_TYPE(i));                                         \
+    }                                                                                              \
+    EXPECT_NO_THROW(vec->Cast(TypeId::DEST_TYPE));                                                 \
+    EXPECT_TRUE(vec->type_id() == TypeId::DEST_TYPE);                                              \
+    EXPECT_EQ(10u, vec->num_elements());                                                           \
+    EXPECT_EQ(10u, vec->count());                                                                  \
+    EXPECT_EQ(nullptr, vec->selection_vector());                                                   \
+    for (uint64_t i = 0; i < vec->num_elements(); i++) {                                           \
+      EXPECT_EQ(GenericValue::Create##DEST_TYPE(static_cast<DEST_CPP_TYPE>(i)), vec->GetValue(i)); \
+    }                                                                                              \
   }
 
-  CHECK_CAST(Double, TinyInt);
-  CHECK_CAST(Float, TinyInt);
-  CHECK_CAST(BigInt, TinyInt);
-  CHECK_CAST(Integer, TinyInt);
-  CHECK_CAST(SmallInt, TinyInt);
+  CHECK_CAST(Double, Boolean, bool);
+  CHECK_CAST(Float, Boolean, bool);
+  CHECK_CAST(BigInt, Boolean, bool);
+  CHECK_CAST(Integer, Boolean, bool);
+  CHECK_CAST(SmallInt, Boolean, bool);
+  CHECK_CAST(TinyInt, Boolean, bool);
 
-  CHECK_CAST(Double, SmallInt);
-  CHECK_CAST(Float, SmallInt);
-  CHECK_CAST(BigInt, SmallInt);
-  CHECK_CAST(Integer, SmallInt);
+  CHECK_CAST(Double, TinyInt, int8_t);
+  CHECK_CAST(Float, TinyInt, int8_t);
+  CHECK_CAST(BigInt, TinyInt, int8_t);
+  CHECK_CAST(Integer, TinyInt, int8_t);
+  CHECK_CAST(SmallInt, TinyInt, int8_t);
 
-  CHECK_CAST(Double, Integer);
-  CHECK_CAST(Float, Integer);
-  CHECK_CAST(BigInt, Integer);
+  CHECK_CAST(Double, SmallInt, int16_t);
+  CHECK_CAST(Float, SmallInt, int16_t);
+  CHECK_CAST(BigInt, SmallInt, int16_t);
+  CHECK_CAST(Integer, SmallInt, int16_t);
 
-  CHECK_CAST(Double, BigInt);
-  CHECK_CAST(Float, BigInt);
+  CHECK_CAST(Double, Integer, int32_t);
+  CHECK_CAST(Float, Integer, int32_t);
+  CHECK_CAST(BigInt, Integer, int32_t);
 
-  CHECK_CAST(Double, Float);
+  CHECK_CAST(Double, BigInt, int64_t);
+  CHECK_CAST(Float, BigInt, int64_t);
+
+  CHECK_CAST(Double, Float, float);
 
 #undef CHECK_CAST
 }
