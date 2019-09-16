@@ -178,8 +178,8 @@ void AggregationHashTable::ProcessBatch(VectorProjectionIterator *iters[],
 
   // Allocate all required batch state, but only on first invocation.
   if (TPL_UNLIKELY(batch_state_ == nullptr)) {
-    batch_state_ = memory_->NewObject<BatchProcessState>(
-        std::unique_ptr<libcount::HLL>(libcount::HLL::Create(kDefaultHLLPrecision)));
+    batch_state_ =
+        memory_->NewObject<BatchProcessState>(libcount::HLL::Create(kDefaultHLLPrecision));
   }
 
   // Launch
