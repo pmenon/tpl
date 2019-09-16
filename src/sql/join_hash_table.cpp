@@ -19,7 +19,7 @@
 namespace tpl::sql {
 
 JoinHashTable::JoinHashTable(MemoryPool *memory, uint32_t tuple_size, bool use_concise_ht)
-    : entries_(sizeof(HashTableEntry) + tuple_size, MemoryPoolAllocator<byte>(memory)),
+    : entries_(HashTableEntry::ComputeEntrySize(tuple_size), MemoryPoolAllocator<byte>(memory)),
       owned_(memory),
       concise_hash_table_(0),
       hll_estimator_(libcount::HLL::Create(kDefaultHLLPrecision)),

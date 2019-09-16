@@ -39,7 +39,7 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory, const std::size_t
                                            const uint32_t initial_size)
     : memory_(memory),
       payload_size_(payload_size),
-      entries_(sizeof(HashTableEntry) + payload_size_, MemoryPoolAllocator<byte>(memory_)),
+      entries_(HashTableEntry::ComputeEntrySize(payload_size_), MemoryPoolAllocator<byte>(memory_)),
       owned_entries_(memory_),
       hash_table_(kDefaultLoadFactor),
       batch_state_(nullptr),

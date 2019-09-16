@@ -10,10 +10,9 @@ namespace tpl::sql {
 using ConciseHashTableSlot = uint64_t;
 
 /**
- * A generic structure used to represent an entry in either a generic hash
- * table or a concise hash table. An entry is a variably-sized chunk of
- * memory where the keys, attributes, aggregates are stored in the \a payload
- * field. This structure is used for both joins and aggregations.
+ * A generic structure used to represent an entry in either a generic hash table or a concise hash
+ * table. An entry is a variably-sized chunk of memory where the keys, attributes, aggregates are
+ * stored in the @em payload field. This structure is used for both joins and aggregations.
  */
 struct HashTableEntry {
   union {
@@ -29,6 +28,15 @@ struct HashTableEntry {
 
   hash_t hash;
   byte payload[0];
+
+  /**
+   * Compute the size of a HashTableEntry element with a payload of the given size.
+   * @param payload_size The size of the payload in bytes.
+   * @return The total size of a HashTableEntry in bytes.
+   */
+  constexpr static std::size_t ComputeEntrySize(const std::size_t payload_size) {
+    return sizeof(HashTableEntry) + payload_size;
+  };
 
   /**
    * For testing!
@@ -54,9 +62,8 @@ struct HashTableEntry {
 struct HashTableEntryIterator {
  public:
   /**
-   * Construct an iterator beginning at the entry @em initial of the chain
-   * of entries matching the hash value @em hash. This iterator is returned
-   * from @em JoinHashTable::Lookup().
+   * Construct an iterator beginning at the entry @em initial of the chain of entries matching the
+   * hash value @em hash. This iterator is returned from @em JoinHashTable::Lookup().
    * @param initial The first matching entry in the chain of entries
    * @param hash The hash value of the probe tuple
    */
@@ -74,10 +81,9 @@ struct HashTableEntryIterator {
   /**
    * Advance to the next match and return true if it is found.
    * @tparam T The templated type of the payload within the entry.
-   * @tparam F A functor with the interface: bool(const T *). The argument is
-   *           is a pointer to the tuple in the hash table entry. The return
-   *           value is a boolean indicating if the entry matches what the user
-   *           is probing for.
+   * @tparam F A functor with the interface: bool(const T *). The argument is a pointer to the tuple
+   *           in the hash table entry. The return value is a boolean indicating if the entry
+   *           matches what the user is probing for.
    * @param key_eq The function used to determine key equality.
    * @return True if there is at least one more match.
    */
@@ -97,15 +103,12 @@ struct HashTableEntryIterator {
   }
 
   /**
-   * A more cumbersome API to iterate used in code-gen because lambda's don't
-   * exist at that level.
-   * @param key_eq Function pointer to check the equality of a tuple to one
-   *               provided.
-   * @param ctx An opaque user-provided object. Passed directly into
-   *            key-equality callback. Not used in the function.
-   * @param probe_tuple The probe tuple we want to find a match for. This is
-   *                    provided to the key-equality callback to find the next
-   *                    match.
+   * A more cumbersome API to iterate used in code-gen because lambda's don't exist at that level.
+   * @param key_eq Function pointer to check the equality of a tuple to one provided.
+   * @param ctx An opaque user-provided object. Passed directly into key-equality callback. Not used
+   *            in the function.
+   * @param probe_tuple The probe tuple we want to find a match for. This is provided to the
+   *                    key-equality callback to find the next match.
    * @return True if there is at least one more match.
    */
   bool HasNext(KeyEq key_eq, void *ctx, void *probe_tuple) {
@@ -126,7 +129,8 @@ struct HashTableEntryIterator {
  private:
   // The next element the iterator produces
   const HashTableEntry *next_;
-  // The hash value we're looking up
+
+  // The hash value we're looking up. Used as a cheap pre-filter in key-equality checks.
   hash_t hash_;
 };
 
