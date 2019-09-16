@@ -7,7 +7,7 @@
 #include "sql/join_hash_table_vector_probe.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
-#include "util/hash.h"
+#include "util/hash_util.h"
 #include "util/test_harness.h"
 
 namespace tpl::sql {
@@ -18,7 +18,7 @@ struct Tuple {
   int32_t build_key;
   uint32_t aux[N];
 
-  auto Hash() { return util::Hasher::Hash(build_key); }
+  auto Hash() { return util::HashUtil::Hash(build_key); }
 };
 
 class JoinHashTableVectorProbeTest : public TplTest {
@@ -36,7 +36,7 @@ class JoinHashTableVectorProbeTest : public TplTest {
     // Insert
     for (uint32_t i = 0; i < num_tuples; i++) {
       auto key = key_gen();
-      auto hash = util::Hasher::Hash(key);
+      auto hash = util::HashUtil::Hash(key);
       auto *tuple = reinterpret_cast<Tuple<N> *>(jht->AllocInputTuple(hash));
       tuple->build_key = key;
     }
@@ -55,7 +55,7 @@ class JoinHashTableVectorProbeTest : public TplTest {
 template <uint8_t N>
 static hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
   const auto *key_ptr = vpi->GetValue<int32_t, false>(0, nullptr);
-  return util::Hasher::Hash(*key_ptr);
+  return util::HashUtil::Hash(*key_ptr);
 }
 
 /// The function to determine whether two tuples have equivalent keys

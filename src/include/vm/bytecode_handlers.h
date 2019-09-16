@@ -19,7 +19,7 @@
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
 #include "sql/vector_filter_executor.h"
-#include "util/hash.h"
+#include "util/hash_util.h"
 
 // All VM bytecode op handlers must use this macro
 #define VM_OP
@@ -472,13 +472,13 @@ VM_OP_HOT void OpVPISetDecimalNull(tpl::sql::VectorProjectionIterator *const vpi
 
 VM_OP_HOT void OpHashInt(hash_t *const hash_val, const tpl::sql::Integer *const input,
                          const hash_t seed) {
-  *hash_val = tpl::util::Hasher::Hash(input->val, seed);
+  *hash_val = tpl::util::HashUtil::Hash(input->val, seed);
   *hash_val = input->is_null ? 0 : *hash_val;
 }
 
 VM_OP_HOT void OpHashReal(hash_t *const hash_val, const tpl::sql::Real *const input,
                           const hash_t seed) {
-  *hash_val = tpl::util::Hasher::Hash(input->val, seed);
+  *hash_val = tpl::util::HashUtil::Hash(input->val, seed);
   *hash_val = input->is_null ? 0 : *hash_val;
 }
 
@@ -488,12 +488,12 @@ VM_OP_HOT void OpHashString(hash_t *const hash_val, const tpl::sql::StringVal *c
     *hash_val = 0;
   } else {
     *hash_val =
-        tpl::util::Hasher::Hash(reinterpret_cast<const uint8_t *>(input->ptr), input->len, seed);
+        tpl::util::HashUtil::Hash(reinterpret_cast<const uint8_t *>(input->ptr), input->len, seed);
   }
 }
 
 VM_OP_HOT void OpHashCombine(hash_t *hash_val, hash_t new_hash_val) {
-  *hash_val = tpl::util::Hasher::CombineHashes(*hash_val, new_hash_val);
+  *hash_val = tpl::util::HashUtil::CombineHashes(*hash_val, new_hash_val);
 }
 
 // ---------------------------------------------------------

@@ -23,7 +23,7 @@ enum class HashMethod : uint8_t { Crc, Murmur2, xxHash3 };
  * functions. There are specialized versions for arithmetic values (integers and floats), and
  * generic versions for longer buffers (strings, c-strings, and opaque buffers).
  */
-class Hasher {
+class HashUtil {
  public:
   /**
    * Compute the hash value of an arithmetic input. The input is allowed to be either an integral

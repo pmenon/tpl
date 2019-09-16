@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/hash.h"
+#include "util/hash_util.h"
 
 namespace tpl::sql {
 
@@ -10,7 +10,7 @@ namespace tpl::sql {
 struct Hash {
   template <typename T>
   static hash_t Apply(T input, bool null) {
-    return null ? hash_t(0) : util::Hasher::Hash(input);
+    return null ? hash_t(0) : util::HashUtil::Hash(input);
   }
 };
 

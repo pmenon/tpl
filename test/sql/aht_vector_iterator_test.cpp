@@ -12,7 +12,7 @@
 #include "sql/vector_filter_executor.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
-#include "util/hash.h"
+#include "util/hash_util.h"
 #include "vm/module.h"
 
 namespace tpl::sql {
@@ -25,7 +25,7 @@ struct InputTuple {
 
   InputTuple(uint64_t key, uint64_t col_a) : key(key), col_a(col_a) {}
 
-  hash_t Hash() const noexcept { return util::Hasher::Hash(key); }
+  hash_t Hash() const noexcept { return util::HashUtil::Hash(key); }
 };
 
 /**

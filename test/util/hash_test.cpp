@@ -3,7 +3,7 @@
 #include <utility>
 #include <vector>
 
-#include "util/hash.h"
+#include "util/hash_util.h"
 #include "util/test_harness.h"
 
 namespace tpl::util {

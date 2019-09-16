@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "sql/bloom_filter.h"
-#include "util/hash.h"
+#include "util/hash_util.h"
 #include "util/test_harness.h"
 
 namespace tpl::sql {
@@ -17,7 +17,7 @@ class BloomFilterTest : public TplTest {
  protected:
   template <typename T>
   auto Hash(const T val) -> std::enable_if_t<std::is_fundamental_v<T>, hash_t> {
-    return util::Hasher::Hash(val);
+    return util::HashUtil::Hash(val);
   }
 
  private:

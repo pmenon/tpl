@@ -12,7 +12,7 @@
 #include "sql/thread_state_container.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
-#include "util/hash.h"
+#include "util/hash_util.h"
 #include "util/test_harness.h"
 
 namespace tpl::sql {
@@ -25,7 +25,7 @@ struct InputTuple {
 
   explicit InputTuple(uint64_t key, uint64_t col_a) : key(key), col_a(col_a) {}
 
-  hash_t Hash() const noexcept { return util::Hasher::Hash(key); }
+  hash_t Hash() const noexcept { return util::HashUtil::Hash(key); }
 };
 
 /**
@@ -197,7 +197,7 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
   const auto hash_fn = [](void *x) {
     auto iters = reinterpret_cast<VectorProjectionIterator **>(x);
     auto key = iters[0]->GetValue<int32_t, false>(0, nullptr);
-    return util::Hasher::Hash(*key);
+    return util::HashUtil::Hash(*key);
   };
 
   const auto key_eq = [](const void *agg, const void *x) {

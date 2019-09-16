@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "sql/generic_hash_table.h"
-#include "util/hash.h"
+#include "util/hash_util.h"
 #include "util/test_harness.h"
 
 namespace tpl::sql {
@@ -21,7 +21,7 @@ struct TestEntry : public HashTableEntry {
     hash = Hash();
   }
 
-  hash_t Hash() { return util::Hasher::Hash(key); }
+  hash_t Hash() { return util::HashUtil::Hash(key); }
 
   bool Eq(const TestEntry &that) const { return key == that.key && value == that.value; }
 

@@ -3,7 +3,7 @@
 
 #include "common/macros.h"
 #include "sql/concise_hash_table.h"
-#include "util/hash.h"
+#include "util/hash_util.h"
 #include "util/test_harness.h"
 
 namespace tpl::sql {

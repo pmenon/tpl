@@ -5,7 +5,7 @@
 
 #include "sql/join_hash_table.h"
 #include "sql/thread_state_container.h"
-#include "util/hash.h"
+#include "util/hash_util.h"
 #include "util/test_harness.h"
 
 namespace tpl::sql {
@@ -14,7 +14,7 @@ namespace tpl::sql {
 struct Tuple {
   uint64_t a, b, c, d;
 
-  hash_t Hash() const { return util::Hasher::Hash(a); }
+  hash_t Hash() const { return util::HashUtil::Hash(a); }
 };
 
 class JoinHashTableTest : public TplTest {
