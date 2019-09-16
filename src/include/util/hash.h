@@ -6,6 +6,8 @@
 #include <string>
 #include <type_traits>
 
+#include "xxh3.h"
+
 #include "common/common.h"
 #include "common/macros.h"
 
@@ -14,30 +16,27 @@ namespace tpl::util {
 /**
  * Enumeration of the supported hashing methods
  */
-enum class HashMethod : uint8_t { Fnv1, Crc, Murmur2, xxHash3 };
+enum class HashMethod : uint8_t { Crc, Murmur2, xxHash3 };
 
 /**
- * Generic hashing utility class. The main entry points into this utility class
- * are the 'Hash' functions. There are specialized, i.e., templated, versions
- * for arithmetic values (integers and floats), and generic versions for longer
- * buffers (strings, c-strings, and opaque buffers).
+ * Generic hashing utility class. The main entry points into this utility class are the Hash()
+ * functions. There are specialized versions for arithmetic values (integers and floats), and
+ * generic versions for longer buffers (strings, c-strings, and opaque buffers).
  */
 class Hasher {
  public:
   /**
-   * Compute the hash value of an arithmetic input. The input is allowed to be
-   * either an integral numbers (8- to 64-bits) or floating pointer numbers.
+   * Compute the hash value of an arithmetic input. The input is allowed to be either an integral
+   * numbers (8- to 64-bits) or floating pointer numbers.
    * @tparam METHOD The hash method to use.
    * @tparam T The input arithmetic type.
    * @param val The input value to hash.
    * @return The compute hash.
    */
-  template <HashMethod METHOD = HashMethod::Crc, typename T>
+  template <HashMethod METHOD = HashMethod::Murmur2, typename T>
   static auto Hash(const T val, const hash_t seed)
       -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
     switch (METHOD) {
-      case HashMethod::Fnv1:
-        return HashFnv1(val, seed);
       case HashMethod::Crc:
         return HashCrc(val, seed);
       case HashMethod::Murmur2:
@@ -48,19 +47,17 @@ class Hasher {
   }
 
   /**
-   * Compute the hash value of an arithmetic input. The input is allowed to be
-   * either an integral numbers (8- to 64-bits) or floating pointer numbers.
+   * Compute the hash value of an arithmetic input. The input is allowed to be either an integral
+   * numbers (8- to 64-bits) or floating pointer numbers.
    * @tparam METHOD The hash method to use.
    * @tparam T The input arithmetic type.
    * @param val The input value to hash.
    * @param seed The seed hash value to mix in.
    * @return The compute hash.
    */
-  template <HashMethod METHOD = HashMethod::Crc, typename T>
+  template <HashMethod METHOD = HashMethod::Murmur2, typename T>
   static auto Hash(const T val) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
     switch (METHOD) {
-      case HashMethod::Fnv1:
-        return HashFnv1(val);
       case HashMethod::Crc:
         return HashCrc(val);
       case HashMethod::Murmur2:
@@ -80,8 +77,6 @@ class Hasher {
   template <HashMethod METHOD = HashMethod::xxHash3>
   static hash_t Hash(const uint8_t *buf, uint32_t len) {
     switch (METHOD) {
-      case HashMethod::Fnv1:
-        return HashFnv1(buf, len);
       case HashMethod::Crc:
         return HashCrc(buf, len);
       case HashMethod::Murmur2:
@@ -102,8 +97,6 @@ class Hasher {
   template <HashMethod METHOD = HashMethod::xxHash3>
   static hash_t Hash(const uint8_t *buf, uint32_t len, const hash_t seed) {
     switch (METHOD) {
-      case HashMethod::Fnv1:
-        return HashFnv1(buf, len, seed);
       case HashMethod::Crc:
         return HashCrc(buf, len, seed);
       case HashMethod::Murmur2:
@@ -281,12 +274,14 @@ class Hasher {
   static hash_t HashMurmur2(const uint8_t *buf, uint32_t len) { return HashMurmur2(buf, len, 0); }
 
   // -------------------------------------------------------
-  // xx3 Hashing
+  // XXH3 Hashing
   // -------------------------------------------------------
 
-  static hash_t HashXX3(const uint8_t *buf, uint32_t len, hash_t seed);
+  static hash_t HashXX3(const uint8_t *buf, uint32_t len, hash_t seed) {
+    return XXH3_64bits_withSeed(buf, len, seed);
+  }
 
-  static hash_t HashXX3(const uint8_t *buf, uint32_t len) { return HashXX3(buf, len, 0); }
+  static hash_t HashXX3(const uint8_t *buf, uint32_t len) { return XXH3_64bits(buf, len); }
 
   template <typename T>
   static auto HashXX3(const T val, const hash_t seed)
@@ -297,37 +292,6 @@ class Hasher {
   template <typename T>
   static auto HashXX3(const T val) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
     return HashXX3(reinterpret_cast<const uint8_t *>(&val), sizeof(T));
-  }
-
-  // -------------------------------------------------------
-  // FNV
-  // -------------------------------------------------------
-
-  // default values recommended by http://isthe.com/chongo/tech/comp/fnv/
-  static constexpr uint64_t kFNV64Prime = 1099511628211UL;
-  static constexpr uint64_t kFNV64Seed = 14695981039346656037UL;
-
-  static hash_t HashFnv1(const uint8_t *buf, uint32_t len, hash_t seed) {
-    while (len--) {
-      seed = (*buf ^ seed) * kFNV64Prime;
-      ++buf;
-    }
-    return seed;
-  }
-
-  static hash_t HashFnv1(const uint8_t *buf, uint32_t len) {
-    return HashFnv1(buf, len, kFNV64Seed);
-  }
-
-  template <typename T>
-  static auto HashFnv1(const T val, const hash_t seed)
-      -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
-    return HashFnv1(reinterpret_cast<const uint8_t *>(&val), sizeof(T), seed);
-  }
-
-  template <typename T>
-  static auto HashFnv1(const T val) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
-    return HashFnv1(reinterpret_cast<const uint8_t *>(&val), sizeof(T));
   }
 };
 

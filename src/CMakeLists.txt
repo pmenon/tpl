@@ -25,8 +25,13 @@ list(REMOVE_ITEM tpl_sources
 # Setup compiler arguments to Clang
 set(CLANG_IR_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-emit-llvm" "-c")
 separate_arguments(CLANG_IR_CXX_FLAGS)
-set(CLANG_IR_CXX_INCLUDES "-I${PROJECT_SOURCE_DIR}/src/include" "-isystem${LLVM_INCLUDE_DIRS}")
-set(CLANG_IR_CXX_INCLUDES ${CLANG_IR_CXX_INCLUDES} "-isystem${PROJECT_SOURCE_DIR}/third_party/gtest/include")
+
+get_property(CLANG_TMP_INCLUDES DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+set(CLANG_IR_CXX_INCLUDES "")
+foreach(INCLUDE_DIR in ${CLANG_TMP_INCLUDES})
+    list(APPEND CLANG_IR_CXX_INCLUDES "-I${INCLUDE_DIR}")
+endforeach()
+list(REMOVE_DUPLICATES CLANG_IR_CXX_INCLUDES)
 
 # Function to generate rule to cross compile a source file to an IR module.
 # When called called with a 'src.cpp' source file it will generate a 'src_bc'

@@ -11,6 +11,7 @@ namespace tpl::sql {
 
 class GenericHashTableTest : public TplTest {};
 
+// A test entry IS A hash table entry. It can directly be inserted into hash tables.
 struct TestEntry : public HashTableEntry {
   uint32_t key{0}, value{0};
 
@@ -25,44 +26,48 @@ struct TestEntry : public HashTableEntry {
   bool Eq(const TestEntry &that) const { return key == that.key && value == that.value; }
 
   bool operator==(const TestEntry &that) const { return this->Eq(that); }
+  bool operator!=(const TestEntry &that) const { return !(*this == that); }
 };
 
 TEST_F(GenericHashTableTest, Insertion) {
   GenericHashTable table;
   table.SetSize(10);
 
-  TestEntry entry(1, 2);
+  TestEntry entry1(1, 2);
+  TestEntry entry2 = entry1;
+  TestEntry entry3(10, 11);
 
   // Looking up an a missing entry should return null
   {
-    auto *e = table.FindChainHead(entry.Hash());
+    auto *e = table.FindChainHead(entry1.Hash());
     EXPECT_EQ(nullptr, e);
   }
 
-  // Try insert and lookup
+  // Try to insert 'entry1' and look it up
   {
-    table.Insert<false>(&entry, entry.Hash());
-    auto *e = table.FindChainHead(entry.Hash());
+    table.Insert<false>(&entry1, entry1.Hash());
+    auto *e = table.FindChainHead(entry1.Hash());
     EXPECT_NE(nullptr, e);
     EXPECT_EQ(nullptr, e->next);
-    EXPECT_EQ(entry, *reinterpret_cast<TestEntry *>(e));
+    EXPECT_EQ(entry1, *reinterpret_cast<TestEntry *>(e));
   }
 
   // Duplicate insert should find both entries
   {
-    table.Insert<false>(&entry, entry.Hash());
-    auto *e = table.FindChainHead(entry.Hash());
-    EXPECT_NE(nullptr, e);
-    EXPECT_NE(nullptr, e->next);
-    EXPECT_EQ(entry, *reinterpret_cast<TestEntry *>(e));
-    EXPECT_EQ(*reinterpret_cast<TestEntry *>(entry.next), *reinterpret_cast<TestEntry *>(e->next));
+    table.Insert<false>(&entry2, entry2.Hash());
+    uint32_t found = 0;
+    for (auto *e = table.FindChainHead(entry2.Hash()); e != nullptr; e = e->next) {
+      EXPECT_EQ(entry1, *reinterpret_cast<TestEntry *>(e));
+      found++;
+    }
+    EXPECT_EQ(2u, found);
   }
 
   // Try finding a missing element for the hell of it
   {
-    TestEntry entry2(10, 11);
-    auto *e = table.FindChainHead(entry2.Hash());
-    EXPECT_EQ(nullptr, e);
+    for (auto *e = table.FindChainHead(entry3.Hash()); e != nullptr; e = e->next) {
+      EXPECT_NE(entry3, *reinterpret_cast<TestEntry *>(e));
+    }
   }
 }
 
