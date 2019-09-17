@@ -17,56 +17,50 @@ fun tearDownState(state: *State) -> nil {
   @aggHTFree(&state.table)
 }
 
-fun keyCheck(agg: *Agg, iters: [*]*VectorProjectionIterator) -> bool {
-  var key = @vpiGetInt(iters[0], 1)
+fun keyCheck(agg: *Agg, vpi: *VectorProjectionIterator) -> bool {
+  var key = @vpiGetInt(vpi, 1)
   return @sqlToBool(key == agg.key)
 }
 
-fun hashFn(iters: [*]*VectorProjectionIterator) -> uint64 {
-  return @hash(@vpiGetInt(iters[0], 1))
+fun hashFn(vpi: *VectorProjectionIterator) -> uint64 {
+  return @hash(@vpiGetInt(vpi, 1))
 }
 
-fun vecHashFnFiltered(hashes: [*]uint64, iters: [*]*VectorProjectionIterator) -> nil {
-  var vec = iters[0]
+fun vecHashFnFiltered(hashes: [*]uint64, vec: *VectorProjectionIterator) -> nil {
   for (var idx = 0; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
     hashes[idx] = @hash(@vpiGetInt(vec, 1))
     idx = idx + 1
   }
 }
 
-fun vecHashFnUnfiltered(hashes: [*]uint64, iters: [*]*VectorProjectionIterator) -> nil {
-  var vec = iters[0]
+fun vecHashFnUnfiltered(hashes: [*]uint64, vec: *VectorProjectionIterator) -> nil {
   for (var idx = 0; @vpiHasNext(vec); @vpiAdvance(vec)) {
     hashes[idx] = @hash(@vpiGetInt(vec, 1))
     idx = idx + 1
   }
 }
 
-fun vecHashFn(hashes: [*]uint64, iters: [*]*VectorProjectionIterator) -> nil {
-  if (@vpiIsFiltered(iters[0])) {
-    vecHashFnFiltered(hashes, iters)
+fun vecHashFn(hashes: [*]uint64, vec: *VectorProjectionIterator) -> nil {
+  if (@vpiIsFiltered(vec)) {
+    vecHashFnFiltered(hashes, vec)
   } else {
-    vecHashFnUnfiltered(hashes, iters)
+    vecHashFnUnfiltered(hashes, vec)
   }
 }
 
-fun constructAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
+fun constructAgg(agg: *Agg, vpi: *VectorProjectionIterator) -> nil {
   // Set key
-  agg.key = @vpiGetInt(iters[0], 1)
+  agg.key = @vpiGetInt(vpi, 1)
   // Initialize aggregate
   @aggInit(&agg.count)
 }
 
-fun updateAgg(agg: *Agg, iters: [*]*VectorProjectionIterator) -> nil {
-  var input = @vpiGetInt(iters[0], 0)
+fun updateAgg(agg: *Agg, vpi: *VectorProjectionIterator) -> nil {
+  var input = @vpiGetInt(vpi, 0)
   @aggAdvance(&agg.count, &input)
 }
 
-
-
 fun pipeline_1(state: *State) -> nil {
-  var iters: [1]*VectorProjectionIterator
-
   // The table
   var ht: *AggregationHashTable = &state.table
 
@@ -74,8 +68,7 @@ fun pipeline_1(state: *State) -> nil {
   var tvi: TableVectorIterator
   for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
     var vec = @tableIterGetVPI(&tvi)
-    iters[0] = vec
-    @aggHTProcessBatch(ht, &iters, hashFn, keyCheck, constructAgg, updateAgg, false)
+    @aggHTProcessBatch(ht, vec, hashFn, keyCheck, constructAgg, updateAgg, false)
   }
   @tableIterClose(&tvi)
 }

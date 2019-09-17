@@ -922,7 +922,7 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 
   OP(AggregationHashTableProcessBatch) : {
     auto *agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
-    auto **iters = frame->LocalAt<sql::VectorProjectionIterator **>(READ_LOCAL_ID());
+    auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
     auto hash_fn_id = READ_FUNC_ID();
     auto key_eq_fn_id = READ_FUNC_ID();
     auto init_agg_fn_id = READ_FUNC_ID();
@@ -937,7 +937,7 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
         module_->GetRawFunctionImpl(init_agg_fn_id));
     auto advance_agg_fn = reinterpret_cast<sql::AggregationHashTable::AdvanceAggFn>(
         module_->GetRawFunctionImpl(merge_agg_fn_id));
-    OpAggregationHashTableProcessBatch(agg_hash_table, iters, hash_fn, key_eq_fn, init_agg_fn,
+    OpAggregationHashTableProcessBatch(agg_hash_table, vpi, hash_fn, key_eq_fn, init_agg_fn,
                                        advance_agg_fn, partitioned);
     DISPATCH_NEXT();
   }

@@ -195,30 +195,30 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
   const uint32_t num_groups = 16;
 
   const auto hash_fn = [](void *x) {
-    auto iters = reinterpret_cast<VectorProjectionIterator **>(x);
-    auto key = iters[0]->GetValue<int32_t, false>(0, nullptr);
+    auto vpi = reinterpret_cast<const VectorProjectionIterator *>(x);
+    auto key = vpi->GetValue<int32_t, false>(0, nullptr);
     return util::HashUtil::Hash(*key);
   };
 
   const auto key_eq = [](const void *agg, const void *x) {
     auto agg_tuple = reinterpret_cast<const AggTuple *>(agg);
-    auto iters = reinterpret_cast<const VectorProjectionIterator *const *>(x);
-    auto vpi_key = iters[0]->GetValue<int32_t, false>(0, nullptr);
+    auto vpi = reinterpret_cast<const VectorProjectionIterator *>(x);
+    auto vpi_key = vpi->GetValue<int32_t, false>(0, nullptr);
     return agg_tuple->key == *vpi_key;
   };
 
   const auto init_agg = [](void *agg, void *x) {
-    auto iters = reinterpret_cast<VectorProjectionIterator **>(x);
-    auto key = iters[0]->GetValue<int32_t, false>(0, nullptr);
-    auto val = iters[0]->GetValue<int32_t, false>(1, nullptr);
+    auto vpi = reinterpret_cast<const VectorProjectionIterator *>(x);
+    auto key = vpi->GetValue<int32_t, false>(0, nullptr);
+    auto val = vpi->GetValue<int32_t, false>(1, nullptr);
     new (agg) AggTuple(InputTuple(*key, *val));
   };
 
   const auto advance_agg = [](void *agg, void *x) {
+    auto vpi = reinterpret_cast<const VectorProjectionIterator *>(x);
     auto agg_tuple = reinterpret_cast<AggTuple *>(agg);
-    auto iters = reinterpret_cast<VectorProjectionIterator **>(x);
-    auto key = iters[0]->GetValue<int32_t, false>(0, nullptr);
-    auto val = iters[0]->GetValue<int32_t, false>(1, nullptr);
+    auto key = vpi->GetValue<int32_t, false>(0, nullptr);
+    auto val = vpi->GetValue<int32_t, false>(1, nullptr);
     agg_tuple->Advance(InputTuple(*key, *val));
   };
 
@@ -246,8 +246,7 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
 
     // Process
     VectorProjectionIterator vpi(&vp);
-    VectorProjectionIterator *iters[] = {&vpi};
-    agg_table()->ProcessBatch(iters, hash_fn, key_eq, init_agg, advance_agg, false);
+    agg_table()->ProcessBatch(&vpi, hash_fn, key_eq, init_agg, advance_agg, false);
   }
 }
 

@@ -154,15 +154,15 @@ class AggregationHashTable {
   byte *Lookup(hash_t hash, KeyEqFn key_eq_fn, const void *probe_tuple);
 
   /**
-   * Process an entire vector of input.
-   * @param iters The input vectors.
+   * Injest and process a batch of input into the aggregation.
+   * @param vpi The vector projection to process.
    * @param hash_fn Function to compute a hash of an input element.
    * @param key_eq_fn Function to check key equality of an input element and an existing aggregate.
    * @param init_agg_fn Function to initialize a new aggregate.
    * @param advance_agg_fn Function to advance an existing aggregate.
    * @param partitioned Whether to perform insertions in partitioned mode.
    */
-  void ProcessBatch(VectorProjectionIterator *iters[], HashFn hash_fn, KeyEqFn key_eq_fn,
+  void ProcessBatch(VectorProjectionIterator *vpi, HashFn hash_fn, KeyEqFn key_eq_fn,
                     InitAggFn init_agg_fn, AdvanceAggFn advance_agg_fn, bool partitioned);
 
   /**
@@ -234,18 +234,18 @@ class AggregationHashTable {
   // Compute the hash value and perform the table lookup for all elements in the input vector
   // projections.
   template <bool VPIIsFiltered>
-  void ProcessBatchImpl(VectorProjectionIterator *iters[], HashFn hash_fn, KeyEqFn key_eq_fn,
+  void ProcessBatchImpl(VectorProjectionIterator *vpi, HashFn hash_fn, KeyEqFn key_eq_fn,
                         InitAggFn init_agg_fn, AdvanceAggFn advance_agg_fn, bool partitioned);
 
   // Dispatched from ProcessBatchImpl() to compute the hash values for all input tuples. Hashes are
   // stored in the 'hashes' array in the batch state.
   template <bool VPIIsFiltered>
-  void ComputeHash(VectorProjectionIterator *iters[], HashFn hash_fn);
+  void ComputeHash(VectorProjectionIterator *vpi, HashFn hash_fn);
 
   // Called from ProcessBatchImpl() to find matching groups for all tuples in the input vector
   // projection. This function returns the number of groups that were found.
   template <bool VPIIsFiltered>
-  uint32_t FindGroups(VectorProjectionIterator *iters[], KeyEqFn key_eq_fn);
+  uint32_t FindGroups(VectorProjectionIterator *vpi, KeyEqFn key_eq_fn);
 
   // Called from FindGroups() to lookup initial entries from the hash table for all input tuples.
   uint32_t LookupInitial(uint32_t num_elems);
@@ -256,20 +256,18 @@ class AggregationHashTable {
 
   // Called from FindGroups() to check the equality of keys.
   template <bool VPIIsFiltered>
-  uint32_t CheckKeyEquality(VectorProjectionIterator *iters[], uint32_t num_elems,
-                            KeyEqFn key_eq_fn);
+  uint32_t CheckKeyEquality(VectorProjectionIterator *vpi, uint32_t num_elems, KeyEqFn key_eq_fn);
 
   // Called from FindGroups() to follow the entry chain of candidate groups.
   uint32_t FollowNext();
 
   // Called from ProcessBatch() to create missing groups
   template <bool VPIIsFiltered, bool Partitioned>
-  void CreateMissingGroups(VectorProjectionIterator *iters[], KeyEqFn key_eq_fn,
-                           InitAggFn init_agg_fn);
+  void CreateMissingGroups(VectorProjectionIterator *vpi, KeyEqFn key_eq_fn, InitAggFn init_agg_fn);
 
   // Called from ProcessBatch() to update only the valid entries in the input vector
   template <bool VPIIsFiltered>
-  void AdvanceGroups(VectorProjectionIterator *iters[], uint32_t num_groups,
+  void AdvanceGroups(VectorProjectionIterator *vpi, uint32_t num_groups,
                      AdvanceAggFn advance_agg_fn);
 
   // Called during partitioned scan to build an aggregation hash table over a single partition.

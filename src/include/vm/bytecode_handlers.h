@@ -788,13 +788,12 @@ VM_OP_HOT void OpAggregationHashTableLookup(byte **result,
 }
 
 VM_OP_HOT void OpAggregationHashTableProcessBatch(
-    tpl::sql::AggregationHashTable *const agg_hash_table,
-    tpl::sql::VectorProjectionIterator *iters[],
+    tpl::sql::AggregationHashTable *const agg_hash_table, tpl::sql::VectorProjectionIterator *vpi,
     const tpl::sql::AggregationHashTable::HashFn hash_fn,
     const tpl::sql::AggregationHashTable::KeyEqFn key_eq_fn,
     const tpl::sql::AggregationHashTable::InitAggFn init_agg_fn,
     const tpl::sql::AggregationHashTable::AdvanceAggFn merge_agg_fn, const bool partitioned) {
-  agg_hash_table->ProcessBatch(iters, hash_fn, key_eq_fn, init_agg_fn, merge_agg_fn, partitioned);
+  agg_hash_table->ProcessBatch(vpi, hash_fn, key_eq_fn, init_agg_fn, merge_agg_fn, partitioned);
 }
 
 VM_OP_HOT void OpAggregationHashTableTransferPartitions(
