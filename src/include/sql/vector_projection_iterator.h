@@ -11,12 +11,31 @@
 namespace tpl::sql {
 
 /**
- * An iterator over vector projections. A VectorProjectionIterator allows both
- * tuple-at-a-time iteration over a vector projection and vector-at-a-time
- * processing. There are two separate APIs for each and interleaving is
- * supported only to a certain degree. This class exists so that we can iterate
- * over a vector projection multiples times and ensure processing always only
- * on filtered items.
+ * A tuple-at-a-time iterator over VectorProjections. The iterator gives the <i>view</i> of
+ * individual tuple access, but does not physically materialize full tuples in memory. Tuples can
+ * also be filtered out of the underlying projection (again without moving or copying any data)
+ * through VectorProjectionIterator::Match() which considers the tuple that the iterator is
+ * positioned at.
+ *
+ * A different iteration API exists depending on whether the underlying vector projection has been
+ * filtered or not. Users must query filtration status before iteration through
+ * VectorProjectionIterator::IsFiltered().
+ *
+ * @code
+ * VectorProjectionIterator iter = ...
+ * if (iter.IsFiltered()) {
+ *   for (; iter.HasNextFiltered(); iter.AdvanceFiltered()) {
+ *     // do work
+ *   }
+ * } else {
+ *   for (; iter.HasNext(); iter.Advance()) {
+ *     // do work
+ *   }
+ * }
+ * @endcode
+ *
+ * The above template exists only for TPL programs, since lambdas don't exist there. For you regular
+ * C++ folks, use VectorProjectionIterator::ForEach().
  */
 class VectorProjectionIterator {
  public:
@@ -79,9 +98,9 @@ class VectorProjectionIterator {
   const T *GetValue(uint32_t col_idx, bool *null) const;
 
   /**
-   * Set the value of the column at index @em col_idx for the row the iterator
-   * is currently pointing at to @em val. If the column is NULL-able, the NULL
-   * bit is also set to the provided NULL value @em null.
+   * Set the value of the column at index @em col_idx for the tuple the iterator is currently
+   * positioned at to @em val. If the column is NULL-able, the NULL bit is also set to the provided
+   * NULL value @em null.
    * @tparam T The desired primitive data type of the column.
    * @tparam Nullable Whether the column is NULL-able.
    * @param col_idx The index of the column to write to.
@@ -105,14 +124,12 @@ class VectorProjectionIterator {
   void Advance();
 
   /**
-   * Advance the iterator by one to the next valid tuple in the filtered
-   * projection.
+   * Advance the iterator by one to the next valid tuple in the filtered projection.
    */
   void AdvanceFiltered();
 
   /**
-   * Mark the tuple this iterator is currently positioned at as matched (valid)
-   * or unmatched (invalid).
+   * Mark the tuple this iterator is currently positioned at as valid or invalid.
    * @param matched True if the current tuple is valid; false otherwise
    */
   void Match(bool matched);
@@ -140,10 +157,9 @@ class VectorProjectionIterator {
   void ResetFiltered();
 
   /**
-   * Run a function over each active tuple in the vector projection. This is a
-   * read-only function (despite it being non-const), meaning the callback must
-   * not modify the state of the iterator, but should only query it using const
-   * functions!
+   * Run a function over each active tuple in the vector projection. This is a read-only function
+   * (despite it being non-const), meaning the callback must not modify the state of the iterator,
+   * but should only query it using const functions!
    * @tparam F The function type
    * @param fn A callback function
    */
@@ -151,14 +167,11 @@ class VectorProjectionIterator {
   void ForEach(const F &fn);
 
   /**
-   * Run a generic tuple-at-a-time filter over all active tuples in the vector
-   * projection
-   * @tparam F The generic type of the filter function. This can be any
-   *           functor-like type including raw function pointer, functor or
-   *           std::function
-   * @param filter A function that accepts a const version of this VPI and
-   *               returns true if the tuple pointed to by the VPI is valid
-   *               (i.e., passes the filter) or false otherwise
+   * Run a generic tuple-at-a-time filter over all active tuples in the vector projection.
+   * @tparam F The generic type of the filter function. This can be any functor-like type including
+   *           raw function pointer, functor or std::function.
+   * @param filter A function that accepts a const version of this VPI and returns true if the tuple
+   *               pointed to by the VPI is valid (i.e., passes the filter) or false otherwise.
    */
   template <typename F>
   void RunFilter(const F &filter);
@@ -189,18 +202,16 @@ class VectorProjectionIterator {
 // Implementation below
 // ---------------------------------------------------------
 
-// The below methods are inlined in the header on purpose for performance.
-// Please do not move them.
+// The below methods are inlined in the header on purpose for performance. Please do not move them.
 
-// Note: The getting and setter functions operate on the underlying vector's
-// raw data rather than going through Vector::GetValue() or Vector::SetValue().
-// This is because the iterator is aware of the selection vector and is aware of
-// the nullability of the column. We take advantage of that here.
+// Note: The getting and setter functions operate on the underlying vector's raw data rather than
+// going through Vector::GetValue() or Vector::SetValue(). This implies that the user is aware of
+// the underlying vector's type and its nullability property. We take advantage of that here.
 
 template <typename T, bool Nullable>
-inline const T *VectorProjectionIterator::GetValue(const uint32_t col_idx, bool *const null) const {
-  // Column's vector data
-  const Vector *const col_vector = vector_projection_->GetColumn(col_idx);
+inline const T *VectorProjectionIterator::GetValue(uint32_t col_idx, bool *null) const {
+  // The vector we'll read from
+  const Vector *col_vector = vector_projection_->GetColumn(col_idx);
 
   if constexpr (Nullable) {
     TPL_ASSERT(null != nullptr, "Missing output variable for NULL indicator");
@@ -211,16 +222,13 @@ inline const T *VectorProjectionIterator::GetValue(const uint32_t col_idx, bool 
 }
 
 template <typename T, bool Nullable>
-inline void VectorProjectionIterator::SetValue(const uint32_t col_idx, const T val,
-                                               const bool null) {
-  // Column's vector
-  Vector *const col_vector = vector_projection_->GetColumn(col_idx);
+inline void VectorProjectionIterator::SetValue(uint32_t col_idx, const T val, bool null) {
+  // The vector we'll write into
+  Vector *col_vector = vector_projection_->GetColumn(col_idx);
 
-  //
-  // If the column is NULL-able, we only write into the data array if the value
-  // isn't NULL. If the column isn't NULL-able, we directly write into the
-  // column data array and skip setting any NULL bits.
-  //
+  // If the column is NULL-able, we check the NULL indication flag before writing into the columns's
+  // underlying data array. If the column isn't NULL-able, we can skip the NULL check and directly
+  // write into the column data array.
 
   if constexpr (Nullable) {
     col_vector->null_mask_[curr_idx_] = null;
