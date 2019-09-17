@@ -32,9 +32,6 @@ AggregationHashTable::BatchProcessState::~BatchProcessState() = default;
 // Aggregation Hash Table
 // ---------------------------------------------------------
 
-AggregationHashTable::AggregationHashTable(MemoryPool *memory, std::size_t payload_size)
-    : AggregationHashTable(memory, payload_size, kDefaultInitialTableSize) {}
-
 AggregationHashTable::AggregationHashTable(MemoryPool *memory, const std::size_t payload_size,
                                            const uint32_t initial_size)
     : memory_(memory),
@@ -59,6 +56,9 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory, const std::size_t
       std::llround(static_cast<float>(l2_size) / entries_.element_size() * kDefaultLoadFactor);
   flush_threshold_ = std::max(uint64_t{256}, util::MathUtil::PowerOf2Floor(flush_threshold_));
 }
+
+AggregationHashTable::AggregationHashTable(MemoryPool *memory, std::size_t payload_size)
+    : AggregationHashTable(memory, payload_size, kDefaultInitialTableSize) {}
 
 AggregationHashTable::~AggregationHashTable() {
   if (batch_state_ != nullptr) {
@@ -125,12 +125,19 @@ byte *AggregationHashTable::Insert(const hash_t hash) {
   return entry->payload;
 }
 
-byte *AggregationHashTable::InsertPartitioned(const hash_t hash) {
-  byte *ret = Insert(hash);
-  if (hash_table_.num_elements() >= flush_threshold_) {
-    FlushToOverflowPartitions();
+void AggregationHashTable::AllocateOverflowPartitions() {
+  TPL_ASSERT((partition_heads_ == nullptr) == (partition_tails_ == nullptr),
+             "Head and tail of overflow partitions list are not equally allocated");
+
+  if (partition_heads_ == nullptr) {
+    partition_heads_ = memory_->AllocateArray<HashTableEntry *>(kDefaultNumPartitions, true);
+    partition_tails_ = memory_->AllocateArray<HashTableEntry *>(kDefaultNumPartitions, true);
+    partition_estimates_ = memory_->AllocateArray<libcount::HLL *>(kDefaultNumPartitions, false);
+    for (uint32_t i = 0; i < kDefaultNumPartitions; i++) {
+      partition_estimates_[i] = libcount::HLL::Create(kDefaultHLLPrecision).release();
+    }
+    partition_tables_ = memory_->AllocateArray<AggregationHashTable *>(kDefaultNumPartitions, true);
   }
-  return ret;
 }
 
 void AggregationHashTable::FlushToOverflowPartitions() {
@@ -153,19 +160,12 @@ void AggregationHashTable::FlushToOverflowPartitions() {
   stats_.num_flushes++;
 }
 
-void AggregationHashTable::AllocateOverflowPartitions() {
-  TPL_ASSERT((partition_heads_ == nullptr) == (partition_tails_ == nullptr),
-             "Head and tail of overflow partitions list are not equally allocated");
-
-  if (partition_heads_ == nullptr) {
-    partition_heads_ = memory_->AllocateArray<HashTableEntry *>(kDefaultNumPartitions, true);
-    partition_tails_ = memory_->AllocateArray<HashTableEntry *>(kDefaultNumPartitions, true);
-    partition_estimates_ = memory_->AllocateArray<libcount::HLL *>(kDefaultNumPartitions, false);
-    for (uint32_t i = 0; i < kDefaultNumPartitions; i++) {
-      partition_estimates_[i] = libcount::HLL::Create(kDefaultHLLPrecision).release();
-    }
-    partition_tables_ = memory_->AllocateArray<AggregationHashTable *>(kDefaultNumPartitions, true);
+byte *AggregationHashTable::InsertPartitioned(const hash_t hash) {
+  byte *ret = Insert(hash);
+  if (hash_table_.num_elements() >= flush_threshold_) {
+    FlushToOverflowPartitions();
   }
+  return ret;
 }
 
 void AggregationHashTable::ProcessBatch(VectorProjectionIterator *iters[],
