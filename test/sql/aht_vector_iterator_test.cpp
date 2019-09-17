@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "util/test_harness.h"
-#include "vm/module_compiler.h"
 
 #include "sql/aggregation_hash_table.h"
 #include "sql/execution_context.h"
@@ -13,7 +12,6 @@
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/hash_util.h"
-#include "vm/module.h"
 
 namespace tpl::sql {
 
@@ -107,7 +105,6 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
  private:
   std::unique_ptr<MemoryPool> memory_;
   std::unique_ptr<Schema> schema_;
-  std::vector<std::unique_ptr<vm::Module>> modules_;
 };
 
 TEST_F(AggregationHashTableVectorIteratorTest, IterateEmptyAggregation) {
