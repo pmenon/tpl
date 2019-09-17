@@ -487,8 +487,8 @@ VM_OP_HOT void OpHashString(hash_t *const hash_val, const tpl::sql::StringVal *c
   if (input->is_null) {
     *hash_val = 0;
   } else {
-    *hash_val =
-        tpl::util::HashUtil::Hash(reinterpret_cast<const uint8_t *>(input->ptr), input->len, seed);
+    const auto *key = reinterpret_cast<const uint8_t *>(input->ptr);
+    *hash_val = tpl::util::HashUtil::Hash(key, input->len, seed);
   }
 }
 

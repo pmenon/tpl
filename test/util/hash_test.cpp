@@ -11,17 +11,17 @@ namespace tpl::util {
 class HashTest : public TplTest {};
 
 // Check an input value using a given hashing method
-#define CHECK_HASH_METHOD_ON_INPUT(METHOD, INPUT)       \
-  {                                                     \
-    auto hash_val1 = Hasher::Hash<METHOD>(INPUT);       \
-    auto hash_val2 = Hasher::Hash<METHOD>(INPUT);       \
-    EXPECT_EQ(hash_val1, hash_val2);                    \
-  }                                                     \
-  {                                                     \
-    auto seed = random_seed();                          \
-    auto hash_val1 = Hasher::Hash<METHOD>(INPUT, seed); \
-    auto hash_val2 = Hasher::Hash<METHOD>(INPUT, seed); \
-    EXPECT_EQ(hash_val1, hash_val2);                    \
+#define CHECK_HASH_METHOD_ON_INPUT(METHOD, INPUT)         \
+  {                                                       \
+    auto hash_val1 = HashUtil::Hash<METHOD>(INPUT);       \
+    auto hash_val2 = HashUtil::Hash<METHOD>(INPUT);       \
+    EXPECT_EQ(hash_val1, hash_val2);                      \
+  }                                                       \
+  {                                                       \
+    auto seed = random_seed();                            \
+    auto hash_val1 = HashUtil::Hash<METHOD>(INPUT, seed); \
+    auto hash_val2 = HashUtil::Hash<METHOD>(INPUT, seed); \
+    EXPECT_EQ(hash_val1, hash_val2);                      \
   }
 
 // Check an input value against all possible hashing methods
@@ -65,11 +65,11 @@ TEST_F(HashTest, StringHash) {
     large_input += small_input;
   }
 
-#define CHECK_HASH_METHOD_ON_INPUT(METHOD, INPUT) \
-  {                                               \
-    auto hash_val1 = Hasher::Hash<METHOD>(INPUT); \
-    auto hash_val2 = Hasher::Hash<METHOD>(INPUT); \
-    EXPECT_EQ(hash_val1, hash_val2);              \
+#define CHECK_HASH_METHOD_ON_INPUT(METHOD, INPUT)   \
+  {                                                 \
+    auto hash_val1 = HashUtil::Hash<METHOD>(INPUT); \
+    auto hash_val2 = HashUtil::Hash<METHOD>(INPUT); \
+    EXPECT_EQ(hash_val1, hash_val2);                \
   }
 
   // Check an input value against all possible hashing methods
