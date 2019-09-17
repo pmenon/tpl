@@ -14,7 +14,7 @@ namespace tpl::util {
 class StringHeap {
  public:
   /**
-   * Construct a new string heap.
+   * Construct a new empty string heap.
    */
   StringHeap();
 
@@ -47,7 +47,6 @@ class StringHeap {
    */
   [[nodiscard]] char *Allocate(std::size_t string_len);
 
-  // Copy the given string into this container, returning a pointer to it.
   /**
    * Copy the given string into the heap, returning a pointer to its heap address.
    * @param str The string whose contents will be copied into the newly allocated string.
