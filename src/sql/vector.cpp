@@ -15,25 +15,6 @@
 namespace tpl::sql {
 
 // ---------------------------------------------------------
-// Strings
-// ---------------------------------------------------------
-
-Vector::Strings::Strings() : region_("vector-strings"), num_strings_(0) {}
-
-char *Vector::Strings::AddString(const std::string_view str) {
-  num_strings_++;
-
-  // Allocate string-length bytes + 1 for the NULL terminator
-  const auto num_bytes = str.length() + 1;
-  auto ptr = region_.Allocate(num_bytes, alignof(char *));
-  std::memcpy(ptr, str.data(), num_bytes);
-
-  return reinterpret_cast<char *>(ptr);
-}
-
-void Vector::Strings::Destroy() { region_.FreeAll(); }
-
-// ---------------------------------------------------------
 // Vector
 // ---------------------------------------------------------
 

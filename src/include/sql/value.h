@@ -4,7 +4,7 @@
 
 #include "common/common.h"
 #include "common/macros.h"
-#include "sql/execution_context.h"
+#include "util/string_heap.h"
 
 namespace tpl::sql {
 
@@ -180,7 +180,7 @@ struct StringVal : public Val {
    * @param memory The memory pool to allocate this string's contents from
    * @param len The size of the string
    */
-  StringVal(ExecutionContext::StringAllocator *memory, std::size_t len) : ptr(nullptr), len(len) {
+  StringVal(util::StringHeap *memory, std::size_t len) : ptr(nullptr), len(len) {
     if (TPL_UNLIKELY(len > kMaxStingLen)) {
       len = 0;
       is_null = true;

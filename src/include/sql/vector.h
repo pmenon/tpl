@@ -10,7 +10,7 @@
 #include "sql/generic_value.h"
 #include "sql/sql.h"
 #include "util/bit_vector.h"
-#include "util/region.h"
+#include "util/string_heap.h"
 
 namespace tpl::sql {
 
@@ -95,6 +95,7 @@ class Vector {
 
  public:
   using NullMask = util::BitVector<uint64_t>;
+  using StringHeap = util::StringHeap;
 
   /**
    * Create an empty vector.
@@ -310,38 +311,6 @@ class Vector {
   void Destroy();
 
  private:
-  // Container for all strings this vector owns and contains
-  class Strings {
-   public:
-    // Construct
-    Strings();
-
-    // Move constructor
-    Strings(Strings &&) = default;
-
-    // No copying
-    DISALLOW_COPY(Strings);
-
-    // Move assignment
-    Strings &operator=(Strings &&) = default;
-
-    // Return the number of strings are in this container
-    uint32_t GetNumStrings() const { return num_strings_; }
-
-    // Copy the given string into this container, returning a pointer to it.
-    char *AddString(std::string_view str);
-
-    // Deallocate all memory in this container
-    void Destroy();
-
-   private:
-    // Where the strings live
-    util::Region region_;
-    // Number of strings
-    uint32_t num_strings_;
-  };
-
- private:
   // The type of the elements stored in the vector
   TypeId type_;
   // The number of elements in the vector
@@ -355,7 +324,7 @@ class Vector {
   // The null mask used to indicate if an element in the vector is NULL
   NullMask null_mask_;
   // String container
-  Strings strings_;
+  StringHeap strings_;
   // If the vector holds allocated data, this field manages it
   std::unique_ptr<byte[]> owned_data_;
 };
