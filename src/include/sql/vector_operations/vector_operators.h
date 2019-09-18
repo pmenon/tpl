@@ -77,6 +77,12 @@ class VectorOps {
    */
   static void FillNull(Vector *vector);
 
+  // -------------------------------------------------------
+  //
+  // Selections
+  //
+  // -------------------------------------------------------
+
   /**
    * Filter the TID list @em tid_list with all elements in @em left that are equal to elements in
    * @em right.
@@ -168,6 +174,32 @@ class VectorOps {
    * @return True if every element is non-null and true; false otherwise.
    */
   static bool AnyTrue(const Vector &input);
+
+  // -------------------------------------------------------
+  //
+  // String operations
+  //
+  // -------------------------------------------------------
+
+  /**
+   * Store the TIDs of all string elements in @em a that are LIKE their counterparts in @em b in the
+   * output Tuple ID list @em tid_list. Only elements whose TIDs appear in @em tid_list are
+   * read and processed.
+   * @param a The vector of strings to compare.
+   * @param b The vector of strings to compare with.
+   * @param[in,out] tid_list The list of TIDs to check, and the output of the check.
+   */
+  static void Like(const Vector &a, const Vector &b, TupleIdList *tid_list);
+
+  /**
+   * Store the TIDs of all string elements in @em a that are NOT LIKE their counterparts in @em b in
+   * the output Tuple ID list @em tid_list. Only elements whose TIDs appear in @em tid_list are
+   * read and processed.
+   * @param a The vector of strings to compare.
+   * @param b The vector of strings to compare with.
+   * @param[in,out] tid_list The list of TIDs to check, and the output of the check.
+   */
+  static void NotLike(const Vector &a, const Vector &b, TupleIdList *tid_list);
 
   // -------------------------------------------------------
   //
