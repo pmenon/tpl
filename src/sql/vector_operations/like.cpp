@@ -45,11 +45,8 @@ void TemplatedLikeOperation_Vector_Vector(const Vector &a, const Vector &b, Tupl
 
 template <typename Op>
 void TemplatedLikeOperation(const Vector &a, const Vector &b, TupleIdList *tid_list) {
-  if (a.type_id() != TypeId::Varchar) {
-    throw InvalidTypeException(a.type_id(), "Left input to (NOT) LIKE must be VARCHAR");
-  }
-  if (b.type_id() != TypeId::Varchar) {
-    throw InvalidTypeException(a.type_id(), "Right input to (NOT) LIKE must be VARCHAR");
+  if (a.type_id() != TypeId::Varchar || b.type_id() != TypeId::Varchar) {
+    throw InvalidTypeException(a.type_id(), "Inputs to (NOT) LIKE must be VARCHAR");
   }
   if (a.IsConstant()) {
     throw Exception(ExceptionType::Execution, "First input to LIKE cannot be constant");
