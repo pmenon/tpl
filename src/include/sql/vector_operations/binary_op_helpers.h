@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sql/vector_operations/vector_operators.h"
+
 namespace tpl::sql {
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
