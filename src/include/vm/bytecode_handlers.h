@@ -182,8 +182,8 @@ VM_OP_HOT void OpExecutionContextGetMemoryPool(tpl::sql::MemoryPool **const memo
   *memory = exec_ctx->memory_pool();
 }
 
-void OpThreadStateContainerInit(tpl::sql::ThreadStateContainer *thread_state_container,
-                                tpl::sql::MemoryPool *memory);
+VM_OP void OpThreadStateContainerInit(tpl::sql::ThreadStateContainer *thread_state_container,
+                                      tpl::sql::MemoryPool *memory);
 
 VM_OP_HOT void OpThreadStateContainerReset(tpl::sql::ThreadStateContainer *thread_state_container,
                                            uint32_t size,
@@ -199,21 +199,21 @@ VM_OP_HOT void OpThreadStateContainerIterate(tpl::sql::ThreadStateContainer *thr
   thread_state_container->IterateStates(state, iterate_fn);
 }
 
-void OpThreadStateContainerFree(tpl::sql::ThreadStateContainer *thread_state_container);
+VM_OP void OpThreadStateContainerFree(tpl::sql::ThreadStateContainer *thread_state_container);
 
 // ---------------------------------------------------------
 // Table Vector Iterator
 // ---------------------------------------------------------
 
-void OpTableVectorIteratorInit(tpl::sql::TableVectorIterator *iter, uint16_t table_id);
+VM_OP void OpTableVectorIteratorInit(tpl::sql::TableVectorIterator *iter, uint16_t table_id);
 
-void OpTableVectorIteratorPerformInit(tpl::sql::TableVectorIterator *iter);
+VM_OP void OpTableVectorIteratorPerformInit(tpl::sql::TableVectorIterator *iter);
 
 VM_OP_HOT void OpTableVectorIteratorNext(bool *has_more, tpl::sql::TableVectorIterator *iter) {
   *has_more = iter->Advance();
 }
 
-void OpTableVectorIteratorFree(tpl::sql::TableVectorIterator *iter);
+VM_OP void OpTableVectorIteratorFree(tpl::sql::TableVectorIterator *iter);
 
 VM_OP_HOT void OpTableVectorIteratorGetVPI(tpl::sql::VectorProjectionIterator **vpi,
                                            tpl::sql::TableVectorIterator *iter) {
@@ -500,19 +500,19 @@ VM_OP_HOT void OpHashCombine(hash_t *hash_val, hash_t new_hash_val) {
 // Filter Manager
 // ---------------------------------------------------------
 
-void OpFilterManagerInit(tpl::sql::FilterManager *filter_manager);
+VM_OP void OpFilterManagerInit(tpl::sql::FilterManager *filter_manager);
 
-void OpFilterManagerStartNewClause(tpl::sql::FilterManager *filter_manager);
+VM_OP void OpFilterManagerStartNewClause(tpl::sql::FilterManager *filter_manager);
 
-void OpFilterManagerInsertFlavor(tpl::sql::FilterManager *filter_manager,
-                                 tpl::sql::FilterManager::MatchFn flavor);
+VM_OP void OpFilterManagerInsertFlavor(tpl::sql::FilterManager *filter_manager,
+                                       tpl::sql::FilterManager::MatchFn flavor);
 
-void OpFilterManagerFinalize(tpl::sql::FilterManager *filter_manager);
+VM_OP void OpFilterManagerFinalize(tpl::sql::FilterManager *filter_manager);
 
-void OpFilterManagerRunFilters(tpl::sql::FilterManager *filter,
-                               tpl::sql::VectorProjectionIterator *vpi);
+VM_OP void OpFilterManagerRunFilters(tpl::sql::FilterManager *filter,
+                                     tpl::sql::VectorProjectionIterator *vpi);
 
-void OpFilterManagerFree(tpl::sql::FilterManager *filter);
+VM_OP void OpFilterManagerFree(tpl::sql::FilterManager *filter);
 
 // ---------------------------------------------------------
 // Vector Filter Executor
@@ -765,8 +765,8 @@ VM_OP_HOT void OpRemReal(tpl::sql::Real *const result, const tpl::sql::Real *con
 // SQL Aggregations
 // ---------------------------------------------------------
 
-void OpAggregationHashTableInit(tpl::sql::AggregationHashTable *agg_hash_table,
-                                tpl::sql::MemoryPool *memory, uint32_t payload_size);
+VM_OP void OpAggregationHashTableInit(tpl::sql::AggregationHashTable *agg_hash_table,
+                                      tpl::sql::MemoryPool *memory, uint32_t payload_size);
 
 VM_OP_HOT void OpAggregationHashTableInsert(byte **result,
                                             tpl::sql::AggregationHashTable *agg_hash_table,
@@ -812,10 +812,10 @@ VM_OP_HOT void OpAggregationHashTableParallelPartitionedScan(
                                                  scan_partition_fn);
 }
 
-void OpAggregationHashTableFree(tpl::sql::AggregationHashTable *agg_hash_table);
+VM_OP void OpAggregationHashTableFree(tpl::sql::AggregationHashTable *agg_hash_table);
 
-void OpAggregationHashTableIteratorInit(tpl::sql::AHTIterator *iter,
-                                        tpl::sql::AggregationHashTable *agg_hash_table);
+VM_OP void OpAggregationHashTableIteratorInit(tpl::sql::AHTIterator *iter,
+                                              tpl::sql::AggregationHashTable *agg_hash_table);
 
 VM_OP_HOT void OpAggregationHashTableIteratorHasNext(bool *has_more, tpl::sql::AHTIterator *iter) {
   *has_more = iter->HasNext();
@@ -827,7 +827,7 @@ VM_OP_HOT void OpAggregationHashTableIteratorGetRow(const byte **row, tpl::sql::
   *row = iter->GetCurrentAggregateRow();
 }
 
-void OpAggregationHashTableIteratorFree(tpl::sql::AHTIterator *iter);
+VM_OP void OpAggregationHashTableIteratorFree(tpl::sql::AHTIterator *iter);
 
 VM_OP_HOT void OpAggregationOverflowPartitionIteratorHasNext(
     bool *has_more, tpl::sql::AHTOverflowPartitionIterator *iter) {
@@ -1101,19 +1101,19 @@ VM_OP_HOT void OpAvgAggregateFree(tpl::sql::AvgAggregate *agg) { agg->~AvgAggreg
 // Hash Joins
 // ---------------------------------------------------------
 
-void OpJoinHashTableInit(tpl::sql::JoinHashTable *join_hash_table, tpl::sql::MemoryPool *memory,
-                         uint32_t tuple_size);
+VM_OP void OpJoinHashTableInit(tpl::sql::JoinHashTable *join_hash_table,
+                               tpl::sql::MemoryPool *memory, uint32_t tuple_size);
 
 VM_OP_HOT void OpJoinHashTableAllocTuple(byte **result, tpl::sql::JoinHashTable *join_hash_table,
                                          hash_t hash) {
   *result = join_hash_table->AllocInputTuple(hash);
 }
 
-void OpJoinHashTableBuild(tpl::sql::JoinHashTable *join_hash_table);
+VM_OP void OpJoinHashTableBuild(tpl::sql::JoinHashTable *join_hash_table);
 
-void OpJoinHashTableBuildParallel(tpl::sql::JoinHashTable *join_hash_table,
-                                  tpl::sql::ThreadStateContainer *thread_state_container,
-                                  uint32_t jht_offset);
+VM_OP void OpJoinHashTableBuildParallel(tpl::sql::JoinHashTable *join_hash_table,
+                                        tpl::sql::ThreadStateContainer *thread_state_container,
+                                        uint32_t jht_offset);
 
 VM_OP_HOT void OpJoinHashTableLookup(tpl::sql::JoinHashTable *join_hash_table,
                                      tpl::sql::HashTableEntryIterator *ht_entry_iter,
@@ -1121,10 +1121,10 @@ VM_OP_HOT void OpJoinHashTableLookup(tpl::sql::JoinHashTable *join_hash_table,
   *ht_entry_iter = join_hash_table->Lookup<false>(hash_val);
 }
 
-void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table);
+VM_OP void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table);
 
-void OpJoinHashTableVectorProbeInit(tpl::sql::JoinHashTableVectorProbe *jht_vector_probe,
-                                    tpl::sql::JoinHashTable *jht);
+VM_OP void OpJoinHashTableVectorProbeInit(tpl::sql::JoinHashTableVectorProbe *jht_vector_probe,
+                                          tpl::sql::JoinHashTable *jht);
 
 VM_OP_HOT void OpJoinHashTableVectorProbePrepare(
     tpl::sql::JoinHashTableVectorProbe *jht_vector_probe, tpl::sql::VectorProjectionIterator *vpi,
@@ -1139,7 +1139,7 @@ VM_OP_HOT void OpJoinHashTableVectorProbeGetNextOutput(
   *result = jht_vector_probe->GetNextOutput(vpi, key_eq_fn);
 }
 
-void OpJoinHashTableVectorProbeFree(tpl::sql::JoinHashTableVectorProbe *jht_vector_probe);
+VM_OP void OpJoinHashTableVectorProbeFree(tpl::sql::JoinHashTableVectorProbe *jht_vector_probe);
 
 VM_OP_HOT void OpHashTableEntryIteratorHasNext(bool *has_next,
                                                tpl::sql::HashTableEntryIterator *ht_entry_iter,
@@ -1157,8 +1157,8 @@ VM_OP_HOT void OpHashTableEntryIteratorGetRow(const byte **row,
 // Sorting
 // ---------------------------------------------------------
 
-void OpSorterInit(tpl::sql::Sorter *sorter, tpl::sql::MemoryPool *memory,
-                  tpl::sql::Sorter::ComparisonFunction cmp_fn, uint32_t tuple_size);
+VM_OP void OpSorterInit(tpl::sql::Sorter *sorter, tpl::sql::MemoryPool *memory,
+                        tpl::sql::Sorter::ComparisonFunction cmp_fn, uint32_t tuple_size);
 
 VM_OP_HOT void OpSorterAllocTuple(byte **result, tpl::sql::Sorter *sorter) {
   *result = sorter->AllocInputTuple();
@@ -1172,19 +1172,19 @@ VM_OP_HOT void OpSorterAllocTupleTopKFinish(tpl::sql::Sorter *sorter, uint64_t t
   sorter->AllocInputTupleTopKFinish(top_k);
 }
 
-void OpSorterSort(tpl::sql::Sorter *sorter);
+VM_OP void OpSorterSort(tpl::sql::Sorter *sorter);
 
-void OpSorterSortParallel(tpl::sql::Sorter *sorter,
-                          tpl::sql::ThreadStateContainer *thread_state_container,
-                          uint32_t sorter_offset);
+VM_OP void OpSorterSortParallel(tpl::sql::Sorter *sorter,
+                                tpl::sql::ThreadStateContainer *thread_state_container,
+                                uint32_t sorter_offset);
 
-void OpSorterSortTopKParallel(tpl::sql::Sorter *sorter,
-                              tpl::sql::ThreadStateContainer *thread_state_container,
-                              uint32_t sorter_offset, uint64_t top_k);
+VM_OP void OpSorterSortTopKParallel(tpl::sql::Sorter *sorter,
+                                    tpl::sql::ThreadStateContainer *thread_state_container,
+                                    uint32_t sorter_offset, uint64_t top_k);
 
-void OpSorterFree(tpl::sql::Sorter *sorter);
+VM_OP void OpSorterFree(tpl::sql::Sorter *sorter);
 
-void OpSorterIteratorInit(tpl::sql::SorterIterator *iter, tpl::sql::Sorter *sorter);
+VM_OP void OpSorterIteratorInit(tpl::sql::SorterIterator *iter, tpl::sql::Sorter *sorter);
 
 VM_OP_HOT void OpSorterIteratorHasNext(bool *has_more, tpl::sql::SorterIterator *iter) {
   *has_more = iter->HasNext();
@@ -1196,7 +1196,7 @@ VM_OP_HOT void OpSorterIteratorGetRow(const byte **row, tpl::sql::SorterIterator
   *row = iter->GetRow();
 }
 
-void OpSorterIteratorFree(tpl::sql::SorterIterator *iter);
+VM_OP void OpSorterIteratorFree(tpl::sql::SorterIterator *iter);
 
 // ---------------------------------------------------------
 // Trig functions
