@@ -79,66 +79,6 @@ class VectorOps {
 
   // -------------------------------------------------------
   //
-  // Comparisons
-  //
-  // -------------------------------------------------------
-
-  /**
-   * Perform an equality comparison on each element from the left and right input vectors and store
-   * the result in the output vector @em result.
-   * @param left The left input to the comparison.
-   * @param right The right input to the comparison
-   * @param[out] result The vector storing the result of the comparison.
-   */
-  static void Equal(const Vector &left, const Vector &right, Vector *result);
-
-  /**
-   * Perform a greater-than comparison on each element from the left and right input vectors and
-   * store the result in the output vector @em result.
-   * @param left The left input to the comparison.
-   * @param right The right input to the comparison
-   * @param[out] result The vector storing the result of the comparison.
-   */
-  static void GreaterThan(const Vector &left, const Vector &right, Vector *result);
-
-  /**
-   * Perform a greater-than-or-equal comparison on each element from the left and right input
-   * vectors and store the result in the output vector @em result.
-   * @param left The left input to the comparison.
-   * @param right The right input to the comparison
-   * @param[out] result The vector storing the result of the comparison.
-   */
-  static void GreaterThanEqual(const Vector &left, const Vector &right, Vector *result);
-
-  /**
-   * Perform a less-than comparison on each element from the left and right input vectors and store
-   * the result in the output vector @em result.
-   * @param left The left input to the comparison.
-   * @param right The right input to the comparison
-   * @param[out] result The vector storing the result of the comparison.
-   */
-  static void LessThan(const Vector &left, const Vector &right, Vector *result);
-
-  /**
-   * Perform a less-than-or-equal comparison on each element from the left and right input vectors
-   * and store the result in the output vector @em result.
-   * @param left The left input to the comparison.
-   * @param right The right input to the comparison
-   * @param[out] result The vector storing the result of the comparison.
-   */
-  static void LessThanEqual(const Vector &left, const Vector &right, Vector *result);
-
-  /**
-   * Perform an inequality comparison on each element from the left and right input vectors and
-   * store the result in the output vector @em result.
-   * @param left The left input to the comparison.
-   * @param right The right input to the comparison
-   * @param[out] result The vector storing the result of the comparison.
-   */
-  static void NotEqual(const Vector &left, const Vector &right, Vector *result);
-
-  // -------------------------------------------------------
-  //
   // Selection operations
   //
   // Selections are like comparisons, but read from and write results into a TID list.
