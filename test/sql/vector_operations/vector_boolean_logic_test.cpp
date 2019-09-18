@@ -133,25 +133,6 @@ TEST_F(VectorBooleanLogicTest, FilteredBooleanLogic) {
   EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(2));
 }
 
-TEST_F(VectorBooleanLogicTest, NullChecking) {
-  auto vec = MakeFloatVector({1.0, 0.0, 1.0, 0.0}, {false, true, false, true});
-  auto result = MakeBooleanVector(vec->num_elements());
-
-  // IS NULL vec, only 1 and 3
-  VectorOps::IsNull(*vec, result.get());
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(0));
-  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(1));
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(2));
-  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(3));
-
-  // IS NOT NULL vec, only 0 and 2
-  VectorOps::IsNotNull(*vec, result.get());
-  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(0));
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(1));
-  EXPECT_EQ(GenericValue::CreateBoolean(true), result->GetValue(2));
-  EXPECT_EQ(GenericValue::CreateBoolean(false), result->GetValue(3));
-}
-
 TEST_F(VectorBooleanLogicTest, AnyOrAll) {
   // vec = [false, false, false, false]
   auto vec = MakeBooleanVector({false, false, false, false}, {false, false, false, false});

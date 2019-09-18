@@ -77,14 +77,6 @@ class VectorOps {
    */
   static void FillNull(Vector *vector);
 
-  // -------------------------------------------------------
-  //
-  // Selection operations
-  //
-  // Selections are like comparisons, but read from and write results into a TID list.
-  //
-  // -------------------------------------------------------
-
   /**
    * Filter the TID list @em tid_list with all elements in @em left that are equal to elements in
    * @em right.
@@ -140,6 +132,22 @@ class VectorOps {
    */
   static void SelectNotEqual(const Vector &left, const Vector &right, TupleIdList *tid_list);
 
+  /**
+   * Check TIDs in the list @em tid_list are NULL in the input vector @em input, storing the result
+   * back into @em tid_list.
+   * @param input The input vector whose elements are checked.
+   * @param[in,out] tid_list The list of TIDs to check, and the output of the check.
+   */
+  static void IsNull(const Vector &input, TupleIdList *tid_list);
+
+  /**
+   * Check TIDs in the list @em tid_list are NOT NULL in the input vector @em input, storing the
+   * result back into @em tid_list.
+   * @param input The input vector whose elements are checked.
+   * @param[in,out] tid_list The list of TIDs to check, and the output of the check.
+   */
+  static void IsNotNull(const Vector &input, TupleIdList *tid_list);
+
   // -------------------------------------------------------
   //
   // Boolean operations
@@ -171,28 +179,6 @@ class VectorOps {
    * @param[out] result The vector storing the result of the AND.
    */
   static void Not(const Vector &input, Vector *result);
-
-  // -------------------------------------------------------
-  //
-  // NULL checking
-  //
-  // -------------------------------------------------------
-
-  /**
-   * Check which elements of the vector @em input are NULL and store the results in the boolean
-   * output vector @em result.
-   * @param input The input vector whose elements are checked.
-   * @param[out] result The output vector storing the results.
-   */
-  static void IsNull(const Vector &input, Vector *result);
-
-  /**
-   * Check which elements of the vector @em input are not NULL and store the results in the boolean
-   * output vector @em result.
-   * @param input The input vector whose elements are checked.
-   * @param[out] result The output vector storing the results.
-   */
-  static void IsNotNull(const Vector &input, Vector *result);
 
   // -------------------------------------------------------
   //

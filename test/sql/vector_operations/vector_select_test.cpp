@@ -167,4 +167,45 @@ TEST_F(VectorSelectTest, SelectNullConstant) {
 #undef NULL_TEST
 }
 
+TEST_F(VectorSelectTest, IsNullAndIsNotNull) {
+  auto vec = MakeFloatVector({1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0},
+                             {false, true, false, true, true, false, false});
+  auto tid_list = TupleIdList(vec->num_elements());
+
+  // Try first with a full TID list
+
+  // IS NULL(vec) = [1, 3, 4]
+  tid_list.AddAll();
+  VectorOps::IsNull(*vec, &tid_list);
+  EXPECT_EQ(3u, tid_list.GetTupleCount());
+  EXPECT_EQ(1u, tid_list[0]);
+  EXPECT_EQ(3u, tid_list[1]);
+  EXPECT_EQ(4u, tid_list[2]);
+
+  // IS_NOT_NULL(vec) = [0, 2, 5, 6]
+  tid_list.AddAll();
+  VectorOps::IsNotNull(*vec, &tid_list);
+  EXPECT_EQ(4u, tid_list.GetTupleCount());
+  EXPECT_EQ(0u, tid_list[0]);
+  EXPECT_EQ(2u, tid_list[1]);
+  EXPECT_EQ(5u, tid_list[2]);
+  EXPECT_EQ(6u, tid_list[3]);
+
+  // Try with a partial input list
+
+  tid_list.Clear();
+  tid_list.Add(1);
+  tid_list.Add(4);
+  VectorOps::IsNull(*vec, &tid_list);
+  EXPECT_EQ(2u, tid_list.GetTupleCount());
+  EXPECT_EQ(1u, tid_list[0]);
+  EXPECT_EQ(4u, tid_list[1]);
+
+  tid_list.Clear();
+  tid_list.AddRange(2, 5);
+  VectorOps::IsNotNull(*vec, &tid_list);
+  EXPECT_EQ(1u, tid_list.GetTupleCount());
+  EXPECT_EQ(2u, tid_list[0]);
+}
+
 }  // namespace tpl::sql
