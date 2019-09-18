@@ -15,9 +15,7 @@ AHTVectorIterator::AHTVectorIterator(const AggregationHashTable &agg_hash_table,
     : memory_(agg_hash_table.memory_),
       iter_(agg_hash_table.hash_table_, memory_),
       vector_projection_(std::make_unique<VectorProjection>()),
-      vector_projection_iterator_(std::make_unique<VectorProjectionIterator>()),
-      temp_aggregates_vec_(
-          memory_->AllocateArray<const byte *>(kDefaultVectorSize, CACHELINE_SIZE, false)) {
+      vector_projection_iterator_(std::make_unique<VectorProjectionIterator>()) {
   // First, initialize the vector projection.
   vector_projection_->Initialize(column_info);
 
@@ -32,16 +30,9 @@ AHTVectorIterator::AHTVectorIterator(const AggregationHashTable &agg_hash_table,
                                      const AHTVectorIterator::TransposeFn transpose_fn)
     : AHTVectorIterator(agg_hash_table, {column_info, column_info + num_cols}, transpose_fn) {}
 
-AHTVectorIterator::~AHTVectorIterator() {
-  memory_->DeallocateArray(temp_aggregates_vec_, kDefaultVectorSize);
-}
-
 void AHTVectorIterator::BuildVectorProjection(const AHTVectorIterator::TransposeFn transpose_fn) {
   // Pull out payload pointers from hash table entries into our temporary array.
   auto [size, entries] = iter_.GetCurrentBatch();
-  for (uint32_t i = 0; i < size; i++) {
-    temp_aggregates_vec_[i] = entries[i]->payload;
-  }
 
   // Update the vector projection with the new batch size.
   vector_projection_->Resize(size);
@@ -54,7 +45,7 @@ void AHTVectorIterator::BuildVectorProjection(const AHTVectorIterator::Transpose
 
   // Invoke the transposition function. After the call, row-wise aggregates stored in the temporary
   // aggregate buffer will be converted into column-wise data in vectors within the projection.
-  transpose_fn(temp_aggregates_vec_, vector_projection_->GetSelectedTupleCount(),
+  transpose_fn(entries, vector_projection_->GetSelectedTupleCount(),
                vector_projection_iterator_.get());
 
   // The vector projection is now filled with vector aggregate data. Reset the VPI so that it's

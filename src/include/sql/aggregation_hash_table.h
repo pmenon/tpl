@@ -375,6 +375,10 @@ inline byte *AggregationHashTable::Lookup(hash_t hash, AggregationHashTable::Key
  */
 class AHTIterator {
  public:
+  /**
+   * Construct an iterator over the given aggregation hash table.
+   * @param agg_table The table to iterate.
+   */
   explicit AHTIterator(const AggregationHashTable &agg_table) : iter_(agg_table.hash_table_) {}
 
   /**
@@ -389,7 +393,7 @@ class AHTIterator {
   void Next() { iter_.Next(); }
 
   /**
-   * Return a pointer to the current row. It assumed the called has checked the iterator is valid.
+   * Return a pointer to the current row. It's assumed the called has checked the iterator is valid.
    */
   const byte *GetCurrentAggregateRow() const {
     auto *ht_entry = iter_.GetCurrentEntry();
@@ -398,7 +402,6 @@ class AHTIterator {
 
  private:
   // The iterator over the aggregation hash table
-  // TODO(pmenon): Switch to vectorized iterator when perf is better
   GenericHashTableIterator<false> iter_;
 };
 
@@ -416,7 +419,7 @@ class AHTIterator {
  */
 class AHTVectorIterator {
  public:
-  using TransposeFn = void (*)(const byte **, uint64_t, VectorProjectionIterator *);
+  using TransposeFn = void (*)(const HashTableEntry *[], uint64_t, VectorProjectionIterator *);
 
   /**
    * Construct a vector iterator over the given aggregation table.
@@ -436,11 +439,6 @@ class AHTVectorIterator {
    * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(AHTVectorIterator);
-
-  /**
-   * Destructor
-   */
-  ~AHTVectorIterator();
 
   /**
    * Does this iterator have more data?
@@ -463,12 +461,17 @@ class AHTVectorIterator {
   void BuildVectorProjection(TransposeFn transpose_fn);
 
  private:
-  // The iterator over the aggregation hash table
+  // Memory allocator
   MemoryPool *memory_;
+
+  // The vectorized iterate over the hash table
   GenericHashTableVectorIterator<false> iter_;
+
+  // The vector projection containing aggregate data stored column-wise
   std::unique_ptr<VectorProjection> vector_projection_;
+
+  // An iterator over the produced vector projection
   std::unique_ptr<VectorProjectionIterator> vector_projection_iterator_;
-  const byte **temp_aggregates_vec_;
 };
 
 // ---------------------------------------------------------
@@ -545,8 +548,10 @@ class AHTOverflowPartitionIterator {
  private:
   // The current position in the partitions array
   HashTableEntry **partitions_iter_;
+
   // The ending position in the partitions array
   HashTableEntry **partitions_end_;
+
   // The current overflow entry
   HashTableEntry *curr_;
 };

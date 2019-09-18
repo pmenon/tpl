@@ -53,11 +53,10 @@ static bool AggTupleKeyEq(const void *table_tuple, const void *probe_tuple) {
   return lhs->key == rhs->key;
 }
 
-static void Transpose(const byte **raw_aggregates, const uint64_t size,
+static void Transpose(const HashTableEntry *agg_entries[], const uint64_t size,
                       VectorProjectionIterator *const vpi) {
-  auto **aggs = reinterpret_cast<const AggTuple **>(raw_aggregates);
   for (uint32_t i = 0; i < size; i++, vpi->Advance()) {
-    const auto *agg = aggs[i];
+    const auto *agg = agg_entries[i]->PayloadAs<AggTuple>();
     vpi->SetValue<int64_t, false>(0, agg->key, false);
     vpi->SetValue<int64_t, false>(1, agg->count1, false);
     vpi->SetValue<int64_t, false>(2, agg->count2, false);
