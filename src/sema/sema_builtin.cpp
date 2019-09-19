@@ -36,8 +36,6 @@ bool AreAllFunctions(const ArgTypes... type) {
 
 }  // namespace
 
-void Sema::CheckBuiltinMapCall(UNUSED ast::CallExpr *call) {}
-
 void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
   if (!CheckArgCount(call, 1)) {
     return;
@@ -82,31 +80,6 @@ void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin built
     }
     default: { UNREACHABLE("Impossible SQL conversion call"); }
   }
-}
-
-void Sema::CheckBuiltinFilterCall(ast::CallExpr *call) {
-  if (!CheckArgCount(call, 3)) {
-    return;
-  }
-
-  const auto &args = call->arguments();
-
-  // The first call argument must be a pointer to a VectorProjectionIterator
-  const auto vpi_kind = ast::BuiltinType::VectorProjectionIterator;
-  if (!IsPointerToSpecificBuiltin(args[0]->type(), vpi_kind)) {
-    ReportIncorrectCallArg(call, 0, GetBuiltinType(vpi_kind)->PointerTo());
-    return;
-  }
-
-  // The second call argument must an integer for the column index
-  auto int32_kind = ast::BuiltinType::Int32;
-  if (!args[1]->type()->IsSpecificBuiltin(int32_kind)) {
-    ReportIncorrectCallArg(call, 1, GetBuiltinType(int32_kind));
-    return;
-  }
-
-  // Set return type
-  call->set_type(GetBuiltinType(ast::BuiltinType::Int32));
 }
 
 void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builtin) {
