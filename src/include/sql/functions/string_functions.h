@@ -68,6 +68,9 @@ class StringFunctions {
   static void Trim(ExecutionContext *ctx, StringVal *result, const StringVal &str);
 
   static void Upper(ExecutionContext *ctx, StringVal *result, const StringVal &str);
+
+  static void Like(ExecutionContext *ctx, BoolVal *result, const StringVal &string,
+                   const StringVal &pattern);
 };
 
 }  // namespace tpl::sql

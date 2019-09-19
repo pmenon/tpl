@@ -4,6 +4,7 @@
 #include <bitset>
 
 #include "sql/execution_context.h"
+#include "sql/operations/like_operators.h"
 
 namespace tpl::sql {
 
@@ -364,6 +365,17 @@ void StringFunctions::Right(UNUSED ExecutionContext *ctx, StringVal *result, con
   } else {
     *result = StringVal(str.ptr + len, str.len - len);
   }
+}
+
+void StringFunctions::Like(UNUSED ExecutionContext *ctx, BoolVal *result, const StringVal &string,
+                           const StringVal &pattern) {
+  if (string.is_null || pattern.is_null) {
+    *result = BoolVal::Null();
+    return;
+  }
+
+  result->is_null = false;
+  result->val = Like::Apply(string.ptr, pattern.ptr);
 }
 
 }  // namespace tpl::sql
