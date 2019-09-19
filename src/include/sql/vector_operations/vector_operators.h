@@ -138,6 +138,12 @@ class VectorOps {
    */
   static void SelectNotEqual(const Vector &left, const Vector &right, TupleIdList *tid_list);
 
+  // -------------------------------------------------------
+  //
+  // NULL check operations
+  //
+  // -------------------------------------------------------
+
   /**
    * Check TIDs in the list @em tid_list are NULL in the input vector @em input, storing the result
    * back into @em tid_list.
@@ -153,27 +159,6 @@ class VectorOps {
    * @param[in,out] tid_list The list of TIDs to check, and the output of the check.
    */
   static void IsNotNull(const Vector &input, TupleIdList *tid_list);
-
-  // -------------------------------------------------------
-  //
-  // Boolean checking
-  //
-  // -------------------------------------------------------
-
-  /**
-   * Check if every active element in the boolean input vector @em input is non-null and true.
-   * @param input The vector to check. Must be a boolean vector.
-   * @return True if every element is non-null and true; false otherwise.
-   */
-  static bool AllTrue(const Vector &input);
-
-  /**
-   * Check if there is any active element in the boolean input vector @em input that is both
-   * non-null and true.
-   * @param input The vector to check. Must be a boolean vector.
-   * @return True if every element is non-null and true; false otherwise.
-   */
-  static bool AnyTrue(const Vector &input);
 
   // -------------------------------------------------------
   //

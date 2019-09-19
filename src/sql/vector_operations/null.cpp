@@ -1,6 +1,5 @@
 #include "sql/vector_operations/vector_operators.h"
 
-#include "common/exception.h"
 #include "sql/tuple_id_list.h"
 
 namespace tpl::sql {
