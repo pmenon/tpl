@@ -16,18 +16,63 @@ class VectorProjection;
 class VectorProjectionIterator;
 
 /**
- * Sorters
+ * A Sorter collects tuple data into a buffer and sorts it. Sorters require clients to provide a
+ * sorting function and the size of the entries it will store. This is because it can store and sort
+ * <b>runtime-generated</b> structures, in contrast to, say, STL std::vectors that know their types
+ * at compile-time.
+ *
+ * To insert a tuple, users invoke Sorter::AllocInputTuple() to acquire a chunk of memory where
+ * the tuple's contents can be written into. This memory is guaranteed to contain sufficient memory
+ * to store all of the tuples attributes if the Sorter instance was instantiated with the correct
+ * tuple size.  When the insertions are complete, all tuples can be sorted through Sorter::Sort().
+ *
+ * @code
+ * Sorter sorter(...);
+ * for (...) {
+ *   auto tuple = reinterpret_cast<Tuple *>(sorter.AllocInputTuple());
+ *   tuple->a = ...
+ *   tuple->b = ...
+ *   // More attributes
+ * }
+ * // Now sort
+ * sorter.Sort();
+ *
+ * Sorters also support efficient Top-K. To use the Top-K functionality, users should use pairs of
+ * Sorter::AllocInputTupleTopK() and Sorter::AllocInputTupleTopKFinish() before and after
+ * </b>each</b> insertion, providing the size of K in each invocation. After all insertions
+ * complete, the results of Sorter::Sort() will contain only Top-K elements.
+ *
+ * @code
+ * uint32_t top_k = 20; // only interested in top 20 elements
+ * Sorter sorter(...);
+ * for (...) {
+ *   auto tuple = reinterpret_cast<Tuple *>(sorter.AllocInputTupleTopK(top_k));
+ *   tuple->a = ...
+ *   tuple->b = ...
+ *   // More attributes
+ *   sorter.AllocInputTupleTopKFinish();
+ * }
+ * // Now sort
+ * sorter.Sort();
+ * // Sorter will only contain 20 elements
+ * @endcode
+ *
+ * Sorters also support parallel sort and parallel Top-K. This relies on using thread-local Sorter
+ * instances managed by a tpl::sql::ThreadStatesContainer. Each thread will insert into their
+ * thread-local Sorter, but <b>without calling</b> Sorter::Sort(). When all insertions are complete
+ * across all threads, the primary thread uses Sorter::SortParallel() or Sorter::SortTopKParallel()
+ * for parallel sort and parallel Top-K, respectively.
  */
 class Sorter {
  public:
   /**
-   * The interface of the comparison function used to sort tuples
+   * The comparison function used to sort tuples in a Sorter.
    */
   using ComparisonFunction = int32_t (*)(const void *lhs, const void *rhs);
 
   /**
-   * Construct a sorter using @em memory as the memory allocator, storing tuples
-   * @em tuple_size size in bytes, and using the comparison function @em cmp_fn.
+   * Construct a sorter using @em memory as the memory allocator, storing tuples @em tuple_size
+   * size in bytes, and using the comparison function @em cmp_fn.
    * @param memory The memory pool to allocate memory from
    * @param cmp_fn The sorting comparison function
    * @param tuple_size The sizes of the input tuples in bytes
@@ -35,18 +80,17 @@ class Sorter {
   Sorter(MemoryPool *memory, ComparisonFunction cmp_fn, uint32_t tuple_size);
 
   /**
-   * Destructor
+   * Destructor.
    */
   ~Sorter();
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(Sorter);
 
   /**
-   * Allocate space for an entry in this sorter, returning a pointer with
-   * at least \a tuple_size contiguous bytes
+   * Allocate room for a tuple in this sorter. Return a pointer to a contiguous chunk of memory.
    */
   byte *AllocInputTuple();
 
@@ -100,12 +144,12 @@ class Sorter {
   /**
    * Return the number of tuples currently in this sorter
    */
-  uint64_t NumTuples() const { return tuples_.size(); }
+  uint64_t GetTupleCount() const noexcept { return tuples_.size(); }
 
   /**
    * Has this sorter's contents been sorted?
    */
-  bool is_sorted() const { return sorted_; }
+  bool IsSorted() const noexcept { return sorted_; }
 
  private:
   // Build a max heap from the tuples currently stored in the sorter instance
@@ -122,13 +166,13 @@ class Sorter {
   // Memory pool
   MemoryPool *memory_;
 
-  // Vector of entries
+  // The vector that stores tuple data
   util::ChunkedVector<MemoryPoolAllocator<byte>> tuple_storage_;
 
-  // All tuples this sorter has taken ownership of from thread-local sorters
-  MemPoolVector<util::ChunkedVector<MemoryPoolAllocator<byte>>> owned_tuples_;
+  // All tuples this sorter has taken ownership of from thread-local sorters, if any
+  MemPoolVector<decltype(tuple_storage_)> owned_tuples_;
 
-  // The comparison function
+  // The function used to compare two tuples
   ComparisonFunction cmp_fn_;
 
   // Vector of pointers to each entry. This is the vector that's sorted.
@@ -167,33 +211,35 @@ class SorterIterator {
    * Does this iterator have more data.
    * @return True if the iterator has more data; false otherwise.
    */
-  bool HasNext() const { return iter_ != end_; }
+  bool HasNext() const noexcept { return iter_ != end_; }
 
   /**
-   * Advance the iterator.
+   * Advance the iterator by one tuple.
    */
-  void Next() { ++iter_; }
+  void Next() noexcept { ++iter_; }
 
   /**
    * Determine the number of rows remaining in the iteration.
+   * @return The number of tuples remaining in the iterator.
    */
-  uint32_t NumRemaining() const { return std::distance(iter_, end_); }
+  uint64_t NumRemaining() const noexcept { return std::distance(iter_, end_); }
 
   /**
    * Return a pointer to the current row. It assumed the called has checked the
    * iterator is valid.
    */
-  const byte *GetRow() const {
+  const byte *GetRow() const noexcept {
     TPL_ASSERT(iter_ != end_, "Invalid iterator");
     return *iter_;
   }
 
   /**
-   * Return a pointer to the current row, interpreted as the template type
-   * @em T. It assumed the called has checked the iterator is valid.
+   * Return a pointer to the current row, interpreted as the template type @em T. It assumed the
+   * called has checked the iterator is valid.
+   * @return A pointer to the row the iterator is positioned at.
    */
   template <typename T>
-  const T *GetRowAs() const {
+  const T *GetRowAs() const noexcept {
     return reinterpret_cast<const T *>(GetRow());
   }
 
@@ -252,12 +298,16 @@ class SorterVectorIterator {
  private:
   // The memory pool
   MemoryPool *memory_;
+
   // The current and ending iterator positions, respectively.
   SorterIterator iter_;
+
   // Temporary array storing the sorter rows
   const byte **temp_rows_;
+
   // The vector projections produced by this iterator
   std::unique_ptr<VectorProjection> vector_projection_;
+
   // The iterator over the vector projection
   std::unique_ptr<VectorProjectionIterator> vector_projection_iterator_;
 };

@@ -19,6 +19,7 @@ SorterVectorIterator::SorterVectorIterator(
       vector_projection_iterator_(std::make_unique<VectorProjectionIterator>()) {
   // First, initialize the vector projection
   vector_projection_->Initialize(column_info);
+
   // Now, move the iterator to the next valid position
   Next(transpose_fn);
 }
@@ -38,7 +39,7 @@ bool SorterVectorIterator::HasNext() const {
 
 void SorterVectorIterator::Next(const SorterVectorIterator::TransposeFn transpose_fn) {
   // Pull rows into temporary array
-  uint32_t size = std::min(iter_.NumRemaining(), kDefaultVectorSize);
+  uint32_t size = std::min(iter_.NumRemaining(), static_cast<uint64_t>(kDefaultVectorSize));
   for (uint32_t i = 0; i < size; ++i, ++iter_) {
     temp_rows_[i] = iter_.GetRow();
   }

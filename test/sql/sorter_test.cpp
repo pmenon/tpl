@@ -285,8 +285,8 @@ void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
   uint32_t expected_total_size = std::accumulate(sorter_sizes.begin(), sorter_sizes.end(), 0u,
                                                  [](auto p, auto s) { return p + s; });
 
-  EXPECT_TRUE(main.is_sorted());
-  EXPECT_EQ(expected_total_size, main.NumTuples());
+  EXPECT_TRUE(main.IsSorted());
+  EXPECT_EQ(expected_total_size, main.GetTupleCount());
 
   // Ensure sortedness
   const TestTuple<N> *prev = nullptr;
