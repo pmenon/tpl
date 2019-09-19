@@ -1145,8 +1145,8 @@ void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
   call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
-void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call) {
-  if (!CheckArgCount(call, 1)) {
+void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call, ast::Builtin builtin) {
+  if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
 
@@ -1157,7 +1157,22 @@ void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call) {
     return;
   }
 
-  // This call returns nothing
+  // If it's an insertion for Top-K, the second argument must be an unsigned integer.
+  if (builtin == ast::Builtin::SorterInsertTopK ||
+      builtin == ast::Builtin::SorterInsertTopKFinish) {
+    // Error if the top-k argument isn't an integer
+    ast::Type *uint_type = GetBuiltinType(ast::BuiltinType::Uint32);
+    if (!call->arguments()[1]->type()->IsIntegerType()) {
+      ReportIncorrectCallArg(call, 1, uint_type);
+      return;
+    }
+    if (call->arguments()[1]->type() != uint_type) {
+      call->set_argument(
+          1, ImplCastExprToType(call->arguments()[1], uint_type, ast::CastKind::IntegralCast));
+    }
+  }
+
+  // This call returns a pointer to the allocated tuple
   call->set_type(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
 }
 
@@ -1443,8 +1458,10 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckBuiltinSorterInit(call);
       break;
     }
-    case ast::Builtin::SorterInsert: {
-      CheckBuiltinSorterInsert(call);
+    case ast::Builtin::SorterInsert:
+    case ast::Builtin::SorterInsertTopK:
+    case ast::Builtin::SorterInsertTopKFinish: {
+      CheckBuiltinSorterInsert(call, builtin);
       break;
     }
     case ast::Builtin::SorterSort:

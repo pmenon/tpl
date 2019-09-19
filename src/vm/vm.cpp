@@ -1329,14 +1329,14 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   OP(SorterAllocTupleTopK) : {
     auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
-    auto top_k = frame->LocalAt<uint64_t>(READ_LOCAL_ID());
+    auto top_k = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
     OpSorterAllocTupleTopK(result, sorter, top_k);
     DISPATCH_NEXT();
   }
 
   OP(SorterAllocTupleTopKFinish) : {
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
-    auto top_k = frame->LocalAt<uint64_t>(READ_LOCAL_ID());
+    auto top_k = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
     OpSorterAllocTupleTopKFinish(sorter, top_k);
     DISPATCH_NEXT();
   }

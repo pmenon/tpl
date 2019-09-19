@@ -67,7 +67,7 @@ void TestSortRandomTupleSize(const uint32_t num_iters, const uint32_t max_elems,
 
     // Create a sorter.
     MemoryPool memory(nullptr);
-    sql::Sorter sorter(&memory, cmp_fn, tuple_size);
+    Sorter sorter(&memory, cmp_fn, tuple_size);
 
     // Randomly create and insert elements to both sorter and reference.
     for (uint32_t i = 0; i < num_elems; i++) {
@@ -82,7 +82,7 @@ void TestSortRandomTupleSize(const uint32_t num_iters, const uint32_t max_elems,
     sorter.Sort();
 
     // Check that the elements are in the same order.
-    sql::SorterIterator iter(sorter);
+    SorterIterator iter(sorter);
     for (uint32_t i = 0; i < num_elems; i++) {
       EXPECT_EQ(*reinterpret_cast<const IntType *>(*iter), reference[i]);
       ++iter;
@@ -116,15 +116,15 @@ void TestTopKRandomTupleSize(const uint32_t num_iters, const uint32_t max_elems,
     // For a random number of top k.
     const auto top_k = std::uniform_int_distribution<uint32_t>(1, num_elems)(*generator);
 
-    // Create a reference top-K min-heap. This contains our real data, and
-    // sorter should match it at the end.
+    // Create a reference top-K min-heap. This contains our real data, and the sorter should match
+    // it at the end.
     std::priority_queue<IntType, std::vector<IntType>, std::greater<>> reference;
 
-    // Create a sorter.
+    // Create a sorter
     MemoryPool memory(nullptr);
-    sql::Sorter sorter(&memory, cmp_fn, tuple_size);
+    Sorter sorter(&memory, cmp_fn, tuple_size);
 
-    // Randomly create and insert elements to both sorter and reference.
+    // Randomly create and insert elements to both sorter and reference
     for (uint32_t i = 0; i < num_elems; i++) {
       const auto rand_data = rng(*generator);
       reference.push(rand_data);
@@ -134,9 +134,12 @@ void TestTopKRandomTupleSize(const uint32_t num_iters, const uint32_t max_elems,
       sorter.AllocInputTupleTopKFinish(top_k);
     }
 
-    // Check that only the top k elements are left.
-    sorter.Sort();  // Sort because the reference is sorted.
-    sql::SorterIterator iter(sorter);
+    // Sort and check size
+    sorter.Sort();
+    EXPECT_EQ(top_k, sorter.GetTupleCount());
+
+    // Verify order
+    SorterIterator iter(sorter);
     for (uint32_t i = 0; i < top_k; i++) {
       const auto ref_elem = reference.top();
       reference.pop();
@@ -187,7 +190,7 @@ TEST_F(SorterTest, DISABLED_PerfSortTest) {
   std::vector<data, MemoryPoolAllocator<data>> vec{MemoryPoolAllocator<data>(&memory)};
   util::ChunkedVectorT<data, MemoryPoolAllocator<data>> chunk_vec{
       MemoryPoolAllocator<data>(&memory)};
-  sql::Sorter sorter(&memory, sorter_cmp_fn, sizeof(data));
+  Sorter sorter(&memory, sorter_cmp_fn, sizeof(data));
   std::cout << "Sizeof(data) is " << (sizeof(data)) << std::endl;
 
   // Fill up the regular vector. This is our reference.
