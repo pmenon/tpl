@@ -582,21 +582,21 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
                                                        llvm::IRBuilder<> *ir_builder) {
   llvm::LLVMContext &ctx = ir_builder->getContext();
   llvm::Function *func = llvm_module_->getFunction(func_info.name());
-  llvm::BasicBlock *entry = llvm::BasicBlock::Create(ctx, "EntryBB", func);
+  llvm::BasicBlock *entry_bb = llvm::BasicBlock::Create(ctx, "EntryBB", func);
 
   // First, construct a simple CFG for the function. The CFG contains entries for the start of every
   // basic block in the function, and the bytecode position of the first instruction in the block.
   // The CFG is ordered by bytecode position in ascending order.
 
-  std::map<std::size_t, llvm::BasicBlock *> blocks = {{0, entry}};
+  std::map<std::size_t, llvm::BasicBlock *> blocks = {{0, entry_bb}};
   BuildSimpleCFG(func_info, blocks);
 
   {
-    uint32_t i = 1;
+    uint32_t block_num = 1;
     for (auto &[_, block] : blocks) {
       (void)_;
       if (block == nullptr) {
-        block = llvm::BasicBlock::Create(ctx, "BB" + std::to_string(i++), func);
+        block = llvm::BasicBlock::Create(ctx, "BB" + std::to_string(block_num++), func);
       }
     }
   }
@@ -616,7 +616,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
   // (either conditional or not depending on context) into the new block, and the IR builder
   // position shifts to the new block.
 
-  ir_builder->SetInsertPoint(entry);
+  ir_builder->SetInsertPoint(entry_bb);
 
   FunctionLocalsMap locals_map(func_info, func, type_map_.get(), ir_builder);
 
