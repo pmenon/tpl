@@ -10,15 +10,13 @@
 namespace tpl::sql {
 
 /**
- * A SIMD-optimized blocked bloom filter. The filter is composed of a contiguous
- * set of partitions, known as blocks. A block is 64-bytes, and thus, fits
- * within a cache line (in most systems). A block is further partitioned into
- * eight 32-bit chunks.
+ * A SIMD-optimized blocked bloom filter. The filter is composed of a contiguous set of partitions,
+ * known as blocks. A block is 64-bytes, and thus, fits within a cache line (in most systems). A
+ * block is further partitioned into eight 32-bit chunks.
  *
- * Elements are inserted into the filter by selecting a block using bits from
- * the incoming hash value, computing eight derivative hash values from the
- * input hash, and setting a bit in each of the eight sub-partitions of the
- * block. This process is enhanced using SIMD instructions.
+ * Elements are inserted into the filter by selecting a block using bits from the incoming hash
+ * value, computing eight derivative hash values from the input hash, and setting a bit in each of
+ * the eight sub-partitions of the block. This process is enhanced using SIMD instructions.
  */
 class BloomFilter {
   // The set of salt values we use to produce alternative hash values
@@ -34,8 +32,8 @@ class BloomFilter {
 
  public:
   /**
-   * Create an uninitialized bloom filter. The bloom filter cannot be used
-   * until a call to @em Init() is made.
+   * Create an uninitialized bloom filter. The bloom filter cannot be used until a call to
+   * BloomFilter::Init() is made.
    */
   BloomFilter() noexcept;
 

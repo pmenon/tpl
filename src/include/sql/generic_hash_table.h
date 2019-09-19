@@ -12,17 +12,15 @@
 namespace tpl::sql {
 
 /**
- * GenericHashTable serves as a dead-simple hash table for joins and
- * aggregations in TPL. It is a generic bytes-to-bytes hash table implemented
- * as a bucket-chained table with pointer tagging. Pointer tagging uses the
- * first @em GenericHashTable::kNumTagBits bits of the entry pointers in the
- * main bucket directory as a bloom filter. It optionally supports concurrent
- * inserts (and trivially concurrent probes). This class only stores pointers
- * into externally managed storage, it does not store any hash table data
- * internally at all.
+ * GenericHashTable serves as a dead-simple hash table for joins and aggregations in TPL. It is a
+ * generic bytes-to-bytes hash table implemented as a bucket-chained table with pointer tagging.
+ * Pointer tagging uses the first @em GenericHashTable::kNumTagBits bits of the entry pointers in
+ * the main bucket directory as a bloom filter. It optionally supports concurrent inserts (and
+ * trivially concurrent probes). This class only stores pointers into externally managed storage,
+ * it does not store any hash table data internally at all.
  *
- * Note that this class makes use of the @em HashTableEntry::next pointer to
- * implement the linked list bucket chain.
+ * Note that this class makes use of the @em HashTableEntry::next pointer to implement the linked
+ * list bucket chain.
  */
 class GenericHashTable {
  private:
@@ -33,8 +31,7 @@ class GenericHashTable {
 
  public:
   /**
-   * Constructor does not allocate memory. Callers must first call SetSize()
-   * before using this hash map.
+   * Create an empty hash table. Callers must first call SetSize() before using this hash table.
    * @param load_factor The desired load-factor for the table
    */
   explicit GenericHashTable(float load_factor = 0.7) noexcept;
@@ -50,8 +47,7 @@ class GenericHashTable {
   DISALLOW_COPY_AND_MOVE(GenericHashTable);
 
   /**
-   * Insert an entry into the hash table, ignoring tagging the pointer into the
-   * bucket head
+   * Insert an entry into the hash table, ignoring tagging the pointer into the bucket head.
    * @tparam Concurrent Is the insert occurring concurrently with other inserts
    * @param new_entry The entry to insert
    * @param hash The hash value of the entry
@@ -69,14 +65,14 @@ class GenericHashTable {
   void InsertTagged(HashTableEntry *new_entry, hash_t hash);
 
   /**
-   * Explicitly set the size of the hash table to support at least @em new_size
-   * elements with good performance.
+   * Explicitly set the size of the hash table to support at least @em new_size elements with good
+   * performance.
    * @param new_size The expected number of elements to size the table for
    */
   void SetSize(uint64_t new_size);
 
   /**
-   * Prefetch the head of the bucket chain for the hash \a hash
+   * Prefetch the head of the bucket chain for the hash @em hash.
    * @tparam ForRead Whether the prefetch is intended for a subsequent read op
    * @param hash The hash value of the element to prefetch
    */
@@ -84,24 +80,24 @@ class GenericHashTable {
   void PrefetchChainHead(hash_t hash) const;
 
   /**
-   * Given a hash value, return the head of the bucket chain ignoring any tag.
-   * This probe is performed assuming no concurrent access into the table.
+   * Given a hash value, return the head of the bucket chain ignoring any tag. This probe is
+   * performed assuming no concurrent access into the table.
    * @param hash The hash value of the element to find
    * @return The (potentially null) head of the bucket chain for the given hash
    */
   HashTableEntry *FindChainHead(hash_t hash) const;
 
   /**
-   * Given a hash value, return the head of the bucket chain removing the tag.
-   * This probe is performed assuming no concurrent access into the table.
+   * Given a hash value, return the head of the bucket chain removing the tag. This probe is
+   * performed assuming no concurrent access into the table.
    * @param hash The hash value of the element to find
    * @return The (potentially null) head of the bucket chain for the given hash
    */
   HashTableEntry *FindChainHeadWithTag(hash_t hash) const;
 
   /**
-   * Empty all entries in this hash table into the sink functor. After this
-   * function exits, the hash table is empty.
+   * Empty all entries in this hash table into the sink functor. After this function exits, the hash
+   * table is empty.
    * @tparam F The function must be of the form void(*)(HashTableEntry*)
    * @param sink The sink of all entries in the hash table
    */
@@ -125,10 +121,9 @@ class GenericHashTable {
   uint64_t capacity() const { return capacity_; }
 
   /**
-   * The configured load factor for the table's directory. Note that this isn't
-   * the load factor value is normally thought of: # elems / # slots. Since
-   * this is a bucket-chained table, load factors can exceed 1.0 if chains are
-   * long.
+   * The configured load factor for the table's directory. Note that this isn't the load factor
+   * value is normally thought of: # elems / # slots. Since this is a bucket-chained table, load
+   * factors can exceed 1.0 if chains are long.
    */
   float load_factor() const { return load_factor_; }
 
@@ -142,8 +137,8 @@ class GenericHashTable {
   // Tag-related operations
   // -------------------------------------------------------
 
-  // Given a tagged HashTableEntry pointer, strip out the tag bits and return an
-  // untagged HashTableEntry pointer
+  // Given a tagged HashTableEntry pointer, strip out the tag bits and return an untagged
+  // HashTableEntry pointer
   static HashTableEntry *UntagPointer(const HashTableEntry *const entry) {
     auto ptr = reinterpret_cast<uintptr_t>(entry);
     return reinterpret_cast<HashTableEntry *>(ptr & kMaskPointer);
@@ -276,9 +271,9 @@ inline void GenericHashTable::FlushEntries(const F &sink) {
 // ---------------------------------------------------------
 
 /**
- * An iterator over the entries in a generic hash table. It's assumed that the
- * underlying hash table is not modified during iteration. This is mostly true
- * for SQL processing where the hash tables are WORM structures.
+ * An iterator over the entries in a generic hash table. It's assumed that the underlying hash table
+ * is not modified during iteration. This is mostly true for SQL processing where the hash tables
+ * are WORM structures.
  * @tparam UseTag Should the iterator use tagged reads?
  */
 template <bool UseTag>
@@ -344,9 +339,9 @@ class GenericHashTableIterator {
 // ---------------------------------------------------------
 
 /**
- * An iterator over a generic hash table that works vector-at-a-time. It's
- * assumed that the underlying hash table is not modified during iteration. This
- * is mostly true for SQL processing where the hash tables are WORM structures.
+ * An iterator over a generic hash table that works vector-at-a-time. It's assumed that the
+ * underlying hash table is not modified during iteration. This is mostly true for SQL processing
+ * where the hash tables are WORM structures.
  * @tparam UseTag Should the iterator use tagged reads?
  */
 // TODO(pmenon): Fix my performance
@@ -385,12 +380,15 @@ class GenericHashTableVectorIterator {
  private:
   // Pool to use for memory allocations
   MemoryPool *memory_;
+
   // The hash table we're iterating over
   const GenericHashTable &table_;
+
   // The index into the hash table's entries directory to read from next
   uint64_t table_dir_index_;
-  // The temporary cache of valid entries, and indexes into the entry cache
-  // pointing to the current and last valid entry.
+
+  // The temporary cache of valid entries, and indexes into the entry cache pointing to the current
+  // and last valid entry.
   const HashTableEntry **entry_vec_;
   uint16_t entry_vec_end_idx_;
 };

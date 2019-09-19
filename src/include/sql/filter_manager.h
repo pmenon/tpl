@@ -13,21 +13,19 @@ namespace tpl::sql {
 class VectorProjectionIterator;
 
 /**
- * An adaptive filter manager that tries to discover the optimal filter
- * configuration.
+ * An adaptive filter manager that tries to discover the optimal filter configuration.
  */
 class FilterManager {
  public:
   /**
-   * A generic filtering function over an input vector projection. Returns the
-   * number of tuples that pass the filter.
+   * A generic filtering function over an input vector projection. Returns the number of tuples that
+   * pass the filter.
    */
   using MatchFn = uint32_t (*)(VectorProjectionIterator *);
 
   /**
-   * A clause in a multi-clause filter. Clauses come in multiple flavors.
-   * Flavors are logically equivalent, but may differ in implementation, and
-   * thus, exhibit different runtimes.
+   * A clause in a multi-clause filter. Clauses come in multiple flavors. Flavors are logically
+   * equivalent, but may differ in implementation, and thus, exhibit different runtimes.
    */
   struct Clause {
     std::vector<MatchFn> flavors;
@@ -73,8 +71,8 @@ class FilterManager {
   void RunFilters(VectorProjectionIterator *vpi);
 
   /**
-   * Return the index of the current optimal implementation flavor for the
-   * clause at index @em clause_index
+   * Return the index of the current optimal implementation flavor for the clause at index
+   * @em clause_index
    * @param clause_index The index of the clause
    * @return The index of the optimal flavor
    */

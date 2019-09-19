@@ -51,26 +51,26 @@ class ConciseHashTable {
   DISALLOW_COPY_AND_MOVE(ConciseHashTable)
 
   /**
-   * Set the size of the hash table to support at least @em num_elems entries.
-   * The table will optimize itself in expectation of seeing at most @em
-   * num_elems elements without resizing.
+   * Set the size of the hash table to support at least @em num_elems entries. The table will
+   * optimize itself in expectation of seeing at most @em num_elems elements without resizing.
    * @param num_elems The expected number of elements
    */
   void SetSize(uint32_t num_elems);
 
   /**
-   * Insert an element with the given hash into the table and return an encoded
-   * slot position. Note: while this function takes both the entry and hash
-   * value, the hash value inside the entry should match what's provided here.
+   * Insert an element with the given hash into the table and return an encoded lot position.
+   * Note: while this function takes both the entry and hash value, the hash value inside the entry
+   * should match what's provided here.
+   *
    * TODO(pmenon): Accept only the entry and use the hash value in the entry
+   *
    * @param entry The entry to insert
    * @param hash The hash value of the entry to insert
    */
   void Insert(HashTableEntry *entry, hash_t hash);
 
   /**
-   * Finalize and build this concise hash table. After finalization, no
-   * insertions should be performed.
+   * Finalize and build this concise hash table. The table is frozen after finalization.
    */
   void Build();
 
@@ -120,11 +120,10 @@ class ConciseHashTable {
 
  private:
   /**
-   * A slot group represents a group of 64 slots. Each slot is represented as a
-   * single bit from the \a bits field. \a count is a count of the number of
-   * set bits in all slot groups in the group array up to and including this
-   * group. In other worse, \a count is a prefix count of the number of filled
-   * slots up to this group.
+   * A slot group represents a group of 64 slots. Each slot is represented as a single bit from the
+   * @em bits field. @em count is a count of the number of set bits in all slot groups in the group
+   * array up to and including this group. In other worse, @em count is a prefix count of the number
+   * of filled slots up to this group.
    */
   struct SlotGroup {
     // The bitmap indicating whether the slots are occupied or free
