@@ -41,6 +41,36 @@ class TupleIdList {
   using BitVectorType = util::BitVector<uint64_t>;
 
   /**
+   * An iterator over the TIDs in a Tuple ID list.
+   */
+  class ConstIterator {
+   public:
+    uint32_t operator*() const noexcept { return curr_; }
+
+    ConstIterator &operator++() {
+      curr_ = bv_.FindNext(curr_);
+      return *this;
+    }
+
+    bool operator==(const ConstIterator &that) const noexcept {
+      return &bv_ == &that.bv_ && curr_ == that.curr_;
+    }
+
+    bool operator!=(const ConstIterator &that) const noexcept { return !(*this == that); }
+
+   private:
+    friend class TupleIdList;
+
+    ConstIterator(const BitVectorType &bv, uint32_t position) : bv_(bv), curr_(position) {}
+
+    explicit ConstIterator(const BitVectorType &bv) : ConstIterator(bv, bv.FindFirst()) {}
+
+   private:
+    const BitVectorType &bv_;
+    uint32_t curr_;
+  };
+
+  /**
    * Construct a TID list with the given maximum size.
    * @param size The maximum size of the list.
    */
@@ -221,6 +251,9 @@ class TupleIdList {
     TPL_ASSERT(i < GetTupleCount(), "Out-of-bounds list access");
     return bit_vector_.NthOne(i);
   }
+
+  ConstIterator begin() { return ConstIterator(bit_vector_); }
+  ConstIterator end() { return ConstIterator(bit_vector_, BitVectorType::kInvalidPos); }
 
  private:
   // The validity bit vector
