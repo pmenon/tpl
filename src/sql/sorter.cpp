@@ -41,18 +41,14 @@ void Sorter::AllocInputTupleTopKFinish(const uint64_t top_k) {
     return;
   }
 
-  // If the number of buffered tuples matches tok_k, let's build the heap. Note,
-  // this will only ever be done once!
+  // If we've buffered k elements, build the heap. Note: this is only ever triggered once!
   if (tuples_.size() == top_k) {
     BuildHeap();
     return;
   }
 
-  //
-  // We've buffered one more tuple than should be in the top-K, so we may need
-  // to reorder the heap. Check if the most recently inserted tuple belongs in
-  // the heap.
-  //
+  // We've buffered ONE more tuple than should be in the top-k, so we may need to reorder the heap.
+  // Check if the most recently inserted tuple belongs in the heap.
 
   const byte *last_insert = tuples_.back();
   tuples_.pop_back();
@@ -60,8 +56,7 @@ void Sorter::AllocInputTupleTopKFinish(const uint64_t top_k) {
   const byte *heap_top = tuples_.front();
 
   if (cmp_fn_(last_insert, heap_top) <= 0) {
-    // The last inserted tuples belongs in the top-k. Swap it with the current
-    // maximum and sift it down.
+    // The last insertion belongs in the top-k. Swap it with the current maximum and sift it down.
     tuples_.front() = last_insert;
     HeapSiftDown();
   }
