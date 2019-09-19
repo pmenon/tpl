@@ -36,6 +36,7 @@ class VectorProjectionIterator;
  * }
  * // Now sort
  * sorter.Sort();
+ * @endcode
  *
  * Sorters also support efficient Top-K. To use the Top-K functionality, users should use pairs of
  * Sorter::AllocInputTupleTopK() and Sorter::AllocInputTupleTopKFinish() before and after
