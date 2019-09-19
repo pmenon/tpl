@@ -446,15 +446,27 @@ class Bytecodes {
     return bytecode;
   }
 
-  static constexpr bool IsJump(Bytecode bytecode) {
-    return (bytecode == Bytecode::Jump || bytecode == Bytecode::JumpIfFalse ||
-            bytecode == Bytecode::JumpIfTrue);
+  // Is the bytecode an unconditional jump?
+  static constexpr bool IsUnconditionalJump(Bytecode bytecode) {
+    return bytecode == Bytecode::Jump;
   }
 
-  static constexpr bool IsCall(Bytecode bytecode) { return bytecode == Bytecode::Call; }
+  // Is the bytecode a conditional jump?
+  static constexpr bool IsConditionalJump(Bytecode bytecode) {
+    return bytecode == Bytecode::JumpIfFalse || bytecode == Bytecode::JumpIfTrue;
+  }
 
+  // Is the bytecode ANY type of jump?
+  static constexpr bool IsJump(Bytecode bytecode) {
+    return IsConditionalJump(bytecode) || IsUnconditionalJump(bytecode);
+  }
+
+  // Is the bytecode a return instruction?
+  static constexpr bool IsReturn(Bytecode bytecode) { return bytecode == Bytecode::Return; }
+
+  // Is the bytecode a terminal instruction, i.e., one that appears at the end of a block
   static constexpr bool IsTerminal(Bytecode bytecode) {
-    return bytecode == Bytecode::Jump || bytecode == Bytecode::Return;
+    return IsJump(bytecode) || IsReturn(bytecode);
   }
 
  private:

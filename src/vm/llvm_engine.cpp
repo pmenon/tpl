@@ -513,13 +513,10 @@ llvm::Function *LLVMEngine::CompiledModuleBuilder::LookupBytecodeHandler(Bytecod
 
 void LLVMEngine::CompiledModuleBuilder::BuildSimpleCFG(
     const FunctionInfo &func_info, std::map<std::size_t, llvm::BasicBlock *> &blocks) {
-  //
-  // Before we can generate LLVM IR, we need to build a control-flow graph (CFG)
-  // for the function. We do this construction directly from the TPL bytecode
-  // using a vanilla DFS and produce an ordered map ('blocks') from bytecode
-  // position to an LLVM basic block. Each entry in the map indicates the start
-  // of a basic block.
-  //
+  // Before we can generate LLVM IR, we need to build a control-flow graph (CFG) for the function.
+  // We do this construction directly from the TPL bytecode using a vanilla DFS and produce an
+  // ordered map ('blocks') from bytecode position to an LLVM basic block. Each entry in the map
+  // indicates the start of a basic block.
 
   // We use this vector as a stack for DFS traversal
   llvm::SmallVector<std::size_t, 16> bb_begin_positions = {0};
@@ -528,27 +525,37 @@ void LLVMEngine::CompiledModuleBuilder::BuildSimpleCFG(
     std::size_t begin_pos = bb_begin_positions.back();
     bb_begin_positions.pop_back();
 
+    // We're at what we think is the start of a new basic block. Scan it until we find a terminal
+    // instruction. Once we do,
     for (iter.SetPosition(begin_pos); !iter.Done(); iter.Advance()) {
       Bytecode bytecode = iter.CurrentBytecode();
 
-      if (Bytecodes::IsTerminal(bytecode)) {
-        if (Bytecodes::IsJump(bytecode)) {
-          // Unconditional Jump
-          std::size_t branch_target_pos = iter.GetPosition() +
-                                          Bytecodes::GetNthOperandOffset(bytecode, 0) +
-                                          iter.GetJumpOffsetOperand(0);
+      // If the bytecode isn't a terminal for the block, continue until we reach one
+      if (!Bytecodes::IsTerminal(bytecode)) {
+        continue;
+      }
 
-          if (blocks.find(branch_target_pos) == blocks.end()) {
-            blocks[branch_target_pos] = nullptr;
-            bb_begin_positions.push_back(branch_target_pos);
-          }
+      // Return?
+      if (Bytecodes::IsReturn(bytecode)) {
+        break;
+      }
+
+      // Unconditional branch?
+      if (Bytecodes::IsUnconditionalJump(bytecode)) {
+        std::size_t branch_target_pos = iter.GetPosition() +
+                                        Bytecodes::GetNthOperandOffset(bytecode, 0) +
+                                        iter.GetJumpOffsetOperand(0);
+
+        if (blocks.find(branch_target_pos) == blocks.end()) {
+          blocks[branch_target_pos] = nullptr;
+          bb_begin_positions.push_back(branch_target_pos);
         }
 
         break;
       }
 
-      if (Bytecodes::IsJump(bytecode)) {
-        // Conditional Jump
+      // Conditional branch?
+      if (Bytecodes::IsConditionalJump(bytecode)) {
         std::size_t fallthrough_pos = iter.GetPosition() + iter.CurrentBytecodeSize();
 
         if (blocks.find(fallthrough_pos) == blocks.end()) {
@@ -577,12 +584,9 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
   llvm::Function *func = llvm_module_->getFunction(func_info.name());
   llvm::BasicBlock *entry = llvm::BasicBlock::Create(ctx, "EntryBB", func);
 
-  //
-  // First, construct a simple CFG for the function. The CFG contains entries
-  // for the start of every basic block in the function, and the bytecode
-  // position of the first instruction in the block. The CFG is ordered by
-  // bytecode position in ascending order.
-  //
+  // First, construct a simple CFG for the function. The CFG contains entries for the start of every
+  // basic block in the function, and the bytecode position of the first instruction in the block.
+  // The CFG is ordered by bytecode position in ascending order.
 
   std::map<std::size_t, llvm::BasicBlock *> blocks = {{0, entry}};
   BuildSimpleCFG(func_info, blocks);
@@ -604,17 +608,13 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
   }
 #endif
 
-  //
-  // We can define the function now. LLVM IR generation happens by iterating
-  // over the function's bytecode simultaneously with the ordered list of basic
-  // block start positions ('blocks'). Each TPL bytecode is converted to a
-  // function call into a pre-compiled TPL bytecode handler. However, many of
-  // these calls will get inlined away during optimization. If the current
-  // bytecode position matches the position of a new basic block, a branch
-  // instruction is generated automatically (either conditional or not depending
-  // on context) into the new block, and the IR builder position shifts to the
-  // new block.
-  //
+  // We can define the function now. LLVM IR generation happens by iterating over the function's
+  // bytecode simultaneously with the ordered list of basic block start positions ('blocks'). Each
+  // TPL bytecode is converted to a function call into a pre-compiled TPL bytecode handler. However,
+  // many of these calls will get inlined away during optimization. If the current bytecode position
+  // matches the position of a new basic block, a branch instruction is generated automatically
+  // (either conditional or not depending on context) into the new block, and the IR builder
+  // position shifts to the new block.
 
   ir_builder->SetInsertPoint(entry);
 
@@ -715,16 +715,12 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
     // Handle bytecode
     switch (bytecode) {
       case Bytecode::Call: {
+        // For internal calls, the callee's function ID will be the first operand. We pull it out
+        // and lookup the function in the module and remove it from the arguments vector.
         //
-        // For internal calls, the callee function's ID will be the first
-        // operand. We pull it out and lookup the function in the module, in
-        // addition to popping it off the arguments vector.
-        //
-        // If the function has a direct return, the second operand will be the
-        // value to store the result of the invocation into. We pop it off the
-        // argument vector, issue the call, then store the result. The remaining
-        // elements are legitimate arguments to the function.
-        //
+        // If the function has a direct return, the second operand will be the value to store the
+        // result of the invocation into. We pop it off the argument vector, issue the call, then
+        // store the result. The remaining elements are legitimate arguments to the function.
 
         const FunctionId callee_id = iter.GetFunctionIdOperand(0);
         const auto *callee_func_info = tpl_module_.GetFuncInfoById(callee_id);
@@ -744,13 +740,10 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
       }
 
       case Bytecode::Jump: {
-        //
-        // Unconditional jumps work as follows: we read the relative target
-        // bytecode position from the iterator, calculate the absolute bytecode
-        // position, and create an unconditional branch to the basic block that
-        // starts at the given bytecode position, using the information in the
-        // CFG.
-        //
+        // Unconditional jumps work as follows: we read the relative target bytecode position from
+        // the iterator, calculate the absolute bytecode position, and create an unconditional
+        // branch to the basic block that starts at the given bytecode position, using the
+        // information in the CFG.
 
         std::size_t branch_target_bb_pos = iter.GetPosition() +
                                            Bytecodes::GetNthOperandOffset(bytecode, 0) +
@@ -763,10 +756,8 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
 
       case Bytecode::JumpIfFalse:
       case Bytecode::JumpIfTrue: {
-        //
-        // Conditional jumps work almost exactly as unconditional jump except
-        // a second fallthrough position is calculated.
-        //
+        // Conditional jumps work almost exactly as unconditional jump except a second fallthrough
+        // position is calculated.
 
         std::size_t fallthrough_bb_pos = iter.GetPosition() + iter.CurrentBytecodeSize();
         std::size_t branch_target_bb_pos = iter.GetPosition() +
@@ -855,26 +846,21 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
       }
 
       default: {
-        //
-        // In the default case, each bytecode makes a function call into its
-        // bytecode handler function.
-        //
-
+        // In the default case, each bytecode makes a function call into its bytecode handler
         llvm::Function *handler = LookupBytecodeHandler(bytecode);
         issue_call(handler, args);
         break;
       }
     }
 
-    //
-    // If the next bytecode marks the start of a new basic block, we need to
-    // switch insertion points to it before continuing IR generation
-    //
+    // If the next bytecode marks the start of a new basic block (based on the CFG), we need to
+    // switch insertion points to it before continuing IR generation. But, it could be the case that
+    // we're starting a new block
 
     auto next_bytecode_pos = iter.GetPosition() + iter.CurrentBytecodeSize();
 
     if (auto blocks_iter = blocks.find(next_bytecode_pos); blocks_iter != blocks.end()) {
-      if (!Bytecodes::IsJump(bytecode) && !Bytecodes::IsTerminal(bytecode)) {
+      if (!Bytecodes::IsTerminal(bytecode)) {
         ir_builder->CreateBr(blocks_iter->second);
       }
       ir_builder->SetInsertPoint(blocks_iter->second);
