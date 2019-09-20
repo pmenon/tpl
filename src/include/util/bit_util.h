@@ -84,6 +84,15 @@ class BitUtil {
   }
 
   /**
+   * Set the bit at index @em idx to 0 in the bit vector @em bits
+   * @param bits The bit vector
+   * @param idx The index of the bit to set to 0
+   */
+  static constexpr void Unset(uint32_t bits[], const uint32_t idx) {
+    bits[idx / kBitWordSize] &= ~(1u << (idx % kBitWordSize));
+  }
+
+  /**
    * Flip the value of the bit at index @em idx in the bit vector
    * @param bits The bit vector
    * @param idx The index of the bit to flip

@@ -90,6 +90,12 @@ include_directories(SYSTEM "${THIRD_PARTY_DIR}/spdlog/include")
 include_directories(SYSTEM "${THIRD_PARTY_DIR}/xbyak")
 
 ############################################################
+# CSV Parser
+############################################################
+
+include_directories(SYSTEM "${THIRD_PARTY_DIR}/csv-parser")
+
+############################################################
 # Google Test
 ############################################################
 

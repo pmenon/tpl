@@ -21,6 +21,7 @@
 #include "sema/sema.h"
 #include "sql/catalog.h"
 #include "sql/execution_context.h"
+#include "sql/tablegen/table_generator.h"
 #include "tpl.h"  // NOLINT
 #include "util/timer.h"
 #include "vm/bytecode_generator.h"
@@ -39,6 +40,7 @@ llvm::cl::opt<std::string> kInputFile(llvm::cl::Positional, llvm::cl::desc("<inp
 llvm::cl::opt<bool> kPrintAst("print-ast", llvm::cl::desc("Print the programs AST"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kPrintTbc("print-tbc", llvm::cl::desc("Print the generated TPL Bytecode"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kIsSQL("sql", llvm::cl::desc("Is the input a SQL query?"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
+llvm::cl::opt<std::string> kTPCH("tpch", llvm::cl::desc("Where to find the TPCH schema files and data files to load"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 // clang-format on
 
 tbb::task_scheduler_init scheduler;
@@ -247,13 +249,22 @@ static void RunFile(const std::string &filename) {
 
 /// Initialize all TPL subsystems
 void InitTPL() {
-  tpl::logging::InitLogger();
+  // Logging infra
+  logging::InitLogger();
 
-  tpl::CpuInfo::Instance();
+  // CPU info
+  CpuInfo::Instance();
 
-  tpl::sql::Catalog::Instance();
+  // LLVM initialization
+  vm::LLVMEngine::Initialize();
 
-  tpl::vm::LLVMEngine::Initialize();
+  // Catalog init
+  sql::Catalog *catalog = tpl::sql::Catalog::Instance();
+
+  // If TPCH is required, load it now
+  if (!kTPCH.empty()) {
+    sql::tablegen::TableGenerator::GenerateTPCHTables(catalog, kTPCH);
+  }
 
   LOG_INFO("TPL Bytecode Count: {}", tpl::vm::Bytecodes::NumBytecodes());
 

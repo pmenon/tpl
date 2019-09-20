@@ -176,7 +176,7 @@ bool TableVectorIterator::ParallelScan(const uint16_t table_id, void *const quer
                                        const TableVectorIterator::ScanFn scan_fn,
                                        const uint32_t min_grain_size) {
   // Lookup table
-  const Table *table = Catalog::Instance()->LookupTableById(TableId(table_id));
+  const Table *table = Catalog::Instance()->LookupTableById(table_id);
   if (table == nullptr) {
     return false;
   }

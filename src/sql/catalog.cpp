@@ -46,12 +46,12 @@ struct ColumnInsertMeta {
  * rows in the table.
  */
 struct TableInsertMeta {
-  TableId id;
+  uint16_t id;
   const char *name;
   uint32_t num_rows;
   std::vector<ColumnInsertMeta> col_meta;
 
-  TableInsertMeta(TableId id, const char *name, uint32_t num_rows,
+  TableInsertMeta(uint16_t id, const char *name, uint32_t num_rows,
                   std::vector<ColumnInsertMeta> col_meta)
       : id(id), name(name), num_rows(num_rows), col_meta(std::move(col_meta)) {}
 };
@@ -65,11 +65,11 @@ struct TableInsertMeta {
 // clang-format off
 TableInsertMeta insert_meta[] = {
     // The empty table
-    {TableId::EmptyTable, "empty_table", 0,
+    {static_cast<uint16_t>(TableId::EmptyTable), "empty_table", 0,
      {{"colA", sql::IntegerType::Instance(false), Dist::Serial, int64_t{0}, int64_t{0}}}},
 
     // Table 1
-    {TableId::Test1, "test_1", 2000000,
+    {static_cast<uint16_t>(TableId::Test1), "test_1", 2000000,
      {{"colA", sql::IntegerType::Instance(false), Dist::Serial, int64_t{0}, int64_t{0}},
       {"colB", sql::IntegerType::Instance(false), Dist::Uniform, int64_t{0}, int64_t{9}},
       {"colC", sql::IntegerType::Instance(false), Dist::Uniform, int64_t{0}, int64_t{9999}},
@@ -207,7 +207,7 @@ void InitTable(const TableInsertMeta &table_meta, Table *table) {
 /*
  * Create a catalog, setting up all tables.
  */
-Catalog::Catalog() {
+Catalog::Catalog(): next_table_id_(static_cast<uint16_t>(TableId::Last)) {
   LOG_INFO("Initializing catalog");
 
   // Insert tables into catalog
@@ -222,6 +222,7 @@ Catalog::Catalog() {
     // Insert into catalog
     table_catalog_[meta.id] = std::make_unique<Table>(static_cast<uint16_t>(meta.id),
                                                       std::make_unique<Schema>(std::move(cols)));
+    table_name_to_id_map_[meta.name] = meta.id;
   }
 
   // Populate all tables
@@ -243,27 +244,23 @@ Catalog *Catalog::Instance() {
 }
 
 Table *Catalog::LookupTableByName(const std::string &name) const {
-  static std::unordered_map<std::string, TableId> kTableNameMap = {
-#define ENTRY(Name, Str, ...) {Str, TableId::Name},
-      TABLES(ENTRY)
-#undef ENTRY
-  };
-
-  auto iter = kTableNameMap.find(name);
-  if (iter == kTableNameMap.end()) {
-    return nullptr;
-  }
-
-  return LookupTableById(iter->second);
+  auto iter = table_name_to_id_map_.find(name);
+  return iter == table_name_to_id_map_.end() ? nullptr : LookupTableById(iter->second);
 }
 
 Table *Catalog::LookupTableByName(const ast::Identifier name) const {
   return LookupTableByName(name.data());
 }
 
-Table *Catalog::LookupTableById(TableId table_id) const {
+Table *Catalog::LookupTableById(uint16_t table_id) const {
   auto iter = table_catalog_.find(table_id);
   return (iter == table_catalog_.end() ? nullptr : iter->second.get());
+}
+
+void Catalog::InsertTable(const std::string &table_name, std::unique_ptr<Table> &&table) {
+  const uint16_t table_id = table->id();
+  table_catalog_.emplace(table_id, std::move(table));
+  table_name_to_id_map_.insert(std::make_pair(table_name, table_id));
 }
 
 }  // namespace tpl::sql

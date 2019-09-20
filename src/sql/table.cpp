@@ -143,7 +143,7 @@ TableBlockIterator::TableBlockIterator(uint16_t table_id, uint32_t start_block_i
 bool TableBlockIterator::Init() {
   // Lookup the table
   const Catalog *catalog = Catalog::Instance();
-  table_ = catalog->LookupTableById(static_cast<TableId>(table_id_));
+  table_ = catalog->LookupTableById(table_id_);
 
   // If the table wasn't found, we didn't initialize
   if (table_ == nullptr) {
