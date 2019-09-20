@@ -11,10 +11,7 @@ namespace tpl::sql::tablegen {
  */
 class TableGenerator {
  public:
-  static void GenerateTableFromFile(sql::Catalog *catalog, const std::string &schema_file,
-                                    const std::string &data_file);
-
-  static void GenerateTPCHTables(sql::Catalog *catalog, const std::string &dir_name);
+  static void GenerateTPCHTables(sql::Catalog *catalog, const std::string &data_dir);
 };
 
 }  // namespace tpl::sql::tablegen

@@ -21,7 +21,7 @@ enum class TableId : uint16_t {
   TABLES(ENTRY)
 #undef ENTRY
 #define COUNT_OP(inst, ...) +1
-  Last = -1 TABLES(COUNT_OP)
+  Last = TABLES(COUNT_OP)
 #undef COUNT_OP
 };
 
