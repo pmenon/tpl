@@ -32,17 +32,17 @@ class AHTOverflowPartitionIterator;
 class AggregationHashTable {
  public:
   // The default load factor we allow the hash table to reach before resizing
-  constexpr static float kDefaultLoadFactor = 0.7;
+  static constexpr float kDefaultLoadFactor = 0.7;
 
   // The default initial size we set the hash table on construction
-  constexpr static uint32_t kDefaultInitialTableSize = 256;
+  static constexpr uint32_t kDefaultInitialTableSize = 256;
 
   // The default number of partitions we use in partitioned aggregation mode
-  constexpr static uint32_t kDefaultNumPartitions = 512;
+  static constexpr uint32_t kDefaultNumPartitions = 512;
 
   // The default precision we use to configure the HyperLogLog instances. Set to
   // optimize accuracy and space manually.
-  constexpr static uint32_t kDefaultHLLPrecision = 10;
+  static constexpr uint32_t kDefaultHLLPrecision = 10;
 
   // -------------------------------------------------------
   // Callback functions to customize aggregations

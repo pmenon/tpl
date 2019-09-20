@@ -34,7 +34,7 @@ struct HashTableEntry {
    * @param payload_size The size of the payload in bytes.
    * @return The total size of a HashTableEntry in bytes.
    */
-  constexpr static std::size_t ComputeEntrySize(const std::size_t payload_size) {
+  static constexpr std::size_t ComputeEntrySize(const std::size_t payload_size) {
     return sizeof(HashTableEntry) + payload_size;
   };
 

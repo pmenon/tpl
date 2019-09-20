@@ -57,7 +57,7 @@ class BitVector {
    * @param num_bits The number of bits.
    * @return The number of words required to store the given number of bits.
    */
-  constexpr static uint32_t NumNeededWords(uint32_t num_bits) {
+  static constexpr uint32_t NumNeededWords(uint32_t num_bits) {
     return util::MathUtil::DivRoundUp(num_bits, kWordSizeBits);
   }
 

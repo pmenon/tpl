@@ -2,7 +2,7 @@
 
 namespace tpl::sql {
 
-constexpr static const char kDefaultEscape = '\\';
+static constexpr const char kDefaultEscape = '\\';
 
 /**
  * Functor implementing the SQL LIKE() operator
