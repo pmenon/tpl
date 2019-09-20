@@ -8,7 +8,7 @@ namespace tpl::sql {
 class ColumnIteratorTest : public SqlBasedTest {};
 
 TEST_F(ColumnIteratorTest, EmptyIteratorTest) {
-  auto *table = sql::Catalog::Instance()->LookupTableById(TableId::Test1);
+  auto *table = sql::Catalog::Instance()->LookupTableById(TableIdToNum(TableId::Test1));
 
   const auto col_idx = 0;
   const auto col_info = table->schema().GetColumnInfo(col_idx);
@@ -44,7 +44,7 @@ TEST_F(ColumnIteratorTest, EmptyIteratorTest) {
 }
 
 TEST_F(ColumnIteratorTest, IntegerIterationTest) {
-  auto *table = sql::Catalog::Instance()->LookupTableById(TableId::Test1);
+  auto *table = sql::Catalog::Instance()->LookupTableById(TableIdToNum(TableId::Test1));
 
   const uint32_t col_idx = 0;
   const auto col_info = table->schema().GetColumnInfo(col_idx);

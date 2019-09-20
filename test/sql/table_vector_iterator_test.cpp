@@ -16,7 +16,7 @@ class TableVectorIteratorTest : public SqlBasedTest {};
 
 TEST_F(TableVectorIteratorTest, InvalidBlockRangeIteratorTest) {
   auto table_id = TableIdToNum(TableId::Test1);
-  auto *table = Catalog::Instance()->LookupTableById(TableId::Test1);
+  auto *table = Catalog::Instance()->LookupTableById(table_id);
 
   const std::tuple<uint32_t, uint32_t, bool> test_cases[] = {
       {0, 10, true},
