@@ -207,7 +207,7 @@ void InitTable(const TableInsertMeta &table_meta, Table *table) {
 /*
  * Create a catalog, setting up all tables.
  */
-Catalog::Catalog(): next_table_id_(static_cast<uint16_t>(TableId::Last)) {
+Catalog::Catalog() : next_table_id_(static_cast<uint16_t>(TableId::Last)) {
   LOG_INFO("Initializing catalog");
 
   // Insert tables into catalog

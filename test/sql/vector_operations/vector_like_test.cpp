@@ -83,7 +83,7 @@ TEST_F(VectorLikeTest, LikeVectorOfPatterns) {
   auto strings = MakeVarcharVector({"first", "second", "third", "fourth", "fifth"},
                                    {false, false, false, false, false});
   auto patterns = MakeVarcharVector({"_%", "s_cnd", "third", "f%%_th", "fifth "},
-                                   {true, false, false, false, false});
+                                    {true, false, false, false, false});
   auto tid_list = TupleIdList(strings->num_elements());
 
   // strings == patterns = [2, 3]
