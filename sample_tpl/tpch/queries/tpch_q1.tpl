@@ -17,7 +17,7 @@ struct Output {
 struct State {
   agg_hash_table: AggregationHashTable
   sorter: Sorter
-  count : int64 // debug
+  count : int32 // debug
 }
 
 struct AggValues {
@@ -99,31 +99,24 @@ fun aggKeyCheck(agg_payload: *AggPayload, agg_values: *AggValues) -> bool {
 
 fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
   // Pipeline 1 (Aggregating)
-  var oids: [7]uint32
-  oids[0] = 9 // l_returnflag : varchar
-  oids[1] = 10 // l_linestatus : varchar
-  oids[2] = 5 // l_quantity : real
-  oids[3] = 6 // l_extendedprice : real
-  oids[4] = 7 // l_discount : real
-  oids[5] = 8 // l_tax : real
-  oids[6] = 11 // l_shipdate : date
-
   var l_tvi : TableVectorIterator
-  @tableIterInitBind(&l_tvi, execCtx, "lineitem", oids)
+  @tableIterInit(&l_tvi, "lineitem")
   for (@tableIterAdvance(&l_tvi)) {
-    var vec = @tableIterGetPCI(&l_tvi)
-    for (; @pciHasNext(vec); @pciAdvance(vec)) {
-      if (@pciGetDate(vec, 6) < @dateToSql(1998, 12, 1)) { //
+    var vec = @tableIterGetVPI(&l_tvi)
+    for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
+      if (@vpiGetDate(vec, 10) < @dateToSql(1998, 12, 1)) { // l_shipdate
+        state.count = state.count + 1
+
         var agg_values : AggValues
-        agg_values.l_returnflag = @pciGetVarlen(vec, 0) // l_returnflag
-        agg_values.l_linestatus = @pciGetVarlen(vec, 1) // l_linestatus
-        agg_values.sum_qty = @pciGetDouble(vec, 2) // l_quantity
-        agg_values.sum_base_price = @pciGetDouble(vec, 3) // l_extendedprice
-        agg_values.sum_disc_price = @pciGetDouble(vec, 3) * @pciGetDouble(vec, 4) // l_extendedprice * l_discount
-        agg_values.sum_charge = @pciGetDouble(vec, 3) * @pciGetDouble(vec, 4) * (@floatToSql(1.0) - @pciGetDouble(vec, 5)) // l_extendedprice * l_discount * (1- l_tax)
-        agg_values.avg_qty = @pciGetDouble(vec, 2) // l_quantity
-        agg_values.avg_price = @pciGetDouble(vec, 3) // l_extendedprice
-        agg_values.avg_disc = @pciGetDouble(vec, 4) // l_discount
+        agg_values.l_returnflag = @vpiGetVarlen(vec, 8) // l_returnflag
+        agg_values.l_linestatus = @vpiGetVarlen(vec, 9) // l_linestatus
+        agg_values.sum_qty = @vpiGetReal(vec, 4) // l_quantity
+        agg_values.sum_base_price = @vpiGetReal(vec, 5) // l_extendedprice
+        agg_values.sum_disc_price = @vpiGetReal(vec, 5) * @vpiGetReal(vec, 6) // l_extendedprice * l_discount
+        agg_values.sum_charge = @vpiGetReal(vec, 5) * @vpiGetReal(vec, 6) * (@floatToSql(1.0) - @vpiGetReal(vec, 7)) // l_extendedprice * l_discount * (1- l_tax)
+        agg_values.avg_qty = @vpiGetReal(vec, 4) // l_quantity
+        agg_values.avg_price = @vpiGetReal(vec, 5) // l_extendedprice
+        agg_values.avg_disc = @vpiGetReal(vec, 6) // l_discount
         agg_values.count_order = @intToSql(1)
         var agg_hash_val = @hash(agg_values.l_returnflag, agg_values.l_linestatus)
         var agg_payload = @ptrCast(*AggPayload, @aggHTLookup(&state.agg_hash_table, agg_hash_val, aggKeyCheck, &agg_values))
@@ -157,7 +150,7 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
 
 fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
   // Pipeline 2 (Sorting)
-  var agg_iter: AggregationHashTableIterator
+  var agg_iter: AHTIterator
   for (@aggHTIterInit(&agg_iter, &state.agg_hash_table); @aggHTIterHasNext(&agg_iter); @aggHTIterNext(&agg_iter)) {
     var agg_payload = @ptrCast(*AggPayload, @aggHTIterGetRow(&agg_iter))
     var sorter_row = @ptrCast(*SorterRow, @sorterInsert(&state.sorter))
@@ -199,7 +192,7 @@ fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
 }
 
 
-fun main(execCtx: *ExecutionContext) -> int64 {
+fun main(execCtx: *ExecutionContext) -> int {
     var state: State
     setUpState(execCtx, &state)
     pipeline1(execCtx, &state)

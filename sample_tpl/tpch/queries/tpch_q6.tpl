@@ -29,29 +29,25 @@ fun teardownState(execCtx: *ExecutionContext, state: *State) -> nil {
 
 fun execQuery(execCtx: *ExecutionContext, state: *State) -> nil {
   // Pipeline 1 (hashing)
+  var out : *outputStruct
   var tvi: TableVectorIterator
-  var oids : [4]uint32
-  oids[0] = 5 // l_quantity
-  oids[1] = 6 // l_extendedprice
-  oids[2] = 7 // l_discount
-  oids[3] = 11 // l_shipdate
-  @tableIterInitBind(&tvi, execCtx, "lineitem", oids)
+  @tableIterInit(&tvi, "lineitem")
   for (@tableIterAdvance(&tvi)) {
-    var pci = @tableIterGetPCI(&tvi)
-    for (; @pciHasNext(pci); @pciAdvance(pci)) {
-      if (@pciGetDouble(pci, 0) > 24.0 // quantity
-          and @pciGetDouble(pci, 2) > 0.04 // discount
-          and @pciGetDouble(pci, 2) < 0.06 // discount
-          and @pciGetDate(pci, 3) >= @dateToSql(1994, 1, 1) // ship date
-          and @pciGetDate(pci, 3) <= @dateToSql(1995, 1, 1)) { // ship date
-        var input = @pciGetDouble(pci, 1) * @pciGetDouble(pci, 2) // extendedprice * discount
+    var vpi = @tableIterGetVPI(&tvi)
+    for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
+      if (@vpiGetReal(vpi, 4) > 24.0 // quantity
+          and @vpiGetReal(vpi, 6) > 0.04 // discount
+          and @vpiGetReal(vpi, 6) < 0.06 // discount
+          and @vpiGetDate(vpi, 10) >= @dateToSql(1994, 1, 1) // ship date
+          and @vpiGetDate(vpi, 10) <= @dateToSql(1995, 1, 1)) { // ship date
+        var input = @vpiGetReal(vpi, 5) * @vpiGetReal(vpi, 6) // extendedprice * discount
         @aggAdvance(&state.sum, &input)
       }
     }
   }
 
   // Pipeline 2 (Output to upper layers)
-  var out = @ptrCast(*outputStruct, @outputAlloc(execCtx))
+  out = @ptrCast(*outputStruct, @outputAlloc(execCtx))
   out.out = @aggResult(&state.sum)
   @outputFinalize(execCtx)
   @tableIterClose(&tvi)

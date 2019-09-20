@@ -20,7 +20,7 @@ struct DebugOutputStruct {
 struct JoinBuildRow {
   o_orderkey: Integer
   o_orderpriority: StringVal
-  match_flag: bool // for semi-join
+  match_flag: bool
 }
 
 // Input & Output of the aggregator
@@ -43,9 +43,9 @@ struct State {
 }
 
 // Check that two join keys are equal
-fun checkJoinKey(execCtx: *ExecutionContext, probe: *ProjectedColumnsIterator, build_row: *JoinBuildRow) -> bool {
+fun checkJoinKey(execCtx: *ExecutionContext, probe: *VectorProjectionIterator, build_row: *JoinBuildRow) -> bool {
   // l_orderkey == o_orderkey
-  return @sqlToBool(@pciGetInt(probe, 0) == build_row.o_orderkey)
+  return @sqlToBool(@vpiGetInt(probe, 0) == build_row.o_orderkey)
 }
 
 // Check that the aggregate key already exists
@@ -81,22 +81,17 @@ fun teardownState(execCtx: *ExecutionContext, state: *State) -> nil {
 // Pipeline 1 (Join Build)
 fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
   var o_tvi : TableVectorIterator
-  var oids: [3]uint32
-  oids[0] = 6 // o_orderpriority : varchar
-  oids[1] = 1 // o_orderkey : int
-  oids[2] = 5 // o_orderdate : date
-
-  @tableIterInitBind(&o_tvi, execCtx, "orders", oids)
+  @tableIterInit(&o_tvi, "orders")
   for (@tableIterAdvance(&o_tvi)) {
-    var vec = @tableIterGetPCI(&o_tvi)
-    for (; @pciHasNext(vec); @pciAdvance(vec)) {
-      if (@pciGetDate(vec, 2) >= @dateToSql(1993, 07, 01) // o_orderdate
-          and @pciGetDate(vec, 2) <= @dateToSql(1993, 10, 01)) { // o_orderdate
+    var vec = @tableIterGetVPI(&o_tvi)
+    for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
+      if (@vpiGetDate(vec, 4) >= @dateToSql(1993, 07, 01) // o_orderdate
+          and @vpiGetDate(vec, 4) <= @dateToSql(1993, 10, 01)) { // o_orderdate
         // Step 2: Insert into Hash Table
-        var hash_val = @hash(@pciGetInt(vec, 1)) // o_orderkey
+        var hash_val = @hash(@vpiGetInt(vec, 0)) // o_orderkey
         var build_row = @ptrCast(*JoinBuildRow, @joinHTInsert(&state.join_table, hash_val))
-        build_row.o_orderkey = @pciGetInt(vec, 1) // o_orderkey
-        build_row.o_orderpriority = @pciGetVarlen(vec, 0) // o_orderpriority
+        build_row.o_orderkey = @vpiGetInt(vec, 0) // o_orderkey
+        build_row.o_orderpriority = @vpiGetVarlen(vec, 5) // o_orderpriority
         build_row.match_flag = false
       }
     }
@@ -110,21 +105,17 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
 // Pipeline 2 (Join Probe up to Agg)
 fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
   var l_tvi : TableVectorIterator
-  var oids: [3]uint32
-  oids[0] = 1 // l_orderkey : int
-  oids[1] = 12 // l_commitdate : date
-  oids[2] = 13 // l_receiptdate : date
-  @tableIterInitBind(&l_tvi, execCtx, "lineitem", oids)
+  @tableIterInit(&l_tvi, "lineitem")
   for (@tableIterAdvance(&l_tvi)) {
-    var vec = @tableIterGetPCI(&l_tvi)
-    for (; @pciHasNext(vec); @pciAdvance(vec)) {
+    var vec = @tableIterGetVPI(&l_tvi)
+    for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
       // if l_commitdate < l_receiptdate
-      if (@pciGetDate(vec, 1) < @pciGetDate(vec, 2)) {
+      if (@vpiGetDate(vec, 11) < @vpiGetDate(vec, 12)) {
         // Step 2: Probe Join Hash Table
-        var hash_val = @hash(@pciGetInt(vec, 0)) // l_orderkey
-        var join_iter: JoinHashTableIterator
-        for (@joinHTIterInit(&join_iter, &state.join_table, hash_val); @joinHTIterHasNext(&join_iter, checkJoinKey, execCtx, vec);) {
-          var build_row = @ptrCast(*JoinBuildRow, @joinHTIterGetRow(&join_iter))
+        var hash_val = @hash(@vpiGetInt(vec, 0)) // l_orderkey
+        var join_iter: HashTableEntryIterator
+        for (@joinHTLookup(&state.join_table, &join_iter, hash_val); @htEntryIterHasNext(&join_iter, checkJoinKey, execCtx, vec);) {
+          var build_row = @ptrCast(*JoinBuildRow, @htEntryIterGetRow(&join_iter))
           // match each row once
           if (!build_row.match_flag) {
             build_row.match_flag = true
@@ -148,7 +139,7 @@ fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
 
 // Pipeline 3 (Sort)
 fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
-  var aht_iter: AggregationHashTableIterator
+  var aht_iter: AHTIterator
   // Step 1: Iterate through Agg Hash Table
   for (@aggHTIterInit(&aht_iter, &state.agg_table); @aggHTIterHasNext(&aht_iter); @aggHTIterNext(&aht_iter)) {
     var agg = @ptrCast(*AggRow, @aggHTIterGetRow(&aht_iter))
@@ -177,8 +168,8 @@ fun pipeline4(execCtx: *ExecutionContext, state: *State) -> nil {
 fun execQuery(execCtx: *ExecutionContext, state: *State) -> nil {
   pipeline1(execCtx, state)
   pipeline2(execCtx, state)
-  pipeline3(execCtx, state)
-  pipeline4(execCtx, state)
+  //pipeline3(execCtx, state)
+  //pipeline4(execCtx, state)
   @outputFinalize(execCtx)
 }
 

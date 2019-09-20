@@ -137,25 +137,25 @@ fun teardownState(execCtx: *ExecutionContext, state: *State) -> nil {
   @sorterFree(&state.sorter)
 }
 
-fun checkJoinKey1(execCtx: *ExecutionContext, probe: *ProjectedColumnsIterator, build: *JoinRow1) -> bool {
+fun checkJoinKey1(execCtx: *ExecutionContext, probe: *VectorProjectionIterator, build: *JoinRow1) -> bool {
   // check c_nationkey == n2_nationkey
-  if (@pciGetInt(probe, 3) != build.n2_nationkey) {
+  if (@vpiGetInt(probe, 3) != build.n2_nationkey) {
     return false
   }
   return true
 }
 
-fun checkJoinKey2(execCtx: *ExecutionContext, probe: *ProjectedColumnsIterator, build: *JoinRow2) -> bool {
+fun checkJoinKey2(execCtx: *ExecutionContext, probe: *VectorProjectionIterator, build: *JoinRow2) -> bool {
   // o_custkey == c_custkey
-  if (@pciGetInt(probe, 1) != build.c_custkey) {
+  if (@vpiGetInt(probe, 1) != build.c_custkey) {
     return false
   }
   return true
 }
 
-fun checkJoinKey3(execCtx: *ExecutionContext, probe: *ProjectedColumnsIterator, build: *JoinRow3) -> bool {
+fun checkJoinKey3(execCtx: *ExecutionContext, probe: *VectorProjectionIterator, build: *JoinRow3) -> bool {
   // l_orderkey == o_orderkey
-  if (@pciGetInt(probe, 0) != build.o_orderkey) {
+  if (@vpiGetInt(probe, 0) != build.o_orderkey) {
     return false
   }
   return true
@@ -184,23 +184,23 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
   // Step 1: Scan nation1
   @tableIterInit(&n1_tvi, "nation")
   for (@tableIterAdvance(&n1_tvi)) {
-    var vec1 = @tableIterGetPCI(&n1_tvi)
-    for (; @pciHasNext(vec1); @pciAdvance(vec1)) {
+    var vec1 = @tableIterGetVPI(&n1_tvi)
+    for (; @vpiHasNext(vec1); @vpiAdvance(vec1)) {
       // n_name
-      if (@pciGetVarlen(vec1, 1) == france or @pciGetVarlen(vec1, 1) == germany) {
+      if (@vpiGetVarlen(vec1, 1) == france or @vpiGetVarlen(vec1, 1) == germany) {
         // Step 2: Scan nation2
         @tableIterInit(&n2_tvi, "nation")
         for (@tableIterAdvance(&n2_tvi)) {
-          var vec2 = @tableIterGetPCI(&n2_tvi)
-          for (; @pciHasNext(vec2); @pciAdvance(vec2)) {
-            if ((@pciGetVarlen(vec1, 1) == france and @pciGetVarlen(vec2, 1) == germany) or @pciGetVarlen(vec1, 1) == germany and @pciGetVarlen(vec2, 1) == france) {
+          var vec2 = @tableIterGetVPI(&n2_tvi)
+          for (; @vpiHasNext(vec2); @vpiAdvance(vec2)) {
+            if ((@vpiGetVarlen(vec1, 1) == france and @vpiGetVarlen(vec2, 1) == germany) or @vpiGetVarlen(vec1, 1) == germany and @vpiGetVarlen(vec2, 1) == france) {
               // Build JHT1
-              var hash_val = @hash(@pciGetInt(vec2, 0)) // n2_nationkey
+              var hash_val = @hash(@vpiGetInt(vec2, 0)) // n2_nationkey
               var build_row1 = @ptrCast(*JoinRow1, @joinHTInsert(&state.join_table1, hash_val))
-              build_row1.n1_nationkey = @pciGetInt(vec1, 0) // n1_nationkey
-              build_row1.n2_nationkey = @pciGetInt(vec2, 0) // n2_nationkey
-              build_row1.n1_name = @pciGetVarlen(vec1, 1) // n1_name
-              build_row1.n2_name = @pciGetVarlen(vec2, 1) // n2_name
+              build_row1.n1_nationkey = @vpiGetInt(vec1, 0) // n1_nationkey
+              build_row1.n2_nationkey = @vpiGetInt(vec2, 0) // n2_nationkey
+              build_row1.n1_name = @vpiGetVarlen(vec1, 1) // n1_name
+              build_row1.n2_name = @vpiGetVarlen(vec2, 1) // n2_name
             }
           }
         }
@@ -219,21 +219,21 @@ fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
   var c_tvi : TableVectorIterator
   @tableIterInit(&c_tvi, "customer")
   for (@tableIterAdvance(&c_tvi)) {
-    var vec = @tableIterGetPCI(&c_tvi)
-    for (; @pciHasNext(vec); @pciAdvance(vec)) {
+    var vec = @tableIterGetVPI(&c_tvi)
+    for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
       // Step 2: Probe JHT1
-      var hash_val = @hash(@pciGetInt(vec, 3)) // c_nationkey
-      var hti: JoinHashTableIterator
-      for (@joinHTIterInit(&state.join_table1, &hti, hash_val); @joinHTIterHasNext(&hti, checkJoinKey1, execCtx, vec);) {
-        var join_row1 = @ptrCast(*JoinRow1, @joinHTIterGetRow(&hti))
+      var hash_val = @hash(@vpiGetInt(vec, 3)) // c_nationkey
+      var hti: HashTableEntryIterator
+      for (@joinHTLookup(&state.join_table1, &hti, hash_val); @htEntryIterHasNext(&hti, checkJoinKey1, execCtx, vec);) {
+        var join_row1 = @ptrCast(*JoinRow1, @htEntryIterGetRow(&hti))
 
         // Step 3: Insert into JHT2
-        var hash_val2 = @hash(@pciGetInt(vec, 0)) // c_custkey
+        var hash_val2 = @hash(@vpiGetInt(vec, 0)) // c_custkey
         var build_row2 = @ptrCast(*JoinRow2, @joinHTInsert(&state.join_table2, hash_val2))
         build_row2.n1_nationkey = join_row1.n1_nationkey
         build_row2.n1_name = join_row1.n1_name
         build_row2.n2_name = join_row1.n2_name
-        build_row2.c_custkey = @pciGetInt(vec, 0) // c_custkey
+        build_row2.c_custkey = @vpiGetInt(vec, 0) // c_custkey
       }
     }
   }
@@ -248,21 +248,21 @@ fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
   var o_tvi : TableVectorIterator
   @tableIterInit(&o_tvi, "orders")
   for (@tableIterAdvance(&o_tvi)) {
-    var vec = @tableIterGetPCI(&o_tvi)
-    for (; @pciHasNext(vec); @pciAdvance(vec)) {
+    var vec = @tableIterGetVPI(&o_tvi)
+    for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
       // Step 2: Probe JHT2
-      var hash_val = @hash(@pciGetInt(vec, 1)) // o_custkey
-      var hti: JoinHashTableIterator
-      for (@joinHTIterInit(&state.join_table2, &hti, hash_val); @joinHTIterHasNext(&hti, checkJoinKey2, execCtx, vec);) {
-        var join_row2 = @ptrCast(*JoinRow2, @joinHTIterGetRow(&hti))
+      var hash_val = @hash(@vpiGetInt(vec, 1)) // o_custkey
+      var hti: HashTableEntryIterator
+      for (@joinHTLookup(&state.join_table2, &hti, hash_val); @htEntryIterHasNext(&hti, checkJoinKey2, execCtx, vec);) {
+        var join_row2 = @ptrCast(*JoinRow2, @htEntryIterGetRow(&hti))
 
         // Step 3: Insert into join table 3
-        var hash_val3 = @hash(@pciGetInt(vec, 0)) // o_orderkey
+        var hash_val3 = @hash(@vpiGetInt(vec, 0)) // o_orderkey
         var build_row3 = @ptrCast(*JoinRow3, @joinHTInsert(&state.join_table3, hash_val3))
         build_row3.n1_nationkey = join_row2.n1_nationkey
         build_row3.n1_name = join_row2.n1_name
         build_row3.n2_name = join_row2.n2_name
-        build_row3.o_orderkey = @pciGetInt(vec, 0)
+        build_row3.o_orderkey = @vpiGetInt(vec, 0)
       }
     }
   }
@@ -276,12 +276,12 @@ fun pipeline4(execCtx: *ExecutionContext, state: *State) -> nil {
   var s_tvi : TableVectorIterator
   @tableIterInit(&s_tvi, "supplier")
   for (@tableIterAdvance(&s_tvi)) {
-    var vec = @tableIterGetPCI(&s_tvi)
-    for (; @pciHasNext(vec); @pciAdvance(vec)) {
-      var hash_val = @hash(@pciGetInt(vec, 0), @pciGetInt(vec, 3)) // s_suppkey, s_nationkey
+    var vec = @tableIterGetVPI(&s_tvi)
+    for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
+      var hash_val = @hash(@vpiGetInt(vec, 0), @vpiGetInt(vec, 3)) // s_suppkey, s_nationkey
       var build_row4 = @ptrCast(*JoinRow4, @joinHTInsert(&state.join_table4, hash_val))
-      build_row4.s_suppkey = @pciGetInt(vec, 0) // s_suppkey
-      build_row4.s_nationkey = @pciGetInt(vec, 3) // s_nationkey
+      build_row4.s_suppkey = @vpiGetInt(vec, 0) // s_suppkey
+      build_row4.s_nationkey = @vpiGetInt(vec, 3) // s_nationkey
     }
   }
   // Build table
@@ -294,31 +294,31 @@ fun pipeline5(execCtx: *ExecutionContext, state: *State) -> nil {
   var l_tvi : TableVectorIterator
   @tableIterInit(&l_tvi, "lineitem")
   for (@tableIterAdvance(&l_tvi)) {
-    var vec = @tableIterGetPCI(&l_tvi)
-    for (; @pciHasNext(vec); @pciAdvance(vec)) {
+    var vec = @tableIterGetVPI(&l_tvi)
+    for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
       // l_shipdate
-      if (@pciGetDate(vec, 10) >= @dateToSql(1995, 1, 1) and @pciGetDate(vec, 10) <= @dateToSql(1996, 12, 31)) {
+      if (@vpiGetDate(vec, 10) >= @dateToSql(1995, 1, 1) and @vpiGetDate(vec, 10) <= @dateToSql(1996, 12, 31)) {
         // Step 2: Probe JHT3
-        var hash_val = @hash(@pciGetInt(vec, 0)) // l_orderkey
-        var hti3: JoinHashTableIterator
-        for (@joinHTIterInit(&state.join_table3, &hti3, hash_val); @joinHTIterHasNext(&hti3, checkJoinKey3, execCtx, vec);) {
-          var join_row3 = @ptrCast(*JoinRow3, @joinHTIterGetRow(&hti3))
+        var hash_val = @hash(@vpiGetInt(vec, 0)) // l_orderkey
+        var hti3: HashTableEntryIterator
+        for (@joinHTLookup(&state.join_table3, &hti3, hash_val); @htEntryIterHasNext(&hti3, checkJoinKey3, execCtx, vec);) {
+          var join_row3 = @ptrCast(*JoinRow3, @htEntryIterGetRow(&hti3))
 
           // Step 3: Probe JHT4
-          var hash_val4 = @hash(@pciGetInt(vec, 2), join_row3.n1_nationkey) // l_suppkey
+          var hash_val4 = @hash(@vpiGetInt(vec, 2), join_row3.n1_nationkey) // l_suppkey
           var join_probe4 : JoinProbe4 // Materialize the right pipeline
-          join_probe4.l_suppkey = @pciGetInt(vec, 2)
+          join_probe4.l_suppkey = @vpiGetInt(vec, 2)
           join_probe4.n1_nationkey = join_row3.n1_nationkey
-          var hti4: JoinHashTableIterator
-          for (@joinHTIterInit(&state.join_table4, &hti4, hash_val4); @joinHTIterHasNext(&hti4, checkJoinKey4, execCtx, &join_probe4);) {
-            var join_row4 = @ptrCast(*JoinRow4, @joinHTIterGetRow(&hti4))
+          var hti4: HashTableEntryIterator
+          for (@joinHTLookup(&state.join_table4, &hti4, hash_val4); @htEntryIterHasNext(&hti4, checkJoinKey4, execCtx, &join_probe4);) {
+            var join_row4 = @ptrCast(*JoinRow4, @htEntryIterGetRow(&hti4))
 
             // Step 4: Build Agg HT
             var agg_input : AggValues // Materialize
             agg_input.supp_nation = join_row3.n1_name
             agg_input.cust_nation = join_row3.n2_name
-            agg_input.l_year = @extractYear(@pciGetDate(vec, 10))
-            agg_input.volume = @pciGetDouble(vec, 5) * (1.0 - @pciGetDouble(vec, 6)) // l_extendedprice * (1.0 -  l_discount)
+            agg_input.l_year = @extractYear(@vpiGetDate(vec, 10))
+            agg_input.volume = @vpiGetReal(vec, 5) * (1.0 - @vpiGetReal(vec, 6)) // l_extendedprice * (1.0 -  l_discount)
             var agg_hash_val = @hash(agg_input.supp_nation, agg_input.cust_nation, agg_input.l_year)
             var agg_payload = @ptrCast(*AggPayload, @aggHTLookup(&state.agg_table, agg_hash_val, checkAggKey, &agg_input))
             if (agg_payload == nil) {
@@ -340,7 +340,7 @@ fun pipeline5(execCtx: *ExecutionContext, state: *State) -> nil {
 
 // Scan AHT, sort
 fun pipeline6(execCtx: *ExecutionContext, state: *State) -> nil {
-  var agg_ht_iter: AggregationHashTableIterator
+  var agg_ht_iter: AHTIterator
   var agg_iter = &agg_ht_iter
   // Step 1: Iterate through Agg Hash Table
   for (@aggHTIterInit(agg_iter, &state.agg_table); @aggHTIterHasNext(agg_iter); @aggHTIterNext(agg_iter)) {
