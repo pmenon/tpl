@@ -36,6 +36,18 @@ class Schema {
 
   const std::vector<ColumnInfo> &columns() const { return cols_; }
 
+  std::string ToString() const {
+    std::string result = "cols=[";
+    bool first = true;
+    for (const auto &col : cols_) {
+      if (!first) result += ",";
+      first = false;
+      result += col.sql_type.GetName();
+    }
+    result += "]";
+    return result;
+  }
+
  private:
   // The metadata for each column. This is immutable after construction.
   const std::vector<ColumnInfo> cols_;

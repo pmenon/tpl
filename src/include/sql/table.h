@@ -18,8 +18,8 @@ extern int32_t current_partition;
 namespace tpl::sql {
 
 /**
- * A SQL table. It's stupid and only for testing the system out. It'll be
- * ripped out when we pull it into the full DBMS
+ * A SQL table. It's stupid and only for testing the system out. It'll be ripped out when we pull it
+ * into the full DBMS.
  */
 class Table {
  public:
@@ -45,19 +45,22 @@ class Table {
     uint32_t num_tuples_;
   };
 
+  /**
+   * The container type for all blocks owned by the table
+   */
   using BlockList = std::vector<Block>;
 
   /**
-   * Create a new table with ID \ref id and physical layout \ref schema
+   * Create a new table with ID @em id and physical layout @em schema
    * @param id The desired ID of the table
    * @param schema The physical schema of the table
    */
   Table(uint16_t id, std::unique_ptr<Schema> schema)
-      : schema_(std::move(schema)), id_(id), num_tuples_(0) {}
+      : id_(id), schema_(std::move(schema)), num_tuples_(0) {}
 
   /**
-   * Insert column data from \ref data into the table
-   * \param block The block of data to insert into the table
+   * Insert column data from @em data data into the table
+   * @param block The block of data to insert into the table
    */
   void Insert(Block &&block);
 
@@ -104,9 +107,13 @@ class Table {
   uint32_t num_blocks() const { return blocks_.size(); }
 
  private:
-  std::unique_ptr<Schema> schema_;
-  BlockList blocks_;
+  // The ID of the table
   uint16_t id_;
+  // The table's schema
+  std::unique_ptr<Schema> schema_;
+  // The list of all blocks constituting the table's data
+  BlockList blocks_;
+  // The total number of tuples in the table
   uint32_t num_tuples_;
 };
 
@@ -121,8 +128,8 @@ class TableBlockIterator {
   explicit TableBlockIterator(uint16_t table_id);
 
   /**
-   * Create an iterator over a subset of the blocks in the table with ID
-   * @em table_id. Iteration occurs of the range [start, end).
+   * Create an iterator over a subset of the blocks in the table with ID @em table_id. Iteration
+   * occurs of the range [start, end).
    * @param table_id The ID of the table
    * @param start_block_idx The index of the block to begin at
    * @param end_block_idx The index of the block to stop at
