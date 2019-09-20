@@ -215,8 +215,8 @@ add_custom_target(check-tpl-diff
 ############################################################
 
 # check if Doxygen is installed
-find_package(Doxygen)
 if (TPL_BUILD_DOC)
+  find_package(Doxygen)
   if(NOT DOXYGEN_FOUND)
     message(FATAL_ERROR "Doxygen is needed to build the documentation.")
   endif()
