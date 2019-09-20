@@ -9,9 +9,14 @@
 
 namespace tpl::sql {
 
-/// A class to capture the physical schema layout
+/**
+ * A Schema captures a physical layout of data in a tabular form.
+ */
 class Schema {
  public:
+  /**
+   * Metadata about a column.
+   */
   struct ColumnInfo {
     std::string name;
     const SqlType &sql_type;
@@ -28,14 +33,40 @@ class Schema {
     }
   };
 
+  /**
+   * Create a schema with the given columns.
+   * @param cols All the columns in the schema and their metadata.
+   */
   explicit Schema(std::vector<ColumnInfo> &&cols) : cols_(std::move(cols)) {}
 
-  const ColumnInfo *GetColumnInfo(uint32_t col_idx) const { return &cols_[col_idx]; }
+  /**
+   * This class cannot be copied or moved.
+   */
+  DISALLOW_COPY_AND_MOVE(Schema);
 
+  /**
+   * Get the metadata for the column at the index @em col_index in the schema.
+   * @param col_idx The index of the column in the schema.
+   * @return The metadata for the column.
+   */
+  const ColumnInfo *GetColumnInfo(uint32_t col_idx) const {
+    TPL_ASSERT(col_idx < cols_.size(), "Out-of-bounds column access");
+    return &cols_[col_idx];
+  }
+
+  /**
+   * @return Return the number of columns in the schema.
+   */
   uint32_t num_columns() const { return static_cast<uint32_t>(columns().size()); }
 
+  /**
+   * @return A const-view of the column metadata.
+   */
   const std::vector<ColumnInfo> &columns() const { return cols_; }
 
+  /**
+   * @return A string representation of this schema.
+   */
   std::string ToString() const {
     std::string result = "cols=[";
     bool first = true;
