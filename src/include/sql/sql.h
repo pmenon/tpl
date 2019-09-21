@@ -5,11 +5,14 @@
 
 #include "common/common.h"
 #include "common/macros.h"
+#include "sql/runtime_types.h"
 
 namespace tpl::sql {
 
 /**
- * The primitive types underlying the SQL types.
+ * All internal types underlying the SQL types. This is a superset of the SQL types meant to capture
+ * the fact that vectors can contain non-SQL data such as hash values and pointers, created during
+ * query execution.
  */
 enum class TypeId : uint8_t {
   Boolean,   // bool
@@ -21,6 +24,7 @@ enum class TypeId : uint8_t {
   Pointer,   // uintptr_t
   Float,     // float
   Double,    // double
+  Date,      // Date objects
   Varchar,   // char*, representing a null-terminated UTF-8 string
   Varbinary  // blobs representing arbitrary bytes
 };
@@ -103,6 +107,8 @@ constexpr inline TypeId GetTypeId() {
     return TypeId::Float;
   } else if constexpr (std::is_same<std::remove_const_t<T>, double>()) {
     return TypeId::Double;
+  } else if constexpr (std::is_same<std::remove_const_t<T>, Date>()) {
+    return TypeId::Date;
   } else if constexpr (std::is_same<std::remove_const_t<T>, char *>() ||
                        std::is_same<std::remove_const_t<T>, const char *>() ||
                        std::is_same<std::remove_const_t<T>, std::string>() ||

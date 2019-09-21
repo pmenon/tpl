@@ -4,6 +4,7 @@
 
 #include "common/common.h"
 #include "common/macros.h"
+#include "sql/runtime_types.h"
 #include "util/string_heap.h"
 
 namespace tpl::sql {
@@ -231,7 +232,7 @@ struct StringVal : public Val {
  * A SQL date value
  */
 struct DateVal : public Val {
-  int32_t date_val;
+  Date date_val;
 
   explicit DateVal(int32_t date) noexcept : Val(false), date_val(date) {}
 

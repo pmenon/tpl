@@ -6,6 +6,7 @@
 
 #include "common/common.h"
 #include "sql/data_types.h"
+#include "sql/runtime_types.h"
 
 namespace tpl::sql {
 
@@ -161,10 +162,12 @@ class GenericValue {
 
   /**
    * Create a non-NULL date value.
-   * @param value The value.
+   * @param year The year of the date.
+   * @param month The month of the date.
+   * @param day The day of the date.
    * @return A Date value.
    */
-  static GenericValue CreateDate(int32_t year, int32_t month, int32_t day);
+  static GenericValue CreateDate(uint32_t year, uint32_t month, uint32_t day);
 
   /**
    * Create a non-NULL timestamp value.
@@ -209,6 +212,7 @@ class GenericValue {
     int64_t bigint;
     hash_t hash;
     uintptr_t pointer;
+    Date date_;
     float float_;
     double double_;
   } value_;

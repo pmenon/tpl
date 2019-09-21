@@ -1,5 +1,6 @@
 #include "sql/generic_value.h"
 
+#include <sql/generic_value.h>
 #include <string>
 
 #include "common/exception.h"
@@ -164,9 +165,10 @@ GenericValue GenericValue::CreateDouble(const double value) {
   return result;
 }
 
-GenericValue GenericValue::CreateDate(UNUSED int32_t year, UNUSED int32_t month,
-                                      UNUSED int32_t day) {
-  throw NotImplementedException("Date generic values are not supported");
+GenericValue GenericValue::CreateDate(uint32_t year, uint32_t month, uint32_t day) {
+  GenericValue result(TypeId::Date);
+  result.value_.date_ = Date::FromYMD(year, month, day);
+  return result;
 }
 
 GenericValue GenericValue::CreateTimestamp(UNUSED int32_t year, UNUSED int32_t month,
