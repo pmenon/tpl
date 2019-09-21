@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.8)
 
 project(tpl)
 
@@ -7,6 +7,7 @@ set(TPL_VERSION_MAJOR 0)
 set(TPL_VERSION_MINOR 1)
 
 # For external projects
+include(CMakeParseArguments)
 include(ExternalProject)
 
 # Let CMake know where all the modules are (i.e., in ./cmake)
@@ -25,14 +26,19 @@ configure_file (
   "${PROJECT_BINARY_DIR}/tpl.h"
 )
 
-# Options
+############################################################
+#
+# Cmake Built Options
+#
+############################################################
+
 option(TPL_USE_ASAN "Build TPL with AddressSanitizer enabled" OFF)
 option(TPL_USE_TSAN "Build TPL with ThreadSanitizer enabled" OFF)
 option(TPL_USE_GOLD "Use the GNU Gold linker if available" OFF)
 option(TPL_GENERATE_COVERAGE "Build TPL with code coverage enabled" OFF)
 option(TPL_BUILD_DOC "Build Doxygen documentation" OFF)
 option(TPL_VERBOSE_THIRDPARTY_BUILD "Verbose output when building third-party librares" OFF)
-option(TPL_BUILD_BENCHMARKS "Build TPL benchmarks" OFF)
+option(TPL_BUILD_BENCHMARKS "Build TPL benchmarks" ON)
 
 # Is this MacOS ?
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")

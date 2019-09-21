@@ -25,7 +25,7 @@ if (TPL_BUILD_BENCHMARKS)
         # To run it the command `ctest -C benchmark -L benchmark` must be used.
         # (Setting -C excludes it from the default set, and setting -L excludes the
         # default tests from it). Note the target `benchmark` runs this command.
-        add_test(${benchmark_name} ${benchmark_name} CONFIGURATIONS "benchmark")
+        add_test(${benchmark_name} ${benchmark_name} --benchmark_color=true CONFIGURATIONS "benchmark")
         set_tests_properties(${benchmark_name} PROPERTIES LABELS "benchmark")
 
         # Add the benchmark as a dependency to the 'runbenchmark' target
