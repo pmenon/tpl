@@ -89,8 +89,8 @@ class Context;
   SQL(Real, tpl::sql::Real)                                                      \
   SQL(Decimal, tpl::sql::Decimal)                                                \
   SQL(StringVal, tpl::sql::StringVal)                                            \
-  SQL(Date, tpl::sql::Date)                                                      \
-  SQL(Timestamp, tpl::sql::Timestamp)
+  SQL(Date, tpl::sql::DateVal)                                                   \
+  SQL(Timestamp, tpl::sql::TimestampVal)
 
 // Ignore a builtin
 #define IGNORE_BUILTIN_TYPE (...)

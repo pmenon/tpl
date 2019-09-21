@@ -20,8 +20,8 @@ TEST_F(IsNullPredicateTests, IsNull) {
   CHECK_IS_NULL_FOR_TYPE(Integer);
   CHECK_IS_NULL_FOR_TYPE(Real);
   CHECK_IS_NULL_FOR_TYPE(StringVal);
-  CHECK_IS_NULL_FOR_TYPE(Date);
-  CHECK_IS_NULL_FOR_TYPE(Timestamp);
+  CHECK_IS_NULL_FOR_TYPE(DateVal);
+  CHECK_IS_NULL_FOR_TYPE(TimestampVal);
 
 #undef CHECK_IS_NULL_FOR_TYPE
 }
