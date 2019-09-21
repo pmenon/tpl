@@ -162,6 +162,13 @@ class GenericValue {
 
   /**
    * Create a non-NULL date value.
+   * @param date The date.
+   * @return A date value.
+   */
+  static GenericValue CreateDate(Date date);
+
+  /**
+   * Create a non-NULL date value.
    * @param year The year of the date.
    * @param month The month of the date.
    * @param day The day of the date.

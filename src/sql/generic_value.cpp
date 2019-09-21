@@ -41,6 +41,8 @@ bool GenericValue::Equals(const GenericValue &other) const {
       return util::MathUtil::ApproxEqual(value_.float_, other.value_.float_);
     case TypeId::Double:
       return util::MathUtil::ApproxEqual(value_.double_, other.value_.double_);
+    case TypeId::Date:
+      return value_.date_ == other.value_.date_;
     case TypeId::Varchar:
       return str_value_ == other.str_value_;
     default:
@@ -84,6 +86,9 @@ std::string GenericValue::ToString() const {
       return std::to_string(value_.float_);
     case TypeId::Double:
       return std::to_string(value_.double_);
+    case TypeId::Date: {
+      return value_.date_.ToString();
+    }
     case TypeId::Varchar:
       return "'" + str_value_ + "'";
     default:
@@ -165,9 +170,17 @@ GenericValue GenericValue::CreateDouble(const double value) {
   return result;
 }
 
+GenericValue GenericValue::CreateDate(Date date) {
+  GenericValue result(TypeId::Date);
+  result.value_.date_ = date;
+  result.is_null_ = false;
+  return result;
+}
+
 GenericValue GenericValue::CreateDate(uint32_t year, uint32_t month, uint32_t day) {
   GenericValue result(TypeId::Date);
   result.value_.date_ = Date::FromYMD(year, month, day);
+  result.is_null_ = false;
   return result;
 }
 
@@ -201,6 +214,8 @@ GenericValue GenericValue::CreateFromRuntimeValue(const TypeId type_id, const Va
       return GenericValue::CreateFloat(static_cast<const Real &>(val).val);
     case TypeId::Double:
       return GenericValue::CreateDouble(static_cast<const Real &>(val).val);
+    case TypeId::Date:
+      return GenericValue::CreateDate(static_cast<const DateVal &>(val).date_val);
     case TypeId::Varchar:
       return GenericValue::CreateVarchar(static_cast<const StringVal &>(val).ptr);
     default:
