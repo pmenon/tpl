@@ -110,6 +110,9 @@ GenericValue Vector::GetValue(const uint64_t index) const {
     case TypeId::Double: {
       return GenericValue::CreateDouble(reinterpret_cast<double *>(data_)[actual_index]);
     }
+    case TypeId::Date: {
+      return GenericValue::CreateDate(reinterpret_cast<Date *>(data_)[actual_index]);
+    }
     case TypeId::Varchar: {
       auto *str = reinterpret_cast<const char **>(data_)[actual_index];
       TPL_ASSERT(str != nullptr, "Null string in position not marked NULL!");
@@ -170,6 +173,11 @@ void Vector::SetValue(const uint64_t index, const GenericValue &val) {
     case TypeId::Double: {
       const auto new_double = val.is_null() ? 0 : val.value_.double_;
       reinterpret_cast<double *>(data_)[actual_index] = new_double;
+      break;
+    }
+    case TypeId::Date: {
+      const auto new_date = val.is_null() ? Date() : val.value_.date_;
+      reinterpret_cast<Date *>(data_)[actual_index] = new_date;
       break;
     }
     case TypeId::Hash: {
