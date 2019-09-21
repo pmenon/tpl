@@ -2,9 +2,6 @@
 
 #include <functional>
 
-// Needed for friend tests
-#include "gtest/gtest_prod.h"
-
 #include "common/common.h"
 #include "util/simd.h"
 

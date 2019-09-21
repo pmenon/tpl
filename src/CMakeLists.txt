@@ -1,6 +1,3 @@
-# Setup includes
-include_directories("${PROJECT_SOURCE_DIR}/src/include/" "${PROJECT_BINARY_DIR}")
-
 # Setup sources: add all CPP files in 'src', but remove tpl.cpp (since it
 # contains main(), and all cross-compiled code.
 file(GLOB_RECURSE tpl_sources "${PROJECT_SOURCE_DIR}/src/*.cpp")

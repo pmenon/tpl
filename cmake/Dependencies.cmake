@@ -3,6 +3,61 @@ set(TPL_LINK_LIBS "")
 set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party")
 
 ############################################################
+# Versions and URLs for toolchain builds, which also can be
+# used to configure offline builds
+############################################################
+
+# Read toolchain versions from thirdparty/versions.txt
+file(STRINGS "${THIRD_PARTY_DIR}/versions.txt" TOOLCHAIN_VERSIONS_TXT)
+foreach (_VERSION_ENTRY ${TOOLCHAIN_VERSIONS_TXT})
+    # Exclude comments
+    if (_VERSION_ENTRY MATCHES "#.*")
+        continue()
+    endif ()
+
+    string(REGEX MATCH "^[^=]*" _LIB_NAME ${_VERSION_ENTRY})
+    string(REPLACE "${_LIB_NAME}=" "" _LIB_VERSION ${_VERSION_ENTRY})
+
+    # Skip blank or malformed lines
+    if (${_LIB_VERSION} STREQUAL "")
+        continue()
+    endif ()
+
+    set(${_LIB_NAME} "${_LIB_VERSION}")
+endforeach ()
+
+if (DEFINED ENV{TERRIER_GTEST_URL})
+    set(GTEST_SOURCE_URL "$ENV{TERRIER_GTEST_URL}")
+else ()
+    set(GTEST_SOURCE_URL "https://github.com/google/googletest/archive/release-${GTEST_VERSION}.tar.gz")
+endif ()
+
+if (DEFINED ENV{TERRIER_GBENCHMARK_URL})
+    set(GBENCHMARK_SOURCE_URL "$ENV{TERRIER_GBENCHMARK_URL}")
+else ()
+    set(GBENCHMARK_SOURCE_URL "https://github.com/google/benchmark/archive/v${GBENCHMARK_VERSION}.tar.gz")
+endif ()
+
+############################################################
+# All external projection use EP_CXX_FLAGS
+############################################################
+
+string(TOUPPER ${CMAKE_BUILD_TYPE} UPPERCASE_BUILD_TYPE)
+set(EP_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${UPPERCASE_BUILD_TYPE}}")
+set(EP_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}}")
+
+if (NOT TPL_VERBOSE_THIRDPARTY_BUILD)
+set(EP_LOG_OPTIONS
+        LOG_CONFIGURE 1
+        LOG_BUILD 1
+        LOG_INSTALL 1
+        LOG_DOWNLOAD 1)
+else ()
+    set(EP_LOG_OPTIONS)
+endif ()
+
+
+############################################################
 # JeMalloc
 ############################################################
 
@@ -36,8 +91,9 @@ list(APPEND TPL_LINK_LIBS ${TBB_LIBRARIES})
 # xxHash
 ############################################################
 
-option(BUILD_XXHSUM "Disable building xxhsum binary" OFF)
-option(XXHASH_BUNDLED_MODE "Indicate that we're building in bundled mode" ON)
+set(BUILD_XXHSUM OFF CACHE BOOL "Suppress building xxhsum binary" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Suppress building library since we use headers only" FORCE)
+set(XXHASH_BUNDLED_MODE ON CACHE BOOL "Indicate that we're building in bundled mode" FORCE)
 add_subdirectory(${THIRD_PARTY_DIR}/xxHash/cmake_unofficial)
 include_directories(SYSTEM "${THIRD_PARTY_DIR}/xxHash")
 
@@ -99,4 +155,82 @@ include_directories(SYSTEM "${THIRD_PARTY_DIR}/csv-parser")
 # Google Test
 ############################################################
 
-include_directories(SYSTEM ${PROJECT_SOURCE_DIR}/third_party/gtest/include)
+if (APPLE)
+    set(GTEST_CMAKE_CXX_FLAGS "-DGTEST_USE_OWN_TR1_TUPLE=1 -Wno-unused-value -Wno-ignored-attributes -fvisibility=hidden")
+endif ()
+
+set(GTEST_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} ${GTEST_CMAKE_CXX_FLAGS}")
+
+set(GTEST_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/googletest_ep-prefix/src/googletest_ep")
+set(GTEST_INCLUDE_DIR "${GTEST_PREFIX}/include")
+set(GTEST_STATIC_LIB "${GTEST_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX}")
+set(GTEST_MAIN_STATIC_LIB "${GTEST_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX}")
+
+# Flags to pass to Googletest
+set(GTEST_CMAKE_ARGS
+        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        -DCMAKE_INSTALL_PREFIX=${GTEST_PREFIX}
+        -DCMAKE_CXX_FLAGS=${GTEST_CMAKE_CXX_FLAGS})
+
+# Add as an external project
+ExternalProject_Add(googletest_ep
+        EXCLUDE_FROM_ALL ON
+        URL ${GTEST_SOURCE_URL}
+        BUILD_BYPRODUCTS ${GTEST_STATIC_LIB} ${GTEST_MAIN_STATIC_LIB}
+        CMAKE_ARGS ${GTEST_CMAKE_ARGS}
+        ${EP_LOG_OPTIONS})
+
+message(STATUS "GTest version: ${GTEST_VERSION}")
+message(STATUS "GTest include dir: ${GTEST_INCLUDE_DIR}")
+message(STATUS "GTest static library: ${GTEST_MAIN_STATIC_LIB}")
+message(STATUS "GTest Main static library: ${GTEST_MAIN_STATIC_LIB}")
+
+include_directories(SYSTEM ${GTEST_INCLUDE_DIR})
+add_library(gtest STATIC IMPORTED)
+add_library(gtest_main STATIC IMPORTED)
+set_target_properties(gtest PROPERTIES IMPORTED_LOCATION "${GTEST_STATIC_LIB}")
+set_target_properties(gtest_main PROPERTIES IMPORTED_LOCATION "${GTEST_MAIN_STATIC_LIB}")
+add_dependencies(gtest googletest_ep)
+add_dependencies(gtest_main googletest_ep)
+
+############################################################
+# Google Benchmark
+############################################################
+
+if (TPL_BUILD_BENCHMARKS)
+    add_custom_target(runbenchmark ctest -L benchmark)
+
+    # Setup the flags for Google Benchmark
+    set(GBENCHMARK_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS}")
+
+    # Prefix directory
+    set(GBENCHMARK_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/gbenchmark_ep/src/gbenchmark_ep-install")
+    set(GBENCHMARK_INCLUDE_DIR "${GBENCHMARK_PREFIX}/include")
+    set(GBENCHMARK_STATIC_LIB "${GBENCHMARK_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}benchmark${CMAKE_STATIC_LIBRARY_SUFFIX}")
+
+    # Set-up flags manually
+    set(GBENCHMARK_CMAKE_ARGS
+            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_INSTALL_PREFIX:PATH=${GBENCHMARK_PREFIX}
+            -DBENCHMARK_ENABLE_TESTING=OFF
+            -DCMAKE_CXX_FLAGS=${GBENCHMARK_CMAKE_CXX_FLAGS})
+    if (APPLE)
+        set(GBENCHMARK_CMAKE_ARGS ${GBENCHMARK_CMAKE_ARGS} "-DBENCHMARK_USE_LIBCXX=ON")
+    endif ()
+
+    ExternalProject_Add(gbenchmark_ep
+            EXCLUDE_FROM_ALL ON
+            URL ${GBENCHMARK_SOURCE_URL}
+            BUILD_BYPRODUCTS "${GBENCHMARK_STATIC_LIB}"
+            CMAKE_ARGS ${GBENCHMARK_CMAKE_ARGS}
+            ${EP_LOG_OPTIONS})
+
+    message(STATUS "Google Benchmark version: ${GBENCHMARK_VERSION}")
+    message(STATUS "Google Benchmark include dir: ${GBENCHMARK_INCLUDE_DIR}")
+    message(STATUS "Google Benchmark static library: ${GBENCHMARK_STATIC_LIB}")
+    include_directories(SYSTEM ${GBENCHMARK_INCLUDE_DIR})
+
+    add_library(benchmark STATIC IMPORTED)
+    set_target_properties(benchmark PROPERTIES IMPORTED_LOCATION "${GBENCHMARK_STATIC_LIB}")
+    add_dependencies(benchmark gbenchmark_ep)
+endif ()

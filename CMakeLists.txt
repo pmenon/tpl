@@ -31,6 +31,8 @@ option(TPL_USE_TSAN "Build TPL with ThreadSanitizer enabled" OFF)
 option(TPL_USE_GOLD "Use the GNU Gold linker if available" OFF)
 option(TPL_GENERATE_COVERAGE "Build TPL with code coverage enabled" OFF)
 option(TPL_BUILD_DOC "Build Doxygen documentation" OFF)
+option(TPL_VERBOSE_THIRDPARTY_BUILD "Verbose output when building third-party librares" OFF)
+option(TPL_BUILD_BENCHMARKS "Build TPL benchmarks" OFF)
 
 # Is this MacOS ?
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -54,16 +56,6 @@ include(Dependencies)
 
 # Setup the compiler and setup the compiler flags
 include(SetupCompiler)
-
-############################################################
-#
-# Project Setup
-#
-############################################################
-
-# Let the sources and tests directory set themselves up
-add_subdirectory(src)
-add_subdirectory(test)
 
 ############################################################
 #
@@ -235,6 +227,23 @@ if (TPL_BUILD_DOC)
           COMMENT "Generating API documentation with Doxygen"
           VERBATIM )
 endif ()
+
+############################################################
+#
+# Project Setup
+#
+############################################################
+
+# Setup includes. Needed for all directory components.
+include_directories("${PROJECT_SOURCE_DIR}/src/include/" "${PROJECT_BINARY_DIR}")
+
+set(TPL_TEST_LINK_LIBS tpl_shared ${TPL_LINK_LIBS} gtest gtest_main ${CMAKE_DL_LIBS})
+set(TPL_BENCHMARK_LINK_LIBS tpl_shared ${TPL_LINK_LIBS} benchmark gtest gtest_main ${CMAKE_DL_LIBS})
+
+# Let the sources and tests directory set themselves up
+add_subdirectory(src)
+add_subdirectory(test)
+add_subdirectory(benchmark)
 
 ############################################################
 #

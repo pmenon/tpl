@@ -4,9 +4,6 @@
 #include <numeric>
 #include <vector>
 
-// Needed for friend tests
-#include "gtest/gtest_prod.h"
-
 #include "sql/bloom_filter.h"
 #include "sql/concise_hash_table.h"
 #include "sql/generic_hash_table.h"
