@@ -60,13 +60,11 @@ void TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &
     }
   }
 
-  if (IgnoreNull && left.null_mask().Any()) {
-    tid_list->Filter([&](uint64_t i) {
-      return left.null_mask()[i] ? false : Op::Apply(left_data[i], constant);
-    });
-  } else {
-    tid_list->Filter([&](uint64_t i) { return Op::Apply(left_data[i], constant); });
-  }
+  // Remove all NULL entries from left input. Right constant is guaranteed non-NULL by this point.
+  tid_list->GetMutableBits()->Difference(left.null_mask());
+
+  // Filter
+  tid_list->Filter([&](uint64_t i) { return Op::Apply(left_data[i], constant); });
 }
 
 template <typename T, typename Op, bool IgnoreNull>
@@ -74,8 +72,6 @@ void TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &ri
                                             TupleIdList *tid_list) {
   auto *left_data = reinterpret_cast<const T *>(left.data());
   auto *right_data = reinterpret_cast<const T *>(right.data());
-
-  const Vector::NullMask result_mask = left.null_mask() | right.null_mask();
 
   if constexpr (std::is_fundamental_v<T>) {
     // We're comparing a vector of primitive values to a constant. We COULD just iterate the TIDs in
@@ -90,18 +86,16 @@ void TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &ri
     if (full_compute_threshold && *full_compute_threshold <= tid_list->ComputeSelectivity()) {
       TupleIdList::BitVectorType *bit_vector = tid_list->GetMutableBits();
       bit_vector->UpdateFull([&](uint64_t i) { return Op::Apply(left_data[i], right_data[i]); });
-      bit_vector->Difference(result_mask);
+      bit_vector->Difference(left.null_mask()).Difference(right.null_mask());
       return;
     }
   }
 
-  if (IgnoreNull && result_mask.Any()) {
-    tid_list->Filter([&](uint64_t i) {
-      return result_mask[i] ? false : Op::Apply(left_data[i], right_data[i]);
-    });
-  } else {
-    tid_list->Filter([&](uint64_t i) { return Op::Apply(left_data[i], right_data[i]); });
-  }
+  // Remove all NULL entries in either vector
+  tid_list->GetMutableBits()->Difference(left.null_mask()).Difference(right.null_mask());
+
+  // Filter
+  tid_list->Filter([&](uint64_t i) { return Op::Apply(left_data[i], right_data[i]); });
 }
 
 template <typename T, typename Op, bool IgnoreNull = false>
