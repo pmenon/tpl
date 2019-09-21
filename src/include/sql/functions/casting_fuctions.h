@@ -15,26 +15,26 @@ class CastingFunctions {
 
   static void CastToBoolVal(BoolVal *result, const Integer &v);
   static void CastToBoolVal(BoolVal *result, const Real &v);
-  static void CastToBoolVal(BoolVal *result, const Date &v);
-  static void CastToBoolVal(BoolVal *result, const Timestamp &v);
+  static void CastToBoolVal(BoolVal *result, const DateVal &v);
+  static void CastToBoolVal(BoolVal *result, const TimestampVal &v);
 
   static void CastToInteger(Integer *result, const BoolVal &v);
   static void CastToInteger(Integer *result, const Real &v);
   static void CastToInteger(Integer *result, const StringVal &v);
-  static void CastToInteger(Integer *result, const Date &v);
-  static void CastToInteger(Integer *result, const Timestamp &v);
+  static void CastToInteger(Integer *result, const DateVal &v);
+  static void CastToInteger(Integer *result, const TimestampVal &v);
 
   static void CastToReal(Real *result, const BoolVal &v);
   static void CastToReal(Real *result, const Integer &v);
   static void CastToReal(Real *result, const StringVal &v);
-  static void CastToReal(Real *result, const Date &v);
-  static void CastToReal(Real *result, const Timestamp &v);
+  static void CastToReal(Real *result, const DateVal &v);
+  static void CastToReal(Real *result, const TimestampVal &v);
 
   static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const BoolVal &v);
   static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const Integer &v);
   static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const Real &v);
-  static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const Date &v);
-  static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const Timestamp &v);
+  static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const DateVal &v);
+  static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const TimestampVal &v);
 };
 
 // ---------------------------------------------------------

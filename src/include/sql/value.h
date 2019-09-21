@@ -230,16 +230,16 @@ struct StringVal : public Val {
 /**
  * A SQL date value
  */
-struct Date : public Val {
+struct DateVal : public Val {
   int32_t date_val;
 
-  explicit Date(int32_t date) noexcept : Val(false), date_val(date) {}
+  explicit DateVal(int32_t date) noexcept : Val(false), date_val(date) {}
 
   /**
    * Create a NULL date
    */
-  static Date Null() {
-    Date date(0);
+  static DateVal Null() {
+    DateVal date(0);
     date.is_null = true;
     return date;
   }
@@ -254,16 +254,16 @@ struct Date : public Val {
 /**
  * A SQL timestamp value
  */
-struct Timestamp : public Val {
+struct TimestampVal : public Val {
   timespec time;
 
-  explicit Timestamp(timespec time) noexcept : Val(false), time(time) {}
+  explicit TimestampVal(timespec time) noexcept : Val(false), time(time) {}
 
   /**
    * Create a NULL timestamp
    */
-  static Timestamp Null() {
-    Timestamp timestamp({0, 0});
+  static TimestampVal Null() {
+    TimestampVal timestamp({0, 0});
     timestamp.is_null = true;
     return timestamp;
   }

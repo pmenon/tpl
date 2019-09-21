@@ -40,11 +40,11 @@ TEST_F(IsNullPredicateTests, IsNotNull) {
   CHECK_IS_NOT_NULL_FOR_TYPE(Integer, 44);
   CHECK_IS_NOT_NULL_FOR_TYPE(Real, 44.0);
   CHECK_IS_NOT_NULL_FOR_TYPE(StringVal, "44");
-  CHECK_IS_NOT_NULL_FOR_TYPE(Date, 44);
+  CHECK_IS_NOT_NULL_FOR_TYPE(DateVal, 44);
   {
     struct timespec ts;
     timespec_get(&ts, TIME_UTC);
-    CHECK_IS_NOT_NULL_FOR_TYPE(Timestamp, ts);
+    CHECK_IS_NOT_NULL_FOR_TYPE(TimestampVal, ts);
   }
 
 #undef CHECK_IS_NOT_NULL_FOR_TYPE
