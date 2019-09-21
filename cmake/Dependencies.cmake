@@ -198,8 +198,6 @@ add_dependencies(gtest_main googletest_ep)
 ############################################################
 
 if (TPL_BUILD_BENCHMARKS)
-    add_custom_target(runbenchmark ctest -L benchmark)
-
     # Setup the flags for Google Benchmark
     set(GBENCHMARK_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS}")
 
