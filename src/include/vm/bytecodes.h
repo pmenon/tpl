@@ -121,24 +121,28 @@ namespace tpl::vm {
   F(VPIGetReal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
   F(VPIGetDouble, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
   F(VPIGetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
+  F(VPIGetDate, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
   F(VPIGetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
   F(VPIGetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPIGetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPIGetRealNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPIGetDoubleNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPIGetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
+  F(VPIGetDateNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPISetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPISetInteger, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPISetBigInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
   F(VPISetReal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
   F(VPISetDouble, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
   F(VPISetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
+  F(VPISetDate, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
   F(VPISetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
   F(VPISetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPISetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPISetRealNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPISetDoubleNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPISetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
+  F(VPISetDateNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
                                                                                                                        \
   /* Filter Manager */                                                                                                 \
   F(FilterManagerInit, OperandType::Local)                                                                             \

@@ -600,33 +600,33 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   // VPI element access
   // -------------------------------------------------------
 
-#define GEN_VPI_ACCESS(type_str, type)                                            \
-  OP(VPIGet##type_str) : {                                                        \
-    auto *result = frame->LocalAt<type *>(READ_LOCAL_ID());                       \
+#define GEN_VPI_ACCESS(NAME, CPP_TYPE)                                            \
+  OP(VPIGet##NAME) : {                                                            \
+    auto *result = frame->LocalAt<CPP_TYPE *>(READ_LOCAL_ID());                   \
     auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
     auto col_idx = READ_UIMM4();                                                  \
-    OpVPIGet##type_str(result, vpi, col_idx);                                     \
+    OpVPIGet##NAME(result, vpi, col_idx);                                         \
     DISPATCH_NEXT();                                                              \
   }                                                                               \
-  OP(VPIGet##type_str##Null) : {                                                  \
-    auto *result = frame->LocalAt<type *>(READ_LOCAL_ID());                       \
+  OP(VPIGet##NAME##Null) : {                                                      \
+    auto *result = frame->LocalAt<CPP_TYPE *>(READ_LOCAL_ID());                   \
     auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
     auto col_idx = READ_UIMM4();                                                  \
-    OpVPIGet##type_str##Null(result, vpi, col_idx);                               \
+    OpVPIGet##NAME##Null(result, vpi, col_idx);                                   \
     DISPATCH_NEXT();                                                              \
   }                                                                               \
-  OP(VPISet##type_str) : {                                                        \
+  OP(VPISet##NAME) : {                                                            \
     auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
-    auto *input = frame->LocalAt<type *>(READ_LOCAL_ID());                        \
+    auto *input = frame->LocalAt<CPP_TYPE *>(READ_LOCAL_ID());                    \
     auto col_idx = READ_UIMM4();                                                  \
-    OpVPISet##type_str(vpi, input, col_idx);                                      \
+    OpVPISet##NAME(vpi, input, col_idx);                                          \
     DISPATCH_NEXT();                                                              \
   }                                                                               \
-  OP(VPISet##type_str##Null) : {                                                  \
+  OP(VPISet##NAME##Null) : {                                                      \
     auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
-    auto *input = frame->LocalAt<type *>(READ_LOCAL_ID());                        \
+    auto *input = frame->LocalAt<CPP_TYPE *>(READ_LOCAL_ID());                    \
     auto col_idx = READ_UIMM4();                                                  \
-    OpVPISet##type_str##Null(vpi, input, col_idx);                                \
+    OpVPISet##NAME##Null(vpi, input, col_idx);                                    \
     DISPATCH_NEXT();                                                              \
   }
   GEN_VPI_ACCESS(SmallInt, sql::Integer)
@@ -635,6 +635,7 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   GEN_VPI_ACCESS(Real, sql::Real)
   GEN_VPI_ACCESS(Double, sql::Real)
   GEN_VPI_ACCESS(Decimal, sql::Decimal)
+  GEN_VPI_ACCESS(Date, sql::DateVal)
 #undef GEN_VPI_ACCESS
 
   // ------------------------------------------------------

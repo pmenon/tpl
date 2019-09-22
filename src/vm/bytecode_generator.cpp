@@ -642,11 +642,19 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
       emitter()->EmitVPIGet(Bytecode::VPIGetDouble, val, vpi, col_idx);
       break;
     }
+    case ast::Builtin::VPIGetDate: {
+      LocalVar val = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Date));
+      auto col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
+      emitter()->EmitVPIGet(Bytecode::VPIGetDate, val, vpi, col_idx);
+      break;
+    }
     case ast::Builtin::VPISetSmallInt:
     case ast::Builtin::VPISetInt:
     case ast::Builtin::VPISetBigInt:
     case ast::Builtin::VPISetReal:
-    case ast::Builtin::VPISetDouble: {
+    case ast::Builtin::VPISetDouble:
+    case ast::Builtin::VPISetDate: {
       Bytecode bytecode;
       if (builtin == ast::Builtin::VPISetSmallInt) {
         bytecode = Bytecode::VPISetSmallInt;
@@ -656,8 +664,10 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
         bytecode = Bytecode::VPISetBigInt;
       } else if (builtin == ast::Builtin::VPISetReal) {
         bytecode = Bytecode::VPISetReal;
-      } else {
+      } else if (builtin == ast::Builtin::VPISetDouble) {
         bytecode = Bytecode::VPISetDouble;
+      } else {
+        bytecode = Bytecode::VPISetDate;
       }
       auto input = VisitExpressionForLValue(call->arguments()[1]);
       auto col_idx = call->arguments()[2]->As<ast::LitExpr>()->int32_val();
@@ -1413,11 +1423,13 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::VPIGetBigInt:
     case ast::Builtin::VPIGetReal:
     case ast::Builtin::VPIGetDouble:
+    case ast::Builtin::VPIGetDate:
     case ast::Builtin::VPISetSmallInt:
     case ast::Builtin::VPISetInt:
     case ast::Builtin::VPISetBigInt:
     case ast::Builtin::VPISetReal:
-    case ast::Builtin::VPISetDouble: {
+    case ast::Builtin::VPISetDouble:
+    case ast::Builtin::VPISetDate: {
       VisitBuiltinVPICall(call, builtin);
       break;
     }
