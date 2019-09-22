@@ -68,27 +68,56 @@ uint32_t Date::ExtractDay() const noexcept {
 }
 
 Date Date::FromString(const char *str, std::size_t len) {
-  char *pos = nullptr;
+  const char *ptr = str, *limit = ptr + len;
+
+  // Trim leading and trailing whitespace
+  while (ptr != limit && std::isspace(*ptr)) ptr++;
+  while (ptr != limit && std::isspace(*limit)) limit--;
+
+  uint32_t year = 0, month = 0, day = 0;
+
+#define ERROR throw ConversionException("{} is not a valid date", std::string(str, len));
 
   // Year
-  uint32_t year = std::strtoul(str, &pos, 10);
-  if (pos == nullptr || *pos != '-') {
-    throw ConversionException("{} is not a valid date", std::string(str, len));
+  while (true) {
+    if (ptr == limit) ERROR;
+    char c = *ptr++;
+    if (std::isdigit(c)) {
+      year = year * 10 + (c - '0');
+    } else if (c == '-') {
+      break;
+    } else {
+      ERROR;
+    }
   }
 
   // Month
-  uint32_t month = std::strtoul(pos + 1, &pos, 10);
-  if (pos == nullptr || *pos != '-') {
-    throw ConversionException("{} is not a valid date", std::string(str, len));
+  while (true) {
+    if (ptr == limit) ERROR;
+    char c = *ptr++;
+    if (std::isdigit(c)) {
+      month = month * 10 + (c - '0');
+    } else if (c == '-') {
+      break;
+    } else {
+      ERROR;
+    }
   }
 
   // Day
-  uint32_t day = std::strtoul(pos + 1, &pos, 10);
-
-  // Validate
-  if (!IsValidJulianDate(year, month, day)) {
-    throw ConversionException("{} is not a valid date", std::string(str, len));
+  while (true) {
+    if (ptr == limit) break;
+    char c = *ptr++;
+    if (std::isdigit(c)) {
+      day = day * 10 + (c - '0');
+    } else {
+      ERROR;
+    }
   }
+
+  if (!IsValidJulianDate(year, month, day)) ERROR;
+
+#undef ERROR
 
   return Date(BuildJulianDate(year, month, day));
 }

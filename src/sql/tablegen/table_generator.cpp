@@ -68,6 +68,11 @@ void ParseCol(byte *data, uint32_t *null_bitmap, const Schema::ColumnInfo &col, 
       *reinterpret_cast<double *>(insert_offset) = field.get<double>();
       break;
     }
+    case SqlTypeId::Date: {
+      auto val = field.get<std::string_view>();
+      *reinterpret_cast<Date *>(insert_offset) = Date::FromString(val.data(), val.length());
+      break;
+    }
     case SqlTypeId::Varchar: {
       auto val = field.get<std::string_view>();
       auto content_size = static_cast<uint32_t>(val.size() + 1);
