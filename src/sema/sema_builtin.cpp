@@ -37,6 +37,25 @@ bool AreAllFunctions(const ArgTypes... type) {
 }  // namespace
 
 void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
+  // Handle this builtin because it's API is different than the other builtins; we expect three
+  // 32-bit integer arguments.
+  if (builtin == ast::Builtin::DateToSql) {
+    if (!CheckArgCount(call, 3)) {
+      return;
+    }
+    const auto int32_kind = ast::BuiltinType::Int32;
+    if (!call->arguments()[0]->type()->IsSpecificBuiltin(int32_kind) ||
+        !call->arguments()[1]->type()->IsSpecificBuiltin(int32_kind) ||
+        !call->arguments()[2]->type()->IsSpecificBuiltin(int32_kind)) {
+      error_reporter()->Report(call->position(), ErrorMessages::kInvalidCastToSqlDate,
+                               call->arguments()[0]->type(), call->arguments()[1]->type(),
+                               call->arguments()[2]->type());
+    }
+    // All good. Set return type as SQL Date.
+    call->set_type(GetBuiltinType(ast::BuiltinType::Date));
+    return;
+  }
+
   if (!CheckArgCount(call, 1)) {
     return;
   }
@@ -1321,6 +1340,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::BoolToSql:
     case ast::Builtin::IntToSql:
     case ast::Builtin::FloatToSql:
+    case ast::Builtin::DateToSql:
     case ast::Builtin::SqlToBool: {
       CheckBuiltinSqlConversionCall(call, builtin);
       break;

@@ -625,6 +625,11 @@ VM_OP_HOT void OpInitReal(tpl::sql::Real *result, double input) {
   result->val = input;
 }
 
+VM_OP_HOT void OpInitDate(tpl::sql::DateVal *result, uint32_t year, uint32_t month, uint32_t day) {
+  result->is_null = false;
+  result->date_val = tpl::sql::Date::FromYMD(year, month, day);
+}
+
 #define GEN_SQL_COMPARISONS(TYPE)                                                                 \
   VM_OP_HOT void OpGreaterThan##TYPE(tpl::sql::BoolVal *const result,                             \
                                      const tpl::sql::TYPE *const left,                            \

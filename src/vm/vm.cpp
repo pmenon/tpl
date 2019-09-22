@@ -793,6 +793,15 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(InitDate) : {
+    auto *sql_date = frame->LocalAt<sql::DateVal *>(READ_LOCAL_ID());
+    auto year = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
+    auto month = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
+    auto day = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
+    OpInitDate(sql_date, year, month, day);
+    DISPATCH_NEXT();
+  }
+
 #define GEN_CMP(op)                                                  \
   OP(op##Integer) : {                                                \
     auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());  \

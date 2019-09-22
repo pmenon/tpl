@@ -465,6 +465,15 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
       emitter()->Emit(Bytecode::InitReal, dest, input);
       break;
     }
+    case ast::Builtin::DateToSql: {
+      auto dest = execution_result()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::Date));
+      auto year = VisitExpressionForRValue(call->arguments()[0]);
+      auto month = VisitExpressionForRValue(call->arguments()[1]);
+      auto day = VisitExpressionForRValue(call->arguments()[2]);
+      emitter()->Emit(Bytecode::InitDate, dest, year, month, day);
+      break;
+    }
     case ast::Builtin::SqlToBool: {
       auto dest = execution_result()->GetOrCreateDestination(
           ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
@@ -1361,6 +1370,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::BoolToSql:
     case ast::Builtin::IntToSql:
     case ast::Builtin::FloatToSql:
+    case ast::Builtin::DateToSql:
     case ast::Builtin::SqlToBool: {
       VisitSqlConversionCall(call, builtin);
       break;
