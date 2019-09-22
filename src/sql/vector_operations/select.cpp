@@ -42,7 +42,8 @@ void TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &
   auto *left_data = reinterpret_cast<const T *>(left.data());
   auto constant = *reinterpret_cast<const T *>(right.data());
 
-  if constexpr (std::is_fundamental_v<T>) {
+  // TODO(pmenon): Move to some SQL-level type traits
+  if constexpr (std::is_fundamental_v<T> || std::is_same_v<T, Date>) {
     // We're comparing a vector of primitive values to a constant. We COULD just iterate the TIDs in
     // the input TupleIdList, apply the predicate and be done with it, but we take advantage of the
     // fact that we can operate on non-selected data and potentially use SIMD to accelerate the
@@ -73,7 +74,8 @@ void TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &ri
   auto *left_data = reinterpret_cast<const T *>(left.data());
   auto *right_data = reinterpret_cast<const T *>(right.data());
 
-  if constexpr (std::is_fundamental_v<T>) {
+  // TODO(pmenon): Move to some SQL-level type traits
+  if constexpr (std::is_fundamental_v<T> || std::is_same_v<T, Date>) {
     // We're comparing a vector of primitive values to a constant. We COULD just iterate the TIDs in
     // the input TupleIdList, apply the predicate and be done with it, but we take advantage of the
     // fact that we can operate on non-selected data and potentially use SIMD to accelerate the
@@ -137,6 +139,9 @@ void SelectOperation(const Vector &left, const Vector &right, TupleIdList *tid_l
       break;
     case TypeId::Double:
       TemplatedSelectOperation<double, Op>(left, right, tid_list);
+      break;
+    case TypeId::Date:
+      TemplatedSelectOperation<Date, Op>(left, right, tid_list);
       break;
     case TypeId::Varchar:
       TemplatedSelectOperation<const char *, Op, true>(left, right, tid_list);

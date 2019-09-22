@@ -50,6 +50,23 @@ void CastFromSrcType(const Vector &source, Vector *target, SqlTypeId target_type
     case SqlTypeId::Double:
       CastFromSrcTypeToDestType<SrcT, double, Op>(source, target);
       break;
+    case SqlTypeId::Date:
+      CastFromSrcTypeToDestType<SrcT, Date, tpl::sql::CastToDate>(source, target);
+      break;
+    case SqlTypeId::Varchar: {
+      TPL_ASSERT(target->type_id() == TypeId::Varchar, "Result vector must be string");
+      auto src_data = reinterpret_cast<SrcT *>(source.data());
+      auto result_data = reinterpret_cast<const char **>(target->data());
+      VectorOps::Exec(source, [&](uint64_t i, uint64_t k) {
+        if (source.null_mask()[i]) {
+          result_data[i] = nullptr;
+        } else {
+          auto str = Op::template Apply<SrcT, std::string>(src_data[i]);
+          result_data[i] = target->mutable_string_heap()->AddString(str);
+        }
+      });
+      break;
+    }
     default:
       throw NotImplementedException("casting vector of type '{}' to '{}' not supported",
                                     TypeIdToString(source.type_id()),
@@ -85,6 +102,9 @@ void VectorOps::Cast(const Vector &source, Vector *target, SqlTypeId source_type
       break;
     case SqlTypeId::Double:
       CastFromSrcType<double, tpl::sql::Cast>(source, target, target_type);
+      break;
+    case SqlTypeId::Date:
+      CastFromSrcType<Date, tpl::sql::CastFromDate>(source, target, target_type);
       break;
     default:
       throw NotImplementedException("casting vector of type '{}' not supported",

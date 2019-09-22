@@ -1,6 +1,7 @@
 #include "sql/vector_operations/vector_operators.h"
 
 #include "common/exception.h"
+#include "sql/generic_value.h"
 
 namespace tpl::sql {
 
@@ -53,6 +54,9 @@ void VectorOps::Fill(Vector *vector, const GenericValue &value) {
       break;
     case TypeId::Double:
       TemplatedFillOperation(vector, value.value_.double_);
+      break;
+    case TypeId::Date:
+      TemplatedFillOperation(vector, value.value_.date_);
       break;
     case TypeId::Varchar:
       TemplatedFillOperation(vector, vector->strings_.AddString(value.str_value_));

@@ -8,6 +8,7 @@
 #include "sql/catalog.h"
 #include "sql/vector.h"
 #include "util/test_harness.h"
+#include "sql/runtime_types.h"
 
 namespace tpl {
 
@@ -52,6 +53,7 @@ MAKE_VEC_TYPE(Integer, int32_t)
 MAKE_VEC_TYPE(BigInt, int64_t)
 MAKE_VEC_TYPE(Float, float)
 MAKE_VEC_TYPE(Double, double)
+MAKE_VEC_TYPE(Date, sql::Date)
 MAKE_VEC_TYPE(Varchar, std::string_view)
 
 #undef MAKE_VEC_TYPE

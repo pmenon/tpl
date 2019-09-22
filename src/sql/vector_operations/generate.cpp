@@ -56,7 +56,8 @@ void VectorOps::Generate(Vector *vector, int64_t start, int64_t increment) {
       TemplatedGenerateOperation<double>(vector, start, increment);
       break;
     default:
-      UNREACHABLE("Impossible type in switch. Should have been caught in if-guard earlier!");
+      throw NotImplementedException("Cannot generate into vector type {}",
+                                    TypeIdToString(vector->type_id()));
   }
 }
 

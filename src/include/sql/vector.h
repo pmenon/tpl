@@ -170,6 +170,11 @@ class Vector {
   NullMask *mutable_null_mask() { return &null_mask_; }
 
   /**
+   * Return a pointer to this vector's string heap.
+   */
+  StringHeap *mutable_string_heap() { return &strings_; }
+
+  /**
    * Set the selection vector.
    */
   void SetSelectionVector(sel_t *const sel_vector, const uint64_t count) {

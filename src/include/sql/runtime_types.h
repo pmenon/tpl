@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "util/hash_util.h"
+
 namespace tpl::sql {
 
 // ---------------------------------------------------------
@@ -134,6 +136,12 @@ class Date {
   static bool IsValidDate(uint32_t year, uint32_t month, uint32_t day) {
     return FromYMD(year, month, day).IsValid();
   }
+
+  /**
+   * Hash the date.
+   * @return The hash value for this date instance.
+   */
+  hash_t Hash() const noexcept { return util::HashUtil::Hash(value_); }
 
  private:
   friend struct DateVal;

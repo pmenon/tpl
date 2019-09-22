@@ -2,6 +2,7 @@
 #include <numeric>
 #include <vector>
 
+#include "common/exception.h"
 #include "sql/vector.h"
 #include "util/bit_util.h"
 #include "util/sql_test_harness.h"
@@ -379,7 +380,7 @@ TEST_F(VectorTest, NumericDowncast) {
       vec->SetValue(i, GenericValue::Create##SRC_TYPE(i));                                         \
     }                                                                                              \
     EXPECT_NO_THROW(vec->Cast(TypeId::DEST_TYPE));                                                 \
-    EXPECT_TRUE(vec->type_id() == TypeId::DEST_TYPE);                                              \
+    EXPECT_EQ(TypeId::DEST_TYPE, vec->type_id());                                                  \
     EXPECT_EQ(10u, vec->num_elements());                                                           \
     EXPECT_EQ(10u, vec->count());                                                                  \
     EXPECT_EQ(nullptr, vec->selection_vector());                                                   \
@@ -416,6 +417,30 @@ TEST_F(VectorTest, NumericDowncast) {
   CHECK_CAST(Double, Float, float);
 
 #undef CHECK_CAST
+}
+
+TEST_F(VectorTest, DateCast) {
+  // a = [NULL, "1980-01-01", "2016-01-27", NULL, "2000-01-01", "2015-08-01"]
+  auto a = MakeDateVector(
+      {Date::FromYMD(1980, 1, 1), Date::FromYMD(1980, 1, 1), Date::FromYMD(2016, 1, 27),
+       Date::FromYMD(1980, 1, 1), Date::FromYMD(2000, 1, 1), Date::FromYMD(2015, 8, 1)},
+      {true, false, false, true, false, false});
+
+  EXPECT_THROW(a->Cast(TypeId::TinyInt), NotImplementedException);
+  EXPECT_THROW(a->Cast(TypeId::SmallInt), NotImplementedException);
+  EXPECT_THROW(a->Cast(TypeId::Integer), NotImplementedException);
+  EXPECT_THROW(a->Cast(TypeId::BigInt), NotImplementedException);
+  EXPECT_THROW(a->Cast(TypeId::Float), NotImplementedException);
+  EXPECT_THROW(a->Cast(TypeId::Double), NotImplementedException);
+  EXPECT_NO_THROW(a->Cast(TypeId::Varchar));
+
+  EXPECT_EQ(TypeId::Varchar, a->type_id());
+  EXPECT_TRUE(a->IsNull(0));
+  EXPECT_EQ(GenericValue::CreateVarchar("1980-01-01"), a->GetValue(1));
+  EXPECT_EQ(GenericValue::CreateVarchar("2016-01-27"), a->GetValue(2));
+  EXPECT_TRUE(a->IsNull(3));
+  EXPECT_EQ(GenericValue::CreateVarchar("2000-01-01"), a->GetValue(4));
+  EXPECT_EQ(GenericValue::CreateVarchar("2015-08-01"), a->GetValue(5));
 }
 
 TEST_F(VectorTest, Append) {

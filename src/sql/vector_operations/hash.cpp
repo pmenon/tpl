@@ -46,6 +46,9 @@ void VectorOps::Hash(const Vector &input, Vector *result) {
     case TypeId::Double:
       UnaryOperation_HandleNull<double, hash_t, tpl::sql::Hash>(input, result);
       break;
+    case TypeId::Date:
+      UnaryOperation_HandleNull<Date, hash_t, tpl::sql::Hash>(input, result);
+      break;
     case TypeId::Varchar:
       UnaryOperation_HandleNull<const char *, hash_t, tpl::sql::Hash>(input, result);
       break;
