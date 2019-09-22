@@ -154,4 +154,93 @@ class Date {
   uint32_t value_;
 };
 
+// ---------------------------------------------------------
+//
+// Variable-length values
+//
+// ---------------------------------------------------------
+
+/**
+ * A VarlenEntry is a cheap handle to variable length buffer allocated and owned by another entity.
+ */
+class VarlenEntry {
+ public:
+  /**
+   * Constructs a new out-lined varlen entry. The varlen DOES NOT take ownership of the content, but
+   * will only store a pointer to it. It is the caller's responsibility to ensure the content
+   * outlives this varlen entry.
+   *
+   * @param content A Pointer to the varlen content itself.
+   * @param size The length of the varlen content, in bytes (no C-style nul-terminator).
+   * @return A constructed VarlenEntry object.
+   */
+  static VarlenEntry Create(byte *content, uint32_t size) {
+    VarlenEntry result;
+    result.size_ = size;
+
+    // If the size is small enough for the content to be inlined, apply that optimization. If not,
+    // store a prefix of the content inline and point to the bigger content.
+
+    if (size <= GetInlineThreshold()) {
+      std::memcpy(result.prefix_, content, size);
+    } else {
+      std::memcpy(result.prefix_, content, sizeof(uint32_t));
+      result.content_ = content;
+    }
+
+    return result;
+  }
+
+  /**
+   * @return The maximum size of the varlen field, in bytes, that can be inlined within the object.
+   * Any objects that are larger need to be stored as a pointer to a separate buffer.
+   */
+  static constexpr uint32_t GetInlineThreshold() { return sizeof(VarlenEntry) - sizeof(uint32_t); }
+
+  /**
+   * @return length of the prefix of the varlen stored in the object for execution engine, if the
+   * varlen entry is not inlined.
+   */
+  static constexpr uint32_t GetPrefixSize() { return sizeof(uint32_t); }
+
+  /**
+   * @return size of the varlen value stored in this entry, in bytes.
+   */
+  uint32_t GetSize() const { return size_; }
+
+  /**
+   * @return whether the content is inlined or not.
+   */
+  bool IsInlined() const { return GetSize() <= GetInlineThreshold(); }
+
+  /**
+   * @return pointer to the stored prefix of the varlen entry
+   */
+  const byte *GetPrefix() const { return prefix_; }
+
+  /**
+   * @return pointer to the varlen entry contents.
+   */
+  const byte *GetContent() const { return IsInlined() ? prefix_ : content_; }
+
+  /**
+   * @return A zero-copy view of the VarlenEntry as an immutable string that allows use with
+   *         convenient STL functions
+   * @warning It is the user's responsibility to ensure that std::string_view does not outlive
+   *          the VarlenEntry
+   */
+  std::string_view GetStringView() const {
+    return std::string_view(reinterpret_cast<const char *const>(GetContent()), GetSize());
+  }
+
+ private:
+  // The size of the contents
+  int32_t size_;
+  // A small prefix for the string. Immediately valid when content is inlined, but used when content
+  // is not inlined as well.
+  byte prefix_[sizeof(uint32_t)];
+  // Pointer to the content when not inlined
+  const byte *content_;
+};
+
 }  // namespace tpl::sql
