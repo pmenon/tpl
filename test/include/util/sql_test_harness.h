@@ -6,9 +6,9 @@
 #include "gtest/gtest.h"
 
 #include "sql/catalog.h"
+#include "sql/runtime_types.h"
 #include "sql/vector.h"
 #include "util/test_harness.h"
-#include "sql/runtime_types.h"
 
 namespace tpl {
 

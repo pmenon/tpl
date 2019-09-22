@@ -232,9 +232,9 @@ struct StringVal : public Val {
  * A SQL date value
  */
 struct DateVal : public Val {
-  Date date_val;
+  Date val;
 
-  explicit DateVal(int32_t date) noexcept : Val(false), date_val(date) {}
+  explicit DateVal(int32_t date) noexcept : Val(false), val(date) {}
 
   /**
    * Create a NULL date

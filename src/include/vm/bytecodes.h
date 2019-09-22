@@ -189,6 +189,12 @@ namespace tpl::vm {
   F(GreaterThanEqualString, OperandType::Local, OperandType::Local, OperandType::Local)                                \
   F(EqualString, OperandType::Local, OperandType::Local, OperandType::Local)                                           \
   F(NotEqualString, OperandType::Local, OperandType::Local, OperandType::Local)                                        \
+  F(LessThanDate, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
+  F(LessThanEqualDate, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
+  F(GreaterThanDate, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
+  F(GreaterThanEqualDate, OperandType::Local, OperandType::Local, OperandType::Local)                                  \
+  F(EqualDate, OperandType::Local, OperandType::Local, OperandType::Local)                                             \
+  F(NotEqualDate, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
                                                                                                                        \
   /* SQL value unary operations */                                                                                     \
   F(AbsInteger, OperandType::Local, OperandType::Local)                                                                \

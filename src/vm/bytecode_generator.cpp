@@ -1768,6 +1768,24 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
   }
 }
 
+#define SQL_COMPARISON_BYTECODE(CODE_RESULT, COMPARISON_TYPE, ARG_KIND) \
+  switch (ARG_KIND) {                                                   \
+    case ast::BuiltinType::Kind::Integer:                               \
+      CODE_RESULT = Bytecode::COMPARISON_TYPE##Integer;                 \
+      break;                                                            \
+    case ast::BuiltinType::Kind::Real:                                  \
+      CODE_RESULT = Bytecode::COMPARISON_TYPE##Real;                    \
+      break;                                                            \
+    case ast::BuiltinType::Kind::Date:                                  \
+      CODE_RESULT = Bytecode::COMPARISON_TYPE##Date;                    \
+      break;                                                            \
+    case ast::BuiltinType::Kind::StringVal:                             \
+      CODE_RESULT = Bytecode::COMPARISON_TYPE##String;                  \
+      break;                                                            \
+    default:                                                            \
+      UNREACHABLE("Undefined SQL comparison!");                         \
+  }
+
 void BytecodeGenerator::VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare) {
   TPL_ASSERT(execution_result()->IsRValue(), "SQL comparison expressions must be R-Values!");
 
@@ -1777,34 +1795,33 @@ void BytecodeGenerator::VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare) {
 
   TPL_ASSERT(compare->left()->type() == compare->right()->type(),
              "Left and right input types to comparison are not equal");
-  const bool is_integer_comparison =
-      compare->left()->type()->IsSpecificBuiltin(ast::BuiltinType::Integer);
+
+  const auto arg_kind = compare->left()->type()->As<ast::BuiltinType>()->kind();
 
   Bytecode code;
   switch (compare->op()) {
     case parsing::Token::Type::GREATER: {
-      code = (is_integer_comparison ? Bytecode::GreaterThanInteger : Bytecode::GreaterThanReal);
+      SQL_COMPARISON_BYTECODE(code, GreaterThan, arg_kind);
       break;
     }
     case parsing::Token::Type::GREATER_EQUAL: {
-      code = (is_integer_comparison ? Bytecode::GreaterThanEqualInteger
-                                    : Bytecode::GreaterThanEqualReal);
+      SQL_COMPARISON_BYTECODE(code, GreaterThanEqual, arg_kind);
       break;
     }
     case parsing::Token::Type::EQUAL_EQUAL: {
-      code = (is_integer_comparison ? Bytecode::EqualInteger : Bytecode::EqualReal);
+      SQL_COMPARISON_BYTECODE(code, Equal, arg_kind);
       break;
     }
     case parsing::Token::Type::LESS: {
-      code = (is_integer_comparison ? Bytecode::LessThanInteger : Bytecode::LessThanReal);
+      SQL_COMPARISON_BYTECODE(code, LessThan, arg_kind);
       break;
     }
     case parsing::Token::Type::LESS_EQUAL: {
-      code = (is_integer_comparison ? Bytecode::LessThanEqualInteger : Bytecode::LessThanEqualReal);
+      SQL_COMPARISON_BYTECODE(code, LessThanEqual, arg_kind);
       break;
     }
     case parsing::Token::Type::BANG_EQUAL: {
-      code = (is_integer_comparison ? Bytecode::NotEqualInteger : Bytecode::NotEqualReal);
+      SQL_COMPARISON_BYTECODE(code, NotEqual, arg_kind);
       break;
     }
     default: { UNREACHABLE("Impossible binary operation"); }
@@ -1816,6 +1833,8 @@ void BytecodeGenerator::VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare) {
   // Mark where the result is
   execution_result()->set_destination(dest);
 }
+
+#undef SQL_COMPARISON_BYTECODE
 
 void BytecodeGenerator::VisitPrimitiveCompareOpExpr(ast::ComparisonOpExpr *compare) {
   TPL_ASSERT(execution_result()->IsRValue(), "Comparison expressions must be R-Values!");

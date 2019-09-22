@@ -215,7 +215,7 @@ GenericValue GenericValue::CreateFromRuntimeValue(const TypeId type_id, const Va
     case TypeId::Double:
       return GenericValue::CreateDouble(static_cast<const Real &>(val).val);
     case TypeId::Date:
-      return GenericValue::CreateDate(static_cast<const DateVal &>(val).date_val);
+      return GenericValue::CreateDate(static_cast<const DateVal &>(val).val);
     case TypeId::Varchar:
       return GenericValue::CreateVarchar(static_cast<const StringVal &>(val).ptr);
     default:

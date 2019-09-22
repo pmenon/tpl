@@ -36,6 +36,13 @@ class ComparisonFunctions {
   static void LtReal(BoolVal *result, const Real &v1, const Real &v2);
   static void NeReal(BoolVal *result, const Real &v1, const Real &v2);
 
+  static void EqDateVal(BoolVal *result, const DateVal &v1, const DateVal &v2);
+  static void GeDateVal(BoolVal *result, const DateVal &v1, const DateVal &v2);
+  static void GtDateVal(BoolVal *result, const DateVal &v1, const DateVal &v2);
+  static void LeDateVal(BoolVal *result, const DateVal &v1, const DateVal &v2);
+  static void LtDateVal(BoolVal *result, const DateVal &v1, const DateVal &v2);
+  static void NeDateVal(BoolVal *result, const DateVal &v1, const DateVal &v2);
+
   static void EqStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
   static void GeStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
   static void GtStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
@@ -71,6 +78,7 @@ class ComparisonFunctions {
   BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, BoolVal, OP) \
   BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, Integer, OP) \
   BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, Real, OP)    \
+  BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, DateVal, OP) \
   BINARY_COMPARISON_STRING_FN_HIDE_NULL(NAME, StringVal, OP)
 
 BINARY_COMPARISONS(Eq, Equal);

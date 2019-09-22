@@ -817,6 +817,13 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     Op##op##Real(result, left, right);                               \
     DISPATCH_NEXT();                                                 \
   }                                                                  \
+  OP(op##Date) : {                                                   \
+    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());  \
+    auto *left = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());       \
+    auto *right = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());      \
+    Op##op##Real(result, left, right);                               \
+    DISPATCH_NEXT();                                                 \
+  }                                                                  \
   OP(op##String) : {                                                 \
     auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());  \
     auto *left = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());  \

@@ -157,6 +157,17 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op, const S
     return {nullptr, left, right};
   }
 
+  // Check date and string
+  if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Date) &&
+      right->type()->IsSpecificBuiltin(ast::BuiltinType::Date)) {
+    return {ast::BuiltinType::Get(context(), ast::BuiltinType::Boolean), left, right};
+  }
+
+  if (left->type()->IsSpecificBuiltin(ast::BuiltinType::StringVal) &&
+      right->type()->IsSpecificBuiltin(ast::BuiltinType::StringVal)) {
+    return {ast::BuiltinType::Get(context(), ast::BuiltinType::Boolean), left, right};
+  }
+
   // If neither input expression is arithmetic, it's an ill-formed operation
   if (!left->type()->IsArithmetic() || !right->type()->IsArithmetic()) {
     error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op, left->type(),
