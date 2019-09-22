@@ -9,6 +9,7 @@
 #include "sql/table.h"
 #include "util/bit_util.h"
 #include "util/memory.h"
+#include "util/timer.h"
 
 namespace tpl::sql::tablegen {
 
@@ -32,7 +33,7 @@ Table *CreateTable(Catalog *catalog, const std::string &table_name,
 constexpr const char *null_string = "\\N";
 
 void ParseCol(byte *data, uint32_t *null_bitmap, const Schema::ColumnInfo &col, uint32_t row_idx,
-              csv::CSVField &field) {
+              csv::CSVField &field, util::StringHeap *string_heap) {
   if (col.sql_type.nullable()) {
     if (field == null_string) {
       util::BitUtil::Set(null_bitmap, row_idx);
@@ -75,11 +76,7 @@ void ParseCol(byte *data, uint32_t *null_bitmap, const Schema::ColumnInfo &col, 
     }
     case SqlTypeId::Varchar: {
       auto val = field.get<std::string_view>();
-      auto content_size = static_cast<uint32_t>(val.size() + 1);
-      byte *content = static_cast<byte *>(util::MallocAligned(content_size, alignof(void *)));
-      std::memcpy(content, val.data(), content_size - 1);
-      content[content_size - 1] = static_cast<byte>(0);
-      *reinterpret_cast<const byte **>(insert_offset) = content;
+      *reinterpret_cast<const char **>(insert_offset) = string_heap->AddString(val);
       break;
     }
     default:
@@ -108,7 +105,11 @@ void ImportTable(const std::string &table_name, Table *table, const std::string 
 
   const auto &cols = table->schema().columns();
 
+  util::StringHeap *table_strings = table->mutable_string_heap();
   std::vector<std::pair<byte *, uint32_t *>> col_data;
+
+  util::Timer<std::milli> timer;
+  timer.Start();
 
   const auto data_file = data_dir + "/" + table_name + ".tbl";
   auto reader = csv::CSVReader(data_file, csv::CSVFormat().delimiter({'|', '\n'}));
@@ -129,7 +130,8 @@ void ImportTable(const std::string &table_name, Table *table, const std::string 
     // Write table data
     for (uint32_t col_idx = 0; col_idx < table->schema().num_columns(); col_idx++) {
       auto field = row[col_idx];
-      ParseCol(col_data[col_idx].first, col_data[col_idx].second, cols[col_idx], num_vals, field);
+      ParseCol(col_data[col_idx].first, col_data[col_idx].second, cols[col_idx], num_vals, field,
+               table_strings);
     }
 
     num_vals++;
@@ -148,6 +150,11 @@ void ImportTable(const std::string &table_name, Table *table, const std::string 
     CreateAndAppendBlockToTable(table, col_data, num_vals);
     total_written += num_vals;
   }
+
+  timer.Stop();
+
+  auto rps = total_written / timer.elapsed() * 1000.0;
+  LOG_INFO("Loaded '{}' with {} rows ({:.2f} rows/sec)", table_name, total_written, rps);
 }
 
 }  // namespace

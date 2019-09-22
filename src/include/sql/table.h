@@ -12,6 +12,7 @@
 #include "sql/column_segment.h"
 #include "sql/schema.h"
 #include "sql/value.h"
+#include "util/string_heap.h"
 
 extern int32_t current_partition;
 
@@ -106,6 +107,11 @@ class Table {
    */
   uint32_t num_blocks() const { return blocks_.size(); }
 
+  /**
+   * Return the mutable string heap for this table.
+   */
+  util::StringHeap *mutable_string_heap() { return &strings_; }
+
  private:
   // The ID of the table
   uint16_t id_;
@@ -113,6 +119,8 @@ class Table {
   std::unique_ptr<Schema> schema_;
   // The list of all blocks constituting the table's data
   BlockList blocks_;
+  // Strings
+  util::StringHeap strings_;
   // The total number of tuples in the table
   uint32_t num_tuples_;
 };
