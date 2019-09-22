@@ -607,46 +607,37 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
       emitter()->Emit(Bytecode::VPIResetFiltered, vpi);
       break;
     }
-    case ast::Builtin::VPIGetSmallInt: {
-      LocalVar val = execution_result()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Integer));
-      auto col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
-      emitter()->EmitVPIGet(Bytecode::VPIGetSmallInt, val, vpi, col_idx);
-      break;
-    }
-    case ast::Builtin::VPIGetInt: {
-      LocalVar val = execution_result()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Integer));
-      auto col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
-      emitter()->EmitVPIGet(Bytecode::VPIGetInteger, val, vpi, col_idx);
-      break;
-    }
-    case ast::Builtin::VPIGetBigInt: {
-      LocalVar val = execution_result()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Integer));
-      auto col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
-      emitter()->EmitVPIGet(Bytecode::VPIGetBigInt, val, vpi, col_idx);
-      break;
-    }
-    case ast::Builtin::VPIGetReal: {
-      LocalVar val = execution_result()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Real));
-      auto col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
-      emitter()->EmitVPIGet(Bytecode::VPIGetReal, val, vpi, col_idx);
-      break;
-    }
-    case ast::Builtin::VPIGetDouble: {
-      LocalVar val = execution_result()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Real));
-      auto col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
-      emitter()->EmitVPIGet(Bytecode::VPIGetDouble, val, vpi, col_idx);
-      break;
-    }
+    case ast::Builtin::VPIGetSmallInt:
+    case ast::Builtin::VPIGetInt:
+    case ast::Builtin::VPIGetBigInt:
+    case ast::Builtin::VPIGetReal:
+    case ast::Builtin::VPIGetDouble:
     case ast::Builtin::VPIGetDate: {
-      LocalVar val = execution_result()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Date));
+      ast::BuiltinType::Kind var_kind;
+      Bytecode bytecode;
+      if (builtin == ast::Builtin::VPIGetSmallInt) {
+        var_kind = ast::BuiltinType::Integer;
+        bytecode = Bytecode::VPIGetSmallInt;
+      } else if (builtin == ast::Builtin::VPIGetInt) {
+        var_kind = ast::BuiltinType::Integer;
+        bytecode = Bytecode::VPIGetInteger;
+      } else if (builtin == ast::Builtin::VPIGetBigInt) {
+        var_kind = ast::BuiltinType::Integer;
+        bytecode = Bytecode::VPIGetBigInt;
+      } else if (builtin == ast::Builtin::VPIGetReal) {
+        var_kind = ast::BuiltinType::Real;
+        bytecode = Bytecode::VPIGetReal;
+      } else if (builtin == ast::Builtin::VPIGetDouble) {
+        var_kind = ast::BuiltinType::Real;
+        bytecode = Bytecode::VPIGetDouble;
+      } else {
+        var_kind = ast::BuiltinType::Date;
+        bytecode = Bytecode::VPIGetDate;
+      }
+      LocalVar val =
+          execution_result()->GetOrCreateDestination(ast::BuiltinType::Get(ctx, var_kind));
       auto col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
-      emitter()->EmitVPIGet(Bytecode::VPIGetDate, val, vpi, col_idx);
+      emitter()->EmitVPIGet(bytecode, val, vpi, col_idx);
       break;
     }
     case ast::Builtin::VPISetSmallInt:
