@@ -281,7 +281,8 @@ namespace tpl::vm {
   F(IntegerMinAggregateGetResult, OperandType::Local, OperandType::Local)                                              \
   F(IntegerMinAggregateFree, OperandType::Local)                                                                       \
   F(AvgAggregateInit, OperandType::Local)                                                                              \
-  F(AvgAggregateAdvance, OperandType::Local, OperandType::Local)                                                       \
+  F(AvgAggregateAdvanceInteger, OperandType::Local, OperandType::Local)                                                \
+  F(AvgAggregateAdvanceReal, OperandType::Local, OperandType::Local)                                                   \
   F(AvgAggregateMerge, OperandType::Local, OperandType::Local)                                                         \
   F(AvgAggregateReset, OperandType::Local)                                                                             \
   F(AvgAggregateGetResult, OperandType::Local, OperandType::Local)                                                     \

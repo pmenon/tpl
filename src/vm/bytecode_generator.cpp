@@ -968,7 +968,7 @@ namespace {
 #define AGG_CODES(F) \
   F(CountAggregate,      CountAggregateInit,      CountAggregateAdvance,      CountAggregateGetResult,      CountAggregateMerge,      CountAggregateReset)                \
   F(CountStarAggregate,  CountStarAggregateInit,  CountStarAggregateAdvance,  CountStarAggregateGetResult,  CountStarAggregateMerge,  CountStarAggregateReset)            \
-  F(AvgAggregate,        AvgAggregateInit,        AvgAggregateAdvance,        AvgAggregateGetResult,        AvgAggregateMerge,        AvgAggregateReset)                  \
+  F(AvgAggregate,        AvgAggregateInit,        AvgAggregateAdvanceInteger, AvgAggregateGetResult,        AvgAggregateMerge,        AvgAggregateReset)                  \
   F(IntegerMaxAggregate, IntegerMaxAggregateInit, IntegerMaxAggregateAdvance, IntegerMaxAggregateGetResult, IntegerMaxAggregateMerge, IntegerMaxAggregateReset)           \
   F(IntegerMinAggregate, IntegerMinAggregateInit, IntegerMinAggregateAdvance, IntegerMinAggregateGetResult, IntegerMinAggregateMerge, IntegerMinAggregateReset)           \
   F(IntegerSumAggregate, IntegerSumAggregateInit, IntegerSumAggregateAdvance, IntegerSumAggregateGetResult, IntegerSumAggregateMerge, IntegerSumAggregateReset)           \
@@ -1070,6 +1070,14 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call, ast::Bui
       LocalVar agg = VisitExpressionForRValue(args[0]);
       LocalVar input = VisitExpressionForRValue(args[1]);
       Bytecode bytecode = OpForAgg<AggOpKind::Advance>(agg_kind);
+
+      // Hack to handle advancing AvgAggregates with float/double precision numbers. The default
+      // behavior in OpForAgg() is to use AvgAggregateAdvanceInteger.
+      if (agg_kind == ast::BuiltinType::AvgAggregate &&
+          args[1]->type()->IsSpecificBuiltin(ast::BuiltinType::Real)) {
+        bytecode = Bytecode::AvgAggregateAdvanceReal;
+      }
+
       emitter()->Emit(bytecode, agg, input);
       break;
     }

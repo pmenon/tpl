@@ -1107,7 +1107,12 @@ VM_OP_HOT void OpAvgAggregateInit(tpl::sql::AvgAggregate *agg) {
   new (agg) tpl::sql::AvgAggregate();
 }
 
-VM_OP_HOT void OpAvgAggregateAdvance(tpl::sql::AvgAggregate *agg, const tpl::sql::Integer *val) {
+VM_OP_HOT void OpAvgAggregateAdvanceInteger(tpl::sql::AvgAggregate *agg,
+                                            const tpl::sql::Integer *val) {
+  agg->Advance(*val);
+}
+
+VM_OP_HOT void OpAvgAggregateAdvanceReal(tpl::sql::AvgAggregate *agg, const tpl::sql::Real *val) {
   agg->Advance(*val);
 }
 

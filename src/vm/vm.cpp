@@ -1184,10 +1184,17 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(AvgAggregateAdvance) : {
+  OP(AvgAggregateAdvanceInteger) : {
     auto *agg = frame->LocalAt<sql::AvgAggregate *>(READ_LOCAL_ID());
     auto *val = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
-    OpAvgAggregateAdvance(agg, val);
+    OpAvgAggregateAdvanceInteger(agg, val);
+    DISPATCH_NEXT();
+  }
+
+  OP(AvgAggregateAdvanceReal) : {
+    auto *agg = frame->LocalAt<sql::AvgAggregate *>(READ_LOCAL_ID());
+    auto *val = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    OpAvgAggregateAdvanceReal(agg, val);
     DISPATCH_NEXT();
   }
 
