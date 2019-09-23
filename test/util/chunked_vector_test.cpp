@@ -130,21 +130,55 @@ TEST_F(ChunkedVectorTest, ChunkReuseTest) {
   EXPECT_EQ(0u, allocated_3 - allocated_2);
 }
 
-struct Simple {
+// Object that allocates 20-bytes of data. Used to ensure objects pushed into vector are destroyed.
+class Simple {
+ public:
   // Not thread-safe!
   static uint32_t count;
-  Simple() { count++; }
+
+  explicit Simple(uint32_t _id) : id_(_id), ptr_(std::make_unique<char[]>(20)) { count++; }
+
   ~Simple() { count--; }
+
+  uint32_t id() const noexcept { return id_; }
+ private:
+  uint32_t id_;
+  std::unique_ptr<char[]> ptr_;
 };
 
 uint32_t Simple::count = 0;
+
+TEST_F(ChunkedVectorTest, ClearTest) {
+  ChunkedVectorT<Simple> v;
+  v.emplace_back(1);
+  v.emplace_back(2);
+  v.emplace_back(3);
+
+  EXPECT_EQ(3u, v.size());
+  EXPECT_EQ(1u, v[0].id());
+  EXPECT_EQ(2u, v[1].id());
+  EXPECT_EQ(3u, v[2].id());
+
+  v.clear();
+
+  EXPECT_EQ(0u, v.size());
+
+  v.emplace_back(10);
+  v.emplace_back(11);
+  v.emplace_back(12);
+
+  EXPECT_EQ(3u, v.size());
+  EXPECT_EQ(10u, v[0].id());
+  EXPECT_EQ(11u, v[1].id());
+  EXPECT_EQ(12u, v[2].id());
+}
 
 TEST_F(ChunkedVectorTest, ElementConstructDestructTest) {
   util::Region tmp("tmp");
   ChunkedVectorT<Simple> vec;
 
   for (uint32_t i = 0; i < 1000; i++) {
-    vec.emplace_back();
+    vec.emplace_back(i);
   }
   EXPECT_EQ(1000u, Simple::count);
 
@@ -161,12 +195,12 @@ TEST_F(ChunkedVectorTest, MoveConstructorTest) {
   const uint32_t num_elems = 1000;
 
   // Populate vec1
-  ChunkedVectorT<uint32_t> vec1;
+  ChunkedVectorT<Simple> vec1;
   for (uint32_t i = 0; i < num_elems; i++) {
-    vec1.push_back(i);
+    vec1.emplace_back(i);
   }
 
-  ChunkedVectorT<uint32_t> vec2(std::move(vec1));
+  ChunkedVectorT<Simple> vec2(std::move(vec1));
   EXPECT_EQ(num_elems, vec2.size());
 }
 
@@ -174,12 +208,12 @@ TEST_F(ChunkedVectorTest, AssignmentMoveTest) {
   const uint32_t num_elems = 1000;
 
   // Populate vec1
-  ChunkedVectorT<uint32_t> vec1;
+  ChunkedVectorT<Simple> vec1;
   for (uint32_t i = 0; i < num_elems; i++) {
-    vec1.push_back(i);
+    vec1.emplace_back(i);
   }
 
-  ChunkedVectorT<uint32_t> vec2;
+  ChunkedVectorT<Simple> vec2;
   EXPECT_EQ(0u, vec2.size());
 
   // Move vec1 into vec2

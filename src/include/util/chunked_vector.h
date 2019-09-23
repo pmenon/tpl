@@ -425,6 +425,17 @@ class ChunkedVector {
     num_elements_--;
   }
 
+  void clear() {
+    active_chunk_idx_ = 0;
+    if (!chunks_.empty()) {
+      position_ = chunks_[0];
+      end_ = position_ + ChunkAllocSize(element_size());
+    } else {
+      position_ = end_ = nullptr;
+    }
+    num_elements_ = 0;
+  }
+
   // -------------------------------------------------------
   // Size/Capacity
   // -------------------------------------------------------
@@ -507,6 +518,32 @@ class ChunkedVectorT {
    */
   explicit ChunkedVectorT(Alloc allocator = {}) noexcept
       : vec_(sizeof(T), ReboundAlloc(allocator)) {}
+
+  /**
+   * Move constructor.
+   * @param that The vector to move into this instance.
+   */
+  ChunkedVectorT(ChunkedVectorT &&that) noexcept : vec_(std::move(that.vec_)) {}
+
+  /**
+   * Copy not supported yet.
+   */
+  DISALLOW_COPY(ChunkedVectorT);
+
+  /**
+   * Destructor.
+   */
+  ~ChunkedVectorT() { std::destroy(begin(), end()); }
+
+  /**
+   * Move assignment.
+   * @param that The vector to move into this.
+   * @return This vector instance.
+   */
+  ChunkedVectorT &operator=(ChunkedVectorT &&that) noexcept {
+    std::swap(vec_, that.vec_);
+    return *this;
+  }
 
   /**
    * Iterator over a typed chunked vector
@@ -627,6 +664,14 @@ class ChunkedVectorT {
    */
   const T &back() const noexcept { return *reinterpret_cast<const T *>(vec_.back()); }
 
+  /**
+   * Clear all elements from the vector.
+   */
+  void clear() {
+    std::destroy(begin(), end());
+    vec_.clear();
+  }
+
   // -------------------------------------------------------
   // Size/Capacity
   // -------------------------------------------------------
@@ -677,7 +722,7 @@ class ChunkedVectorT {
     TPL_ASSERT(!empty(), "Popping from an empty vector");
     T &removed = back();
     vec_.pop_back();
-    removed.~T();
+    std::destroy_at(&removed);
   }
 
  private:
