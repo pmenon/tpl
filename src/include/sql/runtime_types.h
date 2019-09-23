@@ -3,6 +3,7 @@
 #include <string>
 
 #include "util/hash_util.h"
+#include "util/string_heap.h"
 
 namespace tpl::sql {
 
@@ -233,6 +234,50 @@ class VarlenEntry {
     return std::string_view(reinterpret_cast<const char *const>(GetContent()), GetSize());
   }
 
+  /**
+   * Compare two strings. Returns:
+   * < 0 if left < right
+   *  0  if left == right
+   * > 0 if left > right
+   *
+   * @param left The first string.
+   * @param right The second string.
+   * @return The appropriate signed value indicating comparison order.
+   */
+  static int32_t Compare(const VarlenEntry &left, const VarlenEntry &right) {
+    const auto min_len = std::min(left.GetSize(), right.GetSize());
+
+    // Don't bother comparing if one string is empty
+    if (min_len == 0) {
+      return left.GetSize() - right.GetSize();
+    }
+
+    // Both strings have some content. As an early termination optimization, let's check the prefix.
+    // It's already loaded in cache so we might as well use it.
+    // TODO(pmenon) Profile this
+    int32_t result =
+        std::memcmp(left.GetPrefix(), right.GetPrefix(), std::min(min_len, GetPrefixSize()));
+
+    // If the prefix determined order, return now.
+    if (result != 0) {
+      return result;
+    }
+
+    // The prefix didn't help. We need to check the whole string.
+    result = std::memcmp(left.GetContent(), right.GetContent(), min_len);
+
+    // Finish
+    return result != 0 ? result : left.GetSize() - right.GetSize();
+  }
+
+  bool operator==(const VarlenEntry &that) const noexcept { return Compare(*this, that) == 0; }
+  bool operator!=(const VarlenEntry &that) const noexcept { return Compare(*this, that) != 0; }
+  bool operator<(const VarlenEntry &that) const noexcept { return Compare(*this, that) < 0; }
+  bool operator<=(const VarlenEntry &that) const noexcept { return Compare(*this, that) <= 0; }
+  bool operator>(const VarlenEntry &that) const noexcept { return Compare(*this, that) > 0; }
+  bool operator>=(const VarlenEntry &that) const noexcept { return Compare(*this, that) >= 0; }
+
+ private:
  private:
   // The size of the contents
   int32_t size_;
@@ -241,6 +286,60 @@ class VarlenEntry {
   byte prefix_[sizeof(uint32_t)];
   // Pointer to the content when not inlined
   const byte *content_;
+};
+
+/**
+ * A container for varlens.
+ */
+class VarlenHeap {
+ public:
+  /**
+   * Allocate a new varlen whose contents will be written by the caller.
+   * @param len The length of the varlen to allocate.
+   * @return The varlen.
+   */
+  VarlenEntry Allocate(std::size_t len) {
+    auto *content = heap_.Allocate(len);
+    return VarlenEntry::Create(reinterpret_cast<byte *>(content), len);
+  }
+
+  /**
+   * Allocate a varlen from this heap whose contents are the same as the input string.
+   * @param str The string to copy into the heap.
+   * @param len The length of the input string.
+   * @return A varlen.
+   */
+  VarlenEntry AddVarlen(const char *str, std::size_t len) {
+    auto *content = heap_.AddString(std::string_view(str, len));
+    return VarlenEntry::Create(reinterpret_cast<byte *>(content), len);
+  }
+
+  /**
+   * Allocate and return a varlen from this heap whose contents as the same as the input string.
+   * @param string The string to copy into the heap.
+   * @return A varlen.
+   */
+  VarlenEntry AddVarlen(const std::string &string) {
+    return AddVarlen(string.c_str(), string.length());
+  }
+
+  /**
+   * Add a copy of the given varlen into this heap.
+   * @param other The varlen to copy into this heap.
+   * @return A new varlen entry.
+   */
+  VarlenEntry AddVarlen(const VarlenEntry &other) {
+    return AddVarlen(reinterpret_cast<const char *>(other.GetContent()), other.GetSize());
+  }
+
+  /**
+   * Destroy all heap-allocated varlens.
+   */
+  void Destroy() { heap_.Destroy(); }
+
+ private:
+  // Internal heap of strings
+  util::StringHeap heap_;
 };
 
 }  // namespace tpl::sql
