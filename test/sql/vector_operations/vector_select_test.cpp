@@ -167,6 +167,42 @@ TEST_F(VectorSelectTest, SelectNullConstant) {
 #undef NULL_TEST
 }
 
+TEST_F(VectorSelectTest, StringSelection) {
+  auto a = MakeVarcharVector({"His palm's are sweaty", nullptr, "arms are heavy",
+                              "vomit on his sweater already", "mom's spaghetti"},
+                             {false, true, false, false, false});
+  auto b = MakeVarcharVector({"He's nervous", "but on the surface he looks calm and ready", nullptr,
+                              "to drop bombs", "but he keeps on forgetting"},
+                             {false, false, true, false, false});
+  auto tid_list = TupleIdList(a->num_elements());
+
+  // a == b = []
+  tid_list.AddAll();
+  VectorOps::SelectEqual(*a, *b, &tid_list);
+  EXPECT_EQ(0u, tid_list.GetTupleCount());
+
+  // a != b = [0, 3, 4]
+  tid_list.AddAll();
+  VectorOps::SelectNotEqual(*a, *b, &tid_list);
+  EXPECT_EQ(3u, tid_list.GetTupleCount());
+  EXPECT_EQ(0u, tid_list[0]);
+  EXPECT_EQ(3u, tid_list[1]);
+  EXPECT_EQ(4u, tid_list[2]);
+
+  // a < b = [0]
+  tid_list.AddAll();
+  VectorOps::SelectLessThan(*a, *b, &tid_list);
+  EXPECT_EQ(0u, tid_list.GetTupleCount());
+
+  // a > b = [1, 3, 4]
+  tid_list.AddAll();
+  VectorOps::SelectGreaterThan(*a, *b, &tid_list);
+  EXPECT_EQ(3u, tid_list.GetTupleCount());
+  EXPECT_EQ(0u, tid_list[0]);
+  EXPECT_EQ(3u, tid_list[1]);
+  EXPECT_EQ(4u, tid_list[2]);
+}
+
 TEST_F(VectorSelectTest, IsNullAndIsNotNull) {
   auto vec = MakeFloatVector({1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0},
                              {false, true, false, true, true, false, false});

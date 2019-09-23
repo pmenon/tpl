@@ -61,7 +61,7 @@ class ComparisonFunctions {
 #define BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, TYPE, OP)                                   \
   inline void ComparisonFunctions::NAME##TYPE(BoolVal *result, const TYPE &v1, const TYPE &v2) { \
     result->is_null = (v1.is_null || v2.is_null);                                                \
-    result->val = OP::Apply(v1.val, v2.val);                                                     \
+    result->val = OP<decltype(v1.val)>::Apply(v1.val, v2.val);                                   \
   }
 
 #define BINARY_COMPARISON_STRING_FN_HIDE_NULL(NAME, TYPE, OP)                       \
@@ -71,7 +71,7 @@ class ComparisonFunctions {
       *result = BoolVal::Null();                                                    \
       return;                                                                       \
     }                                                                               \
-    *result = BoolVal(OP::Apply(v1.val, v2.val));                                   \
+    *result = BoolVal(OP<decltype(v1.val)>::Apply(v1.val, v2.val));                 \
   }
 
 #define BINARY_COMPARISONS(NAME, OP)                        \

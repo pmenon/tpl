@@ -75,7 +75,7 @@ bool IsSorted(const Vector &vec) {
     if (left_null) {
       continue;
     }
-    if (!LessThanEqual::Apply<T>(data[i], data[i])) {
+    if (!LessThanEqual<T>::Apply(data[i], data[i])) {
       return false;
     }
   }

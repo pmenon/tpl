@@ -10,6 +10,35 @@ namespace tpl::sql {
 
 namespace {
 
+// Filter optimization:
+// --------------------
+// When comparison two vectors (or a vector with a constant) of primitive values we __COULD__ just
+// iterate the input TID list, apply the predicate, update the list, and be done with it. But, we
+// take advantage of the fact that we can operate on unselected data and potentially use SIMD to
+// accelerate the total performance. But, this optimization only makes sense beyond a certain
+// selectivity of the vector. Let's make the decision now.
+//
+// To determine scenarios when we can apply such an optimization, we leverage the below
+// is_safe_for_full_compute trait to find types for which we can use SIMD for. Right now, all
+// fundamental types along with Dates and Timestamps can use this technique.
+
+template <typename T, typename Enable = void>
+struct is_safe_for_full_compute {
+  static constexpr bool value = false;
+};
+
+template <typename T>
+struct is_safe_for_full_compute<
+    T, std::enable_if_t<std::is_fundamental_v<T> && std::is_same_v<T, Date>>> {
+  static constexpr bool value = true;
+};
+
+// When performing a selection between two vectors, we need to make sure of a few things:
+// 1. The types of the two vectors are the same
+// 2. If both input vectors are not constants
+//   2a. The size of the vectors are the same
+//   2b. The selection counts (i.e., the number of "active" or "visible" elements is equal)
+// 3. The output TID list is sufficiently large to represents all TIDs in both left and right inputs
 void CheckSelection(const Vector &left, const Vector &right, TupleIdList *result) {
   if (left.type_id() != right.type_id()) {
     throw TypeMismatchException(left.type_id(), right.type_id(),
@@ -31,7 +60,7 @@ void CheckSelection(const Vector &left, const Vector &right, TupleIdList *result
   }
 }
 
-template <typename T, typename Op, bool IgnoreNull>
+template <typename T, typename Op>
 void TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &right,
                                               TupleIdList *tid_list) {
   // If the scalar constant is NULL, all comparisons are NULL.
@@ -41,17 +70,11 @@ void TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &
   }
 
   auto *left_data = reinterpret_cast<const T *>(left.data());
-  auto constant = *reinterpret_cast<const T *>(right.data());
+  auto &constant = *reinterpret_cast<const T *>(right.data());
 
-  // TODO(pmenon): Move to some SQL-level type traits
-  if constexpr (std::is_fundamental_v<T> || std::is_same_v<T, Date>) {
-    // We're comparing a vector of primitive values to a constant. We COULD just iterate the TIDs in
-    // the input TupleIdList, apply the predicate and be done with it, but we take advantage of the
-    // fact that we can operate on non-selected data and potentially use SIMD to accelerate the
-    // total performance. But, this optimization only makes sense beyond a certain selectivity of
-    // the vector. Let's make the decision now.
-
-    auto full_compute_threshold =
+  // Safe full-compute. Refer to comment at start of file for explanation.
+  if constexpr (is_safe_for_full_compute<T>::value) {
+    const auto full_compute_threshold =
         Settings::Instance()->GetDouble(Settings::Name::SelectOptThreshold);
 
     if (full_compute_threshold && *full_compute_threshold <= tid_list->ComputeSelectivity()) {
@@ -69,23 +92,18 @@ void TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &
   tid_list->Filter([&](uint64_t i) { return Op::Apply(left_data[i], constant); });
 }
 
-template <typename T, typename Op, bool IgnoreNull>
+template <typename T, typename Op>
 void TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &right,
                                             TupleIdList *tid_list) {
   auto *left_data = reinterpret_cast<const T *>(left.data());
   auto *right_data = reinterpret_cast<const T *>(right.data());
 
-  // TODO(pmenon): Move to some SQL-level type traits
-  if constexpr (std::is_fundamental_v<T> || std::is_same_v<T, Date>) {
-    // We're comparing a vector of primitive values to a constant. We COULD just iterate the TIDs in
-    // the input TupleIdList, apply the predicate and be done with it, but we take advantage of the
-    // fact that we can operate on non-selected data and potentially use SIMD to accelerate the
-    // total performance. But, this optimization only makes sense beyond a certain selectivity of
-    // the vector. Let's make the decision now.
-
-    auto full_compute_threshold =
+  // Safe full-compute. Refer to comment at start of file for explanation.
+  if constexpr (is_safe_for_full_compute<T>::value) {
+    const auto full_compute_threshold =
         Settings::Instance()->GetDouble(Settings::Name::SelectOptThreshold);
 
+    // Only perform the full compute if the TID selectivity is larger than the threshold
     if (full_compute_threshold && *full_compute_threshold <= tid_list->ComputeSelectivity()) {
       TupleIdList::BitVectorType *bit_vector = tid_list->GetMutableBits();
       bit_vector->UpdateFull([&](uint64_t i) { return Op::Apply(left_data[i], right_data[i]); });
@@ -101,19 +119,19 @@ void TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &ri
   tid_list->Filter([&](uint64_t i) { return Op::Apply(left_data[i], right_data[i]); });
 }
 
-template <typename T, typename Op, bool IgnoreNull = false>
+template <typename T, template <typename> typename Op>
 void TemplatedSelectOperation(const Vector &left, const Vector &right, TupleIdList *tid_list) {
   if (right.IsConstant()) {
-    TemplatedSelectOperation_Vector_Constant<T, Op, IgnoreNull>(left, right, tid_list);
+    TemplatedSelectOperation_Vector_Constant<T, Op<T>>(left, right, tid_list);
   } else if (left.IsConstant()) {
-    // NOLINTNEXTLINE
-    TemplatedSelectOperation<T, typename Op::SymmetricOp, IgnoreNull>(right, left, tid_list);
+    // NOLINTNEXTLINE re-arrange arguments
+    TemplatedSelectOperation_Vector_Constant<T, typename Op<T>::SymmetricOp>(right, left, tid_list);
   } else {
-    TemplatedSelectOperation_Vector_Vector<T, Op, IgnoreNull>(left, right, tid_list);
+    TemplatedSelectOperation_Vector_Vector<T, Op<T>>(left, right, tid_list);
   }
 }
 
-template <typename Op>
+template <template <typename> typename Op>
 void SelectOperation(const Vector &left, const Vector &right, TupleIdList *tid_list) {
   // Sanity check
   CheckSelection(left, right, tid_list);
@@ -145,7 +163,7 @@ void SelectOperation(const Vector &left, const Vector &right, TupleIdList *tid_l
       TemplatedSelectOperation<Date, Op>(left, right, tid_list);
       break;
     case TypeId::Varchar:
-      TemplatedSelectOperation<const VarlenEntry, Op, true>(left, right, tid_list);
+      TemplatedSelectOperation<VarlenEntry, Op>(left, right, tid_list);
       break;
     default:
       throw NotImplementedException("selections on vector type '{}' not supported",
