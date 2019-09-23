@@ -217,27 +217,6 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
       parse_ms, typecheck_ms, codegen_ms, interp_exec_ms, adaptive_exec_ms, jit_exec_ms);
 }
 
-/// Run the TPL REPL
-static void RunRepl() {
-  while (true) {
-    std::string input;
-
-    std::string line;
-    do {
-      printf(">>> ");
-      std::getline(std::cin, line);
-
-      if (line == kExitKeyword) {
-        return;
-      }
-
-      input.append(line).append("\n");
-    } while (!line.empty());
-
-    CompileAndRun(input);
-  }
-}
-
 /**
  * Compile and run the TPL program contained in the file with the given filename @em filename.
  * @param filename The name of TPL file to compile and run.
@@ -253,6 +232,43 @@ static void RunFile(const std::string &filename) {
 
   // Copy the source into a temporary, compile, and run
   CompileAndRun((*file)->getBuffer().str(), filename);
+}
+
+/**
+ * Run the REPL.
+ */
+static void RunRepl() {
+  const auto prompt_and_read_line = [] {
+    std::string line;
+    printf(">>> ");
+    std::getline(std::cin, line);
+    return line;
+  };
+
+  while (true) {
+    std::string line = prompt_and_read_line();
+
+    // Exit?
+    if (line == kExitKeyword) {
+      return;
+    }
+
+    // Run file?
+    if (llvm::StringRef line_ref(line); line_ref.startswith_lower(".run")) {
+      auto [cmd, filename] = line_ref.split(' ');
+      RunFile(filename);
+      continue;
+    }
+
+    // Code ...
+    std::string input = line;
+    while (!line.empty()) {
+      input.append(line).append("\n");
+      line = prompt_and_read_line();
+    }
+    // Try to compile and run it
+    CompileAndRun(input);
+  }
 }
 
 /**
@@ -334,7 +350,7 @@ int main(int argc, char **argv) {  // NOLINT(bugprone-exception-escape)
   // Either execute a TPL program from a source file, or run REPL
   if (!kInputFile.empty()) {
     tpl::RunFile(kInputFile);
-  } else if (argc == 1) {
+  } else {
     tpl::RunRepl();
   }
 
