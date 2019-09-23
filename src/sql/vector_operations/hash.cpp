@@ -50,7 +50,7 @@ void VectorOps::Hash(const Vector &input, Vector *result) {
       UnaryOperation_HandleNull<Date, hash_t, tpl::sql::Hash>(input, result);
       break;
     case TypeId::Varchar:
-      UnaryOperation_HandleNull<const char *, hash_t, tpl::sql::Hash>(input, result);
+      UnaryOperation_HandleNull<const VarlenEntry, hash_t, tpl::sql::Hash>(input, result);
       break;
     default:
       throw NotImplementedException("hashing not supported for vectors of type '{}'",

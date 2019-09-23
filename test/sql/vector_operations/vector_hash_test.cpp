@@ -63,4 +63,26 @@ TEST_F(VectorHashTest, HashWithNullInput) {
   EXPECT_EQ(0, raw_hash[4]);
 }
 
+TEST_F(VectorHashTest, StringHash) {
+  // input = [1.2, 3.45, NULL, NULL, NULL]
+  const char *refs[] = {
+      "short", "medium sized", "quite long indeed, but why, so?",
+      "I'm trying to right my wrongs, but it's funny, them same wrongs help me write this song"};
+  auto input = MakeVarcharVector({refs[0], refs[1], refs[2], refs[3]}, {false, true, false, false});
+  auto hash = MakeVector(TypeId::Hash, input->num_elements());
+
+  VectorOps::Hash(*input, hash.get());
+
+  EXPECT_EQ(input->num_elements(), hash->num_elements());
+  EXPECT_EQ(input->count(), hash->count());
+  EXPECT_EQ(nullptr, hash->selection_vector());
+
+  auto raw_input = reinterpret_cast<const VarlenEntry *>(input->data());
+  auto raw_hash = reinterpret_cast<hash_t *>(hash->data());
+  EXPECT_EQ(raw_input[0].Hash(), raw_hash[0]);
+  EXPECT_EQ(hash_t(0), raw_hash[1]);
+  EXPECT_EQ(raw_input[2].Hash(), raw_hash[2]);
+  EXPECT_EQ(raw_input[3].Hash(), raw_hash[3]);
+}
+
 }  // namespace tpl::sql
