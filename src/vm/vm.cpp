@@ -636,6 +636,7 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   GEN_VPI_ACCESS(Double, sql::Real)
   GEN_VPI_ACCESS(Decimal, sql::Decimal)
   GEN_VPI_ACCESS(Date, sql::DateVal)
+  GEN_VPI_ACCESS(String, sql::StringVal)
 #undef GEN_VPI_ACCESS
 
   // ------------------------------------------------------

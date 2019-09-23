@@ -864,7 +864,8 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
     case ast::Builtin::VPIGetBigInt:
     case ast::Builtin::VPIGetReal:
     case ast::Builtin::VPIGetDouble:
-    case ast::Builtin::VPIGetDate: {
+    case ast::Builtin::VPIGetDate:
+    case ast::Builtin::VPIGetString: {
       if (!CheckArgCount(call, 2)) {
         return;
       }
@@ -878,7 +879,9 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
                          ? GetBuiltinType(ast::BuiltinType::Real)
                          : builtin == ast::Builtin::VPIGetDate
                                ? GetBuiltinType(ast::BuiltinType::Date)
-                               : GetBuiltinType(ast::BuiltinType::Integer));
+                               : builtin == ast::Builtin::VPIGetString
+                                     ? GetBuiltinType(ast::BuiltinType::StringVal)
+                                     : GetBuiltinType(ast::BuiltinType::Integer));
       break;
     }
     case ast::Builtin::VPISetSmallInt:
@@ -886,7 +889,8 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
     case ast::Builtin::VPISetBigInt:
     case ast::Builtin::VPISetReal:
     case ast::Builtin::VPISetDouble:
-    case ast::Builtin::VPISetDate: {
+    case ast::Builtin::VPISetDate:
+    case ast::Builtin::VPISetString: {
       if (!CheckArgCount(call, 3)) {
         return;
       }
@@ -894,8 +898,10 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       const auto sql_kind =
           (builtin == ast::Builtin::VPISetReal || builtin == ast::Builtin::VPISetDouble
                ? ast::BuiltinType::Real
-               : builtin == ast::Builtin::VPISetDate ? ast::BuiltinType::Date
-                                                     : ast::BuiltinType::Integer);
+               : builtin == ast::Builtin::VPISetDate
+                     ? ast::BuiltinType::Date
+                     : builtin == ast::Builtin::VPISetString ? ast::BuiltinType::StringVal
+                                                             : ast::BuiltinType::Integer);
       if (!call_args[1]->type()->IsSpecificBuiltin(sql_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(sql_kind));
         return;
@@ -1389,12 +1395,14 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::VPIGetReal:
     case ast::Builtin::VPIGetDouble:
     case ast::Builtin::VPIGetDate:
+    case ast::Builtin::VPIGetString:
     case ast::Builtin::VPISetSmallInt:
     case ast::Builtin::VPISetInt:
     case ast::Builtin::VPISetBigInt:
     case ast::Builtin::VPISetReal:
     case ast::Builtin::VPISetDouble:
-    case ast::Builtin::VPISetDate: {
+    case ast::Builtin::VPISetDate:
+    case ast::Builtin::VPISetString: {
       CheckBuiltinVPICall(call, builtin);
       break;
     }

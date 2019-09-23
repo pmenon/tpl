@@ -122,6 +122,7 @@ namespace tpl::vm {
   F(VPIGetDouble, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
   F(VPIGetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPIGetDate, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
+  F(VPIGetString, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
   F(VPIGetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
   F(VPIGetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPIGetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
@@ -129,6 +130,7 @@ namespace tpl::vm {
   F(VPIGetDoubleNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPIGetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPIGetDateNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
+  F(VPIGetStringNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPISetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPISetInteger, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPISetBigInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
@@ -136,6 +138,7 @@ namespace tpl::vm {
   F(VPISetDouble, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
   F(VPISetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPISetDate, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
+  F(VPISetString, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
   F(VPISetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
   F(VPISetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPISetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
@@ -143,6 +146,7 @@ namespace tpl::vm {
   F(VPISetDoubleNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPISetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPISetDateNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
+  F(VPISetStringNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
                                                                                                                        \
   /* Filter Manager */                                                                                                 \
   F(FilterManagerInit, OperandType::Local)                                                                             \

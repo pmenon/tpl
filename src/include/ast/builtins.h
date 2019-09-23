@@ -46,12 +46,14 @@ namespace tpl::ast {
   F(VPIGetReal, vpiGetReal)                                     \
   F(VPIGetDouble, vpiGetDouble)                                 \
   F(VPIGetDate, vpiGetDate)                                     \
+  F(VPIGetString, vpiGetString)                                 \
   F(VPISetSmallInt, vpiSetSmallInt)                             \
   F(VPISetInt, vpiSetInt)                                       \
   F(VPISetBigInt, vpiSetBigInt)                                 \
   F(VPISetReal, vpiSetReal)                                     \
   F(VPISetDouble, vpiSetDouble)                                 \
   F(VPISetDate, vpiSetDate)                                     \
+  F(VPISetString, vpiSetString)                                 \
                                                                 \
   /* Hashing */                                                 \
   F(Hash, hash)                                                 \

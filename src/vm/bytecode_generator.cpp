@@ -612,7 +612,8 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
     case ast::Builtin::VPIGetBigInt:
     case ast::Builtin::VPIGetReal:
     case ast::Builtin::VPIGetDouble:
-    case ast::Builtin::VPIGetDate: {
+    case ast::Builtin::VPIGetDate:
+    case ast::Builtin::VPIGetString: {
       ast::BuiltinType::Kind var_kind;
       Bytecode bytecode;
       if (builtin == ast::Builtin::VPIGetSmallInt) {
@@ -630,9 +631,12 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
       } else if (builtin == ast::Builtin::VPIGetDouble) {
         var_kind = ast::BuiltinType::Real;
         bytecode = Bytecode::VPIGetDouble;
-      } else {
+      } else if (builtin == ast::Builtin::VPIGetDate) {
         var_kind = ast::BuiltinType::Date;
         bytecode = Bytecode::VPIGetDate;
+      } else {
+        var_kind = ast::BuiltinType::StringVal;
+        bytecode = Bytecode::VPIGetString;
       }
       LocalVar val =
           execution_result()->GetOrCreateDestination(ast::BuiltinType::Get(ctx, var_kind));
@@ -657,8 +661,10 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
         bytecode = Bytecode::VPISetReal;
       } else if (builtin == ast::Builtin::VPISetDouble) {
         bytecode = Bytecode::VPISetDouble;
-      } else {
+      } else if (builtin == ast::Builtin::VPISetDate) {
         bytecode = Bytecode::VPISetDate;
+      } else {
+        bytecode = Bytecode::VPISetString;
       }
       auto input = VisitExpressionForLValue(call->arguments()[1]);
       auto col_idx = call->arguments()[2]->As<ast::LitExpr>()->int32_val();
@@ -1415,12 +1421,14 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::VPIGetReal:
     case ast::Builtin::VPIGetDouble:
     case ast::Builtin::VPIGetDate:
+    case ast::Builtin::VPIGetString:
     case ast::Builtin::VPISetSmallInt:
     case ast::Builtin::VPISetInt:
     case ast::Builtin::VPISetBigInt:
     case ast::Builtin::VPISetReal:
     case ast::Builtin::VPISetDouble:
-    case ast::Builtin::VPISetDate: {
+    case ast::Builtin::VPISetDate:
+    case ast::Builtin::VPISetString: {
       VisitBuiltinVPICall(call, builtin);
       break;
     }
