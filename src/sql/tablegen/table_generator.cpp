@@ -33,7 +33,7 @@ Table *CreateTable(Catalog *catalog, const std::string &table_name,
 constexpr const char *null_string = "\\N";
 
 void ParseCol(byte *data, uint32_t *null_bitmap, const Schema::ColumnInfo &col, uint32_t row_idx,
-              csv::CSVField &field, util::StringHeap *string_heap) {
+              csv::CSVField &field, VarlenHeap *string_heap) {
   if (col.sql_type.nullable()) {
     if (field == null_string) {
       util::BitUtil::Set(null_bitmap, row_idx);
@@ -76,7 +76,8 @@ void ParseCol(byte *data, uint32_t *null_bitmap, const Schema::ColumnInfo &col, 
     }
     case SqlTypeId::Varchar: {
       auto val = field.get<std::string_view>();
-      *reinterpret_cast<const char **>(insert_offset) = string_heap->AddString(val);
+      *reinterpret_cast<VarlenEntry *>(insert_offset) =
+          string_heap->AddVarlen(val.data(), val.length());
       break;
     }
     default:
@@ -105,7 +106,7 @@ void ImportTable(const std::string &table_name, Table *table, const std::string 
 
   const auto &cols = table->schema().columns();
 
-  util::StringHeap *table_strings = table->mutable_string_heap();
+  VarlenHeap *table_strings = table->mutable_string_heap();
   std::vector<std::pair<byte *, uint32_t *>> col_data;
 
   util::Timer<std::milli> timer;

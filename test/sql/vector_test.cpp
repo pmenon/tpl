@@ -55,7 +55,10 @@ TEST_F(VectorTest, InitFromArray) {
 
   // Now a string array
   {
-    const char *arr[num_elems] = {"go loko", "hot-line bling", "kawhi", "6ix", "king city"};
+    VarlenHeap varlens;
+    VarlenEntry arr[num_elems] = {varlens.AddVarlen("go loko"), varlens.AddVarlen("hot-line bling"),
+                                  varlens.AddVarlen("kawhi"), varlens.AddVarlen("6ix"),
+                                  varlens.AddVarlen("king city")};
     Vector vec(TypeId::Varchar, reinterpret_cast<byte *>(arr), num_elems);
     EXPECT_EQ(num_elems, vec.num_elements());
     EXPECT_EQ(num_elems, vec.count());
@@ -63,7 +66,7 @@ TEST_F(VectorTest, InitFromArray) {
 
     for (uint32_t i = 0; i < num_elems; i++) {
       auto val = vec.GetValue(i);
-      EXPECT_EQ(GenericValue::CreateVarchar(arr[i]), val);
+      EXPECT_EQ(GenericValue::CreateVarchar(arr[i].GetStringView()), val);
     }
     vec.CheckIntegrity();
   }

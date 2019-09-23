@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "common/common.h"
+#include "sql/runtime_types.h"
 
 namespace tpl::sql {
 
@@ -24,7 +25,7 @@ struct NotEqual;
  * @param v2 The second string.
  * @return The appropriate signed value indicating comparison order.
  */
-inline int32_t CompareStrings(const char *str1, const std::size_t len1, const char *str2,
+inline int32_t CompareStrings(const void *str1, const std::size_t len1, const void *str2,
                               const std::size_t len2) {
   const auto min_len = std::min(len1, len2);
   const auto result = (min_len == 0) ? 0 : std::memcmp(str1, str2, min_len);
@@ -45,16 +46,11 @@ struct Equal {
     return left == right;
   }
 
-  static bool Apply(const char *str1, const std::size_t len1, const char *str2,
+  static bool Apply(const void *left_buf, const std::size_t len1, const char *right_buf,
                     const std::size_t len2) {
-    return CompareStrings(str1, len1, str2, len2) == 0;
+    return CompareStrings(left_buf, len1, right_buf, len2) == 0;
   }
 };
-
-template <>
-inline bool Equal::Apply(const char *left, const char *right) {
-  return std::strcmp(left, right) == 0;
-}
 
 /**
  * Greater-than operator.
@@ -73,11 +69,6 @@ struct GreaterThan {
   }
 };
 
-template <>
-inline bool GreaterThan::Apply(const char *left, const char *right) {
-  return std::strcmp(left, right) > 0;
-}
-
 /**
  * Greater-than or equal operator.
  */
@@ -94,11 +85,6 @@ struct GreaterThanEqual {
     return CompareStrings(str1, len1, str2, len2) >= 0;
   }
 };
-
-template <>
-inline bool GreaterThanEqual::Apply(const char *left, const char *right) {
-  return std::strcmp(left, right) >= 0;
-}
 
 /**
  * Less-than operator.
@@ -117,11 +103,6 @@ struct LessThan {
   }
 };
 
-template <>
-inline bool LessThan::Apply(const char *left, const char *right) {
-  return std::strcmp(left, right) < 0;
-}
-
 /**
  * Less-than or equal operator.
  */
@@ -139,11 +120,6 @@ struct LessThanEqual {
   }
 };
 
-template <>
-inline bool LessThanEqual::Apply(const char *left, const char *right) {
-  return std::strcmp(left, right) <= 0;
-}
-
 /**
  * Inequality operator.
  */
@@ -160,10 +136,5 @@ struct NotEqual {
     return CompareStrings(str1, len1, str2, len2) != 0;
   }
 };
-
-template <>
-inline bool NotEqual::Apply(const char *left, const char *right) {
-  return std::strcmp(left, right) != 0;
-}
 
 }  // namespace tpl::sql

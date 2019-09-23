@@ -12,7 +12,7 @@
 #include "sql/column_segment.h"
 #include "sql/schema.h"
 #include "sql/value.h"
-#include "util/string_heap.h"
+#include "sql/runtime_types.h"
 
 extern int32_t current_partition;
 
@@ -110,7 +110,7 @@ class Table {
   /**
    * Return the mutable string heap for this table.
    */
-  util::StringHeap *mutable_string_heap() { return &strings_; }
+  VarlenHeap *mutable_string_heap() { return &strings_; }
 
  private:
   // The ID of the table
@@ -120,7 +120,7 @@ class Table {
   // The list of all blocks constituting the table's data
   BlockList blocks_;
   // Strings
-  util::StringHeap strings_;
+  VarlenHeap strings_;
   // The total number of tuples in the table
   uint32_t num_tuples_;
 };

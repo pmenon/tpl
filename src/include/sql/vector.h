@@ -95,7 +95,6 @@ class Vector {
 
  public:
   using NullMask = util::BitVector<uint64_t>;
-  using StringHeap = util::StringHeap;
 
   /**
    * Create an empty vector.
@@ -172,7 +171,7 @@ class Vector {
   /**
    * Return a pointer to this vector's string heap.
    */
-  StringHeap *mutable_string_heap() { return &strings_; }
+  VarlenHeap *mutable_string_heap() { return &varlens_; }
 
   /**
    * Set the selection vector.
@@ -328,8 +327,8 @@ class Vector {
   sel_t *sel_vector_;
   // The null mask used to indicate if an element in the vector is NULL
   NullMask null_mask_;
-  // String container
-  StringHeap strings_;
+  // Heap container for strings owned by this vector
+  VarlenHeap varlens_;
   // If the vector holds allocated data, this field manages it
   std::unique_ptr<byte[]> owned_data_;
 };

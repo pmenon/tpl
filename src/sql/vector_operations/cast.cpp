@@ -56,13 +56,11 @@ void CastFromSrcType(const Vector &source, Vector *target, SqlTypeId target_type
     case SqlTypeId::Varchar: {
       TPL_ASSERT(target->type_id() == TypeId::Varchar, "Result vector must be string");
       auto src_data = reinterpret_cast<SrcT *>(source.data());
-      auto result_data = reinterpret_cast<const char **>(target->data());
+      auto result_data = reinterpret_cast<VarlenEntry *>(target->data());
       VectorOps::Exec(source, [&](uint64_t i, uint64_t k) {
-        if (source.null_mask()[i]) {
-          result_data[i] = nullptr;
-        } else {
+        if (!source.null_mask()[i]) {
           auto str = Op::template Apply<SrcT, std::string>(src_data[i]);
-          result_data[i] = target->mutable_string_heap()->AddString(str);
+          result_data[i] = target->mutable_string_heap()->AddVarlen(str);
         }
       });
       break;

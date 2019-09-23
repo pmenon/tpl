@@ -375,7 +375,7 @@ void StringFunctions::Like(UNUSED ExecutionContext *ctx, BoolVal *result, const 
   }
 
   result->is_null = false;
-  result->val = Like::Apply(string.ptr, pattern.ptr);
+  result->val = Like::Apply(string.ptr, string.len, pattern.ptr, pattern.len);
 }
 
 }  // namespace tpl::sql

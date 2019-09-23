@@ -3,6 +3,7 @@
 #include "common/exception.h"
 #include "common/settings.h"
 #include "sql/operations/comparison_operators.h"
+#include "sql/runtime_types.h"
 #include "sql/tuple_id_list.h"
 
 namespace tpl::sql {
@@ -144,7 +145,7 @@ void SelectOperation(const Vector &left, const Vector &right, TupleIdList *tid_l
       TemplatedSelectOperation<Date, Op>(left, right, tid_list);
       break;
     case TypeId::Varchar:
-      TemplatedSelectOperation<const char *, Op, true>(left, right, tid_list);
+      TemplatedSelectOperation<const VarlenEntry, Op, true>(left, right, tid_list);
       break;
     default:
       throw NotImplementedException("selections on vector type '{}' not supported",

@@ -59,7 +59,7 @@ void VectorOps::Fill(Vector *vector, const GenericValue &value) {
       TemplatedFillOperation(vector, value.value_.date_);
       break;
     case TypeId::Varchar:
-      TemplatedFillOperation(vector, vector->strings_.AddString(value.str_value_));
+      TemplatedFillOperation(vector, vector->varlens_.AddVarlen(value.str_value_));
       break;
     default:
       throw InvalidTypeException(vector->type_id(), "vector cannot be filled");

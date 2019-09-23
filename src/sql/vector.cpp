@@ -50,7 +50,7 @@ Vector::Vector(TypeId type, byte *data, uint64_t size)
 Vector::~Vector() { Destroy(); }
 
 void Vector::Initialize(const TypeId new_type, const bool clear) {
-  strings_.Destroy();
+  varlens_.Destroy();
 
   type_ = new_type;
 
@@ -68,7 +68,7 @@ void Vector::Initialize(const TypeId new_type, const bool clear) {
 
 void Vector::Destroy() {
   owned_data_.reset();
-  strings_.Destroy();
+  varlens_.Destroy();
   data_ = nullptr;
   count_ = 0;
   num_elems_ = 0;
@@ -114,9 +114,10 @@ GenericValue Vector::GetValue(const uint64_t index) const {
       return GenericValue::CreateDate(reinterpret_cast<Date *>(data_)[actual_index]);
     }
     case TypeId::Varchar: {
-      auto *str = reinterpret_cast<const char **>(data_)[actual_index];
-      TPL_ASSERT(str != nullptr, "Null string in position not marked NULL!");
-      return GenericValue::CreateVarchar(str);
+      const auto &varlen_str = reinterpret_cast<const VarlenEntry *>(data_)[actual_index];
+      TPL_ASSERT(varlen_str.GetContent() != nullptr, "Null string in position not marked NULL!");
+      return GenericValue::CreateVarchar(std::string_view(
+          reinterpret_cast<const char *>(varlen_str.GetContent()), varlen_str.GetSize()));
     }
     default: {
       throw std::runtime_error(
@@ -191,8 +192,9 @@ void Vector::SetValue(const uint64_t index, const GenericValue &val) {
       break;
     }
     case TypeId::Varchar: {
-      auto str = (val.is_null() ? nullptr : strings_.AddString(val.str_value_));
-      reinterpret_cast<const char **>(data_)[actual_index] = str;
+      if (!val.is_null()) {
+        reinterpret_cast<VarlenEntry *>(data_)[actual_index] = varlens_.AddVarlen(val.str_value_);
+      }
       break;
     }
     default: {
@@ -253,10 +255,11 @@ void Vector::Reference(GenericValue *value) {
       break;
     }
     case TypeId::Varchar: {
-      // Single-element array
-      owned_data_ = std::make_unique<byte[]>(sizeof(byte *));
+      owned_data_ = std::make_unique<byte[]>(sizeof(VarlenEntry));
       data_ = owned_data_.get();
-      reinterpret_cast<const char **>(data_)[0] = value->str_value_.c_str();
+      auto *content = const_cast<byte *>(reinterpret_cast<const byte *>(value->str_value_.c_str()));
+      reinterpret_cast<VarlenEntry *>(data_)[0] =
+          VarlenEntry::Create(content, value->str_value_.size());
       break;
     }
     default: {
@@ -303,7 +306,7 @@ void Vector::MoveTo(Vector *other) {
   other->sel_vector_ = sel_vector_;
   other->null_mask_ = null_mask_;
   other->owned_data_ = move(owned_data_);
-  other->strings_ = std::move(strings_);
+  other->varlens_ = std::move(varlens_);
 
   // Cleanup
   Destroy();
@@ -322,15 +325,14 @@ void Vector::CopyTo(Vector *other, uint64_t offset) {
   } else {
     TPL_ASSERT(type_ == TypeId::Varchar, "Wrong type for copy");
     other->Resize(count_ - offset);
-    auto src_data = reinterpret_cast<const char **>(data_);
-    auto target_data = reinterpret_cast<const char **>(other->data_);
+    auto src_data = reinterpret_cast<const VarlenEntry *>(data_);
+    auto target_data = reinterpret_cast<VarlenEntry *>(other->data_);
     VectorOps::Exec(*this,
                     [&](uint64_t i, uint64_t k) {
                       if (null_mask_[i]) {
                         other->null_mask_.Set(k - offset);
-                        target_data[k - offset] = nullptr;
                       } else {
-                        target_data[k - offset] = other->strings_.AddString(src_data[i]);
+                        target_data[k - offset] = other->varlens_.AddVarlen(src_data[i]);
                       }
                     },
                     offset);
@@ -370,13 +372,12 @@ void Vector::Append(const Vector &other) {
     VectorOps::Copy(other, data_ + old_size * GetTypeIdSize(type_));
   } else {
     TPL_ASSERT(type_ == TypeId::Varchar, "Append on varchars");
-    auto src_data = reinterpret_cast<const char **const>(other.data_);
-    auto target_data = reinterpret_cast<const char **const>(data_);
+    auto src_data = reinterpret_cast<const VarlenEntry *>(other.data_);
+    auto target_data = reinterpret_cast<VarlenEntry *>(data_);
     VectorOps::Exec(other, [&](uint64_t i, uint64_t k) {
       if (other.null_mask_[i]) {
-        target_data[old_size + k] = nullptr;
       } else {
-        target_data[old_size + k] = strings_.AddString(src_data[i]);
+        target_data[old_size + k] = varlens_.AddVarlen(src_data[i]);
       }
     });
   }
@@ -397,22 +398,29 @@ std::string Vector::ToString() const {
 void Vector::Dump(std::ostream &stream) const { stream << ToString() << std::endl; }
 
 void Vector::CheckIntegrity() const {
+#ifndef NDEBUG
+  // Ensure that if there isn't a selection vector, the size and selected count values are equal
   if (sel_vector_ == nullptr) {
     TPL_ASSERT(count_ == num_elems_,
                "Vector count() and num_elems() do not match when missing selection vector");
   }
+
+  // Ensure that the NULL bitmask has the same size at the vector it represents
   TPL_ASSERT(num_elems_ == null_mask_.num_bits(), "NULL bitmask size doesn't match vector size");
-#ifndef NDEBUG
+
+  // Check the strings in the vector, if it's a string vector
   if (type_ == TypeId::Varchar) {
-    VectorOps::ExecTyped<const char *>(*this, [&](const char *string, uint64_t i, uint64_t k) {
-      if (!null_mask_[i]) {
-        TPL_ASSERT(string != nullptr, "NULL pointer in non-null vector slot");
-        // The following check is unsafe. But, we're in debug mode presumably
-        // with ASAN on, so a corrupt string will trigger an ASAN fault.
-        TPL_ASSERT(std::strlen(string) < std::numeric_limits<std::size_t>::max(),
-                   "Invalid string length");
-      }
-    });
+    VectorOps::ExecTyped<const VarlenEntry>(
+        *this, [&](const VarlenEntry &varlen, uint64_t i, uint64_t k) {
+          if (!null_mask_[i]) {
+            TPL_ASSERT(varlen.GetContent() != nullptr, "NULL pointer in non-null vector slot");
+            // The following check is unsafe. But, we're in debug mode presumably
+            // with ASAN on, so a corrupt string will trigger an ASAN fault.
+            TPL_ASSERT(std::string(reinterpret_cast<const char *>(varlen.GetContent())).size() <
+                           std::numeric_limits<std::size_t>::max(),
+                       "Invalid string length");
+          }
+        });
   }
 #endif
 }

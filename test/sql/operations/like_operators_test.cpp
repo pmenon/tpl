@@ -6,35 +6,73 @@ namespace tpl::sql {
 class LikeOperatorsTests : public TplTest {};
 
 TEST_F(LikeOperatorsTests, ShortString) {
-  EXPECT_FALSE(Like::Apply("abc", "a"));
-  EXPECT_FALSE(Like::Apply("abc", "ab"));
-  EXPECT_FALSE(Like::Apply("abc", "axc"));
-  EXPECT_TRUE(Like::Apply("abc", "abc"));
+  // 'abc' LIKE 'a' = false
+  std::string s = "abc";
+  std::string p = "a";
+  EXPECT_FALSE(Like::Apply(s.c_str(), s.length(), p.c_str(), p.length()));
+
+  // 'abc' LIKE 'ab' = false
+  s = "abc";
+  p = "ab";
+  EXPECT_FALSE(Like::Apply(s.c_str(), s.length(), p.c_str(), p.length()));
+
+  // 'abc' LIKE 'axc' = false
+  s = "abc";
+  p = "axc";
+  EXPECT_FALSE(Like::Apply(s.c_str(), s.length(), p.c_str(), p.length()));
+
+  // 'abc' LIKE 'abc' = true
+  s = "abc";
+  p = "abc";
+  EXPECT_TRUE(Like::Apply(s.c_str(), s.length(), p.c_str(), p.length()));
 }
 
 TEST_F(LikeOperatorsTests, SingleCharacter_Wildcard) {
   // Character after single-character wildcard doesn't match
-  EXPECT_FALSE(Like::Apply("forbes \\avenue", "forb_ \\\\venue"));
+  std::string s = "forbes \\avenue";
+  std::string p = "forb_ \\\\venue";
+  EXPECT_FALSE(Like::Apply(s.c_str(), s.length(), p.c_str(), p.length()));
+
   // Now it does
-  EXPECT_TRUE(Like::Apply("forbes \\avenue", "%b_s \\\\avenue"));
+  p = "%b_s \\\\avenue";
+  EXPECT_TRUE(Like::Apply(s.c_str(), s.length(), p.c_str(), p.length()));
 
   // N '_'s must match N characters
-  EXPECT_FALSE(Like::Apply("P Money", "__money"));
-  EXPECT_TRUE(Like::Apply("P Money", "__Money"));
-  EXPECT_TRUE(Like::Apply("P Money", "__M___y"));
+
+  // mismatched 'M'
+  s = "P Money";
+  p = "__money";
+  EXPECT_FALSE(Like::Apply(s.c_str(), s.length(), p.c_str(), p.length()));
+
+  // Match
+  p = "__Money";
+  EXPECT_TRUE(Like::Apply(s.c_str(), s.length(), p.c_str(), p.length()));
+
+  // Match
+  p = "__M___y";
+  EXPECT_TRUE(Like::Apply(s.c_str(), s.length(), p.c_str(), p.length()));
 }
 
 TEST_F(LikeOperatorsTests, MultiCharacter_Wildcard) {
   // Must consume all '%'
-  EXPECT_TRUE(Like::Apply("Money In The Bank", "_%%%%%%_"));
-  EXPECT_TRUE(Like::Apply("Money In The Bank", "_%%%%%%%%%"));
+  std::string s = "Money In The Bank";
+  std::string p = "_%%%%%%_";
+  EXPECT_TRUE(Like::Apply(s.c_str(), s.length(), p.c_str(), p.length()));
+
+  p = "_%%%%%%%%%";
+  EXPECT_TRUE(Like::Apply(s.c_str(), s.length(), p.c_str(), p.length()));
 
   // Consume all '%', but also match last non-wildcard character
-  EXPECT_FALSE(Like::Apply("Money In The Bank", "_%%%%%%%%x"));
-  EXPECT_TRUE(Like::Apply("Money In The Bank", "_%%%%%%%%k"));
+  p = "_%%%%%%%%x";
+  EXPECT_FALSE(Like::Apply(s.c_str(), s.length(), p.c_str(), p.length()));
+
+  p = "_%%%%%%%%k";
+  EXPECT_TRUE(Like::Apply(s.c_str(), s.length(), p.c_str(), p.length()));
 
   // Pattern ending in escape
-  EXPECT_TRUE(Like::Apply("Money In The Bank\\", "_%%%%%%%%k\\\\"));
+  s = "Money In The Bank\\";
+  p = "_%%%%%%%%k\\\\";
+  EXPECT_TRUE(Like::Apply(s.c_str(), s.length(), p.c_str(), p.length()));
 }
 
 }  // namespace tpl::sql

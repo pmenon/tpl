@@ -17,8 +17,8 @@ void TemplatedLikeOperation_Vector_Constant(const Vector &a, const Vector &b,
     return;
   }
 
-  const auto *RESTRICT a_data = reinterpret_cast<const char **>(a.data());
-  const auto *RESTRICT b_data = reinterpret_cast<const char **>(b.data());
+  const auto *RESTRICT a_data = reinterpret_cast<const VarlenEntry *>(a.data());
+  const auto *RESTRICT b_data = reinterpret_cast<const VarlenEntry *>(b.data());
 
   // Remove NULL entries from the left input
   tid_list->GetMutableBits()->Difference(a.null_mask());
@@ -33,8 +33,8 @@ void TemplatedLikeOperation_Vector_Vector(const Vector &a, const Vector &b, Tupl
       a.num_elements() == tid_list->GetCapacity() && b.num_elements() == tid_list->GetCapacity(),
       "Input/output TID list not large enough to store all TIDS from inputs to LIKE()");
 
-  const auto *RESTRICT a_data = reinterpret_cast<const char **>(a.data());
-  const auto *RESTRICT b_data = reinterpret_cast<const char **>(b.data());
+  const auto *RESTRICT a_data = reinterpret_cast<const VarlenEntry *>(a.data());
+  const auto *RESTRICT b_data = reinterpret_cast<const VarlenEntry *>(b.data());
 
   // Remove NULL entries in both left and right inputs (cheap)
   tid_list->GetMutableBits()->Difference(a.null_mask()).Difference(b.null_mask());
