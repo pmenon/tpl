@@ -49,9 +49,9 @@ struct AggPayload {
   sum_base_price : RealSumAggregate
   sum_disc_price : RealSumAggregate
   sum_charge : RealSumAggregate
-  avg_qty : RealAvgAggregate
-  avg_price : RealAvgAggregate
-  avg_disc : RealAvgAggregate
+  avg_qty : AvgAggregate
+  avg_price : AvgAggregate
+  avg_disc : AvgAggregate
   count_order : CountAggregate
 }
 
