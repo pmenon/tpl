@@ -222,6 +222,22 @@ class TupleIdList {
     return bit_vector_.NthOne(i);
   }
 
+  /**
+   * Does this list contain the same list of TIDs as the provided list @em that?
+   * @param that The list to compare with.
+   * @return True if the list contain the same contents; false otherwise.
+   */
+  bool operator==(const TupleIdList &that) const noexcept {
+    return bit_vector_ == that.bit_vector_;
+  }
+
+  /**
+   * Does this list contain any TIDs that differ from the provided list @em that?
+   * @param that The list to compare with.
+   * @return True if the the lists contain different contents; false otherwise.
+   */
+  bool operator!=(const TupleIdList &that) const noexcept { return !(*this == that); }
+
  private:
   // The validity bit vector
   BitVectorType bit_vector_;

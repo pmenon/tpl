@@ -601,6 +601,12 @@ class BitVector {
     return BitReference(&words_[position / kWordSizeBits], position % kWordSizeBits);
   }
 
+  bool operator==(const BitVector &that) const noexcept {
+    return num_bits() == that.num_bits() && words_ == that.words_;
+  }
+
+  bool operator!=(const BitVector &that) const noexcept { return !(*this == that); }
+
   BitVector &operator-=(const BitVector &other) {
     Difference(other);
     return *this;

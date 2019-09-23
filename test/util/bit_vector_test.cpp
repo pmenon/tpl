@@ -506,6 +506,24 @@ TEST(BitVectorTest, NoOpResize) {
   EXPECT_TRUE(bv.All());
 }
 
+TEST(BitVectorTest, Equality) {
+  BitVector<> bv1(70);
+  BitVector<> bv2(70);
+
+  EXPECT_NE(bv1, BitVector<>(65));
+  EXPECT_EQ(bv1, bv2);
+
+  bv1[10] = true;
+  EXPECT_NE(bv1, bv2);
+
+  bv1[60] = true;
+  bv2[10] = true;
+  EXPECT_NE(bv1, bv2);
+
+  bv2[60] = true;
+  EXPECT_EQ(bv1, bv2);
+}
+
 TEST(BitVectorTest, Iterate) {
   // Simple
   {
