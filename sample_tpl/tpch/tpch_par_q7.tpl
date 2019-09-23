@@ -117,7 +117,7 @@ fun p1Filter1(vec: *VectorProjectionIterator) -> int32 {
   var germany = @stringToSql("GERMANY")
   for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
     // n_name = "france" or n_name = "germany"
-    @vpiMatch(vec, @vpiGetVarlen(vec, 1) == france or @vpiGetVarlen(vec, 1) == germany)
+    @vpiMatch(vec, @vpiGetString(vec, 1) == france or @vpiGetString(vec, 1) == germany)
   }
   @vpiResetFiltered(vec)
   return 0
@@ -333,14 +333,14 @@ fun worker1(state: *State, ts: *ThreadState1, n1_tvi: *TableVectorIterator) -> n
       for (@tableIterAdvance(&n2_tvi)) {
         var vec2 = @tableIterGetVPI(&n2_tvi)
         for (; @vpiHasNext(vec2); @vpiAdvance(vec2)) {
-          if ((@vpiGetVarlen(vec1, 1) == france and @vpiGetVarlen(vec2, 1) == germany) or @vpiGetVarlen(vec1, 1) == germany and @vpiGetVarlen(vec2, 1) == france) {
+          if ((@vpiGetString(vec1, 1) == france and @vpiGetString(vec2, 1) == germany) or @vpiGetString(vec1, 1) == germany and @vpiGetString(vec2, 1) == france) {
             // Build JHT1
             var hash_val = @hash(@vpiGetInt(vec2, 0)) // n2_nationkey
             var build_row1 = @ptrCast(*JoinRow1, @joinHTInsert(&ts.ts_join_table, hash_val))
             build_row1.n1_nationkey = @vpiGetInt(vec1, 0) // n1_nationkey
             build_row1.n2_nationkey = @vpiGetInt(vec2, 0) // n2_nationkey
-            build_row1.n1_name = @vpiGetVarlen(vec1, 1) // n1_name
-            build_row1.n2_name = @vpiGetVarlen(vec2, 1) // n2_name
+            build_row1.n1_name = @vpiGetString(vec1, 1) // n1_name
+            build_row1.n2_name = @vpiGetString(vec2, 1) // n2_name
             ts.ts_count = ts.ts_count + 1
           }
         }

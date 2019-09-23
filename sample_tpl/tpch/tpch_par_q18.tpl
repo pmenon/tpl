@@ -366,7 +366,7 @@ fun worker3(state: *State, ts: *ThreadState3, c_tvi: *TableVectorIterator) -> ni
       var hash_val = @hash(@vpiGetInt(vec, 0)) // c_custkey
       var build_row2 = @ptrCast(*JoinRow2, @joinHTInsert(&ts.ts_join_table, hash_val))
       build_row2.c_custkey = @vpiGetInt(vec, 0) // c_custkey
-      build_row2.c_name = @vpiGetVarlen(vec, 1) // c_name
+      build_row2.c_name = @vpiGetString(vec, 1) // c_name
       //ts.ts_count = ts.ts_count + 1
     }
   }

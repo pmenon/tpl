@@ -158,8 +158,8 @@ fun p1Filter1(vec: *VectorProjectionIterator) -> int32 {
                 and (@vpiGetInt(vec, 5) != 3)
                 and (@vpiGetInt(vec, 5) != 36)
                 and (@vpiGetInt(vec, 5) != 9)
-                and (@vpiGetVarlen(vec, 3) != brand)
-                and !(@sqlToBool(@stringLike(@vpiGetVarlen(vec, 4), pattern))))
+                and (@vpiGetString(vec, 3) != brand)
+                and !(@sqlToBool(@stringLike(@vpiGetString(vec, 4), pattern))))
   }
   @vpiResetFiltered(vec)
   return 0
@@ -168,7 +168,7 @@ fun p1Filter1(vec: *VectorProjectionIterator) -> int32 {
 fun p2Filter1(vec: *VectorProjectionIterator) -> int32 {
   var pattern = @stringToSql("%instructions%requests%")
   for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-    @vpiMatch(vec, @stringLike(@vpiGetVarlen(vec, 6), pattern))
+    @vpiMatch(vec, @stringLike(@vpiGetString(vec, 6), pattern))
   }
   @vpiResetFiltered(vec)
   return 0
@@ -258,9 +258,9 @@ fun worker1(state: *State, ts: *ThreadState1, p_tvi: *TableVectorIterator) -> ni
       var hash_val = @hash(@vpiGetInt(vec, 0)) // p_partkey
       var build_row1 = @ptrCast(*JoinRow1, @joinHTInsert(&ts.ts_join_table, hash_val))
       build_row1.p_partkey = @vpiGetInt(vec, 0) // p_partkey
-      build_row1.p_brand = @vpiGetVarlen(vec, 3) // p_brand
+      build_row1.p_brand = @vpiGetString(vec, 3) // p_brand
       build_row1.p_size = @vpiGetInt(vec, 5) // p_size
-      build_row1.p_type = @vpiGetVarlen(vec, 4) // p_type
+      build_row1.p_type = @vpiGetString(vec, 4) // p_type
       //ts.ts_count = ts.ts_count + 1
     }
   }

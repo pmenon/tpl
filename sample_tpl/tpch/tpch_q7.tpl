@@ -187,20 +187,20 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
     var vec1 = @tableIterGetVPI(&n1_tvi)
     for (; @vpiHasNext(vec1); @vpiAdvance(vec1)) {
       // n_name
-      if (@vpiGetVarlen(vec1, 1) == france or @vpiGetVarlen(vec1, 1) == germany) {
+      if (@vpiGetString(vec1, 1) == france or @vpiGetString(vec1, 1) == germany) {
         // Step 2: Scan nation2
         @tableIterInit(&n2_tvi, "nation")
         for (@tableIterAdvance(&n2_tvi)) {
           var vec2 = @tableIterGetVPI(&n2_tvi)
           for (; @vpiHasNext(vec2); @vpiAdvance(vec2)) {
-            if ((@vpiGetVarlen(vec1, 1) == france and @vpiGetVarlen(vec2, 1) == germany) or @vpiGetVarlen(vec1, 1) == germany and @vpiGetVarlen(vec2, 1) == france) {
+            if ((@vpiGetString(vec1, 1) == france and @vpiGetString(vec2, 1) == germany) or @vpiGetString(vec1, 1) == germany and @vpiGetString(vec2, 1) == france) {
               // Build JHT1
               var hash_val = @hash(@vpiGetInt(vec2, 0)) // n2_nationkey
               var build_row1 = @ptrCast(*JoinRow1, @joinHTInsert(&state.join_table1, hash_val))
               build_row1.n1_nationkey = @vpiGetInt(vec1, 0) // n1_nationkey
               build_row1.n2_nationkey = @vpiGetInt(vec2, 0) // n2_nationkey
-              build_row1.n1_name = @vpiGetVarlen(vec1, 1) // n1_name
-              build_row1.n2_name = @vpiGetVarlen(vec2, 1) // n2_name
+              build_row1.n1_name = @vpiGetString(vec1, 1) // n1_name
+              build_row1.n2_name = @vpiGetString(vec2, 1) // n2_name
             }
           }
         }

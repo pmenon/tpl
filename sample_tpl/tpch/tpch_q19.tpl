@@ -59,8 +59,8 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
       var hash_val = @hash(@vpiGetInt(vec, 0)) // p_partkey
       var build_row = @ptrCast(*JoinRow, @joinHTInsert(&state.join_table, hash_val))
       build_row.p_partkey = @vpiGetInt(vec, 0) // p_partkey
-      build_row.p_brand = @vpiGetVarlen(vec, 3) // p_brand
-      build_row.p_container = @vpiGetVarlen(vec, 6) // p_container
+      build_row.p_brand = @vpiGetString(vec, 3) // p_brand
+      build_row.p_container = @vpiGetString(vec, 6) // p_container
       build_row.p_size = @vpiGetInt(vec, 5) // p_size
     }
   }
@@ -105,22 +105,22 @@ fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
         and (@vpiGetReal(vec, 4) >= 1.0 and @vpiGetReal(vec, 4) <= 11.0)
         and (join_row.p_size >= 1 and join_row.p_size <= 5)
         and (join_row.p_container == sm_container1 or join_row.p_container == sm_container2 or join_row.p_container == sm_container3 or join_row.p_container == sm_container4)
-        and (@vpiGetVarlen(vec, 14) == mode1 or @vpiGetVarlen(vec, 14) == mode2)
-        and (@vpiGetVarlen(vec, 13) == instruct)
+        and (@vpiGetString(vec, 14) == mode1 or @vpiGetString(vec, 14) == mode2)
+        and (@vpiGetString(vec, 13) == instruct)
         ) or
         ((join_row.p_brand == brand23)
         and (@vpiGetReal(vec, 4) >= 10.0 and @vpiGetReal(vec, 4) <= 20.0)
         and (join_row.p_size >= 1 and join_row.p_size <= 10)
         and (join_row.p_container == med_container1 or join_row.p_container == med_container2 or join_row.p_container == med_container3 or join_row.p_container == med_container4)
-        and (@vpiGetVarlen(vec, 14) == mode1 or @vpiGetVarlen(vec, 14) == mode2)
-        and (@vpiGetVarlen(vec, 13) == instruct)
+        and (@vpiGetString(vec, 14) == mode1 or @vpiGetString(vec, 14) == mode2)
+        and (@vpiGetString(vec, 13) == instruct)
         ) or
         ((join_row.p_brand == brand34)
         and (@vpiGetReal(vec, 4) >= 20.0 and @vpiGetReal(vec, 4) <= 30.0)
         and (join_row.p_size >= 1 and join_row.p_size <= 15)
         and (join_row.p_container == lg_container1 or join_row.p_container == lg_container2 or join_row.p_container == lg_container3 or join_row.p_container == lg_container4)
-        and (@vpiGetVarlen(vec, 14) == mode1 or @vpiGetVarlen(vec, 14) == mode2)
-        and (@vpiGetVarlen(vec, 13) == instruct)
+        and (@vpiGetString(vec, 14) == mode1 or @vpiGetString(vec, 14) == mode2)
+        and (@vpiGetString(vec, 13) == instruct)
         )
         ) {
           var input = @vpiGetReal(vec, 5) * (1.0 - @vpiGetReal(vec, 6))

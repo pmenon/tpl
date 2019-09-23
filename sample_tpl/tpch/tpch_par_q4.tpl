@@ -181,7 +181,7 @@ fun worker1(state: *State, ts: *ThreadState1, o_tvi: *TableVectorIterator) -> ni
       var hash_val = @hash(@vpiGetInt(vec, 0)) // o_orderkey
       var build_row = @ptrCast(*JoinBuildRow, @joinHTInsert(&ts.ts_join_table, hash_val))
       build_row.o_orderkey = @vpiGetInt(vec, 0) // o_orderkey
-      build_row.o_orderpriority = @vpiGetVarlen(vec, 5) // o_orderpriority
+      build_row.o_orderpriority = @vpiGetString(vec, 5) // o_orderpriority
       build_row.match_flag = false
       ts.ts_count = ts.ts_count + 1
     }

@@ -128,14 +128,14 @@ fun teardownThreadState2(execCtx: *ExecutionContext, ts: *ThreadState2) -> nil {
 
 fun aggHashFn(iters: [*]*VectorProjectionIterator) -> uint64 {
   var vec = iters[0]
-  return @hash(@vpiGetVarlen(vec, 8), @vpiGetVarlen(vec, 9))
+  return @hash(@vpiGetString(vec, 8), @vpiGetString(vec, 9))
 }
 
 fun constructAgg(agg_payload: *AggPayload, iters: [*]*VectorProjectionIterator) -> nil {
   var vec = iters[0]
-  var nnn = @vpiGetVarlen(vec, 15)
-  agg_payload.l_returnflag = @vpiGetVarlen(vec, 8)
-  agg_payload.l_linestatus = @vpiGetVarlen(vec, 9)
+  var nnn = @vpiGetString(vec, 15)
+  agg_payload.l_returnflag = @vpiGetString(vec, 8)
+  agg_payload.l_linestatus = @vpiGetString(vec, 9)
 
   @aggInit(&agg_payload.sum_qty)
   @aggInit(&agg_payload.sum_base_price)
@@ -198,10 +198,10 @@ fun updateAggFromPartial(agg_payload: *AggPayload, partial: *AggPayload) -> nil 
 
 fun aggKeyCheck(agg_payload: *AggPayload, iters: [*]*VectorProjectionIterator) -> bool {
   var vec = iters[0]
-  if (agg_payload.l_returnflag != @vpiGetVarlen(vec, 8)) {
+  if (agg_payload.l_returnflag != @vpiGetString(vec, 8)) {
     return false
   }
-  if (agg_payload.l_linestatus != @vpiGetVarlen(vec, 9)) {
+  if (agg_payload.l_linestatus != @vpiGetString(vec, 9)) {
     return false
   }
   return true

@@ -183,7 +183,7 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
   for (@tableIterAdvance(&r_tvi)) {
     var vec = @tableIterGetVPI(&r_tvi)
     for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-      if (@vpiGetVarlen(vec, 1) == @stringToSql("ASIA")) { // r_name
+      if (@vpiGetString(vec, 1) == @stringToSql("ASIA")) { // r_name
         // Step 2: Insert into HT1
         var hash_val = @hash(@vpiGetInt(vec, 0)) // r_regionkey
         var build_row1 = @ptrCast(*JoinRow1, @joinHTInsert(&state.join_table1, hash_val))
@@ -215,7 +215,7 @@ fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
         var hash_val2 = @hash(@vpiGetInt(vec, 0)) // n_nationkey
         var build_row2 = @ptrCast(*JoinRow2, @joinHTInsert(&state.join_table2, hash_val2))
         build_row2.n_nationkey = @vpiGetInt(vec, 0) // n_nationkey
-        build_row2.n_name = @vpiGetVarlen(vec, 1) // n_name
+        build_row2.n_name = @vpiGetString(vec, 1) // n_name
       }
     }
   }

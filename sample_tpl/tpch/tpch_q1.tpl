@@ -99,17 +99,19 @@ fun aggKeyCheck(agg_payload: *AggPayload, agg_values: *AggValues) -> bool {
 
 fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
   // Pipeline 1 (Aggregating)
+  var date_filter = @dateToSql(1998, 12, 1)
+
   var l_tvi : TableVectorIterator
   @tableIterInit(&l_tvi, "lineitem")
   for (@tableIterAdvance(&l_tvi)) {
     var vec = @tableIterGetVPI(&l_tvi)
     for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-      if (@vpiGetDate(vec, 10) < @dateToSql(1998, 12, 1)) { // l_shipdate
+      if (@vpiGetDate(vec, 10) < date_filter) { // l_shipdate
         state.count = state.count + 1
 
         var agg_values : AggValues
-        agg_values.l_returnflag = @vpiGetVarlen(vec, 8) // l_returnflag
-        agg_values.l_linestatus = @vpiGetVarlen(vec, 9) // l_linestatus
+        agg_values.l_returnflag = @vpiGetString(vec, 8) // l_returnflag
+        agg_values.l_linestatus = @vpiGetString(vec, 9) // l_linestatus
         agg_values.sum_qty = @vpiGetReal(vec, 4) // l_quantity
         agg_values.sum_base_price = @vpiGetReal(vec, 5) // l_extendedprice
         agg_values.sum_disc_price = @vpiGetReal(vec, 5) * @vpiGetReal(vec, 6) // l_extendedprice * l_discount

@@ -91,7 +91,7 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
         var hash_val = @hash(@vpiGetInt(vec, 0)) // o_orderkey
         var build_row = @ptrCast(*JoinBuildRow, @joinHTInsert(&state.join_table, hash_val))
         build_row.o_orderkey = @vpiGetInt(vec, 0) // o_orderkey
-        build_row.o_orderpriority = @vpiGetVarlen(vec, 5) // o_orderpriority
+        build_row.o_orderpriority = @vpiGetString(vec, 5) // o_orderpriority
         build_row.match_flag = false
       }
     }
@@ -175,9 +175,9 @@ fun execQuery(execCtx: *ExecutionContext, state: *State) -> nil {
 
 
 fun main(execCtx: *ExecutionContext) -> int32 {
-    var state: State
-    setUpState(execCtx, &state)
-    execQuery(execCtx, &state)
-    teardownState(execCtx, &state)
-    return state.count
+  var state: State
+  setUpState(execCtx, &state)
+  execQuery(execCtx, &state)
+  teardownState(execCtx, &state)
+  return state.count
 }

@@ -149,15 +149,15 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
           and @vpiGetInt(vec, 5) != 3
           and @vpiGetInt(vec, 5) != 36
           and @vpiGetInt(vec, 5) != 9
-          and @vpiGetVarlen(vec, 3) != brand // p_brand
-          and !(@sqlToBool(@stringLike(@vpiGetVarlen(vec, 4), pattern)))) // p_type
+          and @vpiGetString(vec, 3) != brand // p_brand
+          and !(@sqlToBool(@stringLike(@vpiGetString(vec, 4), pattern)))) // p_type
       {
         var hash_val = @hash(@vpiGetInt(vec, 0)) // p_partkey
         var build_row1 = @ptrCast(*JoinRow1, @joinHTInsert(&state.join_table1, hash_val))
         build_row1.p_partkey = @vpiGetInt(vec, 0) // p_partkey
-        build_row1.p_brand = @vpiGetVarlen(vec, 3) // p_brand
+        build_row1.p_brand = @vpiGetString(vec, 3) // p_brand
         build_row1.p_size = @vpiGetInt(vec, 5) // p_size
-        build_row1.p_type = @vpiGetVarlen(vec, 4) // p_type
+        build_row1.p_type = @vpiGetString(vec, 4) // p_type
         //state.count = state.count + 1
       }
     }
@@ -177,7 +177,7 @@ fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
   for (@tableIterAdvance(&s_tvi)) {
     var vec = @tableIterGetVPI(&s_tvi)
     for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-      if (@stringLike(@vpiGetVarlen(vec, 6), pattern)) {
+      if (@stringLike(@vpiGetString(vec, 6), pattern)) {
         var hash_val = @hash(@vpiGetInt(vec, 0)) // s_suppkey
         var build_row2 = @ptrCast(*JoinRow2, @joinHTInsert(&state.join_table2, hash_val))
         build_row2.s_suppkey = @vpiGetInt(vec, 0) // s_suppkey

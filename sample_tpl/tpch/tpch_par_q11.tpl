@@ -87,7 +87,7 @@ fun p1Filter1(vec: *VectorProjectionIterator) -> int32 {
   var germany = @stringToSql("GERMANY")
   for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
     // n_name = "germany"
-    @vpiMatch(vec, @vpiGetVarlen(vec, 1) == germany)
+    @vpiMatch(vec, @vpiGetString(vec, 1) == germany)
   }
   @vpiResetFiltered(vec)
   return 0

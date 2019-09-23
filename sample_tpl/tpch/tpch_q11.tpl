@@ -118,7 +118,7 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
   for (@tableIterAdvance(&n_tvi)) {
     var vec = @tableIterGetVPI(&n_tvi)
     for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-      if (@vpiGetVarlen(vec, 1) == germany) {
+      if (@vpiGetString(vec, 1) == germany) {
         // Step 2: Insert into Hash Table
         var hash_val = @hash(@vpiGetInt(vec, 0)) // n_nationkey
         var build_row1 = @ptrCast(*JoinRow1, @joinHTInsert(&state.join_table1, hash_val))

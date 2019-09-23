@@ -193,7 +193,7 @@ fun p1Filter1(vec: *VectorProjectionIterator) -> int32 {
   var param = @stringToSql("ASIA")
   for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
     // r_name = "ASIA"
-    @vpiMatch(vec, @vpiGetVarlen(vec, 1) == param)
+    @vpiMatch(vec, @vpiGetString(vec, 1) == param)
   }
   @vpiResetFiltered(vec)
   return 0
@@ -366,7 +366,7 @@ fun worker2(state: *State, ts: *ThreadState2, n_tvi: *TableVectorIterator) -> ni
         var hash_val2 = @hash(@vpiGetInt(vec, 0)) // n_nationkey
         var build_row2 = @ptrCast(*JoinRow2, @joinHTInsert(&ts.ts_join_table, hash_val2))
         build_row2.n_nationkey = @vpiGetInt(vec, 0) // n_nationkey
-        build_row2.n_name = @vpiGetVarlen(vec, 1) // n_name
+        build_row2.n_name = @vpiGetString(vec, 1) // n_name
       }
     }
   }
