@@ -153,41 +153,41 @@ struct Decimal : public Val {
 //===----------------------------------------------------------------------===//
 
 /**
- * A SQL string
+ * A SQL string. SQL strings only and always <b>VIEWS</b> onto externally managed memory. They never
+ * own the memory they point to! They're a very thin wrapper around VarlenEntrys used for String
+ * processing.
  */
 struct StringVal : public Val {
-  static constexpr std::size_t kMaxStingLen = 1 * GB;
-
-  char *ptr;
-  uint32_t len;
+  VarlenEntry val;
 
   /**
-   * Create a string value (i.e., a view) over the given potentially non-null
-   * terminated byte sequence.
-   * @param str The byte sequence.
+   * Create a string value (i.e., a view) over the given (potentially non-null terminated) string.
+   * @param str The character sequence.
    * @param len The length of the sequence.
    */
-  StringVal(char *str, uint32_t len) noexcept : Val(str == nullptr), ptr(str), len(len) {}
+  StringVal(const char *str, uint32_t len) noexcept
+      : Val(false), val(VarlenEntry::Create(reinterpret_cast<const byte *>(str), len)) {
+    TPL_ASSERT(str != nullptr, "String input cannot be NULL");
+  }
 
   /**
    * Create a string value (i.e., view) over the C-style null-terminated string.
-   * Note that no copy is made.
    * @param str The C-string.
    */
   explicit StringVal(const char *str) noexcept : StringVal(const_cast<char *>(str), strlen(str)) {}
 
   /**
-   * Create a new string using the given memory pool and length.
-   * @param memory The memory pool to allocate this string's contents from
-   * @param len The size of the string
+   * Get the length of the string value.
+   * @return The length of the string in bytes.
    */
-  StringVal(util::StringHeap *memory, std::size_t len) : ptr(nullptr), len(len) {
-    if (TPL_UNLIKELY(len > kMaxStingLen)) {
-      len = 0;
-      is_null = true;
-    } else {
-      ptr = reinterpret_cast<char *>(memory->Allocate(len));
-    }
+  std::size_t GetLength() const noexcept { return val.GetSize(); }
+
+  /**
+   * Return a pointer to the bytes underlying the string.
+   * @return A pointer to the underlying content.
+   */
+  const char *GetContent() const noexcept {
+    return reinterpret_cast<const char *>(val.GetContent());
   }
 
   /**
@@ -203,10 +203,7 @@ struct StringVal : public Val {
     if (is_null) {
       return true;
     }
-    if (len != that.len) {
-      return false;
-    }
-    return ptr == that.ptr || memcmp(ptr, that.ptr, len) == 0;
+    return val == that.val;
   }
 
   /**
@@ -219,7 +216,11 @@ struct StringVal : public Val {
   /**
    * Create a NULL varchar/string
    */
-  static StringVal Null() { return StringVal(static_cast<char *>(nullptr), 0); }
+  static StringVal Null() {
+    StringVal result("");
+    result.is_null = true;
+    return result;
+  }
 };
 
 //===----------------------------------------------------------------------===//

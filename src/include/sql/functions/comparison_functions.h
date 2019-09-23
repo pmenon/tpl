@@ -71,7 +71,7 @@ class ComparisonFunctions {
       *result = BoolVal::Null();                                                    \
       return;                                                                       \
     }                                                                               \
-    *result = BoolVal(OP::Apply(v1.ptr, v1.len, v2.ptr, v2.len));                   \
+    *result = BoolVal(OP::Apply(v1.val, v2.val));                                   \
   }
 
 #define BINARY_COMPARISONS(NAME, OP)                        \

@@ -14,6 +14,10 @@ struct Hash {
   }
 
   static hash_t Apply(const Date &input, bool null) { return null ? hash_t(0) : input.Hash(); }
+
+  static hash_t Apply(const VarlenEntry &input, bool null) {
+    return null ? hash_t(0) : input.Hash();
+  }
 };
 
 }  // namespace tpl::sql

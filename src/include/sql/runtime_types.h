@@ -175,7 +175,7 @@ class VarlenEntry {
    * @param size The length of the varlen content, in bytes (no C-style nul-terminator).
    * @return A constructed VarlenEntry object.
    */
-  static VarlenEntry Create(byte *content, uint32_t size) {
+  static VarlenEntry Create(const byte *content, uint32_t size) {
     VarlenEntry result;
     result.size_ = size;
 
@@ -189,6 +189,17 @@ class VarlenEntry {
       result.content_ = content;
     }
 
+    return result;
+  }
+
+  /**
+   * Create en empty varlen entry with zero size.
+   * @return The constructed VarlenEntry object.
+   */
+  static VarlenEntry CreateEmpty() {
+    VarlenEntry result;
+    result.size_ = 0;
+    result.content_ = nullptr;
     return result;
   }
 
@@ -223,6 +234,14 @@ class VarlenEntry {
    * @return pointer to the varlen entry contents.
    */
   const byte *GetContent() const { return IsInlined() ? prefix_ : content_; }
+
+  /**
+   * Hash this varlen.
+   * @return The hash of this varlen.
+   */
+  hash_t Hash() const noexcept {
+    return util::HashUtil::Hash(reinterpret_cast<const uint8_t *>(GetContent()), GetSize());
+  }
 
   /**
    * @return A zero-copy view of the VarlenEntry as an immutable string that allows use with
@@ -278,7 +297,6 @@ class VarlenEntry {
   bool operator>=(const VarlenEntry &that) const noexcept { return Compare(*this, that) >= 0; }
 
  private:
- private:
   // The size of the contents
   int32_t size_;
   // A small prefix for the string. Immediately valid when content is inlined, but used when content
@@ -294,14 +312,12 @@ class VarlenEntry {
 class VarlenHeap {
  public:
   /**
-   * Allocate a new varlen whose contents will be written by the caller.
+   * Allocate memory from the heap whose contents will be filled in by the user BEFORE creating a
+   * varlen.
    * @param len The length of the varlen to allocate.
-   * @return The varlen.
+   * @return The character byte array.
    */
-  VarlenEntry Allocate(std::size_t len) {
-    auto *content = heap_.Allocate(len);
-    return VarlenEntry::Create(reinterpret_cast<byte *>(content), len);
-  }
+  char *PreAllocate(std::size_t len) { return heap_.Allocate(len); }
 
   /**
    * Allocate a varlen from this heap whose contents are the same as the input string.

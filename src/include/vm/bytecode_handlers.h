@@ -19,7 +19,7 @@
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
 #include "sql/vector_filter_executor.h"
-#include "util/hash_util.h"
+#include "sql/operations/hash_operators.h"
 
 // All VM bytecode op handlers must use this macro
 #define VM_OP
@@ -503,24 +503,17 @@ VM_OP_HOT void OpVPISetDateNull(tpl::sql::VectorProjectionIterator *const vpi,
 
 VM_OP_HOT void OpHashInt(hash_t *const hash_val, const tpl::sql::Integer *const input,
                          const hash_t seed) {
-  *hash_val = tpl::util::HashUtil::Hash(input->val, seed);
-  *hash_val = input->is_null ? 0 : *hash_val;
+  *hash_val = input->is_null ? 0 : tpl::util::HashUtil::Hash(input->val, seed);
 }
 
 VM_OP_HOT void OpHashReal(hash_t *const hash_val, const tpl::sql::Real *const input,
                           const hash_t seed) {
-  *hash_val = tpl::util::HashUtil::Hash(input->val, seed);
-  *hash_val = input->is_null ? 0 : *hash_val;
+  *hash_val = input->is_null ? 0 : tpl::util::HashUtil::Hash(input->val, seed);
 }
 
 VM_OP_HOT void OpHashString(hash_t *const hash_val, const tpl::sql::StringVal *const input,
-                            const hash_t seed) {
-  if (input->is_null) {
-    *hash_val = 0;
-  } else {
-    const auto *key = reinterpret_cast<const uint8_t *>(input->ptr);
-    *hash_val = tpl::util::HashUtil::Hash(key, input->len, seed);
-  }
+                            UNUSED const hash_t seed) {
+  *hash_val = input->is_null ? 0 : input->val.Hash();
 }
 
 VM_OP_HOT void OpHashCombine(hash_t *hash_val, hash_t new_hash_val) {

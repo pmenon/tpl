@@ -3,7 +3,7 @@
 #include "common/common.h"
 #include "common/macros.h"
 #include "sql/memory_pool.h"
-#include "util/string_heap.h"
+#include "sql/runtime_types.h"
 
 namespace tpl::sql {
 
@@ -30,13 +30,13 @@ class ExecutionContext {
   /**
    * Return the string allocator.
    */
-  util::StringHeap *string_allocator() { return &string_allocator_; }
+  VarlenHeap *string_allocator() { return &string_allocator_; }
 
  private:
   // Pool for memory allocations required during execution
   MemoryPool *mem_pool_;
   // String allocator
-  util::StringHeap string_allocator_;
+  VarlenHeap string_allocator_;
 };
 
 }  // namespace tpl::sql

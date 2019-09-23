@@ -16,7 +16,7 @@ void StringFunctions::Substring(UNUSED ExecutionContext *ctx, StringVal *result,
   }
 
   const auto start = std::max(pos.val, int64_t{1});
-  const auto end = pos.val + std::min(static_cast<int64_t>(str.len), len.val);
+  const auto end = pos.val + std::min(static_cast<int64_t>(str.GetLength()), len.val);
 
   // The end can be before the start only if the length was negative. This is an
   // error.
@@ -32,13 +32,13 @@ void StringFunctions::Substring(UNUSED ExecutionContext *ctx, StringVal *result,
   }
 
   // All good
-  *result = StringVal(str.ptr + start - 1, end - start);
+  *result = StringVal(str.GetContent() + start - 1, end - start);
 }
 
 namespace {
 
-char *SearchSubstring(char *haystack, const std::size_t hay_len, const char *needle,
-                      const std::size_t needle_len) {
+const char *SearchSubstring(const char *haystack, const std::size_t hay_len, const char *needle,
+                            const std::size_t needle_len) {
   TPL_ASSERT(needle != nullptr, "No search string provided");
   TPL_ASSERT(needle_len > 0, "No search string provided");
   for (uint32_t i = 0; i < hay_len + needle_len; i++) {
@@ -66,20 +66,20 @@ void StringFunctions::SplitPart(UNUSED ExecutionContext *ctx, StringVal *result,
     return;
   }
 
-  if (delim.len == 0) {
+  if (delim.GetLength() == 0) {
     *result = str;
     return;
   }
 
   // Pointers to the start of the current part, the end of the input string, and
   // the delimiter string
-  auto curr = reinterpret_cast<char *>(str.ptr);
-  auto const end = curr + str.len;
-  auto const delimiter = reinterpret_cast<const char *>(delim.ptr);
+  auto curr = str.GetContent();
+  auto const end = curr + str.GetLength();
+  auto const delimiter = delim.GetContent();
 
   for (uint32_t index = 1;; index++) {
     const auto remaining_len = end - curr;
-    const auto next_delim = SearchSubstring(curr, remaining_len, delimiter, delim.len);
+    const auto next_delim = SearchSubstring(curr, remaining_len, delimiter, delim.GetLength());
     if (next_delim == nullptr) {
       if (index == field.val) {
         *result = StringVal(curr, remaining_len);
@@ -94,7 +94,7 @@ void StringFunctions::SplitPart(UNUSED ExecutionContext *ctx, StringVal *result,
       return;
     }
     // We haven't reached the field yet, move along
-    curr = next_delim + delim.len;
+    curr = next_delim + delim.GetLength();
   }
 }
 
@@ -105,23 +105,24 @@ void StringFunctions::Repeat(ExecutionContext *ctx, StringVal *result, const Str
     return;
   }
 
-  if (str.len == 0 || n.val <= 0) {
+  if (str.GetLength() == 0 || n.val <= 0) {
     *result = StringVal("");
     return;
   }
 
-  *result = StringVal(ctx->string_allocator(), str.len * n.val);
+  // Allocate
+  const std::size_t result_len = str.GetLength() * n.val;
+  char *target = ctx->string_allocator()->PreAllocate(result_len);
 
-  if (TPL_UNLIKELY(result->is_null)) {
-    // Allocation failed
-    return;
-  }
-
-  auto *ptr = result->ptr;
+  // Repeat
+  char *ptr = target;
   for (uint32_t i = 0; i < n.val; i++) {
-    std::memcpy(ptr, str.ptr, str.len);
-    ptr += str.len;
+    std::memcpy(ptr, str.GetContent(), str.GetLength());
+    ptr += str.GetLength();
   }
+
+  // Set result
+  *result = StringVal(target, result_len);
 }
 
 void StringFunctions::Lpad(ExecutionContext *ctx, StringVal *result, const StringVal &str,
@@ -132,33 +133,34 @@ void StringFunctions::Lpad(ExecutionContext *ctx, StringVal *result, const Strin
   }
 
   // If target length equals input length, nothing to do
-  if (len.val == str.len) {
+  if (static_cast<std::size_t>(len.val) == str.GetLength()) {
     *result = str;
     return;
   }
 
   // If target length is less than input length, truncate.
-  if (len.val < str.len) {
-    *result = StringVal(str.ptr, len.val);
+  if (static_cast<std::size_t>(len.val) < str.GetLength()) {
+    *result = StringVal(str.GetContent(), len.val);
     return;
   }
 
-  *result = StringVal(ctx->string_allocator(), len.val);
+  // Allocate some memory
+  char *target = ctx->string_allocator()->PreAllocate(len.val);
 
-  if (TPL_UNLIKELY(result->is_null)) {
-    // Allocation failed
-    return;
-  }
-
-  auto *ptr = result->ptr;
-  for (uint32_t bytes_left = len.val - str.len; bytes_left > 0;) {
-    auto copy_len = std::min(pad.len, bytes_left);
-    std::memcpy(ptr, pad.ptr, copy_len);
+  // Pad
+  char *ptr = target;
+  for (std::size_t bytes_left = len.val - str.GetLength(); bytes_left > 0;) {
+    auto copy_len = std::min(pad.GetLength(), bytes_left);
+    std::memcpy(ptr, pad.GetContent(), copy_len);
     bytes_left -= copy_len;
     ptr += copy_len;
   }
 
-  std::memcpy(ptr, str.ptr, str.len);
+  // Copy main string into target
+  std::memcpy(ptr, str.GetContent(), str.GetLength());
+
+  // Set result
+  *result = StringVal(target, len.val);
 }
 
 void StringFunctions::Rpad(ExecutionContext *ctx, StringVal *result, const StringVal &str,
@@ -169,41 +171,40 @@ void StringFunctions::Rpad(ExecutionContext *ctx, StringVal *result, const Strin
   }
 
   // If target length equals input length, nothing to do
-  if (len.val == str.len) {
+  if (static_cast<std::size_t>(len.val) == str.GetLength()) {
     *result = str;
     return;
   }
 
   // If target length is less than input length, truncate.
-  if (len.val < str.len) {
-    *result = StringVal(str.ptr, len.val);
+  if (static_cast<std::size_t>(len.val) < str.GetLength()) {
+    *result = StringVal(str.GetContent(), len.val);
     return;
   }
 
-  *result = StringVal(ctx->string_allocator(), len.val);
-
-  if (TPL_UNLIKELY(result->is_null)) {
-    // Allocation failed
-    return;
-  }
+  // Allocate output
+  char *target = ctx->string_allocator()->PreAllocate(len.val);
+  char *ptr = target;
 
   // Copy input string first
-  auto *ptr = result->ptr;
-  std::memcpy(ptr, str.ptr, str.len);
-  ptr += str.len;
+  std::memcpy(ptr, str.GetContent(), str.GetLength());
+  ptr += str.GetLength();
 
   // Then padding
-  for (uint32_t bytes_left = len.val - str.len; bytes_left > 0;) {
-    auto copy_len = std::min(pad.len, bytes_left);
-    std::memcpy(ptr, pad.ptr, copy_len);
+  for (std::size_t bytes_left = len.val - str.GetLength(); bytes_left > 0;) {
+    auto copy_len = std::min(pad.GetLength(), bytes_left);
+    std::memcpy(ptr, pad.GetContent(), copy_len);
     bytes_left -= copy_len;
     ptr += copy_len;
   }
+
+  // Set result
+  *result = StringVal(target, len.val);
 }
 
 void StringFunctions::Length(UNUSED ExecutionContext *ctx, Integer *result, const StringVal &str) {
   result->is_null = str.is_null;
-  result->val = str.len;
+  result->val = str.GetLength();
 }
 
 void StringFunctions::Lower(ExecutionContext *ctx, StringVal *result, const StringVal &str) {
@@ -212,18 +213,9 @@ void StringFunctions::Lower(ExecutionContext *ctx, StringVal *result, const Stri
     return;
   }
 
-  *result = StringVal(ctx->string_allocator(), str.len);
-
-  if (TPL_UNLIKELY(result->is_null)) {
-    // Allocation failed
-    return;
-  }
-
-  auto *ptr = reinterpret_cast<char *>(result->ptr);
-  auto *src = reinterpret_cast<char *>(str.ptr);
-  for (uint32_t i = 0; i < str.len; i++) {
-    ptr[i] = std::tolower(src[i]);
-  }
+  char *target = ctx->string_allocator()->PreAllocate(str.GetLength());
+  std::transform(str.GetContent(), str.GetContent() + str.GetLength(), target, ::tolower);
+  *result = StringVal(target, str.GetLength());
 }
 
 void StringFunctions::Upper(ExecutionContext *ctx, StringVal *result, const StringVal &str) {
@@ -232,18 +224,9 @@ void StringFunctions::Upper(ExecutionContext *ctx, StringVal *result, const Stri
     return;
   }
 
-  *result = StringVal(ctx->string_allocator(), str.len);
-
-  if (TPL_UNLIKELY(result->is_null)) {
-    // Allocation failed
-    return;
-  }
-
-  auto *ptr = reinterpret_cast<char *>(result->ptr);
-  auto *src = reinterpret_cast<char *>(str.ptr);
-  for (uint32_t i = 0; i < str.len; i++) {
-    ptr[i] = std::toupper(src[i]);
-  }
+  char *target = ctx->string_allocator()->PreAllocate(str.GetLength());
+  std::transform(str.GetContent(), str.GetContent() + str.GetLength(), target, ::toupper);
+  *result = StringVal(target, str.GetLength());
 }
 
 void StringFunctions::Reverse(ExecutionContext *ctx, StringVal *result, const StringVal &str) {
@@ -252,28 +235,22 @@ void StringFunctions::Reverse(ExecutionContext *ctx, StringVal *result, const St
     return;
   }
 
-  if (str.len == 0) {
+  if (str.GetLength() == 0) {
     *result = str;
     return;
   }
 
-  *result = StringVal(ctx->string_allocator(), str.len);
-
-  if (TPL_UNLIKELY(result->is_null)) {
-    // Allocation failed
-    return;
-  }
-
-  std::reverse_copy(str.ptr, str.ptr + str.len, result->ptr);
+  char *target = ctx->string_allocator()->PreAllocate(str.GetLength());
+  std::reverse_copy(str.GetContent(), str.GetContent() + str.GetLength(), target);
+  *result = StringVal(target, str.GetLength());
 }
 
 namespace {
 
-// TODO(pmenon): The bitset we use can be prepared once before all function
-//               invocations if the characters list is a constant value, and not
-//               a column value (i.e., SELECT ltrim(col, 'abc') FROM ...). This
-//               should be populated in the execution context once apriori
-//               rather that initializing it each invocation.
+// TODO(pmenon): The bitset we use can be prepared once before all function invocations if the
+//               characters list is a constant value, and not a column value
+//               (i.e., SELECT ltrim(col, 'abc') FROM ...). This should be populated in the
+//               execution context once apriori rather that initializing it each invocation.
 // TODO(pmenon): What about non-ASCII strings?
 // Templatized from Postgres
 template <bool TrimLeft, bool TrimRight>
@@ -283,32 +260,32 @@ void DoTrim(StringVal *result, const StringVal &str, const StringVal &chars) {
     return;
   }
 
-  if (str.len == 0) {
+  if (str.GetLength() == 0) {
     *result = str;
     return;
   }
 
   std::bitset<256> bitset;
-  for (uint32_t i = 0; i < chars.len; i++) {
-    bitset.set(chars.ptr[i]);
+  for (uint32_t i = 0; i < chars.GetLength(); i++) {
+    bitset.set(chars.GetContent()[i]);
   }
 
   // The valid range
-  int32_t begin = 0, end = str.len - 1;
+  int32_t begin = 0, end = str.GetLength() - 1;
 
   if constexpr (TrimLeft) {
-    while (begin < static_cast<int32_t>(str.len) && bitset.test(str.ptr[begin])) {
+    while (begin < static_cast<int32_t>(str.GetLength()) && bitset.test(str.GetContent()[begin])) {
       begin++;
     }
   }
 
   if constexpr (TrimRight) {
-    while (begin <= end && bitset.test(str.ptr[end])) {
+    while (begin <= end && bitset.test(str.GetContent()[end])) {
       end--;
     }
   }
 
-  *result = StringVal(str.ptr + begin, end - begin + 1);
+  *result = StringVal(str.GetContent() + begin, end - begin + 1);
 }
 
 }  // namespace
@@ -347,9 +324,9 @@ void StringFunctions::Left(UNUSED ExecutionContext *ctx, StringVal *result, cons
     return;
   }
 
-  const auto len = n.val < 0 ? std::max(int64_t{0}, str.len + n.val)
-                             : std::min(str.len, static_cast<uint32_t>(n.val));
-  *result = StringVal(str.ptr, len);
+  const auto len = n.val < 0 ? std::max(int64_t(0), static_cast<int64_t>(str.GetLength()) + n.val)
+                             : std::min(str.GetLength(), static_cast<std::size_t>(n.val));
+  *result = StringVal(str.GetContent(), len);
 }
 
 void StringFunctions::Right(UNUSED ExecutionContext *ctx, StringVal *result, const StringVal &str,
@@ -359,11 +336,11 @@ void StringFunctions::Right(UNUSED ExecutionContext *ctx, StringVal *result, con
     return;
   }
 
-  const auto len = std::min(str.len, static_cast<uint32_t>(std::abs(n.val)));
+  const auto len = std::min(str.GetLength(), static_cast<std::size_t>(std::abs(n.val)));
   if (n.val > 0) {
-    *result = StringVal(str.ptr + (str.len - len), len);
+    *result = StringVal(str.GetContent() + (str.GetLength() - len), len);
   } else {
-    *result = StringVal(str.ptr + len, str.len - len);
+    *result = StringVal(str.GetContent() + len, str.GetLength() - len);
   }
 }
 
@@ -375,7 +352,8 @@ void StringFunctions::Like(UNUSED ExecutionContext *ctx, BoolVal *result, const 
   }
 
   result->is_null = false;
-  result->val = Like::Apply(string.ptr, string.len, pattern.ptr, pattern.len);
+  result->val = Like::Apply(string.GetContent(), string.GetLength(), pattern.GetContent(),
+                            pattern.GetLength());
 }
 
 }  // namespace tpl::sql

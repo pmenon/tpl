@@ -217,7 +217,7 @@ GenericValue GenericValue::CreateFromRuntimeValue(const TypeId type_id, const Va
     case TypeId::Date:
       return GenericValue::CreateDate(static_cast<const DateVal &>(val).val);
     case TypeId::Varchar:
-      return GenericValue::CreateVarchar(static_cast<const StringVal &>(val).ptr);
+      return GenericValue::CreateVarchar(static_cast<const StringVal &>(val).val.GetStringView());
     default:
       throw NotImplementedException("Run-time value of type '{}' not supported as generic value",
                                     TypeIdToString(type_id));
