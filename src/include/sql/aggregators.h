@@ -236,6 +236,16 @@ class IntegerMaxAggregate : public MaxAggregate<Integer> {};
  */
 class RealMaxAggregate : public MaxAggregate<Real> {};
 
+/**
+ * Date Max
+ */
+class DateMaxAggregate : public MaxAggregate<DateVal> {};
+
+/**
+ * String Max
+ */
+class StringMaxAggregate : public MaxAggregate<StringVal> {};
+
 // ---------------------------------------------------------
 // Min
 // ---------------------------------------------------------
@@ -306,6 +316,16 @@ class IntegerMinAggregate : public MinAggregate<Integer> {};
  * Real Min
  */
 class RealMinAggregate : public MinAggregate<Real> {};
+
+/**
+ * Date Min
+ */
+class DateMinAggregate : public MinAggregate<DateVal> {};
+
+/**
+ * String Min
+ */
+class StringMinAggregate : public MinAggregate<StringVal> {};
 
 // ---------------------------------------------------------
 // Average
