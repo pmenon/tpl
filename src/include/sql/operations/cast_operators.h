@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "common/common.h"
 #include "common/exception.h"
 #include "sql/runtime_types.h"

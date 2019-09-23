@@ -1,6 +1,5 @@
 #include "sql/generic_value.h"
 
-#include <sql/generic_value.h>
 #include <string>
 
 #include "common/exception.h"

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <limits>
+#include <string>
 
 #include "sql/value.h"
 

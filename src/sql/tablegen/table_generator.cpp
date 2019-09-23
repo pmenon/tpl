@@ -1,5 +1,10 @@
 #include "sql/tablegen/table_generator.h"
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "csv/csv.hpp"
 
 #include "common/exception.h"

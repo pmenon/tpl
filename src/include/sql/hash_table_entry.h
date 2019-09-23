@@ -36,7 +36,7 @@ struct HashTableEntry {
    */
   static constexpr std::size_t ComputeEntrySize(const std::size_t payload_size) {
     return sizeof(HashTableEntry) + payload_size;
-  };
+  }
 
   /**
    * For testing!

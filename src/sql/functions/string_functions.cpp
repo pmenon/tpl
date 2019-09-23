@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <bitset>
+#include <string>
 
 #include "sql/execution_context.h"
 #include "sql/operations/like_operators.h"

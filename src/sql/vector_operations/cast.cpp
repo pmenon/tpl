@@ -1,5 +1,7 @@
 #include "sql/vector_operations/vector_operators.h"
 
+#include <string>
+
 #include "common/exception.h"
 #include "sql/operations/cast_operators.h"
 
