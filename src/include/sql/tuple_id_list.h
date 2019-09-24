@@ -42,6 +42,11 @@ class TupleIdList {
 
   /**
    * An iterator over the TIDs in a Tuple ID list.
+   *
+   * @warning While this exists for convenience, it is very slow and should only be used when the
+   * loop is driven by an external controller. When possible, design your algorithms around the
+   * callback-based iteration functions in TupleIdList such as TupleIdList::Iterate() and
+   * TupleIdList::Filter() as they perform more than 3x faster!!!!!
    */
   class ConstIterator {
    public:
