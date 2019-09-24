@@ -141,6 +141,7 @@ class Simple {
   ~Simple() { count--; }
 
   uint32_t id() const noexcept { return id_; }
+
  private:
   uint32_t id_;
   std::unique_ptr<char[]> ptr_;
