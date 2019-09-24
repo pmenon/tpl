@@ -276,7 +276,7 @@ const DateType &DateType::InstanceNullable() {
   return kNullableDate;
 }
 
-TypeId DateType::GetPrimitiveTypeId() const { return TypeId::Integer; }
+TypeId DateType::GetPrimitiveTypeId() const { return TypeId::Date; }
 
 std::string DateType::GetName() const {
   std::string str = "Date";

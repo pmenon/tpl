@@ -58,7 +58,7 @@ bool TableVectorIterator::Init() {
 
   // Collect column metadata for the iterators
   std::vector<const Schema::ColumnInfo *> col_infos(column_indexes_.size());
-  for (uint32_t idx = 0; idx < column_indexes_.size(); idx++) {
+  for (uint64_t idx = 0; idx < column_indexes_.size(); idx++) {
     col_infos[idx] = table_schema.GetColumnInfo(idx);
   }
 

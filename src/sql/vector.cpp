@@ -9,7 +9,6 @@
 
 #include "spdlog/fmt/fmt.h"
 
-#include "logging/logger.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "util/bit_util.h"
 
@@ -245,6 +244,10 @@ void Vector::Reference(GenericValue *value) {
     }
     case TypeId::Double: {
       data_ = reinterpret_cast<byte *>(&value->value_.double_);
+      break;
+    }
+    case TypeId::Date: {
+      data_ = reinterpret_cast<byte *>(&value->value_.date_);
       break;
     }
     case TypeId::Hash: {

@@ -29,7 +29,7 @@ struct is_safe_for_full_compute {
 
 template <typename T>
 struct is_safe_for_full_compute<
-    T, std::enable_if_t<std::is_fundamental_v<T> && std::is_same_v<T, Date>>> {
+    T, std::enable_if_t<std::is_fundamental_v<T> || std::is_same_v<T, Date>>> {
   static constexpr bool value = true;
 };
 
