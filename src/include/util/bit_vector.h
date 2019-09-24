@@ -51,6 +51,9 @@ class BitVector {
                 "Word size in bits expected to be a power of two");
 
  public:
+  // Used to indicate an invalid bit position
+  static constexpr const uint32_t kInvalidPos = std::numeric_limits<uint32_t>::max();
+
   /**
    * Return the number of words required to store at least @em num_bits number if bits in a bit
    * vector. Note that this may potentially over allocate.
@@ -494,7 +497,7 @@ class BitVector {
       WordType word_result = 0;
       while (word != 0) {
         const auto t = word & -word;
-        const auto r = util::BitUtil::CountTrailingZeros(word);
+        const auto r = BitUtil::CountTrailingZeros(word);
         word_result |= static_cast<WordType>(p(i * kWordSizeBits + r)) << r;
         word ^= t;
       }
@@ -571,7 +574,7 @@ class BitVector {
   void SetFromBytes(const uint8_t *const bytes, const uint32_t num_bytes) {
     TPL_ASSERT(bytes != nullptr, "Null input");
     TPL_ASSERT(num_bytes == num_bits(), "Byte vector too small");
-    util::VectorUtil::ByteVectorToBitVector(bytes, num_bytes, words_.data());
+    VectorUtil::ByteVectorToBitVector(bytes, num_bytes, words_.data());
   }
 
   /**
@@ -588,6 +591,38 @@ class BitVector {
     }
     result += "]";
     return result;
+  }
+
+  /**
+   * Find the index of the first set bit in the bit vector. If there are no set bits, return the
+   * invalid bit position BitVector::kInvalidPos.
+   * @return The index of the first set bit in the bit vector.
+   */
+  uint32_t FindFirst() const noexcept { return FindFrom(0); }
+
+  /**
+   * Find the index of the first set bit <b>after</b> the bit position @em position. If no bit is
+   * set after the position, return the invalid bit position BitVector::kInvalidPos.
+   * @param position The position to anchor the search.
+   * @return The index of the first set bit after the given position in the bit vector.
+   */
+  uint32_t FindNext(uint32_t position) const noexcept {
+    if (TPL_UNLIKELY(num_bits() == 0 || position >= num_bits() - 1)) {
+      return kInvalidPos;
+    }
+
+    position++;
+
+    const uint32_t word_index = position / kWordSizeBits;
+    const uint32_t bit_idx = position % kWordSizeBits;
+
+    // Does the current word have any remaining 1 bits?
+    if (WordType word = words_[word_index] >> bit_idx; word != WordType(0)) {
+      return position + BitUtil::CountTrailingZeros(word);
+    }
+
+    // Find the next bit in the following set of words
+    return FindFrom(word_index + 1);
   }
 
   // -------------------------------------------------------
@@ -640,6 +675,16 @@ class BitVector {
     if (extra_bits != 0) {
       words_[num_words() - 1] &= ~(kAllOnesWord << extra_bits);
     }
+  }
+
+  // Find the first set bit in the bit vector starting at the given word position
+  uint32_t FindFrom(uint32_t word_index) const noexcept {
+    for (uint32_t i = word_index; i < num_words(); i++) {
+      if (words_[i] != WordType(0)) {
+        return i * kWordSizeBits + BitUtil::CountTrailingZeros(words_[i]);
+      }
+    }
+    return kInvalidPos;
   }
 
  private:
