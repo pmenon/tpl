@@ -148,7 +148,7 @@ fun pipeline4(execCtx: *ExecutionContext, state: *State) -> nil {
         state.count = state.count + 1
 
         var sorter_row = @ptrCast(*SorterRow, @sorterIterGetRow(&sort_iter))
-        
+
         // Output
         out = @ptrCast(*OutputStruct, @resultBufferAllocRow(execCtx))
         out.o_orderpriority = sorter_row.o_orderpriority
