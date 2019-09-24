@@ -835,9 +835,9 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   }                                                                  \
   OP(op##Date) : {                                                   \
     auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());  \
-    auto *left = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());       \
-    auto *right = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());      \
-    Op##op##Real(result, left, right);                               \
+    auto *left = frame->LocalAt<sql::DateVal *>(READ_LOCAL_ID());    \
+    auto *right = frame->LocalAt<sql::DateVal *>(READ_LOCAL_ID());   \
+    Op##op##Date(result, left, right);                               \
     DISPATCH_NEXT();                                                 \
   }                                                                  \
   OP(op##String) : {                                                 \
