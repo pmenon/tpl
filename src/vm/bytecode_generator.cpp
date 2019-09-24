@@ -1271,6 +1271,22 @@ void BytecodeGenerator::VisitBuiltinSorterIterCall(ast::CallExpr *call, ast::Bui
   }
 }
 
+void BytecodeGenerator::VisitResultBufferCall(ast::CallExpr *call, ast::Builtin builtin) {
+  LocalVar exec_ctx = VisitExpressionForRValue(call->arguments()[0]);
+  switch (builtin) {
+    case ast::Builtin::ResultBufferAllocOutRow: {
+      LocalVar dest = execution_result()->GetOrCreateDestination(call->type());
+      emitter()->Emit(Bytecode::ResultBufferAllocOutputRow, dest, exec_ctx);
+      break;
+    }
+    case ast::Builtin::ResultBufferFinalize: {
+      emitter()->Emit(Bytecode::ResultBufferFinalize, exec_ctx);
+      break;
+    }
+    default: { UNREACHABLE("Invalid result buffer call!"); }
+  }
+}
+
 void BytecodeGenerator::VisitExecutionContextCall(ast::CallExpr *call,
                                                   UNUSED ast::Builtin builtin) {
   ast::Context *ctx = call->type()->context();
@@ -1530,6 +1546,11 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitBuiltinSorterIterCall(call, builtin);
       break;
     }
+    case ast::Builtin::ResultBufferAllocOutRow:
+    case ast::Builtin::ResultBufferFinalize: {
+      VisitResultBufferCall(call, builtin);
+      break;
+    }
     case ast::Builtin::ACos:
     case ast::Builtin::ASin:
     case ast::Builtin::ATan:
@@ -1623,6 +1644,10 @@ void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
     }
     case ast::LitExpr::LitKind::Int: {
       emitter()->EmitAssignImm4(target, node->int32_val());
+      break;
+    }
+    case ast::LitExpr::LitKind::Float: {
+      emitter()->EmitAssignImm4F(target, node->float32_val());
       break;
     }
     default: {

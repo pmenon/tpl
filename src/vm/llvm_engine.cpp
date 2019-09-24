@@ -631,33 +631,43 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
           break;
         }
         case OperandType::Imm1: {
-          args.push_back(
-              llvm::ConstantInt::get(type_map_->Int8Type(), iter.GetImmediateOperand(i), true));
+          args.push_back(llvm::ConstantInt::get(type_map_->Int8Type(),
+                                                iter.GetImmediateIntegerOperand(i), true));
           break;
         }
         case OperandType::Imm2: {
-          args.push_back(
-              llvm::ConstantInt::get(type_map_->Int16Type(), iter.GetImmediateOperand(i), true));
+          args.push_back(llvm::ConstantInt::get(type_map_->Int16Type(),
+                                                iter.GetImmediateIntegerOperand(i), true));
           break;
         }
         case OperandType::Imm4: {
-          args.push_back(
-              llvm::ConstantInt::get(type_map_->Int32Type(), iter.GetImmediateOperand(i), true));
+          args.push_back(llvm::ConstantInt::get(type_map_->Int32Type(),
+                                                iter.GetImmediateIntegerOperand(i), true));
           break;
         }
         case OperandType::Imm8: {
+          args.push_back(llvm::ConstantInt::get(type_map_->Int64Type(),
+                                                iter.GetImmediateIntegerOperand(i), true));
+          break;
+        }
+        case OperandType::Imm4F: {
           args.push_back(
-              llvm::ConstantInt::get(type_map_->Int64Type(), iter.GetImmediateOperand(i), true));
+              llvm::ConstantFP::get(type_map_->Float32Type(), iter.GetImmediateFloatOperand(i)));
+          break;
+        }
+        case OperandType::Imm8F: {
+          args.push_back(
+              llvm::ConstantFP::get(type_map_->Float64Type(), iter.GetImmediateFloatOperand(i)));
           break;
         }
         case OperandType::UImm2: {
           args.push_back(llvm::ConstantInt::get(type_map_->UInt16Type(),
-                                                iter.GetUnsignedImmediateOperand(i), false));
+                                                iter.GetUnsignedImmediateIntegerOperand(i), false));
           break;
         }
         case OperandType::UImm4: {
           args.push_back(llvm::ConstantInt::get(type_map_->UInt32Type(),
-                                                iter.GetUnsignedImmediateOperand(i), false));
+                                                iter.GetUnsignedImmediateIntegerOperand(i), false));
           break;
         }
         case OperandType::FunctionId: {

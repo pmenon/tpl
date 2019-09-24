@@ -126,6 +126,9 @@ namespace tpl::ast {
   F(SorterIterGetRow, sorterIterGetRow)                         \
   F(SorterIterClose, sorterIterClose)                           \
                                                                 \
+  F(ResultBufferAllocOutRow, resultBufferAllocRow)              \
+  F(ResultBufferFinalize, resultBufferFinalize)                 \
+                                                                \
   /* Trig */                                                    \
   F(ACos, acos)                                                 \
   F(ASin, asin)                                                 \

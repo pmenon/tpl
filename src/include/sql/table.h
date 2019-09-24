@@ -10,9 +10,9 @@
 #include "common/common.h"
 #include "common/macros.h"
 #include "sql/column_segment.h"
+#include "sql/runtime_types.h"
 #include "sql/schema.h"
 #include "sql/value.h"
-#include "sql/runtime_types.h"
 
 extern int32_t current_partition;
 

@@ -46,6 +46,8 @@ class BytecodeEmitter {
   void EmitAssignImm2(LocalVar dest, int16_t val);
   void EmitAssignImm4(LocalVar dest, int32_t val);
   void EmitAssignImm8(LocalVar dest, int64_t val);
+  void EmitAssignImm4F(LocalVar dest, float val);
+  void EmitAssignImm8F(LocalVar dest, double val);
 
   // -------------------------------------------------------
   // Jumps
@@ -151,7 +153,7 @@ class BytecodeEmitter {
  private:
   // Copy a scalar immediate value into the bytecode stream
   template <typename T>
-  auto EmitScalarValue(const T val) -> std::enable_if_t<std::is_integral_v<T>> {
+  auto EmitScalarValue(const T val) -> std::enable_if_t<std::is_arithmetic_v<T>> {
     bytecode_.insert(bytecode_.end(), sizeof(T), 0);
     *reinterpret_cast<T *>(&*(bytecode_.end() - sizeof(T))) = val;
   }
@@ -164,7 +166,7 @@ class BytecodeEmitter {
 
   // Emit an integer immediate value
   template <typename T>
-  auto EmitImpl(const T val) -> std::enable_if_t<std::is_integral_v<T>> {
+  auto EmitImpl(const T val) -> std::enable_if_t<std::is_arithmetic_v<T>> {
     EmitScalarValue(val);
   }
 

@@ -1104,6 +1104,23 @@ void Sema::CheckBuiltinSizeOfCall(ast::CallExpr *call) {
   // This call returns an unsigned 32-bit value for the size of the type
   call->set_type(GetBuiltinType(ast::BuiltinType::Uint32));
 }
+void Sema::CheckResultBufferCall(ast::CallExpr *call, ast::Builtin builtin) {
+  if (!CheckArgCount(call, 1)) {
+    return;
+  }
+
+  const auto exec_ctx_kind = ast::BuiltinType::ExecutionContext;
+  if (!IsPointerToSpecificBuiltin(call->arguments()[0]->type(), exec_ctx_kind)) {
+    ReportIncorrectCallArg(call, 0, GetBuiltinType(exec_ctx_kind)->PointerTo());
+    return;
+  }
+
+  if (builtin == ast::Builtin::ResultBufferAllocOutRow) {
+    call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Uint8)->PointerTo());
+  } else {
+    call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+  }
+}
 
 void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
   if (!CheckArgCount(call, 2)) {
@@ -1533,6 +1550,11 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     }
     case ast::Builtin::SizeOf: {
       CheckBuiltinSizeOfCall(call);
+      break;
+    }
+    case ast::Builtin::ResultBufferAllocOutRow:
+    case ast::Builtin::ResultBufferFinalize: {
+      CheckResultBufferCall(call, builtin);
       break;
     }
     case ast::Builtin::ACos:

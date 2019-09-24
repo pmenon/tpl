@@ -70,32 +70,42 @@ void PrettyPrintFuncCode(std::ostream &os, const BytecodeModule &module, const F
           break;
         }
         case OperandType::Imm1: {
-          auto imm = iter.GetImmediateOperand(i);
+          auto imm = iter.GetImmediateIntegerOperand(i);
           os << "i8=" << imm;
           break;
         }
         case OperandType::Imm2: {
-          auto imm = iter.GetImmediateOperand(i);
+          auto imm = iter.GetImmediateIntegerOperand(i);
           os << "i16=" << imm;
           break;
         }
         case OperandType::Imm4: {
-          auto imm = iter.GetImmediateOperand(i);
+          auto imm = iter.GetImmediateIntegerOperand(i);
           os << "i32=" << imm;
           break;
         }
         case OperandType::Imm8: {
-          auto imm = iter.GetImmediateOperand(i);
+          auto imm = iter.GetImmediateIntegerOperand(i);
           os << "i64=" << imm;
           break;
         }
+        case OperandType::Imm4F: {
+          auto imm = iter.GetImmediateFloatOperand(i);
+          os << "f32=" << std::fixed << std::setprecision(2) << imm << std::dec;
+          break;
+        }
+        case OperandType::Imm8F: {
+          auto imm = iter.GetImmediateFloatOperand(i);
+          os << "f64=" << std::fixed << std::setprecision(2) << imm << std::dec;
+          break;
+        }
         case OperandType::UImm2: {
-          auto imm = iter.GetUnsignedImmediateOperand(i);
+          auto imm = iter.GetUnsignedImmediateIntegerOperand(i);
           os << "u16=" << imm;
           break;
         }
         case OperandType::UImm4: {
-          auto imm = iter.GetUnsignedImmediateOperand(i);
+          auto imm = iter.GetUnsignedImmediateIntegerOperand(i);
           os << "u32=" << imm;
           break;
         }

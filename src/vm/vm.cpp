@@ -129,8 +129,8 @@ namespace {
 
 template <typename T>
 inline ALWAYS_INLINE T Read(const uint8_t **ip) {
-  static_assert(std::is_integral_v<T>,
-                "Read() should only be used to read primitive integer types "
+  static_assert(std::is_arithmetic_v<T>,
+                "Read() should only be used to read primitive arithmetic types "
                 "directly from the bytecode instruction stream");
   auto ret = *reinterpret_cast<const T *>(*ip);
   (*ip) += sizeof(T);
@@ -140,7 +140,7 @@ inline ALWAYS_INLINE T Read(const uint8_t **ip) {
 template <typename T>
 inline ALWAYS_INLINE T Peek(const uint8_t **ip) {
   static_assert(std::is_integral_v<T>,
-                "Peek() should only be used to read primitive integer types "
+                "Peek() should only be used to read primitive arithmetic types "
                 "directly from the bytecode instruction stream");
   return *reinterpret_cast<const T *>(*ip);
 }
@@ -175,6 +175,8 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 #define READ_IMM2() Read<int16_t>(&ip)
 #define READ_IMM4() Read<int32_t>(&ip)
 #define READ_IMM8() Read<int64_t>(&ip)
+#define READ_IMM4F() Read<float>(&ip)
+#define READ_IMM8F() Read<double>(&ip)
 #define READ_UIMM2() Read<uint16_t>(&ip)
 #define READ_UIMM4() Read<uint32_t>(&ip)
 #define READ_JMP_OFFSET() READ_IMM4()
@@ -391,6 +393,18 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   GEN_ASSIGN(int32_t, 4);
   GEN_ASSIGN(int64_t, 8);
 #undef GEN_ASSIGN
+
+  OP(AssignImm4F) : {
+    auto *dest = frame->LocalAt<float *>(READ_LOCAL_ID());
+    OpAssignImm4F(dest, READ_IMM4F());
+    DISPATCH_NEXT();
+  }
+
+  OP(AssignImm8F) : {
+    auto *dest = frame->LocalAt<double *>(READ_LOCAL_ID());
+    OpAssignImm8F(dest, READ_IMM8F());
+    DISPATCH_NEXT();
+  }
 
   OP(Lea) : {
     auto **dest = frame->LocalAt<byte **>(READ_LOCAL_ID());
@@ -790,7 +804,7 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 
   OP(InitReal) : {
     auto *sql_real = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    auto val = frame->LocalAt<double>(READ_LOCAL_ID());
+    auto val = frame->LocalAt<float>(READ_LOCAL_ID());
     OpInitReal(sql_real, val);
     DISPATCH_NEXT();
   }
@@ -1429,8 +1443,21 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   }
 
   // -------------------------------------------------------
-  // Real-value functions
+  // Output
   // -------------------------------------------------------
+
+  OP(ResultBufferAllocOutputRow) : {
+    auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+    OpResultBufferAllocOutputRow(result, exec_ctx);
+    DISPATCH_NEXT();
+  }
+
+  OP(ResultBufferFinalize) : {
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+    OpResultBufferFinalize(exec_ctx);
+    DISPATCH_NEXT();
+  }
 
   // -------------------------------------------------------
   // Trig functions

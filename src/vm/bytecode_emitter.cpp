@@ -41,6 +41,14 @@ void BytecodeEmitter::EmitAssignImm8(LocalVar dest, int64_t val) {
   EmitAll(Bytecode::AssignImm8, dest, val);
 }
 
+void BytecodeEmitter::EmitAssignImm4F(LocalVar dest, float val) {
+  EmitAll(Bytecode::AssignImm4F, dest, val);
+}
+
+void BytecodeEmitter::EmitAssignImm8F(LocalVar dest, double val) {
+  EmitAll(Bytecode::AssignImm8F, dest, val);
+}
+
 void BytecodeEmitter::EmitUnaryOp(Bytecode bytecode, LocalVar dest, LocalVar input) {
   EmitAll(bytecode, dest, input);
 }

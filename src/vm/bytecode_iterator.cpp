@@ -24,46 +24,58 @@ bool BytecodeIterator::Done() const { return curr_offset_ >= end_offset_; }
 
 void BytecodeIterator::Advance() { curr_offset_ += CurrentBytecodeSize(); }
 
-int64_t BytecodeIterator::GetImmediateOperand(uint32_t operand_index) const {
+int64_t BytecodeIterator::GetImmediateIntegerOperand(uint32_t operand_index) const {
   OperandType operand_type = Bytecodes::GetNthOperandType(CurrentBytecode(), operand_index);
-  TPL_ASSERT(OperandTypes::IsSignedImmediate(operand_type),
+  TPL_ASSERT(OperandTypes::IsSignedIntegerImmediate(operand_type),
              "Operand type is not a signed immediate");
 
   const uint8_t *operand_address = bytecodes_.data() + curr_offset_ +
                                    Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
 
   switch (operand_type) {
-    case OperandType::Imm1: {
+    case OperandType::Imm1:
       return *reinterpret_cast<const int8_t *>(operand_address);
-    }
-    case OperandType::Imm2: {
+    case OperandType::Imm2:
       return *reinterpret_cast<const int16_t *>(operand_address);
-    }
-    case OperandType::Imm4: {
+    case OperandType::Imm4:
       return *reinterpret_cast<const int32_t *>(operand_address);
-    }
-    case OperandType::Imm8: {
+    case OperandType::Imm8:
       return *reinterpret_cast<const int64_t *>(operand_address);
-    }
     default: { UNREACHABLE("Impossible!"); }
   }
 }
 
-uint64_t BytecodeIterator::GetUnsignedImmediateOperand(uint32_t operand_index) const {
+double BytecodeIterator::GetImmediateFloatOperand(uint32_t operand_index) const {
   OperandType operand_type = Bytecodes::GetNthOperandType(CurrentBytecode(), operand_index);
-  TPL_ASSERT(OperandTypes::IsUnsignedImmediate(operand_type),
+  TPL_ASSERT(OperandTypes::IsFloatImmediate(operand_type),
              "Operand type is not a signed immediate");
 
   const uint8_t *operand_address = bytecodes_.data() + curr_offset_ +
                                    Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
 
   switch (operand_type) {
-    case OperandType::UImm2: {
+    case OperandType::Imm4F:
+      return *reinterpret_cast<const float *>(operand_address);
+    case OperandType::Imm8F:
+      return *reinterpret_cast<const double *>(operand_address);
+    default:
+      UNREACHABLE("Impossible!");
+  }
+}
+
+uint64_t BytecodeIterator::GetUnsignedImmediateIntegerOperand(uint32_t operand_index) const {
+  OperandType operand_type = Bytecodes::GetNthOperandType(CurrentBytecode(), operand_index);
+  TPL_ASSERT(OperandTypes::IsUnsignedIntegerImmediate(operand_type),
+             "Operand type is not a signed immediate");
+
+  const uint8_t *operand_address = bytecodes_.data() + curr_offset_ +
+                                   Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
+
+  switch (operand_type) {
+    case OperandType::UImm2:
       return *reinterpret_cast<const uint16_t *>(operand_address);
-    }
-    case OperandType::UImm4: {
+    case OperandType::UImm4:
       return *reinterpret_cast<const uint32_t *>(operand_address);
-    }
     default: { UNREACHABLE("Impossible!"); }
   }
 }

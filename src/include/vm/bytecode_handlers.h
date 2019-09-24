@@ -156,6 +156,10 @@ VM_OP_HOT void OpAssignImm4(int32_t *dest, int32_t src) { *dest = src; }
 
 VM_OP_HOT void OpAssignImm8(int64_t *dest, int64_t src) { *dest = src; }
 
+VM_OP_HOT void OpAssignImm4F(float *dest, float src) { *dest = src; }
+
+VM_OP_HOT void OpAssignImm8F(double *dest, double src) { *dest = src; }
+
 VM_OP_HOT void OpLea(byte **dest, byte *base, uint32_t offset) { *dest = base + offset; }
 
 VM_OP_HOT void OpLeaScaled(byte **dest, byte *base, uint32_t index, uint32_t scale,
@@ -675,7 +679,7 @@ VM_OP_HOT void OpInitInteger(tpl::sql::Integer *result, int32_t input) {
   result->val = input;
 }
 
-VM_OP_HOT void OpInitReal(tpl::sql::Real *result, double input) {
+VM_OP_HOT void OpInitReal(tpl::sql::Real *result, float input) {
   result->is_null = false;
   result->val = input;
 }
@@ -1229,6 +1233,18 @@ VM_OP_HOT void OpSorterIteratorGetRow(const byte **row, tpl::sql::SorterIterator
 }
 
 VM_OP void OpSorterIteratorFree(tpl::sql::SorterIterator *iter);
+
+// ---------------------------------------------------------
+// Output
+// ---------------------------------------------------------
+
+VM_OP_WARM void OpResultBufferAllocOutputRow(byte **result, tpl::sql::ExecutionContext *ctx) {
+  *result = ctx->result_buffer()->AllocOutputSlot();
+}
+
+VM_OP_WARM void OpResultBufferFinalize(tpl::sql::ExecutionContext *ctx) {
+  ctx->result_buffer()->Finalize();
+}
 
 // ---------------------------------------------------------
 // Trig functions

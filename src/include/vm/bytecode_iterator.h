@@ -63,19 +63,28 @@ class BytecodeIterator {
   void Advance();
 
   /**
-   * Read the operand at index @a operand_index for the current bytecode as a signed immediate value
+   * Read the operand at index @em operand_index for the current bytecode as a signed immediate
+   * integer value.
    * @param operand_index The index of operand to read
    * @return The immediate value, up-casted to a signed 64-bit integer
    */
-  int64_t GetImmediateOperand(uint32_t operand_index) const;
+  int64_t GetImmediateIntegerOperand(uint32_t operand_index) const;
+
+  /**
+   * Read the operand at index @em operand_index for the current bytecode as an immediate float
+   * value.
+   * @param operand_index The index of operand to read
+   * @return The immediate value, up-casted to a signed 64-bit integer
+   */
+  double GetImmediateFloatOperand(uint32_t operand_index) const;
 
   /**
    * Read the operand at index @a operand_index for the current bytecode as an unsigned immediate
-   * value
+   * integer value.
    * @param operand_index The index of the operand to read
    * @return The immediate value, up-casted to an unsigned 64-bit integer
    */
-  uint64_t GetUnsignedImmediateOperand(uint32_t operand_index) const;
+  uint64_t GetUnsignedImmediateIntegerOperand(uint32_t operand_index) const;
 
   /**
    * Read the operand at index @a operand_index for the current bytecode as a jump offset as part of

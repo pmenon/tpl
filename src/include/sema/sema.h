@@ -139,6 +139,7 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinFilterManagerCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinVectorFilterExecCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinHashCall(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckResultBufferCall(ast::CallExpr *call, ast::Builtin builtin);
 
   // -------------------------------------------------------
   // Scoping

@@ -78,6 +78,8 @@ namespace tpl::vm {
   F(AssignImm2, OperandType::Local, OperandType::Imm2)                                                                 \
   F(AssignImm4, OperandType::Local, OperandType::Imm4)                                                                 \
   F(AssignImm8, OperandType::Local, OperandType::Imm8)                                                                 \
+  F(AssignImm4F, OperandType::Local, OperandType::Imm4F)                                                               \
+  F(AssignImm8F, OperandType::Local, OperandType::Imm8F)                                                               \
   F(Lea, OperandType::Local, OperandType::Local, OperandType::Imm4)                                                    \
   F(LeaScaled, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Imm4, OperandType::Imm4)       \
                                                                                                                        \
@@ -336,6 +338,10 @@ namespace tpl::vm {
   F(SorterIteratorHasNext, OperandType::Local, OperandType::Local)                                                     \
   F(SorterIteratorNext, OperandType::Local)                                                                            \
   F(SorterIteratorFree, OperandType::Local)                                                                            \
+                                                                                                                       \
+  /* Output */                                                                                                         \
+  F(ResultBufferAllocOutputRow, OperandType::Local, OperandType::Local)                                                \
+  F(ResultBufferFinalize, OperandType::Local)                                                                          \
                                                                                                                        \
   /* Trig functions */                                                                                                 \
   F(Pi, OperandType::Local)                                                                                            \
