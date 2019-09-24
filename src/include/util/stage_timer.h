@@ -1,5 +1,6 @@
 #pragma once
 
+#include <numeric>
 #include <vector>
 
 #include "common/macros.h"
@@ -74,9 +75,17 @@ class StageTimer {
   }
 
   /**
-   * Access information on all stages.
+   * @return The total time across all stages.
    */
-  const std::vector<Stage> GetStages() const { return stages_; }
+  double GetTotalElapsedTime() const {
+    return std::accumulate(stages_.begin(), stages_.end(), double(0),
+                           [](double c, const Stage &stage) { return c + stage.time(); });
+  }
+
+  /**
+   * @return A const view of information on all stages.
+   */
+  const std::vector<Stage> &GetStages() const { return stages_; }
 
  private:
   util::Timer<ResolutionRatio> timer_;
