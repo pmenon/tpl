@@ -12,15 +12,17 @@ namespace {
 
 // Filter optimization:
 // --------------------
-// When comparison two vectors (or a vector with a constant) of primitive values we __COULD__ just
-// iterate the input TID list, apply the predicate, update the list, and be done with it. But, we
-// take advantage of the fact that we can operate on unselected data and potentially use SIMD to
-// accelerate the total performance. But, this optimization only makes sense beyond a certain
-// selectivity of the vector. Let's make the decision now.
+// When perform a comparison between two vectors we __COULD__ just iterate the input TID list, apply
+// the predicate, update the list based on the result of the comparison, and be done with it. But,
+// we take advantage of the fact that, for some data types, we can operate on unselected data and
+// potentially leverage SIMD to accelerate performance. This only works for simple types like
+// integers because unselected data can safely participate in comparisons and get masked out later.
+// This is not true for complex types like strings which may have NULLs or other garbage.
 //
-// To determine scenarios when we can apply such an optimization, we leverage the below
-// is_safe_for_full_compute trait to find types for which we can use SIMD for. Right now, all
-// fundamental types along with Dates and Timestamps can use this technique.
+// This "full-compute" optimization is only beneficial for a range of selectivities that depend on
+// the input vector's data type. We use the is_safe_for_full_compute type trait to determine whether
+// the input type supports "full-compute". If so, we also verify that the selectivity of the TID
+// list warrants the optimization.
 
 template <typename T, typename Enable = void>
 struct is_safe_for_full_compute {
