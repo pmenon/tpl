@@ -9,6 +9,7 @@
 
 #include "spdlog/fmt/fmt.h"
 
+#include "logging/logger.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "util/bit_util.h"
 
@@ -414,11 +415,6 @@ void Vector::CheckIntegrity() const {
         *this, [&](const VarlenEntry &varlen, uint64_t i, uint64_t k) {
           if (!null_mask_[i]) {
             TPL_ASSERT(varlen.GetContent() != nullptr, "NULL pointer in non-null vector slot");
-            // The following check is unsafe. But, we're in debug mode presumably
-            // with ASAN on, so a corrupt string will trigger an ASAN fault.
-            TPL_ASSERT(std::string(reinterpret_cast<const char *>(varlen.GetContent())).size() <
-                           std::numeric_limits<std::size_t>::max(),
-                       "Invalid string length");
           }
         });
   }
