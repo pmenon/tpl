@@ -19,10 +19,16 @@ list(REMOVE_ITEM tpl_sources
 #
 ##################################################
 
-# Setup compiler arguments to Clang
+# Setup arguments to Clang for IR compilation
 set(CLANG_IR_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-emit-llvm" "-c")
 separate_arguments(CLANG_IR_CXX_FLAGS)
 
+# Remove coverage flag from cross-compilation flags
+if (TPL_GENERATE_COVERAGE)
+    list(REMOVE_ITEM CLANG_IR_CXX_FLAGS --coverage)
+endif ()
+
+# Setup includes for Clang's IR compilation. These should be the same as for the project.
 get_property(CLANG_TMP_INCLUDES DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 set(CLANG_IR_CXX_INCLUDES "")
 foreach(INCLUDE_DIR in ${CLANG_TMP_INCLUDES})

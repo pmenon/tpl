@@ -70,7 +70,7 @@ include(SetupCompiler)
 ############################################################
 
 add_custom_target(gen-cov
-        DEPENDS check
+        DEPENDS check check-tpl
         COMMAND lcov --directory . --capture --output-file coverage.info &&               # capture coverage info
                 lcov --remove coverage.info '/usr/*' --output-file coverage.info          # filter out system
                      --remove coverage.info '*/build/*' --output-file coverage.info       # filter out build

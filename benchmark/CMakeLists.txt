@@ -19,6 +19,7 @@ if (TPL_BUILD_BENCHMARKS)
 
         # Add it as an executable, link it to all the right libraries
         add_executable(${benchmark_name} EXCLUDE_FROM_ALL ${benchmark_src} ${benchmark_main})
+        set_target_properties(${benchmark_name} PROPERTIES ENABLE_EXPORTS true)
         target_link_libraries(${benchmark_name} ${TPL_BENCHMARK_LINK_LIBS})
 
         # Add a ctest that will not be run by default.
