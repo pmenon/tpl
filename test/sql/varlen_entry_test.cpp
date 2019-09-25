@@ -73,6 +73,11 @@ TEST_F(VarlenEntryTest, Comparison) {
     auto e2 = VarlenEntry::Create(reinterpret_cast<const byte*>("hellothere"), 10);
     EXPECT_NE(e1, e2);
     EXPECT_LT(e1, e2);
+
+    e1 = VarlenEntry::Create(reinterpret_cast<const byte*>("hello"), 5);
+    e2 = VarlenEntry::Create(reinterpret_cast<const byte*>("hiyathere"), 9);
+    EXPECT_NE(e1, e2);
+    EXPECT_LT(e1, e2);
   }
 
   // Large/Large

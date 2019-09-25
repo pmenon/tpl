@@ -261,18 +261,20 @@ class VarlenEntry {
   static int32_t Compare(const VarlenEntry &left, const VarlenEntry &right) {
     const auto min_len = std::min(left.GetSize(), right.GetSize());
 
-    int32_t result = (min_len == 0) ? 0
-                                    : std::memcmp(left.GetPrefix(), right.GetPrefix(),
-                                                  std::min(min_len, kPrefixLength));
+    if (min_len < GetPrefixSize()) {
+      int32_t result = std::memcmp(left.GetPrefix(), right.GetPrefix(), min_len);
+      return result != 0 ? result : left.GetSize() - right.GetSize();
+    }
 
+    // Full prefix match?
+    int32_t result = std::memcmp(left.GetPrefix(), right.GetPrefix(), GetPrefixSize());
     if (result != 0) {
       return result;
     }
 
-    if (min_len > GetPrefixSize()) {
-      result = std::memcmp(left.GetContent(), right.GetContent(), min_len);
-    }
-
+    // Content match (minus prefix)
+    result = std::memcmp(left.GetContent() + GetPrefixSize(), right.GetContent() + GetPrefixSize(),
+                         min_len - GetPrefixSize());
     return result != 0 ? result : left.GetSize() - right.GetSize();
   }
 
