@@ -251,7 +251,18 @@ TEST_F(ScannerTest, CommentTest) {
         Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE, Token::Type::RETURN,
         Token::Type::INTEGER, Token::Type::AMPERSAND, Token::Type::INTEGER,
         Token::Type::RIGHT_BRACE}},
-  };
+
+      {R"(
+        fun test() {
+          /******** start
+          *
+           var x = 10
+          *
+          **********/
+        }
+        )",
+       {Token::Type::FUN, Token::Type::IDENTIFIER, Token::Type::LEFT_PAREN,
+        Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE, Token::Type::RIGHT_BRACE}}};
 
   RunTests(tests);
 }

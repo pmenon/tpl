@@ -246,21 +246,23 @@ void Scanner::SkipWhiteSpace() {
 }
 
 void Scanner::SkipLineComment() {
-  while (c0_ != '\n' && c0_ != kEndOfInput) {
-    Advance();
-  }
+  AdvanceUntil([](auto c) { return c == kNewLine; });
 }
 
 void Scanner::SkipBlockComment() {
-  int32_t c;
-  do {
-    c = c0_;
-    Advance();
-  } while (c != '*' && c0_ != '/' && c0_ != kEndOfInput);
+  while (c0_ != kEndOfInput) {
+    // Find the first '*'
+    AdvanceUntil([](auto c) { return c == '*'; });
 
-  // Skip the '/' if we found. If we're are the end, Advance() will be a no-op
-  // anyways, so we're safe.
-  Advance();
+    // Look for '/' after potentially repeated '*'
+    while (c0_ == '*') {
+      Advance();
+      if (c0_ == '/') {
+        Advance();
+        return;
+      }
+    }
+  }
 }
 
 Token::Type Scanner::ScanIdentifierOrKeyword() {

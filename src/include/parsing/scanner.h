@@ -15,6 +15,8 @@ namespace tpl::parsing {
 class Scanner {
   static constexpr int32_t kEndOfInput = -1;
 
+  static constexpr int32_t kNewLine = '\n';
+
  public:
   /**
    * Construct a scanner over the given input string
@@ -74,6 +76,14 @@ class Scanner {
     // Not at end, bump
     c0_ = source_[offset_++];
     c0_pos_.column++;
+  }
+
+  // Advance until the given predicate returns false or we reach the end of the input
+  template <typename P>
+  void AdvanceUntil(P &&p) {
+    while (c0_ != kEndOfInput && !p(c0_)) {
+      Advance();
+    }
   }
 
   // Does the current character match the expected? If so, advance the scanner
