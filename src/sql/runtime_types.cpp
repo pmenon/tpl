@@ -142,7 +142,7 @@ Date Date::FromYMD(uint32_t year, uint32_t month, uint32_t day) {
 // ---------------------------------------------------------
 
 hash_t VarlenEntry::Hash() const noexcept {
-  return util::HashUtil::Hash(reinterpret_cast<const uint8_t *>(GetContent()), GetSize());
+  return util::HashUtil::HashXX3(reinterpret_cast<const uint8_t *>(GetContent()), GetSize());
 }
 
 }  // namespace tpl::sql
