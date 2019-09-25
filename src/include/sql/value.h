@@ -160,6 +160,8 @@ struct Decimal : public Val {
 struct StringVal : public Val {
   VarlenEntry val;
 
+  explicit StringVal(VarlenEntry v) noexcept : Val(false), val(v) {}
+
   /**
    * Create a string value (i.e., a view) over the given (potentially non-null terminated) string.
    * @param str The character sequence.
@@ -235,13 +237,15 @@ struct StringVal : public Val {
 struct DateVal : public Val {
   Date val;
 
-  explicit DateVal(int32_t date) noexcept : Val(false), val(date) {}
+  DateVal() noexcept : Val(), val() {}
+
+  explicit DateVal(Date v) noexcept : Val(false), val(v) {}
 
   /**
    * Create a NULL date
    */
   static DateVal Null() {
-    DateVal date(0);
+    DateVal date;
     date.is_null = true;
     return date;
   }
