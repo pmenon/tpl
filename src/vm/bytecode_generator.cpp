@@ -681,21 +681,10 @@ void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call) {
   TPL_ASSERT(!call->arguments().empty(), "@hash() must contain at least one input argument");
   TPL_ASSERT(execution_result() != nullptr, "Caller of @hash() must use result");
 
-  const bool caller_provided_ret = execution_result()->HasDestination();
-
-  // The running hash value. Initialized to zero and fed as the seed to- and
-  // destination for- all hash invocations.
+  // The running hash value initialized to zero
   LocalVar hash_val = execution_result()->GetOrCreateDestination(call->type());
 
-  LocalVar seed;
-  if (caller_provided_ret) {
-    seed = current_function()->NewLocal(call->type());
-  } else {
-    seed = hash_val;
-  }
-
-  // Initialize the seed
-  emitter()->EmitAssignImm8(seed, 0);
+  emitter()->EmitAssignImm8(hash_val, 0);
 
   for (uint32_t idx = 0; idx < call->num_args(); idx++) {
     TPL_ASSERT(call->arguments()[idx]->type()->IsSqlValueType(),
@@ -705,23 +694,22 @@ void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call) {
     const auto *type = call->arguments()[idx]->type()->As<ast::BuiltinType>();
     switch (type->kind()) {
       case ast::BuiltinType::Integer: {
-        emitter()->Emit(Bytecode::HashInt, hash_val, input, seed.ValueOf());
+        emitter()->Emit(Bytecode::HashInt, hash_val, input, hash_val.ValueOf());
         break;
       }
       case ast::BuiltinType::Real: {
-        emitter()->Emit(Bytecode::HashReal, hash_val, input, seed.ValueOf());
+        emitter()->Emit(Bytecode::HashReal, hash_val, input, hash_val.ValueOf());
         break;
       }
       case ast::BuiltinType::StringVal: {
-        emitter()->Emit(Bytecode::HashString, hash_val, input, seed.ValueOf());
+        emitter()->Emit(Bytecode::HashString, hash_val, input, hash_val.ValueOf());
+        break;
+      }
+      case ast::BuiltinType::Date: {
+        emitter()->Emit(Bytecode::HashDate, hash_val, input, hash_val.ValueOf());
         break;
       }
       default: { UNREACHABLE("Hashing this type isn't supported!"); }
-    }
-    if (idx != call->num_args() - 1) {
-      if (caller_provided_ret) {
-        BuildDeref(seed, hash_val, call->type());
-      }
     }
   }
 

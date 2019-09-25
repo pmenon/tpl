@@ -547,8 +547,13 @@ VM_OP_HOT void OpHashReal(hash_t *const hash_val, const tpl::sql::Real *const in
 }
 
 VM_OP_HOT void OpHashString(hash_t *const hash_val, const tpl::sql::StringVal *const input,
-                            UNUSED const hash_t seed) {
-  *hash_val = input->is_null ? 0 : input->val.Hash();
+                            const hash_t seed) {
+  *hash_val = input->is_null ? 0 : input->val.Hash(seed);
+}
+
+VM_OP_HOT void OpHashDate(hash_t *const hash_val, const tpl::sql::DateVal *const input,
+                          const hash_t seed) {
+  *hash_val = input->is_null ? 0 : input->val.Hash(seed);
 }
 
 VM_OP_HOT void OpHashCombine(hash_t *hash_val, hash_t new_hash_val) {

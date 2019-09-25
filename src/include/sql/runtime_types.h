@@ -143,7 +143,7 @@ class Date {
    * Hash the date.
    * @return The hash value for this date instance.
    */
-  hash_t Hash() const noexcept { return util::HashUtil::Hash(value_); }
+  hash_t Hash(const hash_t seed = 0) const noexcept { return util::HashUtil::Hash(value_, seed); }
 
  private:
   friend struct DateVal;
@@ -236,7 +236,7 @@ class VarlenEntry {
   /**
    * @return The hash of this varlen.
    */
-  hash_t Hash() const noexcept;
+  hash_t Hash(hash_t seed = 0) const noexcept;
 
   /**
    * @return A zero-copy view of the VarlenEntry as an immutable string that allows use with

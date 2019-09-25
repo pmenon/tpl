@@ -657,29 +657,20 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   // Hashing
   // ------------------------------------------------------
 
-  OP(HashInt) : {
-    auto *hash_val = frame->LocalAt<hash_t *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
-    auto seed = frame->LocalAt<const hash_t>(READ_LOCAL_ID());
-    OpHashInt(hash_val, input, seed);
-    DISPATCH_NEXT();
+#define GEN_HASH(NAME, CPP_TYPE)                                \
+  OP(Hash##NAME) : {                                            \
+    auto *hash_val = frame->LocalAt<hash_t *>(READ_LOCAL_ID()); \
+    auto *input = frame->LocalAt<CPP_TYPE *>(READ_LOCAL_ID());  \
+    auto seed = frame->LocalAt<const hash_t>(READ_LOCAL_ID());  \
+    OpHash##NAME(hash_val, input, seed);                        \
+    DISPATCH_NEXT();                                            \
   }
 
-  OP(HashReal) : {
-    auto *hash_val = frame->LocalAt<hash_t *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    auto seed = frame->LocalAt<const hash_t>(READ_LOCAL_ID());
-    OpHashReal(hash_val, input, seed);
-    DISPATCH_NEXT();
-  }
-
-  OP(HashString) : {
-    auto *hash_val = frame->LocalAt<hash_t *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
-    auto seed = frame->LocalAt<const hash_t>(READ_LOCAL_ID());
-    OpHashString(hash_val, input, seed);
-    DISPATCH_NEXT();
-  }
+  GEN_HASH(Int, sql::Integer)
+  GEN_HASH(Real, sql::Real)
+  GEN_HASH(String, sql::StringVal)
+  GEN_HASH(Date, sql::DateVal)
+#undef GEN_HASH
 
   OP(HashCombine) : {
     auto *hash_val = frame->LocalAt<hash_t *>(READ_LOCAL_ID());
