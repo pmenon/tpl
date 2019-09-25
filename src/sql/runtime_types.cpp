@@ -8,6 +8,9 @@
 
 namespace tpl::sql {
 
+// ---------------------------------------------------------
+//
+// Date
 namespace {
 
 // The below Julian date conversions are taken from Postgres.
@@ -130,6 +133,16 @@ Date Date::FromYMD(uint32_t year, uint32_t month, uint32_t day) {
   }
 
   return Date(BuildJulianDate(year, month, day));
+}
+
+// ---------------------------------------------------------
+//
+// Varlen
+//
+// ---------------------------------------------------------
+
+hash_t VarlenEntry::Hash() const noexcept {
+  return util::HashUtil::Hash(reinterpret_cast<const uint8_t *>(GetContent()), GetSize());
 }
 
 }  // namespace tpl::sql

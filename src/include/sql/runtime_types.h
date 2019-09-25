@@ -167,6 +167,14 @@ class Date {
  */
 class VarlenEntry {
  public:
+  // Prefix length inlined in the varlen structure.
+  static constexpr uint32_t kPrefixLength = 4;
+  // Length clamp used to avoid std::min().
+  static constexpr uint32_t kPrefixLengthClamp = kPrefixLength - 1;
+
+  // Ensure assumption
+  static_assert(util::MathUtil::IsPowerOf2(kPrefixLength));
+
   /**
    * Constructs a new out-lined varlen entry. The varlen DOES NOT take ownership of the content, but
    * will only store a pointer to it. It is the caller's responsibility to ensure the content
@@ -186,7 +194,7 @@ class VarlenEntry {
     if (size <= GetInlineThreshold()) {
       std::memcpy(result.prefix_, content, size);
     } else {
-      std::memcpy(result.prefix_, content, sizeof(uint32_t));
+      std::memcpy(result.prefix_, content, kPrefixLength);
       result.content_ = content;
     }
 
@@ -194,27 +202,16 @@ class VarlenEntry {
   }
 
   /**
-   * Create en empty varlen entry with zero size.
-   * @return The constructed VarlenEntry object.
-   */
-  static VarlenEntry CreateEmpty() {
-    VarlenEntry result;
-    result.size_ = 0;
-    result.content_ = nullptr;
-    return result;
-  }
-
-  /**
    * @return The maximum size of the varlen field, in bytes, that can be inlined within the object.
    * Any objects that are larger need to be stored as a pointer to a separate buffer.
    */
-  static constexpr uint32_t GetInlineThreshold() { return sizeof(VarlenEntry) - sizeof(uint32_t); }
+  static constexpr uint32_t GetInlineThreshold() { return sizeof(VarlenEntry) - kPrefixLength; }
 
   /**
    * @return length of the prefix of the varlen stored in the object for execution engine, if the
    * varlen entry is not inlined.
    */
-  static constexpr uint32_t GetPrefixSize() { return sizeof(uint32_t); }
+  static constexpr uint32_t GetPrefixSize() { return kPrefixLength; }
 
   /**
    * @return size of the varlen value stored in this entry, in bytes.
@@ -237,12 +234,9 @@ class VarlenEntry {
   const byte *GetContent() const { return IsInlined() ? prefix_ : content_; }
 
   /**
-   * Hash this varlen.
    * @return The hash of this varlen.
    */
-  hash_t Hash() const noexcept {
-    return util::HashUtil::Hash(reinterpret_cast<const uint8_t *>(GetContent()), GetSize());
-  }
+  hash_t Hash() const noexcept;
 
   /**
    * @return A zero-copy view of the VarlenEntry as an immutable string that allows use with
@@ -267,26 +261,18 @@ class VarlenEntry {
   static int32_t Compare(const VarlenEntry &left, const VarlenEntry &right) {
     const auto min_len = std::min(left.GetSize(), right.GetSize());
 
-    // Don't bother comparing if one string is empty
-    if (min_len == 0) {
-      return left.GetSize() - right.GetSize();
-    }
+    int32_t result = (min_len == 0) ? 0
+                                    : std::memcmp(left.GetPrefix(), right.GetPrefix(),
+                                                  std::min(min_len, kPrefixLength));
 
-    // Both strings have some content. As an early termination optimization, let's check the prefix.
-    // It's already loaded in cache so we might as well use it.
-    // TODO(pmenon) Profile this
-    int32_t result =
-        std::memcmp(left.GetPrefix(), right.GetPrefix(), std::min(min_len, GetPrefixSize()));
-
-    // If the prefix determined order, return now.
     if (result != 0) {
       return result;
     }
 
-    // The prefix didn't help. We need to check the whole string.
-    result = std::memcmp(left.GetContent(), right.GetContent(), min_len);
+    if (min_len > GetPrefixSize()) {
+      result = std::memcmp(left.GetContent(), right.GetContent(), min_len);
+    }
 
-    // Finish
     return result != 0 ? result : left.GetSize() - right.GetSize();
   }
 
@@ -302,7 +288,7 @@ class VarlenEntry {
   int32_t size_;
   // A small prefix for the string. Immediately valid when content is inlined, but used when content
   // is not inlined as well.
-  byte prefix_[sizeof(uint32_t)];
+  byte prefix_[kPrefixLength];
   // Pointer to the content when not inlined
   const byte *content_;
 };
