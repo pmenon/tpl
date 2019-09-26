@@ -41,11 +41,7 @@ TEST_F(IsNullPredicateTests, IsNotNull) {
   CHECK_IS_NOT_NULL_FOR_TYPE(Real, 44.0);
   CHECK_IS_NOT_NULL_FOR_TYPE(StringVal, "44");
   CHECK_IS_NOT_NULL_FOR_TYPE(DateVal, sql::Date::FromYMD(2010, 10, 10));
-  {
-    struct timespec ts;
-    timespec_get(&ts, TIME_UTC);
-    CHECK_IS_NOT_NULL_FOR_TYPE(TimestampVal, ts);
-  }
+  //CHECK_IS_NOT_NULL_FOR_TYPE(TimestampVal, sql::Timestamp::FromString("2010-10-10"));
 
 #undef CHECK_IS_NOT_NULL_FOR_TYPE
 }

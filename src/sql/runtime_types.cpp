@@ -8,9 +8,6 @@
 
 namespace tpl::sql {
 
-// ---------------------------------------------------------
-//
-// Date
 namespace {
 
 // The below Julian date conversions are taken from Postgres.
@@ -41,6 +38,12 @@ void SplitJulianDate(uint32_t julian_date, uint32_t *year, uint32_t *month, uint
 }
 
 }  // namespace
+
+//===----------------------------------------------------------------------===//
+//
+// Date
+//
+//===----------------------------------------------------------------------===//
 
 bool Date::IsValid() const noexcept {
   uint32_t year, month, day;
@@ -135,11 +138,15 @@ Date Date::FromYMD(uint32_t year, uint32_t month, uint32_t day) {
   return Date(BuildJulianDate(year, month, day));
 }
 
-// ---------------------------------------------------------
+bool Date::IsValidDate(uint32_t year, uint32_t month, uint32_t day) {
+  return IsValidJulianDate(year, month, day);
+}
+
+//===----------------------------------------------------------------------===//
 //
 // Varlen
 //
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
 
 hash_t VarlenEntry::Hash(const hash_t seed) const noexcept {
   if (GetSize() < GetInlineThreshold()) {

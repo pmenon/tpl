@@ -32,6 +32,16 @@ TEST_F(RuntimeTypesTest, DateFromString) {
   EXPECT_EQ(1u, d.ExtractMonth());
   EXPECT_EQ(11u, d.ExtractDay());
 
+  EXPECT_NO_THROW({ d = Date::FromString("2015-3-1"); });
+  EXPECT_EQ(2015, d.ExtractYear());
+  EXPECT_EQ(3u, d.ExtractMonth());
+  EXPECT_EQ(1u, d.ExtractDay());
+
+  EXPECT_NO_THROW({ d = Date::FromString("   1999-12-31    "); });
+  EXPECT_EQ(1999, d.ExtractYear());
+  EXPECT_EQ(12u, d.ExtractMonth());
+  EXPECT_EQ(31u, d.ExtractDay());
+
   // Invalid
   EXPECT_THROW({ d = Date::FromString("1000-11-23123"); }, ConversionException);
   EXPECT_THROW({ d = Date::FromString("1000-12323-19"); }, ConversionException);
@@ -40,7 +50,7 @@ TEST_F(RuntimeTypesTest, DateFromString) {
   EXPECT_THROW({ d = Date::FromString("129398-12-120"); }, ConversionException);
   EXPECT_THROW({ d = Date::FromString("129398-1289217-12"); }, ConversionException);
   EXPECT_THROW({ d = Date::FromString("da fuk?"); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromString("-1-1-,23"); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromString("-1-1-23"); }, ConversionException);
 }
 
 TEST_F(RuntimeTypesTest, DateComparisons) {
@@ -61,7 +71,7 @@ TEST_F(RuntimeTypesTest, DateToString) {
   EXPECT_EQ("2016-01-27", d1.ToString());
 
   // Make sure we pad months and days
-  d1 = Date::FromString("2000-01-01");
+  d1 = Date::FromString("2000-1-1");
   EXPECT_EQ("2000-01-01", d1.ToString());
 }
 

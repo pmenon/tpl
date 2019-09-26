@@ -331,12 +331,15 @@ VM_OP_HOT void OpVPIGetDouble(tpl::sql::Real *out, tpl::sql::VectorProjectionIte
   out->val = *ptr;
 }
 
-VM_OP_HOT void OpVPIGetDecimal(tpl::sql::Decimal *out,
-                               UNUSED tpl::sql::VectorProjectionIterator *vpi,
-                               UNUSED const uint32_t col_idx) {
+VM_OP_HOT void OpVPIGetDecimal(tpl::sql::DecimalVal *out, tpl::sql::VectorProjectionIterator *vpi,
+                               const uint32_t col_idx) {
+  // Read
+  auto *ptr = vpi->GetValue<tpl::sql::Decimal64, false>(col_idx, nullptr);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read double value");
+
   // Set
   out->is_null = false;
-  out->val = 0;
+  out->val = *ptr;
 }
 
 VM_OP_HOT void OpVPIGetDate(tpl::sql::DateVal *out, tpl::sql::VectorProjectionIterator *vpi,
@@ -423,11 +426,17 @@ VM_OP_HOT void OpVPIGetDoubleNull(tpl::sql::Real *out,
   out->val = *ptr;
 }
 
-VM_OP_HOT void OpVPIGetDecimalNull(tpl::sql::Decimal *out,
+VM_OP_HOT void OpVPIGetDecimalNull(tpl::sql::DecimalVal *out,
                                    tpl::sql::VectorProjectionIterator *const vpi,
                                    const uint32_t col_idx) {
-  out->val = 0;
-  out->is_null = false;
+  // Read
+  bool null = false;
+  auto *ptr = vpi->GetValue<tpl::sql::Decimal64, true>(col_idx, &null);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read double value");
+
+  // Set
+  out->is_null = null;
+  out->val = *ptr;
 }
 
 VM_OP_HOT void OpVPIGetDateNull(tpl::sql::DateVal *out, tpl::sql::VectorProjectionIterator *vpi,
@@ -477,6 +486,11 @@ VM_OP_HOT void OpVPISetDouble(tpl::sql::VectorProjectionIterator *const vpi, tpl
   vpi->SetValue<double, false>(col_idx, input->val, false);
 }
 
+VM_OP_HOT void OpVPISetDecimal(tpl::sql::VectorProjectionIterator *const vpi,
+                               tpl::sql::DecimalVal *input, const uint32_t col_idx) {
+  vpi->SetValue<tpl::sql::Decimal64, false>(col_idx, input->val, false);
+}
+
 VM_OP_HOT void OpVPISetDate(tpl::sql::VectorProjectionIterator *const vpi, tpl::sql::DateVal *input,
                             const uint32_t col_idx) {
   vpi->SetValue<tpl::sql::Date, false>(col_idx, input->val, false);
@@ -485,11 +499,6 @@ VM_OP_HOT void OpVPISetDate(tpl::sql::VectorProjectionIterator *const vpi, tpl::
 VM_OP_HOT void OpVPISetString(tpl::sql::VectorProjectionIterator *const vpi,
                               tpl::sql::StringVal *input, const uint32_t col_idx) {
   vpi->SetValue<tpl::sql::VarlenEntry, false>(col_idx, input->val, false);
-}
-
-VM_OP_HOT void OpVPISetDecimal(tpl::sql::VectorProjectionIterator *const vpi,
-                               tpl::sql::Decimal *input, const uint32_t col_idx) {
-  // TODO(pmenon): Implement me
 }
 
 VM_OP_HOT void OpVPISetSmallIntNull(tpl::sql::VectorProjectionIterator *const vpi,
@@ -518,8 +527,8 @@ VM_OP_HOT void OpVPISetDoubleNull(tpl::sql::VectorProjectionIterator *const vpi,
 }
 
 VM_OP_HOT void OpVPISetDecimalNull(tpl::sql::VectorProjectionIterator *const vpi,
-                                   tpl::sql::Decimal *input, const uint32_t col_idx) {
-  // TODO(pmenon): Implement me
+                                   tpl::sql::DecimalVal *input, const uint32_t col_idx) {
+  vpi->SetValue<tpl::sql::Decimal64, true>(col_idx, input->val, input->is_null);
 }
 
 VM_OP_HOT void OpVPISetDateNull(tpl::sql::VectorProjectionIterator *const vpi,
