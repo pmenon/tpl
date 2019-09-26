@@ -8,11 +8,11 @@
 
 namespace tpl::sql {
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
 //
 // Dates
 //
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
 
 /**
  * A SQL date.
@@ -65,6 +65,12 @@ class Date {
     *month = ExtractMonth();
     *day = ExtractDay();
   }
+
+  /**
+   * Hash the date.
+   * @return The hash value for this date instance.
+   */
+  hash_t Hash(const hash_t seed = 0) const noexcept { return util::HashUtil::Hash(value_, seed); }
 
   /**
    * Equality comparison.
@@ -139,12 +145,6 @@ class Date {
     return FromYMD(year, month, day).IsValid();
   }
 
-  /**
-   * Hash the date.
-   * @return The hash value for this date instance.
-   */
-  hash_t Hash(const hash_t seed = 0) const noexcept { return util::HashUtil::Hash(value_, seed); }
-
  private:
   friend struct DateVal;
 
@@ -156,11 +156,91 @@ class Date {
   uint32_t value_;
 };
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
+// Timestamps
+//
+//===----------------------------------------------------------------------===//
+
+class Timestamp {
+ public:
+  /**
+   * Hash the timestamp
+   * @return The hash value for this date instance.
+   */
+  hash_t Hash(const hash_t seed = 0) const noexcept { return util::HashUtil::Hash(value_, seed); }
+
+  /**
+   * Convert this timestamp object into a string of the form "YYYY-MM-DD HH:MM:SS.ZZZ"
+   * @return The stringification of this timestamp object.
+   */
+  std::string ToString() const;
+
+  /**
+   * Equality comparison.
+   * @return True if this timestamp equals @em that timestamp.
+   */
+  bool operator==(const Timestamp &that) const noexcept { return value_ == that.value_; }
+
+  /**
+   * Inequality comparison.
+   * @return True if this timestamp is not equal to @em that timestamp.
+   */
+  bool operator!=(const Timestamp &that) const noexcept { return value_ != that.value_; }
+
+  /**
+   * Less-than comparison.
+   * @return True if this data occurs before @em that timestamp.
+   */
+  bool operator<(const Timestamp &that) const noexcept { return value_ < that.value_; }
+
+  /**
+   * Less-than-or-equal-to comparison.
+   * @return True if this data occurs before or is the same as @em that timestamp.
+   */
+  bool operator<=(const Timestamp &that) const noexcept { return value_ <= that.value_; }
+
+  /**
+   * Greater-than comparison.
+   * @return True if this timestamp occurs after @em that timestamp.
+   */
+  bool operator>(const Timestamp &that) const noexcept { return value_ > that.value_; }
+
+  /**
+   * Greater-than-or-equal-to comparison.
+   * @return True if this timestamp occurs after or is equal to @em that timestamp.
+   */
+  bool operator>=(const Timestamp &that) const noexcept { return value_ >= that.value_; }
+
+  /**
+   * Convert a C-style string of the form "YYYY-MM-DD HH::MM::SS" into a timestamp. Will attempt to
+   * convert the first timestamp-like object it sees, skipping any leading whitespace.
+   * @param str The string to convert.
+   * @param len The length of the string.
+   * @return The constructed Timestamp. May be invalid.
+   */
+  static Timestamp FromString(const char *str, std::size_t len);
+
+  /**
+   * Convert a string of the form "YYYY-MM-DD HH::MM::SS" into a timestamp. Will attempt to convert
+   * the first timestamp-like object it sees, skipping any leading whitespace.
+   * @param str The string to convert.
+   * @return The constructed Timestamp. May be invalid.
+   */
+  static Timestamp FromString(const std::string &str) {
+    return FromString(str.c_str(), str.size());
+  }
+
+ private:
+  // Timestamp value
+  uint64_t value_;
+};
+
+//===----------------------------------------------------------------------===//
 //
 // Variable-length values
 //
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
 
 /**
  * A VarlenEntry is a cheap handle to variable length buffer allocated and owned by another entity.
@@ -278,11 +358,40 @@ class VarlenEntry {
     return result != 0 ? result : left.GetSize() - right.GetSize();
   }
 
+  /**
+   * Equality comparison.
+   * @return True if this varlen equals @em that varlen.
+   */
   bool operator==(const VarlenEntry &that) const noexcept { return Compare(*this, that) == 0; }
+
+  /**
+   * Inequality comparison.
+   * @return True if this varlen equals @em that varlen.
+   */
   bool operator!=(const VarlenEntry &that) const noexcept { return Compare(*this, that) != 0; }
+
+  /**
+   * Less-than comparison.
+   * @return True if this varlen equals @em that varlen.
+   */
   bool operator<(const VarlenEntry &that) const noexcept { return Compare(*this, that) < 0; }
+
+  /**
+   * Less-than-or-equal-to comparison.
+   * @return True if this varlen equals @em that varlen.
+   */
   bool operator<=(const VarlenEntry &that) const noexcept { return Compare(*this, that) <= 0; }
+
+  /**
+   * Greater-than comparison.
+   * @return True if this varlen equals @em that varlen.
+   */
   bool operator>(const VarlenEntry &that) const noexcept { return Compare(*this, that) > 0; }
+
+  /**
+   * Greater-than-or-equal-to comparison.
+   * @return True if this varlen equals @em that varlen.
+   */
   bool operator>=(const VarlenEntry &that) const noexcept { return Compare(*this, that) >= 0; }
 
  private:
