@@ -326,9 +326,6 @@ class VarlenEntry {
  public:
   // Prefix length inlined in the varlen structure.
   static constexpr uint32_t kPrefixLength = 4;
-  // Length clamp used to avoid std::min().
-  static constexpr uint32_t kPrefixLengthClamp = kPrefixLength - 1;
-
   // Ensure assumption
   static_assert(util::MathUtil::IsPowerOf2(kPrefixLength));
 
