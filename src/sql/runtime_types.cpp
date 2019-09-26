@@ -135,6 +135,10 @@ Date Date::FromYMD(uint32_t year, uint32_t month, uint32_t day) {
   return Date(BuildJulianDate(year, month, day));
 }
 
+bool Date::IsValidDate(uint32_t year, uint32_t month, uint32_t day) {
+  return IsValidJulianDate(year, month, day);
+}
+
 // ---------------------------------------------------------
 //
 // Varlen

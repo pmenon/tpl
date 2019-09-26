@@ -25,32 +25,27 @@ class Date {
   Date() = default;
 
   /**
-   * Is this a valid date?
    * @return True if this is a valid date instance; false otherwise.
    */
   bool IsValid() const noexcept;
 
   /**
-   * Convert this date object into a string of the form "YYYY-MM-DD"
-   * @return The stringification of this date object.
+   * @return A string representation of this date in the form "YYYY-MM-MM".
    */
   std::string ToString() const;
 
   /**
-   * Return the year corresponding to this date.
-   * @return The year of the date.
+   * @return The year of this date.
    */
   uint32_t ExtractYear() const noexcept;
 
   /**
-   * Return the month corresponding to this date.
-   * @return The month of the date.
+   * @return The month of this date.
    */
   uint32_t ExtractMonth() const noexcept;
 
   /**
-   * Return the day corresponding to this date.
-   * @return The day of the date.
+   * @return The day of this date.
    */
   uint32_t ExtractDay() const noexcept;
 
@@ -67,43 +62,36 @@ class Date {
   }
 
   /**
-   * Hash the date.
    * @return The hash value for this date instance.
    */
   hash_t Hash(const hash_t seed = 0) const noexcept { return util::HashUtil::Hash(value_, seed); }
 
   /**
-   * Equality comparison.
    * @return True if this date equals @em that date.
    */
   bool operator==(const Date &that) const noexcept { return value_ == that.value_; }
 
   /**
-   * Inequality comparison.
    * @return True if this date is not equal to @em that date.
    */
   bool operator!=(const Date &that) const noexcept { return value_ != that.value_; }
 
   /**
-   * Less-than comparison.
    * @return True if this data occurs before @em that date.
    */
   bool operator<(const Date &that) const noexcept { return value_ < that.value_; }
 
   /**
-   * Less-than-or-equal-to comparison.
    * @return True if this data occurs before or is the same as @em that date.
    */
   bool operator<=(const Date &that) const noexcept { return value_ <= that.value_; }
 
   /**
-   * Greater-than comparison.
    * @return True if this date occurs after @em that date.
    */
   bool operator>(const Date &that) const noexcept { return value_ > that.value_; }
 
   /**
-   * Greater-than-or-equal-to comparison.
    * @return True if this date occurs after or is equal to @em that date.
    */
   bool operator>=(const Date &that) const noexcept { return value_ >= that.value_; }
@@ -141,9 +129,7 @@ class Date {
    * @param day The day of the date.
    * @return True if valid date.
    */
-  static bool IsValidDate(uint32_t year, uint32_t month, uint32_t day) {
-    return FromYMD(year, month, day).IsValid();
-  }
+  static bool IsValidDate(uint32_t year, uint32_t month, uint32_t day);
 
  private:
   friend struct DateVal;
@@ -165,49 +151,41 @@ class Date {
 class Timestamp {
  public:
   /**
-   * Hash the timestamp
    * @return The hash value for this date instance.
    */
   hash_t Hash(const hash_t seed = 0) const noexcept { return util::HashUtil::Hash(value_, seed); }
 
   /**
-   * Convert this timestamp object into a string of the form "YYYY-MM-DD HH:MM:SS.ZZZ"
-   * @return The stringification of this timestamp object.
+   * @return A string representation of timestamp in the form "YYYY-MM-DD HH:MM:SS.ZZZ"
    */
   std::string ToString() const;
 
   /**
-   * Equality comparison.
    * @return True if this timestamp equals @em that timestamp.
    */
   bool operator==(const Timestamp &that) const noexcept { return value_ == that.value_; }
 
   /**
-   * Inequality comparison.
    * @return True if this timestamp is not equal to @em that timestamp.
    */
   bool operator!=(const Timestamp &that) const noexcept { return value_ != that.value_; }
 
   /**
-   * Less-than comparison.
    * @return True if this data occurs before @em that timestamp.
    */
   bool operator<(const Timestamp &that) const noexcept { return value_ < that.value_; }
 
   /**
-   * Less-than-or-equal-to comparison.
    * @return True if this data occurs before or is the same as @em that timestamp.
    */
   bool operator<=(const Timestamp &that) const noexcept { return value_ <= that.value_; }
 
   /**
-   * Greater-than comparison.
    * @return True if this timestamp occurs after @em that timestamp.
    */
   bool operator>(const Timestamp &that) const noexcept { return value_ > that.value_; }
 
   /**
-   * Greater-than-or-equal-to comparison.
    * @return True if this timestamp occurs after or is equal to @em that timestamp.
    */
   bool operator>=(const Timestamp &that) const noexcept { return value_ >= that.value_; }
@@ -294,27 +272,27 @@ class VarlenEntry {
   static constexpr uint32_t GetPrefixSize() { return kPrefixLength; }
 
   /**
-   * @return size of the varlen value stored in this entry, in bytes.
+   * @return The size of the variable-length string in bytes.
    */
   uint32_t GetSize() const { return size_; }
 
   /**
-   * @return whether the content is inlined or not.
+   * @return True if the entire string is inlined; false otherwise.
    */
   bool IsInlined() const { return GetSize() <= GetInlineThreshold(); }
 
   /**
-   * @return pointer to the stored prefix of the varlen entry
+   * @return A pointer to the inlined prefix string of this variable-length string.
    */
   const byte *GetPrefix() const { return prefix_; }
 
   /**
-   * @return pointer to the varlen entry contents.
+   * @return A pointer to the contents of this variable-length string.
    */
   const byte *GetContent() const { return IsInlined() ? prefix_ : content_; }
 
   /**
-   * @return The hash of this varlen.
+   * @return The hash of this variable-length string.
    */
   hash_t Hash(hash_t seed = 0) const noexcept;
 
@@ -359,37 +337,31 @@ class VarlenEntry {
   }
 
   /**
-   * Equality comparison.
    * @return True if this varlen equals @em that varlen.
    */
   bool operator==(const VarlenEntry &that) const noexcept { return Compare(*this, that) == 0; }
 
   /**
-   * Inequality comparison.
    * @return True if this varlen equals @em that varlen.
    */
   bool operator!=(const VarlenEntry &that) const noexcept { return Compare(*this, that) != 0; }
 
   /**
-   * Less-than comparison.
    * @return True if this varlen equals @em that varlen.
    */
   bool operator<(const VarlenEntry &that) const noexcept { return Compare(*this, that) < 0; }
 
   /**
-   * Less-than-or-equal-to comparison.
    * @return True if this varlen equals @em that varlen.
    */
   bool operator<=(const VarlenEntry &that) const noexcept { return Compare(*this, that) <= 0; }
 
   /**
-   * Greater-than comparison.
    * @return True if this varlen equals @em that varlen.
    */
   bool operator>(const VarlenEntry &that) const noexcept { return Compare(*this, that) > 0; }
 
   /**
-   * Greater-than-or-equal-to comparison.
    * @return True if this varlen equals @em that varlen.
    */
   bool operator>=(const VarlenEntry &that) const noexcept { return Compare(*this, that) >= 0; }
