@@ -32,7 +32,7 @@ struct Val {
 //===----------------------------------------------------------------------===//
 
 /**
- * A SQL boolean value
+ * A NULL-able SQL boolean value.
  */
 struct BoolVal : public Val {
   // The value
@@ -59,7 +59,7 @@ struct BoolVal : public Val {
   bool ForceTruth() const noexcept { return !is_null && val; }
 
   /**
-   * Return a NULL boolean value
+   * @return A NULL boolean value.
    */
   static BoolVal Null() {
     BoolVal val(false);
@@ -75,7 +75,7 @@ struct BoolVal : public Val {
 //===----------------------------------------------------------------------===//
 
 /**
- * An integral SQL value
+ * A NULL-able integral SQL value. Captures tinyint, smallint, integer and bigint.
  */
 struct Integer : public Val {
   // The value
@@ -88,7 +88,7 @@ struct Integer : public Val {
   explicit Integer(int64_t val) noexcept : Val(false), val(val) {}
 
   /**
-   * Create a NULL integer
+   * @return A NULL integer.
    */
   static Integer Null() {
     Integer val(0);
@@ -104,24 +104,26 @@ struct Integer : public Val {
 //===----------------------------------------------------------------------===//
 
 /**
- * An real and double SQL value
+ * A NULL-able single- and double-precision floating point SQL value.
  */
 struct Real : public Val {
   // The value
   double val;
 
   /**
-   * Construct a non-NULL real value from a 32-bit floating point value
+   * Construct a non-NULL real value from a 32-bit floating point value.
+   * @param val The initial value.
    */
   explicit Real(float val) noexcept : Val(false), val(val) {}
 
   /**
    * Construct a non-NULL real value from a 64-bit floating point value
+   * @param val The initial value.
    */
   explicit Real(double val) noexcept : Val(false), val(val) {}
 
   /**
-   * Return a NULL real value
+   * @return A NULL Real value.
    */
   static Real Null() {
     Real real(0.0);
@@ -137,7 +139,7 @@ struct Real : public Val {
 //===----------------------------------------------------------------------===//
 
 /**
- * A fixed-point decimal SQL value
+ * A NULL-able fixed-point decimal SQL value.
  */
 struct DecimalVal : public Val {
   // The value
@@ -156,7 +158,7 @@ struct DecimalVal : public Val {
   explicit DecimalVal(Decimal64::NativeType val) noexcept : DecimalVal(Decimal64{val}) {}
 
   /**
-   * Return a NULL decimal value
+   * @return A NULL decimal value.
    */
   static DecimalVal Null() {
     DecimalVal val(0);
@@ -172,9 +174,9 @@ struct DecimalVal : public Val {
 //===----------------------------------------------------------------------===//
 
 /**
- * A SQL string. SQL strings only and always <b>VIEWS</b> onto externally managed memory. They never
- * own the memory they point to! They're a very thin wrapper around VarlenEntrys used for String
- * processing.
+ * A NULL-able SQL string. These strings are always <b>views</b> onto externally managed memory.
+ * They never own the memory they point to! They're a very thin wrapper around tpl::sql::VarlenEntry
+ * used for string processing.
  */
 struct StringVal : public Val {
   // The value
@@ -241,7 +243,7 @@ struct StringVal : public Val {
   bool operator!=(const StringVal &that) const { return !(*this == that); }
 
   /**
-   * Create a NULL varchar/string
+   * @return A NULL varchar/string.
    */
   static StringVal Null() {
     StringVal result("");
@@ -257,7 +259,7 @@ struct StringVal : public Val {
 //===----------------------------------------------------------------------===//
 
 /**
- * A SQL date value
+ * A NULL-able SQL date value.
  */
 struct DateVal : public Val {
   // The value
@@ -276,7 +278,7 @@ struct DateVal : public Val {
   explicit DateVal(Date::NativeType val) noexcept : DateVal(Date{val}) {}
 
   /**
-   * Create a NULL date
+   * @return A NULL date.
    */
   static DateVal Null() {
     DateVal date(Date{});
@@ -292,7 +294,7 @@ struct DateVal : public Val {
 //===----------------------------------------------------------------------===//
 
 /**
- * A SQL timestamp value
+ * A NULL-able SQL timestamp value.
  */
 struct TimestampVal : public Val {
   // The value
@@ -311,7 +313,7 @@ struct TimestampVal : public Val {
   explicit TimestampVal(Timestamp::NativeType val) noexcept : TimestampVal(Timestamp{val}) {}
 
   /**
-   * Create a NULL timestamp
+   * @return A NULL timestamp.
    */
   static TimestampVal Null() {
     TimestampVal timestamp(Timestamp{0});

@@ -80,7 +80,7 @@ Date Date::FromString(const char *str, std::size_t len) {
 
   // Trim leading and trailing whitespace
   while (ptr != limit && std::isspace(*ptr)) ptr++;
-  while (ptr != limit && std::isspace(*limit)) limit--;
+  while (ptr != limit && std::isspace(*(limit - 1))) limit--;
 
   uint32_t year = 0, month = 0, day = 0;
 

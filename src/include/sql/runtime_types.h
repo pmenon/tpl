@@ -64,9 +64,16 @@ class Date {
   }
 
   /**
+   * Compute the hash value of this date instance.
+   * @param seed The value to seed the hash with.
    * @return The hash value for this date instance.
    */
-  hash_t Hash(const hash_t seed = 0) const noexcept { return util::HashUtil::Hash(value_, seed); }
+  hash_t Hash(const hash_t seed) const { return util::HashUtil::HashCrc(value_, seed); }
+
+  /**
+   * @return The hash value of this date instance.
+   */
+  hash_t Hash() const { return Hash(0); }
 
   /**
    * @return True if this date equals @em that date.
@@ -158,9 +165,16 @@ class Timestamp {
   using NativeType = uint64_t;
 
   /**
-   * @return The hash value for this date instance.
+   * Compute the hash value of this timestamp instance.
+   * @param seed The value to seed the hash with.
+   * @return The hash value for this timestamp instance.
    */
-  hash_t Hash(const hash_t seed = 0) const noexcept { return util::HashUtil::Hash(value_, seed); }
+  hash_t Hash(const hash_t seed) const { return util::HashUtil::HashCrc(value_, seed); }
+
+  /**
+   * @return The hash value of this timestamp instance.
+   */
+  hash_t Hash() const { return Hash(0); }
 
   /**
    * @return A string representation of timestamp in the form "YYYY-MM-DD HH:MM:SS.ZZZ"
@@ -252,7 +266,19 @@ class Decimal {
   /**
    * @return The raw underlying encoded decimal value.
    */
-  operator T() const { return value_; }
+  operator T() const { return value_; }  // NOLINT
+
+  /**
+   * Compute the hash value of this decimal instance.
+   * @param seed The value to seed the hash with.
+   * @return The hash value for this decimal instance.
+   */
+  hash_t Hash(const hash_t seed) const { return util::HashUtil::HashCrc(value_); }
+
+  /**
+   * @return The hash value of this decimal instance.
+   */
+  hash_t Hash() const { return Hash(0); }
 
   /**
    * Add the encoded decimal value @em that to this decimal value.
@@ -324,10 +350,8 @@ using Decimal128 = Decimal<int128_t>;
  */
 class VarlenEntry {
  public:
-  // Prefix length inlined in the varlen structure.
+  // Length of the string prefix (in bytes) that is inlined directly into this structure.
   static constexpr uint32_t kPrefixLength = 4;
-  // Ensure assumption
-  static_assert(util::MathUtil::IsPowerOf2(kPrefixLength));
 
   /**
    * Constructs a new out-lined varlen entry. The varlen DOES NOT take ownership of the content, but
@@ -388,9 +412,16 @@ class VarlenEntry {
   const byte *GetContent() const { return IsInlined() ? prefix_ : content_; }
 
   /**
-   * @return The hash of this variable-length string.
+   * Compute the hash value of this variable-length string instance.
+   * @param seed The value to seed the hash with.
+   * @return The hash value for this string instance.
    */
-  hash_t Hash(hash_t seed = 0) const noexcept;
+  hash_t Hash(hash_t seed) const noexcept;
+
+  /**
+   * @return The hash value of this variable-length string.
+   */
+  hash_t Hash() const { return Hash(0); }
 
   /**
    * @return A zero-copy view of the VarlenEntry as an immutable string that allows use with
