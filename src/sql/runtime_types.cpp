@@ -73,56 +73,35 @@ uint32_t Date::ExtractDay() const noexcept {
 }
 
 Date Date::FromString(const char *str, std::size_t len) {
-  const char *ptr = str, *limit = ptr + len;
-
-  // Trim leading and trailing whitespace
-  while (ptr != limit && std::isspace(*ptr)) ptr++;
-  while (ptr != limit && std::isspace(*limit)) limit--;
-
-  uint32_t year = 0, month = 0, day = 0;
-
-#define ERROR throw ConversionException("{} is not a valid date", std::string(str, len));
+  const char *ptr = str;
+  char *end = nullptr;
 
   // Year
-  while (true) {
-    if (ptr == limit) ERROR;
-    char c = *ptr++;
-    if (std::isdigit(c)) {
-      year = year * 10 + (c - '0');
-    } else if (c == '-') {
-      break;
-    } else {
-      ERROR;
-    }
+  uint32_t year = std::strtoul(ptr, &end, 10);
+  if (errno == ERANGE || *end++ != '-') {
+    throw ConversionException("{} is not a valid date", std::string(str, len));
   }
 
   // Month
-  while (true) {
-    if (ptr == limit) ERROR;
-    char c = *ptr++;
-    if (std::isdigit(c)) {
-      month = month * 10 + (c - '0');
-    } else if (c == '-') {
-      break;
-    } else {
-      ERROR;
-    }
+  uint32_t month = std::strtoul((ptr = end), &end, 10);
+  if (errno == ERANGE || *end++ != '-') {
+    throw ConversionException("{} is not a valid date", std::string(str, len));
   }
 
   // Day
-  while (true) {
-    if (ptr == limit) break;
-    char c = *ptr++;
-    if (std::isdigit(c)) {
-      day = day * 10 + (c - '0');
-    } else {
-      ERROR;
-    }
+  uint32_t day = std::strtoul((ptr = end), &end, 10);
+  if (errno == ERANGE) {
+    throw ConversionException("{} is not a valid date", std::string(str, len));
   }
 
-  if (!IsValidJulianDate(year, month, day)) ERROR;
+  // Whitespace tail
+  if (!std::all_of((ptr = end), str+len, [](char c) { return std::isspace(c); })) {
+    throw ConversionException("{} is not a valid date", std::string(str, len));
+  }
 
-#undef ERROR
+  if (!IsValidJulianDate(year, month, day)) {
+    throw ConversionException("{} is not a valid date", std::string(str, len));
+  }
 
   return Date(BuildJulianDate(year, month, day));
 }
