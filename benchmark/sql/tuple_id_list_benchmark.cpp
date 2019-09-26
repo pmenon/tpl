@@ -4,7 +4,6 @@
 #include <random>
 
 #include "benchmark/benchmark.h"
-#include "logging/logger.h"
 #include "sql/tuple_id_list.h"
 #include "sql/vector.h"
 
@@ -44,6 +43,47 @@ BENCHMARK_DEFINE_F(TupleIdListBenchmark, CallbackBasedIteration)(benchmark::Stat
   }
 }
 
+BENCHMARK_DEFINE_F(TupleIdListBenchmark, ConvertToSelectionVectorAndIterate)
+(benchmark::State &state) {
+  sel_t sel_vector[kDefaultVectorSize];
+  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0, sql::TypeId::Integer);
+  for (auto _ : state) {
+    int64_t count = 0;
+    auto v1data = reinterpret_cast<int32_t *>(v1->data());
+    auto v2data = reinterpret_cast<int32_t *>(v2->data());
+
+    auto size = tid->AsSelectionVector(sel_vector);
+    for (uint32_t i = 0; i < size; i++) count += v1data[sel_vector[i]] + v2data[sel_vector[i]];
+
+    benchmark::ClobberMemory();
+  }
+}
+
+BENCHMARK_DEFINE_F(TupleIdListBenchmark, ConvertToByteVectorThenSelectionVectorThenIterate)
+(benchmark::State &state) {
+  uint8_t byte_vector[kDefaultVectorSize];
+  sel_t sel_vector[kDefaultVectorSize];
+
+  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0, sql::TypeId::Integer);
+  for (auto _ : state) {
+    int64_t count = 0;
+    auto v1data = reinterpret_cast<int32_t *>(v1->data());
+    auto v2data = reinterpret_cast<int32_t *>(v2->data());
+
+    // Bits to byte vector
+    util::VectorUtil::BitVectorToByteVector(tid->GetMutableBits()->words(),
+                                            tid->GetMutableBits()->num_bits(), byte_vector);
+
+    // Byte vector to selection vector
+    auto size =
+        util::VectorUtil::ByteVectorToSelectionVector(byte_vector, kDefaultVectorSize, sel_vector);
+
+    for (uint32_t i = 0; i < size; i++) count += v1data[sel_vector[i]] + v2data[sel_vector[i]];
+
+    benchmark::ClobberMemory();
+  }
+}
+
 BENCHMARK_DEFINE_F(TupleIdListBenchmark, ManualIteration)(benchmark::State &state) {
   auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0, sql::TypeId::Integer);
   for (auto _ : state) {
@@ -55,7 +95,18 @@ BENCHMARK_DEFINE_F(TupleIdListBenchmark, ManualIteration)(benchmark::State &stat
   }
 }
 
+// ---------------------------------------------------------
+// Benchmarks
+// ---------------------------------------------------------
+
 BENCHMARK_REGISTER_F(TupleIdListBenchmark, CallbackBasedIteration)->DenseRange(0, 100, 10);
+
+BENCHMARK_REGISTER_F(TupleIdListBenchmark, ConvertToSelectionVectorAndIterate)
+    ->DenseRange(0, 100, 10);
+
+BENCHMARK_REGISTER_F(TupleIdListBenchmark, ConvertToByteVectorThenSelectionVectorThenIterate)
+    ->DenseRange(0, 100, 10);
+
 BENCHMARK_REGISTER_F(TupleIdListBenchmark, ManualIteration)->DenseRange(0, 100, 10);
 
 }  // namespace tpl
