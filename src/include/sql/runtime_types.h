@@ -19,6 +19,8 @@ namespace tpl::sql {
  */
 class Date {
  public:
+  using NativeType = uint32_t;
+
   /**
    * Empty constructor.
    */
@@ -135,11 +137,11 @@ class Date {
   friend struct DateVal;
 
   // Private constructor to force static factories.
-  explicit Date(uint32_t value) : value_(value) {}
+  explicit Date(NativeType value) : value_(value) {}
 
  private:
   // Date value
-  uint32_t value_;
+  NativeType value_;
 };
 
 //===----------------------------------------------------------------------===//
@@ -148,8 +150,13 @@ class Date {
 //
 //===----------------------------------------------------------------------===//
 
+/**
+ * A SQL timestamp.
+ */
 class Timestamp {
  public:
+  using NativeType = uint64_t;
+
   /**
    * @return The hash value for this date instance.
    */
@@ -210,9 +217,101 @@ class Timestamp {
   }
 
  private:
+  friend struct TimestampVal;
+
+  explicit Timestamp(NativeType value) : value_(value) {}
+
+ private:
   // Timestamp value
-  uint64_t value_;
+  NativeType value_;
 };
+
+//===----------------------------------------------------------------------===//
+//
+// Fixed point decimals
+//
+//===----------------------------------------------------------------------===//
+
+/**
+ * A generic fixed point decimal value. This only serves as a storage container for decimals of
+ * various sizes. Operations on decimals require a precision and scale.
+ * @tparam T The underlying native data type sufficiently large to store decimals of a
+ *           pre-determined scale
+ */
+template <typename T>
+class Decimal {
+ public:
+  using NativeType = T;
+
+  /**
+   * Create a decimal value using the given raw underlying encoded value.
+   * @param value The value to set this decimal to.
+   */
+  explicit Decimal(const T &value) : value_(value) {}
+
+  /**
+   * @return The raw underlying encoded decimal value.
+   */
+  operator T() const { return value_; }
+
+  /**
+   * Add the encoded decimal value @em that to this decimal value.
+   * @param that The value to add.
+   * @return This decimal value.
+   */
+  const Decimal<T> &operator+=(const T &that) {
+    value_ += that;
+    return *this;
+  }
+
+  /**
+   * Subtract the encoded decimal value @em that from this decimal value.
+   * @param that The value to subtract.
+   * @return This decimal value.
+   */
+  const Decimal<T> &operator-=(const T &that) {
+    value_ -= that;
+    return *this;
+  }
+
+  /**
+   * Multiply the encoded decimal value @em that with this decimal value.
+   * @param that The value to multiply by.
+   * @return This decimal value.
+   */
+  const Decimal<T> &operator*=(const T &that) {
+    value_ *= that;
+    return *this;
+  }
+
+  /**
+   * Divide this decimal value by the encoded decimal value @em that.
+   * @param that The value to divide by.
+   * @return This decimal value.
+   */
+  const Decimal<T> &operator/=(const T &that) {
+    value_ /= that;
+    return *this;
+  }
+
+  /**
+   * Modulo divide this decimal value by the encoded decimal value @em that.
+   * @param that The value to modulus by.
+   * @return This decimal value.
+   */
+  const Decimal<T> &operator%=(const T &that) {
+    value_ %= that;
+    return *this;
+  }
+
+ private:
+  // The encoded decimal value
+  T value_;
+};
+
+using Decimal32 = Decimal<int32_t>;
+using Decimal64 = Decimal<int64_t>;
+using Decimal128 = Decimal<int128_t>;
 
 //===----------------------------------------------------------------------===//
 //

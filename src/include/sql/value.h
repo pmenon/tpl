@@ -16,9 +16,10 @@ namespace tpl::sql {
 //===----------------------------------------------------------------------===//
 
 /**
- * A generic base catch-all SQL value
+ * A generic base catch-all SQL value. Used to represent a NULL-able SQL value.
  */
 struct Val {
+  // NULL indication flag
   bool is_null;
 
   explicit Val(bool is_null = false) noexcept : is_null(is_null) {}
@@ -34,8 +35,13 @@ struct Val {
  * A SQL boolean value
  */
 struct BoolVal : public Val {
+  // The value
   bool val;
 
+  /**
+   * Construct a non-NULL boolean with the given value.
+   * @param val The value of the boolean.
+   */
   explicit BoolVal(bool val) noexcept : Val(false), val(val) {}
 
   /**
@@ -72,10 +78,14 @@ struct BoolVal : public Val {
  * An integral SQL value
  */
 struct Integer : public Val {
+  // The value
   int64_t val;
 
-  explicit Integer(int64_t val) noexcept : Integer(false, val) {}
-  explicit Integer(bool null, int64_t val) noexcept : Val(null), val(val) {}
+  /**
+   * Construct a non-NULL integer with the given value.
+   * @param val The value to set.
+   */
+  explicit Integer(int64_t val) noexcept : Val(false), val(val) {}
 
   /**
    * Create a NULL integer
@@ -97,15 +107,16 @@ struct Integer : public Val {
  * An real and double SQL value
  */
 struct Real : public Val {
+  // The value
   double val;
 
   /**
-   * Construct a non-null real value from a 32-bit floating point value
+   * Construct a non-NULL real value from a 32-bit floating point value
    */
   explicit Real(float val) noexcept : Val(false), val(val) {}
 
   /**
-   * Construct a non-null real value from a 64-bit floating point value
+   * Construct a non-NULL real value from a 64-bit floating point value
    */
   explicit Real(double val) noexcept : Val(false), val(val) {}
 
@@ -128,19 +139,27 @@ struct Real : public Val {
 /**
  * A fixed-point decimal SQL value
  */
-struct Decimal : public Val {
-  uint64_t val;
-  uint32_t precision;
-  uint32_t scale;
+struct DecimalVal : public Val {
+  // The value
+  Decimal64 val;
 
-  Decimal(uint64_t val, uint32_t precision, uint32_t scale) noexcept
-      : Val(false), val(val), precision(precision), scale(scale) {}
+  /**
+   * Construct a non-NULL decimal value from the given 64-bit decimal value.
+   * @param val The decimal value.
+   */
+  explicit DecimalVal(Decimal64 val) noexcept : Val(false), val(val) {}
+
+  /**
+   * Construct a non-NULL decimal value from the given 64-bit decimal value.
+   * @param val The raw decimal value.
+   */
+  explicit DecimalVal(Decimal64::NativeType val) noexcept : DecimalVal(Decimal64{val}) {}
 
   /**
    * Return a NULL decimal value
    */
-  static Decimal Null() {
-    Decimal val(0, 0, 0);
+  static DecimalVal Null() {
+    DecimalVal val(0);
     val.is_null = true;
     return val;
   }
@@ -158,12 +177,18 @@ struct Decimal : public Val {
  * processing.
  */
 struct StringVal : public Val {
+  // The value
   VarlenEntry val;
 
-  explicit StringVal(VarlenEntry v) noexcept : Val(false), val(v) {}
+  /**
+   * Construct a non-NULL string from the given string value.
+   * @param val The string.
+   */
+  explicit StringVal(VarlenEntry val) noexcept : Val(false), val(val) {}
 
   /**
-   * Create a string value (i.e., a view) over the given (potentially non-null terminated) string.
+   * Create a non-NULL string value (i.e., a view) over the given (potentially non-null terminated)
+   * string.
    * @param str The character sequence.
    * @param len The length of the sequence.
    */
@@ -173,7 +198,7 @@ struct StringVal : public Val {
   }
 
   /**
-   * Create a string value (i.e., view) over the C-style null-terminated string.
+   * Create a non-NULL string value (i.e., view) over the C-style null-terminated string.
    * @param str The C-string.
    */
   explicit StringVal(const char *str) noexcept : StringVal(const_cast<char *>(str), strlen(str)) {}
@@ -235,17 +260,26 @@ struct StringVal : public Val {
  * A SQL date value
  */
 struct DateVal : public Val {
+  // The value
   Date val;
 
-  DateVal() noexcept : Val(), val() {}
+  /**
+   * Construct a non-NULL date with the given date value.
+   * @param val The value.
+   */
+  explicit DateVal(Date val) noexcept : Val(false), val(val) {}
 
-  explicit DateVal(Date v) noexcept : Val(false), val(v) {}
+  /**
+   * Construct a non-NULL date with the given date value.
+   * @param val The value.
+   */
+  explicit DateVal(Date::NativeType val) noexcept : DateVal(Date{val}) {}
 
   /**
    * Create a NULL date
    */
   static DateVal Null() {
-    DateVal date;
+    DateVal date(Date{});
     date.is_null = true;
     return date;
   }
@@ -261,15 +295,26 @@ struct DateVal : public Val {
  * A SQL timestamp value
  */
 struct TimestampVal : public Val {
-  timespec time;
+  // The value
+  Timestamp val;
 
-  explicit TimestampVal(timespec time) noexcept : Val(false), time(time) {}
+  /**
+   * Construct a non-NULL timestamp with the given value.
+   * @param val The timestamp.
+   */
+  explicit TimestampVal(Timestamp val) noexcept : Val(false), val(val) {}
+
+  /**
+   * Construct a non-NULL timestamp with the given raw timestamp value
+   * @param val The raw timestamp value.
+   */
+  explicit TimestampVal(Timestamp::NativeType val) noexcept : TimestampVal(Timestamp{val}) {}
 
   /**
    * Create a NULL timestamp
    */
   static TimestampVal Null() {
-    TimestampVal timestamp({0, 0});
+    TimestampVal timestamp(Timestamp{0});
     timestamp.is_null = true;
     return timestamp;
   }
