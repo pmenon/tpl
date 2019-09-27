@@ -823,7 +823,14 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call, ast::B
       LocalVar dest = execution_result()->GetOrCreateDestination(call->type());
       LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
       LocalVar hash = VisitExpressionForRValue(call->arguments()[1]);
-      emitter()->Emit(Bytecode::AggregationHashTableInsert, dest, agg_ht, hash);
+      Bytecode bytecode = Bytecode::AggregationHashTableInsert;
+      if (call->arguments().size() > 2) {
+        TPL_ASSERT(call->arguments()[2]->IsLitExpr(), "Last argument must be a boolean literal");
+        const bool partitioned = call->arguments()[2]->As<ast::LitExpr>()->bool_val();
+        bytecode = partitioned ? Bytecode::AggregationHashTableInsertPartitioned
+                               : Bytecode::AggregationHashTableInsert;
+      }
+      emitter()->Emit(bytecode, dest, agg_ht, hash);
       execution_result()->set_destination(dest.ValueOf());
       break;
     }

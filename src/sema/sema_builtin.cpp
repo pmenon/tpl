@@ -136,13 +136,19 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
       break;
     }
     case ast::Builtin::AggHashTableInsert: {
-      if (!CheckArgCount(call, 2)) {
+      if (!CheckArgCountAtLeast(call, 2)) {
         return;
       }
       // Second argument is the hash value
       const auto hash_val_kind = ast::BuiltinType::Uint64;
       if (!args[1]->type()->IsSpecificBuiltin(hash_val_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(hash_val_kind));
+        return;
+      }
+      // If there's a third argument indicating regular or partitioned insertion, it must be a bool
+      if (args.size() > 2 &&
+          (!args[2]->IsLitExpr() || !args[2]->type()->IsSpecificBuiltin(ast::BuiltinType::Bool))) {
+        ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Bool));
         return;
       }
       // Return a byte pointer
