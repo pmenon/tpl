@@ -1,6 +1,6 @@
 struct OutputStruct {
-  o_orderpriority: StringVal
-  order_count: Integer
+  o_orderpriority : StringVal
+  order_count     : Integer
 }
 
 struct JoinBuildRow {
@@ -29,7 +29,8 @@ struct State {
 }
 
 // Check that two join keys are equal
-fun checkJoinKey(execCtx: *ExecutionContext, probe: *VectorProjectionIterator, build_row: *JoinBuildRow) -> bool {
+fun checkJoinKey(execCtx: *ExecutionContext, probe: *VectorProjectionIterator,
+                 build_row: *JoinBuildRow) -> bool {
     // l_orderkey == o_orderkey
     return @sqlToBool(@vpiGetInt(probe, 0) == build_row.o_orderkey)
 }
@@ -65,20 +66,28 @@ fun teardownState(execCtx: *ExecutionContext, state: *State) -> nil {
 
 // Pipeline 1 (Join Build)
 fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
+    var orderdate_lower = @dateToSql(1993, 07, 01)
+    var orderdate_upper = @dateToSql(1993, 10, 01)
+
     var o_tvi : TableVectorIterator
     @tableIterInit(&o_tvi, "orders")
     for (@tableIterAdvance(&o_tvi)) {
         var vec = @tableIterGetVPI(&o_tvi)
-        for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-            if (@vpiGetDate(vec, 4) >= @dateToSql(1993, 07, 01) // o_orderdate
-              and @vpiGetDate(vec, 4) <= @dateToSql(1993, 10, 01)) { // o_orderdate
-                // Step 2: Insert into Hash Table
-                var hash_val = @hash(@vpiGetInt(vec, 0)) // o_orderkey
-                var build_row = @ptrCast(*JoinBuildRow, @joinHTInsert(&state.join_table, hash_val))
-                build_row.o_orderkey = @vpiGetInt(vec, 0) // o_orderkey
-                build_row.o_orderpriority = @vpiGetString(vec, 5) // o_orderpriority
-                build_row.match_flag = false
-            }
+
+        var filter: VectorFilterExecutor
+        @filterExecInit(&filter, vec)
+        @filterExecGe(&filter, 4, orderdate_lower)
+        @filterExecLe(&filter, 4, orderdate_upper)
+        @filterExecFinish(&filter)
+        @filterExecFree(&filter)
+
+        for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
+            var orderkey = @vpiGetInt(vec, 0)
+            var hash_val = @hash(orderkey) // o_orderkey
+            var build_row = @ptrCast(*JoinBuildRow, @joinHTInsert(&state.join_table, hash_val))
+            build_row.o_orderkey = orderkey
+            build_row.o_orderpriority = @vpiGetString(vec, 5) // o_orderpriority
+            build_row.match_flag = false
         }
     }
     @tableIterClose(&o_tvi)
@@ -90,44 +99,48 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
 // Pipeline 2 (Join Probe up to Agg)
 fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
     var l_tvi : TableVectorIterator
-    @tableIterInit(&l_tvi, "lineitem")
-    for (@tableIterAdvance(&l_tvi)) {
+    for (@tableIterInit(&l_tvi, "lineitem"); @tableIterAdvance(&l_tvi); ) {
         var vec = @tableIterGetVPI(&l_tvi)
-        for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-            // if l_commitdate < l_receiptdate
-            if (@vpiGetDate(vec, 11) < @vpiGetDate(vec, 12)) {
-                // Step 2: Probe Join Hash Table
-                var hash_val = @hash(@vpiGetInt(vec, 0)) // l_orderkey
-                var join_iter: HashTableEntryIterator
-                for (@joinHTLookup(&state.join_table, &join_iter, hash_val); @htEntryIterHasNext(&join_iter, checkJoinKey, execCtx, vec);) {
-                    var build_row = @ptrCast(*JoinBuildRow, @htEntryIterGetRow(&join_iter))
-                    // match each row once
-                    if (!build_row.match_flag) {
-                        build_row.match_flag = true
-                        // Step 3: Build Agg Hash Table
-                        var agg_hash_val = @hash(build_row.o_orderpriority)
-                        var agg = @ptrCast(*AggRow, @aggHTLookup(&state.agg_table, agg_hash_val, checkAggKey, build_row))
-                        if (agg == nil) {
-                            agg = @ptrCast(*AggRow, @aggHTInsert(&state.agg_table, agg_hash_val))
-                            agg.o_orderpriority = build_row.o_orderpriority
-                            @aggInit(&agg.order_count)
-                        } else {
-                            @aggAdvance(&agg.order_count, &build_row.o_orderpriority)
-                        }
+
+        // l_commitdate < l_receiptdate
+        var filter: VectorFilterExecutor
+        @filterExecInit(&filter, vec)
+        @filterExecLt(&filter, 11, 12)
+        @filterExecFinish(&filter)
+        @filterExecFree(&filter)
+
+        for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
+            var hash_val = @hash(@vpiGetInt(vec, 0)) // l_orderkey
+            var join_iter: HashTableEntryIterator
+            for (@joinHTLookup(&state.join_table, &join_iter, hash_val);
+                 @htEntryIterHasNext(&join_iter, checkJoinKey, execCtx, vec); ) {
+                var build_row = @ptrCast(*JoinBuildRow, @htEntryIterGetRow(&join_iter))
+                // match each row once
+                if (!build_row.match_flag) {
+                    build_row.match_flag = true
+                    // Step 3: Build Agg Hash Table
+                    var agg_hash_val = @hash(build_row.o_orderpriority)
+                    var agg = @ptrCast(*AggRow, @aggHTLookup(&state.agg_table, agg_hash_val, checkAggKey, build_row))
+                    if (agg == nil) {
+                        agg = @ptrCast(*AggRow, @aggHTInsert(&state.agg_table, agg_hash_val))
+                        agg.o_orderpriority = build_row.o_orderpriority
+                        @aggInit(&agg.order_count)
+                    } else {
+                        @aggAdvance(&agg.order_count, &build_row.o_orderpriority)
                     }
                 }
             }
         }
     }
-    // Close Iterator
     @tableIterClose(&l_tvi)
 }
 
 // Pipeline 3 (Sort)
 fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
-    var aht_iter: AHTIterator
     // Step 1: Iterate through Agg Hash Table
-    for (@aggHTIterInit(&aht_iter, &state.agg_table); @aggHTIterHasNext(&aht_iter); @aggHTIterNext(&aht_iter)) {
+    var agg_table = &state.agg_table
+    var aht_iter: AHTIterator
+    for (@aggHTIterInit(&aht_iter, agg_table); @aggHTIterHasNext(&aht_iter); @aggHTIterNext(&aht_iter)) {
         var agg = @ptrCast(*AggRow, @aggHTIterGetRow(&aht_iter))
         // Step 2: Build Sorter
         var sorter_row = @ptrCast(*SorterRow, @sorterInsert(&state.sorter))
@@ -144,7 +157,9 @@ fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
 fun pipeline4(execCtx: *ExecutionContext, state: *State) -> nil {
     var sort_iter: SorterIterator
     var out: *OutputStruct
-    for (@sorterIterInit(&sort_iter, &state.sorter); @sorterIterHasNext(&sort_iter); @sorterIterNext(&sort_iter)) {
+    for (@sorterIterInit(&sort_iter, &state.sorter);
+         @sorterIterHasNext(&sort_iter);
+         @sorterIterNext(&sort_iter)) {
         state.count = state.count + 1
 
         var sorter_row = @ptrCast(*SorterRow, @sorterIterGetRow(&sort_iter))
@@ -155,6 +170,8 @@ fun pipeline4(execCtx: *ExecutionContext, state: *State) -> nil {
         out.order_count = sorter_row.order_count
     }
     @sorterIterClose(&sort_iter)
+
+    // Finish
     @resultBufferFinalize(execCtx)
 }
 
@@ -165,11 +182,12 @@ fun execQuery(execCtx: *ExecutionContext, state: *State) -> nil {
     pipeline4(execCtx, state)
 }
 
-
 fun main(execCtx: *ExecutionContext) -> int32 {
     var state: State
+
     setUpState(execCtx, &state)
     execQuery(execCtx, &state)
     teardownState(execCtx, &state)
+
     return state.count
 }

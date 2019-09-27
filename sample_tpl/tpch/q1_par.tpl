@@ -239,7 +239,7 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
     @tlsReset(&tls, @sizeOf(P1_ThreadState), p1_initThreadState, p1_tearDownThreadState, execCtx)
 
     // Parallel scan
-    @iterateTableParallel("lineitem", &state, &tls, p1_worker)
+    @iterateTableParallel("lineitem", state, &tls, p1_worker)
 
     // Build global aggregation hash table
     var aht_off: uint32 = 0
@@ -277,7 +277,7 @@ fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
     @tlsReset(&tls, @sizeOf(P2_ThreadState), p2_initThreadState, p2_tearDownThreadState, execCtx)
 
     // Scan aggregation hash table and insert into thread-local sorters
-    @aggHTParallelPartScan(&state.agg_table, &state, &tls, p2_worker)
+    @aggHTParallelPartScan(&state.agg_table, state, &tls, p2_worker)
 
     // Parallel sort
     var sorter_off : uint32 = 0
@@ -312,13 +312,17 @@ fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
     @resultBufferFinalize(execCtx)
 }
 
+fun execQuery(execCtx: *ExecutionContext, state: *State) -> nil {
+    pipeline1(execCtx, state)
+    pipeline2(execCtx, state)
+    pipeline3(execCtx, state)
+}
+
 fun main(execCtx: *ExecutionContext) -> int {
     var state: State
 
     setUpState(execCtx, &state)
-    pipeline1(execCtx, &state)
-    pipeline2(execCtx, &state)
-    pipeline3(execCtx, &state)
+    execQuery(execCtx, &state)
     tearDownState(execCtx, &state)
 
     return state.count
