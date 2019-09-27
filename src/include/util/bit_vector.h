@@ -76,8 +76,7 @@ class BitVector {
     operator bool() const noexcept { return ((*word_) & mask_) != 0; }  // NOLINT
 
     /**
-     * Assign the value of the bit to the boolean @em val. If input value is true, the bit is set to
-     * 1. If the input value is false, the bit is set to 0.
+     * Set the value of this bit to @em val. Set to 1 if @em val is true; 0 otherwise.
      * @param val The value to assign the bit.
      * @return This bit.
      */
@@ -87,18 +86,20 @@ class BitVector {
     }
 
     /**
-     * Assign the value of the bit the value of another bit in the bit vector.
-     * @param other The other bit to read from.
+     * Set the value of this bit to @em that.
+     * @param that The bit to copy from.
      * @return This bit.
      */
-    BitReference &operator=(const BitReference &other) noexcept {
-      Assign(other);
+    BitReference &operator=(const BitReference &that) noexcept {
+      Assign(that);
       return *this;
     }
 
    private:
     friend class BitVector<WordType>;
 
+    // Create a reference to the given bit position in the word array. Only bit vectors can create
+    // references to the bits they own.
     BitReference(WordType *word, uint32_t bit_pos) : word_(word), mask_(WordType(1) << bit_pos) {}
 
     // Assign this bit to the given value
@@ -625,45 +626,105 @@ class BitVector {
     return FindFrom(word_index + 1);
   }
 
-  // -------------------------------------------------------
-  // Operator overloads -- should be fairly obvious ...
-  // -------------------------------------------------------
-
+  /**
+   * Return the value of the bit at position @em position in the bit vector. Used for testing the
+   * value of a bit:
+   *
+   * @code
+   * BitVector<> bv(20);
+   * if (bv[10]) {
+   *   // work
+   * }
+   * @endcode
+   *
+   * @param position The position/index of the bit to check.
+   * @return True if the bit at the input position is set; false otherwise.
+   */
   bool operator[](const uint32_t position) const { return Test(position); }
 
+  /**
+   * Return a reference to the bit at position @em position in the bit vector. The reference can be
+   * modified, but is invalid if the bit vector is resized.
+   *
+   * @code
+   * BitVector<> bv(20);
+   * bv[10] = true;
+   * bv[20] = bv[10];
+   * @endcode
+   *
+   * @param position The position/index of the bit to check.
+   * @return A reference to the bit at the input position.
+   */
   BitReference operator[](const uint32_t position) {
     TPL_ASSERT(position < num_bits(), "Out-of-range access");
     return BitReference(&words_[position / kWordSizeBits], position % kWordSizeBits);
   }
 
+  /**
+   * @return True if this bit-vector equals @em that bit vector, bit-for-bit.
+   */
   bool operator==(const BitVector &that) const noexcept {
     return num_bits() == that.num_bits() && words_ == that.words_;
   }
 
+  /**
+   * @return True if this bit-vector is not @em that bit vector.
+   */
   bool operator!=(const BitVector &that) const noexcept { return !(*this == that); }
 
-  BitVector &operator-=(const BitVector &other) {
-    Difference(other);
+  /**
+   * Perform a difference between this bit vector that @em that.
+   *
+   * @pre The two vectors must be the same size.
+   *
+   * @param that The bit vector to difference with.
+   * @return This bit vector after all <b>common</b> between this and @em that have been removed.
+   */
+  BitVector &operator-=(const BitVector &that) {
+    Difference(that);
     return *this;
   }
 
-  BitVector &operator&=(const BitVector &other) {
-    Intersect(other);
+  /**
+   * Perform an intersection of this bit vector that @em that.
+   *
+   * @pre The two vectors must be the same size.
+   *
+   * @param that The bit vector to intersect with.
+   * @return This bit vector after an intersection with @em that bit vector.
+   */
+  BitVector &operator&=(const BitVector &that) {
+    Intersect(that);
     return *this;
   }
 
-  BitVector &operator|=(const BitVector &other) {
-    Union(other);
+  /**
+   * Perform a union of this bit vector and @em that.
+   *
+   * @pre The two vectors must be the same size.
+   *
+   * @param that The bit vector to union with.
+   * @return This bit vector after a union with @em that bit vector.
+   */
+  BitVector &operator|=(const BitVector &that) {
+    Union(that);
     return *this;
   }
 
-  uint32_t num_bits() const { return num_bits_; }
+  /**
+   * @return The number of bits in the bit vector.
+   */
+  uint32_t num_bits() const noexcept { return num_bits_; }
 
-  uint32_t num_words() const { return words_.size(); }
+  /**
+   * @return The number of "words" in the bit vector. Recall that the word type is a template arg.
+   */
+  uint32_t num_words() const noexcept { return words_.size(); }
 
-  const WordType *words() const { return words_.data(); }
-
-  WordType *words() { return words_.data(); }
+  /**
+   * @return A const-view of the words making up the bit vector.
+   */
+  const WordType *words() const noexcept { return words_.data(); }
 
  private:
   // The number of used bits in the last word
@@ -694,18 +755,56 @@ class BitVector {
   std::vector<WordType> words_;
 };
 
+/**
+ * Free bit vector difference operation. Returns a - b, the difference of the bit vectors @em a and
+ * @em b.
+ *
+ * Note: @em a is copied on purpose to ensure RVO.
+ *
+ * @pre Both inputs must have the same size.
+ *
+ * @tparam T The word size used by both bit vectors.
+ * @param a The left bit vector to the operation.
+ * @param b The right bit vector to the operation.
+ * @return The difference between a and b.
+ */
 template <typename T>
 inline BitVector<T> operator-(BitVector<T> a, const BitVector<T> &b) {
   a -= b;
   return a;
 }
 
+/**
+ * Free bit vector intersection operation. Returns a & b, the intersection of the bit vectors @em a
+ * and @em b.
+ *
+ * Note: @em a is copied on purpose to ensure RVO.
+ *
+ * @pre Both inputs must have the same size.
+ *
+ * @tparam T The word size used by both bit vectors.
+ * @param a The left bit vector to the operation.
+ * @param b The right bit vector to the operation.
+ * @return The intersection between a and b.
+ */
 template <typename T>
 inline BitVector<T> operator&(BitVector<T> a, const BitVector<T> &b) {
   a &= b;
   return a;
 }
 
+/**
+ * Free bit vector union operation. Returns a & b, the union of the bit vectors @em a and @em b.
+ *
+ * Note: @em a is copied on purpose to ensure RVO.
+ *
+ * @pre Both inputs must have the same size.
+ *
+ * @tparam T The word size used by both bit vectors.
+ * @param a The left bit vector to the operation.
+ * @param b The right bit vector to the operation.
+ * @return The union between a and b.
+ */
 template <typename T>
 inline BitVector<T> operator|(BitVector<T> a, const BitVector<T> &b) {
   a |= b;

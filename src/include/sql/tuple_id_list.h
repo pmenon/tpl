@@ -279,9 +279,19 @@ class TupleIdList {
   ConstIterator begin() { return ConstIterator(bit_vector_); }
 
   /**
+   * @return A const iterator position at the first element in the TID list.
+   */
+  ConstIterator begin() const { return ConstIterator(bit_vector_); }
+
+  /**
    * @return An iterator positioned at the end of the list.
    */
   ConstIterator end() { return ConstIterator(bit_vector_, BitVectorType::kInvalidPos); }
+
+  /**
+   * @return A const iterator position at the end of the list.
+   */
+  ConstIterator end() const { return ConstIterator(bit_vector_, BitVectorType::kInvalidPos); }
 
  private:
   // The validity bit vector
