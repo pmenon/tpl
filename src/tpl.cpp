@@ -11,6 +11,7 @@
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 
 #include "ast/ast_dump.h"
 #include "common/cpu_info.h"
@@ -65,6 +66,11 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
 
   parsing::Scanner scanner(source.data(), source.length());
   parsing::Parser parser(&scanner, &context);
+
+  sql::NoOpResultConsumer consumer;
+  sql::tablegen::TPCHOutputSchemas schemas;
+  const sql::Schema *schema = schemas.GetSchema(
+      llvm::sys::path::filename(name).take_until([](char x) { return x == '.'; }));
 
   double parse_ms = 0.0,       // Time to parse the source
       typecheck_ms = 0.0,      // Time to perform semantic analysis
@@ -143,7 +149,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
         return;
       }
       sql::MemoryPool memory(nullptr);
-      sql::ExecutionContext exec_ctx(&memory);
+      sql::ExecutionContext exec_ctx(&memory, schema, &consumer);
       LOG_INFO("VM main() returned: {}", main(&exec_ctx));
     } else {
       std::function<uint32_t()> main;
@@ -171,7 +177,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
         return;
       }
       sql::MemoryPool memory(nullptr);
-      sql::ExecutionContext exec_ctx(&memory);
+      sql::ExecutionContext exec_ctx(&memory, schema, &consumer);
       LOG_INFO("ADAPTIVE main() returned: {}", main(&exec_ctx));
     } else {
       std::function<uint32_t()> main;
@@ -197,9 +203,13 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
             "(*ExecutionContext)->int32");
         return;
       }
+      util::Timer<std::milli> x;
+      x.Start();
       sql::MemoryPool memory(nullptr);
-      sql::ExecutionContext exec_ctx(&memory);
+      sql::ExecutionContext exec_ctx(&memory, schema, &consumer);
       LOG_INFO("JIT main() returned: {}", main(&exec_ctx));
+      x.Stop();
+      LOG_INFO("Jit exec: {} ms", x.elapsed());
     } else {
       std::function<uint32_t()> main;
       if (!module->GetFunction("main", vm::ExecutionMode::Compiled, main)) {
