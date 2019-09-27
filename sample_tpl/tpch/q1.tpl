@@ -113,46 +113,42 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
         @filterExecFree(&filter)
 
         for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-            //if (@vpiGetDate(vec, 10) < date_filter) { // l_shipdate
-                state.count = state.count + 1
+            var agg_values : AggValues
+            agg_values.l_returnflag = @vpiGetString(vec, 8) // l_returnflag
+            agg_values.l_linestatus = @vpiGetString(vec, 9) // l_linestatus
+            agg_values.sum_qty = @vpiGetReal(vec, 4) // l_quantity
+            agg_values.sum_base_price = @vpiGetReal(vec, 5) // l_extendedprice
+            agg_values.sum_disc_price = @vpiGetReal(vec, 5) * @vpiGetReal(vec, 6) // l_extendedprice * l_discount
+            agg_values.sum_charge = @vpiGetReal(vec, 5) * @vpiGetReal(vec, 6) * (@floatToSql(1.0) - @vpiGetReal(vec, 7)) // l_extendedprice * l_discount * (1- l_tax)
+            agg_values.avg_qty = @vpiGetReal(vec, 4) // l_quantity
+            agg_values.avg_price = @vpiGetReal(vec, 5) // l_extendedprice
+            agg_values.avg_disc = @vpiGetReal(vec, 6) // l_discount
+            agg_values.count_order = @intToSql(1)
+            var agg_hash_val = @hash(agg_values.l_returnflag, agg_values.l_linestatus)
+            var agg_payload = @ptrCast(*AggPayload, @aggHTLookup(&state.agg_hash_table, agg_hash_val, aggKeyCheck, &agg_values))
+            if (agg_payload == nil) {
+                agg_payload = @ptrCast(*AggPayload, @aggHTInsert(&state.agg_hash_table, agg_hash_val))
+                agg_payload.l_returnflag = agg_values.l_returnflag
+                agg_payload.l_linestatus = agg_values.l_linestatus
 
-                var agg_values : AggValues
-                agg_values.l_returnflag = @vpiGetString(vec, 8) // l_returnflag
-                agg_values.l_linestatus = @vpiGetString(vec, 9) // l_linestatus
-                agg_values.sum_qty = @vpiGetReal(vec, 4) // l_quantity
-                agg_values.sum_base_price = @vpiGetReal(vec, 5) // l_extendedprice
-                agg_values.sum_disc_price = @vpiGetReal(vec, 5) * @vpiGetReal(vec, 6) // l_extendedprice * l_discount
-                agg_values.sum_charge = @vpiGetReal(vec, 5) * @vpiGetReal(vec, 6) * (@floatToSql(1.0) - @vpiGetReal(vec, 7)) // l_extendedprice * l_discount * (1- l_tax)
-                agg_values.avg_qty = @vpiGetReal(vec, 4) // l_quantity
-                agg_values.avg_price = @vpiGetReal(vec, 5) // l_extendedprice
-                agg_values.avg_disc = @vpiGetReal(vec, 6) // l_discount
-                agg_values.count_order = @intToSql(1)
-                var agg_hash_val = @hash(agg_values.l_returnflag, agg_values.l_linestatus)
-                var agg_payload = @ptrCast(*AggPayload, @aggHTLookup(&state.agg_hash_table, agg_hash_val, aggKeyCheck, &agg_values))
-                if (agg_payload == nil) {
-                    agg_payload = @ptrCast(*AggPayload, @aggHTInsert(&state.agg_hash_table, agg_hash_val))
-                    agg_payload.l_returnflag = agg_values.l_returnflag
-                    agg_payload.l_linestatus = agg_values.l_linestatus
-
-                    @aggInit(&agg_payload.sum_qty)
-                    @aggInit(&agg_payload.sum_base_price)
-                    @aggInit(&agg_payload.sum_disc_price)
-                    @aggInit(&agg_payload.sum_charge)
-                    @aggInit(&agg_payload.avg_qty)
-                    @aggInit(&agg_payload.avg_price)
-                    @aggInit(&agg_payload.avg_disc)
-                    @aggInit(&agg_payload.count_order)
-                } else {
-                    @aggAdvance(&agg_payload.sum_qty, &agg_values.sum_qty)
-                    @aggAdvance(&agg_payload.sum_base_price, &agg_values.sum_base_price)
-                    @aggAdvance(&agg_payload.sum_disc_price, &agg_values.sum_disc_price)
-                    @aggAdvance(&agg_payload.sum_charge, &agg_values.sum_charge)
-                    @aggAdvance(&agg_payload.avg_qty, &agg_values.avg_qty)
-                    @aggAdvance(&agg_payload.avg_price, &agg_values.avg_price)
-                    @aggAdvance(&agg_payload.avg_disc, &agg_values.avg_disc)
-                    @aggAdvance(&agg_payload.count_order, &agg_values.count_order)
-                }
-            //}
+                @aggInit(&agg_payload.sum_qty)
+                @aggInit(&agg_payload.sum_base_price)
+                @aggInit(&agg_payload.sum_disc_price)
+                @aggInit(&agg_payload.sum_charge)
+                @aggInit(&agg_payload.avg_qty)
+                @aggInit(&agg_payload.avg_price)
+                @aggInit(&agg_payload.avg_disc)
+                @aggInit(&agg_payload.count_order)
+            } else {
+                @aggAdvance(&agg_payload.sum_qty, &agg_values.sum_qty)
+                @aggAdvance(&agg_payload.sum_base_price, &agg_values.sum_base_price)
+                @aggAdvance(&agg_payload.sum_disc_price, &agg_values.sum_disc_price)
+                @aggAdvance(&agg_payload.sum_charge, &agg_values.sum_charge)
+                @aggAdvance(&agg_payload.avg_qty, &agg_values.avg_qty)
+                @aggAdvance(&agg_payload.avg_price, &agg_values.avg_price)
+                @aggAdvance(&agg_payload.avg_disc, &agg_values.avg_disc)
+                @aggAdvance(&agg_payload.count_order, &agg_values.count_order)
+            }
         }
     }
     @tableIterClose(&l_tvi)
@@ -175,8 +171,10 @@ fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
         sorter_row.avg_disc = @aggResult(&agg_payload.avg_disc)
         sorter_row.count_order = @aggResult(&agg_payload.count_order)
     }
-    @sorterSort(&state.sorter)
     @aggHTIterClose(&agg_iter)
+
+    // Sort!
+    @sorterSort(&state.sorter)
 }
 
 fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
@@ -184,6 +182,8 @@ fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
     var out: *Output
     var sort_iter: SorterIterator
     for (@sorterIterInit(&sort_iter, &state.sorter); @sorterIterHasNext(&sort_iter); @sorterIterNext(&sort_iter)) {
+        state.count = state.count + 1
+
         out = @ptrCast(*Output, @resultBufferAllocRow(execCtx))
         var sorter_row = @ptrCast(*SorterRow, @sorterIterGetRow(&sort_iter))
         out.l_returnflag = sorter_row.l_returnflag
@@ -198,9 +198,9 @@ fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
         out.count_order = sorter_row.count_order
     }
     @sorterIterClose(&sort_iter)
+
     @resultBufferFinalize(execCtx)
 }
-
 
 fun main(execCtx: *ExecutionContext) -> int {
     var state: State

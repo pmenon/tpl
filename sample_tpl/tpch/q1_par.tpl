@@ -16,7 +16,6 @@ struct State {
     agg_table : AggregationHashTable
     sorter    : Sorter
     count     : int32 // debug
-    execCtx   : *ExecutionContext
 }
 
 // Thread-local state for pipeline 1
@@ -101,7 +100,6 @@ fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
     @aggHTInit(&state.agg_table, @execCtxGetMem(execCtx), @sizeOf(AggPayload))
     @sorterInit(&state.sorter, @execCtxGetMem(execCtx), compareFn, @sizeOf(SorterRow))
     state.count = 0
-    state.execCtx = execCtx
 }
 
 fun tearDownState(execCtx: *ExecutionContext, state: *State) -> nil {
@@ -194,7 +192,7 @@ fun p1_worker(state: *State, ts: *P1_ThreadState, l_tvi: *TableVectorIterator) -
             var agg_hash_val = @hash(agg_values.l_returnflag, agg_values.l_linestatus)
             var agg_payload = @ptrCast(*AggPayload, @aggHTLookup(agg_ht, agg_hash_val, aggKeyCheck, vec))
             if (agg_payload == nil) {
-                agg_payload = @ptrCast(*AggPayload, @aggHTInsert(agg_ht, agg_hash_val))
+                agg_payload = @ptrCast(*AggPayload, @aggHTInsert(agg_ht, agg_hash_val, true))
                 agg_payload.l_returnflag = agg_values.l_returnflag
                 agg_payload.l_linestatus = agg_values.l_linestatus
                 @aggInit(&agg_payload.sum_qty)
@@ -294,6 +292,8 @@ fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
     var out: *Output
     var sort_iter: SorterIterator
     for (@sorterIterInit(&sort_iter, &state.sorter); @sorterIterHasNext(&sort_iter); @sorterIterNext(&sort_iter)) {
+        state.count = state.count + 1
+
         out = @ptrCast(*Output, @resultBufferAllocRow(execCtx))
         var sorter_row = @ptrCast(*SorterRow, @sorterIterGetRow(&sort_iter))
         out.l_returnflag = sorter_row.l_returnflag
@@ -308,6 +308,7 @@ fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
         out.count_order = sorter_row.count_order
     }
     @sorterIterClose(&sort_iter)
+
     @resultBufferFinalize(execCtx)
 }
 
@@ -317,7 +318,7 @@ fun main(execCtx: *ExecutionContext) -> int {
     setUpState(execCtx, &state)
     pipeline1(execCtx, &state)
     pipeline2(execCtx, &state)
-    //pipeline3(execCtx, &state)
+    pipeline3(execCtx, &state)
     tearDownState(execCtx, &state)
 
     return state.count
