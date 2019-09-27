@@ -13,7 +13,9 @@
 namespace tpl::sql {
 
 VectorFilterExecutor::VectorFilterExecutor(VectorProjection *vector_projection)
-    : vector_projection_(vector_projection), tid_list_(vector_projection_->GetTotalTupleCount()) {
+    : vector_projection_iterator_(nullptr),
+      vector_projection_(vector_projection),
+      tid_list_(vector_projection_->GetTotalTupleCount()) {
   TPL_ASSERT(vector_projection_->GetTotalTupleCount() <= kDefaultVectorSize,
              "Vector projection too large");
   if (const sel_t *sel_vector = vector_projection_->GetSelectionVector()) {
@@ -24,7 +26,9 @@ VectorFilterExecutor::VectorFilterExecutor(VectorProjection *vector_projection)
 }
 
 VectorFilterExecutor::VectorFilterExecutor(VectorProjectionIterator *vector_projection_iterator)
-    : VectorFilterExecutor(vector_projection_iterator->GetVectorProjection()) {}
+    : VectorFilterExecutor(vector_projection_iterator->GetVectorProjection()) {
+  vector_projection_iterator_ = vector_projection_iterator;
+}
 
 void VectorFilterExecutor::SelectGeneric(const std::vector<uint32_t> &col_indexes,
                                          const VectorFilterExecutor::VectorFilterFn &filter) {
@@ -130,6 +134,10 @@ void VectorFilterExecutor::Finish() {
   sel_t sel_vec[kDefaultVectorSize];
   uint32_t count = tid_list_.AsSelectionVector(sel_vec);
   vector_projection_->SetSelectionVector(sel_vec, count);
+
+  if (vector_projection_iterator_ != nullptr) {
+    vector_projection_iterator_->Reset(vector_projection_);
+  }
 }
 
 }  // namespace tpl::sql

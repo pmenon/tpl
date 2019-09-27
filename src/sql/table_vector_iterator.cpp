@@ -87,7 +87,7 @@ void TableVectorIterator::RefreshVectorProjection() {
   vector_projection_.CheckIntegrity();
 
   // Insert our vector projection instance into the vector projection iterator
-  vector_projection_iterator_.SetVectorProjection(&vector_projection_);
+  vector_projection_iterator_.Reset(&vector_projection_);
 }
 
 bool TableVectorIterator::Advance() {

@@ -115,7 +115,7 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
 
     // Setup VP
     vp.ResetColumn(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0, size);
-    vpi.SetVectorProjection(&vp);
+    vpi.Reset(&vp);
 
     // Lookup
     lookup.Prepare(&vpi, HashTupleInVPI<N>);
@@ -164,7 +164,7 @@ TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
 
       // Setup VP
       vp.ResetColumn(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0, size);
-      vpi.SetVectorProjection(&vp);
+      vpi.Reset(&vp);
 
       // Lookup
       lookup.Prepare(&vpi, HashTupleInVPI<N>);

@@ -205,6 +205,9 @@ class VectorFilterExecutor {
   void Finish();
 
  private:
+  // The (optional) iterator over the projection that's being filtered.
+  VectorProjectionIterator *vector_projection_iterator_;
+
   // The vector projection we're filtering
   VectorProjection *vector_projection_;
 
