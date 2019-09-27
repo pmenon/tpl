@@ -157,8 +157,17 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   thread_state_container->CollectThreadLocalStateElementsAs(tl_sorters, sorter_offset);
   llvm::erase_if(tl_sorters, [](const Sorter *sorter) { return sorter->GetTupleCount() == 0; });
 
-  // If there's nothing to sort, quit
+  // If there's nothing to sort, exit.
   if (tl_sorters.empty()) {
+    sorted_ = true;
+    return;
+  }
+
+  // If there's only one sorter, just handle it now.
+  if (tl_sorters.size() == 1) {
+    tl_sorters[0]->Sort();
+    owned_tuples_.emplace_back(std::move(tl_sorters[0]->tuple_storage_));
+    tuples_ = tl_sorters[0]->tuples_;
     sorted_ = true;
     return;
   }
@@ -197,12 +206,12 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
 
   timer.EnterStage("Compute Splitters");
 
-  // Let B be the number of buckets we wish to decompose our input into, let N
-  // be the number of sorter instances we have; then, 'splitters' is a [B-1 x N]
-  // matrix where each row of the matrix contains a list of candidate splitters
-  // found in each sorter, and each column indicates the set of splitter keys in
-  // a single sorter. In other words, splitters[i][j] indicates the i-th
+  // Let B be the number of buckets we wish to decompose our input into, let N be the number of
+  // sorter instances we have; then, 'splitters' is a [B-1 x N] matrix where each row of the matrix
+  // contains a list of candidate splitters found in each sorter, and each column indicates the set
+  // of splitter keys in a single sorter. In other words, splitters[i][j] indicates the i-th
   // splitter key found in the j-th sorter instance.
+
   const uint64_t num_buckets = tl_sorters.size();
   std::vector<std::vector<const byte *>> splitters(num_buckets - 1);
   for (auto &splitter : splitters) {
@@ -232,18 +241,16 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   std::vector<MergeWorkType> merge_work;
 
   {
-    // This tracks the current position in the global output (i.e., this
-    // sorter's tuples vector) where the next merge package will begin writing
-    // results into. It begins at the front; as we generate merge packages, we
-    // calculate the next position by computing the sizes of the merge packages.
-    // We've already perfectly sized the output so this memory is allocated and
-    // ready to be written to.
+    // This tracks the current position in the global output (i.e., this sorter's tuples vector)
+    // where the next merge package will begin writing results into. It begins at the front; as we
+    // generate merge packages, we calculate the next position by computing the sizes of the merge
+    // packages. We've already perfectly sized the output so this memory is allocated and ready to
+    // be written to.
     auto write_pos = tuples_.begin();
 
-    // This vector tracks, for each sorter, the position of the start of the
-    // next input range. As we move through the splitters, we bump this pointer
-    // so that we don't need to perform two binary searches to find the lower
-    // and upper range around the splitter key.
+    // This vector tracks, for each sorter, the position of the start of the next input range. As we
+    // move through the splitters, we bump this pointer so that we don't need to perform two binary
+    // searches to find the lower and upper range around the splitter key.
     std::vector<SeqTypeIter> next_start(tl_sorters.size());
 
     for (uint64_t idx = 0; idx < splitters.size(); idx++) {

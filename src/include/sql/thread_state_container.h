@@ -9,15 +9,41 @@
 namespace tpl::sql {
 
 /**
- * This class serves as a container for thread-local data required during query
- * execution. Users create an instance of this class and call @em Reset() to
- * configure it to store thread-local structures of an opaque type with a given
- * size.
+ * This class serves as a container for thread-local data required during query execution. Users
+ * create an instance of this class and call ThreadStateContainer::Reset() to configure it to store
+ * thread-local structures of an opaque type with a given size. Each invocation of
+ * ThreadStateContainer::Reset() must accept the size of the state to allocate, and construction and
+ * destruction functions whose responsibility is to construct and destruct the user-defined thread
+ * state. In other words, thread states themselves are opaque to this class.
  *
- * During query execution, threads can access their thread-local state by
- * calling @em AccessThreadStateOfCurrentThread(). Thread-local state is
- * constructed lazily upon first access and destroyed on a subsequent call to
- * @em Reset() or when the container itself is destroyed.
+ * @code
+ * struct YourStateStruct {
+ *   // Stuff
+ * };
+ *
+ * static void InitThreadState(void *context, void *memory) {
+ *   // 'context' is an opaque pointers provided and bypassed in Reset();
+ *   // 'memory' points to allocated, but uninitialized memory large enough to store thread state
+ *   auto *your_state = reinterpret_cast<YourStateStruct *>(memory);
+ *   // ...
+ * }
+ * static void DestroyThreadState(void *context, void *memory) {
+ *   // 'context' is an opaque pointers provided and bypassed in Reset();
+ *   // 'memory' points to some thread state whose memory must be destructed. Do not free the memory
+ *   //          here, it will be done on your behalf. But, you must clean up any memory your state
+ *   //          allocated.
+ *   std::destroy_at(reinterpret_cast<YourStateStruct *>(memory));
+ * }
+ *
+ * ThreadStateContainer tsc;
+ * tsc.Reset(sizeof(YourStateStruct), InitThreadState, DestroyThreadState, nullptr);
+ * @endcode
+ *
+ * During query execution, threads can access their thread-local state by calling
+ * ThreadStateContainer::AccessThreadStateOfCurrentThread(). If no state has been allocated for the
+ * calling thread, one is created and initialized lazily using the optional construction function.
+ * Each thread's state is destroyed on a subsequent call to ThreadStateContainer::Reset(), or when
+ * the container itself is destroyed.
  */
 class ThreadStateContainer {
  public:
@@ -59,19 +85,18 @@ class ThreadStateContainer {
   void Clear();
 
   /**
-   * Reset this container to store thread-local state whose size in bytes is
-   * @em state_size given size, and use the optional initialization and
-   * destruction functions @em init_fn and @em destroy_fn, respectively, to
-   * initialize the thread-state exactly once upon first access, and destroy
-   * the state upon last access. Both functions will be passed in the given
-   * opaque context object @em ctx as the first argument.
+   * Reset this container to store some state whose size is @em state_size in bytes. If an
+   * initialization function is provided (i.e., @em init_fn), it will be invoked by the calling
+   * thread upon first access to its state. Similarly, if a destruction function is provided, it
+   * will be called when the thread state is requested to be destroyed either through another call
+   * to ThreadStateContainer::Reset(), or when the container itself is destroyed. The @em ctx
+   * pointer is passed into both initialization and destruction functions as a context.
    * @param state_size The size in bytes of the state
-   * @param init_fn The (optional) initialization function to call on first
-   *                access. This is called in the thread that first accesses it.
-   * @param destroy_fn The (optional) destruction function called to destroy the
-   *                   state.
-   * @param ctx The (optional) context object to pass to both initialization and
-   *            destruction functions.
+   * @param init_fn The (optional) initialization function to call on first access. This is called
+   *                in the thread that first accesses it.
+   * @param destroy_fn The (optional) destruction function called to destroy the state.
+   * @param ctx The (optional) context object to pass to both initialization and destruction
+   *            functions.
    */
   void Reset(std::size_t state_size, InitFn init_fn, DestroyFn destroy_fn, void *ctx);
 
@@ -90,15 +115,14 @@ class ThreadStateContainer {
   }
 
   /**
-   * Collect all thread-local states and store pointers in the output container
-   * @em container.
+   * Collect all thread-local states and store pointers in the output container @em container.
    * @param container The output container to store the results.
    */
   void CollectThreadLocalStates(std::vector<byte *> &container) const;
 
   /**
-   * Collect an element at offset @em element_offset from all thread-local
-   * states in this container and store pointers in the output container.
+   * Collect an element at offset @em element_offset from all thread-local states in this container
+   * and store pointers in the output container.
    * @param[out] container The output container to store the results.
    * @param element_offset The offset of the element in the thread-local state
    */
@@ -106,12 +130,12 @@ class ThreadStateContainer {
                                        std::size_t element_offset) const;
 
   /**
-   * Collect an element at offset @em element_offset from all thread-local
-   * states, interpret them as @em T, and store pointers in the output
-   * container.
-   * NOTE: This is a little inefficient because it will perform two copies: one
-   *       into a temporary vector, and a final copy into the output container.
-   *       Don't use in performance-critical code.
+   * Collect an element at offset @em element_offset from all thread-local states, interpret them as
+   * @em T, and store pointers in the output container.
+   *
+   * NOTE: This is slightly inefficient because two copies are performed: one into a temporary
+   *       vector and a copy into the output container. Don't use in performance-critical code.
+   *
    * @tparam T The compile-time type to interpret the state element as
    * @param[out] container The output container to store the results.
    * @param element_offset The offset of the element in the thread-local state
@@ -123,22 +147,21 @@ class ThreadStateContainer {
     CollectThreadLocalStateElements(tmp, element_offset);
     container.clear();
     container.resize(tmp.size());
-    for (uint32_t idx = 0; idx < tmp.size(); idx++) {
+    for (uint64_t idx = 0; idx < tmp.size(); idx++) {
       container[idx] = reinterpret_cast<T *>(tmp[idx]);
     }
   }
 
   /**
-   * Iterate over all thread-local states in this container invoking the given
-   * callback function @em iterate_fn for each such state.
+   * Iterate over all thread-local states in this container invoking the given callback function
+   * @em iterate_fn for each such state.
    * @param ctx An opaque context object.
    * @param iterate_fn The function to call for each state.
    */
   void IterateStates(void *ctx, IterateFn iterate_fn) const;
 
   /**
-   * Apply a function on each thread local state. This is mostly for tests from
-   * C++.
+   * Apply a function on each thread local state. This is mostly for tests from C++.
    * @tparam F Functor with signature void(const void*)
    * @param fn The function to apply
    */

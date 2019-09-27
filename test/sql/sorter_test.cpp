@@ -244,8 +244,10 @@ struct TestTuple {
   int32_t Compare(const TestTuple<N> &other) const { return key - other.key; }
 };
 
-// Generic function to perform a parallel sort. The input parameter indicates
-// the sizes of each thread-local sorter that will be created.
+// Generic function to perform a parallel sort. The input parameter indicates the sizes of each
+// thread-local sorter that will be created.
+//
+// The template argument controls the size of the tuple.
 template <uint32_t N>
 void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
   // Comparison function
@@ -274,10 +276,12 @@ void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
   // Parallel build
   tbb::task_scheduler_init sched;
   tbb::parallel_for_each(sorter_sizes.begin(), sorter_sizes.end(), [&container](auto sorter_size) {
+    std::random_device r;
+    std::this_thread::sleep_for(std::chrono::microseconds(r() % 1000));
     auto *sorter = container.AccessThreadStateOfCurrentThreadAs<Sorter>();
     for (uint32_t i = 0; i < sorter_size; i++) {
       auto *elem = reinterpret_cast<TestTuple<N> *>(sorter->AllocInputTuple());
-      elem->key = i;
+      elem->key = r() % 3333;
     }
   });
 
@@ -295,6 +299,7 @@ void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
   const TestTuple<N> *prev = nullptr;
   for (SorterIterator iter(main); iter.HasNext(); iter.Next()) {
     auto *curr = iter.GetRowAs<TestTuple<N>>();
+    EXPECT_TRUE(curr != nullptr);
     if (prev != nullptr) {
       EXPECT_LE(cmp_fn(prev, curr), 0);
     }
@@ -307,6 +312,8 @@ TEST_F(SorterTest, BalancedParallelSortTest) {
   TestParallelSort<2>({1000, 1000});
   TestParallelSort<2>({1000, 1000, 1000});
   TestParallelSort<2>({1000, 1000, 1000, 1000});
+  TestParallelSort<2>({1000, 1000, 1000, 1000, 1000});
+  TestParallelSort<2>({1000, 1000, 1000, 1000, 1000, 1000});
 }
 
 TEST_F(SorterTest, SingleThreadLocalParallelSortTest) {
@@ -315,6 +322,7 @@ TEST_F(SorterTest, SingleThreadLocalParallelSortTest) {
   TestParallelSort<2>({1});
   TestParallelSort<2>({10});
   TestParallelSort<2>({100});
+  TestParallelSort<2>({1000});
 }
 
 TEST_F(SorterTest, UnbalancedParallelSortTest) {
@@ -322,7 +330,7 @@ TEST_F(SorterTest, UnbalancedParallelSortTest) {
   for (uint32_t x : {0, 1, 10, 100, 1000}) {
     for (uint32_t y : {0, 1, 10, 100, 1000}) {
       for (uint32_t z : {0, 1, 10, 100, 1000}) {
-        TestParallelSort<2>({x, y, z});
+        TestParallelSort<2>({x, y, z, x, y, z, x, y, z});
       }
     }
   }
