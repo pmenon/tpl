@@ -22,7 +22,11 @@ struct Val {
   // NULL indication flag
   bool is_null;
 
-  explicit Val(bool is_null = false) noexcept : is_null(is_null) {}
+  /**
+   * Construct a value with the given NULL indication.
+   * @param is_null Whether the SQL value is NULL.
+   */
+  explicit Val(bool is_null) noexcept : is_null(is_null) {}
 };
 
 //===----------------------------------------------------------------------===//
