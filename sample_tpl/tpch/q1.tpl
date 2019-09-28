@@ -139,16 +139,15 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
                 @aggInit(&agg_payload.avg_price)
                 @aggInit(&agg_payload.avg_disc)
                 @aggInit(&agg_payload.count_order)
-            } else {
-                @aggAdvance(&agg_payload.sum_qty, &agg_values.sum_qty)
-                @aggAdvance(&agg_payload.sum_base_price, &agg_values.sum_base_price)
-                @aggAdvance(&agg_payload.sum_disc_price, &agg_values.sum_disc_price)
-                @aggAdvance(&agg_payload.sum_charge, &agg_values.sum_charge)
-                @aggAdvance(&agg_payload.avg_qty, &agg_values.avg_qty)
-                @aggAdvance(&agg_payload.avg_price, &agg_values.avg_price)
-                @aggAdvance(&agg_payload.avg_disc, &agg_values.avg_disc)
-                @aggAdvance(&agg_payload.count_order, &agg_values.count_order)
             }
+            @aggAdvance(&agg_payload.sum_qty, &agg_values.sum_qty)
+            @aggAdvance(&agg_payload.sum_base_price, &agg_values.sum_base_price)
+            @aggAdvance(&agg_payload.sum_disc_price, &agg_values.sum_disc_price)
+            @aggAdvance(&agg_payload.sum_charge, &agg_values.sum_charge)
+            @aggAdvance(&agg_payload.avg_qty, &agg_values.avg_qty)
+            @aggAdvance(&agg_payload.avg_price, &agg_values.avg_price)
+            @aggAdvance(&agg_payload.avg_disc, &agg_values.avg_disc)
+            @aggAdvance(&agg_payload.count_order, &agg_values.count_order)
         }
     }
     @tableIterClose(&l_tvi)
