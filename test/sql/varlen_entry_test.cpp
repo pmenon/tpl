@@ -38,52 +38,52 @@ TEST_F(VarlenEntryTest, Basic) {
 TEST_F(VarlenEntryTest, Comparison) {
   // Small/Small
   {
-    auto e1 = VarlenEntry::Create(reinterpret_cast<const byte*>("helo"), 4);
-    auto e2 = VarlenEntry::Create(reinterpret_cast<const byte*>("fuck"), 4);
+    auto e1 = VarlenEntry::Create(reinterpret_cast<const byte *>("helo"), 4);
+    auto e2 = VarlenEntry::Create(reinterpret_cast<const byte *>("fuck"), 4);
     EXPECT_NE(e1, e2);
     EXPECT_GT(e1, e2);
 
-    e1 = VarlenEntry::Create(reinterpret_cast<const byte*>("he"), 2);
-    e2 = VarlenEntry::Create(reinterpret_cast<const byte*>("hell"), 4);
+    e1 = VarlenEntry::Create(reinterpret_cast<const byte *>("he"), 2);
+    e2 = VarlenEntry::Create(reinterpret_cast<const byte *>("hell"), 4);
     EXPECT_NE(e1, e2);
 
-    e1 = VarlenEntry::Create(reinterpret_cast<const byte*>("hi"), 2);
-    e2 = VarlenEntry::Create(reinterpret_cast<const byte*>("hi"), 2);
+    e1 = VarlenEntry::Create(reinterpret_cast<const byte *>("hi"), 2);
+    e2 = VarlenEntry::Create(reinterpret_cast<const byte *>("hi"), 2);
     EXPECT_EQ(e1, e2);
   }
 
   // Small/Medium
   {
-    auto e1 = VarlenEntry::Create(reinterpret_cast<const byte*>("helo"), 4);
-    auto e2 = VarlenEntry::Create(reinterpret_cast<const byte*>("fuckyou"), 7);
+    auto e1 = VarlenEntry::Create(reinterpret_cast<const byte *>("helo"), 4);
+    auto e2 = VarlenEntry::Create(reinterpret_cast<const byte *>("fuckyou"), 7);
     EXPECT_NE(e1, e2);
 
-    e1 = VarlenEntry::Create(reinterpret_cast<const byte*>("he"), 2);
-    e2 = VarlenEntry::Create(reinterpret_cast<const byte*>("hellothere"), 10);
+    e1 = VarlenEntry::Create(reinterpret_cast<const byte *>("he"), 2);
+    e2 = VarlenEntry::Create(reinterpret_cast<const byte *>("hellothere"), 10);
     EXPECT_NE(e1, e2);
 
-    e1 = VarlenEntry::Create(reinterpret_cast<const byte*>("hi"), 2);
-    e2 = VarlenEntry::Create(reinterpret_cast<const byte*>("hi"), 2);
+    e1 = VarlenEntry::Create(reinterpret_cast<const byte *>("hi"), 2);
+    e2 = VarlenEntry::Create(reinterpret_cast<const byte *>("hi"), 2);
     EXPECT_EQ(e1, e2);
   }
 
   // Medium/Medium
   {
-    auto e1 = VarlenEntry::Create(reinterpret_cast<const byte*>("hello"), 5);
-    auto e2 = VarlenEntry::Create(reinterpret_cast<const byte*>("hellothere"), 10);
+    auto e1 = VarlenEntry::Create(reinterpret_cast<const byte *>("hello"), 5);
+    auto e2 = VarlenEntry::Create(reinterpret_cast<const byte *>("hellothere"), 10);
     EXPECT_NE(e1, e2);
     EXPECT_LT(e1, e2);
 
-    e1 = VarlenEntry::Create(reinterpret_cast<const byte*>("hello"), 5);
-    e2 = VarlenEntry::Create(reinterpret_cast<const byte*>("hiyathere"), 9);
+    e1 = VarlenEntry::Create(reinterpret_cast<const byte *>("hello"), 5);
+    e2 = VarlenEntry::Create(reinterpret_cast<const byte *>("hiyathere"), 9);
     EXPECT_NE(e1, e2);
     EXPECT_LT(e1, e2);
   }
 
   // Large/Large
   {
-    auto e1 = VarlenEntry::Create(reinterpret_cast<const byte*>("nottodayson"), 11);
-    auto e2 = VarlenEntry::Create(reinterpret_cast<const byte*>("hellotherebro"), 13);
+    auto e1 = VarlenEntry::Create(reinterpret_cast<const byte *>("nottodayson"), 11);
+    auto e2 = VarlenEntry::Create(reinterpret_cast<const byte *>("hellotherebro"), 13);
     EXPECT_NE(e1, e2);
     EXPECT_GT(e1, e2);
   }

@@ -29,10 +29,10 @@ class VectorUtil {
    *              intersection.
    * @return The number of elements in the output selection vector.
    */
-  [[nodiscard]] static uint32_t
-      IntersectSelected(const sel_t *sel_vector_1, uint32_t sel_vector_1_len,
-                        const sel_t *sel_vector_2, uint32_t sel_vector_2_len,
-                        sel_t *out_sel_vector);
+  [[nodiscard]] static uint32_t IntersectSelected(const sel_t *sel_vector_1,
+                                                  uint32_t sel_vector_1_len,
+                                                  const sel_t *sel_vector_2,
+                                                  uint32_t sel_vector_2_len, sel_t *out_sel_vector);
 
   /**
    * Intersect the sorted input selection vector @em v1 and the input bit vector
