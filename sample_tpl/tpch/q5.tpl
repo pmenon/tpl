@@ -1,6 +1,3 @@
-// The code is written to (almost) match the way it will be codegened, so it may be overly verbose.
-// But technically, some of these structs are redundant (like AggValues or SorterRow)
-
 struct OutputStruct {
     n_name  : StringVal
     revenue : Real
@@ -67,18 +64,12 @@ struct SorterRow {
 }
 
 fun checkAggKeyFn(payload: *AggPayload, row: *AggValues) -> bool {
-    if (payload.n_name != row.n_name) {
-        return false
-    }
-    return true
+    return payload.n_name == row.n_name
 }
 
 fun checkJoinKey1(execCtx: *ExecutionContext, probe: *VectorProjectionIterator, build: *JoinRow1) -> bool {
     // check n_regionkey == r_regionkey
-    if (@vpiGetInt(probe, 2) != build.r_regionkey) {
-        return false
-    }
-    return true
+    return @vpiGetInt(probe, 2) == build.r_regionkey
 }
 
 fun checkJoinKey2(execCtx: *ExecutionContext, probe: *VectorProjectionIterator, build: *JoinRow2) -> bool {
@@ -375,8 +366,10 @@ fun execQuery(execCtx: *ExecutionContext, state: *State) -> nil {
 
 fun main(execCtx: *ExecutionContext) -> int32 {
     var state: State
+
     setUpState(execCtx, &state)
     execQuery(execCtx, &state)
     teardownState(execCtx, &state)
+
     return state.count
 }

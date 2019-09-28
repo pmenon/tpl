@@ -1,23 +1,22 @@
-struct outputStruct {
+struct Output {
   out: Real
 }
 
 struct State {
-    sum: RealSumAggregate
+    sum   : RealSumAggregate
+    count : uint32 // debug
 }
 
 fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
     @aggInit(&state.sum)
+    state.count = 0
 }
 
 fun teardownState(execCtx: *ExecutionContext, state: *State) -> nil { }
 
-fun execQuery(execCtx: *ExecutionContext, state: *State) -> nil {
-    // Pipeline 1 (hashing)
-    var out : *outputStruct
+fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
     var tvi: TableVectorIterator
-    @tableIterInit(&tvi, "lineitem")
-    for (@tableIterAdvance(&tvi)) {
+    for (@tableIterInit(&tvi, "lineitem"); @tableIterAdvance(&tvi); ) {
         var vpi = @tableIterGetVPI(&tvi)
 
         var filter: VectorFilterExecutor
@@ -26,33 +25,36 @@ fun execQuery(execCtx: *ExecutionContext, state: *State) -> nil {
         @filterExecGt(&filter, 6, @floatToSql(0.04))       // discount
         @filterExecLt(&filter, 6, @floatToSql(0.06))       // discount
         @filterExecGe(&filter, 10, @dateToSql(1994, 1, 1)) // ship date
-        @filterExecGe(&filter, 10, @dateToSql(1995, 1, 1)) // ship date
+        @filterExecLe(&filter, 10, @dateToSql(1995, 1, 1)) // ship date
         @filterExecFinish(&filter)
         @filterExecFree(&filter)
 
-        for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
-            //if (@vpiGetReal(vpi, 4) > 24.0
-            //        and @vpiGetReal(vpi, 6) > 0.04
-            //        and @vpiGetReal(vpi, 6) < 0.06
-            //        and @vpiGetDate(vpi, 10) >= @dateToSql(1994, 1, 1)
-            //        and @vpiGetDate(vpi, 10) <= @dateToSql(1995, 1, 1)) {
-                var input = @vpiGetReal(vpi, 5) * @vpiGetReal(vpi, 6) // extendedprice * discount
-                @aggAdvance(&state.sum, &input)
-            //}
+        for (; @vpiHasNextFiltered(vpi); @vpiAdvanceFiltered(vpi)) {
+            state.count = state.count + 1
+            var input = @vpiGetReal(vpi, 5) * @vpiGetReal(vpi, 6) // extendedprice * discount
+            @aggAdvance(&state.sum, &input)
         }
     }
+    @tableIterClose(&tvi)
+}
 
-    // Pipeline 2 (Output to upper layers)
-    out = @ptrCast(*outputStruct, @resultBufferAllocRow(execCtx))
+fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
+    var out = @ptrCast(*Output, @resultBufferAllocRow(execCtx))
     out.out = @aggResult(&state.sum)
     @resultBufferFinalize(execCtx)
-    @tableIterClose(&tvi)
+}
+
+fun execQuery(execCtx: *ExecutionContext, state: *State) -> nil {
+    pipeline1(execCtx, state)
+    pipeline2(execCtx, state)
 }
 
 fun main(execCtx: *ExecutionContext) -> int32 {
     var state: State
+
     setUpState(execCtx, &state)
     execQuery(execCtx, &state)
     teardownState(execCtx, &state)
-    return 37
+
+    return state.count
 }
