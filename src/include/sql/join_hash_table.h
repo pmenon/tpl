@@ -45,21 +45,21 @@ class JoinHashTable {
   static constexpr uint32_t kDefaultHLLPrecision = 10;
 
   /**
-   * Construct a join hash table. All memory allocations are sourced from the
-   * injected @em memory, and thus, are ephemeral.
-   * @param memory The memory pool to allocate memory from
-   * @param tuple_size The size of the tuple stored in this join hash table
-   * @param use_concise_ht Whether to use a concise or generic join index
+   * Construct a join hash table. All memory allocations are sourced from the injected @em memory,
+   * and thus, are ephemeral.
+   * @param memory The memory pool to allocate memory from.
+   * @param tuple_size The size of the tuple stored in this join hash table.
+   * @param use_concise_ht Whether to use a concise or generic join index.
    */
   explicit JoinHashTable(MemoryPool *memory, uint32_t tuple_size, bool use_concise_ht = false);
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(JoinHashTable);
 
   /**
-   * Destructor
+   * Destructor.
    */
   ~JoinHashTable();
 
@@ -68,8 +68,8 @@ class JoinHashTable {
    * function only performs an allocation from the table's memory pool. No insertion into the table
    * is performed, meaning a subsequent JoinHashTable::Lookup() for the entry will not return the
    * inserted entry.
-   * @param hash The hash value of the tuple to insert
-   * @return A memory region where the caller can materialize the tuple
+   * @param hash The hash value of the tuple to insert.
+   * @return A memory region where the caller can materialize the tuple.
    */
   byte *AllocInputTuple(hash_t hash);
 
@@ -80,25 +80,20 @@ class JoinHashTable {
   void Build();
 
   /**
-   * The tuple-at-a-time iterator interface
-   */
-  class Iterator;
-
-  /**
-   * Lookup a single entry with hash value @em hash returning an iterator
-   * @tparam UseCHT Should the lookup use the concise or general table
-   * @param hash The hash value of the element to lookup
-   * @return An iterator over all elements that match the hash
+   * Lookup a single entry with hash value @em hash returning an iterator.
+   * @tparam UseCHT Should the lookup use the concise or general table.
+   * @param hash The hash value of the element to lookup.
+   * @return An iterator over all elements that match the hash.
    */
   template <bool UseCHT>
   HashTableEntryIterator Lookup(hash_t hash) const;
 
   /**
    * Perform a batch lookup of elements whose hash values are stored in @em hashes, storing the
-   * results in @em results
-   * @param num_tuples The number of tuples in the batch
-   * @param hashes The hash values of the probe elements
-   * @param results The heads of the bucket chain of the probed elements
+   * results in @em results.
+   * @param num_tuples The number of tuples in the batch.
+   * @param hashes The hash values of the probe elements.
+   * @param results The heads of the bucket chain of the probed elements.
    */
   void LookupBatch(uint32_t num_tuples, const hash_t hashes[],
                    const HashTableEntry *results[]) const;
@@ -106,8 +101,8 @@ class JoinHashTable {
   /**
    * Merge all thread-local hash tables stored in the state contained into this table. Perform the
    * merge in parallel.
-   * @param thread_state_container The container for all thread-local tables
-   * @param jht_offset The offset in the state where the hash table is
+   * @param thread_state_container The container for all thread-local tables.
+   * @param jht_offset The offset in the state where the hash table is.
    */
   void MergeParallel(const ThreadStateContainer *thread_state_container, uint32_t jht_offset);
 
@@ -143,16 +138,14 @@ class JoinHashTable {
    * @return The total number of elements in the table, including duplicates.
    */
   uint64_t GetElementCount() {
-    // We don't know if this table was built in parallel. To be sure, we acquire
-    // the latch before checking the owned entries vector.
+    // We don't know if this table was built in parallel. To be sure, we acquire the latch before
+    // checking the owned entries vector. This isn't a performance-critical function, so acquiring
+    // the latch shouldn't be a problem.
 
     util::SpinLatch::ScopedSpinLatch latch(&owned_latch_);
     if (!owned_.empty()) {
-      uint64_t count = 0;
-      for (const auto &entries : owned_) {
-        count += entries.size();
-      }
-      return count;
+      return std::accumulate(owned_.begin(), owned_.end(), uint64_t{0},
+                             [](auto c, const auto &entries) { return c + entries.size(); });
     }
 
     // Not built in parallel, check the entry vector.
