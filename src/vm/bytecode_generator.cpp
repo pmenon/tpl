@@ -825,7 +825,8 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call, ast::B
       LocalVar hash = VisitExpressionForRValue(call->arguments()[1]);
       Bytecode bytecode = Bytecode::AggregationHashTableInsert;
       if (call->arguments().size() > 2) {
-        TPL_ASSERT(call->arguments()[2]->IsLitExpr(), "Last argument must be a boolean literal");
+        TPL_ASSERT(call->arguments()[2]->IsBoolLiteral(),
+                   "Last argument must be a boolean literal");
         const bool partitioned = call->arguments()[2]->As<ast::LitExpr>()->bool_val();
         bytecode = partitioned ? Bytecode::AggregationHashTableInsertPartitioned
                                : Bytecode::AggregationHashTableInsert;

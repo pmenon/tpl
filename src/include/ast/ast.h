@@ -539,6 +539,7 @@ class Expr : public AstNode {
   void set_type(Type *type) { type_ = type; }
 
   bool IsNilLiteral() const;
+  bool IsBoolLiteral() const;
   bool IsStringLiteral() const;
   bool IsIntegerLiteral() const;
 

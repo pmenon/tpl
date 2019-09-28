@@ -36,6 +36,13 @@ bool Expr::IsNilLiteral() const {
   return false;
 }
 
+bool Expr::IsBoolLiteral() const {
+  if (auto *lit_expr = SafeAs<ast::LitExpr>()) {
+    return lit_expr->literal_kind() == ast::LitExpr::LitKind::Boolean;
+  }
+  return false;
+}
+
 bool Expr::IsStringLiteral() const {
   if (auto *lit_expr = SafeAs<ast::LitExpr>()) {
     return lit_expr->literal_kind() == ast::LitExpr::LitKind::String;
