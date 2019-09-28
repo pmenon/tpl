@@ -15,14 +15,14 @@ std::size_t ComputeRowSize(const Schema &schema) {
       case SqlTypeId::Boolean:
         tuple_size += sizeof(BoolVal);
         break;
-      case SqlTypeId::TinyInt:;
-      case SqlTypeId::SmallInt:;
-      case SqlTypeId::Integer:;
+      case SqlTypeId::TinyInt:
+      case SqlTypeId::SmallInt:
+      case SqlTypeId::Integer:
       case SqlTypeId::BigInt:
         tuple_size += sizeof(Integer);
         break;
-      case SqlTypeId::Real:;
-      case SqlTypeId::Double:;
+      case SqlTypeId::Real:
+      case SqlTypeId::Double:
       case SqlTypeId::Decimal:
         tuple_size += sizeof(Real);
         break;

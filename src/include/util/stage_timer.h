@@ -78,7 +78,7 @@ class StageTimer {
    * @return The total time across all stages.
    */
   double GetTotalElapsedTime() const {
-    return std::accumulate(stages_.begin(), stages_.end(), double(0),
+    return std::accumulate(stages_.begin(), stages_.end(), double{0},
                            [](double c, const Stage &stage) { return c + stage.time(); });
   }
 
