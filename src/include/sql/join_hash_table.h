@@ -20,14 +20,25 @@ namespace tpl::sql {
 class ThreadStateContainer;
 
 /**
- * The main join hash table. Join hash tables are bulk-loaded through calls to
- * @em AllocInputTuple() and frozen after calling @em Build(). Thus, they're
- * write-once read-many (WORM) structures.
+ * The main class used to for hash joins. JoinHashTables are bulk-loaded through calls to
+ * JoinHashTable::AllocInputTuple() and lazily built through JoinHashTable::Build(). After a
+ * JoinHashTable has been built once, it is frozen and immutable. Thus, they're write-once read-many
+ * (WORM) structures.
  *
- * In parallel mode, thread-local join hash tables are lazily built and merged
- * in parallel into a global join hash table through a call to
- * @em MergeParallel(). After this call, the global table takes ownership of all
- * thread-local allocated memory and hash index.
+ * @code
+ * JoinHashTable jht = ...
+ * for (tuple in table) {
+ *   auto tuple = reinterpret_cast<YourTuple *>(jht.AllocInputTuple());
+ *   tuple->col_a = ...
+ *   ...
+ * }
+ * // All insertions complete, lazily build the table
+ * jht.Build();
+ * @endcode
+ *
+ * In parallel mode, thread-local join hash tables are lazily built and merged in parallel into a
+ * global join hash table through a call to JoinHashTable::MergeParallel(). After this call, the
+ * global table takes ownership of all thread-local allocated memory and hash index.
  */
 class JoinHashTable {
  public:
@@ -53,18 +64,18 @@ class JoinHashTable {
   ~JoinHashTable();
 
   /**
-   * Allocate storage in the hash table for an input tuple whose hash value is
-   * @em hash. This function only performs an allocation from the table's memory
-   * pool. No insertion into the table is performed, meaning a subsequent
-   * @em Lookup() for the entry will not return the inserted entry.
+   * Allocate storage in the hash table for an input tuple whose hash value is @em hash. This
+   * function only performs an allocation from the table's memory pool. No insertion into the table
+   * is performed, meaning a subsequent JoinHashTable::Lookup() for the entry will not return the
+   * inserted entry.
    * @param hash The hash value of the tuple to insert
    * @return A memory region where the caller can materialize the tuple
    */
   byte *AllocInputTuple(hash_t hash);
 
   /**
-   * Fully construct the join hash table. Nothing is done if the join hash table
-   * has already been built. After building, the table becomes read-only.
+   * Fully construct the join hash table. Nothing is done if the join hash table has already been
+   * built. After building, the table becomes read-only.
    */
   void Build();
 
@@ -83,8 +94,8 @@ class JoinHashTable {
   HashTableEntryIterator Lookup(hash_t hash) const;
 
   /**
-   * Perform a batch lookup of elements whose hash values are stored in @em
-   * hashes, storing the results in @em results
+   * Perform a batch lookup of elements whose hash values are stored in @em hashes, storing the
+   * results in @em results
    * @param num_tuples The number of tuples in the batch
    * @param hashes The hash values of the probe elements
    * @param results The heads of the bucket chain of the probed elements
@@ -93,45 +104,43 @@ class JoinHashTable {
                    const HashTableEntry *results[]) const;
 
   /**
-   * Merge all thread-local hash tables stored in the state contained into this
-   * table. Perform the merge in parallel.
+   * Merge all thread-local hash tables stored in the state contained into this table. Perform the
+   * merge in parallel.
    * @param thread_state_container The container for all thread-local tables
    * @param jht_offset The offset in the state where the hash table is
    */
   void MergeParallel(const ThreadStateContainer *thread_state_container, uint32_t jht_offset);
 
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
-
   /**
-   * Return the amount of memory the buffered tuples occupy
+   * @return The total number of bytes used to materialize tuples. This excludes space required for
+   *         the join index.
    */
   uint64_t GetBufferedTupleMemoryUsage() const { return entries_.size() * entries_.element_size(); }
 
   /**
-   * Get the amount of memory used by the join index only (i.e., excluding space
-   * used to store materialized build-side tuples)
+   * @return The total number of bytes used by the join index only. The join index (also referred to
+   *         as the hash table directory), excludes storage for materialized tuple contents.
    */
   uint64_t GetJoinIndexMemoryUsage() const {
-    return use_concise_hash_table() ? concise_hash_table_.GetTotalMemoryUsage()
-                                    : generic_hash_table_.GetTotalMemoryUsage();
+    return UsingConciseHashTable() ? concise_hash_table_.GetTotalMemoryUsage()
+                                   : generic_hash_table_.GetTotalMemoryUsage();
   }
 
   /**
-   * Return the total size of the join hash table in bytes
+   * @return The total number of bytes used by this table. This includes both the raw tuple storage
+   *         and the hash table directory storage.
    */
   uint64_t GetTotalMemoryUsage() const {
     return GetBufferedTupleMemoryUsage() + GetJoinIndexMemoryUsage();
   }
 
   /**
-   * Does this JHT use a separate bloom filter?
+   * @return True if this table uses an early filtering bloom filter; false otherwise.
    */
   bool HasBloomFilter() const { return !bloom_filter_.Empty(); }
 
   /**
-   * Return the total number of inserted elements, including duplicates
+   * @return The total number of elements in the table, including duplicates.
    */
   uint64_t GetElementCount() {
     // We don't know if this table was built in parallel. To be sure, we acquire
@@ -151,19 +160,19 @@ class JoinHashTable {
   }
 
   /**
-   * Has the hash table been built?
+   * @return True if the join hash table has been built; false otherwise.
    */
-  bool is_built() const { return built_; }
+  bool IsBuilt() const { return built_; }
 
   /**
-   * Is this join using a concise hash table?
+   * @return True if this join hash table uses a concise table under the hood.
    */
-  bool use_concise_hash_table() const { return use_concise_ht_; }
+  bool UsingConciseHashTable() const { return use_concise_ht_; }
 
   /**
-   * Access the bloom filter
+   * @return The underlying bloom filter.
    */
-  const BloomFilter *bloom_filter() const { return &bloom_filter_; }
+  const BloomFilter *GetBloomFilter() const { return &bloom_filter_; }
 
  private:
   FRIEND_TEST(JoinHashTableTest, LazyInsertionTest);

@@ -564,7 +564,7 @@ void JoinHashTable::BuildConciseHashTable() {
 }
 
 void JoinHashTable::Build() {
-  if (is_built()) {
+  if (IsBuilt()) {
     return;
   }
 
@@ -574,7 +574,7 @@ void JoinHashTable::Build() {
   timer.Start();
 
   // Build
-  if (use_concise_hash_table()) {
+  if (UsingConciseHashTable()) {
     BuildConciseHashTable();
   } else {
     BuildGenericHashTable();
@@ -645,9 +645,9 @@ void JoinHashTable::LookupBatchInConciseHashTable(uint32_t num_tuples, const has
 
 void JoinHashTable::LookupBatch(uint32_t num_tuples, const hash_t hashes[],
                                 const HashTableEntry *results[]) const {
-  TPL_ASSERT(is_built(), "Cannot perform lookup before table is built!");
+  TPL_ASSERT(IsBuilt(), "Cannot perform lookup before table is built!");
 
-  if (use_concise_hash_table()) {
+  if (UsingConciseHashTable()) {
     LookupBatchInConciseHashTable(num_tuples, hashes, results);
   } else {
     LookupBatchInGenericHashTable(num_tuples, hashes, results);
