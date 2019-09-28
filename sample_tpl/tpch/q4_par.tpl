@@ -1,6 +1,6 @@
 struct OutputStruct {
-  o_orderpriority : StringVal
-  order_count     : Integer
+    o_orderpriority : StringVal
+    order_count     : Integer
 }
 
 struct JoinBuildRow {
@@ -29,21 +29,21 @@ struct State {
 }
 
 struct ThreadState1 {
-    ts_join_table : JoinHashTable
-    filter        : FilterManager
+    join_table : JoinHashTable
+    filter     : FilterManager
 }
 
 struct ThreadState2 {
-    ts_agg_table  : AggregationHashTable
-    filter        : FilterManager
+    agg_table  : AggregationHashTable
+    filter     : FilterManager
 }
 
 struct ThreadState3 {
-    ts_sorter : Sorter
+    sorter : Sorter
 }
 
 // Check that two join keys are equal
-fun checkJoinKey(execCtx: *ExecutionContext, probe: *VectorProjectionIterator, build_row: *JoinBuildRow) -> bool {
+fun checkJoinKey(state: *State, probe: *VectorProjectionIterator, build_row: *JoinBuildRow) -> bool {
     // l_orderkey == o_orderkey
     return @sqlToBool(@vpiGetInt(probe, 0) == build_row.o_orderkey)
 }
@@ -67,25 +67,24 @@ fun sorterCompare(lhs: *SorterRow, rhs: *SorterRow) -> int32 {
     return 0
 }
 
-fun p1Filter1(vec: *VectorProjectionIterator) -> int32 {
+fun p1_filter(vec: *VectorProjectionIterator) -> int32 {
     var lo = @dateToSql(1993, 7, 1)
     var hi = @dateToSql(1993, 10, 1)
-    for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-        // 1993-07-01 <= o_orderdate <= 1993-10-01
-        @vpiMatch(vec, @vpiGetDate(vec, 4) >= lo and @vpiGetDate(vec, 4) <= hi)
-    }
-    @vpiResetFiltered(vec)
+    var filter: VectorFilterExecutor
+    @filterExecInit(&filter, vec)
+    @filterExecGe(&filter, 4, lo)
+    @filterExecLe(&filter, 4, hi)
+    @filterExecFinish(&filter)
+    @filterExecFree(&filter)
     return 0
 }
 
-fun p2Filter2(vec: *VectorProjectionIterator) -> int32 {
-    var lo = @dateToSql(1993, 7, 1)
-    var hi = @dateToSql(1993, 10, 1)
-    for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-        // if l_commitdate < l_receiptdate
-        @vpiMatch(vec, @vpiGetDate(vec, 11) < @vpiGetDate(vec, 12))
-    }
-    @vpiResetFiltered(vec)
+fun p2_filter(vec: *VectorProjectionIterator) -> int32 {
+    var filter: VectorFilterExecutor
+    @filterExecInit(&filter, vec)
+    @filterExecLt(&filter, 11, 12)
+    @filterExecFinish(&filter)
+    @filterExecFree(&filter)
     return 0
 }
 
@@ -110,14 +109,14 @@ fun tearDownState(execCtx: *ExecutionContext, state: *State) -> nil {
 
 fun p1_initThreadState(execCtx: *ExecutionContext, ts: *ThreadState1) -> nil {
   @filterManagerInit(&ts.filter)
-  @filterManagerInsertFilter(&ts.filter, p1Filter1)
+  @filterManagerInsertFilter(&ts.filter, p1_filter)
   @filterManagerFinalize(&ts.filter)
-  @joinHTInit(&ts.ts_join_table, @execCtxGetMem(execCtx), @sizeOf(JoinBuildRow))
+  @joinHTInit(&ts.join_table, @execCtxGetMem(execCtx), @sizeOf(JoinBuildRow))
 }
 
 fun p1_tearDownThreadState(execCtx: *ExecutionContext, ts: *ThreadState1) -> nil {
   @filterManagerFree(&ts.filter)
-  @joinHTFree(&ts.ts_join_table)
+  @joinHTFree(&ts.join_table)
 }
 
 // -----------------------------------------------------------------------------
@@ -126,14 +125,14 @@ fun p1_tearDownThreadState(execCtx: *ExecutionContext, ts: *ThreadState1) -> nil
 
 fun p2_initThreadState(execCtx: *ExecutionContext, ts: *ThreadState2) -> nil {
   @filterManagerInit(&ts.filter)
-  @filterManagerInsertFilter(&ts.filter, p2Filter2)
+  @filterManagerInsertFilter(&ts.filter, p2_filter)
   @filterManagerFinalize(&ts.filter)
-  @aggHTInit(&ts.ts_agg_table, @execCtxGetMem(execCtx), @sizeOf(AggRow))
+  @aggHTInit(&ts.agg_table, @execCtxGetMem(execCtx), @sizeOf(AggRow))
 }
 
 fun p2_tearDownThreadState(execCtx: *ExecutionContext, ts: *ThreadState2) -> nil {
   @filterManagerFree(&ts.filter)
-  @aggHTFree(&ts.ts_agg_table)
+  @aggHTFree(&ts.agg_table)
 }
 
 // -----------------------------------------------------------------------------
@@ -141,11 +140,11 @@ fun p2_tearDownThreadState(execCtx: *ExecutionContext, ts: *ThreadState2) -> nil
 // -----------------------------------------------------------------------------
 
 fun p3_initThreadState(execCtx: *ExecutionContext, ts: *ThreadState3) -> nil {
-  @sorterInit(&ts.ts_sorter, @execCtxGetMem(execCtx), sorterCompare, @sizeOf(SorterRow))
+  @sorterInit(&ts.sorter, @execCtxGetMem(execCtx), sorterCompare, @sizeOf(SorterRow))
 }
 
 fun p3_tearDownThreadState(execCtx: *ExecutionContext, ts: *ThreadState3) -> nil {
-  @sorterFree(&ts.ts_sorter)
+  @sorterFree(&ts.sorter)
 }
 
 // Pipeline 1 Worker (Join Build)
@@ -159,7 +158,7 @@ fun p1_worker(state: *State, ts: *ThreadState1, o_tvi: *TableVectorIterator) -> 
         // Insert into JHT
         for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
             var hash_val = @hash(@vpiGetInt(vec, 0)) // o_orderkey
-            var build_row = @ptrCast(*JoinBuildRow, @joinHTInsert(&ts.ts_join_table, hash_val))
+            var build_row = @ptrCast(*JoinBuildRow, @joinHTInsert(&ts.join_table, hash_val))
             build_row.o_orderkey = @vpiGetInt(vec, 0) // o_orderkey
             build_row.o_orderpriority = @vpiGetString(vec, 5) // o_orderpriority
             build_row.match_flag = false
@@ -192,19 +191,20 @@ fun p2_worker(state: *State, ts: *ThreadState2, l_tvi: *TableVectorIterator) -> 
         @filtersRun(&ts.filter, vec)
 
         for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
-            // Step 2: Probe Join Hash Table
             var hash_val = @hash(@vpiGetInt(vec, 0)) // l_orderkey
             var join_iter: HashTableEntryIterator
-            for (@joinHTLookup(&state.join_table, &join_iter, hash_val); @htEntryIterHasNext(&join_iter, checkJoinKey, state, vec);) {
+            for (@joinHTLookup(&state.join_table, &join_iter, hash_val);
+                 @htEntryIterHasNext(&join_iter, checkJoinKey, state, vec);) {
+
                 var build_row = @ptrCast(*JoinBuildRow, @htEntryIterGetRow(&join_iter))
                 // match each row once
                 if (!build_row.match_flag) {
                     build_row.match_flag = true
                     // Step 3: Build Agg Hash Table
                     var agg_hash_val = @hash(build_row.o_orderpriority)
-                    var agg = @ptrCast(*AggRow, @aggHTLookup(&ts.ts_agg_table, agg_hash_val, checkAggKey, build_row))
+                    var agg = @ptrCast(*AggRow, @aggHTLookup(&ts.agg_table, agg_hash_val, checkAggKey, build_row))
                     if (agg == nil) {
-                        agg = @ptrCast(*AggRow, @aggHTInsert(&ts.ts_agg_table, agg_hash_val))
+                        agg = @ptrCast(*AggRow, @aggHTInsert(&ts.agg_table, agg_hash_val))
                         agg.o_orderpriority = build_row.o_orderpriority
                         @aggInit(&agg.order_count)
                     } else {
@@ -256,7 +256,7 @@ fun p3_worker(state: *State, ts: *ThreadState3, agg_table: *AggregationHashTable
     for (@aggHTIterInit(&aht_iter, agg_table); @aggHTIterHasNext(&aht_iter); @aggHTIterNext(&aht_iter)) {
         var agg = @ptrCast(*AggRow, @aggHTIterGetRow(&aht_iter))
         // Step 2: Build Sorter
-        var sorter_row = @ptrCast(*SorterRow, @sorterInsert(&ts.ts_sorter))
+        var sorter_row = @ptrCast(*SorterRow, @sorterInsert(&ts.sorter))
         sorter_row.o_orderpriority = agg.o_orderpriority
         sorter_row.order_count = @aggResult(&agg.order_count)
     }
@@ -286,7 +286,6 @@ fun pipeline4(execCtx: *ExecutionContext, state: *State) -> nil {
     for (@sorterIterInit(&sort_iter, &state.sorter);
          @sorterIterHasNext(&sort_iter);
          @sorterIterNext(&sort_iter)) {
-        state.count = state.count + 1
 
         var out = @ptrCast(*OutputStruct, @resultBufferAllocRow(execCtx))
         var sorter_row = @ptrCast(*SorterRow, @sorterIterGetRow(&sort_iter))
