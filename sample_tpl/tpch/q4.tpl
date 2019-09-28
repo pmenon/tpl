@@ -125,9 +125,8 @@ fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
                         agg = @ptrCast(*AggRow, @aggHTInsert(&state.agg_table, agg_hash_val))
                         agg.o_orderpriority = build_row.o_orderpriority
                         @aggInit(&agg.order_count)
-                    } else {
-                        @aggAdvance(&agg.order_count, &build_row.o_orderpriority)
                     }
+                    @aggAdvance(&agg.order_count, &build_row.o_orderpriority)
                 }
             }
         }

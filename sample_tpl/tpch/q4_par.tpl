@@ -207,9 +207,8 @@ fun p2_worker(state: *State, ts: *ThreadState2, l_tvi: *TableVectorIterator) -> 
                         agg = @ptrCast(*AggRow, @aggHTInsert(&ts.agg_table, agg_hash_val))
                         agg.o_orderpriority = build_row.o_orderpriority
                         @aggInit(&agg.order_count)
-                    } else {
-                        @aggAdvance(&agg.order_count, &build_row.o_orderpriority)
                     }
+                    @aggAdvance(&agg.order_count, &build_row.o_orderpriority)
                 }
             }
         }
