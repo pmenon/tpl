@@ -242,6 +242,11 @@ class RealMaxAggregate : public MaxAggregate<Real> {};
 class DateMaxAggregate : public MaxAggregate<DateVal> {};
 
 /**
+ * Timestamp Max
+ */
+class TimestampMaxAggregate : public MaxAggregate<TimestampVal> {};
+
+/**
  * String Max
  */
 class StringMaxAggregate : public MaxAggregate<StringVal> {};
@@ -321,6 +326,11 @@ class RealMinAggregate : public MinAggregate<Real> {};
  * Date Min
  */
 class DateMinAggregate : public MinAggregate<DateVal> {};
+
+/**
+ * Timestamp Min
+ */
+class TimestampMinAggregate : public MinAggregate<TimestampVal> {};
 
 /**
  * String Min
