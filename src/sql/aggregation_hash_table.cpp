@@ -481,7 +481,7 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(void *const 
   merge_partition_fn_(query_state, agg_table, &iter);
 
   timer.Stop();
-  LOG_INFO(
+  LOG_DEBUG(
       "Overflow Partition {}: estimated size = {}, actual size = {}, "
       "build time = {:2f} ms",
       partition_idx, estimated_size, agg_table->GetTupleCount(), timer.elapsed());
