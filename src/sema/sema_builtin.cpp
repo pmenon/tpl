@@ -155,6 +155,20 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
       call->set_type(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
       break;
     }
+    case ast::Builtin::AggHashTableLinkEntry: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      // Second argument is a HashTableEntry*
+      const auto entry_kind = ast::BuiltinType::HashTableEntry;
+      if (!IsPointerToSpecificBuiltin(args[1]->type(), entry_kind)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(entry_kind)->PointerTo());
+        return;
+      }
+      // Return nothing
+      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
     case ast::Builtin::AggHashTableLookup: {
       if (!CheckArgCount(call, 4)) {
         return;
@@ -336,14 +350,16 @@ void Sema::CheckBuiltinAggPartIterCall(ast::CallExpr *call, ast::Builtin builtin
       call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
+    case ast::Builtin::AggPartIterGetRowEntry: {
+      call->set_type(GetBuiltinType(ast::BuiltinType::HashTableEntry)->PointerTo());
+      break;
+    }
     case ast::Builtin::AggPartIterGetRow: {
-      const auto byte_kind = ast::BuiltinType::Uint8;
-      call->set_type(GetBuiltinType(byte_kind)->PointerTo());
+      call->set_type(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
       break;
     }
     case ast::Builtin::AggPartIterGetHash: {
-      const auto hash_val_kind = ast::BuiltinType::Uint64;
-      call->set_type(GetBuiltinType(hash_val_kind));
+      call->set_type(GetBuiltinType(ast::BuiltinType::Uint64));
       break;
     }
     default: { UNREACHABLE("Impossible aggregation partition iterator call"); }
@@ -1472,6 +1488,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     }
     case ast::Builtin::AggHashTableInit:
     case ast::Builtin::AggHashTableInsert:
+    case ast::Builtin::AggHashTableLinkEntry:
     case ast::Builtin::AggHashTableLookup:
     case ast::Builtin::AggHashTableProcessBatch:
     case ast::Builtin::AggHashTableMovePartitions:
@@ -1491,6 +1508,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::AggPartIterHasNext:
     case ast::Builtin::AggPartIterNext:
     case ast::Builtin::AggPartIterGetRow:
+    case ast::Builtin::AggPartIterGetRowEntry:
     case ast::Builtin::AggPartIterGetHash: {
       CheckBuiltinAggPartIterCall(call, builtin);
       break;

@@ -824,6 +824,11 @@ VM_OP_HOT void OpAggregationHashTableAllocTuplePartitioned(
   *result = agg_hash_table->AllocInputTuplePartitioned(hash_val);
 }
 
+VM_OP_HOT void OpAggregationHashTableLinkHashTableEntry(
+    tpl::sql::AggregationHashTable *agg_hash_table, tpl::sql::HashTableEntry *entry) {
+  agg_hash_table->Insert(entry);
+}
+
 VM_OP_HOT void OpAggregationHashTableLookup(byte **result,
                                             tpl::sql::AggregationHashTable *const agg_hash_table,
                                             const hash_t hash_val,
@@ -892,6 +897,11 @@ VM_OP_HOT void OpAggregationOverflowPartitionIteratorGetHash(
 VM_OP_HOT void OpAggregationOverflowPartitionIteratorGetRow(
     const byte **row, tpl::sql::AHTOverflowPartitionIterator *iter) {
   *row = iter->GetRow();
+}
+
+VM_OP_HOT void OpAggregationOverflowPartitionIteratorGetRowEntry(
+    tpl::sql::HashTableEntry **entry, tpl::sql::AHTOverflowPartitionIterator *iter) {
+  *entry = iter->GetEntryForRow();
 }
 
 //

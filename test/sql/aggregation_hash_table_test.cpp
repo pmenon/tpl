@@ -380,8 +380,7 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
       if (existing != nullptr) {
         existing->Merge(*partial_agg);
       } else {
-        auto *new_agg = table->AllocInputTuple(iter->GetRowHash());
-        new (new_agg) AggTuple(*partial_agg);
+        table->Insert(iter->GetEntryForRow());
       }
     }
   };

@@ -835,6 +835,12 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call, ast::B
       execution_result()->set_destination(dest.ValueOf());
       break;
     }
+    case ast::Builtin::AggHashTableLinkEntry: {
+      LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
+      LocalVar entry = VisitExpressionForRValue(call->arguments()[1]);
+      emitter()->Emit(Bytecode::AggregationHashTableLinkHashTableEntry, agg_ht, entry);
+      break;
+    }
     case ast::Builtin::AggHashTableLookup: {
       LocalVar dest = execution_result()->GetOrCreateDestination(call->type());
       LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
@@ -945,6 +951,13 @@ void BytecodeGenerator::VisitBuiltinAggPartIterCall(ast::CallExpr *call, ast::Bu
       LocalVar iter = VisitExpressionForRValue(call->arguments()[0]);
       emitter()->Emit(Bytecode::AggregationOverflowPartitionIteratorGetRow, row, iter);
       execution_result()->set_destination(row.ValueOf());
+      break;
+    }
+    case ast::Builtin::AggPartIterGetRowEntry: {
+      LocalVar entry = execution_result()->GetOrCreateDestination(call->type());
+      LocalVar iter = VisitExpressionForRValue(call->arguments()[0]);
+      emitter()->Emit(Bytecode::AggregationOverflowPartitionIteratorGetRowEntry, entry, iter);
+      execution_result()->set_destination(entry.ValueOf());
       break;
     }
     case ast::Builtin::AggPartIterGetHash: {
@@ -1478,6 +1491,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     }
     case ast::Builtin::AggHashTableInit:
     case ast::Builtin::AggHashTableInsert:
+    case ast::Builtin::AggHashTableLinkEntry:
     case ast::Builtin::AggHashTableLookup:
     case ast::Builtin::AggHashTableProcessBatch:
     case ast::Builtin::AggHashTableMovePartitions:
@@ -1489,6 +1503,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::AggPartIterHasNext:
     case ast::Builtin::AggPartIterNext:
     case ast::Builtin::AggPartIterGetRow:
+    case ast::Builtin::AggPartIterGetRowEntry:
     case ast::Builtin::AggPartIterGetHash: {
       VisitBuiltinAggPartIterCall(call, builtin);
       break;

@@ -930,6 +930,13 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(AggregationHashTableLinkHashTableEntry) : {
+    auto *agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto *entry = frame->LocalAt<sql::HashTableEntry *>(READ_LOCAL_ID());
+    OpAggregationHashTableLinkHashTableEntry(agg_hash_table, entry);
+    DISPATCH_NEXT();
+  }
+
   OP(AggregationHashTableLookup) : {
     auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
     auto *agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
@@ -1054,6 +1061,13 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     auto *row = frame->LocalAt<const byte **>(READ_LOCAL_ID());
     auto *overflow_iter = frame->LocalAt<sql::AHTOverflowPartitionIterator *>(READ_LOCAL_ID());
     OpAggregationOverflowPartitionIteratorGetRow(row, overflow_iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationOverflowPartitionIteratorGetRowEntry) : {
+    auto *entry = frame->LocalAt<sql::HashTableEntry **>(READ_LOCAL_ID());
+    auto *overflow_iter = frame->LocalAt<sql::AHTOverflowPartitionIterator *>(READ_LOCAL_ID());
+    OpAggregationOverflowPartitionIteratorGetRowEntry(entry, overflow_iter);
     DISPATCH_NEXT();
   }
 

@@ -79,6 +79,7 @@ namespace tpl::ast {
   /* Aggregations */                                            \
   F(AggHashTableInit, aggHTInit)                                \
   F(AggHashTableInsert, aggHTInsert)                            \
+  F(AggHashTableLinkEntry, aggHTLink)                           \
   F(AggHashTableLookup, aggHTLookup)                            \
   F(AggHashTableProcessBatch, aggHTProcessBatch)                \
   F(AggHashTableMovePartitions, aggHTMoveParts)                 \
@@ -93,6 +94,7 @@ namespace tpl::ast {
   F(AggPartIterNext, aggPartIterNext)                           \
   F(AggPartIterGetHash, aggPartIterGetHash)                     \
   F(AggPartIterGetRow, aggPartIterGetRow)                       \
+  F(AggPartIterGetRowEntry, aggPartIterGetRowEntry)             \
   F(AggInit, aggInit)                                           \
   F(AggAdvance, aggAdvance)                                     \
   F(AggMerge, aggMerge)                                         \

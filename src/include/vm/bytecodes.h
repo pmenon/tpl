@@ -234,6 +234,7 @@ namespace tpl::vm {
   F(AggregationHashTableInit, OperandType::Local, OperandType::Local, OperandType::Local)                              \
   F(AggregationHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                        \
   F(AggregationHashTableAllocTuplePartitioned, OperandType::Local, OperandType::Local, OperandType::Local)             \
+  F(AggregationHashTableLinkHashTableEntry, OperandType::Local, OperandType::Local)                                    \
   F(AggregationHashTableLookup, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::FunctionId,   \
       OperandType::Local)                                                                                              \
   F(AggregationHashTableProcessBatch, OperandType::Local, OperandType::Local, OperandType::FunctionId,                 \
@@ -252,6 +253,7 @@ namespace tpl::vm {
   F(AggregationOverflowPartitionIteratorNext, OperandType::Local)                                                      \
   F(AggregationOverflowPartitionIteratorGetHash, OperandType::Local, OperandType::Local)                               \
   F(AggregationOverflowPartitionIteratorGetRow, OperandType::Local, OperandType::Local)                                \
+  F(AggregationOverflowPartitionIteratorGetRowEntry, OperandType::Local, OperandType::Local)                           \
   /* Aggregates */                                                                                                     \
   F(CountAggregateInit, OperandType::Local)                                                                            \
   F(CountAggregateAdvance, OperandType::Local, OperandType::Local)                                                     \

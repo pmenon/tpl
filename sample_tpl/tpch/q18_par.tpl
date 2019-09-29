@@ -134,7 +134,7 @@ fun checkAggKey1(payload: *AggPayload1, row: *AggValues1) -> bool {
 }
 
 fun aggKeyCheckPartial1(agg_payload1: *AggPayload1, agg_payload2: *AggPayload1) -> bool {
-    return @sqlToBool(agg_payload1.l_orderkey == agg_payload2.l_orderkey)
+    return agg_payload1.l_orderkey == agg_payload2.l_orderkey
 }
 
 fun checkAggKey2(payload: *AggPayload2, row: *AggValues2) -> bool {
@@ -301,21 +301,6 @@ fun gatherCounters4(qs: *State, ts: *P4_ThreadState) -> nil {
 // Pipeline 1
 // -----------------------------------------------------------------------------
 
-fun mergerPartitions1(state: *State, agg_table: *AggregationHashTable, iter: *AHTOverflowPartitionIterator) -> nil {
-    var x = 0
-    for (; @aggPartIterHasNext(iter); @aggPartIterNext(iter)) {
-        var partial_hash = @aggPartIterGetHash(iter)
-        var partial = @ptrCast(*AggPayload1, @aggPartIterGetRow(iter))
-        var agg_payload = @ptrCast(*AggPayload1, @aggHTLookup(agg_table, partial_hash, aggKeyCheckPartial1, partial))
-        if (agg_payload == nil) {
-            agg_payload = @ptrCast(*AggPayload1, @aggHTInsert(agg_table, partial_hash))
-            agg_payload.l_orderkey = partial.l_orderkey
-            @aggInit(&agg_payload.sum_quantity)
-        }
-        @aggMerge(&agg_payload.sum_quantity, &partial.sum_quantity)
-    }
-}
-
 // Scan lineitem, build AHT1
 fun p1_worker(state: *State, ts: *P1_ThreadState, l_tvi: *TableVectorIterator) -> nil {
     var x = 0
@@ -333,6 +318,20 @@ fun p1_worker(state: *State, ts: *P1_ThreadState, l_tvi: *TableVectorIterator) -
                 @aggInit(&agg_payload.sum_quantity)
             }
             @aggAdvance(&agg_payload.sum_quantity, &agg_input.sum_quantity)
+        }
+    }
+}
+
+fun mergerPartitions1(state: *State, agg_table: *AggregationHashTable, iter: *AHTOverflowPartitionIterator) -> nil {
+    var x = 0
+    for (; @aggPartIterHasNext(iter); @aggPartIterNext(iter)) {
+        var partial_hash = @aggPartIterGetHash(iter)
+        var partial = @ptrCast(*AggPayload1, @aggPartIterGetRow(iter))
+        var agg_payload = @ptrCast(*AggPayload1, @aggHTLookup(agg_table, partial_hash, aggKeyCheckPartial1, partial))
+        if (agg_payload == nil) {
+            @aggHTLink(agg_table, @aggPartIterGetRowEntry(iter))
+        } else {
+            @aggMerge(&agg_payload.sum_quantity, &partial.sum_quantity)
         }
     }
 }
@@ -489,15 +488,10 @@ fun mergerPartitions5(state: *State, agg_table: *AggregationHashTable, iter: *AH
         var partial = @ptrCast(*AggPayload2, @aggPartIterGetRow(iter))
         var agg_payload = @ptrCast(*AggPayload2, @aggHTLookup(agg_table, partial_hash, aggKeyCheckPartial2, partial))
         if (agg_payload == nil) {
-            agg_payload = @ptrCast(*AggPayload2, @aggHTInsert(agg_table, partial_hash))
-            agg_payload.c_name = partial.c_name
-            agg_payload.c_custkey = partial.c_custkey
-            agg_payload.o_orderkey = partial.o_orderkey
-            agg_payload.o_orderdate = partial.o_orderdate
-            agg_payload.o_totalprice = partial.o_totalprice
-            @aggInit(&agg_payload.sum_quantity)
+            @aggHTLink(agg_table, @aggPartIterGetRowEntry(iter))
+        } else {
+            @aggMerge(&agg_payload.sum_quantity, &partial.sum_quantity)
         }
-        @aggMerge(&agg_payload.sum_quantity, &partial.sum_quantity)
     }
 }
 

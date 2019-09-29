@@ -503,13 +503,19 @@ class AHTOverflowPartitionIterator {
    * @param partitions_end The end of the range.
    */
   AHTOverflowPartitionIterator(HashTableEntry **partitions_begin, HashTableEntry **partitions_end)
-      : partitions_iter_(partitions_begin), partitions_end_(partitions_end), curr_(nullptr) {
-    Next();
+      : partitions_iter_(partitions_begin),
+        partitions_end_(partitions_end),
+        curr_(nullptr),
+        next_(nullptr) {
+    // First find a partition that has a chain
+    FindPartitionHead();
+    if (next_ != nullptr) {
+      Next();
+    }
   }
 
   /**
-   * Are there more overflow entries?
-   * @return True if the iterator has more data; false otherwise
+   * @return True if the iterator has more data; false otherwise.
    */
   bool HasNext() const { return curr_ != nullptr; }
 
@@ -517,17 +523,15 @@ class AHTOverflowPartitionIterator {
    * Move to the next overflow entry.
    */
   void Next() {
-    // Try to move along current partition
-    if (curr_ != nullptr) {
-      curr_ = curr_->next;
-      if (curr_ != nullptr) {
-        return;
-      }
-    }
+    curr_ = next_;
 
-    // Find next non-empty partition
-    while (curr_ == nullptr && partitions_iter_ != partitions_end_) {
-      curr_ = *partitions_iter_++;
+    if (TPL_LIKELY(next_ != nullptr)) {
+      next_ = next_->next;
+
+      // If 'next_' is NULL, we'are the end of a partition. Find the next non-empty partition.
+      if (next_ == nullptr) {
+        FindPartitionHead();
+      }
     }
   }
 
@@ -563,6 +567,13 @@ class AHTOverflowPartitionIterator {
   }
 
  private:
+  void FindPartitionHead() {
+    while (next_ == nullptr && partitions_iter_ != partitions_end_) {
+      next_ = *partitions_iter_++;
+    }
+  }
+
+ private:
   // The current position in the partitions array
   HashTableEntry **partitions_iter_;
 
@@ -571,6 +582,9 @@ class AHTOverflowPartitionIterator {
 
   // The current overflow entry
   HashTableEntry *curr_;
+
+  // The next value overflow entry
+  HashTableEntry *next_;
 };
 
 }  // namespace tpl::sql
