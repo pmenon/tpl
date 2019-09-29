@@ -1,48 +1,48 @@
 struct OutputStruct {
-  c_name : StringVal
-  c_custkey : Integer
-  o_orderkey : Integer
-  o_orderdate : Date
-  o_totalprice : Real
-  sum_quantity : Real
+    c_name : StringVal
+    c_custkey : Integer
+    o_orderkey : Integer
+    o_orderdate : Date
+    o_totalprice : Real
+    sum_quantity : Real
 }
 
 struct State {
-  count       : int32 // Debug
-  join_table1 : JoinHashTable
-  join_table2 : JoinHashTable
-  join_table3 : JoinHashTable
-  agg_table1  : AggregationHashTable
-  agg_table2  : AggregationHashTable
-  sorter      : Sorter
+    count       : int32 // Debug
+    join_table1 : JoinHashTable
+    join_table2 : JoinHashTable
+    join_table3 : JoinHashTable
+    agg_table1  : AggregationHashTable
+    agg_table2  : AggregationHashTable
+    sorter      : Sorter
 }
 
-struct ThreadState1 {
+struct P1_ThreadState {
     ts_agg_table : AggregationHashTable
     ts_count     : int32
 }
 
-struct ThreadState2 {
+struct P2_ThreadState {
     ts_join_table : JoinHashTable
     ts_count      : int32
 }
 
-struct ThreadState3 {
+struct P3_ThreadState {
     ts_join_table : JoinHashTable
     ts_count      : int32
 }
 
-struct ThreadState4 {
+struct P4_ThreadState {
     ts_join_table : JoinHashTable
     ts_count      : int32
 }
 
-struct ThreadState5 {
+struct P5_ThreadState {
     ts_agg_table : AggregationHashTable
     ts_count     : int32
 }
 
-struct ThreadState6 {
+struct P6_ThreadState {
     ts_sorter : Sorter
     ts_count  : int32
 }
@@ -180,6 +180,9 @@ fun sorterCompare(lhs: *SorterRow, rhs: *SorterRow) -> int32 {
     return 0
 }
 
+// -----------------------------------------------------------------------------
+// Query State
+// -----------------------------------------------------------------------------
 
 fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
     state.count = 0
@@ -200,76 +203,103 @@ fun tearDownState(execCtx: *ExecutionContext, state: *State) -> nil {
     @sorterFree(&state.sorter)
 }
 
+// -----------------------------------------------------------------------------
+// Pipeline 1 State
+// -----------------------------------------------------------------------------
 
-fun initTheadState1(execCtx: *ExecutionContext, ts: *ThreadState1) -> nil {
+fun pt_initThreadState(execCtx: *ExecutionContext, ts: *P1_ThreadState) -> nil {
     ts.ts_count = 0
     @aggHTInit(&ts.ts_agg_table, @execCtxGetMem(execCtx), @sizeOf(AggPayload1))
 }
 
-fun teardownThreadState1(execCtx: *ExecutionContext, ts: *ThreadState1) -> nil {
+fun p1_tearDownThreadState(execCtx: *ExecutionContext, ts: *P1_ThreadState) -> nil {
     @aggHTFree(&ts.ts_agg_table)
 }
 
-fun initTheadState2(execCtx: *ExecutionContext, ts: *ThreadState2) -> nil {
+// -----------------------------------------------------------------------------
+// Pipeline 2 State
+// -----------------------------------------------------------------------------
+
+fun p2_initThreadState(execCtx: *ExecutionContext, ts: *P2_ThreadState) -> nil {
     ts.ts_count = 0
     @joinHTInit(&ts.ts_join_table, @execCtxGetMem(execCtx), @sizeOf(JoinRow1))
 }
 
-fun teardownThreadState2(execCtx: *ExecutionContext, ts: *ThreadState2) -> nil {
+fun p2_tearDownThreadState(execCtx: *ExecutionContext, ts: *P2_ThreadState) -> nil {
     @joinHTFree(&ts.ts_join_table)
 }
 
-fun initTheadState3(execCtx: *ExecutionContext, ts: *ThreadState3) -> nil {
+// -----------------------------------------------------------------------------
+// Pipeline 3 State
+// -----------------------------------------------------------------------------
+
+fun p3_initThreadState(execCtx: *ExecutionContext, ts: *P3_ThreadState) -> nil {
     ts.ts_count = 0
     @joinHTInit(&ts.ts_join_table, @execCtxGetMem(execCtx), @sizeOf(JoinRow2))
 }
 
-fun teardownThreadState3(execCtx: *ExecutionContext, ts: *ThreadState3) -> nil {
+fun p3_tearDownThreadState(execCtx: *ExecutionContext, ts: *P3_ThreadState) -> nil {
     @joinHTFree(&ts.ts_join_table)
 }
 
-fun initTheadState4(execCtx: *ExecutionContext, ts: *ThreadState4) -> nil {
+// -----------------------------------------------------------------------------
+// Pipeline 4 State
+// -----------------------------------------------------------------------------
+
+fun p4_initThreadState(execCtx: *ExecutionContext, ts: *P4_ThreadState) -> nil {
     ts.ts_count = 0
     @joinHTInit(&ts.ts_join_table, @execCtxGetMem(execCtx), @sizeOf(JoinRow3))
 }
 
-fun teardownThreadState4(execCtx: *ExecutionContext, ts: *ThreadState3) -> nil {
+fun p4_tearDownThreadState(execCtx: *ExecutionContext, ts: *P3_ThreadState) -> nil {
     @joinHTFree(&ts.ts_join_table)
 }
 
-fun initTheadState5(execCtx: *ExecutionContext, ts: *ThreadState5) -> nil {
+// -----------------------------------------------------------------------------
+// Pipeline 5 State
+// -----------------------------------------------------------------------------
+
+fun p5_initThreadState(execCtx: *ExecutionContext, ts: *P5_ThreadState) -> nil {
     ts.ts_count = 0
     @aggHTInit(&ts.ts_agg_table, @execCtxGetMem(execCtx), @sizeOf(AggPayload2))
 }
 
-fun teardownThreadState5(execCtx: *ExecutionContext, ts: *ThreadState5) -> nil {
+fun p5_tearDownThreadState(execCtx: *ExecutionContext, ts: *P5_ThreadState) -> nil {
     @aggHTFree(&ts.ts_agg_table)
 }
 
-fun initTheadState6(execCtx: *ExecutionContext, ts: *ThreadState6) -> nil {
+// -----------------------------------------------------------------------------
+// Pipeline 6 State
+// -----------------------------------------------------------------------------
+
+fun p6_initThreadState(execCtx: *ExecutionContext, ts: *P6_ThreadState) -> nil {
     ts.ts_count = 0
     @sorterInit(&ts.ts_sorter, @execCtxGetMem(execCtx), sorterCompare, @sizeOf(SorterRow))
 }
 
-fun teardownThreadState6(execCtx: *ExecutionContext, ts: *ThreadState6) -> nil {
+fun p6_tearDownThreadState(execCtx: *ExecutionContext, ts: *P6_ThreadState) -> nil {
     @sorterFree(&ts.ts_sorter)
 }
 
-fun gatherCounters1(qs: *State, ts: *ThreadState1) -> nil {
+fun gatherCounters1(qs: *State, ts: *P1_ThreadState) -> nil {
     qs.count = qs.count + ts.ts_count
 }
 
-fun gatherCounters2(qs: *State, ts: *ThreadState2) -> nil {
+fun gatherCounters2(qs: *State, ts: *P2_ThreadState) -> nil {
     qs.count = qs.count + ts.ts_count
 }
 
-fun gatherCounters3(qs: *State, ts: *ThreadState3) -> nil {
+fun gatherCounters3(qs: *State, ts: *P3_ThreadState) -> nil {
     qs.count = qs.count + ts.ts_count
 }
 
-fun gatherCounters4(qs: *State, ts: *ThreadState4) -> nil {
+fun gatherCounters4(qs: *State, ts: *P4_ThreadState) -> nil {
     qs.count = qs.count + ts.ts_count
 }
+
+// -----------------------------------------------------------------------------
+// Pipeline 1
+// -----------------------------------------------------------------------------
 
 fun mergerPartitions1(state: *State, agg_table: *AggregationHashTable, iter: *AHTOverflowPartitionIterator) -> nil {
     var x = 0
@@ -286,28 +316,8 @@ fun mergerPartitions1(state: *State, agg_table: *AggregationHashTable, iter: *AH
     }
 }
 
-fun mergerPartitions5(state: *State, agg_table: *AggregationHashTable, iter: *AHTOverflowPartitionIterator) -> nil {
-    var x = 0
-    for (; @aggPartIterHasNext(iter); @aggPartIterNext(iter)) {
-        var partial_hash = @aggPartIterGetHash(iter)
-        var partial = @ptrCast(*AggPayload2, @aggPartIterGetRow(iter))
-        var agg_payload = @ptrCast(*AggPayload2, @aggHTLookup(agg_table, partial_hash, aggKeyCheckPartial2, partial))
-        if (agg_payload == nil) {
-            agg_payload = @ptrCast(*AggPayload2, @aggHTInsert(agg_table, partial_hash))
-            agg_payload.c_name = partial.c_name
-            agg_payload.c_custkey = partial.c_custkey
-            agg_payload.o_orderkey = partial.o_orderkey
-            agg_payload.o_orderdate = partial.o_orderdate
-            agg_payload.o_totalprice = partial.o_totalprice
-            @aggInit(&agg_payload.sum_quantity)
-        }
-        @aggMerge(&agg_payload.sum_quantity, &partial.sum_quantity)
-    }
-}
-
-
 // Scan lineitem, build AHT1
-fun worker1(state: *State, ts: *ThreadState1, l_tvi: *TableVectorIterator) -> nil {
+fun p1_worker(state: *State, ts: *P1_ThreadState, l_tvi: *TableVectorIterator) -> nil {
     var x = 0
     for (@tableIterAdvance(l_tvi)) {
         var vec = @tableIterGetVPI(l_tvi)
@@ -318,7 +328,7 @@ fun worker1(state: *State, ts: *ThreadState1, l_tvi: *TableVectorIterator) -> ni
             var agg_hash_val = @hash(agg_input.l_orderkey)
             var agg_payload = @ptrCast(*AggPayload1, @aggHTLookup(&ts.ts_agg_table, agg_hash_val, checkAggKey1, &agg_input))
             if (agg_payload == nil) {
-                agg_payload = @ptrCast(*AggPayload1, @aggHTInsert(&ts.ts_agg_table, agg_hash_val))
+                agg_payload = @ptrCast(*AggPayload1, @aggHTInsert(&ts.ts_agg_table, agg_hash_val, true))
                 agg_payload.l_orderkey = agg_input.l_orderkey
                 @aggInit(&agg_payload.sum_quantity)
             }
@@ -327,8 +337,29 @@ fun worker1(state: *State, ts: *ThreadState1, l_tvi: *TableVectorIterator) -> ni
     }
 }
 
+fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
+    // Thread-local state
+    var tls : ThreadStateContainer
+    @tlsInit(&tls, @execCtxGetMem(execCtx))
+    @tlsReset(&tls, @sizeOf(P1_ThreadState), pt_initThreadState, p1_tearDownThreadState, execCtx)
+
+    // Parallel scan
+    @iterateTableParallel("lineitem", state, &tls, p1_worker)
+
+    // Merge AHT partitions
+    var off: uint32 = 0
+    @aggHTMoveParts(&state.agg_table1, &tls, off, mergerPartitions1)
+
+    // Cleanup
+    @tlsFree(&tls)
+}
+
+// -----------------------------------------------------------------------------
+// Pipeline 2
+// -----------------------------------------------------------------------------
+
 // Scan AHT1, Build JHT1
-fun worker2(state: *State, ts: *ThreadState2, agg_table: *AggregationHashTable) -> nil {
+fun p2_worker(state: *State, ts: *P2_ThreadState, agg_table: *AggregationHashTable) -> nil {
     var aht_iter: AHTIterator
     // Step 1: Iterate through Agg Hash Table
     for (@aggHTIterInit(&aht_iter, agg_table); @aggHTIterHasNext(&aht_iter); @aggHTIterNext(&aht_iter)) {
@@ -342,8 +373,29 @@ fun worker2(state: *State, ts: *ThreadState2, agg_table: *AggregationHashTable) 
     @aggHTIterClose(&aht_iter)
 }
 
+fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
+    // Thread-local state
+    var tls : ThreadStateContainer
+    @tlsInit(&tls, @execCtxGetMem(execCtx))
+    @tlsReset(&tls, @sizeOf(P2_ThreadState), p2_initThreadState, p2_tearDownThreadState, execCtx)
+
+    // Parallel scan aggregation table
+    @aggHTParallelPartScan(&state.agg_table1, state, &tls, p2_worker)
+
+    // Parallel build join table
+    var off: uint32 = 0
+    @joinHTBuildParallel(&state.join_table1, &tls, off)
+
+    // Cleanup
+    @tlsFree(&tls)
+}
+
+// -----------------------------------------------------------------------------
+// Pipeline 3
+// -----------------------------------------------------------------------------
+
 // Scan customer, build JHT2
-fun worker3(state: *State, ts: *ThreadState3, c_tvi: *TableVectorIterator) -> nil {
+fun p3_worker(state: *State, ts: *P3_ThreadState, c_tvi: *TableVectorIterator) -> nil {
     var x = 0
     for (@tableIterAdvance(c_tvi)) {
         var vec = @tableIterGetVPI(c_tvi)
@@ -356,8 +408,29 @@ fun worker3(state: *State, ts: *ThreadState3, c_tvi: *TableVectorIterator) -> ni
     }
 }
 
+fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
+    // Thread-local state
+    var tls : ThreadStateContainer
+    @tlsInit(&tls, @execCtxGetMem(execCtx))
+    @tlsReset(&tls, @sizeOf(P3_ThreadState), p3_initThreadState, p3_tearDownThreadState, execCtx)
+
+    // Parallel scan 'customer'
+    @iterateTableParallel("customer", state, &tls, p3_worker)
+
+    // Parallel build join table
+    var off: uint32 = 0
+    @joinHTBuildParallel(&state.join_table2, &tls, off)
+
+    // Cleanup
+    @tlsFree(&tls)
+}
+
+// -----------------------------------------------------------------------------
+// Pipeline 4
+// -----------------------------------------------------------------------------
+
 // Scan orders, probe JHT1, probe JHT2, build JHT3
-fun worker4(state: *State, ts: *ThreadState4, o_tvi: *TableVectorIterator) -> nil {
+fun p4_worker(state: *State, ts: *P4_ThreadState, o_tvi: *TableVectorIterator) -> nil {
     var x = 0
     for (@tableIterAdvance(o_tvi)) {
         var vec = @tableIterGetVPI(o_tvi)
@@ -386,8 +459,50 @@ fun worker4(state: *State, ts: *ThreadState4, o_tvi: *TableVectorIterator) -> ni
     }
 }
 
+fun pipeline4(execCtx: *ExecutionContext, state: *State) -> nil {
+    // Thread-local state
+    var tls : ThreadStateContainer
+    @tlsInit(&tls, @execCtxGetMem(execCtx))
+    @tlsReset(&tls, @sizeOf(P4_ThreadState), p4_initThreadState, p4_tearDownThreadState, execCtx)
+
+    // Parallel scan 'orders'
+    @iterateTableParallel("orders", state, &tls, p4_worker)
+
+    // Parallel build join table
+    var off: uint32 = 0
+    @joinHTBuildParallel(&state.join_table3, &tls, off)
+
+    //@tlsIterate(&tls, &state, gatherCounters4)
+
+    // Cleanup
+    @tlsFree(&tls)
+}
+
+// -----------------------------------------------------------------------------
+// Pipeline 5
+// -----------------------------------------------------------------------------
+
+fun mergerPartitions5(state: *State, agg_table: *AggregationHashTable, iter: *AHTOverflowPartitionIterator) -> nil {
+    var x = 0
+    for (; @aggPartIterHasNext(iter); @aggPartIterNext(iter)) {
+        var partial_hash = @aggPartIterGetHash(iter)
+        var partial = @ptrCast(*AggPayload2, @aggPartIterGetRow(iter))
+        var agg_payload = @ptrCast(*AggPayload2, @aggHTLookup(agg_table, partial_hash, aggKeyCheckPartial2, partial))
+        if (agg_payload == nil) {
+            agg_payload = @ptrCast(*AggPayload2, @aggHTInsert(agg_table, partial_hash))
+            agg_payload.c_name = partial.c_name
+            agg_payload.c_custkey = partial.c_custkey
+            agg_payload.o_orderkey = partial.o_orderkey
+            agg_payload.o_orderdate = partial.o_orderdate
+            agg_payload.o_totalprice = partial.o_totalprice
+            @aggInit(&agg_payload.sum_quantity)
+        }
+        @aggMerge(&agg_payload.sum_quantity, &partial.sum_quantity)
+    }
+}
+
 // Scan lineitem, probe JHT3, build AHT2
-fun worker5(state: *State, ts: *ThreadState5, l_tvi: *TableVectorIterator) -> nil {
+fun p5_worker(state: *State, ts: *P5_ThreadState, l_tvi: *TableVectorIterator) -> nil {
     var x = 0
     for (@tableIterAdvance(l_tvi)) {
         var vec = @tableIterGetVPI(l_tvi)
@@ -408,7 +523,7 @@ fun worker5(state: *State, ts: *ThreadState5, l_tvi: *TableVectorIterator) -> ni
                 var agg_hash_val = @hash(agg_input.c_name, agg_input.c_custkey, agg_input.o_orderkey, agg_input.o_totalprice)
                 var agg_payload = @ptrCast(*AggPayload2, @aggHTLookup(&ts.ts_agg_table, agg_hash_val, checkAggKey2, &agg_input))
                 if (agg_payload == nil) {
-                    agg_payload = @ptrCast(*AggPayload2, @aggHTInsert(&ts.ts_agg_table, agg_hash_val))
+                    agg_payload = @ptrCast(*AggPayload2, @aggHTInsert(&ts.ts_agg_table, agg_hash_val, true))
                     agg_payload.c_name = agg_input.c_name
                     agg_payload.c_custkey = agg_input.c_custkey
                     agg_payload.o_orderkey = agg_input.o_orderkey
@@ -422,32 +537,72 @@ fun worker5(state: *State, ts: *ThreadState5, l_tvi: *TableVectorIterator) -> ni
     }
 }
 
+fun pipeline5(execCtx: *ExecutionContext, state: *State) -> nil {
+    // Thread-local state
+    var tls : ThreadStateContainer
+    @tlsInit(&tls, @execCtxGetMem(execCtx))
+    @tlsReset(&tls, @sizeOf(P5_ThreadState), p5_initThreadState, p5_tearDownThreadState, execCtx)
+
+    // Parallel scan 'lineitem'
+    @iterateTableParallel("lineitem", state, &tls, p5_worker)
+
+    // Parallel merge AHT
+    var off: uint32 = 0
+    @aggHTMoveParts(&state.agg_table2, &tls, off, mergerPartitions5)
+
+    // Cleanup
+    @tlsFree(&tls)
+}
+
+// -----------------------------------------------------------------------------
+// Pipeline 6
+// -----------------------------------------------------------------------------
+
 // Scan AHT2, sort
-fun worker6(state: *State, ts: *ThreadState6, agg_table: *AggregationHashTable) -> nil {
+fun p6_worker(state: *State, ts: *P6_ThreadState, agg_table: *AggregationHashTable) -> nil {
     var aht_iter: AHTIterator
     // Step 1: Iterate through Agg Hash Table
     for (@aggHTIterInit(&aht_iter, agg_table); @aggHTIterHasNext(&aht_iter); @aggHTIterNext(&aht_iter)) {
         var agg_payload = @ptrCast(*AggPayload2, @aggHTIterGetRow(&aht_iter))
-        // TODO(Amadou): Use SorterTopK.
         // Step 2: Build Sorter
-        var sorter_row = @ptrCast(*SorterRow, @sorterInsert(&ts.ts_sorter))
+        var sorter_row = @ptrCast(*SorterRow, @sorterInsertTopK(&ts.ts_sorter, 100))
         sorter_row.c_name = agg_payload.c_name
         sorter_row.c_custkey = agg_payload.c_custkey
         sorter_row.o_orderkey = agg_payload.o_orderkey
         sorter_row.o_orderdate = agg_payload.o_orderdate
         sorter_row.o_totalprice = agg_payload.o_totalprice
         sorter_row.sum_quantity = @aggResult(&agg_payload.sum_quantity)
+        @sorterInsertTopKFinish(&ts.ts_sorter, 100)
         //ts.ts_count = ts.ts_count + 1
     }
     @aggHTIterClose(&aht_iter)
 }
 
+fun pipeline6(execCtx: *ExecutionContext, state: *State) -> nil {
+    // Thread-local state
+    var tls : ThreadStateContainer
+    @tlsInit(&tls, @execCtxGetMem(execCtx))
+    @tlsReset(&tls, @sizeOf(P6_ThreadState), p6_initThreadState, p6_tearDownThreadState, execCtx)
+
+    // Parallel scan AHT
+    @aggHTParallelPartScan(&state.agg_table2, state, &tls, p6_worker)
+
+    // Parallel sort
+    var off: uint32 = 0
+    @sorterSortTopKParallel(&state.sorter, &tls, off, 100)
+
+    // Cleanup
+    @tlsFree(&tls)
+}
+
+// -----------------------------------------------------------------------------
+// Pipeline 7
+// -----------------------------------------------------------------------------
+
 // Iterate through sorter, output
 fun pipeline7(execCtx: *ExecutionContext, state: *State) -> nil {
     var sort_iter: SorterIterator
-    // TODO(Amadou): Use sorter SorterTopK
-    var limit = 0
-    for (@sorterIterInit(&sort_iter, &state.sorter); limit < 100 and @sorterIterHasNext(&sort_iter); @sorterIterNext(&sort_iter)) {
+    for (@sorterIterInit(&sort_iter, &state.sorter); @sorterIterHasNext(&sort_iter); @sorterIterNext(&sort_iter)) {
         var sorter_row = @ptrCast(*SorterRow, @sorterIterGetRow(&sort_iter))
         var out = @ptrCast(*OutputStruct, @resultBufferAllocRow(execCtx))
         out.c_name = sorter_row.c_name
@@ -456,59 +611,30 @@ fun pipeline7(execCtx: *ExecutionContext, state: *State) -> nil {
         out.o_orderdate = sorter_row.o_orderdate
         out.o_totalprice = sorter_row.o_totalprice
         out.sum_quantity = sorter_row.sum_quantity
-        limit = limit + 1
+        state.count = state.count + 1
     }
     @resultBufferFinalize(execCtx)
+}
+
+// -----------------------------------------------------------------------------
+// Main and Launch
+// -----------------------------------------------------------------------------
+
+fun execQuery(execCtx: *ExecutionContext, state: *State) -> nil {
+    pipeline1(execCtx, state)
+    pipeline2(execCtx, state)
+    pipeline3(execCtx, state)
+    pipeline4(execCtx, state)
+    pipeline5(execCtx, state)
+    pipeline6(execCtx, state)
+    pipeline7(execCtx, state)
 }
 
 fun main(execCtx: *ExecutionContext) -> int32 {
     var state: State
 
     setUpState(execCtx, &state)
-
-    var off: uint32 = 0
-    var tls : ThreadStateContainer
-    @tlsInit(&tls, @execCtxGetMem(execCtx))
-
-    // Pipeline 1
-    @tlsReset(&tls, @sizeOf(ThreadState1), initTheadState1, teardownThreadState1, execCtx)
-    @iterateTableParallel("lineitem", &state, &tls, worker1)
-    @aggHTMoveParts(&state.agg_table1, &tls, off, mergerPartitions1)
-    //@tlsIterate(&tls, &state, gatherCounters1)
-
-    // Pipeline 2
-    @tlsReset(&tls, @sizeOf(ThreadState2), initTheadState2, teardownThreadState2, execCtx)
-    @aggHTParallelPartScan(&state.agg_table1, &state, &tls, worker2)
-    @joinHTBuildParallel(&state.join_table1, &tls, off)
-    //@tlsIterate(&tls, &state, gatherCounters2)
-
-    // Pipeline 3
-    @tlsReset(&tls, @sizeOf(ThreadState3), initTheadState3, teardownThreadState3, execCtx)
-    @iterateTableParallel("customer", &state, &tls, worker3)
-    @joinHTBuildParallel(&state.join_table2, &tls, off)
-    //@tlsIterate(&tls, &state, gatherCounters3)
-
-    // Pipeline 4
-    @tlsReset(&tls, @sizeOf(ThreadState4), initTheadState4, teardownThreadState4, execCtx)
-    @iterateTableParallel("orders", &state, &tls, worker4)
-    @joinHTBuildParallel(&state.join_table3, &tls, off)
-    //@tlsIterate(&tls, &state, gatherCounters4)
-
-    // Pipeline 5
-    @tlsReset(&tls, @sizeOf(ThreadState5), initTheadState5, teardownThreadState5, execCtx)
-    @iterateTableParallel("lineitem", &state, &tls, worker5)
-    @aggHTMoveParts(&state.agg_table2, &tls, off, mergerPartitions5)
-
-    // Pipeline 6
-    @tlsReset(&tls, @sizeOf(ThreadState6), initTheadState6, teardownThreadState6, execCtx)
-    @aggHTParallelPartScan(&state.agg_table2, &state, &tls, worker6)
-    @sorterSortParallel(&state.sorter, &tls, off)
-
-    // Pipeline 7
-    pipeline7(execCtx, &state)
-
-    @tlsFree(&tls)
-
+    execQuery(execCtx, &state)
     tearDownState(execCtx, &state)
 
     return state.count
