@@ -1271,23 +1271,26 @@ void Sema::CheckBuiltinSorterSort(ast::CallExpr *call, ast::Builtin builtin) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(tls_kind)->PointerTo());
         return;
       }
+
       // Third argument must be a 32-bit integer representing the offset
-      const auto uint32_kind = ast::BuiltinType::Uint32;
-      if (!call_args[2]->type()->IsSpecificBuiltin(uint32_kind)) {
-        ReportIncorrectCallArg(call, 2, GetBuiltinType(uint32_kind));
+      ast::Type *uint_type = GetBuiltinType(ast::BuiltinType::Uint32);
+      if (call_args[2]->type() != uint_type) {
+        ReportIncorrectCallArg(call, 2, uint_type);
         return;
       }
 
+      // If it's for top-k, the last argument must be the top-k value
       if (builtin == ast::Builtin::SorterSortTopKParallel) {
         if (!CheckArgCount(call, 4)) {
           return;
         }
-
-        // Last argument must be the TopK value
-        const auto uint64_kind = ast::BuiltinType::Uint64;
-        if (!call_args[3]->type()->IsSpecificBuiltin(uint64_kind)) {
-          ReportIncorrectCallArg(call, 3, GetBuiltinType(uint64_kind));
+        if (!call_args[3]->type()->IsIntegerType()) {
+          ReportIncorrectCallArg(call, 3, uint_type);
           return;
+        }
+        if (call_args[3]->type() != uint_type) {
+          call->set_argument(
+              3, ImplCastExprToType(call_args[3], uint_type, ast::CastKind::IntegralCast));
         }
       }
       break;

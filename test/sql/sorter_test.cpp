@@ -136,7 +136,7 @@ void TestTopKRandomTupleSize(const uint32_t num_iters, const uint32_t max_elems,
 
     // Sort and check size
     sorter.Sort();
-    EXPECT_EQ(top_k, sorter.GetTupleCount());
+    EXPECT_EQ(top_k, sorter.GetElementCount());
 
     // Verify order
     SorterIterator iter(sorter);
@@ -293,7 +293,7 @@ void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
                                                  [](auto p, auto s) { return p + s; });
 
   EXPECT_TRUE(main.IsSorted());
-  EXPECT_EQ(expected_total_size, main.GetTupleCount());
+  EXPECT_EQ(expected_total_size, main.GetElementCount());
 
   // Ensure sortedness
   const TestTuple<N> *prev = nullptr;

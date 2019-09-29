@@ -1389,7 +1389,7 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     auto *sorter = frame->LocalAt<sql::Sorter *>(READ_LOCAL_ID());
     auto *thread_state_container = frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
     auto sorter_offset = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
-    auto top_k = frame->LocalAt<uint64_t>(READ_LOCAL_ID());
+    auto top_k = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
     OpSorterSortTopKParallel(sorter, thread_state_container, sorter_offset, top_k);
     DISPATCH_NEXT();
   }
