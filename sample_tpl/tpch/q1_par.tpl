@@ -216,15 +216,14 @@ fun p1_worker(state: *State, ts: *P1_ThreadState, l_tvi: *TableVectorIterator) -
     }
 }
 
-fun p1_mergerPartitions(state: *State, agg_table: *AggregationHashTable, iter: *AHTOverflowPartitionIterator) -> nil {
+fun p1_mergePartitions(state: *State, agg_table: *AggregationHashTable, iter: *AHTOverflowPartitionIterator) -> nil {
     var x = 0
     for (; @aggPartIterHasNext(iter); @aggPartIterNext(iter)) {
         var partial_hash = @aggPartIterGetHash(iter)
         var partial = @ptrCast(*AggPayload, @aggPartIterGetRow(iter))
         var agg_payload = @ptrCast(*AggPayload, @aggHTLookup(agg_table, partial_hash, aggKeyCheckPartial, partial))
         if (agg_payload == nil) {
-            agg_payload = @ptrCast(*AggPayload, @aggHTInsert(agg_table, partial_hash))
-            p1_constructAggFromPartial(agg_payload, partial)
+            @aggHTLink(agg_table, @aggPartIterGetRowEntry(iter))
         } else {
             p1_updateAggFromPartial(agg_payload, partial)
         }
@@ -242,7 +241,7 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
 
     // Build global aggregation hash table
     var aht_off: uint32 = 0
-    @aggHTMoveParts(&state.agg_table, &tls, aht_off, p1_mergerPartitions)
+    @aggHTMoveParts(&state.agg_table, &tls, aht_off, p1_mergePartitions)
 
     // Cleanup thread-local states
     @tlsFree(&tls)

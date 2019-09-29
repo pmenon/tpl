@@ -222,9 +222,7 @@ fun p2_mergePartitions(state: *State, agg_table: *AggregationHashTable, iter: *A
         var partial = @ptrCast(*AggRow, @aggPartIterGetRow(iter))
         var agg_payload = @ptrCast(*AggRow, @aggHTLookup(agg_table, partial_hash, aggKeyCheckPartial, partial))
         if (agg_payload == nil) {
-            agg_payload = @ptrCast(*AggRow, @aggHTInsert(agg_table, partial_hash))
-            agg_payload.o_orderpriority = partial.o_orderpriority
-            @aggInit(&agg_payload.order_count)
+            @aggHTLink(agg_table, @aggPartIterGetRowEntry(iter))
         } else {
             @aggMerge(&agg_payload.order_count, &partial.order_count)
         }
