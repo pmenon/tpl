@@ -146,15 +146,22 @@ void AggregationHashTable::FlushToOverflowPartitions() {
     AllocateOverflowPartitions();
   }
 
-  // Dump hash table into overflow partition
+  // Dump all entries from the hash table into the overflow partitions. For each entry, we compute
+  // its destination partition using the highest logP bits for P partitions. For each partition, we
+  // also track an estimate of the number of unique hash values so that when the partitions are
+  // merged, we can appropriately size the table before merging. The issue is that both the
+  // bits used for partition selection and unique hash estimation are the same! Thus, the estimates
+  // are inaccurate. To solve this, we scramble the hash values using a bijective hash scrambling
+  // before feeding them to the estimator.
+
   hash_table_.FlushEntries([this](HashTableEntry *entry) {
-    const uint64_t part_idx = (entry->hash >> partition_shift_bits_);
-    entry->next = partition_heads_[part_idx];
-    partition_heads_[part_idx] = entry;
-    if (TPL_UNLIKELY(partition_tails_[part_idx] == nullptr)) {
-      partition_tails_[part_idx] = entry;
+    const uint64_t partition_idx = (entry->hash >> partition_shift_bits_);
+    entry->next = partition_heads_[partition_idx];
+    partition_heads_[partition_idx] = entry;
+    if (TPL_UNLIKELY(partition_tails_[partition_idx] == nullptr)) {
+      partition_tails_[partition_idx] = entry;
     }
-    partition_estimates_[part_idx]->Update(entry->hash);
+    partition_estimates_[partition_idx]->Update(util::HashUtil::ScrambleHash(entry->hash));
   });
 
   // Update stats
@@ -474,7 +481,7 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(void *const 
   merge_partition_fn_(query_state, agg_table, &iter);
 
   timer.Stop();
-  LOG_DEBUG(
+  LOG_INFO(
       "Overflow Partition {}: estimated size = {}, actual size = {}, "
       "build time = {:2f} ms",
       partition_idx, estimated_size, agg_table->GetTupleCount(), timer.elapsed());

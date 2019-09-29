@@ -134,6 +134,14 @@ class HashUtil {
     return b;
   }
 
+  /**
+   * Compute a new hash value that scrambles the bits in the input hash value. This function
+   * guarnatees that if h1 and h2 are two hash values, then scramble(h1) == scramble(h2).
+   * @param hash The input hash value to scramble.
+   * @return The scrambled hash value.
+   */
+  static hash_t ScrambleHash(const hash_t hash) { return XXH64_avalanche(hash); }
+
   // -------------------------------------------------------
   // CRC Hashing
   // -------------------------------------------------------
@@ -171,12 +179,14 @@ class HashUtil {
   template <typename T>
   static auto HashCrc(const T val, const hash_t seed)
       -> std::enable_if_t<std::is_fundamental_v<T>, hash_t> {
-    return HashCrc(reinterpret_cast<const uint8_t *>(&val), sizeof(T), seed);
+    uint64_t result1 = _mm_crc32_u64(seed, static_cast<uint64_t>(val));
+    uint64_t result2 = _mm_crc32_u64(0x04C11DB7, static_cast<uint64_t>(val));
+    return ((result2 << 32u) | result1) * 0x2545F4914F6CDD1Dull;
   }
 
   template <typename T>
   static auto HashCrc(const T val) -> std::enable_if_t<std::is_fundamental_v<T>, hash_t> {
-    return HashCrc(val, kDefaultCRCSeed);
+    return HashCrc(val, 0);
   }
 
 #undef DO_CRC
