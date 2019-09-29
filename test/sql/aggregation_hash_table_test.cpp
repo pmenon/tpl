@@ -116,7 +116,7 @@ TEST_F(AggregationHashTableTest, SimpleRandomInsertionTest) {
         FAIL();
       }
       EXPECT_TRUE(ref_iter == ref_agg_table.end());
-      new (agg_table()->StoreInputTuple(hash_val)) AggTuple(input);
+      new (agg_table()->AllocInputTuple(hash_val)) AggTuple(input);
       ref_agg_table.emplace(input.key, std::make_unique<AggTuple>(input));
     }
   }
@@ -147,7 +147,7 @@ TEST_F(AggregationHashTableTest, IterationTest) {
       if (existing != nullptr) {
         existing->Advance(input);
       } else {
-        auto *new_agg = agg_table()->StoreInputTuple(input.Hash());
+        auto *new_agg = agg_table()->AllocInputTuple(input.Hash());
         new (new_agg) AggTuple(input);
       }
     }
@@ -185,7 +185,7 @@ TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
     if (existing != nullptr) {
       existing->Advance(input);
     } else {
-      auto *new_agg = agg_table()->StoreInputTuplePartitioned(input.Hash());
+      auto *new_agg = agg_table()->AllocInputTuplePartitioned(input.Hash());
       new (new_agg) AggTuple(input);
     }
   }
@@ -299,8 +299,8 @@ TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
     uint32_t count = 0;
     AHTOverflowPartitionIterator iter(partitions.begin(), partitions.end());
     for (; iter.HasNext(); iter.Next()) {
-      EXPECT_EQ(100u, iter.GetPayloadAs<Data>()->key);
-      EXPECT_EQ(200u, iter.GetPayloadAs<Data>()->val);
+      EXPECT_EQ(100u, iter.GetRowAs<Data>()->key);
+      EXPECT_EQ(200u, iter.GetRowAs<Data>()->val);
       count++;
     }
     EXPECT_EQ(1u, count);
@@ -366,7 +366,7 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
       if (existing != nullptr) {
         existing->Advance(input);
       } else {
-        auto *new_agg = agg_table->StoreInputTuplePartitioned(input.Hash());
+        auto *new_agg = agg_table->AllocInputTuplePartitioned(input.Hash());
         new (new_agg) AggTuple(input);
       }
     }
@@ -374,13 +374,13 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
 
   auto merge = [](void *ctx, AggregationHashTable *table, AHTOverflowPartitionIterator *iter) {
     for (; iter->HasNext(); iter->Next()) {
-      auto *partial_agg = iter->GetPayloadAs<AggTuple>();
+      auto *partial_agg = iter->GetRowAs<AggTuple>();
       auto *existing =
-          reinterpret_cast<AggTuple *>(table->Lookup(iter->GetHash(), AggAggKeyEq, partial_agg));
+          reinterpret_cast<AggTuple *>(table->Lookup(iter->GetRowHash(), AggAggKeyEq, partial_agg));
       if (existing != nullptr) {
         existing->Merge(*partial_agg);
       } else {
-        auto *new_agg = table->StoreInputTuple(iter->GetHash());
+        auto *new_agg = table->AllocInputTuple(iter->GetRowHash());
         new (new_agg) AggTuple(*partial_agg);
       }
     }
@@ -392,7 +392,7 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
 
   auto scan = [](void *query_state, void *thread_state, const AggregationHashTable *agg_table) {
     auto *qs = reinterpret_cast<QS *>(query_state);
-    qs->row_count += agg_table->NumElements();
+    qs->row_count += agg_table->GetTupleCount();
   };
 
   QS qstate{0};

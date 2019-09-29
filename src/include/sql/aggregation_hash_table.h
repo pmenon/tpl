@@ -134,14 +134,14 @@ class AggregationHashTable {
    * @param hash The hash value of the element to insert.
    * @return A pointer to a memory area where the element can be written to.
    */
-  byte *StoreInputTuple(hash_t hash);
+  byte *AllocInputTuple(hash_t hash);
 
   /**
    * Insert a new element with hash value @em hash into this partitioned aggregation hash table.
    * @param hash The hash value of the element to insert.
    * @return A pointer to a memory area where the input element can be written.
    */
-  byte *StoreInputTuplePartitioned(hash_t hash);
+  byte *AllocInputTuplePartitioned(hash_t hash);
 
   /**
    * Insert and link in the given fully-constructed tuple contained within @em entry payload into
@@ -162,7 +162,7 @@ class AggregationHashTable {
   byte *Lookup(hash_t hash, KeyEqFn key_eq_fn, const void *probe_tuple);
 
   /**
-   * Injest and process a batch of input into the aggregation.
+   * Ingest and process a batch of input into the aggregation table.
    * @param vpi The vector projection to process.
    * @param hash_fn Function to compute a hash of an input element.
    * @param key_eq_fn Function to check key equality of an input element and an existing aggregate.
@@ -210,14 +210,14 @@ class AggregationHashTable {
                                       ScanPartitionFn scan_fn);
 
   /**
-   * How many aggregates are in this table?
+   * @return The total number of tuples in this table.
    */
-  uint64_t NumElements() const { return hash_table_.num_elements(); }
+  uint64_t GetTupleCount() const { return hash_table_.num_elements(); }
 
   /**
-   * Read-only access to hash table stats.
+   * @return A read-only view of this aggregation table's statistics.
    */
-  const Stats *stats() const { return &stats_; }
+  const Stats *GetStatistics() const { return &stats_; }
 
  private:
   friend class AHTIterator;
@@ -532,33 +532,33 @@ class AHTOverflowPartitionIterator {
   }
 
   /**
-   * @return The current entry.
+   * @return The current entry container for the current row.
    */
-  HashTableEntry *GetCurrentEntry() const { return curr_; }
+  HashTableEntry *GetEntryForRow() const { return curr_; }
 
   /**
-   * Get the hash value of the overflow entry the iterator is currently pointing to. It is assumed
-   * the caller has checked there is data in the iterator.
-   * @return The hash value of the current overflow entry.
+   * @return The hash value of the current row.
    */
-  hash_t GetHash() const { return curr_->hash; }
+  hash_t GetRowHash() const {
+    TPL_ASSERT(curr_ != nullptr, "Iterator not pointing to an overflow entry");
+    return curr_->hash;
+  }
 
   /**
-   * Get the payload of the overflow entry the iterator is currently pointing to. It is assumed the
-   * caller has checked there is data in the iterator.
-   * @return The opaque payload associated with the current overflow entry.
+   * @return The contents of the current row.
    */
-  const byte *GetPayload() const { return curr_->payload; }
+  const byte *GetRow() const {
+    TPL_ASSERT(curr_ != nullptr, "Iterator not pointing to an overflow entry");
+    return curr_->payload;
+  }
 
   /**
-   * Get the payload of the overflow entry the iterator is currently pointing to, but interpret it
-   * as the given template type @em T. It is assumed the caller has checked there is data in the
-   * iterator.
-   * @tparam T The type of the payload in the current overflow entry.
-   * @return The opaque payload associated with the current overflow entry.
+   * @tparam The type of the contents of the current row.
+   * @return The contents of the current row as type @em T.
    */
   template <typename T>
-  const T *GetPayloadAs() const {
+  const T *GetRowAs() const {
+    TPL_ASSERT(curr_ != nullptr, "Iterator not pointing to an overflow entry");
     return curr_->PayloadAs<T>();
   }
 

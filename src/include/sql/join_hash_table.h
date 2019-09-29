@@ -137,7 +137,7 @@ class JoinHashTable {
   /**
    * @return The total number of elements in the table, including duplicates.
    */
-  uint64_t GetElementCount() {
+  uint64_t GetTupleCount() const {
     // We don't know if this table was built in parallel. To be sure, we acquire the latch before
     // checking the owned entries vector. This isn't a performance-critical function, so acquiring
     // the latch shouldn't be a problem.
@@ -226,9 +226,10 @@ class JoinHashTable {
   // The vector where we store the build-side input
   util::ChunkedVector<MemoryPoolAllocator<byte>> entries_;
 
-  // To protect concurrent access to owned_entries
-  util::SpinLatch owned_latch_;
-  // List of entries this hash table has taken ownership of
+  // To protect concurrent access to 'owned_entries_'
+  mutable util::SpinLatch owned_latch_;
+
+  // List of entries this hash table has taken ownership of. Protected by 'owned_latch_'.
   MemPoolVector<decltype(entries_)> owned_;
 
   // The generic hash table

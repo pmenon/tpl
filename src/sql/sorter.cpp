@@ -155,7 +155,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
 
   std::vector<Sorter *> tl_sorters;
   thread_state_container->CollectThreadLocalStateElementsAs(tl_sorters, sorter_offset);
-  llvm::erase_if(tl_sorters, [](const Sorter *sorter) { return sorter->GetElementCount() == 0; });
+  llvm::erase_if(tl_sorters, [](const Sorter *sorter) { return sorter->GetTupleCount() == 0; });
 
   // If there's nothing to sort, exit.
   if (tl_sorters.empty()) {
@@ -182,7 +182,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   const uint64_t num_tuples =
       std::accumulate(tl_sorters.begin(), tl_sorters.end(), uint64_t(0),
                       [](const uint64_t partial, const Sorter *const sorter) {
-                        return partial + sorter->GetElementCount();
+                        return partial + sorter->GetTupleCount();
                       });
   tuples_.resize(num_tuples);
 
@@ -220,7 +220,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
 
   for (uint64_t sorter_idx = 0; sorter_idx < tl_sorters.size(); sorter_idx++) {
     const Sorter *const sorter = tl_sorters[sorter_idx];
-    auto part_size = sorter->GetElementCount() / (splitters.size() + 1);
+    auto part_size = sorter->GetTupleCount() / (splitters.size() + 1);
     for (uint64_t i = 0; i < splitters.size(); i++) {
       splitters[i][sorter_idx] = sorter->tuples_[(i + 1) * part_size];
     }
@@ -341,7 +341,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   sorted_ = true;
 
   UNUSED double tps = (tuples_.size() / timer.GetTotalElapsedTime()) / 1000.0;
-  LOG_DEBUG("Sort Stats: {} tuples ({:.2f} tps)", GetElementCount(), tps);
+  LOG_DEBUG("Sort Stats: {} tuples ({:.2f} tps)", GetTupleCount(), tps);
   for (const auto &stage : timer.GetStages()) {
     LOG_DEBUG("  {}: {.2f} ms", stage.name(), stage.time());
   }
@@ -353,7 +353,7 @@ void Sorter::SortTopKParallel(const ThreadStateContainer *thread_state_container
   SortParallel(thread_state_container, sorter_offset);
 
   // Trim to top-K
-  if (top_k < GetElementCount()) {
+  if (top_k < GetTupleCount()) {
     tuples_.resize(top_k);
   }
 }

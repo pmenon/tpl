@@ -57,7 +57,7 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
 
   // Before build, the generic hash table shouldn't be populated, but the join
   // table's storage should have buffered all input tuples
-  EXPECT_EQ(num_tuples, join_hash_table.GetElementCount());
+  EXPECT_EQ(num_tuples, join_hash_table.GetTupleCount());
   EXPECT_EQ(0u, join_hash_table.generic_hash_table_.num_elements());
 
   // Try to build
@@ -65,7 +65,7 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
 
   // Post-build, the sizes should be synced up since all tuples were inserted
   // into the GHT
-  EXPECT_EQ(num_tuples, join_hash_table.GetElementCount());
+  EXPECT_EQ(num_tuples, join_hash_table.GetTupleCount());
   EXPECT_EQ(num_tuples, join_hash_table.generic_hash_table_.num_elements());
 }
 
@@ -184,7 +184,7 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
   //
   // Check now.
 
-  EXPECT_EQ(num_tuples * num_thread_local_tables, main_jht.GetElementCount());
+  EXPECT_EQ(num_tuples * num_thread_local_tables, main_jht.GetTupleCount());
 
   for (uint32_t i = 0; i < num_tuples; i++) {
     auto probe = Tuple{i, 1, 2, 3};

@@ -232,8 +232,8 @@ namespace tpl::vm {
                                                                                                                        \
   /* Aggregation Hash Table */                                                                                         \
   F(AggregationHashTableInit, OperandType::Local, OperandType::Local, OperandType::Local)                              \
-  F(AggregationHashTableInsert, OperandType::Local, OperandType::Local, OperandType::Local)                            \
-  F(AggregationHashTableInsertPartitioned, OperandType::Local, OperandType::Local, OperandType::Local)                 \
+  F(AggregationHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                        \
+  F(AggregationHashTableAllocTuplePartitioned, OperandType::Local, OperandType::Local, OperandType::Local)             \
   F(AggregationHashTableLookup, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::FunctionId,   \
       OperandType::Local)                                                                                              \
   F(AggregationHashTableProcessBatch, OperandType::Local, OperandType::Local, OperandType::FunctionId,                 \

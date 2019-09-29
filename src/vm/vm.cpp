@@ -914,19 +914,19 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(AggregationHashTableInsert) : {
+  OP(AggregationHashTableAllocTuple) : {
     auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
     auto *agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
     auto hash = frame->LocalAt<hash_t>(READ_LOCAL_ID());
-    OpAggregationHashTableInsert(result, agg_hash_table, hash);
+    OpAggregationHashTableAllocTuple(result, agg_hash_table, hash);
     DISPATCH_NEXT();
   }
 
-  OP(AggregationHashTableInsertPartitioned) : {
+  OP(AggregationHashTableAllocTuplePartitioned) : {
     auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
     auto *agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
     auto hash = frame->LocalAt<hash_t>(READ_LOCAL_ID());
-    OpAggregationHashTableInsertPartitioned(result, agg_hash_table, hash);
+    OpAggregationHashTableAllocTuplePartitioned(result, agg_hash_table, hash);
     DISPATCH_NEXT();
   }
 

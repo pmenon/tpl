@@ -144,7 +144,7 @@ class Sorter {
   /**
    * @return The number of tuples currently in this sorter.
    */
-  uint64_t GetElementCount() const noexcept { return tuples_.size(); }
+  uint64_t GetTupleCount() const noexcept { return tuples_.size(); }
 
   /**
    * @return True if this sorter's contents been sorted; false otherwise.

@@ -94,7 +94,7 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
       auto existing =
           reinterpret_cast<AggTuple *>(aht->Lookup(input.Hash(), AggTupleKeyEq, &input));
       if (existing == nullptr) {
-        new (aht->StoreInputTuple(input.Hash())) AggTuple(input);
+        new (aht->AllocInputTuple(input.Hash())) AggTuple(input);
       } else {
         existing->Advance(input);
       }

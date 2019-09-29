@@ -62,7 +62,7 @@ void JoinHashTable::BuildGenericHashTableInternal() {
 
 void JoinHashTable::BuildGenericHashTable() {
   // Setup based on number of buffered build-size tuples
-  generic_hash_table_.SetSize(GetElementCount());
+  generic_hash_table_.SetSize(GetTupleCount());
 
   // Dispatch to appropriate build code based on GHT size
   uint64_t l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
@@ -546,7 +546,7 @@ void JoinHashTable::BuildConciseHashTableInternal() {
 
 void JoinHashTable::BuildConciseHashTable() {
   // Setup based on number of buffered build-size tuples
-  concise_hash_table_.SetSize(GetElementCount());
+  concise_hash_table_.SetSize(GetTupleCount());
 
   // Dispatch to internal function based on prefetching requirements. If the CHT
   // is larger than L3 then the total size of all buffered build-side tuples is
@@ -581,8 +581,8 @@ void JoinHashTable::Build() {
   }
 
   timer.Stop();
-  UNUSED double tps = (GetElementCount() / timer.elapsed()) / 1000.0;
-  LOG_DEBUG("JHT: built {} tuples in {} ms ({:.2f} tps)", GetElementCount(), timer.elapsed(), tps);
+  UNUSED double tps = (GetTupleCount() / timer.elapsed()) / 1000.0;
+  LOG_DEBUG("JHT: built {} tuples in {} ms ({:.2f} tps)", GetTupleCount(), timer.elapsed(), tps);
 
   built_ = true;
 }
@@ -660,10 +660,10 @@ void JoinHashTable::MergeIncomplete(JoinHashTable *source) {
   // TODO(pmenon): Support merging build of concise tables
 
   // First, merge entries in the source table into ours
-  for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < source->GetElementCount();
+  for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < source->GetTupleCount();
        idx++, prefetch_idx++) {
     if constexpr (Prefetch) {
-      if (TPL_LIKELY(prefetch_idx < source->GetElementCount())) {
+      if (TPL_LIKELY(prefetch_idx < source->GetTupleCount())) {
         auto *prefetch_entry = source->EntryAt(prefetch_idx);
         generic_hash_table_.PrefetchChainHead<false>(prefetch_entry->hash);
       }

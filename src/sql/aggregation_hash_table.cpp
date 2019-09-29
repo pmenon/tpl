@@ -108,7 +108,7 @@ void AggregationHashTable::Grow() {
   stats_.num_growths++;
 }
 
-byte *AggregationHashTable::StoreInputTuple(const hash_t hash) {
+byte *AggregationHashTable::AllocInputTuple(hash_t hash) {
   // Grow if need be
   if (NeedsToGrow()) {
     Grow();
@@ -161,8 +161,8 @@ void AggregationHashTable::FlushToOverflowPartitions() {
   stats_.num_flushes++;
 }
 
-byte *AggregationHashTable::StoreInputTuplePartitioned(const hash_t hash) {
-  byte *ret = StoreInputTuple(hash);
+byte *AggregationHashTable::AllocInputTuplePartitioned(hash_t hash) {
+  byte *ret = AllocInputTuple(hash);
   if (hash_table_.num_elements() >= flush_threshold_) {
     FlushToOverflowPartitions();
   }
@@ -377,7 +377,7 @@ void AggregationHashTable::CreateMissingGroups(VectorProjectionIterator *vpi,
     }
 
     // Initialize
-    init_agg_fn(Partitioned ? StoreInputTuplePartitioned(hash) : StoreInputTuple(hash), vpi);
+    init_agg_fn(Partitioned ? AllocInputTuplePartitioned(hash) : AllocInputTuple(hash), vpi);
   }
 }
 
@@ -411,7 +411,7 @@ void AggregationHashTable::TransferMemoryAndPartitions(
 
   // If, by chance, we have some unflushed aggregate data, flush it out now to
   // ensure partitioned build captures it.
-  if (NumElements() > 0) {
+  if (GetTupleCount() > 0) {
     FlushToOverflowPartitions();
   }
 
@@ -477,7 +477,7 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(void *const 
   LOG_DEBUG(
       "Overflow Partition {}: estimated size = {}, actual size = {}, "
       "build time = {:2f} ms",
-      partition_idx, estimated_size, agg_table->NumElements(), timer.elapsed());
+      partition_idx, estimated_size, agg_table->GetTupleCount(), timer.elapsed());
 
   // Set it
   partition_tables_[partition_idx] = agg_table;

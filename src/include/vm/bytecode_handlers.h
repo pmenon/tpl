@@ -813,15 +813,15 @@ VM_OP_HOT void OpRemReal(tpl::sql::Real *const result, const tpl::sql::Real *con
 VM_OP void OpAggregationHashTableInit(tpl::sql::AggregationHashTable *agg_hash_table,
                                       tpl::sql::MemoryPool *memory, uint32_t payload_size);
 
-VM_OP_HOT void OpAggregationHashTableInsert(byte **result,
-                                            tpl::sql::AggregationHashTable *agg_hash_table,
-                                            hash_t hash_val) {
-  *result = agg_hash_table->StoreInputTuple(hash_val);
+VM_OP_HOT void OpAggregationHashTableAllocTuple(byte **result,
+                                                tpl::sql::AggregationHashTable *agg_hash_table,
+                                                const hash_t hash_val) {
+  *result = agg_hash_table->AllocInputTuple(hash_val);
 }
 
-VM_OP_HOT void OpAggregationHashTableInsertPartitioned(
-    byte **result, tpl::sql::AggregationHashTable *agg_hash_table, hash_t hash_val) {
-  *result = agg_hash_table->StoreInputTuplePartitioned(hash_val);
+VM_OP_HOT void OpAggregationHashTableAllocTuplePartitioned(
+    byte **result, tpl::sql::AggregationHashTable *agg_hash_table, const hash_t hash_val) {
+  *result = agg_hash_table->AllocInputTuplePartitioned(hash_val);
 }
 
 VM_OP_HOT void OpAggregationHashTableLookup(byte **result,
@@ -886,12 +886,12 @@ VM_OP_HOT void OpAggregationOverflowPartitionIteratorNext(
 
 VM_OP_HOT void OpAggregationOverflowPartitionIteratorGetHash(
     hash_t *hash_val, tpl::sql::AHTOverflowPartitionIterator *iter) {
-  *hash_val = iter->GetHash();
+  *hash_val = iter->GetRowHash();
 }
 
 VM_OP_HOT void OpAggregationOverflowPartitionIteratorGetRow(
     const byte **row, tpl::sql::AHTOverflowPartitionIterator *iter) {
-  *row = iter->GetPayload();
+  *row = iter->GetRow();
 }
 
 //
