@@ -116,7 +116,7 @@ TEST_F(AggregationHashTableTest, SimpleRandomInsertionTest) {
         FAIL();
       }
       EXPECT_TRUE(ref_iter == ref_agg_table.end());
-      new (agg_table()->Insert(hash_val)) AggTuple(input);
+      new (agg_table()->StoreInputTuple(hash_val)) AggTuple(input);
       ref_agg_table.emplace(input.key, std::make_unique<AggTuple>(input));
     }
   }
@@ -147,7 +147,7 @@ TEST_F(AggregationHashTableTest, IterationTest) {
       if (existing != nullptr) {
         existing->Advance(input);
       } else {
-        auto *new_agg = agg_table()->Insert(input.Hash());
+        auto *new_agg = agg_table()->StoreInputTuple(input.Hash());
         new (new_agg) AggTuple(input);
       }
     }
@@ -185,7 +185,7 @@ TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
     if (existing != nullptr) {
       existing->Advance(input);
     } else {
-      auto *new_agg = agg_table()->InsertPartitioned(input.Hash());
+      auto *new_agg = agg_table()->StoreInputTuplePartitioned(input.Hash());
       new (new_agg) AggTuple(input);
     }
   }
@@ -366,7 +366,7 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
       if (existing != nullptr) {
         existing->Advance(input);
       } else {
-        auto *new_agg = agg_table->InsertPartitioned(input.Hash());
+        auto *new_agg = agg_table->StoreInputTuplePartitioned(input.Hash());
         new (new_agg) AggTuple(input);
       }
     }
@@ -380,7 +380,7 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
       if (existing != nullptr) {
         existing->Merge(*partial_agg);
       } else {
-        auto *new_agg = table->Insert(iter->GetHash());
+        auto *new_agg = table->StoreInputTuple(iter->GetHash());
         new (new_agg) AggTuple(*partial_agg);
       }
     }

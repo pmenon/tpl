@@ -2,10 +2,11 @@
 
 #include <algorithm>
 #include <memory>
+#include <numeric>
 #include <utility>
 #include <vector>
 
-#include <tbb/tbb.h>  // NOLINT
+#include "tbb/tbb.h"
 
 #include "count/hll.h"
 
@@ -107,7 +108,7 @@ void AggregationHashTable::Grow() {
   stats_.num_growths++;
 }
 
-byte *AggregationHashTable::Insert(const hash_t hash) {
+byte *AggregationHashTable::StoreInputTuple(const hash_t hash) {
   // Grow if need be
   if (NeedsToGrow()) {
     Grow();
@@ -160,8 +161,8 @@ void AggregationHashTable::FlushToOverflowPartitions() {
   stats_.num_flushes++;
 }
 
-byte *AggregationHashTable::InsertPartitioned(const hash_t hash) {
-  byte *ret = Insert(hash);
+byte *AggregationHashTable::StoreInputTuplePartitioned(const hash_t hash) {
+  byte *ret = StoreInputTuple(hash);
   if (hash_table_.num_elements() >= flush_threshold_) {
     FlushToOverflowPartitions();
   }
@@ -376,11 +377,7 @@ void AggregationHashTable::CreateMissingGroups(VectorProjectionIterator *vpi,
     }
 
     // Initialize
-    if constexpr (Partitioned) {
-      init_agg_fn(InsertPartitioned(hash), vpi);
-    } else {  // NOLINT
-      init_agg_fn(Insert(hash), vpi);
-    }
+    init_agg_fn(Partitioned ? StoreInputTuplePartitioned(hash) : StoreInputTuple(hash), vpi);
   }
 }
 
@@ -492,18 +489,15 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(void *const 
 void AggregationHashTable::ExecuteParallelPartitionedScan(
     void *query_state, ThreadStateContainer *thread_states,
     const AggregationHashTable::ScanPartitionFn scan_fn) {
-  // At this point, this aggregation table has a list of overflow partitions
-  // that must be merged into a single aggregation hash table. For simplicity,
-  // we create a new aggregation hash table per overflow partition, and merge
-  // the contents of that partition into the new hash table. We use the HLL
-  // estimates to size the hash table before construction so as to minimize the
-  // growth factor. Each aggregation hash table partition will be built and
-  // scanned in parallel.
+  // At this point, this aggregation table has a list of overflow partitions that must be merged
+  // into a single aggregation hash table. For simplicity, we create a new aggregation hash table
+  // per overflow partition, and merge the contents of that partition into the new hash table. We
+  // use the HLL estimates to size the hash table before construction so as to minimize the growth
+  // factor. Each aggregation hash table partition will be built and scanned in parallel.
 
   TPL_ASSERT(partition_heads_ != nullptr && merge_partition_fn_ != nullptr,
-             "No overflow partitions allocated, or no merging function "
-             "allocated. Did you call TransferMemoryAndPartitions() before "
-             "issuing the partitioned scan?");
+             "No overflow partitions allocated, or no merging function allocated. Did you call "
+             "TransferMemoryAndPartitions() before issuing the partitioned scan?");
 
   // Determine the non-empty overflow partitions
   std::vector<uint32_t> nonempty_parts;

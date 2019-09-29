@@ -134,14 +134,22 @@ class AggregationHashTable {
    * @param hash The hash value of the element to insert.
    * @return A pointer to a memory area where the element can be written to.
    */
-  byte *Insert(hash_t hash);
+  byte *StoreInputTuple(hash_t hash);
 
   /**
    * Insert a new element with hash value @em hash into this partitioned aggregation hash table.
    * @param hash The hash value of the element to insert.
    * @return A pointer to a memory area where the input element can be written.
    */
-  byte *InsertPartitioned(hash_t hash);
+  byte *StoreInputTuplePartitioned(hash_t hash);
+
+  /**
+   * Insert and link in the given fully-constructed tuple contained within @em entry payload into
+   * this aggregation table. This is used during partitioned-build when pre-allocated tuples need to
+   * be linked into the hash table without allocating new tuple data.
+   * @param entry The entry to insert into the hash table.
+   */
+  void Insert(HashTableEntry *entry);
 
   /**
    * Lookup and return an entry in the aggregation table that matches a given hash and key. The hash
@@ -345,8 +353,12 @@ class AggregationHashTable {
 };
 
 // ---------------------------------------------------------
-// Implementation below
+// Aggregation Hash Table implementation below
 // ---------------------------------------------------------
+
+inline void AggregationHashTable::Insert(HashTableEntry *entry) {
+  hash_table_.Insert<false>(entry, entry->hash);
+}
 
 inline HashTableEntry *AggregationHashTable::LookupEntryInternal(
     hash_t hash, AggregationHashTable::KeyEqFn key_eq_fn, const void *probe_tuple) const {
@@ -518,6 +530,11 @@ class AHTOverflowPartitionIterator {
       curr_ = *partitions_iter_++;
     }
   }
+
+  /**
+   * @return The current entry.
+   */
+  HashTableEntry *GetCurrentEntry() const { return curr_; }
 
   /**
    * Get the hash value of the overflow entry the iterator is currently pointing to. It is assumed

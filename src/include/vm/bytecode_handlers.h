@@ -816,12 +816,12 @@ VM_OP void OpAggregationHashTableInit(tpl::sql::AggregationHashTable *agg_hash_t
 VM_OP_HOT void OpAggregationHashTableInsert(byte **result,
                                             tpl::sql::AggregationHashTable *agg_hash_table,
                                             hash_t hash_val) {
-  *result = agg_hash_table->Insert(hash_val);
+  *result = agg_hash_table->StoreInputTuple(hash_val);
 }
 
 VM_OP_HOT void OpAggregationHashTableInsertPartitioned(
     byte **result, tpl::sql::AggregationHashTable *agg_hash_table, hash_t hash_val) {
-  *result = agg_hash_table->InsertPartitioned(hash_val);
+  *result = agg_hash_table->StoreInputTuplePartitioned(hash_val);
 }
 
 VM_OP_HOT void OpAggregationHashTableLookup(byte **result,
