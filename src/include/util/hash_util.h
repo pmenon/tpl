@@ -6,7 +6,7 @@
 #include <string>
 #include <type_traits>
 
-#include "xxh3.h"
+#include "xxh3.h"  // NOLINT
 
 #include "common/common.h"
 #include "common/macros.h"

@@ -1,3 +1,5 @@
+#include <string>
+
 #include "sql/operations/like_operators.h"
 #include "util/test_harness.h"
 
