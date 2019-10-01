@@ -467,7 +467,7 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(void *const 
   }
 
   // Create it
-  auto estimated_size = 4000;  // partition_estimates_[partition_idx]->Estimate();
+  auto estimated_size = partition_estimates_[partition_idx]->Estimate();
   auto *agg_table = new (
       memory_->AllocateAligned(sizeof(AggregationHashTable), alignof(AggregationHashTable), false))
       AggregationHashTable(memory_, payload_size_, estimated_size);
@@ -537,8 +537,8 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(
                         return curr + partition_tables_[idx]->GetTupleCount();
                       });
 
-  UNUSED double tps = (tuple_count / timer.elapsed()) / 1000.0;
-  LOG_INFO("Built and scanned {} tables totalling {} tuples in {:.2f} ms ({:.2f} tps)",
+  double tps = (tuple_count / timer.elapsed()) / 1000.0;
+  LOG_INFO("Built and scanned {} tables totalling {} tuples in {:.2f} ms ({:.2f} mtps)",
            nonempty_parts.size(), tuple_count, timer.elapsed(), tps);
 }
 

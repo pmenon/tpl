@@ -120,8 +120,8 @@ void Sorter::Sort() {
 
   timer.Stop();
 
-  UNUSED double tps = (tuples_.size() / timer.elapsed()) / 1000.0;
-  LOG_DEBUG("Sorted {} tuples in {} ms ({:.2f} tps)", tuples_.size(), timer.elapsed(), tps);
+  double tps = (tuples_.size() / timer.elapsed()) / 1000.0;
+  LOG_INFO("Sorted {} tuples in {} ms ({:.2f} mtps)", tuples_.size(), timer.elapsed(), tps);
 
   // Mark complete
   sorted_ = true;
@@ -174,7 +174,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   // adapting based on tuples sizes, CPU speeds, caches, algorithms, etc.
 
   if (num_tuples < kDefaultMinTuplesForParallelSort) {
-    LOG_INFO("Sorter contains {} elements. Using serial sort.");
+    LOG_INFO("Sorter contains {} elements. Using serial sort.", num_tuples);
 
     // Reserve room for all tuples
     tuples_.reserve(num_tuples);
@@ -345,7 +345,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   sorted_ = true;
 
   UNUSED double tps = (tuples_.size() / timer.GetTotalElapsedTime()) / 1000.0;
-  LOG_DEBUG("Sort Stats: {} tuples ({:.2f} tps)", GetTupleCount(), tps);
+  LOG_DEBUG("Sort Stats: {} tuples ({:.2f} mtps)", GetTupleCount(), tps);
   for (const auto &stage : timer.GetStages()) {
     LOG_DEBUG("  {}: {.2f} ms", stage.name(), stage.time());
   }
