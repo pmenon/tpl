@@ -33,7 +33,7 @@ class HashUtil {
    * @param val The input value to hash.
    * @return The compute hash.
    */
-  template <HashMethod METHOD = HashMethod::Murmur2, typename T>
+  template <HashMethod METHOD = HashMethod::Crc, typename T>
   static auto Hash(const T val, const hash_t seed)
       -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
     switch (METHOD) {
@@ -55,7 +55,7 @@ class HashUtil {
    * @param seed The seed hash value to mix in.
    * @return The compute hash.
    */
-  template <HashMethod METHOD = HashMethod::Murmur2, typename T>
+  template <HashMethod METHOD = HashMethod::Crc, typename T>
   static auto Hash(const T val) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
     switch (METHOD) {
       case HashMethod::Crc:
