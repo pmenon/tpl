@@ -66,6 +66,9 @@ class VectorProjectionIterator;
  */
 class Sorter {
  public:
+  // Minimum number of tuples to have before using a parallel sort
+  static constexpr uint64_t kDefaultMinTuplesForParallelSort = 10000;
+
   /**
    * The comparison function used to sort tuples in a Sorter.
    */
