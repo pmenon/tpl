@@ -195,21 +195,17 @@ class TupleIdList {
   void Clear() { bit_vector_.Reset(); }
 
   /**
-   * Return the number of active tuples in the list.
    * @return The number of active tuples in the list.
    */
   uint32_t GetTupleCount() const { return bit_vector_.CountOnes(); }
 
   /**
-   * Return the capacity of the list.
    * @return The capacity of the TID list.
    */
   uint32_t GetCapacity() const { return bit_vector_.num_bits(); }
 
   /**
-   * Return the selectivity of the list as a fraction in the range [0.0, 1.0].
-   * @return The selectivity of the list, i.e., the fraction of the tuples that are considered
-   *         "active".
+   * @return The selectivity of the list a fraction in the range [0.0, 1.0].
    */
   float ComputeSelectivity() const { return static_cast<float>(GetTupleCount()) / GetCapacity(); }
 
@@ -231,7 +227,7 @@ class TupleIdList {
   }
 
   /**
-   * Return a string representation of this vector.
+   * @return A string representation of this list.
    */
   std::string ToString() const;
 
@@ -242,7 +238,6 @@ class TupleIdList {
   void Dump(std::ostream &stream) const;
 
   /**
-   * Access the internal bit vector.
    * @return The internal bit vector representation of the list.
    */
   BitVectorType *GetMutableBits() { return &bit_vector_; }
