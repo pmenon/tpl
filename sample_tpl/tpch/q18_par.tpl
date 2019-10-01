@@ -137,7 +137,7 @@ fun aggKeyCheckPartial1(agg_payload1: *AggPayload1, agg_payload2: *AggPayload1) 
     return agg_payload1.l_orderkey == agg_payload2.l_orderkey
 }
 
-fun checkAggKey2(payload: *AggPayload2, row: *AggValues2) -> bool {
+fun checkAggKey2(payload: *AggPayload2, row: *JoinRow3) -> bool {
     if (payload.c_custkey != row.c_custkey) {
         return false
     }
@@ -507,25 +507,19 @@ fun p5_worker(state: *State, ts: *P5_ThreadState, l_tvi: *TableVectorIterator) -
                 var join_row3 = @ptrCast(*JoinRow3, @htEntryIterGetRow(&hti))
 
                 // Build AHT
-                var agg_input : AggValues2
-                agg_input.c_name = join_row3.c_name
-                agg_input.c_custkey = join_row3.c_custkey
-                agg_input.o_orderkey = join_row3.o_orderkey
-                agg_input.o_orderdate = join_row3.o_orderdate
-                agg_input.o_totalprice = join_row3.o_totalprice
-                agg_input.sum_quantity = @vpiGetReal(vec, 4) // l_quantity
-                var agg_hash_val = @hash(agg_input.c_name, agg_input.c_custkey, agg_input.o_orderkey, agg_input.o_totalprice)
-                var agg_payload = @ptrCast(*AggPayload2, @aggHTLookup(&ts.ts_agg_table, agg_hash_val, checkAggKey2, &agg_input))
+                var agg_hash_val = @hash(join_row3.c_name, join_row3.c_custkey, join_row3.o_orderkey, join_row3.o_orderdate, join_row3.o_totalprice)
+                var agg_payload = @ptrCast(*AggPayload2, @aggHTLookup(&ts.ts_agg_table, agg_hash_val, checkAggKey2, join_row3))
                 if (agg_payload == nil) {
                     agg_payload = @ptrCast(*AggPayload2, @aggHTInsert(&ts.ts_agg_table, agg_hash_val, true))
-                    agg_payload.c_name = agg_input.c_name
-                    agg_payload.c_custkey = agg_input.c_custkey
-                    agg_payload.o_orderkey = agg_input.o_orderkey
-                    agg_payload.o_orderdate = agg_input.o_orderdate
-                    agg_payload.o_totalprice = agg_input.o_totalprice
+                    agg_payload.c_name = join_row3.c_name
+                    agg_payload.c_custkey = join_row3.c_custkey
+                    agg_payload.o_orderkey = join_row3.o_orderkey
+                    agg_payload.o_orderdate = join_row3.o_orderdate
+                    agg_payload.o_totalprice = join_row3.o_totalprice
                     @aggInit(&agg_payload.sum_quantity)
                 }
-                @aggAdvance(&agg_payload.sum_quantity, &agg_input.sum_quantity)
+                var l_quantity = @vpiGetReal(vec, 4)
+                @aggAdvance(&agg_payload.sum_quantity, &l_quantity)
             }
         }
     }
