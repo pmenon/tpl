@@ -8,43 +8,37 @@ struct OutputStruct {
 }
 
 struct State {
-    count       : int32 // Debug
     join_table1 : JoinHashTable
     join_table2 : JoinHashTable
     join_table3 : JoinHashTable
     agg_table1  : AggregationHashTable
     agg_table2  : AggregationHashTable
     sorter      : Sorter
+    count       : int32 // Debug
 }
 
 struct P1_ThreadState {
     ts_agg_table : AggregationHashTable
-    ts_count     : int32
 }
 
 struct P2_ThreadState {
     ts_join_table : JoinHashTable
-    ts_count      : int32
 }
 
 struct P3_ThreadState {
     ts_join_table : JoinHashTable
-    ts_count      : int32
 }
 
 struct P4_ThreadState {
     ts_join_table : JoinHashTable
-    ts_count      : int32
 }
 
 struct P5_ThreadState {
     ts_agg_table : AggregationHashTable
-    ts_count     : int32
 }
 
 struct P6_ThreadState {
     ts_sorter : Sorter
-    ts_count  : int32
 }
 
 struct JoinRow1 {
@@ -208,7 +202,6 @@ fun tearDownState(execCtx: *ExecutionContext, state: *State) -> nil {
 // -----------------------------------------------------------------------------
 
 fun pt_initThreadState(execCtx: *ExecutionContext, ts: *P1_ThreadState) -> nil {
-    ts.ts_count = 0
     @aggHTInit(&ts.ts_agg_table, @execCtxGetMem(execCtx), @sizeOf(AggPayload1))
 }
 
@@ -221,7 +214,6 @@ fun p1_tearDownThreadState(execCtx: *ExecutionContext, ts: *P1_ThreadState) -> n
 // -----------------------------------------------------------------------------
 
 fun p2_initThreadState(execCtx: *ExecutionContext, ts: *P2_ThreadState) -> nil {
-    ts.ts_count = 0
     @joinHTInit(&ts.ts_join_table, @execCtxGetMem(execCtx), @sizeOf(JoinRow1))
 }
 
@@ -234,7 +226,6 @@ fun p2_tearDownThreadState(execCtx: *ExecutionContext, ts: *P2_ThreadState) -> n
 // -----------------------------------------------------------------------------
 
 fun p3_initThreadState(execCtx: *ExecutionContext, ts: *P3_ThreadState) -> nil {
-    ts.ts_count = 0
     @joinHTInit(&ts.ts_join_table, @execCtxGetMem(execCtx), @sizeOf(JoinRow2))
 }
 
@@ -247,7 +238,6 @@ fun p3_tearDownThreadState(execCtx: *ExecutionContext, ts: *P3_ThreadState) -> n
 // -----------------------------------------------------------------------------
 
 fun p4_initThreadState(execCtx: *ExecutionContext, ts: *P4_ThreadState) -> nil {
-    ts.ts_count = 0
     @joinHTInit(&ts.ts_join_table, @execCtxGetMem(execCtx), @sizeOf(JoinRow3))
 }
 
@@ -260,7 +250,6 @@ fun p4_tearDownThreadState(execCtx: *ExecutionContext, ts: *P3_ThreadState) -> n
 // -----------------------------------------------------------------------------
 
 fun p5_initThreadState(execCtx: *ExecutionContext, ts: *P5_ThreadState) -> nil {
-    ts.ts_count = 0
     @aggHTInit(&ts.ts_agg_table, @execCtxGetMem(execCtx), @sizeOf(AggPayload2))
 }
 
@@ -273,28 +262,11 @@ fun p5_tearDownThreadState(execCtx: *ExecutionContext, ts: *P5_ThreadState) -> n
 // -----------------------------------------------------------------------------
 
 fun p6_initThreadState(execCtx: *ExecutionContext, ts: *P6_ThreadState) -> nil {
-    ts.ts_count = 0
     @sorterInit(&ts.ts_sorter, @execCtxGetMem(execCtx), sorterCompare, @sizeOf(SorterRow))
 }
 
 fun p6_tearDownThreadState(execCtx: *ExecutionContext, ts: *P6_ThreadState) -> nil {
     @sorterFree(&ts.ts_sorter)
-}
-
-fun gatherCounters1(qs: *State, ts: *P1_ThreadState) -> nil {
-    qs.count = qs.count + ts.ts_count
-}
-
-fun gatherCounters2(qs: *State, ts: *P2_ThreadState) -> nil {
-    qs.count = qs.count + ts.ts_count
-}
-
-fun gatherCounters3(qs: *State, ts: *P3_ThreadState) -> nil {
-    qs.count = qs.count + ts.ts_count
-}
-
-fun gatherCounters4(qs: *State, ts: *P4_ThreadState) -> nil {
-    qs.count = qs.count + ts.ts_count
 }
 
 // -----------------------------------------------------------------------------
