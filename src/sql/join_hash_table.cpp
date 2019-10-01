@@ -137,33 +137,33 @@ class ReorderBuffer {
   }
 
   /**
-   * Has the entry @em been processed? In other words, is the entry in its
-   * final location in the entry array?
+   * @return True if @em entry has been processed, i.e., if @em entry is in its final location in
+   *         entry array. Return false otherwise.
    */
-  ALWAYS_INLINE bool IsProcessed(const HashTableEntry *entry) const {
+  bool IsProcessed(const HashTableEntry *entry) const {
     return (entry->cht_slot & kProcessedBit) != 0u;
   }
 
   /**
    * Mark the given entry as processed and in its final location
    */
-  ALWAYS_INLINE void SetProcessed(HashTableEntry *entry) const { entry->cht_slot |= kProcessedBit; }
+  void SetProcessed(HashTableEntry *entry) const { entry->cht_slot |= kProcessedBit; }
 
   /**
-   * Has the entry @em entry been buffered in the reorder buffer?
+   * @return True if @em entry has been buffered into this re-order buffer; false otherwise.
    */
-  ALWAYS_INLINE bool IsBuffered(const HashTableEntry *entry) const {
+  bool IsBuffered(const HashTableEntry *entry) const {
     return (entry->cht_slot & kBufferedBit) != 0u;
   }
 
   /**
    * Mark the entry @em entry as buffered in the reorder buffer
    */
-  ALWAYS_INLINE void SetBuffered(HashTableEntry *entry) const { entry->cht_slot |= kBufferedBit; }
+  void SetBuffered(HashTableEntry *entry) const { entry->cht_slot |= kBufferedBit; }
 
   /**
-   * Fill this reorder buffer with as many entries as possible. Each entry that
-   * is inserted is marked/tagged as buffered.
+   * Fill this reorder buffer with as many entries as possible. Each entry that is inserted is
+   * marked/tagged as buffered.
    * @return True if any entries were buffered; false otherwise
    */
   bool Fill() {
@@ -235,29 +235,23 @@ void JoinHashTable::ReorderMainEntries() {
     return;
   }
 
-  //
-  // This function reorders entries in-place in the main arena using a reorder
-  // buffer space. The general process is:
+  // This function reorders entries in-place in the main arena using a reorder buffer. The general
+  // procedure is:
   // 1. Buffer N tuples. These can be either main or overflow entries.
   // 2. Find and store their destination addresses in the 'targets' buffer
   // 3. Try and store the buffered entry into discovered target space from (2)
   //    There are a few cases we handle:
-  //    3a. If the target entry is 'PROCESSED', then the buffered entry is an
-  //        overflow entry. We acquire an overflow slot and store the buffered
-  //        entry there.
-  //    3b. If the target entry is 'BUFFERED', it is either stored somewhere
-  //        in the reorder buffer, or has been stored into its own target space.
-  //        Either way, we can directly overwrite the target with the buffered
-  //        entry and be done with it.
-  //    3c. We need to swap the target and buffer entry. If the reorder buffer
-  //        has room, copy the target into the buffer and write the buffered
-  //        entry out.
-  //    3d. If the reorder buffer has no room for this target entry, we use a
-  //        temporary space to perform a (costly) three-way swap to buffer the
-  //        target entry into the reorder buffer and write the buffered entry
-  //        out. This should happen infrequently.
+  //    3a. If the target entry is 'PROCESSED', then the buffered entry is an overflow entry. We
+  //        acquire an overflow slot and store the buffered entry there.
+  //    3b. If the target entry is 'BUFFERED', it is either stored somewhere in the reorder buffer,
+  //        or has been stored into its own target space. Either way, we can directly overwrite the
+  //        target with the buffered entry and be done with it.
+  //    3c. We need to swap the target and buffer entry. If the reorder buffer has room, copy the
+  //        target into the buffer and write the buffered entry out.
+  //    3d. If the reorder buffer has no room for this target entry, we use a temporary space to
+  //        perform a (costly) three-way swap to buffer the target entry into the reorder buffer and
+  //        write the buffered entry out. This should happen infrequently.
   // 4. Reset the reorder buffer and repeat.
-  //
 
   HashTableEntry *targets[kDefaultVectorSize];
   ReorderBuffer reorder_buf(entries_, kDefaultVectorSize, 0, overflow_idx);
@@ -692,38 +686,43 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
     hll_estimator_->Merge(jht->hll_estimator_.get());
   }
 
+  // Size the global hash table
   uint64_t num_elem_estimate = hll_estimator_->Estimate();
-
-  // Set size
   generic_hash_table_.SetSize(num_elem_estimate);
 
-  // Resize the owned entries vector now to avoid resizing concurrently during
-  // merge. All the thread-local join table data will get placed into our
-  // owned entries vector
+  // Resize the owned entries vector now to avoid resizing concurrently during merge. All the
+  // thread-local join table data will get placed into our owned entries vector.
   owned_.reserve(tl_join_tables.size());
-
-  // Is the global hash table out of cache? If so, we'll prefetch during build.
-  const uint64_t l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
-  const bool out_of_cache = (generic_hash_table_.GetTotalMemoryUsage() > l3_size);
 
   util::Timer<std::milli> timer;
   timer.Start();
 
-  // Merge all in parallel
-  tbb::task_scheduler_init sched;
-  tbb::parallel_for_each(tl_join_tables, [this, out_of_cache](JoinHashTable *source) {
-    if (out_of_cache) {
-      MergeIncomplete<true, true>(source);
-    } else {
-      MergeIncomplete<false, true>(source);
+  if (num_elem_estimate < kDefaultMinSizeForParallelMerge) {
+    // TODO(pmenon): If the estimate under counted, it might make sense to switch to parallel merge.
+    LOG_DEBUG("JHT: Estimated {} elements. Using serial merge.");
+    for (auto *source : tl_join_tables) {
+      MergeIncomplete<false, false>(source);
     }
-  });
+  } else {
+    const uint64_t l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
+    const bool out_of_cache = (generic_hash_table_.GetTotalMemoryUsage() > l3_size);
+
+    tbb::parallel_for_each(tl_join_tables, [this, out_of_cache](JoinHashTable *source) {
+      if (out_of_cache) {
+        MergeIncomplete<true, true>(source);
+      } else {
+        MergeIncomplete<false, true>(source);
+      }
+    });
+  }
 
   timer.Stop();
 
-  UNUSED double tps = (generic_hash_table_.GetElementCount() / timer.elapsed()) / 1000.0;
-  LOG_INFO("JHT: parallel merged {} elements ({} estimated) in {:.2f} ms ({:.2f} tps)",
-           generic_hash_table_.GetElementCount(), num_elem_estimate, timer.elapsed(), tps);
+  double tps = (generic_hash_table_.GetElementCount() / timer.elapsed()) / 1000.0;
+  LOG_INFO(
+      "JHT: parallel merged {} JHTs totalling {} elements ({} estimated) in {:.2f} ms ({:.2f} tps)",
+      tl_join_tables.size(), generic_hash_table_.GetElementCount(), num_elem_estimate,
+      timer.elapsed(), tps);
 }
 
 }  // namespace tpl::sql

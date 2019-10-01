@@ -42,7 +42,11 @@ class ThreadStateContainer;
  */
 class JoinHashTable {
  public:
+  // Default precision to use for HLL estimations
   static constexpr uint32_t kDefaultHLLPrecision = 10;
+
+  // Minimum number of expected elements to merge before triggering a parallel merge
+  static constexpr uint32_t kDefaultMinSizeForParallelMerge = 1024;
 
   /**
    * Construct a join hash table. All memory allocations are sourced from the injected @em memory,
