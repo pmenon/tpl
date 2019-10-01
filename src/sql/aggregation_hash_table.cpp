@@ -161,7 +161,7 @@ void AggregationHashTable::FlushToOverflowPartitions() {
     if (TPL_UNLIKELY(partition_tails_[partition_idx] == nullptr)) {
       partition_tails_[partition_idx] = entry;
     }
-    // partition_estimates_[partition_idx]->Update(util::HashUtil::ScrambleHash(entry->hash));
+    partition_estimates_[partition_idx]->Update(util::HashUtil::ScrambleHash(entry->hash));
   });
 
   // Update stats
