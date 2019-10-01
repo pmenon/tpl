@@ -699,7 +699,7 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
 
   if (num_elem_estimate < kDefaultMinSizeForParallelMerge) {
     // TODO(pmenon): If the estimate under counted, it might make sense to switch to parallel merge.
-    LOG_INFO("JHT: Estimated {} elements. Using serial merge.");
+    LOG_INFO("JHT: Estimated {} elements. Using serial merge.", num_elem_estimate);
     for (auto *source : tl_join_tables) {
       MergeIncomplete<false, false>(source);
     }
