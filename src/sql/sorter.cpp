@@ -173,7 +173,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   // jobs. The threshold value value was found empirically, but might be a good candidate for
   // adapting based on tuples sizes, CPU speeds, caches, algorithms, etc.
 
-  if (num_tuples < kDefaultMinTuplesForParallelSort) {
+  if (tl_sorters.size() == 1 || num_tuples < kDefaultMinTuplesForParallelSort) {
     LOG_INFO("Sorter contains {} elements. Using serial sort.", num_tuples);
 
     // Reserve room for all tuples
