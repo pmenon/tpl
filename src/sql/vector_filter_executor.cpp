@@ -30,16 +30,6 @@ VectorFilterExecutor::VectorFilterExecutor(VectorProjectionIterator *vector_proj
   vector_projection_iterator_ = vector_projection_iterator;
 }
 
-void VectorFilterExecutor::SelectGeneric(const std::vector<uint32_t> &col_indexes,
-                                         const VectorFilterExecutor::VectorFilterFn &filter) {
-  llvm::SmallVector<const Vector *, 8> vectors;
-  for (const uint32_t col_idx : col_indexes) {
-    vectors.push_back(vector_projection_->GetColumn(col_idx));
-  }
-
-  filter(vectors.data(), &tid_list_);
-}
-
 #define VEC_GENVAL_OP(OP_NAME)                                        \
   const Vector *left_vector = vector_projection_->GetColumn(col_idx); \
   VectorOps::OP_NAME(*left_vector, ConstantVector(val), &tid_list_);
