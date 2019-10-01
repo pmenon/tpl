@@ -9,14 +9,14 @@ GenericHashTable::GenericHashTable(float load_factor) noexcept
 
 GenericHashTable::~GenericHashTable() {
   if (entries_ != nullptr) {
-    util::FreeHugeArray(entries_, capacity());
+    util::FreeHugeArray(entries_, GetCapacity());
   }
 }
 
 void GenericHashTable::SetSize(uint64_t new_size) {
   TPL_ASSERT(new_size > 0, "New size cannot be zero!");
   if (entries_ != nullptr) {
-    util::FreeHugeArray(entries_, capacity());
+    util::FreeHugeArray(entries_, GetCapacity());
   }
 
   uint64_t next_size = util::MathUtil::PowerOf2Ceil(new_size);
@@ -73,7 +73,7 @@ void GenericHashTableVectorIterator<UseTag>::Next() {
 
   // Fill the range [idx, SIZE) in the cache with valid entries from the source
   // hash table.
-  while (index < kDefaultVectorSize && table_dir_index_ < table_.capacity()) {
+  while (index < kDefaultVectorSize && table_dir_index_ < table_.GetCapacity()) {
     entry_vec_[index] = table_.entries_[table_dir_index_++].load(std::memory_order_relaxed);
     if constexpr (UseTag) {
       entry_vec_[index] = GenericHashTable::UntagPointer(entry_vec_[index]);

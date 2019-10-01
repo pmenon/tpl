@@ -48,7 +48,7 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory, const std::size_t
       partition_tables_(nullptr),
       partition_shift_bits_(util::BitUtil::CountLeadingZeros(uint64_t(kDefaultNumPartitions) - 1)) {
   hash_table_.SetSize(initial_size);
-  max_fill_ = std::llround(hash_table_.capacity() * hash_table_.load_factor());
+  max_fill_ = std::llround(hash_table_.GetCapacity() * hash_table_.GetLoadFactor());
 
   // Compute flush threshold. In partitioned mode, we want the thread-local
   // pre-aggregation hash table to be sized to fit in cache. Target L2.
@@ -94,9 +94,9 @@ AggregationHashTable::~AggregationHashTable() {
 
 void AggregationHashTable::Grow() {
   // Resize table
-  const uint64_t new_size = hash_table_.capacity() * 2;
+  const uint64_t new_size = hash_table_.GetCapacity() * 2;
   hash_table_.SetSize(new_size);
-  max_fill_ = std::llround(hash_table_.capacity() * hash_table_.load_factor());
+  max_fill_ = std::llround(hash_table_.GetCapacity() * hash_table_.GetLoadFactor());
 
   // Insert elements again
   for (byte *untyped_entry : entries_) {
@@ -161,7 +161,7 @@ void AggregationHashTable::FlushToOverflowPartitions() {
     if (TPL_UNLIKELY(partition_tails_[partition_idx] == nullptr)) {
       partition_tails_[partition_idx] = entry;
     }
-    partition_estimates_[partition_idx]->Update(util::HashUtil::ScrambleHash(entry->hash));
+    // partition_estimates_[partition_idx]->Update(util::HashUtil::ScrambleHash(entry->hash));
   });
 
   // Update stats
@@ -170,7 +170,7 @@ void AggregationHashTable::FlushToOverflowPartitions() {
 
 byte *AggregationHashTable::AllocInputTuplePartitioned(hash_t hash) {
   byte *ret = AllocInputTuple(hash);
-  if (hash_table_.num_elements() >= flush_threshold_) {
+  if (hash_table_.GetElementCount() >= flush_threshold_) {
     FlushToOverflowPartitions();
   }
   return ret;
@@ -467,7 +467,7 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(void *const 
   }
 
   // Create it
-  auto estimated_size = partition_estimates_[partition_idx]->Estimate();
+  auto estimated_size = 4000;  // partition_estimates_[partition_idx]->Estimate();
   auto *agg_table = new (
       memory_->AllocateAligned(sizeof(AggregationHashTable), alignof(AggregationHashTable), false))
       AggregationHashTable(memory_, payload_size_, estimated_size);
@@ -515,6 +515,9 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(
     }
   }
 
+  util::Timer<std::milli> timer;
+  timer.Start();
+
   tbb::parallel_for_each(nonempty_parts, [&](const uint32_t part_idx) {
     // Build a hash table over the given partition
     auto *agg_table_part = BuildTableOverPartition(query_state, part_idx);
@@ -525,6 +528,18 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(
     // Scan the partition
     scan_fn(query_state, thread_state, agg_table_part);
   });
+
+  timer.Stop();
+
+  const uint64_t tuple_count =
+      std::accumulate(nonempty_parts.begin(), nonempty_parts.end(), uint64_t{0},
+                      [&](const auto curr, const auto idx) {
+                        return curr + partition_tables_[idx]->GetTupleCount();
+                      });
+
+  UNUSED double tps = (tuple_count / timer.elapsed()) / 1000.0;
+  LOG_INFO("Built and scanned {} tables totalling {} tuples in {:.2f} ms ({:.2f} tps)",
+           nonempty_parts.size(), tuple_count, timer.elapsed(), tps);
 }
 
 }  // namespace tpl::sql

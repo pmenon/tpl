@@ -658,6 +658,7 @@ template <bool Prefetch, bool Concurrent>
 void JoinHashTable::MergeIncomplete(JoinHashTable *source) {
   // Only generic table merges are supported
   // TODO(pmenon): Support merging build of concise tables
+  TPL_ASSERT(!source->UsingConciseHashTable(), "Merging incomplete concise tables not supported");
 
   // First, merge entries in the source table into ours
   for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < source->GetTupleCount();
@@ -692,7 +693,6 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
   }
 
   uint64_t num_elem_estimate = hll_estimator_->Estimate();
-  LOG_INFO("Global unique count: {}", num_elem_estimate);
 
   // Set size
   generic_hash_table_.SetSize(num_elem_estimate);
@@ -706,16 +706,24 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
   const uint64_t l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
   const bool out_of_cache = (generic_hash_table_.GetTotalMemoryUsage() > l3_size);
 
+  util::Timer<std::milli> timer;
+  timer.Start();
+
   // Merge all in parallel
   tbb::task_scheduler_init sched;
-  tbb::parallel_for_each(tl_join_tables.begin(), tl_join_tables.end(),
-                         [this, out_of_cache](JoinHashTable *source) {
-                           if (out_of_cache) {
-                             MergeIncomplete<true, true>(source);
-                           } else {
-                             MergeIncomplete<false, true>(source);
-                           }
-                         });
+  tbb::parallel_for_each(tl_join_tables, [this, out_of_cache](JoinHashTable *source) {
+    if (out_of_cache) {
+      MergeIncomplete<true, true>(source);
+    } else {
+      MergeIncomplete<false, true>(source);
+    }
+  });
+
+  timer.Stop();
+
+  UNUSED double tps = (generic_hash_table_.GetElementCount() / timer.elapsed()) / 1000.0;
+  LOG_INFO("JHT: parallel merged {} elements ({} estimated) in {:.2f} ms ({:.2f} tps)",
+           generic_hash_table_.GetElementCount(), num_elem_estimate, timer.elapsed(), tps);
 }
 
 }  // namespace tpl::sql

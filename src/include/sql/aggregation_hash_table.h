@@ -212,7 +212,7 @@ class AggregationHashTable {
   /**
    * @return The total number of tuples in this table.
    */
-  uint64_t GetTupleCount() const { return hash_table_.num_elements(); }
+  uint64_t GetTupleCount() const { return hash_table_.GetElementCount(); }
 
   /**
    * @return A read-only view of this aggregation table's statistics.
@@ -224,7 +224,7 @@ class AggregationHashTable {
   friend class AHTVectorIterator;
 
   // Does the hash table need to grow?
-  bool NeedsToGrow() const { return hash_table_.num_elements() >= max_fill_; }
+  bool NeedsToGrow() const { return hash_table_.GetElementCount() >= max_fill_; }
 
   // Grow the hash table
   void Grow();
