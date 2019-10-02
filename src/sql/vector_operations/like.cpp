@@ -17,11 +17,11 @@ void TemplatedLikeOperation_Vector_Constant(const Vector &a, const Vector &b,
     return;
   }
 
-  const auto *RESTRICT a_data = reinterpret_cast<const VarlenEntry *>(a.data());
-  const auto *RESTRICT b_data = reinterpret_cast<const VarlenEntry *>(b.data());
+  const auto *RESTRICT a_data = reinterpret_cast<const VarlenEntry *>(a.GetData());
+  const auto *RESTRICT b_data = reinterpret_cast<const VarlenEntry *>(b.GetData());
 
   // Remove NULL entries from the left input
-  tid_list->GetMutableBits()->Difference(a.null_mask());
+  tid_list->GetMutableBits()->Difference(a.GetNullMask());
 
   // Lift-off
   tid_list->Filter([&](const uint64_t i) { return Op::Apply(a_data[i], b_data[0]); });
@@ -29,15 +29,14 @@ void TemplatedLikeOperation_Vector_Constant(const Vector &a, const Vector &b,
 
 template <typename Op>
 void TemplatedLikeOperation_Vector_Vector(const Vector &a, const Vector &b, TupleIdList *tid_list) {
-  TPL_ASSERT(
-      a.num_elements() == tid_list->GetCapacity() && b.num_elements() == tid_list->GetCapacity(),
-      "Input/output TID list not large enough to store all TIDS from inputs to LIKE()");
+  TPL_ASSERT(a.GetSize() == tid_list->GetCapacity() && b.GetSize() == tid_list->GetCapacity(),
+             "Input/output TID list not large enough to store all TIDS from inputs to LIKE()");
 
-  const auto *RESTRICT a_data = reinterpret_cast<const VarlenEntry *>(a.data());
-  const auto *RESTRICT b_data = reinterpret_cast<const VarlenEntry *>(b.data());
+  const auto *RESTRICT a_data = reinterpret_cast<const VarlenEntry *>(a.GetData());
+  const auto *RESTRICT b_data = reinterpret_cast<const VarlenEntry *>(b.GetData());
 
   // Remove NULL entries in both left and right inputs (cheap)
-  tid_list->GetMutableBits()->Difference(a.null_mask()).Difference(b.null_mask());
+  tid_list->GetMutableBits()->Difference(a.GetNullMask()).Difference(b.GetNullMask());
 
   // Lift-off
   tid_list->Filter([&](const uint64_t i) { return Op::Apply(a_data[i], b_data[i]); });
@@ -45,8 +44,8 @@ void TemplatedLikeOperation_Vector_Vector(const Vector &a, const Vector &b, Tupl
 
 template <typename Op>
 void TemplatedLikeOperation(const Vector &a, const Vector &b, TupleIdList *tid_list) {
-  if (a.type_id() != TypeId::Varchar || b.type_id() != TypeId::Varchar) {
-    throw InvalidTypeException(a.type_id(), "Inputs to (NOT) LIKE must be VARCHAR");
+  if (a.GetTypeId() != TypeId::Varchar || b.GetTypeId() != TypeId::Varchar) {
+    throw InvalidTypeException(a.GetTypeId(), "Inputs to (NOT) LIKE must be VARCHAR");
   }
   if (a.IsConstant()) {
     throw Exception(ExceptionType::Execution, "First input to LIKE cannot be constant");

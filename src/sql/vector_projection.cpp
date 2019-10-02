@@ -76,7 +76,7 @@ void VectorProjection::Reset() {
     auto ptr = owned_buffer_.get();
     for (const auto &col : columns_) {
       col->Reference(ptr, nullptr, 0);
-      ptr += GetTypeIdSize(col->type_id()) * kDefaultVectorSize;
+      ptr += GetTypeIdSize(col->GetTypeId()) * kDefaultVectorSize;
     }
   }
 }
@@ -106,9 +106,9 @@ void VectorProjection::CheckIntegrity() const {
 #ifndef NDEBUG
   // Check that all contained vectors have the same size and selection vector
   for (const auto &col : columns_) {
-    TPL_ASSERT(!IsFiltered() || sel_vector_ == col->selection_vector(),
+    TPL_ASSERT(!IsFiltered() || sel_vector_ == col->GetSelectionVector(),
                "Vector in projection with different selection vector");
-    TPL_ASSERT(GetSelectedTupleCount() == col->count(),
+    TPL_ASSERT(GetSelectedTupleCount() == col->GetCount(),
                "Vector size does not match rest of projection");
   }
   // Let the vectors do an integrity check

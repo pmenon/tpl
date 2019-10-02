@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <limits>
+#include <memory>
 #include <random>
 
 #include "common/memory.h"

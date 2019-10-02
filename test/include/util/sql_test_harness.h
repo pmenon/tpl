@@ -38,7 +38,7 @@ static inline std::unique_ptr<sql::Vector> MakeVector(sql::TypeId type_id, uint3
     auto vec = Make##TYPE##Vector(vals.size());                                                    \
     for (uint64_t i = 0; i < vals.size(); i++) {                                                   \
       if (nulls[i]) {                                                                              \
-        vec->SetValue(i, sql::GenericValue::CreateNull(vec->type_id()));                           \
+        vec->SetValue(i, sql::GenericValue::CreateNull(vec->GetTypeId()));                         \
       } else {                                                                                     \
         vec->SetValue(i, sql::GenericValue::Create##TYPE(vals[i]));                                \
       }                                                                                            \

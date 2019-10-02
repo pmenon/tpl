@@ -42,20 +42,20 @@ struct is_safe_for_full_compute<
 //   2b. The selection counts (i.e., the number of "active" or "visible" elements is equal)
 // 3. The output TID list is sufficiently large to represents all TIDs in both left and right inputs
 void CheckSelection(const Vector &left, const Vector &right, TupleIdList *result) {
-  if (left.type_id() != right.type_id()) {
-    throw TypeMismatchException(left.type_id(), right.type_id(),
+  if (left.GetTypeId() != right.GetTypeId()) {
+    throw TypeMismatchException(left.GetTypeId(), right.GetTypeId(),
                                 "input vector types must match for selections");
   }
   if (!left.IsConstant() && !right.IsConstant()) {
-    if (left.num_elements() != right.num_elements()) {
+    if (left.GetSize() != right.GetSize()) {
       throw Exception(ExceptionType::Execution,
                       "left and right vectors to comparison have different sizes");
     }
-    if (left.count() != right.count()) {
+    if (left.GetCount() != right.GetCount()) {
       throw Exception(ExceptionType::Execution,
                       "left and right vectors to comparison have different counts");
     }
-    if (result->GetCapacity() != left.num_elements()) {
+    if (result->GetCapacity() != left.GetSize()) {
       throw Exception(ExceptionType::Execution,
                       "result list not large enough to store all TIDs in input vector");
     }
@@ -71,8 +71,8 @@ void TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &
     return;
   }
 
-  auto *left_data = reinterpret_cast<const T *>(left.data());
-  auto &constant = *reinterpret_cast<const T *>(right.data());
+  auto *left_data = reinterpret_cast<const T *>(left.GetData());
+  auto &constant = *reinterpret_cast<const T *>(right.GetData());
 
   // Safe full-compute. Refer to comment at start of file for explanation.
   if constexpr (is_safe_for_full_compute<T>::value) {
@@ -82,13 +82,13 @@ void TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &
     if (full_compute_threshold && *full_compute_threshold <= tid_list->ComputeSelectivity()) {
       TupleIdList::BitVectorType *bit_vector = tid_list->GetMutableBits();
       bit_vector->UpdateFull([&](uint64_t i) { return Op::Apply(left_data[i], constant); });
-      bit_vector->Difference(left.null_mask());
+      bit_vector->Difference(left.GetNullMask());
       return;
     }
   }
 
   // Remove all NULL entries from left input. Right constant is guaranteed non-NULL by this point.
-  tid_list->GetMutableBits()->Difference(left.null_mask());
+  tid_list->GetMutableBits()->Difference(left.GetNullMask());
 
   // Filter
   tid_list->Filter([&](uint64_t i) { return Op::Apply(left_data[i], constant); });
@@ -97,8 +97,8 @@ void TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &
 template <typename T, typename Op>
 void TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &right,
                                             TupleIdList *tid_list) {
-  auto *left_data = reinterpret_cast<const T *>(left.data());
-  auto *right_data = reinterpret_cast<const T *>(right.data());
+  auto *left_data = reinterpret_cast<const T *>(left.GetData());
+  auto *right_data = reinterpret_cast<const T *>(right.GetData());
 
   // Safe full-compute. Refer to comment at start of file for explanation.
   if constexpr (is_safe_for_full_compute<T>::value) {
@@ -109,13 +109,13 @@ void TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &ri
     if (full_compute_threshold && *full_compute_threshold <= tid_list->ComputeSelectivity()) {
       TupleIdList::BitVectorType *bit_vector = tid_list->GetMutableBits();
       bit_vector->UpdateFull([&](uint64_t i) { return Op::Apply(left_data[i], right_data[i]); });
-      bit_vector->Difference(left.null_mask()).Difference(right.null_mask());
+      bit_vector->Difference(left.GetNullMask()).Difference(right.GetNullMask());
       return;
     }
   }
 
   // Remove all NULL entries in either vector
-  tid_list->GetMutableBits()->Difference(left.null_mask()).Difference(right.null_mask());
+  tid_list->GetMutableBits()->Difference(left.GetNullMask()).Difference(right.GetNullMask());
 
   // Filter
   tid_list->Filter([&](uint64_t i) { return Op::Apply(left_data[i], right_data[i]); });
@@ -139,7 +139,7 @@ void SelectOperation(const Vector &left, const Vector &right, TupleIdList *tid_l
   CheckSelection(left, right, tid_list);
 
   // Lift-off
-  switch (left.type_id()) {
+  switch (left.GetTypeId()) {
     case TypeId::Boolean:
       TemplatedSelectOperation<bool, Op>(left, right, tid_list);
       break;
@@ -169,7 +169,7 @@ void SelectOperation(const Vector &left, const Vector &right, TupleIdList *tid_l
       break;
     default:
       throw NotImplementedException("selections on vector type '{}' not supported",
-                                    TypeIdToString(left.type_id()));
+                                    TypeIdToString(left.GetTypeId()));
   }
 }
 

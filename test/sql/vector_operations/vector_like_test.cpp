@@ -15,7 +15,7 @@ TEST_F(VectorLikeTest, InputVerification) {
   {
     auto a = MakeIntegerVector(10);
     auto b = MakeVarcharVector(10);
-    auto tid_list = TupleIdList(a->num_elements());
+    auto tid_list = TupleIdList(a->GetSize());
     EXPECT_THROW(VectorOps::Like(*a, *b, &tid_list), InvalidTypeException);
   }
 
@@ -23,7 +23,7 @@ TEST_F(VectorLikeTest, InputVerification) {
   {
     auto a = MakeVarcharVector(10);
     auto b = MakeFloatVector(10);
-    auto tid_list = TupleIdList(a->num_elements());
+    auto tid_list = TupleIdList(a->GetSize());
     EXPECT_THROW(VectorOps::Like(*a, *b, &tid_list), InvalidTypeException);
   }
 
@@ -31,7 +31,7 @@ TEST_F(VectorLikeTest, InputVerification) {
   {
     auto a = ConstantVector(GenericValue::CreateVarchar("bruh"));
     auto b = MakeVarcharVector(2);
-    auto tid_list = TupleIdList(a.num_elements());
+    auto tid_list = TupleIdList(a.GetSize());
     EXPECT_THROW(VectorOps::Like(a, *b, &tid_list), Exception);
   }
 }
@@ -40,7 +40,7 @@ TEST_F(VectorLikeTest, LikeConstant) {
   auto strings = MakeVarcharVector({"first", "second", "third", "fourth", "fifth"},
                                    {false, false, false, false, false});
   auto pattern = ConstantVector(GenericValue::CreateVarchar("%d"));
-  auto tid_list = TupleIdList(strings->num_elements());
+  auto tid_list = TupleIdList(strings->GetSize());
 
   // strings == pattern = [1, 2]
   tid_list.AddAll();
@@ -84,7 +84,7 @@ TEST_F(VectorLikeTest, LikeVectorOfPatterns) {
                                    {false, false, false, false, false});
   auto patterns = MakeVarcharVector({"_%", "s_cnd", "third", "f%%_th", "fifth "},
                                     {true, false, false, false, false});
-  auto tid_list = TupleIdList(strings->num_elements());
+  auto tid_list = TupleIdList(strings->GetSize());
 
   // strings == patterns = [2, 3]
   tid_list.AddAll();

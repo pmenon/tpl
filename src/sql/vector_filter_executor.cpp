@@ -34,9 +34,10 @@ VectorFilterExecutor::VectorFilterExecutor(VectorProjectionIterator *vector_proj
   const Vector *left_vector = vector_projection_->GetColumn(col_idx); \
   VectorOps::OP_NAME(*left_vector, ConstantVector(val), &tid_list_);
 
-#define VEC_VAL_OP(OP_NAME)                                                                        \
-  const Vector *left_vector = vector_projection_->GetColumn(col_idx);                              \
-  const GenericValue constant = GenericValue::CreateFromRuntimeValue(left_vector->type_id(), val); \
+#define VEC_VAL_OP(OP_NAME)                                                \
+  const Vector *left_vector = vector_projection_->GetColumn(col_idx);      \
+  const GenericValue constant =                                            \
+      GenericValue::CreateFromRuntimeValue(left_vector->GetTypeId(), val); \
   VectorOps::OP_NAME(*left_vector, ConstantVector(constant), &tid_list_);
 
 #define VEC_VEC_OP(OP_NAME)                                                  \

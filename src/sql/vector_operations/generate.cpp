@@ -7,15 +7,15 @@ namespace tpl::sql {
 namespace {
 
 void CheckGenerateArguments(const Vector &input) {
-  if (!IsTypeNumeric(input.type_id())) {
-    throw InvalidTypeException(input.type_id(),
+  if (!IsTypeNumeric(input.GetTypeId())) {
+    throw InvalidTypeException(input.GetTypeId(),
                                "sequence generation only allowed on numeric vectors");
   }
 }
 
 template <typename T>
 void TemplatedGenerateOperation(Vector *vector, T start, T increment) {
-  auto *data = reinterpret_cast<T *>(vector->data());
+  auto *data = reinterpret_cast<T *>(vector->GetData());
   auto value = start;
   VectorOps::Exec(*vector, [&](uint64_t i, uint64_t k) {
     data[i] = value;
@@ -30,7 +30,7 @@ void VectorOps::Generate(Vector *vector, int64_t start, int64_t increment) {
   CheckGenerateArguments(*vector);
 
   // Lift-off
-  switch (vector->type_id()) {
+  switch (vector->GetTypeId()) {
     case TypeId::TinyInt:
       TemplatedGenerateOperation<int8_t>(vector, start, increment);
       break;
@@ -57,7 +57,7 @@ void VectorOps::Generate(Vector *vector, int64_t start, int64_t increment) {
       break;
     default:
       throw NotImplementedException("Cannot generate into vector type {}",
-                                    TypeIdToString(vector->type_id()));
+                                    TypeIdToString(vector->GetTypeId()));
   }
 }
 

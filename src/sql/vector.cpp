@@ -322,7 +322,7 @@ void Vector::CopyTo(Vector *other, uint64_t offset) {
   TPL_ASSERT(other->sel_vector_ == nullptr,
              "Copying to a vector with a selection vector isn't supported");
 
-  other->mutable_null_mask()->Reset();
+  other->GetMutableNullMask()->Reset();
 
   if (IsTypeFixedSize(type_)) {
     VectorOps::Copy(*this, other, offset);
@@ -357,13 +357,13 @@ void Vector::Append(const Vector &other) {
   TPL_ASSERT(sel_vector_ == nullptr, "Appending to vector with selection vector not supported");
   TPL_ASSERT(type_ == other.type_, "Can only append vector of same type");
 
-  if (num_elements() + other.count() > kDefaultVectorSize) {
+  if (GetSize() + other.GetCount() > kDefaultVectorSize) {
     throw std::out_of_range("Cannot append to vector: vector is too large");
   }
 
   uint64_t old_size = count_;
-  num_elems_ += other.count();
-  count_ += other.count();
+  num_elems_ += other.GetCount();
+  count_ += other.GetCount();
 
   // Since the vector's size has changed, we need to also resize the NULL bitmask.
   null_mask_.Resize(num_elems_);
@@ -390,7 +390,7 @@ void Vector::Append(const Vector &other) {
 std::string Vector::ToString() const {
   std::string result = TypeIdToString(type_) + "=[";
   bool first = true;
-  for (uint64_t i = 0; i < count(); i++) {
+  for (uint64_t i = 0; i < GetCount(); i++) {
     if (!first) result += ",";
     first = false;
     result += GetValue(i).ToString();

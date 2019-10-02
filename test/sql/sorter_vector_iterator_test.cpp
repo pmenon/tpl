@@ -65,10 +65,10 @@ void Transpose(const byte *rows[], uint64_t num_rows, VectorProjectionIterator *
  */
 template <class T>
 bool IsSorted(const Vector &vec) {
-  const auto data = reinterpret_cast<const T *>(vec.data());
-  for (uint32_t i = 1; i < vec.count(); i++) {
-    bool left_null = vec.null_mask()[i];
-    bool right_null = vec.null_mask()[i];
+  const auto data = reinterpret_cast<const T *>(vec.GetData());
+  for (uint32_t i = 1; i < vec.GetCount(); i++) {
+    bool left_null = vec.GetNullMask()[i];
+    bool right_null = vec.GetNullMask()[i];
     if (left_null != right_null) {
       return false;
     }

@@ -19,21 +19,21 @@ namespace tpl::sql {
  */
 template <typename InputType, typename ResultType, typename Op>
 inline void UnaryOperation_HandleNull(const Vector &input, Vector *result) {
-  auto *input_data = reinterpret_cast<InputType *>(input.data());
-  auto *result_data = reinterpret_cast<ResultType *>(result->data());
+  auto *input_data = reinterpret_cast<InputType *>(input.GetData());
+  auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
 
-  result->mutable_null_mask()->Reset();
+  result->GetMutableNullMask()->Reset();
 
-  if (input.null_mask().Any()) {
+  if (input.GetNullMask().Any()) {
     VectorOps::Exec(input, [&](uint64_t i, uint64_t k) {
-      result_data[i] = Op::Apply(input_data[i], input.null_mask()[i]);
+      result_data[i] = Op::Apply(input_data[i], input.GetNullMask()[i]);
     });
   } else {
     VectorOps::Exec(
         input, [&](uint64_t i, uint64_t k) { result_data[i] = Op::Apply(input_data[i], false); });
   }
 
-  result->SetSelectionVector(input.selection_vector(), input.count());
+  result->SetSelectionVector(input.GetSelectionVector(), input.GetCount());
 }
 
 /**
@@ -49,14 +49,14 @@ inline void UnaryOperation_HandleNull(const Vector &input, Vector *result) {
  */
 template <typename InputType, typename ResultType, typename Op>
 inline void UnaryOperation(const Vector &input, Vector *result) {
-  auto *input_data = reinterpret_cast<InputType *>(input.data());
-  auto *result_data = reinterpret_cast<ResultType *>(result->data());
+  auto *input_data = reinterpret_cast<InputType *>(input.GetData());
+  auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
 
   VectorOps::Exec(input,
                   [&](uint64_t i, uint64_t k) { result_data[i] = Op::Apply(input_data[i]); });
 
-  result->mutable_null_mask()->Copy(input.null_mask());
-  result->SetSelectionVector(input.selection_vector(), input.count());
+  result->GetMutableNullMask()->Copy(input.GetNullMask());
+  result->SetSelectionVector(input.GetSelectionVector(), input.GetCount());
 }
 
 }  // namespace tpl::sql

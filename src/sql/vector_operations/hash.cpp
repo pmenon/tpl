@@ -9,8 +9,8 @@ namespace tpl::sql {
 namespace {
 
 void CheckHashArguments(const Vector &input, Vector *result) {
-  if (result->type_id() != TypeId::Hash) {
-    throw InvalidTypeException(result->type_id(), "Output of Hash() operation must be hash");
+  if (result->GetTypeId() != TypeId::Hash) {
+    throw InvalidTypeException(result->GetTypeId(), "Output of Hash() operation must be hash");
   }
 }
 
@@ -21,7 +21,7 @@ void VectorOps::Hash(const Vector &input, Vector *result) {
   CheckHashArguments(input, result);
 
   // Lift-off
-  switch (input.type_id()) {
+  switch (input.GetTypeId()) {
     case TypeId::Boolean:
       UnaryOperation_HandleNull<bool, hash_t, tpl::sql::Hash>(input, result);
       break;
@@ -54,10 +54,10 @@ void VectorOps::Hash(const Vector &input, Vector *result) {
       break;
     default:
       throw NotImplementedException("hashing not supported for vectors of type '{}'",
-                                    TypeIdToString(input.type_id()));
+                                    TypeIdToString(input.GetTypeId()));
   }
 
-  result->SetSelectionVector(input.selection_vector(), input.count());
+  result->SetSelectionVector(input.GetSelectionVector(), input.GetCount());
 }
 
 }  // namespace tpl::sql

@@ -12,7 +12,7 @@ TEST_F(VectorFillTest, SimpleNonNull) {
   {                                                                     \
     auto vec = Make##TYPE##Vector(10);                                  \
     VectorOps::Fill(vec.get(), GenericValue::Create##TYPE(FILL_VALUE)); \
-    for (uint64_t i = 0; i < vec->count(); i++) {                       \
+    for (uint64_t i = 0; i < vec->GetSize(); i++) {                     \
       auto val = vec->GetValue(i);                                      \
       EXPECT_FALSE(val.is_null());                                      \
       EXPECT_EQ(GenericValue::Create##TYPE(FILL_VALUE), val);           \
@@ -33,23 +33,23 @@ TEST_F(VectorFillTest, SimpleNonNull) {
 TEST_F(VectorFillTest, NullValue) {
   // Fill with a NULL value, ensure the whole vector is filled with NULLs
   auto vec = MakeIntegerVector(10);
-  VectorOps::Fill(vec.get(), GenericValue::CreateNull(vec->type_id()));
+  VectorOps::Fill(vec.get(), GenericValue::CreateNull(vec->GetTypeId()));
 
-  for (uint64_t i = 0; i < vec->count(); i++) {
+  for (uint64_t i = 0; i < vec->GetCount(); i++) {
     EXPECT_TRUE(vec->IsNull(i));
   }
 }
 
 TEST_F(VectorFillTest, ExplicitNull) {
   // Fill a vector with the given type with the given value of that type
-#define CHECK_SIMPLE_FILL(TYPE)                   \
-  {                                               \
-    auto vec = Make##TYPE##Vector(10);            \
-    VectorOps::FillNull(vec.get());               \
-    for (uint64_t i = 0; i < vec->count(); i++) { \
-      auto val = vec->GetValue(i);                \
-      EXPECT_TRUE(val.is_null());                 \
-    }                                             \
+#define CHECK_SIMPLE_FILL(TYPE)                     \
+  {                                                 \
+    auto vec = Make##TYPE##Vector(10);              \
+    VectorOps::FillNull(vec.get());                 \
+    for (uint64_t i = 0; i < vec->GetSize(); i++) { \
+      auto val = vec->GetValue(i);                  \
+      EXPECT_TRUE(val.is_null());                   \
+    }                                               \
   }
 
   CHECK_SIMPLE_FILL(Boolean);

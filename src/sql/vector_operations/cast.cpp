@@ -11,12 +11,12 @@ namespace {
 
 template <typename SrcT, typename DestT, typename Op>
 void CastFromSrcTypeToDestType(const Vector &source, Vector *target) {
-  auto src_data = reinterpret_cast<SrcT *>(source.data());
-  auto target_data = reinterpret_cast<DestT *>(target->data());
-  if (source.null_mask().Any()) {
+  auto src_data = reinterpret_cast<SrcT *>(source.GetData());
+  auto target_data = reinterpret_cast<DestT *>(target->GetData());
+  if (source.GetNullMask().Any()) {
     // Slow-path need to check NULLs
     VectorOps::Exec(source, [&](uint64_t i, uint64_t k) {
-      if (!source.null_mask()[i]) {
+      if (!source.GetNullMask()[i]) {
         target_data[i] = Op::template Apply<SrcT, DestT>(src_data[i]);
       }
     });
@@ -56,21 +56,21 @@ void CastFromSrcType(const Vector &source, Vector *target, SqlTypeId target_type
       CastFromSrcTypeToDestType<SrcT, Date, tpl::sql::CastToDate>(source, target);
       break;
     case SqlTypeId::Varchar: {
-      TPL_ASSERT(target->type_id() == TypeId::Varchar, "Result vector must be string");
-      auto src_data = reinterpret_cast<SrcT *>(source.data());
-      auto result_data = reinterpret_cast<VarlenEntry *>(target->data());
+      TPL_ASSERT(target->GetTypeId() == TypeId::Varchar, "Result vector must be string");
+      auto src_data = reinterpret_cast<SrcT *>(source.GetData());
+      auto result_data = reinterpret_cast<VarlenEntry *>(target->GetData());
       VectorOps::Exec(source, [&](uint64_t i, uint64_t k) {
-        if (!source.null_mask()[i]) {
+        if (!source.GetNullMask()[i]) {
           auto str = Op::template Apply<SrcT, std::string>(src_data[i]);
-          result_data[i] = target->mutable_string_heap()->AddVarlen(str);
+          result_data[i] = target->GetMutableStringHeap()->AddVarlen(str);
         }
       });
       break;
     }
     default:
       throw NotImplementedException("casting vector of type '{}' to '{}' not supported",
-                                    TypeIdToString(source.type_id()),
-                                    TypeIdToString(target->type_id()));
+                                    TypeIdToString(source.GetTypeId()),
+                                    TypeIdToString(target->GetTypeId()));
   }
 }
 
@@ -78,9 +78,9 @@ void CastFromSrcType(const Vector &source, Vector *target, SqlTypeId target_type
 
 void VectorOps::Cast(const Vector &source, Vector *target, SqlTypeId source_type,
                      SqlTypeId target_type) {
-  target->Resize(source.num_elements());
-  target->SetSelectionVector(source.selection_vector(), source.count());
-  target->mutable_null_mask()->Copy(source.null_mask());
+  target->Resize(source.GetSize());
+  target->SetSelectionVector(source.GetSelectionVector(), source.GetCount());
+  target->GetMutableNullMask()->Copy(source.GetNullMask());
   switch (source_type) {
     case SqlTypeId::Boolean:
       CastFromSrcType<bool, tpl::sql::Cast>(source, target, target_type);
@@ -108,7 +108,7 @@ void VectorOps::Cast(const Vector &source, Vector *target, SqlTypeId source_type
       break;
     default:
       throw NotImplementedException("casting vector of type '{}' not supported",
-                                    TypeIdToString(source.type_id()));
+                                    TypeIdToString(source.GetTypeId()));
   }
 }
 

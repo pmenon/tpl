@@ -13,15 +13,20 @@ TEST_F(VectorGenerateTest, Simple) {
 
 // Generate odd sequence of numbers starting at 1 inclusive. In other words,
 // generate the values [2*i+1 for i in range(0,50)]
-#define CHECK_SIMPLE_GENERATE(TYPE)                          \
-  {                                                          \
-    auto vec = Make##TYPE##Vector(num_elems);                \
-    VectorOps::Generate(vec.get(), 1, 2);                    \
-    for (uint64_t i = 0; i < vec->count(); i++) {            \
-      auto val = vec->GetValue(i);                           \
-      EXPECT_FALSE(val.is_null());                           \
-      EXPECT_EQ(GenericValue::Create##TYPE(2 * i + 1), val); \
-    }                                                        \
+#define CHECK_SIMPLE_GENERATE(TYPE)                            \
+  {                                                            \
+    auto vec = Make##TYPE##Vector(num_elems);                  \
+    vec->SetNull(4, true);                                     \
+    VectorOps::Generate(vec.get(), 1, 2);                      \
+    for (uint64_t i = 0; i < vec->GetSize(); i++) {            \
+      auto val = vec->GetValue(i);                             \
+      if (i == 4) {                                            \
+        EXPECT_TRUE(val.is_null());                            \
+      } else {                                                 \
+        EXPECT_FALSE(val.is_null());                           \
+        EXPECT_EQ(GenericValue::Create##TYPE(2 * i + 1), val); \
+      }                                                        \
+    }                                                          \
   }
 
   CHECK_SIMPLE_GENERATE(TinyInt)

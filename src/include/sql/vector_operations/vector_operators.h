@@ -269,7 +269,7 @@ class VectorOps {
    */
   template <typename T, typename F>
   static void ExecTyped(const Vector &vector, F &&fun) {
-    const auto *data = reinterpret_cast<const T *>(vector.data());
+    const auto *data = reinterpret_cast<const T *>(vector.GetData());
     Exec(vector.sel_vector_, vector.count_, [&](uint64_t i, uint64_t k) { fun(data[i], i, k); });
   }
 };
