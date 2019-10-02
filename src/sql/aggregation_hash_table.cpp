@@ -72,10 +72,8 @@ AggregationHashTable::~AggregationHashTable() {
     memory_->DeallocateArray(partition_tails_, kDefaultNumPartitions);
   }
   if (partition_estimates_ != nullptr) {
-    // The estimates array uses HLL instances acquired from libcount. Libcount
-    // new's HLL objects, hence, we need to manually call delete on all of them.
-    // We could use unique_ptr, but then the definition and usage gets ugly, and
-    // we would still need to iterate over the array to reset each unique_ptr.
+    // The estimates array uses HLL instances acquired from libcount. We own them so we have to
+    // delete them manually.
     for (uint32_t i = 0; i < kDefaultNumPartitions; i++) {
       delete partition_estimates_[i];
     }
@@ -266,8 +264,8 @@ uint32_t AggregationHashTable::LookupInitial(const uint32_t num_elems) {
   }
 }
 
-// This function will perform an initial lookup for all input tuples, storing
-// entries that match on hash value in the 'entries' array.
+// This function will perform an initial lookup for all input tuples, storing entries that match on
+// hash value in the 'entries' array.
 template <bool Prefetch>
 uint32_t AggregationHashTable::LookupInitialImpl(const uint32_t num_elems) {
   auto &hashes = batch_state_->hashes;
@@ -306,9 +304,9 @@ uint32_t AggregationHashTable::LookupInitialImpl(const uint32_t num_elems) {
   return found;
 }
 
-// For all entries in 'groups_found', check whether their keys match. After this
-// function, groups_found will densely contain the indexes of matching keys,
-// and 'key_not_eq' will contain indexes of tuples that didn't match on key.
+// For all entries in 'groups_found', check whether their keys match. After this function,
+// groups_found will densely contain the indexes of matching keys, and 'key_not_eq' will contain
+// indexes of tuples that didn't match on key.
 template <bool VPIIsFiltered>
 uint32_t AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *vpi, uint32_t num_elems,
                                                 const AggregationHashTable::KeyEqFn key_eq_fn) {
@@ -334,9 +332,9 @@ uint32_t AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *vpi, u
   return matched;
 }
 
-// For all unmatched keys, move along the chain until we find another hash
-// match. After this function, 'groups_found' will densely contain the indexes
-// of tuples that matched on hash and should be checked for keys.
+// For all unmatched keys, move along the chain until we find another hash match. After this
+// function, 'groups_found' will densely contain the indexes of tuples that matched on hash and
+// should be checked for keys.
 uint32_t AggregationHashTable::FollowNext() {
   const auto &hashes = batch_state_->hashes;
   const auto &key_not_eq = batch_state_->key_not_eq;
@@ -370,7 +368,7 @@ void AggregationHashTable::CreateMissingGroups(VectorProjectionIterator *vpi,
   const auto &groups_not_found = batch_state_->groups_not_found;
   auto &entries = batch_state_->entries;
 
-  for (uint32_t i = 0; i < groups_not_found.size(); i++) {
+  for (uint64_t i = 0; i < groups_not_found.size(); i++) {
     const auto index = groups_not_found[i];
 
     // Position the iterator to the tuple we're inserting
@@ -408,28 +406,28 @@ void AggregationHashTable::AdvanceGroups(VectorProjectionIterator *vpi, const ui
 void AggregationHashTable::TransferMemoryAndPartitions(
     ThreadStateContainer *const thread_states, const std::size_t agg_ht_offset,
     const AggregationHashTable::MergePartitionFn merge_partition_fn) {
-  // Set the partition merging function. This function tells us how to merge
-  // a set of overflow partitions into an AggregationHashTable.
+  // Set the partition merging function. This function tells us how to merge a set of overflow
+  // partitions into an AggregationHashTable.
   merge_partition_fn_ = merge_partition_fn;
 
-  // Allocate the set of overflow partitions so that we can link in all
-  // thread-local overflow partitions to us.
+  // Allocate the set of overflow partitions so that we can link in all thread-local overflow
+  // partitions to us.
   AllocateOverflowPartitions();
 
-  // If, by chance, we have some unflushed aggregate data, flush it out now to
-  // ensure partitioned build captures it.
+  // If, by chance, we have some un-flushed aggregate data, flush it out now to ensure partitioned
+  // build captures it.
   if (GetTupleCount() > 0) {
     FlushToOverflowPartitions();
   }
 
-  // Okay, now we actually pull out the thread-local aggregation hash tables and
-  // move both their main entry data and the overflow partitions to us.
+  // Okay, now we actually pull out the thread-local aggregation hash tables and move both their
+  // main entry data and the overflow partitions to us.
   std::vector<AggregationHashTable *> tl_agg_ht;
   thread_states->CollectThreadLocalStateElementsAs(tl_agg_ht, agg_ht_offset);
 
   for (auto *table : tl_agg_ht) {
-    // Flush each table to ensure their hash tables are empty and their
-    // overflow partitions contain all partial aggregates
+    // Flush each table to ensure their hash tables are empty and their overflow partitions contain
+    // all partial aggregates
     table->FlushToOverflowPartitions();
 
     // Now, move over their memory
