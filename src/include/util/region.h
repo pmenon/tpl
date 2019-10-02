@@ -80,17 +80,6 @@ class Region {
   void *Allocate(std::size_t size, std::size_t alignment = kDefaultByteAlignment);
 
   /**
-   * Allocate a (contiguous) array of elements of the given type
-   * @tparam T The type of each element in the array
-   * @param num_elems The number of requested elements in the array
-   * @return A pointer to the allocated array
-   */
-  template <typename T>
-  T *AllocateArray(std::size_t num_elems) {
-    return static_cast<T *>(Allocate(num_elems * sizeof(T), alignof(T)));
-  }
-
-  /**
    * Individual de-allocations in a region-allocator are a no-op. All memory is freed when the
    * region is destroyed, or manually through a call to Region::FreeAll().
    * @param ptr The pointer to the memory we're de-allocating
