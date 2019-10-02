@@ -16,10 +16,6 @@ static constexpr uint32_t kMinMallocAlignment = 8;
 
 MemoryPool::MemoryPool(MemoryTracker *tracker) : tracker_(tracker) { (void)tracker_; }
 
-void *MemoryPool::Allocate(const std::size_t size, const bool clear) {
-  return AllocateAligned(size, 0, clear);
-}
-
 void *MemoryPool::AllocateAligned(const std::size_t size, const std::size_t alignment,
                                   const bool clear) {
   void *buf = nullptr;

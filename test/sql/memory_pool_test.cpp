@@ -15,7 +15,7 @@ struct ComplexObj {
   MemoryPool *memory;
   MemPoolPtr<SimpleObj> nested;
   ComplexObj(MemoryPool *m, MemPoolPtr<SimpleObj> n) : memory(m), nested(std::move(n)) {}
-  ~ComplexObj() { memory->FreeObject(std::move(nested)); }
+  ~ComplexObj() { memory->DeleteObject(std::move(nested)); }
 };
 
 TEST_F(MemoryPoolTest, PoolPointers) {
@@ -29,7 +29,7 @@ TEST_F(MemoryPoolTest, PoolPointers) {
   EXPECT_EQ(nullptr, obj1.get());
 
   // Non-empty pointers
-  obj1 = pool.NewObject<SimpleObj>();
+  obj1 = pool.MakeObject<SimpleObj>();
   EXPECT_NE(obj1, obj2);
   EXPECT_NE(nullptr, obj1);
   EXPECT_NE(obj1, nullptr);
@@ -38,7 +38,7 @@ TEST_F(MemoryPoolTest, PoolPointers) {
   obj1->a = 10;
   EXPECT_EQ(10u, obj1->a);
 
-  pool.FreeObject(std::move(obj1));
+  pool.DeleteObject(std::move(obj1));
 }
 
 TEST_F(MemoryPoolTest, ComplexPointers) {
@@ -47,14 +47,14 @@ TEST_F(MemoryPoolTest, ComplexPointers) {
   MemPoolPtr<ComplexObj> obj1, obj2;
   EXPECT_EQ(obj1, obj2);
 
-  obj1 = pool.NewObject<ComplexObj>(&pool, pool.NewObject<SimpleObj>());
+  obj1 = pool.MakeObject<ComplexObj>(&pool, pool.MakeObject<SimpleObj>());
   EXPECT_NE(nullptr, obj1);
   EXPECT_NE(obj1, nullptr);
 
   obj1->nested->a = 1;
   EXPECT_EQ(1u, obj1->nested->a);
 
-  pool.FreeObject(std::move(obj1));
+  pool.DeleteObject(std::move(obj1));
 }
 
 }  // namespace tpl::sql

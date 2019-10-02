@@ -15,10 +15,9 @@ namespace tpl::sql {
 class MemoryTracker;
 
 /**
- * A thin wrapper around a pointer to an object allocated from a memory pool.
- * Exists to alert users that this object has to be returned to the pool at
- * some point. Also to ensure users don't try to delete objects allocated from
- * pool (if they were returned as raw pointers).
+ * A thin wrapper around a pointer to an object allocated from a memory pool. Exists to alert users
+ * that this object has to be returned to the pool at some point. Also to ensure users don't try to
+ * delete objects allocated from pool (if they were returned as raw pointers).
  * @tparam T The type of the pointed-to object.
  */
 template <typename T>
@@ -131,15 +130,37 @@ class MemoryPool {
   DISALLOW_COPY_AND_MOVE(MemoryPool);
 
   /**
-   * Allocate @em size bytes of memory from this pool.
+   * Allocate @em size bytes of memory from this pool. The returned memory is not initialized.
+   * @param size The number of bytes to allocate.
+   * @return A pointer to at least @em size bytes of uninitialized memory.
+   */
+  void *Allocate(std::size_t size) { return Allocate(size, false); }
+
+  /**
+   * Allocate @em size bytes of memory from this pool. If @em clear is set, the memory chunk is
+   * zeroed out before returning.
+   *
    * @param size The number of bytes to allocate.
    * @param clear Whether to clear the bytes before returning.
    * @return A pointer to at least @em size bytes of memory.
    */
-  void *Allocate(std::size_t size, bool clear);
+  void *Allocate(std::size_t size, bool clear) { return AllocateAligned(size, 0, clear); }
 
   /**
-   * Allocate @em size bytes of memory from this pool with a specific alignment.
+   * Allocate @em size bytes of memory from this pool. The returned memory is not initialized.
+   * @param size The number of bytes to allocate.
+   * @param clear Whether to clear the bytes before returning.
+   * @return A pointer to at least @em size bytes of uninitialized memory.
+   */
+  void *AllocateAligned(std::size_t size, std::size_t alignment) {
+    return AllocateAligned(size, alignment, false);
+  }
+
+  /**
+   * Allocate @em size bytes of memory from this pool with a specific alignment. If @em alignment is
+   * less than the default minimum alignment of 8-bytes, a standard allocation is performed. If
+   * @em clear is set, the memory chunk is zeroed out before returning.
+   *
    * @param size The number of bytes to allocate.
    * @param alignment The desired alignment of the allocation.
    * @param clear Whether to clear the bytes before returning.
@@ -148,14 +169,15 @@ class MemoryPool {
   void *AllocateAligned(std::size_t size, std::size_t alignment, bool clear);
 
   /**
-   * Allocate an array of elements with a specific alignment different than the
-   * alignment of type @em T. The provided alignment must be larger than or
-   * equal to the alignment required for T.
+   * Allocate an array of elements with a specific alignment different than the alignment of type
+   * @em T. The provided alignment must be larger than or equal to the alignment required for T.
+   *
+   * @pre The requested alignment must be larger than or equal to the alignment of the type @em T.
+   *
    * @tparam T The type of each element in the array.
    * @param num_elems The number of elements in the array.
    * @param clear Flag to zero-out the contents of the array before returning.
-   * @return @return An array pointer to at least @em num_elems elements of type
-   * @em T
+   * @return An array pointer to at least @em num_elems elements of type @em T
    */
   template <typename T>
   T *AllocateArray(const std::size_t num_elems, std::size_t alignment, const bool clear) {
@@ -164,8 +186,7 @@ class MemoryPool {
   }
 
   /**
-   * Allocate a contiguous array of elements of the given type from this pool.
-   * The alignment of the array will be the alignment of the type @em T.
+   * Allocate a array of elements of the given type from this pool.
    * @tparam T The type of each element in the array.
    * @param num_elems The number of requested elements in the array.
    * @param clear Flag to zero-out the contents of the array before returning.
@@ -174,20 +195,6 @@ class MemoryPool {
   template <typename T>
   T *AllocateArray(const std::size_t num_elems, const bool clear) {
     return AllocateArray<T>(num_elems, alignof(T), clear);
-  }
-
-  /**
-   * Allocate an object from from this pool.
-   * @tparam T The type of the object to allocate.
-   * @tparam Args The argument types.
-   * @param args The arguments.
-   * @return A construct object allocated from this pool.
-   */
-  template <typename T, typename... Args>
-  MemPoolPtr<T> NewObject(Args &&... args) {
-    auto *object_mem = Allocate(sizeof(T), true);
-    auto *obj = new (object_mem) T(std::forward<Args>(args)...);
-    return MemPoolPtr<T>(obj);
   }
 
   /**
@@ -209,14 +216,33 @@ class MemoryPool {
     Deallocate(ptr, sizeof(T) * num_elems);
   }
 
+  // -------------------------------------------------------
+  // Object allocations
+  // -------------------------------------------------------
+
+  /**
+   * Allocate an object from from this pool.
+   * @tparam T The type of the object to allocate.
+   * @tparam Args The argument types.
+   * @param args The arguments.
+   * @return A construct object allocated from this pool.
+   */
+  template <typename T, typename... Args>
+  MemPoolPtr<T> MakeObject(Args &&... args) {
+    auto *object_mem = Allocate(sizeof(T), true);
+    auto *obj = new (object_mem) T(std::forward<Args>(args)...);
+    return MemPoolPtr<T>(obj);
+  }
+
   /**
    * Free an object allocated from this pool.
    * @tparam T The type of the object.
    * @param object The object.
    */
   template <typename T>
-  void FreeObject(MemPoolPtr<T> &&object) {
-    object->~T();
+  void DeleteObject(MemPoolPtr<T> &&object) {
+    // We need to call the pointed-to object's destructor before freeing the underlying memory.
+    std::destroy_at(object.get());
     Deallocate(object.get(), sizeof(T));
   }
 
@@ -257,7 +283,7 @@ class MemoryPoolAllocator {
 
   T *allocate(std::size_t n) { return memory_->AllocateArray<T>(n, false); }
 
-  void deallocate(T *ptr, std::size_t n) { memory_->Deallocate(ptr, n); }
+  void deallocate(T *ptr, std::size_t n) { memory_->DeallocateArray(ptr, n); }
 
   bool operator==(const MemoryPoolAllocator &other) const { return memory_ == other.memory_; }
 
@@ -267,6 +293,10 @@ class MemoryPoolAllocator {
   MemoryPool *memory_;
 };
 
+/**
+ * An STL vector backed by a MemoryPool.
+ * @tparam T The element type stored in the vector.
+ */
 template <typename T>
 class MemPoolVector : public std::vector<T, MemoryPoolAllocator<T>> {
   using BaseType = std::vector<T, MemoryPoolAllocator<T>>;

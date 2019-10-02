@@ -63,7 +63,7 @@ AggregationHashTable::AggregationHashTable(MemoryPool *memory, std::size_t paylo
 
 AggregationHashTable::~AggregationHashTable() {
   if (batch_state_ != nullptr) {
-    memory_->FreeObject(std::move(batch_state_));
+    memory_->DeleteObject(std::move(batch_state_));
   }
   if (partition_heads_ != nullptr) {
     memory_->DeallocateArray(partition_heads_, kDefaultNumPartitions);
@@ -187,7 +187,7 @@ void AggregationHashTable::ProcessBatch(VectorProjectionIterator *vpi,
   // Allocate all required batch state, but only on first invocation.
   if (TPL_UNLIKELY(batch_state_ == nullptr)) {
     batch_state_ =
-        memory_->NewObject<BatchProcessState>(libcount::HLL::Create(kDefaultHLLPrecision));
+        memory_->MakeObject<BatchProcessState>(libcount::HLL::Create(kDefaultHLLPrecision));
   }
 
   // Launch
