@@ -8,8 +8,8 @@ namespace tpl::sql {
 namespace {
 
 void CheckFillArguments(const Vector &input, const GenericValue &value) {
-  if (input.GetTypeId() != value.type_id()) {
-    throw TypeMismatchException(input.GetTypeId(), value.type_id(), "invalid types for fill");
+  if (input.GetTypeId() != value.GetTypeId()) {
+    throw TypeMismatchException(input.GetTypeId(), value.GetTypeId(), "invalid types for fill");
   }
 }
 
@@ -25,7 +25,7 @@ void VectorOps::Fill(Vector *vector, const GenericValue &value) {
   // Sanity check
   CheckFillArguments(*vector, value);
 
-  if (value.is_null()) {
+  if (value.IsNull()) {
     vector->GetMutableNullMask()->SetAll();
     return;
   }

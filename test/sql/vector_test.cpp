@@ -81,7 +81,7 @@ TEST_F(VectorTest, GetAndSet) {
 
   // vec[0] = true (NULL)
   vec->SetNull(0, true);
-  EXPECT_TRUE(vec->GetValue(0).is_null());
+  EXPECT_TRUE(vec->GetValue(0).IsNull());
 
   // vec[0] = true
   vec->SetValue(0, GenericValue::CreateBoolean(true));
@@ -98,7 +98,7 @@ TEST_F(VectorTest, GetAndSetNumeric) {
     EXPECT_EQ(GenericValue::Create##TYPE(1), vec->GetValue(0)); \
     vec->SetNull(0, true);                                      \
     EXPECT_TRUE(vec->IsNull(0));                                \
-    EXPECT_TRUE(vec->GetValue(0).is_null());                    \
+    EXPECT_TRUE(vec->GetValue(0).IsNull());                     \
     vec->SetValue(0, GenericValue::Create##TYPE(2));            \
     EXPECT_EQ(GenericValue::Create##TYPE(2), vec->GetValue(0)); \
     vec->CheckIntegrity();                                      \
@@ -120,7 +120,7 @@ TEST_F(VectorTest, GetAndSetString) {
   EXPECT_EQ(GenericValue::CreateVarchar("hello"), vec->GetValue(0));
   vec->SetNull(0, true);
   EXPECT_TRUE(vec->IsNull(0));
-  EXPECT_TRUE(vec->GetValue(0).is_null());
+  EXPECT_TRUE(vec->GetValue(0).IsNull());
   vec->CheckIntegrity();
 }
 

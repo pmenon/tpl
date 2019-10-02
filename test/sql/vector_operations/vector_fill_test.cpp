@@ -14,7 +14,7 @@ TEST_F(VectorFillTest, SimpleNonNull) {
     VectorOps::Fill(vec.get(), GenericValue::Create##TYPE(FILL_VALUE)); \
     for (uint64_t i = 0; i < vec->GetSize(); i++) {                     \
       auto val = vec->GetValue(i);                                      \
-      EXPECT_FALSE(val.is_null());                                      \
+      EXPECT_FALSE(val.IsNull());                                       \
       EXPECT_EQ(GenericValue::Create##TYPE(FILL_VALUE), val);           \
     }                                                                   \
   }
@@ -48,7 +48,7 @@ TEST_F(VectorFillTest, ExplicitNull) {
     VectorOps::FillNull(vec.get());                 \
     for (uint64_t i = 0; i < vec->GetSize(); i++) { \
       auto val = vec->GetValue(i);                  \
-      EXPECT_TRUE(val.is_null());                   \
+      EXPECT_TRUE(val.IsNull());                    \
     }                                               \
   }
 

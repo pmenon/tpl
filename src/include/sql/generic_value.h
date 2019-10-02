@@ -24,14 +24,14 @@ class GenericValue {
 
  public:
   /**
-   * Return the SQL type of this value.
+   * @return The SQL type of this value.
    */
-  TypeId type_id() const { return type_id_; }
+  TypeId GetTypeId() const noexcept { return type_id_; }
 
   /**
-   * Is this value NULL?
+   * @return If this value is NULL.
    */
-  bool is_null() const { return is_null_; }
+  bool IsNull() const noexcept { return is_null_; }
 
   /**
    * Is this value equal to the provided value? This is NOT SQL equivalence!
@@ -58,12 +58,12 @@ class GenericValue {
   std::string ToString() const;
 
   /**
-   * Generic value equality. This is NOT SQL equality!
+   * @return True if this value is equal @em that. Note that this is NOT SQL equality!
    */
   bool operator==(const GenericValue &that) const { return this->Equals(that); }
 
   /**
-   * Generic value inequality. This is NOT SQL inequality!
+   * @return True if this value is not equal to @em that. Note that this is NOT SQL inequality!
    */
   bool operator!=(const GenericValue &that) const { return !(*this == that); }
 

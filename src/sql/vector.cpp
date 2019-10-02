@@ -137,62 +137,62 @@ void Vector::Resize(uint32_t size) {
 
 void Vector::SetValue(const uint64_t index, const GenericValue &val) {
   TPL_ASSERT(index < count_, "Out-of-bounds vector access");
-  TPL_ASSERT(type_ == val.type_id(), "Mismatched types");
-  SetNull(index, val.is_null());
+  TPL_ASSERT(type_ == val.GetTypeId(), "Mismatched types");
+  SetNull(index, val.IsNull());
   const uint64_t actual_index = sel_vector_ != nullptr ? sel_vector_[index] : index;
   switch (type_) {
     case TypeId::Boolean: {
-      const auto new_boolean = val.is_null() ? false : val.value_.boolean;
+      const auto new_boolean = val.IsNull() ? false : val.value_.boolean;
       reinterpret_cast<bool *>(data_)[actual_index] = new_boolean;
       break;
     }
     case TypeId::TinyInt: {
-      const auto new_tinyint = val.is_null() ? 0 : val.value_.tinyint;
+      const auto new_tinyint = val.IsNull() ? 0 : val.value_.tinyint;
       reinterpret_cast<int8_t *>(data_)[actual_index] = new_tinyint;
       break;
     }
     case TypeId::SmallInt: {
-      const auto new_smallint = val.is_null() ? 0 : val.value_.smallint;
+      const auto new_smallint = val.IsNull() ? 0 : val.value_.smallint;
       reinterpret_cast<int16_t *>(data_)[actual_index] = new_smallint;
       break;
     }
     case TypeId::Integer: {
-      const auto new_integer = val.is_null() ? 0 : val.value_.integer;
+      const auto new_integer = val.IsNull() ? 0 : val.value_.integer;
       reinterpret_cast<int32_t *>(data_)[actual_index] = new_integer;
       break;
     }
     case TypeId::BigInt: {
-      const auto new_bigint = val.is_null() ? 0 : val.value_.bigint;
+      const auto new_bigint = val.IsNull() ? 0 : val.value_.bigint;
       reinterpret_cast<int64_t *>(data_)[actual_index] = new_bigint;
       break;
     }
     case TypeId::Float: {
-      const auto new_float = val.is_null() ? 0 : val.value_.float_;
+      const auto new_float = val.IsNull() ? 0 : val.value_.float_;
       reinterpret_cast<float *>(data_)[actual_index] = new_float;
       break;
     }
     case TypeId::Double: {
-      const auto new_double = val.is_null() ? 0 : val.value_.double_;
+      const auto new_double = val.IsNull() ? 0 : val.value_.double_;
       reinterpret_cast<double *>(data_)[actual_index] = new_double;
       break;
     }
     case TypeId::Date: {
-      const auto new_date = val.is_null() ? Date() : val.value_.date_;
+      const auto new_date = val.IsNull() ? Date() : val.value_.date_;
       reinterpret_cast<Date *>(data_)[actual_index] = new_date;
       break;
     }
     case TypeId::Hash: {
-      const auto new_hash = val.is_null() ? 0 : val.value_.hash;
+      const auto new_hash = val.IsNull() ? 0 : val.value_.hash;
       reinterpret_cast<hash_t *>(data_)[actual_index] = new_hash;
       break;
     }
     case TypeId::Pointer: {
-      const auto new_pointer = val.is_null() ? 0 : val.value_.pointer;
+      const auto new_pointer = val.IsNull() ? 0 : val.value_.pointer;
       reinterpret_cast<uintptr_t *>(data_)[actual_index] = new_pointer;
       break;
     }
     case TypeId::Varchar: {
-      if (!val.is_null()) {
+      if (!val.IsNull()) {
         reinterpret_cast<VarlenEntry *>(data_)[actual_index] = varlens_.AddVarlen(val.str_value_);
       }
       break;
@@ -209,15 +209,15 @@ void Vector::Reference(GenericValue *value) {
   Destroy();
 
   // Start from scratch
-  type_ = value->type_id();
+  type_ = value->GetTypeId();
   num_elems_ = count_ = 1;
   null_mask_.Resize(num_elems_);
 
-  if (value->is_null()) {
+  if (value->IsNull()) {
     SetNull(0, true);
   }
 
-  switch (value->type_id()) {
+  switch (value->GetTypeId()) {
     case TypeId::Boolean: {
       data_ = reinterpret_cast<byte *>(&value->value_.boolean);
       break;

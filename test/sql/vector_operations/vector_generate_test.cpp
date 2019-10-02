@@ -21,9 +21,9 @@ TEST_F(VectorGenerateTest, Simple) {
     for (uint64_t i = 0; i < vec->GetSize(); i++) {            \
       auto val = vec->GetValue(i);                             \
       if (i == 4) {                                            \
-        EXPECT_TRUE(val.is_null());                            \
+        EXPECT_TRUE(val.IsNull());                             \
       } else {                                                 \
-        EXPECT_FALSE(val.is_null());                           \
+        EXPECT_FALSE(val.IsNull());                            \
         EXPECT_EQ(GenericValue::Create##TYPE(2 * i + 1), val); \
       }                                                        \
     }                                                          \
