@@ -9,14 +9,14 @@ GenericHashTable::GenericHashTable(float load_factor) noexcept
 
 GenericHashTable::~GenericHashTable() {
   if (entries_ != nullptr) {
-    util::FreeHugeArray(entries_, GetCapacity());
+    Memory::FreeHugeArray(entries_, GetCapacity());
   }
 }
 
 void GenericHashTable::SetSize(uint64_t new_size) {
   TPL_ASSERT(new_size > 0, "New size cannot be zero!");
   if (entries_ != nullptr) {
-    util::FreeHugeArray(entries_, GetCapacity());
+    Memory::FreeHugeArray(entries_, GetCapacity());
   }
 
   uint64_t next_size = util::MathUtil::PowerOf2Ceil(new_size);
@@ -27,7 +27,7 @@ void GenericHashTable::SetSize(uint64_t new_size) {
   capacity_ = next_size;
   mask_ = capacity_ - 1;
   num_elems_ = 0;
-  entries_ = util::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_, true);
+  entries_ = Memory::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_, true);
 }
 
 // ---------------------------------------------------------

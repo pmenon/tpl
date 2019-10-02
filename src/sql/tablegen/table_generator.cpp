@@ -8,12 +8,12 @@
 #include "csv/csv.hpp"
 
 #include "common/exception.h"
+#include "common/memory.h"
 #include "logging/logger.h"
 #include "sql/catalog.h"
 #include "sql/schema.h"
 #include "sql/table.h"
 #include "util/bit_util.h"
-#include "util/memory.h"
 #include "util/timer.h"
 
 namespace tpl::sql::tablegen {
@@ -123,10 +123,10 @@ void ImportTable(const std::string &table_name, Table *table, const std::string 
     if (num_vals == 0) {
       for (const auto &col : table->schema().columns()) {
         byte *data = static_cast<byte *>(
-            util::MallocAligned(col.GetStorageSize() * kBatchSize, CACHELINE_SIZE));
+            Memory::MallocAligned(col.GetStorageSize() * kBatchSize, CACHELINE_SIZE));
         uint32_t *nulls = nullptr;
         if (col.sql_type.nullable()) {
-          nulls = static_cast<uint32_t *>(util::MallocAligned(
+          nulls = static_cast<uint32_t *>(Memory::MallocAligned(
               util::BitUtil::Num32BitWordsFor(kBatchSize) * sizeof(uint32_t), CACHELINE_SIZE));
         }
         col_data.emplace_back(data, nulls);

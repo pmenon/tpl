@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-#include "util/memory.h"
+#include "common/memory.h"
 
 namespace tpl::util {
 

@@ -5,9 +5,9 @@
 #include <utility>
 
 #include "common/common.h"
+#include "common/memory.h"
 #include "sql/hash_table_entry.h"
 #include "util/bit_util.h"
-#include "util/memory.h"
 
 namespace tpl::sql {
 
@@ -184,7 +184,7 @@ template <bool ForRead>
 inline void ConciseHashTable::PrefetchSlotGroup(hash_t hash) const {
   const uint64_t slot_idx = hash & slot_mask_;
   const uint64_t group_idx = slot_idx >> kLogSlotsPerGroup;
-  util::Prefetch<ForRead, Locality::Low>(slot_groups_ + group_idx);
+  Memory::Prefetch<ForRead, Locality::Low>(slot_groups_ + group_idx);
 }
 
 inline uint64_t ConciseHashTable::NumFilledSlotsBefore(const ConciseHashTableSlot slot) const {

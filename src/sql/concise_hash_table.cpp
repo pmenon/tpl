@@ -15,20 +15,20 @@ ConciseHashTable::ConciseHashTable(uint32_t probe_threshold)
 
 ConciseHashTable::~ConciseHashTable() {
   if (slot_groups_ != nullptr) {
-    util::FreeHugeArray(slot_groups_, num_groups_);
+    Memory::FreeHugeArray(slot_groups_, num_groups_);
   }
 }
 
 void ConciseHashTable::SetSize(const uint32_t num_elems) {
   if (slot_groups_ != nullptr) {
-    util::FreeHugeArray(slot_groups_, num_groups_);
+    Memory::FreeHugeArray(slot_groups_, num_groups_);
   }
 
-  uint64_t capacity =
+  const uint64_t capacity =
       std::max(kMinNumSlots, util::MathUtil::PowerOf2Floor(num_elems * kLoadFactor));
   slot_mask_ = capacity - 1;
   num_groups_ = capacity >> kLogSlotsPerGroup;
-  slot_groups_ = util::MallocHugeArray<SlotGroup>(num_groups_, true);
+  slot_groups_ = Memory::MallocHugeArray<SlotGroup>(num_groups_, true);
 }
 
 void ConciseHashTable::Build() {
@@ -40,7 +40,7 @@ void ConciseHashTable::Build() {
 
   slot_groups_[0].count = util::BitUtil::CountPopulation(slot_groups_[0].bits);
 
-  for (uint32_t i = 1; i < num_groups_; i++) {
+  for (uint64_t i = 1; i < num_groups_; i++) {
     slot_groups_[i].count =
         slot_groups_[i - 1].count + util::BitUtil::CountPopulation(slot_groups_[i].bits);
   }

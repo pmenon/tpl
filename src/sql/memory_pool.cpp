@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include <memory>
 
+#include "common/memory.h"
 #include "sql/memory_tracker.h"
-#include "util/memory.h"
 
 namespace tpl::sql {
 
@@ -25,7 +25,7 @@ void *MemoryPool::AllocateAligned(const std::size_t size, const std::size_t alig
   void *buf = nullptr;
 
   if (size >= kMmapThreshold.load(std::memory_order_relaxed)) {
-    buf = util::MallocHuge(size, true);
+    buf = Memory::MallocHuge(size, true);
     TPL_ASSERT(buf != nullptr, "Null memory pointer");
     // No need to clear memory, guaranteed on Linux
   } else {
@@ -36,7 +36,7 @@ void *MemoryPool::AllocateAligned(const std::size_t size, const std::size_t alig
         buf = std::malloc(size);
       }
     } else {
-      buf = util::MallocAligned(size, alignment);
+      buf = Memory::MallocAligned(size, alignment);
       if (clear) {
         std::memset(buf, 0, size);
       }
@@ -49,7 +49,7 @@ void *MemoryPool::AllocateAligned(const std::size_t size, const std::size_t alig
 
 void MemoryPool::Deallocate(void *ptr, std::size_t size) {
   if (size >= kMmapThreshold.load(std::memory_order_relaxed)) {
-    util::FreeHuge(ptr, size);
+    Memory::FreeHuge(ptr, size);
   } else {
     std::free(ptr);
   }

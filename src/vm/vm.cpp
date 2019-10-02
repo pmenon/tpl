@@ -4,8 +4,8 @@
 #include <string>
 
 #include "common/common.h"
+#include "common/memory.h"
 #include "sql/value.h"
-#include "util/memory.h"
 #include "vm/bytecode_function_info.h"
 #include "vm/bytecode_handlers.h"
 #include "vm/module.h"
@@ -97,7 +97,7 @@ void VM::InvokeFunction(const Module *module, const FunctionId func_id, const ui
   uint8_t *raw_frame = nullptr;
   if (frame_size > kMaxStackAllocSize) {
     used_heap = true;
-    raw_frame = static_cast<uint8_t *>(util::MallocAligned(frame_size, alignof(uint64_t)));
+    raw_frame = static_cast<uint8_t *>(Memory::MallocAligned(frame_size, alignof(uint64_t)));
   } else if (frame_size > kSoftMaxStackAllocSize) {
     // TODO(pmenon): Check stack before allocation
     raw_frame = static_cast<uint8_t *>(alloca(frame_size));
@@ -1684,7 +1684,7 @@ const uint8_t *VM::ExecuteCall(const uint8_t *ip, VM::Frame *caller) {
   uint8_t *raw_frame = nullptr;
   if (frame_size > kMaxStackAllocSize) {
     used_heap = true;
-    raw_frame = static_cast<uint8_t *>(util::MallocAligned(frame_size, alignof(uint64_t)));
+    raw_frame = static_cast<uint8_t *>(Memory::MallocAligned(frame_size, alignof(uint64_t)));
   } else if (frame_size > kSoftMaxStackAllocSize) {
     // TODO(pmenon): Check stack before allocation
     raw_frame = static_cast<uint8_t *>(alloca(frame_size));

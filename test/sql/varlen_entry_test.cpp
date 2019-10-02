@@ -1,8 +1,8 @@
 #include <algorithm>
 #include <random>
 
+#include "common/memory.h"
 #include "sql/runtime_types.h"
-#include "util/memory.h"
 #include "util/test_harness.h"
 
 namespace tpl::sql {
@@ -10,19 +10,18 @@ namespace tpl::sql {
 class VarlenEntryTest : public TplTest {};
 
 TEST_F(VarlenEntryTest, Basic) {
-  std::default_random_engine gen;
+  std::default_random_engine gen(std::random_device{}());
   std::uniform_int_distribution<uint8_t> dist(0, std::numeric_limits<uint8_t>::max());
 
   const uint32_t large_size = 40;
-  byte *large_buf = static_cast<byte *>(util::MallocAligned(large_size, 8));
+  auto large_buf_ptr = std::make_unique<byte[]>(large_size);
+  byte *large_buf = large_buf_ptr.get();
   std::generate(large_buf, large_buf + large_size, [&]() { return static_cast<byte>(dist(gen)); });
 
   VarlenEntry entry = VarlenEntry::Create(large_buf, large_size);
   EXPECT_FALSE(entry.IsInlined());
   EXPECT_EQ(0u, std::memcmp(entry.GetPrefix(), large_buf, VarlenEntry::GetPrefixSize()));
   EXPECT_EQ(large_buf, entry.GetContent());
-
-  std::free(large_buf);
 
   const uint32_t small_size = 10;
   byte small_buf[small_size];

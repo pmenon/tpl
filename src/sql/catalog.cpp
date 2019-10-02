@@ -10,11 +10,11 @@
 #include <variant>
 #include <vector>
 
+#include "common/memory.h"
 #include "logging/logger.h"
 #include "sql/data_types.h"
 #include "sql/schema.h"
 #include "sql/table.h"
-#include "util/memory.h"
 
 namespace tpl::sql {
 
@@ -92,7 +92,7 @@ auto GetRandomDistribution(T min, T max)
 template <typename T>
 T *CreateNumberColumnData(Dist dist, uint32_t num_vals, T min, T max) {
   static T serial_counter = 0;
-  auto *val = static_cast<T *>(util::MallocAligned(sizeof(T) * num_vals, CACHELINE_SIZE));
+  auto *val = static_cast<T *>(Memory::MallocAligned(sizeof(T) * num_vals, CACHELINE_SIZE));
 
   switch (dist) {
     case Dist::Uniform: {
@@ -171,8 +171,8 @@ std::pair<byte *, uint32_t *> GenerateColumnData(const ColumnInsertMeta &col_met
   if (col_meta.sql_type.nullable()) {
     TPL_ASSERT(num_rows != 0, "Cannot have 0 rows.");
     uint64_t num_words = util::BitUtil::Num32BitWordsFor(num_rows);
-    null_bitmap =
-        static_cast<uint32_t *>(util::MallocAligned(num_words * sizeof(uint32_t), CACHELINE_SIZE));
+    null_bitmap = static_cast<uint32_t *>(
+        Memory::MallocAligned(num_words * sizeof(uint32_t), CACHELINE_SIZE));
   }
 
   return {col_data, null_bitmap};

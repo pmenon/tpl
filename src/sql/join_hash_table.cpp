@@ -10,10 +10,10 @@
 #include "count/hll.h"
 
 #include "common/cpu_info.h"
+#include "common/memory.h"
 #include "logging/logger.h"
 #include "sql/memory_pool.h"
 #include "sql/thread_state_container.h"
-#include "util/memory.h"
 #include "util/timer.h"
 
 namespace tpl::sql {
@@ -278,7 +278,7 @@ void JoinHashTable::ReorderMainEntries() {
          idx++, prefetch_idx++) {
       if constexpr (PrefetchEntries) {
         if (TPL_LIKELY(prefetch_idx < num_buf_entries)) {
-          util::Prefetch<false, Locality::Low>(targets[prefetch_idx]);
+          Memory::Prefetch<false, Locality::Low>(targets[prefetch_idx]);
         }
       }
 
@@ -433,7 +433,7 @@ void JoinHashTable::ReorderOverflowEntries() {
          idx++, prefetch_idx++) {
       if constexpr (PrefetchEntries) {
         if (TPL_LIKELY(prefetch_idx < num_buf_entries)) {
-          util::Prefetch<false, Locality::Low>(parents[prefetch_idx]);
+          Memory::Prefetch<false, Locality::Low>(parents[prefetch_idx]);
         }
       }
 
