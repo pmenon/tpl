@@ -80,8 +80,13 @@ class Memory {
     }
 
 #if !defined(__APPLE__)
-    // All good, advise to use huge pages
-    madvise(ptr, size, MADV_HUGEPAGE);
+    // All good, advise to use huge pages. madvise() docs state that it may return EAGAIN to signal
+    // that we should retry.
+    int32_t ret;
+    do {
+      ret = madvise(ptr, size, MADV_HUGEPAGE);
+    } while (ret == -1 && errno == EAGAIN);
+    TPL_ASSERT(ret == 0, "madvise() returned error!");
 #endif
 
     return ptr;
