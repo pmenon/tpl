@@ -27,7 +27,7 @@ void GenericHashTable::SetSize(uint64_t new_size) {
   capacity_ = next_size;
   mask_ = capacity_ - 1;
   num_elems_ = 0;
-  entries_ = util::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_);
+  entries_ = util::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_, true);
 }
 
 // ---------------------------------------------------------

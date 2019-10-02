@@ -25,7 +25,7 @@ void *MemoryPool::AllocateAligned(const std::size_t size, const std::size_t alig
   void *buf = nullptr;
 
   if (size >= kMmapThreshold.load(std::memory_order_relaxed)) {
-    buf = util::MallocHuge(size);
+    buf = util::MallocHuge(size, true);
     TPL_ASSERT(buf != nullptr, "Null memory pointer");
     // No need to clear memory, guaranteed on Linux
   } else {
