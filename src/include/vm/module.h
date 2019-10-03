@@ -164,7 +164,7 @@ class Module {
     }
 
     const auto *func_info = GetFuncInfoById(func_id);
-    return jit_module_->GetFunctionPointer(func_info->name());
+    return jit_module_->GetFunctionPointer(func_info->GetName());
   }
 
   // Compile this module into machine code. This is a blocking call.
@@ -222,7 +222,7 @@ inline bool Module::GetFunction(const std::string &name, const ExecutionMode exe
 
   // Verify argument counts
   constexpr const uint32_t num_params = sizeof...(ArgTypes);
-  if (num_params != func_info->func_type()->num_params()) {
+  if (num_params != func_info->GetFuncType()->num_params()) {
     return false;
   }
 
@@ -239,7 +239,7 @@ inline bool Module::GetFunction(const std::string &name, const ExecutionMode exe
           detail::CopyAll(arg_buffer, args...);
 
           // Invoke and finish
-          VM::InvokeFunction(this, func_info->id(), arg_buffer);
+          VM::InvokeFunction(this, func_info->GetId(), arg_buffer);
           return;
         } else {
           // The return value
@@ -250,7 +250,7 @@ inline bool Module::GetFunction(const std::string &name, const ExecutionMode exe
           detail::CopyAll(arg_buffer, &rv, args...);
 
           // Invoke and finish
-          VM::InvokeFunction(this, func_info->id(), arg_buffer);
+          VM::InvokeFunction(this, func_info->GetId(), arg_buffer);
           return rv;
         }
       };
@@ -259,7 +259,7 @@ inline bool Module::GetFunction(const std::string &name, const ExecutionMode exe
     case ExecutionMode::Compiled: {
       CompileToMachineCode();
       func = [this, func_info](ArgTypes... args) -> Ret {
-        void *raw_func = functions_[func_info->id()].load(std::memory_order_relaxed);
+        void *raw_func = functions_[func_info->GetId()].load(std::memory_order_relaxed);
         auto *jit_f = reinterpret_cast<Ret (*)(ArgTypes...)>(raw_func);
         return jit_f(args...);
       };

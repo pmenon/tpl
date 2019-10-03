@@ -25,15 +25,14 @@ namespace vm {
 using FunctionId = uint16_t;
 
 /**
- * LocalInfo captures information about any local variable allocated in a
- * function, including genuine local variables in the source, function
- * parameters, and temporary variables required for expression evaluation.
+ * LocalInfo captures information about any local variable allocated in a function, including
+ * genuine local variables in the source, function parameters, and temporary variables required for
+ * expression evaluation.
  *
- * Locals have a fixed size, a static position (offset) in a function's
- * execution frame, and a fixed TPL type. A local variable's type also defines
- * its alignment in a function's execution frame. The TPL virtual machine
- * ensures that a local variable's memory has the correct alignment deemed by
- * its type and the machine architecture.
+ * Locals have a fixed size, a static position (offset) in a function's execution frame, and a
+ * fixed TPL type. A local variable's type also defines its alignment in a function's execution
+ * frame. The TPL virtual machine ensures that a local variable's memory has the correct alignment
+ * deemed by its type and the machine architecture.
  */
 class LocalInfo {
  public:
@@ -41,83 +40,89 @@ class LocalInfo {
 
   /**
    * Construct a local with the given, name, type, offset and kind
+   *
+   * @param name The name of the local.
+   * @param type The TPL type of the local.
+   * @param offset The offset of the local in the TBC bytecode.
+   * @param kind The kind of local.
    */
   LocalInfo(std::string name, ast::Type *type, uint32_t offset, Kind kind) noexcept;
 
   /**
-   * Return true if this local variable a parameter to a function
+   * @return True if this local variable a parameter to a function; false otherwise.
    */
-  bool is_parameter() const { return kind_ == Kind::Parameter; }
+  bool IsParameter() const noexcept { return kind_ == Kind::Parameter; }
 
   /**
-   * Return the name of this local variable
+   * @return The name of this local variable.
    */
-  const std::string &name() const { return name_; }
+  const std::string &GetName() const noexcept { return name_; }
 
   /**
-   * Return the TPL type of this local variable
+   * @return The TPL type of this local variable.
    */
-  ast::Type *type() const { return type_; }
+  ast::Type *GetType() const noexcept { return type_; }
 
   /**
-   * Return the offset (in bytes) of this local in the function's stack frame
+   * @return The offset (in bytes) of this local in the function's stack frame.
    */
-  uint32_t offset() const { return offset_; }
+  uint32_t GetOffset() const noexcept { return offset_; }
 
   /**
-   * Return the size (in bytes) of this local variable
+   * @return The size (in bytes) of this local variable.
    */
-  uint32_t size() const { return size_; }
+  uint32_t GetSize() const noexcept { return size_; }
 
  private:
   // The name of the local
   std::string name_;
+
   // The TPL type of the local
   ast::Type *type_;
+
   // The offset (in bytes) of the local from the start of function's frame
   uint32_t offset_;
+
   // The size (in bytes) of the local
   uint32_t size_;
+
   // The kind of the local
   Kind kind_;
 };
 
 /**
- * Local access encapsulates how a given local will be accessed by pairing a
- * local ID and an addressing mode.
+ * Local access encapsulates how a given local will be accessed by pairing a local ID and an
+ * addressing mode.
  */
 class LocalVar {
   static const uint32_t kInvalidOffset = std::numeric_limits<uint32_t>::max() >> 1u;
 
  public:
   /**
-   * The different local addressing modes
+   * The different local addressing modes.
    */
   enum class AddressMode : uint8_t { Address = 0, Value = 1 };
 
   /**
-   * An invalid local variable
+   * An invalid local variable.
    */
   LocalVar() : LocalVar(kInvalidOffset, AddressMode::Address) {}
 
   /**
-   * A local variable with a given addressing mode
-   * @param offset The byte-offset of the local variable in the function's
-   *               execution/stack frame
-   * @param address_mode The addressing mode for this variable
+   * A local variable with a given addressing mode.
+   * @param offset The byte-offset of the local variable in the function's execution/stack frame.
+   * @param address_mode The addressing mode for this variable.
    */
   LocalVar(uint32_t offset, AddressMode address_mode)
       : bitfield_(AddressModeField::Encode(address_mode) | LocalOffsetField::Encode(offset)) {}
 
   /**
-   * Return the addressing mode of for this local variable
-   * @return The addressing mode (direct or indirect) of this local
+   * @return The addressing mode (direct or indirect) of this local.
    */
   AddressMode GetAddressMode() const { return AddressModeField::Decode(bitfield_); }
 
   /**
-   * Return the offset of this local variable in the function's execution frame
-   * @return The offset (in bytes) of this local in the function's frame
+   * @return The offset (in bytes) of this local in the function's frame.
    */
   uint32_t GetOffset() const { return LocalOffsetField::Decode(bitfield_); }
 
@@ -136,18 +141,17 @@ class LocalVar {
   static LocalVar Decode(uint32_t encoded_var) { return LocalVar(encoded_var); }
 
   /**
-   * Return a LocalVar that represents a dereferenced version of the local
+   * @return A LocalVar that represents a de-referenced version of the local.
    */
   LocalVar ValueOf() const { return LocalVar(GetOffset(), AddressMode::Value); }
 
   /**
-   * Return a LocalVar that represents this address of this local
+   * @return A LocalVar that represents this address of this local.
    */
   LocalVar AddressOf() const { return LocalVar(GetOffset(), AddressMode::Address); }
 
   /**
-   * Is this a valid local variable?
-   * @return True if valid; false otherwise
+   * @return True if this local is valid; false otherwise.
    */
   bool IsInvalid() const { return GetOffset() == kInvalidOffset; }
 
@@ -175,15 +179,13 @@ class LocalVar {
 };
 
 /**
- * FunctionInfo captures information about a TBC bytecode function. Bytecode
- * functions work slightly differently than C/C++ or even TPL functions: TBC
- * functions do not have a return value. Rather, callers allocate return value
- * and pass pointers to target functions to fill them in. This is true for both
- * primitive and complex/container types.
+ * FunctionInfo captures information about a TBC bytecode function. Bytecode functions work slightly
+ * differently than C/C++ or even TPL functions: TBC functions do not have a return value. Rather,
+ * callers allocate return value and pass pointers to target functions to fill them in. This is true
+ * for both primitive and complex/container types.
  *
- * TBC functions manage a set of locals. The first N locals are reserved for
- * the input (and output) parameters. The number of parameters tracks both
- * input and output arguments.
+ * TBC functions manage a set of locals. The first N locals are reserved for the input (and output)
+ * parameters. The number of parameters tracks both input and output arguments.
  */
 class FunctionInfo {
  public:
@@ -206,18 +208,18 @@ class FunctionInfo {
   LocalVar NewParameterLocal(ast::Type *type, const std::string &name);
 
   /**
-   * Allocate a new local variable with type @em type and name @em name. This
-   * returns a LocalVar object with the Address addressing mode (i.e., a
-   * pointer to the variable).
+   * Allocate a new local variable with type @em type and name @em name. This returns a LocalVar
+   * object with the Address addressing mode (i.e., a pointer to the variable).
    * @param type The TPL type of the variable
-   * @param name The name of the variable. If no name is given, the variable
-   *             is assigned a synthesized one.
+   * @param name The name of the variable. If no name is given, the variable is assigned a
+   *             synthesized one.
    * @return A (logical) pointer to the local variable
    */
   LocalVar NewLocal(ast::Type *type, const std::string &name = "");
 
   /**
-   * Return the ID of the return value for the function
+   * @return A (logical) pointer to the return value for the function; an invalid pointer if the
+   *         function does not return a value.
    */
   LocalVar GetReturnValueLocal() const;
 
@@ -236,58 +238,58 @@ class FunctionInfo {
   const LocalInfo *LookupLocalInfoByName(const std::string &name) const;
 
   /**
-   * Lookup the information for a local variable in this function by the
-   * variable's offset in the function's execution frame
+   * Lookup the information for a local variable in this function by the variable's offset in the
+   * function's execution frame
    * @param local The offset in bytes of the local
    * @return A possible nullptr to the local's information
    */
   const LocalInfo *LookupLocalInfoByOffset(uint32_t offset) const;
 
   /**
-   * Return the unique ID of this function
+   * @return The unique ID of this function.
    */
-  FunctionId id() const { return id_; }
+  FunctionId GetId() const noexcept { return id_; }
 
   /**
-   * Return the name of this function
+   * @return The name of this function.
    */
-  const std::string &name() const { return name_; }
+  const std::string &GetName() const noexcept { return name_; }
 
   /**
-   * Return the TPL function type
+   * @return The TPL function type.
    */
-  const ast::FunctionType *func_type() const { return func_type_; }
+  const ast::FunctionType *GetFuncType() const noexcept { return func_type_; }
 
   /**
-   * Return the range of bytecode for this function in the bytecode module
+   * @return The range of bytecode for this function in the bytecode module.
    */
-  std::pair<std::size_t, std::size_t> bytecode_range() const { return bytecode_range_; }
+  std::pair<std::size_t, std::size_t> GetBytecodeRange() const noexcept { return bytecode_range_; }
 
   /**
-   * Return a constant view of all the local variables in this function
+   * @return A constant view of all the local variables in this function.
    */
-  const std::vector<LocalInfo> &locals() const { return locals_; }
+  const std::vector<LocalInfo> &GetLocals() const noexcept { return locals_; }
 
   /**
-   * Return the size of the stack frame this function requires
+   * @return The size of the stack frame this function requires.
    */
-  std::size_t frame_size() const { return frame_size_; }
+  std::size_t GetFrameSize() const noexcept { return frame_size_; }
 
   /**
-   * Return the byte position where the first input argument exists in the
-   * function's local execution frame
+   * @return The byte position where the first input argument exists in the function's local
+   *         execution frame
    */
-  std::size_t params_start_pos() const { return params_start_pos_; }
+  std::size_t GetParamsStartPos() const noexcept { return params_start_pos_; }
 
   /**
-   * Return the size (in bytes) of all input arguments, including alignment
+   * @return The size (in bytes) of all input arguments, including alignment.
    */
-  std::size_t params_size() const { return params_size_; }
+  std::size_t GetParamsSize() const noexcept { return params_size_; }
 
   /**
-   * Return the number of parameters to this function
+   * @return The number of parameters to this function.
    */
-  uint32_t num_params() const { return num_params_; }
+  uint32_t GetParamsCount() const noexcept { return num_params_; }
 
  private:
   friend class BytecodeGenerator;

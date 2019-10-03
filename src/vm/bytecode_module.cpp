@@ -19,24 +19,26 @@ BytecodeModule::BytecodeModule(std::string name, std::vector<uint8_t> &&code,
 namespace {
 
 void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
-  os << "Function " << func.id() << " <" << func.name() << ">:" << std::endl;
-  os << "  Frame size " << func.frame_size() << " bytes (" << func.num_params() << " parameter"
-     << (func.num_params() > 1 ? "s, " : ", ") << func.locals().size() << " locals)" << std::endl;
+  os << "Function " << func.GetId() << " <" << func.GetName() << ">:" << std::endl;
+  os << "  Frame size " << func.GetFrameSize() << " bytes (" << func.GetParamsCount()
+     << " parameter" << (func.GetParamsCount() > 1 ? "s, " : ", ") << func.GetLocals().size()
+     << " locals)" << std::endl;
 
   uint64_t max_local_len = 0;
-  for (const auto &local : func.locals()) {
-    max_local_len = std::max(max_local_len, static_cast<uint64_t>(local.name().length()));
+  for (const auto &local : func.GetLocals()) {
+    max_local_len = std::max(max_local_len, static_cast<uint64_t>(local.GetName().length()));
   }
-  for (const auto &local : func.locals()) {
-    if (local.is_parameter()) {
+  for (const auto &local : func.GetLocals()) {
+    if (local.IsParameter()) {
       os << "    param  ";
     } else {
       os << "    local  ";
     }
-    os << std::setw(max_local_len) << std::right << local.name() << ":  offset=" << std::setw(7)
-       << std::left << local.offset() << " size=" << std::setw(7) << std::left << local.size()
-       << " align=" << std::setw(7) << std::left << local.type()->alignment()
-       << " type=" << std::setw(7) << std::left << ast::Type::ToString(local.type()) << std::endl;
+    os << std::setw(max_local_len) << std::right << local.GetName() << ":  offset=" << std::setw(7)
+       << std::left << local.GetOffset() << " size=" << std::setw(7) << std::left << local.GetSize()
+       << " align=" << std::setw(7) << std::left << local.GetType()->alignment()
+       << " type=" << std::setw(7) << std::left << ast::Type::ToString(local.GetType())
+       << std::endl;
   }
 }
 
@@ -60,7 +62,7 @@ void PrettyPrintFuncCode(std::ostream &os, const BytecodeModule &module, const F
       if (local.GetAddressMode() == LocalVar::AddressMode::Address) {
         os << "&";
       }
-      os << local_info->name();
+      os << local_info->GetName();
     };
 
     for (uint32_t i = 0; i < Bytecodes::NumOperands(bytecode); i++) {
@@ -131,7 +133,7 @@ void PrettyPrintFuncCode(std::ostream &os, const BytecodeModule &module, const F
         }
         case OperandType::FunctionId: {
           auto target = module.GetFuncInfoById(iter.GetFunctionIdOperand(i));
-          os << "func=<" << target->name() << ">";
+          os << "func=<" << target->GetName() << ">";
           break;
         }
       }

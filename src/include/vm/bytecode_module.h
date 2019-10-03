@@ -49,7 +49,7 @@ class BytecodeModule {
    */
   const FunctionInfo *GetFuncInfoByName(const std::string &name) const {
     for (const auto &func : functions_) {
-      if (func.name() == name) {
+      if (func.GetName() == name) {
         return &func;
       }
     }
@@ -61,7 +61,7 @@ class BytecodeModule {
    * @return A pointer to the function's info if it exists; null otherwise
    */
   BytecodeIterator BytecodeForFunction(const FunctionInfo &func) const {
-    auto [start, end] = func.bytecode_range();
+    auto [start, end] = func.GetBytecodeRange();
     return BytecodeIterator(code_, start, end);
   }
 
@@ -101,7 +101,7 @@ class BytecodeModule {
   friend class VM;
 
   const uint8_t *GetBytecodeForFunction(const FunctionInfo &func) const {
-    auto [start, _] = func.bytecode_range();
+    auto [start, _] = func.GetBytecodeRange();
     (void)_;
     return &code_[start];
   }

@@ -122,37 +122,36 @@ class LLVMEngine {
     explicit CompiledModule(std::unique_ptr<llvm::MemoryBuffer> object_code);
 
     /**
-     * This class cannot be copied or moved
+     * This class cannot be copied or moved.
      */
     DISALLOW_COPY_AND_MOVE(CompiledModule);
 
     /**
-     * Destroy
+     * Destructor.
      */
     ~CompiledModule();
 
     /**
-     * Get a pointer to the JIT-ed function in this module with name @em name.
-     * @return A function pointer if a function with the provided name exists.
-     *         If no such function exists, returns null.
+     * @return A pointer to the JIT-ed function in this module with name @em name. If no such
+     *         function exists, returns null.
      */
     void *GetFunctionPointer(const std::string &name) const;
 
     /**
-     * Return the size of the module's object code in-memory in bytes.
+     * @return The size of the module's object code in-memory in bytes.
      */
     std::size_t GetModuleObjectCodeSizeInBytes() const { return object_code_->getBufferSize(); }
 
     /**
-     * Load the given module @em module into memory. If this module has already
-     * been loaded, it will not be reloaded.
+     * Load the given module @em module into memory. If this module has already been loaded, it will
+     * not be reloaded.
      */
     void Load(const BytecodeModule &module);
 
     /**
-     * Has this module been loaded into memory and linked?
+     * @return True if this module has been loaded an linked into the process; false otherwise.
      */
-    bool is_loaded() const { return loaded_; }
+    bool IsLoaded() const noexcept { return loaded_; }
 
    private:
     bool loaded_;

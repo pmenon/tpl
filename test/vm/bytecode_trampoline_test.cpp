@@ -23,7 +23,7 @@ namespace tpl::vm {
 class BytecodeTrampolineTest : public TplTest {
  protected:
   void *GetTrampoline(const vm::Module &module, const std::string &func_name) {
-    return module.GetBytecodeImpl(module.GetFuncInfoByName(func_name)->id());
+    return module.GetBytecodeImpl(module.GetFuncInfoByName(func_name)->GetId());
   }
 };
 

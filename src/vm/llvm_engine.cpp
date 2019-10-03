@@ -294,27 +294,27 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
     : ir_builder_(ir_builder) {
   uint32_t local_idx = 0;
 
-  const auto &func_locals = func_info.locals();
+  const auto &func_locals = func_info.GetLocals();
 
-  if (const ast::FunctionType *func_type = func_info.func_type();
+  if (const ast::FunctionType *func_type = func_info.GetFuncType();
       FunctionHasDirectReturn(func_type)) {
     llvm::Type *ret_type = type_map->GetLLVMType(func_type->return_type());
     llvm::Value *val = ir_builder_->CreateAlloca(ret_type);
-    params_[func_locals[0].offset()] = val;
+    params_[func_locals[0].GetOffset()] = val;
     local_idx++;
   }
 
-  for (auto arg_iter = func->arg_begin(); local_idx < func_info.num_params();
+  for (auto arg_iter = func->arg_begin(); local_idx < func_info.GetParamsCount();
        ++local_idx, ++arg_iter) {
     const LocalInfo &param = func_locals[local_idx];
-    params_[param.offset()] = &*arg_iter;
+    params_[param.GetOffset()] = &*arg_iter;
   }
 
-  for (; local_idx < func_info.locals().size(); local_idx++) {
+  for (; local_idx < func_info.GetLocals().size(); local_idx++) {
     const LocalInfo &local_info = func_locals[local_idx];
-    llvm::Type *llvm_type = type_map->GetLLVMType(local_info.type());
+    llvm::Type *llvm_type = type_map->GetLLVMType(local_info.GetType());
     llvm::Value *val = ir_builder_->CreateAlloca(llvm_type);
-    locals_[local_info.offset()] = val;
+    locals_[local_info.GetOffset()] = val;
   }
 }
 
@@ -492,8 +492,9 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(const CompilerOptions &
 
 void LLVMEngine::CompiledModuleBuilder::DeclareFunctions() {
   for (const auto &func_info : tpl_module_.functions()) {
-    auto *func_type = llvm::cast<llvm::FunctionType>(type_map_->GetLLVMType(func_info.func_type()));
-    llvm_module_->getOrInsertFunction(func_info.name(), func_type);
+    auto *func_type =
+        llvm::cast<llvm::FunctionType>(type_map_->GetLLVMType(func_info.GetFuncType()));
+    llvm_module_->getOrInsertFunction(func_info.GetName(), func_type);
   }
 }
 
@@ -581,7 +582,7 @@ void LLVMEngine::CompiledModuleBuilder::BuildSimpleCFG(
 void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_info,
                                                        llvm::IRBuilder<> *ir_builder) {
   llvm::LLVMContext &ctx = ir_builder->getContext();
-  llvm::Function *func = llvm_module_->getFunction(func_info.name());
+  llvm::Function *func = llvm_module_->getFunction(func_info.GetName());
   llvm::BasicBlock *entry_bb = llvm::BasicBlock::Create(ctx, "EntryBB", func);
 
   // First, construct a simple CFG for the function. The CFG contains entries for the start of every
@@ -673,7 +674,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
         case OperandType::FunctionId: {
           const uint16_t target_func_id = iter.GetFunctionIdOperand(i);
           auto *target_func_info = tpl_module_.GetFuncInfoById(target_func_id);
-          auto *target_func = llvm_module_->getFunction(target_func_info->name());
+          auto *target_func = llvm_module_->getFunction(target_func_info->GetName());
           TPL_ASSERT(target_func != nullptr, "Function doesn't exist in LLVM module");
           args.push_back(target_func);
           break;
@@ -734,10 +735,10 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
 
         const FunctionId callee_id = iter.GetFunctionIdOperand(0);
         const auto *callee_func_info = tpl_module_.GetFuncInfoById(callee_id);
-        llvm::Function *callee = llvm_module_->getFunction(callee_func_info->name());
+        llvm::Function *callee = llvm_module_->getFunction(callee_func_info->GetName());
         args.erase(args.begin());
 
-        if (FunctionHasDirectReturn(callee_func_info->func_type())) {
+        if (FunctionHasDirectReturn(callee_func_info->GetFuncType())) {
           llvm::Value *dest = args[0];
           args.erase(args.begin());
           llvm::Value *ret = issue_call(callee, args);
@@ -846,7 +847,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
       }
 
       case Bytecode::Return: {
-        if (FunctionHasDirectReturn(func_info.func_type())) {
+        if (FunctionHasDirectReturn(func_info.GetFuncType())) {
           llvm::Value *ret_val = locals_map.GetArgumentById(func_info.GetReturnValueLocal());
           ir_builder->CreateRet(ir_builder->CreateLoad(ret_val));
         } else {
@@ -1021,7 +1022,7 @@ LLVMEngine::CompiledModule::CompiledModule(std::unique_ptr<llvm::MemoryBuffer> o
 LLVMEngine::CompiledModule::~CompiledModule() = default;
 
 void *LLVMEngine::CompiledModule::GetFunctionPointer(const std::string &name) const {
-  TPL_ASSERT(is_loaded(), "Compiled module isn't loaded!");
+  TPL_ASSERT(IsLoaded(), "Compiled module isn't loaded!");
 
   if (auto iter = functions_.find(name); iter != functions_.end()) {
     return iter->second;
@@ -1032,7 +1033,7 @@ void *LLVMEngine::CompiledModule::GetFunctionPointer(const std::string &name) co
 
 void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
   // If already loaded, do nothing
-  if (is_loaded()) {
+  if (IsLoaded()) {
     return;
   }
 
@@ -1086,8 +1087,8 @@ void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
   //
 
   for (const auto &func : module.functions()) {
-    auto symbol = loader.getSymbol(func.name());
-    functions_[func.name()] = reinterpret_cast<void *>(symbol.getAddress());
+    auto symbol = loader.getSymbol(func.GetName());
+    functions_[func.GetName()] = reinterpret_cast<void *>(symbol.getAddress());
   }
 
   // Done

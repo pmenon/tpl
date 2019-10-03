@@ -80,14 +80,14 @@ void BytecodeEmitter::EmitCall(FunctionId func_id, const std::vector<LocalVar> &
 void BytecodeEmitter::EmitReturn() { EmitImpl(Bytecode::Return); }
 
 void BytecodeEmitter::Bind(BytecodeLabel *label) {
-  TPL_ASSERT(!label->is_bound(), "Cannot rebind labels");
+  TPL_ASSERT(!label->IsBound(), "Cannot rebind labels");
 
-  std::size_t curr_offset = position();
+  std::size_t curr_offset = GetPosition();
 
   if (label->IsForwardTarget()) {
-    // We need to patch all locations in the bytecode that forward jump to the
-    // given bytecode label. Each referrer is stored in the bytecode label ...
-    auto &jump_locations = label->referrer_offsets();
+    // We need to patch all locations in the bytecode that forward jump to the given bytecode label.
+    // Each referrer is stored in the bytecode label's referrer's list.
+    auto &jump_locations = label->GetReferrerOffsets();
 
     for (const auto &jump_location : jump_locations) {
       TPL_ASSERT((curr_offset - jump_location) < std::numeric_limits<int32_t>::max(),
@@ -95,10 +95,10 @@ void BytecodeEmitter::Bind(BytecodeLabel *label) {
 
       auto delta = static_cast<int32_t>(curr_offset - jump_location);
       auto *raw_delta = reinterpret_cast<uint8_t *>(&delta);
-      bytecode_[jump_location] = raw_delta[0];
-      bytecode_[jump_location + 1] = raw_delta[1];
-      bytecode_[jump_location + 2] = raw_delta[2];
-      bytecode_[jump_location + 3] = raw_delta[3];
+      (*bytecode_)[jump_location] = raw_delta[0];
+      (*bytecode_)[jump_location + 1] = raw_delta[1];
+      (*bytecode_)[jump_location + 2] = raw_delta[2];
+      (*bytecode_)[jump_location + 3] = raw_delta[3];
     }
   }
 
@@ -108,24 +108,24 @@ void BytecodeEmitter::Bind(BytecodeLabel *label) {
 void BytecodeEmitter::EmitJump(BytecodeLabel *label) {
   static const int32_t kJumpPlaceholder = std::numeric_limits<int32_t>::max() - 1;
 
-  std::size_t curr_offset = position();
+  std::size_t curr_offset = GetPosition();
 
-  if (label->is_bound()) {
-    // The label is already bound so this must be a backwards jump. We just need
-    // to emit the delta offset directly into the bytestream.
-    TPL_ASSERT(label->offset() <= curr_offset,
+  if (label->IsBound()) {
+    // The label is already bound so this must be a backwards jump. We just need to emit the delta
+    // offset directly into the bytestream.
+    TPL_ASSERT(label->GetOffset() <= curr_offset,
                "Label for backwards jump cannot be beyond current bytecode position");
-    std::size_t delta = curr_offset - label->offset();
+    std::size_t delta = curr_offset - label->GetOffset();
     TPL_ASSERT(delta < std::numeric_limits<int32_t>::max(),
                "Jump delta exceeds 32-bit value for jump offsets!");
 
     // Immediately emit the delta
     EmitScalarValue(-static_cast<int32_t>(delta));
   } else {
-    // The label is not bound yet so this must be a forward jump. We set the
-    // reference position in the label and use a placeholder offset in the
-    // byte stream for now. We'll update the placeholder when the label is bound
-    label->set_referrer(curr_offset);
+    // The label is not bound yet so this must be a forward jump. We set the reference position in
+    // the label and use a placeholder offset in the byte stream for now. We'll update the
+    // placeholder when the label is bound
+    label->SetReferrer(curr_offset);
     EmitScalarValue(kJumpPlaceholder);
   }
 }

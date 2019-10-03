@@ -51,7 +51,7 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name, LocalI
 LocalVar FunctionInfo::NewParameterLocal(ast::Type *type, const std::string &name) {
   const LocalVar local = NewLocal(type, name, LocalInfo::Kind::Parameter);
   num_params_++;
-  params_size_ = frame_size();
+  params_size_ = GetFrameSize();
   return local;
 }
 
@@ -72,9 +72,9 @@ LocalVar FunctionInfo::GetReturnValueLocal() const {
 }
 
 LocalVar FunctionInfo::LookupLocal(const std::string &name) const {
-  for (const auto &local_info : locals()) {
-    if (local_info.name() == name) {
-      return LocalVar(local_info.offset(), LocalVar::AddressMode::Address);
+  for (const auto &local_info : GetLocals()) {
+    if (local_info.GetName() == name) {
+      return LocalVar(local_info.GetOffset(), LocalVar::AddressMode::Address);
     }
   }
 
@@ -82,8 +82,8 @@ LocalVar FunctionInfo::LookupLocal(const std::string &name) const {
 }
 
 const LocalInfo *FunctionInfo::LookupLocalInfoByName(const std::string &name) const {
-  for (const auto &local_info : locals()) {
-    if (local_info.name() == name) {
+  for (const auto &local_info : GetLocals()) {
+    if (local_info.GetName() == name) {
       return &local_info;
     }
   }
@@ -92,8 +92,8 @@ const LocalInfo *FunctionInfo::LookupLocalInfoByName(const std::string &name) co
 }
 
 const LocalInfo *FunctionInfo::LookupLocalInfoByOffset(uint32_t offset) const {
-  for (const auto &local_info : locals()) {
-    if (local_info.offset() == offset) {
+  for (const auto &local_info : GetLocals()) {
+    if (local_info.GetOffset() == offset) {
       return &local_info;
     }
   }

@@ -90,7 +90,7 @@ void VM::InvokeFunction(const Module *module, const FunctionId func_id, const ui
   // The function's info
   const FunctionInfo *func_info = module->GetFuncInfoById(func_id);
   TPL_ASSERT(func_info != nullptr, "Function doesn't exist in module!");
-  const std::size_t frame_size = func_info->frame_size();
+  const std::size_t frame_size = func_info->GetFrameSize();
 
   // Let's try to get some space
   bool used_heap = false;
@@ -106,9 +106,9 @@ void VM::InvokeFunction(const Module *module, const FunctionId func_id, const ui
   }
 
   // Copy args into frame
-  std::memcpy(raw_frame + func_info->params_start_pos(), args, func_info->params_size());
+  std::memcpy(raw_frame + func_info->GetParamsStartPos(), args, func_info->GetParamsSize());
 
-  LOG_DEBUG("Executing function '{}'", func_info->name());
+  LOG_DEBUG("Executing function '{}'", func_info->GetName());
 
   // Let's go. First, create the virtual machine instance.
   VM vm(module);
@@ -1677,7 +1677,7 @@ const uint8_t *VM::ExecuteCall(const uint8_t *ip, VM::Frame *caller) {
   // Lookup the function
   const FunctionInfo *func_info = module_->GetFuncInfoById(func_id);
   TPL_ASSERT(func_info != nullptr, "Function doesn't exist in module!");
-  const std::size_t frame_size = func_info->frame_size();
+  const std::size_t frame_size = func_info->GetFrameSize();
 
   // Get some space for the function's frame
   bool used_heap = false;
@@ -1694,22 +1694,22 @@ const uint8_t *VM::ExecuteCall(const uint8_t *ip, VM::Frame *caller) {
 
   // Set up the arguments to the function
   for (uint32_t i = 0; i < num_params; i++) {
-    const LocalInfo &param_info = func_info->locals()[i];
+    const LocalInfo &param_info = func_info->GetLocals()[i];
     const LocalVar param = LocalVar::Decode(READ_LOCAL_ID());
     const void *param_ptr = caller->PtrToLocalAt(param);
     if (param.GetAddressMode() == LocalVar::AddressMode::Address) {
-      std::memcpy(raw_frame + param_info.offset(), &param_ptr, param_info.size());
+      std::memcpy(raw_frame + param_info.GetOffset(), &param_ptr, param_info.GetSize());
     } else {
-      std::memcpy(raw_frame + param_info.offset(), param_ptr, param_info.size());
+      std::memcpy(raw_frame + param_info.GetOffset(), param_ptr, param_info.GetSize());
     }
   }
 
-  LOG_DEBUG("Executing function '{}'", func_info->name());
+  LOG_DEBUG("Executing function '{}'", func_info->GetName());
 
   // Let's go
   const uint8_t *bytecode = module_->bytecode_module()->GetBytecodeForFunction(*func_info);
   TPL_ASSERT(bytecode != nullptr, "Bytecode cannot be null");
-  VM::Frame callee(raw_frame, func_info->frame_size());
+  VM::Frame callee(raw_frame, func_info->GetFrameSize());
   Interpret(bytecode, &callee);
 
   if (used_heap) {
