@@ -43,6 +43,13 @@ class ComparisonFunctions {
   static void LtDateVal(BoolVal *result, const DateVal &v1, const DateVal &v2);
   static void NeDateVal(BoolVal *result, const DateVal &v1, const DateVal &v2);
 
+  static void EqTimestampVal(BoolVal *result, const TimestampVal &v1, const TimestampVal &v2);
+  static void GeTimestampVal(BoolVal *result, const TimestampVal &v1, const TimestampVal &v2);
+  static void GtTimestampVal(BoolVal *result, const TimestampVal &v1, const TimestampVal &v2);
+  static void LeTimestampVal(BoolVal *result, const TimestampVal &v1, const TimestampVal &v2);
+  static void LtTimestampVal(BoolVal *result, const TimestampVal &v1, const TimestampVal &v2);
+  static void NeTimestampVal(BoolVal *result, const TimestampVal &v1, const TimestampVal &v2);
+
   static void EqStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
   static void GeStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
   static void GtStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
@@ -79,6 +86,7 @@ class ComparisonFunctions {
   BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, Integer, OP) \
   BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, Real, OP)    \
   BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, DateVal, OP) \
+  BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, TimestampVal, OP) \
   BINARY_COMPARISON_STRING_FN_HIDE_NULL(NAME, StringVal, OP)
 
 BINARY_COMPARISONS(Eq, Equal);
