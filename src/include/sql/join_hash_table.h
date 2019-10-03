@@ -136,7 +136,7 @@ class JoinHashTable {
   /**
    * @return True if this table uses an early filtering bloom filter; false otherwise.
    */
-  bool HasBloomFilter() const { return !bloom_filter_.Empty(); }
+  bool HasBloomFilter() const { return !bloom_filter_.IsEmpty(); }
 
   /**
    * @return The total number of elements in the table, including duplicates.
