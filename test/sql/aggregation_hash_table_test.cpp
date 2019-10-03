@@ -348,7 +348,7 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
 
   auto init_ht = [](void *ctx, void *aht) {
     auto exec_ctx = reinterpret_cast<ExecutionContext *>(ctx);
-    new (aht) AggregationHashTable(exec_ctx->memory_pool(), sizeof(AggTuple));
+    new (aht) AggregationHashTable(exec_ctx->GetMemoryPool(), sizeof(AggTuple));
   };
 
   auto destroy_ht = [](void *ctx, void *aht) {

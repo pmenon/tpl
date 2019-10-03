@@ -23,7 +23,7 @@ void Table::Insert(Block &&block) {
   // Sanity check
   TPL_ASSERT(block.num_cols() == schema_->GetColumnCount(), "Column count mismatch");
   for (uint32_t i = 0; i < schema_->GetColumnCount(); i++) {
-    const auto &block_col_type = block.GetColumnData(i)->sql_type();
+    const auto &block_col_type = block.GetColumnData(i)->GetSqlType();
     const auto &schema_col_type = GetSchema().GetColumnInfo(i)->sql_type;
     TPL_ASSERT(schema_col_type.Equals(block_col_type), "Column type mismatch");
   }

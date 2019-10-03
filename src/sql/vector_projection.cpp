@@ -88,8 +88,9 @@ void VectorProjection::ResetColumn(byte *col_data, uint32_t *col_null_bitmap, ui
 
 void VectorProjection::ResetColumn(const std::vector<ColumnVectorIterator> &column_iterators,
                                    const uint32_t col_idx) {
-  ResetColumn(column_iterators[col_idx].col_data(), column_iterators[col_idx].col_null_bitmap(),
-              col_idx, column_iterators[col_idx].NumTuples());
+  ResetColumn(column_iterators[col_idx].GetColumnData(),
+              column_iterators[col_idx].GetColumnNullBitmap(), col_idx,
+              column_iterators[col_idx].GetTupleCount());
 }
 
 std::string VectorProjection::ToString() const {

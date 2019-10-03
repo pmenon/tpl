@@ -33,10 +33,9 @@ class ColumnVectorIterator {
   bool Advance() noexcept;
 
   /**
-   * Return the number of tuples in the current vector of input data.
    * @return The number of tuples in the currently active vector.
    */
-  uint32_t NumTuples() const { return next_block_pos_ - current_block_pos_; }
+  uint32_t GetTupleCount() const { return next_block_pos_ - current_block_pos_; }
 
   /**
    * Reset the iterator to begin iteration at the start of column @em column.
@@ -45,16 +44,24 @@ class ColumnVectorIterator {
   void Reset(const ColumnSegment *column) noexcept;
 
   /**
-   * Access the current vector of raw untyped column data.
+   * @return The current vector chunk's raw untyped column data.
    */
-  byte *col_data() noexcept { return col_data_; }
-  byte *col_data() const noexcept { return col_data_; }
+  byte *GetColumnData() noexcept { return col_data_; }
 
   /**
-   * Access the current raw NULL bitmap.
+   * @return The current vector chunk's raw untyped column data.
    */
-  uint32_t *col_null_bitmap() noexcept { return col_null_bitmap_; }
-  uint32_t *col_null_bitmap() const noexcept { return col_null_bitmap_; }
+  byte *GetColumnData() const noexcept { return col_data_; }
+
+  /**
+   * @return The the current vector chunk's raw NULL bitmap.
+   */
+  uint32_t *GetColumnNullBitmap() noexcept { return col_null_bitmap_; }
+
+  /**
+   * @return The the current vector chunk's raw NULL bitmap.
+   */
+  uint32_t *GetColumnNullBitmap() const noexcept { return col_null_bitmap_; }
 
  private:
   // The schema information for the column this iterator operates on

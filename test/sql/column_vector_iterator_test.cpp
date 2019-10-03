@@ -35,11 +35,11 @@ TEST_F(ColumnIteratorTest, EmptyIteratorTest) {
 
     uint32_t num_rows = 0;
     for (bool has_more = true; has_more; has_more = iter.Advance()) {
-      num_rows += iter.NumTuples();
+      num_rows += iter.GetTupleCount();
     }
 
-    EXPECT_GT(col->num_tuples(), 0u);
-    EXPECT_EQ(col->num_tuples(), num_rows);
+    EXPECT_GT(col->GetTupleCount(), 0u);
+    EXPECT_EQ(col->GetTupleCount(), num_rows);
   }
 }
 
@@ -66,16 +66,16 @@ TEST_F(ColumnIteratorTest, IntegerIterationTest) {
   uint32_t num_rows = 0;
 
   for (bool has_more = true; has_more; has_more = iter.Advance()) {
-    auto *col_data = reinterpret_cast<int32_t *>(iter.col_data());
-    for (uint32_t i = 1; i < iter.NumTuples(); i++) {
+    auto *col_data = reinterpret_cast<int32_t *>(iter.GetColumnData());
+    for (uint32_t i = 1; i < iter.GetTupleCount(); i++) {
       EXPECT_LT(col_data[i - 1], col_data[i]);
       EXPECT_EQ(col_data[i - 1] + 1, col_data[i]);
     }
-    num_rows += iter.NumTuples();
+    num_rows += iter.GetTupleCount();
   }
 
-  EXPECT_GT(col->num_tuples(), 0u);
-  EXPECT_EQ(col->num_tuples(), num_rows);
+  EXPECT_GT(col->GetTupleCount(), 0u);
+  EXPECT_EQ(col->GetTupleCount(), num_rows);
 }
 
 }  // namespace tpl::sql

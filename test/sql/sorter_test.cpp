@@ -259,7 +259,7 @@ void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
 
   // Initialization and destruction function
   const auto init_sorter = [](void *ctx, void *s) {
-    new (s) Sorter(reinterpret_cast<ExecutionContext *>(ctx)->memory_pool(), cmp_fn,
+    new (s) Sorter(reinterpret_cast<ExecutionContext *>(ctx)->GetMemoryPool(), cmp_fn,
                    sizeof(TestTuple<N>));
   };
   const auto destroy_sorter = [](UNUSED void *ctx, void *s) {
@@ -286,7 +286,7 @@ void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
   });
 
   // Main parallel sort
-  Sorter main(exec_ctx.memory_pool(), cmp_fn, sizeof(TestTuple<N>));
+  Sorter main(exec_ctx.GetMemoryPool(), cmp_fn, sizeof(TestTuple<N>));
   main.SortParallel(&container, 0);
 
   uint32_t expected_total_size = std::accumulate(sorter_sizes.begin(), sorter_sizes.end(), 0u,

@@ -183,7 +183,7 @@ VM_OP_HOT void OpReturn() {}
 
 VM_OP_HOT void OpExecutionContextGetMemoryPool(tpl::sql::MemoryPool **const memory,
                                                tpl::sql::ExecutionContext *const exec_ctx) {
-  *memory = exec_ctx->memory_pool();
+  *memory = exec_ctx->GetMemoryPool();
 }
 
 VM_OP void OpThreadStateContainerInit(tpl::sql::ThreadStateContainer *thread_state_container,
@@ -1263,11 +1263,11 @@ VM_OP void OpSorterIteratorFree(tpl::sql::SorterIterator *iter);
 // ---------------------------------------------------------
 
 VM_OP_WARM void OpResultBufferAllocOutputRow(byte **result, tpl::sql::ExecutionContext *ctx) {
-  *result = ctx->result_buffer()->AllocOutputSlot();
+  *result = ctx->GetResultBuffer()->AllocOutputSlot();
 }
 
 VM_OP_WARM void OpResultBufferFinalize(tpl::sql::ExecutionContext *ctx) {
-  ctx->result_buffer()->Finalize();
+  ctx->GetResultBuffer()->Finalize();
 }
 
 // ---------------------------------------------------------

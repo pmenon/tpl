@@ -113,7 +113,7 @@ void StringFunctions::Repeat(ExecutionContext *ctx, StringVal *result, const Str
 
   // Allocate
   const std::size_t result_len = str.GetLength() * n.val;
-  char *target = ctx->string_allocator()->PreAllocate(result_len);
+  char *target = ctx->GetStringHeap()->PreAllocate(result_len);
 
   // Repeat
   char *ptr = target;
@@ -146,7 +146,7 @@ void StringFunctions::Lpad(ExecutionContext *ctx, StringVal *result, const Strin
   }
 
   // Allocate some memory
-  char *target = ctx->string_allocator()->PreAllocate(len.val);
+  char *target = ctx->GetStringHeap()->PreAllocate(len.val);
 
   // Pad
   char *ptr = target;
@@ -184,7 +184,7 @@ void StringFunctions::Rpad(ExecutionContext *ctx, StringVal *result, const Strin
   }
 
   // Allocate output
-  char *target = ctx->string_allocator()->PreAllocate(len.val);
+  char *target = ctx->GetStringHeap()->PreAllocate(len.val);
   char *ptr = target;
 
   // Copy input string first
@@ -214,7 +214,7 @@ void StringFunctions::Lower(ExecutionContext *ctx, StringVal *result, const Stri
     return;
   }
 
-  char *target = ctx->string_allocator()->PreAllocate(str.GetLength());
+  char *target = ctx->GetStringHeap()->PreAllocate(str.GetLength());
   std::transform(str.GetContent(), str.GetContent() + str.GetLength(), target, ::tolower);
   *result = StringVal(target, str.GetLength());
 }
@@ -225,7 +225,7 @@ void StringFunctions::Upper(ExecutionContext *ctx, StringVal *result, const Stri
     return;
   }
 
-  char *target = ctx->string_allocator()->PreAllocate(str.GetLength());
+  char *target = ctx->GetStringHeap()->PreAllocate(str.GetLength());
   std::transform(str.GetContent(), str.GetContent() + str.GetLength(), target, ::toupper);
   *result = StringVal(target, str.GetLength());
 }
@@ -241,7 +241,7 @@ void StringFunctions::Reverse(ExecutionContext *ctx, StringVal *result, const St
     return;
   }
 
-  char *target = ctx->string_allocator()->PreAllocate(str.GetLength());
+  char *target = ctx->GetStringHeap()->PreAllocate(str.GetLength());
   std::reverse_copy(str.GetContent(), str.GetContent() + str.GetLength(), target);
   *result = StringVal(target, str.GetLength());
 }
