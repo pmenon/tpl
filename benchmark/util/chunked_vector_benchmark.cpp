@@ -30,7 +30,7 @@ class ChunkedVectorBenchmark : public benchmark::Fixture {
   }
 };
 
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Vector_InsertAppendBenchmark)
+BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Vector_InsertAppend)
 (benchmark::State &state) {
   const std::size_t size = state.range(0);
   for (auto _ : state) {
@@ -39,7 +39,7 @@ BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Vector_InsertAppendBenchmark)
   }
 }
 
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Deque_InsertAppendBenchmark)
+BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Deque_InsertAppend)
 (benchmark::State &state) {
   const std::size_t size = state.range(0);
   for (auto _ : state) {
@@ -48,7 +48,7 @@ BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Deque_InsertAppendBenchmark)
   }
 }
 
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, ChunkedVector_InsertAppendBenchmark)
+BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, ChunkedVector_InsertAppend)
 (benchmark::State &state) {
   const std::size_t size = state.range(0);
   for (auto _ : state) {
@@ -57,7 +57,7 @@ BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, ChunkedVector_InsertAppendBenchmark)
   }
 }
 
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Vector_ScanBenchmark)
+BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Vector_Scan)
 (benchmark::State &state) {
   // Fill
   const std::size_t size = state.range(0);
@@ -73,7 +73,7 @@ BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Vector_ScanBenchmark)
   }
 }
 
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Deque_ScanBenchmark)
+BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Deque_Scan)
 (benchmark::State &state) {
   // Fill
   const std::size_t size = state.range(0);
@@ -89,7 +89,7 @@ BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Deque_ScanBenchmark)
   }
 }
 
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, ChunkedVector_ScanBenchmark)
+BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, ChunkedVector_Scan)
 (benchmark::State &state) {
   // Fill
   const std::size_t size = state.range(0);
@@ -105,7 +105,7 @@ BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, ChunkedVector_ScanBenchmark)
   }
 }
 
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Vector_RandomAccessBenchmark)
+BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Vector_RandomAccess)
 (benchmark::State &state) {
   // Fill
   const std::size_t size = state.range(0);
@@ -125,7 +125,7 @@ BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Vector_RandomAccessBenchmark)
   }
 }
 
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Deque_RandomAccessBenchmark)
+BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Deque_RandomAccess)
 (benchmark::State &state) {
   // Fill
   const std::size_t size = state.range(0);
@@ -144,7 +144,7 @@ BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Deque_RandomAccessBenchmark)
   }
 }
 
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, ChunkedVector_RandomAccessBenchmark)
+BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, ChunkedVector_RandomAccess)
 (benchmark::State &state) {
   // Fill
   const std::size_t size = state.range(0);
@@ -163,47 +163,47 @@ BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, ChunkedVector_RandomAccessBenchmark)
   }
 }
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Vector_InsertAppendBenchmark)
+BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Vector_InsertAppend)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Deque_InsertAppendBenchmark)
+BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Deque_InsertAppend)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, ChunkedVector_InsertAppendBenchmark)
+BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, ChunkedVector_InsertAppend)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Vector_ScanBenchmark)
+BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Vector_Scan)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Deque_ScanBenchmark)
+BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Deque_Scan)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, ChunkedVector_ScanBenchmark)
+BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, ChunkedVector_Scan)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Vector_RandomAccessBenchmark)
+BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Vector_RandomAccess)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Deque_RandomAccessBenchmark)
+BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Deque_RandomAccess)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, ChunkedVector_RandomAccessBenchmark)
+BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, ChunkedVector_RandomAccess)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);

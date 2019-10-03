@@ -36,8 +36,8 @@ BENCHMARK_DEFINE_F(TupleIdListBenchmark, CallbackBasedIteration)(benchmark::Stat
   auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0, sql::TypeId::Integer);
   for (auto _ : state) {
     int64_t count = 0;
-    auto v1data = reinterpret_cast<int32_t *>(v1->data());
-    auto v2data = reinterpret_cast<int32_t *>(v2->data());
+    auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
+    auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
     tid->Iterate([&](uint64_t i) { count += v1data[i] + v2data[i]; });
     benchmark::ClobberMemory();
   }
@@ -49,8 +49,8 @@ BENCHMARK_DEFINE_F(TupleIdListBenchmark, ConvertToSelectionVectorAndIterate)
   auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0, sql::TypeId::Integer);
   for (auto _ : state) {
     int64_t count = 0;
-    auto v1data = reinterpret_cast<int32_t *>(v1->data());
-    auto v2data = reinterpret_cast<int32_t *>(v2->data());
+    auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
+    auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
 
     auto size = tid->AsSelectionVector(sel_vector);
     for (uint32_t i = 0; i < size; i++) count += v1data[sel_vector[i]] + v2data[sel_vector[i]];
@@ -67,8 +67,8 @@ BENCHMARK_DEFINE_F(TupleIdListBenchmark, ConvertToByteVectorThenSelectionVectorT
   auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0, sql::TypeId::Integer);
   for (auto _ : state) {
     int64_t count = 0;
-    auto v1data = reinterpret_cast<int32_t *>(v1->data());
-    auto v2data = reinterpret_cast<int32_t *>(v2->data());
+    auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
+    auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
 
     // Bits to byte vector
     util::VectorUtil::BitVectorToByteVector(tid->GetMutableBits()->words(),
@@ -88,8 +88,8 @@ BENCHMARK_DEFINE_F(TupleIdListBenchmark, ManualIteration)(benchmark::State &stat
   auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0, sql::TypeId::Integer);
   for (auto _ : state) {
     int64_t count = 0;
-    auto v1data = reinterpret_cast<int32_t *>(v1->data());
-    auto v2data = reinterpret_cast<int32_t *>(v2->data());
+    auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
+    auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
     for (const auto i : *tid) count += v1data[i] + v2data[i];
     benchmark::ClobberMemory();
   }
