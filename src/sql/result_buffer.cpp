@@ -10,7 +10,7 @@ namespace {
 
 std::size_t ComputeRowSize(const Schema &schema) {
   std::size_t tuple_size = 0;
-  for (const auto &col : schema.columns()) {
+  for (const auto &col : schema.GetColumns()) {
     switch (col.sql_type.id()) {
       case SqlTypeId::Boolean:
         tuple_size += sizeof(BoolVal);

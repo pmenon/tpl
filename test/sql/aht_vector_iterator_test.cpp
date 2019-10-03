@@ -81,7 +81,7 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
 
   std::vector<const Schema::ColumnInfo *> output_schema() {
     std::vector<const Schema::ColumnInfo *> ret;
-    for (const auto &col : schema_->columns()) {
+    for (const auto &col : schema_->GetColumns()) {
       ret.push_back(&col);
     }
     return ret;

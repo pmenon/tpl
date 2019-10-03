@@ -48,11 +48,11 @@ bool TableVectorIterator::Init() {
   }
 
   // The table schema
-  const auto &table_schema = block_iterator_.table()->schema();
+  const auto &table_schema = block_iterator_.GetTable()->GetSchema();
 
   // If the column indexes vector is empty, select all the columns
   if (column_indexes_.empty()) {
-    column_indexes_.resize(table_schema.num_columns());
+    column_indexes_.resize(table_schema.GetColumnCount());
     std::iota(column_indexes_.begin(), column_indexes_.end(), uint32_t{0});
   }
 
@@ -123,7 +123,7 @@ bool TableVectorIterator::Advance() {
 
   // Check block iterator
   if (block_iterator_.Advance()) {
-    const Table::Block *block = block_iterator_.current_block();
+    const Table::Block *block = block_iterator_.GetCurrentBlock();
     for (uint32_t i = 0; i < column_iterators_.size(); i++) {
       const ColumnSegment *col = block->GetColumnData(i);
       column_iterators_[i].Reset(col);
@@ -187,14 +187,14 @@ bool TableVectorIterator::ParallelScan(const uint16_t table_id, void *const quer
 
   // Execute parallel scan
   tbb::task_scheduler_init scan_scheduler;
-  tbb::blocked_range<uint32_t> block_range(0, table->num_blocks(), min_grain_size);
+  tbb::blocked_range<uint32_t> block_range(0, table->GetBlockCount(), min_grain_size);
   tbb::parallel_for(block_range, ScanTask(table_id, query_state, thread_states, scan_fn));
 
   timer.Stop();
 
-  double tps = table->num_tuples() / timer.elapsed() / 1000.0;
-  LOG_INFO("Scanned {} blocks ({} tuples) blocks in {} ms ({:.3f} mtps)", table->num_blocks(),
-           table->num_tuples(), timer.elapsed(), tps);
+  double tps = table->GetTupleCount() / timer.elapsed() / 1000.0;
+  LOG_INFO("Scanned {} blocks ({} tuples) blocks in {} ms ({:.3f} mtps)", table->GetBlockCount(),
+           table->GetTupleCount(), timer.elapsed(), tps);
 
   return true;
 }

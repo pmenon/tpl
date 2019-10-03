@@ -88,29 +88,29 @@ class Table {
   void Dump(std::ostream &stream) const;
 
   /**
-   * Return the ID of the table
+   * @return The ID of the table.
    */
-  uint16_t id() const { return id_; }
+  uint16_t GetId() const { return id_; }
 
   /**
-   * Return the total number of tuples in the table
+   * @return The total number of tuples in the table.
    */
-  uint32_t num_tuples() const { return num_tuples_; }
+  uint32_t GetTupleCount() const { return num_tuples_; }
 
   /**
-   * Return the schema of the table
+   * @return The schema of the table.
    */
-  const Schema &schema() const { return *schema_; }
+  const Schema &GetSchema() const { return *schema_; }
 
   /**
-   * Return the number of blocks in the table
+   * @return The number of blocks in the table.
    */
-  uint32_t num_blocks() const { return blocks_.size(); }
+  uint32_t GetBlockCount() const { return blocks_.size(); }
 
   /**
-   * Return the mutable string heap for this table.
+   * @return The mutable string heap for this table.
    */
-  VarlenHeap *mutable_string_heap() { return &strings_; }
+  VarlenHeap *GetMutableStringHeap() { return &strings_; }
 
  private:
   // The ID of the table
@@ -159,12 +159,12 @@ class TableBlockIterator {
   /**
    * Return the table this iterator is scanning over
    */
-  const Table *table() const { return table_; }
+  const Table *GetTable() const { return table_; }
 
   /**
    * Return the current block
    */
-  const Table::Block *current_block() const { return curr_block_; }
+  const Table::Block *GetCurrentBlock() const { return curr_block_; }
 
  private:
   // The ID of the table to iterate

@@ -258,7 +258,7 @@ Table *Catalog::LookupTableById(uint16_t table_id) const {
 }
 
 void Catalog::InsertTable(const std::string &table_name, std::unique_ptr<Table> &&table) {
-  const uint16_t table_id = table->id();
+  const uint16_t table_id = table->GetId();
   table_catalog_.emplace(table_id, std::move(table));
   table_name_to_id_map_.insert(std::make_pair(table_name, table_id));
 }

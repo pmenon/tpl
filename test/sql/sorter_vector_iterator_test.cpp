@@ -96,7 +96,7 @@ class SorterVectorIteratorTest : public TplTest {
 
   std::vector<const Schema::ColumnInfo *> row_meta() const {
     std::vector<const Schema::ColumnInfo *> cols;
-    for (const auto &col : schema_.columns()) {
+    for (const auto &col : schema_.GetColumns()) {
       cols.push_back(&col);
     }
     return cols;

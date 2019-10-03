@@ -499,7 +499,7 @@ void BytecodeGenerator::VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Buil
       ast::Identifier table_name = call->arguments()[1]->As<ast::LitExpr>()->raw_string_val();
       sql::Table *table = sql::Catalog::Instance()->LookupTableByName(table_name);
       TPL_ASSERT(table != nullptr, "Table does not exist!");
-      emitter()->EmitTableIterInit(Bytecode::TableVectorIteratorInit, iter, table->id());
+      emitter()->EmitTableIterInit(Bytecode::TableVectorIteratorInit, iter, table->GetId());
       emitter()->Emit(Bytecode::TableVectorIteratorPerformInit, iter);
       break;
     }
@@ -541,7 +541,7 @@ void BytecodeGenerator::VisitBuiltinTableIterParallelCall(ast::CallExpr *call) {
   const auto scan_fn_name = call->arguments()[3]->As<ast::IdentifierExpr>()->name();
 
   // Done
-  emitter()->EmitParallelTableScan(table->id(), exec_ctx, thread_state_container,
+  emitter()->EmitParallelTableScan(table->GetId(), exec_ctx, thread_state_container,
                                    LookupFuncIdByName(scan_fn_name.data()));
 }
 

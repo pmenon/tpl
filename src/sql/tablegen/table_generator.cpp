@@ -94,10 +94,10 @@ void ParseCol(byte *data, uint32_t *null_bitmap, const Schema::ColumnInfo &col, 
 void CreateAndAppendBlockToTable(Table *table,
                                  const std::vector<std::pair<byte *, uint32_t *>> &col_data,
                                  const uint32_t num_vals) {
-  TPL_ASSERT(table->schema().num_columns() == col_data.size(), "Missing column data");
+  TPL_ASSERT(table->GetSchema().GetColumnCount() == col_data.size(), "Missing column data");
   std::vector<ColumnSegment> columns;
   for (uint64_t i = 0; i < col_data.size(); i++) {
-    auto col_info = table->schema().GetColumnInfo(i);
+    auto col_info = table->GetSchema().GetColumnInfo(i);
     auto [data, null_bitmap] = col_data[i];
     columns.emplace_back(col_info->sql_type, data, null_bitmap, num_vals);
   }
@@ -109,9 +109,9 @@ void ImportTable(const std::string &table_name, Table *table, const std::string 
   const uint32_t kBatchSize = 10000;
   uint32_t total_written = 0, num_vals = 0;
 
-  const auto &cols = table->schema().columns();
+  const auto &cols = table->GetSchema().GetColumns();
 
-  VarlenHeap *table_strings = table->mutable_string_heap();
+  VarlenHeap *table_strings = table->GetMutableStringHeap();
   std::vector<std::pair<byte *, uint32_t *>> col_data;
 
   util::Timer<std::milli> timer;
@@ -121,7 +121,7 @@ void ImportTable(const std::string &table_name, Table *table, const std::string 
   auto reader = csv::CSVReader(data_file, csv::CSVFormat().delimiter({'|', '\n'}));
   for (csv::CSVRow &row : reader) {
     if (num_vals == 0) {
-      for (const auto &col : table->schema().columns()) {
+      for (const auto &col : table->GetSchema().GetColumns()) {
         byte *data = static_cast<byte *>(
             Memory::MallocAligned(col.GetStorageSize() * kBatchSize, CACHELINE_SIZE));
         uint32_t *nulls = nullptr;
@@ -134,7 +134,7 @@ void ImportTable(const std::string &table_name, Table *table, const std::string 
     }
 
     // Write table data
-    for (uint32_t col_idx = 0; col_idx < table->schema().num_columns(); col_idx++) {
+    for (uint32_t col_idx = 0; col_idx < table->GetSchema().GetColumnCount(); col_idx++) {
       auto field = row[col_idx];
       ParseCol(col_data[col_idx].first, col_data[col_idx].second, cols[col_idx], num_vals, field,
                table_strings);

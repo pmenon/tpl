@@ -22,9 +22,9 @@ TEST_F(TableVectorIteratorTest, InvalidBlockRangeIteratorTest) {
       {0, 10, true},
       {10, 0, false},
       {-10, 2, false},
-      {0, table->num_blocks(), true},
-      {10, table->num_blocks(), true},
-      {10, table->num_blocks() + 1, false},
+      {0, table->GetBlockCount(), true},
+      {10, table->GetBlockCount(), true},
+      {10, table->GetBlockCount() + 1, false},
   };
 
   for (auto [start_idx, end_idx, valid] : test_cases) {
@@ -66,7 +66,7 @@ TEST_F(TableVectorIteratorTest, SimpleIteratorTest) {
     vpi->Reset();
   }
 
-  EXPECT_EQ(iter.table()->num_tuples(), num_tuples);
+  EXPECT_EQ(iter.GetTable()->GetTupleCount(), num_tuples);
 }
 
 TEST_F(TableVectorIteratorTest, ParallelScanTest) {

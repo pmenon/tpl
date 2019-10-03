@@ -21,10 +21,10 @@ namespace tpl::sql {
 void Table::Insert(Block &&block) {
 #ifndef NDEBUG
   // Sanity check
-  TPL_ASSERT(block.num_cols() == schema_->num_columns(), "Column count mismatch");
-  for (uint32_t i = 0; i < schema_->num_columns(); i++) {
+  TPL_ASSERT(block.num_cols() == schema_->GetColumnCount(), "Column count mismatch");
+  for (uint32_t i = 0; i < schema_->GetColumnCount(); i++) {
     const auto &block_col_type = block.GetColumnData(i)->sql_type();
-    const auto &schema_col_type = schema().GetColumnInfo(i)->sql_type;
+    const auto &schema_col_type = GetSchema().GetColumnInfo(i)->sql_type;
     TPL_ASSERT(schema_col_type.Equals(block_col_type), "Column type mismatch");
   }
 #endif
@@ -108,7 +108,7 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment
 }  // namespace
 
 void Table::Dump(std::ostream &stream) const {
-  const auto &cols_meta = schema().columns();
+  const auto &cols_meta = GetSchema().GetColumns();
   for (const auto &block : blocks_) {
     for (uint32_t row_idx = 0; row_idx < block.num_tuples(); row_idx++) {
       for (uint32_t col_idx = 0; col_idx < cols_meta.size(); col_idx++) {
@@ -151,12 +151,12 @@ bool TableBlockIterator::Init() {
   }
 
   // Check block range
-  if (start_block_idx_ > table_->num_blocks()) {
+  if (start_block_idx_ > table_->GetBlockCount()) {
     return false;
   }
 
   if (end_block_idx_ != std::numeric_limits<uint32_t>::max()) {
-    if (end_block_idx_ > table_->num_blocks()) {
+    if (end_block_idx_ > table_->GetBlockCount()) {
       return false;
     }
   }

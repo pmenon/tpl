@@ -406,7 +406,10 @@ void Vector::CheckIntegrity() const {
   // Ensure that if there isn't a selection vector, the size and selected count values are equal
   if (sel_vector_ == nullptr) {
     TPL_ASSERT(count_ == num_elems_,
-               "Vector count() and num_elems() do not match when missing selection vector");
+               "Vector count and size do not match with missing selection vector");
+  } else {
+    TPL_ASSERT(count_ <= num_elems_,
+               "Vector count must be smaller than size with selection vector");
   }
 
   // Ensure that the NULL bitmask has the same size at the vector it represents

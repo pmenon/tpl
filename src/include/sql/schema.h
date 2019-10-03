@@ -57,12 +57,12 @@ class Schema {
   /**
    * @return Return the number of columns in the schema.
    */
-  uint32_t num_columns() const { return static_cast<uint32_t>(columns().size()); }
+  uint32_t GetColumnCount() const { return static_cast<uint32_t>(GetColumns().size()); }
 
   /**
    * @return A const-view of the column metadata.
    */
-  const std::vector<ColumnInfo> &columns() const { return cols_; }
+  const std::vector<ColumnInfo> &GetColumns() const { return cols_; }
 
   /**
    * @return A string representation of this schema.

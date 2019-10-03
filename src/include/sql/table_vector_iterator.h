@@ -76,7 +76,7 @@ class TableVectorIterator {
    * Access the table this iterator is scanning
    * @return The table if the iterator has been initialized; null otherwise
    */
-  const Table *table() const { return block_iterator_.table(); }
+  const Table *GetTable() const { return block_iterator_.GetTable(); }
 
   /**
    * Return the iterator over the current active vector projection
