@@ -227,7 +227,7 @@ class ReorderBuffer {
 template <bool PrefetchCHT, bool PrefetchEntries>
 void JoinHashTable::ReorderMainEntries() {
   const uint64_t elem_size = entries_.element_size();
-  const uint64_t num_overflow_entries = concise_hash_table_.num_overflow();
+  const uint64_t num_overflow_entries = concise_hash_table_.GetOverflowEntryCount();
   const uint64_t num_main_entries = entries_.size() - num_overflow_entries;
   uint64_t overflow_idx = num_main_entries;
 
@@ -315,7 +315,7 @@ template <bool PrefetchCHT, bool PrefetchEntries>
 void JoinHashTable::ReorderOverflowEntries() {
   const uint64_t elem_size = entries_.element_size();
   const uint64_t num_entries = entries_.size();
-  const uint64_t num_overflow_entries = concise_hash_table_.num_overflow();
+  const uint64_t num_overflow_entries = concise_hash_table_.GetOverflowEntryCount();
   const uint64_t num_main_entries = num_entries - num_overflow_entries;
   const uint64_t overflow_start_idx = num_main_entries;
   const uint64_t no_overflow = std::numeric_limits<uint64_t>::max();
@@ -496,7 +496,7 @@ void JoinHashTable::VerifyMainEntryOrder() {
 #ifndef NDEBUG
   constexpr const uint64_t kCHTSlotMask = kBufferedBit - 1;
 
-  const uint64_t overflow_idx = entries_.size() - concise_hash_table_.num_overflow();
+  const uint64_t overflow_idx = entries_.size() - concise_hash_table_.GetOverflowEntryCount();
   for (uint32_t idx = 0; idx < overflow_idx; idx++) {
     auto *entry = reinterpret_cast<HashTableEntry *>(entries_[idx]);
     auto dest_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot & kCHTSlotMask);
@@ -522,8 +522,8 @@ void JoinHashTable::BuildConciseHashTableInternal() {
   concise_hash_table_.Build();
 
   LOG_INFO("Concise Table Stats: {} entries, {} overflow ({} % overflow)", entries_.size(),
-           concise_hash_table_.num_overflow(),
-           100.0 * (concise_hash_table_.num_overflow() * 1.0 / entries_.size()));
+           concise_hash_table_.GetOverflowEntryCount(),
+           100.0 * (concise_hash_table_.GetOverflowEntryCount() * 1.0 / entries_.size()));
 
   // Reorder all the main entries in place according to CHT order
   ReorderMainEntries<PrefetchCHT, PrefetchEntries>();

@@ -39,7 +39,7 @@ TEST_F(ConciseHashTableTest, InsertTest) {
   table.SetSize(num_tuples);
 
   // Check minimum capacity is enforced
-  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.capacity());
+  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.GetCapacity());
 
   // 0 should go into the zero-th slot
   auto *entry_0 = TestEntry(0);
@@ -68,7 +68,7 @@ TEST_F(ConciseHashTableTest, InsertOverflowTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.capacity());
+  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.GetCapacity());
 
   // 33 should go into the 33rd slot
   auto *entry_33 = TestEntry(33);
@@ -102,7 +102,7 @@ TEST_F(ConciseHashTableTest, MultiGroupInsertTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.capacity());
+  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.GetCapacity());
 
   // 33 goes in the first group, in the 33rd slot
   auto *entry_33 = TestEntry(33);
@@ -148,7 +148,7 @@ TEST_F(ConciseHashTableTest, CornerCaseTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.capacity());
+  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.GetCapacity());
 
   // 63 should go into the 63rd slot
   auto *entry_63 = TestEntry(63);
@@ -184,7 +184,7 @@ TEST_F(ConciseHashTableTest, BuildTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.capacity());
+  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.GetCapacity());
 
   std::vector<ConciseHashTableSlot> inserted;
 
@@ -212,7 +212,7 @@ TEST_F(ConciseHashTableTest, MultiGroupBuildTest) {
   ConciseHashTable table(probe_length);
   table.SetSize(num_tuples);
 
-  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.capacity());
+  EXPECT_EQ(ConciseHashTable::kMinNumSlots, table.GetCapacity());
 
   std::vector<ConciseHashTableSlot> inserted;
 

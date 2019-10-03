@@ -32,7 +32,7 @@ void ConciseHashTable::SetSize(const uint32_t num_elems) {
 }
 
 void ConciseHashTable::Build() {
-  if (is_built()) {
+  if (IsBuilt()) {
     return;
   }
 

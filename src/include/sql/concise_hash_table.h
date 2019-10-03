@@ -99,24 +99,24 @@ class ConciseHashTable {
   std::pair<bool, uint64_t> Lookup(hash_t hash) const;
 
   /**
-   * Return the number of bytes this hash table has allocated
+   * @return The number of bytes this hash table has allocated.
    */
   uint64_t GetTotalMemoryUsage() const { return sizeof(SlotGroup) * num_groups_; }
 
   /**
-   * Return the capacity (the maximum number of elements) this table supports
+   * @return The capacity, i.e., the maximum number of elements this table supports.
    */
-  uint64_t capacity() const { return slot_mask_ + 1; }
+  uint64_t GetCapacity() const { return slot_mask_ + 1; }
 
   /**
-   * Return the number of overflows entries in this table
+   * @return The number of overflows entries in this table.
    */
-  uint64_t num_overflow() const { return num_overflow_; }
+  uint64_t GetOverflowEntryCount() const { return num_overflow_; }
 
   /**
-   * Has the table been built?
+   * @return True if the table has been built; false otherwise.
    */
-  bool is_built() const { return built_; }
+  bool IsBuilt() const { return built_; }
 
  private:
   /**
@@ -188,7 +188,7 @@ inline void ConciseHashTable::PrefetchSlotGroup(hash_t hash) const {
 }
 
 inline uint64_t ConciseHashTable::NumFilledSlotsBefore(const ConciseHashTableSlot slot) const {
-  TPL_ASSERT(is_built(), "Table must be built");
+  TPL_ASSERT(IsBuilt(), "Table must be built");
 
   const uint64_t group_idx = slot >> kLogSlotsPerGroup;
   const uint64_t bit_idx = slot & kGroupBitMask;
