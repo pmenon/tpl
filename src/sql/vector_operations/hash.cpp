@@ -23,34 +23,34 @@ void VectorOps::Hash(const Vector &input, Vector *result) {
   // Lift-off
   switch (input.GetTypeId()) {
     case TypeId::Boolean:
-      UnaryOperation_HandleNull<bool, hash_t, tpl::sql::Hash<bool>>(input, result);
+      UnaryOperation_HandleNull<bool, hash_t, tpl::sql::Hash>(input, result);
       break;
     case TypeId::TinyInt:
-      UnaryOperation_HandleNull<int8_t, hash_t, tpl::sql::Hash<int8_t>>(input, result);
+      UnaryOperation_HandleNull<int8_t, hash_t, tpl::sql::Hash>(input, result);
       break;
     case TypeId::SmallInt:
-      UnaryOperation_HandleNull<int16_t, hash_t, tpl::sql::Hash<int16_t>>(input, result);
+      UnaryOperation_HandleNull<int16_t, hash_t, tpl::sql::Hash>(input, result);
       break;
     case TypeId::Integer:
-      UnaryOperation_HandleNull<int32_t, hash_t, tpl::sql::Hash<int32_t>>(input, result);
+      UnaryOperation_HandleNull<int32_t, hash_t, tpl::sql::Hash>(input, result);
       break;
     case TypeId::BigInt:
-      UnaryOperation_HandleNull<int64_t, hash_t, tpl::sql::Hash<int64_t>>(input, result);
+      UnaryOperation_HandleNull<int64_t, hash_t, tpl::sql::Hash>(input, result);
       break;
     case TypeId::Pointer:
-      UnaryOperation_HandleNull<uintptr_t, hash_t, tpl::sql::Hash<uintptr_t>>(input, result);
+      UnaryOperation_HandleNull<uintptr_t, hash_t, tpl::sql::Hash>(input, result);
       break;
     case TypeId::Float:
-      UnaryOperation_HandleNull<float, hash_t, tpl::sql::Hash<float>>(input, result);
+      UnaryOperation_HandleNull<float, hash_t, tpl::sql::Hash>(input, result);
       break;
     case TypeId::Double:
-      UnaryOperation_HandleNull<double, hash_t, tpl::sql::Hash<double>>(input, result);
+      UnaryOperation_HandleNull<double, hash_t, tpl::sql::Hash>(input, result);
       break;
     case TypeId::Date:
-      UnaryOperation_HandleNull<Date, hash_t, tpl::sql::Hash<Date>>(input, result);
+      UnaryOperation_HandleNull<Date, hash_t, tpl::sql::Hash>(input, result);
       break;
     case TypeId::Varchar:
-      UnaryOperation_HandleNull<VarlenEntry, hash_t, tpl::sql::Hash<VarlenEntry>>(input, result);
+      UnaryOperation_HandleNull<const VarlenEntry, hash_t, tpl::sql::Hash>(input, result);
       break;
     default:
       throw NotImplementedException("hashing not supported for vectors of type '{}'",
