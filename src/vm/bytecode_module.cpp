@@ -9,12 +9,21 @@
 #include <vector>
 
 #include "ast/type.h"
+#include "vm/bytecode_iterator.h"
 
 namespace tpl::vm {
 
 BytecodeModule::BytecodeModule(std::string name, std::vector<uint8_t> &&code,
                                std::vector<FunctionInfo> &&functions)
     : name_(std::move(name)), code_(std::move(code)), functions_(std::move(functions)) {}
+
+std::size_t BytecodeModule::GetInstructionCount() const {
+  std::size_t count = 0;
+  for (BytecodeIterator iter(code_); !iter.Done(); iter.Advance()) {
+    count++;
+  }
+  return count;
+}
 
 namespace {
 
@@ -156,7 +165,7 @@ void PrettyPrintFunc(std::ostream &os, const BytecodeModule &module, const Funct
 
 }  // namespace
 
-void BytecodeModule::PrettyPrint(std::ostream &os) const {
+void BytecodeModule::Dump(std::ostream &os) const {
   for (const auto &func : functions_) {
     PrettyPrintFunc(os, *this, func);
   }

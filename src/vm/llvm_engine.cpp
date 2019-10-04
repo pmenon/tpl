@@ -481,8 +481,8 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(const CompilerOptions &
     }
 
     llvm_module_ = std::move(module.get());
-    llvm_module_->setModuleIdentifier(tpl_module.name());
-    llvm_module_->setSourceFileName(tpl_module.name() + ".tpl");
+    llvm_module_->setModuleIdentifier(tpl_module.GetName());
+    llvm_module_->setSourceFileName(tpl_module.GetName() + ".tpl");
     llvm_module_->setDataLayout(target_machine_->createDataLayout());
     llvm_module_->setTargetTriple(target_triple);
   }
@@ -491,7 +491,7 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(const CompilerOptions &
 }
 
 void LLVMEngine::CompiledModuleBuilder::DeclareFunctions() {
-  for (const auto &func_info : tpl_module_.functions()) {
+  for (const auto &func_info : tpl_module_.GetFunctions()) {
     auto *func_type =
         llvm::cast<llvm::FunctionType>(type_map_->GetLLVMType(func_info.GetFuncType()));
     llvm_module_->getOrInsertFunction(func_info.GetName(), func_type);
@@ -881,7 +881,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
 
 void LLVMEngine::CompiledModuleBuilder::DefineFunctions() {
   llvm::IRBuilder<> ir_builder(*context_);
-  for (const auto &func_info : tpl_module_.functions()) {
+  for (const auto &func_info : tpl_module_.GetFunctions()) {
     DefineFunction(func_info, &ir_builder);
   }
 }
@@ -970,7 +970,7 @@ std::unique_ptr<llvm::MemoryBuffer> LLVMEngine::CompiledModuleBuilder::EmitObjec
 }
 
 void LLVMEngine::CompiledModuleBuilder::PersistObjectToFile(const llvm::MemoryBuffer &obj_buffer) {
-  const std::string file_name = tpl_module_.name() + ".to";
+  const std::string file_name = tpl_module_.GetName() + ".to";
 
   std::error_code error_code;
   llvm::raw_fd_ostream dest(file_name, error_code, llvm::sys::fs::F_None);
@@ -1050,7 +1050,7 @@ void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
       LOG_ERROR("LLVMEngine: Error reading current path '{}'", error.message());
       return;
     }
-    llvm::sys::path::append(path, module.name(), ".to");
+    llvm::sys::path::append(path, module.GetName(), ".to");
     auto file_buffer = llvm::MemoryBuffer::getFile(path);
     if (std::error_code error = file_buffer.getError()) {
       LOG_ERROR("LLVMEngine: Error reading object file '{}'", error.message());
@@ -1086,7 +1086,7 @@ void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
   // all module functions into a handy cache.
   //
 
-  for (const auto &func : module.functions()) {
+  for (const auto &func : module.GetFunctions()) {
     auto symbol = loader.getSymbol(func.GetName());
     functions_[func.GetName()] = reinterpret_cast<void *>(symbol.getAddress());
   }

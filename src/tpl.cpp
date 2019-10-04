@@ -128,7 +128,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
 
   // Dump Bytecode
   if (kPrintTbc) {
-    bytecode_module->PrettyPrint(std::cout);
+    bytecode_module->Dump(std::cout);
   }
 
   auto module = std::make_unique<vm::Module>(std::move(bytecode_module));

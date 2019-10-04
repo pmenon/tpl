@@ -11,16 +11,15 @@
 namespace tpl::vm {
 
 /**
- * A bytecode module is a container for all the TPL bytecode (TBC) for a TPL
- * source file. Bytecode modules directly contain a list of all the physical
- * bytecode that make up the program, and a list of functions that store
- * information about the functions in the TPL program.
+ * A bytecode module is a container for all the TPL bytecode (TBC) for a TPL source file. Bytecode
+ * modules directly contain a list of all the physical bytecode that make up the program, and a list
+ * of functions that store information about the functions in the TPL program.
  */
 class BytecodeModule {
  public:
   /**
-   * Construct a new bytecode module. After construction, all available bytecode
-   * functions are available for execution.
+   * Construct a new bytecode module. After construction, all available bytecode functions are
+   * available for execution.
    * @param name The name of the module
    * @param code The bytecode that makes up the module
    * @param functions The functions within the module
@@ -29,16 +28,16 @@ class BytecodeModule {
                  std::vector<FunctionInfo> &&functions);
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(BytecodeModule);
 
   /**
-   * Look up a TPL function in this module by its ID
-   * @return A pointer to the function's info if it exists; null otherwise
+   * Look up a TPL function in this module by its ID.
+   * @return A pointer to the function's info if it exists; null otherwise.
    */
   const FunctionInfo *GetFuncInfoById(const FunctionId func_id) const {
-    TPL_ASSERT(func_id < num_functions(), "Invalid function");
+    TPL_ASSERT(func_id < GetFunctionCount(), "Invalid function");
     return &functions_[func_id];
   }
 
@@ -57,8 +56,7 @@ class BytecodeModule {
   }
 
   /**
-   * Retrieve an iterator over the bytecode for the given function \a func
-   * @return A pointer to the function's info if it exists; null otherwise
+   * @return An iterator over the bytecode for the function @em func.
    */
   BytecodeIterator BytecodeForFunction(const FunctionInfo &func) const {
     auto [start, end] = func.GetBytecodeRange();
@@ -66,36 +64,30 @@ class BytecodeModule {
   }
 
   /**
-   * Return the number of bytecode instructions in this module.
+   * @return The number of bytecode instructions in this module.
    */
-  std::size_t GetInstructionCount() const {
-    std::size_t count = 0;
-    for (BytecodeIterator iter(code_); !iter.Done(); iter.Advance()) {
-      count++;
-    }
-    return count;
-  }
+  std::size_t GetInstructionCount() const;
 
   /**
    * Pretty print all the module's contents into the provided output stream
    * @param os The stream into which we dump the module's contents
    */
-  void PrettyPrint(std::ostream &os) const;
+  void Dump(std::ostream &os) const;
 
   /**
-   * Return the name of the module
+   * @return The name of the module.
    */
-  const std::string &name() const { return name_; }
+  const std::string &GetName() const { return name_; }
 
   /**
-   * Return a constant view of all functions
+   * @return A const-view of the metadata for all functions in this module.
    */
-  const std::vector<FunctionInfo> &functions() const { return functions_; }
+  const std::vector<FunctionInfo> &GetFunctions() const { return functions_; }
 
   /**
-   * Return the number of functions defined in this module
+   * @return The number of functions defined in this module.
    */
-  std::size_t num_functions() const { return functions_.size(); }
+  std::size_t GetFunctionCount() const { return functions_.size(); }
 
  private:
   friend class VM;

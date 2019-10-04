@@ -45,22 +45,22 @@ Module::Module(std::unique_ptr<BytecodeModule> bytecode_module,
                std::unique_ptr<LLVMEngine::CompiledModule> llvm_module)
     : bytecode_module_(std::move(bytecode_module)),
       jit_module_(std::move(llvm_module)),
-      functions_(std::make_unique<std::atomic<void *>[]>(bytecode_module_->num_functions())),
-      bytecode_trampolines_(std::make_unique<Trampoline[]>(bytecode_module_->num_functions())) {
+      functions_(std::make_unique<std::atomic<void *>[]>(bytecode_module_->GetFunctionCount())),
+      bytecode_trampolines_(std::make_unique<Trampoline[]>(bytecode_module_->GetFunctionCount())) {
   // Create the trampolines for all bytecode functions
-  for (const auto &func : bytecode_module_->functions()) {
+  for (const auto &func : bytecode_module_->GetFunctions()) {
     CreateFunctionTrampoline(func.GetId());
   }
 
   // If a compiled module wasn't provided, all internal function stubs point to
   // the bytecode implementations.
   if (jit_module_ == nullptr) {
-    const auto num_functions = bytecode_module_->num_functions();
+    const auto num_functions = bytecode_module_->GetFunctionCount();
     for (uint32_t idx = 0; idx < num_functions; idx++) {
       functions_[idx] = bytecode_trampolines_[idx].code();
     }
   } else {
-    const auto num_functions = bytecode_module_->num_functions();
+    const auto num_functions = bytecode_module_->GetFunctionCount();
     for (uint32_t idx = 0; idx < num_functions; idx++) {
       auto func_info = bytecode_module_->GetFuncInfoById(idx);
       functions_[idx] = jit_module_->GetFunctionPointer(func_info->GetName());
@@ -283,7 +283,7 @@ void Module::CompileToMachineCode() {
     jit_module_ = LLVMEngine::Compile(*bytecode_module_, options);
 
     // Setup function pointers
-    for (const auto &func_info : bytecode_module_->functions()) {
+    for (const auto &func_info : bytecode_module_->GetFunctions()) {
       auto *jit_function = jit_module_->GetFunctionPointer(func_info.GetName());
       TPL_ASSERT(jit_function != nullptr, "Missing function in compiled module!");
       functions_[func_info.GetId()].store(jit_function, std::memory_order_relaxed);
