@@ -138,6 +138,9 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   // Lookup a function's ID by its name
   FunctionId LookupFuncIdByName(const std::string &name) const;
 
+  // Create a new static
+  LocalVar NewStatic(ast::Identifier name, ast::Type *type, void *contents, std::size_t len);
+
   // Access the current execution result scope
   ExpressionResultScope *GetExecutionResult() { return execution_result_; }
 
@@ -149,8 +152,14 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   FunctionInfo *GetCurrentFunction() { return &functions_.back(); }
 
  private:
+  // The data section of the module
+  std::vector<uint8_t> data_;
+
   // The bytecode generated during compilation
-  std::vector<uint8_t> bytecode_;
+  std::vector<uint8_t> code_;
+
+  // Constants stored in the data section
+  std::vector<LocalInfo> static_locals_;
 
   // Information about all generated functions
   std::vector<FunctionInfo> functions_;
@@ -158,7 +167,7 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   // Cache of function names to IDs for faster lookup
   std::unordered_map<std::string, FunctionId> func_map_;
 
-  // Emitter to write bytecode ops
+  // Emitter to write bytecode into the code section
   BytecodeEmitter emitter_;
 
   // RAII struct to capture semantics of expression evaluation

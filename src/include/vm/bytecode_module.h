@@ -21,11 +21,13 @@ class BytecodeModule {
    * Construct a new bytecode module. After construction, all available bytecode functions are
    * available for execution.
    * @param name The name of the module
-   * @param code The bytecode that makes up the module
+   * @param code The code section containing all bytecode instructions.
+   * @param data The data section containing static data.
    * @param functions The functions within the module
+   * @param static_locals All statically allocated variables in the data section.
    */
-  BytecodeModule(std::string name, std::vector<uint8_t> &&code,
-                 std::vector<FunctionInfo> &&functions);
+  BytecodeModule(std::string name, std::vector<uint8_t> &&code, std::vector<uint8_t> &&data,
+                 std::vector<FunctionInfo> &&functions, std::vector<LocalInfo> &&static_locals);
 
   /**
    * This class cannot be copied or moved.
@@ -85,23 +87,47 @@ class BytecodeModule {
   const std::vector<FunctionInfo> &GetFunctions() const { return functions_; }
 
   /**
+   * @return A const-view of the metadata for all static-locals in this module.
+   */
+  const std::vector<LocalInfo> &GetStaticLocals() const noexcept { return static_vars_; }
+
+  /**
    * @return The number of functions defined in this module.
    */
   std::size_t GetFunctionCount() const { return functions_.size(); }
 
+  /**
+   * @return The number of static locals.
+   */
+  uint32_t GetStaticLocalsCount() const noexcept { return static_vars_.size(); }
+
  private:
   friend class VM;
+  friend class LLVMEngine;
 
-  const uint8_t *GetBytecodeForFunction(const FunctionInfo &func) const {
+  const uint8_t *AccessBytecodeForFunctionRaw(const FunctionInfo &func) const {
     auto [start, _] = func.GetBytecodeRange();
     (void)_;
     return &code_[start];
   }
 
+  // Access a const-view of some static-local's data by its offset
+  const uint8_t *AccessStaticLocalDataRaw(const uint32_t offset) const {
+    TPL_ASSERT(offset < data_.size(), "Invalid local offset");
+    return &data_[offset];
+  }
+
+  // Access a const-view of a static-local's data
+  const uint8_t *AccessStaticLocalDataRaw(const LocalVar local) const {
+    return AccessStaticLocalDataRaw(local.GetOffset());
+  }
+
  private:
   const std::string name_;
   const std::vector<uint8_t> code_;
+  const std::vector<uint8_t> data_;
   const std::vector<FunctionInfo> functions_;
+  const std::vector<LocalInfo> static_vars_;
 };
 
 }  // namespace tpl::vm

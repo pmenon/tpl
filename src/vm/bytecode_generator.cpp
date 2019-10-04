@@ -138,8 +138,7 @@ class BytecodeGenerator::BytecodePositionScope {
 // Bytecode Generator begins
 // ---------------------------------------------------------
 
-BytecodeGenerator::BytecodeGenerator() noexcept
-    : emitter_(&bytecode_), execution_result_(nullptr) {}
+BytecodeGenerator::BytecodeGenerator() noexcept : emitter_(&code_), execution_result_(nullptr) {}
 
 void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
   IfThenElseBuilder if_builder(this);
@@ -2161,6 +2160,28 @@ FunctionId BytecodeGenerator::LookupFuncIdByName(const std::string &name) const 
   return iter->second;
 }
 
+LocalVar BytecodeGenerator::NewStatic(ast::Identifier name, ast::Type *type, void *contents,
+                                      std::size_t len) {
+  // TODO(pmenon): Fix to add some caching
+  std::size_t offset = data_.size();
+
+  // Respect alignment
+  if (!util::MathUtil::IsAligned(offset, type->alignment())) {
+    offset = util::MathUtil::AlignTo(offset, type->alignment());
+  }
+
+  // Copy contents into data array
+  const std::size_t padded_len = len + (offset - data_.size());
+  data_.insert(data_.end(), padded_len, 0);
+  std::memcpy(&data_[offset], contents, len);
+
+  // Track metadata
+  static_locals_.emplace_back(name.data(), type, offset, LocalInfo::Kind::Var);
+
+  // Done
+  return LocalVar(offset, LocalVar::AddressMode::Address);
+}
+
 LocalVar BytecodeGenerator::VisitExpressionForLValue(ast::Expr *expr) {
   LValueResultScope scope(this);
   Visit(expr);
@@ -2216,8 +2237,9 @@ std::unique_ptr<BytecodeModule> BytecodeGenerator::Compile(ast::AstNode *root,
 
   // Create the bytecode module. Note that we move the bytecode and functions
   // array from the generator into the module.
-  return std::make_unique<BytecodeModule>(name, std::move(generator.bytecode_),
-                                          std::move(generator.functions_));
+  return std::make_unique<BytecodeModule>(
+      name, std::move(generator.code_), std::move(generator.data_), std::move(generator.functions_),
+      std::move(generator.static_locals_));
 }
 
 }  // namespace tpl::vm

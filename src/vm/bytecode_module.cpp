@@ -14,8 +14,13 @@
 namespace tpl::vm {
 
 BytecodeModule::BytecodeModule(std::string name, std::vector<uint8_t> &&code,
-                               std::vector<FunctionInfo> &&functions)
-    : name_(std::move(name)), code_(std::move(code)), functions_(std::move(functions)) {}
+                               std::vector<uint8_t> &&data, std::vector<FunctionInfo> &&functions,
+                               std::vector<LocalInfo> &&static_locals)
+    : name_(std::move(name)),
+      code_(std::move(code)),
+      data_(std::move(data)),
+      functions_(std::move(functions)),
+      static_vars_(std::move(static_locals)) {}
 
 std::size_t BytecodeModule::GetInstructionCount() const {
   std::size_t count = 0;

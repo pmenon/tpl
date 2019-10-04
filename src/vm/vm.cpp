@@ -114,7 +114,7 @@ void VM::InvokeFunction(const Module *module, const FunctionId func_id, const ui
   VM vm(module);
 
   // Now get the bytecode for the function and fire it off
-  const uint8_t *bytecode = module->GetBytecodeModule()->GetBytecodeForFunction(*func_info);
+  const uint8_t *bytecode = module->GetBytecodeModule()->AccessBytecodeForFunctionRaw(*func_info);
   TPL_ASSERT(bytecode != nullptr, "Bytecode cannot be null");
   Frame frame(raw_frame, frame_size);
   vm.Interpret(bytecode, &frame);
@@ -1707,7 +1707,7 @@ const uint8_t *VM::ExecuteCall(const uint8_t *ip, VM::Frame *caller) {
   LOG_DEBUG("Executing function '{}'", func_info->GetName());
 
   // Let's go
-  const uint8_t *bytecode = module_->GetBytecodeModule()->GetBytecodeForFunction(*func_info);
+  const uint8_t *bytecode = module_->GetBytecodeModule()->AccessBytecodeForFunctionRaw(*func_info);
   TPL_ASSERT(bytecode != nullptr, "Bytecode cannot be null");
   VM::Frame callee(raw_frame, func_info->GetFrameSize());
   Interpret(bytecode, &callee);
