@@ -6,6 +6,7 @@ array.tpl,false,44
 array-iterate.tpl,false,110
 array-iterate-2.tpl,false,110
 call.tpl,false,70
+comments.tpl,false,46
 compare.tpl,false,200
 deref.tpl,false,404
 fib.tpl,false,832040
@@ -26,7 +27,6 @@ return-expr.tpl,false,15
 #scope.tpl,false,3
 short-circuit.tpl,false,1
 simple.tpl,false,40
-single-line-comment.tpl,false,46
 struct.tpl,false,10
 struct-debug.tpl,false,100000
 struct-empty.tpl,false,0

@@ -7,5 +7,13 @@ fun main() -> int {
     x = x + i
     /* blah */
   }
+  /*
+  var a = 0
+  var b = 20
+  var c = 20
+  for (var i = 0; i < 10; i=i+1) {
+    a = a + b + c + i
+  }
+  */
   return x + 1
 }
