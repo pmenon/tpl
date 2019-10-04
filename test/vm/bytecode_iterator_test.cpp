@@ -31,14 +31,14 @@ TEST_F(BytecodeIteratorTest, SimpleIteratorTest) {
 
   vm::BytecodeIterator iter(GetCode(), 0, GetCode().size());
   EXPECT_FALSE(iter.Done());
-  EXPECT_EQ(Bytecode::BitNeg_int8_t, iter.GetCurrentBytecode());
+  EXPECT_EQ(Bytecode::BitNeg_int8_t, iter.CurrentBytecode());
   EXPECT_EQ(v2, iter.GetLocalOperand(0));
   EXPECT_EQ(v1, iter.GetLocalOperand(1));
 
   iter.Advance();
 
   EXPECT_FALSE(iter.Done());
-  EXPECT_EQ(Bytecode::Add_int16_t, iter.GetCurrentBytecode());
+  EXPECT_EQ(Bytecode::Add_int16_t, iter.CurrentBytecode());
   EXPECT_EQ(v3, iter.GetLocalOperand(0));
   EXPECT_EQ(v2, iter.GetLocalOperand(1));
   EXPECT_EQ(v1, iter.GetLocalOperand(2));
@@ -46,7 +46,7 @@ TEST_F(BytecodeIteratorTest, SimpleIteratorTest) {
   iter.Advance();
 
   EXPECT_FALSE(iter.Done());
-  EXPECT_EQ(Bytecode::BitAnd_int8_t, iter.GetCurrentBytecode());
+  EXPECT_EQ(Bytecode::BitAnd_int8_t, iter.CurrentBytecode());
   EXPECT_EQ(v1, iter.GetLocalOperand(0));
   EXPECT_EQ(v2, iter.GetLocalOperand(1));
   EXPECT_EQ(v3, iter.GetLocalOperand(2));
@@ -73,12 +73,12 @@ TEST_F(BytecodeIteratorTest, JumpTest) {
 
   vm::BytecodeIterator iter(GetCode(), 0, GetCode().size());
   EXPECT_FALSE(iter.Done());
-  EXPECT_EQ(Bytecode::Jump, iter.GetCurrentBytecode());
+  EXPECT_EQ(Bytecode::Jump, iter.CurrentBytecode());
   EXPECT_EQ(-4, iter.GetJumpOffsetOperand(0));
 
   iter.Advance();
   EXPECT_FALSE(iter.Done());
-  EXPECT_EQ(Bytecode::Add_int16_t, iter.GetCurrentBytecode());
+  EXPECT_EQ(Bytecode::Add_int16_t, iter.CurrentBytecode());
   EXPECT_EQ(v3, iter.GetLocalOperand(0));
   EXPECT_EQ(v2, iter.GetLocalOperand(1));
   EXPECT_EQ(v1, iter.GetLocalOperand(2));
