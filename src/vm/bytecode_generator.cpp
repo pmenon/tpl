@@ -2160,25 +2160,21 @@ FunctionId BytecodeGenerator::LookupFuncIdByName(const std::string &name) const 
   return iter->second;
 }
 
-LocalVar BytecodeGenerator::NewStatic(ast::Identifier name, ast::Type *type, void *contents,
-                                      std::size_t len) {
-  // TODO(pmenon): Fix to add some caching
+LocalVar BytecodeGenerator::NewStatic(ast::Identifier name, ast::Type *type, void *contents) {
   std::size_t offset = data_.size();
 
-  // Respect alignment
   if (!util::MathUtil::IsAligned(offset, type->alignment())) {
     offset = util::MathUtil::AlignTo(offset, type->alignment());
   }
 
-  // Copy contents into data array
-  const std::size_t padded_len = len + (offset - data_.size());
+  const std::size_t padded_len = type->size() + (offset - data_.size());
   data_.insert(data_.end(), padded_len, 0);
-  std::memcpy(&data_[offset], contents, len);
+  std::memcpy(&data_[offset], contents, type->size());
 
-  // Track metadata
-  static_locals_.emplace_back(name.data(), type, offset, LocalInfo::Kind::Var);
+  auto &version = static_locals_versions_[name];
+  auto name_and_version = "static_" + std::string(name.data()) + "_" + std::to_string(version++);
+  static_locals_.emplace_back(name_and_version, type, offset, LocalInfo::Kind::Var);
 
-  // Done
   return LocalVar(offset, LocalVar::AddressMode::Address);
 }
 

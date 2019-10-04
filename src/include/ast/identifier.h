@@ -75,8 +75,7 @@ namespace std {
 template <>
 struct hash<tpl::ast::Identifier> {
   std::size_t operator()(const tpl::ast::Identifier &identifier) const noexcept {
-    const std::string_view s(identifier.data(), identifier.length());
-    return std::hash<std::string_view>()(s);
+    return std::hash<const char *>()(identifier.data());
   }
 };
 

@@ -139,7 +139,7 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   FunctionId LookupFuncIdByName(const std::string &name) const;
 
   // Create a new static
-  LocalVar NewStatic(ast::Identifier name, ast::Type *type, void *contents, std::size_t len);
+  LocalVar NewStatic(ast::Identifier name, ast::Type *type, void *contents);
 
   // Access the current execution result scope
   ExpressionResultScope *GetExecutionResult() { return execution_result_; }
@@ -160,6 +160,7 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
 
   // Constants stored in the data section
   std::vector<LocalInfo> static_locals_;
+  std::unordered_map<ast::Identifier, uint32_t> static_locals_versions_;
 
   // Information about all generated functions
   std::vector<FunctionInfo> functions_;
