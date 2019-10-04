@@ -32,7 +32,8 @@ std::size_t BytecodeModule::GetInstructionCount() const {
 
 namespace {
 
-void PrettyPrintStaticLocals(std::ostream &os, const BytecodeModule &module) {
+void PrettyPrintStaticLocals(std::ostream &os, const BytecodeModule &module,
+                             const std::function<const char *(uint32_t)> &static_access_fn) {
   os << std::endl << "Data: " << std::endl;
 
   uint64_t max_local_len = 0;
@@ -40,11 +41,15 @@ void PrettyPrintStaticLocals(std::ostream &os, const BytecodeModule &module) {
     max_local_len = std::max(max_local_len, static_cast<uint64_t>(local.GetName().length()));
   }
   for (const auto &local : module.GetStaticLocals()) {
-    os << "     " << std::setw(max_local_len) << std::right << local.GetName() << ": "
+    auto local_data = std::string_view(static_access_fn(local.GetOffset()), local.GetSize());
+    // clang-format off
+    os << "     " << std::setw(max_local_len) << std::right
+       << local.GetName() << ": "
        << " offset=" << std::setw(7) << std::left << local.GetOffset()
        << " size=" << std::setw(7) << std::left << local.GetSize()
        << " align=" << std::setw(7) << std::left << local.GetType()->alignment()
-       << " data=" << std::endl;
+       << " data=\"" << local_data << "\"" << std::endl;
+    // clang-format on
   }
 
   os << std::endl;
@@ -190,7 +195,9 @@ void PrettyPrintFunc(std::ostream &os, const BytecodeModule &module, const Funct
 
 void BytecodeModule::Dump(std::ostream &os) const {
   // Static locals
-  PrettyPrintStaticLocals(os, *this);
+  PrettyPrintStaticLocals(os, *this, [this](uint32_t offset) {
+    return reinterpret_cast<const char *>(AccessStaticLocalDataRaw(offset));
+  });
 
   // Functions
   for (const auto &func : functions_) {

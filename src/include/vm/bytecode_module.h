@@ -39,16 +39,18 @@ class BytecodeModule {
    * @return A pointer to the function's info if it exists; null otherwise.
    */
   const FunctionInfo *GetFuncInfoById(const FunctionId func_id) const {
+    // Function IDs are dense, so the given ID must be in the range [0, # functions)
     TPL_ASSERT(func_id < GetFunctionCount(), "Invalid function");
     return &functions_[func_id];
   }
 
   /**
-   * Look up a TPL function in this module by its name
-   * @param name The name of the function to lookup
-   * @return A pointer to the function's info if it exists; null otherwise
+   * Look up a TPL function in this module by its name.
+   * @param name The name of the function to lookup.
+   * @return A pointer to the function's info if it exists; null otherwise.
    */
   const FunctionInfo *GetFuncInfoByName(const std::string &name) const {
+    // TODO(pmenon): Cache?
     for (const auto &func : functions_) {
       if (func.GetName() == name) {
         return &func;
@@ -69,12 +71,6 @@ class BytecodeModule {
    * @return The number of bytecode instructions in this module.
    */
   std::size_t GetInstructionCount() const;
-
-  /**
-   * Pretty print all the module's contents into the provided output stream
-   * @param os The stream into which we dump the module's contents
-   */
-  void Dump(std::ostream &os) const;
 
   /**
    * @return The name of the module.
@@ -101,11 +97,18 @@ class BytecodeModule {
    */
   uint32_t GetStaticLocalsCount() const noexcept { return static_vars_.size(); }
 
+  /**
+   * Pretty print all the module's contents into the provided output stream.
+   * @param os The stream into which we dump the module's contents.
+   */
+  void Dump(std::ostream &os) const;
+
  private:
   friend class VM;
   friend class LLVMEngine;
 
   const uint8_t *AccessBytecodeForFunctionRaw(const FunctionInfo &func) const {
+    TPL_ASSERT(GetFuncInfoById(func.GetId()) == &func, "Function not in module!");
     auto [start, _] = func.GetBytecodeRange();
     (void)_;
     return &code_[start];
@@ -113,7 +116,13 @@ class BytecodeModule {
 
   // Access a const-view of some static-local's data by its offset
   const uint8_t *AccessStaticLocalDataRaw(const uint32_t offset) const {
+#ifndef NDEBUG
     TPL_ASSERT(offset < data_.size(), "Invalid local offset");
+    UNUSED auto iter =
+        std::find_if(static_vars_.begin(), static_vars_.end(),
+                     [&](const LocalInfo &info) { return info.GetOffset() == offset; });
+    TPL_ASSERT(iter != static_vars_.end(), "No local at given offset");
+#endif
     return &data_[offset];
   }
 
