@@ -107,9 +107,9 @@ class Module {
   }
 
   /**
-   * Return the TPL bytecode module
+   * @return The TPL bytecode module.
    */
-  const BytecodeModule *bytecode_module() const { return bytecode_module_.get(); }
+  const BytecodeModule *GetBytecodeModule() const { return bytecode_module_.get(); }
 
  private:
   friend class VM;
