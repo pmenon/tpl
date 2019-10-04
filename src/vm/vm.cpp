@@ -33,12 +33,11 @@ class VM::Frame {
   }
 
   /**
-   * Access the local variable at the given index in the fame. @em index is an
-   * encoded LocalVar that contains both the byte offset of the variable to
-   * load and the access mode, i.e., whether the local variable is accessed
-   * accessed by address or value.
-   * @tparam T The type of the variable the user expects
-   * @param index The encoded index into the frame where the variable is
+   * Access the local variable at the given index in the fame. @em index is an encoded LocalVar that
+   * contains both the byte offset of the variable to load and the access mode, i.e., whether the
+   * local variable is accessed accessed by address or value.
+   * @tparam T The type of the variable the user expects.
+   * @param index The encoded index into the frame where the variable is.
    * @return The value of the variable. Note that this is copied!
    */
   template <typename T>
@@ -108,18 +107,12 @@ void VM::InvokeFunction(const Module *module, const FunctionId func_id, const ui
   // Copy args into frame
   std::memcpy(raw_frame + func_info->GetParamsStartPos(), args, func_info->GetParamsSize());
 
-  LOG_DEBUG("Executing function '{}'", func_info->GetName());
-
-  // Let's go. First, create the virtual machine instance.
+  // Let's go!
   VM vm(module);
-
-  // Now get the bytecode for the function and fire it off
-  const uint8_t *bytecode = module->GetBytecodeModule()->AccessBytecodeForFunctionRaw(*func_info);
-  TPL_ASSERT(bytecode != nullptr, "Bytecode cannot be null");
   Frame frame(raw_frame, frame_size);
-  vm.Interpret(bytecode, &frame);
+  vm.Interpret(module->GetBytecodeModule()->AccessBytecodeForFunctionRaw(*func_info), &frame);
 
-  // Cleanup
+  // Done. Now, let's cleanup.
   if (used_heap) {
     std::free(raw_frame);
   }
@@ -1704,14 +1697,11 @@ const uint8_t *VM::ExecuteCall(const uint8_t *ip, VM::Frame *caller) {
     }
   }
 
-  LOG_DEBUG("Executing function '{}'", func_info->GetName());
-
   // Let's go
-  const uint8_t *bytecode = module_->GetBytecodeModule()->AccessBytecodeForFunctionRaw(*func_info);
-  TPL_ASSERT(bytecode != nullptr, "Bytecode cannot be null");
-  VM::Frame callee(raw_frame, func_info->GetFrameSize());
-  Interpret(bytecode, &callee);
+  Frame callee(raw_frame, func_info->GetFrameSize());
+  Interpret(module_->GetBytecodeModule()->AccessBytecodeForFunctionRaw(*func_info), &callee);
 
+  // Done. Now, let's cleanup.
   if (used_heap) {
     std::free(raw_frame);
   }
