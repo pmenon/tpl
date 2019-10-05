@@ -6,10 +6,15 @@
 #include <utility>
 #include <vector>
 
-#include "ast/ast.h"
 #include "ast/ast_visitor.h"
 #include "ast/builtins.h"
 #include "vm/bytecode_emitter.h"
+
+namespace tpl::ast {
+class Context;
+class FunctionType;
+class Type;
+}  // namespace tpl::ast
 
 namespace tpl::vm {
 
@@ -139,7 +144,10 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   FunctionId LookupFuncIdByName(const std::string &name) const;
 
   // Create a new static
-  LocalVar NewStatic(ast::Identifier name, ast::Type *type, void *contents);
+  LocalVar NewStatic(const std::string &name, ast::Type *type, const void *contents);
+
+  // Create a new static string
+  LocalVar NewStaticString(const std::string &name, ast::Context *ctx, ast::Identifier string);
 
   // Access the current execution result scope
   ExpressionResultScope *GetExecutionResult() { return execution_result_; }
@@ -160,7 +168,8 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
 
   // Constants stored in the data section
   std::vector<LocalInfo> static_locals_;
-  std::unordered_map<ast::Identifier, uint32_t> static_locals_versions_;
+  std::unordered_map<std::string, uint32_t> static_locals_versions_;
+  std::unordered_map<ast::Identifier, LocalVar> static_string_cache_;
 
   // Information about all generated functions
   std::vector<FunctionInfo> functions_;

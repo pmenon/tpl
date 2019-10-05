@@ -2160,7 +2160,8 @@ FunctionId BytecodeGenerator::LookupFuncIdByName(const std::string &name) const 
   return iter->second;
 }
 
-LocalVar BytecodeGenerator::NewStatic(ast::Identifier name, ast::Type *type, void *contents) {
+LocalVar BytecodeGenerator::NewStatic(const std::string &name, ast::Type *type,
+                                      const void *contents) {
   std::size_t offset = data_.size();
 
   if (!util::MathUtil::IsAligned(offset, type->alignment())) {
@@ -2172,10 +2173,28 @@ LocalVar BytecodeGenerator::NewStatic(ast::Identifier name, ast::Type *type, voi
   std::memcpy(&data_[offset], contents, type->size());
 
   auto &version = static_locals_versions_[name];
-  auto name_and_version = "static_" + std::string(name.data()) + "_" + std::to_string(version++);
+  auto name_and_version = "static_" + name + "_" + std::to_string(version++);
   static_locals_.emplace_back(name_and_version, type, offset, LocalInfo::Kind::Var);
 
   return LocalVar(offset, LocalVar::AddressMode::Address);
+}
+
+LocalVar BytecodeGenerator::NewStaticString(const std::string &name, ast::Context *ctx,
+                                            const ast::Identifier string) {
+  // Check cache
+  if (auto iter = static_string_cache_.find(string); iter != static_string_cache_.end()) {
+    return LocalVar(iter->second.GetOffset(), LocalVar::AddressMode::Address);
+  }
+
+  // Create
+  auto *type =
+      ast::ArrayType::Get(string.length(), ast::BuiltinType::Get(ctx, ast::BuiltinType::Uint8));
+  auto static_local = NewStatic(name, type, static_cast<const void *>(string.data()));
+
+  // Cache
+  static_string_cache_.emplace(string, static_local);
+
+  return static_local;
 }
 
 LocalVar BytecodeGenerator::VisitExpressionForLValue(ast::Expr *expr) {
