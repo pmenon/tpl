@@ -14,6 +14,7 @@ class LocalVar;
  *
  * @code
  * for (auto iter = ...; !iter.Done(); iter.Advance()) {
+ *   auto bytecode = iter.CurrentBytecode();
  *   // body
  * }
  * @endcode
@@ -29,16 +30,15 @@ class LocalVar;
 class BytecodeIterator {
  public:
   /**
-   * Construct an iterator over the bytecode, but only the within the range [start,end]
-   * @param bytecode The underlying bytecode
-   * @param start The start position
-   * @param end The end position
+   * Construct an iterator over the bytecode, but only the within the range [start,end).
+   * @param bytecode The underlying bytecode.
+   * @param start The start position.
+   * @param end The end position.
    */
   BytecodeIterator(const std::vector<uint8_t> &bytecode, std::size_t start, std::size_t end);
 
   /**
-   * Construct an iterator over all the bytecode container in the input bytecode
-   * vector.
+   * Construct an iterator over all the bytecode container in the input bytecode vector.
    * @param bytecode The underlying bytecode.
    */
   explicit BytecodeIterator(const std::vector<uint8_t> &bytecode);
@@ -55,7 +55,7 @@ class BytecodeIterator {
 
   /**
    * Advance the iterator to the next bytecode instruction. It's expected that the user has verified
-   * there are more instructions with a preceding call to BytecodeIterator::Done()
+   * there are more instructions with a preceding call to BytecodeIterator::Done().
    */
   void Advance();
 
@@ -68,47 +68,48 @@ class BytecodeIterator {
   int64_t GetImmediateIntegerOperand(uint32_t operand_index) const;
 
   /**
-   * Read the operand at index @em operand_index for the current bytecode as a float-int point
-   * value. Supports both single- and double-precision floating point values, if indeed the operand
-   * is a floating point immediate value.
+   * Read the operand at index @em operand_index for the current bytecode as a floating point value.
+   * Supports both single- and double-precision floating point immediates.
    * @param operand_index The index of the operand to read.
    * @return The immediate value, up-casted to a double-precision floating point value.
    */
   double GetImmediateFloatOperand(uint32_t operand_index) const;
 
   /**
-   * Read the operand at index @em operand_index for the current bytecode as an unsigned
-   * integer value. Supports 8-, 16-, 32-, and 64-bit unsigned integer immediates.
+   * Read the operand at index @em operand_index for the current bytecode as an unsigned integer
+   * value. Supports 8-, 16-, 32-, and 64-bit unsigned integer immediates.
    * @param operand_index The index of the operand to read.
    * @return The immediate value, up-casted to an unsigned 64-bit integer.
    */
   uint64_t GetUnsignedImmediateIntegerOperand(uint32_t operand_index) const;
 
   /**
-   * Read the operand at index @em operand_index for the current bytecode as a jump offset as part
-   * of either a conditional or unconditional jump
+   * Read the operand at index @em operand_index for the current bytecode as a jump offset. Jump
+   * offsets are signed (to support backwards and forward jumps) and relative to the current
+   * bytecode position.
    * @param operand_index The index of the operand to read.
    * @return The jump offset at the given index.
    */
   int32_t GetJumpOffsetOperand(uint32_t operand_index) const;
 
   /**
-   * Read the operand at index @a operand_index for the current bytecode as a local variable.
+   * Read the operand at index @em operand_index for the current bytecode as a local variable.
    * @param operand_index The index of the operand to read.
    * @return The operand at the given operand index.
    */
   LocalVar GetLocalOperand(uint32_t operand_index) const;
 
   /**
-   * Read the operand at @a operand_index for the current bytecode as a count of local variables,
-   * and read each such local variable into the output vector @a locals.
+   * Read the operand at @em operand_index for the current bytecode as a count of local variables,
+   * and read each such local variable into the output vector @em locals.
    * @param operand_index The index of the operand to read.
    * @return The number of operands.
    */
   uint16_t GetLocalCountOperand(uint32_t operand_index, std::vector<LocalVar> &locals) const;
 
   /**
-   * Read the operand at @a operand_index for the current bytecode as a count of local variables
+   * Read the operand at @em operand_index for the current bytecode as a count of local variables
+   * that appear after this operand in the instruction.
    * @param operand_index The index of the operand to read.
    * @return The number of operands.
    */
@@ -118,8 +119,8 @@ class BytecodeIterator {
   }
 
   /**
-   * Get the operand at @a operand_index for the current bytecode as the ID of a function defined in
-   * the module.
+   * Get the operand at @em operand_index for the current bytecode as the ID of a function defined
+   * in the module.
    * @param operand_index The index of the operand to read.
    * @return The encoded function ID.
    */
@@ -138,7 +139,7 @@ class BytecodeIterator {
   std::size_t GetPosition() const { return curr_offset_ - start_offset_; }
 
   /**
-   * Set the position of the iterator
+   * Set the position of the iterator.
    * @param pos The position to shift the iterator to
    */
   void SetPosition(std::size_t pos) {
