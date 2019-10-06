@@ -76,7 +76,7 @@ class Module {
    * @return A pointer to the function's info if it exists; null otherwise
    */
   const FunctionInfo *GetFuncInfoByName(const std::string &name) const {
-    return bytecode_module_->GetFuncInfoByName(name);
+    return bytecode_module_->LookupFuncInfoByName(name);
   }
 
   /**
@@ -213,7 +213,7 @@ template <typename Ret, typename... ArgTypes>
 inline bool Module::GetFunction(const std::string &name, const ExecutionMode exec_mode,
                                 std::function<Ret(ArgTypes...)> &func) {
   // Lookup function
-  const FunctionInfo *func_info = bytecode_module_->GetFuncInfoByName(name);
+  const FunctionInfo *func_info = bytecode_module_->LookupFuncInfoByName(name);
 
   // Check valid function
   if (func_info == nullptr) {

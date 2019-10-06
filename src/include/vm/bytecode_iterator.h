@@ -100,12 +100,21 @@ class BytecodeIterator {
   LocalVar GetLocalOperand(uint32_t operand_index) const;
 
   /**
+   * Read the operand at index @em operand_index for the current bytecode as a reference to a static
+   * local stored in the TBC unit's data section. This is an absolute offset of an element in the
+   * data section.
+   * @param operand_index The index of the operand to read.
+   * @return The static local at the given operand index.
+   */
+  LocalVar GetStaticLocalOperand(uint32_t operand_index) const;
+
+  /**
    * Read the operand at @em operand_index for the current bytecode as a count of local variables,
    * and read each such local variable into the output vector @em locals.
    * @param operand_index The index of the operand to read.
    * @return The number of operands.
    */
-  uint16_t GetLocalCountOperand(uint32_t operand_index, std::vector<LocalVar> &locals) const;
+  uint16_t GetLocalCountOperand(uint32_t operand_index, std::vector<LocalVar> *locals) const;
 
   /**
    * Read the operand at @em operand_index for the current bytecode as a count of local variables
@@ -115,7 +124,7 @@ class BytecodeIterator {
    */
   uint16_t GetLocalCountOperand(uint32_t operand_index) const {
     std::vector<LocalVar> locals;
-    return GetLocalCountOperand(operand_index, locals);
+    return GetLocalCountOperand(operand_index, &locals);
   }
 
   /**

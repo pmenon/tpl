@@ -71,24 +71,16 @@ LocalVar FunctionInfo::GetReturnValueLocal() const {
   return LocalVar(0u, LocalVar::AddressMode::Address);
 }
 
-LocalVar FunctionInfo::LookupLocal(const std::string &name) const {
-  for (const auto &local_info : GetLocals()) {
-    if (local_info.GetName() == name) {
-      return LocalVar(local_info.GetOffset(), LocalVar::AddressMode::Address);
-    }
-  }
-
-  return LocalVar();
+const LocalInfo *FunctionInfo::LookupLocalInfoByName(const std::string &name) const {
+  const auto iter = std::find_if(locals_.begin(), locals_.end(),
+                                 [&](const auto &info) { return info.GetName() == name; });
+  return iter == locals_.end() ? nullptr : &*iter;
 }
 
-const LocalInfo *FunctionInfo::LookupLocalInfoByName(const std::string &name) const {
-  for (const auto &local_info : GetLocals()) {
-    if (local_info.GetName() == name) {
-      return &local_info;
-    }
-  }
-
-  return nullptr;
+LocalVar FunctionInfo::LookupLocal(const std::string &name) const {
+  const LocalInfo *local_info = LookupLocalInfoByName(name);
+  return local_info == nullptr ? LocalVar()
+                               : LocalVar(local_info->GetOffset(), LocalVar::AddressMode::Address);
 }
 
 const LocalInfo *FunctionInfo::LookupLocalInfoByOffset(uint32_t offset) const {

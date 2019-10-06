@@ -59,12 +59,12 @@ void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin built
   if (!CheckArgCount(call, 1)) {
     return;
   }
+
   auto input_type = call->arguments()[0]->type();
   switch (builtin) {
     case ast::Builtin::BoolToSql: {
       if (!input_type->IsSpecificBuiltin(ast::BuiltinType::Bool)) {
-        error_reporter()->Report(call->position(), ErrorMessages::kInvalidSqlCastToBool,
-                                 input_type);
+        ReportIncorrectCallArg(call, 0, "boolean literal");
         return;
       }
       call->set_type(GetBuiltinType(ast::BuiltinType::Boolean));
@@ -72,8 +72,7 @@ void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin built
     }
     case ast::Builtin::IntToSql: {
       if (!input_type->IsIntegerType()) {
-        error_reporter()->Report(call->position(), ErrorMessages::kInvalidSqlCastToBool,
-                                 input_type);
+        ReportIncorrectCallArg(call, 0, "integer literal");
         return;
       }
       call->set_type(GetBuiltinType(ast::BuiltinType::Integer));
@@ -81,11 +80,17 @@ void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin built
     }
     case ast::Builtin::FloatToSql: {
       if (!input_type->IsFloatType()) {
-        error_reporter()->Report(call->position(), ErrorMessages::kInvalidSqlCastToBool,
-                                 input_type);
+        ReportIncorrectCallArg(call, 0, "floating point number literal");
         return;
       }
       call->set_type(GetBuiltinType(ast::BuiltinType::Real));
+      break;
+    }
+    case ast::Builtin::StringToSql: {
+      if (!input_type->IsStringType() || !call->arguments()[0]->IsLitExpr()) {
+        ReportIncorrectCallArg(call, 0, "string literal");
+      }
+      call->set_type(GetBuiltinType(ast::BuiltinType::StringVal));
       break;
     }
     case ast::Builtin::SqlToBool: {
@@ -1408,6 +1413,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::IntToSql:
     case ast::Builtin::FloatToSql:
     case ast::Builtin::DateToSql:
+    case ast::Builtin::StringToSql:
     case ast::Builtin::SqlToBool: {
       CheckBuiltinSqlConversionCall(call, builtin);
       break;

@@ -265,6 +265,11 @@ void BytecodeEmitter::Emit(Bytecode bytecode, LocalVar operand_1, LocalVar opera
           operand_8);
 }
 
+void BytecodeEmitter::EmitInitString(LocalVar dest, LocalVar static_local_string,
+                                     uint32_t string_len) {
+  EmitAll(Bytecode::InitString, dest, static_local_string, string_len);
+}
+
 void BytecodeEmitter::EmitThreadStateContainerIterate(LocalVar tls, LocalVar ctx,
                                                       FunctionId iterate_fn) {
   EmitAll(Bytecode::ThreadStateContainerIterate, tls, ctx, iterate_fn);

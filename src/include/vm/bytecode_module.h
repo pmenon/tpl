@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <iosfwd>
 #include <string>
 #include <vector>
@@ -45,18 +46,28 @@ class BytecodeModule {
   }
 
   /**
-   * Look up a TPL function in this module by its name.
+   * Lookup and retrieve the metadata for a TPL function whose name is @em name.
    * @param name The name of the function to lookup.
-   * @return A pointer to the function's info if it exists; null otherwise.
+   * @return A pointer to the function's info if it exists; NULL otherwise.
    */
-  const FunctionInfo *GetFuncInfoByName(const std::string &name) const {
-    // TODO(pmenon): Cache?
-    for (const auto &func : functions_) {
-      if (func.GetName() == name) {
-        return &func;
-      }
-    }
-    return nullptr;
+  const FunctionInfo *LookupFuncInfoByName(const std::string &name) const {
+    const auto iter =
+        std::find_if(functions_.begin(), functions_.end(),
+                     [&](const FunctionInfo &info) { return info.GetName() == name; });
+    return iter == functions_.end() ? nullptr : &*iter;
+  }
+
+  /**
+   * Lookup and retrieve the metadata for a static local whose offset is @em offset into the data
+   * section of this module.
+   * @param offset The offset of the static local in bytes in the data section.
+   * @return The metadata for the static if one exists at the offset; NULL otherwise.
+   */
+  const LocalInfo *LookupStaticInfoByOffset(const uint32_t offset) const {
+    const auto iter =
+        std::find_if(static_locals_.begin(), static_locals_.end(),
+                     [&](const LocalInfo &info) { return info.GetOffset() == offset; });
+    return iter == static_locals_.end() ? nullptr : &*iter;
   }
 
   /**
@@ -85,7 +96,7 @@ class BytecodeModule {
   /**
    * @return A const-view of the metadata for all static-locals in this module.
    */
-  const std::vector<LocalInfo> &GetStaticLocals() const noexcept { return static_vars_; }
+  const std::vector<LocalInfo> &GetStaticLocals() const noexcept { return static_locals_; }
 
   /**
    * @return The number of functions defined in this module.
@@ -95,7 +106,7 @@ class BytecodeModule {
   /**
    * @return The number of static locals.
    */
-  uint32_t GetStaticLocalsCount() const noexcept { return static_vars_.size(); }
+  uint32_t GetStaticLocalsCount() const noexcept { return static_locals_.size(); }
 
   /**
    * Pretty print all the module's contents into the provided output stream.
@@ -119,9 +130,9 @@ class BytecodeModule {
 #ifndef NDEBUG
     TPL_ASSERT(offset < data_.size(), "Invalid local offset");
     UNUSED auto iter =
-        std::find_if(static_vars_.begin(), static_vars_.end(),
+        std::find_if(static_locals_.begin(), static_locals_.end(),
                      [&](const LocalInfo &info) { return info.GetOffset() == offset; });
-    TPL_ASSERT(iter != static_vars_.end(), "No local at given offset");
+    TPL_ASSERT(iter != static_locals_.end(), "No local at given offset");
 #endif
     return &data_[offset];
   }
@@ -136,7 +147,7 @@ class BytecodeModule {
   const std::vector<uint8_t> code_;
   const std::vector<uint8_t> data_;
   const std::vector<FunctionInfo> functions_;
-  const std::vector<LocalInfo> static_vars_;
+  const std::vector<LocalInfo> static_locals_;
 };
 
 }  // namespace tpl::vm

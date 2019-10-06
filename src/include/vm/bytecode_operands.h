@@ -23,6 +23,7 @@ enum class OperandSize : uint8_t { None = 0, Byte = 1, Short = 2, Int = 4, Long 
   V(UImm4, false, OperandSize::Int)        \
   V(JumpOffset, true, OperandSize::Int)    \
   V(Local, false, OperandSize::Int)        \
+  V(StaticLocal, false, OperandSize::Int)  \
   V(LocalCount, false, OperandSize::Short) \
   V(FunctionId, false, OperandSize::Short)
 
@@ -67,6 +68,13 @@ class OperandTypes {
    */
   static constexpr bool IsLocal(OperandType operand_type) {
     return operand_type == OperandType::Local;
+  }
+
+  /**
+   * @return True if @em operand_type is a static-local reference operand; false otherwise.
+   */
+  static constexpr bool IsStaticLocal(OperandType operand_type) {
+    return operand_type == OperandType::StaticLocal;
   }
 
   /**

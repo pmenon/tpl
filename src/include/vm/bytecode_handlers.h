@@ -703,6 +703,11 @@ VM_OP_HOT void OpInitDate(tpl::sql::DateVal *result, uint32_t year, uint32_t mon
   result->val = tpl::sql::Date::FromYMD(year, month, day);
 }
 
+VM_OP_HOT void OpInitString(tpl::sql::StringVal *result, const uint8_t *str, uint32_t length) {
+  result->is_null = false;
+  result->val = tpl::sql::VarlenEntry::Create(reinterpret_cast<const byte *>(str), length);
+}
+
 #define GEN_SQL_COMPARISONS(NAME, TYPE)                                                           \
   VM_OP_HOT void OpGreaterThan##NAME(tpl::sql::BoolVal *const result,                             \
                                      const tpl::sql::TYPE *const left,                            \

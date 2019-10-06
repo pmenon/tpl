@@ -12,6 +12,7 @@ namespace tpl::ast {
   F(BoolToSql, boolToSql)                                       \
   F(FloatToSql, floatToSql)                                     \
   F(DateToSql, dateToSql)                                       \
+  F(StringToSql, stringToSql)                                   \
   F(SqlToBool, sqlToBool)                                       \
                                                                 \
   /* Thread State Container */                                  \

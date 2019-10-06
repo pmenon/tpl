@@ -174,6 +174,7 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 #define READ_UIMM4() Read<uint32_t>(&ip)
 #define READ_JMP_OFFSET() READ_IMM4()
 #define READ_LOCAL_ID() Read<uint32_t>(&ip)
+#define READ_STATIC_LOCAL_ID() Read<uint32_t>(&ip)
 #define READ_OP() Read<std::underlying_type_t<Bytecode>>(&ip)
 #define READ_FUNC_ID() READ_UIMM2()
 
@@ -799,6 +800,15 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     auto month = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
     auto day = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
     OpInitDate(sql_date, year, month, day);
+    DISPATCH_NEXT();
+  }
+
+  OP(InitString) : {
+    auto *sql_string = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *string = module_->GetBytecodeModule()->AccessStaticLocalDataRaw(
+        LocalVar::Decode(READ_STATIC_LOCAL_ID()));
+    auto length = READ_UIMM4();
+    OpInitString(sql_string, string, length);
     DISPATCH_NEXT();
   }
 

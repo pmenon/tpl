@@ -181,6 +181,7 @@ namespace tpl::vm {
   F(InitInteger, OperandType::Local, OperandType::Local)                                                               \
   F(InitReal, OperandType::Local, OperandType::Local)                                                                  \
   F(InitDate, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                          \
+  F(InitString, OperandType::Local, OperandType::StaticLocal, OperandType::UImm4)                                      \
   F(LessThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
   F(LessThanEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                  \
   F(GreaterThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                    \

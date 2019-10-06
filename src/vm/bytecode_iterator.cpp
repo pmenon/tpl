@@ -93,15 +93,26 @@ int32_t BytecodeIterator::GetJumpOffsetOperand(uint32_t operand_index) const {
 LocalVar BytecodeIterator::GetLocalOperand(uint32_t operand_index) const {
   TPL_ASSERT(OperandTypes::IsLocal(Bytecodes::GetNthOperandType(CurrentBytecode(), operand_index)),
              "Operand type is not a local variable reference");
+
   const uint8_t *operand_address = bytecodes_.data() + curr_offset_ +
                                    Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
+  const auto encoded_val = *reinterpret_cast<const uint32_t *>(operand_address);
+  return LocalVar::Decode(encoded_val);
+}
 
-  auto encoded_val = *reinterpret_cast<const uint32_t *>(operand_address);
+LocalVar BytecodeIterator::GetStaticLocalOperand(uint32_t operand_index) const {
+  TPL_ASSERT(
+      OperandTypes::IsStaticLocal(Bytecodes::GetNthOperandType(CurrentBytecode(), operand_index)),
+      "Operand type is not a static local reference");
+
+  const uint8_t *operand_address = bytecodes_.data() + curr_offset_ +
+                                   Bytecodes::GetNthOperandOffset(CurrentBytecode(), operand_index);
+  const auto encoded_val = *reinterpret_cast<const uint32_t *>(operand_address);
   return LocalVar::Decode(encoded_val);
 }
 
 uint16_t BytecodeIterator::GetLocalCountOperand(uint32_t operand_index,
-                                                std::vector<LocalVar> &locals) const {
+                                                std::vector<LocalVar> *locals) const {
   TPL_ASSERT(
       OperandTypes::IsLocalCount(Bytecodes::GetNthOperandType(CurrentBytecode(), operand_index)),
       "Operand type is not a local variable count");
@@ -116,7 +127,7 @@ uint16_t BytecodeIterator::GetLocalCountOperand(uint32_t operand_index,
 
   for (uint32_t i = 0; i < num_locals; i++) {
     auto encoded_val = *reinterpret_cast<const uint32_t *>(locals_address);
-    locals.push_back(LocalVar::Decode(encoded_val));
+    locals->push_back(LocalVar::Decode(encoded_val));
 
     locals_address += OperandTypeTraits<OperandType::Local>::kSize;
   }

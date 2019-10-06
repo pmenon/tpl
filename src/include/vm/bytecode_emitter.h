@@ -105,6 +105,8 @@ class BytecodeEmitter {
   // Special
   // -------------------------------------------------------
 
+  void EmitInitString(LocalVar dest, LocalVar static_local_string, uint32_t string_len);
+
   // Iterate over all the states in the container
   void EmitThreadStateContainerIterate(LocalVar tls, LocalVar ctx, FunctionId iterate_fn);
 

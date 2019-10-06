@@ -20,7 +20,7 @@ BytecodeModule::BytecodeModule(std::string name, std::vector<uint8_t> &&code,
       code_(std::move(code)),
       data_(std::move(data)),
       functions_(std::move(functions)),
-      static_vars_(std::move(static_locals)) {}
+      static_locals_(std::move(static_locals)) {}
 
 std::size_t BytecodeModule::GetInstructionCount() const {
   std::size_t count = 0;
@@ -32,9 +32,11 @@ std::size_t BytecodeModule::GetInstructionCount() const {
 
 namespace {
 
-void PrettyPrintStaticLocals(std::ostream &os, const BytecodeModule &module,
+void PrettyPrintStaticLocals(std::ostream &os, const BytecodeModule &module, const std::size_t size,
                              const std::function<const char *(uint32_t)> &static_access_fn) {
   os << std::endl << "Data: " << std::endl;
+  os << "  Data section size " << size << " bytes"
+     << " (" << module.GetStaticLocalsCount() << " locals)" << std::endl;
 
   uint64_t max_local_len = 0;
   for (const auto &local : module.GetStaticLocals()) {
@@ -159,9 +161,15 @@ void PrettyPrintFuncCode(std::ostream &os, const BytecodeModule &module, const F
           print_local(iter.GetLocalOperand(i));
           break;
         }
+        case OperandType::StaticLocal: {
+          auto sl_offset = iter.GetStaticLocalOperand(i);
+          auto sl_info = module.LookupStaticInfoByOffset(sl_offset.GetOffset());
+          os << "data=" << sl_info->GetName();
+          break;
+        }
         case OperandType::LocalCount: {
           std::vector<LocalVar> locals;
-          uint16_t n = iter.GetLocalCountOperand(i, locals);
+          uint16_t n = iter.GetLocalCountOperand(i, &locals);
           for (uint16_t j = 0; j < n; j++) {
             print_local(locals[j]);
             os << "  ";
@@ -195,7 +203,7 @@ void PrettyPrintFunc(std::ostream &os, const BytecodeModule &module, const Funct
 
 void BytecodeModule::Dump(std::ostream &os) const {
   // Static locals
-  PrettyPrintStaticLocals(os, *this, [this](uint32_t offset) {
+  PrettyPrintStaticLocals(os, *this, data_.size(), [this](uint32_t offset) {
     return reinterpret_cast<const char *>(AccessStaticLocalDataRaw(offset));
   });
 

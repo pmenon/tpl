@@ -118,6 +118,7 @@ class LLVMEngine::TypeMap {
   llvm::Type *UInt64Type() { return type_map_["uint64"]; }
   llvm::Type *Float32Type() { return type_map_["float32"]; }
   llvm::Type *Float64Type() { return type_map_["float64"]; }
+  llvm::Type *StringType() { return type_map_["string"]; }
 
   llvm::Type *GetLLVMType(const ast::Type *type);
 
@@ -351,6 +352,9 @@ class LLVMEngine::CompiledModuleBuilder {
   // No copying or moving this class
   DISALLOW_COPY_AND_MOVE(CompiledModuleBuilder);
 
+  // Generate all static local data in the module
+  void DeclareStaticLocals();
+
   // Generate function declarations for each function in the TPL bytecode module
   void DeclareFunctions();
 
@@ -402,6 +406,7 @@ class LLVMEngine::CompiledModuleBuilder {
   std::unique_ptr<llvm::LLVMContext> context_;
   std::unique_ptr<llvm::Module> llvm_module_;
   std::unique_ptr<TypeMap> type_map_;
+  llvm::DenseMap<std::size_t, llvm::Constant *> static_locals_;
 };
 
 // ---------------------------------------------------------
@@ -488,6 +493,36 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(const CompilerOptions &
   }
 
   type_map_ = std::make_unique<TypeMap>(llvm_module_.get());
+}
+
+void LLVMEngine::CompiledModuleBuilder::DeclareStaticLocals() {
+  for (const auto &local_info : tpl_module_.GetStaticLocals()) {
+    // The raw data wrapped in a string reference
+    llvm::StringRef data_ref(reinterpret_cast<const char *>(
+                                 tpl_module_.AccessStaticLocalDataRaw(local_info.GetOffset())),
+                             local_info.GetSize());
+
+    // The constant
+    llvm::Constant *string_constant = llvm::ConstantDataArray::getString(*context_, data_ref);
+
+    // The global variable wrapping the constant. It's private to this module, so it does NOT
+    // participate in linking. It also not thread-local since it's shared across all threads. Don't
+    // be alarmed by 'new' here; the module will take care of deleting it.
+    auto *global_var = new llvm::GlobalVariable(
+        *llvm_module_, string_constant->getType(), true, llvm::GlobalValue::PrivateLinkage,
+        string_constant, local_info.GetName(), nullptr, llvm::GlobalVariable::NotThreadLocal);
+    global_var->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+    global_var->setAlignment(1);
+
+    // Convert the global variable into an i8*
+    llvm::Constant *zero = llvm::ConstantInt::get(type_map_->Int32Type(), 0);
+    llvm::Constant *indices[] = {zero, zero};
+    auto result = llvm::ConstantExpr::getInBoundsGetElementPtr(global_var->getValueType(),
+                                                               global_var, indices);
+
+    // Cache
+    static_locals_[local_info.GetOffset()] = result;
+  }
 }
 
 void LLVMEngine::CompiledModuleBuilder::DeclareFunctions() {
@@ -672,9 +707,9 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
           break;
         }
         case OperandType::FunctionId: {
-          const uint16_t target_func_id = iter.GetFunctionIdOperand(i);
-          auto *target_func_info = tpl_module_.GetFuncInfoById(target_func_id);
-          auto *target_func = llvm_module_->getFunction(target_func_info->GetName());
+          const FunctionInfo *target_func_info =
+              tpl_module_.GetFuncInfoById(iter.GetFunctionIdOperand(i));
+          llvm::Function *target_func = llvm_module_->getFunction(target_func_info->GetName());
           TPL_ASSERT(target_func != nullptr, "Function doesn't exist in LLVM module");
           args.push_back(target_func);
           break;
@@ -688,9 +723,17 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
           args.push_back(locals_map.GetArgumentById(local));
           break;
         }
+        case OperandType::StaticLocal: {
+          const uint32_t offset = iter.GetStaticLocalOperand(i).GetOffset();
+          const auto static_locals_iter = static_locals_.find(offset);
+          TPL_ASSERT(static_locals_iter != static_locals_.end(),
+                     "Static local at offset does not exist");
+          args.push_back(static_locals_iter->second);
+          break;
+        }
         case OperandType::LocalCount: {
           std::vector<LocalVar> locals;
-          iter.GetLocalCountOperand(i, locals);
+          iter.GetLocalCountOperand(i, &locals);
           for (const auto local : locals) {
             args.push_back(locals_map.GetArgumentById(local));
           }
@@ -1114,6 +1157,8 @@ void LLVMEngine::Shutdown() { llvm::llvm_shutdown(); }
 std::unique_ptr<LLVMEngine::CompiledModule> LLVMEngine::Compile(const BytecodeModule &module,
                                                                 const CompilerOptions &options) {
   CompiledModuleBuilder builder(options, module);
+
+  builder.DeclareStaticLocals();
 
   builder.DeclareFunctions();
 
