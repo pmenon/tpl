@@ -63,20 +63,6 @@ enum class ColumnEncoding : uint8_t {
 enum class JoinType : uint8_t { Inner, Outer, Left, Right, Anti, Semi };
 
 /**
- * Simple structure representing a blob.
- */
-struct Blob {
-  uint8_t *data;
-  uint64_t size;
-
-  bool operator==(const Blob &that) const noexcept {
-    return size == that.size && std::memcmp(data, that.data, size) == 0;
-  }
-
-  bool operator!=(const Blob &that) const noexcept { return !(*this == that); }
-};
-
-/**
  * Given an internal type, return the simplest SQL type. Note that this
  * conversion is a lossy since some internal types are used as the underlying
  * storage for multiple SQL types. For example, int32_t is used for SQL Integers and

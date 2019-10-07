@@ -76,32 +76,32 @@ class Date {
   hash_t Hash() const { return Hash(0); }
 
   /**
-   * @return True if this date equals @em that date.
+   * @return True if this date equals @em that date; false otherwise.
    */
   bool operator==(const Date &that) const noexcept { return value_ == that.value_; }
 
   /**
-   * @return True if this date is not equal to @em that date.
+   * @return True if this date is not equal to @em that date; false otherwise.
    */
   bool operator!=(const Date &that) const noexcept { return value_ != that.value_; }
 
   /**
-   * @return True if this data occurs before @em that date.
+   * @return True if this data occurs before @em that date; false otherwise.
    */
   bool operator<(const Date &that) const noexcept { return value_ < that.value_; }
 
   /**
-   * @return True if this data occurs before or is the same as @em that date.
+   * @return True if this data occurs before or is the same as @em that date; false otherwise.
    */
   bool operator<=(const Date &that) const noexcept { return value_ <= that.value_; }
 
   /**
-   * @return True if this date occurs after @em that date.
+   * @return True if this date occurs after @em that date; false otherwise.
    */
   bool operator>(const Date &that) const noexcept { return value_ > that.value_; }
 
   /**
-   * @return True if this date occurs after or is equal to @em that date.
+   * @return True if this date occurs after or is equal to @em that date; false otherwise.
    */
   bool operator>=(const Date &that) const noexcept { return value_ >= that.value_; }
 
@@ -182,32 +182,32 @@ class Timestamp {
   std::string ToString() const;
 
   /**
-   * @return True if this timestamp equals @em that timestamp.
+   * @return True if this timestamp equals @em that timestamp; false otherwise.
    */
   bool operator==(const Timestamp &that) const noexcept { return value_ == that.value_; }
 
   /**
-   * @return True if this timestamp is not equal to @em that timestamp.
+   * @return True if this timestamp is not equal to @em that timestamp; false otherwise.
    */
   bool operator!=(const Timestamp &that) const noexcept { return value_ != that.value_; }
 
   /**
-   * @return True if this data occurs before @em that timestamp.
+   * @return True if this data occurs before @em that timestamp; false otherwise.
    */
   bool operator<(const Timestamp &that) const noexcept { return value_ < that.value_; }
 
   /**
-   * @return True if this data occurs before or is the same as @em that timestamp.
+   * @return True if this data occurs before or is the same as @em that timestamp; false otherwise.
    */
   bool operator<=(const Timestamp &that) const noexcept { return value_ <= that.value_; }
 
   /**
-   * @return True if this timestamp occurs after @em that timestamp.
+   * @return True if this timestamp occurs after @em that timestamp; false otherwise.
    */
   bool operator>(const Timestamp &that) const noexcept { return value_ > that.value_; }
 
   /**
-   * @return True if this timestamp occurs after or is equal to @em that timestamp.
+   * @return True if this timestamp occurs after or is equal to @em that timestamp; false otherwise.
    */
   bool operator>=(const Timestamp &that) const noexcept { return value_ >= that.value_; }
 
@@ -464,32 +464,32 @@ class VarlenEntry {
   }
 
   /**
-   * @return True if this varlen equals @em that varlen.
+   * @return True if this varlen equals @em that varlen; false otherwise.
    */
   bool operator==(const VarlenEntry &that) const noexcept { return Compare(*this, that) == 0; }
 
   /**
-   * @return True if this varlen equals @em that varlen.
+   * @return True if this varlen equals @em that varlen; false otherwise.
    */
   bool operator!=(const VarlenEntry &that) const noexcept { return Compare(*this, that) != 0; }
 
   /**
-   * @return True if this varlen equals @em that varlen.
+   * @return True if this varlen equals @em that varlen; false otherwise.
    */
   bool operator<(const VarlenEntry &that) const noexcept { return Compare(*this, that) < 0; }
 
   /**
-   * @return True if this varlen equals @em that varlen.
+   * @return True if this varlen equals @em that varlen; false otherwise.
    */
   bool operator<=(const VarlenEntry &that) const noexcept { return Compare(*this, that) <= 0; }
 
   /**
-   * @return True if this varlen equals @em that varlen.
+   * @return True if this varlen equals @em that varlen; false otherwise.
    */
   bool operator>(const VarlenEntry &that) const noexcept { return Compare(*this, that) > 0; }
 
   /**
-   * @return True if this varlen equals @em that varlen.
+   * @return True if this varlen equals @em that varlen; false otherwise.
    */
   bool operator>=(const VarlenEntry &that) const noexcept { return Compare(*this, that) >= 0; }
 
@@ -553,6 +553,95 @@ class VarlenHeap {
  private:
   // Internal heap of strings
   util::StringHeap heap_;
+};
+
+/**
+ * Simple structure representing a blob.
+ */
+class Blob {
+ public:
+  /**
+   * Crete an empty blob reference.
+   */
+  Blob() : data_(nullptr), size_(0) {}
+
+  /**
+   * Create a reference to an existing blob.
+   * @param data The blob data.
+   * @param size The size of the blob.
+   */
+  Blob(byte *data, std::size_t size) noexcept : data_(data), size_(size) {}
+
+  /**
+   * @return A const-view of the raw blob data.
+   */
+  const byte *GetData() const noexcept { return data_; }
+
+  /**
+   * @return The size of the blob in bytes.
+   */
+  std::size_t GetSize() const noexcept { return size_; }
+
+  /**
+   * Compare two strings. Returns:
+   * < 0 if left < right
+   *  0  if left == right
+   * > 0 if left > right
+   *
+   * @param left The first blob.
+   * @param right The second blob.
+   * @return The appropriate signed value indicating comparison order.
+   */
+  static int32_t Compare(const Blob &left, const Blob &right) {
+    const std::size_t min_len = std::min(left.GetSize(), right.GetSize());
+    const int32_t result =
+        min_len == 0 ? 0 : std::memcmp(left.GetData(), right.GetData(), left.GetSize());
+    if (result != 0) {
+      return result;
+    }
+    return left.GetSize() - right.GetSize();
+  }
+
+  /**
+   * @return True if this blob is byte-for-byte equivalent to @em that blob; false otherwise.
+   */
+  bool operator==(const Blob &that) const noexcept {
+    return size_ == that.size_ && std::memcmp(data_, that.data_, size_) == 0;
+  }
+
+  /**
+   * @return True if this blob is byte-for-byte not-equal-to @em that blob; false otherwise.
+   */
+  bool operator!=(const Blob &that) const noexcept { return !(*this == that); }
+
+  /**
+   * @return True if this blob is byte-for-byte less-than @em that blob; false otherwise.
+   */
+  bool operator<(const Blob &that) const noexcept { return Compare(*this, that) < 0; }
+
+  /**
+   * @return True if this blob is byte-for-byte less-than-or-equal-to @em that blob; false
+   *         otherwise.
+   */
+  bool operator<=(const Blob &that) const noexcept { return Compare(*this, that) <= 0; }
+
+  /**
+   * @return True if this blob is byte-for-byte greater than @em that blob; false otherwise.
+   */
+  bool operator>(const Blob &that) const noexcept { return Compare(*this, that) > 0; }
+
+  /**
+   * @return True if this blob is byte-for-byte greater-than-or-equal-to @em that blob; false
+   *         otherwise.
+   */
+  bool operator>=(const Blob &that) const noexcept { return Compare(*this, that) >= 0; }
+
+ private:
+  // Root
+  byte *data_;
+
+  // Length
+  std::size_t size_;
 };
 
 }  // namespace tpl::sql
