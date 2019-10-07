@@ -396,7 +396,9 @@ namespace tpl::vm {
 
 // clang-format on
 
-/// The single enumeration of all possible bytecode instructions
+/**
+ * The enumeration listing all possible bytecode instructions.
+ */
 enum class Bytecode : uint32_t {
 #define DECLARE_OP(inst, ...) inst,
   BYTECODE_LIST(DECLARE_OP)
@@ -406,91 +408,139 @@ enum class Bytecode : uint32_t {
 #undef COUNT_OP
 };
 
-/// Helper class for querying/interacting with bytecode instructions
+/**
+ * Helper class for querying/interacting with bytecode instructions.
+ */
 class Bytecodes {
  public:
   // The total number of bytecode instructions
   static constexpr const uint32_t kBytecodeCount = static_cast<uint32_t>(Bytecode::Last) + 1;
 
+  /**
+   * Deleted constructor to force static-only functions.
+   */
+  Bytecodes() = delete;
+
+  /**
+   * @return The total number of bytecodes.
+   */
   static constexpr uint32_t NumBytecodes() { return kBytecodeCount; }
 
-  // Return the maximum length of any bytecode instruction in bytes
+  /**
+   * @return The maximum length of any bytecode instruction in bytes.
+   */
   static uint32_t MaxBytecodeNameLength();
 
-  // Returns the string representation of the given bytecode
+  /**
+   * @return The string representation of the given bytecode.
+   */
   static const char *ToString(Bytecode bytecode) {
     return kBytecodeNames[static_cast<uint32_t>(bytecode)];
   }
 
-  // Return the number of operands a bytecode accepts
+  /**
+   * @return The number of operands a bytecode accepts.
+   */
   static uint32_t NumOperands(Bytecode bytecode) {
     return kBytecodeOperandCounts[static_cast<uint32_t>(bytecode)];
   }
 
-  // Return an array of the operand types to the given bytecode
+  /**
+   * @return An array of the operand types to the given bytecode.
+   */
   static const OperandType *GetOperandTypes(Bytecode bytecode) {
     return kBytecodeOperandTypes[static_cast<uint32_t>(bytecode)];
   }
 
-  // Return an array of the sizes of all operands to the given bytecode
+  /**
+   * @return An array containing the sizes of all operands to the given bytecode.
+   */
   static const OperandSize *GetOperandSizes(Bytecode bytecode) {
     return kBytecodeOperandSizes[static_cast<uint32_t>(bytecode)];
   }
 
-  // Return the type of the Nth operand to the given bytecode
+  /**
+   * @return The type of the Nth operand to the given bytecode.
+   */
   static OperandType GetNthOperandType(Bytecode bytecode, uint32_t operand_index) {
     TPL_ASSERT(operand_index < NumOperands(bytecode),
                "Accessing out-of-bounds operand number for bytecode");
     return GetOperandTypes(bytecode)[operand_index];
   }
 
-  // Return the type of the Nth operand to the given bytecode
+  /**
+   * @return The size of the Nth operand to the given bytecode.
+   */
   static OperandSize GetNthOperandSize(Bytecode bytecode, uint32_t operand_index) {
     TPL_ASSERT(operand_index < NumOperands(bytecode),
                "Accessing out-of-bounds operand number for bytecode");
     return GetOperandSizes(bytecode)[operand_index];
   }
 
-  // Return the offset of the Nth operand of the given bytecode
+  /**
+   * @return The offset of the Nth operand of the given bytecode.
+   */
   static uint32_t GetNthOperandOffset(Bytecode bytecode, uint32_t operand_index);
 
-  // Return the name of the bytecode handler function for this bytecode
+  /**
+   * @return The name of the bytecode handler function for the given bytecode.
+   */
   static const char *GetBytecodeHandlerName(Bytecode bytecode) {
     return kBytecodeHandlerName[ToByte(bytecode)];
   }
 
-  // Converts the given bytecode to a single-byte representation
+  /**
+   * Converts the bytecode instruction @em bytecode into a raw encoded value.
+   * @param bytecode The bytecode to convert.
+   * @return The raw encoded value for the input bytecode instruction.
+   */
   static constexpr std::underlying_type_t<Bytecode> ToByte(Bytecode bytecode) {
     TPL_ASSERT(bytecode <= Bytecode::Last, "Invalid bytecode");
     return static_cast<std::underlying_type_t<Bytecode>>(bytecode);
   }
 
-  // Converts the given unsigned byte into the associated bytecode
+  /**
+   * Decode and convert the raw value @em val into a bytecode instruction.
+   * @param val The value to convert.
+   * @return The bytecode associated with the given value.
+   */
   static constexpr Bytecode FromByte(std::underlying_type_t<Bytecode> val) {
     auto bytecode = static_cast<Bytecode>(val);
     TPL_ASSERT(bytecode <= Bytecode::Last, "Invalid bytecode");
     return bytecode;
   }
 
-  // Is the bytecode an unconditional jump?
+  /**
+   * @return True if the bytecode @em bytecode is an unconditional jump; false otherwise.
+   */
   static constexpr bool IsUnconditionalJump(Bytecode bytecode) {
     return bytecode == Bytecode::Jump;
   }
 
-  // Is the bytecode a conditional jump?
+  /**
+   * @return True if the bytecode @em bytecode is a conditional jump; false otherwise.
+   */
   static constexpr bool IsConditionalJump(Bytecode bytecode) {
     return bytecode == Bytecode::JumpIfFalse || bytecode == Bytecode::JumpIfTrue;
   }
 
-  // Is the bytecode ANY type of jump?
+  /**
+   * @return True if the bytecode @em bytecode is a jump instruction, either conditional or not;
+   *         false otherwise.
+   */
   static constexpr bool IsJump(Bytecode bytecode) {
     return IsConditionalJump(bytecode) || IsUnconditionalJump(bytecode);
   }
 
-  // Is the bytecode a return instruction?
+  /**
+   * @return True if the bytecode @em bytecode is a return instruction.
+   */
   static constexpr bool IsReturn(Bytecode bytecode) { return bytecode == Bytecode::Return; }
 
-  // Is the bytecode a terminal instruction, i.e., one that appears at the end of a block
+  /**
+   * @return True if the bytecode @em bytecode is a terminal instruction. A terminal instruction is
+   *         one that appears at the end of a basic block.
+   */
   static constexpr bool IsTerminal(Bytecode bytecode) {
     return IsJump(bytecode) || IsReturn(bytecode);
   }
