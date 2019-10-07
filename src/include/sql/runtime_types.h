@@ -8,11 +8,15 @@
 
 namespace tpl::sql {
 
+class Timestamp;
+
 //===----------------------------------------------------------------------===//
 //
 // Dates
 //
 //===----------------------------------------------------------------------===//
+
+static constexpr uint64_t kMsPerDay = 24 * 60 * 60 * 1000;
 
 /**
  * A SQL date.
@@ -57,11 +61,13 @@ class Date {
    * @param[out] month The month corresponding to this date.
    * @param[out] day The day corresponding to this date.
    */
-  void Convert(uint32_t *year, uint32_t *month, uint32_t *day) {
-    *year = ExtractYear();
-    *month = ExtractMonth();
-    *day = ExtractDay();
-  }
+  void ExtractComponents(uint32_t *year, uint32_t *month, uint32_t *day);
+
+  /**
+   * Convert this date instance into a timestamp instance.
+   * @return The timestamp instance representing this date.
+   */
+  Timestamp ConvertToTimestamp() const noexcept;
 
   /**
    * Compute the hash value of this date instance.
@@ -141,6 +147,7 @@ class Date {
   static bool IsValidDate(uint32_t year, uint32_t month, uint32_t day);
 
  private:
+  friend class Timestamp;
   friend struct DateVal;
 
   // Private constructor to force static factories.
@@ -163,6 +170,11 @@ class Date {
 class Timestamp {
  public:
   using NativeType = uint64_t;
+
+  /**
+   * Empty constructor.
+   */
+  Timestamp() = default;
 
   /**
    * Compute the hash value of this timestamp instance.
@@ -231,6 +243,7 @@ class Timestamp {
   }
 
  private:
+  friend class Date;
   friend struct TimestampVal;
 
   explicit Timestamp(NativeType value) : value_(value) {}
@@ -643,5 +656,7 @@ class Blob {
   // Length
   std::size_t size_;
 };
+
+inline Timestamp Date::ConvertToTimestamp() const noexcept { return Timestamp(value_ * kMsPerDay); }
 
 }  // namespace tpl::sql

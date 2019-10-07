@@ -75,6 +75,10 @@ uint32_t Date::ExtractDay() const noexcept {
   return day;
 }
 
+void Date::ExtractComponents(uint32_t *year, uint32_t *month, uint32_t *day) {
+  SplitJulianDate(value_, year, month, day);
+}
+
 Date Date::FromString(const char *str, std::size_t len) {
   const char *ptr = str, *limit = ptr + len;
 
