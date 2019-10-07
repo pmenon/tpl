@@ -63,15 +63,12 @@ enum class ColumnEncoding : uint8_t {
 enum class JoinType : uint8_t { Inner, Outer, Left, Right, Anti, Semi };
 
 /**
- * Given an internal type, return the simplest SQL type. Note that this
- * conversion is a lossy since some internal types are used as the underlying
- * storage for multiple SQL types. For example, int32_t is used for SQL Integers and
- * SQL Dates).
+ * @return The simplest SQL type for primitive type ID @em type.
  */
 SqlTypeId GetSqlTypeFromInternalType(TypeId type);
 
 /**
- * Given a templated type, return the associated internal type ID.
+ * @return The primitive type ID for the C/C++ template type @em T.
  */
 template <class T>
 constexpr inline TypeId GetTypeId() {
@@ -107,22 +104,22 @@ constexpr inline TypeId GetTypeId() {
 }
 
 /**
- * Return the size in bytes of a value with the primitive type @em type.
+ * @return The size in bytes of a value with the primitive type @em type.
  */
 std::size_t GetTypeIdSize(TypeId type);
 
 /**
- * Is the given type a fixed-size type?
+ * @return True if the primitive type ID @em type is a fixed-size type; false otherwise.
  */
 bool IsTypeFixedSize(TypeId type);
 
 /**
- * Is the given type a numeric?
+ * @return True if the primitive type ID @em type is a numeric type; false otherwise.
  */
 bool IsTypeNumeric(TypeId type);
 
 /**
- * Convert a TypeId to a string value.
+ * @return A string representation of the input type ID @em type.
  */
 std::string TypeIdToString(TypeId type);
 
