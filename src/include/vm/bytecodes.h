@@ -159,7 +159,12 @@ namespace tpl::vm {
   F(FilterManagerFree, OperandType::Local)                                                                             \
                                                                                                                        \
   /* Vector Filter Executor */                                                                                         \
-  F(VectorFilterExecuteInit, OperandType::Local, OperandType::Local)                                                   \
+  F(VectorFilterExecuteInit, OperandType::Local, OperandType::Local, OperandType::Local)                                                   \
+  F(VectorFilterDisjunction, OperandType::Local, OperandType::Local)                                                   \
+  F(VectorFilterConjunction, OperandType::Local, OperandType::Local)                                                   \
+  F(VectorFilterNegation, OperandType::Local)                                                   \
+  F(VectorFilterSetForConjunction, OperandType::Local)                                                   \
+  F(VectorFilterSetForDisjunction, OperandType::Local)                                                   \
   F(VectorFilterExecuteEqual, OperandType::Local, OperandType::Local, OperandType::Local)                              \
   F(VectorFilterExecuteEqualVal, OperandType::Local, OperandType::Local, OperandType::Local)                           \
   F(VectorFilterExecuteGreaterThan, OperandType::Local, OperandType::Local, OperandType::Local)                        \

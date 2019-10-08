@@ -78,8 +78,9 @@ class TupleIdList {
   /**
    * Construct a TID list with the given maximum size.
    * @param size The maximum size of the list.
+   * @param is_for_conjunction whether to perform conjections.
    */
-  explicit TupleIdList(uint32_t size) : bit_vector_(size) {}
+  explicit TupleIdList(uint32_t size, bool is_for_conjunction) : bit_vector_(size), is_for_conjunction_{is_for_conjunction} {}
 
   /**
    * Resize the list to the given size. If growing the list, the contents of the list remain
@@ -151,6 +152,11 @@ class TupleIdList {
    * @param other The list to union with.
    */
   void UnionWith(const TupleIdList &other) { bit_vector_.Union(other.bit_vector_); }
+
+  /**
+   * Negates the set of tuple IDs.
+   */
+  void Negate() { bit_vector_.Negate(); }
 
   /**
    * Remove all tuple IDs from this list that are also present in the provided list.
@@ -288,9 +294,18 @@ class TupleIdList {
    */
   ConstIterator end() const { return ConstIterator(bit_vector_, BitVectorType::kInvalidPos); }
 
+
+  bool IsForConjunction() {
+    return is_for_conjunction_;
+  }
+
+  bool SetForConjunction(bool is_for_conjunction) {
+    return is_for_conjunction;
+  }
  private:
   // The validity bit vector
   BitVectorType bit_vector_;
+  bool is_for_conjunction_;
 };
 
 }  // namespace tpl::sql

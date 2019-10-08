@@ -35,14 +35,55 @@ class VectorFilterExecutor {
   /**
    * Create a filter runner using the provided vector projection as input.
    * @param vector_projection The input projection the filter operates on.
+   * @param is_for_conjunction Whether this filter will perform conjunctions.
    */
-  explicit VectorFilterExecutor(VectorProjection *vector_projection);
+  explicit VectorFilterExecutor(VectorProjection *vector_projection, bool is_for_conjunction);
 
   /**
    * Create a filter runner using the projection contained within provided iterator.
    * @param vector_projection_iterator A vector projection iterator to filter.
+   * @param is_for_conjunction Whether this filter will perform conjunctions.
    */
-  explicit VectorFilterExecutor(VectorProjectionIterator *vector_projection_iterator);
+  explicit VectorFilterExecutor(VectorProjectionIterator *vector_projection_iterator, bool is_for_conjunction);
+
+  /**
+   * Performs a disjunction between this filter and the provided one.
+   * It should be used to handles disjunctions like (A and B) or (C and D)
+   * @param other The filter to perform disjunction with
+   */
+  void Disjunction(VectorFilterExecutor *other) {
+    tid_list_.UnionWith(other->tid_list_);
+  }
+
+  /**
+   * Performs a conjunction between this filter and provided one
+   * It should be used to handle conjunctions like (A or B) and (C or D)
+   * @param other The filter to perform conjunction with
+   */
+  void Conjunction(VectorFilterExecutor *other) {
+    tid_list_.IntersectWith(other->tid_list_);
+  }
+
+  /**
+   * Negates this filter.
+   */
+  void Negation() {
+    tid_list_.Negate();
+  }
+
+  /**
+   * Make the filter perform conjunctions.
+   */
+  void SetIsForConjunction() {
+    tid_list_.SetForConjunction(true);
+  }
+
+  /**
+   * Make the filter perform disjunctions.
+   */
+  void SetIsForDisjunction() {
+    tid_list_.SetForConjunction(false);
+  }
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection

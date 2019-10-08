@@ -78,20 +78,30 @@ void TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &
   if constexpr (is_safe_for_full_compute<T>::value) {
     const auto full_compute_threshold =
         Settings::Instance()->GetDouble(Settings::Name::SelectOptThreshold);
+    TupleIdList::BitVectorType *bit_vector = tid_list->GetMutableBits();
+    const auto & null_mask = left.null_mask();
 
-    if (full_compute_threshold && *full_compute_threshold <= tid_list->ComputeSelectivity()) {
-      TupleIdList::BitVectorType *bit_vector = tid_list->GetMutableBits();
+    if (full_compute_threshold && tid_list->IsForConjunction() && *full_compute_threshold <= tid_list->ComputeSelectivity()) {
       bit_vector->UpdateFull([&](uint64_t i) { return Op::Apply(left_data[i], constant); });
       bit_vector->Difference(left.null_mask());
       return;
+    } else if(full_compute_threshold && !tid_list->IsForConjunction() && (*full_compute_threshold * null_mask.num_bits()) >= null_mask.CountOnes()) {
+      bit_vector->PerformDisjunctionFull([&](uint64_t i) { return Op::Apply(left_data[i], constant); });
     }
   }
 
-  // Remove all NULL entries from left input. Right constant is guaranteed non-NULL by this point.
-  tid_list->GetMutableBits()->Difference(left.null_mask());
-
-  // Filter
-  tid_list->Filter([&](uint64_t i) { return Op::Apply(left_data[i], constant); });
+  if (tid_list->IsForConjunction()) {
+    // Remove all NULL entries from left input. Right constant is guaranteed non-NULL by this point.
+    tid_list->GetMutableBits()->Difference(left.null_mask());
+    // Filter
+    tid_list->Filter([&](uint64_t i) { return Op::Apply(left_data[i], constant); });
+  } else {
+    const auto & null_mask = left.null_mask();
+    TupleIdList::BitVectorType *bit_vector = tid_list->GetMutableBits();
+    bit_vector->PerformDisjunction(null_mask, [&](uint64_t i) {
+      return !left.IsNull(i) && Op::Apply(left_data[i], constant);
+    });
+  }
 }
 
 template <typename T, typename Op>

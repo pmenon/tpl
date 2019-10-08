@@ -592,8 +592,28 @@ VM_OP void OpFilterManagerFree(tpl::sql::FilterManager *filter);
 // ---------------------------------------------------------
 
 VM_OP_HOT void OpVectorFilterExecuteInit(tpl::sql::VectorFilterExecutor *filter_exec,
-                                         tpl::sql::VectorProjectionIterator *vpi) {
-  new (filter_exec) tpl::sql::VectorFilterExecutor(vpi);
+                                         tpl::sql::VectorProjectionIterator *vpi, bool is_for_conjunction) {
+  new (filter_exec) tpl::sql::VectorFilterExecutor(vpi, is_for_conjunction);
+}
+
+VM_OP_HOT void OpVectorFilterDisjunction(tpl::sql::VectorFilterExecutor *filter_exec, tpl::sql::VectorFilterExecutor *other) {
+  filter_exec->Disjunction(other);
+}
+
+VM_OP_HOT void OpVectorFilterConjunction(tpl::sql::VectorFilterExecutor *filter_exec, tpl::sql::VectorFilterExecutor *other) {
+  filter_exec->Conjunction(other);
+}
+
+VM_OP_HOT void OpVectorFilterNegation(tpl::sql::VectorFilterExecutor *filter_exec) {
+  filter_exec->Negation();
+}
+
+VM_OP_HOT void OpVectorFilterSetForConjunction(tpl::sql::VectorFilterExecutor *filter_exec) {
+  filter_exec->SetIsForConjunction();
+}
+
+VM_OP_HOT void OpVectorFilterSetForDisjunction(tpl::sql::VectorFilterExecutor *filter_exec) {
+  filter_exec->SetIsForDisjunction();
 }
 
 VM_OP_HOT void OpVectorFilterExecuteEqual(tpl::sql::VectorFilterExecutor *filter_exec,

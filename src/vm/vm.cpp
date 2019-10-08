@@ -729,7 +729,40 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   OP(VectorFilterExecuteInit) : {
     auto *filter_exec = frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID());
     auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    OpVectorFilterExecuteInit(filter_exec, vpi);
+    auto is_for_conjunction = frame->LocalAt<bool>(READ_LOCAL_ID());
+    OpVectorFilterExecuteInit(filter_exec, vpi, is_for_conjunction);
+    DISPATCH_NEXT();
+  }
+
+  OP(VectorFilterConjunction) : {
+    auto *filter_exec = frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID());
+    auto *other = frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID());
+    OpVectorFilterConjunction(filter_exec, other);
+    DISPATCH_NEXT();
+  }
+
+  OP(VectorFilterDisjunction) : {
+    auto *filter_exec = frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID());
+    auto *other = frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID());
+    OpVectorFilterDisjunction(filter_exec, other);
+    DISPATCH_NEXT();
+  }
+
+  OP(VectorFilterNegation) : {
+    auto *filter_exec = frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID());
+    OpVectorFilterNegation(filter_exec);
+    DISPATCH_NEXT();
+  }
+
+  OP(VectorFilterSetForConjunction) : {
+    auto *filter_exec = frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID());
+    OpVectorFilterSetForConjunction(filter_exec);
+    DISPATCH_NEXT();
+  }
+
+  OP(VectorFilterSetForDisjunction) : {
+    auto *filter_exec = frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID());
+    OpVectorFilterSetForDisjunction(filter_exec);
     DISPATCH_NEXT();
   }
 

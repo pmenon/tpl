@@ -455,6 +455,17 @@ class BitVector {
   }
 
   /**
+   * Negate the bits in this bit vector.
+   * @return This bit vector
+   */
+  BitVector &Negate() {
+    for (uint32_t i = 0; i < num_words(); i++) {
+      words_[i] = ~words_[i];
+    }
+    return *this;
+  }
+
+  /**
    * Reserve enough space in the bit vector to store @em num_bits bits. This does not change the
    * size of the bit vector, but may allocate additional memory.
    * @param num_bits The desired number of bits to reserve for.
@@ -541,6 +552,70 @@ class BitVector {
     for (WordType i = num_full_words * kWordSizeBits; i < num_bits(); i++) {
       if (!p(i)) {
         Unset(i);
+      }
+    }
+  }
+
+  /**
+   * Performs a disjunction by setting all positions that satisfy the predicate.
+   * This version will invoke the predicate on all positions.
+   * @tparam P The predicate functor
+   * @param p the predicate to apply at each position
+   */
+  template <typename P>
+  void PerformDisjunctionFull(P &&p) {
+    static_assert(std::is_invocable_r_v<bool, P, uint32_t>,
+                  "Predicate must be accept an unsigned 32-bit index and return a bool");
+    if (num_bits() == 0) {
+      return;
+    }
+
+    const uint32_t num_full_words = GetNumExtraBits() == 0 ? num_words() : num_words() - 1;
+
+    // This first loop processes all FULL words in the bit vector. It should be fully vectorized
+    // if the predicate function can also vectorized.
+    for (WordType i = 0; i < num_full_words; i++) {
+      for (WordType j = 0; j < kWordSizeBits; j++) {
+        words_[i] |= static_cast<WordType>(p(i * kWordSizeBits + j)) << j;
+      }
+    }
+
+    // If the last word isn't full, process it using a scalar loop.
+    for (WordType i = num_full_words * kWordSizeBits; i < num_bits(); i++) {
+      if (p(i)) {
+        Set(i);
+      }
+    }
+  }
+
+  /**
+   * Performs a disjunction by setting all positions that satisfy the predicate
+   * This version will only invoke the predicate on bits that are not excluded.
+   * @tparam P The predicate functor
+   * @param exclude the set of excluded bits (like a null mask)
+   * @param p the predicate to apply at each position
+   */
+  template <typename P>
+  void PerformDisjunction(const BitVector<WordType>& exclude, P &&p) {
+    static_assert(std::is_invocable_r_v<bool, P, uint32_t>,
+                  "Predicate must be accept an unsigned 32-bit index and return a bool");
+    if (num_bits() == 0) {
+      return;
+    }
+    const uint32_t num_full_words = GetNumExtraBits() == 0 ? num_words() : num_words() - 1;
+    for (WordType i = 0; i < num_full_words; i++) {
+      WordType word = ~exclude.words_[i];
+      while (word != 0) {
+        const auto t = word & -word;
+        const auto r = BitUtil::CountTrailingZeros(word);
+        words_[i] |= static_cast<WordType>(p(i * kWordSizeBits + r)) << r;
+        word ^= t;
+      }
+    }
+    // If the last word isn't full, process it using a scalar loop.
+    for (WordType i = num_full_words * kWordSizeBits; i < num_bits(); i++) {
+      if (p(i)) {
+        Set(i);
       }
     }
   }

@@ -12,21 +12,21 @@
 
 namespace tpl::sql {
 
-VectorFilterExecutor::VectorFilterExecutor(VectorProjection *vector_projection)
+VectorFilterExecutor::VectorFilterExecutor(VectorProjection *vector_projection, bool is_for_conjunction)
     : vector_projection_iterator_(nullptr),
       vector_projection_(vector_projection),
-      tid_list_(vector_projection_->GetTotalTupleCount()) {
+      tid_list_(vector_projection_->GetTotalTupleCount(), is_for_conjunction){
   TPL_ASSERT(vector_projection_->GetTotalTupleCount() <= kDefaultVectorSize,
              "Vector projection too large");
   if (const sel_t *sel_vector = vector_projection_->GetSelectionVector()) {
     tid_list_.BuildFromSelectionVector(sel_vector, vector_projection_->GetSelectedTupleCount());
-  } else {
+  } else if(is_for_conjunction) {
     tid_list_.AddAll();
   }
 }
 
-VectorFilterExecutor::VectorFilterExecutor(VectorProjectionIterator *vector_projection_iterator)
-    : VectorFilterExecutor(vector_projection_iterator->GetVectorProjection()) {
+VectorFilterExecutor::VectorFilterExecutor(VectorProjectionIterator *vector_projection_iterator, bool is_for_conjunction)
+    : VectorFilterExecutor(vector_projection_iterator->GetVectorProjection(), is_for_conjunction) {
   vector_projection_iterator_ = vector_projection_iterator;
 }
 

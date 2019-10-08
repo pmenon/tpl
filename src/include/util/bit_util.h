@@ -34,11 +34,11 @@ class BitUtil {
   }
 
   /**
-   * Count the number of zeroes from the most significant bit to the first 1 in
+   * Count the number of zeroes from the least significant bit to the first 1 in
    * the input number @em val
    * @tparam T The data type of the input value
    * @param val The input number
-   * @return The number of leading zeros
+   * @return The number of trailing zeros
    */
   template <typename T>
   static constexpr uint64_t CountTrailingZeros(T val) {
