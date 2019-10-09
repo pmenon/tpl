@@ -1421,6 +1421,11 @@ VM_OP_WARM void OpLeft(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *res
   tpl::sql::StringFunctions::Left(ctx, result, *str, *n);
 }
 
+VM_OP_WARM void OpLike(tpl::sql::BoolVal *result, const tpl::sql::StringVal *str,
+                       const tpl::sql::StringVal *pattern) {
+  tpl::sql::StringFunctions::Like(nullptr, result, *str, *pattern);
+}
+
 VM_OP_WARM void OpLength(tpl::sql::ExecutionContext *ctx, tpl::sql::Integer *result,
                          const tpl::sql::StringVal *str) {
   tpl::sql::StringFunctions::Length(ctx, result, *str);

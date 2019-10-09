@@ -381,6 +381,7 @@ namespace tpl::vm {
   /* String functions */                                                                                               \
   F(Left, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                              \
   F(Length, OperandType::Local, OperandType::Local, OperandType::Local)                                                \
+  F(Like, OperandType::Local, OperandType::Local, OperandType::Local)                                                  \
   F(Lower, OperandType::Local, OperandType::Local, OperandType::Local)                                                 \
   F(LPad, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)          \
   F(LTrim, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                             \

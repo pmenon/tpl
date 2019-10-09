@@ -525,6 +525,14 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
   }
 }
 
+void BytecodeGenerator::VisitSqlStringLikeCall(ast::CallExpr *call) {
+  auto dest = GetExecutionResult()->GetOrCreateDestination(call->type());
+  auto input = VisitExpressionForLValue(call->arguments()[0]);
+  auto pattern = VisitExpressionForLValue(call->arguments()[1]);
+  GetEmitter()->Emit(Bytecode::Like, dest, input, pattern);
+  GetExecutionResult()->SetDestination(dest);
+}
+
 void BytecodeGenerator::VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin) {
   ast::Context *ctx = call->type()->context();
 
@@ -1453,6 +1461,10 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::StringToSql:
     case ast::Builtin::SqlToBool: {
       VisitSqlConversionCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::Like: {
+      VisitSqlStringLikeCall(call);
       break;
     }
     case ast::Builtin::ExecutionContextGetMemoryPool: {

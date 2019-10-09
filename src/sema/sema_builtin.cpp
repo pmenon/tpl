@@ -105,6 +105,25 @@ void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin built
     default: { UNREACHABLE("Impossible SQL conversion call"); }
   }
 }
+void Sema::CheckBuiltinStringLikeCall(ast::CallExpr *call) {
+  if (!CheckArgCount(call, 2)) {
+    return;
+  }
+
+  // Both arguments must be SQL strings
+  auto str_kind = ast::BuiltinType::StringVal;
+  if (!call->arguments()[0]->type()->IsSpecificBuiltin(str_kind)) {
+    ReportIncorrectCallArg(call, 0, GetBuiltinType(str_kind));
+    return;
+  }
+  if (!call->arguments()[1]->type()->IsSpecificBuiltin(str_kind)) {
+    ReportIncorrectCallArg(call, 1, GetBuiltinType(str_kind));
+    return;
+  }
+
+  // Returns a SQL boolean
+  call->set_type(GetBuiltinType(ast::BuiltinType::Boolean));
+}
 
 void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
@@ -1416,6 +1435,10 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::StringToSql:
     case ast::Builtin::SqlToBool: {
       CheckBuiltinSqlConversionCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::Like: {
+      CheckBuiltinStringLikeCall(call);
       break;
     }
     case ast::Builtin::ExecutionContextGetMemoryPool: {
