@@ -28,7 +28,6 @@ class Policy {
 
   /**
    * Construct a policy of the given kind
-   *
    * @param kind The specific kind of policy this is
    */
   explicit Policy(Kind kind);
@@ -39,14 +38,14 @@ class Policy {
   virtual ~Policy() = default;
 
   /**
-   * Returns the next action to take according to the policy
+   * @return The next action to take according to the policy.
    */
   virtual uint32_t NextAction(Agent *agent) = 0;
 
   /**
-   * Returns the specific kind of policy this is
+   * @return The specific kind of policy this is.
    */
-  Kind kind() { return kind_; }
+  Kind GetKind() const { return kind_; }
 
  protected:
   Kind kind_;
@@ -54,10 +53,9 @@ class Policy {
 };
 
 /**
- * The Epsilon-Greedy policy will choose a random action with probability
- * epsilon and take the best apparent approach with probability 1-epsilon. If
- * multiple actions are tied for best choice, then a random action from that
- * subset is selected.
+ * The Epsilon-Greedy policy will choose a random action with probability epsilon and take the best
+ * apparent approach with probability 1-epsilon. If multiple actions are tied for best choice, then
+ * a random action from that subset is selected.
  */
 class EpsilonGreedyPolicy : public Policy {
  public:
@@ -69,7 +67,7 @@ class EpsilonGreedyPolicy : public Policy {
   uint32_t NextAction(Agent *agent) override;
 
  protected:
-  void set_epsilon(const double epsilon) { epsilon_ = epsilon; }
+  void SetEpsilon(const double epsilon) { epsilon_ = epsilon; }
 
  private:
   double epsilon_;
@@ -78,9 +76,8 @@ class EpsilonGreedyPolicy : public Policy {
 };
 
 /**
- * The Greedy policy only takes the best apparent action, with ties broken by
- * random selection. This can be seen as a special case of EpsilonGreedy where
- * epsilon = 0 i.e. always exploit.
+ * The Greedy policy only takes the best apparent action, with ties broken by random selection. This
+ * can be seen as a special case of EpsilonGreedy where epsilon = 0 i.e. always exploit.
  */
 class GreedyPolicy : public EpsilonGreedyPolicy {
  public:
@@ -88,9 +85,9 @@ class GreedyPolicy : public EpsilonGreedyPolicy {
 };
 
 /**
- * The Random policy randomly selects from all available actions with no
- * consideration to which is apparently best. This can be seen as a special
- * case of EpsilonGreedy where epsilon = 1 i.e. always explore.
+ * The Random policy randomly selects from all available actions with no consideration to which is
+ * apparently best. This can be seen as a special case of EpsilonGreedy where epsilon = 1 i.e.
+ * always explore.
  */
 class RandomPolicy : public EpsilonGreedyPolicy {
  public:
@@ -98,9 +95,9 @@ class RandomPolicy : public EpsilonGreedyPolicy {
 };
 
 /**
- * The Upper Confidence Bound algorithm (UCB). It applies an exploration
- * factor to the expected value of each arm which can influence a greedy
- * selection strategy to more intelligently explore less confident options.
+ * The Upper Confidence Bound algorithm (UCB). It applies an exploration factor to the expected
+ * value of each arm which can influence a greedy selection strategy to more intelligently explore
+ * less confident options.
  */
 class UCBPolicy : public Policy {
  public:
@@ -116,8 +113,7 @@ class UCBPolicy : public Policy {
 };
 
 /**
- * Fixed Action Policy. It returns a fixed action irrespective of the rewards
- * obtained.
+ * Fixed Action Policy. It returns a fixed action irrespective of the rewards obtained.
  */
 class FixedActionPolicy : public Policy {
  public:
@@ -130,8 +126,8 @@ class FixedActionPolicy : public Policy {
 };
 
 /**
- * An annealing epsilon greedy policy is one that decays the epsilon value over
- * time. This obviates the need to tune the epsilon hyper-parameter.
+ * An annealing epsilon greedy policy is one that decays the epsilon value over time. This obviates
+ * the need to tune the epsilon hyper-parameter.
  */
 class AnnealingEpsilonGreedyPolicy : public EpsilonGreedyPolicy {
  public:

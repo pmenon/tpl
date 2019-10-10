@@ -25,7 +25,7 @@ class FilterManager {
 
   /**
    * A clause in a multi-clause filter. Clauses come in multiple flavors. Flavors are logically
-   * equivalent, but may differ in implementation, and thus, exhibit different runtimes.
+   * equivalent, but may differ in implementation, and thus, exhibit different run times.
    */
   struct Clause {
     std::vector<MatchFn> flavors;
@@ -33,18 +33,18 @@ class FilterManager {
   };
 
   /**
-   * Construct the filter using the given adaptive policy
-   * @param policy_kind
+   * Construct the filter using the given adaptive policy.
+   * @param policy_kind The adaptive policy to use.
    */
   explicit FilterManager(bandit::Policy::Kind policy_kind = bandit::Policy::EpsilonGreedy);
 
   /**
-   * Destructor
+   * Destructor.
    */
   ~FilterManager();
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(FilterManager);
 
@@ -54,8 +54,8 @@ class FilterManager {
   void StartNewClause();
 
   /**
-   * Insert a flavor for the current clause in the filter
-   * @param flavor A filter flavor
+   * Insert a flavor for the current clause in the filter.
+   * @param flavor A filter flavor.
    */
   void InsertClauseFlavor(FilterManager::MatchFn flavor);
 
@@ -65,16 +65,13 @@ class FilterManager {
   void Finalize();
 
   /**
-   * Run the filters over the given vector projection @em vpi
-   * @param vpi The input vector
+   * Run the filters over the given vector projection @em vpi.
+   * @param vpi The input projection.
    */
   void RunFilters(VectorProjectionIterator *vpi);
 
   /**
-   * Return the index of the current optimal implementation flavor for the clause at index
-   * @em clause_index
-   * @param clause_index The index of the clause
-   * @return The index of the optimal flavor
+   * @return The index of the optimal flavor for the clause at index @em clause_index.
    */
   uint32_t GetOptimalFlavorForClause(uint32_t clause_index) const;
 
