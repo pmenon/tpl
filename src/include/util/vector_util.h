@@ -10,13 +10,8 @@ namespace tpl::util {
 /**
  * Utility class containing vectorized operations.
  */
-class VectorUtil {
+class VectorUtil : public AllStatic {
  public:
-  /**
-   * Force only static functions.
-   */
-  VectorUtil() = delete;
-
   /**
    * Intersect the sorted input selection vectors @em v1 and @em v2, with
    * lengths @em v1_count and @em v2_count, respectively, and store the result

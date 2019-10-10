@@ -5,14 +5,13 @@
 
 namespace tpl::sql {
 
+class ExecutionContext;
+
 /**
  * Utility class to handle various SQL casting functions.
  */
-class CastingFunctions {
+class CastingFunctions : public AllStatic {
  public:
-  // Delete to force only static functions
-  CastingFunctions() = delete;
-
   static void CastToBoolVal(BoolVal *result, const Integer &v);
   static void CastToBoolVal(BoolVal *result, const Real &v);
   static void CastToBoolVal(BoolVal *result, const DateVal &v);

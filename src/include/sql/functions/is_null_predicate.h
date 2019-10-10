@@ -7,11 +7,8 @@ namespace tpl::sql {
 /**
  * Utility class to check NULL-ness of SQL values.
  */
-class IsNullPredicate {
+class IsNullPredicate : public AllStatic {
  public:
-  // Delete to force only static functions
-  IsNullPredicate() = delete;
-
   /**
    * Determine if the input value @em val is NULL, setting the result to true if so.
    * @param[out] result Result of the NULL check. True if @em val is NULL; false otherwise.

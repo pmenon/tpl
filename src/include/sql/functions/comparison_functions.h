@@ -10,11 +10,8 @@ namespace tpl::sql {
 /**
  * Comparison functions for SQL values.
  */
-class ComparisonFunctions {
+class ComparisonFunctions : public AllStatic {
  public:
-  // Delete to force only static functions
-  ComparisonFunctions() = delete;
-
   static void EqBoolVal(BoolVal *result, const BoolVal &v1, const BoolVal &v2);
   static void GeBoolVal(BoolVal *result, const BoolVal &v1, const BoolVal &v2);
   static void GtBoolVal(BoolVal *result, const BoolVal &v1, const BoolVal &v2);

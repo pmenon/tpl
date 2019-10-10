@@ -11,11 +11,8 @@ class TupleIdList;
 /**
  * A utility class containing several core vectorized operations.
  */
-class VectorOps {
+class VectorOps : public AllStatic {
  public:
-  // Delete to force only static functions
-  VectorOps() = delete;
-
   /**
    * Copy @em element_count elements from @em source starting at offset @em offset into the (opaque)
    * array @em target.

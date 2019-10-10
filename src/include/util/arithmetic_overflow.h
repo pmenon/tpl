@@ -9,17 +9,10 @@ namespace tpl::util {
 /**
  * Utility class to handle arithmetic operations that can overflow.
  */
-class ArithmeticOverflow {
+class ArithmeticOverflow : public AllStatic {
  public:
   static constexpr int128_t kMinInt128 = std::numeric_limits<int128_t>::min();
   static constexpr int128_t kMaxInt128 = std::numeric_limits<int128_t>::max();
-
-  // Deleted to force only static functions
-  ArithmeticOverflow() = delete;
-
-  // -------------------------------------------------------
-  // Addition
-  // -------------------------------------------------------
 
   /**
    * Add two integral values and store their result in @em res. Return true if
@@ -109,10 +102,6 @@ class ArithmeticOverflow {
     return (a > kMaxInt128 - b);
   }
 
-  // -------------------------------------------------------
-  // Subtraction
-  // -------------------------------------------------------
-
   /**
    * Subtract two integer values and store their result in @em res. Return true
    * if the subtraction overflowed.
@@ -199,10 +188,6 @@ class ArithmeticOverflow {
     *res = a + b;
     return (a < kMinInt128 + b);
   }
-
-  // -------------------------------------------------------
-  // Multiplication
-  // -------------------------------------------------------
 
   /**
    * Multiply two integer values and store their result in @em res. Return true

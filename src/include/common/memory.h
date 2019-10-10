@@ -19,13 +19,8 @@ namespace tpl {
 /**
  * Container for common memory operations.
  */
-class Memory {
+class Memory : public AllStatic {
  public:
-  /**
-   * Deleted to force static-only functions.
-   */
-  Memory() = delete;
-
   /**
    * Allocate and return a pointer to a chunk of memory of @em size bytes. The returned pointer will
    * be a multiple of @em alignment, which must be a power of two and a multiple of sizeof(void *).

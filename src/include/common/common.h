@@ -36,26 +36,40 @@ using uint128_t = unsigned __int128;
 
 namespace tpl {
 
-/// A compact structure used during parsing to capture and describe the position
-/// in the source as 1-based line and column number
+/**
+ * A compact structure used during parsing to capture and describe the position in a source file.
+ * Tracked as a 1-based line and column number.
+ */
 struct SourcePosition {
   uint64_t line;
   uint64_t column;
 };
 
-/// Use to classify locality of reference for memory accesses
+/**
+ * Base for classes that should be instantiated.
+ */
+class AllStatic {
+#ifndef NDEBUG
+ public:
+  AllStatic() = delete;
+#endif
+};
+
+/**
+ * Enumeration used to classify locality of reference for memory accesses.
+ */
 enum class Locality : uint8_t { None = 0, Low = 1, Medium = 2, High = 3 };
 
-/// The number of bits per byte
+/** The number of bits per byte */
 static constexpr const uint32_t kBitsPerByte = 8;
 
-/// The default vector size to use when performing vectorized iteration
+/** The default vector size to use when performing vectorized iteration */
 static constexpr const uint32_t kDefaultVectorSize = 2048;
 
-/// The default prefetch distance to use
+/** The default prefetch distance to use */
 static constexpr const uint32_t kPrefetchDistance = 16;
 
-/// Common memory sizes
+/** Common memory sizes */
 static constexpr const uint32_t KB = 1024;
 static constexpr const uint32_t MB = KB * KB;
 static constexpr const uint32_t GB = KB * KB * KB;

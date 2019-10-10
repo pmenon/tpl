@@ -418,11 +418,6 @@ class Bytecodes {
   static constexpr const uint32_t kBytecodeCount = static_cast<uint32_t>(Bytecode::Last) + 1;
 
   /**
-   * Deleted constructor to force static-only functions.
-   */
-  Bytecodes() = delete;
-
-  /**
    * @return The total number of bytecodes.
    */
   static constexpr uint32_t NumBytecodes() { return kBytecodeCount; }

@@ -164,15 +164,10 @@ enum class Builtin : uint8_t {
 /**
  * Helper class providing.
  */
-class Builtins {
+class Builtins : public AllStatic {
  public:
   // The total number of builtin functions
   static const uint32_t kBuiltinsCount = static_cast<uint32_t>(Builtin ::Last) + 1;
-
-  /**
-   * Deleted constructor to force static-only functions.
-   */
-  Builtins() = delete;
 
   /**
    * @return The total number of builtin functions.
