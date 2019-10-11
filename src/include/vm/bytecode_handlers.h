@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <sql/functions/casting_fuctions.h>
 
 #include "common/common.h"
 
@@ -706,6 +707,14 @@ VM_OP_HOT void OpInitDate(tpl::sql::DateVal *result, uint32_t year, uint32_t mon
 VM_OP_HOT void OpInitString(tpl::sql::StringVal *result, const uint8_t *str, uint32_t length) {
   result->is_null = false;
   result->val = tpl::sql::VarlenEntry::Create(reinterpret_cast<const byte *>(str), length);
+}
+
+VM_OP_HOT void OpIntegerToReal(tpl::sql::Real *result, const tpl::sql::Integer *input) {
+  tpl::sql::CastingFunctions::CastToReal(result, *input);
+}
+
+VM_OP_HOT void OpRealToInteger(tpl::sql::Integer *result, const tpl::sql::Real *input) {
+  tpl::sql::CastingFunctions::CastToInteger(result, *input);
 }
 
 #define GEN_SQL_COMPARISONS(NAME, TYPE)                                                           \

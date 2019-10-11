@@ -754,6 +754,9 @@ enum class CastKind : uint8_t {
 
   // Conversion of a 64-bit float into a non-nullable SQL Real value
   FloatToSqlReal,
+
+  // Convert a SQL integer into a SQL real
+  SqlIntToSqlReal,
 };
 
 /**

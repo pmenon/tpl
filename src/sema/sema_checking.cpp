@@ -83,7 +83,7 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op, const S
     return {nullptr, left, right};
   }
 
-  // If the inputs match up (and are arithmetic from the earlier check), finish.
+  // If the input types are equal, finish.
   if (left->type() == right->type()) {
     return {left->type(), left, right};
   }
@@ -122,6 +122,20 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op, const S
   if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Real) && right->type()->IsFloatType()) {
     auto new_right = ImplCastExprToType(right, left->type(), ast::CastKind::FloatToSqlReal);
     return {left->type(), left, new_right};
+  }
+
+  // SQL real <OP> SQL int
+  if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Real) &&
+      right->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
+    auto new_right = ImplCastExprToType(right, left->type(), ast::CastKind::SqlIntToSqlReal);
+    return {left->type(), left, new_right};
+  }
+
+  // SQL int <OP> SQL real
+  if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Integer) &&
+      right->type()->IsSpecificBuiltin(ast::BuiltinType::Real)) {
+    auto new_left = ImplCastExprToType(left, right->type(), ast::CastKind::SqlIntToSqlReal);
+    return {left->type(), new_left, right};
   }
 
   // TODO(pmenon): Fix me to support other arithmetic types
