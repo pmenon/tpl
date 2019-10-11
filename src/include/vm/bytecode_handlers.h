@@ -1,16 +1,15 @@
 #pragma once
 
 #include <cstdint>
-#include <sql/functions/casting_fuctions.h>
 
 #include "common/common.h"
-
 #include "common/macros.h"
 #include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
 #include "sql/execution_context.h"
 #include "sql/filter_manager.h"
 #include "sql/functions/arithmetic_functions.h"
+#include "sql/functions/casting_fuctions.h"
 #include "sql/functions/comparison_functions.h"
 #include "sql/functions/is_null_predicate.h"
 #include "sql/functions/string_functions.h"
