@@ -515,7 +515,7 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
       auto dest = GetExecutionResult()->GetOrCreateDestination(
           ast::BuiltinType::Get(ctx, ast::BuiltinType::StringVal));
       auto string_lit = call->arguments()[0]->As<ast::LitExpr>()->raw_string_val();
-      auto static_string = NewStaticString("string_val", call->type()->context(), string_lit);
+      auto static_string = NewStaticString(call->type()->context(), string_lit);
       GetEmitter()->EmitInitString(dest, static_string, string_lit.length());
       break;
     }
@@ -2199,15 +2199,14 @@ LocalVar BytecodeGenerator::NewStatic(const std::string &name, ast::Type *type,
   data_.insert(data_.end(), padded_len, 0);
   std::memcpy(&data_[offset], contents, type->size());
 
-  auto &version = static_locals_versions_[name];
-  auto name_and_version = "static_" + name + "_" + std::to_string(version++);
+  uint32_t &version = static_locals_versions_[name];
+  auto name_and_version = name + std::to_string(version++);
   static_locals_.emplace_back(name_and_version, type, offset, LocalInfo::Kind::Var);
 
   return LocalVar(offset, LocalVar::AddressMode::Address);
 }
 
-LocalVar BytecodeGenerator::NewStaticString(const std::string &name, ast::Context *ctx,
-                                            const ast::Identifier string) {
+LocalVar BytecodeGenerator::NewStaticString(ast::Context *ctx, const ast::Identifier string) {
   // Check cache
   if (auto iter = static_string_cache_.find(string); iter != static_string_cache_.end()) {
     return LocalVar(iter->second.GetOffset(), LocalVar::AddressMode::Address);
@@ -2216,7 +2215,7 @@ LocalVar BytecodeGenerator::NewStaticString(const std::string &name, ast::Contex
   // Create
   auto *type =
       ast::ArrayType::Get(string.length(), ast::BuiltinType::Get(ctx, ast::BuiltinType::Uint8));
-  auto static_local = NewStatic(name, type, static_cast<const void *>(string.data()));
+  auto static_local = NewStatic("stringVal", type, static_cast<const void *>(string.data()));
 
   // Cache
   static_string_cache_.emplace(string, static_local);

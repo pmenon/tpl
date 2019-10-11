@@ -148,7 +148,7 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   LocalVar NewStatic(const std::string &name, ast::Type *type, const void *contents);
 
   // Create a new static string
-  LocalVar NewStaticString(const std::string &name, ast::Context *ctx, ast::Identifier string);
+  LocalVar NewStaticString(ast::Context *ctx, ast::Identifier string);
 
   // Access the current execution result scope
   ExpressionResultScope *GetExecutionResult() { return execution_result_; }

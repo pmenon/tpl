@@ -43,15 +43,12 @@ void PrettyPrintStaticLocals(std::ostream &os, const BytecodeModule &module, con
     max_local_len = std::max(max_local_len, static_cast<uint64_t>(local.GetName().length()));
   }
   for (const auto &local : module.GetStaticLocals()) {
-    auto local_data = std::string_view(static_access_fn(local.GetOffset()), local.GetSize());
-    // clang-format off
-    os << "     " << std::setw(max_local_len) << std::right
-       << local.GetName() << ": "
-       << " offset=" << std::setw(7) << std::left << local.GetOffset()
-       << " size=" << std::setw(7) << std::left << local.GetSize()
-       << " align=" << std::setw(7) << std::left << local.GetType()->alignment()
-       << " data=\"" << local_data << "\"" << std::endl;
-    // clang-format on
+    const auto local_data = std::string_view(static_access_fn(local.GetOffset()), local.GetSize());
+    os << "     " << std::setw(max_local_len) << std::right << local.GetName() << ": ";
+    os << " offset=" << std::setw(7) << std::left << local.GetOffset();
+    os << " size=" << std::setw(7) << std::left << local.GetSize();
+    os << " align=" << std::setw(7) << std::left << local.GetType()->alignment();
+    os << " data=\"" << local_data << "\"" << std::endl;
   }
 
   os << std::endl;
@@ -73,11 +70,12 @@ void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
     } else {
       os << "    local  ";
     }
-    os << std::setw(max_local_len) << std::right << local.GetName() << ":  offset=" << std::setw(7)
-       << std::left << local.GetOffset() << " size=" << std::setw(7) << std::left << local.GetSize()
-       << " align=" << std::setw(7) << std::left << local.GetType()->alignment()
-       << " type=" << std::setw(7) << std::left << ast::Type::ToString(local.GetType())
-       << std::endl;
+    os << std::setw(max_local_len) << std::right << local.GetName() << ": ";
+    os << " offset=" << std::setw(7) << std::left << local.GetOffset();
+    os << " size=" << std::setw(7) << std::left << local.GetSize();
+    os << " align=" << std::setw(7) << std::left << local.GetType()->alignment();
+    os << " type=" << std::setw(7) << std::left << ast::Type::ToString(local.GetType());
+    os << std::endl;
   }
 }
 
