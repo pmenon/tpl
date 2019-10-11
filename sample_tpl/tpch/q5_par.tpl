@@ -436,11 +436,10 @@ fun p6_mergePartitions(state: *State, agg_table: *AggregationHashTable, iter: *A
         var partial = @ptrCast(*AggPayload, @aggPartIterGetRow(iter))
         var agg_payload = @ptrCast(*AggPayload, @aggHTLookup(agg_table, partial_hash, aggKeyCheckPartial, partial))
         if (agg_payload == nil) {
-            agg_payload = @ptrCast(*AggPayload, @aggHTInsert(agg_table, partial_hash))
-            agg_payload.n_name = partial.n_name
-            @aggInit(&agg_payload.revenue)
+            @aggHTLink(agg_table, @aggPartIterGetRowEntry(iter))
+        } else {
+            @aggMerge(&agg_payload.revenue, &partial.revenue)
         }
-        @aggMerge(&agg_payload.revenue, &partial.revenue)
     }
 }
 
