@@ -28,8 +28,13 @@ class FilterManager {
    * equivalent, but may differ in implementation, and thus, exhibit different run times.
    */
   struct Clause {
+    // The "flavors" or implementation versions of a given conjunctive clause.
     std::vector<MatchFn> flavors;
-    uint32_t num_flavors() const { return flavors.size(); }
+
+    /**
+     * @return The number of flavors.
+     */
+    uint32_t GetFlavorCount() const { return flavors.size(); }
   };
 
   /**
@@ -80,25 +85,21 @@ class FilterManager {
   void RunFilterClause(VectorProjectionIterator *vpi, uint32_t clause_index);
 
   // Run the given matching function
-  std::pair<uint32_t, double> RunFilterClauseImpl(VectorProjectionIterator *vpi,
-                                                  FilterManager::MatchFn func);
-
-  // Return the clause at the given index in the filter
-  const Clause *ClauseAt(uint32_t index) const { return &clauses_[index]; }
-
-  // Return the agent handling the clause at the given index
-  bandit::Agent *GetAgentFor(uint32_t clause_index);
-  const bandit::Agent *GetAgentFor(uint32_t clause_index) const;
+  std::pair<uint32_t, double> RunFilterClauseImpl(VectorProjectionIterator *vpi, MatchFn func);
 
  private:
   // The clauses in the filter
   std::vector<Clause> clauses_;
+
   // The optimal order to execute the clauses
   std::vector<uint32_t> optimal_clause_order_;
+
   // The adaptive policy to use
   std::unique_ptr<bandit::Policy> policy_;
+
   // The agents, one per clause
   std::vector<bandit::Agent> agents_;
+
   // Has the manager's clauses been finalized?
   bool finalized_;
 };

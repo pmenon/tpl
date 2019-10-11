@@ -19,25 +19,19 @@ namespace {
 // TODO(pmenon): Move to some PolicyFactory
 std::unique_ptr<bandit::Policy> CreatePolicy(bandit::Policy::Kind policy_kind) {
   switch (policy_kind) {
-    case bandit::Policy::Kind::EpsilonGreedy: {
+    case bandit::Policy::Kind::EpsilonGreedy:
       return std::make_unique<bandit::EpsilonGreedyPolicy>(
           bandit::EpsilonGreedyPolicy::kDefaultEpsilon);
-    }
-    case bandit::Policy::Greedy: {
+    case bandit::Policy::Greedy:
       return std::make_unique<bandit::GreedyPolicy>();
-    }
-    case bandit::Policy::Random: {
+    case bandit::Policy::Random:
       return std::make_unique<bandit::RandomPolicy>();
-    }
-    case bandit::Policy::UCB: {
+    case bandit::Policy::UCB:
       return std::make_unique<bandit::UCBPolicy>(bandit::UCBPolicy::kDefaultUCBHyperParam);
-    }
-    case bandit::Policy::FixedAction: {
+    case bandit::Policy::FixedAction:
       return std::make_unique<bandit::FixedActionPolicy>(0);
-    }
-    case bandit::Policy::AnnealingEpsilonGreedy: {
+    case bandit::Policy::AnnealingEpsilonGreedy:
       return std::make_unique<bandit::AnnealingEpsilonGreedyPolicy>();
-    }
     default: { UNREACHABLE("Impossible bandit policy kind"); }
   }
 }
@@ -72,8 +66,8 @@ void FilterManager::Finalize() {
   std::iota(optimal_clause_order_.begin(), optimal_clause_order_.end(), 0);
 
   // Setup the agents, once per clause
-  for (uint64_t idx = 0; idx < clauses_.size(); idx++) {
-    agents_.emplace_back(policy_.get(), ClauseAt(idx)->num_flavors());
+  for (const auto &clause : clauses_) {
+    agents_.emplace_back(policy_.get(), clause.GetFlavorCount());
   }
 
   finalized_ = true;
@@ -98,9 +92,9 @@ void FilterManager::RunFilterClause(VectorProjectionIterator *vpi, const uint32_
   // agent's state.
 
   // Select the apparent optimal flavor of the clause to execute
-  bandit::Agent *agent = GetAgentFor(clause_index);
+  bandit::Agent *agent = &agents_[clause_index];
   const uint32_t opt_flavor_idx = agent->NextAction();
-  const auto opt_match_func = ClauseAt(clause_index)->flavors[opt_flavor_idx];
+  const auto opt_match_func = clauses_[clause_index].flavors[opt_flavor_idx];
 
   // Run the filter
   auto [_, exec_ms] = RunFilterClauseImpl(vpi, opt_match_func);
@@ -124,14 +118,8 @@ std::pair<uint32_t, double> FilterManager::RunFilterClauseImpl(VectorProjectionI
 }
 
 uint32_t FilterManager::GetOptimalFlavorForClause(uint32_t clause_index) const {
-  const bandit::Agent *agent = GetAgentFor(clause_index);
+  const bandit::Agent *agent = &agents_[clause_index];
   return agent->GetCurrentOptimalAction();
-}
-
-bandit::Agent *FilterManager::GetAgentFor(uint32_t clause_index) { return &agents_[clause_index]; }
-
-const bandit::Agent *FilterManager::GetAgentFor(uint32_t clause_index) const {
-  return &agents_[clause_index];
 }
 
 }  // namespace tpl::sql
