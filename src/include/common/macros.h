@@ -2,8 +2,6 @@
 
 #include <cassert>
 
-#include "llvm/Support/ErrorHandling.h"
-
 // 99% of cache-lines are 64 bytes
 #define CACHELINE_SIZE 64
 
@@ -11,8 +9,9 @@
 #define UNUSED __attribute__((unused))
 #define ALWAYS_INLINE __attribute__((always_inline))
 #define NEVER_INLINE __attribute__((noinline))
-#define FALLTHROUGH LLVM_FALLTHROUGH
 #define PACKED __attribute__((packed))
+#define FALLTHROUGH [[fallthrough]]
+#define NORETURN __attribute((noreturn))
 
 // ---------------------------------------------------------
 // Macros to force classes to be non-copyable, non-movable,
@@ -35,11 +34,11 @@
 // Handy branch hints
 // ---------------------------------------------------------
 
-#define TPL_LIKELY(x) LLVM_LIKELY(x)
-#define TPL_UNLIKELY(x) LLVM_UNLIKELY(x)
+#define TPL_LIKELY(expr) __builtin_expect((bool)(expr), true)
+#define TPL_UNLIKELY(expr) __builtin_expect((bool)(expr), false)
 
 // ---------------------------------------------------------
-// Suped up assertions
+// Supe'd up assertions
 // ---------------------------------------------------------
 
 #ifdef NDEBUG
@@ -53,7 +52,11 @@
 // unreachable.
 // ---------------------------------------------------------
 
-#define UNREACHABLE(msg) llvm_unreachable(msg)
+namespace tpl {
+NORETURN void tpl_unreachable(const char *msg, const char *file, unsigned int line);
+}  // namespace tpl
+
+#define UNREACHABLE(msg) tpl::tpl_unreachable(msg, __FILE__, __LINE__)
 
 // ---------------------------------------------------------
 // Google Test ONLY
