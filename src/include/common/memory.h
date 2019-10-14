@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sys/mman.h>
+#include <cerrno>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
