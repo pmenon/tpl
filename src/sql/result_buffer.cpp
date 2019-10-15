@@ -41,8 +41,10 @@ std::size_t ComputeRowSize(const Schema &schema) {
 }  // namespace
 
 ResultBuffer::ResultBuffer(sql::MemoryPool *memory_pool, const sql::Schema &output_schema,
-                           ResultConsumer *consumer)
-    : tuples_(ComputeRowSize(output_schema), memory_pool), consumer_(consumer) {}
+                           ResultConsumer *consumer, const uint32_t batch_size)
+    : tuples_(ComputeRowSize(output_schema), memory_pool),
+      consumer_(consumer),
+      batch_size_(batch_size) {}
 
 ResultBuffer::~ResultBuffer() = default;
 

@@ -15,9 +15,9 @@ class Schema;
 class ResultBuffer {
  public:
   /**
-   * Batch size
+   * Default batch size.
    */
-  static constexpr uint32_t BATCH_SIZE = 32;
+  static constexpr uint32_t kDefaultBatchSize = 32;
 
   /**
    * Construct a buffer.
@@ -26,10 +26,10 @@ class ResultBuffer {
    * @param callback upper layer callback
    */
   ResultBuffer(sql::MemoryPool *memory_pool, const sql::Schema &output_schema,
-               ResultConsumer *consumer);
+               ResultConsumer *consumer, uint32_t batch_size = kDefaultBatchSize);
 
   /**
-   * Destructor
+   * Destructor.
    */
   ~ResultBuffer();
 
@@ -37,7 +37,7 @@ class ResultBuffer {
    * @return an output slot to be written to.
    */
   byte *AllocOutputSlot() {
-    if (tuples_.size() == BATCH_SIZE) {
+    if (tuples_.size() == GetBatchSize()) {
       consumer_->Consume(tuples_);
       tuples_.clear();
     }
@@ -49,9 +49,20 @@ class ResultBuffer {
    */
   void Finalize();
 
+  /**
+   * @return The maximum size of output batches sent to the consumer.
+   */
+  uint32_t GetBatchSize() const noexcept { return batch_size_; }
+
  private:
+  // Buffer storing output tuples
   OutputBuffer tuples_;
+
+  // The consumer of the results
   ResultConsumer *consumer_;
+
+  // The batch size
+  uint32_t batch_size_;
 };
 
 }  // namespace tpl::sql
