@@ -13,7 +13,7 @@ namespace tpl::util {
 /**
  * Utility class containing various math/arithmetic functions
  */
-class MathUtil {
+class MathUtil : public AllStatic {
  public:
   /**
    * Perform a division taking the ceil of the result

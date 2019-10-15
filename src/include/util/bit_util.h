@@ -12,7 +12,7 @@ namespace tpl::util {
 /**
  * Utility class to deal with bit-level operations.
  */
-class BitUtil {
+class BitUtil : public AllStatic {
  public:
   // The number of bits in one word
   static constexpr const uint32_t kBitWordSize = sizeof(uint32_t) * kBitsPerByte;
