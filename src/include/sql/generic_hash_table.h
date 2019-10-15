@@ -11,6 +11,12 @@
 
 namespace tpl::sql {
 
+//===----------------------------------------------------------------------===//
+//
+// Generic Hash Table
+//
+//===----------------------------------------------------------------------===//
+
 /**
  * GenericHashTable serves as a dead-simple hash table for joins and aggregations in TPL. It is a
  * generic bytes-to-bytes hash table implemented as a bucket-chained table with pointer tagging.
@@ -265,9 +271,11 @@ inline void GenericHashTable::FlushEntries(const F &sink) {
   num_elems_ = 0;
 }
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Generic Hash Table Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * An iterator over the entries in a generic hash table. It's assumed that the underlying hash table
@@ -333,9 +341,11 @@ class GenericHashTableIterator {
   const HashTableEntry *curr_entry_;
 };
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Generic Hash Table Vector Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * An iterator over a generic hash table that works vector-at-a-time. It's assumed that the

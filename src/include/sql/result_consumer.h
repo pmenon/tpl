@@ -5,6 +5,9 @@
 
 namespace tpl::sql {
 
+/**
+ * Data structure representing a buffer of tuples.
+ */
 using OutputBuffer = util::ChunkedVector<MemoryPoolAllocator<byte>>;
 
 /**
@@ -24,10 +27,20 @@ class ResultConsumer {
   virtual void Consume(const OutputBuffer &batch) = 0;
 };
 
+/**
+ * A consumer that doesn't do anything with the result tuples.
+ */
 class NoOpResultConsumer : public ResultConsumer {
  public:
-  ~NoOpResultConsumer() override {}
+  /**
+   * Simple destructor.
+   */
+  ~NoOpResultConsumer() override = default;
 
+  /**
+   * No-op batch consumption.
+   * @param batch The output batch to consume.
+   */
   void Consume(UNUSED const OutputBuffer &batch) override {}
 };
 
