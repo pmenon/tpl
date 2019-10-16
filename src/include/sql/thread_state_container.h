@@ -173,6 +173,11 @@ class ThreadStateContainer {
     });
   }
 
+  /**
+   * @return The number of allocated thread-local states in this container.
+   */
+  uint32_t GetThreadStateCount() const;
+
  private:
   /**
    * A handle to a single thread's state

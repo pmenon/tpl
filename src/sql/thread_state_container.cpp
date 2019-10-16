@@ -104,4 +104,6 @@ void ThreadStateContainer::IterateStates(void *const ctx,
   }
 }
 
+uint32_t ThreadStateContainer::GetThreadStateCount() const { return impl_->states.size(); }
+
 }  // namespace tpl::sql
