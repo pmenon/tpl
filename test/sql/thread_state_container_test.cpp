@@ -14,11 +14,10 @@ namespace tpl::sql {
 
 class ThreadStateContainerTest : public TplTest {
  protected:
-  void ForceCreationOfThreadStates(ThreadStateContainer *container) {
-    std::vector<uint32_t> input(2000);
-    tbb::task_scheduler_init sched;
-    tbb::parallel_for_each(input.begin(), input.end(),
-                           [&container](auto c) { container->AccessThreadStateOfCurrentThread(); });
+  static void ForceCreationOfThreadStates(ThreadStateContainer *container,
+                                          const uint32_t num_thread_states) {
+    LaunchParallel(num_thread_states,
+                   [&](auto tid) { container->AccessThreadStateOfCurrentThread(); });
   }
 };
 
@@ -50,7 +49,7 @@ TEST_F(ThreadStateContainerTest, ComplexObjectContainerTest) {
                     obj->initialized = true;
                   },
                   nullptr, nullptr);
-  ForceCreationOfThreadStates(&container);
+  ForceCreationOfThreadStates(&container, 4);
 
   // Check
   container.ForEach<Object>([](Object *obj) {
@@ -58,6 +57,7 @@ TEST_F(ThreadStateContainerTest, ComplexObjectContainerTest) {
     EXPECT_EQ(nullptr, obj->next);
     EXPECT_EQ(true, obj->initialized);
   });
+  LOG_INFO("{} thread states", container.GetThreadStateCount());
 }
 
 TEST_F(ThreadStateContainerTest, ContainerResetTest) {
@@ -83,7 +83,7 @@ TEST_F(ThreadStateContainerTest, ContainerResetTest) {
         [](auto *ctx, UNUSED auto *s) { (*reinterpret_cast<decltype(count) *>(ctx)) += N; }, \
         [](auto *ctx, UNUSED auto *s) { (*reinterpret_cast<decltype(count) *>(ctx)) -= N; }, \
         &count);                                                                             \
-    ForceCreationOfThreadStates(&container);                                                 \
+    ForceCreationOfThreadStates(&container, 4);                                              \
   }
 
   RESET(1)
@@ -129,8 +129,7 @@ TEST_F(ThreadStateContainerTest, SimpleContainerTest) {
   // Manually collect and add
   {
     std::vector<uint32_t *> counts;
-    container.CollectThreadLocalStateElementsAs(counts, 0);
-    LOG_INFO("{} thread states", counts.size());
+    container.CollectThreadLocalStateElementsAs<uint32_t>(counts, 0);
 
     total = std::accumulate(counts.begin(), counts.end(), 0,
                             [](auto partial, auto *c) { return partial + *c; });
