@@ -66,8 +66,15 @@ class VectorProjectionIterator;
  */
 class Sorter {
  public:
-  // Minimum number of tuples to have before using a parallel sort
+  /**
+   * Minimum number of tuples to have before using a parallel sort. We use a smaller value in DEBUG
+   * mode to reduce runtime of tests by not requiring large Sorters when testing parallel sorts.
+   */
+#ifndef NDEBUG
+  static constexpr uint64_t kDefaultMinTuplesForParallelSort = 1000;
+#else
   static constexpr uint64_t kDefaultMinTuplesForParallelSort = 10000;
+#endif
 
   /**
    * The comparison function used to sort tuples in a Sorter.

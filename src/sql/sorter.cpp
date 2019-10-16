@@ -5,11 +5,11 @@
 #include <utility>
 #include <vector>
 
-#include <tbb/tbb.h>  // NOLINT
+#include "ips4o/ips4o.hpp"
 
 #include "llvm/ADT/STLExtras.h"
 
-#include "ips4o/ips4o.hpp"
+#include "tbb/tbb.h"
 
 #include "logging/logger.h"
 #include "sql/thread_state_container.h"
@@ -121,7 +121,7 @@ void Sorter::Sort() {
   timer.Stop();
 
   double tps = (tuples_.size() / timer.elapsed()) / 1000.0;
-  LOG_INFO("Sorted {} tuples in {} ms ({:.2f} mtps)", tuples_.size(), timer.elapsed(), tps);
+  LOG_DEBUG("Sorted {} tuples in {} ms ({:.2f} mtps)", tuples_.size(), timer.elapsed(), tps);
 
   // Mark complete
   sorted_ = true;
@@ -174,7 +174,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   // adapting based on tuples sizes, CPU speeds, caches, algorithms, etc.
 
   if (tl_sorters.size() == 1 || num_tuples < kDefaultMinTuplesForParallelSort) {
-    LOG_INFO("Sorter contains {} elements. Using serial sort.", num_tuples);
+    LOG_DEBUG("Sorter contains {} elements. Using serial sort.", num_tuples);
 
     // Reserve room for all tuples
     tuples_.reserve(num_tuples);
@@ -190,6 +190,16 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
     // Finish
     return;
   }
+
+#ifndef NDEBUG
+  std::string msg = "Issuing parallel sort. Sorter sizes: ";
+  std::for_each(tl_sorters.begin(), tl_sorters.end(), [first = true, &msg](auto *sorter) mutable {
+    if (!first) msg += ",";
+    first = false;
+    msg += std::to_string(sorter->GetTupleCount());
+  });
+  LOG_DEBUG("{}", msg);
+#endif
 
   // Make room in our 'tuples_' vector for all tuples. Since w
   tuples_.resize(num_tuples);

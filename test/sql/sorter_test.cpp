@@ -250,6 +250,8 @@ struct TestTuple {
 // The template argument controls the size of the tuple.
 template <uint32_t N>
 void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
+  tbb::task_scheduler_init sched;
+
   // Comparison function
   static const auto cmp_fn = [](const void *left, const void *right) {
     const auto *l = reinterpret_cast<const TestTuple<N> *>(left);
@@ -273,13 +275,13 @@ void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
 
   container.Reset(sizeof(Sorter), init_sorter, destroy_sorter, &exec_ctx);
 
-  // Parallel build
-  tbb::task_scheduler_init sched;
-  tbb::parallel_for_each(sorter_sizes.begin(), sorter_sizes.end(), [&container](auto sorter_size) {
+  // Parallel construct sorter
+
+  LaunchParallel(sorter_sizes.size(), [&](auto tid) {
     std::random_device r;
     std::this_thread::sleep_for(std::chrono::microseconds(r() % 1000));
     auto *sorter = container.AccessThreadStateOfCurrentThreadAs<Sorter>();
-    for (uint32_t i = 0; i < sorter_size; i++) {
+    for (uint32_t i = 0; i < sorter_sizes[tid]; i++) {
       auto *elem = reinterpret_cast<TestTuple<N> *>(sorter->AllocInputTuple());
       elem->key = r() % 3333;
     }
