@@ -157,6 +157,11 @@ class Sorter {
   uint64_t GetTupleCount() const noexcept { return tuples_.size(); }
 
   /**
+   * @return True if this sorter contains no tuples; false otherwise.
+   */
+  bool IsEmpty() const noexcept { return GetTupleCount() == 0; }
+
+  /**
    * @return True if this sorter's contents been sorted; false otherwise.
    */
   bool IsSorted() const noexcept { return sorted_; }
