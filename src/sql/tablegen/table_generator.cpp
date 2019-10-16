@@ -35,12 +35,12 @@ Table *CreateTable(Catalog *catalog, const std::string &table_name,
 }
 
 // Postgres NULL string
-constexpr const char *null_string = "\\N";
+constexpr const char *kNullString = "\\N";
 
 void ParseCol(byte *data, uint32_t *null_bitmap, const Schema::ColumnInfo &col, uint32_t row_idx,
               csv::CSVField &field, VarlenHeap *string_heap) {
   if (col.sql_type.nullable()) {
-    if (field == null_string) {
+    if (field == kNullString) {
       util::BitUtil::Set(null_bitmap, row_idx);
       return;
     }
