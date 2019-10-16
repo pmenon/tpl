@@ -697,7 +697,8 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
   util::Timer<std::milli> timer;
   timer.Start();
 
-  if (num_elem_estimate < kDefaultMinSizeForParallelMerge) {
+  const bool use_serial_build = num_elem_estimate < kDefaultMinSizeForParallelMerge;
+  if (use_serial_build) {
     // TODO(pmenon): If the estimate under counted, it might make sense to switch to parallel merge.
     LOG_INFO("JHT: Estimated {} elements. Using serial merge.", num_elem_estimate);
     for (auto *source : tl_join_tables) {
@@ -719,9 +720,9 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
   timer.Stop();
 
   double tps = (generic_hash_table_.GetElementCount() / timer.elapsed()) / 1000.0;
-  LOG_INFO("JHT: parallel merged {} JHTs, {} elements ({} estimated) in {:.2f} ms ({:.2f} mtps)",
-           tl_join_tables.size(), generic_hash_table_.GetElementCount(), num_elem_estimate,
-           timer.elapsed(), tps);
+  LOG_INFO("{} merged {} JHTs. Estimated {} elements, actual {}. Time: {:.2f} ms ({:.2f} mtps)",
+           use_serial_build ? "Serial" : "Parallel", tl_join_tables.size(), num_elem_estimate,
+           generic_hash_table_.GetElementCount(), timer.elapsed(), tps);
 }
 
 }  // namespace tpl::sql
