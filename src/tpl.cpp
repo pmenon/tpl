@@ -325,7 +325,7 @@ void SignalHandler(int32_t sig_num) {
   }
 }
 
-int main(int argc, char **argv) {  // NOLINT(bugprone-exception-escape)
+int main(int argc, char **argv) {
   // Parse options
   llvm::cl::HideUnrelatedOptions(kTplOptionsCategory);
   llvm::cl::ParseCommandLineOptions(argc, argv);

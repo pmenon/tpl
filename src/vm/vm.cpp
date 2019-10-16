@@ -140,7 +140,6 @@ inline ALWAYS_INLINE T Peek(const uint8_t **ip) {
 
 }  // namespace
 
-// NOLINTNEXTLINE(google-readability-function-size,readability-function-size)
 void VM::Interpret(const uint8_t *ip, Frame *frame) {
   static void *kDispatchTable[] = {
 #define ENTRY(name, ...) &&op_##name,

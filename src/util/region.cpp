@@ -17,7 +17,7 @@ Region::Region(std::string_view name) noexcept
       position_(0),
       end_(0) {}
 
-Region::~Region() { FreeAll(); }  // NOLINT(bugprone-exception-escape)
+Region::~Region() { FreeAll(); }
 
 void *Region::Allocate(std::size_t size, std::size_t alignment) {
   TPL_ASSERT(alignment > 0, "Alignment must be greater than 0");
