@@ -10,7 +10,8 @@ class MemoryPool;
 class Schema;
 
 /**
- * A class that buffers the output and makes a callback for every batch.
+ * A class that buffers the result tuples from a query into batches and delivers them to the
+ * consumer of the query.
  */
 class ResultBuffer {
  public:
@@ -21,9 +22,10 @@ class ResultBuffer {
 
   /**
    * Construct a buffer.
-   * @param memory_pool memory pool to use for buffer allocation
-   * @param output_schema The schema of the output
-   * @param callback upper layer callback
+   * @param memory_pool memory pool to use for buffer allocation.
+   * @param output_schema The schema of the output.
+   * @param consumer The callback invoked to consume batches of results.
+   * @param batch_size The size of the buffer to use to batch results.
    */
   ResultBuffer(sql::MemoryPool *memory_pool, const sql::Schema &output_schema,
                ResultConsumer *consumer, uint32_t batch_size = kDefaultBatchSize);
