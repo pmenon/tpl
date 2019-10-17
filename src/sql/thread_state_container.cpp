@@ -7,9 +7,11 @@
 
 namespace tpl::sql {
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Thread Local State Handle
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 ThreadStateContainer::TLSHandle::TLSHandle() : container_(nullptr), state_(nullptr) {}
 
@@ -34,20 +36,22 @@ ThreadStateContainer::TLSHandle::~TLSHandle() {
   container_->memory_->Deallocate(state_, state_size);
 }
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Actual container of all thread state
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
-/**
- * The actual container for all thread-local state for participating threads
- */
+// The actual container for all thread-local state for participating threads
 struct ThreadStateContainer::Impl {
   tbb::enumerable_thread_specific<TLSHandle> states;
 };
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Thread State Container
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 ThreadStateContainer::ThreadStateContainer(MemoryPool *memory)
     : memory_(memory),
@@ -59,12 +63,14 @@ ThreadStateContainer::ThreadStateContainer(MemoryPool *memory)
   impl_->states = tbb::enumerable_thread_specific<TLSHandle>([&]() { return TLSHandle(this); });
 }
 
-ThreadStateContainer::~ThreadStateContainer() = default;
+ThreadStateContainer::~ThreadStateContainer() { Clear(); }
 
 void ThreadStateContainer::Clear() { impl_->states.clear(); }
 
-void ThreadStateContainer::Reset(const std::size_t state_size, InitFn init_fn, DestroyFn destroy_fn,
-                                 void *ctx) {
+void ThreadStateContainer::Reset(const std::size_t state_size,
+                                 const ThreadStateContainer::InitFn init_fn,
+                                 const ThreadStateContainer::DestroyFn destroy_fn,
+                                 void *const ctx) {
   // Ensure we clean before resetting sizes, functions, context
   Clear();
 
