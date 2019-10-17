@@ -80,7 +80,7 @@ class ThreadStateContainer {
   ~ThreadStateContainer();
 
   /**
-   * Clear all thread local data
+   * Clear all thread local data. This will destroy and clean up all allocated thread states.
    */
   void Clear();
 
@@ -91,7 +91,7 @@ class ThreadStateContainer {
    * will be called when the thread state is requested to be destroyed either through another call
    * to ThreadStateContainer::Reset(), or when the container itself is destroyed. The @em ctx
    * pointer is passed into both initialization and destruction functions as a context.
-   * @param state_size The size in bytes of the state
+   * @param state_size The size in bytes of the state.
    * @param init_fn The (optional) initialization function to call on first access. This is called
    *                in the thread that first accesses it.
    * @param destroy_fn The (optional) destruction function called to destroy the state.
@@ -124,7 +124,7 @@ class ThreadStateContainer {
    * Collect an element at offset @em element_offset from all thread-local states in this container
    * and store pointers in the output container.
    * @param[out] container The output container to store the results.
-   * @param element_offset The offset of the element in the thread-local state
+   * @param element_offset The offset of the element in the thread-local state.
    */
   void CollectThreadLocalStateElements(std::vector<byte *> &container,
                                        std::size_t element_offset) const;
@@ -138,7 +138,7 @@ class ThreadStateContainer {
    *
    * @tparam T The compile-time type to interpret the state element as
    * @param[out] container The output container to store the results.
-   * @param element_offset The offset of the element in the thread-local state
+   * @param element_offset The offset of the element in the thread-local state.
    */
   template <typename T>
   void CollectThreadLocalStateElementsAs(std::vector<T *> &container,
@@ -162,11 +162,13 @@ class ThreadStateContainer {
 
   /**
    * Apply a function on each thread local state. This is mostly for tests from C++.
-   * @tparam F Functor with signature void(const void*)
-   * @param fn The function to apply
+   * @tparam F Functor with signature void(const void*).
+   * @param fn The function to apply.
    */
   template <typename T, typename F>
   void ForEach(const F &fn) const {
+    static_assert(std::is_invocable_v<F, T *>,
+                  "Callback must be a single-argument functor accepting a pointer to state");
     IterateStates(const_cast<F *>(&fn), [](void *ctx, void *raw_state) {
       auto *state = reinterpret_cast<T *>(raw_state);
       std::invoke(*reinterpret_cast<const F *>(ctx), state);
@@ -199,6 +201,7 @@ class ThreadStateContainer {
    private:
     // Handle to container
     ThreadStateContainer *container_;
+
     // Owned memory
     byte *state_;
   };
@@ -206,13 +209,17 @@ class ThreadStateContainer {
  private:
   // Memory allocator
   MemoryPool *memory_;
+
   // Size of each thread's state
   std::size_t state_size_;
+
   // The function to initialize a thread's local state upon first use
   InitFn init_fn_;
+
   // The function to destroy a thread's local state when no longer needed
   DestroyFn destroy_fn_;
-  // An opaque context that passed into the constructor and destructor
+
+  // An opaque context passed into the initialization and destruction functions
   void *ctx_;
 
   // PIMPL
