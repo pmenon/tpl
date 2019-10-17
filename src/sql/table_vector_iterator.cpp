@@ -156,7 +156,7 @@ class ScanTask {
     }
 
     // Pull out the thread-local state
-    byte *const thread_state = thread_state_container_->AccessThreadStateOfCurrentThread();
+    byte *const thread_state = thread_state_container_->AccessCurrentThreadState();
 
     // Call scanning function
     scanner_(query_state_, thread_state, &iter);

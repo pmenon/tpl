@@ -9,12 +9,25 @@
 namespace tpl::sql {
 
 /**
- * This class serves as a container for thread-local data required during query execution. Users
- * create an instance of this class and call ThreadStateContainer::Reset() to configure it to store
- * thread-local structures of an opaque type with a given size. Each invocation of
- * ThreadStateContainer::Reset() must accept the size of the state to allocate, and construction and
- * destruction functions whose responsibility is to construct and destruct the user-defined thread
- * state. In other words, thread states themselves are opaque to this class.
+ * General Information:
+ * -------------------
+ * This class serves as a container for thread-local data structures. The <b>type</b> of the
+ * structure is not known at compile-time, but is a dynamically generated type. To enable storing
+ * opaque and generic structures, this class needs three ingredients:
+ *
+ * 1. We need to know the <b>size</b> of the structure, in bytes.
+ * 2. We need a method to <b>initialize</b> the structure.
+ * 3. We need a method to <b>destroy</b> this structure in the cases where it further allocates
+ *    elements that must recursively destroyed.
+ *
+ * We refer to these three ingredients as a <b>type schema</b>. Users configure the container to
+ * store a given type schema through ThreadStateContainer::Reset() and provide the necessary type
+ * ingredients.
+ *
+ * ThreadStateContainer::Reset() does not allocate any memory itself. State allocation is deferred
+ * to first access through ThreadStateContainer::AccessCurrentThreadState() where it is lazily
+ * allocated and initialized using the type schema provided during reset. This is done to ensure
+ * locality of the allocation to the thread it is associated to. An example usage is provided below:
  *
  * @code
  * struct YourStateStruct {
@@ -35,15 +48,40 @@ namespace tpl::sql {
  *   std::destroy_at(reinterpret_cast<YourStateStruct *>(memory));
  * }
  *
- * ThreadStateContainer tsc;
- * tsc.Reset(sizeof(YourStateStruct), InitThreadState, DestroyThreadState, nullptr);
+ * ThreadStateContainer thread_states;
+ * thread_states.Reset(sizeof(YourStateStruct), InitThreadState, DestroyThreadState, nullptr);
  * @endcode
  *
- * During query execution, threads can access their thread-local state by calling
- * ThreadStateContainer::AccessThreadStateOfCurrentThread(). If no state has been allocated for the
- * calling thread, one is created and initialized lazily using the optional construction function.
- * Each thread's state is destroyed on a subsequent call to ThreadStateContainer::Reset(), or when
- * the container itself is destroyed.
+ * Ingredients:
+ * -----------
+ * The type's initialization function accepts two void pointer arguments: an opaque "context" object
+ * and a pointer to the uninitialized memory for the thread's state. It is the responsibility of the
+ * initialization function to set up the thread's state by invoking the state's constructor, or
+ * performing the construction manually.
+ *
+ * The destruction function is invoked when the container is destroyed, or when the container is
+ * reset (through ThreadStateContainer::Reset()) to store a different type. The destruction function
+ * must accept two void pointer arguments: an opaque "context" object and a pointer to the thread's
+ * state. It is the responsibility of the destruction function to invoke the destructor of the
+ * state. The memory underlying the thread state will be deallocated by the container!
+ *
+ * Reuse & Recycle:
+ * ---------------
+ * Containers can be reused multiple times to store different types of state objects. Each
+ * invocation to ThreadStateContainer::Reset() configures it to store a new state object type by
+ * cleaning up all previous state (invoking destruction) and setting up new state. Resetting the
+ * container does not allocate memory. The container can be cleared <b>without</b> configuring new
+ * state through ThreadStateContainer::Clear().
+ *
+ * Iteration:
+ * ---------
+ * All thread-local states stored in the container can be retrieved through
+ * ThreadStateContainer::CollectThreadLocalStates(). Specific elements at an offset within each
+ * thread-state can also be collected through
+ * ThreadStateContainer::CollectThreadLocalStateElements(). Additionally, this container supports
+ * generic iteration over states through ThreadStateContainer::ForEach() that will iterate over all
+ * states and invoke a callback function to "use" the state.
+ *
  */
 class ThreadStateContainer {
  public:
@@ -101,17 +139,16 @@ class ThreadStateContainer {
   void Reset(std::size_t state_size, InitFn init_fn, DestroyFn destroy_fn, void *ctx);
 
   /**
-   * Access the calling thread's thread-local state.
+   * @return The calling thread's thread-local state.
    */
-  byte *AccessThreadStateOfCurrentThread();
+  byte *AccessCurrentThreadState();
 
   /**
-   * Access the calling thread's thread-local state and interpret it as the
-   * templated type.
+   * @return The calling thread's thread-local state and interpret it as the templated type.
    */
   template <typename T>
-  T *AccessThreadStateOfCurrentThreadAs() {
-    return reinterpret_cast<T *>(AccessThreadStateOfCurrentThread());
+  T *AccessCurrentThreadStateAs() {
+    return reinterpret_cast<T *>(AccessCurrentThreadState());
   }
 
   /**

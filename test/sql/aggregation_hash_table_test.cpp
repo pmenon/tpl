@@ -410,7 +410,7 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
   // Build 4 thread-local aggregation hash tables
   container.Reset(sizeof(AggregationHashTable), init_ht, destroy_ht, &ctx);
   LaunchParallel(4, [&](auto tid) {
-    build_agg_table(container.AccessThreadStateOfCurrentThreadAs<AggregationHashTable>());
+    build_agg_table(container.AccessCurrentThreadStateAs<AggregationHashTable>());
   });
 
   // The main table that merges all thread-local tables

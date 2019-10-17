@@ -16,8 +16,7 @@ class ThreadStateContainerTest : public TplTest {
  protected:
   static void ForceCreationOfThreadStates(ThreadStateContainer *container,
                                           const uint32_t num_thread_states) {
-    LaunchParallel(num_thread_states,
-                   [&](auto tid) { container->AccessThreadStateOfCurrentThread(); });
+    LaunchParallel(num_thread_states, [&](auto tid) { container->AccessCurrentThreadState(); });
   }
 };
 
@@ -25,7 +24,7 @@ TEST_F(ThreadStateContainerTest, EmptyStateTest) {
   MemoryPool memory(nullptr);
   ThreadStateContainer container(&memory);
   container.Reset(0, nullptr, nullptr, nullptr);
-  UNUSED auto *state = container.AccessThreadStateOfCurrentThread();
+  UNUSED auto *state = container.AccessCurrentThreadState();
   container.Clear();
 }
 
@@ -115,7 +114,7 @@ TEST_F(ThreadStateContainerTest, SimpleContainerTest) {
   tbb::task_scheduler_init sched;
   tbb::blocked_range r(std::size_t(0), input.size());
   tbb::parallel_for(r, [&container](const auto &range) {
-    auto *state = container.AccessThreadStateOfCurrentThreadAs<uint32_t>();
+    auto *state = container.AccessCurrentThreadStateAs<uint32_t>();
     for (auto iter = range.begin(), end = range.end(); iter != end; ++iter) {
       (*state)++;
     }

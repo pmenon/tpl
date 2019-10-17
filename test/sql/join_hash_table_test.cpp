@@ -169,7 +169,7 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
 
   // Parallel populate each of the thread-local hash tables
   LaunchParallel(num_thread_local_tables, [&](auto tid) {
-    auto *jht = container.AccessThreadStateOfCurrentThreadAs<JoinHashTable>();
+    auto *jht = container.AccessCurrentThreadStateAs<JoinHashTable>();
     PopulateJoinHashTable(jht, num_tuples, 1);
   });
 

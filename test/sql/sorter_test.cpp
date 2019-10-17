@@ -280,7 +280,7 @@ void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
   LaunchParallel(sorter_sizes.size(), [&](auto tid) {
     std::random_device r;
     std::this_thread::sleep_for(std::chrono::microseconds(r() % 1000));
-    auto *sorter = container.AccessThreadStateOfCurrentThreadAs<Sorter>();
+    auto *sorter = container.AccessCurrentThreadStateAs<Sorter>();
     for (uint32_t i = 0; i < sorter_sizes[tid]; i++) {
       auto *elem = reinterpret_cast<TestTuple<N> *>(sorter->AllocInputTuple());
       elem->key = r() % 3333;

@@ -81,7 +81,7 @@ void ThreadStateContainer::Reset(const std::size_t state_size,
   ctx_ = ctx;
 }
 
-byte *ThreadStateContainer::AccessThreadStateOfCurrentThread() {
+byte *ThreadStateContainer::AccessCurrentThreadState() {
   auto &tls_handle = impl_->states.local();
   return tls_handle.state();
 }

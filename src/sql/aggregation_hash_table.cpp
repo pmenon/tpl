@@ -521,7 +521,7 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(
     auto *agg_table_part = BuildTableOverPartition(query_state, part_idx);
 
     // Get a handle to the thread-local state of the executing thread
-    auto *thread_state = thread_states->AccessThreadStateOfCurrentThread();
+    auto *thread_state = thread_states->AccessCurrentThreadState();
 
     // Scan the partition
     scan_fn(query_state, thread_state, agg_table_part);
