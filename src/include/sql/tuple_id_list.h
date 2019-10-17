@@ -18,8 +18,8 @@ namespace tpl::sql {
  * removing (one or all) TIDs from the list. Intersection, union, and difference are efficient
  * operations linear in the capacity of the list.
  *
- * Users can iterate over the TIDs in the list through TupleIdList::Iterate(), and build/update
- * lists from subsets of other lists using TupleIdList::BuildFromOtherList().
+ * Users can iterate over the TIDs in the list through TupleIdList::Iterate() and filter a TID list
+ * through TupleIdList::Filter().
  *
  * Tuple ID lists can also be converted into dense selection vectors through
  * TupleIdList::AsSelectionVector().
@@ -95,27 +95,28 @@ class TupleIdList {
   bool Contains(const uint32_t tid) const { return bit_vector_.Test(tid); }
 
   /**
-   * Does the list contain all TIDs in the range of TIDs it tracks?
-   * @return True if full; false otherwise.
+   * @return True if this list contains all TIDs; false otherwise.
    */
   bool IsFull() const { return bit_vector_.All(); }
 
   /**
-   * Is the list empty?
-   * @return True if empty; false otherwise.
+   * @return True if this list is empty; false otherwise.
    */
   bool IsEmpty() const { return bit_vector_.None(); }
 
   /**
-   * Set a given tuple as active in the list.
+   * Add the tuple ID @em tid to this list.
+   *
+   * @pre The given TID must be in the range [0, capacity) of this list.
+   *
    * @param tid The ID of the tuple.
    */
   void Add(const uint32_t tid) { bit_vector_.Set(tid); }
 
   /**
-   * Add all tuples whose IDs are in the range [start_tid, end_tid). Note the half-open interval!
+   * Add all TIDs in the range [start_tid, end_tid) to this list. Note the half-open interval!
    * @param start_tid The left inclusive range boundary.
-   * @param end_tid The right inclusive range boundary.
+   * @param end_tid The right exclusive range boundary.
    */
   void AddRange(const uint32_t start_tid, const uint32_t end_tid) {
     bit_vector_.SetRange(start_tid, end_tid);
@@ -251,22 +252,6 @@ class TupleIdList {
     TPL_ASSERT(i < GetTupleCount(), "Out-of-bounds list access");
     return bit_vector_.NthOne(i);
   }
-
-  /**
-   * Does this list contain the same list of TIDs as the provided list @em that?
-   * @param that The list to compare with.
-   * @return True if the list contain the same contents; false otherwise.
-   */
-  bool operator==(const TupleIdList &that) const noexcept {
-    return bit_vector_ == that.bit_vector_;
-  }
-
-  /**
-   * Does this list contain any TIDs that differ from the provided list @em that?
-   * @param that The list to compare with.
-   * @return True if the the lists contain different contents; false otherwise.
-   */
-  bool operator!=(const TupleIdList &that) const noexcept { return !(*this == that); }
 
   /**
    * @return An iterator positioned at the first element in the TID list.
