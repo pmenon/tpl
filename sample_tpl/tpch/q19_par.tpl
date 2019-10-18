@@ -3,16 +3,16 @@ struct OutputStruct {
 }
 
 struct State {
-    count      : int32 // Debug
     join_table : JoinHashTable
     revenue    : RealSumAggregate
+    count      : int32 // Debug
 }
 
-struct ThreadState1 {
+struct P1_ThreadState {
     ts_join_table : JoinHashTable
 }
 
-struct ThreadState2 {
+struct P2_ThreadState {
     ts_revenue : RealSumAggregate
 }
 
@@ -36,30 +36,38 @@ fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
     @aggInit(&state.revenue)
 }
 
-fun teardownState(execCtx: *ExecutionContext, state: *State) -> nil {
+fun tearDownState(execCtx: *ExecutionContext, state: *State) -> nil {
     @joinHTFree(&state.join_table)
 }
 
-fun initTheadState1(execCtx: *ExecutionContext, ts: *ThreadState1) -> nil {
+// -----------------------------------------------------------------------------
+// Pipeline 1 State
+// -----------------------------------------------------------------------------
+
+fun p1_initThreadState(execCtx: *ExecutionContext, ts: *P1_ThreadState) -> nil {
     @joinHTInit(&ts.ts_join_table, @execCtxGetMem(execCtx), @sizeOf(JoinRow))
 }
 
-fun teardownThreadState1(execCtx: *ExecutionContext, ts: *ThreadState1) -> nil {
+fun p1_tearDownThreadState(execCtx: *ExecutionContext, ts: *P1_ThreadState) -> nil {
     @joinHTFree(&ts.ts_join_table)
 }
 
-fun initTheadState2(execCtx: *ExecutionContext, ts: *ThreadState2) -> nil {
+// -----------------------------------------------------------------------------
+// Pipeline 2 State
+// -----------------------------------------------------------------------------
+
+fun p2_initThreadState(execCtx: *ExecutionContext, ts: *P2_ThreadState) -> nil {
     @aggInit(&ts.ts_revenue)
 }
 
-fun teardownThreadState2(execCtx: *ExecutionContext, ts: *ThreadState2) -> nil { }
+fun p2_tearDownThreadState(execCtx: *ExecutionContext, ts: *P2_ThreadState) -> nil { }
 
-fun gatherAgg(qs: *State, ts: *ThreadState2) -> nil {
-    @aggMerge(&qs.revenue, &ts.ts_revenue)
-}
+// -----------------------------------------------------------------------------
+// Pipeline 1
+// -----------------------------------------------------------------------------
 
 // Scan part, build JHT
-fun p1_worker(state: *State, ts: *ThreadState1, p_tvi: *TableVectorIterator) -> nil {
+fun p1_worker(state: *State, ts: *P1_ThreadState, p_tvi: *TableVectorIterator) -> nil {
     var x = 0
     for (@tableIterAdvance(p_tvi)) {
         var vec = @tableIterGetVPI(p_tvi)
@@ -77,7 +85,7 @@ fun p1_worker(state: *State, ts: *ThreadState1, p_tvi: *TableVectorIterator) -> 
 fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
     var tls : ThreadStateContainer
     @tlsInit(&tls, @execCtxGetMem(execCtx))
-    @tlsReset(&tls, @sizeOf(ThreadState1), initTheadState1, teardownThreadState1, execCtx)
+    @tlsReset(&tls, @sizeOf(P1_ThreadState), p1_initThreadState, p1_tearDownThreadState, execCtx)
 
     @iterateTableParallel("part", state, &tls, p1_worker)
 
@@ -87,8 +95,12 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
     @tlsFree(&tls)
 }
 
+// -----------------------------------------------------------------------------
+// Pipeline 2
+// -----------------------------------------------------------------------------
+
 // Scan lineitem, probe JHT, advance AGG
-fun p2_worker(state: *State, ts: *ThreadState2, p_tvi: *TableVectorIterator) -> nil {
+fun p2_worker(state: *State, ts: *P2_ThreadState, p_tvi: *TableVectorIterator) -> nil {
     // Used for predicates
     var brand12 = @stringToSql("Brand#12")
     var brand23 = @stringToSql("Brand#23")
@@ -146,16 +158,22 @@ fun p2_worker(state: *State, ts: *ThreadState2, p_tvi: *TableVectorIterator) -> 
     }
 }
 
+fun gatherAgg(qs: *State, ts: *P2_ThreadState) -> nil { @aggMerge(&qs.revenue, &ts.ts_revenue) }
+
 fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
     var tls : ThreadStateContainer
     @tlsInit(&tls, @execCtxGetMem(execCtx))
-    @tlsReset(&tls, @sizeOf(ThreadState2), initTheadState2, teardownThreadState2, execCtx)
+    @tlsReset(&tls, @sizeOf(P2_ThreadState), p2_initThreadState, p2_tearDownThreadState, execCtx)
 
     @iterateTableParallel("lineitem", state, &tls, p2_worker)
     @tlsIterate(&tls, state, gatherAgg)
 
     @tlsFree(&tls)
 }
+
+// -----------------------------------------------------------------------------
+// Pipeline 3
+// -----------------------------------------------------------------------------
 
 fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
     var out = @ptrCast(*OutputStruct, @resultBufferAllocRow(execCtx))
@@ -174,7 +192,7 @@ fun main(execCtx: *ExecutionContext) -> int32 {
 
     setUpState(execCtx, &state)
     execQuery(execCtx, &state)
-    teardownState(execCtx, &state)
+    tearDownState(execCtx, &state)
 
     return state.count
 }
