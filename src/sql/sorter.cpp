@@ -120,8 +120,8 @@ void Sorter::Sort() {
 
   timer.Stop();
 
-  double tps = (tuples_.size() / timer.elapsed()) / 1000.0;
-  LOG_DEBUG("Sorted {} tuples in {} ms ({:.2f} mtps)", tuples_.size(), timer.elapsed(), tps);
+  double tps = (tuples_.size() / timer.GetElapsed()) / 1000.0;
+  LOG_DEBUG("Sorted {} tuples in {} ms ({:.2f} mtps)", tuples_.size(), timer.GetElapsed(), tps);
 
   // Mark complete
   sorted_ = true;

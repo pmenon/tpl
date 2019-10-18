@@ -575,8 +575,8 @@ void JoinHashTable::Build() {
   }
 
   timer.Stop();
-  UNUSED double tps = (GetTupleCount() / timer.elapsed()) / 1000.0;
-  LOG_DEBUG("JHT: built {} tuples in {} ms ({:.2f} tps)", GetTupleCount(), timer.elapsed(), tps);
+  UNUSED double tps = (GetTupleCount() / timer.GetElapsed()) / 1000.0;
+  LOG_DEBUG("JHT: built {} tuples in {} ms ({:.2f} tps)", GetTupleCount(), timer.GetElapsed(), tps);
 
   built_ = true;
 }
@@ -719,10 +719,10 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
 
   timer.Stop();
 
-  double tps = (generic_hash_table_.GetElementCount() / timer.elapsed()) / 1000.0;
+  double tps = (generic_hash_table_.GetElementCount() / timer.GetElapsed()) / 1000.0;
   LOG_INFO("{} merged {} JHTs. Estimated {} elements, actual {}. Time: {:.2f} ms ({:.2f} mtps)",
            use_serial_build ? "Serial" : "Parallel", tl_join_tables.size(), num_elem_estimate,
-           generic_hash_table_.GetElementCount(), timer.elapsed(), tps);
+           generic_hash_table_.GetElementCount(), timer.GetElapsed(), tps);
 }
 
 }  // namespace tpl::sql

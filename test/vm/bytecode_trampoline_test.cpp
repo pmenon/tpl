@@ -239,7 +239,7 @@ TEST_F(BytecodeTrampolineTest, DISABLED_PerfGenComparisonForSortTest) {
                 // NOLINTNEXTLINE
                 [compare](const auto a, const auto b) { return compare(a, b) < 0; });
     timer.Stop();
-    return timer.elapsed();
+    return timer.GetElapsed();
   };
 
   UNUSED auto bench_func = [](auto &vec) {
@@ -255,7 +255,7 @@ TEST_F(BytecodeTrampolineTest, DISABLED_PerfGenComparisonForSortTest) {
                 // NOLINTNEXTLINE
                 [&compare](const auto a, const auto b) { return compare(a, b) < 0; });
     timer.Stop();
-    return timer.elapsed();
+    return timer.GetElapsed();
   };
 
   UNUSED auto bench_std = [](auto &vec) {
@@ -266,7 +266,7 @@ TEST_F(BytecodeTrampolineTest, DISABLED_PerfGenComparisonForSortTest) {
                 // NOLINTNEXTLINE
                 [](const auto &a, const auto &b) { return a < b; });
     timer.Stop();
-    return timer.elapsed();
+    return timer.GetElapsed();
   };
 
   const uint32_t nelems = 10000000;

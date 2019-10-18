@@ -43,7 +43,7 @@ static inline double Bench(uint32_t repeat, const F &f) {
   }
 
   timer.Stop();
-  return timer.elapsed() / static_cast<double>(repeat);
+  return timer.GetElapsed() / static_cast<double>(repeat);
 }
 
 template <typename F>

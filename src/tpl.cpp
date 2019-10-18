@@ -209,7 +209,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
       sql::ExecutionContext exec_ctx(&memory, schema, &consumer);
       LOG_INFO("JIT main() returned: {}", main(&exec_ctx));
       x.Stop();
-      LOG_INFO("Jit exec: {} ms", x.elapsed());
+      LOG_INFO("Jit exec: {} ms", x.GetElapsed());
     } else {
       std::function<uint32_t()> main;
       if (!module->GetFunction("main", vm::ExecutionMode::Compiled, main)) {

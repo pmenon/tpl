@@ -159,7 +159,7 @@ void ImportTable(const std::string &table_name, Table *table, const std::string 
 
   timer.Stop();
 
-  auto rps = total_written / timer.elapsed() * 1000.0;
+  auto rps = total_written / timer.GetElapsed() * 1000.0;
   LOG_INFO("Loaded '{}' with {} rows ({:.2f} rows/sec)", table_name, total_written, rps);
 }
 

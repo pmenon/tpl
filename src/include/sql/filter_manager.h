@@ -85,7 +85,8 @@ class FilterManager {
   void RunFilterClause(VectorProjectionIterator *vpi, uint32_t clause_index);
 
   // Run the given matching function
-  std::pair<uint32_t, double> RunFilterClauseImpl(VectorProjectionIterator *vpi, MatchFn func);
+  static std::pair<uint32_t, double> RunFilterClauseImpl(VectorProjectionIterator *vpi,
+                                                         FilterManager::MatchFn func);
 
  private:
   // The clauses in the filter

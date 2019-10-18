@@ -71,7 +71,7 @@ class StageTimer {
     TPL_ASSERT(!stages_.empty(), "Missing call to EnterStage()");
     TPL_ASSERT(stages_.back().time() == 0, "Duplicate call to ExitStage()");
     timer_.Stop();
-    stages_.back().set_time(timer_.elapsed());
+    stages_.back().set_time(timer_.GetElapsed());
   }
 
   /**

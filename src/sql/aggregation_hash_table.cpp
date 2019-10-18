@@ -482,7 +482,7 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(void *const 
   LOG_DEBUG(
       "Overflow Partition {}: estimated size = {}, actual size = {}, "
       "build time = {:2f} ms",
-      partition_idx, estimated_size, agg_table->GetTupleCount(), timer.elapsed());
+      partition_idx, estimated_size, agg_table->GetTupleCount(), timer.GetElapsed());
 
   // Set it
   partition_tables_[partition_idx] = agg_table;
@@ -535,9 +535,9 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(
                         return curr + partition_tables_[idx]->GetTupleCount();
                       });
 
-  double tps = (tuple_count / timer.elapsed()) / 1000.0;
+  double tps = (tuple_count / timer.GetElapsed()) / 1000.0;
   LOG_INFO("Built and scanned {} tables totalling {} tuples in {:.2f} ms ({:.2f} mtps)",
-           nonempty_parts.size(), tuple_count, timer.elapsed(), tps);
+           nonempty_parts.size(), tuple_count, timer.GetElapsed(), tps);
 }
 
 }  // namespace tpl::sql

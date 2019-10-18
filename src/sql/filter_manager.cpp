@@ -106,15 +106,16 @@ void FilterManager::RunFilterClause(VectorProjectionIterator *vpi, const uint32_
   LOG_DEBUG("Clause {} observed reward {}", clause_index, reward);
 }
 
+// static
 std::pair<uint32_t, double> FilterManager::RunFilterClauseImpl(VectorProjectionIterator *vpi,
                                                                const FilterManager::MatchFn func) {
   // Time and execute the match function, returning the number of selected tuples and the execution
   // time in milliseconds
-  util::Timer<> timer;
+  util::Timer<std::micro> timer;
   timer.Start();
   const uint32_t num_selected = func(vpi);
   timer.Stop();
-  return std::make_pair(num_selected, timer.elapsed());
+  return std::make_pair(num_selected, timer.GetElapsed());
 }
 
 uint32_t FilterManager::GetOptimalFlavorForClause(uint32_t clause_index) const {
