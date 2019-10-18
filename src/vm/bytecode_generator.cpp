@@ -2200,7 +2200,7 @@ LocalVar BytecodeGenerator::NewStatic(const std::string &name, ast::Type *type,
   std::memcpy(&data_[offset], contents, type->size());
 
   uint32_t &version = static_locals_versions_[name];
-  auto name_and_version = name + std::to_string(version++);
+  const std::string name_and_version = name + "_" + std::to_string(version++);
   static_locals_.emplace_back(name_and_version, type, offset, LocalInfo::Kind::Var);
 
   return LocalVar(offset, LocalVar::AddressMode::Address);
@@ -2215,7 +2215,7 @@ LocalVar BytecodeGenerator::NewStaticString(ast::Context *ctx, const ast::Identi
   // Create
   auto *type =
       ast::ArrayType::Get(string.length(), ast::BuiltinType::Get(ctx, ast::BuiltinType::Uint8));
-  auto static_local = NewStatic("stringVal", type, static_cast<const void *>(string.data()));
+  auto static_local = NewStatic("stringConst", type, static_cast<const void *>(string.data()));
 
   // Cache
   static_string_cache_.emplace(string, static_local);

@@ -609,7 +609,7 @@ class BitVector {
    * @return The index of the first set bit after the given position in the bit vector.
    */
   uint32_t FindNext(uint32_t position) const noexcept {
-    if (TPL_UNLIKELY(num_bits() == 0 || position >= num_bits() - 1)) {
+    if (num_bits() == 0 || position >= num_bits() - 1) {
       return kInvalidPos;
     }
 
