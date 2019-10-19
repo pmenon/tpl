@@ -1,6 +1,7 @@
 #pragma once
 
 #include <immintrin.h>
+#include <type_traits>
 
 #include "common/common.h"
 #include "common/macros.h"
