@@ -71,8 +71,8 @@ BENCHMARK_DEFINE_F(TupleIdListBenchmark, ConvertToByteVectorThenSelectionVectorT
     auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
 
     // Bits to byte vector
-    util::VectorUtil::BitVectorToByteVector(tid->GetMutableBits()->words(),
-                                            tid->GetMutableBits()->num_bits(), byte_vector);
+    util::VectorUtil::BitVectorToByteVector(tid->GetMutableBits()->GetWords(),
+                                            tid->GetMutableBits()->GetNumBits(), byte_vector);
 
     // Byte vector to selection vector
     auto size =

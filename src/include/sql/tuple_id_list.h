@@ -203,7 +203,7 @@ class TupleIdList {
   /**
    * @return The capacity of the TID list.
    */
-  uint32_t GetCapacity() const { return bit_vector_.num_bits(); }
+  uint32_t GetCapacity() const { return bit_vector_.GetNumBits(); }
 
   /**
    * @return The selectivity of the list a fraction in the range [0.0, 1.0].

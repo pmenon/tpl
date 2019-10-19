@@ -413,7 +413,7 @@ void Vector::CheckIntegrity() const {
   }
 
   // Ensure that the NULL bitmask has the same size at the vector it represents
-  TPL_ASSERT(num_elems_ == null_mask_.num_bits(), "NULL bitmask size doesn't match vector size");
+  TPL_ASSERT(num_elems_ == null_mask_.GetNumBits(), "NULL bitmask size doesn't match vector size");
 
   // Check the strings in the vector, if it's a string vector
   if (type_ == TypeId::Varchar) {

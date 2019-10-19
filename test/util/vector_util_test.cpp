@@ -254,9 +254,9 @@ TEST_F(VectorUtilTest, BitToByteVector) {
   bv.Set(44);
   bv.Set(73);
 
-  util::VectorUtil::BitVectorToByteVector(bv.words(), bv.num_bits(), bytes);
+  util::VectorUtil::BitVectorToByteVector(bv.GetWords(), bv.GetNumBits(), bytes);
 
-  for (uint32_t i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.GetNumBits(); i++) {
     EXPECT_EQ(bv[i], bytes[i] == 0xFF);
   }
 }
@@ -273,7 +273,7 @@ TEST_F(VectorUtilTest, BitToSelectionVector) {
   }
 
   // Transform
-  uint32_t size = util::VectorUtil::BitVectorToSelectionVector(bv.words(), num_bits, sel);
+  uint32_t size = util::VectorUtil::BitVectorToSelectionVector(bv.GetWords(), num_bits, sel);
 
   // Only 63 bits are set (remember there are only 126-bits)
   EXPECT_EQ(63u, size);
