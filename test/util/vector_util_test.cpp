@@ -284,6 +284,30 @@ TEST_F(VectorUtilTest, BitToSelectionVector) {
   }
 }
 
+TEST_F(VectorUtilTest, BitToSelectionVector_Sparse_vs_Dense) {
+  for (uint32_t density : {0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100}) {
+    // Create a bit vector with specific density
+    BitVector bv(kDefaultVectorSize);
+    std::random_device r;
+    for (uint32_t i = 0; i < kDefaultVectorSize; i++) {
+      if (r() % 100 < density) {
+        bv[i] = true;
+      }
+    }
+
+    sel_t sel_1[kDefaultVectorSize], sel_2[kDefaultVectorSize];
+
+    // Ensure both sparse and dense implementations produce the same output
+    const uint32_t size_1 =
+        util::VectorUtil::BitVectorToSelectionVector_Sparse(bv.GetWords(), bv.GetNumBits(), sel_1);
+    const uint32_t size_2 =
+        util::VectorUtil::BitVectorToSelectionVector_Dense(bv.GetWords(), bv.GetNumBits(), sel_2);
+
+    ASSERT_EQ(size_1, size_2);
+    ASSERT_TRUE(std::equal(sel_1, sel_1 + size_1, sel_2, sel_2 + size_2));
+  }
+}
+
 TEST_F(VectorUtilTest, DiffSelected) {
   sel_t input[kDefaultVectorSize] = {0, 2, 3, 5, 7, 9};
   sel_t output[kDefaultVectorSize];

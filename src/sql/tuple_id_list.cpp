@@ -14,9 +14,8 @@ void TupleIdList::BuildFromSelectionVector(const sel_t *sel_vector, uint32_t siz
 }
 
 uint32_t TupleIdList::AsSelectionVector(sel_t *sel_vec) const {
-  uint32_t k = 0;
-  bit_vector_.IterateSetBits([&](const uint32_t i) { sel_vec[k++] = i; });
-  return k;
+  return util::VectorUtil::BitVectorToSelectionVector(bit_vector_.GetWords(),
+                                                      bit_vector_.GetNumBits(), sel_vec);
 }
 
 std::string TupleIdList::ToString() const {

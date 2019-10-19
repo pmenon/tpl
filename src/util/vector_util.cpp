@@ -3,7 +3,6 @@
 #include <immintrin.h>
 
 #include "util/bit_util.h"
-#include "util/bit_vector.h"
 #include "util/math_util.h"
 #include "util/simd/types.h"
 
@@ -195,9 +194,8 @@ void VectorUtil::BitVectorToByteVector(const uint64_t *bit_vector, const uint32_
   }
 }
 
-// TODO(pmenon): Consider splitting into dense and sparse implementations.
-uint32_t VectorUtil::BitVectorToSelectionVector(const uint64_t *bit_vector, const uint32_t num_bits,
-                                                sel_t *sel_vector) {
+uint32_t VectorUtil::BitVectorToSelectionVector_Sparse(const uint64_t *bit_vector,
+                                                       uint32_t num_bits, sel_t *sel_vector) {
   const uint32_t num_words = MathUtil::DivRoundUp(num_bits, 64);
 
   uint32_t k = 0;
@@ -211,6 +209,55 @@ uint32_t VectorUtil::BitVectorToSelectionVector(const uint64_t *bit_vector, cons
     }
   }
   return k;
+}
+
+uint32_t VectorUtil::BitVectorToSelectionVector_Dense(const uint64_t *bit_vector, uint32_t num_bits,
+                                                      sel_t *sel_vector) {
+  // Vector of '8's = [8,8,8,8,8,8,8]
+  const auto eight = _mm_set1_epi16(8);
+
+  // Selection vector write index
+  auto idx = _mm_set1_epi16(0);
+
+  // Selection vector size
+  uint32_t k = 0;
+
+  const uint32_t num_words = MathUtil::DivRoundUp(num_bits, 64);
+  for (uint32_t i = 0; i < num_words; i++) {
+    uint64_t word = bit_vector[i];
+    for (uint32_t j = 0; j < 8; j++) {
+      const auto mask = static_cast<uint8_t>(word);
+      word >>= 8u;
+      const __m128i match_pos_scaled =
+          _mm_loadl_epi64(reinterpret_cast<const __m128i *>(&simd::k8BitMatchLUT[mask]));
+      const __m128i match_pos = _mm_cvtepi8_epi16(match_pos_scaled);
+      const __m128i pos_vec = _mm_add_epi16(idx, match_pos);
+      idx = _mm_add_epi16(idx, eight);
+      _mm_storeu_si128(reinterpret_cast<__m128i *>(sel_vector + k), pos_vec);
+      k += BitUtil::CountPopulation(static_cast<uint32_t>(mask));
+    }
+  }
+
+  return k;
+}
+
+uint32_t VectorUtil::BitVectorToSelectionVector(const uint64_t *bit_vector, const uint32_t num_bits,
+                                                sel_t *sel_vector) {
+  const uint32_t num_words = MathUtil::DivRoundUp(num_bits, 64);
+
+  // Calculate the density of the input bit vector in order to direct the algorithm to either the
+  // sparse-optimized or dense-optimized unpacking implementation.
+
+  uint64_t count = 0;
+  for (uint64_t i = 0; i < num_words; i++) {
+    count += util::BitUtil::CountPopulation(bit_vector[i]);
+  }
+
+  // TODO(pmenon): Use settings
+  // Sparse is defined as < 15% ones
+  const float density = static_cast<float>(count) / static_cast<float>(num_bits);
+  return density <= 0.15 ? BitVectorToSelectionVector_Sparse(bit_vector, num_bits, sel_vector)
+                         : BitVectorToSelectionVector_Dense(bit_vector, num_bits, sel_vector);
 }
 
 }  // namespace tpl::util
