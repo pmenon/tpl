@@ -1,7 +1,7 @@
 #pragma once
 
-#include <condition_variable>  // NOLINT
-#include <mutex>               // NOLINT
+#include <condition_variable>
+#include <mutex>
 
 #include "common/common.h"
 #include "common/macros.h"
@@ -9,14 +9,14 @@
 namespace tpl::util {
 
 /**
- * A cyclic barrier is a synchronization construct that allows multiple threads
- * to wait for each other to reach a common barrier point. The barrier is
- * configured with a particular number of threads (N) and, as each thread
- * reaches the barrier, must wait until the remaining N threads arrive. Once the
- * last thread arrive at the barrier point, all waiting threads proceed and the
+ * A cyclic barrier is a synchronization construct that allows multiple threads to wait for each
+ * other to reach a common barrier point. The barrier is configured with a particular number of
+ * threads (N) and, as each thread reaches the barrier, must wait until the remaining N-1 threads
+ * arrive. Once the last thread arrives at the barrier point, all waiting threads proceed and the
  * barrier is reset.
  *
- * The barrier is considered "cyclic" because it can be reused.
+ * The barrier is considered "cyclic" because it can be reused. Barriers proceed in "generations".
+ * Each time all threads arrive at the barrier, a new generation begins and threads proceed.
  */
 class Barrier {
  public:
@@ -52,16 +52,16 @@ class Barrier {
   }
 
   /**
-   * Get the current generation the barrier is in.
+   * @return The current generation the barrier is in.
    */
-  uint32_t GetGeneration() {
+  uint32_t GetGeneration() const {
     std::unique_lock<std::mutex> lock(mutex_);
     return generation_;
   }
 
  private:
   // The mutex used to protect all fields
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
   // The condition variable threads wait on
   std::condition_variable cv_;
 
