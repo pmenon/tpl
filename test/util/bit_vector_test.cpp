@@ -12,7 +12,7 @@ namespace {
 // Verify that the callback returns true for all set bit indexes
 template <typename BitVectorType, typename F>
 ::testing::AssertionResult Verify(BitVectorType &bv, F &&f) {
-  for (uint32_t i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.GetNumBits(); i++) {
     if (bv[i] && !f(i)) {
       return ::testing::AssertionFailure() << "bv[" << i << "]=true, but expected to be false";
     }
