@@ -10,6 +10,7 @@
 #include "util/test_harness.h"
 #include "util/timer.h"
 #include "util/vector_util.h"
+#include "util/simd.h"
 
 namespace tpl::util {
 

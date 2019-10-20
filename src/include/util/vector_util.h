@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common/common.h"
-#include "util/simd.h"
+#include "common/macros.h"
 
 namespace tpl::util {
 
