@@ -7,40 +7,40 @@
 namespace tpl::ast {
 
 /**
- * A visitor that fully and recursively traverses an entire AST tree. Clients
- * can control which AST nodes by implementing only the Visit() methods on the
- * node types they're interested. Moreover, clients can cull visitations to
- * whole classes of nodes by implementing VisitNode() and returning true
- * only for those node types they're interested.
+ * A visitor that fully traverses the entire AST. It invokes AstTraversalVisitor::VisitNode()
+ * on each node before proceeding with its subtree. Sub-classes may override
+ * AstTraversalVisitor::VisitNode() (a dummy implementation exists here), or override the specific
+ * Visit*() methods for the node they are interested in.
  *
  * Usage:
  * @code
+ * // The ForStmtVisitor class will find ALL for-statement nodes in the input AST
  * class ForStmtVisitor : public AstTraversalVisitor<ForStmtVisitor> {
  *  public:
- *    ForStmtVisitor(ast::AstNode *root) :
- *      AstTraversalVisitor<ForStmtVisitor>(root) {}
+ *   ForStmtVisitor(ast::AstNode *root) : AstTraversalVisitor<ForStmtVisitor>(root) {}
  *
- *   void VisitForStmt(ast::ForStmt *stmt) { ... }
+ *   void VisitForStmt(ast::ForStmt *stmt) {
+ *     // Process stmt
+ *   }
  * }
  * @endcode
- * The \a ForStmtVisitor class will find all for-statement nodes in an AST tree
  */
 template <typename Subclass>
 class AstTraversalVisitor : public AstVisitor<Subclass> {
  public:
   /**
-   * Construct a visitor over the AST rooted at @em root
-   * @param root The root of the AST tree to begin visiting
+   * Construct a visitor over the AST rooted at @em root.
+   * @param root The root of the AST tree to begin visiting.
    */
   explicit AstTraversalVisitor(AstNode *root) : root_(root) {}
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(AstTraversalVisitor);
 
   /**
-   * Run the traversal
+   * Run the traversal.
    */
   void Run() {
     TPL_ASSERT(root_ != nullptr, "Cannot run traversal on NULL tree");
@@ -56,24 +56,26 @@ class AstTraversalVisitor : public AstVisitor<Subclass> {
   // Should this iterator visit the given node? This method can be implemented
   // in subclasses to skip some visiting some nodes. By default, we visit all
   // nodes.
-  bool VisitNode(AstNode *node) { return true; }
+  bool VisitNode(UNUSED AstNode *node) { return true; }
 
  private:
   AstNode *root_;
 };
 
 // ---------------------------------------------------------
+//
 // Implementation below
+//
 // ---------------------------------------------------------
 
 #define PROCESS_NODE(node)                \
   do {                                    \
-    if (!this->impl()->VisitNode(node)) { \
+    if (!this->Impl()->VisitNode(node)) { \
       return;                             \
     }                                     \
   } while (false)
 
-#define RECURSE(call) this->impl()->call
+#define RECURSE(call) this->Impl()->call
 
 template <typename Subclass>
 inline void AstTraversalVisitor<Subclass>::VisitBadExpr(BadExpr *node) {

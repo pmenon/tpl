@@ -114,7 +114,9 @@ BENCHMARK_DEFINE_F(TupleIdListBenchmark, ManualIteration)(benchmark::State &stat
 }
 
 // ---------------------------------------------------------
-// Benchmarks
+//
+// Benchmark Configs
+//
 // ---------------------------------------------------------
 
 BENCHMARK_REGISTER_F(TupleIdListBenchmark, CallbackBasedIteration)->DenseRange(0, 100, 10);

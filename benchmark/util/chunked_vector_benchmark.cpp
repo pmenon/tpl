@@ -163,6 +163,12 @@ BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, ChunkedVector_RandomAccess)
   }
 }
 
+// ---------------------------------------------------------
+//
+// Benchmark Configs
+//
+// ---------------------------------------------------------
+
 BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Vector_InsertAppend)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)

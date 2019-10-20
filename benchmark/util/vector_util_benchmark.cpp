@@ -65,6 +65,12 @@ BENCHMARK_DEFINE_F(VectorUtilBenchmark, BitsToSelectionIndex_Adaptive)
   }
 }
 
+// ---------------------------------------------------------
+//
+// Benchmark Configs
+//
+// ---------------------------------------------------------
+
 BENCHMARK_REGISTER_F(VectorUtilBenchmark, BitsToSelectionIndex_Sparse)->DenseRange(0, 100, 5);
 BENCHMARK_REGISTER_F(VectorUtilBenchmark, BitsToSelectionIndex_Dense)->DenseRange(0, 100, 5);
 BENCHMARK_REGISTER_F(VectorUtilBenchmark, BitsToSelectionIndex_Adaptive)->DenseRange(0, 100, 5);
