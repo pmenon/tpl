@@ -12,7 +12,16 @@
 namespace tpl::sql {
 
 /**
- * A concise hash table that uses a bitmap to determine slot occupation.
+ * A concise hash table that uses a bitmap to determine slot occupation. A concise hash table is
+ * meant to be bulk loaded through calls to ConciseHashTable::Insert() and frozen through
+ * ConciseHashTable::Build(). Thus, it is a write-only-read-many (WORM) data structure.
+ *
+ * The (potential) advantage over vanilla hash tables is the space savings since only one bit
+ * is needed per-entry ([1]). This offers up to an 8x space savings, depending on the chosen probing
+ * limit. These space savings encourage in-cache processing which can leverage SIMD vectorized
+ * instructions for even faster join processing throughput.
+ *
+ * [1]: In actuality, the overhead per element is larger than one bit.
  */
 class ConciseHashTable {
  public:
@@ -140,6 +149,15 @@ class ConciseHashTable {
                   "Number of slots in group and configured constant are out of sync");
   } PACKED;
 
+  // Given a hash value, return its initial candidate slot index in the logical slot array
+  uint64_t SlotIndex(hash_t hash) const noexcept { return hash & slot_mask_; }
+
+  // Given a slot index, return the index of the group it falls to
+  uint64_t GroupIndex(uint64_t slot_idx) const noexcept { return slot_idx >> kLogSlotsPerGroup; }
+
+  // Given a slot index, return the index of the bit in the group's slot chunk
+  uint64_t GroupSlotIndex(uint64_t slot_index) const noexcept { return slot_index & kGroupBitMask; }
+
  private:
   // The array of groups. This array is managed by this class.
   SlotGroup *slot_groups_;
@@ -169,13 +187,13 @@ class ConciseHashTable {
 // The below methods are inlined in the header on purpose for performance. Please do not move them.
 
 inline void ConciseHashTable::Insert(HashTableEntry *entry, const hash_t hash) {
-  const uint64_t slot_idx = hash & slot_mask_;
-  const uint64_t group_idx = slot_idx >> kLogSlotsPerGroup;
-  const uint64_t num_bits_to_group = group_idx << kLogSlotsPerGroup;
+  const uint64_t slot_idx = SlotIndex(hash);
+  const uint64_t group_idx = GroupIndex(slot_idx);
+  const uint64_t num_bits_to_group = group_idx * kSlotsPerGroup;
   auto *group_bits = reinterpret_cast<uint32_t *>(&slot_groups_[group_idx].bits);
 
-  auto bit_idx = static_cast<uint32_t>(slot_idx & kGroupBitMask);
-  uint32_t max_bit_idx = std::min(63u, bit_idx + probe_limit_);
+  auto bit_idx = static_cast<uint32_t>(GroupSlotIndex(slot_idx));
+  const auto max_bit_idx = std::min(63u, bit_idx + probe_limit_);
   do {
     if (!util::BitUtil::Test(group_bits, bit_idx)) {
       util::BitUtil::Set(group_bits, bit_idx);
@@ -191,16 +209,16 @@ inline void ConciseHashTable::Insert(HashTableEntry *entry, const hash_t hash) {
 
 template <bool ForRead>
 inline void ConciseHashTable::PrefetchSlotGroup(hash_t hash) const {
-  const uint64_t slot_idx = hash & slot_mask_;
-  const uint64_t group_idx = slot_idx >> kLogSlotsPerGroup;
+  const uint64_t slot_idx = SlotIndex(hash);
+  const uint64_t group_idx = GroupIndex(slot_idx);
   Memory::Prefetch<ForRead, Locality::Low>(slot_groups_ + group_idx);
 }
 
 inline uint64_t ConciseHashTable::NumFilledSlotsBefore(const ConciseHashTableSlot slot) const {
   TPL_ASSERT(IsBuilt(), "Table must be built");
 
-  const uint64_t group_idx = slot >> kLogSlotsPerGroup;
-  const uint64_t bit_idx = slot & kGroupBitMask;
+  const uint64_t group_idx = GroupIndex(slot);
+  const uint64_t bit_idx = GroupSlotIndex(slot);
 
   const SlotGroup *slot_group = slot_groups_ + group_idx;
   const uint64_t bits_after_slot = slot_group->bits & (uint64_t(-1) << bit_idx);
@@ -208,9 +226,9 @@ inline uint64_t ConciseHashTable::NumFilledSlotsBefore(const ConciseHashTableSlo
 }
 
 inline std::pair<bool, uint64_t> ConciseHashTable::Lookup(const hash_t hash) const {
-  const uint64_t slot_idx = hash & slot_mask_;
-  const uint64_t group_idx = slot_idx >> kLogSlotsPerGroup;
-  const uint64_t bit_idx = slot_idx & kGroupBitMask;
+  const uint64_t slot_idx = SlotIndex(hash);
+  const uint64_t group_idx = GroupIndex(slot_idx);
+  const uint64_t bit_idx = GroupSlotIndex(slot_idx);
 
   const SlotGroup *slot_group = slot_groups_ + group_idx;
   const uint64_t bits_after_slot = slot_group->bits & (uint64_t(-1) << bit_idx);
