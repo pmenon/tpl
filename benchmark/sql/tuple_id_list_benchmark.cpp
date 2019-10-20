@@ -13,9 +13,9 @@ class TupleIdListBenchmark : public benchmark::Fixture {
  protected:
   static std::tuple<std::unique_ptr<sql::Vector>, std::unique_ptr<sql::Vector>,
                     std::unique_ptr<sql::TupleIdList>>
-  MakeInput(double sel, sql::TypeId type_id) {
-    auto v1 = std::make_unique<sql::Vector>(type_id, true, true);
-    auto v2 = std::make_unique<sql::Vector>(type_id, true, true);
+  MakeInput(double sel) {
+    auto v1 = std::make_unique<sql::Vector>(sql::TypeId::Integer, true, true);
+    auto v2 = std::make_unique<sql::Vector>(sql::TypeId::Integer, true, true);
     v1->Resize(kDefaultVectorSize);
     v2->Resize(kDefaultVectorSize);
     auto tid_list = std::make_unique<sql::TupleIdList>(kDefaultVectorSize);
@@ -23,6 +23,8 @@ class TupleIdListBenchmark : public benchmark::Fixture {
     int64_t limit = sel * 100.0;
     std::random_device r;
     for (uint32_t i = 0; i < kDefaultVectorSize; i++) {
+      reinterpret_cast<int32_t *>(v1->GetData())[i] = r() % 5;
+      reinterpret_cast<int32_t *>(v2->GetData())[i] = r() % 5;
       if (r() % 100 < limit) {
         tid_list->Add(i);
       }
@@ -33,29 +35,45 @@ class TupleIdListBenchmark : public benchmark::Fixture {
 };
 
 BENCHMARK_DEFINE_F(TupleIdListBenchmark, CallbackBasedIteration)(benchmark::State &state) {
-  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0, sql::TypeId::Integer);
+  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0);
   for (auto _ : state) {
-    int64_t count = 0;
+    uint64_t count = 0;
     auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
     auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
     tid->Iterate([&](uint64_t i) { count += v1data[i] + v2data[i]; });
-    benchmark::ClobberMemory();
+    benchmark::DoNotOptimize(count);
   }
 }
 
 BENCHMARK_DEFINE_F(TupleIdListBenchmark, ConvertToSelectionVectorAndIterate)
 (benchmark::State &state) {
   sel_t sel_vector[kDefaultVectorSize];
-  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0, sql::TypeId::Integer);
+  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0);
   for (auto _ : state) {
-    int64_t count = 0;
+    uint64_t count = 0;
     auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
     auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
 
-    auto size = tid->AsSelectionVector(sel_vector);
+    auto size = tid->ToSelectionVector(sel_vector);
     for (uint32_t i = 0; i < size; i++) count += v1data[sel_vector[i]] + v2data[sel_vector[i]];
 
-    benchmark::ClobberMemory();
+    benchmark::DoNotOptimize(count);
+  }
+}
+
+BENCHMARK_DEFINE_F(TupleIdListBenchmark, IterateSelectionVector)
+(benchmark::State &state) {
+  sel_t sel_vector[kDefaultVectorSize];
+  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0);
+  const auto size = tid->ToSelectionVector(sel_vector);
+  for (auto _ : state) {
+    uint64_t count = 0;
+    auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
+    auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
+
+    for (uint32_t i = 0; i < size; i++) count += v1data[sel_vector[i]] + v2data[sel_vector[i]];
+
+    benchmark::DoNotOptimize(count);
   }
 }
 
@@ -64,9 +82,9 @@ BENCHMARK_DEFINE_F(TupleIdListBenchmark, ConvertToByteVectorThenSelectionVectorT
   uint8_t byte_vector[kDefaultVectorSize];
   sel_t sel_vector[kDefaultVectorSize];
 
-  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0, sql::TypeId::Integer);
+  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0);
   for (auto _ : state) {
-    int64_t count = 0;
+    uint64_t count = 0;
     auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
     auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
 
@@ -80,18 +98,18 @@ BENCHMARK_DEFINE_F(TupleIdListBenchmark, ConvertToByteVectorThenSelectionVectorT
 
     for (uint32_t i = 0; i < size; i++) count += v1data[sel_vector[i]] + v2data[sel_vector[i]];
 
-    benchmark::ClobberMemory();
+    benchmark::DoNotOptimize(count);
   }
 }
 
 BENCHMARK_DEFINE_F(TupleIdListBenchmark, ManualIteration)(benchmark::State &state) {
-  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0, sql::TypeId::Integer);
+  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0);
   for (auto _ : state) {
-    int64_t count = 0;
+    uint64_t count = 0;
     auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
     auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
     for (const auto i : *tid) count += v1data[i] + v2data[i];
-    benchmark::ClobberMemory();
+    benchmark::DoNotOptimize(count);
   }
 }
 
@@ -103,6 +121,8 @@ BENCHMARK_REGISTER_F(TupleIdListBenchmark, CallbackBasedIteration)->DenseRange(0
 
 BENCHMARK_REGISTER_F(TupleIdListBenchmark, ConvertToSelectionVectorAndIterate)
     ->DenseRange(0, 100, 10);
+
+BENCHMARK_REGISTER_F(TupleIdListBenchmark, IterateSelectionVector)->DenseRange(0, 100, 10);
 
 BENCHMARK_REGISTER_F(TupleIdListBenchmark, ConvertToByteVectorThenSelectionVectorThenIterate)
     ->DenseRange(0, 100, 10);

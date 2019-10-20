@@ -13,7 +13,7 @@ void TupleIdList::BuildFromSelectionVector(const sel_t *sel_vector, uint32_t siz
   }
 }
 
-uint32_t TupleIdList::AsSelectionVector(sel_t *sel_vec) const {
+uint32_t TupleIdList::ToSelectionVector(sel_t *sel_vec) const {
   return util::VectorUtil::BitVectorToSelectionVector(bit_vector_.GetWords(),
                                                       bit_vector_.GetNumBits(), sel_vec);
 }

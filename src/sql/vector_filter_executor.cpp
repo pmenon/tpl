@@ -123,7 +123,7 @@ void VectorFilterExecutor::SelectNe(const uint32_t left_col_idx, const uint32_t 
 
 void VectorFilterExecutor::Finish() {
   sel_t sel_vec[kDefaultVectorSize];
-  uint32_t count = tid_list_.AsSelectionVector(sel_vec);
+  uint32_t count = tid_list_.ToSelectionVector(sel_vec);
   vector_projection_->SetSelectionVector(sel_vec, count);
 
   if (vector_projection_iterator_ != nullptr) {

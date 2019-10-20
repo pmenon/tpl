@@ -200,7 +200,7 @@ TEST_F(TupleIdListTest, ConvertToSelectionVector) {
   list.Add(0);
   list.AddRange(3, 7);
 
-  uint32_t n = list.AsSelectionVector(sel);
+  uint32_t n = list.ToSelectionVector(sel);
   EXPECT_EQ(5u, n);
   EXPECT_EQ(0u, sel[0]);
   EXPECT_EQ(3u, sel[1]);

@@ -215,7 +215,7 @@ class TupleIdList {
    * @param[out] sel_vec The output selection vector.
    * @return The number of elements in the generated selection vector.
    */
-  [[nodiscard]] uint32_t AsSelectionVector(sel_t *sel_vec) const;
+  [[nodiscard]] uint32_t ToSelectionVector(sel_t *sel_vec) const;
 
   /**
    * Iterate all TIDs in this list.

@@ -31,8 +31,8 @@ BENCHMARK_DEFINE_F(VectorUtilBenchmark, BitsToSelectionIndex_Sparse)
   auto sel_vec = std::array<sel_t, kDefaultVectorSize>();
 
   for (auto _ : state) {
-    const auto size =
-        VectorUtil::BitVectorToSelectionVector_Sparse(bv.GetWords(), bv.GetNumBits(), sel_vec.data());
+    const auto size = VectorUtil::BitVectorToSelectionVector_Sparse(bv.GetWords(), bv.GetNumBits(),
+                                                                    sel_vec.data());
     benchmark::DoNotOptimize(size);
   }
 }
