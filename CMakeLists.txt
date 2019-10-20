@@ -139,6 +139,7 @@ endif (UNIX)
 # we modified the format script to take multiple args
 
 string(CONCAT FORMAT_DIRS
+        "${CMAKE_CURRENT_SOURCE_DIR}/benchmark,"
         "${CMAKE_CURRENT_SOURCE_DIR}/src,"
         "${CMAKE_CURRENT_SOURCE_DIR}/test,"
         )
