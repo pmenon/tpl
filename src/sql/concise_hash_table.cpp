@@ -6,9 +6,10 @@
 
 namespace tpl::sql {
 
-ConciseHashTable::ConciseHashTable(uint32_t probe_threshold)
+ConciseHashTable::ConciseHashTable(const uint32_t probe_threshold)
     : slot_groups_(nullptr),
       num_groups_(0),
+      slot_mask_(0),
       probe_limit_(probe_threshold),
       num_overflow_(0),
       built_(false) {}
@@ -19,13 +20,12 @@ ConciseHashTable::~ConciseHashTable() {
   }
 }
 
-void ConciseHashTable::SetSize(const uint32_t num_elems) {
+void ConciseHashTable::SetSize(const uint32_t new_size) {
   if (slot_groups_ != nullptr) {
     Memory::FreeHugeArray(slot_groups_, num_groups_);
   }
 
-  const uint64_t capacity =
-      std::max(kMinNumSlots, util::MathUtil::PowerOf2Floor(num_elems * kLoadFactor));
+  uint64_t capacity = std::max(kMinNumSlots, util::MathUtil::PowerOf2Floor(new_size * kLoadFactor));
   slot_mask_ = capacity - 1;
   num_groups_ = capacity >> kLogSlotsPerGroup;
   slot_groups_ = Memory::MallocHugeArray<SlotGroup>(num_groups_, true);

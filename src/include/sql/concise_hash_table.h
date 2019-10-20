@@ -17,50 +17,55 @@ namespace tpl::sql {
 class ConciseHashTable {
  public:
   // The maximum probe length before falling back into the overflow table
-  static constexpr const uint32_t kProbeThreshold = 1;
+  static constexpr const uint64_t kProbeThreshold = 1;
 
   // The default load factor
-  static constexpr const uint32_t kLoadFactor = 8;
+  static constexpr const uint64_t kLoadFactor = 8;
 
   // A minimum of 4K slots
-  static constexpr const uint64_t kMinNumSlots = 1u << 12;
+  static constexpr const uint64_t kMinNumSlots = 1u << 12u;
 
   // The number of CHT slots that belong to one group. This value should either
   // be 32 or 64 for (1) making computation simpler by bit-shifting and (2) to
   // ensure at most one cache-line read/write per insert/lookup.
-  static constexpr const uint32_t kLogSlotsPerGroup = 6;
-  static constexpr const uint32_t kSlotsPerGroup = 1u << kLogSlotsPerGroup;
-  static constexpr const uint32_t kGroupBitMask = kSlotsPerGroup - 1;
+  static constexpr const uint64_t kLogSlotsPerGroup = 6;
+  static constexpr const uint64_t kSlotsPerGroup = 1u << kLogSlotsPerGroup;
+  static constexpr const uint64_t kGroupBitMask = kSlotsPerGroup - 1;
+
+  // Sanity check
+  static_assert(util::MathUtil::IsPowerOf2(kMinNumSlots),
+                "Minimum slot count must be a power of 2");
 
   /**
-   * Create a new uninitialized concise hash table. Callers **must** call
-   * @em SetSize() before interacting with the table
-   * @param probe_threshold The maximum probe threshold before falling back to
-   *                        a secondary overflow entry table.
+   * Create a new uninitialized concise hash table. Callers must call @em SetSize() before
+   * inserting into the table.
+   * @param probe_threshold The maximum probe threshold before falling back to a secondary overflow
+   *                        entry table.
    */
   explicit ConciseHashTable(uint32_t probe_threshold = kProbeThreshold);
 
   /**
-   * Destructor
+   * Destructor.
    */
   ~ConciseHashTable();
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(ConciseHashTable)
 
   /**
    * Set the size of the hash table to support at least @em num_elems entries. The table will
    * optimize itself in expectation of seeing at most @em num_elems elements without resizing.
-   * @param num_elems The expected number of elements
+   * @param new_size The expected number of elements.
    */
-  void SetSize(uint32_t num_elems);
+  void SetSize(uint32_t new_size);
 
   /**
-   * Insert an element with the given hash into the table and return an encoded lot position.
-   * Note: while this function takes both the entry and hash value, the hash value inside the entry
-   * should match what's provided here.
+   * Insert an element with the given hash into the table. After insertion, the input entry's
+   * CHT slot member will be populated with the slot in this hash table it resides.
+   *
+   * @pre The hash value inside the entry must match what is contained in the hash entry.
    *
    * TODO(pmenon): Accept only the entry and use the hash value in the entry
    *
@@ -75,17 +80,17 @@ class ConciseHashTable {
   void Build();
 
   /**
-   * Prefetch the slot group for an entry with the given hash value @em hash
-   * @tparam ForRead Is the prefetch for a subsequent read operation
-   * @param hash The hash value of the entry to prefetch
+   * Prefetch the slot group for an entry with the given hash value @em hash.
+   * @tparam ForRead Is the prefetch for a subsequent read operation.
+   * @param hash The hash value of the entry to prefetch.
    */
   template <bool ForRead>
   void PrefetchSlotGroup(hash_t hash) const;
 
   /**
-   * Return the number of occupied slots in the table **before** the given slot
-   * @param slot The slot to compute the prefix count for
-   * @return The number of occupied slot before the provided input slot
+   * Return the number of occupied slots in the table **before** the given slot.
+   * @param slot The slot to compute the prefix count for.
+   * @return The number of occupied slot before the provided input slot.
    */
   uint64_t NumFilledSlotsBefore(ConciseHashTableSlot slot) const;
 
@@ -156,16 +161,20 @@ class ConciseHashTable {
 };
 
 // ---------------------------------------------------------
+//
 // Implementation below
+//
 // ---------------------------------------------------------
+
+// The below methods are inlined in the header on purpose for performance. Please do not move them.
 
 inline void ConciseHashTable::Insert(HashTableEntry *entry, const hash_t hash) {
   const uint64_t slot_idx = hash & slot_mask_;
   const uint64_t group_idx = slot_idx >> kLogSlotsPerGroup;
   const uint64_t num_bits_to_group = group_idx << kLogSlotsPerGroup;
-  uint32_t *group_bits = reinterpret_cast<uint32_t *>(&slot_groups_[group_idx].bits);
+  auto *group_bits = reinterpret_cast<uint32_t *>(&slot_groups_[group_idx].bits);
 
-  uint32_t bit_idx = static_cast<uint32_t>(slot_idx & kGroupBitMask);
+  auto bit_idx = static_cast<uint32_t>(slot_idx & kGroupBitMask);
   uint32_t max_bit_idx = std::min(63u, bit_idx + probe_limit_);
   do {
     if (!util::BitUtil::Test(group_bits, bit_idx)) {

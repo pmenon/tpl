@@ -199,7 +199,9 @@ class VectorProjectionIterator {
 };
 
 // ---------------------------------------------------------
+//
 // Implementation below
+//
 // ---------------------------------------------------------
 
 // The below methods are inlined in the header on purpose for performance. Please do not move them.
