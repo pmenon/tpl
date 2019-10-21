@@ -26,22 +26,49 @@ struct PassArgument {
 
 }  // namespace detail
 
+/**
+ * Utility class to register and store diagnostic error messages generated during parsing and
+ * semantic analysis.
+ */
 class ErrorReporter {
  public:
-  explicit ErrorReporter(util::Region *region) : region_(region), errors_(region) {}
+  /**
+   * Create a new error reporter.
+   */
+  explicit ErrorReporter() : region_("error-strings"), errors_(&region_) {}
 
-  // Record an error
+  /**
+   * This class cannot be copied or moved.
+   */
+  DISALLOW_COPY_AND_MOVE(ErrorReporter);
+
+  /**
+   * Report an error.
+   * @tparam ArgTypes Types of all arguments.
+   * @param pos The position in the source file the error occurs.
+   * @param message The error message.
+   * @param args The arguments.
+   */
   template <typename... ArgTypes>
   void Report(const SourcePosition &pos, const ErrorMessage<ArgTypes...> &message,
               typename detail::PassArgument<ArgTypes>::type... args) {
-    errors_.emplace_back(region_, pos, message, std::forward<ArgTypes>(args)...);
+    errors_.emplace_back(&region_, pos, message, std::forward<ArgTypes>(args)...);
   }
 
-  // Have any errors been reported?
+  /**
+   * @return True if any errors have been reported; false otherwise.
+   */
   bool HasErrors() const { return !errors_.empty(); }
 
+  /**
+   * Reset this error reporter to as if just after construction. This clears all pending error
+   * messages.
+   */
   void Reset() { errors_.clear(); }
 
+  /**
+   * Dump all error messages.
+   */
   void PrintErrors();
 
  private:
@@ -112,7 +139,10 @@ class ErrorReporter {
   };
 
  private:
-  util::Region *region_;
+  // Memory region
+  util::Region region_;
+
+  // List of all errors
   util::RegionVector<MessageWithArgs> errors_;
 };
 

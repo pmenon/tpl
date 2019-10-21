@@ -11,16 +11,15 @@ namespace tpl::ast {
 
 class TypeTest : public TplTest {
  public:
-  TypeTest() : region_("ast_test"), errors_(&region_), ctx_(&region_, &errors_) {}
-
-  util::Region *region() { return &region_; }
+  TypeTest() : errors_(), ctx_(&errors_) {}
 
   ast::Context *ctx() { return &ctx_; }
+
+  util::Region *region() { return ctx()->region(); }
 
   ast::Identifier Name(const std::string &s) { return ctx()->GetIdentifier(s); }
 
  private:
-  util::Region region_;
   sema::ErrorReporter errors_;
   ast::Context ctx_;
 };

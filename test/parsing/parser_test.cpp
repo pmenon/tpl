@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-#include "ast/ast_dump.h"
 #include "parsing/parser.h"
 #include "parsing/scanner.h"
 #include "util/test_harness.h"
@@ -14,13 +13,12 @@ namespace tpl::parsing {
 
 class ParserTest : public TplTest {
  public:
-  ParserTest() : region_("test"), reporter_(&region_), ctx_(&region_, &reporter_) {}
+  ParserTest() : reporter_(), ctx_(&reporter_) {}
 
   ast::Context *context() { return &ctx_; }
   sema::ErrorReporter *reporter() { return &reporter_; }
 
  private:
-  util::Region region_;
   sema::ErrorReporter reporter_;
   ast::Context ctx_;
 };

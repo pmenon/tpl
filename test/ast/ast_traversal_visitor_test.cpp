@@ -12,27 +12,20 @@ namespace tpl::ast {
 
 class AstTraversalVisitorTest : public TplTest {
  public:
-  AstTraversalVisitorTest() : region_("ast_test"), pos_() {}
-
-  util::Region *region() { return &region_; }
-
-  const SourcePosition &empty_pos() const { return pos_; }
+  AstTraversalVisitorTest() : error_reporter_(), context_(&error_reporter_) {}
 
   AstNode *GenerateAst(const std::string &src) {
-    sema::ErrorReporter error(region());
-    ast::Context ctx(region(), &error);
-
     parsing::Scanner scanner(src);
-    parsing::Parser parser(&scanner, &ctx);
+    parsing::Parser parser(&scanner, Ctx());
 
-    if (error.HasErrors()) {
-      error.PrintErrors();
+    if (ErrorReporter()->HasErrors()) {
+      ErrorReporter()->PrintErrors();
       return nullptr;
     }
 
     auto *root = parser.Parse();
 
-    sema::Sema sema(&ctx);
+    sema::Sema sema(Ctx());
     auto check = sema.Run(root);
 
     EXPECT_FALSE(check);
@@ -41,8 +34,13 @@ class AstTraversalVisitorTest : public TplTest {
   }
 
  private:
-  util::Region region_;
-  SourcePosition pos_;
+  sema::ErrorReporter *ErrorReporter() { return &error_reporter_; }
+
+  ast::Context *Ctx() { return &context_; }
+
+ private:
+  sema::ErrorReporter error_reporter_;
+  ast::Context context_;
 };
 
 namespace {

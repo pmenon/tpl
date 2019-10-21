@@ -16,7 +16,7 @@ namespace tpl::vm {
 
 class ModuleCompiler {
  public:
-  ModuleCompiler() : region_("temp"), errors_(&region_), ctx_(&region_, &errors_) {}
+  ModuleCompiler() : errors_(), ctx_(&errors_) {}
 
   ast::AstNode *CompileToAst(const std::string &source) {
     parsing::Scanner scanner(source);
@@ -47,7 +47,6 @@ class ModuleCompiler {
   void ClearErrors() { errors_.Reset(); }
 
  private:
-  util::Region region_;
   sema::ErrorReporter errors_;
   ast::Context ctx_;
 };

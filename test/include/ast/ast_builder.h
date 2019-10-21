@@ -13,7 +13,7 @@ namespace tpl::ast {
 
 class TestAstBuilder {
  public:
-  TestAstBuilder() : region_("test"), error_reporter_(&region_), ctx_(&region_, &error_reporter_) {}
+  TestAstBuilder() : error_reporter_(), ctx_(&error_reporter_) {}
 
   Context *ctx() { return &ctx_; }
   sema::ErrorReporter *error_reporter() { return &error_reporter_; }
@@ -62,7 +62,7 @@ class TestAstBuilder {
   Stmt *DeclStmt(Decl *decl) { return node_factory()->NewDeclStmt(decl); }
 
   Stmt *Block(std::initializer_list<Stmt *> stmts) {
-    util::RegionVector<Stmt *> region_stmts(stmts.begin(), stmts.end(), &region_);
+    util::RegionVector<Stmt *> region_stmts(stmts.begin(), stmts.end(), ctx()->region());
     return node_factory()->NewBlockStmt(empty_, empty_, std::move(region_stmts));
   }
 
@@ -90,7 +90,7 @@ class TestAstBuilder {
   template <Builtin BUILTIN, typename... Args>
   CallExpr *Call(Args... args) {
     auto fn = IdentExpr(Builtins::GetFunctionName(BUILTIN));
-    auto call_args = util::RegionVector<Expr *>({std::forward<Args>(args)...}, &region_);
+    auto call_args = util::RegionVector<Expr *>({std::forward<Args>(args)...}, ctx()->region());
     return node_factory()->NewBuiltinCallExpr(fn, std::move(call_args));
   }
 
@@ -98,7 +98,6 @@ class TestAstBuilder {
   AstNodeFactory *node_factory() { return ctx()->node_factory(); }
 
  private:
-  util::Region region_;
   sema::ErrorReporter error_reporter_;
   Context ctx_;
   SourcePosition empty_{0, 0};
