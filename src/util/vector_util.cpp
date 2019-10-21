@@ -211,8 +211,8 @@ uint32_t VectorUtil::BitVectorToSelectionVector_Sparse(const uint64_t *bit_vecto
   return k;
 }
 
-uint32_t VectorUtil::BitVectorToSelectionVector_Dense(const uint64_t *bit_vector, uint32_t num_bits,
-                                                      sel_t *sel_vector) {
+uint32_t VectorUtil::BitVectorToSelectionVector_Dense_AVX2(const uint64_t *bit_vector,
+                                                           uint32_t num_bits, sel_t *sel_vector) {
   // Vector of '8's = [8,8,8,8,8,8,8]
   const auto eight = _mm_set1_epi16(8);
 
@@ -239,6 +239,49 @@ uint32_t VectorUtil::BitVectorToSelectionVector_Dense(const uint64_t *bit_vector
   }
 
   return k;
+}
+
+#if __AVX512VBMI2__
+uint32_t VectorUtil::BitVectorToSelectionVector_Dense_AVX512(const uint64_t *bit_vector,
+                                                             uint32_t num_bits, sel_t *sel_vector) {
+  const __m512i _32 = _mm512_set1_epi16(32);
+  __m512i indexes = _mm512_set_epi16(31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16,
+                                     15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+
+  uint32_t k = 0;
+
+  const uint32_t num_words = MathUtil::DivRoundUp(num_bits, 64);
+  for (uint32_t i = 0; i < num_words; i++) {
+    uint64_t word = bit_vector[i];
+
+    // First word
+    auto mask = _cvtu32_mask32(static_cast<uint32_t>(word));
+    _mm512_mask_compressstoreu_epi16(sel_vector + k, mask, indexes);
+
+    // Bump indexes
+    _mm512_add_epi16(indexes, _32);
+    k += BitUtil::CountPopulation(mask);
+
+    // Second word
+    mask = _cvtu32_mask32(static_cast<uint32_t>(word >> 32u));
+    _mm512_mask_compressstoreu_epi16(sel_vector + k, mask, indexes);
+
+    // Bump indexes again
+    _mm512_add_epi16(indexes, _32);
+    k += BitUtil::CountPopulation(mask);
+  }
+
+  return k;
+}
+#endif
+
+uint32_t VectorUtil::BitVectorToSelectionVector_Dense(const uint64_t *bit_vector, uint32_t num_bits,
+                                                      sel_t *sel_vector) {
+#if __AVX512VBMI2__
+  return BitVectorToSelectionVector_Dense_AVX512(bit_vector, num_bits, sel_vector);
+#else
+  return BitVectorToSelectionVector_Dense_AVX2(bit_vector, num_bits, sel_vector);
+#endif
 }
 
 uint32_t VectorUtil::BitVectorToSelectionVector(const uint64_t *bit_vector, const uint32_t num_bits,

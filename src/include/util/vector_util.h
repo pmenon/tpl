@@ -157,6 +157,14 @@ class VectorUtil : public AllStatic {
   FRIEND_TEST(VectorUtilTest, DiffSelectedWithScratchPad);
   FRIEND_TEST(VectorUtilTest, PerfIntersectSelected);
 
+  [[nodiscard]] static uint32_t BitVectorToSelectionVector_Dense_AVX2(const uint64_t *bit_vector,
+                                                                      uint32_t num_bits,
+                                                                      sel_t *sel_vector);
+
+  [[nodiscard]] static uint32_t BitVectorToSelectionVector_Dense_AVX512(const uint64_t *bit_vector,
+                                                                        uint32_t num_bits,
+                                                                        sel_t *sel_vector);
+
   // A sorted-set difference implementation using purely scalar operations
   [[nodiscard]] static uint32_t DiffSelected_Scalar(uint32_t n, const sel_t *sel_vector, uint32_t m,
                                                     sel_t *out_sel_vector);
