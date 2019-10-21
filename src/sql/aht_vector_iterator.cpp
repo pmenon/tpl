@@ -36,7 +36,7 @@ void AHTVectorIterator::BuildVectorProjection(const AHTVectorIterator::Transpose
 
   // Update the vector projection with the new batch size.
   vector_projection_->Resize(size);
-  vector_projection_iterator_->SetVectorProjection(vector_projection_.get());
+  vector_projection_iterator_->Reset(vector_projection_.get());
 
   // If there isn't data, exit.
   if (size == 0) {

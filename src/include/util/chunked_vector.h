@@ -12,38 +12,35 @@
 namespace tpl::util {
 
 /**
- * A ChunkedVector is similar to STL's std::vector, but with three important
- * distinctions: ChunkedVectors are untyped and are not templated;
- * ChunkedVectors do not guarantee physical contiguity of all elements, though
- * the majority of elements are stored contiguously; ChunkedVectors ensures
- * that pointers into the container are not invalidated through insertions.
+ * A ChunkedVector is similar to STL's std::vector, but with three important distinctions:
+ * ChunkedVectors are untyped and are not templated; ChunkedVectors do not guarantee physical
+ * contiguity of all elements, though the majority of elements are stored contiguously;
+ * ChunkedVectors ensures that pointers into the container are not invalidated through insertions.
  *
- * ChunkedVectors are composed of a list of fixed-sized memory chunks and one
- * active chunk. Elements \a within a chunk are stored contiguously, and new
- * elements are inserted into the active chunk (i.e., the most recently
- * allocated chunk and the last chunk in the list of chunks). Appending new
- * elements is an amortized constant O(1) time operation; random access lookups
- * are also constant O(1) time operations. Iteration performance is comparable
- * to std::vector since the majority of elements are contiguous.
+ * ChunkedVectors are composed of a list of fixed-sized memory chunks and one active chunk. Elements
+ * <b>within</b> a chunk are stored contiguously, and new elements are inserted into the active
+ * chunk (i.e., the most recently allocated chunk and the last chunk in the list of chunks).
+ * Appending new elements is an amortized constant O(1) time operation; random access lookups are
+ * also constant O(1) time operations. Iteration performance is comparable to std::vector since the
+ * majority of elements are contiguous.
  *
- * This class is useful (and usually faster) when you don't need to rely on
- * contiguity of elements, or when you do not know the number of insertions
- * into the vector apriori. In fact, when the number of insertions is unknown,
- * a chunked vector will be roughly 2x faster than a std::vector.
+ * This class is useful (and usually faster) when you don't need to rely on contiguity of elements,
+ * or when you do not know the number of insertions into the vector apriori. In fact, when the
+ * number of insertions is unknown, a chunked vector will be roughly 2x faster than a std::vector.
  */
 template <typename Alloc = std::allocator<byte>>
 class ChunkedVector {
  public:
-  // clang-format off
-  // We store 256 elements in each chunk of the vector
+  // As deafult, we store 256 elements in each chunk of the vector
   static constexpr const uint32_t kLogNumElementsPerChunk = 8;
   static constexpr const uint32_t kNumElementsPerChunk = (1u << kLogNumElementsPerChunk);
   static constexpr const uint32_t kChunkPositionMask = kNumElementsPerChunk - 1;
-  // clang-format on
 
   /**
-   * Construct a chunked vector whose elements have size @em element_size in
-   * bytes using the provided allocator.
+   * Construct a chunked vector whose elements have size @em element_size in bytes using the
+   * provided allocator.
+   * @param element_size The size of each vector element.
+   * @param allocator The allocator to use for all chunk allocations.
    */
   explicit ChunkedVector(std::size_t element_size, Alloc allocator = {}) noexcept
       : allocator_(allocator),
@@ -201,13 +198,13 @@ class ChunkedVector {
     }
 
     // Pre-increment
-    // NOTE: This is not implemented in terms of += to optimize for the cases
-    // when the offset is known.
+    // NOTE: This is not implemented in terms of operator+=() to optimize for the cases when the
+    //       offset is known.
     Iterator &operator++() noexcept {
       const int64_t chunk_size = ChunkAllocSize(element_size_);
       const int64_t byte_offset = static_cast<int64_t>(element_size_) + (curr_ - *chunks_iter_);
-      // NOTE: an explicit if statement is a bit faster despite the possibility
-      // of branch misprediction.
+      // NOTE: an explicit if statement is a bit faster despite the possibility of branch
+      //       misprediction.
       if (byte_offset >= chunk_size) {
         ++chunks_iter_;
         curr_ = *chunks_iter_ + (byte_offset - chunk_size);
@@ -225,13 +222,13 @@ class ChunkedVector {
     }
 
     // Pre-decrement
-    // NOTE: This is not implemented in terms of += to optimize for the cases
-    // when the offset is known.
+    // NOTE: This is not implemented in terms of operator-=() to optimize for the cases when the
+    //       offset is known.
     Iterator &operator--() noexcept {
       const int64_t chunk_size = ChunkAllocSize(element_size_);
       const int64_t byte_offset = -static_cast<int64_t>(element_size_) + (curr_ - *chunks_iter_);
-      // NOTE: an explicit if statement is a bit faster despite the possibility
-      // of branch misprediction.
+      // NOTE: an explicit if statement is a bit faster despite the possibility of branch
+      //       misprediction.
       if (byte_offset < 0) {
         --chunks_iter_;
         curr_ = *chunks_iter_ + byte_offset + chunk_size;
@@ -385,8 +382,10 @@ class ChunkedVector {
   // -------------------------------------------------------
 
   /**
-   * Append a new entry at the end of the vector, returning a contiguous memory
-   * space where the element can be written to by the caller.
+   * Append a new entry at the end of the vector, returning a contiguous memory space where the
+   * element can be written to by the caller.
+   *
+   * @return A pointer to the memory for the element.
    */
   byte *append() noexcept {
     if (position_ == end_) {
@@ -424,6 +423,17 @@ class ChunkedVector {
 
     position_ -= element_size();
     num_elements_--;
+  }
+
+  void clear() {
+    active_chunk_idx_ = 0;
+    if (!chunks_.empty()) {
+      position_ = chunks_[0];
+      end_ = position_ + ChunkAllocSize(element_size());
+    } else {
+      position_ = end_ = nullptr;
+    }
+    num_elements_ = 0;
   }
 
   // -------------------------------------------------------
@@ -508,6 +518,32 @@ class ChunkedVectorT {
    */
   explicit ChunkedVectorT(Alloc allocator = {}) noexcept
       : vec_(sizeof(T), ReboundAlloc(allocator)) {}
+
+  /**
+   * Move constructor.
+   * @param that The vector to move into this instance.
+   */
+  ChunkedVectorT(ChunkedVectorT &&that) noexcept : vec_(std::move(that.vec_)) {}
+
+  /**
+   * Copy not supported yet.
+   */
+  DISALLOW_COPY(ChunkedVectorT);
+
+  /**
+   * Destructor.
+   */
+  ~ChunkedVectorT() { std::destroy(begin(), end()); }
+
+  /**
+   * Move assignment.
+   * @param that The vector to move into this.
+   * @return This vector instance.
+   */
+  ChunkedVectorT &operator=(ChunkedVectorT &&that) noexcept {
+    std::swap(vec_, that.vec_);
+    return *this;
+  }
 
   /**
    * Iterator over a typed chunked vector
@@ -595,40 +631,46 @@ class ChunkedVectorT {
   // -------------------------------------------------------
 
   /**
-   * Return a read-write reference to the element at index @em idx, skipping any
-   * bounds check.
+   * Return a read-write reference to the element at index @em idx, skipping any bounds check.
    */
   T &operator[](std::size_t idx) noexcept { return *reinterpret_cast<T *>(vec_[idx]); }
 
   /**
-   * Return a read-only reference to the element at index @em idx, skipping any
-   * bounds check.
+   * Return a read-only reference to the element at index @em idx, skipping any bounds check.
    */
   const T &operator[](std::size_t idx) const noexcept { return *reinterpret_cast<T *>(vec_[idx]); }
 
   /**
-   * Return a read-write reference to the first element in this vector. Has
-   * undefined behavior when accessing an empty vector.
+   * Return a read-write reference to the first element in this vector. Has undefined behavior when
+   * accessing an empty vector.
    */
   T &front() noexcept { return *reinterpret_cast<T *>(vec_.front()); }
 
   /**
-   * Return a read-only reference to the first element in this vector. Has
-   * undefined behavior when accessing an empty vector.
+   * Return a read-only reference to the first element in this vector. Has undefined behavior when
+   * accessing an empty vector.
    */
   const T &front() const noexcept { return *reinterpret_cast<const T *>(vec_.front()); }
 
   /**
-   * Return a read-write reference to the last element in the vector. Has
-   * undefined behavior when accessing an empty vector.
+   * Return a read-write reference to the last element in the vector. Has undefined behavior when
+   * accessing an empty vector.
    */
   T &back() noexcept { return *reinterpret_cast<T *>(vec_.back()); }
 
   /**
-   * Return a read-only reference to the last element in the vector. Has
-   * undefined behavior when accessing an empty vector.
+   * Return a read-only reference to the last element in the vector. Has undefined behavior when
+   * accessing an empty vector.
    */
   const T &back() const noexcept { return *reinterpret_cast<const T *>(vec_.back()); }
+
+  /**
+   * Clear all elements from the vector.
+   */
+  void clear() {
+    std::destroy(begin(), end());
+    vec_.clear();
+  }
 
   // -------------------------------------------------------
   // Size/Capacity
@@ -649,8 +691,7 @@ class ChunkedVectorT {
   // -------------------------------------------------------
 
   /**
-   * In-place construct an element using arguments @em args and append to the
-   * end of the vector.
+   * In-place construct an element using arguments @em args and append to the end of the vector.
    */
   template <class... Args>
   void emplace_back(Args &&... args) {
@@ -681,7 +722,7 @@ class ChunkedVectorT {
     TPL_ASSERT(!empty(), "Popping from an empty vector");
     T &removed = back();
     vec_.pop_back();
-    removed.~T();
+    std::destroy_at(&removed);
   }
 
  private:

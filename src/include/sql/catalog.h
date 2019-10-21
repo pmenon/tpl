@@ -20,6 +20,9 @@ enum class TableId : uint16_t {
 #define ENTRY(Id, ...) Id,
   TABLES(ENTRY)
 #undef ENTRY
+#define COUNT_OP(inst, ...) +1
+      Last = TABLES(COUNT_OP)
+#undef COUNT_OP
 };
 
 /**
@@ -64,7 +67,19 @@ class Catalog {
    * @param table_id The ID of the target table
    * @return A pointer to the table, or NULL if the table doesn't exist.
    */
-  Table *LookupTableById(TableId table_id) const;
+  Table *LookupTableById(uint16_t table_id) const;
+
+  /**
+   * Allocate a table ID
+   */
+  uint16_t AllocateTableId() { return next_table_id_++; }
+
+  /**
+   * Insert the table into the catalog.
+   * @param table_name
+   * @param table
+   */
+  void InsertTable(const std::string &table_name, std::unique_ptr<Table> &&table);
 
  private:
   /**
@@ -74,7 +89,9 @@ class Catalog {
   Catalog();
 
  private:
-  std::unordered_map<TableId, std::unique_ptr<Table>> table_catalog_;
+  std::unordered_map<uint16_t, std::unique_ptr<Table>> table_catalog_;
+  std::unordered_map<std::string, uint16_t> table_name_to_id_map_;
+  uint16_t next_table_id_;
 };
 
 }  // namespace tpl::sql

@@ -5,7 +5,7 @@
 namespace tpl {
 
 Exception::Exception(ExceptionType exception_type, const std::string &message)
-    : std::exception(), type_(exception_type) {
+    : type_(exception_type) {
   exception_message_ = ExceptionTypeToString(type_) + ": " + message;
 }
 

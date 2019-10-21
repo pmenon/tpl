@@ -19,13 +19,14 @@ namespace tpl::sql {
  * its data, or <b>reference</b> data owned by some other entity, e.g., base table column data, data
  * within another vector, or a constant value.
  *
- * All vectors have a maximum capacity determined by the global constant ::tpl::kDefaultVectorSize
- * usually set to 2048 elements. Vectors also have a <b>size</b> (see Vector::num_elements()) that
- * reflects the number of elements <b>currently</b> in the vector. A vector's size can fluctuate
- * through its life, but will always be less than its capacity. Finally, a vector has an
- * <b>active count</b> (see Vector::count()) that represents the number of externally visible
- * elements. Elements may become inactive if they have been filtered out through predicates. The
- * visibility of elements in the vector is controlled through a <b>selection vector</b>
+ * All vectors have a maximum capacity (see Vector::GetCapacity()) determined by the global constant
+ * ::tpl::kDefaultVectorSize usually set to 2048 elements. Vectors also have a <b>size</b> (see
+ * Vector::GetSize()) that reflects the number of physically contiguous elements <b>currently</b> in
+ * the vector. A vector's size can fluctuate through its life, but will always be less than its
+ * capacity. Finally, a vector has an <b>active count</b> (see Vector::GetCount()) that represents
+ * the number of externally visible elements. Elements may become inactive if they have been
+ * filtered out through predicates. The visibility of elements in the vector is controlled through
+ * a <b>selection vector</b>.
  *
  * A selection vector is an array containing the indexes of the <i>active</i> vector elements. When
  * a selection vector is available, it must be used to access the vector's data since the vector may
@@ -37,7 +38,7 @@ namespace tpl::sql {
  * Vector vec ...
  * sel_t *sel_vec = vec.selection_vector();
  * uint64_t x = 0;
- * for (uint64_t i = 0; i < vec.count(); i++) {
+ * for (uint64_t i = 0; i < vec.GetCount(); i++) {
  *   x += vec.data()[sel_vec[i]];
  * }
  * @endcode
@@ -95,7 +96,6 @@ class Vector {
 
  public:
   using NullMask = util::BitVector<uint64_t>;
-  using StringHeap = util::StringHeap;
 
   /**
    * Create an empty vector.
@@ -132,45 +132,59 @@ class Vector {
   ~Vector();
 
   /**
-   * What is the type of the elements contained in this vector?
+   * @return The type of the elements contained in this vector.
    */
-  TypeId type_id() const { return type_; }
+  TypeId GetTypeId() const noexcept { return type_; }
 
   /**
-   * Return the number of active (i.e., externally visible) elements in the vector. The count must
-   * be <= the size of the vector, since some elements may have been filtered out by the selection
-   * vector, if one exists.
+   * @return The number of active, i.e., externally visible, elements in the vector. Active elements
+   *         are those that have survived any filters in the selection vector. The count of a vector
+   *         is guaranteed to be <= the size of the vector.
    */
-  uint64_t count() const { return count_; }
+  uint64_t GetCount() const noexcept { return count_; }
 
   /**
-   * Return the total number of tuples currently in the vector, including those that may have been
-   * filtered out by the selection vector, if one exists. The size of the vector must be >= count.
+   * @return The total number of tuples currently in the vector, including those that may have been
+   *         filtered out by the selection vector, if one exists. The size of a vector is always
+   *         greater than or equal to the selected count.
    */
-  uint64_t num_elements() const { return num_elems_; }
+  uint64_t GetSize() const noexcept { return num_elems_; }
 
   /**
-   * Return the raw data pointer.
+   * @return The maximum capacity of this vector.
    */
-  byte *data() const { return data_; }
+  uint64_t GetCapacity() const noexcept { return kDefaultVectorSize; }
 
   /**
-   * Return the selection vector, NULL if there isn't one.
+   * @return The raw untyped data pointer.
    */
-  sel_t *selection_vector() const { return sel_vector_; }
+  byte *GetData() const noexcept { return data_; }
 
   /**
-   * Return the NULL bitmask of elements in this vector.
+   * @return The selection vector; NULL if there isn't one.
    */
-  const NullMask &null_mask() const { return null_mask_; }
+  sel_t *GetSelectionVector() const noexcept { return sel_vector_; }
 
   /**
-   * Return a mutable instance of the NULL bitmask in this vector.
+   * @return An immutable view of this vector's NULL bitmask. This bitmask positionally indicates
+   *         which elements in the vector are considered NULL.
    */
-  NullMask *mutable_null_mask() { return &null_mask_; }
+  const NullMask &GetNullMask() const noexcept { return null_mask_; }
+
+  /**
+   * @return A mutable pointer to this vector's NULL bitmask.
+   */
+  NullMask *GetMutableNullMask() noexcept { return &null_mask_; }
+
+  /**
+   * @return A mutable pointer to this vector's string heap.
+   */
+  VarlenHeap *GetMutableStringHeap() noexcept { return &varlens_; }
 
   /**
    * Set the selection vector.
+   * @param sel_vector The selection vector.
+   * @param count The number of elements in the selection vector.
    */
   void SetSelectionVector(sel_t *const sel_vector, const uint64_t count) {
     TPL_ASSERT(count <= num_elems_, "Selection vector count cannot exceed vector size");
@@ -179,24 +193,25 @@ class Vector {
   }
 
   /**
-   * Is this vector holding a single constant value?
+   * @return True if this vector is holding a single constant value; false otherwise.
    */
   bool IsConstant() const noexcept { return num_elems_ == 1 && sel_vector_ == nullptr; }
 
   /**
-   * Is this vector empty?
+   * @return True if thsi vector is empty; false otherwise.
    */
   bool IsEmpty() const noexcept { return num_elems_ == 0; }
 
   /**
-   * Compute the selectivity, i.e., the fraction of tuples that are externally visible.
+   * @return The computed selectivity of this vector, i.e., the fraction of tuples that are
+   *         externally visible.
    */
   float ComputeSelectivity() const noexcept {
     return IsEmpty() ? 0 : static_cast<float>(count_) / num_elems_;
   }
 
   /**
-   * Is the value at position @em index NULL?
+   * @return True if the value at index @em index is NULL; false otherwise.
    */
   bool IsNull(const uint64_t index) const {
     return null_mask_[sel_vector_ != nullptr ? sel_vector_[index] : index];
@@ -244,11 +259,13 @@ class Vector {
   /**
    * Cast this vector to a different type. If the target type is the same as the current type,
    * nothing is done.
+   * @param new_type The type to cast this vector into.
    */
   void Cast(TypeId new_type);
 
   /**
    * Append the contents of the provided vector @em other into this vector.
+   * @param other The vector whose contents will be copied and appended to the end of this vector.
    */
   void Append(const Vector &other);
 
@@ -295,6 +312,7 @@ class Vector {
 
   /**
    * Print a string representation of this vector to the output stream.
+   * @param The output stream.
    */
   void Dump(std::ostream &stream) const;
 
@@ -313,18 +331,25 @@ class Vector {
  private:
   // The type of the elements stored in the vector
   TypeId type_;
+
   // The number of elements in the vector
   uint64_t count_;
+
   // The number of physically contiguous elements in the vector
   uint64_t num_elems_;
+
   // A pointer to the data.
   byte *data_;
+
   // The selection vector of the vector
   sel_t *sel_vector_;
+
   // The null mask used to indicate if an element in the vector is NULL
   NullMask null_mask_;
-  // String container
-  StringHeap strings_;
+
+  // Heap container for strings owned by this vector
+  VarlenHeap varlens_;
+
   // If the vector holds allocated data, this field manages it
   std::unique_ptr<byte[]> owned_data_;
 };

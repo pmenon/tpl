@@ -6,10 +6,15 @@
 #include <utility>
 #include <vector>
 
-#include "ast/ast.h"
 #include "ast/ast_visitor.h"
 #include "ast/builtins.h"
 #include "vm/bytecode_emitter.h"
+
+namespace tpl::ast {
+class Context;
+class FunctionType;
+class Type;
+}  // namespace tpl::ast
 
 namespace tpl::vm {
 
@@ -17,15 +22,18 @@ class BytecodeModule;
 class LoopBuilder;
 
 /**
- * This class is responsible for generating and compiling a parsed and
- * type-checked TPL program (as an AST) into TPL bytecode (TBC) as a
- * BytecodeModule. Once compiled, all functions defined in the module are
- * fully executable. BytecodeGenerator exposes a single public static function
- * @em Compile() that performs the heavy lifting and orchestration involved in
- * the compilation process.
+ * BytecodeGenerator is responsible for converting a parsed TPL AST into TPL bytecode (TBC). It is
+ * assumed that the input TPL program has been type-checked. Once compiled into a TBC unit, all
+ * defined functions are fully executable.
+ *
+ * BytecodeGenerator exposes a single public static function BytecodeGenerator::Compile() that
+ * performs the heavy lifting and orchestration involved in the compilation process.
  */
-class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
+class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
  public:
+  /**
+   * This class cannot be copied or moved.
+   */
   DISALLOW_COPY_AND_MOVE(BytecodeGenerator);
 
   // Declare all node visit methods here
@@ -33,6 +41,17 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   AST_NODES(DECLARE_VISIT_METHOD)
 #undef DECLARE_VISIT_METHOD
 
+  /**
+   * @return The emitter used by this generator to write bytecode.
+   */
+  BytecodeEmitter *GetEmitter() { return &emitter_; }
+
+  /**
+   * Convert a parse and type-checked TPL AST into a TBC unit.
+   * @param root The root of the AST.
+   * @param name The (optional) name of the program.
+   * @return A compiled TBC unit.
+   */
   static std::unique_ptr<BytecodeModule> Compile(ast::AstNode *root, const std::string &name);
 
  private:
@@ -50,6 +69,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   // Dispatched from VisitBuiltinCallExpr() to handle the various builtin
   // functions, including filtering, hash table interaction, sorting etc.
   void VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin);
+  void VisitSqlStringLikeCall(ast::CallExpr *call);
   void VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinTableIterParallelCall(ast::CallExpr *call);
   void VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin);
@@ -64,6 +84,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   void VisitBuiltinHashTableEntryIteratorCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinSorterCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin);
+  void VisitResultBufferCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitExecutionContextCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinSizeOfCall(ast::CallExpr *call);
@@ -73,8 +94,8 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   void VisitBuiltinCallExpr(ast::CallExpr *call);
   void VisitRegularCallExpr(ast::CallExpr *call);
 
-  // Dispatched from VisitBinaryOpExpr() for handling logical boolean
-  // expressions and arithmetic expressions
+  // Dispatched from VisitBinaryOpExpr() for handling logical boolean expressions and arithmetic
+  // expressions
   void VisitLogicalAndOrExpr(ast::BinaryOpExpr *node);
   void VisitArithmeticExpr(ast::BinaryOpExpr *node);
 
@@ -88,20 +109,18 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   void VisitArithmeticUnaryExpr(ast::UnaryOpExpr *op);
   void VisitLogicalNotExpr(ast::UnaryOpExpr *op);
 
-  // Dispatched from VisitIndexExpr() to distinguish between array and map
-  // access.
+  // Dispatched from VisitIndexExpr() to distinguish between array and map access
   void VisitArrayIndexExpr(ast::IndexExpr *node);
   void VisitMapIndexExpr(ast::IndexExpr *node);
 
   // Visit an expression for its L-Value
   LocalVar VisitExpressionForLValue(ast::Expr *expr);
 
-  // Visit an expression for its R-Value and return the local variable holding
-  // its result
+  // Visit an expression for its R-Value and return the local variable holding its result
   LocalVar VisitExpressionForRValue(ast::Expr *expr);
 
-  // Visit an expression for its R-Value providing a destination variable where
-  // the result should be stored
+  // Visit an expression for its R-Value, providing a destination variable where the result should
+  // be stored
   void VisitExpressionForRValue(ast::Expr *expr, LocalVar dest);
 
   enum class TestFallthrough : uint8_t { None, Then, Else };
@@ -122,28 +141,36 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
 
   Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type);
 
- public:
-  BytecodeEmitter *emitter() { return &emitter_; }
-
- private:
   // Lookup a function's ID by its name
   FunctionId LookupFuncIdByName(const std::string &name) const;
 
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
+  // Create a new static
+  LocalVar NewStatic(const std::string &name, ast::Type *type, const void *contents);
 
-  ExpressionResultScope *execution_result() { return execution_result_; }
+  // Create a new static string
+  LocalVar NewStaticString(ast::Context *ctx, ast::Identifier string);
 
-  void set_execution_result(ExpressionResultScope *execution_result) {
-    execution_result_ = execution_result;
-  }
+  // Access the current execution result scope
+  ExpressionResultScope *GetExecutionResult() { return execution_result_; }
 
-  FunctionInfo *current_function() { return &functions_.back(); }
+  // Set the current execution result scope. We lose any previous scope, so it's the caller's
+  // responsibility to restore it, if any.
+  void SetExecutionResult(ExpressionResultScope *exec_result) { execution_result_ = exec_result; }
+
+  // Access the current function that's being generated. May be NULL.
+  FunctionInfo *GetCurrentFunction() { return &functions_.back(); }
 
  private:
+  // The data section of the module
+  std::vector<uint8_t> data_;
+
   // The bytecode generated during compilation
-  std::vector<uint8_t> bytecode_;
+  std::vector<uint8_t> code_;
+
+  // Constants stored in the data section
+  std::vector<LocalInfo> static_locals_;
+  std::unordered_map<std::string, uint32_t> static_locals_versions_;
+  std::unordered_map<ast::Identifier, LocalVar> static_string_cache_;
 
   // Information about all generated functions
   std::vector<FunctionInfo> functions_;
@@ -151,7 +178,7 @@ class BytecodeGenerator : public ast::AstVisitor<BytecodeGenerator> {
   // Cache of function names to IDs for faster lookup
   std::unordered_map<std::string, FunctionId> func_map_;
 
-  // Emitter to write bytecode ops
+  // Emitter to write bytecode into the code section
   BytecodeEmitter emitter_;
 
   // RAII struct to capture semantics of expression evaluation

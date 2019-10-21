@@ -4,166 +4,81 @@
 #include <cstring>
 
 #include "common/common.h"
+#include "sql/runtime_types.h"
 
 namespace tpl::sql {
 
+template <typename>
 struct Equal;
+template <typename>
 struct GreaterThan;
+template <typename>
 struct GreaterThanEqual;
+template <typename>
 struct LessThan;
+template <typename>
 struct LessThanEqual;
+template <typename>
 struct NotEqual;
-
-/**
- * Compare two strings. Returns
- * < 0 if s1 < s2
- * 0 if s1 == s2
- * > 0 if s1 > s2
- *
- * @param v1 The first string.
- * @param v2 The second string.
- * @return The appropriate signed value indicating comparison order.
- */
-inline int32_t CompareStrings(const char *str1, const std::size_t len1, const char *str2,
-                              const std::size_t len2) {
-  const auto min_len = std::min(len1, len2);
-  const auto result = (min_len == 0) ? 0 : std::memcmp(str1, str2, min_len);
-  if (result != 0) {
-    return result;
-  }
-  return len1 - len2;
-}
 
 /**
  * Equality operator.
  */
+template <typename T>
 struct Equal {
-  using SymmetricOp = Equal;
+  using SymmetricOp = Equal<T>;
 
-  template <typename T>
-  static bool Apply(T left, T right) {
-    return left == right;
-  }
-
-  static bool Apply(const char *str1, const std::size_t len1, const char *str2,
-                    const std::size_t len2) {
-    return CompareStrings(str1, len1, str2, len2) == 0;
-  }
+  static bool Apply(T left, T right) { return left == right; }
 };
-
-template <>
-inline bool Equal::Apply(const char *left, const char *right) {
-  return std::strcmp(left, right) == 0;
-}
 
 /**
  * Greater-than operator.
  */
+template <typename T>
 struct GreaterThan {
-  using SymmetricOp = LessThan;
+  using SymmetricOp = LessThan<T>;
 
-  template <typename T>
-  static bool Apply(T left, T right) {
-    return left > right;
-  }
-
-  static bool Apply(const char *str1, const std::size_t len1, const char *str2,
-                    const std::size_t len2) {
-    return CompareStrings(str1, len1, str2, len2) > 0;
-  }
+  static bool Apply(T left, T right) { return left > right; }
 };
-
-template <>
-inline bool GreaterThan::Apply(const char *left, const char *right) {
-  return std::strcmp(left, right) > 0;
-}
 
 /**
  * Greater-than or equal operator.
  */
+template <typename T>
 struct GreaterThanEqual {
-  using SymmetricOp = LessThanEqual;
+  using SymmetricOp = LessThanEqual<T>;
 
-  template <typename T>
-  static bool Apply(T left, T right) {
-    return left >= right;
-  }
-
-  static bool Apply(const char *str1, const std::size_t len1, const char *str2,
-                    const std::size_t len2) {
-    return CompareStrings(str1, len1, str2, len2) >= 0;
-  }
+  static bool Apply(T left, T right) { return left >= right; }
 };
-
-template <>
-inline bool GreaterThanEqual::Apply(const char *left, const char *right) {
-  return std::strcmp(left, right) >= 0;
-}
 
 /**
  * Less-than operator.
  */
+template <typename T>
 struct LessThan {
-  using SymmetricOp = GreaterThan;
+  using SymmetricOp = GreaterThan<T>;
 
-  template <typename T>
-  static bool Apply(T left, T right) {
-    return left < right;
-  }
-
-  static bool Apply(const char *str1, const std::size_t len1, const char *str2,
-                    const std::size_t len2) {
-    return CompareStrings(str1, len1, str2, len2) < 0;
-  }
+  static bool Apply(T left, T right) { return left < right; }
 };
-
-template <>
-inline bool LessThan::Apply(const char *left, const char *right) {
-  return std::strcmp(left, right) < 0;
-}
 
 /**
  * Less-than or equal operator.
  */
+template <typename T>
 struct LessThanEqual {
-  using SymmetricOp = GreaterThanEqual;
+  using SymmetricOp = GreaterThanEqual<T>;
 
-  template <typename T>
-  static bool Apply(T left, T right) {
-    return left <= right;
-  }
-
-  static bool Apply(const char *str1, const std::size_t len1, const char *str2,
-                    const std::size_t len2) {
-    return CompareStrings(str1, len1, str2, len2) <= 0;
-  }
+  static bool Apply(T left, T right) { return left <= right; }
 };
-
-template <>
-inline bool LessThanEqual::Apply(const char *left, const char *right) {
-  return std::strcmp(left, right) <= 0;
-}
 
 /**
  * Inequality operator.
  */
+template <typename T>
 struct NotEqual {
-  using SymmetricOp = NotEqual;
+  using SymmetricOp = NotEqual<T>;
 
-  template <typename T>
-  static bool Apply(T left, T right) {
-    return left != right;
-  }
-
-  static bool Apply(const char *str1, const std::size_t len1, const char *str2,
-                    const std::size_t len2) {
-    return CompareStrings(str1, len1, str2, len2) != 0;
-  }
+  static bool Apply(T left, T right) { return left != right; }
 };
-
-template <>
-inline bool NotEqual::Apply(const char *left, const char *right) {
-  return std::strcmp(left, right) != 0;
-}
 
 }  // namespace tpl::sql

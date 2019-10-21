@@ -48,17 +48,17 @@ bool TableVectorIterator::Init() {
   }
 
   // The table schema
-  const auto &table_schema = block_iterator_.table()->schema();
+  const auto &table_schema = block_iterator_.GetTable()->GetSchema();
 
   // If the column indexes vector is empty, select all the columns
   if (column_indexes_.empty()) {
-    column_indexes_.resize(table_schema.num_columns());
+    column_indexes_.resize(table_schema.GetColumnCount());
     std::iota(column_indexes_.begin(), column_indexes_.end(), uint32_t{0});
   }
 
   // Collect column metadata for the iterators
   std::vector<const Schema::ColumnInfo *> col_infos(column_indexes_.size());
-  for (uint32_t idx = 0; idx < column_indexes_.size(); idx++) {
+  for (uint64_t idx = 0; idx < column_indexes_.size(); idx++) {
     col_infos[idx] = table_schema.GetColumnInfo(idx);
   }
 
@@ -87,7 +87,7 @@ void TableVectorIterator::RefreshVectorProjection() {
   vector_projection_.CheckIntegrity();
 
   // Insert our vector projection instance into the vector projection iterator
-  vector_projection_iterator_.SetVectorProjection(&vector_projection_);
+  vector_projection_iterator_.Reset(&vector_projection_);
 }
 
 bool TableVectorIterator::Advance() {
@@ -123,7 +123,7 @@ bool TableVectorIterator::Advance() {
 
   // Check block iterator
   if (block_iterator_.Advance()) {
-    const Table::Block *block = block_iterator_.current_block();
+    const Table::Block *block = block_iterator_.GetCurrentBlock();
     for (uint32_t i = 0; i < column_iterators_.size(); i++) {
       const ColumnSegment *col = block->GetColumnData(i);
       column_iterators_[i].Reset(col);
@@ -156,7 +156,7 @@ class ScanTask {
     }
 
     // Pull out the thread-local state
-    byte *const thread_state = thread_state_container_->AccessThreadStateOfCurrentThread();
+    byte *const thread_state = thread_state_container_->AccessCurrentThreadState();
 
     // Call scanning function
     scanner_(query_state_, thread_state, &iter);
@@ -176,7 +176,7 @@ bool TableVectorIterator::ParallelScan(const uint16_t table_id, void *const quer
                                        const TableVectorIterator::ScanFn scan_fn,
                                        const uint32_t min_grain_size) {
   // Lookup table
-  const Table *table = Catalog::Instance()->LookupTableById(TableId(table_id));
+  const Table *table = Catalog::Instance()->LookupTableById(table_id);
   if (table == nullptr) {
     return false;
   }
@@ -187,14 +187,14 @@ bool TableVectorIterator::ParallelScan(const uint16_t table_id, void *const quer
 
   // Execute parallel scan
   tbb::task_scheduler_init scan_scheduler;
-  tbb::blocked_range<uint32_t> block_range(0, table->num_blocks(), min_grain_size);
+  tbb::blocked_range<uint32_t> block_range(0, table->GetBlockCount(), min_grain_size);
   tbb::parallel_for(block_range, ScanTask(table_id, query_state, thread_states, scan_fn));
 
   timer.Stop();
 
-  double tps = table->num_tuples() / timer.elapsed() / 1000.0;
-  LOG_INFO("Scanned {} blocks ({} tuples) blocks in {} ms ({:.3f} mtps)", table->num_blocks(),
-           table->num_tuples(), timer.elapsed(), tps);
+  double tps = table->GetTupleCount() / timer.GetElapsed() / 1000.0;
+  LOG_INFO("Scanned {} blocks ({} tuples) blocks in {} ms ({:.3f} mtps)", table->GetBlockCount(),
+           table->GetTupleCount(), timer.GetElapsed(), tps);
 
   return true;
 }

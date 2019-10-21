@@ -11,11 +11,8 @@ namespace tpl::sql {
 /**
  * Utility class to handle various arithmetic SQL functions.
  */
-class ArithmeticFunctions {
+class ArithmeticFunctions : public AllStatic {
  public:
-  // Delete to force only static functions
-  ArithmeticFunctions() = delete;
-
   static void Add(Integer *result, const Integer &a, const Integer &b);
   static void Add(Integer *result, const Integer &a, const Integer &b, bool *overflow);
   static void Add(Real *result, const Real &a, const Real &b);

@@ -5,11 +5,14 @@
 
 #include "common/common.h"
 #include "common/macros.h"
+#include "sql/runtime_types.h"
 
 namespace tpl::sql {
 
 /**
- * The primitive types underlying the SQL types.
+ * All internal types underlying the SQL types. This is a superset of the SQL types meant to capture
+ * the fact that vectors can contain non-SQL data such as hash values and pointers, created during
+ * query execution.
  */
 enum class TypeId : uint8_t {
   Boolean,   // bool
@@ -21,6 +24,7 @@ enum class TypeId : uint8_t {
   Pointer,   // uintptr_t
   Float,     // float
   Double,    // double
+  Date,      // Date objects
   Varchar,   // char*, representing a null-terminated UTF-8 string
   Varbinary  // blobs representing arbitrary bytes
 };
@@ -59,29 +63,12 @@ enum class ColumnEncoding : uint8_t {
 enum class JoinType : uint8_t { Inner, Outer, Left, Right, Anti, Semi };
 
 /**
- * Simple structure representing a blob.
- */
-struct Blob {
-  uint8_t *data;
-  uint64_t size;
-
-  bool operator==(const Blob &that) const noexcept {
-    return size == that.size && std::memcmp(data, that.data, size) == 0;
-  }
-
-  bool operator!=(const Blob &that) const noexcept { return !(*this == that); }
-};
-
-/**
- * Given an internal type, return the simplest SQL type. Note that this
- * conversion is a lossy since some internal types are used as the underlying
- * storage for multiple SQL types. For example, int32_t is used for SQL Integers and
- * SQL Dates).
+ * @return The simplest SQL type for primitive type ID @em type.
  */
 SqlTypeId GetSqlTypeFromInternalType(TypeId type);
 
 /**
- * Given a templated type, return the associated internal type ID.
+ * @return The primitive type ID for the C/C++ template type @em T.
  */
 template <class T>
 constexpr inline TypeId GetTypeId() {
@@ -103,6 +90,8 @@ constexpr inline TypeId GetTypeId() {
     return TypeId::Float;
   } else if constexpr (std::is_same<std::remove_const_t<T>, double>()) {
     return TypeId::Double;
+  } else if constexpr (std::is_same<std::remove_const_t<T>, Date>()) {
+    return TypeId::Date;
   } else if constexpr (std::is_same<std::remove_const_t<T>, char *>() ||
                        std::is_same<std::remove_const_t<T>, const char *>() ||
                        std::is_same<std::remove_const_t<T>, std::string>() ||
@@ -115,22 +104,22 @@ constexpr inline TypeId GetTypeId() {
 }
 
 /**
- * Return the size in bytes of a value with the primitive type @em type.
+ * @return The size in bytes of a value with the primitive type @em type.
  */
 std::size_t GetTypeIdSize(TypeId type);
 
 /**
- * Is the given type a fixed-size type?
+ * @return True if the primitive type ID @em type is a fixed-size type; false otherwise.
  */
 bool IsTypeFixedSize(TypeId type);
 
 /**
- * Is the given type a numeric?
+ * @return True if the primitive type ID @em type is a numeric type; false otherwise.
  */
 bool IsTypeNumeric(TypeId type);
 
 /**
- * Convert a TypeId to a string value.
+ * @return A string representation of the input type ID @em type.
  */
 std::string TypeIdToString(TypeId type);
 

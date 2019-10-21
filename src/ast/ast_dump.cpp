@@ -305,38 +305,33 @@ void AstDumperImpl::VisitImplicitCastExpr(ImplicitCastExpr *node) {
   {
     WithColor color(this, llvm::raw_ostream::Colors::RED);
     switch (node->cast_kind()) {
-      case CastKind::IntToSqlInt: {
+      case CastKind::IntToSqlInt:
         DumpPrimitive("IntToSqlInt");
         break;
-      }
-      case CastKind::IntToSqlDecimal: {
+      case CastKind::IntToSqlDecimal:
         DumpPrimitive("IntToSqlDecimal");
         break;
-      }
-      case CastKind::SqlBoolToBool: {
+      case CastKind::SqlBoolToBool:
         DumpPrimitive("SqlBoolToBool");
         break;
-      }
-      case CastKind::IntegralCast: {
+      case CastKind::IntegralCast:
         DumpPrimitive("IntegralCast");
         break;
-      }
-      case CastKind::IntToFloat: {
+      case CastKind::IntToFloat:
         DumpPrimitive("IntToFloat");
         break;
-      }
-      case CastKind::FloatToInt: {
+      case CastKind::FloatToInt:
         DumpPrimitive("FloatToInt");
         break;
-      }
-      case CastKind::BitCast: {
+      case CastKind::BitCast:
         DumpPrimitive("BitCast");
         break;
-      }
-      case CastKind::FloatToSqlReal: {
+      case CastKind::FloatToSqlReal:
         DumpPrimitive("FloatToSqlReal");
         break;
-      }
+      case CastKind::SqlIntToSqlReal:
+        DumpPrimitive("SqlIntToSqlReal");
+        break;
     }
   }
   DumpPrimitive(">");
@@ -352,26 +347,21 @@ void AstDumperImpl::VisitIndexExpr(IndexExpr *node) {
 void AstDumperImpl::VisitLitExpr(LitExpr *node) {
   DumpExpressionCommon(node);
   switch (node->literal_kind()) {
-    case LitExpr::LitKind::Nil: {
+    case LitExpr::LitKind::Nil:
       DumpPrimitive("nil");
       break;
-    }
-    case LitExpr::LitKind::Boolean: {
+    case LitExpr::LitKind::Boolean:
       DumpPrimitive(node->bool_val() ? "'true'" : "'false'");
       break;
-    }
-    case LitExpr::LitKind::Int: {
+    case LitExpr::LitKind::Int:
       DumpPrimitive(node->int32_val());
       break;
-    }
-    case LitExpr::LitKind::Float: {
+    case LitExpr::LitKind::Float:
       DumpPrimitive(node->float32_val());
       break;
-    }
-    case LitExpr::LitKind::String: {
+    case LitExpr::LitKind::String:
       DumpIdentifier(node->raw_string_val());
       break;
-    }
   }
 }
 

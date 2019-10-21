@@ -13,7 +13,9 @@
 namespace tpl::sql {
 
 VectorFilterExecutor::VectorFilterExecutor(VectorProjection *vector_projection)
-    : vector_projection_(vector_projection), tid_list_(vector_projection_->GetTotalTupleCount()) {
+    : vector_projection_iterator_(nullptr),
+      vector_projection_(vector_projection),
+      tid_list_(vector_projection_->GetTotalTupleCount()) {
   TPL_ASSERT(vector_projection_->GetTotalTupleCount() <= kDefaultVectorSize,
              "Vector projection too large");
   if (const sel_t *sel_vector = vector_projection_->GetSelectionVector()) {
@@ -24,25 +26,18 @@ VectorFilterExecutor::VectorFilterExecutor(VectorProjection *vector_projection)
 }
 
 VectorFilterExecutor::VectorFilterExecutor(VectorProjectionIterator *vector_projection_iterator)
-    : VectorFilterExecutor(vector_projection_iterator->GetVectorProjection()) {}
-
-void VectorFilterExecutor::SelectGeneric(const std::vector<uint32_t> &col_indexes,
-                                         const VectorFilterExecutor::VectorFilterFn &filter) {
-  llvm::SmallVector<const Vector *, 8> vectors;
-  for (const uint32_t col_idx : col_indexes) {
-    vectors.push_back(vector_projection_->GetColumn(col_idx));
-  }
-
-  filter(vectors.data(), &tid_list_);
+    : VectorFilterExecutor(vector_projection_iterator->GetVectorProjection()) {
+  vector_projection_iterator_ = vector_projection_iterator;
 }
 
 #define VEC_GENVAL_OP(OP_NAME)                                        \
   const Vector *left_vector = vector_projection_->GetColumn(col_idx); \
   VectorOps::OP_NAME(*left_vector, ConstantVector(val), &tid_list_);
 
-#define VEC_VAL_OP(OP_NAME)                                                                        \
-  const Vector *left_vector = vector_projection_->GetColumn(col_idx);                              \
-  const GenericValue constant = GenericValue::CreateFromRuntimeValue(left_vector->type_id(), val); \
+#define VEC_VAL_OP(OP_NAME)                                                \
+  const Vector *left_vector = vector_projection_->GetColumn(col_idx);      \
+  const GenericValue constant =                                            \
+      GenericValue::CreateFromRuntimeValue(left_vector->GetTypeId(), val); \
   VectorOps::OP_NAME(*left_vector, ConstantVector(constant), &tid_list_);
 
 #define VEC_VEC_OP(OP_NAME)                                                  \
@@ -128,8 +123,12 @@ void VectorFilterExecutor::SelectNe(const uint32_t left_col_idx, const uint32_t 
 
 void VectorFilterExecutor::Finish() {
   sel_t sel_vec[kDefaultVectorSize];
-  uint32_t count = tid_list_.AsSelectionVector(sel_vec);
+  uint32_t count = tid_list_.ToSelectionVector(sel_vec);
   vector_projection_->SetSelectionVector(sel_vec, count);
+
+  if (vector_projection_iterator_ != nullptr) {
+    vector_projection_iterator_->Reset(vector_projection_);
+  }
 }
 
 }  // namespace tpl::sql

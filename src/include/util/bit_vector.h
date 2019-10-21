@@ -2,6 +2,7 @@
 
 #include <immintrin.h>
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -51,6 +52,9 @@ class BitVector {
                 "Word size in bits expected to be a power of two");
 
  public:
+  // Used to indicate an invalid bit position
+  static constexpr const uint32_t kInvalidPos = std::numeric_limits<uint32_t>::max();
+
   /**
    * Return the number of words required to store at least @em num_bits number if bits in a bit
    * vector. Note that this may potentially over allocate.
@@ -73,8 +77,7 @@ class BitVector {
     operator bool() const noexcept { return ((*word_) & mask_) != 0; }  // NOLINT
 
     /**
-     * Assign the value of the bit to the boolean @em val. If input value is true, the bit is set to
-     * 1. If the input value is false, the bit is set to 0.
+     * Set the value of this bit to @em val. Set to 1 if @em val is true; 0 otherwise.
      * @param val The value to assign the bit.
      * @return This bit.
      */
@@ -84,18 +87,20 @@ class BitVector {
     }
 
     /**
-     * Assign the value of the bit the value of another bit in the bit vector.
-     * @param other The other bit to read from.
+     * Set the value of this bit to @em that.
+     * @param that The bit to copy from.
      * @return This bit.
      */
-    BitReference &operator=(const BitReference &other) noexcept {
-      Assign(other);
+    BitReference &operator=(const BitReference &that) noexcept {
+      Assign(that);
       return *this;
     }
 
    private:
     friend class BitVector<WordType>;
 
+    // Create a reference to the given bit position in the word array. Only bit vectors can create
+    // references to the bits they own.
     BitReference(WordType *word, uint32_t bit_pos) : word_(word), mask_(WordType(1) << bit_pos) {}
 
     // Assign this bit to the given value
@@ -158,7 +163,7 @@ class BitVector {
    * @return True if the bit is set; false otherwise.
    */
   bool Test(const uint32_t position) const {
-    TPL_ASSERT(position < num_bits(), "Index out of range");
+    TPL_ASSERT(position < GetNumBits(), "Index out of range");
     const WordType mask = WordType(1) << (position % kWordSizeBits);
     return words_[position / kWordSizeBits] & mask;
   }
@@ -169,7 +174,7 @@ class BitVector {
    * @return This bit vector.
    */
   BitVector &Set(const uint32_t position) {
-    TPL_ASSERT(position < num_bits(), "Index out of range");
+    TPL_ASSERT(position < GetNumBits(), "Index out of range");
     words_[position / kWordSizeBits] |= WordType(1) << (position % kWordSizeBits);
     return *this;
   }
@@ -181,7 +186,7 @@ class BitVector {
    * @return This bit vector.
    */
   BitVector &Set(const uint32_t position, const bool v) {
-    TPL_ASSERT(position < num_bits(), "Index out of range");
+    TPL_ASSERT(position < GetNumBits(), "Index out of range");
     WordType mask = static_cast<WordType>(1) << (position % kWordSizeBits);
     words_[position / kWordSizeBits] ^=
         (-static_cast<WordType>(v) ^ words_[position / kWordSizeBits]) & mask;
@@ -199,7 +204,7 @@ class BitVector {
    */
   BitVector &SetRange(uint32_t start, uint32_t end) {
     TPL_ASSERT(start <= end, "Cannot set backward range");
-    TPL_ASSERT(end <= num_bits(), "End position out of range");
+    TPL_ASSERT(end <= GetNumBits(), "End position out of range");
 
     if (start == end) {
       return *this;
@@ -234,7 +239,7 @@ class BitVector {
    * @return This bit vector.
    */
   BitVector &SetAll() {
-    for (uint32_t i = 0; i < num_words(); i++) {
+    for (uint32_t i = 0; i < GetNumWords(); i++) {
       words_[i] = kAllOnesWord;
     }
     ZeroUnusedBits();
@@ -247,7 +252,7 @@ class BitVector {
    * @return This bit vector.
    */
   BitVector &Unset(const uint32_t position) {
-    TPL_ASSERT(position < num_bits(), "Index out of range");
+    TPL_ASSERT(position < GetNumBits(), "Index out of range");
     words_[position / kWordSizeBits] &= ~(WordType(1) << (position % kWordSizeBits));
     return *this;
   }
@@ -257,7 +262,7 @@ class BitVector {
    * @return This bit vector.
    */
   BitVector &Reset() {
-    for (uint32_t i = 0; i < num_words(); i++) {
+    for (uint32_t i = 0; i < GetNumWords(); i++) {
       words_[i] = WordType(0);
     }
     return *this;
@@ -269,7 +274,7 @@ class BitVector {
    * @return This bit vector.
    */
   BitVector &Flip(const uint32_t position) {
-    TPL_ASSERT(position < num_bits(), "Index out of range");
+    TPL_ASSERT(position < GetNumBits(), "Index out of range");
     words_[position / kWordSizeBits] ^= WordType(1) << (position % kWordSizeBits);
     return *this;
   }
@@ -279,7 +284,7 @@ class BitVector {
    * @return This bit vector.
    */
   BitVector &FlipAll() {
-    for (uint32_t i = 0; i < num_words(); i++) {
+    for (uint32_t i = 0; i < GetNumWords(); i++) {
       words_[i] = ~words_[i];
     }
     ZeroUnusedBits();
@@ -292,7 +297,7 @@ class BitVector {
    * @return Value of the word.
    */
   WordType GetWord(const uint32_t word_position) const {
-    TPL_ASSERT(word_position < num_words(), "Index out of range");
+    TPL_ASSERT(word_position < GetNumWords(), "Index out of range");
     return words_[word_position];
   }
 
@@ -304,9 +309,9 @@ class BitVector {
    * @return This bit vector.
    */
   BitVector &SetWord(const uint32_t word_position, const WordType word_val) {
-    TPL_ASSERT(word_position < num_words(), "Index out of range");
+    TPL_ASSERT(word_position < GetNumWords(), "Index out of range");
     words_[word_position] = word_val;
-    if (word_position == num_words() - 1) ZeroUnusedBits();
+    if (word_position == GetNumWords() - 1) ZeroUnusedBits();
     return *this;
   }
 
@@ -315,7 +320,7 @@ class BitVector {
    * @return True if any bit in the vector is set to 1; false otherwise.
    */
   bool Any() const {
-    for (uint32_t i = 0; i < num_words(); i++) {
+    for (uint32_t i = 0; i < GetNumWords(); i++) {
       if (words_[i] != static_cast<WordType>(0)) {
         return true;
       }
@@ -331,20 +336,20 @@ class BitVector {
     const uint32_t extra_bits = GetNumExtraBits();
 
     if (extra_bits == 0) {
-      for (uint32_t i = 0; i < num_words(); i++) {
+      for (uint32_t i = 0; i < GetNumWords(); i++) {
         if (words_[i] != kAllOnesWord) {
           return false;
         }
       }
       return true;
     } else {
-      for (uint32_t i = 0; i < num_words() - 1; i++) {
+      for (uint32_t i = 0; i < GetNumWords() - 1; i++) {
         if (words_[i] != kAllOnesWord) {
           return false;
         }
       }
       const WordType mask = ~(kAllOnesWord << GetNumExtraBits());
-      return words_[num_words() - 1] == mask;
+      return words_[GetNumWords() - 1] == mask;
     }
   }
 
@@ -360,7 +365,7 @@ class BitVector {
    */
   uint32_t CountOnes() const {
     uint32_t count = 0;
-    for (uint32_t i = 0; i < num_words(); i++) {
+    for (uint32_t i = 0; i < GetNumWords(); i++) {
       count += util::BitUtil::CountPopulation(words_[i]);
     }
     return count;
@@ -372,17 +377,17 @@ class BitVector {
    * @return The index of the n-th 1-bit. If there are fewer than @em n bits, return the size.
    */
   uint32_t NthOne(uint32_t n) const {
-    for (uint32_t i = 0; i < num_words(); i++) {
+    for (uint32_t i = 0; i < GetNumWords(); i++) {
       const WordType word = words_[i];
       const uint32_t count = BitUtil::CountPopulation(word);
       if (n < count) {
         const WordType mask = _pdep_u64(static_cast<WordType>(1) << n, word);
         const uint32_t pos = BitUtil::CountTrailingZeros(mask);
-        return std::min(num_bits(), (i * kWordSizeBits) + pos);
+        return std::min(GetNumBits(), (i * kWordSizeBits) + pos);
       }
       n -= count;
     }
-    return num_bits();
+    return GetNumBits();
   }
 
   /**
@@ -394,8 +399,8 @@ class BitVector {
    * @return This bit vector.
    */
   BitVector &Copy(const BitVector &other) {
-    TPL_ASSERT(num_bits() == other.num_bits(), "Mismatched bit vector size");
-    for (uint32_t i = 0; i < num_words(); i++) {
+    TPL_ASSERT(GetNumBits() == other.GetNumBits(), "Mismatched bit vector size");
+    for (uint32_t i = 0; i < GetNumWords(); i++) {
       words_[i] = other.words_[i];
     }
     return *this;
@@ -410,8 +415,8 @@ class BitVector {
    * @return This bit vector.
    */
   BitVector &Intersect(const BitVector &other) {
-    TPL_ASSERT(num_bits() == other.num_bits(), "Mismatched bit vector size");
-    for (uint32_t i = 0; i < num_words(); i++) {
+    TPL_ASSERT(GetNumBits() == other.GetNumBits(), "Mismatched bit vector size");
+    for (uint32_t i = 0; i < GetNumWords(); i++) {
       words_[i] &= other.words_[i];
     }
     return *this;
@@ -426,8 +431,8 @@ class BitVector {
    * @return This bit vector.
    */
   BitVector &Union(const BitVector &other) {
-    TPL_ASSERT(num_bits() == other.num_bits(), "Mismatched bit vector size");
-    for (uint32_t i = 0; i < num_words(); i++) {
+    TPL_ASSERT(GetNumBits() == other.GetNumBits(), "Mismatched bit vector size");
+    for (uint32_t i = 0; i < GetNumWords(); i++) {
       words_[i] |= other.words_[i];
     }
     return *this;
@@ -442,8 +447,8 @@ class BitVector {
    * @return This bit vector.
    */
   BitVector &Difference(const BitVector &other) {
-    TPL_ASSERT(num_bits() == other.num_bits(), "Mismatched bit vector size");
-    for (uint32_t i = 0; i < num_words(); i++) {
+    TPL_ASSERT(GetNumBits() == other.GetNumBits(), "Mismatched bit vector size");
+    for (uint32_t i = 0; i < GetNumWords(); i++) {
       words_[i] &= ~other.words_[i];
     }
     return *this;
@@ -471,7 +476,7 @@ class BitVector {
 
     uint32_t new_num_words = NumNeededWords(num_bits);
 
-    if (num_words() != new_num_words) {
+    if (GetNumWords() != new_num_words) {
       words_.resize(new_num_words, WordType(0));
     }
 
@@ -489,12 +494,12 @@ class BitVector {
     static_assert(std::is_invocable_r_v<bool, P, uint32_t>,
                   "Predicate must be accept an unsigned 32-bit index and return a bool");
 
-    for (WordType i = 0; i < num_words(); i++) {
+    for (WordType i = 0; i < GetNumWords(); i++) {
       WordType word = words_[i];
       WordType word_result = 0;
       while (word != 0) {
         const auto t = word & -word;
-        const auto r = util::BitUtil::CountTrailingZeros(word);
+        const auto r = BitUtil::CountTrailingZeros(word);
         word_result |= static_cast<WordType>(p(i * kWordSizeBits + r)) << r;
         word ^= t;
       }
@@ -516,11 +521,11 @@ class BitVector {
   void UpdateFull(P &&p) {
     static_assert(std::is_invocable_r_v<bool, P, uint32_t>,
                   "Predicate must be accept an unsigned 32-bit index and return a bool");
-    if (num_bits() == 0) {
+    if (GetNumBits() == 0) {
       return;
     }
 
-    const uint32_t num_full_words = GetNumExtraBits() == 0 ? num_words() : num_words() - 1;
+    const uint32_t num_full_words = GetNumExtraBits() == 0 ? GetNumWords() : GetNumWords() - 1;
 
     // This first loop processes all FULL words in the bit vector. It should be fully vectorized
     // if the predicate function can also vectorized.
@@ -533,7 +538,7 @@ class BitVector {
     }
 
     // If the last word isn't full, process it using a scalar loop.
-    for (WordType i = num_full_words * kWordSizeBits; i < num_bits(); i++) {
+    for (WordType i = num_full_words * kWordSizeBits; i < GetNumBits(); i++) {
       if (!p(i)) {
         Unset(i);
       }
@@ -550,7 +555,7 @@ class BitVector {
     static_assert(std::is_invocable_v<F, uint32_t>,
                   "Callback must be a single-argument functor accepting an unsigned 32-bit index");
 
-    for (WordType i = 0; i < num_words(); i++) {
+    for (WordType i = 0; i < GetNumWords(); i++) {
       WordType word = words_[i];
       while (word != 0) {
         const auto t = word & -word;
@@ -570,8 +575,8 @@ class BitVector {
    */
   void SetFromBytes(const uint8_t *const bytes, const uint32_t num_bytes) {
     TPL_ASSERT(bytes != nullptr, "Null input");
-    TPL_ASSERT(num_bytes == num_bits(), "Byte vector too small");
-    util::VectorUtil::ByteVectorToBitVector(bytes, num_bytes, words_.data());
+    TPL_ASSERT(num_bytes == GetNumBits(), "Byte vector too small");
+    VectorUtil::ByteVectorToBitVector(bytes, num_bytes, words_.data());
   }
 
   /**
@@ -579,9 +584,9 @@ class BitVector {
    * @return String representation of this vector.
    */
   std::string ToString() const {
-    std::string result = "BitVector(#bits=" + std::to_string(num_bits()) + ")=[";
+    std::string result = "BitVector(#bits=" + std::to_string(GetNumBits()) + ")=[";
     bool first = true;
-    for (uint32_t i = 0; i < num_bits(); i++) {
+    for (uint32_t i = 0; i < GetNumBits(); i++) {
       if (!first) result += ",";
       first = false;
       result += Test(i) ? "1" : "0";
@@ -590,71 +595,218 @@ class BitVector {
     return result;
   }
 
-  // -------------------------------------------------------
-  // Operator overloads -- should be fairly obvious ...
-  // -------------------------------------------------------
+  /**
+   * Find the index of the first set bit in the bit vector. If there are no set bits, return the
+   * invalid bit position BitVector::kInvalidPos.
+   * @return The index of the first set bit in the bit vector.
+   */
+  uint32_t FindFirst() const noexcept { return FindFrom(0); }
 
+  /**
+   * Find the index of the first set bit <b>after</b> the bit position @em position. If no bit is
+   * set after the position, return the invalid bit position BitVector::kInvalidPos.
+   * @param position The position to anchor the search.
+   * @return The index of the first set bit after the given position in the bit vector.
+   */
+  uint32_t FindNext(uint32_t position) const noexcept {
+    if (GetNumBits() == 0 || position >= GetNumBits() - 1) {
+      return kInvalidPos;
+    }
+
+    position++;
+
+    const uint32_t word_index = position / kWordSizeBits;
+    const uint32_t bit_idx = position % kWordSizeBits;
+
+    // Does the current word have any remaining 1 bits?
+    if (WordType word = words_[word_index] >> bit_idx; word != WordType(0)) {
+      return position + BitUtil::CountTrailingZeros(word);
+    }
+
+    // Find the next bit in the following set of words
+    return FindFrom(word_index + 1);
+  }
+
+  /**
+   * Return the value of the bit at position @em position in the bit vector. Used for testing the
+   * value of a bit:
+   *
+   * @code
+   * BitVector<> bv(20);
+   * if (bv[10]) {
+   *   // work
+   * }
+   * @endcode
+   *
+   * @param position The position/index of the bit to check.
+   * @return True if the bit at the input position is set; false otherwise.
+   */
   bool operator[](const uint32_t position) const { return Test(position); }
 
+  /**
+   * Return a reference to the bit at position @em position in the bit vector. The reference can be
+   * modified, but is invalid if the bit vector is resized.
+   *
+   * @code
+   * BitVector<> bv(20);
+   * bv[10] = true;
+   * bv[20] = bv[10];
+   * @endcode
+   *
+   * @param position The position/index of the bit to check.
+   * @return A reference to the bit at the input position.
+   */
   BitReference operator[](const uint32_t position) {
-    TPL_ASSERT(position < num_bits(), "Out-of-range access");
+    TPL_ASSERT(position < GetNumBits(), "Out-of-range access");
     return BitReference(&words_[position / kWordSizeBits], position % kWordSizeBits);
   }
 
-  BitVector &operator-=(const BitVector &other) {
-    Difference(other);
+  /**
+   * @return True if this bit-vector equals @em that bit vector, bit-for-bit.
+   */
+  bool operator==(const BitVector &that) const noexcept {
+    return GetNumBits() == that.GetNumBits() && words_ == that.words_;
+  }
+
+  /**
+   * @return True if this bit-vector is not @em that bit vector.
+   */
+  bool operator!=(const BitVector &that) const noexcept { return !(*this == that); }
+
+  /**
+   * Perform a difference between this bit vector that @em that.
+   *
+   * @pre The two vectors must be the same size.
+   *
+   * @param that The bit vector to difference with.
+   * @return This bit vector after all <b>common</b> between this and @em that have been removed.
+   */
+  BitVector &operator-=(const BitVector &that) {
+    Difference(that);
     return *this;
   }
 
-  BitVector &operator&=(const BitVector &other) {
-    Intersect(other);
+  /**
+   * Perform an intersection of this bit vector that @em that.
+   *
+   * @pre The two vectors must be the same size.
+   *
+   * @param that The bit vector to intersect with.
+   * @return This bit vector after an intersection with @em that bit vector.
+   */
+  BitVector &operator&=(const BitVector &that) {
+    Intersect(that);
     return *this;
   }
 
-  BitVector &operator|=(const BitVector &other) {
-    Union(other);
+  /**
+   * Perform a union of this bit vector and @em that.
+   *
+   * @pre The two vectors must be the same size.
+   *
+   * @param that The bit vector to union with.
+   * @return This bit vector after a union with @em that bit vector.
+   */
+  BitVector &operator|=(const BitVector &that) {
+    Union(that);
     return *this;
   }
 
-  uint32_t num_bits() const { return num_bits_; }
+  /**
+   * @return The number of bits in the bit vector.
+   */
+  uint32_t GetNumBits() const noexcept { return num_bits_; }
 
-  uint32_t num_words() const { return words_.size(); }
+  /**
+   * @return The number of "words" in the bit vector. Recall that the word type is a template arg.
+   */
+  uint32_t GetNumWords() const noexcept { return words_.size(); }
 
-  const WordType *words() const { return words_.data(); }
-
-  WordType *words() { return words_.data(); }
+  /**
+   * @return A const-view of the words making up the bit vector.
+   */
+  const WordType *GetWords() const noexcept { return words_.data(); }
 
  private:
-  // The number of used bits in the last word
+  // The number of bits in the last word
   uint32_t GetNumExtraBits() const { return num_bits_ % kWordSizeBits; }
 
   // Zero unused bits in the last word
   void ZeroUnusedBits() {
-    uint32_t extra_bits = GetNumExtraBits();
+    const uint32_t extra_bits = GetNumExtraBits();
     if (extra_bits != 0) {
-      words_[num_words() - 1] &= ~(kAllOnesWord << extra_bits);
+      words_[GetNumWords() - 1] &= ~(kAllOnesWord << extra_bits);
     }
+  }
+
+  // Find the first set bit in the bit vector starting at the given word position
+  uint32_t FindFrom(uint32_t word_index) const noexcept {
+    for (uint32_t i = word_index; i < GetNumWords(); i++) {
+      if (words_[i] != WordType(0)) {
+        return i * kWordSizeBits + BitUtil::CountTrailingZeros(words_[i]);
+      }
+    }
+    return kInvalidPos;
   }
 
  private:
   // The number of bits in the bit vector
   uint32_t num_bits_;
+
   // The array of words making up the bit vector
   std::vector<WordType> words_;
 };
 
+/**
+ * Free bit vector difference operation. Returns a - b, the difference of the bit vectors @em a and
+ * @em b.
+ *
+ * Note: @em a is copied on purpose to ensure RVO.
+ *
+ * @pre Both inputs must have the same size.
+ *
+ * @tparam T The word size used by both bit vectors.
+ * @param a The left bit vector to the operation.
+ * @param b The right bit vector to the operation.
+ * @return The difference between a and b.
+ */
 template <typename T>
 inline BitVector<T> operator-(BitVector<T> a, const BitVector<T> &b) {
   a -= b;
   return a;
 }
 
+/**
+ * Free bit vector intersection operation. Returns a & b, the intersection of the bit vectors @em a
+ * and @em b.
+ *
+ * Note: @em a is copied on purpose to ensure RVO.
+ *
+ * @pre Both inputs must have the same size.
+ *
+ * @tparam T The word size used by both bit vectors.
+ * @param a The left bit vector to the operation.
+ * @param b The right bit vector to the operation.
+ * @return The intersection between a and b.
+ */
 template <typename T>
 inline BitVector<T> operator&(BitVector<T> a, const BitVector<T> &b) {
   a &= b;
   return a;
 }
 
+/**
+ * Free bit vector union operation. Returns a & b, the union of the bit vectors @em a and @em b.
+ *
+ * Note: @em a is copied on purpose to ensure RVO.
+ *
+ * @pre Both inputs must have the same size.
+ *
+ * @tparam T The word size used by both bit vectors.
+ * @param a The left bit vector to the operation.
+ * @param b The right bit vector to the operation.
+ * @return The union between a and b.
+ */
 template <typename T>
 inline BitVector<T> operator|(BitVector<T> a, const BitVector<T> &b) {
   a |= b;

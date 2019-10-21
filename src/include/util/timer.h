@@ -1,11 +1,11 @@
 #pragma once
 
-#include <chrono>  // NOLINT
+#include <chrono>
 
 namespace tpl::util {
 
 /**
- * A simple restartable timer
+ * A simple restartable timer.
  */
 template <typename ResolutionRatio = std::milli>
 class Timer {
@@ -16,12 +16,12 @@ class Timer {
   Timer() noexcept : elapsed_(0) { Start(); }
 
   /**
-   * Start the timer
+   * Start the timer.
    */
   void Start() noexcept { start_ = Clock::now(); }
 
   /**
-   * Stop the timer
+   * Stop the timer.
    */
   void Stop() noexcept {
     stop_ = Clock::now();
@@ -32,9 +32,9 @@ class Timer {
   }
 
   /**
-   * Return the total number of elapsed time units
+   * @return The total number of elapsed time units.
    */
-  double elapsed() const noexcept { return elapsed_; }
+  double GetElapsed() const noexcept { return elapsed_; }
 
   /**
    * Time a function @em func
@@ -43,12 +43,12 @@ class Timer {
    * @return The elapsed time in whatever resolution ratio the caller wants
    */
   template <typename F>
-  static inline double TimeFunction(const F &fn) {
+  static double TimeFunction(F &&fn) {
     Timer<ResolutionRatio> timer;
     timer.Start();
     fn();
     timer.Stop();
-    return timer.elapsed();
+    return timer.GetElapsed();
   }
 
  private:
@@ -59,9 +59,17 @@ class Timer {
 };
 
 /**
- * An RAII timer that begins timing upon construction and stops timing when the
- * object goes out of scope. The total elapsed time is written to the output
- * @em elapsed argument.
+ * An RAII timer that begins timing upon construction and stops timing when the object goes out of
+ * scope. The total elapsed time is written to the output @em elapsed argument.
+ *
+ * @code
+ * double t = 0.0;
+ * {
+ *   ScopedTimer<std::milli> timer(&t);
+ *   // Work ...
+ * }
+ * // 't' contains the number of elapsed milliseconds spent in the above block
+ * @endcode
  */
 template <typename ResolutionRatio = std::milli>
 class ScopedTimer {
@@ -73,7 +81,7 @@ class ScopedTimer {
 
   ~ScopedTimer() {
     timer_.Stop();
-    *elapsed_ = timer_.elapsed();
+    *elapsed_ = timer_.GetElapsed();
   }
 
  private:

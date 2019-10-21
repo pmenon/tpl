@@ -9,14 +9,14 @@ GenericHashTable::GenericHashTable(float load_factor) noexcept
 
 GenericHashTable::~GenericHashTable() {
   if (entries_ != nullptr) {
-    util::FreeHugeArray(entries_, capacity());
+    Memory::FreeHugeArray(entries_, GetCapacity());
   }
 }
 
 void GenericHashTable::SetSize(uint64_t new_size) {
   TPL_ASSERT(new_size > 0, "New size cannot be zero!");
   if (entries_ != nullptr) {
-    util::FreeHugeArray(entries_, capacity());
+    Memory::FreeHugeArray(entries_, GetCapacity());
   }
 
   uint64_t next_size = util::MathUtil::PowerOf2Ceil(new_size);
@@ -27,7 +27,7 @@ void GenericHashTable::SetSize(uint64_t new_size) {
   capacity_ = next_size;
   mask_ = capacity_ - 1;
   num_elems_ = 0;
-  entries_ = util::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_);
+  entries_ = Memory::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_, true);
 }
 
 // ---------------------------------------------------------
@@ -53,14 +53,14 @@ GenericHashTableVectorIterator<UseTag>::~GenericHashTableVectorIterator() {
 
 template <bool UseTag>
 void GenericHashTableVectorIterator<UseTag>::Next() {
-  // Invariant: the range of elements [0, entry_vec_end_idx_) in
-  // the entry cache contains non-null hash table entries.
+  // Invariant: the range of elements [0, entry_vec_end_idx_) in the entry cache contains non-null
+  // hash table entries.
 
   // Index tracks the end of the valid range of entries in the entry cache
   uint32_t index = 0;
 
-  // For the current set of valid entries, follow their chain. This may produce
-  // holes in the range, but we'll compact them out in a subsequent filter.
+  // For the current set of valid entries, follow their chain. This may produce holes in the range,
+  // but we'll compact them out in a subsequent filter.
   for (uint32_t i = 0; i < entry_vec_end_idx_; i++) {
     entry_vec_[i] = entry_vec_[i]->next;
   }
@@ -71,9 +71,8 @@ void GenericHashTableVectorIterator<UseTag>::Next() {
     index += (entry_vec_[index] != nullptr);
   }
 
-  // Fill the range [idx, SIZE) in the cache with valid entries from the source
-  // hash table.
-  while (index < kDefaultVectorSize && table_dir_index_ < table_.capacity()) {
+  // Fill the range [idx, SIZE) in the cache with valid entries from the source hash table.
+  while (index < kDefaultVectorSize && table_dir_index_ < table_.GetCapacity()) {
     entry_vec_[index] = table_.entries_[table_dir_index_++].load(std::memory_order_relaxed);
     if constexpr (UseTag) {
       entry_vec_[index] = GenericHashTable::UntagPointer(entry_vec_[index]);

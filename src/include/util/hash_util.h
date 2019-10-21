@@ -6,7 +6,7 @@
 #include <string>
 #include <type_traits>
 
-#include "xxh3.h"
+#include "xxh3.h"  // NOLINT
 
 #include "common/common.h"
 #include "common/macros.h"
@@ -23,7 +23,7 @@ enum class HashMethod : uint8_t { Crc, Murmur2, xxHash3 };
  * functions. There are specialized versions for arithmetic values (integers and floats), and
  * generic versions for longer buffers (strings, c-strings, and opaque buffers).
  */
-class HashUtil {
+class HashUtil : public AllStatic {
  public:
   /**
    * Compute the hash value of an arithmetic input. The input is allowed to be either an integral
@@ -33,7 +33,7 @@ class HashUtil {
    * @param val The input value to hash.
    * @return The compute hash.
    */
-  template <HashMethod METHOD = HashMethod::Murmur2, typename T>
+  template <HashMethod METHOD = HashMethod::Crc, typename T>
   static auto Hash(const T val, const hash_t seed)
       -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
     switch (METHOD) {
@@ -55,7 +55,7 @@ class HashUtil {
    * @param seed The seed hash value to mix in.
    * @return The compute hash.
    */
-  template <HashMethod METHOD = HashMethod::Murmur2, typename T>
+  template <HashMethod METHOD = HashMethod::Crc, typename T>
   static auto Hash(const T val) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
     switch (METHOD) {
       case HashMethod::Crc:
@@ -134,58 +134,62 @@ class HashUtil {
     return b;
   }
 
+  /**
+   * Compute a new hash value that scrambles the bits in the input hash value. This function
+   * guarnatees that if h1 and h2 are two hash values, then scramble(h1) == scramble(h2).
+   * @param hash The input hash value to scramble.
+   * @return The scrambled hash value.
+   */
+  static hash_t ScrambleHash(const hash_t hash) { return XXH64_avalanche(hash); }
+
   // -------------------------------------------------------
   // CRC Hashing
   // -------------------------------------------------------
 
+  static constexpr hash_t kDefaultCRCSeed = 0x04C11DB7;
+
+#define DO_CRC(op, crc, type, buf, len)                                           \
+  do {                                                                            \
+    for (; (len) >= sizeof(type); (len) -= sizeof(type), (buf) += sizeof(type)) { \
+      (crc) = op((crc), *(type *)buf);                                            \
+    }                                                                             \
+  } while (0)
+
+  static hash_t HashCrc(const uint8_t *buf, uint32_t len, hash_t seed) {
+    hash_t hash_val = seed;
+
+    // If the string is empty, return the CRC calculated so far
+    if (len == 0) {
+      return hash_val;
+    }
+
+    // Try to consume chunks of 8-byte, 4-byte, 2-byte, and 1-bytes.
+    DO_CRC(_mm_crc32_u64, hash_val, uint64_t, buf, len);
+    DO_CRC(_mm_crc32_u32, hash_val, uint32_t, buf, len);
+    DO_CRC(_mm_crc32_u16, hash_val, uint16_t, buf, len);
+    DO_CRC(_mm_crc32_u8, hash_val, uint8_t, buf, len);
+
+    return hash_val;
+  }
+
+  static hash_t HashCrc(const uint8_t *buf, uint32_t len) {
+    return HashCrc(buf, len, kDefaultCRCSeed);
+  }
+
   template <typename T>
   static auto HashCrc(const T val, const hash_t seed)
-      -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
+      -> std::enable_if_t<std::is_fundamental_v<T>, hash_t> {
     uint64_t result1 = _mm_crc32_u64(seed, static_cast<uint64_t>(val));
     uint64_t result2 = _mm_crc32_u64(0x04C11DB7, static_cast<uint64_t>(val));
     return ((result2 << 32u) | result1) * 0x2545F4914F6CDD1Dull;
   }
 
   template <typename T>
-  static auto HashCrc(const T val) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
-    return HashCrc(val, hash_t{0});
+  static auto HashCrc(const T val) -> std::enable_if_t<std::is_fundamental_v<T>, hash_t> {
+    return HashCrc(val, 0);
   }
 
-  static hash_t HashCrc(const uint8_t *buf, uint32_t len, hash_t seed) {
-    // Thanks HyPer
-    uint64_t hash = seed;
-
-    // Process as many 8-byte chunks as possible
-    for (; len >= 8; buf += 8, len -= 8) {
-      hash = HashCrc(*reinterpret_cast<const uint64_t *>(buf), hash);
-    }
-
-    // If there's at least a 4-byte chunk, process that
-    if (len >= 4) {
-      hash = HashCrc(*reinterpret_cast<const uint32_t *>(buf), hash);
-      buf += 4;
-      len -= 4;
-    }
-
-    // Process the tail
-    switch (len) {
-      case 3:
-        hash ^= (static_cast<uint64_t>(buf[2])) << 16u;
-        FALLTHROUGH;
-      case 2:
-        hash ^= (static_cast<uint64_t>(buf[1])) << 8u;
-        FALLTHROUGH;
-      case 1:
-        hash ^= buf[0];
-        FALLTHROUGH;
-      default:
-        break;
-    }
-
-    return hash;
-  }
-
-  static hash_t HashCrc(const uint8_t *buf, uint32_t len) { return HashCrc(buf, len, 0); }
+#undef DO_CRC
 
   // -------------------------------------------------------
   // Murmur2 Hashing

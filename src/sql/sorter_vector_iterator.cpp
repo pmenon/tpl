@@ -56,7 +56,7 @@ void SorterVectorIterator::Next(const SorterVectorIterator::TransposeFn transpos
 void SorterVectorIterator::BuildVectorProjection(
     const SorterVectorIterator::TransposeFn transpose_fn) {
   // Update the vector projection iterator
-  vector_projection_iterator_->SetVectorProjection(vector_projection_.get());
+  vector_projection_iterator_->Reset(vector_projection_.get());
 
   // Invoke the transposition function which does the heavy, query-specific,
   // lifting of converting rows to columns.

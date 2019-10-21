@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "common/common.h"
+#include "sql/sql.h"
 #include "sql/tuple_id_list.h"
 
 namespace tpl::sql {
@@ -16,19 +17,26 @@ class VectorProjectionIterator;
 struct Val;
 
 /**
- * This is a helper class to execute conjunctive filters over an input vector projection. Filters
- * can be applied between a vectors and scalar constants, between two vectors, or between multiple
- * vectors within a projection. While the most common filter functions are specialized here, a
- * generic filtering interface is also provided through @em SelectGeneric() to support user-provided
- * filter implementations.
+ * This is a helper class to execute filters over vector projections. Filters can be applied between
+ * vectors and scalars, or between two vectors.
  *
- * Filtering operations are applied incrementally, meaning they will only be applied to the valid
- * set of the tuples generated from a previous invocation of a selection, using the input vector
- * projection's own selection vector on the first filtering operation.
+ * Vector filters main a list of TIDs in the input projection that are active. Filtering operations
+ * are applied incrementally to only those tuples that are active. To materialize the results of the
+ * filter into the projection, the filter must be finalized through a call to
+ * VectorFilterExecutor::Finish(). This call atomically makes all valid TIDs active in the input
+ * projection.
  *
- * To materialize the results of the filter into the projection, the filter must be finalized
- * through a call to @em Finish(). After this call, the projection will only contain those tuples
- * that passed all filtering operations.
+ * Filters work on column indexes as they appear in the vector projections they operate on. It is
+ * the responsibility of the user to be aware of this ordering.
+ *
+ * @code
+ * VectorFilterExecutor filter = ...
+ * GenericValue ten = ...
+ * filter.SelectEqVal(1, ten);
+ * filter.Finalize();
+ * @endcode
+ *
+ * The above code
  */
 class VectorFilterExecutor {
  public:
@@ -188,23 +196,15 @@ class VectorFilterExecutor {
    */
   void SelectNe(uint32_t col_idx, uint32_t right_col_idx);
 
-  // Generic filtering function. Accepts a list of input vectors and the TID list to update.
-  using VectorFilterFn = std::function<uint32_t(const Vector *[], TupleIdList *)>;
-
-  /**
-   * Apply a generic selection filter using the vectors at indexes stored in @em col_indexes as
-   * input vectors.
-   * @param col_indexes The indexes of the columns to operate on.
-   * @param filter The filtering function that updates the TID list.
-   */
-  void SelectGeneric(const std::vector<uint32_t> &col_indexes, const VectorFilterFn &filter);
-
   /**
    * Materialize the results of the filter in the input vector projection.
    */
   void Finish();
 
  private:
+  // The (optional) iterator over the projection that's being filtered.
+  VectorProjectionIterator *vector_projection_iterator_;
+
   // The vector projection we're filtering
   VectorProjection *vector_projection_;
 

@@ -58,8 +58,8 @@ TEST_F(VectorProjectionTest, InitializeEmpty) {
   EXPECT_EQ(nullptr, vp.GetSelectionVector());
 
   for (uint32_t i = 0; i < vp.GetNumColumns(); i++) {
-    EXPECT_EQ(0u, vp.GetColumn(i)->count());
-    EXPECT_EQ(nullptr, vp.GetColumn(i)->selection_vector());
+    EXPECT_EQ(0u, vp.GetColumn(i)->GetCount());
+    EXPECT_EQ(nullptr, vp.GetColumn(i)->GetSelectionVector());
   }
 
   vp.CheckIntegrity();
@@ -78,8 +78,8 @@ TEST_F(VectorProjectionTest, Initialize) {
   EXPECT_EQ(nullptr, vp.GetSelectionVector());
 
   for (uint32_t i = 0; i < vp.GetNumColumns(); i++) {
-    EXPECT_EQ(0u, vp.GetColumn(i)->count());
-    EXPECT_EQ(nullptr, vp.GetColumn(i)->selection_vector());
+    EXPECT_EQ(0u, vp.GetColumn(i)->GetCount());
+    EXPECT_EQ(nullptr, vp.GetColumn(i)->GetSelectionVector());
   }
 
   vp.CheckIntegrity();

@@ -67,6 +67,16 @@ class VectorProjectionIterator;
 class Sorter {
  public:
   /**
+   * Minimum number of tuples to have before using a parallel sort. We use a smaller value in DEBUG
+   * mode to reduce runtime of tests by not requiring large Sorters when testing parallel sorts.
+   */
+#ifndef NDEBUG
+  static constexpr uint64_t kDefaultMinTuplesForParallelSort = 1000;
+#else
+  static constexpr uint64_t kDefaultMinTuplesForParallelSort = 10000;
+#endif
+
+  /**
    * The comparison function used to sort tuples in a Sorter.
    */
   using ComparisonFunction = int32_t (*)(const void *lhs, const void *rhs);
@@ -91,64 +101,68 @@ class Sorter {
   DISALLOW_COPY_AND_MOVE(Sorter);
 
   /**
-   * Allocate room for a tuple in this sorter. Return a pointer to a contiguous chunk of memory.
+   * Allocate room for a tuple in this sorter. It's the callers responsibility to fill in the
+   * contents.
+   * @return A pointer to a contiguous chunk of memory where the tuple's contents are written.
    */
   byte *AllocInputTuple();
 
   /**
-   * Tuple allocation for TopK. This call is must be paired with a subsequent
-   * @em AllocInputTupleTopKFinish() call.
+   * Tuple allocation for TopK. This call is must be paired with a subsequent call to
+   * Sorter::AllocInputTupleTopKFinish() after the tuple's contents have been written into the
+   * space.
    *
    * @see AllocInputTupleTopKFinish()
    */
   byte *AllocInputTupleTopK(uint64_t top_k);
 
   /**
-   * Complete the allocation and insertion of a tuple intended for TopK. This
-   * call must be preceded by a call to @em AllocInputTupleTopK().
+   * Complete the allocation and insertion of a tuple intended for TopK. This call must be preceded
+   * by a call to Sorter::AllocInputTupleTopK().
    *
    * @see AllocInputTupleTopK()
    */
   void AllocInputTupleTopKFinish(uint64_t top_k);
 
   /**
-   * Sort all inserted entries
+   * Sort all inserted entries.
    */
   void Sort();
 
   /**
-   * Perform a parallel sort of all sorter instances stored in the thread state
-   * container object. Each thread-local sorter instance is assumed (but not
-   * required) to be unsorted. Once sorting completes, this sorter instance will
-   * take ownership of all data owned by each thread-local instances.
-   * @param thread_state_container The container holding all thread-local sorter
-   *                               instances.
-   * @param sorter_offset The offset into the container where the sorter
-   *                      instance is.
+   * Perform a parallel sort of all sorter instances stored in the thread state container object.
+   * Each thread-local sorter instance is assumed (but not required) to be unsorted. Once sorting
+   * completes, <b>this</b> sorter instance will take ownership of all data owned by each
+   * thread-local instances.
+   * @param thread_state_container The container holding all thread-local sorter instances.
+   * @param sorter_offset The offset into the container where the sorter instance is.
    */
   void SortParallel(const ThreadStateContainer *thread_state_container, uint32_t sorter_offset);
 
   /**
-   * Perform a parallel Top-K of all sorter instances stored in the thread
-   * state container object. Each thread-local sorter instance is assumed (but
-   * not required) to be unsorted. Once sorting completes, this sorter instance
-   * will take ownership of all data owned by each thread-local instances.
-   * @param thread_state_container The container holding all thread-local sorter
-   *                               instances.
-   * @param sorter_offset The offset into the container where the sorter
-   *                      instance is.
+   * Perform a parallel Top-K of all sorter instances stored in the thread state container object.
+   * Each thread-local sorter instance is assumed (but not required) to be unsorted. Once sorting
+   * completes, this sorter instance will take ownership of all data owned by each thread-local
+   * instances.
+   * @param thread_state_container The container holding all thread-local sorter instances.
+   * @param sorter_offset The offset into the container where the sorter instance is.
    * @param top_k The number entries at the top the caller cares for.
    */
   void SortTopKParallel(const ThreadStateContainer *thread_state_container, uint32_t sorter_offset,
                         uint64_t top_k);
 
   /**
-   * Return the number of tuples currently in this sorter
+   * @return The number of tuples currently in this sorter.
    */
   uint64_t GetTupleCount() const noexcept { return tuples_.size(); }
 
   /**
-   * Has this sorter's contents been sorted?
+   * @return True if this sorter contains no tuples; false otherwise.
+   */
+  bool IsEmpty() const noexcept { return GetTupleCount() == 0; }
+
+  /**
+   * @return True if this sorter's contents been sorted; false otherwise.
    */
   bool IsSorted() const noexcept { return sorted_; }
 

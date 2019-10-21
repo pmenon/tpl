@@ -116,7 +116,7 @@ TEST_F(AggregationHashTableTest, SimpleRandomInsertionTest) {
         FAIL();
       }
       EXPECT_TRUE(ref_iter == ref_agg_table.end());
-      new (agg_table()->Insert(hash_val)) AggTuple(input);
+      new (agg_table()->AllocInputTuple(hash_val)) AggTuple(input);
       ref_agg_table.emplace(input.key, std::make_unique<AggTuple>(input));
     }
   }
@@ -147,7 +147,7 @@ TEST_F(AggregationHashTableTest, IterationTest) {
       if (existing != nullptr) {
         existing->Advance(input);
       } else {
-        auto *new_agg = agg_table()->Insert(input.Hash());
+        auto *new_agg = agg_table()->AllocInputTuple(input.Hash());
         new (new_agg) AggTuple(input);
       }
     }
@@ -185,7 +185,7 @@ TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
     if (existing != nullptr) {
       existing->Advance(input);
     } else {
-      auto *new_agg = agg_table()->InsertPartitioned(input.Hash());
+      auto *new_agg = agg_table()->AllocInputTuplePartitioned(input.Hash());
       new (new_agg) AggTuple(input);
     }
   }
@@ -299,8 +299,8 @@ TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
     uint32_t count = 0;
     AHTOverflowPartitionIterator iter(partitions.begin(), partitions.end());
     for (; iter.HasNext(); iter.Next()) {
-      EXPECT_EQ(100u, iter.GetPayloadAs<Data>()->key);
-      EXPECT_EQ(200u, iter.GetPayloadAs<Data>()->val);
+      EXPECT_EQ(100u, iter.GetRowAs<Data>()->key);
+      EXPECT_EQ(200u, iter.GetRowAs<Data>()->val);
       count++;
     }
     EXPECT_EQ(1u, count);
@@ -344,18 +344,25 @@ TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
 }
 
 TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
-  const uint32_t num_aggs = 100;
+  tbb::task_scheduler_init sched;
 
-  auto init_ht = [](void *ctx, void *aht) {
+  // Thread-local state initialization function:
+  // Creates the aggregation table
+  const auto init_ht = [](void *ctx, void *aht) {
     auto exec_ctx = reinterpret_cast<ExecutionContext *>(ctx);
-    new (aht) AggregationHashTable(exec_ctx->memory_pool(), sizeof(AggTuple));
+    new (aht) AggregationHashTable(exec_ctx->GetMemoryPool(), sizeof(AggTuple));
   };
 
-  auto destroy_ht = [](void *ctx, void *aht) {
-    reinterpret_cast<AggregationHashTable *>(aht)->~AggregationHashTable();
+  // Thread-local state destruction function:
+  // Destroys the aggregation hash table
+  const auto destroy_ht = [](void *ctx, void *aht) {
+    std::destroy_at(reinterpret_cast<AggregationHashTable *>(aht));
   };
 
-  auto build_agg_table = [&](AggregationHashTable *agg_table) {
+  // Function to build one aggregation hash table. Inserts random data to ensure 'num_aggs'
+  // unique aggregates in final table.
+  constexpr uint32_t num_aggs = 100;
+  const auto build_agg_table = [&](AggregationHashTable *agg_table) {
     std::mt19937 generator;
     std::uniform_int_distribution<uint64_t> distribution(0, num_aggs - 1);
 
@@ -366,60 +373,58 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
       if (existing != nullptr) {
         existing->Advance(input);
       } else {
-        auto *new_agg = agg_table->InsertPartitioned(input.Hash());
+        auto *new_agg = agg_table->AllocInputTuplePartitioned(input.Hash());
         new (new_agg) AggTuple(input);
       }
     }
   };
 
+  // Merging function to merge overflow partition data
   auto merge = [](void *ctx, AggregationHashTable *table, AHTOverflowPartitionIterator *iter) {
     for (; iter->HasNext(); iter->Next()) {
-      auto *partial_agg = iter->GetPayloadAs<AggTuple>();
+      auto *partial_agg = iter->GetRowAs<AggTuple>();
       auto *existing =
-          reinterpret_cast<AggTuple *>(table->Lookup(iter->GetHash(), AggAggKeyEq, partial_agg));
+          reinterpret_cast<AggTuple *>(table->Lookup(iter->GetRowHash(), AggAggKeyEq, partial_agg));
       if (existing != nullptr) {
         existing->Merge(*partial_agg);
       } else {
-        auto *new_agg = table->Insert(iter->GetHash());
-        new (new_agg) AggTuple(*partial_agg);
+        table->Insert(iter->GetEntryForRow());
       }
     }
   };
 
-  struct QS {
+  struct QueryState {
     std::atomic<uint32_t> row_count;
   };
 
   auto scan = [](void *query_state, void *thread_state, const AggregationHashTable *agg_table) {
-    auto *qs = reinterpret_cast<QS *>(query_state);
-    qs->row_count += agg_table->NumElements();
+    auto *qs = reinterpret_cast<QueryState *>(query_state);
+    qs->row_count += agg_table->GetTupleCount();
   };
 
-  QS qstate{0};
+  QueryState query_state{0};
   MemoryPool memory(nullptr);
   ExecutionContext ctx(&memory);
   ThreadStateContainer container(&memory);
 
-  // Build thread-local tables
+  // Build 4 thread-local aggregation hash tables
   container.Reset(sizeof(AggregationHashTable), init_ht, destroy_ht, &ctx);
-  auto aggs = {0, 1, 2, 3};
-  tbb::task_scheduler_init sched;
-  tbb::parallel_for_each(aggs.begin(), aggs.end(), [&](UNUSED auto x) {
-    auto aht = container.AccessThreadStateOfCurrentThreadAs<AggregationHashTable>();
-    build_agg_table(aht);
+  LaunchParallel(4, [&](auto tid) {
+    build_agg_table(container.AccessCurrentThreadStateAs<AggregationHashTable>());
   });
 
+  // The main table that merges all thread-local tables
   AggregationHashTable main_table(&memory, sizeof(AggTuple));
-
-  // Move memory
   main_table.TransferMemoryAndPartitions(&container, 0, merge);
+
+  // Clear thread-local container to ensure all memory has been moved
   container.Clear();
 
-  // Scan
-  main_table.ExecuteParallelPartitionedScan(&qstate, &container, scan);
+  // Scan main table and ensure all data exists.
+  main_table.ExecuteParallelPartitionedScan(&query_state, &container, scan);
 
   // Check
-  EXPECT_EQ(num_aggs, qstate.row_count.load(std::memory_order_seq_cst));
+  EXPECT_EQ(num_aggs, query_state.row_count.load(std::memory_order_seq_cst));
 }
 
 }  // namespace tpl::sql

@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "common/exception.h"
+
 namespace tpl::sql {
 
 // static
@@ -21,12 +23,14 @@ SqlTypeId GetSqlTypeFromInternalType(TypeId type) {
       return SqlTypeId::Real;
     case TypeId::Double:
       return SqlTypeId::Double;
+    case TypeId::Date:
+      return SqlTypeId::Date;
     case TypeId::Varchar:
       return SqlTypeId::Varchar;
     case TypeId::Varbinary:
       return SqlTypeId::Varchar;
     default:
-      UNREACHABLE("Impossible internal type");
+      throw InvalidTypeException(type, "type is not a SQL type");
   }
 }
 
@@ -51,11 +55,14 @@ std::size_t GetTypeIdSize(TypeId type) {
       return sizeof(float);
     case TypeId::Double:
       return sizeof(double);
+    case TypeId::Date:
+      return sizeof(Date);
     case TypeId::Varchar:
-      return sizeof(char *);
+      return sizeof(VarlenEntry);
     case TypeId::Varbinary:
       return sizeof(Blob);
     default:
+      // All cases handled
       UNREACHABLE("Impossible type");
   }
 }
@@ -72,6 +79,7 @@ bool IsTypeFixedSize(TypeId type) {
     case TypeId::Pointer:
     case TypeId::Float:
     case TypeId::Double:
+    case TypeId::Date:
       return true;
     case TypeId::Varchar:
     case TypeId::Varbinary:
@@ -93,11 +101,13 @@ bool IsTypeNumeric(TypeId type) {
     case TypeId::Pointer:
     case TypeId::Float:
     case TypeId::Double:
+    case TypeId::Date:
       return true;
     case TypeId::Varchar:
     case TypeId::Varbinary:
       return false;
     default:
+      // All cases handled
       UNREACHABLE("Impossible type");
   }
 }
@@ -123,11 +133,14 @@ std::string TypeIdToString(TypeId type) {
       return "Float";
     case TypeId::Double:
       return "Double";
+    case TypeId::Date:
+      return "Date";
     case TypeId::Varchar:
       return "VarChar";
     case TypeId::Varbinary:
       return "VarBinary";
     default:
+      // All cases handled
       UNREACHABLE("Impossible type");
   }
 }

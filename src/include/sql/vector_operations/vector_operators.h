@@ -11,11 +11,8 @@ class TupleIdList;
 /**
  * A utility class containing several core vectorized operations.
  */
-class VectorOps {
+class VectorOps : public AllStatic {
  public:
-  // Delete to force only static functions
-  VectorOps() = delete;
-
   /**
    * Copy @em element_count elements from @em source starting at offset @em offset into the (opaque)
    * array @em target.
@@ -201,6 +198,22 @@ class VectorOps {
 
   // -------------------------------------------------------
   //
+  // Gather / Scatter
+  //
+  // -------------------------------------------------------
+
+  /**
+   * Read the values pointed to by pointers in the @em pointers vector into the @em result vector.
+   * A byte-offset value @em offset is added to each pointer element before the pointer is
+   * de-referenced. NULL pointer elements are skipped, and the NULL bit is set in the result.
+   * @param pointers The vector of pointers to read.
+   * @param[out] result The vector containing the values read from de-referencing each pointer.
+   * @param offset The byte offset to apply to each pointer before it is de-referenced.
+   */
+  static void Gather(const Vector &pointers, Vector *result, std::size_t offset);
+
+  // -------------------------------------------------------
+  //
   // Vector Iteration Logic
   //
   // -------------------------------------------------------
@@ -269,7 +282,7 @@ class VectorOps {
    */
   template <typename T, typename F>
   static void ExecTyped(const Vector &vector, F &&fun) {
-    const auto *data = reinterpret_cast<const T *>(vector.data());
+    const auto *data = reinterpret_cast<const T *>(vector.GetData());
     Exec(vector.sel_vector_, vector.count_, [&](uint64_t i, uint64_t k) { fun(data[i], i, k); });
   }
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <immintrin.h>
+#include <type_traits>
 
 #include "common/common.h"
 #include "common/macros.h"
@@ -566,85 +567,6 @@ inline Vec8 operator<<(const Vec8 &a, const Vec8 &b) { return Vec8(_mm256_sllv_e
 inline Vec8 &operator<<=(Vec8 &a, const Vec8 &b) {
   a = a << b;
   return a;
-}
-
-// ---------------------------------------------------------
-// Filter
-// ---------------------------------------------------------
-
-template <typename T, typename Enable = void>
-struct FilterVecSizer;
-
-template <>
-struct FilterVecSizer<int8_t> {
-  using Vec = Vec8;
-  using VecMask = Vec8Mask;
-};
-
-template <>
-struct FilterVecSizer<int16_t> {
-  using Vec = Vec8;
-  using VecMask = Vec8Mask;
-};
-
-template <>
-struct FilterVecSizer<int32_t> {
-  using Vec = Vec8;
-  using VecMask = Vec8Mask;
-};
-
-template <>
-struct FilterVecSizer<int64_t> {
-  using Vec = Vec4;
-  using VecMask = Vec4Mask;
-};
-
-template <typename T>
-struct FilterVecSizer<T, std::enable_if_t<std::is_unsigned_v<T>>>
-    : public FilterVecSizer<std::make_signed_t<T>> {};
-
-template <typename T, template <typename> typename Compare>
-static inline uint32_t FilterVectorByVal(const T *RESTRICT in, const uint32_t in_count, const T val,
-                                         sel_t *RESTRICT out, uint32_t *RESTRICT in_pos) {
-  using Vec = typename FilterVecSizer<T>::Vec;
-  using VecMask = typename FilterVecSizer<T>::VecMask;
-
-  const Compare cmp;
-
-  const Vec xval(val);
-
-  uint32_t out_pos = 0;
-
-  Vec in_vec;
-  for (*in_pos = 0; *in_pos + Vec::Size() < in_count; *in_pos += Vec::Size()) {
-    in_vec.Load(in + *in_pos);
-    VecMask mask = cmp(in_vec, xval);
-    out_pos += mask.ToPositions(out + out_pos, *in_pos);
-  }
-
-  return out_pos;
-}
-
-template <typename T, template <typename> typename Compare>
-static inline uint32_t FilterVectorByVector(const T *RESTRICT in_1, const T *RESTRICT in_2,
-                                            const uint32_t in_count, sel_t *RESTRICT out,
-                                            uint32_t *RESTRICT in_pos) {
-  using Vec = typename FilterVecSizer<T>::Vec;
-  using VecMask = typename FilterVecSizer<T>::VecMask;
-
-  const Compare cmp;
-
-  uint32_t out_pos = 0;
-
-  Vec in_1_vec, in_2_vec;
-  for (*in_pos = 0; *in_pos + Vec::Size() < in_count; *in_pos += Vec::Size()) {
-    in_1_vec.Load(in_1 + *in_pos);
-    in_2_vec.Load(in_2 + *in_pos);
-    VecMask mask = cmp(in_1_vec, in_2_vec);
-    out_pos += mask.ToPositions(out + out_pos, *in_pos);
-  }
-
-  return out_pos;
 }
 
 }  // namespace tpl::util::simd

@@ -10,11 +10,8 @@ namespace tpl::sql {
 /**
  * Comparison functions for SQL values.
  */
-class ComparisonFunctions {
+class ComparisonFunctions : public AllStatic {
  public:
-  // Delete to force only static functions
-  ComparisonFunctions() = delete;
-
   static void EqBoolVal(BoolVal *result, const BoolVal &v1, const BoolVal &v2);
   static void GeBoolVal(BoolVal *result, const BoolVal &v1, const BoolVal &v2);
   static void GtBoolVal(BoolVal *result, const BoolVal &v1, const BoolVal &v2);
@@ -36,6 +33,20 @@ class ComparisonFunctions {
   static void LtReal(BoolVal *result, const Real &v1, const Real &v2);
   static void NeReal(BoolVal *result, const Real &v1, const Real &v2);
 
+  static void EqDateVal(BoolVal *result, const DateVal &v1, const DateVal &v2);
+  static void GeDateVal(BoolVal *result, const DateVal &v1, const DateVal &v2);
+  static void GtDateVal(BoolVal *result, const DateVal &v1, const DateVal &v2);
+  static void LeDateVal(BoolVal *result, const DateVal &v1, const DateVal &v2);
+  static void LtDateVal(BoolVal *result, const DateVal &v1, const DateVal &v2);
+  static void NeDateVal(BoolVal *result, const DateVal &v1, const DateVal &v2);
+
+  static void EqTimestampVal(BoolVal *result, const TimestampVal &v1, const TimestampVal &v2);
+  static void GeTimestampVal(BoolVal *result, const TimestampVal &v1, const TimestampVal &v2);
+  static void GtTimestampVal(BoolVal *result, const TimestampVal &v1, const TimestampVal &v2);
+  static void LeTimestampVal(BoolVal *result, const TimestampVal &v1, const TimestampVal &v2);
+  static void LtTimestampVal(BoolVal *result, const TimestampVal &v1, const TimestampVal &v2);
+  static void NeTimestampVal(BoolVal *result, const TimestampVal &v1, const TimestampVal &v2);
+
   static void EqStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
   static void GeStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
   static void GtStringVal(BoolVal *result, const StringVal &v1, const StringVal &v2);
@@ -54,7 +65,7 @@ class ComparisonFunctions {
 #define BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, TYPE, OP)                                   \
   inline void ComparisonFunctions::NAME##TYPE(BoolVal *result, const TYPE &v1, const TYPE &v2) { \
     result->is_null = (v1.is_null || v2.is_null);                                                \
-    result->val = OP::Apply(v1.val, v2.val);                                                     \
+    result->val = OP<decltype(v1.val)>::Apply(v1.val, v2.val);                                   \
   }
 
 #define BINARY_COMPARISON_STRING_FN_HIDE_NULL(NAME, TYPE, OP)                       \
@@ -64,13 +75,15 @@ class ComparisonFunctions {
       *result = BoolVal::Null();                                                    \
       return;                                                                       \
     }                                                                               \
-    *result = BoolVal(OP::Apply(v1.ptr, v1.len, v2.ptr, v2.len));                   \
+    *result = BoolVal(OP<decltype(v1.val)>::Apply(v1.val, v2.val));                 \
   }
 
-#define BINARY_COMPARISONS(NAME, OP)                        \
-  BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, BoolVal, OP) \
-  BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, Integer, OP) \
-  BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, Real, OP)    \
+#define BINARY_COMPARISONS(NAME, OP)                             \
+  BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, BoolVal, OP)      \
+  BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, Integer, OP)      \
+  BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, Real, OP)         \
+  BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, DateVal, OP)      \
+  BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, TimestampVal, OP) \
   BINARY_COMPARISON_STRING_FN_HIDE_NULL(NAME, StringVal, OP)
 
 BINARY_COMPARISONS(Eq, Equal);

@@ -5,11 +5,11 @@
 #include <utility>
 #include <vector>
 
-#include <tbb/tbb.h>  // NOLINT
+#include "ips4o/ips4o.hpp"
 
 #include "llvm/ADT/STLExtras.h"
 
-#include "ips4o/ips4o.hpp"
+#include "tbb/tbb.h"
 
 #include "logging/logger.h"
 #include "sql/thread_state_container.h"
@@ -120,8 +120,8 @@ void Sorter::Sort() {
 
   timer.Stop();
 
-  UNUSED double tps = (tuples_.size() / timer.elapsed()) / 1000.0;
-  LOG_DEBUG("Sorted {} tuples in {} ms ({:.2f} tps)", tuples_.size(), timer.elapsed(), tps);
+  double tps = (tuples_.size() / timer.GetElapsed()) / 1000.0;
+  LOG_DEBUG("Sorted {} tuples in {} ms ({:.2f} mtps)", tuples_.size(), timer.GetElapsed(), tps);
 
   // Mark complete
   sorted_ = true;
@@ -155,54 +155,79 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
 
   std::vector<Sorter *> tl_sorters;
   thread_state_container->CollectThreadLocalStateElementsAs(tl_sorters, sorter_offset);
-  llvm::erase_if(tl_sorters, [](const Sorter *sorter) { return sorter->GetTupleCount() == 0; });
+  llvm::erase_if(tl_sorters, [](const Sorter *sorter) { return sorter->IsEmpty(); });
 
-  // If there's nothing to sort, quit
+  // If there's nothing to sort, exit.
   if (tl_sorters.empty()) {
     sorted_ = true;
     return;
   }
 
+  const uint64_t num_tuples = std::accumulate(
+      tl_sorters.begin(), tl_sorters.end(), uint64_t(0),
+      [](const auto partial, const auto *sorter) { return partial + sorter->GetTupleCount(); });
+
+  // If the total number of tuples across **ALL** thread-local sorter instances is less than
+  // kMinTuplesForParallelSort, we execute a single-threaded sort. Parallel sorting fewer than this
+  // threshold is slower due to the overhead of statistics collection and spawning sort and merge
+  // jobs. The threshold value value was found empirically, but might be a good candidate for
+  // adapting based on tuples sizes, CPU speeds, caches, algorithms, etc.
+
+  if (tl_sorters.size() == 1 || num_tuples < kDefaultMinTuplesForParallelSort) {
+    LOG_DEBUG("Sorter contains {} elements. Using serial sort.", num_tuples);
+
+    // Reserve room for all tuples
+    tuples_.reserve(num_tuples);
+    for (auto *tl_sorter : tl_sorters) {
+      tuples_.insert(tuples_.end(), tl_sorter->tuples_.begin(), tl_sorter->tuples_.end());
+      owned_tuples_.emplace_back(std::move(tl_sorter->tuple_storage_));
+      tl_sorter->tuples_.clear();
+    }
+
+    // Single-threaded sort
+    Sort();
+
+    // Finish
+    return;
+  }
+
+#ifndef NDEBUG
+  std::string msg = "Issuing parallel sort. Sorter sizes: ";
+  std::for_each(tl_sorters.begin(), tl_sorters.end(), [first = true, &msg](auto *sorter) mutable {
+    if (!first) msg += ",";
+    first = false;
+    msg += std::to_string(sorter->GetTupleCount());
+  });
+  LOG_DEBUG("{}", msg);
+#endif
+
+  // Make room in our 'tuples_' vector for all tuples. Since w
+  tuples_.resize(num_tuples);
+
   // -------------------------------------------------------
-  // 1. Make room in this sorter for all result tuples
+  // 1. Sort each thread-local sorter in parallel
   // -------------------------------------------------------
 
   util::StageTimer<std::milli> timer;
-  timer.EnterStage("Resize Main Sorter");
-
-  const uint64_t num_tuples =
-      std::accumulate(tl_sorters.begin(), tl_sorters.end(), uint64_t(0),
-                      [](const uint64_t partial, const Sorter *const sorter) {
-                        return partial + sorter->GetTupleCount();
-                      });
-  tuples_.resize(num_tuples);
-
-  timer.ExitStage();
-
-  // -------------------------------------------------------
-  // 2. Sort each thread-local sorter in parallel
-  // -------------------------------------------------------
-
   timer.EnterStage("Parallel Sort Thread-Local Instances");
 
   tbb::task_scheduler_init sched;
-  tbb::parallel_for_each(tl_sorters.begin(), tl_sorters.end(),
-                         [](Sorter *sorter) { sorter->Sort(); });
+  tbb::parallel_for_each(tl_sorters, [](Sorter *sorter) { sorter->Sort(); });
 
   timer.ExitStage();
 
   // -------------------------------------------------------
-  // 3. Compute splitters
+  // 2. Compute splitters
   // -------------------------------------------------------
 
   timer.EnterStage("Compute Splitters");
 
-  // Let B be the number of buckets we wish to decompose our input into, let N
-  // be the number of sorter instances we have; then, 'splitters' is a [B-1 x N]
-  // matrix where each row of the matrix contains a list of candidate splitters
-  // found in each sorter, and each column indicates the set of splitter keys in
-  // a single sorter. In other words, splitters[i][j] indicates the i-th
+  // Let B be the number of buckets we wish to decompose our input into, let N be the number of
+  // sorter instances we have; then, 'splitters' is a [B-1 x N] matrix where each row of the matrix
+  // contains a list of candidate splitters found in each sorter, and each column indicates the set
+  // of splitter keys in a single sorter. In other words, splitters[i][j] indicates the i-th
   // splitter key found in the j-th sorter instance.
+
   const uint64_t num_buckets = tl_sorters.size();
   std::vector<std::vector<const byte *>> splitters(num_buckets - 1);
   for (auto &splitter : splitters) {
@@ -220,7 +245,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   timer.ExitStage();
 
   // -------------------------------------------------------
-  // 4. Compute work packages
+  // 3. Compute work packages
   // -------------------------------------------------------
 
   timer.EnterStage("Compute Work Packages");
@@ -232,18 +257,16 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   std::vector<MergeWorkType> merge_work;
 
   {
-    // This tracks the current position in the global output (i.e., this
-    // sorter's tuples vector) where the next merge package will begin writing
-    // results into. It begins at the front; as we generate merge packages, we
-    // calculate the next position by computing the sizes of the merge packages.
-    // We've already perfectly sized the output so this memory is allocated and
-    // ready to be written to.
+    // This tracks the current position in the global output (i.e., this sorter's tuples vector)
+    // where the next merge package will begin writing results into. It begins at the front; as we
+    // generate merge packages, we calculate the next position by computing the sizes of the merge
+    // packages. We've already perfectly sized the output so this memory is allocated and ready to
+    // be written to.
     auto write_pos = tuples_.begin();
 
-    // This vector tracks, for each sorter, the position of the start of the
-    // next input range. As we move through the splitters, we bump this pointer
-    // so that we don't need to perform two binary searches to find the lower
-    // and upper range around the splitter key.
+    // This vector tracks, for each sorter, the position of the start of the next input range. As we
+    // move through the splitters, we bump this pointer so that we don't need to perform two binary
+    // searches to find the lower and upper range around the splitter key.
     std::vector<SeqTypeIter> next_start(tl_sorters.size());
 
     for (uint64_t idx = 0; idx < splitters.size(); idx++) {
@@ -286,7 +309,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   timer.ExitStage();
 
   // -------------------------------------------------------
-  // 5. Parallel merge
+  // 4. Parallel merge
   // -------------------------------------------------------
 
   timer.EnterStage("Parallel Merge");
@@ -295,26 +318,24 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
     return cmp_fn_(*l.first, *r.first) >= 0;
   };
 
-  tbb::parallel_for_each(
-      merge_work.begin(), merge_work.end(), [&heap_cmp](const MergeWork<SeqTypeIter> &work) {
-        std::priority_queue<MergeWorkType::Range, std::vector<MergeWorkType::Range>,
-                            decltype(heap_cmp)>
-            heap(heap_cmp, work.input_ranges);
-        SeqTypeIter dest = work.destination;
-        while (!heap.empty()) {
-          auto top = heap.top();
-          heap.pop();
-          *dest++ = *top.first;
-          if (top.first + 1 != top.second) {
-            heap.emplace(top.first + 1, top.second);
-          }
-        }
-      });
+  tbb::parallel_for_each(merge_work, [&heap_cmp](const MergeWork<SeqTypeIter> &work) {
+    std::priority_queue<MergeWorkType::Range, std::vector<MergeWorkType::Range>, decltype(heap_cmp)>
+        heap(heap_cmp, work.input_ranges);
+    SeqTypeIter dest = work.destination;
+    while (!heap.empty()) {
+      auto top = heap.top();
+      heap.pop();
+      *dest++ = *top.first;
+      if (top.first + 1 != top.second) {
+        heap.emplace(top.first + 1, top.second);
+      }
+    }
+  });
 
   timer.ExitStage();
 
   // -------------------------------------------------------
-  // 6. Move thread-local data into this sorter
+  // 5. Move thread-local data into this sorter
   // -------------------------------------------------------
 
   timer.EnterStage("Transfer Tuple Ownership");
@@ -333,7 +354,8 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
 
   sorted_ = true;
 
-  LOG_DEBUG("Parallel Sort:");
+  UNUSED double tps = (tuples_.size() / timer.GetTotalElapsedTime()) / 1000.0;
+  LOG_DEBUG("Sort Stats: {} tuples ({:.2f} mtps)", GetTupleCount(), tps);
   for (const auto &stage : timer.GetStages()) {
     LOG_DEBUG("  {}: {.2f} ms", stage.name(), stage.time());
   }
@@ -345,7 +367,9 @@ void Sorter::SortTopKParallel(const ThreadStateContainer *thread_state_container
   SortParallel(thread_state_container, sorter_offset);
 
   // Trim to top-K
-  tuples_.resize(top_k);
+  if (top_k < GetTupleCount()) {
+    tuples_.resize(top_k);
+  }
 }
 
 }  // namespace tpl::sql

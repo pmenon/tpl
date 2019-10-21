@@ -10,10 +10,10 @@
 #include "count/hll.h"
 
 #include "common/cpu_info.h"
+#include "common/memory.h"
 #include "logging/logger.h"
 #include "sql/memory_pool.h"
 #include "sql/thread_state_container.h"
-#include "util/memory.h"
 #include "util/timer.h"
 
 namespace tpl::sql {
@@ -62,7 +62,7 @@ void JoinHashTable::BuildGenericHashTableInternal() {
 
 void JoinHashTable::BuildGenericHashTable() {
   // Setup based on number of buffered build-size tuples
-  generic_hash_table_.SetSize(GetElementCount());
+  generic_hash_table_.SetSize(GetTupleCount());
 
   // Dispatch to appropriate build code based on GHT size
   uint64_t l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
@@ -137,33 +137,33 @@ class ReorderBuffer {
   }
 
   /**
-   * Has the entry @em been processed? In other words, is the entry in its
-   * final location in the entry array?
+   * @return True if @em entry has been processed, i.e., if @em entry is in its final location in
+   *         entry array. Return false otherwise.
    */
-  ALWAYS_INLINE bool IsProcessed(const HashTableEntry *entry) const {
+  bool IsProcessed(const HashTableEntry *entry) const {
     return (entry->cht_slot & kProcessedBit) != 0u;
   }
 
   /**
    * Mark the given entry as processed and in its final location
    */
-  ALWAYS_INLINE void SetProcessed(HashTableEntry *entry) const { entry->cht_slot |= kProcessedBit; }
+  void SetProcessed(HashTableEntry *entry) const { entry->cht_slot |= kProcessedBit; }
 
   /**
-   * Has the entry @em entry been buffered in the reorder buffer?
+   * @return True if @em entry has been buffered into this re-order buffer; false otherwise.
    */
-  ALWAYS_INLINE bool IsBuffered(const HashTableEntry *entry) const {
+  bool IsBuffered(const HashTableEntry *entry) const {
     return (entry->cht_slot & kBufferedBit) != 0u;
   }
 
   /**
    * Mark the entry @em entry as buffered in the reorder buffer
    */
-  ALWAYS_INLINE void SetBuffered(HashTableEntry *entry) const { entry->cht_slot |= kBufferedBit; }
+  void SetBuffered(HashTableEntry *entry) const { entry->cht_slot |= kBufferedBit; }
 
   /**
-   * Fill this reorder buffer with as many entries as possible. Each entry that
-   * is inserted is marked/tagged as buffered.
+   * Fill this reorder buffer with as many entries as possible. Each entry that is inserted is
+   * marked/tagged as buffered.
    * @return True if any entries were buffered; false otherwise
    */
   bool Fill() {
@@ -227,7 +227,7 @@ class ReorderBuffer {
 template <bool PrefetchCHT, bool PrefetchEntries>
 void JoinHashTable::ReorderMainEntries() {
   const uint64_t elem_size = entries_.element_size();
-  const uint64_t num_overflow_entries = concise_hash_table_.num_overflow();
+  const uint64_t num_overflow_entries = concise_hash_table_.GetOverflowEntryCount();
   const uint64_t num_main_entries = entries_.size() - num_overflow_entries;
   uint64_t overflow_idx = num_main_entries;
 
@@ -235,29 +235,23 @@ void JoinHashTable::ReorderMainEntries() {
     return;
   }
 
-  //
-  // This function reorders entries in-place in the main arena using a reorder
-  // buffer space. The general process is:
+  // This function reorders entries in-place in the main arena using a reorder buffer. The general
+  // procedure is:
   // 1. Buffer N tuples. These can be either main or overflow entries.
   // 2. Find and store their destination addresses in the 'targets' buffer
   // 3. Try and store the buffered entry into discovered target space from (2)
   //    There are a few cases we handle:
-  //    3a. If the target entry is 'PROCESSED', then the buffered entry is an
-  //        overflow entry. We acquire an overflow slot and store the buffered
-  //        entry there.
-  //    3b. If the target entry is 'BUFFERED', it is either stored somewhere
-  //        in the reorder buffer, or has been stored into its own target space.
-  //        Either way, we can directly overwrite the target with the buffered
-  //        entry and be done with it.
-  //    3c. We need to swap the target and buffer entry. If the reorder buffer
-  //        has room, copy the target into the buffer and write the buffered
-  //        entry out.
-  //    3d. If the reorder buffer has no room for this target entry, we use a
-  //        temporary space to perform a (costly) three-way swap to buffer the
-  //        target entry into the reorder buffer and write the buffered entry
-  //        out. This should happen infrequently.
+  //    3a. If the target entry is 'PROCESSED', then the buffered entry is an overflow entry. We
+  //        acquire an overflow slot and store the buffered entry there.
+  //    3b. If the target entry is 'BUFFERED', it is either stored somewhere in the reorder buffer,
+  //        or has been stored into its own target space. Either way, we can directly overwrite the
+  //        target with the buffered entry and be done with it.
+  //    3c. We need to swap the target and buffer entry. If the reorder buffer has room, copy the
+  //        target into the buffer and write the buffered entry out.
+  //    3d. If the reorder buffer has no room for this target entry, we use a temporary space to
+  //        perform a (costly) three-way swap to buffer the target entry into the reorder buffer and
+  //        write the buffered entry out. This should happen infrequently.
   // 4. Reset the reorder buffer and repeat.
-  //
 
   HashTableEntry *targets[kDefaultVectorSize];
   ReorderBuffer reorder_buf(entries_, kDefaultVectorSize, 0, overflow_idx);
@@ -284,7 +278,7 @@ void JoinHashTable::ReorderMainEntries() {
          idx++, prefetch_idx++) {
       if constexpr (PrefetchEntries) {
         if (TPL_LIKELY(prefetch_idx < num_buf_entries)) {
-          util::Prefetch<false, Locality::Low>(targets[prefetch_idx]);
+          Memory::Prefetch<false, Locality::Low>(targets[prefetch_idx]);
         }
       }
 
@@ -321,7 +315,7 @@ template <bool PrefetchCHT, bool PrefetchEntries>
 void JoinHashTable::ReorderOverflowEntries() {
   const uint64_t elem_size = entries_.element_size();
   const uint64_t num_entries = entries_.size();
-  const uint64_t num_overflow_entries = concise_hash_table_.num_overflow();
+  const uint64_t num_overflow_entries = concise_hash_table_.GetOverflowEntryCount();
   const uint64_t num_main_entries = num_entries - num_overflow_entries;
   const uint64_t overflow_start_idx = num_main_entries;
   const uint64_t no_overflow = std::numeric_limits<uint64_t>::max();
@@ -439,7 +433,7 @@ void JoinHashTable::ReorderOverflowEntries() {
          idx++, prefetch_idx++) {
       if constexpr (PrefetchEntries) {
         if (TPL_LIKELY(prefetch_idx < num_buf_entries)) {
-          util::Prefetch<false, Locality::Low>(parents[prefetch_idx]);
+          Memory::Prefetch<false, Locality::Low>(parents[prefetch_idx]);
         }
       }
 
@@ -502,7 +496,7 @@ void JoinHashTable::VerifyMainEntryOrder() {
 #ifndef NDEBUG
   constexpr const uint64_t kCHTSlotMask = kBufferedBit - 1;
 
-  const uint64_t overflow_idx = entries_.size() - concise_hash_table_.num_overflow();
+  const uint64_t overflow_idx = entries_.size() - concise_hash_table_.GetOverflowEntryCount();
   for (uint32_t idx = 0; idx < overflow_idx; idx++) {
     auto *entry = reinterpret_cast<HashTableEntry *>(entries_[idx]);
     auto dest_idx = concise_hash_table_.NumFilledSlotsBefore(entry->cht_slot & kCHTSlotMask);
@@ -528,8 +522,8 @@ void JoinHashTable::BuildConciseHashTableInternal() {
   concise_hash_table_.Build();
 
   LOG_INFO("Concise Table Stats: {} entries, {} overflow ({} % overflow)", entries_.size(),
-           concise_hash_table_.num_overflow(),
-           100.0 * (concise_hash_table_.num_overflow() * 1.0 / entries_.size()));
+           concise_hash_table_.GetOverflowEntryCount(),
+           100.0 * (concise_hash_table_.GetOverflowEntryCount() * 1.0 / entries_.size()));
 
   // Reorder all the main entries in place according to CHT order
   ReorderMainEntries<PrefetchCHT, PrefetchEntries>();
@@ -546,7 +540,7 @@ void JoinHashTable::BuildConciseHashTableInternal() {
 
 void JoinHashTable::BuildConciseHashTable() {
   // Setup based on number of buffered build-size tuples
-  concise_hash_table_.SetSize(GetElementCount());
+  concise_hash_table_.SetSize(GetTupleCount());
 
   // Dispatch to internal function based on prefetching requirements. If the CHT
   // is larger than L3 then the total size of all buffered build-side tuples is
@@ -564,7 +558,7 @@ void JoinHashTable::BuildConciseHashTable() {
 }
 
 void JoinHashTable::Build() {
-  if (is_built()) {
+  if (IsBuilt()) {
     return;
   }
 
@@ -574,15 +568,15 @@ void JoinHashTable::Build() {
   timer.Start();
 
   // Build
-  if (use_concise_hash_table()) {
+  if (UsingConciseHashTable()) {
     BuildConciseHashTable();
   } else {
     BuildGenericHashTable();
   }
 
   timer.Stop();
-  UNUSED double tps = (GetElementCount() / timer.elapsed()) / 1000.0;
-  LOG_DEBUG("JHT: built {} tuples in {} ms ({:.2f} tps)", GetElementCount(), timer.elapsed(), tps);
+  UNUSED double tps = (GetTupleCount() / timer.GetElapsed()) / 1000.0;
+  LOG_DEBUG("JHT: built {} tuples in {} ms ({:.2f} tps)", GetTupleCount(), timer.GetElapsed(), tps);
 
   built_ = true;
 }
@@ -645,9 +639,9 @@ void JoinHashTable::LookupBatchInConciseHashTable(uint32_t num_tuples, const has
 
 void JoinHashTable::LookupBatch(uint32_t num_tuples, const hash_t hashes[],
                                 const HashTableEntry *results[]) const {
-  TPL_ASSERT(is_built(), "Cannot perform lookup before table is built!");
+  TPL_ASSERT(IsBuilt(), "Cannot perform lookup before table is built!");
 
-  if (use_concise_hash_table()) {
+  if (UsingConciseHashTable()) {
     LookupBatchInConciseHashTable(num_tuples, hashes, results);
   } else {
     LookupBatchInGenericHashTable(num_tuples, hashes, results);
@@ -658,12 +652,13 @@ template <bool Prefetch, bool Concurrent>
 void JoinHashTable::MergeIncomplete(JoinHashTable *source) {
   // Only generic table merges are supported
   // TODO(pmenon): Support merging build of concise tables
+  TPL_ASSERT(!source->UsingConciseHashTable(), "Merging incomplete concise tables not supported");
 
   // First, merge entries in the source table into ours
-  for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < source->GetElementCount();
+  for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < source->GetTupleCount();
        idx++, prefetch_idx++) {
     if constexpr (Prefetch) {
-      if (TPL_LIKELY(prefetch_idx < source->GetElementCount())) {
+      if (TPL_LIKELY(prefetch_idx < source->GetTupleCount())) {
         auto *prefetch_entry = source->EntryAt(prefetch_idx);
         generic_hash_table_.PrefetchChainHead<false>(prefetch_entry->hash);
       }
@@ -691,31 +686,43 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
     hll_estimator_->Merge(jht->hll_estimator_.get());
   }
 
+  // Size the global hash table
   uint64_t num_elem_estimate = hll_estimator_->Estimate();
-  LOG_INFO("Global unique count: {}", num_elem_estimate);
-
-  // Set size
   generic_hash_table_.SetSize(num_elem_estimate);
 
-  // Resize the owned entries vector now to avoid resizing concurrently during
-  // merge. All the thread-local join table data will get placed into our
-  // owned entries vector
+  // Resize the owned entries vector now to avoid resizing concurrently during merge. All the
+  // thread-local join table data will get placed into our owned entries vector.
   owned_.reserve(tl_join_tables.size());
 
-  // Is the global hash table out of cache? If so, we'll prefetch during build.
-  const uint64_t l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
-  const bool out_of_cache = (generic_hash_table_.GetTotalMemoryUsage() > l3_size);
+  util::Timer<std::milli> timer;
+  timer.Start();
 
-  // Merge all in parallel
-  tbb::task_scheduler_init sched;
-  tbb::parallel_for_each(tl_join_tables.begin(), tl_join_tables.end(),
-                         [this, out_of_cache](JoinHashTable *source) {
-                           if (out_of_cache) {
-                             MergeIncomplete<true, true>(source);
-                           } else {
-                             MergeIncomplete<false, true>(source);
-                           }
-                         });
+  const bool use_serial_build = num_elem_estimate < kDefaultMinSizeForParallelMerge;
+  if (use_serial_build) {
+    // TODO(pmenon): If the estimate under counted, it might make sense to switch to parallel merge.
+    LOG_INFO("JHT: Estimated {} elements. Using serial merge.", num_elem_estimate);
+    for (auto *source : tl_join_tables) {
+      MergeIncomplete<false, false>(source);
+    }
+  } else {
+    const uint64_t l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
+    const bool out_of_cache = (generic_hash_table_.GetTotalMemoryUsage() > l3_size);
+
+    tbb::parallel_for_each(tl_join_tables, [this, out_of_cache](JoinHashTable *source) {
+      if (out_of_cache) {
+        MergeIncomplete<true, true>(source);
+      } else {
+        MergeIncomplete<false, true>(source);
+      }
+    });
+  }
+
+  timer.Stop();
+
+  double tps = (generic_hash_table_.GetElementCount() / timer.GetElapsed()) / 1000.0;
+  LOG_INFO("{} merged {} JHTs. Estimated {} elements, actual {}. Time: {:.2f} ms ({:.2f} mtps)",
+           use_serial_build ? "Serial" : "Parallel", tl_join_tables.size(), num_elem_estimate,
+           generic_hash_table_.GetElementCount(), timer.GetElapsed(), tps);
 }
 
 }  // namespace tpl::sql

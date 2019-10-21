@@ -102,7 +102,7 @@ TEST_F(BloomFilterTest, Comprehensive) {
 
     double fpr = (actual_found - expected_found) / static_cast<double>(lookups.size());
     double probes_per_sec =
-        static_cast<double>(lookups.size()) / timer.elapsed() * 1000.0 / 1000000.0;
+        static_cast<double>(lookups.size()) / timer.GetElapsed() * 1000.0 / 1000000.0;
     LOG_INFO("p: {:.2f}, {} M probes/sec, FPR: {:2.4f}, (expected: {}, actual: {})", prob_success,
              probes_per_sec, fpr, expected_found, actual_found);
   }

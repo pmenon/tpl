@@ -1,6 +1,7 @@
 #pragma once
 
 #include <limits>
+#include <string>
 
 #include "sql/value.h"
 
@@ -11,11 +12,8 @@ class ExecutionContext;
 /**
  * Utility class to handle SQL string manipulations.
  */
-class StringFunctions {
+class StringFunctions : public AllStatic {
  public:
-  // Delete to force only static functions
-  StringFunctions() = delete;
-
   static void CharLength(ExecutionContext *ctx, Integer *result, const StringVal &str) {
     Length(ctx, result, str);
   }

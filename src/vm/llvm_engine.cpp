@@ -118,6 +118,7 @@ class LLVMEngine::TypeMap {
   llvm::Type *UInt64Type() { return type_map_["uint64"]; }
   llvm::Type *Float32Type() { return type_map_["float32"]; }
   llvm::Type *Float64Type() { return type_map_["float64"]; }
+  llvm::Type *StringType() { return type_map_["string"]; }
 
   llvm::Type *GetLLVMType(const ast::Type *type);
 
@@ -294,27 +295,27 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
     : ir_builder_(ir_builder) {
   uint32_t local_idx = 0;
 
-  const auto &func_locals = func_info.locals();
+  const auto &func_locals = func_info.GetLocals();
 
-  if (const ast::FunctionType *func_type = func_info.func_type();
+  if (const ast::FunctionType *func_type = func_info.GetFuncType();
       FunctionHasDirectReturn(func_type)) {
     llvm::Type *ret_type = type_map->GetLLVMType(func_type->return_type());
     llvm::Value *val = ir_builder_->CreateAlloca(ret_type);
-    params_[func_locals[0].offset()] = val;
+    params_[func_locals[0].GetOffset()] = val;
     local_idx++;
   }
 
-  for (auto arg_iter = func->arg_begin(); local_idx < func_info.num_params();
+  for (auto arg_iter = func->arg_begin(); local_idx < func_info.GetParamsCount();
        ++local_idx, ++arg_iter) {
     const LocalInfo &param = func_locals[local_idx];
-    params_[param.offset()] = &*arg_iter;
+    params_[param.GetOffset()] = &*arg_iter;
   }
 
-  for (; local_idx < func_info.locals().size(); local_idx++) {
+  for (; local_idx < func_info.GetLocals().size(); local_idx++) {
     const LocalInfo &local_info = func_locals[local_idx];
-    llvm::Type *llvm_type = type_map->GetLLVMType(local_info.type());
+    llvm::Type *llvm_type = type_map->GetLLVMType(local_info.GetType());
     llvm::Value *val = ir_builder_->CreateAlloca(llvm_type);
-    locals_[local_info.offset()] = val;
+    locals_[local_info.GetOffset()] = val;
   }
 }
 
@@ -350,6 +351,9 @@ class LLVMEngine::CompiledModuleBuilder {
 
   // No copying or moving this class
   DISALLOW_COPY_AND_MOVE(CompiledModuleBuilder);
+
+  // Generate all static local data in the module
+  void DeclareStaticLocals();
 
   // Generate function declarations for each function in the TPL bytecode module
   void DeclareFunctions();
@@ -402,6 +406,7 @@ class LLVMEngine::CompiledModuleBuilder {
   std::unique_ptr<llvm::LLVMContext> context_;
   std::unique_ptr<llvm::Module> llvm_module_;
   std::unique_ptr<TypeMap> type_map_;
+  llvm::DenseMap<std::size_t, llvm::Constant *> static_locals_;
 };
 
 // ---------------------------------------------------------
@@ -481,8 +486,8 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(const CompilerOptions &
     }
 
     llvm_module_ = std::move(module.get());
-    llvm_module_->setModuleIdentifier(tpl_module.name());
-    llvm_module_->setSourceFileName(tpl_module.name() + ".tpl");
+    llvm_module_->setModuleIdentifier(tpl_module.GetName());
+    llvm_module_->setSourceFileName(tpl_module.GetName() + ".tpl");
     llvm_module_->setDataLayout(target_machine_->createDataLayout());
     llvm_module_->setTargetTriple(target_triple);
   }
@@ -490,10 +495,41 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(const CompilerOptions &
   type_map_ = std::make_unique<TypeMap>(llvm_module_.get());
 }
 
+void LLVMEngine::CompiledModuleBuilder::DeclareStaticLocals() {
+  for (const auto &local_info : tpl_module_.GetStaticLocals()) {
+    // The raw data wrapped in a string reference
+    llvm::StringRef data_ref(reinterpret_cast<const char *>(
+                                 tpl_module_.AccessStaticLocalDataRaw(local_info.GetOffset())),
+                             local_info.GetSize());
+
+    // The constant
+    llvm::Constant *string_constant = llvm::ConstantDataArray::getString(*context_, data_ref);
+
+    // The global variable wrapping the constant. It's private to this module, so it does NOT
+    // participate in linking. It also not thread-local since it's shared across all threads. Don't
+    // be alarmed by 'new' here; the module will take care of deleting it.
+    auto *global_var = new llvm::GlobalVariable(
+        *llvm_module_, string_constant->getType(), true, llvm::GlobalValue::PrivateLinkage,
+        string_constant, local_info.GetName(), nullptr, llvm::GlobalVariable::NotThreadLocal);
+    global_var->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+    global_var->setAlignment(1);
+
+    // Convert the global variable into an i8*
+    llvm::Constant *zero = llvm::ConstantInt::get(type_map_->Int32Type(), 0);
+    llvm::Constant *indices[] = {zero, zero};
+    auto result = llvm::ConstantExpr::getInBoundsGetElementPtr(global_var->getValueType(),
+                                                               global_var, indices);
+
+    // Cache
+    static_locals_[local_info.GetOffset()] = result;
+  }
+}
+
 void LLVMEngine::CompiledModuleBuilder::DeclareFunctions() {
-  for (const auto &func_info : tpl_module_.functions()) {
-    auto *func_type = llvm::cast<llvm::FunctionType>(type_map_->GetLLVMType(func_info.func_type()));
-    llvm_module_->getOrInsertFunction(func_info.name(), func_type);
+  for (const auto &func_info : tpl_module_.GetFunctions()) {
+    auto *func_type =
+        llvm::cast<llvm::FunctionType>(type_map_->GetLLVMType(func_info.GetFuncType()));
+    llvm_module_->getOrInsertFunction(func_info.GetName(), func_type);
   }
 }
 
@@ -581,7 +617,7 @@ void LLVMEngine::CompiledModuleBuilder::BuildSimpleCFG(
 void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_info,
                                                        llvm::IRBuilder<> *ir_builder) {
   llvm::LLVMContext &ctx = ir_builder->getContext();
-  llvm::Function *func = llvm_module_->getFunction(func_info.name());
+  llvm::Function *func = llvm_module_->getFunction(func_info.GetName());
   llvm::BasicBlock *entry_bb = llvm::BasicBlock::Create(ctx, "EntryBB", func);
 
   // First, construct a simple CFG for the function. The CFG contains entries for the start of every
@@ -631,39 +667,49 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
           break;
         }
         case OperandType::Imm1: {
-          args.push_back(
-              llvm::ConstantInt::get(type_map_->Int8Type(), iter.GetImmediateOperand(i), true));
+          args.push_back(llvm::ConstantInt::get(type_map_->Int8Type(),
+                                                iter.GetImmediateIntegerOperand(i), true));
           break;
         }
         case OperandType::Imm2: {
-          args.push_back(
-              llvm::ConstantInt::get(type_map_->Int16Type(), iter.GetImmediateOperand(i), true));
+          args.push_back(llvm::ConstantInt::get(type_map_->Int16Type(),
+                                                iter.GetImmediateIntegerOperand(i), true));
           break;
         }
         case OperandType::Imm4: {
-          args.push_back(
-              llvm::ConstantInt::get(type_map_->Int32Type(), iter.GetImmediateOperand(i), true));
+          args.push_back(llvm::ConstantInt::get(type_map_->Int32Type(),
+                                                iter.GetImmediateIntegerOperand(i), true));
           break;
         }
         case OperandType::Imm8: {
+          args.push_back(llvm::ConstantInt::get(type_map_->Int64Type(),
+                                                iter.GetImmediateIntegerOperand(i), true));
+          break;
+        }
+        case OperandType::Imm4F: {
           args.push_back(
-              llvm::ConstantInt::get(type_map_->Int64Type(), iter.GetImmediateOperand(i), true));
+              llvm::ConstantFP::get(type_map_->Float32Type(), iter.GetImmediateFloatOperand(i)));
+          break;
+        }
+        case OperandType::Imm8F: {
+          args.push_back(
+              llvm::ConstantFP::get(type_map_->Float64Type(), iter.GetImmediateFloatOperand(i)));
           break;
         }
         case OperandType::UImm2: {
           args.push_back(llvm::ConstantInt::get(type_map_->UInt16Type(),
-                                                iter.GetUnsignedImmediateOperand(i), false));
+                                                iter.GetUnsignedImmediateIntegerOperand(i), false));
           break;
         }
         case OperandType::UImm4: {
           args.push_back(llvm::ConstantInt::get(type_map_->UInt32Type(),
-                                                iter.GetUnsignedImmediateOperand(i), false));
+                                                iter.GetUnsignedImmediateIntegerOperand(i), false));
           break;
         }
         case OperandType::FunctionId: {
-          const uint16_t target_func_id = iter.GetFunctionIdOperand(i);
-          auto *target_func_info = tpl_module_.GetFuncInfoById(target_func_id);
-          auto *target_func = llvm_module_->getFunction(target_func_info->name());
+          const FunctionInfo *target_func_info =
+              tpl_module_.GetFuncInfoById(iter.GetFunctionIdOperand(i));
+          llvm::Function *target_func = llvm_module_->getFunction(target_func_info->GetName());
           TPL_ASSERT(target_func != nullptr, "Function doesn't exist in LLVM module");
           args.push_back(target_func);
           break;
@@ -677,9 +723,17 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
           args.push_back(locals_map.GetArgumentById(local));
           break;
         }
+        case OperandType::StaticLocal: {
+          const uint32_t offset = iter.GetStaticLocalOperand(i).GetOffset();
+          const auto static_locals_iter = static_locals_.find(offset);
+          TPL_ASSERT(static_locals_iter != static_locals_.end(),
+                     "Static local at offset does not exist");
+          args.push_back(static_locals_iter->second);
+          break;
+        }
         case OperandType::LocalCount: {
           std::vector<LocalVar> locals;
-          iter.GetLocalCountOperand(i, locals);
+          iter.GetLocalCountOperand(i, &locals);
           for (const auto local : locals) {
             args.push_back(locals_map.GetArgumentById(local));
           }
@@ -724,10 +778,10 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
 
         const FunctionId callee_id = iter.GetFunctionIdOperand(0);
         const auto *callee_func_info = tpl_module_.GetFuncInfoById(callee_id);
-        llvm::Function *callee = llvm_module_->getFunction(callee_func_info->name());
+        llvm::Function *callee = llvm_module_->getFunction(callee_func_info->GetName());
         args.erase(args.begin());
 
-        if (FunctionHasDirectReturn(callee_func_info->func_type())) {
+        if (FunctionHasDirectReturn(callee_func_info->GetFuncType())) {
           llvm::Value *dest = args[0];
           args.erase(args.begin());
           llvm::Value *ret = issue_call(callee, args);
@@ -836,7 +890,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
       }
 
       case Bytecode::Return: {
-        if (FunctionHasDirectReturn(func_info.func_type())) {
+        if (FunctionHasDirectReturn(func_info.GetFuncType())) {
           llvm::Value *ret_val = locals_map.GetArgumentById(func_info.GetReturnValueLocal());
           ir_builder->CreateRet(ir_builder->CreateLoad(ret_val));
         } else {
@@ -870,7 +924,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
 
 void LLVMEngine::CompiledModuleBuilder::DefineFunctions() {
   llvm::IRBuilder<> ir_builder(*context_);
-  for (const auto &func_info : tpl_module_.functions()) {
+  for (const auto &func_info : tpl_module_.GetFunctions()) {
     DefineFunction(func_info, &ir_builder);
   }
 }
@@ -959,7 +1013,7 @@ std::unique_ptr<llvm::MemoryBuffer> LLVMEngine::CompiledModuleBuilder::EmitObjec
 }
 
 void LLVMEngine::CompiledModuleBuilder::PersistObjectToFile(const llvm::MemoryBuffer &obj_buffer) {
-  const std::string file_name = tpl_module_.name() + ".to";
+  const std::string file_name = tpl_module_.GetName() + ".to";
 
   std::error_code error_code;
   llvm::raw_fd_ostream dest(file_name, error_code, llvm::sys::fs::F_None);
@@ -1011,7 +1065,7 @@ LLVMEngine::CompiledModule::CompiledModule(std::unique_ptr<llvm::MemoryBuffer> o
 LLVMEngine::CompiledModule::~CompiledModule() = default;
 
 void *LLVMEngine::CompiledModule::GetFunctionPointer(const std::string &name) const {
-  TPL_ASSERT(is_loaded(), "Compiled module isn't loaded!");
+  TPL_ASSERT(IsLoaded(), "Compiled module isn't loaded!");
 
   if (auto iter = functions_.find(name); iter != functions_.end()) {
     return iter->second;
@@ -1022,7 +1076,7 @@ void *LLVMEngine::CompiledModule::GetFunctionPointer(const std::string &name) co
 
 void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
   // If already loaded, do nothing
-  if (is_loaded()) {
+  if (IsLoaded()) {
     return;
   }
 
@@ -1039,7 +1093,7 @@ void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
       LOG_ERROR("LLVMEngine: Error reading current path '{}'", error.message());
       return;
     }
-    llvm::sys::path::append(path, module.name(), ".to");
+    llvm::sys::path::append(path, module.GetName(), ".to");
     auto file_buffer = llvm::MemoryBuffer::getFile(path);
     if (std::error_code error = file_buffer.getError()) {
       LOG_ERROR("LLVMEngine: Error reading object file '{}'", error.message());
@@ -1075,9 +1129,9 @@ void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
   // all module functions into a handy cache.
   //
 
-  for (const auto &func : module.functions()) {
-    auto symbol = loader.getSymbol(func.name());
-    functions_[func.name()] = reinterpret_cast<void *>(symbol.getAddress());
+  for (const auto &func : module.GetFunctions()) {
+    auto symbol = loader.getSymbol(func.GetName());
+    functions_[func.GetName()] = reinterpret_cast<void *>(symbol.getAddress());
   }
 
   // Done
@@ -1103,6 +1157,8 @@ void LLVMEngine::Shutdown() { llvm::llvm_shutdown(); }
 std::unique_ptr<LLVMEngine::CompiledModule> LLVMEngine::Compile(const BytecodeModule &module,
                                                                 const CompilerOptions &options) {
   CompiledModuleBuilder builder(options, module);
+
+  builder.DeclareStaticLocals();
 
   builder.DeclareFunctions();
 

@@ -81,7 +81,7 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
 
   std::vector<const Schema::ColumnInfo *> output_schema() {
     std::vector<const Schema::ColumnInfo *> ret;
-    for (const auto &col : schema_->columns()) {
+    for (const auto &col : schema_->GetColumns()) {
       ret.push_back(&col);
     }
     return ret;
@@ -94,7 +94,7 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
       auto existing =
           reinterpret_cast<AggTuple *>(aht->Lookup(input.Hash(), AggTupleKeyEq, &input));
       if (existing == nullptr) {
-        new (aht->Insert(input.Hash())) AggTuple(input);
+        new (aht->AllocInputTuple(input.Hash())) AggTuple(input);
       } else {
         existing->Advance(input);
       }

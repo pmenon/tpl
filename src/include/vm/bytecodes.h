@@ -78,6 +78,8 @@ namespace tpl::vm {
   F(AssignImm2, OperandType::Local, OperandType::Imm2)                                                                 \
   F(AssignImm4, OperandType::Local, OperandType::Imm4)                                                                 \
   F(AssignImm8, OperandType::Local, OperandType::Imm8)                                                                 \
+  F(AssignImm4F, OperandType::Local, OperandType::Imm4F)                                                               \
+  F(AssignImm8F, OperandType::Local, OperandType::Imm8F)                                                               \
   F(Lea, OperandType::Local, OperandType::Local, OperandType::Imm4)                                                    \
   F(LeaScaled, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Imm4, OperandType::Imm4)       \
                                                                                                                        \
@@ -121,24 +123,32 @@ namespace tpl::vm {
   F(VPIGetReal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
   F(VPIGetDouble, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
   F(VPIGetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
+  F(VPIGetDate, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
+  F(VPIGetString, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
   F(VPIGetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
   F(VPIGetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPIGetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPIGetRealNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPIGetDoubleNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPIGetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
+  F(VPIGetDateNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
+  F(VPIGetStringNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPISetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPISetInteger, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPISetBigInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
   F(VPISetReal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
   F(VPISetDouble, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
   F(VPISetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
+  F(VPISetDate, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
+  F(VPISetString, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
   F(VPISetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
   F(VPISetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPISetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPISetRealNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPISetDoubleNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
   F(VPISetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
+  F(VPISetDateNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
+  F(VPISetStringNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
                                                                                                                        \
   /* Filter Manager */                                                                                                 \
   F(FilterManagerInit, OperandType::Local)                                                                             \
@@ -170,6 +180,10 @@ namespace tpl::vm {
   F(InitBool, OperandType::Local, OperandType::Local)                                                                  \
   F(InitInteger, OperandType::Local, OperandType::Local)                                                               \
   F(InitReal, OperandType::Local, OperandType::Local)                                                                  \
+  F(InitDate, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                          \
+  F(InitString, OperandType::Local, OperandType::StaticLocal, OperandType::UImm4)                                      \
+  F(IntegerToReal, OperandType::Local, OperandType::Local)                                                             \
+  F(RealToInteger, OperandType::Local, OperandType::Local)                                                             \
   F(LessThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
   F(LessThanEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                  \
   F(GreaterThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                    \
@@ -188,6 +202,12 @@ namespace tpl::vm {
   F(GreaterThanEqualString, OperandType::Local, OperandType::Local, OperandType::Local)                                \
   F(EqualString, OperandType::Local, OperandType::Local, OperandType::Local)                                           \
   F(NotEqualString, OperandType::Local, OperandType::Local, OperandType::Local)                                        \
+  F(LessThanDate, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
+  F(LessThanEqualDate, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
+  F(GreaterThanDate, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
+  F(GreaterThanEqualDate, OperandType::Local, OperandType::Local, OperandType::Local)                                  \
+  F(EqualDate, OperandType::Local, OperandType::Local, OperandType::Local)                                             \
+  F(NotEqualDate, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
                                                                                                                        \
   /* SQL value unary operations */                                                                                     \
   F(AbsInteger, OperandType::Local, OperandType::Local)                                                                \
@@ -210,12 +230,14 @@ namespace tpl::vm {
   F(HashInt, OperandType::Local, OperandType::Local, OperandType::Local)                                               \
   F(HashReal, OperandType::Local, OperandType::Local, OperandType::Local)                                              \
   F(HashString, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
+  F(HashDate, OperandType::Local, OperandType::Local, OperandType::Local)                                              \
   F(HashCombine, OperandType::Local, OperandType::Local)                                                               \
                                                                                                                        \
   /* Aggregation Hash Table */                                                                                         \
   F(AggregationHashTableInit, OperandType::Local, OperandType::Local, OperandType::Local)                              \
-  F(AggregationHashTableInsert, OperandType::Local, OperandType::Local, OperandType::Local)                            \
-  F(AggregationHashTableInsertPartitioned, OperandType::Local, OperandType::Local, OperandType::Local)                 \
+  F(AggregationHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                        \
+  F(AggregationHashTableAllocTuplePartitioned, OperandType::Local, OperandType::Local, OperandType::Local)             \
+  F(AggregationHashTableLinkHashTableEntry, OperandType::Local, OperandType::Local)                                    \
   F(AggregationHashTableLookup, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::FunctionId,   \
       OperandType::Local)                                                                                              \
   F(AggregationHashTableProcessBatch, OperandType::Local, OperandType::Local, OperandType::FunctionId,                 \
@@ -234,6 +256,7 @@ namespace tpl::vm {
   F(AggregationOverflowPartitionIteratorNext, OperandType::Local)                                                      \
   F(AggregationOverflowPartitionIteratorGetHash, OperandType::Local, OperandType::Local)                               \
   F(AggregationOverflowPartitionIteratorGetRow, OperandType::Local, OperandType::Local)                                \
+  F(AggregationOverflowPartitionIteratorGetRowEntry, OperandType::Local, OperandType::Local)                           \
   /* Aggregates */                                                                                                     \
   F(CountAggregateInit, OperandType::Local)                                                                            \
   F(CountAggregateAdvance, OperandType::Local, OperandType::Local)                                                     \
@@ -266,7 +289,8 @@ namespace tpl::vm {
   F(IntegerMinAggregateGetResult, OperandType::Local, OperandType::Local)                                              \
   F(IntegerMinAggregateFree, OperandType::Local)                                                                       \
   F(AvgAggregateInit, OperandType::Local)                                                                              \
-  F(AvgAggregateAdvance, OperandType::Local, OperandType::Local)                                                       \
+  F(AvgAggregateAdvanceInteger, OperandType::Local, OperandType::Local)                                                \
+  F(AvgAggregateAdvanceReal, OperandType::Local, OperandType::Local)                                                   \
   F(AvgAggregateMerge, OperandType::Local, OperandType::Local)                                                         \
   F(AvgAggregateReset, OperandType::Local)                                                                             \
   F(AvgAggregateGetResult, OperandType::Local, OperandType::Local)                                                     \
@@ -321,6 +345,10 @@ namespace tpl::vm {
   F(SorterIteratorNext, OperandType::Local)                                                                            \
   F(SorterIteratorFree, OperandType::Local)                                                                            \
                                                                                                                        \
+  /* Output */                                                                                                         \
+  F(ResultBufferAllocOutputRow, OperandType::Local, OperandType::Local)                                                \
+  F(ResultBufferFinalize, OperandType::Local)                                                                          \
+                                                                                                                       \
   /* Trig functions */                                                                                                 \
   F(Pi, OperandType::Local)                                                                                            \
   F(E, OperandType::Local)                                                                                             \
@@ -355,6 +383,7 @@ namespace tpl::vm {
   /* String functions */                                                                                               \
   F(Left, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                              \
   F(Length, OperandType::Local, OperandType::Local, OperandType::Local)                                                \
+  F(Like, OperandType::Local, OperandType::Local, OperandType::Local)                                                  \
   F(Lower, OperandType::Local, OperandType::Local, OperandType::Local)                                                 \
   F(LPad, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)          \
   F(LTrim, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                             \
@@ -370,7 +399,9 @@ namespace tpl::vm {
 
 // clang-format on
 
-/// The single enumeration of all possible bytecode instructions
+/**
+ * The enumeration listing all possible bytecode instructions.
+ */
 enum class Bytecode : uint32_t {
 #define DECLARE_OP(inst, ...) inst,
   BYTECODE_LIST(DECLARE_OP)
@@ -380,91 +411,134 @@ enum class Bytecode : uint32_t {
 #undef COUNT_OP
 };
 
-/// Helper class for querying/interacting with bytecode instructions
+/**
+ * Helper class for querying/interacting with bytecode instructions.
+ */
 class Bytecodes {
  public:
   // The total number of bytecode instructions
   static constexpr const uint32_t kBytecodeCount = static_cast<uint32_t>(Bytecode::Last) + 1;
 
+  /**
+   * @return The total number of bytecodes.
+   */
   static constexpr uint32_t NumBytecodes() { return kBytecodeCount; }
 
-  // Return the maximum length of any bytecode instruction in bytes
+  /**
+   * @return The maximum length of any bytecode instruction in bytes.
+   */
   static uint32_t MaxBytecodeNameLength();
 
-  // Returns the string representation of the given bytecode
+  /**
+   * @return The string representation of the given bytecode.
+   */
   static const char *ToString(Bytecode bytecode) {
     return kBytecodeNames[static_cast<uint32_t>(bytecode)];
   }
 
-  // Return the number of operands a bytecode accepts
+  /**
+   * @return The number of operands a bytecode accepts.
+   */
   static uint32_t NumOperands(Bytecode bytecode) {
     return kBytecodeOperandCounts[static_cast<uint32_t>(bytecode)];
   }
 
-  // Return an array of the operand types to the given bytecode
+  /**
+   * @return An array of the operand types to the given bytecode.
+   */
   static const OperandType *GetOperandTypes(Bytecode bytecode) {
     return kBytecodeOperandTypes[static_cast<uint32_t>(bytecode)];
   }
 
-  // Return an array of the sizes of all operands to the given bytecode
+  /**
+   * @return An array containing the sizes of all operands to the given bytecode.
+   */
   static const OperandSize *GetOperandSizes(Bytecode bytecode) {
     return kBytecodeOperandSizes[static_cast<uint32_t>(bytecode)];
   }
 
-  // Return the type of the Nth operand to the given bytecode
+  /**
+   * @return The type of the Nth operand to the given bytecode.
+   */
   static OperandType GetNthOperandType(Bytecode bytecode, uint32_t operand_index) {
     TPL_ASSERT(operand_index < NumOperands(bytecode),
                "Accessing out-of-bounds operand number for bytecode");
     return GetOperandTypes(bytecode)[operand_index];
   }
 
-  // Return the type of the Nth operand to the given bytecode
+  /**
+   * @return The size of the Nth operand to the given bytecode.
+   */
   static OperandSize GetNthOperandSize(Bytecode bytecode, uint32_t operand_index) {
     TPL_ASSERT(operand_index < NumOperands(bytecode),
                "Accessing out-of-bounds operand number for bytecode");
     return GetOperandSizes(bytecode)[operand_index];
   }
 
-  // Return the offset of the Nth operand of the given bytecode
+  /**
+   * @return The offset of the Nth operand of the given bytecode.
+   */
   static uint32_t GetNthOperandOffset(Bytecode bytecode, uint32_t operand_index);
 
-  // Return the name of the bytecode handler function for this bytecode
+  /**
+   * @return The name of the bytecode handler function for the given bytecode.
+   */
   static const char *GetBytecodeHandlerName(Bytecode bytecode) {
     return kBytecodeHandlerName[ToByte(bytecode)];
   }
 
-  // Converts the given bytecode to a single-byte representation
+  /**
+   * Converts the bytecode instruction @em bytecode into a raw encoded value.
+   * @param bytecode The bytecode to convert.
+   * @return The raw encoded value for the input bytecode instruction.
+   */
   static constexpr std::underlying_type_t<Bytecode> ToByte(Bytecode bytecode) {
     TPL_ASSERT(bytecode <= Bytecode::Last, "Invalid bytecode");
     return static_cast<std::underlying_type_t<Bytecode>>(bytecode);
   }
 
-  // Converts the given unsigned byte into the associated bytecode
+  /**
+   * Decode and convert the raw value @em val into a bytecode instruction.
+   * @param val The value to convert.
+   * @return The bytecode associated with the given value.
+   */
   static constexpr Bytecode FromByte(std::underlying_type_t<Bytecode> val) {
     auto bytecode = static_cast<Bytecode>(val);
     TPL_ASSERT(bytecode <= Bytecode::Last, "Invalid bytecode");
     return bytecode;
   }
 
-  // Is the bytecode an unconditional jump?
+  /**
+   * @return True if the bytecode @em bytecode is an unconditional jump; false otherwise.
+   */
   static constexpr bool IsUnconditionalJump(Bytecode bytecode) {
     return bytecode == Bytecode::Jump;
   }
 
-  // Is the bytecode a conditional jump?
+  /**
+   * @return True if the bytecode @em bytecode is a conditional jump; false otherwise.
+   */
   static constexpr bool IsConditionalJump(Bytecode bytecode) {
     return bytecode == Bytecode::JumpIfFalse || bytecode == Bytecode::JumpIfTrue;
   }
 
-  // Is the bytecode ANY type of jump?
+  /**
+   * @return True if the bytecode @em bytecode is a jump instruction, either conditional or not;
+   *         false otherwise.
+   */
   static constexpr bool IsJump(Bytecode bytecode) {
     return IsConditionalJump(bytecode) || IsUnconditionalJump(bytecode);
   }
 
-  // Is the bytecode a return instruction?
+  /**
+   * @return True if the bytecode @em bytecode is a return instruction.
+   */
   static constexpr bool IsReturn(Bytecode bytecode) { return bytecode == Bytecode::Return; }
 
-  // Is the bytecode a terminal instruction, i.e., one that appears at the end of a block
+  /**
+   * @return True if the bytecode @em bytecode is a terminal instruction. A terminal instruction is
+   *         one that appears at the end of a basic block.
+   */
   static constexpr bool IsTerminal(Bytecode bytecode) {
     return IsJump(bytecode) || IsReturn(bytecode);
   }

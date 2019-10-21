@@ -115,7 +115,7 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
 
     // Setup VP
     vp.ResetColumn(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0, size);
-    vpi.SetVectorProjection(&vp);
+    vpi.Reset(&vp);
 
     // Lookup
     lookup.Prepare(&vpi, HashTupleInVPI<N>);
@@ -164,7 +164,7 @@ TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
 
       // Setup VP
       vp.ResetColumn(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0, size);
-      vpi.SetVectorProjection(&vp);
+      vpi.Reset(&vp);
 
       // Lookup
       lookup.Prepare(&vpi, HashTupleInVPI<N>);
@@ -177,10 +177,10 @@ TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
     }
 
     timer.Stop();
-    auto mtps = (num_probe / timer.elapsed()) / 1000.0;
+    auto mtps = (num_probe / timer.GetElapsed()) / 1000.0;
     LOG_INFO("========== {} ==========", concise ? "Concise" : "Generic");
     LOG_INFO("# Probes    : {}", num_probe)
-    LOG_INFO("Probe Time  : {} ms ({:.2f} Mtps)", timer.elapsed(), mtps);
+    LOG_INFO("Probe Time  : {} ms ({:.2f} Mtps)", timer.GetElapsed(), mtps);
   };
 
   bench(false);

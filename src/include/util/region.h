@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 #include "common/macros.h"
 #include "util/math_util.h"
@@ -12,25 +13,39 @@
 namespace tpl::util {
 
 /**
- * A region-based allocator supports fast O(1) time allocations of small chunks
- * of memory. Individual de-allocations are not supported, but the entire
- * region can be de-allocated in one fast operation upon destruction. Regions
- * are used to hold ephemeral objects that are allocated once and freed all at
- * once. This is the pattern used during parsing when generating AST nodes
+ * A region-based allocator supports fast O(1) time allocations of small chunks of memory.
+ * Individual de-allocations are not supported, but the entire region can be de-allocated in one
+ * fast operation upon destruction. Regions are used to hold ephemeral objects that are allocated
+ * once and freed all at once. This is the pattern used during parsing when generating AST nodes
  * which are thrown away after compilation to bytecode.
  */
 class Region {
  public:
   /**
-   * Construct a region with the given name @em name. No allocations are
-   * performed upon construction, only at the first call to @em Allocate().
+   * Construct a region with the given name @em name. No allocations are performed upon
+   * construction, only at the first call to @em Allocate().
    */
   explicit Region(std::string_view name) noexcept;
 
   /**
    * Default move constructor.
    */
-  Region(Region &&) = default;
+  Region(Region &&that) noexcept
+      : name_(that.name_),
+        allocated_(that.allocated_),
+        alignment_waste_(that.alignment_waste_),
+        chunk_bytes_allocated_(that.chunk_bytes_allocated_),
+        head_(that.head_),
+        position_(that.position_),
+        end_(that.end_) {
+    that.name_ = nullptr;
+    that.allocated_ = 0;
+    that.alignment_waste_ = 0;
+    that.chunk_bytes_allocated_ = 0;
+    that.head_ = nullptr;
+    that.position_ = 0;
+    that.end_ = 0;
+  }
 
   /**
    * Regions cannot be copied.
@@ -45,7 +60,16 @@ class Region {
   /**
    * Default move assignment.
    */
-  Region &operator=(Region &&) = default;
+  Region &operator=(Region &&that) noexcept {
+    std::swap(name_, that.name_);
+    std::swap(allocated_, that.allocated_);
+    std::swap(alignment_waste_, that.alignment_waste_);
+    std::swap(chunk_bytes_allocated_, that.chunk_bytes_allocated_);
+    std::swap(head_, that.head_);
+    std::swap(position_, that.position_);
+    std::swap(end_, that.end_);
+    return *this;
+  }
 
   /**
    * Allocate memory from this region
@@ -56,20 +80,8 @@ class Region {
   void *Allocate(std::size_t size, std::size_t alignment = kDefaultByteAlignment);
 
   /**
-   * Allocate a (contiguous) array of elements of the given type
-   * @tparam T The type of each element in the array
-   * @param num_elems The number of requested elements in the array
-   * @return A pointer to the allocated array
-   */
-  template <typename T>
-  T *AllocateArray(std::size_t num_elems) {
-    return static_cast<T *>(Allocate(num_elems * sizeof(T), alignof(T)));
-  }
-
-  /**
-   * Individual de-allocations in a region-allocator are a no-op. All memory is
-   * freed when the region is destroyed, or manually through a call to
-   * @em FreeAll().
+   * Individual de-allocations in a region-allocator are a no-op. All memory is freed when the
+   * region is destroyed, or manually through a call to Region::FreeAll().
    * @param ptr The pointer to the memory we're de-allocating
    * @param size The number of bytes the pointer points to
    */
@@ -110,9 +122,9 @@ class Region {
     Chunk *next;
     uint64_t size;
 
-    void Init(Chunk *next, uint64_t size) {
-      this->next = next;
-      this->size = size;
+    void Init(Chunk *_next, uint64_t _size) {
+      next = _next;
+      size = _size;
     }
 
     uintptr_t Start() const { return reinterpret_cast<uintptr_t>(this) + sizeof(Chunk); }

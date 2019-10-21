@@ -8,91 +8,91 @@ template <typename LeftType, typename RightType, typename ResultType, typename O
           bool IgnoreNull = false>
 inline void BinaryOperation_Constant_Vector(const Vector &left, const Vector &right,
                                             Vector *result) {
-  auto *left_data = reinterpret_cast<LeftType *>(left.data());
-  auto *right_data = reinterpret_cast<RightType *>(right.data());
-  auto *result_data = reinterpret_cast<ResultType *>(result->data());
+  auto *left_data = reinterpret_cast<LeftType *>(left.GetData());
+  auto *right_data = reinterpret_cast<RightType *>(right.GetData());
+  auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
 
   if (left.IsNull(0)) {
     VectorOps::FillNull(result);
   } else {
-    result->mutable_null_mask()->Copy(right.null_mask());
+    result->GetMutableNullMask()->Copy(right.GetNullMask());
 
-    if (IgnoreNull && result->null_mask().Any()) {
+    if (IgnoreNull && result->GetNullMask().Any()) {
       // Slow-path: need to check NULLs
-      VectorOps::Exec(right.selection_vector(), right.count(), [&](uint64_t i, uint64_t k) {
-        if (!result->null_mask()[i]) {
+      VectorOps::Exec(right.GetSelectionVector(), right.GetCount(), [&](uint64_t i, uint64_t k) {
+        if (!result->GetNullMask()[i]) {
           result_data[i] = Op::Apply(left_data[0], right_data[i]);
         }
       });
     } else {
       // Fast-path: no NULL checks
-      VectorOps::Exec(right.selection_vector(), right.count(), [&](uint64_t i, uint64_t k) {
+      VectorOps::Exec(right.GetSelectionVector(), right.GetCount(), [&](uint64_t i, uint64_t k) {
         result_data[i] = Op::Apply(left_data[0], right_data[i]);
       });
     }
   }
 
-  result->SetSelectionVector(right.selection_vector(), right.count());
+  result->SetSelectionVector(right.GetSelectionVector(), right.GetCount());
 }
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
           bool IgnoreNull = false>
 inline void BinaryOperation_Vector_Constant(const Vector &left, const Vector &right,
                                             Vector *result) {
-  auto *left_data = reinterpret_cast<LeftType *>(left.data());
-  auto *right_data = reinterpret_cast<RightType *>(right.data());
-  auto *result_data = reinterpret_cast<ResultType *>(result->data());
+  auto *left_data = reinterpret_cast<LeftType *>(left.GetData());
+  auto *right_data = reinterpret_cast<RightType *>(right.GetData());
+  auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
 
   if (right.IsNull(0)) {
     VectorOps::FillNull(result);
   } else {
     // Left input vector's NULL mask becomes result's NULL mask
-    result->mutable_null_mask()->Copy(left.null_mask());
+    result->GetMutableNullMask()->Copy(left.GetNullMask());
 
-    if (IgnoreNull && result->null_mask().Any()) {
+    if (IgnoreNull && result->GetNullMask().Any()) {
       // Slow-path: need to check NULLs
-      VectorOps::Exec(left.selection_vector(), left.count(), [&](uint64_t i, uint64_t k) {
-        if (!result->null_mask()[i]) {
+      VectorOps::Exec(left.GetSelectionVector(), left.GetCount(), [&](uint64_t i, uint64_t k) {
+        if (!result->GetNullMask()[i]) {
           result_data[i] = Op::Apply(left_data[i], right_data[0]);
         }
       });
     } else {
       // Fast-path: no NULL checks
-      VectorOps::Exec(left.selection_vector(), left.count(), [&](uint64_t i, uint64_t k) {
+      VectorOps::Exec(left.GetSelectionVector(), left.GetCount(), [&](uint64_t i, uint64_t k) {
         result_data[i] = Op::Apply(left_data[i], right_data[0]);
       });
     }
   }
 
-  result->SetSelectionVector(left.selection_vector(), left.count());
+  result->SetSelectionVector(left.GetSelectionVector(), left.GetCount());
 }
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
           bool IgnoreNull = false>
 inline void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right, Vector *result) {
-  TPL_ASSERT(left.selection_vector() == right.selection_vector(),
+  TPL_ASSERT(left.GetSelectionVector() == right.GetSelectionVector(),
              "Mismatched selection vectors for comparison");
-  TPL_ASSERT(left.count() == right.count(), "Mismatched vector counts for comparison");
+  TPL_ASSERT(left.GetCount() == right.GetCount(), "Mismatched vector counts for comparison");
 
-  auto *left_data = reinterpret_cast<LeftType *>(left.data());
-  auto *right_data = reinterpret_cast<RightType *>(right.data());
-  auto *result_data = reinterpret_cast<ResultType *>(result->data());
+  auto *left_data = reinterpret_cast<LeftType *>(left.GetData());
+  auto *right_data = reinterpret_cast<RightType *>(right.GetData());
+  auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
 
-  result->mutable_null_mask()->Copy(left.null_mask()).Union(right.null_mask());
+  result->GetMutableNullMask()->Copy(left.GetNullMask()).Union(right.GetNullMask());
 
-  if (IgnoreNull && result->null_mask().Any()) {
-    VectorOps::Exec(left.selection_vector(), left.count(), [&](uint64_t i, uint64_t k) {
-      if (!result->null_mask()[i]) {
+  if (IgnoreNull && result->GetNullMask().Any()) {
+    VectorOps::Exec(left.GetSelectionVector(), left.GetCount(), [&](uint64_t i, uint64_t k) {
+      if (!result->GetNullMask()[i]) {
         result_data[i] = Op::Apply(left_data[i], right_data[i]);
       }
     });
   } else {
-    VectorOps::Exec(left.selection_vector(), left.count(), [&](uint64_t i, uint64_t k) {
+    VectorOps::Exec(left.GetSelectionVector(), left.GetCount(), [&](uint64_t i, uint64_t k) {
       result_data[i] = Op::Apply(left_data[i], right_data[i]);
     });
   }
 
-  result->SetSelectionVector(left.selection_vector(), left.count());
+  result->SetSelectionVector(left.GetSelectionVector(), left.GetCount());
 }
 
 /**

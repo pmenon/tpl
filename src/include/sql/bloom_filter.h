@@ -81,32 +81,32 @@ class BloomFilter {
   bool Contains(hash_t hash) const;
 
   /**
-   * Return the size of the filter in bytes.
+   * @return The size of the filter in bytes.
    */
   uint64_t GetSizeInBytes() const { return sizeof(Block) * GetNumBlocks(); }
 
   /**
-   * Return the number of bits in this filter.
+   * @return The number of bits in this filter.
    */
   uint64_t GetSizeInBits() const { return GetSizeInBytes() * kBitsPerByte; }
 
   /**
-   * Return the number of set bits in this filter.
+   * @return The number of set bits in this filter.
    */
   uint64_t GetTotalBitsSet() const;
 
   /**
-   * Is the filter empty?
+   * @return True if the filter is empty; false otherwise.
    */
-  bool Empty() const { return num_additions_ == 0; }
+  bool IsEmpty() const { return num_additions_ == 0; }
 
   /**
-   * Return the number of elements that have been added to the filter.
+   * @return The number of elements that have been added to the filter.
    */
   uint32_t GetNumAdditions() const { return num_additions_; }
 
   /**
-   * Return a debug string representing the bloom filter stats.
+   * @return A debug string representing the bloom filter stats.
    */
   std::string DebugString() const;
 

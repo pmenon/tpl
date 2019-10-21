@@ -1,7 +1,7 @@
 #include "sql/operations/cast_operators.h"
 
 #include <limits>
-#include <stdexcept>
+#include <string>
 
 namespace tpl::sql {
 
@@ -20,7 +20,7 @@ template <typename Src, typename Dest>
 static Dest DoCheckedCast(Src source) {
   Dest dest;
   if (!DoSafeCheckedCast(source, &dest)) {
-    throw std::runtime_error("Write me");
+    throw ValueOutOfRangeException(source, GetTypeId<Src>(), GetTypeId<Dest>());
   }
   return dest;
 }
@@ -28,7 +28,7 @@ static Dest DoCheckedCast(Src source) {
 }  // namespace
 
 // ---------------------------------------------------------
-// Downcasting Numeric -> TinyInt (int8_t)
+// Down-casting Numeric -> TinyInt (int8_t)
 // ---------------------------------------------------------
 
 template <>
@@ -82,7 +82,7 @@ bool TryCast::Apply(double source, int8_t *dest) {
 }
 
 // ---------------------------------------------------------
-// Downcasting Numeric -> SmallInt (int16_t)
+// Down-casting Numeric -> SmallInt (int16_t)
 // ---------------------------------------------------------
 
 template <>
@@ -120,7 +120,7 @@ bool TryCast::Apply(double source, int16_t *dest) {
 }
 
 // ---------------------------------------------------------
-// Downcasting Numeric -> Int (int32_t)
+// Down-casting Numeric -> Int (int32_t)
 // ---------------------------------------------------------
 
 template <>
@@ -154,7 +154,7 @@ bool TryCast::Apply(double source, int32_t *dest) {
 }
 
 // ---------------------------------------------------------
-// Downcasting Numeric -> BigInt (int64_t)
+// Down-casting Numeric -> BigInt (int64_t)
 // ---------------------------------------------------------
 
 template <>
@@ -175,6 +175,59 @@ bool TryCast::Apply(float source, int64_t *dest) {
 template <>
 bool TryCast::Apply(double source, int64_t *dest) {
   return DoSafeCheckedCast<float, int64_t>(source, dest);
+}
+
+// ---------------------------------------------------------
+// Date casting
+// ---------------------------------------------------------
+
+template <>
+std::string CastFromDate::Apply(Date source) {
+  return source.ToString();
+}
+
+template <>
+Date CastToDate::Apply(const char *source) {
+  return Date::FromString(source, strlen(source));
+}
+
+// ---------------------------------------------------------
+// Numeric -> String
+// ---------------------------------------------------------
+
+template <>
+std::string Cast::Apply(bool source) {
+  return source ? "true" : "false";
+}
+
+template <>
+std::string Cast::Apply(int8_t source) {
+  return std::to_string(source);
+}
+
+template <>
+std::string Cast::Apply(int16_t source) {
+  return std::to_string(source);
+}
+
+template <>
+std::string Cast::Apply(int32_t source) {
+  return std::to_string(source);
+}
+
+template <>
+std::string Cast::Apply(int64_t source) {
+  return std::to_string(source);
+}
+
+template <>
+std::string Cast::Apply(float source) {
+  return std::to_string(source);
+}
+
+template <>
+std::string Cast::Apply(double source) {
+  return std::to_string(source);
 }
 
 }  // namespace tpl::sql

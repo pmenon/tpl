@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <iosfwd>
 #include <string>
 #include <vector>
@@ -11,105 +12,142 @@
 namespace tpl::vm {
 
 /**
- * A bytecode module is a container for all the TPL bytecode (TBC) for a TPL
- * source file. Bytecode modules directly contain a list of all the physical
- * bytecode that make up the program, and a list of functions that store
- * information about the functions in the TPL program.
+ * A bytecode module is a container for all the TPL bytecode (TBC) for a TPL source file. Bytecode
+ * modules directly contain a list of all the physical bytecode that make up the program, and a list
+ * of functions that store information about the functions in the TPL program.
  */
 class BytecodeModule {
  public:
   /**
-   * Construct a new bytecode module. After construction, all available bytecode
-   * functions are available for execution.
+   * Construct a new bytecode module. After construction, all available bytecode functions are
+   * available for execution.
    * @param name The name of the module
-   * @param code The bytecode that makes up the module
+   * @param code The code section containing all bytecode instructions.
+   * @param data The data section containing static data.
    * @param functions The functions within the module
+   * @param static_locals All statically allocated variables in the data section.
    */
-  BytecodeModule(std::string name, std::vector<uint8_t> &&code,
-                 std::vector<FunctionInfo> &&functions);
+  BytecodeModule(std::string name, std::vector<uint8_t> &&code, std::vector<uint8_t> &&data,
+                 std::vector<FunctionInfo> &&functions, std::vector<LocalInfo> &&static_locals);
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(BytecodeModule);
 
   /**
-   * Look up a TPL function in this module by its ID
-   * @return A pointer to the function's info if it exists; null otherwise
+   * Look up a TPL function in this module by its ID.
+   * @return A pointer to the function's info if it exists; null otherwise.
    */
   const FunctionInfo *GetFuncInfoById(const FunctionId func_id) const {
-    TPL_ASSERT(func_id < num_functions(), "Invalid function");
+    // Function IDs are dense, so the given ID must be in the range [0, # functions)
+    TPL_ASSERT(func_id < GetFunctionCount(), "Invalid function");
     return &functions_[func_id];
   }
 
   /**
-   * Look up a TPL function in this module by its name
-   * @param name The name of the function to lookup
-   * @return A pointer to the function's info if it exists; null otherwise
+   * Lookup and retrieve the metadata for a TPL function whose name is @em name.
+   * @param name The name of the function to lookup.
+   * @return A pointer to the function's info if it exists; NULL otherwise.
    */
-  const FunctionInfo *GetFuncInfoByName(const std::string &name) const {
-    for (const auto &func : functions_) {
-      if (func.name() == name) {
-        return &func;
-      }
-    }
-    return nullptr;
+  const FunctionInfo *LookupFuncInfoByName(const std::string &name) const {
+    const auto iter =
+        std::find_if(functions_.begin(), functions_.end(),
+                     [&](const FunctionInfo &info) { return info.GetName() == name; });
+    return iter == functions_.end() ? nullptr : &*iter;
   }
 
   /**
-   * Retrieve an iterator over the bytecode for the given function \a func
-   * @return A pointer to the function's info if it exists; null otherwise
+   * Lookup and retrieve the metadata for a static local whose offset is @em offset into the data
+   * section of this module.
+   * @param offset The offset of the static local in bytes in the data section.
+   * @return The metadata for the static if one exists at the offset; NULL otherwise.
+   */
+  const LocalInfo *LookupStaticInfoByOffset(const uint32_t offset) const {
+    const auto iter =
+        std::find_if(static_locals_.begin(), static_locals_.end(),
+                     [&](const LocalInfo &info) { return info.GetOffset() == offset; });
+    return iter == static_locals_.end() ? nullptr : &*iter;
+  }
+
+  /**
+   * @return An iterator over the bytecode for the function @em func.
    */
   BytecodeIterator BytecodeForFunction(const FunctionInfo &func) const {
-    auto [start, end] = func.bytecode_range();
+    auto [start, end] = func.GetBytecodeRange();
     return BytecodeIterator(code_, start, end);
   }
 
   /**
-   * Return the number of bytecode instructions in this module.
+   * @return The number of bytecode instructions in this module.
    */
-  std::size_t GetInstructionCount() const {
-    std::size_t count = 0;
-    for (BytecodeIterator iter(code_); !iter.Done(); iter.Advance()) {
-      count++;
-    }
-    return count;
-  }
+  std::size_t GetInstructionCount() const;
 
   /**
-   * Pretty print all the module's contents into the provided output stream
-   * @param os The stream into which we dump the module's contents
+   * @return The name of the module.
    */
-  void PrettyPrint(std::ostream &os) const;
+  const std::string &GetName() const { return name_; }
 
   /**
-   * Return the name of the module
+   * @return A const-view of the metadata for all functions in this module.
    */
-  const std::string &name() const { return name_; }
+  const std::vector<FunctionInfo> &GetFunctions() const { return functions_; }
 
   /**
-   * Return a constant view of all functions
+   * @return A const-view of the metadata for all static-locals in this module.
    */
-  const std::vector<FunctionInfo> &functions() const { return functions_; }
+  const std::vector<LocalInfo> &GetStaticLocals() const noexcept { return static_locals_; }
 
   /**
-   * Return the number of functions defined in this module
+   * @return The number of functions defined in this module.
    */
-  std::size_t num_functions() const { return functions_.size(); }
+  std::size_t GetFunctionCount() const { return functions_.size(); }
+
+  /**
+   * @return The number of static locals.
+   */
+  uint32_t GetStaticLocalsCount() const noexcept { return static_locals_.size(); }
+
+  /**
+   * Pretty print all the module's contents into the provided output stream.
+   * @param os The stream into which we dump the module's contents.
+   */
+  void Dump(std::ostream &os) const;
 
  private:
   friend class VM;
+  friend class LLVMEngine;
 
-  const uint8_t *GetBytecodeForFunction(const FunctionInfo &func) const {
-    auto [start, _] = func.bytecode_range();
+  const uint8_t *AccessBytecodeForFunctionRaw(const FunctionInfo &func) const {
+    TPL_ASSERT(GetFuncInfoById(func.GetId()) == &func, "Function not in module!");
+    auto [start, _] = func.GetBytecodeRange();
     (void)_;
     return &code_[start];
+  }
+
+  // Access a const-view of some static-local's data by its offset
+  const uint8_t *AccessStaticLocalDataRaw(const uint32_t offset) const {
+#ifndef NDEBUG
+    TPL_ASSERT(offset < data_.size(), "Invalid local offset");
+    UNUSED auto iter =
+        std::find_if(static_locals_.begin(), static_locals_.end(),
+                     [&](const LocalInfo &info) { return info.GetOffset() == offset; });
+    TPL_ASSERT(iter != static_locals_.end(), "No local at given offset");
+#endif
+    return &data_[offset];
+  }
+
+  // Access a const-view of a static-local's data
+  const uint8_t *AccessStaticLocalDataRaw(const LocalVar local) const {
+    return AccessStaticLocalDataRaw(local.GetOffset());
   }
 
  private:
   const std::string name_;
   const std::vector<uint8_t> code_;
+  const std::vector<uint8_t> data_;
   const std::vector<FunctionInfo> functions_;
+  const std::vector<LocalInfo> static_locals_;
 };
 
 }  // namespace tpl::vm

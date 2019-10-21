@@ -276,7 +276,7 @@ const DateType &DateType::InstanceNullable() {
   return kNullableDate;
 }
 
-TypeId DateType::GetPrimitiveTypeId() const { return TypeId::Integer; }
+TypeId DateType::GetPrimitiveTypeId() const { return TypeId::Date; }
 
 std::string DateType::GetName() const {
   std::string str = "Date";
@@ -364,7 +364,7 @@ VarcharType::VarcharType(bool nullable, uint32_t max_len)
 TypeId VarcharType::GetPrimitiveTypeId() const { return TypeId::Varchar; }
 
 std::string VarcharType::GetName() const {
-  std::string str = "Char[" + std::to_string(max_length());
+  std::string str = "Varchar[" + std::to_string(max_length());
   if (nullable()) {
     str.append(",NULLABLE");
   }

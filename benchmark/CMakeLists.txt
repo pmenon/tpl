@@ -19,13 +19,14 @@ if (TPL_BUILD_BENCHMARKS)
 
         # Add it as an executable, link it to all the right libraries
         add_executable(${benchmark_name} EXCLUDE_FROM_ALL ${benchmark_src} ${benchmark_main})
+        set_target_properties(${benchmark_name} PROPERTIES ENABLE_EXPORTS true)
         target_link_libraries(${benchmark_name} ${TPL_BENCHMARK_LINK_LIBS})
 
         # Add a ctest that will not be run by default.
         # To run it the command `ctest -C benchmark -L benchmark` must be used.
         # (Setting -C excludes it from the default set, and setting -L excludes the
         # default tests from it). Note the target `benchmark` runs this command.
-        add_test(${benchmark_name} ${benchmark_name} CONFIGURATIONS "benchmark")
+        add_test(${benchmark_name} ${benchmark_name} --benchmark_color=true CONFIGURATIONS "benchmark")
         set_tests_properties(${benchmark_name} PROPERTIES LABELS "benchmark")
 
         # Add the benchmark as a dependency to the 'runbenchmark' target

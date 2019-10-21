@@ -103,8 +103,7 @@ fun p1_mergePartitions(qs: *State, table: *AggregationHashTable, iter: *AHTOverf
     var partial = @ptrCast(*Agg, @aggPartIterGetRow(iter))
     var agg = @ptrCast(*Agg, @aggHTLookup(table, partial_hash, keyCheckPartial, partial))
     if (agg == nil) {
-      agg = @ptrCast(*Agg, @aggHTInsert(table, partial_hash))
-      constructAggFromPartial(agg, partial)
+      @aggHTLink(table, @aggPartIterGetRowEntry(iter))
     } else {
       updateAggFromPartial(agg, partial)
     }

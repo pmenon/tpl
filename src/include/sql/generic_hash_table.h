@@ -5,11 +5,17 @@
 
 #include "common/common.h"
 #include "common/macros.h"
+#include "common/memory.h"
 #include "sql/hash_table_entry.h"
 #include "sql/memory_pool.h"
-#include "util/memory.h"
 
 namespace tpl::sql {
+
+//===----------------------------------------------------------------------===//
+//
+// Generic Hash Table
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * GenericHashTable serves as a dead-simple hash table for joins and aggregations in TPL. It is a
@@ -105,27 +111,26 @@ class GenericHashTable {
   void FlushEntries(const F &sink);
 
   /**
-   * Return the total number of bytes this hash table has allocated
+   * @return The total number of bytes this hash table has allocated.
    */
-  uint64_t GetTotalMemoryUsage() const { return sizeof(HashTableEntry *) * capacity(); }
+  uint64_t GetTotalMemoryUsage() const { return sizeof(HashTableEntry *) * GetCapacity(); }
 
   /**
-   * Return the number of elements stored in this hash table
+   * @return The number of elements stored in this hash table.
    */
-  uint64_t num_elements() const { return num_elems_; }
+  uint64_t GetElementCount() const { return num_elems_.load(std::memory_order_relaxed); }
 
   /**
-   * Return the maximum number of elements this hash table can store at its
-   * current size
+   * @return The maximum number of elements this hash table can store at its current size.
    */
-  uint64_t capacity() const { return capacity_; }
+  uint64_t GetCapacity() const { return capacity_; }
 
   /**
-   * The configured load factor for the table's directory. Note that this isn't the load factor
-   * value is normally thought of: # elems / # slots. Since this is a bucket-chained table, load
-   * factors can exceed 1.0 if chains are long.
+   * @return The configured load factor for the table's directory. Note that this isn't the load
+   *         factor value is normally thought of: # elems / # slots. Since this is a bucket-chained
+   *         table, load factors can exceed 1.0 if chains are long.
    */
-  float load_factor() const { return load_factor_; }
+  float GetLoadFactor() const { return load_factor_; }
 
  private:
   template <bool UseTag>
@@ -154,10 +159,9 @@ class GenericHashTable {
   }
 
   static uint64_t TagHash(const hash_t hash) {
-    // We use the given hash value to obtain a bit position in the tag to set.
-    // Thus, we need to extract a sample/signature from the hash value in the
-    // range [0, kNumTagBits), so we take the log2(kNumTagBits) most significant
-    // bits to determine which bit in the tag to set.
+    // We use the given hash value to obtain a bit position in the tag to set. We need to extract a
+    // signature from the hash value in the range [0, kNumTagBits), so we take the log2(kNumTagBits)
+    // most significant bits to determine which bit in the tag to set.
     auto tag_bit_pos = hash >> (sizeof(hash_t) * 8 - 4);
     TPL_ASSERT(tag_bit_pos < kNumTagBits, "Invalid tag!");
     return 1ull << (tag_bit_pos + kNumPointerBits);
@@ -173,8 +177,9 @@ class GenericHashTable {
   // The capacity of the directory
   uint64_t capacity_;
 
-  // The current number of elements stored in the table
-  uint64_t num_elems_;
+  // The current number of elements stored in the table. Atomic because it **MAY** be modified
+  // concurrently during insertions.
+  std::atomic<uint64_t> num_elems_;
 
   // The current load-factor
   float load_factor_;
@@ -187,7 +192,7 @@ class GenericHashTable {
 template <bool ForRead>
 void GenericHashTable::PrefetchChainHead(hash_t hash) const {
   const uint64_t pos = hash & mask_;
-  util::Prefetch<ForRead, Locality::Low>(entries_ + pos);
+  Memory::Prefetch<ForRead, Locality::Low>(entries_ + pos);
 }
 
 inline HashTableEntry *GenericHashTable::FindChainHead(hash_t hash) const {
@@ -205,7 +210,7 @@ template <bool Concurrent>
 inline void GenericHashTable::Insert(HashTableEntry *new_entry, hash_t hash) {
   const auto pos = hash & mask_;
 
-  TPL_ASSERT(pos < capacity(), "Computed table position exceeds capacity!");
+  TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");
   TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
@@ -221,14 +226,14 @@ inline void GenericHashTable::Insert(HashTableEntry *new_entry, hash_t hash) {
     loc.store(new_entry, std::memory_order_relaxed);
   }
 
-  num_elems_++;
+  num_elems_.fetch_add(1, std::memory_order_relaxed);
 }
 
 template <bool Concurrent>
 inline void GenericHashTable::InsertTagged(HashTableEntry *new_entry, hash_t hash) {
   const auto pos = hash & mask_;
 
-  TPL_ASSERT(pos < capacity(), "Computed table position exceeds capacity!");
+  TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");
   TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
@@ -246,14 +251,14 @@ inline void GenericHashTable::InsertTagged(HashTableEntry *new_entry, hash_t has
     loc.store(UpdateTag(old_entry, new_entry), std::memory_order_relaxed);
   }
 
-  num_elems_++;
+  num_elems_.fetch_add(1, std::memory_order_relaxed);
 }
 
 template <typename F>
 inline void GenericHashTable::FlushEntries(const F &sink) {
   static_assert(std::is_invocable_v<F, HashTableEntry *>);
 
-  for (uint32_t idx = 0; idx < capacity_; idx++) {
+  for (uint64_t idx = 0; idx < capacity_; idx++) {
     HashTableEntry *entry = entries_[idx].load(std::memory_order_relaxed);
     while (entry != nullptr) {
       HashTableEntry *next = entry->next;
@@ -266,9 +271,11 @@ inline void GenericHashTable::FlushEntries(const F &sink) {
   num_elems_ = 0;
 }
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Generic Hash Table Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * An iterator over the entries in a generic hash table. It's assumed that the underlying hash table
@@ -289,7 +296,7 @@ class GenericHashTableIterator {
   }
 
   /**
-   * Is there more data in the iterator?
+   * @return True if there is more data in the iterator; false otherwise.
    */
   bool HasNext() const noexcept { return curr_entry_ != nullptr; }
 
@@ -307,7 +314,7 @@ class GenericHashTableIterator {
 
     // While we haven't exhausted the directory, and haven't found a valid entry
     // continue on ...
-    while (entries_index_ < table_.capacity()) {
+    while (entries_index_ < table_.GetCapacity()) {
       curr_entry_ = table_.entries_[entries_index_++].load(std::memory_order_relaxed);
 
       if constexpr (UseTag) {
@@ -321,7 +328,7 @@ class GenericHashTableIterator {
   }
 
   /**
-   * Access the element the iterator is currently pointing to.
+   * @return The element the iterator is currently pointing to.
    */
   const HashTableEntry *GetCurrentEntry() const noexcept { return curr_entry_; }
 
@@ -334,9 +341,11 @@ class GenericHashTableIterator {
   const HashTableEntry *curr_entry_;
 };
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Generic Hash Table Vector Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * An iterator over a generic hash table that works vector-at-a-time. It's assumed that the
@@ -361,7 +370,7 @@ class GenericHashTableVectorIterator {
   ~GenericHashTableVectorIterator();
 
   /**
-   * Is there more data in the iterator?
+   * @return True if there's more data in the iterator; false otherwise.
    */
   bool HasNext() const { return entry_vec_end_idx_ > 0; }
 
@@ -371,7 +380,7 @@ class GenericHashTableVectorIterator {
   void Next();
 
   /**
-   * Return the current batch of entries and its size.
+   * @return The current batch of entries and its size.
    */
   std::pair<uint16_t, const HashTableEntry **> GetCurrentBatch() const {
     return std::make_pair(entry_vec_end_idx_, entry_vec_);

@@ -16,15 +16,15 @@ class TableVectorIteratorTest : public SqlBasedTest {};
 
 TEST_F(TableVectorIteratorTest, InvalidBlockRangeIteratorTest) {
   auto table_id = TableIdToNum(TableId::Test1);
-  auto *table = Catalog::Instance()->LookupTableById(TableId::Test1);
+  auto *table = Catalog::Instance()->LookupTableById(table_id);
 
   const std::tuple<uint32_t, uint32_t, bool> test_cases[] = {
       {0, 10, true},
       {10, 0, false},
       {-10, 2, false},
-      {0, table->num_blocks(), true},
-      {10, table->num_blocks(), true},
-      {10, table->num_blocks() + 1, false},
+      {0, table->GetBlockCount(), true},
+      {10, table->GetBlockCount(), true},
+      {10, table->GetBlockCount() + 1, false},
   };
 
   for (auto [start_idx, end_idx, valid] : test_cases) {
@@ -66,7 +66,7 @@ TEST_F(TableVectorIteratorTest, SimpleIteratorTest) {
     vpi->Reset();
   }
 
-  EXPECT_EQ(iter.table()->num_tuples(), num_tuples);
+  EXPECT_EQ(iter.GetTable()->GetTupleCount(), num_tuples);
 }
 
 TEST_F(TableVectorIteratorTest, ParallelScanTest) {
@@ -90,7 +90,7 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
   // Setup thread states
   MemoryPool memory(nullptr);
   ExecutionContext ctx(&memory);
-  ThreadStateContainer thread_state_container(ctx.memory_pool());
+  ThreadStateContainer thread_state_container(ctx.GetMemoryPool());
   thread_state_container.Reset(sizeof(Counter), init_count, nullptr, nullptr);
 
   // Scan

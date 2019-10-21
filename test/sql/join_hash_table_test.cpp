@@ -57,16 +57,16 @@ TEST_F(JoinHashTableTest, LazyInsertionTest) {
 
   // Before build, the generic hash table shouldn't be populated, but the join
   // table's storage should have buffered all input tuples
-  EXPECT_EQ(num_tuples, join_hash_table.GetElementCount());
-  EXPECT_EQ(0u, join_hash_table.generic_hash_table_.num_elements());
+  EXPECT_EQ(num_tuples, join_hash_table.GetTupleCount());
+  EXPECT_EQ(0u, join_hash_table.generic_hash_table_.GetElementCount());
 
   // Try to build
   join_hash_table.Build();
 
   // Post-build, the sizes should be synced up since all tuples were inserted
   // into the GHT
-  EXPECT_EQ(num_tuples, join_hash_table.GetElementCount());
-  EXPECT_EQ(num_tuples, join_hash_table.generic_hash_table_.num_elements());
+  EXPECT_EQ(num_tuples, join_hash_table.GetTupleCount());
+  EXPECT_EQ(num_tuples, join_hash_table.generic_hash_table_.GetElementCount());
 }
 
 void PopulateJoinHashTable(JoinHashTable *jht, uint32_t num_tuples, uint32_t dup_scale_factor) {
@@ -151,6 +151,8 @@ TEST_F(JoinHashTableTest, UniqueKeyConciseTableTest) { BuildAndProbeTest<true>(4
 TEST_F(JoinHashTableTest, DuplicateKeyLookupConciseTableTest) { BuildAndProbeTest<true>(400, 5); }
 
 TEST_F(JoinHashTableTest, ParallelBuildTest) {
+  tbb::task_scheduler_init sched;
+
   constexpr bool use_concise_ht = false;
   const uint32_t num_tuples = 10000;
   const uint32_t num_thread_local_tables = 4;
@@ -166,11 +168,8 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
       [](auto *ctx, auto *s) { reinterpret_cast<JoinHashTable *>(s)->~JoinHashTable(); }, &memory);
 
   // Parallel populate each of the thread-local hash tables
-  tbb::task_scheduler_init sched;
-  tbb::blocked_range<std::size_t> block_range(0, num_thread_local_tables, 1);
-  tbb::parallel_for(block_range, [&](const auto &range) {
-    auto *jht = container.AccessThreadStateOfCurrentThreadAs<JoinHashTable>();
-    LOG_INFO("JHT @ {:p}", (void *)jht);
+  LaunchParallel(num_thread_local_tables, [&](auto tid) {
+    auto *jht = container.AccessCurrentThreadStateAs<JoinHashTable>();
     PopulateJoinHashTable(jht, num_tuples, 1);
   });
 
@@ -184,7 +183,7 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
   //
   // Check now.
 
-  EXPECT_EQ(num_tuples * num_thread_local_tables, main_jht.GetElementCount());
+  EXPECT_EQ(num_tuples * num_thread_local_tables, main_jht.GetTupleCount());
 
   for (uint32_t i = 0; i < num_tuples; i++) {
     auto probe = Tuple{i, 1, 2, 3};

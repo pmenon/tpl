@@ -539,6 +539,7 @@ class Expr : public AstNode {
   void set_type(Type *type) { type_ = type; }
 
   bool IsNilLiteral() const;
+  bool IsBoolLiteral() const;
   bool IsStringLiteral() const;
   bool IsIntegerLiteral() const;
 
@@ -753,6 +754,9 @@ enum class CastKind : uint8_t {
 
   // Conversion of a 64-bit float into a non-nullable SQL Real value
   FloatToSqlReal,
+
+  // Convert a SQL integer into a SQL real
+  SqlIntToSqlReal,
 };
 
 /**

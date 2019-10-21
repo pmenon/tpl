@@ -203,7 +203,7 @@ class VectorProjection {
    * tuple count is always <= the total tuple count.
    * @return The number of externally visible tuples in this projection.
    */
-  uint64_t GetSelectedTupleCount() const { return columns_.empty() ? 0 : columns_[0]->count(); }
+  uint64_t GetSelectedTupleCount() const { return columns_.empty() ? 0 : columns_[0]->GetCount(); }
 
   /**
    * Return the total number of tuples in the projection, including those that may have been
@@ -211,7 +211,7 @@ class VectorProjection {
    * tuple count.
    * @return The total number of tuples in the projection.
    */
-  uint64_t GetTotalTupleCount() const { return columns_.empty() ? 0 : columns_[0]->num_elements(); }
+  uint64_t GetTotalTupleCount() const { return columns_.empty() ? 0 : columns_[0]->GetSize(); }
 
   /**
    * Compute the selectivity of this projection.

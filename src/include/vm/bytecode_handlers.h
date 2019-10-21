@@ -3,23 +3,23 @@
 #include <cstdint>
 
 #include "common/common.h"
-
 #include "common/macros.h"
 #include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
 #include "sql/execution_context.h"
 #include "sql/filter_manager.h"
 #include "sql/functions/arithmetic_functions.h"
+#include "sql/functions/casting_fuctions.h"
 #include "sql/functions/comparison_functions.h"
 #include "sql/functions/is_null_predicate.h"
 #include "sql/functions/string_functions.h"
 #include "sql/join_hash_table.h"
 #include "sql/join_hash_table_vector_probe.h"
+#include "sql/operations/hash_operators.h"
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
 #include "sql/vector_filter_executor.h"
-#include "util/hash_util.h"
 
 // All VM bytecode op handlers must use this macro
 #define VM_OP
@@ -156,6 +156,10 @@ VM_OP_HOT void OpAssignImm4(int32_t *dest, int32_t src) { *dest = src; }
 
 VM_OP_HOT void OpAssignImm8(int64_t *dest, int64_t src) { *dest = src; }
 
+VM_OP_HOT void OpAssignImm4F(float *dest, float src) { *dest = src; }
+
+VM_OP_HOT void OpAssignImm8F(double *dest, double src) { *dest = src; }
+
 VM_OP_HOT void OpLea(byte **dest, byte *base, uint32_t offset) { *dest = base + offset; }
 
 VM_OP_HOT void OpLeaScaled(byte **dest, byte *base, uint32_t index, uint32_t scale,
@@ -179,7 +183,7 @@ VM_OP_HOT void OpReturn() {}
 
 VM_OP_HOT void OpExecutionContextGetMemoryPool(tpl::sql::MemoryPool **const memory,
                                                tpl::sql::ExecutionContext *const exec_ctx) {
-  *memory = exec_ctx->memory_pool();
+  *memory = exec_ctx->GetMemoryPool();
 }
 
 VM_OP void OpThreadStateContainerInit(tpl::sql::ThreadStateContainer *thread_state_container,
@@ -327,12 +331,35 @@ VM_OP_HOT void OpVPIGetDouble(tpl::sql::Real *out, tpl::sql::VectorProjectionIte
   out->val = *ptr;
 }
 
-VM_OP_HOT void OpVPIGetDecimal(tpl::sql::Decimal *out,
-                               UNUSED tpl::sql::VectorProjectionIterator *vpi,
-                               UNUSED const uint32_t col_idx) {
+VM_OP_HOT void OpVPIGetDecimal(tpl::sql::DecimalVal *out, tpl::sql::VectorProjectionIterator *vpi,
+                               const uint32_t col_idx) {
+  // Read
+  auto *ptr = vpi->GetValue<tpl::sql::Decimal64, false>(col_idx, nullptr);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read double value");
+
   // Set
   out->is_null = false;
-  out->val = 0;
+  out->val = *ptr;
+}
+
+VM_OP_HOT void OpVPIGetDate(tpl::sql::DateVal *out, tpl::sql::VectorProjectionIterator *vpi,
+                            const uint32_t col_idx) {
+  auto *ptr = vpi->GetValue<tpl::sql::Date, false>(col_idx, nullptr);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read Date value");
+
+  // Set
+  out->is_null = false;
+  out->val = *ptr;
+}
+
+VM_OP_HOT void OpVPIGetString(tpl::sql::StringVal *out, tpl::sql::VectorProjectionIterator *vpi,
+                              const uint32_t col_idx) {
+  auto *ptr = vpi->GetValue<tpl::sql::VarlenEntry, false>(col_idx, nullptr);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read Date value");
+
+  // Set
+  out->is_null = false;
+  out->val = *ptr;
 }
 
 VM_OP_HOT void OpVPIGetSmallIntNull(tpl::sql::Integer *out,
@@ -399,11 +426,39 @@ VM_OP_HOT void OpVPIGetDoubleNull(tpl::sql::Real *out,
   out->val = *ptr;
 }
 
-VM_OP_HOT void OpVPIGetDecimalNull(tpl::sql::Decimal *out,
+VM_OP_HOT void OpVPIGetDecimalNull(tpl::sql::DecimalVal *out,
                                    tpl::sql::VectorProjectionIterator *const vpi,
                                    const uint32_t col_idx) {
-  out->val = 0;
-  out->is_null = false;
+  // Read
+  bool null = false;
+  auto *ptr = vpi->GetValue<tpl::sql::Decimal64, true>(col_idx, &null);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read double value");
+
+  // Set
+  out->is_null = null;
+  out->val = *ptr;
+}
+
+VM_OP_HOT void OpVPIGetDateNull(tpl::sql::DateVal *out, tpl::sql::VectorProjectionIterator *vpi,
+                                const uint32_t col_idx) {
+  bool null = false;
+  auto *ptr = vpi->GetValue<tpl::sql::Date, true>(col_idx, &null);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read Date value");
+
+  // Set
+  out->is_null = null;
+  out->val = *ptr;
+}
+
+VM_OP_HOT void OpVPIGetStringNull(tpl::sql::StringVal *out, tpl::sql::VectorProjectionIterator *vpi,
+                                  const uint32_t col_idx) {
+  bool null = false;
+  auto *ptr = vpi->GetValue<tpl::sql::VarlenEntry, true>(col_idx, &null);
+  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read Date value");
+
+  // Set
+  out->is_null = null;
+  out->val = *ptr;
 }
 
 VM_OP_HOT void OpVPISetSmallInt(tpl::sql::VectorProjectionIterator *const vpi,
@@ -432,8 +487,18 @@ VM_OP_HOT void OpVPISetDouble(tpl::sql::VectorProjectionIterator *const vpi, tpl
 }
 
 VM_OP_HOT void OpVPISetDecimal(tpl::sql::VectorProjectionIterator *const vpi,
-                               tpl::sql::Decimal *input, const uint32_t col_idx) {
-  // TODO(pmenon): Implement me
+                               tpl::sql::DecimalVal *input, const uint32_t col_idx) {
+  vpi->SetValue<tpl::sql::Decimal64, false>(col_idx, input->val, false);
+}
+
+VM_OP_HOT void OpVPISetDate(tpl::sql::VectorProjectionIterator *const vpi, tpl::sql::DateVal *input,
+                            const uint32_t col_idx) {
+  vpi->SetValue<tpl::sql::Date, false>(col_idx, input->val, false);
+}
+
+VM_OP_HOT void OpVPISetString(tpl::sql::VectorProjectionIterator *const vpi,
+                              tpl::sql::StringVal *input, const uint32_t col_idx) {
+  vpi->SetValue<tpl::sql::VarlenEntry, false>(col_idx, input->val, false);
 }
 
 VM_OP_HOT void OpVPISetSmallIntNull(tpl::sql::VectorProjectionIterator *const vpi,
@@ -462,8 +527,18 @@ VM_OP_HOT void OpVPISetDoubleNull(tpl::sql::VectorProjectionIterator *const vpi,
 }
 
 VM_OP_HOT void OpVPISetDecimalNull(tpl::sql::VectorProjectionIterator *const vpi,
-                                   tpl::sql::Decimal *input, const uint32_t col_idx) {
-  // TODO(pmenon): Implement me
+                                   tpl::sql::DecimalVal *input, const uint32_t col_idx) {
+  vpi->SetValue<tpl::sql::Decimal64, true>(col_idx, input->val, input->is_null);
+}
+
+VM_OP_HOT void OpVPISetDateNull(tpl::sql::VectorProjectionIterator *const vpi,
+                                tpl::sql::DateVal *input, const uint32_t col_idx) {
+  vpi->SetValue<tpl::sql::Date, true>(col_idx, input->val, input->is_null);
+}
+
+VM_OP_HOT void OpVPISetStringNull(tpl::sql::VectorProjectionIterator *const vpi,
+                                  tpl::sql::StringVal *input, const uint32_t col_idx) {
+  vpi->SetValue<tpl::sql::VarlenEntry, true>(col_idx, input->val, input->is_null);
 }
 
 // ---------------------------------------------------------
@@ -472,24 +547,22 @@ VM_OP_HOT void OpVPISetDecimalNull(tpl::sql::VectorProjectionIterator *const vpi
 
 VM_OP_HOT void OpHashInt(hash_t *const hash_val, const tpl::sql::Integer *const input,
                          const hash_t seed) {
-  *hash_val = tpl::util::HashUtil::Hash(input->val, seed);
-  *hash_val = input->is_null ? 0 : *hash_val;
+  *hash_val = input->is_null ? 0 : tpl::util::HashUtil::HashCrc(input->val, seed);
 }
 
 VM_OP_HOT void OpHashReal(hash_t *const hash_val, const tpl::sql::Real *const input,
                           const hash_t seed) {
-  *hash_val = tpl::util::HashUtil::Hash(input->val, seed);
-  *hash_val = input->is_null ? 0 : *hash_val;
+  *hash_val = input->is_null ? 0 : tpl::util::HashUtil::HashCrc(input->val, seed);
 }
 
 VM_OP_HOT void OpHashString(hash_t *const hash_val, const tpl::sql::StringVal *const input,
                             const hash_t seed) {
-  if (input->is_null) {
-    *hash_val = 0;
-  } else {
-    const auto *key = reinterpret_cast<const uint8_t *>(input->ptr);
-    *hash_val = tpl::util::HashUtil::Hash(key, input->len, seed);
-  }
+  *hash_val = input->is_null ? 0 : input->val.Hash(seed);
+}
+
+VM_OP_HOT void OpHashDate(hash_t *const hash_val, const tpl::sql::DateVal *const input,
+                          const hash_t seed) {
+  *hash_val = input->is_null ? 0 : input->val.Hash(seed);
 }
 
 VM_OP_HOT void OpHashCombine(hash_t *hash_val, hash_t new_hash_val) {
@@ -620,81 +693,66 @@ VM_OP_HOT void OpInitInteger(tpl::sql::Integer *result, int32_t input) {
   result->val = input;
 }
 
-VM_OP_HOT void OpInitReal(tpl::sql::Real *result, double input) {
+VM_OP_HOT void OpInitReal(tpl::sql::Real *result, float input) {
   result->is_null = false;
   result->val = input;
 }
 
-#define GEN_SQL_COMPARISONS(TYPE)                                                                 \
-  VM_OP_HOT void OpGreaterThan##TYPE(tpl::sql::BoolVal *const result,                             \
+VM_OP_HOT void OpInitDate(tpl::sql::DateVal *result, uint32_t year, uint32_t month, uint32_t day) {
+  result->is_null = false;
+  result->val = tpl::sql::Date::FromYMD(year, month, day);
+}
+
+VM_OP_HOT void OpInitString(tpl::sql::StringVal *result, const uint8_t *str, uint32_t length) {
+  result->is_null = false;
+  result->val = tpl::sql::VarlenEntry::Create(reinterpret_cast<const byte *>(str), length);
+}
+
+VM_OP_HOT void OpIntegerToReal(tpl::sql::Real *result, const tpl::sql::Integer *input) {
+  tpl::sql::CastingFunctions::CastToReal(result, *input);
+}
+
+VM_OP_HOT void OpRealToInteger(tpl::sql::Integer *result, const tpl::sql::Real *input) {
+  tpl::sql::CastingFunctions::CastToInteger(result, *input);
+}
+
+#define GEN_SQL_COMPARISONS(NAME, TYPE)                                                           \
+  VM_OP_HOT void OpGreaterThan##NAME(tpl::sql::BoolVal *const result,                             \
                                      const tpl::sql::TYPE *const left,                            \
                                      const tpl::sql::TYPE *const right) {                         \
     tpl::sql::ComparisonFunctions::Gt##TYPE(result, *left, *right);                               \
   }                                                                                               \
-  VM_OP_HOT void OpGreaterThanEqual##TYPE(tpl::sql::BoolVal *const result,                        \
+  VM_OP_HOT void OpGreaterThanEqual##NAME(tpl::sql::BoolVal *const result,                        \
                                           const tpl::sql::TYPE *const left,                       \
                                           const tpl::sql::TYPE *const right) {                    \
     tpl::sql::ComparisonFunctions::Ge##TYPE(result, *left, *right);                               \
   }                                                                                               \
-  VM_OP_HOT void OpEqual##TYPE(tpl::sql::BoolVal *const result, const tpl::sql::TYPE *const left, \
+  VM_OP_HOT void OpEqual##NAME(tpl::sql::BoolVal *const result, const tpl::sql::TYPE *const left, \
                                const tpl::sql::TYPE *const right) {                               \
     tpl::sql::ComparisonFunctions::Eq##TYPE(result, *left, *right);                               \
   }                                                                                               \
-  VM_OP_HOT void OpLessThan##TYPE(tpl::sql::BoolVal *const result,                                \
+  VM_OP_HOT void OpLessThan##NAME(tpl::sql::BoolVal *const result,                                \
                                   const tpl::sql::TYPE *const left,                               \
                                   const tpl::sql::TYPE *const right) {                            \
     tpl::sql::ComparisonFunctions::Lt##TYPE(result, *left, *right);                               \
   }                                                                                               \
-  VM_OP_HOT void OpLessThanEqual##TYPE(tpl::sql::BoolVal *const result,                           \
+  VM_OP_HOT void OpLessThanEqual##NAME(tpl::sql::BoolVal *const result,                           \
                                        const tpl::sql::TYPE *const left,                          \
                                        const tpl::sql::TYPE *const right) {                       \
     tpl::sql::ComparisonFunctions::Le##TYPE(result, *left, *right);                               \
   }                                                                                               \
-  VM_OP_HOT void OpNotEqual##TYPE(tpl::sql::BoolVal *const result,                                \
+  VM_OP_HOT void OpNotEqual##NAME(tpl::sql::BoolVal *const result,                                \
                                   const tpl::sql::TYPE *const left,                               \
                                   const tpl::sql::TYPE *const right) {                            \
     tpl::sql::ComparisonFunctions::Ne##TYPE(result, *left, *right);                               \
   }
 
-GEN_SQL_COMPARISONS(Integer)
-GEN_SQL_COMPARISONS(Real)
+GEN_SQL_COMPARISONS(Integer, Integer)
+GEN_SQL_COMPARISONS(Real, Real)
+GEN_SQL_COMPARISONS(Date, DateVal)
+GEN_SQL_COMPARISONS(String, StringVal)
 
 #undef GEN_SQL_COMPARISONS
-
-VM_OP_HOT void OpGreaterThanString(tpl::sql::BoolVal *const result,
-                                   const tpl::sql::StringVal *const left,
-                                   const tpl::sql::StringVal *const right) {
-  tpl::sql::ComparisonFunctions::GtStringVal(result, *left, *right);
-}
-
-VM_OP_HOT void OpGreaterThanEqualString(tpl::sql::BoolVal *const result,
-                                        const tpl::sql::StringVal *const left,
-                                        const tpl::sql::StringVal *const right) {
-  tpl::sql::ComparisonFunctions::GeStringVal(result, *left, *right);
-}
-
-VM_OP_HOT void OpEqualString(tpl::sql::BoolVal *const result, const tpl::sql::StringVal *const left,
-                             const tpl::sql::StringVal *const right) {
-  tpl::sql::ComparisonFunctions::EqStringVal(result, *left, *right);
-}
-
-VM_OP_HOT void OpLessThanString(tpl::sql::BoolVal *const result,
-                                const tpl::sql::StringVal *const left,
-                                const tpl::sql::StringVal *const right) {
-  tpl::sql::ComparisonFunctions::LtStringVal(result, *left, *right);
-}
-
-VM_OP_HOT void OpLessThanEqualString(tpl::sql::BoolVal *const result,
-                                     const tpl::sql::StringVal *const left,
-                                     const tpl::sql::StringVal *const right) {
-  tpl::sql::ComparisonFunctions::LeStringVal(result, *left, *right);
-}
-
-VM_OP_HOT void OpNotEqualString(tpl::sql::BoolVal *const result,
-                                const tpl::sql::StringVal *const left,
-                                const tpl::sql::StringVal *const right) {
-  tpl::sql::ComparisonFunctions::NeStringVal(result, *left, *right);
-}
 
 VM_OP_WARM void OpAbsInteger(tpl::sql::Integer *const result, const tpl::sql::Integer *const left) {
   tpl::sql::ArithmeticFunctions::Abs(result, *left);
@@ -768,15 +826,20 @@ VM_OP_HOT void OpRemReal(tpl::sql::Real *const result, const tpl::sql::Real *con
 VM_OP void OpAggregationHashTableInit(tpl::sql::AggregationHashTable *agg_hash_table,
                                       tpl::sql::MemoryPool *memory, uint32_t payload_size);
 
-VM_OP_HOT void OpAggregationHashTableInsert(byte **result,
-                                            tpl::sql::AggregationHashTable *agg_hash_table,
-                                            hash_t hash_val) {
-  *result = agg_hash_table->Insert(hash_val);
+VM_OP_HOT void OpAggregationHashTableAllocTuple(byte **result,
+                                                tpl::sql::AggregationHashTable *agg_hash_table,
+                                                const hash_t hash_val) {
+  *result = agg_hash_table->AllocInputTuple(hash_val);
 }
 
-VM_OP_HOT void OpAggregationHashTableInsertPartitioned(
-    byte **result, tpl::sql::AggregationHashTable *agg_hash_table, hash_t hash_val) {
-  *result = agg_hash_table->InsertPartitioned(hash_val);
+VM_OP_HOT void OpAggregationHashTableAllocTuplePartitioned(
+    byte **result, tpl::sql::AggregationHashTable *agg_hash_table, const hash_t hash_val) {
+  *result = agg_hash_table->AllocInputTuplePartitioned(hash_val);
+}
+
+VM_OP_HOT void OpAggregationHashTableLinkHashTableEntry(
+    tpl::sql::AggregationHashTable *agg_hash_table, tpl::sql::HashTableEntry *entry) {
+  agg_hash_table->Insert(entry);
 }
 
 VM_OP_HOT void OpAggregationHashTableLookup(byte **result,
@@ -841,12 +904,17 @@ VM_OP_HOT void OpAggregationOverflowPartitionIteratorNext(
 
 VM_OP_HOT void OpAggregationOverflowPartitionIteratorGetHash(
     hash_t *hash_val, tpl::sql::AHTOverflowPartitionIterator *iter) {
-  *hash_val = iter->GetHash();
+  *hash_val = iter->GetRowHash();
 }
 
 VM_OP_HOT void OpAggregationOverflowPartitionIteratorGetRow(
     const byte **row, tpl::sql::AHTOverflowPartitionIterator *iter) {
-  *row = iter->GetPayload();
+  *row = iter->GetRow();
+}
+
+VM_OP_HOT void OpAggregationOverflowPartitionIteratorGetRowEntry(
+    tpl::sql::HashTableEntry **entry, tpl::sql::AHTOverflowPartitionIterator *iter) {
+  *entry = iter->GetEntryForRow();
 }
 
 //
@@ -1080,7 +1148,12 @@ VM_OP_HOT void OpAvgAggregateInit(tpl::sql::AvgAggregate *agg) {
   new (agg) tpl::sql::AvgAggregate();
 }
 
-VM_OP_HOT void OpAvgAggregateAdvance(tpl::sql::AvgAggregate *agg, const tpl::sql::Integer *val) {
+VM_OP_HOT void OpAvgAggregateAdvanceInteger(tpl::sql::AvgAggregate *agg,
+                                            const tpl::sql::Integer *val) {
+  agg->Advance(*val);
+}
+
+VM_OP_HOT void OpAvgAggregateAdvanceReal(tpl::sql::AvgAggregate *agg, const tpl::sql::Real *val) {
   agg->Advance(*val);
 }
 
@@ -1197,6 +1270,18 @@ VM_OP_HOT void OpSorterIteratorGetRow(const byte **row, tpl::sql::SorterIterator
 }
 
 VM_OP void OpSorterIteratorFree(tpl::sql::SorterIterator *iter);
+
+// ---------------------------------------------------------
+// Output
+// ---------------------------------------------------------
+
+VM_OP_WARM void OpResultBufferAllocOutputRow(byte **result, tpl::sql::ExecutionContext *ctx) {
+  *result = ctx->GetResultBuffer()->AllocOutputSlot();
+}
+
+VM_OP_WARM void OpResultBufferFinalize(tpl::sql::ExecutionContext *ctx) {
+  ctx->GetResultBuffer()->Finalize();
+}
 
 // ---------------------------------------------------------
 // Trig functions
@@ -1342,6 +1427,11 @@ VM_OP_WARM void OpCharLength(tpl::sql::ExecutionContext *ctx, tpl::sql::Integer 
 VM_OP_WARM void OpLeft(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
                        const tpl::sql::StringVal *str, const tpl::sql::Integer *n) {
   tpl::sql::StringFunctions::Left(ctx, result, *str, *n);
+}
+
+VM_OP_WARM void OpLike(tpl::sql::BoolVal *result, const tpl::sql::StringVal *str,
+                       const tpl::sql::StringVal *pattern) {
+  tpl::sql::StringFunctions::Like(nullptr, result, *str, *pattern);
 }
 
 VM_OP_WARM void OpLength(tpl::sql::ExecutionContext *ctx, tpl::sql::Integer *result,

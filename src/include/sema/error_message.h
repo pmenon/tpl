@@ -70,6 +70,9 @@ namespace sema {
   F(InvalidArrayIndexValue, "non-integer array index", ())                                         \
   F(InvalidCastToSqlInt, "invalid cast of %0 to SQL integer", (ast::Type *))                       \
   F(InvalidCastToSqlDecimal, "invalid cast of %0 to SQL decimal", (ast::Type *))                   \
+  F(InvalidCastToSqlDate,                                                                          \
+    "date creation expects three 32-bit integers, received '%0', '%1', '%2'",                      \
+    (ast::Type *, ast::Type *, ast::Type *))                                                       \
   F(InvalidSqlCastToBool, "invalid input to cast to native boolean: expected SQL boolean, got %0", \
     (ast::Type *))                                                                                 \
   F(MissingReturn, "missing return at end of function", ())                                        \

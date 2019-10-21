@@ -134,14 +134,22 @@ class AggregationHashTable {
    * @param hash The hash value of the element to insert.
    * @return A pointer to a memory area where the element can be written to.
    */
-  byte *Insert(hash_t hash);
+  byte *AllocInputTuple(hash_t hash);
 
   /**
    * Insert a new element with hash value @em hash into this partitioned aggregation hash table.
    * @param hash The hash value of the element to insert.
    * @return A pointer to a memory area where the input element can be written.
    */
-  byte *InsertPartitioned(hash_t hash);
+  byte *AllocInputTuplePartitioned(hash_t hash);
+
+  /**
+   * Insert and link in the given fully-constructed tuple contained within @em entry payload into
+   * this aggregation table. This is used during partitioned-build when pre-allocated tuples need to
+   * be linked into the hash table without allocating new tuple data.
+   * @param entry The entry to insert into the hash table.
+   */
+  void Insert(HashTableEntry *entry);
 
   /**
    * Lookup and return an entry in the aggregation table that matches a given hash and key. The hash
@@ -154,7 +162,7 @@ class AggregationHashTable {
   byte *Lookup(hash_t hash, KeyEqFn key_eq_fn, const void *probe_tuple);
 
   /**
-   * Injest and process a batch of input into the aggregation.
+   * Ingest and process a batch of input into the aggregation table.
    * @param vpi The vector projection to process.
    * @param hash_fn Function to compute a hash of an input element.
    * @param key_eq_fn Function to check key equality of an input element and an existing aggregate.
@@ -202,21 +210,21 @@ class AggregationHashTable {
                                       ScanPartitionFn scan_fn);
 
   /**
-   * How many aggregates are in this table?
+   * @return The total number of tuples in this table.
    */
-  uint64_t NumElements() const { return hash_table_.num_elements(); }
+  uint64_t GetTupleCount() const { return hash_table_.GetElementCount(); }
 
   /**
-   * Read-only access to hash table stats.
+   * @return A read-only view of this aggregation table's statistics.
    */
-  const Stats *stats() const { return &stats_; }
+  const Stats *GetStatistics() const { return &stats_; }
 
  private:
   friend class AHTIterator;
   friend class AHTVectorIterator;
 
   // Does the hash table need to grow?
-  bool NeedsToGrow() const { return hash_table_.num_elements() >= max_fill_; }
+  bool NeedsToGrow() const { return hash_table_.GetElementCount() >= max_fill_; }
 
   // Grow the hash table
   void Grow();
@@ -345,8 +353,12 @@ class AggregationHashTable {
 };
 
 // ---------------------------------------------------------
-// Implementation below
+// Aggregation Hash Table implementation below
 // ---------------------------------------------------------
+
+inline void AggregationHashTable::Insert(HashTableEntry *entry) {
+  hash_table_.Insert<false>(entry, entry->hash);
+}
 
 inline HashTableEntry *AggregationHashTable::LookupEntryInternal(
     hash_t hash, AggregationHashTable::KeyEqFn key_eq_fn, const void *probe_tuple) const {
@@ -491,13 +503,19 @@ class AHTOverflowPartitionIterator {
    * @param partitions_end The end of the range.
    */
   AHTOverflowPartitionIterator(HashTableEntry **partitions_begin, HashTableEntry **partitions_end)
-      : partitions_iter_(partitions_begin), partitions_end_(partitions_end), curr_(nullptr) {
-    Next();
+      : partitions_iter_(partitions_begin),
+        partitions_end_(partitions_end),
+        curr_(nullptr),
+        next_(nullptr) {
+    // First find a partition that has a chain
+    FindPartitionHead();
+    if (next_ != nullptr) {
+      Next();
+    }
   }
 
   /**
-   * Are there more overflow entries?
-   * @return True if the iterator has more data; false otherwise
+   * @return True if the iterator has more data; false otherwise.
    */
   bool HasNext() const { return curr_ != nullptr; }
 
@@ -505,44 +523,54 @@ class AHTOverflowPartitionIterator {
    * Move to the next overflow entry.
    */
   void Next() {
-    // Try to move along current partition
-    if (curr_ != nullptr) {
-      curr_ = curr_->next;
-      if (curr_ != nullptr) {
-        return;
-      }
-    }
+    curr_ = next_;
 
-    // Find next non-empty partition
-    while (curr_ == nullptr && partitions_iter_ != partitions_end_) {
-      curr_ = *partitions_iter_++;
+    if (TPL_LIKELY(next_ != nullptr)) {
+      next_ = next_->next;
+
+      // If 'next_' is NULL, we'are the end of a partition. Find the next non-empty partition.
+      if (next_ == nullptr) {
+        FindPartitionHead();
+      }
     }
   }
 
   /**
-   * Get the hash value of the overflow entry the iterator is currently pointing to. It is assumed
-   * the caller has checked there is data in the iterator.
-   * @return The hash value of the current overflow entry.
+   * @return The current entry container for the current row.
    */
-  hash_t GetHash() const { return curr_->hash; }
+  HashTableEntry *GetEntryForRow() const { return curr_; }
 
   /**
-   * Get the payload of the overflow entry the iterator is currently pointing to. It is assumed the
-   * caller has checked there is data in the iterator.
-   * @return The opaque payload associated with the current overflow entry.
+   * @return The hash value of the current row.
    */
-  const byte *GetPayload() const { return curr_->payload; }
+  hash_t GetRowHash() const {
+    TPL_ASSERT(curr_ != nullptr, "Iterator not pointing to an overflow entry");
+    return curr_->hash;
+  }
 
   /**
-   * Get the payload of the overflow entry the iterator is currently pointing to, but interpret it
-   * as the given template type @em T. It is assumed the caller has checked there is data in the
-   * iterator.
-   * @tparam T The type of the payload in the current overflow entry.
-   * @return The opaque payload associated with the current overflow entry.
+   * @return The contents of the current row.
+   */
+  const byte *GetRow() const {
+    TPL_ASSERT(curr_ != nullptr, "Iterator not pointing to an overflow entry");
+    return curr_->payload;
+  }
+
+  /**
+   * @tparam The type of the contents of the current row.
+   * @return The contents of the current row as type @em T.
    */
   template <typename T>
-  const T *GetPayloadAs() const {
+  const T *GetRowAs() const {
+    TPL_ASSERT(curr_ != nullptr, "Iterator not pointing to an overflow entry");
     return curr_->PayloadAs<T>();
+  }
+
+ private:
+  void FindPartitionHead() {
+    while (next_ == nullptr && partitions_iter_ != partitions_end_) {
+      next_ = *partitions_iter_++;
+    }
   }
 
  private:
@@ -554,6 +582,9 @@ class AHTOverflowPartitionIterator {
 
   // The current overflow entry
   HashTableEntry *curr_;
+
+  // The next value overflow entry
+  HashTableEntry *next_;
 };
 
 }  // namespace tpl::sql

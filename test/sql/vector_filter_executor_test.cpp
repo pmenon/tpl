@@ -88,8 +88,8 @@ TEST_F(VectorFilterExecutorTest, ColumnWithConstant) {
     filter.Finish();
 
     check_loop(vp.get(), 1, [](VectorProjectionIterator *iter) {
-      auto cole = *iter->GetValue<char *, false>(Col::E, nullptr);
-      EXPECT_STREQ("ten", cole);
+      auto cole = iter->GetValue<VarlenEntry, false>(Col::E, nullptr);
+      EXPECT_STREQ("ten", cole->GetStringView().data());
     });
   }
 

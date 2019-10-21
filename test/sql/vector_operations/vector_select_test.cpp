@@ -14,7 +14,7 @@ class VectorSelectTest : public TplTest {};
 TEST_F(VectorSelectTest, MismatchedInputTypes) {
   auto a = MakeTinyIntVector(2);
   auto b = MakeBigIntVector(2);
-  auto result = TupleIdList(a->num_elements());
+  auto result = TupleIdList(a->GetSize());
   result.AddAll();
   EXPECT_THROW(VectorOps::SelectEqual(*a, *b, &result), TypeMismatchException);
 }
@@ -22,7 +22,7 @@ TEST_F(VectorSelectTest, MismatchedInputTypes) {
 TEST_F(VectorSelectTest, MismatchedSizes) {
   auto a = MakeTinyIntVector(54);
   auto b = MakeBigIntVector(19);
-  auto result = TupleIdList(a->num_elements());
+  auto result = TupleIdList(a->GetSize());
   result.AddAll();
   EXPECT_THROW(VectorOps::SelectEqual(*a, *b, &result), Exception);
 }
@@ -37,7 +37,7 @@ TEST_F(VectorSelectTest, MismatchedCounts) {
   a->SetSelectionVector(sel_1, 3);
   b->SetSelectionVector(sel_2, 2);
 
-  auto result = TupleIdList(a->num_elements());
+  auto result = TupleIdList(a->GetSize());
   result.AddAll();
 
   EXPECT_THROW(VectorOps::SelectEqual(*a, *b, &result), Exception);
@@ -66,7 +66,7 @@ TEST_F(VectorSelectTest, BasicSelect) {
     b->Cast(type_id);
     _2.Cast(type_id);
 
-    TupleIdList input_list(a->num_elements());
+    TupleIdList input_list(a->GetSize());
     input_list.AddAll();
 
     // a < 2
@@ -139,19 +139,19 @@ TEST_F(VectorSelectTest, BasicSelect) {
 TEST_F(VectorSelectTest, SelectNullConstant) {
   // a = [0, 1, NULL, NULL, 4, 5]
   auto a = MakeIntegerVector({0, 1, 2, 3, 4, 5}, {false, false, true, true, false, false});
-  auto null_constant = ConstantVector(GenericValue::CreateNull(a->type_id()));
+  auto null_constant = ConstantVector(GenericValue::CreateNull(a->GetTypeId()));
 
 #define NULL_TEST(OP)                                \
   /* a <OP> NULL */                                  \
   {                                                  \
-    TupleIdList list(a->num_elements());             \
+    TupleIdList list(a->GetSize());                  \
     list.AddAll();                                   \
     VectorOps::Select##OP(*a, null_constant, &list); \
     EXPECT_TRUE(list.IsEmpty());                     \
   }                                                  \
   /* NULL <OP> a */                                  \
   {                                                  \
-    TupleIdList list(a->num_elements());             \
+    TupleIdList list(a->GetSize());                  \
     list.AddAll();                                   \
     VectorOps::Select##OP(*a, null_constant, &list); \
     EXPECT_TRUE(list.IsEmpty());                     \
@@ -167,10 +167,46 @@ TEST_F(VectorSelectTest, SelectNullConstant) {
 #undef NULL_TEST
 }
 
+TEST_F(VectorSelectTest, StringSelection) {
+  auto a = MakeVarcharVector({"His palm's are sweaty", nullptr, "arms are heavy",
+                              "vomit on his sweater already", "mom's spaghetti"},
+                             {false, true, false, false, false});
+  auto b = MakeVarcharVector({"He's nervous", "but on the surface he looks calm and ready", nullptr,
+                              "to drop bombs", "but he keeps on forgetting"},
+                             {false, false, true, false, false});
+  auto tid_list = TupleIdList(a->GetSize());
+
+  // a == b = []
+  tid_list.AddAll();
+  VectorOps::SelectEqual(*a, *b, &tid_list);
+  EXPECT_EQ(0u, tid_list.GetTupleCount());
+
+  // a != b = [0, 3, 4]
+  tid_list.AddAll();
+  VectorOps::SelectNotEqual(*a, *b, &tid_list);
+  EXPECT_EQ(3u, tid_list.GetTupleCount());
+  EXPECT_EQ(0u, tid_list[0]);
+  EXPECT_EQ(3u, tid_list[1]);
+  EXPECT_EQ(4u, tid_list[2]);
+
+  // a < b = [0]
+  tid_list.AddAll();
+  VectorOps::SelectLessThan(*a, *b, &tid_list);
+  EXPECT_EQ(0u, tid_list.GetTupleCount());
+
+  // a > b = [1, 3, 4]
+  tid_list.AddAll();
+  VectorOps::SelectGreaterThan(*a, *b, &tid_list);
+  EXPECT_EQ(3u, tid_list.GetTupleCount());
+  EXPECT_EQ(0u, tid_list[0]);
+  EXPECT_EQ(3u, tid_list[1]);
+  EXPECT_EQ(4u, tid_list[2]);
+}
+
 TEST_F(VectorSelectTest, IsNullAndIsNotNull) {
   auto vec = MakeFloatVector({1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0},
                              {false, true, false, true, true, false, false});
-  auto tid_list = TupleIdList(vec->num_elements());
+  auto tid_list = TupleIdList(vec->GetSize());
 
   // Try first with a full TID list
 

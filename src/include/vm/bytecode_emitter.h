@@ -14,21 +14,23 @@ class BytecodeLabel;
 class BytecodeEmitter {
  public:
   /**
-   * Construct a bytecode emitter instance that emits bytecode operations into
-   * the provided bytecode vector
-   * @param bytecode The bytecode array to emit bytecode into
+   * Construct a bytecode emitter instance that encodes and writes bytecode instructions into the
+   * provided bytecode vector.
+   * @param bytecode The bytecode array to emit bytecode into.
    */
-  explicit BytecodeEmitter(std::vector<uint8_t> &bytecode) : bytecode_(bytecode) {}
+  explicit BytecodeEmitter(std::vector<uint8_t> *bytecode) : bytecode_(bytecode) {
+    TPL_ASSERT(bytecode_ != nullptr, "NULL bytecode pointer provided to emitter");
+  }
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(BytecodeEmitter);
 
   /**
-   * Access the current position of the emitter in the bytecode stream
+   * @return The current position of the emitter in the bytecode stream.
    */
-  std::size_t position() const { return bytecode_.size(); }
+  std::size_t GetPosition() const { return bytecode_->size(); }
 
   // -------------------------------------------------------
   // Derefs
@@ -46,6 +48,8 @@ class BytecodeEmitter {
   void EmitAssignImm2(LocalVar dest, int16_t val);
   void EmitAssignImm4(LocalVar dest, int32_t val);
   void EmitAssignImm8(LocalVar dest, int64_t val);
+  void EmitAssignImm4F(LocalVar dest, float val);
+  void EmitAssignImm8F(LocalVar dest, double val);
 
   // -------------------------------------------------------
   // Jumps
@@ -101,6 +105,8 @@ class BytecodeEmitter {
   // Special
   // -------------------------------------------------------
 
+  void EmitInitString(LocalVar dest, LocalVar static_local_string, uint32_t string_len);
+
   // Iterate over all the states in the container
   void EmitThreadStateContainerIterate(LocalVar tls, LocalVar ctx, FunctionId iterate_fn);
 
@@ -151,9 +157,9 @@ class BytecodeEmitter {
  private:
   // Copy a scalar immediate value into the bytecode stream
   template <typename T>
-  auto EmitScalarValue(const T val) -> std::enable_if_t<std::is_integral_v<T>> {
-    bytecode_.insert(bytecode_.end(), sizeof(T), 0);
-    *reinterpret_cast<T *>(&*(bytecode_.end() - sizeof(T))) = val;
+  auto EmitScalarValue(const T val) -> std::enable_if_t<std::is_arithmetic_v<T>> {
+    bytecode_->insert(bytecode_->end(), sizeof(T), 0);
+    *reinterpret_cast<T *>(&*(bytecode_->end() - sizeof(T))) = val;
   }
 
   // Emit a bytecode
@@ -164,7 +170,7 @@ class BytecodeEmitter {
 
   // Emit an integer immediate value
   template <typename T>
-  auto EmitImpl(const T val) -> std::enable_if_t<std::is_integral_v<T>> {
+  auto EmitImpl(const T val) -> std::enable_if_t<std::is_arithmetic_v<T>> {
     EmitScalarValue(val);
   }
 
@@ -174,11 +180,11 @@ class BytecodeEmitter {
     (EmitImpl(args), ...);
   }
 
-  //
+  // Emit a jump instruction to the given label
   void EmitJump(BytecodeLabel *label);
 
  private:
-  std::vector<uint8_t> &bytecode_;
+  std::vector<uint8_t> *bytecode_;
 };
 
 }  // namespace tpl::vm

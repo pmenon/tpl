@@ -1,5 +1,6 @@
 #pragma once
 
+#include <numeric>
 #include <vector>
 
 #include "common/macros.h"
@@ -70,13 +71,21 @@ class StageTimer {
     TPL_ASSERT(!stages_.empty(), "Missing call to EnterStage()");
     TPL_ASSERT(stages_.back().time() == 0, "Duplicate call to ExitStage()");
     timer_.Stop();
-    stages_.back().set_time(timer_.elapsed());
+    stages_.back().set_time(timer_.GetElapsed());
   }
 
   /**
-   * Access information on all stages.
+   * @return The total time across all stages.
    */
-  const std::vector<Stage> GetStages() const { return stages_; }
+  double GetTotalElapsedTime() const {
+    return std::accumulate(stages_.begin(), stages_.end(), double{0},
+                           [](double c, const Stage &stage) { return c + stage.time(); });
+  }
+
+  /**
+   * @return A const view of information on all stages.
+   */
+  const std::vector<Stage> &GetStages() const { return stages_; }
 
  private:
   util::Timer<ResolutionRatio> timer_;

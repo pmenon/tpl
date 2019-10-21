@@ -76,7 +76,7 @@ void VectorProjection::Reset() {
     auto ptr = owned_buffer_.get();
     for (const auto &col : columns_) {
       col->Reference(ptr, nullptr, 0);
-      ptr += GetTypeIdSize(col->type_id()) * kDefaultVectorSize;
+      ptr += GetTypeIdSize(col->GetTypeId()) * kDefaultVectorSize;
     }
   }
 }
@@ -88,8 +88,9 @@ void VectorProjection::ResetColumn(byte *col_data, uint32_t *col_null_bitmap, ui
 
 void VectorProjection::ResetColumn(const std::vector<ColumnVectorIterator> &column_iterators,
                                    const uint32_t col_idx) {
-  ResetColumn(column_iterators[col_idx].col_data(), column_iterators[col_idx].col_null_bitmap(),
-              col_idx, column_iterators[col_idx].NumTuples());
+  ResetColumn(column_iterators[col_idx].GetColumnData(),
+              column_iterators[col_idx].GetColumnNullBitmap(), col_idx,
+              column_iterators[col_idx].GetTupleCount());
 }
 
 std::string VectorProjection::ToString() const {
@@ -106,9 +107,9 @@ void VectorProjection::CheckIntegrity() const {
 #ifndef NDEBUG
   // Check that all contained vectors have the same size and selection vector
   for (const auto &col : columns_) {
-    TPL_ASSERT(!IsFiltered() || sel_vector_ == col->selection_vector(),
+    TPL_ASSERT(!IsFiltered() || sel_vector_ == col->GetSelectionVector(),
                "Vector in projection with different selection vector");
-    TPL_ASSERT(GetSelectedTupleCount() == col->count(),
+    TPL_ASSERT(GetSelectedTupleCount() == col->GetCount(),
                "Vector size does not match rest of projection");
   }
   // Let the vectors do an integrity check

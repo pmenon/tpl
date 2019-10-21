@@ -7,10 +7,11 @@
 #include <string>
 #include <utility>
 
-#include <tbb/task_scheduler_init.h>  // NOLINT
+#include "tbb/task_scheduler_init.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 
 #include "ast/ast_dump.h"
 #include "common/cpu_info.h"
@@ -21,6 +22,7 @@
 #include "sema/sema.h"
 #include "sql/catalog.h"
 #include "sql/execution_context.h"
+#include "sql/tablegen/table_generator.h"
 #include "tpl.h"  // NOLINT
 #include "util/timer.h"
 #include "vm/bytecode_generator.h"
@@ -34,23 +36,26 @@
 // ---------------------------------------------------------
 
 // clang-format off
-llvm::cl::OptionCategory kTplOptionsCategory("TPL Compiler Options", "Options for controlling the TPL compilation process.");  // NOLINT
-llvm::cl::opt<std::string> kInputFile(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::init(""), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
+llvm::cl::OptionCategory kTplOptionsCategory("TPL Compiler Options","Options for controlling the TPL compilation process."); // NOLINT
 llvm::cl::opt<bool> kPrintAst("print-ast", llvm::cl::desc("Print the programs AST"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kPrintTbc("print-tbc", llvm::cl::desc("Print the generated TPL Bytecode"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kIsSQL("sql", llvm::cl::desc("Is the input a SQL query?"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
+llvm::cl::opt<bool> kTpch("tpch", llvm::cl::desc("Should the TPCH database be loaded? Requires '-schema' and '-data' directories."), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
+llvm::cl::opt<std::string> kDataDir("data", llvm::cl::desc("Where to find data files of tables to load"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
+llvm::cl::opt<std::string> kInputFile(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::init(""), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 // clang-format on
 
-tbb::task_scheduler_init scheduler;
+tbb::task_scheduler_init scheduler;  // NOLINT
 
 namespace tpl {
 
 static constexpr const char *kExitKeyword = ".exit";
 
-/// Compile the TPL source in \a source and run it in both interpreted and JIT
-/// compiled mode
-/// \param source The TPL source
-/// \param name The name of the module/program
+/**
+ * Compile TPL source code contained in @em source and execute it in all execution modes once.
+ * @param source The TPL source.
+ * @param name The name of the TPL file.
+ */
 static void CompileAndRun(const std::string &source, const std::string &name = "tmp-tpl") {
   util::Region region("repl-ast");
   util::Region error_region("repl-error");
@@ -62,8 +67,17 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
   parsing::Scanner scanner(source.data(), source.length());
   parsing::Parser parser(&scanner, &context);
 
-  double parse_ms = 0.0, typecheck_ms = 0.0, codegen_ms = 0.0, interp_exec_ms = 0.0,
-         adaptive_exec_ms = 0.0, jit_exec_ms = 0.0;
+  sql::NoOpResultConsumer consumer;
+  sql::tablegen::TPCHOutputSchemas schemas;
+  const sql::Schema *schema = schemas.GetSchema(
+      llvm::sys::path::filename(name).take_until([](char x) { return x == '.'; }));
+
+  double parse_ms = 0.0,       // Time to parse the source
+      typecheck_ms = 0.0,      // Time to perform semantic analysis
+      codegen_ms = 0.0,        // Time to generate TBC
+      interp_exec_ms = 0.0,    // Time to execute the program in fully interpreted mode
+      adaptive_exec_ms = 0.0,  // Time to execute the program in adaptive mode
+      jit_exec_ms = 0.0;       // Time to execute the program in JIT excluding compilation time
 
   //
   // Parse
@@ -114,7 +128,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
 
   // Dump Bytecode
   if (kPrintTbc) {
-    bytecode_module->PrettyPrint(std::cout);
+    bytecode_module->Dump(std::cout);
   }
 
   auto module = std::make_unique<vm::Module>(std::move(bytecode_module));
@@ -135,7 +149,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
         return;
       }
       sql::MemoryPool memory(nullptr);
-      sql::ExecutionContext exec_ctx(&memory);
+      sql::ExecutionContext exec_ctx(&memory, schema, &consumer);
       LOG_INFO("VM main() returned: {}", main(&exec_ctx));
     } else {
       std::function<uint32_t()> main;
@@ -163,7 +177,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
         return;
       }
       sql::MemoryPool memory(nullptr);
-      sql::ExecutionContext exec_ctx(&memory);
+      sql::ExecutionContext exec_ctx(&memory, schema, &consumer);
       LOG_INFO("ADAPTIVE main() returned: {}", main(&exec_ctx));
     } else {
       std::function<uint32_t()> main;
@@ -189,9 +203,13 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
             "(*ExecutionContext)->int32");
         return;
       }
+      util::Timer<std::milli> x;
+      x.Start();
       sql::MemoryPool memory(nullptr);
-      sql::ExecutionContext exec_ctx(&memory);
+      sql::ExecutionContext exec_ctx(&memory, schema, &consumer);
       LOG_INFO("JIT main() returned: {}", main(&exec_ctx));
+      x.Stop();
+      LOG_INFO("Jit exec: {} ms", x.GetElapsed());
     } else {
       std::function<uint32_t()> main;
       if (!module->GetFunction("main", vm::ExecutionMode::Compiled, main)) {
@@ -209,29 +227,10 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
       parse_ms, typecheck_ms, codegen_ms, interp_exec_ms, adaptive_exec_ms, jit_exec_ms);
 }
 
-/// Run the TPL REPL
-static void RunRepl() {
-  while (true) {
-    std::string input;
-
-    std::string line;
-    do {
-      printf(">>> ");
-      std::getline(std::cin, line);
-
-      if (line == kExitKeyword) {
-        return;
-      }
-
-      input.append(line).append("\n");
-    } while (!line.empty());
-
-    CompileAndRun(input);
-  }
-}
-
-/// Compile and run the TPL program in the given filename
-/// \param filename The name of the file on disk to compile
+/**
+ * Compile and run the TPL program contained in the file with the given filename @em filename.
+ * @param filename The name of TPL file to compile and run.
+ */
 static void RunFile(const std::string &filename) {
   auto file = llvm::MemoryBuffer::getFile(filename);
   if (std::error_code error = file.getError()) {
@@ -242,25 +241,71 @@ static void RunFile(const std::string &filename) {
   LOG_INFO("Compiling and running file: {}", filename);
 
   // Copy the source into a temporary, compile, and run
-  CompileAndRun((*file)->getBuffer().str());
+  CompileAndRun((*file)->getBuffer().str(), filename);
 }
 
-/// Initialize all TPL subsystems
+/**
+ * Run the REPL.
+ */
+static void RunRepl() {
+  const auto prompt_and_read_line = [] {
+    std::string line;
+    printf(">>> ");
+    std::getline(std::cin, line);
+    return line;
+  };
+
+  while (true) {
+    std::string line = prompt_and_read_line();
+
+    // Exit?
+    if (line == kExitKeyword) {
+      return;
+    }
+
+    // Run file?
+    if (llvm::StringRef line_ref(line); line_ref.startswith_lower(".run")) {
+      auto [_, filename] = line_ref.split(' ');
+      (void)_;
+      RunFile(filename);
+      continue;
+    }
+
+    // Code ...
+    std::string input = line;
+    while (!line.empty()) {
+      input.append(line).append("\n");
+      line = prompt_and_read_line();
+    }
+    // Try to compile and run it
+    CompileAndRun(input);
+  }
+}
+
+/**
+ * Initialize all TPL subsystems in preparation for execution.
+ */
 void InitTPL() {
-  tpl::logging::InitLogger();
+  // Logging infra
+  logging::InitLogger();
 
-  tpl::CpuInfo::Instance();
+  // CPU info
+  CpuInfo::Instance();
 
+  // LLVM initialization
+  vm::LLVMEngine::Initialize();
+
+  // Catalog init
   tpl::sql::Catalog::Instance();
-
-  tpl::vm::LLVMEngine::Initialize();
 
   LOG_INFO("TPL Bytecode Count: {}", tpl::vm::Bytecodes::NumBytecodes());
 
   LOG_INFO("TPL initialized ...");
 }
 
-/// Shutdown all TPL subsystems
+/**
+ * Shutdown all TPL subsystems.
+ */
 void ShutdownTPL() {
   tpl::vm::LLVMEngine::Shutdown();
 
@@ -280,7 +325,7 @@ void SignalHandler(int32_t sig_num) {
   }
 }
 
-int main(int argc, char **argv) {  // NOLINT(bugprone-exception-escape)
+int main(int argc, char **argv) {
   // Parse options
   llvm::cl::HideUnrelatedOptions(kTplOptionsCategory);
   llvm::cl::ParseCommandLineOptions(argc, argv);
@@ -300,6 +345,15 @@ int main(int argc, char **argv) {  // NOLINT(bugprone-exception-escape)
   // Init TPL
   tpl::InitTPL();
 
+  if (kTpch) {
+    if (kDataDir.empty()) {
+      LOG_ERROR("Must specify '-data' directories when loading TPC-H");
+      return -1;
+    }
+
+    tpl::sql::tablegen::TableGenerator::GenerateTPCHTables(tpl::sql::Catalog::Instance(), kDataDir);
+  }
+
   LOG_INFO("\n{}", tpl::CpuInfo::Instance()->PrettyPrintInfo());
 
   LOG_INFO("Welcome to TPL (ver. {}.{})", TPL_VERSION_MAJOR, TPL_VERSION_MINOR);
@@ -307,7 +361,7 @@ int main(int argc, char **argv) {  // NOLINT(bugprone-exception-escape)
   // Either execute a TPL program from a source file, or run REPL
   if (!kInputFile.empty()) {
     tpl::RunFile(kInputFile);
-  } else if (argc == 1) {
+  } else {
     tpl::RunRepl();
   }
 

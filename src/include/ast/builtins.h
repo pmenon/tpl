@@ -11,7 +11,12 @@ namespace tpl::ast {
   F(IntToSql, intToSql)                                         \
   F(BoolToSql, boolToSql)                                       \
   F(FloatToSql, floatToSql)                                     \
+  F(DateToSql, dateToSql)                                       \
+  F(StringToSql, stringToSql)                                   \
   F(SqlToBool, sqlToBool)                                       \
+                                                                \
+  /* SQL Functions */                                           \
+  F(Like, like)                                                 \
                                                                 \
   /* Thread State Container */                                  \
   F(ExecutionContextGetMemoryPool, execCtxGetMem)               \
@@ -44,11 +49,15 @@ namespace tpl::ast {
   F(VPIGetBigInt, vpiGetBigInt)                                 \
   F(VPIGetReal, vpiGetReal)                                     \
   F(VPIGetDouble, vpiGetDouble)                                 \
+  F(VPIGetDate, vpiGetDate)                                     \
+  F(VPIGetString, vpiGetString)                                 \
   F(VPISetSmallInt, vpiSetSmallInt)                             \
   F(VPISetInt, vpiSetInt)                                       \
   F(VPISetBigInt, vpiSetBigInt)                                 \
   F(VPISetReal, vpiSetReal)                                     \
   F(VPISetDouble, vpiSetDouble)                                 \
+  F(VPISetDate, vpiSetDate)                                     \
+  F(VPISetString, vpiSetString)                                 \
                                                                 \
   /* Hashing */                                                 \
   F(Hash, hash)                                                 \
@@ -74,6 +83,7 @@ namespace tpl::ast {
   /* Aggregations */                                            \
   F(AggHashTableInit, aggHTInit)                                \
   F(AggHashTableInsert, aggHTInsert)                            \
+  F(AggHashTableLinkEntry, aggHTLink)                           \
   F(AggHashTableLookup, aggHTLookup)                            \
   F(AggHashTableProcessBatch, aggHTProcessBatch)                \
   F(AggHashTableMovePartitions, aggHTMoveParts)                 \
@@ -88,6 +98,7 @@ namespace tpl::ast {
   F(AggPartIterNext, aggPartIterNext)                           \
   F(AggPartIterGetHash, aggPartIterGetHash)                     \
   F(AggPartIterGetRow, aggPartIterGetRow)                       \
+  F(AggPartIterGetRowEntry, aggPartIterGetRowEntry)             \
   F(AggInit, aggInit)                                           \
   F(AggAdvance, aggAdvance)                                     \
   F(AggMerge, aggMerge)                                         \
@@ -121,6 +132,9 @@ namespace tpl::ast {
   F(SorterIterGetRow, sorterIterGetRow)                         \
   F(SorterIterClose, sorterIterClose)                           \
                                                                 \
+  F(ResultBufferAllocOutRow, resultBufferAllocRow)              \
+  F(ResultBufferFinalize, resultBufferFinalize)                 \
+                                                                \
   /* Trig */                                                    \
   F(ACos, acos)                                                 \
   F(ASin, asin)                                                 \
@@ -135,6 +149,9 @@ namespace tpl::ast {
   F(SizeOf, sizeOf)                                             \
   F(PtrCast, ptrCast)
 
+/**
+ * An enumeration of all TPL builtin functions.
+ */
 enum class Builtin : uint8_t {
 #define ENTRY(Name, ...) Name,
   BUILTINS_LIST(ENTRY)
@@ -144,14 +161,22 @@ enum class Builtin : uint8_t {
 #undef COUNT_OP
 };
 
-class Builtins {
+/**
+ * Helper class providing.
+ */
+class Builtins : public AllStatic {
  public:
   // The total number of builtin functions
   static const uint32_t kBuiltinsCount = static_cast<uint32_t>(Builtin ::Last) + 1;
 
-  // Return the total number of bytecodes
+  /**
+   * @return The total number of builtin functions.
+   */
   static constexpr uint32_t NumBuiltins() { return kBuiltinsCount; }
 
+  /**
+   * @return The name of the function associated with the given builtin enumeration.
+   */
   static const char *GetFunctionName(Builtin builtin) {
     return kBuiltinFunctionNames[static_cast<uint8_t>(builtin)];
   }

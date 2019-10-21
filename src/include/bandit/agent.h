@@ -8,9 +8,8 @@
 namespace tpl::bandit {
 
 /**
- * An Agent is able to take one of a set of actions at each time step. The
- * action is chosen using a strategy based on the history of prior actions
- * and outcome observations.
+ * An Agent is able to take one of a set of actions at each time step. The action is chosen using a
+ * strategy based on the history of prior actions and outcome observations.
  */
 class Agent {
  public:
@@ -22,35 +21,34 @@ class Agent {
   void Reset();
 
   /**
-   * Return the next action to be taken.
+   * @return The next action to be taken.
    */
   uint32_t NextAction();
 
   /**
-   * Update the state based on reward obtained by playing the action chosen
-   * earlier.
+   * Update the state of the agent based on reward obtained by playing the action chosen earlier.
    */
   void Observe(double reward);
 
   /**
-   * Return the current optimal action.
+   * @return The current optimal action.
    */
   uint32_t GetCurrentOptimalAction() const;
 
   /**
-   * Return estimations of the value of each flavor/action
+   * @return The estimations of the value of each flavor/action.
    */
-  const std::vector<double> &value_estimates() const { return value_estimates_; }
+  const std::vector<double> &GetValueEstimates() const { return value_estimates_; }
 
   /**
-   * Return counts of the number of times each flavor/action was tried
+   * @return The counts of the number of times each flavor/action was tried.
    */
-  const std::vector<uint32_t> &action_attempts() const { return action_attempts_; }
+  const std::vector<uint32_t> &GetActionAttempts() const { return action_attempts_; }
 
   /**
-   * Return the current time step
+   * @return The current time step.
    */
-  uint32_t time_step() const { return time_step_; }
+  uint32_t GetTimeStep() const { return time_step_; }
 
  private:
   // Policy to use for choosing the next action.

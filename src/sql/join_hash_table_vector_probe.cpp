@@ -30,7 +30,7 @@ void JoinHashTableVectorProbe::Prepare(VectorProjectionIterator *vpi, const Hash
 
   // If the join hash table uses a bloom filter, use it to early filter.
   if (join_hash_table_.HasBloomFilter()) {
-    const BloomFilter *const bloom_filter = join_hash_table_.bloom_filter();
+    const BloomFilter *const bloom_filter = join_hash_table_.GetBloomFilter();
     if (vpi->IsFiltered()) {
       for (uint32_t idx = 0; vpi->HasNextFiltered(); vpi->AdvanceFiltered()) {
         vpi->Match(bloom_filter->Contains(hashes_[idx++]));

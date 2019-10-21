@@ -24,7 +24,9 @@ class StlRegionAllocator {
   template <typename U>
   friend class StlRegionAllocator;
 
-  T *allocate(std::size_t n) { return region_->AllocateArray<T>(n); }
+  T *allocate(std::size_t n) {
+    return static_cast<T *>(region_->Allocate(sizeof(T) * n, alignof(T)));
+  }
 
   void deallocate(T *ptr, std::size_t n) { region_->Deallocate(ptr, n); }
 

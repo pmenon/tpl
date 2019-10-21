@@ -153,7 +153,7 @@ TEST_F(VectorProjectionIteratorTest, EmptyIteratorTest) {
 
   VectorProjection empty_vector_proj;
   VectorProjectionIterator iter;
-  iter.SetVectorProjection(&empty_vector_proj);
+  iter.Reset(&empty_vector_proj);
 
   for (; iter.HasNext(); iter.Advance()) {
     FAIL() << "Should not iterate with empty vector projection!";
@@ -170,7 +170,7 @@ TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
     uint32_t tuple_count = 0;
 
     VectorProjectionIterator iter;
-    iter.SetVectorProjection(vp());
+    iter.Reset(vp());
 
     for (; iter.HasNext(); iter.Advance()) {
       tuple_count++;
@@ -186,7 +186,7 @@ TEST_F(VectorProjectionIteratorTest, SimpleIteratorTest) {
 
   {
     VectorProjectionIterator iter;
-    iter.SetVectorProjection(vp());
+    iter.Reset(vp());
 
     bool entered = false;
     for (int16_t last = -1; iter.HasNext(); iter.Advance()) {
@@ -211,7 +211,7 @@ TEST_F(VectorProjectionIteratorTest, ReadNullableColumnsTest) {
   //
 
   VectorProjectionIterator iter;
-  iter.SetVectorProjection(vp());
+  iter.Reset(vp());
 
   uint32_t num_nulls = 0;
   for (; iter.HasNext(); iter.Advance()) {
@@ -231,7 +231,7 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
 
   {
     VectorProjectionIterator iter;
-    iter.SetVectorProjection(vp());
+    iter.Reset(vp());
 
     for (; iter.HasNext(); iter.Advance()) {
       bool null = false;
@@ -269,7 +269,7 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
 
   {
     VectorProjectionIterator iter;
-    iter.SetVectorProjection(vp());
+    iter.Reset(vp());
 
     for (; iter.HasNext(); iter.Advance()) {
       auto *val = iter.GetValue<int16_t, false>(ColId::col_a, nullptr);
@@ -312,7 +312,7 @@ TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
   //
 
   VectorProjectionIterator iter;
-  iter.SetVectorProjection(vp());
+  iter.Reset(vp());
 
   iter.RunFilter([&iter]() {
     bool null = false;

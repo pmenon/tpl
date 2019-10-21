@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 
 #include "sql/catalog.h"
+#include "sql/runtime_types.h"
 #include "sql/vector.h"
 #include "util/test_harness.h"
 
@@ -37,7 +38,7 @@ static inline std::unique_ptr<sql::Vector> MakeVector(sql::TypeId type_id, uint3
     auto vec = Make##TYPE##Vector(vals.size());                                                    \
     for (uint64_t i = 0; i < vals.size(); i++) {                                                   \
       if (nulls[i]) {                                                                              \
-        vec->SetValue(i, sql::GenericValue::CreateNull(vec->type_id()));                           \
+        vec->SetValue(i, sql::GenericValue::CreateNull(vec->GetTypeId()));                         \
       } else {                                                                                     \
         vec->SetValue(i, sql::GenericValue::Create##TYPE(vals[i]));                                \
       }                                                                                            \
@@ -52,6 +53,7 @@ MAKE_VEC_TYPE(Integer, int32_t)
 MAKE_VEC_TYPE(BigInt, int64_t)
 MAKE_VEC_TYPE(Float, float)
 MAKE_VEC_TYPE(Double, double)
+MAKE_VEC_TYPE(Date, sql::Date)
 MAKE_VEC_TYPE(Varchar, std::string_view)
 
 #undef MAKE_VEC_TYPE

@@ -2,6 +2,7 @@
 #include <numeric>
 #include <vector>
 
+#include "common/exception.h"
 #include "sql/vector.h"
 #include "util/bit_util.h"
 #include "util/sql_test_harness.h"
@@ -14,20 +15,20 @@ TEST_F(VectorTest, CheckEmpty) {
   // Creating an empty vector should have zero count, zero size, no selection vector, and should
   // clean itself up upon destruction.
   auto vec1 = MakeIntegerVector(0);
-  EXPECT_EQ(0u, vec1->num_elements());
-  EXPECT_EQ(0u, vec1->count());
-  EXPECT_EQ(nullptr, vec1->selection_vector());
+  EXPECT_EQ(0u, vec1->GetSize());
+  EXPECT_EQ(0u, vec1->GetCount());
+  EXPECT_EQ(nullptr, vec1->GetSelectionVector());
   vec1->CheckIntegrity();
 }
 
 TEST_F(VectorTest, Clear) {
   auto vec = MakeTinyIntVector(10);
 
-  EXPECT_EQ(10u, vec->num_elements());
-  EXPECT_EQ(10u, vec->count());
-  EXPECT_EQ(nullptr, vec->selection_vector());
+  EXPECT_EQ(10u, vec->GetSize());
+  EXPECT_EQ(10u, vec->GetCount());
+  EXPECT_EQ(nullptr, vec->GetSelectionVector());
 
-  for (uint32_t i = 0; i < vec->num_elements(); i++) {
+  for (uint32_t i = 0; i < vec->GetSize(); i++) {
     EXPECT_EQ(GenericValue::CreateTinyInt(0), vec->GetValue(i));
   }
   vec->CheckIntegrity();
@@ -41,9 +42,9 @@ TEST_F(VectorTest, InitFromArray) {
     float arr[num_elems] = {-1.2, -34.56, 6.7, 8.91011, 1213.1415};
 
     Vector vec(TypeId::Float, reinterpret_cast<byte *>(arr), num_elems);
-    EXPECT_EQ(num_elems, vec.num_elements());
-    EXPECT_EQ(num_elems, vec.count());
-    EXPECT_EQ(nullptr, vec.selection_vector());
+    EXPECT_EQ(num_elems, vec.GetSize());
+    EXPECT_EQ(num_elems, vec.GetCount());
+    EXPECT_EQ(nullptr, vec.GetSelectionVector());
 
     for (uint32_t i = 0; i < num_elems; i++) {
       auto val = vec.GetValue(i);
@@ -54,15 +55,18 @@ TEST_F(VectorTest, InitFromArray) {
 
   // Now a string array
   {
-    const char *arr[num_elems] = {"go loko", "hot-line bling", "kawhi", "6ix", "king city"};
+    VarlenHeap varlens;
+    VarlenEntry arr[num_elems] = {varlens.AddVarlen("go loko"), varlens.AddVarlen("hot-line bling"),
+                                  varlens.AddVarlen("kawhi"), varlens.AddVarlen("6ix"),
+                                  varlens.AddVarlen("king city")};
     Vector vec(TypeId::Varchar, reinterpret_cast<byte *>(arr), num_elems);
-    EXPECT_EQ(num_elems, vec.num_elements());
-    EXPECT_EQ(num_elems, vec.count());
-    EXPECT_EQ(nullptr, vec.selection_vector());
+    EXPECT_EQ(num_elems, vec.GetSize());
+    EXPECT_EQ(num_elems, vec.GetCount());
+    EXPECT_EQ(nullptr, vec.GetSelectionVector());
 
     for (uint32_t i = 0; i < num_elems; i++) {
       auto val = vec.GetValue(i);
-      EXPECT_EQ(GenericValue::CreateVarchar(arr[i]), val);
+      EXPECT_EQ(GenericValue::CreateVarchar(arr[i].GetStringView()), val);
     }
     vec.CheckIntegrity();
   }
@@ -77,7 +81,7 @@ TEST_F(VectorTest, GetAndSet) {
 
   // vec[0] = true (NULL)
   vec->SetNull(0, true);
-  EXPECT_TRUE(vec->GetValue(0).is_null());
+  EXPECT_TRUE(vec->GetValue(0).IsNull());
 
   // vec[0] = true
   vec->SetValue(0, GenericValue::CreateBoolean(true));
@@ -94,7 +98,7 @@ TEST_F(VectorTest, GetAndSetNumeric) {
     EXPECT_EQ(GenericValue::Create##TYPE(1), vec->GetValue(0)); \
     vec->SetNull(0, true);                                      \
     EXPECT_TRUE(vec->IsNull(0));                                \
-    EXPECT_TRUE(vec->GetValue(0).is_null());                    \
+    EXPECT_TRUE(vec->GetValue(0).IsNull());                     \
     vec->SetValue(0, GenericValue::Create##TYPE(2));            \
     EXPECT_EQ(GenericValue::Create##TYPE(2), vec->GetValue(0)); \
     vec->CheckIntegrity();                                      \
@@ -116,14 +120,14 @@ TEST_F(VectorTest, GetAndSetString) {
   EXPECT_EQ(GenericValue::CreateVarchar("hello"), vec->GetValue(0));
   vec->SetNull(0, true);
   EXPECT_TRUE(vec->IsNull(0));
-  EXPECT_TRUE(vec->GetValue(0).is_null());
+  EXPECT_TRUE(vec->GetValue(0).IsNull());
   vec->CheckIntegrity();
 }
 
 TEST_F(VectorTest, SetSelectionVector) {
   // vec = [0, 1, 2, 3, NULL, 5, 6, 7, 8, 9]
   auto vec = MakeTinyIntVector(10);
-  for (uint64_t i = 0; i < vec->num_elements(); i++) {
+  for (uint64_t i = 0; i < vec->GetSize(); i++) {
     vec->SetValue(i, GenericValue::CreateTinyInt(i));
   }
   vec->SetNull(4, true);
@@ -135,9 +139,9 @@ TEST_F(VectorTest, SetSelectionVector) {
   vec->SetSelectionVector(sel_vec, 4);
 
   // Verify
-  EXPECT_EQ(4u, vec->count());
-  EXPECT_EQ(10u, vec->num_elements());
-  EXPECT_EQ(sel_vec, vec->selection_vector());
+  EXPECT_EQ(4u, vec->GetCount());
+  EXPECT_EQ(10u, vec->GetSize());
+  EXPECT_EQ(sel_vec, vec->GetSelectionVector());
   EXPECT_FLOAT_EQ(0.4, vec->ComputeSelectivity());
 
   // Check indexing post-selection
@@ -151,7 +155,7 @@ TEST_F(VectorTest, SetSelectionVector) {
 TEST_F(VectorTest, Reference) {
   // vec = [0, 1, NULL, 3, 4, 5, 6, 7, 8, 9]
   auto vec = MakeIntegerVector(10);
-  for (uint64_t i = 0; i < vec->num_elements(); i++) {
+  for (uint64_t i = 0; i < vec->GetSize(); i++) {
     vec->SetValue(i, GenericValue::CreateInteger(i));
   }
   vec->SetNull(2, true);
@@ -159,12 +163,12 @@ TEST_F(VectorTest, Reference) {
   // Create a new vector that references the one we just created. We intentionally create it with a
   // different type to ensure we switch types.
 
-  Vector vec2(vec->type_id(), false, false);
+  Vector vec2(vec->GetTypeId(), false, false);
   vec2.Reference(vec.get());
-  EXPECT_EQ(TypeId::Integer, vec2.type_id());
-  EXPECT_EQ(vec->num_elements(), vec2.num_elements());
-  EXPECT_EQ(vec->count(), vec2.count());
-  for (uint64_t i = 0; i < vec2.num_elements(); i++) {
+  EXPECT_EQ(TypeId::Integer, vec2.GetTypeId());
+  EXPECT_EQ(vec->GetSize(), vec2.GetSize());
+  EXPECT_EQ(vec->GetCount(), vec2.GetCount());
+  for (uint64_t i = 0; i < vec2.GetSize(); i++) {
     if (i == 2) {
       EXPECT_TRUE(vec2.IsNull(i));
     } else {
@@ -177,7 +181,7 @@ TEST_F(VectorTest, Reference) {
 TEST_F(VectorTest, Move) {
   // vec = [0, 1, 2, 3, NULL, 5, 6, 7, 8, 9]
   auto vec = MakeIntegerVector(10);
-  for (uint64_t i = 0; i < vec->num_elements(); i++) {
+  for (uint64_t i = 0; i < vec->GetSize(); i++) {
     vec->SetValue(i, GenericValue::CreateInteger(i));
   }
   vec->SetNull(4, true);
@@ -188,22 +192,22 @@ TEST_F(VectorTest, Move) {
 
   // Move the original vector to the target
   // target = [(0), (1), 2, 3, (NULL), 5, 6, (7), (8), 9], bracketed elements are selected
-  auto target = MakeIntegerVector(vec->num_elements());
+  auto target = MakeIntegerVector(vec->GetSize());
   vec->MoveTo(target.get());
 
   // First, the old vector should empty
-  EXPECT_EQ(0u, vec->num_elements());
-  EXPECT_EQ(0u, vec->count());
-  EXPECT_EQ(nullptr, vec->selection_vector());
-  EXPECT_EQ(nullptr, vec->data());
+  EXPECT_EQ(0u, vec->GetSize());
+  EXPECT_EQ(0u, vec->GetCount());
+  EXPECT_EQ(nullptr, vec->GetSelectionVector());
+  EXPECT_EQ(nullptr, vec->GetData());
 
   // The new vector should own the data
-  EXPECT_EQ(10u, target->num_elements());
-  EXPECT_EQ(sel.size(), target->count());
-  EXPECT_EQ(sel.data(), target->selection_vector());
-  EXPECT_NE(nullptr, target->data());
+  EXPECT_EQ(10u, target->GetSize());
+  EXPECT_EQ(sel.size(), target->GetCount());
+  EXPECT_EQ(sel.data(), target->GetSelectionVector());
+  EXPECT_NE(nullptr, target->GetData());
 
-  for (uint64_t i = 0; i < target->count(); i++) {
+  for (uint64_t i = 0; i < target->GetCount(); i++) {
     if (i == 2) {
       EXPECT_TRUE(target->IsNull(i));
     } else {
@@ -220,7 +224,7 @@ TEST_F(VectorTest, Copy) {
                        TypeId::Float, TypeId::Double}) {
     // vec = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     auto vec = MakeVector(type_id, num_elems);
-    for (uint64_t i = 0; i < vec->num_elements(); i++) {
+    for (uint64_t i = 0; i < vec->GetSize(); i++) {
       vec->SetValue(i, GenericValue::CreateTinyInt(i).CastTo(type_id));
     }
 
@@ -233,11 +237,11 @@ TEST_F(VectorTest, Copy) {
 
     // Copying is a densifying operation; the count and size should be 5, and there shouldn't be a
     // selection vector present in the target.
-    EXPECT_EQ(sel.size(), target->num_elements());
-    EXPECT_EQ(sel.size(), target->count());
-    EXPECT_EQ(nullptr, target->selection_vector());
+    EXPECT_EQ(sel.size(), target->GetSize());
+    EXPECT_EQ(sel.size(), target->GetCount());
+    EXPECT_EQ(nullptr, target->GetSelectionVector());
 
-    for (uint64_t i = 0; i < target->count(); i++) {
+    for (uint64_t i = 0; i < target->GetCount(); i++) {
       EXPECT_EQ(vec->GetValue(i).CastTo(type_id), target->GetValue(i));
     }
   }
@@ -246,7 +250,7 @@ TEST_F(VectorTest, Copy) {
 TEST_F(VectorTest, CopyWithOffset) {
   // vec = [0, 1, 2, 3, NULL, 5, 6, 7, NULL, 9]
   auto vec = MakeIntegerVector(10);
-  for (uint64_t i = 0; i < vec->num_elements(); i++) {
+  for (uint64_t i = 0; i < vec->GetSize(); i++) {
     if (i == 4 || i == 8) {
       vec->SetNull(i, true);
     } else {
@@ -260,14 +264,14 @@ TEST_F(VectorTest, CopyWithOffset) {
 
   // We copy all elements [2, 5). Then target = [NULL, 6 NULL]
   const uint32_t offset = 2;
-  auto target = MakeIntegerVector(vec->num_elements());
+  auto target = MakeIntegerVector(vec->GetSize());
   vec->CopyTo(target.get(), offset);
 
   // Copying is a densifying operation; the count and size should match, and there shouldn't be a
   // selection vector present in the target.
-  EXPECT_EQ(3u, target->num_elements());
-  EXPECT_EQ(3u, target->count());
-  EXPECT_EQ(nullptr, target->selection_vector());
+  EXPECT_EQ(3u, target->GetSize());
+  EXPECT_EQ(3u, target->GetCount());
+  EXPECT_EQ(nullptr, target->GetSelectionVector());
 
   EXPECT_TRUE(target->IsNull(0));
   EXPECT_EQ(GenericValue::CreateInteger(6), target->GetValue(1));
@@ -277,7 +281,7 @@ TEST_F(VectorTest, CopyWithOffset) {
 TEST_F(VectorTest, CopyStringVector) {
   // vec = ['val-0','val-1','val-2','val-3','val-4','val-5','val-6','val-7','val-8','val-9']
   auto vec = MakeVarcharVector(10);
-  for (uint64_t i = 0; i < vec->num_elements(); i++) {
+  for (uint64_t i = 0; i < vec->GetSize(); i++) {
     vec->SetValue(i, GenericValue::CreateVarchar("val-" + std::to_string(i)));
   }
 
@@ -288,15 +292,15 @@ TEST_F(VectorTest, CopyStringVector) {
 
   // Copying is a densifying operation; the count and size should match, and there shouldn't be a
   // selection vector present in the target.
-  auto target = MakeVarcharVector(vec->num_elements());
+  auto target = MakeVarcharVector(vec->GetSize());
   vec->CopyTo(target.get());
 
   // Force deletion of source vector to ensure target has actually copied strings into its own heap
   vec.reset();
 
-  EXPECT_EQ(sel.size(), target->num_elements());
-  EXPECT_EQ(sel.size(), target->count());
-  EXPECT_EQ(nullptr, target->selection_vector());
+  EXPECT_EQ(sel.size(), target->GetSize());
+  EXPECT_EQ(sel.size(), target->GetCount());
+  EXPECT_EQ(nullptr, target->GetSelectionVector());
   EXPECT_EQ(GenericValue::CreateVarchar("val-0"), target->GetValue(0));
   EXPECT_TRUE(target->IsNull(1));
   EXPECT_EQ(GenericValue::CreateVarchar("val-4"), target->GetValue(2));
@@ -307,7 +311,7 @@ TEST_F(VectorTest, CopyStringVector) {
 TEST_F(VectorTest, Cast) {
   // vec(i8) = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
   auto vec = MakeTinyIntVector(10);
-  for (uint64_t i = 0; i < vec->num_elements(); i++) {
+  for (uint64_t i = 0; i < vec->GetSize(); i++) {
     vec->SetValue(i, GenericValue::CreateTinyInt(i));
   }
 
@@ -318,10 +322,10 @@ TEST_F(VectorTest, Cast) {
 
   // Case 1: try up-cast from int8_t -> int32_t with valid values
   EXPECT_NO_THROW(vec->Cast(TypeId::Integer));
-  EXPECT_EQ(TypeId::Integer, vec->type_id());
-  EXPECT_EQ(10u, vec->num_elements());
-  EXPECT_EQ(sel.size(), vec->count());
-  EXPECT_EQ(sel.data(), vec->selection_vector());
+  EXPECT_EQ(TypeId::Integer, vec->GetTypeId());
+  EXPECT_EQ(10u, vec->GetSize());
+  EXPECT_EQ(sel.size(), vec->GetCount());
+  EXPECT_EQ(sel.data(), vec->GetSelectionVector());
   EXPECT_EQ(GenericValue::CreateInteger(1), vec->GetValue(0));
   EXPECT_EQ(GenericValue::CreateInteger(2), vec->GetValue(1));
   EXPECT_TRUE(vec->IsNull(2));
@@ -329,10 +333,10 @@ TEST_F(VectorTest, Cast) {
 
   // Case 2: try down-cast int32_t -> int16_t with valid values
   EXPECT_NO_THROW(vec->Cast(TypeId::SmallInt));
-  EXPECT_TRUE(vec->type_id() == TypeId::SmallInt);
-  EXPECT_EQ(10u, vec->num_elements());
-  EXPECT_EQ(sel.size(), vec->count());
-  EXPECT_EQ(sel.data(), vec->selection_vector());
+  EXPECT_TRUE(vec->GetTypeId() == TypeId::SmallInt);
+  EXPECT_EQ(10u, vec->GetSize());
+  EXPECT_EQ(sel.size(), vec->GetCount());
+  EXPECT_EQ(sel.data(), vec->GetSelectionVector());
   EXPECT_EQ(GenericValue::CreateSmallInt(1), vec->GetValue(0));
   EXPECT_EQ(GenericValue::CreateSmallInt(2), vec->GetValue(1));
   EXPECT_TRUE(vec->IsNull(2));
@@ -347,7 +351,7 @@ TEST_F(VectorTest, Cast) {
 TEST_F(VectorTest, CastWithNulls) {
   // vec(int) = [0, 1, 2, 3, NULL, 5, 6, 7, NULL, 9]
   auto vec = MakeIntegerVector(10);
-  for (uint64_t i = 0; i < vec->num_elements(); i++) {
+  for (uint64_t i = 0; i < vec->GetSize(); i++) {
     vec->SetValue(i, GenericValue::CreateInteger(i));
   }
   vec->SetNull(4, true);
@@ -357,12 +361,12 @@ TEST_F(VectorTest, CastWithNulls) {
   // vec(bigint) = [0, 1, 2, 3, NULL, 5, 6, 7, NULL, 9]
 
   EXPECT_NO_THROW(vec->Cast(TypeId::BigInt));
-  EXPECT_EQ(TypeId::BigInt, vec->type_id());
-  EXPECT_EQ(10u, vec->num_elements());
-  EXPECT_EQ(10u, vec->count());
-  EXPECT_EQ(nullptr, vec->selection_vector());
+  EXPECT_EQ(TypeId::BigInt, vec->GetTypeId());
+  EXPECT_EQ(10u, vec->GetSize());
+  EXPECT_EQ(10u, vec->GetCount());
+  EXPECT_EQ(nullptr, vec->GetSelectionVector());
 
-  for (uint64_t i = 0; i < vec->num_elements(); i++) {
+  for (uint64_t i = 0; i < vec->GetSize(); i++) {
     if (i == 4 || i == 8) {
       EXPECT_TRUE(vec->IsNull(i));
     } else {
@@ -375,15 +379,15 @@ TEST_F(VectorTest, NumericDowncast) {
 #define CHECK_CAST(SRC_TYPE, DEST_TYPE, DEST_CPP_TYPE)                                             \
   {                                                                                                \
     auto vec = Make##SRC_TYPE##Vector(10);                                                         \
-    for (uint32_t i = 0; i < vec->num_elements(); i++) {                                           \
+    for (uint32_t i = 0; i < vec->GetSize(); i++) {                                                \
       vec->SetValue(i, GenericValue::Create##SRC_TYPE(i));                                         \
     }                                                                                              \
     EXPECT_NO_THROW(vec->Cast(TypeId::DEST_TYPE));                                                 \
-    EXPECT_TRUE(vec->type_id() == TypeId::DEST_TYPE);                                              \
-    EXPECT_EQ(10u, vec->num_elements());                                                           \
-    EXPECT_EQ(10u, vec->count());                                                                  \
-    EXPECT_EQ(nullptr, vec->selection_vector());                                                   \
-    for (uint64_t i = 0; i < vec->num_elements(); i++) {                                           \
+    EXPECT_EQ(TypeId::DEST_TYPE, vec->GetTypeId());                                                \
+    EXPECT_EQ(10u, vec->GetSize());                                                                \
+    EXPECT_EQ(10u, vec->GetCount());                                                               \
+    EXPECT_EQ(nullptr, vec->GetSelectionVector());                                                 \
+    for (uint64_t i = 0; i < vec->GetSize(); i++) {                                                \
       EXPECT_EQ(GenericValue::Create##DEST_TYPE(static_cast<DEST_CPP_TYPE>(i)), vec->GetValue(i)); \
     }                                                                                              \
   }
@@ -418,6 +422,30 @@ TEST_F(VectorTest, NumericDowncast) {
 #undef CHECK_CAST
 }
 
+TEST_F(VectorTest, DateCast) {
+  // a = [NULL, "1980-01-01", "2016-01-27", NULL, "2000-01-01", "2015-08-01"]
+  auto a = MakeDateVector(
+      {Date::FromYMD(1980, 1, 1), Date::FromYMD(1980, 1, 1), Date::FromYMD(2016, 1, 27),
+       Date::FromYMD(1980, 1, 1), Date::FromYMD(2000, 1, 1), Date::FromYMD(2015, 8, 1)},
+      {true, false, false, true, false, false});
+
+  EXPECT_THROW(a->Cast(TypeId::TinyInt), NotImplementedException);
+  EXPECT_THROW(a->Cast(TypeId::SmallInt), NotImplementedException);
+  EXPECT_THROW(a->Cast(TypeId::Integer), NotImplementedException);
+  EXPECT_THROW(a->Cast(TypeId::BigInt), NotImplementedException);
+  EXPECT_THROW(a->Cast(TypeId::Float), NotImplementedException);
+  EXPECT_THROW(a->Cast(TypeId::Double), NotImplementedException);
+  EXPECT_NO_THROW(a->Cast(TypeId::Varchar));
+
+  EXPECT_EQ(TypeId::Varchar, a->GetTypeId());
+  EXPECT_TRUE(a->IsNull(0));
+  EXPECT_EQ(GenericValue::CreateVarchar("1980-01-01"), a->GetValue(1));
+  EXPECT_EQ(GenericValue::CreateVarchar("2016-01-27"), a->GetValue(2));
+  EXPECT_TRUE(a->IsNull(3));
+  EXPECT_EQ(GenericValue::CreateVarchar("2000-01-01"), a->GetValue(4));
+  EXPECT_EQ(GenericValue::CreateVarchar("2015-08-01"), a->GetValue(5));
+}
+
 TEST_F(VectorTest, Append) {
   // vec1 = [1.0, NULL, 3.0]
   auto vec1 = MakeDoubleVector(3);
@@ -433,9 +461,9 @@ TEST_F(VectorTest, Append) {
   // vec2 = [10.0, 11.0, 1.0, NULL, 3.0]
   vec2->Append(*vec1);
 
-  EXPECT_EQ(5u, vec2->num_elements());
-  EXPECT_EQ(5u, vec2->count());
-  EXPECT_EQ(nullptr, vec2->selection_vector());
+  EXPECT_EQ(5u, vec2->GetSize());
+  EXPECT_EQ(5u, vec2->GetCount());
+  EXPECT_EQ(nullptr, vec2->GetSelectionVector());
 
   EXPECT_EQ(GenericValue::CreateDouble(10.0), vec2->GetValue(0));
   EXPECT_EQ(GenericValue::CreateDouble(11.0), vec2->GetValue(1));
@@ -463,9 +491,9 @@ TEST_F(VectorTest, AppendWithSelectionVector) {
   // vec2 = [10.0, 11.0, NULL, 3.0]
   vec2->Append(*vec1);
 
-  EXPECT_EQ(4u, vec2->num_elements());
-  EXPECT_EQ(4u, vec2->count());
-  EXPECT_EQ(nullptr, vec2->selection_vector());
+  EXPECT_EQ(4u, vec2->GetSize());
+  EXPECT_EQ(4u, vec2->GetCount());
+  EXPECT_EQ(nullptr, vec2->GetSelectionVector());
 
   EXPECT_EQ(GenericValue::CreateFloat(10.0), vec2->GetValue(0));
   EXPECT_EQ(GenericValue::CreateFloat(11.0), vec2->GetValue(1));

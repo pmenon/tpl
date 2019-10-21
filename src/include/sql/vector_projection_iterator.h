@@ -54,7 +54,7 @@ class VectorProjectionIterator {
    * @param vp The projection to iterator over.
    */
   explicit VectorProjectionIterator(VectorProjection *vp) : VectorProjectionIterator() {
-    SetVectorProjection(vp);
+    Reset(vp);
   }
 
   /**
@@ -72,7 +72,7 @@ class VectorProjectionIterator {
    * Reset this iterator to begin iteration over the given projection @em vp.
    * @param vp The vector projection to iterate over.
    */
-  void SetVectorProjection(VectorProjection *vp) {
+  void Reset(VectorProjection *vp) {
     vector_projection_ = vp;
     curr_idx_ = vp->IsFiltered() ? vp->sel_vector_[0] : 0;
     sel_vector_ = vp->sel_vector_;
@@ -199,7 +199,9 @@ class VectorProjectionIterator {
 };
 
 // ---------------------------------------------------------
+//
 // Implementation below
+//
 // ---------------------------------------------------------
 
 // The below methods are inlined in the header on purpose for performance. Please do not move them.

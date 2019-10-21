@@ -1,108 +1,15 @@
 #pragma once
 
-#include <functional>
-
 #include "common/common.h"
-#include "util/simd.h"
+#include "common/macros.h"
 
 namespace tpl::util {
 
 /**
  * Utility class containing vectorized operations.
  */
-class VectorUtil {
+class VectorUtil : public AllStatic {
  public:
-  /**
-   * Force only static functions.
-   */
-  VectorUtil() = delete;
-
-  /**
-   * Filter an input vector by a constant value and store the indexes of valid
-   * elements in the output vector. If a selection vector is provided, only
-   * vector elements from the selection vector will be read.
-   * @tparam T The data type of the elements stored in the input vector.
-   * @tparam Op The filter comparison operation.
-   * @param in The input vector.
-   * @param in_count The number of elements in the input (or selection) vector.
-   * @param val The constant value to compare with.
-   * @param[out] out The vector storing indexes of valid input elements.
-   * @param sel The selection vector used to read input values.
-   * @return The number of elements that pass the filter.
-   */
-  template <typename T, template <typename> typename Op>
-  [[nodiscard]] static uint32_t FilterVectorByVal(const T *RESTRICT in, const uint32_t in_count,
-                                                  const T val, sel_t *RESTRICT out) {
-    // Simple check to make sure the provided filter operation returns bool
-    static_assert(std::is_same_v<bool, std::invoke_result_t<Op<T>, T, T>>);
-
-    uint32_t in_pos = 0;
-    uint32_t out_pos = simd::FilterVectorByVal<T, Op>(in, in_count, val, out, &in_pos);
-
-    for (; in_pos < in_count; in_pos++) {
-      bool cmp = Op<T>()(in[in_pos], val);
-      out[out_pos] = in_pos;
-      out_pos += static_cast<uint32_t>(cmp);
-    }
-
-    return out_pos;
-  }
-
-  /**
-   * Filter an input vector by the values in a second input vector, and store
-   * indexes of the valid elements (zero-based) into an output vector. If a
-   * selection vector is provided, only the vector elements whose indexes are in
-   * the selection vector will be read.
-   * @tparam T The data type of the elements stored in the input vector.
-   * @tparam Op The filter operation.
-   * @param in_1 The first input vector.
-   * @param in_2 The second input vector.
-   * @param in_count The number of elements in the input (or selection) vector.
-   * @param[out] out The vector storing the indexes of the valid input elements.
-   * @param sel The selection vector storing indexes of elements to process.
-   * @return The number of elements that pass the filter.
-   */
-  template <typename T, template <typename> typename Op>
-  [[nodiscard]] static uint32_t FilterVectorByVector(const T *RESTRICT in_1, const T *RESTRICT in_2,
-                                                     const uint32_t in_count, sel_t *RESTRICT out) {
-    // Simple check to make sure the provided filter operation returns bool
-    static_assert(std::is_same_v<bool, std::invoke_result_t<Op<T>, T, T>>);
-
-    uint32_t in_pos = 0;
-    uint32_t out_pos = simd::FilterVectorByVector<T, Op>(in_1, in_2, in_count, out, &in_pos);
-
-    for (; in_pos < in_count; in_pos++) {
-      bool cmp = Op<T>()(in_1[in_pos], in_2[in_pos]);
-      out[out_pos] = in_pos;
-      out_pos += static_cast<uint32_t>(cmp);
-    }
-
-    return out_pos;
-  }
-
-  // -------------------------------------------------------
-  // Generate specialized vectorized filters
-  // -------------------------------------------------------
-
-#define GEN_FILTER(Op, Comparison)                                                         \
-  template <typename T>                                                                    \
-  [[nodiscard]] static uint32_t Filter##Op(const T *RESTRICT in, const uint32_t in_count,  \
-                                           const T val, sel_t *RESTRICT out) {             \
-    return FilterVectorByVal<T, Comparison>(in, in_count, val, out);                       \
-  }                                                                                        \
-  template <typename T>                                                                    \
-  [[nodiscard]] static uint32_t Filter##Op(const T *RESTRICT in_1, const T *RESTRICT in_2, \
-                                           const uint32_t in_count, sel_t *RESTRICT out) { \
-    return FilterVectorByVector<T, Comparison>(in_1, in_2, in_count, out);                 \
-  }
-  GEN_FILTER(Eq, std::equal_to)
-  GEN_FILTER(Gt, std::greater)
-  GEN_FILTER(Ge, std::greater_equal)
-  GEN_FILTER(Lt, std::less)
-  GEN_FILTER(Le, std::less_equal)
-  GEN_FILTER(Ne, std::not_equal_to)
-#undef GEN_FILTER
-
   /**
    * Intersect the sorted input selection vectors @em v1 and @em v2, with
    * lengths @em v1_count and @em v2_count, respectively, and store the result
@@ -115,10 +22,10 @@ class VectorUtil {
    *              intersection.
    * @return The number of elements in the output selection vector.
    */
-  [[nodiscard]] static uint32_t
-      IntersectSelected(const sel_t *sel_vector_1, uint32_t sel_vector_1_len,
-                        const sel_t *sel_vector_2, uint32_t sel_vector_2_len,
-                        sel_t *out_sel_vector);
+  [[nodiscard]] static uint32_t IntersectSelected(const sel_t *sel_vector_1,
+                                                  uint32_t sel_vector_1_len,
+                                                  const sel_t *sel_vector_2,
+                                                  uint32_t sel_vector_2_len, sel_t *out_sel_vector);
 
   /**
    * Intersect the sorted input selection vector @em v1 and the input bit vector
@@ -200,18 +107,49 @@ class VectorUtil {
                                     uint8_t *byte_vector);
 
   /**
-   * Convert a bit vector into a densely packed selection vector. For all bits
-   * in the bit vector that are true, insert their indexes into the output
-   * selection vector. The resulting selection vector is guaranteed to be
-   * sorted ascending.
-   * @param num_bits The number of bits in the bit vector, and the minimum
-   *                 capacity of the selection vector.
+   * Convert a bit vector into a densely packed selection vector. Extract the indexes of all set (1)
+   * bits and store into the output selection vector. The resulting selection vector is guaranteed
+   * to be sorted ascending.
+   *
+   * NOTE: Use this if you do not know the density of the bit vector. Otherwise, use the sparse or
+   *       dense implementations below which are optimized as appropriate.
+   *
    * @param bit_vector The input bit vector.
+   * @param num_bits The number of bits in the bit vector. This must match the maximum capacity of
+   *                 the output selection vector!
    * @param[out] sel_vector The output selection vector.
    * @return The number of elements in the selection vector.
    */
   [[nodiscard]] static uint32_t BitVectorToSelectionVector(const uint64_t *bit_vector,
                                                            uint32_t num_bits, sel_t *sel_vector);
+
+  /**
+   * Convert a bit vector into a densely packed selection vector using an algorithm optimized for
+   * sparse bit vectors.
+   *
+   * @param bit_vector The input bit vector.
+   * @param num_bits The number of bits in the bit vector. This must match the maximum capacity of
+   *                 the output selection vector!
+   * @param[out] sel_vector The output selection vector.
+   * @return The number of elements in the selection vector.
+   */
+  [[nodiscard]] static uint32_t BitVectorToSelectionVector_Sparse(const uint64_t *bit_vector,
+                                                                  uint32_t num_bits,
+                                                                  sel_t *sel_vector);
+
+  /**
+   * Convert a bit vector into a densely packed selection vector using an algorithm optimized for
+   * dense bit vectors.
+   *
+   * @param bit_vector The input bit vector.
+   * @param num_bits The number of bits in the bit vector. This must match the maximum capacity of
+   *                 the output selection vector!
+   * @param[out] sel_vector The output selection vector.
+   * @return The number of elements in the selection vector.
+   */
+  [[nodiscard]] static uint32_t BitVectorToSelectionVector_Dense(const uint64_t *bit_vector,
+                                                                 uint32_t num_bits,
+                                                                 sel_t *sel_vector);
 
  private:
   FRIEND_TEST(VectorUtilTest, IntersectScalar);

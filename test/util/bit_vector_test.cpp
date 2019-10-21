@@ -12,7 +12,7 @@ namespace {
 // Verify that the callback returns true for all set bit indexes
 template <typename BitVectorType, typename F>
 ::testing::AssertionResult Verify(BitVectorType &bv, F &&f) {
-  for (uint32_t i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.GetNumBits(); i++) {
     if (bv[i] && !f(i)) {
       return ::testing::AssertionFailure() << "bv[" << i << "]=true, but expected to be false";
     }
@@ -65,10 +65,10 @@ TEST(BitVectorTest, BitVectorSize) {
 
 TEST(BitVectorTest, Init) {
   BitVector<> bv(100);
-  EXPECT_EQ(2u, bv.num_words());
-  EXPECT_EQ(100u, bv.num_bits());
+  EXPECT_EQ(2u, bv.GetNumWords());
+  EXPECT_EQ(100u, bv.GetNumBits());
 
-  for (uint32_t i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.GetNumBits(); i++) {
     EXPECT_FALSE(bv[i]);
   }
 }
@@ -117,7 +117,7 @@ TEST(BitVectorTest, SetAll) {
   EXPECT_TRUE(Verify(bv, {2, 299}));
 
   bv.SetAll();
-  for (uint32_t i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.GetNumBits(); i++) {
     EXPECT_TRUE(bv[i]);
   }
 }
@@ -126,7 +126,7 @@ TEST(BitVectorDeathTest, SetRange) {
   BitVector<> bv(300);
 
   EXPECT_DEATH(bv.SetRange(20, 10), "backward");
-  EXPECT_DEATH(bv.SetRange(10, bv.num_bits() + 20), "range");
+  EXPECT_DEATH(bv.SetRange(10, bv.GetNumBits() + 20), "range");
 }
 
 TEST(BitVectorTest, SetRange) {
@@ -189,14 +189,14 @@ TEST(BitVectorTest, SetWord) {
   bv.SetWord(0, 0x00000001);
 
   EXPECT_TRUE(bv.Test(0));
-  for (uint32_t i = 1; i < bv.num_bits(); i++) {
+  for (uint32_t i = 1; i < bv.GetNumBits(); i++) {
     EXPECT_FALSE(bv.Test(i));
   }
 
   // bv[9] = true
   bv.SetWord(0, 0x00000200);
   EXPECT_TRUE(bv.Test(9));
-  for (uint32_t i = 0; i < bv.num_bits() - 1; i++) {
+  for (uint32_t i = 0; i < bv.GetNumBits() - 1; i++) {
     EXPECT_FALSE(bv.Test(i));
   }
 
@@ -206,7 +206,7 @@ TEST(BitVectorTest, SetWord) {
 
   // Even bits only
   bv.SetWord(0, 0x55555555);
-  for (uint32_t i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.GetNumBits(); i++) {
     EXPECT_EQ(i % 2 == 0, bv.Test(i));
   }
 }
@@ -215,7 +215,7 @@ TEST(BitVectorTest, Unset) {
   BitVector<> bv(10);
 
   // Set every 3rd bit
-  for (uint32_t i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.GetNumBits(); i++) {
     if (i % 3 == 0) {
       bv.Set(i);
     }
@@ -244,12 +244,12 @@ TEST(BitVectorTest, TestAndSet) {
   // Set even bits only, then check
   {
     BitVector<> bv(100);
-    for (uint32_t i = 0; i < bv.num_bits(); i++) {
+    for (uint32_t i = 0; i < bv.GetNumBits(); i++) {
       if (i % 2 == 0) {
         bv.Set(i);
       }
     }
-    for (uint32_t i = 0; i < bv.num_bits(); i++) {
+    for (uint32_t i = 0; i < bv.GetNumBits(); i++) {
       EXPECT_EQ(i % 2 == 0, bv[i]);
     }
   }
@@ -259,7 +259,7 @@ TEST(BitVectorTest, Flip) {
   BitVector<> bv(10);
 
   // Set even bits
-  for (uint32_t i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.GetNumBits(); i++) {
     if (i % 2 == 0) {
       bv.Set(i);
     }
@@ -286,7 +286,7 @@ TEST(BitVectorTest, FlipAll) {
 
   // Set even bits
   bv.Reset();
-  for (uint32_t i = 0; i < bv.num_bits(); i++) {
+  for (uint32_t i = 0; i < bv.GetNumBits(); i++) {
     if (i % 2 == 0) {
       bv.Set(i);
     }
@@ -324,13 +324,13 @@ TEST(BitVectorTest, All) {
     EXPECT_FALSE(bv.All());
 
     // Set all but one
-    for (uint32_t i = 0; i < bv.num_bits() - 1; i++) {
+    for (uint32_t i = 0; i < bv.GetNumBits() - 1; i++) {
       bv.Set(i);
     }
     EXPECT_FALSE(bv.All());
 
     // Set last manually
-    bv.Set(bv.num_bits() - 1);
+    bv.Set(bv.GetNumBits() - 1);
     EXPECT_TRUE(bv.All());
 
     bv.Reset().SetAll();
@@ -403,13 +403,13 @@ TEST(BitVectorTest, NthOne) {
     EXPECT_EQ(7u, bv.NthOne(2));
     EXPECT_EQ(8u, bv.NthOne(3));
     EXPECT_EQ(10u, bv.NthOne(4));
-    EXPECT_EQ(bv.num_bits(), bv.NthOne(10));
+    EXPECT_EQ(bv.GetNumBits(), bv.NthOne(10));
   }
 
   // Multi-word
   {
     BitVector<> bv(140);
-    EXPECT_EQ(bv.num_bits(), bv.NthOne(0));
+    EXPECT_EQ(bv.GetNumBits(), bv.NthOne(0));
 
     bv.Set(7);
     bv.Set(71);
@@ -464,8 +464,8 @@ TEST(BitVectorTest, ResizeSmaller) {
   EXPECT_TRUE(bv.All());
 
   bv.Resize(40);
-  EXPECT_EQ(40u, bv.num_bits());
-  EXPECT_EQ(1u, bv.num_words());
+  EXPECT_EQ(40u, bv.GetNumBits());
+  EXPECT_EQ(1u, bv.GetNumWords());
 
   // Bits [0, 70) were set before the resize, bits [0, 40) should be unchanged after, too.
   EXPECT_TRUE(bv.All());
@@ -481,8 +481,8 @@ TEST(BitVectorTest, ResizeLarger) {
   EXPECT_TRUE(bv.All());
 
   bv.Resize(70);
-  EXPECT_EQ(70u, bv.num_bits());
-  EXPECT_EQ(2u, bv.num_words());
+  EXPECT_EQ(70u, bv.GetNumBits());
+  EXPECT_EQ(2u, bv.GetNumWords());
 
   // Bits [0, 10) were set before the resize, they should still be set after resize. But, [10, 70)
   // should be zero.
@@ -501,9 +501,27 @@ TEST(BitVectorTest, NoOpResize) {
   EXPECT_TRUE(bv.All());
 
   bv.Resize(70);
-  EXPECT_EQ(70u, bv.num_bits());
-  EXPECT_EQ(2u, bv.num_words());
+  EXPECT_EQ(70u, bv.GetNumBits());
+  EXPECT_EQ(2u, bv.GetNumWords());
   EXPECT_TRUE(bv.All());
+}
+
+TEST(BitVectorTest, Equality) {
+  BitVector<> bv1(70);
+  BitVector<> bv2(70);
+
+  EXPECT_NE(bv1, BitVector<>(65));
+  EXPECT_EQ(bv1, bv2);
+
+  bv1[10] = true;
+  EXPECT_NE(bv1, bv2);
+
+  bv1[60] = true;
+  bv2[10] = true;
+  EXPECT_NE(bv1, bv2);
+
+  bv2[60] = true;
+  EXPECT_EQ(bv1, bv2);
 }
 
 TEST(BitVectorTest, Iterate) {
@@ -524,7 +542,7 @@ TEST(BitVectorTest, Iterate) {
   {
     BitVector<> bv(100);
     // Set even bits
-    for (uint32_t i = 0; i < bv.num_bits(); i++) {
+    for (uint32_t i = 0; i < bv.GetNumBits(); i++) {
       if (i % 2 == 0) {
         bv.Set(i);
       }

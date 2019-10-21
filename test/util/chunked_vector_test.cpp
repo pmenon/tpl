@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <deque>
+#include <memory>
 #include <random>
 #include <utility>
 #include <vector>
@@ -130,21 +131,56 @@ TEST_F(ChunkedVectorTest, ChunkReuseTest) {
   EXPECT_EQ(0u, allocated_3 - allocated_2);
 }
 
-struct Simple {
+// Object that allocates 20-bytes of data. Used to ensure objects pushed into vector are destroyed.
+class Simple {
+ public:
   // Not thread-safe!
   static uint32_t count;
-  Simple() { count++; }
+
+  explicit Simple(uint32_t _id) : id_(_id), ptr_(std::make_unique<char[]>(20)) { count++; }
+
   ~Simple() { count--; }
+
+  uint32_t id() const noexcept { return id_; }
+
+ private:
+  uint32_t id_;
+  std::unique_ptr<char[]> ptr_;
 };
 
 uint32_t Simple::count = 0;
+
+TEST_F(ChunkedVectorTest, ClearTest) {
+  ChunkedVectorT<Simple> v;
+  v.emplace_back(1);
+  v.emplace_back(2);
+  v.emplace_back(3);
+
+  EXPECT_EQ(3u, v.size());
+  EXPECT_EQ(1u, v[0].id());
+  EXPECT_EQ(2u, v[1].id());
+  EXPECT_EQ(3u, v[2].id());
+
+  v.clear();
+
+  EXPECT_EQ(0u, v.size());
+
+  v.emplace_back(10);
+  v.emplace_back(11);
+  v.emplace_back(12);
+
+  EXPECT_EQ(3u, v.size());
+  EXPECT_EQ(10u, v[0].id());
+  EXPECT_EQ(11u, v[1].id());
+  EXPECT_EQ(12u, v[2].id());
+}
 
 TEST_F(ChunkedVectorTest, ElementConstructDestructTest) {
   util::Region tmp("tmp");
   ChunkedVectorT<Simple> vec;
 
   for (uint32_t i = 0; i < 1000; i++) {
-    vec.emplace_back();
+    vec.emplace_back(i);
   }
   EXPECT_EQ(1000u, Simple::count);
 
@@ -161,12 +197,12 @@ TEST_F(ChunkedVectorTest, MoveConstructorTest) {
   const uint32_t num_elems = 1000;
 
   // Populate vec1
-  ChunkedVectorT<uint32_t> vec1;
+  ChunkedVectorT<Simple> vec1;
   for (uint32_t i = 0; i < num_elems; i++) {
-    vec1.push_back(i);
+    vec1.emplace_back(i);
   }
 
-  ChunkedVectorT<uint32_t> vec2(std::move(vec1));
+  ChunkedVectorT<Simple> vec2(std::move(vec1));
   EXPECT_EQ(num_elems, vec2.size());
 }
 
@@ -174,12 +210,12 @@ TEST_F(ChunkedVectorTest, AssignmentMoveTest) {
   const uint32_t num_elems = 1000;
 
   // Populate vec1
-  ChunkedVectorT<uint32_t> vec1;
+  ChunkedVectorT<Simple> vec1;
   for (uint32_t i = 0; i < num_elems; i++) {
-    vec1.push_back(i);
+    vec1.emplace_back(i);
   }
 
-  ChunkedVectorT<uint32_t> vec2;
+  ChunkedVectorT<Simple> vec2;
   EXPECT_EQ(0u, vec2.size());
 
   // Move vec1 into vec2
@@ -333,133 +369,6 @@ TEST_F(ChunkedVectorTest, SortTest) {
   for (uint32_t i = 0; i < num_elems; i++) {
     ASSERT_EQ(vec[i], i);
   }
-}
-
-TEST_F(ChunkedVectorTest, DISABLED_PerfInsertTest) {
-  auto stdvec_ms = Bench(3, []() {
-    util::Region tmp("tmp");
-    std::vector<uint32_t, StlRegionAllocator<uint32_t>> v{StlRegionAllocator<uint32_t>(&tmp)};
-    for (uint32_t i = 0; i < 10000000; i++) {
-      v.push_back(i);
-    }
-  });
-
-  auto stddeque_ms = Bench(3, []() {
-    util::Region tmp("tmp");
-    std::deque<uint32_t, StlRegionAllocator<uint32_t>> v{StlRegionAllocator<uint32_t>(&tmp)};
-    for (uint32_t i = 0; i < 10000000; i++) {
-      v.push_back(i);
-    }
-  });
-
-  auto chunked_ms = Bench(3, []() {
-    util::Region tmp("tmp");
-    ChunkedVectorT<uint32_t, StlRegionAllocator<uint32_t>> v{
-        util::StlRegionAllocator<uint32_t>(&tmp)};
-    for (uint32_t i = 0; i < 10000000; i++) {
-      v.push_back(i);
-    }
-  });
-
-  std::cout << std::fixed << std::setprecision(4);
-  std::cout << "std::vector  : " << stdvec_ms << " ms" << std::endl;
-  std::cout << "std::deque   : " << stddeque_ms << " ms" << std::endl;
-  std::cout << "ChunkedVector: " << chunked_ms << " ms" << std::endl;
-}
-
-TEST_F(ChunkedVectorTest, DISABLED_PerfScanTest) {
-  static const uint32_t num_elems = 10000000;
-
-  util::Region tmp("vec"), tmp2("deque"), tmp3("chunk");
-  std::vector<uint32_t, StlRegionAllocator<uint32_t>> stdvec{StlRegionAllocator<uint32_t>(&tmp)};
-  std::deque<uint32_t, StlRegionAllocator<uint32_t>> stddeque{StlRegionAllocator<uint32_t>(&tmp2)};
-  ChunkedVectorT<uint32_t, StlRegionAllocator<uint32_t>> chunkedvec{
-      util::StlRegionAllocator<uint32_t>(&tmp3)};
-  for (uint32_t i = 0; i < num_elems; i++) {
-    stdvec.push_back(i);
-    stddeque.push_back(i);
-    chunkedvec.push_back(i);
-  }
-
-  auto stdvec_ms = Bench(10, [&stdvec]() {
-    uint32_t c = 0;
-    for (auto x : stdvec) {
-      c += x;
-    }
-    stdvec[0] = c;
-  });
-
-  auto stddeque_ms = Bench(10, [&stddeque]() {
-    uint32_t c = 0;
-    for (auto x : stddeque) {
-      c += x;
-    }
-    stddeque[0] = c;
-  });
-
-  auto chunked_ms = Bench(10, [&chunkedvec]() {
-    uint32_t c = 0;
-    for (auto x : chunkedvec) {
-      c += x;
-    }
-    chunkedvec[0] = c;
-  });
-
-  std::cout << std::fixed << std::setprecision(4);
-  std::cout << "std::vector  : " << stdvec_ms << " ms" << std::endl;
-  std::cout << "std::deque   : " << stddeque_ms << " ms" << std::endl;
-  std::cout << "ChunkedVector: " << chunked_ms << " ms" << std::endl;
-}
-
-TEST_F(ChunkedVectorTest, DISABLED_PerfRandomAccessTest) {
-  static const uint32_t num_elems = 10000000;
-  std::default_random_engine generator;
-  std::uniform_int_distribution<uint32_t> rng(0, num_elems);
-
-  util::Region tmp("vec"), tmp2("deque"), tmp3("chunk");
-  std::vector<uint32_t, StlRegionAllocator<uint32_t>> stdvec{StlRegionAllocator<uint32_t>(&tmp)};
-  std::deque<uint32_t, StlRegionAllocator<uint32_t>> stddeque{StlRegionAllocator<uint32_t>(&tmp2)};
-  ChunkedVectorT<uint32_t, StlRegionAllocator<uint32_t>> chunkedvec{
-      util::StlRegionAllocator<uint32_t>(&tmp3)};
-  for (uint32_t i = 0; i < num_elems; i++) {
-    stdvec.push_back(i % 4);
-    stddeque.push_back(i % 4);
-    chunkedvec.push_back(i % 4);
-  }
-
-  std::vector<uint32_t> random_indexes(num_elems);
-  for (uint32_t i = 0; i < num_elems; i++) {
-    random_indexes[i] = rng(generator);
-  }
-
-  auto stdvec_ms = Bench(10, [&stdvec, &random_indexes]() {
-    uint32_t c = 0;
-    for (auto idx : random_indexes) {
-      c += stdvec[idx];
-    }
-    stdvec[0] = c;
-  });
-
-  auto stddeque_ms = Bench(10, [&stddeque, &random_indexes]() {
-    uint32_t c = 0;
-    for (auto idx : random_indexes) {
-      c += stddeque[idx];
-    }
-    stddeque[0] = c;
-  });
-
-  auto chunked_ms = Bench(10, [&chunkedvec, &random_indexes]() {
-    uint32_t c = 0;
-    for (auto idx : random_indexes) {
-      c += chunkedvec[idx];
-    }
-    chunkedvec[0] = c;
-  });
-
-  std::cout << std::fixed << std::setprecision(4);
-  std::cout << "std::vector  : " << stdvec_ms << " ms" << std::endl;
-  std::cout << "std::deque   : " << stddeque_ms << " ms" << std::endl;
-  std::cout << "ChunkedVector: " << chunked_ms << " ms" << std::endl;
 }
 
 }  // namespace tpl::util

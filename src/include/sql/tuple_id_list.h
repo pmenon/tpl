@@ -18,8 +18,8 @@ namespace tpl::sql {
  * removing (one or all) TIDs from the list. Intersection, union, and difference are efficient
  * operations linear in the capacity of the list.
  *
- * Users can iterate over the TIDs in the list through TupleIdList::Iterate(), and build/update
- * lists from subsets of other lists using TupleIdList::BuildFromOtherList().
+ * Users can iterate over the TIDs in the list through TupleIdList::Iterate() and filter a TID list
+ * through TupleIdList::Filter().
  *
  * Tuple ID lists can also be converted into dense selection vectors through
  * TupleIdList::AsSelectionVector().
@@ -41,6 +41,41 @@ class TupleIdList {
   using BitVectorType = util::BitVector<uint64_t>;
 
   /**
+   * An iterator over the TIDs in a Tuple ID list.
+   *
+   * @warning While this exists for convenience, it is very slow and should only be used when the
+   * loop is driven by an external controller. When possible, design your algorithms around the
+   * callback-based iteration functions in TupleIdList such as TupleIdList::Iterate() and
+   * TupleIdList::Filter() as they perform more than 3x faster!!!!!
+   */
+  class ConstIterator {
+   public:
+    uint32_t operator*() const noexcept { return curr_; }
+
+    ConstIterator &operator++() {
+      curr_ = bv_.FindNext(curr_);
+      return *this;
+    }
+
+    bool operator==(const ConstIterator &that) const noexcept {
+      return &bv_ == &that.bv_ && curr_ == that.curr_;
+    }
+
+    bool operator!=(const ConstIterator &that) const noexcept { return !(*this == that); }
+
+   private:
+    friend class TupleIdList;
+
+    ConstIterator(const BitVectorType &bv, uint32_t position) : bv_(bv), curr_(position) {}
+
+    explicit ConstIterator(const BitVectorType &bv) : ConstIterator(bv, bv.FindFirst()) {}
+
+   private:
+    const BitVectorType &bv_;
+    uint32_t curr_;
+  };
+
+  /**
    * Construct a TID list with the given maximum size.
    * @param size The maximum size of the list.
    */
@@ -60,27 +95,28 @@ class TupleIdList {
   bool Contains(const uint32_t tid) const { return bit_vector_.Test(tid); }
 
   /**
-   * Does the list contain all TIDs in the range of TIDs it tracks?
-   * @return True if full; false otherwise.
+   * @return True if this list contains all TIDs; false otherwise.
    */
   bool IsFull() const { return bit_vector_.All(); }
 
   /**
-   * Is the list empty?
-   * @return True if empty; false otherwise.
+   * @return True if this list is empty; false otherwise.
    */
   bool IsEmpty() const { return bit_vector_.None(); }
 
   /**
-   * Set a given tuple as active in the list.
+   * Add the tuple ID @em tid to this list.
+   *
+   * @pre The given TID must be in the range [0, capacity) of this list.
+   *
    * @param tid The ID of the tuple.
    */
   void Add(const uint32_t tid) { bit_vector_.Set(tid); }
 
   /**
-   * Add all tuples whose IDs are in the range [start_tid, end_tid). Note the half-open interval!
+   * Add all TIDs in the range [start_tid, end_tid) to this list. Note the half-open interval!
    * @param start_tid The left inclusive range boundary.
-   * @param end_tid The right inclusive range boundary.
+   * @param end_tid The right exclusive range boundary.
    */
   void AddRange(const uint32_t start_tid, const uint32_t end_tid) {
     bit_vector_.SetRange(start_tid, end_tid);
@@ -160,21 +196,17 @@ class TupleIdList {
   void Clear() { bit_vector_.Reset(); }
 
   /**
-   * Return the number of active tuples in the list.
    * @return The number of active tuples in the list.
    */
   uint32_t GetTupleCount() const { return bit_vector_.CountOnes(); }
 
   /**
-   * Return the capacity of the list.
    * @return The capacity of the TID list.
    */
-  uint32_t GetCapacity() const { return bit_vector_.num_bits(); }
+  uint32_t GetCapacity() const { return bit_vector_.GetNumBits(); }
 
   /**
-   * Return the selectivity of the list as a fraction in the range [0.0, 1.0].
-   * @return The selectivity of the list, i.e., the fraction of the tuples that are considered
-   *         "active".
+   * @return The selectivity of the list a fraction in the range [0.0, 1.0].
    */
   float ComputeSelectivity() const { return static_cast<float>(GetTupleCount()) / GetCapacity(); }
 
@@ -183,7 +215,7 @@ class TupleIdList {
    * @param[out] sel_vec The output selection vector.
    * @return The number of elements in the generated selection vector.
    */
-  [[nodiscard]] uint32_t AsSelectionVector(sel_t *sel_vec) const;
+  [[nodiscard]] uint32_t ToSelectionVector(sel_t *sel_vec) const;
 
   /**
    * Iterate all TIDs in this list.
@@ -196,7 +228,7 @@ class TupleIdList {
   }
 
   /**
-   * Return a string representation of this vector.
+   * @return A string representation of this list.
    */
   std::string ToString() const;
 
@@ -207,7 +239,6 @@ class TupleIdList {
   void Dump(std::ostream &stream) const;
 
   /**
-   * Access the internal bit vector.
    * @return The internal bit vector representation of the list.
    */
   BitVectorType *GetMutableBits() { return &bit_vector_; }
@@ -221,6 +252,26 @@ class TupleIdList {
     TPL_ASSERT(i < GetTupleCount(), "Out-of-bounds list access");
     return bit_vector_.NthOne(i);
   }
+
+  /**
+   * @return An iterator positioned at the first element in the TID list.
+   */
+  ConstIterator begin() { return ConstIterator(bit_vector_); }
+
+  /**
+   * @return A const iterator position at the first element in the TID list.
+   */
+  ConstIterator begin() const { return ConstIterator(bit_vector_); }
+
+  /**
+   * @return An iterator positioned at the end of the list.
+   */
+  ConstIterator end() { return ConstIterator(bit_vector_, BitVectorType::kInvalidPos); }
+
+  /**
+   * @return A const iterator position at the end of the list.
+   */
+  ConstIterator end() const { return ConstIterator(bit_vector_, BitVectorType::kInvalidPos); }
 
  private:
   // The validity bit vector

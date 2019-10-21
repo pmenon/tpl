@@ -15,7 +15,7 @@ ColumnVectorIterator::ColumnVectorIterator(const Schema::ColumnInfo *col_info) n
       col_null_bitmap_(nullptr) {}
 
 bool ColumnVectorIterator::Advance() noexcept {
-  if (column_ == nullptr || next_block_pos_ == column_->num_tuples()) {
+  if (column_ == nullptr || next_block_pos_ == column_->GetTupleCount()) {
     return false;
   }
 
@@ -25,7 +25,7 @@ bool ColumnVectorIterator::Advance() noexcept {
   col_null_bitmap_ = const_cast<uint32_t *>(column_->AccessRawNullBitmap(0));
 
   current_block_pos_ = next_block_pos_;
-  next_block_pos_ = std::min(column_->num_tuples(), current_block_pos_ + kDefaultVectorSize);
+  next_block_pos_ = std::min(column_->GetTupleCount(), current_block_pos_ + kDefaultVectorSize);
 
   return true;
 }
@@ -41,7 +41,7 @@ void ColumnVectorIterator::Reset(const ColumnSegment *column) noexcept {
   // Setup the current position (0) and the next position (the minimum of the length of the column
   // or one vector's length of data)
   current_block_pos_ = 0;
-  next_block_pos_ = std::min(column->num_tuples(), kDefaultVectorSize);
+  next_block_pos_ = std::min(column->GetTupleCount(), kDefaultVectorSize);
 }
 
 }  // namespace tpl::sql

@@ -1,20 +1,21 @@
 #include "sql/vector_operations/vector_operators.h"
 
 #include "common/exception.h"
+#include "sql/generic_value.h"
 
 namespace tpl::sql {
 
 namespace {
 
 void CheckFillArguments(const Vector &input, const GenericValue &value) {
-  if (input.type_id() != value.type_id()) {
-    throw TypeMismatchException(input.type_id(), value.type_id(), "invalid types for fill");
+  if (input.GetTypeId() != value.GetTypeId()) {
+    throw TypeMismatchException(input.GetTypeId(), value.GetTypeId(), "invalid types for fill");
   }
 }
 
 template <typename T>
 void TemplatedFillOperation(Vector *vector, T val) {
-  auto *data = reinterpret_cast<T *>(vector->data());
+  auto *data = reinterpret_cast<T *>(vector->GetData());
   VectorOps::Exec(*vector, [&](uint64_t i, uint64_t k) { data[i] = val; });
 }
 
@@ -24,15 +25,15 @@ void VectorOps::Fill(Vector *vector, const GenericValue &value) {
   // Sanity check
   CheckFillArguments(*vector, value);
 
-  if (value.is_null()) {
-    vector->mutable_null_mask()->SetAll();
+  if (value.IsNull()) {
+    vector->GetMutableNullMask()->SetAll();
     return;
   }
 
-  vector->mutable_null_mask()->Reset();
+  vector->GetMutableNullMask()->Reset();
 
   // Lift-off
-  switch (vector->type_id()) {
+  switch (vector->GetTypeId()) {
     case TypeId::Boolean:
       TemplatedFillOperation(vector, value.value_.boolean);
       break;
@@ -54,11 +55,14 @@ void VectorOps::Fill(Vector *vector, const GenericValue &value) {
     case TypeId::Double:
       TemplatedFillOperation(vector, value.value_.double_);
       break;
+    case TypeId::Date:
+      TemplatedFillOperation(vector, value.value_.date_);
+      break;
     case TypeId::Varchar:
-      TemplatedFillOperation(vector, vector->strings_.AddString(value.str_value_));
+      TemplatedFillOperation(vector, vector->varlens_.AddVarlen(value.str_value_));
       break;
     default:
-      throw InvalidTypeException(vector->type_id(), "vector cannot be filled");
+      throw InvalidTypeException(vector->GetTypeId(), "vector cannot be filled");
   }
 }
 

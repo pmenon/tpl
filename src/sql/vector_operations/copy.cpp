@@ -8,7 +8,7 @@ namespace {
 
 template <typename T>
 void TemplatedCopyOperation(const Vector &source, void *target, uint64_t offset, uint64_t count) {
-  auto *src_data = reinterpret_cast<T *>(source.data());
+  auto *src_data = reinterpret_cast<T *>(source.GetData());
   auto *target_data = reinterpret_cast<T *>(target);
   VectorOps::Exec(source, [&](uint64_t i, uint64_t k) { target_data[k - offset] = src_data[i]; },
                   offset, count);
@@ -16,11 +16,11 @@ void TemplatedCopyOperation(const Vector &source, void *target, uint64_t offset,
 
 void GenericCopyOperation(const Vector &source, void *target, uint64_t offset,
                           uint64_t element_count) {
-  if (source.count() == 0) {
+  if (source.GetCount() == 0) {
     return;
   }
 
-  switch (source.type_id()) {
+  switch (source.GetTypeId()) {
     case TypeId::Boolean:
       TemplatedCopyOperation<bool>(source, target, offset, element_count);
       break;
@@ -48,9 +48,12 @@ void GenericCopyOperation(const Vector &source, void *target, uint64_t offset,
     case TypeId::Double:
       TemplatedCopyOperation<double>(source, target, offset, element_count);
       break;
+    case TypeId::Date:
+      TemplatedCopyOperation<Date>(source, target, offset, element_count);
+      break;
     default:
       throw NotImplementedException("copying vector of type '{}' not supported",
-                                    TypeIdToString(source.type_id()));
+                                    TypeIdToString(source.GetTypeId()));
   }
 }
 
@@ -63,10 +66,10 @@ void VectorOps::Copy(const Vector &source, void *target, uint64_t offset, uint64
 
 void VectorOps::Copy(const Vector &source, Vector *target, uint64_t offset) {
   TPL_ASSERT(offset < source.count_, "Out-of-bounds offset");
-  TPL_ASSERT(target->selection_vector() == nullptr, "Cannot copy into filtered vector");
+  TPL_ASSERT(target->GetSelectionVector() == nullptr, "Cannot copy into filtered vector");
 
   // Resize the target vector to accommodate count-offset elements from the source vector
-  target->Resize(source.count() - offset);
+  target->Resize(source.GetCount() - offset);
 
   // Copy NULLs
   Exec(source,
@@ -74,7 +77,7 @@ void VectorOps::Copy(const Vector &source, Vector *target, uint64_t offset) {
        offset);
 
   // Copy data
-  Copy(source, target->data(), offset, target->count());
+  Copy(source, target->GetData(), offset, target->GetCount());
 }
 
 }  // namespace tpl::sql
