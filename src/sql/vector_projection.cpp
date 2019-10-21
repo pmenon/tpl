@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "sql/column_vector_iterator.h"
+#include "sql/tuple_id_list.h"
 #include "sql/vector.h"
 
 namespace tpl::sql {
@@ -50,12 +51,24 @@ void VectorProjection::Initialize(const std::vector<const Schema::ColumnInfo *> 
 
 void VectorProjection::SetSelectionVector(const sel_t *const new_sel_vector, const uint32_t count) {
   TPL_ASSERT(new_sel_vector != nullptr, "Null input selection vector");
-  TPL_ASSERT(count <= kDefaultVectorSize, "Invalid count");
+  TPL_ASSERT(count <= GetTupleCapacity(), "Invalid count");
 
   // Copy into our selection vector
   std::memcpy(sel_vector_, new_sel_vector, count * sizeof(sel_t));
 
   // Update vectors
+  for (const auto &col : columns_) {
+    col->SetSelectionVector(sel_vector_, count);
+  }
+}
+
+void VectorProjection::SetSelections(const TupleIdList &tid_list) {
+  TPL_ASSERT(tid_list.GetCapacity() <= GetTupleCapacity(), "TID list too large for projection");
+
+  // Convert the list into a selection vector
+  const uint32_t count = tid_list.ToSelectionVector(sel_vector_);
+
+  // Update the child vectors
   for (const auto &col : columns_) {
     col->SetSelectionVector(sel_vector_, count);
   }

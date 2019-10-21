@@ -14,6 +14,7 @@
 namespace tpl::sql {
 
 class ColumnVectorIterator;
+class TupleIdList;
 
 /**
  * A container representing a collection of tuples whose attributes are stored in columnar format.
@@ -27,7 +28,9 @@ class ColumnVectorIterator;
  * vector containing the indexes of the tuples that are externally visible. All column vectors
  * contain references to the selection index vector owned by this projection. At any given time,
  * projections have a selected count (see VectorProjection::GetSelectedTupleCount()) that is <=
- * the total tuple count (see VectorProjection::GetTotalTupleCount()).
+ * the total tuple count (see VectorProjection::GetTotalTupleCount()). Users can manually set the
+ * selections by calling either VectorProjection::SetSelectionVector() with a physical selection
+ * index vector, or VectorProjection::SetSelections() providing a tuple ID list.
  *
  * VectorProjections come in two flavors: referencing and owning projections. A referencing vector
  * projection contains a set of column vectors that reference data stored externally. An owning
@@ -132,11 +135,17 @@ class VectorProjection {
   void SetSelectionVector(const sel_t *new_sel_vector, uint32_t count);
 
   /**
+   * Filter elements from the projection based on the tuple IDs in the input list @em tid_list.
+   * @param tid_list The input TID list of valid tuples.
+   */
+  void SetSelections(const TupleIdList &tid_list);
+
+  /**
    * Access metadata for the column at position @em col_idx in the projection.
    * @return The metadata for the column at the given index in the projection.
    */
   const Schema::ColumnInfo *GetColumnInfo(const uint32_t col_idx) const {
-    TPL_ASSERT(col_idx < GetNumColumns(), "Out-of-bounds column access");
+    TPL_ASSERT(col_idx < GetColumnCount(), "Out-of-bounds column access");
     return column_info_[col_idx];
   }
 
@@ -146,7 +155,7 @@ class VectorProjection {
    * @return The column's vector data.
    */
   const Vector *GetColumn(const uint32_t col_idx) const {
-    TPL_ASSERT(col_idx < GetNumColumns(), "Out-of-bounds column access");
+    TPL_ASSERT(col_idx < GetColumnCount(), "Out-of-bounds column access");
     return columns_[col_idx].get();
   }
 
@@ -156,7 +165,7 @@ class VectorProjection {
    * @return The column's vector data.
    */
   Vector *GetColumn(const uint32_t col_idx) {
-    TPL_ASSERT(col_idx < GetNumColumns(), "Out-of-bounds column access");
+    TPL_ASSERT(col_idx < GetColumnCount(), "Out-of-bounds column access");
     return columns_[col_idx].get();
   }
 
@@ -193,30 +202,33 @@ class VectorProjection {
                    uint32_t num_tuples);
 
   /**
-   * Return the number of columns in this projection.
    * @return The number of columns in the projection.
    */
-  uint32_t GetNumColumns() const { return columns_.size(); }
+  uint32_t GetColumnCount() const { return columns_.size(); }
 
   /**
-   * Return the number of active, i.e., externally visible, tuples in this projection. The selected
-   * tuple count is always <= the total tuple count.
-   * @return The number of externally visible tuples in this projection.
+   * @return The number of active, i.e., externally visible, tuples in this projection. The selected
+   *         tuple count is always <= the total tuple count.
    */
   uint64_t GetSelectedTupleCount() const { return columns_.empty() ? 0 : columns_[0]->GetCount(); }
 
   /**
-   * Return the total number of tuples in the projection, including those that may have been
-   * filtered out by a selection vector, if one exists. The total tuple count is >= the selected
-   * tuple count.
-   * @return The total number of tuples in the projection.
+   * @return The total number of tuples in the projection, including those that may have been
+   *         filtered out by a selection vector, if one exists. The total tuple count is >= the
+   *         selected tuple count.
    */
   uint64_t GetTotalTupleCount() const { return columns_.empty() ? 0 : columns_[0]->GetSize(); }
 
   /**
-   * Compute the selectivity of this projection.
-   * @return A number between [0.0, 1.0] representing the selectivity, i.e., the fraction of tuples
-   *         that are active and visible.
+   * @return The maximum capacity of this projection. In other words, the maximum number of tuples
+   *         the vectors constituting this projection can store.
+   */
+  uint64_t GetTupleCapacity() const { return columns_.empty() ? 0 : columns_[0]->GetCapacity(); }
+
+  /**
+   * @return The selectivity of this projection, i.e., the fraction of **total** tuples that have
+   *         passed any filters (through the selection vector), and are externally visible. The
+   *         selectivity is a floating-point number in the range [0.0, 1.0].
    */
   double ComputeSelectivity() const {
     return columns_.empty() ? 0 : columns_[0]->ComputeSelectivity();

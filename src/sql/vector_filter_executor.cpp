@@ -122,10 +122,10 @@ void VectorFilterExecutor::SelectNe(const uint32_t left_col_idx, const uint32_t 
 #undef VEC_GENVAL_OP
 
 void VectorFilterExecutor::Finish() {
-  sel_t sel_vec[kDefaultVectorSize];
-  uint32_t count = tid_list_.ToSelectionVector(sel_vec);
-  vector_projection_->SetSelectionVector(sel_vec, count);
+  // Update projection
+  vector_projection_->SetSelections(tid_list_);
 
+  // Reset iterator, if we have one
   if (vector_projection_iterator_ != nullptr) {
     vector_projection_iterator_->Reset(vector_projection_);
   }

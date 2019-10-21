@@ -1,6 +1,7 @@
 #include <memory>
 #include <vector>
 
+#include "sql/tuple_id_list.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "sql/vector_projection.h"
 #include "util/test_harness.h"
@@ -39,7 +40,7 @@ class VectorProjectionTest : public TplTest {
 TEST_F(VectorProjectionTest, Empty) {
   VectorProjection vp;
 
-  EXPECT_EQ(0u, vp.GetNumColumns());
+  EXPECT_EQ(0u, vp.GetColumnCount());
   EXPECT_EQ(0u, vp.GetTotalTupleCount());
   EXPECT_EQ(0u, vp.GetSelectedTupleCount());
   EXPECT_EQ(nullptr, vp.GetSelectionVector());
@@ -50,14 +51,14 @@ TEST_F(VectorProjectionTest, InitializeEmpty) {
   VectorProjection vp;
   vp.InitializeEmpty({smallint_col(), double_col()});
 
-  EXPECT_EQ(2u, vp.GetNumColumns());
+  EXPECT_EQ(2u, vp.GetColumnCount());
   EXPECT_EQ(SmallIntType::Instance(false), vp.GetColumnInfo(0)->sql_type);
   EXPECT_EQ(DoubleType::Instance(false), vp.GetColumnInfo(1)->sql_type);
   EXPECT_EQ(0u, vp.GetTotalTupleCount());
   EXPECT_EQ(0u, vp.GetSelectedTupleCount());
   EXPECT_EQ(nullptr, vp.GetSelectionVector());
 
-  for (uint32_t i = 0; i < vp.GetNumColumns(); i++) {
+  for (uint32_t i = 0; i < vp.GetColumnCount(); i++) {
     EXPECT_EQ(0u, vp.GetColumn(i)->GetCount());
     EXPECT_EQ(nullptr, vp.GetColumn(i)->GetSelectionVector());
   }
@@ -69,7 +70,7 @@ TEST_F(VectorProjectionTest, Initialize) {
   VectorProjection vp;
   vp.Initialize({float_col(), int_col(), date_col()});
 
-  EXPECT_EQ(3u, vp.GetNumColumns());
+  EXPECT_EQ(3u, vp.GetColumnCount());
   EXPECT_EQ(RealType::Instance(false), vp.GetColumnInfo(0)->sql_type);
   EXPECT_EQ(IntegerType::Instance(false), vp.GetColumnInfo(1)->sql_type);
   EXPECT_EQ(DateType::Instance(false), vp.GetColumnInfo(2)->sql_type);
@@ -77,7 +78,7 @@ TEST_F(VectorProjectionTest, Initialize) {
   EXPECT_EQ(0u, vp.GetSelectedTupleCount());
   EXPECT_EQ(nullptr, vp.GetSelectionVector());
 
-  for (uint32_t i = 0; i < vp.GetNumColumns(); i++) {
+  for (uint32_t i = 0; i < vp.GetColumnCount(); i++) {
     EXPECT_EQ(0u, vp.GetColumn(i)->GetCount());
     EXPECT_EQ(nullptr, vp.GetColumn(i)->GetSelectionVector());
   }
@@ -90,8 +91,8 @@ TEST_F(VectorProjectionTest, Selection) {
   vp.Initialize({bigint_col(), double_col()});
   vp.Resize(20);
 
-  // a = [i for i in range(0, 40, 3)]
-  // b = [123.45 for i in range(40)]
+  // a = [i for i in range(0, 20, 3)]
+  // b = [123.45 for i in range(20)]
   VectorOps::Generate(vp.GetColumn(0), 0, 3);
   VectorOps::Fill(vp.GetColumn(1), GenericValue::CreateDouble(123.45));
 

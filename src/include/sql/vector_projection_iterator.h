@@ -282,7 +282,7 @@ inline void VectorProjectionIterator::Reset() {
 
 inline void VectorProjectionIterator::ResetFiltered() {
   // Update the projection counts
-  for (uint32_t i = 0; i < vector_projection_->GetNumColumns(); i++) {
+  for (uint32_t i = 0; i < vector_projection_->GetColumnCount(); i++) {
     vector_projection_->GetColumn(i)->SetSelectionVector(sel_vector_, sel_vector_write_idx_);
   }
 

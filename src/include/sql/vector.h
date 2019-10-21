@@ -198,7 +198,7 @@ class Vector {
   bool IsConstant() const noexcept { return num_elems_ == 1 && sel_vector_ == nullptr; }
 
   /**
-   * @return True if thsi vector is empty; false otherwise.
+   * @return True if this vector is empty; false otherwise.
    */
   bool IsEmpty() const noexcept { return num_elems_ == 0; }
 
@@ -219,6 +219,8 @@ class Vector {
 
   /**
    * Set the value at position @em index to @em null.
+   * @param index The index of the element to modify.
+   * @param null Whether the element is NULL.
    */
   void SetNull(const uint64_t index, const bool null) {
     null_mask_[sel_vector_ != nullptr ? sel_vector_[index] : index] = null;
