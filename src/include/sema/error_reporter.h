@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iosfwd>
 #include <string>
 #include <utility>
 #include <vector>
@@ -67,9 +68,10 @@ class ErrorReporter {
   void Reset() { errors_.clear(); }
 
   /**
-   * Dump all error messages.
+   * Dump all error messages to the given output stream.
+   * @param os The stream to write errors into.
    */
-  void PrintErrors();
+  void PrintErrors(std::ostream &os);
 
  private:
   /*

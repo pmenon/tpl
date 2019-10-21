@@ -48,7 +48,7 @@ Module::Module(std::unique_ptr<BytecodeModule> bytecode_module,
       functions_(std::make_unique<std::atomic<void *>[]>(bytecode_module_->GetFunctionCount())),
       bytecode_trampolines_(std::make_unique<Trampoline[]>(bytecode_module_->GetFunctionCount())) {
   // Create the trampolines for all bytecode functions
-  for (const auto &func : bytecode_module_->GetFunctions()) {
+  for (const auto &func : bytecode_module_->GetFunctionsInfo()) {
     CreateFunctionTrampoline(func.GetId());
   }
 
@@ -283,7 +283,7 @@ void Module::CompileToMachineCode() {
     jit_module_ = LLVMEngine::Compile(*bytecode_module_, options);
 
     // Setup function pointers
-    for (const auto &func_info : bytecode_module_->GetFunctions()) {
+    for (const auto &func_info : bytecode_module_->GetFunctionsInfo()) {
       auto *jit_function = jit_module_->GetFunctionPointer(func_info.GetName());
       TPL_ASSERT(jit_function != nullptr, "Missing function in compiled module!");
       functions_[func_info.GetId()].store(jit_function, std::memory_order_relaxed);

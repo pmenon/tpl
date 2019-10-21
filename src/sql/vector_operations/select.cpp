@@ -97,7 +97,6 @@ void TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &
 template <typename T, typename Op>
 void TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &right,
                                             TupleIdList *tid_list) {
-
   auto *left_data = reinterpret_cast<const T *>(left.GetData());
   auto *right_data = reinterpret_cast<const T *>(right.GetData());
 

@@ -5,7 +5,6 @@
 
 #include "ast/type.h"
 #include "ast/type_visitor.h"
-#include "logging/logger.h"
 
 namespace tpl::sema {
 
@@ -82,14 +81,10 @@ std::string ErrorReporter::MessageWithArgs::FormatMessage() const {
   return msg;
 }
 
-void ErrorReporter::PrintErrors() {
-  std::string error_str;
-
+void ErrorReporter::PrintErrors(std::ostream &os) {
   for (const auto &error : errors_) {
-    error_str.append(error.FormatMessage()).append("\n");
+    os << error.FormatMessage() << "\n";
   }
-
-  LOG_ERROR("{}", error_str.c_str());
 }
 
 }  // namespace tpl::sema

@@ -91,12 +91,12 @@ class BytecodeModule {
   /**
    * @return A const-view of the metadata for all functions in this module.
    */
-  const std::vector<FunctionInfo> &GetFunctions() const { return functions_; }
+  const std::vector<FunctionInfo> &GetFunctionsInfo() const { return functions_; }
 
   /**
    * @return A const-view of the metadata for all static-locals in this module.
    */
-  const std::vector<LocalInfo> &GetStaticLocals() const noexcept { return static_locals_; }
+  const std::vector<LocalInfo> &GetStaticLocalsInfo() const { return static_locals_; }
 
   /**
    * @return The number of functions defined in this module.
@@ -106,7 +106,7 @@ class BytecodeModule {
   /**
    * @return The number of static locals.
    */
-  uint32_t GetStaticLocalsCount() const noexcept { return static_locals_.size(); }
+  uint32_t GetStaticLocalsCount() const { return static_locals_.size(); }
 
   /**
    * Pretty print all the module's contents into the provided output stream.
@@ -128,11 +128,12 @@ class BytecodeModule {
   // Access a const-view of some static-local's data by its offset
   const uint8_t *AccessStaticLocalDataRaw(const uint32_t offset) const {
 #ifndef NDEBUG
+    // In DEBUG mode, make sure the offset we're about to access corresponds to a valid static value
     TPL_ASSERT(offset < data_.size(), "Invalid local offset");
-    UNUSED auto iter =
-        std::find_if(static_locals_.begin(), static_locals_.end(),
-                     [&](const LocalInfo &info) { return info.GetOffset() == offset; });
-    TPL_ASSERT(iter != static_locals_.end(), "No local at given offset");
+    TPL_ASSERT(std::find_if(static_locals_.begin(), static_locals_.end(),
+                            [&](const LocalInfo &info) { return info.GetOffset() == offset; }) !=
+                   static_locals_.end(),
+               "No local at given offset");
 #endif
     return &data_[offset];
   }

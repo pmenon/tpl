@@ -39,10 +39,10 @@ void PrettyPrintStaticLocals(std::ostream &os, const BytecodeModule &module, con
      << " (" << module.GetStaticLocalsCount() << " locals)" << std::endl;
 
   uint64_t max_local_len = 0;
-  for (const auto &local : module.GetStaticLocals()) {
+  for (const auto &local : module.GetStaticLocalsInfo()) {
     max_local_len = std::max(max_local_len, static_cast<uint64_t>(local.GetName().length()));
   }
-  for (const auto &local : module.GetStaticLocals()) {
+  for (const auto &local : module.GetStaticLocalsInfo()) {
     const auto local_data = std::string_view(static_access_fn(local.GetOffset()), local.GetSize());
     os << "     " << std::setw(max_local_len) << std::right << local.GetName() << ": ";
     os << " offset=" << std::setw(7) << std::left << local.GetOffset();

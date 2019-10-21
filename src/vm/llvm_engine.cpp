@@ -496,7 +496,7 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(const CompilerOptions &
 }
 
 void LLVMEngine::CompiledModuleBuilder::DeclareStaticLocals() {
-  for (const auto &local_info : tpl_module_.GetStaticLocals()) {
+  for (const auto &local_info : tpl_module_.GetStaticLocalsInfo()) {
     // The raw data wrapped in a string reference
     llvm::StringRef data_ref(reinterpret_cast<const char *>(
                                  tpl_module_.AccessStaticLocalDataRaw(local_info.GetOffset())),
@@ -526,7 +526,7 @@ void LLVMEngine::CompiledModuleBuilder::DeclareStaticLocals() {
 }
 
 void LLVMEngine::CompiledModuleBuilder::DeclareFunctions() {
-  for (const auto &func_info : tpl_module_.GetFunctions()) {
+  for (const auto &func_info : tpl_module_.GetFunctionsInfo()) {
     auto *func_type =
         llvm::cast<llvm::FunctionType>(type_map_->GetLLVMType(func_info.GetFuncType()));
     llvm_module_->getOrInsertFunction(func_info.GetName(), func_type);
@@ -924,7 +924,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
 
 void LLVMEngine::CompiledModuleBuilder::DefineFunctions() {
   llvm::IRBuilder<> ir_builder(*context_);
-  for (const auto &func_info : tpl_module_.GetFunctions()) {
+  for (const auto &func_info : tpl_module_.GetFunctionsInfo()) {
     DefineFunction(func_info, &ir_builder);
   }
 }
@@ -1129,7 +1129,7 @@ void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
   // all module functions into a handy cache.
   //
 
-  for (const auto &func : module.GetFunctions()) {
+  for (const auto &func : module.GetFunctionsInfo()) {
     auto symbol = loader.getSymbol(func.GetName());
     functions_[func.GetName()] = reinterpret_cast<void *>(symbol.getAddress());
   }

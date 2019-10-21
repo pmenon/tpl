@@ -88,7 +88,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
 
   if (error_reporter.HasErrors()) {
     LOG_ERROR("Parsing error!");
-    error_reporter.PrintErrors();
+    error_reporter.PrintErrors(std::cerr);
     return;
   }
 
@@ -104,7 +104,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
 
   if (error_reporter.HasErrors()) {
     LOG_ERROR("Type-checking error!");
-    error_reporter.PrintErrors();
+    error_reporter.PrintErrors(std::cerr);
     return;
   }
 

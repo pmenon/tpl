@@ -7,10 +7,10 @@
 #include "sql/sql.h"
 #include "util/bit_vector.h"
 #include "util/fast_rand.h"
+#include "util/simd.h"
 #include "util/test_harness.h"
 #include "util/timer.h"
 #include "util/vector_util.h"
-#include "util/simd.h"
 
 namespace tpl::util {
 
