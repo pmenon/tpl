@@ -36,11 +36,14 @@ namespace tpl::ast {
 // Key type used in the cache for struct types in the context
 // ---------------------------------------------------------
 
-/// Compute a hash_code for a field
+// Compute a hash_code for a field
 llvm::hash_code hash_value(const Field &field) {
   return llvm::hash_combine(field.name.data(), field.type);
 }
 
+/*
+ * Struct required to store TPL struct types in LLVM DenseMaps.
+ */
 struct StructTypeKeyInfo {
   struct KeyTy {
     const util::RegionVector<Field> &elements;
@@ -80,6 +83,9 @@ struct StructTypeKeyInfo {
 // Key type used in the cache for function types in the context
 // ---------------------------------------------------------
 
+/*
+ * Struct required to store TPL function types in LLVM DenseMaps.
+ */
 struct FunctionTypeKeyInfo {
   struct KeyTy {
     Type *const ret_type;
@@ -131,7 +137,7 @@ struct Context::Implementation {
 #define F(BKind, ...) BuiltinType *BKind##Type;
   BUILTIN_TYPE_LIST(F, F, F)
 #undef F
-  StringType *string;
+  StringType *string_type;
 
   // -------------------------------------------------------
   // Type caches
@@ -156,14 +162,14 @@ struct Context::Implementation {
     BUILTIN_TYPE_LIST(F, F, F)
 #undef F
 
-    string = new (ctx->region()) StringType(ctx);
+    string_type = new (ctx->region()) StringType(ctx);
   }
 };
 
-Context::Context(util::Region *region, sema::ErrorReporter *error_reporter)
-    : region_(region),
+Context::Context(sema::ErrorReporter *error_reporter)
+    : region_("ast-mem-region"),
       error_reporter_(error_reporter),
-      node_factory_(std::make_unique<AstNodeFactory>(region)),
+      node_factory_(std::make_unique<AstNodeFactory>(&region_)),
       impl_(std::make_unique<Implementation>(this)) {
   // Put all builtins into list
 #define F(BKind, ...) impl()->builtin_types_list.push_back(impl()->BKind##Type);
@@ -201,13 +207,13 @@ Identifier Context::GetIdentifier(llvm::StringRef str) {
   return Identifier(iter->getKeyData());
 }
 
-Type *Context::LookupBuiltinType(Identifier identifier) const {
-  auto iter = impl()->builtin_types.find(identifier);
+Type *Context::LookupBuiltinType(Identifier name) const {
+  auto iter = impl()->builtin_types.find(name);
   return (iter == impl()->builtin_types.end() ? nullptr : iter->second);
 }
 
-bool Context::IsBuiltinFunction(Identifier identifier, Builtin *builtin) const {
-  if (auto iter = impl()->builtin_funcs.find(identifier); iter != impl()->builtin_funcs.end()) {
+bool Context::IsBuiltinFunction(Identifier name, Builtin *builtin) const {
+  if (auto iter = impl()->builtin_funcs.find(name); iter != impl()->builtin_funcs.end()) {
     if (builtin != nullptr) {
       *builtin = iter->second;
     }
@@ -225,7 +231,7 @@ BuiltinType *BuiltinType::Get(Context *ctx, BuiltinType::Kind kind) {
 }
 
 // static
-StringType *StringType::Get(Context *ctx) { return ctx->impl()->string; }
+StringType *StringType::Get(Context *ctx) { return ctx->impl()->string_type; }
 
 // static
 PointerType *PointerType::Get(Type *base) {

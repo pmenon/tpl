@@ -57,12 +57,11 @@ static constexpr const char *kExitKeyword = ".exit";
  * @param name The name of the TPL file.
  */
 static void CompileAndRun(const std::string &source, const std::string &name = "tmp-tpl") {
-  util::Region region("repl-ast");
   util::Region error_region("repl-error");
 
   // Let's parse the source
   sema::ErrorReporter error_reporter(&error_region);
-  ast::Context context(&region, &error_reporter);
+  ast::Context context(&error_reporter);
 
   parsing::Scanner scanner(source.data(), source.length());
   parsing::Parser parser(&scanner, &context);
