@@ -19,7 +19,7 @@ class AstTraversalVisitorTest : public TplTest {
     parsing::Parser parser(&scanner, Ctx());
 
     if (ErrorReporter()->HasErrors()) {
-      ErrorReporter()->PrintErrors();
+      ErrorReporter()->PrintErrors(std::cerr);
       return nullptr;
     }
 

@@ -28,7 +28,7 @@ class ModuleCompiler {
     type_check.Run(ast);
 
     if (errors_.HasErrors()) {
-      errors_.PrintErrors();
+      errors_.PrintErrors(std::cerr);
     }
 
     return ast;
