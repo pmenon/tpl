@@ -72,8 +72,13 @@ class TableVectorIterator {
   bool Advance();
 
   /**
-   * Access the table this iterator is scanning.
-   * @return The table if the iterator has been initialized; null otherwise.
+   * @return True if the iterator has been initialized; false otherwise.
+   */
+  bool IsInitialized() const { return initialized_; }
+
+  /**
+   * @return The underlying data table the iterator is scanning, if the iterator has been
+   *         initialized; null otherwise.
    */
   const Table *GetTable() const { return block_iterator_.GetTable(); }
 

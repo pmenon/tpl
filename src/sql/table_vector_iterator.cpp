@@ -38,7 +38,7 @@ TableVectorIterator::TableVectorIterator(uint16_t table_id, uint32_t start_block
 
 bool TableVectorIterator::Init() {
   // No-op if already initialized
-  if (initialized_) {
+  if (IsInitialized()) {
     return true;
   }
 
@@ -92,7 +92,7 @@ void TableVectorIterator::RefreshVectorProjection() {
 
 bool TableVectorIterator::Advance() {
   // Cannot advance if not initialized
-  if (!initialized_) {
+  if (!IsInitialized()) {
     return false;
   }
 
