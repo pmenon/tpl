@@ -221,7 +221,7 @@ VM_OP void OpTableVectorIteratorFree(tpl::sql::TableVectorIterator *iter);
 
 VM_OP_HOT void OpTableVectorIteratorGetVPI(tpl::sql::VectorProjectionIterator **vpi,
                                            tpl::sql::TableVectorIterator *iter) {
-  *vpi = iter->vector_projection_iterator();
+  *vpi = iter->GetVectorProjectionIterator();
 }
 
 VM_OP_HOT void OpParallelScanTable(const uint16_t table_id, void *const query_state,

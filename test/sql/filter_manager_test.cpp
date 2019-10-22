@@ -44,7 +44,7 @@ TEST_F(FilterManagerTest, SimpleFilterManagerTest) {
 
   TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
   for (tvi.Init(); tvi.Advance();) {
-    auto *vpi = tvi.vector_projection_iterator();
+    auto *vpi = tvi.GetVectorProjectionIterator();
 
     // Run the filters
     filter.RunFilters(vpi);
@@ -66,7 +66,7 @@ TEST_F(FilterManagerTest, AdaptiveFilterManagerTest) {
 
   TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
   for (tvi.Init(); tvi.Advance();) {
-    auto *vpi = tvi.vector_projection_iterator();
+    auto *vpi = tvi.GetVectorProjectionIterator();
 
     // Run the filters
     filter.RunFilters(vpi);

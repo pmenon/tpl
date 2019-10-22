@@ -56,7 +56,7 @@ TEST_F(TableVectorIteratorTest, SimpleIteratorTest) {
 
   EXPECT_TRUE(iter.Init());
 
-  VectorProjectionIterator *vpi = iter.vector_projection_iterator();
+  VectorProjectionIterator *vpi = iter.GetVectorProjectionIterator();
 
   uint32_t num_tuples = 0;
   while (iter.Advance()) {
