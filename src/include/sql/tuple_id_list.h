@@ -82,6 +82,11 @@ class TupleIdList {
   explicit TupleIdList(uint32_t size) : bit_vector_(size) {}
 
   /**
+   * This class cannot be copied or moved.
+   */
+  DISALLOW_COPY_AND_MOVE(TupleIdList);
+
+  /**
    * Resize the list to the given size. If growing the list, the contents of the list remain
    * unchanged. If shrinking the list, previously added/active elements are discarded.
    */
@@ -128,8 +133,8 @@ class TupleIdList {
   void AddAll() { bit_vector_.SetAll(); }
 
   /**
-   * Enable or disable the tuple with the given ID depending on the value of @em enable. If
-   * @em enable is true, the tuple is added to the list, and otherwise it is disabled.
+   * Enable or disable the tuple with ID @em tid depending on the value of @em enable. If @em enable
+   * is true, the tuple is added to the list, and otherwise it is disabled.
    * @param tid The ID to add or remove from the list.
    * @param enable The flag indicating if the tuple is added or removed.
    */
@@ -140,6 +145,12 @@ class TupleIdList {
    * @param tid The ID of the tuple.
    */
   void Remove(const uint32_t tid) { bit_vector_.Unset(tid); }
+
+  /**
+   * Assign all tuple IDs in @em other to this list.
+   * @param other The list to copy all TIDs from.
+   */
+  void AssignFrom(const TupleIdList &other) { bit_vector_.Copy(other.bit_vector_); }
 
   /**
    * Intersect the set of tuple IDs in this list with the tuple IDs in the provided list.
