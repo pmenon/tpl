@@ -47,11 +47,11 @@ agg-vec-filter.tpl,true,10
 join.tpl,true,200000
 parallel-agg.tpl,true,10
 parallel-join.tpl,true,50000
-parallel-scan.tpl,true,0
+parallel-scan.tpl,true,500
 scan-table.tpl,true,500
 scan-table-2.tpl,true,1999950
 scan-table-3.tpl,true,2000000
 scan-vpi-iter.tpl,true,500
 sort.tpl,true,2000
 sort-topk.tpl,true,11
-vec-filter.tpl,true,500
+vec-filter.tpl,true,2000

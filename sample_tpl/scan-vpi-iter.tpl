@@ -1,61 +1,38 @@
-fun Lt500(vpi: *VectorProjectionIterator) -> int32 {
-  var param: Integer = @intToSql(500)
-  var cola: Integer
-  if (@vpiIsFiltered(vpi)) {
-    for (; @vpiHasNextFiltered(vpi); @vpiAdvanceFiltered(vpi)) {
-      cola = @vpiGetInt(vpi, 0)
-      @vpiMatch(vpi, cola < param)
-    }
-  } else {
-    for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
-      cola = @vpiGetInt(vpi, 0)
-      @vpiMatch(vpi, cola < param)
-    }
-  }
-  @vpiResetFiltered(vpi)
-  return 0
-}
-
-fun Lt500_Vec(vpi: *VectorProjectionIterator) -> int32 {
-  var filter: VectorFilterExecutor
-  @filterExecInit(&filter, vpi)
-  @filterExecLt(&filter, 0, @intToSql(500))
-  @filterExecFinish(&filter)
-  @filterExecFree(&filter)
-  return 0
+fun filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    @filterLt(vector_proj, 0, @intToSql(500), tids)
 }
 
 fun count(vpi: *VectorProjectionIterator) -> int32 {
-  var ret = 0
-  if (@vpiIsFiltered(vpi)) {
-    for (; @vpiHasNextFiltered(vpi); @vpiAdvanceFiltered(vpi)) {
-      ret = ret + 1
+    var ret = 0
+    if (@vpiIsFiltered(vpi)) {
+        for (; @vpiHasNextFiltered(vpi); @vpiAdvanceFiltered(vpi)) {
+          ret = ret + 1
+        }
+    } else {
+        for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
+          ret = ret + 1
+        }
     }
-  } else {
-    for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
-      ret = ret + 1
-    }
-  }
-  @vpiResetFiltered(vpi)
-  return ret
+    @vpiResetFiltered(vpi)
+    return ret
 }
 
 fun main(execCtx: *ExecutionContext) -> int {
-  var ret :int = 0
+    var ret :int = 0
 
-  var filter: FilterManager
-  @filterManagerInit(&filter)
-  @filterManagerInsertFilter(&filter, Lt500, Lt500_Vec)
-  @filterManagerFinalize(&filter)
+    var filter: FilterManager
+    @filterManagerInit(&filter)
+    @filterManagerInsertFilter(&filter, filter_clause0term0)
+    @filterManagerFinalize(&filter)
 
-  var tvi: TableVectorIterator
-  for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
-    var vpi = @tableIterGetVPI(&tvi)
-    @filtersRun(&filter, vpi)
-    ret = ret + count(vpi)
-  }
+    var tvi: TableVectorIterator
+    for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
+        var vpi = @tableIterGetVPI(&tvi)
+        @filterManagerRunFilters(&filter, vpi)
+        ret = ret + count(vpi)
+    }
 
-  @filterManagerFree(&filter)
-  @tableIterClose(&tvi)
-  return ret
+    @filterManagerFree(&filter)
+    @tableIterClose(&tvi)
+    return ret
 }

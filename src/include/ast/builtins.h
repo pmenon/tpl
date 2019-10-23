@@ -66,7 +66,7 @@ namespace tpl::ast {
   F(FilterManagerInit, filterManagerInit)                       \
   F(FilterManagerInsertFilter, filterManagerInsertFilter)       \
   F(FilterManagerFinalize, filterManagerFinalize)               \
-  F(FilterManagerRunFilters, filtersRun)                        \
+  F(FilterManagerRunFilters, filterManagerRunFilters)           \
   F(FilterManagerFree, filterManagerFree)                       \
   /* Filter Execution */                                        \
   F(VectorFilterEqual, filterEq)                                \
