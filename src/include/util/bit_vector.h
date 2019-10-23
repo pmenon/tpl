@@ -466,20 +466,11 @@ class BitVector {
    * the bits in the range [0, num_bits()) are unchanged, and the remaining bits are set to zero. If
    * @em num_bits < @em num_bits() then the bits in the range [0, num_bits) are unchanged the
    * remaining bits are discarded.
-   *
    * @param num_bits The number of bits to resize this bit vector to.
    */
   void Resize(const uint32_t num_bits) {
-    if (num_bits == num_bits_) {
-      return;
-    }
-
     uint32_t new_num_words = NumNeededWords(num_bits);
-
-    if (GetNumWords() != new_num_words) {
-      words_.resize(new_num_words, WordType(0));
-    }
-
+    words_.resize(new_num_words, WordType(0));
     num_bits_ = num_bits;
     ZeroUnusedBits();
   }

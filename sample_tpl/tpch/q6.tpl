@@ -21,11 +21,11 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
 
         var filter: VectorFilterExecutor
         @filterExecInit(&filter, vpi)
-        @filterExecGt(&filter, 4, @floatToSql(24.0))       // quantity
-        @filterExecGt(&filter, 6, @floatToSql(0.04))       // discount
-        @filterExecLt(&filter, 6, @floatToSql(0.06))       // discount
+        @filterExecLt(&filter, 4, @floatToSql(24.0))       // quantity
+        @filterExecGe(&filter, 6, @floatToSql(0.05))       // discount
+        @filterExecLe(&filter, 6, @floatToSql(0.07))       // discount
         @filterExecGe(&filter, 10, @dateToSql(1994, 1, 1)) // ship date
-        @filterExecLe(&filter, 10, @dateToSql(1995, 1, 1)) // ship date
+        @filterExecLt(&filter, 10, @dateToSql(1995, 1, 1)) // ship date
         @filterExecFinish(&filter)
         @filterExecFree(&filter)
 
