@@ -177,7 +177,7 @@ class VectorProjectionIterator {
   void RunFilter(const F &filter);
 
   /**
-   * Return the number of selected tuples after any filters have been applied.
+   * @return The number of selected tuples after any filters have been applied.
    */
   uint32_t GetTupleCount() const { return vector_projection_->GetSelectedTupleCount(); }
 

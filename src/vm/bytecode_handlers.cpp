@@ -48,9 +48,9 @@ void OpFilterManagerStartNewClause(tpl::sql::FilterManager *filter_manager) {
   filter_manager->StartNewClause();
 }
 
-void OpFilterManagerInsertFlavor(tpl::sql::FilterManager *filter_manager,
+void OpFilterManagerInsertFilter(tpl::sql::FilterManager *filter_manager,
                                  tpl::sql::FilterManager::MatchFn flavor) {
-  filter_manager->InsertClauseFlavor(flavor);
+  filter_manager->InsertClauseTerm(flavor);
 }
 
 void OpFilterManagerFinalize(tpl::sql::FilterManager *filter_manager) {

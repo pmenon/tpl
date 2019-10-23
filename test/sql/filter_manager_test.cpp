@@ -1,6 +1,5 @@
-#include <chrono>  // NOLINT
+#include <chrono>
 #include <string>
-#include <thread>  // NOLINT
 #include <vector>
 
 #include "sql/catalog.h"
@@ -23,23 +22,14 @@ uint32_t TaaT_Lt_500(VectorProjectionIterator *vpi) {
   return vpi->GetTupleCount();
 }
 
-uint32_t Hobbled_TaaT_Lt_500(VectorProjectionIterator *vpi) {
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  return TaaT_Lt_500(vpi);
-}
-
-uint32_t Vectorized_Lt_500(VectorProjectionIterator *vpi) {
-  VectorFilterExecutor filter(vpi);
-  filter.SelectLtVal(Col::A, GenericValue::CreateInteger(500));
-  filter.Finish();
-  return vpi->GetTupleCount();
+void Vectorized_Lt_500(VectorProjection *vpi, TupleIdList *tids) {
+  VectorFilterExecutor::SelectLessThanVal(vpi, Col::A, GenericValue::CreateInteger(500), tids);
 }
 
 TEST_F(FilterManagerTest, SimpleFilterManagerTest) {
   FilterManager filter(bandit::Policy::FixedAction);
   filter.StartNewClause();
-  filter.InsertClauseFlavor(TaaT_Lt_500);
-  filter.InsertClauseFlavor(Vectorized_Lt_500);
+  filter.InsertClauseTerm(Vectorized_Lt_500);
   filter.Finalize();
 
   TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
@@ -60,8 +50,7 @@ TEST_F(FilterManagerTest, SimpleFilterManagerTest) {
 TEST_F(FilterManagerTest, AdaptiveFilterManagerTest) {
   FilterManager filter(bandit::Policy::EpsilonGreedy);
   filter.StartNewClause();
-  filter.InsertClauseFlavor(Hobbled_TaaT_Lt_500);
-  filter.InsertClauseFlavor(Vectorized_Lt_500);
+  filter.InsertClauseTerm(Vectorized_Lt_500);
   filter.Finalize();
 
   TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
@@ -79,7 +68,7 @@ TEST_F(FilterManagerTest, AdaptiveFilterManagerTest) {
   }
 
   // The vectorized filter better be the optimal!
-  EXPECT_EQ(1u, filter.GetOptimalFlavorForClause(0));
+  //EXPECT_EQ(1u, filter.GetOptimalFlavorForClause(0));
 }
 
 #if 0

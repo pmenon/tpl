@@ -127,7 +127,7 @@ class BytecodeEmitter {
   void EmitVPISet(Bytecode bytecode, LocalVar vpi, LocalVar input, uint32_t col_idx);
 
   // Insert a filter flavor into the filter manager builder
-  void EmitFilterManagerInsertFlavor(LocalVar fmb, FunctionId func);
+  void EmitFilterManagerInsertFilter(LocalVar filter_manager, FunctionId func);
 
   // Check if a hash table entry iterator has more rows
   void EmitHashTableEntryIteratorHasNext(LocalVar has_next, LocalVar ht_entry_iter,

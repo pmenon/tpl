@@ -7,9 +7,11 @@
 #include "bandit/policy.h"
 #include "common/common.h"
 #include "common/macros.h"
+#include "sql/tuple_id_list.h"
 
 namespace tpl::sql {
 
+class VectorProjection;
 class VectorProjectionIterator;
 
 /**
@@ -18,23 +20,22 @@ class VectorProjectionIterator;
 class FilterManager {
  public:
   /**
-   * A generic filtering function over an input vector projection. Returns the number of tuples that
-   * pass the filter.
+   * A vectorized filter function over a vector projection.
    */
-  using MatchFn = uint32_t (*)(VectorProjectionIterator *);
+  using MatchFn = void (*)(VectorProjection *, TupleIdList *);
 
   /**
    * A clause in a multi-clause filter. Clauses come in multiple flavors. Flavors are logically
    * equivalent, but may differ in implementation, and thus, exhibit different run times.
    */
   struct Clause {
-    // The "flavors" or implementation versions of a given conjunctive clause.
-    std::vector<MatchFn> flavors;
+    // The terms (i.e., factors) of the conjunction
+    std::vector<MatchFn> terms;
 
     /**
      * @return The number of flavors.
      */
-    uint32_t GetFlavorCount() const { return flavors.size(); }
+    uint32_t GetTermCount() const { return terms.size(); }
   };
 
   /**
@@ -60,9 +61,9 @@ class FilterManager {
 
   /**
    * Insert a flavor for the current clause in the filter.
-   * @param flavor A filter flavor.
+   * @param term A filter flavor.
    */
-  void InsertClauseFlavor(FilterManager::MatchFn flavor);
+  void InsertClauseTerm(MatchFn term);
 
   /**
    * Make the manager immutable.
@@ -70,23 +71,21 @@ class FilterManager {
   void Finalize();
 
   /**
-   * Run the filters over the given vector projection @em vpi.
-   * @param vpi The input projection.
+   * Run the filters over the given vector projection.
+   * @param vector_projection The projection to filter.
+   */
+  void RunFilters(VectorProjection *vector_projection);
+
+  /**
+   * Run all configured filters over the vector projection the input iterator is iterating over.
+   * @param vpi The input projection iterator storing the projection to filter.
    */
   void RunFilters(VectorProjectionIterator *vpi);
 
   /**
-   * @return The index of the optimal flavor for the clause at index @em clause_index.
+   * @return If the filter manager has been finalized and frozen.
    */
-  uint32_t GetOptimalFlavorForClause(uint32_t clause_index) const;
-
- private:
-  // Run a specific clause of the filter
-  void RunFilterClause(VectorProjectionIterator *vpi, uint32_t clause_index);
-
-  // Run the given matching function
-  static std::pair<uint32_t, double> RunFilterClauseImpl(VectorProjectionIterator *vpi,
-                                                         FilterManager::MatchFn func);
+  bool IsFinalized() const { return finalized_; }
 
  private:
   // The clauses in the filter
@@ -98,8 +97,10 @@ class FilterManager {
   // The adaptive policy to use
   std::unique_ptr<bandit::Policy> policy_;
 
-  // The agents, one per clause
-  std::vector<bandit::Agent> agents_;
+  // List used for disjunctions
+  TupleIdList input_list_;
+  TupleIdList tmp_list_;
+  TupleIdList output_list_;
 
   // Has the manager's clauses been finalized?
   bool finalized_;

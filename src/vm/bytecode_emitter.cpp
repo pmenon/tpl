@@ -299,8 +299,8 @@ void BytecodeEmitter::EmitVPISet(Bytecode bytecode, LocalVar vpi, LocalVar input
   EmitAll(bytecode, vpi, input, col_idx);
 }
 
-void BytecodeEmitter::EmitFilterManagerInsertFlavor(LocalVar fmb, FunctionId func) {
-  EmitAll(Bytecode::FilterManagerInsertFlavor, fmb, func);
+void BytecodeEmitter::EmitFilterManagerInsertFilter(LocalVar filter_manager, FunctionId func) {
+  EmitAll(Bytecode::FilterManagerInsertFilter, filter_manager, func);
 }
 
 void BytecodeEmitter::EmitHashTableEntryIteratorHasNext(LocalVar has_next, LocalVar ht_entry_iter,

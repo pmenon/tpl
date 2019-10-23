@@ -205,11 +205,15 @@ TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
 
     auto vaat_ms = Bench(4, [&]() {
       vaat_ret = 0;
+      TupleIdList tids(kDefaultVectorSize);
       AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
       for (; iter.HasNext(); iter.Next(Transpose)) {
-        VectorFilterExecutor filter(iter.GetVectorProjectionIterator());
-        filter.SelectLtVal(0, GenericValue::CreateBigInt(filter_val));
-        filter.Finish();
+        auto *vector_projection = iter.GetVectorProjectionIterator()->GetVectorProjection();
+        tids.Resize(vector_projection->GetTotalTupleCount());
+        tids.AddAll();
+        VectorFilterExecutor::SelectLessThanVal(vector_projection, 0,
+                                                GenericValue::CreateBigInt(filter_val), &tids);
+        vector_projection->SetSelections(tids);
       }
     });
 

@@ -4,53 +4,29 @@
 #include <vector>
 
 #include "common/common.h"
+#include "sql/constant_vector.h"
+#include "sql/generic_value.h"
 #include "sql/sql.h"
 #include "sql/tuple_id_list.h"
+#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_projection.h"
+#include "sql/vector_projection_iterator.h"
 
 namespace tpl::sql {
 
-class GenericValue;
-class Vector;
-class VectorProjection;
-class VectorProjectionIterator;
-
-struct Val;
-
 /**
- * This is a helper class to execute filters over vector projections. Filters can be applied between
- * vectors and scalars, or between two vectors.
- *
- * Vector filters main a list of TIDs in the input projection that are active. Filtering operations
- * are applied incrementally to only those tuples that are active. To materialize the results of the
- * filter into the projection, the filter must be finalized through a call to
- * VectorFilterExecutor::Finish(). This call atomically makes all valid TIDs active in the input
- * projection.
- *
- * Filters work on column indexes as they appear in the vector projections they operate on. It is
- * the responsibility of the user to be aware of this ordering.
- *
- * @code
- * VectorFilterExecutor filter = ...
- * GenericValue ten = ...
- * filter.SelectEqVal(1, ten);
- * filter.Finalize();
- * @endcode
- *
- * The above code
+ * This is a helper class to execute filters over vector projections.
  */
-class VectorFilterExecutor {
+class VectorFilterExecutor : public AllStatic {
  public:
   /**
-   * Create a filter runner using the provided vector projection as input.
-   * @param vector_projection The input projection the filter operates on.
+   * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
+   * that are equal to the provided constant value (@em val).
+   * @param col_idx The index of the column to compare with.
+   * @param val The value to compare with.
    */
-  explicit VectorFilterExecutor(VectorProjection *vector_projection);
-
-  /**
-   * Create a filter runner using the projection contained within provided iterator.
-   * @param vector_projection_iterator A vector projection iterator to filter.
-   */
-  explicit VectorFilterExecutor(VectorProjectionIterator *vector_projection_iterator);
+  static void SelectEqualVal(VectorProjection *vector_projection, uint32_t col_idx,
+                             const GenericValue &val, TupleIdList *tid_list);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -58,15 +34,8 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectEqVal(uint32_t col_idx, const GenericValue &val);
-
-  /**
-   * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
-   * that are equal to the provided constant value (@em val).
-   * @param col_idx The index of the column to compare with.
-   * @param val The value to compare with.
-   */
-  void SelectEqVal(uint32_t col_idx, const Val &val);
+  static void SelectEqualVal(VectorProjection *vector_projection, uint32_t col_idx, const Val &val,
+                             TupleIdList *tid_list);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -74,7 +43,8 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectGeVal(uint32_t col_idx, const GenericValue &val);
+  static void SelectGreaterThanEqualVal(VectorProjection *vector_projection, uint32_t col_idx,
+                                        const GenericValue &val, TupleIdList *tid_list);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -82,7 +52,8 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectGeVal(uint32_t col_idx, const Val &val);
+  static void SelectGreaterThanEqualVal(VectorProjection *vector_projection, uint32_t col_idx,
+                                        const Val &val, TupleIdList *tid_list);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -90,7 +61,8 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectGtVal(uint32_t col_idx, const GenericValue &val);
+  static void SelectGreaterThanVal(VectorProjection *vector_projection, uint32_t col_idx,
+                                   const GenericValue &val, TupleIdList *tid_list);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -98,7 +70,8 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectGtVal(uint32_t col_idx, const Val &val);
+  static void SelectGreaterThanVal(VectorProjection *vector_projection, uint32_t col_idx,
+                                   const Val &val, TupleIdList *tid_list);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -106,7 +79,8 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectLeVal(uint32_t col_idx, const GenericValue &val);
+  static void SelectLessThanEqualVal(VectorProjection *vector_projection, uint32_t col_idx,
+                                     const GenericValue &val, TupleIdList *tid_list);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -114,7 +88,8 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectLeVal(uint32_t col_idx, const Val &val);
+  static void SelectLessThanEqualVal(VectorProjection *vector_projection, uint32_t col_idx,
+                                     const Val &val, TupleIdList *tid_list);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -122,7 +97,8 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectLtVal(uint32_t col_idx, const GenericValue &val);
+  static void SelectLessThanVal(VectorProjection *vector_projection, uint32_t col_idx,
+                                const GenericValue &val, TupleIdList *tid_list);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -130,7 +106,8 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectLtVal(uint32_t col_idx, const Val &val);
+  static void SelectLessThanVal(VectorProjection *vector_projection, uint32_t col_idx,
+                                const Val &val, TupleIdList *tid_list);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -138,7 +115,8 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectNeVal(uint32_t col_idx, const GenericValue &val);
+  static void SelectNotEqualVal(VectorProjection *vector_projection, uint32_t col_idx,
+                                const GenericValue &val, TupleIdList *tid_list);
 
   /**
    * Select tuples in the column stored at the given index (@em col_idx) in the vector projection
@@ -146,7 +124,8 @@ class VectorFilterExecutor {
    * @param col_idx The index of the column to compare with.
    * @param val The value to compare with.
    */
-  void SelectNeVal(uint32_t col_idx, const Val &val);
+  static void SelectNotEqualVal(VectorProjection *vector_projection, uint32_t col_idx,
+                                const Val &val, TupleIdList *tid_list);
 
   /**
    * Select tuples whose values in the left (first) column are equal to the values in the right
@@ -154,7 +133,8 @@ class VectorFilterExecutor {
    * @param left_col_idx The index of the left column to compare with.
    * @param right_col_idx The index of the right column to compare with.
    */
-  void SelectEq(uint32_t left_col_idx, uint32_t right_col_idx);
+  static void SelectEqual(VectorProjection *vector_projection, uint32_t left_col_idx,
+                          uint32_t right_col_idx, TupleIdList *tid_list);
 
   /**
    * Select tuples whose values in the left (first) column are greater than or equal to the values
@@ -162,7 +142,8 @@ class VectorFilterExecutor {
    * @param left_col_idx The index of the left column to compare with.
    * @param right_col_idx The index of the right column to compare with.
    */
-  void SelectGe(uint32_t left_col_idx, uint32_t right_col_idx);
+  static void SelectGreaterThanEqual(VectorProjection *vector_projection, uint32_t left_col_idx,
+                                     uint32_t right_col_idx, TupleIdList *tid_list);
 
   /**
    * Select tuples whose values in the left (first) column are greater than the values in the right
@@ -170,7 +151,8 @@ class VectorFilterExecutor {
    * @param left_col_idx The index of the left column to compare with.
    * @param right_col_idx The index of the right column to compare with.
    */
-  void SelectGt(uint32_t left_col_idx, uint32_t right_col_idx);
+  static void SelectGreaterThan(VectorProjection *vector_projection, uint32_t left_col_idx,
+                                uint32_t right_col_idx, TupleIdList *tid_list);
 
   /**
    * Select tuples whose values in the left (first) column are less than or equal to the values in
@@ -178,7 +160,8 @@ class VectorFilterExecutor {
    * @param left_col_idx The index of the left column to compare with.
    * @param right_col_idx The index of the right column to compare with.
    */
-  void SelectLe(uint32_t left_col_idx, uint32_t right_col_idx);
+  static void SelectLessThanEqual(VectorProjection *vector_projection, uint32_t left_col_idx,
+                                  uint32_t right_col_idx, TupleIdList *tid_list);
 
   /**
    * Select tuples whose values in the left (first) column are less than the values in the right
@@ -186,7 +169,8 @@ class VectorFilterExecutor {
    * @param left_col_idx The index of the left column to compare with.
    * @param right_col_idx The index of the right column to compare with.
    */
-  void SelectLt(uint32_t left_col_idx, uint32_t right_col_idx);
+  static void SelectLessThan(VectorProjection *vector_projection, uint32_t left_col_idx,
+                             uint32_t right_col_idx, TupleIdList *tid_list);
 
   /**
    * Select tuples whose values in the left (first) column are not equal to the values in the right
@@ -194,22 +178,57 @@ class VectorFilterExecutor {
    * @param left_col_idx The index of the left column to compare with.
    * @param right_col_idx The index of the right column to compare with.
    */
-  void SelectNe(uint32_t col_idx, uint32_t right_col_idx);
-
-  /**
-   * Materialize the results of the filter in the input vector projection.
-   */
-  void Finish();
-
- private:
-  // The (optional) iterator over the projection that's being filtered.
-  VectorProjectionIterator *vector_projection_iterator_;
-
-  // The vector projection we're filtering
-  VectorProjection *vector_projection_;
-
-  // The list where we collect the result of the filter
-  TupleIdList tid_list_;
+  static void SelectNotEqual(VectorProjection *vector_projection, uint32_t col_idx,
+                             uint32_t right_col_idx, TupleIdList *tid_list);
 };
+
+// ---------------------------------------------------------
+//
+// Implementation
+//
+// ---------------------------------------------------------
+
+#define GEN_FILTER_VECTOR_GENERIC_VAL(OpName)                                                    \
+  inline void VectorFilterExecutor::OpName##Val(VectorProjection *vector_projection,             \
+                                                const uint32_t col_idx, const GenericValue &val, \
+                                                TupleIdList *tid_list) {                         \
+    const auto *left_vector = vector_projection->GetColumn(col_idx);                             \
+    VectorOps::OpName(*left_vector, ConstantVector(val), tid_list);                              \
+  }
+
+#define GEN_FILTER_VECTOR_VAL(OpName)                                                          \
+  inline void VectorFilterExecutor::OpName##Val(VectorProjection *vector_projection,           \
+                                                const uint32_t col_idx, const Val &val,        \
+                                                TupleIdList *tid_list) {                       \
+    const auto *left_vector = vector_projection->GetColumn(col_idx);                           \
+    const auto constant = GenericValue::CreateFromRuntimeValue(left_vector->GetTypeId(), val); \
+    VectorOps::OpName(*left_vector, ConstantVector(constant), tid_list);                       \
+  }
+
+#define GEN_FILTER_VECTOR_VECTOR(OpName)                                                          \
+  inline void VectorFilterExecutor::OpName(VectorProjection *vector_projection,                   \
+                                           const uint32_t left_col_idx,                           \
+                                           const uint32_t right_col_idx, TupleIdList *tid_list) { \
+    const auto *left_vector = vector_projection->GetColumn(left_col_idx);                         \
+    const auto *right_vector = vector_projection->GetColumn(right_col_idx);                       \
+    VectorOps::OpName(*left_vector, *right_vector, tid_list);                                     \
+  }
+
+#define GEN_FILTER(OpName)              \
+  GEN_FILTER_VECTOR_GENERIC_VAL(OpName) \
+  GEN_FILTER_VECTOR_VAL(OpName)         \
+  GEN_FILTER_VECTOR_VECTOR(OpName)
+
+GEN_FILTER(SelectEqual);
+GEN_FILTER(SelectGreaterThan);
+GEN_FILTER(SelectGreaterThanEqual);
+GEN_FILTER(SelectLessThan);
+GEN_FILTER(SelectLessThanEqual);
+GEN_FILTER(SelectNotEqual);
+
+#undef GEN_FILTER
+#undef GEN_FILTER_VECTOR_VECTOR
+#undef GEN_FILTER_VECTOR_VAL
+#undef GEN_FILTER_VECTOR_GENERIC_VAL
 
 }  // namespace tpl::sql

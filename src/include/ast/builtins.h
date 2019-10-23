@@ -68,17 +68,13 @@ namespace tpl::ast {
   F(FilterManagerFinalize, filterManagerFinalize)               \
   F(FilterManagerRunFilters, filtersRun)                        \
   F(FilterManagerFree, filterManagerFree)                       \
-                                                                \
-  /* Vector Filter Executor */                                  \
-  F(VectorFilterExecInit, filterExecInit)                       \
-  F(VectorFilterExecEqual, filterExecEq)                        \
-  F(VectorFilterExecGreaterThan, filterExecGt)                  \
-  F(VectorFilterExecGreaterThanEqual, filterExecGe)             \
-  F(VectorFilterExecLessThan, filterExecLt)                     \
-  F(VectorFilterExecLessThanEqual, filterExecLe)                \
-  F(VectorFilterExecNotEqual, filterExecNe)                     \
-  F(VectorFilterExecFinish, filterExecFinish)                   \
-  F(VectorFilterExecFree, filterExecFree)                       \
+  /* Filter Execution */                                        \
+  F(VectorFilterEqual, filterEq)                                \
+  F(VectorFilterGreaterThan, filterGt)                          \
+  F(VectorFilterGreaterThanEqual, filterGe)                     \
+  F(VectorFilterLessThan, filterLt)                             \
+  F(VectorFilterLessThanEqual, filterLe)                        \
+  F(VectorFilterNotEqual, filterNe)                             \
                                                                 \
   /* Aggregations */                                            \
   F(AggHashTableInit, aggHTInit)                                \

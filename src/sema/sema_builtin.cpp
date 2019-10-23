@@ -1016,23 +1016,17 @@ void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call, const ast::B
     }
     case ast::Builtin::FilterManagerInsertFilter: {
       for (uint32_t arg_idx = 1; arg_idx < call->num_args(); arg_idx++) {
-        // clang-format off
+        const auto vector_proj_kind = ast::BuiltinType::VectorProjection;
+        const auto tid_list_kind = ast::BuiltinType::TupleIdList;
         auto *arg_type = call->arguments()[arg_idx]->type()->SafeAs<ast::FunctionType>();
-        if (arg_type == nullptr ||                                              // not a function
-            !arg_type->return_type()->IsIntegerType() ||                        // doesn't return an integer
-            arg_type->num_params() != 1 ||                                      // isn't a single-arg func
-            arg_type->params()[0].type->GetPointeeType() == nullptr ||          // first arg isn't a *VPI
-            !arg_type->params()[0].type->GetPointeeType()->IsSpecificBuiltin(
-                ast::BuiltinType::VectorProjectionIterator)) {
-          // error
-          error_reporter()->Report(
-              call->position(), ErrorMessages::kIncorrectCallArgType,
-              call->GetFuncName(),
-              GetBuiltinType(fm_kind)->PointerTo(), arg_idx,
-              call->arguments()[arg_idx]->type());
+        if (arg_type == nullptr || arg_type->num_params() != 2 ||
+            !IsPointerToSpecificBuiltin(arg_type->params()[0].type, vector_proj_kind) ||
+            !IsPointerToSpecificBuiltin(arg_type->params()[1].type, tid_list_kind)) {
+          error_reporter()->Report(call->position(), ErrorMessages::kIncorrectCallArgType,
+                                   call->GetFuncName(), GetBuiltinType(fm_kind)->PointerTo(),
+                                   arg_idx, call->arguments()[arg_idx]->type());
           return;
         }
-        // clang-format on
       }
       call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
       break;
@@ -1050,56 +1044,43 @@ void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call, const ast::B
   }
 }
 
-void Sema::CheckBuiltinVectorFilterExecCall(ast::CallExpr *call, ast::Builtin builtin) {
-  if (!CheckArgCountAtLeast(call, 1)) {
+void Sema::CheckBuiltinVectorFilterCall(ast::CallExpr *call) {
+  if (!CheckArgCount(call, 4)) {
     return;
   }
 
-  // The first argument must be a *VectorFilterExecutor
-  const auto filter_kind = ast::BuiltinType::VectorFilterExecutor;
-  if (!IsPointerToSpecificBuiltin(call->arguments()[0]->type(), filter_kind)) {
-    ReportIncorrectCallArg(call, 0, GetBuiltinType(filter_kind)->PointerTo());
+  // The first argument must be a *VectorProjection
+  const auto vector_proj_kind = ast::BuiltinType::VectorProjection;
+  if (!IsPointerToSpecificBuiltin(call->arguments()[0]->type(), vector_proj_kind)) {
+    ReportIncorrectCallArg(call, 0, GetBuiltinType(vector_proj_kind)->PointerTo());
     return;
   }
 
-  switch (builtin) {
-    case ast::Builtin::VectorFilterExecInit:
-    case ast::Builtin::VectorFilterExecFinish:
-    case ast::Builtin::VectorFilterExecFree: {
-      break;
-    }
-    case ast::Builtin::VectorFilterExecEqual:
-    case ast::Builtin::VectorFilterExecGreaterThan:
-    case ast::Builtin::VectorFilterExecGreaterThanEqual:
-    case ast::Builtin::VectorFilterExecLessThan:
-    case ast::Builtin::VectorFilterExecLessThanEqual:
-    case ast::Builtin::VectorFilterExecNotEqual: {
-      if (!CheckArgCount(call, 3)) {
-        return;
-      }
-
-      // Second argument is the column index
-      const auto &call_args = call->arguments();
-      const auto int32_kind = ast::BuiltinType::Int32;
-      const auto uint32_kind = ast::BuiltinType::Uint32;
-      if (!call_args[1]->type()->IsSpecificBuiltin(int32_kind) &&
-          !call_args[1]->type()->IsSpecificBuiltin(uint32_kind)) {
-        ReportIncorrectCallArg(call, 1, GetBuiltinType(int32_kind));
-        return;
-      }
-
-      // Third argument is either an integer or a pointer to a generic value
-      if (!call_args[2]->type()->IsSpecificBuiltin(int32_kind) &&
-          !call_args[2]->type()->IsSqlValueType()) {
-        ReportIncorrectCallArg(call, 2, GetBuiltinType(int32_kind));
-        return;
-      }
-
-      break;
-    }
-    default: { UNREACHABLE("Impossible vector filter call"); }
+  // Second argument is the column index
+  const auto &call_args = call->arguments();
+  const auto int32_kind = ast::BuiltinType::Int32;
+  const auto uint32_kind = ast::BuiltinType::Uint32;
+  if (!call_args[1]->type()->IsSpecificBuiltin(int32_kind) &&
+      !call_args[1]->type()->IsSpecificBuiltin(uint32_kind)) {
+    ReportIncorrectCallArg(call, 1, GetBuiltinType(int32_kind));
+    return;
   }
 
+  // Third argument is either an integer or a pointer to a generic value
+  if (!call_args[2]->type()->IsSpecificBuiltin(int32_kind) &&
+      !call_args[2]->type()->IsSqlValueType()) {
+    ReportIncorrectCallArg(call, 2, GetBuiltinType(int32_kind));
+    return;
+  }
+
+  // Fourth and last argument is the *TupleIdList
+  const auto tid_list_kind = ast::BuiltinType::TupleIdList;
+  if (!IsPointerToSpecificBuiltin(call_args[3]->type(), tid_list_kind)) {
+    ReportIncorrectCallArg(call, 3, GetBuiltinType(tid_list_kind)->PointerTo());
+    return;
+  }
+
+  // Done
   call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
@@ -1503,16 +1484,13 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckBuiltinFilterManagerCall(call, builtin);
       break;
     }
-    case ast::Builtin::VectorFilterExecInit:
-    case ast::Builtin::VectorFilterExecEqual:
-    case ast::Builtin::VectorFilterExecGreaterThan:
-    case ast::Builtin::VectorFilterExecGreaterThanEqual:
-    case ast::Builtin::VectorFilterExecLessThan:
-    case ast::Builtin::VectorFilterExecLessThanEqual:
-    case ast::Builtin::VectorFilterExecNotEqual:
-    case ast::Builtin::VectorFilterExecFinish:
-    case ast::Builtin::VectorFilterExecFree: {
-      CheckBuiltinVectorFilterExecCall(call, builtin);
+    case ast::Builtin::VectorFilterEqual:
+    case ast::Builtin::VectorFilterGreaterThan:
+    case ast::Builtin::VectorFilterGreaterThanEqual:
+    case ast::Builtin::VectorFilterLessThan:
+    case ast::Builtin::VectorFilterLessThanEqual:
+    case ast::Builtin::VectorFilterNotEqual: {
+      CheckBuiltinVectorFilterCall(call);
       break;
     }
     case ast::Builtin::AggHashTableInit:

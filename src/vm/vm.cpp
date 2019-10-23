@@ -688,11 +688,11 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(FilterManagerInsertFlavor) : {
+  OP(FilterManagerInsertFilter) : {
     auto *filter_manager = frame->LocalAt<sql::FilterManager *>(READ_LOCAL_ID());
     auto func_id = READ_FUNC_ID();
     auto fn = reinterpret_cast<sql::FilterManager::MatchFn>(module_->GetRawFunctionImpl(func_id));
-    OpFilterManagerInsertFlavor(filter_manager, fn);
+    OpFilterManagerInsertFilter(filter_manager, fn);
     DISPATCH_NEXT();
   }
 
@@ -719,47 +719,32 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   // Vector Filter Executor
   // ------------------------------------------------------
 
-  OP(VectorFilterExecuteInit) : {
-    auto *filter_exec = frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID());
-    auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    OpVectorFilterExecuteInit(filter_exec, vpi);
-    DISPATCH_NEXT();
+#define GEN_VEC_FILTER(BYTECODE)                                                        \
+  OP(BYTECODE) : {                                                                      \
+    auto *vector_projection = frame->LocalAt<sql::VectorProjection *>(READ_LOCAL_ID()); \
+    auto left_col_idx = frame->LocalAt<uint32_t>(READ_LOCAL_ID());                      \
+    auto right_col_idx = frame->LocalAt<uint32_t>(READ_LOCAL_ID());                     \
+    auto *tid_list = frame->LocalAt<sql::TupleIdList *>(READ_LOCAL_ID());               \
+    Op##BYTECODE(vector_projection, left_col_idx, right_col_idx, tid_list);             \
+    DISPATCH_NEXT();                                                                    \
+  }                                                                                     \
+  OP(BYTECODE##Val) : {                                                                 \
+    auto *vector_projection = frame->LocalAt<sql::VectorProjection *>(READ_LOCAL_ID()); \
+    auto left_col_idx = frame->LocalAt<uint32_t>(READ_LOCAL_ID());                      \
+    auto right_val = frame->LocalAt<sql::Val *>(READ_LOCAL_ID());                       \
+    auto *tid_list = frame->LocalAt<sql::TupleIdList *>(READ_LOCAL_ID());               \
+    Op##BYTECODE##Val(vector_projection, left_col_idx, right_val, tid_list);            \
+    DISPATCH_NEXT();                                                                    \
   }
 
-#define GEN_VEC_FILTER(BYTECODE)                                                      \
-  OP(BYTECODE) : {                                                                    \
-    auto *filter_exec = frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID()); \
-    auto left_col_idx = frame->LocalAt<uint32_t>(READ_LOCAL_ID());                    \
-    auto right_col_idx = frame->LocalAt<uint32_t>(READ_LOCAL_ID());                   \
-    Op##BYTECODE(filter_exec, left_col_idx, right_col_idx);                           \
-    DISPATCH_NEXT();                                                                  \
-  }                                                                                   \
-  OP(BYTECODE##Val) : {                                                               \
-    auto *filter_exec = frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID()); \
-    auto left_col_idx = frame->LocalAt<uint32_t>(READ_LOCAL_ID());                    \
-    auto right_val = frame->LocalAt<sql::Val *>(READ_LOCAL_ID());                     \
-    Op##BYTECODE##Val(filter_exec, left_col_idx, right_val);                          \
-    DISPATCH_NEXT();                                                                  \
-  }
-  GEN_VEC_FILTER(VectorFilterExecuteEqual)
-  GEN_VEC_FILTER(VectorFilterExecuteGreaterThan)
-  GEN_VEC_FILTER(VectorFilterExecuteGreaterThanEqual)
-  GEN_VEC_FILTER(VectorFilterExecuteLessThan)
-  GEN_VEC_FILTER(VectorFilterExecuteLessThanEqual)
-  GEN_VEC_FILTER(VectorFilterExecuteNotEqual)
+  GEN_VEC_FILTER(VectorFilterEqual)
+  GEN_VEC_FILTER(VectorFilterGreaterThan)
+  GEN_VEC_FILTER(VectorFilterGreaterThanEqual)
+  GEN_VEC_FILTER(VectorFilterLessThan)
+  GEN_VEC_FILTER(VectorFilterLessThanEqual)
+  GEN_VEC_FILTER(VectorFilterNotEqual)
+
 #undef GEN_VEC_FILTER
-
-  OP(VectorFilterExecuteFinish) : {
-    auto *filter_exec = frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID());
-    OpVectorFilterExecuteFinish(filter_exec);
-    DISPATCH_NEXT();
-  }
-
-  OP(VectorFilterExecuteFree) : {
-    auto *filter_exec = frame->LocalAt<sql::VectorFilterExecutor *>(READ_LOCAL_ID());
-    OpVectorFilterExecuteFree(filter_exec);
-    DISPATCH_NEXT();
-  }
 
   // -------------------------------------------------------
   // SQL Integer Comparison Operations

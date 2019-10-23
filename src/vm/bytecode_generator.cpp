@@ -785,7 +785,7 @@ void BytecodeGenerator::VisitBuiltinFilterManagerCall(ast::CallExpr *call, ast::
         const std::string func_name =
             call->arguments()[arg_idx]->As<ast::IdentifierExpr>()->name().data();
         const FunctionId func_id = LookupFuncIdByName(func_name);
-        GetEmitter()->EmitFilterManagerInsertFlavor(filter_manager, func_id);
+        GetEmitter()->EmitFilterManagerInsertFilter(filter_manager, func_id);
       }
       break;
     }
@@ -806,56 +806,43 @@ void BytecodeGenerator::VisitBuiltinFilterManagerCall(ast::CallExpr *call, ast::
   }
 }
 
-void BytecodeGenerator::VisitBuiltinVectorFilterExecCall(ast::CallExpr *call,
-                                                         ast::Builtin builtin) {
-  LocalVar filter_exec = VisitExpressionForRValue(call->arguments()[0]);
+void BytecodeGenerator::VisitBuiltinVectorFilterCall(ast::CallExpr *call, ast::Builtin builtin) {
+  LocalVar vector_projection = VisitExpressionForRValue(call->arguments()[0]);
+  LocalVar tid_list = VisitExpressionForRValue(call->arguments()[3]);
 
-#define GEN_CASE(BYTECODE)                                               \
-  LocalVar left_col = VisitExpressionForRValue(call->arguments()[1]);    \
-  if (!call->arguments()[2]->type()->IsIntegerType()) {                  \
-    LocalVar right_val = VisitExpressionForLValue(call->arguments()[2]); \
-    GetEmitter()->Emit(BYTECODE##Val, filter_exec, left_col, right_val); \
-  } else {                                                               \
-    LocalVar right_col = VisitExpressionForRValue(call->arguments()[2]); \
-    GetEmitter()->Emit(BYTECODE, filter_exec, left_col, right_col);      \
+#define GEN_CASE(BYTECODE)                                                               \
+  LocalVar left_col = VisitExpressionForRValue(call->arguments()[1]);                    \
+  if (!call->arguments()[2]->type()->IsIntegerType()) {                                  \
+    LocalVar right_val = VisitExpressionForLValue(call->arguments()[2]);                 \
+    GetEmitter()->Emit(BYTECODE##Val, vector_projection, left_col, right_val, tid_list); \
+  } else {                                                                               \
+    LocalVar right_col = VisitExpressionForRValue(call->arguments()[2]);                 \
+    GetEmitter()->Emit(BYTECODE, vector_projection, left_col, right_col, tid_list);      \
   }
 
   switch (builtin) {
-    case ast::Builtin::VectorFilterExecInit: {
-      LocalVar vpi = VisitExpressionForRValue(call->arguments()[1]);
-      GetEmitter()->Emit(Bytecode::VectorFilterExecuteInit, filter_exec, vpi);
+    case ast::Builtin::VectorFilterEqual: {
+      GEN_CASE(Bytecode::VectorFilterEqual);
       break;
     }
-    case ast::Builtin::VectorFilterExecEqual: {
-      GEN_CASE(Bytecode::VectorFilterExecuteEqual);
+    case ast::Builtin::VectorFilterGreaterThan: {
+      GEN_CASE(Bytecode::VectorFilterGreaterThan);
       break;
     }
-    case ast::Builtin::VectorFilterExecGreaterThan: {
-      GEN_CASE(Bytecode::VectorFilterExecuteGreaterThan);
+    case ast::Builtin::VectorFilterGreaterThanEqual: {
+      GEN_CASE(Bytecode::VectorFilterGreaterThanEqual);
       break;
     }
-    case ast::Builtin::VectorFilterExecGreaterThanEqual: {
-      GEN_CASE(Bytecode::VectorFilterExecuteGreaterThanEqual);
+    case ast::Builtin::VectorFilterLessThan: {
+      GEN_CASE(Bytecode::VectorFilterLessThan);
       break;
     }
-    case ast::Builtin::VectorFilterExecLessThan: {
-      GEN_CASE(Bytecode::VectorFilterExecuteLessThan);
+    case ast::Builtin::VectorFilterLessThanEqual: {
+      GEN_CASE(Bytecode::VectorFilterLessThanEqual);
       break;
     }
-    case ast::Builtin::VectorFilterExecLessThanEqual: {
-      GEN_CASE(Bytecode::VectorFilterExecuteLessThanEqual);
-      break;
-    }
-    case ast::Builtin::VectorFilterExecNotEqual: {
-      GEN_CASE(Bytecode::VectorFilterExecuteNotEqual);
-      break;
-    }
-    case ast::Builtin::VectorFilterExecFinish: {
-      GetEmitter()->Emit(Bytecode::VectorFilterExecuteFinish, filter_exec);
-      break;
-    }
-    case ast::Builtin::VectorFilterExecFree: {
-      GetEmitter()->Emit(Bytecode::VectorFilterExecuteFree, filter_exec);
+    case ast::Builtin::VectorFilterNotEqual: {
+      GEN_CASE(Bytecode::VectorFilterNotEqual);
       break;
     }
     default: { UNREACHABLE("Impossible vector filter executor call"); }
@@ -1535,16 +1522,13 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitBuiltinFilterManagerCall(call, builtin);
       break;
     }
-    case ast::Builtin::VectorFilterExecInit:
-    case ast::Builtin::VectorFilterExecEqual:
-    case ast::Builtin::VectorFilterExecGreaterThan:
-    case ast::Builtin::VectorFilterExecGreaterThanEqual:
-    case ast::Builtin::VectorFilterExecLessThan:
-    case ast::Builtin::VectorFilterExecLessThanEqual:
-    case ast::Builtin::VectorFilterExecNotEqual:
-    case ast::Builtin::VectorFilterExecFinish:
-    case ast::Builtin::VectorFilterExecFree: {
-      VisitBuiltinVectorFilterExecCall(call, builtin);
+    case ast::Builtin::VectorFilterEqual:
+    case ast::Builtin::VectorFilterGreaterThan:
+    case ast::Builtin::VectorFilterGreaterThanEqual:
+    case ast::Builtin::VectorFilterLessThan:
+    case ast::Builtin::VectorFilterLessThanEqual:
+    case ast::Builtin::VectorFilterNotEqual: {
+      VisitBuiltinVectorFilterCall(call, builtin);
       break;
     }
     case ast::Builtin::AggHashTableInit:
