@@ -47,15 +47,16 @@ BENCHMARK_DEFINE_F(TupleIdListBenchmark, CallbackBasedIteration)(benchmark::Stat
 
 BENCHMARK_DEFINE_F(TupleIdListBenchmark, ConvertToSelectionVectorAndIterate)
 (benchmark::State &state) {
-  sel_t sel_vector[kDefaultVectorSize];
   auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0);
   for (auto _ : state) {
     uint64_t count = 0;
     auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
     auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
 
-    auto size = tid->ToSelectionVector(sel_vector);
-    for (uint32_t i = 0; i < size; i++) count += v1data[sel_vector[i]] + v2data[sel_vector[i]];
+    for (sql::TupleIdListIterator iter(tid.get()); iter.HasNext(); iter.Advance()) {
+      auto tid = iter.GetCurrentTupleId();
+      count += v1data[tid] + v2data[tid];
+    }
 
     benchmark::DoNotOptimize(count);
   }
