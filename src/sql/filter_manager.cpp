@@ -109,7 +109,9 @@ void FilterManager::RunFilters(VectorProjection *vector_projection) {
 }
 
 void FilterManager::RunFilters(VectorProjectionIterator *vpi) {
-  RunFilters(vpi->GetVectorProjection());
+  VectorProjection *vector_projection = vpi->GetVectorProjection();
+  RunFilters(vector_projection);
+  vpi->Reset();
 }
 
 }  // namespace tpl::sql
