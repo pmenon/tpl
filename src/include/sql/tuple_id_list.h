@@ -18,11 +18,8 @@ namespace tpl::sql {
  * removing (one or all) TIDs from the list. Intersection, union, and difference are efficient
  * operations linear in the capacity of the list.
  *
- * Users can iterate over the TIDs in the list through TupleIdList::Iterate() and filter a TID list
- * through TupleIdList::Filter().
- *
- * Tuple ID lists can also be converted into dense selection vectors through
- * TupleIdList::AsSelectionVector().
+ * Users can iterate over the TIDs in the list through TupleIdList::Iterate() or instantiate a
+ * TupleIdListIterator. The list can also be filtered through TupleIdList::Filter().
  *
  * Implementation:
  * ---------------
@@ -287,6 +284,57 @@ class TupleIdList {
  private:
   // The validity bit vector
   BitVectorType bit_vector_;
+};
+
+/**
+ * A forward-only resettable iterator over the contents of a TupleIdList. This iterator is heavy-
+ * handed because it will materialize all IDs into an internal array. As such, this iterator
+ * shouldn't be used unless you intend to iterate over the entire list.
+ */
+class TupleIdListIterator {
+ public:
+  /**
+   * Create an iterator over the TID list @em tid_list.
+   * @param tid_list The list to iterate over.
+   */
+  explicit TupleIdListIterator(TupleIdList *tid_list)
+      : tid_list_(tid_list), size_(0), curr_idx_(0) {
+    TPL_ASSERT(tid_list->GetCapacity() <= kDefaultVectorSize, "TIDList too large");
+    Reset();
+  }
+
+  /**
+   * @return True if there are more TIDs in the iterator.
+   */
+  bool HasNext() const { return curr_idx_ != size_; }
+
+  /**
+   * Advance the iterator to the next TID. If the iterator has exhausted all TIDS in the list,
+   * TupleIdListIterator::HasNext() will return false after this call completes.
+   */
+  void Advance() { curr_idx_++; }
+
+  /**
+   * Reset the iterator to the start of the list.
+   */
+  void Reset() {
+    curr_idx_ = 0;
+    size_ = tid_list_->ToSelectionVector(sel_vector_);
+  }
+
+  /**
+   * @return The current TID.
+   */
+  sel_t GetCurrentTupleId() const { return sel_vector_[curr_idx_]; }
+
+ private:
+  // The list we're iterating over
+  TupleIdList *tid_list_;
+
+  // The materialized selection vector
+  sel_t sel_vector_[kDefaultVectorSize];
+  sel_t size_;
+  sel_t curr_idx_;
 };
 
 }  // namespace tpl::sql
