@@ -9,6 +9,10 @@
 #include "common/macros.h"
 #include "sql/tuple_id_list.h"
 
+namespace tpl::bandit {
+class Agent;
+}  // namespace tpl::bandit
+
 namespace tpl::sql {
 
 class VectorProjection;
@@ -25,17 +29,48 @@ class FilterManager {
   using MatchFn = void (*)(VectorProjection *, TupleIdList *);
 
   /**
-   * A clause in a multi-clause filter. Clauses come in multiple flavors. Flavors are logically
-   * equivalent, but may differ in implementation, and thus, exhibit different run times.
+   * A conjunctive clause in a multi-clause disjunctive normal form filter. A clause is composed of
+   * one or more terms that form the factors of the conjunction. Factors can be reordered.
    */
-  struct Clause {
+  class Clause {
+   public:
+    /**
+     * Create a new empty clause.
+     */
+    Clause();
+
+    /**
+     * Add a term to the clause.
+     * @param term The term to add to this clause.
+     */
+    void AddTerm(MatchFn term) { terms.push_back(term); }
+
+    /**
+     * Finalize and prepare this clause for execution. After this call, the clause is immutable.
+     */
+    void Finalize(bandit::Policy::Kind policy_kind);
+
+    /**
+     * Run the clause over the given input projection.
+     * @param vector_projection The projection to filter.
+     * @param tid_list The input TID list
+     */
+    void RunFilter(VectorProjection *vector_projection, TupleIdList *tid_list);
+
+    /**
+     * @return The number of terms.
+     */
+    uint32_t GetTermCount() const { return terms.size(); }
+
+   private:
     // The terms (i.e., factors) of the conjunction
     std::vector<MatchFn> terms;
 
-    /**
-     * @return The number of flavors.
-     */
-    uint32_t GetTermCount() const { return terms.size(); }
+    // The adaptive policy
+    std::unique_ptr<bandit::Policy> policy_;
+
+    // The adaptive agent
+    std::unique_ptr<bandit::Agent> agent_;
   };
 
   /**

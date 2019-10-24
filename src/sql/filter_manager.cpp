@@ -36,6 +36,38 @@ std::unique_ptr<bandit::Policy> CreatePolicy(bandit::Policy::Kind policy_kind) {
 
 }  // namespace
 
+//===----------------------------------------------------------------------===//
+//
+// Filter Manager Clause
+//
+//===----------------------------------------------------------------------===//
+
+FilterManager::Clause::Clause() : agent_(nullptr) {}
+
+void FilterManager::Clause::Finalize(bandit::Policy::Kind policy_kind) {
+  policy_ = CreatePolicy(policy_kind);
+  agent_ = std::make_unique<bandit::Agent>(policy_.get(), GetTermCount());
+}
+
+void FilterManager::Clause::RunFilter(VectorProjection *vector_projection, TupleIdList *tid_list) {
+  util::Timer<std::micro> timer;
+  timer.Start();
+
+  // TODO(pmenon): Use agent to choose best ordering, run it, update state.
+
+  for (const auto &term_fn : terms) {
+    term_fn(vector_projection, tid_list);
+  }
+
+  timer.Stop();
+}
+
+//===----------------------------------------------------------------------===//
+//
+// Filter Manager
+//
+//===----------------------------------------------------------------------===//
+
 FilterManager::FilterManager(const bandit::Policy::Kind policy_kind)
     : policy_(CreatePolicy(policy_kind)),
       input_list_(kDefaultVectorSize),
@@ -53,7 +85,7 @@ void FilterManager::StartNewClause() {
 void FilterManager::InsertClauseTerm(const FilterManager::MatchFn term) {
   TPL_ASSERT(!finalized_, "Cannot modify filter manager after finalization");
   TPL_ASSERT(!clauses_.empty(), "Inserting flavor without clause");
-  clauses_.back().terms.push_back(term);
+  clauses_.back().AddTerm(term);
 }
 
 void FilterManager::Finalize() {
@@ -64,6 +96,11 @@ void FilterManager::Finalize() {
   // Initialize optimal orderings, initially in the order they appear
   optimal_clause_order_.resize(clauses_.size());
   std::iota(optimal_clause_order_.begin(), optimal_clause_order_.end(), 0);
+
+  // Finalize each clause
+  for (auto &clause : clauses_) {
+    clause.Finalize(policy_->GetKind());
+  }
 
   finalized_ = true;
 }
@@ -87,18 +124,17 @@ void FilterManager::RunFilters(VectorProjection *vector_projection) {
   output_list_.Clear();
 
   // Run through all summands in the order we believe to be optimal
-  for (const uint32_t opt_clause_idx : optimal_clause_order_) {
+  for (const uint32_t clause_index : optimal_clause_order_) {
     tmp_list_.AssignFrom(input_list_);
     tmp_list_.UnsetFrom(output_list_);
 
+    // Quit
     if (tmp_list_.IsEmpty()) {
       break;
     }
 
-    // Run through all factors in the clause in the order we believe to be optimal
-    for (const auto &term_fn : clauses_[opt_clause_idx].terms) {
-      term_fn(vector_projection, &tmp_list_);
-    }
+    // Run the clause
+    clauses_[clause_index].RunFilter(vector_projection, &tmp_list_);
 
     // Update output list with surviving TIDs
     output_list_.UnionWith(tmp_list_);
