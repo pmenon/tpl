@@ -87,13 +87,9 @@ fun compareFn(lhs: *SorterRow, rhs: *SorterRow) -> int32 {
     return 0
 }
 
-fun p1_filter(vec: *VectorProjectionIterator) -> int32 {
-    var param = @dateToSql(1998, 12, 1)
-    for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-        @vpiMatch(vec, @vpiGetDate(vec, 10) < param)
-    }
-    @vpiResetFiltered(vec)
-    return 0
+fun p1_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    var date_filter = @dateToSql(1998, 12, 1)
+    @filterLt(vector_proj, 10, date_filter, tids)
 }
 
 fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
@@ -113,7 +109,7 @@ fun tearDownState(execCtx: *ExecutionContext, state: *State) -> nil {
 
 fun p1_initThreadState(execCtx: *ExecutionContext, ts: *P1_ThreadState) -> nil {
     @filterManagerInit(&ts.filter)
-    @filterManagerInsertFilter(&ts.filter, p1_filter)
+    @filterManagerInsertFilter(&ts.filter, p1_filter_clause0term0)
     @filterManagerFinalize(&ts.filter)
     @aggHTInit(&ts.agg_table, @execCtxGetMem(execCtx), @sizeOf(AggPayload))
     ts.count = 0
@@ -175,7 +171,7 @@ fun p1_worker(state: *State, ts: *P1_ThreadState, l_tvi: *TableVectorIterator) -
     for (@tableIterAdvance(l_tvi)) {
         var vec = @tableIterGetVPI(l_tvi)
 
-        @filtersRun(&ts.filter, vec)
+        @filterManagerRunFilters(&ts.filter, vec)
 
         for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
             var agg_values : AggValues
@@ -309,6 +305,10 @@ fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
 
     @resultBufferFinalize(execCtx)
 }
+
+// -----------------------------------------------------------------------------
+// Main
+// -----------------------------------------------------------------------------
 
 fun execQuery(execCtx: *ExecutionContext, state: *State) -> nil {
     pipeline1(execCtx, state)

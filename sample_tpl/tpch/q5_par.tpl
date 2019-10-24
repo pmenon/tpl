@@ -174,25 +174,19 @@ fun sorterCompare(lhs: *SorterRow, rhs: *SorterRow) -> int32 {
     return 0
 }
 
-fun p1_filter(vec: *VectorProjectionIterator) -> int32 {
-    var param = @stringToSql("ASIA")
-    for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-        // r_name = "ASIA"
-        @vpiMatch(vec, @vpiGetString(vec, 1) == param)
-    }
-    @vpiResetFiltered(vec)
-    return 0
+fun p1_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // r_name
+    @filterEq(vector_proj, 1, @stringToSql("ASIA"), tids)
 }
 
-fun p4_filter(vec: *VectorProjectionIterator) -> int32 {
-    var lo = @dateToSql(1990, 1, 1)
-    var hi = @dateToSql(2000, 1, 1)
-    for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-        // o_orderdate between lo and hi
-        @vpiMatch(vec, @vpiGetDate(vec, 4) >= lo and @vpiGetDate(vec, 4) <= hi)
-    }
-    @vpiResetFiltered(vec)
-    return 0
+fun p4_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // o_orderdate
+    @filterGe(vector_proj, 4, @dateToSql(1990, 1, 1), tids)
+}
+
+fun p4_filter_clause0term1(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // o_orderdate
+    @filterLe(vector_proj, 4, @dateToSql(2000, 1, 1), tids)
 }
 
 fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
@@ -221,11 +215,15 @@ fun tearDownState(execCtx: *ExecutionContext, state: *State) -> nil {
     @sorterFree(&state.sorter)
 }
 
+// -----------------------------------------------------------------------------
+// Pipeline 1 Thread States
+// -----------------------------------------------------------------------------
+
 fun p1_initThreadState(execCtx: *ExecutionContext, ts: *P1_ThreadState) -> nil {
     ts.ts_count = 0
     @joinHTInit(&ts.ts_join_table, @execCtxGetMem(execCtx), @sizeOf(JoinRow1))
     @filterManagerInit(&ts.filter)
-    @filterManagerInsertFilter(&ts.filter, p1_filter)
+    @filterManagerInsertFilter(&ts.filter, p1_filter_clause0term0)
     @filterManagerFinalize(&ts.filter)
 }
 
@@ -233,6 +231,10 @@ fun p1_tearDownThreadState(execCtx: *ExecutionContext, ts: *P1_ThreadState) -> n
     @joinHTFree(&ts.ts_join_table)
     @filterManagerFree(&ts.filter)
 }
+
+// -----------------------------------------------------------------------------
+// Pipeline 2 Thread States
+// -----------------------------------------------------------------------------
 
 fun p2_initThreadState(execCtx: *ExecutionContext, ts: *P2_ThreadState) -> nil {
     ts.ts_count = 0
@@ -243,6 +245,10 @@ fun p2_tearDownThreadState(execCtx: *ExecutionContext, ts: *P2_ThreadState) -> n
     @joinHTFree(&ts.ts_join_table)
 }
 
+// -----------------------------------------------------------------------------
+// Pipeline 3 Thread States
+// -----------------------------------------------------------------------------
+
 fun p3_initThreadState(execCtx: *ExecutionContext, ts: *P3_ThreadState) -> nil {
     ts.ts_count = 0
     @joinHTInit(&ts.ts_join_table, @execCtxGetMem(execCtx), @sizeOf(JoinRow3))
@@ -252,11 +258,15 @@ fun p3_tearDownThreadState(execCtx: *ExecutionContext, ts: *P3_ThreadState) -> n
     @joinHTFree(&ts.ts_join_table)
 }
 
+// -----------------------------------------------------------------------------
+// Pipeline 4 Thread States
+// -----------------------------------------------------------------------------
+
 fun p4_initThreadState(execCtx: *ExecutionContext, ts: *P4_ThreadState) -> nil {
     ts.ts_count = 0
     @joinHTInit(&ts.ts_join_table, @execCtxGetMem(execCtx), @sizeOf(JoinRow4))
     @filterManagerInit(&ts.filter)
-    @filterManagerInsertFilter(&ts.filter, p4_filter)
+    @filterManagerInsertFilter(&ts.filter, p4_filter_clause0term0, p4_filter_clause0term1)
     @filterManagerFinalize(&ts.filter)
 }
 
@@ -264,6 +274,10 @@ fun p4_tearDownThreadState(execCtx: *ExecutionContext, ts: *P4_ThreadState) -> n
     @joinHTFree(&ts.ts_join_table)
     @filterManagerFree(&ts.filter)
 }
+
+// -----------------------------------------------------------------------------
+// Pipeline 5 Thread States
+// -----------------------------------------------------------------------------
 
 fun p5_initThreadState(execCtx: *ExecutionContext, ts: *P5_ThreadState) -> nil {
     ts.ts_count = 0
@@ -274,6 +288,10 @@ fun p5_tearDownThreadState(execCtx: *ExecutionContext, ts: *P5_ThreadState) -> n
     @joinHTFree(&ts.ts_join_table)
 }
 
+// -----------------------------------------------------------------------------
+// Pipeline 6 Thread States
+// -----------------------------------------------------------------------------
+
 fun p6_initThreadState(execCtx: *ExecutionContext, ts: *P6_ThreadState) -> nil {
     ts.ts_count = 0
     @aggHTInit(&ts.ts_agg_table, @execCtxGetMem(execCtx), @sizeOf(AggPayload))
@@ -282,6 +300,10 @@ fun p6_initThreadState(execCtx: *ExecutionContext, ts: *P6_ThreadState) -> nil {
 fun p6_tearDownThreadState(execCtx: *ExecutionContext, ts: *P6_ThreadState) -> nil {
     @aggHTFree(&ts.ts_agg_table)
 }
+
+// -----------------------------------------------------------------------------
+// Pipeline 7 Thread States
+// -----------------------------------------------------------------------------
 
 fun p7_initThreadState(execCtx: *ExecutionContext, ts: *P7_ThreadState) -> nil {
     ts.ts_count = 0
@@ -297,8 +319,11 @@ fun p1_worker(state: *State, ts: *P1_ThreadState, r_tvi: *TableVectorIterator) -
     var x = 0
     for (@tableIterAdvance(r_tvi)) {
         var vec = @tableIterGetVPI(r_tvi)
-        @filtersRun(&ts.filter, vec)
-        // Step 2: Insert into HT1
+
+        // Filter
+        @filterManagerRunFilters(&ts.filter, vec)
+
+        // Insert into HT1
         for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
             var hash_val = @hash(@vpiGetInt(vec, 0)) // r_regionkey
             var build_row1 = @ptrCast(*JoinRow1, @joinHTInsert(&ts.ts_join_table, hash_val))
@@ -356,9 +381,12 @@ fun p4_worker(state: *State, ts: *P4_ThreadState, o_tvi: *TableVectorIterator) -
     var x = 0
     for (@tableIterAdvance(o_tvi)) {
         var vec = @tableIterGetVPI(o_tvi)
-        @filtersRun(&ts.filter, vec)
+
+        // Filter
+        @filterManagerRunFilters(&ts.filter, vec)
+
+        // Probe HT3
         for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
-            // Step 2: Probe HT3
             var hash_val = @hash(@vpiGetInt(vec, 1)) // o_custkey
             var hti: HashTableEntryIterator
             for (@joinHTLookup(&state.join_table3, &hti, hash_val); @htEntryIterHasNext(&hti, checkJoinKey3, state, vec);) {

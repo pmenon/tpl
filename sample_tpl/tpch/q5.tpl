@@ -150,25 +150,40 @@ fun teardownState(execCtx: *ExecutionContext, state: *State) -> nil {
     @sorterFree(&state.sorter)
 }
 
+fun p1_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // r_name
+    @filterEq(vector_proj, 1, @stringToSql("ASIA"), tids)
+}
+
 // Scan Region table and build HT1
 fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
+    var filter: FilterManager
+    @filterManagerInit(&filter)
+    @filterManagerInsertFilter(&filter, p1_filter_clause0term0)
+    @filterManagerFinalize(&filter)
+
     var r_tvi : TableVectorIterator
-    @tableIterInit(&r_tvi, "region")
-    for (@tableIterAdvance(&r_tvi)) {
+    for (@tableIterInit(&r_tvi, "region"); @tableIterAdvance(&r_tvi); ) {
         var vec = @tableIterGetVPI(&r_tvi)
-        for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-            if (@vpiGetString(vec, 1) == @stringToSql("ASIA")) { // r_name
-                // Step 2: Insert into HT1
-                var hash_val = @hash(@vpiGetInt(vec, 0)) // r_regionkey
-                var build_row1 = @ptrCast(*JoinRow1, @joinHTInsert(&state.join_table1, hash_val))
-                build_row1.r_regionkey = @vpiGetInt(vec, 0) // r_regionkey
-                state.count = state.count + 1
-            }
+
+        // Step 1: Filter
+        @filterManagerRunFilters(&filter, vec)
+
+        // Step 2: Insert into table
+        for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
+            var hash_val = @hash(@vpiGetInt(vec, 0)) // r_regionkey
+            var build_row1 = @ptrCast(*JoinRow1, @joinHTInsert(&state.join_table1, hash_val))
+            build_row1.r_regionkey = @vpiGetInt(vec, 0) // r_regionkey
+            state.count = state.count + 1
         }
     }
+    @tableIterClose(&r_tvi)
+
     // Step 3: Build HT1
     @joinHTBuild(&state.join_table1)
-    @tableIterClose(&r_tvi)
+
+    // Cleanup
+    @filterManagerFree(&filter)
 }
 
 // Scan Nation table, probe HT1, build HT2
@@ -225,35 +240,54 @@ fun pipeline3(execCtx: *ExecutionContext, state: *State) -> nil {
     @tableIterClose(&c_tvi)
 }
 
+fun p4_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // o_orderdate
+    @filterGe(vector_proj, 4, @dateToSql(1990, 1, 1), tids)
+}
+
+fun p4_filter_clause0term1(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // o_orderdate
+    @filterLe(vector_proj, 4, @dateToSql(2000, 1, 1), tids)
+}
+
 // Scan Orders table, probe HT3, build HT4
 fun pipeline4(execCtx: *ExecutionContext, state: *State) -> nil {
+    var filter: FilterManager
+    @filterManagerInit(&filter)
+    @filterManagerInsertFilter(&filter, p4_filter_clause0term0, p4_filter_clause0term1)
+    @filterManagerFinalize(&filter)
+
     // Step 1: Sequential Scan
     var o_tvi : TableVectorIterator
     @tableIterInit(&o_tvi, "orders")
     for (@tableIterAdvance(&o_tvi)) {
         var vec = @tableIterGetVPI(&o_tvi)
-        for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-            if (@vpiGetDate(vec, 4) >= @dateToSql(1990, 1, 1) // o_orderdate
-                and @vpiGetDate(vec, 4) <= @dateToSql(2000, 1, 1)) { // o_orderdate
-                // Step 2: Probe HT3
-                var hash_val = @hash(@vpiGetInt(vec, 1)) // o_custkey
-                var hti: HashTableEntryIterator
-                for (@joinHTLookup(&state.join_table3, &hti, hash_val); @htEntryIterHasNext(&hti, checkJoinKey3, execCtx, vec);) {
-                    var join_row3 = @ptrCast(*JoinRow3, @htEntryIterGetRow(&hti))
-                    // Step 3: Insert into join table 4
-                    var hash_val4 = @hash(@vpiGetInt(vec, 0)) // o_orderkey
-                    var build_row4 = @ptrCast(*JoinRow4, @joinHTInsert(&state.join_table4, hash_val4))
-                    build_row4.n_nationkey = join_row3.n_nationkey
-                    build_row4.n_name = join_row3.n_name
-                    build_row4.o_orderkey = @vpiGetInt(vec, 0) // o_orderkey
-                }
+
+        // Filter
+        @filterManagerRunFilters(&filter, vec)
+
+        for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
+            // Step 2: Probe HT3
+            var hash_val = @hash(@vpiGetInt(vec, 1)) // o_custkey
+            var hti: HashTableEntryIterator
+            for (@joinHTLookup(&state.join_table3, &hti, hash_val); @htEntryIterHasNext(&hti, checkJoinKey3, execCtx, vec);) {
+                var join_row3 = @ptrCast(*JoinRow3, @htEntryIterGetRow(&hti))
+                // Step 3: Insert into join table 4
+                var hash_val4 = @hash(@vpiGetInt(vec, 0)) // o_orderkey
+                var build_row4 = @ptrCast(*JoinRow4, @joinHTInsert(&state.join_table4, hash_val4))
+                build_row4.n_nationkey = join_row3.n_nationkey
+                build_row4.n_name = join_row3.n_name
+                build_row4.o_orderkey = @vpiGetInt(vec, 0) // o_orderkey
             }
         }
     }
+    @tableIterClose(&o_tvi)
 
     // Step 4: Build HT4
     @joinHTBuild(&state.join_table4)
-    @tableIterClose(&o_tvi)
+
+    // Cleanup
+    @filterManagerFree(&filter)
 }
 
 // Scan Supplier, build join HT5
@@ -279,42 +313,42 @@ fun pipeline5(execCtx: *ExecutionContext, state: *State) -> nil {
 
 // Scan Lineitem, probe HT4, probe HT5, build agg HT
 fun pipeline6(execCtx: *ExecutionContext, state: *State) -> nil {
-  var l_tvi : TableVectorIterator
-  @tableIterInit(&l_tvi, "lineitem")
-  for (@tableIterAdvance(&l_tvi)) {
-    var vec = @tableIterGetVPI(&l_tvi)
-    for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-      // Step 2: Probe HT4
-      var hash_val = @hash(@vpiGetInt(vec, 0)) // l_orderkey
-      var hti: HashTableEntryIterator
-      for (@joinHTLookup(&state.join_table4, &hti, hash_val); @htEntryIterHasNext(&hti, checkJoinKey4, execCtx, vec);) {
-        var join_row4 = @ptrCast(*JoinRow4, @htEntryIterGetRow(&hti))
+    var l_tvi : TableVectorIterator
+    @tableIterInit(&l_tvi, "lineitem")
+    for (@tableIterAdvance(&l_tvi)) {
+        var vec = @tableIterGetVPI(&l_tvi)
+        for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
+            // Step 2: Probe HT4
+            var hash_val = @hash(@vpiGetInt(vec, 0)) // l_orderkey
+            var hti: HashTableEntryIterator
+            for (@joinHTLookup(&state.join_table4, &hti, hash_val); @htEntryIterHasNext(&hti, checkJoinKey4, execCtx, vec);) {
+                var join_row4 = @ptrCast(*JoinRow4, @htEntryIterGetRow(&hti))
 
-        // Step 3: Probe HT5
-        var hash_val5 = @hash(@vpiGetInt(vec, 2), join_row4.n_nationkey) // l_suppkey
-        var join_probe5 : JoinProbe5 // Materialize the right pipeline
-        join_probe5.n_nationkey = join_row4.n_nationkey
-        join_probe5.l_suppkey = @vpiGetInt(vec, 2)
-        var hti5: HashTableEntryIterator
-        for (@joinHTLookup(&state.join_table5, &hti5, hash_val5); @htEntryIterHasNext(&hti5, checkJoinKey5, execCtx, &join_probe5);) {
-          var join_row5 = @ptrCast(*JoinRow5, @htEntryIterGetRow(&hti5))
-          // Step 4: Build Agg HT
-          var agg_input : AggValues // Materialize
-          agg_input.n_name = join_row4.n_name
-          agg_input.revenue = @vpiGetReal(vec, 5) * (1.0 - @vpiGetReal(vec, 6)) // l_extendedprice * (1.0 -  l_discount)
-          var agg_hash_val = @hash(join_row4.n_name)
-          var agg_payload = @ptrCast(*AggPayload, @aggHTLookup(&state.agg_table, agg_hash_val, checkAggKey, &agg_input))
-          if (agg_payload == nil) {
-            agg_payload = @ptrCast(*AggPayload, @aggHTInsert(&state.agg_table, agg_hash_val))
-            agg_payload.n_name = agg_input.n_name
-            @aggInit(&agg_payload.revenue)
-          }
-          @aggAdvance(&agg_payload.revenue, &agg_input.revenue)
+                // Step 3: Probe HT5
+                var hash_val5 = @hash(@vpiGetInt(vec, 2), join_row4.n_nationkey) // l_suppkey
+                var join_probe5 : JoinProbe5 // Materialize the right pipeline
+                join_probe5.n_nationkey = join_row4.n_nationkey
+                join_probe5.l_suppkey = @vpiGetInt(vec, 2)
+                var hti5: HashTableEntryIterator
+                for (@joinHTLookup(&state.join_table5, &hti5, hash_val5); @htEntryIterHasNext(&hti5, checkJoinKey5, execCtx, &join_probe5);) {
+                    var join_row5 = @ptrCast(*JoinRow5, @htEntryIterGetRow(&hti5))
+                    // Step 4: Build Agg HT
+                    var agg_input : AggValues // Materialize
+                    agg_input.n_name = join_row4.n_name
+                    agg_input.revenue = @vpiGetReal(vec, 5) * (1.0 - @vpiGetReal(vec, 6)) // l_extendedprice * (1.0 -  l_discount)
+                    var agg_hash_val = @hash(join_row4.n_name)
+                    var agg_payload = @ptrCast(*AggPayload, @aggHTLookup(&state.agg_table, agg_hash_val, checkAggKey, &agg_input))
+                    if (agg_payload == nil) {
+                        agg_payload = @ptrCast(*AggPayload, @aggHTInsert(&state.agg_table, agg_hash_val))
+                        agg_payload.n_name = agg_input.n_name
+                        @aggInit(&agg_payload.revenue)
+                    }
+                    @aggAdvance(&agg_payload.revenue, &agg_input.revenue)
+                }
+            }
         }
-      }
     }
-  }
-  @tableIterClose(&l_tvi)
+    @tableIterClose(&l_tvi)
 }
 
 // Scan Agg HT table, sort

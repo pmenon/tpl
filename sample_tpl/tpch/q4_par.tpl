@@ -67,25 +67,19 @@ fun sorterCompare(lhs: *SorterRow, rhs: *SorterRow) -> int32 {
     return 0
 }
 
-fun p1_filter(vec: *VectorProjectionIterator) -> int32 {
-    var lo = @dateToSql(1993, 7, 1)
-    var hi = @dateToSql(1993, 10, 1)
-    var filter: VectorFilterExecutor
-    @filterExecInit(&filter, vec)
-    @filterExecGe(&filter, 4, lo)
-    @filterExecLe(&filter, 4, hi)
-    @filterExecFinish(&filter)
-    @filterExecFree(&filter)
-    return 0
+fun p1_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    var orderdate_lo = @dateToSql(1993, 7, 1)
+    @filterGe(vector_proj, 4, orderdate_lo, tids)
 }
 
-fun p2_filter(vec: *VectorProjectionIterator) -> int32 {
-    var filter: VectorFilterExecutor
-    @filterExecInit(&filter, vec)
-    @filterExecLt(&filter, 11, 12)
-    @filterExecFinish(&filter)
-    @filterExecFree(&filter)
-    return 0
+fun p1_filter_clause0term1(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    var orderdate_hi = @dateToSql(1993, 10, 1)
+    @filterLe(vector_proj, 4, orderdate_hi, tids)
+}
+
+fun p2_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // l_commitdate < l_receiptdate
+    @filterLt(vector_proj, 11, 12, tids)
 }
 
 // Setup the whole-query state
@@ -98,9 +92,9 @@ fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
 
 // Tear down the whole-query state
 fun tearDownState(execCtx: *ExecutionContext, state: *State) -> nil {
-  @aggHTFree(&state.agg_table)
-  @sorterFree(&state.sorter)
-  @joinHTFree(&state.join_table)
+    @aggHTFree(&state.agg_table)
+    @sorterFree(&state.sorter)
+    @joinHTFree(&state.join_table)
 }
 
 // -----------------------------------------------------------------------------
@@ -108,15 +102,15 @@ fun tearDownState(execCtx: *ExecutionContext, state: *State) -> nil {
 // -----------------------------------------------------------------------------
 
 fun p1_initThreadState(execCtx: *ExecutionContext, ts: *ThreadState1) -> nil {
-  @filterManagerInit(&ts.filter)
-  @filterManagerInsertFilter(&ts.filter, p1_filter)
-  @filterManagerFinalize(&ts.filter)
-  @joinHTInit(&ts.join_table, @execCtxGetMem(execCtx), @sizeOf(JoinBuildRow))
+    @filterManagerInit(&ts.filter)
+    @filterManagerInsertFilter(&ts.filter, p1_filter_clause0term0, p1_filter_clause0term1)
+    @filterManagerFinalize(&ts.filter)
+    @joinHTInit(&ts.join_table, @execCtxGetMem(execCtx), @sizeOf(JoinBuildRow))
 }
 
 fun p1_tearDownThreadState(execCtx: *ExecutionContext, ts: *ThreadState1) -> nil {
-  @filterManagerFree(&ts.filter)
-  @joinHTFree(&ts.join_table)
+    @filterManagerFree(&ts.filter)
+    @joinHTFree(&ts.join_table)
 }
 
 // -----------------------------------------------------------------------------
@@ -124,15 +118,15 @@ fun p1_tearDownThreadState(execCtx: *ExecutionContext, ts: *ThreadState1) -> nil
 // -----------------------------------------------------------------------------
 
 fun p2_initThreadState(execCtx: *ExecutionContext, ts: *ThreadState2) -> nil {
-  @filterManagerInit(&ts.filter)
-  @filterManagerInsertFilter(&ts.filter, p2_filter)
-  @filterManagerFinalize(&ts.filter)
-  @aggHTInit(&ts.agg_table, @execCtxGetMem(execCtx), @sizeOf(AggRow))
+    @filterManagerInit(&ts.filter)
+    @filterManagerInsertFilter(&ts.filter, p2_filter_clause0term0)
+    @filterManagerFinalize(&ts.filter)
+    @aggHTInit(&ts.agg_table, @execCtxGetMem(execCtx), @sizeOf(AggRow))
 }
 
 fun p2_tearDownThreadState(execCtx: *ExecutionContext, ts: *ThreadState2) -> nil {
-  @filterManagerFree(&ts.filter)
-  @aggHTFree(&ts.agg_table)
+    @filterManagerFree(&ts.filter)
+    @aggHTFree(&ts.agg_table)
 }
 
 // -----------------------------------------------------------------------------
@@ -140,11 +134,11 @@ fun p2_tearDownThreadState(execCtx: *ExecutionContext, ts: *ThreadState2) -> nil
 // -----------------------------------------------------------------------------
 
 fun p3_initThreadState(execCtx: *ExecutionContext, ts: *ThreadState3) -> nil {
-  @sorterInit(&ts.sorter, @execCtxGetMem(execCtx), sorterCompare, @sizeOf(SorterRow))
+    @sorterInit(&ts.sorter, @execCtxGetMem(execCtx), sorterCompare, @sizeOf(SorterRow))
 }
 
 fun p3_tearDownThreadState(execCtx: *ExecutionContext, ts: *ThreadState3) -> nil {
-  @sorterFree(&ts.sorter)
+    @sorterFree(&ts.sorter)
 }
 
 // Pipeline 1 Worker (Join Build)
@@ -152,8 +146,9 @@ fun p1_worker(state: *State, ts: *ThreadState1, o_tvi: *TableVectorIterator) -> 
     var x = 0
     for (@tableIterAdvance(o_tvi)) {
         var vec = @tableIterGetVPI(o_tvi)
+
         // Run Filter
-        @filtersRun(&ts.filter, vec)
+        @filterManagerRunFilters(&ts.filter, vec)
 
         // Insert into JHT
         for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
@@ -187,8 +182,9 @@ fun p2_worker(state: *State, ts: *ThreadState2, l_tvi: *TableVectorIterator) -> 
     var x = 0
     for (@tableIterAdvance(l_tvi)) {
         var vec = @tableIterGetVPI(l_tvi)
+
         // Run Filter
-        @filtersRun(&ts.filter, vec)
+        @filterManagerRunFilters(&ts.filter, vec)
 
         for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
             var hash_val = @hash(@vpiGetInt(vec, 0)) // l_orderkey
@@ -304,11 +300,11 @@ fun execQuery(execCtx: *ExecutionContext, state: *State) -> nil {
 }
 
 fun main(execCtx: *ExecutionContext) -> int32 {
-  var state: State
+    var state: State
 
-  setUpState(execCtx, &state)
-  execQuery(execCtx, &state)
-  tearDownState(execCtx, &state)
+    setUpState(execCtx, &state)
+    execQuery(execCtx, &state)
+    tearDownState(execCtx, &state)
 
-  return state.count
+    return state.count
 }

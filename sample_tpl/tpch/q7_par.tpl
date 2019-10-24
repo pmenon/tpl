@@ -69,7 +69,6 @@ struct State {
 
 struct P1_ThreadState {
     ts_join_table : JoinHashTable
-    filter        : FilterManager
     ts_count      : int32
 }
 
@@ -110,15 +109,14 @@ fun p1_filter(vec: *VectorProjectionIterator) -> int32 {
     return 0
 }
 
-fun p5_filter(vec: *VectorProjectionIterator) -> int32 {
-    var lo = @dateToSql(1995, 1, 1)
-    var hi = @dateToSql(1996, 12, 31)
-    for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-        // l_shipdate between lo and hi
-        @vpiMatch(vec, @vpiGetDate(vec, 10) >= lo and @vpiGetDate(vec, 10) <= hi)
-    }
-    @vpiResetFiltered(vec)
-    return 0
+fun p5_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // l_shipdate
+    @filterGe(vector_proj, 10, @dateToSql(1995, 1, 1), tids)
+}
+
+fun p5_filter_clause0term1(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // l_shipdate
+    @filterLe(vector_proj, 10, @dateToSql(1996, 12, 31), tids)
 }
 
 // Check that the aggregate key already exists
@@ -186,9 +184,6 @@ fun tearDownState(execCtx: *ExecutionContext, state: *State) -> nil {
 fun p1_initThreadState(execCtx: *ExecutionContext, ts: *P1_ThreadState) -> nil {
     ts.ts_count = 0
     @joinHTInit(&ts.ts_join_table, @execCtxGetMem(execCtx), @sizeOf(JoinRow1))
-    @filterManagerInit(&ts.filter)
-    @filterManagerInsertFilter(&ts.filter, p1_filter)
-    @filterManagerFinalize(&ts.filter)
 }
 
 fun p1_tearDownThreadState(execCtx: *ExecutionContext, ts: *P1_ThreadState) -> nil {
@@ -226,7 +221,7 @@ fun p5_initThreadState(execCtx: *ExecutionContext, ts: *P5_ThreadState) -> nil {
     ts.ts_count = 0
     @aggHTInit(&ts.ts_agg_table, @execCtxGetMem(execCtx), @sizeOf(AggPayload))
     @filterManagerInit(&ts.filter)
-    @filterManagerInsertFilter(&ts.filter, p5_filter)
+    @filterManagerInsertFilter(&ts.filter, p5_filter_clause0term0, p5_filter_clause0term1)
     @filterManagerFinalize(&ts.filter)
 }
 
@@ -286,26 +281,26 @@ fun p1_worker(state: *State, ts: *P1_ThreadState, n1_tvi: *TableVectorIterator) 
     var germany = @stringToSql("GERMANY")
     for (@tableIterAdvance(n1_tvi)) {
         var vec1 = @tableIterGetVPI(n1_tvi)
-        @filtersRun(&ts.filter, vec1)
         @tableIterInit(&n2_tvi, "nation")
         for (; @vpiHasNextFiltered(vec1); @vpiAdvanceFiltered(vec1)) {
-            @tableIterInit(&n2_tvi, "nation")
-            for (@tableIterAdvance(&n2_tvi)) {
-                var vec2 = @tableIterGetVPI(&n2_tvi)
-                for (; @vpiHasNext(vec2); @vpiAdvance(vec2)) {
-                    if ((@vpiGetString(vec1, 1) == france and @vpiGetString(vec2, 1) == germany) or @vpiGetString(vec1, 1) == germany and @vpiGetString(vec2, 1) == france) {
-                        // Build JHT1
-                        var hash_val = @hash(@vpiGetInt(vec2, 0)) // n2_nationkey
-                        var build_row1 = @ptrCast(*JoinRow1, @joinHTInsert(&ts.ts_join_table, hash_val))
-                        build_row1.n1_nationkey = @vpiGetInt(vec1, 0) // n1_nationkey
-                        build_row1.n2_nationkey = @vpiGetInt(vec2, 0) // n2_nationkey
-                        build_row1.n1_name = @vpiGetString(vec1, 1) // n1_name
-                        build_row1.n2_name = @vpiGetString(vec2, 1) // n2_name
-                        ts.ts_count = ts.ts_count + 1
+            if (@vpiGetString(vec1, 1) == france or @vpiGetString(vec1, 1) == germany) {
+                for (@tableIterInit(&n2_tvi, "nation"); @tableIterAdvance(&n2_tvi); ) {
+                    var vec2 = @tableIterGetVPI(&n2_tvi)
+                    for (; @vpiHasNext(vec2); @vpiAdvance(vec2)) {
+                        if ((@vpiGetString(vec1, 1) == france and @vpiGetString(vec2, 1) == germany) or @vpiGetString(vec1, 1) == germany and @vpiGetString(vec2, 1) == france) {
+                            // Build JHT1
+                            var hash_val = @hash(@vpiGetInt(vec2, 0)) // n2_nationkey
+                            var build_row1 = @ptrCast(*JoinRow1, @joinHTInsert(&ts.ts_join_table, hash_val))
+                            build_row1.n1_nationkey = @vpiGetInt(vec1, 0) // n1_nationkey
+                            build_row1.n2_nationkey = @vpiGetInt(vec2, 0) // n2_nationkey
+                            build_row1.n1_name = @vpiGetString(vec1, 1) // n1_name
+                            build_row1.n2_name = @vpiGetString(vec2, 1) // n2_name
+                            ts.ts_count = ts.ts_count + 1
+                        }
                     }
                 }
+                @tableIterClose(&n2_tvi)
             }
-          @tableIterClose(&n2_tvi)
         }
     }
 }
@@ -377,7 +372,11 @@ fun p5_worker(state: *State, ts: *P5_ThreadState, l_tvi: *TableVectorIterator) -
     var x = 0
         for (@tableIterAdvance(l_tvi)) {
         var vec = @tableIterGetVPI(l_tvi)
-        @filtersRun(&ts.filter, vec)
+
+        // Filter
+        @filterManagerRunFilters(&ts.filter, vec)
+
+        // Next
         for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
             // Step 2: Probe JHT3
             var hash_val = @hash(@vpiGetInt(vec, 0)) // l_orderkey

@@ -173,8 +173,7 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
             // n_name
             if (@vpiGetString(vec1, 1) == france or @vpiGetString(vec1, 1) == germany) {
                 // Step 2: Scan nation2
-                @tableIterInit(&n2_tvi, "nation")
-                for (@tableIterAdvance(&n2_tvi)) {
+                for (@tableIterInit(&n2_tvi, "nation"); @tableIterAdvance(&n2_tvi); ) {
                     var vec2 = @tableIterGetVPI(&n2_tvi)
                     for (; @vpiHasNext(vec2); @vpiAdvance(vec2)) {
                         if ((@vpiGetString(vec1, 1) == france and @vpiGetString(vec2, 1) == germany) or @vpiGetString(vec1, 1) == germany and @vpiGetString(vec2, 1) == france) {
@@ -274,52 +273,71 @@ fun pipeline4(execCtx: *ExecutionContext, state: *State) -> nil {
     @joinHTBuild(&state.join_table4)
 }
 
+fun p5_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // l_shipdate
+    @filterGe(vector_proj, 10, @dateToSql(1995, 1, 1), tids)
+}
+
+fun p5_filter_clause0term1(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // l_shipdate
+    @filterLe(vector_proj, 10, @dateToSql(1996, 12, 31), tids)
+}
+
 // Scan lineitem, probe JHT3, probe JHT4, build AHT
 fun pipeline5(execCtx: *ExecutionContext, state: *State) -> nil {
+    var filter: FilterManager
+    @filterManagerInit(&filter)
+    @filterManagerInsertFilter(&filter, p5_filter_clause0term0, p5_filter_clause0term1)
+    @filterManagerFinalize(&filter)
+
     var l_tvi : TableVectorIterator
     for (@tableIterInit(&l_tvi, "lineitem"); @tableIterAdvance(&l_tvi); ) {
         var vec = @tableIterGetVPI(&l_tvi)
-        for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-            // l_shipdate
-            if (@vpiGetDate(vec, 10) >= @dateToSql(1995, 1, 1) and @vpiGetDate(vec, 10) <= @dateToSql(1996, 12, 31)) {
-                // Step 2: Probe JHT3
-                var hash_val = @hash(@vpiGetInt(vec, 0)) // l_orderkey
-                var hti3: HashTableEntryIterator
-                for (@joinHTLookup(&state.join_table3, &hti3, hash_val); @htEntryIterHasNext(&hti3, checkJoinKey3, execCtx, vec);) {
-                    var join_row3 = @ptrCast(*JoinRow3, @htEntryIterGetRow(&hti3))
 
-                    // Step 3: Probe JHT4
-                    var hash_val4 = @hash(@vpiGetInt(vec, 2), join_row3.n1_nationkey) // l_suppkey
-                    var join_probe4 : JoinProbe4 // Materialize the right pipeline
-                    join_probe4.l_suppkey = @vpiGetInt(vec, 2)
-                    join_probe4.n1_nationkey = join_row3.n1_nationkey
-                    var hti4: HashTableEntryIterator
-                    for (@joinHTLookup(&state.join_table4, &hti4, hash_val4); @htEntryIterHasNext(&hti4, checkJoinKey4, execCtx, &join_probe4);) {
-                        var join_row4 = @ptrCast(*JoinRow4, @htEntryIterGetRow(&hti4))
+        // Filter
+        @filterManagerRunFilters(&filter, vec)
 
-                        // Step 4: Build Agg HT
-                        var agg_input : AggValues // Materialize
-                        agg_input.supp_nation = join_row3.n1_name
-                        agg_input.cust_nation = join_row3.n2_name
-                        agg_input.l_year = @extractYear(@vpiGetDate(vec, 10))
-                        agg_input.volume = @vpiGetReal(vec, 5) * (1.0 - @vpiGetReal(vec, 6)) // l_extendedprice * (1.0 -  l_discount)
-                        var agg_hash_val = @hash(agg_input.supp_nation, agg_input.cust_nation, agg_input.l_year)
-                        var agg_payload = @ptrCast(*AggPayload, @aggHTLookup(&state.agg_table, agg_hash_val, checkAggKey, &agg_input))
-                        if (agg_payload == nil) {
-                            agg_payload = @ptrCast(*AggPayload, @aggHTInsert(&state.agg_table, agg_hash_val))
-                            agg_payload.supp_nation = agg_input.supp_nation
-                            agg_payload.cust_nation = agg_input.cust_nation
-                            agg_payload.l_year = agg_input.l_year
-                            @aggInit(&agg_payload.volume)
-                        }
-                        @aggAdvance(&agg_payload.volume, &agg_input.volume)
+        for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
+            // Step 2: Probe JHT3
+            var hash_val = @hash(@vpiGetInt(vec, 0)) // l_orderkey
+            var hti3: HashTableEntryIterator
+            for (@joinHTLookup(&state.join_table3, &hti3, hash_val); @htEntryIterHasNext(&hti3, checkJoinKey3, execCtx, vec);) {
+                var join_row3 = @ptrCast(*JoinRow3, @htEntryIterGetRow(&hti3))
+
+                // Step 3: Probe JHT4
+                var hash_val4 = @hash(@vpiGetInt(vec, 2), join_row3.n1_nationkey) // l_suppkey
+                var join_probe4 : JoinProbe4 // Materialize the right pipeline
+                join_probe4.l_suppkey = @vpiGetInt(vec, 2)
+                join_probe4.n1_nationkey = join_row3.n1_nationkey
+                var hti4: HashTableEntryIterator
+                for (@joinHTLookup(&state.join_table4, &hti4, hash_val4); @htEntryIterHasNext(&hti4, checkJoinKey4, execCtx, &join_probe4);) {
+                    var join_row4 = @ptrCast(*JoinRow4, @htEntryIterGetRow(&hti4))
+
+                    // Step 4: Build Agg HT
+                    var agg_input : AggValues // Materialize
+                    agg_input.supp_nation = join_row3.n1_name
+                    agg_input.cust_nation = join_row3.n2_name
+                    agg_input.l_year = @extractYear(@vpiGetDate(vec, 10))
+                    agg_input.volume = @vpiGetReal(vec, 5) * (1.0 - @vpiGetReal(vec, 6)) // l_extendedprice * (1.0 -  l_discount)
+                    var agg_hash_val = @hash(agg_input.supp_nation, agg_input.cust_nation, agg_input.l_year)
+                    var agg_payload = @ptrCast(*AggPayload, @aggHTLookup(&state.agg_table, agg_hash_val, checkAggKey, &agg_input))
+                    if (agg_payload == nil) {
+                        agg_payload = @ptrCast(*AggPayload, @aggHTInsert(&state.agg_table, agg_hash_val))
+                        agg_payload.supp_nation = agg_input.supp_nation
+                        agg_payload.cust_nation = agg_input.cust_nation
+                        agg_payload.l_year = agg_input.l_year
+                        @aggInit(&agg_payload.volume)
                     }
+                    @aggAdvance(&agg_payload.volume, &agg_input.volume)
                 }
             }
         }
     }
     // Build table
     @tableIterClose(&l_tvi)
+
+    // Cleanup
+    @filterManagerFree(&filter)
 }
 
 // Scan AHT, sort

@@ -28,28 +28,48 @@ struct P1_ThreadState {
     ts_count : int32
 }
 
-fun p1_filter(vec: *VectorProjectionIterator) -> int32 {
-    var filter: VectorFilterExecutor
-    @filterExecInit(&filter, vec)
-    @filterExecGt(&filter, 4, @floatToSql(24.0))       // quantity
-    @filterExecGt(&filter, 6, @floatToSql(0.04))       // discount
-    @filterExecLt(&filter, 6, @floatToSql(0.06))       // discount
-    @filterExecGe(&filter, 10, @dateToSql(1994, 1, 1)) // ship date
-    @filterExecLe(&filter, 10, @dateToSql(1995, 1, 1)) // ship date
-    @filterExecFinish(&filter)
-    @filterExecFree(&filter)
-    return 0
+fun p1_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // l_quantity
+    @filterLt(vector_proj, 4, @floatToSql(24.0), tids)
+}
+
+fun p1_filter_clause0term1(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // l_discount
+    @filterGe(vector_proj, 6, @floatToSql(0.05), tids)
+}
+
+fun p1_filter_clause0term2(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // l_discount
+    @filterLe(vector_proj, 6, @floatToSql(0.07), tids)
+}
+
+fun p1_filter_clause0term3(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // l_shipdate
+    @filterGe(vector_proj, 10, @dateToSql(1994, 1, 1), tids)
+}
+
+fun p1_filter_clause0term4(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // l_shipdate
+    @filterLt(vector_proj, 10, @dateToSql(1995, 1, 1), tids)
 }
 
 fun p1_initThreadState(execCtx: *ExecutionContext, ts: *P1_ThreadState) -> nil {
     ts.ts_count = 0
     @aggInit(&ts.ts_sum)
+
     @filterManagerInit(&ts.filter)
-    @filterManagerInsertFilter(&ts.filter, p1_filter)
+    @filterManagerInsertFilter(&ts.filter,
+                               p1_filter_clause0term0,
+                               p1_filter_clause0term1,
+                               p1_filter_clause0term2,
+                               p1_filter_clause0term3,
+                               p1_filter_clause0term4)
     @filterManagerFinalize(&ts.filter)
 }
 
-fun p1_tearDownThreadState(execCtx: *ExecutionContext, ts: *P1_ThreadState) -> nil { }
+fun p1_tearDownThreadState(execCtx: *ExecutionContext, ts: *P1_ThreadState) -> nil {
+    @filterManagerFree(&ts.filter)
+}
 
 // -----------------------------------------------------------------------------
 // Pipeline 1
@@ -61,7 +81,7 @@ fun p1_worker(state: *State, ts: *P1_ThreadState, l_tvi: *TableVectorIterator) -
     var vec = @tableIterGetVPI(l_tvi)
 
     // Filter
-    @filtersRun(&ts.filter, vec)
+    @filterManagerRunFilters(&ts.filter, vec)
 
     // Aggregate
     for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
@@ -73,8 +93,8 @@ fun p1_worker(state: *State, ts: *P1_ThreadState, l_tvi: *TableVectorIterator) -
 }
 
 fun p1_mergeAggregates(qs: *State, ts: *P1_ThreadState) -> nil {
-  @aggMerge(&qs.sum, &ts.ts_sum)
-  qs.count = qs.count + ts.ts_count
+    @aggMerge(&qs.sum, &ts.ts_sum)
+    qs.count = qs.count + ts.ts_count
 }
 
 fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {

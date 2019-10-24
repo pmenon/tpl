@@ -63,24 +63,32 @@ fun teardownState(execCtx: *ExecutionContext, state: *State) -> nil {
     @joinHTFree(&state.join_table)
 }
 
+fun p1_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    var orderdate_lower = @dateToSql(1993, 07, 01)
+    @filterGe(vector_proj, 4, orderdate_lower, tids)
+}
+
+fun p1_filter_clause0term1(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    var orderdate_upper = @dateToSql(1993, 10, 01)
+    @filterLe(vector_proj, 4, orderdate_upper, tids)
+}
 
 // Pipeline 1 (Join Build)
 fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
-    var orderdate_lower = @dateToSql(1993, 07, 01)
-    var orderdate_upper = @dateToSql(1993, 10, 01)
+    var filter: FilterManager
+    @filterManagerInit(&filter)
+    @filterManagerInsertFilter(&filter, p1_filter_clause0term0, p1_filter_clause0term1)
+    @filterManagerFinalize(&filter)
 
     var o_tvi : TableVectorIterator
     @tableIterInit(&o_tvi, "orders")
     for (@tableIterAdvance(&o_tvi)) {
         var vec = @tableIterGetVPI(&o_tvi)
 
-        var filter: VectorFilterExecutor
-        @filterExecInit(&filter, vec)
-        @filterExecGe(&filter, 4, orderdate_lower)
-        @filterExecLe(&filter, 4, orderdate_upper)
-        @filterExecFinish(&filter)
-        @filterExecFree(&filter)
+        // Filter
+        @filterManagerRunFilters(&filter, vec)
 
+        // Build JHT
         for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
             var orderkey = @vpiGetInt(vec, 0)
             var hash_val = @hash(orderkey) // o_orderkey
@@ -94,21 +102,31 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
 
     // Build hash table
     @joinHTBuild(&state.join_table)
+
+    // Cleanup
+    @filterManagerFree(&filter)
+}
+
+fun p2_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+    // l_commitdate < l_receiptdate
+    @filterLt(vector_proj, 11, 12, tids)
 }
 
 // Pipeline 2 (Join Probe up to Agg)
 fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
+    var filter: FilterManager
+    @filterManagerInit(&filter)
+    @filterManagerInsertFilter(&filter, p2_filter_clause0term0)
+    @filterManagerFinalize(&filter)
+
     var l_tvi : TableVectorIterator
     for (@tableIterInit(&l_tvi, "lineitem"); @tableIterAdvance(&l_tvi); ) {
         var vec = @tableIterGetVPI(&l_tvi)
 
-        // l_commitdate < l_receiptdate
-        var filter: VectorFilterExecutor
-        @filterExecInit(&filter, vec)
-        @filterExecLt(&filter, 11, 12)
-        @filterExecFinish(&filter)
-        @filterExecFree(&filter)
+        // Filter
+        @filterManagerRunFilters(&filter, vec)
 
+        // Probe + Aggregate
         for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
             var hash_val = @hash(@vpiGetInt(vec, 0)) // l_orderkey
             var join_iter: HashTableEntryIterator
@@ -132,6 +150,9 @@ fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
         }
     }
     @tableIterClose(&l_tvi)
+
+    // Cleanup
+    @filterManagerFree(&filter)
 }
 
 // Pipeline 3 (Sort)

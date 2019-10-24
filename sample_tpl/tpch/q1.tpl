@@ -1,6 +1,3 @@
-// This is what the codegen looks like for now.
-// It will likely change once I add vectorized operations.
-
 struct Output {
     l_returnflag   : StringVal
     l_linestatus   : StringVal
@@ -15,6 +12,7 @@ struct Output {
 }
 
 struct State {
+    filter         : FilterManager
     agg_hash_table : AggregationHashTable
     sorter         : Sorter
     count          : int32 // debug
@@ -75,13 +73,22 @@ fun compareFn(lhs: *SorterRow, rhs: *SorterRow) -> int32 {
     return 0
 }
 
+fun p1_filter_clause0term0(vector_proj : *VectorProjection, tids: *TupleIdList) -> nil {
+    var date_filter = @dateToSql(1998, 12, 1)
+    @filterLt(vector_proj, 10, date_filter, tids)
+}
+
 fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
+    @filterManagerInit(&state.filter)
+    @filterManagerInsertFilter(&state.filter, pipeline1_filter_clause0term0)
+    @filterManagerFinalize(&state.filter)
     @aggHTInit(&state.agg_hash_table, @execCtxGetMem(execCtx), @sizeOf(AggPayload))
     @sorterInit(&state.sorter, @execCtxGetMem(execCtx), compareFn, @sizeOf(SorterRow))
     state.count = 0
 }
 
-fun teardownState(execCtx: *ExecutionContext, state: *State) -> nil {
+fun tearDownState(execCtx: *ExecutionContext, state: *State) -> nil {
+    @filterManagerFree(&state.filter)
     @aggHTFree(&state.agg_hash_table)
     @sorterFree(&state.sorter)
 }
@@ -98,19 +105,13 @@ fun aggKeyCheck(agg_payload: *AggPayload, agg_values: *AggValues) -> bool {
 
 fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
     // Pipeline 1 (Aggregating)
-    var date_filter = @dateToSql(1998, 12, 1)
-
     var l_tvi : TableVectorIterator
     @tableIterInit(&l_tvi, "lineitem")
     for (@tableIterAdvance(&l_tvi)) {
         var vec = @tableIterGetVPI(&l_tvi)
 
         // Filter on 'l_shipdate'
-        var filter: VectorFilterExecutor
-        @filterExecInit(&filter, vec)
-        @filterExecLt(&filter, 10, date_filter)
-        @filterExecFinish(&filter)
-        @filterExecFree(&filter)
+        @filterManagerRunFilters(&state.filter, vec)
 
         for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
             var agg_values : AggValues
@@ -208,7 +209,7 @@ fun main(execCtx: *ExecutionContext) -> int {
     pipeline1(execCtx, &state)
     pipeline2(execCtx, &state)
     pipeline3(execCtx, &state)
-    teardownState(execCtx, &state)
+    tearDownState(execCtx, &state)
 
     return state.count
 }
