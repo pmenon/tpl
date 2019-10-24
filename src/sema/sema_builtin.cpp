@@ -1032,6 +1032,10 @@ void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call, const ast::B
       break;
     }
     case ast::Builtin::FilterManagerRunFilters: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+
       const auto vpi_kind = ast::BuiltinType::VectorProjectionIterator;
       if (!IsPointerToSpecificBuiltin(call->arguments()[1]->type(), vpi_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(vpi_kind)->PointerTo());
