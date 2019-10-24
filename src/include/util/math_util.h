@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <numeric>
 
 #include "llvm/Support/MathExtras.h"
 
@@ -128,6 +129,19 @@ class MathUtil : public AllStatic {
    */
   static constexpr uintptr_t AlignmentAdjustment(uintptr_t addr, std::size_t alignment) {
     return MathUtil::AlignAddress(addr, alignment) - addr;
+  }
+
+  /**
+   * Compute the factorial of a given number @em num.
+   * @param num The input number.
+   * @return !num
+   */
+  static uint64_t Factorial(uint64_t num) {
+    uint64_t result = 1;
+    for (uint64_t i = 1; i <= num; i++) {
+      result *= i;
+    }
+    return result;
   }
 
   /**
