@@ -1440,6 +1440,15 @@ void BytecodeGenerator::VisitBuiltinSizeOfCall(ast::CallExpr *call) {
   GetExecutionResult()->SetDestination(size_var.ValueOf());
 }
 
+void BytecodeGenerator::VisitBuiltinOffsetOfCall(ast::CallExpr *call) {
+  auto composite_type = call->arguments()[0]->type()->As<ast::StructType>();
+  auto field_name = call->arguments()[1]->As<ast::IdentifierExpr>();
+  const uint32_t offset = composite_type->GetOffsetOfFieldByName(field_name->name());
+  LocalVar offset_var = GetExecutionResult()->GetOrCreateDestination(call->type());
+  GetEmitter()->EmitAssignImm4(offset_var, offset);
+  GetExecutionResult()->SetDestination(offset_var.ValueOf());
+}
+
 void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
   ast::Builtin builtin;
 
@@ -1617,6 +1626,10 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     }
     case ast::Builtin::SizeOf: {
       VisitBuiltinSizeOfCall(call);
+      break;
+    }
+    case ast::Builtin::OffsetOf: {
+      VisitBuiltinOffsetOfCall(call);
       break;
     }
     case ast::Builtin::PtrCast: {

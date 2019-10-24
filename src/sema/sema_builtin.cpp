@@ -1123,14 +1123,6 @@ void Sema::CheckMathTrigCall(ast::CallExpr *call, ast::Builtin builtin) {
   call->set_type(GetBuiltinType(real_kind));
 }
 
-void Sema::CheckBuiltinSizeOfCall(ast::CallExpr *call) {
-  if (!CheckArgCount(call, 1)) {
-    return;
-  }
-
-  // This call returns an unsigned 32-bit value for the size of the type
-  call->set_type(GetBuiltinType(ast::BuiltinType::Uint32));
-}
 void Sema::CheckResultBufferCall(ast::CallExpr *call, ast::Builtin builtin) {
   if (!CheckArgCount(call, 1)) {
     return;
@@ -1147,6 +1139,45 @@ void Sema::CheckResultBufferCall(ast::CallExpr *call, ast::Builtin builtin) {
   } else {
     call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
   }
+}
+
+void Sema::CheckBuiltinSizeOfCall(ast::CallExpr *call) {
+  if (!CheckArgCount(call, 1)) {
+    return;
+  }
+
+  // This call returns an unsigned 32-bit value for the size of the type
+  call->set_type(GetBuiltinType(ast::BuiltinType::Uint32));
+}
+
+void Sema::CheckBuiltinOffsetOfCall(ast::CallExpr *call) {
+  if (!CheckArgCount(call, 2)) {
+    return;
+  }
+
+  // First argument must be a resolved composite type
+  auto *type = Resolve(call->arguments()[0]);
+  if (type == nullptr || !type->IsStructType()) {
+    ReportIncorrectCallArg(call, 0, "composite");
+    return;
+  }
+
+  // Second argument must be an identifier expression
+  auto field = call->arguments()[1]->SafeAs<ast::IdentifierExpr>();
+  if (field == nullptr) {
+    ReportIncorrectCallArg(call, 1, "identifier expression");
+    return;
+  }
+
+  // Field with the given name must exist in the composite type
+  if (type->As<ast::StructType>()->LookupFieldByName(field->name()) == nullptr) {
+    error_reporter()->Report(call->position(), ErrorMessages::kFieldObjectDoesNotExist,
+                             field->name(), type);
+    return;
+  }
+
+  // Returns a 32-bit value for the offset of the type
+  call->set_type(GetBuiltinType(ast::BuiltinType::Uint32));
 }
 
 void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
@@ -1400,6 +1431,11 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     return;
   }
 
+  if (builtin == ast::Builtin::OffsetOf) {
+    CheckBuiltinOffsetOfCall(call);
+    return;
+  }
+
   // First, resolve all call arguments. If any fail, exit immediately.
   for (auto *arg : call->arguments()) {
     auto *resolved_type = Resolve(arg);
@@ -1582,10 +1618,6 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckBuiltinSorterIterCall(call, builtin);
       break;
     }
-    case ast::Builtin::SizeOf: {
-      CheckBuiltinSizeOfCall(call);
-      break;
-    }
     case ast::Builtin::ResultBufferAllocOutRow:
     case ast::Builtin::ResultBufferFinalize: {
       CheckResultBufferCall(call, builtin);
@@ -1600,6 +1632,14 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::Sin:
     case ast::Builtin::Tan: {
       CheckMathTrigCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::SizeOf: {
+      CheckBuiltinSizeOfCall(call);
+      break;
+    }
+    case ast::Builtin::OffsetOf: {
+      CheckBuiltinOffsetOfCall(call);
       break;
     }
     case ast::Builtin::PtrCast: {

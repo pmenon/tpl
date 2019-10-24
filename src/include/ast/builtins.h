@@ -143,6 +143,7 @@ namespace tpl::ast {
                                                                 \
   /* Generic */                                                 \
   F(SizeOf, sizeOf)                                             \
+  F(OffsetOf, offsetOf)                                         \
   F(PtrCast, ptrCast)
 
 /**
