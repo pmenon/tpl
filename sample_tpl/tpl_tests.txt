@@ -21,6 +21,7 @@ loop3.tpl,false,0
 loop4.tpl,false,166167000
 #map.tpl,false,10
 nil.tpl,false,0
+offsetof.tpl,false,54
 param.tpl,false,10
 pointer.tpl,false,10
 return-expr.tpl,false,15

@@ -35,12 +35,10 @@ namespace sema {
   F(MismatchedCallArgs, "wrong number of arguments in call to '%0': expected %1, received %2.",    \
     (ast::Identifier, uint32_t, uint32_t))                                                         \
   F(IncorrectCallArgType,                                                                          \
-    "function '%0' expects argument of type '%1' in position '%2', received "                      \
-    "type '%3'",                                                                                   \
+    "function '%0' expects argument of type '%1' in position '%2', received type '%3'",            \
     (ast::Identifier, ast::Type *, uint32_t, ast::Type *))                                         \
   F(IncorrectCallArgType2,                                                                         \
-    "function '%0' expects '%1' argument in position '%2', received type "                         \
-    "'%3'",                                                                                        \
+    "function '%0' expects '%1' argument in position '%2', received type '%3'",                    \
     (ast::Identifier, const char *, uint32_t, ast::Type *))                                        \
   F(NonBoolIfCondition, "non-bool used as if condition", ())                                       \
   F(NonBoolForCondition, "non-bool used as for condition", ())                                     \
@@ -54,8 +52,7 @@ namespace sema {
   F(MismatchedTypesToBinary, "mismatched types '%0' and '%1' to binary operation '%2'",            \
     (ast::Type *, ast::Type *, parsing::Token::Type))                                              \
   F(MismatchedReturnType,                                                                          \
-    "type of 'return' expression '%0' incompatible with function's declared "                      \
-    "return type '%1'",                                                                            \
+    "type of 'return' expression '%0' incompatible with function's declared return type '%1'",     \
     (ast::Type *, ast::Type *))                                                                    \
   F(NonIdentifierIterator, "expected identifier for table iteration variable", ())                 \
   F(NonIdentifierTargetInForInLoop, "target of for-in loop must be an identifier", ())             \
@@ -78,24 +75,20 @@ namespace sema {
   F(MissingReturn, "missing return at end of function", ())                                        \
   F(InvalidDeclaration, "non-declaration outside function", ())                                    \
   F(BadComparisonFunctionForSorter,                                                                \
-    "sorterInit requires a comparison function of type (*,*)->int32. "                             \
-    "Received type '%0'",                                                                          \
+    "sorterInit requires a comparison function of type (*,*)->int32. Received type '%0'",          \
     (ast::Type *))                                                                                 \
   F(BadArgToPtrCast,                                                                               \
-    "ptrCast() expects (compile-time *DestType, *T) arguments.  Received "                         \
-    "type '%0' in position %1",                                                                    \
+    "ptrCast() expects (compile-time *Type, Expr) arguments. Received type '%0' in position %1",   \
     (ast::Type *, uint32_t))                                                                       \
   F(BadHashArg, "cannot hash type '%0'", (ast::Type *))                                            \
   F(MissingArrayLength, "missing array length (either compile-time number or '*')", ())            \
   F(NotASQLAggregate, "'%0' is not a SQL aggregator type", (ast::Type *))                          \
   F(BadParallelScanFunction,                                                                       \
-    "parallel scan function must have type (*ExecutionContext, "                                   \
-    "*TableVectorIterator)->nil, received '%0'",                                                   \
+    "parallel scan function must have type (*ExecutionContext, *TableVectorIterator)->nil, "       \
+    "received '%0'",                                                                               \
     (ast::Type *))                                                                                 \
   F(BadKeyEqualityCheckFunctionForJoinTableLookup,                                                 \
-    "key equality check function must have type: (*,*,*)->bool, received "                         \
-    "'%0'",                                                                                        \
-    (ast::Type *))
+    "key equality check function must have type: (*,*,*)->bool, received '%0'", (ast::Type *))
 
 /// Define the ErrorMessageId enumeration
 enum class ErrorMessageId : uint16_t {
