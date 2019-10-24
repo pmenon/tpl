@@ -48,40 +48,42 @@ namespace tpl::sql {
  * there is no selection vector, the active element count and size will match. Otherwise, the active
  * element count equals the size of the selection vector.
  *
- * <b>Usage</b>:
+ * <h2>Usage:</h2>
  *
- * Referencing-vectors are created with <b>zero</b> capacity. No memory is allocated and the vector
- * can only ever reference external data.
  *
- * To create a referencing vector whose data is only available <b>after</b> construction:
+ * <h3>Referencing-vectors</h3>
+ * Referencing-vectors do not allocate any memory and can only reference externally-owned data. To
+ * create a referencing-vector, create a vector of the appropriate type followed by a call to
+ * Vector::Reference() with the raw data as shown below:
  * @code
  * Vector vec(TypeId::SmallInt);
  * ...
- * vec.Reset(...);
+ * vec.Reference(data, null_mask, size)
  * @endcode
  *
- * To create a referencing vector whose external data is immediately available:
- * @code
- * Vector vec(TypeId::Integer, data, size);
- * // Vector size (and count) match the size provide at construction time
- * auto first = vec.GetValue(0);
- * ...
- * @endcode
+ * When creating a referencing-vector, the underlying data is not allowed to be NULL. The input NULL
+ * bitmask, however, can be NULL to indicate that <b>no</b> elements are NULL. The <i>size</i>
+ * attribute indicates the number of physically contiguous elements in the vector, and must be
+ * smaller than the maximum capacity of the vector. After creation, the count and size are equal.
  *
- * Both the above approaches set the size of the vector based on the size of the underlying data.
  * Referencing-vectors enable users to lift externally stored data into the vector-processing
  * ecosystem; the rich library of vector operations in tpl::sql::VectorOps can be executed on native
  * arrays.
  *
- * Owning vectors are created empty and must be explicitly resized after construction:
+ *
+ * <h3>Owning-vectors</h3>
+ * Owning vectors, as their name implies, create and own the underlying vector data upon creation.
+ * Owning vectors are created empty (i.e., with a size of 0) and must be explicitly resized after
+ * construction:
  * @code
  * Vector vec(TypeId::Double, true, false);
  * vec.Resize(100);
- * vec->SetNull(10, true);
+ * vec.SetNull(10, true);
  * // ...
  * @endcode
  *
- * <b>Caution</b>:
+ *
+ * <h3>Caution:</h3>
  *
  * While there are methods to get/set individual vector elements, this should be used
  * sparingly. If you find yourself invoking this is in a hot-loop, or very often, reconsider your
@@ -112,14 +114,6 @@ class Vector {
    * @param clear Should the vector zero the data if it allocates any?
    */
   Vector(TypeId type, bool create_data, bool clear);
-
-  /**
-   * Create a non-owning vector that references the specified data.
-   * @param type The primitive type ID of the elements in the vector.
-   * @param data A pointer to the data.
-   * @param size The number of elements in the vector
-   */
-  Vector(TypeId type, byte *data, uint64_t size);
 
   /**
    * Vector's cannot be implicitly copied or moved.

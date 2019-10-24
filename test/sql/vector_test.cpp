@@ -41,7 +41,8 @@ TEST_F(VectorTest, InitFromArray) {
   {
     float arr[num_elems] = {-1.2, -34.56, 6.7, 8.91011, 1213.1415};
 
-    Vector vec(TypeId::Float, reinterpret_cast<byte *>(arr), num_elems);
+    Vector vec(TypeId::Float);
+    vec.Reference(reinterpret_cast<byte *>(arr), nullptr, num_elems);
     EXPECT_EQ(num_elems, vec.GetSize());
     EXPECT_EQ(num_elems, vec.GetCount());
     EXPECT_EQ(nullptr, vec.GetSelectionVector());
@@ -59,7 +60,8 @@ TEST_F(VectorTest, InitFromArray) {
     VarlenEntry arr[num_elems] = {varlens.AddVarlen("go loko"), varlens.AddVarlen("hot-line bling"),
                                   varlens.AddVarlen("kawhi"), varlens.AddVarlen("6ix"),
                                   varlens.AddVarlen("king city")};
-    Vector vec(TypeId::Varchar, reinterpret_cast<byte *>(arr), num_elems);
+    Vector vec(TypeId::Varchar);
+    vec.Reference(reinterpret_cast<byte *>(arr), nullptr, num_elems);
     EXPECT_EQ(num_elems, vec.GetSize());
     EXPECT_EQ(num_elems, vec.GetCount());
     EXPECT_EQ(nullptr, vec.GetSelectionVector());

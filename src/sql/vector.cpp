@@ -37,16 +37,6 @@ Vector::Vector(TypeId type, bool create_data, bool clear)
   }
 }
 
-Vector::Vector(TypeId type, byte *data, uint64_t size)
-    : type_(type), count_(size), num_elems_(size), data_(data), sel_vector_(nullptr) {
-  TPL_ASSERT(data != nullptr, "Cannot create vector from NULL data pointer");
-  TPL_ASSERT(size <= kDefaultVectorSize, "External data size too large");
-  // Since vector capacity can never exceed kDefaultVectorSize, we reserve upon creation to remove
-  // allocations as the vector is resized.
-  null_mask_.Reserve(kDefaultVectorSize);
-  null_mask_.Resize(num_elems_);
-}
-
 Vector::~Vector() { Destroy(); }
 
 void Vector::Initialize(const TypeId new_type, const bool clear) {
