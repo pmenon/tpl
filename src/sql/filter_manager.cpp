@@ -63,11 +63,14 @@ void FilterManager::Clause::Finalize(bandit::Policy::Kind policy_kind) {
 }
 
 void FilterManager::Clause::RunFilter(VectorProjection *vector_projection, TupleIdList *tid_list) {
+  // Choose the ordering we think is best
+  const TermEvaluationOrder &ordering = orderings_[agent_->NextAction()];
+
   util::Timer<std::micro> timer;
   timer.Start();
 
-  for (const auto &term_idx : orderings_[agent_->NextAction()]) {
-    terms[term_idx](vector_projection, tid_list);
+  for (const auto &term_idx : ordering) {
+    terms_[term_idx](vector_projection, tid_list);
   }
 
   timer.Stop();

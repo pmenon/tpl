@@ -1,7 +1,6 @@
 #include <chrono>
 #include <string>
 #include <vector>
-#include <iostream>
 
 #include "sql/catalog.h"
 #include "sql/filter_manager.h"
@@ -17,6 +16,7 @@ enum Col : uint8_t { A = 0, B = 1, C = 2, D = 3 };
 
 using namespace std::chrono_literals;  // NOLINT
 
+// 0.025% selective
 void Clause0Term0(VectorProjection *vpi, TupleIdList *tids) {
   VectorFilterExecutor::SelectLessThanVal(vpi, Col::A, GenericValue::CreateInteger(500), tids);
 }
@@ -26,20 +26,10 @@ void Clause0Term1(VectorProjection *vpi, TupleIdList *tids) {
   VectorFilterExecutor::SelectLessThanVal(vpi, Col::B, GenericValue::CreateInteger(9), tids);
 }
 
-// 20% selective
-void Clause0Term2(VectorProjection *vpi, TupleIdList *tids) {
-  VectorFilterExecutor::SelectLessThanVal(vpi, Col::C, GenericValue::CreateInteger(200), tids);
-}
-
-// 50% selective
-void Clause0Term3(VectorProjection *vpi, TupleIdList *tids) {
-  VectorFilterExecutor::SelectLessThanVal(vpi, Col::D, GenericValue::CreateInteger(50000), tids);
-}
-
 TEST_F(FilterManagerTest, SimpleFilterManagerTest) {
   FilterManager filter(bandit::Policy::FixedAction);
   filter.StartNewClause();
-  filter.InsertClauseTerm(Clause0Term0);
+  filter.InsertClauseTerms({Clause0Term0, Clause0Term1});
   filter.Finalize();
 
   TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
@@ -52,36 +42,11 @@ TEST_F(FilterManagerTest, SimpleFilterManagerTest) {
     // Check
     vpi->ForEach([vpi]() {
       auto cola = *vpi->GetValue<int32_t, false>(Col::A, nullptr);
+      auto colb = *vpi->GetValue<int32_t, false>(Col::B, nullptr);
       EXPECT_LT(cola, 500);
+      EXPECT_LT(colb, 9);
     });
   }
-}
-
-TEST_F(FilterManagerTest, AdaptiveFilterManagerTest) {
-  FilterManager filter(bandit::Policy::EpsilonGreedy);
-  filter.StartNewClause();
-  filter.InsertClauseTerms({Clause0Term1, Clause0Term2, Clause0Term3, Clause0Term0});
-  filter.Finalize();
-
-  TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
-  for (tvi.Init(); tvi.Advance();) {
-    auto *vpi = tvi.GetVectorProjectionIterator();
-
-    // Run the filters
-    filter.RunFilters(vpi);
-
-    // Check
-    vpi->ForEach([vpi]() {
-      auto cola = *vpi->GetValue<int32_t, false>(Col::A, nullptr);
-      EXPECT_LT(cola, 500);
-    });
-  }
-
-  // No matter what, Term0 is the most selective, so should be the first to be evaluated. Term0
-  // appears as the last term.
-  auto actual_optimal_order = filter.GetOptimalOrderings();
-  EXPECT_EQ(1u, actual_optimal_order.size());
-  EXPECT_EQ(3u, actual_optimal_order[0][0]);
 }
 
 #if 0

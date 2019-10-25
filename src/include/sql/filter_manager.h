@@ -49,7 +49,7 @@ class FilterManager {
      * Add a term to the clause.
      * @param term The term to add to this clause.
      */
-    void AddTerm(MatchFn term) { terms.push_back(term); }
+    void AddTerm(MatchFn term) { terms_.push_back(term); }
 
     /**
      * Finalize and prepare this clause for execution. After this call, the clause is immutable.
@@ -66,7 +66,7 @@ class FilterManager {
     /**
      * @return The number of terms.
      */
-    uint32_t GetTermCount() const { return terms.size(); }
+    uint32_t GetTermCount() const { return terms_.size(); }
 
     /**
      * @return The current optimal term ordering.
@@ -75,7 +75,7 @@ class FilterManager {
 
    private:
     // The terms (i.e., factors) of the conjunction
-    std::vector<MatchFn> terms;
+    std::vector<MatchFn> terms_;
 
     // Possible term orderings
     std::vector<TermEvaluationOrder> orderings_;
