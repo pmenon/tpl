@@ -300,7 +300,7 @@ TEST(BitVectorTest, FlipAll) {
 }
 
 TEST(BitVectorTest, Any) {
-  for (uint32_t size : {100, 256}) {
+  for (uint32_t size : {100, 257, 521, 1024, 1031}) {
     BitVector<> bv(size);
     EXPECT_FALSE(bv.Any());
 
@@ -316,7 +316,7 @@ TEST(BitVectorTest, Any) {
 }
 
 TEST(BitVectorTest, All) {
-  for (uint32_t size : {100, 256}) {
+  for (uint32_t size : {100, 257, 521, 1024, 1031}) {
     BitVector<> bv(size);
     EXPECT_FALSE(bv.All());
 
@@ -339,7 +339,7 @@ TEST(BitVectorTest, All) {
 }
 
 TEST(BitVectorTest, None) {
-  BitVector<> bv(100);
+  BitVector<> bv(1024);
   EXPECT_TRUE(bv.None());
 
   bv.Reset();

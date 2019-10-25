@@ -316,21 +316,7 @@ class BitVector {
   }
 
   /**
-   * Check if any bit in the vector is non-zero.
-   * @return True if any bit in the vector is set to 1; false otherwise.
-   */
-  bool Any() const {
-    for (uint32_t i = 0; i < GetNumWords(); i++) {
-      if (words_[i] != static_cast<WordType>(0)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Check if all bits in the vector are non-zero.
-   * @return True if all bits are set to 1; false otherwise.
+   * @return True if all bits are set, i.e., 1; false otherwise.
    */
   bool All() const {
     const uint32_t extra_bits = GetNumExtraBits();
@@ -354,10 +340,21 @@ class BitVector {
   }
 
   /**
-   * Check if all bits in the vector are zero.
-   * @return True if all bits are set to 0; false otherwise.
+   * @return True if all bits are unset, i.e., 0; false otherwise.
    */
-  bool None() const { return !Any(); }
+  bool None() const {
+    for (uint32_t i = 0; i < GetNumWords(); i++) {
+      if (words_[i] != static_cast<WordType>(0)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * @return True if any bit in the vector is set, i.e., 1; false otherwise.
+   */
+  bool Any() const { return !None(); }
 
   /**
    * Count the 1-bits in the bit vector.
