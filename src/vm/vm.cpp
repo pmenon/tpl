@@ -1195,6 +1195,10 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   GEN_AGGREGATE(Real, RealSumAggregate);
   GEN_AGGREGATE(Real, RealMaxAggregate);
   GEN_AGGREGATE(Real, RealMinAggregate);
+  GEN_AGGREGATE(DateVal, DateMaxAggregate);
+  GEN_AGGREGATE(DateVal, DateMinAggregate);
+  GEN_AGGREGATE(StringVal, StringMaxAggregate);
+  GEN_AGGREGATE(StringVal, StringMinAggregate);
 
 #undef GEN_AGGREGATE
 

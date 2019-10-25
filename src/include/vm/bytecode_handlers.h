@@ -919,9 +919,9 @@ VM_OP_HOT void OpAggregationOverflowPartitionIteratorGetRowEntry(
   *entry = iter->GetEntryForRow();
 }
 
-//
+// ---------------------------------------------------------
 // COUNT
-//
+// ---------------------------------------------------------
 
 VM_OP_HOT void OpCountAggregateInit(tpl::sql::CountAggregate *agg) {
   new (agg) tpl::sql::CountAggregate();
@@ -945,9 +945,9 @@ VM_OP_HOT void OpCountAggregateGetResult(tpl::sql::Integer *result,
 
 VM_OP_HOT void OpCountAggregateFree(tpl::sql::CountAggregate *agg) { agg->~CountAggregate(); }
 
-//
+// ---------------------------------------------------------
 // COUNT(*)
-//
+// ---------------------------------------------------------
 
 VM_OP_HOT void OpCountStarAggregateInit(tpl::sql::CountStarAggregate *agg) {
   new (agg) tpl::sql::CountStarAggregate();
@@ -974,9 +974,9 @@ VM_OP_HOT void OpCountStarAggregateFree(tpl::sql::CountStarAggregate *agg) {
   agg->~CountStarAggregate();
 }
 
-//
-// SUM(int_type)
-//
+// ---------------------------------------------------------
+// SUM
+// ---------------------------------------------------------
 
 VM_OP_HOT void OpIntegerSumAggregateInit(tpl::sql::IntegerSumAggregate *agg) {
   new (agg) tpl::sql::IntegerSumAggregate();
@@ -1003,9 +1003,32 @@ VM_OP_HOT void OpIntegerSumAggregateFree(tpl::sql::IntegerSumAggregate *agg) {
   agg->~IntegerSumAggregate();
 }
 
-//
-// MAX(int_type)
-//
+VM_OP_HOT void OpRealSumAggregateInit(tpl::sql::RealSumAggregate *agg) {
+  new (agg) tpl::sql::RealSumAggregate();
+}
+
+VM_OP_HOT void OpRealSumAggregateAdvance(tpl::sql::RealSumAggregate *agg,
+                                         const tpl::sql::Real *val) {
+  agg->Advance(*val);
+}
+
+VM_OP_HOT void OpRealSumAggregateMerge(tpl::sql::RealSumAggregate *agg_1,
+                                       const tpl::sql::RealSumAggregate *agg_2) {
+  agg_1->Merge(*agg_2);
+}
+
+VM_OP_HOT void OpRealSumAggregateReset(tpl::sql::RealSumAggregate *agg) { agg->Reset(); }
+
+VM_OP_HOT void OpRealSumAggregateGetResult(tpl::sql::Real *result,
+                                           const tpl::sql::RealSumAggregate *agg) {
+  *result = agg->GetResultSum();
+}
+
+VM_OP_HOT void OpRealSumAggregateFree(tpl::sql::RealSumAggregate *agg) { agg->~RealSumAggregate(); }
+
+// ---------------------------------------------------------
+// MAX
+// ---------------------------------------------------------
 
 VM_OP_HOT void OpIntegerMaxAggregateInit(tpl::sql::IntegerMaxAggregate *agg) {
   new (agg) tpl::sql::IntegerMaxAggregate();
@@ -1032,9 +1055,80 @@ VM_OP_HOT void OpIntegerMaxAggregateFree(tpl::sql::IntegerMaxAggregate *agg) {
   agg->~IntegerMaxAggregate();
 }
 
-//
-// MIN(int_type)
-//
+VM_OP_HOT void OpRealMaxAggregateInit(tpl::sql::RealMaxAggregate *agg) {
+  new (agg) tpl::sql::RealMaxAggregate();
+}
+
+VM_OP_HOT void OpRealMaxAggregateAdvance(tpl::sql::RealMaxAggregate *agg,
+                                         const tpl::sql::Real *val) {
+  agg->Advance(*val);
+}
+
+VM_OP_HOT void OpRealMaxAggregateMerge(tpl::sql::RealMaxAggregate *agg_1,
+                                       const tpl::sql::RealMaxAggregate *agg_2) {
+  agg_1->Merge(*agg_2);
+}
+
+VM_OP_HOT void OpRealMaxAggregateReset(tpl::sql::RealMaxAggregate *agg) { agg->Reset(); }
+
+VM_OP_HOT void OpRealMaxAggregateGetResult(tpl::sql::Real *result,
+                                           const tpl::sql::RealMaxAggregate *agg) {
+  *result = agg->GetResultMax();
+}
+
+VM_OP_HOT void OpRealMaxAggregateFree(tpl::sql::RealMaxAggregate *agg) { agg->~RealMaxAggregate(); }
+
+VM_OP_HOT void OpDateMaxAggregateInit(tpl::sql::DateMaxAggregate *agg) {
+  new (agg) tpl::sql::DateMaxAggregate();
+}
+
+VM_OP_HOT void OpDateMaxAggregateAdvance(tpl::sql::DateMaxAggregate *agg,
+                                         const tpl::sql::DateVal *val) {
+  agg->Advance(*val);
+}
+
+VM_OP_HOT void OpDateMaxAggregateMerge(tpl::sql::DateMaxAggregate *agg_1,
+                                       const tpl::sql::DateMaxAggregate *agg_2) {
+  agg_1->Merge(*agg_2);
+}
+
+VM_OP_HOT void OpDateMaxAggregateReset(tpl::sql::DateMaxAggregate *agg) { agg->Reset(); }
+
+VM_OP_HOT void OpDateMaxAggregateGetResult(tpl::sql::DateVal *result,
+                                           const tpl::sql::DateMaxAggregate *agg) {
+  *result = agg->GetResultMax();
+}
+
+VM_OP_HOT void OpDateMaxAggregateFree(tpl::sql::DateMaxAggregate *agg) { agg->~DateMaxAggregate(); }
+
+VM_OP_HOT void OpStringMaxAggregateInit(tpl::sql::StringMaxAggregate *agg) {
+  new (agg) tpl::sql::StringMaxAggregate();
+}
+
+VM_OP_HOT void OpStringMaxAggregateAdvance(tpl::sql::StringMaxAggregate *agg,
+                                           const tpl::sql::StringVal *val) {
+  agg->Advance(*val);
+}
+
+VM_OP_HOT void OpStringMaxAggregateMerge(tpl::sql::StringMaxAggregate *agg_1,
+                                         const tpl::sql::StringMaxAggregate *agg_2) {
+  agg_1->Merge(*agg_2);
+}
+
+VM_OP_HOT void OpStringMaxAggregateReset(tpl::sql::StringMaxAggregate *agg) { agg->Reset(); }
+
+VM_OP_HOT void OpStringMaxAggregateGetResult(tpl::sql::StringVal *result,
+                                             const tpl::sql::StringMaxAggregate *agg) {
+  *result = agg->GetResultMax();
+}
+
+VM_OP_HOT void OpStringMaxAggregateFree(tpl::sql::StringMaxAggregate *agg) {
+  agg->~StringMaxAggregate();
+}
+
+// ---------------------------------------------------------
+// MIN
+// ---------------------------------------------------------
 
 VM_OP_HOT void OpIntegerMinAggregateInit(tpl::sql::IntegerMinAggregate *agg) {
   new (agg) tpl::sql::IntegerMinAggregate();
@@ -1061,64 +1155,6 @@ VM_OP_HOT void OpIntegerMinAggregateFree(tpl::sql::IntegerMinAggregate *agg) {
   agg->~IntegerMinAggregate();
 }
 
-//
-// SUM(real)
-//
-
-VM_OP_HOT void OpRealSumAggregateInit(tpl::sql::RealSumAggregate *agg) {
-  new (agg) tpl::sql::RealSumAggregate();
-}
-
-VM_OP_HOT void OpRealSumAggregateAdvance(tpl::sql::RealSumAggregate *agg,
-                                         const tpl::sql::Real *val) {
-  agg->Advance(*val);
-}
-
-VM_OP_HOT void OpRealSumAggregateMerge(tpl::sql::RealSumAggregate *agg_1,
-                                       const tpl::sql::RealSumAggregate *agg_2) {
-  agg_1->Merge(*agg_2);
-}
-
-VM_OP_HOT void OpRealSumAggregateReset(tpl::sql::RealSumAggregate *agg) { agg->Reset(); }
-
-VM_OP_HOT void OpRealSumAggregateGetResult(tpl::sql::Real *result,
-                                           const tpl::sql::RealSumAggregate *agg) {
-  *result = agg->GetResultSum();
-}
-
-VM_OP_HOT void OpRealSumAggregateFree(tpl::sql::RealSumAggregate *agg) { agg->~RealSumAggregate(); }
-
-//
-// MAX(real_type)
-//
-
-VM_OP_HOT void OpRealMaxAggregateInit(tpl::sql::RealMaxAggregate *agg) {
-  new (agg) tpl::sql::RealMaxAggregate();
-}
-
-VM_OP_HOT void OpRealMaxAggregateAdvance(tpl::sql::RealMaxAggregate *agg,
-                                         const tpl::sql::Real *val) {
-  agg->Advance(*val);
-}
-
-VM_OP_HOT void OpRealMaxAggregateMerge(tpl::sql::RealMaxAggregate *agg_1,
-                                       const tpl::sql::RealMaxAggregate *agg_2) {
-  agg_1->Merge(*agg_2);
-}
-
-VM_OP_HOT void OpRealMaxAggregateReset(tpl::sql::RealMaxAggregate *agg) { agg->Reset(); }
-
-VM_OP_HOT void OpRealMaxAggregateGetResult(tpl::sql::Real *result,
-                                           const tpl::sql::RealMaxAggregate *agg) {
-  *result = agg->GetResultMax();
-}
-
-VM_OP_HOT void OpRealMaxAggregateFree(tpl::sql::RealMaxAggregate *agg) { agg->~RealMaxAggregate(); }
-
-//
-// MIN(real_type)
-//
-
 VM_OP_HOT void OpRealMinAggregateInit(tpl::sql::RealMinAggregate *agg) {
   new (agg) tpl::sql::RealMinAggregate();
 }
@@ -1142,9 +1178,57 @@ VM_OP_HOT void OpRealMinAggregateGetResult(tpl::sql::Real *result,
 
 VM_OP_HOT void OpRealMinAggregateFree(tpl::sql::RealMinAggregate *agg) { agg->~RealMinAggregate(); }
 
-//
+VM_OP_HOT void OpDateMinAggregateInit(tpl::sql::DateMinAggregate *agg) {
+  new (agg) tpl::sql::DateMinAggregate();
+}
+
+VM_OP_HOT void OpDateMinAggregateAdvance(tpl::sql::DateMinAggregate *agg,
+                                         const tpl::sql::DateVal *val) {
+  agg->Advance(*val);
+}
+
+VM_OP_HOT void OpDateMinAggregateMerge(tpl::sql::DateMinAggregate *agg_1,
+                                       const tpl::sql::DateMinAggregate *agg_2) {
+  agg_1->Merge(*agg_2);
+}
+
+VM_OP_HOT void OpDateMinAggregateReset(tpl::sql::DateMinAggregate *agg) { agg->Reset(); }
+
+VM_OP_HOT void OpDateMinAggregateGetResult(tpl::sql::DateVal *result,
+                                           const tpl::sql::DateMinAggregate *agg) {
+  *result = agg->GetResultMin();
+}
+
+VM_OP_HOT void OpDateMinAggregateFree(tpl::sql::DateMinAggregate *agg) { agg->~DateMinAggregate(); }
+
+VM_OP_HOT void OpStringMinAggregateInit(tpl::sql::StringMinAggregate *agg) {
+  new (agg) tpl::sql::StringMinAggregate();
+}
+
+VM_OP_HOT void OpStringMinAggregateAdvance(tpl::sql::StringMinAggregate *agg,
+                                           const tpl::sql::StringVal *val) {
+  agg->Advance(*val);
+}
+
+VM_OP_HOT void OpStringMinAggregateMerge(tpl::sql::StringMinAggregate *agg_1,
+                                         const tpl::sql::StringMinAggregate *agg_2) {
+  agg_1->Merge(*agg_2);
+}
+
+VM_OP_HOT void OpStringMinAggregateReset(tpl::sql::StringMinAggregate *agg) { agg->Reset(); }
+
+VM_OP_HOT void OpStringMinAggregateGetResult(tpl::sql::StringVal *result,
+                                             const tpl::sql::StringMinAggregate *agg) {
+  *result = agg->GetResultMin();
+}
+
+VM_OP_HOT void OpStringMinAggregateFree(tpl::sql::StringMinAggregate *agg) {
+  agg->~StringMinAggregate();
+}
+
+// ---------------------------------------------------------
 // AVG
-//
+// ---------------------------------------------------------
 
 VM_OP_HOT void OpAvgAggregateInit(tpl::sql::AvgAggregate *agg) {
   new (agg) tpl::sql::AvgAggregate();
