@@ -29,6 +29,12 @@ class FilterManager {
   using MatchFn = void (*)(VectorProjection *, TupleIdList *);
 
   /**
+   * The order of evaluation of terms in a clause. Each element represents the index of the term in
+   * the clause to execute.
+   */
+  using TermEvaluationOrder = std::vector<uint16_t>;
+
+  /**
    * A conjunctive clause in a multi-clause disjunctive normal form filter. A clause is composed of
    * one or more terms that form the factors of the conjunction. Factors can be reordered.
    */
@@ -62,9 +68,17 @@ class FilterManager {
      */
     uint32_t GetTermCount() const { return terms.size(); }
 
+    /**
+     * @return The current optimal term ordering.
+     */
+    TermEvaluationOrder GetOptimalTermOrder() const;
+
    private:
     // The terms (i.e., factors) of the conjunction
     std::vector<MatchFn> terms;
+
+    // Possible term orderings
+    std::vector<TermEvaluationOrder> orderings_;
 
     // The adaptive policy
     std::unique_ptr<bandit::Policy> policy_;
@@ -95,10 +109,16 @@ class FilterManager {
   void StartNewClause();
 
   /**
-   * Insert a flavor for the current clause in the filter.
-   * @param term A filter flavor.
+   * Insert a term in the current clause in the filter.
+   * @param term A term.
    */
   void InsertClauseTerm(MatchFn term);
+
+  /**
+   * Insert a list of terms in the current clause in the filter.
+   * @param terms The terms of the clause.
+   */
+  void InsertClauseTerms(std::initializer_list<MatchFn> terms);
 
   /**
    * Make the manager immutable.
@@ -121,6 +141,16 @@ class FilterManager {
    * @return If the filter manager has been finalized and frozen.
    */
   bool IsFinalized() const { return finalized_; }
+
+  /**
+   * @return The number of clauses in this filter.
+   */
+  uint32_t GetClauseCount() const { return clauses_.size(); }
+
+  /**
+   * @return The optimal term orderings for each clause in this filter.
+   */
+  std::vector<TermEvaluationOrder> GetOptimalOrderings() const;
 
  private:
   // The clauses in the filter

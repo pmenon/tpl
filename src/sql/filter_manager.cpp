@@ -45,21 +45,40 @@ std::unique_ptr<bandit::Policy> CreatePolicy(bandit::Policy::Kind policy_kind) {
 FilterManager::Clause::Clause() : agent_(nullptr) {}
 
 void FilterManager::Clause::Finalize(bandit::Policy::Kind policy_kind) {
+  // Create orderings
+
+  // TODO(pmenon): This is retarded. Be smarter about this exploration.
+
+  const uint32_t num_orderings = util::MathUtil::Factorial(GetTermCount());
+  orderings_.reserve(num_orderings);
+
+  TermEvaluationOrder order(GetTermCount());
+  std::iota(order.begin(), order.end(), uint16_t{0});
+  do {
+    orderings_.push_back(order);
+  } while (std::next_permutation(order.begin(), order.end()));
+
   policy_ = CreatePolicy(policy_kind);
-  agent_ = std::make_unique<bandit::Agent>(policy_.get(), GetTermCount());
+  agent_ = std::make_unique<bandit::Agent>(policy_.get(), num_orderings);
 }
 
 void FilterManager::Clause::RunFilter(VectorProjection *vector_projection, TupleIdList *tid_list) {
   util::Timer<std::micro> timer;
   timer.Start();
 
-  // TODO(pmenon): Use agent to choose best ordering, run it, update state.
-
-  for (const auto &term_fn : terms) {
-    term_fn(vector_projection, tid_list);
+  for (const auto &term_idx : orderings_[agent_->NextAction()]) {
+    terms[term_idx](vector_projection, tid_list);
   }
 
   timer.Stop();
+
+  double reward = bandit::MultiArmedBandit::ExecutionTimeToReward(timer.GetElapsed());
+  agent_->Observe(reward);
+}
+
+FilterManager::TermEvaluationOrder FilterManager::Clause::GetOptimalTermOrder() const {
+  const uint32_t opt_term_order_idx = agent_->GetCurrentOptimalAction();
+  return orderings_[opt_term_order_idx];
 }
 
 //===----------------------------------------------------------------------===//
@@ -86,6 +105,12 @@ void FilterManager::InsertClauseTerm(const FilterManager::MatchFn term) {
   TPL_ASSERT(!finalized_, "Cannot modify filter manager after finalization");
   TPL_ASSERT(!clauses_.empty(), "Inserting flavor without clause");
   clauses_.back().AddTerm(term);
+}
+
+void FilterManager::InsertClauseTerms(std::initializer_list<MatchFn> terms) {
+  for (auto term : terms) {
+    InsertClauseTerm(term);
+  }
 }
 
 void FilterManager::Finalize() {
@@ -148,6 +173,15 @@ void FilterManager::RunFilters(VectorProjectionIterator *vpi) {
   VectorProjection *vector_projection = vpi->GetVectorProjection();
   RunFilters(vector_projection);
   vpi->Reset();
+}
+
+std::vector<FilterManager::TermEvaluationOrder> FilterManager::GetOptimalOrderings() const {
+  std::vector<FilterManager::TermEvaluationOrder> opt_order;
+  opt_order.reserve(GetClauseCount());
+  for (const auto &clause : clauses_) {
+    opt_order.emplace_back(clause.GetOptimalTermOrder());
+  }
+  return opt_order;
 }
 
 }  // namespace tpl::sql
