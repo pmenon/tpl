@@ -60,11 +60,11 @@ void FilterManager::Clause::RunFilter(VectorProjection *vector_projection, Tuple
   }
 
   float selectivity = tid_list->ComputeSelectivity();
-  for (const auto &index : optimal_term_order_) {
+  for (const auto &term_idx : optimal_term_order_) {
     util::Timer<std::nano> timer;
     timer.Start();
 
-    auto &term = terms_[index];
+    Clause::Term &term = terms_[term_idx];
     term.fn(vector_projection, tid_list);
 
     timer.Stop();
