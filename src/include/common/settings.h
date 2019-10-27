@@ -29,16 +29,17 @@ namespace tpl {
   COMPUTED(SelectOptThreshold, double, DeriveOptimalFullSelectionThreshold)                        \
                                                                                                    \
   /*                                                                                               \
-   * Selections can use either a branching or branch-less strategy. Experimentally, branch-less    \
-   * selections work best when the selectivity of the predicate is in the range [0.1, 0.9].        \
+   * The frequency at which to sample statistics when adaptively reordering predicate clauses in   \
+   * the range [0.0, 1.0]. A low frequency incurs minimal overhead, but is less reactive to        \
+   * changing data distributions. A high sampling frequency is more adaptive, but incurs higher    \
+   * overhead.                                                                                     \
    */                                                                                              \
-  CONST(SelectBranchingThreshold_Low, double, 0.1)                                                 \
-  CONST(SelectBranchingThreshold_High, double, 0.9)
+  CONST(AdaptivePredicateOrderSamplingFrequency, float, 0.1)
 
 class Settings {
  public:
   // List of all settings
-  enum class Name : uint32_t {
+  enum Name : uint32_t {
 #define F(NAME, ...) NAME,
     SETTINGS_LIST(F, F)
 #undef F
