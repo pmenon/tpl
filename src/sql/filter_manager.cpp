@@ -96,8 +96,9 @@ FilterManager::~FilterManager() = default;
 
 void FilterManager::StartNewClause() {
   TPL_ASSERT(!finalized_, "Cannot modify filter manager after finalization");
-  auto freq = Settings::Instance()->GetDouble(Settings::AdaptivePredicateOrderSamplingFrequency);
-  clauses_.emplace_back(static_cast<float>(*freq));
+  const auto sample_freq =
+      Settings::Instance()->GetDouble(Settings::Name::AdaptivePredicateOrderSamplingFrequency);
+  clauses_.emplace_back(static_cast<float>(sample_freq));
 }
 
 void FilterManager::InsertClauseTerm(const FilterManager::MatchFn term) {

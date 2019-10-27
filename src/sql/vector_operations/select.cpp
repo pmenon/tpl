@@ -79,7 +79,7 @@ void TemplatedSelectOperation_Vector_Constant(const Vector &left, const Vector &
     const auto full_compute_threshold =
         Settings::Instance()->GetDouble(Settings::Name::SelectOptThreshold);
 
-    if (full_compute_threshold && *full_compute_threshold <= tid_list->ComputeSelectivity()) {
+    if (full_compute_threshold <= tid_list->ComputeSelectivity()) {
       TupleIdList::BitVectorType *bit_vector = tid_list->GetMutableBits();
       bit_vector->UpdateFull([&](uint64_t i) { return Op::Apply(left_data[i], constant); });
       bit_vector->Difference(left.GetNullMask());
@@ -106,7 +106,7 @@ void TemplatedSelectOperation_Vector_Vector(const Vector &left, const Vector &ri
         Settings::Instance()->GetDouble(Settings::Name::SelectOptThreshold);
 
     // Only perform the full compute if the TID selectivity is larger than the threshold
-    if (full_compute_threshold && *full_compute_threshold <= tid_list->ComputeSelectivity()) {
+    if (full_compute_threshold <= tid_list->ComputeSelectivity()) {
       TupleIdList::BitVectorType *bit_vector = tid_list->GetMutableBits();
       bit_vector->UpdateFull([&](uint64_t i) { return Op::Apply(left_data[i], right_data[i]); });
       bit_vector->Difference(left.GetNullMask()).Difference(right.GetNullMask());

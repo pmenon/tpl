@@ -1,8 +1,8 @@
 #pragma once
 
+#include <array>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <variant>
 
 #include "common/common.h"
@@ -39,13 +39,23 @@ namespace tpl {
 class Settings {
  public:
   // List of all settings
-  enum Name : uint32_t {
+  enum class Name : uint32_t {
 #define F(NAME, ...) NAME,
     SETTINGS_LIST(F, F)
 #undef F
+#define COUNT_OP(inst, ...) +1
+    Last = SETTINGS_LIST(COUNT_OP, COUNT_OP)
+#undef COUNT_OP
   };
 
-  // Setting values are stored as glorified unions
+  /**
+   * Number of settings.
+   */
+  static constexpr uint32_t kNumSettings = static_cast<uint32_t>(Name::Last);
+
+  /**
+   * Setting values are stored as glorified unions.
+   */
   using Value = std::variant<bool, int64_t, double, std::string>;
 
   /**
@@ -68,7 +78,10 @@ class Settings {
    * @param name The name of the value to read.
    * @return The value of the setting, if it exists.
    */
-  std::optional<bool> GetBool(Name name) const;
+  bool GetBool(Name name) const {
+    TPL_ASSERT(name < Name::Last, "Invalid setting");
+    return std::get<bool>(settings_[static_cast<uint32_t>(name)]);
+  }
 
   /**
    * Retrieve the value of the setting with name @em name. If no setting with the given name exists,
@@ -76,7 +89,10 @@ class Settings {
    * @param name The name of the value to read.
    * @return The value of the setting, if it exists.
    */
-  std::optional<int64_t> GetInt(Name name) const;
+  int64_t GetInt(Name name) const {
+    TPL_ASSERT(name < Name::Last, "Invalid setting");
+    return std::get<int64_t>(settings_[static_cast<uint32_t>(name)]);
+  }
 
   /**
    * Retrieve the value of the setting with name @em name. If no setting with the given name exists,
@@ -84,7 +100,10 @@ class Settings {
    * @param name The name of the value to read.
    * @return The value of the setting, if it exists.
    */
-  std::optional<double> GetDouble(Name name) const;
+  double GetDouble(Name name) const {
+    TPL_ASSERT(name < Name::Last, "Invalid setting");
+    return std::get<double>(settings_[static_cast<uint32_t>(name)]);
+  }
 
   /**
    * Retrieve the value of the setting with name @em name. If no setting with the given name exists,
@@ -92,18 +111,18 @@ class Settings {
    * @param name The name of the value to read.
    * @return The value of the setting, if it exists.
    */
-  std::optional<std::string> GetString(Name name) const;
+  std::string GetString(Name name) const {
+    TPL_ASSERT(name < Name::Last, "Invalid setting");
+    return std::get<std::string>(settings_[static_cast<uint32_t>(name)]);
+  }
 
  private:
   // Private to force singleton access
   Settings();
 
-  template <typename T>
-  std::optional<T> GetSettingValueImpl(Name name) const;
-
  private:
   // Container for all settings
-  std::unordered_map<Name, Value> settings_;
+  std::array<Value, kNumSettings> settings_;
 };
 
 }  // namespace tpl
