@@ -14,7 +14,28 @@ class VectorProjection;
 class VectorProjectionIterator;
 
 /**
- * An adaptive filter manager that tries to discover the optimal filter configuration.
+ * An adaptive filter that tries to discover the optimal filter configuration. Users build
+ * up the filter in DNF form. Each summand (i.e., clause) begins with a call to
+ * FilterManager::StartNewClause(), and factors (i.e., terms) for each clause are inserted through
+ * FilterManager::InsertClauseTerm(). When finished, use FilterManager::Finalize(). After
+ * finalization, the filter is immutable.
+ *
+ * @code
+ * FilterManager filter;
+ * filter.StartNewClause();
+ * filter.InsertClauseFilter(C0F0);
+ * // Remaining clauses and terms ..
+ * filter.Finalize();
+ *
+ * // Once finalized, the filter can be applied to projections
+ * VectorProjectionIterator *vpi = ...
+ * filter.RunFilters(vpi);
+ *
+ * // At this point, iteration over the VPI will only hit selected, i.e., active, tuples.
+ * for (; vpi->HasNextFiltered(); vpi->AdvanceFiltered()) {
+ *   // Only touch unfiltered tuples ...
+ * }
+ * @endcode
  */
 class FilterManager {
  public:
@@ -49,7 +70,7 @@ class FilterManager {
     /**
      * Run the clause over the given input projection.
      * @param vector_projection The projection to filter.
-     * @param tid_list The input TID list
+     * @param tid_list The input TID list.
      */
     void RunFilter(VectorProjection *vector_projection, TupleIdList *tid_list);
 
@@ -77,7 +98,7 @@ class FilterManager {
     std::vector<Term> terms_;
 
     // The optimal order to execute the terms
-    std::vector<uint16_t> optimal_term_order_;
+    std::vector<uint32_t> optimal_term_order_;
 
     // Frequency at which to sample stats, a number in the range [0.0, 1.0]
     float sample_freq_;
@@ -88,8 +109,7 @@ class FilterManager {
   };
 
   /**
-   * Construct the filter using the given adaptive policy.
-   * @param policy_kind The adaptive policy to use.
+   * Construct an empty filter.
    */
   explicit FilterManager();
 

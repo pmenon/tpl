@@ -59,25 +59,20 @@ void FilterManager::Clause::RunFilter(VectorProjection *vector_projection, Tuple
     return;
   }
 
-  float selectivity = tid_list->ComputeSelectivity();
+  double selectivity = tid_list->ComputeSelectivity();
   for (const auto &term_idx : optimal_term_order_) {
-    util::Timer<std::nano> timer;
-    timer.Start();
-
     Clause::Term &term = terms_[term_idx];
-    term.fn(vector_projection, tid_list);
-
-    timer.Stop();
-
-    const float new_selectivity = tid_list->ComputeSelectivity();
-    term.rank = (1.0f - (selectivity - new_selectivity)) / timer.GetElapsed();
+    const double exec_ns = util::Time<std::nano>([&] { term.fn(vector_projection, tid_list); });
+    const double new_selectivity = tid_list->ComputeSelectivity();
+    term.rank = (1.0f - (selectivity - new_selectivity)) / exec_ns;
     selectivity = new_selectivity;
   }
 
   // Re-rank
-  ips4o::sort(
-      optimal_term_order_.begin(), optimal_term_order_.end(),
-      [&](const auto idx1, const auto idx2) { return terms_[idx1].rank < terms_[idx2].rank; });
+  ips4o::sort(optimal_term_order_.begin(), optimal_term_order_.end(),
+              [&](const auto term_idx1, const auto term_idx2) {
+                return terms_[term_idx1].rank < terms_[term_idx2].rank;
+              });
 }
 
 //===----------------------------------------------------------------------===//

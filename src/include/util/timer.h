@@ -36,27 +36,35 @@ class Timer {
    */
   double GetElapsed() const noexcept { return elapsed_; }
 
-  /**
-   * Time a function @em func
-   * @tparam F A no-arg void return functor-type
-   * @param fn The functor to time
-   * @return The elapsed time in whatever resolution ratio the caller wants
-   */
-  template <typename F>
-  static double TimeFunction(F &&fn) {
-    Timer<ResolutionRatio> timer;
-    timer.Start();
-    fn();
-    timer.Stop();
-    return timer.GetElapsed();
-  }
-
  private:
   TimePoint start_;
   TimePoint stop_;
 
   double elapsed_;
 };
+
+/**
+ * Measure the time taken evaluation the functor @em func.
+ *
+ * @code
+ * auto time_ns = Time<std::nano>([] {
+ *   // your busy work ...
+ * });
+ * @endcode
+ *
+ * @tparam ResolutionRatio Timing resolution, std::milli, std::micro, std::nano etc.
+ * @tparam F A no-arg void return functor-type
+ * @param fn The functor to time
+ * @return The elapsed time in whatever resolution ratio the caller wants
+ */
+template <typename ResolutionRatio, typename F>
+inline double Time(F &&fn) {
+  Timer<ResolutionRatio> timer;
+  timer.Start();
+  fn();
+  timer.Stop();
+  return timer.GetElapsed();
+}
 
 /**
  * An RAII timer that begins timing upon construction and stops timing when the object goes out of
