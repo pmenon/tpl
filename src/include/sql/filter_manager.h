@@ -1,17 +1,13 @@
 #pragma once
 
 #include <memory>
+#include <random>
 #include <utility>
 #include <vector>
 
-#include "bandit/policy.h"
 #include "common/common.h"
 #include "common/macros.h"
 #include "sql/tuple_id_list.h"
-
-namespace tpl::bandit {
-class Agent;
-}  // namespace tpl::bandit
 
 namespace tpl::sql {
 
@@ -42,19 +38,20 @@ class FilterManager {
    public:
     /**
      * Create a new empty clause.
+     * @param stat_sample_freq The frequency to sample term runtime/selectivity stats.
      */
-    Clause();
+    explicit Clause(float stat_sample_freq);
 
     /**
      * Add a term to the clause.
      * @param term The term to add to this clause.
      */
-    void AddTerm(MatchFn term) { terms_.push_back(term); }
+    void AddTerm(MatchFn term) { terms_.emplace_back(term); }
 
     /**
      * Finalize and prepare this clause for execution. After this call, the clause is immutable.
      */
-    void Finalize(bandit::Policy::Kind policy_kind);
+    void Finalize();
 
     /**
      * Run the clause over the given input projection.
@@ -68,30 +65,40 @@ class FilterManager {
      */
     uint32_t GetTermCount() const { return terms_.size(); }
 
-    /**
-     * @return The current optimal term ordering.
-     */
-    TermEvaluationOrder GetOptimalTermOrder() const;
+   private:
+    // Indicates if statistics for all terms should be recollected
+    bool ShouldReRank();
+
+   private:
+    struct Term {
+      // The term function
+      MatchFn fn;
+      // The current rank
+      double rank;
+      // Create a new term with no rank
+      explicit Term(MatchFn term_fn) : fn(term_fn), rank(0.0) {}
+    };
 
    private:
     // The terms (i.e., factors) of the conjunction
-    std::vector<MatchFn> terms_;
+    std::vector<Term> terms_;
 
-    // Possible term orderings
-    std::vector<TermEvaluationOrder> orderings_;
+    // The optimal order to execute the terms
+    TermEvaluationOrder optimal_term_order_;
 
-    // The adaptive policy
-    std::unique_ptr<bandit::Policy> policy_;
+    // Frequency at which to sample stats: an integer between [0,100]
+    float sample_freq_;
 
-    // The adaptive agent
-    std::unique_ptr<bandit::Agent> agent_;
+    // Random number generator
+    std::mt19937 gen_;
+    std::uniform_real_distribution<float> dist_;
   };
 
   /**
    * Construct the filter using the given adaptive policy.
    * @param policy_kind The adaptive policy to use.
    */
-  explicit FilterManager(bandit::Policy::Kind policy_kind = bandit::Policy::EpsilonGreedy);
+  explicit FilterManager();
 
   /**
    * Destructor.
@@ -147,20 +154,12 @@ class FilterManager {
    */
   uint32_t GetClauseCount() const { return clauses_.size(); }
 
-  /**
-   * @return The optimal term orderings for each clause in this filter.
-   */
-  std::vector<TermEvaluationOrder> GetOptimalOrderings() const;
-
  private:
   // The clauses in the filter
   std::vector<Clause> clauses_;
 
   // The optimal order to execute the clauses
   std::vector<uint32_t> optimal_clause_order_;
-
-  // The adaptive policy to use
-  std::unique_ptr<bandit::Policy> policy_;
 
   // List used for disjunctions
   TupleIdList input_list_;

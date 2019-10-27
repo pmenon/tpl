@@ -27,7 +27,7 @@ void Clause0Term1(VectorProjection *vpi, TupleIdList *tids) {
 }
 
 TEST_F(FilterManagerTest, SimpleFilterManagerTest) {
-  FilterManager filter(bandit::Policy::FixedAction);
+  FilterManager filter;
   filter.StartNewClause();
   filter.InsertClauseTerms({Clause0Term0, Clause0Term1});
   filter.Finalize();

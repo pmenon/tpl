@@ -3,38 +3,13 @@
 #include <memory>
 #include <numeric>
 
-#include "bandit/agent.h"
-#include "bandit/multi_armed_bandit.h"
-#include "bandit/policy.h"
+#include "ips4o/ips4o.hpp"
+
+#include "common/settings.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/timer.h"
 
 namespace tpl::sql {
-
-namespace {
-
-// TODO(pmenon): Move to some PolicyFactory
-std::unique_ptr<bandit::Policy> CreatePolicy(bandit::Policy::Kind policy_kind) {
-  switch (policy_kind) {
-    case bandit::Policy::Kind::EpsilonGreedy:
-      return std::make_unique<bandit::EpsilonGreedyPolicy>(
-          bandit::EpsilonGreedyPolicy::kDefaultEpsilon);
-    case bandit::Policy::Greedy:
-      return std::make_unique<bandit::GreedyPolicy>();
-    case bandit::Policy::Random:
-      return std::make_unique<bandit::RandomPolicy>();
-    case bandit::Policy::UCB:
-      return std::make_unique<bandit::UCBPolicy>(bandit::UCBPolicy::kDefaultUCBHyperParam);
-    case bandit::Policy::FixedAction:
-      return std::make_unique<bandit::FixedActionPolicy>(0);
-    case bandit::Policy::AnnealingEpsilonGreedy:
-      return std::make_unique<bandit::AnnealingEpsilonGreedyPolicy>();
-    default:
-      UNREACHABLE("Impossible bandit policy kind");
-  }
-}
-
-}  // namespace
 
 //===----------------------------------------------------------------------===//
 //
@@ -42,46 +17,67 @@ std::unique_ptr<bandit::Policy> CreatePolicy(bandit::Policy::Kind policy_kind) {
 //
 //===----------------------------------------------------------------------===//
 
-FilterManager::Clause::Clause() : agent_(nullptr) {}
-
-void FilterManager::Clause::Finalize(bandit::Policy::Kind policy_kind) {
-  // Create orderings
-
-  // TODO(pmenon): This is retarded. Be smarter about this exploration.
-
-  const uint32_t num_orderings = util::MathUtil::Factorial(GetTermCount());
-  orderings_.reserve(num_orderings);
-
-  TermEvaluationOrder order(GetTermCount());
-  std::iota(order.begin(), order.end(), uint16_t{0});
-  do {
-    orderings_.push_back(order);
-  } while (std::next_permutation(order.begin(), order.end()));
-
-  policy_ = CreatePolicy(policy_kind);
-  agent_ = std::make_unique<bandit::Agent>(policy_.get(), num_orderings);
+FilterManager::Clause::Clause(const float stat_sample_freq)
+    : sample_freq_(stat_sample_freq),
+#ifndef NDEBUG
+      // In DEBUG mode, use a fixed seed so we get predictable and repeatable randomness
+      gen_(0),
+#else
+      gen_(std::random_device()()),
+#endif
+      dist_(0, 1) {
 }
+
+void FilterManager::Clause::Finalize() {
+  // The initial "best" ordering of terms is the order they were inserted into the filter manager,
+  // which also happens to be, presumably, the order the optimizer provided in the physical plan.
+  // Let's stick with it now and revisit during runtime.
+  optimal_term_order_.resize(terms_.size());
+  std::iota(optimal_term_order_.begin(), optimal_term_order_.end(), 0);
+}
+
+bool FilterManager::Clause::ShouldReRank() { return dist_(gen_) < sample_freq_; }
 
 void FilterManager::Clause::RunFilter(VectorProjection *vector_projection, TupleIdList *tid_list) {
-  // Choose the ordering we think is best
-  const TermEvaluationOrder &ordering = orderings_[agent_->NextAction()];
+  // With probability 'sample_freq_' we will collect statistics on each clause
+  // term and re-rank them to form a potentially new, more optimal ordering.
+  // The rank of a term is defined as:
+  //
+  //   rank = (1 - selectivity) / cost
+  //
+  // We use the elapsed time as a proxy for a term's cost. The below algorithm
+  // uses the difference of selectivities to estimate the selectivity of a term.
+  // This, of course, requires the assumption that terms are independent, which
+  // is false. But, the point is that we can use this infrastructure to
+  // implement any policy.
+  // TODO(pmenon): Implement Babu et. al's adaptive policy
 
-  util::Timer<std::micro> timer;
-  timer.Start();
-
-  for (const auto &term_idx : ordering) {
-    terms_[term_idx](vector_projection, tid_list);
+  if (!ShouldReRank()) {
+    for (const auto &term_idx : optimal_term_order_) {
+      terms_[term_idx].fn(vector_projection, tid_list);
+    }
+    return;
   }
 
-  timer.Stop();
+  float selectivity = tid_list->ComputeSelectivity();
+  for (const auto &index : optimal_term_order_) {
+    util::Timer<std::nano> timer;
+    timer.Start();
 
-  double reward = bandit::MultiArmedBandit::ExecutionTimeToReward(timer.GetElapsed());
-  agent_->Observe(reward);
-}
+    auto &term = terms_[index];
+    term.fn(vector_projection, tid_list);
 
-FilterManager::TermEvaluationOrder FilterManager::Clause::GetOptimalTermOrder() const {
-  const uint32_t opt_term_order_idx = agent_->GetCurrentOptimalAction();
-  return orderings_[opt_term_order_idx];
+    timer.Stop();
+
+    const float new_selectivity = tid_list->ComputeSelectivity();
+    term.rank = (1.0f - (selectivity - new_selectivity)) / timer.GetElapsed();
+    selectivity = new_selectivity;
+  }
+
+  // Re-rank
+  ips4o::sort(
+      optimal_term_order_.begin(), optimal_term_order_.end(),
+      [&](const auto idx1, const auto idx2) { return terms_[idx1].rank < terms_[idx2].rank; });
 }
 
 //===----------------------------------------------------------------------===//
@@ -90,9 +86,8 @@ FilterManager::TermEvaluationOrder FilterManager::Clause::GetOptimalTermOrder() 
 //
 //===----------------------------------------------------------------------===//
 
-FilterManager::FilterManager(const bandit::Policy::Kind policy_kind)
-    : policy_(CreatePolicy(policy_kind)),
-      input_list_(kDefaultVectorSize),
+FilterManager::FilterManager()
+    : input_list_(kDefaultVectorSize),
       tmp_list_(kDefaultVectorSize),
       output_list_(kDefaultVectorSize),
       finalized_(false) {}
@@ -101,7 +96,8 @@ FilterManager::~FilterManager() = default;
 
 void FilterManager::StartNewClause() {
   TPL_ASSERT(!finalized_, "Cannot modify filter manager after finalization");
-  clauses_.emplace_back();
+  auto freq = Settings::Instance()->GetDouble(Settings::AdaptivePredicateOrderSamplingFrequency);
+  clauses_.emplace_back(static_cast<float>(*freq));
 }
 
 void FilterManager::InsertClauseTerm(const FilterManager::MatchFn term) {
@@ -111,9 +107,7 @@ void FilterManager::InsertClauseTerm(const FilterManager::MatchFn term) {
 }
 
 void FilterManager::InsertClauseTerms(std::initializer_list<MatchFn> terms) {
-  for (auto term : terms) {
-    InsertClauseTerm(term);
-  }
+  std::for_each(terms.begin(), terms.end(), [this](auto &term) { InsertClauseTerm(term); });
 }
 
 void FilterManager::Finalize() {
@@ -126,9 +120,7 @@ void FilterManager::Finalize() {
   std::iota(optimal_clause_order_.begin(), optimal_clause_order_.end(), 0);
 
   // Finalize each clause
-  for (auto &clause : clauses_) {
-    clause.Finalize(policy_->GetKind());
-  }
+  std::for_each(clauses_.begin(), clauses_.end(), [](auto &clause) { clause.Finalize(); });
 
   finalized_ = true;
 }
@@ -176,15 +168,6 @@ void FilterManager::RunFilters(VectorProjectionIterator *vpi) {
   VectorProjection *vector_projection = vpi->GetVectorProjection();
   RunFilters(vector_projection);
   vpi->Reset();
-}
-
-std::vector<FilterManager::TermEvaluationOrder> FilterManager::GetOptimalOrderings() const {
-  std::vector<FilterManager::TermEvaluationOrder> opt_order;
-  opt_order.reserve(GetClauseCount());
-  for (const auto &clause : clauses_) {
-    opt_order.emplace_back(clause.GetOptimalTermOrder());
-  }
-  return opt_order;
 }
 
 }  // namespace tpl::sql
