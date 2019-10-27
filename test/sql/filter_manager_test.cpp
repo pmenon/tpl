@@ -17,19 +17,19 @@ enum Col : uint8_t { A = 0, B = 1, C = 2, D = 3 };
 using namespace std::chrono_literals;  // NOLINT
 
 // 0.025% selective
-void Clause0Term0(VectorProjection *vpi, TupleIdList *tids) {
+void ColA_Lt_500(VectorProjection *vpi, TupleIdList *tids) {
   VectorFilterExecutor::SelectLessThanVal(vpi, Col::A, GenericValue::CreateInteger(500), tids);
 }
 
 // 90% selective
-void Clause0Term1(VectorProjection *vpi, TupleIdList *tids) {
+void ColB_Lt_9(VectorProjection *vpi, TupleIdList *tids) {
   VectorFilterExecutor::SelectLessThanVal(vpi, Col::B, GenericValue::CreateInteger(9), tids);
 }
 
-TEST_F(FilterManagerTest, SimpleFilterManagerTest) {
+TEST_F(FilterManagerTest, ConjunctionTest) {
   FilterManager filter;
   filter.StartNewClause();
-  filter.InsertClauseTerms({Clause0Term0, Clause0Term1});
+  filter.InsertClauseTerms({ColA_Lt_500, ColB_Lt_9});
   filter.Finalize();
 
   TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
@@ -45,6 +45,30 @@ TEST_F(FilterManagerTest, SimpleFilterManagerTest) {
       auto colb = *vpi->GetValue<int32_t, false>(Col::B, nullptr);
       EXPECT_LT(cola, 500);
       EXPECT_LT(colb, 9);
+    });
+  }
+}
+
+TEST_F(FilterManagerTest, DisjunctionTest) {
+  FilterManager filter;
+  filter.StartNewClause();
+  filter.InsertClauseTerm(ColA_Lt_500);
+  filter.StartNewClause();
+  filter.InsertClauseTerm(ColB_Lt_9);
+  filter.Finalize();
+
+  TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
+  for (tvi.Init(); tvi.Advance();) {
+    auto *vpi = tvi.GetVectorProjectionIterator();
+
+    // Run the filters
+    filter.RunFilters(vpi);
+
+    // Check
+    vpi->ForEach([vpi]() {
+      auto cola = *vpi->GetValue<int32_t, false>(Col::A, nullptr);
+      auto colb = *vpi->GetValue<int32_t, false>(Col::B, nullptr);
+      EXPECT_TRUE(cola < 500 || colb < 9);
     });
   }
 }

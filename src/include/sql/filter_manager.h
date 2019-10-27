@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <random>
 #include <utility>
 #include <vector>
@@ -23,12 +22,6 @@ class FilterManager {
    * A vectorized filter function over a vector projection.
    */
   using MatchFn = void (*)(VectorProjection *, TupleIdList *);
-
-  /**
-   * The order of evaluation of terms in a clause. Each element represents the index of the term in
-   * the clause to execute.
-   */
-  using TermEvaluationOrder = std::vector<uint16_t>;
 
   /**
    * A conjunctive clause in a multi-clause disjunctive normal form filter. A clause is composed of
@@ -69,9 +62,9 @@ class FilterManager {
     // Indicates if statistics for all terms should be recollected
     bool ShouldReRank();
 
-   private:
+    // A term in the clause
     struct Term {
-      // The term function
+      // The function implementing the term
       MatchFn fn;
       // The current rank
       double rank;
@@ -84,9 +77,9 @@ class FilterManager {
     std::vector<Term> terms_;
 
     // The optimal order to execute the terms
-    TermEvaluationOrder optimal_term_order_;
+    std::vector<uint16_t> optimal_term_order_;
 
-    // Frequency at which to sample stats: an integer between [0,100]
+    // Frequency at which to sample stats, a number in the range [0.0, 1.0]
     float sample_freq_;
 
     // Random number generator

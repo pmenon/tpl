@@ -1,6 +1,5 @@
 #include "sql/filter_manager.h"
 
-#include <memory>
 #include <numeric>
 
 #include "ips4o/ips4o.hpp"
@@ -29,9 +28,10 @@ FilterManager::Clause::Clause(const float stat_sample_freq)
 }
 
 void FilterManager::Clause::Finalize() {
-  // The initial "best" ordering of terms is the order they were inserted into the filter manager,
-  // which also happens to be, presumably, the order the optimizer provided in the physical plan.
-  // Let's stick with it now and revisit during runtime.
+  // The initial "best" ordering of terms is the order they were inserted into
+  // the filter manager, which also happens to be, presumably, the order the
+  // optimizer provided in the physical plan. Let's stick with it now and
+  // revisit during runtime.
   optimal_term_order_.resize(terms_.size());
   std::iota(optimal_term_order_.begin(), optimal_term_order_.end(), 0);
 }
