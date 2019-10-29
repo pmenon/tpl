@@ -360,7 +360,7 @@ class GenericHashTableVectorIterator {
   /**
    * Construct an iterator over the given hash table @em table.
    * @param table The table to iterate over.
-   * @param memory The memory pool to use for allocations
+   * @param memory The memory pool to use for allocations.
    */
   GenericHashTableVectorIterator(const GenericHashTable &table, MemoryPool *memory) noexcept;
 
@@ -396,10 +396,10 @@ class GenericHashTableVectorIterator {
   // The index into the hash table's entries directory to read from next
   uint64_t table_dir_index_;
 
-  // The temporary cache of valid entries, and indexes into the entry cache pointing to the current
-  // and last valid entry.
+  // The temporary cache of valid entries, and indexes into the entry cache
+  // pointing to the current and last valid entry.
   const HashTableEntry **entry_vec_;
-  uint16_t entry_vec_end_idx_;
+  uint32_t entry_vec_end_idx_;
 };
 
 }  // namespace tpl::sql
