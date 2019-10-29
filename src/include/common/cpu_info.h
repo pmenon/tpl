@@ -51,39 +51,40 @@ class CpuInfo {
   }
 
   /**
-   * Return the total number of physical processor packages in the system.
+   * @return The total number of physical processor packages in the system.
    */
   uint32_t GetNumProcessors() const noexcept { return num_processors_; }
 
   /**
-   * Return the total number of physical cores in the system.
+   * @return The total number of physical cores in the system.
    */
   uint32_t GetNumPhysicalCores() const noexcept { return num_physical_cores_; }
 
   /**
-   * Return the total number of logical cores in the system.
+   * @return The total number of logical cores in the system.
    */
   uint32_t GetNumLogicalCores() const noexcept { return num_logical_cores_; }
 
   /**
-   * Return the size of the cache at level @em level in bytes.
+   * @return The size of the cache at level @em level in bytes.
    */
   uint32_t GetCacheSize(const CacheLevel level) const noexcept { return cache_sizes_[level]; }
 
   /**
-   * Return the size of a cache line at level @em level.
+   * @return The size of a cache line at level @em level.
    */
   uint32_t GetCacheLineSize(const CacheLevel level) const noexcept {
     return cache_line_sizes_[level];
   }
 
   /**
-   * Does the CPU have the given hardware feature?
+   * @return True if the CPU has the input hardware feature @em feature; false otherwise;
    */
   bool HasFeature(const Feature feature) const noexcept { return hardware_flags_[feature]; }
 
   /**
    * Pretty print CPU information to a string.
+   * @return A string-representation of the CPU information.
    */
   std::string PrettyPrintInfo() const;
 
