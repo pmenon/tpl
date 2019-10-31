@@ -14,6 +14,12 @@ double DeriveOptimalFullSelectionThreshold(UNUSED Settings *settings, UNUSED Cpu
   return 0.25;
 }
 
+double DeriveMinBitDensityThresholdForAvxIndexDecode(UNUSED Settings *settings,
+                                                     UNUSED CpuInfo *cpu_info) {
+  // TODO(pmenon): Derive me, dude.
+  return 0.15;
+}
+
 }  // namespace
 
 Settings::Settings() {
