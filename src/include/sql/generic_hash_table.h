@@ -267,28 +267,6 @@ void GenericHashTable<UseTags>::PrefetchChainHead(hash_t hash) const {
 }
 
 template <bool UseTags>
-inline HashTableEntry *GenericHashTable<UseTags>::FindChainHeadInternal(hash_t hash) const {
-  const uint64_t pos = BucketPosition(hash);
-  return entries_[pos].load(std::memory_order_relaxed);
-}
-
-template <bool UseTags>
-inline HashTableEntry *GenericHashTable<UseTags>::FindChainHeadTaggedInternal(hash_t hash) const {
-  const HashTableEntry *const candidate = FindChainHeadInternal(hash);
-  auto exists_in_chain = reinterpret_cast<uintptr_t>(candidate) & TagHash(hash);
-  return (exists_in_chain ? UntagPointer(candidate) : nullptr);
-}
-
-template <bool UseTags>
-HashTableEntry *GenericHashTable<UseTags>::FindChainHead(hash_t hash) const {
-  if constexpr (UseTags) {
-    return FindChainHeadTaggedInternal(hash);
-  } else {
-    return FindChainHeadInternal(hash);
-  }
-}
-
-template <bool UseTags>
 template <bool Concurrent>
 inline void GenericHashTable<UseTags>::InsertInternal(HashTableEntry *new_entry, hash_t hash) {
   const uint64_t pos = BucketPosition(hash);
@@ -385,6 +363,28 @@ inline void GenericHashTable<UseTags>::InsertBatch(util::ChunkedVector<Allocator
 }
 
 template <bool UseTags>
+inline HashTableEntry *GenericHashTable<UseTags>::FindChainHeadInternal(hash_t hash) const {
+  const uint64_t pos = BucketPosition(hash);
+  return entries_[pos].load(std::memory_order_relaxed);
+}
+
+template <bool UseTags>
+inline HashTableEntry *GenericHashTable<UseTags>::FindChainHeadTaggedInternal(hash_t hash) const {
+  const HashTableEntry *const candidate = FindChainHeadInternal(hash);
+  auto exists_in_chain = reinterpret_cast<uintptr_t>(candidate) & TagHash(hash);
+  return (exists_in_chain ? UntagPointer(candidate) : nullptr);
+}
+
+template <bool UseTags>
+HashTableEntry *GenericHashTable<UseTags>::FindChainHead(hash_t hash) const {
+  if constexpr (UseTags) {
+    return FindChainHeadTaggedInternal(hash);
+  } else {
+    return FindChainHeadInternal(hash);
+  }
+}
+
+template <bool UseTags>
 template <bool Prefetch>
 inline void GenericHashTable<UseTags>::LookupBatchInternal(uint64_t n, const hash_t hashes[],
                                                            const HashTableEntry *entries[]) const {
@@ -395,7 +395,11 @@ inline void GenericHashTable<UseTags>::LookupBatchInternal(uint64_t n, const has
       }
     }
 
-    entries[idx] = FindChainHead(hashes[idx]);
+    if constexpr (UseTags) {
+      entries[idx] = FindChainHeadTaggedInternal(hashes[idx]);
+    } else {
+      entries[idx] = FindChainHeadInternal(hashes[idx]);
+    }
   }
 }
 
