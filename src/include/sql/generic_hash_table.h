@@ -143,6 +143,11 @@ class GenericHashTable {
   void FlushEntries(const F &sink);
 
   /**
+   * @return True if the hash table is empty; false otherwise.
+   */
+  bool IsEmpty() const { return GetElementCount() == 0; }
+
+  /**
    * @return The total number of bytes this hash table has allocated.
    */
   uint64_t GetTotalMemoryUsage() const { return sizeof(HashTableEntry *) * GetCapacity(); }
@@ -257,13 +262,13 @@ class GenericHashTable {
 template <bool UseTags>
 template <bool ForRead>
 void GenericHashTable<UseTags>::PrefetchChainHead(hash_t hash) const {
-  const uint64_t pos = hash & mask_;
+  const uint64_t pos = BucketPosition(hash);
   Memory::Prefetch<ForRead, Locality::Low>(entries_ + pos);
 }
 
 template <bool UseTags>
 inline HashTableEntry *GenericHashTable<UseTags>::FindChainHeadInternal(hash_t hash) const {
-  const uint64_t pos = hash & mask_;
+  const uint64_t pos = BucketPosition(hash);
   return entries_[pos].load(std::memory_order_relaxed);
 }
 
@@ -286,7 +291,7 @@ HashTableEntry *GenericHashTable<UseTags>::FindChainHead(hash_t hash) const {
 template <bool UseTags>
 template <bool Concurrent>
 inline void GenericHashTable<UseTags>::InsertInternal(HashTableEntry *new_entry, hash_t hash) {
-  const auto pos = hash & mask_;
+  const uint64_t pos = BucketPosition(hash);
 
   TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");
   TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");
@@ -309,7 +314,7 @@ template <bool UseTags>
 template <bool Concurrent>
 inline void GenericHashTable<UseTags>::InsertTaggedInternal(HashTableEntry *new_entry,
                                                             hash_t hash) {
-  const auto pos = hash & mask_;
+  const uint64_t pos = BucketPosition(hash);
 
   TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");
   TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");

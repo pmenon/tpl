@@ -13,7 +13,8 @@ class GenericHashTableTest : public TplTest {};
 
 // A test entry IS A hash table entry. It can directly be inserted into hash tables.
 struct TestEntry : public HashTableEntry {
-  uint32_t key{0}, value{0};
+  uint32_t key;
+  uint32_t value;
 
   TestEntry() : HashTableEntry(), key(0), value(0) { hash = Hash(); }
 
@@ -23,7 +24,9 @@ struct TestEntry : public HashTableEntry {
 
   hash_t Hash() { return util::HashUtil::Hash(key); }
 
-  bool Eq(const TestEntry &that) const { return key == that.key && value == that.value; }
+  bool Eq(const TestEntry &that) const {
+    return hash == that.hash && key == that.key && value == that.value;
+  }
 
   bool operator==(const TestEntry &that) const { return this->Eq(that); }
   bool operator!=(const TestEntry &that) const { return !(*this == that); }
@@ -150,6 +153,36 @@ TEST_F(GenericHashTableTest, ConcurrentInsertion) {
   }
 
   EXPECT_EQ(num_threads * num_entries, found_entries);
+}
+
+TEST_F(GenericHashTableTest, Flushing) {
+  std::vector<TestEntry> entries = {
+      {0, 1},
+      {1, 2},
+      {2, 3},
+      {3, 4},
+  };
+
+  TaggedGenericHashTable ht;
+  ht.SetSize(entries.size());
+
+  for (auto &entry : entries) {
+    ht.Insert<false>(&entry);
+  }
+
+  std::unordered_set<uint32_t> keys;
+  ht.FlushEntries([&](auto *entry) {
+    ASSERT_NE(nullptr, entry);
+    auto *test_entry = reinterpret_cast<TestEntry *>(entry);
+    EXPECT_EQ(0u, keys.count(test_entry->key));
+    keys.insert(test_entry->key);
+  });
+
+  // Ensure table is actually empty
+  EXPECT_TRUE(ht.IsEmpty());
+
+  // Ensure we got all keys
+  EXPECT_EQ(entries.size(), keys.size());
 }
 
 TEST_F(GenericHashTableTest, EmptyIterator) {
