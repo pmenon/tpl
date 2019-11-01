@@ -192,8 +192,6 @@ class JoinHashTable {
   // and to reorder buffered build tuples in place according to the CHT
   template <bool PrefetchCHT, bool PrefetchEntries>
   void BuildConciseHashTableInternal();
-  template <bool Prefetch>
-  void InsertIntoConciseHashTable();
   template <bool PrefetchCHT, bool PrefetchEntries>
   void ReorderMainEntries();
   template <bool Prefetch, bool PrefetchEntries>

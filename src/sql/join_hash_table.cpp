@@ -61,22 +61,6 @@ void JoinHashTable::BuildGenericHashTable() {
 // Concise hash tables
 // ---------------------------------------------------------
 
-template <bool Prefetch>
-void JoinHashTable::InsertIntoConciseHashTable() {
-  for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < entries_.size();
-       idx++, prefetch_idx++) {
-    if constexpr (Prefetch) {
-      if (TPL_LIKELY(prefetch_idx < entries_.size())) {
-        auto *prefetch_entry = EntryAt(prefetch_idx);
-        concise_hash_table_.PrefetchSlotGroup<false>(prefetch_entry->hash);
-      }
-    }
-
-    HashTableEntry *entry = EntryAt(idx);
-    concise_hash_table_.Insert(entry, entry->hash);
-  }
-}
-
 namespace {
 
 // The bits we set in the entry to mark if the entry has been buffered in the
@@ -499,10 +483,8 @@ void JoinHashTable::VerifyOverflowEntryOrder() {
 
 template <bool PrefetchCHT, bool PrefetchEntries>
 void JoinHashTable::BuildConciseHashTableInternal() {
-  // Insert all elements
-  InsertIntoConciseHashTable<PrefetchCHT>();
-
-  // Build
+  // Bulk-load all buffered tuples, then build
+  concise_hash_table_.InsertBatch(&entries_);
   concise_hash_table_.Build();
 
   LOG_INFO("Concise Table Stats: {} entries, {} overflow ({} % overflow)", entries_.size(),
@@ -523,7 +505,7 @@ void JoinHashTable::BuildConciseHashTableInternal() {
 }
 
 void JoinHashTable::BuildConciseHashTable() {
-  // Setup based on number of buffered build-size tuples
+  // Perfectly size the concise hash table in preparation for bulk-load.
   concise_hash_table_.SetSize(GetTupleCount());
 
   // Dispatch to internal function based on prefetching requirements. If the CHT

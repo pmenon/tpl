@@ -5,9 +5,11 @@
 #include <utility>
 
 #include "common/common.h"
+#include "common/cpu_info.h"
 #include "common/memory.h"
 #include "sql/hash_table_entry.h"
 #include "util/bit_util.h"
+#include "util/chunked_vector.h"
 
 namespace tpl::sql {
 
@@ -71,17 +73,19 @@ class ConciseHashTable {
   void SetSize(uint32_t new_size);
 
   /**
-   * Insert an element with the given hash into the table. After insertion, the input entry's
-   * CHT slot member will be populated with the slot in this hash table it resides.
-   *
-   * @pre The hash value inside the entry must match what is contained in the hash entry.
-   *
-   * TODO(pmenon): Accept only the entry and use the hash value in the entry
-   *
+   * Insert an element into the table. After insertion, the input entry's CHT slot member will be
+   * populated with the slot in this hash table it resides.
    * @param entry The entry to insert
-   * @param hash The hash value of the entry to insert
    */
-  void Insert(HashTableEntry *entry, hash_t hash);
+  void Insert(HashTableEntry *entry);
+
+  /**
+   * Insert a list of entries into this hash table.
+   * @tparam Allocator The allocator used by the vector.
+   * @param entries The list of entries to insert into the table.
+   */
+  template <typename Allocator>
+  void InsertBatch(util::ChunkedVector<Allocator> *entries);
 
   /**
    * Finalize and build this concise hash table. The table is frozen after finalization.
@@ -158,6 +162,10 @@ class ConciseHashTable {
   // Given a slot index, return the index of the bit in the group's slot chunk
   uint64_t GroupSlotIndex(uint64_t slot_index) const noexcept { return slot_index & kGroupBitMask; }
 
+  // Insert a list of entries into the hash table.
+  template <bool Prefetch, typename Allocator>
+  void InsertBatchInternal(util::ChunkedVector<Allocator> *entries);
+
  private:
   // The array of groups. This array is managed by this class.
   SlotGroup *slot_groups_;
@@ -186,8 +194,8 @@ class ConciseHashTable {
 
 // The below methods are inlined in the header on purpose for performance. Please do not move them.
 
-inline void ConciseHashTable::Insert(HashTableEntry *entry, const hash_t hash) {
-  const uint64_t slot_idx = SlotIndex(hash);
+inline void ConciseHashTable::Insert(HashTableEntry *entry) {
+  const uint64_t slot_idx = SlotIndex(entry->hash);
   const uint64_t group_idx = GroupIndex(slot_idx);
   const uint64_t num_bits_to_group = group_idx * kSlotsPerGroup;
   auto *group_bits = reinterpret_cast<uint32_t *>(&slot_groups_[group_idx].bits);
@@ -205,6 +213,31 @@ inline void ConciseHashTable::Insert(HashTableEntry *entry, const hash_t hash) {
   num_overflow_++;
 
   entry->cht_slot = ConciseHashTableSlot(num_bits_to_group + bit_idx - 1);
+}
+
+template <bool Prefetch, typename Allocator>
+void ConciseHashTable::InsertBatchInternal(util::ChunkedVector<Allocator> *entries) {
+  const uint64_t size = entries->size();
+  for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < size; idx++, prefetch_idx++) {
+    if constexpr (Prefetch) {
+      if (TPL_LIKELY(prefetch_idx < size)) {
+        auto *prefetch_entry = reinterpret_cast<HashTableEntry *>((*entries)[prefetch_idx]);
+        PrefetchSlotGroup<false>(prefetch_entry->hash);
+      }
+    }
+
+    Insert(reinterpret_cast<HashTableEntry *>((*entries)[idx]));
+  }
+}
+
+template <typename Allocator>
+void ConciseHashTable::InsertBatch(util::ChunkedVector<Allocator> *entries) {
+  uint64_t l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
+  if (const bool out_of_cache = GetTotalMemoryUsage() > l3_cache_size; out_of_cache) {
+    InsertBatchInternal<true>(entries);
+  } else {
+    InsertBatchInternal<false>(entries);
+  }
 }
 
 template <bool ForRead>
