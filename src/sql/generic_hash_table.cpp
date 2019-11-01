@@ -4,16 +4,19 @@
 
 namespace tpl::sql {
 
-GenericHashTable::GenericHashTable(float load_factor) noexcept
-    : entries_(nullptr), mask_(0), capacity_(0), num_elems_(0), load_factor_(load_factor) {}
+template <bool UseTags>
+GenericHashTable<UseTags>::GenericHashTable(float load_factor) noexcept
+    : entries_(nullptr), mask_(0), capacity_(0), num_elements_(0), load_factor_(load_factor) {}
 
-GenericHashTable::~GenericHashTable() {
+template <bool UseTags>
+GenericHashTable<UseTags>::~GenericHashTable() {
   if (entries_ != nullptr) {
     Memory::FreeHugeArray(entries_, GetCapacity());
   }
 }
 
-void GenericHashTable::SetSize(uint64_t new_size) {
+template <bool UseTags>
+void GenericHashTable<UseTags>::SetSize(uint64_t new_size) {
   TPL_ASSERT(new_size > 0, "New size cannot be zero!");
   if (entries_ != nullptr) {
     Memory::FreeHugeArray(entries_, GetCapacity());
@@ -26,9 +29,12 @@ void GenericHashTable::SetSize(uint64_t new_size) {
 
   capacity_ = next_size;
   mask_ = capacity_ - 1;
-  num_elems_ = 0;
+  num_elements_ = 0;
   entries_ = Memory::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_, true);
 }
+
+template class GenericHashTable<true>;
+template class GenericHashTable<false>;
 
 // ---------------------------------------------------------
 // Vector Iterator
@@ -36,7 +42,7 @@ void GenericHashTable::SetSize(uint64_t new_size) {
 
 template <bool UseTag>
 GenericHashTableVectorIterator<UseTag>::GenericHashTableVectorIterator(
-    const GenericHashTable &table, MemoryPool *memory) noexcept
+    const GenericHashTable<UseTag> &table, MemoryPool *memory) noexcept
     : memory_(memory),
       table_(table),
       table_dir_index_(0),
@@ -79,7 +85,7 @@ void GenericHashTableVectorIterator<UseTag>::Next() {
   while (index < kDefaultVectorSize && table_dir_index_ < table_.GetCapacity()) {
     entry_vec_[index] = table_.entries_[table_dir_index_++].load(std::memory_order_relaxed);
     if constexpr (UseTag) {
-      entry_vec_[index] = GenericHashTable::UntagPointer(entry_vec_[index]);
+      entry_vec_[index] = GenericHashTable<UseTag>::UntagPointer(entry_vec_[index]);
     }
     index += (entry_vec_[index] != nullptr);
   }

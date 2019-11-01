@@ -149,7 +149,7 @@ class AggregationHashTable {
    * be linked into the hash table without allocating new tuple data.
    * @param entry The entry to insert into the hash table.
    */
-  void Insert(HashTableEntry *entry);
+  void Insert(HashTableEntry *entry) { hash_table_.Insert<false>(entry); }
 
   /**
    * Lookup and return an entry in the aggregation table that matches a given hash and key. The hash
@@ -295,7 +295,7 @@ class AggregationHashTable {
   MemPoolVector<decltype(entries_)> owned_entries_;
 
   // The hash index.
-  GenericHashTable hash_table_;
+  UntaggedGenericHashTable hash_table_;
 
   // A struct we use to track various metadata during batch processing
   struct BatchProcessState {
@@ -355,10 +355,6 @@ class AggregationHashTable {
 // ---------------------------------------------------------
 // Aggregation Hash Table implementation below
 // ---------------------------------------------------------
-
-inline void AggregationHashTable::Insert(HashTableEntry *entry) {
-  hash_table_.Insert<false>(entry, entry->hash);
-}
 
 inline HashTableEntry *AggregationHashTable::LookupEntryInternal(
     hash_t hash, AggregationHashTable::KeyEqFn key_eq_fn, const void *probe_tuple) const {

@@ -29,8 +29,8 @@ struct TestEntry : public HashTableEntry {
   bool operator!=(const TestEntry &that) const { return !(*this == that); }
 };
 
-TEST_F(GenericHashTableTest, Insertion) {
-  GenericHashTable table;
+TEST_F(GenericHashTableTest, UntaggedInsertion) {
+  UntaggedGenericHashTable table;
   table.SetSize(10);
 
   TestEntry entry1(1, 2);
@@ -45,7 +45,7 @@ TEST_F(GenericHashTableTest, Insertion) {
 
   // Try to insert 'entry1' and look it up
   {
-    table.Insert<false>(&entry1, entry1.Hash());
+    table.Insert<false>(&entry1);
     auto *e = table.FindChainHead(entry1.Hash());
     EXPECT_NE(nullptr, e);
     EXPECT_EQ(nullptr, e->next);
@@ -54,7 +54,7 @@ TEST_F(GenericHashTableTest, Insertion) {
 
   // Duplicate insert should find both entries
   {
-    table.Insert<false>(&entry2, entry2.Hash());
+    table.Insert<false>(&entry2);
     uint32_t found = 0;
     for (auto *e = table.FindChainHead(entry2.Hash()); e != nullptr; e = e->next) {
       EXPECT_EQ(entry1, *reinterpret_cast<TestEntry *>(e));
@@ -72,21 +72,21 @@ TEST_F(GenericHashTableTest, Insertion) {
 }
 
 TEST_F(GenericHashTableTest, TaggedInsertion) {
-  GenericHashTable table;
+  TaggedGenericHashTable table;
   table.SetSize(10);
 
   TestEntry entry(1, 2);
 
   // Looking up an a missing entry should return null
   {
-    auto *e = table.FindChainHeadWithTag(entry.Hash());
+    auto *e = table.FindChainHead(entry.Hash());
     EXPECT_EQ(nullptr, e);
   }
 
   // Try insert and lookup
   {
-    table.InsertTagged<false>(&entry, entry.Hash());
-    auto *e = table.FindChainHeadWithTag(entry.Hash());
+    table.Insert<false>(&entry);
+    auto *e = table.FindChainHead(entry.Hash());
     EXPECT_NE(nullptr, e);
     EXPECT_EQ(nullptr, e->next);
     EXPECT_EQ(entry, *reinterpret_cast<TestEntry *>(e));
@@ -121,14 +121,14 @@ TEST_F(GenericHashTableTest, ConcurrentInsertion) {
   }
 
   // Size the hash table
-  GenericHashTable hash_table;
+  UntaggedGenericHashTable hash_table;
   hash_table.SetSize(num_threads * num_entries);
 
   // Parallel insert
   LaunchParallel(num_threads, [&](auto thread_id) {
     for (uint32_t idx = thread_id * num_entries, end = idx + num_entries; idx < end; idx++) {
       auto &entry = entries[idx];
-      hash_table.Insert<true>(&entry, entry.hash);
+      hash_table.Insert<true>(&entry);
     }
   });
 
@@ -153,7 +153,7 @@ TEST_F(GenericHashTableTest, ConcurrentInsertion) {
 }
 
 TEST_F(GenericHashTableTest, EmptyIterator) {
-  GenericHashTable table;
+  UntaggedGenericHashTable table;
 
   //
   // Test: iteration shouldn't begin on an uninitialized table
@@ -222,13 +222,13 @@ TEST_F(GenericHashTableTest, SimpleIteration) {
   }
 
   // The table
-  GenericHashTable table;
+  UntaggedGenericHashTable table;
   table.SetSize(1000);
 
   // Insert
   for (uint32_t idx = 0; idx < num_inserts; idx++) {
     auto entry = &entries[idx];
-    table.Insert<false>(entry, entry->hash);
+    table.Insert<false>(entry);
   }
 
   // Check regular iterator
@@ -289,13 +289,13 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
   }
 
   // The table
-  GenericHashTable table;
+  UntaggedGenericHashTable table;
   table.SetSize(1000);
 
   // Insert
   for (uint32_t idx = 0; idx < num_inserts; idx++) {
     auto entry = &entries[idx];
-    table.Insert<false>(entry, entry->hash);
+    table.Insert<false>(entry);
   }
 
   // Check regular iterator
@@ -346,13 +346,13 @@ TEST_F(GenericHashTableTest, DISABLED_PerfIteration) {
   }
 
   // The table
-  GenericHashTable table;
+  UntaggedGenericHashTable table;
   table.SetSize(num_inserts);
 
   // Insert
   for (uint32_t idx = 0; idx < num_inserts; idx++) {
     auto entry = &entries[idx];
-    table.Insert<false>(entry, entry->hash);
+    table.Insert<false>(entry);
   }
 
   uint32_t sum1 = 0, sum2 = 0;

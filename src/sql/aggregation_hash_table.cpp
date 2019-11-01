@@ -99,7 +99,7 @@ void AggregationHashTable::Grow() {
   // Insert elements again
   for (byte *untyped_entry : entries_) {
     auto *entry = reinterpret_cast<HashTableEntry *>(untyped_entry);
-    hash_table_.Insert<false>(entry, entry->hash);
+    hash_table_.Insert<false>(entry);
   }
 
   // Update stats
@@ -118,7 +118,7 @@ byte *AggregationHashTable::AllocInputTuple(hash_t hash) {
   entry->next = nullptr;
 
   // Insert into table
-  hash_table_.Insert<false>(entry, entry->hash);
+  hash_table_.Insert<false>(entry);
 
   // Give the payload so the client can write into it
   return entry->payload;

@@ -5,9 +5,14 @@
 #include <utility>
 #include <vector>
 
-#include <tbb/tbb.h>  // NOLINT
-
+// Libcount
 #include "count/hll.h"
+
+// LLVM
+#include "llvm/ADT/STLExtras.h"
+
+// Intel TBB
+#include "tbb/tbb.h"
 
 #include "common/cpu_info.h"
 #include "common/memory.h"
@@ -44,33 +49,12 @@ byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
 // Generic hash tables
 // ---------------------------------------------------------
 
-template <bool Prefetch>
-void JoinHashTable::BuildGenericHashTableInternal() {
-  for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < entries_.size();
-       idx++, prefetch_idx++) {
-    if constexpr (Prefetch) {
-      if (TPL_LIKELY(prefetch_idx < entries_.size())) {
-        auto *prefetch_entry = EntryAt(prefetch_idx);
-        generic_hash_table_.PrefetchChainHead<false>(prefetch_entry->hash);
-      }
-    }
-
-    HashTableEntry *entry = EntryAt(idx);
-    generic_hash_table_.Insert<false>(entry, entry->hash);
-  }
-}
-
 void JoinHashTable::BuildGenericHashTable() {
-  // Setup based on number of buffered build-size tuples
+  // Perfectly size the generic hash table in preparation for bulk-load.
   generic_hash_table_.SetSize(GetTupleCount());
 
-  // Dispatch to appropriate build code based on GHT size
-  uint64_t l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
-  if (generic_hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
-    BuildGenericHashTableInternal<true>();
-  } else {
-    BuildGenericHashTableInternal<false>();
-  }
+  // Bulk-load the, now correctly sized, generic hash table using a non-concurrent algorithm.
+  generic_hash_table_.InsertBatch<false>(&entries_);
 }
 
 // ---------------------------------------------------------
@@ -581,33 +565,10 @@ void JoinHashTable::Build() {
   built_ = true;
 }
 
-template <bool Prefetch>
-void JoinHashTable::LookupBatchInGenericHashTableInternal(uint32_t num_tuples,
-                                                          const hash_t hashes[],
-                                                          const HashTableEntry *results[]) const {
-  // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
-
-  // Initial lookup
-  for (uint32_t idx = 0, prefetch_idx = kPrefetchDistance; idx < num_tuples;
-       idx++, prefetch_idx++) {
-    if constexpr (Prefetch) {
-      if (TPL_LIKELY(prefetch_idx < num_tuples)) {
-        generic_hash_table_.PrefetchChainHead<true>(hashes[prefetch_idx]);
-      }
-    }
-
-    results[idx] = generic_hash_table_.FindChainHead(hashes[idx]);
-  }
-}
-
 void JoinHashTable::LookupBatchInGenericHashTable(uint32_t num_tuples, const hash_t hashes[],
                                                   const HashTableEntry *results[]) const {
-  uint64_t l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
-  if (generic_hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
-    LookupBatchInGenericHashTableInternal<true>(num_tuples, hashes, results);
-  } else {
-    LookupBatchInGenericHashTableInternal<false>(num_tuples, hashes, results);
-  }
+  // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
+  generic_hash_table_.LookupBatch(num_tuples, hashes, results);
 }
 
 template <bool Prefetch>
@@ -648,31 +609,17 @@ void JoinHashTable::LookupBatch(uint32_t num_tuples, const hash_t hashes[],
   }
 }
 
-template <bool Prefetch, bool Concurrent>
+template <bool Concurrent>
 void JoinHashTable::MergeIncomplete(JoinHashTable *source) {
-  // Only generic table merges are supported
   // TODO(pmenon): Support merging build of concise tables
   TPL_ASSERT(!source->UsingConciseHashTable(), "Merging incomplete concise tables not supported");
 
-  // First, merge entries in the source table into ours
-  for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < source->GetTupleCount();
-       idx++, prefetch_idx++) {
-    if constexpr (Prefetch) {
-      if (TPL_LIKELY(prefetch_idx < source->GetTupleCount())) {
-        auto *prefetch_entry = source->EntryAt(prefetch_idx);
-        generic_hash_table_.PrefetchChainHead<false>(prefetch_entry->hash);
-      }
-    }
-
-    HashTableEntry *entry = source->EntryAt(idx);
-    generic_hash_table_.Insert<Concurrent>(entry, entry->hash);
-  }
+  // First, bulk-load all entries in the source table into our hash table
+  generic_hash_table_.InsertBatch<Concurrent>(&source->entries_);
 
   // Next, take ownership of source table's memory
-  {
-    util::SpinLatch::ScopedSpinLatch latch(&owned_latch_);
-    owned_.emplace_back(std::move(source->entries_));
-  }
+  util::SpinLatch::ScopedSpinLatch latch(&owned_latch_);
+  owned_.emplace_back(std::move(source->entries_));
 }
 
 void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_container,
@@ -699,28 +646,22 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
 
   const bool use_serial_build = num_elem_estimate < kDefaultMinSizeForParallelMerge;
   if (use_serial_build) {
-    // TODO(pmenon): If the estimate under counted, it might make sense to switch to parallel merge.
-    LOG_INFO("JHT: Estimated {} elements. Using serial merge.", num_elem_estimate);
-    for (auto *source : tl_join_tables) {
-      MergeIncomplete<false, false>(source);
-    }
+    // TODO(pmenon): Switch to parallel-mode if estimate is wrong.
+    LOG_INFO(
+        "JHT: Estimated total {} elements < {} element parallel threshold. Using serial merge.",
+        num_elem_estimate, kDefaultMinSizeForParallelMerge);
+    llvm::for_each(tl_join_tables, [this](auto *source) { MergeIncomplete<false>(source); });
   } else {
-    const uint64_t l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
-    const bool out_of_cache = (generic_hash_table_.GetTotalMemoryUsage() > l3_size);
-
-    tbb::parallel_for_each(tl_join_tables, [this, out_of_cache](JoinHashTable *source) {
-      if (out_of_cache) {
-        MergeIncomplete<true, true>(source);
-      } else {
-        MergeIncomplete<false, true>(source);
-      }
-    });
+    LOG_INFO(
+        "JHT: Estimated total {} elements >= {} element parallel threshold. Using parallel merge.",
+        num_elem_estimate, kDefaultMinSizeForParallelMerge);
+    tbb::parallel_for_each(tl_join_tables, [this](auto *source) { MergeIncomplete<true>(source); });
   }
 
   timer.Stop();
 
   double tps = (generic_hash_table_.GetElementCount() / timer.GetElapsed()) / 1000.0;
-  LOG_INFO("{} merged {} JHTs. Estimated {} elements, actual {}. Time: {:.2f} ms ({:.2f} mtps)",
+  LOG_INFO("JHT: {} merged {} JHTs. Estimated {}, actual {}. Time: {:.2f} ms ({:.2f} mtps)",
            use_serial_build ? "Serial" : "Parallel", tl_join_tables.size(), num_elem_estimate,
            generic_hash_table_.GetElementCount(), timer.GetElapsed(), tps);
 }

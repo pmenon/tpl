@@ -188,10 +188,6 @@ class JoinHashTable {
   void BuildGenericHashTable();
   void BuildConciseHashTable();
 
-  // Dispatched from BuildGenericHashTable()
-  template <bool Prefetch>
-  void BuildGenericHashTableInternal();
-
   // Dispatched from BuildConciseHashTable() to construct the concise hash table
   // and to reorder buffered build tuples in place according to the CHT
   template <bool PrefetchCHT, bool PrefetchEntries>
@@ -212,18 +208,13 @@ class JoinHashTable {
   void LookupBatchInConciseHashTable(uint32_t num_tuples, const hash_t hashes[],
                                      const HashTableEntry *results[]) const;
 
-  // Dispatched from LookupBatchInGenericHashTable()
-  template <bool Prefetch>
-  void LookupBatchInGenericHashTableInternal(uint32_t num_tuples, const hash_t hashes[],
-                                             const HashTableEntry *results[]) const;
-
   // Dispatched from LookupBatchInConciseHashTable()
   template <bool Prefetch>
   void LookupBatchInConciseHashTableInternal(uint32_t num_tuples, const hash_t hashes[],
                                              const HashTableEntry *results[]) const;
 
   // Merge the source hash table (which isn't built yet) into this one
-  template <bool Prefetch, bool Concurrent>
+  template <bool Concurrent>
   void MergeIncomplete(JoinHashTable *source);
 
  private:
@@ -237,7 +228,7 @@ class JoinHashTable {
   MemPoolVector<decltype(entries_)> owned_;
 
   // The generic hash table
-  GenericHashTable generic_hash_table_;
+  UntaggedGenericHashTable generic_hash_table_;
 
   // The concise hash table
   ConciseHashTable concise_hash_table_;

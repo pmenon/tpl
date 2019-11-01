@@ -4,10 +4,12 @@
 #include <utility>
 
 #include "common/common.h"
+#include "common/cpu_info.h"
 #include "common/macros.h"
 #include "common/memory.h"
 #include "sql/hash_table_entry.h"
 #include "sql/memory_pool.h"
+#include "util/chunked_vector.h"
 
 namespace tpl::sql {
 
@@ -18,16 +20,32 @@ namespace tpl::sql {
 //===----------------------------------------------------------------------===//
 
 /**
- * GenericHashTable serves as a dead-simple hash table for joins and aggregations in TPL. It is a
- * generic bytes-to-bytes hash table implemented as a bucket-chained table with pointer tagging.
- * Pointer tagging uses the first @em GenericHashTable::kNumTagBits bits of the entry pointers in
- * the main bucket directory as a bloom filter. It optionally supports concurrent inserts (and
- * trivially concurrent probes). This class only stores pointers into externally managed storage,
- * it does not store any hash table data internally at all.
+ * GenericHashTable is a simple bucket-chained table with optional pointer tagging. The use of
+ * pointer tagging is controlled through the sole boolean template parameter. Pointer tagging uses
+ * the first @em GenericHashTable::kNumTagBits bits (typically 16 bits) of the entry pointers in the
+ * main bucket directory as a tiny bloom filter. This bloom filter is used to early-prune probe
+ * misses that would normally require a full cache-unfriendly linked list traversal. We can
+ * re-purpose the most-significant 16-bits of a pointer because X86_64 uses 48-bits of the VM
+ * address space. Pointer tagged hash tables will have to be disabled when the full 64-bit VM
+ * address space is enabled.
  *
- * Note that this class makes use of the next pointer in HashTableEntry::next to implement the
+ * GenericHashTable support both serial and concurrent insertions. Both are controlled through
+ * a template parameter to GenericHashTable::Insert() and GenericHashTable::InsertBatch(). The
+ * former method inserts a single entry, while the latter method bulk-loads a batch of entries.
+ * Whenever possible, prefer using the latter as it can apply some optimizations that usually
+ * improve performance, such as prefetching and batched atomic additions.
+ *
+ * GenericHashTable also supports both one-at-a-time and batched probes. Like batched insertion,
+ * prefer using the batched probe because it offers greater performance.
+ *
+ * GenericHashTables only stores pointers into externally managed storage; it does not manage any
+ * hash table data internally. In other words, the memory of all inserted HashTableEntry must be
+ * owned by an external entity whose lifetime exceeds this GenericHashTable!
+ *
+ * Note: GenericHashTable leverages the ‘next’ pointer in HashTableEntry::next to implement the
  * linked list bucket chain.
  */
+template <bool UseTags>
 class GenericHashTable {
  private:
   // X86_64 has 48-bit VM address space, leaving 16 for us to re-purpose.
@@ -44,8 +62,8 @@ class GenericHashTable {
 
  public:
   /**
-   * Create an empty hash table. Callers must first call GenericHashTable::SetSize() before using
-   * this hash table.
+   * Create an empty hash table. Callers must first call GenericHashTable<UseTags>::SetSize() before
+   * using this hash table.
    * @param load_factor The desired load-factor for the table.
    */
   explicit GenericHashTable(float load_factor = kDefaultLoadFactor) noexcept;
@@ -61,6 +79,15 @@ class GenericHashTable {
   ~GenericHashTable();
 
   /**
+   * Explicitly set the size of the hash table to support at least @em new_size elements. The input
+   * size @em new_size serves as a lower-bound of the expected number of elements. This resize
+   * operation may resize to a larger value to (1) respect the load factor or to (2) ensure a power
+   * of two size.
+   * @param new_size The expected number of elements that will be inserted into the table.
+   */
+  void SetSize(uint64_t new_size);
+
+  /**
    * Insert an entry into the hash table without tagging the entry.
    *
    * @pre The input hash value @em hash should match what's stored in @em entry.
@@ -70,31 +97,16 @@ class GenericHashTable {
    * @param hash The hash value of the entry.
    */
   template <bool Concurrent>
-  void Insert(HashTableEntry *new_entry, hash_t hash);
+  void Insert(HashTableEntry *new_entry);
 
   /**
-   * Insert an entry into the hash table using a tag. This insertion will update the tag bits of
-   * the bucket it lands into for this new entry before physically installing the entry in the hash
-   * directory.
-   * @tparam Concurrent Is the insert occurring concurrently with other inserts.
-   * @param new_entry The entry to insert.
-   * @param hash The hash value of the entry.
+   * Insert a list of entries into this hash table.
+   * @tparam Concurrent Is the insertion occurring concurrently with other insertions?
+   * @tparam Allocator The allocator used by the vector.
+   * @param entries The list of entries to insert into the table.
    */
-  template <bool Concurrent>
-  void InsertTagged(HashTableEntry *new_entry, hash_t hash);
-
-  /**
-   * Explicitly set the size of the hash table to support at least @em new_size elements. The
-   input
-   * size @em new_size serves as a lower-bound of the expected number of elements. This resize
-   * operation may resize to a larger value to:
-   *
-   * 1. Respect the load factor.
-   * 2. To ensure a power of two size.
-
-   * @param new_size The expected number of elements that will be inserted into the table.
-   */
-  void SetSize(uint64_t new_size);
+  template <bool Concurrent, typename Allocator>
+  void InsertBatch(util::ChunkedVector<Allocator> *entries);
 
   /**
    * Prefetch the head of the bucket chain for the hash @em hash.
@@ -113,12 +125,13 @@ class GenericHashTable {
   HashTableEntry *FindChainHead(hash_t hash) const;
 
   /**
-   * Given a hash value, return the head of the bucket chain removing the tag. This probe is
-   * performed assuming no concurrent access into the table.
-   * @param hash The hash value of the element to find
-   * @return The (potentially null) head of the bucket chain for the given hash
+   * Perform a batch lookup of elements whose hash values are stored in @em hashes, storing the
+   * results in @em results.
+   * @param num_tuples The number of tuples in the batch.
+   * @param hashes The hash values of the probe elements.
+   * @param results The heads of the bucket chain of the probed elements.
    */
-  HashTableEntry *FindChainHeadWithTag(hash_t hash) const;
+  void LookupBatch(uint64_t n, const hash_t hashes[], const HashTableEntry *entries[]) const;
 
   /**
    * Empty all entries in this hash table into the sink functor. After this function exits, the hash
@@ -137,7 +150,7 @@ class GenericHashTable {
   /**
    * @return The number of elements stored in this hash table.
    */
-  uint64_t GetElementCount() const { return num_elems_.load(std::memory_order_relaxed); }
+  uint64_t GetElementCount() const { return num_elements_.load(std::memory_order_relaxed); }
 
   /**
    * @return The maximum number of elements this hash table can store at its current size.
@@ -152,10 +165,43 @@ class GenericHashTable {
   float GetLoadFactor() const { return load_factor_; }
 
  private:
-  template <bool UseTag>
+  template <bool>
   friend class GenericHashTableIterator;
-  template <bool UseTag>
+  template <bool>
   friend class GenericHashTableVectorIterator;
+
+  // Return the position of the bucket the given hash value lands into
+  uint64_t BucketPosition(const hash_t hash) const { return hash & mask_; }
+
+  // Add the given value to the total element count
+  void AddElementCount(uint64_t v) { num_elements_.fetch_add(v, std::memory_order_relaxed); }
+
+  // Note: internal insertion functions do not modify the element count!
+
+  // Insert an entry into the hash table without tagging the entry.
+  template <bool Concurrent>
+  void InsertInternal(HashTableEntry *new_entry, hash_t hash);
+
+  // Insert an entry into the hash table using a tagged pointers.
+  template <bool Concurrent>
+  void InsertTaggedInternal(HashTableEntry *new_entry, hash_t hash);
+
+  // Insert a list of entries into the hash table.
+  template <bool Prefetch, bool Concurrent, typename Allocator>
+  void InsertBatchInternal(util::ChunkedVector<Allocator> *entries);
+
+  // Given a hash value, return the head of the bucket chain ignoring any tag. This probe is
+  // performed assuming no concurrent access into the table.
+  HashTableEntry *FindChainHeadInternal(hash_t hash) const;
+
+  // Given a hash value, return the head of the bucket chain removing the tag. This probe is
+  // performed assuming no concurrent access into the table.
+  HashTableEntry *FindChainHeadTaggedInternal(hash_t hash) const;
+
+  // Perform a batch lookup of elements.
+  template <bool Prefetch>
+  void LookupBatchInternal(uint64_t n, const hash_t hashes[],
+                           const HashTableEntry *entries[]) const;
 
   // -------------------------------------------------------
   // Tag-related operations
@@ -188,18 +234,17 @@ class GenericHashTable {
   }
 
  private:
-  // Main bucket table
+  // Main directory of hash table entry buckets. Each bucket is the head of a linked list chain.
   std::atomic<HashTableEntry *> *entries_;
 
-  // The mask to use to determine the bucket position of an entry given its hash
+  // The mask to use to determine the bucket position of an entry given its hash.
   uint64_t mask_;
 
-  // The capacity of the directory
+  // The capacity of the directory.
   uint64_t capacity_;
 
-  // The current number of elements stored in the table. Atomic because it **MAY** be modified
-  // concurrently during insertions.
-  std::atomic<uint64_t> num_elems_;
+  // The current number of elements stored in the table.
+  std::atomic<uint64_t> num_elements_;
 
   // The current load-factor
   float load_factor_;
@@ -209,25 +254,38 @@ class GenericHashTable {
 // Implementation below
 // ---------------------------------------------------------
 
+template <bool UseTags>
 template <bool ForRead>
-void GenericHashTable::PrefetchChainHead(hash_t hash) const {
+void GenericHashTable<UseTags>::PrefetchChainHead(hash_t hash) const {
   const uint64_t pos = hash & mask_;
   Memory::Prefetch<ForRead, Locality::Low>(entries_ + pos);
 }
 
-inline HashTableEntry *GenericHashTable::FindChainHead(hash_t hash) const {
+template <bool UseTags>
+inline HashTableEntry *GenericHashTable<UseTags>::FindChainHeadInternal(hash_t hash) const {
   const uint64_t pos = hash & mask_;
   return entries_[pos].load(std::memory_order_relaxed);
 }
 
-inline HashTableEntry *GenericHashTable::FindChainHeadWithTag(hash_t hash) const {
-  const HashTableEntry *const candidate = FindChainHead(hash);
+template <bool UseTags>
+inline HashTableEntry *GenericHashTable<UseTags>::FindChainHeadTaggedInternal(hash_t hash) const {
+  const HashTableEntry *const candidate = FindChainHeadInternal(hash);
   auto exists_in_chain = reinterpret_cast<uintptr_t>(candidate) & TagHash(hash);
   return (exists_in_chain ? UntagPointer(candidate) : nullptr);
 }
 
+template <bool UseTags>
+HashTableEntry *GenericHashTable<UseTags>::FindChainHead(hash_t hash) const {
+  if constexpr (UseTags) {
+    return FindChainHeadTaggedInternal(hash);
+  } else {
+    return FindChainHeadInternal(hash);
+  }
+}
+
+template <bool UseTags>
 template <bool Concurrent>
-inline void GenericHashTable::Insert(HashTableEntry *new_entry, hash_t hash) {
+inline void GenericHashTable<UseTags>::InsertInternal(HashTableEntry *new_entry, hash_t hash) {
   const auto pos = hash & mask_;
 
   TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");
@@ -245,12 +303,12 @@ inline void GenericHashTable::Insert(HashTableEntry *new_entry, hash_t hash) {
     new_entry->next = old_entry;
     loc.store(new_entry, std::memory_order_relaxed);
   }
-
-  num_elems_.fetch_add(1, std::memory_order_relaxed);
 }
 
+template <bool UseTags>
 template <bool Concurrent>
-inline void GenericHashTable::InsertTagged(HashTableEntry *new_entry, hash_t hash) {
+inline void GenericHashTable<UseTags>::InsertTaggedInternal(HashTableEntry *new_entry,
+                                                            hash_t hash) {
   const auto pos = hash & mask_;
 
   TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");
@@ -270,26 +328,109 @@ inline void GenericHashTable::InsertTagged(HashTableEntry *new_entry, hash_t has
     new_entry->next = UntagPointer(old_entry);
     loc.store(UpdateTag(old_entry, new_entry), std::memory_order_relaxed);
   }
-
-  num_elems_.fetch_add(1, std::memory_order_relaxed);
 }
 
+template <bool UseTags>
+template <bool Concurrent>
+void GenericHashTable<UseTags>::Insert(HashTableEntry *new_entry) {
+  if constexpr (UseTags) {
+    InsertTaggedInternal<Concurrent>(new_entry, new_entry->hash);
+  } else {
+    InsertInternal<Concurrent>(new_entry, new_entry->hash);
+  }
+
+  // Update element count
+  AddElementCount(1);
+}
+
+template <bool UseTags>
+template <bool Prefetch, bool Concurrent, typename Allocator>
+inline void GenericHashTable<UseTags>::InsertBatchInternal(
+    util::ChunkedVector<Allocator> *entries) {
+  const uint64_t size = entries->size();
+  for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < size; idx++, prefetch_idx++) {
+    if constexpr (Prefetch) {
+      if (TPL_LIKELY(prefetch_idx < size)) {
+        auto *prefetch_entry = reinterpret_cast<HashTableEntry *>((*entries)[prefetch_idx]);
+        PrefetchChainHead<false>(prefetch_entry->hash);
+      }
+    }
+
+    auto *entry = reinterpret_cast<HashTableEntry *>((*entries)[idx]);
+    if constexpr (UseTags) {
+      InsertTaggedInternal<Concurrent>(entry, entry->hash);
+    } else {
+      InsertInternal<Concurrent>(entry, entry->hash);
+    }
+  }
+}
+
+template <bool UseTags>
+template <bool Concurrent, typename Allocator>
+inline void GenericHashTable<UseTags>::InsertBatch(util::ChunkedVector<Allocator> *entries) {
+  const uint64_t l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
+  if (bool out_of_cache = GetTotalMemoryUsage() > l3_size; out_of_cache) {
+    InsertBatchInternal<true, Concurrent>(entries);
+  } else {
+    InsertBatchInternal<false, Concurrent>(entries);
+  }
+
+  // Update element count
+  AddElementCount(entries->size());
+}
+
+template <bool UseTags>
+template <bool Prefetch>
+inline void GenericHashTable<UseTags>::LookupBatchInternal(uint64_t n, const hash_t hashes[],
+                                                           const HashTableEntry *entries[]) const {
+  for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < n; idx++, prefetch_idx++) {
+    if constexpr (Prefetch) {
+      if (TPL_LIKELY(prefetch_idx < n)) {
+        PrefetchChainHead<true>(hashes[prefetch_idx]);
+      }
+    }
+
+    entries[idx] = FindChainHead(hashes[idx]);
+  }
+}
+
+template <bool UseTags>
+inline void GenericHashTable<UseTags>::LookupBatch(uint64_t num_elements, const hash_t hashes[],
+                                                   const HashTableEntry *entries[]) const {
+  const uint64_t l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
+  if (bool out_of_cache = GetTotalMemoryUsage() > l3_size; out_of_cache) {
+    LookupBatchInternal<true>(num_elements, hashes, entries);
+  } else {
+    LookupBatchInternal<false>(num_elements, hashes, entries);
+  }
+}
+
+template <bool UseTags>
 template <typename F>
-inline void GenericHashTable::FlushEntries(const F &sink) {
+inline void GenericHashTable<UseTags>::FlushEntries(const F &sink) {
   static_assert(std::is_invocable_v<F, HashTableEntry *>);
 
   for (uint64_t idx = 0; idx < capacity_; idx++) {
     HashTableEntry *entry = entries_[idx].load(std::memory_order_relaxed);
+
+    if constexpr (UseTags) {
+      entry = UntagPointer(entry);
+    }
+
     while (entry != nullptr) {
       HashTableEntry *next = entry->next;
       sink(entry);
       entry = next;
     }
+
     entries_[idx].store(nullptr, std::memory_order_relaxed);
   }
 
-  num_elems_ = 0;
+  num_elements_ = 0;
 }
+
+using TaggedGenericHashTable = GenericHashTable<true>;
+using UntaggedGenericHashTable = GenericHashTable<false>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -310,7 +451,7 @@ class GenericHashTableIterator {
    * Construct an iterator over the given hash table @em table.
    * @param table The table to iterate over.
    */
-  explicit GenericHashTableIterator(const GenericHashTable &table) noexcept
+  explicit GenericHashTableIterator(const GenericHashTable<UseTag> &table) noexcept
       : table_(table), entries_index_(0), curr_entry_(nullptr) {
     Next();
   }
@@ -338,7 +479,7 @@ class GenericHashTableIterator {
       curr_entry_ = table_.entries_[entries_index_++].load(std::memory_order_relaxed);
 
       if constexpr (UseTag) {
-        curr_entry_ = GenericHashTable::UntagPointer(curr_entry_);
+        curr_entry_ = GenericHashTable<UseTag>::UntagPointer(curr_entry_);
       }
 
       if (curr_entry_ != nullptr) {
@@ -354,7 +495,7 @@ class GenericHashTableIterator {
 
  private:
   // The table we're iterating over
-  const GenericHashTable &table_;
+  const GenericHashTable<UseTag> &table_;
   // The index into the hash table's entries directory to read from next
   uint64_t entries_index_;
   // The current entry the iterator is pointing to
@@ -382,7 +523,8 @@ class GenericHashTableVectorIterator {
    * @param table The table to iterate over.
    * @param memory The memory pool to use for allocations.
    */
-  GenericHashTableVectorIterator(const GenericHashTable &table, MemoryPool *memory) noexcept;
+  GenericHashTableVectorIterator(const GenericHashTable<UseTag> &table,
+                                 MemoryPool *memory) noexcept;
 
   /**
    * Deallocate the entry cache array
@@ -411,7 +553,7 @@ class GenericHashTableVectorIterator {
   MemoryPool *memory_;
 
   // The hash table we're iterating over
-  const GenericHashTable &table_;
+  const GenericHashTable<UseTag> &table_;
 
   // The index into the hash table's entries directory to read from next
   uint64_t table_dir_index_;
