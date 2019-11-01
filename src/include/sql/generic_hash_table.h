@@ -25,27 +25,30 @@ namespace tpl::sql {
  * trivially concurrent probes). This class only stores pointers into externally managed storage,
  * it does not store any hash table data internally at all.
  *
- * Note that this class makes use of the @em HashTableEntry::next pointer to implement the linked
- * list bucket chain.
+ * Note that this class makes use of the next pointer in HashTableEntry::next to implement the
+ * linked list bucket chain.
  */
 class GenericHashTable {
  private:
-  static constexpr const uint32_t kNumTagBits = 16;
-  static constexpr const uint32_t kNumPointerBits = sizeof(uint8_t *) * 8 - kNumTagBits;
-  static constexpr const uint64_t kMaskPointer = (~0ull) >> kNumTagBits;
-  static constexpr const uint64_t kMaskTag = (~0ull) << kNumPointerBits;
+  // X86_64 has 48-bit VM address space, leaving 16 for us to re-purpose.
+  static constexpr uint32_t kNumTagBits = 16;
+  // The number of bits to use for the physical pointer.
+  static constexpr uint32_t kNumPointerBits = (sizeof(void *) * kBitsPerByte) - kNumTagBits;
+  // The mask to use to retrieve the physical pointer from a tagged pointer.
+  static constexpr uint64_t kMaskPointer = (~0ull) >> kNumTagBits;
+  // The mask to use to retrieve the tag from a tagged pointer.
+  static constexpr uint64_t kMaskTag = (~0ull) << kNumPointerBits;
+
+  // The default load factor to use.
+  static constexpr float kDefaultLoadFactor = 0.7;
 
  public:
   /**
-   * Create an empty hash table. Callers must first call SetSize() before using this hash table.
-   * @param load_factor The desired load-factor for the table
+   * Create an empty hash table. Callers must first call GenericHashTable::SetSize() before using
+   * this hash table.
+   * @param load_factor The desired load-factor for the table.
    */
-  explicit GenericHashTable(float load_factor = 0.7) noexcept;
-
-  /**
-   * Cleanup.
-   */
-  ~GenericHashTable();
+  explicit GenericHashTable(float load_factor = kDefaultLoadFactor) noexcept;
 
   /**
    * This class cannot be copied or moved.
@@ -53,34 +56,50 @@ class GenericHashTable {
   DISALLOW_COPY_AND_MOVE(GenericHashTable);
 
   /**
-   * Insert an entry into the hash table, ignoring tagging the pointer into the bucket head.
-   * @tparam Concurrent Is the insert occurring concurrently with other inserts
-   * @param new_entry The entry to insert
-   * @param hash The hash value of the entry
+   * Destructor.
+   */
+  ~GenericHashTable();
+
+  /**
+   * Insert an entry into the hash table without tagging the entry.
+   *
+   * @pre The input hash value @em hash should match what's stored in @em entry.
+   *
+   * @tparam Concurrent Is the insert occurring concurrently with other inserts.
+   * @param new_entry The entry to insert.
+   * @param hash The hash value of the entry.
    */
   template <bool Concurrent>
   void Insert(HashTableEntry *new_entry, hash_t hash);
 
   /**
-   * Insert an entry into the hash table, updating the tag in the bucket head
-   * @tparam Concurrent Is the insert occurring concurrently with other inserts
-   * @param new_entry The entry to insert
-   * @param hash The hash value of the entry
+   * Insert an entry into the hash table using a tag. This insertion will update the tag bits of
+   * the bucket it lands into for this new entry before physically installing the entry in the hash
+   * directory.
+   * @tparam Concurrent Is the insert occurring concurrently with other inserts.
+   * @param new_entry The entry to insert.
+   * @param hash The hash value of the entry.
    */
   template <bool Concurrent>
   void InsertTagged(HashTableEntry *new_entry, hash_t hash);
 
   /**
-   * Explicitly set the size of the hash table to support at least @em new_size elements with good
-   * performance.
-   * @param new_size The expected number of elements to size the table for
+   * Explicitly set the size of the hash table to support at least @em new_size elements. The
+   input
+   * size @em new_size serves as a lower-bound of the expected number of elements. This resize
+   * operation may resize to a larger value to:
+   *
+   * 1. Respect the load factor.
+   * 2. To ensure a power of two size.
+
+   * @param new_size The expected number of elements that will be inserted into the table.
    */
   void SetSize(uint64_t new_size);
 
   /**
    * Prefetch the head of the bucket chain for the hash @em hash.
-   * @tparam ForRead Whether the prefetch is intended for a subsequent read op
-   * @param hash The hash value of the element to prefetch
+   * @tparam ForRead Whether the prefetch is intended for a subsequent read.
+   * @param hash The hash value of the element to prefetch.
    */
   template <bool ForRead>
   void PrefetchChainHead(hash_t hash) const;
@@ -142,8 +161,8 @@ class GenericHashTable {
   // Tag-related operations
   // -------------------------------------------------------
 
-  // Given a tagged HashTableEntry pointer, strip out the tag bits and return an untagged
-  // HashTableEntry pointer
+  // Given a tagged HashTableEntry pointer, strip out the tag bits and return an
+  // untagged HashTableEntry pointer
   static HashTableEntry *UntagPointer(const HashTableEntry *const entry) {
     auto ptr = reinterpret_cast<uintptr_t>(entry);
     return reinterpret_cast<HashTableEntry *>(ptr & kMaskPointer);
@@ -159,9 +178,10 @@ class GenericHashTable {
   }
 
   static uint64_t TagHash(const hash_t hash) {
-    // We use the given hash value to obtain a bit position in the tag to set. We need to extract a
-    // signature from the hash value in the range [0, kNumTagBits), so we take the log2(kNumTagBits)
-    // most significant bits to determine which bit in the tag to set.
+    // We use the given hash value to obtain a bit position in the tag to set.
+    // We need to extract a signature from the hash value in the range
+    // [0, kNumTagBits), so we take the log2(kNumTagBits) most significant bits
+    // to determine which bit in the tag to set.
     auto tag_bit_pos = hash >> (sizeof(hash_t) * 8 - 4);
     TPL_ASSERT(tag_bit_pos < kNumTagBits, "Invalid tag!");
     return 1ull << (tag_bit_pos + kNumPointerBits);
