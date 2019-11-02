@@ -13,6 +13,7 @@ void InitLogger() {
 
   // The top level logger
   logger = std::make_shared<spdlog::logger>("logger", default_sink);
+  logger->set_pattern("[%Y-%m-%d %T.%e] [%^%L%$] %v");
   // logger->set_level(SPD_LOG_LEVEL);
 
   spdlog::register_logger(logger);
