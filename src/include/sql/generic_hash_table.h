@@ -127,11 +127,12 @@ class GenericHashTable {
   /**
    * Perform a batch lookup of elements whose hash values are stored in @em hashes, storing the
    * results in @em results.
-   * @param num_tuples The number of tuples in the batch.
+   * @param num_elements The number of hashes to lookup.
    * @param hashes The hash values of the probe elements.
    * @param results The heads of the bucket chain of the probed elements.
    */
-  void LookupBatch(uint64_t n, const hash_t hashes[], const HashTableEntry *entries[]) const;
+  void LookupBatch(uint64_t num_elements, const hash_t hashes[],
+                   const HashTableEntry *entries[]) const;
 
   /**
    * Empty all entries in this hash table into the sink functor. After this function exits, the hash
@@ -185,27 +186,27 @@ class GenericHashTable {
 
   // Insert an entry into the hash table without tagging the entry.
   template <bool Concurrent>
-  void InsertInternal(HashTableEntry *new_entry, hash_t hash);
+  void InsertUntagged(HashTableEntry *new_entry, hash_t hash);
 
   // Insert an entry into the hash table using a tagged pointers.
   template <bool Concurrent>
-  void InsertTaggedInternal(HashTableEntry *new_entry, hash_t hash);
+  void InsertTagged(HashTableEntry *new_entry, hash_t hash);
 
   // Insert a list of entries into the hash table.
   template <bool Prefetch, bool Concurrent, typename Allocator>
   void InsertBatchInternal(util::ChunkedVector<Allocator> *entries);
 
-  // Given a hash value, return the head of the bucket chain ignoring any tag. This probe is
-  // performed assuming no concurrent access into the table.
-  HashTableEntry *FindChainHeadInternal(hash_t hash) const;
+  // Given a hash value, return the head of the bucket chain ignoring any tag.
+  // This probe is performed assuming no concurrent access into the table.
+  HashTableEntry *FindChainHeadUntagged(hash_t hash) const;
 
-  // Given a hash value, return the head of the bucket chain removing the tag. This probe is
-  // performed assuming no concurrent access into the table.
-  HashTableEntry *FindChainHeadTaggedInternal(hash_t hash) const;
+  // Given a hash value, return the head of the bucket chain removing the tag.
+  // This probe is performed assuming no concurrent access into the table.
+  HashTableEntry *FindChainHeadTagged(hash_t hash) const;
 
   // Perform a batch lookup of elements.
   template <bool Prefetch>
-  void LookupBatchInternal(uint64_t n, const hash_t hashes[],
+  void LookupBatchInternal(uint64_t num_elements, const hash_t hashes[],
                            const HashTableEntry *entries[]) const;
 
   // -------------------------------------------------------
@@ -239,10 +240,11 @@ class GenericHashTable {
   }
 
  private:
-  // Main directory of hash table entry buckets. Each bucket is the head of a linked list chain.
+  // Main directory of hash table entry buckets. Each bucket is the head of a
+  // linked list chain.
   std::atomic<HashTableEntry *> *entries_;
 
-  // The mask to use to determine the bucket position of an entry given its hash.
+  // The mask to use to compute the bucket position of an entry.
   uint64_t mask_;
 
   // The capacity of the directory.
@@ -251,7 +253,7 @@ class GenericHashTable {
   // The current number of elements stored in the table.
   std::atomic<uint64_t> num_elements_;
 
-  // The current load-factor
+  // The configured load-factor.
   float load_factor_;
 };
 
@@ -261,14 +263,14 @@ class GenericHashTable {
 
 template <bool UseTags>
 template <bool ForRead>
-void GenericHashTable<UseTags>::PrefetchChainHead(hash_t hash) const {
+inline void GenericHashTable<UseTags>::PrefetchChainHead(hash_t hash) const {
   const uint64_t pos = BucketPosition(hash);
   Memory::Prefetch<ForRead, Locality::Low>(entries_ + pos);
 }
 
 template <bool UseTags>
 template <bool Concurrent>
-inline void GenericHashTable<UseTags>::InsertInternal(HashTableEntry *new_entry, hash_t hash) {
+inline void GenericHashTable<UseTags>::InsertUntagged(HashTableEntry *new_entry, hash_t hash) {
   const uint64_t pos = BucketPosition(hash);
 
   TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");
@@ -290,8 +292,8 @@ inline void GenericHashTable<UseTags>::InsertInternal(HashTableEntry *new_entry,
 
 template <bool UseTags>
 template <bool Concurrent>
-inline void GenericHashTable<UseTags>::InsertTaggedInternal(HashTableEntry *new_entry,
-                                                            hash_t hash) {
+inline void GenericHashTable<UseTags>::InsertTagged(HashTableEntry *new_entry,
+                                                    hash_t hash) {
   const uint64_t pos = BucketPosition(hash);
 
   TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");
@@ -315,11 +317,11 @@ inline void GenericHashTable<UseTags>::InsertTaggedInternal(HashTableEntry *new_
 
 template <bool UseTags>
 template <bool Concurrent>
-void GenericHashTable<UseTags>::Insert(HashTableEntry *new_entry) {
+inline void GenericHashTable<UseTags>::Insert(HashTableEntry *new_entry) {
   if constexpr (UseTags) {
-    InsertTaggedInternal<Concurrent>(new_entry, new_entry->hash);
+    InsertTagged<Concurrent>(new_entry, new_entry->hash);
   } else {
-    InsertInternal<Concurrent>(new_entry, new_entry->hash);
+    InsertUntagged<Concurrent>(new_entry, new_entry->hash);
   }
 
   // Update element count
@@ -341,9 +343,9 @@ inline void GenericHashTable<UseTags>::InsertBatchInternal(
 
     auto *entry = reinterpret_cast<HashTableEntry *>((*entries)[idx]);
     if constexpr (UseTags) {
-      InsertTaggedInternal<Concurrent>(entry, entry->hash);
+      InsertTagged<Concurrent>(entry, entry->hash);
     } else {
-      InsertInternal<Concurrent>(entry, entry->hash);
+      InsertUntagged<Concurrent>(entry, entry->hash);
     }
   }
 }
@@ -363,48 +365,51 @@ inline void GenericHashTable<UseTags>::InsertBatch(util::ChunkedVector<Allocator
 }
 
 template <bool UseTags>
-inline HashTableEntry *GenericHashTable<UseTags>::FindChainHeadInternal(hash_t hash) const {
+inline HashTableEntry *GenericHashTable<UseTags>::FindChainHeadUntagged(hash_t hash) const {
   const uint64_t pos = BucketPosition(hash);
   return entries_[pos].load(std::memory_order_relaxed);
 }
 
 template <bool UseTags>
-inline HashTableEntry *GenericHashTable<UseTags>::FindChainHeadTaggedInternal(hash_t hash) const {
-  const HashTableEntry *const candidate = FindChainHeadInternal(hash);
+inline HashTableEntry *GenericHashTable<UseTags>::FindChainHeadTagged(hash_t hash) const {
+  const HashTableEntry *const candidate = FindChainHeadUntagged(hash);
   auto exists_in_chain = reinterpret_cast<uintptr_t>(candidate) & TagHash(hash);
   return (exists_in_chain ? UntagPointer(candidate) : nullptr);
 }
 
 template <bool UseTags>
-HashTableEntry *GenericHashTable<UseTags>::FindChainHead(hash_t hash) const {
+inline HashTableEntry *GenericHashTable<UseTags>::FindChainHead(hash_t hash) const {
   if constexpr (UseTags) {
-    return FindChainHeadTaggedInternal(hash);
+    return FindChainHeadTagged(hash);
   } else {
-    return FindChainHeadInternal(hash);
+    return FindChainHeadUntagged(hash);
   }
 }
 
 template <bool UseTags>
 template <bool Prefetch>
-inline void GenericHashTable<UseTags>::LookupBatchInternal(uint64_t n, const hash_t hashes[],
+inline void GenericHashTable<UseTags>::LookupBatchInternal(const uint64_t num_elements,
+                                                           const hash_t hashes[],
                                                            const HashTableEntry *entries[]) const {
-  for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < n; idx++, prefetch_idx++) {
+  for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < num_elements;
+       idx++, prefetch_idx++) {
     if constexpr (Prefetch) {
-      if (TPL_LIKELY(prefetch_idx < n)) {
+      if (TPL_LIKELY(prefetch_idx < num_elements)) {
         PrefetchChainHead<true>(hashes[prefetch_idx]);
       }
     }
 
     if constexpr (UseTags) {
-      entries[idx] = FindChainHeadTaggedInternal(hashes[idx]);
+      entries[idx] = FindChainHeadTagged(hashes[idx]);
     } else {
-      entries[idx] = FindChainHeadInternal(hashes[idx]);
+      entries[idx] = FindChainHeadUntagged(hashes[idx]);
     }
   }
 }
 
 template <bool UseTags>
-inline void GenericHashTable<UseTags>::LookupBatch(uint64_t num_elements, const hash_t hashes[],
+inline void GenericHashTable<UseTags>::LookupBatch(const uint64_t num_elements,
+                                                   const hash_t hashes[],
                                                    const HashTableEntry *entries[]) const {
   const uint64_t l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
   if (bool out_of_cache = GetTotalMemoryUsage() > l3_size; out_of_cache) {
