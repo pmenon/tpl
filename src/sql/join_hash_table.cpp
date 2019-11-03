@@ -76,9 +76,9 @@ class ReorderBuffer {
   // Use a 16 KB internal buffer for temporary copies
   static constexpr const uint32_t kBufferSizeInBytes = 16 * 1024;
 
-  ReorderBuffer(util::ChunkedVector<MemoryPoolAllocator<byte>> &entries, uint64_t max_elems,
+  ReorderBuffer(util::ChunkedVector<MemoryPoolAllocator<byte>> *entries, uint64_t max_elems,
                 uint64_t begin_read_idx, uint64_t end_read_idx)
-      : entry_size_(entries.element_size()),
+      : entry_size_(entries->element_size()),
         buf_idx_(0),
         max_elems_(std::min(max_elems, kBufferSizeInBytes / entry_size_) - 1),
         temp_buf_(buffer_ + (max_elems_ * entry_size_)),
@@ -116,7 +116,7 @@ class ReorderBuffer {
   // is inserted is marked/tagged as buffered.
   bool Fill() {
     while (buf_idx_ < max_elems_ && read_idx_ < end_read_idx_) {
-      auto *entry = reinterpret_cast<HashTableEntry *>(entries_[read_idx_++]);
+      auto *entry = reinterpret_cast<HashTableEntry *>((*entries_)[read_idx_++]);
 
       if (IsProcessed(entry)) {
         continue;
@@ -162,7 +162,7 @@ class ReorderBuffer {
   const uint64_t end_read_idx_;
 
   // Source of all entries
-  util::ChunkedVector<MemoryPoolAllocator<byte>> &entries_;
+  util::ChunkedVector<MemoryPoolAllocator<byte>> *entries_;
 };
 
 }  // namespace
@@ -203,7 +203,7 @@ void JoinHashTable::ReorderMainEntries() {
   // 4. Reset the reorder buffer and repeat.
 
   HashTableEntry *targets[kDefaultVectorSize];
-  ReorderBuffer reorder_buf(entries_, kDefaultVectorSize, 0, overflow_idx);
+  ReorderBuffer reorder_buf(&entries_, kDefaultVectorSize, 0, overflow_idx);
 
   while (reorder_buf.Fill()) {
     const uint64_t num_buf_entries = reorder_buf.GetNumEntries();
@@ -356,7 +356,7 @@ void JoinHashTable::ReorderOverflowEntries() {
   // index to write the overflow entry into.
   //
 
-  ReorderBuffer reorder_buf(entries_, kDefaultVectorSize, overflow_start_idx, num_entries);
+  ReorderBuffer reorder_buf(&entries_, kDefaultVectorSize, overflow_start_idx, num_entries);
   while (reorder_buf.Fill()) {
     const uint64_t num_buf_entries = reorder_buf.GetNumEntries();
 

@@ -479,32 +479,27 @@ void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
 }
 
 void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
-  ast::Context *ctx = call->type()->context();
+  TPL_ASSERT(call->type() != nullptr, "No return type set for call!");
+
+  LocalVar dest = GetExecutionResult()->GetOrCreateDestination(call->type());
+
   switch (builtin) {
     case ast::Builtin::BoolToSql: {
-      auto dest = GetExecutionResult()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Boolean));
       auto input = VisitExpressionForRValue(call->arguments()[0]);
       GetEmitter()->Emit(Bytecode::InitBool, dest, input);
       break;
     }
     case ast::Builtin::IntToSql: {
-      auto dest = GetExecutionResult()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Integer));
       auto input = VisitExpressionForRValue(call->arguments()[0]);
       GetEmitter()->Emit(Bytecode::InitInteger, dest, input);
       break;
     }
     case ast::Builtin::FloatToSql: {
-      auto dest = GetExecutionResult()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Real));
       auto input = VisitExpressionForRValue(call->arguments()[0]);
       GetEmitter()->Emit(Bytecode::InitReal, dest, input);
       break;
     }
     case ast::Builtin::DateToSql: {
-      auto dest = GetExecutionResult()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Date));
       auto year = VisitExpressionForRValue(call->arguments()[0]);
       auto month = VisitExpressionForRValue(call->arguments()[1]);
       auto day = VisitExpressionForRValue(call->arguments()[2]);
@@ -512,16 +507,12 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
       break;
     }
     case ast::Builtin::StringToSql: {
-      auto dest = GetExecutionResult()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::StringVal));
       auto string_lit = call->arguments()[0]->As<ast::LitExpr>()->raw_string_val();
       auto static_string = NewStaticString(call->type()->context(), string_lit);
       GetEmitter()->EmitInitString(dest, static_string, string_lit.length());
       break;
     }
     case ast::Builtin::SqlToBool: {
-      auto dest = GetExecutionResult()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
       auto input = VisitExpressionForRValue(call->arguments()[0]);
       GetEmitter()->Emit(Bytecode::ForceBoolTruth, dest, input);
       GetExecutionResult()->SetDestination(dest.ValueOf());
@@ -540,8 +531,6 @@ void BytecodeGenerator::VisitSqlStringLikeCall(ast::CallExpr *call) {
 }
 
 void BytecodeGenerator::VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin) {
-  ast::Context *ctx = call->type()->context();
-
   // The first argument to all calls is a pointer to the TVI
   LocalVar iter = VisitExpressionForRValue(call->arguments()[0]);
 
@@ -557,15 +546,13 @@ void BytecodeGenerator::VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Buil
       break;
     }
     case ast::Builtin::TableIterAdvance: {
-      LocalVar cond = GetExecutionResult()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
+      LocalVar cond = GetExecutionResult()->GetOrCreateDestination(call->type());
       GetEmitter()->Emit(Bytecode::TableVectorIteratorNext, cond, iter);
       GetExecutionResult()->SetDestination(cond.ValueOf());
       break;
     }
     case ast::Builtin::TableIterGetVPI: {
-      ast::Type *vpi_type = ast::BuiltinType::Get(ctx, ast::BuiltinType::VectorProjectionIterator);
-      LocalVar vpi = GetExecutionResult()->GetOrCreateDestination(vpi_type);
+      LocalVar vpi = GetExecutionResult()->GetOrCreateDestination(call->type());
       GetEmitter()->Emit(Bytecode::TableVectorIteratorGetVPI, vpi, iter);
       GetExecutionResult()->SetDestination(vpi.ValueOf());
       break;
@@ -599,39 +586,37 @@ void BytecodeGenerator::VisitBuiltinTableIterParallelCall(ast::CallExpr *call) {
 }
 
 void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
+  TPL_ASSERT(call->type() != nullptr, "No return type set for call!");
+
   ast::Context *ctx = call->type()->context();
 
-  // The first argument to all calls is a pointer to the TVI
+  // The first argument to all calls is a pointer to the VPI
   LocalVar vpi = VisitExpressionForRValue(call->arguments()[0]);
 
   switch (builtin) {
     case ast::Builtin::VPIIsFiltered: {
-      LocalVar is_filtered = GetExecutionResult()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
+      LocalVar is_filtered = GetExecutionResult()->GetOrCreateDestination(call->type());
       GetEmitter()->Emit(Bytecode::VPIIsFiltered, is_filtered, vpi);
       GetExecutionResult()->SetDestination(is_filtered.ValueOf());
       break;
     }
     case ast::Builtin::VPIGetSelectedRowCount: {
-      LocalVar count = GetExecutionResult()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Uint32));
+      LocalVar count = GetExecutionResult()->GetOrCreateDestination(call->type());
       GetEmitter()->Emit(Bytecode::VPIGetSelectedRowCount, count, vpi);
       GetExecutionResult()->SetDestination(count.ValueOf());
       break;
     }
     case ast::Builtin::VPIGetVectorProjection: {
-      LocalVar vector_proj = GetExecutionResult()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::VectorProjection)->PointerTo());
-      GetEmitter()->Emit(Bytecode::VPIGetVectorProjection, vector_proj, vpi);
-      GetExecutionResult()->SetDestination(vector_proj.ValueOf());
+      LocalVar vector_projection = GetExecutionResult()->GetOrCreateDestination(call->type());
+      GetEmitter()->Emit(Bytecode::VPIGetVectorProjection, vector_projection, vpi);
+      GetExecutionResult()->SetDestination(vector_projection.ValueOf());
       break;
     }
     case ast::Builtin::VPIHasNext:
     case ast::Builtin::VPIHasNextFiltered: {
       const Bytecode bytecode =
           builtin == ast::Builtin::VPIHasNext ? Bytecode::VPIHasNext : Bytecode::VPIHasNextFiltered;
-      LocalVar cond = GetExecutionResult()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
+      LocalVar cond = GetExecutionResult()->GetOrCreateDestination(call->type());
       GetEmitter()->Emit(bytecode, cond, vpi);
       GetExecutionResult()->SetDestination(cond.ValueOf());
       break;
@@ -709,7 +694,8 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
     case ast::Builtin::VPISetBigInt:
     case ast::Builtin::VPISetReal:
     case ast::Builtin::VPISetDouble:
-    case ast::Builtin::VPISetDate: {
+    case ast::Builtin::VPISetDate:
+    case ast::Builtin::VPISetString: {
       Bytecode bytecode;
       if (builtin == ast::Builtin::VPISetSmallInt) {
         bytecode = Bytecode::VPISetSmallInt;
@@ -1290,8 +1276,6 @@ void BytecodeGenerator::VisitBuiltinSorterCall(ast::CallExpr *call, ast::Builtin
 }
 
 void BytecodeGenerator::VisitBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin) {
-  ast::Context *ctx = call->type()->context();
-
   // The first argument to all calls is the sorter iterator instance
   const LocalVar sorter_iter = VisitExpressionForRValue(call->arguments()[0]);
 
@@ -1302,8 +1286,7 @@ void BytecodeGenerator::VisitBuiltinSorterIterCall(ast::CallExpr *call, ast::Bui
       break;
     }
     case ast::Builtin::SorterIterHasNext: {
-      LocalVar cond = GetExecutionResult()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool));
+      LocalVar cond = GetExecutionResult()->GetOrCreateDestination(call->type());
       GetEmitter()->Emit(Bytecode::SorterIteratorHasNext, cond, sorter_iter);
       GetExecutionResult()->SetDestination(cond.ValueOf());
       break;
@@ -1313,8 +1296,7 @@ void BytecodeGenerator::VisitBuiltinSorterIterCall(ast::CallExpr *call, ast::Bui
       break;
     }
     case ast::Builtin::SorterIterGetRow: {
-      LocalVar row_ptr = GetExecutionResult()->GetOrCreateDestination(
-          ast::BuiltinType::Get(ctx, ast::BuiltinType::Uint8)->PointerTo());
+      LocalVar row_ptr = GetExecutionResult()->GetOrCreateDestination(call->type());
       GetEmitter()->Emit(Bytecode::SorterIteratorGetRow, row_ptr, sorter_iter);
       GetExecutionResult()->SetDestination(row_ptr.ValueOf());
       break;
@@ -1396,9 +1378,7 @@ void BytecodeGenerator::VisitBuiltinThreadStateContainerCall(ast::CallExpr *call
 }
 
 void BytecodeGenerator::VisitBuiltinTrigCall(ast::CallExpr *call, ast::Builtin builtin) {
-  ast::Context *ctx = call->type()->context();
-  LocalVar dest = GetExecutionResult()->GetOrCreateDestination(
-      ast::BuiltinType::Get(ctx, ast::BuiltinType::Real));
+  LocalVar dest = GetExecutionResult()->GetOrCreateDestination(call->type());
   LocalVar src = VisitExpressionForRValue(call->arguments()[0]);
 
   switch (builtin) {
@@ -1415,7 +1395,8 @@ void BytecodeGenerator::VisitBuiltinTrigCall(ast::CallExpr *call, ast::Builtin b
       break;
     }
     case ast::Builtin::ATan2: {
-      GetEmitter()->Emit(Bytecode::Atan2, dest, src);
+      LocalVar src2 = VisitExpressionForRValue(call->arguments()[1]);
+      GetEmitter()->Emit(Bytecode::Atan2, dest, src, src2);
       break;
     }
     case ast::Builtin::Cos: {
@@ -1441,8 +1422,7 @@ void BytecodeGenerator::VisitBuiltinTrigCall(ast::CallExpr *call, ast::Builtin b
 
 void BytecodeGenerator::VisitBuiltinSizeOfCall(ast::CallExpr *call) {
   ast::Type *target_type = call->arguments()[0]->type();
-  LocalVar size_var = GetExecutionResult()->GetOrCreateDestination(
-      ast::BuiltinType::Get(target_type->context(), ast::BuiltinType::Uint32));
+  LocalVar size_var = GetExecutionResult()->GetOrCreateDestination(call->type());
   GetEmitter()->EmitAssignImm4(size_var, target_type->size());
   GetExecutionResult()->SetDestination(size_var.ValueOf());
 }
