@@ -144,13 +144,15 @@ void AggregationHashTable::FlushToOverflowPartitions() {
     AllocateOverflowPartitions();
   }
 
-  // Dump all entries from the hash table into the overflow partitions. For each entry, we compute
-  // its destination partition using the highest logP bits for P partitions. For each partition, we
-  // also track an estimate of the number of unique hash values so that when the partitions are
-  // merged, we can appropriately size the table before merging. The issue is that both the
-  // bits used for partition selection and unique hash estimation are the same! Thus, the estimates
-  // are inaccurate. To solve this, we scramble the hash values using a bijective hash scrambling
-  // before feeding them to the estimator.
+  // Dump all entries from the hash table into the overflow partitions. For each
+  // entry in the table, we compute its destination partition using the highest
+  // log(P) bits for P partitions. For each partition, we also track an estimate
+  // of the number of unique hash values so that when the partitions are merged,
+  // we can appropriately size the table before merging. The issue is that both
+  // the bits used for partition selection and unique hash estimation are the
+  // same! Thus, the estimates are inaccurate. To solve this, we scramble the
+  // hash values using a bijective hash scrambling before feeding them to the
+  // estimator.
 
   hash_table_.FlushEntries([this](HashTableEntry *entry) {
     const uint64_t partition_idx = (entry->hash >> partition_shift_bits_);
@@ -264,8 +266,8 @@ uint32_t AggregationHashTable::LookupInitial(const uint32_t num_elems) {
   }
 }
 
-// This function will perform an initial lookup for all input tuples, storing entries that match on
-// hash value in the 'entries' array.
+// This function will perform an initial lookup for all input tuples, storing
+// entries that match on hash value in the 'entries' array.
 template <bool Prefetch>
 uint32_t AggregationHashTable::LookupInitialImpl(const uint32_t num_elems) {
   auto &hashes = batch_state_->hashes;
@@ -304,9 +306,9 @@ uint32_t AggregationHashTable::LookupInitialImpl(const uint32_t num_elems) {
   return found;
 }
 
-// For all entries in 'groups_found', check whether their keys match. After this function,
-// groups_found will densely contain the indexes of matching keys, and 'key_not_eq' will contain
-// indexes of tuples that didn't match on key.
+// For all entries in 'groups_found', check whether their keys match. After this
+// function, groups_found will densely contain the indexes of matching keys, and
+// 'key_not_eq' will contain indexes of tuples that didn't match on key.
 template <bool VPIIsFiltered>
 uint32_t AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *vpi, uint32_t num_elems,
                                                 const AggregationHashTable::KeyEqFn key_eq_fn) {
@@ -332,9 +334,9 @@ uint32_t AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *vpi, u
   return matched;
 }
 
-// For all unmatched keys, move along the chain until we find another hash match. After this
-// function, 'groups_found' will densely contain the indexes of tuples that matched on hash and
-// should be checked for keys.
+// For all unmatched keys, move along the chain until we find another hash
+// match. After this function, 'groups_found' will densely contain the indexes
+// of tuples that matched on hash and should be checked for keys.
 uint32_t AggregationHashTable::FollowNext() {
   const auto &hashes = batch_state_->hashes;
   const auto &key_not_eq = batch_state_->key_not_eq;
@@ -404,30 +406,30 @@ void AggregationHashTable::AdvanceGroups(VectorProjectionIterator *vpi, const ui
 }
 
 void AggregationHashTable::TransferMemoryAndPartitions(
-    ThreadStateContainer *const thread_states, const std::size_t agg_ht_offset,
+    ThreadStateContainer *thread_states, const std::size_t agg_ht_offset,
     const AggregationHashTable::MergePartitionFn merge_partition_fn) {
-  // Set the partition merging function. This function tells us how to merge a set of overflow
-  // partitions into an AggregationHashTable.
+  // Set the partition merging function. This function tells us how to merge a
+  // set of overflow partitions into an AggregationHashTable.
   merge_partition_fn_ = merge_partition_fn;
 
-  // Allocate the set of overflow partitions so that we can link in all thread-local overflow
-  // partitions to us.
+  // Allocate the set of overflow partitions so that we can link in all
+  // thread-local overflow partitions to us.
   AllocateOverflowPartitions();
 
-  // If, by chance, we have some un-flushed aggregate data, flush it out now to ensure partitioned
-  // build captures it.
+  // If, by chance, we have some un-flushed aggregate data, flush it out now to
+  // ensure partitioned build captures it.
   if (GetTupleCount() > 0) {
     FlushToOverflowPartitions();
   }
 
-  // Okay, now we actually pull out the thread-local aggregation hash tables and move both their
-  // main entry data and the overflow partitions to us.
+  // Okay, now we actually pull out the thread-local aggregation hash tables and
+  // move both their main entry data and the overflow partitions to us.
   std::vector<AggregationHashTable *> tl_agg_ht;
   thread_states->CollectThreadLocalStateElementsAs(tl_agg_ht, agg_ht_offset);
 
   for (auto *table : tl_agg_ht) {
-    // Flush each table to ensure their hash tables are empty and their overflow partitions contain
-    // all partial aggregates
+    // Flush each table to ensure their hash tables are empty and their overflow
+    // partitions contain all partial aggregates
     table->FlushToOverflowPartitions();
 
     // Now, move over their memory
@@ -494,11 +496,13 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(void *const 
 void AggregationHashTable::ExecuteParallelPartitionedScan(
     void *query_state, ThreadStateContainer *thread_states,
     const AggregationHashTable::ScanPartitionFn scan_fn) {
-  // At this point, this aggregation table has a list of overflow partitions that must be merged
-  // into a single aggregation hash table. For simplicity, we create a new aggregation hash table
-  // per overflow partition, and merge the contents of that partition into the new hash table. We
-  // use the HLL estimates to size the hash table before construction so as to minimize the growth
-  // factor. Each aggregation hash table partition will be built and scanned in parallel.
+  // At this point, this aggregation table has a list of overflow partitions
+  // that must be merged into a single aggregation hash table. For simplicity,
+  // we create a new aggregation hash table per overflow partition, and merge
+  // the contents of that partition into the new hash table. We use the HLL
+  // estimates to size the hash table before construction so as to minimize the
+  // growth factor. Each aggregation hash table partition will be built and
+  // scanned in parallel.
 
   TPL_ASSERT(partition_heads_ != nullptr && merge_partition_fn_ != nullptr,
              "No overflow partitions allocated, or no merging function allocated. Did you call "

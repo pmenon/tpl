@@ -292,8 +292,7 @@ inline void GenericHashTable<UseTags>::InsertUntagged(HashTableEntry *new_entry,
 
 template <bool UseTags>
 template <bool Concurrent>
-inline void GenericHashTable<UseTags>::InsertTagged(HashTableEntry *new_entry,
-                                                    hash_t hash) {
+inline void GenericHashTable<UseTags>::InsertTagged(HashTableEntry *new_entry, hash_t hash) {
   const uint64_t pos = BucketPosition(hash);
 
   TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");

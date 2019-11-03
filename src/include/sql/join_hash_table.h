@@ -108,7 +108,7 @@ class JoinHashTable {
    * @param thread_state_container The container for all thread-local tables.
    * @param jht_offset The offset in the state where the hash table is.
    */
-  void MergeParallel(const ThreadStateContainer *thread_state_container, uint32_t jht_offset);
+  void MergeParallel(const ThreadStateContainer *thread_state_container, std::size_t jht_offset);
 
   /**
    * @return The total number of bytes used to materialize tuples. This excludes space required for

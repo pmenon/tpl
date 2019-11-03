@@ -69,10 +69,8 @@ namespace {
 constexpr const uint64_t kBufferedBit = 1ull << 62ull;
 constexpr const uint64_t kProcessedBit = 1ull << 63ull;
 
-/**
- * A reorder is a small piece of buffer space into which we temporarily buffer
- * hash table entries for the purposes of reordering them.
- */
+// A reorder is a small piece of buffer space into which we temporarily buffer
+// hash table entries for the purposes of reordering them.
 class ReorderBuffer {
  public:
   // Use a 16 KB internal buffer for temporary copies
@@ -88,52 +86,34 @@ class ReorderBuffer {
         end_read_idx_(end_read_idx),
         entries_(entries) {}
 
-  /**
-   * This class cannot be copied or moved
-   */
+  // This class cannot be copied or moved
   DISALLOW_COPY_AND_MOVE(ReorderBuffer);
 
-  /**
-   * Retrieve an entry in the buffer by its index in the buffer
-   * @tparam T The type to cast the resulting entry into
-   * @param idx The index of the entry to lookup
-   * @return A pointer to the entry
-   */
+  // Return a pointer to the element at the given index in the buffer.
   template <typename T = byte>
   T *BufEntryAt(uint64_t idx) {
     return reinterpret_cast<T *>(buffer_ + (idx * entry_size_));
   }
 
-  /**
-   * @return True if @em entry has been processed, i.e., if @em entry is in its final location in
-   *         entry array. Return false otherwise.
-   */
+  // Has the given entry been processed? In other words, is the input entry in
+  // its final location in the entry array?
   bool IsProcessed(const HashTableEntry *entry) const {
     return (entry->cht_slot & kProcessedBit) != 0u;
   }
 
-  /**
-   * Mark the given entry as processed and in its final location
-   */
+  // Mark the given entry as processed and in its final location.
   void SetProcessed(HashTableEntry *entry) const { entry->cht_slot |= kProcessedBit; }
 
-  /**
-   * @return True if @em entry has been buffered into this re-order buffer; false otherwise.
-   */
+  // Has the given entry been buffered in this reorder buffer?
   bool IsBuffered(const HashTableEntry *entry) const {
     return (entry->cht_slot & kBufferedBit) != 0u;
   }
 
-  /**
-   * Mark the entry @em entry as buffered in the reorder buffer
-   */
+  // Mark the given entry as buffered in the reorder buffer.
   void SetBuffered(HashTableEntry *entry) const { entry->cht_slot |= kBufferedBit; }
 
-  /**
-   * Fill this reorder buffer with as many entries as possible. Each entry that is inserted is
-   * marked/tagged as buffered.
-   * @return True if any entries were buffered; false otherwise
-   */
+  // Fill this reorder buffer with as many entries as possible. Each entry that
+  // is inserted is marked/tagged as buffered.
   bool Fill() {
     while (buf_idx_ < max_elems_ && read_idx_ < end_read_idx_) {
       auto *entry = reinterpret_cast<HashTableEntry *>(entries_[read_idx_++]);
@@ -150,19 +130,14 @@ class ReorderBuffer {
     return buf_idx_ > 0;
   }
 
-  /**
-   * Reset the index where the next buffered entry goes. This is needed when,
-   * in the process of
-   */
+  // Reset the index where the next buffered entry goes.
   void Reset(const uint64_t new_buf_idx) { buf_idx_ = new_buf_idx; }
 
-  // -------------------------------------------------------
-  // Accessors
-  // -------------------------------------------------------
+  // Return the number of currently buffered entries
+  uint64_t GetNumEntries() const { return buf_idx_; }
 
-  uint64_t num_entries() const { return buf_idx_; }
-
-  byte *temp_buffer() const { return temp_buf_; }
+  // Return the pointer buffer used for temporary copies
+  byte *GetTempBuffer() const { return temp_buf_; }
 
  private:
   // Size of entries
@@ -203,29 +178,35 @@ void JoinHashTable::ReorderMainEntries() {
     return;
   }
 
-  // This function reorders entries in-place in the main arena using a reorder buffer. The general
+  // This function reorders entries in-place in the main arena according to the
+  // order it should appear in the concise hash table. This function uses a
+  // order buffer, a temporary workspace, to perform the reordering. The
   // procedure is:
   // 1. Buffer N tuples. These can be either main or overflow entries.
   // 2. Find and store their destination addresses in the 'targets' buffer
   // 3. Try and store the buffered entry into discovered target space from (2)
   //    There are a few cases we handle:
-  //    3a. If the target entry is 'PROCESSED', then the buffered entry is an overflow entry. We
-  //        acquire an overflow slot and store the buffered entry there.
-  //    3b. If the target entry is 'BUFFERED', it is either stored somewhere in the reorder buffer,
-  //        or has been stored into its own target space. Either way, we can directly overwrite the
-  //        target with the buffered entry and be done with it.
-  //    3c. We need to swap the target and buffer entry. If the reorder buffer has room, copy the
-  //        target into the buffer and write the buffered entry out.
-  //    3d. If the reorder buffer has no room for this target entry, we use a temporary space to
-  //        perform a (costly) three-way swap to buffer the target entry into the reorder buffer and
-  //        write the buffered entry out. This should happen infrequently.
+  //    3a. If the target entry is 'PROCESSED', then the buffered entry is an
+  //        overflow entry. We acquire an overflow slot and store the buffered
+  //        entry there.
+  //    3b. If the target entry is 'BUFFERED', it is either stored somewhere in
+  //        the reorder buffer, or has been stored into its own target space.
+  //        Either way, we can directly overwrite the target with the buffered
+  //        entry and be done with it.
+  //    3c. We need to swap the target and buffer entry. If the reorder buffer
+  //        has room, copy the target into the buffer and write the buffered
+  //        entry out.
+  //    3d. If the reorder buffer has no room for this target entry, we use a
+  //        temporary space to perform a (costly) three-way swap to buffer the
+  //        target entry into the reorder buffer and write the buffered entry
+  //        out. This should happen infrequently.
   // 4. Reset the reorder buffer and repeat.
 
   HashTableEntry *targets[kDefaultVectorSize];
   ReorderBuffer reorder_buf(entries_, kDefaultVectorSize, 0, overflow_idx);
 
   while (reorder_buf.Fill()) {
-    const uint64_t num_buf_entries = reorder_buf.num_entries();
+    const uint64_t num_buf_entries = reorder_buf.GetNumEntries();
 
     for (uint64_t idx = 0, prefetch_idx = idx + kPrefetchDistance; idx < num_buf_entries;
          idx++, prefetch_idx++) {
@@ -268,7 +249,7 @@ void JoinHashTable::ReorderMainEntries() {
         std::memcpy(reorder_buf.BufEntryAt(buf_write_idx++), static_cast<void *>(dest), elem_size);
         std::memcpy(static_cast<void *>(dest), buf_entry, elem_size);
       } else {
-        byte *const tmp = reorder_buf.temp_buffer();
+        byte *const tmp = reorder_buf.GetTempBuffer();
         std::memcpy(tmp, static_cast<void *>(dest), elem_size);
         std::memcpy(static_cast<void *>(dest), buf_entry, elem_size);
         std::memcpy(reorder_buf.BufEntryAt(buf_write_idx++), tmp, elem_size);
@@ -377,7 +358,7 @@ void JoinHashTable::ReorderOverflowEntries() {
 
   ReorderBuffer reorder_buf(entries_, kDefaultVectorSize, overflow_start_idx, num_entries);
   while (reorder_buf.Fill()) {
-    const uint64_t num_buf_entries = reorder_buf.num_entries();
+    const uint64_t num_buf_entries = reorder_buf.GetNumEntries();
 
     // For each overflow entry, find its main entry parent in the overflow chain
     for (uint64_t idx = 0, prefetch_idx = idx + kPrefetchDistance; idx < num_buf_entries;
@@ -419,7 +400,7 @@ void JoinHashTable::ReorderOverflowEntries() {
                     elem_size);
         std::memcpy(static_cast<void *>(target), buf_entry, elem_size);
       } else {
-        byte *const tmp = reorder_buf.temp_buffer();
+        byte *const tmp = reorder_buf.GetTempBuffer();
         std::memcpy(tmp, static_cast<void *>(target), elem_size);
         std::memcpy(static_cast<void *>(target), buf_entry, elem_size);
         std::memcpy(reorder_buf.BufEntryAt(buf_write_idx++), tmp, elem_size);
@@ -605,7 +586,7 @@ void JoinHashTable::MergeIncomplete(JoinHashTable *source) {
 }
 
 void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_container,
-                                  const uint32_t jht_offset) {
+                                  const std::size_t jht_offset) {
   // Collect thread-local hash tables
   std::vector<JoinHashTable *> tl_join_tables;
   thread_state_container->CollectThreadLocalStateElementsAs(tl_join_tables, jht_offset);
@@ -619,8 +600,9 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
   uint64_t num_elem_estimate = hll_estimator_->Estimate();
   generic_hash_table_.SetSize(num_elem_estimate);
 
-  // Resize the owned entries vector now to avoid resizing concurrently during merge. All the
-  // thread-local join table data will get placed into our owned entries vector.
+  // Resize the owned entries vector now to avoid resizing concurrently during
+  // merge. All the thread-local join table data will get placed into our owned
+  // entries vector.
   owned_.reserve(tl_join_tables.size());
 
   util::Timer<std::milli> timer;

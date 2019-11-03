@@ -144,7 +144,7 @@ struct MergeWork {
 }  // namespace
 
 void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
-                          const uint32_t sorter_offset) {
+                          const std::size_t sorter_offset) {
   const auto comp = [this](const byte *left, const byte *right) {
     return cmp_fn_(left, right) < 0;
   };

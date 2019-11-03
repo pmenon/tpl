@@ -105,7 +105,7 @@ class AggregationHashTable {
    * Construct an aggregation hash table using the provided memory pool, and configured to store
    * aggregates of size @em payload_size in bytes.
    * @param memory The memory pool to allocate memory from.
-   * @param payload_size The size of the elements in the hash table.
+   * @param payload_size The size of the elements in the hash table, in bytes.
    */
   AggregationHashTable(MemoryPool *memory, std::size_t payload_size);
 
@@ -114,7 +114,7 @@ class AggregationHashTable {
    * aggregates of size @em payload_size in bytes, and whose initial size allows for
    * @em initial_size aggregates.
    * @param memory The memory pool to allocate memory from.
-   * @param payload_size The size of the elements in the hash table.
+   * @param payload_size The size of the elements in the hash table, in bytes.
    * @param initial_size The initial number of aggregates to support.
    */
   AggregationHashTable(MemoryPool *memory, std::size_t payload_size, uint32_t initial_size);

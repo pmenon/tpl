@@ -137,7 +137,7 @@ class Sorter {
    * @param thread_state_container The container holding all thread-local sorter instances.
    * @param sorter_offset The offset into the container where the sorter instance is.
    */
-  void SortParallel(const ThreadStateContainer *thread_state_container, uint32_t sorter_offset);
+  void SortParallel(const ThreadStateContainer *thread_state_container, std::size_t sorter_offset);
 
   /**
    * Perform a parallel Top-K of all sorter instances stored in the thread state container object.

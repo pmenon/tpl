@@ -136,7 +136,7 @@ class HashUtil : public AllStatic {
 
   /**
    * Compute a new hash value that scrambles the bits in the input hash value. This function
-   * guarnatees that if h1 and h2 are two hash values, then scramble(h1) == scramble(h2).
+   * guarantees that if h1 and h2 are two hash values, then scramble(h1) == scramble(h2).
    * @param hash The input hash value to scramble.
    * @return The scrambled hash value.
    */
