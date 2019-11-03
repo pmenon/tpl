@@ -80,7 +80,7 @@ fun p1_filter_clause0term0(vector_proj : *VectorProjection, tids: *TupleIdList) 
 
 fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
     @filterManagerInit(&state.filter)
-    @filterManagerInsertFilter(&state.filter, pipeline1_filter_clause0term0)
+    @filterManagerInsertFilter(&state.filter, p1_filter_clause0term0)
     @filterManagerFinalize(&state.filter)
     @aggHTInit(&state.agg_hash_table, @execCtxGetMem(execCtx), @sizeOf(AggPayload))
     @sorterInit(&state.sorter, @execCtxGetMem(execCtx), compareFn, @sizeOf(SorterRow))
