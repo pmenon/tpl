@@ -544,6 +544,13 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(VPIGetVectorProjection) : {
+    auto *vector_projection = frame->LocalAt<sql::VectorProjection **>(READ_LOCAL_ID());
+    auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    OpVPIGetVectorProjection(vector_projection, iter);
+    DISPATCH_NEXT();
+  }
+
   OP(VPIHasNext) : {
     auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
     auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());

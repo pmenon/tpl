@@ -243,6 +243,11 @@ VM_OP_HOT void OpVPIGetSelectedRowCount(uint32_t *count,
   *count = vpi->GetTupleCount();
 }
 
+VM_OP_HOT void OpVPIGetVectorProjection(tpl::sql::VectorProjection **vector_projection,
+                                        const tpl::sql::VectorProjectionIterator *vpi) {
+  *vector_projection = vpi->GetVectorProjection();
+}
+
 VM_OP_HOT void OpVPIHasNext(bool *has_more, const tpl::sql::VectorProjectionIterator *vpi) {
   *has_more = vpi->HasNext();
 }

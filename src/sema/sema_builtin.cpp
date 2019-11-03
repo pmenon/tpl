@@ -887,6 +887,10 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       call->set_type(GetBuiltinType(ast::BuiltinType::Uint32));
       break;
     }
+    case ast::Builtin ::VPIGetVectorProjection: {
+      call->set_type(GetBuiltinType(ast::BuiltinType::VectorProjection)->PointerTo());
+      break;
+    }
     case ast::Builtin::VPISetPosition:
     case ast::Builtin::VPISetPositionFiltered: {
       if (!CheckArgCount(call, 2)) {
@@ -1486,6 +1490,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     }
     case ast::Builtin::VPIIsFiltered:
     case ast::Builtin::VPIGetSelectedRowCount:
+    case ast::Builtin::VPIGetVectorProjection:
     case ast::Builtin::VPIHasNext:
     case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:

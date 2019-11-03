@@ -619,6 +619,13 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
       GetExecutionResult()->SetDestination(count.ValueOf());
       break;
     }
+    case ast::Builtin::VPIGetVectorProjection: {
+      LocalVar vector_proj = GetExecutionResult()->GetOrCreateDestination(
+          ast::BuiltinType::Get(ctx, ast::BuiltinType::VectorProjection)->PointerTo());
+      GetEmitter()->Emit(Bytecode::VPIGetVectorProjection, vector_proj, vpi);
+      GetExecutionResult()->SetDestination(vector_proj.ValueOf());
+      break;
+    }
     case ast::Builtin::VPIHasNext:
     case ast::Builtin::VPIHasNextFiltered: {
       const Bytecode bytecode =
@@ -1493,6 +1500,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     }
     case ast::Builtin::VPIIsFiltered:
     case ast::Builtin::VPIGetSelectedRowCount:
+    case ast::Builtin::VPIGetVectorProjection:
     case ast::Builtin::VPIHasNext:
     case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:

@@ -35,6 +35,7 @@ namespace tpl::ast {
   /* VPI */                                                     \
   F(VPIIsFiltered, vpiIsFiltered)                               \
   F(VPIGetSelectedRowCount, vpiSelectedRowCount)                \
+  F(VPIGetVectorProjection, vpiGetVectorProjection)             \
   F(VPIHasNext, vpiHasNext)                                     \
   F(VPIHasNextFiltered, vpiHasNextFiltered)                     \
   F(VPIAdvance, vpiAdvance)                                     \

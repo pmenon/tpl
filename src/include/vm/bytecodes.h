@@ -108,6 +108,7 @@ namespace tpl::vm {
   /* Vector Projection Iterator (VPI) */                                                                               \
   F(VPIIsFiltered, OperandType::Local, OperandType::Local)                                                             \
   F(VPIGetSelectedRowCount, OperandType::Local, OperandType::Local)                                                    \
+  F(VPIGetVectorProjection, OperandType::Local, OperandType::Local)                                                    \
   F(VPIHasNext, OperandType::Local, OperandType::Local)                                                                \
   F(VPIHasNextFiltered, OperandType::Local, OperandType::Local)                                                        \
   F(VPIAdvance, OperandType::Local)                                                                                    \
