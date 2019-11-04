@@ -588,8 +588,6 @@ void BytecodeGenerator::VisitBuiltinTableIterParallelCall(ast::CallExpr *call) {
 void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
   TPL_ASSERT(call->type() != nullptr, "No return type set for call!");
 
-  ast::Context *ctx = call->type()->context();
-
   // The first argument to all calls is a pointer to the VPI
   LocalVar vpi = VisitExpressionForRValue(call->arguments()[0]);
 
@@ -659,34 +657,25 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
     case ast::Builtin::VPIGetDouble:
     case ast::Builtin::VPIGetDate:
     case ast::Builtin::VPIGetString: {
-      ast::BuiltinType::Kind var_kind;
       Bytecode bytecode;
       if (builtin == ast::Builtin::VPIGetSmallInt) {
-        var_kind = ast::BuiltinType::Integer;
         bytecode = Bytecode::VPIGetSmallInt;
       } else if (builtin == ast::Builtin::VPIGetInt) {
-        var_kind = ast::BuiltinType::Integer;
         bytecode = Bytecode::VPIGetInteger;
       } else if (builtin == ast::Builtin::VPIGetBigInt) {
-        var_kind = ast::BuiltinType::Integer;
         bytecode = Bytecode::VPIGetBigInt;
       } else if (builtin == ast::Builtin::VPIGetReal) {
-        var_kind = ast::BuiltinType::Real;
         bytecode = Bytecode::VPIGetReal;
       } else if (builtin == ast::Builtin::VPIGetDouble) {
-        var_kind = ast::BuiltinType::Real;
         bytecode = Bytecode::VPIGetDouble;
       } else if (builtin == ast::Builtin::VPIGetDate) {
-        var_kind = ast::BuiltinType::Date;
         bytecode = Bytecode::VPIGetDate;
       } else {
-        var_kind = ast::BuiltinType::StringVal;
         bytecode = Bytecode::VPIGetString;
       }
-      LocalVar val =
-          GetExecutionResult()->GetOrCreateDestination(ast::BuiltinType::Get(ctx, var_kind));
-      auto col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
-      GetEmitter()->EmitVPIGet(bytecode, val, vpi, col_idx);
+      LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->type());
+      const uint32_t col_idx = call->arguments()[1]->As<ast::LitExpr>()->int32_val();
+      GetEmitter()->EmitVPIGet(bytecode, result, vpi, col_idx);
       break;
     }
     case ast::Builtin::VPISetSmallInt:
@@ -1116,7 +1105,7 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call, ast::Bui
       // Hack to handle advancing AvgAggregates with float/double precision numbers. The default
       // behavior in OpForAgg() is to use AvgAggregateAdvanceInteger.
       if (agg_kind == ast::BuiltinType::AvgAggregate &&
-          args[1]->type()->IsSpecificBuiltin(ast::BuiltinType::Real)) {
+          args[1]->type()->GetPointeeType()->IsSpecificBuiltin(ast::BuiltinType::Real)) {
         bytecode = Bytecode::AvgAggregateAdvanceReal;
       }
 
