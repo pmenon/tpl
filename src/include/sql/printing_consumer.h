@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include <iostream>
+#include <iosfwd>
 #include <vector>
 
 #include "sql/result_consumer.h"
