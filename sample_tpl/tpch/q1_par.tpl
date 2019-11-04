@@ -174,13 +174,19 @@ fun p1_worker(state: *State, ts: *P1_ThreadState, l_tvi: *TableVectorIterator) -
         @filterManagerRunFilters(&ts.filter, vec)
 
         for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
+            // l_extendedprice * (1 - l_discount)
+            var disc_price = @vpiGetReal(vec, 5) * (@floatToSql(1.0) - @vpiGetReal(vec, 6))
+
+            // l_extendedprice * (1 - l_discount) * (1 + l_tax)
+            var charge = disc_price * (@floatToSql(1.0) + @vpiGetReal(vec, 7))
+
             var agg_values : AggValues
             agg_values.l_returnflag = @vpiGetString(vec, 8) // l_returnflag
             agg_values.l_linestatus = @vpiGetString(vec, 9) // l_linestatus
             agg_values.sum_qty = @vpiGetReal(vec, 4) // l_quantity
             agg_values.sum_base_price = @vpiGetReal(vec, 5) // l_extendedprice
-            agg_values.sum_disc_price = @vpiGetReal(vec, 5) * @vpiGetReal(vec, 6) // l_extendedprice * l_discount
-            agg_values.sum_charge = @vpiGetReal(vec, 5) * @vpiGetReal(vec, 6) * (@floatToSql(1.0) - @vpiGetReal(vec, 7)) // l_extendedprice * l_discount * (1- l_tax)
+            agg_values.sum_disc_price = disc_price
+            agg_values.sum_charge = charge
             agg_values.avg_qty = @vpiGetReal(vec, 4) // l_quantity
             agg_values.avg_price = @vpiGetReal(vec, 5) // l_extendedprice
             agg_values.avg_disc = @vpiGetReal(vec, 6) // l_discount

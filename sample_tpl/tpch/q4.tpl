@@ -64,13 +64,13 @@ fun teardownState(execCtx: *ExecutionContext, state: *State) -> nil {
 }
 
 fun p1_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
-    var orderdate_lower = @dateToSql(1993, 07, 01)
+    var orderdate_lower = @dateToSql(1993, 7, 1)
     @filterGe(vector_proj, 4, orderdate_lower, tids)
 }
 
 fun p1_filter_clause0term1(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
-    var orderdate_upper = @dateToSql(1993, 10, 01)
-    @filterLe(vector_proj, 4, orderdate_upper, tids)
+    var orderdate_upper = @dateToSql(1993, 10, 1)
+    @filterLt(vector_proj, 4, orderdate_upper, tids)
 }
 
 // Pipeline 1 (Join Build)
