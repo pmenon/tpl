@@ -78,10 +78,11 @@ class ChunkedVector {
    */
   ~ChunkedVector() noexcept { DeallocateAll(); }
 
-  // -------------------------------------------------------
-  // Assignment
-  // -------------------------------------------------------
-
+  /**
+   * Move-assign the given vector into this vector.
+   * @param other The vector whose contents will be moved into this vector.
+   * @return This vector containing the contents previously stored in @em other.
+   */
   ChunkedVector &operator=(ChunkedVector &&other) noexcept {
     if (this == &other) {
       return *this;
@@ -111,12 +112,8 @@ class ChunkedVector {
     return *this;
   }
 
-  // -------------------------------------------------------
-  // Iterators
-  // -------------------------------------------------------
-
   /**
-   * Random access iterator
+   * Random access iterator.
    */
   class Iterator {
    public:
@@ -129,7 +126,7 @@ class ChunkedVector {
 
     Iterator() noexcept : chunks_iter_(), element_size_(0), curr_(nullptr) {}
 
-    Iterator(std::vector<byte *>::iterator chunks_iter, byte *position,
+    Iterator(std::vector<byte *>::const_iterator chunks_iter, byte *position,
              std::size_t element_size) noexcept
         : chunks_iter_(chunks_iter), element_size_(element_size), curr_(position) {
       if (*chunks_iter + ChunkAllocSize(element_size) == position) {
@@ -283,13 +280,13 @@ class ChunkedVector {
     }
 
    private:
-    std::vector<byte *>::iterator chunks_iter_;
+    std::vector<byte *>::const_iterator chunks_iter_;
     std::size_t element_size_;
     byte *curr_;
   };
 
   /**
-   * Return an iterator pointing to the first element in this vector.
+   * @return An iterator pointing to the first element in this vector.
    */
   Iterator begin() noexcept {
     if (empty()) {
@@ -299,8 +296,17 @@ class ChunkedVector {
   }
 
   /**
-   * Return an iterator pointing to the element following the last in this
-   * vector.
+   * @return An iterator pointing to the first element in this vector.
+   */
+  Iterator begin() const noexcept {
+    if (empty()) {
+      return Iterator();
+    }
+    return Iterator(chunks_.begin(), chunks_[0], element_size());
+  }
+
+  /**
+   * @return An iterator pointing to the element following the last in this vector.
    */
   Iterator end() noexcept {
     if (empty()) {
@@ -309,12 +315,18 @@ class ChunkedVector {
     return Iterator(chunks_.end() - 1, position_, element_size());
   }
 
-  // -------------------------------------------------------
-  // Element access
-  // -------------------------------------------------------
+  /**
+   * @return An iterator pointing to the element following the last in this vector.
+   */
+  Iterator end() const noexcept {
+    if (empty()) {
+      return Iterator();
+    }
+    return Iterator(chunks_.end() - 1, position_, element_size());
+  }
 
   /**
-   * Access the element at index @em index, with a bounds check.
+   * @return The element at index @em index. This method performs a bounds-check.
    */
   byte *at(std::size_t idx) {
     if (idx > size()) {
@@ -324,7 +336,7 @@ class ChunkedVector {
   }
 
   /**
-   * Access the element at index @em index, with a bounds check.
+   * @return The element at index @em index. This method performs a bounds-check.
    */
   const byte *at(std::size_t idx) const {
     if (idx > size()) {
@@ -334,7 +346,7 @@ class ChunkedVector {
   }
 
   /**
-   * Access the element at index @em index, skipping all bounds checking.
+   * @return The element at index @em index. This method DOES NOT perform a bounds check.
    */
   byte *operator[](std::size_t idx) noexcept {
     const std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
@@ -343,7 +355,7 @@ class ChunkedVector {
   }
 
   /**
-   * Access the element at index @em index, skipping all bounds checking.
+   * @return The element at index @em index. This method DOES NOT perform a bounds check.
    */
   const byte *operator[](std::size_t idx) const noexcept {
     const std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
@@ -352,7 +364,7 @@ class ChunkedVector {
   }
 
   /**
-   * Access the first element in the vector. Undefined if the vector is empty.
+   * @return The first element in the vector. Undefined if the vector is empty.
    */
   byte *front() noexcept {
     TPL_ASSERT(!empty(), "Accessing front() of empty vector");
@@ -360,31 +372,32 @@ class ChunkedVector {
   }
 
   /**
-   * Access the first element in the vector.
+   * @return The first element in the vector. Undefined if the vector is empty.
    */
   const byte *front() const noexcept {
     TPL_ASSERT(!empty(), "Accessing front() of empty vector");
     return chunks_[0];
   }
 
+  /**
+   * @return The last element in the vector. Undefined if the vector is empty.
+   */
   byte *back() noexcept {
     TPL_ASSERT(!empty(), "Accessing back() of empty vector");
     return this->operator[](size() - 1);
   }
 
+  /**
+   * @return The first element in the vector. Undefined if the vector is empty.
+   */
   const byte *back() const noexcept {
     TPL_ASSERT(!empty(), "Accessing back() of empty vector");
     return this->operator[](size() - 1);
   }
 
-  // -------------------------------------------------------
-  // Modification
-  // -------------------------------------------------------
-
   /**
    * Append a new entry at the end of the vector, returning a contiguous memory space where the
    * element can be written to by the caller.
-   *
    * @return A pointer to the memory for the element.
    */
   byte *append() noexcept {
@@ -425,6 +438,9 @@ class ChunkedVector {
     num_elements_--;
   }
 
+  /**
+   * Remove all elements from the vector.
+   */
   void clear() {
     active_chunk_idx_ = 0;
     if (!chunks_.empty()) {
@@ -436,22 +452,18 @@ class ChunkedVector {
     num_elements_ = 0;
   }
 
-  // -------------------------------------------------------
-  // Size/Capacity
-  // -------------------------------------------------------
-
   /**
-   * Is this vector empty?
+   * @return True if this vector empty; false otherwise.
    */
   bool empty() const noexcept { return size() == 0; }
 
   /**
-   * Return the number of elements currently in the vector
+   * @reutrn The number of elements currently in the vector.
    */
   std::size_t size() const noexcept { return num_elements_; }
 
   /**
-   * Return the sizes of the elements (in bytes) in the vector
+   * @return The size of the elements (in bytes) this vector stores.
    */
   std::size_t element_size() const noexcept { return element_size_; }
 
