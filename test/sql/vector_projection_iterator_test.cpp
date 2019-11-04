@@ -253,7 +253,7 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
     const auto &col_data = column_data(ColId::col_b);
     uint32_t actual_non_null = col_data.num_tuples - col_data.num_nulls;
     EXPECT_EQ(actual_non_null, num_non_null);
-    EXPECT_EQ(actual_non_null, iter.GetTupleCount());
+    EXPECT_EQ(actual_non_null, iter.GetSelectedTupleCount());
   }
 
   //
@@ -286,7 +286,7 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
 
     iter.ResetFiltered();
 
-    EXPECT_LE(iter.GetTupleCount(), 100u);
+    EXPECT_LE(iter.GetSelectedTupleCount(), 100u);
 
     for (; iter.HasNextFiltered(); iter.AdvanceFiltered()) {
       // col_a must be less than 100
@@ -322,7 +322,7 @@ TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
 
   const auto &col_data = column_data(ColId::col_b);
   uint32_t actual_non_null = col_data.num_tuples - col_data.num_nulls;
-  EXPECT_EQ(actual_non_null, iter.GetTupleCount());
+  EXPECT_EQ(actual_non_null, iter.GetSelectedTupleCount());
 
   //
   // Ensure subsequent iterations only work on selected items
@@ -337,8 +337,8 @@ TEST_F(VectorProjectionIteratorTest, ManagedFilterTest) {
       EXPECT_FALSE(null);
     });
 
-    EXPECT_EQ(actual_non_null, iter.GetTupleCount());
-    EXPECT_EQ(iter.GetTupleCount(), c);
+    EXPECT_EQ(actual_non_null, iter.GetSelectedTupleCount());
+    EXPECT_EQ(iter.GetSelectedTupleCount(), c);
   }
 }
 

@@ -135,7 +135,7 @@ TEST_F(SorterVectorIteratorTest, Iterate) {
        iter.Next(Transpose)) {
     auto *vpi = iter.GetVectorProjectionIterator();
     // Count
-    num_found += vpi->GetTupleCount();
+    num_found += vpi->GetSelectedTupleCount();
     // Verify sorted
     IsSorted<int64_t>(*vpi->GetVectorProjection()->GetColumn(0));
   }

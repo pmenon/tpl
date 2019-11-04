@@ -29,10 +29,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Werror -march=native")
 # For CMAKE_BUILD_TYPE=RelWithDebInfo
 #   -O2: Some compiler optimizations
 #   -ggdb: Enable gdb debugging
-set(CXX_FLAGS_DEBUG "-ggdb -O0 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
-set(CXX_FLAGS_FASTDEBUG "-ggdb -O1 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
-set(CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-set(CXX_FLAGS_RELWITHDEBINFO "-ggdb -O2 -DNDEBUG -fno-omit-frame-pointer")
+set(CXX_FLAGS_DEBUG "-O0 -ggdb -fno-inline -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+set(CXX_FLAGS_FASTDEBUG "-O1 -ggdb -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+set(CXX_FLAGS_RELEASE "-O3 -DNDEBUG -fomit-frame-pointer -funroll-loops")
+set(CXX_FLAGS_RELWITHDEBINFO "-O2 -ggdb -DNDEBUG -fno-omit-frame-pointer")
 
 string (TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
 

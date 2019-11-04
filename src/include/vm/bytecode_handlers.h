@@ -240,7 +240,7 @@ VM_OP_HOT void OpVPIIsFiltered(bool *is_filtered, const tpl::sql::VectorProjecti
 
 VM_OP_HOT void OpVPIGetSelectedRowCount(uint32_t *count,
                                         const tpl::sql::VectorProjectionIterator *vpi) {
-  *count = vpi->GetTupleCount();
+  *count = vpi->GetSelectedTupleCount();
 }
 
 VM_OP_HOT void OpVPIGetVectorProjection(tpl::sql::VectorProjection **vector_projection,

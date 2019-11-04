@@ -182,7 +182,7 @@ void AggregationHashTable::ProcessBatch(VectorProjectionIterator *vpi,
                                         const AggregationHashTable::InitAggFn init_agg_fn,
                                         const AggregationHashTable::AdvanceAggFn advance_agg_fn,
                                         const bool partitioned) {
-  TPL_ASSERT(vpi->GetTupleCount() <= kDefaultVectorSize, "Vector projection is too large");
+  TPL_ASSERT(vpi->GetSelectedTupleCount() <= kDefaultVectorSize, "Vector projection is too large");
 
   // Allocate all required batch state, but only on first invocation.
   if (TPL_UNLIKELY(batch_state_ == nullptr)) {
@@ -245,7 +245,7 @@ uint32_t AggregationHashTable::FindGroups(VectorProjectionIterator *vpi,
                                           const AggregationHashTable::KeyEqFn key_eq_fn) {
   batch_state_->key_not_eq.clear();
   batch_state_->groups_not_found.clear();
-  uint32_t found = LookupInitial(vpi->GetTupleCount());
+  uint32_t found = LookupInitial(vpi->GetSelectedTupleCount());
   uint32_t keys_equal = CheckKeyEquality<VPIIsFiltered>(vpi, found, key_eq_fn);
   while (!batch_state_->key_not_eq.empty()) {
     found = FollowNext();

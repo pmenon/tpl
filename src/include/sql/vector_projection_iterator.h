@@ -179,7 +179,7 @@ class VectorProjectionIterator {
   /**
    * @return The number of selected tuples after any filters have been applied.
    */
-  uint32_t GetTupleCount() const { return vector_projection_->GetSelectedTupleCount(); }
+  uint32_t GetSelectedTupleCount() const { return vector_projection_->GetSelectedTupleCount(); }
 
  private:
   // The vector projection we're iterating over
@@ -244,7 +244,7 @@ inline void VectorProjectionIterator::SetValue(uint32_t col_idx, const T val, bo
 
 template <bool Filtered>
 inline void VectorProjectionIterator::SetPosition(uint32_t idx) {
-  TPL_ASSERT(idx < GetTupleCount(), "Out of bounds access");
+  TPL_ASSERT(idx < GetSelectedTupleCount(), "Out of bounds access");
   if constexpr (Filtered) {
     TPL_ASSERT(IsFiltered(), "Attempting to set position in unfiltered VPI");
     sel_vector_read_idx_ = idx;

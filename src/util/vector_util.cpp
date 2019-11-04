@@ -286,6 +286,14 @@ uint32_t VectorUtil::BitVectorToSelectionVector_Dense(const uint64_t *bit_vector
 
 uint32_t VectorUtil::BitVectorToSelectionVector(const uint64_t *bit_vector, const uint32_t num_bits,
                                                 sel_t *sel_vector) {
+  // TODO(pmenon): For short bit vectors, like those used in vectorized execution (2048 bits), doing
+  //               a full population count to determine sparsity/density is practical. In general,
+  //               a full population count isn't necessary, and isn't feasible for long bit vectors.
+  //               To solve this, we borrow a page from sample sort; classification only requires a
+  //               sample (with an appropriate over sampling rate) of p = O(logn) words and their
+  //               population counts. The sample is faster to collect and equally as representative
+  //               as a full population count.
+
   const uint32_t num_words = MathUtil::DivRoundUp(num_bits, 64);
 
   // Calculate the density of the input bit vector in order to direct the algorithm to either the

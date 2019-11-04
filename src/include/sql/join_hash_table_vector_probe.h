@@ -66,7 +66,7 @@ template <typename T>
 inline const T *JoinHashTableVectorProbe::GetNextOutput(VectorProjectionIterator *const vpi,
                                                         const KeyEqFn key_eq_fn) {
   TPL_ASSERT(vpi != nullptr, "No input VPI!");
-  TPL_ASSERT(match_idx_ < vpi->GetTupleCount(), "Continuing past iteration!");
+  TPL_ASSERT(match_idx_ < vpi->GetSelectedTupleCount(), "Continuing past iteration!");
 
   while (true) {
     // Continue along current chain until we find a match
@@ -78,7 +78,7 @@ inline const T *JoinHashTableVectorProbe::GetNextOutput(VectorProjectionIterator
     }
 
     // No match found, move to the next probe tuple index
-    if (++match_idx_ >= vpi->GetTupleCount()) {
+    if (++match_idx_ >= vpi->GetSelectedTupleCount()) {
       break;
     }
 

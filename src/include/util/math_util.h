@@ -27,24 +27,22 @@ class MathUtil : public AllStatic {
   }
 
   /**
-   * Return true if the input value is a power of two > 0
-   * @param val The value to check
-   * @return True if the value is a power of two > 0
+   * @return True if the input value is a power of two > 0; false otherwise.
    */
   static constexpr bool IsPowerOf2(uint64_t val) { return llvm::isPowerOf2_64(val); }
 
   /**
-   * Compute the next power of two strictly greater than the input @em val
+   * @return The next power of two strictly greater than the input value.
    */
   static uint64_t NextPowerOf2(uint64_t val) { return llvm::NextPowerOf2(val); }
 
   /**
-   * Return the next power of two greater than or equal to the input @em val
+   * @return The power of two greater than or equal to the input value.
    */
   static uint64_t PowerOf2Ceil(uint64_t val) { return llvm::PowerOf2Ceil(val); }
 
   /**
-   * Compute the power of tww loweer than the provided input @em val
+   * @return The power of two less than or equal to the provided input value.
    */
   static uint64_t PowerOf2Floor(uint64_t val) { return llvm::PowerOf2Floor(val); }
 
@@ -145,8 +143,7 @@ class MathUtil : public AllStatic {
   }
 
   /**
-   * Are the two input 32-bit floating point values equal given the tolerances
-   * on this machine?
+   * Are the two input 32-bit floating point values equal given the tolerances on this machine?
    * @param left The first input value.
    * @param right The second input value.
    * @return True if they're equal; false otherwise.
@@ -154,8 +151,7 @@ class MathUtil : public AllStatic {
   static bool ApproxEqual(float left, float right);
 
   /**
-   * Are the two input 64-bit floating point values equal given the tolerances
-   * on this machine?
+   * Are the two input 64-bit floating point values equal given the tolerances on this machine?
    * @param left The first input value.
    * @param right The second input value.
    * @return True if they're equal; false otherwise.

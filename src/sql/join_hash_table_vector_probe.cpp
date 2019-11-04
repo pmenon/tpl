@@ -8,7 +8,7 @@ JoinHashTableVectorProbe::JoinHashTableVectorProbe(const JoinHashTable &table)
     : join_hash_table_(table), match_idx_(0), hashes_{0}, entries_{nullptr} {}
 
 void JoinHashTableVectorProbe::Prepare(VectorProjectionIterator *vpi, const HashFn hash_fn) {
-  TPL_ASSERT(vpi->GetTupleCount() <= kDefaultVectorSize,
+  TPL_ASSERT(vpi->GetSelectedTupleCount() <= kDefaultVectorSize,
              "VectorProjection size must be less than kDefaultVectorSize");
   // Set up
   match_idx_ = 0;
@@ -46,7 +46,7 @@ void JoinHashTableVectorProbe::Prepare(VectorProjectionIterator *vpi, const Hash
   }
 
   // Perform the initial lookup
-  join_hash_table_.LookupBatch(vpi->GetTupleCount(), hashes_, entries_);
+  join_hash_table_.LookupBatch(vpi->GetSelectedTupleCount(), hashes_, entries_);
 }
 
 }  // namespace tpl::sql
