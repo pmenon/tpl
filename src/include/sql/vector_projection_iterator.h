@@ -181,6 +181,11 @@ class VectorProjectionIterator {
    */
   uint32_t GetSelectedTupleCount() const { return vector_projection_->GetSelectedTupleCount(); }
 
+  /**
+   * @return The total number of tuples in the projection, including filtered out tuples.
+   */
+  uint32_t GetTotalTupleCount() const { return vector_projection_->GetTotalTupleCount(); }
+
  private:
   // The vector projection we're iterating over
   VectorProjection *vector_projection_;
