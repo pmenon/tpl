@@ -19,7 +19,8 @@ uint32_t TupleIdList::ToSelectionVector(sel_t *sel_vec) const {
 }
 
 std::string TupleIdList::ToString() const {
-  std::string result = "TIDs=[";
+  std::string result =
+      "TIDs(" + std::to_string(GetTupleCount()) + "/" + std::to_string(GetCapacity()) + ")=[";
   bool first = true;
   Iterate([&](const uint64_t i) {
     if (!first) result += ",";

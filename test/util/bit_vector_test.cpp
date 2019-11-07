@@ -320,16 +320,17 @@ TEST(BitVectorTest, All) {
     BitVector<> bv(size);
     EXPECT_FALSE(bv.All());
 
-    bv.Set(64);
+    // Set "middle" bit
+    bv.Set(size / 2);
     EXPECT_FALSE(bv.All());
 
-    // Set all but one
+    // Set all but last bit
     for (uint32_t i = 0; i < bv.GetNumBits() - 1; i++) {
       bv.Set(i);
     }
     EXPECT_FALSE(bv.All());
 
-    // Set last manually
+    // Now, set last manually
     bv.Set(bv.GetNumBits() - 1);
     EXPECT_TRUE(bv.All());
 

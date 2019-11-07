@@ -10,16 +10,50 @@
 namespace tpl::sql {
 
 /**
- * An ordered set of tuple IDs used during query execution to efficiently represent valid tuples in
- * a vector projection. TupleIdLists can represent all TIDs in the range [0, capacity), set up
- * upon construction, but can also be resized afterwards to large or smaller capacities.
+ * An ordered set of tuple IDs (TID) used during query execution to efficiently represent valid
+ * tuples in a vector projection. TupleIdLists have a maximum capacity, usually 1024 or 2048 TIDs
+ * sourced from ::tpl::kDefaultVectorSize, and a size reflecting the number of tuples in the list.
+ * A TupleIdList with capacity C can store all TIDs in the range [0, C) in sorted order.
  *
- * Checking the existence of a TID in the list is a constant time operation, as is adding or
- * removing (one or all) TIDs from the list. Intersection, union, and difference are efficient
- * operations linear in the capacity of the list.
+ * Basic Operations:
+ * ----------------
+ * TID existence checks, adding TIDs, and removing TIDs from a TupleIdList are all constant-time
+ * operations. Intersection, union, and difference of TupleIdLists are linear in the capacity of the
+ * list.
  *
+ * Usage:
+ * @code
+ * auto tid_list = TupleIdList(40);   // tid_list can store all TIDs in the range [0, 40)
+ * auto v = tid_list.Contains(1);     // v is false since TID 1 is not in the list
+ * tid_list.AddRange(8, 12);          // tid_list = [8, 9, 10, 11]
+ * v = tid_list.Contains(10);         // v is true
+ * tid_list.Remove(10);               // tid_list = [8, 9, 11]
+ * @endcode
+ *
+ * Iteration:
+ * ----------
  * Users can iterate over the TIDs in the list through TupleIdList::Iterate() or instantiate a
- * TupleIdListIterator. The list can also be filtered through TupleIdList::Filter().
+ * TupleIdListIterator.
+ *
+ * Usage:
+ * @code
+ * auto tid_list = TupleIdList(40);
+ * for (auto iter = TupleIdListIterator(&tid_list); iter.HasNext(); iter.Advance()) {
+ *   auto tid = iter.GetCurrentTupleId();
+ *   // tid is an active tuple ID in the list
+ * }
+ * @endcode
+ *
+ * Filtering:
+ * -----------
+ * TupleIdLists can be filtered through TupleIdList::Filter().
+ *
+ * Usage:
+ * @code
+ * auto tid_list = TupleIdList(8);
+ * tid_list.AddAll();                                      // tid_list = [0, 1, 2, 3, 4, 5, 6, 7]
+ * tid_list.Filter([](auto tid) { return tid % 2 == 0; }); // tid_list = [0, 2, 4, 6]
+ * @endcode
  *
  * Implementation:
  * ---------------
@@ -73,10 +107,10 @@ class TupleIdList {
   };
 
   /**
-   * Construct a TID list with the given maximum size.
-   * @param size The maximum size of the list.
+   * Construct a list capable of storing at least @em num_tuples tuple IDs.
+   * @param num_tuples The maximum number of tuples in the list.
    */
-  explicit TupleIdList(uint32_t size) : bit_vector_(size) {}
+  explicit TupleIdList(uint32_t num_tuples) : bit_vector_(num_tuples) {}
 
   /**
    * This class cannot be copied or moved.
@@ -84,20 +118,29 @@ class TupleIdList {
   DISALLOW_COPY_AND_MOVE(TupleIdList);
 
   /**
-   * Resize the list to the given size. If growing the list, the contents of the list remain
-   * unchanged. If shrinking the list, previously added/active elements are discarded.
+   * Resize the list to be able to store at least @em num_tuples tuple IDs. If growing the list, the
+   * contents of the list remain unchanged. If shrinking the list, tuples whose IDs are less than
+   * the new capacity are removed.
+   *
+   * @code
+   * auto tids = TupleIdList(10);  // tids = []
+   * tids.AddAll();                // tids = [0,1,2,3,4,5,6,7,8,9]
+   * tids.Resize(20);              // tids = [0,1,2,3,4,5,6,7,8,9]
+   * tids.Add(11);                 // tids = [0,1,2,3,4,5,6,7,8,9,11]
+   * tids.Resize(4);               // tids = [0,1,2,3]
+   * @endcode
+   *
+   * @param num_tuples The number of TIDs to list should be able to store.
    */
-  void Resize(uint32_t size) { bit_vector_.Resize(size); }
+  void Resize(const uint32_t num_tuples) { bit_vector_.Resize(num_tuples); }
 
   /**
-   * Is the tuple with the given ID in this list?
-   * @param tid The tuple ID to check.
-   * @return True if the tuple is in the list; false otherwise.
+   * @return True if the given TID @em tid is in the list; false otherwise.
    */
   bool Contains(const uint32_t tid) const { return bit_vector_.Test(tid); }
 
   /**
-   * @return True if this list contains all TIDs; false otherwise.
+   * @return True if this list contains all TIDs in the range [0, capacity); false otherwise.
    */
   bool IsFull() const { return bit_vector_.All(); }
 
@@ -214,7 +257,7 @@ class TupleIdList {
   uint32_t GetCapacity() const { return bit_vector_.GetNumBits(); }
 
   /**
-   * @return The selectivity of the list a fraction in the range [0.0, 1.0].
+   * @return The selectivity of the list as a fraction in the range [0.0, 1.0].
    */
   float ComputeSelectivity() const { return static_cast<float>(GetTupleCount()) / GetCapacity(); }
 
@@ -297,7 +340,7 @@ class TupleIdListIterator {
    * Create an iterator over the TID list @em tid_list.
    * @param tid_list The list to iterate over.
    */
-  explicit TupleIdListIterator(TupleIdList *tid_list)
+  explicit TupleIdListIterator(const TupleIdList *tid_list)
       : tid_list_(tid_list), size_(0), curr_idx_(0) {
     TPL_ASSERT(tid_list->GetCapacity() <= kDefaultVectorSize, "TIDList too large");
     Reset();
@@ -329,7 +372,7 @@ class TupleIdListIterator {
 
  private:
   // The list we're iterating over
-  TupleIdList *tid_list_;
+  const TupleIdList *tid_list_;
 
   // The materialized selection vector
   sel_t sel_vector_[kDefaultVectorSize];

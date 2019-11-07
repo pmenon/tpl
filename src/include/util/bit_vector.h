@@ -321,22 +321,20 @@ class BitVector {
   bool All() const {
     const uint32_t extra_bits = GetNumExtraBits();
 
-    if (extra_bits == 0) {
-      for (uint32_t i = 0; i < GetNumWords(); i++) {
-        if (words_[i] != kAllOnesWord) {
-          return false;
-        }
+    const uint32_t num_full_words = (extra_bits == 0 ? GetNumWords() : GetNumWords() - 1);
+
+    for (uint32_t i = 0; i < num_full_words; i++) {
+      if (words_[i] != kAllOnesWord) {
+        return false;
       }
-      return true;
-    } else {
-      for (uint32_t i = 0; i < GetNumWords() - 1; i++) {
-        if (words_[i] != kAllOnesWord) {
-          return false;
-        }
-      }
-      const WordType mask = ~(kAllOnesWord << GetNumExtraBits());
+    }
+
+    if (extra_bits != 0) {
+      const WordType mask = ~(kAllOnesWord << extra_bits);
       return words_[GetNumWords() - 1] == mask;
     }
+
+    return true;
   }
 
   /**

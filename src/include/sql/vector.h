@@ -44,21 +44,21 @@ namespace tpl::sql {
  * @endcode
  *
  * The selection vector is used primarily to activate and deactivate elements in the vector without
- * copying or moving data. In general, the active count is <= the size which is <= the capacity. If
- * there is no selection vector, the active element count and size will match. Otherwise, the active
- * element count equals the size of the selection vector.
+ * copying or moving data. Each vector maintains this invariant: active count <= size <= capacity.
+ * If there is no selection vector, the active element count and size will match. Otherwise, the
+ * active element count equals the size of the selection vector.
  *
  * <h2>Usage:</h2>
- *
  *
  * <h3>Referencing-vectors</h3>
  * Referencing-vectors do not allocate any memory and can only reference externally-owned data. To
  * create a referencing-vector, create a vector of the appropriate type followed by a call to
  * Vector::Reference() with the raw data as shown below:
  * @code
- * Vector vec(TypeId::SmallInt);
- * ...
- * vec.Reference(data, null_mask, size)
+ * int16_t data[] = {0,2,4,6,8};          // data = [0,2,4,6,8]
+ * auto nulls = [0,1,0,1,0]               // nulls = [false,true,false,true,false]
+ * Vector vec(TypeId::SmallInt);          // vec = []
+ * vec.Reference(data, null_mask, size);  // vec = [0,NULL,4,NULL,8]
  * @endcode
  *
  * When creating a referencing-vector, the underlying data is not allowed to be NULL. The input NULL
@@ -70,18 +70,16 @@ namespace tpl::sql {
  * ecosystem; the rich library of vector operations in tpl::sql::VectorOps can be executed on native
  * arrays.
  *
- *
  * <h3>Owning-vectors</h3>
  * Owning vectors, as their name implies, create and own the underlying vector data upon creation.
  * Owning vectors are created empty (i.e., with a size of 0) and must be explicitly resized after
  * construction:
  * @code
- * Vector vec(TypeId::Double, true, false);
- * vec.Resize(100);
- * vec.SetNull(10, true);
+ * Vector vec(TypeId::Double, true, true);  // vec = []
+ * vec.Resize(100);                         // vec = [0,0,0,0...]
+ * vec.SetNull(10, true);                   // vec = [0,0,0,0,0,0,0,0,0,NULL,0,...]
  * // ...
  * @endcode
- *
  *
  * <h3>Caution:</h3>
  *
@@ -160,13 +158,12 @@ class Vector {
   sel_t *GetSelectionVector() const noexcept { return sel_vector_; }
 
   /**
-   * @return An immutable view of this vector's NULL bitmask. This bitmask positionally indicates
-   *         which elements in the vector are considered NULL.
+   * @return An immutable view of this vector's NULL indication bitmask.
    */
   const NullMask &GetNullMask() const noexcept { return null_mask_; }
 
   /**
-   * @return A mutable pointer to this vector's NULL bitmask.
+   * @return A mutable pointer to this vector's NULL indication bitmask.
    */
   NullMask *GetMutableNullMask() noexcept { return &null_mask_; }
 
