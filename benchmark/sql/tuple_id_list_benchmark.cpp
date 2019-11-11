@@ -40,7 +40,7 @@ BENCHMARK_DEFINE_F(TupleIdListBenchmark, CallbackBasedIteration)(benchmark::Stat
     uint64_t count = 0;
     auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
     auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
-    tid->Iterate([&](uint64_t i) { count += v1data[i] + v2data[i]; });
+    tid->ForEach([&](uint64_t i) { count += v1data[i] + v2data[i]; });
     benchmark::DoNotOptimize(count);
   }
 }

@@ -274,7 +274,7 @@ class TupleIdList {
    * @param f The callback to invoke for each TID in the list.
    */
   template <typename F>
-  void Iterate(F &&f) const {
+  void ForEach(F &&f) const {
     bit_vector_.IterateSetBits(f);
   }
 
