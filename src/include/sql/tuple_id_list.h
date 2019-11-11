@@ -81,15 +81,28 @@ class TupleIdList {
    */
   class ConstIterator {
    public:
-    uint32_t operator*() const noexcept { return curr_; }
+    uint32_t operator*() const noexcept { return current_position_; }
 
-    ConstIterator &operator++() {
-      curr_ = bv_.FindNext(curr_);
+    ConstIterator &operator++() noexcept {
+      current_position_ = bv_.FindNext(current_position_);
       return *this;
     }
 
+    ConstIterator &operator+=(uint32_t n) noexcept {
+      while (n-- > 0) {
+        ++(*this);
+      }
+      return *this;
+    }
+
+    ConstIterator operator+(const uint32_t n) const noexcept {
+      ConstIterator iter = *this;
+      iter += n;
+      return iter;
+    }
+
     bool operator==(const ConstIterator &that) const noexcept {
-      return &bv_ == &that.bv_ && curr_ == that.curr_;
+      return &bv_ == &that.bv_ && current_position_ == that.current_position_;
     }
 
     bool operator!=(const ConstIterator &that) const noexcept { return !(*this == that); }
@@ -97,13 +110,14 @@ class TupleIdList {
    private:
     friend class TupleIdList;
 
-    ConstIterator(const BitVectorType &bv, uint32_t position) : bv_(bv), curr_(position) {}
+    ConstIterator(const BitVectorType &bv, uint32_t position)
+        : bv_(bv), current_position_(position) {}
 
     explicit ConstIterator(const BitVectorType &bv) : ConstIterator(bv, bv.FindFirst()) {}
 
    private:
     const BitVectorType &bv_;
-    uint32_t curr_;
+    uint32_t current_position_;
   };
 
   /**

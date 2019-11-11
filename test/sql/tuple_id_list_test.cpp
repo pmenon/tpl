@@ -193,6 +193,34 @@ TEST_F(TupleIdListTest, Selectivity) {
   EXPECT_FLOAT_EQ(1.0, list.ComputeSelectivity());
 }
 
+TEST_F(TupleIdListTest, Iterate) {
+  TupleIdList list(10);
+  for (uint32_t i = 0; i < list.GetCapacity(); i++) {
+    list.AddConditional(i, i % 2 == 0);
+  }
+  list.ForEach([](auto tid) { EXPECT_TRUE(tid % 2 == 0); });
+}
+
+TEST_F(TupleIdListTest, IterateRange) {
+  // list = []
+  TupleIdList list(10);
+  for (uint32_t i = 0; i < list.GetCapacity(); i++) {
+    list.AddConditional(i, i % 2 == 0);
+  }
+
+  // list = [0, 2, 4, 6, 8]
+  // let's iterate just [2, 4, 6]
+
+  std::vector<uint32_t> output;
+  for (auto iter = list.begin() + 1, end = iter + 3; iter != end; ++iter) {
+    output.push_back(*iter);
+  }
+  EXPECT_EQ(3, output.size());
+  EXPECT_EQ(2, output[0]);
+  EXPECT_EQ(4, output[1]);
+  EXPECT_EQ(6, output[2]);
+}
+
 TEST_F(TupleIdListTest, ConvertToSelectionVector) {
   uint16_t sel[kDefaultVectorSize];
 
