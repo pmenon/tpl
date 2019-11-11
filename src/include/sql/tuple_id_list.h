@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <iosfwd>
 #include <string>
 #include <type_traits>
@@ -10,10 +11,10 @@
 namespace tpl::sql {
 
 /**
- * An ordered set of tuple IDs (TID) used during query execution to efficiently represent valid
- * tuples in a vector projection. TupleIdLists have a maximum capacity, usually 1024 or 2048 TIDs
- * sourced from ::tpl::kDefaultVectorSize, and a size reflecting the number of tuples in the list.
- * A TupleIdList with capacity C can store all TIDs in the range [0, C) in sorted order.
+ * TupleIdList is an ordered set of tuple IDs (TID) used during query execution to efficiently
+ * represent valid tuples in a vector projection. TupleIdLists have a maximum capacity, usually 1024
+ * or 2048 TIDs sourced from ::tpl::kDefaultVectorSize, and a size reflecting the number of tuples
+ * in the list. A TupleIdList with capacity C can store all TIDs in the range [0,C) in sorted order.
  *
  * Basic Operations:
  * ----------------
@@ -32,7 +33,7 @@ namespace tpl::sql {
  *
  * Iteration:
  * ----------
- * Users can iterate over the TIDs in the list through TupleIdList::Iterate() or instantiate a
+ * Users can iterate the TIDs in a TupleIdList through TupleIdList::ForEach() or using
  * TupleIdListIterator.
  *
  * Usage:
@@ -46,7 +47,7 @@ namespace tpl::sql {
  *
  * Filtering:
  * -----------
- * TupleIdLists can be filtered through TupleIdList::Filter().
+ * TIDs in a TupleIdList can be filtered through TupleIdList::Filter().
  *
  * Usage:
  * @code
@@ -57,13 +58,13 @@ namespace tpl::sql {
  *
  * Implementation:
  * ---------------
- * TupleIdList is implemented as a very thin wrapper around a bit-vector. Thus, they occupy 128 or
- * 256 bytes of memory to represent 1024 or 2048 tuples, respectively. Using a bit vector as the
- * underlying data structure enables efficient implementations of list intersection, union, and
- * difference required during expression evaluation. Moreover, bit vectors are amenable to
- * auto-vectorization by the compiler.
+ * TupleIdList is implemented as a very thin wrapper around a bit vector. They occupy 128 or 256
+ * bytes to represent 1024 or 2048 tuples, respectively. Using a bit vector as the underlying data
+ * structure enables efficient implementations of list intersection, union, and difference required
+ * during expression evaluation. Moreover, bit vectors are amenable to auto-vectorization by the
+ * compiler.
  *
- * The primary drawback of bit vectors is iteration: dense RID lists (also known as selection
+ * The primary drawback of bit vectors is iteration: dense TID lists (also known as selection index
  * vectors) are faster to iterate over than bit vectors, more so when the selectivity of the vector
  * is low.
  */
@@ -321,6 +322,27 @@ class TupleIdList {
   std::size_t operator[](const std::size_t i) const {
     TPL_ASSERT(i < GetTupleCount(), "Out-of-bounds list access");
     return bit_vector_.NthOne(i);
+  }
+
+  /**
+   * Assign the TIDs in @em tids to this list. Any previous contents are cleared out.
+   *
+   * NOTE: THIS IS ONLY FOR TESTING. DO NOT USE OTHERWISE!
+   *
+   * @param tids TIDs to add to the list.
+   * @return This list.
+   */
+  TupleIdList &operator=(std::initializer_list<uint32_t> tids) {
+    if (!std::all_of(tids.begin(), tids.end(), [this](auto tid) { return tid < GetCapacity(); })) {
+      throw std::out_of_range("Not all TIDs can be added to this list");
+    }
+
+    Clear();
+    for (const auto tid : tids) {
+      Add(tid);
+    }
+
+    return *this;
   }
 
   /**

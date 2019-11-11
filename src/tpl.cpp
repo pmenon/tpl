@@ -140,9 +140,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
     if (kIsSQL) {
       std::function<uint32_t(sql::ExecutionContext *)> main;
       if (!module->GetFunction("main", vm::ExecutionMode::Interpret, main)) {
-        LOG_ERROR(
-            "Missing 'main' entry function with signature "
-            "(*ExecutionContext)->int32");
+        LOG_ERROR("Missing 'main' entry function with signature (*ExecutionContext)->int32");
         return;
       }
       sql::MemoryPool memory(nullptr);
@@ -168,9 +166,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
     if (kIsSQL) {
       std::function<uint32_t(sql::ExecutionContext *)> main;
       if (!module->GetFunction("main", vm::ExecutionMode::Adaptive, main)) {
-        LOG_ERROR(
-            "Missing 'main' entry function with signature "
-            "(*ExecutionContext)->int32");
+        LOG_ERROR("Missing 'main' entry function with signature (*ExecutionContext)->int32");
         return;
       }
       sql::MemoryPool memory(nullptr);
@@ -195,9 +191,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
     if (kIsSQL) {
       std::function<uint32_t(sql::ExecutionContext *)> main;
       if (!module->GetFunction("main", vm::ExecutionMode::Compiled, main)) {
-        LOG_ERROR(
-            "Missing 'main' entry function with signature "
-            "(*ExecutionContext)->int32");
+        LOG_ERROR("Missing 'main' entry function with signature (*ExecutionContext)->int32");
         return;
       }
       util::Timer<std::milli> x;

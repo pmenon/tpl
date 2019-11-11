@@ -96,11 +96,11 @@ bool TableVectorIterator::Advance() {
     return false;
   }
 
-  // First, we try to advance all the column iterators. We issue Advance()
-  // calls to **all** column iterators to make sure they're consistent. If we're
-  // able to advance all the column iterators, then we're certain there is
-  // another vector of input; in this case, we just need to set up the
-  // vector projection iterator with the new data and finish.
+  // First, we try to advance all the column iterators. We issue Advance() calls
+  // to ALL column iterators to make sure they're consistent. If we're able to
+  // advance all the column iterators, then we're certain there is another
+  // vector of input; in this case, we just need to set up the vector projection
+  // iterator with the new data and finish.
   //
   // Typically, either all column iterators can advance or non advance. If any
   // one of the column iterators says they're out of data, we advance the
@@ -124,7 +124,7 @@ bool TableVectorIterator::Advance() {
   // Check block iterator
   if (block_iterator_.Advance()) {
     const Table::Block *block = block_iterator_.GetCurrentBlock();
-    for (uint32_t i = 0; i < column_iterators_.size(); i++) {
+    for (uint64_t i = 0; i < column_iterators_.size(); i++) {
       const ColumnSegment *col = block->GetColumnData(i);
       column_iterators_[i].Reset(col);
     }
