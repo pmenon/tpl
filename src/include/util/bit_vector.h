@@ -99,12 +99,22 @@ class BitVector {
    private:
     friend class BitVector<WordType>;
 
-    // Create a reference to the given bit position in the word array. Only bit vectors can create
-    // references to the bits they own.
+    // Create a reference to the given bit position in the word array. Only bit
+    // vectors can create references to the bits they own.
     BitReference(WordType *word, uint32_t bit_pos) : word_(word), mask_(WordType(1) << bit_pos) {}
 
     // Assign this bit to the given value
-    void Assign(bool val) noexcept { (*word_) ^= (-static_cast<WordType>(val) ^ *word_) & mask_; }
+    void Assign(const bool val) noexcept {
+      // Turns out that using an explicit-if here is faster than a branch-free
+      // implementation:
+      // (*word_) ^= (-static_cast<WordType>(val) ^ *word_) & mask_;
+
+      if (val) {
+        (*word_) |= mask_;
+      } else {
+        (*word_) &= ~mask_;
+      }
+    }
 
    private:
     WordType *word_;
@@ -513,8 +523,8 @@ class BitVector {
 
     const uint32_t num_full_words = GetNumExtraBits() == 0 ? GetNumWords() : GetNumWords() - 1;
 
-    // This first loop processes all FULL words in the bit vector. It should be fully vectorized
-    // if the predicate function can also vectorized.
+    // This first loop processes all FULL words in the bit vector. It should be
+    // fully vectorized if the predicate function can also vectorized.
     for (WordType i = 0; i < num_full_words; i++) {
       WordType word_result = 0;
       for (WordType j = 0; j < kWordSizeBits; j++) {

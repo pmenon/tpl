@@ -287,10 +287,10 @@ class Vector {
   /**
    * Reference a specific chunk of data.
    * @param data The data.
-   * @param nullmask The NULL bitmap.
+   * @param null_mask The NULL bitmap.
    * @param size The number of elements in the array.
    */
-  void Reference(byte *data, uint32_t *nullmask, uint64_t size);
+  void Reference(byte *data, const uint32_t *null_mask, uint64_t size);
 
   /**
    * Create a vector that references data held (and owned!) by another vector.

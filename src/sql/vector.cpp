@@ -14,22 +14,18 @@
 
 namespace tpl::sql {
 
-// ---------------------------------------------------------
-// Vector
-// ---------------------------------------------------------
-
 Vector::Vector(TypeId type)
     : type_(type), count_(0), num_elems_(0), data_(nullptr), sel_vector_(nullptr) {
-  // Since vector capacity can never exceed kDefaultVectorSize, we reserve upon creation to remove
-  // allocations as the vector is resized.
+  // Since vector capacity can never exceed kDefaultVectorSize, we reserve upon
+  // creation to remove allocations as the vector is resized.
   null_mask_.Reserve(kDefaultVectorSize);
   null_mask_.Resize(num_elems_);
 }
 
 Vector::Vector(TypeId type, bool create_data, bool clear)
     : type_(type), count_(0), num_elems_(0), data_(nullptr), sel_vector_(nullptr) {
-  // Since vector capacity can never exceed kDefaultVectorSize, we reserve upon creation to remove
-  // allocations as the vector is resized.
+  // Since vector capacity can never exceed kDefaultVectorSize, we reserve upon
+  // creation to remove allocations as the vector is resized.
   null_mask_.Reserve(kDefaultVectorSize);
   null_mask_.Resize(num_elems_);
   if (create_data) {
@@ -41,19 +37,17 @@ Vector::~Vector() { Destroy(); }
 
 void Vector::Initialize(const TypeId new_type, const bool clear) {
   varlens_.Destroy();
-
   type_ = new_type;
 
-  // Since the caller controls whether we zero the vector's memory upon creation, we need to be
-  // careful about exactly how we allocate it. std::make_unique<T[]>(...) will always zero-out the
-  // memory since it value-initializes the array. Similarly, new T[...]() also value-initializes
-  // each element. We want to avoid both of these if the caller didn't explicitly request it. So, we
-  // allocate the array using new T[...] (without the '()'), and clear the contents if requested.
-
-  std::size_t num_bytes = kDefaultVectorSize * GetTypeIdSize(type_);
+  // By default, we always allocate ::tpl::kDefaultVectorSize since a vector
+  // can never exceed this capacity during query processing.
+  const std::size_t num_bytes = kDefaultVectorSize * GetTypeIdSize(type_);
   owned_data_ = std::unique_ptr<byte[]>(new byte[num_bytes]);
   data_ = owned_data_.get();
-  if (clear) std::memset(data_, 0, num_bytes);
+
+  if (clear) {
+    std::memset(data_, 0, num_bytes);
+  }
 }
 
 void Vector::Destroy() {
@@ -263,7 +257,7 @@ void Vector::Reference(GenericValue *value) {
   }
 }
 
-void Vector::Reference(byte *data, uint32_t *nullmask, uint64_t size) {
+void Vector::Reference(byte *data, const uint32_t *null_mask, uint64_t size) {
   TPL_ASSERT(owned_data_ == nullptr, "Cannot reference a vector if owning data");
   count_ = size;
   num_elems_ = size;
@@ -272,11 +266,11 @@ void Vector::Reference(byte *data, uint32_t *nullmask, uint64_t size) {
   null_mask_.Resize(num_elems_);
 
   // TODO(pmenon): Optimize me if this is a bottleneck
-  if (nullmask == nullptr) {
+  if (null_mask == nullptr) {
     null_mask_.Reset();
   } else {
     for (uint64_t i = 0; i < size; i++) {
-      null_mask_[i] = util::BitUtil::Test(nullmask, i);
+      null_mask_[i] = util::BitUtil::Test(null_mask, i);
     }
   }
 }
