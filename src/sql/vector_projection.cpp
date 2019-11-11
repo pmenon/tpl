@@ -114,7 +114,7 @@ std::string VectorProjection::ToString() const {
   return result;
 }
 
-void VectorProjection::Dump(std::ostream &stream) const { stream << ToString() << std::endl; }
+void VectorProjection::Dump(std::ostream &os) const { os << ToString() << std::endl; }
 
 void VectorProjection::CheckIntegrity() const {
 #ifndef NDEBUG

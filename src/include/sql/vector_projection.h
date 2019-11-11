@@ -235,16 +235,16 @@ class VectorProjection {
   }
 
   /**
-   * Return a string representation of this vector.
+   * Return a string representation of this vector projection.
    * @return A string representation of the projection's contents.
    */
   std::string ToString() const;
 
   /**
    * Print a string representation of this vector projection to the provided output stream.
-   * @param stream The stream where the string representation of this projection is written to.
+   * @param os The stream where the string representation of this projection is written to.
    */
-  void Dump(std::ostream &stream) const;
+  void Dump(std::ostream &os) const;
 
   /**
    * Perform an integrity check on this vector projection instance. This is used in debug mode.

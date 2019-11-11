@@ -46,7 +46,7 @@ struct SourcePosition {
 };
 
 /**
- * Base for classes that should be instantiated.
+ * Base for classes that should NOT be instantiated, i.e., classes that only have static functions.
  */
 class AllStatic {
 #ifndef NDEBUG

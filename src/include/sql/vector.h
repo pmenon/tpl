@@ -300,14 +300,15 @@ class Vector {
 
   /**
    * Return a string representation of this vector.
+   * @return A string representation of the vector's contents.
    */
   std::string ToString() const;
 
   /**
    * Print a string representation of this vector to the output stream.
-   * @param The output stream.
+   * @param os The stream where the string representation of this vector is written to.
    */
-  void Dump(std::ostream &stream) const;
+  void Dump(std::ostream &os) const;
 
   /**
    * Perform an integrity check on this vector. This is used in debug mode for sanity checks.

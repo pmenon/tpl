@@ -44,13 +44,13 @@ TEST_F(TupleIdListTest, Enable) {
   constexpr uint32_t num_tids = 10;
 
   TupleIdList list(num_tids);
-  list.Enable(4, false);
+  list.AddConditional(4, false);
   EXPECT_FALSE(list.Contains(4));
 
-  list.Enable(4, true);
+  list.AddConditional(4, true);
   EXPECT_TRUE(list.Contains(4));
 
-  list.Enable(4, false);
+  list.AddConditional(4, false);
   EXPECT_FALSE(list.Contains(4));
 }
 
