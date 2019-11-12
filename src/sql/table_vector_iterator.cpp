@@ -82,7 +82,10 @@ void TableVectorIterator::RefreshVectorProjection() {
 
   vector_projection_.Reset();
   for (uint64_t col_idx = 0; col_idx < column_iterators_.size(); col_idx++) {
-    vector_projection_.ResetColumn(column_iterators_, col_idx);
+    Vector *column_vector = vector_projection_.GetColumn(col_idx);
+    column_vector->Reference(column_iterators_[col_idx].GetColumnData(),
+                             column_iterators_[col_idx].GetColumnNullBitmap(),
+                             column_iterators_[col_idx].GetTupleCount());
   }
   vector_projection_.CheckIntegrity();
 

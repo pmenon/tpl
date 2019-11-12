@@ -44,6 +44,11 @@ class ColumnVectorIterator {
   void Reset(const ColumnSegment *column) noexcept;
 
   /**
+   * @return The non-null schema of the column we're iterating over.
+   */
+  const Schema::ColumnInfo *GetColumnInfo() const noexcept { return col_info_; }
+
+  /**
    * @return The current vector chunk's raw untyped column data.
    */
   byte *GetColumnData() noexcept { return col_data_; }

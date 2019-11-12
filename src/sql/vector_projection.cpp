@@ -94,18 +94,6 @@ void VectorProjection::Reset() {
   }
 }
 
-void VectorProjection::ResetColumn(byte *col_data, uint32_t *col_null_bitmap, uint32_t col_idx,
-                                   uint32_t num_tuples) {
-  columns_[col_idx]->Reference(col_data, col_null_bitmap, num_tuples);
-}
-
-void VectorProjection::ResetColumn(const std::vector<ColumnVectorIterator> &column_iterators,
-                                   const uint32_t col_idx) {
-  ResetColumn(column_iterators[col_idx].GetColumnData(),
-              column_iterators[col_idx].GetColumnNullBitmap(), col_idx,
-              column_iterators[col_idx].GetTupleCount());
-}
-
 std::string VectorProjection::ToString() const {
   std::string result = "VectorProjection(#cols=" + std::to_string(columns_.size()) + "):\n";
   for (auto &col : columns_) {

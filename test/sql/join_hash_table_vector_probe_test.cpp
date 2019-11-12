@@ -114,7 +114,7 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
     uint32_t size = std::min(kDefaultVectorSize, num_probe - i);
 
     // Setup VP
-    vp.ResetColumn(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0, size);
+    vp.GetColumn(0)->Reference(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, size);
     vpi.Reset(&vp);
 
     // Lookup
@@ -163,7 +163,7 @@ TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
       uint32_t size = std::min(kDefaultVectorSize, num_probe - i);
 
       // Setup VP
-      vp.ResetColumn(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, 0, size);
+      vp.GetColumn(0)->Reference(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, size);
       vpi.Reset(&vp);
 
       // Lookup
