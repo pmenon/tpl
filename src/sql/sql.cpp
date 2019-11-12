@@ -67,6 +67,38 @@ std::size_t GetTypeIdSize(TypeId type) {
   }
 }
 
+std::size_t GetTypeIdAlignment(TypeId type) {
+  switch (type) {
+    case TypeId::Boolean:
+      return alignof(bool);
+    case TypeId::TinyInt:
+      return alignof(int8_t);
+    case TypeId::SmallInt:
+      return alignof(int16_t);
+    case TypeId::Integer:
+      return alignof(int32_t);
+    case TypeId::BigInt:
+      return alignof(int64_t);
+    case TypeId::Hash:
+      return alignof(hash_t);
+    case TypeId::Pointer:
+      return alignof(uintptr_t);
+    case TypeId::Float:
+      return alignof(float);
+    case TypeId::Double:
+      return alignof(double);
+    case TypeId::Date:
+      return alignof(Date);
+    case TypeId::Varchar:
+      return alignof(VarlenEntry);
+    case TypeId::Varbinary:
+      return alignof(Blob);
+    default:
+      // All cases handled
+      UNREACHABLE("Impossible type");
+  }
+}
+
 // static
 bool IsTypeFixedSize(TypeId type) {
   switch (type) {

@@ -109,6 +109,11 @@ constexpr inline TypeId GetTypeId() {
 std::size_t GetTypeIdSize(TypeId type);
 
 /**
+ * @return The alignment in bytes of a value with the primitive type @em type.
+ */
+std::size_t GetTypeIdAlignment(TypeId type);
+
+/**
  * @return True if the primitive type ID @em type is a fixed-size type; false otherwise.
  */
 bool IsTypeFixedSize(TypeId type);

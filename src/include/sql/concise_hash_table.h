@@ -139,11 +139,10 @@ class ConciseHashTable {
  private:
   /**
    * A slot group represents a group of 64 slots. Each slot is represented as a single bit from the
-   * @em bits field. @em count is a count of the number of set bits in all slot groups in the group
-   * array up to and including this group. In other worse, @em count is a prefix count of the number
-   * of filled slots up to this group.
+   * @em bits field. @em count is a count of occupied slots in all slot groups up to and including
+   * this group, or in other words, a prefix count of the number of filled slots up to this group.
    */
-  struct SlotGroup {
+  struct alignas(CACHELINE_SIZE) SlotGroup {
     // The bitmap indicating whether the slots are occupied or free
     uint64_t bits;
     // The prefix population count
