@@ -52,14 +52,13 @@ TEST_F(TableVectorIteratorTest, SimpleIteratorTest) {
   // Simple test to ensure we iterate over the whole table
   //
 
-  TableVectorIterator iter(TableIdToNum(TableId::EmptyTable));
+  TableVectorIterator iter(TableIdToNum(TableId::Test1));
 
   EXPECT_TRUE(iter.Init());
 
-  VectorProjectionIterator *vpi = iter.GetVectorProjectionIterator();
-
   uint32_t num_tuples = 0;
   while (iter.Advance()) {
+    VectorProjectionIterator *vpi = iter.GetVectorProjectionIterator();
     for (; vpi->HasNext(); vpi->Advance()) {
       num_tuples++;
     }
@@ -80,10 +79,13 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
 
   auto init_count = [](UNUSED void *ctx, void *tls) { reinterpret_cast<Counter *>(tls)->c = 0; };
 
+  // Scan function just counts all tuples it sees
   auto scanner = [](UNUSED void *state, void *tls, TableVectorIterator *tvi) {
     auto *counter = reinterpret_cast<Counter *>(tls);
     while (tvi->Advance()) {
-      counter->c++;
+      for (auto *vpi = tvi->GetVectorProjectionIterator(); vpi->HasNext(); vpi->Advance()) {
+        counter->c++;
+      }
     }
   };
 
@@ -91,19 +93,25 @@ TEST_F(TableVectorIteratorTest, ParallelScanTest) {
   MemoryPool memory(nullptr);
   ExecutionContext ctx(&memory);
   ThreadStateContainer thread_state_container(ctx.GetMemoryPool());
-  thread_state_container.Reset(sizeof(Counter), init_count, nullptr, nullptr);
+  thread_state_container.Reset(sizeof(Counter),  // The type of each thread state structure
+                               init_count,       // The thread state initialization function
+                               nullptr,          // The thread state destruction function
+                               nullptr           // Context passed to init/destroy functions
+  );
 
-  // Scan
-  TableVectorIterator::ParallelScan(TableIdToNum(TableId::Test1), nullptr, &thread_state_container,
-                                    scanner);
+  const auto table_id = TableIdToNum(TableId::Test1);
+  TableVectorIterator::ParallelScan(table_id,                 // ID of table to scan
+                                    nullptr,                  // Query state to pass to scan threads
+                                    &thread_state_container,  // Container for thread states
+                                    scanner                   // Scan function
+  );
 
-  // Combine counters
-  std::vector<byte *> counters;
-  thread_state_container.CollectThreadLocalStates(counters);
+  // Count total aggregate tuple count seen by all threads
+  uint32_t aggregate_tuple_count = 0;
+  thread_state_container.ForEach<Counter>(
+      [&](Counter *counter) { aggregate_tuple_count += counter->c; });
 
-  for (auto *counter : counters) {
-    LOG_INFO("Count: {}", reinterpret_cast<Counter *>(counter)->c);
-  }
+  EXPECT_EQ(Catalog::Instance()->LookupTableById(table_id)->GetTupleCount(), aggregate_tuple_count);
 }
 
 }  // namespace tpl::sql
