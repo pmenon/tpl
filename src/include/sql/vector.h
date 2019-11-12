@@ -62,7 +62,7 @@ namespace tpl::sql {
  * @endcode
  *
  * When creating a referencing-vector, the underlying data is not allowed to be NULL. The input NULL
- * bitmask, however, can be NULL to indicate that <b>no</b> elements are NULL. The <i>size</i>
+ * bit mask, however, can be NULL to indicate that <b>no</b> elements are NULL. The <i>size</i>
  * attribute indicates the number of physically contiguous elements in the vector, and must be
  * smaller than the maximum capacity of the vector. After creation, the count and size are equal.
  *
@@ -140,7 +140,7 @@ class Vector {
    *         filtered out by the selection vector, if one exists. The size of a vector is always
    *         greater than or equal to the selected count.
    */
-  uint64_t GetSize() const noexcept { return num_elems_; }
+  uint64_t GetSize() const noexcept { return num_elements_; }
 
   /**
    * @return The maximum capacity of this vector.
@@ -158,19 +158,19 @@ class Vector {
   sel_t *GetSelectionVector() const noexcept { return sel_vector_; }
 
   /**
-   * @return An immutable view of this vector's NULL indication bitmask.
+   * @return An immutable view of this vector's NULL indication bit mask.
    */
   const NullMask &GetNullMask() const noexcept { return null_mask_; }
 
   /**
-   * @return A mutable pointer to this vector's NULL indication bitmask.
+   * @return A mutable pointer to this vector's NULL indication bit mask.
    */
   NullMask *GetMutableNullMask() noexcept { return &null_mask_; }
 
   /**
    * @return A mutable pointer to this vector's string heap.
    */
-  VarlenHeap *GetMutableStringHeap() noexcept { return &varlens_; }
+  VarlenHeap *GetMutableStringHeap() noexcept { return &varlen_heap_; }
 
   /**
    * Set the selection vector.
@@ -178,7 +178,7 @@ class Vector {
    * @param count The number of elements in the selection vector.
    */
   void SetSelectionVector(sel_t *const sel_vector, const uint64_t count) {
-    TPL_ASSERT(count <= num_elems_, "Selection vector count cannot exceed vector size");
+    TPL_ASSERT(count <= num_elements_, "Selection vector count cannot exceed vector size");
     sel_vector_ = sel_vector;
     count_ = count;
   }
@@ -186,19 +186,19 @@ class Vector {
   /**
    * @return True if this vector is holding a single constant value; false otherwise.
    */
-  bool IsConstant() const noexcept { return num_elems_ == 1 && sel_vector_ == nullptr; }
+  bool IsConstant() const noexcept { return num_elements_ == 1 && sel_vector_ == nullptr; }
 
   /**
    * @return True if this vector is empty; false otherwise.
    */
-  bool IsEmpty() const noexcept { return num_elems_ == 0; }
+  bool IsEmpty() const noexcept { return num_elements_ == 0; }
 
   /**
    * @return The computed selectivity of this vector, i.e., the fraction of tuples that are
    *         externally visible.
    */
   float ComputeSelectivity() const noexcept {
-    return IsEmpty() ? 0 : static_cast<float>(count_) / num_elems_;
+    return IsEmpty() ? 0 : static_cast<float>(count_) / num_elements_;
   }
 
   /**
@@ -323,28 +323,28 @@ class Vector {
   void Destroy();
 
  private:
-  // The type of the elements stored in the vector
+  // The type of the elements stored in the vector.
   TypeId type_;
 
-  // The number of elements in the vector
+  // The number of elements in the vector.
   uint64_t count_;
 
-  // The number of physically contiguous elements in the vector
-  uint64_t num_elems_;
+  // The number of physically contiguous elements in the vector.
+  uint64_t num_elements_;
 
   // A pointer to the data.
   byte *data_;
 
-  // The selection vector of the vector
+  // The selection vector of the vector.
   sel_t *sel_vector_;
 
-  // The null mask used to indicate if an element in the vector is NULL
+  // The null mask used to indicate if an element in the vector is NULL.
   NullMask null_mask_;
 
-  // Heap container for strings owned by this vector
-  VarlenHeap varlens_;
+  // Heap container for strings owned by this vector.
+  VarlenHeap varlen_heap_;
 
-  // If the vector holds allocated data, this field manages it
+  // If the vector holds allocated data, this field manages it.
   std::unique_ptr<byte[]> owned_data_;
 };
 

@@ -44,13 +44,13 @@ TEST_F(TupleIdListTest, Enable) {
   constexpr uint32_t num_tids = 10;
 
   TupleIdList list(num_tids);
-  list.AddConditional(4, false);
+  list.Enable(4, false);
   EXPECT_FALSE(list.Contains(4));
 
-  list.AddConditional(4, true);
+  list.Enable(4, true);
   EXPECT_TRUE(list.Contains(4));
 
-  list.AddConditional(4, false);
+  list.Enable(4, false);
   EXPECT_FALSE(list.Contains(4));
 }
 
@@ -196,7 +196,7 @@ TEST_F(TupleIdListTest, Selectivity) {
 TEST_F(TupleIdListTest, Iterate) {
   TupleIdList list(10);
   for (uint32_t i = 0; i < list.GetCapacity(); i++) {
-    list.AddConditional(i, i % 2 == 0);
+    list.Enable(i, i % 2 == 0);
   }
   list.ForEach([](auto tid) { EXPECT_TRUE(tid % 2 == 0); });
 }
@@ -205,7 +205,7 @@ TEST_F(TupleIdListTest, IterateRange) {
   // list = []
   TupleIdList list(10);
   for (uint32_t i = 0; i < list.GetCapacity(); i++) {
-    list.AddConditional(i, i % 2 == 0);
+    list.Enable(i, i % 2 == 0);
   }
 
   // list = [0, 2, 4, 6, 8]

@@ -224,25 +224,27 @@ class VectorOps : public AllStatic {
    * vector is not provided, the function @em fun is applied to integers in the range
    * [offset, count).
    *
-   * The callback function receives two parameters: i = the current index from the selection vector,
-   * and k = count.
+   * The callback function receives two arguments:
+   *
+   * i = the current tuple ID.
+   * k = position in TID list.
    *
    * @tparam F Functor accepting two integer arguments.
    * @param sel_vector The optional selection vector to iterate over.
    * @param count The number of elements in the selection vector if available.
-   * @param fun The function to call on each element.
+   * @param f The function to call on each element.
    * @param offset The offset from the beginning to begin iteration.
    */
   template <typename F>
-  static void Exec(const sel_t *RESTRICT sel_vector, const uint64_t count, F &&fun,
+  static void Exec(const sel_t *RESTRICT sel_vector, const uint64_t count, F &&f,
                    const uint64_t offset = 0) {
     if (sel_vector != nullptr) {
       for (uint64_t i = offset; i < count; i++) {
-        fun(sel_vector[i], i);
+        f(sel_vector[i], i);
       }
     } else {
       for (uint64_t i = offset; i < count; i++) {
-        fun(i, i);
+        f(i, i);
       }
     }
   }
@@ -255,35 +257,45 @@ class VectorOps : public AllStatic {
    *
    * By default, the function will be applied to all active elements in the vector.
    *
-   * The callback function receives two parameters: i = the current index from the selection vector,
-   * and k = count.
+   * The callback function receives two arguments:
+   *
+   * i = the current tuple ID.
+   * k = position in TID list.
    *
    * @tparam F Functor accepting two integer arguments.
    * @param sel_vector The optional selection vector to iterate over.
    * @param count The number of elements in the selection vector if available.
-   * @param fun The function to call on each element.
+   * @param f The function to call on each element.
    * @param offset The offset from the beginning to begin iteration.
    */
   template <typename F>
-  static void Exec(const Vector &vector, F &&fun, uint64_t offset = 0, uint64_t count = 0) {
+  static void Exec(const Vector &vector, F &&f, uint64_t offset = 0, uint64_t count = 0) {
     if (count == 0) {
       count = vector.count_;
     } else {
       count += offset;
     }
 
-    Exec(vector.sel_vector_, count, fun, offset);
+    Exec(vector.sel_vector_, count, f, offset);
   }
 
   /**
-   * Apply a function to every active element in the vector. The callback function receives three
-   * arguments, val = the value of the element at the current iteration position, i = index,
-   * dependent on the selection vector, and k = count.
+   * Apply a function to all active elements in the input vector @em v. The callback function @em f
+   * receives three arguments:
+   *
+   * v = a const-reference to the element at the current TID.
+   * i = the current tuple ID.
+   * k = position in TID list.
+   *
+   * @tparam T The type to cast each vector element into.
+   * @tparam F Functor accepting three arguments outlined in the function description.
+   * @param vector The vector whose contents to iterate over.
+   * @param f The callback function invoked for each active vector element.
    */
   template <typename T, typename F>
-  static void ExecTyped(const Vector &vector, F &&fun) {
+  static void ExecTyped(const Vector &vector, F &&f) {
     const auto *data = reinterpret_cast<const T *>(vector.GetData());
-    Exec(vector.sel_vector_, vector.count_, [&](uint64_t i, uint64_t k) { fun(data[i], i, k); });
+    Exec(vector.sel_vector_, vector.count_, [&](uint64_t i, uint64_t k) { f(data[i], i, k); });
   }
 };
 

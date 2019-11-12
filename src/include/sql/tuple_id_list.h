@@ -174,19 +174,6 @@ class TupleIdList {
   void Add(const uint32_t tid) { bit_vector_.Set(tid); }
 
   /**
-   * Conditionally add the tuple with ID @em tid depending on the value of @em enable. If @em enable
-   * is true, the tuple is added to the list (with proper duplicate handling). If @em enable is
-   * false, the tuple is removed from the list if it exists.
-   *
-   * This method is faster than an explicit if-then-else handled by the client because it can avoid
-   * the branching. Use this method if you are modifying a TupleIdList in a hot loop.
-   *
-   * @param tid The ID of the tuple to conditionally add to the list.
-   * @param enable The flag indicating if the tuple is added or removed.
-   */
-  void AddConditional(const uint32_t tid, const bool enable) { bit_vector_.Set(tid, enable); }
-
-  /**
    * Add all TIDs in the range [start_tid, end_tid) to this list. Note the half-open interval!
    * @param start_tid The left inclusive range boundary.
    * @param end_tid The right exclusive range boundary.
@@ -199,6 +186,19 @@ class TupleIdList {
    * Add all tuple IDs this list can support.
    */
   void AddAll() { bit_vector_.SetAll(); }
+
+  /**
+   * Conditionally add or remove the tuple with ID @em tid depending on the value of @em enable. If
+   * @em enable is true, the tuple is added to the list (with proper duplicate handling). If false,
+   * the tuple is removed from the list (if it exists).
+   *
+   * This method is faster than an explicit if-then-else handled by the client because it can avoid
+   * branching. Use this method if you are modifying a TupleIdList in a hot loop.
+   *
+   * @param tid The ID of the tuple to conditionally add to the list.
+   * @param enable The flag indicating if the tuple is added or removed.
+   */
+  void Enable(const uint32_t tid, const bool enable) { bit_vector_.Set(tid, enable); }
 
   /**
    * Remove the tuple with the given ID from the list.

@@ -15,19 +15,19 @@
 namespace tpl::sql {
 
 Vector::Vector(TypeId type)
-    : type_(type), count_(0), num_elems_(0), data_(nullptr), sel_vector_(nullptr) {
+    : type_(type), count_(0), num_elements_(0), data_(nullptr), sel_vector_(nullptr) {
   // Since vector capacity can never exceed kDefaultVectorSize, we reserve upon
   // creation to remove allocations as the vector is resized.
   null_mask_.Reserve(kDefaultVectorSize);
-  null_mask_.Resize(num_elems_);
+  null_mask_.Resize(num_elements_);
 }
 
 Vector::Vector(TypeId type, bool create_data, bool clear)
-    : type_(type), count_(0), num_elems_(0), data_(nullptr), sel_vector_(nullptr) {
+    : type_(type), count_(0), num_elements_(0), data_(nullptr), sel_vector_(nullptr) {
   // Since vector capacity can never exceed kDefaultVectorSize, we reserve upon
   // creation to remove allocations as the vector is resized.
   null_mask_.Reserve(kDefaultVectorSize);
-  null_mask_.Resize(num_elems_);
+  null_mask_.Resize(num_elements_);
   if (create_data) {
     Initialize(type, clear);
   }
@@ -36,7 +36,7 @@ Vector::Vector(TypeId type, bool create_data, bool clear)
 Vector::~Vector() { Destroy(); }
 
 void Vector::Initialize(const TypeId new_type, const bool clear) {
-  varlens_.Destroy();
+  varlen_heap_.Destroy();
   type_ = new_type;
 
   // By default, we always allocate ::tpl::kDefaultVectorSize since a vector
@@ -52,10 +52,10 @@ void Vector::Initialize(const TypeId new_type, const bool clear) {
 
 void Vector::Destroy() {
   owned_data_.reset();
-  varlens_.Destroy();
+  varlen_heap_.Destroy();
   data_ = nullptr;
   count_ = 0;
-  num_elems_ = 0;
+  num_elements_ = 0;
   sel_vector_ = nullptr;
   null_mask_.Reset();
 }
@@ -115,8 +115,8 @@ void Vector::Resize(uint32_t size) {
 
   sel_vector_ = nullptr;
   count_ = size;
-  num_elems_ = size;
-  null_mask_.Resize(num_elems_);
+  num_elements_ = size;
+  null_mask_.Resize(num_elements_);
 }
 
 void Vector::SetValue(const uint64_t index, const GenericValue &val) {
@@ -177,7 +177,8 @@ void Vector::SetValue(const uint64_t index, const GenericValue &val) {
     }
     case TypeId::Varchar: {
       if (!val.IsNull()) {
-        reinterpret_cast<VarlenEntry *>(data_)[actual_index] = varlens_.AddVarlen(val.str_value_);
+        reinterpret_cast<VarlenEntry *>(data_)[actual_index] =
+            varlen_heap_.AddVarlen(val.str_value_);
       }
       break;
     }
@@ -194,8 +195,8 @@ void Vector::Reference(GenericValue *value) {
 
   // Start from scratch
   type_ = value->GetTypeId();
-  num_elems_ = count_ = 1;
-  null_mask_.Resize(num_elems_);
+  num_elements_ = count_ = 1;
+  null_mask_.Resize(num_elements_);
 
   if (value->IsNull()) {
     SetNull(0, true);
@@ -260,10 +261,10 @@ void Vector::Reference(GenericValue *value) {
 void Vector::Reference(byte *data, const uint32_t *null_mask, uint64_t size) {
   TPL_ASSERT(owned_data_ == nullptr, "Cannot reference a vector if owning data");
   count_ = size;
-  num_elems_ = size;
+  num_elements_ = size;
   data_ = data;
   sel_vector_ = nullptr;
-  null_mask_.Resize(num_elems_);
+  null_mask_.Resize(num_elements_);
 
   // TODO(pmenon): Optimize me if this is a bottleneck
   if (null_mask == nullptr) {
@@ -279,7 +280,7 @@ void Vector::Reference(Vector *other) {
   TPL_ASSERT(owned_data_ == nullptr, "Cannot reference a vector if owning data");
   type_ = other->type_;
   count_ = other->count_;
-  num_elems_ = other->num_elems_;
+  num_elements_ = other->num_elements_;
   data_ = other->data_;
   sel_vector_ = other->sel_vector_;
   null_mask_ = other->null_mask_;
@@ -289,12 +290,12 @@ void Vector::MoveTo(Vector *other) {
   other->Destroy();
   other->type_ = type_;
   other->count_ = count_;
-  other->num_elems_ = num_elems_;
+  other->num_elements_ = num_elements_;
   other->data_ = data_;
   other->sel_vector_ = sel_vector_;
-  other->null_mask_ = null_mask_;
-  other->owned_data_ = move(owned_data_);
-  other->varlens_ = std::move(varlens_);
+  other->null_mask_ = std::move(null_mask_);
+  other->owned_data_ = std::move(owned_data_);
+  other->varlen_heap_ = std::move(varlen_heap_);
 
   // Cleanup
   Destroy();
@@ -320,7 +321,7 @@ void Vector::CopyTo(Vector *other, uint64_t offset) {
                       if (null_mask_[i]) {
                         other->null_mask_.Set(k - offset);
                       } else {
-                        target_data[k - offset] = other->varlens_.AddVarlen(src_data[i]);
+                        target_data[k - offset] = other->varlen_heap_.AddVarlen(src_data[i]);
                       }
                     },
                     offset);
@@ -346,11 +347,11 @@ void Vector::Append(const Vector &other) {
   }
 
   uint64_t old_size = count_;
-  num_elems_ += other.GetCount();
+  num_elements_ += other.GetCount();
   count_ += other.GetCount();
 
-  // Since the vector's size has changed, we need to also resize the NULL bitmask.
-  null_mask_.Resize(num_elems_);
+  // Since the vector's size has changed, we need to also resize the NULL bit mask.
+  null_mask_.Resize(num_elements_);
 
   // merge NULL mask
   VectorOps::Exec(other,
@@ -365,7 +366,7 @@ void Vector::Append(const Vector &other) {
     VectorOps::Exec(other, [&](uint64_t i, uint64_t k) {
       if (other.null_mask_[i]) {
       } else {
-        target_data[old_size + k] = varlens_.AddVarlen(src_data[i]);
+        target_data[old_size + k] = varlen_heap_.AddVarlen(src_data[i]);
       }
     });
   }
@@ -389,15 +390,16 @@ void Vector::CheckIntegrity() const {
 #ifndef NDEBUG
   // Ensure that if there isn't a selection vector, the size and selected count values are equal
   if (sel_vector_ == nullptr) {
-    TPL_ASSERT(count_ == num_elems_,
+    TPL_ASSERT(count_ == num_elements_,
                "Vector count and size do not match with missing selection vector");
   } else {
-    TPL_ASSERT(count_ <= num_elems_,
+    TPL_ASSERT(count_ <= num_elements_,
                "Vector count must be smaller than size with selection vector");
   }
 
-  // Ensure that the NULL bitmask has the same size at the vector it represents
-  TPL_ASSERT(num_elems_ == null_mask_.GetNumBits(), "NULL bitmask size doesn't match vector size");
+  // Ensure that the NULL bit mask has the same size at the vector it represents
+  TPL_ASSERT(num_elements_ == null_mask_.GetNumBits(),
+             "NULL indication bit vector size doesn't match vector size");
 
   // Check the strings in the vector, if it's a string vector
   if (type_ == TypeId::Varchar) {

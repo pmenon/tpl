@@ -117,13 +117,12 @@ class VectorProjection {
   void InitializeEmpty(const std::vector<const Schema::ColumnInfo *> &column_info);
 
   /**
-   * Has this projection been filtered through a selection vector?
-   * @return True if filtered; false otherwise.
+   * @return True if the projection is filtered; false otherwise.
    */
   bool IsFiltered() const { return sel_vector_[0] != kInvalidPos; }
 
   /**
-   * Return the selection vector. If no selection vector exists, returns NULL.
+   * @return The list of active TIDs in the projection; null if no list exists.
    */
   sel_t *GetSelectionVector() { return IsFiltered() ? sel_vector_ : nullptr; }
 
@@ -141,8 +140,7 @@ class VectorProjection {
   void SetSelections(const TupleIdList &tid_list);
 
   /**
-   * Access metadata for the column at position @em col_idx in the projection.
-   * @return The metadata for the column at the given index in the projection.
+   * @return The metadata for the column at index @em col_idx in the projection.
    */
   const Schema::ColumnInfo *GetColumnInfo(const uint32_t col_idx) const {
     TPL_ASSERT(col_idx < GetColumnCount(), "Out-of-bounds column access");
@@ -150,9 +148,7 @@ class VectorProjection {
   }
 
   /**
-   * Access the column at index @em col_idx as it appears in the projection.
-   * @param col_idx The index of the column.
-   * @return The column's vector data.
+   * @return The column vector at index @em col_idx as it appears in the projection.
    */
   const Vector *GetColumn(const uint32_t col_idx) const {
     TPL_ASSERT(col_idx < GetColumnCount(), "Out-of-bounds column access");
@@ -160,9 +156,7 @@ class VectorProjection {
   }
 
   /**
-   * Access the column at index @em col_idx as it appears in this projection.
-   * @param col_idx The index of the column.
-   * @return The column's vector data.
+   * @return The column vector at index @em col_idx as it appears in the projection.
    */
   Vector *GetColumn(const uint32_t col_idx) {
     TPL_ASSERT(col_idx < GetColumnCount(), "Out-of-bounds column access");

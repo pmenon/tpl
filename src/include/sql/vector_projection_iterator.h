@@ -63,26 +63,24 @@ class VectorProjectionIterator {
   DISALLOW_COPY_AND_MOVE(VectorProjectionIterator);
 
   /**
-   * Has this vector projection been filtered? Does it have a selection vector?
-   * @return True if filtered; false otherwise.
+   * @return True if the vector projection we're iterating over is filtered; false otherwise.
    */
   bool IsFiltered() const { return vector_projection_->IsFiltered(); }
 
   /**
-   * Reset this iterator to begin iteration over the given projection @em vp.
-   * @param vp The vector projection to iterate over.
+   * Reset this iterator to begin iteration over the given projection @em vector_projection.
+   * @param vector_projection The vector projection to iterate over.
    */
-  void Reset(VectorProjection *vp) {
-    vector_projection_ = vp;
-    curr_idx_ = vp->IsFiltered() ? vp->sel_vector_[0] : 0;
-    sel_vector_ = vp->sel_vector_;
+  void Reset(VectorProjection *vector_projection) {
+    vector_projection_ = vector_projection;
+    curr_idx_ = vector_projection->IsFiltered() ? vector_projection->sel_vector_[0] : 0;
+    sel_vector_ = vector_projection->sel_vector_;
     sel_vector_read_idx_ = 0;
     sel_vector_write_idx_ = 0;
   }
 
   /**
-   * Return the vector projection this iterator is iterating over.
-   * @return The vector projection that's being iterated over.
+   * @return The vector projection that we're iterating over.
    */
   VectorProjection *GetVectorProjection() const { return vector_projection_; }
 
@@ -209,11 +207,14 @@ class VectorProjectionIterator {
 //
 // ---------------------------------------------------------
 
-// The below methods are inlined in the header on purpose for performance. Please do not move them.
+// The below methods are inlined in the header on purpose for performance.
+// Please do not move them unless you know what you're doing.
 
-// Note: The getting and setter functions operate on the underlying vector's raw data rather than
-// going through Vector::GetValue() or Vector::SetValue(). This implies that the user is aware of
-// the underlying vector's type and its nullability property. We take advantage of that here.
+// Note: The getting and setter functions operate on the underlying vector's raw
+// data rather than going through Vector::GetValue() or Vector::SetValue(). This
+// assumes the user is aware of the underlying vector's type and its NULL-ness
+// property. We take advantage of that here by offering templatized accessor
+// functions optimized for both NULL and non-NULL cases.
 
 template <typename T, bool Nullable>
 inline const T *VectorProjectionIterator::GetValue(uint32_t col_idx, bool *null) const {
@@ -233,9 +234,10 @@ inline void VectorProjectionIterator::SetValue(uint32_t col_idx, const T val, bo
   // The vector we'll write into
   Vector *col_vector = vector_projection_->GetColumn(col_idx);
 
-  // If the column is NULL-able, we check the NULL indication flag before writing into the columns's
-  // underlying data array. If the column isn't NULL-able, we can skip the NULL check and directly
-  // write into the column data array.
+  // If the column is NULL-able, we check the NULL indication flag before
+  // writing into the columns's underlying data array. If the column isn't
+  // NULL-able, we can skip the NULL check and directly write into the column
+  // data array.
 
   if constexpr (Nullable) {
     col_vector->null_mask_[curr_idx_] = null;
