@@ -7,8 +7,7 @@
 #include <string>
 #include <utility>
 
-#include "spdlog/fmt/fmt.h"
-
+#include "common/exception.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "util/bit_util.h"
 
@@ -104,8 +103,7 @@ GenericValue Vector::GetValue(const uint64_t index) const {
           reinterpret_cast<const char *>(varlen_str.GetContent()), varlen_str.GetSize()));
     }
     default: {
-      throw std::runtime_error(
-          fmt::format("Cannot read value of type '{}' from vector", TypeIdToString(type_)));
+      throw NotImplementedException("Cannot read vector value of type '{}'", TypeIdToString(type_));
     }
   }
 }
@@ -183,8 +181,8 @@ void Vector::SetValue(const uint64_t index, const GenericValue &val) {
       break;
     }
     default: {
-      throw std::runtime_error(
-          fmt::format("Cannot write value of type '{}' into vector", TypeIdToString(type_)));
+      throw NotImplementedException("Cannot write vector value of type '{}'",
+                                    TypeIdToString(type_));
     }
   }
 }
@@ -252,8 +250,7 @@ void Vector::Reference(GenericValue *value) {
       break;
     }
     default: {
-      throw std::runtime_error(
-          fmt::format("Cannot read value of type '{}'", TypeIdToString(type_)));
+      throw NotImplementedException("Cannot reference vector of type '{}'", TypeIdToString(type_));
     }
   }
 }
