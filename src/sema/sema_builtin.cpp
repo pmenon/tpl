@@ -873,6 +873,36 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 
   switch (builtin) {
+    case ast::Builtin::VPIInit: {
+      if (!CheckArgCountAtLeast(call, 2)) {
+        return;
+      }
+
+      // The second argument must be a *VectorProjection
+      const auto vp_kind = ast::BuiltinType::VectorProjection;
+      if (!IsPointerToSpecificBuiltin(call_args[1]->type(), vp_kind)) {
+        ReportIncorrectCallArg(call, 0, GetBuiltinType(vp_kind)->PointerTo());
+        return;
+      }
+
+      // The third optional argument must be a *TupleIdList
+      const auto tid_list_kind = ast::BuiltinType::TupleIdList;
+      if (call_args.size() > 2 &&
+          !IsPointerToSpecificBuiltin(call_args[2]->type(), tid_list_kind)) {
+        ReportIncorrectCallArg(call, 2, GetBuiltinType(tid_list_kind)->PointerTo());
+        return;
+      }
+
+      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::VPIFree: {
+      if (!CheckArgCount(call, 1)) {
+        return;
+      }
+      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
     case ast::Builtin::VPIIsFiltered:
     case ast::Builtin::VPIHasNext:
     case ast::Builtin::VPIHasNextFiltered:
@@ -1488,6 +1518,8 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckBuiltinTableIterParCall(call);
       break;
     }
+    case ast::Builtin::VPIInit:
+    case ast::Builtin::VPIFree:
     case ast::Builtin::VPIIsFiltered:
     case ast::Builtin::VPIGetSelectedRowCount:
     case ast::Builtin::VPIGetVectorProjection:

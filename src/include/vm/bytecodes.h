@@ -106,6 +106,9 @@ namespace tpl::vm {
   F(ParallelScanTable, OperandType::UImm2, OperandType::Local, OperandType::Local, OperandType::FunctionId)            \
                                                                                                                        \
   /* Vector Projection Iterator (VPI) */                                                                               \
+  F(VPIInit, OperandType::Local, OperandType::Local)                                                                   \
+  F(VPIInitWithList, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
+  F(VPIFree, OperandType::Local)                                                                                       \
   F(VPIIsFiltered, OperandType::Local, OperandType::Local)                                                             \
   F(VPIGetSelectedRowCount, OperandType::Local, OperandType::Local)                                                    \
   F(VPIGetVectorProjection, OperandType::Local, OperandType::Local)                                                    \

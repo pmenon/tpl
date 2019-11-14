@@ -530,6 +530,21 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   // VPI iteration operations
   // -------------------------------------------------------
 
+  OP(VPIInit) : {
+    auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    auto *vector_projection = frame->LocalAt<sql::VectorProjection *>(READ_LOCAL_ID());
+    OpVPIInit(iter, vector_projection);
+    DISPATCH_NEXT();
+  }
+
+  OP(VPIInitWithList) : {
+    auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    auto *vector_projection = frame->LocalAt<sql::VectorProjection *>(READ_LOCAL_ID());
+    auto *tid_list = frame->LocalAt<sql::TupleIdList *>(READ_LOCAL_ID());
+    OpVPIInitWithList(iter, vector_projection, tid_list);
+    DISPATCH_NEXT();
+  }
+
   OP(VPIIsFiltered) : {
     auto *is_filtered = frame->LocalAt<bool *>(READ_LOCAL_ID());
     auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
@@ -607,6 +622,12 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   OP(VPIResetFiltered) : {
     auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
     OpVPIResetFiltered(iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(VPIFree) : {
+    auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    OpVPIFree(iter);
     DISPATCH_NEXT();
   }
 

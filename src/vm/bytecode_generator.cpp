@@ -592,6 +592,20 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
   LocalVar vpi = VisitExpressionForRValue(call->arguments()[0]);
 
   switch (builtin) {
+    case ast::Builtin::VPIInit: {
+      LocalVar vector_projection = VisitExpressionForRValue(call->arguments()[1]);
+      if (call->arguments().size() == 3) {
+        LocalVar tid_list = VisitExpressionForRValue(call->arguments()[2]);
+        GetEmitter()->Emit(Bytecode::VPIInitWithList, vpi, vector_projection, tid_list);
+      } else {
+        GetEmitter()->Emit(Bytecode::VPIInit, vpi, vector_projection);
+      }
+      break;
+    }
+    case ast::Builtin::VPIFree: {
+      GetEmitter()->Emit(Bytecode::VPIFree, vpi);
+      break;
+    }
     case ast::Builtin::VPIIsFiltered: {
       LocalVar is_filtered = GetExecutionResult()->GetOrCreateDestination(call->type());
       GetEmitter()->Emit(Bytecode::VPIIsFiltered, is_filtered, vpi);
@@ -1467,6 +1481,8 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitBuiltinTableIterParallelCall(call);
       break;
     }
+    case ast::Builtin::VPIInit:
+    case ast::Builtin::VPIFree:
     case ast::Builtin::VPIIsFiltered:
     case ast::Builtin::VPIGetSelectedRowCount:
     case ast::Builtin::VPIGetVectorProjection:

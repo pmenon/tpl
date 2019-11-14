@@ -36,6 +36,17 @@ void OpTableVectorIteratorFree(tpl::sql::TableVectorIterator *iter) {
   iter->~TableVectorIterator();
 }
 
+void OpVPIInit(tpl::sql::VectorProjectionIterator *vpi, tpl::sql::VectorProjection *vp) {
+  new (vpi) tpl::sql::VectorProjectionIterator(vp);
+}
+
+void OpVPIInitWithList(tpl::sql::VectorProjectionIterator *vpi, tpl::sql::VectorProjection *vp,
+                       tpl::sql::TupleIdList *tid_list) {
+  new (vpi) tpl::sql::VectorProjectionIterator(vp, tid_list);
+}
+
+void OpVPIFree(tpl::sql::VectorProjectionIterator *vpi) { vpi->~VectorProjectionIterator(); }
+
 // ---------------------------------------------------------
 // Filter Manager
 // ---------------------------------------------------------

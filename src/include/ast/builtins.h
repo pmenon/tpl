@@ -33,6 +33,7 @@ namespace tpl::ast {
   F(TableIterParallel, iterateTableParallel)                    \
                                                                 \
   /* VPI */                                                     \
+  F(VPIInit, vpiInit)                                           \
   F(VPIIsFiltered, vpiIsFiltered)                               \
   F(VPIGetSelectedRowCount, vpiSelectedRowCount)                \
   F(VPIGetVectorProjection, vpiGetVectorProjection)             \
@@ -59,6 +60,7 @@ namespace tpl::ast {
   F(VPISetDouble, vpiSetDouble)                                 \
   F(VPISetDate, vpiSetDate)                                     \
   F(VPISetString, vpiSetString)                                 \
+  F(VPIFree, vpiFree)                                           \
                                                                 \
   /* Hashing */                                                 \
   F(Hash, hash)                                                 \

@@ -234,6 +234,13 @@ VM_OP_HOT void OpParallelScanTable(const uint16_t table_id, void *const query_st
 // Vector Projection Iterator
 // ---------------------------------------------------------
 
+void OpVPIInit(tpl::sql::VectorProjectionIterator *vpi, tpl::sql::VectorProjection *vp);
+
+void OpVPIInitWithList(tpl::sql::VectorProjectionIterator *vpi, tpl::sql::VectorProjection *vp,
+                       tpl::sql::TupleIdList *tid_list);
+
+void OpVPIFree(tpl::sql::VectorProjectionIterator *vpi);
+
 VM_OP_HOT void OpVPIIsFiltered(bool *is_filtered, const tpl::sql::VectorProjectionIterator *vpi) {
   *is_filtered = vpi->IsFiltered();
 }
