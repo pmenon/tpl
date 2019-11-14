@@ -79,7 +79,7 @@ void CastFromSrcType(const Vector &source, Vector *target, SqlTypeId target_type
 void VectorOps::Cast(const Vector &source, Vector *target, SqlTypeId source_type,
                      SqlTypeId target_type) {
   target->Resize(source.GetSize());
-  target->SetSelectionVector(source.GetSelectionVector(), source.GetCount());
+  target->SetFilteredTupleIdList(source.GetFilteredTupleIdList(), source.GetCount());
   target->GetMutableNullMask()->Copy(source.GetNullMask());
   switch (source_type) {
     case SqlTypeId::Boolean:

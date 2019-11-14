@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <random>
 #include <vector>
 
@@ -49,7 +50,7 @@ int32_t CompareTuple(const Tuple &lhs, const Tuple &rhs) { return lhs.key - rhs.
  * @param iter The output vector projection iterator.
  */
 void Transpose(const byte *rows[], uint64_t num_rows, VectorProjectionIterator *iter) {
-  for (uint32_t i = 0; i < num_rows; i++) {
+  for (uint64_t i = 0; i < num_rows; i++) {
     auto tuple = reinterpret_cast<const Tuple *>(rows[i]);
     iter->SetValue<int64_t, false>(0, tuple->key, false);
     iter->SetValue<int64_t, false>(1, tuple->attributes, false);
@@ -66,8 +67,8 @@ void Transpose(const byte *rows[], uint64_t num_rows, VectorProjectionIterator *
 template <class T>
 bool IsSorted(const Vector &vec) {
   const auto data = reinterpret_cast<const T *>(vec.GetData());
-  for (uint32_t i = 1; i < vec.GetCount(); i++) {
-    bool left_null = vec.GetNullMask()[i];
+  for (uint64_t i = 1; i < vec.GetCount(); i++) {
+    bool left_null = vec.GetNullMask()[i - 1];
     bool right_null = vec.GetNullMask()[i];
     if (left_null != right_null) {
       return false;
@@ -75,7 +76,7 @@ bool IsSorted(const Vector &vec) {
     if (left_null) {
       continue;
     }
-    if (!LessThanEqual<T>::Apply(data[i], data[i])) {
+    if (!LessThanEqual<T>::Apply(data[i - 1], data[i])) {
       return false;
     }
   }
@@ -121,7 +122,9 @@ TEST_F(SorterVectorIteratorTest, EmptyIterator) {
 }
 
 TEST_F(SorterVectorIteratorTest, Iterate) {
+  // To ensure at least two vector's worth of data
   const uint32_t num_elems = kDefaultVectorSize + 29;
+
   const auto compare = [](const void *lhs, const void *rhs) {
     return CompareTuple(*reinterpret_cast<const Tuple *>(lhs),
                         *reinterpret_cast<const Tuple *>(rhs));
@@ -134,10 +137,25 @@ TEST_F(SorterVectorIteratorTest, Iterate) {
   for (SorterVectorIterator iter(sorter, row_meta(), Transpose); iter.HasNext();
        iter.Next(Transpose)) {
     auto *vpi = iter.GetVectorProjectionIterator();
+
+    // VPI shouldn't be filtered
+    EXPECT_FALSE(vpi->IsFiltered());
+    EXPECT_GT(vpi->GetTotalTupleCount(), 0u);
+
+    // VPI should have two columns: key and attributes
+    EXPECT_EQ(2u, vpi->GetVectorProjection()->GetColumnCount());
+
+    // Neither vector should have NULLs
+    EXPECT_FALSE(vpi->GetVectorProjection()->GetColumn(0)->GetNullMask().Any());
+    EXPECT_FALSE(vpi->GetVectorProjection()->GetColumn(1)->GetNullMask().Any());
+
+    // Verify sorted
+    const auto *key_vector = vpi->GetVectorProjection()->GetColumn(0);
+    const auto *key_data = reinterpret_cast<const decltype(Tuple::key) *>(key_vector->GetData());
+    EXPECT_TRUE(std::is_sorted(key_data, key_data + key_vector->GetCount()));
+
     // Count
     num_found += vpi->GetSelectedTupleCount();
-    // Verify sorted
-    IsSorted<int64_t>(*vpi->GetVectorProjection()->GetColumn(0));
   }
 
   EXPECT_EQ(num_elems, num_found);

@@ -31,11 +31,14 @@ TEST_F(VectorSelectTest, MismatchedCounts) {
   auto a = MakeTinyIntVector(10);
   auto b = MakeBigIntVector(10);
 
-  sel_t sel_1[] = {0, 1, 2};
-  sel_t sel_2[] = {9, 8};
+  auto filter_a = TupleIdList(a->GetCount());
+  auto filter_b = TupleIdList(b->GetCount());
 
-  a->SetSelectionVector(sel_1, 3);
-  b->SetSelectionVector(sel_2, 2);
+  filter_a = {0, 1, 2};
+  filter_b = {9, 8};
+
+  a->SetFilteredTupleIdList(&filter_a, filter_a.GetTupleCount());
+  b->SetFilteredTupleIdList(&filter_b, filter_b.GetTupleCount());
 
   auto result = TupleIdList(a->GetSize());
   result.AddAll();

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "common/common.h"
 #include "sql/generic_value.h"
 #include "sql/vector.h"
@@ -219,28 +221,35 @@ class VectorOps : public AllStatic {
   // -------------------------------------------------------
 
   /**
-   * Apply a function to a range of indexes. If a selection vector is provided, the function @em fun
-   * is applied to indexes from the selection vector in the range [offset, count). If a selection
-   * vector is not provided, the function @em fun is applied to integers in the range
-   * [offset, count).
+   * Apply a function to a range of indexes. If a non-null TID list is provided, the callback
+   * functor @em fun is applied to TIDs from the list in the range [offset, count). Otherwise, the
+   * callback functor @em fun is applied to integers in the range [offset, count).
    *
-   * The callback function receives two arguments:
+   * The callback functor receives two arguments:
    *
-   * i = the current tuple ID.
+   * i = the current TID.
    * k = position in TID list.
    *
    * @tparam F Functor accepting two integer arguments.
-   * @param sel_vector The optional selection vector to iterate over.
+   * @param tid_list The optional list of TIDs to iterate over.
    * @param count The number of elements in the selection vector if available.
    * @param f The function to call on each element.
    * @param offset The offset from the beginning to begin iteration.
    */
   template <typename F>
-  static void Exec(const sel_t *RESTRICT sel_vector, const uint64_t count, F &&f,
+  static void Exec(const TupleIdList *tid_list, const uint64_t count, F &&f,
                    const uint64_t offset = 0) {
-    if (sel_vector != nullptr) {
-      for (uint64_t i = offset; i < count; i++) {
-        f(sel_vector[i], i);
+    if (tid_list != nullptr) {
+      // If we're scanning all TIDs in the list, it's faster to use ForEach().
+      // If we're scanning only a subset range of TIDs in the list, we fall
+      // back to the slower TID iterator API.
+      // TODO(pmenon): Pull optimization into TupleIdList ?
+      uint64_t k = offset;
+      if (offset == 0 && count == tid_list->GetCapacity()) {
+        tid_list->ForEach([&](uint64_t i) { f(i, k++); });
+      } else {
+        const auto iter = tid_list->begin() + offset;
+        std::for_each(iter, iter + count, [&](uint64_t i) { f(i, k++); });
       }
     } else {
       for (uint64_t i = offset; i < count; i++) {
@@ -251,16 +260,15 @@ class VectorOps : public AllStatic {
 
   /**
    * Apply a function to active elements in the input vector @em vector. If the vector has a
-   * selection vector, the function @em fun is only applied to indexes from the selection vector in
+   * filtered TID list, the function @em fun is only applied to indexes from the selection vector in
    * the range [offset, count). If a selection vector is not provided, the function @em fun is
    * applied to integers in the range [offset, count).
    *
    * By default, the function will be applied to all active elements in the vector.
    *
    * The callback function receives two arguments:
-   *
-   * i = the current tuple ID.
-   * k = position in TID list.
+   * i = the current index from the selection vector.
+   * k = count.
    *
    * @tparam F Functor accepting two integer arguments.
    * @param sel_vector The optional selection vector to iterate over.
@@ -271,12 +279,12 @@ class VectorOps : public AllStatic {
   template <typename F>
   static void Exec(const Vector &vector, F &&f, uint64_t offset = 0, uint64_t count = 0) {
     if (count == 0) {
-      count = vector.count_;
+      count = vector.GetCount();
     } else {
       count += offset;
     }
 
-    Exec(vector.sel_vector_, count, f, offset);
+    Exec(vector.GetFilteredTupleIdList(), count, f, offset);
   }
 
   /**
@@ -295,7 +303,8 @@ class VectorOps : public AllStatic {
   template <typename T, typename F>
   static void ExecTyped(const Vector &vector, F &&f) {
     const auto *data = reinterpret_cast<const T *>(vector.GetData());
-    Exec(vector.sel_vector_, vector.count_, [&](uint64_t i, uint64_t k) { f(data[i], i, k); });
+    Exec(vector.GetFilteredTupleIdList(), vector.GetCount(),
+         [&](const uint64_t i, const uint64_t k) { f(data[i], i, k); });
   }
 };
 

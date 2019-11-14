@@ -17,13 +17,23 @@ enum Col : uint8_t { A = 0, B = 1, C = 2, D = 3 };
 using namespace std::chrono_literals;  // NOLINT
 
 // 0.025% selective
-void ColA_Lt_500(VectorProjection *vpi, TupleIdList *tids) {
-  VectorFilterExecutor::SelectLessThanVal(vpi, Col::A, GenericValue::CreateInteger(500), tids);
+void ColA_Lt_500(VectorProjection *vp, TupleIdList *tids) {
+  VectorFilterExecutor::SelectLessThanVal(vp, Col::A, GenericValue::CreateInteger(500), tids);
 }
 
 // 90% selective
-void ColB_Lt_9(VectorProjection *vpi, TupleIdList *tids) {
-  VectorFilterExecutor::SelectLessThanVal(vpi, Col::B, GenericValue::CreateInteger(9), tids);
+void ColB_Lt_9(VectorProjection *vp, TupleIdList *tids) {
+  VectorFilterExecutor::SelectLessThanVal(vp, Col::B, GenericValue::CreateInteger(9), tids);
+}
+
+// 90% selective tuple-at-a-time filter
+void ColB_Lt_9_TaaT(VectorProjection *vp, TupleIdList *tids) {
+  VectorProjectionIterator iter(vp, tids);
+  iter.RunFilter([&]() {
+    bool null = false;
+    auto col_b = *iter.GetValue<int32_t, false>(Col::B, &null);
+    return col_b < 9;
+  });
 }
 
 TEST_F(FilterManagerTest, ConjunctionTest) {
@@ -69,6 +79,29 @@ TEST_F(FilterManagerTest, DisjunctionTest) {
       auto cola = *vpi->GetValue<int32_t, false>(Col::A, nullptr);
       auto colb = *vpi->GetValue<int32_t, false>(Col::B, nullptr);
       EXPECT_TRUE(cola < 500 || colb < 9);
+    });
+  }
+}
+
+TEST_F(FilterManagerTest, MixedTaatVaatFilterTest) {
+  FilterManager filter;
+  filter.StartNewClause();
+  filter.InsertClauseTerms({ColB_Lt_9_TaaT, ColA_Lt_500});
+  filter.Finalize();
+
+  TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
+  for (tvi.Init(); tvi.Advance();) {
+    auto *vpi = tvi.GetVectorProjectionIterator();
+
+    // Run the filters
+    filter.RunFilters(vpi);
+
+    // Check
+    vpi->ForEach([vpi]() {
+      auto cola = *vpi->GetValue<int32_t, false>(Col::A, nullptr);
+      auto colb = *vpi->GetValue<int32_t, false>(Col::B, nullptr);
+      EXPECT_LT(cola, 500);
+      EXPECT_LT(colb, 9);
     });
   }
 }

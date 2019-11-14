@@ -77,9 +77,9 @@ class AggregationHashTableTest : public TplTest {
  public:
   AggregationHashTableTest() : memory_(nullptr), agg_table_(&memory_, sizeof(AggTuple)) {}
 
-  MemoryPool *memory() { return &memory_; }
+  MemoryPool *Memory() { return &memory_; }
 
-  AggregationHashTable *agg_table() { return &agg_table_; }
+  AggregationHashTable *AggTable() { return &agg_table_; }
 
  private:
   MemoryPool memory_;
@@ -100,7 +100,7 @@ TEST_F(AggregationHashTableTest, SimpleRandomInsertionTest) {
     auto input = InputTuple(distribution(generator), 1);
     auto hash_val = input.Hash();
     auto *existing = reinterpret_cast<AggTuple *>(
-        agg_table()->Lookup(hash_val, AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
+        AggTable()->Lookup(hash_val, AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
 
     if (existing != nullptr) {
       // The reference table should have an equivalent aggregate tuple
@@ -116,7 +116,7 @@ TEST_F(AggregationHashTableTest, SimpleRandomInsertionTest) {
         FAIL();
       }
       EXPECT_TRUE(ref_iter == ref_agg_table.end());
-      new (agg_table()->AllocInputTuple(hash_val)) AggTuple(input);
+      new (AggTable()->AllocInputTuple(hash_val)) AggTuple(input);
       ref_agg_table.emplace(input.key, std::make_unique<AggTuple>(input));
     }
   }
@@ -142,12 +142,12 @@ TEST_F(AggregationHashTableTest, IterationTest) {
     for (uint32_t idx = 0; idx < num_inserts; idx++) {
       InputTuple input(idx % num_groups, 1);
       auto *existing = reinterpret_cast<AggTuple *>(
-          agg_table()->Lookup(input.Hash(), AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
+          AggTable()->Lookup(input.Hash(), AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
 
       if (existing != nullptr) {
         existing->Advance(input);
       } else {
-        auto *new_agg = agg_table()->AllocInputTuple(input.Hash());
+        auto *new_agg = AggTable()->AllocInputTuple(input.Hash());
         new (new_agg) AggTuple(input);
       }
     }
@@ -159,7 +159,7 @@ TEST_F(AggregationHashTableTest, IterationTest) {
 
   {
     uint32_t group_count = 0;
-    for (AHTIterator iter(*agg_table()); iter.HasNext(); iter.Next()) {
+    for (AHTIterator iter(*AggTable()); iter.HasNext(); iter.Next()) {
       auto *agg_tuple = reinterpret_cast<const AggTuple *>(iter.GetCurrentAggregateRow());
       EXPECT_EQ(tuples_per_group, agg_tuple->count1);
       EXPECT_EQ(tuples_per_group * 2, agg_tuple->count2);
@@ -180,19 +180,23 @@ TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
   for (uint32_t idx = 0; idx < num_tuples; idx++) {
     InputTuple input(distribution(generator), 1);
     auto *existing = reinterpret_cast<AggTuple *>(
-        agg_table()->Lookup(input.Hash(), AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
+        AggTable()->Lookup(input.Hash(), AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
 
     if (existing != nullptr) {
       existing->Advance(input);
     } else {
-      auto *new_agg = agg_table()->AllocInputTuplePartitioned(input.Hash());
+      auto *new_agg = AggTable()->AllocInputTuplePartitioned(input.Hash());
       new (new_agg) AggTuple(input);
     }
   }
 }
 
 TEST_F(AggregationHashTableTest, BatchProcessTest) {
-  const uint32_t num_groups = 16;
+  constexpr uint32_t num_groups = 400;
+
+  // Insert 'num_tuples' tuples into an aggregation table to force the creation
+  // of 'num_groups' unique groups. Each group should receive 'tuples_per_group'
+  // tuples as input.
 
   const auto hash_fn = [](void *x) {
     auto vpi = reinterpret_cast<const VectorProjectionIterator *>(x);
@@ -227,27 +231,23 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
   std::vector<const Schema::ColumnInfo *> cols = {&key_col, &val_col};
 
   VectorProjection vp;
-  vp.InitializeEmpty(cols);
-
-  alignas(CACHELINE_SIZE) uint32_t keys[kDefaultVectorSize];
-  alignas(CACHELINE_SIZE) uint32_t vals[kDefaultVectorSize];
+  vp.Initialize(cols);
+  vp.Reset(kDefaultVectorSize);
 
   for (uint32_t run = 0; run < 10; run++) {
-    // Fill keys and value
+    // Setup projection's key and value
     std::random_device random;
     for (uint32_t idx = 0; idx < kDefaultVectorSize; idx++) {
-      keys[idx] = idx % num_groups;
-      vals[idx] = 1;
+      reinterpret_cast<uint32_t *>(vp.GetColumn(0)->GetData())[idx] = idx % num_groups;
+      reinterpret_cast<uint32_t *>(vp.GetColumn(1)->GetData())[idx] = 1;
     }
-
-    // Setup projection
-    vp.GetColumn(0)->Reference(reinterpret_cast<byte *>(keys), nullptr, kDefaultVectorSize);
-    vp.GetColumn(1)->Reference(reinterpret_cast<byte *>(vals), nullptr, kDefaultVectorSize);
 
     // Process
     VectorProjectionIterator vpi(&vp);
-    agg_table()->ProcessBatch(&vpi, hash_fn, key_eq, init_agg, advance_agg, false);
+    AggTable()->ProcessBatch(&vpi, hash_fn, key_eq, init_agg, advance_agg, false);
   }
+
+  EXPECT_EQ(num_groups, AggTable()->GetTupleCount());
 }
 
 TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {

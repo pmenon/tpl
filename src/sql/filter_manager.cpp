@@ -136,8 +136,10 @@ void FilterManager::RunFilters(VectorProjection *vector_projection) {
     output_list_.Resize(projection_size);
   }
 
-  if (auto *sel_vector = vector_projection->GetSelectionVector(); sel_vector != nullptr) {
-    input_list_.BuildFromSelectionVector(sel_vector, vector_projection->GetSelectedTupleCount());
+  if (vector_projection->IsFiltered()) {
+    const auto *filter = vector_projection->GetFilteredTupleIdList();
+    TPL_ASSERT(filter != nullptr, "No TID list filter for filtered projection");
+    input_list_.AssignFrom(*filter);
   } else {
     input_list_.AddAll();
   }
@@ -161,13 +163,13 @@ void FilterManager::RunFilters(VectorProjection *vector_projection) {
   }
 
   // Finish
-  vector_projection->SetSelections(output_list_);
+  vector_projection->SetFilteredSelections(output_list_);
 }
 
 void FilterManager::RunFilters(VectorProjectionIterator *vpi) {
   VectorProjection *vector_projection = vpi->GetVectorProjection();
   RunFilters(vector_projection);
-  vpi->Reset();
+  vpi->SetVectorProjection(vector_projection);
 }
 
 }  // namespace tpl::sql

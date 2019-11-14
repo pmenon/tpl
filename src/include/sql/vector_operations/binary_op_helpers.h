@@ -19,20 +19,21 @@ inline void BinaryOperation_Constant_Vector(const Vector &left, const Vector &ri
 
     if (IgnoreNull && result->GetNullMask().Any()) {
       // Slow-path: need to check NULLs
-      VectorOps::Exec(right.GetSelectionVector(), right.GetCount(), [&](uint64_t i, uint64_t k) {
-        if (!result->GetNullMask()[i]) {
-          result_data[i] = Op::Apply(left_data[0], right_data[i]);
-        }
-      });
+      VectorOps::Exec(right.GetFilteredTupleIdList(), right.GetCount(),
+                      [&](uint64_t i, uint64_t k) {
+                        if (!result->GetNullMask()[i]) {
+                          result_data[i] = Op::Apply(left_data[0], right_data[i]);
+                        }
+                      });
     } else {
       // Fast-path: no NULL checks
-      VectorOps::Exec(right.GetSelectionVector(), right.GetCount(), [&](uint64_t i, uint64_t k) {
-        result_data[i] = Op::Apply(left_data[0], right_data[i]);
-      });
+      VectorOps::Exec(
+          right.GetFilteredTupleIdList(), right.GetCount(),
+          [&](uint64_t i, uint64_t k) { result_data[i] = Op::Apply(left_data[0], right_data[i]); });
     }
   }
 
-  result->SetSelectionVector(right.GetSelectionVector(), right.GetCount());
+  result->SetFilteredTupleIdList(right.GetFilteredTupleIdList(), right.GetCount());
 }
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
@@ -51,26 +52,26 @@ inline void BinaryOperation_Vector_Constant(const Vector &left, const Vector &ri
 
     if (IgnoreNull && result->GetNullMask().Any()) {
       // Slow-path: need to check NULLs
-      VectorOps::Exec(left.GetSelectionVector(), left.GetCount(), [&](uint64_t i, uint64_t k) {
+      VectorOps::Exec(left.GetFilteredTupleIdList(), left.GetCount(), [&](uint64_t i, uint64_t k) {
         if (!result->GetNullMask()[i]) {
           result_data[i] = Op::Apply(left_data[i], right_data[0]);
         }
       });
     } else {
       // Fast-path: no NULL checks
-      VectorOps::Exec(left.GetSelectionVector(), left.GetCount(), [&](uint64_t i, uint64_t k) {
+      VectorOps::Exec(left.GetFilteredTupleIdList(), left.GetCount(), [&](uint64_t i, uint64_t k) {
         result_data[i] = Op::Apply(left_data[i], right_data[0]);
       });
     }
   }
 
-  result->SetSelectionVector(left.GetSelectionVector(), left.GetCount());
+  result->SetFilteredTupleIdList(left.GetFilteredTupleIdList(), left.GetCount());
 }
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
           bool IgnoreNull = false>
 inline void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right, Vector *result) {
-  TPL_ASSERT(left.GetSelectionVector() == right.GetSelectionVector(),
+  TPL_ASSERT(left.GetFilteredTupleIdList() == right.GetFilteredTupleIdList(),
              "Mismatched selection vectors for comparison");
   TPL_ASSERT(left.GetCount() == right.GetCount(), "Mismatched vector counts for comparison");
 
@@ -81,18 +82,18 @@ inline void BinaryOperation_Vector_Vector(const Vector &left, const Vector &righ
   result->GetMutableNullMask()->Copy(left.GetNullMask()).Union(right.GetNullMask());
 
   if (IgnoreNull && result->GetNullMask().Any()) {
-    VectorOps::Exec(left.GetSelectionVector(), left.GetCount(), [&](uint64_t i, uint64_t k) {
+    VectorOps::Exec(left.GetFilteredTupleIdList(), left.GetCount(), [&](uint64_t i, uint64_t k) {
       if (!result->GetNullMask()[i]) {
         result_data[i] = Op::Apply(left_data[i], right_data[i]);
       }
     });
   } else {
-    VectorOps::Exec(left.GetSelectionVector(), left.GetCount(), [&](uint64_t i, uint64_t k) {
+    VectorOps::Exec(left.GetFilteredTupleIdList(), left.GetCount(), [&](uint64_t i, uint64_t k) {
       result_data[i] = Op::Apply(left_data[i], right_data[i]);
     });
   }
 
-  result->SetSelectionVector(left.GetSelectionVector(), left.GetCount());
+  result->SetFilteredTupleIdList(left.GetFilteredTupleIdList(), left.GetCount());
 }
 
 /**

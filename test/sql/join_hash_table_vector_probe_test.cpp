@@ -80,13 +80,6 @@ struct Range {
   int32_t operator()() noexcept { return dist(random); }
 };
 
-// Random number functor
-struct Rand {
-  std::random_device random;
-  Rand() = default;
-  int32_t operator()() noexcept { return random(); }
-};
-
 TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
   constexpr const uint8_t N = 1;
   constexpr const uint32_t num_build = 1000;
@@ -95,14 +88,10 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
   // Create test JHT
   auto jht = BuildJoinHashTable<N>(/*concise*/ false, num_build, Seq(0));
 
-  // Create test probe input
-  auto probe_keys = std::vector<uint32_t>(num_probe);
-  std::generate(probe_keys.begin(), probe_keys.end(), Range(0, num_build - 1));
-
+  // The vector projection
   Schema schema({{"probeKey", IntegerType::InstanceNonNullable()}});
-
   VectorProjection vp;
-  vp.InitializeEmpty({schema.GetColumnInfo(0)});
+  vp.Initialize({schema.GetColumnInfo(0)});
 
   VectorProjectionIterator vpi(&vp);
 
@@ -114,8 +103,13 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
     uint32_t size = std::min(kDefaultVectorSize, num_probe - i);
 
     // Setup VP
-    vp.GetColumn(0)->Reference(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, size);
-    vpi.Reset(&vp);
+    vp.Reset(size);
+    auto probe_keys = reinterpret_cast<uint32_t *>(vp.GetColumn(0)->GetData());
+    std::generate(probe_keys, probe_keys + size, Range(0, num_build - 1));
+    vp.CheckIntegrity();
+
+    // Setup VPI
+    vpi.SetVectorProjection(&vp);
 
     // Lookup
     lookup.Prepare(&vpi, HashTupleInVPI<N>);
@@ -131,6 +125,7 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
   EXPECT_EQ(num_probe, count);
 }
 
+#if 0
 TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
   auto bench = [this](bool concise) {
     constexpr const uint8_t N = 1;
@@ -164,7 +159,7 @@ TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
 
       // Setup VP
       vp.GetColumn(0)->Reference(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, size);
-      vpi.Reset(&vp);
+      vpi.SetVectorProjection(&vp);
 
       // Lookup
       lookup.Prepare(&vpi, HashTupleInVPI<N>);
@@ -186,5 +181,6 @@ TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
   bench(false);
   bench(true);
 }
+#endif
 
 }  // namespace tpl::sql

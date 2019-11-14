@@ -57,7 +57,7 @@ void VectorOps::Hash(const Vector &input, Vector *result) {
                                     TypeIdToString(input.GetTypeId()));
   }
 
-  result->SetSelectionVector(input.GetSelectionVector(), input.GetCount());
+  result->SetFilteredTupleIdList(input.GetFilteredTupleIdList(), input.GetCount());
 }
 
 }  // namespace tpl::sql

@@ -66,7 +66,7 @@ void VectorOps::Copy(const Vector &source, void *target, uint64_t offset, uint64
 
 void VectorOps::Copy(const Vector &source, Vector *target, uint64_t offset) {
   TPL_ASSERT(offset < source.count_, "Out-of-bounds offset");
-  TPL_ASSERT(target->GetSelectionVector() == nullptr, "Cannot copy into filtered vector");
+  TPL_ASSERT(target->GetFilteredTupleIdList() == nullptr, "Cannot copy into filtered vector");
 
   // Resize the target vector to accommodate count-offset elements from the source vector
   target->Resize(source.GetCount() - offset);

@@ -24,7 +24,7 @@ TEST_F(VectorHashTest, NumericHashes) {
     VectorOps::Hash(*input, hashes.get());                                                \
     EXPECT_EQ(input->GetSize(), hashes->GetSize());                                       \
     EXPECT_EQ(input->GetCount(), hashes->GetCount());                                     \
-    EXPECT_EQ(nullptr, hashes->GetSelectionVector());                                     \
+    EXPECT_EQ(nullptr, hashes->GetFilteredTupleIdList());                                 \
     /* Check output */                                                                    \
     VectorOps::Exec(*input, [&](uint64_t i, uint64_t k) {                                 \
       EXPECT_EQ(reinterpret_cast<hash_t *>(hashes->GetData())[i],                         \
@@ -52,7 +52,7 @@ TEST_F(VectorHashTest, HashWithNullInput) {
 
   EXPECT_EQ(input->GetSize(), hash->GetSize());
   EXPECT_EQ(input->GetCount(), hash->GetCount());
-  EXPECT_EQ(nullptr, hash->GetSelectionVector());
+  EXPECT_EQ(nullptr, hash->GetFilteredTupleIdList());
 
   auto raw_input = reinterpret_cast<float *>(input->GetData());
   auto raw_hash = reinterpret_cast<hash_t *>(hash->GetData());
@@ -75,7 +75,7 @@ TEST_F(VectorHashTest, StringHash) {
 
   EXPECT_EQ(input->GetSize(), hash->GetSize());
   EXPECT_EQ(input->GetCount(), hash->GetCount());
-  EXPECT_EQ(nullptr, hash->GetSelectionVector());
+  EXPECT_EQ(nullptr, hash->GetFilteredTupleIdList());
 
   auto raw_input = reinterpret_cast<const VarlenEntry *>(input->GetData());
   auto raw_hash = reinterpret_cast<hash_t *>(hash->GetData());

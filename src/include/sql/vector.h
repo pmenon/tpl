@@ -9,17 +9,18 @@
 #include "common/macros.h"
 #include "sql/generic_value.h"
 #include "sql/sql.h"
+#include "sql/tuple_id_list.h"
 #include "util/bit_vector.h"
 #include "util/string_heap.h"
 
 namespace tpl::sql {
 
 /**
- * A vector represents a contiguous chunk of values of a single type. A vector may allocate and own
+ * A Vector represents a contiguous chunk of values of a single type. A vector may allocate and own
  * its data, or <b>reference</b> data owned by some other entity, e.g., base table column data, data
  * within another vector, or a constant value.
  *
- * All vectors have a maximum capacity (see Vector::GetCapacity()) determined by the global constant
+ * All Vectors have a maximum capacity (see Vector::GetCapacity()) determined by the global constant
  * ::tpl::kDefaultVectorSize usually set to 2048 elements. Vectors also have a <b>size</b> (see
  * Vector::GetSize()) that reflects the number of physically contiguous elements <b>currently</b> in
  * the vector. A vector's size can fluctuate through its life, but will always be less than its
@@ -28,31 +29,31 @@ namespace tpl::sql {
  * filtered out through predicates. The visibility of elements in the vector is controlled through
  * a <b>selection vector</b>.
  *
- * A selection vector is an array containing the indexes of the <i>active</i> vector elements. When
- * a selection vector is available, it must be used to access the vector's data since the vector may
- * hold otherwise invalid data in unselected positions (e.g., null pointers). This functionality is
- * provided for you through VectorOps::Exec(), but can be done manually as the below example
- * illustrates:
+ * Vectors can be logically filtered through a <i>tuple ID (TID) list</i>. A TID list is an array
+ * containing the indexes of the <i>active</i> vector elements. If a filtered TID list is available,
+ * it must be used to access the vector's data since the vector may hold otherwise invalid data in
+ * unselected positions (e.g., null pointers). This functionality is provided for you through
+ * VectorOps::Exec(), but can be done manually as the below example illustrates:
  *
  * @code
- * Vector vec ...
- * sel_t *sel_vec = vec.selection_vector();
+ * Vector vec = ...
+ * auto *tids = vec.GetFilteredTupleIdList();
  * uint64_t x = 0;
- * for (uint64_t i = 0; i < vec.GetCount(); i++) {
- *   x += vec.data()[sel_vec[i]];
+ * for (auto i : *tids) {
+ *   x += vec.GetData()[i];
  * }
  * @endcode
  *
- * The selection vector is used primarily to activate and deactivate elements in the vector without
- * copying or moving data. Each vector maintains this invariant: active count <= size <= capacity.
- * If there is no selection vector, the active element count and size will match. Otherwise, the
- * active element count equals the size of the selection vector.
+ * The TID list is used primarily to activate and deactivate elements in the vector without having
+ * to copy or move data. Each vector maintains the invariant: active count <= size <= capacity.
+ * If there is no filtering TID list, the active element count and size will match. Otherwise, the
+ * active element count equals the size (i.e., number of TIDs in) the filtering TID list.
  *
  * <h2>Usage:</h2>
  *
  * <h3>Referencing-vectors</h3>
  * Referencing-vectors do not allocate any memory and can only reference externally-owned data. To
- * create a referencing-vector, create a vector of the appropriate type followed by a call to
+ * create a referencing-vector, create a Vector of the appropriate type followed by a call to
  * Vector::Reference() with the raw data as shown below:
  * @code
  * int16_t data[] = {0,2,4,6,8};          // data = [0,2,4,6,8]
@@ -61,8 +62,8 @@ namespace tpl::sql {
  * vec.Reference(data, null_mask, size);  // vec = [0,NULL,4,NULL,8]
  * @endcode
  *
- * When creating a referencing-vector, the underlying data is not allowed to be NULL. The input NULL
- * bit mask, however, can be NULL to indicate that <b>no</b> elements are NULL. The <i>size</i>
+ * When creating a referencing-vector, the underlying data is not allowed to be NULL. The NULL bit
+ * mask, however, can be NULL to indicate that <b>no</b> elements are NULL. The <i>size</i>
  * attribute indicates the number of physically contiguous elements in the vector, and must be
  * smaller than the maximum capacity of the vector. After creation, the count and size are equal.
  *
@@ -87,8 +88,6 @@ namespace tpl::sql {
  * sparingly. If you find yourself invoking this is in a hot-loop, or very often, reconsider your
  * interaction pattern with Vector, and think about writing a new vector primitive to achieve your
  * objective.
- *
- * Inspired by VectorWise.
  */
 class Vector {
   friend class VectorOps;
@@ -153,9 +152,9 @@ class Vector {
   byte *GetData() const noexcept { return data_; }
 
   /**
-   * @return The selection vector; NULL if there isn't one.
+   * @return The list of active TIDs in the vector. If all TIDs are visible, the list is NULL.
    */
-  sel_t *GetSelectionVector() const noexcept { return sel_vector_; }
+  const TupleIdList *GetFilteredTupleIdList() const noexcept { return tid_list_; }
 
   /**
    * @return An immutable view of this vector's NULL indication bit mask.
@@ -173,20 +172,37 @@ class Vector {
   VarlenHeap *GetMutableStringHeap() noexcept { return &varlen_heap_; }
 
   /**
-   * Set the selection vector.
-   * @param sel_vector The selection vector.
+   * Set the (optional) list of filtered TIDs in the vector and the new count of vector. A null
+   * @em tid_list indicates that the vector is unfiltered in which case @em count must match the
+   * current vector size. A non-null TID list contains the TIDs of active vector elements, and
+   * @em count must match the size of the TID list.
+   *
+   * Note: For non-null input TID lists, we don't necessarily need the count since we can derive it
+   *       using TupleIdList::GetTupleCount(). We don't do that here for performance. This method is
+   *       called either during vector operations which simply propagate the TID list by reference,
+   *       or through a VectorProjection. In the former case, the cached count value in the source
+   *       vector is also propagated. In the latter case, the count is computed once for the
+   *       projection and sent to each child vector.
+   *
+   * TODO(pmenon): Is the above optimization valid?
+   *
+   * @param tid_list The list of active TIDs in the vector.
    * @param count The number of elements in the selection vector.
    */
-  void SetSelectionVector(sel_t *const sel_vector, const uint64_t count) {
-    TPL_ASSERT(count <= num_elements_, "Selection vector count cannot exceed vector size");
-    sel_vector_ = sel_vector;
+  void SetFilteredTupleIdList(const TupleIdList *tid_list, const uint64_t count) {
+    TPL_ASSERT(tid_list == nullptr || tid_list->GetCapacity() == num_elements_,
+               "TID list too small to capture all vector elements");
+    TPL_ASSERT(tid_list == nullptr || tid_list->GetTupleCount() == count,
+               "TID list size and count do not match");
+    TPL_ASSERT(count <= num_elements_, "TID list count must be smaller than vector size");
+    tid_list_ = tid_list;
     count_ = count;
   }
 
   /**
    * @return True if this vector is holding a single constant value; false otherwise.
    */
-  bool IsConstant() const noexcept { return num_elements_ == 1 && sel_vector_ == nullptr; }
+  bool IsConstant() const noexcept { return num_elements_ == 1 && tid_list_ == nullptr; }
 
   /**
    * @return True if this vector is empty; false otherwise.
@@ -205,7 +221,7 @@ class Vector {
    * @return True if the value at index @em index is NULL; false otherwise.
    */
   bool IsNull(const uint64_t index) const {
-    return null_mask_[sel_vector_ != nullptr ? sel_vector_[index] : index];
+    return null_mask_[tid_list_ != nullptr ? (*tid_list_)[index] : index];
   }
 
   /**
@@ -214,7 +230,7 @@ class Vector {
    * @param null Whether the element is NULL.
    */
   void SetNull(const uint64_t index, const bool null) {
-    null_mask_[sel_vector_ != nullptr ? sel_vector_[index] : index] = null;
+    null_mask_[tid_list_ != nullptr ? (*tid_list_)[index] : index] = null;
   }
 
   /**
@@ -335,8 +351,9 @@ class Vector {
   // A pointer to the data.
   byte *data_;
 
-  // The selection vector of the vector.
-  sel_t *sel_vector_;
+  // The list of active tuple IDs in the vector. If all TIDs are active, the
+  // list is NOT used and will be NULL.
+  const TupleIdList *tid_list_;
 
   // The null mask used to indicate if an element in the vector is NULL.
   NullMask null_mask_;

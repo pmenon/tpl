@@ -33,7 +33,7 @@ inline void UnaryOperation_HandleNull(const Vector &input, Vector *result) {
         input, [&](uint64_t i, uint64_t k) { result_data[i] = Op::Apply(input_data[i], false); });
   }
 
-  result->SetSelectionVector(input.GetSelectionVector(), input.GetCount());
+  result->SetFilteredTupleIdList(input.GetFilteredTupleIdList(), input.GetCount());
 }
 
 /**
@@ -56,7 +56,7 @@ inline void UnaryOperation(const Vector &input, Vector *result) {
                   [&](uint64_t i, uint64_t k) { result_data[i] = Op::Apply(input_data[i]); });
 
   result->GetMutableNullMask()->Copy(input.GetNullMask());
-  result->SetSelectionVector(input.GetSelectionVector(), input.GetCount());
+  result->SetFilteredTupleIdList(input.GetFilteredTupleIdList(), input.GetCount());
 }
 
 }  // namespace tpl::sql

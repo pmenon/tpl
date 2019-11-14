@@ -77,9 +77,9 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
     schema_ = std::make_unique<Schema>(std::move(cols));
   }
 
-  MemoryPool *memory() { return memory_.get(); }
+  MemoryPool *Memory() { return memory_.get(); }
 
-  std::vector<const Schema::ColumnInfo *> output_schema() {
+  std::vector<const Schema::ColumnInfo *> OutputSchema() {
     std::vector<const Schema::ColumnInfo *> ret;
     for (const auto &col : schema_->GetColumns()) {
       ret.push_back(&col);
@@ -108,10 +108,10 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
 
 TEST_F(AggregationHashTableVectorIteratorTest, IterateEmptyAggregation) {
   // Empty table
-  AggregationHashTable agg_ht(memory(), sizeof(AggTuple));
+  AggregationHashTable agg_ht(Memory(), sizeof(AggTuple));
 
   // Iterate
-  AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
+  AHTVectorIterator iter(agg_ht, OutputSchema(), Transpose);
   for (; iter.HasNext(); iter.Next(Transpose)) {
     FAIL() << "Iteration should not occur on empty aggregation hash table";
   }
@@ -122,15 +122,16 @@ TEST_F(AggregationHashTableVectorIteratorTest, IterateSmallAggregation) {
   constexpr uint32_t group_size = 10;
   constexpr uint32_t num_tuples = num_aggs * group_size;
 
-  // Insert 'num_tuples' into an aggregation table to force the creation of 'num_aggs' unique
-  // aggregates. Each aggregate should receive 'group_size' tuples as input whose column value
-  // is 'cola'. The key range of aggregates is [0, num_aggs).
+  // Insert 'num_tuples' tuples into an aggregation table to force the creation
+  // of 'num_aggs' unique aggregates. Each aggregate should receive 'group_size'
+  // tuples as input whose column value is 'cola'. The key range of aggregates
+  // is [0, num_aggs).
   //
   // We need to ensure:
   // 1. After transposition, we receive exactly 'num_aggs' unique aggregates.
   // 2. For each aggregate, the associated count/sums is correct.
 
-  AggregationHashTable agg_ht(memory(), sizeof(AggTuple));
+  AggregationHashTable agg_ht(Memory(), sizeof(AggTuple));
 
   // Populate
   PopulateAggHT(&agg_ht, num_aggs, num_tuples, 1 /* cola */);
@@ -138,21 +139,22 @@ TEST_F(AggregationHashTableVectorIteratorTest, IterateSmallAggregation) {
   std::unordered_set<uint64_t> reference;
 
   // Iterate
-  AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
+  AHTVectorIterator iter(agg_ht, OutputSchema(), Transpose);
   for (; iter.HasNext(); iter.Next(Transpose)) {
     auto *vpi = iter.GetVectorProjectionIterator();
     EXPECT_FALSE(vpi->IsFiltered());
+    EXPECT_EQ(4u, vpi->GetVectorProjection()->GetColumnCount());
+    EXPECT_GT(vpi->GetVectorProjection()->GetTotalTupleCount(), 0);
 
     for (; vpi->HasNext(); vpi->Advance()) {
       auto agg_key = *vpi->GetValue<int64_t, false>(0, nullptr);
       auto agg_count_1 = *vpi->GetValue<int64_t, false>(1, nullptr);
       auto agg_count_2 = *vpi->GetValue<int64_t, false>(2, nullptr);
       auto agg_count_3 = *vpi->GetValue<int64_t, false>(3, nullptr);
-      EXPECT_TRUE(agg_key < num_aggs);
+      EXPECT_LT(agg_key, num_aggs);
       EXPECT_EQ(group_size, agg_count_1);
       EXPECT_EQ(agg_count_1 * 2u, agg_count_2);
       EXPECT_EQ(agg_count_1 * 10u, agg_count_3);
-      // The key should be unique, i.e., one we haven't seen so far.
       EXPECT_EQ(0u, reference.count(agg_key));
       reference.insert(agg_key);
     }
@@ -166,29 +168,33 @@ TEST_F(AggregationHashTableVectorIteratorTest, FilterPostAggregation) {
   constexpr uint32_t group_size = 10;
   constexpr uint32_t num_tuples = num_aggs * group_size;
 
-  AggregationHashTable agg_ht(memory(), sizeof(AggTuple));
+  constexpr int32_t agg_needle_key = 686;
+
+  // Insert 'num_tuples' tuples into an aggregation table to force the creation
+  // of 'num_aggs' unique aggregates. Each aggregate should receive 'group_size'
+  // tuples as input whose column value is 'cola'. The key range of aggregates
+  // is [0, num_aggs).
+  //
+  // Apply a filter to the output of the iterator looking for a unique key.
+  // There should only be one match since keys are unique.
+
+  AggregationHashTable agg_ht(Memory(), sizeof(AggTuple));
 
   PopulateAggHT(&agg_ht, num_aggs, num_tuples, 1 /* cola */);
 
-  constexpr int32_t agg_needle_key = 686;
-  constexpr int32_t agg_max_key = 2600;
-
   // Iterate
-  int32_t num_needle_keys = 0, num_keys_lt_max = 0;
-  AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
+  uint32_t num_needle_matches = 0;
+  AHTVectorIterator iter(agg_ht, OutputSchema(), Transpose);
   for (; iter.HasNext(); iter.Next(Transpose)) {
     auto *vpi = iter.GetVectorProjectionIterator();
-    vpi->ForEach([&]() {
+    vpi->RunFilter([&]() {
       auto agg_key = *vpi->GetValue<int64_t, false>(0, nullptr);
-      num_needle_keys += static_cast<uint32_t>(agg_key == agg_needle_key);
-      num_keys_lt_max += static_cast<uint32_t>(agg_key < agg_max_key);
+      return agg_key == agg_needle_key;
     });
+    num_needle_matches += vpi->GetSelectedTupleCount();
   }
 
-  // After filter, there should be exactly one key equal to the needle. Since we
-  // use a dense aggregate key range
-  EXPECT_EQ(1, num_needle_keys);
-  EXPECT_EQ(agg_max_key, num_keys_lt_max);
+  EXPECT_EQ(1u, num_needle_matches);
 }
 
 TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
@@ -196,7 +202,7 @@ TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
 
   for (uint32_t size : {10, 100, 1000, 10000, 100000, 1000000, 10000000}) {
     // The table
-    AggregationHashTable agg_ht(memory(), sizeof(AggTuple));
+    AggregationHashTable agg_ht(Memory(), sizeof(AggTuple));
 
     // Populate
     PopulateAggHT(&agg_ht, size, size * 10, 1 /* cola */);
@@ -206,14 +212,14 @@ TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
     auto vaat_ms = Bench(4, [&]() {
       vaat_ret = 0;
       TupleIdList tids(kDefaultVectorSize);
-      AHTVectorIterator iter(agg_ht, output_schema(), Transpose);
+      AHTVectorIterator iter(agg_ht, OutputSchema(), Transpose);
       for (; iter.HasNext(); iter.Next(Transpose)) {
         auto *vector_projection = iter.GetVectorProjectionIterator()->GetVectorProjection();
         tids.Resize(vector_projection->GetTotalTupleCount());
         tids.AddAll();
         VectorFilterExecutor::SelectLessThanVal(vector_projection, 0,
                                                 GenericValue::CreateBigInt(filter_val), &tids);
-        vector_projection->SetSelections(tids);
+        vector_projection->SetFilteredSelections(tids);
       }
     });
 

@@ -80,7 +80,13 @@ void TableVectorIterator::RefreshVectorProjection() {
   // Reset our projection and refresh all columns with new data from the column
   // iterators.
 
-  vector_projection_.Reset();
+  const uint32_t tuple_count = column_iterators_[0].GetTupleCount();
+
+  TPL_ASSERT(std::all_of(column_iterators_.begin(), column_iterators_.end(),
+                         [&](const auto &iter) { return tuple_count == iter.GetTupleCount(); }),
+             "Not all iterators have the same size?");
+
+  vector_projection_.Reset(tuple_count);
   for (uint64_t col_idx = 0; col_idx < column_iterators_.size(); col_idx++) {
     Vector *column_vector = vector_projection_.GetColumn(col_idx);
     column_vector->Reference(column_iterators_[col_idx].GetColumnData(),
@@ -90,7 +96,7 @@ void TableVectorIterator::RefreshVectorProjection() {
   vector_projection_.CheckIntegrity();
 
   // Insert our vector projection instance into the vector projection iterator
-  vector_projection_iterator_.Reset(&vector_projection_);
+  vector_projection_iterator_.SetVectorProjection(&vector_projection_);
 }
 
 bool TableVectorIterator::Advance() {

@@ -1,4 +1,3 @@
-#include <limits>
 #include <numeric>
 #include <vector>
 
@@ -17,7 +16,7 @@ TEST_F(VectorTest, CheckEmpty) {
   auto vec1 = MakeIntegerVector(0);
   EXPECT_EQ(0u, vec1->GetSize());
   EXPECT_EQ(0u, vec1->GetCount());
-  EXPECT_EQ(nullptr, vec1->GetSelectionVector());
+  EXPECT_EQ(nullptr, vec1->GetFilteredTupleIdList());
   vec1->CheckIntegrity();
 }
 
@@ -26,7 +25,7 @@ TEST_F(VectorTest, Clear) {
 
   EXPECT_EQ(10u, vec->GetSize());
   EXPECT_EQ(10u, vec->GetCount());
-  EXPECT_EQ(nullptr, vec->GetSelectionVector());
+  EXPECT_EQ(nullptr, vec->GetFilteredTupleIdList());
 
   for (uint32_t i = 0; i < vec->GetSize(); i++) {
     EXPECT_EQ(GenericValue::CreateTinyInt(0), vec->GetValue(i));
@@ -45,7 +44,7 @@ TEST_F(VectorTest, InitFromArray) {
     vec.Reference(reinterpret_cast<byte *>(arr), nullptr, num_elems);
     EXPECT_EQ(num_elems, vec.GetSize());
     EXPECT_EQ(num_elems, vec.GetCount());
-    EXPECT_EQ(nullptr, vec.GetSelectionVector());
+    EXPECT_EQ(nullptr, vec.GetFilteredTupleIdList());
 
     for (uint32_t i = 0; i < num_elems; i++) {
       auto val = vec.GetValue(i);
@@ -64,7 +63,7 @@ TEST_F(VectorTest, InitFromArray) {
     vec.Reference(reinterpret_cast<byte *>(arr), nullptr, num_elems);
     EXPECT_EQ(num_elems, vec.GetSize());
     EXPECT_EQ(num_elems, vec.GetCount());
-    EXPECT_EQ(nullptr, vec.GetSelectionVector());
+    EXPECT_EQ(nullptr, vec.GetFilteredTupleIdList());
 
     for (uint32_t i = 0; i < num_elems; i++) {
       auto val = vec.GetValue(i);
@@ -137,13 +136,14 @@ TEST_F(VectorTest, SetSelectionVector) {
   EXPECT_FLOAT_EQ(1.0, vec->ComputeSelectivity());
 
   // After selection, vec = [0, NULL, 5, 9]
-  sel_t sel_vec[] = {0, 4, 5, 9};
-  vec->SetSelectionVector(sel_vec, 4);
+  auto filter = TupleIdList(vec->GetCount());
+  filter = {0, 4, 5, 9};
+  vec->SetFilteredTupleIdList(&filter, filter.GetTupleCount());
 
   // Verify
   EXPECT_EQ(4u, vec->GetCount());
   EXPECT_EQ(10u, vec->GetSize());
-  EXPECT_EQ(sel_vec, vec->GetSelectionVector());
+  EXPECT_EQ(&filter, vec->GetFilteredTupleIdList());
   EXPECT_FLOAT_EQ(0.4, vec->ComputeSelectivity());
 
   // Check indexing post-selection
@@ -189,8 +189,9 @@ TEST_F(VectorTest, Move) {
   vec->SetNull(4, true);
 
   // Filtered vector, vec = [0, 1, NULL, 7, 8]
-  std::vector<sel_t> sel = {0, 1, 4, 7, 8};
-  vec->SetSelectionVector(sel.data(), sel.size());
+  auto filter = TupleIdList(vec->GetCount());
+  filter = {0, 1, 4, 7, 8};
+  vec->SetFilteredTupleIdList(&filter, filter.GetTupleCount());
 
   // Move the original vector to the target
   // target = [(0), (1), 2, 3, (NULL), 5, 6, (7), (8), 9], bracketed elements are selected
@@ -200,13 +201,13 @@ TEST_F(VectorTest, Move) {
   // First, the old vector should empty
   EXPECT_EQ(0u, vec->GetSize());
   EXPECT_EQ(0u, vec->GetCount());
-  EXPECT_EQ(nullptr, vec->GetSelectionVector());
+  EXPECT_EQ(nullptr, vec->GetFilteredTupleIdList());
   EXPECT_EQ(nullptr, vec->GetData());
 
   // The new vector should own the data
   EXPECT_EQ(10u, target->GetSize());
-  EXPECT_EQ(sel.size(), target->GetCount());
-  EXPECT_EQ(sel.data(), target->GetSelectionVector());
+  EXPECT_EQ(filter.GetTupleCount(), target->GetCount());
+  EXPECT_EQ(&filter, target->GetFilteredTupleIdList());
   EXPECT_NE(nullptr, target->GetData());
 
   for (uint64_t i = 0; i < target->GetCount(); i++) {
@@ -214,7 +215,7 @@ TEST_F(VectorTest, Move) {
       EXPECT_TRUE(target->IsNull(i));
     } else {
       EXPECT_FALSE(target->IsNull(i));
-      EXPECT_EQ(GenericValue::CreateInteger(sel[i]), target->GetValue(i));
+      EXPECT_EQ(GenericValue::CreateInteger(filter[i]), target->GetValue(i));
     }
   }
 }
@@ -231,17 +232,18 @@ TEST_F(VectorTest, Copy) {
     }
 
     // Filtered vec = [0, 1, 3, 7, 8]
-    std::vector<sel_t> sel = {0, 1, 3, 7, 8};
-    vec->SetSelectionVector(sel.data(), sel.size());
+    auto filter = TupleIdList(vec->GetCount());
+    filter = {0, 1, 3, 7, 8};
+    vec->SetFilteredTupleIdList(&filter, filter.GetTupleCount());
 
     auto target = MakeVector(type_id, num_elems);
     vec->CopyTo(target.get());
 
-    // Copying is a densifying operation; the count and size should be 5, and there shouldn't be a
-    // selection vector present in the target.
-    EXPECT_EQ(sel.size(), target->GetSize());
-    EXPECT_EQ(sel.size(), target->GetCount());
-    EXPECT_EQ(nullptr, target->GetSelectionVector());
+    // Copying is a "densifying" operation; the count and size should be 5, and
+    // there shouldn't be a selection vector present in the target.
+    EXPECT_EQ(filter.GetTupleCount(), target->GetSize());
+    EXPECT_EQ(filter.GetTupleCount(), target->GetCount());
+    EXPECT_EQ(nullptr, target->GetFilteredTupleIdList());
 
     for (uint64_t i = 0; i < target->GetCount(); i++) {
       EXPECT_EQ(vec->GetValue(i).CastTo(type_id), target->GetValue(i));
@@ -261,19 +263,20 @@ TEST_F(VectorTest, CopyWithOffset) {
   }
 
   // Filtered vec = [0, 2, NULL, 6, NULL]
-  std::vector<sel_t> sel = {0, 2, 4, 6, 8};
-  vec->SetSelectionVector(sel.data(), sel.size());
+  auto filter = TupleIdList(vec->GetCount());
+  filter = {0, 2, 4, 6, 8};
+  vec->SetFilteredTupleIdList(&filter, filter.GetTupleCount());
 
   // We copy all elements [2, 5). Then target = [NULL, 6 NULL]
   const uint32_t offset = 2;
   auto target = MakeIntegerVector(vec->GetSize());
   vec->CopyTo(target.get(), offset);
 
-  // Copying is a densifying operation; the count and size should match, and there shouldn't be a
-  // selection vector present in the target.
+  // Copying is a "densifying" operation; the count and size should match, and
+  // there shouldn't be a selection vector present in the target.
   EXPECT_EQ(3u, target->GetSize());
   EXPECT_EQ(3u, target->GetCount());
-  EXPECT_EQ(nullptr, target->GetSelectionVector());
+  EXPECT_EQ(nullptr, target->GetFilteredTupleIdList());
 
   EXPECT_TRUE(target->IsNull(0));
   EXPECT_EQ(GenericValue::CreateInteger(6), target->GetValue(1));
@@ -288,21 +291,22 @@ TEST_F(VectorTest, CopyStringVector) {
   }
 
   // Filtered vec = ['val-0',NULL,'val-4','val-6','val-8']
-  std::vector<sel_t> sel = {0, 2, 4, 6, 8};
-  vec->SetSelectionVector(sel.data(), sel.size());
+  auto filter = TupleIdList(vec->GetCount());
+  filter = {0, 2, 4, 6, 8};
+  vec->SetFilteredTupleIdList(&filter, filter.GetTupleCount());
   vec->SetNull(1, true);
 
-  // Copying is a densifying operation; the count and size should match, and there shouldn't be a
-  // selection vector present in the target.
+  // Copying is a "densifying" operation; the count and size should match, and
+  // there shouldn't be a selection vector present in the target.
   auto target = MakeVarcharVector(vec->GetSize());
   vec->CopyTo(target.get());
 
   // Force deletion of source vector to ensure target has actually copied strings into its own heap
   vec.reset();
 
-  EXPECT_EQ(sel.size(), target->GetSize());
-  EXPECT_EQ(sel.size(), target->GetCount());
-  EXPECT_EQ(nullptr, target->GetSelectionVector());
+  EXPECT_EQ(filter.GetTupleCount(), target->GetSize());
+  EXPECT_EQ(filter.GetTupleCount(), target->GetCount());
+  EXPECT_EQ(nullptr, target->GetFilteredTupleIdList());
   EXPECT_EQ(GenericValue::CreateVarchar("val-0"), target->GetValue(0));
   EXPECT_TRUE(target->IsNull(1));
   EXPECT_EQ(GenericValue::CreateVarchar("val-4"), target->GetValue(2));
@@ -318,16 +322,17 @@ TEST_F(VectorTest, Cast) {
   }
 
   // vec(i8) = [1, 2, NULL, 8]
-  std::vector<sel_t> sel = {1, 2, 7, 8};
-  vec->SetSelectionVector(sel.data(), sel.size());
+  auto filter = TupleIdList(vec->GetCount());
+  filter = {1, 2, 7, 8};
+  vec->SetFilteredTupleIdList(&filter, filter.GetTupleCount());
   vec->SetNull(2, true);
 
   // Case 1: try up-cast from int8_t -> int32_t with valid values
   EXPECT_NO_THROW(vec->Cast(TypeId::Integer));
   EXPECT_EQ(TypeId::Integer, vec->GetTypeId());
   EXPECT_EQ(10u, vec->GetSize());
-  EXPECT_EQ(sel.size(), vec->GetCount());
-  EXPECT_EQ(sel.data(), vec->GetSelectionVector());
+  EXPECT_EQ(filter.GetTupleCount(), vec->GetCount());
+  EXPECT_EQ(&filter, vec->GetFilteredTupleIdList());
   EXPECT_EQ(GenericValue::CreateInteger(1), vec->GetValue(0));
   EXPECT_EQ(GenericValue::CreateInteger(2), vec->GetValue(1));
   EXPECT_TRUE(vec->IsNull(2));
@@ -337,8 +342,8 @@ TEST_F(VectorTest, Cast) {
   EXPECT_NO_THROW(vec->Cast(TypeId::SmallInt));
   EXPECT_TRUE(vec->GetTypeId() == TypeId::SmallInt);
   EXPECT_EQ(10u, vec->GetSize());
-  EXPECT_EQ(sel.size(), vec->GetCount());
-  EXPECT_EQ(sel.data(), vec->GetSelectionVector());
+  EXPECT_EQ(filter.GetTupleCount(), vec->GetCount());
+  EXPECT_EQ(&filter, vec->GetFilteredTupleIdList());
   EXPECT_EQ(GenericValue::CreateSmallInt(1), vec->GetValue(0));
   EXPECT_EQ(GenericValue::CreateSmallInt(2), vec->GetValue(1));
   EXPECT_TRUE(vec->IsNull(2));
@@ -366,7 +371,7 @@ TEST_F(VectorTest, CastWithNulls) {
   EXPECT_EQ(TypeId::BigInt, vec->GetTypeId());
   EXPECT_EQ(10u, vec->GetSize());
   EXPECT_EQ(10u, vec->GetCount());
-  EXPECT_EQ(nullptr, vec->GetSelectionVector());
+  EXPECT_EQ(nullptr, vec->GetFilteredTupleIdList());
 
   for (uint64_t i = 0; i < vec->GetSize(); i++) {
     if (i == 4 || i == 8) {
@@ -388,7 +393,7 @@ TEST_F(VectorTest, NumericDowncast) {
     EXPECT_EQ(TypeId::DEST_TYPE, vec->GetTypeId());                                                \
     EXPECT_EQ(10u, vec->GetSize());                                                                \
     EXPECT_EQ(10u, vec->GetCount());                                                               \
-    EXPECT_EQ(nullptr, vec->GetSelectionVector());                                                 \
+    EXPECT_EQ(nullptr, vec->GetFilteredTupleIdList());                                             \
     for (uint64_t i = 0; i < vec->GetSize(); i++) {                                                \
       EXPECT_EQ(GenericValue::Create##DEST_TYPE(static_cast<DEST_CPP_TYPE>(i)), vec->GetValue(i)); \
     }                                                                                              \
@@ -465,7 +470,7 @@ TEST_F(VectorTest, Append) {
 
   EXPECT_EQ(5u, vec2->GetSize());
   EXPECT_EQ(5u, vec2->GetCount());
-  EXPECT_EQ(nullptr, vec2->GetSelectionVector());
+  EXPECT_EQ(nullptr, vec2->GetFilteredTupleIdList());
 
   EXPECT_EQ(GenericValue::CreateDouble(10.0), vec2->GetValue(0));
   EXPECT_EQ(GenericValue::CreateDouble(11.0), vec2->GetValue(1));
@@ -482,8 +487,9 @@ TEST_F(VectorTest, AppendWithSelectionVector) {
   vec1->SetValue(2, GenericValue::CreateFloat(3.0));
 
   // Filtered vec1 = [NULL, 3.0]
-  std::vector<sel_t> sel1 = {1, 2};
-  vec1->SetSelectionVector(sel1.data(), sel1.size());
+  auto filter = TupleIdList(vec1->GetCount());
+  filter = {1, 2};
+  vec1->SetFilteredTupleIdList(&filter, filter.GetTupleCount());
 
   // vec2 = [10.0, 11.0]
   auto vec2 = MakeFloatVector(2);
@@ -495,7 +501,7 @@ TEST_F(VectorTest, AppendWithSelectionVector) {
 
   EXPECT_EQ(4u, vec2->GetSize());
   EXPECT_EQ(4u, vec2->GetCount());
-  EXPECT_EQ(nullptr, vec2->GetSelectionVector());
+  EXPECT_EQ(nullptr, vec2->GetFilteredTupleIdList());
 
   EXPECT_EQ(GenericValue::CreateFloat(10.0), vec2->GetValue(0));
   EXPECT_EQ(GenericValue::CreateFloat(11.0), vec2->GetValue(1));

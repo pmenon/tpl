@@ -12,13 +12,13 @@
 
 namespace tpl::sql {
 
-VectorProjection::VectorProjection() : sel_vector_{0}, owned_buffer_(nullptr) {
-  sel_vector_[0] = kInvalidPos;
+VectorProjection::VectorProjection()
+    : filter_(nullptr), owned_tid_list_(kDefaultVectorSize), owned_buffer_(nullptr) {
+  owned_tid_list_.Resize(0);
 }
 
 void VectorProjection::InitializeEmpty(const std::vector<const Schema::ColumnInfo *> &column_info) {
   TPL_ASSERT(!column_info.empty(), "Cannot create projection with zero columns");
-  sel_vector_[0] = kInvalidPos;
   column_info_ = column_info;
   columns_.resize(column_info.size());
   for (uint64_t i = 0; i < columns_.size(); i++) {
@@ -37,8 +37,8 @@ void VectorProjection::Initialize(const std::vector<const Schema::ColumnInfo *> 
     size_in_bytes += col_info->GetStorageSize() * kDefaultVectorSize;
   }
 
-  // Note that std::make_unique<[]>() will zero-out the array for us due to value-initialization. We
-  // don't need to explicitly memset() it.
+  // std::make_unique() with an array-type zeros the array for us due to
+  // value-initialization. We don't need to explicitly memset() it.
   owned_buffer_ = std::make_unique<byte[]>(size_in_bytes);
 
   // Setup the vector's to reference our data chunk
@@ -49,47 +49,59 @@ void VectorProjection::Initialize(const std::vector<const Schema::ColumnInfo *> 
   }
 }
 
-void VectorProjection::SetSelectionVector(const sel_t *const new_sel_vector, const uint32_t count) {
-  TPL_ASSERT(new_sel_vector != nullptr, "Null input selection vector");
-  TPL_ASSERT(count <= GetTupleCapacity(), "Invalid count");
+void VectorProjection::RefreshFilteredTupleIdList() {
+  // If the list of active TIDs is a strict subset of all TIDs in the projection,
+  // we need to update the cached filter list. Otherwise, we set the filter list
+  // to NULL to indicate the non-existence of a filter. In either case, we also
+  // propagate the list to all child vectors.
 
-  // Copy into our selection vector
-  std::memcpy(sel_vector_, new_sel_vector, count * sizeof(sel_t));
+  uint32_t count = owned_tid_list_.GetTupleCount();
 
-  // Update vectors
-  for (const auto &col : columns_) {
-    col->SetSelectionVector(sel_vector_, count);
+  if (count < owned_tid_list_.GetCapacity()) {
+    filter_ = &owned_tid_list_;
+  } else {
+    filter_ = nullptr;
+    count = owned_tid_list_.GetCapacity();
   }
-}
 
-void VectorProjection::SetSelections(const TupleIdList &tid_list) {
-  TPL_ASSERT(tid_list.GetCapacity() <= GetTupleCapacity(), "TID list too large for projection");
-
-  // Convert the list into a selection vector
-  const uint32_t count = tid_list.ToSelectionVector(sel_vector_);
-
-  // Update the child vectors
-  for (const auto &col : columns_) {
-    col->SetSelectionVector(sel_vector_, count);
-  }
-}
-
-void VectorProjection::Resize(uint64_t num_tuples) {
   for (auto &col : columns_) {
-    col->Resize(num_tuples);
+    col->SetFilteredTupleIdList(filter_, count);
   }
 }
 
-void VectorProjection::Reset() {
-  // Reset selection vector.
-  sel_vector_[0] = kInvalidPos;
+void VectorProjection::SetFilteredSelections(const TupleIdList &tid_list) {
+  TPL_ASSERT(tid_list.GetCapacity() == owned_tid_list_.GetCapacity(),
+             "Input TID list capacity doesn't match projection capacity");
 
-  // Force vector's to reference memory managed by us.
+  // Copy the input TID list.
+  owned_tid_list_.AssignFrom(tid_list);
+
+  // Let the child vectors know of the new list, if need be.
+  RefreshFilteredTupleIdList();
+}
+
+void VectorProjection::Reset(uint64_t num_tuples) {
+  // Reset the cached TID list to NULL indicating all TIDs are active
+  filter_ = nullptr;
+
+  // Setup TID list to include all tuples
+  owned_tid_list_.Resize(num_tuples);
+  owned_tid_list_.AddAll();
+
+  // If the projection is an owning projection, we need to reset each child
+  // vector to point to its designated chunk of the internal buffer. If the
+  // projection is a referencing projection, just notify each child vector of
+  // its new size.
+
   if (owned_buffer_ != nullptr) {
     auto ptr = owned_buffer_.get();
     for (const auto &col : columns_) {
-      col->Reference(ptr, nullptr, 0);
+      col->Reference(ptr, nullptr, num_tuples);
       ptr += GetTypeIdSize(col->GetTypeId()) * kDefaultVectorSize;
+    }
+  } else {
+    for (auto &col : columns_) {
+      col->Resize(num_tuples);
     }
   }
 }
@@ -106,13 +118,22 @@ void VectorProjection::Dump(std::ostream &os) const { os << ToString() << std::e
 
 void VectorProjection::CheckIntegrity() const {
 #ifndef NDEBUG
+  // Check that the TID list size is sufficient for this vector projection
+  TPL_ASSERT(owned_tid_list_.GetCapacity() == GetTotalTupleCount(),
+             "TID list capacity doesn't match vector projection capacity!");
+
+  // Check if the filtered TID list matches the owned list when filtered
+  TPL_ASSERT(!IsFiltered() || filter_ == &owned_tid_list_,
+             "Filtered list pointer doesn't match internal owned active TID list");
+
   // Check that all contained vectors have the same size and selection vector
   for (const auto &col : columns_) {
-    TPL_ASSERT(!IsFiltered() || sel_vector_ == col->GetSelectionVector(),
+    TPL_ASSERT(!IsFiltered() || filter_ == col->GetFilteredTupleIdList(),
                "Vector in projection with different selection vector");
     TPL_ASSERT(GetSelectedTupleCount() == col->GetCount(),
                "Vector size does not match rest of projection");
   }
+
   // Let the vectors do an integrity check
   for (const auto &col : columns_) {
     col->CheckIntegrity();

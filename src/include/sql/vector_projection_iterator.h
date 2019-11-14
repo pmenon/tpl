@@ -5,6 +5,7 @@
 
 #include "common/common.h"
 #include "common/macros.h"
+#include "sql/tuple_id_list.h"
 #include "sql/vector_projection.h"
 #include "util/bit_util.h"
 
@@ -13,9 +14,38 @@ namespace tpl::sql {
 /**
  * A tuple-at-a-time iterator over VectorProjections. The iterator gives the <i>view</i> of
  * individual tuple access, but does not physically materialize full tuples in memory. Tuples can
- * also be filtered out of the underlying projection (again without moving or copying any data)
- * through VectorProjectionIterator::Match() which considers the tuple that the iterator is
- * positioned at.
+ * be filtered out of the underlying projection (again without moving or copying any data) through
+ * VectorProjectionIterator::Match() which considers the tuple that the iterator is positioned at.
+ *
+ * A VectorProjectionIterator must be constructed with a VectorProjection that's to be iterated.
+ * Iteration occurs over all active/visible tuples in the underlying projection. Tuples which are
+ * filtered out during iteration are immediately reflected in the underlying VectorProjection in
+ * its filtered TID list.
+ *
+ * If a VectorProjectionIterator is constructed with both a VectorProjection and a TupleIdList, only
+ * tuples whose TIDs are in the input list are visited during iteration. Tuples which are filtered
+ * out during iteration are removed from the provided TupleIdList; the vector projection's filtered
+ * TID list is not modified.
+ *
+ * In the example below, the vector projection is filtered.
+ * @code
+ * // vector_proj.IsFiltered() = false
+ * auto iter = VectorProjectionIterator(vector_proj);
+ * iter.RunFilter([] { .. filter logic ... });
+ * // vector_proj.IsFiltered() = true
+ * @endcode
+ *
+ * In the example below, the results of the filter are preserved in the input list. The vector
+ * projection is unmodified!
+ * @code
+ * // vector_proj.IsFiltered() = false
+ * auto iter = VectorProjectionIterator(vector_proj, tid_list);
+ * iter.RunFilter([] { .. filter logic ... });
+ * // vector_proj.IsFiltered() = false
+ * // tid_list contains TIDs of all valid tuples
+ * @endcode
+ *
+ * <h3>Iteration API</h3>:
  *
  * A different iteration API exists depending on whether the underlying vector projection has been
  * filtered or not. Users must query filtration status before iteration through
@@ -38,23 +68,42 @@ namespace tpl::sql {
  * C++ folks, use VectorProjectionIterator::ForEach().
  */
 class VectorProjectionIterator {
+  // Constant marking an invalid index in the selection vector
+  static constexpr sel_t kInvalidPos = std::numeric_limits<sel_t>::max();
+
  public:
   /**
    * Create an empty iterator over an empty projection.
    */
   VectorProjectionIterator()
       : vector_projection_(nullptr),
+        tid_list_(nullptr),
         curr_idx_(0),
-        sel_vector_(nullptr),
+        sel_vector_{0},
+        size_(0),
         sel_vector_read_idx_(0),
-        sel_vector_write_idx_(0) {}
+        sel_vector_write_idx_(0) {
+    sel_vector_[0] = kInvalidPos;
+  }
 
   /**
-   * Create an iterator over the given projection @em vp.
-   * @param vp The projection to iterator over.
+   * Create an iterator over the given projection.
+   * @param vector_projection The projection to iterate.
    */
-  explicit VectorProjectionIterator(VectorProjection *vp) : VectorProjectionIterator() {
-    Reset(vp);
+  explicit VectorProjectionIterator(VectorProjection *vector_projection)
+      : VectorProjectionIterator() {
+    SetVectorProjection(vector_projection);
+  }
+
+  /**
+   * Create an iterator over the given projection, but only iterate over the TIDs in the given list.
+   * Update the TID list if any tuples in the projection are unmatched.
+   * @param vector_projection The projection to iterate.
+   * @param tid_list The list of TIDs to iterate the projection with.
+   */
+  VectorProjectionIterator(VectorProjection *vector_projection, TupleIdList *tid_list)
+      : VectorProjectionIterator() {
+    Init(vector_projection, tid_list);
   }
 
   /**
@@ -65,18 +114,14 @@ class VectorProjectionIterator {
   /**
    * @return True if the vector projection we're iterating over is filtered; false otherwise.
    */
-  bool IsFiltered() const { return vector_projection_->IsFiltered(); }
+  bool IsFiltered() const { return sel_vector_[0] != kInvalidPos; }
 
   /**
    * Reset this iterator to begin iteration over the given projection @em vector_projection.
    * @param vector_projection The vector projection to iterate over.
    */
-  void Reset(VectorProjection *vector_projection) {
-    vector_projection_ = vector_projection;
-    curr_idx_ = vector_projection->IsFiltered() ? vector_projection->sel_vector_[0] : 0;
-    sel_vector_ = vector_projection->sel_vector_;
-    sel_vector_read_idx_ = 0;
-    sel_vector_write_idx_ = 0;
+  void SetVectorProjection(VectorProjection *vector_projection) {
+    Init(vector_projection, &vector_projection->owned_tid_list_);
   }
 
   /**
@@ -185,20 +230,52 @@ class VectorProjectionIterator {
   uint32_t GetTotalTupleCount() const { return vector_projection_->GetTotalTupleCount(); }
 
  private:
-  // The vector projection we're iterating over
+  void Init(VectorProjection *vector_projection, TupleIdList *tid_list) {
+    TPL_ASSERT(vector_projection != nullptr, "NULL projection");
+    TPL_ASSERT(tid_list != nullptr, "NULL TID list");
+
+    vector_projection_ = vector_projection;
+
+    tid_list_ = tid_list;
+
+    if (!tid_list_->IsFull()) {
+      size_ = tid_list_->ToSelectionVector(sel_vector_);
+      curr_idx_ = sel_vector_[0];
+    } else {
+      sel_vector_[0] = kInvalidPos;
+      size_ = tid_list_->GetCapacity();
+      curr_idx_ = 0;
+    }
+
+    sel_vector_read_idx_ = 0;
+    sel_vector_write_idx_ = 0;
+  }
+
+ private:
+  // The vector projection we're iterating over.
   VectorProjection *vector_projection_;
 
-  // The current raw position in the vector projection we're pointing to
-  uint32_t curr_idx_;
+  // The list of TIDs to iterate over in the projection. This list is also
+  // updated when iteration is filtered.
+  TupleIdList *tid_list_;
 
-  // The selection vector used to filter the vector projection
-  sel_t *sel_vector_;
+  // The current raw position in the vector projection we're pointing to.
+  sel_t curr_idx_;
 
-  // The next slot in the selection vector to read from
-  uint32_t sel_vector_read_idx_;
+  // The selection vector used to filter the vector projection. This is a cached
+  // materialized copy of the vector projection's tuple ID list.
+  sel_t sel_vector_[kDefaultVectorSize];
 
-  // The next slot in the selection vector to write into
-  uint32_t sel_vector_write_idx_;
+  // The number of elements in the projection. If filtered, size is the number
+  // of elements in the selection vector. Otherwise, it is the total number of
+  // elements in the vector projection.
+  sel_t size_;
+
+  // The next slot in the selection vector to read from.
+  sel_t sel_vector_read_idx_;
+
+  // The next slot in the selection vector to write into.
+  sel_t sel_vector_write_idx_;
 };
 
 // ---------------------------------------------------------
@@ -269,16 +346,18 @@ inline void VectorProjectionIterator::AdvanceFiltered() {
 }
 
 inline void VectorProjectionIterator::Match(bool matched) {
+  // Update the cached selection vector
   sel_vector_[sel_vector_write_idx_] = curr_idx_;
   sel_vector_write_idx_ += static_cast<uint32_t>(matched);
+
+  // Update the TID list
+  tid_list_->Enable(curr_idx_, matched);
 }
 
-inline bool VectorProjectionIterator::HasNext() const {
-  return curr_idx_ < vector_projection_->GetSelectedTupleCount();
-}
+inline bool VectorProjectionIterator::HasNext() const { return curr_idx_ < size_; }
 
 inline bool VectorProjectionIterator::HasNextFiltered() const {
-  return sel_vector_read_idx_ < vector_projection_->GetSelectedTupleCount();
+  return sel_vector_read_idx_ < size_;
 }
 
 inline void VectorProjectionIterator::Reset() {
@@ -289,12 +368,11 @@ inline void VectorProjectionIterator::Reset() {
 
 inline void VectorProjectionIterator::ResetFiltered() {
   // Update the projection counts
-  for (uint32_t i = 0; i < vector_projection_->GetColumnCount(); i++) {
-    vector_projection_->GetColumn(i)->SetSelectionVector(sel_vector_, sel_vector_write_idx_);
-  }
+  vector_projection_->RefreshFilteredTupleIdList();
 
-  // Reset
+  // Reset index positions
   curr_idx_ = sel_vector_[0];
+  size_ = sel_vector_write_idx_;
   sel_vector_read_idx_ = 0;
   sel_vector_write_idx_ = 0;
 }

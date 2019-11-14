@@ -9,12 +9,12 @@
 #include "common/common.h"
 #include "common/macros.h"
 #include "sql/schema.h"
+#include "sql/tuple_id_list.h"
 #include "sql/vector.h"
 
 namespace tpl::sql {
 
 class ColumnVectorIterator;
-class TupleIdList;
 
 /**
  * A container representing a collection of tuples whose attributes are stored in columnar format.
@@ -24,13 +24,13 @@ class TupleIdList;
  * Columns in the projection have a well-defined order and are accessed using this unchanging order.
  * All columns in the projection have the same size and selection count at any given time.
  *
- * In addition to holding just the vector data, vector projections also contain a selection index
- * vector containing the indexes of the tuples that are externally visible. All column vectors
- * contain references to the selection index vector owned by this projection. At any given time,
- * projections have a selected count (see VectorProjection::GetSelectedTupleCount()) that is <=
- * the total tuple count (see VectorProjection::GetTotalTupleCount()). Users can manually set the
- * selections by calling either VectorProjection::SetSelectionVector() with a physical selection
- * index vector, or VectorProjection::SetSelections() providing a tuple ID list.
+ * In addition to holding all vector data, vector projections also contain a tuple ID (TID) list
+ * containing the IDs of all tuples that are externally visible. Child column vectors hold
+ * references to the TID list owned by this projection. At any given time, projections have a
+ * selected count (see VectorProjection::GetSelectedTupleCount()) that is <= the total tuple count
+ * (see VectorProjection::GetTotalTupleCount()). Users can manually set the selections by calling
+ * VectorProjection::SetSelections() providing a tuple ID list. The provided list must have the same
+ * shape (i.e., capacity) as the projection.
  *
  * VectorProjections come in two flavors: referencing and owning projections. A referencing vector
  * projection contains a set of column vectors that reference data stored externally. An owning
@@ -77,9 +77,6 @@ class TupleIdList;
 class VectorProjection {
   friend class VectorProjectionIterator;
 
-  // Constant marking an invalid index in the selection vector
-  static constexpr sel_t kInvalidPos = std::numeric_limits<sel_t>::max();
-
  public:
   /**
    * Create an empty and uninitialized vector projection. Users must call @em Initialize() or
@@ -117,27 +114,25 @@ class VectorProjection {
   void InitializeEmpty(const std::vector<const Schema::ColumnInfo *> &column_info);
 
   /**
+   * @return True if the projection has no tuples; false otherwise.
+   */
+  bool IsEmpty() const { return GetSelectedTupleCount() == 0; }
+
+  /**
    * @return True if the projection is filtered; false otherwise.
    */
-  bool IsFiltered() const { return sel_vector_[0] != kInvalidPos; }
+  bool IsFiltered() const { return filter_ != nullptr; }
 
   /**
-   * @return The list of active TIDs in the projection; null if no list exists.
+   * @return The list of active TIDs in the projection; NULL if no tuples have been filtered out.
    */
-  sel_t *GetSelectionVector() { return IsFiltered() ? sel_vector_ : nullptr; }
-
-  /**
-   * Filter elements from the vector based on the indexes in the provided selection index vector.
-   * @param new_sel_vector The new selection vector.
-   * @param count The number of elements in the new selection vector.
-   */
-  void SetSelectionVector(const sel_t *new_sel_vector, uint32_t count);
+  const TupleIdList *GetFilteredTupleIdList() { return filter_; }
 
   /**
    * Filter elements from the projection based on the tuple IDs in the input list @em tid_list.
    * @param tid_list The input TID list of valid tuples.
    */
-  void SetSelections(const TupleIdList &tid_list);
+  void SetFilteredSelections(const TupleIdList &tid_list);
 
   /**
    * @return The metadata for the column at index @em col_idx in the projection.
@@ -164,17 +159,10 @@ class VectorProjection {
   }
 
   /**
-   * Set the size of this projection and all child vectors to the given size. This size must be less
-   * than the maximum capacity of the vector projection.
-   * @param num_tuples The size to set the projection.
-   */
-  void Resize(uint64_t num_tuples);
-
-  /**
    * Reset this vector projection to the state after initialization. This will set the counts to 0,
    * and reset each child vector to point to data owned by this projection (if it owns any).
    */
-  void Reset();
+  void Reset(uint64_t num_tuples);
 
   /**
    * @return The number of columns in the projection.
@@ -205,9 +193,7 @@ class VectorProjection {
    *         passed any filters (through the selection vector), and are externally visible. The
    *         selectivity is a floating-point number in the range [0.0, 1.0].
    */
-  double ComputeSelectivity() const {
-    return columns_.empty() ? 0 : columns_[0]->ComputeSelectivity();
-  }
+  double ComputeSelectivity() const { return IsEmpty() ? 0 : owned_tid_list_.ComputeSelectivity(); }
 
   /**
    * Return a string representation of this vector projection.
@@ -227,14 +213,23 @@ class VectorProjection {
   void CheckIntegrity() const;
 
  private:
+  // Propagate the active TID list to child vectors, if necessary.
+  void RefreshFilteredTupleIdList();
+
+ private:
   // Metadata for all columns in this projection.
   std::vector<const Schema::ColumnInfo *> column_info_;
 
   // Vector containing column data for all columns in this projection.
   std::vector<std::unique_ptr<Vector>> columns_;
 
-  // The selection vector for the projection.
-  sel_t sel_vector_[kDefaultVectorSize];
+  // The list of active TIDs in the projection. Non-null only when tuples have
+  // been filtered out.
+  const TupleIdList *filter_;
+
+  // The list of active TIDs in the projection. This is the source of truth and
+  // will always represent the list of visible TIDs.
+  TupleIdList owned_tid_list_;
 
   // If the vector projection allocates memory for all contained vectors, this
   // pointer owns that memory.
