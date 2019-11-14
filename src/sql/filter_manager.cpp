@@ -103,7 +103,9 @@ void FilterManager::InsertClauseTerm(const FilterManager::MatchFn term) {
 }
 
 void FilterManager::InsertClauseTerms(std::initializer_list<MatchFn> terms) {
-  std::for_each(terms.begin(), terms.end(), [this](auto &term) { InsertClauseTerm(term); });
+  for (auto &term : terms) {
+    InsertClauseTerm(term);
+  }
 }
 
 void FilterManager::Finalize() {
@@ -116,7 +118,9 @@ void FilterManager::Finalize() {
   std::iota(optimal_clause_order_.begin(), optimal_clause_order_.end(), 0);
 
   // Finalize each clause
-  std::for_each(clauses_.begin(), clauses_.end(), [](auto &clause) { clause.Finalize(); });
+  for (auto &clause : clauses_) {
+    clause.Finalize();
+  }
 
   finalized_ = true;
 }
