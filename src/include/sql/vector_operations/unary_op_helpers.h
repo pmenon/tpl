@@ -22,7 +22,9 @@ inline void UnaryOperation_HandleNull(const Vector &input, Vector *result) {
   auto *input_data = reinterpret_cast<InputType *>(input.GetData());
   auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
 
+  result->Resize(input.GetSize());
   result->GetMutableNullMask()->Reset();
+  result->SetFilteredTupleIdList(input.GetFilteredTupleIdList(), input.GetCount());
 
   if (input.GetNullMask().Any()) {
     VectorOps::Exec(input, [&](uint64_t i, uint64_t k) {
@@ -32,8 +34,6 @@ inline void UnaryOperation_HandleNull(const Vector &input, Vector *result) {
     VectorOps::Exec(
         input, [&](uint64_t i, uint64_t k) { result_data[i] = Op::Apply(input_data[i], false); });
   }
-
-  result->SetFilteredTupleIdList(input.GetFilteredTupleIdList(), input.GetCount());
 }
 
 /**

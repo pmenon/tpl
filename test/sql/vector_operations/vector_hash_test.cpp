@@ -14,20 +14,20 @@ TEST_F(VectorHashTest, NumericHashes) {
 #define GEN_HASH_TEST(TYPE_ID, CPP_TYPE)                                                  \
   {                                                                                       \
     auto input = Make##TYPE_ID##Vector(257);                                              \
-    auto hashes = MakeVector(TypeId::Hash, 257);                                          \
+    auto hashes = Vector(TypeId::Hash, true, false);                                      \
     /* Fill input */                                                                      \
     std::random_device r;                                                                 \
     for (uint64_t i = 0; i < input->GetSize(); i++) {                                     \
       input->SetValue(i, GenericValue::Create##TYPE_ID(r()));                             \
     }                                                                                     \
     /* Hash */                                                                            \
-    VectorOps::Hash(*input, hashes.get());                                                \
-    EXPECT_EQ(input->GetSize(), hashes->GetSize());                                       \
-    EXPECT_EQ(input->GetCount(), hashes->GetCount());                                     \
-    EXPECT_EQ(nullptr, hashes->GetFilteredTupleIdList());                                 \
+    VectorOps::Hash(*input, &hashes);                                                     \
+    EXPECT_EQ(input->GetSize(), hashes.GetSize());                                        \
+    EXPECT_EQ(input->GetCount(), hashes.GetCount());                                      \
+    EXPECT_EQ(nullptr, hashes.GetFilteredTupleIdList());                                  \
     /* Check output */                                                                    \
     VectorOps::Exec(*input, [&](uint64_t i, uint64_t k) {                                 \
-      EXPECT_EQ(reinterpret_cast<hash_t *>(hashes->GetData())[i],                         \
+      EXPECT_EQ(reinterpret_cast<hash_t *>(hashes.GetData())[i],                          \
                 util::HashUtil::Hash(reinterpret_cast<CPP_TYPE *>(input->GetData())[i])); \
     });                                                                                   \
   }
@@ -46,16 +46,16 @@ TEST_F(VectorHashTest, HashWithNullInput) {
   // input = [1.2, 3.45, NULL, NULL, NULL]
   auto input =
       MakeFloatVector({1.2, 3.45, 67.89, 123.456, 789.01}, {false, false, true, true, true});
-  auto hash = MakeVector(TypeId::Hash, input->GetSize());
+  auto hash = Vector(TypeId::Hash, true, false);
 
-  VectorOps::Hash(*input, hash.get());
+  VectorOps::Hash(*input, &hash);
 
-  EXPECT_EQ(input->GetSize(), hash->GetSize());
-  EXPECT_EQ(input->GetCount(), hash->GetCount());
-  EXPECT_EQ(nullptr, hash->GetFilteredTupleIdList());
+  EXPECT_EQ(input->GetSize(), hash.GetSize());
+  EXPECT_EQ(input->GetCount(), hash.GetCount());
+  EXPECT_EQ(nullptr, hash.GetFilteredTupleIdList());
 
   auto raw_input = reinterpret_cast<float *>(input->GetData());
-  auto raw_hash = reinterpret_cast<hash_t *>(hash->GetData());
+  auto raw_hash = reinterpret_cast<hash_t *>(hash.GetData());
   EXPECT_EQ(util::HashUtil::Hash(raw_input[0]), raw_hash[0]);
   EXPECT_EQ(util::HashUtil::Hash(raw_input[1]), raw_hash[1]);
   EXPECT_EQ(0, raw_hash[2]);

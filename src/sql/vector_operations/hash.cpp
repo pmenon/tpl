@@ -56,8 +56,6 @@ void VectorOps::Hash(const Vector &input, Vector *result) {
       throw NotImplementedException("hashing not supported for vectors of type '{}'",
                                     TypeIdToString(input.GetTypeId()));
   }
-
-  result->SetFilteredTupleIdList(input.GetFilteredTupleIdList(), input.GetCount());
 }
 
 }  // namespace tpl::sql
