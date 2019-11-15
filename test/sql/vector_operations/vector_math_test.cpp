@@ -96,8 +96,8 @@ TEST_F(VectorArithmeticTest, DivMod) {
     // Nulls, zeros, no filter, vector + vector
     b->SetNull(2, true);
     b->SetNull(9, true);
-    a->SetValue(1, GenericValue::CreateInteger(0));
-    a->SetValue(11, GenericValue::CreateInteger(0));
+    a->SetValue(1, GenericValue::CreateSmallInt(0));
+    a->SetValue(11, GenericValue::CreateSmallInt(0));
     VectorOps::Divide(*b, *a, &result);
 
     EXPECT_EQ(a->GetSize(), result.GetSize());
@@ -110,7 +110,7 @@ TEST_F(VectorArithmeticTest, DivMod) {
 
     for (uint64_t i = 0; i < result.GetCount(); i++) {
       if (!result.IsNull(i)) {
-        EXPECT_EQ(GenericValue::CreateInteger(2), result.GetValue(i));
+        EXPECT_EQ(GenericValue::CreateSmallInt(2), result.GetValue(i));
       }
     }
   }
