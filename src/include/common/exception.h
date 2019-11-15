@@ -13,18 +13,21 @@ namespace tpl {
 
 /**
  * All exception types.
+ *
+ * NOTE: Please keep these sorted.
  */
 enum class ExceptionType {
-  OutOfRange,      // value out of range error
+  Cardinality,     // vectors have different cardinalities
   Conversion,      // conversion/casting error
-  UnknownType,     // unknown type
-  TypeMismatch,    // mismatched types
   Decimal,         // decimal related
   DivideByZero,    // divide by 0
-  InvalidType,     // incompatible for operation
-  NotImplemented,  // method not implemented
   Execution,       // executor related
   Index,           // index related
+  InvalidType,     // incompatible for operation
+  NotImplemented,  // method not implemented
+  OutOfRange,      // value out of range error
+  TypeMismatch,    // mismatched types
+  UnknownType,     // unknown type
 };
 
 /**

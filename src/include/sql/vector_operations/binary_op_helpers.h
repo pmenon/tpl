@@ -1,8 +1,24 @@
 #pragma once
 
+#include "common/exception.h"
 #include "sql/vector_operations/vector_operators.h"
 
 namespace tpl::sql {
+
+inline void CheckBinaryOperation(const Vector &left, const Vector &right, Vector *result) {
+  if (left.GetTypeId() != right.GetTypeId()) {
+    throw TypeMismatchException(left.GetTypeId(), right.GetTypeId(),
+                                "left and right vector types to binary operation must be the same");
+  }
+  if (left.GetTypeId() != result->GetTypeId()) {
+    throw TypeMismatchException(left.GetTypeId(), result->GetTypeId(),
+                                "result type of binary operation must be the same as input types");
+  }
+  if (!left.IsConstant() && !right.IsConstant() && left.GetCount() != right.GetCount()) {
+    throw Exception(ExceptionType::Cardinality,
+                    "left and right input vectors to binary operation must have the same size");
+  }
+}
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
           bool IgnoreNull = false>
