@@ -12,8 +12,8 @@ namespace internal {
 template <typename T, typename Op>
 struct ShouldPerformFullCompute<
     T, Op,
-    std::enable_if_t<std::is_same_v<Op, Add> || std::is_same_v<Op, Subtract> ||
-                     std::is_same_v<Op, Multiply>>> {
+    std::enable_if_t<std::is_same_v<Op, tpl::sql::Add> || std::is_same_v<Op, tpl::sql::Subtract> ||
+                     std::is_same_v<Op, tpl::sql::Multiply>>> {
   bool operator()(const TupleIdList *tid_list) {
     auto full_compute_threshold =
         Settings::Instance()->GetDouble(Settings::Name::ArithmeticFullComputeOptThreshold);
