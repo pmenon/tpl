@@ -5,6 +5,31 @@
 
 namespace tpl::sql {
 
+namespace internal {
+
+/**
+ * A struct used to determine if a given operation on a given type should be optimized to use a
+ * full-computation implementation. By default, full-computation is disabled.
+ *
+ * If you want to enable full-computation for your operation, specialize this struct.
+ *
+ * @tparam T The types of the vector elements.
+ * @tparam Op The operation.
+ * @tparam Enable
+ */
+template <typename T, typename Op, typename Enable = void>
+struct ShouldPerformFullCompute {
+  /**
+   * Call-arg operator that accepts a potentially null filtered TID list. This is list of active
+   * TIDs of the input vector used in the computation.
+   * @param tid_list Potentially null filtered TID list.
+   * @return True if full-computation should be performed; false otherwise.
+   */
+  bool operator()(const TupleIdList *tid_list) { return false; }
+};
+
+}  // namespace internal
+
 inline void CheckBinaryOperation(const Vector &left, const Vector &right, Vector *result) {
   if (left.GetTypeId() != right.GetTypeId()) {
     throw TypeMismatchException(left.GetTypeId(), right.GetTypeId(),
@@ -45,9 +70,20 @@ inline void BinaryOperation_Constant_Vector(const Vector &left, const Vector &ri
       });
     } else {
       // Fast-path: no NULL checks
-      VectorOps::Exec(right, [&](uint64_t i, uint64_t k) {
-        result_data[i] = Op::Apply(left_data[0], right_data[i]);
-      });
+
+      // If it's faster to perform a full computation given the selectivity of
+      // the vector and the operation we're performing, do so. Otherwise, use a
+      // regular vector iteration.
+
+      if (internal::ShouldPerformFullCompute<RightType, Op>()(right.GetFilteredTupleIdList())) {
+        VectorOps::ExecIgnoreFilter(right, [&](uint64_t i, uint64_t k) {
+          result_data[i] = Op::Apply(left_data[0], right_data[i]);
+        });
+      } else {
+        VectorOps::Exec(right, [&](uint64_t i, uint64_t k) {
+          result_data[i] = Op::Apply(left_data[0], right_data[i]);
+        });
+      }
     }
   }
 }
@@ -78,9 +114,20 @@ inline void BinaryOperation_Vector_Constant(const Vector &left, const Vector &ri
       });
     } else {
       // Fast-path: no NULL checks
-      VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
-        result_data[i] = Op::Apply(left_data[i], right_data[0]);
-      });
+
+      // If it's faster to perform a full computation given the selectivity of
+      // the vector and the operation we're performing, do so. Otherwise, use a
+      // regular vector iteration.
+
+      if (internal::ShouldPerformFullCompute<LeftType, Op>()(left.GetFilteredTupleIdList())) {
+        VectorOps::ExecIgnoreFilter(left, [&](uint64_t i, uint64_t k) {
+          result_data[i] = Op::Apply(left_data[0], right_data[i]);
+        });
+      } else {
+        VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
+          result_data[i] = Op::Apply(left_data[i], right_data[0]);
+        });
+      }
     }
   }
 
@@ -109,9 +156,19 @@ inline void BinaryOperation_Vector_Vector(const Vector &left, const Vector &righ
       }
     });
   } else {
-    VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
-      result_data[i] = Op::Apply(left_data[i], right_data[i]);
-    });
+    // If it's faster to perform a full computation given the selectivity of
+    // the vector and the operation we're performing, do so. Otherwise, use a
+    // regular vector iteration.
+
+    if (internal::ShouldPerformFullCompute<LeftType, Op>()(left.GetFilteredTupleIdList())) {
+      VectorOps::ExecIgnoreFilter(left, [&](uint64_t i, uint64_t k) {
+        result_data[i] = Op::Apply(left_data[i], right_data[i]);
+      });
+    } else {
+      VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
+        result_data[i] = Op::Apply(left_data[i], right_data[i]);
+      });
+    }
   }
 }
 

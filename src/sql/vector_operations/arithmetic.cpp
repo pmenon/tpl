@@ -1,8 +1,27 @@
-#include "sql/operations/numeric_binary_operators.h"
-#include "sql/vector_operations/binary_op_helpers.h"
 #include "sql/vector_operations/vector_operators.h"
 
+#include "common/settings.h"
+#include "sql/operations/numeric_binary_operators.h"
+#include "sql/vector_operations/binary_op_helpers.h"
+
 namespace tpl::sql {
+
+namespace internal {
+
+// Specialized struct to enable full-computation.
+template <typename T, typename Op>
+struct ShouldPerformFullCompute<
+    T, Op,
+    std::enable_if_t<std::is_same_v<Op, Add> || std::is_same_v<Op, Subtract> ||
+                     std::is_same_v<Op, Multiply>>> {
+  bool operator()(const TupleIdList *tid_list) {
+    auto full_compute_threshold =
+        Settings::Instance()->GetDouble(Settings::Name::ArithmeticFullComputeOptThreshold);
+    return tid_list == nullptr || full_compute_threshold <= tid_list->ComputeSelectivity();
+  }
+};
+
+}  // namespace internal
 
 namespace {
 
@@ -69,7 +88,7 @@ void DivModOperation_Vector_Vector(const Vector &left, const Vector &right, Vect
   result->GetMutableNullMask()->Copy(left.GetNullMask()).Union(right.GetNullMask());
   result->SetFilteredTupleIdList(left.GetFilteredTupleIdList(), left.GetCount());
 
-  VectorOps::Exec(left.GetFilteredTupleIdList(), left.GetCount(), [&](uint64_t i, uint64_t k) {
+  VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
     if (left_data[i] == LeftType(0) || right_data[i] == RightType(0)) {
       result->GetMutableNullMask()->Set(i);
     } else {

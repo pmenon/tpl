@@ -292,60 +292,24 @@ class VectorOps : public AllStatic {
   // -------------------------------------------------------
 
   /**
-   * Apply a function to a range of indexes. If a non-null TID list is provided, the callback
-   * functor @em fun is applied to TIDs from the list in the range [offset, count). Otherwise, the
-   * callback functor @em fun is applied to integers in the range [offset, count).
-   *
-   * The callback functor receives two arguments:
-   *
-   * i = the current TID.
-   * k = position in TID list.
-   *
-   * @tparam F Functor accepting two integer arguments.
-   * @param tid_list The optional list of TIDs to iterate over.
-   * @param count The number of elements in the selection vector if available.
-   * @param f The function to call on each element.
-   * @param offset The offset from the beginning to begin iteration.
-   */
-  template <typename F>
-  static void Exec(const TupleIdList *tid_list, const uint64_t count, F &&f,
-                   const uint64_t offset = 0) {
-    if (tid_list != nullptr) {
-      // If we're scanning all TIDs in the list, it's faster to use ForEach().
-      // If we're scanning only a subset range of TIDs in the list, we fall
-      // back to the slower TID iterator API.
-      // TODO(pmenon): Pull optimization into TupleIdList ?
-      uint64_t k = offset;
-      if (offset == 0 && count == tid_list->GetCapacity()) {
-        tid_list->ForEach([&](uint64_t i) { f(i, k++); });
-      } else {
-        const auto iter = tid_list->begin() + offset;
-        std::for_each(iter, iter + count, [&](uint64_t i) { f(i, k++); });
-      }
-    } else {
-      for (uint64_t i = offset; i < count; i++) {
-        f(i, i);
-      }
-    }
-  }
-
-  /**
    * Apply a function to active elements in the input vector @em vector. If the vector has a
-   * filtered TID list, the function @em fun is only applied to indexes from the selection vector in
-   * the range [offset, count). If a selection vector is not provided, the function @em fun is
-   * applied to integers in the range [offset, count).
+   * filtered TID list, the callback @em f is only applied to TIDs in this list, but in the range
+   * [offset,count). For example, if the TID list is [0,2,4,6,8,10], offset is 2, and count is 5,
+   * the callback @em f will receive the argument pairs [(4,0),(6,1),(8,2)].
    *
-   * By default, the function will be applied to all active elements in the vector.
+   * If input vector is unfiltered, the callback @em f is applied to all TIDs in the range
+   * [offset, count).
    *
    * The callback function receives two arguments:
    * i = the current index from the selection vector.
-   * k = count.
+   * k = position in TID list.
    *
    * @tparam F Functor accepting two integer arguments.
-   * @param sel_vector The optional selection vector to iterate over.
-   * @param count The number of elements in the selection vector if available.
+   * @param vector The vector to iterate.
    * @param f The function to call on each element.
-   * @param offset The offset from the beginning to begin iteration.
+   * @param offset The (optional) offset from the beginning to begin iteration.
+   * @param count The (optional) count indicating the end of the iteration range. A zero count
+   *              implies scanning to end of the vector.
    */
   template <typename F>
   static void Exec(const Vector &vector, F &&f, uint64_t offset = 0, uint64_t count = 0) {
@@ -355,7 +319,46 @@ class VectorOps : public AllStatic {
       count += offset;
     }
 
-    Exec(vector.GetFilteredTupleIdList(), count, f, offset);
+    const TupleIdList *tid_list = vector.GetFilteredTupleIdList();
+
+    if (tid_list != nullptr) {
+      // If we're scanning all TIDs in the list, it's faster to use ForEach().
+      // If we're scanning only a subset range of TIDs in the list, we fall
+      // back to the slower TID iterator API.
+      // TODO(pmenon): Pull optimization into TupleIdList ?
+
+      if (offset == 0 && count == vector.GetCount()) {
+        uint64_t k = 0;
+        tid_list->ForEach([&](const uint64_t i) { f(i, k++); });
+      } else {
+        uint64_t k = offset;
+        const auto iter = tid_list->begin() + offset;
+        std::for_each(iter, iter + count, [&](const uint64_t i) { f(i, k++); });
+      }
+    } else {
+      for (uint64_t i = offset; i < count; i++) {
+        f(i, i);
+      }
+    }
+  }
+
+  /**
+   * Apply a function to ALL TIDs in the input vector. This function bypasses any filtered TID
+   * list in the vector and will perform a full iteration of all vector tuples.
+   *
+   * The callback function receives two arguments:
+   * i = the current index from the selection vector.
+   * k = position in TID list.
+   *
+   * @tparam F Functor accepting two integer arguments.
+   * @param vector The vector to iterate.
+   * @param f The function to call on each element.
+   */
+  template <typename F>
+  static void ExecIgnoreFilter(const Vector &vector, F &&f) {
+    for (uint64_t i = 0; i < vector.GetSize(); i++) {
+      f(i, i);
+    }
   }
 
   /**
@@ -374,8 +377,7 @@ class VectorOps : public AllStatic {
   template <typename T, typename F>
   static void ExecTyped(const Vector &vector, F &&f) {
     const auto *data = reinterpret_cast<const T *>(vector.GetData());
-    Exec(vector.GetFilteredTupleIdList(), vector.GetCount(),
-         [&](const uint64_t i, const uint64_t k) { f(data[i], i, k); });
+    Exec(vector, [&](const uint64_t i, const uint64_t k) { f(data[i], i, k); });
   }
 };
 
