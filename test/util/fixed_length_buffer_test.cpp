@@ -14,16 +14,16 @@ class FixedLengthBufferTest : public TplTest {};
 TEST_F(FixedLengthBufferTest, Append) {
   FixedLengthBuffer<uint32_t, 10> buffer;
 
-  EXPECT_TRUE(buffer.empty());
-  buffer.append(200u);
-  EXPECT_FALSE(buffer.empty());
-  EXPECT_EQ(1u, buffer.size());
+  EXPECT_TRUE(buffer.IsEmpty());
+  buffer.Append(200u);
+  EXPECT_FALSE(buffer.IsEmpty());
+  EXPECT_EQ(1u, buffer.GetSize());
 
   EXPECT_EQ(200u, buffer[0]);
 
-  buffer.clear();
-  EXPECT_TRUE(buffer.empty());
-  EXPECT_EQ(0u, buffer.size());
+  buffer.Clear();
+  EXPECT_TRUE(buffer.IsEmpty());
+  EXPECT_EQ(0u, buffer.GetSize());
 }
 
 TEST_F(FixedLengthBufferTest, Iteration) {
@@ -35,7 +35,7 @@ TEST_F(FixedLengthBufferTest, Iteration) {
   std::random_device r;
   for (uint32_t i = 0; i < nelems; i++) {
     uint32_t num = r();
-    buffer.append(num);
+    buffer.Append(num);
     reference.push_back(num);
     EXPECT_EQ(num, buffer[i]);
   }
@@ -49,19 +49,19 @@ TEST_F(FixedLengthBufferTest, Iteration) {
 TEST_F(FixedLengthBufferTest, OutOfBoundsAccess) {
   FixedLengthBuffer<uint32_t, 2> buffer;
 
-  EXPECT_THROW(buffer.at(0), std::out_of_range);
+  EXPECT_THROW(buffer.At(0), std::out_of_range);
 
-  buffer.append(10);
-  EXPECT_NO_THROW(buffer.at(0));
+  buffer.Append(10);
+  EXPECT_NO_THROW(buffer.At(0));
   EXPECT_EQ(10u, buffer[0]);
-  EXPECT_THROW(buffer.at(1), std::out_of_range);
+  EXPECT_THROW(buffer.At(1), std::out_of_range);
 
-  buffer.append(11);
-  EXPECT_NO_THROW(buffer.at(0));
-  EXPECT_NO_THROW(buffer.at(1));
+  buffer.Append(11);
+  EXPECT_NO_THROW(buffer.At(0));
+  EXPECT_NO_THROW(buffer.At(1));
   EXPECT_EQ(10u, buffer[0]);
   EXPECT_EQ(11u, buffer[1]);
-  EXPECT_THROW(buffer.at(2), std::out_of_range);
+  EXPECT_THROW(buffer.At(2), std::out_of_range);
 }
 
 }  // namespace tpl::util

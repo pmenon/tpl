@@ -243,14 +243,14 @@ void AggregationHashTable::ComputeHash(VectorProjectionIterator *vpi,
 template <bool VPIIsFiltered>
 uint32_t AggregationHashTable::FindGroups(VectorProjectionIterator *vpi,
                                           const AggregationHashTable::KeyEqFn key_eq_fn) {
-  batch_state_->key_not_eq.clear();
-  batch_state_->groups_not_found.clear();
+  batch_state_->key_not_eq.Clear();
+  batch_state_->groups_not_found.Clear();
   uint32_t found = LookupInitial(vpi->GetSelectedTupleCount());
   uint32_t keys_equal = CheckKeyEquality<VPIIsFiltered>(vpi, found, key_eq_fn);
-  while (!batch_state_->key_not_eq.empty()) {
+  while (!batch_state_->key_not_eq.IsEmpty()) {
     found = FollowNext();
     if (found == 0) break;
-    batch_state_->key_not_eq.clear();
+    batch_state_->key_not_eq.Clear();
     keys_equal += CheckKeyEquality<VPIIsFiltered>(vpi, found, key_eq_fn);
   }
   return keys_equal;
@@ -298,7 +298,7 @@ uint32_t AggregationHashTable::LookupInitialImpl(const uint32_t num_elems) {
         }
       }
     }
-    groups_not_found.append(idx);
+    groups_not_found.Append(idx);
   nextChain:
     idx++;
   }
@@ -327,7 +327,7 @@ uint32_t AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *vpi, u
     if (key_eq_fn(entries[index]->payload, vpi)) {
       groups_found[matched++] = index;
     } else {
-      key_not_eq.append(index);
+      key_not_eq.Append(index);
     }
   }
 
@@ -345,7 +345,7 @@ uint32_t AggregationHashTable::FollowNext() {
   auto &groups_not_found = batch_state_->groups_not_found;
 
   uint32_t matched = 0;
-  for (uint32_t i = 0; i < key_not_eq.size();) {
+  for (uint32_t i = 0; i < key_not_eq.GetSize();) {
     const auto index = key_not_eq[i];
     for (auto *entry = entries[index]; entry != nullptr; entry = entry->next) {
       const auto hash = hashes[index];
@@ -355,7 +355,7 @@ uint32_t AggregationHashTable::FollowNext() {
         goto nextChain;
       }
     }
-    groups_not_found.append(index);
+    groups_not_found.Append(index);
   nextChain:
     i++;
   }
@@ -370,7 +370,7 @@ void AggregationHashTable::CreateMissingGroups(VectorProjectionIterator *vpi,
   const auto &groups_not_found = batch_state_->groups_not_found;
   auto &entries = batch_state_->entries;
 
-  for (uint64_t i = 0; i < groups_not_found.size(); i++) {
+  for (uint64_t i = 0; i < groups_not_found.GetSize(); i++) {
     const auto index = groups_not_found[i];
 
     // Position the iterator to the tuple we're inserting
