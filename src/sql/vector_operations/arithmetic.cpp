@@ -25,13 +25,13 @@ struct ShouldPerformFullCompute<
 
 namespace {
 
-// TODO(pmenon): Instead of doing a branching zero-check, use a TID list to quickly select which are
-//               non-zero, then iterate over that sub list?
-
-// TODO(pmenon): Overflow
+// TODO(pmenon): Instead of doing a branching zero-check, use a TID list to
+//               quickly select which are non-zero, then iterate over that sub list?
+// TODO(pmenon): Overflow?
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op>
-void DivModOperation_Constant_Vector(const Vector &left, const Vector &right, Vector *result) {
+void TemplatedDivModOperation_Constant_Vector(const Vector &left, const Vector &right,
+                                              Vector *result) {
   auto *left_data = reinterpret_cast<LeftType *>(left.GetData());
   auto *right_data = reinterpret_cast<RightType *>(right.GetData());
   auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
@@ -55,7 +55,8 @@ void DivModOperation_Constant_Vector(const Vector &left, const Vector &right, Ve
 }
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op>
-void DivModOperation_Vector_Constant(const Vector &left, const Vector &right, Vector *result) {
+void TemplatedDivModOperation_Vector_Constant(const Vector &left, const Vector &right,
+                                              Vector *result) {
   auto *left_data = reinterpret_cast<LeftType *>(left.GetData());
   auto *right_data = reinterpret_cast<RightType *>(right.GetData());
   auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
@@ -79,7 +80,8 @@ void DivModOperation_Vector_Constant(const Vector &left, const Vector &right, Ve
 }
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op>
-void DivModOperation_Vector_Vector(const Vector &left, const Vector &right, Vector *result) {
+void TemplatedDivModOperation_Vector_Vector(const Vector &left, const Vector &right,
+                                            Vector *result) {
   auto *left_data = reinterpret_cast<LeftType *>(left.GetData());
   auto *right_data = reinterpret_cast<RightType *>(right.GetData());
   auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
@@ -98,18 +100,21 @@ void DivModOperation_Vector_Vector(const Vector &left, const Vector &right, Vect
 }
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op>
-void XDivModOperation(const Vector &left, const Vector &right, Vector *result) {
+void XTemplatedDivModOperation(const Vector &left, const Vector &right, Vector *result) {
   if (left.IsConstant()) {
-    DivModOperation_Constant_Vector<LeftType, RightType, ResultType, Op>(left, right, result);
+    TemplatedDivModOperation_Constant_Vector<LeftType, RightType, ResultType, Op>(left, right,
+                                                                                  result);
   } else if (right.IsConstant()) {
-    DivModOperation_Vector_Constant<LeftType, RightType, ResultType, Op>(left, right, result);
+    TemplatedDivModOperation_Vector_Constant<LeftType, RightType, ResultType, Op>(left, right,
+                                                                                  result);
   } else {
-    DivModOperation_Vector_Vector<LeftType, RightType, ResultType, Op>(left, right, result);
+    TemplatedDivModOperation_Vector_Vector<LeftType, RightType, ResultType, Op>(left, right,
+                                                                                result);
   }
 }
 
-// Helper function to execute a divide or modulo operations. The operations are performed only on
-// the active elements in the input vectors.
+// Helper function to execute a divide or modulo operations. The operations are
+// performed only on the active elements in the input vectors.
 template <typename Op>
 void DivModOperation(const Vector &left, const Vector &right, Vector *result) {
   // Sanity check
@@ -118,25 +123,25 @@ void DivModOperation(const Vector &left, const Vector &right, Vector *result) {
   // Lift-off
   switch (left.GetTypeId()) {
     case TypeId::TinyInt:
-      XDivModOperation<int8_t, int8_t, int8_t, Op>(left, right, result);
+      XTemplatedDivModOperation<int8_t, int8_t, int8_t, Op>(left, right, result);
       break;
     case TypeId::SmallInt:
-      XDivModOperation<int16_t, int16_t, int16_t, Op>(left, right, result);
+      XTemplatedDivModOperation<int16_t, int16_t, int16_t, Op>(left, right, result);
       break;
     case TypeId::Integer:
-      XDivModOperation<int32_t, int32_t, int32_t, Op>(left, right, result);
+      XTemplatedDivModOperation<int32_t, int32_t, int32_t, Op>(left, right, result);
       break;
     case TypeId::BigInt:
-      XDivModOperation<int64_t, int64_t, int64_t, Op>(left, right, result);
+      XTemplatedDivModOperation<int64_t, int64_t, int64_t, Op>(left, right, result);
       break;
     case TypeId::Float:
-      XDivModOperation<float, float, float, Op>(left, right, result);
+      XTemplatedDivModOperation<float, float, float, Op>(left, right, result);
       break;
     case TypeId::Double:
-      XDivModOperation<double, double, double, Op>(left, right, result);
+      XTemplatedDivModOperation<double, double, double, Op>(left, right, result);
       break;
     case TypeId::Pointer:
-      XDivModOperation<uint64_t, uint64_t, uint64_t, Op>(left, right, result);
+      XTemplatedDivModOperation<uint64_t, uint64_t, uint64_t, Op>(left, right, result);
       break;
     default:
       throw InvalidTypeException(left.GetTypeId(), "Invalid type for arithmetic operation");
@@ -152,25 +157,25 @@ void BinaryArithmeticOperation(const Vector &left, const Vector &right, Vector *
   // Lift-off
   switch (left.GetTypeId()) {
     case TypeId::TinyInt:
-      BinaryOperation<int8_t, int8_t, int8_t, Op>(left, right, result);
+      TemplatedBinaryOperation<int8_t, int8_t, int8_t, Op>(left, right, result);
       break;
     case TypeId::SmallInt:
-      BinaryOperation<int16_t, int16_t, int16_t, Op>(left, right, result);
+      TemplatedBinaryOperation<int16_t, int16_t, int16_t, Op>(left, right, result);
       break;
     case TypeId::Integer:
-      BinaryOperation<int32_t, int32_t, int32_t, Op>(left, right, result);
+      TemplatedBinaryOperation<int32_t, int32_t, int32_t, Op>(left, right, result);
       break;
     case TypeId::BigInt:
-      BinaryOperation<int64_t, int64_t, int64_t, Op>(left, right, result);
+      TemplatedBinaryOperation<int64_t, int64_t, int64_t, Op>(left, right, result);
       break;
     case TypeId::Float:
-      BinaryOperation<float, float, float, Op>(left, right, result);
+      TemplatedBinaryOperation<float, float, float, Op>(left, right, result);
       break;
     case TypeId::Double:
-      BinaryOperation<double, double, double, Op>(left, right, result);
+      TemplatedBinaryOperation<double, double, double, Op>(left, right, result);
       break;
     case TypeId::Pointer:
-      BinaryOperation<uint64_t, uint64_t, uint64_t, Op>(left, right, result);
+      TemplatedBinaryOperation<uint64_t, uint64_t, uint64_t, Op>(left, right, result);
       break;
     default:
       throw InvalidTypeException(left.GetTypeId(), "Invalid type for arithmetic operation");
@@ -198,7 +203,5 @@ void VectorOps::Divide(const Vector &left, const Vector &right, Vector *result) 
 void VectorOps::Modulo(const Vector &left, const Vector &right, Vector *result) {
   DivModOperation<tpl::sql::Modulo>(left, right, result);
 }
-
-void VectorOps::AddInPlace(Vector *left, const Vector &right) {}
 
 }  // namespace tpl::sql

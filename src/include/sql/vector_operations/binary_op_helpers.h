@@ -47,8 +47,8 @@ inline void CheckBinaryOperation(const Vector &left, const Vector &right, Vector
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
           bool IgnoreNull = false>
-inline void BinaryOperation_Constant_Vector(const Vector &left, const Vector &right,
-                                            Vector *result) {
+inline void TemplatedBinaryOperation_Constant_Vector(const Vector &left, const Vector &right,
+                                                     Vector *result) {
   auto *left_data = reinterpret_cast<LeftType *>(left.GetData());
   auto *right_data = reinterpret_cast<RightType *>(right.GetData());
   auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
@@ -90,8 +90,8 @@ inline void BinaryOperation_Constant_Vector(const Vector &left, const Vector &ri
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
           bool IgnoreNull = false>
-inline void BinaryOperation_Vector_Constant(const Vector &left, const Vector &right,
-                                            Vector *result) {
+inline void TemplatedBinaryOperation_Vector_Constant(const Vector &left, const Vector &right,
+                                                     Vector *result) {
   auto *left_data = reinterpret_cast<LeftType *>(left.GetData());
   auto *right_data = reinterpret_cast<RightType *>(right.GetData());
   auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
@@ -136,7 +136,8 @@ inline void BinaryOperation_Vector_Constant(const Vector &left, const Vector &ri
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
           bool IgnoreNull = false>
-inline void BinaryOperation_Vector_Vector(const Vector &left, const Vector &right, Vector *result) {
+inline void TemplatedBinaryOperation_Vector_Vector(const Vector &left, const Vector &right,
+                                                   Vector *result) {
   TPL_ASSERT(left.GetFilteredTupleIdList() == right.GetFilteredTupleIdList(),
              "Mismatched selection vectors for comparison");
   TPL_ASSERT(left.GetCount() == right.GetCount(), "Mismatched vector counts for comparison");
@@ -194,16 +195,16 @@ inline void BinaryOperation_Vector_Vector(const Vector &left, const Vector &righ
  */
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
           bool IgnoreNull = false>
-inline void BinaryOperation(const Vector &left, const Vector &right, Vector *result) {
+inline void TemplatedBinaryOperation(const Vector &left, const Vector &right, Vector *result) {
   if (left.IsConstant()) {
-    BinaryOperation_Constant_Vector<LeftType, RightType, ResultType, Op, IgnoreNull>(left, right,
-                                                                                     result);
+    TemplatedBinaryOperation_Constant_Vector<LeftType, RightType, ResultType, Op, IgnoreNull>(
+        left, right, result);
   } else if (right.IsConstant()) {
-    BinaryOperation_Vector_Constant<LeftType, RightType, ResultType, Op, IgnoreNull>(left, right,
-                                                                                     result);
+    TemplatedBinaryOperation_Vector_Constant<LeftType, RightType, ResultType, Op, IgnoreNull>(
+        left, right, result);
   } else {
-    BinaryOperation_Vector_Vector<LeftType, RightType, ResultType, Op, IgnoreNull>(left, right,
-                                                                                   result);
+    TemplatedBinaryOperation_Vector_Vector<LeftType, RightType, ResultType, Op, IgnoreNull>(
+        left, right, result);
   }
 }
 
