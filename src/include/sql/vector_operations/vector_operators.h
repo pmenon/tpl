@@ -78,6 +78,77 @@ class VectorOps : public AllStatic {
 
   // -------------------------------------------------------
   //
+  // Projections
+  //
+  // -------------------------------------------------------
+
+  /**
+   * Add vector elements in @em left with @em right and store the result into @em result:
+   *
+   * result = left + right
+   *
+   * @param left The left input into the addition.
+   * @param right The right input into the addition.
+   * @param[out] result The result of the addition.
+   */
+  static void Add(const Vector &left, const Vector &right, Vector *result);
+
+  /**
+   * Subtract vector elements in @em right from @em left and store the result into @em result:
+   *
+   * result = left - right
+   *
+   * @param left The left input into the addition.
+   * @param right The right input into the addition.
+   * @param[out] result The result of the addition.
+   */
+  static void Subtract(const Vector &left, const Vector &right, Vector *result);
+
+  /**
+   * Multiply vector elements in @em left with @em right and store the result into @em result:
+   *
+   * result = left * right
+   *
+   * @param left The left input into the addition.
+   * @param right The right input into the addition.
+   * @param[out] result The result of the addition.
+   */
+  static void Multiply(const Vector &left, const Vector &right, Vector *result);
+
+  /**
+   * Divide vector elements in @em left by @em right and store the result into @em result:
+   *
+   * result = left / right
+   *
+   * @param left The left input into the addition.
+   * @param right The right input into the addition.
+   * @param[out] result The result of the addition.
+   */
+  static void Divide(const Vector &left, const Vector &right, Vector *result);
+
+  /**
+   * Modulo vector elements in @em left by @em right and store the result into @em result:
+   *
+   * result = left % right
+   *
+   * @param left The left input into the addition.
+   * @param right The right input into the addition.
+   * @param[out] result The result of the addition.
+   */
+  static void Modulo(const Vector &left, const Vector &right, Vector *result);
+
+  /**
+   * Add vector elements in @em left with @em right and store the result back into @em left:
+   *
+   * left += right
+   *
+   * @param[in,out] left The left input into the addition.
+   * @param right The right input into the addition.
+   */
+  static void AddInPlace(Vector *left, const Vector &right);
+
+  // -------------------------------------------------------
+  //
   // Selections
   //
   // -------------------------------------------------------

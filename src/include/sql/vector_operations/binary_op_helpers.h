@@ -28,6 +28,9 @@ inline void BinaryOperation_Constant_Vector(const Vector &left, const Vector &ri
   auto *right_data = reinterpret_cast<RightType *>(right.GetData());
   auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
 
+  result->Resize(right.GetSize());
+  result->SetFilteredTupleIdList(right.GetFilteredTupleIdList(), right.GetCount());
+
   if (left.IsNull(0)) {
     VectorOps::FillNull(result);
   } else {
@@ -35,21 +38,18 @@ inline void BinaryOperation_Constant_Vector(const Vector &left, const Vector &ri
 
     if (IgnoreNull && result->GetNullMask().Any()) {
       // Slow-path: need to check NULLs
-      VectorOps::Exec(right.GetFilteredTupleIdList(), right.GetCount(),
-                      [&](uint64_t i, uint64_t k) {
-                        if (!result->GetNullMask()[i]) {
-                          result_data[i] = Op::Apply(left_data[0], right_data[i]);
-                        }
-                      });
+      VectorOps::Exec(right, [&](uint64_t i, uint64_t k) {
+        if (!result->GetNullMask()[i]) {
+          result_data[i] = Op::Apply(left_data[0], right_data[i]);
+        }
+      });
     } else {
       // Fast-path: no NULL checks
-      VectorOps::Exec(
-          right.GetFilteredTupleIdList(), right.GetCount(),
-          [&](uint64_t i, uint64_t k) { result_data[i] = Op::Apply(left_data[0], right_data[i]); });
+      VectorOps::Exec(right, [&](uint64_t i, uint64_t k) {
+        result_data[i] = Op::Apply(left_data[0], right_data[i]);
+      });
     }
   }
-
-  result->SetFilteredTupleIdList(right.GetFilteredTupleIdList(), right.GetCount());
 }
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
@@ -60,6 +60,9 @@ inline void BinaryOperation_Vector_Constant(const Vector &left, const Vector &ri
   auto *right_data = reinterpret_cast<RightType *>(right.GetData());
   auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
 
+  result->Resize(left.GetSize());
+  result->SetFilteredTupleIdList(left.GetFilteredTupleIdList(), left.GetCount());
+
   if (right.IsNull(0)) {
     VectorOps::FillNull(result);
   } else {
@@ -68,14 +71,14 @@ inline void BinaryOperation_Vector_Constant(const Vector &left, const Vector &ri
 
     if (IgnoreNull && result->GetNullMask().Any()) {
       // Slow-path: need to check NULLs
-      VectorOps::Exec(left.GetFilteredTupleIdList(), left.GetCount(), [&](uint64_t i, uint64_t k) {
+      VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
         if (!result->GetNullMask()[i]) {
           result_data[i] = Op::Apply(left_data[i], right_data[0]);
         }
       });
     } else {
       // Fast-path: no NULL checks
-      VectorOps::Exec(left.GetFilteredTupleIdList(), left.GetCount(), [&](uint64_t i, uint64_t k) {
+      VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
         result_data[i] = Op::Apply(left_data[i], right_data[0]);
       });
     }
@@ -95,21 +98,21 @@ inline void BinaryOperation_Vector_Vector(const Vector &left, const Vector &righ
   auto *right_data = reinterpret_cast<RightType *>(right.GetData());
   auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
 
+  result->Resize(left.GetSize());
   result->GetMutableNullMask()->Copy(left.GetNullMask()).Union(right.GetNullMask());
+  result->SetFilteredTupleIdList(left.GetFilteredTupleIdList(), left.GetCount());
 
   if (IgnoreNull && result->GetNullMask().Any()) {
-    VectorOps::Exec(left.GetFilteredTupleIdList(), left.GetCount(), [&](uint64_t i, uint64_t k) {
+    VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
       if (!result->GetNullMask()[i]) {
         result_data[i] = Op::Apply(left_data[i], right_data[i]);
       }
     });
   } else {
-    VectorOps::Exec(left.GetFilteredTupleIdList(), left.GetCount(), [&](uint64_t i, uint64_t k) {
+    VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
       result_data[i] = Op::Apply(left_data[i], right_data[i]);
     });
   }
-
-  result->SetFilteredTupleIdList(left.GetFilteredTupleIdList(), left.GetCount());
 }
 
 /**
