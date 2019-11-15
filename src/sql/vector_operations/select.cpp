@@ -31,7 +31,9 @@ struct is_safe_for_full_compute {
 
 template <typename T>
 struct is_safe_for_full_compute<
-    T, std::enable_if_t<std::is_fundamental_v<T> || std::is_same_v<T, Date>>> {
+    T, std::enable_if_t<std::is_fundamental_v<T> || std::is_same_v<T, Date> ||
+                        std::is_same_v<T, Timestamp> || std::is_same_v<T, Decimal32> ||
+                        std::is_same_v<T, Decimal64> || std::is_same_v<T, Decimal128>>> {
   static constexpr bool value = true;
 };
 
