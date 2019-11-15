@@ -9,14 +9,21 @@ namespace tpl {
 namespace {
 
 double DeriveOptimalFullSelectionThreshold(UNUSED Settings *settings, UNUSED CpuInfo *cpu_info) {
-  // TODO(pmenon): Micro-benchmark to determine this for different machines
+  // TODO(pmenon): Micro-benchmark to determine this at database startup for the current machine
   // TODO(pmenon): What about types?
   return 0.25;
 }
 
+double DeriveOptimalArithmeticFullComputeThreshold(UNUSED Settings *settings,
+                                                   UNUSED CpuInfo *cpu_info) {
+  // TODO(pmenon): Micro-benchmark to determine this at database startup for the current machine
+  // TODO(pmenon): What about types?
+  return 0.05;
+}
+
 double DeriveMinBitDensityThresholdForAvxIndexDecode(UNUSED Settings *settings,
                                                      UNUSED CpuInfo *cpu_info) {
-  // TODO(pmenon): Derive me, dude.
+  // TODO(pmenon): Micro-benchmark to determine this at database startup for the current machine
   return 0.15;
 }
 
