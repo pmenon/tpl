@@ -14,16 +14,17 @@ class VectorProjection;
 class VectorProjectionIterator;
 
 /**
- * An adaptive filter that tries to discover the optimal filter configuration. Users build
- * up the filter in DNF form. Each summand (i.e., clause) begins with a call to
- * FilterManager::StartNewClause(), and factors (i.e., terms) for each clause are inserted through
- * FilterManager::InsertClauseTerm(). When finished, use FilterManager::Finalize(). After
- * finalization, the filter is immutable.
+ * An adaptive filter that tries to discover the optimal filter configuration. Users build up the
+ * filter in disjunctive normal form (DNF). Each summand (i.e., clause in this context) begins with
+ * a call to FilterManager::StartNewClause(). Factors (i.e., terms in this context) can be added to
+ * the current summand through FilterManager::InsertClauseTerm(). Each summand must only be
+ * composed of conjunctive terms. When finished, use FilterManager::Finalize(). The filter is
+ * immutable after finalization.
  *
  * @code
  * FilterManager filter;
  * filter.StartNewClause();
- * filter.InsertClauseFilter(C0F0);
+ * filter.InsertClauseFilter(Clause0Term0);
  * // Remaining clauses and terms ..
  * filter.Finalize();
  *

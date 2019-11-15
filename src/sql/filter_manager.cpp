@@ -19,7 +19,7 @@ namespace tpl::sql {
 FilterManager::Clause::Clause(const float stat_sample_freq)
     : sample_freq_(stat_sample_freq),
 #ifndef NDEBUG
-      // In DEBUG mode, use a fixed seed so we get predictable and repeatable randomness
+      // In DEBUG mode, use a fixed seed so we get repeatable randomness
       gen_(0),
 #else
       gen_(std::random_device()()),
@@ -128,7 +128,8 @@ void FilterManager::Finalize() {
 void FilterManager::RunFilters(VectorProjection *vector_projection) {
   TPL_ASSERT(IsFinalized(), "Must finalize the filter before it can be used");
 
-  // Initialize the input, output, and temporary TID lists for processing this projection
+  // Initialize the input, output, and temporary tuple ID lists for processing
+  // this projection.
   if (const uint32_t projection_size = vector_projection->GetTotalTupleCount();
       projection_size != input_list_.GetCapacity()) {
     tmp_list_.Resize(projection_size);
