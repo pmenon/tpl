@@ -111,11 +111,7 @@ TEST_F(AggregationHashTableTest, SimpleRandomInsertionTest) {
       ref_iter->second->Advance(input);
     } else {
       // The reference table shouldn't have the aggregate
-      auto ref_iter = ref_agg_table.find(input.key);
-      if (ref_iter != ref_agg_table.end()) {
-        FAIL();
-      }
-      EXPECT_TRUE(ref_iter == ref_agg_table.end());
+      EXPECT_EQ(ref_agg_table.find(input.key), ref_agg_table.end());
       new (AggTable()->AllocInputTuple(hash_val)) AggTuple(input);
       ref_agg_table.emplace(input.key, std::make_unique<AggTuple>(input));
     }
@@ -174,11 +170,8 @@ TEST_F(AggregationHashTableTest, IterationTest) {
 TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
   const uint32_t num_tuples = 10000;
 
-  std::mt19937 generator;
-  std::uniform_int_distribution<uint64_t> distribution(0, 9);
-
   for (uint32_t idx = 0; idx < num_tuples; idx++) {
-    InputTuple input(distribution(generator), 1);
+    InputTuple input(idx, 1);
     auto *existing = reinterpret_cast<AggTuple *>(
         AggTable()->Lookup(input.Hash(), AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
 
@@ -189,14 +182,17 @@ TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
       new (new_agg) AggTuple(input);
     }
   }
+
+  // We had to have flushed
+  EXPECT_GT(AggTable()->GetStatistics()->num_flushes, 0);
 }
 
 TEST_F(AggregationHashTableTest, BatchProcessTest) {
   constexpr uint32_t num_groups = 400;
+  constexpr uint32_t num_batches = 10;
 
-  // Insert 'num_tuples' tuples into an aggregation table to force the creation
-  // of 'num_groups' unique groups. Each group should receive 'tuples_per_group'
-  // tuples as input.
+  // Insert 'num_batches' of 'kDefaultVectorSize' (i.e., 2048) tuples into an aggregation table to
+  // force the creation of 'num_groups' unique groups.
 
   const auto hash_fn = [](void *x) {
     auto vpi = reinterpret_cast<const VectorProjectionIterator *>(x);
@@ -230,13 +226,12 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
   vector_projection.Initialize({TypeId::Integer, TypeId::Integer});
   vector_projection.Reset(kDefaultVectorSize);
 
-  for (uint32_t run = 0; run < 10; run++) {
+  for (uint32_t run = 0; run < num_batches; run++) {
     // Setup projection's key and value
     std::random_device random;
-    for (uint32_t idx = 0; idx < kDefaultVectorSize; idx++) {
-      reinterpret_cast<uint32_t *>(vector_projection.GetColumn(0)->GetData())[idx] =
-          idx % num_groups;
-      reinterpret_cast<uint32_t *>(vector_projection.GetColumn(1)->GetData())[idx] = 1;
+    for (uint32_t i = 0; i < kDefaultVectorSize; i++) {
+      reinterpret_cast<uint32_t *>(vector_projection.GetColumn(0)->GetData())[i] = i % num_groups;
+      reinterpret_cast<uint32_t *>(vector_projection.GetColumn(1)->GetData())[i] = 1;
     }
 
     // Process
