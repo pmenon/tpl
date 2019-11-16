@@ -87,23 +87,15 @@ class VectorProjectionIteratorTest : public TplTest {
 
  public:
   VectorProjectionIteratorTest() : num_tuples_(10) {
-    // Create the schema
-    std::vector<Schema::ColumnInfo> cols = {
-        Schema::ColumnInfo("col_a", SmallIntType::InstanceNonNullable()),
-        Schema::ColumnInfo("col_b", IntegerType::InstanceNullable()),
-        Schema::ColumnInfo("col_c", IntegerType::InstanceNonNullable()),
-        Schema::ColumnInfo("col_d", BigIntType::InstanceNonNullable()),
-        Schema::ColumnInfo("col_e", BigIntType::InstanceNonNullable()),
-        Schema::ColumnInfo("col_f", BigIntType::InstanceNonNullable()),
-    };
-    schema_ = std::make_unique<Schema>(std::move(cols));
-
-    std::vector<const Schema::ColumnInfo *> column_info = {
-        schema_->GetColumnInfo(0), schema_->GetColumnInfo(1), schema_->GetColumnInfo(2),
-        schema_->GetColumnInfo(3), schema_->GetColumnInfo(4), schema_->GetColumnInfo(5),
-    };
     vector_projection_ = std::make_unique<VectorProjection>();
-    vector_projection_->Initialize(column_info);
+    vector_projection_->Initialize({
+        TypeId::SmallInt,  // col a
+        TypeId::Integer,   // col b
+        TypeId::Integer,   // col c
+        TypeId::BigInt,    // col d
+        TypeId::BigInt,    // col e
+        TypeId::BigInt,    // col f
+    });
     vector_projection_->Reset(NumTuples());
 
     // Load the data

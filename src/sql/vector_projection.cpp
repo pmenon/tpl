@@ -17,24 +17,22 @@ VectorProjection::VectorProjection()
   owned_tid_list_.Resize(0);
 }
 
-void VectorProjection::InitializeEmpty(const std::vector<const Schema::ColumnInfo *> &column_info) {
-  TPL_ASSERT(!column_info.empty(), "Cannot create projection with zero columns");
-  column_info_ = column_info;
-  columns_.resize(column_info.size());
-  for (uint64_t i = 0; i < columns_.size(); i++) {
-    const auto col_type = column_info[i]->sql_type.GetPrimitiveTypeId();
-    columns_[i] = std::make_unique<Vector>(col_type);
+void VectorProjection::InitializeEmpty(const std::vector<TypeId> &col_types) {
+  TPL_ASSERT(!col_types.empty(), "Cannot create projection with zero columns");
+  columns_.reserve(col_types.size());
+  for (const auto col_type : col_types) {
+    columns_.emplace_back(std::make_unique<Vector>(col_type));
   }
 }
 
-void VectorProjection::Initialize(const std::vector<const Schema::ColumnInfo *> &column_info) {
+void VectorProjection::Initialize(const std::vector<TypeId> &col_types) {
   // First initialize an empty projection
-  InitializeEmpty(column_info);
+  InitializeEmpty(col_types);
 
   // Now allocate space to accommodate all child vector data
   std::size_t size_in_bytes = 0;
-  for (const auto &col_info : column_info) {
-    size_in_bytes += col_info->GetStorageSize() * kDefaultVectorSize;
+  for (const auto &col_type : col_types) {
+    size_in_bytes += GetTypeIdSize(col_type) * kDefaultVectorSize;
   }
 
   // std::make_unique() with an array-type zeros the array for us due to
@@ -43,9 +41,9 @@ void VectorProjection::Initialize(const std::vector<const Schema::ColumnInfo *> 
 
   // Setup the vector's to reference our data chunk
   byte *ptr = owned_buffer_.get();
-  for (uint64_t i = 0; i < column_info.size(); i++) {
+  for (uint64_t i = 0; i < col_types.size(); i++) {
     columns_[i]->Reference(ptr, nullptr, 0);
-    ptr += column_info[i]->GetStorageSize() * kDefaultVectorSize;
+    ptr += GetTypeIdSize(col_types[i]) * kDefaultVectorSize;
   }
 }
 

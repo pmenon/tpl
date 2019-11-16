@@ -226,24 +226,21 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
     agg_tuple->Advance(InputTuple(*key, *val));
   };
 
-  Schema::ColumnInfo key_col("key", IntegerType::InstanceNonNullable());
-  Schema::ColumnInfo val_col("val", IntegerType::InstanceNonNullable());
-  std::vector<const Schema::ColumnInfo *> cols = {&key_col, &val_col};
-
-  VectorProjection vp;
-  vp.Initialize(cols);
-  vp.Reset(kDefaultVectorSize);
+  VectorProjection vector_projection;
+  vector_projection.Initialize({TypeId::Integer, TypeId::Integer});
+  vector_projection.Reset(kDefaultVectorSize);
 
   for (uint32_t run = 0; run < 10; run++) {
     // Setup projection's key and value
     std::random_device random;
     for (uint32_t idx = 0; idx < kDefaultVectorSize; idx++) {
-      reinterpret_cast<uint32_t *>(vp.GetColumn(0)->GetData())[idx] = idx % num_groups;
-      reinterpret_cast<uint32_t *>(vp.GetColumn(1)->GetData())[idx] = 1;
+      reinterpret_cast<uint32_t *>(vector_projection.GetColumn(0)->GetData())[idx] =
+          idx % num_groups;
+      reinterpret_cast<uint32_t *>(vector_projection.GetColumn(1)->GetData())[idx] = 1;
     }
 
     // Process
-    VectorProjectionIterator vpi(&vp);
+    VectorProjectionIterator vpi(&vector_projection);
     AggTable()->ProcessBatch(&vpi, hash_fn, key_eq, init_agg, advance_agg, false);
   }
 

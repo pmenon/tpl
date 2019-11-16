@@ -18,7 +18,11 @@ SorterVectorIterator::SorterVectorIterator(
       vector_projection_(std::make_unique<VectorProjection>()),
       vector_projection_iterator_(std::make_unique<VectorProjectionIterator>()) {
   // First, initialize the vector projection
-  vector_projection_->Initialize(column_info);
+  std::vector<TypeId> col_types;
+  for (const auto *col_info : column_info) {
+    col_types.emplace_back(col_info->sql_type.GetPrimitiveTypeId());
+  }
+  vector_projection_->Initialize(col_types);
 
   // Now, move the iterator to the next valid position
   Next(transpose_fn);

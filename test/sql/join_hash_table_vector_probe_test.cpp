@@ -89,10 +89,10 @@ TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
   auto jht = BuildJoinHashTable<N>(/*concise*/ false, num_build, Seq(0));
 
   // The vector projection
-  Schema schema({{"probeKey", IntegerType::InstanceNonNullable()}});
   VectorProjection vp;
-  vp.Initialize({schema.GetColumnInfo(0)});
+  vp.Initialize({TypeId::Integer});
 
+  // The iterator
   VectorProjectionIterator vpi(&vp);
 
   // Lookup

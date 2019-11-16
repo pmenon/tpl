@@ -97,9 +97,9 @@ class VectorProjection {
    * vector for each type provided in the column metadata list @em column_info. All vectors will
    * will be initialized with a maximum capacity of kDefaultVectorSize (e.g., 2048), are empty, and
    * will reference data owned by this vector projection.
-   * @param column_info Metadata for columns in the projection.
+   * @param col_types Metadata for columns in the projection.
    */
-  void Initialize(const std::vector<const Schema::ColumnInfo *> &column_info);
+  void Initialize(const std::vector<TypeId> &col_types);
 
   /**
    * Initialize an empty vector projection with columns of the provided types. This will create an
@@ -109,9 +109,9 @@ class VectorProjection {
    *
    * @see VectorProjection::ResetColumn()
    *
-   * @param column_info Metadata for columns in the projection.
+   * @param col_types Metadata for columns in the projection.
    */
-  void InitializeEmpty(const std::vector<const Schema::ColumnInfo *> &column_info);
+  void InitializeEmpty(const std::vector<TypeId> &col_types);
 
   /**
    * @return True if the projection has no tuples; false otherwise.
@@ -137,9 +137,9 @@ class VectorProjection {
   /**
    * @return The metadata for the column at index @em col_idx in the projection.
    */
-  const Schema::ColumnInfo *GetColumnInfo(const uint32_t col_idx) const {
+  TypeId GetColumnType(const uint32_t col_idx) const {
     TPL_ASSERT(col_idx < GetColumnCount(), "Out-of-bounds column access");
-    return column_info_[col_idx];
+    return GetColumn(col_idx)->GetTypeId();
   }
 
   /**
@@ -217,9 +217,6 @@ class VectorProjection {
   void RefreshFilteredTupleIdList();
 
  private:
-  // Metadata for all columns in this projection.
-  std::vector<const Schema::ColumnInfo *> column_info_;
-
   // Vector containing column data for all columns in this projection.
   std::vector<std::unique_ptr<Vector>> columns_;
 

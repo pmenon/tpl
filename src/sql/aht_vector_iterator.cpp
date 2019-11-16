@@ -17,7 +17,11 @@ AHTVectorIterator::AHTVectorIterator(const AggregationHashTable &agg_hash_table,
       vector_projection_(std::make_unique<VectorProjection>()),
       vector_projection_iterator_(std::make_unique<VectorProjectionIterator>()) {
   // First, initialize the vector projection.
-  vector_projection_->Initialize(column_info);
+  std::vector<TypeId> col_types;
+  for (const auto *col_info : column_info) {
+    col_types.emplace_back(col_info->sql_type.GetPrimitiveTypeId());
+  }
+  vector_projection_->Initialize(col_types);
 
   // If the iterator has data, build up the projection and the current input.
   if (iter_.HasNext()) {

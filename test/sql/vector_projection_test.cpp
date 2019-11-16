@@ -8,34 +8,7 @@
 
 namespace tpl::sql {
 
-class VectorProjectionTest : public TplTest {
- public:
-  VectorProjectionTest()
-      : tinyint_col_("A", TinyIntType::Instance(false)),
-        smallint_col_("B", SmallIntType::Instance(false)),
-        int_col_("C", IntegerType::Instance(false)),
-        bigint_col_("D", BigIntType::Instance(false)),
-        float_col_("E", RealType::Instance(false)),
-        double_col_("F", DoubleType::Instance(false)),
-        date_col_("G", DateType::Instance(false)) {}
-
-  const Schema::ColumnInfo *tinyint_col() const { return &tinyint_col_; }
-  const Schema::ColumnInfo *smallint_col() const { return &smallint_col_; }
-  const Schema::ColumnInfo *int_col() const { return &int_col_; }
-  const Schema::ColumnInfo *bigint_col() const { return &bigint_col_; }
-  const Schema::ColumnInfo *float_col() const { return &float_col_; }
-  const Schema::ColumnInfo *double_col() const { return &double_col_; }
-  const Schema::ColumnInfo *date_col() const { return &date_col_; }
-
- private:
-  Schema::ColumnInfo tinyint_col_;
-  Schema::ColumnInfo smallint_col_;
-  Schema::ColumnInfo int_col_;
-  Schema::ColumnInfo bigint_col_;
-  Schema::ColumnInfo float_col_;
-  Schema::ColumnInfo double_col_;
-  Schema::ColumnInfo date_col_;
-};
+class VectorProjectionTest : public TplTest {};
 
 class VectorProjectionDeathTest : public VectorProjectionTest {};
 
@@ -51,11 +24,11 @@ TEST_F(VectorProjectionTest, Empty) {
 
 TEST_F(VectorProjectionTest, InitializeEmpty) {
   VectorProjection vector_projection;
-  vector_projection.InitializeEmpty({smallint_col(), double_col()});
+  vector_projection.InitializeEmpty({TypeId::SmallInt, TypeId::Double});
 
   EXPECT_EQ(2u, vector_projection.GetColumnCount());
-  EXPECT_EQ(SmallIntType::Instance(false), vector_projection.GetColumnInfo(0)->sql_type);
-  EXPECT_EQ(DoubleType::Instance(false), vector_projection.GetColumnInfo(1)->sql_type);
+  EXPECT_EQ(TypeId::SmallInt, vector_projection.GetColumnType(0));
+  EXPECT_EQ(TypeId::Double, vector_projection.GetColumnType(1));
   EXPECT_EQ(0u, vector_projection.GetTotalTupleCount());
   EXPECT_EQ(0u, vector_projection.GetSelectedTupleCount());
   EXPECT_EQ(nullptr, vector_projection.GetFilteredTupleIdList());
@@ -70,12 +43,12 @@ TEST_F(VectorProjectionTest, InitializeEmpty) {
 
 TEST_F(VectorProjectionTest, Initialize) {
   VectorProjection vector_projection;
-  vector_projection.Initialize({float_col(), int_col(), date_col()});
+  vector_projection.Initialize({TypeId::Float, TypeId::Integer, TypeId::Date});
 
   EXPECT_EQ(3u, vector_projection.GetColumnCount());
-  EXPECT_EQ(RealType::Instance(false), vector_projection.GetColumnInfo(0)->sql_type);
-  EXPECT_EQ(IntegerType::Instance(false), vector_projection.GetColumnInfo(1)->sql_type);
-  EXPECT_EQ(DateType::Instance(false), vector_projection.GetColumnInfo(2)->sql_type);
+  EXPECT_EQ(TypeId::Float, vector_projection.GetColumnType(0));
+  EXPECT_EQ(TypeId::Integer, vector_projection.GetColumnType(1));
+  EXPECT_EQ(TypeId::Date, vector_projection.GetColumnType(2));
   EXPECT_EQ(0u, vector_projection.GetTotalTupleCount());
   EXPECT_EQ(0u, vector_projection.GetSelectedTupleCount());
   EXPECT_EQ(nullptr, vector_projection.GetFilteredTupleIdList());
@@ -90,7 +63,7 @@ TEST_F(VectorProjectionTest, Initialize) {
 
 TEST_F(VectorProjectionTest, Selection) {
   VectorProjection vector_projection;
-  vector_projection.Initialize({bigint_col(), double_col()});
+  vector_projection.Initialize({TypeId::BigInt, TypeId::Double});
   vector_projection.Reset(20);
 
   // a = [i for i in range(0, 20, 3)] = [0, 3, 6, 9, 12, ...]
@@ -135,7 +108,7 @@ TEST_F(VectorProjectionTest, Selection) {
 
 TEST_F(VectorProjectionDeathTest, InvalidFilter) {
   VectorProjection vector_projection;
-  vector_projection.Initialize({bigint_col(), double_col()});
+  vector_projection.Initialize({TypeId::BigInt, TypeId::Double});
   vector_projection.Reset(20);
 
   // Filtered TID list is too small
@@ -153,7 +126,7 @@ TEST_F(VectorProjectionDeathTest, InvalidFilter) {
 
 TEST_F(VectorProjectionDeathTest, InvalidShape) {
   VectorProjection vector_projection;
-  vector_projection.Initialize({bigint_col(), double_col()});
+  vector_projection.Initialize({TypeId::BigInt, TypeId::Double});
   vector_projection.Reset(20);
 
   // Vectors have different sizes
@@ -167,7 +140,7 @@ TEST_F(VectorProjectionDeathTest, InvalidShape) {
 
 TEST_F(VectorProjectionTest, Reset) {
   VectorProjection vector_projection;
-  vector_projection.Initialize({tinyint_col()});
+  vector_projection.Initialize({TypeId::TinyInt});
   vector_projection.Reset(20);
 
   auto tid_list = TupleIdList(vector_projection.GetTotalTupleCount());
