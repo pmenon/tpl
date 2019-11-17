@@ -33,6 +33,7 @@ namespace tpl::vm {
   CREATE_FOR_INT_TYPES(F, op, __VA_ARGS__)   \
   CREATE_FOR_FLOAT_TYPES(F, op, __VA_ARGS__)
 
+// Creates instances of a given opcode for *ALL* primitive types
 #define CREATE_FOR_ALL_TYPES(F, op, ...)    \
   CREATE_FOR_BOOL_TYPES(F, op, __VA_ARGS__) \
   CREATE_FOR_INT_TYPES(F, op, __VA_ARGS__)  \
