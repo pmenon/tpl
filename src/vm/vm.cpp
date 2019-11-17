@@ -234,12 +234,12 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   DO_GEN_COMPARISON(LessThanEqual, type)    \
   DO_GEN_COMPARISON(NotEqual, type)
 
-  INT_TYPES(GEN_COMPARISON_TYPES)
+  ALL_TYPES(GEN_COMPARISON_TYPES)
 #undef GEN_COMPARISON_TYPES
 #undef DO_GEN_COMPARISON
 
   // -------------------------------------------------------
-  // Primitive arithmetic and binary operations
+  // Primitive arithmetic
   // -------------------------------------------------------
 
 #define DO_GEN_ARITHMETIC_OP(op, test, type)              \
@@ -254,19 +254,37 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     Op##op##_##type(dest, lhs, rhs);                      \
     DISPATCH_NEXT();                                      \
   }
-#define GEN_ARITHMETIC_OP(type, ...)        \
-  DO_GEN_ARITHMETIC_OP(Add, false, type)    \
-  DO_GEN_ARITHMETIC_OP(Sub, false, type)    \
-  DO_GEN_ARITHMETIC_OP(Mul, false, type)    \
-  DO_GEN_ARITHMETIC_OP(Div, true, type)     \
-  DO_GEN_ARITHMETIC_OP(Rem, true, type)     \
-  DO_GEN_ARITHMETIC_OP(BitAnd, false, type) \
-  DO_GEN_ARITHMETIC_OP(BitOr, false, type)  \
-  DO_GEN_ARITHMETIC_OP(BitXor, false, type)
+#define GEN_ARITHMETIC_OP(type, ...)     \
+  DO_GEN_ARITHMETIC_OP(Add, false, type) \
+  DO_GEN_ARITHMETIC_OP(Sub, false, type) \
+  DO_GEN_ARITHMETIC_OP(Mul, false, type) \
+  DO_GEN_ARITHMETIC_OP(Div, true, type)  \
+  DO_GEN_ARITHMETIC_OP(Rem, true, type)
 
-  INT_TYPES(GEN_ARITHMETIC_OP)
+  ALL_NUMERIC_TYPES(GEN_ARITHMETIC_OP)
 #undef GEN_ARITHMETIC_OP
 #undef DO_GEN_ARITHMETIC_OP
+
+  // -------------------------------------------------------
+  // Primitive arithmetic
+  // -------------------------------------------------------
+
+#define DO_GEN_BIT_OP(op, test, type)                     \
+  OP(op##_##type) : {                                     \
+    auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
+    auto lhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
+    auto rhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
+    Op##op##_##type(dest, lhs, rhs);                      \
+    DISPATCH_NEXT();                                      \
+  }
+#define GEN_BIT_OP(type, ...)               \
+  DO_GEN_BIT_OP(BitAnd, false, type) \
+  DO_GEN_BIT_OP(BitOr, false, type)  \
+  DO_GEN_BIT_OP(BitXor, false, type)
+
+  INT_TYPES(GEN_BIT_OP)
+#undef GEN_BIT_OP
+#undef DO_GEN_BIT_OP
 
   // -------------------------------------------------------
   // Bitwise and integer negation

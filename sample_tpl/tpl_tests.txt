@@ -26,6 +26,7 @@ param.tpl,false,10
 pointer.tpl,false,10
 return-expr.tpl,false,15
 #scope.tpl,false,3
+simple.tpl,false,1
 short-circuit.tpl,false,1
 struct.tpl,false,10
 struct-debug.tpl,false,100000

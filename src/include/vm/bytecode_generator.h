@@ -142,6 +142,8 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
 
   Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type);
 
+  Bytecode GetFloatTypedBytecode(Bytecode bytecode, ast::Type *type);
+
   // Lookup a function's ID by its name
   FunctionId LookupFuncIdByName(const std::string &name) const;
 

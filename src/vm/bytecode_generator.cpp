@@ -1760,6 +1760,14 @@ void BytecodeGenerator::VisitLogicalAndOrExpr(ast::BinaryOpExpr *node) {
   GetExecutionResult()->SetDestination(dest.ValueOf());
 }
 
+#define MATH_BYTECODE(CODE_RESULT, MATH_OP, TPL_TYPE)                                           \
+  if (TPL_TYPE->IsIntegerType()) {                                                              \
+    CODE_RESULT = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::MATH_OP), TPL_TYPE);     \
+  } else {                                                                                      \
+    TPL_ASSERT(TPL_TYPE->IsFloatType(), "Only integer and floating point math operations");     \
+    CODE_RESULT = GetFloatTypedBytecode(GET_BASE_FOR_FLOAT_TYPES(Bytecode::MATH_OP), TPL_TYPE); \
+  }
+
 void BytecodeGenerator::VisitPrimitiveArithmeticExpr(ast::BinaryOpExpr *node) {
   TPL_ASSERT(GetExecutionResult()->IsRValue(), "Arithmetic expressions must be R-Values!");
 
@@ -1770,23 +1778,23 @@ void BytecodeGenerator::VisitPrimitiveArithmeticExpr(ast::BinaryOpExpr *node) {
   Bytecode bytecode;
   switch (node->op()) {
     case parsing::Token::Type::PLUS: {
-      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Add), node->type());
+      MATH_BYTECODE(bytecode, Add, node->type());
       break;
     }
     case parsing::Token::Type::MINUS: {
-      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Sub), node->type());
+      MATH_BYTECODE(bytecode, Sub, node->type());
       break;
     }
     case parsing::Token::Type::STAR: {
-      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Mul), node->type());
+      MATH_BYTECODE(bytecode, Mul, node->type());
       break;
     }
     case parsing::Token::Type::SLASH: {
-      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Div), node->type());
+      MATH_BYTECODE(bytecode, Div, node->type());
       break;
     }
     case parsing::Token::Type::PERCENT: {
-      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Rem), node->type());
+      MATH_BYTECODE(bytecode, Rem, node->type());
       break;
     }
     case parsing::Token::Type::AMPERSAND: {
@@ -1810,6 +1818,8 @@ void BytecodeGenerator::VisitPrimitiveArithmeticExpr(ast::BinaryOpExpr *node) {
   // Mark where the result is
   GetExecutionResult()->SetDestination(dest.ValueOf());
 }
+
+#undef MATH_BYTECODE
 
 void BytecodeGenerator::VisitSqlArithmeticExpr(ast::BinaryOpExpr *node) {
   LocalVar dest = GetExecutionResult()->GetOrCreateDestination(node->type());
@@ -1940,6 +1950,18 @@ void BytecodeGenerator::VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare) {
 
 #undef SQL_COMPARISON_BYTECODE
 
+#define COMPARISON_BYTECODE(CODE_RESULT, COMPARISON_TYPE, TPL_TYPE)                              \
+  if (TPL_TYPE->IsIntegerType()) {                                                               \
+    CODE_RESULT =                                                                                \
+        GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::COMPARISON_TYPE), TPL_TYPE);        \
+  } else if (TPL_TYPE->IsFloatType()) {                                                          \
+    CODE_RESULT =                                                                                \
+        GetFloatTypedBytecode(GET_BASE_FOR_FLOAT_TYPES(Bytecode::COMPARISON_TYPE), TPL_TYPE);    \
+  } else {                                                                                       \
+    TPL_ASSERT(TPL_TYPE->IsBoolType(), "Only integer, floating point, and boolean comparisons"); \
+    CODE_RESULT = Bytecode::COMPARISON_TYPE##_bool;                                              \
+  }
+
 void BytecodeGenerator::VisitPrimitiveCompareOpExpr(ast::ComparisonOpExpr *compare) {
   TPL_ASSERT(GetExecutionResult()->IsRValue(), "Comparison expressions must be R-Values!");
 
@@ -1958,39 +1980,38 @@ void BytecodeGenerator::VisitPrimitiveCompareOpExpr(ast::ComparisonOpExpr *compa
 
   // regular comparison
 
+  TPL_ASSERT(compare->left()->type()->IsArithmetic() || compare->left()->type()->IsBoolType(),
+             "Invalid type to comparison");
+  TPL_ASSERT(compare->right()->type()->IsArithmetic() || compare->left()->right()->IsBoolType(),
+             "Invalid type to comparison");
+
   LocalVar left = VisitExpressionForRValue(compare->left());
   LocalVar right = VisitExpressionForRValue(compare->right());
 
   Bytecode bytecode;
   switch (compare->op()) {
     case parsing::Token::Type::GREATER: {
-      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::GreaterThan),
-                                     compare->left()->type());
+      COMPARISON_BYTECODE(bytecode, GreaterThan, compare->left()->type());
       break;
     }
     case parsing::Token::Type::GREATER_EQUAL: {
-      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::GreaterThanEqual),
-                                     compare->left()->type());
+      COMPARISON_BYTECODE(bytecode, GreaterThanEqual, compare->left()->type());
       break;
     }
     case parsing::Token::Type::EQUAL_EQUAL: {
-      bytecode =
-          GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::Equal), compare->left()->type());
+      COMPARISON_BYTECODE(bytecode, Equal, compare->left()->type());
       break;
     }
     case parsing::Token::Type::LESS: {
-      bytecode =
-          GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::LessThan), compare->left()->type());
+      COMPARISON_BYTECODE(bytecode, LessThan, compare->left()->type());
       break;
     }
     case parsing::Token::Type::LESS_EQUAL: {
-      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::LessThanEqual),
-                                     compare->left()->type());
+      COMPARISON_BYTECODE(bytecode, LessThanEqual, compare->left()->type());
       break;
     }
     case parsing::Token::Type::BANG_EQUAL: {
-      bytecode =
-          GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::NotEqual), compare->left()->type());
+      COMPARISON_BYTECODE(bytecode, NotEqual, compare->left()->type());
       break;
     }
     default: { UNREACHABLE("Impossible binary operation"); }
@@ -2002,6 +2023,8 @@ void BytecodeGenerator::VisitPrimitiveCompareOpExpr(ast::ComparisonOpExpr *compa
   // Mark where the result is
   GetExecutionResult()->SetDestination(dest.ValueOf());
 }
+
+#undef COMPARISON_BYTECODE
 
 void BytecodeGenerator::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
   TPL_ASSERT(GetExecutionResult()->IsRValue(), "Comparison expressions must be R-Values!");
@@ -2257,6 +2280,13 @@ Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode, ast::Type *ty
   TPL_ASSERT(type->IsIntegerType(), "Type must be integer type");
   auto int_kind = type->SafeAs<ast::BuiltinType>()->kind();
   auto kind_idx = static_cast<uint8_t>(int_kind - ast::BuiltinType::Int8);
+  return Bytecodes::FromByte(Bytecodes::ToByte(bytecode) + kind_idx);
+}
+
+Bytecode BytecodeGenerator::GetFloatTypedBytecode(Bytecode bytecode, ast::Type *type) {
+  TPL_ASSERT(type->IsFloatType(), "Type must be floating-point type");
+  auto float_kind = type->SafeAs<ast::BuiltinType>()->kind();
+  auto kind_idx = static_cast<uint8_t>(float_kind - ast::BuiltinType::Float32);
   return Bytecodes::FromByte(Bytecodes::ToByte(bytecode) + kind_idx);
 }
 

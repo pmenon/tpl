@@ -182,6 +182,10 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op, const S
     return {ast::BuiltinType::Get(context(), ast::BuiltinType::Boolean), left, right};
   }
 
+  if (left->type()->IsBoolType() && right->type()->IsBoolType()) {
+    return {ast::BuiltinType::Get(context(), ast::BuiltinType::Bool), left, right};
+  }
+
   // If neither input expression is arithmetic, it's an ill-formed operation
   if (!left->type()->IsArithmetic() || !right->type()->IsArithmetic()) {
     error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op, left->type(),
@@ -189,7 +193,7 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op, const S
     return {nullptr, left, right};
   }
 
-  auto built_ret_type = [this](ast::Type *input_type) {
+  auto build_ret_type = [this](ast::Type *input_type) {
     if (input_type->IsSqlValueType()) {
       return ast::BuiltinType::Get(context(), ast::BuiltinType::Boolean);
     }
@@ -198,37 +202,47 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op, const S
 
   // If the input types are the same, we don't need to do any work
   if (left->type() == right->type()) {
-    return {built_ret_type(left->type()), left, right};
+    return {build_ret_type(left->type()), left, right};
+  }
+
+  // Primitive int -> primitive float
+  if (left->type()->IsIntegerType() && right->type()->IsFloatType()) {
+    auto new_left = ImplCastExprToType(left, right->type(), ast::CastKind::IntToFloat);
+    return {build_ret_type(right->type()), new_left, right};
+  }
+  if (left->type()->IsFloatType() && right->type()->IsIntegerType()) {
+    auto new_right = ImplCastExprToType(right, left->type(), ast::CastKind::IntToFloat);
+    return {build_ret_type(right->type()), left, new_right};
   }
 
   // Primitive float -> Sql Float
   if (left->type()->IsFloatType() && right->type()->IsSpecificBuiltin(ast::BuiltinType::Real)) {
     auto new_left = ImplCastExprToType(left, right->type(), ast::CastKind::FloatToSqlReal);
-    return {built_ret_type(right->type()), new_left, right};
+    return {build_ret_type(right->type()), new_left, right};
   }
 
   // Sql Float <- Primitive Float
   if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Real) && right->type()->IsFloatType()) {
     auto new_right = ImplCastExprToType(right, left->type(), ast::CastKind::FloatToSqlReal);
-    return {built_ret_type(left->type()), left, new_right};
+    return {build_ret_type(left->type()), left, new_right};
   }
 
   // Primitive int -> Sql Integer
   if (left->type()->IsIntegerType() &&
       right->type()->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
     auto new_left = ImplCastExprToType(left, right->type(), ast::CastKind::IntToSqlInt);
-    return {built_ret_type(right->type()), new_left, right};
+    return {build_ret_type(right->type()), new_left, right};
   }
 
   // Sql Integer <- Primitive int
   if (left->type()->IsSpecificBuiltin(ast::BuiltinType::Integer) &&
       right->type()->IsIntegerType()) {
     auto new_right = ImplCastExprToType(right, left->type(), ast::CastKind::IntToSqlInt);
-    return {built_ret_type(left->type()), left, new_right};
+    return {build_ret_type(left->type()), left, new_right};
   }
 
   // Done
-  return {built_ret_type(left->type()), left, right};
+  return {build_ret_type(left->type()), left, right};
 }
 
 bool Sema::CheckAssignmentConstraints(ast::Type *target_type, ast::Expr *&expr) {

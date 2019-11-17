@@ -60,7 +60,7 @@ extern "C" {
   /* Primitive not-equal-to implementation */                                                     \
   VM_OP_HOT void OpNotEqual##_##type(bool *result, type lhs, type rhs) { *result = (lhs != rhs); }
 
-INT_TYPES(COMPARISONS);
+ALL_TYPES(COMPARISONS);
 
 #undef COMPARISONS
 
@@ -96,6 +96,35 @@ VM_OP_HOT void OpNot(bool *const result, const bool input) { *result = !input; }
   VM_OP_HOT void OpNeg##_##type(type *result, type input) { *result = -input; }
 
 INT_TYPES(ARITHMETIC);
+
+#undef ARITHMETIC
+
+#define ARITHMETIC(type, ...)                                                                \
+  /* Primitive addition */                                                                   \
+  VM_OP_HOT void OpAdd##_##type(type *result, type lhs, type rhs) { *result = (lhs + rhs); } \
+                                                                                             \
+  /* Primitive subtraction */                                                                \
+  VM_OP_HOT void OpSub##_##type(type *result, type lhs, type rhs) { *result = (lhs - rhs); } \
+                                                                                             \
+  /* Primitive multiplication */                                                             \
+  VM_OP_HOT void OpMul##_##type(type *result, type lhs, type rhs) { *result = (lhs * rhs); } \
+                                                                                             \
+  /* Primitive division (no zero-check) */                                                   \
+  VM_OP_HOT void OpDiv##_##type(type *result, type lhs, type rhs) {                          \
+    TPL_ASSERT(rhs != 0, "Division-by-zero error!");                                         \
+    *result = (lhs / rhs);                                                                   \
+  }                                                                                          \
+                                                                                             \
+  /* Primitive modulo-remainder (no zero-check) */                                           \
+  VM_OP_HOT void OpRem##_##type(type *result, type lhs, type rhs) {                          \
+    TPL_ASSERT(rhs != 0, "Division-by-zero error!");                                         \
+    *result = std::fmod(lhs, rhs);                                                           \
+  }                                                                                          \
+                                                                                             \
+  /* Primitive negation */                                                                   \
+  VM_OP_HOT void OpNeg##_##type(type *result, type input) { *result = -input; }
+
+FLOAT_TYPES(ARITHMETIC);
 
 #undef ARITHMETIC
 
