@@ -1,4 +1,4 @@
-# Should return 1
+// Should return 1
 
 fun main() -> int32 {
   if (true == true) {
