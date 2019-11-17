@@ -48,6 +48,7 @@ namespace tpl::vm {
 // clang-format off
 #define BYTECODE_LIST(F)                                                                                               \
   /* Primitive operations */                                                                                           \
+  CREATE_FOR_NUMERIC_TYPES(F, Neg, OperandType::Local, OperandType::Local)                                             \
   CREATE_FOR_NUMERIC_TYPES(F, Add, OperandType::Local, OperandType::Local, OperandType::Local)                         \
   CREATE_FOR_NUMERIC_TYPES(F, Sub, OperandType::Local, OperandType::Local, OperandType::Local)                         \
   CREATE_FOR_NUMERIC_TYPES(F, Mul, OperandType::Local, OperandType::Local, OperandType::Local)                         \
@@ -56,7 +57,6 @@ namespace tpl::vm {
   CREATE_FOR_INT_TYPES(F, BitAnd, OperandType::Local, OperandType::Local, OperandType::Local)                          \
   CREATE_FOR_INT_TYPES(F, BitOr, OperandType::Local, OperandType::Local, OperandType::Local)                           \
   CREATE_FOR_INT_TYPES(F, BitXor, OperandType::Local, OperandType::Local, OperandType::Local)                          \
-  CREATE_FOR_INT_TYPES(F, Neg, OperandType::Local, OperandType::Local)                                                 \
   CREATE_FOR_INT_TYPES(F, BitNeg, OperandType::Local, OperandType::Local)                                              \
   CREATE_FOR_ALL_TYPES(F, GreaterThan, OperandType::Local, OperandType::Local, OperandType::Local)                     \
   CREATE_FOR_ALL_TYPES(F, GreaterThanEqual, OperandType::Local, OperandType::Local, OperandType::Local)                \

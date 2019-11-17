@@ -266,28 +266,7 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 #undef DO_GEN_ARITHMETIC_OP
 
   // -------------------------------------------------------
-  // Primitive arithmetic
-  // -------------------------------------------------------
-
-#define DO_GEN_BIT_OP(op, test, type)                     \
-  OP(op##_##type) : {                                     \
-    auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
-    auto lhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
-    auto rhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
-    Op##op##_##type(dest, lhs, rhs);                      \
-    DISPATCH_NEXT();                                      \
-  }
-#define GEN_BIT_OP(type, ...)               \
-  DO_GEN_BIT_OP(BitAnd, false, type) \
-  DO_GEN_BIT_OP(BitOr, false, type)  \
-  DO_GEN_BIT_OP(BitXor, false, type)
-
-  INT_TYPES(GEN_BIT_OP)
-#undef GEN_BIT_OP
-#undef DO_GEN_BIT_OP
-
-  // -------------------------------------------------------
-  // Bitwise and integer negation
+  // Arithmetic negation
   // -------------------------------------------------------
 
 #define GEN_NEG_OP(type, ...)                             \
@@ -296,16 +275,40 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     auto input = frame->LocalAt<type>(READ_LOCAL_ID());   \
     OpNeg##_##type(dest, input);                          \
     DISPATCH_NEXT();                                      \
-  }                                                       \
+  }
+
+  ALL_NUMERIC_TYPES(GEN_NEG_OP)
+#undef GEN_NEG_OP
+
+  // -------------------------------------------------------
+  // Bitwise operations
+  // -------------------------------------------------------
+
+#define DO_GEN_BIT_OP(op, type)                           \
+  OP(op##_##type) : {                                     \
+    auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
+    auto lhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
+    auto rhs = frame->LocalAt<type>(READ_LOCAL_ID());     \
+    Op##op##_##type(dest, lhs, rhs);                      \
+    DISPATCH_NEXT();                                      \
+  }
+#define DO_GEN_NEG_OP(type, ...)                          \
   OP(BitNeg##_##type) : {                                 \
     auto *dest = frame->LocalAt<type *>(READ_LOCAL_ID()); \
     auto input = frame->LocalAt<type>(READ_LOCAL_ID());   \
     OpBitNeg##_##type(dest, input);                       \
     DISPATCH_NEXT();                                      \
   }
+#define GEN_BIT_OP(type, ...) \
+  DO_GEN_BIT_OP(BitAnd, type) \
+  DO_GEN_BIT_OP(BitOr, type)  \
+  DO_GEN_BIT_OP(BitXor, type) \
+  DO_GEN_NEG_OP(type)
 
-  INT_TYPES(GEN_NEG_OP)
+  INT_TYPES(GEN_BIT_OP)
+#undef GEN_BIT_OP
 #undef GEN_NEG_OP
+#undef DO_GEN_BIT_OP
 
   OP(Not) : {
     auto *dest = frame->LocalAt<bool *>(READ_LOCAL_ID());
