@@ -103,7 +103,7 @@ include_directories(SYSTEM "${THIRD_PARTY_DIR}/xxHash")
 
 add_subdirectory(${THIRD_PARTY_DIR}/libcount)
 include_directories(SYSTEM "${THIRD_PARTY_DIR}/libcount/include")
-list(APPEND TPL_LINK_LIBS count)
+list(APPEND TPL_LINK_LIBS libcount)
 
 ############################################################
 # Check Clang++ is available. Ideally, you should have
@@ -111,7 +111,7 @@ list(APPEND TPL_LINK_LIBS count)
 # old to use with TPL.
 ############################################################
 
-set(SUPPORTED_CLANGS "clang++-7" "clang++-6.0")
+set(SUPPORTED_CLANGS "clang++-9" "clang++-8" "clang++-7")
 if (${MACOSX})
     # Because MacOS does some weird Clang versioning, and it isn't available
     # through Homebrew, we add in vanilla "clang++". You won't be running TPL
@@ -120,7 +120,7 @@ if (${MACOSX})
 endif ()
 
 find_program(CLANG NAMES ${SUPPORTED_CLANGS})
-if (NOT EXISTS ${CLANG})
+if (${CLANG} STREQUAL "CLANG-NOTFOUND")
     message(FATAL_ERROR "Unable to locate clang++.")
 else()
     message(STATUS "Found Clang ${CLANG}")
