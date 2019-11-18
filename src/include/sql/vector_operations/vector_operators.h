@@ -343,8 +343,7 @@ class VectorOps : public AllStatic {
   }
 
   /**
-   * Apply a function to ALL TIDs in the input vector. This function bypasses any filtered TID
-   * list in the vector and will perform a full iteration of all vector tuples.
+   * Apply a function to all TIDs in the input vector, bypassing any filtered TID list.
    *
    * The callback function receives two arguments:
    * i = the current index from the selection vector.
