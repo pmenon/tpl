@@ -8,6 +8,7 @@
 #include "ast/builtins.h"
 #include "ast/context.h"
 #include "ast/type.h"
+#include "common/exception.h"
 #include "common/macros.h"
 #include "logging/logger.h"
 #include "sql/catalog.h"
@@ -293,7 +294,8 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
       break;
     }
     default: {
-      throw std::runtime_error("Implement this cast type");
+      throw NotImplementedException("'{}' cast is not implemented",
+                                    ast::CastKindToString(node->cast_kind()));
     }
   }
 }

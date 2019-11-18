@@ -760,6 +760,11 @@ enum class CastKind : uint8_t {
 };
 
 /**
+ * @return A string representation for a given cast kind.
+ */
+std::string CastKindToString(CastKind cast_kind);
+
+/**
  * An implicit cast operation is one that is inserted automatically by the
  * compiler during semantic analysis.
  */

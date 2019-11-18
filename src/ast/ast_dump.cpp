@@ -304,35 +304,7 @@ void AstDumperImpl::VisitImplicitCastExpr(ImplicitCastExpr *node) {
   DumpPrimitive("<");
   {
     WithColor color(this, llvm::raw_ostream::Colors::RED);
-    switch (node->cast_kind()) {
-      case CastKind::IntToSqlInt:
-        DumpPrimitive("IntToSqlInt");
-        break;
-      case CastKind::IntToSqlDecimal:
-        DumpPrimitive("IntToSqlDecimal");
-        break;
-      case CastKind::SqlBoolToBool:
-        DumpPrimitive("SqlBoolToBool");
-        break;
-      case CastKind::IntegralCast:
-        DumpPrimitive("IntegralCast");
-        break;
-      case CastKind::IntToFloat:
-        DumpPrimitive("IntToFloat");
-        break;
-      case CastKind::FloatToInt:
-        DumpPrimitive("FloatToInt");
-        break;
-      case CastKind::BitCast:
-        DumpPrimitive("BitCast");
-        break;
-      case CastKind::FloatToSqlReal:
-        DumpPrimitive("FloatToSqlReal");
-        break;
-      case CastKind::SqlIntToSqlReal:
-        DumpPrimitive("SqlIntToSqlReal");
-        break;
-    }
+    DumpPrimitive(CastKindToString(node->cast_kind()));
   }
   DumpPrimitive(">");
   DumpExpr(node->input());

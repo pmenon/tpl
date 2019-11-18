@@ -140,4 +140,29 @@ bool Stmt::IsTerminating(Stmt *stmt) {
   }
 }
 
+std::string CastKindToString(const CastKind cast_kind) {
+  switch (cast_kind) {
+    case CastKind::IntToSqlInt:
+      return "IntToSqlInt";
+    case CastKind::IntToSqlDecimal:
+      return "IntToSqlDecimal";
+    case CastKind::SqlBoolToBool:
+      return "SqlBoolToBool";
+    case CastKind::IntegralCast:
+      return "IntegralCast";
+    case CastKind::IntToFloat:
+      return "IntToFloat";
+    case CastKind::FloatToInt:
+      return "FloatToInt";
+    case CastKind::BitCast:
+      return "BitCast";
+    case CastKind::FloatToSqlReal:
+      return "FloatToSqlReal";
+    case CastKind::SqlIntToSqlReal:
+      return "SqlIntToSqlReal";
+    default:
+      UNREACHABLE("Impossible cast kind");
+  }
+}
+
 }  // namespace tpl::ast
