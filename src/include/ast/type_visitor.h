@@ -24,7 +24,9 @@ class TypeVisitor {
 
     switch (type->type_id()) {
       TYPE_LIST(T)
-      default: { UNREACHABLE("Impossible node type"); }
+      default: {
+        UNREACHABLE("Impossible node type");
+      }
 
 #undef T
     }

@@ -134,7 +134,9 @@ bool Stmt::IsTerminating(Stmt *stmt) {
     case AstNode::Kind::ReturnStmt: {
       return true;
     }
-    default: { return false; }
+    default: {
+      return false;
+    }
   }
 }
 

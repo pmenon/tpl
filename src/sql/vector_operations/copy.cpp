@@ -10,8 +10,9 @@ template <typename T>
 void TemplatedCopyOperation(const Vector &source, void *target, uint64_t offset, uint64_t count) {
   auto *src_data = reinterpret_cast<T *>(source.GetData());
   auto *target_data = reinterpret_cast<T *>(target);
-  VectorOps::Exec(source, [&](uint64_t i, uint64_t k) { target_data[k - offset] = src_data[i]; },
-                  offset, count);
+  VectorOps::Exec(
+      source, [&](uint64_t i, uint64_t k) { target_data[k - offset] = src_data[i]; }, offset,
+      count);
 }
 
 void GenericCopyOperation(const Vector &source, void *target, uint64_t offset,
@@ -72,9 +73,10 @@ void VectorOps::Copy(const Vector &source, Vector *target, uint64_t offset) {
   target->Resize(source.GetCount() - offset);
 
   // Copy NULLs
-  Exec(source,
-       [&](uint64_t i, uint64_t k) { target->null_mask_[k - offset] = source.null_mask_[i]; },
-       offset);
+  Exec(
+      source,
+      [&](uint64_t i, uint64_t k) { target->null_mask_[k - offset] = source.null_mask_[i]; },
+      offset);
 
   // Copy data
   Copy(source, target->GetData(), offset, target->GetCount());

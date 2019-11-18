@@ -313,15 +313,16 @@ void Vector::CopyTo(Vector *other, uint64_t offset) {
     other->Resize(count_ - offset);
     auto src_data = reinterpret_cast<const VarlenEntry *>(data_);
     auto target_data = reinterpret_cast<VarlenEntry *>(other->data_);
-    VectorOps::Exec(*this,
-                    [&](uint64_t i, uint64_t k) {
-                      if (null_mask_[i]) {
-                        other->null_mask_.Set(k - offset);
-                      } else {
-                        target_data[k - offset] = other->varlen_heap_.AddVarlen(src_data[i]);
-                      }
-                    },
-                    offset);
+    VectorOps::Exec(
+        *this,
+        [&](uint64_t i, uint64_t k) {
+          if (null_mask_[i]) {
+            other->null_mask_.Set(k - offset);
+          } else {
+            target_data[k - offset] = other->varlen_heap_.AddVarlen(src_data[i]);
+          }
+        },
+        offset);
   }
 }
 

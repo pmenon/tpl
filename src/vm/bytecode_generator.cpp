@@ -292,7 +292,9 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
       GetExecutionResult()->SetDestination(dest);
       break;
     }
-    default: { throw std::runtime_error("Implement this cast type"); }
+    default: {
+      throw std::runtime_error("Implement this cast type");
+    }
   }
 }
 
@@ -429,7 +431,9 @@ void BytecodeGenerator::VisitArithmeticUnaryExpr(ast::UnaryOpExpr *op) {
       bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitNeg), op->type());
       break;
     }
-    default: { UNREACHABLE("Impossible unary operation"); }
+    default: {
+      UNREACHABLE("Impossible unary operation");
+    }
   }
 
   // Emit
@@ -465,7 +469,9 @@ void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
       VisitLogicalNotExpr(node);
       break;
     }
-    default: { UNREACHABLE("Impossible unary operation"); }
+    default: {
+      UNREACHABLE("Impossible unary operation");
+    }
   }
 }
 
@@ -518,7 +524,9 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
       GetExecutionResult()->SetDestination(dest.ValueOf());
       break;
     }
-    default: { UNREACHABLE("Impossible SQL conversion call"); }
+    default: {
+      UNREACHABLE("Impossible SQL conversion call");
+    }
   }
 }
 
@@ -561,7 +569,9 @@ void BytecodeGenerator::VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Buil
       GetEmitter()->Emit(Bytecode::TableVectorIteratorFree, iter);
       break;
     }
-    default: { UNREACHABLE("Impossible table iteration call"); }
+    default: {
+      UNREACHABLE("Impossible table iteration call");
+    }
   }
 }
 
@@ -720,7 +730,9 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
       GetEmitter()->EmitVPISet(bytecode, vpi, input, col_idx);
       break;
     }
-    default: { UNREACHABLE("Impossible table iteration call"); }
+    default: {
+      UNREACHABLE("Impossible table iteration call");
+    }
   }
 }
 
@@ -758,7 +770,9 @@ void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call) {
         GetEmitter()->Emit(Bytecode::HashDate, hash_val, input, hash_val.ValueOf());
         break;
       }
-      default: { UNREACHABLE("Hashing this type isn't supported!"); }
+      default: {
+        UNREACHABLE("Hashing this type isn't supported!");
+      }
     }
   }
 
@@ -798,7 +812,9 @@ void BytecodeGenerator::VisitBuiltinFilterManagerCall(ast::CallExpr *call, ast::
       GetEmitter()->Emit(Bytecode::FilterManagerFree, filter_manager);
       break;
     }
-    default: { UNREACHABLE("Impossible filter manager call"); }
+    default: {
+      UNREACHABLE("Impossible filter manager call");
+    }
   }
 }
 
@@ -841,7 +857,9 @@ void BytecodeGenerator::VisitBuiltinVectorFilterCall(ast::CallExpr *call, ast::B
       GEN_CASE(Bytecode::VectorFilterNotEqual);
       break;
     }
-    default: { UNREACHABLE("Impossible vector filter executor call"); }
+    default: {
+      UNREACHABLE("Impossible vector filter executor call");
+    }
   }
 #undef GEN_CASE
 }
@@ -927,7 +945,9 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call, ast::B
       GetEmitter()->Emit(Bytecode::AggregationHashTableFree, agg_ht);
       break;
     }
-    default: { UNREACHABLE("Impossible aggregation hash table bytecode"); }
+    default: {
+      UNREACHABLE("Impossible aggregation hash table bytecode");
+    }
   }
 }
 
@@ -964,7 +984,9 @@ void BytecodeGenerator::VisitBuiltinAggHashTableIterCall(ast::CallExpr *call,
       GetEmitter()->Emit(Bytecode::AggregationHashTableIteratorFree, agg_ht_iter);
       break;
     }
-    default: { UNREACHABLE("Impossible aggregation hash table iteration bytecode"); }
+    default: {
+      UNREACHABLE("Impossible aggregation hash table iteration bytecode");
+    }
   }
 }
 
@@ -1003,7 +1025,9 @@ void BytecodeGenerator::VisitBuiltinAggPartIterCall(ast::CallExpr *call, ast::Bu
       GetExecutionResult()->SetDestination(hash.ValueOf());
       break;
     }
-    default: { UNREACHABLE("Impossible aggregation partition iterator bytecode"); }
+    default: {
+      UNREACHABLE("Impossible aggregation partition iterator bytecode");
+    }
   }
 }
 
@@ -1033,7 +1057,9 @@ Bytecode OpForAgg(ast::BuiltinType::Kind agg_kind);
 template <>
 Bytecode OpForAgg<AggOpKind::Init>(const ast::BuiltinType::Kind agg_kind) {
   switch (agg_kind) {
-    default: { UNREACHABLE("Impossible aggregate type"); }
+    default: {
+      UNREACHABLE("Impossible aggregate type");
+    }
 #define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
   case ast::BuiltinType::Type:                              \
     return Bytecode::Init;
@@ -1045,7 +1071,9 @@ Bytecode OpForAgg<AggOpKind::Init>(const ast::BuiltinType::Kind agg_kind) {
 template <>
 Bytecode OpForAgg<AggOpKind::Advance>(const ast::BuiltinType::Kind agg_kind) {
   switch (agg_kind) {
-    default: { UNREACHABLE("Impossible aggregate type"); }
+    default: {
+      UNREACHABLE("Impossible aggregate type");
+    }
 #define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
   case ast::BuiltinType::Type:                              \
     return Bytecode::Advance;
@@ -1057,7 +1085,9 @@ Bytecode OpForAgg<AggOpKind::Advance>(const ast::BuiltinType::Kind agg_kind) {
 template <>
 Bytecode OpForAgg<AggOpKind::GetResult>(const ast::BuiltinType::Kind agg_kind) {
   switch (agg_kind) {
-    default: { UNREACHABLE("Impossible aggregate type"); }
+    default: {
+      UNREACHABLE("Impossible aggregate type");
+    }
 #define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
   case ast::BuiltinType::Type:                              \
     return Bytecode::GetResult;
@@ -1069,7 +1099,9 @@ Bytecode OpForAgg<AggOpKind::GetResult>(const ast::BuiltinType::Kind agg_kind) {
 template <>
 Bytecode OpForAgg<AggOpKind::Merge>(const ast::BuiltinType::Kind agg_kind) {
   switch (agg_kind) {
-    default: { UNREACHABLE("Impossible aggregate type"); }
+    default: {
+      UNREACHABLE("Impossible aggregate type");
+    }
 #define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
   case ast::BuiltinType::Type:                              \
     return Bytecode::Merge;
@@ -1081,7 +1113,9 @@ Bytecode OpForAgg<AggOpKind::Merge>(const ast::BuiltinType::Kind agg_kind) {
 template <>
 Bytecode OpForAgg<AggOpKind::Reset>(const ast::BuiltinType::Kind agg_kind) {
   switch (agg_kind) {
-    default: { UNREACHABLE("Impossible aggregate type"); }
+    default: {
+      UNREACHABLE("Impossible aggregate type");
+    }
 #define ENTRY(Type, Init, Advance, GetResult, Merge, Reset) \
   case ast::BuiltinType::Type:                              \
     return Bytecode::Reset;
@@ -1144,7 +1178,9 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call, ast::Bui
       GetEmitter()->Emit(bytecode, result, agg);
       break;
     }
-    default: { UNREACHABLE("Impossible aggregator call"); }
+    default: {
+      UNREACHABLE("Impossible aggregator call");
+    }
   }
 }
 
@@ -1186,7 +1222,9 @@ void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call, ast::
       GetEmitter()->Emit(Bytecode::JoinHashTableFree, join_hash_table);
       break;
     }
-    default: { UNREACHABLE("Impossible join hash table call"); }
+    default: {
+      UNREACHABLE("Impossible join hash table call");
+    }
   }
 }
 
@@ -1212,7 +1250,9 @@ void BytecodeGenerator::VisitBuiltinHashTableEntryIteratorCall(ast::CallExpr *ca
       GetEmitter()->Emit(Bytecode::HashTableEntryIteratorGetRow, row, ht_entry_iter);
       break;
     }
-    default: { UNREACHABLE("Impossible hash table entry iterator call"); }
+    default: {
+      UNREACHABLE("Impossible hash table entry iterator call");
+    }
   }
 }
 
@@ -1274,7 +1314,9 @@ void BytecodeGenerator::VisitBuiltinSorterCall(ast::CallExpr *call, ast::Builtin
       GetEmitter()->Emit(Bytecode::SorterFree, sorter);
       break;
     }
-    default: { UNREACHABLE("Impossible bytecode"); }
+    default: {
+      UNREACHABLE("Impossible bytecode");
+    }
   }
 }
 
@@ -1308,7 +1350,9 @@ void BytecodeGenerator::VisitBuiltinSorterIterCall(ast::CallExpr *call, ast::Bui
       GetEmitter()->Emit(Bytecode::SorterIteratorFree, sorter_iter);
       break;
     }
-    default: { UNREACHABLE("Impossible table iteration call"); }
+    default: {
+      UNREACHABLE("Impossible table iteration call");
+    }
   }
 }
 
@@ -1324,7 +1368,9 @@ void BytecodeGenerator::VisitResultBufferCall(ast::CallExpr *call, ast::Builtin 
       GetEmitter()->Emit(Bytecode::ResultBufferFinalize, exec_ctx);
       break;
     }
-    default: { UNREACHABLE("Invalid result buffer call!"); }
+    default: {
+      UNREACHABLE("Invalid result buffer call!");
+    }
   }
 }
 
@@ -1376,7 +1422,9 @@ void BytecodeGenerator::VisitBuiltinThreadStateContainerCall(ast::CallExpr *call
       GetEmitter()->Emit(Bytecode::ThreadStateContainerFree, tls);
       break;
     }
-    default: { UNREACHABLE("Impossible thread state container call"); }
+    default: {
+      UNREACHABLE("Impossible thread state container call");
+    }
   }
 }
 
@@ -1417,7 +1465,9 @@ void BytecodeGenerator::VisitBuiltinTrigCall(ast::CallExpr *call, ast::Builtin b
     case ast::Builtin::Tan: {
       GetEmitter()->Emit(Bytecode::Tan, dest, src);
     }
-    default: { UNREACHABLE("Impossible trigonometric bytecode"); }
+    default: {
+      UNREACHABLE("Impossible trigonometric bytecode");
+    }
   }
 
   GetExecutionResult()->SetDestination(dest.ValueOf());
@@ -1744,7 +1794,9 @@ void BytecodeGenerator::VisitLogicalAndOrExpr(ast::BinaryOpExpr *node) {
       conditional_jump = Bytecode::JumpIfFalse;
       break;
     }
-    default: { UNREACHABLE("Impossible logical operation type"); }
+    default: {
+      UNREACHABLE("Impossible logical operation type");
+    }
   }
 
   // Do a conditional jump
@@ -1809,7 +1861,9 @@ void BytecodeGenerator::VisitPrimitiveArithmeticExpr(ast::BinaryOpExpr *node) {
       bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitXor), node->type());
       break;
     }
-    default: { UNREACHABLE("Impossible binary operation"); }
+    default: {
+      UNREACHABLE("Impossible binary operation");
+    }
   }
 
   // Emit
@@ -1850,7 +1904,9 @@ void BytecodeGenerator::VisitSqlArithmeticExpr(ast::BinaryOpExpr *node) {
       bytecode = (is_integer_math ? Bytecode::RemInteger : Bytecode::RemReal);
       break;
     }
-    default: { UNREACHABLE("Impossible arithmetic SQL operation"); }
+    default: {
+      UNREACHABLE("Impossible arithmetic SQL operation");
+    }
   }
 
   // Emit
@@ -1938,7 +1994,9 @@ void BytecodeGenerator::VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare) {
       SQL_COMPARISON_BYTECODE(code, NotEqual, arg_kind);
       break;
     }
-    default: { UNREACHABLE("Impossible binary operation"); }
+    default: {
+      UNREACHABLE("Impossible binary operation");
+    }
   }
 
   // Emit
@@ -2014,7 +2072,9 @@ void BytecodeGenerator::VisitPrimitiveCompareOpExpr(ast::ComparisonOpExpr *compa
       COMPARISON_BYTECODE(bytecode, NotEqual, compare->left()->type());
       break;
     }
-    default: { UNREACHABLE("Impossible binary operation"); }
+    default: {
+      UNREACHABLE("Impossible binary operation");
+    }
   }
 
   // Emit
