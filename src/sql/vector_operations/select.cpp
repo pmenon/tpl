@@ -1,10 +1,9 @@
-#include "sql/vector_operations/vector_operators.h"
-
 #include "common/exception.h"
 #include "common/settings.h"
 #include "sql/operations/comparison_operators.h"
 #include "sql/runtime_types.h"
 #include "sql/tuple_id_list.h"
+#include "sql/vector_operations/vector_operators.h"
 
 namespace tpl::sql {
 
@@ -156,6 +155,12 @@ void SelectOperation(const Vector &left, const Vector &right, TupleIdList *tid_l
       break;
     case TypeId::BigInt:
       TemplatedSelectOperation<int64_t, Op>(left, right, tid_list);
+      break;
+    case TypeId::Hash:
+      TemplatedSelectOperation<hash_t, Op>(left, right, tid_list);
+      break;
+    case TypeId::Pointer:
+      TemplatedSelectOperation<uintptr_t, Op>(left, right, tid_list);
       break;
     case TypeId::Float:
       TemplatedSelectOperation<float, Op>(left, right, tid_list);
