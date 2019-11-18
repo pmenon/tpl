@@ -1,9 +1,10 @@
+#include "sql/vector_operations/vector_operators.h"
+
 #include "common/exception.h"
 #include "common/settings.h"
 #include "sql/operations/comparison_operators.h"
 #include "sql/runtime_types.h"
 #include "sql/tuple_id_list.h"
-#include "sql/vector_operations/vector_operators.h"
 
 namespace tpl::sql {
 
