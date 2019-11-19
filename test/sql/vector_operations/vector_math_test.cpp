@@ -140,25 +140,25 @@ TEST_F(VectorArithmeticTest, InPlaceAdditionNull) {
 }
 
 TEST_F(VectorArithmeticTest, InPlaceAdditionSimple) {
-#define GEN_CASE(TYPE)                                                \
-  {                                                                   \
-    auto a = MakeSmallIntVector(100);                                 \
-    auto b = MakeSmallIntVector(100);                                 \
-                                                                      \
-    /* a = [0,2,4,6,8,10,...]   */                                    \
-    /* b = [0,4,8,12,16,20,...] */                                    \
-    VectorOps::Generate(a.get(), 0, 2);                               \
-    VectorOps::Generate(b.get(), 0, 4);                               \
-                                                                      \
-    VectorOps::AddInPlace(a.get(), *b);                               \
-                                                                      \
-    EXPECT_EQ(100, a->GetSize());                                     \
-    EXPECT_EQ(100, a->GetCount());                                    \
-    EXPECT_EQ(nullptr, a->GetFilteredTupleIdList());                  \
-    for (uint64_t i = 0; i < a->GetCount(); i++) {                    \
-      EXPECT_FALSE(a->IsNull(i));                                     \
-      EXPECT_EQ(GenericValue::CreateSmallInt(6 * i), a->GetValue(i)); \
-    }                                                                 \
+#define GEN_CASE(TYPE)                                              \
+  {                                                                 \
+    auto a = Make##TYPE##Vector(100);                               \
+    auto b = Make##TYPE##Vector(100);                               \
+                                                                    \
+    /* a = [0,2,4,6,8,10,...]   */                                  \
+    /* b = [0,4,8,12,16,20,...] */                                  \
+    VectorOps::Generate(a.get(), 0, 2);                             \
+    VectorOps::Generate(b.get(), 0, 4);                             \
+                                                                    \
+    VectorOps::AddInPlace(a.get(), *b);                             \
+                                                                    \
+    EXPECT_EQ(100, a->GetSize());                                   \
+    EXPECT_EQ(100, a->GetCount());                                  \
+    EXPECT_EQ(nullptr, a->GetFilteredTupleIdList());                \
+    for (uint64_t i = 0; i < a->GetCount(); i++) {                  \
+      EXPECT_FALSE(a->IsNull(i));                                   \
+      EXPECT_EQ(GenericValue::Create##TYPE(6 * i), a->GetValue(i)); \
+    }                                                               \
   }
 
   GEN_CASE(TinyInt);
