@@ -98,9 +98,9 @@ class VectorOps : public AllStatic {
    *
    * result = left - right
    *
-   * @param left The left input into the addition.
-   * @param right The right input into the addition.
-   * @param[out] result The result of the addition.
+   * @param left The left input into the subtraction.
+   * @param right The right input into the subtraction.
+   * @param[out] result The result of the subtraction.
    */
   static void Subtract(const Vector &left, const Vector &right, Vector *result);
 
@@ -109,9 +109,9 @@ class VectorOps : public AllStatic {
    *
    * result = left * right
    *
-   * @param left The left input into the addition.
-   * @param right The right input into the addition.
-   * @param[out] result The result of the addition.
+   * @param left The left input into the multiplication.
+   * @param right The right input into the multiplication.
+   * @param[out] result The result of the multiplication.
    */
   static void Multiply(const Vector &left, const Vector &right, Vector *result);
 
@@ -120,9 +120,9 @@ class VectorOps : public AllStatic {
    *
    * result = left / right
    *
-   * @param left The left input into the addition.
-   * @param right The right input into the addition.
-   * @param[out] result The result of the addition.
+   * @param left The left input into the division.
+   * @param right The right input into the division.
+   * @param[out] result The result of the division.
    */
   static void Divide(const Vector &left, const Vector &right, Vector *result);
 
@@ -131,9 +131,9 @@ class VectorOps : public AllStatic {
    *
    * result = left % right
    *
-   * @param left The left input into the addition.
-   * @param right The right input into the addition.
-   * @param[out] result The result of the addition.
+   * @param left The left input into the modulus.
+   * @param right The right input into the modulus.
+   * @param[out] result The result of the modulus.
    */
   static void Modulo(const Vector &left, const Vector &right, Vector *result);
 
@@ -146,6 +146,16 @@ class VectorOps : public AllStatic {
    * @param right The right input into the addition.
    */
   static void AddInPlace(Vector *left, const Vector &right);
+
+  /**
+   * Bitwise AND elements in @em left with @em right and store the result back into @em left:
+   *
+   * left &= right
+   *
+   * @param[in,out] left The left input into the bitwise operation.
+   * @param right The right input into the bitwise operation.
+   */
+  static void BitwiseANDInPlace(Vector *left, const Vector &right);
 
   // -------------------------------------------------------
   //

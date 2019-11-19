@@ -38,4 +38,14 @@ inline void ModuloInPlace::Apply(double *a, double b) {
   *a = std::fmod(*a, b);
 }
 
+/**
+ * In-place bitwise AND.
+ */
+struct BitwiseANDInPlace {
+  template <typename T>
+  static void Apply(T *a, T b) {
+    *a &= b;
+  }
+};
+
 }  // namespace tpl::sql
