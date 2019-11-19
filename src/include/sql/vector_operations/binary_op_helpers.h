@@ -20,8 +20,8 @@ namespace internal {
 template <typename T, typename Op, typename Enable = void>
 struct ShouldPerformFullCompute {
   /**
-   * Call-arg operator that accepts a potentially null filtered TID list. This is list of active
-   * TIDs of the input vector used in the computation.
+   * Call operator accepting a potentially null list of TIDs on which to perform the given templated
+   * operation.
    * @param tid_list Potentially null filtered TID list.
    * @return True if full-computation should be performed; false otherwise.
    */

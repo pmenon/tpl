@@ -7,9 +7,9 @@
 
 namespace tpl::sql {
 
-// This file contains a bunch of templated functors that implement traditional
-// mathematical operators.
-
+/**
+ * Addition.
+ */
 struct Add {
   template <typename T>
   static T Apply(T a, T b) {
@@ -22,6 +22,9 @@ struct Add {
   }
 };
 
+/**
+ * Subtraction.
+ */
 struct Subtract {
   template <typename T>
   static T Apply(T a, T b) {
@@ -34,6 +37,9 @@ struct Subtract {
   }
 };
 
+/**
+ * Multiplication.
+ */
 struct Multiply {
   template <typename T>
   static T Apply(T a, T b) {
@@ -46,6 +52,9 @@ struct Multiply {
   }
 };
 
+/**
+ * Division.
+ */
 struct Divide {
   template <typename T>
   static T Apply(T a, T b) {
@@ -55,6 +64,9 @@ struct Divide {
   }
 };
 
+/**
+ * Modulus.
+ */
 struct Modulo {
   template <typename T>
   static T Apply(T a, T b) {
