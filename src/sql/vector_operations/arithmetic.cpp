@@ -6,7 +6,7 @@
 
 namespace tpl::sql {
 
-namespace internal {
+namespace traits {
 
 // Specialized struct to enable full-computation.
 template <typename T, typename Op>
@@ -21,7 +21,7 @@ struct ShouldPerformFullCompute<
   }
 };
 
-}  // namespace internal
+}  // namespace traits
 
 namespace {
 

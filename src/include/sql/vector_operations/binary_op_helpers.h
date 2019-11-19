@@ -1,35 +1,17 @@
 #pragma once
 
 #include "common/exception.h"
+#include "sql/vector_operations/traits.h"
 #include "sql/vector_operations/vector_operators.h"
 
 namespace tpl::sql {
 
-namespace internal {
-
 /**
- * A struct used to determine if a given operation on a given type should be optimized to use a
- * full-computation implementation. By default, full-computation is disabled.
  *
- * If you want to enable full-computation for your operation, specialize this struct.
- *
- * @tparam T The types of the vector elements.
- * @tparam Op The operation.
- * @tparam Enable
+ * @param left
+ * @param right
+ * @param result
  */
-template <typename T, typename Op, typename Enable = void>
-struct ShouldPerformFullCompute {
-  /**
-   * Call operator accepting a potentially null list of TIDs on which to perform the given templated
-   * operation.
-   * @param tid_list Potentially null filtered TID list.
-   * @return True if full-computation should be performed; false otherwise.
-   */
-  bool operator()(const TupleIdList *tid_list) { return false; }
-};
-
-}  // namespace internal
-
 inline void CheckBinaryOperation(const Vector &left, const Vector &right, Vector *result) {
   if (left.GetTypeId() != right.GetTypeId()) {
     throw TypeMismatchException(left.GetTypeId(), right.GetTypeId(),
@@ -75,7 +57,7 @@ inline void TemplatedBinaryOperation_Constant_Vector(const Vector &left, const V
       // the vector and the operation we're performing, do so. Otherwise, use a
       // regular vector iteration.
 
-      if (internal::ShouldPerformFullCompute<RightType, Op>()(right.GetFilteredTupleIdList())) {
+      if (traits::ShouldPerformFullCompute<RightType, Op>()(right.GetFilteredTupleIdList())) {
         VectorOps::ExecIgnoreFilter(right, [&](uint64_t i, uint64_t k) {
           result_data[i] = Op::Apply(left_data[0], right_data[i]);
         });
@@ -119,7 +101,7 @@ inline void TemplatedBinaryOperation_Vector_Constant(const Vector &left, const V
       // the vector and the operation we're performing, do so. Otherwise, use a
       // regular vector iteration.
 
-      if (internal::ShouldPerformFullCompute<LeftType, Op>()(left.GetFilteredTupleIdList())) {
+      if (traits::ShouldPerformFullCompute<LeftType, Op>()(left.GetFilteredTupleIdList())) {
         VectorOps::ExecIgnoreFilter(left, [&](uint64_t i, uint64_t k) {
           result_data[i] = Op::Apply(left_data[0], right_data[i]);
         });
@@ -161,7 +143,7 @@ inline void TemplatedBinaryOperation_Vector_Vector(const Vector &left, const Vec
     // the vector and the operation we're performing, do so. Otherwise, use a
     // regular vector iteration.
 
-    if (internal::ShouldPerformFullCompute<LeftType, Op>()(left.GetFilteredTupleIdList())) {
+    if (traits::ShouldPerformFullCompute<LeftType, Op>()(left.GetFilteredTupleIdList())) {
       VectorOps::ExecIgnoreFilter(left, [&](uint64_t i, uint64_t k) {
         result_data[i] = Op::Apply(left_data[i], right_data[i]);
       });
@@ -177,6 +159,10 @@ inline void TemplatedBinaryOperation_Vector_Vector(const Vector &left, const Vec
  * Helper function to execute a binary operation on two input vectors and store the result into an
  * output vector. The operations are performed only on the active elements in the input vectors. It
  * is assumed that the input vectors have the same size and selection vectors (if any).
+ *
+ * This function leverages the tpl::sql::traits::ShouldPerformFullCompute trait to determine whether
+ * the operation should be performed on ALL vector elements or just the active elements. Users can
+ * control this feature by optionally specialization the trait for their operation type.
  *
  * After the function returns, the result vector will have the same selection vector and count as
  * the inputs.
