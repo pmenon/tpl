@@ -365,7 +365,8 @@ class VectorOps : public AllStatic {
    */
   template <typename F>
   static void ExecIgnoreFilter(const Vector &vector, F &&f) {
-    for (uint64_t i = 0; i < vector.GetSize(); i++) {
+    const uint64_t count = vector.GetSize();
+    for (uint64_t i = 0; i < count; i++) {
       f(i, i);
     }
   }
