@@ -52,16 +52,26 @@ void TemplatedInPlaceOperation(Vector *result, const Vector &input) {
     if (input.IsNull(0)) {
       result->GetMutableNullMask()->SetAll();
     } else {
-      VectorOps::Exec(*result,
-                      [&](uint64_t i, uint64_t k) { Op::Apply(&result_data[i], input_data[0]); });
+      if (traits::ShouldPerformFullCompute<InputType, Op>()(result->GetFilteredTupleIdList())) {
+        VectorOps::ExecIgnoreFilter(
+            *result, [&](uint64_t i, uint64_t k) { Op::Apply(&result_data[i], input_data[0]); });
+      } else {
+        VectorOps::Exec(*result,
+                        [&](uint64_t i, uint64_t k) { Op::Apply(&result_data[i], input_data[0]); });
+      }
     }
   } else {
     TPL_ASSERT(result->GetFilteredTupleIdList() == input.GetFilteredTupleIdList(),
                "Filter list of inputs to in-place operation do not match");
 
     result->GetMutableNullMask()->Union(input.GetNullMask());
-    VectorOps::Exec(*result,
-                    [&](uint64_t i, uint64_t k) { Op::Apply(&result_data[i], input_data[i]); });
+    if (traits::ShouldPerformFullCompute<InputType, Op>()(result->GetFilteredTupleIdList())) {
+      VectorOps::ExecIgnoreFilter(
+          *result, [&](uint64_t i, uint64_t k) { Op::Apply(&result_data[i], input_data[i]); });
+    } else {
+      VectorOps::Exec(*result,
+                      [&](uint64_t i, uint64_t k) { Op::Apply(&result_data[i], input_data[i]); });
+    }
   }
 }
 

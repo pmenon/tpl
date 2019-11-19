@@ -6,6 +6,19 @@
 
 namespace tpl::sql {
 
+namespace traits {
+
+template <typename T, typename Op>
+struct ShouldPerformFullCompute<T, Op, std::enable_if_t<std::is_same_v<Op, tpl::sql::AddInPlace>>> {
+  bool operator()(const TupleIdList *tid_list) {
+    auto full_compute_threshold =
+        Settings::Instance()->GetDouble(Settings::Name::ArithmeticFullComputeOptThreshold);
+    return tid_list == nullptr || full_compute_threshold <= tid_list->ComputeSelectivity();
+  }
+};
+
+}  // namespace traits
+
 void VectorOps::AddInPlace(Vector *left, const Vector &right) {
   // Sanity check
   CheckInplaceOperation(left, right);
