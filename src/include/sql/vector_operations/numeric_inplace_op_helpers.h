@@ -8,7 +8,10 @@
 namespace tpl::sql {
 
 /**
- * Function to check the input arguments to in-place operations.
+ * Check:
+ * - Input and output vectors have the same type.
+ * - Input and output vectors have the same shape.
+ *
  * @param result The vector storing the result of the in-place operation.
  * @param input The right-side input into the in-place operation.
  */
