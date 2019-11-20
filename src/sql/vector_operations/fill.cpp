@@ -49,6 +49,9 @@ void VectorOps::Fill(Vector *vector, const GenericValue &value) {
     case TypeId::BigInt:
       TemplatedFillOperation(vector, value.value_.bigint);
       break;
+    case TypeId::Hash:
+      TemplatedFillOperation(vector, value.value_.hash);
+      break;
     case TypeId::Float:
       TemplatedFillOperation(vector, value.value_.float_);
       break;
