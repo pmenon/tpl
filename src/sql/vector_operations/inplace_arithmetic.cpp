@@ -44,7 +44,7 @@ void VectorOps::AddInPlace(Vector *left, const Vector &right) {
       TemplatedInPlaceOperation<double, double, tpl::sql::AddInPlace>(left, right);
       break;
     case TypeId::Pointer:
-      TemplatedInPlaceOperation<uintptr_t , uintptr_t , tpl::sql::AddInPlace>(left, right);
+      TemplatedInPlaceOperation<uintptr_t, uintptr_t, tpl::sql::AddInPlace>(left, right);
       break;
     default:
       throw InvalidTypeException(left->GetTypeId(),

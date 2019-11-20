@@ -13,8 +13,9 @@ void CheckGatherArguments(const Vector &pointers, UNUSED Vector *result) {
 }
 
 template <typename T>
-void GatherOperation(const Vector &pointers, Vector *result, const std::size_t offset) {
-  T *result_data = reinterpret_cast<T *>(result->GetData());
+void TemplatedGatherOperation(const Vector &pointers, Vector *result, const std::size_t offset) {
+  auto *RESTRICT result_data = reinterpret_cast<T *>(result->GetData());
+
   if (const auto &null_mask = pointers.GetNullMask(); null_mask.Any()) {
     VectorOps::ExecTyped<byte *>(pointers, [&](byte *ptr, uint64_t i, uint64_t k) {
       result_data[i] = null_mask[i] ? T{} : *reinterpret_cast<T *>(ptr + offset);
@@ -35,31 +36,31 @@ void VectorOps::Gather(const Vector &pointers, Vector *result, const std::size_t
   // Lift-off
   switch (result->GetTypeId()) {
     case TypeId::Boolean:
-      GatherOperation<bool>(pointers, result, offset);
+      TemplatedGatherOperation<bool>(pointers, result, offset);
       break;
     case TypeId::TinyInt:
-      GatherOperation<int8_t>(pointers, result, offset);
+      TemplatedGatherOperation<int8_t>(pointers, result, offset);
       break;
     case TypeId::SmallInt:
-      GatherOperation<int16_t>(pointers, result, offset);
+      TemplatedGatherOperation<int16_t>(pointers, result, offset);
       break;
     case TypeId::Integer:
-      GatherOperation<int32_t>(pointers, result, offset);
+      TemplatedGatherOperation<int32_t>(pointers, result, offset);
       break;
     case TypeId::BigInt:
-      GatherOperation<int64_t>(pointers, result, offset);
+      TemplatedGatherOperation<int64_t>(pointers, result, offset);
       break;
     case TypeId::Float:
-      GatherOperation<float>(pointers, result, offset);
+      TemplatedGatherOperation<float>(pointers, result, offset);
       break;
     case TypeId::Double:
-      GatherOperation<double>(pointers, result, offset);
+      TemplatedGatherOperation<double>(pointers, result, offset);
       break;
     case TypeId::Date:
-      GatherOperation<Date>(pointers, result, offset);
+      TemplatedGatherOperation<Date>(pointers, result, offset);
       break;
     case TypeId::Varchar:
-      GatherOperation<VarlenEntry>(pointers, result, offset);
+      TemplatedGatherOperation<VarlenEntry>(pointers, result, offset);
       break;
     default:
       throw NotImplementedException("Gathering '{}' types not supported",

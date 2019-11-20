@@ -20,8 +20,8 @@ namespace tpl::sql {
  */
 template <typename InputType, typename ResultType, typename Op>
 inline void TemplatedUnaryOperation_HandleNull(const Vector &input, Vector *result) {
-  auto *input_data = reinterpret_cast<InputType *>(input.GetData());
-  auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
+  auto *RESTRICT input_data = reinterpret_cast<InputType *>(input.GetData());
+  auto *RESTRICT result_data = reinterpret_cast<ResultType *>(result->GetData());
 
   result->Resize(input.GetSize());
   result->GetMutableNullMask()->Reset();
