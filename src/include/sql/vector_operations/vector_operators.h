@@ -301,6 +301,12 @@ class VectorOps : public AllStatic {
   //
   // -------------------------------------------------------
 
+  /**
+   * Sort the input vector and store the resulting re-ordering selection index vector in @em result.
+   *
+   * @param input The vector to sort.
+   * @param[out] result The output result vector.
+   */
   static void Sort(const Vector &input, sel_t result[]);
 
   // -------------------------------------------------------
