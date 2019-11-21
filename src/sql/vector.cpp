@@ -401,6 +401,13 @@ void Vector::CheckIntegrity() const {
   TPL_ASSERT(num_elements_ == null_mask_.GetNumBits(),
              "NULL indication bit vector size doesn't match vector size");
 
+  // Ensure that all NULL TIDs are in the filtered TID list, if one exists
+  if (tid_list_ != nullptr) {
+    bool valid = true;
+    null_mask_.IterateSetBits([&](auto idx) { valid &= tid_list_->Contains(idx); });
+    TPL_ASSERT(valid, "NULL mask contains indexes not in selected TID list");
+  }
+
   // Check the strings in the vector, if it's a string vector
   if (type_ == TypeId::Varchar) {
     VectorOps::ExecTyped<const VarlenEntry>(
