@@ -283,6 +283,27 @@ void Vector::Reference(Vector *other) {
   null_mask_ = other->null_mask_;
 }
 
+void Vector::GetNonNullSelections(TupleIdList *non_null_tids, TupleIdList *null_tids) const {
+  non_null_tids->Resize(GetSize());
+  null_tids->Resize(GetSize());
+
+  // Copy NULLs directly
+  null_tids->GetMutableBits()->Copy(null_mask_);
+
+  // Copy selections
+  if (tid_list_ != nullptr) {
+    non_null_tids->AssignFrom(*tid_list_);
+  } else {
+    non_null_tids->AddAll();
+  }
+
+  // Ensure NULL list only refers to selected TIDs
+  null_tids->GetMutableBits()->Intersect(*non_null_tids->GetMutableBits());
+
+  // Remove NULLs from filtered TIDs
+  non_null_tids->GetMutableBits()->Difference(null_mask_);
+}
+
 void Vector::MoveTo(Vector *other) {
   other->Destroy();
   other->type_ = type_;
@@ -400,13 +421,6 @@ void Vector::CheckIntegrity() const {
   // Ensure that the NULL bit mask has the same size at the vector it represents
   TPL_ASSERT(num_elements_ == null_mask_.GetNumBits(),
              "NULL indication bit vector size doesn't match vector size");
-
-  // Ensure that all NULL TIDs are in the filtered TID list, if one exists
-  if (tid_list_ != nullptr) {
-    bool valid = true;
-    null_mask_.IterateSetBits([&](auto idx) { valid &= tid_list_->Contains(idx); });
-    TPL_ASSERT(valid, "NULL mask contains indexes not in selected TID list");
-  }
 
   // Check the strings in the vector, if it's a string vector
   if (type_ == TypeId::Varchar) {

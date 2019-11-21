@@ -315,6 +315,14 @@ class Vector {
   void Reference(Vector *other);
 
   /**
+   * Populate the input TID lists with the TIDs of all non-NULL active vector elements and active
+   * NULL vector elements, respectively.
+   * @param[out] non_null_tids The list of non-NULL TIDs in this vector.
+   * @param[out] null_tids The list of NULL TIDs in this vector.
+   */
+  void GetNonNullSelections(TupleIdList *non_null_tids, TupleIdList *null_tids) const;
+
+  /**
    * Return a string representation of this vector.
    * @return A string representation of the vector's contents.
    */

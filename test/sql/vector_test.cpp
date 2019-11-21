@@ -509,6 +509,56 @@ TEST_F(VectorTest, AppendWithSelectionVector) {
   EXPECT_EQ(GenericValue::CreateFloat(3.0), vec2->GetValue(3));
 }
 
+TEST_F(VectorTest, GetNonNullSelections) {
+  // vec1 = [1,2,3,4,5,6,7,8,9,10,11,12]
+  auto vec1 = MakeFloatVector(
+      {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+      {false, false, false, false, false, false, false, false, false, false, false, false});
+
+  TupleIdList non_null_tids(vec1->GetSize());
+  TupleIdList null_tids(vec1->GetSize());
+
+  // Initially, no NULLs
+  {
+    vec1->GetNonNullSelections(&non_null_tids, &null_tids);
+    EXPECT_TRUE(null_tids.IsEmpty());
+    EXPECT_TRUE(non_null_tids.IsFull());
+  }
+
+  // vec1      = [1,2,3,4,NULL,6,7,8,9,10,NULL,12]
+  // NULLs     = [4,10]
+  // non-NULLs = [0,1,2,3,5,6,7,8,9,11]
+  {
+    vec1->SetNull(4, true);
+    vec1->SetNull(10, true);
+    vec1->GetNonNullSelections(&non_null_tids, &null_tids);
+    EXPECT_EQ(2, null_tids.GetTupleCount());
+    EXPECT_EQ(4u, null_tids[0]);
+    EXPECT_EQ(10u, null_tids[1]);
+    EXPECT_EQ(vec1->GetSize() - 2, non_null_tids.GetTupleCount());
+    EXPECT_FALSE(non_null_tids.Contains(4));
+    EXPECT_FALSE(non_null_tids.Contains(10));
+  }
+
+  // vec1       = [1,3,NULL,7,9]
+  // selections = [0,2,4,6,8]
+  // NULLs      = [2]
+  // non-NULLs  = [0,2,6,8]
+  {
+    TupleIdList selections(vec1->GetSize());
+    selections = {0, 2, 4, 6, 8};
+    vec1->SetFilteredTupleIdList(&selections, selections.GetTupleCount());
+    vec1->GetNonNullSelections(&non_null_tids, &null_tids);
+    EXPECT_EQ(1, null_tids.GetTupleCount());
+    EXPECT_EQ(4u, null_tids[0]);
+    EXPECT_EQ(4u, non_null_tids.GetTupleCount());
+    EXPECT_EQ(0u, non_null_tids[0]);
+    EXPECT_EQ(2u, non_null_tids[1]);
+    EXPECT_EQ(6u, non_null_tids[2]);
+    EXPECT_EQ(8u, non_null_tids[3]);
+  }
+}
+
 TEST_F(VectorTest, Print) {
   {
     auto vec = MakeBooleanVector({false, true, true, false}, {false, false, false, false});
