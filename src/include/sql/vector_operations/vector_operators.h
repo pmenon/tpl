@@ -372,9 +372,10 @@ class VectorOps : public AllStatic {
   }
 
   /**
-   * Apply a function to all active elements in the input vector @em v. The callback function @em f
-   * receives three arguments:
+   * Apply a function to all active elements in the input vector assuming elements have the
+   * templated C++ type. Each element is passed by const-reference.
    *
+   * The callback function receives three arguments:
    * v = a const-reference to the element at the current TID.
    * i = the current tuple ID.
    * k = position in TID list.
