@@ -1,5 +1,8 @@
 #include "sql/generic_hash_table.h"
 
+#include <algorithm>
+#include <limits>
+
 #include "util/math_util.h"
 
 namespace tpl::sql {
@@ -31,6 +34,27 @@ void GenericHashTable<UseTags>::SetSize(uint64_t new_size) {
   mask_ = capacity_ - 1;
   num_elements_ = 0;
   entries_ = Memory::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_, true);
+}
+
+template <bool UseTags>
+std::tuple<uint64_t, uint64_t, float> GenericHashTable<UseTags>::GetChainLengthStats() const {
+  uint64_t min = std::numeric_limits<uint64_t>::max(), max = 0, total = 0;
+
+  for (uint64_t idx = 0; idx < capacity_; idx++) {
+    HashTableEntry *entry = entries_[idx].load(std::memory_order_relaxed);
+    if constexpr (UseTags) {
+      entry = UntagPointer(entry);
+    }
+    uint64_t length = 0;
+    for (; entry != nullptr; entry = entry->next) {
+      total++;
+      length++;
+    }
+    min = std::min(min, length);
+    max = std::max(max, length);
+  }
+
+  return {min, max, static_cast<float>(total) / capacity_};
 }
 
 template class GenericHashTable<true>;

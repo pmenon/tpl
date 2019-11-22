@@ -170,6 +170,12 @@ class GenericHashTable {
    */
   float GetLoadFactor() const { return load_factor_; }
 
+  /**
+   * @return Collect and return a tuple containing the minimum, maximum, and average bucket chain in
+   *         this hash table. This is not a concurrent operation!
+   */
+  std::tuple<uint64_t, uint64_t, float> GetChainLengthStats() const;
+
  private:
   template <bool>
   friend class GenericHashTableIterator;

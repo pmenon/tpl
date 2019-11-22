@@ -11,15 +11,14 @@ namespace tpl::util {
 class VectorUtil : public AllStatic {
  public:
   /**
-   * Intersect the sorted input selection vectors @em v1 and @em v2, with
-   * lengths @em v1_count and @em v2_count, respectively, and store the result
-   * of the intersection in the output selection vector @em out_v.
+   * Intersect the sorted input selection vectors @em v1 and @em v2, with lengths @em v1_count and
+   * @em v2_count, respectively, and store the result of the intersection in the output selection
+   * vector @em out_v.
    * @param sel_vector_1 The first input selection vector.
    * @param sel_vector_1_len The length of the first input selection vector.
    * @param sel_vector_2 The second input selection vector.
    * @param sel_vector_2_len The length of the second input selection vector.
-   * @param out_sel_vector The output selection vector storing the result of the
-   *              intersection.
+   * @param out_sel_vector The output selection vector storing the result of the intersection.
    * @return The number of elements in the output selection vector.
    */
   [[nodiscard]] static uint32_t IntersectSelected(const sel_t *sel_vector_1,
@@ -28,16 +27,14 @@ class VectorUtil : public AllStatic {
                                                   uint32_t sel_vector_2_len, sel_t *out_sel_vector);
 
   /**
-   * Intersect the sorted input selection vector @em v1 and the input bit vector
-   * @em bit_vector, and store the result of the intersection in the output
-   * selection vector @em out_v.
+   * Intersect the sorted input selection vector @em v1 and the input bit vector @em bit_vector, and
+   * store the result of the intersection in the output selection vector @em out_v.
    *
    * @param sel_vector The input selection vector.
    * @param sel_vector_len The length of the input selection vector.
    * @param bit_vector The input bit vector.
    * @param bit_vector_len The length of the bit vector in bits.
-   * @param[out] out_sel_vector The output selection vector storing the result
-   *                            of the intersection.
+   * @param[out] out_sel_vector The output selection vector storing the result of the intersection.
    * @return The number of elements in the output selection vector.
    */
   [[nodiscard]] static uint32_t IntersectSelected(const sel_t *sel_vector, uint32_t sel_vector_len,
@@ -45,10 +42,9 @@ class VectorUtil : public AllStatic {
                                                   uint32_t bit_vector_len, sel_t *out_sel_vector);
 
   /**
-   * Populate the output selection vector @em out_sel_vector with all indexes
-   * that do not appear in the input selection vector @em sel_vector.
-   * @param n The maximum number of indexes that can appear in the selection
-   *          vector.
+   * Populate the output selection vector @em out_sel_vector with all indexes that do not appear in
+   * the input selection vector @em sel_vector.
+   * @param n The maximum number of indexes that can appear in the selection vector.
    * @param sel_vector The input selection vector.
    * @param sel_vector_len The number of elements in the input selection vector.
    * @param[out] out_sel_vector The output selection vector.
@@ -58,11 +54,11 @@ class VectorUtil : public AllStatic {
                                              uint32_t sel_vector_len, sel_t *out_sel_vector);
 
   /**
-   * Convert a selection vector into a byte vector. For each index stored in the
-   * selection vector, set the corresponding index in the byte vector to the
-   * saturated 8-bit integer (0xFF = 255 = 11111111).
-   * @param num_elems The number of elements in the selection vector, and the
-   *                  minimum capacity of the byte vector.
+   * Convert a selection vector into a byte vector. For each index stored in the selection vector,
+   * set the corresponding index in the byte vector to the saturated 8-bit integer
+   * (0xFF = 255 = 11111111).
+   * @param num_elems The number of elements in the selection vector, and the minimum capacity of
+   *                  the byte vector.
    * @param sel_vector The input selection index vector.
    * @param[out] byte_vector The output byte vector.
    */
@@ -70,11 +66,11 @@ class VectorUtil : public AllStatic {
                                           uint8_t *byte_vector);
 
   /**
-   * Convert a byte vector into a selection vector. For all elements in the byte
-   * vector whose value is a saturated 8-bit integer (0xFF = 255 = 11111111),
-   * left-pack the indexes of the elements into the selection vector.
-   * @param num_bytes The number of elements in the byte vector, and the minimum
-   *                  capacity of the selection vector.
+   * Convert a byte vector into a selection vector. For all elements in the byte vector whose value
+   * is a saturated 8-bit integer (0xFF = 255 = 11111111), left-pack the indexes of the elements
+   * into the selection vector.
+   * @param num_bytes The number of elements in the byte vector, and the minimum capacity of the
+   *                  selection vector.
    * @param byte_vector The input byte vector.
    * @param[out] sel_vector The output selection vector.
    * @return The number of elements in the selection vector.
@@ -83,11 +79,11 @@ class VectorUtil : public AllStatic {
                                                             uint32_t num_bytes, sel_t *sel_vector);
 
   /**
-   * Convert a byte vector to a bit vector. For all elements in the byte vector
-   * whose value is a saturated 8-bit integer (0xFF = 255 = 11111111), set the
-   * corresponding bit in the bit vector to 1.
-   * @param num_bytes The number of elements in the byte vector, and the minimum
-   *                  capacity (in bits) of the bit vector.
+   * Convert a byte vector to a bit vector. For all elements in the byte vector whose value is a
+   * saturated 8-bit integer (0xFF = 255 = 11111111), set the corresponding bit in the bit vector to
+   * 1.
+   * @param num_bytes The number of elements in the byte vector, and the minimum capacity (in bits)
+   *                  of the bit vector.
    * @param byte_vector The input byte vector.
    * @param[out] bit_vector The output bit vector.
    */
@@ -95,11 +91,11 @@ class VectorUtil : public AllStatic {
                                     uint64_t *bit_vector);
 
   /**
-   * Convert a bit vector into a byte vector. For all set bits in the input bit
-   * vector, set the corresponding byte to a saturated 8-bit integer. The input
-   * bit vector has @em n bits, and the output byte vector has @em n bytes.
-   * @param num_bits The number of bits in the bit vector, and the minimum
-   *                 capacity of the byte vector
+   * Convert a bit vector into a byte vector. For all set bits in the input bit vector, set the
+   * corresponding byte to a saturated 8-bit integer. The input bit vector has @em n bits, and the
+   * output byte vector has @em n bytes.
+   * @param num_bits The number of bits in the bit vector, and the minimum capacity of the byte
+   *                 vector.
    * @param bit_vector The input bit vector, passed along as an array of words.
    * @param byte_vector The output byte vector.
    */
