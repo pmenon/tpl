@@ -1,20 +1,51 @@
 #pragma once
 
+#include "common/common.h"
 #include "util/hash_util.h"
 
 namespace tpl::sql {
 
 /**
- * Hash operation functor. Dispatches to tpl::util::Hash() for non-null inputs.
+ * Hash operation functor.
  */
-struct Hash {
-  template <typename T>
-  static auto Apply(T input, bool null) -> std::enable_if_t<std::is_fundamental_v<T>, hash_t> {
-    return null ? hash_t(0) : util::HashUtil::HashCrc(input);
-  }
+template <typename T>
+struct Hash;
 
-  static hash_t Apply(const Date &input, bool null) { return null ? hash_t(0) : input.Hash(); }
+/**
+ * Primitive hashing.
+ */
+#define DECL_HASH(Type, ...)                                    \
+  template <>                                                   \
+  struct Hash<Type> {                                           \
+    static hash_t Apply(Type input, bool null) {                \
+      return null ? hash_t(0) : util::HashUtil::HashCrc(input); \
+    }                                                           \
+  };
 
+ALL_TYPES(DECL_HASH)
+#undef DECL_HASH
+
+/**
+ * Date hashing.
+ */
+template <>
+struct Hash<Date> {
+  static hash_t Apply(Date input, bool null) { return null ? hash_t(0) : input.Hash(); }
+};
+
+/**
+ * Timestamp hashing.
+ */
+template <>
+struct Hash<Timestamp> {
+  static hash_t Apply(Timestamp input, bool null) { return null ? hash_t(0) : input.Hash(); }
+};
+
+/**
+ * String hashing.
+ */
+template <>
+struct Hash<VarlenEntry> {
   static hash_t Apply(const VarlenEntry &input, bool null) {
     return null ? hash_t(0) : input.Hash();
   }
