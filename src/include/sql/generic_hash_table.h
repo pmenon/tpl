@@ -248,7 +248,7 @@ class GenericHashTable {
  private:
   // Main directory of hash table entry buckets. Each bucket is the head of a
   // linked list chain.
-  std::atomic<HashTableEntry *> *entries_;
+  HashTableEntry **entries_;
 
   // The mask to use to compute the bucket position of an entry.
   uint64_t mask_;
@@ -283,16 +283,20 @@ inline void GenericHashTable<UseTags>::InsertUntagged(HashTableEntry *new_entry,
   TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
-    std::atomic<HashTableEntry *> &loc = entries_[pos];
-    HashTableEntry *old_entry = loc.load();
+    // Simulate a compare_exchange_weak() loop to swap in new entry into directory
+    HashTableEntry *old_entry = entries_[pos];
     do {
       new_entry->next = old_entry;
-    } while (!loc.compare_exchange_weak(old_entry, new_entry));
+    } while (!__atomic_compare_exchange_n(entries_ + pos,    // Slot to atomically swap into
+                                          &old_entry,        // What we expect to the there
+                                          new_entry,         // What we want to write there
+                                          true,              // Weak exchange?
+                                          __ATOMIC_RELEASE,  // Use release semantics for success
+                                          __ATOMIC_RELAXED   // Use relaxed semantics for failure
+                                          ));
   } else {
-    std::atomic<HashTableEntry *> &loc = entries_[pos];
-    HashTableEntry *old_entry = loc.load(std::memory_order_relaxed);
-    new_entry->next = old_entry;
-    loc.store(new_entry, std::memory_order_relaxed);
+    new_entry->next = entries_[pos];
+    entries_[pos] = new_entry;
   }
 }
 
@@ -305,18 +309,21 @@ inline void GenericHashTable<UseTags>::InsertTagged(HashTableEntry *new_entry, h
   TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
-    std::atomic<HashTableEntry *> &loc = entries_[pos];
-    HashTableEntry *old_entry = loc.load();
+    // Simulate a compare_exchange_weak() loop to swap in new entry into directory
+    HashTableEntry *old_entry = entries_[pos];
     do {
-      new_entry->next = UntagPointer(old_entry);
-      new_entry = UpdateTag(old_entry, new_entry);
-    } while (!loc.compare_exchange_weak(old_entry, new_entry));
-
+      new_entry->next = UntagPointer(old_entry);             // Un-tag the old entry
+      new_entry = UpdateTag(old_entry, new_entry);           // Tag the new entry
+    } while (!__atomic_compare_exchange_n(entries_ + pos,    // Slot to atomically swap into
+                                          &old_entry,        // What we expect to the there
+                                          new_entry,         // What we want to write there
+                                          true,              // Weak exchange?
+                                          __ATOMIC_RELEASE,  // Use release semantics for success
+                                          __ATOMIC_RELAXED   // Use relaxed semantics for failure
+                                          ));
   } else {
-    std::atomic<HashTableEntry *> &loc = entries_[pos];
-    HashTableEntry *old_entry = loc.load(std::memory_order_relaxed);
-    new_entry->next = UntagPointer(old_entry);
-    loc.store(UpdateTag(old_entry, new_entry), std::memory_order_relaxed);
+    new_entry->next = UntagPointer(entries_[pos]);
+    entries_[pos] = UpdateTag(entries_[pos], new_entry);
   }
 }
 
@@ -372,7 +379,7 @@ inline void GenericHashTable<UseTags>::InsertBatch(util::ChunkedVector<Allocator
 template <bool UseTags>
 inline HashTableEntry *GenericHashTable<UseTags>::FindChainHeadUntagged(hash_t hash) const {
   const uint64_t pos = BucketPosition(hash);
-  return entries_[pos].load(std::memory_order_relaxed);
+  return entries_[pos];
 }
 
 template <bool UseTags>
@@ -430,7 +437,7 @@ inline void GenericHashTable<UseTags>::FlushEntries(const F &sink) {
   static_assert(std::is_invocable_v<F, HashTableEntry *>);
 
   for (uint64_t idx = 0; idx < capacity_; idx++) {
-    HashTableEntry *entry = entries_[idx].load(std::memory_order_relaxed);
+    HashTableEntry *entry = entries_[idx];
 
     if constexpr (UseTags) {
       entry = UntagPointer(entry);
@@ -442,7 +449,7 @@ inline void GenericHashTable<UseTags>::FlushEntries(const F &sink) {
       entry = next;
     }
 
-    entries_[idx].store(nullptr, std::memory_order_relaxed);
+    entries_[idx] = nullptr;
   }
 
   num_elements_ = 0;
@@ -495,7 +502,7 @@ class GenericHashTableIterator {
     // While we haven't exhausted the directory, and haven't found a valid entry
     // continue on ...
     while (entries_index_ < table_.GetCapacity()) {
-      curr_entry_ = table_.entries_[entries_index_++].load(std::memory_order_relaxed);
+      curr_entry_ = table_.entries_[entries_index_++];
 
       if constexpr (UseTag) {
         curr_entry_ = GenericHashTable<UseTag>::UntagPointer(curr_entry_);

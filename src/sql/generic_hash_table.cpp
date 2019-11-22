@@ -33,7 +33,7 @@ void GenericHashTable<UseTags>::SetSize(uint64_t new_size) {
   capacity_ = next_size;
   mask_ = capacity_ - 1;
   num_elements_ = 0;
-  entries_ = Memory::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_, true);
+  entries_ = Memory::MallocHugeArray<HashTableEntry *>(capacity_, true);
 }
 
 template <bool UseTags>
@@ -41,7 +41,7 @@ std::tuple<uint64_t, uint64_t, float> GenericHashTable<UseTags>::GetChainLengthS
   uint64_t min = std::numeric_limits<uint64_t>::max(), max = 0, total = 0;
 
   for (uint64_t idx = 0; idx < capacity_; idx++) {
-    HashTableEntry *entry = entries_[idx].load(std::memory_order_relaxed);
+    HashTableEntry *entry = entries_[idx];
     if constexpr (UseTags) {
       entry = UntagPointer(entry);
     }
@@ -107,7 +107,7 @@ void GenericHashTableVectorIterator<UseTag>::Next() {
   // Fill the range [idx, SIZE) in the cache with valid entries from the source
   // hash table.
   while (index < kDefaultVectorSize && table_dir_index_ < table_.GetCapacity()) {
-    entry_vec_[index] = table_.entries_[table_dir_index_++].load(std::memory_order_relaxed);
+    entry_vec_[index] = table_.entries_[table_dir_index_++];
     if constexpr (UseTag) {
       entry_vec_[index] = GenericHashTable<UseTag>::UntagPointer(entry_vec_[index]);
     }

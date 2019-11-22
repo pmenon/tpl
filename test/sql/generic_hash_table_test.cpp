@@ -40,7 +40,7 @@ TEST_F(GenericHashTableTest, UntaggedInsertion) {
   TestEntry entry2 = entry1;
   TestEntry entry3(10, 11);
 
-  // Looking up an a missing entry should return null
+  // Looking up a missing entry should return null
   {
     auto *e = table.FindChainHead(entry1.Hash());
     EXPECT_EQ(nullptr, e);
@@ -362,6 +362,37 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
     }
     EXPECT_EQ(num_inserts, found_entries);
   }
+}
+
+TEST_F(GenericHashTableTest, ChainStats) {
+  TaggedGenericHashTable table;
+  table.SetSize(100);
+
+  constexpr uint32_t unique_keys = 4;
+  constexpr uint32_t bucket_len = 20;
+  constexpr uint32_t N = unique_keys * bucket_len;
+
+  // Pre-generate N entries
+  std::vector<TestEntry> entries;
+  for (uint32_t idx = 0; idx < N; idx++) {
+    TestEntry entry(idx % unique_keys, idx);
+    entry.hash = entry.Hash();
+    entries.emplace_back(entry);
+  }
+
+  auto [min, max, avg] = table.GetChainLengthStats();
+  EXPECT_EQ(0, min);
+  EXPECT_EQ(0, max);
+  EXPECT_DOUBLE_EQ(0.0, avg);
+
+  // Insert everything
+  for (auto &entry : entries) {
+    table.Insert<true>(&entry);
+  }
+
+  std::tie(min, max, avg) = table.GetChainLengthStats();
+  EXPECT_EQ(0, min);
+  EXPECT_EQ(bucket_len, max);
 }
 
 TEST_F(GenericHashTableTest, DISABLED_PerfIteration) {
