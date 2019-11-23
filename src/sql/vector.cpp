@@ -283,6 +283,16 @@ void Vector::Reference(Vector *other) {
   null_mask_ = other->null_mask_;
 }
 
+void Vector::Pack() {
+  if (tid_list_ == nullptr) {
+    return;
+  }
+
+  Vector copy(GetTypeId(), true, false);
+  CopyTo(&copy);
+  copy.MoveTo(this);
+}
+
 void Vector::GetNonNullSelections(TupleIdList *non_null_tids, TupleIdList *null_tids) const {
   non_null_tids->Resize(GetSize());
   null_tids->Resize(GetSize());

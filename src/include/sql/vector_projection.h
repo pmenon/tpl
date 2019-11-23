@@ -165,6 +165,12 @@ class VectorProjection {
   void Reset(uint64_t num_tuples);
 
   /**
+   * Packing (or compressing) a projection rearranges contained vector data by contiguously storing
+   * only active vector elements, removing any filtered TID list.
+   */
+  void Pack();
+
+  /**
    * @return The number of columns in the projection.
    */
   uint32_t GetColumnCount() const { return columns_.size(); }

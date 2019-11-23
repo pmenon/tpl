@@ -176,4 +176,48 @@ TEST_F(VectorProjectionTest, Reset) {
   vector_projection.CheckIntegrity();
 }
 
+TEST_F(VectorProjectionTest, Pack) {
+  VectorProjection vector_projection;
+  vector_projection.Initialize({TypeId::TinyInt, TypeId::SmallInt, TypeId::Float});
+  vector_projection.Reset(20);
+
+  VectorOps::Fill(vector_projection.GetColumn(0), GenericValue::CreateTinyInt(4));
+  VectorOps::Fill(vector_projection.GetColumn(1), GenericValue::CreateSmallInt(8));
+  VectorOps::Fill(vector_projection.GetColumn(2), GenericValue::CreateFloat(16.0));
+
+  // Try packing an unfiltered projection
+  {
+    vector_projection.Pack();
+
+    EXPECT_FALSE(vector_projection.IsEmpty());
+    EXPECT_FALSE(vector_projection.IsFiltered());
+    EXPECT_EQ(20u, vector_projection.GetSelectedTupleCount());
+    EXPECT_EQ(20u, vector_projection.GetTotalTupleCount());
+    EXPECT_EQ(nullptr, vector_projection.GetFilteredTupleIdList());
+    vector_projection.CheckIntegrity();
+  }
+
+  // Try packing with a filter
+  {
+    auto tid_list = TupleIdList(vector_projection.GetTotalTupleCount());
+    tid_list = {7, 11, 13};
+    vector_projection.SetFilteredSelections(tid_list);
+
+    vector_projection.Pack();
+
+    EXPECT_FALSE(vector_projection.IsEmpty());
+    EXPECT_FALSE(vector_projection.IsFiltered());
+    EXPECT_EQ(tid_list.GetTupleCount(), vector_projection.GetSelectedTupleCount());
+    EXPECT_EQ(tid_list.GetTupleCount(), vector_projection.GetTotalTupleCount());
+    EXPECT_EQ(nullptr, vector_projection.GetFilteredTupleIdList());
+    EXPECT_FLOAT_EQ(1.0, vector_projection.ComputeSelectivity());
+    vector_projection.CheckIntegrity();
+
+    for (uint32_t i = 0; i < vector_projection.GetColumnCount(); i++) {
+      auto *vec = vector_projection.GetColumn(i);
+      EXPECT_EQ(tid_list.GetTupleCount(), vec->GetCount());
+    }
+  }
+}
+
 }  // namespace tpl::sql

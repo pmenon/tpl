@@ -315,6 +315,12 @@ class Vector {
   void Reference(Vector *other);
 
   /**
+   * Packing (or compressing) a vector rearranges this vector's contents by contiguously storing
+   * all active vector elements, removing any TID filter list.
+   */
+  void Pack();
+
+  /**
    * Populate the input TID lists with the TIDs of all non-NULL active vector elements and active
    * NULL vector elements, respectively.
    * @param[out] non_null_tids The list of non-NULL TIDs in this vector.

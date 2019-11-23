@@ -104,6 +104,20 @@ void VectorProjection::Reset(uint64_t num_tuples) {
   }
 }
 
+void VectorProjection::Pack() {
+  if (!IsFiltered()) {
+    return;
+  }
+
+  filter_ = nullptr;
+  owned_tid_list_.Resize(GetSelectedTupleCount());
+  owned_tid_list_.AddAll();
+
+  for (auto &col : columns_) {
+    col->Pack();
+  }
+}
+
 std::string VectorProjection::ToString() const {
   std::string result = "VectorProjection(#cols=" + std::to_string(columns_.size()) + "):\n";
   for (auto &col : columns_) {

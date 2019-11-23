@@ -509,6 +509,39 @@ TEST_F(VectorTest, AppendWithSelectionVector) {
   EXPECT_EQ(GenericValue::CreateFloat(3.0), vec2->GetValue(3));
 }
 
+TEST_F(VectorTest, Pack) {
+  // vec = [NULL,1,2,3,4,5,6,7,8,NULL]
+  auto vec = MakeSmallIntVector({0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, {true, false, false, false, false,
+                                                                 false, false, false, false, true});
+
+  // Try to flatten an already flattened vector
+  {
+    vec->Pack();
+    EXPECT_EQ(10u, vec->GetCount());
+    EXPECT_EQ(10u, vec->GetSize());
+    EXPECT_EQ(nullptr, vec->GetFilteredTupleIdList());
+    EXPECT_TRUE(vec->IsNull(0));
+    EXPECT_TRUE(vec->IsNull(vec->GetSize() - 1));
+  }
+
+  // Try flattening with a filtered vector
+  {
+    // vec = [NULL,3,5,7]
+    auto tids = TupleIdList(vec->GetSize());
+    tids = {0,3,5,7};
+    vec->SetFilteredTupleIdList(&tids, tids.GetTupleCount());
+    vec->Pack();
+
+    EXPECT_EQ(4u, vec->GetCount());
+    EXPECT_EQ(4u, vec->GetSize());
+    EXPECT_EQ(nullptr, vec->GetFilteredTupleIdList());
+    EXPECT_TRUE(vec->IsNull(0));
+    EXPECT_EQ(GenericValue::CreateSmallInt(3), vec->GetValue(1));
+    EXPECT_EQ(GenericValue::CreateSmallInt(5), vec->GetValue(2));
+    EXPECT_EQ(GenericValue::CreateSmallInt(7), vec->GetValue(3));
+  }
+}
+
 TEST_F(VectorTest, GetNonNullSelections) {
   // vec1 = [1,2,3,4,5,6,7,8,9,10,11,12]
   auto vec1 = MakeFloatVector(
