@@ -274,6 +274,15 @@ inline void GenericHashTable<UseTags>::PrefetchChainHead(hash_t hash) const {
   Memory::Prefetch<ForRead, Locality::Low>(entries_ + pos);
 }
 
+#define COMPARE_EXCHANGE_WEAK(ADDRESS, EXPECTED, NEW_VAL)                                     \
+  (__atomic_compare_exchange_n((ADDRESS),        /* Address to atomically CAS into */         \
+                               (EXPECTED),       /* The old value we read from the address */ \
+                               (NEW_VAL),        /* The new value we want to write there */   \
+                               true,             /* Weak exchange ?*/                         \
+                               __ATOMIC_RELEASE, /* Use release semantics for success*/       \
+                               __ATOMIC_RELAXED  /* Use relaxed semantics for failure*/       \
+                               ))
+
 template <bool UseTags>
 template <bool Concurrent>
 inline void GenericHashTable<UseTags>::InsertUntagged(HashTableEntry *new_entry, hash_t hash) {
@@ -283,17 +292,10 @@ inline void GenericHashTable<UseTags>::InsertUntagged(HashTableEntry *new_entry,
   TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
-    // Simulate a compare_exchange_weak() loop to swap in new entry into directory
     HashTableEntry *old_entry = entries_[pos];
     do {
       new_entry->next = old_entry;
-    } while (!__atomic_compare_exchange_n(entries_ + pos,    // Slot to atomically swap into
-                                          &old_entry,        // What we expect to the there
-                                          new_entry,         // What we want to write there
-                                          true,              // Weak exchange?
-                                          __ATOMIC_RELEASE,  // Use release semantics for success
-                                          __ATOMIC_RELAXED   // Use relaxed semantics for failure
-                                          ));
+    } while (!COMPARE_EXCHANGE_WEAK(entries_ + pos, &old_entry, new_entry));
   } else {
     new_entry->next = entries_[pos];
     entries_[pos] = new_entry;
@@ -309,23 +311,18 @@ inline void GenericHashTable<UseTags>::InsertTagged(HashTableEntry *new_entry, h
   TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
-    // Simulate a compare_exchange_weak() loop to swap in new entry into directory
     HashTableEntry *old_entry = entries_[pos];
     do {
-      new_entry->next = UntagPointer(old_entry);             // Un-tag the old entry
-      new_entry = UpdateTag(old_entry, new_entry);           // Tag the new entry
-    } while (!__atomic_compare_exchange_n(entries_ + pos,    // Slot to atomically swap into
-                                          &old_entry,        // What we expect to the there
-                                          new_entry,         // What we want to write there
-                                          true,              // Weak exchange?
-                                          __ATOMIC_RELEASE,  // Use release semantics for success
-                                          __ATOMIC_RELAXED   // Use relaxed semantics for failure
-                                          ));
+      new_entry->next = UntagPointer(old_entry);    // Un-tag the old entry
+      new_entry = UpdateTag(old_entry, new_entry);  // Tag the new entry
+    } while (!COMPARE_EXCHANGE_WEAK(entries_ + pos, &old_entry, new_entry));
   } else {
     new_entry->next = UntagPointer(entries_[pos]);
     entries_[pos] = UpdateTag(entries_[pos], new_entry);
   }
 }
+
+#undef COMPARE_EXCHANGE_WEAK
 
 template <bool UseTags>
 template <bool Concurrent>
