@@ -3,7 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include <tbb/tbb.h>  // NOLINT
+// For TBB's tbb::enumerable_thread_specific
+#include "tbb/enumerable_thread_specific.h"
 
 namespace tpl::sql {
 

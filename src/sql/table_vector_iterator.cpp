@@ -5,7 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "tbb/tbb.h"
+#include "tbb/parallel_for.h"
+#include "tbb/task_scheduler_init.h"
 
 #include "logging/logger.h"
 #include "sql/catalog.h"

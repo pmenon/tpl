@@ -9,7 +9,8 @@
 
 #include "llvm/ADT/STLExtras.h"
 
-#include "tbb/tbb.h"
+#include "tbb/parallel_for_each.h"
+#include "tbb/task_scheduler_init.h"
 
 #include "logging/logger.h"
 #include "sql/thread_state_container.h"
