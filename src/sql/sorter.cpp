@@ -5,13 +5,10 @@
 #include <utility>
 #include <vector>
 
-// For super-scalar sampling sorting
 #include "ips4o/ips4o.hpp"
 
-// For llvm::erase_if()
 #include "llvm/ADT/STLExtras.h"
 
-// For tbb::parallel_for_each()
 #include "tbb/parallel_for_each.h"
 #include "tbb/task_scheduler_init.h"
 

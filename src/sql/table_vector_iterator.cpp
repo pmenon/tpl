@@ -5,7 +5,6 @@
 #include <utility>
 #include <vector>
 
-// For tbb::parallel_for()
 #include "tbb/parallel_for.h"
 #include "tbb/task_scheduler_init.h"
 
