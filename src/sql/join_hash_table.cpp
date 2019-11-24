@@ -8,11 +8,11 @@
 // Libcount
 #include "count/hll.h"
 
-// LLVM
+// For llvm::erase_if()
 #include "llvm/ADT/STLExtras.h"
 
-// Intel TBB
-#include "tbb/tbb.h"
+// For tbb::parallel_for_each()
+#include "tbb/parallel_for_each.h"
 
 #include "common/cpu_info.h"
 #include "common/memory.h"

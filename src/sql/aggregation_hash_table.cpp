@@ -6,9 +6,11 @@
 #include <utility>
 #include <vector>
 
-#include "tbb/tbb.h"
-
+// Libcount
 #include "count/hll.h"
+
+// For tbb::parallel_for_each()
+#include "tbb/parallel_for_each.h"
 
 #include "common/cpu_info.h"
 #include "logging/logger.h"
