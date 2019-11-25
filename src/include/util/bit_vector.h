@@ -486,7 +486,7 @@ class BitVector {
    * @param p The predicate to apply to each set bit position.
    */
   template <typename P>
-  void UpdateSetBits(P &&p) {
+  void UpdateSetBits(P p) {
     static_assert(std::is_invocable_r_v<bool, P, uint32_t>,
                   "Predicate must be accept an unsigned 32-bit index and return a bool");
 
@@ -514,7 +514,7 @@ class BitVector {
    * @param p The predicate to apply to each bit position.
    */
   template <typename P>
-  void UpdateFull(P &&p) {
+  void UpdateFull(P p) {
     static_assert(std::is_invocable_r_v<bool, P, uint32_t>,
                   "Predicate must be accept an unsigned 32-bit index and return a bool");
     if (GetNumBits() == 0) {
