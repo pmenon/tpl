@@ -490,7 +490,7 @@ class BitVector {
     static_assert(std::is_invocable_r_v<bool, P, uint32_t>,
                   "Predicate must be accept an unsigned 32-bit index and return a bool");
 
-    for (WordType i = 0; i < GetNumWords(); i++) {
+    for (WordType i = 0, num_words = GetNumWords(); i < num_words; i++) {
       WordType word = words_[i];
       WordType word_result = 0;
       while (word != 0) {
@@ -554,8 +554,7 @@ class BitVector {
     static_assert(std::is_invocable_v<F, uint32_t>,
                   "Callback must be a single-argument functor accepting an unsigned 32-bit index");
 
-    const auto num_words = GetNumWords();
-    for (WordType i = 0; i < num_words; i++) {
+    for (WordType i = 0, num_words = GetNumWords(); i < num_words; i++) {
       WordType word = words_[i];
       while (word != 0) {
         const auto t = word & -word;
