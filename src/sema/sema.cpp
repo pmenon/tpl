@@ -1,12 +1,8 @@
 #include "sema/sema.h"
 
-#include <utility>
-
 #include "ast/context.h"
 #include "ast/type.h"
-#include "sql/data_types.h"
-#include "sql/schema.h"
-#include "sql/table.h"
+#include "ast/builtins.h"
 
 namespace tpl::sema {
 
