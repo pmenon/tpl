@@ -543,20 +543,24 @@ class BitVector {
 
   /**
    * Iterate all bits in this vector and invoke the callback with the index of set bits only.
-   * @tparam F The type of the callback function. Must accept a single unsigned integer value.
-   * @param callback The callback function to invoke with the index of set bits.
+   * @tparam F Functor object whose signature is equivalent to:
+   *           @code
+   *           void f(uint32_t index);
+   *           @endcode
+   * @param f Callback functor applied on the index of each set bit in this bit vector.
    */
   template <typename F>
-  void IterateSetBits(F &&callback) const {
+  void IterateSetBits(F f) const {
     static_assert(std::is_invocable_v<F, uint32_t>,
                   "Callback must be a single-argument functor accepting an unsigned 32-bit index");
 
-    for (WordType i = 0; i < GetNumWords(); i++) {
+    const auto num_words = GetNumWords();
+    for (WordType i = 0; i < num_words; i++) {
       WordType word = words_[i];
       while (word != 0) {
         const auto t = word & -word;
         const auto r = BitUtil::CountTrailingZeros(word);
-        callback(i * kWordSizeBits + r);
+        f(i * kWordSizeBits + r);
         word ^= t;
       }
     }
