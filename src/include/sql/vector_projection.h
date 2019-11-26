@@ -135,6 +135,12 @@ class VectorProjection {
   void SetFilteredSelections(const TupleIdList &tid_list);
 
   /**
+   * Copy the full list of active TIDs in this projection into the provided TID list.
+   * @param[out] tid_list The list where active TIDs in this projection are written to.
+   */
+  void CopySelections(TupleIdList *tid_list) const;
+
+  /**
    * @return The metadata for the column at index @em col_idx in the projection.
    */
   TypeId GetColumnType(const uint32_t col_idx) const {

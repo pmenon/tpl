@@ -194,34 +194,6 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
   // Insert 'num_batches' of 'kDefaultVectorSize' (i.e., 2048) tuples into an aggregation table to
   // force the creation of 'num_groups' unique groups.
 
-  const auto hash_fn = [](void *x) {
-    auto vpi = reinterpret_cast<const VectorProjectionIterator *>(x);
-    auto key = vpi->GetValue<int32_t, false>(0, nullptr);
-    return util::HashUtil::Hash(*key);
-  };
-
-  const auto key_eq = [](const void *agg, const void *x) {
-    auto agg_tuple = reinterpret_cast<const AggTuple *>(agg);
-    auto vpi = reinterpret_cast<const VectorProjectionIterator *>(x);
-    auto vpi_key = vpi->GetValue<int32_t, false>(0, nullptr);
-    return agg_tuple->key == *vpi_key;
-  };
-
-  const auto init_agg = [](void *agg, void *x) {
-    auto vpi = reinterpret_cast<const VectorProjectionIterator *>(x);
-    auto key = vpi->GetValue<int32_t, false>(0, nullptr);
-    auto val = vpi->GetValue<int32_t, false>(1, nullptr);
-    new (agg) AggTuple(InputTuple(*key, *val));
-  };
-
-  const auto advance_agg = [](void *agg, void *x) {
-    auto vpi = reinterpret_cast<const VectorProjectionIterator *>(x);
-    auto agg_tuple = reinterpret_cast<AggTuple *>(agg);
-    auto key = vpi->GetValue<int32_t, false>(0, nullptr);
-    auto val = vpi->GetValue<int32_t, false>(1, nullptr);
-    agg_tuple->Advance(InputTuple(*key, *val));
-  };
-
   VectorProjection vector_projection;
   vector_projection.Initialize({TypeId::Integer, TypeId::Integer});
   vector_projection.Reset(kDefaultVectorSize);
@@ -236,7 +208,19 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
 
     // Process
     VectorProjectionIterator vpi(&vector_projection);
-    AggTable()->ProcessBatch(&vpi, hash_fn, key_eq, init_agg, advance_agg, false);
+    AggTable()->ProcessBatch(
+        &vpi,  // Input batch
+        {0},   // Key indexes
+        // Aggregate initialization function
+        [](VectorProjectionIterator *new_aggs, VectorProjectionIterator *input_batch) {
+          // FILL ME IN
+        },
+        // Aggregate update function
+        [](VectorProjectionIterator *new_aggs, VectorProjectionIterator *input_batch) {
+          // FILL ME IN
+        },
+        false  // Partitioned?
+    );
   }
 
   EXPECT_EQ(num_groups, AggTable()->GetTupleCount());

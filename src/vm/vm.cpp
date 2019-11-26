@@ -1013,9 +1013,9 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
         module_->GetRawFunctionImpl(hash_fn_id));
     auto key_eq_fn = reinterpret_cast<sql::AggregationHashTable::KeyEqFn>(
         module_->GetRawFunctionImpl(key_eq_fn_id));
-    auto init_agg_fn = reinterpret_cast<sql::AggregationHashTable::InitAggFn>(
+    auto init_agg_fn = reinterpret_cast<sql::AggregationHashTable::VectorInitAggFn>(
         module_->GetRawFunctionImpl(init_agg_fn_id));
-    auto advance_agg_fn = reinterpret_cast<sql::AggregationHashTable::AdvanceAggFn>(
+    auto advance_agg_fn = reinterpret_cast<sql::AggregationHashTable::VectorAdvanceAggFn>(
         module_->GetRawFunctionImpl(merge_agg_fn_id));
     OpAggregationHashTableProcessBatch(agg_hash_table, vpi, hash_fn, key_eq_fn, init_agg_fn,
                                        advance_agg_fn, partitioned);

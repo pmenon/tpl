@@ -232,13 +232,17 @@ class TupleIdList {
 
   /**
    * Filter the TIDs in this list based on the given unary filtering function.
-   * @tparam F A unary functor that accepts a 32-bit tuple ID and returns true if the tuple ID
+   * @tparam P A unary functor that accepts a 32-bit tuple ID and returns true if the tuple ID
    *           remains in the list, and false if the tuple should be removed from the list.
-   * @param f The filtering function.
+   * @param p The filtering function.
    */
-  template <typename F>
-  void Filter(F &&f) {
-    bit_vector_.UpdateSetBits(f);
+  template <typename P>
+  void Filter(P p) {
+    if (IsFull()) {
+      bit_vector_.UpdateFull(p);
+    } else {
+      bit_vector_.UpdateSetBits(p);
+    }
   }
 
   /**
@@ -294,7 +298,7 @@ class TupleIdList {
    * @param f The callback to invoke for each TID in the list.
    */
   template <typename F>
-  void ForEach(F &&f) const {
+  void ForEach(F f) const {
     bit_vector_.IterateSetBits(f);
   }
 

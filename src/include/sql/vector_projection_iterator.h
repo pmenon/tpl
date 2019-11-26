@@ -103,7 +103,7 @@ class VectorProjectionIterator {
    */
   VectorProjectionIterator(VectorProjection *vector_projection, TupleIdList *tid_list)
       : VectorProjectionIterator() {
-    Init(vector_projection, tid_list);
+    SetVectorProjection(vector_projection, tid_list);
   }
 
   /**
@@ -121,7 +121,17 @@ class VectorProjectionIterator {
    * @param vector_projection The vector projection to iterate over.
    */
   void SetVectorProjection(VectorProjection *vector_projection) {
-    Init(vector_projection, &vector_projection->owned_tid_list_);
+    SetVectorProjection(vector_projection, &vector_projection->owned_tid_list_);
+  }
+
+  /**
+   * Reset this iterator to begin iteration over @em vector_projection, but only over the tuples
+   * contained in the TID list @em list.
+   * @param vector_projection THe projection to iterate over.
+   * @param tid_list The list of TIDs to iterate over.
+   */
+  void SetVectorProjection(VectorProjection *vector_projection, TupleIdList *tid_list) {
+    Init(vector_projection, tid_list);
   }
 
   /**

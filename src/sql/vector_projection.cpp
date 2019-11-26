@@ -78,6 +78,11 @@ void VectorProjection::SetFilteredSelections(const TupleIdList &tid_list) {
   RefreshFilteredTupleIdList();
 }
 
+void VectorProjection::CopySelections(TupleIdList *tid_list) const {
+  tid_list->Resize(owned_tid_list_.GetCapacity());
+  tid_list->AssignFrom(owned_tid_list_);
+}
+
 void VectorProjection::Reset(uint64_t num_tuples) {
   // Reset the cached TID list to NULL indicating all TIDs are active
   filter_ = nullptr;

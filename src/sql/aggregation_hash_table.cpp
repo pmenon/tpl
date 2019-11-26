@@ -12,8 +12,12 @@
 #include "tbb/task_scheduler_init.h"
 
 #include "common/cpu_info.h"
+#include "common/exception.h"
 #include "logging/logger.h"
+#include "sql/constant_vector.h"
+#include "sql/generic_value.h"
 #include "sql/thread_state_container.h"
+#include "sql/vector_operations/vector_operators.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/bit_util.h"
 #include "util/math_util.h"
@@ -21,14 +25,128 @@
 
 namespace tpl::sql {
 
+class AggregationHashTable::HashToGroupIdMap {
+  // Marker indicating an empty slot in the hash table
+  static constexpr const uint16_t kEmpty = std::numeric_limits<uint16_t>::max();
+
+ public:
+  // An entry in the hash table.
+  struct Entry {
+    uint32_t hash;
+    uint16_t gid;
+    uint16_t next;
+  };
+
+  explicit HashToGroupIdMap() {
+    const uint64_t max_size = kDefaultVectorSize;
+    capacity_ = max_size * 2;
+    mask_ = capacity_ - 1;
+    entries_ = std::unique_ptr<uint16_t[]>(new uint16_t[capacity_]{kEmpty});
+    storage_ = std::make_unique<Entry[]>(max_size);
+    storage_used_ = 0;
+  }
+
+  // This class cannot be copied or moved.
+  DISALLOW_COPY_AND_MOVE(HashToGroupIdMap);
+
+  // Remove all elements from the hash table.
+  void Clear() {
+    storage_used_ = 0;
+    std::memset(entries_.get(), kEmpty, capacity_ * sizeof(uint16_t));
+  }
+
+  // Find the group associated to the input hash, but only if the predicate is
+  // true. If no such value is found, return a nullptr.
+  template <typename P>
+  uint16_t *Find(const hash_t hash, P p) {
+    uint16_t candidate = entries_[hash & mask_];
+    if (candidate == kEmpty) {
+      return nullptr;
+    }
+    for (auto candidate_ptr = &storage_[candidate]; candidate != kEmpty;
+         candidate = candidate_ptr->next, candidate_ptr = &storage_[candidate]) {
+      if (p(candidate_ptr->gid)) {
+        return &candidate_ptr->gid;
+      }
+    }
+    return nullptr;
+  }
+
+  // Insert a new hash-group mapping
+  void Insert(const hash_t hash, const uint16_t gid) {
+    TPL_ASSERT(storage_used_ < kDefaultVectorSize, "Too many elements in table");
+
+    // Determine the spot in the storage the new entry occupies
+    uint16_t entry_pos = storage_used_++;
+    Entry *entry = &storage_[entry_pos];
+
+    // Put the new entry at the head of the chain
+    entry->next = entries_[hash & mask_];
+    entries_[hash & mask_] = entry_pos;
+
+    // Fill the entry
+    entry->hash = hash;
+    entry->gid = gid;
+  }
+
+  // Iterators
+  Entry *begin() { return storage_.get(); }
+  Entry *end() { return storage_.get() + storage_used_; }
+
+ private:
+  // The mask to use to map hashes to entry/directory slots
+  hash_t mask_;
+  // The main directory mapping to indexes of storage entries
+  std::unique_ptr<uint16_t[]> entries_;
+  // Main array storage of hash table data (keys, values, hashes, etc.)
+  std::unique_ptr<Entry[]> storage_;
+  // The capacity of the directory
+  uint16_t capacity_;
+  // The number of slots of storage that have been used
+  uint16_t storage_used_;
+};
+
 // ---------------------------------------------------------
 // Batch Process State
 // ---------------------------------------------------------
 
-AggregationHashTable::BatchProcessState::BatchProcessState(std::unique_ptr<libcount::HLL> estimator)
-    : hll_estimator(std::move(estimator)), hashes{0}, entries{nullptr}, groups_found{0} {}
+AggregationHashTable::BatchProcessState::BatchProcessState(
+    std::unique_ptr<libcount::HLL> estimator, std::unique_ptr<HashToGroupIdMap> hash_to_group_map)
+    : hll_estimator(std::move(estimator)),
+      hash_to_group_map(std::move(hash_to_group_map)),
+      groups_not_found(kDefaultVectorSize),
+      groups_found(kDefaultVectorSize),
+      key_not_equal(kDefaultVectorSize),
+      key_equal(kDefaultVectorSize) {
+  hash_and_entries.Initialize({TypeId::Hash, TypeId::Pointer});
+}
 
 AggregationHashTable::BatchProcessState::~BatchProcessState() = default;
+
+void AggregationHashTable::BatchProcessState::Reset(VectorProjectionIterator *input_batch) {
+  // Resize the lists if they don't match the input. This should only happen
+  // once, on the last input batch where the size may be less than one full
+  // vector.
+  const auto count = input_batch->GetTotalTupleCount();
+  if (count != hash_and_entries.GetTotalTupleCount()) {
+    hash_and_entries.Reset(count);
+    groups_not_found.Resize(count);
+    groups_found.Resize(count);
+    key_not_equal.Resize(count);
+    key_equal.Resize(count);
+  }
+
+  // Initially, there are no groups found and all keys are unequal
+  input_batch->GetVectorProjection()->CopySelections(&groups_not_found);
+  input_batch->GetVectorProjection()->CopySelections(&key_not_equal);
+
+  // Clear the rest of the lists
+  groups_found.Clear();
+  key_equal.Clear();
+
+  // Clear the collision table
+  hash_to_group_map->Clear();
+}
 
 // ---------------------------------------------------------
 // Aggregation Hash Table
@@ -73,8 +191,8 @@ AggregationHashTable::~AggregationHashTable() {
     memory_->DeallocateArray(partition_tails_, kDefaultNumPartitions);
   }
   if (partition_estimates_ != nullptr) {
-    // The estimates array uses HLL instances acquired from libcount. We own them so we have to
-    // delete them manually.
+    // The estimates array uses HLL instances acquired from libcount. We own
+    // them so we have to delete them manually.
     for (uint32_t i = 0; i < kDefaultNumPartitions; i++) {
       delete partition_estimates_[i];
     }
@@ -107,12 +225,7 @@ void AggregationHashTable::Grow() {
   stats_.num_growths++;
 }
 
-byte *AggregationHashTable::AllocInputTuple(hash_t hash) {
-  // Grow if need be
-  if (NeedsToGrow()) {
-    Grow();
-  }
-
+HashTableEntry *AggregationHashTable::AllocateEntryInternal(const hash_t hash) {
   // Allocate an entry
   auto *entry = reinterpret_cast<HashTableEntry *>(entries_.append());
   entry->hash = hash;
@@ -121,7 +234,20 @@ byte *AggregationHashTable::AllocInputTuple(hash_t hash) {
   // Insert into table
   hash_table_.Insert<false>(entry);
 
-  // Give the payload so the client can write into it
+  // Done
+  return entry;
+}
+
+byte *AggregationHashTable::AllocInputTuple(const hash_t hash) {
+  // Grow if need be
+  if (NeedsToGrow()) {
+    Grow();
+  }
+
+  // Allocate an entry
+  HashTableEntry *entry = AllocateEntryInternal(hash);
+
+  // Return the payload so the client can write into it
   return entry->payload;
 }
 
@@ -171,245 +297,284 @@ void AggregationHashTable::FlushToOverflowPartitions() {
 
 byte *AggregationHashTable::AllocInputTuplePartitioned(hash_t hash) {
   byte *ret = AllocInputTuple(hash);
-  if (hash_table_.GetElementCount() >= flush_threshold_) {
+  if (NeedsToFlushToOverflowPartitions()) {
     FlushToOverflowPartitions();
   }
   return ret;
 }
 
-void AggregationHashTable::ProcessBatch(VectorProjectionIterator *input_batch,
-                                        const AggregationHashTable::HashFn hash_fn,
-                                        const AggregationHashTable::KeyEqFn key_eq_fn,
-                                        const AggregationHashTable::InitAggFn init_agg_fn,
-                                        const AggregationHashTable::AdvanceAggFn advance_agg_fn,
-                                        const bool partitioned) {
-  TPL_ASSERT(input_batch->GetSelectedTupleCount() <= kDefaultVectorSize,
-             "Vector projection is too large");
-
-  // Allocate all required batch state, but only on first invocation.
-  if (TPL_UNLIKELY(batch_state_ == nullptr)) {
-    batch_state_ =
-        memory_->MakeObject<BatchProcessState>(libcount::HLL::Create(kDefaultHLLPrecision));
-  }
-
-  // Launch
-  if (input_batch->IsFiltered()) {
-    ProcessBatchImpl<true>(input_batch, hash_fn, key_eq_fn, init_agg_fn, advance_agg_fn,
-                           partitioned);
-  } else {
-    ProcessBatchImpl<false>(input_batch, hash_fn, key_eq_fn, init_agg_fn, advance_agg_fn,
-                            partitioned);
-  }
-}
-
-template <bool VPIIsFiltered>
-void AggregationHashTable::ProcessBatchImpl(VectorProjectionIterator *input_batch,
-                                            const AggregationHashTable::HashFn hash_fn,
-                                            const AggregationHashTable::KeyEqFn key_eq_fn,
-                                            const AggregationHashTable::InitAggFn init_agg_fn,
-                                            const AggregationHashTable::AdvanceAggFn advance_agg_fn,
-                                            const bool partitioned) {
-  // Compute the hashes
-  ComputeHash<VPIIsFiltered>(input_batch, hash_fn);
-
-  // Try to find associated groups for all input tuples
-  const uint32_t found_groups = FindGroups<VPIIsFiltered>(input_batch, key_eq_fn);
-  input_batch->Reset();
-
-  // Create aggregates for those tuples that didn't find a match
-  if (partitioned) {
-    CreateMissingGroups<VPIIsFiltered, true>(input_batch, key_eq_fn, init_agg_fn);
-  } else {
-    CreateMissingGroups<VPIIsFiltered, false>(input_batch, key_eq_fn, init_agg_fn);
-  }
-  input_batch->Reset();
-
-  // Advance the aggregates for all tuples that did find a match
-  AdvanceGroups<VPIIsFiltered>(input_batch, found_groups, advance_agg_fn);
-  input_batch->Reset();
-}
-
-template <bool VPIIsFiltered>
 void AggregationHashTable::ComputeHash(VectorProjectionIterator *input_batch,
-                                       const AggregationHashTable::HashFn hash_fn) {
-  auto &hashes = batch_state_->hashes;
-  if constexpr (VPIIsFiltered) {
-    for (uint32_t idx = 0; input_batch->HasNextFiltered(); input_batch->AdvanceFiltered()) {
-      hashes[idx++] = hash_fn(input_batch);
-    }
-  } else {  // NOLINT
-    for (uint32_t idx = 0; input_batch->HasNext(); input_batch->Advance()) {
-      hashes[idx++] = hash_fn(input_batch);
-    }
+                                       const std::vector<uint32_t> &key_indexes) {
+  for (const auto key_index : key_indexes) {
+    const Vector *key_vector = input_batch->GetVectorProjection()->GetColumn(key_index);
+    VectorOps::Hash(*key_vector, batch_state_->Hashes());
   }
 }
 
-template <bool VPIIsFiltered>
-uint32_t AggregationHashTable::FindGroups(VectorProjectionIterator *input_batch,
-                                          const AggregationHashTable::KeyEqFn key_eq_fn) {
-  batch_state_->key_not_eq.Clear();
-  batch_state_->groups_not_found.Clear();
-  uint32_t found = LookupInitial(input_batch->GetSelectedTupleCount());
-  uint32_t keys_equal = CheckKeyEquality<VPIIsFiltered>(input_batch, found, key_eq_fn);
-  while (!batch_state_->key_not_eq.IsEmpty()) {
-    found = FollowNext();
-    if (found == 0) break;
-    batch_state_->key_not_eq.Clear();
-    keys_equal += CheckKeyEquality<VPIIsFiltered>(input_batch, found, key_eq_fn);
-  }
-  return keys_equal;
+void AggregationHashTable::LookupInitial() {
+  // For every active hash value in the hashes vector, perform a lookup in the
+  // hash table and store the head of the bucket chain (if any) into the entries
+  // vector.
+  auto *RESTRICT raw_entries =
+      reinterpret_cast<const HashTableEntry **>(batch_state_->Entries()->GetData());
+  VectorOps::ExecTyped<hash_t>(*batch_state_->Hashes(),
+                               [&](const hash_t hash_val, const uint64_t i, const uint64_t k) {
+                                 raw_entries[i] = hash_table_.FindChainHead(hash_val);
+                               });
+
+  // Tuples that did not find a matching group will have null HashTableEntry
+  // pointers in the entries vector. Find and store their TIDs in the
+  // groups-not-found list.
+  ConstantVector null_ptr(GenericValue::CreatePointer(0));
+  VectorOps::SelectEqual(*batch_state_->Entries(), null_ptr, batch_state_->GroupsNotFound());
+
+  // Tuples that did find a group still need check for matching keys. Collect
+  // their TIDs in the key-not-equal list.
+  batch_state_->KeyNotEqual()->UnsetFrom(*batch_state_->GroupsNotFound());
 }
 
-uint32_t AggregationHashTable::LookupInitial(const uint32_t num_elems) {
-  // If the hash table is larger than cache, inject prefetch instructions
-  uint64_t l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
-  if (hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
-    return LookupInitialImpl<true>(num_elems);
-  } else {  // NOLINT
-    return LookupInitialImpl<false>(num_elems);
+namespace {
+
+template <typename T>
+void TemplatedCompareKey(const Vector &probe_keys, const Vector &entries,
+                         const std::size_t key_offset, TupleIdList *tid_list) {
+  auto *RESTRICT raw_probe_keys = reinterpret_cast<const T *>(probe_keys.GetData());
+  auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(entries.GetData());
+  tid_list->Filter([&](uint64_t i) {
+    auto *RESTRICT table_key = reinterpret_cast<const T *>(raw_entries[i]->payload + key_offset);
+    return raw_probe_keys[i] == *table_key;
+  });
+}
+
+void CompareKey(const Vector &probe_keys, const Vector &entries, const std::size_t key_offset,
+                TupleIdList *tid_list) {
+  switch (probe_keys.GetTypeId()) {
+    case TypeId::Boolean:
+      TemplatedCompareKey<bool>(probe_keys, entries, key_offset, tid_list);
+      break;
+    case TypeId::TinyInt:
+      TemplatedCompareKey<int8_t>(probe_keys, entries, key_offset, tid_list);
+      break;
+    case TypeId::SmallInt:
+      TemplatedCompareKey<int16_t>(probe_keys, entries, key_offset, tid_list);
+      break;
+    case TypeId::Integer:
+      TemplatedCompareKey<int32_t>(probe_keys, entries, key_offset, tid_list);
+      break;
+    case TypeId::BigInt:
+      TemplatedCompareKey<int64_t>(probe_keys, entries, key_offset, tid_list);
+      break;
+    case TypeId::Float:
+      TemplatedCompareKey<float>(probe_keys, entries, key_offset, tid_list);
+      break;
+    case TypeId::Double:
+      TemplatedCompareKey<double>(probe_keys, entries, key_offset, tid_list);
+      break;
+    case TypeId::Date:
+      TemplatedCompareKey<Date>(probe_keys, entries, key_offset, tid_list);
+      break;
+    case TypeId::Varchar:
+      TemplatedCompareKey<VarlenEntry>(probe_keys, entries, key_offset, tid_list);
+      break;
+    default:
+      throw NotImplementedException("key comparison on type {} not supported",
+                                    TypeIdToString(probe_keys.GetTypeId()));
   }
 }
 
-// This function will perform an initial lookup for all input tuples, storing
-// entries that match on hash value in the 'entries' array.
-template <bool Prefetch>
-uint32_t AggregationHashTable::LookupInitialImpl(const uint32_t num_elems) {
-  auto &hashes = batch_state_->hashes;
-  auto &entries = batch_state_->entries;
-  auto &groups_found = batch_state_->groups_found;
-  auto &groups_not_found = batch_state_->groups_not_found;
+}  // namespace
 
-  uint32_t found = 0;
-  for (uint32_t idx = 0, prefetch_idx = kPrefetchDistance; idx < num_elems;) {
-    if constexpr (Prefetch) {
-      if (TPL_LIKELY(prefetch_idx < num_elems)) {
-        hash_table_.PrefetchChainHead<false>(hashes[prefetch_idx++]);
-      }
-    }
+void AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *input_batch,
+                                            const std::vector<uint32_t> &key_indexes) {
+  // The list of tuples whose keys need to be checked is stored in
+  // key-not-equal. We copy it to the key-equal list which we'll use as the
+  // running list of tuples that DO have matching keys to table aggregates.
+  batch_state_->KeyEqual()->AssignFrom(*batch_state_->KeyNotEqual());
 
-    const auto hash = hashes[idx];
-    if (auto *entry = hash_table_.FindChainHead(hash)) {
-      if (entry->hash == hash) {
-        entries[idx] = entry;
-        groups_found[found++] = idx;
-        goto nextChain;
-      }
-      for (entry = entry->next; entry != nullptr; entry = entry->next) {
-        if (entry->hash == hash) {
-          entries[idx] = entry;
-          groups_found[found++] = idx;
-          goto nextChain;
-        }
-      }
-    }
-    groups_not_found.Append(idx);
-  nextChain:
-    idx++;
+  // Check all key components
+  std::size_t key_offset = 0;
+  for (const auto key_index : key_indexes) {
+    const Vector *key_vector = input_batch->GetVectorProjection()->GetColumn(key_index);
+    CompareKey(*key_vector, *batch_state_->Entries(), key_offset, batch_state_->KeyEqual());
+    key_offset += GetTypeIdSize(key_vector->GetTypeId());
   }
 
-  return found;
+  // The key-equal list now contains the TIDs of all tuples that succeeded in
+  // matching keys with their associated group. Add them to the running list
+  // of groups-found.
+  batch_state_->GroupsFound()->UnionWith(*batch_state_->KeyEqual());
+
+  // Tuples that didn't match keys need to proceed through the chain of
+  // candidate entries. Collect them in the key-not-equal list.
+  batch_state_->KeyNotEqual()->UnsetFrom(*batch_state_->KeyEqual());
 }
 
-// For all entries in 'groups_found', check whether their keys match. After this
-// function, groups_found will densely contain the indexes of matching keys, and
-// 'key_not_eq' will contain indexes of tuples that didn't match on key.
-template <bool VPIIsFiltered>
-uint32_t AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *input_batch,
-                                                uint32_t num_elems,
-                                                const AggregationHashTable::KeyEqFn key_eq_fn) {
-  auto &entries = batch_state_->entries;
-  auto &groups_found = batch_state_->groups_found;
-  auto &key_not_eq = batch_state_->key_not_eq;
+void AggregationHashTable::FollowNext() {
+  auto *raw_entries = reinterpret_cast<HashTableEntry **>(batch_state_->Entries()->GetData());
+  batch_state_->KeyNotEqual()->Filter(
+      [&](uint64_t i) { return (raw_entries[i] = raw_entries[i]->next) != nullptr; });
+}
 
-  uint32_t matched = 0;
-  for (uint32_t i = 0; i < num_elems; i++) {
-    const uint32_t index = groups_found[i];
+void AggregationHashTable::FindGroups(VectorProjectionIterator *input_batch,
+                                      const std::vector<uint32_t> &key_indexes) {
+  // Perform initial lookup.
+  LookupInitial();
 
-    // Position the iterator on the tuple we're about the compare keys with
-    input_batch->SetPosition<VPIIsFiltered>(index);
+  // Check keys.
+  CheckKeyEquality(input_batch, key_indexes);
 
-    // Compare keys of the aggregate and the input tuple
-    if (key_eq_fn(entries[index]->payload, input_batch)) {
-      groups_found[matched++] = index;
+  // While we have unmatched keys, move along chain.
+  while (!batch_state_->KeyNotEqual()->IsEmpty()) {
+    FollowNext();
+    CheckKeyEquality(input_batch, key_indexes);
+  }
+}
+
+namespace {
+
+template <typename T, typename F>
+void TemplatedFixGrouping(AggregationHashTable::HashToGroupIdMap *hash_to_group_map,
+                          const Vector &hashes, const Vector &entries, const Vector &probe_keys,
+                          TupleIdList *tid_list, F f) {
+  auto *RESTRICT raw_hashes = reinterpret_cast<const hash_t *>(hashes.GetData());
+  auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(entries.GetData());
+  auto *RESTRICT raw_keys = reinterpret_cast<const T *>(probe_keys.GetData());
+  tid_list->Filter([&](const uint64_t i) {
+    auto *gid = hash_to_group_map->Find(
+        raw_hashes[i], [&](const uint16_t gid) { return raw_keys[gid] == raw_keys[i]; });
+    if (gid != nullptr) {
+      raw_entries[i] = raw_entries[*gid];
     } else {
-      key_not_eq.Append(index);
+      hash_to_group_map->Insert(raw_hashes[i], i);
+      raw_entries[i] = f(raw_hashes[i]);
     }
-  }
-
-  return matched;
+    return gid != nullptr;
+  });
 }
 
-// For all unmatched keys, move along the chain until we find another hash
-// match. After this function, 'groups_found' will densely contain the indexes
-// of tuples that matched on hash and should be checked for keys.
-uint32_t AggregationHashTable::FollowNext() {
-  const auto &hashes = batch_state_->hashes;
-  const auto &key_not_eq = batch_state_->key_not_eq;
-  auto &entries = batch_state_->entries;
-  auto &groups_found = batch_state_->groups_found;
-  auto &groups_not_found = batch_state_->groups_not_found;
-
-  uint32_t matched = 0;
-  for (uint32_t i = 0; i < key_not_eq.GetSize();) {
-    const auto index = key_not_eq[i];
-    for (auto *entry = entries[index]; entry != nullptr; entry = entry->next) {
-      const auto hash = hashes[index];
-      if (entry->hash == hash) {
-        entries[index] = entry;
-        groups_found[matched++] = index;
-        goto nextChain;
-      }
-    }
-    groups_not_found.Append(index);
-  nextChain:
-    i++;
-  }
-  return matched;
-}
-
-template <bool VPIIsFiltered, bool Partitioned>
-void AggregationHashTable::CreateMissingGroups(VectorProjectionIterator *input_batch,
-                                               const AggregationHashTable::KeyEqFn key_eq_fn,
-                                               const AggregationHashTable::InitAggFn init_agg_fn) {
-  const auto &hashes = batch_state_->hashes;
-  const auto &groups_not_found = batch_state_->groups_not_found;
-  auto &entries = batch_state_->entries;
-
-  for (uint64_t i = 0; i < groups_not_found.GetSize(); i++) {
-    const auto index = groups_not_found[i];
-
-    // Position the iterator to the tuple we're inserting
-    input_batch->SetPosition<VPIIsFiltered>(index);
-
-    // But before we insert, check if already inserted
-    const hash_t hash = hashes[index];
-    if (auto *entry = LookupEntryInternal(hash, key_eq_fn, input_batch)) {
-      entries[index] = entry;
-      continue;
-    }
-
-    // Initialize
-    init_agg_fn(Partitioned ? AllocInputTuplePartitioned(hash) : AllocInputTuple(hash),
-                input_batch);
+template <typename F>
+void FixGrouping(AggregationHashTable::HashToGroupIdMap *groups, const Vector &hashes,
+                 const Vector &entries, const Vector &probe_keys, TupleIdList *tid_list, F f) {
+  switch (probe_keys.GetTypeId()) {
+    case TypeId::Boolean:
+      TemplatedFixGrouping<bool, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::TinyInt:
+      TemplatedFixGrouping<int8_t, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::SmallInt:
+      TemplatedFixGrouping<int16_t, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::Integer:
+      TemplatedFixGrouping<int32_t, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::BigInt:
+      TemplatedFixGrouping<int64_t, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::Float:
+      TemplatedFixGrouping<float, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::Double:
+      TemplatedFixGrouping<double, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::Date:
+      TemplatedFixGrouping<Date, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::Varchar:
+      TemplatedFixGrouping<VarlenEntry, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    default:
+      throw NotImplementedException("key comparison on type {} not supported",
+                                    TypeIdToString(probe_keys.GetTypeId()));
   }
 }
 
-template <bool VPIIsFiltered>
-void AggregationHashTable::AdvanceGroups(VectorProjectionIterator *input_batch,
-                                         const uint32_t num_groups,
-                                         const AggregationHashTable::AdvanceAggFn advance_agg_fn) {
-  const auto &entries = batch_state_->entries;
-  const auto &groups_found = batch_state_->groups_found;
+}  // namespace
 
-  for (uint32_t i = 0; i < num_groups; i++) {
-    const auto index = groups_found[i];
+void AggregationHashTable::CreateMissingGroups(
+    VectorProjectionIterator *input_batch, const std::vector<uint32_t> &key_indexes,
+    const AggregationHashTable::VectorInitAggFn init_agg_fn) {
+  // The groups-found list contains all tuples that found a matching group in
+  // the aggregation hash table. Thus, the list of tuples that did not find a
+  // match is the complement of the groups-found list.
+  input_batch->GetVectorProjection()->CopySelections(batch_state_->GroupsNotFound());
+  batch_state_->GroupsNotFound()->UnsetFrom(*batch_state_->GroupsFound());
 
-    // Position the iterator at the tuple we'll use to update the aggregate
-    input_batch->SetPosition<VPIIsFiltered>(index);
-
-    // Call the advancement function
-    advance_agg_fn(entries[index]->payload, input_batch);
+  // If all tuples found a matching group, we don't need to create any.
+  if (batch_state_->GroupsNotFound()->IsEmpty()) {
+    return;
   }
+
+  // Find and resolve duplicate keys in this batch.
+  batch_state_->KeyNotEqual()->AssignFrom(*batch_state_->GroupsNotFound());
+  batch_state_->KeyEqual()->AssignFrom(*batch_state_->GroupsNotFound());
+  for (const auto key_index : key_indexes) {
+    const Vector *key_vector = input_batch->GetVectorProjection()->GetColumn(key_index);
+    FixGrouping(batch_state_->HashToGroupMap(),  // Hash-to-group mapping
+                *batch_state_->Hashes(),         // Hashes
+                *batch_state_->Entries(),        // Entries
+                *key_vector,                     // Keys
+                batch_state_->KeyEqual(),        // The running list of tuples that found a match
+                [this](const hash_t hash) { return AllocateEntryInternal(hash); });
+  }
+
+  // The key-not-equal list contains the list of all TIDs that did not find a
+  // matching group. The key-equal list contains TIDs tuples that found a
+  // matching group WITHIN this batch. The difference between these lists is
+  // the list of tuples that require NEW groups.
+  batch_state_->KeyNotEqual()->UnsetFrom(*batch_state_->KeyEqual());
+
+  // Let the initialization function handle all the newly created aggregates.
+  VectorProjectionIterator iter(batch_state_->Projection(), batch_state_->KeyNotEqual());
+  input_batch->SetVectorProjection(input_batch->GetVectorProjection(), batch_state_->KeyNotEqual());
+  init_agg_fn(&iter, input_batch);
+}
+
+void AggregationHashTable::AdvanceGroups(
+    VectorProjectionIterator *input_batch,
+    const AggregationHashTable::VectorAdvanceAggFn advance_agg_fn) {
+  // The list of tuples that found a match is stored in the groups-found list.
+  // We let the callback function iterate over only these tuples and update
+  // the aggregates as need be.
+  batch_state_->GroupsFound()->UnionWith(*batch_state_->GroupsNotFound());
+
+  VectorProjectionIterator iter(batch_state_->Projection(), batch_state_->GroupsFound());
+  input_batch->SetVectorProjection(input_batch->GetVectorProjection(), batch_state_->GroupsFound());
+  advance_agg_fn(&iter, input_batch);
+}
+
+void AggregationHashTable::ProcessBatch(
+    VectorProjectionIterator *input_batch, const std::vector<uint32_t> &key_indexes,
+    const AggregationHashTable::VectorInitAggFn init_agg_fn,
+    const AggregationHashTable::VectorAdvanceAggFn advance_agg_fn,
+    const bool partitioned_aggregation) {
+  if (TPL_UNLIKELY(batch_state_ == nullptr)) {
+    batch_state_ = memory_->MakeObject<BatchProcessState>(
+        libcount::HLL::Create(kDefaultHLLPrecision),  // The Hyper-Log-Log estimator
+        std::make_unique<HashToGroupIdMap>()          // The Hash-to-GroupID map
+    );
+  }
+
+  // Reset state for this batch
+  batch_state_->Reset(input_batch);
+
+  // Compute the hashes
+  ComputeHash(input_batch, key_indexes);
+
+  // Find groups
+  FindGroups(input_batch, key_indexes);
+
+  // Creating missing groups
+  CreateMissingGroups(input_batch, key_indexes, init_agg_fn);
+
+  // If the caller requested a partitioned aggregation, drain the main hash
+  // table out to the overflow partitions, but only if needed.
+  if (partitioned_aggregation && NeedsToFlushToOverflowPartitions()) {
+    FlushToOverflowPartitions();
+  }
+
+  // Advance the aggregates for all tuples that found a match
+  AdvanceGroups(input_batch, advance_agg_fn);
 }
 
 void AggregationHashTable::TransferMemoryAndPartitions(
