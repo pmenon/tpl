@@ -376,6 +376,9 @@ void CompareKey(const Vector &probe_keys, const Vector &entries, const std::size
     case TypeId::Varchar:
       TemplatedCompareKey<VarlenEntry>(probe_keys, entries, key_offset, tid_list);
       break;
+    case TypeId::Varbinary:
+      TemplatedCompareKey<Blob>(probe_keys, entries, key_offset, tid_list);
+      break;
     default:
       throw NotImplementedException("key comparison on type {} not supported",
                                     TypeIdToString(probe_keys.GetTypeId()));
@@ -482,6 +485,9 @@ void FixGrouping(AggregationHashTable::HashToGroupIdMap *groups, const Vector &h
       break;
     case TypeId::Varchar:
       TemplatedFixGrouping<VarlenEntry, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::Varbinary:
+      TemplatedFixGrouping<Blob, F>(groups, hashes, entries, probe_keys, tid_list, f);
       break;
     default:
       throw NotImplementedException("key comparison on type {} not supported",

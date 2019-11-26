@@ -596,6 +596,16 @@ class Blob {
   std::size_t GetSize() const noexcept { return size_; }
 
   /**
+   * @return The hash value for this BLOB using the given seed.
+   */
+  hash_t Hash(hash_t seed) const noexcept;
+
+  /**
+   * @return The hash value of this BLOB.
+   */
+  hash_t Hash() const { return Hash(0); }
+
+  /**
    * Compare two strings. Returns:
    * < 0 if left < right
    *  0  if left == right

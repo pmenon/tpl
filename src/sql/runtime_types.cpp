@@ -162,4 +162,14 @@ hash_t VarlenEntry::Hash(const hash_t seed) const noexcept {
   }
 }
 
+//===----------------------------------------------------------------------===//
+//
+// Blob
+//
+//===----------------------------------------------------------------------===//
+
+hash_t Blob::Hash(hash_t seed) const noexcept {
+  return util::HashUtil::HashXX3(reinterpret_cast<const uint8_t *>(data_), size_, seed);
+}
+
 }  // namespace tpl::sql
