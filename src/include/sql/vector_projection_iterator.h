@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <initializer_list>
 #include <limits>
 #include <type_traits>
 
@@ -210,24 +212,31 @@ class VectorProjectionIterator {
   void ResetFiltered();
 
   /**
-   * Run a function over each active tuple in the vector projection. This is a read-only function
-   * (despite it being non-const), meaning the callback must not modify the state of the iterator,
-   * but should only query it using const functions!
-   * @tparam F The function type
-   * @param fn A callback function
+   * Run a functor over all active tuples in the vector projection.
+   *
+   * @warning While non-const, the callback functor should treat this as a const method and avoid
+   *          mutating the iterator during iteration.
+   *
+   * @tparam F Functor whose signature is equivalent to:
+   *           @code
+   *           void f();
+   *           @endcode
+   * @param f A callback functor.
    */
   template <typename F>
-  void ForEach(const F &fn);
+  void ForEach(F f);
 
   /**
-   * Run a generic tuple-at-a-time filter over all active tuples in the vector projection.
-   * @tparam F The generic type of the filter function. This can be any functor-like type including
-   *           raw function pointer, functor or std::function.
-   * @param filter A function that accepts a const version of this VPI and returns true if the tuple
-   *               pointed to by the VPI is valid (i.e., passes the filter) or false otherwise.
+   * Run a tuple-at-a-time predicate over all active tuples in the vector projection.
+   *
+   * @tparam P Predicate functor whose signature is equivalent to:
+   *           @code
+   *           bool f();
+   *           @endcode
+   * @param p The predicate functor that returns a boolean indicating if the current tuple is valid.
    */
-  template <typename F>
-  void RunFilter(const F &filter);
+  template <typename P>
+  void RunFilter(P p);
 
   /**
    * @return The number of selected tuples after any filters have been applied.
@@ -388,39 +397,35 @@ inline void VectorProjectionIterator::ResetFiltered() {
 }
 
 template <typename F>
-inline void VectorProjectionIterator::ForEach(const F &fn) {
-  // Ensure function conforms to expected form
-  static_assert(std::is_invocable_r_v<void, F>,
-                "Iteration function must be a no-arg void-return function");
+inline void VectorProjectionIterator::ForEach(F f) {
+  // Ensure callback conforms to expectation
+  static_assert(std::is_invocable_r_v<void, F>, "Callback must be a no-arg void-return function");
 
   if (IsFiltered()) {
     for (; HasNextFiltered(); AdvanceFiltered()) {
-      fn();
+      f();
     }
   } else {
     for (; HasNext(); Advance()) {
-      fn();
+      f();
     }
   }
 
   Reset();
 }
 
-template <typename F>
-inline void VectorProjectionIterator::RunFilter(const F &filter) {
+template <typename P>
+inline void VectorProjectionIterator::RunFilter(P p) {
   // Ensure filter function conforms to expected form
-  static_assert(std::is_invocable_r_v<bool, F>,
-                "Filter function must be a no-arg function returning a bool");
+  static_assert(std::is_invocable_r_v<bool, P>, "Predicate must take no arguments and return bool");
 
   if (IsFiltered()) {
     for (; HasNextFiltered(); AdvanceFiltered()) {
-      bool valid = filter();
-      Match(valid);
+      Match(p());
     }
   } else {
     for (; HasNext(); Advance()) {
-      bool valid = filter();
-      Match(valid);
+      Match(p());
     }
   }
 
