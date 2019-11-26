@@ -497,7 +497,6 @@ void AggregationHashTable::CreateMissingGroups(
   // The groups-found list contains all tuples that found a matching group in
   // the aggregation hash table. Thus, the list of tuples that did not find a
   // match is the complement of the groups-found list.
-  input_batch->GetVectorProjection()->CopySelections(batch_state_->GroupsNotFound());
   batch_state_->GroupsNotFound()->UnsetFrom(*batch_state_->GroupsFound());
 
   // If all tuples found a matching group, we don't need to create any.
@@ -528,6 +527,10 @@ void AggregationHashTable::CreateMissingGroups(
   VectorProjectionIterator iter(batch_state_->Projection(), batch_state_->KeyNotEqual());
   input_batch->SetVectorProjection(input_batch->GetVectorProjection(), batch_state_->KeyNotEqual());
   init_agg_fn(&iter, input_batch);
+
+  // Finish up
+  batch_state_->GroupsFound()->UnionWith(*batch_state_->KeyNotEqual());
+  batch_state_->GroupsFound()->UnionWith(*batch_state_->GroupsNotFound());
 }
 
 void AggregationHashTable::AdvanceGroups(
@@ -536,8 +539,6 @@ void AggregationHashTable::AdvanceGroups(
   // The list of tuples that found a match is stored in the groups-found list.
   // We let the callback function iterate over only these tuples and update
   // the aggregates as need be.
-  batch_state_->GroupsFound()->UnionWith(*batch_state_->GroupsNotFound());
-
   VectorProjectionIterator iter(batch_state_->Projection(), batch_state_->GroupsFound());
   input_batch->SetVectorProjection(input_batch->GetVectorProjection(), batch_state_->GroupsFound());
   advance_agg_fn(&iter, input_batch);
@@ -569,8 +570,14 @@ void AggregationHashTable::ProcessBatch(
 
   // If the caller requested a partitioned aggregation, drain the main hash
   // table out to the overflow partitions, but only if needed.
-  if (partitioned_aggregation && NeedsToFlushToOverflowPartitions()) {
-    FlushToOverflowPartitions();
+  if (partitioned_aggregation) {
+    if (NeedsToFlushToOverflowPartitions()) {
+      FlushToOverflowPartitions();
+    }
+  } else {
+    if (NeedsToGrow()) {
+      Grow();
+    }
   }
 
   // Advance the aggregates for all tuples that found a match
