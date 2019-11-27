@@ -337,47 +337,47 @@ namespace {
 
 template <typename T>
 void TemplatedCompareKey(const Vector &probe_keys, const Vector &entries,
-                         const std::size_t key_offset, TupleIdList *tid_list) {
+                         const std::size_t key_offset, TupleIdList *key_equal_tids) {
   auto *RESTRICT raw_probe_keys = reinterpret_cast<const T *>(probe_keys.GetData());
   auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(entries.GetData());
-  tid_list->Filter([&](uint64_t i) {
+  key_equal_tids->Filter([&](uint64_t i) {
     auto *RESTRICT table_key = reinterpret_cast<const T *>(raw_entries[i]->payload + key_offset);
     return raw_probe_keys[i] == *table_key;
   });
 }
 
 void CompareKey(const Vector &probe_keys, const Vector &entries, const std::size_t key_offset,
-                TupleIdList *tid_list) {
+                TupleIdList *key_equal_tids) {
   switch (probe_keys.GetTypeId()) {
     case TypeId::Boolean:
-      TemplatedCompareKey<bool>(probe_keys, entries, key_offset, tid_list);
+      TemplatedCompareKey<bool>(probe_keys, entries, key_offset, key_equal_tids);
       break;
     case TypeId::TinyInt:
-      TemplatedCompareKey<int8_t>(probe_keys, entries, key_offset, tid_list);
+      TemplatedCompareKey<int8_t>(probe_keys, entries, key_offset, key_equal_tids);
       break;
     case TypeId::SmallInt:
-      TemplatedCompareKey<int16_t>(probe_keys, entries, key_offset, tid_list);
+      TemplatedCompareKey<int16_t>(probe_keys, entries, key_offset, key_equal_tids);
       break;
     case TypeId::Integer:
-      TemplatedCompareKey<int32_t>(probe_keys, entries, key_offset, tid_list);
+      TemplatedCompareKey<int32_t>(probe_keys, entries, key_offset, key_equal_tids);
       break;
     case TypeId::BigInt:
-      TemplatedCompareKey<int64_t>(probe_keys, entries, key_offset, tid_list);
+      TemplatedCompareKey<int64_t>(probe_keys, entries, key_offset, key_equal_tids);
       break;
     case TypeId::Float:
-      TemplatedCompareKey<float>(probe_keys, entries, key_offset, tid_list);
+      TemplatedCompareKey<float>(probe_keys, entries, key_offset, key_equal_tids);
       break;
     case TypeId::Double:
-      TemplatedCompareKey<double>(probe_keys, entries, key_offset, tid_list);
+      TemplatedCompareKey<double>(probe_keys, entries, key_offset, key_equal_tids);
       break;
     case TypeId::Date:
-      TemplatedCompareKey<Date>(probe_keys, entries, key_offset, tid_list);
+      TemplatedCompareKey<Date>(probe_keys, entries, key_offset, key_equal_tids);
       break;
     case TypeId::Varchar:
-      TemplatedCompareKey<VarlenEntry>(probe_keys, entries, key_offset, tid_list);
+      TemplatedCompareKey<VarlenEntry>(probe_keys, entries, key_offset, key_equal_tids);
       break;
     case TypeId::Varbinary:
-      TemplatedCompareKey<Blob>(probe_keys, entries, key_offset, tid_list);
+      TemplatedCompareKey<Blob>(probe_keys, entries, key_offset, key_equal_tids);
       break;
     default:
       throw NotImplementedException("key comparison on type {} not supported",
