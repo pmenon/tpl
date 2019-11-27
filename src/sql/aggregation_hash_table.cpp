@@ -313,8 +313,7 @@ void AggregationHashTable::ComputeHash(VectorProjectionIterator *input_batch,
 
 void AggregationHashTable::LookupInitial() {
   // For every active hash value in the hashes vector, perform a lookup in the
-  // hash table and store the head of the bucket chain (if any) into the entries
-  // vector.
+  // hash table and store the head of the bucket chain into the entries vector.
   auto *RESTRICT raw_entries =
       reinterpret_cast<const HashTableEntry **>(batch_state_->Entries()->GetData());
   VectorOps::ExecTyped<hash_t>(*batch_state_->Hashes(),
@@ -328,7 +327,7 @@ void AggregationHashTable::LookupInitial() {
   ConstantVector null_ptr(GenericValue::CreatePointer(0));
   VectorOps::SelectEqual(*batch_state_->Entries(), null_ptr, batch_state_->GroupsNotFound());
 
-  // Tuples that did find a group still need check for matching keys. Collect
+  // Tuples that DID find a group still need to check for matching keys. Collect
   // their TIDs in the key-not-equal list.
   batch_state_->KeyNotEqual()->UnsetFrom(*batch_state_->GroupsNotFound());
 }
@@ -555,6 +554,12 @@ void AggregationHashTable::ProcessBatch(
     const AggregationHashTable::VectorInitAggFn init_agg_fn,
     const AggregationHashTable::VectorAdvanceAggFn advance_agg_fn,
     const bool partitioned_aggregation) {
+  // No-op if the iterator is empty.
+  if (input_batch->IsEmpty()) {
+    return;
+  }
+
+  // Initialize the batch state if need be. Note: this is only performed once.
   if (TPL_UNLIKELY(batch_state_ == nullptr)) {
     batch_state_ = memory_->MakeObject<BatchProcessState>(
         libcount::HLL::Create(kDefaultHLLPrecision),  // The Hyper-Log-Log estimator
@@ -562,16 +567,16 @@ void AggregationHashTable::ProcessBatch(
     );
   }
 
-  // Reset state for this batch
+  // Reset state for the incoming batch.
   batch_state_->Reset(input_batch);
 
-  // Compute the hashes
+  // Compute the hashes.
   ComputeHash(input_batch, key_indexes);
 
-  // Find groups
+  // Find groups.
   FindGroups(input_batch, key_indexes);
 
-  // Creating missing groups
+  // Creating missing groups.
   CreateMissingGroups(input_batch, key_indexes, init_agg_fn);
 
   // If the caller requested a partitioned aggregation, drain the main hash
@@ -586,7 +591,7 @@ void AggregationHashTable::ProcessBatch(
     }
   }
 
-  // Advance the aggregates for all tuples that found a match
+  // Advance the aggregates for all tuples that found a match.
   AdvanceGroups(input_batch, advance_agg_fn);
 }
 

@@ -114,6 +114,11 @@ class VectorProjectionIterator {
   DISALLOW_COPY_AND_MOVE(VectorProjectionIterator);
 
   /**
+   * @return True if the iterator is empty.
+   */
+  bool IsEmpty() const { return GetSelectedTupleCount() == 0; }
+
+  /**
    * @return True if the vector projection we're iterating over is filtered; false otherwise.
    */
   bool IsFiltered() const { return sel_vector_[0] != kInvalidPos; }
