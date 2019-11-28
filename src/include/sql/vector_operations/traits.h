@@ -24,7 +24,7 @@ struct ShouldPerformFullCompute {
    * @param tid_list Potentially null filtered TID list.
    * @return True if full-computation should be performed; false otherwise.
    */
-  bool operator()(const TupleIdList *tid_list) { return false; }
+  bool operator()(const sel_t *tid_list) { return false; }
 };
 
 }  // namespace traits

@@ -9,12 +9,12 @@
 #include "common/common.h"
 #include "common/macros.h"
 #include "sql/schema.h"
-#include "sql/tuple_id_list.h"
 #include "sql/vector.h"
 
 namespace tpl::sql {
 
 class ColumnVectorIterator;
+class TupleIdList;
 
 /**
  * A container representing a collection of tuples whose attributes are stored in columnar format.
@@ -121,24 +121,18 @@ class VectorProjection {
   /**
    * @return True if the projection is filtered; false otherwise.
    */
-  bool IsFiltered() const { return filter_ != nullptr; }
+  bool IsFiltered() const { return sel_vector_[0] != kInvalidSelPos; }
 
   /**
    * @return The list of active TIDs in the projection; NULL if no tuples have been filtered out.
    */
-  const TupleIdList *GetFilteredTupleIdList() { return filter_; }
+  sel_t *GetSelectionVector() { return IsFiltered() ? sel_vector_ : nullptr; }
 
   /**
    * Filter elements from the projection based on the tuple IDs in the input list @em tid_list.
    * @param tid_list The input TID list of valid tuples.
    */
   void SetFilteredSelections(const TupleIdList &tid_list);
-
-  /**
-   * Copy the full list of active TIDs in this projection into the provided TID list.
-   * @param[out] tid_list The list where active TIDs in this projection are written to.
-   */
-  void CopySelections(TupleIdList *tid_list) const;
 
   /**
    * @return The metadata for the column at index @em col_idx in the projection.
@@ -205,7 +199,9 @@ class VectorProjection {
    *         passed any filters (through the selection vector), and are externally visible. The
    *         selectivity is a floating-point number in the range [0.0, 1.0].
    */
-  double ComputeSelectivity() const { return IsEmpty() ? 0 : owned_tid_list_.ComputeSelectivity(); }
+  double ComputeSelectivity() const {
+    return columns_.empty() ? 0.0 : columns_[0]->ComputeSelectivity();
+  }
 
   /**
    * Return a string representation of this vector projection.
@@ -226,19 +222,14 @@ class VectorProjection {
 
  private:
   // Propagate the active TID list to child vectors, if necessary.
-  void RefreshFilteredTupleIdList();
+  void RefreshFilteredTupleIdList(uint32_t size);
 
  private:
   // Vector containing column data for all columns in this projection.
   std::vector<std::unique_ptr<Vector>> columns_;
 
-  // The list of active TIDs in the projection. Non-null only when tuples have
-  // been filtered out.
-  const TupleIdList *filter_;
-
-  // The list of active TIDs in the projection. This is the source of truth and
-  // will always represent the list of visible TIDs.
-  TupleIdList owned_tid_list_;
+  // The selection vector of active tuples
+  sel_t sel_vector_[kDefaultVectorSize];
 
   // If the vector projection allocates memory for all contained vectors, this
   // pointer owns that memory.

@@ -10,6 +10,7 @@
 #include "sql/tuple_id_list.h"
 #include "sql/vector_projection.h"
 #include "util/bit_util.h"
+#include "sql/selection_vector.h"
 
 namespace tpl::sql {
 
@@ -70,22 +71,19 @@ namespace tpl::sql {
  * C++ folks, use VectorProjectionIterator::ForEach().
  */
 class VectorProjectionIterator {
-  // Constant marking an invalid index in the selection vector
-  static constexpr sel_t kInvalidPos = std::numeric_limits<sel_t>::max();
-
  public:
   /**
    * Create an empty iterator over an empty projection.
    */
   VectorProjectionIterator()
       : vector_projection_(nullptr),
-        tid_list_(nullptr),
+        sel_vector_(owned_sel_vector_),
         curr_idx_(0),
-        sel_vector_{0},
+        owned_sel_vector_{0},
         size_(0),
         sel_vector_read_idx_(0),
         sel_vector_write_idx_(0) {
-    sel_vector_[0] = kInvalidPos;
+    sel_vector_[0] = kInvalidSelPos;
   }
 
   /**
@@ -121,24 +119,48 @@ class VectorProjectionIterator {
   /**
    * @return True if the vector projection we're iterating over is filtered; false otherwise.
    */
-  bool IsFiltered() const { return sel_vector_[0] != kInvalidPos; }
+  bool IsFiltered() const { return sel_vector_[0] != kInvalidSelPos; }
 
   /**
    * Reset this iterator to begin iteration over the given projection @em vector_projection.
    * @param vector_projection The vector projection to iterate over.
    */
   void SetVectorProjection(VectorProjection *vector_projection) {
-    SetVectorProjection(vector_projection, &vector_projection->owned_tid_list_);
+    TPL_ASSERT(vector_projection != nullptr, "NULL projection");
+    vector_projection_ = vector_projection;
+    curr_idx_ = vector_projection_->IsFiltered() ? vector_projection->sel_vector_[0] : 0;
+    sel_vector_ = vector_projection_->sel_vector_;
+    size_ = vector_projection_->GetSelectedTupleCount();
+    sel_vector_read_idx_ = 0;
+    sel_vector_write_idx_ = 0;
   }
 
-  /**
-   * Reset this iterator to begin iteration over @em vector_projection, but only over the tuples
-   * contained in the TID list @em list.
-   * @param vector_projection THe projection to iterate over.
-   * @param tid_list The list of TIDs to iterate over.
-   */
+  void SetVectorProjection(VectorProjection *vector_projection, SelectionVector *sel_vector) {
+    TPL_ASSERT(vector_projection != nullptr, "NULL projection");
+    vector_projection_ = vector_projection;
+
+    sel_vector_ = sel_vector->GetRawSelections();
+    size_ = sel_vector->GetSize();
+    curr_idx_ = sel_vector_[0];
+
+    sel_vector_read_idx_ = 0;
+    sel_vector_write_idx_ = 0;
+  }
+
   void SetVectorProjection(VectorProjection *vector_projection, TupleIdList *tid_list) {
-    Init(vector_projection, tid_list);
+    TPL_ASSERT(vector_projection != nullptr, "NULL projection");
+    vector_projection_ = vector_projection;
+    sel_vector_ = owned_sel_vector_;
+    if (!tid_list->IsFull()) {
+      size_ = tid_list->ToSelectionVector(owned_sel_vector_);
+      curr_idx_ = sel_vector_[0];
+    } else {
+      sel_vector_[0] = kInvalidSelPos;
+      size_ = tid_list->GetCapacity();
+      curr_idx_ = 0;
+    }
+    sel_vector_read_idx_ = 0;
+    sel_vector_write_idx_ = 0;
   }
 
   /**
@@ -193,6 +215,13 @@ class VectorProjectionIterator {
    * @param matched True if the current tuple is valid; false otherwise
    */
   void Match(bool matched);
+
+  /**
+   *
+   * @param matched
+   * @param tid_list
+   */
+  void Match(bool matched, TupleIdList *tid_list);
 
   /**
    * Does the iterator have another tuple?
@@ -254,41 +283,18 @@ class VectorProjectionIterator {
   uint32_t GetTotalTupleCount() const { return vector_projection_->GetTotalTupleCount(); }
 
  private:
-  void Init(VectorProjection *vector_projection, TupleIdList *tid_list) {
-    TPL_ASSERT(vector_projection != nullptr, "NULL projection");
-    TPL_ASSERT(tid_list != nullptr, "NULL TID list");
-
-    vector_projection_ = vector_projection;
-
-    tid_list_ = tid_list;
-
-    if (!tid_list_->IsFull()) {
-      size_ = tid_list_->ToSelectionVector(sel_vector_);
-      curr_idx_ = sel_vector_[0];
-    } else {
-      sel_vector_[0] = kInvalidPos;
-      size_ = tid_list_->GetCapacity();
-      curr_idx_ = 0;
-    }
-
-    sel_vector_read_idx_ = 0;
-    sel_vector_write_idx_ = 0;
-  }
-
- private:
   // The vector projection we're iterating over.
   VectorProjection *vector_projection_;
 
-  // The list of TIDs to iterate over in the projection. This list is also
-  // updated when iteration is filtered.
-  TupleIdList *tid_list_;
+  // The main selection vector. Can point into the owned vector or to an
+  // externally managed selection vector.
+  sel_t *sel_vector_;
 
   // The current raw position in the vector projection we're pointing to.
   sel_t curr_idx_;
 
-  // The selection vector used to filter the vector projection. This is a cached
-  // materialized copy of the vector projection's tuple ID list.
-  sel_t sel_vector_[kDefaultVectorSize];
+  // The selection vector used to filter the vector projection.
+  sel_t owned_sel_vector_[kDefaultVectorSize];
 
   // The number of elements in the projection. If filtered, size is the number
   // of elements in the selection vector. Otherwise, it is the total number of
@@ -373,9 +379,11 @@ inline void VectorProjectionIterator::Match(bool matched) {
   // Update the cached selection vector
   sel_vector_[sel_vector_write_idx_] = curr_idx_;
   sel_vector_write_idx_ += static_cast<uint32_t>(matched);
+}
 
-  // Update the TID list
-  tid_list_->Enable(curr_idx_, matched);
+inline void VectorProjectionIterator::Match(bool matched, TupleIdList *tid_list) {
+  Match(matched);
+  tid_list->Enable(curr_idx_, matched);
 }
 
 inline bool VectorProjectionIterator::HasNext() const { return curr_idx_ < size_; }
@@ -392,7 +400,7 @@ inline void VectorProjectionIterator::Reset() {
 
 inline void VectorProjectionIterator::ResetFiltered() {
   // Update the projection counts
-  vector_projection_->RefreshFilteredTupleIdList();
+  if (sel_vector_ != owned_sel_vector_) vector_projection_->RefreshFilteredTupleIdList(size_);
 
   // Reset index positions
   curr_idx_ = sel_vector_[0];

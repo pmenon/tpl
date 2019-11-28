@@ -8,6 +8,7 @@ namespace tpl::sql {
 
 namespace traits {
 
+#if 0
 template <typename T, typename Op>
 struct ShouldPerformFullCompute<T, Op,
                                 std::enable_if_t<std::is_same_v<Op, tpl::sql::BitwiseANDInPlace>>> {
@@ -17,6 +18,7 @@ struct ShouldPerformFullCompute<T, Op,
     return tid_list == nullptr || full_compute_threshold <= tid_list->ComputeSelectivity();
   }
 };
+#endif
 
 }  // namespace traits
 

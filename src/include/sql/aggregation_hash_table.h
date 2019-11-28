@@ -8,6 +8,7 @@
 #include "sql/generic_hash_table.h"
 #include "sql/memory_pool.h"
 #include "sql/schema.h"
+#include "sql/selection_vector.h"
 #include "sql/vector.h"
 #include "sql/vector_projection.h"
 #include "util/chunked_vector.h"
@@ -295,29 +296,27 @@ class AggregationHashTable {
     // Reset state in preparation for processing the next batch.
     void Reset(VectorProjectionIterator *input_batch);
 
-    VectorProjection *Projection() { return &hash_and_entries; }
-    Vector *Hashes() { return hash_and_entries.GetColumn(0); }
-    Vector *Entries() { return hash_and_entries.GetColumn(1); }
-    TupleIdList *GroupsFound() { return &groups_found; }
-    TupleIdList *GroupsNotFound() { return &groups_not_found; }
-    TupleIdList *KeyNotEqual() { return &key_not_equal; }
-    TupleIdList *KeyEqual() { return &key_equal; }
-    HashToGroupIdMap *HashToGroupMap() { return hash_to_group_map.get(); }
+    VectorProjection *Projection() { return &hash_and_entries_; }
+    Vector *Hashes() { return hash_and_entries_.GetColumn(0); }
+    Vector *Entries() { return hash_and_entries_.GetColumn(1); }
+    SelectionVector *GroupsFound() { return &groups_found_; }
+    SelectionVector *GroupsNotFound() { return &groups_not_found_; }
+    SelectionVector *KeyNotEqual() { return &key_not_eq_; }
+    HashToGroupIdMap *HashToGroupMap() { return hash_to_group_map_.get(); }
 
    private:
     // Unique hash estimator
-    std::unique_ptr<libcount::HLL> hll_estimator;
+    std::unique_ptr<libcount::HLL> hll_estimator_;
     // Specialized structure mapping hashes to group IDs
-    std::unique_ptr<HashToGroupIdMap> hash_to_group_map;
+    std::unique_ptr<HashToGroupIdMap> hash_to_group_map_;
     // Projection containing hashes and entries
-    VectorProjection hash_and_entries;
-    // List of tuples that do not have a matching group
-    TupleIdList groups_not_found;
-    // List of tuples that have found a matching group
-    TupleIdList groups_found;
-    // The list of groups that have unmatched keys
-    TupleIdList key_not_equal;
-    TupleIdList key_equal;
+    VectorProjection hash_and_entries_;
+    // Buffer containing indexes of tuples that found a matching group
+    SelectionVector groups_found_;
+    // Buffer containing indexes of tuples that did not find a matching group
+    SelectionVector groups_not_found_;
+    // Buffer containing indexes of tuples that didn't match keys
+    SelectionVector key_not_eq_;
   };
 
  private:

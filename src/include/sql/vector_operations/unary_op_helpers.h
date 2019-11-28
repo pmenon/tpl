@@ -25,7 +25,7 @@ inline void TemplatedUnaryOperation_HandleNull(const Vector &input, Vector *resu
 
   result->Resize(input.GetSize());
   result->GetMutableNullMask()->Reset();
-  result->SetFilteredTupleIdList(input.GetFilteredTupleIdList(), input.GetCount());
+  result->SetSelectionVector(input.GetSelectionVector(), input.GetCount());
 
   if (input.GetNullMask().Any()) {
     VectorOps::Exec(input, [&](uint64_t i, uint64_t k) {
@@ -57,7 +57,7 @@ inline void TemplatedUnaryOperation(const Vector &input, Vector *result) {
                   [&](uint64_t i, uint64_t k) { result_data[i] = Op::Apply(input_data[i]); });
 
   result->GetMutableNullMask()->Copy(input.GetNullMask());
-  result->SetFilteredTupleIdList(input.GetFilteredTupleIdList(), input.GetCount());
+  result->SetSelectionVector(input.GetSelectionVector(), input.GetCount());
 }
 
 }  // namespace tpl::sql

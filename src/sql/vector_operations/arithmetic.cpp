@@ -8,6 +8,7 @@ namespace tpl::sql {
 
 namespace traits {
 
+#if 0
 // Specialized struct to enable full-computation.
 template <typename T, typename Op>
 struct ShouldPerformFullCompute<
@@ -20,6 +21,7 @@ struct ShouldPerformFullCompute<
     return tid_list == nullptr || full_compute_threshold <= tid_list->ComputeSelectivity();
   }
 };
+#endif
 
 }  // namespace traits
 
@@ -37,7 +39,7 @@ void TemplatedDivModOperation_Constant_Vector(const Vector &left, const Vector &
   auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
 
   result->Resize(right.GetSize());
-  result->SetFilteredTupleIdList(right.GetFilteredTupleIdList(), right.GetCount());
+  result->SetSelectionVector(right.GetSelectionVector(), right.GetCount());
 
   if (left.IsNull(0)) {
     VectorOps::FillNull(result);
@@ -62,7 +64,7 @@ void TemplatedDivModOperation_Vector_Constant(const Vector &left, const Vector &
   auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
 
   result->Resize(left.GetSize());
-  result->SetFilteredTupleIdList(left.GetFilteredTupleIdList(), left.GetCount());
+  result->SetSelectionVector(left.GetSelectionVector(), left.GetCount());
 
   if (right.IsNull(0)) {
     VectorOps::FillNull(result);
@@ -88,7 +90,7 @@ void TemplatedDivModOperation_Vector_Vector(const Vector &left, const Vector &ri
 
   result->Resize(left.GetSize());
   result->GetMutableNullMask()->Copy(left.GetNullMask()).Union(right.GetNullMask());
-  result->SetFilteredTupleIdList(left.GetFilteredTupleIdList(), left.GetCount());
+  result->SetSelectionVector(left.GetSelectionVector(), left.GetCount());
 
   VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
     if (left_data[i] == LeftType(0) || right_data[i] == RightType(0)) {

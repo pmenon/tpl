@@ -154,7 +154,7 @@ class Vector {
   /**
    * @return The list of active TIDs in the vector. If all TIDs are visible, the list is NULL.
    */
-  const TupleIdList *GetFilteredTupleIdList() const noexcept { return tid_list_; }
+  const sel_t *GetSelectionVector() const noexcept { return sel_vector_; }
 
   /**
    * @return An immutable view of this vector's NULL indication bit mask.
@@ -172,37 +172,23 @@ class Vector {
   VarlenHeap *GetMutableStringHeap() noexcept { return &varlen_heap_; }
 
   /**
-   * Set the (optional) list of filtered TIDs in the vector and the new count of vector. A null
-   * @em tid_list indicates that the vector is unfiltered in which case @em count must match the
-   * current vector size. A non-null TID list contains the TIDs of active vector elements, and
-   * @em count must match the size of the TID list.
-   *
-   * Note: For non-null input TID lists, we don't necessarily need the count since we can derive it
-   *       using TupleIdList::GetTupleCount(). We don't do that here for performance. This method is
-   *       called either during vector operations which simply propagate the TID list by reference,
-   *       or through a VectorProjection. In the former case, the cached count value in the source
-   *       vector is also propagated. In the latter case, the count is computed once for the
-   *       projection and sent to each child vector.
-   *
-   * TODO(pmenon): Is the above optimization valid?
-   *
-   * @param tid_list The list of active TIDs in the vector.
+   * Set the (optional) selection index vector and the new count for this vector. A null selection
+   * vector indicates that all tuples are visible, in which case @em count must match the current
+   * vector size. A non-null selection vector contains the TIDs of active tuples, and @em count must
+   * match the size of the selection vector.
+   * @param sel_vector The list of active TIDs in the vector.
    * @param count The number of elements in the selection vector.
    */
-  void SetFilteredTupleIdList(const TupleIdList *tid_list, const uint64_t count) {
-    TPL_ASSERT(tid_list == nullptr || tid_list->GetCapacity() == num_elements_,
-               "TID list too small to capture all vector elements");
-    TPL_ASSERT(tid_list == nullptr || tid_list->GetTupleCount() == count,
-               "TID list size and count do not match");
-    TPL_ASSERT(count <= num_elements_, "TID list count must be smaller than vector size");
-    tid_list_ = tid_list;
-    count_ = count;
+  void SetSelectionVector(const sel_t *sel_vector, const uint64_t count) {
+      TPL_ASSERT(count <= num_elements_, "Selection vector count cannot exceed vector size");
+      sel_vector_ = sel_vector;
+      count_ = count;
   }
 
   /**
    * @return True if this vector is holding a single constant value; false otherwise.
    */
-  bool IsConstant() const noexcept { return num_elements_ == 1 && tid_list_ == nullptr; }
+  bool IsConstant() const noexcept { return num_elements_ == 1 && sel_vector_ == nullptr; }
 
   /**
    * @return True if this vector is empty; false otherwise.
@@ -221,7 +207,7 @@ class Vector {
    * @return True if the value at index @em index is NULL; false otherwise.
    */
   bool IsNull(const uint64_t index) const {
-    return null_mask_[tid_list_ != nullptr ? (*tid_list_)[index] : index];
+    return null_mask_[sel_vector_ != nullptr ? sel_vector_[index] : index];
   }
 
   /**
@@ -230,7 +216,7 @@ class Vector {
    * @param null Whether the element is NULL.
    */
   void SetNull(const uint64_t index, const bool null) {
-    null_mask_[tid_list_ != nullptr ? (*tid_list_)[index] : index] = null;
+    null_mask_[sel_vector_ != nullptr ? sel_vector_[index] : index] = null;
   }
 
   /**
@@ -365,9 +351,8 @@ class Vector {
   // A pointer to the data.
   byte *data_;
 
-  // The list of active tuple IDs in the vector. If all TIDs are active, the
-  // list is NOT used and will be NULL.
-  const TupleIdList *tid_list_;
+  // The selection vector. If null, all tuples are visible.
+  const sel_t *sel_vector_;
 
   // The null mask used to indicate if an element in the vector is NULL.
   NullMask null_mask_;

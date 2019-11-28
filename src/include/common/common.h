@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 
 /// Common integral type shorthands
 using byte = std::byte;
@@ -84,5 +85,8 @@ static constexpr const uint32_t kPrefetchDistance = 16;
 static constexpr const uint32_t KB = 1024;
 static constexpr const uint32_t MB = KB * KB;
 static constexpr const uint32_t GB = KB * KB * KB;
+
+/** An invalid selection vector position */
+static constexpr const sel_t kInvalidSelPos = std::numeric_limits<sel_t>::max();
 
 }  // namespace tpl

@@ -137,10 +137,8 @@ void FilterManager::RunFilters(VectorProjection *vector_projection) {
     output_list_.Resize(projection_size);
   }
 
-  if (vector_projection->IsFiltered()) {
-    const auto *filter = vector_projection->GetFilteredTupleIdList();
-    TPL_ASSERT(filter != nullptr, "No TID list filter for filtered projection");
-    input_list_.AssignFrom(*filter);
+  if (auto *sel_vector = vector_projection->GetSelectionVector(); sel_vector != nullptr) {
+    input_list_.BuildFromSelectionVector(sel_vector, vector_projection->GetSelectedTupleCount());
   } else {
     input_list_.AddAll();
   }

@@ -112,13 +112,8 @@ class AggregationHashTable::HashToGroupIdMap {
 
 AggregationHashTable::BatchProcessState::BatchProcessState(
     std::unique_ptr<libcount::HLL> estimator, std::unique_ptr<HashToGroupIdMap> hash_to_group_map)
-    : hll_estimator(std::move(estimator)),
-      hash_to_group_map(std::move(hash_to_group_map)),
-      groups_not_found(kDefaultVectorSize),
-      groups_found(kDefaultVectorSize),
-      key_not_equal(kDefaultVectorSize),
-      key_equal(kDefaultVectorSize) {
-  hash_and_entries.Initialize({TypeId::Hash, TypeId::Pointer});
+    : hll_estimator_(std::move(estimator)), hash_to_group_map_(std::move(hash_to_group_map)) {
+  hash_and_entries_.Initialize({TypeId::Hash, TypeId::Pointer});
 }
 
 AggregationHashTable::BatchProcessState::~BatchProcessState() = default;
@@ -128,24 +123,17 @@ void AggregationHashTable::BatchProcessState::Reset(VectorProjectionIterator *in
   // once, on the last input batch where the size may be less than one full
   // vector.
   const auto count = input_batch->GetTotalTupleCount();
-  if (count != hash_and_entries.GetTotalTupleCount()) {
-    hash_and_entries.Reset(count);
-    groups_not_found.Resize(count);
-    groups_found.Resize(count);
-    key_not_equal.Resize(count);
-    key_equal.Resize(count);
+  if (count != hash_and_entries_.GetTotalTupleCount()) {
+    hash_and_entries_.Reset(count);
   }
 
-  // Initially, there are no groups found and all keys are unequal
-  input_batch->GetVectorProjection()->CopySelections(&groups_not_found);
-  input_batch->GetVectorProjection()->CopySelections(&key_not_equal);
-
-  // Clear the rest of the lists
-  groups_found.Clear();
-  key_equal.Clear();
+  // Clear selection vectors
+  groups_found_.Clear();
+  groups_not_found_.Clear();
+  key_not_eq_.Clear();
 
   // Clear the collision table
-  hash_to_group_map->Clear();
+  hash_to_group_map_->Clear();
 }
 
 // ---------------------------------------------------------
@@ -324,59 +312,61 @@ void AggregationHashTable::LookupInitial() {
   // Tuples that did not find a matching group will have null HashTableEntry
   // pointers in the entries vector. Find and store their TIDs in the
   // groups-not-found list.
-  ConstantVector null_ptr(GenericValue::CreatePointer(0));
-  VectorOps::SelectEqual(*batch_state_->Entries(), null_ptr, batch_state_->GroupsNotFound());
-
-  // Tuples that DID find a group still need to check for matching keys. Collect
-  // their TIDs in the key-not-equal list.
-  batch_state_->KeyNotEqual()->UnsetFrom(*batch_state_->GroupsNotFound());
+  VectorOps::ExecTyped<HashTableEntry *>(
+      *batch_state_->Entries(), [&](const HashTableEntry *, const uint64_t i, const uint64_t k) {
+        const bool valid = raw_entries[i] != nullptr;
+        batch_state_->GroupsFound()->AppendConditional(i, valid);
+        batch_state_->GroupsNotFound()->AppendConditional(i, !valid);
+      });
 }
 
 namespace {
 
 template <typename T>
 void TemplatedCompareKey(const Vector &probe_keys, const Vector &entries,
-                         const std::size_t key_offset, TupleIdList *key_equal_tids) {
+                         const std::size_t key_offset, SelectionVector *groups_found,
+                         SelectionVector *key_not_equal) {
   auto *RESTRICT raw_probe_keys = reinterpret_cast<const T *>(probe_keys.GetData());
   auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(entries.GetData());
-  key_equal_tids->Filter([&](uint64_t i) {
+  groups_found->SplitFilter(key_not_equal, [&](uint64_t i) {
     auto *RESTRICT table_key = reinterpret_cast<const T *>(raw_entries[i]->payload + key_offset);
     return raw_probe_keys[i] == *table_key;
   });
 }
 
 void CompareKey(const Vector &probe_keys, const Vector &entries, const std::size_t key_offset,
-                TupleIdList *key_equal_tids) {
+                SelectionVector *groups_found, SelectionVector *key_not_equal) {
   switch (probe_keys.GetTypeId()) {
     case TypeId::Boolean:
-      TemplatedCompareKey<bool>(probe_keys, entries, key_offset, key_equal_tids);
+      TemplatedCompareKey<bool>(probe_keys, entries, key_offset, groups_found, key_not_equal);
       break;
     case TypeId::TinyInt:
-      TemplatedCompareKey<int8_t>(probe_keys, entries, key_offset, key_equal_tids);
+      TemplatedCompareKey<int8_t>(probe_keys, entries, key_offset, groups_found, key_not_equal);
       break;
     case TypeId::SmallInt:
-      TemplatedCompareKey<int16_t>(probe_keys, entries, key_offset, key_equal_tids);
+      TemplatedCompareKey<int16_t>(probe_keys, entries, key_offset, groups_found, key_not_equal);
       break;
     case TypeId::Integer:
-      TemplatedCompareKey<int32_t>(probe_keys, entries, key_offset, key_equal_tids);
+      TemplatedCompareKey<int32_t>(probe_keys, entries, key_offset, groups_found, key_not_equal);
       break;
     case TypeId::BigInt:
-      TemplatedCompareKey<int64_t>(probe_keys, entries, key_offset, key_equal_tids);
+      TemplatedCompareKey<int64_t>(probe_keys, entries, key_offset, groups_found, key_not_equal);
       break;
     case TypeId::Float:
-      TemplatedCompareKey<float>(probe_keys, entries, key_offset, key_equal_tids);
+      TemplatedCompareKey<float>(probe_keys, entries, key_offset, groups_found, key_not_equal);
       break;
     case TypeId::Double:
-      TemplatedCompareKey<double>(probe_keys, entries, key_offset, key_equal_tids);
+      TemplatedCompareKey<double>(probe_keys, entries, key_offset, groups_found, key_not_equal);
       break;
     case TypeId::Date:
-      TemplatedCompareKey<Date>(probe_keys, entries, key_offset, key_equal_tids);
+      TemplatedCompareKey<Date>(probe_keys, entries, key_offset, groups_found, key_not_equal);
       break;
     case TypeId::Varchar:
-      TemplatedCompareKey<VarlenEntry>(probe_keys, entries, key_offset, key_equal_tids);
+      TemplatedCompareKey<VarlenEntry>(probe_keys, entries, key_offset, groups_found,
+                                       key_not_equal);
       break;
     case TypeId::Varbinary:
-      TemplatedCompareKey<Blob>(probe_keys, entries, key_offset, key_equal_tids);
+      TemplatedCompareKey<Blob>(probe_keys, entries, key_offset, groups_found, key_not_equal);
       break;
     default:
       throw NotImplementedException("key comparison on type {} not supported",
@@ -388,33 +378,24 @@ void CompareKey(const Vector &probe_keys, const Vector &entries, const std::size
 
 void AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *input_batch,
                                             const std::vector<uint32_t> &key_indexes) {
-  // The list of tuples whose keys need to be checked is stored in
-  // key-not-equal. We copy it to the key-equal list which we'll use as the
-  // running list of tuples that DO have matching keys to table aggregates.
-  batch_state_->KeyEqual()->AssignFrom(*batch_state_->KeyNotEqual());
-
   // Check all key components
   std::size_t key_offset = 0;
   for (const auto key_index : key_indexes) {
     const Vector *key_vector = input_batch->GetVectorProjection()->GetColumn(key_index);
-    CompareKey(*key_vector, *batch_state_->Entries(), key_offset, batch_state_->KeyEqual());
+    CompareKey(*key_vector, *batch_state_->Entries(), key_offset, batch_state_->GroupsFound(),
+               batch_state_->KeyNotEqual());
     key_offset += GetTypeIdSize(key_vector->GetTypeId());
   }
-
-  // The key-equal list now contains the TIDs of all tuples that succeeded in
-  // matching keys with their associated group. Add them to the running list
-  // of groups-found.
-  batch_state_->GroupsFound()->UnionWith(*batch_state_->KeyEqual());
-
-  // Tuples that didn't match keys need to proceed through the chain of
-  // candidate entries. Collect them in the key-not-equal list.
-  batch_state_->KeyNotEqual()->UnsetFrom(*batch_state_->KeyEqual());
 }
 
 void AggregationHashTable::FollowNext() {
+  batch_state_->GroupsFound()->Clear();
   auto *raw_entries = reinterpret_cast<HashTableEntry **>(batch_state_->Entries()->GetData());
-  batch_state_->KeyNotEqual()->Filter(
-      [&](uint64_t i) { return (raw_entries[i] = raw_entries[i]->next) != nullptr; });
+  batch_state_->KeyNotEqual()->ForEach([&](uint64_t i) {
+    bool valid = (raw_entries[i] = raw_entries[i]->next) != nullptr;
+    batch_state_->GroupsFound()->AppendConditional(i, valid);
+    batch_state_->GroupsNotFound()->AppendConditional(i, !valid);
+  });
 }
 
 void AggregationHashTable::FindGroups(VectorProjectionIterator *input_batch,
@@ -428,6 +409,8 @@ void AggregationHashTable::FindGroups(VectorProjectionIterator *input_batch,
   // While we have unmatched keys, move along chain.
   while (!batch_state_->KeyNotEqual()->IsEmpty()) {
     FollowNext();
+    if (batch_state_->GroupsFound()->IsEmpty()) break;
+    batch_state_->KeyNotEqual()->Clear();
     CheckKeyEquality(input_batch, key_indexes);
   }
 }
@@ -437,11 +420,11 @@ namespace {
 template <typename T, typename F>
 void TemplatedFixGrouping(AggregationHashTable::HashToGroupIdMap *hash_to_group_map,
                           const Vector &hashes, const Vector &entries, const Vector &probe_keys,
-                          TupleIdList *tid_list, F f) {
+                          SelectionVector *groups_not_found, SelectionVector *group_reps, F f) {
   auto *RESTRICT raw_hashes = reinterpret_cast<const hash_t *>(hashes.GetData());
   auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(entries.GetData());
   auto *RESTRICT raw_keys = reinterpret_cast<const T *>(probe_keys.GetData());
-  tid_list->Filter([&](const uint64_t i) {
+  groups_not_found->SplitFilter(group_reps, [&](const uint64_t i) {
     auto *gid = hash_to_group_map->Find(
         raw_hashes[i], [&](const uint16_t gid) { return raw_keys[gid] == raw_keys[i]; });
     if (gid != nullptr) {
@@ -456,37 +439,48 @@ void TemplatedFixGrouping(AggregationHashTable::HashToGroupIdMap *hash_to_group_
 
 template <typename F>
 void FixGrouping(AggregationHashTable::HashToGroupIdMap *groups, const Vector &hashes,
-                 const Vector &entries, const Vector &probe_keys, TupleIdList *tid_list, F f) {
+                 const Vector &entries, const Vector &probe_keys, SelectionVector *groups_not_found,
+                 SelectionVector *group_reps, F f) {
   switch (probe_keys.GetTypeId()) {
     case TypeId::Boolean:
-      TemplatedFixGrouping<bool, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<bool, F>(groups, hashes, entries, probe_keys, groups_not_found,
+                                    group_reps, f);
       break;
     case TypeId::TinyInt:
-      TemplatedFixGrouping<int8_t, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<int8_t, F>(groups, hashes, entries, probe_keys, groups_not_found,
+                                      group_reps, f);
       break;
     case TypeId::SmallInt:
-      TemplatedFixGrouping<int16_t, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<int16_t, F>(groups, hashes, entries, probe_keys, groups_not_found,
+                                       group_reps, f);
       break;
     case TypeId::Integer:
-      TemplatedFixGrouping<int32_t, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<int32_t, F>(groups, hashes, entries, probe_keys, groups_not_found,
+                                       group_reps, f);
       break;
     case TypeId::BigInt:
-      TemplatedFixGrouping<int64_t, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<int64_t, F>(groups, hashes, entries, probe_keys, groups_not_found,
+                                       group_reps, f);
       break;
     case TypeId::Float:
-      TemplatedFixGrouping<float, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<float, F>(groups, hashes, entries, probe_keys, groups_not_found,
+                                     group_reps, f);
       break;
     case TypeId::Double:
-      TemplatedFixGrouping<double, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<double, F>(groups, hashes, entries, probe_keys, groups_not_found,
+                                      group_reps, f);
       break;
     case TypeId::Date:
-      TemplatedFixGrouping<Date, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<Date, F>(groups, hashes, entries, probe_keys, groups_not_found,
+                                    group_reps, f);
       break;
     case TypeId::Varchar:
-      TemplatedFixGrouping<VarlenEntry, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<VarlenEntry, F>(groups, hashes, entries, probe_keys, groups_not_found,
+                                           group_reps, f);
       break;
     case TypeId::Varbinary:
-      TemplatedFixGrouping<Blob, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<Blob, F>(groups, hashes, entries, probe_keys, groups_not_found,
+                                    group_reps, f);
       break;
     default:
       throw NotImplementedException("key comparison on type {} not supported",
@@ -499,43 +493,30 @@ void FixGrouping(AggregationHashTable::HashToGroupIdMap *groups, const Vector &h
 void AggregationHashTable::CreateMissingGroups(
     VectorProjectionIterator *input_batch, const std::vector<uint32_t> &key_indexes,
     const AggregationHashTable::VectorInitAggFn init_agg_fn) {
-  // The groups-found list contains all tuples that found a matching group in
-  // the aggregation hash table. Thus, the list of tuples that did not find a
-  // match is the complement of the groups-found list.
-  batch_state_->GroupsNotFound()->UnsetFrom(*batch_state_->GroupsFound());
-
   // If all tuples found a matching group, we don't need to create any.
   if (batch_state_->GroupsNotFound()->IsEmpty()) {
     return;
   }
 
   // Find and resolve duplicate keys in this batch.
-  batch_state_->KeyNotEqual()->AssignFrom(*batch_state_->GroupsNotFound());
-  batch_state_->KeyEqual()->AssignFrom(*batch_state_->GroupsNotFound());
+  auto group_reps = batch_state_->KeyNotEqual();
+  group_reps->Clear();
   for (const auto key_index : key_indexes) {
     const Vector *key_vector = input_batch->GetVectorProjection()->GetColumn(key_index);
     FixGrouping(batch_state_->HashToGroupMap(),  // Hash-to-group mapping
                 *batch_state_->Hashes(),         // Hashes
                 *batch_state_->Entries(),        // Entries
                 *key_vector,                     // Keys
-                batch_state_->KeyEqual(),        // The running list of tuples that found a match
+                batch_state_->GroupsNotFound(),  // The TIDs of missing groups
+                group_reps,                      // The representative for each new group
                 [this](const hash_t hash) { return AllocateEntryInternal(hash); });
   }
 
-  // The key-not-equal list contains the list of all TIDs that did not find a
-  // matching group. The key-equal list contains TIDs tuples that found a
-  // matching group WITHIN this batch. The difference between these lists is
-  // the list of tuples that require NEW groups.
-  batch_state_->KeyNotEqual()->UnsetFrom(*batch_state_->KeyEqual());
-
   // Let the initialization function handle all the newly created aggregates.
-  VectorProjectionIterator iter(batch_state_->Projection(), batch_state_->KeyNotEqual());
-  input_batch->SetVectorProjection(input_batch->GetVectorProjection(), batch_state_->KeyNotEqual());
+  VectorProjectionIterator iter;
+  iter.SetVectorProjection(batch_state_->Projection(), group_reps);
+  input_batch->SetVectorProjection(input_batch->GetVectorProjection(), group_reps);
   init_agg_fn(&iter, input_batch);
-
-  // Finish up
-  batch_state_->GroupsFound()->UnionWith(*batch_state_->KeyNotEqual());
-  batch_state_->GroupsFound()->UnionWith(*batch_state_->GroupsNotFound());
 }
 
 void AggregationHashTable::AdvanceGroups(
@@ -544,7 +525,8 @@ void AggregationHashTable::AdvanceGroups(
   // The list of tuples that found a match is stored in the groups-found list.
   // We let the callback function iterate over only these tuples and update
   // the aggregates as need be.
-  VectorProjectionIterator iter(batch_state_->Projection(), batch_state_->GroupsFound());
+  VectorProjectionIterator iter;
+  iter.SetVectorProjection(batch_state_->Projection(), batch_state_->GroupsFound());
   input_batch->SetVectorProjection(input_batch->GetVectorProjection(), batch_state_->GroupsFound());
   advance_agg_fn(&iter, input_batch);
 }

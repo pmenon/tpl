@@ -4,6 +4,7 @@
 #include <random>
 
 #include "benchmark/benchmark.h"
+#include "sql/selection_vector.h"
 #include "sql/tuple_id_list.h"
 #include "sql/vector.h"
 
@@ -78,6 +79,70 @@ BENCHMARK_DEFINE_F(TupleIdListBenchmark, IterateSelectionVector)
   }
 }
 
+BENCHMARK_DEFINE_F(TupleIdListBenchmark, FilterTidList)
+(benchmark::State &state) {
+  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0);
+  for (auto _ : state) {
+    state.PauseTiming();
+    sql::TupleIdList tid_copy(v1->GetCount());
+    tid_copy.AssignFrom(*tid);
+    state.ResumeTiming();
+    uint64_t count = 0;
+    auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
+    auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
+    tid_copy.Filter([&](auto i) { return v1data[i] < v2data[i]; });
+    benchmark::DoNotOptimize(count += tid_copy.GetTupleCount());
+  }
+}
+
+BENCHMARK_DEFINE_F(TupleIdListBenchmark, FilterSlow)
+(benchmark::State &state) {
+  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0);
+  for (auto _ : state) {
+    state.PauseTiming();
+    sql::SelectionVector sel;
+    for (auto i : *tid) sel.Append(i);
+    state.ResumeTiming();
+    uint64_t count = 0;
+    auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
+    auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
+    sel.FilterSlow([&](auto i) { return v1data[i] < v2data[i]; });
+    benchmark::DoNotOptimize(count += sel.GetSize());
+  }
+}
+
+BENCHMARK_DEFINE_F(TupleIdListBenchmark, Filter)
+(benchmark::State &state) {
+  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0);
+  for (auto _ : state) {
+    state.PauseTiming();
+    sql::SelectionVector sel;
+    for (auto i : *tid) sel.Append(i);
+    state.ResumeTiming();
+    uint64_t count = 0;
+    auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
+    auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
+    sel.Filter([&](auto i) { return v1data[i] < v2data[i]; });
+    benchmark::DoNotOptimize(count += sel.GetSize());
+  }
+}
+
+BENCHMARK_DEFINE_F(TupleIdListBenchmark, FilterFast)
+(benchmark::State &state) {
+  auto [v1, v2, tid] = MakeInput(static_cast<double>(state.range(0)) / 100.0);
+  for (auto _ : state) {
+    state.PauseTiming();
+    sql::SelectionVector sel;
+    for (auto i : *tid) sel.Append(i);
+    state.ResumeTiming();
+    uint64_t count = 0;
+    auto v1data = reinterpret_cast<int32_t *>(v1->GetData());
+    auto v2data = reinterpret_cast<int32_t *>(v2->GetData());
+    sel.FilterFast([&](auto i) { return v1data[i] < v2data[i]; });
+    benchmark::DoNotOptimize(count += sel.GetSize());
+  }
+}
+
 BENCHMARK_DEFINE_F(TupleIdListBenchmark, ConvertToByteVectorThenSelectionVectorThenIterate)
 (benchmark::State &state) {
   uint8_t byte_vector[kDefaultVectorSize];
@@ -131,5 +196,10 @@ BENCHMARK_REGISTER_F(TupleIdListBenchmark, ConvertToByteVectorThenSelectionVecto
     ->DenseRange(0, 100, 10);
 
 BENCHMARK_REGISTER_F(TupleIdListBenchmark, ManualIteration)->DenseRange(0, 100, 10);
+
+BENCHMARK_REGISTER_F(TupleIdListBenchmark, FilterTidList)->DenseRange(0, 100, 10);
+BENCHMARK_REGISTER_F(TupleIdListBenchmark, FilterSlow)->DenseRange(0, 100, 10);
+BENCHMARK_REGISTER_F(TupleIdListBenchmark, Filter)->DenseRange(0, 100, 10);
+BENCHMARK_REGISTER_F(TupleIdListBenchmark, FilterFast)->DenseRange(0, 100, 10);
 
 }  // namespace tpl

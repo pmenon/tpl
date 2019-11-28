@@ -41,7 +41,7 @@ inline void TemplatedBinaryOperation_Constant_Vector(const Vector &left, const V
   auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
 
   result->Resize(right.GetSize());
-  result->SetFilteredTupleIdList(right.GetFilteredTupleIdList(), right.GetCount());
+  result->SetSelectionVector(right.GetSelectionVector(), right.GetCount());
 
   if (left.IsNull(0)) {
     VectorOps::FillNull(result);
@@ -55,7 +55,7 @@ inline void TemplatedBinaryOperation_Constant_Vector(const Vector &left, const V
         }
       });
     } else {
-      if (traits::ShouldPerformFullCompute<RightType, Op>()(right.GetFilteredTupleIdList())) {
+      if (traits::ShouldPerformFullCompute<RightType, Op>()(right.GetSelectionVector())) {
         VectorOps::ExecIgnoreFilter(right, [&](uint64_t i, uint64_t k) {
           result_data[i] = Op::Apply(left_data[0], right_data[i]);
         });
@@ -77,7 +77,7 @@ inline void TemplatedBinaryOperation_Vector_Constant(const Vector &left, const V
   auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
 
   result->Resize(left.GetSize());
-  result->SetFilteredTupleIdList(left.GetFilteredTupleIdList(), left.GetCount());
+  result->SetSelectionVector(left.GetSelectionVector(), left.GetCount());
 
   if (right.IsNull(0)) {
     VectorOps::FillNull(result);
@@ -91,7 +91,7 @@ inline void TemplatedBinaryOperation_Vector_Constant(const Vector &left, const V
         }
       });
     } else {
-      if (traits::ShouldPerformFullCompute<LeftType, Op>()(left.GetFilteredTupleIdList())) {
+      if (traits::ShouldPerformFullCompute<LeftType, Op>()(left.GetSelectionVector())) {
         VectorOps::ExecIgnoreFilter(left, [&](uint64_t i, uint64_t k) {
           result_data[i] = Op::Apply(left_data[0], right_data[i]);
         });
@@ -103,14 +103,14 @@ inline void TemplatedBinaryOperation_Vector_Constant(const Vector &left, const V
     }
   }
 
-  result->SetFilteredTupleIdList(left.GetFilteredTupleIdList(), left.GetCount());
+  result->SetSelectionVector(left.GetSelectionVector(), left.GetCount());
 }
 
 template <typename LeftType, typename RightType, typename ResultType, typename Op,
           bool IgnoreNull = false>
 inline void TemplatedBinaryOperation_Vector_Vector(const Vector &left, const Vector &right,
                                                    Vector *result) {
-  TPL_ASSERT(left.GetFilteredTupleIdList() == right.GetFilteredTupleIdList(),
+  TPL_ASSERT(left.GetSelectionVector() == right.GetSelectionVector(),
              "Mismatched selection vectors for comparison");
   TPL_ASSERT(left.GetCount() == right.GetCount(), "Mismatched vector counts for comparison");
 
@@ -120,7 +120,7 @@ inline void TemplatedBinaryOperation_Vector_Vector(const Vector &left, const Vec
 
   result->Resize(left.GetSize());
   result->GetMutableNullMask()->Copy(left.GetNullMask()).Union(right.GetNullMask());
-  result->SetFilteredTupleIdList(left.GetFilteredTupleIdList(), left.GetCount());
+  result->SetSelectionVector(left.GetSelectionVector(), left.GetCount());
 
   if (IgnoreNull && result->GetNullMask().Any()) {
     VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
@@ -129,7 +129,7 @@ inline void TemplatedBinaryOperation_Vector_Vector(const Vector &left, const Vec
       }
     });
   } else {
-    if (traits::ShouldPerformFullCompute<LeftType, Op>()(left.GetFilteredTupleIdList())) {
+    if (traits::ShouldPerformFullCompute<LeftType, Op>()(left.GetSelectionVector())) {
       VectorOps::ExecIgnoreFilter(left, [&](uint64_t i, uint64_t k) {
         result_data[i] = Op::Apply(left_data[i], right_data[i]);
       });

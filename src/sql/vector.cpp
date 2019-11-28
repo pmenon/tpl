@@ -14,7 +14,7 @@
 namespace tpl::sql {
 
 Vector::Vector(TypeId type)
-    : type_(type), count_(0), num_elements_(0), data_(nullptr), tid_list_(nullptr) {
+    : type_(type), count_(0), num_elements_(0), data_(nullptr), sel_vector_(nullptr) {
   // Since vector capacity can never exceed kDefaultVectorSize, we reserve upon
   // creation to remove allocations as the vector is resized.
   null_mask_.Reserve(kDefaultVectorSize);
@@ -22,7 +22,7 @@ Vector::Vector(TypeId type)
 }
 
 Vector::Vector(TypeId type, bool create_data, bool clear)
-    : type_(type), count_(0), num_elements_(0), data_(nullptr), tid_list_(nullptr) {
+    : type_(type), count_(0), num_elements_(0), data_(nullptr), sel_vector_(nullptr) {
   // Since vector capacity can never exceed kDefaultVectorSize, we reserve upon
   // creation to remove allocations as the vector is resized.
   null_mask_.Reserve(kDefaultVectorSize);
@@ -55,7 +55,7 @@ void Vector::Destroy() {
   data_ = nullptr;
   count_ = 0;
   num_elements_ = 0;
-  tid_list_ = nullptr;
+  sel_vector_ = nullptr;
   null_mask_.Reset();
 }
 
@@ -64,7 +64,7 @@ GenericValue Vector::GetValue(const uint64_t index) const {
   if (IsNull(index)) {
     return GenericValue::CreateNull(type_);
   }
-  auto actual_index = (tid_list_ != nullptr ? (*tid_list_)[index] : index);
+  auto actual_index = (sel_vector_ != nullptr ? sel_vector_[index] : index);
   switch (type_) {
     case TypeId::Boolean: {
       return GenericValue::CreateBoolean(reinterpret_cast<bool *>(data_)[actual_index]);
@@ -111,7 +111,7 @@ GenericValue Vector::GetValue(const uint64_t index) const {
 void Vector::Resize(uint32_t size) {
   TPL_ASSERT(size <= kDefaultVectorSize, "Size too large");
 
-  tid_list_ = nullptr;
+  sel_vector_ = nullptr;
   count_ = size;
   num_elements_ = size;
   null_mask_.Resize(num_elements_);
@@ -121,7 +121,7 @@ void Vector::SetValue(const uint64_t index, const GenericValue &val) {
   TPL_ASSERT(index < count_, "Out-of-bounds vector access");
   TPL_ASSERT(type_ == val.GetTypeId(), "Mismatched types");
   SetNull(index, val.IsNull());
-  const uint64_t actual_index = tid_list_ != nullptr ? (*tid_list_)[index] : index;
+  const uint64_t actual_index = sel_vector_ != nullptr ? sel_vector_[index] : index;
   switch (type_) {
     case TypeId::Boolean: {
       const auto new_boolean = val.IsNull() ? false : val.value_.boolean;
@@ -260,7 +260,7 @@ void Vector::Reference(byte *data, const uint32_t *null_mask, uint64_t size) {
   count_ = size;
   num_elements_ = size;
   data_ = data;
-  tid_list_ = nullptr;
+  sel_vector_ = nullptr;
   null_mask_.Resize(num_elements_);
 
   // TODO(pmenon): Optimize me if this is a bottleneck
@@ -279,12 +279,12 @@ void Vector::Reference(Vector *other) {
   count_ = other->count_;
   num_elements_ = other->num_elements_;
   data_ = other->data_;
-  tid_list_ = other->tid_list_;
+  sel_vector_ = other->sel_vector_;
   null_mask_ = other->null_mask_;
 }
 
 void Vector::Pack() {
-  if (tid_list_ == nullptr) {
+  if (sel_vector_ == nullptr) {
     return;
   }
 
@@ -294,6 +294,7 @@ void Vector::Pack() {
 }
 
 void Vector::GetNonNullSelections(TupleIdList *non_null_tids, TupleIdList *null_tids) const {
+#if 0
   non_null_tids->Resize(GetSize());
   null_tids->Resize(GetSize());
 
@@ -301,7 +302,7 @@ void Vector::GetNonNullSelections(TupleIdList *non_null_tids, TupleIdList *null_
   null_tids->GetMutableBits()->Copy(null_mask_);
 
   // Copy selections
-  if (tid_list_ != nullptr) {
+  if (sel_vector_ != nullptr) {
     non_null_tids->AssignFrom(*tid_list_);
   } else {
     non_null_tids->AddAll();
@@ -312,6 +313,7 @@ void Vector::GetNonNullSelections(TupleIdList *non_null_tids, TupleIdList *null_
 
   // Remove NULLs from filtered TIDs
   non_null_tids->GetMutableBits()->Difference(null_mask_);
+#endif
 }
 
 void Vector::MoveTo(Vector *other) {
@@ -320,7 +322,7 @@ void Vector::MoveTo(Vector *other) {
   other->count_ = count_;
   other->num_elements_ = num_elements_;
   other->data_ = data_;
-  other->tid_list_ = tid_list_;
+  other->sel_vector_ = sel_vector_;
   other->null_mask_ = std::move(null_mask_);
   other->owned_data_ = std::move(owned_data_);
   other->varlen_heap_ = std::move(varlen_heap_);
@@ -332,7 +334,7 @@ void Vector::MoveTo(Vector *other) {
 void Vector::CopyTo(Vector *other, uint64_t offset) {
   TPL_ASSERT(type_ == other->type_,
              "Copying to vector of different type. Did you mean to cast instead?");
-  TPL_ASSERT(other->tid_list_ == nullptr,
+  TPL_ASSERT(other->sel_vector_ == nullptr,
              "Copying to a vector with a selection vector isn't supported");
 
   other->GetMutableNullMask()->Reset();
@@ -368,7 +370,7 @@ void Vector::Cast(TypeId new_type) {
 }
 
 void Vector::Append(const Vector &other) {
-  TPL_ASSERT(tid_list_ == nullptr, "Appending to vector with selection vector not supported");
+  TPL_ASSERT(sel_vector_ == nullptr, "Appending to vector with selection vector not supported");
   TPL_ASSERT(type_ == other.type_, "Can only append vector of same type");
 
   if (GetSize() + other.GetCount() > kDefaultVectorSize) {
@@ -418,12 +420,9 @@ void Vector::Dump(std::ostream &os) const { os << ToString() << std::endl; }
 void Vector::CheckIntegrity() const {
 #ifndef NDEBUG
   // Ensure TID list shape
-  if (tid_list_ == nullptr) {
+  if (sel_vector_ == nullptr) {
     TPL_ASSERT(count_ == num_elements_, "Vector count and size do not match in unfiltered vector");
   } else {
-    TPL_ASSERT(num_elements_ == tid_list_->GetCapacity(),
-               "TID list too small to capture all vector elements");
-    TPL_ASSERT(count_ == tid_list_->GetTupleCount(), "TID list size and cached count do not match");
     TPL_ASSERT(count_ <= num_elements_,
                "Vector count must be smaller than size with selection vector");
   }
