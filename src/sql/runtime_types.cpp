@@ -153,13 +153,7 @@ bool Date::IsValidDate(uint32_t year, uint32_t month, uint32_t day) {
 //===----------------------------------------------------------------------===//
 
 hash_t VarlenEntry::Hash(const hash_t seed) const noexcept {
-  if (GetSize() < GetInlineThreshold()) {
-    return util::HashUtil::HashCrc(reinterpret_cast<const uint8_t *>(GetContent()), GetSize(),
-                                   seed);
-  } else {
-    return util::HashUtil::HashXX3(reinterpret_cast<const uint8_t *>(GetContent()), GetSize(),
-                                   seed);
-  }
+  return util::HashUtil::HashXX3(reinterpret_cast<const uint8_t *>(GetContent()), GetSize(), seed);
 }
 
 //===----------------------------------------------------------------------===//

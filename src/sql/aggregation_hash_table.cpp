@@ -393,7 +393,12 @@ void AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *input_batc
   // running list of tuples that DO have matching keys to table aggregates.
   batch_state_->KeyEqual()->AssignFrom(*batch_state_->KeyNotEqual());
 
-  // Check all key components
+  // If no tuples to check, we can exit.
+  if (batch_state_->KeyEqual()->IsEmpty()) {
+    return;
+  }
+
+  // Check all key components one at a time.
   std::size_t key_offset = 0;
   for (const auto key_index : key_indexes) {
     const Vector *key_vector = input_batch->GetVectorProjection()->GetColumn(key_index);
