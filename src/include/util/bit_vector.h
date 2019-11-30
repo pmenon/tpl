@@ -123,14 +123,12 @@ class BitVector {
 
   /**
    * Create an empty bit vector. Users must call @em Resize() before interacting with it.
-   *
    * @ref BitVector::Resize()
    */
   BitVector() : num_bits_(0) {}
 
   /**
-   * Create a new bit vector with the specified number of bits. After construction, all bits are
-   * unset.
+   * Create a new bit vector with the specified number of bits, all initially unset.
    * @param num_bits The number of bits in the vector.
    */
   explicit BitVector(const uint32_t num_bits)
@@ -169,8 +167,7 @@ class BitVector {
   BitVector &operator=(BitVector &&other) noexcept = default;
 
   /**
-   * Test if the bit at the provided index is set.
-   * @return True if the bit is set; false otherwise.
+   * @return True if the bit at position @em position is set; false otherwise.
    */
   bool Test(const uint32_t position) const {
     TPL_ASSERT(position < GetNumBits(), "Index out of range");
@@ -377,8 +374,6 @@ class BitVector {
   }
 
   /**
-   * Return the index of the n-th 1 in this bit vector.
-   * @param n Which 1-bit to look for.
    * @return The index of the n-th 1-bit. If there are fewer than @em n bits, return the size.
    */
   uint32_t NthOne(uint32_t n) const {
@@ -625,6 +620,11 @@ class BitVector {
     // Find the next bit in the following set of words
     return FindFrom(word_index + 1);
   }
+
+  /**
+   * @return The density of set (i.e., 1) bits in this bit vector.
+   */
+  float ComputeDensity() const noexcept { return static_cast<float>(CountOnes()) / GetNumBits(); }
 
   /**
    * Return the value of the bit at position @em position in the bit vector. Used for testing the

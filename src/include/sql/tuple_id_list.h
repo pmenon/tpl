@@ -283,7 +283,7 @@ class TupleIdList {
   /**
    * @return The selectivity of the list as a fraction in the range [0.0, 1.0].
    */
-  float ComputeSelectivity() const { return static_cast<float>(GetTupleCount()) / GetCapacity(); }
+  float ComputeSelectivity() const { return bit_vector_.ComputeDensity(); }
 
   /**
    * Convert this tuple ID list into a dense selection index vector.
