@@ -1,8 +1,6 @@
 #pragma once
 
-#include <functional>
 #include <iosfwd>
-#include <vector>
 
 #include "sql/result_consumer.h"
 
@@ -29,16 +27,14 @@ class PrintingConsumer : public ResultConsumer {
   void Consume(const OutputBuffer &batch) override;
 
  private:
-  using PrintFunc = const byte *(*)(std::ostream &, const byte *);
+  // Print one tuple
+  void PrintTuple(const byte *tuple) const;
 
+ private:
   // The output stream
   std::ostream &os_;
-
   // The output schema
   const sql::Schema &output_schema_;
-
-  // Per-column printing functions
-  std::vector<PrintFunc> col_printers_;
 };
 
 }  // namespace tpl::sql
