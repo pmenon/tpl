@@ -1,9 +1,10 @@
 #pragma once
 
+#include <array>
 #include <memory>
 #include <string>
 
-#include "util/region.h"
+#include "common/macros.h"
 #include "util/timer.h"
 
 namespace tpl {
@@ -30,7 +31,18 @@ namespace compiler {
  */
 class Compiler {
  public:
-  enum class Response : uint8_t { Continue, Abort };
+  /**
+   * Phases of compilation.
+   */
+  enum class Phase : uint8_t {
+    Parsing,
+    SemanticAnalysis,
+    BytecodeGeneration,
+    ModuleGeneration,
+
+    // Never add elements below this comment
+    Last
+  };
 
   /**
    * Input into a compilation job.
@@ -45,7 +57,7 @@ class Compiler {
      * @param context The TPL context to use.
      * @param source The TPL source code.
      */
-    Input(const std::string &name, ast::Context *context, const std::string &source);
+    Input(const std::string &name, ast::Context *context, const std::string *source);
 
     /**
      * Construct input from a pre-generated TPL AST. The region that created the AST must also be
@@ -78,7 +90,7 @@ class Compiler {
 
    private:
     // The name to assign the input
-    const std::string &name_;
+    const std::string name_;
     // The context that created the AST
     ast::Context *context_;
     // The root of the AST, if any
@@ -92,18 +104,44 @@ class Compiler {
    */
   class Callbacks {
    public:
+    /**
+     * Virtual destructor.
+     */
     virtual ~Callbacks() = default;
-    virtual Response OnBeginParse(Compiler *compiler) { return Response::Continue; }
-    virtual Response OnEndParse(Compiler *compiler) { return Response::Continue; }
-    virtual Response OnBeginSemanticAnalysis(Compiler *compiler) { return Response::Continue; }
-    virtual Response OnEndSemanticAnalysis(Compiler *compiler) { return Response::Continue; }
-    virtual Response OnBeginBytecodeGeneration(Compiler *compiler) { return Response::Continue; }
-    virtual Response OnEndBytecodeGeneration(Compiler *compiler) { return Response::Continue; }
-    virtual Response OnBeginModuleGeneration(Compiler *compiler) { return Response::Continue; }
-    virtual Response OnEndModuleGeneration(Compiler *compiler) { return Response::Continue; }
-    virtual void OnError(Compiler *compiler) {}
+
+    /**
+     * Called before starting the provided phase of compilation.
+     * @param phase The phase of compilation that will begin.
+     * @param compiler The compiler instance.
+     * @return True if compilation should continue; false otherwise.
+     */
+    virtual bool BeginPhase(Phase phase, Compiler *compiler) { return true; }
+
+    /**
+     * Invoked after the provided phase of compilation.
+     * @param phase The phase that has ended.
+     * @param compiler The compiler instance.
+     * @return True if compilation should continue; false otherwise.
+     */
+    virtual void EndPhase(Phase phase, Compiler *compiler) { }
+
+    /**
+     * Invoked when an error occurs during compilation. Compilation will NOT continue after this
+     * method call.
+     * @param phase The phase of compilation where the error occurred.
+     * @param compiler The compiler instance.
+     */
+    virtual void OnError(Phase phase, Compiler *compiler) = 0;
+
+    /**
+     * Arrange for the caller to take ownership of the generated module produced by the compiler.
+     * @param module The generated module.
+     */
     virtual void TakeOwnership(std::unique_ptr<vm::Module> module) = 0;
   };
+
+  /** Tracks the number of phases */
+  static constexpr uint32_t kNumPhases = static_cast<uint32_t>(Phase::Last);
 
   /**
    * Main entry point into the TPL compilation pipeline. Accepts an input program (in the form of
@@ -113,6 +151,13 @@ class Compiler {
    * @param callbacks The callbacks.
    */
   static void RunCompilation(const Input &input, Callbacks *callbacks);
+
+  /**
+   * Compile the given input into a module.
+   * @param input The input to compilation.
+   * @return The generated module. If there was an error, returns NULL.
+   */
+  static std::unique_ptr<vm::Module> RunCompilationSimple(const Input &input);
 
   /**
    * @return The TPL context used during compilation.
@@ -149,14 +194,6 @@ class Compiler {
   // Driver
   void Run(Compiler::Callbacks *callbacks);
 
-  bool Parse(Compiler::Callbacks *callbacks);
-
-  bool SemanticAnalysis(Compiler::Callbacks *callbacks);
-
-  std::unique_ptr<vm::BytecodeModule> GenerateBytecode(Compiler::Callbacks *callbacks);
-
-  void GenerateModule(std::unique_ptr<vm::BytecodeModule>, Compiler::Callbacks *callbacks);
-
  private:
   // The input to compilation
   const Compiler::Input &input_;
@@ -166,34 +203,45 @@ class Compiler {
   vm::BytecodeModule *bytecode_module_;
 };
 
+/**
+ * Utility class to time phases of compilation.
+ */
 class TimePasses : public Compiler::Callbacks {
  public:
-  explicit TimePasses();
+  explicit TimePasses() : phase_timings_{0.0} {}
 
-  Compiler::Response OnBeginParse(Compiler *compiler) override;
-  Compiler::Response OnEndParse(Compiler *compiler) override;
-  Compiler::Response OnBeginSemanticAnalysis(Compiler *compiler) override;
-  Compiler::Response OnEndSemanticAnalysis(Compiler *compiler) override;
-  Compiler::Response OnBeginBytecodeGeneration(Compiler *compiler) override;
-  Compiler::Response OnEndBytecodeGeneration(Compiler *compiler) override;
-  Compiler::Response OnBeginModuleGeneration(Compiler *compiler) override;
-  Compiler::Response OnEndModuleGeneration(Compiler *compiler) override;
+  bool BeginPhase(Compiler::Phase phase, Compiler *compiler) override {
+    timer_.Start();
+    return Compiler::Callbacks::BeginPhase(phase, compiler);
+  }
 
-  double GetParseTimeMs() const noexcept { return parse_ms_; }
-  double GetSemaTimeMs() const noexcept { return sema_ms_; }
-  double GetTBCGenTimeMs() const noexcept { return tbc_gen_ms_; }
-  double GetModuleGenTimeMs() const noexcept { return module_gen_ms_; }
+  void EndPhase(Compiler::Phase phase, Compiler *compiler) override {
+    timer_.Stop();
+    phase_timings_[static_cast<uint32_t>(phase)] = timer_.GetElapsed();
+    Compiler::Callbacks::EndPhase(phase, compiler);
+  }
+
+  double GetParseTimeMs() const {
+    return phase_timings_[static_cast<uint32_t>(Compiler::Phase::Parsing)];
+  }
+
+  double GetSemaTimeMs() const {
+    return phase_timings_[static_cast<uint32_t>(Compiler::Phase::SemanticAnalysis)];
+  }
+
+  double GetBytecodeGenTimeMs() const {
+    return phase_timings_[static_cast<uint32_t>(Compiler::Phase::BytecodeGeneration)];
+  }
+
+  double GetModuleGenTimeMs() const {
+    return phase_timings_[static_cast<uint32_t>(Compiler::Phase::ModuleGeneration)];
+  }
 
  private:
+  // The timer we use to time phases
   util::Timer<std::milli> timer_;
-  // Time taken to parse program
-  double parse_ms_;
-  // Time taken to type-check program
-  double sema_ms_;
-  // Time taken to code-gen program
-  double tbc_gen_ms_;
-  // Time taken to construct module
-  double module_gen_ms_;
+  // Timings of each phase
+  std::array<double, Compiler::kNumPhases> phase_timings_;
 };
 
 }  // namespace compiler

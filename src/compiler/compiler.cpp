@@ -16,8 +16,8 @@ namespace tpl::compiler {
 //
 //===----------------------------------------------------------------------===//
 
-Compiler::Input::Input(const std::string &name, ast::Context *context, const std::string &source)
-    : name_(name), context_(context), root_(nullptr), source_(&source) {}
+Compiler::Input::Input(const std::string &name, ast::Context *context, const std::string *source)
+    : name_(name), context_(context), root_(nullptr), source_(source) {}
 
 Compiler::Input::Input(const std::string &name, ast::Context *context, ast::AstNode *root)
     : name_(name), context_(context), root_(root), source_(nullptr) {}
@@ -39,92 +39,69 @@ Compiler::~Compiler() = default;
 
 sema::ErrorReporter *Compiler::GetErrorReporter() const { return GetContext()->error_reporter(); }
 
-bool Compiler::Parse(Compiler::Callbacks *callbacks) {
-  if (root_ != nullptr) {
-    // Input provided AST, no need to parse
-    TPL_ASSERT(input_.IsFromAST(), "No source should exist when compiling directly from AST");
-    return true;
+void Compiler::Run(Compiler::Callbacks *callbacks) {
+  // -------------------------------------------------------
+  // Phase 1 : Parsing
+  // -------------------------------------------------------
+
+  if (input_.IsFromSource()) {
+    if (!callbacks->BeginPhase(Phase::Parsing, this)) {
+      return;
+    }
+
+    parsing::Scanner scanner(*input_.source_);
+    parsing::Parser parser(&scanner, GetContext());
+    root_ = parser.Parse();
+
+    callbacks->EndPhase(Phase::Parsing, this);
   }
 
-  TPL_ASSERT(input_.IsFromSource(),
-             "No AST should exist before parsing when compiling from source");
-
-  // The input is TPL source, we need to parse it.
-  if (callbacks->OnBeginParse(this) == Response::Abort) {
-    return false;
-  }
-
-  // Setup the scanner and parse
-  parsing::Scanner scanner(*input_.source_);
-  parsing::Parser parser(&scanner, GetContext());
-  root_ = parser.Parse();
-
-  // Errors?
   if (root_ == nullptr || GetErrorReporter()->HasErrors()) {
-    callbacks->OnError(this);
-    return false;
+    callbacks->OnError(Phase::Parsing, this);
+    return;
   }
 
-  // Continue?
-  if (callbacks->OnEndParse(this) == Response::Abort) {
-    return false;
-  }
+  // -------------------------------------------------------
+  // Phase 2 : Semantic Analysis (i.e., type-checking)
+  // -------------------------------------------------------
 
-  return true;
-}
-
-bool Compiler::SemanticAnalysis(Compiler::Callbacks *callbacks) {
-  TPL_ASSERT(root_ != nullptr, "Must have AST before reaching semantic analysis");
-
-  // Continue?
-  if (callbacks->OnBeginSemanticAnalysis(this) == Response::Abort) {
-    return false;
+  if (!callbacks->BeginPhase(Phase::SemanticAnalysis, this)) {
+    return;
   }
 
   sema::Sema semantic_analysis(GetContext());
   semantic_analysis.Run(root_);
 
-  // Errors?
   if (GetErrorReporter()->HasErrors()) {
-    callbacks->OnError(this);
-    return false;
+    callbacks->OnError(Phase::SemanticAnalysis, this);
+    return;
   }
 
-  // Continue?
-  if (callbacks->OnEndSemanticAnalysis(this) == Response::Abort) {
-    return false;
+  callbacks->EndPhase(Phase::SemanticAnalysis, this);
+
+  // -------------------------------------------------------
+  // Phase 3 : Bytecode Generation
+  // -------------------------------------------------------
+
+  if (!callbacks->BeginPhase(Phase::BytecodeGeneration, this)) {
+    return;
   }
 
-  return true;
-}
-
-std::unique_ptr<vm::BytecodeModule> Compiler::GenerateBytecode(Compiler::Callbacks *callbacks) {
-  // Continue?
-  if (callbacks->OnBeginBytecodeGeneration(this) == Response::Abort) {
-    return nullptr;
-  }
-
-  auto bytecode_module = vm::BytecodeGenerator::Compile(root_, "name_");
+  auto bytecode_module = vm::BytecodeGenerator::Compile(root_, input_.name_);
   bytecode_module_ = bytecode_module.get();
 
-  // Errors?
   if (GetErrorReporter()->HasErrors()) {
-    callbacks->OnError(this);
-    return nullptr;
+    callbacks->OnError(Phase::BytecodeGeneration, this);
+    return;
   }
 
-  // Continue?
-  if (callbacks->OnEndBytecodeGeneration(this) == Response::Abort) {
-    return nullptr;
-  }
+  callbacks->BeginPhase(Phase::BytecodeGeneration, this);
 
-  return bytecode_module;
-}
+  // -------------------------------------------------------
+  // Phase 4 : Module Generation
+  // -------------------------------------------------------
 
-void Compiler::GenerateModule(std::unique_ptr<vm::BytecodeModule> bytecode_module,
-                              Compiler::Callbacks *callbacks) {
-  // Continue?
-  if (callbacks->OnBeginModuleGeneration(this) == Response::Abort) {
+  if (!callbacks->BeginPhase(Phase::ModuleGeneration, this)) {
     return;
   }
 
@@ -132,42 +109,17 @@ void Compiler::GenerateModule(std::unique_ptr<vm::BytecodeModule> bytecode_modul
 
   // Errors?
   if (GetErrorReporter()->HasErrors()) {
-    callbacks->OnError(this);
+    callbacks->OnError(Phase::ModuleGeneration, this);
     return;
   }
 
-  // Continue?
-  if (callbacks->OnEndModuleGeneration(this) == Response::Abort) {
-    return;
-  }
+  callbacks->EndPhase(Phase::ModuleGeneration, this);
 
-  // Done
+  // -------------------------------------------------------
+  // End
+  // -------------------------------------------------------
+
   callbacks->TakeOwnership(std::move(module));
-}
-
-void Compiler::Run(Compiler::Callbacks *callbacks) {
-  bool valid;
-
-  valid = Parse(callbacks);
-
-  if (!valid) {
-    return;
-  }
-
-  valid = SemanticAnalysis(callbacks);
-
-  if (!valid) {
-    return;
-  }
-
-  auto bytecode_module = GenerateBytecode(callbacks);
-  valid = bytecode_module != nullptr;
-
-  if (!valid) {
-    return;
-  }
-
-  GenerateModule(std::move(bytecode_module), callbacks);
 }
 
 void Compiler::RunCompilation(const Compiler::Input &input, Compiler::Callbacks *callbacks) {
@@ -176,50 +128,25 @@ void Compiler::RunCompilation(const Compiler::Input &input, Compiler::Callbacks 
   compiler.Run(callbacks);
 }
 
-TimePasses::TimePasses() : parse_ms_(0), sema_ms_(0), tbc_gen_ms_(0), module_gen_ms_(0) {}
+namespace {
 
-Compiler::Response TimePasses::OnBeginParse(Compiler *compiler) {
-  timer_.Start();
-  return Callbacks::OnBeginParse(compiler);
-}
+class NoOpCallbacks : public Compiler::Callbacks {
+ public:
+  NoOpCallbacks() : module_(nullptr) {}
+  void OnError(Compiler::Phase phase, Compiler *compiler) override {}
+  void TakeOwnership(std::unique_ptr<vm::Module> module) override { module_ = std::move(module); }
+  std::unique_ptr<vm::Module> TakeModule() { return std::move(module_); }
 
-Compiler::Response TimePasses::OnEndParse(Compiler *compiler) {
-  timer_.Stop();
-  parse_ms_ = timer_.GetElapsed();
-  return Callbacks::OnEndParse(compiler);
-}
+ private:
+  std::unique_ptr<vm::Module> module_;
+};
 
-Compiler::Response TimePasses::OnBeginSemanticAnalysis(Compiler *compiler) {
-  timer_.Start();
-  return Callbacks::OnBeginSemanticAnalysis(compiler);
-}
+}  // namespace
 
-Compiler::Response TimePasses::OnEndSemanticAnalysis(Compiler *compiler) {
-  timer_.Stop();
-  sema_ms_ = timer_.GetElapsed();
-  return Callbacks::OnEndSemanticAnalysis(compiler);
-}
-
-Compiler::Response TimePasses::OnBeginBytecodeGeneration(Compiler *compiler) {
-  timer_.Start();
-  return Callbacks::OnBeginBytecodeGeneration(compiler);
-}
-
-Compiler::Response TimePasses::OnEndBytecodeGeneration(Compiler *compiler) {
-  timer_.Stop();
-  tbc_gen_ms_ = timer_.GetElapsed();
-  return Callbacks::OnEndBytecodeGeneration(compiler);
-}
-
-Compiler::Response TimePasses::OnBeginModuleGeneration(Compiler *compiler) {
-  timer_.Start();
-  return Callbacks::OnBeginModuleGeneration(compiler);
-}
-
-Compiler::Response TimePasses::OnEndModuleGeneration(Compiler *compiler) {
-  timer_.Stop();
-  module_gen_ms_ = timer_.GetElapsed();
-  return Callbacks::OnEndModuleGeneration(compiler);
+std::unique_ptr<vm::Module> Compiler::RunCompilationSimple(const Compiler::Input &input) {
+  NoOpCallbacks no_op_callbacks;
+  RunCompilation(input, &no_op_callbacks);
+  return no_op_callbacks.TakeModule();
 }
 
 }  // namespace tpl::compiler
