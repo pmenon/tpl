@@ -36,6 +36,18 @@ namespace tpl::util {
 
 #endif
 
+#define IGNORE_EINTR(x)                                   \
+  ({                                                      \
+    decltype(x) eintr_wrapper_result;                     \
+    do {                                                  \
+      eintr_wrapper_result = (x);                         \
+      if (eintr_wrapper_result == -1 && errno == EINTR) { \
+        eintr_wrapper_result = 0;                         \
+      }                                                   \
+    } while (0);                                          \
+    eintr_wrapper_result;                                 \
+  })
+
 void File::Open(const std::filesystem::path &path, File::AccessMode access_mode) {
   // Close the existing file if it's open
   Close();
@@ -87,7 +99,6 @@ void File::CreateTemp() {
 }
 
 int32_t File::ReadFull(byte *data, size_t len) const {
-  // Ensure open
   TPL_ASSERT(IsOpen(), "File must be open before reading");
 
   std::size_t bytes_read = 0;
@@ -104,7 +115,6 @@ int32_t File::ReadFull(byte *data, size_t len) const {
 }
 
 int32_t File::ReadFullFromPosition(std::size_t offset, byte *data, std::size_t len) const {
-  // Ensure open
   TPL_ASSERT(IsOpen(), "File must be open before reading");
 
   std::size_t bytes_read = 0;
@@ -120,10 +130,12 @@ int32_t File::ReadFullFromPosition(std::size_t offset, byte *data, std::size_t l
   return bytes_read > 0 ? bytes_read : ret;
 }
 
-int32_t File::Read(byte *data, std::size_t len) const { return HANDLE_EINTR(read(fd_, data, len)); }
+int32_t File::Read(byte *data, std::size_t len) const {
+  TPL_ASSERT(IsOpen(), "File must be open before reading");
+  return HANDLE_EINTR(read(fd_, data, len));
+}
 
 int32_t File::WriteFull(const byte *data, size_t len) const {
-  // Ensure open
   TPL_ASSERT(IsOpen(), "File must be open before reading");
 
   std::size_t bytes_written = 0;
@@ -140,7 +152,6 @@ int32_t File::WriteFull(const byte *data, size_t len) const {
 }
 
 int32_t File::WriteFullAtPosition(std::size_t offset, byte *data, std::size_t len) const {
-  // Ensure open
   TPL_ASSERT(IsOpen(), "File must be open before reading");
 
   std::size_t bytes_written = 0;
@@ -158,6 +169,7 @@ int32_t File::WriteFullAtPosition(std::size_t offset, byte *data, std::size_t le
 }
 
 int32_t File::Write(const byte *data, std::size_t len) const {
+  TPL_ASSERT(IsOpen(), "File must be open before reading");
   return HANDLE_EINTR(write(fd_, data, len));
 }
 
@@ -170,7 +182,6 @@ bool File::Flush() const {
 }
 
 std::size_t File::Size() const {
-  // Ensure open
   TPL_ASSERT(IsOpen(), "File must be open before reading");
 
   // Save the current position
@@ -201,7 +212,8 @@ std::size_t File::Size() const {
 
 void File::Close() {
   if (IsOpen()) {
-    close(fd_);
+    UNUSED auto ret = IGNORE_EINTR(close(fd_));
+    TPL_ASSERT(ret == 0, "Invalid return code from close()");
     fd_ = kInvalid;
   }
 }
