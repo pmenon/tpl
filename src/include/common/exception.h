@@ -22,6 +22,7 @@ enum class ExceptionType {
   Decimal,         // decimal related
   DivideByZero,    // divide by 0
   Execution,       // executor related
+  File,            // file related
   Index,           // index related
   InvalidType,     // incompatible for operation
   NotImplemented,  // method not implemented
@@ -87,24 +88,6 @@ class CastException : public Exception {
 };
 
 /**
- * An exception thrown when a value falls outside a given type's valid value range.
- */
-class ValueOutOfRangeException : public Exception {
- public:
-  template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>, uint32_t>>
-  ValueOutOfRangeException(T value, sql::TypeId src_type, sql::TypeId dest_type)
-      : ValueOutOfRangeException() {
-    Format(TypeIdToString(src_type), TypeIdToString(dest_type));
-  }
-
- private:
-  ValueOutOfRangeException()
-      : Exception(ExceptionType::OutOfRange,
-                  "Type {} with value {} cannot be cast because the value is out of range for the "
-                  "target type {}") {}
-};
-
-/**
  * An exception thrown when a given type cannot be converted into another type.
  */
 class ConversionException : public Exception {
@@ -116,16 +99,8 @@ class ConversionException : public Exception {
   }
 };
 
-class TypeMismatchException : public Exception {
- public:
-  TypeMismatchException(sql::TypeId src_type, sql::TypeId dest_type, const std::string &msg)
-      : Exception(ExceptionType::TypeMismatch, "Type '{}' does not match type '{}'. " + msg) {
-    Format(TypeIdToString(src_type), TypeIdToString(dest_type));
-  }
-};
-
 /**
- *
+ * The given type is invalid in its context of use.
  */
 class InvalidTypeException : public Exception {
  public:
@@ -145,6 +120,35 @@ class NotImplementedException : public Exception {
       : Exception(ExceptionType::NotImplemented, msg) {
     Format(args...);
   }
+};
+
+/**
+ * An unexpected type enters.
+ */
+class TypeMismatchException : public Exception {
+ public:
+  TypeMismatchException(sql::TypeId src_type, sql::TypeId dest_type, const std::string &msg)
+      : Exception(ExceptionType::TypeMismatch, "Type '{}' does not match type '{}'. " + msg) {
+    Format(TypeIdToString(src_type), TypeIdToString(dest_type));
+  }
+};
+
+/**
+ * An exception thrown when a value falls outside a given type's valid value range.
+ */
+class ValueOutOfRangeException : public Exception {
+ public:
+  template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>, uint32_t>>
+  ValueOutOfRangeException(T value, sql::TypeId src_type, sql::TypeId dest_type)
+      : ValueOutOfRangeException() {
+    Format(TypeIdToString(src_type), TypeIdToString(dest_type));
+  }
+
+ private:
+  ValueOutOfRangeException()
+      : Exception(ExceptionType::OutOfRange,
+                  "Type {} with value {} cannot be cast because the value is out of range for the "
+                  "target type {}") {}
 };
 
 }  // namespace tpl
