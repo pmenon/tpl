@@ -11,21 +11,75 @@ namespace tpl::util {
  * Handle to a file.
  */
 class File {
+  // An invalid file descriptor
+  static constexpr int32_t kInvalid = -1;
+
  public:
   /**
-   * Various access methods.
+   * Flags to control opening or creating files.
+   *
+   * The first five flags (i.e., FLAG_(OPEN|CREATE)_* are mutually exclusive - only one should be
+   * used during construction or opening a file.
+   *
+   * Additionally, all calls to open must include at least one of FLAG_READ or FLAG_WRITE to
+   * indicate the intention with the file.
    */
-  enum class AccessMode : uint8_t { Create, ReadOnly, WriteOnly, ReadWrite };
+  enum Flags {
+    FLAG_OPEN = 1 << 0,              // Opens a file, only if it exists.
+    FLAG_CREATE = 1 << 1,            // Creates a new file, only if it doesn't already exist.
+    FLAG_OPEN_ALWAYS = 1 << 2,       // May create a new file.
+    FLAG_CREATE_ALWAYS = 1 << 3,     // May overwrite an old file.
+    FLAG_OPEN_TRUNCATED = 1 << 4,    // Opens a file and truncates it, only if it exists.
+    FLAG_READ = 1 << 5,              // Opens a file with read permissions.
+    FLAG_WRITE = 1 << 6,             // Opens a file with write permissions.
+    FLAG_APPEND = 1 << 7,            // Opens a file with write permissions, positioned at the end.
+    FLAG_DELETE_ON_CLOSE = 1 << 13,  // Will delete the file upon closing.
+  };
+
+  /**
+   * Possible errors.
+   */
+  enum class Error {
+    OK,
+    FAILED,
+    IN_USE,
+    EXISTS,
+    NOT_FOUND,
+    ACCESS_DENIED,
+    TOO_MANY_OPENED,
+    NO_MEMORY,
+    NO_SPACE,
+    NOT_A_DIRECTORY,
+    IO,
+    // Put new entries above this comment
+    MAX
+  };
+
+  /**
+   * Used as origin during file seeks. The enumeration values matter here.
+   */
+  enum class Whence {
+    FROM_BEGIN   = 0,
+    FROM_CURRENT = 1,
+    FROM_END     = 2
+  };
 
   /**
    * Create a file handle to no particular file.
    */
-  File() : fd_(kInvalid) {}
+  File() : fd_(kInvalid), created_(false), error_(Error::FAILED) {}
+
+  /**
+   * Open a handle to a file at the given path and flags.
+   * @param path Path to file.
+   * @param flags Flags to use.
+   */
+  File(const std::filesystem::path &path, uint32_t flags);
 
   /**
    * File handles cannot be copied.
    */
-  DISALLOW_COPY(File);
+  DISALLOW_COPY_AND_MOVE(File);
 
   /**
    * Destructor.
@@ -33,34 +87,11 @@ class File {
   ~File() { Close(); }
 
   /**
-   * Move construct a new file from an existing file. The existing file is closed and will take
-   * ownership of the new file.
-   * @param other The file to move.
-   */
-  File(File &&other) noexcept : fd_(kInvalid) { std::swap(fd_, other.fd_); }
-
-  /**
-   * Move construct a new file from an existing file. The existing file is closed and will take
-   * ownership of the new file.
-   * @param other The file to move.
-   */
-  File &operator=(File &&other) noexcept {
-    // First, close this file
-    Close();
-
-    // Swap descriptors
-    std::swap(fd_, other.fd_);
-
-    // Done
-    return *this;
-  }
-
-  /**
    * Open the file at the given path and with the provided access mode.
    * @param path The path to the file.
-   * @param access_mode The access mode.
+   * @param flags The access mode.
    */
-  void Open(const std::filesystem::path &path, AccessMode access_mode);
+  void Open(const std::filesystem::path &path, uint32_t flags);
 
   /**
    * Create a file at the given path. If a file exists already, an exception is thrown.
@@ -71,7 +102,7 @@ class File {
   /**
    * Create a temporary file.
    */
-  void CreateTemp();
+  void CreateTemp(bool delete_on_close);
 
   /**
    * Make a best-effort attempt to read @em len bytes of data from the current file position into
@@ -133,20 +164,44 @@ class File {
   int32_t Write(const byte *data, std::size_t len) const;
 
   /**
+   * Shifts the current position in the file to an offset relative to the origin defined by
+   * @em whence.
+   * @param whence Relative position to seek by.
+   * @param offset Number of bytes to shift position.
+   * @return The result position in the file relative tot he start; -1 in case of error.
+   */
+  int64_t Seek(Whence whence, int64_t offset);
+
+  /**
    * Flush any in-memory buffered contents into the file.
    * @return True if the flush was successful; false otherwise.
    */
   bool Flush() const;
 
   /**
-   * @return The size of the file, if valid and open, in bytes.
+   * @return The size of the file, if valid and open, in bytes. Return -1 on error.
    */
-  std::size_t Size() const;
+  int64_t Length();
+
+  /**
+   * @return The error indicator.
+   */
+  Error GetErrorIndicator() const { return error_; }
+
+  /**
+   * @return True if there is an error; false otherwise.
+   */
+  bool HasError() const noexcept { return error_ != Error::OK; }
 
   /**
    * @return True if the file is open; false otherwise.
    */
-  bool IsOpen() const { return fd_ != kInvalid; }
+  bool IsOpen() const noexcept { return fd_ != kInvalid; }
+
+  /**
+   * @return True if this file was created new; false otherwise.
+   */
+  bool IsCreated() const noexcept { return created_; }
 
   /**
    * Close the file. Does nothing if already closed, or not open.
@@ -154,10 +209,19 @@ class File {
   void Close();
 
  private:
-  // The file descriptor
-  int32_t fd_;
+  // Initialization logic.
+  void Initialize(const std::filesystem::path &path, uint32_t flags);
 
-  static constexpr int kInvalid = -1;
+  // Convert an error number into a high level error
+  static Error OsErrorToFileError(int saved_errno);
+
+ private:
+  // The file descriptor.
+  int32_t fd_;
+  // Was the file created?
+  bool created_;
+  // Error indicator.
+  Error error_;
 };
 
 }  // namespace tpl::util
