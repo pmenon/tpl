@@ -57,7 +57,7 @@ class Compiler {
      * @param context The TPL context to use.
      * @param source The TPL source code.
      */
-    Input(const std::string &name, ast::Context *context, const std::string *source);
+    Input(std::string name, ast::Context *context, const std::string *source);
 
     /**
      * Construct input from a pre-generated TPL AST. The region that created the AST must also be
@@ -66,7 +66,7 @@ class Compiler {
      * @param context The TPL context the AST belongs to.
      * @param root The root of the AST.
      */
-    Input(const std::string &name, ast::Context *context, ast::AstNode *root);
+    Input(std::string name, ast::Context *context, ast::AstNode *root);
 
     /**
      * @return The name of the input.
@@ -121,7 +121,6 @@ class Compiler {
      * Invoked after the provided phase of compilation.
      * @param phase The phase that has ended.
      * @param compiler The compiler instance.
-     * @return True if compilation should continue; false otherwise.
      */
     virtual void EndPhase(Phase phase, Compiler *compiler) { }
 

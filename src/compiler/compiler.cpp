@@ -16,11 +16,11 @@ namespace tpl::compiler {
 //
 //===----------------------------------------------------------------------===//
 
-Compiler::Input::Input(const std::string &name, ast::Context *context, const std::string *source)
-    : name_(name), context_(context), root_(nullptr), source_(source) {}
+Compiler::Input::Input(std::string name, ast::Context *context, const std::string *source)
+    : name_(std::move(name)), context_(context), root_(nullptr), source_(source) {}
 
-Compiler::Input::Input(const std::string &name, ast::Context *context, ast::AstNode *root)
-    : name_(name), context_(context), root_(root), source_(nullptr) {}
+Compiler::Input::Input(std::string name, ast::Context *context, ast::AstNode *root)
+    : name_(std::move(name)), context_(context), root_(root), source_(nullptr) {}
 
 //===----------------------------------------------------------------------===//
 //
@@ -95,7 +95,7 @@ void Compiler::Run(Compiler::Callbacks *callbacks) {
     return;
   }
 
-  callbacks->BeginPhase(Phase::BytecodeGeneration, this);
+  callbacks->EndPhase(Phase::BytecodeGeneration, this);
 
   // -------------------------------------------------------
   // Phase 4 : Module Generation
