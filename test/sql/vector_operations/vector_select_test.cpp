@@ -171,11 +171,17 @@ TEST_F(VectorSelectTest, SelectNullConstant) {
 }
 
 TEST_F(VectorSelectTest, StringSelection) {
-  auto a = MakeVarcharVector({"His palm's are sweaty", {}, "arms are heavy",
-                              "vomit on his sweater already", "mom's spaghetti"},
+  auto a = MakeVarcharVector({"His palm's are sweaty",
+                              {},
+                              "arms are heavy",
+                              "vomit on his sweater already",
+                              "mom's spaghetti"},
                              {false, true, false, false, false});
-  auto b = MakeVarcharVector({"He's nervous", "but on the surface he looks calm and ready", {},
-                              "to drop bombs", "but he keeps on forgetting"},
+  auto b = MakeVarcharVector({"He's nervous",
+                              "but on the surface he looks calm and ready",
+                              {},
+                              "to drop bombs",
+                              "but he keeps on forgetting"},
                              {false, false, true, false, false});
   auto tid_list = TupleIdList(a->GetSize());
 

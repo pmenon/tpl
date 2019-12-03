@@ -319,8 +319,6 @@ File::Error File::OsErrorToFileError(int saved_errno) {
       return Error::NO_MEMORY;
     case ENOSPC:
       return Error::NO_SPACE;
-    case ENOTDIR:
-      return Error::NOT_A_DIRECTORY;
     default:
       return Error::FAILED;
   }

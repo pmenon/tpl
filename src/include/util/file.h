@@ -25,32 +25,31 @@ class File {
    * indicate the intention with the file.
    */
   enum Flags {
-    FLAG_OPEN = 1 << 0,              // Opens a file, only if it exists.
-    FLAG_CREATE = 1 << 1,            // Creates a new file, only if it doesn't already exist.
-    FLAG_OPEN_ALWAYS = 1 << 2,       // May create a new file.
-    FLAG_CREATE_ALWAYS = 1 << 3,     // May overwrite an old file.
-    FLAG_OPEN_TRUNCATED = 1 << 4,    // Opens a file and truncates it, only if it exists.
-    FLAG_READ = 1 << 5,              // Opens a file with read permissions.
-    FLAG_WRITE = 1 << 6,             // Opens a file with write permissions.
-    FLAG_APPEND = 1 << 7,            // Opens a file with write permissions, positioned at the end.
-    FLAG_DELETE_ON_CLOSE = 1 << 13,  // Will delete the file upon closing.
+    FLAG_OPEN = 1 << 0,             // Opens a file, only if it exists.
+    FLAG_CREATE = 1 << 1,           // Creates a new file, only if it doesn't already exist.
+    FLAG_OPEN_ALWAYS = 1 << 2,      // May create a new file.
+    FLAG_CREATE_ALWAYS = 1 << 3,    // May overwrite an old file.
+    FLAG_OPEN_TRUNCATED = 1 << 4,   // Opens a file and truncates it, only if it exists.
+    FLAG_READ = 1 << 5,             // Opens a file with read permissions.
+    FLAG_WRITE = 1 << 6,            // Opens a file with write permissions.
+    FLAG_APPEND = 1 << 7,           // Opens a file with write permissions, positioned at the end.
+    FLAG_DELETE_ON_CLOSE = 1 << 8,  // Will delete the file upon closing.
   };
 
   /**
    * Possible errors.
    */
   enum class Error {
-    OK,
-    FAILED,
-    IN_USE,
-    EXISTS,
-    NOT_FOUND,
     ACCESS_DENIED,
-    TOO_MANY_OPENED,
+    EXISTS,
+    FAILED,
+    IO,
+    IN_USE,
     NO_MEMORY,
     NO_SPACE,
-    NOT_A_DIRECTORY,
-    IO,
+    NOT_FOUND,
+    OK,
+    TOO_MANY_OPENED,
     // Put new entries above this comment
     MAX
   };
@@ -58,11 +57,7 @@ class File {
   /**
    * Used as origin during file seeks. The enumeration values matter here.
    */
-  enum class Whence {
-    FROM_BEGIN   = 0,
-    FROM_CURRENT = 1,
-    FROM_END     = 2
-  };
+  enum class Whence { FROM_BEGIN = 0, FROM_CURRENT = 1, FROM_END = 2 };
 
   /**
    * Create a file handle to no particular file.

@@ -528,7 +528,7 @@ TEST_F(VectorTest, Pack) {
   {
     // vec = [NULL,3,5,7]
     auto tids = TupleIdList(vec->GetSize());
-    tids = {0,3,5,7};
+    tids = {0, 3, 5, 7};
     vec->SetFilteredTupleIdList(&tids, tids.GetTupleCount());
     vec->Pack();
 

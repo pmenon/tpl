@@ -1,8 +1,8 @@
 #include "sema/sema.h"
 
+#include "ast/builtins.h"
 #include "ast/context.h"
 #include "ast/type.h"
-#include "ast/builtins.h"
 
 namespace tpl::sema {
 

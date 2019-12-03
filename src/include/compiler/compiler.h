@@ -122,7 +122,7 @@ class Compiler {
      * @param phase The phase that has ended.
      * @param compiler The compiler instance.
      */
-    virtual void EndPhase(Phase phase, Compiler *compiler) { }
+    virtual void EndPhase(Phase phase, Compiler *compiler) {}
 
     /**
      * Invoked when an error occurs during compilation. Compilation will NOT continue after this
