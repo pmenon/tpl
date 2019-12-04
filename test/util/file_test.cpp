@@ -111,4 +111,56 @@ TEST_F(FileTest, ReadAndWrite) {
   EXPECT_EQ(std::string(text_back, text_back + chars_read), text);
 }
 
+TEST_F(FileTest, Write) {
+  auto path = std::filesystem::path("/tmp/tpl.TEMP." + std::to_string(FastRand().Next()));
+
+  File file(path, File::FLAG_OPEN_ALWAYS | File::FLAG_READ | File::FLAG_WRITE |
+                      File::FLAG_DELETE_ON_CLOSE);
+  ASSERT_TRUE(file.IsOpen());
+  ASSERT_FALSE(file.HasError());
+
+  // Write something
+  std::string text = "Test";
+  auto written = file.WriteFull(reinterpret_cast<const byte *>(text.data()), text.length());
+  EXPECT_EQ(written, text.length());
+  EXPECT_TRUE(file.Flush());
+
+  // Overwrite
+  text = "A new string";
+  written = file.WriteFullAtPosition(0, reinterpret_cast<const byte *>(text.data()), text.length());
+  EXPECT_EQ(written, text.length());
+  EXPECT_TRUE(file.Flush());
+
+  // Read second string back in
+  char text_back[100];
+  auto chars_read =
+      file.ReadFullFromPosition(0, reinterpret_cast<byte *>(text_back), text.length());
+  EXPECT_EQ(chars_read, text.length());
+  EXPECT_EQ(std::string(text_back, text_back + chars_read), text);
+}
+
+TEST_F(FileTest, Seek) {
+  auto path = std::filesystem::path("/tmp/tpl.TEMP." + std::to_string(FastRand().Next()));
+
+  File file(path, File::FLAG_OPEN_ALWAYS | File::FLAG_READ | File::FLAG_WRITE |
+                      File::FLAG_DELETE_ON_CLOSE);
+  ASSERT_TRUE(file.IsOpen());
+  ASSERT_FALSE(file.HasError());
+
+  // Write something
+  std::string text = "Test";
+  auto written = file.WriteFull(reinterpret_cast<const byte *>(text.data()), text.length());
+  EXPECT_EQ(written, text.length());
+  EXPECT_TRUE(file.Flush());
+
+  // Seek back two characters
+  EXPECT_EQ(2, file.Seek(File::Whence::FROM_CURRENT, -2));
+
+  // Try to read in 100 characters, but should only read in last two
+  char text_back[100];
+  auto chars_read = file.ReadFull(reinterpret_cast<byte *>(text_back), 100);
+  EXPECT_EQ(chars_read, 2);
+  EXPECT_EQ(std::string(text_back, text_back + chars_read), "st");
+}
+
 }  // namespace tpl::util

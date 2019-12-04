@@ -12,7 +12,7 @@ namespace tpl::util {
  */
 class File {
   // An invalid file descriptor
-  static constexpr int32_t kInvalid = -1;
+  static constexpr int32_t kInvalidDescriptor = -1;
 
  public:
   /**
@@ -62,7 +62,7 @@ class File {
   /**
    * Create a file handle to no particular file.
    */
-  File() : fd_(kInvalid), created_(false), error_(Error::FAILED) {}
+  File() : fd_(kInvalidDescriptor), created_(false), error_(Error::FAILED) {}
 
   /**
    * Open a handle to a file at the given path and flags.
@@ -147,7 +147,7 @@ class File {
    * @param len The number of bytes to write.
    * @return The number of bytes written if >= 0, or the error code if < 0.
    */
-  int32_t WriteFullAtPosition(std::size_t offset, byte *data, std::size_t len) const;
+  int32_t WriteFullAtPosition(std::size_t offset, const byte *data, std::size_t len) const;
 
   /**
    * Attempt to write @em len bytes from @em data into the file. No effort is made to write all
@@ -159,13 +159,17 @@ class File {
   int32_t Write(const byte *data, std::size_t len) const;
 
   /**
-   * Shifts the current position in the file to an offset relative to the origin defined by
-   * @em whence.
+   * Repositions the file offset to @em offset bytes relative to the origin defined by @em whence.
+   * Cases:
+   * FROM_BEGIN -> repositions file to @em offset bytes from the start of the file.
+   * FROM_CUR -> repositions file to @em offset bytes from the current position.
+   * FROM_END -> repositions file to @em offset bytes from the end of the file
+   *
    * @param whence Relative position to seek by.
    * @param offset Number of bytes to shift position.
    * @return The result position in the file relative tot he start; -1 in case of error.
    */
-  int64_t Seek(Whence whence, int64_t offset);
+  int64_t Seek(Whence whence, int64_t offset) const;
 
   /**
    * Flush any in-memory buffered contents into the file.
@@ -181,7 +185,7 @@ class File {
   /**
    * @return The error indicator.
    */
-  Error GetErrorIndicator() const { return error_; }
+  Error GetErrorIndicator() const noexcept { return error_; }
 
   /**
    * @return True if there is an error; false otherwise.
@@ -191,7 +195,7 @@ class File {
   /**
    * @return True if the file is open; false otherwise.
    */
-  bool IsOpen() const noexcept { return fd_ != kInvalid; }
+  bool IsOpen() const noexcept { return fd_ != kInvalidDescriptor; }
 
   /**
    * @return True if this file was created new; false otherwise.

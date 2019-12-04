@@ -48,7 +48,7 @@ namespace tpl::util {
   })
 
 File::File(const std::filesystem::path &path, uint32_t flags)
-    : fd_(-1), created_(false), error_(Error::OK) {
+    : fd_(kInvalidDescriptor), created_(false), error_(Error::OK) {
   Initialize(path, flags);
 }
 
@@ -103,22 +103,23 @@ void File::Initialize(const std::filesystem::path &path, uint32_t flags) {
 
   int32_t mode = S_IRUSR | S_IWUSR;
 
-  // Try opening it
   int32_t fd = open(path.c_str(), open_flags, mode);
 
-  // If requested to always open the file, we need to create it first.
   if (flags & FLAG_OPEN_ALWAYS) {
-    if (fd < 0) {
+    // Check if the file is open, create it otherwise.
+    if (fd == kInvalidDescriptor) {
       open_flags |= O_CREAT;
 
       fd = HANDLE_EINTR(open(path.c_str(), open_flags, mode));
 
-      if (fd >= 0) created_ = true;
+      if (fd >= 0) {
+        created_ = true;
+      }
     }
   }
 
   // Check error
-  if (fd == kInvalid) {
+  if (fd == kInvalidDescriptor) {
     error_ = OsErrorToFileError(errno);
     return;
   }
@@ -156,7 +157,7 @@ void File::CreateTemp(bool delete_on_close) {
   int32_t fd = HANDLE_EINTR(mkstemp(tmp));
 
   // Fail?
-  if (fd == kInvalid) {
+  if (fd == kInvalidDescriptor) {
     error_ = OsErrorToFileError(errno);
     return;
   }
@@ -225,7 +226,7 @@ int32_t File::WriteFull(const byte *data, size_t len) const {
   return bytes_written > 0 ? bytes_written : ret;
 }
 
-int32_t File::WriteFullAtPosition(std::size_t offset, byte *data, std::size_t len) const {
+int32_t File::WriteFullAtPosition(std::size_t offset, const byte *data, std::size_t len) const {
   TPL_ASSERT(IsOpen(), "File must be open before reading");
 
   std::size_t bytes_written = 0;
@@ -247,7 +248,7 @@ int32_t File::Write(const byte *data, std::size_t len) const {
   return HANDLE_EINTR(write(fd_, data, len));
 }
 
-int64_t File::Seek(File::Whence whence, int64_t offset) {
+int64_t File::Seek(File::Whence whence, int64_t offset) const {
   static_assert(sizeof(int64_t) == sizeof(off_t), "off_t must be 64 bits");
   return lseek(fd_, static_cast<off_t>(offset), static_cast<int32_t>(whence));
 }
@@ -292,7 +293,7 @@ void File::Close() {
   if (IsOpen()) {
     UNUSED auto ret = IGNORE_EINTR(close(fd_));
     TPL_ASSERT(ret == 0, "Invalid return code from close()");
-    fd_ = kInvalid;
+    fd_ = kInvalidDescriptor;
   }
 }
 
