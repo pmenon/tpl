@@ -297,6 +297,34 @@ void File::Close() {
   }
 }
 
+std::string File::ErrorToString(File::Error error) {
+  switch (error) {
+    case Error::ACCESS_DENIED:
+      return "ACCESS DENIED";
+    case Error::EXISTS:
+      return "FILE EXISTS";
+    case Error::FAILED:
+      return "FAILED";
+    case Error::IO:
+      return "IO ERROR";
+    case Error::IN_USE:
+      return "IN USE";
+    case Error::NO_MEMORY:
+      return "NO MEMORY";
+    case Error::NO_SPACE:
+      return "NO SPACE";
+    case Error::NOT_FOUND:
+      return "NOT FOUND";
+    case Error::OK:
+      return "OK";
+    case Error::TOO_MANY_OPENED:
+      return "TOO MANY OPENED";
+    case Error::MAX:
+      break;
+  }
+  UNREACHABLE("Impossible");
+}
+
 File::Error File::OsErrorToFileError(int saved_errno) {
   switch (saved_errno) {
     case EACCES:

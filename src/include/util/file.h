@@ -207,6 +207,13 @@ class File {
    */
   void Close();
 
+  /**
+   * Convert an error code into a string. Used for logging.
+   * @param error The error code.
+   * @return String text describing the error.
+   */
+  static std::string ErrorToString(Error error);
+
  private:
   // Initialization logic.
   void Initialize(const std::filesystem::path &path, uint32_t flags);
