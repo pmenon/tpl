@@ -3,106 +3,114 @@
 #include <immintrin.h>
 #include <cstring>
 
+#include "logging/logger.h"
+
 namespace tpl::util {
 
-CSVReader::CSVReader(std::string file_path, uint32_t num_cols, char delimiter, char quote,
-                     char escape)
-    : file_path_(std::move(file_path)),
+//===----------------------------------------------------------------------===//
+//
+// CSV File Source
+//
+//===----------------------------------------------------------------------===//
+
+CSVFile::CSVFile(const std::string &path)
+    : file_(path, util::File::FLAG_OPEN | util::File::FLAG_READ),
+      buffer_(std::unique_ptr<char[]>(new char[kDefaultBufferSize + kNumExtraPaddingChars])),
+      read_pos_(0),
+      end_pos_(0),
+      buffer_alloc_size_(kDefaultBufferSize) {}
+
+bool CSVFile::Initialize() { return file_.IsOpen(); }
+
+void CSVFile::Consume(const std::size_t n) {
+  TPL_ASSERT(read_pos_ + n <= end_pos_, "Buffer overflow!");
+  read_pos_ += n;
+}
+
+bool CSVFile::Fill() {
+  // If there are any left over bytes in the current buffer, copy it to the
+  // front of the buffer before reading more data.
+
+  if (const auto left_over_bytes = end_pos_ - read_pos_; left_over_bytes > 0) {
+    std::memcpy(&buffer_[0], &buffer_[read_pos_], left_over_bytes);
+    end_pos_ -= read_pos_;
+    read_pos_ = 0;
+  }
+
+  // If there isn't room in the current buffer to read new data, it's a signal
+  // that the consumer's working set is larger than what we're currently
+  // delivering. We'll double the buffer size to accommodate, but up to a
+  // maximum determined by kMaxAllocSize, usually 1GB.
+
+  if (end_pos_ == buffer_alloc_size_) {
+    buffer_alloc_size_ = std::min(buffer_alloc_size_ * 2, kMaxAllocSize);
+    auto new_buffer = std::unique_ptr<char[]>(new char[buffer_alloc_size_ + kNumExtraPaddingChars]);
+    std::memcpy(&new_buffer[0], &buffer_[0], end_pos_ - read_pos_);
+    buffer_ = std::move(new_buffer);
+  }
+
+  // We have some room to read new data from the file. Do so now. If there's an
+  // error, log it and terminate.
+
+  const auto available = buffer_alloc_size_ - end_pos_;
+  const auto bytes_read = file_.ReadFull(reinterpret_cast<byte *>(&buffer_[end_pos_]), available);
+
+  if (bytes_read < 0) {
+    LOG_ERROR("Error reading from CSV: {}", util::File::ErrorToString(file_.GetErrorIndicator()));
+    return false;
+  }
+
+  end_pos_ += bytes_read;
+
+  return read_pos_ < end_pos_;
+}
+
+//===----------------------------------------------------------------------===//
+//
+// CSV Reader
+//
+//===----------------------------------------------------------------------===//
+
+CSVReader::CSVReader(CSVSource *source, char delimiter, char quote, char escape)
+    : source_(source),
       buf_(nullptr),
-      buf_pos_(nullptr),
       buf_end_(nullptr),
-      buf_alloc_size_(kDefaultBufferSize),
       delimiter_(delimiter),
-      quote_(quote),
-      escape_(escape) {
-  row_.cells.resize(num_cols);
+      quote_char_(quote),
+      escape_char_(escape) {
+  // Assume 8 columns for now. We'll discover as we go along.
+  row_.cells.resize(8);
   for (CSVCell &cell : row_.cells) {
     cell.ptr = nullptr;
     cell.len = 0;
+    cell.escape_char = escape_char_;
   }
 }
 
-CSVReader::CSVReader(const char *file_path, const uint32_t num_cols, const char delimiter,
-                     const char quote, const char escape)
-    : CSVReader(std::string(file_path), num_cols, delimiter, quote, escape) {}
+bool CSVReader::Initialize() { return source_->Initialize(); }
 
-bool CSVReader::FillBuffer() {
-  // Copy left-over data to the start of the buffer.
-  const uint64_t remaining = buf_end_ - buf_pos_;
-
-  if (remaining > 0) {
-    std::memcpy(buf_.get(), buf_pos_, remaining);
-  }
-
-  buf_pos_ = buf_.get();
-  buf_end_ = buf_pos_ + remaining;
-
-  // If the buffer is too small we'll allocate a new one double the size
-  if (remaining == buf_alloc_size_) {
-    buf_alloc_size_ = std::min(buf_alloc_size_ * 2, kMaxAllocSize);
-    auto new_buf = std::unique_ptr<char[]>(new char[buf_alloc_size_ + kExtraPadding]);
-    std::memcpy(new_buf.get(), buf_.get(), remaining);
-    buf_ = std::move(new_buf);
-    stats_.num_reallocs++;
-  }
-
-  // Try to read a full buffer's worth of data from the input file.
-  const auto available = &buf_[buf_alloc_size_] - buf_end_;
-  const auto actual_bytes_read = file_.ReadFull(reinterpret_cast<byte *>(buf_end_), available);
-  if (actual_bytes_read <= 0) {
-    return false;
-  }
-
-  // Bump up the end
-  buf_end_ += actual_bytes_read;
-
-  // Collect stats
-  stats_.num_reads++;
-  stats_.bytes_read += static_cast<uint32_t>(actual_bytes_read);
-
-  // Done
-  return true;
-}
-
-bool CSVReader::Initialize() {
-  // Let's try to open the file
-  file_.Open(file_path_, util::File::FLAG_OPEN | util::File::FLAG_READ);
-
-  if (!file_.IsOpen()) {
-    return false;
-  }
-
-  // Allocate buffer space, and setup internal buffer pointers
-  buf_ = std::make_unique<char[]>(buf_alloc_size_ + kExtraPadding);
-  buf_pos_ = buf_end_ = buf_.get();
-
-  // Fill read-buffer
-  return FillBuffer();
-}
-
-// Try parse will try to parse one line of input. If successful, it will return
-// ParseOk. If it needs more data, it returns
 CSVReader::ParseResult CSVReader::TryParse() {
-  const auto check_quoted = [&](const char *buf) {
-    const auto special = _mm_setr_epi8(quote_, escape_, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    const auto data = _mm_loadu_si128(reinterpret_cast<const __m128i *>(buf));
-    return _mm_cmpistri(special, data, _SIDD_CMP_EQUAL_ANY);
-  };
-
-  const auto check_unquoted = [&](const char *buf) {
+  const auto check_quoted = [&](const char *buf) noexcept {
     const auto special =
-        _mm_setr_epi8(delimiter_, escape_, '\r', '\n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        _mm_setr_epi8(quote_char_, escape_char_, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     const auto data = _mm_loadu_si128(reinterpret_cast<const __m128i *>(buf));
     return _mm_cmpistri(special, data, _SIDD_CMP_EQUAL_ANY);
   };
 
-  int32_t ret;
+  const auto check_unquoted = [&](const char *buf) noexcept {
+    const auto special =
+        _mm_setr_epi8(delimiter_, escape_char_, '\r', '\n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    const auto data = _mm_loadu_si128(reinterpret_cast<const __m128i *>(buf));
+    return _mm_cmpistri(special, data, _SIDD_CMP_EQUAL_ANY);
+  };
+
+  const auto is_new_line = [](const char c) noexcept { return c == '\r' || c == '\n'; };
 
   // The current cell
   CSVCell *cell = &row_.cells[0];
 
   // The running pointer into the buffer
-  char *ptr = buf_pos_;
+  const char *ptr = buf_;
 
 #define RETURN_IF_AT_END()            \
   if (ptr >= buf_end_) {              \
@@ -117,16 +125,24 @@ CSVReader::ParseResult CSVReader::TryParse() {
   cell->ptr = cell_start;    \
   cell->len = ptr - cell_start - 1;
 
+#define NEXT_CELL()                        \
+  cell++;                                  \
+  if (++row_.count == row_.cells.size()) { \
+    return ParseResult::NeedMoreCells;     \
+  }
+
 cell_start:
-  char *cell_start = ptr;
+  const char *cell_start = ptr;
+  cell->escaped = false;
 
   // The first check we do is if we've reached the end of a line. This can be
   // caused by an empty last cell.
 
   RETURN_IF_AT_END();
-  if (*ptr == '\r' || *ptr == '\n') {
-    buf_pos_ = ptr + 1;
-    stats_.num_lines++;
+  if (is_new_line(*ptr)) {
+    FINISH_CELL();
+    row_.count++;
+    buf_ = ptr + 1;
     return ParseResult::Ok;
   }
 
@@ -136,12 +152,12 @@ cell_start:
   // escaped, of course. However, quoted fields must always end in a quoting
   // character followed by a delimiter character.
 
-  if (*ptr == quote_) {
+  if (*ptr == quote_char_) {
     cell_start = ++ptr;
   quoted_cell:
     while (true) {
       RETURN_IF_AT_END();
-      ret = check_quoted(ptr);
+      int32_t ret = check_quoted(ptr);
       if (ret != 16) {
         ptr += ret + 1;
         break;
@@ -152,16 +168,17 @@ cell_start:
     RETURN_IF_AT_END();
     if (*ptr == delimiter_) {
       FINISH_QUOTED_CELL();
-      cell++;
+      NEXT_CELL();
       ptr++;
       goto cell_start;
     }
-    if (*ptr == '\r' || *ptr == '\n') {
+    if (is_new_line(*ptr)) {
       FINISH_QUOTED_CELL();
-      buf_pos_ = ptr + 1;
-      stats_.num_lines++;
+      row_.count++;
+      buf_ = ptr + 1;
       return ParseResult::Ok;
     }
+    cell->escaped = true;
     ptr++;
     goto quoted_cell;
   }
@@ -173,7 +190,7 @@ cell_start:
 unquoted_cell:
   while (true) {
     RETURN_IF_AT_END();
-    ret = check_unquoted(ptr);
+    int32_t ret = check_unquoted(ptr);
     if (ret != 16) {
       ptr += ret;
       break;
@@ -184,29 +201,42 @@ unquoted_cell:
   RETURN_IF_AT_END();
   if (*ptr == delimiter_) {
     FINISH_CELL();
-    cell++;
+    NEXT_CELL();
     ptr++;
     goto cell_start;
   }
-  if (*ptr == '\r' || *ptr == '\n') {
+  if (is_new_line(*ptr)) {
     FINISH_CELL();
-    buf_pos_ = ptr + 1;
-    stats_.num_lines++;
+    row_.count++;
+    buf_ = ptr + 1;
     return ParseResult::Ok;
   }
+  cell->escaped = true;
   ptr++;
   goto unquoted_cell;
 }
 
 bool CSVReader::Advance() {
   do {
+    row_.count = 0;
+    buf_ = source_->GetBuffer();
+    buf_end_ = buf_ + source_->GetSize();
+    const char *start_pos = buf_;
     switch (TryParse()) {
       case ParseResult::Ok:
+        stats_.num_lines++;
+        stats_.bytes_read += buf_ - start_pos;
+        source_->Consume(buf_ - start_pos);
         return true;
+      case ParseResult::NeedMoreCells:
+        row_.cells.resize(row_.cells.size() * 2);
+        for (auto &cell : row_.cells) cell.escape_char = escape_char_;
+        return Advance();
       case ParseResult::NeedMoreData:
         break;
     }
-  } while (FillBuffer());
+    stats_.num_fills++;
+  } while (source_->Fill());
 
   // There's no more data in the buffer.
   return false;
