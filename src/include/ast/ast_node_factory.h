@@ -8,10 +8,7 @@
 namespace tpl::ast {
 
 /**
- * A factory for AST nodes. This factory uses a region allocator to quickly
- * allocate AST nodes during parsing. The assumption here is that the nodes are
- * only required during parsing and are thrown away after code generation, hence
- * require quick deallocation as well, thus the use of a region.
+ * A factory for AST nodes.
  */
 class AstNodeFactory {
  public:
