@@ -1261,8 +1261,8 @@ void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
   }
 
   // Replace the unary with a PointerTypeRepr node and resolve it
-  call->set_argument(0, context()->node_factory()->NewPointerType(call->arguments()[0]->position(),
-                                                                  unary_op->expr()));
+  call->set_argument(0, context()->GetNodeFactory()->NewPointerType(
+                            call->arguments()[0]->position(), unary_op->expr()));
 
   for (auto *arg : call->arguments()) {
     auto *resolved_type = Resolve(arg);

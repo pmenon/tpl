@@ -18,7 +18,7 @@ namespace {
 ast::Decl *DeclareVar(ast::Context *ctx, SourcePosition pos, const std::string &name,
                       ast::Expr *type_repr, ast::Expr *init) {
   auto name_ident = ctx->GetIdentifier(name);
-  return ctx->node_factory()->NewVariableDecl(pos, name_ident, type_repr, init);
+  return ctx->GetNodeFactory()->NewVariableDecl(pos, name_ident, type_repr, init);
 }
 
 ast::Decl *DeclareVarNoType(ast::Context *ctx, SourcePosition pos, const std::string &name,
@@ -35,16 +35,17 @@ ast::Decl *DeclareVarNoInit(ast::Context *ctx, SourcePosition pos, const std::st
                             ast::BuiltinType::Kind kind) {
   auto *type = ast::BuiltinType::Get(ctx, kind);
   auto type_ident = ctx->GetIdentifier(type->GetTplName());
-  auto type_expr = ctx->node_factory()->NewIdentifierExpr(pos, type_ident);
+  auto type_expr = ctx->GetNodeFactory()->NewIdentifierExpr(pos, type_ident);
   return DeclareVarNoInit(ctx, pos, name, type_expr);
 }
 
 // Generate a call to the given builtin using the given arguments
 ast::Expr *GenCallBuiltin(ast::Context *ctx, SourcePosition pos, ast::Builtin builtin,
                           const llvm::SmallVectorImpl<ast::Expr *> &args) {
-  auto *name = ctx->node_factory()->NewIdentifierExpr(
+  auto *name = ctx->GetNodeFactory()->NewIdentifierExpr(
       pos, ctx->GetIdentifier(ast::Builtins::GetFunctionName(builtin)));
-  return ctx->node_factory()->NewBuiltinCallExpr(name, {args.begin(), args.end(), ctx->region()});
+  return ctx->GetNodeFactory()->NewBuiltinCallExpr(name,
+                                                   {args.begin(), args.end(), ctx->GetRegion()});
 }
 
 }  // namespace
@@ -73,9 +74,9 @@ ast::Stmt *RewriteForInScan(ast::Context *ctx, ast::ForInStmt *for_in) {
              "Iterable must be a string literal");
 
   const auto pos = for_in->position();
-  auto *factory = ctx->node_factory();
+  auto *factory = ctx->GetNodeFactory();
 
-  util::RegionVector<ast::Stmt *> statements(ctx->region());
+  util::RegionVector<ast::Stmt *> statements(ctx->GetRegion());
 
   // The iterator's name
   ast::Identifier tvi_name = ctx->GetIdentifier("$tvi");
@@ -140,7 +141,7 @@ ast::Stmt *RewriteForInScan(ast::Context *ctx, ast::ForInStmt *for_in) {
   }
 
   // Done
-  return ctx->node_factory()->NewBlockStmt(pos, pos, std::move(statements));
+  return ctx->GetNodeFactory()->NewBlockStmt(pos, pos, std::move(statements));
 }
 
 }  // namespace tpl::parsing

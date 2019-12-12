@@ -153,15 +153,15 @@ struct Context::Implementation {
   llvm::DenseSet<FunctionType *, FunctionTypeKeyInfo> func_types;
 
   explicit Implementation(Context *ctx)
-      : string_table(kDefaultStringTableCapacity, util::LLVMRegionAllocator(ctx->region())) {
+      : string_table(kDefaultStringTableCapacity, util::LLVMRegionAllocator(ctx->GetRegion())) {
     // Instantiate all the builtins
-#define F(BKind, CppType, ...) \
-  BKind##Type =                \
-      new (ctx->region()) BuiltinType(ctx, sizeof(CppType), alignof(CppType), BuiltinType::BKind);
+#define F(BKind, CppType, ...)         \
+  BKind##Type = new (ctx->GetRegion()) \
+      BuiltinType(ctx, sizeof(CppType), alignof(CppType), BuiltinType::BKind);
     BUILTIN_TYPE_LIST(F, F, F)
 #undef F
 
-    string_type = new (ctx->region()) StringType(ctx);
+    string_type = new (ctx->GetRegion()) StringType(ctx);
   }
 };
 
@@ -171,26 +171,26 @@ Context::Context(sema::ErrorReporter *error_reporter)
       node_factory_(std::make_unique<AstNodeFactory>(&region_)),
       impl_(std::make_unique<Implementation>(this)) {
   // Put all builtins into list
-#define F(BKind, ...) impl()->builtin_types_list.push_back(impl()->BKind##Type);
+#define F(BKind, ...) impl_->builtin_types_list.push_back(impl()->BKind##Type);
   BUILTIN_TYPE_LIST(F, F, F)
 #undef F
 
   // Put all builtins into cache by name
 #define PRIM(BKind, CppType, TplName) \
-  impl()->builtin_types[GetIdentifier(TplName)] = impl()->BKind##Type;
-#define OTHERS(BKind, CppType) impl()->builtin_types[GetIdentifier(#BKind)] = impl()->BKind##Type;
+  impl_->builtin_types[GetIdentifier(TplName)] = impl_->BKind##Type;
+#define OTHERS(BKind, CppType) impl_->builtin_types[GetIdentifier(#BKind)] = impl_->BKind##Type;
   BUILTIN_TYPE_LIST(PRIM, OTHERS, OTHERS)
 #undef OTHERS
 #undef PRIM
 
   // Builtin aliases
-  impl()->builtin_types[GetIdentifier("int")] = impl()->Int32Type;
-  impl()->builtin_types[GetIdentifier("float")] = impl()->Float32Type;
-  impl()->builtin_types[GetIdentifier("void")] = impl()->NilType;
+  impl_->builtin_types[GetIdentifier("int")] = impl_->Int32Type;
+  impl_->builtin_types[GetIdentifier("float")] = impl_->Float32Type;
+  impl_->builtin_types[GetIdentifier("void")] = impl_->NilType;
 
   // Initialize builtin functions
 #define BUILTIN_FUNC(Name, ...) \
-  impl()->builtin_funcs[GetIdentifier(Builtins::GetFunctionName(Builtin::Name))] = Builtin::Name;
+  impl_->builtin_funcs[GetIdentifier(Builtins::GetFunctionName(Builtin::Name))] = Builtin::Name;
   BUILTINS_LIST(BUILTIN_FUNC)
 #undef BUILTIN_FUNC
 }
@@ -202,17 +202,17 @@ Identifier Context::GetIdentifier(llvm::StringRef str) {
     return Identifier(nullptr);
   }
 
-  auto iter = impl()->string_table.insert(std::make_pair(str, static_cast<char>(0))).first;
+  auto iter = impl_->string_table.insert(std::make_pair(str, static_cast<char>(0))).first;
   return Identifier(iter->getKeyData());
 }
 
 Type *Context::LookupBuiltinType(Identifier name) const {
-  auto iter = impl()->builtin_types.find(name);
-  return (iter == impl()->builtin_types.end() ? nullptr : iter->second);
+  auto iter = impl_->builtin_types.find(name);
+  return (iter == impl_->builtin_types.end() ? nullptr : iter->second);
 }
 
 bool Context::IsBuiltinFunction(Identifier name, Builtin *builtin) const {
-  if (auto iter = impl()->builtin_funcs.find(name); iter != impl()->builtin_funcs.end()) {
+  if (auto iter = impl_->builtin_funcs.find(name); iter != impl_->builtin_funcs.end()) {
     if (builtin != nullptr) {
       *builtin = iter->second;
     }
@@ -239,7 +239,7 @@ PointerType *PointerType::Get(Type *base) {
   PointerType *&pointer_type = ctx->impl()->pointer_types[base];
 
   if (pointer_type == nullptr) {
-    pointer_type = new (ctx->region()) PointerType(base);
+    pointer_type = new (ctx->GetRegion()) PointerType(base);
   }
 
   return pointer_type;
@@ -252,7 +252,7 @@ ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
   ArrayType *&array_type = ctx->impl()->array_types[{elem_type, length}];
 
   if (array_type == nullptr) {
-    array_type = new (ctx->region()) ArrayType(length, elem_type);
+    array_type = new (ctx->GetRegion()) ArrayType(length, elem_type);
   }
 
   return array_type;
@@ -265,7 +265,7 @@ MapType *MapType::Get(Type *key_type, Type *value_type) {
   MapType *&map_type = ctx->impl()->map_types[{key_type, value_type}];
 
   if (map_type == nullptr) {
-    map_type = new (ctx->region()) MapType(key_type, value_type);
+    map_type = new (ctx->GetRegion()) MapType(key_type, value_type);
   }
 
   return map_type;
@@ -292,7 +292,7 @@ StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
     // struct element.
     uint32_t size = 0;
     uint32_t alignment = 0;
-    util::RegionVector<uint32_t> field_offsets(ctx->region());
+    util::RegionVector<uint32_t> field_offsets(ctx->GetRegion());
     for (const auto &field : fields) {
       // Check if the type needs to be padded
       uint32_t field_align = field.type->GetAlignment();
@@ -318,7 +318,7 @@ StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
     }
 
     // Create type
-    struct_type = new (ctx->region())
+    struct_type = new (ctx->GetRegion())
         StructType(ctx, size, alignment, std::move(fields), std::move(field_offsets));
 
     // Set in cache
@@ -349,7 +349,7 @@ FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
   if (inserted) {
     // The function type was not in the cache, create the type now and insert it
     // into the cache
-    func_type = new (ctx->region()) FunctionType(std::move(params), ret);
+    func_type = new (ctx->GetRegion()) FunctionType(std::move(params), ret);
     *iter = func_type;
   } else {
     func_type = *iter;

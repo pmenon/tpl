@@ -15,7 +15,7 @@ class TypeTest : public TplTest {
 
   ast::Context *ctx() { return &ctx_; }
 
-  util::Region *region() { return ctx()->region(); }
+  util::Region *region() { return ctx()->GetRegion(); }
 
   ast::Identifier Name(const std::string &s) { return ctx()->GetIdentifier(s); }
 

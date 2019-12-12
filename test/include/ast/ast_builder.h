@@ -62,7 +62,7 @@ class TestAstBuilder {
   Stmt *DeclStmt(Decl *decl) { return node_factory()->NewDeclStmt(decl); }
 
   Stmt *Block(std::initializer_list<Stmt *> stmts) {
-    util::RegionVector<Stmt *> region_stmts(stmts.begin(), stmts.end(), ctx()->region());
+    util::RegionVector<Stmt *> region_stmts(stmts.begin(), stmts.end(), ctx()->GetRegion());
     return node_factory()->NewBlockStmt(empty_, empty_, std::move(region_stmts));
   }
 
@@ -90,12 +90,12 @@ class TestAstBuilder {
   template <Builtin BUILTIN, typename... Args>
   CallExpr *Call(Args... args) {
     auto fn = IdentExpr(Builtins::GetFunctionName(BUILTIN));
-    auto call_args = util::RegionVector<Expr *>({std::forward<Args>(args)...}, ctx()->region());
+    auto call_args = util::RegionVector<Expr *>({std::forward<Args>(args)...}, ctx()->GetRegion());
     return node_factory()->NewBuiltinCallExpr(fn, std::move(call_args));
   }
 
  private:
-  AstNodeFactory *node_factory() { return ctx()->node_factory(); }
+  AstNodeFactory *node_factory() { return ctx()->GetNodeFactory(); }
 
  private:
   sema::ErrorReporter error_reporter_;

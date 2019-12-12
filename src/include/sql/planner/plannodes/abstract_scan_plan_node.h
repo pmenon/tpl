@@ -74,4 +74,3 @@ class AbstractScanPlanNode : public AbstractPlanNode {
 };
 
 }  // namespace tpl::sql::planner
-

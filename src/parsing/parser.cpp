@@ -13,8 +13,8 @@ static std::unordered_set<Token::Type> kTopLevelDecls = {Token::Type::STRUCT, To
 Parser::Parser(Scanner *scanner, ast::Context *context)
     : scanner_(scanner),
       context_(context),
-      node_factory_(context->node_factory()),
-      error_reporter_(context->error_reporter()) {}
+      node_factory_(context->GetNodeFactory()),
+      error_reporter_(context->GetErrorReporter()) {}
 
 ast::AstNode *Parser::Parse() {
   util::RegionVector<ast::Decl *> decls(region());

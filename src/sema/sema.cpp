@@ -8,7 +8,7 @@ namespace tpl::sema {
 
 Sema::Sema(ast::Context *ctx)
     : ctx_(ctx),
-      error_reporter_(ctx->error_reporter()),
+      error_reporter_(ctx->GetErrorReporter()),
       scope_(nullptr),
       num_cached_scopes_(0),
       curr_func_(nullptr) {}

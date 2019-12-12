@@ -179,7 +179,6 @@ class CSVString : public CSVSource {
   const char *pend_;
 };
 
-
 //===----------------------------------------------------------------------===//
 //
 // CSV Reader

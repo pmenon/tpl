@@ -179,7 +179,7 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
     }
 
     ast::ReturnStmt *empty_ret =
-        context()->node_factory()->NewReturnStmt(node->position(), nullptr);
+        context()->GetNodeFactory()->NewReturnStmt(node->position(), nullptr);
     node->body()->statements().push_back(empty_ret);
   }
 }

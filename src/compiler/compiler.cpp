@@ -37,7 +37,7 @@ Compiler::Compiler(const Compiler::Input &input)
 // Required because we forward-declared the classes we use as templates to unique_ptr<> members.
 Compiler::~Compiler() = default;
 
-sema::ErrorReporter *Compiler::GetErrorReporter() const { return GetContext()->error_reporter(); }
+sema::ErrorReporter *Compiler::GetErrorReporter() const { return GetContext()->GetErrorReporter(); }
 
 void Compiler::Run(Compiler::Callbacks *callbacks) {
   // -------------------------------------------------------

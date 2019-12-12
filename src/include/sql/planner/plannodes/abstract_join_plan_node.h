@@ -87,4 +87,3 @@ class AbstractJoinPlanNode : public AbstractPlanNode {
 };
 
 }  // namespace tpl::sql::planner
-

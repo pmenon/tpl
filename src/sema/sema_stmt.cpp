@@ -94,7 +94,7 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
 
     // Perform implicit cast from SQL boolean to primitive boolean
     ast::Expr *cond = node->condition();
-    cond = context()->node_factory()->NewImplicitCastExpr(
+    cond = context()->GetNodeFactory()->NewImplicitCastExpr(
         cond->position(), ast::CastKind::SqlBoolToBool, bool_type, cond);
     cond->set_type(bool_type);
     node->set_condition(cond);
