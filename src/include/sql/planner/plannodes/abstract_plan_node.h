@@ -12,7 +12,7 @@
 namespace tpl::sql::planner {
 
 /**
- * An abstract plan node should be the base class for (almost) all plan nodes
+ * An abstract plan node should be the base class for (almost) all plan nodes.
  */
 class AbstractPlanNode {
  protected:
@@ -66,21 +66,14 @@ class AbstractPlanNode {
       : children_(std::move(children)), output_schema_(std::move(output_schema)) {}
 
  public:
-  /**
-   * Constructor for Deserialization and DDL statements
-   */
   AbstractPlanNode() = default;
 
   DISALLOW_COPY_AND_MOVE(AbstractPlanNode)
 
   virtual ~AbstractPlanNode() = default;
 
-  //===--------------------------------------------------------------------===//
-  // Children Helpers
-  //===--------------------------------------------------------------------===//
-
   /**
-   * @return child plan nodes
+   * @return The list of all children plan nodes.
    */
   std::vector<const AbstractPlanNode *> GetChildren() const {
     std::vector<const AbstractPlanNode *> children;
@@ -92,7 +85,7 @@ class AbstractPlanNode {
   }
 
   /**
-   * @return number of children
+   * @return The number of children this plan node contains.
    */
   size_t GetChildrenSize() const { return children_.size(); }
 
@@ -106,20 +99,14 @@ class AbstractPlanNode {
     return children_[child_index].get();
   }
 
-  //===--------------------------------------------------------------------===//
-  // Accessors
-  //===--------------------------------------------------------------------===//
-
   /**
-   * Returns plan type, each derived plan class should override this method to return their specific
-   * type
-   * @return plan type
+   * @return The type of this plan node implemented by each derived node type.
    */
   virtual PlanNodeType GetPlanNodeType() const = 0;
 
   /**
-   * @return output schema for the node. The output schema contains information on columns of the
-   * output of the plan node operator
+   * @return The output schema for the node. which contains information on columns of the output of
+   *         the plan node operator.
    */
   const OutputSchema *GetOutputSchema() const { return output_schema_.get(); }
 

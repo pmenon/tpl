@@ -42,10 +42,6 @@ class AbstractScanPlanNode : public AbstractPlanNode {
    * @param children child plan nodes
    * @param output_schema Schema representing the structure of the output of this plan node
    * @param predicate predicate used for performing scan
-   * @param is_for_update scan is used for an update
-   * @param is_parallel parallel scan flag
-   * @param database_oid database oid for scan
-   * @param namespace_oid OID of the namespace
    */
   AbstractScanPlanNode(std::vector<std::unique_ptr<AbstractPlanNode>> &&children,
                        std::unique_ptr<OutputSchema> output_schema,

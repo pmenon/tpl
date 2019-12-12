@@ -10,12 +10,12 @@
 namespace tpl::sql::planner {
 
 /**
- * Base class for table joins
+ * Base class for table joins.
  */
 class AbstractJoinPlanNode : public AbstractPlanNode {
  protected:
   /**
-   * Base builder class for join plan nodes
+   * Base builder class for join plan nodes.
    * @tparam ConcreteType
    */
   template <class ConcreteType>
