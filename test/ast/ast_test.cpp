@@ -31,15 +31,15 @@ TEST_F(AstTest, HierechyTest) {
   /// Test declarations
   {
     AstNode *all_decls[] = {
-        factory.NewFieldDecl(empty_pos(), Identifier(nullptr), nullptr),
+        factory.NewFieldDecl(empty_pos(), Identifier(), nullptr),
         factory.NewFunctionDecl(
-            empty_pos(), Identifier(nullptr),
+            empty_pos(), Identifier(),
             factory.NewFunctionLitExpr(
                 factory.NewFunctionType(empty_pos(), util::RegionVector<FieldDecl *>(region()),
                                         nullptr),
                 nullptr)),
-        factory.NewStructDecl(empty_pos(), Identifier(nullptr), nullptr),
-        factory.NewVariableDecl(empty_pos(), Identifier(nullptr), nullptr, nullptr),
+        factory.NewStructDecl(empty_pos(), Identifier(), nullptr),
+        factory.NewVariableDecl(empty_pos(), Identifier(), nullptr, nullptr),
     };
 
     for (const auto *node : all_decls) {
@@ -70,7 +70,7 @@ TEST_F(AstTest, HierechyTest) {
             nullptr),
         factory.NewNilLiteral(empty_pos()),
         factory.NewUnaryOpExpr(empty_pos(), parsing::Token::Type::MINUS, nullptr),
-        factory.NewIdentifierExpr(empty_pos(), Identifier(nullptr)),
+        factory.NewIdentifierExpr(empty_pos(), Identifier()),
         factory.NewArrayType(empty_pos(), nullptr, nullptr),
         factory.NewFunctionType(empty_pos(), util::RegionVector<FieldDecl *>(region()), nullptr),
         factory.NewPointerType(empty_pos(), nullptr),
@@ -98,7 +98,7 @@ TEST_F(AstTest, HierechyTest) {
     AstNode *all_stmts[] = {
         factory.NewBlockStmt(empty_pos(), empty_pos(), util::RegionVector<Stmt *>(region())),
         factory.NewDeclStmt(
-            factory.NewVariableDecl(empty_pos(), Identifier(nullptr), nullptr, nullptr)),
+            factory.NewVariableDecl(empty_pos(), Identifier(), nullptr, nullptr)),
         factory.NewExpressionStmt(factory.NewNilLiteral(empty_pos())),
         factory.NewForStmt(empty_pos(), nullptr, nullptr, nullptr, nullptr),
         factory.NewIfStmt(empty_pos(), nullptr, nullptr, nullptr),

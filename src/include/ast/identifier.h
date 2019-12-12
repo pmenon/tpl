@@ -15,13 +15,22 @@ namespace tpl::ast {
  * pointer value - we don't need to check contents.
  */
 class Identifier {
- public:
+ private:
+  friend class Context;
+
+  // Constructor accessible only to Context which ensures uniqueness.
   explicit Identifier(const char *str) noexcept : data_(str) {}
+
+ public:
+  /**
+   * Create an empty identifier.
+   */
+  Identifier() noexcept : data_(nullptr) {}
 
   /**
    * @return A const pointer to this identifier's underlying string data.
    */
-  const char *GetData() const { return data_; }
+  const char *GetData() const noexcept { return data_; }
 
   /**
    * @return The length of this identifier in bytes.
@@ -34,26 +43,26 @@ class Identifier {
   /**
    * @return True if this identifier is empty; false otherwise.
    */
-  bool IsEmpty() const { return GetLength() == 0; }
+  bool IsEmpty() const noexcept { return data_ == nullptr; }
 
   /**
    * @return A string view over this identifier.
    */
-  std::string_view GetStringView() const noexcept { return std::string_view(data_, GetLength()); }
+  std::string_view GetString() const noexcept { return std::string_view(data_, GetLength()); }
 
   /**
    * Is this identifier equal to another identifier @em other.
    * @param other The identifier to compare with.
    * @return True if equal; false otherwise.
    */
-  bool operator==(const Identifier &other) const { return GetData() == other.GetData(); }
+  bool operator==(const Identifier &other) const noexcept { return GetData() == other.GetData(); }
 
   /**
    * Is this identifier not equal to another identifier @em other.
    * @param other The identifier to compare with.
    * @return True if not equal; false otherwise.
    */
-  bool operator!=(const Identifier &other) const { return !(*this == other); }
+  bool operator!=(const Identifier &other) const noexcept { return !(*this == other); }
 
   /**
    * @return An identifier that can be used to indicate an empty idenfitier.
@@ -72,6 +81,7 @@ class Identifier {
   }
 
  private:
+  // Data
   const char *data_;
 };
 

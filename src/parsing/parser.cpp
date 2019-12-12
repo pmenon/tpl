@@ -612,7 +612,7 @@ ast::Expr *Parser::ParseFunctionType() {
   while (peek() != Token::Type::RIGHT_PAREN) {
     const SourcePosition &field_position = scanner_->current_position();
 
-    ast::Identifier ident(nullptr);
+    ast::Identifier ident;
 
     ast::Expr *type = nullptr;
 
@@ -624,7 +624,7 @@ ast::Expr *Parser::ParseFunctionType() {
       type = ParseType();
     } else {
       type = node_factory_->NewIdentifierExpr(field_position, ident);
-      ident = ast::Identifier(nullptr);
+      ident = ast::Identifier();
     }
 
     // That's it

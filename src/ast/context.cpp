@@ -199,7 +199,7 @@ Context::~Context() = default;
 
 Identifier Context::GetIdentifier(llvm::StringRef str) {
   if (str.empty()) {
-    return Identifier(nullptr);
+    return Identifier();
   }
 
   auto iter = impl_->string_table.insert(std::make_pair(str, static_cast<char>(0))).first;
