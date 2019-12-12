@@ -101,7 +101,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   }
 
   // Check argument count matches
-  if (!CheckArgCount(node, func_type->num_params())) {
+  if (!CheckArgCount(node, func_type->GetNumParams())) {
     return;
   }
 
@@ -118,7 +118,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
 
   const auto &actual_args = node->arguments();
   for (uint32_t arg_num = 0; arg_num < actual_args.size(); arg_num++) {
-    ast::Type *expected_type = func_type->params()[arg_num].type;
+    ast::Type *expected_type = func_type->GetParams()[arg_num].type;
     ast::Expr *arg = actual_args[arg_num];
 
     // Function application simplifies to performing an assignment of the
@@ -142,7 +142,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   }
 
   // Looks good ...
-  node->set_type(func_type->return_type());
+  node->set_type(func_type->GetReturnType());
 }
 
 void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
@@ -162,7 +162,7 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   FunctionSemaScope function_scope(this, node);
 
   // Declare function parameters in scope
-  for (const auto &param : func_type->params()) {
+  for (const auto &param : func_type->GetParams()) {
     current_scope()->Declare(param.name, param.type);
   }
 
@@ -173,7 +173,7 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   // "return" statement only if the function has a "nil" return type. In this
   // case, we automatically insert a "return" statement.
   if (node->IsEmpty() || !ast::Stmt::IsTerminating(node->body())) {
-    if (!func_type->return_type()->IsNilType()) {
+    if (!func_type->GetReturnType()->IsNilType()) {
       error_reporter()->Report(node->body()->right_brace_position(), ErrorMessages::kMissingReturn);
       return;
     }
@@ -225,9 +225,9 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
   }
 
   if (auto *arr_type = obj_type->SafeAs<ast::ArrayType>()) {
-    node->set_type(arr_type->element_type());
+    node->set_type(arr_type->GetElementType());
   } else {
-    node->set_type(obj_type->As<ast::MapType>()->value_type());
+    node->set_type(obj_type->As<ast::MapType>()->GetValueType());
   }
 }
 
@@ -295,7 +295,7 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
         return;
       }
 
-      node->set_type(expr_type->As<ast::PointerType>()->base());
+      node->set_type(expr_type->As<ast::PointerType>()->GetBase());
       break;
     }
     case parsing::Token::Type::AMPERSAND: {
@@ -323,7 +323,7 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
   }
 
   if (auto *pointer_type = obj_type->SafeAs<ast::PointerType>()) {
-    obj_type = pointer_type->base();
+    obj_type = pointer_type->GetBase();
   }
 
   if (!obj_type->IsStructType()) {

@@ -82,7 +82,7 @@ const bool BuiltinType::kSignedFlags[] = {
 // ---------------------------------------------------------
 
 FunctionType::FunctionType(util::RegionVector<Field> &&params, Type *ret)
-    : Type(ret->context(), sizeof(void *), alignof(void *), TypeId::FunctionType),
+    : Type(ret->GetContext(), sizeof(void *), alignof(void *), TypeId::FunctionType),
       params_(std::move(params)),
       ret_(ret) {}
 
@@ -91,7 +91,7 @@ FunctionType::FunctionType(util::RegionVector<Field> &&params, Type *ret)
 // ---------------------------------------------------------
 
 MapType::MapType(Type *key_type, Type *val_type)
-    : Type(key_type->context(), sizeof(std::unordered_map<int32_t, int32_t>),
+    : Type(key_type->GetContext(), sizeof(std::unordered_map<int32_t, int32_t>),
            alignof(std::unordered_map<int32_t, int32_t>), TypeId::MapType),
       key_type_(key_type),
       val_type_(val_type) {}

@@ -272,7 +272,7 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
     case ast::CastKind::IntegralCast: {
       // As an optimization, we only issue a new assignment if the input and
       // output types of the cast have different sizes.
-      if (node->input()->type()->size() != node->type()->size()) {
+      if (node->input()->type()->GetSize() != node->type()->GetSize()) {
         LocalVar dest = GetExecutionResult()->GetOrCreateDestination(node->type());
         BuildAssign(dest, input, node->type());
         GetExecutionResult()->SetDestination(dest.ValueOf());
@@ -303,7 +303,7 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
 void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
   // The type and the element's size
   auto *type = node->object()->type()->As<ast::ArrayType>();
-  auto elem_size = type->element_type()->size();
+  auto elem_size = type->GetElementType()->GetSize();
 
   // First, we need to get the base address of the array
   LocalVar arr;
@@ -516,7 +516,7 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
     }
     case ast::Builtin::StringToSql: {
       auto string_lit = call->arguments()[0]->As<ast::LitExpr>()->raw_string_val();
-      auto static_string = NewStaticString(call->type()->context(), string_lit);
+      auto static_string = NewStaticString(call->type()->GetContext(), string_lit);
       GetEmitter()->EmitInitString(dest, static_string, string_lit.length());
       break;
     }
@@ -755,7 +755,7 @@ void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call) {
 
     LocalVar input = VisitExpressionForLValue(call->arguments()[idx]);
     const auto *type = call->arguments()[idx]->type()->As<ast::BuiltinType>();
-    switch (type->kind()) {
+    switch (type->GetKind()) {
       case ast::BuiltinType::Integer: {
         GetEmitter()->Emit(Bytecode::HashInt, hash_val, input, hash_val.ValueOf());
         break;
@@ -1133,7 +1133,7 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call, ast::Bui
     case ast::Builtin::AggInit:
     case ast::Builtin::AggReset: {
       for (const auto &arg : call->arguments()) {
-        const auto agg_kind = arg->type()->GetPointeeType()->As<ast::BuiltinType>()->kind();
+        const auto agg_kind = arg->type()->GetPointeeType()->As<ast::BuiltinType>()->GetKind();
         LocalVar input = VisitExpressionForRValue(arg);
         Bytecode bytecode;
         if (builtin == ast::Builtin::AggInit) {
@@ -1147,7 +1147,7 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call, ast::Bui
     }
     case ast::Builtin::AggAdvance: {
       const auto &args = call->arguments();
-      const auto agg_kind = args[0]->type()->GetPointeeType()->As<ast::BuiltinType>()->kind();
+      const auto agg_kind = args[0]->type()->GetPointeeType()->As<ast::BuiltinType>()->GetKind();
       LocalVar agg = VisitExpressionForRValue(args[0]);
       LocalVar input = VisitExpressionForRValue(args[1]);
       Bytecode bytecode = OpForAgg<AggOpKind::Advance>(agg_kind);
@@ -1164,7 +1164,7 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call, ast::Bui
     }
     case ast::Builtin::AggMerge: {
       const auto &args = call->arguments();
-      const auto agg_kind = args[0]->type()->GetPointeeType()->As<ast::BuiltinType>()->kind();
+      const auto agg_kind = args[0]->type()->GetPointeeType()->As<ast::BuiltinType>()->GetKind();
       LocalVar agg_1 = VisitExpressionForRValue(args[0]);
       LocalVar agg_2 = VisitExpressionForRValue(args[1]);
       Bytecode bytecode = OpForAgg<AggOpKind::Merge>(agg_kind);
@@ -1173,7 +1173,7 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call, ast::Bui
     }
     case ast::Builtin::AggResult: {
       const auto &args = call->arguments();
-      const auto agg_kind = args[0]->type()->GetPointeeType()->As<ast::BuiltinType>()->kind();
+      const auto agg_kind = args[0]->type()->GetPointeeType()->As<ast::BuiltinType>()->GetKind();
       LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->type());
       LocalVar agg = VisitExpressionForRValue(args[0]);
       Bytecode bytecode = OpForAgg<AggOpKind::GetResult>(agg_kind);
@@ -1378,7 +1378,7 @@ void BytecodeGenerator::VisitResultBufferCall(ast::CallExpr *call, ast::Builtin 
 
 void BytecodeGenerator::VisitExecutionContextCall(ast::CallExpr *call,
                                                   UNUSED ast::Builtin builtin) {
-  ast::Context *ctx = call->type()->context();
+  ast::Context *ctx = call->type()->GetContext();
 
   // The memory pool pointer
   LocalVar mem_pool = GetExecutionResult()->GetOrCreateDestination(
@@ -1478,7 +1478,7 @@ void BytecodeGenerator::VisitBuiltinTrigCall(ast::CallExpr *call, ast::Builtin b
 void BytecodeGenerator::VisitBuiltinSizeOfCall(ast::CallExpr *call) {
   ast::Type *target_type = call->arguments()[0]->type();
   LocalVar size_var = GetExecutionResult()->GetOrCreateDestination(call->type());
-  GetEmitter()->EmitAssignImm4(size_var, target_type->size());
+  GetEmitter()->EmitAssignImm4(size_var, target_type->GetSize());
   GetExecutionResult()->SetDestination(size_var.ValueOf());
 }
 
@@ -1494,7 +1494,7 @@ void BytecodeGenerator::VisitBuiltinOffsetOfCall(ast::CallExpr *call) {
 void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
   ast::Builtin builtin;
 
-  ast::Context *ctx = call->type()->context();
+  ast::Context *ctx = call->type()->GetContext();
   ctx->IsBuiltinFunction(call->GetFuncName(), &builtin);
 
   switch (builtin) {
@@ -1693,15 +1693,15 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
 
   auto *func_type = call->function()->type()->As<ast::FunctionType>();
 
-  if (!func_type->return_type()->IsNilType()) {
+  if (!func_type->GetReturnType()->IsNilType()) {
     LocalVar ret_val;
     if (caller_wants_result) {
-      ret_val = GetExecutionResult()->GetOrCreateDestination(func_type->return_type());
+      ret_val = GetExecutionResult()->GetOrCreateDestination(func_type->GetReturnType());
 
       // Let the caller know where the result value is
       GetExecutionResult()->SetDestination(ret_val.ValueOf());
     } else {
-      ret_val = GetCurrentFunction()->NewLocal(func_type->return_type());
+      ret_val = GetCurrentFunction()->NewLocal(func_type->GetReturnType());
     }
 
     // Push return value address into parameter list
@@ -1709,7 +1709,7 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   }
 
   // Collect non-return-value parameters as usual
-  for (uint32_t i = 0; i < func_type->num_params(); i++) {
+  for (uint32_t i = 0; i < func_type->GetNumParams(); i++) {
     params.push_back(VisitExpressionForRValue(call->arguments()[i]));
   }
 
@@ -1968,7 +1968,7 @@ void BytecodeGenerator::VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare) {
   TPL_ASSERT(compare->left()->type() == compare->right()->type(),
              "Left and right input types to comparison are not equal");
 
-  const auto arg_kind = compare->left()->type()->As<ast::BuiltinType>()->kind();
+  const auto arg_kind = compare->left()->type()->As<ast::BuiltinType>()->GetKind();
 
   Bytecode code;
   switch (compare->op()) {
@@ -2104,7 +2104,7 @@ void BytecodeGenerator::VisitFunctionLitExpr(ast::FunctionLitExpr *node) { Visit
 
 void BytecodeGenerator::BuildAssign(LocalVar dest, LocalVar val, ast::Type *dest_type) {
   // Emit the appropriate assignment
-  const uint32_t size = dest_type->size();
+  const uint32_t size = dest_type->GetSize();
   if (size == 1) {
     GetEmitter()->EmitAssign(Bytecode::Assign1, dest, val);
   } else if (size == 2) {
@@ -2118,7 +2118,7 @@ void BytecodeGenerator::BuildAssign(LocalVar dest, LocalVar val, ast::Type *dest
 
 void BytecodeGenerator::BuildDeref(LocalVar dest, LocalVar ptr, ast::Type *dest_type) {
   // Emit the appropriate deref
-  const uint32_t size = dest_type->size();
+  const uint32_t size = dest_type->GetSize();
   if (size == 1) {
     GetEmitter()->EmitDeref(Bytecode::Deref1, dest, ptr);
   } else if (size == 2) {
@@ -2160,7 +2160,7 @@ void BytecodeGenerator::VisitMemberExpr(ast::MemberExpr *node) {
   if (auto *type = node->object()->type(); node->IsSugaredArrow()) {
     // Double pointer, need to dereference
     obj_ptr = BuildLoadPointer(obj_ptr, type);
-    obj_type = type->As<ast::PointerType>()->base()->As<ast::StructType>();
+    obj_type = type->As<ast::PointerType>()->GetBase()->As<ast::StructType>();
   } else {
     obj_type = type->As<ast::StructType>();
   }
@@ -2239,12 +2239,12 @@ FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &func_name,
   FunctionInfo *func = &functions_.back();
 
   // Register return type
-  if (auto *return_type = func_type->return_type(); !return_type->IsNilType()) {
+  if (auto *return_type = func_type->GetReturnType(); !return_type->IsNilType()) {
     func->NewParameterLocal(return_type->PointerTo(), "hiddenRv");
   }
 
   // Register parameters
-  for (const auto &param : func_type->params()) {
+  for (const auto &param : func_type->GetParams()) {
     func->NewParameterLocal(param.type, param.name.data());
   }
 
@@ -2266,13 +2266,13 @@ LocalVar BytecodeGenerator::NewStatic(const std::string &name, ast::Type *type,
                                       const void *contents) {
   std::size_t offset = data_.size();
 
-  if (!util::MathUtil::IsAligned(offset, type->alignment())) {
-    offset = util::MathUtil::AlignTo(offset, type->alignment());
+  if (!util::MathUtil::IsAligned(offset, type->GetAlignment())) {
+    offset = util::MathUtil::AlignTo(offset, type->GetAlignment());
   }
 
-  const std::size_t padded_len = type->size() + (offset - data_.size());
+  const std::size_t padded_len = type->GetSize() + (offset - data_.size());
   data_.insert(data_.end(), padded_len, 0);
-  std::memcpy(&data_[offset], contents, type->size());
+  std::memcpy(&data_[offset], contents, type->GetSize());
 
   uint32_t &version = static_locals_versions_[name];
   const std::string name_and_version = name + "_" + std::to_string(version++);
@@ -2340,14 +2340,14 @@ void BytecodeGenerator::VisitExpressionForTest(ast::Expr *expr, BytecodeLabel *t
 
 Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode, ast::Type *type) {
   TPL_ASSERT(type->IsIntegerType(), "Type must be integer type");
-  auto int_kind = type->SafeAs<ast::BuiltinType>()->kind();
+  auto int_kind = type->SafeAs<ast::BuiltinType>()->GetKind();
   auto kind_idx = static_cast<uint8_t>(int_kind - ast::BuiltinType::Int8);
   return Bytecodes::FromByte(Bytecodes::ToByte(bytecode) + kind_idx);
 }
 
 Bytecode BytecodeGenerator::GetFloatTypedBytecode(Bytecode bytecode, ast::Type *type) {
   TPL_ASSERT(type->IsFloatType(), "Type must be floating-point type");
-  auto float_kind = type->SafeAs<ast::BuiltinType>()->kind();
+  auto float_kind = type->SafeAs<ast::BuiltinType>()->GetKind();
   auto kind_idx = static_cast<uint8_t>(float_kind - ast::BuiltinType::Float32);
   return Bytecodes::FromByte(Bytecodes::ToByte(bytecode) + kind_idx);
 }

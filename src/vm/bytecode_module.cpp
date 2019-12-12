@@ -47,7 +47,7 @@ void PrettyPrintStaticLocals(std::ostream &os, const BytecodeModule &module, con
     os << "     " << std::setw(max_local_len) << std::right << local.GetName() << ": ";
     os << " offset=" << std::setw(7) << std::left << local.GetOffset();
     os << " size=" << std::setw(7) << std::left << local.GetSize();
-    os << " align=" << std::setw(7) << std::left << local.GetType()->alignment();
+    os << " align=" << std::setw(7) << std::left << local.GetType()->GetAlignment();
     os << " data=\"" << local_data << "\"" << std::endl;
   }
 
@@ -73,7 +73,7 @@ void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
     os << std::setw(max_local_len) << std::right << local.GetName() << ": ";
     os << " offset=" << std::setw(7) << std::left << local.GetOffset();
     os << " size=" << std::setw(7) << std::left << local.GetSize();
-    os << " align=" << std::setw(7) << std::left << local.GetType()->alignment();
+    os << " align=" << std::setw(7) << std::left << local.GetType()->GetAlignment();
     os << " type=" << std::setw(7) << std::left << ast::Type::ToString(local.GetType());
     os << std::endl;
   }

@@ -90,7 +90,7 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op, const S
 
   // primitive int <OP> primitive int
   if (left->type()->IsIntegerType() && right->type()->IsIntegerType()) {
-    if (left->type()->size() < right->type()->size()) {
+    if (left->type()->GetSize() < right->type()->GetSize()) {
       auto new_left = ImplCastExprToType(left, right->type(), ast::CastKind::IntegralCast);
       return {right->type(), new_left, right};
     }
@@ -253,7 +253,7 @@ bool Sema::CheckAssignmentConstraints(ast::Type *target_type, ast::Expr *&expr) 
 
   // Integer expansion
   if (target_type->IsIntegerType() && expr->type()->IsIntegerType()) {
-    if (target_type->size() > expr->type()->size()) {
+    if (target_type->GetSize() > expr->type()->GetSize()) {
       expr = ImplCastExprToType(expr, target_type, ast::CastKind::IntegralCast);
     }
     return true;

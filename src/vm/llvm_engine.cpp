@@ -40,13 +40,13 @@ namespace tpl::vm {
 namespace {
 
 bool FunctionHasIndirectReturn(const ast::FunctionType *func_type) {
-  ast::Type *ret_type = func_type->return_type();
-  return (!ret_type->IsNilType() && ret_type->size() > sizeof(int64_t));
+  ast::Type *ret_type = func_type->GetReturnType();
+  return (!ret_type->IsNilType() && ret_type->GetSize() > sizeof(int64_t));
 }
 
 bool FunctionHasDirectReturn(const ast::FunctionType *func_type) {
-  ast::Type *ret_type = func_type->return_type();
-  return (!ret_type->IsNilType() && ret_type->size() <= sizeof(int64_t));
+  ast::Type *ret_type = func_type->GetReturnType();
+  return (!ret_type->IsNilType() && ret_type->GetSize() <= sizeof(int64_t));
 }
 
 }  // namespace
@@ -156,7 +156,7 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
   //
 
   llvm::Type *llvm_type = nullptr;
-  switch (type->type_id()) {
+  switch (type->GetTypeId()) {
     case ast::Type::TypeId::StringType: {
       // These should be pre-filled in type cache!
       UNREACHABLE("Missing default type not found in cache");
@@ -167,14 +167,14 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
     }
     case ast::Type::TypeId::PointerType: {
       auto *ptr_type = type->As<ast::PointerType>();
-      llvm_type = llvm::PointerType::getUnqual(GetLLVMType(ptr_type->base()));
+      llvm_type = llvm::PointerType::getUnqual(GetLLVMType(ptr_type->GetBase()));
       break;
     }
     case ast::Type::TypeId::ArrayType: {
       auto *arr_type = type->As<ast::ArrayType>();
-      llvm::Type *elem_type = GetLLVMType(arr_type->element_type());
+      llvm::Type *elem_type = GetLLVMType(arr_type->GetElementType());
       if (arr_type->HasKnownLength()) {
-        llvm_type = llvm::ArrayType::get(elem_type, arr_type->length());
+        llvm_type = llvm::ArrayType::get(elem_type, arr_type->GetLength());
       } else {
         llvm_type = llvm::PointerType::getUnqual(elem_type);
       }
@@ -206,10 +206,10 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
 }
 
 llvm::Type *LLVMEngine::TypeMap::GetLLVMTypeForBuiltin(const ast::BuiltinType *builtin_type) {
-  TPL_ASSERT(!builtin_type->is_primitive(), "Primitive types should be cached!");
+  TPL_ASSERT(!builtin_type->IsPrimitive(), "Primitive types should be cached!");
 
   // For the builtins, we perform a lookup using the C++ name
-  const std::string name = builtin_type->cpp_name();
+  const std::string name = builtin_type->GetCppName();
 
   // Try "struct" prefix
   if (llvm::Type *type = module_->getTypeByName("struct." + name)) {
@@ -229,7 +229,7 @@ llvm::StructType *LLVMEngine::TypeMap::GetLLVMStructType(const ast::StructType *
   // Collect the fields here
   llvm::SmallVector<llvm::Type *, 8> fields;
 
-  for (const auto &field : struct_type->fields()) {
+  for (const auto &field : struct_type->GetFields()) {
     fields.push_back(GetLLVMType(field.type));
   }
 
@@ -249,19 +249,19 @@ llvm::FunctionType *LLVMEngine::TypeMap::GetLLVMFunctionType(const ast::Function
 
   llvm::Type *return_type = nullptr;
   if (FunctionHasIndirectReturn(func_type)) {
-    llvm::Type *rv_param = GetLLVMType(func_type->return_type()->PointerTo());
+    llvm::Type *rv_param = GetLLVMType(func_type->GetReturnType()->PointerTo());
     param_types.push_back(rv_param);
     // Return type of the function is void
     return_type = VoidType();
   } else {
-    return_type = GetLLVMType(func_type->return_type());
+    return_type = GetLLVMType(func_type->GetReturnType());
   }
 
   //
   // Now the formal parameters
   //
 
-  for (const auto &param_info : func_type->params()) {
+  for (const auto &param_info : func_type->GetParams()) {
     llvm::Type *param_type = GetLLVMType(param_info.type);
     param_types.push_back(param_type);
   }
@@ -299,7 +299,7 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
 
   if (const ast::FunctionType *func_type = func_info.GetFuncType();
       FunctionHasDirectReturn(func_type)) {
-    llvm::Type *ret_type = type_map->GetLLVMType(func_type->return_type());
+    llvm::Type *ret_type = type_map->GetLLVMType(func_type->GetReturnType());
     llvm::Value *val = ir_builder_->CreateAlloca(ret_type);
     params_[func_locals[0].GetOffset()] = val;
     local_idx++;
