@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <string_view>
 
 #include "llvm/ADT/DenseMapInfo.h"
 
@@ -17,23 +18,54 @@ class Identifier {
  public:
   explicit Identifier(const char *str) noexcept : data_(str) {}
 
-  const char *data() const { return data_; }
+  /**
+   * @return A const pointer to this identifier's underlying string data.
+   */
+  const char *GetData() const { return data_; }
 
-  std::size_t length() const {
+  /**
+   * @return The length of this identifier in bytes.
+   */
+  std::size_t GetLength() const {
     TPL_ASSERT(data_ != nullptr, "Trying to get the length of an invalid identifier");
-    return std::strlen(data());
+    return std::strlen(GetData());
   }
 
-  bool empty() const { return length() == 0; }
+  /**
+   * @return True if this identifier is empty; false otherwise.
+   */
+  bool IsEmpty() const { return GetLength() == 0; }
 
-  bool operator==(const Identifier &other) const { return data() == other.data(); }
+  /**
+   * @return A string view over this identifier.
+   */
+  std::string_view GetStringView() const noexcept { return std::string_view(data_, GetLength()); }
 
+  /**
+   * Is this identifier equal to another identifier @em other.
+   * @param other The identifier to compare with.
+   * @return True if equal; false otherwise.
+   */
+  bool operator==(const Identifier &other) const { return GetData() == other.GetData(); }
+
+  /**
+   * Is this identifier not equal to another identifier @em other.
+   * @param other The identifier to compare with.
+   * @return True if not equal; false otherwise.
+   */
   bool operator!=(const Identifier &other) const { return !(*this == other); }
 
+  /**
+   * @return An identifier that can be used to indicate an empty idenfitier.
+   */
   static Identifier GetEmptyKey() {
     return Identifier(static_cast<const char *>(llvm::DenseMapInfo<const void *>::getEmptyKey()));
   }
 
+  /**
+   * @return A tombstone key that can be used to determine deleted keys in LLVM's DenseMap. This
+   *         Identifier cannot equal any valid identifier that can be stored in the map.
+   */
   static Identifier GetTombstoneKey() {
     return Identifier(
         static_cast<const char *>(llvm::DenseMapInfo<const void *>::getTombstoneKey()));
@@ -57,7 +89,8 @@ struct DenseMapInfo<tpl::ast::Identifier> {
   static tpl::ast::Identifier getTombstoneKey() { return tpl::ast::Identifier::GetTombstoneKey(); }
 
   static unsigned getHashValue(const tpl::ast::Identifier identifier) {
-    return DenseMapInfo<const void *>::getHashValue(static_cast<const void *>(identifier.data()));
+    return DenseMapInfo<const void *>::getHashValue(
+        static_cast<const void *>(identifier.GetData()));
   }
 
   static bool isEqual(const tpl::ast::Identifier lhs, const tpl::ast::Identifier rhs) {
@@ -75,7 +108,7 @@ namespace std {
 template <>
 struct hash<tpl::ast::Identifier> {
   std::size_t operator()(const tpl::ast::Identifier &identifier) const noexcept {
-    return std::hash<const char *>()(identifier.data());
+    return std::hash<const char *>()(identifier.GetData());
   }
 };
 

@@ -514,14 +514,14 @@ ast::Expr *Parser::ParseOperand() {
       Next();
       // Convert the number
       char *end = nullptr;
-      int32_t num = std::strtol(GetSymbol().data(), &end, 10);
+      int32_t num = std::strtol(GetSymbol().GetData(), &end, 10);
       return node_factory_->NewIntLiteral(scanner_->current_position(), num);
     }
     case Token::Type::FLOAT: {
       Next();
       // Convert the number
       char *end = nullptr;
-      float num = std::strtof(GetSymbol().data(), &end);
+      float num = std::strtof(GetSymbol().GetData(), &end);
       return node_factory_->NewFloatLiteral(scanner_->current_position(), num);
     }
     case Token::Type::STRING: {
@@ -620,7 +620,7 @@ ast::Expr *Parser::ParseFunctionType() {
       ident = GetSymbol();
     }
 
-    if (Matches(Token::Type::COLON) || ident.data() == nullptr) {
+    if (Matches(Token::Type::COLON) || ident.GetData() == nullptr) {
       type = ParseType();
     } else {
       type = node_factory_->NewIdentifierExpr(field_position, ident);

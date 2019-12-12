@@ -203,7 +203,7 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
   auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
 
   // Allocate the function
-  FunctionInfo *func_info = AllocateFunc(node->name().data(), func_type);
+  FunctionInfo *func_info = AllocateFunc(node->name().GetData(), func_type);
 
   {
     // Visit the body of the function. We use this handy scope object to track
@@ -220,7 +220,7 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   // previous variable declaration (or parameter declaration). What is returned
   // is a pointer to the variable.
 
-  const std::string local_name = node->name().data();
+  const std::string local_name = node->name().GetData();
   LocalVar local = GetCurrentFunction()->LookupLocal(local_name);
 
   if (GetExecutionResult()->IsLValue()) {
@@ -389,7 +389,7 @@ void BytecodeGenerator::VisitVariableDecl(ast::VariableDecl *node) {
   }
 
   // Register this variable in the function as a local
-  LocalVar local = GetCurrentFunction()->NewLocal(type, node->name().data());
+  LocalVar local = GetCurrentFunction()->NewLocal(type, node->name().GetData());
 
   // If there's an initializer, generate code for it now
   if (node->initial() != nullptr) {
@@ -517,7 +517,7 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
     case ast::Builtin::StringToSql: {
       auto string_lit = call->arguments()[0]->As<ast::LitExpr>()->raw_string_val();
       auto static_string = NewStaticString(call->type()->GetContext(), string_lit);
-      GetEmitter()->EmitInitString(dest, static_string, string_lit.length());
+      GetEmitter()->EmitInitString(dest, static_string, string_lit.GetLength());
       break;
     }
     case ast::Builtin::SqlToBool: {
@@ -594,7 +594,7 @@ void BytecodeGenerator::VisitBuiltinTableIterParallelCall(ast::CallExpr *call) {
 
   // Done
   GetEmitter()->EmitParallelTableScan(table->GetId(), exec_ctx, thread_state_container,
-                                      LookupFuncIdByName(scan_fn_name.data()));
+                                      LookupFuncIdByName(scan_fn_name.GetData()));
 }
 
 void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
@@ -795,7 +795,7 @@ void BytecodeGenerator::VisitBuiltinFilterManagerCall(ast::CallExpr *call, ast::
       // Insert all flavors
       for (uint32_t arg_idx = 1; arg_idx < call->num_args(); arg_idx++) {
         const std::string func_name =
-            call->arguments()[arg_idx]->As<ast::IdentifierExpr>()->name().data();
+            call->arguments()[arg_idx]->As<ast::IdentifierExpr>()->name().GetData();
         const FunctionId func_id = LookupFuncIdByName(func_name);
         GetEmitter()->EmitFilterManagerInsertFilter(filter_manager, func_id);
       }
@@ -902,7 +902,7 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call, ast::B
       LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
       LocalVar hash = VisitExpressionForRValue(call->arguments()[1]);
       auto key_eq_fn =
-          LookupFuncIdByName(call->arguments()[2]->As<ast::IdentifierExpr>()->name().data());
+          LookupFuncIdByName(call->arguments()[2]->As<ast::IdentifierExpr>()->name().GetData());
       LocalVar arg = VisitExpressionForRValue(call->arguments()[3]);
       GetEmitter()->EmitAggHashTableLookup(dest, agg_ht, hash, key_eq_fn, arg);
       GetExecutionResult()->SetDestination(dest.ValueOf());
@@ -912,13 +912,13 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call, ast::B
       LocalVar agg_ht = VisitExpressionForRValue(call->arguments()[0]);
       LocalVar iters = VisitExpressionForRValue(call->arguments()[1]);
       auto hash_fn =
-          LookupFuncIdByName(call->arguments()[2]->As<ast::IdentifierExpr>()->name().data());
+          LookupFuncIdByName(call->arguments()[2]->As<ast::IdentifierExpr>()->name().GetData());
       auto key_eq_fn =
-          LookupFuncIdByName(call->arguments()[3]->As<ast::IdentifierExpr>()->name().data());
+          LookupFuncIdByName(call->arguments()[3]->As<ast::IdentifierExpr>()->name().GetData());
       auto init_agg_fn =
-          LookupFuncIdByName(call->arguments()[4]->As<ast::IdentifierExpr>()->name().data());
+          LookupFuncIdByName(call->arguments()[4]->As<ast::IdentifierExpr>()->name().GetData());
       auto merge_agg_fn =
-          LookupFuncIdByName(call->arguments()[5]->As<ast::IdentifierExpr>()->name().data());
+          LookupFuncIdByName(call->arguments()[5]->As<ast::IdentifierExpr>()->name().GetData());
       LocalVar partitioned = VisitExpressionForRValue(call->arguments()[6]);
       GetEmitter()->EmitAggHashTableProcessBatch(agg_ht, iters, hash_fn, key_eq_fn, init_agg_fn,
                                                  merge_agg_fn, partitioned);
@@ -929,7 +929,7 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call, ast::B
       LocalVar tls = VisitExpressionForRValue(call->arguments()[1]);
       LocalVar aht_offset = VisitExpressionForRValue(call->arguments()[2]);
       auto merge_part_fn =
-          LookupFuncIdByName(call->arguments()[3]->As<ast::IdentifierExpr>()->name().data());
+          LookupFuncIdByName(call->arguments()[3]->As<ast::IdentifierExpr>()->name().GetData());
       GetEmitter()->EmitAggHashTableMovePartitions(agg_ht, tls, aht_offset, merge_part_fn);
       break;
     }
@@ -938,7 +938,7 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call, ast::B
       LocalVar ctx = VisitExpressionForRValue(call->arguments()[1]);
       LocalVar tls = VisitExpressionForRValue(call->arguments()[2]);
       auto scan_part_fn =
-          LookupFuncIdByName(call->arguments()[3]->As<ast::IdentifierExpr>()->name().data());
+          LookupFuncIdByName(call->arguments()[3]->As<ast::IdentifierExpr>()->name().GetData());
       GetEmitter()->EmitAggHashTableParallelPartitionedScan(agg_ht, ctx, tls, scan_part_fn);
       break;
     }
@@ -1239,7 +1239,7 @@ void BytecodeGenerator::VisitBuiltinHashTableEntryIteratorCall(ast::CallExpr *ca
     case ast::Builtin::HashTableEntryIterHasNext: {
       LocalVar has_more = GetExecutionResult()->GetOrCreateDestination(call->type());
       const std::string key_eq_func_name =
-          call->arguments()[1]->As<ast::IdentifierExpr>()->name().data();
+          call->arguments()[1]->As<ast::IdentifierExpr>()->name().GetData();
       LocalVar ctx = VisitExpressionForRValue(call->arguments()[2]);
       LocalVar probe_tuple = VisitExpressionForRValue(call->arguments()[3]);
       GetEmitter()->EmitHashTableEntryIteratorHasNext(
@@ -1266,7 +1266,7 @@ void BytecodeGenerator::VisitBuiltinSorterCall(ast::CallExpr *call, ast::Builtin
       LocalVar sorter = VisitExpressionForRValue(call->arguments()[0]);
       LocalVar memory = VisitExpressionForRValue(call->arguments()[1]);
       const std::string cmp_func_name =
-          call->arguments()[2]->As<ast::IdentifierExpr>()->name().data();
+          call->arguments()[2]->As<ast::IdentifierExpr>()->name().GetData();
       LocalVar entry_size = VisitExpressionForRValue(call->arguments()[3]);
       GetEmitter()->EmitSorterInit(Bytecode::SorterInit, sorter, memory,
                                    LookupFuncIdByName(cmp_func_name), entry_size);
@@ -1406,16 +1406,16 @@ void BytecodeGenerator::VisitBuiltinThreadStateContainerCall(ast::CallExpr *call
     case ast::Builtin::ThreadStateContainerIterate: {
       LocalVar ctx = VisitExpressionForRValue(call->arguments()[1]);
       FunctionId iterate_fn =
-          LookupFuncIdByName(call->arguments()[2]->As<ast::IdentifierExpr>()->name().data());
+          LookupFuncIdByName(call->arguments()[2]->As<ast::IdentifierExpr>()->name().GetData());
       GetEmitter()->EmitThreadStateContainerIterate(tls, ctx, iterate_fn);
       break;
     }
     case ast::Builtin::ThreadStateContainerReset: {
       LocalVar entry_size = VisitExpressionForRValue(call->arguments()[1]);
       FunctionId init_fn =
-          LookupFuncIdByName(call->arguments()[2]->As<ast::IdentifierExpr>()->name().data());
+          LookupFuncIdByName(call->arguments()[2]->As<ast::IdentifierExpr>()->name().GetData());
       FunctionId destroy_fn =
-          LookupFuncIdByName(call->arguments()[3]->As<ast::IdentifierExpr>()->name().data());
+          LookupFuncIdByName(call->arguments()[3]->As<ast::IdentifierExpr>()->name().GetData());
       LocalVar ctx = VisitExpressionForRValue(call->arguments()[4]);
       GetEmitter()->EmitThreadStateContainerReset(tls, entry_size, init_fn, destroy_fn, ctx);
       break;
@@ -1714,7 +1714,7 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   }
 
   // Emit call
-  const auto func_id = LookupFuncIdByName(call->GetFuncName().data());
+  const auto func_id = LookupFuncIdByName(call->GetFuncName().GetData());
   TPL_ASSERT(func_id != FunctionInfo::kInvalidFuncId, "Function not found!");
   GetEmitter()->EmitCall(func_id, params);
 }
@@ -2245,7 +2245,7 @@ FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &func_name,
 
   // Register parameters
   for (const auto &param : func_type->GetParams()) {
-    func->NewParameterLocal(param.type, param.name.data());
+    func->NewParameterLocal(param.type, param.name.GetData());
   }
 
   // Cache
@@ -2289,8 +2289,8 @@ LocalVar BytecodeGenerator::NewStaticString(ast::Context *ctx, const ast::Identi
 
   // Create
   auto *type =
-      ast::ArrayType::Get(string.length(), ast::BuiltinType::Get(ctx, ast::BuiltinType::Uint8));
-  auto static_local = NewStatic("stringConst", type, static_cast<const void *>(string.data()));
+      ast::ArrayType::Get(string.GetLength(), ast::BuiltinType::Get(ctx, ast::BuiltinType::Uint8));
+  auto static_local = NewStatic("stringConst", type, static_cast<const void *>(string.GetData()));
 
   // Cache
   static_string_cache_.emplace(string, static_local);

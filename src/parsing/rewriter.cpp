@@ -88,7 +88,7 @@ ast::Stmt *RewriteForInScan(ast::Context *ctx, ast::ForInStmt *for_in) {
   // Declare the TVI
   {
     auto *tvi_decl =
-        DeclareVarNoInit(ctx, pos, tvi_name.data(), ast::BuiltinType::TableVectorIterator);
+        DeclareVarNoInit(ctx, pos, tvi_name.GetData(), ast::BuiltinType::TableVectorIterator);
     statements.push_back(factory->NewDeclStmt(tvi_decl));
   }
 
@@ -117,7 +117,7 @@ ast::Stmt *RewriteForInScan(ast::Context *ctx, ast::ForInStmt *for_in) {
     llvm::SmallVector<ast::Expr *, 1> args = {tvi_addr};
     auto *call = GenCallBuiltin(ctx, pos, ast::Builtin::TableIterGetVPI, args);
     auto vpi_ident = for_in->target()->As<ast::IdentifierExpr>()->name();
-    auto *vpi_decl = DeclareVarNoType(ctx, pos, vpi_ident.data(), call);
+    auto *vpi_decl = DeclareVarNoType(ctx, pos, vpi_ident.GetData(), call);
     body.insert(body.begin(), factory->NewDeclStmt(vpi_decl));
   }
 

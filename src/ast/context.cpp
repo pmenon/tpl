@@ -37,7 +37,7 @@ namespace tpl::ast {
 
 // Compute a hash_code for a field
 llvm::hash_code hash_value(const Field &field) {
-  return llvm::hash_combine(field.name.data(), field.type);
+  return llvm::hash_combine(field.name.GetData(), field.type);
 }
 
 /*

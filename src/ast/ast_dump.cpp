@@ -84,7 +84,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
     out_ << val;
   }
 
-  void DumpIdentifier(Identifier str) { out_.write(str.data(), str.length()); }
+  void DumpIdentifier(Identifier str) { out_.write(str.GetData(), str.GetLength()); }
 
   template <typename Fn>
   void DumpChild(Fn dump_fn) {

@@ -249,7 +249,7 @@ Table *Catalog::LookupTableByName(const std::string &name) const {
 }
 
 Table *Catalog::LookupTableByName(const ast::Identifier name) const {
-  return LookupTableByName(name.data());
+  return LookupTableByName(name.GetData());
 }
 
 Table *Catalog::LookupTableById(uint16_t table_id) const {
