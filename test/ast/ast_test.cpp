@@ -97,8 +97,7 @@ TEST_F(AstTest, HierechyTest) {
   {
     AstNode *all_stmts[] = {
         factory.NewBlockStmt(empty_pos(), empty_pos(), util::RegionVector<Stmt *>(region())),
-        factory.NewDeclStmt(
-            factory.NewVariableDecl(empty_pos(), Identifier(), nullptr, nullptr)),
+        factory.NewDeclStmt(factory.NewVariableDecl(empty_pos(), Identifier(), nullptr, nullptr)),
         factory.NewExpressionStmt(factory.NewNilLiteral(empty_pos())),
         factory.NewForStmt(empty_pos(), nullptr, nullptr, nullptr, nullptr),
         factory.NewIfStmt(empty_pos(), nullptr, nullptr, nullptr),
