@@ -8,14 +8,13 @@
 #include <utility>
 #include <vector>
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/StringMap.h"
-
 #include "ast/ast_node_factory.h"
 #include "ast/builtins.h"
 #include "ast/type.h"
 #include "common/common.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
 #include "sql/execution_context.h"
@@ -50,7 +49,7 @@ struct StructTypeKeyInfo {
 
     explicit KeyTy(const util::RegionVector<Field> &es) : elements(es) {}
 
-    explicit KeyTy(const StructType *struct_type) : elements(struct_type->fields()) {}
+    explicit KeyTy(const StructType *struct_type) : elements(struct_type->GetFields()) {}
 
     bool operator==(const KeyTy &that) const { return elements == that.elements; }
 
@@ -95,7 +94,7 @@ struct FunctionTypeKeyInfo {
         : ret_type(ret_type), params(ps) {}
 
     explicit KeyTy(const FunctionType *func_type)
-        : ret_type(func_type->return_type()), params(func_type->params()) {}
+        : ret_type(func_type->GetReturnType()), params(func_type->GetParams()) {}
 
     bool operator==(const KeyTy &that) const {
       return ret_type == that.ret_type && params == that.params;
@@ -235,7 +234,7 @@ StringType *StringType::Get(Context *ctx) { return ctx->impl()->string_type; }
 
 // static
 PointerType *PointerType::Get(Type *base) {
-  Context *ctx = base->context();
+  Context *ctx = base->GetContext();
 
   PointerType *&pointer_type = ctx->impl()->pointer_types[base];
 
@@ -248,7 +247,7 @@ PointerType *PointerType::Get(Type *base) {
 
 // static
 ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
-  Context *ctx = elem_type->context();
+  Context *ctx = elem_type->GetContext();
 
   ArrayType *&array_type = ctx->impl()->array_types[{elem_type, length}];
 
@@ -261,7 +260,7 @@ ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
 
 // static
 MapType *MapType::Get(Type *key_type, Type *value_type) {
-  Context *ctx = key_type->context();
+  Context *ctx = key_type->GetContext();
 
   MapType *&map_type = ctx->impl()->map_types[{key_type, value_type}];
 
@@ -296,15 +295,15 @@ StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
     util::RegionVector<uint32_t> field_offsets(ctx->region());
     for (const auto &field : fields) {
       // Check if the type needs to be padded
-      uint32_t field_align = field.type->alignment();
+      uint32_t field_align = field.type->GetAlignment();
       if (!util::MathUtil::IsAligned(size, field_align)) {
         size = static_cast<uint32_t>(util::MathUtil::AlignTo(size, field_align));
       }
 
       // Update size and calculate alignment
       field_offsets.push_back(size);
-      size += field.type->size();
-      alignment = std::max(alignment, field.type->alignment());
+      size += field.type->GetSize();
+      alignment = std::max(alignment, field.type->GetAlignment());
     }
 
     // Empty structs have an alignment of 1 byte
@@ -334,12 +333,12 @@ StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
 // static
 StructType *StructType::Get(util::RegionVector<Field> &&fields) {
   TPL_ASSERT(!fields.empty(), "Cannot use StructType::Get(fields) with an empty list of fields");
-  return StructType::Get(fields[0].type->context(), std::move(fields));
+  return StructType::Get(fields[0].type->GetContext(), std::move(fields));
 }
 
 // static
 FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
-  Context *ctx = ret->context();
+  Context *ctx = ret->GetContext();
 
   const FunctionTypeKeyInfo::KeyTy key(ret, params);
 

@@ -452,7 +452,7 @@ void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin)
                                  args[0]->type());
         return;
       }
-      switch (args[0]->type()->GetPointeeType()->As<ast::BuiltinType>()->kind()) {
+      switch (args[0]->type()->GetPointeeType()->As<ast::BuiltinType>()->GetKind()) {
         case ast::BuiltinType::Kind::CountAggregate:
         case ast::BuiltinType::Kind::CountStarAggregate:
         case ast::BuiltinType::Kind::IntegerMaxAggregate:
@@ -644,11 +644,11 @@ void Sema::CheckBuiltinHashTableEntryIterCall(ast::CallExpr *call, ast::Builtin 
 
       // Second argument must be key-equality function
       auto *const key_eq_func_type = args[1]->type()->SafeAs<ast::FunctionType>();
-      if (key_eq_func_type == nullptr || key_eq_func_type->num_params() != 3 ||
-          !key_eq_func_type->return_type()->IsSpecificBuiltin(ast::BuiltinType::Bool) ||
-          !key_eq_func_type->params()[0].type->IsPointerType() ||
-          !key_eq_func_type->params()[1].type->IsPointerType() ||
-          !key_eq_func_type->params()[2].type->IsPointerType()) {
+      if (key_eq_func_type == nullptr || key_eq_func_type->GetNumParams() != 3 ||
+          !key_eq_func_type->GetReturnType()->IsSpecificBuiltin(ast::BuiltinType::Bool) ||
+          !key_eq_func_type->GetParams()[0].type->IsPointerType() ||
+          !key_eq_func_type->GetParams()[1].type->IsPointerType() ||
+          !key_eq_func_type->GetParams()[2].type->IsPointerType()) {
         error_reporter()->Report(call->position(),
                                  ErrorMessages::kBadKeyEqualityCheckFunctionForJoinTableLookup,
                                  args[1]->type());
@@ -846,7 +846,7 @@ void Sema::CheckBuiltinTableIterParCall(ast::CallExpr *call) {
   }
   // Check type
   const auto tvi_kind = ast::BuiltinType::TableVectorIterator;
-  const auto &params = scan_fn_type->params();
+  const auto &params = scan_fn_type->GetParams();
   if (params.size() != 3 || !params[0].type->IsPointerType() || !params[1].type->IsPointerType() ||
       !IsPointerToSpecificBuiltin(params[2].type, tvi_kind)) {
     error_reporter()->Report(call->position(), ErrorMessages::kBadParallelScanFunction,
@@ -1053,9 +1053,9 @@ void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call, const ast::B
         const auto vector_proj_kind = ast::BuiltinType::VectorProjection;
         const auto tid_list_kind = ast::BuiltinType::TupleIdList;
         auto *arg_type = call->arguments()[arg_idx]->type()->SafeAs<ast::FunctionType>();
-        if (arg_type == nullptr || arg_type->num_params() != 2 ||
-            !IsPointerToSpecificBuiltin(arg_type->params()[0].type, vector_proj_kind) ||
-            !IsPointerToSpecificBuiltin(arg_type->params()[1].type, tid_list_kind)) {
+        if (arg_type == nullptr || arg_type->GetNumParams() != 2 ||
+            !IsPointerToSpecificBuiltin(arg_type->GetParams()[0].type, vector_proj_kind) ||
+            !IsPointerToSpecificBuiltin(arg_type->GetParams()[1].type, tid_list_kind)) {
           error_reporter()->Report(call->position(), ErrorMessages::kIncorrectCallArgType,
                                    call->GetFuncName(), GetBuiltinType(fm_kind)->PointerTo(),
                                    arg_idx, call->arguments()[arg_idx]->type());
@@ -1282,10 +1282,10 @@ void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
 
   // Second argument must be a function
   auto *const cmp_func_type = args[2]->type()->SafeAs<ast::FunctionType>();
-  if (cmp_func_type == nullptr || cmp_func_type->num_params() != 2 ||
-      !cmp_func_type->return_type()->IsSpecificBuiltin(ast::BuiltinType::Int32) ||
-      !cmp_func_type->params()[0].type->IsPointerType() ||
-      !cmp_func_type->params()[1].type->IsPointerType()) {
+  if (cmp_func_type == nullptr || cmp_func_type->GetNumParams() != 2 ||
+      !cmp_func_type->GetReturnType()->IsSpecificBuiltin(ast::BuiltinType::Int32) ||
+      !cmp_func_type->GetParams()[0].type->IsPointerType() ||
+      !cmp_func_type->GetParams()[1].type->IsPointerType()) {
     error_reporter()->Report(call->position(), ErrorMessages::kBadComparisonFunctionForSorter,
                              args[2]->type());
     return;

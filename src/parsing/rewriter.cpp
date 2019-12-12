@@ -34,7 +34,7 @@ ast::Decl *DeclareVarNoInit(ast::Context *ctx, SourcePosition pos, const std::st
 ast::Decl *DeclareVarNoInit(ast::Context *ctx, SourcePosition pos, const std::string &name,
                             ast::BuiltinType::Kind kind) {
   auto *type = ast::BuiltinType::Get(ctx, kind);
-  auto type_ident = ctx->GetIdentifier(type->tpl_name());
+  auto type_ident = ctx->GetIdentifier(type->GetTplName());
   auto type_expr = ctx->node_factory()->NewIdentifierExpr(pos, type_ident);
   return DeclareVarNoInit(ctx, pos, name, type_expr);
 }

@@ -133,10 +133,10 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
 
   auto *func_type = current_function()->type()->As<ast::FunctionType>();
 
-  if (func_type->return_type()->IsNilType()) {
+  if (func_type->GetReturnType()->IsNilType()) {
     if (return_type != nullptr) {
       error_reporter_->Report(node->position(), ErrorMessages::kMismatchedReturnType, return_type,
-                              func_type->return_type());
+                              func_type->GetReturnType());
     }
     return;
   }
@@ -151,9 +151,9 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
   }
 
   ast::Expr *ret = node->ret();
-  if (!CheckAssignmentConstraints(func_type->return_type(), ret)) {
+  if (!CheckAssignmentConstraints(func_type->GetReturnType(), ret)) {
     error_reporter_->Report(node->position(), ErrorMessages::kMismatchedReturnType, return_type,
-                            func_type->return_type());
+                            func_type->GetReturnType());
     return;
   }
 

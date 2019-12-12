@@ -15,7 +15,7 @@ namespace tpl::vm {
 
 LocalInfo::LocalInfo(std::string name, ast::Type *type, uint32_t offset,
                      LocalInfo::Kind kind) noexcept
-    : name_(std::move(name)), type_(type), offset_(offset), size_(type->size()), kind_(kind) {}
+    : name_(std::move(name)), type_(type), offset_(offset), size_(type->GetSize()), kind_(kind) {}
 
 // ---------------------------------------------------------
 // Function Information
@@ -36,14 +36,14 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name, LocalI
   TPL_ASSERT(!name.empty(), "Local name cannot be empty");
 
   // Bump size to account for the alignment of the new local
-  if (!util::MathUtil::IsAligned(frame_size_, type->alignment())) {
-    frame_size_ = util::MathUtil::AlignTo(frame_size_, type->alignment());
+  if (!util::MathUtil::IsAligned(frame_size_, type->GetAlignment())) {
+    frame_size_ = util::MathUtil::AlignTo(frame_size_, type->GetAlignment());
   }
 
   const auto offset = static_cast<uint32_t>(frame_size_);
   locals_.emplace_back(name, type, offset, kind);
 
-  frame_size_ += type->size();
+  frame_size_ += type->GetSize();
 
   return LocalVar(offset, LocalVar::AddressMode::Address);
 }
@@ -66,7 +66,7 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name) {
 
 LocalVar FunctionInfo::GetReturnValueLocal() const {
   // This invocation only makes sense if the function actually returns a value
-  TPL_ASSERT(!func_type_->return_type()->IsNilType(),
+  TPL_ASSERT(!func_type_->GetReturnType()->IsNilType(),
              "Cannot lookup local slot for function that does not have return value");
   return LocalVar(0u, LocalVar::AddressMode::Address);
 }

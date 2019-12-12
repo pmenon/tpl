@@ -72,7 +72,7 @@ class TestAstBuilder {
 
   template <BuiltinType::Kind BUILTIN>
   Expr *BuiltinTypeRepr() {
-    return IdentExpr(BuiltinType::Get(ctx(), BUILTIN)->tpl_name());
+    return IdentExpr(BuiltinType::Get(ctx(), BUILTIN)->GetTplName());
   }
 
   Expr *PrimIntTypeRepr() { return BuiltinTypeRepr<BuiltinType::Int32>(); }

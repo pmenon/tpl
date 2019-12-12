@@ -1,11 +1,9 @@
-#include "ast/type.h"
-
 #include <string>
 
+#include "ast/type.h"
+#include "ast/type_visitor.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include "ast/type_visitor.h"
 
 namespace tpl::ast {
 
@@ -32,12 +30,14 @@ class TypePrinter : public TypeVisitor<TypePrinter> {
   llvm::raw_ostream &out_;
 };
 
-void tpl::ast::TypePrinter::VisitBuiltinType(const BuiltinType *type) { os() << type->tpl_name(); }
+void tpl::ast::TypePrinter::VisitBuiltinType(const BuiltinType *type) {
+  os() << type->GetTplName();
+}
 
 void TypePrinter::VisitFunctionType(const FunctionType *type) {
   os() << "(";
   bool first = true;
-  for (const auto &param : type->params()) {
+  for (const auto &param : type->GetParams()) {
     if (!first) {
       os() << ",";
     }
@@ -45,20 +45,20 @@ void TypePrinter::VisitFunctionType(const FunctionType *type) {
     Visit(param.type);
   }
   os() << ")->";
-  Visit(type->return_type());
+  Visit(type->GetReturnType());
 }
 
 void TypePrinter::VisitStringType(const StringType *type) { os() << "string"; }
 
 void TypePrinter::VisitPointerType(const PointerType *type) {
   os() << "*";
-  Visit(type->base());
+  Visit(type->GetBase());
 }
 
 void TypePrinter::VisitStructType(const StructType *type) {
   os() << "struct{";
   bool first = true;
-  for (const auto &field : type->fields()) {
+  for (const auto &field : type->GetFields()) {
     if (!first) {
       os() << ",";
     }
@@ -73,17 +73,17 @@ void TypePrinter::VisitArrayType(const ArrayType *type) {
   if (type->HasUnknownLength()) {
     os() << "*";
   } else {
-    os() << type->length();
+    os() << type->GetLength();
   }
   os() << "]";
-  Visit(type->element_type());
+  Visit(type->GetElementType());
 }
 
 void tpl::ast::TypePrinter::VisitMapType(const MapType *type) {
   os() << "map[";
-  Visit(type->key_type());
+  Visit(type->GetKeyType());
   os() << "]";
-  Visit(type->value_type());
+  Visit(type->GetValueType());
 }
 
 }  // namespace

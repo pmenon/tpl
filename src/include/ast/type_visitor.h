@@ -22,9 +22,11 @@ class TypeVisitor {
   case Type::TypeId::TypeClass: \
     DISPATCH(TypeClass)
 
-    switch (type->type_id()) {
+    switch (type->GetTypeId()) {
       TYPE_LIST(T)
-      default: { UNREACHABLE("Impossible node type"); }
+      default: {
+        UNREACHABLE("Impossible node type");
+      }
 
 #undef T
     }
