@@ -5,12 +5,26 @@
 namespace tpl::ast {
 
 /**
- * Generic visitor for type hierarchies.
+ * Base class for TPL type hierarchy visitors. Uses the Curiously Recurring Template Pattern (CRTP)
+ * to avoid overhead of virtual function dispatch. Made possible because we keep a static,
+ * macro-based list of all possible TPL types.
+ *
+ * Derived classes parameterize TypeVisitor with itself, e.g.:
+ *
+ * @code
+ * class Derived : public TypeVisitor<Derived> {
+ *   ...
+ * }
+ * @endcode
+ *
+ * All type visitations will get forwarded to the derived class, if they are implemented, and falls
+ * back to this base class otherwise. To easily define visitors for all nodes, use the TYPE_LIST()
+ * macro providing a function generator argument.
  */
 template <typename Subclass, typename RetType = void>
 class TypeVisitor {
  public:
-#define DISPATCH(Type) return this->Impl()->Visit##Type(static_cast<const Type *>(type));
+#define DISPATCH(Type) return this->Impl()->Visit##Type(static_cast<const Type *>(type));  // NOLINT
 
   /**
    * Begin type traversal at the given type node.
@@ -18,32 +32,24 @@ class TypeVisitor {
    * @return Template-specific return type.
    */
   RetType Visit(const Type *type) {
-#define T(TypeClass)            \
-  case Type::TypeId::TypeClass: \
+#define GEN_VISIT_CASE(TypeClass) \
+  case Type::TypeId::TypeClass:   \
     DISPATCH(TypeClass)
 
+    // Main switch
     switch (type->GetTypeId()) {
-      TYPE_LIST(T)
-      default: {
+      TYPE_LIST(GEN_VISIT_CASE)
+      default:
         UNREACHABLE("Impossible node type");
-      }
-
-#undef T
     }
+
+#undef GEN_VISIT_CASE
   }
 
-  /**
-   * No-op base implementation for all type nodes.
-   * @param type The type to visit.
-   * @return No-arg constructed return.
-   */
-  RetType VisitType(UNUSED const Type *type) { return RetType(); }
-
-#define T(Type) \
-  RetType Visit##Type(const Type *type) { DISPATCH(Type); }
-  TYPE_LIST(T)
-#undef T
-
+#define GEN_VISIT_TYPE(TypeClass) \
+  RetType Visit##TypeClass(const TypeClass *type) { DISPATCH(TypeClass); }
+  TYPE_LIST(GEN_VISIT_TYPE)
+#undef GEN_VISIT_TYPE
 #undef DISPATCH
 
  protected:

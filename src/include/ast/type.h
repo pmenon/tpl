@@ -210,13 +210,45 @@ class Type : public util::RegionObject {
   TYPE_LIST(F)
 #undef F
 
+  /**
+   * @return True if this type is arithmetic. Arithmetic types are 8-bit, 16-bit, 32-bit, or 64-bit
+   *         signed and unsigned integer types, or 32- or 64-bit floating point types.
+   */
   bool IsArithmetic() const;
-  bool IsSpecificBuiltin(uint16_t kind) const;
-  bool IsNilType() const;
-  bool IsBoolType() const;
+
+  /**
+   * @return True if this is a 8-bit, 16-bit, 32-bit, or 64-bit signed or unsigned TPL integer type.
+   */
   bool IsIntegerType() const;
+
+  /**
+   * @return True if this is a 32-bit or 64-bit floating point type; false otherwise.
+   */
   bool IsFloatType() const;
+
+  /**
+   * @return True if this type is a specific builtin; false otherwise.
+   */
+  bool IsSpecificBuiltin(uint16_t kind) const;
+
+  /**
+   * @return True if this is a TPL nil; false otherwise.
+   */
+  bool IsNilType() const;
+
+  /**
+   * @return True if this is a TPL boolean type; false otherwise.
+   */
+  bool IsBoolType() const;
+
+  /**
+   * @return True if this is a builtin SQL value type; false otherwise.
+   */
   bool IsSqlValueType() const;
+
+  /**
+   * @return True if this is a builtin SQL aggregate type; false otherwise.
+   */
   bool IsSqlAggregatorType() const;
 
   /**

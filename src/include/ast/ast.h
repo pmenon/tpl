@@ -925,7 +925,7 @@ class MemberExpr : public Expr {
 };
 
 /**
- * A unary expression with a non-null inner expression and an operator
+ * A unary expression with a non-null inner expression and an operator.
  */
 class UnaryOpExpr : public Expr {
  public:
@@ -947,15 +947,13 @@ class UnaryOpExpr : public Expr {
 // Type Representation Nodes
 // ---------------------------------------------------------
 
-//
 // Type representation nodes. A type representation is a thin representation of
 // how the type appears in code. They are structurally the same as their full
 // blown Type counterparts, but we use the expressions to defer their type
 // resolution.
-//
 
 /**
- * Arrau Type
+ * Array type.
  */
 class ArrayTypeRepr : public Expr {
  public:
@@ -976,7 +974,7 @@ class ArrayTypeRepr : public Expr {
 };
 
 /**
- * Function type
+ * Function type.
  */
 class FunctionTypeRepr : public Expr {
  public:
@@ -998,7 +996,7 @@ class FunctionTypeRepr : public Expr {
 };
 
 /**
- * Map types
+ * Map type.
  */
 class MapTypeRepr : public Expr {
  public:
@@ -1017,7 +1015,7 @@ class MapTypeRepr : public Expr {
 };
 
 /**
- * Pointer type
+ * Pointer type.
  */
 class PointerTypeRepr : public Expr {
  public:
@@ -1033,7 +1031,7 @@ class PointerTypeRepr : public Expr {
 };
 
 /**
- * Struct type
+ * Struct type.
  */
 class StructTypeRepr : public Expr {
  public:
