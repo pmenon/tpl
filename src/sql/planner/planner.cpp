@@ -14,11 +14,13 @@
 #include "sql/planner/plannodes/abstract_plan_node.h"
 #include "sql/planner/plannodes/abstract_scan_plan_node.h"
 #include "sql/planner/plannodes/aggregate_plan_node.h"
+#include "sql/planner/plannodes/csv_scan_plan_node.h"
 #include "sql/planner/plannodes/hash_join_plan_node.h"
 #include "sql/planner/plannodes/nested_loop_join_plan_node.h"
 #include "sql/planner/plannodes/order_by_plan_node.h"
 #include "sql/planner/plannodes/output_schema.h"
 #include "sql/planner/plannodes/plan_node_defs.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
+#include "sql/planner/plannodes/set_op_plan_node.h"
 
 namespace tpl::sql::planner {}

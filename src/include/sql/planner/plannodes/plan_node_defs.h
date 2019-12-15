@@ -90,4 +90,26 @@ enum class LogicalJoinType {
   SEMI = 5                    // IN+Subquery is SEMI
 };
 
+//===--------------------------------------------------------------------===//
+// Set Operation Types
+//===--------------------------------------------------------------------===//
+
+enum class SetOpType {
+  INVALID = INVALID_TYPE_ID,
+  INTERSECT = 1,
+  INTERSECT_ALL = 2,
+  EXCEPT = 3,
+  EXCEPT_ALL = 4
+};
+
+//===--------------------------------------------------------------------===//
+// CSV scan defaults
+//===--------------------------------------------------------------------===//
+
+static constexpr char kDefaultCsvDelimiterChar = ',';
+static constexpr char kDefaultCsvQuoteChar = '"';
+static constexpr char kDefaultCsvEscapeChar = '"';
+static constexpr const char *kDefaultCsvNullString = "";
+
+
 }  // namespace tpl::sql::planner
