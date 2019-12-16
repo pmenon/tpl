@@ -1,9 +1,6 @@
 #pragma once
 
-#include <cstdint>
 #include <memory>
-#include <string>
-#include <utility>
 #include <vector>
 
 #include "sql/planner/plannodes/output_schema.h"
@@ -66,10 +63,14 @@ class AbstractPlanNode {
       : children_(std::move(children)), output_schema_(std::move(output_schema)) {}
 
  public:
-  AbstractPlanNode() = default;
-
+  /**
+   * Plans cannot be copied or moved.
+   */
   DISALLOW_COPY_AND_MOVE(AbstractPlanNode)
 
+  /**
+   * Destructor.
+   */
   virtual ~AbstractPlanNode() = default;
 
   /**
@@ -111,7 +112,9 @@ class AbstractPlanNode {
   const OutputSchema *GetOutputSchema() const { return output_schema_.get(); }
 
  private:
+  // The children of the plan.
   std::vector<std::unique_ptr<AbstractPlanNode>> children_;
+  // The output schema of the plan.
   std::unique_ptr<OutputSchema> output_schema_;
 };
 
