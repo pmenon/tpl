@@ -1,8 +1,5 @@
 #pragma once
 
-#include <utility>
-#include <vector>
-
 namespace tpl::sql::planner {
 
 constexpr int INVALID_TYPE_ID = 0;
@@ -62,9 +59,15 @@ enum class PlanNodeType {
   MOCK
 };
 
+/**
+ * @return A string representation for the given node type @em type.
+ */
+std::string PlanNodeTypeToString(PlanNodeType type);
+
 //===--------------------------------------------------------------------===//
-// Aggregate Stragegies
+// Aggregate Strategies
 //===--------------------------------------------------------------------===//
+
 enum class AggregateStrategyType {
   INVALID = INVALID_TYPE_ID,
   SORTED = 1,
@@ -73,7 +76,7 @@ enum class AggregateStrategyType {
 };
 
 //===--------------------------------------------------------------------===//
-// Order by Orderings
+// Order-by Orderings
 //===--------------------------------------------------------------------===//
 
 enum class OrderByOrderingType { ASC, DESC };
@@ -81,6 +84,7 @@ enum class OrderByOrderingType { ASC, DESC };
 //===--------------------------------------------------------------------===//
 // Logical Join Types
 //===--------------------------------------------------------------------===//
+
 enum class LogicalJoinType {
   INVALID = INVALID_TYPE_ID,  // invalid join type
   LEFT = 1,                   // left
