@@ -53,7 +53,12 @@ namespace tpl {
    * The minimum bit vector density before using a SIMD decoding algorithm.                        \
    */                                                                                              \
   COMPUTED(BitDensityThresholdForAVXIndexDecode, float,                                            \
-           DeriveMinBitDensityThresholdForAvxIndexDecode)
+           DeriveMinBitDensityThresholdForAvxIndexDecode)                                          \
+                                                                                                   \
+  /*                                                                                               \
+   * Flag indicating if parallel execution is supported.                                           \
+   */                                                                                              \
+  CONST(ParallelQueryExecution, bool, true)
 
 class Settings {
  public:
