@@ -115,5 +115,4 @@ static constexpr char kDefaultCsvQuoteChar = '"';
 static constexpr char kDefaultCsvEscapeChar = '"';
 static constexpr const char *kDefaultCsvNullString = "";
 
-
 }  // namespace tpl::sql::planner
