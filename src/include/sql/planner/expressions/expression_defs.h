@@ -2,7 +2,6 @@
 
 #include <string>
 
-#include "common/exception.h"
 #include "common/macros.h"
 
 namespace tpl::sql::planner {
@@ -76,11 +75,11 @@ enum class ExpressionType : uint8_t {
 };
 
 /**
- * When short_str is true, return a short version of ExpressionType string
- * For example, + instead of Operator_Plus. It's used to generate the expression name
- * @param type Expression Type
- * @param short_str Flag if a short version of the Expression Type should be returned
- * @return String representation of the Expression Type
+ * Convert an expression type into a string representation. When short_str is true, return a short
+ * version of ExpressionType string. For example, "+" instead of "Operator_Plus".
+ * @param type The expression type.
+ * @param short_str If a terse version of the expression type should be returned.
+ * @return A representation of the expression type.
  */
 std::string ExpressionTypeToString(ExpressionType type, bool short_str);
 

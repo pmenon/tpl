@@ -36,10 +36,12 @@ class OutputSchema {
      * @return SQL type for this column
      */
     sql::TypeId GetType() const { return type_; }
+
     /**
      * @return true if the column is nullable, false otherwise
      */
     bool GetNullable() const { return nullable_; }
+
     /**
      * @return the expression of this column.
      */
