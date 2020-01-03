@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace tpl::sql::planner {
 
 constexpr int INVALID_TYPE_ID = 0;
