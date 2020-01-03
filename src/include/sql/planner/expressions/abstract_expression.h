@@ -1,6 +1,5 @@
 #pragma once
 
-#include <utility>
 #include <vector>
 
 #include "sql/planner/expressions/expression_defs.h"
@@ -38,31 +37,33 @@ class AbstractExpression {
   void SetReturnValueType(TypeId return_value_type) { return_value_type_ = return_value_type; }
 
  public:
+  /**
+   * Destructor.
+   */
   virtual ~AbstractExpression() = default;
 
   /**
-   * @return type of this expression
+   * @return The type of this expression.
    */
   ExpressionType GetExpressionType() const { return expression_type_; }
 
   /**
-   * @return type of the return value
+   * @return The SQL type of value this expression produces and returns.
    */
   TypeId GetReturnValueType() const { return return_value_type_; }
 
   /**
-   * @return number of children in this abstract expression
+   * @return The number of children the expression has.
    */
   size_t GetChildrenSize() const { return children_.size(); }
 
   /**
-   * @return children of this abstract expression
+   * @return A const view of this expression's children.
    */
   const std::vector<const AbstractExpression *> &GetChildren() const { return children_; }
 
   /**
-   * @param index index of child
-   * @return child of abstract expression at that index
+   * @return The n-th child of this expression.
    */
   const AbstractExpression *GetChild(uint64_t index) const {
     TPL_ASSERT(index < children_.size(), "Index must be in bounds.");
@@ -72,19 +73,11 @@ class AbstractExpression {
   virtual void DeriveReturnValueType() {}
 
  private:
-  /**
-   * Type of the current expression
-   */
+  // The expression type.
   ExpressionType expression_type_;
-
-  /**
-   * Type of the return value
-   */
+  // The expression's return type.
   TypeId return_value_type_;
-
-  /**
-   * List fo children expressions
-   */
+  // List fo children expressions.
   std::vector<const AbstractExpression *> children_;
 };
 

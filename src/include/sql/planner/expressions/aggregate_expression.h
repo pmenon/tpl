@@ -24,14 +24,12 @@ class AggregateExpression : public AbstractExpression {
         distinct_(distinct) {}
 
   /**
-   * @return true if we should eliminate duplicate values in aggregate function calculations
+   * @return true if we should eliminate duplicate values in aggregate function calculations.
    */
   bool IsDistinct() const { return distinct_; }
 
  private:
-  /**
-   * If duplicate rows will be removed
-   */
+  // If duplicate rows will be removed.
   bool distinct_;
 };
 

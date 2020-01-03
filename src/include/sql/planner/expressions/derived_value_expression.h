@@ -23,24 +23,20 @@ class DerivedValueExpression : public AbstractExpression {
         value_idx_(value_idx) {}
 
   /**
-   * @return index of the tuple
+   * @return The index of the tuple.
    */
   int32_t GetTupleIdx() const { return tuple_idx_; }
 
   /**
-   * @return offset of the value in the tuple
+   * @return The offset of the value in the tuple.
    */
   int32_t GetValueIdx() const { return value_idx_; }
 
  private:
-  /**
-   * Index of the tuple
-   */
+  // Index of the tuple.
   int32_t tuple_idx_;
-
-  /**
-   * Offset of the value in the tuple
-   */
+  // Offset of the value in the tuple.
   int32_t value_idx_;
 };
+
 }  // namespace tpl::sql::planner

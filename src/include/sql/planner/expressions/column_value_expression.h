@@ -1,8 +1,5 @@
 #pragma once
 
-#include <string>
-#include <utility>
-
 #include "sql/planner/expressions/abstract_expression.h"
 
 namespace tpl::sql::planner {
@@ -21,9 +18,7 @@ class ColumnValueExpression : public AbstractExpression {
   uint16_t GetColumnOid() const { return column_oid_; }
 
  private:
-  /**
-   * OID of the column
-   */
+  // OID of the column.
   uint16_t column_oid_;
 };
 
