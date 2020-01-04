@@ -13,6 +13,7 @@ Checks:     '
             -google-readability-namespace-comments,
             -google-runtime-references,
             -readability-braces-around-statements,
+            -modernize-use-trailing-return-type,
             '
 WarningsAsErrors: '*'
 HeaderFilterRegex: '$(benchmark|src|test)/include'
