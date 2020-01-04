@@ -143,7 +143,7 @@ void AstPrettyPrintImpl::VisitAssignmentStmt(AssignmentStmt *node) {
 }
 
 void AstPrettyPrintImpl::VisitFile(File *node) {
-  for (auto *decl : node->declarations()) {
+  for (auto *decl : node->GetDeclarations()) {
     Visit(decl);
   }
 }

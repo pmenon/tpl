@@ -171,7 +171,7 @@ inline void AstTraversalVisitor<Subclass>::VisitAssignmentStmt(AssignmentStmt *n
 template <typename Subclass>
 inline void AstTraversalVisitor<Subclass>::VisitFile(File *node) {
   PROCESS_NODE(node);
-  for (auto *decl : node->declarations()) {
+  for (auto *decl : node->GetDeclarations()) {
     RECURSE(Visit(decl));
   }
 }

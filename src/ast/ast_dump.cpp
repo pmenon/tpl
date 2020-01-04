@@ -156,7 +156,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
 void AstDumperImpl::VisitFile(File *node) {
   DumpNodeCommon(node);
   DumpChild([=] {
-    for (auto *decl : node->declarations()) {
+    for (auto *decl : node->GetDeclarations()) {
       DumpDecl(decl);
     }
   });

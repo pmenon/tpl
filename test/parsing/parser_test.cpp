@@ -37,10 +37,10 @@ TEST_F(ParserTest, RegularForStmtTest) {
 
   // No errors, move down AST
   ASSERT_TRUE(ast->IsFile());
-  ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->declarations().size());
+  ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->GetDeclarations().size());
 
   // Only one function decl
-  auto *decl = ast->As<ast::File>()->declarations()[0];
+  auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
   ASSERT_TRUE(decl->IsFunctionDecl());
 
   auto *func_decl = decl->As<ast::FunctionDecl>();
@@ -94,10 +94,10 @@ TEST_F(ParserTest, ExhaustiveForStmtTest) {
 
     // No errors, move down AST
     ASSERT_TRUE(ast->IsFile());
-    ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->declarations().size());
+    ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->GetDeclarations().size());
 
     // Only one function decl
-    auto *decl = ast->As<ast::File>()->declarations()[0];
+    auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
     ASSERT_TRUE(decl->IsFunctionDecl());
 
     auto *func_decl = decl->As<ast::FunctionDecl>();
@@ -131,10 +131,10 @@ TEST_F(ParserTest, RegularForStmt_NoInitTest) {
 
   // No errors, move down AST
   ASSERT_TRUE(ast->IsFile());
-  ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->declarations().size());
+  ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->GetDeclarations().size());
 
   // Only one function decl
-  auto *decl = ast->As<ast::File>()->declarations()[0];
+  auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
   ASSERT_TRUE(decl->IsFunctionDecl());
 
   auto *func_decl = decl->As<ast::FunctionDecl>();
@@ -184,10 +184,10 @@ TEST_F(ParserTest, RegularForStmt_WhileTest) {
 
     // No errors, move down AST
     ASSERT_TRUE(ast->IsFile());
-    ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->declarations().size());
+    ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->GetDeclarations().size());
 
     // Only one function decl
-    auto *decl = ast->As<ast::File>()->declarations()[0];
+    auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
     ASSERT_TRUE(decl->IsFunctionDecl());
 
     auto *func_decl = decl->As<ast::FunctionDecl>();
@@ -227,10 +227,10 @@ TEST_F(ParserTest, RegularForInStmtTest) {
 
   // No errors, move down AST
   ASSERT_TRUE(ast->IsFile());
-  ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->declarations().size());
+  ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->GetDeclarations().size());
 
   // Only one function decl
-  auto *decl = ast->As<ast::File>()->declarations()[0];
+  auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
   ASSERT_TRUE(decl->IsFunctionDecl());
 
   auto *func_decl = decl->As<ast::FunctionDecl>();

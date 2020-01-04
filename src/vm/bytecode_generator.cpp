@@ -1735,7 +1735,7 @@ void BytecodeGenerator::VisitAssignmentStmt(ast::AssignmentStmt *node) {
 }
 
 void BytecodeGenerator::VisitFile(ast::File *node) {
-  for (auto *decl : node->declarations()) {
+  for (auto *decl : node->GetDeclarations()) {
     Visit(decl);
   }
 }

@@ -41,7 +41,7 @@ void Sema::VisitBlockStmt(ast::BlockStmt *node) {
 void Sema::VisitFile(ast::File *node) {
   SemaScope file_scope(this, Scope::Kind::File);
 
-  for (auto *decl : node->declarations()) {
+  for (auto *decl : node->GetDeclarations()) {
     Visit(decl);
   }
 }
