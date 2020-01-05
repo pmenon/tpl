@@ -108,7 +108,7 @@ AST_NODES(FORWARD_DECLARE)
  * All AST nodes have a "kind" that represents as an ID indicating the specific kind of AST node it
  * is (i.e., an if-statement, loop, or a binary expression). You can query the node for its kind,
  * but it's usually more informative and clear to use Is(). We use kind instead of type to not
- * confuse the type of TPL AST node it is, and it's resolved TPL type as it appeas in TPL code.
+ * confuse the type of TPL AST node it is, and it's resolved TPL type as it appears in TPL code.
  */
 class AstNode : public util::RegionObject {
  public:
@@ -120,7 +120,7 @@ class AstNode : public util::RegionObject {
   /**
    * @return The kind of this node.
    */
-  Kind kind() const { return kind_; }
+  Kind GetKind() const { return kind_; }
 
   /**
    * @return The position in the source where this element was found.
@@ -137,7 +137,7 @@ class AstNode : public util::RegionObject {
 
     // Main type switch
     // clang-format off
-    switch (kind()) {
+    switch (GetKind()) {
       default: { UNREACHABLE("Impossible kind name"); }
       AST_NODES(KIND_CASE)
     }
@@ -213,7 +213,7 @@ class File : public AstNode {
    * @param node The node to check.
    * @return True if the node is a file; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::File; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::File; }
 
  private:
   // The declarations.
@@ -249,7 +249,7 @@ class Decl : public AstNode {
    * @return True if the node is a declaration; false otherwise.
    */
   static bool classof(const AstNode *node) {
-    return node->kind() >= Kind::FieldDecl && node->kind() <= Kind::VariableDecl;
+    return node->GetKind() >= Kind::FieldDecl && node->GetKind() <= Kind::VariableDecl;
   }
 
  private:
@@ -272,7 +272,7 @@ class FieldDecl : public Decl {
    * @param node The node to check.
    * @return True if the node is a field; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::FieldDecl; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FieldDecl; }
 };
 
 /**
@@ -292,7 +292,7 @@ class FunctionDecl : public Decl {
    * @param node The node to check.
    * @return True if the node is a function declaration; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::FunctionDecl; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FunctionDecl; }
 
  private:
   // The function definition (signature and body).
@@ -311,7 +311,7 @@ class StructDecl : public Decl {
    * @param node The node to check.
    * @return True if the node is a struct declaration; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::StructDecl; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::StructDecl; }
 };
 
 /**
@@ -343,7 +343,7 @@ class VariableDecl : public Decl {
    * @param node The node to check.
    * @return True if the node is a variable declaration; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::VariableDecl; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::VariableDecl; }
 
  private:
   friend class sema::Sema;
@@ -378,7 +378,7 @@ class Stmt : public AstNode {
    * @return True if the node is a statement; false otherwise.
    */
   static bool classof(const AstNode *node) {
-    return node->kind() >= Kind::AssignmentStmt && node->kind() <= Kind::ReturnStmt;
+    return node->GetKind() >= Kind::AssignmentStmt && node->GetKind() <= Kind::ReturnStmt;
   }
 };
 
@@ -405,7 +405,7 @@ class AssignmentStmt : public Stmt {
    * @param node The node to check.
    * @return True if the node is a assignment; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::AssignmentStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::AssignmentStmt; }
 
  private:
   friend class sema::Sema;
@@ -454,7 +454,7 @@ class BlockStmt : public Stmt {
    * @param node The node to check.
    * @return True if the node is a statement list; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::BlockStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::BlockStmt; }
 
  private:
   // The right brace position.
@@ -480,7 +480,7 @@ class DeclStmt : public Stmt {
    * @param node The node to check.
    * @return True if the node is a declaration; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::DeclStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::DeclStmt; }
 
  private:
   // The wrapped declaration.
@@ -504,7 +504,7 @@ class ExpressionStmt : public Stmt {
    * @param node The node to check.
    * @return True if the node is an expression; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::ExpressionStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ExpressionStmt; }
 
  private:
   // The wrapped expression.
@@ -530,7 +530,7 @@ class IterationStmt : public Stmt {
    * @return True if the node is an iteration; false otherwise.
    */
   static bool classof(const AstNode *node) {
-    return node->kind() >= Kind::ForStmt && node->kind() <= Kind::ForInStmt;
+    return node->GetKind() >= Kind::ForStmt && node->GetKind() <= Kind::ForInStmt;
   }
 
  private:
@@ -566,7 +566,7 @@ class ForStmt : public IterationStmt {
    * @param node The node to check.
    * @return True if the node is a for loop; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::ForStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ForStmt; }
 
  private:
   Stmt *init_;
@@ -605,7 +605,7 @@ class ForInStmt : public IterationStmt {
    * @param node The node to check.
    * @return True if the node is a for-in loop; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::ForInStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ForInStmt; }
 
  private:
   Expr *target_;
@@ -645,7 +645,7 @@ class IfStmt : public Stmt {
    * @param node The node to check.
    * @return True if the node is an if statement; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::IfStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::IfStmt; }
 
  private:
   friend class sema::Sema;
@@ -681,7 +681,7 @@ class ReturnStmt : public Stmt {
    * @param node The node to check.
    * @return True if the node is a return statement; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::ReturnStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ReturnStmt; }
 
  private:
   friend class sema::Sema;
@@ -757,7 +757,7 @@ class Expr : public AstNode {
    * @return True if the node is an expression; false otherwise.
    */
   static bool classof(const AstNode *node) {
-    return node->kind() >= Kind::BadExpr && node->kind() <= Kind::StructTypeRepr;
+    return node->GetKind() >= Kind::BadExpr && node->GetKind() <= Kind::StructTypeRepr;
   }
 
  private:
@@ -772,7 +772,7 @@ class BadExpr : public Expr {
  public:
   explicit BadExpr(const SourcePosition &pos) : Expr(AstNode::Kind::BadExpr, pos) {}
 
-  static bool classof(const AstNode *node) { return node->kind() == Kind::BadExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::BadExpr; }
 };
 
 /**
@@ -803,7 +803,7 @@ class BinaryOpExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is a binary expression; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::BinaryOpExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::BinaryOpExpr; }
 
  private:
   friend class sema::Sema;
@@ -870,7 +870,7 @@ class CallExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is a call; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::CallExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::CallExpr; }
 
  private:
   friend class sema::Sema;
@@ -925,7 +925,7 @@ class ComparisonOpExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is a comparison; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::ComparisonOpExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ComparisonOpExpr; }
 
  private:
   friend class sema::Sema;
@@ -976,7 +976,7 @@ class FunctionLitExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is a function literal; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::FunctionLitExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FunctionLitExpr; }
 
  private:
   // The function's signature.
@@ -1015,7 +1015,7 @@ class IdentifierExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is an identifier expression; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::IdentifierExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::IdentifierExpr; }
 
  private:
   // TODO(pmenon) Should these two be a union since only one should be active?
@@ -1085,7 +1085,7 @@ class ImplicitCastExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is an implicit cast; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::ImplicitCastExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ImplicitCastExpr; }
 
  private:
   friend class AstNodeFactory;
@@ -1132,7 +1132,7 @@ class IndexExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is an index expression; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::IndexExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::IndexExpr; }
 
  private:
   friend class AstNodeFactory;
@@ -1236,7 +1236,7 @@ class LitExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is a literal; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::LitExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::LitExpr; }
 
  private:
   // The kind of literal.
@@ -1292,7 +1292,7 @@ class MemberExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is a member expression; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::MemberExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::MemberExpr; }
 
  private:
   friend class AstNodeFactory;
@@ -1330,7 +1330,7 @@ class UnaryOpExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is a unary expression; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::UnaryOpExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::UnaryOpExpr; }
 
  private:
   // The unary operator.
@@ -1376,7 +1376,7 @@ class ArrayTypeRepr : public Expr {
    * @param node The node to check.
    * @return True if the node is an array type; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::ArrayTypeRepr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ArrayTypeRepr; }
 
  private:
   // The specified length.
@@ -1411,7 +1411,7 @@ class FunctionTypeRepr : public Expr {
    * @param node The node to check.
    * @return True if the node is a function type; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::FunctionTypeRepr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FunctionTypeRepr; }
 
  private:
   // The parameters to the function.
@@ -1443,7 +1443,7 @@ class MapTypeRepr : public Expr {
    * @param node The node to check.
    * @return True if the node is a map type; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::MapTypeRepr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::MapTypeRepr; }
 
  private:
   // The key type.
@@ -1470,7 +1470,7 @@ class PointerTypeRepr : public Expr {
    * @param node The node to check.
    * @return True if the node is a pointer type; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::PointerTypeRepr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::PointerTypeRepr; }
 
  private:
   // The type of the element being pointed to.
@@ -1495,7 +1495,7 @@ class StructTypeRepr : public Expr {
    * @param node The node to check.
    * @return True if the node is a struct type; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->kind() == Kind::StructTypeRepr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::StructTypeRepr; }
 
  private:
   // The fields of the struct.

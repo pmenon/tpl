@@ -8,12 +8,14 @@ namespace tpl::sema {
 
 void Sema::ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, ast::Type *expected) {
   error_reporter()->Report(call->Position(), ErrorMessages::kIncorrectCallArgType,
-                           call->GetFuncName(), expected, index, call->Arguments()[index]->GetType());
+                           call->GetFuncName(), expected, index,
+                           call->Arguments()[index]->GetType());
 }
 
 void Sema::ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, const char *expected) {
   error_reporter()->Report(call->Position(), ErrorMessages::kIncorrectCallArgType2,
-                           call->GetFuncName(), expected, index, call->Arguments()[index]->GetType());
+                           call->GetFuncName(), expected, index,
+                           call->Arguments()[index]->GetType());
 }
 
 ast::Expr *Sema::ImplCastExprToType(ast::Expr *expr, ast::Type *target_type,
@@ -113,13 +115,15 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op, const S
   }
 
   // primitive float <OP> SQL real
-  if (left->GetType()->IsFloatType() && right->GetType()->IsSpecificBuiltin(ast::BuiltinType::Real)) {
+  if (left->GetType()->IsFloatType() &&
+      right->GetType()->IsSpecificBuiltin(ast::BuiltinType::Real)) {
     auto new_left = ImplCastExprToType(left, right->GetType(), ast::CastKind::FloatToSqlReal);
     return {right->GetType(), new_left, right};
   }
 
   // SQL real <OP> primitive float
-  if (left->GetType()->IsSpecificBuiltin(ast::BuiltinType::Real) && right->GetType()->IsFloatType()) {
+  if (left->GetType()->IsSpecificBuiltin(ast::BuiltinType::Real) &&
+      right->GetType()->IsFloatType()) {
     auto new_right = ImplCastExprToType(right, left->GetType(), ast::CastKind::FloatToSqlReal);
     return {left->GetType(), left, new_right};
   }
@@ -216,13 +220,15 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op, const S
   }
 
   // Primitive float -> Sql Float
-  if (left->GetType()->IsFloatType() && right->GetType()->IsSpecificBuiltin(ast::BuiltinType::Real)) {
+  if (left->GetType()->IsFloatType() &&
+      right->GetType()->IsSpecificBuiltin(ast::BuiltinType::Real)) {
     auto new_left = ImplCastExprToType(left, right->GetType(), ast::CastKind::FloatToSqlReal);
     return {build_ret_type(right->GetType()), new_left, right};
   }
 
   // Sql Float <- Primitive Float
-  if (left->GetType()->IsSpecificBuiltin(ast::BuiltinType::Real) && right->GetType()->IsFloatType()) {
+  if (left->GetType()->IsSpecificBuiltin(ast::BuiltinType::Real) &&
+      right->GetType()->IsFloatType()) {
     auto new_right = ImplCastExprToType(right, left->GetType(), ast::CastKind::FloatToSqlReal);
     return {build_ret_type(left->GetType()), left, new_right};
   }

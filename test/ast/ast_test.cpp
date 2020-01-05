@@ -54,7 +54,7 @@ TEST_F(AstTest, HierechyTest) {
 
       // Each declaration must match only one other declaration type (itself)
       EXPECT_EQ(1, COUNT_MATCHES(DECLARATION_NODES))
-                << node->KindName() << " matches more than one of " << DECLARATION_NODES(CSL);
+          << node->KindName() << " matches more than one of " << DECLARATION_NODES(CSL);
     }
   }
 
@@ -89,7 +89,7 @@ TEST_F(AstTest, HierechyTest) {
 
       // Each expression must match only one other expression type (itself)
       EXPECT_EQ(1, COUNT_MATCHES(EXPRESSION_NODES))
-                << node->KindName() << " matches more than one of " << EXPRESSION_NODES(CSL);
+          << node->KindName() << " matches more than one of " << EXPRESSION_NODES(CSL);
     }
   }
 
@@ -117,7 +117,7 @@ TEST_F(AstTest, HierechyTest) {
 
       // Each expression must match only one other expression type (itself)
       EXPECT_EQ(1, COUNT_MATCHES(STATEMENT_NODES))
-                << node->KindName() << " matches more than one of " << STATEMENT_NODES(CSL);
+          << node->KindName() << " matches more than one of " << STATEMENT_NODES(CSL);
     }
   }
 }

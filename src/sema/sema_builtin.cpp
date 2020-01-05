@@ -172,8 +172,8 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
         return;
       }
       // If there's a third argument indicating regular or partitioned insertion, it must be a bool
-      if (args.size() > 2 &&
-          (!args[2]->IsLitExpr() || !args[2]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Bool))) {
+      if (args.size() > 2 && (!args[2]->IsLitExpr() ||
+                              !args[2]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Bool))) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Bool));
         return;
       }
@@ -226,8 +226,8 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
         return;
       }
       // Third, fourth, fifth, and sixth are all functions
-      if (!AreAllFunctions(args[2]->GetType(),
-                           args[3]->GetType(), args[4]->GetType(), args[5]->GetType())) {
+      if (!AreAllFunctions(args[2]->GetType(), args[3]->GetType(), args[4]->GetType(),
+                           args[5]->GetType())) {
         ReportIncorrectCallArg(call, 2, "function");
         return;
       }
@@ -466,12 +466,14 @@ void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin)
         case ast::BuiltinType::Kind::CountStarAggregate:
         case ast::BuiltinType::Kind::IntegerMaxAggregate:
         case ast::BuiltinType::Kind::IntegerMinAggregate:
-        case ast::BuiltinType::Kind::IntegerSumAggregate:call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
+        case ast::BuiltinType::Kind::IntegerSumAggregate:
+          call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
           break;
         case ast::BuiltinType::Kind::RealMaxAggregate:
         case ast::BuiltinType::Kind::RealMinAggregate:
         case ast::BuiltinType::Kind::RealSumAggregate:
-        case ast::BuiltinType::Kind::AvgAggregate:call->SetType(GetBuiltinType(ast::BuiltinType::Real));
+        case ast::BuiltinType::Kind::AvgAggregate:
+          call->SetType(GetBuiltinType(ast::BuiltinType::Real));
           break;
         default:
           UNREACHABLE("Impossible aggregate type!");
@@ -750,7 +752,8 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builti
       }
       // Third and fourth arguments must be functions
       // TODO(pmenon): More thorough check
-      if (!call_args[2]->GetType()->IsFunctionType() || !call_args[3]->GetType()->IsFunctionType()) {
+      if (!call_args[2]->GetType()->IsFunctionType() ||
+          !call_args[3]->GetType()->IsFunctionType()) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Uint32));
         return;
       }
@@ -987,12 +990,12 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
         return;
       }
       call->SetType(builtin == ast::Builtin::VPIGetReal || builtin == ast::Builtin::VPIGetDouble
-                    ? GetBuiltinType(ast::BuiltinType::Real)
-                    : builtin == ast::Builtin::VPIGetDate
-                      ? GetBuiltinType(ast::BuiltinType::Date)
-                      : builtin == ast::Builtin::VPIGetString
-                        ? GetBuiltinType(ast::BuiltinType::StringVal)
-                        : GetBuiltinType(ast::BuiltinType::Integer));
+                        ? GetBuiltinType(ast::BuiltinType::Real)
+                        : builtin == ast::Builtin::VPIGetDate
+                              ? GetBuiltinType(ast::BuiltinType::Date)
+                              : builtin == ast::Builtin::VPIGetString
+                                    ? GetBuiltinType(ast::BuiltinType::StringVal)
+                                    : GetBuiltinType(ast::BuiltinType::Integer));
       break;
     }
     case ast::Builtin::VPISetSmallInt:
@@ -1260,8 +1263,8 @@ void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
   }
 
   // Replace the unary with a PointerTypeRepr node and resolve it
-  call->SetArgument(0, context()->GetNodeFactory()->NewPointerType(
-      call->Arguments()[0]->Position(), unary_op->Input()));
+  call->SetArgument(0, context()->GetNodeFactory()->NewPointerType(call->Arguments()[0]->Position(),
+                                                                   unary_op->Input()));
 
   for (auto *arg : call->Arguments()) {
     auto *resolved_type = Resolve(arg);

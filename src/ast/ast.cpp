@@ -113,7 +113,8 @@ bool IndexExpr::IsMapAccess() const {
 // ---------------------------------------------------------
 
 bool MemberExpr::IsSugaredArrow() const {
-  TPL_ASSERT(Object()->GetType() != nullptr, "Cannot determine sugared-arrow before type checking!");
+  TPL_ASSERT(Object()->GetType() != nullptr,
+             "Cannot determine sugared-arrow before type checking!");
   return Object()->GetType()->IsPointerType();
 }
 
@@ -122,7 +123,7 @@ bool MemberExpr::IsSugaredArrow() const {
 // ---------------------------------------------------------
 
 bool Stmt::IsTerminating(Stmt *stmt) {
-  switch (stmt->kind()) {
+  switch (stmt->GetKind()) {
     case AstNode::Kind::BlockStmt: {
       return IsTerminating(stmt->As<BlockStmt>()->Statements().back());
     }
