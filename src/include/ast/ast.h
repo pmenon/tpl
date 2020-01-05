@@ -125,12 +125,12 @@ class AstNode : public util::RegionObject {
   /**
    * @return The position in the source where this element was found.
    */
-  const SourcePosition &position() const { return pos_; }
+  const SourcePosition &Position() const { return pos_; }
 
   /**
    * @return The name of this node. NOTE: this is mainly used in tests!
    */
-  const char *kind_name() const {
+  const char *KindName() const {
 #define KIND_CASE(kind) \
   case Kind::kind:      \
     return #kind;
@@ -206,7 +206,7 @@ class File : public AstNode {
   /**
    * @return The list of declarations making up the file.
    */
-  util::RegionVector<Decl *> &GetDeclarations() { return decls_; }
+  util::RegionVector<Decl *> &Declarations() { return decls_; }
 
   /**
    * Is the given node an AST File? Needed as part of the custom AST RTTI infrastructure.
@@ -236,12 +236,12 @@ class Decl : public AstNode {
   /**
    * @return The name of the declaration as it appears in code.
    */
-  Identifier name() const { return name_; }
+  Identifier Name() const { return name_; }
 
   /**
    * @return The type representation of the declaration. May be null for variables.
    */
-  Expr *type_repr() const { return type_repr_; }
+  Expr *TypeRepr() const { return type_repr_; }
 
   /**
    * Is the given node an AST Declaration? Needed as part of the custom AST RTTI infrastructure.
@@ -285,7 +285,7 @@ class FunctionDecl : public Decl {
   /**
    * @return The function literal defining the body of the function declaration.
    */
-  FunctionLitExpr *function() const { return func_; }
+  FunctionLitExpr *Function() const { return func_; }
 
   /**
    * Is the given node a function declaration? Needed as part of the custom AST RTTI infrastructure.
@@ -295,6 +295,7 @@ class FunctionDecl : public Decl {
   static bool classof(const AstNode *node) { return node->kind() == Kind::FunctionDecl; }
 
  private:
+  // The function definition (signature and body).
   FunctionLitExpr *func_;
 };
 
@@ -324,13 +325,13 @@ class VariableDecl : public Decl {
   /**
    * @return The initial value assigned to the variable, if one was provided; null otherwise.
    */
-  Expr *initial() const { return init_; }
+  Expr *Initial() const { return init_; }
 
   /**
    * @return True if the variable declaration came with an explicit type, i.e., var v: int = 0.
    *         False if no explicit type was provided.
    */
-  bool HasTypeDecl() const { return type_repr() != nullptr; }
+  bool HasTypeDecl() const { return TypeRepr() != nullptr; }
 
   /**
    * @return True if the variable is assigned an initial value; false otherwise.
@@ -347,7 +348,7 @@ class VariableDecl : public Decl {
  private:
   friend class sema::Sema;
 
-  void set_initial(ast::Expr *initial) { init_ = initial; }
+  void SetInitial(ast::Expr *initial) { init_ = initial; }
 
  private:
   Expr *init_;
@@ -392,12 +393,12 @@ class AssignmentStmt : public Stmt {
   /**
    * @return The target/destination of the assignment.
    */
-  Expr *destination() { return dest_; }
+  Expr *Destination() { return dest_; }
 
   /**
    * @return The source of the assignment.
    */
-  Expr *source() { return src_; }
+  Expr *Source() { return src_; }
 
   /**
    * Is the given node an AST assignment? Needed as part of the custom AST RTTI infrastructure.
@@ -410,7 +411,7 @@ class AssignmentStmt : public Stmt {
   friend class sema::Sema;
 
   // Used for implicit casts
-  void set_source(Expr *source) { src_ = source; }
+  void SetSource(Expr *source) { src_ = source; }
 
  private:
   // The destination of the assignment.
@@ -431,12 +432,12 @@ class BlockStmt : public Stmt {
   /**
    * @return The statements making up the block.
    */
-  util::RegionVector<Stmt *> &statements() { return statements_; }
+  util::RegionVector<Stmt *> &Statements() { return statements_; }
 
   /**
    * @return The position of the right-brace.
    */
-  const SourcePosition &right_brace_position() const { return rbrace_pos_; }
+  const SourcePosition &RightBracePosition() const { return rbrace_pos_; }
 
   /**
    * @return True if the block is empty; false otherwise.
@@ -467,12 +468,12 @@ class BlockStmt : public Stmt {
  */
 class DeclStmt : public Stmt {
  public:
-  explicit DeclStmt(Decl *decl) : Stmt(Kind::DeclStmt, decl->position()), decl_(decl) {}
+  explicit DeclStmt(Decl *decl) : Stmt(Kind::DeclStmt, decl->Position()), decl_(decl) {}
 
   /**
    * @return The wrapped declaration.
    */
-  Decl *declaration() const { return decl_; }
+  Decl *Declaration() const { return decl_; }
 
   /**
    * Is the given node an AST declaration? Needed as part of the custom AST RTTI infrastructure.
@@ -496,7 +497,7 @@ class ExpressionStmt : public Stmt {
   /**
    * @return The wrapped expression.
    */
-  Expr *expression() { return expr_; }
+  Expr *Expression() { return expr_; }
 
   /**
    * Is the given node an AST expression? Needed as part of the custom AST RTTI infrastructure.
@@ -521,7 +522,7 @@ class IterationStmt : public Stmt {
   /**
    * @return The block making up the body of the iteration.
    */
-  BlockStmt *body() const { return body_; }
+  BlockStmt *Body() const { return body_; }
 
   /**
    * Is the given node an AST iteration? Needed as part of the custom AST RTTI infrastructure.
@@ -546,19 +547,19 @@ class ForStmt : public IterationStmt {
       : IterationStmt(pos, AstNode::Kind::ForStmt, body), init_(init), cond_(cond), next_(next) {}
 
   /**
-   * @return The initial list of statements. Can be null.
+   * @return The initialization statement(s). Can be null.
    */
-  Stmt *init() const { return init_; }
+  Stmt *Init() const { return init_; }
 
   /**
    * @return The loop condition. Can be null if infinite loop.
    */
-  Expr *condition() const { return cond_; }
+  Expr *Condition() const { return cond_; }
 
   /**
-   * @return The advancement expression.
+   * @return The advancement statement(s). Can be null.
    */
-  Stmt *next() const { return next_; }
+  Stmt *Next() const { return next_; }
 
   /**
    * Is the given node an AST for loop? Needed as part of the custom AST RTTI infrastructure.
@@ -575,6 +576,14 @@ class ForStmt : public IterationStmt {
 
 /**
  * A range for statement.
+ *
+ * @code
+ * for (row in table) {
+ *   // body
+ * }
+ * @endcode
+ *
+ * 'row' is the target and 'table' is the iterable object in a for-in statement.
  */
 class ForInStmt : public IterationStmt {
  public:
@@ -584,12 +593,12 @@ class ForInStmt : public IterationStmt {
   /**
    * @return The loop iteration variable.
    */
-  Expr *target() const { return target_; }
+  Expr *Target() const { return target_; }
 
   /**
    * @return The iterable.
    */
-  Expr *iter() const { return iter_; }
+  Expr *Iterable() const { return iter_; }
 
   /**
    * Is the given node an AST for-in loop? Needed as part of the custom AST RTTI infrastructure.
@@ -614,17 +623,17 @@ class IfStmt : public Stmt {
   /**
    * @return The if-condition.
    */
-  Expr *condition() { return cond_; }
+  Expr *Condition() { return cond_; }
 
   /**
    * @return The block of statements if the condition is true.
    */
-  BlockStmt *then_stmt() { return then_stmt_; }
+  BlockStmt *ThenStmt() { return then_stmt_; }
 
   /**
    * @return The else statement.
    */
-  Stmt *else_stmt() { return else_stmt_; }
+  Stmt *ElseStmt() { return else_stmt_; }
 
   /**
    * @return True if there is an else statement; false otherwise.
@@ -641,7 +650,7 @@ class IfStmt : public Stmt {
  private:
   friend class sema::Sema;
 
-  void set_condition(Expr *cond) {
+  void SetCondition(Expr *cond) {
     TPL_ASSERT(cond != nullptr, "Cannot set null condition");
     cond_ = cond;
   }
@@ -665,7 +674,7 @@ class ReturnStmt : public Stmt {
   /**
    * @return The expression representing the value that's to be returned.
    */
-  Expr *ret() { return ret_; }
+  Expr *Ret() { return ret_; }
 
   /**
    * Is the given node a return statement? Needed as part of the custom AST RTTI infrastructure.
@@ -677,7 +686,7 @@ class ReturnStmt : public Stmt {
  private:
   friend class sema::Sema;
 
-  void set_ret(ast::Expr *ret) { ret_ = ret; }
+  void SetRet(ast::Expr *ret) { ret_ = ret; }
 
  private:
   // The expression representing the value that's returned.
@@ -707,18 +716,18 @@ class Expr : public AstNode {
   /**
    * @return The resolved TPL type of the expression. NULL if type checking has yet to run.
    */
-  Type *type() { return type_; }
+  Type *GetType() { return type_; }
 
   /**
    * @return The resolved TPL type of the expression. NULL if type checking has yet to run.
    */
-  const Type *type() const { return type_; }
+  const Type *GetType() const { return type_; }
 
   /**
    * Set the type of the expression. Usually performed during semantic type checking.
    * @param type The type to set.
    */
-  void set_type(Type *type) { type_ = type; }
+  void SetType(Type *type) { type_ = type; }
 
   /**
    * @return True if this expression is a 'nil' literal; false otherwise.
@@ -752,6 +761,7 @@ class Expr : public AstNode {
   }
 
  private:
+  // The resolved TPL type. Null if type checking has not run.
   Type *type_;
 };
 
@@ -776,17 +786,17 @@ class BinaryOpExpr : public Expr {
   /**
    * @return The parsing token representing the kind of binary operation. +, -, etc.
    */
-  parsing::Token::Type op() { return op_; }
+  parsing::Token::Type Op() { return op_; }
 
   /**
    * @return The left input to the binary expression.
    */
-  Expr *left() { return left_; }
+  Expr *Left() { return left_; }
 
   /**
    * @return The right input to the binary expression.
    */
-  Expr *right() { return right_; }
+  Expr *Right() { return right_; }
 
   /**
    * Is the given node a binary expression? Needed as part of the custom AST RTTI infrastructure.
@@ -798,12 +808,12 @@ class BinaryOpExpr : public Expr {
  private:
   friend class sema::Sema;
 
-  void set_left(Expr *left) {
+  void SetLeft(Expr *left) {
     TPL_ASSERT(left != nullptr, "Left cannot be null!");
     left_ = left;
   }
 
-  void set_right(Expr *right) {
+  void SetRight(Expr *right) {
     TPL_ASSERT(right != nullptr, "Right cannot be null!");
     right_ = right;
   }
@@ -825,7 +835,7 @@ class CallExpr : public Expr {
       : CallExpr(func, std::move(args), CallKind::Regular) {}
 
   CallExpr(Expr *func, util::RegionVector<Expr *> &&args, CallKind call_kind)
-      : Expr(Kind::CallExpr, func->position()),
+      : Expr(Kind::CallExpr, func->Position()),
         func_(func),
         args_(std::move(args)),
         call_kind_(call_kind) {}
@@ -838,22 +848,22 @@ class CallExpr : public Expr {
   /**
    * @return The function that's to be called.
    */
-  Expr *function() { return func_; }
+  Expr *Function() { return func_; }
 
   /**
    * @return A const-view of the arguments to the function.
    */
-  const util::RegionVector<Expr *> &arguments() const { return args_; }
+  const util::RegionVector<Expr *> &Arguments() const { return args_; }
 
   /**
    * @return The number of call arguments.
    */
-  uint32_t num_args() const { return static_cast<uint32_t>(args_.size()); }
+  uint32_t NumArgs() const { return static_cast<uint32_t>(args_.size()); }
 
   /**
    * @return The kind of call, either regular or a call to a builtin function.
    */
-  CallKind call_kind() const { return call_kind_; }
+  CallKind GetCallKind() const { return call_kind_; }
 
   /**
    * Is the given node a call? Needed as part of the custom AST RTTI infrastructure.
@@ -865,8 +875,8 @@ class CallExpr : public Expr {
  private:
   friend class sema::Sema;
 
-  void set_argument(uint32_t arg_idx, Expr *expr) {
-    TPL_ASSERT(arg_idx < num_args(), "Out-of-bounds argument access");
+  void SetArgument(uint32_t arg_idx, Expr *expr) {
+    TPL_ASSERT(arg_idx < NumArgs(), "Out-of-bounds argument access");
     args_[arg_idx] = expr;
   }
 
@@ -890,17 +900,17 @@ class ComparisonOpExpr : public Expr {
   /**
    * @return The parsing token representing the kind of comparison, <, ==, etc.
    */
-  parsing::Token::Type op() { return op_; }
+  parsing::Token::Type Op() { return op_; }
 
   /**
    * @return The left input to the comparison.
    */
-  Expr *left() { return left_; }
+  Expr *Left() { return left_; }
 
   /**
    * @return The right input to the comparison.
    */
-  Expr *right() { return right_; }
+  Expr *Right() { return right_; }
 
   /**
    * Is this a comparison between an expression and a nil literal?
@@ -920,12 +930,12 @@ class ComparisonOpExpr : public Expr {
  private:
   friend class sema::Sema;
 
-  void set_left(Expr *left) {
+  void SetLeft(Expr *left) {
     TPL_ASSERT(left != nullptr, "Left cannot be null!");
     left_ = left;
   }
 
-  void set_right(Expr *right) {
+  void SetRight(Expr *right) {
     TPL_ASSERT(right != nullptr, "Right cannot be null!");
     right_ = right;
   }
@@ -949,17 +959,17 @@ class FunctionLitExpr : public Expr {
   /**
    * @return The function's signature.
    */
-  FunctionTypeRepr *type_repr() const { return type_repr_; }
+  FunctionTypeRepr *TypeRepr() const { return type_repr_; }
 
   /**
    * @return The statements making up the body of the function.
    */
-  BlockStmt *body() const { return body_; }
+  BlockStmt *Body() const { return body_; }
 
   /**
    * @return True if the function has no statements; false otherwise.
    */
-  bool IsEmpty() const { return body()->IsEmpty(); }
+  bool IsEmpty() const { return Body()->IsEmpty(); }
 
   /**
    * Is the given node a function literal? Needed as part of the custom AST RTTI infrastructure.
@@ -986,7 +996,7 @@ class IdentifierExpr : public Expr {
   /**
    * @return The identifier the expression represents.
    */
-  Identifier name() const { return name_; }
+  Identifier Name() const { return name_; }
 
   /**
    * Bind an identifier to a source declaration.
@@ -1063,12 +1073,12 @@ class ImplicitCastExpr : public Expr {
   /**
    * @return The kind of cast operation this expression represents.
    */
-  CastKind cast_kind() const { return cast_kind_; }
+  CastKind GetCastKind() const { return cast_kind_; }
 
   /**
    * @return The input to the cast operation.
    */
-  Expr *input() { return input_; }
+  Expr *Input() { return input_; }
 
   /**
    * Is the given node an implicit cast? Needed as part of the custom AST RTTI infrastructure.
@@ -1100,12 +1110,12 @@ class IndexExpr : public Expr {
   /**
    * @return The object that's being indexed into.
    */
-  Expr *object() const { return obj_; }
+  Expr *Object() const { return obj_; }
 
   /**
    * @return The index to use to access the object.
    */
-  Expr *index() const { return index_; }
+  Expr *Index() const { return index_; }
 
   /**
    * @return True if this expression for an array access; false otherwise.
@@ -1162,7 +1172,7 @@ class LitExpr : public Expr {
   /**
    * @return The kind of literal this expression represents.
    */
-  LitExpr::LitKind literal_kind() const { return lit_kind_; }
+  LitExpr::LitKind GetLiteralKind() const { return lit_kind_; }
 
   /**
    * @return True if this is a 'nil' literal; false otherwise.
@@ -1192,7 +1202,7 @@ class LitExpr : public Expr {
   /**
    * @return The boolean literal value. No check to ensure expression is a boolean literal.
    */
-  bool bool_val() const {
+  bool BoolVal() const {
     TPL_ASSERT(IsBoolLitExpr(), "Literal is not a boolean value literal");
     return boolean_;
   }
@@ -1200,7 +1210,7 @@ class LitExpr : public Expr {
   /**
    * @return The raw string value. No check to ensure expression is a string.
    */
-  Identifier raw_string_val() const {
+  Identifier StringVal() const {
     TPL_ASSERT(IsStringLitExpr(), "Literal is not a string or identifier");
     return str_;
   }
@@ -1208,7 +1218,7 @@ class LitExpr : public Expr {
   /**
    * @return The integer value. No check to ensure expression is an integer.
    */
-  int32_t int32_val() const {
+  int32_t Int32Val() const {
     TPL_ASSERT(IsIntLitExpr(), "Literal is not an integer literal");
     return int32_;
   }
@@ -1216,7 +1226,7 @@ class LitExpr : public Expr {
   /**
    * @return The floating point value. No check to ensure expression is a floating point value.
    */
-  float float32_val() const {
+  float Float32Val() const {
     TPL_ASSERT(IsFloatLitExpr(), "Literal is not a floating point literal");
     return float32_;
   }
@@ -1258,19 +1268,19 @@ class LitExpr : public Expr {
  * px.a = 20
  * @endcode
  *
- * Using doc-access for pointers to object is termed a sugared-arrow access.
+ * Using dot-access for pointers to object is termed a sugared-arrow access.
  */
 class MemberExpr : public Expr {
  public:
   /**
    * @return The object being accessed.
    */
-  Expr *object() const { return object_; }
+  Expr *Object() const { return object_; }
 
   /**
    * @return The member of the object/struct to access.
    */
-  Expr *member() const { return member_; }
+  Expr *Member() const { return member_; }
 
   /**
    * @return True if this member access is sugared. Refer to docs to understand arrow sugaring.
@@ -1308,12 +1318,12 @@ class UnaryOpExpr : public Expr {
   /**
    * @return The parsing token operator representing the unary operation.
    */
-  parsing::Token::Type op() { return op_; }
+  parsing::Token::Type Op() { return op_; }
 
   /**
    * @return The input expression to the unary operation.
    */
-  Expr *expr() { return expr_; }
+  Expr *Input() { return expr_; }
 
   /**
    * Is the given node a unary expression? Needed as part of the custom AST RTTI infrastructure.
@@ -1349,12 +1359,12 @@ class ArrayTypeRepr : public Expr {
   /**
    * @return The length of the array, if provided; null if not provided.
    */
-  Expr *length() const { return len_; }
+  Expr *Length() const { return len_; }
 
   /**
    * @return The type of elements the array stores.
    */
-  Expr *element_type() const { return elem_type_; }
+  Expr *ElementType() const { return elem_type_; }
 
   /**
    * @return True if a length was specified in the array type representation; false otherwise.
@@ -1389,12 +1399,12 @@ class FunctionTypeRepr : public Expr {
   /**
    * @return The parameters to the function.
    */
-  const util::RegionVector<FieldDecl *> &parameters() const { return param_types_; }
+  const util::RegionVector<FieldDecl *> &Parameters() const { return param_types_; }
 
   /**
    * @return The return type of the function.
    */
-  Expr *return_type() const { return ret_type_; }
+  Expr *ReturnType() const { return ret_type_; }
 
   /**
    * Is the given node a function type? Needed as part of the custom AST RTTI infrastructure.
@@ -1421,12 +1431,12 @@ class MapTypeRepr : public Expr {
   /**
    * @return The key type of the map.
    */
-  Expr *key() const { return key_; }
+  Expr *KeyType() const { return key_; }
 
   /**
    * @return The value type of the map.
    */
-  Expr *val() const { return val_; }
+  Expr *ValType() const { return val_; }
 
   /**
    * Is the given node a map type? Needed as part of the custom AST RTTI infrastructure.
@@ -1453,7 +1463,7 @@ class PointerTypeRepr : public Expr {
   /**
    * @return The pointee type.
    */
-  Expr *base() const { return base_; }
+  Expr *Base() const { return base_; }
 
   /**
    * Is the given node a pointer type? Needed as part of the custom AST RTTI infrastructure.
@@ -1478,7 +1488,7 @@ class StructTypeRepr : public Expr {
   /**
    * @return The fields of the struct.
    */
-  const util::RegionVector<FieldDecl *> &fields() const { return fields_; }
+  const util::RegionVector<FieldDecl *> &Fields() const { return fields_; }
 
   /**
    * Is the given node a struct type? Needed as part of the custom AST RTTI infrastructure.

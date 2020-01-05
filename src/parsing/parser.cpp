@@ -46,11 +46,11 @@ ast::Expr *Parser::MakeExpr(ast::AstNode *node) {
   }
 
   if (auto *expr_stmt = node->SafeAs<ast::ExpressionStmt>()) {
-    return expr_stmt->expression();
+    return expr_stmt->Expression();
   }
 
   const auto err_msg = sema::ErrorMessages::kExpectingExpression;
-  error_reporter_->Report(node->position(), err_msg);
+  error_reporter_->Report(node->Position(), err_msg);
   return nullptr;
 }
 
@@ -453,7 +453,7 @@ ast::Expr *Parser::ParsePrimaryExpr() {
         // Member expression
         Consume(Token::Type::DOT);
         ast::Expr *member = ParseOperand();
-        result = node_factory_->NewMemberExpr(result->position(), result, member);
+        result = node_factory_->NewMemberExpr(result->Position(), result, member);
         break;
         // @ptrCast(*Row, expr)
       }
@@ -462,7 +462,7 @@ ast::Expr *Parser::ParsePrimaryExpr() {
         Consume(Token::Type::LEFT_BRACKET);
         ast::Expr *index = ParseExpr();
         Expect(Token::Type::RIGHT_BRACKET);
-        result = node_factory_->NewIndexExpr(result->position(), result, index);
+        result = node_factory_->NewIndexExpr(result->Position(), result, index);
         break;
       }
       default: {

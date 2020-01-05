@@ -22,7 +22,7 @@ TEST_F(AstTest, HierechyTest) {
   AstNodeFactory factory(region());
 
 #define CHECK_NODE_IS_NOT_KIND(n) \
-  EXPECT_FALSE(node->Is<n>()) << "Node " << node->kind_name() << " is not " << #n;
+  EXPECT_FALSE(node->Is<n>()) << "Node " << node->KindName() << " is not " << #n;
 
 #define IS_MATCH(n) node->Is<n>() +
 #define COUNT_MATCHES(NODE_LIST) NODE_LIST(IS_MATCH) 0
@@ -48,13 +48,13 @@ TEST_F(AstTest, HierechyTest) {
       EXPRESSION_NODES(CHECK_NODE_IS_NOT_KIND)
 
       // Ensure concrete declarations are also a base declaration type
-      EXPECT_TRUE(node->Is<Decl>()) << "Node " << node->kind_name()
+      EXPECT_TRUE(node->Is<Decl>()) << "Node " << node->KindName()
                                     << " isn't an Decl? Ensure Decl::classof() handles all "
                                        "cases if you've added a new Decl node.";
 
       // Each declaration must match only one other declaration type (itself)
       EXPECT_EQ(1, COUNT_MATCHES(DECLARATION_NODES))
-          << node->kind_name() << " matches more than one of " << DECLARATION_NODES(CSL);
+                << node->KindName() << " matches more than one of " << DECLARATION_NODES(CSL);
     }
   }
 
@@ -83,13 +83,13 @@ TEST_F(AstTest, HierechyTest) {
       STATEMENT_NODES(CHECK_NODE_IS_NOT_KIND)
 
       // Ensure concrete expressions are also a base expression type
-      EXPECT_TRUE(node->Is<Expr>()) << "Node " << node->kind_name()
+      EXPECT_TRUE(node->Is<Expr>()) << "Node " << node->KindName()
                                     << " isn't an Expr? Ensure Expr::classof() handles all "
                                        "cases if you've added a new Expr node.";
 
       // Each expression must match only one other expression type (itself)
       EXPECT_EQ(1, COUNT_MATCHES(EXPRESSION_NODES))
-          << node->kind_name() << " matches more than one of " << EXPRESSION_NODES(CSL);
+                << node->KindName() << " matches more than one of " << EXPRESSION_NODES(CSL);
     }
   }
 
@@ -111,13 +111,13 @@ TEST_F(AstTest, HierechyTest) {
 
       // Ensure concrete expressions are also a base expression type
       EXPECT_TRUE(node->Is<Stmt>())
-          << "Node " << node->kind_name()
+          << "Node " << node->KindName()
           << " isn't an Statement? Ensure Statement::classof() handles all "
              "cases if you've added a new Statement node.";
 
       // Each expression must match only one other expression type (itself)
       EXPECT_EQ(1, COUNT_MATCHES(STATEMENT_NODES))
-          << node->kind_name() << " matches more than one of " << STATEMENT_NODES(CSL);
+                << node->KindName() << " matches more than one of " << STATEMENT_NODES(CSL);
     }
   }
 }

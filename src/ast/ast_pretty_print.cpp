@@ -41,12 +41,12 @@ class AstPrettyPrintImpl : public AstVisitor<AstPrettyPrintImpl> {
 void AstPrettyPrintImpl::VisitArrayTypeRepr(ArrayTypeRepr *node) {
   os_ << "[";
   if (node->HasLength()) {
-    os_ << node->length();
+    os_ << node->Length();
   } else {
     os_ << "*";
   }
   os_ << "]";
-  Visit(node->element_type());
+  Visit(node->ElementType());
 }
 
 void AstPrettyPrintImpl::VisitBadExpr(BadExpr *node) { TPL_ASSERT(false, "Invalid"); }
@@ -57,7 +57,7 @@ void AstPrettyPrintImpl::VisitBlockStmt(BlockStmt *node) {
   NewLine();
 
   bool first = true;
-  for (auto *stmt : node->statements()) {
+  for (auto *stmt : node->Statements()) {
     if (!first) NewLine();
     first = false;
     Visit(stmt);
@@ -70,10 +70,10 @@ void AstPrettyPrintImpl::VisitBlockStmt(BlockStmt *node) {
 }
 
 void AstPrettyPrintImpl::VisitCallExpr(CallExpr *node) {
-  Visit(node->function());
+  Visit(node->Function());
   os_ << "(";
   bool first = true;
-  for (auto *arg : node->arguments()) {
+  for (auto *arg : node->Arguments()) {
     if (!first) os_ << ",";
     first = false;
     Visit(arg);
@@ -82,197 +82,197 @@ void AstPrettyPrintImpl::VisitCallExpr(CallExpr *node) {
 }
 
 void AstPrettyPrintImpl::VisitFieldDecl(FieldDecl *node) {
-  os_ << node->name().GetString() << ": ";
-  Visit(node->type_repr());
+  os_ << node->Name().GetString() << ": ";
+  Visit(node->TypeRepr());
 }
 
 void AstPrettyPrintImpl::VisitFunctionDecl(FunctionDecl *node) {
-  os_ << "fun " << node->name().GetString();
-  Visit(node->function());
+  os_ << "fun " << node->Name().GetString();
+  Visit(node->Function());
 }
 
 void AstPrettyPrintImpl::VisitIdentifierExpr(IdentifierExpr *node) {
-  os_ << node->name().GetString();
+  os_ << node->Name().GetString();
 }
 
 void AstPrettyPrintImpl::VisitImplicitCastExpr(ImplicitCastExpr *node) {
-  os_ << CastKindToString(node->cast_kind()) << "(";
-  Visit(node->input());
+  os_ << CastKindToString(node->GetCastKind()) << "(";
+  Visit(node->Input());
   os_ << ")";
 }
 
 void AstPrettyPrintImpl::VisitReturnStmt(ReturnStmt *node) {
   os_ << "return";
-  if (node->ret() != nullptr) {
+  if (node->Ret() != nullptr) {
     os_ << " ";
-    Visit(node->ret());
+    Visit(node->Ret());
   }
 }
 
 void AstPrettyPrintImpl::VisitStructDecl(StructDecl *node) {
-  os_ << "struct " << node->name().GetString() << " {";
+  os_ << "struct " << node->Name().GetString() << " {";
   IncreaseIndent();
   NewLine();
-  Visit(node->type_repr());
+  Visit(node->TypeRepr());
   DecreaseIndent();
   os_ << "}";
   NewLine();
 }
 
 void AstPrettyPrintImpl::VisitUnaryOpExpr(UnaryOpExpr *node) {
-  os_ << parsing::Token::GetString(node->op());
-  Visit(node->expr());
+  os_ << parsing::Token::GetString(node->Op());
+  Visit(node->Input());
 }
 
 void AstPrettyPrintImpl::VisitVariableDecl(VariableDecl *node) {
-  os_ << "var " << node->name().GetString();
-  if (node->type_repr() != nullptr) {
+  os_ << "var " << node->Name().GetString();
+  if (node->TypeRepr() != nullptr) {
     os_ << ": ";
-    Visit(node->type_repr());
+    Visit(node->TypeRepr());
   }
-  if (node->initial() != nullptr) {
+  if (node->Initial() != nullptr) {
     os_ << " = ";
-    Visit(node->initial());
+    Visit(node->Initial());
   }
 }
 
 void AstPrettyPrintImpl::VisitAssignmentStmt(AssignmentStmt *node) {
-  Visit(node->destination());
+  Visit(node->Destination());
   os_ << " = ";
-  Visit(node->source());
+  Visit(node->Source());
 }
 
 void AstPrettyPrintImpl::VisitFile(File *node) {
-  for (auto *decl : node->GetDeclarations()) {
+  for (auto *decl : node->Declarations()) {
     Visit(decl);
   }
 }
 
 void AstPrettyPrintImpl::VisitFunctionLitExpr(FunctionLitExpr *node) {
-  Visit(node->type_repr());
+  Visit(node->TypeRepr());
   os_ << " ";
-  Visit(node->body());
+  Visit(node->Body());
 }
 
 void AstPrettyPrintImpl::VisitForStmt(ForStmt *node) {
   os_ << "for (";
-  if (node->init() != nullptr || node->next() != nullptr) {
+  if (node->Init() != nullptr || node->Next() != nullptr) {
     // Standard
-    if (node->init() != nullptr) Visit(node->init());
+    if (node->Init() != nullptr) Visit(node->Init());
     os_ << "; ";
-    Visit(node->condition());
+    Visit(node->Condition());
     os_ << "; ";
-    if (node->next() != nullptr) Visit(node->next());
-  } else if (node->condition() != nullptr) {
+    if (node->Next() != nullptr) Visit(node->Next());
+  } else if (node->Condition() != nullptr) {
     // While
-    Visit(node->condition());
+    Visit(node->Condition());
   } else {
     // Unconditional loop
   }
   os_ << ") ";
-  Visit(node->body());
+  Visit(node->Body());
 }
 
 void AstPrettyPrintImpl::VisitForInStmt(ForInStmt *node) {
   os_ << "for (";
-  Visit(node->target());
+  Visit(node->Target());
   os_ << " in ";
-  Visit(node->iter());
+  Visit(node->Iterable());
   os_ << ")";
-  Visit(node->body());
+  Visit(node->Body());
 }
 
 void AstPrettyPrintImpl::VisitBinaryOpExpr(BinaryOpExpr *node) {
-  Visit(node->left());
-  os_ << parsing::Token::GetString(node->op());
-  Visit(node->right());
+  Visit(node->Left());
+  os_ << parsing::Token::GetString(node->Op());
+  Visit(node->Right());
 }
 
 void AstPrettyPrintImpl::VisitMapTypeRepr(MapTypeRepr *node) {
   os_ << "map[";
-  Visit(node->key());
+  Visit(node->KeyType());
   os_ << "]";
-  Visit(node->val());
+  Visit(node->ValType());
 }
 
 void AstPrettyPrintImpl::VisitLitExpr(LitExpr *node) {
-  switch (node->literal_kind()) {
+  switch (node->GetLiteralKind()) {
     case LitExpr::LitKind::Nil:
       os_ << "nil";
       break;
     case LitExpr::LitKind::Boolean:
-      os_ << node->bool_val();
+      os_ << node->BoolVal();
       break;
     case LitExpr::LitKind::Int:
-      os_ << node->int32_val();
+      os_ << node->Int32Val();
       break;
     case LitExpr::LitKind::Float:
-      os_ << node->float32_val();
+      os_ << node->Float32Val();
       break;
     case LitExpr::LitKind::String:
-      os_ << node->raw_string_val().GetString();
+      os_ << node->StringVal().GetString();
       break;
   }
 }
 
 void AstPrettyPrintImpl::VisitStructTypeRepr(StructTypeRepr *node) {
-  for (auto &field : node->fields()) {
-    os_ << field->name().GetString() << ": ";
-    Visit(field->type_repr());
+  for (auto &field : node->Fields()) {
+    os_ << field->Name().GetString() << ": ";
+    Visit(field->TypeRepr());
     NewLine();
   }
 }
 
-void AstPrettyPrintImpl::VisitDeclStmt(DeclStmt *node) { Visit(node->declaration()); }
+void AstPrettyPrintImpl::VisitDeclStmt(DeclStmt *node) { Visit(node->Declaration()); }
 
 void AstPrettyPrintImpl::VisitMemberExpr(MemberExpr *node) {
-  Visit(node->object());
+  Visit(node->Object());
   os_ << ".";
-  Visit(node->member());
+  Visit(node->Member());
 }
 
 void AstPrettyPrintImpl::VisitPointerTypeRepr(PointerTypeRepr *node) {
   os_ << "*";
-  Visit(node->base());
+  Visit(node->Base());
 }
 
 void AstPrettyPrintImpl::VisitComparisonOpExpr(ComparisonOpExpr *node) {
-  Visit(node->left());
-  os_ << " " << parsing::Token::GetString(node->op()) << " ";
-  Visit(node->right());
+  Visit(node->Left());
+  os_ << " " << parsing::Token::GetString(node->Op()) << " ";
+  Visit(node->Right());
 }
 
 void AstPrettyPrintImpl::VisitIfStmt(IfStmt *node) {
   os_ << "if (";
-  Visit(node->condition());
+  Visit(node->Condition());
   os_ << ") ";
-  Visit(node->then_stmt());
-  if (node->else_stmt()) {
+  Visit(node->ThenStmt());
+  if (node->ElseStmt()) {
     os_ << " else ";
-    Visit(node->else_stmt());
+    Visit(node->ElseStmt());
   }
 }
 
-void AstPrettyPrintImpl::VisitExpressionStmt(ExpressionStmt *node) { Visit(node->expression()); }
+void AstPrettyPrintImpl::VisitExpressionStmt(ExpressionStmt *node) { Visit(node->Expression()); }
 
 void AstPrettyPrintImpl::VisitIndexExpr(IndexExpr *node) {
-  Visit(node->object());
+  Visit(node->Object());
   os_ << "[";
-  Visit(node->index());
+  Visit(node->Index());
   os_ << "]";
 }
 
 void AstPrettyPrintImpl::VisitFunctionTypeRepr(FunctionTypeRepr *node) {
   os_ << "(";
   bool first = true;
-  for (const auto &param : node->parameters()) {
+  for (const auto &param : node->Parameters()) {
     if (!first) os_ << ",";
     first = false;
-    os_ << param->name().GetString() << ": ";
-    Visit(param->type_repr());
+    os_ << param->Name().GetString() << ": ";
+    Visit(param->TypeRepr());
   }
   os_ << ") -> ";
-  Visit(node->return_type());
+  Visit(node->ReturnType());
 }
 
 }  // namespace

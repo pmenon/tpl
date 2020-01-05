@@ -70,7 +70,7 @@ class Sema : public ast::AstVisitor<Sema> {
   // Resolve the type of the input expression
   ast::Type *Resolve(ast::Expr *expr) {
     Visit(expr);
-    return expr->type();
+    return expr->GetType();
   }
 
   // Create a builtin type

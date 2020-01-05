@@ -57,7 +57,7 @@ class TestAstBuilder {
     return node_factory()->NewVariableDecl(empty_, name, type_repr, init);
   }
 
-  Expr *DeclRef(Decl *decl) { return IdentExpr(decl->name()); }
+  Expr *DeclRef(Decl *decl) { return IdentExpr(decl->Name()); }
 
   Stmt *DeclStmt(Decl *decl) { return node_factory()->NewDeclStmt(decl); }
 

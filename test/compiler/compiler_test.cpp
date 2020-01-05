@@ -62,14 +62,14 @@ TEST_F(CompilerTest, CompileToAst) {
 
   EXPECT_NE(nullptr, callback.root);
   EXPECT_TRUE(callback.root->IsFile());
-  EXPECT_TRUE(callback.root->As<ast::File>()->GetDeclarations()[0]->IsFunctionDecl());
-  auto *decl = callback.root->As<ast::File>()->GetDeclarations()[0]->As<ast::FunctionDecl>();
+  EXPECT_TRUE(callback.root->As<ast::File>()->Declarations()[0]->IsFunctionDecl());
+  auto *decl = callback.root->As<ast::File>()->Declarations()[0]->As<ast::FunctionDecl>();
 
   // Check name
-  EXPECT_EQ(Context()->GetIdentifier("BLAH"), decl->name());
+  EXPECT_EQ(Context()->GetIdentifier("BLAH"), decl->Name());
 
   // Check type isn't set, since we didn't do type checking
-  EXPECT_EQ(nullptr, decl->function()->type_repr()->return_type()->type());
+  EXPECT_EQ(nullptr, decl->Function()->TypeRepr()->ReturnType()->GetType());
 }
 
 }  // namespace tpl::compiler
