@@ -204,9 +204,14 @@ class File : public AstNode {
       : AstNode(Kind::File, pos), decls_(std::move(decls)) {}
 
   /**
-   * @return The list of declarations making up the file.
+   * @return A const-view of the declarations making up the file.
    */
-  util::RegionVector<Decl *> &Declarations() { return decls_; }
+  const util::RegionVector<Decl *> &Declarations() const { return decls_; }
+
+  /**
+   * @return The mutable list of declarations making up the file.
+   */
+  util::RegionVector<Decl *> *MutableDeclarations() { return &decls_; }
 
   /**
    * Is the given node an AST File? Needed as part of the custom AST RTTI infrastructure.

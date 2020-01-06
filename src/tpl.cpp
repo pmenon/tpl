@@ -14,6 +14,7 @@
 #include "llvm/Support/Path.h"
 
 #include "ast/ast_dump.h"
+#include "ast/ast_pretty_print.h"
 #include "common/cpu_info.h"
 #include "logging/logger.h"
 #include "parsing/parser.h"
@@ -39,6 +40,7 @@
 llvm::cl::OptionCategory kTplOptionsCategory("TPL Compiler Options","Options for controlling the TPL compilation process."); // NOLINT
 llvm::cl::opt<bool> kPrintAst("print-ast", llvm::cl::desc("Print the programs AST"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kPrintTbc("print-tbc", llvm::cl::desc("Print the generated TPL Bytecode"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
+llvm::cl::opt<bool> kPrettyPrint("pretty-print", llvm::cl::desc("Pretty-print the source from the parsed AST"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kIsSQL("sql", llvm::cl::desc("Is the input a SQL query?"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kTpch("tpch", llvm::cl::desc("Should the TPCH database be loaded? Requires '-schema' and '-data' directories."), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<std::string> kDataDir("data", llvm::cl::desc("Where to find data files of tables to load"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
@@ -111,6 +113,11 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
   // Dump AST
   if (kPrintAst) {
     ast::AstDump::Dump(root);
+  }
+
+  // Pretty-print AST
+  if (kPrettyPrint) {
+    ast::AstPrettyPrint::Dump(std::cout, root);
   }
 
   //

@@ -52,6 +52,11 @@ void AstPrettyPrintImpl::VisitArrayTypeRepr(ArrayTypeRepr *node) {
 void AstPrettyPrintImpl::VisitBadExpr(BadExpr *node) { TPL_ASSERT(false, "Invalid"); }
 
 void AstPrettyPrintImpl::VisitBlockStmt(BlockStmt *node) {
+  if (node->IsEmpty()) {
+    os_ << "{ }";
+    return;
+  }
+
   os_ << "{";
   IncreaseIndent();
   NewLine();
@@ -66,7 +71,7 @@ void AstPrettyPrintImpl::VisitBlockStmt(BlockStmt *node) {
   DecreaseIndent();
   NewLine();
   os_ << "}";
-  NewLine();
+//  NewLine();
 }
 
 void AstPrettyPrintImpl::VisitCallExpr(CallExpr *node) {
@@ -115,6 +120,7 @@ void AstPrettyPrintImpl::VisitStructDecl(StructDecl *node) {
   NewLine();
   Visit(node->TypeRepr());
   DecreaseIndent();
+  NewLine();
   os_ << "}";
   NewLine();
 }
@@ -152,6 +158,7 @@ void AstPrettyPrintImpl::VisitFunctionLitExpr(FunctionLitExpr *node) {
   Visit(node->TypeRepr());
   os_ << " ";
   Visit(node->Body());
+  NewLine();
 }
 
 void AstPrettyPrintImpl::VisitForStmt(ForStmt *node) {
@@ -184,7 +191,7 @@ void AstPrettyPrintImpl::VisitForInStmt(ForInStmt *node) {
 
 void AstPrettyPrintImpl::VisitBinaryOpExpr(BinaryOpExpr *node) {
   Visit(node->Left());
-  os_ << parsing::Token::GetString(node->Op());
+  os_ << " " << parsing::Token::GetString(node->Op()) << " ";
   Visit(node->Right());
 }
 
@@ -216,10 +223,12 @@ void AstPrettyPrintImpl::VisitLitExpr(LitExpr *node) {
 }
 
 void AstPrettyPrintImpl::VisitStructTypeRepr(StructTypeRepr *node) {
+  bool first = true;
   for (auto &field : node->Fields()) {
+    if (!first) NewLine();
+    first = false;
     os_ << field->Name().GetString() << ": ";
     Visit(field->TypeRepr());
-    NewLine();
   }
 }
 
