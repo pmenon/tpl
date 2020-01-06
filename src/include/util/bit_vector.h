@@ -87,11 +87,14 @@ class BitVector {
     }
 
     /**
-     * Set the value of this bit to @em that.
-     * @param that The bit to copy from.
+     * Set the value of this bit to the provided bit.
+     * @param that The bit to assign from.
      * @return This bit.
      */
     BitReference &operator=(const BitReference &that) noexcept {
+      if (this == &that) {
+        return *this;
+      }
       Assign(that);
       return *this;
     }
@@ -122,7 +125,7 @@ class BitVector {
   };
 
   /**
-   * Create an empty bit vector. Users must call @em Resize() before interacting with it.
+   * Create an empty bit vector. Users must call Resize() before interacting with it.
    * @ref BitVector::Resize()
    */
   BitVector() : num_bits_(0) {}
@@ -154,6 +157,9 @@ class BitVector {
    * @return This bit vector as a copy of the input vector.
    */
   BitVector &operator=(const BitVector &other) {
+    if (this == &other) {
+      return *this;
+    }
     num_bits_ = other.num_bits_;
     words_ = other.words_;
     return *this;
@@ -167,7 +173,7 @@ class BitVector {
   BitVector &operator=(BitVector &&other) noexcept = default;
 
   /**
-   * @return True if the bit at position @em position is set; false otherwise.
+   * @return True if the bit at the provided position is set; false otherwise.
    */
   bool Test(const uint32_t position) const {
     TPL_ASSERT(position < GetNumBits(), "Index out of range");
@@ -368,13 +374,13 @@ class BitVector {
   uint32_t CountOnes() const {
     uint32_t count = 0;
     for (uint32_t i = 0; i < GetNumWords(); i++) {
-      count += util::BitUtil::CountPopulation(words_[i]);
+      count += BitUtil::CountPopulation(words_[i]);
     }
     return count;
   }
 
   /**
-   * @return The index of the n-th 1-bit. If there are fewer than @em n bits, return the size.
+   * @return The index of the n-th 1-bit. If there are fewer than n bits, return the size.
    */
   uint32_t NthOne(uint32_t n) const {
     for (uint32_t i = 0; i < GetNumWords(); i++) {
@@ -391,7 +397,7 @@ class BitVector {
   }
 
   /**
-   * Copy the bit vector @em other into this bit vector.
+   * Copy the contents of the provided bit vector into this bit vector.
    *
    * @pre The sizes of the bit vectors must be the same.
    *
@@ -407,7 +413,7 @@ class BitVector {
   }
 
   /**
-   * Perform the bitwise intersection of this bit vector with the provided @em other bit vector.
+   * Perform the bitwise intersection of this bit vector with the provided bit vector.
    *
    * @pre The sizes of the bit vectors must be the same.
    *
@@ -423,7 +429,7 @@ class BitVector {
   }
 
   /**
-   * Perform the bitwise union of this bit vector with the provided @em other bit vector.
+   * Perform the bitwise union of this bit vector with the provided bit vector.
    *
    * @pre The sizes of the bit vectors must be the same.
    *
@@ -455,17 +461,20 @@ class BitVector {
   }
 
   /**
-   * Reserve enough space in the bit vector to store @em num_bits bits. This does not change the
+   * Reserve enough space in the bit vector to store the provided bits. This does not change the
    * size of the bit vector, but may allocate additional memory.
+   *
    * @param num_bits The desired number of bits to reserve for.
    */
   void Reserve(const uint32_t num_bits) { words_.reserve(NumNeededWords(num_bits)); }
 
   /**
-   * Change the number of bits in the bit vector to @em num_bits. If @em num_bits > num_bits() then
-   * the bits in the range [0, num_bits()) are unchanged, and the remaining bits are set to zero. If
-   * @em num_bits < @em num_bits() then the bits in the range [0, num_bits) are unchanged the
-   * remaining bits are discarded.
+   * Resize the bit vector to store exactly the provided number of bits. If the new size is larger
+   * than the existing size (i.e., num_bits > GetNumBits()) then the bits in the range
+   * [0, GetNumBits()) are unchanged, and the remaining bits are set to zero. If the new size is
+   * smaller than the existing size (i.e., num_bits < GetNumBits()) then the bits in the range
+   * [0, num_bits) are unchanged the remaining bits are discarded.
+   *
    * @param num_bits The number of bits to resize this bit vector to.
    */
   void Resize(const uint32_t num_bits) {
@@ -597,8 +606,8 @@ class BitVector {
   uint32_t FindFirst() const noexcept { return FindFrom(0); }
 
   /**
-   * Find the index of the first set bit <b>after</b> the bit position @em position. If no bit is
-   * set after the position, return the invalid bit position BitVector::kInvalidPos.
+   * Find the index of the first set bit <b>after</b> the provided bit position. If no bit is set
+   * after the position, return the invalid bit position BitVector::kInvalidPos.
    * @param position The position to anchor the search.
    * @return The index of the first set bit after the given position in the bit vector.
    */
@@ -627,7 +636,7 @@ class BitVector {
   float ComputeDensity() const noexcept { return static_cast<float>(CountOnes()) / GetNumBits(); }
 
   /**
-   * Return the value of the bit at position @em position in the bit vector. Used for testing the
+   * Return the value of the bit at the provided position in the bit vector. Used for testing the
    * value of a bit:
    *
    * @code
@@ -643,7 +652,7 @@ class BitVector {
   bool operator[](const uint32_t position) const { return Test(position); }
 
   /**
-   * Return a reference to the bit at position @em position in the bit vector. The reference can be
+   * Return a reference to the bit at the provided position in the bit vector. The reference can be
    * modified, but is invalid if the bit vector is resized.
    *
    * @code
@@ -661,19 +670,20 @@ class BitVector {
   }
 
   /**
-   * @return True if this bit-vector equals @em that bit vector, bit-for-bit.
+   * @return True if this bit-vector equals the provided bit vector, bit-for-bit.
    */
   bool operator==(const BitVector &that) const noexcept {
     return GetNumBits() == that.GetNumBits() && words_ == that.words_;
   }
 
   /**
-   * @return True if this bit-vector is not @em that bit vector.
+   * @return True if this bit-vector is not equal to the provided bit vector.
    */
   bool operator!=(const BitVector &that) const noexcept { return !(*this == that); }
 
   /**
-   * Perform a difference between this bit vector that @em that.
+   * Perform a bitwise difference between this bit vector and the provided bit vector storing the
+   * result in this bit vector.
    *
    * @pre The two vectors must be the same size.
    *
@@ -686,7 +696,8 @@ class BitVector {
   }
 
   /**
-   * Perform an intersection of this bit vector that @em that.
+   * Perform an intersection of this bit vector the provided bit vector storing the result in this
+   * bit vector.
    *
    * @pre The two vectors must be the same size.
    *
@@ -699,7 +710,8 @@ class BitVector {
   }
 
   /**
-   * Perform a union of this bit vector and @em that.
+   * Perform a union of this bit vector and the provided bit vector storing the result in this bit
+   * vector.
    *
    * @pre The two vectors must be the same size.
    *
