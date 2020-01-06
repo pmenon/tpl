@@ -195,9 +195,15 @@ VM_OP_HOT void OpReturn() {}
 // Execution Context
 // ---------------------------------------------------------
 
-VM_OP_HOT void OpExecutionContextGetMemoryPool(tpl::sql::MemoryPool **const memory,
-                                               tpl::sql::ExecutionContext *const exec_ctx) {
+VM_OP_WARM void OpExecutionContextGetMemoryPool(tpl::sql::MemoryPool **const memory,
+                                                tpl::sql::ExecutionContext *const exec_ctx) {
   *memory = exec_ctx->GetMemoryPool();
+}
+
+VM_OP_WARM void OpExecutionContextGetTLS(
+    tpl::sql::ThreadStateContainer **const thread_state_container,
+    tpl::sql::ExecutionContext *const exec_ctx) {
+  *thread_state_container = exec_ctx->GetThreadStateContainer();
 }
 
 VM_OP void OpThreadStateContainerInit(tpl::sql::ThreadStateContainer *thread_state_container,

@@ -692,21 +692,31 @@ void Sema::CheckBuiltinHashTableEntryIterCall(ast::CallExpr *call, ast::Builtin 
   }
 }
 
-void Sema::CheckBuiltinExecutionContextCall(ast::CallExpr *call, UNUSED ast::Builtin builtin) {
+void Sema::CheckBuiltinExecutionContextCall(ast::CallExpr *call, ast::Builtin builtin) {
   if (!CheckArgCount(call, 1)) {
     return;
   }
 
-  const auto &call_args = call->Arguments();
-
+  // First and only argument should be the execution context
   auto exec_ctx_kind = ast::BuiltinType::ExecutionContext;
-  if (!IsPointerToSpecificBuiltin(call_args[0]->GetType(), exec_ctx_kind)) {
+  if (!IsPointerToSpecificBuiltin(call->Arguments()[0]->GetType(), exec_ctx_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(exec_ctx_kind)->PointerTo());
     return;
   }
 
-  auto mem_pool_kind = ast::BuiltinType::MemoryPool;
-  call->SetType(GetBuiltinType(mem_pool_kind)->PointerTo());
+  switch (builtin) {
+    case ast::Builtin::ExecutionContextGetMemoryPool: {
+      call->SetType(GetBuiltinType(ast::BuiltinType::MemoryPool)->PointerTo());
+      break;
+    }
+    case ast::Builtin::ExecutionContextGetTLS: {
+      call->SetType(GetBuiltinType(ast::BuiltinType::ThreadStateContainer)->PointerTo());
+      break;
+    }
+    default: {
+      UNREACHABLE("Impossible execution context call");
+    }
+  }
 }
 
 void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builtin builtin) {
@@ -1526,7 +1536,8 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckBuiltinStringLikeCall(call);
       break;
     }
-    case ast::Builtin::ExecutionContextGetMemoryPool: {
+    case ast::Builtin::ExecutionContextGetMemoryPool:
+    case ast::Builtin::ExecutionContextGetTLS: {
       CheckBuiltinExecutionContextCall(call, builtin);
       break;
     }

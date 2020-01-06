@@ -100,6 +100,7 @@ namespace tpl::vm {
                                                                                                                        \
   /* Execution Context */                                                                                              \
   F(ExecutionContextGetMemoryPool, OperandType::Local, OperandType::Local)                                             \
+  F(ExecutionContextGetTLS, OperandType::Local, OperandType::Local)                                                    \
                                                                                                                        \
   /* Thread State Container */                                                                                         \
   F(ThreadStateContainerInit, OperandType::Local, OperandType::Local)                                                  \

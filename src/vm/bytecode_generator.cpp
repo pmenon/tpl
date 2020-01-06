@@ -1376,22 +1376,23 @@ void BytecodeGenerator::VisitResultBufferCall(ast::CallExpr *call, ast::Builtin 
   }
 }
 
-void BytecodeGenerator::VisitExecutionContextCall(ast::CallExpr *call,
-                                                  UNUSED ast::Builtin builtin) {
-  ast::Context *ctx = call->GetType()->GetContext();
-
-  // The memory pool pointer
-  LocalVar mem_pool = GetExecutionResult()->GetOrCreateDestination(
-      ast::BuiltinType::Get(ctx, ast::BuiltinType::MemoryPool)->PointerTo());
-
-  // The execution context pointer
+void BytecodeGenerator::VisitExecutionContextCall(ast::CallExpr *call, ast::Builtin builtin) {
+  LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType());
   LocalVar exec_ctx = VisitExpressionForRValue(call->Arguments()[0]);
-
-  // Emit bytecode
-  GetEmitter()->Emit(Bytecode::ExecutionContextGetMemoryPool, mem_pool, exec_ctx);
-
-  // Indicate where the result is
-  GetExecutionResult()->SetDestination(mem_pool.ValueOf());
+  switch (builtin) {
+    case ast::Builtin::ExecutionContextGetMemoryPool: {
+      GetEmitter()->Emit(Bytecode::ExecutionContextGetMemoryPool, result, exec_ctx);
+      break;
+    }
+    case ast::Builtin::ExecutionContextGetTLS: {
+      GetEmitter()->Emit(Bytecode::ExecutionContextGetTLS, result, exec_ctx);
+      break;
+    }
+    default: {
+      UNREACHABLE("Impossible execution context call");
+    }
+  }
+  GetExecutionResult()->SetDestination(result.ValueOf());
 }
 
 void BytecodeGenerator::VisitBuiltinThreadStateContainerCall(ast::CallExpr *call,
@@ -1511,7 +1512,8 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitSqlStringLikeCall(call);
       break;
     }
-    case ast::Builtin::ExecutionContextGetMemoryPool: {
+    case ast::Builtin::ExecutionContextGetMemoryPool:
+    case ast::Builtin::ExecutionContextGetTLS: {
       VisitExecutionContextCall(call, builtin);
       break;
     }

@@ -6,6 +6,7 @@
 #include "common/macros.h"
 #include "sql/result_buffer.h"
 #include "sql/runtime_types.h"
+#include "sql/thread_state_container.h"
 
 namespace tpl::sql {
 
@@ -18,9 +19,9 @@ class Schema;
 class ExecutionContext {
  public:
   /**
-   * Create a context for the execution of a query. All allocations will occur from the provided
-   * memory allocator @em mem_pool. If a schema and result consumer are provided, the result of the
-   * query will be fed into the @em consumer.
+   * Create a context for the execution of a query. All memory allocations required during execution
+   * will occur from the provided memory allocator. If a schema and result consumer are provided,
+   * the result of the query will be fed into the provided consumer.
    * @param mem_pool The memory pool for all memory allocations.
    * @param schema The optional schema of the output.
    * @param consumer The optional consumer of the output.
@@ -28,7 +29,10 @@ class ExecutionContext {
   explicit ExecutionContext(MemoryPool *mem_pool, const Schema *schema = nullptr,
                             ResultConsumer *consumer = nullptr)
       : mem_pool_(mem_pool),
-        buffer_(schema == nullptr ? nullptr : new ResultBuffer(mem_pool, *schema, consumer)) {}
+        buffer_(schema == nullptr ? nullptr : new ResultBuffer(mem_pool, *schema, consumer)),
+        thread_state_container_(std::make_unique<ThreadStateContainer>(mem_pool_)) {
+    TPL_ASSERT(mem_pool != nullptr, "Null memory-pool provided to execution context");
+  }
 
   /**
    * This class cannot be copied or moved.
@@ -50,6 +54,11 @@ class ExecutionContext {
    */
   ResultBuffer *GetResultBuffer() { return buffer_.get(); }
 
+  /**
+   * @return The thread state container.
+   */
+  ThreadStateContainer *GetThreadStateContainer() { return thread_state_container_.get(); }
+
  private:
   // Pool for memory allocations required during execution
   MemoryPool *mem_pool_;
@@ -59,6 +68,10 @@ class ExecutionContext {
 
   // Buffer of results before sending to consumer
   std::unique_ptr<ResultBuffer> buffer_;
+
+  // Container for thread-local state. During parallel processing, execution
+  // threads access their thread-local state from this container.
+  std::unique_ptr<ThreadStateContainer> thread_state_container_;
 };
 
 }  // namespace tpl::sql

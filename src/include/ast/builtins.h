@@ -20,6 +20,7 @@ namespace tpl::ast {
                                                                 \
   /* Thread State Container */                                  \
   F(ExecutionContextGetMemoryPool, execCtxGetMem)               \
+  F(ExecutionContextGetTLS, execCtxGetTLS)                      \
   F(ThreadStateContainerInit, tlsInit)                          \
   F(ThreadStateContainerReset, tlsReset)                        \
   F(ThreadStateContainerIterate, tlsIterate)                    \

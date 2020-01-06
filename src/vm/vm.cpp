@@ -459,6 +459,13 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(ExecutionContextGetTLS) : {
+    auto *thread_state_container = frame->LocalAt<sql::ThreadStateContainer **>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+    OpExecutionContextGetTLS(thread_state_container, exec_ctx);
+    DISPATCH_NEXT();
+  }
+
   OP(ThreadStateContainerInit) : {
     auto *thread_state_container = frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
     auto *memory = frame->LocalAt<tpl::sql::MemoryPool *>(READ_LOCAL_ID());
