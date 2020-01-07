@@ -883,6 +883,11 @@ class CallExpr : public Expr {
   CallKind GetCallKind() const { return call_kind_; }
 
   /**
+   * @return True if the call is to a builtin function; false otherwise.
+   */
+  bool IsBuiltinCall() const { return call_kind_ == CallKind::Builtin; }
+
+  /**
    * Is the given node a call? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a call; false otherwise.

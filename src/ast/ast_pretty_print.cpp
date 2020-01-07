@@ -71,10 +71,10 @@ void AstPrettyPrintImpl::VisitBlockStmt(BlockStmt *node) {
   DecreaseIndent();
   NewLine();
   os_ << "}";
-//  NewLine();
 }
 
 void AstPrettyPrintImpl::VisitCallExpr(CallExpr *node) {
+  if (node->IsBuiltinCall()) os_ << "@";
   Visit(node->Function());
   os_ << "(";
   bool first = true;
@@ -82,7 +82,7 @@ void AstPrettyPrintImpl::VisitCallExpr(CallExpr *node) {
     if (!first) os_ << ",";
     first = false;
     Visit(arg);
-  };
+  }
   os_ << ")";
 }
 
