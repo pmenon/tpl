@@ -437,12 +437,24 @@ class BlockStmt : public Stmt {
   /**
    * @return The statements making up the block.
    */
-  util::RegionVector<Stmt *> &Statements() { return statements_; }
+  const util::RegionVector<Stmt *> &Statements() const { return statements_; }
+
+  /**
+   * Append a new statement to the list of statements.
+   * @param stmt The statement to append.
+   */
+  void AppendStatement(ast::Stmt *stmt) { statements_.push_back(stmt); }
 
   /**
    * @return The position of the right-brace.
    */
   const SourcePosition &RightBracePosition() const { return rbrace_pos_; }
+
+  /**
+   * Set the right-brace position for the end of the block.
+   * @param pos The right brace position.
+   */
+  void SetRightBracePosition(const SourcePosition &pos) { rbrace_pos_ = pos; }
 
   /**
    * @return True if the block is empty; false otherwise.
@@ -452,7 +464,7 @@ class BlockStmt : public Stmt {
   /**
    * @return The last statement in the block; null if the block is empty;
    */
-  Stmt *GetLastStmt() { return (IsEmpty() ? nullptr : statements_.back()); }
+  Stmt *GetLast() { return (IsEmpty() ? nullptr : statements_.back()); }
 
   /**
    * Is the given node an AST statement list? Needed as part of the custom AST RTTI infrastructure.
@@ -463,7 +475,7 @@ class BlockStmt : public Stmt {
 
  private:
   // The right brace position.
-  const SourcePosition rbrace_pos_;
+  SourcePosition rbrace_pos_;
   // The list of statements.
   util::RegionVector<Stmt *> statements_;
 };

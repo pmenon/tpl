@@ -111,23 +111,19 @@ ast::Stmt *RewriteForInScan(ast::Context *ctx, ast::ForInStmt *for_in) {
 
   // Splice in the target initialization at the start of the body
   {
-    auto &body = for_in->Body()->Statements();
-
     // Pull out VPI
     llvm::SmallVector<ast::Expr *, 1> args = {tvi_addr};
     auto *call = GenCallBuiltin(ctx, pos, ast::Builtin::TableIterGetVPI, args);
     auto vpi_ident = for_in->Target()->As<ast::IdentifierExpr>()->Name();
     auto *vpi_decl = DeclareVarNoType(ctx, pos, vpi_ident.GetData(), call);
-    body.insert(body.begin(), factory->NewDeclStmt(vpi_decl));
+    for_in->Body()->AppendStatement(factory->NewDeclStmt(vpi_decl));
   }
 
   {
-    auto &body = for_in->Body()->Statements();
-
     auto vpi_ident = for_in->Target()->As<ast::IdentifierExpr>();
     llvm::SmallVector<ast::Expr *, 1> args = {vpi_ident};
     auto *call = GenCallBuiltin(ctx, pos, ast::Builtin::VPIReset, args);
-    body.push_back(factory->NewExpressionStmt(call));
+    for_in->Body()->AppendStatement(factory->NewExpressionStmt(call));
   }
 
   // Add the loop to the running statements list
