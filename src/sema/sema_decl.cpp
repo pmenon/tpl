@@ -1,5 +1,7 @@
 #include "sema/sema.h"
 
+#include <unordered_set>
+
 #include "ast/context.h"
 #include "ast/type.h"
 
@@ -60,10 +62,21 @@ void Sema::VisitFunctionDecl(ast::FunctionDecl *node) {
     return;
   }
 
-  // Make declaration available
+  // Check for duplicate fields.
+  std::unordered_set<ast::Identifier> seen_fields;
+  for (const auto *field : node->TypeRepr()->As<ast::FunctionTypeRepr>()->Parameters()) {
+    if (seen_fields.count(field->Name()) > 0) {
+      error_reporter()->Report(node->Position(), ErrorMessages::kDuplicateArgName,
+                               field->Name(), node->Name());
+      return;
+    }
+    seen_fields.insert(field->Name());
+  }
+
+  // Make declaration available.
   current_scope()->Declare(node->Name(), func_type);
 
-  // Now resolve the whole function
+  // Now resolve the whole function.
   Resolve(node->Function());
 }
 
@@ -74,6 +87,18 @@ void Sema::VisitStructDecl(ast::StructDecl *node) {
     return;
   }
 
+  // Check for duplicate fields.
+  std::unordered_set<ast::Identifier> seen_fields;
+  for (const auto *field : node->TypeRepr()->As<ast::StructTypeRepr>()->Fields()) {
+    if (seen_fields.count(field->Name()) > 0) {
+      error_reporter()->Report(node->Position(), ErrorMessages::kDuplicateStructFieldName,
+                               field->Name(), node->Name());
+      return;
+    }
+    seen_fields.insert(field->Name());
+  }
+
+  // Make the declaration available.
   current_scope()->Declare(node->Name(), struct_type);
 }
 

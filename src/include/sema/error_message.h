@@ -19,7 +19,8 @@ namespace sema {
 #define MESSAGE_LIST(F)                                                                            \
   F(UnexpectedToken, "unexpected token '%0', expecting '%1'",                                      \
     (parsing::Token::Type, parsing::Token::Type))                                                  \
-  F(DuplicateArgName, "duplicate named argument '%0' in function '%0'", (ast::Identifier))         \
+  F(DuplicateArgName, "duplicate named argument '%0' in function '%0'",                            \
+    (ast::Identifier, ast::Identifier))                                                            \
   F(DuplicateStructFieldName, "duplicate field name '%0' in struct '%1'",                          \
     (ast::Identifier, ast::Identifier))                                                            \
   F(AssignmentUsedAsValue, "assignment '%0' = '%1' used as value",                                 \
