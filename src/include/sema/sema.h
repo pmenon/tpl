@@ -175,7 +175,9 @@ class Sema : public ast::AstVisitor<Sema> {
     }
   }
 
-  /// RAII scope class to track the current scope
+  /**
+   * RAII scope class to track the current scope.
+   */
   class SemaScope {
    public:
     SemaScope(Sema *check, Scope::Kind scope_kind) : check_(check), exited_(false) {
@@ -198,7 +200,9 @@ class Sema : public ast::AstVisitor<Sema> {
     bool exited_;
   };
 
-  /// RAII scope class to capture both the current function and its scope
+  /**
+   * RAII scope class to capture both the current function and its scope.
+   */
   class FunctionSemaScope {
    public:
     FunctionSemaScope(Sema *check, ast::FunctionLitExpr *func)
