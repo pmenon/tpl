@@ -223,11 +223,21 @@ void AstPrettyPrintImpl::VisitLitExpr(LitExpr *node) {
 }
 
 void AstPrettyPrintImpl::VisitStructTypeRepr(StructTypeRepr *node) {
+  // We want to ensure all types are aligned. Pre-process the fields to
+  // find longest field names, then align as appropriate.
+
+  std::size_t longest_field_len = 0;
+  for (const auto *field : node->Fields()) {
+    longest_field_len = std::max(longest_field_len, field->Name().GetLength());
+  }
+
   bool first = true;
-  for (auto &field : node->Fields()) {
+  for (const auto *field : node->Fields()) {
     if (!first) NewLine();
     first = false;
-    os_ << field->Name().GetString() << ": ";
+    os_ << field->Name().GetString();
+    const std::size_t padding = longest_field_len - field->Name().GetLength();
+    os_ << std::string(padding, ' ') << ": ";
     Visit(field->TypeRepr());
   }
 }

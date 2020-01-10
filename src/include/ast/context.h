@@ -48,7 +48,8 @@ class Context {
   ~Context();
 
   /**
-   * Return @em str as a unique string in this context.
+   * Return a unique and context-owned version of the provided string. Identifiers are any string
+   * that appear in TPL source code. Identical strings will map to the same AST Identifier object.
    * @param str The input string.
    * @return A uniqued (interned) version of the string in this context.
    */
