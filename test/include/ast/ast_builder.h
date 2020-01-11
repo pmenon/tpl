@@ -16,6 +16,7 @@ class TestAstBuilder {
   TestAstBuilder() : error_reporter_(), ctx_(&error_reporter_) {}
 
   Context *ctx() { return &ctx_; }
+
   sema::ErrorReporter *error_reporter() { return &error_reporter_; }
 
   Identifier Ident(const std::string &s) { return ctx()->GetIdentifier(s); }
@@ -57,6 +58,16 @@ class TestAstBuilder {
     return node_factory()->NewVariableDecl(empty_, name, type_repr, init);
   }
 
+  FieldDecl *GenFieldDecl(Identifier name, ast::Expr *type_repr) {
+    return node_factory()->NewFieldDecl(empty_, name, type_repr);
+  }
+
+  StructDecl *DeclStruct(Identifier name, std::initializer_list<ast::FieldDecl *> fields) {
+    util::RegionVector<FieldDecl *> f(fields.begin(), fields.end(), ctx()->GetRegion());
+    ast::StructTypeRepr *type = node_factory()->NewStructType(empty_, std::move(f));
+    return node_factory()->NewStructDecl(empty_, name, type);
+  }
+
   Expr *DeclRef(Decl *decl) { return IdentExpr(decl->Name()); }
 
   Stmt *DeclStmt(Decl *decl) { return node_factory()->NewDeclStmt(decl); }
@@ -92,6 +103,11 @@ class TestAstBuilder {
     auto fn = IdentExpr(Builtins::GetFunctionName(BUILTIN));
     auto call_args = util::RegionVector<Expr *>({std::forward<Args>(args)...}, ctx()->GetRegion());
     return node_factory()->NewBuiltinCallExpr(fn, std::move(call_args));
+  }
+
+  File *GenFile(std::initializer_list<ast::Decl *> decls) {
+    util::RegionVector<Decl *> d(decls.begin(), decls.end(), ctx()->GetRegion());
+    return node_factory()->NewFile(empty_, std::move(d));
   }
 
  private:
