@@ -79,7 +79,7 @@ void AstPrettyPrintImpl::VisitCallExpr(CallExpr *node) {
   os_ << "(";
   bool first = true;
   for (auto *arg : node->Arguments()) {
-    if (!first) os_ << ",";
+    if (!first) os_ << ", ";
     first = false;
     Visit(arg);
   }
@@ -285,7 +285,7 @@ void AstPrettyPrintImpl::VisitFunctionTypeRepr(FunctionTypeRepr *node) {
   os_ << "(";
   bool first = true;
   for (const auto &param : node->Parameters()) {
-    if (!first) os_ << ",";
+    if (!first) os_ << ", ";
     first = false;
     os_ << param->Name().GetString() << ": ";
     Visit(param->TypeRepr());
