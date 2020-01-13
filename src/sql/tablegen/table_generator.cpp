@@ -29,7 +29,8 @@ std::unique_ptr<Schema> MakeSchema(std::initializer_list<Schema::ColumnInfo> col
 Table *CreateTable(Catalog *catalog, const std::string &table_name,
                    std::unique_ptr<Schema> schema) {
   const uint16_t table_id = catalog->AllocateTableId();
-  catalog->InsertTable(table_name, std::make_unique<Table>(table_id, std::move(schema)));
+  catalog->InsertTable(table_name,
+                       std::make_unique<Table>(table_id, table_name, std::move(schema)));
   LOG_INFO("Instantiated table '{}' in catalog with ID [{}]", table_name, table_id);
   return catalog->LookupTableByName(table_name);
 }

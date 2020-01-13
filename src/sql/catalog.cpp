@@ -220,7 +220,7 @@ Catalog::Catalog() : next_table_id_(static_cast<uint16_t>(TableId::Last)) {
     }
 
     // Insert into catalog
-    table_catalog_[meta.id] = std::make_unique<Table>(static_cast<uint16_t>(meta.id),
+    table_catalog_[meta.id] = std::make_unique<Table>(static_cast<uint16_t>(meta.id), meta.name,
                                                       std::make_unique<Schema>(std::move(cols)));
     table_name_to_id_map_[meta.name] = meta.id;
   }
