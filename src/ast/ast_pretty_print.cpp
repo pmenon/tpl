@@ -94,6 +94,7 @@ void AstPrettyPrintImpl::VisitFieldDecl(FieldDecl *node) {
 void AstPrettyPrintImpl::VisitFunctionDecl(FunctionDecl *node) {
   os_ << "fun " << node->Name().GetString();
   Visit(node->Function());
+  NewLine();
 }
 
 void AstPrettyPrintImpl::VisitIdentifierExpr(IdentifierExpr *node) {
@@ -217,7 +218,7 @@ void AstPrettyPrintImpl::VisitLitExpr(LitExpr *node) {
       os_ << node->Float32Val();
       break;
     case LitExpr::LitKind::String:
-      os_ << node->StringVal().GetString();
+      os_ << "\"" << node->StringVal().GetString() << "\"";
       break;
   }
 }
