@@ -10,7 +10,7 @@
 #include "sql/planner/expressions/operator_expression.h"
 #include "sql/value.h"
 
-namespace tpl::sql::codegen {
+namespace tpl::sql::planner {
 
 /**
  * Helper class to reduce typing and increase readability when hand crafting expression.
@@ -226,4 +226,4 @@ class ExpressionMaker {
   std::vector<NewAggExpression> allocated_aggs_;
 };
 
-}  // namespace tpl::sql::codegen
+}  // namespace tpl::sql::planner
