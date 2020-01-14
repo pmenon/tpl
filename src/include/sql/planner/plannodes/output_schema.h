@@ -85,8 +85,7 @@ class OutputSchema {
     }
 
     /**
-     *
-     * @return
+     * @return The constructed output schema.
      */
     std::unique_ptr<OutputSchema> Build() {
       return std::make_unique<OutputSchema>(std::move(cols_));
