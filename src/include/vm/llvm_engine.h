@@ -105,7 +105,8 @@ class LLVMEngine {
     }
 
     /**
-     * @return True if the module will be persisted to disk as a shared object file; false otherwise.
+     * @return True if the module will be persisted to disk as a shared object file; false
+     * otherwise.
      */
     bool ShouldPersistObjectFile() const { return write_obj_file_; }
 
