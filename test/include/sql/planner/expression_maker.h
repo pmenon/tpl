@@ -64,7 +64,7 @@ class ExpressionMaker {
   /**
    * Create a Comparison expression
    */
-  Expression Comparison(planner::ExpressionType comp_type, Expression child1, Expression child2) {
+  Expression Compare(planner::ExpressionType comp_type, Expression child1, Expression child2) {
     return Alloc(std::make_unique<planner::ComparisonExpression>(
         comp_type, std::vector<Expression>{child1, child2}));
   }
@@ -72,43 +72,43 @@ class ExpressionMaker {
   /**
    *  expression for child1 == child2
    */
-  Expression ComparisonEq(Expression child1, Expression child2) {
-    return Comparison(planner::ExpressionType::COMPARE_EQUAL, child1, child2);
+  Expression CompareEq(Expression child1, Expression child2) {
+    return Compare(planner::ExpressionType::COMPARE_EQUAL, child1, child2);
   }
 
   /**
    * Create expression for child1 == child2
    */
-  Expression ComparisonNeq(Expression child1, Expression child2) {
-    return Comparison(planner::ExpressionType::COMPARE_NOT_EQUAL, child1, child2);
+  Expression CompareNeq(Expression child1, Expression child2) {
+    return Compare(planner::ExpressionType::COMPARE_NOT_EQUAL, child1, child2);
   }
 
   /**
    * Create expression for child1 < child2
    */
-  Expression ComparisonLt(Expression child1, Expression child2) {
-    return Comparison(planner::ExpressionType::COMPARE_LESS_THAN, child1, child2);
+  Expression CompareLt(Expression child1, Expression child2) {
+    return Compare(planner::ExpressionType::COMPARE_LESS_THAN, child1, child2);
   }
 
   /**
    * Create expression for child1 <= child2
    */
-  Expression ComparisonLe(Expression child1, Expression child2) {
-    return Comparison(planner::ExpressionType::COMPARE_LESS_THAN_OR_EQUAL_TO, child1, child2);
+  Expression CompareLe(Expression child1, Expression child2) {
+    return Compare(planner::ExpressionType::COMPARE_LESS_THAN_OR_EQUAL_TO, child1, child2);
   }
 
   /**
    * Create expression for child1 > child2
    */
-  Expression ComparisonGt(Expression child1, Expression child2) {
-    return Comparison(planner::ExpressionType::COMPARE_GREATER_THAN, child1, child2);
+  Expression CompareGt(Expression child1, Expression child2) {
+    return Compare(planner::ExpressionType::COMPARE_GREATER_THAN, child1, child2);
   }
 
   /**
    * Create expression for child1 >= child2
    */
-  Expression ComparisonGe(Expression child1, Expression child2) {
-    return Comparison(planner::ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL_TO, child1, child2);
+  Expression CompareGe(Expression child1, Expression child2) {
+    return Compare(planner::ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL_TO, child1, child2);
   }
 
   /**

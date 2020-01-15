@@ -22,7 +22,7 @@ SeqScanTranslator::SeqScanTranslator(const planner::SeqScanPlanNode &plan,
   // Register as a parallel scan.
   pipeline->RegisterSource(this, Pipeline::Parallelism::Parallel);
   // Prepare the scan predicate.
-  if (plan.GetScanPredicate() != nullptr) {
+  if (HasPredicate()) {
     compilation_context->Prepare(*plan.GetScanPredicate());
   }
 }
