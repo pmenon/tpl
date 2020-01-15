@@ -16,9 +16,9 @@ ArithmeticTranslator::ArithmeticTranslator(const planner::OperatorExpression &ex
 }
 
 ast::Expr *ArithmeticTranslator::DeriveValue(ConsumerContext *ctx) const {
-  CodeGen * codegen = GetCodeGen();
-  ast::Expr * left_val = ctx->DeriveValue(*GetExpression().GetChild(0));
-  ast::Expr * right_val = ctx->DeriveValue(*GetExpression().GetChild(1));
+  CodeGen *codegen = GetCodeGen();
+  ast::Expr *left_val = ctx->DeriveValue(*GetExpression().GetChild(0));
+  ast::Expr *right_val = ctx->DeriveValue(*GetExpression().GetChild(1));
 
   switch (auto expr_type = GetExpression().GetExpressionType(); expr_type) {
     case planner::ExpressionType::OPERATOR_PLUS:

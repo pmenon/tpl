@@ -7,7 +7,6 @@ namespace tpl::sql::planner {
 
 class ExpressionUtil : public AllStatic {
  public:
-
   /**
    * @return True if the given expression is of the form: col <op> const_val. False otherwise.
    */

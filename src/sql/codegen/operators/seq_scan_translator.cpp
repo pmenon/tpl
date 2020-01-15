@@ -1,6 +1,6 @@
 #include "sql/codegen/operators/seq_scan_translator.h"
-#include <common/exception.h>
 
+#include "common/exception.h"
 #include "sql/catalog.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"

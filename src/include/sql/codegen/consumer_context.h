@@ -5,7 +5,7 @@
 
 #include "common/common.h"
 #include "sql/codegen/ast_fwd.h"
-#include "pipeline.h"
+#include "sql/codegen/pipeline.h"
 
 namespace tpl::sql::planner {
 class AbstractExpression;

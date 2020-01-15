@@ -170,8 +170,7 @@ void SortTranslator::TearDownPipelineState(const PipelineContext &pipeline_conte
   }
 }
 
-void SortTranslator::InsertIntoSorter(ConsumerContext *consumer_context) const {
-}
+void SortTranslator::InsertIntoSorter(ConsumerContext *consumer_context) const {}
 
 void SortTranslator::ScanSorter(ConsumerContext *consumer_context) const {
   CodeGen *codegen = GetCodeGen();

@@ -12,7 +12,7 @@ namespace tpl::sql {
 
 namespace codegen {
 class ConstantTranslator;
-} //
+}  // namespace codegen
 
 struct Val;
 

@@ -12,7 +12,7 @@ ConstantTranslator::ConstantTranslator(const planner::ConstantValueExpression &e
     : ExpressionTranslator(expr, compilation_context) {}
 
 ast::Expr *ConstantTranslator::DeriveValue(UNUSED ConsumerContext *ctx) const {
-  CodeGen * codegen = GetCodeGen();
+  CodeGen *codegen = GetCodeGen();
 
   const GenericValue &val = GetExpressionAs<const planner::ConstantValueExpression>().GetValue();
   switch (val.GetTypeId()) {

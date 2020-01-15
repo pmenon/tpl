@@ -101,13 +101,13 @@ class SeqScanTranslator : public OperatorTranslator {
   std::string_view GetTableName() const;
 
   // Generate a generic filter term.
-  void GenerateGenericTerm(FunctionBuilder *func,
-                           const planner::AbstractExpression *term);
+  void GenerateGenericTerm(FunctionBuilder *func, const planner::AbstractExpression *term);
 
   // Generate all filter clauses.
   void GenerateFilterClauseFunctions(TopLevelDeclarations *top_level_declarations,
                                      const planner::AbstractExpression *predicate,
-                                     std::vector<ast::Identifier> *curr_clause, bool seen_conjunction);
+                                     std::vector<ast::Identifier> *curr_clause,
+                                     bool seen_conjunction);
 
   // Perform a table scan using the provided table vector iterator pointer.
   void DoScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool close_iter) const;

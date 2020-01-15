@@ -17,8 +17,8 @@ ConjunctionTranslator::ConjunctionTranslator(const planner::ConjunctionExpressio
 
 ast::Expr *ConjunctionTranslator::DeriveValue(ConsumerContext *ctx) const {
   CodeGen *codegen = GetCodeGen();
-  ast::Expr * left_val = ctx->DeriveValue(*GetExpression().GetChild(0));
-  ast::Expr * right_val = ctx->DeriveValue(*GetExpression().GetChild(1));
+  ast::Expr *left_val = ctx->DeriveValue(*GetExpression().GetChild(0));
+  ast::Expr *right_val = ctx->DeriveValue(*GetExpression().GetChild(1));
 
   switch (const auto expr_type = GetExpression().GetExpressionType(); expr_type) {
     case planner::ExpressionType::CONJUNCTION_AND:
