@@ -210,6 +210,23 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *OffsetOf(ast::Identifier obj, ast::Identifier member) const;
 
+  /**
+   * Perform a pointer case of the given expression into the provided type representation.
+   * @param base The type to cast the expression into.
+   * @param arg The expression to cast.
+   * @return The result of the cast.
+   */
+  [[nodiscard]] ast::Expr *PtrCast(ast::Expr *base, ast::Expr *arg) const;
+
+  /**
+   * Perform a pointer case of the given argument into a pointer to the type with the provided
+   * base name.
+   * @param base_name The name of the base type.
+   * @param arg The argument to the cast.
+   * @return The result of the cast.
+   */
+  [[nodiscard]] ast::Expr *PtrCast(ast::Identifier base_name, ast::Expr *arg) const;
+
   // ---------------------------------------------------------------------------
   //
   // Declarations
@@ -549,35 +566,35 @@ class CodeGen {
    * @param sorter The sorter instance to iterate.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *SorterIterInit(ast::Expr * iter, ast::Expr * sorter) const;
+  [[nodiscard]] ast::Expr *SorterIterInit(ast::Expr *iter, ast::Expr *sorter) const;
 
   /**
    * Call @sorterIterHasNext(). Check if the sorter iterator has more data.
    * @param iter The iterator.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *SorterIterHasNext(ast::Expr * iter) const;
+  [[nodiscard]] ast::Expr *SorterIterHasNext(ast::Expr *iter) const;
 
   /**
    * Call @sorterIterNext(). Advances the sorter iterator one tuple.
    * @param iter The iterator.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *SorterIterNext(ast::Expr * iter) const;
+  [[nodiscard]] ast::Expr *SorterIterNext(ast::Expr *iter) const;
 
   /**
    * Call @sorterIterGetRow(). Retrieves a pointer to the current iterator row.
    * @param iter The iterator.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *SorterIterGetRow(ast::Expr * iter) const;
+  [[nodiscard]] ast::Expr *SorterIterGetRow(ast::Expr *iter) const;
 
   /**
    * Call @sorterIterClose(). Destroy and cleanup the provided sorter iterator instance.
    * @param iter The sorter iterator.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *SorterIterClose(ast::Expr * iter) const;
+  [[nodiscard]] ast::Expr *SorterIterClose(ast::Expr *iter) const;
 
   /**
    * Call @like(). Implements the SQL LIKE() operation.
@@ -615,6 +632,11 @@ class CodeGen {
    * @return A new identifier expression representing the given identifier.
    */
   ast::IdentifierExpr *MakeExpr(ast::Identifier ident) const;
+
+  /**
+   * @return The expression as a standalone statement.
+   */
+  ast::Stmt *MakeStmt(ast::Expr *expr) const;
 
   /**
    * @return An empty list of statements.

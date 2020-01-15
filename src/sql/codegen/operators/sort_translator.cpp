@@ -6,6 +6,7 @@
 #include "sql/codegen/consumer_context.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
+#include "sql/codegen/loop.h"
 #include "sql/codegen/top_level_declarations.h"
 #include "sql/planner/plannodes/order_by_plan_node.h"
 
@@ -76,9 +77,7 @@ void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder, ast::E
 
   // Setup the contexts.
   const auto num_cols = GetPlan().GetChild(0)->GetOutputSchema()->GetColumns().size();
-  std::vector<SortRowAccess> attrs;
-  attrs.resize(num_cols * 2);
-
+  std::vector<SortRowAccess> attrs(num_cols * 2);
   ConsumerContext left_ctx(GetCompilationContext(), nullptr);
   ConsumerContext right_ctx(GetCompilationContext(), nullptr);
   for (uint32_t i = 0; i < num_cols; i++) {
@@ -122,7 +121,7 @@ void SortTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_decls
   FunctionBuilder builder(codegen, fn_name, std::move(params), codegen->Int32Type());
   {
     GenerateComparisonFunction(&builder, builder.GetParameterByPosition(0),
-                               builder.GetParameterByPosition(0));
+                               builder.GetParameterByPosition(1));
   }
   cmp_func_ = builder.Finish(codegen->Const32(0));
   top_level_decls->RegisterFunction(cmp_func_);
@@ -149,7 +148,27 @@ void SortTranslator::DeclarePipelineState(PipelineContext *pipeline_context) {
   }
 }
 
-void SortTranslator::ScanSorter(ConsumerContext *ctx) const {}
+void SortTranslator::ScanSorter(ConsumerContext *ctx) const {
+  CodeGen *codegen = GetCodeGen();
+  FunctionBuilder *builder = codegen->CurrentFunction();
+
+  ast::Identifier sorter_iter_var = codegen->MakeFreshIdentifier("iter");
+  ast::Expr *iter = codegen->AddressOf(codegen->MakeExpr(sorter_iter_var));
+  ast::Expr *sorter = GetQueryState().GetStateEntryPtr(codegen, sorter_);
+
+  builder->Append(
+      codegen->DeclareVarNoInit(sorter_iter_var, ast::BuiltinType::Kind::SorterIterator));
+  Loop loop(codegen, codegen->MakeStmt(codegen->SorterIterInit(iter, sorter)),
+            codegen->SorterIterHasNext(iter), codegen->MakeStmt(codegen->SorterIterNext(iter)));
+  {
+    ast::Identifier row_var = codegen->MakeFreshIdentifier("row");
+    UNUSED ast::Expr *row = codegen->MakeExpr(row_var);
+    builder->Append(codegen->DeclareVarWithInit(
+        row_var, codegen->PtrCast(sort_row_->Name(), codegen->SorterIterGetRow(iter))));
+  }
+  loop.EndLoop();
+  builder->Append(codegen->SorterIterClose(iter));
+}
 
 void SortTranslator::InsertIntoSorter(ConsumerContext *ctx) const {}
 

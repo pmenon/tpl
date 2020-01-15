@@ -210,6 +210,16 @@ ast::Expr *CodeGen::OffsetOf(ast::Identifier obj, ast::Identifier member) const 
   return CallBuiltin(ast::Builtin::OffsetOf, {MakeExpr(obj), MakeExpr(member)});
 }
 
+ast::Expr *CodeGen::PtrCast(ast::Expr *base, ast::Expr *arg) const {
+  ast::Expr *ptr =
+      context_->GetNodeFactory()->NewUnaryOpExpr(position_, parsing::Token::Type::STAR, base);
+  return CallBuiltin(ast::Builtin::PtrCast, {ptr, arg});
+}
+
+ast::Expr *CodeGen::PtrCast(ast::Identifier base_name, ast::Expr *arg) const {
+  return PtrCast(MakeExpr(base_name), arg);
+}
+
 ast::Expr *CodeGen::BuildCall(ast::Identifier func_name,
                               std::initializer_list<ast::Expr *> args) const {
   // Create the call argument list
@@ -235,9 +245,7 @@ ast::Expr *CodeGen::AccessStructMember(ast::Expr *object, ast::Identifier member
   return context_->GetNodeFactory()->NewMemberExpr(position_, object, MakeExpr(member));
 }
 
-ast::Stmt *CodeGen::Return() {
-  return Return(nullptr);
-}
+ast::Stmt *CodeGen::Return() { return Return(nullptr); }
 
 ast::Stmt *CodeGen::Return(ast::Expr *ret) {
   ast::Stmt *stmt = context_->GetNodeFactory()->NewReturnStmt(position_, ret);
@@ -444,6 +452,10 @@ ast::Identifier CodeGen::MakeIdentifier(std::string_view str) const {
 
 ast::IdentifierExpr *CodeGen::MakeExpr(ast::Identifier ident) const {
   return context_->GetNodeFactory()->NewIdentifierExpr(position_, ident);
+}
+
+ast::Stmt *CodeGen::MakeStmt(ast::Expr *expr) const {
+  return context_->GetNodeFactory()->NewExpressionStmt(expr);
 }
 
 ast::BlockStmt *CodeGen::MakeEmptyBlock() const {
