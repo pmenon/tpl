@@ -36,6 +36,31 @@ std::string_view SeqScanTranslator::GetTableName() const {
   return Catalog::Instance()->LookupTableById(table_oid)->GetName();
 }
 
+namespace {
+
+class TableColumnProvider : public ConsumerContext::ValueProvider {
+ public:
+  TableColumnProvider() : schema_(nullptr), codegen_(nullptr), vpi_(nullptr), col_idx_(0) {}
+
+  TableColumnProvider(const Schema *schema, CodeGen *codegen, ast::Expr *vpi, uint32_t col_idx)
+      : schema_(schema), codegen_(codegen), vpi_(vpi), col_idx_(col_idx) {}
+
+  // Call @vpiGetType(vpi, index)
+  ast::Expr *GetValue(ConsumerContext *ctx) const override {
+    auto type = schema_->GetColumnInfo(col_idx_)->sql_type.GetPrimitiveTypeId();
+    auto nullable = schema_->GetColumnInfo(col_idx_)->sql_type.nullable();
+    return codegen_->VPIGet(vpi_, type, nullable, col_idx_);
+  }
+
+ private:
+  const Schema *schema_;
+  CodeGen *codegen_;
+  ast::Expr *vpi_;
+  uint32_t col_idx_;
+};
+
+}  // namespace
+
 void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *func,
                                             const planner::AbstractExpression *term) {
   CodeGen *codegen = GetCodeGen();
@@ -58,9 +83,19 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *func,
                 codegen->VPIHasNext(vpi, true),                               // @vpiHasNext()
                 codegen->MakeStmt(codegen->VPIAdvance(vpi, true)));           // @vpiAdvance()
   {
+    // Create evaluation context.
+    const auto table_oid = GetPlanAs<planner::SeqScanPlanNode>().GetTableOid();
+    const auto schema = &Catalog::Instance()->LookupTableById(table_oid)->GetSchema();
+    std::vector<TableColumnProvider> attrs(schema->GetColumnCount());
+    ConsumerContext ctx(GetCompilationContext(), *GetPipeline());
+    for (uint32_t i = 0; i < schema->GetColumnCount(); i++) {
+      attrs[i] = TableColumnProvider(schema, codegen, vpi, i);
+      ctx.RegisterColumnValueProvider(i, &attrs[i]);
+    }
+
     // Call @vpiMatch() with the result of the comparison.
     ExpressionTranslator *cond_translator = GetCompilationContext()->LookupTranslator(*term);
-    ast::Expr *cond = cond_translator->DeriveValue(nullptr);
+    ast::Expr *cond = cond_translator->DeriveValue(&ctx);
     func->Append(codegen->VPIMatch(vpi, cond));
   }
   vpi_loop.EndLoop();
