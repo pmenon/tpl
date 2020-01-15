@@ -389,6 +389,17 @@ class CodeGen {
   [[nodiscard]] ast::Expr *CallBuiltin(ast::Builtin builtin,
                                        std::initializer_list<ast::Expr *> args) const;
 
+  /**
+   * Generate a call to the provided function using the provided arguments. This function is almost
+   * identical to the previous with the exception of the type of the arguments parameter. It's
+   * an alternative API for callers that manually build up their arguments list.
+   * @param builtin The builtin to call.
+   * @param args The arguments to pass in the call.
+   * @return The expression representing the call.
+   */
+  [[nodiscard]] ast::Expr *CallBuiltin(ast::Builtin builtin,
+                                       const std::vector<ast::Expr *> &args) const;
+
   // ---------------------------------------------------------------------------
   //
   // Actual TPL builtins
@@ -481,6 +492,86 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *IterateTableParallel(std::string_view table_name, ast::Expr *query_state,
                                                 ast::Expr *tls, ast::Identifier worker_name) const;
+
+  /**
+   * Call @vpiHasNext() or @vpiHasNextFiltered(). Check if the provided unfiltered (or filtered) VPI
+   * has more tuple data to iterate over.
+   * @param vpi The vector projection iterator.
+   * @param filtered Flag indicating if the VPI is filtered.
+   * @return The call expression.
+   */
+  [[nodiscard]] ast::Expr *VPIHasNext(ast::Expr *vpi, bool filtered) const;
+
+  /**
+   * Call @vpiAdvance() or @vpiAdvanceFiltered(). Advance the provided unfiltered (or filtered) VPI
+   * to the next valid tuple.
+   * @param vpi The vector projection iterator.
+   * @param filtered Flag indicating if the VPI is filtered.
+   * @return The call expression.
+   */
+  [[nodiscard]] ast::Expr *VPIAdvance(ast::Expr *vpi, bool filtered) const;
+
+  /**
+   * Call @vpiInit(). Initialize a new VPI using the provided vector projection. The last TID list
+   * argument is optional and can be NULL.
+   * @param vpi The vector projection iterator.
+   * @param vp The vector projection.
+   * @param tids The TID list.
+   * @return The call expression.
+   */
+  [[nodiscard]] ast::Expr *VPIInit(ast::Expr *vpi, ast::Expr *vp, ast::Expr *tids) const;
+
+  /**
+   * Call @vpiMatch(). Mark the current tuple the provided vector projection iterator is positioned
+   * at as valid or invalid depending on the value of the provided condition.
+   * @param vpi The vector projection iterator.
+   * @param cond The boolean condition setting the current tuples filtration state.
+   * @return The call expression.
+   */
+  [[nodiscard]] ast::Expr *VPIMatch(ast::Expr *vpi, ast::Expr *cond) const;
+
+  /**
+   * Call @vpiGet[Type][Nullable](). Reads a value from the provided vector projection iterator of
+   * the given type and NULL-ability flag, and at the provided column index.
+   * @param vpi The vector projection iterator.
+   * @param type_id The SQL type of the column value to read.
+   * @param nullable NULL-ability flag.
+   * @param idx The index of the column in the VPI to read.
+   */
+  [[nodiscard]] ast::Expr *VPIGet(ast::Expr *vpi, sql::TypeId type_id, bool nullable,
+                                  uint32_t idx) const;
+
+  /**
+   * Call @filterManagerInit(). Initialize the provided filter manager instance.
+   * @param fm The filter manager pointer.
+   */
+  [[nodiscard]] ast::Expr *FilterManagerInit(ast::Expr *filter_manager) const;
+
+  /**
+   * Call @filterManagerFree(). Destroy and clean up the provided filter manager instance.
+   * @param fm The filter manager pointer.
+   */
+  [[nodiscard]] ast::Expr *FilterManagerFree(ast::Expr *filter_manager) const;
+
+  /**
+   * Call @filterManagerInsert(). Insert a list of clauses.
+   * @param fm The filter manager pointer.
+   */
+  [[nodiscard]] ast::Expr *FilterManagerInsert(
+      ast::Expr *filter_manager, const std::vector<ast::Identifier> &clause_fn_names) const;
+
+  /**
+   * Call @filterManagerFinalize(). Seal the filter manager making it immutable and executable.
+   * @param fm The filter manager pointer.
+   */
+  [[nodiscard]] ast::Expr *FilterManagerFinalize(ast::Expr *filter_manager) const;
+
+  /**
+   * Call @filterManagerRun(). Runs all filters on the input vector projection iterator.
+   * @param fm The filter manager pointer.
+   * @param vpi The input vector projection iterator.
+   */
+  [[nodiscard]] ast::Expr *FilterManagerRunFilters(ast::Expr *filter_manager, ast::Expr *vpi) const;
 
   /**
    * Call @execCtxGetMemPool(). Return the memory pool within an execution context.

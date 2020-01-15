@@ -4,6 +4,7 @@
 #include "ast/builtins.h"
 #include "ast/context.h"
 #include "ast/type.h"
+#include "common/exception.h"
 #include "sql/codegen/code_container.h"
 
 namespace tpl::sql::codegen {
@@ -174,19 +175,19 @@ ast::Expr *CodeGen::PointerType(ast::BuiltinType::Kind builtin) const {
 ast::Expr *CodeGen::TplType(sql::TypeId type) {
   switch (type) {
     case sql::TypeId::Boolean:
-      return BuiltinType(ast::BuiltinType::Kind::Boolean);
+      return BuiltinType(ast::BuiltinType::Boolean);
     case sql::TypeId::TinyInt:
     case sql::TypeId::SmallInt:
     case sql::TypeId::Integer:
     case sql::TypeId::BigInt:
-      return BuiltinType(ast::BuiltinType::Kind::Integer);
+      return BuiltinType(ast::BuiltinType::Integer);
     case sql::TypeId::Date:
-      return BuiltinType(ast::BuiltinType::Kind::Date);
+      return BuiltinType(ast::BuiltinType::Date);
     case sql::TypeId::Double:
     case sql::TypeId::Float:
-      return BuiltinType(ast::BuiltinType::Kind::Real);
+      return BuiltinType(ast::BuiltinType::Real);
     case sql::TypeId::Varchar:
-      return BuiltinType(ast::BuiltinType::Kind::StringVal);
+      return BuiltinType(ast::BuiltinType::StringVal);
     default:
       UNREACHABLE("Cannot codegen unsupported type.");
   }
@@ -265,6 +266,14 @@ ast::Expr *CodeGen::CallBuiltin(ast::Builtin builtin,
   return call;
 }
 
+// This is copied from the overloaded function. But, we use initializer so often we keep it around.
+ast::Expr *CodeGen::CallBuiltin(ast::Builtin builtin, const std::vector<ast::Expr *> &args) const {
+  util::RegionVector<ast::Expr *> call_args(args.begin(), args.end(), context_->GetRegion());
+  ast::Expr *func = MakeExpr(context_->GetIdentifier(ast::Builtins::GetFunctionName(builtin)));
+  ast::Expr *call = context_->GetNodeFactory()->NewBuiltinCallExpr(func, std::move(call_args));
+  return call;
+}
+
 ast::Expr *CodeGen::BoolToSql(bool b) const {
   ast::Expr *call = CallBuiltin(ast::Builtin::BoolToSql, {ConstBool(b)});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Boolean));
@@ -331,6 +340,114 @@ ast::Expr *CodeGen::IterateTableParallel(std::string_view table_name, ast::Expr 
                                          ast::Expr *tls, ast::Identifier worker_name) const {
   ast::Expr *call = CallBuiltin(ast::Builtin::TableIterParallel,
                                 {ConstString(table_name), query_state, tls, MakeExpr(worker_name)});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::VPIHasNext(ast::Expr *vpi, bool filtered) const {
+  ast::Builtin builtin = filtered ? ast::Builtin::VPIHasNextFiltered : ast::Builtin::VPIHasNext;
+  ast::Expr *call = CallBuiltin(builtin, {vpi});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Bool));
+  return call;
+}
+
+ast::Expr *CodeGen::VPIAdvance(ast::Expr *vpi, bool filtered) const {
+  ast::Builtin builtin = filtered ? ast::Builtin ::VPIAdvanceFiltered : ast::Builtin ::VPIAdvance;
+  ast::Expr *call = CallBuiltin(builtin, {vpi});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::VPIMatch(ast::Expr *vpi, ast::Expr *cond) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::VPIMatch, {vpi, cond});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::VPIInit(ast::Expr *vpi, ast::Expr *vp, ast::Expr *tids) const {
+  ast::Expr *call = nullptr;
+  if (tids != nullptr) {
+    call = CallBuiltin(ast::Builtin::VPIInit, {vpi, vp, tids});
+  } else {
+    call = CallBuiltin(ast::Builtin::VPIInit, {vpi, vp});
+  }
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::VPIGet(ast::Expr *vpi, sql::TypeId type_id, bool nullable, uint32_t idx) const {
+  ast::Builtin builtin;
+  ast::BuiltinType::Kind ret_kind;
+  switch (type_id) {
+    case sql::TypeId::SmallInt:
+      builtin = ast::Builtin::VPIGetSmallInt;
+      ret_kind = ast::BuiltinType::Integer;
+      break;
+    case sql::TypeId::Integer:
+      builtin = ast::Builtin::VPIGetInt;
+      ret_kind = ast::BuiltinType::Integer;
+      break;
+    case sql::TypeId::BigInt:
+      builtin = ast::Builtin::VPIGetBigInt;
+      ret_kind = ast::BuiltinType::Integer;
+      break;
+    case sql::TypeId::Float:
+      builtin = ast::Builtin::VPIGetReal;
+      ret_kind = ast::BuiltinType::Real;
+      break;
+    case sql::TypeId::Double:
+      builtin = ast::Builtin::VPIGetDouble;
+      ret_kind = ast::BuiltinType::Real;
+      break;
+    case sql::TypeId::Date:
+      builtin = ast::Builtin::VPIGetDate;
+      ret_kind = ast::BuiltinType::Date;
+      break;
+    case sql::TypeId::Varchar:
+      builtin = ast::Builtin::VPIGetString;
+      ret_kind = ast::BuiltinType::StringVal;
+      break;
+    default:
+      throw NotImplementedException("CodeGen: Reading type {} from VPI not supported.",
+                                    TypeIdToString(type_id));
+  }
+  ast::Expr *call = CallBuiltin(builtin, {vpi, Const32(idx)});
+  call->SetType(ast::BuiltinType::Get(context_, ret_kind));
+  return call;
+}
+
+ast::Expr *CodeGen::FilterManagerInit(ast::Expr *filter_manager) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerInit, {filter_manager});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::FilterManagerFree(ast::Expr *filter_manager) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerFree, {filter_manager});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::FilterManagerInsert(ast::Expr *filter_manager,
+                                        const std::vector<ast::Identifier> &clause_fn_names) const {
+  std::vector<ast::Expr *> params(1 + clause_fn_names.size());
+  params[0] = filter_manager;
+  for (uint32_t i = 1; i < clause_fn_names.size(); i++) {
+    params[i] = MakeExpr(clause_fn_names[i]);
+  }
+  ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerInsertFilter, params);
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::FilterManagerFinalize(ast::Expr *filter_manager) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerFinalize, {filter_manager});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::FilterManagerRunFilters(ast::Expr *filter_manager, ast::Expr *vpi) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerRunFilters, {filter_manager, vpi});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }
