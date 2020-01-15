@@ -223,12 +223,26 @@ ast::Expr *CodeGen::BinaryOp(parsing::Token::Type op, ast::Expr *left, ast::Expr
   return context_->GetNodeFactory()->NewBinaryOpExpr(position_, op, left, right);
 }
 
+ast::Expr *CodeGen::Compare(parsing::Token::Type op, ast::Expr *left, ast::Expr *right) const {
+  return context_->GetNodeFactory()->NewComparisonOpExpr(position_, op, left, right);
+}
+
 ast::Expr *CodeGen::UnaryOp(parsing::Token::Type op, ast::Expr *input) const {
   return context_->GetNodeFactory()->NewUnaryOpExpr(position_, op, input);
 }
 
 ast::Expr *CodeGen::AccessStructMember(ast::Expr *object, ast::Identifier member) {
   return context_->GetNodeFactory()->NewMemberExpr(position_, object, MakeExpr(member));
+}
+
+ast::Stmt *CodeGen::Return() {
+  return Return(nullptr);
+}
+
+ast::Stmt *CodeGen::Return(ast::Expr *ret) {
+  ast::Stmt *stmt = context_->GetNodeFactory()->NewReturnStmt(position_, ret);
+  NewLine();
+  return stmt;
 }
 
 ast::Expr *CodeGen::Call(ast::Identifier func_name, std::initializer_list<ast::Expr *> args) const {
@@ -299,6 +313,12 @@ ast::Expr *CodeGen::TableIterGetVPI(ast::Expr *table_iter) const {
   return call;
 }
 
+ast::Expr *CodeGen::TableIterClose(ast::Expr *table_iter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::TableIterClose, {table_iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
 ast::Expr *CodeGen::IterateTableParallel(std::string_view table_name, ast::Expr *query_state,
                                          ast::Expr *tls, ast::Identifier worker_name) const {
   ast::Expr *call = CallBuiltin(ast::Builtin::TableIterParallel,
@@ -329,6 +349,10 @@ ast::Expr *CodeGen::TLSReset(ast::Expr *tls, ast::Identifier tls_state_name,
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }
+
+// ---------------------------------------------------------
+// Sorters
+// ---------------------------------------------------------
 
 ast::Expr *CodeGen::SorterInit(ast::Expr *sorter, ast::Expr *mem_pool,
                                ast::Identifier cmp_func_name,
@@ -365,6 +389,40 @@ ast::Expr *CodeGen::SorterFree(ast::Expr *sorter) const {
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }
+
+ast::Expr *CodeGen::SorterIterInit(ast::Expr *iter, ast::Expr *sorter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterInit, {iter, sorter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::SorterIterHasNext(ast::Expr *iter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterHasNext, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Bool));
+  return call;
+}
+
+ast::Expr *CodeGen::SorterIterNext(ast::Expr *iter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterNext, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::SorterIterGetRow(ast::Expr *iter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterGetRow, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint8)->PointerTo());
+  return call;
+}
+
+ast::Expr *CodeGen::SorterIterClose(ast::Expr *iter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterClose, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+// ---------------------------------------------------------
+// SQL functions
+// ---------------------------------------------------------
 
 ast::Expr *CodeGen::Like(ast::Expr *str, ast::Expr *pattern) const {
   ast::Expr *call = CallBuiltin(ast::Builtin::Like, {str, pattern});

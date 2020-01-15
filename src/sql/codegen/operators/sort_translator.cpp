@@ -5,6 +5,7 @@
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
 #include "sql/codegen/function_builder.h"
+#include "sql/codegen/if.h"
 #include "sql/codegen/top_level_declarations.h"
 #include "sql/planner/plannodes/order_by_plan_node.h"
 
@@ -32,27 +33,19 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
   }
 
   // Register state.
-  auto codegen = compilation_context->GetCodeGen();
+  CodeGen *codegen = compilation_context->GetCodeGen();
   ast::Expr *sorter_type = codegen->BuiltinType(ast::BuiltinType::Kind::Sorter);
   sorter_ = compilation_context->GetQueryState()->DeclareStateEntry(codegen, "sorter", sorter_type);
 }
 
 void SortTranslator::DefineHelperStructs(TopLevelDeclarations *top_level_decls) {
-  TPL_ASSERT(sort_row_ == nullptr, "Helper structure already generated!");
-  auto codegen = GetCodeGen();
-  auto fields = codegen->MakeEmptyFieldList();
-
-  sort_row_attr_prefix_ = codegen->MakeFreshIdentifier("sorter_attr");
-  std::string prefix(sort_row_attr_prefix_.GetString());
-
-  const auto output_schema = GetPlan().GetChild(0)->GetOutputSchema();
-  for (uint32_t idx = 0; idx < output_schema->GetColumns().size(); idx++) {
-    auto field_name = codegen->MakeIdentifier(prefix + std::to_string(idx));
-    auto type = codegen->TplType(output_schema->GetColumn(idx).GetExpr()->GetReturnValueType());
-    fields.push_back(codegen->MakeField(field_name, type));
-  }
-
+  // Build struct.
+  CodeGen *codegen = GetCodeGen();
+  util::RegionVector<ast::FieldDecl *> fields = codegen->MakeEmptyFieldList();
+  GetChildOutputFields(0, "attr", &fields);
   sort_row_ = codegen->DeclareStruct(codegen->MakeFreshIdentifier("SortRow"), std::move(fields));
+
+  // Declare struct.
   top_level_decls->RegisterStruct(sort_row_);
 }
 
@@ -60,61 +53,92 @@ namespace {
 
 class SortRowAccess : public ConsumerContext::ValueProvider {
  public:
-  using EvalFn = std::function<ast::Expr *()>;
-  explicit SortRowAccess(EvalFn fn) : fn_(std::move(fn)) {}
-  ast::Expr *GetValue(UNUSED ConsumerContext *consumer_context) const override { return fn_(); }
+  SortRowAccess() : codegen_(nullptr), row_ptr_(nullptr) {}
+
+  SortRowAccess(CodeGen *codegen, ast::Expr *row_ptr, const ast::Identifier &attribute)
+      : codegen_(codegen), row_ptr_(row_ptr), attribute_(attribute) {}
+
+  ast::Expr *GetValue(ConsumerContext *ctx) const override {
+    return codegen_->AccessStructMember(row_ptr_, attribute_);
+  }
 
  private:
-  EvalFn fn_;
+  CodeGen *codegen_;
+  ast::Expr *row_ptr_;
+  ast::Identifier attribute_;
 };
 
 }  // namespace
 
-void SortTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_decls) {
-  TPL_ASSERT(cmp_func_ == nullptr, "Comparison function already generated!");
+void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder, ast::Expr *lhs_row,
+                                                ast::Expr *rhs_row) const {
+  CodeGen *codegen = GetCodeGen();
 
-  auto codegen = GetCodeGen();
-  auto fn_name = codegen->MakeFreshIdentifier("compare");
+  // Setup the contexts.
+  const auto num_cols = GetPlan().GetChild(0)->GetOutputSchema()->GetColumns().size();
+  std::vector<SortRowAccess> attrs;
+  attrs.resize(num_cols * 2);
 
-  // Make params
-  auto sort_row_type = codegen->PointerType(sort_row_->Name());
-  auto params =
-      codegen->MakeFieldList({codegen->MakeField(codegen->MakeIdentifier("lhs"), sort_row_type),
-                              codegen->MakeField(codegen->MakeIdentifier("rhs"), sort_row_type)});
-  FunctionBuilder builder(codegen, fn_name, std::move(params), codegen->Int32Type());
-  {
-    // Setup the contexts.
-    ConsumerContext left_ctx(GetCompilationContext(), nullptr);
-    ConsumerContext right_ctx(GetCompilationContext(), nullptr);
+  ConsumerContext left_ctx(GetCompilationContext(), nullptr);
+  ConsumerContext right_ctx(GetCompilationContext(), nullptr);
+  for (uint32_t i = 0; i < num_cols; i++) {
+    ast::Identifier attr = codegen->MakeIdentifier("attr" + std::to_string(i));
+    attrs[i] = SortRowAccess(codegen, lhs_row, attr);
+    attrs[i + num_cols] = SortRowAccess(codegen, rhs_row, attr);
+    left_ctx.RegisterColumnValueProvider(i, &attrs[i]);
+    right_ctx.RegisterColumnValueProvider(i, &attrs[i + num_cols]);
+  }
 
-    UNUSED int32_t ret_value;
-    for (const auto &[expr, sort_order] : GetTypedPlan().GetSortKeys()) {
-      if (sort_order == planner::OrderByOrderingType::ASC) {
-        ret_value = -1;
-      } else {
-        ret_value = 1;
+  int32_t ret_value;
+  for (const auto &[expr, sort_order] : GetTypedPlan().GetSortKeys()) {
+    if (sort_order == planner::OrderByOrderingType::ASC) {
+      ret_value = -1;
+    } else {
+      ret_value = 1;
+    }
+    for (const auto tok : {parsing::Token::Type::LESS, parsing::Token::Type::GREATER}) {
+      ast::Expr *lhs = left_ctx.DeriveValue(*expr);
+      ast::Expr *rhs = right_ctx.DeriveValue(*expr);
+      If cond(codegen, codegen->Compare(tok, lhs, rhs));
+      {
+        // Return the value depending on ordering.
+        builder->Append(codegen->Return(codegen->Const32(ret_value)));
       }
-      for (UNUSED const auto tok : {parsing::Token::Type::LESS, parsing::Token::Type::GREATER}) {
-        UNUSED ast::Expr *lhs = left_ctx.DeriveValue(*expr);
-        UNUSED ast::Expr *rhs = right_ctx.DeriveValue(*expr);
-      }
+      cond.EndIf();
+      ret_value = -ret_value;
     }
   }
-  cmp_func_ = builder.Finish(codegen->Const32(1));
+}
+
+void SortTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_decls) {
+  CodeGen *codegen = GetCodeGen();
+  ast::Identifier fn_name = codegen->MakeFreshIdentifier("compare");
+
+  // Params
+  ast::Expr *sort_row_type = codegen->PointerType(sort_row_->Name());
+  ast::FieldDecl *lhs = codegen->MakeField(codegen->MakeIdentifier("lhs"), sort_row_type);
+  ast::FieldDecl *rhs = codegen->MakeField(codegen->MakeIdentifier("rhs"), sort_row_type);
+  util::RegionVector<ast::FieldDecl *> params = codegen->MakeFieldList({lhs, rhs});
+  FunctionBuilder builder(codegen, fn_name, std::move(params), codegen->Int32Type());
+  {
+    GenerateComparisonFunction(&builder, builder.GetParameterByPosition(0),
+                               builder.GetParameterByPosition(0));
+  }
+  cmp_func_ = builder.Finish(codegen->Const32(0));
   top_level_decls->RegisterFunction(cmp_func_);
 }
 
 void SortTranslator::InitializeQueryState() const {
-  auto codegen = GetCodeGen();
-  auto func = codegen->CurrentFunction();
-  auto sorter_ptr = GetQueryState().GetStateEntryPtr(codegen, sorter_);
-  auto mem_pool = codegen->ExecCtxGetMemoryPool(GetExecutionContext());
+  CodeGen *codegen = GetCodeGen();
+  FunctionBuilder *func = codegen->CurrentFunction();
+  ast::Expr *sorter_ptr = GetQueryState().GetStateEntryPtr(codegen, sorter_);
+  ast::Expr *mem_pool = codegen->ExecCtxGetMemoryPool(GetExecutionContext());
   func->Append(codegen->SorterInit(sorter_ptr, mem_pool, cmp_func_->Name(), sort_row_->Name()));
 }
 
 void SortTranslator::TearDownQueryState() const {
-  auto codegen = GetCodeGen();
-  auto func = codegen->CurrentFunction();
+  CodeGen *codegen = GetCodeGen();
+  FunctionBuilder *func = codegen->CurrentFunction();
   func->Append(codegen->SorterFree(GetQueryState().GetStateEntryPtr(codegen, sorter_)));
 }
 
@@ -139,11 +163,11 @@ void SortTranslator::DoPipelineWork(ConsumerContext *ctx) const {
 
 void SortTranslator::FinishPipelineWork(const PipelineContext &pipeline_context) const {
   if (IsBottomPipeline(pipeline_context.GetPipeline()) && pipeline_context.IsParallel()) {
-    auto codegen = GetCodeGen();
-    auto function = codegen->CurrentFunction();
+    CodeGen *codegen = GetCodeGen();
+    FunctionBuilder *function = codegen->CurrentFunction();
 
-    auto sorter = GetQueryState().GetStateEntryPtr(codegen, sorter_);
-    auto offset = pipeline_context.GetThreadStateEntryOffset(codegen, tl_sorter_);
+    ast::Expr *sorter = GetQueryState().GetStateEntryPtr(codegen, sorter_);
+    ast::Expr *offset = pipeline_context.GetThreadStateEntryOffset(codegen, tl_sorter_);
 
     if (GetTypedPlan().HasLimit()) {
       const auto limit = GetTypedPlan().GetLimit();

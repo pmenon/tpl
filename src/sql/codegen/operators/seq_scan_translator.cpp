@@ -28,15 +28,23 @@ std::string_view SeqScanTranslator::GetTableName() const {
   return Catalog::Instance()->LookupTableById(table_oid)->GetName();
 }
 
-void SeqScanTranslator::DoScanTable(ConsumerContext *ctx, ast::Expr *tvi) const {
+void SeqScanTranslator::DoScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool close_iter) const {
   auto codegen = GetCodeGen();
+  auto func = codegen->CurrentFunction();
+
+  // Loop while iterator has data.
   Loop tvi_loop(codegen, codegen->TableIterAdvance(tvi));
   {
     // Stuff
-    UNUSED auto vpi = codegen->DeclareVarWithInit(codegen->MakeFreshIdentifier("vpi"),
-                                           codegen->TableIterGetVPI(tvi));
+    auto vpi_name = codegen->MakeFreshIdentifier("vpi");
+    UNUSED auto vpi = codegen->MakeExpr(vpi_name);
+    func->Append(codegen->DeclareVarWithInit(vpi_name, codegen->TableIterGetVPI(tvi)));
   }
   tvi_loop.EndLoop();
+
+  if (close_iter) {
+    func->Append(codegen->TableIterClose(tvi));
+  }
 }
 
 void SeqScanTranslator::DoPipelineWork(ConsumerContext *ctx) const {
@@ -45,15 +53,14 @@ void SeqScanTranslator::DoPipelineWork(ConsumerContext *ctx) const {
 
   ast::Expr *tvi = nullptr;
   if (ctx->GetPipeline().IsParallel()) {
-    tvi = func->GetParameterByPosition(2);
+    DoScanTable(ctx, func->GetParameterByPosition(2), false);
   } else {
     auto tvi_name = codegen->MakeFreshIdentifier("tvi");
     tvi = codegen->AddressOf(codegen->MakeExpr(tvi_name));
     func->Append(codegen->DeclareVarNoInit(tvi_name, ast::BuiltinType::Kind::TableVectorIterator));
     func->Append(codegen->TableIterInit(tvi, GetTableName()));
+    DoScanTable(ctx, tvi, true);
   }
-
-  DoScanTable(ctx, tvi);
 }
 
 util::RegionVector<ast::FieldDecl *> SeqScanTranslator::GetWorkerParams() const {

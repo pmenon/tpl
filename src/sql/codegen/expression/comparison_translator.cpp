@@ -16,23 +16,23 @@ ComparisonTranslator::ComparisonTranslator(const planner::ComparisonExpression &
 }
 
 ast::Expr *ComparisonTranslator::DeriveValue(ConsumerContext *ctx) const {
-  auto codegen = GetCodeGen();
-  auto left_val = ctx->DeriveValue(*GetExpression().GetChild(0));
-  auto right_val = ctx->DeriveValue(*GetExpression().GetChild(1));
+  CodeGen *codegen = GetCodeGen();
+  ast::Expr *left_val = ctx->DeriveValue(*GetExpression().GetChild(0));
+  ast::Expr *right_val = ctx->DeriveValue(*GetExpression().GetChild(1));
 
   switch (const auto expr_type = GetExpression().GetExpressionType(); expr_type) {
     case planner::ExpressionType::COMPARE_EQUAL:
-      return codegen->BinaryOp(parsing::Token::Type::PLUS, left_val, right_val);
+      return codegen->Compare(parsing::Token::Type::PLUS, left_val, right_val);
     case planner::ExpressionType::COMPARE_GREATER_THAN:
-      return codegen->BinaryOp(parsing::Token::Type::GREATER, left_val, right_val);
+      return codegen->Compare(parsing::Token::Type::GREATER, left_val, right_val);
     case planner::ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL_TO:
-      return codegen->BinaryOp(parsing::Token::Type::GREATER_EQUAL, left_val, right_val);
+      return codegen->Compare(parsing::Token::Type::GREATER_EQUAL, left_val, right_val);
     case planner::ExpressionType::COMPARE_LESS_THAN:
-      return codegen->BinaryOp(parsing::Token::Type::LESS, left_val, right_val);
+      return codegen->Compare(parsing::Token::Type::LESS, left_val, right_val);
     case planner::ExpressionType::COMPARE_LESS_THAN_OR_EQUAL_TO:
-      return codegen->BinaryOp(parsing::Token::Type::LESS_EQUAL, left_val, right_val);
+      return codegen->Compare(parsing::Token::Type::LESS_EQUAL, left_val, right_val);
     case planner::ExpressionType::COMPARE_NOT_EQUAL:
-      return codegen->BinaryOp(parsing::Token::Type::BANG_EQUAL, left_val, right_val);
+      return codegen->Compare(parsing::Token::Type::BANG_EQUAL, left_val, right_val);
     case planner::ExpressionType::COMPARE_LIKE:
       return codegen->Like(left_val, right_val);
     case planner::ExpressionType::COMPARE_NOT_LIKE:

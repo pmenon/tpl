@@ -87,7 +87,7 @@ class SeqScanTranslator : public OperatorTranslator {
   std::string_view GetTableName() const;
 
   // Perform a table scan using the provided table vector iterator pointer.
-  void DoScanTable(ConsumerContext *ctx, ast::Expr *tvi) const;
+  void DoScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool close_iter) const;
 };
 
 }  // namespace tpl::sql::codegen

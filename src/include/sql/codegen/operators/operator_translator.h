@@ -207,6 +207,14 @@ class OperatorTranslator {
     return static_cast<const T &>(plan_);
   }
 
+  // Used by operators when they need to generate a struct containing a child's
+  // output. Also used by the output layer to materialize the output.
+  // The child index refers to which specific child to inspect.
+  // The prefix is added to each field/attribute of the child.
+  // The fields vector collects the resulting field declarations.
+  void GetChildOutputFields(uint32_t child_index, const std::string &prefix,
+                            util::RegionVector<ast::FieldDecl *> *fields) const;
+
  private:
   // The plan node.
   const planner::AbstractPlanNode &plan_;

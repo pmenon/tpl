@@ -304,6 +304,17 @@ class CodeGen {
                                     ast::Expr *right) const;
 
   /**
+   * Generate a comparison operation of the provided type between the provided left and right
+   * operands, returning its result.
+   * @param op The binary operation.
+   * @param left The left input.
+   * @param right The right input.
+   * @return THe result of the comparison.
+   */
+  [[nodiscard]] ast::Expr *Compare(parsing::Token::Type op, ast::Expr *left,
+                                   ast::Expr *right) const;
+
+  /**
    * Generate a unary operation of the provided operation type (<b>op</b>) on the provided input.
    * @param op The unary operation.
    * @param input The input.
@@ -324,6 +335,19 @@ class CodeGen {
    * @return An expression accessing the desired struct member.
    */
   [[nodiscard]] ast::Expr *AccessStructMember(ast::Expr *object, ast::Identifier member);
+
+  /**
+   * Create a return statement without a return value.
+   * @return The statement.
+   */
+  [[nodiscard]] ast::Stmt *Return();
+
+  /**
+   * Create a return statement that returns the given value.
+   * @param ret The return value.
+   * @return The statement.
+   */
+  [[nodiscard]] ast::Stmt *Return(ast::Expr *ret);
 
   // ---------------------------------------------------------------------------
   //
@@ -422,6 +446,13 @@ class CodeGen {
   [[nodiscard]] ast::Expr *TableIterGetVPI(ast::Expr *table_iter) const;
 
   /**
+   * Call @tableIterClose(). Close and destroy a table vector iterator.
+   * @param table_iter The table vector iterator.
+   * @return The call expression.
+   */
+  [[nodiscard]] ast::Expr *TableIterClose(ast::Expr *table_iter) const;
+
+  /**
    * Call @iterateTableParallel(). Performs a parallel scan over the table with the provided name,
    * using the provided query state and thread-state container and calling the provided scan
    * function.
@@ -511,6 +542,42 @@ class CodeGen {
    * @return The call.
    */
   [[nodiscard]] ast::Expr *SorterFree(ast::Expr *sorter) const;
+
+  /**
+   * Call @sorterIterInit(). Initialize the provided sorter iterator over the given sorter.
+   * @param iter The sorter iterator.
+   * @param sorter The sorter instance to iterate.
+   * @return The call expression.
+   */
+  [[nodiscard]] ast::Expr *SorterIterInit(ast::Expr * iter, ast::Expr * sorter) const;
+
+  /**
+   * Call @sorterIterHasNext(). Check if the sorter iterator has more data.
+   * @param iter The iterator.
+   * @return The call expression.
+   */
+  [[nodiscard]] ast::Expr *SorterIterHasNext(ast::Expr * iter) const;
+
+  /**
+   * Call @sorterIterNext(). Advances the sorter iterator one tuple.
+   * @param iter The iterator.
+   * @return The call expression.
+   */
+  [[nodiscard]] ast::Expr *SorterIterNext(ast::Expr * iter) const;
+
+  /**
+   * Call @sorterIterGetRow(). Retrieves a pointer to the current iterator row.
+   * @param iter The iterator.
+   * @return The call expression.
+   */
+  [[nodiscard]] ast::Expr *SorterIterGetRow(ast::Expr * iter) const;
+
+  /**
+   * Call @sorterIterClose(). Destroy and cleanup the provided sorter iterator instance.
+   * @param iter The sorter iterator.
+   * @return The call expression.
+   */
+  [[nodiscard]] ast::Expr *SorterIterClose(ast::Expr * iter) const;
 
   /**
    * Call @like(). Implements the SQL LIKE() operation.

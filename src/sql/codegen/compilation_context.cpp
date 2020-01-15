@@ -10,6 +10,7 @@
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/executable_query.h"
 #include "sql/codegen/expression/arithmetic_translator.h"
+#include "sql/codegen/expression/column_value_translator.h"
 #include "sql/codegen/expression/comparison_translator.h"
 #include "sql/codegen/expression/conjunction_translator.h"
 #include "sql/codegen/expression/constant_translator.h"
@@ -201,6 +202,11 @@ void CompilationContext::Prepare(const planner::AbstractExpression &expression) 
     case planner::ExpressionType::CONJUNCTION_OR: {
       const auto &conjunction = static_cast<const planner::ConjunctionExpression &>(expression);
       translator = std::make_unique<ConjunctionTranslator>(conjunction, this);
+      break;
+    }
+    case planner::ExpressionType::COLUMN_VALUE: {
+      const auto &column_value = static_cast<const planner::ColumnValueExpression &>(expression);
+      translator = std::make_unique<ColumnValueTranslator>(column_value, this);
       break;
     }
     default: {

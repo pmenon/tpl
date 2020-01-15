@@ -10,6 +10,8 @@ class OrderByPlanNode;
 
 namespace tpl::sql::codegen {
 
+class FunctionBuilder;
+
 /**
  * A translator for order-by plans.
  */
@@ -54,6 +56,10 @@ class SortTranslator : public OperatorTranslator {
   // Called to insert the tuple in the context into the sorter instance.
   void InsertIntoSorter(ConsumerContext *ctx) const;
 
+  // Generate comparison function.
+  void GenerateComparisonFunction(FunctionBuilder *builder, ast::Expr *lhs_row,
+                                  ast::Expr *rhs_row) const;
+
  private:
   // Build-side pipeline.
   Pipeline child_pipeline_;
@@ -65,7 +71,6 @@ class SortTranslator : public OperatorTranslator {
   // The struct representing the row-wise materialization into the sorter
   // instance. Each field in the row represents a column that is sent by the
   // child operator.
-  ast::Identifier sort_row_attr_prefix_;
   ast::StructDecl *sort_row_;
 
   // The comparison function.
