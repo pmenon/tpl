@@ -6,18 +6,17 @@
 
 namespace tpl::sql::codegen {
 
-ConsumerContext::ConsumerContext(CompilationContext *compilation_context,
-                                 PipelineContext *pipeline_context)
+ConsumerContext::ConsumerContext(CompilationContext *compilation_context, const Pipeline &pipeline)
     : compilation_context_(compilation_context),
-      pipeline_context_(pipeline_context),
-      pipeline_idx_(0) {}
+      pipeline_(pipeline),
+      pipeline_context_(nullptr),
+      pipeline_iter_(pipeline_.Begin()),
+      pipeline_end_(pipeline_.End()) {}
 
-ast::Expr *ConsumerContext::DeriveValue(const planner::AbstractExpression &expr) {
-  auto *translator = compilation_context_->LookupTranslator(expr);
-  if (translator == nullptr) {
-    return nullptr;
-  }
-  return translator->DeriveValue(this);
+ConsumerContext::ConsumerContext(CompilationContext *compilation_context,
+                                 const PipelineContext *pipeline_context)
+    : ConsumerContext(compilation_context, pipeline_context->GetPipeline()) {
+  pipeline_context_ = pipeline_context;
 }
 
 void ConsumerContext::RegisterColumnValueProvider(const uint16_t col_id,
@@ -36,6 +35,19 @@ ConsumerContext::ValueProvider *ConsumerContext::LookupColumnValueProvider(uint1
   return iter == col_value_providers_.end() ? nullptr : iter->second;
 }
 
-const Pipeline &ConsumerContext::GetPipeline() const { return pipeline_context_->GetPipeline(); }
+ast::Expr *ConsumerContext::DeriveValue(const planner::AbstractExpression &expr) {
+  auto *translator = compilation_context_->LookupTranslator(expr);
+  if (translator == nullptr) {
+    return nullptr;
+  }
+  return translator->DeriveValue(this);
+}
+
+void ConsumerContext::Push() {
+  if (++pipeline_iter_ == pipeline_end_) {
+    return;
+  }
+  (*pipeline_iter_)->DoPipelineWork(this);
+}
 
 }  // namespace tpl::sql::codegen

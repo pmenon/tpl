@@ -174,6 +174,8 @@ void Pipeline::RegisterSource(OperatorTranslator *op, Pipeline::Parallelism para
   } else {
     parallelism_ = Pipeline::Parallelism::Parallel;
   }
+
+  LOG_INFO("Generated pipeline: {}", PrettyPrint());
 }
 
 void Pipeline::LinkSourcePipeline(Pipeline *dependency) {
@@ -194,7 +196,11 @@ ast::FunctionDecl *Pipeline::GenerateSetupPipelineStateFunction(
   auto name = GetSetupPipelineStateFunctionName();
   FunctionBuilder builder(codegen, name, PipelineArgs(), codegen->Nil());
   {
+    // Request new scope for the function.
     CodeGen::CodeScope code_scope(codegen);
+    // Set the thread state.
+    PipelineContext::StateScope state_scope(pipeline_context,
+                                            codegen->MakeExpr(pipeline_state_var_));
     for (auto *op : steps_) {
       op->InitializePipelineState(*pipeline_context);
     }
@@ -206,14 +212,18 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineStateFunction(
     PipelineContext *pipeline_context) const {
   auto codegen = compilation_context_->GetCodeGen();
   auto name = GetTearDownPipelineStateFunctionName();
-  FunctionBuilder tear_down(codegen, name, PipelineArgs(), codegen->Nil());
+  FunctionBuilder builder(codegen, name, PipelineArgs(), codegen->Nil());
   {
+    // Request new scope for the function.
     CodeGen::CodeScope code_scope(codegen);
+    // Set the thread state.
+    PipelineContext::StateScope state_scope(pipeline_context,
+                                            codegen->MakeExpr(pipeline_state_var_));
     for (auto *op : steps_) {
       op->TearDownPipelineState(*pipeline_context);
     }
   }
-  return tear_down.Finish();
+  return builder.Finish();
 }
 
 ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction(PipelineContext *pipeline_context) const {
@@ -233,13 +243,14 @@ ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction(PipelineContext *pipel
 
       // var tls = @execCtxGetTLS(exec_ctx)
       // @tlsReset(tls, @sizeOf(ThreadState), init, tearDown, queryState)
-      auto exec_ctx =
+      ast::Expr *state_ptr = query_state->GetStatePointer(codegen);
+      ast::Expr *exec_ctx =
           query_state->GetStateEntry(codegen, compilation_context_->GetExecutionContextStateSlot());
-      auto tls = codegen->MakeFreshIdentifier("tls");
+      ast::Identifier tls = codegen->MakeFreshIdentifier("tls");
       builder.Append(codegen->DeclareVarWithInit(tls, codegen->ExecCtxGetTLS(exec_ctx)));
-      builder.Append(codegen->TLSReset(
-          codegen->MakeExpr(tls), pipeline_state_type_name_, GetSetupPipelineStateFunctionName(),
-          GetTearDownPipelineStateFunctionName(), builder.GetParameterByPosition(0)));
+      builder.Append(codegen->TLSReset(codegen->MakeExpr(tls), pipeline_state_type_name_,
+                                       GetSetupPipelineStateFunctionName(),
+                                       GetTearDownPipelineStateFunctionName(), state_ptr));
     }
   }
   return builder.Finish();
@@ -256,11 +267,11 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction(PipelineContext *pipel
 
   FunctionBuilder work(codegen, GetWorkFunctionName(), std::move(params), codegen->Nil());
   {
-    // Set the state in this scope.
-    PipelineContext::StateScope state_scope(pipeline_context, work.GetParameterByPosition(1));
     // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen);
-    // Generate the pipeline code.
+    // Set the state in this scope.
+    PipelineContext::StateScope state_scope(pipeline_context,
+                                            codegen->MakeExpr(pipeline_state_var_));
     ConsumerContext consumer_context(compilation_context_, pipeline_context);
     Source()->DoPipelineWork(&consumer_context);
   }
@@ -342,7 +353,7 @@ void Pipeline::GeneratePipeline(CodeContainer *code_container) const {
 std::string Pipeline::PrettyPrint() const {
   std::string result;
   bool first = true;
-  for (auto iter = steps_.rbegin(), end = steps_.rend(); iter != end; ++iter) {
+  for (auto iter = Begin(), end = End(); iter != end; ++iter) {
     if (!first) result += " -> ";
     first = false;
     std::string plan_type = planner::PlanNodeTypeToString((*iter)->GetPlan().GetPlanNodeType());

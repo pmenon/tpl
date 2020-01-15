@@ -14,6 +14,7 @@
 #include "ast/identifier.h"
 #include "ast/type.h"
 #include "common/common.h"
+#include "sql/planner/expressions/expression_defs.h"
 #include "sql/runtime_types.h"
 #include "sql/sql.h"
 #include "util/region_containers.h"
@@ -540,6 +541,18 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *VPIGet(ast::Expr *vpi, sql::TypeId type_id, bool nullable,
                                   uint32_t idx) const;
+
+  /**
+   * Call @filter[Comparison](). Invokes the vectorized filter on the provided vector projection
+   * and column index, populating the results in the provided tuple ID list.
+   * @param vp The vector projection.
+   * @param comp_type The comparison type.
+   * @param col_idx The index of the column in the vector projection to apply the filter on.
+   * @param filter_val The filtering value.
+   * @param The TID list.
+   */
+  ast::Expr *VPIFilter(ast::Expr *vp, planner::ExpressionType comp_type, uint32_t col_idx,
+                       ast::Expr *filter_val, ast::Expr *tids);
 
   /**
    * Call @filterManagerInit(). Initialize the provided filter manager instance.

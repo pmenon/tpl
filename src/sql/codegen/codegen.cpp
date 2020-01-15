@@ -416,6 +416,38 @@ ast::Expr *CodeGen::VPIGet(ast::Expr *vpi, sql::TypeId type_id, bool nullable, u
   return call;
 }
 
+ast::Expr *CodeGen::VPIFilter(ast::Expr *vp, planner::ExpressionType comp_type, uint32_t col_idx,
+                              ast::Expr *filter_val, ast::Expr *tids) {
+  // Call @FilterComp(vpi, col_idx, col_type, filter_val)
+  ast::Builtin builtin;
+  switch (comp_type) {
+    case planner::ExpressionType::COMPARE_EQUAL:
+      builtin = ast::Builtin::VectorFilterEqual;
+      break;
+    case planner::ExpressionType::COMPARE_NOT_EQUAL:
+      builtin = ast::Builtin::VectorFilterNotEqual;
+      break;
+    case planner::ExpressionType::COMPARE_LESS_THAN:
+      builtin = ast::Builtin::VectorFilterLessThan;
+      break;
+    case planner::ExpressionType::COMPARE_LESS_THAN_OR_EQUAL_TO:
+      builtin = ast::Builtin::VectorFilterLessThanEqual;
+      break;
+    case planner::ExpressionType::COMPARE_GREATER_THAN:
+      builtin = ast::Builtin::VectorFilterGreaterThan;
+      break;
+    case planner::ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL_TO:
+      builtin = ast::Builtin::VectorFilterGreaterThanEqual;
+      break;
+    default:
+      throw NotImplementedException("CodeGen: Vector filter type {} from VPI not supported.",
+                                    planner::ExpressionTypeToString(comp_type, true));
+  }
+  ast::Expr *call = CallBuiltin(builtin, {vp, Const32(col_idx), filter_val, tids});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
 ast::Expr *CodeGen::FilterManagerInit(ast::Expr *filter_manager) const {
   ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerInit, {filter_manager});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));

@@ -5,6 +5,7 @@
 
 #include "common/common.h"
 #include "sql/codegen/ast_fwd.h"
+#include "pipeline.h"
 
 namespace tpl::sql::planner {
 class AbstractExpression;
@@ -20,7 +21,7 @@ class PipelineContext;
 class ConsumerContext {
  public:
   /**
-   * Generic interface class that can provide a value given an AST context.
+   * Generic interface class that can provide a value given a context.
    */
   class ValueProvider {
    public:
@@ -38,26 +39,11 @@ class ConsumerContext {
   };
 
   /**
-   * Simple value provider that uses an injected function.
+   * Create a new consumer context whose data flows along the provided pipeline.
+   * @param compilation_context The compilation context.
+   * @param pipeline The pipeline.
    */
-  class FunctorValueProvider : public ValueProvider {
-   public:
-    using EvalFn = std::function<ast::Expr *(ConsumerContext *)>;
-
-    /**
-     * Create a value provider using the provided function callback.
-     * @param f The callback function.
-     */
-    explicit FunctorValueProvider(EvalFn f) : f_(std::move(f)) {}
-
-    /**
-     * @return The computed value in the given context.
-     */
-    ast::Expr *GetValue(ConsumerContext *ctx) const override { return f_(ctx); }
-
-   private:
-    EvalFn f_;
-  };
+  ConsumerContext(CompilationContext *compilation_context, const Pipeline &pipeline);
 
   /**
    * Create a consumer context wrapping the provided compilation context (containing all operator
@@ -65,7 +51,7 @@ class ConsumerContext {
    * @param compilation_context The compilation context.
    * @param pipeline_context The pipeline context the consumption occurs along.
    */
-  ConsumerContext(CompilationContext *compilation_context, PipelineContext *pipeline_context);
+  ConsumerContext(CompilationContext *compilation_context, const PipelineContext *pipeline_context);
 
   /**
    * Register a value provider for the given column OID. If a provider already exists for the given
@@ -89,24 +75,31 @@ class ConsumerContext {
   ast::Expr *DeriveValue(const planner::AbstractExpression &expr);
 
   /**
-   * @return The pipeline the consumption occurs in.
+   * Push this context through to the next step in the pipeline.
    */
-  const Pipeline &GetPipeline() const;
+  void Push();
 
   /**
-   * @return The pipeline context the consumption occurs in.
+   * @return The pipeline the consumption occurs in.
    */
-  PipelineContext *GetPipelineContext() const { return pipeline_context_; }
+  const Pipeline &GetPipeline() const { return pipeline_; }
+
+  /**
+   * @return The pipeline context, if available.
+   */
+  const PipelineContext *GetPipelineContext() const { return pipeline_context_; }
 
  private:
   // The compilation context.
   CompilationContext *compilation_context_;
-  // The context of the consumption
-  PipelineContext *pipeline_context_;
-  // The current step position in the pipeline.
-  uint32_t pipeline_idx_;
+  // The pipeline that this context flows through.
+  const Pipeline &pipeline_;
+  // The context of the consumption.
+  const PipelineContext *pipeline_context_;
   // Column value providers.
   std::unordered_map<uint16_t, ValueProvider *> col_value_providers_;
+  // The current pipeline step and last pipeline step.
+  Pipeline::StepIterator pipeline_iter_, pipeline_end_;
 };
 
 }  // namespace tpl::sql::codegen

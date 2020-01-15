@@ -143,9 +143,9 @@ class OperatorTranslator {
    * Perform the main pipeline work. This is where the operator's logic should be implemented based
    * on the input tuples (batch) in the consumer context. The consumer context is a grab-bag of
    * many things: an expression result cache, the pipeline, and the pipeline context.
-   * @param ctx The consumer context.
+   * @param consumer_context The consumer context.
    */
-  virtual void DoPipelineWork(ConsumerContext *ctx) const = 0;
+  virtual void DoPipelineWork(ConsumerContext *consumer_context) const = 0;
 
   /**
    * @return The list of extra fields added to the main work function. This is only called on

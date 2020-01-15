@@ -197,20 +197,35 @@ class Pipeline {
   bool IsParallel() const { return parallelism_ == Parallelism ::Parallel; }
 
   /**
-   * @return This pipeline's ID.
+   * @return True if this pipeline is fully vectorized; false otherwise.
    */
-  uint32_t GetId() const { return id_; }
+  bool IsVectorized() const { return false; }
+
+  /**
+   * Typedef used to specify an iterator over the steps in a pipeline.
+   */
+  using StepIterator = std::vector<OperatorTranslator *>::const_reverse_iterator;
+
+  /**
+   * @return An iterator over the operators in the pipeline.
+   */
+  StepIterator Begin() const { return steps_.rbegin(); }
+
+  /**
+   * @return An iterator positioned at the end of the operators steps in the pipeline.
+   */
+  StepIterator End() const { return steps_.rend(); }
+
+  /**
+   * @return The root/source of the pipeline.
+   */
+  OperatorTranslator *Source() const { return *Begin(); }
 
   /**
    * Pretty print this pipeline's information.
    * @return A string containing pretty-printed information about this pipeline.
    */
   std::string PrettyPrint() const;
-
-  /**
-   * @return The root/source of the pipeline.
-   */
-  OperatorTranslator *Source() const { return steps_.back(); }
 
  private:
   // Create a unique function local to this pipeline.

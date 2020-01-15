@@ -1,15 +1,20 @@
 #pragma once
 
 #include <string_view>
+#include <vector>
 
 #include "sql/codegen/ast_fwd.h"
 #include "sql/codegen/operators/operator_translator.h"
+#include "sql/codegen/pipeline.h"
 
 namespace tpl::sql::planner {
+class AbstractExpression;
 class SeqScanPlanNode;
 }  // namespace tpl::sql::planner
 
 namespace tpl::sql::codegen {
+
+class FunctionBuilder;
 
 /**
  * A translator for sequential table scans.
@@ -41,14 +46,20 @@ class SeqScanTranslator : public OperatorTranslator {
   void TearDownQueryState() const override {}
 
   /**
-   * Sequential scans don't create any pipeline state.
+   * If the scan has a predicate, this function will define all clause functions.
+   * @param top_level_decls The top-level declarations.
    */
-  void DeclarePipelineState(PipelineContext *pipeline_context) override {}
+  void DefineHelperFunctions(TopLevelDeclarations *top_level_decls) override;
 
   /**
-   * Sequential scans don't create any pipeline state.
+   * Declare a FilterManager if there's a scan predicate.
    */
-  void InitializePipelineState(const PipelineContext &pipeline_context) const override {}
+  void DeclarePipelineState(PipelineContext *pipeline_context) override;
+
+  /**
+   * Initialize the FilterManager if required.
+   */
+  void InitializePipelineState(const PipelineContext &pipeline_context) const override;
 
   /**
    * Sequential scans don't require any pre-pipeline logic.
@@ -57,9 +68,9 @@ class SeqScanTranslator : public OperatorTranslator {
 
   /**
    * Generate the scan.
-   * @param ctx The consumer context.
+   * @param consumer_context The consumer context.
    */
-  void DoPipelineWork(ConsumerContext *ctx) const override;
+  void DoPipelineWork(ConsumerContext *consumer_context) const override;
 
   /**
    * @return The pipeline work function parameters. Just the *TVI.
@@ -78,16 +89,38 @@ class SeqScanTranslator : public OperatorTranslator {
   void FinishPipelineWork(const PipelineContext &pipeline_context) const override {}
 
   /**
-   * Sequential scans don't create any pipeline state.
+   * Tear-down the FilterManager if required.
    */
-  void TearDownPipelineState(const PipelineContext &pipeline_context) const override {}
+  void TearDownPipelineState(const PipelineContext &pipeline_context) const override;
 
  private:
+  // Does the scan have a predicate?
+  bool HasPredicate() const;
+
   // Get the name of the table being scanned.
   std::string_view GetTableName() const;
 
+  // Generate a generic filter term.
+  void GenerateGenericTerm(FunctionBuilder *func,
+                           const planner::AbstractExpression *term);
+
+  // Generate all filter clauses.
+  void GenerateFilterClauseFunctions(TopLevelDeclarations *top_level_declarations,
+                                     const planner::AbstractExpression *predicate,
+                                     std::vector<ast::Identifier> *curr_clause, bool seen_conjunction);
+
   // Perform a table scan using the provided table vector iterator pointer.
   void DoScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool close_iter) const;
+
+  // Generate a scan over the VPI.
+  void GenerateVPIScan(ConsumerContext *consumer_context, ast::Expr *vpi) const;
+
+ private:
+  // Where the filter manager exists.
+  PipelineContext::Slot fm_slot_;
+  // The list of filter manager clauses. Populated during helper function
+  // definition, but only if there's a predicate.
+  std::vector<std::vector<ast::Identifier>> filters_;
 };
 
 }  // namespace tpl::sql::codegen
