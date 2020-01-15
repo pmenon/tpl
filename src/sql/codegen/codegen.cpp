@@ -15,16 +15,20 @@ namespace tpl::sql::codegen {
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(pmenon): Fix me!
-llvm::StringRef CodeGen::Scope::GetFreshName(const std::string &name) {
+std::string CodeGen::Scope::GetFreshName(const std::string &name) {
   // Attempt insert.
   auto insert_result = names_.insert(std::make_pair(name, 1));
   if (insert_result.second) {
-    return insert_result.first->getKey();
+    return insert_result.first->getKey().str();
   }
-  // Duplicate found.
-  auto result = name + std::to_string(insert_result.first->getValue()++);
-  return result;
+  // Duplicate found. Find a new version that hasn't already been declared.
+  uint64_t &id = insert_result.first->getValue();
+  while (true) {
+    const std::string next_name = name + std::to_string(id++);
+    if (names_.find(next_name) == names_.end()) {
+      return next_name;
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -464,8 +468,8 @@ ast::Expr *CodeGen::FilterManagerInsert(ast::Expr *filter_manager,
                                         const std::vector<ast::Identifier> &clause_fn_names) const {
   std::vector<ast::Expr *> params(1 + clause_fn_names.size());
   params[0] = filter_manager;
-  for (uint32_t i = 1; i < clause_fn_names.size(); i++) {
-    params[i] = MakeExpr(clause_fn_names[i]);
+  for (uint32_t i = 0; i < clause_fn_names.size(); i++) {
+    params[i + 1] = MakeExpr(clause_fn_names[i]);
   }
   ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerInsertFilter, params);
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));

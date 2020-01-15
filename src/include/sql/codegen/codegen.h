@@ -43,7 +43,7 @@ class CodeGen {
     void Init(Scope *previous) { previous_ = previous; }
 
     // Get a fresh name in this scope.
-    llvm::StringRef GetFreshName(const std::string &name);
+    std::string GetFreshName(const std::string &name);
 
     // Return the previous scope.
     Scope *Previous() { return previous_; }
