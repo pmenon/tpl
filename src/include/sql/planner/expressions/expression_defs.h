@@ -75,6 +75,36 @@ enum class ExpressionType : uint8_t {
 };
 
 /**
+ * @return True if the given expression type is a comparison expression; false otherwise.
+ */
+static inline bool IsComparisonExpression(ExpressionType type) {
+  return type <= planner::ExpressionType::COMPARE_IS_DISTINCT_FROM &&
+         type >= planner::ExpressionType::COMPARE_EQUAL;
+}
+
+/**
+ * @return True if the given expression type is an arithmetic expression; false otherwise.
+ */
+static inline bool IsArithmeticExpression(ExpressionType type) {
+  return type <= planner::ExpressionType::OPERATOR_MOD &&
+         type >= planner::ExpressionType::OPERATOR_PLUS;
+}
+
+/**
+ * @return True if the given expression type is a column-reference expression; false otherwise.
+ */
+static inline bool IsColumnRefExpression(ExpressionType type) {
+  return type == ExpressionType::COLUMN_VALUE;
+}
+
+/**
+ * @return True if the given expression type is a constant value expression; false otherwise.
+ */
+static inline bool IsConstantExpression(ExpressionType type) {
+  return type == ExpressionType::VALUE_CONSTANT;
+}
+
+/**
  * Convert an expression type into a string representation. When short_str is true, return a short
  * version of ExpressionType string. For example, "+" instead of "Operator_Plus".
  * @param type The expression type.
