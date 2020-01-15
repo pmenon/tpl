@@ -207,17 +207,26 @@ class Compiler {
  */
 class TimePasses : public Compiler::Callbacks {
  public:
-  explicit TimePasses() : phase_timings_{0.0} {}
+  explicit TimePasses(Compiler::Callbacks *wrapped_callbacks)
+      : wrapped_callbacks_(wrapped_callbacks), phase_timings_{0.0} {}
 
   bool BeginPhase(Compiler::Phase phase, Compiler *compiler) override {
     timer_.Start();
-    return Compiler::Callbacks::BeginPhase(phase, compiler);
+    return wrapped_callbacks_->BeginPhase(phase, compiler);
   }
 
   void EndPhase(Compiler::Phase phase, Compiler *compiler) override {
     timer_.Stop();
     phase_timings_[static_cast<uint32_t>(phase)] = timer_.GetElapsed();
-    Compiler::Callbacks::EndPhase(phase, compiler);
+    wrapped_callbacks_->EndPhase(phase, compiler);
+  }
+
+  void OnError(Compiler::Phase phase, Compiler *compiler) override {
+    wrapped_callbacks_->OnError(phase, compiler);
+  }
+
+  void TakeOwnership(std::unique_ptr<vm::Module> module) override {
+    wrapped_callbacks_->TakeOwnership(std::move(module));
   }
 
   double GetParseTimeMs() const {
@@ -237,6 +246,8 @@ class TimePasses : public Compiler::Callbacks {
   }
 
  private:
+  // Wrapped callbacks
+  Compiler::Callbacks *wrapped_callbacks_;
   // The timer we use to time phases
   util::Timer<std::milli> timer_;
   // Timings of each phase

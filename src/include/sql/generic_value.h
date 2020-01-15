@@ -10,6 +10,10 @@
 
 namespace tpl::sql {
 
+namespace codegen {
+class ConstantTranslator;
+} //
+
 struct Val;
 
 /**
@@ -21,6 +25,7 @@ class GenericValue {
   friend class Vector;
   friend class VectorOps;
   friend class GenericValueTests;
+  friend class codegen::ConstantTranslator;
 
  public:
   /**
