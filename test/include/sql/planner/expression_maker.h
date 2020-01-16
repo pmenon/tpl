@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "sql/planner/expressions/abstract_expression.h"
 #include "sql/planner/expressions/aggregate_expression.h"
 #include "sql/planner/expressions/column_value_expression.h"

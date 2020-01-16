@@ -112,7 +112,7 @@ class FilterManager {
   /**
    * Construct an empty filter.
    */
-  explicit FilterManager();
+  FilterManager();
 
   /**
    * Destructor.

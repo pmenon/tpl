@@ -42,7 +42,7 @@ class QueryState {
   /**
    * Create a new empty state.
    */
-  explicit QueryState();
+  QueryState();
 
   /**
    * Create a new empty state using the provided state accessor that's able to load the query state

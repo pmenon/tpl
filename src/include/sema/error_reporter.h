@@ -36,7 +36,7 @@ class ErrorReporter {
   /**
    * Create a new error reporter.
    */
-  explicit ErrorReporter() : region_("error-strings"), errors_(&region_) {}
+  ErrorReporter() : region_("error-strings"), errors_(&region_) {}
 
   /**
    * This class cannot be copied or moved.

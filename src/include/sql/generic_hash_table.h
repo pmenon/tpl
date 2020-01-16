@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <tuple>
 #include <utility>
 
 #include "common/common.h"
