@@ -212,8 +212,8 @@ class OperatorTranslator {
   // The child index refers to which specific child to inspect.
   // The prefix is added to each field/attribute of the child.
   // The fields vector collects the resulting field declarations.
-  void GetChildOutputFields(uint32_t child_index, const std::string &prefix,
-                            util::RegionVector<ast::FieldDecl *> *fields) const;
+  void GetAllChildOutputFields(uint32_t child_index, const std::string &field_name_prefix,
+                               util::RegionVector<ast::FieldDecl *> *fields) const;
 
  private:
   // The plan node.

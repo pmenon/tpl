@@ -713,11 +713,13 @@ class CodeGen {
   [[nodiscard]] ast::Expr *SorterIterNext(ast::Expr *iter) const;
 
   /**
-   * Call @sorterIterGetRow(). Retrieves a pointer to the current iterator row.
+   * Call @sorterIterGetRow(). Retrieves a pointer to the current iterator row casted to the
+   * provided row type.
    * @param iter The iterator.
+   * @param row_type_name The name of the TPL type that will be stored in the sorter.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *SorterIterGetRow(ast::Expr *iter) const;
+  [[nodiscard]] ast::Expr *SorterIterGetRow(ast::Expr *iter, ast::Identifier row_type_name) const;
 
   /**
    * Call @sorterIterClose(). Destroy and cleanup the provided sorter iterator instance.

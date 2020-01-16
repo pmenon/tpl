@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/query_state.h"

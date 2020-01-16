@@ -117,13 +117,8 @@ ast::VariableDecl *CodeGen::DeclareVarWithInit(ast::Identifier name, ast::Expr *
 
 ast::StructDecl *CodeGen::DeclareStruct(ast::Identifier name,
                                         util::RegionVector<ast::FieldDecl *> &&fields) const {
-  // The type representation
-  ast::StructTypeRepr *type =
-      context_->GetNodeFactory()->NewStructType(position_, std::move(fields));
-  // The declaration
-  ast::StructDecl *decl = context_->GetNodeFactory()->NewStructDecl(position_, name, type);
-  // Done
-  return decl;
+  auto type_repr = context_->GetNodeFactory()->NewStructType(position_, std::move(fields));
+  return context_->GetNodeFactory()->NewStructDecl(position_, name, type_repr);
 }
 
 ast::Stmt *CodeGen::Assign(ast::Expr *dest, ast::Expr *value) {
@@ -592,10 +587,10 @@ ast::Expr *CodeGen::SorterIterNext(ast::Expr *iter) const {
   return call;
 }
 
-ast::Expr *CodeGen::SorterIterGetRow(ast::Expr *iter) const {
+ast::Expr *CodeGen::SorterIterGetRow(ast::Expr *iter, ast::Identifier row_type_name) const {
   ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterGetRow, {iter});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint8)->PointerTo());
-  return call;
+  return PtrCast(row_type_name, call);
 }
 
 ast::Expr *CodeGen::SorterIterClose(ast::Expr *iter) const {

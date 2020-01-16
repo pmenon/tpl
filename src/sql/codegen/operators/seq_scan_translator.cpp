@@ -69,7 +69,7 @@ void SeqScanTranslator::PopulateContextWithVPIAttributes(
   const auto schema = &Catalog::Instance()->LookupTableById(table_oid)->GetSchema();
   attrs->resize(schema->GetColumnCount());
 
-  CodeGen *codegen = GetCodeGen();
+  auto codegen = GetCodeGen();
   for (uint32_t i = 0; i < schema->GetColumnCount(); i++) {
     (*attrs)[i] = TableColumnAccess(schema, codegen, vpi, i);
     consumer_context->RegisterColumnValueProvider(i, &(*attrs)[i]);
@@ -78,19 +78,19 @@ void SeqScanTranslator::PopulateContextWithVPIAttributes(
 
 void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *func,
                                             const planner::AbstractExpression *term) {
-  CodeGen *codegen = GetCodeGen();
+  auto codegen = GetCodeGen();
 
-  ast::Expr *vp = func->GetParameterByPosition(0);
-  ast::Expr *tids = func->GetParameterByPosition(1);
+  auto vp = func->GetParameterByPosition(0);
+  auto tids = func->GetParameterByPosition(1);
 
   // Declare vpi_base: VectorProjectionIterator.
-  ast::Identifier vpi_base = codegen->MakeFreshIdentifier("vpi_base");
-  ast::BuiltinType::Kind vpi_kind = ast::BuiltinType::Kind::VectorProjectionIterator;
+  auto vpi_base = codegen->MakeFreshIdentifier("vpi_base");
+  auto vpi_kind = ast::BuiltinType::VectorProjectionIterator;
   func->Append(codegen->DeclareVarNoInit(vpi_base, vpi_kind));
 
   // Assign vpi = &vpi_base
-  ast::Identifier vpi_name = codegen->MakeFreshIdentifier("vpi");
-  ast::Expr *vpi = codegen->MakeExpr(vpi_name);
+  auto vpi_name = codegen->MakeFreshIdentifier("vpi");
+  auto vpi = codegen->MakeExpr(vpi_name);
   func->Append(
       codegen->DeclareVarWithInit(vpi_name, codegen->PointerType(codegen->MakeExpr(vpi_base))));
 
@@ -104,9 +104,8 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *func,
     PopulateContextWithVPIAttributes(&ctx, vpi, &attrs);
 
     // Call @vpiMatch() with the result of the comparison.
-    ExpressionTranslator *cond_translator = GetCompilationContext()->LookupTranslator(*term);
-    ast::Expr *cond = cond_translator->DeriveValue(&ctx);
-    func->Append(codegen->VPIMatch(vpi, cond));
+    auto cond_translator = GetCompilationContext()->LookupTranslator(*term);
+    func->Append(codegen->VPIMatch(vpi, cond_translator->DeriveValue(&ctx)));
   }
   vpi_loop.EndLoop();
 }
@@ -140,19 +139,13 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(TopLevelDeclarations *top_
 
   // At this point, we create a term.
   // Signature: (vp: *VectorProjection, tids: *TupleIdList) -> nil
-  // First make vp: *VectorProjection
-  ast::Identifier vp_name = codegen->MakeIdentifier("vp");
-  ast::FieldDecl *param1 =
-      codegen->MakeField(vp_name, codegen->PointerType(ast::BuiltinType::Kind::VectorProjection));
-
-  // Then make tids: *TupleIdList.
-  ast::Identifier tids_name = codegen->MakeIdentifier("tids");
-  ast::FieldDecl *param2 =
-      codegen->MakeField(tids_name, codegen->PointerType(ast::BuiltinType::Kind::TupleIdList));
-
-  // Now create the function.
-  ast::Identifier fn_name = codegen->MakeFreshIdentifier("filterClause");
-  util::RegionVector<ast::FieldDecl *> params = codegen->MakeFieldList({param1, param2});
+  auto fn_name = codegen->MakeFreshIdentifier("filterClause");
+  util::RegionVector<ast::FieldDecl *> params = codegen->MakeFieldList({
+      codegen->MakeField(codegen->MakeIdentifier("vp"),
+                         codegen->PointerType(ast::BuiltinType::VectorProjection)),
+      codegen->MakeField(codegen->MakeIdentifier("tids"),
+                         codegen->PointerType(ast::BuiltinType::TupleIdList)),
+  });
   FunctionBuilder builder(codegen, fn_name, std::move(params), codegen->Nil());
   {
     ast::Expr *vp = builder.GetParameterByPosition(0);
@@ -193,7 +186,7 @@ void SeqScanTranslator::GenerateVPIScan(ConsumerContext *consumer_context, ast::
   TPL_ASSERT(!consumer_context->GetPipeline().IsVectorized(),
              "Should not generate VPI scan for vectorized pipeline");
 
-  CodeGen *codegen = GetCodeGen();
+  auto codegen = GetCodeGen();
   Loop vpi_loop(codegen, nullptr, codegen->VPIHasNext(vpi, false),
                 codegen->MakeStmt(codegen->VPIAdvance(vpi, false)));
   {
@@ -207,21 +200,21 @@ void SeqScanTranslator::GenerateVPIScan(ConsumerContext *consumer_context, ast::
 }
 
 void SeqScanTranslator::ScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool close_iter) const {
-  CodeGen *codegen = GetCodeGen();
-  FunctionBuilder *func = codegen->CurrentFunction();
+  auto codegen = GetCodeGen();
+  auto func = codegen->CurrentFunction();
 
   // Loop while iterator has data.
   Loop tvi_loop(codegen, codegen->TableIterAdvance(tvi));
   {
     // Pull out VPI from TVI.
-    ast::Identifier vpi_var = codegen->MakeFreshIdentifier("vpi");
-    ast::Expr *vpi = codegen->MakeExpr(vpi_var);
-    func->Append(codegen->DeclareVarWithInit(vpi_var, codegen->TableIterGetVPI(tvi)));
+    auto vpi_name = codegen->MakeFreshIdentifier("vpi");
+    auto vpi = codegen->MakeExpr(vpi_name);
+    func->Append(codegen->DeclareVarWithInit(vpi_name, codegen->TableIterGetVPI(tvi)));
 
     // Generate filter.
     if (HasPredicate()) {
-      ast::Expr *fm = ctx->GetPipelineContext()->GetThreadStateEntryPtr(codegen, fm_slot_);
-      func->Append(codegen->FilterManagerRunFilters(fm, vpi));
+      auto filter_manager = ctx->GetPipelineContext()->GetThreadStateEntryPtr(codegen, fm_slot_);
+      func->Append(codegen->FilterManagerRunFilters(filter_manager, vpi));
     }
 
     // If the pipeline is vectorized, just pass along the VPI. Otherwise,
@@ -241,24 +234,24 @@ void SeqScanTranslator::ScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool clo
 void SeqScanTranslator::DeclarePipelineState(PipelineContext *pipeline_context) {
   if (HasPredicate()) {
     // Declare the filter manager.
-    CodeGen *codegen = GetCodeGen();
-    ast::Expr *filter_manager_type = codegen->BuiltinType(ast::BuiltinType::Kind::FilterManager);
-    fm_slot_ = pipeline_context->DeclareStateEntry(codegen, "filter", filter_manager_type);
+    auto fm_type = GetCodeGen()->BuiltinType(ast::BuiltinType::FilterManager);
+    fm_slot_ = pipeline_context->DeclareStateEntry(GetCodeGen(), "filter", fm_type);
   }
 }
 
 void SeqScanTranslator::InitializePipelineState(const PipelineContext &pipeline_context) const {
   if (HasPredicate()) {
-    // Initialize the filter manager.
-    CodeGen *codegen = GetCodeGen();
-    FunctionBuilder *func = codegen->CurrentFunction();
-    ast::Expr *fm = pipeline_context.GetThreadStateEntryPtr(codegen, fm_slot_);
-    // Initialize filter manager.
+    // Declare a filter manager and initialize it.
+    auto codegen = GetCodeGen();
+    auto func = codegen->CurrentFunction();
+    auto fm = pipeline_context.GetThreadStateEntryPtr(codegen, fm_slot_);
     func->Append(codegen->FilterManagerInit(fm));
+
     // Insert clauses.
     for (const auto &clause : filters_) {
       func->Append(codegen->FilterManagerInsert(fm, clause));
     }
+
     // Finalize filter manager.
     func->Append(codegen->FilterManagerFinalize(fm));
   }
@@ -267,25 +260,25 @@ void SeqScanTranslator::InitializePipelineState(const PipelineContext &pipeline_
 void SeqScanTranslator::TearDownPipelineState(const PipelineContext &pipeline_context) const {
   if (HasPredicate()) {
     // Tear-down filter manager.
-    CodeGen *codegen = GetCodeGen();
-    ast::Expr *fm = pipeline_context.GetThreadStateEntryPtr(codegen, fm_slot_);
+    auto codegen = GetCodeGen();
+    auto fm = pipeline_context.GetThreadStateEntryPtr(codegen, fm_slot_);
     codegen->CurrentFunction()->Append(codegen->FilterManagerFree(fm));
   }
 }
 
 void SeqScanTranslator::DoPipelineWork(ConsumerContext *consumer_context) const {
-  CodeGen *codegen = GetCodeGen();
-  FunctionBuilder *func = codegen->CurrentFunction();
+  auto codegen = GetCodeGen();
+  auto func = codegen->CurrentFunction();
 
   if (consumer_context->GetPipeline().IsParallel()) {
     // Parallel scan, the TVI is the last argument the function.
     ScanTable(consumer_context, func->GetParameterByPosition(2), false);
   } else {
     // Declare new TVI.
-    ast::Identifier tvi_var = codegen->MakeFreshIdentifier("tvi");
-    ast::Expr *tvi = codegen->AddressOf(codegen->MakeExpr(tvi_var));
-    func->Append(codegen->DeclareVarNoInit(tvi_var, ast::BuiltinType::Kind::TableVectorIterator));
-    // @tableIterInit().
+    auto tvi_name = codegen->MakeFreshIdentifier("tvi");
+    auto tvi = codegen->AddressOf(codegen->MakeExpr(tvi_name));
+    func->Append(codegen->DeclareVarNoInit(tvi_name, ast::BuiltinType::TableVectorIterator));
+    // Initialize the TVI: @tableIterInit().
     func->Append(codegen->TableIterInit(tvi, GetTableName()));
     // Scan it.
     ScanTable(consumer_context, tvi, true);
@@ -293,18 +286,19 @@ void SeqScanTranslator::DoPipelineWork(ConsumerContext *consumer_context) const 
 }
 
 util::RegionVector<ast::FieldDecl *> SeqScanTranslator::GetWorkerParams() const {
-  CodeGen *codegen = GetCodeGen();
-  ast::Identifier tvi_var = codegen->MakeIdentifier("tvi");
-  ast::Expr *tvi_type = codegen->PointerType(ast::BuiltinType::Kind::TableVectorIterator);
-  return codegen->MakeFieldList({codegen->MakeField(tvi_var, tvi_type)});
+  // The only additional worker function parameters needed for parallel scans is
+  // a *TableVectorIterator.
+  auto codegen = GetCodeGen();
+  auto tvi_type = codegen->PointerType(ast::BuiltinType::TableVectorIterator);
+  return codegen->MakeFieldList({codegen->MakeField(codegen->MakeIdentifier("tvi"), tvi_type)});
 }
 
 void SeqScanTranslator::LaunchWork(ast::Identifier work_func_name) const {
   // @iterateTableParallel(table_name, query_state, thread_state_container, worker)
-  CodeGen *codegen = GetCodeGen();
-  FunctionBuilder *func = codegen->CurrentFunction();
-  ast::Expr *state_ptr = GetQueryState().GetStatePointer(codegen);
-  ast::Expr *tls_ptr = GetThreadStateContainer();
+  auto codegen = GetCodeGen();
+  auto func = codegen->CurrentFunction();
+  auto state_ptr = GetQueryState().GetStatePointer(codegen);
+  auto tls_ptr = GetThreadStateContainer();
   func->Append(codegen->IterateTableParallel(GetTableName(), state_ptr, tls_ptr, work_func_name));
 }
 
