@@ -21,6 +21,7 @@ SeqScanTranslator::SeqScanTranslator(const planner::SeqScanPlanNode &plan,
     : OperatorTranslator(plan, compilation_context, pipeline) {
   // Register as a parallel scan.
   pipeline->RegisterSource(this, Pipeline::Parallelism::Parallel);
+
   // Prepare the scan predicate.
   if (HasPredicate()) {
     compilation_context->Prepare(*plan.GetScanPredicate());
@@ -205,7 +206,7 @@ void SeqScanTranslator::GenerateVPIScan(ConsumerContext *consumer_context, ast::
   vpi_loop.EndLoop();
 }
 
-void SeqScanTranslator::DoScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool close_iter) const {
+void SeqScanTranslator::ScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool close_iter) const {
   CodeGen *codegen = GetCodeGen();
   FunctionBuilder *func = codegen->CurrentFunction();
 
@@ -278,7 +279,7 @@ void SeqScanTranslator::DoPipelineWork(ConsumerContext *consumer_context) const 
 
   if (consumer_context->GetPipeline().IsParallel()) {
     // Parallel scan, the TVI is the last argument the function.
-    DoScanTable(consumer_context, func->GetParameterByPosition(2), false);
+    ScanTable(consumer_context, func->GetParameterByPosition(2), false);
   } else {
     // Declare new TVI.
     ast::Identifier tvi_var = codegen->MakeFreshIdentifier("tvi");
@@ -287,7 +288,7 @@ void SeqScanTranslator::DoPipelineWork(ConsumerContext *consumer_context) const 
     // @tableIterInit().
     func->Append(codegen->TableIterInit(tvi, GetTableName()));
     // Scan it.
-    DoScanTable(consumer_context, tvi, true);
+    ScanTable(consumer_context, tvi, true);
   }
 }
 

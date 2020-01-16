@@ -154,7 +154,7 @@ void SortTranslator::TearDownQueryState() const {
 void SortTranslator::DeclarePipelineState(PipelineContext *pipeline_context) {
   if (IsBottomPipeline(pipeline_context->GetPipeline()) && pipeline_context->IsParallel()) {
     ast::Expr *sorter_type = GetCodeGen()->BuiltinType(ast::BuiltinType::Kind::Sorter);
-    tl_sorter_slot_ = pipeline_context->DeclareStateEntry(GetCodeGen(), "tl_sorter", sorter_type);
+    tl_sorter_slot_ = pipeline_context->DeclareStateEntry(GetCodeGen(), "sorter", sorter_type);
   }
 }
 
@@ -170,7 +170,52 @@ void SortTranslator::TearDownPipelineState(const PipelineContext &pipeline_conte
   }
 }
 
-void SortTranslator::InsertIntoSorter(ConsumerContext *consumer_context) const {}
+void SortTranslator::FillSortRow(ConsumerContext *consumer_context, ast::Expr *sort_row) const {
+  CodeGen *codegen = GetCodeGen();
+  FunctionBuilder *builder = codegen->CurrentFunction();
+
+  // For each child output, set the sorter attribute
+  const auto child_schema = GetPlan().GetChild(0)->GetOutputSchema();
+  for (uint32_t attr_idx = 0; attr_idx < child_schema->GetColumns().size(); attr_idx++) {
+    ast::Identifier attr = GetCodeGen()->MakeIdentifier("attr" + std::to_string(attr_idx));
+    ast::Expr *lhs = codegen->AccessStructMember(sort_row, attr);
+    ast::Expr *rhs = consumer_context->DeriveValue(*child_schema->GetColumn(attr_idx).GetExpr());
+    builder->Append(codegen->Assign(lhs, rhs));
+  }
+}
+
+void SortTranslator::InsertIntoSorter(ConsumerContext *consumer_context) const {
+  CodeGen *codegen = GetCodeGen();
+  FunctionBuilder *func = codegen->CurrentFunction();
+
+  // Collect correct sorter instance.
+  ast::Expr *sorter = nullptr;
+  if (consumer_context->GetPipeline().IsParallel()) {
+    const auto pipeline_context = consumer_context->GetPipelineContext();
+    sorter = pipeline_context->GetThreadStateEntryPtr(codegen, tl_sorter_slot_);
+  } else {
+    sorter = GetQueryState().GetStateEntryPtr(codegen, sorter_slot_);
+  }
+
+  ast::Identifier sort_row_name = codegen->MakeFreshIdentifier("sort_row");
+  ast::Expr *sort_row = codegen->MakeExpr(sort_row_name);
+  if (const auto &plan = GetTypedPlan(); plan.HasLimit()) {
+    // @sorterInsertTopK()
+    const std::size_t topk = plan.GetOffset() + plan.GetLimit();
+    func->Append(codegen->DeclareVarWithInit(
+        sort_row_name, codegen->SorterInsertTopK(sorter, sort_row_->Name(), topk)));
+    // Fill row.
+    FillSortRow(consumer_context, sort_row);
+    // @sorterInsertTopKFinish();
+    func->Append(codegen->SorterInsertTopKFinish(sorter));
+  } else {
+    // @sorterInsert()
+    func->Append(codegen->DeclareVarWithInit(sort_row_name,
+                                             codegen->SorterInsert(sorter, sort_row_->Name())));
+    // Fill row.
+    FillSortRow(consumer_context, sort_row);
+  }
+}
 
 void SortTranslator::ScanSorter(ConsumerContext *consumer_context) const {
   CodeGen *codegen = GetCodeGen();

@@ -7,7 +7,12 @@ namespace tpl::sql::codegen {
 
 OperatorTranslator::OperatorTranslator(const planner::AbstractPlanNode &plan,
                                        CompilationContext *compilation_context, Pipeline *pipeline)
-    : plan_(plan), compilation_context_(compilation_context), pipeline_(pipeline) {}
+    : plan_(plan), compilation_context_(compilation_context), pipeline_(pipeline) {
+  // Register output schema expressions
+  for (const auto &output_column : plan.GetOutputSchema()->GetColumns()) {
+    compilation_context->Prepare(*output_column.GetExpr());
+  }
+}
 
 CodeGen *OperatorTranslator::GetCodeGen() const { return compilation_context_->GetCodeGen(); }
 

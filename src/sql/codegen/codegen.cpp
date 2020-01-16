@@ -525,6 +525,29 @@ ast::Expr *CodeGen::SorterInit(ast::Expr *sorter, ast::Expr *mem_pool,
   return call;
 }
 
+ast::Expr *CodeGen::SorterInsert(ast::Expr *sorter, ast::Identifier sort_row_type_name) const {
+  // @sorterInsert(sorter)
+  ast::Expr *call = CallBuiltin(ast::Builtin::SorterInsert, {sorter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint8)->PointerTo());
+  // @ptrCast(sort_row_type, @sorterInsert())
+  return PtrCast(sort_row_type_name, call);
+}
+
+ast::Expr *CodeGen::SorterInsertTopK(ast::Expr *sorter, ast::Identifier sort_row_type_name,
+                                     uint64_t top_k) const {
+  // @sorterInsertTopK(sorter)
+  ast::Expr *call = CallBuiltin(ast::Builtin::SorterInsertTopK, {sorter, Const64(top_k)});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint8)->PointerTo());
+  // @ptrCast(sort_row_type, @sorterInsertTopK())
+  return PtrCast(sort_row_type_name, call);
+}
+
+ast::Expr *CodeGen::SorterInsertTopKFinish(ast::Expr *sorter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::SorterInsertTopKFinish, {sorter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
 ast::Expr *CodeGen::SorterSort(ast::Expr *sorter) const {
   ast::Expr *call = CallBuiltin(ast::Builtin::SorterSort, {sorter});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));

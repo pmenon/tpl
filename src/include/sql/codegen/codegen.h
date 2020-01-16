@@ -628,6 +628,32 @@ class CodeGen {
                                       ast::Identifier sort_row_type_name) const;
 
   /**
+   * Call @sorterInsert(). Prepare an insert into the provided sorter whose type is the given type.
+   * @param sorter The sorter instance.
+   * @param sort_row_type_name The name of the TPL type that will be stored in the sorter.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *SorterInsert(ast::Expr *sorter,
+                                        ast::Identifier sort_row_type_name) const;
+
+  /**
+   * Call @sorterInsertTopK(). Prepare a top-k insert into the provided sorter whose type is the
+   * given type.
+   * @param sorter The sorter instance.
+   * @param sort_row_type_name The name of the TPL type that will be stored in the sorter.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *SorterInsertTopK(ast::Expr *sorter, ast::Identifier sort_row_type_name,
+                                            uint64_t top_k) const;
+
+  /**
+   * Call @sorterInsertTopK(). Complete a previous top-k insert into the provided sorter.
+   * @param sorter The sorter instance.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *SorterInsertTopKFinish(ast::Expr *sorter) const;
+
+  /**
    * Call @sorterSort().  Sort the provided sorter instance.
    * @param sorter The sorter instance.
    * @return The call.

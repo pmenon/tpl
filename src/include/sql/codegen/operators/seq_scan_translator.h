@@ -118,7 +118,7 @@ class SeqScanTranslator : public OperatorTranslator {
                                         std::vector<TableColumnAccess> *attrs) const;
 
   // Perform a table scan using the provided table vector iterator pointer.
-  void DoScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool close_iter) const;
+  void ScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool close_iter) const;
 
   // Generate a scan over the VPI.
   void GenerateVPIScan(ConsumerContext *consumer_context, ast::Expr *vpi) const;

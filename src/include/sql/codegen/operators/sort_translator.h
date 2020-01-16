@@ -120,6 +120,9 @@ class SortTranslator : public OperatorTranslator {
   // Called to scan the global sorter instance.
   void ScanSorter(ConsumerContext *consumer_context) const;
 
+  // Insert tuple data into the provided sort row.
+  void FillSortRow(ConsumerContext *consumer_context, ast::Expr *sort_row) const;
+
   // Called to insert the tuple in the context into the sorter instance.
   void InsertIntoSorter(ConsumerContext *consumer_context) const;
 
