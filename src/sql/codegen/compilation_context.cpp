@@ -15,6 +15,7 @@
 #include "sql/codegen/expression/conjunction_translator.h"
 #include "sql/codegen/expression/constant_translator.h"
 #include "sql/codegen/function_builder.h"
+#include "sql/codegen/operators/nested_loop_join_translator.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/operators/seq_scan_translator.h"
 #include "sql/codegen/operators/sort_translator.h"
@@ -149,14 +150,19 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
   std::unique_ptr<OperatorTranslator> translator;
 
   switch (plan.GetPlanNodeType()) {
-    case planner::PlanNodeType::SEQSCAN: {
-      const auto &seq_scan = static_cast<const planner::SeqScanPlanNode &>(plan);
-      translator = std::make_unique<SeqScanTranslator>(seq_scan, this, pipeline);
+    case planner::PlanNodeType::NESTLOOP: {
+      const auto &nested_loop = static_cast<const planner::NestedLoopJoinPlanNode &>(plan);
+      translator = std::make_unique<NestedLoopJoinTranslator>(nested_loop, this, pipeline);
       break;
     }
     case planner::PlanNodeType::ORDERBY: {
       const auto &sort = static_cast<const planner::OrderByPlanNode &>(plan);
       translator = std::make_unique<SortTranslator>(sort, this, pipeline);
+      break;
+    }
+    case planner::PlanNodeType::SEQSCAN: {
+      const auto &seq_scan = static_cast<const planner::SeqScanPlanNode &>(plan);
+      translator = std::make_unique<SeqScanTranslator>(seq_scan, this, pipeline);
       break;
     }
     default: {
