@@ -82,7 +82,7 @@ void CompilationContext::GenerateHelperStructsAndFunctions(TopLevelDeclarations 
 
 void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   exec_ctx_slot_ = query_state_.DeclareStateEntry(
-      GetCodeGen(), "execCtx", codegen_.PointerType(ast::BuiltinType::Kind::ExecutionContext));
+      GetCodeGen(), "execCtx", codegen_.PointerType(ast::BuiltinType::ExecutionContext));
 
   // Prepare all translators for the plan.
   Pipeline main_pipeline(this);
@@ -116,6 +116,7 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   std::vector<std::unique_ptr<CodeContainer>> fragments;
   fragments.emplace_back(std::move(main_container));
 
+  // TODO(pmenon): This isn't correct. We need to report errors back up.
   // Compile each
   for (auto &fragment : fragments) {
     fragment->Compile();

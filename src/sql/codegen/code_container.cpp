@@ -48,10 +48,10 @@ class ContainerCompileCallback : public compiler::Compiler::Callbacks {
 
 }  // namespace
 
-void CodeContainer::Compile() {
+bool CodeContainer::Compile() {
   // If the container's code has already been compiled, we're done.
   if (IsCompiled()) {
-    return;
+    return true;
   }
 
   // Compile it.
@@ -60,6 +60,11 @@ void CodeContainer::Compile() {
   auto timer = compiler::TimePasses(&callbacks);
   compiler::Compiler::RunCompilation(input, &timer);
   module_ = callbacks.TakeModule();
+
+  // If compilation succeeded, a valid module should have been created.
+  // If no module was created, we conclude there was some error that'd
+  // been reported to the error reporter.
+  return module_ != nullptr;
 }
 
 void CodeContainer::Dump() { ast::AstPrettyPrint::Dump(std::cout, generated_file_); }
