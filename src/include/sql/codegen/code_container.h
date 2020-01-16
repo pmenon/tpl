@@ -50,8 +50,9 @@ class CodeContainer {
 
   /**
    * Compile the code in the container.
+   * @return True if the compilation was successful; false otherwise.
    */
-  void Compile();
+  bool Compile();
 
   /**
    * @return True if the code in the container has been compiled; false otherwise.
