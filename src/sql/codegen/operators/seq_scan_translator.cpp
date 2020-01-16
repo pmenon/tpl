@@ -36,16 +36,14 @@ std::string_view SeqScanTranslator::GetTableName() const {
   return Catalog::Instance()->LookupTableById(table_oid)->GetName();
 }
 
-namespace {
-
-class TableColumnProvider : public ConsumerContext::ValueProvider {
+class SeqScanTranslator::TableColumnAccess : public ConsumerContext::ValueProvider {
  public:
-  TableColumnProvider() : schema_(nullptr), codegen_(nullptr), vpi_(nullptr), col_idx_(0) {}
+  TableColumnAccess() : schema_(nullptr), codegen_(nullptr), vpi_(nullptr), col_idx_(0) {}
 
-  TableColumnProvider(const Schema *schema, CodeGen *codegen, ast::Expr *vpi, uint32_t col_idx)
+  TableColumnAccess(const Schema *schema, CodeGen *codegen, ast::Expr *vpi, uint32_t col_idx)
       : schema_(schema), codegen_(codegen), vpi_(vpi), col_idx_(col_idx) {}
 
-  // Call @vpiGetType(vpi, index)
+  // Call @vpiGet[Type](vpi, index)
   ast::Expr *GetValue(ConsumerContext *ctx) const override {
     auto type = schema_->GetColumnInfo(col_idx_)->sql_type.GetPrimitiveTypeId();
     auto nullable = schema_->GetColumnInfo(col_idx_)->sql_type.nullable();
@@ -53,13 +51,29 @@ class TableColumnProvider : public ConsumerContext::ValueProvider {
   }
 
  private:
+  // The table schema.
   const Schema *schema_;
+  // The code generator instance.
   CodeGen *codegen_;
+  // The VPI pointer.
   ast::Expr *vpi_;
+  // The column to read in the VPI.
   uint32_t col_idx_;
 };
 
-}  // namespace
+void SeqScanTranslator::PopulateContextWithVPIAttributes(
+    ConsumerContext *consumer_context, ast::Expr *vpi,
+    std::vector<SeqScanTranslator::TableColumnAccess> *attrs) const {
+  const auto table_oid = GetPlanAs<planner::SeqScanPlanNode>().GetTableOid();
+  const auto schema = &Catalog::Instance()->LookupTableById(table_oid)->GetSchema();
+  attrs->resize(schema->GetColumnCount());
+
+  CodeGen *codegen = GetCodeGen();
+  for (uint32_t i = 0; i < schema->GetColumnCount(); i++) {
+    (*attrs)[i] = TableColumnAccess(schema, codegen, vpi, i);
+    consumer_context->RegisterColumnValueProvider(i, &(*attrs)[i]);
+  }
+}
 
 void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *func,
                                             const planner::AbstractExpression *term) {
@@ -84,14 +98,9 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *func,
                 codegen->MakeStmt(codegen->VPIAdvance(vpi, true)));           // @vpiAdvance()
   {
     // Create evaluation context.
-    const auto table_oid = GetPlanAs<planner::SeqScanPlanNode>().GetTableOid();
-    const auto schema = &Catalog::Instance()->LookupTableById(table_oid)->GetSchema();
-    std::vector<TableColumnProvider> attrs(schema->GetColumnCount());
+    std::vector<TableColumnAccess> attrs;
     ConsumerContext ctx(GetCompilationContext(), *GetPipeline());
-    for (uint32_t i = 0; i < schema->GetColumnCount(); i++) {
-      attrs[i] = TableColumnProvider(schema, codegen, vpi, i);
-      ctx.RegisterColumnValueProvider(i, &attrs[i]);
-    }
+    PopulateContextWithVPIAttributes(&ctx, vpi, &attrs);
 
     // Call @vpiMatch() with the result of the comparison.
     ExpressionTranslator *cond_translator = GetCompilationContext()->LookupTranslator(*term);
@@ -187,6 +196,9 @@ void SeqScanTranslator::GenerateVPIScan(ConsumerContext *consumer_context, ast::
   Loop vpi_loop(codegen, nullptr, codegen->VPIHasNext(vpi, false),
                 codegen->MakeStmt(codegen->VPIAdvance(vpi, false)));
   {
+    // Populate context with VPI columns.
+    std::vector<TableColumnAccess> attrs;
+    PopulateContextWithVPIAttributes(consumer_context, vpi, &attrs);
     // Push to consumer.
     consumer_context->Push();
   }

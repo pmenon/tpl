@@ -110,6 +110,13 @@ class SeqScanTranslator : public OperatorTranslator {
                                      std::vector<ast::Identifier> *curr_clause,
                                      bool seen_conjunction);
 
+  class TableColumnAccess;
+
+  // Insert an column provider for every column in the VPI into the consumer context.
+  // Store the source providers in the output attributes array.
+  void PopulateContextWithVPIAttributes(ConsumerContext *consumer_context, ast::Expr *vpi,
+                                        std::vector<TableColumnAccess> *attrs) const;
+
   // Perform a table scan using the provided table vector iterator pointer.
   void DoScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool close_iter) const;
 
