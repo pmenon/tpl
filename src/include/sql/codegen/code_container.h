@@ -59,7 +59,7 @@ class CodeContainer {
    */
   bool IsCompiled() const { return module_ != nullptr; }
 
-  void Dump();
+  void PrettyPrint();
 
  private:
   // The AST context used to generate the TPL ast

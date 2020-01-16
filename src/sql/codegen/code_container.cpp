@@ -67,6 +67,6 @@ bool CodeContainer::Compile() {
   return module_ != nullptr;
 }
 
-void CodeContainer::Dump() { ast::AstPrettyPrint::Dump(std::cout, generated_file_); }
+void CodeContainer::PrettyPrint() { ast::AstPrettyPrint::Dump(std::cout, generated_file_); }
 
 }  // namespace tpl::sql::codegen

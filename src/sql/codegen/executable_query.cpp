@@ -19,13 +19,12 @@ ExecutableQuery::~ExecutableQuery() = default;
 
 void ExecutableQuery::Setup(std::vector<std::unique_ptr<CodeContainer>> &&fragments,
                             const std::size_t query_state_size) {
-  TPL_ASSERT(std::for_each(fragments.begin(), fragments.end(),
-                           [](const auto &fragment) { return fragment->IsCompiled(); }),
-             "Fragment isn't compiled!");
-
+  TPL_ASSERT(std::all_of(fragments.begin(), fragments.end(),
+                         [](const auto &fragment) { return fragment->IsCompiled(); }),
+             "All query fragments are not compiled!");
   TPL_ASSERT(
       query_state_size >= sizeof(ExecutionContext *),
-      "Query state size must be large enough to store at least a pointer to the ExecutionContext");
+      "Query state size must be large enough to store at least a pointer to the ExecutionContext.");
 
   fragments_ = std::move(fragments);
   query_state_size_ = query_state_size;
@@ -33,7 +32,7 @@ void ExecutableQuery::Setup(std::vector<std::unique_ptr<CodeContainer>> &&fragme
   LOG_INFO("Query has {} fragments with {}-byte query state", fragments_.size(), query_state_size_);
 
   for (auto &fragment : fragments_) {
-    fragment->Dump();
+    fragment->PrettyPrint();
   }
 }
 
@@ -41,6 +40,12 @@ void ExecutableQuery::Run(ExecutionContext *exec_ctx) {
   // First, allocate the query state and move the execution context into it.
   auto query_state = std::make_unique<byte[]>(query_state_size_);
   *reinterpret_cast<ExecutionContext **>(query_state.get()) = exec_ctx;
+
+  // Now run through fragments.
+  for (const auto &fragment : fragments_) {
+    // TODO(pmenon): Complete me.
+    (void)fragment;
+  }
 }
 
 }  // namespace tpl::sql::codegen
