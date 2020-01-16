@@ -124,11 +124,6 @@ class AggregatePlanNode : public AbstractPlanNode {
         group_by_terms_(std::move(group_by_terms)) {}
 
  public:
-  /**
-   * Default constructor used for deserialization
-   */
-  AggregatePlanNode() = default;
-
   DISALLOW_COPY_AND_MOVE(AggregatePlanNode)
 
   //===--------------------------------------------------------------------===//

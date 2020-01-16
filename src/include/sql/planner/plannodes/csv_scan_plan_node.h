@@ -127,11 +127,6 @@ class CSVScanPlanNode : public AbstractScanPlanNode {
         null_string_(std::move(null_string)) {}
 
  public:
-  /**
-   * Default constructor for deserialization
-   */
-  CSVScanPlanNode() = default;
-
   DISALLOW_COPY_AND_MOVE(CSVScanPlanNode)
 
   /**
