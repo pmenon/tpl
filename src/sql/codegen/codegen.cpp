@@ -140,6 +140,8 @@ ast::Expr *CodeGen::BuiltinType(ast::BuiltinType::Kind builtin_kind) const {
   return expr;
 }
 
+ast::Expr *CodeGen::BoolType() const { return BuiltinType(ast::BuiltinType::Bool); }
+
 ast::Expr *CodeGen::Int8Type() const { return BuiltinType(ast::BuiltinType::Int8); }
 
 ast::Expr *CodeGen::Int16Type() const { return BuiltinType(ast::BuiltinType::Int16); }
@@ -549,10 +551,31 @@ ast::Expr *CodeGen::JoinHashTableBuildParallel(ast::Expr *jht, ast::Expr *thread
   return call;
 }
 
+ast::Expr *CodeGen::JoinHashTableLookup(ast::Expr *jht, ast::Expr *entry_iter,
+                                        ast::Expr *hash_val) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableLookup, {jht, entry_iter, hash_val});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
 ast::Expr *CodeGen::JoinHashTableFree(ast::Expr *jht) const {
   ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableFree, {jht});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
+}
+
+ast::Expr *CodeGen::HTEntryIterHasNext(ast::Expr *iter, ast::Identifier key_check_fn_name,
+                                       ast::Expr *ctx, ast::Expr *probe_row) const {
+  std::initializer_list<ast::Expr *> args = {iter, MakeExpr(key_check_fn_name), ctx, probe_row};
+  ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryIterHasNext, args);
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Bool));
+  return call;
+}
+
+ast::Expr *CodeGen::HTEntryIterGetRow(ast::Expr *iter, ast::Identifier row_type_name) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryIterGetRow, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint8)->PointerTo());
+  return PtrCast(row_type_name, call);
 }
 
 // ---------------------------------------------------------

@@ -136,6 +136,12 @@ class CodeGen {
   // ---------------------------------------------------------------------------
 
   /**
+   * @return The type representation for a primitive boolean value.
+   */
+
+  [[nodiscard]] ast::Expr *BoolType() const;
+
+  /**
    * @return The type representation for an 8-bit signed integer (i.e., int8)
    */
   [[nodiscard]] ast::Expr *Int8Type() const;
@@ -696,11 +702,45 @@ class CodeGen {
                                                       ast::Expr *offset) const;
 
   /**
+   * Call @joinHTLookup(). Performs a single lookup into the hash table with a tuple with the
+   * provided hash value. The provided iterator is initialized to return a subset of tuples in the
+   * hash table that may match on key. It is the responsibility of the caller to resolve hash and
+   * key collisions on tuples returned from the iterator.
+   * @param jht The join hash table.
+   * @param entry_iter An iterator over a list of entries.
+   * @param hash_val The hash value of the probe key.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *JoinHashTableLookup(ast::Expr *jht, ast::Expr *entry_iter,
+                                               ast::Expr *hash_val) const;
+
+  /**
    * Call @joinHTFree(). Cleanup and destroy the provided join hash table instance.
    * @param jht The join hash table.
    * @return The call.
    */
   [[nodiscard]] ast::Expr *JoinHashTableFree(ast::Expr *jht) const;
+
+  /**
+   * Call @htEntryIterHasNext(). Determine if the provided iterator has more entries.
+   * @param iter The iterator.
+   * @param key_check_fn_name The name of the function that performs a key-equality check.
+   * @param ctx An opaque context argument passed through as the first argument to the provided key
+   *            check function. This value is untouched.
+   * @param probe_row The probe row.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *HTEntryIterHasNext(ast::Expr *iter, ast::Identifier key_check_fn_name,
+                                              ast::Expr *ctx, ast::Expr *probe_row) const;
+
+  /**
+   * Call @htEntryIterGetRow(). Retrieves a pointer to the current row the iterator is positioned at
+   * casted to the provided row type.
+   * @param iter The iterator.
+   * @param row_type_name The name of the struct type the row is expected to be.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *HTEntryIterGetRow(ast::Expr *iter, ast::Identifier row_type_name) const;
 
   // -------------------------------------------------------
   //
