@@ -82,7 +82,7 @@ void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder, ast::E
   // Generate all column comparisons.
   auto codegen = GetCodeGen();
   int32_t ret_value;
-  for (const auto &[expr, sort_order] : GetTypedPlan().GetSortKeys()) {
+  for (const auto &[expr, sort_order] : Op<planner::OrderByPlanNode>().GetSortKeys()) {
     if (sort_order == planner::OrderByOrderingType::ASC) {
       ret_value = -1;
     } else {
@@ -181,7 +181,7 @@ void SortTranslator::InsertIntoSorter(ConsumerContext *ctx) const {
 
   auto sort_row_name = codegen->MakeFreshIdentifier("sort_row");
   auto sort_row = codegen->MakeExpr(sort_row_name);
-  if (const auto &plan = GetTypedPlan(); plan.HasLimit()) {
+  if (const auto &plan = Op<planner::OrderByPlanNode>(); plan.HasLimit()) {
     // @sorterInsertTopK()
     const std::size_t topk = plan.GetOffset() + plan.GetLimit();
     func->Append(codegen->DeclareVarWithInit(

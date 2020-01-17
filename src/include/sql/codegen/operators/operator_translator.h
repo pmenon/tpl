@@ -206,7 +206,7 @@ class OperatorTranslator {
 
   // The plan node for this translator as its concrete type.
   template <typename T>
-  const T &GetPlanAs() const {
+  const T &Op() const {
     static_assert(std::is_base_of_v<planner::AbstractPlanNode, T>, "Template is not a plan node");
     return static_cast<const T &>(plan_);
   }

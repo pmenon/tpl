@@ -105,10 +105,6 @@ class SortTranslator : public OperatorTranslator {
   void LaunchWork(ast::Identifier work_func_name) const override { UNREACHABLE("Impossible"); }
 
  private:
-  const planner::OrderByPlanNode &GetTypedPlan() const {
-    return GetPlanAs<planner::OrderByPlanNode>();
-  }
-
   // Get the bottom/build pipeline.
   Pipeline *GetBuildPipeline() { return &child_pipeline_; }
   const Pipeline &GetBuildPipeline() const { return child_pipeline_; }
