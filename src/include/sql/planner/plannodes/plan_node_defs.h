@@ -93,7 +93,8 @@ enum class LogicalJoinType {
   RIGHT = 2,                  // right
   INNER = 3,                  // inner
   OUTER = 4,                  // outer
-  SEMI = 5                    // IN+Subquery is SEMI
+  SEMI = 5,                   // IN+Subquery is SEMI
+  ANTI = 6                    // anti
 };
 
 //===--------------------------------------------------------------------===//
