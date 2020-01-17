@@ -452,6 +452,12 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *StringToSql(std::string_view str) const;
 
+  // -------------------------------------------------------
+  //
+  // Table stuff
+  //
+  // -------------------------------------------------------
+
   /**
    * Call @tableIterInit(). Initializes a TableVectorIterator instance with a table ID.
    * @param table_iter The table iterator variable.
@@ -494,6 +500,12 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *IterateTableParallel(std::string_view table_name, ast::Expr *query_state,
                                                 ast::Expr *tls, ast::Identifier worker_name) const;
+
+  // -------------------------------------------------------
+  //
+  // VPI stuff
+  //
+  // -------------------------------------------------------
 
   /**
    * Call @vpiHasNext() or @vpiHasNextFiltered(). Check if the provided unfiltered (or filtered) VPI
@@ -555,6 +567,12 @@ class CodeGen {
   ast::Expr *VPIFilter(ast::Expr *vp, planner::ExpressionType comp_type, uint32_t col_idx,
                        ast::Expr *filter_val, ast::Expr *tids);
 
+  // -------------------------------------------------------
+  //
+  // Filter Manager stuff
+  //
+  // -------------------------------------------------------
+
   /**
    * Call @filterManagerInit(). Initialize the provided filter manager instance.
    * @param fm The filter manager pointer.
@@ -614,6 +632,21 @@ class CodeGen {
   [[nodiscard]] ast::Expr *TLSReset(ast::Expr *tls, ast::Identifier tls_state_name,
                                     ast::Identifier init_fn, ast::Identifier tear_down_fn,
                                     ast::Expr *context) const;
+
+  // -------------------------------------------------------
+  //
+  // Join stuff
+  //
+  // -------------------------------------------------------
+
+  [[nodiscard]] ast::Expr *JoinHashTableInit(ast::Expr *jht, ast::Expr *mem_pool,
+                                             ast::Identifier build_row_type_name) const;
+
+  // -------------------------------------------------------
+  //
+  // Sorter stuff
+  //
+  // -------------------------------------------------------
 
   /**
    * Call @sorterInit(). Initialize the provided sorter instance using a memory pool, comparison

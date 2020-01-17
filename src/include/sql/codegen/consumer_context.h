@@ -86,23 +86,9 @@ class ConsumerContext {
   void ClearExpressionCache();
 
   /**
-   * @return The previous operator the context visited in the pipeline.
-   */
-  OperatorTranslator *PreviousOp() const {
-    return pipeline_iter_ == pipeline_.Begin() ? nullptr : *(pipeline_iter_ - 1);
-  }
-
-  /**
    * @return The operator the context is currently positioned at in the pipeline.
    */
   OperatorTranslator *CurrentOp() const { return *pipeline_iter_; }
-
-  /**
-   * @return The next operator the context will visit in the pipeline.
-   */
-  OperatorTranslator *NextOp() const {
-    return pipeline_iter_ == pipeline_end_ ? nullptr : *(pipeline_iter_ + 1);
-  }
 
   /**
    * @return The pipeline the consumption occurs in.
