@@ -209,7 +209,7 @@ void AstPrettyPrintImpl::VisitLitExpr(LitExpr *node) {
       os_ << "nil";
       break;
     case LitExpr::LitKind::Boolean:
-      os_ << node->BoolVal();
+      os_ << (node->BoolVal() ? "true" : "false");
       break;
     case LitExpr::LitKind::Int:
       os_ << node->Int32Val();
