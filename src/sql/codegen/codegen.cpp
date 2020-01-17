@@ -507,6 +507,45 @@ ast::Expr *CodeGen::TLSReset(ast::Expr *tls, ast::Identifier tls_state_name,
 }
 
 // ---------------------------------------------------------
+// Joins
+// ---------------------------------------------------------
+
+ast::Expr *CodeGen::JoinHashTableInit(ast::Expr *jht, ast::Expr *mem_pool,
+                                      ast::Identifier build_row_type_name) const {
+  ast::Expr *call =
+      CallBuiltin(ast::Builtin::JoinHashTableInit, {jht, mem_pool, SizeOf(build_row_type_name)});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::JoinHashTableInsert(ast::Expr *jht, ast::Expr *hash_val,
+                                        ast::Identifier tuple_type_name) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableInsert, {jht, hash_val});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return PtrCast(tuple_type_name, call);
+}
+
+ast::Expr *CodeGen::JoinHashTableBuild(ast::Expr *jht) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableBuild, {jht});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::JoinHashTableBuildParallel(ast::Expr *jht, ast::Expr *thread_state_container,
+                                               ast::Expr *offset) const {
+  ast::Expr *call =
+      CallBuiltin(ast::Builtin::JoinHashTableBuildParallel, {jht, thread_state_container, offset});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::JoinHashTableFree(ast::Expr *jht) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableFree, {jht});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+// ---------------------------------------------------------
 // Sorters
 // ---------------------------------------------------------
 

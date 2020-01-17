@@ -639,8 +639,55 @@ class CodeGen {
   //
   // -------------------------------------------------------
 
+  /**
+   * Call @joinHTInit(). Initialize the provided join hash table using a memory pool and storing
+   * the build-row structures with the provided name.
+   * @param jht The join hash table.
+   * @param mem_pool The memory pool.
+   * @param build_row_type_name The name of the materialized build-side row in the hash table.
+   * @return The call.
+   */
   [[nodiscard]] ast::Expr *JoinHashTableInit(ast::Expr *jht, ast::Expr *mem_pool,
                                              ast::Identifier build_row_type_name) const;
+
+  /**
+   * Call @joinHTInsert(). Allocates a new tuple in the join hash table with the given hash value.
+   * The returned value is a pointer to an element with the given type.
+   * @param jht The join hash table.
+   * @param hash_val The hash value of the tuple that's to be inserted.
+   * @param tuple_type_name The name of the struct type representing the tuple to be inserted.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *JoinHashTableInsert(ast::Expr *jht, ast::Expr *hash_val,
+                                               ast::Identifier tuple_type_name) const;
+
+  /**
+   * Call @joinHTBuild(). Performs the hash table build step of a hash join. Called on the provided
+   * join hash table expected to be a *JoinHashTable.
+   * @param jht The pointer to the join hash table.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *JoinHashTableBuild(ast::Expr *jht) const;
+
+  /**
+   * Call @joinHTBuildParallel(). Performs the parallel hash table build step of a hash join. Called
+   * on the provided global join hash table (expected to be a *JoinHashTable), and a pointer to the
+   * thread state container where thread-local join hash tables are stored at the given offset.
+   * @param jht The global join hash table.
+   * @param thread_state_container The thread state container.
+   * @param offset The offset in the thread state container where thread-local tables are.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *JoinHashTableBuildParallel(ast::Expr *jht,
+                                                      ast::Expr *thread_state_container,
+                                                      ast::Expr *offset) const;
+
+  /**
+   * Call @joinHTFree(). Cleanup and destroy the provided join hash table instance.
+   * @param jht The join hash table.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *JoinHashTableFree(ast::Expr *jht) const;
 
   // -------------------------------------------------------
   //
