@@ -19,11 +19,8 @@ namespace tpl::sql::codegen {
 SeqScanTranslator::SeqScanTranslator(const planner::SeqScanPlanNode &plan,
                                      CompilationContext *compilation_context, Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline) {
-  // Register as a parallel scan.
   pipeline->RegisterSource(this, Pipeline::Parallelism::Parallel);
-
-  // Prepare the scan predicate.
-  if (HasPredicate()) {
+  if (plan.GetScanPredicate() != nullptr) {
     compilation_context->Prepare(*plan.GetScanPredicate());
   }
 }
@@ -63,7 +60,7 @@ class SeqScanTranslator::TableColumnAccess : public ConsumerContext::ValueProvid
 };
 
 void SeqScanTranslator::PopulateContextWithVPIAttributes(
-    ConsumerContext *consumer_context, ast::Expr *vpi,
+    ConsumerContext *ctx, ast::Expr *vpi,
     std::vector<SeqScanTranslator::TableColumnAccess> *attrs) const {
   const auto table_oid = GetPlanAs<planner::SeqScanPlanNode>().GetTableOid();
   const auto schema = &Catalog::Instance()->LookupTableById(table_oid)->GetSchema();
@@ -72,7 +69,7 @@ void SeqScanTranslator::PopulateContextWithVPIAttributes(
   auto codegen = GetCodeGen();
   for (uint32_t i = 0; i < schema->GetColumnCount(); i++) {
     (*attrs)[i] = TableColumnAccess(schema, codegen, vpi, i);
-    consumer_context->RegisterColumnValueProvider(i, &(*attrs)[i]);
+    ctx->RegisterColumnValueProvider(i, &(*attrs)[i]);
   }
 }
 
@@ -98,47 +95,41 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *func,
                 codegen->VPIHasNext(vpi, true),                               // @vpiHasNext()
                 codegen->MakeStmt(codegen->VPIAdvance(vpi, true)));           // @vpiAdvance()
   {
-    // Create evaluation context.
     std::vector<TableColumnAccess> attrs;
     ConsumerContext ctx(GetCompilationContext(), *GetPipeline());
     PopulateContextWithVPIAttributes(&ctx, vpi, &attrs);
 
-    // Call @vpiMatch() with the result of the comparison.
     auto cond_translator = GetCompilationContext()->LookupTranslator(*term);
-    func->Append(codegen->VPIMatch(vpi, cond_translator->DeriveValue(&ctx)));
+    auto match = cond_translator->DeriveValue(&ctx);
+    func->Append(codegen->VPIMatch(vpi, match));
   }
   vpi_loop.EndLoop();
 }
 
-void SeqScanTranslator::GenerateFilterClauseFunctions(TopLevelDeclarations *top_level_declarations,
+void SeqScanTranslator::GenerateFilterClauseFunctions(TopLevelDeclarations *top_level_decls,
                                                       const planner::AbstractExpression *predicate,
                                                       std::vector<ast::Identifier> *curr_clause,
                                                       bool seen_conjunction) {
-  CodeGen *codegen = GetCodeGen();
-
   // The top-most disjunctions in the tree form separate clauses in the filter manager.
   if (!seen_conjunction &&
       predicate->GetExpressionType() == planner::ExpressionType::CONJUNCTION_OR) {
     std::vector<ast::Identifier> next_clause;
-    GenerateFilterClauseFunctions(top_level_declarations, predicate->GetChild(0), &next_clause,
-                                  false);
+    GenerateFilterClauseFunctions(top_level_decls, predicate->GetChild(0), &next_clause, false);
     filters_.emplace_back(std::move(next_clause));
-    GenerateFilterClauseFunctions(top_level_declarations, predicate->GetChild(1), curr_clause,
-                                  false);
+    GenerateFilterClauseFunctions(top_level_decls, predicate->GetChild(1), curr_clause, false);
     return;
   }
 
   // Consecutive conjunctions are part of the same clause.
   if (predicate->GetExpressionType() == planner::ExpressionType::CONJUNCTION_AND) {
-    GenerateFilterClauseFunctions(top_level_declarations, predicate->GetChild(0), curr_clause,
-                                  true);
-    GenerateFilterClauseFunctions(top_level_declarations, predicate->GetChild(1), curr_clause,
-                                  true);
+    GenerateFilterClauseFunctions(top_level_decls, predicate->GetChild(0), curr_clause, true);
+    GenerateFilterClauseFunctions(top_level_decls, predicate->GetChild(1), curr_clause, true);
     return;
   }
 
   // At this point, we create a term.
   // Signature: (vp: *VectorProjection, tids: *TupleIdList) -> nil
+  auto codegen = GetCodeGen();
   auto fn_name = codegen->MakeFreshIdentifier("filterClause");
   util::RegionVector<ast::FieldDecl *> params = codegen->MakeFieldList({
       codegen->MakeField(codegen->MakeIdentifier("vp"),
@@ -167,10 +158,8 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(TopLevelDeclarations *top_
       GenerateGenericTerm(&builder, predicate);
     }
   }
-  // Register function.
-  top_level_declarations->RegisterFunction(builder.Finish());
-  // Add to list of filters.
-  curr_clause->emplace_back(fn_name);
+  curr_clause->push_back(fn_name);
+  top_level_decls->RegisterFunction(builder.Finish());
 }
 
 void SeqScanTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_decls) {
@@ -182,19 +171,14 @@ void SeqScanTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_de
   }
 }
 
-void SeqScanTranslator::GenerateVPIScan(ConsumerContext *consumer_context, ast::Expr *vpi) const {
-  TPL_ASSERT(!consumer_context->GetPipeline().IsVectorized(),
-             "Should not generate VPI scan for vectorized pipeline");
-
+void SeqScanTranslator::ScanVPI(ConsumerContext *ctx, ast::Expr *vpi) const {
   auto codegen = GetCodeGen();
   Loop vpi_loop(codegen, nullptr, codegen->VPIHasNext(vpi, false),
                 codegen->MakeStmt(codegen->VPIAdvance(vpi, false)));
   {
-    // Populate context with VPI columns.
     std::vector<TableColumnAccess> attrs;
-    PopulateContextWithVPIAttributes(consumer_context, vpi, &attrs);
-    // Push to consumer.
-    consumer_context->Push();
+    PopulateContextWithVPIAttributes(ctx, vpi, &attrs);
+    ctx->Push();
   }
   vpi_loop.EndLoop();
 }
@@ -203,25 +187,20 @@ void SeqScanTranslator::ScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool clo
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
 
-  // Loop while iterator has data.
   Loop tvi_loop(codegen, codegen->TableIterAdvance(tvi));
   {
-    // Pull out VPI from TVI.
     auto vpi_name = codegen->MakeFreshIdentifier("vpi");
     auto vpi = codegen->MakeExpr(vpi_name);
     func->Append(codegen->DeclareVarWithInit(vpi_name, codegen->TableIterGetVPI(tvi)));
 
-    // Generate filter.
     if (HasPredicate()) {
       auto filter_manager = ctx->GetPipelineContext()->GetThreadStateEntryPtr(codegen, fm_slot_);
       func->Append(codegen->FilterManagerRunFilters(filter_manager, vpi));
     }
 
-    // If the pipeline is vectorized, just pass along the VPI. Otherwise,
-    // generate a scan over the VPI.
     if (ctx->GetPipeline().IsVectorized()) {
     } else {
-      GenerateVPIScan(ctx, vpi);
+      ScanVPI(ctx, vpi);
     }
   }
   tvi_loop.EndLoop();
@@ -233,7 +212,6 @@ void SeqScanTranslator::ScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool clo
 
 void SeqScanTranslator::DeclarePipelineState(PipelineContext *pipeline_context) {
   if (HasPredicate()) {
-    // Declare the filter manager.
     auto fm_type = GetCodeGen()->BuiltinType(ast::BuiltinType::FilterManager);
     fm_slot_ = pipeline_context->DeclareStateEntry(GetCodeGen(), "filter", fm_type);
   }
@@ -241,53 +219,43 @@ void SeqScanTranslator::DeclarePipelineState(PipelineContext *pipeline_context) 
 
 void SeqScanTranslator::InitializePipelineState(const PipelineContext &pipeline_context) const {
   if (HasPredicate()) {
-    // Declare a filter manager and initialize it.
     auto codegen = GetCodeGen();
     auto func = codegen->CurrentFunction();
     auto fm = pipeline_context.GetThreadStateEntryPtr(codegen, fm_slot_);
     func->Append(codegen->FilterManagerInit(fm));
 
-    // Insert clauses.
     for (const auto &clause : filters_) {
       func->Append(codegen->FilterManagerInsert(fm, clause));
     }
 
-    // Finalize filter manager.
     func->Append(codegen->FilterManagerFinalize(fm));
   }
 }
 
 void SeqScanTranslator::TearDownPipelineState(const PipelineContext &pipeline_context) const {
   if (HasPredicate()) {
-    // Tear-down filter manager.
     auto codegen = GetCodeGen();
     auto fm = pipeline_context.GetThreadStateEntryPtr(codegen, fm_slot_);
     codegen->CurrentFunction()->Append(codegen->FilterManagerFree(fm));
   }
 }
 
-void SeqScanTranslator::DoPipelineWork(ConsumerContext *consumer_context) const {
+void SeqScanTranslator::DoPipelineWork(ConsumerContext *ctx) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
 
-  if (consumer_context->GetPipeline().IsParallel()) {
-    // Parallel scan, the TVI is the last argument the function.
-    ScanTable(consumer_context, func->GetParameterByPosition(2), false);
+  if (ctx->GetPipeline().IsParallel()) {
+    ScanTable(ctx, func->GetParameterByPosition(2), false);
   } else {
-    // Declare new TVI.
     auto tvi_name = codegen->MakeFreshIdentifier("tvi");
     auto tvi = codegen->AddressOf(codegen->MakeExpr(tvi_name));
     func->Append(codegen->DeclareVarNoInit(tvi_name, ast::BuiltinType::TableVectorIterator));
-    // Initialize the TVI: @tableIterInit().
     func->Append(codegen->TableIterInit(tvi, GetTableName()));
-    // Scan it.
-    ScanTable(consumer_context, tvi, true);
+    ScanTable(ctx, tvi, true);
   }
 }
 
 util::RegionVector<ast::FieldDecl *> SeqScanTranslator::GetWorkerParams() const {
-  // The only additional worker function parameters needed for parallel scans is
-  // a *TableVectorIterator.
   auto codegen = GetCodeGen();
   auto tvi_type = codegen->PointerType(ast::BuiltinType::TableVectorIterator);
   return codegen->MakeFieldList({codegen->MakeField(codegen->MakeIdentifier("tvi"), tvi_type)});

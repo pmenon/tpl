@@ -123,10 +123,10 @@ class SortTranslator : public OperatorTranslator {
   void ScanSorter(ConsumerContext *consumer_context) const;
 
   // Insert tuple data into the provided sort row.
-  void FillSortRow(ConsumerContext *consumer_context, ast::Expr *sort_row) const;
+  void FillSortRow(ConsumerContext *ctx, ast::Expr *sort_row) const;
 
   // Called to insert the tuple in the context into the sorter instance.
-  void InsertIntoSorter(ConsumerContext *consumer_context) const;
+  void InsertIntoSorter(ConsumerContext *ctx) const;
 
   // Generate comparison function.
   void GenerateComparisonFunction(FunctionBuilder *builder, ast::Expr *lhs_row,

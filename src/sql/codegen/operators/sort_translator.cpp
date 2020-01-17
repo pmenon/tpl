@@ -46,7 +46,6 @@ void SortTranslator::DefineHelperStructs(TopLevelDeclarations *top_level_decls) 
   GetAllChildOutputFields(0, "attr", &fields);
   sort_row_ = codegen->DeclareStruct(codegen->MakeFreshIdentifier("SortRow"), std::move(fields));
 
-  // Declare struct.
   top_level_decls->RegisterStruct(sort_row_);
 }
 
@@ -101,10 +100,7 @@ void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder, ast::E
       ast::Expr *lhs = left_ctx.DeriveValue(*expr);
       ast::Expr *rhs = right_ctx.DeriveValue(*expr);
       If cond(codegen, codegen->Compare(tok, lhs, rhs));
-      {
-        // Return the value depending on ordering.
-        builder->Append(codegen->Return(codegen->Const32(ret_value)));
-      }
+      builder->Append(codegen->Return(codegen->Const32(ret_value)));
       cond.EndIf();
       ret_value = -ret_value;
     }
@@ -114,8 +110,6 @@ void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder, ast::E
 void SortTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_decls) {
   auto codegen = GetCodeGen();
   auto fn_name = codegen->MakeFreshIdentifier("compare");
-
-  // Params
   auto params = codegen->MakeFieldList({
       codegen->MakeField(codegen->MakeIdentifier("lhs"), codegen->PointerType(sort_row_->Name())),
       codegen->MakeField(codegen->MakeIdentifier("rhs"), codegen->PointerType(sort_row_->Name())),
@@ -169,25 +163,25 @@ void SortTranslator::TearDownPipelineState(const PipelineContext &pipeline_conte
   }
 }
 
-void SortTranslator::FillSortRow(ConsumerContext *consumer_context, ast::Expr *sort_row) const {
+void SortTranslator::FillSortRow(ConsumerContext *ctx, ast::Expr *sort_row) const {
   auto codegen = GetCodeGen();
   const auto child_schema = GetPlan().GetChild(0)->GetOutputSchema();
   for (uint32_t attr_idx = 0; attr_idx < child_schema->GetColumns().size(); attr_idx++) {
     auto attr_name = codegen->MakeIdentifier("attr" + std::to_string(attr_idx));
     auto lhs = codegen->AccessStructMember(sort_row, attr_name);
-    auto rhs = consumer_context->DeriveValue(*child_schema->GetColumn(attr_idx).GetExpr());
+    auto rhs = ctx->DeriveValue(*child_schema->GetColumn(attr_idx).GetExpr());
     codegen->CurrentFunction()->Append(codegen->Assign(lhs, rhs));
   }
 }
 
-void SortTranslator::InsertIntoSorter(ConsumerContext *consumer_context) const {
+void SortTranslator::InsertIntoSorter(ConsumerContext *ctx) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
 
   // Collect correct sorter instance.
   ast::Expr *sorter = nullptr;
-  if (consumer_context->GetPipeline().IsParallel()) {
-    const auto pipeline_context = consumer_context->GetPipelineContext();
+  if (ctx->GetPipeline().IsParallel()) {
+    const auto pipeline_context = ctx->GetPipelineContext();
     sorter = pipeline_context->GetThreadStateEntryPtr(codegen, tl_sorter_slot_);
   } else {
     sorter = GetQueryState().GetStateEntryPtr(codegen, sorter_slot_);
@@ -201,7 +195,7 @@ void SortTranslator::InsertIntoSorter(ConsumerContext *consumer_context) const {
     func->Append(codegen->DeclareVarWithInit(
         sort_row_name, codegen->SorterInsertTopK(sorter, sort_row_->Name(), topk)));
     // Fill row.
-    FillSortRow(consumer_context, sort_row);
+    FillSortRow(ctx, sort_row);
     // @sorterInsertTopKFinish();
     func->Append(codegen->SorterInsertTopKFinish(sorter));
   } else {
@@ -209,7 +203,7 @@ void SortTranslator::InsertIntoSorter(ConsumerContext *consumer_context) const {
     func->Append(codegen->DeclareVarWithInit(sort_row_name,
                                              codegen->SorterInsert(sorter, sort_row_->Name())));
     // Fill row.
-    FillSortRow(consumer_context, sort_row);
+    FillSortRow(ctx, sort_row);
   }
 }
 

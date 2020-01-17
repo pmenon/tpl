@@ -105,7 +105,7 @@ class SeqScanTranslator : public OperatorTranslator {
   void GenerateGenericTerm(FunctionBuilder *func, const planner::AbstractExpression *term);
 
   // Generate all filter clauses.
-  void GenerateFilterClauseFunctions(TopLevelDeclarations *top_level_declarations,
+  void GenerateFilterClauseFunctions(TopLevelDeclarations *top_level_decls,
                                      const planner::AbstractExpression *predicate,
                                      std::vector<ast::Identifier> *curr_clause,
                                      bool seen_conjunction);
@@ -114,14 +114,14 @@ class SeqScanTranslator : public OperatorTranslator {
 
   // Insert an column provider for every column in the VPI into the consumer context.
   // Store the source providers in the output attributes array.
-  void PopulateContextWithVPIAttributes(ConsumerContext *consumer_context, ast::Expr *vpi,
+  void PopulateContextWithVPIAttributes(ConsumerContext *ctx, ast::Expr *vpi,
                                         std::vector<TableColumnAccess> *attrs) const;
 
   // Perform a table scan using the provided table vector iterator pointer.
   void ScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool close_iter) const;
 
   // Generate a scan over the VPI.
-  void GenerateVPIScan(ConsumerContext *consumer_context, ast::Expr *vpi) const;
+  void ScanVPI(ConsumerContext *ctx, ast::Expr *vpi) const;
 
  private:
   // Where the filter manager exists.
