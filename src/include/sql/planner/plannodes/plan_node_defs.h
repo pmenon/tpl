@@ -62,7 +62,7 @@ enum class PlanNodeType {
 };
 
 /**
- * @return A string representation for the given node type @em type.
+ * @return A string representation for the provided node type.
  */
 std::string PlanNodeTypeToString(PlanNodeType type);
 

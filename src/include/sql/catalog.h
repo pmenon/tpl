@@ -14,7 +14,8 @@ class Table;
 
 #define TABLES(V)              \
   V(EmptyTable, "empty_table") \
-  V(Test1, "test_1")
+  V(Test1, "test_1")           \
+  V(Test2, "test_2")
 
 enum class TableId : uint16_t {
 #define ENTRY(Id, ...) Id,

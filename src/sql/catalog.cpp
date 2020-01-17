@@ -46,12 +46,12 @@ struct ColumnInsertMeta {
  * rows in the table.
  */
 struct TableInsertMeta {
-  uint16_t id;
+  TableId id;
   const char *name;
   uint32_t num_rows;
   std::vector<ColumnInsertMeta> col_meta;
 
-  TableInsertMeta(uint16_t id, const char *name, uint32_t num_rows,
+  TableInsertMeta(TableId id, const char *name, uint32_t num_rows,
                   std::vector<ColumnInsertMeta> col_meta)
       : id(id), name(name), num_rows(num_rows), col_meta(std::move(col_meta)) {}
 };
@@ -65,15 +65,20 @@ struct TableInsertMeta {
 // clang-format off
 TableInsertMeta insert_meta[] = {
     // The empty table
-    {static_cast<uint16_t>(TableId::EmptyTable), "empty_table", 0,
+    {TableId::EmptyTable, "empty_table", 0,
      {{"colA", sql::IntegerType::Instance(false), Dist::Serial, int64_t{0}, int64_t{0}}}},
 
     // Table 1
-    {static_cast<uint16_t>(TableId::Test1), "test_1", 2000000,
+    {TableId::Test1, "test_1", 2000000,
      {{"colA", sql::IntegerType::Instance(false), Dist::Serial, int64_t{0}, int64_t{0}},
       {"colB", sql::IntegerType::Instance(false), Dist::Uniform, int64_t{0}, int64_t{9}},
       {"colC", sql::IntegerType::Instance(false), Dist::Uniform, int64_t{0}, int64_t{9999}},
       {"colD", sql::IntegerType::Instance(false), Dist::Uniform, int64_t{0}, int64_t{99999}}}},
+
+    // Table 2
+    {TableId::Test2, "test_2", 2000000,
+     {{"colA", sql::IntegerType::Instance(false), Dist::Uniform, int64_t{0}, int64_t{100}},
+      {"colB", sql::IntegerType::Instance(false), Dist::Serial, int64_t{0}, int64_t{0}}}},
 };
 // clang-format on
 
@@ -219,15 +224,16 @@ Catalog::Catalog() : next_table_id_(static_cast<uint16_t>(TableId::Last)) {
       cols.emplace_back(col_meta.name, col_meta.sql_type);
     }
 
-    // Insert into catalog
-    table_catalog_[meta.id] = std::make_unique<Table>(static_cast<uint16_t>(meta.id), meta.name,
-                                                      std::make_unique<Schema>(std::move(cols)));
-    table_name_to_id_map_[meta.name] = meta.id;
+    const auto table_id = static_cast<uint16_t>(meta.id);
+
+    table_catalog_[table_id] = std::make_unique<Table>(static_cast<uint16_t>(meta.id), meta.name,
+                                                       std::make_unique<Schema>(std::move(cols)));
+    table_name_to_id_map_[meta.name] = table_id;
   }
 
   // Populate all tables
   for (const auto &table_meta : insert_meta) {
-    InitTable(table_meta, LookupTableById(table_meta.id));
+    InitTable(table_meta, LookupTableById(static_cast<uint16_t>(table_meta.id)));
   }
 
   LOG_INFO("Catalog initialization complete");
