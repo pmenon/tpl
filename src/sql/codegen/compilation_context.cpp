@@ -9,6 +9,7 @@
 #include "common/macros.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/executable_query.h"
+#include "sql/codegen/expression//derived_value_translator.h"
 #include "sql/codegen/expression/arithmetic_translator.h"
 #include "sql/codegen/expression/column_value_translator.h"
 #include "sql/codegen/expression/comparison_translator.h"
@@ -179,13 +180,9 @@ void CompilationContext::Prepare(const planner::AbstractExpression &expression) 
   std::unique_ptr<ExpressionTranslator> translator;
 
   switch (expression.GetExpressionType()) {
-    case planner::ExpressionType::OPERATOR_PLUS:
-    case planner::ExpressionType::OPERATOR_MINUS:
-    case planner::ExpressionType::OPERATOR_MULTIPLY:
-    case planner::ExpressionType::OPERATOR_DIVIDE:
-    case planner::ExpressionType::OPERATOR_MOD: {
-      const auto &operator_expr = static_cast<const planner::OperatorExpression &>(expression);
-      translator = std::make_unique<ArithmeticTranslator>(operator_expr, this);
+    case planner::ExpressionType::COLUMN_VALUE: {
+      const auto &column_value = static_cast<const planner::ColumnValueExpression &>(expression);
+      translator = std::make_unique<ColumnValueTranslator>(column_value, this);
       break;
     }
     case planner::ExpressionType::COMPARE_EQUAL:
@@ -200,20 +197,29 @@ void CompilationContext::Prepare(const planner::AbstractExpression &expression) 
       translator = std::make_unique<ComparisonTranslator>(comparison, this);
       break;
     }
-    case planner::ExpressionType::VALUE_CONSTANT: {
-      const auto &constant = static_cast<const planner::ConstantValueExpression &>(expression);
-      translator = std::make_unique<ConstantTranslator>(constant, this);
-      break;
-    }
     case planner::ExpressionType::CONJUNCTION_AND:
     case planner::ExpressionType::CONJUNCTION_OR: {
       const auto &conjunction = static_cast<const planner::ConjunctionExpression &>(expression);
       translator = std::make_unique<ConjunctionTranslator>(conjunction, this);
       break;
     }
-    case planner::ExpressionType::COLUMN_VALUE: {
-      const auto &column_value = static_cast<const planner::ColumnValueExpression &>(expression);
-      translator = std::make_unique<ColumnValueTranslator>(column_value, this);
+    case planner::ExpressionType::OPERATOR_PLUS:
+    case planner::ExpressionType::OPERATOR_MINUS:
+    case planner::ExpressionType::OPERATOR_MULTIPLY:
+    case planner::ExpressionType::OPERATOR_DIVIDE:
+    case planner::ExpressionType::OPERATOR_MOD: {
+      const auto &operator_expr = static_cast<const planner::OperatorExpression &>(expression);
+      translator = std::make_unique<ArithmeticTranslator>(operator_expr, this);
+      break;
+    }
+    case planner::ExpressionType::VALUE_CONSTANT: {
+      const auto &constant = static_cast<const planner::ConstantValueExpression &>(expression);
+      translator = std::make_unique<ConstantTranslator>(constant, this);
+      break;
+    }
+    case planner::ExpressionType::VALUE_TUPLE: {
+      const auto &derived_value = static_cast<const planner::DerivedValueExpression &>(expression);
+      translator = std::make_unique<DerivedValueTranslator>(derived_value, this);
       break;
     }
     default: {

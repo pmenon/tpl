@@ -81,6 +81,30 @@ class ConsumerContext {
   void Push();
 
   /**
+   * Clear any cached expression result values.
+   */
+  void ClearExpressionCache();
+
+  /**
+   * @return The previous operator the context visited in the pipeline.
+   */
+  OperatorTranslator *PreviousOp() const {
+    return pipeline_iter_ == pipeline_.Begin() ? nullptr : *(pipeline_iter_ - 1);
+  }
+
+  /**
+   * @return The operator the context is currently positioned at in the pipeline.
+   */
+  OperatorTranslator *CurrentOp() const { return *pipeline_iter_; }
+
+  /**
+   * @return The next operator the context will visit in the pipeline.
+   */
+  OperatorTranslator *NextOp() const {
+    return pipeline_iter_ == pipeline_end_ ? nullptr : *(pipeline_iter_ + 1);
+  }
+
+  /**
    * @return The pipeline the consumption occurs in.
    */
   const Pipeline &GetPipeline() const { return pipeline_; }
@@ -99,6 +123,8 @@ class ConsumerContext {
   const PipelineContext *pipeline_context_;
   // Column value providers.
   std::unordered_map<uint16_t, ValueProvider *> col_value_providers_;
+  // Cache of expression results.
+  std::unordered_map<const planner::AbstractExpression *, ast::Expr *> cache_;
   // The current pipeline step and last pipeline step.
   Pipeline::StepIterator pipeline_iter_, pipeline_end_;
 };

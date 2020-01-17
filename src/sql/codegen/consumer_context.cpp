@@ -36,11 +36,16 @@ ConsumerContext::ValueProvider *ConsumerContext::LookupColumnValueProvider(uint1
 }
 
 ast::Expr *ConsumerContext::DeriveValue(const planner::AbstractExpression &expr) {
+  if (auto iter = cache_.find(&expr); iter != cache_.end()) {
+    return iter->second;
+  }
   auto *translator = compilation_context_->LookupTranslator(expr);
   if (translator == nullptr) {
     return nullptr;
   }
-  return translator->DeriveValue(this);
+  auto result = translator->DeriveValue(this);
+  cache_[&expr] = result;
+  return result;
 }
 
 void ConsumerContext::Push() {
@@ -49,5 +54,7 @@ void ConsumerContext::Push() {
   }
   (*pipeline_iter_)->DoPipelineWork(this);
 }
+
+void ConsumerContext::ClearExpressionCache() { cache_.clear(); }
 
 }  // namespace tpl::sql::codegen
