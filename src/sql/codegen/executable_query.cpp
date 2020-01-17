@@ -1,5 +1,7 @@
 #include "sql/codegen/executable_query.h"
 
+#include "llvm/ADT/STLExtras.h"
+
 #include "ast/context.h"
 #include "logging/logger.h"
 #include "sema/error_reporter.h"
@@ -19,8 +21,7 @@ ExecutableQuery::~ExecutableQuery() = default;
 
 void ExecutableQuery::Setup(std::vector<std::unique_ptr<CodeContainer>> &&fragments,
                             const std::size_t query_state_size) {
-  TPL_ASSERT(std::all_of(fragments.begin(), fragments.end(),
-                         [](const auto &fragment) { return fragment->IsCompiled(); }),
+  TPL_ASSERT(llvm::all_of(fragments, [](auto &fragment) { return fragment->IsCompiled(); }),
              "All query fragments are not compiled!");
   TPL_ASSERT(
       query_state_size >= sizeof(ExecutionContext *),
