@@ -256,7 +256,7 @@ void SortTranslator::FinishPipelineWork(const PipelineContext &pipeline_context)
     auto offset = pipeline_context.GetThreadStateEntryOffset(codegen, tl_sorter_slot_);
 
     if (GetBuildPipeline().IsParallel()) {
-      if (const auto &plan = GetTypedPlan(); plan.HasLimit()) {
+      if (const auto &plan = Op<planner::OrderByPlanNode>(); plan.HasLimit()) {
         const std::size_t topk = plan.GetOffset() + plan.GetLimit();
         func->Append(codegen->SortTopKParallel(sorter, GetThreadStateContainer(), offset, topk));
       } else {
