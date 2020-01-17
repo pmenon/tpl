@@ -29,6 +29,10 @@ ast::Expr *OperatorTranslator::GetThreadStateContainer() const {
   return GetCodeGen()->ExecCtxGetTLS(GetExecutionContext());
 }
 
+ast::Expr *OperatorTranslator::GetMemoryPool() const {
+  return GetCodeGen()->ExecCtxGetMemoryPool(GetExecutionContext());
+}
+
 void OperatorTranslator::GetAllChildOutputFields(
     const uint32_t child_index, const std::string &field_name_prefix,
     util::RegionVector<ast::FieldDecl *> *fields) const {

@@ -80,9 +80,9 @@ class SortTranslator : public OperatorTranslator {
   /**
    * Implement either the build-side or scan-side of the sort depending on the pipeline this context
    * contains.
-   * @param consumer_context The consumer context.
+   * @param ctx The consumer context.
    */
-  void DoPipelineWork(ConsumerContext *consumer_context) const override;
+  void DoPipelineWork(ConsumerContext *ctx) const override;
 
   /**
    * If the given pipeline is for the build-side, we'll need to issue a sort. If the pipeline is
@@ -109,18 +109,24 @@ class SortTranslator : public OperatorTranslator {
     return GetPlanAs<planner::OrderByPlanNode>();
   }
 
-  // Return true if the given pipeline is for the bottom/built portion of the sort.
-  bool IsBottomPipeline(const Pipeline &pipeline) const { return &child_pipeline_ == &pipeline; }
+  // Get the bottom/build pipeline.
+  Pipeline *GetBuildPipeline() { return &child_pipeline_; }
+  const Pipeline &GetBuildPipeline() const { return child_pipeline_; }
 
-  // Return true if the given pipeline is for the top/scan portion of the sort.
-  bool IsTopPipeline(const Pipeline &pipeline) const { return !IsBottomPipeline(pipeline); }
+  // Get the top/scan pipeline.
+  Pipeline *GetScanPipeline() { return GetPipeline(); }
+  const Pipeline &GetScanPipeline() const { return *GetPipeline(); }
+
+  // Check if the given pipelines are t
+  bool IsBuildPipeline(const Pipeline &pipeline) const { return &GetBuildPipeline() == &pipeline; }
+  bool IsScanPipeline(const Pipeline &pipeline) const { return &GetScanPipeline() == &pipeline; }
 
   // Initialize and destroy the given sorter.
   void InitializeSorter(ast::Expr *sorter_ptr) const;
   void TearDownSorter(ast::Expr *sorter_ptr) const;
 
   // Called to scan the global sorter instance.
-  void ScanSorter(ConsumerContext *consumer_context) const;
+  void ScanSorter(ConsumerContext *ctx) const;
 
   // Insert tuple data into the provided sort row.
   void FillSortRow(ConsumerContext *ctx, ast::Expr *sort_row) const;

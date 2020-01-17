@@ -195,8 +195,11 @@ class OperatorTranslator {
   // Get the execution context pointer in the current function.
   ast::Expr *GetExecutionContext() const;
 
-  // Get the thread state container pointer in the current function.
+  // Get the thread state container pointer from the execution context stored in the query state.
   ast::Expr *GetThreadStateContainer() const;
+
+  // Get the memory pool pointer from the execution context stored in the query state.
+  ast::Expr *GetMemoryPool() const;
 
   // The pipeline this translator is a part of.
   Pipeline *GetPipeline() const { return pipeline_; }

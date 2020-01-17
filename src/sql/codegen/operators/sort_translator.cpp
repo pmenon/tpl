@@ -18,17 +18,11 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
       child_pipeline_(this, Pipeline::Parallelism::Flexible),
       sort_row_(nullptr),
       cmp_func_(nullptr) {
-  // Indicate that this sorter is the source of the input pipeline. The output
-  // of a sort must be serial to ensure delivery of tuples in sorted order.
   pipeline->RegisterSource(this, Pipeline::Parallelism::Serial);
+  pipeline->LinkSourcePipeline(GetBuildPipeline());
 
-  // Add the child pipeline as a dependency to the upper scan pipeline.
-  pipeline->LinkSourcePipeline(&child_pipeline_);
+  compilation_context->Prepare(*plan.GetChild(0), GetBuildPipeline());
 
-  // Prepare children.
-  compilation_context->Prepare(*plan.GetChild(0), &child_pipeline_);
-
-  // Prepare expressions.
   for (const auto &[expr, _] : plan.GetSortKeys()) {
     compilation_context->Prepare(*expr);
   }
@@ -40,12 +34,10 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
 }
 
 void SortTranslator::DefineHelperStructs(TopLevelDeclarations *top_level_decls) {
-  // Build struct.
   auto codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
   GetAllChildOutputFields(0, "attr", &fields);
   sort_row_ = codegen->DeclareStruct(codegen->MakeFreshIdentifier("SortRow"), std::move(fields));
-
   top_level_decls->RegisterStruct(sort_row_);
 }
 
@@ -127,7 +119,7 @@ void SortTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_decls
 void SortTranslator::InitializeSorter(ast::Expr *sorter_ptr) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
-  auto mem_pool = codegen->ExecCtxGetMemoryPool(GetExecutionContext());
+  auto mem_pool = GetMemoryPool();
   func->Append(codegen->SorterInit(sorter_ptr, mem_pool, cmp_func_->Name(), sort_row_->Name()));
 }
 
@@ -145,20 +137,20 @@ void SortTranslator::TearDownQueryState() const {
 }
 
 void SortTranslator::DeclarePipelineState(PipelineContext *pipeline_context) {
-  if (IsBottomPipeline(pipeline_context->GetPipeline()) && pipeline_context->IsParallel()) {
+  if (IsBuildPipeline(pipeline_context->GetPipeline()) && pipeline_context->IsParallel()) {
     ast::Expr *sorter_type = GetCodeGen()->BuiltinType(ast::BuiltinType::Sorter);
     tl_sorter_slot_ = pipeline_context->DeclareStateEntry(GetCodeGen(), "sorter", sorter_type);
   }
 }
 
 void SortTranslator::InitializePipelineState(const PipelineContext &pipeline_context) const {
-  if (IsBottomPipeline(pipeline_context.GetPipeline()) && pipeline_context.IsParallel()) {
+  if (IsBuildPipeline(pipeline_context.GetPipeline()) && GetBuildPipeline().IsParallel()) {
     InitializeSorter(pipeline_context.GetThreadStateEntryPtr(GetCodeGen(), tl_sorter_slot_));
   }
 }
 
 void SortTranslator::TearDownPipelineState(const PipelineContext &pipeline_context) const {
-  if (IsBottomPipeline(pipeline_context.GetPipeline()) && pipeline_context.IsParallel()) {
+  if (IsBuildPipeline(pipeline_context.GetPipeline()) && GetBuildPipeline().IsParallel()) {
     TearDownSorter(pipeline_context.GetThreadStateEntryPtr(GetCodeGen(), tl_sorter_slot_));
   }
 }
@@ -207,7 +199,7 @@ void SortTranslator::InsertIntoSorter(ConsumerContext *ctx) const {
   }
 }
 
-void SortTranslator::ScanSorter(ConsumerContext *consumer_context) const {
+void SortTranslator::ScanSorter(ConsumerContext *ctx) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
 
@@ -235,10 +227,10 @@ void SortTranslator::ScanSorter(ConsumerContext *consumer_context) const {
 
     // Add attributes into context.
     std::vector<SortRowAccess> attrs;
-    PopulateContextWithSortAttributes(consumer_context, row, &attrs);
+    PopulateContextWithSortAttributes(ctx, row, &attrs);
 
     // Move along
-    consumer_context->Push();
+    ctx->Push();
   }
   loop.EndLoop();
 
@@ -246,27 +238,32 @@ void SortTranslator::ScanSorter(ConsumerContext *consumer_context) const {
   func->Append(codegen->SorterIterClose(iter));
 }
 
-void SortTranslator::DoPipelineWork(ConsumerContext *consumer_context) const {
-  if (IsTopPipeline(consumer_context->GetPipeline())) {
-    ScanSorter(consumer_context);
+void SortTranslator::DoPipelineWork(ConsumerContext *ctx) const {
+  if (IsScanPipeline(ctx->GetPipeline())) {
+    ScanSorter(ctx);
   } else {
-    InsertIntoSorter(consumer_context);
+    TPL_ASSERT(IsBuildPipeline(ctx->GetPipeline()), "Pipeline is unknown to sort translator");
+    InsertIntoSorter(ctx);
   }
 }
 
 void SortTranslator::FinishPipelineWork(const PipelineContext &pipeline_context) const {
-  if (IsBottomPipeline(pipeline_context.GetPipeline()) && pipeline_context.IsParallel()) {
+  if (IsBuildPipeline(pipeline_context.GetPipeline())) {
     auto codegen = GetCodeGen();
-    auto function = codegen->CurrentFunction();
+    auto func = codegen->CurrentFunction();
 
     auto sorter = GetQueryState().GetStateEntryPtr(codegen, sorter_slot_);
     auto offset = pipeline_context.GetThreadStateEntryOffset(codegen, tl_sorter_slot_);
 
-    if (const auto &plan = GetTypedPlan(); plan.HasLimit()) {
-      const std::size_t topk = plan.GetOffset() + plan.GetLimit();
-      function->Append(codegen->SortTopKParallel(sorter, GetThreadStateContainer(), offset, topk));
+    if (GetBuildPipeline().IsParallel()) {
+      if (const auto &plan = GetTypedPlan(); plan.HasLimit()) {
+        const std::size_t topk = plan.GetOffset() + plan.GetLimit();
+        func->Append(codegen->SortTopKParallel(sorter, GetThreadStateContainer(), offset, topk));
+      } else {
+        func->Append(codegen->SortParallel(sorter, GetThreadStateContainer(), offset));
+      }
     } else {
-      function->Append(codegen->SortParallel(sorter, GetThreadStateContainer(), offset));
+      func->Append(codegen->SorterSort(sorter));
     }
   }
 }
