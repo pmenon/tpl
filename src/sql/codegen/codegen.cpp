@@ -507,6 +507,16 @@ ast::Expr *CodeGen::TLSReset(ast::Expr *tls, ast::Identifier tls_state_name,
 }
 
 // ---------------------------------------------------------
+// Hash
+// ---------------------------------------------------------
+
+ast::Expr *CodeGen::Hash(const std::vector<ast::Expr *> &values) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::Hash, values);
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint64));
+  return call;
+}
+
+// ---------------------------------------------------------
 // Joins
 // ---------------------------------------------------------
 

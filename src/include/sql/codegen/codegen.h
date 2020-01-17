@@ -635,6 +635,19 @@ class CodeGen {
 
   // -------------------------------------------------------
   //
+  // Hash
+  //
+  // -------------------------------------------------------
+
+  /**
+   * Invoke @hash(). Hashes all input arguments and combines them into a single hash value.
+   * @param values The values to hash.
+   * @return The result of the hash.
+   */
+  [[nodiscard]] ast::Expr *Hash(const std::vector<ast::Expr *> &values) const;
+
+  // -------------------------------------------------------
+  //
   // Join stuff
   //
   // -------------------------------------------------------
