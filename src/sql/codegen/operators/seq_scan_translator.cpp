@@ -26,11 +26,11 @@ SeqScanTranslator::SeqScanTranslator(const planner::SeqScanPlanNode &plan,
 }
 
 bool SeqScanTranslator::HasPredicate() const {
-  return Op<planner::SeqScanPlanNode>().GetScanPredicate() != nullptr;
+  return GetPlanAs<planner::SeqScanPlanNode>().GetScanPredicate() != nullptr;
 }
 
 std::string_view SeqScanTranslator::GetTableName() const {
-  const auto table_oid = Op<planner::SeqScanPlanNode>().GetTableOid();
+  const auto table_oid = GetPlanAs<planner::SeqScanPlanNode>().GetTableOid();
   return Catalog::Instance()->LookupTableById(table_oid)->GetName();
 }
 
@@ -62,7 +62,7 @@ class SeqScanTranslator::TableColumnAccess : public ConsumerContext::ValueProvid
 void SeqScanTranslator::PopulateContextWithVPIAttributes(
     ConsumerContext *ctx, ast::Expr *vpi,
     std::vector<SeqScanTranslator::TableColumnAccess> *attrs) const {
-  const auto table_oid = Op<planner::SeqScanPlanNode>().GetTableOid();
+  const auto table_oid = GetPlanAs<planner::SeqScanPlanNode>().GetTableOid();
   const auto schema = &Catalog::Instance()->LookupTableById(table_oid)->GetSchema();
   attrs->resize(schema->GetColumnCount());
 
@@ -165,7 +165,7 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(TopLevelDeclarations *top_
 void SeqScanTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_decls) {
   if (HasPredicate()) {
     std::vector<ast::Identifier> curr_clause;
-    auto root_expr = Op<planner::SeqScanPlanNode>().GetScanPredicate();
+    auto root_expr = GetPlanAs<planner::SeqScanPlanNode>().GetScanPredicate();
     GenerateFilterClauseFunctions(top_level_decls, root_expr, &curr_clause, false);
     filters_.emplace_back(std::move(curr_clause));
   }

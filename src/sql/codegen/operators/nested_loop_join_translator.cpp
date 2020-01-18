@@ -26,7 +26,7 @@ NestedLoopJoinTranslator::NestedLoopJoinTranslator(const planner::NestedLoopJoin
 }
 
 void NestedLoopJoinTranslator::DoPipelineWork(ConsumerContext *consumer_context) const {
-  const auto *predicate = Op<planner::NestedLoopJoinPlanNode>().GetJoinPredicate();
+  const auto *predicate = GetPlanAs<planner::NestedLoopJoinPlanNode>().GetJoinPredicate();
   if (predicate != nullptr) {
     If cond(GetCodeGen(), consumer_context->DeriveValue(*predicate));
     {

@@ -16,7 +16,7 @@ class DerivedValueTranslator : public ExpressionTranslator {
    * @param compilation_context The context in which translation occurs.
    */
   DerivedValueTranslator(const planner::DerivedValueExpression &expr,
-                        CompilationContext *compilation_context);
+                         CompilationContext *compilation_context);
 
   /**
    * Derive the value of the expression.
