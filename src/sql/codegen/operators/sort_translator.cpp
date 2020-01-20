@@ -129,11 +129,11 @@ void SortTranslator::TearDownSorter(ast::Expr *sorter_ptr) const {
 }
 
 void SortTranslator::InitializeQueryState() const {
-  InitializeSorter(GetQueryState().GetStateEntryPtr(GetCodeGen(), sorter_slot_));
+  InitializeSorter(GetQueryStateEntryPtr(sorter_slot_));
 }
 
 void SortTranslator::TearDownQueryState() const {
-  TearDownSorter(GetQueryState().GetStateEntryPtr(GetCodeGen(), sorter_slot_));
+  TearDownSorter(GetQueryStateEntryPtr(sorter_slot_));
 }
 
 void SortTranslator::DeclarePipelineState(PipelineContext *pipeline_context) {
@@ -176,7 +176,7 @@ void SortTranslator::InsertIntoSorter(ConsumerContext *ctx) const {
     const auto pipeline_context = ctx->GetPipelineContext();
     sorter = pipeline_context->GetThreadStateEntryPtr(codegen, tl_sorter_slot_);
   } else {
-    sorter = GetQueryState().GetStateEntryPtr(codegen, sorter_slot_);
+    sorter = GetQueryStateEntryPtr(sorter_slot_);
   }
 
   auto sort_row_name = codegen->MakeFreshIdentifier("sort_row");
@@ -213,7 +213,7 @@ void SortTranslator::ScanSorter(ConsumerContext *ctx) const {
   func->Append(codegen->DeclareVarWithInit(iter_name,
                                            codegen->AddressOf(codegen->MakeExpr(base_iter_name))));
 
-  auto sorter = GetQueryState().GetStateEntryPtr(codegen, sorter_slot_);
+  auto sorter = GetQueryStateEntryPtr(sorter_slot_);
   Loop loop(codegen,
             codegen->MakeStmt(codegen->SorterIterInit(iter, sorter)),  // @sorterIterInit();
             codegen->SorterIterHasNext(iter),                          // @sorterIterHasNext();
@@ -252,7 +252,7 @@ void SortTranslator::FinishPipelineWork(const PipelineContext &pipeline_context)
     auto codegen = GetCodeGen();
     auto func = codegen->CurrentFunction();
 
-    auto sorter = GetQueryState().GetStateEntryPtr(codegen, sorter_slot_);
+    auto sorter = GetQueryStateEntryPtr(sorter_slot_);
     auto offset = pipeline_context.GetThreadStateEntryOffset(codegen, tl_sorter_slot_);
 
     if (GetBuildPipeline().IsParallel()) {

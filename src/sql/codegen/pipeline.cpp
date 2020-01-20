@@ -244,8 +244,7 @@ ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction(PipelineContext *pipel
       // var tls = @execCtxGetTLS(exec_ctx)
       // @tlsReset(tls, @sizeOf(ThreadState), init, tearDown, queryState)
       ast::Expr *state_ptr = query_state->GetStatePointer(codegen);
-      ast::Expr *exec_ctx =
-          query_state->GetStateEntry(codegen, compilation_context_->GetExecutionContextStateSlot());
+      ast::Expr *exec_ctx = compilation_context_->GetExecutionContextPtrFromQueryState();
       ast::Identifier tls = codegen->MakeFreshIdentifier("tls");
       builder.Append(codegen->DeclareVarWithInit(tls, codegen->ExecCtxGetTLS(exec_ctx)));
       builder.Append(codegen->TLSReset(codegen->MakeExpr(tls), pipeline_state_type_name_,

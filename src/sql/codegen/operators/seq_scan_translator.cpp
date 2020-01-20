@@ -265,9 +265,8 @@ void SeqScanTranslator::LaunchWork(ast::Identifier work_func_name) const {
   // @iterateTableParallel(table_name, query_state, thread_state_container, worker)
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
-  auto state_ptr = GetQueryState().GetStatePointer(codegen);
-  auto tls_ptr = GetThreadStateContainer();
-  func->Append(codegen->IterateTableParallel(GetTableName(), state_ptr, tls_ptr, work_func_name));
+  func->Append(codegen->IterateTableParallel(GetTableName(), GetQueryStatePtr(),
+                                             GetThreadStateContainer(), work_func_name));
 }
 
 }  // namespace tpl::sql::codegen

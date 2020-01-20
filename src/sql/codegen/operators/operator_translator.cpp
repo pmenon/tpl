@@ -16,13 +16,12 @@ OperatorTranslator::OperatorTranslator(const planner::AbstractPlanNode &plan,
 
 CodeGen *OperatorTranslator::GetCodeGen() const { return compilation_context_->GetCodeGen(); }
 
-const QueryState &OperatorTranslator::GetQueryState() const {
-  return *compilation_context_->GetQueryState();
+ast::Expr *OperatorTranslator::GetQueryStatePtr() const {
+  return compilation_context_->GetQueryState()->GetStatePointer(GetCodeGen());
 }
 
 ast::Expr *OperatorTranslator::GetExecutionContext() const {
-  const auto exec_ctx_slot = compilation_context_->GetExecutionContextStateSlot();
-  return GetQueryState().GetStateEntry(GetCodeGen(), exec_ctx_slot);
+  return compilation_context_->GetExecutionContextPtrFromQueryState();
 }
 
 ast::Expr *OperatorTranslator::GetThreadStateContainer() const {
@@ -31,6 +30,10 @@ ast::Expr *OperatorTranslator::GetThreadStateContainer() const {
 
 ast::Expr *OperatorTranslator::GetMemoryPool() const {
   return GetCodeGen()->ExecCtxGetMemoryPool(GetExecutionContext());
+}
+
+ast::Expr *OperatorTranslator::GetQueryStateEntryPtr(QueryState::Slot slot) const {
+  return compilation_context_->GetQueryState()->GetStateEntryPtr(GetCodeGen(), slot);
 }
 
 void OperatorTranslator::GetAllChildOutputFields(

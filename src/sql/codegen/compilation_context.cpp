@@ -258,4 +258,8 @@ util::RegionVector<ast::FieldDecl *> CompilationContext::QueryParams() const {
   return codegen_.MakeFieldList({field});
 }
 
+ast::Expr *CompilationContext::GetExecutionContextPtrFromQueryState() {
+  return query_state_.GetStateEntry(&codegen_, exec_ctx_slot_);
+}
+
 }  // namespace tpl::sql::codegen
