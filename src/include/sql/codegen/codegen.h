@@ -703,9 +703,9 @@ class CodeGen {
 
   /**
    * Call @joinHTLookup(). Performs a single lookup into the hash table with a tuple with the
-   * provided hash value. The provided iterator is initialized to return a subset of tuples in the
-   * hash table that may match on key. It is the responsibility of the caller to resolve hash and
-   * key collisions on tuples returned from the iterator.
+   * provided hash value. The provided iterator will provide tuples in the hash table that match the
+   * provided hash, but may not match on key (i.e., it may offer false positives). It is the
+   * responsibility of the user to resolve such hash collisions.
    * @param jht The join hash table.
    * @param entry_iter An iterator over a list of entries.
    * @param hash_val The hash value of the probe key.
@@ -722,16 +722,11 @@ class CodeGen {
   [[nodiscard]] ast::Expr *JoinHashTableFree(ast::Expr *jht) const;
 
   /**
-   * Call @htEntryIterHasNext(). Determine if the provided iterator has more entries.
+   * Call @htEntryIterHasNext(). Determine if the provided iterator has more entries. Entries
    * @param iter The iterator.
-   * @param key_check_fn_name The name of the function that performs a key-equality check.
-   * @param ctx An opaque context argument passed through as the first argument to the provided key
-   *            check function. This value is untouched.
-   * @param probe_row The probe row.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *HTEntryIterHasNext(ast::Expr *iter, ast::Identifier key_check_fn_name,
-                                              ast::Expr *ctx, ast::Expr *probe_row) const;
+  [[nodiscard]] ast::Expr *HTEntryIterHasNext(ast::Expr *iter) const;
 
   /**
    * Call @htEntryIterGetRow(). Retrieves a pointer to the current row the iterator is positioned at

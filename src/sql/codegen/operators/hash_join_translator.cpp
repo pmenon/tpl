@@ -22,8 +22,7 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
     : OperatorTranslator(plan, compilation_context, pipeline),
       build_row_name_(GetCodeGen()->MakeFreshIdentifier("buildRow")),
       left_pipeline_(this, Pipeline::Parallelism::Flexible),
-      build_row_(nullptr),
-      key_check_(nullptr) {
+      build_row_(nullptr) {
   pipeline->RegisterStep(this, Pipeline::Parallelism::Flexible);
   pipeline->LinkSourcePipeline(LeftPipeline());
 
@@ -52,26 +51,6 @@ void HashJoinTranslator::DefineHelperStructs(TopLevelDeclarations *top_level_dec
   }
   build_row_ = codegen->DeclareStruct(codegen->MakeFreshIdentifier("BuildRow"), std::move(fields));
   top_level_decls->RegisterStruct(build_row_);
-}
-
-void HashJoinTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_decls) {
-  // Signature: fun keyCheck(*QueryState, *VectorProjectionIterator, *BuildRow) -> bool
-  auto codegen = GetCodeGen();
-  auto params = GetCompilationContext()->QueryParams();
-  params.push_back(
-      codegen->MakeField(codegen->MakeFreshIdentifier("probeRow"),
-                         codegen->PointerType(ast::BuiltinType::VectorProjectionIterator)));
-  params.push_back(codegen->MakeField(codegen->MakeFreshIdentifier("tableRow"),
-                                      codegen->PointerType(build_row_->Name())));
-  FunctionBuilder func(codegen, codegen->MakeFreshIdentifier("keyCheck"), std::move(params),
-                       codegen->BoolType());
-  {
-    ConsumerContext left_ctx(GetCompilationContext(), *LeftPipeline());
-    //    auto match = left_ctx.DeriveValue(*Op<planner::HashJoinPlanNode>().GetJoinPredicate());
-    //    func.Append(codegen->Return(match));
-  }
-  key_check_ = func.Finish(codegen->ConstBool(true));
-  top_level_decls->RegisterFunction(key_check_);
 }
 
 void HashJoinTranslator::InitializeJoinHashTable(ast::Expr *jht_ptr) const {
@@ -180,7 +159,6 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx) const {
   func->Append(codegen->DeclareVarWithInit(iter_name,
                                            codegen->AddressOf(codegen->MakeExpr(iter_name_base))));
 
-  auto query_state_ptr = GetQueryStatePtr();
   auto jht = GetQueryStateEntryPtr(jht_slot_);
   auto entry_iter = codegen->MakeExpr(iter_name);
   auto hash_val = HashKeys(ctx, GetPlanAs<planner::HashJoinPlanNode>().GetRightHashKeys());
@@ -188,12 +166,20 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx) const {
   // Loop over matches.
   Loop entry_loop(codegen,
                   codegen->MakeStmt(codegen->JoinHashTableLookup(jht, entry_iter, hash_val)),
-                  codegen->HTEntryIterHasNext(entry_iter, key_check_->Name(), query_state_ptr,
-                                              codegen->Const64(0)),
-                  nullptr);
+                  codegen->HTEntryIterHasNext(entry_iter), nullptr);
   {
-    // Push matches?
-    ctx->Push();
+    // var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
+    func->Append(codegen->DeclareVarWithInit(
+        build_row_name_, codegen->HTEntryIterGetRow(entry_iter, build_row_->Name())));
+
+    // Check predicate
+    if (const auto join_predicate = GetPlanAs<planner::HashJoinPlanNode>().GetJoinPredicate()) {
+      auto cond = ctx->DeriveValue(*join_predicate, this);
+      If check_condition(codegen, cond);
+      ctx->Push();
+    } else {
+      ctx->Push();
+    }
   }
   entry_loop.EndLoop();
 }
@@ -230,19 +216,9 @@ ast::Expr *HashJoinTranslator::GetOutput(ConsumerContext *consumer_context,
 
 ast::Expr *HashJoinTranslator::GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
                                               uint32_t attr_idx) const {
-  if (IsLeftPipeline(consumer_context->GetPipeline())) {
-    // Propagate to left child.
-    const auto child = GetPlan().GetChild(0);
-    const auto child_translator = GetCompilationContext()->LookupTranslator(*child);
-    return child_translator->GetOutput(consumer_context, attr_idx);
+  if (IsRightPipeline(consumer_context->GetPipeline()) && child_idx == 0) {
+    return GetBuildRowAttribute(GetCodeGen()->MakeExpr(build_row_name_), attr_idx);
   } else {
-    // If the requested output is for the left child, the parent actually wants
-    // the attribute from the build-row we've pulled out of the hash table.
-    auto codegen = GetCodeGen();
-    if (child_idx == 0) {
-      return GetBuildRowAttribute(codegen->MakeExpr(build_row_name_), attr_idx);
-    }
-    // The parent wants an attribute from the right child. Propagate to child.
     const auto child = GetPlan().GetChild(child_idx);
     const auto child_translator = GetCompilationContext()->LookupTranslator(*child);
     return child_translator->GetOutput(consumer_context, attr_idx);

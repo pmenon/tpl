@@ -566,10 +566,8 @@ ast::Expr *CodeGen::JoinHashTableFree(ast::Expr *jht) const {
   return call;
 }
 
-ast::Expr *CodeGen::HTEntryIterHasNext(ast::Expr *iter, ast::Identifier key_check_fn_name,
-                                       ast::Expr *ctx, ast::Expr *probe_row) const {
-  std::initializer_list<ast::Expr *> args = {iter, MakeExpr(key_check_fn_name), ctx, probe_row};
-  ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryIterHasNext, args);
+ast::Expr *CodeGen::HTEntryIterHasNext(ast::Expr *iter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryIterHasNext, {iter});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Bool));
   return call;
 }

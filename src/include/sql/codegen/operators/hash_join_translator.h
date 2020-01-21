@@ -37,11 +37,9 @@ class HashJoinTranslator : public OperatorTranslator {
   void DefineHelperStructs(TopLevelDeclarations *top_level_decls) override;
 
   /**
-   * Declare the key-check function used when performing the join table probe.
-   * @param top_level_decls The top-level declarations for the query. The key-check function will be
-   *                        registered here after it's been defined.
+   * Hash-joins don't rely on any helper functions.
    */
-  void DefineHelperFunctions(TopLevelDeclarations *top_level_decls) override;
+  void DefineHelperFunctions(TopLevelDeclarations *top_level_decls) override {}
 
   /**
    * Initialize the global hash table.
@@ -171,9 +169,6 @@ class HashJoinTranslator : public OperatorTranslator {
 
   // The build-row used to materialized results into the join hash table.
   ast::StructDecl *build_row_;
-
-  // Key check function.
-  ast::FunctionDecl *key_check_;
 };
 
 }  // namespace tpl::sql::codegen
