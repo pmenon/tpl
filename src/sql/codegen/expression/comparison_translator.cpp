@@ -22,7 +22,7 @@ ast::Expr *ComparisonTranslator::DeriveValue(ConsumerContext *ctx) const {
 
   switch (const auto expr_type = GetExpression().GetExpressionType(); expr_type) {
     case planner::ExpressionType::COMPARE_EQUAL:
-      return codegen->Compare(parsing::Token::Type::PLUS, left_val, right_val);
+      return codegen->Compare(parsing::Token::Type::EQUAL_EQUAL, left_val, right_val);
     case planner::ExpressionType::COMPARE_GREATER_THAN:
       return codegen->Compare(parsing::Token::Type::GREATER, left_val, right_val);
     case planner::ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL_TO:
