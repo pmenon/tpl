@@ -1,4 +1,4 @@
-#include "sql/generic_hash_table.h"
+#include "sql/chaining_hash_table.h"
 
 #include <algorithm>
 #include <limits>
@@ -8,18 +8,18 @@
 namespace tpl::sql {
 
 template <bool UseTags>
-GenericHashTable<UseTags>::GenericHashTable(float load_factor) noexcept
+ChainingHashTable<UseTags>::ChainingHashTable(float load_factor) noexcept
     : entries_(nullptr), mask_(0), capacity_(0), num_elements_(0), load_factor_(load_factor) {}
 
 template <bool UseTags>
-GenericHashTable<UseTags>::~GenericHashTable() {
+ChainingHashTable<UseTags>::~ChainingHashTable() {
   if (entries_ != nullptr) {
     Memory::FreeHugeArray(entries_, GetCapacity());
   }
 }
 
 template <bool UseTags>
-void GenericHashTable<UseTags>::SetSize(uint64_t new_size) {
+void ChainingHashTable<UseTags>::SetSize(uint64_t new_size) {
   TPL_ASSERT(new_size > 0, "New size cannot be zero!");
   if (entries_ != nullptr) {
     Memory::FreeHugeArray(entries_, GetCapacity());
@@ -37,7 +37,7 @@ void GenericHashTable<UseTags>::SetSize(uint64_t new_size) {
 }
 
 template <bool UseTags>
-std::tuple<uint64_t, uint64_t, float> GenericHashTable<UseTags>::GetChainLengthStats() const {
+std::tuple<uint64_t, uint64_t, float> ChainingHashTable<UseTags>::GetChainLengthStats() const {
   uint64_t min = std::numeric_limits<uint64_t>::max(), max = 0, total = 0;
 
   for (uint64_t idx = 0; idx < capacity_; idx++) {
@@ -57,16 +57,16 @@ std::tuple<uint64_t, uint64_t, float> GenericHashTable<UseTags>::GetChainLengthS
   return {min, max, static_cast<float>(total) / capacity_};
 }
 
-template class GenericHashTable<true>;
-template class GenericHashTable<false>;
+template class ChainingHashTable<true>;
+template class ChainingHashTable<false>;
 
 // ---------------------------------------------------------
 // Vector Iterator
 // ---------------------------------------------------------
 
 template <bool UseTag>
-GenericHashTableVectorIterator<UseTag>::GenericHashTableVectorIterator(
-    const GenericHashTable<UseTag> &table, MemoryPool *memory) noexcept
+ChainingHashTableVectorIterator<UseTag>::ChainingHashTableVectorIterator(
+    const ChainingHashTable<UseTag> &table, MemoryPool *memory) noexcept
     : memory_(memory),
       table_(table),
       table_dir_index_(0),
@@ -77,12 +77,12 @@ GenericHashTableVectorIterator<UseTag>::GenericHashTableVectorIterator(
 }
 
 template <bool UseTag>
-GenericHashTableVectorIterator<UseTag>::~GenericHashTableVectorIterator() {
+ChainingHashTableVectorIterator<UseTag>::~ChainingHashTableVectorIterator() {
   memory_->DeallocateArray(entry_vec_, kDefaultVectorSize);
 }
 
 template <bool UseTag>
-void GenericHashTableVectorIterator<UseTag>::Next() {
+void ChainingHashTableVectorIterator<UseTag>::Next() {
   // Invariant: the range of elements [0, entry_vec_end_idx_) in the entry cache
   // contains non-null hash table entries.
 
@@ -109,7 +109,7 @@ void GenericHashTableVectorIterator<UseTag>::Next() {
   while (index < kDefaultVectorSize && table_dir_index_ < table_.GetCapacity()) {
     entry_vec_[index] = table_.entries_[table_dir_index_++];
     if constexpr (UseTag) {
-      entry_vec_[index] = GenericHashTable<UseTag>::UntagPointer(entry_vec_[index]);
+      entry_vec_[index] = ChainingHashTable<UseTag>::UntagPointer(entry_vec_[index]);
     }
     index += (entry_vec_[index] != nullptr);
   }
@@ -118,7 +118,7 @@ void GenericHashTableVectorIterator<UseTag>::Next() {
   entry_vec_end_idx_ = index;
 }
 
-template class GenericHashTableVectorIterator<true>;
-template class GenericHashTableVectorIterator<false>;
+template class ChainingHashTableVectorIterator<true>;
+template class ChainingHashTableVectorIterator<false>;
 
 }  // namespace tpl::sql

@@ -21,7 +21,7 @@ namespace tpl::sql {
 //===----------------------------------------------------------------------===//
 
 /**
- * GenericHashTable is a simple bucket-chained table with optional pointer tagging. The use of
+ * ChainingHashTable is a simple bucket-chained table with optional pointer tagging. The use of
  * pointer tagging is controlled through the sole boolean template parameter. Pointer tagging uses
  * the first @em GenericHashTable::kNumTagBits bits (typically 16 bits) of the entry pointers in the
  * main bucket directory as a tiny bloom filter. This bloom filter is used to early-prune probe
@@ -47,7 +47,7 @@ namespace tpl::sql {
  * linked list bucket chain.
  */
 template <bool UseTags>
-class GenericHashTable {
+class ChainingHashTable {
  private:
   // X86_64 has 48-bit VM address space, leaving 16 for us to re-purpose.
   static constexpr uint32_t kNumTagBits = 16;
@@ -67,17 +67,17 @@ class GenericHashTable {
    * using this hash table.
    * @param load_factor The desired load-factor for the table.
    */
-  explicit GenericHashTable(float load_factor = kDefaultLoadFactor) noexcept;
+  explicit ChainingHashTable(float load_factor = kDefaultLoadFactor) noexcept;
 
   /**
    * This class cannot be copied or moved.
    */
-  DISALLOW_COPY_AND_MOVE(GenericHashTable);
+  DISALLOW_COPY_AND_MOVE(ChainingHashTable);
 
   /**
    * Destructor.
    */
-  ~GenericHashTable();
+  ~ChainingHashTable();
 
   /**
    * Explicitly set the size of the hash table to support at least @em new_size elements. The input
@@ -179,9 +179,9 @@ class GenericHashTable {
 
  private:
   template <bool>
-  friend class GenericHashTableIterator;
+  friend class ChainingHashTableIterator;
   template <bool>
-  friend class GenericHashTableVectorIterator;
+  friend class ChainingHashTableVectorIterator;
 
   // Return the position of the bucket the given hash value lands into
   uint64_t BucketPosition(const hash_t hash) const { return hash & mask_; }
@@ -270,7 +270,7 @@ class GenericHashTable {
 
 template <bool UseTags>
 template <bool ForRead>
-inline void GenericHashTable<UseTags>::PrefetchChainHead(hash_t hash) const {
+inline void ChainingHashTable<UseTags>::PrefetchChainHead(hash_t hash) const {
   const uint64_t pos = BucketPosition(hash);
   Memory::Prefetch<ForRead, Locality::Low>(entries_ + pos);
 }
@@ -286,7 +286,7 @@ inline void GenericHashTable<UseTags>::PrefetchChainHead(hash_t hash) const {
 
 template <bool UseTags>
 template <bool Concurrent>
-inline void GenericHashTable<UseTags>::InsertUntagged(HashTableEntry *new_entry, hash_t hash) {
+inline void ChainingHashTable<UseTags>::InsertUntagged(HashTableEntry *new_entry, hash_t hash) {
   const uint64_t pos = BucketPosition(hash);
 
   TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");
@@ -305,7 +305,7 @@ inline void GenericHashTable<UseTags>::InsertUntagged(HashTableEntry *new_entry,
 
 template <bool UseTags>
 template <bool Concurrent>
-inline void GenericHashTable<UseTags>::InsertTagged(HashTableEntry *new_entry, hash_t hash) {
+inline void ChainingHashTable<UseTags>::InsertTagged(HashTableEntry *new_entry, hash_t hash) {
   const uint64_t pos = BucketPosition(hash);
 
   TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");
@@ -327,7 +327,7 @@ inline void GenericHashTable<UseTags>::InsertTagged(HashTableEntry *new_entry, h
 
 template <bool UseTags>
 template <bool Concurrent>
-inline void GenericHashTable<UseTags>::Insert(HashTableEntry *new_entry) {
+inline void ChainingHashTable<UseTags>::Insert(HashTableEntry *new_entry) {
   if constexpr (UseTags) {
     InsertTagged<Concurrent>(new_entry, new_entry->hash);
   } else {
@@ -340,7 +340,7 @@ inline void GenericHashTable<UseTags>::Insert(HashTableEntry *new_entry) {
 
 template <bool UseTags>
 template <bool Prefetch, bool Concurrent, typename Allocator>
-inline void GenericHashTable<UseTags>::InsertBatchInternal(
+inline void ChainingHashTable<UseTags>::InsertBatchInternal(
     util::ChunkedVector<Allocator> *entries) {
   const uint64_t size = entries->size();
   for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < size; idx++, prefetch_idx++) {
@@ -362,7 +362,7 @@ inline void GenericHashTable<UseTags>::InsertBatchInternal(
 
 template <bool UseTags>
 template <bool Concurrent, typename Allocator>
-inline void GenericHashTable<UseTags>::InsertBatch(util::ChunkedVector<Allocator> *entries) {
+inline void ChainingHashTable<UseTags>::InsertBatch(util::ChunkedVector<Allocator> *entries) {
   const uint64_t l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
   if (bool out_of_cache = GetTotalMemoryUsage() > l3_size; out_of_cache) {
     InsertBatchInternal<true, Concurrent>(entries);
@@ -375,20 +375,20 @@ inline void GenericHashTable<UseTags>::InsertBatch(util::ChunkedVector<Allocator
 }
 
 template <bool UseTags>
-inline HashTableEntry *GenericHashTable<UseTags>::FindChainHeadUntagged(hash_t hash) const {
+inline HashTableEntry *ChainingHashTable<UseTags>::FindChainHeadUntagged(hash_t hash) const {
   const uint64_t pos = BucketPosition(hash);
   return entries_[pos];
 }
 
 template <bool UseTags>
-inline HashTableEntry *GenericHashTable<UseTags>::FindChainHeadTagged(hash_t hash) const {
+inline HashTableEntry *ChainingHashTable<UseTags>::FindChainHeadTagged(hash_t hash) const {
   const HashTableEntry *const candidate = FindChainHeadUntagged(hash);
   auto exists_in_chain = reinterpret_cast<uintptr_t>(candidate) & TagHash(hash);
   return (exists_in_chain ? UntagPointer(candidate) : nullptr);
 }
 
 template <bool UseTags>
-inline HashTableEntry *GenericHashTable<UseTags>::FindChainHead(hash_t hash) const {
+inline HashTableEntry *ChainingHashTable<UseTags>::FindChainHead(hash_t hash) const {
   if constexpr (UseTags) {
     return FindChainHeadTagged(hash);
   } else {
@@ -398,9 +398,9 @@ inline HashTableEntry *GenericHashTable<UseTags>::FindChainHead(hash_t hash) con
 
 template <bool UseTags>
 template <bool Prefetch>
-inline void GenericHashTable<UseTags>::LookupBatchInternal(const uint64_t num_elements,
-                                                           const hash_t hashes[],
-                                                           const HashTableEntry *entries[]) const {
+inline void ChainingHashTable<UseTags>::LookupBatchInternal(const uint64_t num_elements,
+                                                            const hash_t hashes[],
+                                                            const HashTableEntry *entries[]) const {
   for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < num_elements;
        idx++, prefetch_idx++) {
     if constexpr (Prefetch) {
@@ -418,9 +418,9 @@ inline void GenericHashTable<UseTags>::LookupBatchInternal(const uint64_t num_el
 }
 
 template <bool UseTags>
-inline void GenericHashTable<UseTags>::LookupBatch(const uint64_t num_elements,
-                                                   const hash_t hashes[],
-                                                   const HashTableEntry *entries[]) const {
+inline void ChainingHashTable<UseTags>::LookupBatch(const uint64_t num_elements,
+                                                    const hash_t hashes[],
+                                                    const HashTableEntry *entries[]) const {
   const uint64_t l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
   if (bool out_of_cache = GetTotalMemoryUsage() > l3_size; out_of_cache) {
     LookupBatchInternal<true>(num_elements, hashes, entries);
@@ -431,7 +431,7 @@ inline void GenericHashTable<UseTags>::LookupBatch(const uint64_t num_elements,
 
 template <bool UseTags>
 template <typename F>
-inline void GenericHashTable<UseTags>::FlushEntries(const F &sink) {
+inline void ChainingHashTable<UseTags>::FlushEntries(const F &sink) {
   static_assert(std::is_invocable_v<F, HashTableEntry *>);
 
   for (uint64_t idx = 0; idx < capacity_; idx++) {
@@ -453,12 +453,12 @@ inline void GenericHashTable<UseTags>::FlushEntries(const F &sink) {
   num_elements_ = 0;
 }
 
-using TaggedGenericHashTable = GenericHashTable<true>;
-using UntaggedGenericHashTable = GenericHashTable<false>;
+using TaggedChainingHashTable = ChainingHashTable<true>;
+using UntaggedChainingHashTable = ChainingHashTable<false>;
 
 //===----------------------------------------------------------------------===//
 //
-// Generic Hash Table Iterator
+// Chaining Hash Table Iterator
 //
 //===----------------------------------------------------------------------===//
 
@@ -469,13 +469,13 @@ using UntaggedGenericHashTable = GenericHashTable<false>;
  * @tparam UseTag Should the iterator use tagged reads?
  */
 template <bool UseTag>
-class GenericHashTableIterator {
+class ChainingHashTableIterator {
  public:
   /**
    * Construct an iterator over the given hash table @em table.
    * @param table The table to iterate over.
    */
-  explicit GenericHashTableIterator(const GenericHashTable<UseTag> &table) noexcept
+  explicit ChainingHashTableIterator(const ChainingHashTable<UseTag> &table) noexcept
       : table_(table), entries_index_(0), curr_entry_(nullptr) {
     Next();
   }
@@ -503,7 +503,7 @@ class GenericHashTableIterator {
       curr_entry_ = table_.entries_[entries_index_++];
 
       if constexpr (UseTag) {
-        curr_entry_ = GenericHashTable<UseTag>::UntagPointer(curr_entry_);
+        curr_entry_ = ChainingHashTable<UseTag>::UntagPointer(curr_entry_);
       }
 
       if (curr_entry_ != nullptr) {
@@ -519,7 +519,7 @@ class GenericHashTableIterator {
 
  private:
   // The table we're iterating over
-  const GenericHashTable<UseTag> &table_;
+  const ChainingHashTable<UseTag> &table_;
   // The index into the hash table's entries directory to read from next
   uint64_t entries_index_;
   // The current entry the iterator is pointing to
@@ -528,7 +528,7 @@ class GenericHashTableIterator {
 
 //===----------------------------------------------------------------------===//
 //
-// Generic Hash Table Vector Iterator
+// Chaining Hash Table Vector Iterator
 //
 //===----------------------------------------------------------------------===//
 
@@ -540,20 +540,20 @@ class GenericHashTableIterator {
  */
 // TODO(pmenon): Fix my performance
 template <bool UseTag>
-class GenericHashTableVectorIterator {
+class ChainingHashTableVectorIterator {
  public:
   /**
    * Construct an iterator over the given hash table @em table.
    * @param table The table to iterate over.
    * @param memory The memory pool to use for allocations.
    */
-  GenericHashTableVectorIterator(const GenericHashTable<UseTag> &table,
-                                 MemoryPool *memory) noexcept;
+  ChainingHashTableVectorIterator(const ChainingHashTable<UseTag> &table,
+                                  MemoryPool *memory) noexcept;
 
   /**
    * Deallocate the entry cache array
    */
-  ~GenericHashTableVectorIterator();
+  ~ChainingHashTableVectorIterator();
 
   /**
    * @return True if there's more data in the iterator; false otherwise.
@@ -577,7 +577,7 @@ class GenericHashTableVectorIterator {
   MemoryPool *memory_;
 
   // The hash table we're iterating over
-  const GenericHashTable<UseTag> &table_;
+  const ChainingHashTable<UseTag> &table_;
 
   // The index into the hash table's entries directory to read from next
   uint64_t table_dir_index_;

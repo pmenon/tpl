@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "sql/generic_hash_table.h"
+#include "sql/chaining_hash_table.h"
 #include "sql/memory_pool.h"
 #include "sql/schema.h"
 #include "sql/vector.h"
@@ -334,7 +334,7 @@ class AggregationHashTable {
   MemPoolVector<decltype(entries_)> owned_entries_;
 
   // The hash index.
-  UntaggedGenericHashTable hash_table_;
+  UntaggedChainingHashTable hash_table_;
 
   // State used during batch processing.
   MemPoolPtr<BatchProcessState> batch_state_;
@@ -430,7 +430,7 @@ class AHTIterator {
 
  private:
   // The iterator over the aggregation hash table
-  GenericHashTableIterator<false> iter_;
+  ChainingHashTableIterator<false> iter_;
 };
 
 // ---------------------------------------------------------
@@ -493,7 +493,7 @@ class AHTVectorIterator {
   MemoryPool *memory_;
 
   // The vectorized iterate over the hash table
-  GenericHashTableVectorIterator<false> iter_;
+  ChainingHashTableVectorIterator<false> iter_;
 
   // The vector projection containing aggregate data stored column-wise
   std::unique_ptr<VectorProjection> vector_projection_;

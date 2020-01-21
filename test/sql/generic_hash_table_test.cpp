@@ -3,7 +3,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "sql/generic_hash_table.h"
+#include "sql/chaining_hash_table.h"
 #include "util/hash_util.h"
 #include "util/test_harness.h"
 
@@ -33,7 +33,7 @@ struct TestEntry : public HashTableEntry {
 };
 
 TEST_F(GenericHashTableTest, UntaggedInsertion) {
-  UntaggedGenericHashTable table;
+  UntaggedChainingHashTable table;
   table.SetSize(10);
 
   TestEntry entry1(1, 2);
@@ -75,7 +75,7 @@ TEST_F(GenericHashTableTest, UntaggedInsertion) {
 }
 
 TEST_F(GenericHashTableTest, TaggedInsertion) {
-  TaggedGenericHashTable table;
+  TaggedChainingHashTable table;
   table.SetSize(10);
 
   TestEntry entry(1, 2);
@@ -124,7 +124,7 @@ TEST_F(GenericHashTableTest, ConcurrentInsertion) {
   }
 
   // Size the hash table
-  UntaggedGenericHashTable hash_table;
+  UntaggedChainingHashTable hash_table;
   hash_table.SetSize(num_threads * num_entries);
 
   // Parallel insert
@@ -138,7 +138,7 @@ TEST_F(GenericHashTableTest, ConcurrentInsertion) {
   // After the insertions we should be able to find all entries, including
   // duplicates.
   std::array<std::unordered_set<uint32_t>, num_threads> thread_local_entries;
-  GenericHashTableIterator<false> iter(hash_table);
+  ChainingHashTableIterator<false> iter(hash_table);
   uint32_t found_entries = 0;
   for (; iter.HasNext(); iter.Next()) {
     found_entries++;
@@ -163,7 +163,7 @@ TEST_F(GenericHashTableTest, Flushing) {
       {3, 4},
   };
 
-  TaggedGenericHashTable ht;
+  TaggedChainingHashTable ht;
   ht.SetSize(entries.size());
 
   for (auto &entry : entries) {
@@ -186,14 +186,14 @@ TEST_F(GenericHashTableTest, Flushing) {
 }
 
 TEST_F(GenericHashTableTest, EmptyIterator) {
-  UntaggedGenericHashTable table;
+  UntaggedChainingHashTable table;
 
   //
   // Test: iteration shouldn't begin on an uninitialized table
   //
 
   {
-    GenericHashTableIterator<false> iter(table);
+    ChainingHashTableIterator<false> iter(table);
     EXPECT_FALSE(iter.HasNext());
   }
 
@@ -203,7 +203,7 @@ TEST_F(GenericHashTableTest, EmptyIterator) {
 
   {
     MemoryPool pool(nullptr);
-    GenericHashTableVectorIterator<false> iter(table, &pool);
+    ChainingHashTableVectorIterator<false> iter(table, &pool);
     EXPECT_FALSE(iter.HasNext());
   }
 
@@ -214,7 +214,7 @@ TEST_F(GenericHashTableTest, EmptyIterator) {
   //
 
   {
-    GenericHashTableIterator<false> iter(table);
+    ChainingHashTableIterator<false> iter(table);
     EXPECT_FALSE(iter.HasNext());
   }
 
@@ -225,7 +225,7 @@ TEST_F(GenericHashTableTest, EmptyIterator) {
 
   {
     MemoryPool pool(nullptr);
-    GenericHashTableVectorIterator<false> iter(table, &pool);
+    ChainingHashTableVectorIterator<false> iter(table, &pool);
     EXPECT_FALSE(iter.HasNext());
   }
 }
@@ -255,7 +255,7 @@ TEST_F(GenericHashTableTest, SimpleIteration) {
   }
 
   // The table
-  UntaggedGenericHashTable table;
+  UntaggedChainingHashTable table;
   table.SetSize(1000);
 
   // Insert
@@ -266,7 +266,7 @@ TEST_F(GenericHashTableTest, SimpleIteration) {
 
   // Check regular iterator
   {
-    GenericHashTableIterator<false> iter(table);
+    ChainingHashTableIterator<false> iter(table);
     uint32_t found_entries = 0;
     for (; iter.HasNext(); iter.Next()) {
       auto *row = reinterpret_cast<const TestEntry *>(iter.GetCurrentEntry());
@@ -284,7 +284,7 @@ TEST_F(GenericHashTableTest, SimpleIteration) {
   // Check vector iterator
   {
     MemoryPool pool(nullptr);
-    GenericHashTableVectorIterator<false> iter(table, &pool);
+    ChainingHashTableVectorIterator<false> iter(table, &pool);
     uint32_t found_entries = 0;
     for (; iter.HasNext(); iter.Next()) {
       auto [size, batch] = iter.GetCurrentBatch();
@@ -322,7 +322,7 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
   }
 
   // The table
-  UntaggedGenericHashTable table;
+  UntaggedChainingHashTable table;
   table.SetSize(1000);
 
   // Insert
@@ -333,7 +333,7 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
 
   // Check regular iterator
   {
-    GenericHashTableIterator<false> iter(table);
+    ChainingHashTableIterator<false> iter(table);
     uint32_t found_entries = 0;
     for (; iter.HasNext(); iter.Next()) {
       auto *row = reinterpret_cast<const TestEntry *>(iter.GetCurrentEntry());
@@ -348,7 +348,7 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
   // Check vector iterator
   {
     MemoryPool pool(nullptr);
-    GenericHashTableVectorIterator<false> iter(table, &pool);
+    ChainingHashTableVectorIterator<false> iter(table, &pool);
     uint32_t found_entries = 0;
     for (; iter.HasNext(); iter.Next()) {
       auto [size, batch] = iter.GetCurrentBatch();
@@ -365,7 +365,7 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
 }
 
 TEST_F(GenericHashTableTest, ChainStats) {
-  TaggedGenericHashTable table;
+  TaggedChainingHashTable table;
   table.SetSize(100);
 
   constexpr uint32_t unique_keys = 4;
@@ -410,7 +410,7 @@ TEST_F(GenericHashTableTest, DISABLED_PerfIteration) {
   }
 
   // The table
-  UntaggedGenericHashTable table;
+  UntaggedChainingHashTable table;
   table.SetSize(num_inserts);
 
   // Insert
@@ -422,7 +422,7 @@ TEST_F(GenericHashTableTest, DISABLED_PerfIteration) {
   uint32_t sum1 = 0, sum2 = 0;
 
   double taat_ms = Bench(5, [&]() {
-    GenericHashTableIterator<false> iter(table);
+    ChainingHashTableIterator<false> iter(table);
     for (; iter.HasNext(); iter.Next()) {
       auto *row = reinterpret_cast<const TestEntry *>(iter.GetCurrentEntry());
       sum1 += row->value;
@@ -431,7 +431,7 @@ TEST_F(GenericHashTableTest, DISABLED_PerfIteration) {
 
   double vaat_ms = Bench(5, [&]() {
     MemoryPool pool(nullptr);
-    GenericHashTableVectorIterator<false> iter(table, &pool);
+    ChainingHashTableVectorIterator<false> iter(table, &pool);
     for (; iter.HasNext(); iter.Next()) {
       auto [size, batch] = iter.GetCurrentBatch();
       for (uint32_t i = 0; i < size; i++) {

@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "sql/bloom_filter.h"
+#include "sql/chaining_hash_table.h"
 #include "sql/concise_hash_table.h"
-#include "sql/generic_hash_table.h"
 #include "sql/memory_pool.h"
 #include "util/chunked_vector.h"
 #include "util/spin_latch.h"
@@ -226,7 +226,7 @@ class JoinHashTable {
   MemPoolVector<decltype(entries_)> owned_;
 
   // The generic hash table
-  UntaggedGenericHashTable generic_hash_table_;
+  UntaggedChainingHashTable generic_hash_table_;
 
   // The concise hash table
   ConciseHashTable concise_hash_table_;
