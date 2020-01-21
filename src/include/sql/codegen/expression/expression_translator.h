@@ -5,6 +5,7 @@
 #include "common/common.h"
 #include "common/macros.h"
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/expression/column_value_provider.h"
 
 namespace tpl::sql::planner {
 class AbstractExpression;
@@ -45,7 +46,8 @@ class ExpressionTranslator {
    * @param ctx The consumer context.
    * @return The TPL value of the expression.
    */
-  virtual ast::Expr *DeriveValue(ConsumerContext *ctx) const = 0;
+  virtual ast::Expr *DeriveValue(ConsumerContext *ctx,
+                                 const ColumnValueProvider *provider) const = 0;
 
   /**
    * @return The expression being translated.

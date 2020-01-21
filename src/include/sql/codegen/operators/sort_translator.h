@@ -104,6 +104,24 @@ class SortTranslator : public OperatorTranslator {
    */
   void LaunchWork(ast::Identifier work_func_name) const override { UNREACHABLE("Impossible"); }
 
+  /**
+   * @return
+   */
+  ast::Expr *GetOutput(ConsumerContext *consumer_context, uint32_t attr_idx) const override;
+
+  /**
+   * @return
+   */
+  ast::Expr *GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
+                            uint32_t attr_idx) const override;
+
+  /**
+   * Order-by operators do not produce columns from base tables.
+   */
+  ast::Expr *GetTableColumn(uint16_t col_oid) const override {
+    UNREACHABLE("Order-by operators do not produce columns from base tables");
+  }
+
  private:
   // Get the bottom/build pipeline.
   Pipeline *GetBuildPipeline() { return &child_pipeline_; }
@@ -121,6 +139,9 @@ class SortTranslator : public OperatorTranslator {
   void InitializeSorter(ast::Expr *sorter_ptr) const;
   void TearDownSorter(ast::Expr *sorter_ptr) const;
 
+  // Access the attribute at the given index within the provided sort row.
+  ast::Expr *GetSortRowAttribute(ast::Expr *sort_row, uint32_t attr_idx) const;
+
   // Called to scan the global sorter instance.
   void ScanSorter(ConsumerContext *ctx) const;
 
@@ -131,17 +152,13 @@ class SortTranslator : public OperatorTranslator {
   void InsertIntoSorter(ConsumerContext *ctx) const;
 
   // Generate comparison function.
-  void GenerateComparisonFunction(FunctionBuilder *builder, ast::Expr *lhs_row,
-                                  ast::Expr *rhs_row) const;
-
-  class SortRowAccess;
-
-  // Create attribute accessors for all attributes for the provided sort row and insert them into
-  // the context. The output attributes vector stores the accessors which the context references.
-  void PopulateContextWithSortAttributes(ConsumerContext *consumer_context, ast::Expr *sort_row,
-                                         std::vector<SortRowAccess> *attrs) const;
+  void GenerateComparisonFunction(FunctionBuilder *builder);
 
  private:
+  // The name of the materialized sort row when inserting into sorter or pulling
+  // from an iterator.
+  ast::Identifier sort_row_var_name_;
+
   // Build-side pipeline.
   Pipeline child_pipeline_;
 
@@ -156,6 +173,9 @@ class SortTranslator : public OperatorTranslator {
 
   // The comparison function.
   ast::FunctionDecl *cmp_func_;
+
+  enum class CurrentRow { Child, Lhs, Rhs };
+  CurrentRow current_row_;
 };
 
 }  // namespace tpl::sql::codegen

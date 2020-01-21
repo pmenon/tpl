@@ -8,11 +8,10 @@ ColumnValueTranslator::ColumnValueTranslator(const planner::ColumnValueExpressio
                                              CompilationContext *compilation_context)
     : ExpressionTranslator(expr, compilation_context) {}
 
-ast::Expr *ColumnValueTranslator::DeriveValue(ConsumerContext *ctx) const {
+ast::Expr *ColumnValueTranslator::DeriveValue(UNUSED ConsumerContext *ctx,
+                                              const ColumnValueProvider *provider) const {
   auto &col_expr = GetExpressionAs<const planner::ColumnValueExpression>();
-  auto provider = ctx->LookupColumnValueProvider(col_expr.GetColumnOid());
-  TPL_ASSERT(provider != nullptr, "No value provider available for column OID");
-  return provider->GetValue(ctx);
+  return provider->GetTableColumn(col_expr.GetColumnOid());
 }
 
 }  // namespace tpl::sql::codegen

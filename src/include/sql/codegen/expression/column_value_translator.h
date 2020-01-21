@@ -23,7 +23,7 @@ class ColumnValueTranslator : public ExpressionTranslator {
    * @param ctx The context containing collected subexpressions.
    * @return The value of the expression.
    */
-  ast::Expr *DeriveValue(ConsumerContext *ctx) const override;
+  ast::Expr *DeriveValue(ConsumerContext *ctx, const ColumnValueProvider *provider) const override;
 };
 
 }  // namespace tpl::sql::codegen

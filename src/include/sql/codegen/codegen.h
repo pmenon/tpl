@@ -775,6 +775,7 @@ class CodeGen {
    * given type.
    * @param sorter The sorter instance.
    * @param sort_row_type_name The name of the TPL type that will be stored in the sorter.
+   * @param top_k The top-k value.
    * @return The call.
    */
   [[nodiscard]] ast::Expr *SorterInsertTopK(ast::Expr *sorter, ast::Identifier sort_row_type_name,
@@ -783,9 +784,10 @@ class CodeGen {
   /**
    * Call @sorterInsertTopK(). Complete a previous top-k insert into the provided sorter.
    * @param sorter The sorter instance.
+   * @param top_k The top-k value.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *SorterInsertTopKFinish(ast::Expr *sorter) const;
+  [[nodiscard]] ast::Expr *SorterInsertTopKFinish(ast::Expr *sorter, uint64_t top_k) const;
 
   /**
    * Call @sorterSort().  Sort the provided sorter instance.

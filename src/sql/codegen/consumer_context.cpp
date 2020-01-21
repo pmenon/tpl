@@ -19,23 +19,8 @@ ConsumerContext::ConsumerContext(CompilationContext *compilation_context,
   pipeline_context_ = pipeline_context;
 }
 
-void ConsumerContext::RegisterColumnValueProvider(const uint16_t col_id,
-                                                  ConsumerContext::ValueProvider *provider) {
-#ifndef NDEBUG
-  if (const auto iter = col_value_providers_.find(col_id); iter != col_value_providers_.end()) {
-    LOG_WARN("Column OID {} already has provider {:p} in context. Overriding with {:p}.", col_id,
-             static_cast<void *>(iter->second), static_cast<void *>(provider));
-  }
-#endif
-  col_value_providers_[col_id] = provider;
-}
-
-ConsumerContext::ValueProvider *ConsumerContext::LookupColumnValueProvider(uint16_t col_id) const {
-  auto iter = col_value_providers_.find(col_id);
-  return iter == col_value_providers_.end() ? nullptr : iter->second;
-}
-
-ast::Expr *ConsumerContext::DeriveValue(const planner::AbstractExpression &expr) {
+ast::Expr *ConsumerContext::DeriveValue(const planner::AbstractExpression &expr,
+                                        const ColumnValueProvider *provider) {
   if (auto iter = cache_.find(&expr); iter != cache_.end()) {
     return iter->second;
   }
@@ -43,7 +28,7 @@ ast::Expr *ConsumerContext::DeriveValue(const planner::AbstractExpression &expr)
   if (translator == nullptr) {
     return nullptr;
   }
-  auto result = translator->DeriveValue(this);
+  auto result = translator->DeriveValue(this, provider);
   cache_[&expr] = result;
   return result;
 }

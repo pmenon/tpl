@@ -15,10 +15,11 @@ ArithmeticTranslator::ArithmeticTranslator(const planner::OperatorExpression &ex
   compilation_context->Prepare(*expr.GetChild(1));
 }
 
-ast::Expr *ArithmeticTranslator::DeriveValue(ConsumerContext *ctx) const {
+ast::Expr *ArithmeticTranslator::DeriveValue(ConsumerContext *ctx,
+                                             const ColumnValueProvider *provider) const {
   auto codegen = GetCodeGen();
-  auto left_val = ctx->DeriveValue(*GetExpression().GetChild(0));
-  auto right_val = ctx->DeriveValue(*GetExpression().GetChild(1));
+  auto left_val = ctx->DeriveValue(*GetExpression().GetChild(0), provider);
+  auto right_val = ctx->DeriveValue(*GetExpression().GetChild(1), provider);
 
   switch (auto expr_type = GetExpression().GetExpressionType(); expr_type) {
     case planner::ExpressionType::OPERATOR_PLUS:

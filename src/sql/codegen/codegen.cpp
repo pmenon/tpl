@@ -1,5 +1,7 @@
 #include "sql/codegen/codegen.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "ast/ast_node_factory.h"
 #include "ast/builtins.h"
 #include "ast/context.h"
@@ -24,7 +26,7 @@ std::string CodeGen::Scope::GetFreshName(const std::string &name) {
   // Duplicate found. Find a new version that hasn't already been declared.
   uint64_t &id = insert_result.first->getValue();
   while (true) {
-    const std::string next_name = name + std::to_string(id++);
+    const std::string next_name = fmt::format("{}{}", name, id++);
     if (names_.find(next_name) == names_.end()) {
       return next_name;
     }
@@ -609,8 +611,8 @@ ast::Expr *CodeGen::SorterInsertTopK(ast::Expr *sorter, ast::Identifier sort_row
   return PtrCast(sort_row_type_name, call);
 }
 
-ast::Expr *CodeGen::SorterInsertTopKFinish(ast::Expr *sorter) const {
-  ast::Expr *call = CallBuiltin(ast::Builtin::SorterInsertTopKFinish, {sorter});
+ast::Expr *CodeGen::SorterInsertTopKFinish(ast::Expr *sorter, uint64_t top_k) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::SorterInsertTopKFinish, {sorter, Const64(top_k)});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }

@@ -94,6 +94,14 @@ class SeqScanTranslator : public OperatorTranslator {
    */
   void LaunchWork(ast::Identifier work_func_name) const override;
 
+  ast::Expr *GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
+                            uint32_t attr_idx) const override {
+    UNREACHABLE("sdf");
+  }
+
+  ast::Expr *GetTableColumn(uint16_t col_oid) const override;
+  ast::Expr *GetOutput(ConsumerContext *consumer_context, uint32_t attr_idx) const override;
+
  private:
   // Does the scan have a predicate?
   bool HasPredicate() const;
@@ -110,13 +118,6 @@ class SeqScanTranslator : public OperatorTranslator {
                                      std::vector<ast::Identifier> *curr_clause,
                                      bool seen_conjunction);
 
-  class TableColumnAccess;
-
-  // Insert an column provider for every column in the VPI into the consumer context.
-  // Store the source providers in the output attributes array.
-  void PopulateContextWithVPIAttributes(ConsumerContext *ctx, ast::Expr *vpi,
-                                        std::vector<TableColumnAccess> *attrs) const;
-
   // Perform a table scan using the provided table vector iterator pointer.
   void ScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool close_iter) const;
 
@@ -124,6 +125,8 @@ class SeqScanTranslator : public OperatorTranslator {
   void ScanVPI(ConsumerContext *ctx, ast::Expr *vpi) const;
 
  private:
+  // The name of the declared VPI.
+  ast::Identifier vpi_name_;
   // Where the filter manager exists.
   PipelineContext::Slot fm_slot_;
   // The list of filter manager clauses. Populated during helper function

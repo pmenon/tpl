@@ -11,11 +11,10 @@ DerivedValueTranslator::DerivedValueTranslator(const planner::DerivedValueExpres
                                                CompilationContext *compilation_context)
     : ExpressionTranslator(expr, compilation_context) {}
 
-ast::Expr *DerivedValueTranslator::DeriveValue(ConsumerContext *ctx) const {
+ast::Expr *DerivedValueTranslator::DeriveValue(ConsumerContext *ctx,
+                                               const ColumnValueProvider *provider) const {
   const auto &derived_expr = GetExpressionAs<planner::DerivedValueExpression>();
-  const auto child_plan = ctx->CurrentOp()->GetPlan().GetChild(derived_expr.GetTupleIdx());
-  const auto child_col = child_plan->GetOutputSchema()->GetColumn(derived_expr.GetValueIdx());
-  return ctx->DeriveValue(*child_col.GetExpr());
+  return provider->GetChildOutput(ctx, derived_expr.GetTupleIdx(), derived_expr.GetValueIdx());
 }
 
 }  // namespace tpl::sql::codegen

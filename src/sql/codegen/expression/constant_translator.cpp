@@ -11,7 +11,8 @@ ConstantTranslator::ConstantTranslator(const planner::ConstantValueExpression &e
                                        CompilationContext *compilation_context)
     : ExpressionTranslator(expr, compilation_context) {}
 
-ast::Expr *ConstantTranslator::DeriveValue(UNUSED ConsumerContext *ctx) const {
+ast::Expr *ConstantTranslator::DeriveValue(ConsumerContext *ctx,
+                                           const ColumnValueProvider *provider) const {
   auto codegen = GetCodeGen();
   const auto &val = GetExpressionAs<const planner::ConstantValueExpression>().GetValue();
   switch (val.GetTypeId()) {

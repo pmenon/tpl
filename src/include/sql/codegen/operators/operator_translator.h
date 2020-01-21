@@ -6,6 +6,7 @@
 #include "ast/identifier.h"
 #include "common/macros.h"
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/expression/column_value_provider.h"
 #include "sql/codegen/query_state.h"
 #include "util/region_containers.h"
 
@@ -76,7 +77,7 @@ class TopLevelDeclarations;
  * TopLevelDeclarations container. These operations are guaranteed to be called exactly once per
  * operator in the query plan.
  */
-class OperatorTranslator {
+class OperatorTranslator : public ColumnValueProvider {
  public:
   /**
    * Create a translator.
@@ -174,6 +175,14 @@ class OperatorTranslator {
    * @param work_func_name The name of the work function that implements the pipeline logic.
    */
   virtual void LaunchWork(ast::Identifier work_func_name) const = 0;
+
+  /**
+   *
+   * @param consumer_context
+   * @param attr_idx
+   * @return
+   */
+  virtual ast::Expr *GetOutput(ConsumerContext *consumer_context, uint32_t attr_idx) const = 0;
 
   /**
    * @return The plan the translator is generating.

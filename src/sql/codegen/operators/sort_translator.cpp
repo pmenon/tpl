@@ -12,12 +12,18 @@
 
 namespace tpl::sql::codegen {
 
+namespace {
+constexpr const char kSortRowAttrPrefix[] = "attr";
+}  // namespace
+
 SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
                                CompilationContext *compilation_context, Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline),
+      sort_row_var_name_(GetCodeGen()->MakeFreshIdentifier("sortRow")),
       child_pipeline_(this, Pipeline::Parallelism::Flexible),
       sort_row_(nullptr),
-      cmp_func_(nullptr) {
+      cmp_func_(nullptr),
+      current_row_(CurrentRow::Child) {
   pipeline->RegisterSource(this, Pipeline::Parallelism::Serial);
   pipeline->LinkSourcePipeline(GetBuildPipeline());
 
@@ -36,51 +42,15 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
 void SortTranslator::DefineHelperStructs(TopLevelDeclarations *top_level_decls) {
   auto codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
-  GetAllChildOutputFields(0, "attr", &fields);
+  GetAllChildOutputFields(0, kSortRowAttrPrefix, &fields);
   sort_row_ = codegen->DeclareStruct(codegen->MakeFreshIdentifier("SortRow"), std::move(fields));
   top_level_decls->RegisterStruct(sort_row_);
 }
 
-class SortTranslator::SortRowAccess : public ConsumerContext::ValueProvider {
- public:
-  SortRowAccess() : codegen_(nullptr), row_ptr_(nullptr) {}
-
-  SortRowAccess(CodeGen *codegen, ast::Expr *row_ptr, const ast::Identifier &attribute)
-      : codegen_(codegen), row_ptr_(row_ptr), attribute_(attribute) {}
-
-  ast::Expr *GetValue(ConsumerContext *ctx) const override {
-    return codegen_->AccessStructMember(row_ptr_, attribute_);
-  }
-
- private:
-  CodeGen *codegen_;
-  ast::Expr *row_ptr_;
-  ast::Identifier attribute_;
-};
-
-void SortTranslator::PopulateContextWithSortAttributes(ConsumerContext *consumer_context,
-                                                       ast::Expr *sort_row,
-                                                       std::vector<SortRowAccess> *attrs) const {
-  const auto num_cols = GetPlan().GetChild(0)->GetOutputSchema()->GetColumns().size();
-  attrs->resize(num_cols);
-  for (uint32_t attr_idx = 0; attr_idx < num_cols; attr_idx++) {
-    auto attr_name = GetCodeGen()->MakeIdentifier("attr" + std::to_string(attr_idx));
-    (*attrs)[attr_idx] = SortRowAccess(GetCodeGen(), sort_row, attr_name);
-    consumer_context->RegisterColumnValueProvider(attr_idx, &(*attrs)[attr_idx]);
-  }
-}
-
-void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder, ast::Expr *lhs_row,
-                                                ast::Expr *rhs_row) const {
-  // Setup the contexts.
-  std::vector<SortRowAccess> left_attrs, right_attrs;
-  ConsumerContext left_ctx(GetCompilationContext(), *GetPipeline()),
-      right_ctx(GetCompilationContext(), *GetPipeline());
-  PopulateContextWithSortAttributes(&left_ctx, lhs_row, &left_attrs);
-  PopulateContextWithSortAttributes(&right_ctx, rhs_row, &right_attrs);
-
-  // Generate all column comparisons.
+void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder) {
   auto codegen = GetCodeGen();
+  auto context = ConsumerContext(GetCompilationContext(), *GetBuildPipeline());
+
   int32_t ret_value;
   for (const auto &[expr, sort_order] : GetPlanAs<planner::OrderByPlanNode>().GetSortKeys()) {
     if (sort_order == planner::OrderByOrderingType::ASC) {
@@ -89,14 +59,17 @@ void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder, ast::E
       ret_value = 1;
     }
     for (const auto tok : {parsing::Token::Type::LESS, parsing::Token::Type::GREATER}) {
-      ast::Expr *lhs = left_ctx.DeriveValue(*expr);
-      ast::Expr *rhs = right_ctx.DeriveValue(*expr);
-      If cond(codegen, codegen->Compare(tok, lhs, rhs));
+      current_row_ = CurrentRow::Lhs;
+      ast::Expr *lhs = context.DeriveValue(*expr, this);
+      current_row_ = CurrentRow::Rhs;
+      ast::Expr *rhs = context.DeriveValue(*expr, this);
+      If check_comparison(codegen, codegen->Compare(tok, lhs, rhs));
       builder->Append(codegen->Return(codegen->Const32(ret_value)));
-      cond.EndIf();
+      check_comparison.EndIf();
       ret_value = -ret_value;
     }
   }
+  current_row_ = CurrentRow::Child;
 }
 
 void SortTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_decls) {
@@ -108,9 +81,8 @@ void SortTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_decls
   });
   FunctionBuilder builder(codegen, fn_name, std::move(params), codegen->Int32Type());
   {
-    ast::Expr *lhs_row = builder.GetParameterByPosition(0);
-    ast::Expr *rhs_row = builder.GetParameterByPosition(1);
-    GenerateComparisonFunction(&builder, lhs_row, rhs_row);
+    // Generate body.
+    GenerateComparisonFunction(&builder);
   }
   cmp_func_ = builder.Finish(codegen->Const32(0));
   top_level_decls->RegisterFunction(cmp_func_);
@@ -155,13 +127,18 @@ void SortTranslator::TearDownPipelineState(const PipelineContext &pipeline_conte
   }
 }
 
+ast::Expr *SortTranslator::GetSortRowAttribute(ast::Expr *sort_row, uint32_t attr_idx) const {
+  auto codegen = GetCodeGen();
+  auto attr_name = codegen->MakeIdentifier(kSortRowAttrPrefix + std::to_string(attr_idx));
+  return codegen->AccessStructMember(sort_row, attr_name);
+}
+
 void SortTranslator::FillSortRow(ConsumerContext *ctx, ast::Expr *sort_row) const {
   auto codegen = GetCodeGen();
   const auto child_schema = GetPlan().GetChild(0)->GetOutputSchema();
   for (uint32_t attr_idx = 0; attr_idx < child_schema->GetColumns().size(); attr_idx++) {
-    auto attr_name = codegen->MakeIdentifier("attr" + std::to_string(attr_idx));
-    auto lhs = codegen->AccessStructMember(sort_row, attr_name);
-    auto rhs = ctx->DeriveValue(*child_schema->GetColumn(attr_idx).GetExpr());
+    auto lhs = GetSortRowAttribute(sort_row, attr_idx);
+    auto rhs = GetChildOutput(ctx, 0, attr_idx);
     codegen->CurrentFunction()->Append(codegen->Assign(lhs, rhs));
   }
 }
@@ -179,20 +156,19 @@ void SortTranslator::InsertIntoSorter(ConsumerContext *ctx) const {
     sorter = GetQueryStateEntryPtr(sorter_slot_);
   }
 
-  auto sort_row_name = codegen->MakeFreshIdentifier("sort_row");
-  auto sort_row = codegen->MakeExpr(sort_row_name);
+  auto sort_row = codegen->MakeExpr(sort_row_var_name_);
   if (const auto &plan = GetPlanAs<planner::OrderByPlanNode>(); plan.HasLimit()) {
     // @sorterInsertTopK()
-    const std::size_t topk = plan.GetOffset() + plan.GetLimit();
+    const std::size_t top_k = plan.GetOffset() + plan.GetLimit();
     func->Append(codegen->DeclareVarWithInit(
-        sort_row_name, codegen->SorterInsertTopK(sorter, sort_row_->Name(), topk)));
+        sort_row_var_name_, codegen->SorterInsertTopK(sorter, sort_row_->Name(), top_k)));
     // Fill row.
     FillSortRow(ctx, sort_row);
     // @sorterInsertTopKFinish();
-    func->Append(codegen->SorterInsertTopKFinish(sorter));
+    func->Append(codegen->SorterInsertTopKFinish(sorter, top_k));
   } else {
     // @sorterInsert()
-    func->Append(codegen->DeclareVarWithInit(sort_row_name,
+    func->Append(codegen->DeclareVarWithInit(sort_row_var_name_,
                                              codegen->SorterInsert(sorter, sort_row_->Name())));
     // Fill row.
     FillSortRow(ctx, sort_row);
@@ -219,16 +195,9 @@ void SortTranslator::ScanSorter(ConsumerContext *ctx) const {
             codegen->SorterIterHasNext(iter),                          // @sorterIterHasNext();
             codegen->MakeStmt(codegen->SorterIterNext(iter)));         // @sorterIterNext();
   {
-    // var row = @ptrCast(SortRow*, @sorterIterGetRow(sorter))
-    auto row_name = codegen->MakeFreshIdentifier("row");
-    auto row = codegen->MakeExpr(row_name);
-    func->Append(
-        codegen->DeclareVarWithInit(row_name, codegen->SorterIterGetRow(iter, sort_row_->Name())));
-
-    // Add attributes into context.
-    std::vector<SortRowAccess> attrs;
-    PopulateContextWithSortAttributes(ctx, row, &attrs);
-
+    // var sortRow = @ptrCast(SortRow*, @sorterIterGetRow(sorter))
+    auto row = codegen->SorterIterGetRow(iter, sort_row_->Name());
+    func->Append(codegen->DeclareVarWithInit(sort_row_var_name_, row));
     // Move along
     ctx->Push();
   }
@@ -257,8 +226,8 @@ void SortTranslator::FinishPipelineWork(const PipelineContext &pipeline_context)
 
     if (GetBuildPipeline().IsParallel()) {
       if (const auto &plan = GetPlanAs<planner::OrderByPlanNode>(); plan.HasLimit()) {
-        const std::size_t topk = plan.GetOffset() + plan.GetLimit();
-        func->Append(codegen->SortTopKParallel(sorter, GetThreadStateContainer(), offset, topk));
+        const std::size_t top_k = plan.GetOffset() + plan.GetLimit();
+        func->Append(codegen->SortTopKParallel(sorter, GetThreadStateContainer(), offset, top_k));
       } else {
         func->Append(codegen->SortParallel(sorter, GetThreadStateContainer(), offset));
       }
@@ -266,6 +235,35 @@ void SortTranslator::FinishPipelineWork(const PipelineContext &pipeline_context)
       func->Append(codegen->SorterSort(sorter));
     }
   }
+}
+
+ast::Expr *SortTranslator::GetOutput(ConsumerContext *consumer_context, uint32_t attr_idx) const {
+  const auto &output_col = GetPlan().GetOutputSchema()->GetColumn(attr_idx);
+  return consumer_context->DeriveValue(*output_col.GetExpr(), this);
+}
+
+ast::Expr *SortTranslator::GetChildOutput(ConsumerContext *consumer_context,
+                                          UNUSED uint32_t child_idx, uint32_t attr_idx) const {
+  if (IsScanPipeline(consumer_context->GetPipeline())) {
+    return GetSortRowAttribute(GetCodeGen()->MakeExpr(sort_row_var_name_), attr_idx);
+  } else {
+    TPL_ASSERT(IsBuildPipeline(consumer_context->GetPipeline()), "Pipeline not known to sorter");
+    switch (current_row_) {
+      case CurrentRow::Lhs: {
+        auto func = GetCodeGen()->CurrentFunction();
+        return GetSortRowAttribute(func->GetParameterByPosition(0), attr_idx);
+      }
+      case CurrentRow::Rhs: {
+        auto func = GetCodeGen()->CurrentFunction();
+        return GetSortRowAttribute(func->GetParameterByPosition(1), attr_idx);
+      }
+      case CurrentRow::Child: {
+        auto child_translator = GetCompilationContext()->LookupTranslator(*GetPlan().GetChild(0));
+        return child_translator->GetOutput(consumer_context, attr_idx);
+      }
+    }
+  }
+  return nullptr;
 }
 
 }  // namespace tpl::sql::codegen

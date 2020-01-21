@@ -16,6 +16,7 @@
 #include "sql/codegen/expression/conjunction_translator.h"
 #include "sql/codegen/expression/constant_translator.h"
 #include "sql/codegen/function_builder.h"
+#include "sql/codegen/operators/hash_join_translator.h"
 #include "sql/codegen/operators/nested_loop_join_translator.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/operators/seq_scan_translator.h"
@@ -152,6 +153,11 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
   std::unique_ptr<OperatorTranslator> translator;
 
   switch (plan.GetPlanNodeType()) {
+    case planner::PlanNodeType::HASHJOIN: {
+      const auto &hash_join = static_cast<const planner::HashJoinPlanNode &>(plan);
+      translator = std::make_unique<HashJoinTranslator>(hash_join, this, pipeline);
+      break;
+    }
     case planner::PlanNodeType::NESTLOOP: {
       const auto &nested_loop = static_cast<const planner::NestedLoopJoinPlanNode &>(plan);
       translator = std::make_unique<NestedLoopJoinTranslator>(nested_loop, this, pipeline);
@@ -168,7 +174,7 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
       break;
     }
     default: {
-      throw NotImplementedException("Code generation for plan node type '{}' not supported",
+      throw NotImplementedException("Code generation for plan node type '{}'",
                                     planner::PlanNodeTypeToString(plan.GetPlanNodeType()));
     }
   }
