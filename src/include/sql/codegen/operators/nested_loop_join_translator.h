@@ -55,6 +55,16 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
   void DoPipelineWork(ConsumerContext *consumer_context) const override;
 
   /**
+   * NLJ plans do not perform any post-pipeline work. Thus, this method is a no-op.
+   */
+  void FinishPipelineWork(const PipelineContext &pipeline_context) const override {}
+
+  /**
+   * NLJ plans do not allocate state. Thus, this method is a no-op.
+   */
+  void TearDownPipelineState(const PipelineContext &pipeline_context) const override {}
+
+  /**
    * NLJ plans are not the root of a pipeline. Thus, this method should never be called.
    */
   util::RegionVector<ast::FieldDecl *> GetWorkerParams() const override {
@@ -65,16 +75,6 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
    * NLJ plans are not the root of a pipeline. Thus, this method should never be called.
    */
   void LaunchWork(ast::Identifier work_func_name) const override { UNREACHABLE("Impossible"); }
-
-  /**
-   * NLJ plans do not perform any post-pipeline work. Thus, this method is a no-op.
-   */
-  void FinishPipelineWork(const PipelineContext &pipeline_context) const override {}
-
-  /**
-   * NLJ plans do not allocate state. Thus, this method is a no-op.
-   */
-  void TearDownPipelineState(const PipelineContext &pipeline_context) const override {}
 };
 
 }  // namespace tpl::sql::codegen

@@ -149,6 +149,18 @@ class OperatorTranslator {
   virtual void DoPipelineWork(ConsumerContext *consumer_context) const = 0;
 
   /**
+   * Perform any work required <b>after</b> the main pipeline work. This is executed by one thread.
+   * @param pipeline_context The pipeline context.
+   */
+  virtual void FinishPipelineWork(const PipelineContext &pipeline_context) const = 0;
+
+  /**
+   * Tear down and destroy any pipeline-local state.
+   * @param pipeline_context The pipeline context.
+   */
+  virtual void TearDownPipelineState(const PipelineContext &pipeline_context) const = 0;
+
+  /**
    * @return The list of extra fields added to the main work function. This is only called on
    *         parallel pipelines and only for the source/root of the pipeline that's responsible for
    *         launching the worker function. By default, the first two argument of a parallel work
@@ -162,18 +174,6 @@ class OperatorTranslator {
    * @param work_func_name The name of the work function that implements the pipeline logic.
    */
   virtual void LaunchWork(ast::Identifier work_func_name) const = 0;
-
-  /**
-   * Perform any work required <b>after</b> the main pipeline work. This is executed by one thread.
-   * @param pipeline_context The pipeline context.
-   */
-  virtual void FinishPipelineWork(const PipelineContext &pipeline_context) const = 0;
-
-  /**
-   * Tear down and destroy any pipeline-local state.
-   * @param pipeline_context The pipeline context.
-   */
-  virtual void TearDownPipelineState(const PipelineContext &pipeline_context) const = 0;
 
   /**
    * @return The plan the translator is generating.

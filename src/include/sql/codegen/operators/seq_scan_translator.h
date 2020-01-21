@@ -74,6 +74,16 @@ class SeqScanTranslator : public OperatorTranslator {
   void DoPipelineWork(ConsumerContext *consumer_context) const override;
 
   /**
+   * Sequential scans don't rely on any post-pipeline logic.
+   */
+  void FinishPipelineWork(const PipelineContext &pipeline_context) const override {}
+
+  /**
+   * Tear-down the FilterManager if required.
+   */
+  void TearDownPipelineState(const PipelineContext &pipeline_context) const override;
+
+  /**
    * @return The pipeline work function parameters. Just the *TVI.
    */
   util::RegionVector<ast::FieldDecl *> GetWorkerParams() const override;
@@ -83,16 +93,6 @@ class SeqScanTranslator : public OperatorTranslator {
    * @param work_func_name The worker function that'll be called during the parallel scan.
    */
   void LaunchWork(ast::Identifier work_func_name) const override;
-
-  /**
-   * Sequential scans don't rely on any post-pipeline logic.
-   */
-  void FinishPipelineWork(const PipelineContext &pipeline_context) const override {}
-
-  /**
-   * Tear-down the FilterManager if required.
-   */
-  void TearDownPipelineState(const PipelineContext &pipeline_context) const override;
 
  private:
   // Does the scan have a predicate?
