@@ -77,8 +77,8 @@ TableInsertMeta insert_meta[] = {
 
     // Table 2
     {TableId::Test2, "test_2", 2000000,
-     {{"colA", sql::IntegerType::Instance(false), Dist::Uniform, int64_t{0}, int64_t{100}},
-      {"colB", sql::IntegerType::Instance(false), Dist::Serial, int64_t{0}, int64_t{0}}}},
+     {{"col1", sql::IntegerType::Instance(false), Dist::Uniform, int64_t{0}, int64_t{100}},
+      {"col2", sql::IntegerType::Instance(false), Dist::Serial, int64_t{0}, int64_t{0}}}},
 };
 // clang-format on
 
