@@ -53,10 +53,8 @@ struct HashTableEntry {
  * Use as follows:
  *
  * @code
- * for (auto iter = jht.Lookup(hash); iter.HasNext(key_eq_fn);) {
- *   auto payload = (Payload*)iter.GetMatchPayload();
- *   // Check key
- *   if (payload->key == my_key) {
+ * for (auto iter = jht.Lookup(hash); iter.HasNext();) {
+ *   if (auto payload = (Payload*)iter.GetMatchPayload(); payload->key == my_key) {
  *     // Match
  *   }
  * }
