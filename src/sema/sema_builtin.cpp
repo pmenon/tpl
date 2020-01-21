@@ -1353,6 +1353,10 @@ void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call, ast::Builtin builtin) {
   // If it's an insertion for Top-K, the second argument must be an unsigned integer.
   if (builtin == ast::Builtin::SorterInsertTopK ||
       builtin == ast::Builtin::SorterInsertTopKFinish) {
+    if (!CheckArgCount(call, 2)) {
+      return;
+    }
+
     // Error if the top-k argument isn't an integer
     ast::Type *uint_type = GetBuiltinType(ast::BuiltinType::Uint32);
     if (!call->Arguments()[1]->GetType()->IsIntegerType()) {
