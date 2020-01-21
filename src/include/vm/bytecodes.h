@@ -367,8 +367,7 @@ namespace tpl::vm {
   F(JoinHashTableVectorProbeGetNextOutput, OperandType::Local, OperandType::Local, OperandType::Local,                 \
       OperandType::FunctionId)                                                                                         \
   F(JoinHashTableVectorProbeFree, OperandType::Local)                                                                  \
-  F(HashTableEntryIteratorHasNext, OperandType::Local, OperandType::Local, OperandType::FunctionId,                    \
-      OperandType::Local, OperandType::Local)                                                                          \
+  F(HashTableEntryIteratorHasNext, OperandType::Local, OperandType::Local)                                             \
   F(HashTableEntryIteratorGetRow, OperandType::Local, OperandType::Local)                                              \
                                                                                                                        \
   /* Sorting */                                                                                                        \

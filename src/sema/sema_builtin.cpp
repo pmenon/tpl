@@ -649,36 +649,6 @@ void Sema::CheckBuiltinHashTableEntryIterCall(ast::CallExpr *call, ast::Builtin 
 
   switch (builtin) {
     case ast::Builtin::HashTableEntryIterHasNext: {
-      if (!CheckArgCount(call, 4)) {
-        return;
-      }
-
-      const auto &args = call->Arguments();
-
-      // Second argument must be key-equality function
-      auto *const key_eq_func_type = args[1]->GetType()->SafeAs<ast::FunctionType>();
-      if (key_eq_func_type == nullptr || key_eq_func_type->GetNumParams() != 3 ||
-          !key_eq_func_type->GetReturnType()->IsSpecificBuiltin(ast::BuiltinType::Bool) ||
-          !key_eq_func_type->GetParams()[0].type->IsPointerType() ||
-          !key_eq_func_type->GetParams()[1].type->IsPointerType() ||
-          !key_eq_func_type->GetParams()[2].type->IsPointerType()) {
-        error_reporter()->Report(call->Position(),
-                                 ErrorMessages::kBadKeyEqualityCheckFunctionForJoinTableLookup,
-                                 args[1]->GetType());
-        return;
-      }
-
-      // Third and fourth arguments should be pointers
-      const auto byte_kind = ast::BuiltinType::Uint8;
-      if (!args[2]->GetType()->IsPointerType()) {
-        ReportIncorrectCallArg(call, 2, GetBuiltinType(byte_kind)->PointerTo());
-        return;
-      }
-      if (!args[3]->GetType()->IsPointerType()) {
-        ReportIncorrectCallArg(call, 3, GetBuiltinType(byte_kind)->PointerTo());
-        return;
-      }
-
       call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
       break;
     }

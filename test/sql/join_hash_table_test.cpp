@@ -115,7 +115,7 @@ void BuildAndProbeTest(uint32_t num_tuples, uint32_t dup_scale_factor) {
     uint32_t count = 0;
     for (auto iter = join_hash_table.Lookup<UseCHT>(probe_tuple.Hash());
          iter.template HasNext<Tuple>(key_eq);) {
-      auto *entry = iter.NextMatch();
+      auto *entry = iter.GetMatch();
       auto *matched = reinterpret_cast<const Tuple *>(entry->payload);
       EXPECT_EQ(i, matched->a);
       count++;
@@ -191,7 +191,7 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
 
     uint32_t count = 0;
     for (auto iter = main_jht.Lookup<use_concise_ht>(probe.Hash()); iter.HasNext<Tuple>(key_eq);
-         iter.NextMatch()) {
+         iter.GetMatch()) {
       count++;
     }
     EXPECT_EQ(num_thread_local_tables, count);

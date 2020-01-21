@@ -48,12 +48,17 @@ struct HashTableEntry {
 };
 
 /**
- * An iterator over a chain of hash table entries. Use as follows:
+ * An iterator over a chain of hash table entries that match a provided initial hash value. This
+ * iterator cannot resolve hash collisions, it is the responsibility of the user to do so.
+ * Use as follows:
  *
  * @code
  * for (auto iter = jht.Lookup(hash); iter.HasNext(key_eq_fn);) {
- *   auto entry = iter.NextMatch();
- *   // Use entry
+ *   auto payload = (Payload*)iter.GetMatchPayload();
+ *   // Check key
+ *   if (payload->key == my_key) {
+ *     // Match
+ *   }
  * }
  * @endcode
  *
@@ -62,8 +67,9 @@ struct HashTableEntry {
 struct HashTableEntryIterator {
  public:
   /**
-   * Construct an iterator beginning at the entry @em initial of the chain of entries matching the
-   * hash value @em hash. This iterator is returned from @em JoinHashTable::Lookup().
+   * Construct an iterator over hash table entry's beginning at the provided initial entry that
+   * match the provided hash value. It is the responsibility of the user to resolve hash collisions.
+   * This iterator is returned from JoinHashTable::Lookup().
    * @param initial The first matching entry in the chain of entries
    * @param hash The hash value of the probe tuple
    */
@@ -71,66 +77,39 @@ struct HashTableEntryIterator {
       : next_(initial), hash_(hash) {}
 
   /**
-   * Function used to check equality of hash keys.
-   * First argument is an opaque context object provided by the caller.
-   * Second argument is the probe/input tuple we're matching on through keys.
-   * Last argument is a candidate entry in the chain we'll check keys with.
-   */
-  using KeyEq = bool (*)(void *, void *, void *);
-
-  /**
    * Advance to the next match and return true if it is found.
-   * @tparam T The templated type of the payload within the entry.
-   * @tparam F A functor with the interface: bool(const T *). The argument is a pointer to the tuple
-   *           in the hash table entry. The return value is a boolean indicating if the entry
-   *           matches what the user is probing for.
-   * @param key_eq The function used to determine key equality.
-   * @return True if there is at least one more match.
+   * @return True if there is at least one more potential match.
    */
-  template <typename T, typename F>
-  bool HasNext(F &&key_eq) {
-    static_assert(std::is_invocable_r_v<bool, F, const T *>,
-                  "Key-equality must be invocable as: bool(const T *)");
-
+  bool HasNext() {
     while (next_ != nullptr) {
-      if (next_->hash == hash_ && key_eq(reinterpret_cast<const T *>(next_->payload))) {
+      if (next_->hash == hash_) {
         return true;
       }
       next_ = next_->next;
     }
-
     return false;
   }
 
   /**
-   * A more cumbersome API to iterate used in code-gen because lambda's don't exist at that level.
-   * @param key_eq Function pointer to check the equality of a tuple to one provided.
-   * @param ctx An opaque user-provided object. Passed directly into key-equality callback. Not used
-   *            in the function.
-   * @param probe_tuple The probe tuple we want to find a match for. This is provided to the
-   *                    key-equality callback to find the next match.
-   * @return True if there is at least one more match.
+   * @return The next match.
    */
-  bool HasNext(KeyEq key_eq, void *ctx, void *probe_tuple) {
-    return HasNext<void *>([&](const void *table_tuple) -> bool {
-      return key_eq(ctx, probe_tuple, const_cast<void *>(table_tuple));
-    });
-  }
-
-  /**
-   * Return the next match.
-   */
-  const HashTableEntry *NextMatch() {
+  const HashTableEntry *GetMatch() {
     const HashTableEntry *result = next_;
     next_ = next_->next;
     return result;
   }
 
+  /**
+   * @return The payload of the next matched entry.
+   */
+  const byte *GetMatchPayload() { return GetMatch()->PayloadAs<byte>(); }
+
  private:
-  // The next element the iterator produces
+  // The next element the iterator produces.
   const HashTableEntry *next_;
 
-  // The hash value we're looking up. Used as a cheap pre-filter in key-equality checks.
+  // The hash value we're looking up. Used as a cheap pre-filter in
+  // key-equality checks.
   hash_t hash_;
 };
 

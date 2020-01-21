@@ -1238,12 +1238,7 @@ void BytecodeGenerator::VisitBuiltinHashTableEntryIteratorCall(ast::CallExpr *ca
   switch (builtin) {
     case ast::Builtin::HashTableEntryIterHasNext: {
       LocalVar has_more = GetExecutionResult()->GetOrCreateDestination(call->GetType());
-      const std::string key_eq_func_name =
-          call->Arguments()[1]->As<ast::IdentifierExpr>()->Name().GetData();
-      LocalVar ctx = VisitExpressionForRValue(call->Arguments()[2]);
-      LocalVar probe_tuple = VisitExpressionForRValue(call->Arguments()[3]);
-      GetEmitter()->EmitHashTableEntryIteratorHasNext(
-          has_more, ht_entry_iter, LookupFuncIdByName(key_eq_func_name), ctx, probe_tuple);
+      GetEmitter()->Emit(Bytecode::HashTableEntryIteratorHasNext, has_more, ht_entry_iter);
       GetExecutionResult()->SetDestination(has_more.ValueOf());
       break;
     }

@@ -1358,13 +1358,7 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   OP(HashTableEntryIteratorHasNext) : {
     auto *has_next = frame->LocalAt<bool *>(READ_LOCAL_ID());
     auto *ht_entry_iter = frame->LocalAt<sql::HashTableEntryIterator *>(READ_LOCAL_ID());
-    auto key_eq_fn_id = READ_FUNC_ID();
-    auto *ctx = frame->LocalAt<void *>(READ_LOCAL_ID());
-    auto *probe_tuple = frame->LocalAt<void *>(READ_LOCAL_ID());
-
-    auto key_eq_fn = reinterpret_cast<sql::HashTableEntryIterator::KeyEq>(
-        module_->GetRawFunctionImpl(key_eq_fn_id));
-    OpHashTableEntryIteratorHasNext(has_next, ht_entry_iter, key_eq_fn, ctx, probe_tuple);
+    OpHashTableEntryIteratorHasNext(has_next, ht_entry_iter);
     DISPATCH_NEXT();
   }
 
