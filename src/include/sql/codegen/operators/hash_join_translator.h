@@ -104,8 +104,13 @@ class HashJoinTranslator : public OperatorTranslator {
    */
   void LaunchWork(ast::Identifier work_func_name) const override { UNREACHABLE("Impossible"); }
 
-  ast::Expr *GetOutput(ConsumerContext *consumer_context, uint32_t attr_idx) const override;
-
+  /**
+   *
+   * @param consumer_context
+   * @param child_idx
+   * @param attr_idx
+   * @return
+   */
   ast::Expr *GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 

@@ -177,12 +177,9 @@ class OperatorTranslator : public ColumnValueProvider {
   virtual void LaunchWork(ast::Identifier work_func_name) const = 0;
 
   /**
-   *
-   * @param consumer_context
-   * @param attr_idx
-   * @return
+   * @return The value (vector) of the attribute at the given index in this operator's output.
    */
-  virtual ast::Expr *GetOutput(ConsumerContext *consumer_context, uint32_t attr_idx) const = 0;
+  ast::Expr *GetOutput(ConsumerContext *consumer_context, uint32_t attr_idx) const;
 
   /**
    * @return The plan the translator is generating.

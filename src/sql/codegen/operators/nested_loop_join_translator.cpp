@@ -41,12 +41,6 @@ void NestedLoopJoinTranslator::DoPipelineWork(ConsumerContext *consumer_context)
   }
 }
 
-ast::Expr *NestedLoopJoinTranslator::GetOutput(ConsumerContext *consumer_context,
-                                               uint32_t attr_idx) const {
-  const auto output_col = GetPlan().GetOutputSchema()->GetColumn(attr_idx);
-  return consumer_context->DeriveValue(*output_col.GetExpr(), this);
-}
-
 ast::Expr *NestedLoopJoinTranslator::GetChildOutput(ConsumerContext *consumer_context,
                                                     uint32_t child_idx, uint32_t attr_idx) const {
   const auto child_translator =

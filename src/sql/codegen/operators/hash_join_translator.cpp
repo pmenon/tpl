@@ -208,12 +208,6 @@ void HashJoinTranslator::FinishPipelineWork(const PipelineContext &pipeline_cont
   }
 }
 
-ast::Expr *HashJoinTranslator::GetOutput(ConsumerContext *consumer_context,
-                                         uint32_t attr_idx) const {
-  const auto &output_col = GetPlan().GetOutputSchema()->GetColumn(attr_idx);
-  return consumer_context->DeriveValue(*output_col.GetExpr(), this);
-}
-
 ast::Expr *HashJoinTranslator::GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
                                               uint32_t attr_idx) const {
   if (IsRightPipeline(consumer_context->GetPipeline()) && child_idx == 0) {

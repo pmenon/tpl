@@ -77,14 +77,6 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
   void LaunchWork(ast::Identifier work_func_name) const override { UNREACHABLE("Impossible"); }
 
   /**
-   *
-   * @param consumer_context
-   * @param attr_idx
-   * @return
-   */
-  ast::Expr *GetOutput(ConsumerContext *consumer_context, uint32_t attr_idx) const override;
-
-  /**
    * @return The value of the ou
    */
   ast::Expr *GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,

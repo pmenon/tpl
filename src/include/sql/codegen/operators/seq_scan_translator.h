@@ -100,7 +100,6 @@ class SeqScanTranslator : public OperatorTranslator {
   }
 
   ast::Expr *GetTableColumn(uint16_t col_oid) const override;
-  ast::Expr *GetOutput(ConsumerContext *consumer_context, uint32_t attr_idx) const override;
 
  private:
   // Does the scan have a predicate?

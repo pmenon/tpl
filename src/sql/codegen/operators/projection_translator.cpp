@@ -15,12 +15,6 @@ void ProjectionTranslator::DoPipelineWork(ConsumerContext *consumer_context) con
   consumer_context->Push();
 }
 
-ast::Expr *ProjectionTranslator::GetOutput(ConsumerContext *consumer_context,
-                                           uint32_t attr_idx) const {
-  const auto output_col = GetPlan().GetOutputSchema()->GetColumn(attr_idx);
-  return consumer_context->DeriveValue(*output_col.GetExpr(), this);
-}
-
 ast::Expr *ProjectionTranslator::GetChildOutput(ConsumerContext *consumer_context,
                                                 uint32_t child_idx, uint32_t attr_idx) const {
   const auto child_translator =

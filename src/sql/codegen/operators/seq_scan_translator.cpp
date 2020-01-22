@@ -226,12 +226,6 @@ void SeqScanTranslator::LaunchWork(ast::Identifier work_func_name) const {
                                              GetThreadStateContainer(), work_func_name));
 }
 
-ast::Expr *SeqScanTranslator::GetOutput(ConsumerContext *consumer_context,
-                                        uint32_t attr_idx) const {
-  const auto &output_col = GetPlan().GetOutputSchema()->GetColumn(attr_idx);
-  return consumer_context->DeriveValue(*output_col.GetExpr(), this);
-}
-
 ast::Expr *SeqScanTranslator::GetTableColumn(uint16_t col_oid) const {
   const auto table_oid = GetPlanAs<planner::SeqScanPlanNode>().GetTableOid();
   const auto schema = &Catalog::Instance()->LookupTableById(table_oid)->GetSchema();

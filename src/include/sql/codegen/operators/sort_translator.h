@@ -107,11 +107,6 @@ class SortTranslator : public OperatorTranslator {
   /**
    * @return
    */
-  ast::Expr *GetOutput(ConsumerContext *consumer_context, uint32_t attr_idx) const override;
-
-  /**
-   * @return
-   */
   ast::Expr *GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 

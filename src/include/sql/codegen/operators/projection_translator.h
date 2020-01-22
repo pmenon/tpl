@@ -78,11 +78,6 @@ class ProjectionTranslator : public OperatorTranslator {
   }
 
   /**
-   * @return The output of this operator at the given attribute index.
-   */
-  ast::Expr *GetOutput(ConsumerContext *consumer_context, uint32_t attr_idx) const override;
-
-  /**
    * @return The output of the given child's attribute in the provided context.
    */
   ast::Expr *GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
