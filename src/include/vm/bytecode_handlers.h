@@ -361,6 +361,7 @@ GEN_VPI_SET(Decimal, DecimalVal, tpl::sql::Decimal64);
 GEN_VPI_SET(Date, DateVal, tpl::sql::Date);
 GEN_VPI_SET(String, StringVal, tpl::sql::VarlenEntry);
 
+#undef GEN_VPI_SET
 #undef GEN_VPI_GET
 
 // ---------------------------------------------------------
@@ -413,91 +414,28 @@ VM_OP void OpFilterManagerFree(tpl::sql::FilterManager *filter);
 // Vector Filter Executor
 // ---------------------------------------------------------
 
-VM_OP_HOT void OpVectorFilterEqual(tpl::sql::VectorProjection *vector_projection,
-                                   const uint32_t left_col_idx, const uint32_t right_col_idx,
-                                   tpl::sql::TupleIdList *tid_list) {
-  tpl::sql::VectorFilterExecutor::SelectEqual(vector_projection, left_col_idx, right_col_idx,
-                                              tid_list);
-}
+#define GEN_VECTOR_FILTER(Name)                                                                   \
+  VM_OP_HOT void OpVectorFilter##Name(tpl::sql::VectorProjection *vector_projection,              \
+                                      const uint32_t left_col_idx, const uint32_t right_col_idx,  \
+                                      tpl::sql::TupleIdList *tid_list) {                          \
+    tpl::sql::VectorFilterExecutor::Select##Name(vector_projection, left_col_idx, right_col_idx,  \
+                                                 tid_list);                                       \
+  }                                                                                               \
+  VM_OP_HOT void OpVectorFilter##Name##Val(tpl::sql::VectorProjection *vector_projection,         \
+                                           const uint32_t left_col_idx, const tpl::sql::Val *val, \
+                                           tpl::sql::TupleIdList *tid_list) {                     \
+    tpl::sql::VectorFilterExecutor::Select##Name##Val(vector_projection, left_col_idx, *val,      \
+                                                      tid_list);                                  \
+  }
 
-VM_OP_HOT void OpVectorFilterEqualVal(tpl::sql::VectorProjection *vector_projection,
-                                      const uint32_t left_col_idx, const tpl::sql::Val *val,
-                                      tpl::sql::TupleIdList *tid_list) {
-  tpl::sql::VectorFilterExecutor::SelectEqualVal(vector_projection, left_col_idx, *val, tid_list);
-}
+GEN_VECTOR_FILTER(Equal)
+GEN_VECTOR_FILTER(GreaterThan)
+GEN_VECTOR_FILTER(GreaterThanEqual)
+GEN_VECTOR_FILTER(LessThan)
+GEN_VECTOR_FILTER(LessThanEqual)
+GEN_VECTOR_FILTER(NotEqual)
 
-VM_OP_HOT void OpVectorFilterGreaterThan(tpl::sql::VectorProjection *vector_projection,
-                                         const uint32_t left_col_idx, const uint32_t right_col_idx,
-                                         tpl::sql::TupleIdList *tid_list) {
-  tpl::sql::VectorFilterExecutor::SelectGreaterThan(vector_projection, left_col_idx, right_col_idx,
-                                                    tid_list);
-}
-
-VM_OP_HOT void OpVectorFilterGreaterThanVal(tpl::sql::VectorProjection *vector_projection,
-                                            const uint32_t left_col_idx, const tpl::sql::Val *val,
-                                            tpl::sql::TupleIdList *tid_list) {
-  tpl::sql::VectorFilterExecutor::SelectGreaterThanVal(vector_projection, left_col_idx, *val,
-                                                       tid_list);
-}
-
-VM_OP_HOT void OpVectorFilterGreaterThanEqual(tpl::sql::VectorProjection *vector_projection,
-                                              const uint32_t left_col_idx,
-                                              const uint32_t right_col_idx,
-                                              tpl::sql::TupleIdList *tid_list) {
-  tpl::sql::VectorFilterExecutor::SelectGreaterThanEqual(vector_projection, left_col_idx,
-                                                         right_col_idx, tid_list);
-}
-
-VM_OP_HOT void OpVectorFilterGreaterThanEqualVal(tpl::sql::VectorProjection *vector_projection,
-                                                 const uint32_t left_col_idx,
-                                                 const tpl::sql::Val *val,
-                                                 tpl::sql::TupleIdList *tid_list) {
-  tpl::sql::VectorFilterExecutor::SelectGreaterThanEqualVal(vector_projection, left_col_idx, *val,
-                                                            tid_list);
-}
-
-VM_OP_HOT void OpVectorFilterLessThan(tpl::sql::VectorProjection *vector_projection,
-                                      const uint32_t left_col_idx, const uint32_t right_col_idx,
-                                      tpl::sql::TupleIdList *tid_list) {
-  tpl::sql::VectorFilterExecutor::SelectLessThan(vector_projection, left_col_idx, right_col_idx,
-                                                 tid_list);
-}
-
-VM_OP_HOT void OpVectorFilterLessThanVal(tpl::sql::VectorProjection *vector_projection,
-                                         const uint32_t left_col_idx, const tpl::sql::Val *val,
-                                         tpl::sql::TupleIdList *tid_list) {
-  tpl::sql::VectorFilterExecutor::SelectLessThanVal(vector_projection, left_col_idx, *val,
-                                                    tid_list);
-}
-
-VM_OP_HOT void OpVectorFilterLessThanEqual(tpl::sql::VectorProjection *vector_projection,
-                                           const uint32_t left_col_idx,
-                                           const uint32_t right_col_idx,
-                                           tpl::sql::TupleIdList *tid_list) {
-  tpl::sql::VectorFilterExecutor::SelectLessThanEqual(vector_projection, left_col_idx,
-                                                      right_col_idx, tid_list);
-}
-
-VM_OP_HOT void OpVectorFilterLessThanEqualVal(tpl::sql::VectorProjection *vector_projection,
-                                              const uint32_t left_col_idx, const tpl::sql::Val *val,
-                                              tpl::sql::TupleIdList *tid_list) {
-  tpl::sql::VectorFilterExecutor::SelectLessThanEqualVal(vector_projection, left_col_idx, *val,
-                                                         tid_list);
-}
-
-VM_OP_HOT void OpVectorFilterNotEqual(tpl::sql::VectorProjection *vector_projection,
-                                      const uint32_t left_col_idx, const uint32_t right_col_idx,
-                                      tpl::sql::TupleIdList *tid_list) {
-  tpl::sql::VectorFilterExecutor::SelectNotEqual(vector_projection, left_col_idx, right_col_idx,
-                                                 tid_list);
-}
-
-VM_OP_HOT void OpVectorFilterNotEqualVal(tpl::sql::VectorProjection *vector_projection,
-                                         const uint32_t left_col_idx, const tpl::sql::Val *val,
-                                         tpl::sql::TupleIdList *tid_list) {
-  tpl::sql::VectorFilterExecutor::SelectNotEqualVal(vector_projection, left_col_idx, *val,
-                                                    tid_list);
-}
+#undef GEN_VECTOR_FILTER
 
 // ---------------------------------------------------------
 // Scalar SQL comparisons
@@ -1409,5 +1347,11 @@ VM_OP_WARM void OpUpper(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *re
                         const tpl::sql::StringVal *str) {
   tpl::sql::StringFunctions::Upper(ctx, result, *str);
 }
+
+// Macro hygiene
+#undef VM_OP_COLD
+#undef VM_OP_WARM
+#undef VM_OP_HOT
+#undef VM_OP
 
 }  // extern "C"
