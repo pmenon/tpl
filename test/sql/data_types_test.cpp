@@ -7,8 +7,8 @@ class DataTypesTests : public TplTest {};
 
 #define CHECK_TYPE_PROPERTIES(TYPE, TYPE_ID, IS_ARITHMETIC) \
   const auto &type = TYPE::Instance(true);                  \
-  EXPECT_TRUE(type.nullable());                             \
-  EXPECT_EQ(TYPE_ID, type.id());                            \
+  EXPECT_TRUE(type.IsNullable());                           \
+  EXPECT_EQ(TYPE_ID, type.GetId());                         \
   EXPECT_EQ(IS_ARITHMETIC, type.IsArithmetic());            \
   EXPECT_TRUE(type.Equals(TYPE::InstanceNullable()));       \
   EXPECT_FALSE(type.Equals(TYPE::InstanceNonNullable()));

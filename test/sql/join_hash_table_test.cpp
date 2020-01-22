@@ -110,15 +110,13 @@ void BuildAndProbeTest(uint32_t num_tuples, uint32_t dup_scale_factor) {
   for (uint32_t i = 0; i < num_tuples; i++) {
     // The probe tuple
     Tuple probe_tuple = {i, 0, 0, 0};
-    auto key_eq = [&](const Tuple *t) { return t->a == probe_tuple.a; };
     // Perform probe
     uint32_t count = 0;
-    for (auto iter = join_hash_table.Lookup<UseCHT>(probe_tuple.Hash());
-         iter.template HasNext<Tuple>(key_eq);) {
-      auto *entry = iter.GetMatch();
-      auto *matched = reinterpret_cast<const Tuple *>(entry->payload);
-      EXPECT_EQ(i, matched->a);
-      count++;
+    for (auto iter = join_hash_table.Lookup<UseCHT>(probe_tuple.Hash()); iter.HasNext();) {
+      auto *matched = reinterpret_cast<const Tuple *>(iter.GetMatchPayload());
+      if (matched->a == probe_tuple.a) {
+        count++;
+      }
     }
     EXPECT_EQ(dup_scale_factor, count)
         << "Expected to find " << dup_scale_factor << " matches, but key [" << i << "] found "
@@ -132,10 +130,7 @@ void BuildAndProbeTest(uint32_t num_tuples, uint32_t dup_scale_factor) {
   for (uint32_t i = num_tuples; i < num_tuples + 1000; i++) {
     // A tuple that should NOT find any join partners
     Tuple probe_tuple = {i, 0, 0, 0};
-    auto key_eq = [&](const Tuple *t) { return t->a == probe_tuple.a; };
-    // Lookups should fail
-    for (auto iter = join_hash_table.Lookup<UseCHT>(probe_tuple.Hash());
-         iter.template HasNext<Tuple>(key_eq);) {
+    for (auto iter = join_hash_table.Lookup<UseCHT>(probe_tuple.Hash()); iter.HasNext();) {
       FAIL() << "Should not find any matches for key [" << i
              << "] that was not inserted into the join hash table";
     }
@@ -187,12 +182,12 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
 
   for (uint32_t i = 0; i < num_tuples; i++) {
     auto probe = Tuple{i, 1, 2, 3};
-    auto key_eq = [&](const Tuple *t) { return t->a == probe.a; };
-
     uint32_t count = 0;
-    for (auto iter = main_jht.Lookup<use_concise_ht>(probe.Hash()); iter.HasNext<Tuple>(key_eq);
-         iter.GetMatch()) {
-      count++;
+    for (auto iter = main_jht.Lookup<use_concise_ht>(probe.Hash()); iter.HasNext();) {
+      auto *matched = reinterpret_cast<const Tuple *>(iter.GetMatchPayload());
+      if (matched->a == probe.a) {
+        count++;
+      }
     }
     EXPECT_EQ(num_thread_local_tables, count);
   }

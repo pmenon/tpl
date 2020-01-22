@@ -174,7 +174,7 @@ TEST_F(SeqScanTranslatorTest, SimpleHashJoin) {
                           .Build())
                   .Build())
           .AddLeftHashKey(expr_maker.DVE(TypeId::Integer, 0, 0))
-          .AddRightHashKey(expr_maker.DVE(TypeId::Integer, 1, 1))
+          .AddRightHashKey(expr_maker.DVE(TypeId::Integer, 1, 0))
           .SetJoinPredicate(expr_maker.CompareEq(expr_maker.DVE(TypeId::Integer, 0, 0),
                                                  expr_maker.DVE(TypeId::Integer, 1, 0)))
           .SetOutputSchema(
