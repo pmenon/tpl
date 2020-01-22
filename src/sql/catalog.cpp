@@ -10,6 +10,7 @@
 #include <variant>
 #include <vector>
 
+#include "common/exception.h"
 #include "common/memory.h"
 #include "logging/logger.h"
 #include "sql/data_types.h"
@@ -66,19 +67,30 @@ struct TableInsertMeta {
 TableInsertMeta insert_meta[] = {
     // The empty table
     {TableId::EmptyTable, "empty_table", 0,
-     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, int64_t{0}, int64_t{0}}}},
+     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0L, 0L}}},
 
     // Table 1
     {TableId::Test1, "test_1", 2000000,
-     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, int64_t{0}, int64_t{0}},
-      {"colB", sql::IntegerType::Instance(false), Dist::Uniform, int64_t{0}, int64_t{9}},
-      {"colC", sql::IntegerType::Instance(false), Dist::Uniform, int64_t{0}, int64_t{9999}},
-      {"colD", sql::IntegerType::Instance(false), Dist::Uniform, int64_t{0}, int64_t{99999}}}},
+     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0L, 0L},
+      {"colB", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 9L},
+      {"colC", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 9999L},
+      {"colD", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 99999L}}},
 
     // Table 2
     {TableId::Test2, "test_2", 2000000,
-     {{"col1", sql::IntegerType::Instance(false), Dist::Uniform, int64_t{0}, int64_t{100}},
-      {"col2", sql::IntegerType::Instance(false), Dist::Serial, int64_t{0}, int64_t{0}}}},
+     {{"col1", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 100L},
+      {"col2", sql::IntegerType::Instance(false), Dist::Serial, 0L, 0L}}},
+
+    // All types
+    {TableId::AllTypes, "all_types", 2000000,
+     {{"a", sql::BooleanType::Instance(false), Dist::Uniform, 0L, 1L},
+      {"b", sql::TinyIntType::Instance(false), Dist::Uniform, -100L, 100L},
+      {"c", sql::SmallIntType::Instance(false), Dist::Uniform, -1000L, 1000L},
+      {"d", sql::IntegerType::Instance(false), Dist::Uniform, -10000L, 10000L},
+      {"e", sql::BigIntType::Instance(false), Dist::Uniform, -1000000L, 1000000L},
+      {"f", sql::RealType::Instance(false), Dist::Uniform, -4444.44F, 4444.44F},
+      {"g", sql::DoubleType::Instance(false), Dist::Uniform, -7777.77F, 7777.77F},
+     }},
 };
 // clang-format on
 
@@ -92,6 +104,34 @@ template <class T>
 auto GetRandomDistribution(T min, T max)
     -> std::enable_if_t<std::is_floating_point_v<T>, std::uniform_real_distribution<T>> {
   return std::uniform_real_distribution<T>(min, max);
+}
+
+bool *CreateBooleanColumnData(Dist dist, uint32_t num_vals) {
+  auto *val = static_cast<bool *>(Memory::MallocAligned(sizeof(bool) * num_vals, CACHELINE_SIZE));
+
+  switch (dist) {
+    case Dist::Uniform: {
+      std::mt19937 generator{};
+      std::uniform_int_distribution<int16_t> distribution(0, 1);
+      for (uint32_t i = 0; i < num_vals; i++) {
+        val[i] = distribution(generator) % 2 == 0;
+      }
+      break;
+    }
+    case Dist::Serial: {
+      // Split the false/true values by half
+      uint32_t half = num_vals / 2;
+      for (uint32_t i = 0; i < num_vals; i++) {
+        val[i] = (i >= half);
+      }
+      break;
+    }
+    default: {
+      throw NotImplementedException("Distribution for booleans");
+    }
+  }
+
+  return val;
 }
 
 template <typename T>
@@ -116,8 +156,9 @@ T *CreateNumberColumnData(Dist dist, uint32_t num_vals, T min, T max) {
       }
       break;
     }
-    default:
-      throw std::runtime_error("Implement me!");
+    default: {
+      throw NotImplementedException("Distribution for numbers");
+    }
   }
 
   return val;
@@ -128,6 +169,10 @@ std::pair<byte *, uint32_t *> GenerateColumnData(const ColumnInsertMeta &col_met
   // Create data
   byte *col_data = nullptr;
   switch (col_meta.sql_type.GetId()) {
+    case SqlTypeId::Boolean: {
+      col_data = reinterpret_cast<byte *>(CreateBooleanColumnData(col_meta.dist, num_rows));
+      break;
+    }
     case SqlTypeId::TinyInt: {
       col_data = reinterpret_cast<byte *>(
           CreateNumberColumnData<int8_t>(col_meta.dist, num_rows, std::get<int64_t>(col_meta.min),
@@ -163,11 +208,11 @@ std::pair<byte *, uint32_t *> GenerateColumnData(const ColumnInsertMeta &col_met
           col_meta.dist, num_rows, std::get<double>(col_meta.min), std::get<double>(col_meta.max)));
       break;
     }
-    case SqlTypeId::Boolean:
     case SqlTypeId::Date:
     case SqlTypeId::Char:
     case SqlTypeId::Varchar: {
-      throw std::runtime_error("Implement me!");
+      throw NotImplementedException(
+          fmt::format("Populating column type '{}'", col_meta.sql_type.GetName()));
     }
   }
 
