@@ -953,29 +953,37 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
+    case ast::Builtin::VPIGetBool: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Boolean));
+      break;
+    }
+    case ast::Builtin::VPIGetTinyInt:
     case ast::Builtin::VPIGetSmallInt:
     case ast::Builtin::VPIGetInt:
-    case ast::Builtin::VPIGetBigInt:
+    case ast::Builtin::VPIGetBigInt: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
+      break;
+    }
     case ast::Builtin::VPIGetReal:
-    case ast::Builtin::VPIGetDouble:
+    case ast::Builtin::VPIGetDouble: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Real));
+      break;
+    }
     case ast::Builtin::VPIGetDate:
     case ast::Builtin::VPIGetString: {
       if (!CheckArgCount(call, 2)) {
         return;
       }
-      // Second argument should be column index
-      const auto int32_kind = ast::BuiltinType::Int32;
-      if (!call_args[1]->GetType()->IsSpecificBuiltin(int32_kind)) {
-        ReportIncorrectCallArg(call, 1, GetBuiltinType(int32_kind));
-        return;
-      }
-      call->SetType(builtin == ast::Builtin::VPIGetReal || builtin == ast::Builtin::VPIGetDouble
-                        ? GetBuiltinType(ast::BuiltinType::Real)
-                        : builtin == ast::Builtin::VPIGetDate
-                              ? GetBuiltinType(ast::BuiltinType::Date)
-                              : builtin == ast::Builtin::VPIGetString
-                                    ? GetBuiltinType(ast::BuiltinType::StringVal)
-                                    : GetBuiltinType(ast::BuiltinType::Integer));
+      call->SetType(GetBuiltinType(ast::BuiltinType::StringVal));
       break;
     }
     case ast::Builtin::VPISetSmallInt:
@@ -1547,6 +1555,8 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::VPIMatch:
     case ast::Builtin::VPIReset:
     case ast::Builtin::VPIResetFiltered:
+    case ast::Builtin::VPIGetBool:
+    case ast::Builtin::VPIGetTinyInt:
     case ast::Builtin::VPIGetSmallInt:
     case ast::Builtin::VPIGetInt:
     case ast::Builtin::VPIGetBigInt:
@@ -1554,6 +1564,8 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::VPIGetDouble:
     case ast::Builtin::VPIGetDate:
     case ast::Builtin::VPIGetString:
+    case ast::Builtin::VPISetBool:
+    case ast::Builtin::VPISetTinyInt:
     case ast::Builtin::VPISetSmallInt:
     case ast::Builtin::VPISetInt:
     case ast::Builtin::VPISetBigInt:

@@ -306,272 +306,62 @@ VM_OP_HOT void OpVPIReset(tpl::sql::VectorProjectionIterator *vpi) { vpi->Reset(
 
 VM_OP_HOT void OpVPIResetFiltered(tpl::sql::VectorProjectionIterator *vpi) { vpi->ResetFiltered(); }
 
-VM_OP_HOT void OpVPIGetSmallInt(tpl::sql::Integer *out,
-                                tpl::sql::VectorProjectionIterator *const iter,
-                                const uint32_t col_idx) {
-  // Read
-  auto *ptr = iter->GetValue<int16_t, false>(col_idx, nullptr);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
+// ---------------------------------------------------------
+// VPI Get
+// ---------------------------------------------------------
 
-  // Set
-  out->is_null = false;
-  out->val = *ptr;
-}
+#define GEN_VPI_GET(Name, SqlValueType, CppType)                                     \
+  VM_OP_HOT void OpVPIGet##Name(tpl::sql::SqlValueType *out,                         \
+                                tpl::sql::VectorProjectionIterator *const vpi,       \
+                                const uint32_t col_idx) {                            \
+    auto *ptr = vpi->GetValue<CppType, false>(col_idx, nullptr);                     \
+    TPL_ASSERT(ptr != nullptr, "Null data pointer when trying to read attribute");   \
+    out->is_null = false;                                                            \
+    out->val = *ptr;                                                                 \
+  }                                                                                  \
+  VM_OP_HOT void OpVPIGet##Name##Null(tpl::sql::SqlValueType *out,                   \
+                                      tpl::sql::VectorProjectionIterator *const vpi, \
+                                      const uint32_t col_idx) {                      \
+    bool null = false;                                                               \
+    auto *ptr = vpi->GetValue<CppType, true>(col_idx, &null);                        \
+    TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");          \
+    out->is_null = null;                                                             \
+    out->val = *ptr;                                                                 \
+  }
 
-VM_OP_HOT void OpVPIGetInteger(tpl::sql::Integer *out,
-                               tpl::sql::VectorProjectionIterator *const vpi,
-                               const uint32_t col_idx) {
-  // Read
-  auto *ptr = vpi->GetValue<int32_t, false>(col_idx, nullptr);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
+#define GEN_VPI_SET(Name, SqlValueType, CppType)                                               \
+  VM_OP_HOT void OpVPISet##Name(tpl::sql::VectorProjectionIterator *const vpi,                 \
+                                tpl::sql::SqlValueType *input, const uint32_t col_idx) {       \
+    vpi->SetValue<CppType, false>(col_idx, input->val, false);                                 \
+  }                                                                                            \
+  VM_OP_HOT void OpVPISet##Name##Null(tpl::sql::VectorProjectionIterator *const vpi,           \
+                                      tpl::sql::SqlValueType *input, const uint32_t col_idx) { \
+    vpi->SetValue<CppType, true>(col_idx, input->val, input->is_null);                         \
+  }
 
-  // Set
-  out->is_null = false;
-  out->val = *ptr;
-}
+GEN_VPI_GET(Bool, BoolVal, bool);
+GEN_VPI_GET(TinyInt, Integer, int8_t);
+GEN_VPI_GET(SmallInt, Integer, int16_t);
+GEN_VPI_GET(Integer, Integer, int32_t);
+GEN_VPI_GET(BigInt, Integer, int64_t);
+GEN_VPI_GET(Real, Real, float);
+GEN_VPI_GET(Double, Real, double);
+GEN_VPI_GET(Decimal, DecimalVal, tpl::sql::Decimal64);
+GEN_VPI_GET(Date, DateVal, tpl::sql::Date);
+GEN_VPI_GET(String, StringVal, tpl::sql::VarlenEntry);
 
-VM_OP_HOT void OpVPIGetBigInt(tpl::sql::Integer *out, tpl::sql::VectorProjectionIterator *const vpi,
-                              const uint32_t col_idx) {
-  // Read
-  auto *ptr = vpi->GetValue<int64_t, false>(col_idx, nullptr);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
+GEN_VPI_SET(Bool, BoolVal, bool);
+GEN_VPI_SET(TinyInt, Integer, int8_t);
+GEN_VPI_SET(SmallInt, Integer, int16_t);
+GEN_VPI_SET(Integer, Integer, int32_t);
+GEN_VPI_SET(BigInt, Integer, int64_t);
+GEN_VPI_SET(Real, Real, float);
+GEN_VPI_SET(Double, Real, double);
+GEN_VPI_SET(Decimal, DecimalVal, tpl::sql::Decimal64);
+GEN_VPI_SET(Date, DateVal, tpl::sql::Date);
+GEN_VPI_SET(String, StringVal, tpl::sql::VarlenEntry);
 
-  // Set
-  out->is_null = false;
-  out->val = *ptr;
-}
-
-VM_OP_HOT void OpVPIGetReal(tpl::sql::Real *out, tpl::sql::VectorProjectionIterator *const vpi,
-                            const uint32_t col_idx) {
-  // Read
-  auto *ptr = vpi->GetValue<float, false>(col_idx, nullptr);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read real value");
-
-  // Set
-  out->is_null = false;
-  out->val = *ptr;
-}
-
-VM_OP_HOT void OpVPIGetDouble(tpl::sql::Real *out, tpl::sql::VectorProjectionIterator *const vpi,
-                              const uint32_t col_idx) {
-  // Read
-  auto *ptr = vpi->GetValue<double, false>(col_idx, nullptr);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read double value");
-
-  // Set
-  out->is_null = false;
-  out->val = *ptr;
-}
-
-VM_OP_HOT void OpVPIGetDecimal(tpl::sql::DecimalVal *out, tpl::sql::VectorProjectionIterator *vpi,
-                               const uint32_t col_idx) {
-  // Read
-  auto *ptr = vpi->GetValue<tpl::sql::Decimal64, false>(col_idx, nullptr);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read double value");
-
-  // Set
-  out->is_null = false;
-  out->val = *ptr;
-}
-
-VM_OP_HOT void OpVPIGetDate(tpl::sql::DateVal *out, tpl::sql::VectorProjectionIterator *vpi,
-                            const uint32_t col_idx) {
-  auto *ptr = vpi->GetValue<tpl::sql::Date, false>(col_idx, nullptr);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read Date value");
-
-  // Set
-  out->is_null = false;
-  out->val = *ptr;
-}
-
-VM_OP_HOT void OpVPIGetString(tpl::sql::StringVal *out, tpl::sql::VectorProjectionIterator *vpi,
-                              const uint32_t col_idx) {
-  auto *ptr = vpi->GetValue<tpl::sql::VarlenEntry, false>(col_idx, nullptr);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read Date value");
-
-  // Set
-  out->is_null = false;
-  out->val = *ptr;
-}
-
-VM_OP_HOT void OpVPIGetSmallIntNull(tpl::sql::Integer *out,
-                                    tpl::sql::VectorProjectionIterator *const vpi,
-                                    const uint32_t col_idx) {
-  // Read
-  bool null = false;
-  auto *ptr = vpi->GetValue<int16_t, true>(col_idx, &null);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
-
-  // Set
-  out->is_null = null;
-  out->val = *ptr;
-}
-
-VM_OP_HOT void OpVPIGetIntegerNull(tpl::sql::Integer *out,
-                                   tpl::sql::VectorProjectionIterator *const vpi,
-                                   const uint32_t col_idx) {
-  // Read
-  bool null = false;
-  auto *ptr = vpi->GetValue<int32_t, true>(col_idx, &null);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
-
-  // Set
-  out->is_null = null;
-  out->val = *ptr;
-}
-
-VM_OP_HOT void OpVPIGetBigIntNull(tpl::sql::Integer *out,
-                                  tpl::sql::VectorProjectionIterator *const vpi,
-                                  const uint32_t col_idx) {
-  // Read
-  bool null = false;
-  auto *ptr = vpi->GetValue<int64_t, true>(col_idx, &null);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read integer");
-
-  // Set
-  out->is_null = null;
-  out->val = *ptr;
-}
-
-VM_OP_HOT void OpVPIGetRealNull(tpl::sql::Real *out, tpl::sql::VectorProjectionIterator *const vpi,
-                                const uint32_t col_idx) {
-  // Read
-  bool null = false;
-  auto *ptr = vpi->GetValue<float, true>(col_idx, &null);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read real value");
-
-  // Set
-  out->is_null = null;
-  out->val = *ptr;
-}
-
-VM_OP_HOT void OpVPIGetDoubleNull(tpl::sql::Real *out,
-                                  tpl::sql::VectorProjectionIterator *const vpi,
-                                  const uint32_t col_idx) {
-  // Read
-  bool null = false;
-  auto *ptr = vpi->GetValue<double, true>(col_idx, &null);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read double value");
-
-  // Set
-  out->is_null = null;
-  out->val = *ptr;
-}
-
-VM_OP_HOT void OpVPIGetDecimalNull(tpl::sql::DecimalVal *out,
-                                   tpl::sql::VectorProjectionIterator *const vpi,
-                                   const uint32_t col_idx) {
-  // Read
-  bool null = false;
-  auto *ptr = vpi->GetValue<tpl::sql::Decimal64, true>(col_idx, &null);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read double value");
-
-  // Set
-  out->is_null = null;
-  out->val = *ptr;
-}
-
-VM_OP_HOT void OpVPIGetDateNull(tpl::sql::DateVal *out, tpl::sql::VectorProjectionIterator *vpi,
-                                const uint32_t col_idx) {
-  bool null = false;
-  auto *ptr = vpi->GetValue<tpl::sql::Date, true>(col_idx, &null);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read Date value");
-
-  // Set
-  out->is_null = null;
-  out->val = *ptr;
-}
-
-VM_OP_HOT void OpVPIGetStringNull(tpl::sql::StringVal *out, tpl::sql::VectorProjectionIterator *vpi,
-                                  const uint32_t col_idx) {
-  bool null = false;
-  auto *ptr = vpi->GetValue<tpl::sql::VarlenEntry, true>(col_idx, &null);
-  TPL_ASSERT(ptr != nullptr, "Null pointer when trying to read Date value");
-
-  // Set
-  out->is_null = null;
-  out->val = *ptr;
-}
-
-VM_OP_HOT void OpVPISetSmallInt(tpl::sql::VectorProjectionIterator *const vpi,
-                                tpl::sql::Integer *input, const uint32_t col_idx) {
-  vpi->SetValue<int16_t, false>(col_idx, input->val, false);
-}
-
-VM_OP_HOT void OpVPISetInteger(tpl::sql::VectorProjectionIterator *const vpi,
-                               tpl::sql::Integer *input, const uint32_t col_idx) {
-  vpi->SetValue<int32_t, false>(col_idx, input->val, false);
-}
-
-VM_OP_HOT void OpVPISetBigInt(tpl::sql::VectorProjectionIterator *const vpi,
-                              tpl::sql::Integer *input, const uint32_t col_idx) {
-  vpi->SetValue<int64_t, false>(col_idx, input->val, false);
-}
-
-VM_OP_HOT void OpVPISetReal(tpl::sql::VectorProjectionIterator *const vpi, tpl::sql::Real *input,
-                            const uint32_t col_idx) {
-  vpi->SetValue<float, false>(col_idx, input->val, false);
-}
-
-VM_OP_HOT void OpVPISetDouble(tpl::sql::VectorProjectionIterator *const vpi, tpl::sql::Real *input,
-                              const uint32_t col_idx) {
-  vpi->SetValue<double, false>(col_idx, input->val, false);
-}
-
-VM_OP_HOT void OpVPISetDecimal(tpl::sql::VectorProjectionIterator *const vpi,
-                               tpl::sql::DecimalVal *input, const uint32_t col_idx) {
-  vpi->SetValue<tpl::sql::Decimal64, false>(col_idx, input->val, false);
-}
-
-VM_OP_HOT void OpVPISetDate(tpl::sql::VectorProjectionIterator *const vpi, tpl::sql::DateVal *input,
-                            const uint32_t col_idx) {
-  vpi->SetValue<tpl::sql::Date, false>(col_idx, input->val, false);
-}
-
-VM_OP_HOT void OpVPISetString(tpl::sql::VectorProjectionIterator *const vpi,
-                              tpl::sql::StringVal *input, const uint32_t col_idx) {
-  vpi->SetValue<tpl::sql::VarlenEntry, false>(col_idx, input->val, false);
-}
-
-VM_OP_HOT void OpVPISetSmallIntNull(tpl::sql::VectorProjectionIterator *const vpi,
-                                    tpl::sql::Integer *input, const uint32_t col_idx) {
-  vpi->SetValue<int16_t, true>(col_idx, input->val, input->is_null);
-}
-
-VM_OP_HOT void OpVPISetIntegerNull(tpl::sql::VectorProjectionIterator *const vpi,
-                                   tpl::sql::Integer *input, const uint32_t col_idx) {
-  vpi->SetValue<int32_t, true>(col_idx, input->val, input->is_null);
-}
-
-VM_OP_HOT void OpVPISetBigIntNull(tpl::sql::VectorProjectionIterator *const vpi,
-                                  tpl::sql::Integer *input, const uint32_t col_idx) {
-  vpi->SetValue<int64_t, true>(col_idx, input->val, input->is_null);
-}
-
-VM_OP_HOT void OpVPISetRealNull(tpl::sql::VectorProjectionIterator *const vpi,
-                                tpl::sql::Real *input, const uint32_t col_idx) {
-  vpi->SetValue<float, true>(col_idx, input->val, input->is_null);
-}
-
-VM_OP_HOT void OpVPISetDoubleNull(tpl::sql::VectorProjectionIterator *const vpi,
-                                  tpl::sql::Real *input, const uint32_t col_idx) {
-  vpi->SetValue<double, true>(col_idx, input->val, input->is_null);
-}
-
-VM_OP_HOT void OpVPISetDecimalNull(tpl::sql::VectorProjectionIterator *const vpi,
-                                   tpl::sql::DecimalVal *input, const uint32_t col_idx) {
-  vpi->SetValue<tpl::sql::Decimal64, true>(col_idx, input->val, input->is_null);
-}
-
-VM_OP_HOT void OpVPISetDateNull(tpl::sql::VectorProjectionIterator *const vpi,
-                                tpl::sql::DateVal *input, const uint32_t col_idx) {
-  vpi->SetValue<tpl::sql::Date, true>(col_idx, input->val, input->is_null);
-}
-
-VM_OP_HOT void OpVPISetStringNull(tpl::sql::VectorProjectionIterator *const vpi,
-                                  tpl::sql::StringVal *input, const uint32_t col_idx) {
-  vpi->SetValue<tpl::sql::VarlenEntry, true>(col_idx, input->val, input->is_null);
-}
+#undef GEN_VPI_GET
 
 // ---------------------------------------------------------
 // Hashing
@@ -781,6 +571,7 @@ VM_OP_HOT void OpRealToInteger(tpl::sql::Integer *result, const tpl::sql::Real *
     tpl::sql::ComparisonFunctions::Ne##TYPE(result, *left, *right);                               \
   }
 
+GEN_SQL_COMPARISONS(Bool, BoolVal)
 GEN_SQL_COMPARISONS(Integer, Integer)
 GEN_SQL_COMPARISONS(Real, Real)
 GEN_SQL_COMPARISONS(Date, DateVal)

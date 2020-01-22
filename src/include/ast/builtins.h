@@ -47,6 +47,8 @@ namespace tpl::ast {
   F(VPIMatch, vpiMatch)                                         \
   F(VPIReset, vpiReset)                                         \
   F(VPIResetFiltered, vpiResetFiltered)                         \
+  F(VPIGetBool, vpiGetBool)                                     \
+  F(VPIGetTinyInt, vpiGetTinyInt)                               \
   F(VPIGetSmallInt, vpiGetSmallInt)                             \
   F(VPIGetInt, vpiGetInt)                                       \
   F(VPIGetBigInt, vpiGetBigInt)                                 \
@@ -54,6 +56,8 @@ namespace tpl::ast {
   F(VPIGetDouble, vpiGetDouble)                                 \
   F(VPIGetDate, vpiGetDate)                                     \
   F(VPIGetString, vpiGetString)                                 \
+  F(VPISetBool, vpiSetBool)                                     \
+  F(VPISetTinyInt, vpiSetTinyInt)                               \
   F(VPISetSmallInt, vpiSetSmallInt)                             \
   F(VPISetInt, vpiSetInt)                                       \
   F(VPISetBigInt, vpiSetBigInt)                                 \

@@ -692,6 +692,8 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     OpVPISet##NAME##Null(vpi, input, col_idx);                                    \
     DISPATCH_NEXT();                                                              \
   }
+  GEN_VPI_ACCESS(Bool, sql::BoolVal)
+  GEN_VPI_ACCESS(TinyInt, sql::Integer)
   GEN_VPI_ACCESS(SmallInt, sql::Integer)
   GEN_VPI_ACCESS(Integer, sql::Integer)
   GEN_VPI_ACCESS(BigInt, sql::Integer)
@@ -867,6 +869,13 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   }
 
 #define GEN_CMP(op)                                                  \
+  OP(op##Bool) : {                                                   \
+    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());  \
+    auto *left = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());    \
+    auto *right = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());   \
+    Op##op##Bool(result, left, right);                               \
+    DISPATCH_NEXT();                                                 \
+  }                                                                  \
   OP(op##Integer) : {                                                \
     auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());  \
     auto *left = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());    \

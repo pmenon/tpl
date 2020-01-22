@@ -149,6 +149,8 @@ std::string CastKindToString(const CastKind cast_kind) {
       return "IntToSqlDecimal";
     case CastKind::SqlBoolToBool:
       return "SqlBoolToBool";
+    case CastKind::BoolToSqlBool:
+      return "BoolToSqlBool";
     case CastKind::IntegralCast:
       return "IntegralCast";
     case CastKind::IntToFloat:

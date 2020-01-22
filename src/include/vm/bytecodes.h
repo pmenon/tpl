@@ -133,6 +133,8 @@ namespace tpl::vm {
   F(VPIMatch, OperandType::Local, OperandType::Local)                                                                  \
   F(VPIReset, OperandType::Local)                                                                                      \
   F(VPIResetFiltered, OperandType::Local)                                                                              \
+  F(VPIGetBool, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
+  F(VPIGetTinyInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPIGetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPIGetInteger, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPIGetBigInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
@@ -141,6 +143,8 @@ namespace tpl::vm {
   F(VPIGetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPIGetDate, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
   F(VPIGetString, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
+  F(VPIGetBoolNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
+  F(VPIGetTinyIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPIGetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
   F(VPIGetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPIGetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
@@ -149,6 +153,8 @@ namespace tpl::vm {
   F(VPIGetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPIGetDateNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPIGetStringNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
+  F(VPISetBool, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
+  F(VPISetTinyInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPISetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPISetInteger, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPISetBigInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
@@ -157,6 +163,8 @@ namespace tpl::vm {
   F(VPISetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPISetDate, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
   F(VPISetString, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
+  F(VPISetBoolNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
+  F(VPISetTinyIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPISetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
   F(VPISetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPISetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
@@ -197,6 +205,12 @@ namespace tpl::vm {
   F(InitString, OperandType::Local, OperandType::StaticLocal, OperandType::UImm4)                                      \
   F(IntegerToReal, OperandType::Local, OperandType::Local)                                                             \
   F(RealToInteger, OperandType::Local, OperandType::Local)                                                             \
+  F(LessThanBool, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
+  F(LessThanEqualBool, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
+  F(GreaterThanBool, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
+  F(GreaterThanEqualBool, OperandType::Local, OperandType::Local, OperandType::Local)                                  \
+  F(EqualBool, OperandType::Local, OperandType::Local, OperandType::Local)                                             \
+  F(NotEqualBool, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
   F(LessThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
   F(LessThanEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                  \
   F(GreaterThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                    \

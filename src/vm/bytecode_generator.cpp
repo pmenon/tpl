@@ -676,62 +676,48 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
       GetEmitter()->Emit(Bytecode::VPIResetFiltered, vpi);
       break;
     }
-    case ast::Builtin::VPIGetSmallInt:
-    case ast::Builtin::VPIGetInt:
-    case ast::Builtin::VPIGetBigInt:
-    case ast::Builtin::VPIGetReal:
-    case ast::Builtin::VPIGetDouble:
-    case ast::Builtin::VPIGetDate:
-    case ast::Builtin::VPIGetString: {
-      Bytecode bytecode;
-      if (builtin == ast::Builtin::VPIGetSmallInt) {
-        bytecode = Bytecode::VPIGetSmallInt;
-      } else if (builtin == ast::Builtin::VPIGetInt) {
-        bytecode = Bytecode::VPIGetInteger;
-      } else if (builtin == ast::Builtin::VPIGetBigInt) {
-        bytecode = Bytecode::VPIGetBigInt;
-      } else if (builtin == ast::Builtin::VPIGetReal) {
-        bytecode = Bytecode::VPIGetReal;
-      } else if (builtin == ast::Builtin::VPIGetDouble) {
-        bytecode = Bytecode::VPIGetDouble;
-      } else if (builtin == ast::Builtin::VPIGetDate) {
-        bytecode = Bytecode::VPIGetDate;
-      } else {
-        bytecode = Bytecode::VPIGetString;
-      }
-      LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType());
-      const uint32_t col_idx = call->Arguments()[1]->As<ast::LitExpr>()->Int32Val();
-      GetEmitter()->EmitVPIGet(bytecode, result, vpi, col_idx);
-      break;
-    }
-    case ast::Builtin::VPISetSmallInt:
-    case ast::Builtin::VPISetInt:
-    case ast::Builtin::VPISetBigInt:
-    case ast::Builtin::VPISetReal:
-    case ast::Builtin::VPISetDouble:
-    case ast::Builtin::VPISetDate:
-    case ast::Builtin::VPISetString: {
-      Bytecode bytecode;
-      if (builtin == ast::Builtin::VPISetSmallInt) {
-        bytecode = Bytecode::VPISetSmallInt;
-      } else if (builtin == ast::Builtin::VPISetInt) {
-        bytecode = Bytecode::VPISetInteger;
-      } else if (builtin == ast::Builtin::VPISetBigInt) {
-        bytecode = Bytecode::VPISetBigInt;
-      } else if (builtin == ast::Builtin::VPISetReal) {
-        bytecode = Bytecode::VPISetReal;
-      } else if (builtin == ast::Builtin::VPISetDouble) {
-        bytecode = Bytecode::VPISetDouble;
-      } else if (builtin == ast::Builtin::VPISetDate) {
-        bytecode = Bytecode::VPISetDate;
-      } else {
-        bytecode = Bytecode::VPISetString;
-      }
-      auto input = VisitExpressionForLValue(call->Arguments()[1]);
-      auto col_idx = call->Arguments()[2]->As<ast::LitExpr>()->Int32Val();
-      GetEmitter()->EmitVPISet(bytecode, vpi, input, col_idx);
-      break;
-    }
+
+#define GEN_CASE(BuiltinName, Bytecode)                                              \
+  case ast::Builtin::BuiltinName: {                                                  \
+    LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType()); \
+    const uint32_t col_idx = call->Arguments()[1]->As<ast::LitExpr>()->Int32Val();   \
+    GetEmitter()->EmitVPIGet(Bytecode, result, vpi, col_idx);                        \
+    break;                                                                           \
+  }
+      // clang-format off
+    GEN_CASE(VPIGetBool, Bytecode::VPIGetBool);
+    GEN_CASE(VPIGetTinyInt, Bytecode::VPIGetTinyInt);
+    GEN_CASE(VPIGetSmallInt, Bytecode::VPIGetSmallInt);
+    GEN_CASE(VPIGetInt, Bytecode::VPIGetInteger);
+    GEN_CASE(VPIGetBigInt, Bytecode::VPIGetBigInt);
+    GEN_CASE(VPIGetReal, Bytecode::VPIGetReal);
+    GEN_CASE(VPIGetDouble, Bytecode::VPIGetDouble);
+    GEN_CASE(VPIGetDate, Bytecode::VPIGetDate);
+    GEN_CASE(VPIGetString, Bytecode::VPIGetString);
+      // clang-format on
+#undef GEN_CASE
+
+#define GEN_CASE(BuiltinName, Bytecode)                                  \
+  case ast::Builtin::BuiltinName: {                                      \
+    auto input = VisitExpressionForLValue(call->Arguments()[1]);         \
+    auto col_idx = call->Arguments()[2]->As<ast::LitExpr>()->Int32Val(); \
+    GetEmitter()->EmitVPISet(Bytecode, vpi, input, col_idx);             \
+    break;                                                               \
+  }
+
+      // clang-format off
+    GEN_CASE(VPISetBool, Bytecode::VPISetBool);
+    GEN_CASE(VPISetTinyInt, Bytecode::VPISetTinyInt);
+    GEN_CASE(VPISetSmallInt, Bytecode::VPISetSmallInt);
+    GEN_CASE(VPISetInt, Bytecode::VPISetInteger);
+    GEN_CASE(VPISetBigInt, Bytecode::VPISetBigInt);
+    GEN_CASE(VPISetReal, Bytecode::VPISetReal);
+    GEN_CASE(VPISetDouble, Bytecode::VPISetDouble);
+    GEN_CASE(VPISetDate, Bytecode::VPISetDate);
+    GEN_CASE(VPISetString, Bytecode::VPISetString);
+      // clang-format on
+#undef GEN_CASE
+
     default: {
       UNREACHABLE("Impossible table iteration call");
     }
@@ -1544,6 +1530,8 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::VPIMatch:
     case ast::Builtin::VPIReset:
     case ast::Builtin::VPIResetFiltered:
+    case ast::Builtin::VPIGetBool:
+    case ast::Builtin::VPIGetTinyInt:
     case ast::Builtin::VPIGetSmallInt:
     case ast::Builtin::VPIGetInt:
     case ast::Builtin::VPIGetBigInt:
@@ -1551,6 +1539,8 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::VPIGetDouble:
     case ast::Builtin::VPIGetDate:
     case ast::Builtin::VPIGetString:
+    case ast::Builtin::VPISetBool:
+    case ast::Builtin::VPISetTinyInt:
     case ast::Builtin::VPISetSmallInt:
     case ast::Builtin::VPISetInt:
     case ast::Builtin::VPISetBigInt:
@@ -1939,6 +1929,9 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
 
 #define SQL_COMPARISON_BYTECODE(CODE_RESULT, COMPARISON_TYPE, ARG_KIND) \
   switch (ARG_KIND) {                                                   \
+    case ast::BuiltinType::Kind::Boolean:                                  \
+      CODE_RESULT = Bytecode::COMPARISON_TYPE##Bool;                    \
+      break;                                                            \
     case ast::BuiltinType::Kind::Integer:                               \
       CODE_RESULT = Bytecode::COMPARISON_TYPE##Integer;                 \
       break;                                                            \
