@@ -32,19 +32,17 @@ enum class ExecutionMode : uint8_t {
 };
 
 /**
- * A Module instance is used to store all information associated with a single
- * TPL program. Module's are a top-level container for metadata about all TPL
- * functions, data structures, types, etc. They also contain the generated TBC
- * bytecode and their implementations, along with compiled machine-code versions
- * of TPL functions.
+ * A Module instance is used to store all information associated with a single TPL program. Module's
+ * are a top-level container for metadata about all TPL functions, data structures, types, etc.
+ * They also contain the generated TBC bytecode and their implementations, along with compiled
+ * machine-code versions of TPL functions.
  *
  * Modules are thread-safe.
  */
 class Module {
  public:
   /**
-   * Create a TPL module using the given bytecode module as the only
-   * implementation.
+   * Create a TPL module using the given bytecode module as the initial implementation.
    * @param bytecode_module The bytecode module implementation.
    */
   explicit Module(std::unique_ptr<BytecodeModule> bytecode_module);
@@ -80,10 +78,9 @@ class Module {
   }
 
   /**
-   * Retrieve and wrap a TPL function inside a C++ function object, thus making
-   * the TPL function callable as a C++ function. Callers can request different
-   * versions of the TPL code including an interpreted version and a compiled
-   * version.
+   * Retrieve and wrap a TPL function inside a C++ function object, thus making the TPL function
+   * callable as a C++ function. Callers can request different versions of the TPL code including
+   * an interpreted version and a compiled version.
    * @tparam Ret Ret The C/C++ return type of the function
    * @tparam ArgTypes ArgTypes The C/C++ argument types to the function
    * @param name The name of the function the caller wants
@@ -95,9 +92,13 @@ class Module {
                    std::function<Ret(ArgTypes...)> &func);
 
   /**
-   * Return the raw function implementation for the function in this module with
-   * ID @em func_id. The returned function will either be interpreted or
-   * compiled, but the implementation is hidden from the caller.
+   * Return the raw function implementation for the function in this module with the given function
+   * ID. The returned function will either be interpreted or compiled, but the implementation is
+   * hidden from the caller.
+   *
+   * The caller is responsible for knowing the function's interface and casting to the appropriate
+   * type.
+   *
    * @param func_id The ID of the function the caller wants.
    * @return The function address if it exists; null otherwise.
    */
@@ -113,7 +114,6 @@ class Module {
 
  private:
   friend class VM;
-  friend class AsyncCompileTask;
 
   // Accesses the trampoline functions
   friend class BytecodeTrampolineTest;
