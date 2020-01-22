@@ -127,7 +127,7 @@ std::pair<byte *, uint32_t *> GenerateColumnData(const ColumnInsertMeta &col_met
                                                  uint32_t num_rows) {
   // Create data
   byte *col_data = nullptr;
-  switch (col_meta.sql_type.id()) {
+  switch (col_meta.sql_type.GetId()) {
     case SqlTypeId::TinyInt: {
       col_data = reinterpret_cast<byte *>(
           CreateNumberColumnData<int8_t>(col_meta.dist, num_rows, std::get<int64_t>(col_meta.min),
@@ -173,7 +173,7 @@ std::pair<byte *, uint32_t *> GenerateColumnData(const ColumnInsertMeta &col_met
 
   // Create bitmap
   uint32_t *null_bitmap = nullptr;
-  if (col_meta.sql_type.nullable()) {
+  if (col_meta.sql_type.IsNullable()) {
     TPL_ASSERT(num_rows != 0, "Cannot have 0 rows.");
     uint64_t num_words = util::BitUtil::Num32BitWordsFor(num_rows);
     null_bitmap = static_cast<uint32_t *>(

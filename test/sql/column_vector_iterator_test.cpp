@@ -56,7 +56,7 @@ TEST_F(ColumnIteratorTest, IntegerIterationTest) {
   // test.
   //
 
-  ASSERT_TRUE(col_info->sql_type.id() == SqlTypeId::Integer);
+  ASSERT_TRUE(col_info->sql_type.GetId() == SqlTypeId::Integer);
 
   const auto *col = table->GetBlock(0)->GetColumnData(0);
 

@@ -40,7 +40,7 @@ constexpr const char *kNullString = "\\N";
 
 void ParseCol(byte *data, uint32_t *null_bitmap, const Schema::ColumnInfo &col, uint32_t row_idx,
               csv::CSVField &field, VarlenHeap *string_heap) {
-  if (col.sql_type.nullable()) {
+  if (col.sql_type.IsNullable()) {
     if (field == kNullString) {
       util::BitUtil::Set(null_bitmap, row_idx);
       return;
@@ -50,7 +50,7 @@ void ParseCol(byte *data, uint32_t *null_bitmap, const Schema::ColumnInfo &col, 
 
   // Write column data
   byte *insert_offset = data + row_idx * col.GetStorageSize();
-  switch (col.sql_type.id()) {
+  switch (col.sql_type.GetId()) {
     case SqlTypeId::TinyInt: {
       *reinterpret_cast<int8_t *>(insert_offset) = field.get<int8_t>();
       break;
@@ -126,7 +126,7 @@ void ImportTable(const std::string &table_name, Table *table, const std::string 
         byte *data = static_cast<byte *>(
             Memory::MallocAligned(col.GetStorageSize() * kBatchSize, CACHELINE_SIZE));
         uint32_t *nulls = nullptr;
-        if (col.sql_type.nullable()) {
+        if (col.sql_type.IsNullable()) {
           nulls = static_cast<uint32_t *>(Memory::MallocAligned(
               util::BitUtil::Num32BitWordsFor(kBatchSize) * sizeof(uint32_t), CACHELINE_SIZE));
         }

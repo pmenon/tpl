@@ -19,7 +19,7 @@ void PrintingConsumer::PrintTuple(const byte *tuple) const {
     first = false;
 
     // Column value
-    switch (col_info.sql_type.id()) {
+    switch (col_info.sql_type.GetId()) {
       case SqlTypeId::Boolean: {
         const auto val = reinterpret_cast<const BoolVal *>(tuple);
         os_ << (val->is_null ? "NULL" : val->val ? "True" : "False");

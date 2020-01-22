@@ -37,12 +37,12 @@ namespace {
 
 void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment &col,
                   uint32_t row_idx) {
-  switch (sql_type.id()) {
+  switch (sql_type.GetId()) {
     case SqlTypeId::Boolean: {
       break;
     }
     case SqlTypeId::TinyInt: {
-      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
+      if (sql_type.IsNullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
         os << col.TypedAccessAt<int8_t>(row_idx);
@@ -50,7 +50,7 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment
       break;
     }
     case SqlTypeId::SmallInt: {
-      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
+      if (sql_type.IsNullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
         os << col.TypedAccessAt<int16_t>(row_idx);
@@ -58,7 +58,7 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment
       break;
     }
     case SqlTypeId::Integer: {
-      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
+      if (sql_type.IsNullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
         os << col.TypedAccessAt<int32_t>(row_idx);
@@ -66,7 +66,7 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment
       break;
     }
     case SqlTypeId::BigInt: {
-      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
+      if (sql_type.IsNullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
         os << col.TypedAccessAt<int64_t>(row_idx);
@@ -74,7 +74,7 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment
       break;
     }
     case SqlTypeId::Real: {
-      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
+      if (sql_type.IsNullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
         os << col.TypedAccessAt<float>(row_idx);
@@ -82,7 +82,7 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment
       break;
     }
     case SqlTypeId::Double: {
-      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
+      if (sql_type.IsNullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
         os << col.TypedAccessAt<double>(row_idx);
@@ -91,7 +91,7 @@ void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment
     }
     case SqlTypeId::Char:
     case SqlTypeId::Varchar: {
-      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
+      if (sql_type.IsNullable() && col.IsNullAt(row_idx)) {
         os << "NULL";
       } else {
         os << std::string(col.TypedAccessAt<const char *>(row_idx));

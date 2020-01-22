@@ -17,9 +17,9 @@ class SqlType {
  public:
   virtual ~SqlType() = default;
 
-  SqlTypeId id() const { return id_; }
+  SqlTypeId GetId() const { return id_; }
 
-  bool nullable() const { return nullable_; }
+  bool IsNullable() const { return nullable_; }
 
   virtual const SqlType &GetNonNullableVersion() const = 0;
 
@@ -101,7 +101,7 @@ class BooleanType : public SqlType {
 
   bool Equals(const SqlType &that) const override;
 
-  static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Boolean; }
+  static bool classof(const SqlType *type) { return type->GetId() == SqlTypeId::Boolean; }
 
  private:
   explicit BooleanType(bool nullable);
@@ -145,7 +145,7 @@ class TinyIntType : public NumberBaseType<int8_t> {
 
   bool Equals(const SqlType &that) const override;
 
-  static bool classof(const SqlType *type) { return type->id() == SqlTypeId::TinyInt; }
+  static bool classof(const SqlType *type) { return type->GetId() == SqlTypeId::TinyInt; }
 
  private:
   explicit TinyIntType(bool nullable);
@@ -172,7 +172,7 @@ class SmallIntType : public NumberBaseType<int16_t> {
 
   bool Equals(const SqlType &that) const override;
 
-  static bool classof(const SqlType *type) { return type->id() == SqlTypeId::SmallInt; }
+  static bool classof(const SqlType *type) { return type->GetId() == SqlTypeId::SmallInt; }
 
  private:
   explicit SmallIntType(bool nullable);
@@ -199,7 +199,7 @@ class IntegerType : public NumberBaseType<int32_t> {
 
   bool Equals(const SqlType &that) const override;
 
-  static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Integer; }
+  static bool classof(const SqlType *type) { return type->GetId() == SqlTypeId::Integer; }
 
  private:
   explicit IntegerType(bool nullable);
@@ -226,7 +226,7 @@ class BigIntType : public NumberBaseType<int64_t> {
 
   bool Equals(const SqlType &that) const override;
 
-  static bool classof(const SqlType *type) { return type->id() == SqlTypeId::BigInt; }
+  static bool classof(const SqlType *type) { return type->GetId() == SqlTypeId::BigInt; }
 
  private:
   explicit BigIntType(bool nullable);
@@ -253,7 +253,7 @@ class RealType : public NumberBaseType<float> {
 
   bool Equals(const SqlType &that) const override;
 
-  static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Real; }
+  static bool classof(const SqlType *type) { return type->GetId() == SqlTypeId::Real; }
 
  private:
   explicit RealType(bool nullable);
@@ -280,7 +280,7 @@ class DoubleType : public NumberBaseType<double> {
 
   bool Equals(const SqlType &that) const override;
 
-  static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Double; }
+  static bool classof(const SqlType *type) { return type->GetId() == SqlTypeId::Double; }
 
  private:
   explicit DoubleType(bool nullable);
@@ -319,7 +319,7 @@ class DecimalType : public SqlType {
 
   uint32_t scale() const;
 
-  static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Decimal; }
+  static bool classof(const SqlType *type) { return type->GetId() == SqlTypeId::Decimal; }
 
  private:
   DecimalType(bool nullable, uint32_t precision, uint32_t scale);
@@ -357,7 +357,7 @@ class DateType : public SqlType {
 
   bool IsArithmetic() const override { return false; }
 
-  static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Date; }
+  static bool classof(const SqlType *type) { return type->GetId() == SqlTypeId::Date; }
 
  private:
   explicit DateType(bool nullable);
@@ -390,7 +390,7 @@ class CharType : public SqlType {
 
   uint32_t length() const;
 
-  static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Char; }
+  static bool classof(const SqlType *type) { return type->GetId() == SqlTypeId::Char; }
 
  private:
   explicit CharType(bool nullable, uint32_t length);
@@ -431,7 +431,7 @@ class VarcharType : public SqlType {
 
   uint32_t max_length() const;
 
-  static bool classof(const SqlType *type) { return type->id() == SqlTypeId::Varchar; }
+  static bool classof(const SqlType *type) { return type->GetId() == SqlTypeId::Varchar; }
 
  private:
   explicit VarcharType(bool nullable, uint32_t max_len);

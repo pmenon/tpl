@@ -107,8 +107,8 @@ TEST_F(DataTypesTests, DateType) {
 
 TEST_F(DataTypesTests, DecimalType) {
   const auto &type1 = DecimalType::InstanceNullable(5, 2);
-  EXPECT_TRUE(type1.nullable());
-  EXPECT_EQ(SqlTypeId::Decimal, type1.id());
+  EXPECT_TRUE(type1.IsNullable());
+  EXPECT_EQ(SqlTypeId::Decimal, type1.GetId());
   EXPECT_EQ(5u, type1.precision());
   EXPECT_EQ(2u, type1.scale());
   EXPECT_TRUE(type1.IsArithmetic());
@@ -128,8 +128,8 @@ TEST_F(DataTypesTests, DecimalType) {
 
 TEST_F(DataTypesTests, CharType) {
   const auto &type1 = CharType::InstanceNullable(100);
-  EXPECT_TRUE(type1.nullable());
-  EXPECT_EQ(SqlTypeId::Char, type1.id());
+  EXPECT_TRUE(type1.IsNullable());
+  EXPECT_EQ(SqlTypeId::Char, type1.GetId());
   EXPECT_EQ(100u, type1.length());
   EXPECT_FALSE(type1.IsArithmetic());
 
@@ -150,8 +150,8 @@ TEST_F(DataTypesTests, CharType) {
 
 TEST_F(DataTypesTests, VarcharType) {
   const auto &type1 = VarcharType::InstanceNullable(100);
-  EXPECT_TRUE(type1.nullable());
-  EXPECT_EQ(SqlTypeId::Varchar, type1.id());
+  EXPECT_TRUE(type1.IsNullable());
+  EXPECT_EQ(SqlTypeId::Varchar, type1.GetId());
   EXPECT_EQ(100u, type1.max_length());
   EXPECT_FALSE(type1.IsArithmetic());
 

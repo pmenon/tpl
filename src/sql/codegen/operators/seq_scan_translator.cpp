@@ -230,7 +230,7 @@ ast::Expr *SeqScanTranslator::GetTableColumn(uint16_t col_oid) const {
   const auto table_oid = GetPlanAs<planner::SeqScanPlanNode>().GetTableOid();
   const auto schema = &Catalog::Instance()->LookupTableById(table_oid)->GetSchema();
   auto type = schema->GetColumnInfo(col_oid)->sql_type.GetPrimitiveTypeId();
-  auto nullable = schema->GetColumnInfo(col_oid)->sql_type.nullable();
+  auto nullable = schema->GetColumnInfo(col_oid)->sql_type.IsNullable();
   return GetCodeGen()->VPIGet(GetCodeGen()->MakeExpr(vpi_name_), type, nullable, col_oid);
 }
 
