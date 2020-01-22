@@ -1,7 +1,5 @@
 #include "sql/codegen/operators/hash_join_translator.h"
 
-#include "spdlog/fmt/fmt.h"
-
 #include "ast/type.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
@@ -112,7 +110,7 @@ ast::Expr *HashJoinTranslator::HashKeys(
 
 ast::Expr *HashJoinTranslator::GetBuildRowAttribute(ast::Expr *build_row, uint32_t attr_idx) const {
   auto codegen = GetCodeGen();
-  auto attr_name = codegen->MakeIdentifier(fmt::format("{}{}", kBuildRowAttrPrefix, attr_idx));
+  auto attr_name = codegen->MakeIdentifier(kBuildRowAttrPrefix + std::to_string(attr_idx));
   return codegen->AccessStructMember(build_row, attr_name);
 }
 
