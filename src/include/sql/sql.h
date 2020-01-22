@@ -119,6 +119,16 @@ std::size_t GetTypeIdAlignment(TypeId type);
 bool IsTypeFixedSize(TypeId type);
 
 /**
+ * @return True if the provided primitive type is an integral type.
+ */
+bool IsTypeIntegral(TypeId type);
+
+/**
+ * @return True if the provided primitive type is a floating point type.
+ */
+bool IsTypeFloatingPoint(TypeId type);
+
+/**
  * @return True if the primitive type ID @em type is a numeric type; false otherwise.
  */
 bool IsTypeNumeric(TypeId type);

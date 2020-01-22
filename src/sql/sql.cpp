@@ -121,6 +121,48 @@ bool IsTypeFixedSize(TypeId type) {
   }
 }
 
+bool IsTypeIntegral(TypeId type) {
+  switch (type) {
+    case TypeId::TinyInt:
+    case TypeId::SmallInt:
+    case TypeId::Integer:
+    case TypeId::BigInt:
+      return true;
+    case TypeId::Boolean:
+    case TypeId::Hash:
+    case TypeId::Pointer:
+    case TypeId::Float:
+    case TypeId::Double:
+    case TypeId::Date:
+    case TypeId::Varchar:
+    case TypeId::Varbinary:
+      return false;
+    default:
+      UNREACHABLE("Impossible type");
+  }
+}
+
+bool IsTypeFloatingPoint(TypeId type) {
+  switch (type) {
+    case TypeId::Float:
+    case TypeId::Double:
+      return true;
+    case TypeId::Boolean:
+    case TypeId::TinyInt:
+    case TypeId::SmallInt:
+    case TypeId::Integer:
+    case TypeId::BigInt:
+    case TypeId::Hash:
+    case TypeId::Pointer:
+    case TypeId::Date:
+    case TypeId::Varchar:
+    case TypeId::Varbinary:
+      return false;
+    default:
+      UNREACHABLE("Impossible type");
+  }
+}
+
 // static
 bool IsTypeNumeric(TypeId type) {
   switch (type) {
