@@ -48,10 +48,11 @@ fun pipeline_2(state: *State) -> nil {
     var hash_val = @hash(key)
 
     var iter: HashTableEntryIterator
-    for (@joinHTLookup(&state.table, &iter, hash_val);
-         @htEntryIterHasNext(&iter, checkKey, state, vec);) {
-      var unused = @htEntryIterGetRow(&iter)
-      state.num_matches = state.num_matches + 1
+    for (@joinHTLookup(&state.table, &iter, hash_val); @htEntryIterHasNext(&iter); ) {
+      var build_row = @ptrCast(*BuildRow, @htEntryIterGetRow(&iter))
+      if (build_row.key == @vpiGetInt(vec, 1)) {
+        state.num_matches = state.num_matches + 1
+      }
     }
 
     @vpiReset(vec)

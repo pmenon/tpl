@@ -67,10 +67,6 @@ fun pipeline1_worker(queryState: *State, state: *ThreadState_1, tvi: *TableVecto
     }
 }
 
-fun checkKey(ctx: *int8, vec: *VectorProjectionIterator, tuple: *BuildRow) -> bool {
-    return @vpiGetInt(vec, 1) == tuple.key
-}
-
 fun pipeline2_worker_initThreadState(execCtx: *ExecutionContext, state: *ThreadState_2) -> nil {
     state.num_matches = 0
 }
@@ -86,9 +82,11 @@ fun pipeline2_worker(queryState: *State, state: *ThreadState_2, tvi: *TableVecto
         var hash_val = @hash(key)
 
         var iter: HashTableEntryIterator
-        for (@joinHTLookup(&queryState.jht, &iter, hash_val); @htEntryIterHasNext(&iter, checkKey, queryState, vec);) {
-            var unused = @htEntryIterGetRow(&iter)
-            state.num_matches = state.num_matches + 1
+        for (@joinHTLookup(&queryState.jht, &iter, hash_val); @htEntryIterHasNext(&iter); ) {
+            var build_row = @ptrCast(*BuildRow, @htEntryIterGetRow(&iter))
+            if (@vpiGetInt(vec, 1) == build_row.key) {
+              state.num_matches = state.num_matches + 1
+            }
         }
 
         @vpiReset(vec)
