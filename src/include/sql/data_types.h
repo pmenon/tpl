@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <type_traits>
 
 #include "llvm/Support/Casting.h"
 
@@ -28,6 +29,10 @@ class SqlType {
   virtual TypeId GetPrimitiveTypeId() const = 0;
 
   virtual std::string GetName() const = 0;
+
+  virtual bool IsIntegral() const = 0;
+
+  virtual bool IsFloatingPoint() const = 0;
 
   virtual bool IsArithmetic() const = 0;
 
@@ -97,6 +102,10 @@ class BooleanType : public SqlType {
 
   std::string GetName() const override;
 
+  bool IsIntegral() const override;
+
+  bool IsFloatingPoint() const override;
+
   bool IsArithmetic() const override;
 
   bool Equals(const SqlType &that) const override;
@@ -117,6 +126,10 @@ template <typename CppType>
 class NumberBaseType : public SqlType {
  public:
   TypeId GetPrimitiveTypeId() const override { return GetTypeId<CppType>(); }
+
+  bool IsIntegral() const override { return std::is_integral_v<CppType>; }
+
+  bool IsFloatingPoint() const override { return std::is_floating_point_v<CppType>; }
 
   bool IsArithmetic() const override { return true; }
 
@@ -313,6 +326,10 @@ class DecimalType : public SqlType {
 
   bool Equals(const SqlType &that) const override;
 
+  bool IsIntegral() const override;
+
+  bool IsFloatingPoint() const override;
+
   bool IsArithmetic() const override;
 
   uint32_t precision() const;
@@ -355,6 +372,10 @@ class DateType : public SqlType {
 
   bool Equals(const SqlType &that) const override;
 
+  bool IsIntegral() const override { return false; }
+
+  bool IsFloatingPoint() const override { return false; }
+
   bool IsArithmetic() const override { return false; }
 
   static bool classof(const SqlType *type) { return type->GetId() == SqlTypeId::Date; }
@@ -385,6 +406,10 @@ class CharType : public SqlType {
   std::string GetName() const override;
 
   bool Equals(const SqlType &that) const override;
+
+  bool IsIntegral() const override { return false; }
+
+  bool IsFloatingPoint() const override { return false; }
 
   bool IsArithmetic() const override { return false; }
 
@@ -426,6 +451,10 @@ class VarcharType : public SqlType {
   std::string GetName() const override;
 
   bool Equals(const SqlType &that) const override;
+
+  bool IsIntegral() const override { return false; }
+
+  bool IsFloatingPoint() const override { return false; }
 
   bool IsArithmetic() const override { return false; }
 

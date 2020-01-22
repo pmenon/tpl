@@ -24,6 +24,10 @@ std::string BooleanType::GetName() const {
   return str;
 }
 
+bool BooleanType::IsIntegral() const { return false; }
+
+bool BooleanType::IsFloatingPoint() const { return false; }
+
 bool BooleanType::IsArithmetic() const { return false; }
 
 bool BooleanType::Equals(const SqlType &that) const {
@@ -229,10 +233,14 @@ std::string DecimalType::GetName() const {
 bool DecimalType::Equals(const SqlType &that) const {
   if (auto *other_decimal = that.SafeAs<DecimalType>()) {
     return precision() == other_decimal->precision() && scale() == other_decimal->scale() &&
-        IsNullable() == that.IsNullable();
+           IsNullable() == that.IsNullable();
   }
   return false;
 }
+
+bool DecimalType::IsIntegral() const { return false; }
+
+bool DecimalType::IsFloatingPoint() const { return true; }
 
 bool DecimalType::IsArithmetic() const { return true; }
 
@@ -374,7 +382,8 @@ std::string VarcharType::GetName() const {
 
 bool VarcharType::Equals(const SqlType &that) const {
   if (auto *other_varchar = that.SafeAs<VarcharType>()) {
-    return max_length() == other_varchar->max_length() && IsNullable() == other_varchar->IsNullable();
+    return max_length() == other_varchar->max_length() &&
+           IsNullable() == other_varchar->IsNullable();
   }
   return false;
 }
