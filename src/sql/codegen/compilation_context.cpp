@@ -19,6 +19,7 @@
 #include "sql/codegen/operators/hash_join_translator.h"
 #include "sql/codegen/operators/nested_loop_join_translator.h"
 #include "sql/codegen/operators/operator_translator.h"
+#include "sql/codegen/operators/projection_translator.h"
 #include "sql/codegen/operators/seq_scan_translator.h"
 #include "sql/codegen/operators/sort_translator.h"
 #include "sql/codegen/pipeline.h"
@@ -36,6 +37,7 @@
 #include "sql/planner/plannodes/hash_join_plan_node.h"
 #include "sql/planner/plannodes/nested_loop_join_plan_node.h"
 #include "sql/planner/plannodes/order_by_plan_node.h"
+#include "sql/planner/plannodes/projection_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
 #include "sql/planner/plannodes/set_op_plan_node.h"
 
@@ -166,6 +168,11 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
     case planner::PlanNodeType::ORDERBY: {
       const auto &sort = static_cast<const planner::OrderByPlanNode &>(plan);
       translator = std::make_unique<SortTranslator>(sort, this, pipeline);
+      break;
+    }
+    case planner::PlanNodeType::PROJECTION: {
+      const auto &projection = static_cast<const planner::ProjectionPlanNode &>(plan);
+      translator = std::make_unique<ProjectionTranslator>(projection, this, pipeline);
       break;
     }
     case planner::PlanNodeType::SEQSCAN: {

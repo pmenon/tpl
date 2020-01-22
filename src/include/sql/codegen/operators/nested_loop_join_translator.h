@@ -90,7 +90,9 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
   ast::Expr *GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
-  ast::Expr *GetTableColumn(uint16_t col_oid) const override { UNREACHABLE("ds"); }
+  ast::Expr *GetTableColumn(uint16_t col_oid) const override {
+    UNREACHABLE("Nested-loop joins do not produce columns from base tables.");
+  }
 };
 
 }  // namespace tpl::sql::codegen

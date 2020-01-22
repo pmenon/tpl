@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "planner/plannodes/abstract_plan_node.h"
+#include "sql/planner/plannodes/abstract_plan_node.h"
 
 namespace tpl::sql::planner {
 
@@ -48,11 +48,6 @@ class ProjectionPlanNode : public AbstractPlanNode {
    * @return The type of this plan node.
    */
   PlanNodeType GetPlanNodeType() const override { return PlanNodeType::PROJECTION; }
-
-  /**
-   * @return True if this node is equivalent to the provided input node.
-   */
-  bool operator==(const AbstractPlanNode &rhs) const override;
 };
 
 }  // namespace tpl::sql::planner
