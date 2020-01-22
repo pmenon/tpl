@@ -636,7 +636,7 @@ void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
 }
 
 void Sema::CheckBuiltinHashTableEntryIterCall(ast::CallExpr *call, ast::Builtin builtin) {
-  if (!CheckArgCountAtLeast(call, 1)) {
+  if (!CheckArgCount(call, 1)) {
     return;
   }
 
