@@ -83,6 +83,10 @@ class Context;
   NON_PRIM(RealMaxAggregate, tpl::sql::RealMaxAggregate)                         \
   NON_PRIM(RealMinAggregate, tpl::sql::RealMinAggregate)                         \
   NON_PRIM(RealSumAggregate, tpl::sql::RealSumAggregate)                         \
+  NON_PRIM(DateMinAggregate, tpl::sql::DateMinAggregate)                         \
+  NON_PRIM(DateMaxAggregate, tpl::sql::DateMaxAggregate)                         \
+  NON_PRIM(StringMinAggregate, tpl::sql::StringMinAggregate)                     \
+  NON_PRIM(StringMaxAggregate, tpl::sql::StringMaxAggregate)                     \
                                                                                  \
   /* Non-primitive SQL Runtime Values */                                         \
   SQL(Boolean, tpl::sql::BoolVal)                                                \
