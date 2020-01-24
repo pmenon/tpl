@@ -448,9 +448,9 @@ void HashAggregationTranslator::ScanAggregationHashTable(ConsumerContext *consum
       codegen->MakeStmt(codegen->AggHashTableIteratorNext(codegen->MakeExpr(aht_iter))));
   {
     // var aggRow = @ahtIterGetRow()
-    auto get_row =
-        codegen->AggHashTableIteratorGetRow(codegen->MakeExpr(aht_iter), agg_payload_->Name());
-    function->Append(codegen->DeclareVarWithInit(agg_row_var_name_, get_row));
+    function->Append(codegen->DeclareVarWithInit(
+        agg_row_var_name_,
+        codegen->AggHashTableIteratorGetRow(codegen->MakeExpr(aht_iter), agg_payload_->Name())));
 
     // Check having clause.
     if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {

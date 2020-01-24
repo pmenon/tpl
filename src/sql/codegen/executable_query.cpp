@@ -31,10 +31,6 @@ void ExecutableQuery::Setup(std::vector<std::unique_ptr<CodeContainer>> &&fragme
   query_state_size_ = query_state_size;
 
   LOG_INFO("Query has {} fragments with {}-byte query state", fragments_.size(), query_state_size_);
-
-  for (auto &fragment : fragments_) {
-    fragment->PrettyPrint();
-  }
 }
 
 void ExecutableQuery::Run(ExecutionContext *exec_ctx) {
