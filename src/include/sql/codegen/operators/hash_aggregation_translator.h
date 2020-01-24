@@ -1,9 +1,9 @@
 #pragma once
 
-#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/query_state.h"
+#include "sql/codegen/work_context.h"
 
 namespace tpl::sql::planner {
 class AggregatePlanNode;
@@ -76,9 +76,9 @@ class HashAggregationTranslator : public OperatorTranslator {
    * If the context pipeline is for the build-side, we'll aggregate the input into the aggregation
    * hash table. Otherwise, we'll perform a scan over the resulting aggregates in the aggregation
    * hash table.
-   * @param consumer_context The context.
+   * @param work_context The context.
    */
-  void DoPipelineWork(ConsumerContext *consumer_context) const override;
+  void PerformPipelineWork(WorkContext *work_context) const override;
 
   /**
    * If the provided context is for the build pipeline and we're performing a parallel aggregation,
@@ -105,7 +105,7 @@ class HashAggregationTranslator : public OperatorTranslator {
   /**
    * @return The output of the child of this aggregation in the given context.
    */
-  ast::Expr *GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
+  ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
   /**
@@ -152,7 +152,7 @@ class HashAggregationTranslator : public OperatorTranslator {
   //   2b. Performing lookup.
   // 3. Initializing new aggregates.
   // 4. Advancing existing aggregates.
-  ast::VariableDecl *FillInputValues(FunctionBuilder *function, ConsumerContext *ctx) const;
+  ast::VariableDecl *FillInputValues(FunctionBuilder *function, WorkContext *ctx) const;
   ast::VariableDecl *HashInputKeys(FunctionBuilder *function, ast::Identifier agg_values) const;
   ast::VariableDecl *PerformLookup(FunctionBuilder *function, ast::Expr *agg_ht,
                                    ast::Identifier hash_val, ast::Identifier agg_values) const;
@@ -163,10 +163,10 @@ class HashAggregationTranslator : public OperatorTranslator {
                         ast::Identifier agg_values) const;
 
   // Merge the input row into the aggregation hash table.
-  void UpdateAggregates(ConsumerContext *consumer_context, ast::Expr *agg_ht) const;
+  void UpdateAggregates(WorkContext *work_context, ast::Expr *agg_ht) const;
 
   // Scan the final aggregation hash table.
-  void ScanAggregationHashTable(ConsumerContext *consumer_context, ast::Expr *agg_ht) const;
+  void ScanAggregationHashTable(WorkContext *work_context, ast::Expr *agg_ht) const;
 
  private:
   // The name of the variable used to:

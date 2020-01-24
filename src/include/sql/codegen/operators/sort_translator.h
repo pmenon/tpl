@@ -80,9 +80,9 @@ class SortTranslator : public OperatorTranslator {
   /**
    * Implement either the build-side or scan-side of the sort depending on the pipeline this context
    * contains.
-   * @param ctx The consumer context.
+   * @param ctx The context of the work.
    */
-  void DoPipelineWork(ConsumerContext *ctx) const override;
+  void PerformPipelineWork(WorkContext *ctx) const override;
 
   /**
    * If the given pipeline is for the build-side, we'll need to issue a sort. If the pipeline is
@@ -107,7 +107,7 @@ class SortTranslator : public OperatorTranslator {
   /**
    * @return
    */
-  ast::Expr *GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
+  ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
   /**
@@ -138,13 +138,13 @@ class SortTranslator : public OperatorTranslator {
   ast::Expr *GetSortRowAttribute(ast::Expr *sort_row, uint32_t attr_idx) const;
 
   // Called to scan the global sorter instance.
-  void ScanSorter(ConsumerContext *ctx) const;
+  void ScanSorter(WorkContext *ctx) const;
 
   // Insert tuple data into the provided sort row.
-  void FillSortRow(ConsumerContext *ctx, ast::Expr *sort_row) const;
+  void FillSortRow(WorkContext *ctx, ast::Expr *sort_row) const;
 
   // Called to insert the tuple in the context into the sorter instance.
-  void InsertIntoSorter(ConsumerContext *ctx) const;
+  void InsertIntoSorter(WorkContext *ctx) const;
 
   // Generate comparison function.
   void GenerateComparisonFunction(FunctionBuilder *builder);

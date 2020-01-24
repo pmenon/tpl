@@ -69,9 +69,9 @@ class SeqScanTranslator : public OperatorTranslator {
 
   /**
    * Generate the scan.
-   * @param consumer_context The consumer context.
+   * @param work_context The context of the work.
    */
-  void DoPipelineWork(ConsumerContext *consumer_context) const override;
+  void PerformPipelineWork(WorkContext *work_context) const override;
 
   /**
    * Sequential scans don't rely on any post-pipeline logic.
@@ -94,11 +94,18 @@ class SeqScanTranslator : public OperatorTranslator {
    */
   void LaunchWork(ast::Identifier work_func_name) const override;
 
-  ast::Expr *GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
+  /**
+   * Sequential table scans do not have children.
+   */
+  ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                             uint32_t attr_idx) const override {
-    UNREACHABLE("sdf");
+    UNREACHABLE("Sequential scans are leaves in a plan tree.");
   }
 
+  /**
+   * @return The value (or value vector) of the column with the provided column OID in the table
+   *         this sequential scan is operating over.
+   */
   ast::Expr *GetTableColumn(uint16_t col_oid) const override;
 
  private:
@@ -118,10 +125,10 @@ class SeqScanTranslator : public OperatorTranslator {
                                      bool seen_conjunction);
 
   // Perform a table scan using the provided table vector iterator pointer.
-  void ScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool close_iter) const;
+  void ScanTable(WorkContext *ctx, ast::Expr *tvi, bool close_iter) const;
 
   // Generate a scan over the VPI.
-  void ScanVPI(ConsumerContext *ctx, ast::Expr *vpi) const;
+  void ScanVPI(WorkContext *ctx, ast::Expr *vpi) const;
 
  private:
   // The name of the declared VPI.

@@ -2,7 +2,7 @@
 
 #include "common/exception.h"
 #include "sql/codegen/compilation_context.h"
-#include "sql/codegen/consumer_context.h"
+#include "sql/codegen/work_context.h"
 
 namespace tpl::sql::codegen {
 

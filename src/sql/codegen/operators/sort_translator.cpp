@@ -3,11 +3,11 @@
 #include <utility>
 
 #include "sql/codegen/compilation_context.h"
-#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
 #include "sql/codegen/loop.h"
 #include "sql/codegen/top_level_declarations.h"
+#include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/order_by_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -49,7 +49,7 @@ void SortTranslator::DefineHelperStructs(TopLevelDeclarations *top_level_decls) 
 
 void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder) {
   auto codegen = GetCodeGen();
-  auto context = ConsumerContext(GetCompilationContext(), *GetBuildPipeline());
+  auto context = WorkContext(GetCompilationContext(), *GetBuildPipeline());
 
   int32_t ret_value;
   for (const auto &[expr, sort_order] : GetPlanAs<planner::OrderByPlanNode>().GetSortKeys()) {
@@ -133,7 +133,7 @@ ast::Expr *SortTranslator::GetSortRowAttribute(ast::Expr *sort_row, uint32_t att
   return codegen->AccessStructMember(sort_row, attr_name);
 }
 
-void SortTranslator::FillSortRow(ConsumerContext *ctx, ast::Expr *sort_row) const {
+void SortTranslator::FillSortRow(WorkContext *ctx, ast::Expr *sort_row) const {
   auto codegen = GetCodeGen();
   const auto child_schema = GetPlan().GetChild(0)->GetOutputSchema();
   for (uint32_t attr_idx = 0; attr_idx < child_schema->GetColumns().size(); attr_idx++) {
@@ -143,7 +143,7 @@ void SortTranslator::FillSortRow(ConsumerContext *ctx, ast::Expr *sort_row) cons
   }
 }
 
-void SortTranslator::InsertIntoSorter(ConsumerContext *ctx) const {
+void SortTranslator::InsertIntoSorter(WorkContext *ctx) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
 
@@ -175,7 +175,7 @@ void SortTranslator::InsertIntoSorter(ConsumerContext *ctx) const {
   }
 }
 
-void SortTranslator::ScanSorter(ConsumerContext *ctx) const {
+void SortTranslator::ScanSorter(WorkContext *ctx) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
 
@@ -207,7 +207,7 @@ void SortTranslator::ScanSorter(ConsumerContext *ctx) const {
   func->Append(codegen->SorterIterClose(iter));
 }
 
-void SortTranslator::DoPipelineWork(ConsumerContext *ctx) const {
+void SortTranslator::PerformPipelineWork(WorkContext *ctx) const {
   if (IsScanPipeline(ctx->GetPipeline())) {
     ScanSorter(ctx);
   } else {
@@ -237,12 +237,12 @@ void SortTranslator::FinishPipelineWork(const PipelineContext &pipeline_context)
   }
 }
 
-ast::Expr *SortTranslator::GetChildOutput(ConsumerContext *consumer_context,
-                                          UNUSED uint32_t child_idx, uint32_t attr_idx) const {
-  if (IsScanPipeline(consumer_context->GetPipeline())) {
+ast::Expr *SortTranslator::GetChildOutput(WorkContext *work_context, UNUSED uint32_t child_idx,
+                                          uint32_t attr_idx) const {
+  if (IsScanPipeline(work_context->GetPipeline())) {
     return GetSortRowAttribute(GetCodeGen()->MakeExpr(sort_row_var_name_), attr_idx);
   } else {
-    TPL_ASSERT(IsBuildPipeline(consumer_context->GetPipeline()), "Pipeline not known to sorter");
+    TPL_ASSERT(IsBuildPipeline(work_context->GetPipeline()), "Pipeline not known to sorter");
     switch (current_row_) {
       case CurrentRow::Lhs: {
         auto func = GetCodeGen()->CurrentFunction();
@@ -254,7 +254,7 @@ ast::Expr *SortTranslator::GetChildOutput(ConsumerContext *consumer_context,
       }
       case CurrentRow::Child: {
         auto child_translator = GetCompilationContext()->LookupTranslator(*GetPlan().GetChild(0));
-        return child_translator->GetOutput(consumer_context, attr_idx);
+        return child_translator->GetOutput(work_context, attr_idx);
       }
     }
   }

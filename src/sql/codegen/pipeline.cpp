@@ -10,9 +10,9 @@
 #include "sql/codegen/code_container.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
-#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/operators/operator_translator.h"
+#include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/abstract_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -271,8 +271,8 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction(PipelineContext *pipel
     // Set the state in this scope.
     PipelineContext::StateScope state_scope(pipeline_context,
                                             codegen->MakeExpr(pipeline_state_var_));
-    ConsumerContext consumer_context(compilation_context_, pipeline_context);
-    Source()->DoPipelineWork(&consumer_context);
+    WorkContext work_context(compilation_context_, pipeline_context);
+    Source()->PerformPipelineWork(&work_context);
   }
   return work.Finish();
 }

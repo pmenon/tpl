@@ -50,9 +50,9 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
 
   /**
    * Generate the join condition from the two child inputs.
-   * @param consumer_context The consumer context.
+   * @param work_context The context of the work.
    */
-  void DoPipelineWork(ConsumerContext *consumer_context) const override;
+  void PerformPipelineWork(WorkContext *work_context) const override;
 
   /**
    * NLJ plans do not perform any post-pipeline work. Thus, this method is a no-op.
@@ -79,7 +79,7 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
   /**
    * @return The value of the ou
    */
-  ast::Expr *GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
+  ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
   ast::Expr *GetTableColumn(uint16_t col_oid) const override {

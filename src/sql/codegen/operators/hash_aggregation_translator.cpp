@@ -310,7 +310,7 @@ ast::Expr *HashAggregationTranslator::GetAggregateTermPtr(ast::Identifier agg_ro
 }
 
 ast::VariableDecl *HashAggregationTranslator::FillInputValues(FunctionBuilder *function,
-                                                              ConsumerContext *ctx) const {
+                                                              WorkContext *ctx) const {
   auto codegen = GetCodeGen();
 
   // var aggValues : AggValues
@@ -407,12 +407,12 @@ void HashAggregationTranslator::AdvanceAggregate(FunctionBuilder *function,
   }
 }
 
-void HashAggregationTranslator::UpdateAggregates(ConsumerContext *consumer_context,
+void HashAggregationTranslator::UpdateAggregates(WorkContext *work_context,
                                                  ast::Expr *agg_ht) const {
   auto codegen = GetCodeGen();
   auto function = codegen->CurrentFunction();
 
-  auto agg_values = FillInputValues(function, consumer_context);
+  auto agg_values = FillInputValues(function, work_context);
   auto hash_val = HashInputKeys(function, agg_values->Name());
   auto agg_payload = PerformLookup(function, agg_ht, hash_val->Name(), agg_values->Name());
   If check_new_agg(codegen, codegen->IsNilPointer(codegen->MakeExpr(agg_payload->Name())));
@@ -426,7 +426,7 @@ void HashAggregationTranslator::UpdateAggregates(ConsumerContext *consumer_conte
   AdvanceAggregate(function, agg_payload->Name(), agg_values->Name());
 }
 
-void HashAggregationTranslator::ScanAggregationHashTable(ConsumerContext *consumer_context,
+void HashAggregationTranslator::ScanAggregationHashTable(WorkContext *work_context,
                                                          ast::Expr *agg_ht) const {
   auto codegen = GetCodeGen();
   auto function = codegen->CurrentFunction();
@@ -454,10 +454,10 @@ void HashAggregationTranslator::ScanAggregationHashTable(ConsumerContext *consum
 
     // Check having clause.
     if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
-      If check_having(codegen, consumer_context->DeriveValue(*having, this));
-      consumer_context->Push();
+      If check_having(codegen, work_context->DeriveValue(*having, this));
+      work_context->Push();
     } else {
-      consumer_context->Push();
+      work_context->Push();
     }
   }
   loop.EndLoop();
@@ -466,18 +466,18 @@ void HashAggregationTranslator::ScanAggregationHashTable(ConsumerContext *consum
   function->Append(codegen->AggHashTableIteratorClose(codegen->MakeExpr(aht_iter)));
 }
 
-void HashAggregationTranslator::DoPipelineWork(ConsumerContext *consumer_context) const {
+void HashAggregationTranslator::PerformPipelineWork(WorkContext *work_context) const {
   auto codegen = GetCodeGen();
-  if (IsBuildPipeline(consumer_context->GetPipeline())) {
+  if (IsBuildPipeline(work_context->GetPipeline())) {
     if (build_pipeline_.IsParallel()) {
-      const auto pipeline_context = consumer_context->GetPipelineContext();
+      const auto pipeline_context = work_context->GetPipelineContext();
       auto agg_ht = pipeline_context->GetThreadStateEntryPtr(codegen, tl_agg_ht_slot_);
-      UpdateAggregates(consumer_context, agg_ht);
+      UpdateAggregates(work_context, agg_ht);
     } else {
-      UpdateAggregates(consumer_context, GetQueryStateEntryPtr(agg_ht_slot_));
+      UpdateAggregates(work_context, GetQueryStateEntryPtr(agg_ht_slot_));
     }
   } else {
-    TPL_ASSERT(IsProducePipeline(consumer_context->GetPipeline()),
+    TPL_ASSERT(IsProducePipeline(work_context->GetPipeline()),
                "Pipeline is unknown to hash aggregation translator");
     if (GetPipeline()->IsParallel()) {
       // In parallel-mode, we would've issued a parallel partitioned scan. In
@@ -486,9 +486,9 @@ void HashAggregationTranslator::DoPipelineWork(ConsumerContext *consumer_context
       // function which we're generating right now. Pull it out.
       auto agg_ht_param_position = GetCompilationContext()->QueryParams().size();
       auto agg_ht = codegen->CurrentFunction()->GetParameterByPosition(agg_ht_param_position);
-      ScanAggregationHashTable(consumer_context, agg_ht);
+      ScanAggregationHashTable(work_context, agg_ht);
     } else {
-      ScanAggregationHashTable(consumer_context, GetQueryStateEntryPtr(agg_ht_slot_));
+      ScanAggregationHashTable(work_context, GetQueryStateEntryPtr(agg_ht_slot_));
     }
   }
 }
@@ -505,11 +505,11 @@ void HashAggregationTranslator::FinishPipelineWork(const PipelineContext &pipeli
   }
 }
 
-ast::Expr *HashAggregationTranslator::GetChildOutput(ConsumerContext *consumer_context,
+ast::Expr *HashAggregationTranslator::GetChildOutput(WorkContext *work_context,
                                                      UNUSED uint32_t child_idx,
                                                      uint32_t attr_idx) const {
   TPL_ASSERT(child_idx == 0, "Aggregations can only have a single child.");
-  if (IsProducePipeline(consumer_context->GetPipeline())) {
+  if (IsProducePipeline(work_context->GetPipeline())) {
     if (attr_idx < GetAggPlan().GetGroupByTerms().size()) {
       return GetGroupByTerm(agg_row_var_name_, attr_idx);
     }
@@ -518,7 +518,7 @@ ast::Expr *HashAggregationTranslator::GetChildOutput(ConsumerContext *consumer_c
 
   // The request is in the build pipeline. Forward to child translator.
   const auto child_translator = GetCompilationContext()->LookupTranslator(*GetPlan().GetChild(0));
-  return child_translator->GetOutput(consumer_context, attr_idx);
+  return child_translator->GetOutput(work_context, attr_idx);
 }
 
 util::RegionVector<ast::FieldDecl *> HashAggregationTranslator::GetWorkerParams() const {

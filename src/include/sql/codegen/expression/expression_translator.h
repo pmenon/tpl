@@ -15,7 +15,7 @@ namespace tpl::sql::codegen {
 
 class CodeGen;
 class CompilationContext;
-class ConsumerContext;
+class WorkContext;
 class Pipeline;
 
 /**
@@ -43,11 +43,11 @@ class ExpressionTranslator {
 
   /**
    * Derive the TPL value of the expression.
-   * @param ctx The consumer context.
+   * @param ctx The context the derivation of expression is occurring in.
+   * @param provider A provider for specific column values.
    * @return The TPL value of the expression.
    */
-  virtual ast::Expr *DeriveValue(ConsumerContext *ctx,
-                                 const ColumnValueProvider *provider) const = 0;
+  virtual ast::Expr *DeriveValue(WorkContext *ctx, const ColumnValueProvider *provider) const = 0;
 
   /**
    * @return The expression being translated.

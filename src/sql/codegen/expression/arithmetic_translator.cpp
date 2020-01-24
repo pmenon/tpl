@@ -3,7 +3,7 @@
 #include "common/exception.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
-#include "sql/codegen/consumer_context.h"
+#include "sql/codegen/work_context.h"
 
 namespace tpl::sql::codegen {
 
@@ -15,7 +15,7 @@ ArithmeticTranslator::ArithmeticTranslator(const planner::OperatorExpression &ex
   compilation_context->Prepare(*expr.GetChild(1));
 }
 
-ast::Expr *ArithmeticTranslator::DeriveValue(ConsumerContext *ctx,
+ast::Expr *ArithmeticTranslator::DeriveValue(WorkContext *ctx,
                                              const ColumnValueProvider *provider) const {
   auto codegen = GetCodeGen();
   auto left_val = ctx->DeriveValue(*GetExpression().GetChild(0), provider);

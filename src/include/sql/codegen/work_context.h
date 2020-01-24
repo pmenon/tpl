@@ -21,24 +21,26 @@ class Pipeline;
 class PipelineContext;
 
 /**
- * A consumer context is a wrapper class containing the code generation context and a pipelin
+ * A work context carries information necessary for a pipeline along all operators within that
+ * pipeline. It provides access to thread-local state and a mechanism to evaluation expressions in
+ * the pipeline.
  */
-class ConsumerContext {
+class WorkContext {
  public:
   /**
-   * Create a new consumer context whose data flows along the provided pipeline.
+   * Create a new context whose data flows along the provided pipeline.
    * @param compilation_context The compilation context.
    * @param pipeline The pipeline.
    */
-  ConsumerContext(CompilationContext *compilation_context, const Pipeline &pipeline);
+  WorkContext(CompilationContext *compilation_context, const Pipeline &pipeline);
 
   /**
-   * Create a consumer context wrapping the provided compilation context (containing all operator
-   * and expression translators) and the pipeline the consumption occurs along.
+   * Create a context wrapping the provided compilation context (containing all operator and
+   * expression translators) and the pipeline the consumption occurs along.
    * @param compilation_context The compilation context.
    * @param pipeline_context The pipeline context the consumption occurs along.
    */
-  ConsumerContext(CompilationContext *compilation_context, const PipelineContext *pipeline_context);
+  WorkContext(CompilationContext *compilation_context, const PipelineContext *pipeline_context);
 
   /**
    * Derive the value of the given expression.

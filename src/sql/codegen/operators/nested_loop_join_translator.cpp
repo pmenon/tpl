@@ -1,9 +1,9 @@
 #include "sql/codegen/operators/nested_loop_join_translator.h"
 
 #include "sql/codegen/compilation_context.h"
-#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/if.h"
 #include "sql/codegen/pipeline.h"
+#include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/nested_loop_join_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -26,26 +26,26 @@ NestedLoopJoinTranslator::NestedLoopJoinTranslator(const planner::NestedLoopJoin
   }
 }
 
-void NestedLoopJoinTranslator::DoPipelineWork(ConsumerContext *consumer_context) const {
+void NestedLoopJoinTranslator::PerformPipelineWork(WorkContext *work_context) const {
   const auto *predicate = GetPlanAs<planner::NestedLoopJoinPlanNode>().GetJoinPredicate();
   if (predicate != nullptr) {
-    If cond(GetCodeGen(), consumer_context->DeriveValue(*predicate, this));
+    If cond(GetCodeGen(), work_context->DeriveValue(*predicate, this));
     {
       // Valid tuple. Push to next operator in pipeline.
-      consumer_context->Push();
+      work_context->Push();
     }
     cond.EndIf();
   } else {
     // No join predicate. Push to next operator in pipeline.
-    consumer_context->Push();
+    work_context->Push();
   }
 }
 
-ast::Expr *NestedLoopJoinTranslator::GetChildOutput(ConsumerContext *consumer_context,
-                                                    uint32_t child_idx, uint32_t attr_idx) const {
+ast::Expr *NestedLoopJoinTranslator::GetChildOutput(WorkContext *work_context, uint32_t child_idx,
+                                                    uint32_t attr_idx) const {
   const auto child_translator =
       GetCompilationContext()->LookupTranslator(*GetPlan().GetChild(child_idx));
-  return child_translator->GetOutput(consumer_context, attr_idx);
+  return child_translator->GetOutput(work_context, attr_idx);
 }
 
 }  // namespace tpl::sql::codegen

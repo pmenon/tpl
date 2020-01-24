@@ -4,11 +4,11 @@
 #include "sql/catalog.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
-#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/loop.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/top_level_declarations.h"
+#include "sql/codegen/work_context.h"
 #include "sql/planner/expressions/column_value_expression.h"
 #include "sql/planner/expressions/expression_util.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
@@ -56,7 +56,7 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *func,
                 codegen->VPIHasNext(vpi, true),                               // @vpiHasNext()
                 codegen->MakeStmt(codegen->VPIAdvance(vpi, true)));           // @vpiAdvance()
   {
-    ConsumerContext context(GetCompilationContext(), *GetPipeline());
+    WorkContext context(GetCompilationContext(), *GetPipeline());
     auto cond_translator = GetCompilationContext()->LookupTranslator(*term);
     auto match = cond_translator->DeriveValue(&context, this);
     func->Append(codegen->VPIMatch(vpi, match));
@@ -129,7 +129,7 @@ void SeqScanTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_de
   }
 }
 
-void SeqScanTranslator::ScanVPI(ConsumerContext *ctx, ast::Expr *vpi) const {
+void SeqScanTranslator::ScanVPI(WorkContext *ctx, ast::Expr *vpi) const {
   auto codegen = GetCodeGen();
   Loop vpi_loop(codegen, nullptr, codegen->VPIHasNext(vpi, false),
                 codegen->MakeStmt(codegen->VPIAdvance(vpi, false)));
@@ -140,7 +140,7 @@ void SeqScanTranslator::ScanVPI(ConsumerContext *ctx, ast::Expr *vpi) const {
   vpi_loop.EndLoop();
 }
 
-void SeqScanTranslator::ScanTable(ConsumerContext *ctx, ast::Expr *tvi, bool close_iter) const {
+void SeqScanTranslator::ScanTable(WorkContext *ctx, ast::Expr *tvi, bool close_iter) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
 
@@ -197,18 +197,18 @@ void SeqScanTranslator::TearDownPipelineState(const PipelineContext &pipeline_co
   }
 }
 
-void SeqScanTranslator::DoPipelineWork(ConsumerContext *ctx) const {
+void SeqScanTranslator::PerformPipelineWork(WorkContext *work_context) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
 
-  if (ctx->GetPipeline().IsParallel()) {
-    ScanTable(ctx, func->GetParameterByPosition(2), false);
+  if (work_context->GetPipeline().IsParallel()) {
+    ScanTable(work_context, func->GetParameterByPosition(2), false);
   } else {
     auto tvi_name = codegen->MakeFreshIdentifier("tvi");
     auto tvi = codegen->AddressOf(codegen->MakeExpr(tvi_name));
     func->Append(codegen->DeclareVarNoInit(tvi_name, ast::BuiltinType::TableVectorIterator));
     func->Append(codegen->TableIterInit(tvi, GetTableName()));
-    ScanTable(ctx, tvi, true);
+    ScanTable(work_context, tvi, true);
   }
 }
 

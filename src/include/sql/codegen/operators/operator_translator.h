@@ -18,7 +18,7 @@ namespace tpl::sql::codegen {
 
 class CodeGen;
 class CompilationContext;
-class ConsumerContext;
+class WorkContext;
 class Pipeline;
 class PipelineContext;
 class TopLevelDeclarations;
@@ -142,12 +142,23 @@ class OperatorTranslator : public ColumnValueProvider {
   virtual void BeginPipelineWork(const PipelineContext &pipeline_context) const = 0;
 
   /**
-   * Perform the main pipeline work. This is where the operator's logic should be implemented based
-   * on the input tuples (batch) in the consumer context. The consumer context is a grab-bag of
-   * many things: an expression result cache, the pipeline, and the pipeline context.
-   * @param consumer_context The consumer context.
+   * Perform the primary logic of a pipeline. This is where the operator's logic should be
+   * implemented. The provided context object contains information necessary to help operators
+   * decide what work to perform. Specifically,
+   *  1. The pipeline the work is for:
+   *     Some operators may be connected to multiple pipelines. For example, hash joins rely on two
+   *     pipelines. The provided work context indicates specifically which pipeline the work is for
+   *     so that operators generate the correct code.
+   *  2. Access to thread-local state:
+   *     Operators may rely on pipeline-local state. The provided context allows operators to access
+   *     such state using slot references they've received when declaring pipeline state in
+   *     DeclarePipelineState().
+   *  3. An expression evaluation mechanism:
+   *     The provided work context can be used to evaluate an expression. Expression evaluation is
+   *     context sensitive. The context also provides a mechanism to cache expression results.
+   * @param work_context The context of the work.
    */
-  virtual void DoPipelineWork(ConsumerContext *consumer_context) const = 0;
+  virtual void PerformPipelineWork(WorkContext *work_context) const = 0;
 
   /**
    * Perform any work required <b>after</b> the main pipeline work. This is executed by one thread.
@@ -179,7 +190,7 @@ class OperatorTranslator : public ColumnValueProvider {
   /**
    * @return The value (vector) of the attribute at the given index in this operator's output.
    */
-  ast::Expr *GetOutput(ConsumerContext *consumer_context, uint32_t attr_idx) const;
+  ast::Expr *GetOutput(WorkContext *work_context, uint32_t attr_idx) const;
 
   /**
    * @return The plan the translator is generating.

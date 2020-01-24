@@ -2,11 +2,11 @@
 
 #include "ast/type.h"
 #include "sql/codegen/compilation_context.h"
-#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
 #include "sql/codegen/loop.h"
 #include "sql/codegen/top_level_declarations.h"
+#include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/hash_join_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -92,7 +92,7 @@ void HashJoinTranslator::TearDownPipelineState(const PipelineContext &pipeline_c
 }
 
 ast::Expr *HashJoinTranslator::HashKeys(
-    ConsumerContext *ctx, const std::vector<const planner::AbstractExpression *> &hash_keys) const {
+    WorkContext *ctx, const std::vector<const planner::AbstractExpression *> &hash_keys) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
 
@@ -114,7 +114,7 @@ ast::Expr *HashJoinTranslator::GetBuildRowAttribute(ast::Expr *build_row, uint32
   return codegen->AccessStructMember(build_row, attr_name);
 }
 
-void HashJoinTranslator::FillBuildRow(ConsumerContext *ctx, ast::Expr *build_row) const {
+void HashJoinTranslator::FillBuildRow(WorkContext *ctx, ast::Expr *build_row) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
 
@@ -126,7 +126,7 @@ void HashJoinTranslator::FillBuildRow(ConsumerContext *ctx, ast::Expr *build_row
   }
 }
 
-void HashJoinTranslator::InsertIntoJoinHashTable(ConsumerContext *ctx) const {
+void HashJoinTranslator::InsertIntoJoinHashTable(WorkContext *ctx) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
 
@@ -146,7 +146,7 @@ void HashJoinTranslator::InsertIntoJoinHashTable(ConsumerContext *ctx) const {
   FillBuildRow(ctx, codegen->MakeExpr(build_row_name_));
 }
 
-void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx) const {
+void HashJoinTranslator::ProbeJoinHashTable(WorkContext *ctx) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
 
@@ -182,7 +182,7 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx) const {
   entry_loop.EndLoop();
 }
 
-void HashJoinTranslator::DoPipelineWork(ConsumerContext *ctx) const {
+void HashJoinTranslator::PerformPipelineWork(WorkContext *ctx) const {
   if (IsLeftPipeline(ctx->GetPipeline())) {
     InsertIntoJoinHashTable(ctx);
   } else {
@@ -206,14 +206,14 @@ void HashJoinTranslator::FinishPipelineWork(const PipelineContext &pipeline_cont
   }
 }
 
-ast::Expr *HashJoinTranslator::GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
+ast::Expr *HashJoinTranslator::GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                                               uint32_t attr_idx) const {
-  if (IsRightPipeline(consumer_context->GetPipeline()) && child_idx == 0) {
+  if (IsRightPipeline(work_context->GetPipeline()) && child_idx == 0) {
     return GetBuildRowAttribute(GetCodeGen()->MakeExpr(build_row_name_), attr_idx);
   } else {
     const auto child = GetPlan().GetChild(child_idx);
     const auto child_translator = GetCompilationContext()->LookupTranslator(*child);
-    return child_translator->GetOutput(consumer_context, attr_idx);
+    return child_translator->GetOutput(work_context, attr_idx);
   }
 }
 

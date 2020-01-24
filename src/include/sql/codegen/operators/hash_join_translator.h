@@ -81,9 +81,9 @@ class HashJoinTranslator : public OperatorTranslator {
    * Implement main join logic. If the context is coming from the left pipeline, the input tuples
    * are materialized into the join hash table. If the context is coming from the right pipeline,
    * the input tuples are probed in the join hash table.
-   * @param ctx The consumer context.
+   * @param ctx The context of the work.
    */
-  void DoPipelineWork(ConsumerContext *ctx) const override;
+  void PerformPipelineWork(WorkContext *ctx) const override;
 
   /**
    * If the pipeline context represents the left pipeline and the left pipeline is parallel, we'll
@@ -106,12 +106,12 @@ class HashJoinTranslator : public OperatorTranslator {
 
   /**
    *
-   * @param consumer_context
+   * @param work_context
    * @param child_idx
    * @param attr_idx
    * @return
    */
-  ast::Expr *GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
+  ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
   /**
@@ -147,17 +147,17 @@ class HashJoinTranslator : public OperatorTranslator {
 
   // Evaluate the provided hash keys in the provided context and return the
   // results in the provided results output vector.
-  ast::Expr *HashKeys(ConsumerContext *ctx,
+  ast::Expr *HashKeys(WorkContext *ctx,
                       const std::vector<const planner::AbstractExpression *> &hash_keys) const;
 
   // Fill the build row with the columns from the given context.
-  void FillBuildRow(ConsumerContext *ctx, ast::Expr *build_row) const;
+  void FillBuildRow(WorkContext *ctx, ast::Expr *build_row) const;
 
   // Input the tuple(s) in the provided context into the join hash table.
-  void InsertIntoJoinHashTable(ConsumerContext *ctx) const;
+  void InsertIntoJoinHashTable(WorkContext *ctx) const;
 
   // Probe the join hash table with the input tuple(s).
-  void ProbeJoinHashTable(ConsumerContext *ctx) const;
+  void ProbeJoinHashTable(WorkContext *ctx) const;
 
  private:
   // The name of the materialized row when inserting or probing into join hash

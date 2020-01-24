@@ -2,14 +2,14 @@
 
 namespace tpl::sql::codegen {
 
-class ConsumerContext;
+class WorkContext;
 
 class ColumnValueProvider {
  public:
   /**
    * @return the child's output at the given index
    */
-  virtual ast::Expr *GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
+  virtual ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                                     uint32_t attr_idx) const = 0;
 
   /**

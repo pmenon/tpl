@@ -49,9 +49,9 @@ class ProjectionTranslator : public OperatorTranslator {
 
   /**
    * Push the context through this operator to the next in the pipeline.
-   * @param consumer_context The context.
+   * @param work_context The context.
    */
-  void DoPipelineWork(ConsumerContext *consumer_context) const override;
+  void PerformPipelineWork(WorkContext *work_context) const override;
 
   /**
    * Projections do not require any post-pipeline work.
@@ -80,7 +80,7 @@ class ProjectionTranslator : public OperatorTranslator {
   /**
    * @return The output of the given child's attribute in the provided context.
    */
-  ast::Expr *GetChildOutput(ConsumerContext *consumer_context, uint32_t child_idx,
+  ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
   /**

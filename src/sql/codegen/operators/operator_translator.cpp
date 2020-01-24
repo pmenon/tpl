@@ -1,7 +1,7 @@
 #include "sql/codegen/operators/operator_translator.h"
 
 #include "sql/codegen/compilation_context.h"
-#include "sql/codegen/consumer_context.h"
+#include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/abstract_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -15,10 +15,9 @@ OperatorTranslator::OperatorTranslator(const planner::AbstractPlanNode &plan,
   }
 }
 
-ast::Expr *OperatorTranslator::GetOutput(ConsumerContext *consumer_context,
-                                         uint32_t attr_idx) const {
+ast::Expr *OperatorTranslator::GetOutput(WorkContext *work_context, uint32_t attr_idx) const {
   const auto &output_col = GetPlan().GetOutputSchema()->GetColumn(attr_idx);
-  return consumer_context->DeriveValue(*output_col.GetExpr(), this);
+  return work_context->DeriveValue(*output_col.GetExpr(), this);
 }
 
 CodeGen *OperatorTranslator::GetCodeGen() const { return compilation_context_->GetCodeGen(); }

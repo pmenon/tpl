@@ -3,7 +3,7 @@
 #include "common/exception.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
-#include "sql/codegen/consumer_context.h"
+#include "sql/codegen/work_context.h"
 
 namespace tpl::sql::codegen {
 
@@ -15,7 +15,7 @@ ConjunctionTranslator::ConjunctionTranslator(const planner::ConjunctionExpressio
   compilation_context->Prepare(*expr.GetChild(1));
 }
 
-ast::Expr *ConjunctionTranslator::DeriveValue(ConsumerContext *ctx,
+ast::Expr *ConjunctionTranslator::DeriveValue(WorkContext *ctx,
                                               const ColumnValueProvider *provider) const {
   auto codegen = GetCodeGen();
   auto left_val = ctx->DeriveValue(*GetExpression().GetChild(0), provider);
