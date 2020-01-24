@@ -188,22 +188,34 @@ TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
 }
 
 TEST_F(AggregationHashTableTest, BatchProcessTest) {
-  constexpr uint32_t num_groups = 400;
+  constexpr uint32_t num_groups = 512;
+  constexpr uint32_t num_group_updates_per_batch = kDefaultVectorSize / 512;
+  constexpr uint32_t count1_scale = 1;
+  constexpr uint32_t count2_scale = 2;
+  constexpr uint32_t count3_scale = 3;
   constexpr uint32_t num_batches = 10;
 
-  // Insert 'num_batches' of 'kDefaultVectorSize' (i.e., 2048) tuples into an aggregation table to
-  // force the creation of 'num_groups' unique groups.
+  // We'll create an aggregation hash table with NUM_GROUPS unique groups.
+  // We'll populate the hash table in batches of 2048 tuples, thus, each
+  // group should see 2048/NUM_GROUPS updates in one batch. We'll perform
+  // NUM_BATCHES such updates of the hash table. Thus, in total, each
+  // group should receive (2048/NUM_GROUPS)*NUM_BATCHES updates.
 
   VectorProjection vector_projection;
   vector_projection.Initialize({TypeId::Integer, TypeId::Integer});
   vector_projection.Reset(kDefaultVectorSize);
 
   for (uint32_t run = 0; run < num_batches; run++) {
-    // Setup projection's key and value
-    std::random_device random;
+    // Setup projection's key and value.
     for (uint32_t i = 0; i < kDefaultVectorSize; i++) {
       reinterpret_cast<uint32_t *>(vector_projection.GetColumn(0)->GetData())[i] = i % num_groups;
       reinterpret_cast<uint32_t *>(vector_projection.GetColumn(1)->GetData())[i] = 1;
+    }
+
+    // Shuffle grouping keys.
+    {
+      auto keys = reinterpret_cast<uint32_t *>(vector_projection.GetColumn(0)->GetData());
+      std::shuffle(keys, keys + kDefaultVectorSize, std::random_device());
     }
 
     // Process
@@ -212,18 +224,36 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
         &vpi,  // Input batch
         {0},   // Key indexes
         // Aggregate initialization function
-        [](VectorProjectionIterator *new_aggs, VectorProjectionIterator *input_batch) {
-          // FILL ME IN
+        [](VectorProjectionIterator *new_aggs, VectorProjectionIterator *input) {
+          VectorProjectionIterator::ForEach({new_aggs, input}, [&]() {
+            auto *e = *new_aggs->GetValue<sql::HashTableEntry *, false>(1, nullptr);
+            auto agg = const_cast<AggTuple *>(e->PayloadAs<AggTuple>());
+            agg->key = *input->GetValue<uint32_t, false>(0, nullptr);
+            agg->count1 = agg->count2 = agg->count3 = 0;
+          });
         },
         // Aggregate update function
-        [](VectorProjectionIterator *new_aggs, VectorProjectionIterator *input_batch) {
-          // FILL ME IN
+        [](VectorProjectionIterator *aggs, VectorProjectionIterator *input) {
+          VectorProjectionIterator::ForEach({aggs, input}, [&]() {
+            auto *e = *aggs->GetValue<sql::HashTableEntry *, false>(1, nullptr);
+            auto agg = const_cast<AggTuple *>(e->PayloadAs<AggTuple>());
+            agg->count1 += count1_scale;
+            agg->count2 += count2_scale;
+            agg->count3 += count3_scale;
+          });
         },
         false  // Partitioned?
     );
   }
 
   EXPECT_EQ(num_groups, AggTable()->GetTupleCount());
+
+  for (auto iter = AHTIterator(*AggTable()); iter.HasNext(); iter.Next()) {
+    auto agg = reinterpret_cast<const AggTuple *>(iter.GetCurrentAggregateRow());
+    EXPECT_EQ(num_group_updates_per_batch * num_batches * count1_scale, agg->count1);
+    EXPECT_EQ(num_group_updates_per_batch * num_batches * count2_scale, agg->count2);
+    EXPECT_EQ(num_group_updates_per_batch * num_batches * count3_scale, agg->count3);
+  }
 }
 
 TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
