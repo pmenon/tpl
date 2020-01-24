@@ -170,10 +170,9 @@ void HashAggregationTranslator::GeneratePartialKeyCheckFunction(
       codegen->MakeField(lhs_arg, codegen->PointerType(agg_payload_->Name())),
       codegen->MakeField(rhs_arg, codegen->PointerType(agg_payload_->Name())),
   });
-
+  auto name = build_pipeline_.ConstructPipelineFunctionName("KeyCheckPartial");
   auto ret_type = codegen->BuiltinType(ast::BuiltinType::Kind::Bool);
-  FunctionBuilder builder(codegen, codegen->MakeFreshIdentifier("KeyCheckPartial"),
-                          std::move(params), ret_type);
+  FunctionBuilder builder(codegen, codegen->MakeIdentifier(name), std::move(params), ret_type);
   {
     for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetGroupByTerms().size(); term_idx++) {
       auto lhs = GetGroupByTerm(lhs_arg, term_idx);
@@ -223,9 +222,9 @@ void HashAggregationTranslator::GenerateKeyCheckFunction(TopLevelDeclarations *t
       codegen->MakeField(agg_payload, codegen->PointerType(agg_payload_->Name())),
       codegen->MakeField(agg_values, codegen->PointerType(agg_values_->Name())),
   });
+  auto name = build_pipeline_.ConstructPipelineFunctionName("KeyCheck");
   auto ret_type = codegen->BuiltinType(ast::BuiltinType::Kind::Bool);
-  FunctionBuilder builder(codegen, codegen->MakeFreshIdentifier("KeyCheck"), std::move(params),
-                          ret_type);
+  FunctionBuilder builder(codegen, codegen->MakeIdentifier(name), std::move(params), ret_type);
   {
     for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetGroupByTerms().size(); term_idx++) {
       auto lhs = GetGroupByTerm(agg_payload, term_idx);
