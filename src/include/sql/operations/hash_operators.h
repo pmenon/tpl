@@ -14,15 +14,17 @@ struct Hash;
 /**
  * Primitive hashing.
  */
-#define DECL_HASH(Type, ...)                                       \
-  template <>                                                      \
-  struct Hash<Type> {                                              \
-    static hash_t Apply(Type input, bool null) {                   \
-      return null ? hash_t(0) : util::HashUtil::HashMurmur(input); \
-    }                                                              \
+#define DECL_HASH(Type, ...)                                    \
+  template <>                                                   \
+  struct Hash<Type> {                                           \
+    static hash_t Apply(Type input, bool null) {                \
+      return null ? hash_t(0) : util::HashUtil::HashCrc(input); \
+    }                                                           \
   };
 
-ALL_TYPES(DECL_HASH)
+BOOL_TYPES(DECL_HASH)
+INT_TYPES(DECL_HASH)
+FLOAT_TYPES(DECL_HASH)
 #undef DECL_HASH
 
 /**

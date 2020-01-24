@@ -104,6 +104,7 @@ class HashUtil : public AllStatic {
 
   template <typename T>
   static auto HashCrc(T val, hash_t seed) -> std::enable_if_t<std::is_fundamental_v<T>, hash_t> {
+    // Thanks HyPer
     static constexpr hash_t kDefaultCRCSeed = 0x04c11db7ULL;
 
     uint64_t result1 = _mm_crc32_u64(seed, static_cast<uint64_t>(val));
