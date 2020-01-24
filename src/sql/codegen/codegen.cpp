@@ -41,7 +41,6 @@ CodeGen::CodeGen(ast::Context *context)
     : context_(context),
       position_{0, 0},
       curr_function_(nullptr),
-      id_counter_(0),
       num_cached_scopes_(0),
       scope_(nullptr) {
   for (auto &scope : scope_cache_) {

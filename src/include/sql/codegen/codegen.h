@@ -29,6 +29,10 @@ class FunctionBuilder;
  * Bundles convenience methods needed by other classes during code generation.
  */
 class CodeGen {
+  friend class If;
+  friend class FunctionBuilder;
+  friend class Loop;
+
   // The default number of cached scopes to keep around.
   static constexpr uint32_t kDefaultScopeCacheSize = 4;
 
@@ -1163,11 +1167,6 @@ class CodeGen {
   void UnIndent() { position_.column -= 4; }
 
  private:
-  friend class CodeScope;
-  friend class If;
-  friend class FunctionBuilder;
-  friend class Loop;
-
   // Enter a new lexical scope.
   void EnterScope();
 
@@ -1187,9 +1186,6 @@ class CodeGen {
   SourcePosition position_;
   // The current function we're generating.
   FunctionBuilder *curr_function_;
-  // Unique ID generation.
-  // TODO(pmenon) Fix me.
-  uint64_t id_counter_;
   // Cache of code scopes.
   uint32_t num_cached_scopes_;
   std::array<std::unique_ptr<Scope>, kDefaultScopeCacheSize> scope_cache_ = {nullptr};

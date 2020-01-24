@@ -12,7 +12,7 @@ NullCheckTranslator::NullCheckTranslator(const planner::OperatorExpression &expr
   compilation_context->Prepare(*expr.GetChild(0));
 }
 
-ast::Expr *NullCheckTranslator::DeriveValue(ConsumerContext *ctx,
+ast::Expr *NullCheckTranslator::DeriveValue(WorkContext *ctx,
                                             const ColumnValueProvider *provider) const {
   auto codegen = GetCodeGen();
   auto input = ctx->DeriveValue(*GetExpression().GetChild(0), provider);
