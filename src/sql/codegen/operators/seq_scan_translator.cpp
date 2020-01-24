@@ -151,7 +151,7 @@ void SeqScanTranslator::ScanTable(WorkContext *ctx, ast::Expr *tvi, bool close_i
     func->Append(codegen->DeclareVarWithInit(vpi_name, codegen->TableIterGetVPI(tvi)));
 
     if (HasPredicate()) {
-      auto filter_manager = ctx->GetPipelineContext()->GetThreadStateEntryPtr(codegen, fm_slot_);
+      auto filter_manager = ctx->GetThreadStateEntryPtr(codegen, fm_slot_);
       func->Append(codegen->FilterManagerRunFilters(filter_manager, vpi));
     }
 

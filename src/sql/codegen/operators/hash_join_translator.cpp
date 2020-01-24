@@ -132,7 +132,7 @@ void HashJoinTranslator::InsertIntoJoinHashTable(WorkContext *ctx) const {
 
   ast::Expr *jht = nullptr;
   if (ctx->GetPipeline().IsParallel()) {
-    jht = ctx->GetPipelineContext()->GetThreadStateEntryPtr(codegen, tl_jht_slot_);
+    jht = ctx->GetThreadStateEntryPtr(codegen, tl_jht_slot_);
   } else {
     jht = GetQueryStateEntryPtr(jht_slot_);
   }

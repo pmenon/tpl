@@ -470,8 +470,7 @@ void HashAggregationTranslator::PerformPipelineWork(WorkContext *work_context) c
   auto codegen = GetCodeGen();
   if (IsBuildPipeline(work_context->GetPipeline())) {
     if (build_pipeline_.IsParallel()) {
-      const auto pipeline_context = work_context->GetPipelineContext();
-      auto agg_ht = pipeline_context->GetThreadStateEntryPtr(codegen, tl_agg_ht_slot_);
+      auto agg_ht = work_context->GetThreadStateEntryPtr(codegen, tl_agg_ht_slot_);
       UpdateAggregates(work_context, agg_ht);
     } else {
       UpdateAggregates(work_context, GetQueryStateEntryPtr(agg_ht_slot_));

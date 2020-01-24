@@ -150,8 +150,7 @@ void SortTranslator::InsertIntoSorter(WorkContext *ctx) const {
   // Collect correct sorter instance.
   ast::Expr *sorter = nullptr;
   if (ctx->GetPipeline().IsParallel()) {
-    const auto pipeline_context = ctx->GetPipelineContext();
-    sorter = pipeline_context->GetThreadStateEntryPtr(codegen, tl_sorter_slot_);
+    sorter = ctx->GetThreadStateEntryPtr(codegen, tl_sorter_slot_);
   } else {
     sorter = GetQueryStateEntryPtr(sorter_slot_);
   }

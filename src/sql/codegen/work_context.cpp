@@ -40,6 +40,19 @@ void WorkContext::Push() {
   (*pipeline_iter_)->PerformPipelineWork(this);
 }
 
+ast::Expr *WorkContext::GetThreadStateEntry(CodeGen *codegen, PipelineContext::Slot slot) const {
+  return pipeline_context_->GetThreadStateEntry(codegen, slot);
+}
+
+ast::Expr *WorkContext::GetThreadStateEntryPtr(CodeGen *codegen, PipelineContext::Slot slot) const {
+  return pipeline_context_->GetThreadStateEntryPtr(codegen, slot);
+}
+
+ast::Expr *WorkContext::GetThreadStateEntryOffset(CodeGen *codegen,
+                                                  PipelineContext::Slot slot) const {
+  return pipeline_context_->GetThreadStateEntryOffset(codegen, slot);
+}
+
 void WorkContext::ClearExpressionCache() { cache_.clear(); }
 
 }  // namespace tpl::sql::codegen

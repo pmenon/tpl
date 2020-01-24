@@ -56,6 +56,21 @@ class WorkContext {
   void Push();
 
   /**
+   * @return The value of the state element at the given slot in this pipeline's state.
+   */
+  ast::Expr *GetThreadStateEntry(CodeGen *codegen, PipelineContext::Slot slot) const;
+
+  /**
+   * @return A pointer to the state element at the given slot in this pipeline's state.
+   */
+  ast::Expr *GetThreadStateEntryPtr(CodeGen *codegen, PipelineContext::Slot slot) const;
+
+  /**
+   * @return The byte offset of the stat element at the given slot in the pipeline state.
+   */
+  ast::Expr *GetThreadStateEntryOffset(CodeGen *codegen, PipelineContext::Slot slot) const;
+
+  /**
    * Clear any cached expression result values.
    */
   void ClearExpressionCache();
@@ -69,11 +84,6 @@ class WorkContext {
    * @return The pipeline the consumption occurs in.
    */
   const Pipeline &GetPipeline() const { return pipeline_; }
-
-  /**
-   * @return The pipeline context, if available.
-   */
-  const PipelineContext *GetPipelineContext() const { return pipeline_context_; }
 
  private:
   // The compilation context.
