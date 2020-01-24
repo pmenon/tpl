@@ -302,14 +302,23 @@ class CSVReader {
   bool Advance();
 
   /**
-   * @return Return the current row.
+   * @return The current parsed row.
    */
-  const CSVRow *GetRow() const noexcept { return &row_; }
+  const CSVRow *GetRow() const { return &row_; }
+
+  /**
+   * @warning No bounds-checking is done on the provided index.
+   * @return The parsed cell at the given index in the current row.
+   */
+  const CSVCell *GetRowCell(uint32_t idx) const {
+    TPL_ASSERT(idx < row_.count, "Out-of-bounds access");
+    return &row_.cells[idx];
+  }
 
   /**
    * @return Return statistics collected during parsing.
    */
-  const Stats *GetStatistics() const noexcept { return &stats_; }
+  const Stats *GetStatistics() const { return &stats_; }
 
  private:
   // The result of an attempted parse
