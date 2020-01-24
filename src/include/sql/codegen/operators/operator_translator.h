@@ -99,16 +99,6 @@ class OperatorTranslator : public ColumnValueProvider {
   virtual ~OperatorTranslator() = default;
 
   /**
-   * Initialize all query state.
-   */
-  virtual void InitializeQueryState() const = 0;
-
-  /**
-   * Tear down all query state.
-   */
-  virtual void TearDownQueryState() const = 0;
-
-  /**
    * Define any helper structures required for processing. Ensure they're declared in the provided
    * declaration container.
    * @param top_level_decls Query-level declarations.
@@ -121,6 +111,16 @@ class OperatorTranslator : public ColumnValueProvider {
    * @param top_level_decls Query-level declarations.
    */
   virtual void DefineHelperFunctions(TopLevelDeclarations *top_level_decls) {}
+
+  /**
+   * Initialize all query state.
+   */
+  virtual void InitializeQueryState() const = 0;
+
+  /**
+   * Tear down all query state.
+   */
+  virtual void TearDownQueryState() const = 0;
 
   /**
    * Declare any pipeline-local state needed by this operator. The given context contains the
