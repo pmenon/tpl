@@ -392,7 +392,8 @@ void HashAggregationTranslator::ConstructNewAggregate(FunctionBuilder *function,
 
   // Initialize all aggregate terms.
   for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
-    function->Append(codegen->AggregatorInit(GetAggregateTermPtr(agg_payload, term_idx)));
+    auto agg_term = GetAggregateTermPtr(agg_payload, term_idx);
+    function->Append(codegen->AggregatorInit(agg_term));
   }
 }
 
