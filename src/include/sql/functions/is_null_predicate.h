@@ -11,17 +11,17 @@ class IsNullPredicate : public AllStatic {
  public:
   /**
    * Determine if the input value is a SQL NULL.
-   * @param[out] result Result of the NULL check. True if input is NULL; false otherwise.
    * @param val The input value to check.
+   * @return True if input is a SQL NULL; false otherwise.
    */
-  static void IsNull(bool *result, const Val &val) { *result = val.is_null; }
+  static bool IsNull(const Val &val) { return val.is_null; }
 
   /**
    * Determine if the input value is NOT a SQL NULL.
-   * @param[out] result Result of the NULL check. True if input is not NULL; false otherwise.
    * @param val The input value to check.
+   * @return True if input is not a SQL NULL; false otherwise.
    */
-  static void IsNotNull(bool *result, const Val &val) { *result = val.is_null; }
+  static bool IsNotNull(const Val &val) { return !val.is_null; }
 };
 
 }  // namespace tpl::sql

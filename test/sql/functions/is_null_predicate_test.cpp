@@ -7,43 +7,20 @@ namespace tpl::sql {
 class IsNullPredicateTests : public TplTest {};
 
 TEST_F(IsNullPredicateTests, IsNull) {
-#define CHECK_IS_NULL_FOR_TYPE(TYPE)                 \
-  {                                                  \
-    auto result = BoolVal::Null();                   \
-    const auto val = TYPE::Null();                   \
-    tpl::sql::IsNullPredicate::IsNull(&result, val); \
-    EXPECT_FALSE(result.is_null);                    \
-    EXPECT_TRUE(result.val);                         \
+#define CHECK_NULL_FOR_TYPE(NullVal, NonNullVal)                   \
+  {                                                                \
+    EXPECT_TRUE(tpl::sql::IsNullPredicate::IsNull(NullVal));       \
+    EXPECT_FALSE(tpl::sql::IsNullPredicate::IsNotNull(NullVal));   \
+    EXPECT_FALSE(tpl::sql::IsNullPredicate::IsNull(NonNullVal));   \
+    EXPECT_TRUE(tpl::sql::IsNullPredicate::IsNotNull(NonNullVal)); \
   }
 
-  CHECK_IS_NULL_FOR_TYPE(BoolVal);
-  CHECK_IS_NULL_FOR_TYPE(Integer);
-  CHECK_IS_NULL_FOR_TYPE(Real);
-  CHECK_IS_NULL_FOR_TYPE(StringVal);
-  CHECK_IS_NULL_FOR_TYPE(DateVal);
-  CHECK_IS_NULL_FOR_TYPE(TimestampVal);
-
-#undef CHECK_IS_NULL_FOR_TYPE
-}
-
-TEST_F(IsNullPredicateTests, IsNotNull) {
-#define CHECK_IS_NOT_NULL_FOR_TYPE(TYPE, INIT)       \
-  {                                                  \
-    auto result = BoolVal::Null();                   \
-    const auto val = TYPE(INIT);                     \
-    tpl::sql::IsNullPredicate::IsNull(&result, val); \
-    EXPECT_FALSE(result.is_null);                    \
-    EXPECT_FALSE(result.val);                        \
-  }
-
-  CHECK_IS_NOT_NULL_FOR_TYPE(BoolVal, false);
-  CHECK_IS_NOT_NULL_FOR_TYPE(Integer, 44);
-  CHECK_IS_NOT_NULL_FOR_TYPE(Real, 44.0);
-  CHECK_IS_NOT_NULL_FOR_TYPE(StringVal, "44");
-  CHECK_IS_NOT_NULL_FOR_TYPE(DateVal, sql::Date::FromYMD(2010, 10, 10));
-  // CHECK_IS_NOT_NULL_FOR_TYPE(TimestampVal, sql::Timestamp::FromString("2010-10-10"));
-
-#undef CHECK_IS_NOT_NULL_FOR_TYPE
+  CHECK_NULL_FOR_TYPE(BoolVal::Null(), BoolVal(false));
+  CHECK_NULL_FOR_TYPE(Integer::Null(), Integer(44));
+  CHECK_NULL_FOR_TYPE(Real::Null(), Real(44.0));
+  CHECK_NULL_FOR_TYPE(StringVal::Null(), StringVal("44"));
+  CHECK_NULL_FOR_TYPE(DateVal::Null(), DateVal(sql::Date::FromYMD(2010, 10, 10)));
+  // CHECK_IS_NOT_NULL_FOR_TYPE(TimestampVal::Null(), sql::Timestamp::FromString("2010-10-10"));
 }
 
 }  // namespace tpl::sql
