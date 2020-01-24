@@ -310,7 +310,25 @@ class FunctionDecl : public Decl {
  */
 class StructDecl : public Decl {
  public:
+  /**
+   * Create a new structure declaration.
+   * @param pos The position in the source where the declaration was defined.
+   * @param name The name of the structure.
+   * @param type_repr The type representation of the structure.
+   */
   StructDecl(const SourcePosition &pos, Identifier name, StructTypeRepr *type_repr);
+
+  /**
+   * @return The number of fields in the declaration.
+   */
+  uint32_t NumFields() const;
+
+  /**
+   * @return The field at the given index within the structure declaration. Note: this method does
+   *         not perform any bounds checking. It is the responsibility of the caller to access only
+   *         valid fields.
+   */
+  ast::FieldDecl *GetFieldAt(uint32_t field_idx) const;
 
   /**
    * Is the given node a struct declaration? Needed as part of the custom AST RTTI infrastructure.
@@ -1515,6 +1533,14 @@ class StructTypeRepr : public Expr {
    * @return The fields of the struct.
    */
   const util::RegionVector<FieldDecl *> &Fields() const { return fields_; }
+
+  /**
+   * @return The field at the provided index. No bounds checking is performed!
+   */
+  FieldDecl *GetFieldAt(uint32_t field_idx) const {
+    TPL_ASSERT(field_idx < fields_.size(), "Out-of-bounds field access");
+    return fields_[field_idx];
+  }
 
   /**
    * Is the given node a struct type? Needed as part of the custom AST RTTI infrastructure.
