@@ -218,26 +218,25 @@ class VectorProjectionIterator {
 
   /**
    * Run a functor over all active tuples in the vector projection.
-   *
    * @warning While non-const, the callback functor should treat this as a const method and avoid
    *          mutating the iterator during iteration.
-   *
-   * @tparam F Functor whose signature is equivalent to:
-   *           @code
-   *           void f();
-   *           @endcode
+   * @tparam F Functor whose signature is equivalent to: <code>void f();</code>
    * @param f A callback functor.
    */
   template <typename F>
   void ForEach(F f);
 
   /**
+   * Run a functor synchronously over all active tuples in all provided input iterators.
+   * @tparam F Functor whose signature is equivalent to: <code>void f();</code>
+   * @param f A callback functor.
+   */
+  template <typename F>
+  static void ForEach(std::initializer_list<VectorProjectionIterator *> iters, F f);
+
+  /**
    * Run a tuple-at-a-time predicate over all active tuples in the vector projection.
-   *
-   * @tparam P Predicate functor whose signature is equivalent to:
-   *           @code
-   *           bool f();
-   *           @endcode
+   * @tparam P Predicate functor whose signature is equivalent to: <code>bool f();</code>
    * @param p The predicate functor that returns a boolean indicating if the current tuple is valid.
    */
   template <typename P>
@@ -417,6 +416,38 @@ inline void VectorProjectionIterator::ForEach(F f) {
   }
 
   Reset();
+}
+
+// static
+template <typename F>
+void VectorProjectionIterator::ForEach(std::initializer_list<VectorProjectionIterator *> iters,
+                                       F f) {
+  // Ensure callback conforms to expectation
+  static_assert(std::is_invocable_r_v<void, F>, "Callback must be a no-arg void-return function");
+
+  // Either all provided iterators are filtered or non are.
+  TPL_ASSERT(
+      std::all_of(iters.begin(), iters.end(), [](auto vpi) { return vpi->IsFiltered(); }) ||
+          std::none_of(iters.begin(), iters.end(), [](auto vpi) { return vpi->IsFiltered(); }),
+      "All iterators must have the same filtration status");
+
+  // No-op if list is empty.
+  if (iters.size() == 0) {
+    return;
+  }
+
+  // Fire.
+  if ((*iters.begin())->IsFiltered()) {
+    for (; std::all_of(iters.begin(), iters.end(), [](auto vpi) { return vpi->HasNextFiltered(); });
+         std::for_each(iters.begin(), iters.end(), [](auto vpi) { vpi->AdvanceFiltered(); })) {
+      f();
+    }
+  } else {
+    for (; std::all_of(iters.begin(), iters.end(), [](auto vpi) { return vpi->HasNext(); });
+         std::for_each(iters.begin(), iters.end(), [](auto vpi) { vpi->Advance(); })) {
+      f();
+    }
+  }
 }
 
 template <typename P>
