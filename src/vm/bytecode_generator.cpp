@@ -1940,7 +1940,7 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
 
 #define SQL_COMPARISON_BYTECODE(CODE_RESULT, COMPARISON_TYPE, ARG_KIND) \
   switch (ARG_KIND) {                                                   \
-    case ast::BuiltinType::Kind::Boolean:                                  \
+    case ast::BuiltinType::Kind::Boolean:                               \
       CODE_RESULT = Bytecode::COMPARISON_TYPE##Bool;                    \
       break;                                                            \
     case ast::BuiltinType::Kind::Integer:                               \

@@ -34,9 +34,9 @@ class HashAggregationTranslator : public OperatorTranslator {
   void DefineHelperStructs(TopLevelDeclarations *top_level_decls) override;
 
   /**
- * If the build-pipeline is parallel, we'll need to define the partition-merging function.
- * @param top_level_decls Where the defined functions will be registered.
- */
+   * If the build-pipeline is parallel, we'll need to define the partition-merging function.
+   * @param top_level_decls Where the defined functions will be registered.
+   */
   void DefineHelperFunctions(TopLevelDeclarations *top_level_decls) override;
 
   /**

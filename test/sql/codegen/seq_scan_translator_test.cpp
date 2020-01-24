@@ -7,9 +7,9 @@
 #include "sql/execution_context.h"
 #include "sql/planner/plannodes/aggregate_plan_node.h"
 #include "sql/planner/plannodes/hash_join_plan_node.h"
+#include "sql/planner/plannodes/nested_loop_join_plan_node.h"
 #include "sql/planner/plannodes/order_by_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
-#include "sql/planner/plannodes/nested_loop_join_plan_node.h"
 #include "sql/printing_consumer.h"
 #include "sql/schema.h"
 
@@ -20,9 +20,7 @@ namespace tpl::sql::codegen {
 
 class SeqScanTranslatorTest : public SqlBasedTest {
  protected:
-  void SetUp() override {
-    SqlBasedTest::SetUp();
-  }
+  void SetUp() override { SqlBasedTest::SetUp(); }
 };
 
 TEST_F(SeqScanTranslatorTest, SimpleScan) {

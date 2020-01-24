@@ -19,7 +19,7 @@ StructDecl::StructDecl(const SourcePosition &pos, Identifier name, StructTypeRep
     : Decl(Kind::StructDecl, pos, name, type_repr) {}
 
 uint32_t StructDecl::NumFields() const {
-  const auto &fields =TypeRepr()->As<ast::StructTypeRepr>()->Fields();
+  const auto &fields = TypeRepr()->As<ast::StructTypeRepr>()->Fields();
   return fields.size();
 }
 
