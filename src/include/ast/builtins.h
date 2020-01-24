@@ -14,6 +14,7 @@ namespace tpl::ast {
   F(DateToSql, dateToSql)                                       \
   F(StringToSql, stringToSql)                                   \
   F(SqlToBool, sqlToBool)                                       \
+  F(IsValNull, isValNull)                                       \
                                                                 \
   /* SQL Functions */                                           \
   F(Like, like)                                                 \

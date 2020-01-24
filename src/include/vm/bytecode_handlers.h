@@ -1252,11 +1252,11 @@ VM_OP_WARM void OpPow(tpl::sql::Real *result, const tpl::sql::Real *base,
 // Null/Not Null predicates
 // ---------------------------------------------------------
 
-VM_OP_WARM void OpValIsNull(tpl::sql::BoolVal *result, const tpl::sql::Val *val) {
+VM_OP_WARM void OpValIsNull(bool *result, const tpl::sql::Val *val) {
   tpl::sql::IsNullPredicate::IsNull(result, *val);
 }
 
-VM_OP_WARM void OpValIsNotNull(tpl::sql::BoolVal *result, const tpl::sql::Val *val) {
+VM_OP_WARM void OpValIsNotNull(bool *result, const tpl::sql::Val *val) {
   tpl::sql::IsNullPredicate::IsNotNull(result, *val);
 }
 

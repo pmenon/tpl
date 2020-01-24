@@ -13,6 +13,7 @@
 #include "sql/codegen/expression/arithmetic_translator.h"
 #include "sql/codegen/expression/column_value_translator.h"
 #include "sql/codegen/expression/comparison_translator.h"
+#include "sql/codegen/expression/null_check_translator.h"
 #include "sql/codegen/expression/conjunction_translator.h"
 #include "sql/codegen/expression/constant_translator.h"
 #include "sql/codegen/function_builder.h"
@@ -231,6 +232,12 @@ void CompilationContext::Prepare(const planner::AbstractExpression &expression) 
     case planner::ExpressionType::OPERATOR_MOD: {
       const auto &operator_expr = static_cast<const planner::OperatorExpression &>(expression);
       translator = std::make_unique<ArithmeticTranslator>(operator_expr, this);
+      break;
+    }
+    case planner::ExpressionType::OPERATOR_IS_NULL:
+    case planner::ExpressionType::OPERATOR_IS_NOT_NULL: {
+      const auto &operator_expr = static_cast<const planner::OperatorExpression &>(expression);
+      translator = std::make_unique<NullCheckTranslator>(operator_expr, this);
       break;
     }
     case planner::ExpressionType::VALUE_CONSTANT: {

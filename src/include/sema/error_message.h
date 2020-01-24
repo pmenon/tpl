@@ -89,7 +89,9 @@ namespace sema {
     "received '%0'",                                                                               \
     (ast::Type *))                                                                                 \
   F(BadKeyEqualityCheckFunctionForJoinTableLookup,                                                 \
-    "key equality check function must have type: (*,*,*)->bool, received '%0'", (ast::Type *))
+    "key equality check function must have type: (*,*,*)->bool, received '%0'", (ast::Type *))     \
+  F(IsValNullExpectsSqlValue, "@isValNull() expects a SQL value input, received type '%0'",        \
+    (ast::Type *))
 
 /// Define the ErrorMessageId enumeration
 enum class ErrorMessageId : uint16_t {

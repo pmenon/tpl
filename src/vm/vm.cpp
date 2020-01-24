@@ -931,14 +931,14 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 #undef GEN_UNARY_MATH_OPS
 
   OP(ValIsNull) : {
-    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    auto *result = frame->LocalAt<bool *>(READ_LOCAL_ID());
     auto *val = frame->LocalAt<const sql::Val *>(READ_LOCAL_ID());
     OpValIsNull(result, val);
     DISPATCH_NEXT();
   }
 
   OP(ValIsNotNull) : {
-    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    auto *result = frame->LocalAt<bool *>(READ_LOCAL_ID());
     auto *val = frame->LocalAt<const sql::Val *>(READ_LOCAL_ID());
     OpValIsNotNull(result, val);
     DISPATCH_NEXT();

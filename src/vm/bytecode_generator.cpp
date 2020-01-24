@@ -532,6 +532,13 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
   }
 }
 
+void BytecodeGenerator::VisitNullValueCall(ast::CallExpr *call, UNUSED ast::Builtin builtin) {
+  LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+  LocalVar input = VisitExpressionForLValue(call->Arguments()[0]);
+  GetEmitter()->Emit(Bytecode::ValIsNull, result, input);
+  GetExecutionResult()->SetDestination(result.ValueOf());
+}
+
 void BytecodeGenerator::VisitSqlStringLikeCall(ast::CallExpr *call) {
   auto dest = GetExecutionResult()->GetOrCreateDestination(call->GetType());
   auto input = VisitExpressionForLValue(call->Arguments()[0]);
@@ -1487,6 +1494,10 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::StringToSql:
     case ast::Builtin::SqlToBool: {
       VisitSqlConversionCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::IsValNull: {
+      VisitNullValueCall(call, builtin);
       break;
     }
     case ast::Builtin::Like: {

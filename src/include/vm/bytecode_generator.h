@@ -69,6 +69,7 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   // Dispatched from VisitBuiltinCallExpr() to handle the various builtin
   // functions, including filtering, hash table interaction, sorting etc.
   void VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin);
+  void VisitNullValueCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitSqlStringLikeCall(ast::CallExpr *call);
   void VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinTableIterParallelCall(ast::CallExpr *call);

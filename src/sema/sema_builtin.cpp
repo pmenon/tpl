@@ -107,6 +107,20 @@ void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin built
     }
   }
 }
+
+void Sema::CheckNullValueCall(ast::CallExpr *call, UNUSED ast::Builtin builtin) {
+  if (!CheckArgCount(call, 1)) {
+    return;
+  }
+  // Input must be a SQL value.
+  if (auto type = call->Arguments()[0]->GetType(); !type->IsSqlValueType()) {
+    ErrorReporter().Report(call->Position(), ErrorMessages::kIsValNullExpectsSqlValue, type);
+    return;
+  }
+  // Returns a primitive boolean.
+  call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
+}
+
 void Sema::CheckBuiltinStringLikeCall(ast::CallExpr *call) {
   if (!CheckArgCount(call, 2)) {
     return;
@@ -1512,6 +1526,10 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::StringToSql:
     case ast::Builtin::SqlToBool: {
       CheckBuiltinSqlConversionCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::IsValNull: {
+      CheckNullValueCall(call, builtin);
       break;
     }
     case ast::Builtin::Like: {
