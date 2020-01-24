@@ -16,6 +16,7 @@
 #include "sql/codegen/expression/conjunction_translator.h"
 #include "sql/codegen/expression/constant_translator.h"
 #include "sql/codegen/function_builder.h"
+#include "sql/codegen/operators/hash_aggregation_translator.h"
 #include "sql/codegen/operators/hash_join_translator.h"
 #include "sql/codegen/operators/nested_loop_join_translator.h"
 #include "sql/codegen/operators/operator_translator.h"
@@ -25,7 +26,6 @@
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/top_level_declarations.h"
 #include "sql/planner/expressions/abstract_expression.h"
-#include "sql/planner/expressions/aggregate_expression.h"
 #include "sql/planner/expressions/column_value_expression.h"
 #include "sql/planner/expressions/comparison_expression.h"
 #include "sql/planner/expressions/conjunction_expression.h"
@@ -155,6 +155,14 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
   std::unique_ptr<OperatorTranslator> translator;
 
   switch (plan.GetPlanNodeType()) {
+    case planner::PlanNodeType::AGGREGATE: {
+      const auto &aggregation = static_cast<const planner::AggregatePlanNode &>(plan);
+      if (aggregation.GetAggregateStrategyType() == planner::AggregateStrategyType::SORTED) {
+        throw NotImplementedException("Code generation for sort-based aggregations");
+      }
+      translator = std::make_unique<HashAggregationTranslator>(aggregation, this, pipeline);
+      break;
+    }
     case planner::PlanNodeType::HASHJOIN: {
       const auto &hash_join = static_cast<const planner::HashJoinPlanNode &>(plan);
       translator = std::make_unique<HashJoinTranslator>(hash_join, this, pipeline);

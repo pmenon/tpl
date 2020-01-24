@@ -1,7 +1,5 @@
 #include "sql/codegen/codegen.h"
 
-#include "spdlog/fmt/fmt.h"
-
 #include "ast/ast_node_factory.h"
 #include "ast/builtins.h"
 #include "ast/context.h"
@@ -26,7 +24,7 @@ std::string CodeGen::Scope::GetFreshName(const std::string &name) {
   // Duplicate found. Find a new version that hasn't already been declared.
   uint64_t &id = insert_result.first->getValue();
   while (true) {
-    const std::string next_name = fmt::format("{}{}", name, id++);
+    auto next_name = name + std::to_string(id++);
     if (names_.find(next_name) == names_.end()) {
       return next_name;
     }
@@ -196,6 +194,49 @@ ast::Expr *CodeGen::TplType(sql::TypeId type) {
   }
 }
 
+ast::Expr *CodeGen::AggregateType(planner::ExpressionType agg_type, TypeId ret_type) const {
+  switch (agg_type) {
+    case planner::ExpressionType::AGGREGATE_COUNT:
+      return BuiltinType(ast::BuiltinType::Kind::CountAggregate);
+    case planner::ExpressionType::AGGREGATE_AVG:
+      return BuiltinType(ast::BuiltinType::AvgAggregate);
+    case planner::ExpressionType::AGGREGATE_MIN:
+      if (IsTypeIntegral(ret_type)) {
+        return BuiltinType(ast::BuiltinType::IntegerMinAggregate);
+      } else if (IsTypeFloatingPoint(ret_type)) {
+        return BuiltinType(ast::BuiltinType::RealMinAggregate);
+      } else if (ret_type == TypeId::Date) {
+        return BuiltinType(ast::BuiltinType::DateMinAggregate);
+      } else if (ret_type == TypeId::Varchar) {
+        return BuiltinType(ast::BuiltinType::StringMinAggregate);
+      } else {
+        throw NotImplementedException("MIN() aggregates on type {}", TypeIdToString(ret_type));
+      }
+    case planner::ExpressionType::AGGREGATE_MAX:
+      if (IsTypeIntegral(ret_type)) {
+        return BuiltinType(ast::BuiltinType::IntegerMaxAggregate);
+      } else if (IsTypeFloatingPoint(ret_type)) {
+        return BuiltinType(ast::BuiltinType::RealMaxAggregate);
+      } else if (ret_type == TypeId::Date) {
+        return BuiltinType(ast::BuiltinType::DateMaxAggregate);
+      } else if (ret_type == TypeId::Varchar) {
+        return BuiltinType(ast::BuiltinType::StringMaxAggregate);
+      } else {
+        throw NotImplementedException("MAX() aggregates on type {}", TypeIdToString(ret_type));
+      }
+    case planner::ExpressionType::AGGREGATE_SUM:
+      TPL_ASSERT(IsTypeNumeric(ret_type), "Only arithmetic types have sums.");
+      if (IsTypeIntegral(ret_type)) {
+        return BuiltinType(ast::BuiltinType::IntegerSumAggregate);
+      } else {
+        return BuiltinType(ast::BuiltinType::RealSumAggregate);
+      }
+    default: {
+      UNREACHABLE("AggregateType() should only be called with aggregates.");
+    }
+  }
+}
+
 ast::Expr *CodeGen::Nil() const {
   ast::Expr *expr = context_->GetNodeFactory()->NewNilLiteral(position_);
   expr->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
@@ -239,6 +280,10 @@ ast::Expr *CodeGen::BinaryOp(parsing::Token::Type op, ast::Expr *left, ast::Expr
 
 ast::Expr *CodeGen::Compare(parsing::Token::Type op, ast::Expr *left, ast::Expr *right) const {
   return context_->GetNodeFactory()->NewComparisonOpExpr(position_, op, left, right);
+}
+
+ast::Expr *CodeGen::IsNilPointer(ast::Expr *obj) const {
+  return Compare(parsing::Token::Type::EQUAL_EQUAL, obj, Nil());
 }
 
 ast::Expr *CodeGen::UnaryOp(parsing::Token::Type op, ast::Expr *input) const {
@@ -382,6 +427,10 @@ ast::Expr *CodeGen::VPIGet(ast::Expr *vpi, sql::TypeId type_id, bool nullable, u
   ast::Builtin builtin;
   ast::BuiltinType::Kind ret_kind;
   switch (type_id) {
+    case sql::TypeId::TinyInt:
+      builtin = ast::Builtin::VPIGetTinyInt;
+      ret_kind = ast::BuiltinType::Integer;
+      break;
     case sql::TypeId::SmallInt:
       builtin = ast::Builtin::VPIGetSmallInt;
       ret_kind = ast::BuiltinType::Integer;
@@ -576,6 +625,158 @@ ast::Expr *CodeGen::HTEntryIterGetRow(ast::Expr *iter, ast::Identifier row_type_
   ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryIterGetRow, {iter});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint8)->PointerTo());
   return PtrCast(row_type_name, call);
+}
+
+// ---------------------------------------------------------
+// Hash aggregations
+// ---------------------------------------------------------
+
+ast::Expr *CodeGen::AggHashTableInit(ast::Expr *agg_ht, ast::Expr *mem_pool,
+                                     ast::Identifier agg_payload_type) const {
+  ast::Expr *call =
+      CallBuiltin(ast::Builtin::AggHashTableInit, {agg_ht, mem_pool, SizeOf(agg_payload_type)});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::AggHashTableLookup(ast::Expr *agg_ht, ast::Expr *hash_val,
+                                       ast::Identifier key_check, ast::Expr *input,
+                                       ast::Identifier agg_payload_type) const {
+  ast::Expr *call =
+      CallBuiltin(ast::Builtin::AggHashTableLookup, {agg_ht, hash_val, MakeExpr(key_check), input});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint8)->PointerTo());
+  return PtrCast(agg_payload_type, call);
+}
+
+ast::Expr *CodeGen::AggHashTableInsert(ast::Expr *agg_ht, ast::Expr *hash_val, bool partitioned,
+                                       ast::Identifier agg_payload_type) const {
+  ast::Expr *call =
+      CallBuiltin(ast::Builtin::AggHashTableInsert, {agg_ht, hash_val, ConstBool(partitioned)});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint8)->PointerTo());
+  return PtrCast(agg_payload_type, call);
+}
+
+ast::Expr *CodeGen::AggHashTableLinkEntry(ast::Expr *agg_ht, ast::Expr *entry) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableLinkEntry, {agg_ht, entry});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::AggHashTableMovePartitions(ast::Expr *agg_ht, ast::Expr *tls,
+                                               ast::Expr *tl_agg_ht_offset,
+                                               ast::Identifier merge_partitions_fn_name) const {
+  std::initializer_list<ast::Expr *> args = {agg_ht, tls, tl_agg_ht_offset,
+                                             MakeExpr(merge_partitions_fn_name)};
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableMovePartitions, args);
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::AggHashTableParallelScan(ast::Expr *agg_ht, ast::Expr *query_state,
+                                             ast::Expr *thread_state_container,
+                                             ast::Identifier worker_fn) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableParallelPartitionedScan,
+                                {agg_ht, query_state, thread_state_container, MakeExpr(worker_fn)});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::AggHashTableFree(ast::Expr *agg_ht) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableFree, {agg_ht});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+// ---------------------------------------------------------
+// Aggregation Hash Table Overflow Iterator
+// ---------------------------------------------------------
+
+ast::Expr *CodeGen::AggPartitionIteratorHasNext(ast::Expr *iter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggPartIterHasNext, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Bool));
+  return call;
+}
+
+ast::Expr *CodeGen::AggPartitionIteratorNext(ast::Expr *iter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggPartIterNext, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::AggPartitionIteratorGetHash(ast::Expr *iter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggPartIterGetHash, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint64));
+  return call;
+}
+
+ast::Expr *CodeGen::AggPartitionIteratorGetRow(ast::Expr *iter,
+                                               ast::Identifier agg_payload_type) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggPartIterGetRow, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint8)->PointerTo());
+  return PtrCast(agg_payload_type, call);
+}
+
+ast::Expr *CodeGen::AggPartitionIteratorGetRowEntry(ast::Expr *iter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggPartIterGetRowEntry, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::HashTableEntry)->PointerTo());
+  return call;
+}
+
+ast::Expr *CodeGen::AggHashTableIteratorInit(ast::Expr *iter, ast::Expr *agg_ht) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableIterInit, {iter, agg_ht});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::AggHashTableIteratorHasNext(ast::Expr *iter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableIterHasNext, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Bool));
+  return call;
+}
+
+ast::Expr *CodeGen::AggHashTableIteratorNext(ast::Expr *iter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableIterNext, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::AggHashTableIteratorGetRow(ast::Expr *iter,
+                                               ast::Identifier agg_payload_type) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableIterGetRow, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint8)->PointerTo());
+  return PtrCast(agg_payload_type, call);
+}
+
+ast::Expr *CodeGen::AggHashTableIteratorClose(ast::Expr *iter) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableIterClose, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+// ---------------------------------------------------------
+// Aggregators
+// ---------------------------------------------------------
+
+ast::Expr *CodeGen::AggregatorInit(ast::Expr *agg) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggInit, {agg});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::AggregatorAdvance(ast::Expr *agg, ast::Expr *val) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggAdvance, {agg, val});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::AggregatorMerge(ast::Expr *agg1, ast::Expr *agg2) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::AggMerge, {agg1, agg2});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::AggregatorResult(ast::Expr *agg) const {
+  return CallBuiltin(ast::Builtin::AggResult, {agg});
 }
 
 // ---------------------------------------------------------

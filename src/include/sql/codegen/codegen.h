@@ -201,7 +201,15 @@ class CodeGen {
    * @param type The SQL type.
    * @return The corresponding TPL type.
    */
-  [[nodiscard]] ast::Expr *TplType(sql::TypeId type);
+  [[nodiscard]] ast::Expr *TplType(TypeId type);
+
+  /**
+   * Return the appropriate aggregate type for the given input aggregation expression.
+   * @param agg_type The aggregate expression type.
+   * @param ret_type The return type of the aggregate.
+   * @return The corresponding TPL aggregate type.
+   */
+  [[nodiscard]] ast::Expr *AggregateType(planner::ExpressionType agg_type, TypeId ret_type) const;
 
   /**
    * @return An expression that represents the address of the provided object.
@@ -334,10 +342,17 @@ class CodeGen {
    * @param op The binary operation.
    * @param left The left input.
    * @param right The right input.
-   * @return THe result of the comparison.
+   * @return The result of the comparison.
    */
   [[nodiscard]] ast::Expr *Compare(parsing::Token::Type op, ast::Expr *left,
                                    ast::Expr *right) const;
+
+  /**
+   * Generate a comparison of the given object pointer to 'nil', checking if it's a nil pointer.
+   * @param obj The object to compare.
+   * @return The boolean result of the comparison.
+   */
+  [[nodiscard]] ast::Expr *IsNilPointer(ast::Expr *obj) const;
 
   /**
    * Generate a unary operation of the provided operation type (<b>op</b>) on the provided input.
@@ -736,6 +751,203 @@ class CodeGen {
    * @return The call.
    */
   [[nodiscard]] ast::Expr *HTEntryIterGetRow(ast::Expr *iter, ast::Identifier row_type_name) const;
+
+  // -------------------------------------------------------
+  //
+  // Hash aggregation
+  //
+  // -------------------------------------------------------
+
+  /**
+   * Call @aggHTInit(). Initializes an aggregation hash table.
+   * @param agg_ht A pointer to the aggregation hash table.
+   * @param mem_pool A pointer to the memory pool.
+   * @param agg_payload_type The name of the struct representing the aggregation payload.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggHashTableInit(ast::Expr *agg_ht, ast::Expr *mem_pool,
+                                            ast::Identifier agg_payload_type) const;
+
+  /**
+   * Call @aggHTLookup(). Performs a single key lookup in an aggregation hash table. The hash value
+   * is provided, as is a key check function to resolve hash collisions. The result of the lookup
+   * is casted to the provided type.
+   * @param agg_ht A pointer to the aggregation hash table.
+   * @param hash_val The hash value of the key.
+   * @param key_check The function to perform key-equality check.
+   * @param input The probe aggregate values.
+   * @param agg_payload_type The name of the struct representing the aggregation payload.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggHashTableLookup(ast::Expr *agg_ht, ast::Expr *hash_val,
+                                              ast::Identifier key_check, ast::Expr *input,
+                                              ast::Identifier agg_payload_type) const;
+
+  /**
+   * Call @aggHTInsert(). Inserts a new entry into the aggregation hash table. The result of the
+   * insertion is casted to the provided type.
+   * @param agg_ht A pointer to the aggregation hash table.
+   * @param hash_val The hash value of the key.
+   * @param partitioned Whether the insertion is in partitioned mode.
+   * @param agg_payload_type The name of the struct representing the aggregation payload.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggHashTableInsert(ast::Expr *agg_ht, ast::Expr *hash_val,
+                                              bool partitioned,
+                                              ast::Identifier agg_payload_type) const;
+
+  /**
+   * Call @aggHTLink(). Directly inserts a new partial aggregate into the provided aggregation hash
+   * table.
+   * @param agg_ht A pointer to the aggregation hash table.
+   * @param entry A pointer to the hash table entry storing the partial aggregate data.
+   * @retur The call.
+   */
+  [[nodiscard]] ast::Expr *AggHashTableLinkEntry(ast::Expr *agg_ht, ast::Expr *entry) const;
+
+  /**
+   * Call @aggHTMoveParts(). Move all overflow partitions stored in thread-local aggregation hash
+   * tables at the given offset inside the provided thread state container into the global hash
+   * table.
+   * @param agg_ht A pointer to the global aggregation hash table.
+   * @param tls A pointer to the thread state container.
+   * @param tl_agg_ht_offset The offset in the state container where the thread-local aggregation
+   *                         hash tables.
+   * @param merge_partitions_fn_name The name of the merging function to merge partial aggregates
+   *                                 into the global hash table.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggHashTableMovePartitions(
+      ast::Expr *agg_ht, ast::Expr *tls, ast::Expr *tl_agg_ht_offset,
+      ast::Identifier merge_partitions_fn_name) const;
+
+  /**
+   * Call @aggHTParallelPartScan(). Performs a parallel partitioned scan over an aggregation hash
+   * table, using the provided worker function as a callback.
+   * @param agg_ht A pointer to the global hash table.
+   * @param query_state A pointer to the query state.
+   * @param thread_state_container A pointer to the thread state.
+   * @param worker_fn The name of the function used to scan over a partition of the hash table.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggHashTableParallelScan(ast::Expr *agg_ht, ast::Expr *query_state,
+                                                    ast::Expr *thread_state_container,
+                                                    ast::Identifier worker_fn) const;
+
+  /**
+   * Call @aggHTFree(). Cleans up and destroys the provided aggregation hash table.
+   * @param agg_ht A pointer to the aggregation hash table.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggHashTableFree(ast::Expr *agg_ht) const;
+
+  /**
+   * Call @aggHTPartIterHasNext(). Determines if the provided overflow partition iterator has more
+   * data.
+   * @param iter A pointer to the overflow partition iterator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggPartitionIteratorHasNext(ast::Expr *iter) const;
+
+  /**
+   * Call @aggHTPartIterNext(). Advanced the iterator by one element.
+   * @param iter A pointer to the overflow partition iterator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggPartitionIteratorNext(ast::Expr *iter) const;
+
+  /**
+   * Call @aggHTPartIterGetHash(). Returns the hash value of the entry the iterator is currently
+   * positioned at.
+   * @param iter A pointer to the overflow partition iterator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggPartitionIteratorGetHash(ast::Expr *iter) const;
+
+  /**
+   * Call @aggHTPartIterGetRow(). Returns a pointer to the aggregate payload struct of the entry the
+   * iterator is currently positioned at.
+   * @param iter A pointer to the overflow partition iterator.
+   * @param agg_payload_type The type of aggregate payload.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggPartitionIteratorGetRow(ast::Expr *iter,
+                                                      ast::Identifier agg_payload_type) const;
+
+  /**
+   * Call @aggHTPartIterGetRowEntry(). Returns a pointer to the current hash table entry.
+   * @param iter A pointer to the overflow partition iterator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggPartitionIteratorGetRowEntry(ast::Expr *iter) const;
+
+  /**
+   * Call @aggHTIterInit(). Initializes an aggregation hash table iterator.
+   * @param iter A pointer to the iterator.
+   * @param agg_ht A pointer to the hash table to iterate over.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggHashTableIteratorInit(ast::Expr *iter, ast::Expr *agg_ht) const;
+
+  /**
+   * Call @aggHTIterHasNExt(). Determines if the given iterator has more data.
+   * @param iter A pointer to the iterator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggHashTableIteratorHasNext(ast::Expr *iter) const;
+
+  /**
+   * Call @aggHTIterNext(). Advances the iterator by one element.
+   * @param iter A pointer to the iterator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggHashTableIteratorNext(ast::Expr *iter) const;
+
+  /**
+   * Call @aggHTIterGetRow(). Returns a pointer to the aggregate payload the iterator is currently
+   * positioned at.
+   * @param iter A pointer to the iterator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggHashTableIteratorGetRow(ast::Expr *iter,
+                                                      ast::Identifier agg_payload_type) const;
+
+  /**
+   * Call @aggHTIterClose(). Cleans up and destroys the given iterator.
+   * @param iter A pointer to the iterator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggHashTableIteratorClose(ast::Expr *iter) const;
+
+  /**
+   * Call @aggInit(). Initializes and aggregator.
+   * @param agg A pointer to the aggregator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggregatorInit(ast::Expr *agg) const;
+
+  /**
+   * Call @aggAdvance(). Advanced an aggregator with the provided input value.
+   * @param agg A pointer to the aggregator.
+   * @param val The input value.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggregatorAdvance(ast::Expr *agg, ast::Expr *val) const;
+
+  /**
+   * Call @aggMerge(). Merges two aggregators storing the result in the first argument.
+   * @param agg1 A pointer to the aggregator.
+   * @param agg2 A pointer to the aggregator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggregatorMerge(ast::Expr *agg1, ast::Expr *agg2) const;
+
+  /**
+   * Call @aggResult(). Finalizes and returns the result of the aggregation.
+   * @param agg A pointer to the aggregator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *AggregatorResult(ast::Expr *agg) const;
 
   // -------------------------------------------------------
   //

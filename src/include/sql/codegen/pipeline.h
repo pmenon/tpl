@@ -229,10 +229,10 @@ class Pipeline {
    */
   std::string PrettyPrint() const;
 
- private:
   // Create a unique function local to this pipeline.
   std::string ConstructPipelineFunctionName(const std::string &func_name) const;
 
+ private:
   // Return the thread-local state initialization and tear-down function names.
   // This is needed when we invoke @tlsReset() from the pipeline initialization
   // function to setup the thread-local state.

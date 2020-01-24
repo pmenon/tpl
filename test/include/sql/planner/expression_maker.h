@@ -202,6 +202,20 @@ class ExpressionMaker {
   }
 
   /**
+   * Create a sum aggregate expression
+   */
+  AggExpression AggMin(Expression child) {
+    return AggregateTerm(planner::ExpressionType::AGGREGATE_MIN, child);
+  }
+
+  /**
+   * Create a sum aggregate expression
+   */
+  AggExpression AggMax(Expression child) {
+    return AggregateTerm(planner::ExpressionType::AGGREGATE_MAX, child);
+  }
+
+  /**
    * Create a avg aggregate expression
    */
   AggExpression AggAvg(Expression child) {

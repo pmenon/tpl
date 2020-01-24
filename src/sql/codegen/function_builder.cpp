@@ -53,8 +53,9 @@ ast::FunctionDecl *FunctionBuilder::Finish(ast::Expr *ret) {
              "statement and call FunctionBuilder::Finish() with a null return.");
 
   // Add the return
-  // if (ret) codegen_->NewLine();
-  Append(codegen_->GetFactory()->NewReturnStmt(codegen_->GetPosition(), ret));
+  if (!statements_->IsEmpty() && !statements_->GetLast()->IsReturnStmt()) {
+    Append(codegen_->GetFactory()->NewReturnStmt(codegen_->GetPosition(), ret));
+  }
 
   // Finalize everything
   statements_->SetRightBracePosition(codegen_->GetPosition());
