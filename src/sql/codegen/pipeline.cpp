@@ -264,7 +264,7 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction(PipelineContext *pipel
     params.insert(params.end(), additional_params.begin(), additional_params.end());
   }
 
-  FunctionBuilder work(codegen, GetWorkFunctionName(), std::move(params), codegen->Nil());
+  FunctionBuilder builder(codegen, GetWorkFunctionName(), std::move(params), codegen->Nil());
   {
     // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen);
@@ -274,13 +274,13 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction(PipelineContext *pipel
     WorkContext work_context(compilation_context_, pipeline_context);
     Source()->PerformPipelineWork(&work_context);
   }
-  return work.Finish();
+  return builder.Finish();
 }
 
 ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(PipelineContext *pipeline_context) const {
   auto codegen = compilation_context_->GetCodeGen();
   auto name = codegen->MakeIdentifier(ConstructPipelineFunctionName("Run"));
-  FunctionBuilder plan(codegen, name, compilation_context_->QueryParams(), codegen->Nil());
+  FunctionBuilder builder(codegen, name, compilation_context_->QueryParams(), codegen->Nil());
   {
     // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen);
@@ -294,9 +294,9 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(PipelineContext *pipeli
     if (IsParallel()) {
       Source()->LaunchWork(GetWorkFunctionName());
     } else {
-      auto state_ptr = plan.GetParameterByPosition(0);
+      auto state_ptr = builder.GetParameterByPosition(0);
       auto thread_state_ptr = codegen->Const64(0);
-      plan.Append(codegen->Call(GetWorkFunctionName(), {state_ptr, thread_state_ptr}));
+      builder.Append(codegen->Call(GetWorkFunctionName(), {state_ptr, thread_state_ptr}));
     }
 
     // Let the operators perform some completion work in this pipeline.
@@ -304,21 +304,21 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(PipelineContext *pipeli
       op->FinishPipelineWork(*pipeline_context);
     }
   }
-  return plan.Finish();
+  return builder.Finish();
 }
 
 ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction(
     PipelineContext *pipeline_context) const {
   auto codegen = compilation_context_->GetCodeGen();
   auto name = codegen->MakeIdentifier(ConstructPipelineFunctionName("TearDown"));
-  FunctionBuilder clean_up(codegen, name, compilation_context_->QueryParams(), codegen->Nil());
+  FunctionBuilder builder(codegen, name, compilation_context_->QueryParams(), codegen->Nil());
   {
     // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen);
     // Nothing, for now ...
     (void)pipeline_context;
   }
-  return clean_up.Finish();
+  return builder.Finish();
 }
 
 void Pipeline::GeneratePipeline(CodeContainer *code_container) const {
