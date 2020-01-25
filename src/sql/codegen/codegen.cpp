@@ -548,6 +548,13 @@ ast::Expr *CodeGen::ExecCtxGetTLS(ast::Expr *exec_ctx) const {
   return call;
 }
 
+ast::Expr *CodeGen::TLSIterate(ast::Expr *tls, ast::Expr *context, ast::Identifier func) const {
+  ast::Expr *call =
+      CallBuiltin(ast::Builtin::ExecutionContextGetTLS, {tls, context, MakeExpr(func)});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
 ast::Expr *CodeGen::TLSReset(ast::Expr *tls, ast::Identifier tls_state_name,
                              ast::Identifier init_fn, ast::Identifier tear_down_fn,
                              ast::Expr *context) const {

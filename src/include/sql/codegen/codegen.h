@@ -645,6 +645,17 @@ class CodeGen {
   [[nodiscard]] ast::Expr *ExecCtxGetTLS(ast::Expr *exec_ctx) const;
 
   /**
+   * Call @tlsIterate(). Invokes the provided callback function for all thread-local state objects.
+   * The context is provided as the first argument, and the thread-local state as the second.
+   * @param tls A pointer to the thread state container.
+   * @param context An opaque context object.
+   * @param func The callback function.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *TLSIterate(ast::Expr *tls, ast::Expr *context,
+                                      ast::Identifier func) const;
+
+  /**
    * Call @tlsReset(). Reset the thread state container to a new state type with its own
    * initialization and tear-down functions.
    * @param tls The name of the thread state container variable.
