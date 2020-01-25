@@ -275,9 +275,17 @@ class VectorOps : public AllStatic {
   /**
    * Hash vector elements from @em input into @em result.
    * @param input The input to hash.
-   * @param[out] result The vector containing the hashed values.
+   * @param[out] result The vector where hash results are stored.
    */
   static void Hash(const Vector &input, Vector *result);
+
+  /**
+   * Like VectorOps::Hash(), but combines the hashes stored in @em result with the computed hashes
+   * of vector elements in @em input. The hashes in @em result serve as seed hashes.
+   * @param input The input to hash.
+   * @param[out] result The vector of seed hash values combined with the input; also stores result.
+   */
+  static void HashCombine(const Vector &input, Vector *result);
 
   // -------------------------------------------------------
   //
