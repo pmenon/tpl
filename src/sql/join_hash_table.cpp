@@ -49,10 +49,10 @@ byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
 
 void JoinHashTable::BuildGenericHashTable() {
   // Perfectly size the generic hash table in preparation for bulk-load.
-  generic_hash_table_.SetSize(GetTupleCount());
+  chaining_hash_table_.SetSize(GetTupleCount());
 
   // Bulk-load the, now correctly sized, generic hash table using a non-concurrent algorithm.
-  generic_hash_table_.InsertBatch<false>(&entries_);
+  chaining_hash_table_.InsertBatch<false>(&entries_);
 }
 
 // ---------------------------------------------------------
@@ -529,7 +529,7 @@ void JoinHashTable::Build() {
 void JoinHashTable::LookupBatchInGenericHashTable(uint32_t num_tuples, const hash_t hashes[],
                                                   const HashTableEntry *results[]) const {
   // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
-  generic_hash_table_.LookupBatch(num_tuples, hashes, results);
+  chaining_hash_table_.LookupBatch(num_tuples, hashes, results);
 }
 
 template <bool Prefetch>
@@ -576,7 +576,7 @@ void JoinHashTable::MergeIncomplete(JoinHashTable *source) {
   TPL_ASSERT(!source->UsingConciseHashTable(), "Merging incomplete concise tables not supported");
 
   // First, bulk-load all entries in the source table into our hash table
-  generic_hash_table_.InsertBatch<Concurrent>(&source->entries_);
+  chaining_hash_table_.InsertBatch<Concurrent>(&source->entries_);
 
   // Next, take ownership of source table's memory
   util::SpinLatch::ScopedSpinLatch latch(&owned_latch_);
@@ -596,7 +596,7 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
 
   // Size the global hash table
   uint64_t num_elem_estimate = hll_estimator_->Estimate();
-  generic_hash_table_.SetSize(num_elem_estimate);
+  chaining_hash_table_.SetSize(num_elem_estimate);
 
   // Resize the owned entries vector now to avoid resizing concurrently during
   // merge. All the thread-local join table data will get placed into our owned
@@ -622,10 +622,10 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
 
   timer.Stop();
 
-  double tps = (generic_hash_table_.GetElementCount() / timer.GetElapsed()) / 1000.0;
+  double tps = (chaining_hash_table_.GetElementCount() / timer.GetElapsed()) / 1000.0;
   LOG_INFO("JHT: {} merged {} JHTs. Estimated {}, actual {}. Time: {:.2f} ms ({:.2f} mtps)",
            use_serial_build ? "Serial" : "Parallel", tl_join_tables.size(), num_elem_estimate,
-           generic_hash_table_.GetElementCount(), timer.GetElapsed(), tps);
+           chaining_hash_table_.GetElementCount(), timer.GetElapsed(), tps);
 }
 
 }  // namespace tpl::sql

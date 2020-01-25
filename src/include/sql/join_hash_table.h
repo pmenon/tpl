@@ -122,7 +122,7 @@ class JoinHashTable {
    */
   uint64_t GetJoinIndexMemoryUsage() const {
     return UsingConciseHashTable() ? concise_hash_table_.GetTotalMemoryUsage()
-                                   : generic_hash_table_.GetTotalMemoryUsage();
+                                   : chaining_hash_table_.GetTotalMemoryUsage();
   }
 
   /**
@@ -216,25 +216,25 @@ class JoinHashTable {
   void MergeIncomplete(JoinHashTable *source);
 
  private:
-  // The vector where we store the build-side input
+  // The vector where we store the build-side input.
   util::ChunkedVector<MemoryPoolAllocator<byte>> entries_;
 
-  // To protect concurrent access to 'owned_entries_'
+  // To protect concurrent access to 'owned_entries_'.
   mutable util::SpinLatch owned_latch_;
 
   // List of entries this hash table has taken ownership of. Protected by 'owned_latch_'.
   MemPoolVector<decltype(entries_)> owned_;
 
-  // The generic hash table
-  UntaggedChainingHashTable generic_hash_table_;
+  // The chaining hash table.
+  UntaggedChainingHashTable chaining_hash_table_;
 
-  // The concise hash table
+  // The concise hash table.
   ConciseHashTable concise_hash_table_;
 
-  // The bloom filter
+  // The bloom filter.
   BloomFilter bloom_filter_;
 
-  // Estimator of unique elements
+  // Estimator of unique elements.
   std::unique_ptr<libcount::HLL> hll_estimator_;
 
   // Has the hash table been built?
@@ -250,7 +250,7 @@ class JoinHashTable {
 
 template <>
 inline HashTableEntryIterator JoinHashTable::Lookup<false>(const hash_t hash) const {
-  HashTableEntry *entry = generic_hash_table_.FindChainHead(hash);
+  HashTableEntry *entry = chaining_hash_table_.FindChainHead(hash);
   while (entry != nullptr && entry->hash != hash) {
     entry = entry->next;
   }
