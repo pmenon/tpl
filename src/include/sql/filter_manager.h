@@ -175,10 +175,9 @@ class FilterManager {
   // The optimal order to execute the clauses
   std::vector<uint32_t> optimal_clause_order_;
 
-  // List used for disjunctions
-  TupleIdList input_list_;
-  TupleIdList tmp_list_;
-  TupleIdList output_list_;
+  // The input and output TID lists, and a temporary list. These are used during
+  // filter evaluation to carry TIDs across disjunctive clauses.
+  TupleIdList input_list_, output_list_, tmp_list_;
 
   // Has the manager's clauses been finalized?
   bool finalized_;

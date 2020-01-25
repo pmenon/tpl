@@ -60,7 +60,7 @@ void FilterManager::Clause::RunFilter(VectorProjection *vector_projection, Tuple
   }
 
   double selectivity = tid_list->ComputeSelectivity();
-  for (const auto &term_idx : optimal_term_order_) {
+  for (const auto term_idx : optimal_term_order_) {
     Clause::Term &term = terms_[term_idx];
     const double exec_ns = util::Time<std::nano>([&] { term.fn(vector_projection, tid_list); });
     const double new_selectivity = tid_list->ComputeSelectivity();
@@ -83,8 +83,8 @@ void FilterManager::Clause::RunFilter(VectorProjection *vector_projection, Tuple
 
 FilterManager::FilterManager()
     : input_list_(kDefaultVectorSize),
-      tmp_list_(kDefaultVectorSize),
       output_list_(kDefaultVectorSize),
+      tmp_list_(kDefaultVectorSize),
       finalized_(false) {}
 
 FilterManager::~FilterManager() = default;
@@ -129,14 +129,15 @@ void FilterManager::RunFilters(VectorProjection *vector_projection) {
   TPL_ASSERT(IsFinalized(), "Must finalize the filter before it can be used");
 
   // Initialize the input, output, and temporary tuple ID lists for processing
-  // this projection.
+  // this projection. This check just ensures they're all the same shape.
   if (const uint32_t projection_size = vector_projection->GetTotalTupleCount();
       projection_size != input_list_.GetCapacity()) {
-    tmp_list_.Resize(projection_size);
     input_list_.Resize(projection_size);
     output_list_.Resize(projection_size);
+    tmp_list_.Resize(projection_size);
   }
 
+  // Copy the input list from the input vector projection.
   if (vector_projection->IsFiltered()) {
     const auto *filter = vector_projection->GetFilteredTupleIdList();
     TPL_ASSERT(filter != nullptr, "No TID list filter for filtered projection");
@@ -144,26 +145,30 @@ void FilterManager::RunFilters(VectorProjection *vector_projection) {
   } else {
     input_list_.AddAll();
   }
+
+  // The output list is initially empty: no tuples pass the filter. This list is
+  // incrementally built up.
   output_list_.Clear();
 
-  // Run through all summands in the order we believe to be optimal
+  // Run through all summands in the order we believe to be optimal.
   for (const uint32_t clause_index : optimal_clause_order_) {
+    // The set of TIDs that we need to check is everything in the input that
+    // hasn't yet passed any previous clause.
     tmp_list_.AssignFrom(input_list_);
     tmp_list_.UnsetFrom(output_list_);
 
-    // Quit
+    // Quit.
     if (tmp_list_.IsEmpty()) {
       break;
     }
 
-    // Run the clause
+    // Run the clause.
     clauses_[clause_index].RunFilter(vector_projection, &tmp_list_);
 
-    // Update output list with surviving TIDs
+    // Update output list with surviving TIDs.
     output_list_.UnionWith(tmp_list_);
   }
 
-  // Finish
   vector_projection->SetFilteredSelections(output_list_);
 }
 
