@@ -225,7 +225,7 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
         {0},   // Key indexes
         // Aggregate initialization function
         [](VectorProjectionIterator *new_aggs, VectorProjectionIterator *input) {
-          VectorProjectionIterator::ForEach({new_aggs, input}, [&]() {
+          VectorProjectionIterator::SynchronizedForEach({new_aggs, input}, [&]() {
             auto *e = *new_aggs->GetValue<sql::HashTableEntry *, false>(1, nullptr);
             auto agg = const_cast<AggTuple *>(e->PayloadAs<AggTuple>());
             agg->key = *input->GetValue<uint32_t, false>(0, nullptr);
@@ -234,7 +234,7 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
         },
         // Aggregate update function
         [](VectorProjectionIterator *aggs, VectorProjectionIterator *input) {
-          VectorProjectionIterator::ForEach({aggs, input}, [&]() {
+          VectorProjectionIterator::SynchronizedForEach({aggs, input}, [&]() {
             auto *e = *aggs->GetValue<sql::HashTableEntry *, false>(1, nullptr);
             auto agg = const_cast<AggTuple *>(e->PayloadAs<AggTuple>());
             agg->count1 += count1_scale;

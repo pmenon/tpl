@@ -227,12 +227,12 @@ class VectorProjectionIterator {
   void ForEach(F f);
 
   /**
-   * Run a functor synchronously over all active tuples in all provided input iterators.
+   * Run a functor simultaneously over all active tuples in all provided input iterators.
    * @tparam F Functor whose signature is equivalent to: <code>void f();</code>
    * @param f A callback functor.
    */
   template <typename F>
-  static void ForEach(std::initializer_list<VectorProjectionIterator *> iters, F f);
+  static void SynchronizedForEach(std::initializer_list<VectorProjectionIterator *> iters, F f);
 
   /**
    * Run a tuple-at-a-time predicate over all active tuples in the vector projection.
@@ -420,8 +420,8 @@ inline void VectorProjectionIterator::ForEach(F f) {
 
 // static
 template <typename F>
-void VectorProjectionIterator::ForEach(std::initializer_list<VectorProjectionIterator *> iters,
-                                       F f) {
+void VectorProjectionIterator::SynchronizedForEach(
+    std::initializer_list<VectorProjectionIterator *> iters, F f) {
   // Ensure callback conforms to expectation
   static_assert(std::is_invocable_r_v<void, F>, "Callback must be a no-arg void-return function");
 
