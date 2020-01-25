@@ -37,7 +37,7 @@ class AggregationHashTable::HashToGroupIdMap {
     uint16_t next;
   };
 
-  explicit HashToGroupIdMap() {
+  HashToGroupIdMap() {
     const uint64_t max_size = kDefaultVectorSize;
     capacity_ = max_size * 2;
     mask_ = capacity_ - 1;
@@ -574,8 +574,7 @@ void AggregationHashTable::ProcessBatch(
   if (TPL_UNLIKELY(batch_state_ == nullptr)) {
     batch_state_ = memory_->MakeObject<BatchProcessState>(
         libcount::HLL::Create(kDefaultHLLPrecision),  // The Hyper-Log-Log estimator
-        std::make_unique<HashToGroupIdMap>()          // The Hash-to-GroupID map
-    );
+        std::make_unique<HashToGroupIdMap>());        // The Hash-to-GroupID map
   }
 
   // Reset state for the incoming batch.
