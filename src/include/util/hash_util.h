@@ -30,7 +30,7 @@ class HashUtil : public AllStatic {
    */
   template <typename T>
   static auto Hash(T val, hash_t seed) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
-    return HashMurmur(val, seed);
+    return HashCrc(val, seed);
   }
 
   /**
@@ -42,7 +42,7 @@ class HashUtil : public AllStatic {
    */
   template <typename T>
   static auto Hash(T val) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
-    return HashMurmur(val);
+    return HashCrc(val);
   }
 
   /**
