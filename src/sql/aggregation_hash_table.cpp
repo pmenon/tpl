@@ -305,9 +305,15 @@ byte *AggregationHashTable::AllocInputTuplePartitioned(hash_t hash) {
 
 void AggregationHashTable::ComputeHash(VectorProjectionIterator *input_batch,
                                        const std::vector<uint32_t> &key_indexes) {
-  for (const auto key_index : key_indexes) {
-    const Vector *key_vector = input_batch->GetVectorProjection()->GetColumn(key_index);
-    VectorOps::Hash(*key_vector, batch_state_->Hashes());
+  TPL_ASSERT(!key_indexes.empty(), "Must have at least one key term");
+  // Where the result of all hashing is stored.
+  Vector *hashes = batch_state_->Hashes();
+  // Hash the first key column.
+  VectorOps::Hash(*input_batch->GetVectorProjection()->GetColumn(key_indexes[0]), hashes);
+  // Hash the rest using a combining/seeded hash.
+  for (uint32_t i = 1; i < key_indexes.size(); i++) {
+    const Vector *key_vector = input_batch->GetVectorProjection()->GetColumn(key_indexes[i]);
+    VectorOps::HashCombine(*key_vector, hashes);
   }
 }
 
