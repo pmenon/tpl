@@ -286,9 +286,9 @@ class VectorOps : public AllStatic {
   // -------------------------------------------------------
 
   /**
-   * Read the values pointed to by pointers in the @em pointers vector into the @em result vector.
-   * A byte-offset value @em offset is added to each pointer element before the pointer is
-   * de-referenced. NULL pointer elements are skipped, and the NULL bit is set in the result.
+   * Read the values pointed to by elements in the provided pointers vector into the result vector.
+   * A byte-offset value is added to each pointer element before de-referencing the pointer. NULL
+   * pointer elements are skipped, and the NULL bit is set in the result.
    * @param pointers The vector of pointers to read.
    * @param[out] result The vector containing the values read from de-referencing each pointer.
    * @param offset The byte offset to apply to each pointer before it is de-referenced.

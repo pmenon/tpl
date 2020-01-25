@@ -59,14 +59,14 @@ class TopLevelDeclarations;
  * a subtree in the query plan composing of operators that do not materialize tuple (batch) data
  * into cache or memory.
  *
- * Pipelines have a source and a sink. Tuples (batches) flow from the source to the sink,
- * potentially revisiting operators. Tuple (batch) data is contained in a ConsumerContext and
- * passed along the pipeline through DoPipelineWork(). DoPipelineWork() is where operators generate
- * their logic.
+ * All pipelines have a source operator and a sink operator. Tuples (batches) flow from the source
+ * to the sink along a pipeline in a WorkContext. When an operator receives a work context, it is
+ * a request to generate the logic of the operator (i.e., perform some work). When this work is
+ * complete, it should be sent to the following operator in the pipeline.
  *
- * Operators can implement some pre-work and post-work logic that may be required by implementing
- * BeginPipelineWork() and FinishPipelineWork() which are called before and after the primary/main
- * pipeline work is generated, respectively.
+ * Operators may generate pre-work and post-work pipeline logic by overriding BeginPipelineWork()
+ * and FinishPipelineWork() which are called before and after the primary/main pipeline work is
+ * generated, respectively.
  *
  * Helper functions:
  * -----------------
