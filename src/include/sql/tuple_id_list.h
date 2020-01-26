@@ -122,7 +122,7 @@ class TupleIdList {
   };
 
   /**
-   * Construct a list capable of storing at least @em num_tuples tuple IDs.
+   * Construct an empty list capable of storing at least @em num_tuples tuple IDs.
    * @param num_tuples The maximum number of tuples in the list.
    */
   explicit TupleIdList(uint32_t num_tuples) : bit_vector_(num_tuples) {}

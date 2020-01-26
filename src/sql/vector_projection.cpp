@@ -9,6 +9,7 @@
 #include "sql/column_vector_iterator.h"
 #include "sql/tuple_id_list.h"
 #include "sql/vector.h"
+#include "sql/vector_operations/vector_operators.h"
 
 namespace tpl::sql {
 
@@ -78,7 +79,7 @@ void VectorProjection::SetFilteredSelections(const TupleIdList &tid_list) {
   RefreshFilteredTupleIdList();
 }
 
-void VectorProjection::CopySelections(TupleIdList *tid_list) const {
+void VectorProjection::CopySelectionsTo(TupleIdList *tid_list) const {
   tid_list->Resize(owned_tid_list_.GetCapacity());
   tid_list->AssignFrom(owned_tid_list_);
 }
@@ -120,6 +121,14 @@ void VectorProjection::Pack() {
 
   for (auto &col : columns_) {
     col->Pack();
+  }
+}
+
+void VectorProjection::Hash(const std::vector<uint32_t> &cols, Vector *result) const {
+  TPL_ASSERT(!cols.empty(), "Must provide at least one column to hash.");
+  VectorOps::Hash(*GetColumn(cols[0]), result);
+  for (uint32_t i = 1; i < cols.size(); i++) {
+    VectorOps::HashCombine(*GetColumn(cols[i]), result);
   }
 }
 

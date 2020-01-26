@@ -138,7 +138,7 @@ class VectorProjection {
    * Copy the full list of active TIDs in this projection into the provided TID list.
    * @param[out] tid_list The list where active TIDs in this projection are written to.
    */
-  void CopySelections(TupleIdList *tid_list) const;
+  void CopySelectionsTo(TupleIdList *tid_list) const;
 
   /**
    * @return The metadata for the column at index @em col_idx in the projection.
@@ -175,6 +175,13 @@ class VectorProjection {
    * only active vector elements, removing any filtered TID list.
    */
   void Pack();
+
+  /**
+   * Hash the columns whose indexes are in @em cols and store the result in @em result.
+   * @param cols The indexes of the columns to hash.
+   * @param[out] result The output vector containing the result of the hash computation.
+   */
+  void Hash(const std::vector<uint32_t> &cols, Vector *result) const;
 
   /**
    * @return The number of columns in the projection.

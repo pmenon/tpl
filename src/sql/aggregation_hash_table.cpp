@@ -137,8 +137,8 @@ void AggregationHashTable::BatchProcessState::Reset(VectorProjectionIterator *in
   }
 
   // Initially, there are no groups found and all keys are unequal
-  input_batch->GetVectorProjection()->CopySelections(&groups_not_found);
-  input_batch->GetVectorProjection()->CopySelections(&key_not_equal);
+  input_batch->GetVectorProjection()->CopySelectionsTo(&groups_not_found);
+  input_batch->GetVectorProjection()->CopySelectionsTo(&key_not_equal);
 
   // Clear the rest of the lists
   groups_found.Clear();
@@ -305,16 +305,8 @@ byte *AggregationHashTable::AllocInputTuplePartitioned(hash_t hash) {
 
 void AggregationHashTable::ComputeHash(VectorProjectionIterator *input_batch,
                                        const std::vector<uint32_t> &key_indexes) {
-  TPL_ASSERT(!key_indexes.empty(), "Must have at least one key term");
-  // Where the result of all hashing is stored.
-  Vector *hashes = batch_state_->Hashes();
-  // Hash the first key column.
-  VectorOps::Hash(*input_batch->GetVectorProjection()->GetColumn(key_indexes[0]), hashes);
-  // Hash the rest using a combining/seeded hash.
-  for (uint32_t i = 1; i < key_indexes.size(); i++) {
-    const Vector *key_vector = input_batch->GetVectorProjection()->GetColumn(key_indexes[i]);
-    VectorOps::HashCombine(*key_vector, hashes);
-  }
+  auto *vector_projection = input_batch->GetVectorProjection();
+  vector_projection->Hash(key_indexes, batch_state_->Hashes());
 }
 
 void AggregationHashTable::LookupInitial() {
