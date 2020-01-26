@@ -165,8 +165,8 @@ class VectorProjection {
   }
 
   /**
-   * Reset this vector projection to the state after initialization. This will set the counts to 0,
-   * and reset each child vector to point to data owned by this projection (if it owns any).
+   * Reset the count of each child vector to @em num_tuples and reset the data pointer of each child
+   * vector to point to their data chunk in this projection, if it owns any.
    */
   void Reset(uint64_t num_tuples);
 
