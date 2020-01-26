@@ -9,7 +9,7 @@
 
 namespace tpl::sql {
 
-class GenericHashTableTest : public TplTest {};
+class ChainingHashTableTest : public TplTest {};
 
 // A test entry IS A hash table entry. It can directly be inserted into hash tables.
 struct TestEntry : public HashTableEntry {
@@ -32,7 +32,7 @@ struct TestEntry : public HashTableEntry {
   bool operator!=(const TestEntry &that) const { return !(*this == that); }
 };
 
-TEST_F(GenericHashTableTest, UntaggedInsertion) {
+TEST_F(ChainingHashTableTest, UntaggedInsertion) {
   UntaggedChainingHashTable table;
   table.SetSize(10);
 
@@ -74,7 +74,7 @@ TEST_F(GenericHashTableTest, UntaggedInsertion) {
   }
 }
 
-TEST_F(GenericHashTableTest, TaggedInsertion) {
+TEST_F(ChainingHashTableTest, TaggedInsertion) {
   TaggedChainingHashTable table;
   table.SetSize(10);
 
@@ -96,7 +96,7 @@ TEST_F(GenericHashTableTest, TaggedInsertion) {
   }
 }
 
-TEST_F(GenericHashTableTest, ConcurrentInsertion) {
+TEST_F(ChainingHashTableTest, ConcurrentInsertion) {
   constexpr uint32_t num_entries = 5000;
   constexpr uint32_t num_threads = 4;
 
@@ -155,7 +155,7 @@ TEST_F(GenericHashTableTest, ConcurrentInsertion) {
   EXPECT_EQ(num_threads * num_entries, found_entries);
 }
 
-TEST_F(GenericHashTableTest, Flushing) {
+TEST_F(ChainingHashTableTest, Flushing) {
   std::vector<TestEntry> entries = {
       {0, 1},
       {1, 2},
@@ -185,7 +185,7 @@ TEST_F(GenericHashTableTest, Flushing) {
   EXPECT_EQ(entries.size(), keys.size());
 }
 
-TEST_F(GenericHashTableTest, EmptyIterator) {
+TEST_F(ChainingHashTableTest, EmptyIterator) {
   UntaggedChainingHashTable table;
 
   //
@@ -230,7 +230,7 @@ TEST_F(GenericHashTableTest, EmptyIterator) {
   }
 }
 
-TEST_F(GenericHashTableTest, SimpleIteration) {
+TEST_F(ChainingHashTableTest, SimpleIteration) {
   //
   // Test: insert a bunch of entries into the hash table, ensure iteration finds
   //       them all.
@@ -303,7 +303,7 @@ TEST_F(GenericHashTableTest, SimpleIteration) {
   }
 }
 
-TEST_F(GenericHashTableTest, LongChainIteration) {
+TEST_F(ChainingHashTableTest, LongChainIteration) {
   //
   // Test: insert a bunch of identifier entries into the hash table to form a
   //       long chain in a single bucket. Then, iteration should complete over
@@ -364,7 +364,7 @@ TEST_F(GenericHashTableTest, LongChainIteration) {
   }
 }
 
-TEST_F(GenericHashTableTest, ChainStats) {
+TEST_F(ChainingHashTableTest, ChainStats) {
   TaggedChainingHashTable table;
   table.SetSize(100);
 
@@ -395,7 +395,7 @@ TEST_F(GenericHashTableTest, ChainStats) {
   EXPECT_EQ(bucket_len, max);
 }
 
-TEST_F(GenericHashTableTest, DISABLED_PerfIteration) {
+TEST_F(ChainingHashTableTest, DISABLED_PerfIteration) {
   const uint32_t num_inserts = 5000000;
 
   // The entries
