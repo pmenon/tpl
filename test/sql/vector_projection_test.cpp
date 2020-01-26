@@ -61,6 +61,31 @@ TEST_F(VectorProjectionTest, Initialize) {
   vector_projection.CheckIntegrity();
 }
 
+TEST_F(VectorProjectionTest, Reinitialize) {
+  VectorProjection vector_projection;
+
+  // Create vector projection with [smallint, double]
+  vector_projection.Initialize({TypeId::SmallInt, TypeId::Double});
+  EXPECT_EQ(2u, vector_projection.GetColumnCount());
+  EXPECT_EQ(TypeId::SmallInt, vector_projection.GetColumnType(0));
+  EXPECT_EQ(TypeId::Double, vector_projection.GetColumnType(1));
+  EXPECT_EQ(0u, vector_projection.GetTotalTupleCount());
+  EXPECT_EQ(0u, vector_projection.GetSelectedTupleCount());
+  EXPECT_EQ(nullptr, vector_projection.GetFilteredTupleIdList());
+  vector_projection.CheckIntegrity();
+
+  // Reinitialize with different schema: [integer, bigint, float]
+  vector_projection.InitializeEmpty({TypeId::Integer, TypeId::BigInt, TypeId::Float});
+  EXPECT_EQ(3u, vector_projection.GetColumnCount());
+  EXPECT_EQ(TypeId::Integer, vector_projection.GetColumnType(0));
+  EXPECT_EQ(TypeId::BigInt, vector_projection.GetColumnType(1));
+  EXPECT_EQ(TypeId::Float, vector_projection.GetColumnType(2));
+  EXPECT_EQ(0u, vector_projection.GetTotalTupleCount());
+  EXPECT_EQ(0u, vector_projection.GetSelectedTupleCount());
+  EXPECT_EQ(nullptr, vector_projection.GetFilteredTupleIdList());
+  vector_projection.CheckIntegrity();
+}
+
 TEST_F(VectorProjectionTest, Selection) {
   VectorProjection vector_projection;
   vector_projection.Initialize({TypeId::BigInt, TypeId::Double});

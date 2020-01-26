@@ -20,9 +20,9 @@ VectorProjection::VectorProjection()
 
 void VectorProjection::InitializeEmpty(const std::vector<TypeId> &col_types) {
   TPL_ASSERT(!col_types.empty(), "Cannot create projection with zero columns");
-  columns_.reserve(col_types.size());
-  for (const auto col_type : col_types) {
-    columns_.emplace_back(std::make_unique<Vector>(col_type));
+  columns_.resize(col_types.size());
+  for (uint32_t i = 0; i < col_types.size(); i++) {
+    columns_[i] = std::make_unique<Vector>(col_types[i]);
   }
 }
 
