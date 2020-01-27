@@ -21,7 +21,6 @@
 #include "sql/filter_manager.h"
 #include "sql/generic_value.h"
 #include "sql/join_hash_table.h"
-#include "sql/join_hash_table_vector_probe.h"
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"

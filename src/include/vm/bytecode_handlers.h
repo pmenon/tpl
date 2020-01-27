@@ -14,7 +14,6 @@
 #include "sql/functions/is_null_predicate.h"
 #include "sql/functions/string_functions.h"
 #include "sql/join_hash_table.h"
-#include "sql/join_hash_table_vector_probe.h"
 #include "sql/operations/hash_operators.h"
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
@@ -1042,24 +1041,6 @@ VM_OP_HOT void OpJoinHashTableLookup(tpl::sql::JoinHashTable *join_hash_table,
 }
 
 VM_OP void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table);
-
-VM_OP void OpJoinHashTableVectorProbeInit(tpl::sql::JoinHashTableVectorProbe *jht_vector_probe,
-                                          tpl::sql::JoinHashTable *jht);
-
-VM_OP_HOT void OpJoinHashTableVectorProbePrepare(
-    tpl::sql::JoinHashTableVectorProbe *jht_vector_probe, tpl::sql::VectorProjectionIterator *vpi,
-    tpl::sql::JoinHashTableVectorProbe::HashFn hash_fn) {
-  jht_vector_probe->Prepare(vpi, hash_fn);
-}
-
-VM_OP_HOT void OpJoinHashTableVectorProbeGetNextOutput(
-    const byte **result, tpl::sql::JoinHashTableVectorProbe *jht_vector_probe,
-    tpl::sql::VectorProjectionIterator *vpi,
-    tpl::sql::JoinHashTableVectorProbe::KeyEqFn key_eq_fn) {
-  *result = jht_vector_probe->GetNextOutput(vpi, key_eq_fn);
-}
-
-VM_OP void OpJoinHashTableVectorProbeFree(tpl::sql::JoinHashTableVectorProbe *jht_vector_probe);
 
 VM_OP_HOT void OpHashTableEntryIteratorHasNext(bool *has_next,
                                                tpl::sql::HashTableEntryIterator *ht_entry_iter) {

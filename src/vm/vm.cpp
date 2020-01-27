@@ -1328,42 +1328,6 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(JoinHashTableVectorProbeInit) : {
-    auto *jht_vector_probe = frame->LocalAt<sql::JoinHashTableVectorProbe *>(READ_LOCAL_ID());
-    auto *jht = frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
-    OpJoinHashTableVectorProbeInit(jht_vector_probe, jht);
-    DISPATCH_NEXT();
-  }
-
-  OP(JoinHashTableVectorProbePrepare) : {
-    auto *jht_vector_probe = frame->LocalAt<sql::JoinHashTableVectorProbe *>(READ_LOCAL_ID());
-    auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    auto hash_fn_id = READ_FUNC_ID();
-
-    auto *hash_fn = reinterpret_cast<sql::JoinHashTableVectorProbe::HashFn>(
-        module_->GetRawFunctionImpl(hash_fn_id));
-    OpJoinHashTableVectorProbePrepare(jht_vector_probe, vpi, hash_fn);
-    DISPATCH_NEXT();
-  }
-
-  OP(JoinHashTableVectorProbeGetNextOutput) : {
-    auto **result = frame->LocalAt<const byte **>(READ_LOCAL_ID());
-    auto *jht_vector_probe = frame->LocalAt<sql::JoinHashTableVectorProbe *>(READ_LOCAL_ID());
-    auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    auto key_eq_fn_id = READ_FUNC_ID();
-
-    auto *key_eq_fn = reinterpret_cast<sql::JoinHashTableVectorProbe::KeyEqFn>(
-        module_->GetRawFunctionImpl(key_eq_fn_id));
-    OpJoinHashTableVectorProbeGetNextOutput(result, jht_vector_probe, vpi, key_eq_fn);
-    DISPATCH_NEXT();
-  }
-
-  OP(JoinHashTableVectorProbeFree) : {
-    auto *jht_vector_probe = frame->LocalAt<sql::JoinHashTableVectorProbe *>(READ_LOCAL_ID());
-    OpJoinHashTableVectorProbeFree(jht_vector_probe);
-    DISPATCH_NEXT();
-  }
-
   OP(HashTableEntryIteratorHasNext) : {
     auto *has_next = frame->LocalAt<bool *>(READ_LOCAL_ID());
     auto *ht_entry_iter = frame->LocalAt<sql::HashTableEntryIterator *>(READ_LOCAL_ID());

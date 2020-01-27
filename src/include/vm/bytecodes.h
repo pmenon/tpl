@@ -376,11 +376,6 @@ namespace tpl::vm {
   F(JoinHashTableBuildParallel, OperandType::Local, OperandType::Local, OperandType::Local)                            \
   F(JoinHashTableLookup, OperandType::Local, OperandType::Local, OperandType::Local)                                   \
   F(JoinHashTableFree, OperandType::Local)                                                                             \
-  F(JoinHashTableVectorProbeInit, OperandType::Local, OperandType::Local)                                              \
-  F(JoinHashTableVectorProbePrepare, OperandType::Local, OperandType::Local, OperandType::FunctionId)                  \
-  F(JoinHashTableVectorProbeGetNextOutput, OperandType::Local, OperandType::Local, OperandType::Local,                 \
-      OperandType::FunctionId)                                                                                         \
-  F(JoinHashTableVectorProbeFree, OperandType::Local)                                                                  \
   F(HashTableEntryIteratorHasNext, OperandType::Local, OperandType::Local)                                             \
   F(HashTableEntryIteratorGetRow, OperandType::Local, OperandType::Local)                                              \
                                                                                                                        \
