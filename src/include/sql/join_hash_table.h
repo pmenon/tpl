@@ -18,6 +18,7 @@ class HLL;
 namespace tpl::sql {
 
 class ThreadStateContainer;
+class Vector;
 
 /**
  * The main class used to for hash joins. JoinHashTables are bulk-loaded through calls to
@@ -53,7 +54,7 @@ class JoinHashTable {
    * and thus, are ephemeral.
    * @param memory The memory pool to allocate memory from.
    * @param tuple_size The size of the tuple stored in this join hash table.
-   * @param use_concise_ht Whether to use a concise or generic join index.
+   * @param use_concise_ht Whether to use a concise or fatter chaining join index.
    */
   explicit JoinHashTable(MemoryPool *memory, uint32_t tuple_size, bool use_concise_ht = false);
 
@@ -93,14 +94,13 @@ class JoinHashTable {
   HashTableEntryIterator Lookup(hash_t hash) const;
 
   /**
-   * Perform a batch lookup of elements whose hash values are stored in @em hashes, storing the
-   * results in @em results.
-   * @param num_tuples The number of tuples in the batch.
+   * Perform a bulk lookup of tuples whose hash values are stored in @em hashes, storing the results
+   * in @em results. The results vector will chain the potentially null head of a chain of
+   * HashTableEntry objects.
    * @param hashes The hash values of the probe elements.
    * @param results The heads of the bucket chain of the probed elements.
    */
-  void LookupBatch(uint32_t num_tuples, const hash_t hashes[],
-                   const HashTableEntry *results[]) const;
+  void LookupBatch(const Vector &hashes, Vector *results) const;
 
   /**
    * Merge all thread-local hash tables stored in the state contained into this table. Perform the
@@ -184,12 +184,12 @@ class JoinHashTable {
     return reinterpret_cast<const HashTableEntry *>(entries_[idx]);
   }
 
-  // Dispatched from Build() to build either a generic or concise hash table
-  void BuildGenericHashTable();
+  // Dispatched from Build() to build either a chaining or concise hash table.
+  void BuildChainingHashTable();
   void BuildConciseHashTable();
 
   // Dispatched from BuildConciseHashTable() to construct the concise hash table
-  // and to reorder buffered build tuples in place according to the CHT
+  // and to reorder buffered build tuples in place according to the CHT.
   template <bool PrefetchCHT, bool PrefetchEntries>
   void BuildConciseHashTableInternal();
   template <bool PrefetchCHT, bool PrefetchEntries>
@@ -199,17 +199,10 @@ class JoinHashTable {
   void VerifyMainEntryOrder();
   void VerifyOverflowEntryOrder();
 
-  // Dispatched from LookupBatch() to lookup from either a generic or concise
-  // hash table in batched manner
-  void LookupBatchInGenericHashTable(uint32_t num_tuples, const hash_t hashes[],
-                                     const HashTableEntry *results[]) const;
-  void LookupBatchInConciseHashTable(uint32_t num_tuples, const hash_t hashes[],
-                                     const HashTableEntry *results[]) const;
-
-  // Dispatched from LookupBatchInConciseHashTable()
-  template <bool Prefetch>
-  void LookupBatchInConciseHashTableInternal(uint32_t num_tuples, const hash_t hashes[],
-                                             const HashTableEntry *results[]) const;
+  // Dispatched from LookupBatch() to lookup from either a chaining or concise
+  // hash table in batched manner.
+  void LookupBatchInChainingHashTable(const Vector &hashes, Vector *results) const;
+  void LookupBatchInConciseHashTable(const Vector &hashes, Vector *results) const;
 
   // Merge the source hash table (which isn't built yet) into this one
   template <bool Concurrent>

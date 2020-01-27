@@ -17,6 +17,8 @@
 #include "logging/logger.h"
 #include "sql/memory_pool.h"
 #include "sql/thread_state_container.h"
+#include "sql/vector.h"
+#include "sql/vector_operations/vector_operators.h"
 #include "util/timer.h"
 
 namespace tpl::sql {
@@ -47,7 +49,7 @@ byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
 // Generic hash tables
 // ---------------------------------------------------------
 
-void JoinHashTable::BuildGenericHashTable() {
+void JoinHashTable::BuildChainingHashTable() {
   // Perfectly size the generic hash table in preparation for bulk-load.
   chaining_hash_table_.SetSize(GetTupleCount());
 
@@ -516,7 +518,7 @@ void JoinHashTable::Build() {
   if (UsingConciseHashTable()) {
     BuildConciseHashTable();
   } else {
-    BuildGenericHashTable();
+    BuildChainingHashTable();
   }
 
   timer.Stop();
@@ -526,47 +528,31 @@ void JoinHashTable::Build() {
   built_ = true;
 }
 
-void JoinHashTable::LookupBatchInGenericHashTable(uint32_t num_tuples, const hash_t hashes[],
-                                                  const HashTableEntry *results[]) const {
+void JoinHashTable::LookupBatchInChainingHashTable(const Vector &hashes, Vector *results) const {
   // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
-  chaining_hash_table_.LookupBatch(num_tuples, hashes, results);
+  // TODO(pmenon): Implement prefetching.
+  auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(results->GetData());
+  VectorOps::ExecTyped<hash_t>(hashes, [&](hash_t hash_val, uint64_t i, uint64_t k) {
+    raw_entries[i] = chaining_hash_table_.FindChainHead(hash_val);
+  });
 }
 
-template <bool Prefetch>
-void JoinHashTable::LookupBatchInConciseHashTableInternal(uint32_t num_tuples,
-                                                          const hash_t hashes[],
-                                                          const HashTableEntry *results[]) const {
-  for (uint32_t idx = 0, prefetch_idx = kPrefetchDistance; idx < num_tuples;
-       idx++, prefetch_idx++) {
-    if constexpr (Prefetch) {
-      if (TPL_LIKELY(prefetch_idx < num_tuples)) {
-        concise_hash_table_.PrefetchSlotGroup<true>(hashes[prefetch_idx]);
-      }
-    }
-
-    const auto [found, entry_idx] = concise_hash_table_.Lookup(hashes[idx]);
-    results[idx] = (found ? EntryAt(entry_idx) : nullptr);
-  }
+void JoinHashTable::LookupBatchInConciseHashTable(const Vector &hashes, Vector *results) const {
+  // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
+  // TODO(pmenon): Implement prefetching.
+  auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(results->GetData());
+  VectorOps::ExecTyped<hash_t>(hashes, [&](hash_t hash_val, uint64_t i, uint64_t k) {
+    const auto [found, entry_idx] = concise_hash_table_.Lookup(hash_val);
+    raw_entries[i] = (found ? EntryAt(entry_idx) : nullptr);
+  });
 }
 
-void JoinHashTable::LookupBatchInConciseHashTable(uint32_t num_tuples, const hash_t hashes[],
-                                                  const HashTableEntry *results[]) const {
-  uint64_t l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
-  if (concise_hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
-    LookupBatchInConciseHashTableInternal<true>(num_tuples, hashes, results);
-  } else {
-    LookupBatchInConciseHashTableInternal<false>(num_tuples, hashes, results);
-  }
-}
-
-void JoinHashTable::LookupBatch(uint32_t num_tuples, const hash_t hashes[],
-                                const HashTableEntry *results[]) const {
+void JoinHashTable::LookupBatch(const Vector &hashes, Vector *results) const {
   TPL_ASSERT(IsBuilt(), "Cannot perform lookup before table is built!");
-
   if (UsingConciseHashTable()) {
-    LookupBatchInConciseHashTable(num_tuples, hashes, results);
+    LookupBatchInConciseHashTable(hashes, results);
   } else {
-    LookupBatchInGenericHashTable(num_tuples, hashes, results);
+    LookupBatchInChainingHashTable(hashes, results);
   }
 }
 
