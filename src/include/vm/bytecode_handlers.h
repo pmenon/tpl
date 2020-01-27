@@ -400,7 +400,7 @@ VM_OP void OpFilterManagerInit(tpl::sql::FilterManager *filter_manager);
 VM_OP void OpFilterManagerStartNewClause(tpl::sql::FilterManager *filter_manager);
 
 VM_OP void OpFilterManagerInsertFilter(tpl::sql::FilterManager *filter_manager,
-                                       tpl::sql::FilterManager::MatchFn flavor);
+                                       tpl::sql::FilterManager::MatchFn clause);
 
 VM_OP void OpFilterManagerFinalize(tpl::sql::FilterManager *filter_manager);
 
