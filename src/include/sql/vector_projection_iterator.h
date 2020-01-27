@@ -420,7 +420,7 @@ inline void VectorProjectionIterator::ForEach(F f) {
 
 // static
 template <typename F>
-void VectorProjectionIterator::SynchronizedForEach(
+inline void VectorProjectionIterator::SynchronizedForEach(
     std::initializer_list<VectorProjectionIterator *> iters, F f) {
   // Ensure callback conforms to expectation
   static_assert(std::is_invocable_r_v<void, F>, "Callback must be a no-arg void-return function");
