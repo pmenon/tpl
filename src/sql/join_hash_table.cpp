@@ -549,6 +549,10 @@ void JoinHashTable::LookupBatchInConciseHashTable(const Vector &hashes, Vector *
 
 void JoinHashTable::LookupBatch(const Vector &hashes, Vector *results) const {
   TPL_ASSERT(IsBuilt(), "Cannot perform lookup before table is built!");
+  results->Resize(hashes.GetSize());
+  results->GetMutableNullMask()->Copy(hashes.GetNullMask());
+  results->SetFilteredTupleIdList(hashes.GetFilteredTupleIdList(), hashes.GetCount());
+
   if (UsingConciseHashTable()) {
     LookupBatchInConciseHashTable(hashes, results);
   } else {
