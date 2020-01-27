@@ -90,7 +90,19 @@ class VectorProjection {
   /**
    * This class cannot be copied or moved.
    */
-  DISALLOW_COPY_AND_MOVE(VectorProjection);
+  DISALLOW_COPY(VectorProjection);
+
+  /**
+   * Move constructor.
+   */
+  VectorProjection(VectorProjection &&other) = default;
+
+  /**
+   * Move assignment.
+   * @param other The vector projection whose contents to move into this instance.
+   * @return This vector projection instance.
+   */
+  VectorProjection &operator=(VectorProjection &&other) = default;
 
   /**
    * Initialize a vector projection with column vectors of the provided types. This will create one

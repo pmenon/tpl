@@ -56,5 +56,5 @@ scan-alltypes.tpl,true,1000000
 scan-vpi-iter.tpl,true,500
 sort.tpl,true,2000
 sort-topk.tpl,true,11
-sql-null-check.tpl,true,2000000
+sql-null-check.tpl,true,0
 vec-filter.tpl,true,2000

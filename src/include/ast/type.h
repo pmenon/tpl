@@ -63,7 +63,6 @@ class Context;
   NON_PRIM(HashTableEntry, tpl::sql::HashTableEntry)                             \
   NON_PRIM(HashTableEntryIterator, tpl::sql::HashTableEntryIterator)             \
   NON_PRIM(JoinHashTable, tpl::sql::JoinHashTable)                               \
-  NON_PRIM(JoinHashTableVectorProbe, tpl::sql::JoinHashTableVectorProbe)         \
   NON_PRIM(MemoryPool, tpl::sql::MemoryPool)                                     \
   NON_PRIM(Sorter, tpl::sql::Sorter)                                             \
   NON_PRIM(SorterIterator, tpl::sql::SorterIterator)                             \

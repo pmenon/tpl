@@ -98,16 +98,6 @@ void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table) {
   join_hash_table->~JoinHashTable();
 }
 
-void OpJoinHashTableVectorProbeInit(tpl::sql::JoinHashTableVectorProbe *jht_vector_probe,
-                                    tpl::sql::JoinHashTable *jht) {
-  TPL_ASSERT(jht != nullptr, "Null JHT");
-  new (jht_vector_probe) tpl::sql::JoinHashTableVectorProbe(*jht);
-}
-
-void OpJoinHashTableVectorProbeFree(tpl::sql::JoinHashTableVectorProbe *jht_vector_probe) {
-  jht_vector_probe->~JoinHashTableVectorProbe();
-}
-
 // ---------------------------------------------------------
 // Aggregation Hash Table
 // ---------------------------------------------------------
