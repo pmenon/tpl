@@ -5,6 +5,7 @@
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/function_builder.h"
+#include "sql/codegen/if.h"
 #include "sql/codegen/loop.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/top_level_declarations.h"
@@ -52,16 +53,24 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *func,
   func->Append(
       codegen->DeclareVarWithInit(vpi_name_, codegen->PointerType(codegen->MakeExpr(vpi_base))));
 
-  Loop vpi_loop(codegen, codegen->MakeStmt(codegen->VPIInit(vpi, vp, tids)),  // @vpiInit()
-                codegen->VPIHasNext(vpi, true),                               // @vpiHasNext()
-                codegen->MakeStmt(codegen->VPIAdvance(vpi, true)));           // @vpiAdvance()
-  {
-    WorkContext context(GetCompilationContext(), *GetPipeline());
-    auto cond_translator = GetCompilationContext()->LookupTranslator(*term);
-    auto match = cond_translator->DeriveValue(&context, this);
-    func->Append(codegen->VPIMatch(vpi, match));
-  }
-  vpi_loop.EndLoop();
+  auto gen_body = [&](const bool is_filtered) {
+    Loop vpi_loop(codegen, codegen->MakeStmt(codegen->VPIInit(vpi, vp, tids)),  // @vpiInit()
+                  codegen->VPIHasNext(vpi, is_filtered),                        // @vpiHasNext()
+                  codegen->MakeStmt(codegen->VPIAdvance(vpi, is_filtered)));    // @vpiAdvance()
+    {
+      WorkContext context(GetCompilationContext(), *GetPipeline());
+      auto cond_translator = GetCompilationContext()->LookupTranslator(*term);
+      auto match = cond_translator->DeriveValue(&context, this);
+      func->Append(codegen->VPIMatch(vpi, match));
+    }
+    vpi_loop.EndLoop();
+  };
+
+  If check_filtered(codegen, codegen->VPIIsFiltered(vpi));
+  gen_body(true);
+  check_filtered.Else();
+  gen_body(false);
+  check_filtered.EndIf();
 }
 
 void SeqScanTranslator::GenerateFilterClauseFunctions(TopLevelDeclarations *top_level_decls,
