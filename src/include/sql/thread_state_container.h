@@ -86,18 +86,21 @@ namespace tpl::sql {
 class ThreadStateContainer {
  public:
   /**
-   * Function used to initialize a thread's local state upon first use
+   * Function used to initialize a thread's local state upon first use.
+   * Arguments: pointer to opaque context, pointer to a thread-local state.
    */
   using InitFn = void (*)(void *, void *);
 
   /**
-   * Function used to destroy a thread's local state if the container is
-   * destructed, or if the states are reset.
+   * Function used to destroy a thread's local state. Called if the container is destructed, or if
+   * the states are reset.
+   * Arguments: pointer to opaque context, pointer to a thread-local state.
    */
   using DestroyFn = void (*)(void *, void *);
 
   /**
    * Function to iterate over all thread-local states in this container.
+   * Arguments: pointer to opaque context, pointer to a thread-local state.
    */
   using IterateFn = void (*)(void *, void *);
 
