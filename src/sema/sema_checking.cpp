@@ -270,6 +270,11 @@ bool Sema::CheckAssignmentConstraints(ast::Type *target_type, ast::Expr *&expr) 
     return true;
   }
 
+  // Null pointers
+  if (target_type->IsPointerType() && expr->GetType()->IsNilType()) {
+    return true;
+  }
+
   // Integer expansion
   if (target_type->IsIntegerType() && expr->GetType()->IsIntegerType()) {
     if (target_type->GetSize() > expr->GetType()->GetSize()) {

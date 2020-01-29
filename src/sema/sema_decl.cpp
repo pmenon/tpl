@@ -13,13 +13,12 @@ void Sema::VisitVariableDecl(ast::VariableDecl *node) {
     return;
   }
 
-  // At this point, the variable either has a declared type or an initial value
+  // At this point, the variable either has a declared type or an initial value.
   TPL_ASSERT(node->HasTypeDecl() || node->HasInitialValue(),
-             "Variable has neither a type declaration or an initial "
-             "expression. This should have been caught during parsing.");
+             "Variable has neither a type declaration or an initial expression. This should have "
+             "been caught during parsing.");
 
-  ast::Type *declared_type = nullptr;
-  ast::Type *initializer_type = nullptr;
+  ast::Type *declared_type = nullptr, *initializer_type = nullptr;
 
   if (node->HasTypeDecl()) {
     declared_type = Resolve(node->TypeRepr());
@@ -29,27 +28,34 @@ void Sema::VisitVariableDecl(ast::VariableDecl *node) {
     initializer_type = Resolve(node->Initial());
   }
 
+  // If neither are resolved, it's an error.
   if (declared_type == nullptr && initializer_type == nullptr) {
     return;
   }
 
-  // If both are provided, check assignment
   if (declared_type != nullptr && initializer_type != nullptr) {
+    // If both type declarations are provided, check assignment.
     ast::Expr *init = node->Initial();
     if (!CheckAssignmentConstraints(declared_type, init)) {
       error_reporter()->Report(node->Position(), ErrorMessages::kInvalidAssignment, declared_type,
                                initializer_type);
       return;
     }
-    // If the check applied an implicit cast, reset the initializing expression
+    // If the check applied an implicit cast, reset the initializing expression.
     if (init != node->Initial()) {
       node->SetInitial(init);
     }
+  } else if (initializer_type != nullptr) {
+    // Both type declarations are not provided, but the initial value has a
+    // resolved type. Let's check it now.
+    if (initializer_type->IsNilType()) {
+      error_reporter()->Report(node->Position(), ErrorMessages::kUseOfUntypedNil);
+      return;
+    }
   }
 
-  // The type should be resolved now
-  current_scope()->Declare(node->Name(),
-                           (declared_type != nullptr ? declared_type : initializer_type));
+  ast::Type *resolved_type = (declared_type != nullptr ? declared_type : initializer_type);
+  current_scope()->Declare(node->Name(), resolved_type);
 }
 
 void Sema::VisitFieldDecl(ast::FieldDecl *node) { Visit(node->TypeRepr()); }
@@ -77,7 +83,7 @@ bool HasDuplicatesNames(const util::RegionVector<ast::FieldDecl *> &fields,
 
 void Sema::VisitFunctionDecl(ast::FunctionDecl *node) {
   // Resolve just the function type (not the body of the function).
-  auto *func_type = Resolve(node->TypeRepr());
+  ast::Type *func_type = Resolve(node->TypeRepr());
 
   if (func_type == nullptr) {
     return;
@@ -99,7 +105,7 @@ void Sema::VisitFunctionDecl(ast::FunctionDecl *node) {
 }
 
 void Sema::VisitStructDecl(ast::StructDecl *node) {
-  auto *struct_type = Resolve(node->TypeRepr());
+  ast::Type *struct_type = Resolve(node->TypeRepr());
 
   if (struct_type == nullptr) {
     return;

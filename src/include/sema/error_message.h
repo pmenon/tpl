@@ -46,6 +46,7 @@ namespace sema {
   F(NonIntegerArrayLength, "non-integer literal used as array size", ())                           \
   F(NegativeArrayLength, "array bound must be non-negative", ())                                   \
   F(ReturnOutsideFunction, "return outside function", ())                                          \
+  F(UseOfUntypedNil, "use of untyped 'nil'", ())                                                   \
   F(MissingTypeAndInitialValue,                                                                    \
     "variable '%0' must have either a declared type or an initial value", (ast::Identifier))       \
   F(IllegalTypesForBinary, "binary operation '%0' does not support types '%1' and '%2'",           \
