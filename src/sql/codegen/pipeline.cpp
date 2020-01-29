@@ -125,7 +125,7 @@ ast::Identifier Pipeline::GetWorkFunctionName() const {
   return compilation_context_->GetCodeGen()->MakeIdentifier(name);
 }
 
-util::RegionVector<ast::FieldDecl *> Pipeline::PipelineArgs() const {
+util::RegionVector<ast::FieldDecl *> Pipeline::PipelineParams() const {
   auto codegen = compilation_context_->GetCodeGen();
   // The main query parameters.
   util::RegionVector<ast::FieldDecl *> query_params = compilation_context_->QueryParams();
@@ -194,7 +194,7 @@ ast::FunctionDecl *Pipeline::GenerateSetupPipelineStateFunction(
     PipelineContext *pipeline_context) const {
   auto codegen = compilation_context_->GetCodeGen();
   auto name = GetSetupPipelineStateFunctionName();
-  FunctionBuilder builder(codegen, name, PipelineArgs(), codegen->Nil());
+  FunctionBuilder builder(codegen, name, PipelineParams(), codegen->Nil());
   {
     // Request new scope for the function.
     CodeGen::CodeScope code_scope(codegen);
@@ -212,7 +212,7 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineStateFunction(
     PipelineContext *pipeline_context) const {
   auto codegen = compilation_context_->GetCodeGen();
   auto name = GetTearDownPipelineStateFunctionName();
-  FunctionBuilder builder(codegen, name, PipelineArgs(), codegen->Nil());
+  FunctionBuilder builder(codegen, name, PipelineParams(), codegen->Nil());
   {
     // Request new scope for the function.
     CodeGen::CodeScope code_scope(codegen);
@@ -257,10 +257,10 @@ ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction(PipelineContext *pipel
 
 ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction(PipelineContext *pipeline_context) const {
   auto codegen = compilation_context_->GetCodeGen();
-  auto params = PipelineArgs();
+  auto params = PipelineParams();
 
   if (IsParallel()) {
-    auto additional_params = Source()->GetWorkerParams();
+    auto additional_params = (*Begin())->GetWorkerParams();
     params.insert(params.end(), additional_params.begin(), additional_params.end());
   }
 
@@ -272,7 +272,7 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction(PipelineContext *pipel
     PipelineContext::StateScope state_scope(pipeline_context,
                                             codegen->MakeExpr(pipeline_state_var_));
     WorkContext work_context(compilation_context_, pipeline_context);
-    Source()->PerformPipelineWork(&work_context);
+    (*Begin())->PerformPipelineWork(&work_context);
   }
   return builder.Finish();
 }
@@ -292,7 +292,7 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(PipelineContext *pipeli
 
     // Launch pipeline work.
     if (IsParallel()) {
-      Source()->LaunchWork(GetWorkFunctionName());
+      (*Begin())->LaunchWork(GetWorkFunctionName());
     } else {
       auto state_ptr = builder.GetParameterByPosition(0);
       auto thread_state_ptr = codegen->Const64(0);

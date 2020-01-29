@@ -219,18 +219,20 @@ class Pipeline {
   StepIterator End() const { return steps_.rend(); }
 
   /**
-   * @return The root/source of the pipeline.
-   */
-  OperatorTranslator *Source() const { return *Begin(); }
-
-  /**
    * Pretty print this pipeline's information.
    * @return A string containing pretty-printed information about this pipeline.
    */
   std::string PrettyPrint() const;
 
-  // Create a unique function local to this pipeline.
+  /**
+   * @return A unique name for a function local to this pipeline.
+   */
   std::string ConstructPipelineFunctionName(const std::string &func_name) const;
+
+  /**
+   * @return Arguments common to all pipeline functions.
+   */
+  util::RegionVector<ast::FieldDecl *> PipelineParams() const;
 
  private:
   // Return the thread-local state initialization and tear-down function names.
@@ -239,8 +241,6 @@ class Pipeline {
   ast::Identifier GetSetupPipelineStateFunctionName() const;
   ast::Identifier GetTearDownPipelineStateFunctionName() const;
   ast::Identifier GetWorkFunctionName() const;
-
-  util::RegionVector<ast::FieldDecl *> PipelineArgs() const;
 
   // Generate the pipeline state initialization logic.
   ast::FunctionDecl *GenerateSetupPipelineStateFunction(PipelineContext *pipeline_context) const;
