@@ -264,13 +264,12 @@ static void RunRepl() {
     // Run file?
     if (llvm::StringRef line_ref(line); line_ref.startswith_lower(".run")) {
       auto [_, filename] = line_ref.split(' ');
-      (void)_;
       RunFile(filename);
       continue;
     }
 
     // Code ...
-    std::string input = line;
+    std::string input;
     while (!line.empty()) {
       input.append(line).append("\n");
       line = prompt_and_read_line();
