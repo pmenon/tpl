@@ -149,4 +149,19 @@ std::unique_ptr<vm::Module> Compiler::RunCompilationSimple(const Compiler::Input
   return no_op_callbacks.TakeModule();
 }
 
+std::string Compiler::CompilerPhaseToString(Compiler::Phase phase) {
+  switch (phase) {
+    case Phase::Parsing:
+      return "Parsing";
+    case Phase::SemanticAnalysis:
+      return "Semantic Analysis";
+    case Phase::BytecodeGeneration:
+      return "Bytecode Generation";
+    case Phase::ModuleGeneration:
+      return "Module Generation";
+    default:
+      UNREACHABLE("Impossible.");
+  }
+}
+
 }  // namespace tpl::compiler

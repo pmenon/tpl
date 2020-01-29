@@ -160,6 +160,11 @@ class Compiler {
   static std::unique_ptr<vm::Module> RunCompilationSimple(const Input &input);
 
   /**
+   * @return A string name for the given compilation phase.
+   */
+  static std::string CompilerPhaseToString(Phase phase);
+
+  /**
    * @return The TPL context used during compilation.
    */
   ast::Context *GetContext() const { return input_.GetContext(); }
