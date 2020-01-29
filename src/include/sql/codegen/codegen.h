@@ -533,6 +533,13 @@ class CodeGen {
   // -------------------------------------------------------
 
   /**
+   * Call @vpiIsFiltered(). Determines if the provided vector projection iterator is filtered.
+   * @param vpi The vector projection iterator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *VPIIsFiltered(ast::Expr *vpi) const;
+
+  /**
    * Call @vpiHasNext() or @vpiHasNextFiltered(). Check if the provided unfiltered (or filtered) VPI
    * has more tuple data to iterate over.
    * @param vpi The vector projection iterator.

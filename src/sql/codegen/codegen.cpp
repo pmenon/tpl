@@ -391,6 +391,12 @@ ast::Expr *CodeGen::IterateTableParallel(std::string_view table_name, ast::Expr 
   return call;
 }
 
+ast::Expr *CodeGen::VPIIsFiltered(ast::Expr *vpi) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::VPIIsFiltered, {vpi});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Bool));
+  return call;
+}
+
 ast::Expr *CodeGen::VPIHasNext(ast::Expr *vpi, bool filtered) const {
   ast::Builtin builtin = filtered ? ast::Builtin::VPIHasNextFiltered : ast::Builtin::VPIHasNext;
   ast::Expr *call = CallBuiltin(builtin, {vpi});
