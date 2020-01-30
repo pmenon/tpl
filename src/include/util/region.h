@@ -77,7 +77,7 @@ class Region {
    * @param alignment The desired alignment
    * @return A pointer to the start of the allocated space
    */
-  void *Allocate(std::size_t size, std::size_t alignment = kDefaultByteAlignment);
+  [[nodiscard]] void *Allocate(std::size_t size, std::size_t alignment = kDefaultByteAlignment);
 
   /**
    * Individual de-allocations in a region-allocator are a no-op. All memory is freed when the

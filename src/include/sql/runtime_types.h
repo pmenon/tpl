@@ -527,7 +527,7 @@ class VarlenHeap {
    * @param len The length of the varlen to allocate.
    * @return The character byte array.
    */
-  char *PreAllocate(std::size_t len) { return heap_.Allocate(len); }
+  [[nodiscard]] char *PreAllocate(std::size_t len) { return heap_.Allocate(len); }
 
   /**
    * Allocate a varlen from this heap whose contents are the same as the input string.
@@ -535,7 +535,7 @@ class VarlenHeap {
    * @param len The length of the input string.
    * @return A varlen.
    */
-  VarlenEntry AddVarlen(const char *str, std::size_t len) {
+  [[nodiscard]] VarlenEntry AddVarlen(const char *str, std::size_t len) {
     auto *content = heap_.AddString(std::string_view(str, len));
     return VarlenEntry::Create(reinterpret_cast<byte *>(content), len);
   }
@@ -545,7 +545,7 @@ class VarlenHeap {
    * @param string The string to copy into the heap.
    * @return A varlen.
    */
-  VarlenEntry AddVarlen(const std::string &string) {
+  [[nodiscard]] VarlenEntry AddVarlen(const std::string &string) {
     return AddVarlen(string.c_str(), string.length());
   }
 
@@ -554,7 +554,7 @@ class VarlenHeap {
    * @param other The varlen to copy into this heap.
    * @return A new varlen entry.
    */
-  VarlenEntry AddVarlen(const VarlenEntry &other) {
+  [[nodiscard]] VarlenEntry AddVarlen(const VarlenEntry &other) {
     return AddVarlen(reinterpret_cast<const char *>(other.GetContent()), other.GetSize());
   }
 
