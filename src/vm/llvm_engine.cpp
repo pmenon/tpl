@@ -297,6 +297,7 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
 
   const auto &func_locals = func_info.GetLocals();
 
+  // Make an allocation for the return value, if it's direct.
   if (const ast::FunctionType *func_type = func_info.GetFuncType();
       FunctionHasDirectReturn(func_type)) {
     llvm::Type *ret_type = type_map->GetLLVMType(func_type->GetReturnType());
@@ -305,12 +306,14 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
     local_idx++;
   }
 
+  // Cache parameters.
   for (auto arg_iter = func->arg_begin(); local_idx < func_info.GetParamsCount();
        ++local_idx, ++arg_iter) {
     const LocalInfo &param = func_locals[local_idx];
     params_[param.GetOffset()] = &*arg_iter;
   }
 
+  // Allocate all local variables up front.
   for (; local_idx < func_info.GetLocals().size(); local_idx++) {
     const LocalInfo &local_info = func_locals[local_idx];
     llvm::Type *llvm_type = type_map->GetLLVMType(local_info.GetType());
@@ -618,13 +621,14 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
                                                        llvm::IRBuilder<> *ir_builder) {
   llvm::LLVMContext &ctx = ir_builder->getContext();
   llvm::Function *func = llvm_module_->getFunction(func_info.GetName());
-  llvm::BasicBlock *entry_bb = llvm::BasicBlock::Create(ctx, "EntryBB", func);
+  llvm::BasicBlock *first_bb = llvm::BasicBlock::Create(ctx, "BB0", func);
+  llvm::BasicBlock *entry_bb = llvm::BasicBlock::Create(ctx, "EntryBB", func, first_bb);
 
   // First, construct a simple CFG for the function. The CFG contains entries for the start of every
   // basic block in the function, and the bytecode position of the first instruction in the block.
   // The CFG is ordered by bytecode position in ascending order.
 
-  std::map<std::size_t, llvm::BasicBlock *> blocks = {{0, entry_bb}};
+  std::map<std::size_t, llvm::BasicBlock *> blocks = {{0, first_bb}};
   BuildSimpleCFG(func_info, blocks);
 
   {
@@ -655,6 +659,10 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
   ir_builder->SetInsertPoint(entry_bb);
 
   FunctionLocalsMap locals_map(func_info, func, type_map_.get(), ir_builder);
+
+  // Jump to the first block, after all local allocations have been made.
+  ir_builder->CreateBr(first_bb);
+  ir_builder->SetInsertPoint(first_bb);
 
   for (auto iter = tpl_module_.BytecodeForFunction(func_info); !iter.Done(); iter.Advance()) {
     Bytecode bytecode = iter.CurrentBytecode();
