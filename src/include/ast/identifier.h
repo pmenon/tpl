@@ -48,7 +48,13 @@ class Identifier {
   /**
    * @return A string view over this identifier.
    */
-  std::string_view GetString() const noexcept { return std::string_view(data_, GetLength()); }
+  std::string_view GetView() const noexcept { return std::string_view(data_, GetLength()); }
+
+  /**
+   * @return A copy of this identifier's contents as a string. We assume that the identifier was
+   *         properly NULL terminated.
+   */
+  std::string GetString() const { return !data_ ? std::string() : std::string(data_, GetLength()); }
 
   /**
    * Is this identifier equal to another identifier @em other.

@@ -87,18 +87,18 @@ void AstPrettyPrintImpl::VisitCallExpr(CallExpr *node) {
 }
 
 void AstPrettyPrintImpl::VisitFieldDecl(FieldDecl *node) {
-  os_ << node->Name().GetString() << ": ";
+  os_ << node->Name().GetView() << ": ";
   Visit(node->TypeRepr());
 }
 
 void AstPrettyPrintImpl::VisitFunctionDecl(FunctionDecl *node) {
-  os_ << "fun " << node->Name().GetString();
+  os_ << "fun " << node->Name().GetView();
   Visit(node->Function());
   NewLine();
 }
 
 void AstPrettyPrintImpl::VisitIdentifierExpr(IdentifierExpr *node) {
-  os_ << node->Name().GetString();
+  os_ << node->Name().GetView();
 }
 
 void AstPrettyPrintImpl::VisitImplicitCastExpr(ImplicitCastExpr *node) {
@@ -116,7 +116,7 @@ void AstPrettyPrintImpl::VisitReturnStmt(ReturnStmt *node) {
 }
 
 void AstPrettyPrintImpl::VisitStructDecl(StructDecl *node) {
-  os_ << "struct " << node->Name().GetString() << " {";
+  os_ << "struct " << node->Name().GetView() << " {";
   IncreaseIndent();
   NewLine();
   Visit(node->TypeRepr());
@@ -132,7 +132,7 @@ void AstPrettyPrintImpl::VisitUnaryOpExpr(UnaryOpExpr *node) {
 }
 
 void AstPrettyPrintImpl::VisitVariableDecl(VariableDecl *node) {
-  os_ << "var " << node->Name().GetString();
+  os_ << "var " << node->Name().GetView();
   if (node->TypeRepr() != nullptr) {
     os_ << ": ";
     Visit(node->TypeRepr());
@@ -218,7 +218,7 @@ void AstPrettyPrintImpl::VisitLitExpr(LitExpr *node) {
       os_ << node->Float32Val();
       break;
     case LitExpr::LitKind::String:
-      os_ << "\"" << node->StringVal().GetString() << "\"";
+      os_ << "\"" << node->StringVal().GetView() << "\"";
       break;
   }
 }
@@ -236,7 +236,7 @@ void AstPrettyPrintImpl::VisitStructTypeRepr(StructTypeRepr *node) {
   for (const auto *field : node->Fields()) {
     if (!first) NewLine();
     first = false;
-    os_ << field->Name().GetString();
+    os_ << field->Name().GetView();
     const std::size_t padding = longest_field_len - field->Name().GetLength();
     os_ << std::string(padding, ' ') << ": ";
     Visit(field->TypeRepr());
@@ -288,7 +288,7 @@ void AstPrettyPrintImpl::VisitFunctionTypeRepr(FunctionTypeRepr *node) {
   for (const auto &param : node->Parameters()) {
     if (!first) os_ << ", ";
     first = false;
-    os_ << param->Name().GetString() << ": ";
+    os_ << param->Name().GetView() << ": ";
     Visit(param->TypeRepr());
   }
   os_ << ") -> ";
