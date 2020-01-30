@@ -6,12 +6,9 @@
 
 #include "spdlog/fmt/fmt.h"
 
-#include "ast/ast_traversal_visitor.h"
 #include "ast/context.h"
 #include "common/exception.h"
 #include "common/macros.h"
-#include "compiler/compiler.h"
-#include "sema/error_reporter.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/executable_query.h"
 #include "sql/codegen/executable_query_builder.h"
@@ -46,7 +43,6 @@
 #include "sql/planner/plannodes/projection_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
 #include "sql/planner/plannodes/set_op_plan_node.h"
-#include "vm/module.h"
 
 namespace tpl::sql::codegen {
 
