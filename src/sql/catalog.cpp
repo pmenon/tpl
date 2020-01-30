@@ -91,6 +91,11 @@ TableInsertMeta insert_meta[] = {
       {"f", sql::RealType::Instance(false), Dist::Uniform, -4444.44F, 4444.44F},
       {"g", sql::DoubleType::Instance(false), Dist::Uniform, -7777.77F, 7777.77F},
      }},
+
+    // Small1
+    {TableId::Small1, "small_1", 200,
+     {{"col1", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 100L},
+      {"col2", sql::IntegerType::Instance(false), Dist::Serial, 0L, 0L}}},
 };
 // clang-format on
 
