@@ -48,9 +48,9 @@ class SeqScanTranslator : public OperatorTranslator {
 
   /**
    * If the scan has a predicate, this function will define all clause functions.
-   * @param top_level_decls The top-level declarations.
+   * @param top_level_funcs The top-level declarations.
    */
-  void DefineHelperFunctions(TopLevelDeclarations *top_level_decls) override;
+  void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *top_level_funcs) override;
 
   /**
    * Declare a FilterManager if there's a scan predicate.
@@ -119,7 +119,7 @@ class SeqScanTranslator : public OperatorTranslator {
   void GenerateGenericTerm(FunctionBuilder *func, const planner::AbstractExpression *term);
 
   // Generate all filter clauses.
-  void GenerateFilterClauseFunctions(TopLevelDeclarations *top_level_decls,
+  void GenerateFilterClauseFunctions(util::RegionVector<ast::FunctionDecl *> *top_level_funcs,
                                      const planner::AbstractExpression *predicate,
                                      std::vector<ast::Identifier> *curr_clause,
                                      bool seen_conjunction);

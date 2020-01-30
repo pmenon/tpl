@@ -112,9 +112,6 @@ class CompilationContext {
   // Given a plan node, compile it into a compiled query object.
   void GeneratePlan(const planner::AbstractPlanNode &plan);
 
-  // Build up the helper structures into the given top-level declarations.
-  void GenerateHelperStructsAndFunctions(TopLevelDeclarations *top_level_decls);
-
   // Generate the query initialization function.
   ast::FunctionDecl *GenerateInitFunction();
 

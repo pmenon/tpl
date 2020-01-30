@@ -30,15 +30,15 @@ class SortTranslator : public OperatorTranslator {
 
   /**
    * Define the sort-row structure that's materialized in the sorter.
-   * @param top_level_decls The top-level declarations.
+   * @param top_level_structs The top-level declarations.
    */
-  void DefineHelperStructs(TopLevelDeclarations *top_level_decls) override;
+  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *top_level_structs) override;
 
   /**
    * Define the sorting function.
-   * @param top_level_decls The top-level declarations.
+   * @param top_level_funcs The top-level declarations.
    */
-  void DefineHelperFunctions(TopLevelDeclarations *top_level_decls) override;
+  void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *top_level_funcs) override;
 
   /**
    * Initialize the sorter instance.

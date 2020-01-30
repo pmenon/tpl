@@ -101,16 +101,16 @@ class OperatorTranslator : public ColumnValueProvider {
   /**
    * Define any helper structures required for processing. Ensure they're declared in the provided
    * declaration container.
-   * @param top_level_decls Query-level declarations.
+   * @param top_level_structs Query-level declarations.
    */
-  virtual void DefineHelperStructs(TopLevelDeclarations *top_level_decls) {}
+  virtual void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *top_level_structs) {}
 
   /**
    * Define any helper functions required for processing. Ensure they're declared in the provided
    * declaration container.
-   * @param top_level_decls Query-level declarations.
+   * @param top_level_funcs Query-level declarations.
    */
-  virtual void DefineHelperFunctions(TopLevelDeclarations *top_level_decls) {}
+  virtual void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *top_level_funcs) {}
 
   /**
    * Initialize all query state.

@@ -13,6 +13,8 @@
 #include "sql/printing_consumer.h"
 #include "sql/schema.h"
 
+#include "vm/llvm_engine.h"
+
 // Tests
 #include "sql/planner/expression_maker.h"
 
@@ -21,6 +23,8 @@ namespace tpl::sql::codegen {
 class SeqScanTranslatorTest : public SqlBasedTest {
  protected:
   void SetUp() override { SqlBasedTest::SetUp(); }
+  static void SetUpTestSuite() { tpl::vm::LLVMEngine::Initialize(); }
+  static void TearDownTestSuite() { tpl::vm::LLVMEngine::Shutdown(); }
 };
 
 TEST_F(SeqScanTranslatorTest, SimpleScan) {
@@ -112,17 +116,17 @@ TEST_F(SeqScanTranslatorTest, SimpleNLJ) {
   auto expr_maker = planner::ExpressionMaker();
 
   auto plan = planner::NestedLoopJoinPlanNode::Builder()
-                  // Left scan on 'test_1'
+                  // Left scan on 'small_1'
                   .AddChild(planner::SeqScanPlanNode::Builder()
-                                .SetTableOid(1)
+                                .SetTableOid(4)
                                 .SetOutputSchema(planner::OutputSchema::Builder()
                                                      .AddColumn(TypeId::Integer, false,
                                                                 expr_maker.CVE(0, TypeId::Integer))
                                                      .Build())
                                 .Build())
-                  // Right scan on 'test_2'
+                  // Right scan on 'small_1'
                   .AddChild(planner::SeqScanPlanNode::Builder()
-                                .SetTableOid(2)
+                                .SetTableOid(4)
                                 .SetOutputSchema(planner::OutputSchema::Builder()
                                                      .AddColumn(TypeId::Integer, false,
                                                                 expr_maker.CVE(1, TypeId::Integer))

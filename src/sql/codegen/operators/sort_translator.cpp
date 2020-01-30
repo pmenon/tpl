@@ -6,7 +6,6 @@
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
 #include "sql/codegen/loop.h"
-#include "sql/codegen/top_level_declarations.h"
 #include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/order_by_plan_node.h"
 
@@ -39,12 +38,12 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
       codegen, "sorter", codegen->BuiltinType(ast::BuiltinType::Sorter));
 }
 
-void SortTranslator::DefineHelperStructs(TopLevelDeclarations *top_level_decls) {
+void SortTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *top_level_structs) {
   auto codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
   GetAllChildOutputFields(0, kSortRowAttrPrefix, &fields);
   sort_row_ = codegen->DeclareStruct(codegen->MakeFreshIdentifier("SortRow"), std::move(fields));
-  top_level_decls->RegisterStruct(sort_row_);
+  top_level_structs->push_back(sort_row_);
 }
 
 void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder) {
@@ -72,7 +71,8 @@ void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder) {
   current_row_ = CurrentRow::Child;
 }
 
-void SortTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_decls) {
+void SortTranslator::DefineHelperFunctions(
+    util::RegionVector<ast::FunctionDecl *> *top_level_funcs) {
   auto codegen = GetCodeGen();
   auto fn_name = codegen->MakeFreshIdentifier("compare");
   auto params = codegen->MakeFieldList({
@@ -85,7 +85,7 @@ void SortTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_decls
     GenerateComparisonFunction(&builder);
   }
   cmp_func_ = builder.Finish(codegen->Const32(0));
-  top_level_decls->RegisterFunction(cmp_func_);
+  top_level_funcs->push_back(cmp_func_);
 }
 
 void SortTranslator::InitializeSorter(ast::Expr *sorter_ptr) const {

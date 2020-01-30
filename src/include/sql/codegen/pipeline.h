@@ -13,8 +13,8 @@
 namespace tpl::sql::codegen {
 
 class CodeGen;
-class CodeContainer;
 class CompilationContext;
+class ExecutableQueryFragmentBuilder;
 class ExpressionTranslator;
 class OperatorTranslator;
 
@@ -191,7 +191,7 @@ class Pipeline {
    * Generate all functions to execute this pipeline in the provided container.
    * @param codegen The code generator instance.
    */
-  void GeneratePipeline(CodeContainer *code_container) const;
+  void GeneratePipeline(ExecutableQueryFragmentBuilder *builder) const;
 
   /**
    * @return True if the pipeline is parallel; false otherwise.

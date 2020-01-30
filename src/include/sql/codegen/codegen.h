@@ -22,7 +22,7 @@
 
 namespace tpl::sql::codegen {
 
-class CodeContainer;
+class ExecutableQueryFragmentBuilder;
 class FunctionBuilder;
 
 /**
@@ -45,7 +45,10 @@ class CodeGen {
     explicit Scope(Scope *previous) : previous_(nullptr) { Init(previous); }
 
     // Initialize this scope.
-    void Init(Scope *previous) { previous_ = previous; }
+    void Init(Scope *previous) {
+      previous_ = previous;
+      names_.clear();
+    }
 
     // Get a fresh name in this scope.
     std::string GetFreshName(const std::string &name);
@@ -675,6 +678,13 @@ class CodeGen {
   [[nodiscard]] ast::Expr *TLSReset(ast::Expr *tls, ast::Identifier tls_state_name,
                                     ast::Identifier init_fn, ast::Identifier tear_down_fn,
                                     ast::Expr *context) const;
+
+  /**
+   * Call @tlsClear(). Clears all thread-local states.
+   * @param tls The name of the thread state container variable.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *TLSClear(ast::Expr *tls) const;
 
   // -------------------------------------------------------
   //

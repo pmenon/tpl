@@ -8,7 +8,6 @@
 #include "sql/codegen/if.h"
 #include "sql/codegen/loop.h"
 #include "sql/codegen/pipeline.h"
-#include "sql/codegen/top_level_declarations.h"
 #include "sql/codegen/work_context.h"
 #include "sql/planner/expressions/column_value_expression.h"
 #include "sql/planner/expressions/expression_util.h"
@@ -73,24 +72,24 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *func,
   check_filtered.EndIf();
 }
 
-void SeqScanTranslator::GenerateFilterClauseFunctions(TopLevelDeclarations *top_level_decls,
-                                                      const planner::AbstractExpression *predicate,
-                                                      std::vector<ast::Identifier> *curr_clause,
-                                                      bool seen_conjunction) {
+void SeqScanTranslator::GenerateFilterClauseFunctions(
+    util::RegionVector<ast::FunctionDecl *> *top_level_funcs,
+    const planner::AbstractExpression *predicate, std::vector<ast::Identifier> *curr_clause,
+    bool seen_conjunction) {
   // The top-most disjunctions in the tree form separate clauses in the filter manager.
   if (!seen_conjunction &&
       predicate->GetExpressionType() == planner::ExpressionType::CONJUNCTION_OR) {
     std::vector<ast::Identifier> next_clause;
-    GenerateFilterClauseFunctions(top_level_decls, predicate->GetChild(0), &next_clause, false);
+    GenerateFilterClauseFunctions(top_level_funcs, predicate->GetChild(0), &next_clause, false);
     filters_.emplace_back(std::move(next_clause));
-    GenerateFilterClauseFunctions(top_level_decls, predicate->GetChild(1), curr_clause, false);
+    GenerateFilterClauseFunctions(top_level_funcs, predicate->GetChild(1), curr_clause, false);
     return;
   }
 
   // Consecutive conjunctions are part of the same clause.
   if (predicate->GetExpressionType() == planner::ExpressionType::CONJUNCTION_AND) {
-    GenerateFilterClauseFunctions(top_level_decls, predicate->GetChild(0), curr_clause, true);
-    GenerateFilterClauseFunctions(top_level_decls, predicate->GetChild(1), curr_clause, true);
+    GenerateFilterClauseFunctions(top_level_funcs, predicate->GetChild(0), curr_clause, true);
+    GenerateFilterClauseFunctions(top_level_funcs, predicate->GetChild(1), curr_clause, true);
     return;
   }
 
@@ -126,14 +125,15 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(TopLevelDeclarations *top_
     }
   }
   curr_clause->push_back(fn_name);
-  top_level_decls->RegisterFunction(builder.Finish());
+  top_level_funcs->push_back(builder.Finish());
 }
 
-void SeqScanTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_decls) {
+void SeqScanTranslator::DefineHelperFunctions(
+    util::RegionVector<ast::FunctionDecl *> *top_level_funcs) {
   if (HasPredicate()) {
     std::vector<ast::Identifier> curr_clause;
     auto root_expr = GetPlanAs<planner::SeqScanPlanNode>().GetScanPredicate();
-    GenerateFilterClauseFunctions(top_level_decls, root_expr, &curr_clause, false);
+    GenerateFilterClauseFunctions(top_level_funcs, root_expr, &curr_clause, false);
     filters_.emplace_back(std::move(curr_clause));
   }
 }
@@ -155,9 +155,8 @@ void SeqScanTranslator::ScanTable(WorkContext *ctx, ast::Expr *tvi, bool close_i
 
   Loop tvi_loop(codegen, codegen->TableIterAdvance(tvi));
   {
-    auto vpi_name = codegen->MakeFreshIdentifier("vpi");
-    auto vpi = codegen->MakeExpr(vpi_name);
-    func->Append(codegen->DeclareVarWithInit(vpi_name, codegen->TableIterGetVPI(tvi)));
+    auto vpi = codegen->MakeExpr(vpi_name_);
+    func->Append(codegen->DeclareVarWithInit(vpi_name_, codegen->TableIterGetVPI(tvi)));
 
     if (HasPredicate()) {
       auto filter_manager = ctx->GetThreadStateEntryPtr(codegen, fm_slot_);

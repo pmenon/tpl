@@ -2,13 +2,19 @@
 
 #include <algorithm>
 #include <atomic>
+#include <sstream>
 
 #include "spdlog/fmt/fmt.h"
 
+#include "ast/ast_traversal_visitor.h"
+#include "ast/context.h"
 #include "common/exception.h"
 #include "common/macros.h"
+#include "compiler/compiler.h"
+#include "sema/error_reporter.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/executable_query.h"
+#include "sql/codegen/executable_query_builder.h"
 #include "sql/codegen/expression//derived_value_translator.h"
 #include "sql/codegen/expression/arithmetic_translator.h"
 #include "sql/codegen/expression/column_value_translator.h"
@@ -25,7 +31,6 @@
 #include "sql/codegen/operators/seq_scan_translator.h"
 #include "sql/codegen/operators/sort_translator.h"
 #include "sql/codegen/pipeline.h"
-#include "sql/codegen/top_level_declarations.h"
 #include "sql/planner/expressions/abstract_expression.h"
 #include "sql/planner/expressions/column_value_expression.h"
 #include "sql/planner/expressions/comparison_expression.h"
@@ -41,6 +46,7 @@
 #include "sql/planner/plannodes/projection_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
 #include "sql/planner/plannodes/set_op_plan_node.h"
+#include "vm/module.h"
 
 namespace tpl::sql::codegen {
 
@@ -59,10 +65,8 @@ CompilationContext::CompilationContext(ExecutableQuery *query, const Compilation
 ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
   const auto name = codegen_.MakeIdentifier(fmt::format("{}_Init", GetFunctionPrefix()));
   FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.Nil());
-  {
-    for (auto &[_, op] : ops_) {
-      op->InitializeQueryState();
-    }
+  for (auto &[_, op] : ops_) {
+    op->InitializeQueryState();
   }
   return builder.Finish();
 }
@@ -70,64 +74,53 @@ ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
 ast::FunctionDecl *CompilationContext::GenerateTearDownFunction() {
   const auto name = codegen_.MakeIdentifier(fmt::format("{}_TearDown", GetFunctionPrefix()));
   FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.Nil());
-  {
-    for (auto &[_, op] : ops_) {
-      op->TearDownQueryState();
-    }
+  for (auto &[_, op] : ops_) {
+    op->TearDownQueryState();
   }
   return builder.Finish();
-}
-
-void CompilationContext::GenerateHelperStructsAndFunctions(TopLevelDeclarations *top_level_decls) {
-  for (auto &[_, op] : ops_) {
-    op->DefineHelperStructs(top_level_decls);
-    op->DefineHelperFunctions(top_level_decls);
-  }
 }
 
 void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   exec_ctx_slot_ = query_state_.DeclareStateEntry(
       GetCodeGen(), "execCtx", codegen_.PointerType(ast::BuiltinType::ExecutionContext));
 
-  // Prepare all translators for the plan.
   Pipeline main_pipeline(this);
   Prepare(plan, &main_pipeline);
+  query_state_.ConstructFinalType(&codegen_, query_state_type_name_);
 
-  // The main init/tear down container.
-  auto main_container = std::make_unique<CodeContainer>(query_->GetContext());
+  // Step 1: Collect top-level structures and declarations. Top-level elements
+  //         are available to all query fragments.
+  util::RegionVector<ast::StructDecl *> top_level_structs(query_->GetContext()->GetRegion());
+  util::RegionVector<ast::FunctionDecl *> top_level_funcs(query_->GetContext()->GetRegion());
+  for (auto &[_, op] : ops_) {
+    op->DefineHelperStructs(&top_level_structs);
+    op->DefineHelperFunctions(&top_level_funcs);
+  }
+  top_level_structs.push_back(query_state_.GetType());
 
-  // First, build-up and declare the query state for the whole query.
-  main_container->RegisterStruct(
-      query_state_.ConstructFinalType(GetCodeGen(), query_state_type_name_));
+  // All fragments.
+  std::vector<std::unique_ptr<ExecutableQuery::Fragment>> fragments;
 
-  // Declare helper structs and functions
-  TopLevelDeclarations top_level_declarations;
-  GenerateHelperStructsAndFunctions(&top_level_declarations);
-  top_level_declarations.DeclareInContainer(main_container.get());
+  // The main builder. The initialization and tear-down code go here. In
+  // one-shot compilation, all query code goes here, too.
+  ExecutableQueryFragmentBuilder main_builder(query_->GetContext());
+  main_builder.DeclareAll(top_level_structs);
+  main_builder.DeclareAll(top_level_funcs);
+  main_builder.RegisterStep(GenerateInitFunction());
 
-  // Find pipeline execution order now.
+  // Generate each pipeline.
   std::vector<Pipeline *> execution_order;
   main_pipeline.CollectDependencies(&execution_order);
 
   for (auto *pipeline : execution_order) {
-    pipeline->GeneratePipeline(main_container.get());
+    pipeline->GeneratePipeline(&main_builder);
   }
 
-  // Declare query init and tear-down functions.
-  main_container->RegisterFunction(GenerateInitFunction());
-  main_container->RegisterFunction(GenerateTearDownFunction());
+  // Register the tear-down function.
+  main_builder.RegisterStep(GenerateTearDownFunction());
 
-  // Setup the query with the generated fragments and return.
-  std::vector<std::unique_ptr<CodeContainer>> fragments;
-  fragments.emplace_back(std::move(main_container));
-
-  // TODO(pmenon): This isn't correct. We need to report errors back up.
-  // Compile each
-  for (auto &fragment : fragments) {
-    fragment->Compile();
-  }
-
-  // Done
+  // Compile and finish.
+  fragments.emplace_back(main_builder.Compile());
   query_->Setup(std::move(fragments), query_state_.GetSize());
 }
 

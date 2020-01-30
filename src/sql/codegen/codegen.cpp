@@ -5,7 +5,7 @@
 #include "ast/context.h"
 #include "ast/type.h"
 #include "common/exception.h"
-#include "sql/codegen/code_container.h"
+#include "sql/codegen/executable_query_builder.h"
 
 namespace tpl::sql::codegen {
 
@@ -567,6 +567,12 @@ ast::Expr *CodeGen::TLSReset(ast::Expr *tls, ast::Identifier tls_state_name,
   ast::Expr *call = CallBuiltin(
       ast::Builtin::ThreadStateContainerReset,
       {tls, SizeOf(tls_state_name), MakeExpr(init_fn), MakeExpr(tear_down_fn), context});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::TLSClear(ast::Expr *tls) const {
+  ast::Expr *call = CallBuiltin(ast::Builtin::ThreadStateContainerClear, {tls});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }

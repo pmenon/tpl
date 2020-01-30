@@ -3,12 +3,43 @@
 #include "llvm/ADT/STLExtras.h"
 
 #include "ast/context.h"
+#include "common/exception.h"
 #include "logging/logger.h"
 #include "sema/error_reporter.h"
-#include "sql/codegen/code_container.h"
 #include "sql/execution_context.h"
+#include "vm/module.h"
 
 namespace tpl::sql::codegen {
+
+//===----------------------------------------------------------------------===//
+//
+// Executable Query Fragment
+//
+//===----------------------------------------------------------------------===//
+
+ExecutableQuery::Fragment::Fragment(std::vector<std::string> &&functions,
+                                    std::unique_ptr<vm::Module> module)
+    : functions_(std::move(functions)), module_(std::move(module)) {}
+
+ExecutableQuery::Fragment::~Fragment() = default;
+
+void ExecutableQuery::Fragment::Run(byte query_state[]) const {
+  using Function = std::function<void(void *)>;
+  for (const auto &func_name : functions_) {
+    Function func;
+    if (!module_->GetFunction(func_name, vm::ExecutionMode::Compiled, func)) {
+      throw Exception(ExceptionType::Execution,
+                      fmt::format("Could not find function '{}' in query fragment", func_name));
+    }
+    func(query_state);
+  }
+}
+
+//===----------------------------------------------------------------------===//
+//
+// Executable Query
+//
+//===----------------------------------------------------------------------===//
 
 ExecutableQuery::ExecutableQuery(const planner::AbstractPlanNode &plan)
     : plan_(plan),
@@ -19,18 +50,19 @@ ExecutableQuery::ExecutableQuery(const planner::AbstractPlanNode &plan)
 // Needed because we forward-declare classes used as template types to std::unique_ptr<>
 ExecutableQuery::~ExecutableQuery() = default;
 
-void ExecutableQuery::Setup(std::vector<std::unique_ptr<CodeContainer>> &&fragments,
-                            const std::size_t query_state_size) {
+void ExecutableQuery::Setup(std::vector<std::unique_ptr<Fragment>> &&fragments,
+                            size_t query_state_size) {
   TPL_ASSERT(llvm::all_of(fragments, [](auto &fragment) { return fragment->IsCompiled(); }),
              "All query fragments are not compiled!");
   TPL_ASSERT(
-      query_state_size >= sizeof(ExecutionContext *),
+      query_state_size >= sizeof(void *),
       "Query state size must be large enough to store at least a pointer to the ExecutionContext.");
 
   fragments_ = std::move(fragments);
   query_state_size_ = query_state_size;
 
-  LOG_INFO("Query has {} fragments with {}-byte query state", fragments_.size(), query_state_size_);
+  LOG_INFO("Query has {} fragment{} with {}-byte query state.", fragments_.size(),
+           fragments_.size() > 1 ? "s" : "", query_state_size_);
 }
 
 void ExecutableQuery::Run(ExecutionContext *exec_ctx) {
@@ -40,8 +72,7 @@ void ExecutableQuery::Run(ExecutionContext *exec_ctx) {
 
   // Now run through fragments.
   for (const auto &fragment : fragments_) {
-    // TODO(pmenon): Complete me.
-    (void)fragment;
+    fragment->Run(query_state.get());
   }
 }
 

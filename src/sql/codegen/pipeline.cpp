@@ -7,7 +7,7 @@
 #include "common/macros.h"
 #include "common/settings.h"
 #include "logging/logger.h"
-#include "sql/codegen/code_container.h"
+#include "sql/codegen/executable_query_builder.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/function_builder.h"
@@ -315,13 +315,16 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction(
   {
     // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen);
-    // Nothing, for now ...
-    (void)pipeline_context;
+    // Tear down thread local state if parallel pipeline.
+    if (IsParallel()) {
+      ast::Expr *exec_ctx = compilation_context_->GetExecutionContextPtrFromQueryState();
+      builder.Append(codegen->TLSClear(codegen->ExecCtxGetTLS(exec_ctx)));
+    }
   }
   return builder.Finish();
 }
 
-void Pipeline::GeneratePipeline(CodeContainer *code_container) const {
+void Pipeline::GeneratePipeline(ExecutableQueryFragmentBuilder *builder) const {
   PipelineContext pipeline_context(*this, pipeline_state_type_name_);
 
   // Collect all pipeline state and register it in the container.
@@ -330,23 +333,19 @@ void Pipeline::GeneratePipeline(CodeContainer *code_container) const {
   }
 
   auto codegen = compilation_context_->GetCodeGen();
-  code_container->RegisterStruct(pipeline_context.ConstructPipelineStateType(codegen));
+  builder->DeclareStruct(pipeline_context.ConstructPipelineStateType(codegen));
 
   // Generate pipeline state initialization and tear-down functions.
-  code_container->RegisterFunction(GenerateSetupPipelineStateFunction(&pipeline_context));
-  code_container->RegisterFunction(GenerateTearDownPipelineStateFunction(&pipeline_context));
-
-  // Generate pipeline setup logic.
-  code_container->RegisterFunction(GenerateInitPipelineFunction(&pipeline_context));
+  builder->DeclareFunction(GenerateSetupPipelineStateFunction(&pipeline_context));
+  builder->DeclareFunction(GenerateTearDownPipelineStateFunction(&pipeline_context));
 
   // Generate main pipeline logic.
-  code_container->RegisterFunction(GeneratePipelineWorkFunction(&pipeline_context));
+  builder->DeclareFunction(GeneratePipelineWorkFunction(&pipeline_context));
 
-  // Generate the pipeline launch code.
-  code_container->RegisterFunction(GenerateRunPipelineFunction(&pipeline_context));
-
-  // Generate pipeline tear-down logic.
-  code_container->RegisterFunction(GenerateTearDownPipelineFunction(&pipeline_context));
+  // Register the main init, run, tear-down functions as steps, in that order.
+  builder->RegisterStep(GenerateInitPipelineFunction(&pipeline_context));
+  builder->RegisterStep(GenerateRunPipelineFunction(&pipeline_context));
+  builder->RegisterStep(GenerateTearDownPipelineFunction(&pipeline_context));
 }
 
 std::string Pipeline::PrettyPrint() const {

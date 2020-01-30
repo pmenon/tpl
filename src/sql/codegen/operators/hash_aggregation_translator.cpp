@@ -5,7 +5,6 @@
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
 #include "sql/codegen/loop.h"
-#include "sql/codegen/top_level_declarations.h"
 #include "sql/planner/plannodes/aggregate_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -52,7 +51,8 @@ HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePla
       codegen, "aggHashTable", codegen->BuiltinType(ast::BuiltinType::AggregationHashTable));
 }
 
-void HashAggregationTranslator::DefinePayloadStruct(TopLevelDeclarations *top_level_decls) {
+void HashAggregationTranslator::DefinePayloadStruct(
+    util::RegionVector<ast::StructDecl *> *top_level_structs) {
   auto codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
 
@@ -77,10 +77,11 @@ void HashAggregationTranslator::DefinePayloadStruct(TopLevelDeclarations *top_le
 
   agg_payload_ =
       codegen->DeclareStruct(codegen->MakeFreshIdentifier("AggPayload"), std::move(fields));
-  top_level_decls->RegisterStruct(agg_payload_);
+  top_level_structs->push_back(agg_payload_);
 }
 
-void HashAggregationTranslator::DefineInputValuesStruct(TopLevelDeclarations *top_level_decls) {
+void HashAggregationTranslator::DefineInputValuesStruct(
+    util::RegionVector<ast::StructDecl *> *top_level_structs) {
   const auto &agg_plan = GetPlanAs<planner::AggregatePlanNode>();
 
   auto codegen = GetCodeGen();
@@ -106,10 +107,11 @@ void HashAggregationTranslator::DefineInputValuesStruct(TopLevelDeclarations *to
 
   agg_values_ =
       codegen->DeclareStruct(codegen->MakeFreshIdentifier("AggValues"), std::move(fields));
-  top_level_decls->RegisterStruct(agg_values_);
+  top_level_structs->push_back(agg_values_);
 }
 
-void HashAggregationTranslator::DefineHelperStructs(TopLevelDeclarations *top_level_decls) {
+void HashAggregationTranslator::DefineHelperStructs(
+    util::RegionVector<ast::StructDecl *> *top_level_decls) {
   DefinePayloadStruct(top_level_decls);
   DefineInputValuesStruct(top_level_decls);
 }
@@ -161,7 +163,7 @@ void HashAggregationTranslator::MergeOverflowPartitions(FunctionBuilder *functio
 }
 
 void HashAggregationTranslator::GeneratePartialKeyCheckFunction(
-    TopLevelDeclarations *top_level_decls) {
+    util::RegionVector<ast::FunctionDecl *> *top_level_funcs) {
   auto codegen = GetCodeGen();
 
   auto lhs_arg = codegen->MakeIdentifier("lhs");
@@ -182,11 +184,11 @@ void HashAggregationTranslator::GeneratePartialKeyCheckFunction(
     }
     builder.Append(codegen->Return(codegen->ConstBool(true)));
   }
-  top_level_decls->RegisterFunction(key_check_partial_fn_ = builder.Finish());
+  top_level_funcs->push_back(key_check_partial_fn_ = builder.Finish());
 }
 
 void HashAggregationTranslator::GenerateMergeOverflowPartitionsFunction(
-    TopLevelDeclarations *top_level_decls) {
+    util::RegionVector<ast::FunctionDecl *> *top_level_funcs) {
   // The partition merge function has the following signature:
   // (*QueryState,*AggregationHashTable,*AHTOverflowPartitionIterator) -> nil
 
@@ -211,10 +213,11 @@ void HashAggregationTranslator::GenerateMergeOverflowPartitionsFunction(
     // Main function.
     MergeOverflowPartitions(&builder);
   }
-  top_level_decls->RegisterFunction(merge_partitions_fn_ = builder.Finish());
+  top_level_funcs->push_back(merge_partitions_fn_ = builder.Finish());
 }
 
-void HashAggregationTranslator::GenerateKeyCheckFunction(TopLevelDeclarations *top_level_decls) {
+void HashAggregationTranslator::GenerateKeyCheckFunction(
+    util::RegionVector<ast::FunctionDecl *> *top_level_funcs) {
   auto codegen = GetCodeGen();
   auto agg_payload = codegen->MakeIdentifier("aggPayload");
   auto agg_values = codegen->MakeIdentifier("aggValues");
@@ -234,15 +237,16 @@ void HashAggregationTranslator::GenerateKeyCheckFunction(TopLevelDeclarations *t
     }
     builder.Append(codegen->Return(codegen->ConstBool(true)));
   }
-  top_level_decls->RegisterFunction(key_check_fn_ = builder.Finish());
+  top_level_funcs->push_back(key_check_fn_ = builder.Finish());
 }
 
-void HashAggregationTranslator::DefineHelperFunctions(TopLevelDeclarations *top_level_decls) {
+void HashAggregationTranslator::DefineHelperFunctions(
+    util::RegionVector<ast::FunctionDecl *> *top_level_funcs) {
   if (build_pipeline_.IsParallel()) {
-    GeneratePartialKeyCheckFunction(top_level_decls);
-    GenerateMergeOverflowPartitionsFunction(top_level_decls);
+    GeneratePartialKeyCheckFunction(top_level_funcs);
+    GenerateMergeOverflowPartitionsFunction(top_level_funcs);
   }
-  GenerateKeyCheckFunction(top_level_decls);
+  GenerateKeyCheckFunction(top_level_funcs);
 }
 
 void HashAggregationTranslator::InitializeAggregationHashTable(ast::Expr *agg_ht) const {

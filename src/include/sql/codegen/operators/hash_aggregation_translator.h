@@ -29,15 +29,15 @@ class HashAggregationTranslator : public OperatorTranslator {
 
   /**
    * Define the aggregation row structure.
-   * @param top_level_decls Where the defined structure will be registered.
+   * @param top_level_structs Where the defined structure will be registered.
    */
-  void DefineHelperStructs(TopLevelDeclarations *top_level_decls) override;
+  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *top_level_structs) override;
 
   /**
    * If the build-pipeline is parallel, we'll need to define the partition-merging function.
-   * @param top_level_decls Where the defined functions will be registered.
+   * @param top_level_funcs Where the defined functions will be registered.
    */
-  void DefineHelperFunctions(TopLevelDeclarations *top_level_decls) override;
+  void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *top_level_funcs) override;
 
   /**
    * Initialize the global aggregation hash table.
@@ -126,13 +126,14 @@ class HashAggregationTranslator : public OperatorTranslator {
   bool IsProducePipeline(const Pipeline &pipeline) const { return GetPipeline() == &pipeline; }
 
   // Declare the payload and input structures. Called from DefineHelperStructs().
-  void DefinePayloadStruct(TopLevelDeclarations *top_level_decls);
-  void DefineInputValuesStruct(TopLevelDeclarations *top_level_decls);
+  void DefinePayloadStruct(util::RegionVector<ast::StructDecl *> *top_level_structs);
+  void DefineInputValuesStruct(util::RegionVector<ast::StructDecl *> *top_level_structs);
 
   // Generate the overflow partition merging process.
-  void GenerateKeyCheckFunction(TopLevelDeclarations *top_level_decls);
-  void GeneratePartialKeyCheckFunction(TopLevelDeclarations *top_level_decls);
-  void GenerateMergeOverflowPartitionsFunction(TopLevelDeclarations *top_level_decls);
+  void GenerateKeyCheckFunction(util::RegionVector<ast::FunctionDecl *> *top_level_funcs);
+  void GeneratePartialKeyCheckFunction(util::RegionVector<ast::FunctionDecl *> *top_level_funcs);
+  void GenerateMergeOverflowPartitionsFunction(
+      util::RegionVector<ast::FunctionDecl *> *top_level_funcs);
   void MergeOverflowPartitions(FunctionBuilder *function);
 
   // Initialize and destroy the input aggregation hash table. These are called

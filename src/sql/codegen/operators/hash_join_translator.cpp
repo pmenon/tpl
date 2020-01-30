@@ -5,7 +5,6 @@
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
 #include "sql/codegen/loop.h"
-#include "sql/codegen/top_level_declarations.h"
 #include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/hash_join_plan_node.h"
 
@@ -40,7 +39,8 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
       codegen, "joinHashTable", codegen->BuiltinType(ast::BuiltinType::JoinHashTable));
 }
 
-void HashJoinTranslator::DefineHelperStructs(TopLevelDeclarations *top_level_decls) {
+void HashJoinTranslator::DefineHelperStructs(
+    util::RegionVector<ast::StructDecl *> *top_level_structs) {
   auto codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
   GetAllChildOutputFields(0, kBuildRowAttrPrefix, &fields);
@@ -48,7 +48,7 @@ void HashJoinTranslator::DefineHelperStructs(TopLevelDeclarations *top_level_dec
     fields.push_back(codegen->MakeField(codegen->MakeFreshIdentifier("mark"), codegen->BoolType()));
   }
   build_row_ = codegen->DeclareStruct(codegen->MakeFreshIdentifier("BuildRow"), std::move(fields));
-  top_level_decls->RegisterStruct(build_row_);
+  top_level_structs->push_back(build_row_);
 }
 
 void HashJoinTranslator::InitializeJoinHashTable(ast::Expr *jht_ptr) const {
