@@ -205,24 +205,24 @@ VM_OP_WARM void OpExecutionContextGetTLS(
   *thread_state_container = exec_ctx->GetThreadStateContainer();
 }
 
-VM_OP void OpThreadStateContainerInit(tpl::sql::ThreadStateContainer *thread_state_container,
-                                      tpl::sql::MemoryPool *memory);
-
-VM_OP_HOT void OpThreadStateContainerReset(tpl::sql::ThreadStateContainer *thread_state_container,
-                                           uint32_t size,
-                                           tpl::sql::ThreadStateContainer::InitFn init_fn,
-                                           tpl::sql::ThreadStateContainer::DestroyFn destroy_fn,
-                                           void *ctx) {
+VM_OP_WARM void OpThreadStateContainerReset(tpl::sql::ThreadStateContainer *thread_state_container,
+                                            const uint32_t size,
+                                            tpl::sql::ThreadStateContainer::InitFn init_fn,
+                                            tpl::sql::ThreadStateContainer::DestroyFn destroy_fn,
+                                            void *ctx) {
   thread_state_container->Reset(size, init_fn, destroy_fn, ctx);
 }
 
-VM_OP_HOT void OpThreadStateContainerIterate(tpl::sql::ThreadStateContainer *thread_state_container,
-                                             void *const state,
-                                             tpl::sql::ThreadStateContainer::IterateFn iterate_fn) {
+VM_OP_WARM void OpThreadStateContainerIterate(
+    tpl::sql::ThreadStateContainer *thread_state_container, void *const state,
+    tpl::sql::ThreadStateContainer::IterateFn iterate_fn) {
   thread_state_container->IterateStates(state, iterate_fn);
 }
 
-VM_OP void OpThreadStateContainerFree(tpl::sql::ThreadStateContainer *thread_state_container);
+VM_OP_WARM void OpThreadStateContainerClear(
+    tpl::sql::ThreadStateContainer *thread_state_container) {
+  thread_state_container->Clear();
+}
 
 // ---------------------------------------------------------
 // Table Vector Iterator

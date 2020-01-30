@@ -103,11 +103,10 @@ namespace tpl::vm {
   F(ExecutionContextGetTLS, OperandType::Local, OperandType::Local)                                                    \
                                                                                                                        \
   /* Thread State Container */                                                                                         \
-  F(ThreadStateContainerInit, OperandType::Local, OperandType::Local)                                                  \
   F(ThreadStateContainerIterate, OperandType::Local, OperandType::Local, OperandType::FunctionId)                      \
   F(ThreadStateContainerReset, OperandType::Local, OperandType::Local, OperandType::FunctionId,                        \
       OperandType::FunctionId, OperandType::Local)                                                                     \
-  F(ThreadStateContainerFree, OperandType::Local)                                                                      \
+  F(ThreadStateContainerClear, OperandType::Local)                                                                     \
                                                                                                                        \
   /* Table Vector Iterator */                                                                                          \
   F(TableVectorIteratorInit, OperandType::Local, OperandType::UImm2)                                                   \

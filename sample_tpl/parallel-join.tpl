@@ -98,34 +98,32 @@ fun pipeline2_finalize(qs: *State, ts: *ThreadState_2) -> nil {
 }
 
 fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
-    var tls: ThreadStateContainer
-    @tlsInit(&tls, @execCtxGetMem(execCtx))
-    @tlsReset(&tls, @sizeOf(ThreadState_1), pipeline1_worker_initThreadState, pipeline1_worker_tearDownThreadState, execCtx)
+    var tls = @execCtxGetTLS(execCtx)
+    @tlsReset(tls, @sizeOf(ThreadState_1), pipeline1_worker_initThreadState, pipeline1_worker_tearDownThreadState, execCtx)
 
     // Parallel scan "test_1"
-    @iterateTableParallel("test_1", state, &tls, pipeline1_worker)
+    @iterateTableParallel("test_1", state, tls, pipeline1_worker)
 
     // Parallel build the join hash table
     var off: uint32 = 0
-    @joinHTBuildParallel(&state.jht, &tls, off)
+    @joinHTBuildParallel(&state.jht, tls, off)
 
     // Cleanup
-    @tlsFree(&tls)
+    @tlsClear(tls)
 }
 
 fun pipeline2(execCtx: *ExecutionContext, state: *State) -> nil {
-    var tls: ThreadStateContainer
-    @tlsInit(&tls, @execCtxGetMem(execCtx))
-    @tlsReset(&tls, @sizeOf(ThreadState_2), pipeline2_worker_initThreadState, pipeline2_worker_tearDownThreadState, execCtx)
+    var tls = @execCtxGetTLS(execCtx)
+    @tlsReset(tls, @sizeOf(ThreadState_2), pipeline2_worker_initThreadState, pipeline2_worker_tearDownThreadState, execCtx)
 
     // Parallel scan "test_1" again
-    @iterateTableParallel("test_1", state, &tls, pipeline2_worker)
+    @iterateTableParallel("test_1", state, tls, pipeline2_worker)
 
     // Collect results
-    @tlsIterate(&tls, state, pipeline2_finalize)
+    @tlsIterate(tls, state, pipeline2_finalize)
 
     // Cleanup
-    @tlsFree(&tls)
+    @tlsClear(tls)
 }
 
 fun execQuery(execCtx: *ExecutionContext, state: *State) -> nil {

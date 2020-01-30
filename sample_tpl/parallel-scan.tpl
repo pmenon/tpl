@@ -51,18 +51,17 @@ fun pipeline1_worker(query_state: *State, state: *ThreadState_1, tvi: *TableVect
 
 fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
     // First the thread state container
-    var tls: ThreadStateContainer
-    @tlsInit(&tls, @execCtxGetMem(execCtx))
-    @tlsReset(&tls, @sizeOf(ThreadState_1), pipeline1_worker_initThreadState, pipeline1_worker_tearDownThreadState, execCtx)
+    var tls = @execCtxGetTLS(execCtx)
+    @tlsReset(tls, @sizeOf(ThreadState_1), pipeline1_worker_initThreadState, pipeline1_worker_tearDownThreadState, execCtx)
 
     // Now scan
-    @iterateTableParallel("test_1", state, &tls, pipeline1_worker)
+    @iterateTableParallel("test_1", state, tls, pipeline1_worker)
 
     // Collect results
-    @tlsIterate(&tls, state, pipeline1_finalize)
+    @tlsIterate(tls, state, pipeline1_finalize)
 
     // Cleanup
-    @tlsFree(&tls)
+    @tlsClear(tls)
 }
 
 fun execQuery(execCtx: *ExecutionContext, state: *State) -> nil {

@@ -718,20 +718,7 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builti
   }
 
   switch (builtin) {
-    case ast::Builtin::ThreadStateContainerInit: {
-      if (!CheckArgCount(call, 2)) {
-        return;
-      }
-
-      // Second argument is a MemoryPool
-      auto mem_pool_kind = ast::BuiltinType::MemoryPool;
-      if (!IsPointerToSpecificBuiltin(call_args[1]->GetType(), mem_pool_kind)) {
-        ReportIncorrectCallArg(call, 1, GetBuiltinType(mem_pool_kind)->PointerTo());
-        return;
-      }
-      break;
-    }
-    case ast::Builtin::ThreadStateContainerFree: {
+    case ast::Builtin::ThreadStateContainerClear: {
       break;
     }
     case ast::Builtin::ThreadStateContainerReset: {
@@ -1541,10 +1528,9 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckBuiltinExecutionContextCall(call, builtin);
       break;
     }
-    case ast::Builtin::ThreadStateContainerInit:
     case ast::Builtin::ThreadStateContainerReset:
     case ast::Builtin::ThreadStateContainerIterate:
-    case ast::Builtin::ThreadStateContainerFree: {
+    case ast::Builtin::ThreadStateContainerClear: {
       CheckBuiltinThreadStateContainerCall(call, builtin);
       break;
     }

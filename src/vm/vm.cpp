@@ -466,13 +466,6 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(ThreadStateContainerInit) : {
-    auto *thread_state_container = frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
-    auto *memory = frame->LocalAt<tpl::sql::MemoryPool *>(READ_LOCAL_ID());
-    OpThreadStateContainerInit(thread_state_container, memory);
-    DISPATCH_NEXT();
-  }
-
   OP(ThreadStateContainerIterate) : {
     auto *thread_state_container = frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
     auto ctx = frame->LocalAt<void *>(READ_LOCAL_ID());
@@ -499,9 +492,9 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(ThreadStateContainerFree) : {
+  OP(ThreadStateContainerClear) : {
     auto *thread_state_container = frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
-    OpThreadStateContainerFree(thread_state_container);
+    OpThreadStateContainerClear(thread_state_container);
     DISPATCH_NEXT();
   }
 

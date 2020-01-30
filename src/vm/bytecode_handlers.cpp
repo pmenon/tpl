@@ -5,19 +5,6 @@
 extern "C" {
 
 // ---------------------------------------------------------
-// Thread State Container
-// ---------------------------------------------------------
-
-void OpThreadStateContainerInit(tpl::sql::ThreadStateContainer *const thread_state_container,
-                                tpl::sql::MemoryPool *const memory) {
-  new (thread_state_container) tpl::sql::ThreadStateContainer(memory);
-}
-
-void OpThreadStateContainerFree(tpl::sql::ThreadStateContainer *const thread_state_container) {
-  thread_state_container->~ThreadStateContainer();
-}
-
-// ---------------------------------------------------------
 // Table Vector Iterator
 // ---------------------------------------------------------
 

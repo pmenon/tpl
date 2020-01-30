@@ -141,33 +141,32 @@ fun main(execCtx: *ExecutionContext) -> int {
 
     // ---- Pipeline 1 Begin ---- // 
     
-    var tls: ThreadStateContainer
-    @tlsInit(&tls, @execCtxGetMem(execCtx))
-    @tlsReset(&tls, @sizeOf(ThreadState_1), p1_worker_initThreadState, p1_worker_tearDownThreadState, execCtx)
+    var tls = @execCtxGetTLS(execCtx)
+    @tlsReset(tls, @sizeOf(ThreadState_1), p1_worker_initThreadState, p1_worker_tearDownThreadState, execCtx)
 
     // Parallel Scan
-    @iterateTableParallel("test_1", &state, &tls, p1_worker)
+    @iterateTableParallel("test_1", &state, tls, p1_worker)
 
     // ---- Pipeline 1 End ---- // 
 
     // Move thread-local states
     var aht_off: uint32 = 0
-    @aggHTMoveParts(&state.table, &tls, aht_off, p1_mergePartitions)
+    @aggHTMoveParts(&state.table, tls, aht_off, p1_mergePartitions)
 
     // ---- Pipeline 2 Begin ---- //
 
-    @tlsReset(&tls, @sizeOf(ThreadState_2), p2_worker_initThreadState, p2_worker_tearDownThreadState, execCtx)
-    @aggHTParallelPartScan(&state.table, &state, &tls, p2_worker)
+    @tlsReset(tls, @sizeOf(ThreadState_2), p2_worker_initThreadState, p2_worker_tearDownThreadState, execCtx)
+    @aggHTParallelPartScan(&state.table, &state, tls, p2_worker)
 
     // ---- Pipeline 2 End ---- //
 
-    @tlsIterate(&tls, &state, p2_finalize)
+    @tlsIterate(tls, &state, p2_finalize)
 
     // ---- Clean Up ---- //
 
     var ret = state.count
 
-    @tlsFree(&tls)
+    @tlsClear(tls)
     tearDownState(execCtx, &state)
 
     return ret
